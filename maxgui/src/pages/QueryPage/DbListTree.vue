@@ -34,7 +34,7 @@
             </template>
             <template v-slot:append="{ isHover, item }">
                 <v-btn
-                    v-show="nodesHasCtxMenu.includes(item.type) && (isHover || showCtxBtn(item))"
+                    v-show="nodesHaveCtxMenu.includes(item.type) && (isHover || showCtxBtn(item))"
                     :id="`ctx-menu-activator-${item.key}`"
                     icon
                     x-small
@@ -45,7 +45,7 @@
             </template>
         </m-treeview>
         <v-tooltip
-            v-if="hoveredItem && nodesHasCtxMenu.includes(hoveredItem.type)"
+            v-if="hoveredItem && nodesHaveCtxMenu.includes(hoveredItem.type)"
             :value="Boolean(hoveredItem)"
             :disabled="isDragging"
             right
@@ -63,27 +63,17 @@
                 </tbody>
             </table>
         </v-tooltip>
-        <v-menu
+        <sub-menu
             v-if="activeCtxItem"
             :key="activeCtxItem.key"
             v-model="showCtxMenu"
-            transition="slide-y-transition"
             left
-            nudge-right="12"
-            nudge-bottom="28"
-            content-class="mariadb-select-v-menu mariadb-select-v-menu--full-border"
+            :nudge-right="12"
+            :nudge-bottom="10"
+            :items="getNodeOpts(activeCtxItem)"
             :activator="`#ctx-menu-activator-${activeCtxItem.key}`"
-        >
-            <v-list v-for="option in getOptions(activeCtxItem)" :key="option">
-                <v-list-item
-                    dense
-                    link
-                    @click="() => optionHandler({ item: activeCtxItem, option })"
-                >
-                    <v-list-item-title class="color text-text" v-text="option" />
-                </v-list-item>
-            </v-list>
-        </v-menu>
+            @item-click="optionHandler({ item: activeCtxItem, opt: $event })"
+        />
     </div>
 </template>
 <script>
@@ -106,24 +96,9 @@ export default {
     mixins: [customDragEvt],
     data() {
         return {
-            /**
-             *  TODO: Refactor and dry ctx menu. A menu option named `Insert to editor`
-             *  has sub-menu `insertSchemaToEditor` and `insertNameToEditor`
-             */
-            tableOptions: [
-                this.$t('previewData'),
-                this.$t('viewDetails'),
-                this.$t('placeSchemaInEditor'),
-            ],
-            userTblOptions: [this.$t('alterTbl')],
-            schemaOptions: [this.$t('useDb'), this.$t('placeSchemaInEditor')],
-            columnOptions: [this.$t('placeColumnNameInEditor')],
-            spOptions: [this.$t('placeSchemaInEditor')],
-            triggerOptions: [this.$t('placeSchemaInEditor')],
             showCtxMenu: false,
             activeCtxItem: null, // active item to show in context(options) menu
             hoveredItem: null,
-            nodesHasCtxMenu: ['Schema', 'Table', 'Stored Procedure', 'Column', 'Trigger'],
             expandedNodes: [],
         }
     },
@@ -131,6 +106,8 @@ export default {
         ...mapState({
             SQL_DDL_ALTER_SPECS: state => state.app_config.SQL_DDL_ALTER_SPECS,
             SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
+            SQL_NODE_TYPES: state => state.app_config.SQL_NODE_TYPES,
+            SQL_NODE_CTX_OPTS: state => state.app_config.SQL_NODE_CTX_OPTS,
             expanded_nodes: state => state.query.expanded_nodes,
             active_wke_id: state => state.query.active_wke_id,
         }),
@@ -139,6 +116,70 @@ export default {
             getActiveTreeNode: 'query/getActiveTreeNode',
             getAlteredActiveNode: 'query/getAlteredActiveNode',
         }),
+        nodesHaveCtxMenu() {
+            const { SCHEMA, TABLE, SP, COL, TRIGGER } = this.SQL_NODE_TYPES
+            return [SCHEMA, TABLE, SP, COL, TRIGGER]
+        },
+        queryOpts() {
+            const {
+                SQL_TXT_EDITOR_OPT_TYPES: { QUERY },
+            } = this.SQL_NODE_CTX_OPTS
+            return [
+                { text: this.$t('previewData'), type: QUERY },
+                { text: this.$t('viewDetails'), type: QUERY },
+            ]
+        },
+        insertOpts() {
+            const {
+                SQL_TXT_EDITOR_OPT_TYPES: { INSERT },
+            } = this.SQL_NODE_CTX_OPTS
+            return [
+                {
+                    text: this.$t('placeToEditor'),
+                    children: [
+                        { text: this.$t('placeSchemaInEditorEscaped'), type: INSERT },
+                        { text: this.$t('placeSchemaInEditor'), type: INSERT },
+                        { text: this.$t('placeNameInEditorEscaped'), type: INSERT },
+                        { text: this.$t('placeNameInEditor'), type: INSERT },
+                    ],
+                },
+            ]
+        },
+        txtEditorRelatedOpts() {
+            return [...this.queryOpts, { divider: true }, ...this.insertOpts]
+        },
+        // basic node options for different node types
+        baseOptsMap() {
+            const { SCHEMA, TABLE, SP, COL, TRIGGER } = this.SQL_NODE_TYPES
+            const {
+                SQL_ADMIN_OPT_TYPES: { USE },
+            } = this.SQL_NODE_CTX_OPTS
+            return {
+                [SCHEMA]: [{ text: this.$t('useDb'), type: USE }, ...this.insertOpts],
+                [TABLE]: [...this.txtEditorRelatedOpts],
+                [SP]: [...this.insertOpts],
+                [COL]: [...this.insertOpts],
+                [TRIGGER]: [...this.insertOpts],
+            }
+        },
+        // more node options for user's nodes
+        userNodeOptsMap() {
+            const { SCHEMA, TABLE, SP, COL, TRIGGER } = this.SQL_NODE_TYPES
+            const {
+                SQL_DDL_OPT_TYPES: { DD },
+            } = this.SQL_NODE_CTX_OPTS
+            return {
+                [SCHEMA]: [{ text: this.$t('dropSchema'), type: DD }],
+                [TABLE]: [
+                    { text: this.$t('alterTbl'), type: DD },
+                    { text: this.$t('dropTbl'), type: DD },
+                    { text: this.$t('truncateTbl'), type: DD },
+                ],
+                [SP]: [{ text: this.$t('dropSp'), type: DD }],
+                [COL]: [],
+                [TRIGGER]: [{ text: this.$t('dropTrigger'), type: DD }],
+            }
+        },
         filter() {
             return (item, search, textKey) => item[textKey].indexOf(search) > -1
         },
@@ -188,7 +229,7 @@ export default {
         ...mapMutations({
             UPDATE_DB_TREE_MAP: 'query/UPDATE_DB_TREE_MAP',
             SET_EXPANDED_NODES: 'query/SET_EXPANDED_NODES',
-            SET_CURR_EDITOR_MODE_MAP: 'query/SET_CURR_EDITOR_MODE_MAP',
+            UPDATE_CURR_EDITOR_MODE_MAP: 'query/UPDATE_CURR_EDITOR_MODE_MAP',
             SET_CURR_DDL_COL_SPEC: 'query/SET_CURR_DDL_COL_SPEC',
             UPDATE_TBL_CREATION_INFO_MAP: 'query/UPDATE_TBL_CREATION_INFO_MAP',
         }),
@@ -243,103 +284,166 @@ export default {
         updateActiveNode(item) {
             this.activeNodes = [item]
         },
-        optionHandler({ item, option }) {
-            const schema = item.id
-            const txtEditorOptions = [
-                this.$t('previewData'),
-                this.$t('viewDetails'),
-                this.$t('placeSchemaInEditor'),
-                this.$t('placeColumnNameInEditor'),
-            ]
-            if (txtEditorOptions.includes(option))
-                this.SET_CURR_EDITOR_MODE_MAP({
+        /**
+         * @param {Object} item - node
+         * @param {Object} opt - context menu option
+         * @param {String} schema - node identifier
+         */
+        handleEmitQueryOpt({ item, opt, schema }) {
+            /**
+             * If altered_active_node exists, clear it first so that
+             * activeNodes can be updated
+             */
+            if (this.getAlteredActiveNode)
+                // Clear altered active node
+                this.UPDATE_TBL_CREATION_INFO_MAP({
                     id: this.active_wke_id,
-                    mode: this.SQL_EDITOR_MODES.TXT_EDITOR,
+                    payload: {
+                        altered_active_node: null,
+                    },
                 })
-
-            const prvwDataOpts = [this.$t('previewData'), this.$t('viewDetails')]
-            if (prvwDataOpts.includes(option)) {
-                /**
-                 * If altered_active_node exists, clear it first so that
-                 * activeNodes can be updated
-                 */
-                if (this.getAlteredActiveNode)
-                    // Clear altered active node
-                    this.UPDATE_TBL_CREATION_INFO_MAP({
-                        id: this.active_wke_id,
-                        payload: {
-                            altered_active_node: null,
-                        },
-                    })
-                this.updateActiveNode(item)
-            }
-            switch (option) {
+            this.updateActiveNode(item)
+            switch (opt.text) {
                 case this.$t('previewData'):
                     this.$emit('preview-data', schema)
                     break
                 case this.$t('viewDetails'):
                     this.$emit('view-details', schema)
                     break
-                case this.$t('placeSchemaInEditor'):
+            }
+        },
+        /**
+         * @param {Object} item - node
+         * @param {Object} opt - context menu option
+         * @param {String} schema - node identifier
+         */
+        handleEmitInsertOpt({ item, opt, schema }) {
+            switch (opt.text) {
+                case this.$t('placeSchemaInEditorEscaped'):
                     this.$emit('place-to-editor', this.$help.escapeIdentifiers(schema))
                     break
-                case this.$t('placeColumnNameInEditor'):
+                case this.$t('placeSchemaInEditor'):
+                    this.$emit('place-to-editor', schema)
+                    break
+                case this.$t('placeNameInEditorEscaped'):
                     this.$emit('place-to-editor', this.$help.escapeIdentifiers(item.name))
                     break
-                case this.$t('useDb'):
-                    this.$emit('use-db', schema)
+                case this.$t('placeNameInEditor'):
+                    this.$emit('place-to-editor', item.name)
                     break
+            }
+        },
+        /**
+         * @param {Object} item - node
+         * @param {Object} opt - context menu option
+         * @param {String} schema - node identifier
+         */
+        handleEmitDD_opt({ item, opt, schema }) {
+            switch (opt.text) {
                 case this.$t('alterTbl'):
                     {
-                        const alterActiveNode = { id: item.id, type: item.type, level: item.level }
+                        const alterActiveNode = {
+                            id: item.id,
+                            type: item.type,
+                            level: item.level,
+                        }
                         this.UPDATE_TBL_CREATION_INFO_MAP({
                             id: this.active_wke_id,
                             payload: {
                                 altered_active_node: alterActiveNode,
                             },
                         })
-                        this.SET_CURR_EDITOR_MODE_MAP({
+                        this.UPDATE_CURR_EDITOR_MODE_MAP({
                             id: this.active_wke_id,
-                            mode: this.SQL_EDITOR_MODES.DDL_EDITOR,
+                            payload: this.SQL_EDITOR_MODES.DDL_EDITOR,
                         })
                         this.SET_CURR_DDL_COL_SPEC(this.SQL_DDL_ALTER_SPECS.COLUMNS)
                         this.$emit('alter-tbl', alterActiveNode)
                     }
                     break
+                case this.$t('dropTbl'):
+                case this.$t('dropSchema'):
+                case this.$t('dropSp'):
+                case this.$t('dropTrigger'):
+                    this.$emit('drop-action', { id: schema, type: item.type })
+                    break
+                case this.$t('truncateTbl'):
+                    this.$emit('truncate-tbl', schema)
+                    break
+            }
+        },
+        /**
+         * @param {Object} item - node
+         * @param {Object} opt - context menu option
+         * @param {String} schema - node identifier
+         */
+        handleTxtEditorOpt({ item, opt, schema }) {
+            const {
+                SQL_TXT_EDITOR_OPT_TYPES: { INSERT, QUERY },
+            } = this.SQL_NODE_CTX_OPTS
+            this.UPDATE_CURR_EDITOR_MODE_MAP({
+                id: this.active_wke_id,
+                payload: this.SQL_EDITOR_MODES.TXT_EDITOR,
+            })
+            switch (opt.type) {
+                case QUERY:
+                    this.handleEmitQueryOpt({ item, opt, schema })
+                    break
+                case INSERT:
+                    this.handleEmitInsertOpt({ item, opt, schema })
+                    break
+            }
+        },
+        /**
+         * @param {Object} item - node
+         * @param {Object} opt - context menu option
+         */
+        optionHandler({ item, opt }) {
+            const schema = item.id
+            const {
+                SQL_TXT_EDITOR_OPT_TYPES: { INSERT, QUERY },
+                SQL_DDL_OPT_TYPES: { DD },
+                SQL_ADMIN_OPT_TYPES: { USE },
+            } = this.SQL_NODE_CTX_OPTS
+            switch (opt.type) {
+                case DD:
+                    this.handleEmitDD_opt({ item, opt, schema })
+                    break
+                case USE:
+                    this.$emit('use-db', schema)
+                    break
+                case INSERT:
+                case QUERY:
+                    this.handleTxtEditorOpt({ item, opt, schema })
+                    break
             }
         },
         iconSheet(item) {
+            const { SCHEMA, TABLES, SPS } = this.SQL_NODE_TYPES
             switch (item.type) {
-                case 'Schema':
+                case SCHEMA:
                     return '$vuetify.icons.database'
                 //TODO: a separate icon for Tables
-                case 'Tables':
+                case TABLES:
                     return '$vuetify.icons.table'
-                case 'Stored Procedures':
+                case SPS:
                     return '$vuetify.icons.storedProcedures'
                 //TODO: an icon for Column
             }
         },
-        getOptions(node) {
-            switch (node.type) {
-                case 'Schema':
-                    return this.schemaOptions
-                case 'Table':
-                    if (node.isSysTbl) return this.tableOptions
-                    else return [...this.tableOptions, ...this.userTblOptions]
-                case 'Stored Procedure':
-                    return this.spOptions
-                case 'Column':
-                    return this.columnOptions
-                case 'Trigger':
-                    return this.triggerOptions
-            }
+        getNodeOpts(node) {
+            if (node.isSys) return this.baseOptsMap[node.type]
+            return [
+                ...this.baseOptsMap[node.type],
+                { divider: true },
+                ...this.userNodeOptsMap[node.type],
+            ]
         },
         onNodeClick(item) {
             if (item.canBeHighlighted) this.$emit('preview-data', this.activeNodes[0].id)
         },
         onContextMenu({ e, item }) {
-            if (this.nodesHasCtxMenu.includes(item.type)) this.handleOpenCtxMenu({ e, item })
+            if (this.nodesHaveCtxMenu.includes(item.type)) this.handleOpenCtxMenu({ e, item })
         },
         onNodeDragStart(e) {
             e.preventDefault()

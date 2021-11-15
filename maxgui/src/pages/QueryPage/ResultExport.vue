@@ -60,6 +60,7 @@
                                     :items="fileFormats"
                                     outlined
                                     dense
+                                    :height="36"
                                     class="std mariadb-select-input error--text__bottom"
                                     :menu-props="{
                                         contentClass: 'mariadb-select-v-menu',
@@ -118,6 +119,7 @@
                                     item-value="val"
                                     outlined
                                     dense
+                                    :height="36"
                                     class="std mariadb-select-input error--text__bottom"
                                     :menu-props="{
                                         contentClass: 'mariadb-select-v-menu',

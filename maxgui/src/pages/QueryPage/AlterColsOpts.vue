@@ -104,7 +104,7 @@
                             colIdx,
                             rowObj: rowDataToObj(rowData),
                         }"
-                        :height="30"
+                        :height="28"
                         :defTblCharset="defTblCharset"
                         :defTblCollation="defTblCollation"
                         :dataTypes="dataTypes"

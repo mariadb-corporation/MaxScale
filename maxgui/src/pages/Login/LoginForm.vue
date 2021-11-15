@@ -21,6 +21,7 @@
                         autocomplete="username"
                         autofocus
                         dense
+                        :height="36"
                         single-line
                         outlined
                         required
@@ -38,6 +39,7 @@
                         autocomplete="current-password"
                         single-line
                         dense
+                        :height="36"
                         outlined
                         required
                         :placeholder="$t('password')"
@@ -108,7 +110,7 @@ export default {
             isLoading: false,
 
             isPwdVisible: false,
-            rememberMe: false,
+            rememberMe: true,
             credential: {
                 username: '',
                 password: '',

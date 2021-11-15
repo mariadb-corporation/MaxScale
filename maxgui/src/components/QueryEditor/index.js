@@ -12,6 +12,7 @@
  */
 import { languageConfiguration, languageTokens } from './mariadbLang'
 import './customStyle.css'
+import { mapState } from 'vuex'
 export default {
     name: 'query-editor',
     props: {
@@ -20,6 +21,7 @@ export default {
         readOnly: { type: Boolean, default: false },
         options: { type: Object, default: () => {} },
         isKeptAlive: { type: Boolean, default: false },
+        skipRegCompleters: { type: Boolean, default: false },
     },
 
     model: {
@@ -38,6 +40,7 @@ export default {
         },
     },
     computed: {
+        ...mapState({ SQL_NODE_TYPES: state => state.app_config.SQL_NODE_TYPES }),
         builtInCmplItems() {
             const keywordCmplItems = languageTokens.keywords.map(s => ({
                 label: s,
@@ -55,13 +58,14 @@ export default {
         },
         custCmplList() {
             const dist = this.$help.lodash.cloneDeep(this.cmplList)
+            const { SCHEMA, TABLE, SP, TRIGGER, COL } = this.SQL_NODE_TYPES
             for (const item of dist) {
                 switch (item.type) {
-                    case 'Table':
-                    case 'Column':
-                    case 'Schema':
-                    case 'Stored Procedure':
-                    case 'Trigger':
+                    case SCHEMA:
+                    case TABLE:
+                    case SP:
+                    case COL:
+                    case TRIGGER:
                         item.kind = this.monaco.languages.CompletionItemKind.Text
                 }
             }
@@ -86,10 +90,12 @@ export default {
         if (this.editor) this.editor.dispose()
     },
     activated() {
-        if (this.isKeptAlive && !this.readOnly) this.regCompleters(this.monaco)
+        if (this.isKeptAlive && !this.readOnly && !this.skipRegCompleters)
+            this.regCompleters(this.monaco)
     },
     deactivated() {
-        if (this.isKeptAlive && !this.readOnly) this.handleDisposeCompletionProvider()
+        if (this.isKeptAlive && !this.readOnly && !this.skipRegCompleters)
+            this.handleDisposeCompletionProvider()
     },
     methods: {
         initMonaco(monaco) {
@@ -160,7 +166,7 @@ export default {
                 ...this.options,
             })
             if (!this.readOnly) {
-                if (!this.isKeptAlive) this.regCompleters(monaco)
+                if (!this.isKeptAlive && !this.skipRegCompleters) this.regCompleters(monaco)
                 this.regDocFormattingProvider(monaco)
                 this.addWatchers(this.editor)
                 this.addCustomCmds(monaco)
@@ -177,6 +183,10 @@ export default {
                 ],
             })
         },
+        /**
+         * Should be called once https://github.com/microsoft/monaco-editor/issues/1957
+         * @param {Object} monaco
+         */
         regCompleters(monaco) {
             const scope = this
             this.completionProvider = monaco.languages.registerCompletionItemProvider(

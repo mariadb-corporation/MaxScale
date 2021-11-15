@@ -29,6 +29,7 @@ import SplitPane from './SplitPane'
 import MTreeVIew from './MTreeView'
 import VirtualScrollTable from './VirtualScrollTable'
 import TruncateString from './TruncateString'
+import SubMenu from './SubMenu'
 
 export default {
     'page-wrapper': PageWrapper,
@@ -47,4 +48,5 @@ export default {
     'm-treeview': MTreeVIew,
     'virtual-scroll-table': VirtualScrollTable,
     'truncate-string': TruncateString,
+    'sub-menu': SubMenu,
 }

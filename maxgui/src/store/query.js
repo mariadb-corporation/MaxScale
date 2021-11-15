@@ -82,6 +82,29 @@ export function defWorksheetState() {
         ...saWkeStates(),
     }
 }
+/**
+ * Below states are stored in hash map structure.
+ * Using worksheet's id as key. This helps to preserve
+ * multiple worksheet's data in memory.
+ * Use `memStatesMutationCreator` to create corresponding mutations
+ * @returns {Object} - returns states that are stored in memory
+ */
+function memStates() {
+    return {
+        // connection related states
+        is_querying_map: {},
+        // sidebar states
+        db_tree_map: {},
+        exe_stmt_result_map: {},
+        // editor states
+        curr_editor_mode_map: {},
+        tbl_creation_info_map: {},
+        // results states
+        prvw_data_map: {},
+        prvw_data_details_map: {},
+        query_results_map: {},
+    }
+}
 
 /**
  * This helps to update standalone worksheet state
@@ -110,6 +133,37 @@ function patch_wke_property(state, { obj, scope, active_wke_id }) {
     update_standalone_wke_state(state, obj)
 }
 
+/**
+ * This function helps to generate vuex mutations for states are
+ * stored in memory, i.e. states return from memStates().
+ * The name of mutation follows this pattern UPDATE_STATE_NAME. e.g. mutation
+ * for is_querying_map state is UPDATE_IS_QUERYING_MAP
+ * @returns {Object} - returns vuex mutations
+ */
+function memStatesMutationCreator() {
+    let mutations = {}
+    Object.keys(memStates()).forEach(key => {
+        // Use function instead of arrow func in order to access `this.vue`
+        mutations[`UPDATE_${key.toUpperCase()}`] = function(state, { id, payload }) {
+            if (!payload) this.vue.$delete(state[key], id)
+            else {
+                switch (key) {
+                    case 'is_querying_map':
+                    case 'curr_editor_mode_map':
+                        state[key] = { ...state[key], [id]: payload }
+                        break
+                    default:
+                        state[key] = {
+                            ...state[key],
+                            ...{ [id]: { ...state[key][id], ...payload } },
+                        }
+                        break
+                }
+            }
+        }
+    })
+    return mutations
+}
 export default {
     namespaced: true,
     state: {
@@ -127,24 +181,7 @@ export default {
         worksheets_arr: [defWorksheetState()], // persisted
         active_wke_id: '',
         cnct_resources: [],
-        /**
-         * Below states are stored in hash map structure.
-         * Using worksheet's id as key. This helps to preserve
-         * multiple worksheet's data in memory
-         */
-        // connection related states
-        is_querying_map: {},
-        // sidebar states
-        sysSchemas: ['information_schema', 'performance_schema', 'mysql', 'sys'],
-        db_tree_map: {},
-        // editor states
-        curr_editor_mode_map: {},
-        tbl_creation_info_map: {},
-        altering_table_result_map: {},
-        // results states
-        prvw_data_map: {},
-        prvw_data_details_map: {},
-        query_results_map: {},
+        ...memStates(),
         /**
          * Below is standalone wke states. The value
          * of each state is replicated from current active
@@ -158,6 +195,7 @@ export default {
         ...saWkeStates(),
     },
     mutations: {
+        ...memStatesMutationCreator(),
         //Toolbar mutations
         SET_FULLSCREEN(state, payload) {
             state.is_fullscreen = payload
@@ -173,14 +211,6 @@ export default {
                 scope: this,
                 active_wke_id,
             })
-        },
-        UPDATE_IS_QUERYING_MAP(state, { id, payload }) {
-            if (!payload) this.vue.$delete(state.is_querying_map, id)
-            else
-                state.is_querying_map = {
-                    ...state.is_querying_map,
-                    [id]: payload,
-                }
         },
 
         // Sidebar tree schema mutations
@@ -198,14 +228,6 @@ export default {
                 active_wke_id: state.active_wke_id,
             })
         },
-        UPDATE_DB_TREE_MAP(state, { id, payload }) {
-            if (!payload) this.vue.$delete(state.db_tree_map, id)
-            else
-                state.db_tree_map = {
-                    ...state.db_tree_map,
-                    ...{ [id]: { ...state.db_tree_map[id], ...payload } },
-                }
-        },
         SET_EXPANDED_NODES(state, payload) {
             patch_wke_property(state, {
                 obj: { expanded_nodes: payload },
@@ -215,14 +237,6 @@ export default {
         },
 
         // editor mutations
-        SET_CURR_EDITOR_MODE_MAP(state, { id, mode }) {
-            if (!mode) this.vue.$delete(state.curr_editor_mode_map, id)
-            else
-                state.curr_editor_mode_map = {
-                    ...state.curr_editor_mode_map,
-                    ...{ [id]: mode },
-                }
-        },
         SET_QUERY_TXT(state, payload) {
             patch_wke_property(state, {
                 obj: { query_txt: payload },
@@ -240,14 +254,6 @@ export default {
                 active_wke_id: state.active_wke_id,
             })
         },
-        UPDATE_TBL_CREATION_INFO_MAP(state, { id, payload }) {
-            if (!payload) this.vue.$delete(state.tbl_creation_info_map, id)
-            else
-                state.tbl_creation_info_map = {
-                    ...state.tbl_creation_info_map,
-                    ...{ [id]: { ...state.tbl_creation_info_map[id], ...payload } },
-                }
-        },
         SET_CHARSET_COLLATION_MAP(state, payload) {
             state.charset_collation_map = payload
         },
@@ -256,14 +262,6 @@ export default {
         },
         SET_ENGINES(state, payload) {
             state.engines = payload
-        },
-        UPDATE_ALTERING_TABLE_RESULT_MAP(state, { id, payload }) {
-            if (!payload) this.vue.$delete(state.altering_table_result_map, id)
-            else
-                state.altering_table_result_map = {
-                    ...state.altering_table_result_map,
-                    ...{ [id]: { ...state.altering_table_result_map[id], ...payload } },
-                }
         },
         // Toolbar mutations
         SET_RC_TARGET_NAMES_MAP(state, payload) {
@@ -306,31 +304,6 @@ export default {
                 active_wke_id: state.active_wke_id,
             })
         },
-        UPDATE_PRVW_DATA_MAP(state, { id, payload }) {
-            if (!payload) this.vue.$delete(state.prvw_data_map, id)
-            else
-                state.prvw_data_map = {
-                    ...state.prvw_data_map,
-                    ...{ [id]: { ...state.prvw_data_map[id], ...payload } },
-                }
-        },
-        UPDATE_PRVW_DATA_DETAILS_MAP(state, { id, payload }) {
-            if (!payload) this.vue.$delete(state.prvw_data_details_map, id)
-            else
-                state.prvw_data_details_map = {
-                    ...state.prvw_data_details_map,
-                    ...{ [id]: { ...state.prvw_data_details_map[id], ...payload } },
-                }
-        },
-        UPDATE_QUERY_RESULTS_MAP(state, { id, payload }) {
-            if (!payload) this.vue.$delete(state.query_results_map, id)
-            else
-                state.query_results_map = {
-                    ...state.query_results_map,
-                    ...{ [id]: { ...state.query_results_map[id], ...payload } },
-                }
-        },
-
         // worksheet mutations
         ADD_NEW_WKE(state) {
             state.worksheets_arr.push(defWorksheetState())
@@ -562,17 +535,18 @@ export default {
         async getDbs({ state, commit, rootState }) {
             const curr_cnct_resource = state.curr_cnct_resource
             try {
+                const {
+                    SQL_NODE_TYPES: { SCHEMA, TABLES, SPS },
+                    SQL_SYS_SCHEMAS: SYS_S,
+                } = rootState.app_config
                 let sql = 'SELECT * FROM information_schema.SCHEMATA'
                 if (!rootState.persisted.query_show_sys_schemas_flag)
-                    sql += ` WHERE SCHEMA_NAME NOT IN(${state.sysSchemas
-                        .map(db => `'${db}'`)
-                        .join(',')})`
+                    sql += ` WHERE SCHEMA_NAME NOT IN(${SYS_S.map(db => `'${db}'`).join(',')})`
                 const res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
                     sql,
                 })
                 let cmpList = []
                 let db_tree = []
-                const nodeType = 'Schema'
                 if (res.data.data.attributes.results[0].data) {
                     const dataRows = this.vue.$help.getObjectRows({
                         columns: res.data.data.attributes.results[0].fields,
@@ -581,29 +555,30 @@ export default {
                     dataRows.forEach(row => {
                         db_tree.push({
                             key: uniqueId('node_key_'),
-                            type: nodeType,
+                            type: SCHEMA,
                             name: row.SCHEMA_NAME,
                             id: row.SCHEMA_NAME,
                             data: row,
                             draggable: true,
                             level: 0,
+                            isSys: SYS_S.includes(row.SCHEMA_NAME.toLowerCase()),
                             children: [
                                 {
                                     key: uniqueId('node_key_'),
-                                    type: 'Tables',
-                                    name: 'Tables',
+                                    type: TABLES,
+                                    name: TABLES,
                                     // only use to identify active node
-                                    id: `${row.SCHEMA_NAME}.Tables`,
+                                    id: `${row.SCHEMA_NAME}.${TABLES}`,
                                     draggable: false,
                                     level: 1,
                                     children: [],
                                 },
                                 {
                                     key: uniqueId('node_key_'),
-                                    type: 'Stored Procedures',
-                                    name: 'Stored Procedures',
+                                    type: SPS,
+                                    name: SPS,
                                     // only use to identify active node
-                                    id: `${row.SCHEMA_NAME}.Stored Procedures`,
+                                    id: `${row.SCHEMA_NAME}.${SPS}`,
                                     draggable: false,
                                     level: 1,
                                     children: [],
@@ -614,7 +589,7 @@ export default {
                             label: row.SCHEMA_NAME,
                             detail: 'SCHEMA',
                             insertText: `\`${row.SCHEMA_NAME}\``,
-                            type: nodeType,
+                            type: SCHEMA,
                         })
                     })
                 } else {
@@ -637,33 +612,34 @@ export default {
             }
         },
         /**
-         * @param {Object} node - node child of db node object. Either type `Tables` or `Stored Procedures`
+         * @param {Object} node - node child of db node object. Either type TABLES or SPS
          * @returns {Object} { dbName, gch, cmpList }
          */
-        async getDbGrandChild({ state }, node) {
+        async getDbGrandChild({ state, rootState }, node) {
             const curr_cnct_resource = state.curr_cnct_resource
             try {
-                let dbName
-                let query
-                let grandChildNodeType
-                let rowName
+                let dbName, grandChildNodeType, rowName, query
+                const {
+                    SQL_NODE_TYPES: { TABLES, TABLE, SPS, SP, COLS, TRIGGERS },
+                    SQL_SYS_SCHEMAS: SYS_S,
+                } = rootState.app_config
+                // a db node id is formed by dbName.node_type So getting dbName by removing node type part from id.
+                let reg = `\\b.${node.type}\\b`
+                dbName = node.id.replace(new RegExp(reg, 'g'), '')
                 switch (node.type) {
-                    case 'Tables':
-                        dbName = node.id.replace(/\.Tables/g, '')
-                        grandChildNodeType = 'Table'
+                    case TABLES:
+                        grandChildNodeType = TABLE
                         rowName = 'TABLE_NAME'
                         // eslint-disable-next-line vue/max-len
                         query = `SELECT TABLE_NAME, CREATE_TIME, TABLE_TYPE, TABLE_ROWS, ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${dbName}';`
                         break
-                    case 'Stored Procedures':
-                        dbName = node.id.replace(/\.Stored Procedures/g, '')
-                        grandChildNodeType = 'Stored Procedure'
+                    case SPS:
+                        grandChildNodeType = SP
                         rowName = 'ROUTINE_NAME'
                         // eslint-disable-next-line vue/max-len
                         query = `SELECT ROUTINE_NAME, CREATED FROM information_schema.ROUTINES WHERE ROUTINE_TYPE = 'PROCEDURE' AND ROUTINE_SCHEMA = '${dbName}';`
                         break
                 }
-                // eslint-disable-next-line vue/max-len
                 const res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
                     sql: query,
                 })
@@ -683,28 +659,28 @@ export default {
                         draggable: true,
                         data: row,
                         level: 2,
-                        isSysTbl: state.sysSchemas.includes(dbName.toLowerCase()),
+                        isSys: SYS_S.includes(dbName.toLowerCase()),
                     }
-                    // For child node of Tables, it has canBeHighlighted and children props
-                    if (node.type === 'Tables') {
+                    // For child node of TABLES, it has canBeHighlighted and children props
+                    if (node.type === TABLES) {
                         grandChildNode.canBeHighlighted = true
                         grandChildNode.children = [
                             {
                                 key: uniqueId('node_key_'),
-                                type: 'Columns',
-                                name: 'Columns',
+                                type: COLS,
+                                name: COLS,
                                 // only use to identify active node
-                                id: `${dbName}.${row[rowName]}.Columns`,
+                                id: `${dbName}.${row[rowName]}.${COLS}`,
                                 draggable: false,
                                 children: [],
                                 level: 3,
                             },
                             {
                                 key: uniqueId('node_key_'),
-                                type: 'Triggers',
-                                name: 'Triggers',
+                                type: TRIGGERS,
+                                name: TRIGGERS,
                                 // only use to identify active node
-                                id: `${dbName}.${row[rowName]}.Triggers`,
+                                id: `${dbName}.${row[rowName]}.${TRIGGERS}`,
                                 draggable: false,
                                 children: [],
                                 level: 3,
@@ -730,23 +706,25 @@ export default {
          * @param {Object} node - node object. Either type `Triggers` or `Columns`
          * @returns {Object} { dbName, tblName, gch, cmpList }
          */
-        async getTableGrandChild({ state }, node) {
+        async getTableGrandChild({ state, rootState }, node) {
             const curr_cnct_resource = state.curr_cnct_resource
             try {
                 const dbName = node.id.split('.')[0]
                 const tblName = node.id.split('.')[1]
-                let query
-                let nodeType
-                let rowName
+                const {
+                    SQL_NODE_TYPES: { COLS, COL, TRIGGERS, TRIGGER },
+                    SQL_SYS_SCHEMAS: SYS_S,
+                } = rootState.app_config
+                let grandChildNodeType, rowName, query
                 switch (node.type) {
-                    case 'Triggers':
-                        nodeType = 'Trigger'
+                    case TRIGGERS:
+                        grandChildNodeType = TRIGGER
                         rowName = 'TRIGGER_NAME'
                         // eslint-disable-next-line vue/max-len
                         query = `SELECT TRIGGER_NAME, CREATED, EVENT_MANIPULATION, ACTION_STATEMENT FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA='${dbName}' AND EVENT_OBJECT_TABLE = '${tblName}';`
                         break
-                    case 'Columns':
-                        nodeType = 'Column'
+                    case COLS:
+                        grandChildNodeType = COL
                         rowName = 'COLUMN_NAME'
                         // eslint-disable-next-line vue/max-len
                         query = `SELECT COLUMN_NAME, COLUMN_TYPE, COLUMN_KEY, PRIVILEGES FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = "${dbName}" AND TABLE_NAME = "${tblName}";`
@@ -767,18 +745,19 @@ export default {
                 dataRows.forEach(row => {
                     gch.push({
                         key: uniqueId('node_key_'),
-                        type: nodeType,
+                        type: grandChildNodeType,
                         name: row[rowName],
                         id: `${dbName}.${row[rowName]}`,
                         draggable: true,
                         data: row,
                         level: 4,
+                        isSys: SYS_S.includes(dbName.toLowerCase()),
                     })
                     cmpList.push({
                         label: row[rowName],
-                        detail: nodeType.toUpperCase(),
+                        detail: grandChildNodeType.toUpperCase(),
                         insertText: row[rowName],
-                        type: nodeType,
+                        type: grandChildNodeType,
                     })
                 })
                 return { dbName, tblName, gch, cmpList }
@@ -793,11 +772,12 @@ export default {
          * @param {Array} payload.cmpList - Array of completion list for editor
          * @returns {Array} { new_db_tree: {}, new_cmp_list: [] }
          */
-        async getTreeData({ dispatch }, { node, db_tree, cmpList }) {
+        async getTreeData({ dispatch, rootState }, { node, db_tree, cmpList }) {
             try {
+                const { TABLES, SPS, COLS, TRIGGERS } = rootState.app_config.SQL_NODE_TYPES
                 switch (node.type) {
-                    case 'Tables':
-                    case 'Stored Procedures': {
+                    case TABLES:
+                    case SPS: {
                         const { gch, cmpList: partCmpList, dbName } = await dispatch(
                             'getDbGrandChild',
                             node
@@ -808,11 +788,10 @@ export default {
                             childType: node.type,
                             gch,
                         })
-
                         return { new_db_tree, new_cmp_list: [...cmpList, ...partCmpList] }
                     }
-                    case 'Columns':
-                    case 'Triggers': {
+                    case COLS:
+                    case TRIGGERS: {
                         const { gch, cmpList: partCmpList, dbName, tblName } = await dispatch(
                             'getTableGrandChild',
                             node
@@ -853,7 +832,7 @@ export default {
                 actionName: 'updateTreeNodes',
             })
         },
-        async reloadTreeNodes({ commit, dispatch, state }) {
+        async reloadTreeNodes({ commit, dispatch, state, rootState }) {
             const active_wke_id = state.active_wke_id
             const expanded_nodes = this.vue.$help.lodash.cloneDeep(state.expanded_nodes)
             await dispatch('queryingActionWrapper', {
@@ -868,16 +847,13 @@ export default {
                     if (db_tree.length) {
                         let tree = db_tree
                         let completionList = cmpList
-                        const hasChildNodes = ['Tables', 'Stored Procedures', 'Columns', 'Triggers']
-                        for (let i = 0; i < expanded_nodes.length; i++) {
-                            if (hasChildNodes.includes(expanded_nodes[i].type)) {
+                        const { TABLES, SPS, COLS, TRIGGERS } = rootState.app_config.SQL_NODE_TYPES
+                        const nodesHaveChild = [TABLES, SPS, COLS, TRIGGERS]
+                        for (const node of expanded_nodes) {
+                            if (nodesHaveChild.includes(node.type)) {
                                 const { new_db_tree, new_cmp_list } = await dispatch(
                                     'getTreeData',
-                                    {
-                                        node: expanded_nodes[i],
-                                        db_tree: tree,
-                                        cmpList: completionList,
-                                    }
+                                    { node, db_tree: tree, cmpList: completionList }
                                 )
                                 if (!this.vue.$typy(new_db_tree).isEmptyObject) tree = new_db_tree
                                 if (completionList.length) completionList = new_cmp_list
@@ -1208,53 +1184,58 @@ export default {
             })
         },
 
-        async alterTable({ state, rootState, dispatch, commit, getters }, sql) {
+        /**
+         * This action is used to execute statement or statements.
+         * Since users are allowed to modify the auto-generated SQL statement,
+         * they can add more SQL statements after or before the auto-generated statement
+         * which may receive error. As a result, the action log still log it as a failed action.
+         * This can be fixed if a SQL parser is introduced.
+         * @param {String} payload.sql - sql to be executed
+         * @param {String} payload.action - action name. e.g. DROP TABLE table_name
+         * @param {Boolean} payload.showSnackbar - show successfully snackbar message
+         */
+        async exeStmtAction(
+            { state, rootState, dispatch, commit },
+            { sql, action, showSnackbar = true }
+        ) {
             const curr_cnct_resource = state.curr_cnct_resource
             const active_wke_id = state.active_wke_id
             const request_sent_time = new Date().valueOf()
             await dispatch('queryingActionWrapper', {
                 action: async () => {
-                    commit('UPDATE_ALTERING_TABLE_RESULT_MAP', {
-                        id: active_wke_id,
-                        payload: {
-                            is_altering_table: true,
-                        },
-                    })
+                    let stmt_err_msg_obj = {}
                     let res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
                         sql,
                         max_rows: rootState.persisted.query_max_rows,
                     })
-                    commit('UPDATE_ALTERING_TABLE_RESULT_MAP', {
+                    const results = this.vue.$typy(res, 'data.data.attributes.results').safeArray
+                    const errMsgs = results.filter(res => this.vue.$typy(res, 'errno').isDefined)
+                    // if multi statement mode, it'll still return only an err msg obj
+                    if (errMsgs.length) stmt_err_msg_obj = errMsgs[0]
+                    commit('UPDATE_EXE_STMT_RESULT_MAP', {
                         id: active_wke_id,
                         payload: {
-                            is_altering_table: false,
                             data: res.data.data.attributes,
+                            stmt_err_msg_obj,
                         },
                     })
-                    const isQueryFailed = Boolean(
-                        this.vue.$typy(res.data.data.attributes, 'results[0].errno').safeObject
-                    )
-                    const tblToBeAltered = this.vue.$help.escapeIdentifiers(
-                        getters.getAlteredActiveNode.id
-                    )
-                    let queryName = `Apply changes to ${tblToBeAltered}`
-                    if (!isQueryFailed)
-                        commit(
-                            'SET_SNACK_BAR_MESSAGE',
-                            {
-                                text: [this.i18n.t('info.alterTableSuccessfully')],
-                                type: 'success',
-                            },
-                            { root: true }
-                        )
+                    let queryAction
+                    if (!this.vue.$typy(stmt_err_msg_obj).isEmptyObject)
+                        queryAction = this.i18n.t('errors.failedToExeAction', { action })
                     else {
-                        queryName = `Failed to apply changes to ${tblToBeAltered}`
+                        queryAction = this.i18n.t('info.exeActionSuccessfully', { action })
+                        if (showSnackbar)
+                            commit(
+                                'SET_SNACK_BAR_MESSAGE',
+                                { text: [queryAction], type: 'success' },
+                                { root: true }
+                            )
                     }
                     dispatch(
                         'persisted/pushQueryLog',
                         {
                             startTime: request_sent_time,
-                            name: queryName,
+                            name: queryAction,
                             sql,
                             res,
                             connection_name: curr_cnct_resource.name,
@@ -1263,12 +1244,11 @@ export default {
                         { root: true }
                     )
                 },
-                actionName: 'alterTable',
+                actionName: 'exeStmtAction',
                 catchAction: e => {
-                    commit('UPDATE_ALTERING_TABLE_RESULT_MAP', {
+                    commit('UPDATE_EXE_STMT_RESULT_MAP', {
                         id: active_wke_id,
                         payload: {
-                            is_altering_table: false,
                             result: this.vue.$help.getErrorsArr(e),
                         },
                     })
@@ -1285,15 +1265,9 @@ export default {
             })
         },
         releaseMemory({ commit }, wkeId) {
-            const payload = { id: wkeId }
-            commit('UPDATE_QUERY_RESULTS_MAP', payload)
-            commit('UPDATE_DB_TREE_MAP', payload)
-            commit('UPDATE_PRVW_DATA_DETAILS_MAP', payload)
-            commit('UPDATE_PRVW_DATA_MAP', payload)
-            commit('UPDATE_IS_QUERYING_MAP', payload)
-            commit('SET_CURR_EDITOR_MODE_MAP', payload)
-            commit('UPDATE_TBL_CREATION_INFO_MAP', payload)
-            commit('UPDATE_ALTERING_TABLE_RESULT_MAP', payload)
+            Object.keys(memStates()).forEach(key => {
+                commit(`UPDATE_${key.toUpperCase()}`, { id: wkeId })
+            })
         },
         resetAllWkeStates({ state, commit }) {
             for (const [idx, targetWke] of state.worksheets_arr.entries()) {
@@ -1448,12 +1422,7 @@ export default {
             const { altered_active_node = null } = getters.getTblCreationInfo
             return altered_active_node
         },
-        // altering_table_result_map getters
-        getAlteringTableResultMap: state =>
-            state.altering_table_result_map[state.active_wke_id] || {},
-        getIsAlteringTable: (state, getters) => {
-            const { is_altering_table = false } = getters.getAlteringTableResultMap
-            return is_altering_table
-        },
+        // exe_stmt_result_map getters
+        getExeStmtResultMap: state => state.exe_stmt_result_map[state.active_wke_id] || {},
     },
 }

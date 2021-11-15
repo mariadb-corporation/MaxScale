@@ -11,7 +11,7 @@
  * Public License.
  */
 import { immutableUpdate } from 'utils/helpers'
-
+import { APP_CONFIG } from 'utils/constants'
 // private functions
 /**
  * @private
@@ -85,7 +85,11 @@ function updateTblChild({ db_tree, dbName, tblName, gch, childType }) {
     try {
         const dbIdx = getDbIdx({ dbName, db_tree })
         // idx of Tables node
-        const idxOfTablesNode = getIdxOfDbChildNode({ dbIdx, db_tree, childType: 'Tables' })
+        const idxOfTablesNode = getIdxOfDbChildNode({
+            dbIdx,
+            db_tree,
+            childType: APP_CONFIG.SQL_NODE_TYPES.TABLES,
+        })
         const tblIdx = db_tree[dbIdx].children[idxOfTablesNode].children.findIndex(
             tbl => tbl.name === tblName
         )

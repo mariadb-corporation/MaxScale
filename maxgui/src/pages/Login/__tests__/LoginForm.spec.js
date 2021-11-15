@@ -102,16 +102,21 @@ describe('LoginForm.vue', async () => {
         expect(input.find('[type = "text"]').exists()).to.be.equal(true)
     })
 
-    it('Should toggle the value of rememberMe', async () => {
-        await mockupCheckingTheBox(wrapper) // checked
+    it('Should have rememberMe checked by default', async () => {
         expect(wrapper.vm.$data.rememberMe).to.be.true
+    })
+
+    it('Should toggle the value of rememberMe', async () => {
         await mockupCheckingTheBox(wrapper) // unchecked
         expect(wrapper.vm.$data.rememberMe).to.be.false
+        await mockupCheckingTheBox(wrapper) // checked
+        expect(wrapper.vm.$data.rememberMe).to.be.true
     })
 
     it('Should send auth request when remember me is not chosen', async () => {
         await inputChangeMock(wrapper, 'admin', '#username')
         await inputChangeMock(wrapper, 'mariadb', '#password')
+        await mockupCheckingTheBox(wrapper) // unchecked
         await wrapper.find('.login-btn').trigger('click') //submit
 
         loginAxiosStub.should.have.been.calledWith('/auth?persist=yes', {
@@ -120,7 +125,6 @@ describe('LoginForm.vue', async () => {
     })
 
     it('Should send auth request when remember me is chosen', async () => {
-        await mockupCheckingTheBox(wrapper) // checked
         await inputChangeMock(wrapper, 'maxskysql', '#username')
         await inputChangeMock(wrapper, 'skysql', '#password')
         await wrapper.find('.login-btn').trigger('click') //submit
@@ -134,7 +138,7 @@ describe('LoginForm.vue', async () => {
         await inputChangeMock(wrapper, 'maxskysql', '#username')
         await inputChangeMock(wrapper, 'skysql', '#password')
         await wrapper.find('.login-btn').trigger('click') //submit
-        loginAxiosStub.should.have.been.calledWith('/auth?persist=yes', {
+        loginAxiosStub.should.have.been.calledWith('/auth?persist=yes&max-age=86400', {
             auth: { username: 'maxskysql', password: 'skysql' },
         })
         await wrapper.vm.$nextTick(() =>

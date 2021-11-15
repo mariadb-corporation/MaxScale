@@ -29,7 +29,7 @@
                             :rules="rules.table_name"
                             required
                             name="table_name"
-                            :height="30"
+                            :height="28"
                             class="std error--text__bottom"
                             hide-details="auto"
                             dense
@@ -46,7 +46,7 @@
                             single-line
                             outlined
                             dense
-                            :height="30"
+                            :height="28"
                             hide-details="auto"
                         />
                     </v-col>
@@ -68,7 +68,7 @@
                                 offsetY: true,
                             }"
                             dense
-                            :height="30"
+                            :height="28"
                             hide-details="auto"
                         />
                     </v-col>
@@ -79,7 +79,7 @@
                         <charset-input
                             v-model="tableOptsData.table_charset"
                             :defCharset="defDbCharset"
-                            :height="30"
+                            :height="28"
                             @on-input="onInputCharset"
                         />
                     </v-col>
@@ -90,7 +90,7 @@
                         <collation-input
                             v-model="tableOptsData.table_collation"
                             :defCollation="defCollation"
-                            :height="30"
+                            :height="28"
                             :charset="tableOptsData.table_charset"
                         />
                     </v-col>

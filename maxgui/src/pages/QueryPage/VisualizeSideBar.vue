@@ -40,14 +40,14 @@
                 <div v-if="$typy(resSet, 'data').isEmptyArray" class="mt-4 color text-small-text">
                     {{ $t('emptySet') }}
                 </div>
-                <template v-for="a in ['x', 'y']" v-else>
-                    <div :key="a" class="mt-2">
+                <template v-else>
+                    <div v-for="(_, axisName) in axis" :key="axisName" class="mt-2">
                         <label class="field__label color text-small-text text-capitalize">
-                            {{ a }} axis
+                            {{ axisName }} axis
                         </label>
                         <v-select
-                            v-model="axis[a]"
-                            :items="a === 'y' ? yAxisFields : xAxisFields"
+                            v-model="axis[axisName]"
+                            :items="axisName === 'y' ? yAxisFields : xAxisFields"
                             outlined
                             class="std mariadb-select-input error--text__bottom"
                             :menu-props="{
@@ -120,6 +120,7 @@ export default {
         ...mapGetters({
             getPrvwDataRes: 'query/getPrvwDataRes',
             getResults: 'query/getResults',
+            getActiveTreeNode: 'query/getActiveTreeNode',
         }),
         resultSets() {
             let resSets = []
@@ -140,7 +141,7 @@ export default {
                 this.$typy(this.getPrvwDataRes(this.SQL_QUERY_MODES.PRVW_DATA)).safeObject
             )
             if (!this.$typy(prvwData).isEmptyObject) {
-                prvwData.id = this.$t('previewData')
+                prvwData.id = `${this.$t('previewData')} for ${this.getActiveTreeNode.id}`
                 resSets.push(prvwData)
             }
 
@@ -149,7 +150,7 @@ export default {
             )
 
             if (!this.$typy(prvwDataDetails).isEmptyObject) {
-                prvwDataDetails.id = this.$t('viewDetails')
+                prvwDataDetails.id = `${this.$t('viewDetails')} for ${this.getActiveTreeNode.id}`
                 resSets.push(prvwDataDetails)
             }
             return resSets
@@ -232,7 +233,7 @@ export default {
         },
     },
     deactivated() {
-        this.rmResultSetsWatcher()
+        if (this.rmResultSetsWatcher) this.rmResultSetsWatcher()
     },
     activated() {
         this.addResultSetsWatcher()

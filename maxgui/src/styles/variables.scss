@@ -147,3 +147,6 @@ $data-table-dense-header-height: 30px;
 
 // label font size for control inputs .e.g. v-radio, v-checkbox,...
 $label-control-size: 0.75rem;
+
+$text-field-padding: 0px;
+//TODO: Replace overrides css class selector style in main.scss with vuetify SASS Variables

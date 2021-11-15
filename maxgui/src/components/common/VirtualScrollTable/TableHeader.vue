@@ -225,12 +225,12 @@ export default {
     },
     methods: {
         headerTxtMaxWidth({ header, i }) {
-            return (
+            const w =
                 this.$typy(this.headerWidthMap[i]).safeNumber -
                 (this.enableSorting && header.sortable !== false ? 22 : 0) -
                 (this.enableGrouping && this.$typy(header, 'groupable').safeBoolean ? 38 : 0) -
                 24 // padding
-            )
+            return w > 0 ? w : 1
         },
         isResizerDisabled(header) {
             return header.text === '#' || header.resizable === false
