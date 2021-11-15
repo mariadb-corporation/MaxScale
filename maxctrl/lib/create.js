@@ -48,7 +48,7 @@ exports.builder = function (yargs) {
   yargs
     // Create server
     .command(
-      "server <name> <host|socket> [port]",
+      "server <name> <host|socket> [port] [params...]",
       "Create a new server",
       function (yargs) {
         return yargs
@@ -58,9 +58,12 @@ exports.builder = function (yargs) {
               "of servers a service or a monitor uses can be altered with the " +
               "`link` and `unlink` commands. If the <host|socket> argument is an " +
               "absolute path, the server will use a local UNIX domain socket " +
-              "connection. In this case the [port] argument is ignored."
+              "connection. In this case the [port] argument is ignored." +
+              "\n\n" +
+              "The recommended way of declaring parameters is with the new `key=value` syntax added in MaxScale 6.2.0. " +
+              "Note that for some parameters (e.g. `extra_port` and `proxy_protocol`) this is the only way to pass them."
           )
-          .usage("Usage: create server <name> <host|socket> [port]")
+          .usage("Usage: create server <name> <host|socket> [port] [params...]")
           .group(
             [
               "services",
@@ -187,8 +190,16 @@ exports.builder = function (yargs) {
           }
         }
 
+        var err = validateParams(argv, argv.params);
+        var extra_params = argv.params.reduce(to_obj, {});
+        Object.assign(server.data.attributes.parameters, extra_params);
+
         maxctrl(argv, function (host) {
           checkName(argv.name);
+
+          if (err) {
+            return Promise.reject(err);
+          }
 
           return doRequest(host, "servers", { method: "POST", data: server });
         });
