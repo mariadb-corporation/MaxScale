@@ -149,6 +149,94 @@ bool element_is_valid_as_id(const bsoncxx::document::element& element)
 namespace command
 {
 
+template<class T>
+class TableCreating : public T
+{
+public:
+    using T::T;
+
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override final
+    {
+        State state;
+
+        if (m_creating_table)
+        {
+            state = translate_create_table(std::move(mariadb_response), ppResponse);
+        }
+        else
+        {
+            state = translate2(std::move(mariadb_response), ppResponse);
+        }
+
+        return state;
+    }
+
+protected:
+    virtual State translate2(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) = 0;
+
+    virtual State table_created(GWBUF** ppResponse) = 0;
+
+    void create_table()
+    {
+        mxb_assert(!m_creating_table);
+        m_creating_table = true;
+
+        bool if_not_exists = true;
+
+        ostringstream sql;
+        sql << "CREATE DATABASE IF NOT EXISTS `" << T::m_database.name() << "`; "
+            << table_create_statement(T::table(), T::m_database.config().id_length, if_not_exists);
+
+        T::send_downstream_via_loop(sql.str());
+    }
+
+private:
+    State translate_create_table(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+    {
+        mxb_assert(m_creating_table);
+        m_creating_table = false;
+
+        State state = State::BUSY;
+
+        uint8_t* pBuffer = mariadb_response.data();
+        uint8_t* pEnd = pBuffer + mariadb_response.length();
+
+        ComResponse create_database_response(&pBuffer);
+
+        switch (create_database_response.type())
+        {
+        case ComResponse::OK_PACKET:
+            {
+                ComResponse create_table_response(&pBuffer);
+
+                if (create_table_response.is_ok())
+                {
+                    state = table_created(ppResponse);
+                }
+                else
+                {
+                    mxb_assert(create_table_response.type() == ComResponse::ERR_PACKET);
+
+                    throw MariaDBError(ComERR(create_table_response));
+                }
+            }
+            break;
+
+        case ComResponse::ERR_PACKET:
+            throw MariaDBError(ComERR(create_database_response));
+            break;
+
+        default:
+            T::throw_unexpected_packet();
+        }
+
+        return state;
+    }
+
+private:
+    bool m_creating_table { false };
+};
+
 class OrderedCommand : public MultiCommand
 {
 public:
@@ -1003,15 +1091,14 @@ private:
     Stats*         m_pStats { nullptr };
 };
 
-
 // https://docs.mongodb.com/v4.4/reference/command/findAndModify/
-class FindAndModify : public MultiCommand
+class FindAndModify : public TableCreating<MultiCommand>
 {
 public:
     static constexpr const char* const KEY = "findAndModify";
     static constexpr const char* const HELP = "";
 
-    using MultiCommand::MultiCommand;
+    using TableCreating<MultiCommand>::TableCreating;
 
     ~FindAndModify()
     {
@@ -1054,9 +1141,14 @@ protected:
         return m_sSub_command->create_initial_select();
     }
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
+    State translate2(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
     {
         return m_sSub_command->translate(std::move(mariadb_response), ppResponse);
+    }
+
+    State table_created(GWBUF** ppResponse) override
+    {
+        return m_sSub_command->table_created(ppResponse);
     }
 
 private:
@@ -1143,6 +1235,13 @@ private:
             }
 
             return state;
+        }
+
+        virtual State table_created(GWBUF** ppResponse)
+        {
+            mxb_assert(!true);
+            *ppResponse = nullptr;
+            return State::READY;
         }
 
     protected:
@@ -1490,7 +1589,6 @@ private:
     public:
         static const int32_t ACTION_UPDATE = 201;
         static const int32_t ACTION_INSERT = 202;
-        static const int32_t ACTION_CREATE_TABLE = 203;
 
         UpdateSubCommand(FindAndModify* pSuper)
             : SubCommand(pSuper)
@@ -1511,10 +1609,6 @@ private:
 
             case ACTION_INSERT:
                 state = translate_insert(std::move(mariadb_response), ppResponse);
-                break;
-
-            case ACTION_CREATE_TABLE:
-                state = translate_create_table(std::move(mariadb_response), ppResponse);
                 break;
 
             default:
@@ -1667,51 +1761,6 @@ private:
             return state;
         }
 
-        State translate_create_table(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
-        {
-            State state = State::BUSY;
-
-            uint8_t* pBuffer = mariadb_response.data();
-            uint8_t* pEnd = pBuffer + mariadb_response.length();
-
-            ComResponse commit_response(&pBuffer);
-
-            switch (commit_response.type())
-            {
-            case ComResponse::OK_PACKET:
-                {
-                    ComResponse create_database_response(&pBuffer);
-
-                    if (create_database_response.type() == ComResponse::OK_PACKET)
-                    {
-                        ComResponse create_table_response(&pBuffer);
-
-                        if (create_table_response.is_ok())
-                        {
-                            table_created();
-                        }
-                    }
-                    else
-                    {
-                        mxb_assert(create_database_response.type() == ComResponse::ERR_PACKET);
-
-                        throw MariaDBError(ComERR(create_database_response));
-                    }
-                }
-                break;
-
-            case ComResponse::ERR_PACKET:
-                throw MariaDBError(ComERR(commit_response));
-                break;
-
-            default:
-                throw_unexpected_packet();
-            }
-
-            return state;
-        }
-
-
         void initial_select_succeeded(const string& json) override
         {
             if (!m_id.empty())
@@ -1748,7 +1797,10 @@ private:
         {
             if (m_upsert)
             {
-                create_table();
+                m_aborted_action = m_action;
+                m_aborted_statement = m_super.m_last_statement;
+
+                m_super.create_table();
             }
             else
             {
@@ -1765,30 +1817,14 @@ private:
             }
         }
 
-        void table_created()
+        State table_created(GWBUF** ppResponse) override
         {
             send_downstream_delayed(m_aborted_statement, m_aborted_action);
+            *ppResponse = nullptr;
+            return State::BUSY;
         }
 
     private:
-        void create_table()
-        {
-            m_aborted_action = m_action;
-            m_aborted_statement = m_super.last_statement();
-
-            m_action = ACTION_CREATE_TABLE;
-
-
-            bool if_not_exists = true;
-
-            ostringstream sql;
-            sql << "COMMIT; "
-                << "CREATE DATABASE IF NOT EXISTS `" << m_super.m_database.name() << "`; "
-                << table_create_statement(table(), m_super.m_database.config().id_length, if_not_exists);
-
-            send_downstream_delayed(sql.str());
-        }
-
         void update()
         {
             m_action = ACTION_UPDATE;
