@@ -68,16 +68,37 @@ public:
     RplEvent(RplEvent&& rhs);
     RplEvent& operator=(RplEvent&& rhs);
 
-    /** Read an event */
-    static RplEvent read_event(std::istream& file, long* file_pos);
-
     bool     is_empty() const;
     explicit operator bool() const;
 
-    Rotate        rotate() const;
-    GtidEvent     gtid_event() const;
-    GtidListEvent gtid_list() const;
-    bool          is_commit() const;
+    /**
+     * @brief read_event
+     * @param file       - file to read from
+     * @param *file_pos  - file position to start reading from,
+     *                     and set to the next position to read from.
+     *
+     * @return RplEvent. If there was not enough data to read
+     *                   is_empty() == true and *file_pos is unchanged.
+     */
+    static RplEvent read_event(std::istream& file, long* file_pos);
+
+    /**
+     * @brief  read_header_only. Use read_body() to get the full event.
+     * @param  file      - to read from
+     * @param *file_pos  - file position to start reading from, and set to
+     *                     the position where the body should be read from.
+     *                     If the intention is to read the next header, it
+     *                     is at position next_event_pos().
+     * @return RplEvent. If there was not enough data to read
+     *                   is_empty() == true and *file_pos is unchanged.
+     */
+    static RplEvent read_header_only(std::istream& file, long* file_pos);
+
+    /* Functions that are valid after the header has been read. */
+    const char* pBuffer() const;
+    size_t      buffer_size() const;
+    const char* pHeader() const;
+    const char* pEnd() const;
 
     mariadb_rpl_event event_type() const;
     unsigned int      timestamp() const;
@@ -85,14 +106,30 @@ public:
     unsigned int      event_length() const;
     uint32_t          next_event_pos() const;
     unsigned short    flags() const;
-    unsigned int      checksum() const;
 
-    const char* pBuffer() const;
-    size_t      buffer_size() const;
-    const char* pHeader() const;
-    const char* pBody() const;
-    const char* pEnd() const;
+    /**
+     * @brief read_body  - completes the event when only yhe header was read.
+     *                    No effect if the body has already been read.
+     * @param file       - file to read from
+     * @param *file_pos  - file position to start reading from, and set
+     *                     to the next position to read an event from.
+     *
+     * @return true if the body could be read. NOTE: if the body could not be read
+     *              this instance is invalidated and is_empty() will return true.
+     *
+     */
+    bool read_body(std::istream& file, long* file_pos);
 
+    /** Functions that are valid after the body has been read */
+    const char*  pBody() const;
+    unsigned int checksum() const;
+
+    Rotate        rotate() const;
+    GtidEvent     gtid_event() const;
+    GtidListEvent gtid_list() const;
+    bool          is_commit() const;
+
+    /** For the writer */
     void       set_next_pos(uint32_t next_pos);
     static int get_event_length(const std::vector<char>& header);
 
