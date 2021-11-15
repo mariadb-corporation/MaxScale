@@ -27,83 +27,109 @@ const refreshAxiosToken = () => {
 const cancelAllRequests = () => {
     cancelSource.cancel(CANCEL_MESSAGE)
 }
-
-let authHttp = ax.create({
-    baseURL: BASE_URL,
-    headers: HEADERS,
-})
-authHttp.interceptors.request.use(
-    function(config) {
-        config.cancelToken = cancelSource.token
-        return config
-    },
-    function(error) {
-        return Promise.reject(error)
-    }
-)
-
-function http(store) {
-    let http = ax.create({
+function baseConf() {
+    return ax.create({
         baseURL: BASE_URL,
         headers: HEADERS,
     })
+}
+/**
+ * Default handler for error response status codes
+ */
+async function defErrStatusHandler({ store, error }) {
+    const { getErrorsArr, delay } = store.vue.$help
+    store.commit('SET_SNACK_BAR_MESSAGE', {
+        text: getErrorsArr(error),
+        type: 'error',
+    })
+    /* When request is dispatched in a modal, an overlay_type loading will be set,
+     * Turn it off before returning error
+     */
+    if (store.state.overlay_type !== null)
+        await delay(600).then(() => store.commit('SET_OVERLAY_TYPE', null))
+    return Promise.reject(error)
+}
+
+/**
+ * @param {Object} payload.store - vuex store instance
+ * @param {Object} payload.error - axios error object
+ * @returns {Object} - returns an object with error response status codes as key and value as handler function
+ */
+function baseErrStatusHandlerMap({ store, error }) {
+    return {
+        401: async function() {
+            // cancel all previous requests before logging out
+            store.$cancelAllRequests()
+            await store.dispatch('user/logout')
+        },
+        404: async function() {
+            await store.router.push('/404')
+        },
+        null: function() {
+            if (error.toString() === `Cancel: ${CANCEL_MESSAGE}`)
+                // request is cancelled by user, so no response is received
+                return Promise.reject(error)
+            else
+                return store.commit('SET_SNACK_BAR_MESSAGE', {
+                    text: ['Lost connection to MaxScale, please check if MaxScale is running'],
+                    type: 'error',
+                })
+        },
+    }
+}
+
+// axios instance for auth endpoint
+let authHttp = baseConf()
+authHttp.interceptors.request.use(
+    config => ({ ...config, cancelToken: cancelSource.token }),
+    error => Promise.reject(error)
+)
+
+// axios instance for other endpoints except `/sql`
+function http(store) {
+    let http = baseConf()
 
     http.interceptors.request.use(
-        function(config) {
-            config.cancelToken = cancelSource.token
-            return config
-        },
-        function(error) {
-            return Promise.reject(error)
-        }
+        config => ({ ...config, cancelToken: cancelSource.token }),
+        error => Promise.reject(error)
     )
     http.interceptors.response.use(
-        response => {
-            return response
-        },
+        response => response,
         async error => {
-            const { getErrorsArr, delay } = store.vue.$help
             const { response: { status = null } = {} } = error || {}
-            switch (status) {
-                case 401:
-                    // cancel all previous requests before logging out
-                    store.$cancelAllRequests()
-                    await store.dispatch('user/logout')
-                    break
-                case 404:
-                    await store.router.push('/404')
-                    break
-                case null:
-                    if (error.toString() === `Cancel: ${CANCEL_MESSAGE}`)
-                        // request is cancelled by user, so no response is received
-                        return Promise.reject(error)
-                    else
-                        return store.commit('SET_SNACK_BAR_MESSAGE', {
-                            text: [
-                                'Lost connection to MaxScale, please check if MaxScale is running',
-                            ],
-                            type: 'error',
-                        })
-                case 503: {
-                    return store.commit('SET_SNACK_BAR_MESSAGE', {
-                        text: [...getErrorsArr(error), 'Please reconnect'],
-                        type: 'error',
-                    })
-                }
-                default:
-                    store.commit('SET_SNACK_BAR_MESSAGE', {
-                        text: getErrorsArr(error),
-                        type: 'error',
-                    })
-                    /* When request is dispatched in a modal, an overlay_type loading will be set,
-                     * Turn it off before returning error
-                     */
-                    if (store.state.overlay_type !== null)
-                        await delay(600).then(() => store.commit('SET_OVERLAY_TYPE', null))
-                    return Promise.reject(error)
-            }
+            const errStatusHandlerMap = baseErrStatusHandlerMap({ store, error })
+            if (Object.keys(errStatusHandlerMap).includes(`${status}`)) {
+                await errStatusHandlerMap[status]()
+            } else defErrStatusHandler({ store, error })
         }
     )
     return http
 }
-export { refreshAxiosToken, cancelAllRequests, authHttp, http }
+// axios instance for `/sql` endpoint
+function queryHttp(store) {
+    let queryHttp = baseConf()
+    queryHttp.interceptors.request.use(
+        config => ({ ...config, cancelToken: cancelSource.token }),
+        error => Promise.reject(error)
+    )
+
+    queryHttp.interceptors.response.use(
+        response => response,
+        async error => {
+            const { getErrorsArr } = store.vue.$help
+            const { response: { status = null } = {} } = error || {}
+            const errStatusHandlerMap = baseErrStatusHandlerMap({ store, error })
+            if (Object.keys(errStatusHandlerMap).includes(`${status}`)) {
+                await errStatusHandlerMap[status]()
+            } else if (status === 503) {
+                return store.commit('SET_SNACK_BAR_MESSAGE', {
+                    text: [...getErrorsArr(error), 'Please reconnect'],
+                    type: 'error',
+                })
+            } else defErrStatusHandler({ store, error })
+        }
+    )
+    return queryHttp
+}
+
+export { refreshAxiosToken, cancelAllRequests, authHttp, http, queryHttp }

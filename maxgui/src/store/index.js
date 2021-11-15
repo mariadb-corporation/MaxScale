@@ -26,13 +26,14 @@ import { APP_CONFIG } from 'utils/constants'
 import router from 'router'
 import i18n from 'plugins/i18n'
 import createPersistedState from 'vuex-persistedstate'
-import { refreshAxiosToken, cancelAllRequests, authHttp, http } from 'utils/axios'
+import { refreshAxiosToken, cancelAllRequests, authHttp, http, queryHttp } from 'utils/axios'
 const plugins = store => {
     store.router = router
     store.vue = Vue.prototype
     store.i18n = i18n
     store.$authHttp = authHttp
     store.$http = http(store)
+    store.$queryHttp = queryHttp(store)
     store.$refreshAxiosToken = refreshAxiosToken
     store.$cancelAllRequests = cancelAllRequests
 }
