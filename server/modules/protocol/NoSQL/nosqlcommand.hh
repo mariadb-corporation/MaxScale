@@ -377,13 +377,13 @@ private:
 //
 // OpUpdateCommand
 //
-class OpUpdateCommand : public PacketCommand<packet::Update>
+class OpUpdateCommand : public TableCreating<PacketCommand<packet::Update>>
 {
 public:
     OpUpdateCommand(Database* pDatabase,
                     GWBUF* pRequest,
                     packet::Update&& req)
-        : PacketCommand<packet::Update>(pDatabase, pRequest, std::move(req), ResponseKind::NONE)
+        : TableCreating<PacketCommand<packet::Update>>(pDatabase, pRequest, std::move(req), ResponseKind::NONE)
     {
     }
 
@@ -393,26 +393,24 @@ public:
 
     State execute(GWBUF** ppNoSQL_response) override final;
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+    State translate2(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+
+    State table_created(GWBUF** ppResponse) override final;
 
 private:
     enum class Action
     {
         UPDATING_DOCUMENT,
         INSERTING_DOCUMENT,
-        CREATING_TABLE
     };
 
     State translate_updating_document(ComResponse& response);
     State translate_inserting_document(ComResponse& response);
-    State translate_creating_table(ComResponse& response);
 
     State update_document(const std::string& sql);
-    State create_table();
     State insert_document();
 
     Action                       m_action { Action::UPDATING_DOCUMENT };
-    uint32_t                     m_dcid { 0 };
     std::string                  m_update;
     std::string                  m_insert;
     std::unique_ptr<NoError::Id> m_sId;

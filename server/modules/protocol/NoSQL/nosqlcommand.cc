@@ -751,10 +751,6 @@ string OpInsertCommand::convert_document_data(const bsoncxx::document::view& doc
 //
 OpUpdateCommand::~OpUpdateCommand()
 {
-    if (m_dcid)
-    {
-        worker().cancel_delayed_call(m_dcid);
-    }
 }
 
 string OpUpdateCommand::description() const
@@ -781,7 +777,7 @@ State OpUpdateCommand::execute(GWBUF** ppNoSQL_response)
     return update_document(sql);
 }
 
-State OpUpdateCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+State OpUpdateCommand::translate2(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
 {
     State state = State::READY;
 
@@ -798,10 +794,6 @@ State OpUpdateCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL
 
         case Action::INSERTING_DOCUMENT:
             state = translate_inserting_document(response);
-            break;
-
-        case Action::CREATING_TABLE:
-            state = translate_creating_table(response);
             break;
         }
     }
@@ -882,7 +874,8 @@ State OpUpdateCommand::translate_updating_document(ComResponse& response)
         {
             if (m_database.config().auto_create_tables)
             {
-                state = create_table();
+                create_table();
+                state = State::BUSY;
             }
             else
             {
@@ -941,21 +934,12 @@ State OpUpdateCommand::translate_inserting_document(ComResponse& response)
     return state;
 }
 
-State OpUpdateCommand::translate_creating_table(ComResponse& response)
+State OpUpdateCommand::table_created(GWBUF** ppResponse)
 {
-    State state = State::READY;
+    insert_document();
 
-    if (response.type() == ComResponse::OK_PACKET)
-    {
-        state = insert_document();
-    }
-    else
-    {
-        ComERR err(response);
-        m_database.context().set_last_error(MariaDBError(err).create_last_error());
-    }
-
-    return state;
+    *ppResponse = nullptr;
+    return State::BUSY;
 }
 
 State OpUpdateCommand::update_document(const string& sql)
@@ -965,27 +949,6 @@ State OpUpdateCommand::update_document(const string& sql)
     m_update = sql;
 
     send_downstream(m_update);
-
-    return State::BUSY;
-}
-
-State OpUpdateCommand::create_table()
-{
-    m_action = Action::CREATING_TABLE;
-
-    mxb_assert(m_dcid == 0);
-    m_dcid = worker().delayed_call(0, [this](Worker::Call::action_t action) {
-            m_dcid = 0;
-
-            if (action == Worker::Call::EXECUTE)
-            {
-                auto sql = nosql::table_create_statement(table(), m_database.config().id_length);
-
-                send_downstream(sql);
-            }
-
-            return false;
-        });
 
     return State::BUSY;
 }
