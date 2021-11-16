@@ -376,6 +376,7 @@ const char CURSORS_NOT_FOUND[]               = "cursorsNotFound";
 const char CURSORS_UNKNOWN[]                 = "cursorsUnknown";
 const char CURSOR[]                          = "cursor";
 const char DATABASES[]                       = "databases";
+const char DEACH[]                           = "$each";
 const char DEBUG[]                           = "debug";
 const char DELETES[]                         = "deletes";
 const char DIRECTION[]                       = "direction";
