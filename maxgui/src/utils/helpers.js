@@ -706,38 +706,6 @@ export function daysDiff(timestamp) {
     return end.diff(now, 'days')
 }
 
-//TODO: Remove this. Replace with deep-diff which gives more details about diff
-/**
- * Deep diff between two objects
- * @param  {Object} base - Base object
- * @param  {Object} object - New object
- * @returns {Object} - Returns a new object that represents the diff
- */
-export function objectDiff({ base, object }) {
-    const changes = {}
-
-    function walkObject(base, object, path = '') {
-        for (const key of Object.keys(base)) {
-            const currentPath = path === '' ? key : `${path}.${key}`
-            if (object[key] === undefined) changes[currentPath] = '-'
-        }
-
-        for (const [key, value] of Object.entries(object)) {
-            let currentPath
-            if (Array.isArray(object)) currentPath = path + `[${key}]`
-            else currentPath = path === '' ? key : `${path}.${key}`
-
-            if (base[key] === undefined) changes[currentPath] = '+'
-            else if (value !== base[key])
-                if (typeof value === 'object' && typeof base[key] === 'object')
-                    walkObject(base[key], value, currentPath)
-                else changes[currentPath] = object[key]
-        }
-    }
-    walkObject(base, object)
-    return changes
-}
-
 //TODO: objects Re-order in array diff
 /**
  * @param {Array} payload.base - initial base array
@@ -839,10 +807,10 @@ Object.defineProperties(Vue.prototype, {
                 preventNonInteger,
                 addDaysToNow,
                 daysDiff,
-                objectDiff,
                 uuidv1,
                 arrOfObjsDiff,
                 formatSQL,
+                deepDiff,
             }
         },
     },
