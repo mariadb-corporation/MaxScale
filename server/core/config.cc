@@ -1164,7 +1164,6 @@ static bool get_milliseconds(const char* zName,
                              std::chrono::milliseconds* pMilliseconds);
 static void log_duration_suffix_warning(const char* zName, const char* zValue);
 
-bool        config_has_duplicate_sections(const char* config, DUPLICATE_CONTEXT* context);
 int         create_new_service(CONFIG_CONTEXT* obj);
 int         create_new_server(CONFIG_CONTEXT* obj);
 int         create_new_monitor(CONFIG_CONTEXT* obj, std::set<std::string>& monitored_servers);
@@ -1199,58 +1198,9 @@ const char* config_pre_parse_global_params[] =
     NULL
 };
 
-const char* deprecated_server_params[] =
-{
-    CN_AUTHENTICATOR_OPTIONS,
-    NULL
-};
-
 void config_finish()
 {
     config_context_free(this_unit.config_context.m_next);
-}
-
-bool duplicate_context_init(DUPLICATE_CONTEXT* context)
-{
-    bool rv = false;
-
-    std::set<std::string>* sections = new(std::nothrow) std::set<std::string>;
-    int errcode;
-    PCRE2_SIZE erroffset;
-    pcre2_code* re = pcre2_compile((PCRE2_SPTR) "^\\s*\\[(.+)\\]\\s*$",
-                                   PCRE2_ZERO_TERMINATED,
-                                   0,
-                                   &errcode,
-                                   &erroffset,
-                                   NULL);
-    pcre2_match_data* mdata = NULL;
-
-    if (sections && re && (mdata = pcre2_match_data_create_from_pattern(re, NULL)))
-    {
-        context->sections = sections;
-        context->re = re;
-        context->mdata = mdata;
-        rv = true;
-    }
-    else
-    {
-        pcre2_match_data_free(mdata);
-        pcre2_code_free(re);
-        delete sections;
-    }
-
-    return rv;
-}
-
-void duplicate_context_finish(DUPLICATE_CONTEXT* context)
-{
-    pcre2_match_data_free(context->mdata);
-    pcre2_code_free(context->re);
-    delete context->sections;
-
-    context->mdata = NULL;
-    context->re = NULL;
-    context->sections = NULL;
 }
 
 
@@ -1601,7 +1551,7 @@ bool config_load_single_file(const char* file, DUPLICATE_CONTEXT* dcontext, CONF
     bool duplicate_found = false;
     for (const auto& section : config)
     {
-        auto insert_res = dcontext->sections->insert(section.first);
+        auto insert_res = dcontext->sections.insert(section.first);
         if (insert_res.second == false)
         {
             MXS_ERROR("Duplicate section found: %s", section.first.c_str());
@@ -1904,81 +1854,66 @@ static bool config_load_and_process(const char* filename,
     DUPLICATE_CONTEXT dcontext;
     bool have_persisted_configs = false;
 
-    if (duplicate_context_init(&dcontext))
+    if (config_load_single_contents(cfg_file_contents, &this_unit.config_context))
     {
-        if (config_load_single_contents(cfg_file_contents, &this_unit.config_context))
+        this_unit.is_root_config_file = false;
+        const char DIR_SUFFIX[] = ".d";
+
+        string dir = string(filename) + DIR_SUFFIX;
+        rval = true;
+
+        if (is_directory(dir.c_str()))
         {
-            this_unit.is_root_config_file = false;
-            const char DIR_SUFFIX[] = ".d";
+            rval = config_load_dir(dir.c_str(), &dcontext, &this_unit.config_context);
+        }
 
-            char dir[strlen(filename) + sizeof(DIR_SUFFIX)];
-            strcpy(dir, filename);
-            strcat(dir, DIR_SUFFIX);
+        const char* persist_cnf = mxs::config_persistdir();
 
-            rval = true;
+        if (mxs::Config::get().load_persisted_configs
+            && is_directory(persist_cnf) && contains_cnf_files(persist_cnf))
+        {
+            /**
+             * Set the global flag that we are processing a persisted configuration.
+             * This will tell the modules whether it is OK to completely overwrite
+             * the persisted configuration when changes are made.
+             *
+             * TODO: Figure out a cleaner way to do this
+             */
+            this_unit.is_persisted_config = true;
+            have_persisted_configs = true;
 
-            if (is_directory(dir))
+            MXS_NOTICE("Runtime configuration changes have been done to MaxScale. Loading persisted "
+                       "configuration files and applying them on top of the main configuration file. "
+                       "These changes can override the values of the main configuration file: "
+                       "To revert them, remove all the files in '%s'.", persist_cnf);
+
+            /**
+             * We need to initialize a second duplicate context for the
+             * generated configuration files as the monitors and services will
+             * have duplicate sections. The duplicate sections are used to
+             * store changes to the list of servers the services and monitors
+             * use, and thus should not be treated as errors.
+             */
+            DUPLICATE_CONTEXT p_dcontext;
+            rval = config_load_dir(persist_cnf, &p_dcontext, &this_unit.config_context);
+            this_unit.is_persisted_config = false;
+        }
+
+        if (rval)
+        {
+            if (!check_config_objects(this_unit.config_context.m_next)
+                || !process_config_context(this_unit.config_context.m_next))
             {
-                rval = config_load_dir(dir, &dcontext, &this_unit.config_context);
-            }
-
-            const char* persist_cnf = mxs::config_persistdir();
-
-            if (mxs::Config::get().load_persisted_configs
-                && is_directory(persist_cnf) && contains_cnf_files(persist_cnf))
-            {
-                /**
-                 * Set the global flag that we are processing a persisted configuration.
-                 * This will tell the modules whether it is OK to completely overwrite
-                 * the persisted configuration when changes are made.
-                 *
-                 * TODO: Figure out a cleaner way to do this
-                 */
-                this_unit.is_persisted_config = true;
-                have_persisted_configs = true;
-
-                MXS_NOTICE("Runtime configuration changes have been done to MaxScale. Loading persisted "
-                           "configuration files and applying them on top of the main configuration file. "
-                           "These changes can override the values of the main configuration file: "
-                           "To revert them, remove all the files in '%s'.", persist_cnf);
-                DUPLICATE_CONTEXT p_dcontext;
-                /**
-                 * We need to initialize a second duplicate context for the
-                 * generated configuration files as the monitors and services will
-                 * have duplicate sections. The duplicate sections are used to
-                 * store changes to the list of servers the services and monitors
-                 * use, and thus should not be treated as errors.
-                 */
-                if (duplicate_context_init(&p_dcontext))
+                rval = false;
+                if (have_persisted_configs)
                 {
-                    rval = config_load_dir(persist_cnf, &p_dcontext, &this_unit.config_context);
-                    duplicate_context_finish(&p_dcontext);
-                }
-                else
-                {
-                    rval = false;
-                }
-                this_unit.is_persisted_config = false;
-            }
-
-            if (rval)
-            {
-                if (!check_config_objects(this_unit.config_context.m_next)
-                    || !process_config_context(this_unit.config_context.m_next))
-                {
-                    rval = false;
-                    if (have_persisted_configs)
-                    {
-                        MXS_WARNING("Persisted configuration files generated by runtime configuration "
-                                    "changes were found at '%s' and at least one configuration error was "
-                                    "encountered. If the errors relate to any of the persisted configuration "
-                                    "files, remove the offending files and restart MaxScale.", persist_cnf);
-                    }
+                    MXS_WARNING("Persisted configuration files generated by runtime configuration "
+                                "changes were found at '%s' and at least one configuration error was "
+                                "encountered. If the errors relate to any of the persisted configuration "
+                                "files, remove the offending files and restart MaxScale.", persist_cnf);
                 }
             }
         }
-
-        duplicate_context_finish(&dcontext);
     }
     return rval;
 }
@@ -3432,75 +3367,6 @@ static int get_release_string(char* release)
     {
         return 0;
     }
-}
-
-/**
- * Check if sections are defined multiple times in the configuration file.
- *
- * @param filename Path to the configuration file
- * @param context  The context object used for tracking the duplication
- *                 section information.
- *
- * @return True if duplicate sections were found or an error occurred
- */
-bool config_has_duplicate_sections(const char* filename, DUPLICATE_CONTEXT* context)
-{
-    bool rval = false;
-
-    int size = 1024;
-    char* buffer = (char*)MXS_MALLOC(size * sizeof(char));
-
-    if (buffer)
-    {
-        FILE* file = fopen(filename, "r");
-
-        if (file)
-        {
-            while (maxscale_getline(&buffer, &size, file) > 0)
-            {
-                if (pcre2_match(context->re,
-                                (PCRE2_SPTR) buffer,
-                                PCRE2_ZERO_TERMINATED,
-                                0,
-                                0,
-                                context->mdata,
-                                NULL) > 0)
-                {
-                    /**
-                     * Neither of the PCRE2 calls will fail since we know the pattern
-                     * beforehand and we allocate enough memory from the stack
-                     */
-                    PCRE2_SIZE len;
-                    pcre2_substring_length_bynumber(context->mdata, 1, &len);
-                    len += 1;   /** one for the null terminator */
-                    PCRE2_UCHAR section[len];
-                    pcre2_substring_copy_bynumber(context->mdata, 1, section, &len);
-
-                    string key(reinterpret_cast<char*>(section), len);
-                    if (context->sections->insert(key).second == false)
-                    {
-                        MXS_ERROR("Duplicate section found: %s", section);
-                        rval = true;
-                    }
-                }
-            }
-            fclose(file);
-        }
-        else
-        {
-            MXS_ERROR("Failed to open file '%s': %s", filename, mxs_strerror(errno));
-            rval = true;
-        }
-    }
-    else
-    {
-        MXS_OOM_MESSAGE("Failed to allocate enough memory when checking"
-                        " for duplicate sections in configuration file.");
-        rval = true;
-    }
-
-    MXS_FREE(buffer);
-    return rval;
 }
 
 

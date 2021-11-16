@@ -74,24 +74,20 @@ static int test1()
 bool test_load_config(const char* input, Server* server)
 {
     DUPLICATE_CONTEXT dcontext;
+    CONFIG_CONTEXT ccontext;
 
-    if (duplicate_context_init(&dcontext))
+    auto load_res = mxb::ini::parse_config_file_to_map(input);
+    if (config_load_single_file(input, &dcontext, &ccontext, load_res.config))
     {
-        CONFIG_CONTEXT ccontext;
-        auto load_res = mxb::ini::parse_config_file_to_map(input);
-        if (config_load_single_file(input, &dcontext, &ccontext, load_res.config))
-        {
-            CONFIG_CONTEXT* obj = ccontext.m_next;
-            mxs::ConfigParameters* param = &obj->m_parameters;
+        CONFIG_CONTEXT* obj = ccontext.m_next;
+        mxs::ConfigParameters* param = &obj->m_parameters;
 
-            TEST(strcmp(obj->name(), server->name()) == 0, "Server names differ");
-            TEST(param->get_string("address") == server->address(), "Server addresses differ");
-            TEST(param->get_integer("port") == server->port(), "Server ports differ");
-            TEST(ServerManager::create_server(obj->name(), obj->m_parameters),
-                 "Failed to create server from loaded config");
-            duplicate_context_finish(&dcontext);
-            config_context_free(obj);
-        }
+        TEST(strcmp(obj->name(), server->name()) == 0, "Server names differ");
+        TEST(param->get_string("address") == server->address(), "Server addresses differ");
+        TEST(param->get_integer("port") == server->port(), "Server ports differ");
+        TEST(ServerManager::create_server(obj->name(), obj->m_parameters),
+             "Failed to create server from loaded config");
+        config_context_free(obj);
     }
 
     return true;

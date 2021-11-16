@@ -235,28 +235,10 @@ bool missing_required_parameters(const MXS_MODULE_PARAM* mod_params,
                                  const mxs::ConfigParameters& params,
                                  const char* name);
 
-typedef struct duplicate_context
+struct DUPLICATE_CONTEXT
 {
-    std::set<std::string>* sections;
-    pcre2_code*            re;
-    pcre2_match_data*      mdata;
-} DUPLICATE_CONTEXT;
-
-/**
- * Initialize the context object used for tracking duplicate sections.
- *
- * @param context The context object to be initialized.
- *
- * @return True, if the object could be initialized.
- */
-bool duplicate_context_init(DUPLICATE_CONTEXT* context);
-
-/**
- * Finalize the context object used for tracking duplicate sections.
- *
- * @param context The context object to be initialized.
- */
-void duplicate_context_finish(DUPLICATE_CONTEXT* context);
+    std::set<std::string> sections;
+};
 
 /**
  * Load single configuration file.
