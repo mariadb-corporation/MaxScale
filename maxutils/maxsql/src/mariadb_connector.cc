@@ -310,7 +310,9 @@ vector<unique_ptr<QueryResult>> MariaDB::multiquery(const vector<string>& querie
     if (m_conn)
     {
         string multiquery = mxb::create_list_string(queries, " ");
-        if (mysql_real_query(m_conn, multiquery.c_str(), multiquery.length()) == 0)
+        int rc = mysql_real_query(m_conn, multiquery.c_str(), multiquery.length());
+
+        if (rc == 0)
         {
             const auto n_queries = queries.size();
             vector<unique_ptr<QueryResult>> results;
@@ -390,6 +392,8 @@ vector<unique_ptr<QueryResult>> MariaDB::multiquery(const vector<string>& querie
             m_errornum = mysql_errno(m_conn);
             m_errormsg = string_printf(query_failed, multiquery.c_str(), m_errornum, mysql_error(m_conn));
         }
+
+        mxq::log_statement(rc, m_conn, multiquery);
     }
     else
     {
@@ -504,7 +508,9 @@ bool MariaDB::run_query(const string& query, const std::function<bool()>& result
     bool rval = false;
     if (m_conn)
     {
-        if (mysql_real_query(m_conn, query.c_str(), query.length()) == 0)
+        int rc = mysql_real_query(m_conn, query.c_str(), query.length());
+
+        if (rc == 0)
         {
             rval = result_handler();
         }
@@ -513,6 +519,8 @@ bool MariaDB::run_query(const string& query, const std::function<bool()>& result
             m_errornum = mysql_errno(m_conn);
             m_errormsg = mxb::string_printf(query_failed, query.c_str(), m_errornum, mysql_error(m_conn));
         }
+
+        mxq::log_statement(rc, m_conn, query);
     }
     else
     {

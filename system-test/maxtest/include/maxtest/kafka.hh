@@ -212,7 +212,7 @@ public:
     {
         using Clock = std::chrono::steady_clock;
         auto start = Clock::now();
-        const std::chrono::seconds limit{30};
+        const std::chrono::seconds limit {30};
         int i = 0;
 
         while (i < n_expected && Clock::now() - start < limit)

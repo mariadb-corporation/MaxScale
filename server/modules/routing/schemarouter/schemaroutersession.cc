@@ -1129,16 +1129,18 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
 
         if (!data.empty())
         {
-            mxs::Target* duplicate = m_shard.get_location(data);
-
-            if (duplicate && data.find('.') != std::string::npos && !ignore_duplicate_table(data))
+            if (!ignore_duplicate_table(data))
             {
-                duplicate_found = true;
-                MXS_ERROR("'%s' found on servers '%s' and '%s' for user %s.",
-                          data.c_str(), target->name(), duplicate->name(),
-                          m_pSession->user_and_host().c_str());
+                if (mxs::Target* duplicate = m_shard.get_location(data))
+                {
+                    duplicate_found = true;
+                    MXS_ERROR("'%s' found on servers '%s' and '%s' for user %s.",
+                              data.c_str(), target->name(), duplicate->name(),
+                              m_pSession->user_and_host().c_str());
+                }
             }
-            else
+
+            if (!duplicate_found)
             {
                 m_shard.add_location(data, target);
             }
