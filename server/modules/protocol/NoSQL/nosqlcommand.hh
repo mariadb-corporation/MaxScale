@@ -15,6 +15,7 @@
 
 #include "nosqlprotocol.hh"
 #include <string>
+#include <sstream>
 #include <utility>
 #include <vector>
 #include <bsoncxx/builder/basic/array.hpp>
@@ -195,6 +196,131 @@ protected:
     }
 
     Packet m_req;
+};
+
+template<class T>
+class TableCreating : public T
+{
+public:
+    using T::T;
+
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override final
+    {
+        State state;
+
+        if (m_creating_table)
+        {
+            state = translate_create_table(std::move(mariadb_response), ppResponse);
+        }
+        else
+        {
+            state = translate2(std::move(mariadb_response), ppResponse);
+        }
+
+        return state;
+    }
+
+protected:
+    virtual State translate2(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) = 0;
+
+    virtual State table_created(GWBUF** ppResponse) = 0;
+
+    void create_table()
+    {
+        const auto& config = T::m_database.config();
+
+        if (!config.auto_create_tables)
+        {
+            std::ostringstream ss;
+            ss << "Table " << T::table() << " does not exist, and 'auto_create_tables' "
+               << "is false.";
+
+            throw HardError(ss.str(), error::COMMAND_FAILED);
+        }
+
+        mxb_assert(!m_creating_table);
+        m_creating_table = true;
+
+        bool if_not_exists = true;
+
+        std::ostringstream sql;
+
+        if (config.auto_create_databases)
+        {
+            sql << "CREATE DATABASE IF NOT EXISTS `" << T::m_database.name() << "`; ";
+        }
+
+        sql << table_create_statement(T::table(), config.id_length, if_not_exists);
+
+        T::send_downstream_via_loop(sql.str());
+    }
+
+private:
+    State translate_create_table(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+    {
+        mxb_assert(m_creating_table);
+        m_creating_table = false;
+
+        State state = State::BUSY;
+
+        uint8_t* pBuffer = mariadb_response.data();
+        uint8_t* pEnd = pBuffer + mariadb_response.length();
+
+        if (T::m_database.config().auto_create_databases)
+        {
+            ComResponse create_database_response(&pBuffer);
+
+            switch (create_database_response.type())
+            {
+            case ComResponse::OK_PACKET:
+                {
+                    ComResponse create_table_response(&pBuffer);
+
+                    state = translate_create_table(create_table_response, ppResponse);
+                }
+                break;
+
+            case ComResponse::ERR_PACKET:
+                throw MariaDBError(ComERR(create_database_response));
+                break;
+
+            default:
+                T::throw_unexpected_packet();
+            }
+        }
+        else
+        {
+            ComResponse create_table_response(&pBuffer);
+
+            state = translate_create_table(create_table_response, ppResponse);
+        }
+
+        return state;
+    }
+
+    State translate_create_table(const ComResponse& create_table_response, GWBUF** ppResponse)
+    {
+        State state = State::BUSY;
+
+        switch (create_table_response.type())
+        {
+        case ComResponse::OK_PACKET:
+            state = table_created(ppResponse);
+            break;
+
+        case ComResponse::ERR_PACKET:
+            throw MariaDBError(ComERR(create_table_response));
+            break;
+
+        default:
+            T::throw_unexpected_packet();
+        }
+
+        return state;
+    }
+
+private:
+    bool m_creating_table { false };
 };
 
 //
