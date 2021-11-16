@@ -22,6 +22,7 @@
 #include <bsoncxx/builder/basic/document.hpp>
 #include <maxscale/buffer.hh>
 #include "../../filter/masking/mysql.hh"
+#include "nosqldatabase.hh"
 #include "nosql.hh"
 
 namespace nosql
@@ -346,21 +347,13 @@ public:
 //
 // OpInsertCommand
 //
-class OpInsertCommand : public PacketCommand<packet::Insert>
+class OpInsertCommand : public TableCreating<PacketCommand<packet::Insert>>
 {
 public:
-    enum Action
-    {
-        INSERTING_DATA,
-        CREATING_TABLE,
-        CREATING_DATABASE
-    };
-
     OpInsertCommand(Database* pDatabase,
                     GWBUF* pRequest,
                     packet::Insert&& req)
-        : PacketCommand<packet::Insert>(pDatabase, pRequest, std::move(req), ResponseKind::NONE)
-        , m_action(INSERTING_DATA)
+        : TableCreating<PacketCommand<packet::Insert>>(pDatabase, pRequest, std::move(req), ResponseKind::NONE)
     {
         mxb_assert(m_req.documents().size() == 1);
     }
@@ -369,13 +362,14 @@ public:
 
     State execute(GWBUF** ppNoSQL_response) override final;
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+    State translate2(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+
+    State table_created(GWBUF** ppResponse) override final;
 
 private:
     std::string convert_document_data(const bsoncxx::document::view& doc);
 
 private:
-    Action                                m_action;
     std::string                           m_statement;
     std::vector<bsoncxx::document::value> m_stashed_documents;
 };

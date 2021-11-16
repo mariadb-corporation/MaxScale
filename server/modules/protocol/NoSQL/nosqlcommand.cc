@@ -17,7 +17,6 @@
 #include <maxbase/string.hh>
 #include <maxbase/worker.hh>
 #include <maxscale/modutil.hh>
-#include "nosqldatabase.hh"
 #include "crc32.h"
 
 using mxb::Worker;
@@ -656,9 +655,9 @@ State OpInsertCommand::execute(GWBUF** ppNoSQL_response)
     return State::BUSY;
 }
 
-State OpInsertCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+State OpInsertCommand::translate2(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
 {
-    State state = State::READY;
+    State state = State::BUSY;
     GWBUF* pResponse = nullptr;
 
     ComResponse response(mariadb_response.data());
@@ -666,24 +665,8 @@ State OpInsertCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL
     switch (response.type())
     {
     case ComResponse::OK_PACKET:
-        if (m_action == CREATING_TABLE || m_action == CREATING_DATABASE)
-        {
-            worker().delayed_call(0, [this](Worker::Call::action_t action) {
-                    if (action == Worker::Call::EXECUTE)
-                    {
-                        m_action = INSERTING_DATA;
-                        send_downstream(m_statement);
-                    }
-
-                    return false;
-                });
-            state = State::BUSY;
-        }
-        else
-        {
-            m_database.context().set_last_error(std::make_unique<NoError>(1));
-            state = State::READY;
-        }
+        m_database.context().set_last_error(std::make_unique<NoError>(1));
+        state = State::READY;
         break;
 
     case ComResponse::ERR_PACKET:
@@ -694,69 +677,11 @@ State OpInsertCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL
             switch (err.code())
             {
             case ER_NO_SUCH_TABLE:
-                {
-                    worker().delayed_call(0, [this](Worker::Call::action_t action) {
-                            if (action == Worker::Call::EXECUTE)
-                            {
-                                auto id_length = m_database.config().id_length;
-                                auto sql = nosql::table_create_statement(table(), id_length);
-
-                                m_action = CREATING_TABLE;
-                                send_downstream(sql);
-                            }
-
-                            return false;
-                        });
-                    state = State::BUSY;
-                }
-                break;
-
-            case ER_BAD_DB_ERROR:
-                {
-                    if (err.message().find("Unknown database") == 0)
-                    {
-                        worker().delayed_call(0, [this](Worker::Call::action_t action) {
-                                if (action == Worker::Call::EXECUTE)
-                                {
-                                    ostringstream ss;
-                                    ss << "CREATE DATABASE `" << m_database.name() << "`";
-
-                                    m_action = CREATING_DATABASE;
-                                    send_downstream(ss.str());
-                                }
-
-                                return false;
-                            });
-                        state = State::BUSY;
-                    }
-                    else
-                    {
-                        MXS_ERROR("Inserting '%s' failed with: (%d) %s",
-                                  m_statement.c_str(), err.code(), err.message().c_str());
-                        state = State::READY;
-                    }
-                }
-                break;
-
-            case ER_DB_CREATE_EXISTS:
-            case ER_TABLE_EXISTS_ERROR:
-                // Ok, someone else got there first.
-                worker().delayed_call(0, [this](Worker::Call::action_t action) {
-                        if (action == Worker::Call::EXECUTE)
-                        {
-                            m_action = INSERTING_DATA;
-                            send_downstream(m_statement);
-                        }
-
-                        return false;
-                    });
-                state = State::BUSY;
+                create_table();
                 break;
 
             default:
-                MXS_ERROR("Inserting '%s' failed with: (%d) %s",
-                          m_statement.c_str(), err.code(), err.message().c_str());
-                state = State::READY;
+                throw MariaDBError(err);
             }
         }
         break;
@@ -769,6 +694,14 @@ State OpInsertCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL
     *ppNoSQL_response = pResponse;
     return state;
 };
+
+State OpInsertCommand::table_created(GWBUF** ppResponse)
+{
+    send_downstream_via_loop(m_statement);
+
+    *ppResponse = nullptr;
+    return State::BUSY;
+}
 
 string OpInsertCommand::convert_document_data(const bsoncxx::document::view& doc)
 {
