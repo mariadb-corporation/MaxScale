@@ -1574,26 +1574,29 @@ bool config_load_single_file(const char* file, DUPLICATE_CONTEXT* dcontext, CONF
  */
 static CONFIG_CONTEXT* current_ccontext;
 static DUPLICATE_CONTEXT* current_dcontext;
-static std::unordered_set<std::string> hidden_dirs;
 
-/**
- * The nftw callback.
- *
- * @see man ftw
- */
-int config_cb(const char* fpath, const struct stat* sb, int typeflag, struct FTW* ftwbuf)
+namespace
 {
-    bool success = true;
-    int rval = 0;
+struct ConfFilePath
+{
+    string total_path;
+    string filename;
+};
 
+// Global variables used by config files search. Required to work around nftw limitations.
+std::vector<ConfFilePath> config_files_list;
+std::unordered_set<std::string> hidden_dirs;
+
+int config_files_search_cb(const char* fpath, const struct stat* sb, int typeflag, struct FTW* ftwbuf)
+{
     if (typeflag == FTW_SL)     // A symbolic link; let's see what it points to.
     {
-        struct stat sb;
-
-        if (stat(fpath, &sb) == 0)
+        // Another stat-call is required as the sb given by nftw contains info about the link itself, not
+        // the linked file.
+        struct stat sb2 {};
+        if (stat(fpath, &sb2) == 0)
         {
-            int file_type = (sb.st_mode & S_IFMT);
-
+            auto file_type = (sb2.st_mode & S_IFMT);
             switch (file_type)
             {
             case S_IFREG:
@@ -1608,8 +1611,7 @@ int config_cb(const char* fpath, const struct stat* sb, int typeflag, struct FTW
                 break;
 
             default:
-                // Points to something else; we'll silently ignore.
-                ;
+                ;   // Points to something else; we'll silently ignore.
             }
         }
         else
@@ -1619,65 +1621,38 @@ int config_cb(const char* fpath, const struct stat* sb, int typeflag, struct FTW
         }
     }
 
+    string path_to(fpath, fpath + ftwbuf->base - 1);
     if (typeflag == FTW_D)
     {
-        // Hidden directory or a directory inside a hidden directory
-        if (fpath[ftwbuf->base] == '.' || hidden_dirs.count(std::string(fpath, fpath + ftwbuf->base - 1)))
+        // Hidden directory or a directory inside a hidden directory.
+        if (fpath[ftwbuf->base] == '.' || hidden_dirs.count(path_to))
         {
-            hidden_dirs.insert(fpath);
+            hidden_dirs.emplace(fpath);
         }
     }
-
-    if (typeflag == FTW_F)      // We are only interested in files,
+    else if (typeflag == FTW_F)
     {
+        // We are only interested in files...
         const char* filename = fpath + ftwbuf->base;
         const char* dot = strrchr(filename, '.');
 
-        if (hidden_dirs.count(std::string(fpath, fpath + ftwbuf->base - 1)))
+        if (hidden_dirs.count(path_to))
         {
             MXS_INFO("Ignoring file inside hidden directory: %s", fpath);
         }
-        else if (dot && *filename != '.')   // that have a suffix and are not hidden,
+        else if (dot && *filename != '.')   // that have a suffix .cnf and are not hidden.
         {
             const char* suffix = dot + 1;
-
-            if (strcmp(suffix, "cnf") == 0)     // that is ".cnf".
+            if (strcmp(suffix, "cnf") == 0)
             {
-                mxb_assert(current_dcontext);
-                mxb_assert(current_ccontext);
-
-                auto load_res = mxb::ini::parse_config_file_to_map(fpath);
-                if (load_res.errors.empty())
-                {
-                    // If the file looks like the main config file (likely runtime-generated?),
-                    // apply the main "maxscale"-section first.
-                    if (this_unit.is_persisted_config && strcmp(filename, "maxscale.cnf") == 0)
-                    {
-                        if (!apply_main_config(load_res.config))
-                        {
-                            success = false;
-                        }
-                    }
-
-                    if (success && !config_load_single_file(fpath, current_dcontext, current_ccontext,
-                                                            load_res.config))
-                    {
-                        success = false;
-                    }
-                }
-                else
-                {
-                    success = false;
-                    for (const auto& error_msg : load_res.errors)
-                    {
-                        MXB_ERROR("%s", error_msg.c_str());
-                    }
-                }
+                ConfFilePath file_info;
+                file_info.total_path = fpath;
+                file_info.filename = filename;
+                config_files_list.push_back(std::move(file_info));
             }
         }
     }
-
-    return success ? 0 : 1;
+    return 0;
 }
 
 /**
@@ -1692,18 +1667,65 @@ int config_cb(const char* fpath, const struct stat* sb, int typeflag, struct FTW
  * @return True, if all configuration files in the directory hierarchy could be loaded,
  *         otherwise false.
  */
-static bool config_load_dir(const char* dir, DUPLICATE_CONTEXT* dcontext, CONFIG_CONTEXT* ccontext)
+bool config_load_dir(const string& dir, DUPLICATE_CONTEXT* dcontext, CONFIG_CONTEXT* ccontext)
 {
     int nopenfd = 5;    // Maximum concurrently opened directory descriptors
 
+    hidden_dirs.clear();
+    config_files_list.clear();
+    int rc = nftw(dir.c_str(), config_files_search_cb, nopenfd, FTW_PHYS);
+    const auto file_list = move(config_files_list);
+
     current_dcontext = dcontext;
     current_ccontext = ccontext;
-    int rv = nftw(dir, config_cb, nopenfd, FTW_PHYS);
-    current_ccontext = NULL;
-    current_dcontext = NULL;
-    hidden_dirs.clear();
 
-    return rv == 0;
+    bool success = false;
+    if (rc == 0)
+    {
+        success = true;
+        for (auto it = file_list.begin(); it != file_list.end() && success; it++)
+        {
+            auto& file = *it;
+            // Load config file.
+            auto load_res = mxb::ini::parse_config_file_to_map(file.total_path);
+            if (load_res.errors.empty())
+            {
+                // If the file looks like the main config file (likely runtime-generated?),
+                // apply the main "maxscale"-section first.
+                if (this_unit.is_persisted_config && file.filename == "maxscale.cnf"
+                    && !apply_main_config(load_res.config))
+                {
+                    success = false;
+                }
+
+                if (success
+                    && !config_load_single_file(file.total_path.c_str(), current_dcontext, current_ccontext,
+                                                load_res.config))
+                {
+                    success = false;
+                }
+            }
+            else
+            {
+                success = false;
+                for (const auto& error_msg : load_res.errors)
+                {
+                    MXB_ERROR("%s", error_msg.c_str());
+                }
+            }
+        }
+    }
+    else
+    {
+        int eno = errno;
+        MXB_ERROR("File tree walk (nftw) failed for '%s'. Error %i: %s",
+                  dir.c_str(), eno, mxb_strerror(eno));
+    }
+
+    current_ccontext = nullptr;
+    current_dcontext = nullptr;
+    return success;
+}
 }
 
 /**
@@ -1866,7 +1888,7 @@ static bool config_load_and_process(const char* filename,
 
         if (is_directory(dir.c_str()))
         {
-            rval = config_load_dir(dir.c_str(), &dcontext, &this_unit.config_context);
+            rval = config_load_dir(dir, &dcontext, &this_unit.config_context);
         }
 
         const char* persist_cnf = mxs::config_persistdir();
