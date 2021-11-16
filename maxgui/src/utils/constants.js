@@ -59,4 +59,5 @@ export const APP_CONFIG = Object.freeze({
         USER_LOGS: i18n.t('userQueryLogs'),
         ACTION_LOGS: i18n.t('actionLogs'),
     }),
+    MARIADB_NET_ERRNO: [2001, 2002, 2003, 2004, 2006, 2011, 2013],
 })

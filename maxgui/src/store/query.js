@@ -93,6 +93,7 @@ function memStates() {
     return {
         // connection related states
         is_querying_map: {},
+        lost_cnn_err_msg_obj_map: {},
         // sidebar states
         db_tree_map: {},
         exe_stmt_result_map: {},
@@ -150,6 +151,7 @@ function memStatesMutationCreator() {
                 switch (key) {
                     case 'is_querying_map':
                     case 'curr_editor_mode_map':
+                    case 'lost_cnn_err_msg_obj_map':
                         state[key] = { ...state[key], [id]: payload }
                         break
                     default:
@@ -409,6 +411,34 @@ export default {
                 logger.error(e)
             }
         },
+        async reconnect({ state, commit, dispatch }) {
+            const curr_cnct_resource = state.curr_cnct_resource
+            try {
+                let res = await this.$queryHttp.post(`/sql/${curr_cnct_resource.id}/reconnect`)
+                if (res.status === 204) {
+                    commit(
+                        'SET_SNACK_BAR_MESSAGE',
+                        {
+                            text: [this.i18n.t('info.reconnSuccessfully')],
+                            type: 'success',
+                        },
+                        { root: true }
+                    )
+                    await dispatch('initialFetch', curr_cnct_resource)
+                } else
+                    commit(
+                        'SET_SNACK_BAR_MESSAGE',
+                        {
+                            text: [this.i18n.t('errors.reconnFailed')],
+                            type: 'error',
+                        },
+                        { root: true }
+                    )
+            } catch (e) {
+                const logger = this.vue.$logger('store-query-reconnect')
+                logger.error(e)
+            }
+        },
         clearConn({ commit, dispatch, state }) {
             try {
                 const curr_cnct_resource = state.curr_cnct_resource
@@ -501,7 +531,7 @@ export default {
          * @param {Object} payload.state  query module state
          * @returns {Object} { dbTree, cmpList }
          */
-        async getDbs({ state, commit, rootState }) {
+        async getDbs({ state, rootState }) {
             const curr_cnct_resource = state.curr_cnct_resource
             try {
                 const {
@@ -561,18 +591,6 @@ export default {
                             type: SCHEMA,
                         })
                     })
-                } else {
-                    const errArr = Object.entries(res.data.data.attributes.results[0]).map(
-                        arr => `${arr[0]}: ${arr[1]}`
-                    )
-                    commit(
-                        'SET_SNACK_BAR_MESSAGE',
-                        {
-                            text: errArr,
-                            type: 'error',
-                        },
-                        { root: true }
-                    )
                 }
                 return { db_tree, cmpList }
             } catch (e) {
@@ -1023,7 +1041,9 @@ export default {
                 let res = await this.$queryHttp.post(`/sql/${curr_cnct_resource.id}/queries`, {
                     sql: 'SELECT DATABASE()',
                 })
-                const resActiveDb = res.data.data.attributes.results[0].data.flat()[0]
+                const resActiveDb = this.vue
+                    .$typy(res, 'data.data.attributes.results[0].data')
+                    .safeArray.flat()[0]
                 if (!resActiveDb) commit('SET_ACTIVE_DB', { payload: '', active_wke_id })
                 else if (active_db !== resActiveDb)
                     commit('SET_ACTIVE_DB', { payload: resActiveDb, active_wke_id })
@@ -1302,6 +1322,9 @@ export default {
         },
         getIsQuerying: state => {
             return state.is_querying_map[state.active_wke_id] || false
+        },
+        getQueryErrMsgObj: state => {
+            return state.lost_cnn_err_msg_obj_map[state.active_wke_id] || {}
         },
         // sidebar getters
         getCurrDbTree: state => state.db_tree_map[state.active_wke_id] || {},
