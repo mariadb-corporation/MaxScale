@@ -200,8 +200,8 @@ mxs::Buffer PinlokiSession::package(const uint8_t* ptr, size_t size)
 
 bool PinlokiSession::send_event(const maxsql::RplEvent& event)
 {
-    // Not the prettiest way of detecting a full network buffer but it should work
-    bool can_write = m_pSession->client_dcb->writeq() == nullptr;
+    bool can_write = m_pSession->client_dcb->writeq() == nullptr
+        || gwbuf_length(m_pSession->client_dcb->writeq()) < mxs::Config::get().writeq_high_water.get();
 
     if (can_write)
     {
