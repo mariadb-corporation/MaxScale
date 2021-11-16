@@ -128,7 +128,6 @@ protected:
 
     void send_downstream_via_loop(const std::string& sql);
 
-    void log_unexpected_packet();
     void throw_unexpected_packet();
 
     mxs::RoutingWorker& worker() const;
@@ -407,7 +406,13 @@ private:
     State translate_updating_document(ComResponse& response);
     State translate_inserting_document(ComResponse& response);
 
-    State update_document(const std::string& sql);
+    enum class Send
+    {
+        DIRECTLY,
+        VIA_LOOP
+    };
+
+    void update_document(const std::string& sql, Send send);
     State insert_document();
 
     Action                       m_action { Action::UPDATING_DOCUMENT };

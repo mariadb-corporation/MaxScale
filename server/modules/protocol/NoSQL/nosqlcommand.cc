@@ -364,11 +364,6 @@ string unexpected_message(const std::string& who, const std::string& statement)
 
 }
 
-void Command::log_unexpected_packet()
-{
-    MXS_ERROR("%s", unexpected_message(description(), m_last_statement).c_str());
-}
-
 void Command::throw_unexpected_packet()
 {
     throw HardError(unexpected_message(description(), m_last_statement), error::INTERNAL_ERROR);
@@ -614,8 +609,7 @@ State OpDeleteCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL
         break;
 
     default:
-        // We do not throw, as that would generate a response.
-        log_unexpected_packet();
+        throw_unexpected_packet();
     }
 
     *ppNoSQL_response = nullptr;
@@ -772,9 +766,9 @@ State OpUpdateCommand::execute(GWBUF** ppNoSQL_response)
         ss << "LIMIT 1";
     }
 
-    auto sql = ss.str();
+    update_document(ss.str(), Send::DIRECTLY);
 
-    return update_document(sql);
+    return State::BUSY;
 }
 
 State OpUpdateCommand::translate2(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
@@ -799,8 +793,7 @@ State OpUpdateCommand::translate2(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQ
     }
     else
     {
-        // We do not throw, as that would generate a response.
-        log_unexpected_packet();
+        throw_unexpected_packet();
     }
 
     *ppNoSQL_response = nullptr;
@@ -872,25 +865,12 @@ State OpUpdateCommand::translate_updating_document(ComResponse& response)
 
         if (err.code() == ER_NO_SUCH_TABLE)
         {
-            if (m_database.config().auto_create_tables)
-            {
-                create_table();
-                state = State::BUSY;
-            }
-            else
-            {
-                ostringstream ss;
-                ss << "Table " << table() << " does not exist, and 'auto_create_tables' "
-                   << "is false.";
-
-                MXB_WARNING("%s", ss.str().c_str());
-            }
+            create_table();
+            state = State::BUSY;
         }
         else
         {
-            MariaDBError mariadb_err(err);
-            MXB_ERROR("%s", mariadb_err.message().c_str());
-            m_database.context().set_last_error(mariadb_err.create_last_error());
+            throw MariaDBError(err);
         }
     }
 
@@ -899,14 +879,9 @@ State OpUpdateCommand::translate_updating_document(ComResponse& response)
 
 State OpUpdateCommand::translate_inserting_document(ComResponse& response)
 {
-    State state = State::BUSY;
-
     if (response.type() == ComResponse::ERR_PACKET)
     {
-        ComERR err(response);
-        m_database.context().set_last_error(MariaDBError(err).create_last_error());
-
-        state = State::READY;
+        throw MariaDBError(ComERR(response));
     }
     else
     {
@@ -916,22 +891,10 @@ State OpUpdateCommand::translate_inserting_document(ComResponse& response)
            << " "
            << "WHERE id = '" << m_sId->to_string() << "'";
 
-        auto sql = ss.str();
-
-        mxb_assert(m_dcid == 0);
-        m_dcid = worker().delayed_call(0, [this, sql](Worker::Call::action_t action) {
-                m_dcid = 0;
-
-                if (action == Worker::Call::EXECUTE)
-                {
-                    update_document(sql);
-                }
-
-            return false;
-        });
+        update_document(ss.str(), Send::VIA_LOOP);
     }
 
-    return state;
+    return State::BUSY;
 }
 
 State OpUpdateCommand::table_created(GWBUF** ppResponse)
@@ -942,15 +905,20 @@ State OpUpdateCommand::table_created(GWBUF** ppResponse)
     return State::BUSY;
 }
 
-State OpUpdateCommand::update_document(const string& sql)
+void OpUpdateCommand::update_document(const string& sql, Send send)
 {
     m_action = Action::UPDATING_DOCUMENT;
 
     m_update = sql;
 
-    send_downstream(m_update);
-
-    return State::BUSY;
+    if (send == Send::DIRECTLY)
+    {
+        send_downstream(m_update);
+    }
+    else
+    {
+        send_downstream_via_loop(m_update);
+    }
 }
 
 State OpUpdateCommand::insert_document()
@@ -1034,17 +1002,7 @@ State OpUpdateCommand::insert_document()
 
     m_insert = ss.str();
 
-    mxb_assert(m_dcid == 0);
-    m_dcid = worker().delayed_call(0, [this](Worker::Call::action_t action) {
-            m_dcid = 0;
-
-            if (action == Worker::Call::EXECUTE)
-            {
-                send_downstream(m_insert);
-            }
-
-            return false;
-        });
+    send_downstream_via_loop(m_insert);
 
     return State::BUSY;
 }
