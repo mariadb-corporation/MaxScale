@@ -449,3 +449,18 @@ h6 {
 .row + .row {
     margin-top: 0;
 }
+
+.err-tbl-code {
+    width: 100%;
+    background-color: $reflection;
+    td {
+        color: $code-color;
+        vertical-align: top;
+        padding-bottom: 4px;
+        width: auto;
+        &:first-of-type {
+            width: 1px;
+            padding-right: 16px;
+        }
+    }
+}
