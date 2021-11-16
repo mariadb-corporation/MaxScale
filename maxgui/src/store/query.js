@@ -734,7 +734,7 @@ export default {
                         key: uniqueId('node_key_'),
                         type: grandChildNodeType,
                         name: row[rowName],
-                        id: `${dbName}.${row[rowName]}`,
+                        id: `${tblName}.${row[rowName]}`,
                         draggable: true,
                         data: row,
                         level: 4,
