@@ -58,7 +58,7 @@ describe('Dashboard Filters tab', () => {
                 all_filters: () => dummy_all_filters,
             },
         })
-        axiosStub = sinon.stub(wrapper.vm.$axios, 'get').resolves(
+        axiosStub = sinon.stub(wrapper.vm.$store.$http, 'get').resolves(
             Promise.resolve({
                 data: {},
             })

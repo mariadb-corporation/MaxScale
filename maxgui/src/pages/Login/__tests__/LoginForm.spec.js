@@ -1,10 +1,22 @@
-import Vue from 'vue'
+/*
+ * Copyright (c) 2020 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2025-10-29
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
 import chai, { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import LoginForm from '@/pages/Login/LoginForm'
 import { inputChangeMock, routeChangesMock } from '@tests/unit/utils'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
+import { makeServer } from '@tests/unit/mirage/api'
 chai.should()
 chai.use(sinonChai)
 
@@ -18,37 +30,26 @@ async function mockupCheckingTheBox(wrapper) {
     await input.trigger('click')
 }
 
+let api
+let originalXMLHttpRequest = XMLHttpRequest
 describe('LoginForm.vue', async () => {
-    let wrapper, loginAxiosStub, axiosStub
-
-    after(async () => {
-        await loginAxiosStub.reset()
-        await axiosStub.reset()
-    })
-
+    let wrapper
     beforeEach(() => {
-        axiosStub = sinon.stub(Vue.prototype.$axios, 'get').resolves(
-            Promise.resolve({
-                data: {},
-            })
-        )
+        api = makeServer({ environment: 'test' })
+        // eslint-disable-next-line no-global-assign
+        XMLHttpRequest = window.XMLHttpRequest
         wrapper = mount({
             shallow: false,
             component: LoginForm,
         })
         routeChangesMock(wrapper, '/login')
-        loginAxiosStub = sinon.stub(wrapper.vm.$loginAxios, 'get').resolves(
-            Promise.resolve({
-                data: {},
-            })
-        )
     })
-
-    afterEach(async () => {
-        loginAxiosStub.restore()
-        axiosStub.restore()
+    afterEach(() => {
+        api.shutdown()
+        // Restore node's original window.XMLHttpRequest.
+        // eslint-disable-next-line no-global-assign
+        XMLHttpRequest = originalXMLHttpRequest
     })
-
     it('Should render username and password fields.', () => {
         const emailInput = wrapper.find('#username')
         const passwordInput = wrapper.find('#password')
@@ -112,37 +113,36 @@ describe('LoginForm.vue', async () => {
         await mockupCheckingTheBox(wrapper) // checked
         expect(wrapper.vm.$data.rememberMe).to.be.true
     })
-
     it('Should send auth request when remember me is not chosen', async () => {
         await inputChangeMock(wrapper, 'admin', '#username')
         await inputChangeMock(wrapper, 'mariadb', '#password')
         await mockupCheckingTheBox(wrapper) // unchecked
         await wrapper.find('.login-btn').trigger('click') //submit
-
-        loginAxiosStub.should.have.been.calledWith('/auth?persist=yes', {
-            auth: { username: 'admin', password: 'mariadb' },
-        })
+        await wrapper.vm.$nextTick(() =>
+            expect(api.pretender.unhandledRequests[0].responseURL).to.be.equal('/auth?persist=yes')
+        )
     })
 
     it('Should send auth request when remember me is chosen', async () => {
         await inputChangeMock(wrapper, 'maxskysql', '#username')
         await inputChangeMock(wrapper, 'skysql', '#password')
         await wrapper.find('.login-btn').trigger('click') //submit
-
-        loginAxiosStub.should.have.been.calledWith('/auth?persist=yes&max-age=86400', {
-            auth: { username: 'maxskysql', password: 'skysql' },
-        })
+        await wrapper.vm.$nextTick(() =>
+            expect(api.pretender.unhandledRequests[0].responseURL).to.be.equal(
+                '/auth?persist=yes&max-age=86400'
+            )
+        )
     })
 
     it('Should navigate to dashboard page once authenticating process is succeed', async () => {
         await inputChangeMock(wrapper, 'maxskysql', '#username')
         await inputChangeMock(wrapper, 'skysql', '#password')
         await wrapper.find('.login-btn').trigger('click') //submit
-        loginAxiosStub.should.have.been.calledWith('/auth?persist=yes&max-age=86400', {
-            auth: { username: 'maxskysql', password: 'skysql' },
-        })
-        await wrapper.vm.$nextTick(() =>
+        await wrapper.vm.$nextTick(() => {
+            expect(api.pretender.unhandledRequests[0].responseURL).to.be.equal(
+                '/auth?persist=yes&max-age=86400'
+            )
             expect(wrapper.vm.$route.path).to.be.equals('/dashboard/servers')
-        )
+        })
     })
 })

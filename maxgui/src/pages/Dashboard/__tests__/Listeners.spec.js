@@ -71,7 +71,7 @@ describe('Dashboard Listeners tab', () => {
                 all_listeners: () => dummy_all_listeners,
             },
         })
-        axiosStub = sinon.stub(wrapper.vm.$axios, 'get').resolves(
+        axiosStub = sinon.stub(wrapper.vm.$store.$http, 'get').resolves(
             Promise.resolve({
                 data: {},
             })

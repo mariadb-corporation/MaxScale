@@ -330,7 +330,7 @@ export default {
     actions: {
         async fetchRcTargetNames({ state, commit }, resourceType) {
             try {
-                let res = await this.vue.$axios.get(`/${resourceType}?fields[${resourceType}]=id`)
+                let res = await this.$queryHttp.get(`/${resourceType}?fields[${resourceType}]=id`)
                 if (res.data.data) {
                     const names = res.data.data.map(({ id, type }) => ({ id, type }))
                     commit('SET_RC_TARGET_NAMES_MAP', {
@@ -346,7 +346,7 @@ export default {
         async openConnect({ state, dispatch, commit }, { body, resourceType }) {
             const active_wke_id = state.active_wke_id
             try {
-                let res = await this.vue.$axios.post(`/sql?persist=yes&max-age=86400`, body)
+                let res = await this.$queryHttp.post(`/sql?persist=yes&max-age=86400`, body)
                 if (res.status === 201) {
                     commit(
                         'SET_SNACK_BAR_MESSAGE',
@@ -376,7 +376,7 @@ export default {
         async disconnect({ state, commit, dispatch }, { showSnackbar, id: cnctId }) {
             try {
                 const targetCnctResource = state.cnct_resources.find(rsrc => rsrc.id === cnctId)
-                let res = await this.vue.$axios.delete(`/sql/${cnctId}`)
+                let res = await this.$queryHttp.delete(`/sql/${cnctId}`)
                 if (res.status === 204) {
                     if (showSnackbar)
                         commit(
@@ -422,7 +422,7 @@ export default {
         async validatingConn({ state, commit, dispatch }) {
             try {
                 commit('SET_IS_VALIDATING_CONN', true)
-                const res = await this.vue.$axios.get(`/sql/`)
+                const res = await this.$queryHttp.get(`/sql/`)
                 const resConnIds = res.data.data.map(conn => conn.id)
                 const clientConnIds = queryHelper.getClientConnIds()
                 if (resConnIds.length === 0) {
@@ -542,7 +542,7 @@ export default {
                 let sql = 'SELECT * FROM information_schema.SCHEMATA'
                 if (!rootState.persisted.query_show_sys_schemas_flag)
                     sql += ` WHERE SCHEMA_NAME NOT IN(${SYS_S.map(db => `'${db}'`).join(',')})`
-                const res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                const res = await this.$queryHttp.post(`/sql/${curr_cnct_resource.id}/queries`, {
                     sql,
                 })
                 let cmpList = []
@@ -640,7 +640,7 @@ export default {
                         query = `SELECT ROUTINE_NAME, CREATED FROM information_schema.ROUTINES WHERE ROUTINE_TYPE = 'PROCEDURE' AND ROUTINE_SCHEMA = '${dbName}';`
                         break
                 }
-                const res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                const res = await this.$queryHttp.post(`/sql/${curr_cnct_resource.id}/queries`, {
                     sql: query,
                 })
                 const dataRows = this.vue.$help.getObjectRows({
@@ -730,7 +730,7 @@ export default {
                         query = `SELECT COLUMN_NAME, COLUMN_TYPE, COLUMN_KEY, PRIVILEGES FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = "${dbName}" AND TABLE_NAME = "${tblName}";`
                         break
                 }
-                const res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                const res = await this.$queryHttp.post(`/sql/${curr_cnct_resource.id}/queries`, {
                     sql: query,
                 })
 
@@ -911,7 +911,7 @@ export default {
                             break
                     }
 
-                    let res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                    let res = await this.$queryHttp.post(`/sql/${curr_cnct_resource.id}/queries`, {
                         sql,
                         max_rows: rootState.persisted.query_max_rows,
                     })
@@ -968,7 +968,7 @@ export default {
                         },
                     })
 
-                    let res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                    let res = await this.$queryHttp.post(`/sql/${curr_cnct_resource.id}/queries`, {
                         sql: query,
                         max_rows: rootState.persisted.query_max_rows,
                     })
@@ -1017,7 +1017,7 @@ export default {
                 const now = new Date().valueOf()
                 const escapedDb = this.vue.$help.escapeIdentifiers(db)
                 const sql = `USE ${escapedDb};`
-                let res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                let res = await this.$queryHttp.post(`/sql/${curr_cnct_resource.id}/queries`, {
                     sql,
                 })
                 let queryName = `Change default database to ${escapedDb}`
@@ -1055,7 +1055,7 @@ export default {
             const active_db = state.active_db
             const active_wke_id = state.active_wke_id
             try {
-                let res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                let res = await this.$queryHttp.post(`/sql/${curr_cnct_resource.id}/queries`, {
                     sql: 'SELECT DATABASE()',
                 })
                 const resActiveDb = res.data.data.attributes.results[0].data.flat()[0]
@@ -1073,7 +1073,7 @@ export default {
                 const sql =
                     // eslint-disable-next-line vue/max-len
                     'SELECT character_set_name, collation_name, is_default FROM information_schema.collations'
-                let res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                let res = await this.$queryHttp.post(`/sql/${curr_cnct_resource.id}/queries`, {
                     sql,
                 })
                 let charsetCollationMap = new Map()
@@ -1101,7 +1101,7 @@ export default {
                 const sql =
                     // eslint-disable-next-line vue/max-len
                     'SELECT schema_name, default_character_set_name FROM information_schema.schemata'
-                let res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                let res = await this.$queryHttp.post(`/sql/${curr_cnct_resource.id}/queries`, {
                     sql,
                 })
                 let defDbCharsetMap = new Map()
@@ -1120,7 +1120,7 @@ export default {
         async queryEngines({ state, commit }) {
             const curr_cnct_resource = state.curr_cnct_resource
             try {
-                let res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                let res = await this.$queryHttp.post(`/sql/${curr_cnct_resource.id}/queries`, {
                     sql: 'SELECT engine FROM information_schema.ENGINES',
                 })
                 commit('SET_ENGINES', res.data.data.attributes.results[0].data.flat())
@@ -1147,11 +1147,12 @@ export default {
                         curr_cnct_resource,
                         nodeId: node.id,
                         vue: this.vue,
+                        $queryHttp: this.$queryHttp,
                     })
                     const colsOptsData = await queryHelper.queryColsOptsData({
                         curr_cnct_resource,
                         nodeId: node.id,
-                        vue: this.vue,
+                        $queryHttp: this.$queryHttp,
                     })
                     commit(`UPDATE_TBL_CREATION_INFO_MAP`, {
                         id: active_wke_id,
@@ -1204,7 +1205,7 @@ export default {
             await dispatch('queryingActionWrapper', {
                 action: async () => {
                     let stmt_err_msg_obj = {}
-                    let res = await this.vue.$axios.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                    let res = await this.$queryHttp.post(`/sql/${curr_cnct_resource.id}/queries`, {
                         sql,
                         max_rows: rootState.persisted.query_max_rows,
                     })

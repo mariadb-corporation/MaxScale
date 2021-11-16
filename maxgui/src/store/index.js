@@ -26,11 +26,16 @@ import { APP_CONFIG } from 'utils/constants'
 import router from 'router'
 import i18n from 'plugins/i18n'
 import createPersistedState from 'vuex-persistedstate'
-
+import { refreshAxiosToken, cancelAllRequests, authHttp, http, queryHttp } from 'utils/axios'
 const plugins = store => {
     store.router = router
     store.vue = Vue.prototype
     store.i18n = i18n
+    store.$authHttp = authHttp
+    store.$http = http(store)
+    store.$queryHttp = queryHttp(store)
+    store.$refreshAxiosToken = refreshAxiosToken
+    store.$cancelAllRequests = cancelAllRequests
 }
 
 const store = new Vuex.Store({
@@ -105,9 +110,9 @@ const store = new Vuex.Store({
          * It should be dispatched on public route when routing occurs
          */
         async checkingForUpdate({ commit }) {
-            this.vue.$refreshAxiosToken()
+            this.$refreshAxiosToken()
             const logger = this.vue.$logger('index-store')
-            const res = await this.vue.$axios.get(`/`)
+            const res = await this.$http.get(`/`)
             logger.info('Checking for update')
             const resDoc = new DOMParser().parseFromString(res.data, 'text/html')
             const newCommitId = resDoc.getElementsByName('commitId')[0].content
@@ -134,13 +139,10 @@ const store = new Vuex.Store({
                 let data = []
                 let res
                 if (resourceId) {
-                    res = await this.vue.$axios.get(
+                    res = await this.$http.get(
                         `/${resourceType}/${resourceId}?fields[${resourceType}]=state`
                     )
-                } else
-                    res = await this.vue.$axios.get(
-                        `/${resourceType}?fields[${resourceType}]=state`
-                    )
+                } else res = await this.$http.get(`/${resourceType}?fields[${resourceType}]=state`)
 
                 if (res.data.data) data = res.data.data
                 return data
@@ -153,7 +155,7 @@ const store = new Vuex.Store({
         async fetchModuleParameters({ commit }, moduleId) {
             try {
                 let data = []
-                let res = await this.vue.$axios.get(
+                let res = await this.$http.get(
                     `/maxscale/modules/${moduleId}?fields[module]=parameters`
                 )
                 if (res.data.data) {

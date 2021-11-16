@@ -28,7 +28,7 @@ export default {
     actions: {
         async fetchAllFilters({ commit }) {
             try {
-                let res = await this.vue.$axios.get(`/filters`)
+                let res = await this.$http.get(`/filters`)
                 if (res.data.data) commit('SET_ALL_FILTERS', res.data.data)
             } catch (e) {
                 const logger = this.vue.$logger('store-filter-fetchAllFilters')
@@ -38,7 +38,7 @@ export default {
 
         async fetchFilterById({ commit }, id) {
             try {
-                let res = await this.vue.$axios.get(`/filters/${id}`)
+                let res = await this.$http.get(`/filters/${id}`)
                 if (res.data.data) commit('SET_CURRENT_FILTER', res.data.data)
             } catch (e) {
                 const logger = this.vue.$logger('store-filter-fetchFilterById')
@@ -65,7 +65,7 @@ export default {
                         },
                     },
                 }
-                let res = await this.vue.$axios.post(`/filters`, body)
+                let res = await this.$http.post(`/filters`, body)
                 let message = [`Filter ${payload.id} is created`]
                 // response ok
                 if (res.status === 204) {
@@ -100,7 +100,7 @@ export default {
                         attributes: { parameters: payload.parameters },
                     },
                 }
-                let res = await this.vue.$axios.patch(`/filters/${payload.id}`, body)
+                let res = await this.$http.patch(`/filters/${payload.id}`, body)
                 // response ok
                 if (res.status === 204) {
                     commit(
@@ -121,7 +121,7 @@ export default {
 
         async destroyFilter({ dispatch, commit }, id) {
             try {
-                let res = await this.vue.$axios.delete(`/filters/${id}?force=yes`)
+                let res = await this.$http.delete(`/filters/${id}?force=yes`)
                 if (res.status === 204) {
                     await dispatch('fetchAllFilters')
                     commit(

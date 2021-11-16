@@ -48,8 +48,8 @@ describe('MonitorDetail - PageHeader', () => {
                 currentMonitor: dummy_all_monitors[0],
             },
         })
-        axiosDeleteStub = sinon.stub(wrapper.vm.$axios, 'delete').returns(Promise.resolve())
-        axiosPutStub = sinon.stub(wrapper.vm.$axios, 'put').returns(Promise.resolve())
+        axiosDeleteStub = sinon.stub(wrapper.vm.$store.$http, 'delete').returns(Promise.resolve())
+        axiosPutStub = sinon.stub(wrapper.vm.$store.$http, 'put').returns(Promise.resolve())
     })
 
     afterEach(async () => {

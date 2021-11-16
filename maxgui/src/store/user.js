@@ -56,15 +56,12 @@ export default {
     actions: {
         async login({ commit }, { rememberMe, auth }) {
             try {
-                /* Using $loginAxios instance, instead of using $axios as it's configured to have global interceptor*/
-                this.vue.$refreshAxiosToken()
+                /* Using $authHttp instance, instead of using $http as it's configured to have global interceptor*/
+                this.$refreshAxiosToken()
                 let url = '/auth?persist=yes'
-                let res = await this.vue.$loginAxios.get(
-                    `${url}${rememberMe ? '&max-age=86400' : ''}`,
-                    {
-                        auth,
-                    }
-                )
+                let res = await this.$authHttp.get(`${url}${rememberMe ? '&max-age=86400' : ''}`, {
+                    auth,
+                })
                 if (res.status === 204) {
                     commit('SET_LOGGED_IN_USER', {
                         name: auth.username,
@@ -90,7 +87,7 @@ export default {
         },
         async logout({ commit, dispatch, rootState }) {
             await dispatch('query/disconnectAll', {}, { root: true })
-            this.vue.$cancelAllRequests() // cancel all previous requests before logging out
+            this.$cancelAllRequests() // cancel all previous requests before logging out
             commit('CLEAR_USER')
             commit('SET_OVERLAY_TYPE', OVERLAY_LOGOUT, { root: true })
 
@@ -121,7 +118,7 @@ export default {
         // --------------------------------------------------- Network users -------------------------------------
         async fetchCurrentNetworkUser({ dispatch, commit, state }) {
             try {
-                let res = await this.vue.$axios.get(`/users/inet/${state.logged_in_user.username}`)
+                let res = await this.$http.get(`/users/inet/${state.logged_in_user.username}`)
                 // response ok
                 if (res.status === 200 && res.data.data) {
                     let data = res.data.data
@@ -139,7 +136,7 @@ export default {
         },
         async fetchAllNetworkUsers({ commit }) {
             try {
-                let res = await this.vue.$axios.get(`/users/inet`)
+                let res = await this.$http.get(`/users/inet`)
                 // response ok
                 if (res.status === 200 && res.data.data) {
                     commit('SET_ALL_NETWORK_USERS', res.data.data)
@@ -170,7 +167,7 @@ export default {
                                     attributes: { password: data.password, account: data.role },
                                 },
                             }
-                            res = await this.vue.$axios.post(`/users/inet`, payload)
+                            res = await this.$http.post(`/users/inet`, payload)
                             message = [`Network User ${data.id} is created`]
                         }
                         break
@@ -181,7 +178,7 @@ export default {
                                     attributes: { password: data.password },
                                 },
                             }
-                            res = await this.vue.$axios.patch(`/users/inet/${data.id}`, payload)
+                            res = await this.$http.patch(`/users/inet/${data.id}`, payload)
                             message = [`Network User ${data.id} is updated`]
                         }
                         break
@@ -208,7 +205,7 @@ export default {
          */
         async deleteNetworkUserById({ dispatch, commit }, id) {
             try {
-                let res = await this.vue.$axios.delete(`/users/inet/${id}`)
+                let res = await this.$http.delete(`/users/inet/${id}`)
                 // response ok
                 if (res.status === 204) {
                     await dispatch('fetchAllNetworkUsers')
@@ -229,7 +226,7 @@ export default {
         // --------------------------------------------------- Unix accounts -------------------------------------
         async fetchAllUNIXAccounts({ commit }) {
             try {
-                let res = await this.vue.$axios.get(`/users/unix`)
+                let res = await this.$http.get(`/users/unix`)
                 // response ok
                 if (res.status === 200 && res.data.data) {
                     commit('SET_ALL_UNIX_ACCOUNTS', res.data.data)
@@ -241,7 +238,7 @@ export default {
         },
         async enableUNIXAccount({ commit, dispatch }, { id, role }) {
             try {
-                let res = await this.vue.$axios.get(`/users/unix`, {
+                let res = await this.$http.get(`/users/unix`, {
                     data: {
                         id: id,
                         type: 'unix',
@@ -272,7 +269,7 @@ export default {
          */
         async disableUNIXAccount({ dispatch, commit }, id) {
             try {
-                let res = await this.vue.$axios.delete(`/users/unix/${id}`)
+                let res = await this.$http.delete(`/users/unix/${id}`)
                 // response ok
                 if (res.status === 204) {
                     await dispatch('fetchAllUNIXAccounts')
@@ -293,7 +290,7 @@ export default {
         // --------------------------------------------------- All users -----------------------------------------
         async fetchAllUsers({ commit }) {
             try {
-                let res = await this.vue.$axios.get(`/users`)
+                let res = await this.$http.get(`/users`)
                 // response ok
                 if (res.status === 200 && res.data.data) {
                     commit('SET_ALL_USERS', res.data.data)

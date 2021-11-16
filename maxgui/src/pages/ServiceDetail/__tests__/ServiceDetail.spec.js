@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Vue from 'vue'
+import store from 'store'
 import chai, { expect } from 'chai'
 import mount, { router } from '@tests/unit/setup'
 import ServiceDetail from '@/pages/ServiceDetail'
@@ -102,12 +102,12 @@ describe('ServiceDetail index', () => {
 
     before(async () => {
         await toServicePage()
-        axiosGetStub = sinon.stub(Vue.prototype.$axios, 'get').returns(
+        axiosGetStub = sinon.stub(store.$http, 'get').returns(
             Promise.resolve({
                 data: {},
             })
         )
-        axiosPatchStub = sinon.stub(Vue.prototype.$axios, 'patch').returns(Promise.resolve())
+        axiosPatchStub = sinon.stub(store.$http, 'patch').returns(Promise.resolve())
         wrapper = mount(shallowMountOptions)
     })
 

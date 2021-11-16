@@ -10,13 +10,12 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Vue from 'vue'
 import chai, { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import Dashboard from '@/pages/Dashboard'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
-
+import store from 'store'
 chai.should()
 chai.use(sinonChai)
 
@@ -28,7 +27,7 @@ describe('Dashboard index', () => {
     })
 
     beforeEach(async () => {
-        axiosStub = sinon.stub(Vue.prototype.$axios, 'get').resolves(
+        axiosStub = sinon.stub(store.$http, 'get').resolves(
             Promise.resolve({
                 data: {},
             })

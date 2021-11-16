@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Vue from 'vue'
+import store from 'store'
 import chai from 'chai'
 import mount, { router } from '@tests/unit/setup'
 import ListenerDetail from '@/pages/ListenerDetail'
@@ -24,7 +24,7 @@ describe('ListenerDetail index', () => {
     let wrapper, axiosStub
 
     before(async () => {
-        axiosStub = sinon.stub(Vue.prototype.$axios, 'get').returns(
+        axiosStub = sinon.stub(store.$http, 'get').returns(
             Promise.resolve({
                 data: {},
             })
@@ -41,7 +41,7 @@ describe('ListenerDetail index', () => {
 
     beforeEach(async () => {
         await axiosStub.restore()
-        axiosStub = sinon.stub(Vue.prototype.$axios, 'get').returns(
+        axiosStub = sinon.stub(store.$http, 'get').returns(
             Promise.resolve({
                 data: {},
             })

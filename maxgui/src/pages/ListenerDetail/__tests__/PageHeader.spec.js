@@ -31,7 +31,7 @@ describe('ListenerDetail - PageHeader', () => {
                 currentListener: dummy_all_listeners[0],
             },
         })
-        axiosStub = sinon.stub(wrapper.vm.$axios, 'delete').returns(Promise.resolve())
+        axiosStub = sinon.stub(wrapper.vm.$store.$http, 'delete').returns(Promise.resolve())
     })
 
     afterEach(async () => {

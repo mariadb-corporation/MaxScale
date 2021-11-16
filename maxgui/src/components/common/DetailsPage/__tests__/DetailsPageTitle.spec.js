@@ -30,7 +30,7 @@ describe('DetailsPageTitle.vue', () => {
             shallow: false,
             component: DetailsPageTitle,
         })
-        axiosStub = sinon.stub(wrapper.vm.$axios, 'get').resolves(
+        axiosStub = sinon.stub(wrapper.vm.$store.$http, 'get').resolves(
             Promise.resolve({
                 data: {},
             })

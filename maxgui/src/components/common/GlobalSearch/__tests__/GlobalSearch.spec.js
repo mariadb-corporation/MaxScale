@@ -25,7 +25,7 @@ describe('GlobalSearch.vue', () => {
             shallow: true,
             component: GlobalSearch,
         })
-        axiosStub = sinon.stub(wrapper.vm.$axios, 'get').resolves(
+        axiosStub = sinon.stub(wrapper.vm.$store.$http, 'get').resolves(
             Promise.resolve({
                 data: {},
             })

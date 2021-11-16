@@ -28,7 +28,7 @@ export default {
     actions: {
         async fetchAllListeners({ commit }) {
             try {
-                let res = await this.vue.$axios.get(`/listeners`)
+                let res = await this.$http.get(`/listeners`)
                 if (res.data.data) commit('SET_ALL_LISTENERS', res.data.data)
             } catch (e) {
                 const logger = this.vue.$logger('store-listener-fetchAllListeners')
@@ -38,7 +38,7 @@ export default {
 
         async fetchListenerById({ commit }, id) {
             try {
-                let res = await this.vue.$axios.get(`/listeners/${id}`)
+                let res = await this.$http.get(`/listeners/${id}`)
                 if (res.data.data) commit('SET_CURRENT_LISTENER', res.data.data)
             } catch (e) {
                 const logger = this.vue.$logger('store-listener-fetchListenerById')
@@ -65,7 +65,7 @@ export default {
                     },
                 }
 
-                let res = await this.vue.$axios.post(`/listeners`, body)
+                let res = await this.$http.post(`/listeners`, body)
                 let message = [`Listener ${payload.id} is created`]
                 // response ok
                 if (res.status === 204) {
@@ -99,7 +99,7 @@ export default {
                         attributes: { parameters: payload.parameters },
                     },
                 }
-                let res = await this.vue.$axios.patch(`/listeners/${payload.id}`, body)
+                let res = await this.$http.patch(`/listeners/${payload.id}`, body)
                 // response ok
                 if (res.status === 204) {
                     commit(
@@ -119,7 +119,7 @@ export default {
         },
         async destroyListener({ dispatch, commit }, id) {
             try {
-                let res = await this.vue.$axios.delete(`/listeners/${id}`)
+                let res = await this.$http.delete(`/listeners/${id}`)
                 if (res.status === 204) {
                     await dispatch('fetchAllListeners')
                     commit(
