@@ -145,6 +145,20 @@ export default {
                 },
             ]
         },
+        clipboardOpts() {
+            const { SQL_CLIPBOARD } = this.SQL_NODE_CTX_OPTS
+            return [
+                {
+                    text: this.$t('copyToClipboard'),
+                    children: [
+                        { text: this.$t('clipboardSchemaEscaped'), type: SQL_CLIPBOARD },
+                        { text: this.$t('clipboardSchema'), type: SQL_CLIPBOARD },
+                        { text: this.$t('clipboardNameEscaped'), type: SQL_CLIPBOARD },
+                        { text: this.$t('clipboardName'), type: SQL_CLIPBOARD },
+                    ],
+                },
+            ]
+        },
         txtEditorRelatedOpts() {
             return [...this.queryOpts, { divider: true }, ...this.insertOpts]
         },
@@ -155,11 +169,15 @@ export default {
                 SQL_ADMIN_OPT_TYPES: { USE },
             } = this.SQL_NODE_CTX_OPTS
             return {
-                [SCHEMA]: [{ text: this.$t('useDb'), type: USE }, ...this.insertOpts],
-                [TABLE]: [...this.txtEditorRelatedOpts],
-                [SP]: [...this.insertOpts],
-                [COL]: [...this.insertOpts],
-                [TRIGGER]: [...this.insertOpts],
+                [SCHEMA]: [
+                    { text: this.$t('useDb'), type: USE },
+                    ...this.insertOpts,
+                    ...this.clipboardOpts,
+                ],
+                [TABLE]: [...this.txtEditorRelatedOpts, ...this.clipboardOpts],
+                [SP]: [...this.insertOpts, ...this.clipboardOpts],
+                [COL]: [...this.insertOpts, ...this.clipboardOpts],
+                [TRIGGER]: [...this.insertOpts, ...this.clipboardOpts],
             }
         },
         // more node options for user's nodes
@@ -338,6 +356,29 @@ export default {
          * @param {Object} opt - context menu option
          * @param {String} schema - node identifier
          */
+        handleCopyToClipboardOpt({ item, opt, schema }) {
+            let v = ''
+            switch (opt.text) {
+                case this.$t('clipboardSchemaEscaped'):
+                    v = this.$help.escapeIdentifiers(schema)
+                    break
+                case this.$t('clipboardSchema'):
+                    v = schema
+                    break
+                case this.$t('clipboardNameEscaped'):
+                    v = this.$help.escapeIdentifiers(item.name)
+                    break
+                case this.$t('clipboardName'):
+                    v = item.name
+                    break
+            }
+            this.$help.copyTextToClipboard(v)
+        },
+        /**
+         * @param {Object} item - node
+         * @param {Object} opt - context menu option
+         * @param {String} schema - node identifier
+         */
         handleEmitDD_opt({ item, opt, schema }) {
             switch (opt.text) {
                 case this.$t('alterTbl'):
@@ -401,6 +442,7 @@ export default {
         optionHandler({ item, opt }) {
             const schema = item.id
             const {
+                SQL_CLIPBOARD,
                 SQL_TXT_EDITOR_OPT_TYPES: { INSERT, QUERY },
                 SQL_DDL_OPT_TYPES: { DD },
                 SQL_ADMIN_OPT_TYPES: { USE },
@@ -415,6 +457,9 @@ export default {
                 case INSERT:
                 case QUERY:
                     this.handleTxtEditorOpt({ item, opt, schema })
+                    break
+                case SQL_CLIPBOARD:
+                    this.handleCopyToClipboardOpt({ item, opt, schema })
                     break
             }
         },
