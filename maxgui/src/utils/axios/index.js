@@ -105,16 +105,30 @@ function http(store) {
     )
     return http
 }
+
+function updateIsQueryingMap({ store, value }) {
+    const active_wke_id = store.state.query.active_wke_id
+    if (active_wke_id)
+        store.commit('query/UPDATE_IS_QUERYING_MAP', {
+            id: active_wke_id,
+            payload: value,
+        })
+}
 // axios instance for `/sql` endpoint
 function queryHttp(store) {
     let queryHttp = baseConf()
     queryHttp.interceptors.request.use(
-        config => ({ ...config, cancelToken: cancelSource.token }),
+        config => {
+            updateIsQueryingMap({ store, value: true })
+            return { ...config, cancelToken: cancelSource.token }
+        },
         error => Promise.reject(error)
     )
-
     queryHttp.interceptors.response.use(
-        response => response,
+        response => {
+            updateIsQueryingMap({ store, value: false })
+            return response
+        },
         async error => {
             const { getErrorsArr } = store.vue.$help
             const { response: { status = null } = {} } = error || {}
@@ -127,6 +141,7 @@ function queryHttp(store) {
                     type: 'error',
                 })
             } else defErrStatusHandler({ store, error })
+            updateIsQueryingMap({ store, value: false })
         }
     )
     return queryHttp
