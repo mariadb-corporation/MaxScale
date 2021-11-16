@@ -137,9 +137,9 @@ export default {
                 {
                     text: this.$t('placeToEditor'),
                     children: [
-                        { text: this.$t('placeSchemaInEditorEscaped'), type: INSERT },
-                        { text: this.$t('placeSchemaInEditor'), type: INSERT },
-                        { text: this.$t('placeNameInEditorEscaped'), type: INSERT },
+                        { text: this.$t('placeQualifiedNameQuoted'), type: INSERT },
+                        { text: this.$t('placeQualifiedName'), type: INSERT },
+                        { text: this.$t('placeNameInEditorQuoted'), type: INSERT },
                         { text: this.$t('placeNameInEditor'), type: INSERT },
                     ],
                 },
@@ -151,9 +151,9 @@ export default {
                 {
                     text: this.$t('copyToClipboard'),
                     children: [
-                        { text: this.$t('clipboardSchemaEscaped'), type: SQL_CLIPBOARD },
-                        { text: this.$t('clipboardSchema'), type: SQL_CLIPBOARD },
-                        { text: this.$t('clipboardNameEscaped'), type: SQL_CLIPBOARD },
+                        { text: this.$t('clipboardQualifiedNameQuoted'), type: SQL_CLIPBOARD },
+                        { text: this.$t('clipboardQualifiedName'), type: SQL_CLIPBOARD },
+                        { text: this.$t('clipboardNameQuoted'), type: SQL_CLIPBOARD },
                         { text: this.$t('clipboardName'), type: SQL_CLIPBOARD },
                     ],
                 },
@@ -337,13 +337,13 @@ export default {
          */
         handleEmitInsertOpt({ item, opt, schema }) {
             switch (opt.text) {
-                case this.$t('placeSchemaInEditorEscaped'):
+                case this.$t('placeQualifiedNameQuoted'):
                     this.$emit('place-to-editor', this.$help.escapeIdentifiers(schema))
                     break
-                case this.$t('placeSchemaInEditor'):
+                case this.$t('placeQualifiedName'):
                     this.$emit('place-to-editor', schema)
                     break
-                case this.$t('placeNameInEditorEscaped'):
+                case this.$t('placeNameInEditorQuoted'):
                     this.$emit('place-to-editor', this.$help.escapeIdentifiers(item.name))
                     break
                 case this.$t('placeNameInEditor'):
@@ -359,13 +359,13 @@ export default {
         handleCopyToClipboardOpt({ item, opt, schema }) {
             let v = ''
             switch (opt.text) {
-                case this.$t('clipboardSchemaEscaped'):
+                case this.$t('clipboardQualifiedNameQuoted'):
                     v = this.$help.escapeIdentifiers(schema)
                     break
-                case this.$t('clipboardSchema'):
+                case this.$t('clipboardQualifiedName'):
                     v = schema
                     break
-                case this.$t('clipboardNameEscaped'):
+                case this.$t('clipboardNameQuoted'):
                     v = this.$help.escapeIdentifiers(item.name)
                     break
                 case this.$t('clipboardName'):
