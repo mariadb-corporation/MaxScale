@@ -107,7 +107,7 @@ export default {
             SQL_DDL_ALTER_SPECS: state => state.app_config.SQL_DDL_ALTER_SPECS,
             SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
             SQL_NODE_TYPES: state => state.app_config.SQL_NODE_TYPES,
-            SQL_NODE_CTX_OPTS: state => state.app_config.SQL_NODE_CTX_OPTS,
+            SQL_NODE_CTX_OPT_TYPES: state => state.app_config.SQL_NODE_CTX_OPT_TYPES,
             expanded_nodes: state => state.query.expanded_nodes,
             active_wke_id: state => state.query.active_wke_id,
         }),
@@ -122,8 +122,8 @@ export default {
         },
         queryOpts() {
             const {
-                SQL_TXT_EDITOR_OPT_TYPES: { QUERY },
-            } = this.SQL_NODE_CTX_OPTS
+                TXT_EDITOR: { QUERY },
+            } = this.SQL_NODE_CTX_OPT_TYPES
             return [
                 { text: this.$t('previewData'), type: QUERY },
                 { text: this.$t('viewDetails'), type: QUERY },
@@ -131,8 +131,8 @@ export default {
         },
         insertOpts() {
             const {
-                SQL_TXT_EDITOR_OPT_TYPES: { INSERT },
-            } = this.SQL_NODE_CTX_OPTS
+                TXT_EDITOR: { INSERT },
+            } = this.SQL_NODE_CTX_OPT_TYPES
             return [
                 {
                     text: this.$t('placeToEditor'),
@@ -146,15 +146,15 @@ export default {
             ]
         },
         clipboardOpts() {
-            const { SQL_CLIPBOARD } = this.SQL_NODE_CTX_OPTS
+            const { CLIPBOARD } = this.SQL_NODE_CTX_OPT_TYPES
             return [
                 {
                     text: this.$t('copyToClipboard'),
                     children: [
-                        { text: this.$t('clipboardQualifiedNameQuoted'), type: SQL_CLIPBOARD },
-                        { text: this.$t('clipboardQualifiedName'), type: SQL_CLIPBOARD },
-                        { text: this.$t('clipboardNameQuoted'), type: SQL_CLIPBOARD },
-                        { text: this.$t('clipboardName'), type: SQL_CLIPBOARD },
+                        { text: this.$t('clipboardQualifiedNameQuoted'), type: CLIPBOARD },
+                        { text: this.$t('clipboardQualifiedName'), type: CLIPBOARD },
+                        { text: this.$t('clipboardNameQuoted'), type: CLIPBOARD },
+                        { text: this.$t('clipboardName'), type: CLIPBOARD },
                     ],
                 },
             ]
@@ -166,8 +166,8 @@ export default {
         baseOptsMap() {
             const { SCHEMA, TABLE, SP, COL, TRIGGER } = this.SQL_NODE_TYPES
             const {
-                SQL_ADMIN_OPT_TYPES: { USE },
-            } = this.SQL_NODE_CTX_OPTS
+                ADMIN: { USE },
+            } = this.SQL_NODE_CTX_OPT_TYPES
             return {
                 [SCHEMA]: [
                     { text: this.$t('useDb'), type: USE },
@@ -184,8 +184,8 @@ export default {
         userNodeOptsMap() {
             const { SCHEMA, TABLE, SP, COL, TRIGGER } = this.SQL_NODE_TYPES
             const {
-                SQL_DDL_OPT_TYPES: { DD },
-            } = this.SQL_NODE_CTX_OPTS
+                DDL: { DD },
+            } = this.SQL_NODE_CTX_OPT_TYPES
             return {
                 [SCHEMA]: [{ text: this.$t('dropSchema'), type: DD }],
                 [TABLE]: [
@@ -420,8 +420,8 @@ export default {
          */
         handleTxtEditorOpt({ item, opt, schema }) {
             const {
-                SQL_TXT_EDITOR_OPT_TYPES: { INSERT, QUERY },
-            } = this.SQL_NODE_CTX_OPTS
+                TXT_EDITOR: { INSERT, QUERY },
+            } = this.SQL_NODE_CTX_OPT_TYPES
             this.UPDATE_CURR_EDITOR_MODE_MAP({
                 id: this.active_wke_id,
                 payload: this.SQL_EDITOR_MODES.TXT_EDITOR,
@@ -442,11 +442,11 @@ export default {
         optionHandler({ item, opt }) {
             const schema = item.id
             const {
-                SQL_CLIPBOARD,
-                SQL_TXT_EDITOR_OPT_TYPES: { INSERT, QUERY },
-                SQL_DDL_OPT_TYPES: { DD },
-                SQL_ADMIN_OPT_TYPES: { USE },
-            } = this.SQL_NODE_CTX_OPTS
+                CLIPBOARD,
+                TXT_EDITOR: { INSERT, QUERY },
+                DDL: { DD },
+                ADMIN: { USE },
+            } = this.SQL_NODE_CTX_OPT_TYPES
             switch (opt.type) {
                 case DD:
                     this.handleEmitDD_opt({ item, opt, schema })
@@ -458,7 +458,7 @@ export default {
                 case QUERY:
                     this.handleTxtEditorOpt({ item, opt, schema })
                     break
-                case SQL_CLIPBOARD:
+                case CLIPBOARD:
                     this.handleCopyToClipboardOpt({ item, opt, schema })
                     break
             }
