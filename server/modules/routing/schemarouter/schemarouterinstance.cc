@@ -46,7 +46,7 @@ cfg::ParamRegex s_ignore_tables_regex(
 
 cfg::ParamBool s_refresh_databases(
     &s_spec, "refresh_databases", "Refresh database mapping information",
-    true, cfg::Param::AT_RUNTIME);
+    false, cfg::Param::AT_RUNTIME);
 
 cfg::ParamSeconds s_refresh_interval(
     &s_spec, "refresh_interval", "How often to refresh the database mapping information",

@@ -77,8 +77,18 @@ describe("Create/Destroy Commands", function () {
     return doCommand("destroy server server5").should.be.fulfilled;
   });
 
+  it("create server with custom parameters", async function () {
+    var res = await verifyCommand("create server server5 127.0.0.1 3004 extra_port=4004", "servers/server5");
+    res.data.attributes.parameters.extra_port.should.equal(4004);
+    await doCommand("destroy server server5");
+  });
+
   it("will not create server with bad parameters", function () {
     return doCommand("create server server5 bad parameter").should.be.rejected;
+  });
+
+  it("will not create server with bad custom parameters", function () {
+    return doCommand("create server server5 127.0.0.1 4567 bad=parameter").should.be.rejected;
   });
 
   it("will not create server with bad options", function () {

@@ -154,6 +154,38 @@ This parameter has been removed in MaxScale 6.0, use
 This parameter has been removed in MaxScale 6.0, use
 [ignore_tables_regex](#ignore_tables_regex) instead.
 
+### `max_sescmd_history`
+
+This parameter has been moved to
+[the MaxScale core](../Getting-Started/Configuration-Guide.md#max_sescmd_history)
+in MaxScale 6.0.
+
+### `disable_sescmd_history`
+
+This parameter has been moved to
+[the MaxScale core](../Getting-Started/Configuration-Guide.md#disable_sescmd_history)
+in MaxScale 6.0.
+
+### `refresh_databases`
+
+Enable database map refreshing mid-session. These are triggered by a failure to
+change the database i.e. `USE ...` queries. This feature is disabled by default.
+
+Before MaxScale 6.2.0, this parameter did nothing. Starting with the 6.2.0
+release of MaxScale this parameter now works again but it is disabled by default
+to retain the same behavior as in older releases.
+
+### `refresh_interval`
+
+The minimum interval between database map refreshes in seconds. The default
+value is 300 seconds.
+
+The interval is specified as documented
+[here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
+is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
+versions a value without a unit may be rejected. Note that since the granularity
+of the intervaltimeout is seconds, a timeout specified in milliseconds will be rejected,
+even if the duration is longer than a second.
 
 ## Table Family Sharding
 
@@ -169,52 +201,11 @@ table `tbl2`. The query `SELECT * FROM db.tbl1` will be routed to _server1_ and 
 `SELECT * FROM db.tbl2` will be routed to _server2_. As in the example queries, the table
 names must be qualified with the database names for table-level sharding to work.
 Specifically, the query series below is not supported.
+
 ```
 USE db;
 SELECT * FROM tbl1; // May be routed to an incorrect backend if using table sharding.
 ```
-
-## Router Options
-
-**Note:** Router options for the Schemarouter were deprecated in MaxScale 2.1.
-
-The following options are options for the `router_options` parameter of the
-service. Multiple router options are given as a comma separated list of key
-value pairs.
-
-### `max_sescmd_history`
-
-This parameter has been moved to
-[the MaxScale core](../Getting-Started/Configuration-Guide.md#max_sescmd_history)
-in MaxScale 6.0.
-
-### `disable_sescmd_history`
-
-This parameter has been moved to
-[the MaxScale core](../Getting-Started/Configuration-Guide.md#disable_sescmd_history)
-in MaxScale 6.0.
-
-### `refresh_databases`
-
-**Note:** This parameter does nothing in 2.4 and newer versions. The
-  database map is only created when the session starts. Follow
-  [MXS-3836](https://jira.mariadb.org/browse/MXS-3836) for more
-  information.
-
-Enable database map refreshing mid-session. These are triggered by a failure to
-change the database i.e. `USE ...` queries. This feature is enabled by default.
-
-### `refresh_interval`
-
-The minimum interval between database map refreshes in seconds. The default
-value is 300 seconds.
-
-The interval is specified as documented
-[here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
-is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
-versions a value without a unit may be rejected. Note that since the granularity
-of the intervaltimeout is seconds, a timeout specified in milliseconds will be rejected,
-even if the duration is longer than a second.
 
 ## Router Diagnostics
 

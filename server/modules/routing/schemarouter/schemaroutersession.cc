@@ -338,6 +338,13 @@ bool SchemaRouterSession::routeQuery(GWBUF* pPacket)
         {
             if (!change_current_db(m_current_db, m_shard, pPacket))
             {
+                if (m_config.refresh_databases && m_shard.stale(m_config.refresh_interval.count()))
+                {
+                    m_queue.push_back(pPacket);
+                    query_databases();
+                    return 1;
+                }
+
                 char db[MYSQL_DATABASE_MAXLEN + 1];
                 extract_database(pPacket, db);
                 gwbuf_free(pPacket);
@@ -1020,7 +1027,8 @@ std::string get_lenenc_str(uint8_t* ptr)
     }
 }
 
-static const std::set<std::string> always_ignore = {"mysql", "information_schema", "performance_schema"};
+static const std::set<std::string> always_ignore =
+{"mysql", "information_schema", "performance_schema", "sys"};
 
 bool SchemaRouterSession::ignore_duplicate_table(const std::string& data)
 {
@@ -1121,16 +1129,18 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
 
         if (!data.empty())
         {
-            mxs::Target* duplicate = m_shard.get_location(data);
-
-            if (duplicate && data.find('.') != std::string::npos && !ignore_duplicate_table(data))
+            if (!ignore_duplicate_table(data))
             {
-                duplicate_found = true;
-                MXS_ERROR("'%s' found on servers '%s' and '%s' for user %s.",
-                          data.c_str(), target->name(), duplicate->name(),
-                          m_pSession->user_and_host().c_str());
+                if (mxs::Target* duplicate = m_shard.get_location(data))
+                {
+                    duplicate_found = true;
+                    MXS_ERROR("'%s' found on servers '%s' and '%s' for user %s.",
+                              data.c_str(), target->name(), duplicate->name(),
+                              m_pSession->user_and_host().c_str());
+                }
             }
-            else
+
+            if (!duplicate_found)
             {
                 m_shard.add_location(data, target);
             }

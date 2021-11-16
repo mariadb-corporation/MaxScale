@@ -329,6 +329,11 @@ static std::vector<std::tuple<std::string, uint32_t, qc_query_op_t>> test_cases
         QUERY_TYPE_WRITE,
         QUERY_OP_SELECT
     },
+    {
+        "DELETE x FROM x JOIN (SELECT id FROM y) y ON x.id = y.id;",
+        QUERY_TYPE_WRITE,
+        QUERY_OP_DELETE
+    },
 
     // MXS-3377: Parsing of KILL queries
     {
