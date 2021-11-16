@@ -999,18 +999,6 @@ add_test_executable(mxs2441_galera_slaves.cpp mxs2441_galera_slaves mxs2441_gale
 ############################################
 
 ############################################
-# BEGIN: ColumnStore tests                 #
-############################################
-
-# MXS-2146: Add test case for csmon
-# https://jira.mariadb.org/browse/MXS-2146
-add_test_executable(csmon_test.cpp csmon_test csmon_test LABELS csmon CS_BACKEND)
-
-############################################
-# END: ColumnStore tests                   #
-############################################
-
-############################################
 # BEGIN: tests for Xpand monitor        #
 ############################################
 
@@ -1026,25 +1014,6 @@ add_test_executable(xpand_alter_cluster.cpp xpand_alter_cluster xpand_alter_clus
 
 ############################################
 # END: tests for Xpand monitor          #
-############################################
-
-############################################
-# BEGIN: Kerberos tests                    #
-############################################
-
-# These tests have some issues and may affect other tests as they do not cleanup after themselves.
-# Run with BREAKS_REPL tag to ensure they are ran on a different test VM in parallel runs. Also run these
-# tests last so they cannot affect earlier tests.
-
-# Creates KDC and tries authrization via GSSAPI (both client and backend)
-# works only with yum-based distributions
-# TODO: make it working with zypper and apt, move part of KDC setup to MDBCI
-add_test_executable(kerberos_setup.cpp kerberos_setup kerberos LABELS HEAVY UNSTABLE BREAKS_REPL gssapi REPL_BACKEND)
-add_test_derived(kerberos_setup_ssl kerberos_setup kerberos_ssl LABELS HEAVY UNSTABLE BREAKS_REPL gssapi
-        BACKEND_SSL LISTENER_SSL REPL_BACKEND)
-
-############################################
-# END: Kerberos tests                      #
 ############################################
 
 ###############################
