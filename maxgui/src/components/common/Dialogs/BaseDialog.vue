@@ -20,7 +20,7 @@
                 <h3 class="font-weight-light color text-deep-ocean">
                     {{ title }}
                 </h3>
-                <v-btn v-if="!isForceAccept" class="close" icon @click="close">
+                <v-btn v-if="!isForceAccept && showCloseIcon" class="close" icon @click="close">
                     <v-icon size="20" color="navigation"> $vuetify.icons.close</v-icon>
                 </v-btn>
             </v-card-title>
@@ -119,6 +119,7 @@ export default {
          */
         closeImmediate: { type: Boolean, default: false },
         allowEnterToSubmit: { type: Boolean, default: true },
+        showCloseIcon: { type: Boolean, default: true },
     },
     data() {
         return {
