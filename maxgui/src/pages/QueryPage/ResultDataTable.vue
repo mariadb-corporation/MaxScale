@@ -96,6 +96,7 @@
                 :activeRow="activeRow"
                 @item-selected="selectedItems = $event"
                 @is-grouping="isGrouping = $event"
+                @on-cell-right-click="onCellRClick"
                 v-on="$listeners"
             >
                 <template
@@ -109,7 +110,15 @@
                 </template>
             </virtual-scroll-table>
         </keep-alive>
-        <!-- TODO: Add context menu to copy cell value to clipboard, place cell value in editor -->
+        <sub-menu
+            v-if="!$typy(ctxMenuData).isEmptyObject"
+            :key="ctxMenuActivator"
+            v-model="showCtxMenu"
+            left
+            :items="[...baseOpts, ...menuOpts]"
+            :activator="ctxMenuActivator"
+            @item-click="optHandler"
+        />
     </div>
 </template>
 
@@ -126,6 +135,12 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+/*
+@on-delete-selected: selectedItems:any[]. Event is emitted when showSelect props is true
+@on-choose-opt: { opt:object, data:object}. Emit when menuOpts props is provided
+Also emits other events from virtual-scroll-table via v-on="$listeners"
+*/
 import ResultExport from './ResultExport'
 import ColumnList from './ColumnList.vue'
 export default {
@@ -149,7 +164,7 @@ export default {
         showSelect: { type: Boolean, default: false },
         groupBy: { type: String, default: '' },
         showGroupBy: { type: Boolean, default: false },
-        activeRow: { type: Array, default: () => [] },
+        menuOpts: { type: Array, default: () => [] },
     },
     data() {
         return {
@@ -160,6 +175,9 @@ export default {
             isVertTable: false,
             isGrouping: false,
             selectedItems: [],
+            // states for ctx menu
+            showCtxMenu: false,
+            ctxMenuData: {},
         }
     },
     computed: {
@@ -209,6 +227,22 @@ export default {
                 this.visHeaderIdxs.includes(i) ? h : { ...h, hidden: true }
             )
         },
+        activeRow() {
+            return this.$typy(this.ctxMenuData, 'row').safeArray
+        },
+        ctxMenuActivator() {
+            return `#${this.$typy(this.ctxMenuData, 'cellID').safeString}`
+        },
+        baseOpts() {
+            //TODO: add opts
+            return []
+        },
+    },
+    watch: {
+        showCtxMenu(v) {
+            // when menu is closed by blur event, clear ctxMenuData so that activeRow can be reset
+            if (!v) this.ctxMenuData = {}
+        },
     },
     activated() {
         this.setTableToolsHeight()
@@ -217,6 +251,19 @@ export default {
         setTableToolsHeight() {
             if (!this.$refs.tableTools) return
             this.tableToolsHeight = this.$refs.tableTools.clientHeight
+        },
+        onCellRClick(data) {
+            const { cellID } = data
+            if (this.$typy(this.ctxMenuData, 'cellID').safeString === cellID) {
+                this.showCtxMenu = false
+                this.ctxMenuData = {}
+            } else {
+                this.showCtxMenu = true
+                this.ctxMenuData = data
+            }
+        },
+        optHandler(opt) {
+            this.$emit('on-choose-opt', { opt, data: this.ctxMenuData })
         },
     },
 }

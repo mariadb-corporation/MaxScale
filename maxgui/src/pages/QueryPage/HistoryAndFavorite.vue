@@ -35,10 +35,13 @@
                     showSelect
                     showGroupBy
                     groupBy="date"
-                    :activeRow="activeCtxItem"
+                    :menuOpts="[
+                        { text: $t('copySqlToClipboard') },
+                        { text: $t('placeSqlInEditor') },
+                    ]"
                     @on-delete-selected="handleDeleteSelectedRows"
                     @custom-group="customGroup"
-                    @on-cell-right-click="onCellRClick"
+                    @on-choose-opt="onChooseOpt"
                     v-on="$listeners"
                 >
                     <template v-slot:header-connection_name="{ data: { maxWidth } }">
@@ -162,21 +165,6 @@
                 </p>
             </template>
         </confirm-dialog>
-        <v-menu
-            v-if="activeCtxItem"
-            v-model="showCtxMenu"
-            transition="slide-y-transition"
-            left
-            :position-x="ctxClientPos.x"
-            :position-y="ctxClientPos.y"
-            content-class="mariadb-select-v-menu mariadb-select-v-menu--full-border"
-        >
-            <v-list v-for="option in ctxOptions" :key="option">
-                <v-list-item dense link @click="() => optHandler(option)">
-                    <v-list-item-title class="color text-text" v-text="option" />
-                </v-list-item>
-            </v-list>
-        </v-menu>
     </div>
 </template>
 
@@ -215,11 +203,6 @@ export default {
         return {
             headerHeight: 0,
             itemsToBeDeleted: [],
-            // states for ctx menu
-            showCtxMenu: false,
-            activeCtxItem: null,
-            ctxClientPos: { x: 0, y: 0 },
-            ctxOptions: [this.$t('copySqlToClipboard'), this.$t('placeSqlInEditor')],
             selectedLogTypes: [],
             isConfDlgOpened: false,
         }
@@ -311,11 +294,6 @@ export default {
             return data.map(item => Object.values(item))
         },
     },
-    watch: {
-        showCtxMenu(v) {
-            if (!v) this.activeCtxItem = null
-        },
-    },
     activated() {
         this.setHeaderHeight()
     },
@@ -371,34 +349,24 @@ export default {
 
             this[`SET_QUERY_${this.activeView}`](newData)
         },
-        onCellRClick({ e, row }) {
-            if (this.$help.lodash.isEqual(this.activeCtxItem, row)) {
-                this.showCtxMenu = false
-                this.activeCtxItem = null
-            } else {
-                if (!this.showCtxMenu) this.showCtxMenu = true
-                this.activeCtxItem = row
-                this.ctxClientPos = { x: e.clientX, y: e.clientY }
-            }
-        },
-        optHandler(opt) {
-            let data = this.$help.getObjectRows({
+        onChooseOpt({ opt, data }) {
+            let rowData = this.$help.getObjectRows({
                 columns: this.headers.map(h => h.text),
-                rows: [this.activeCtxItem.filter((_, i) => i !== 0)], // Remove # col
+                rows: [data.row.filter((_, i) => i !== 0)], // Remove # col
             })
             let sql, name
             switch (this.activeView) {
                 case this.SQL_QUERY_MODES.HISTORY: {
-                    name = data[0].action.name
-                    sql = data[0].action.sql
+                    name = rowData[0].action.name
+                    sql = rowData[0].action.sql
                     break
                 }
                 case this.SQL_QUERY_MODES.FAVORITE:
-                    sql = data[0].sql
+                    sql = rowData[0].sql
             }
             // if no name is defined when storing the query, sql query is stored to name
             let sqlTxt = sql ? sql : name
-            switch (opt) {
+            switch (opt.text) {
                 case this.$t('copySqlToClipboard'): {
                     this.$help.copyTextToClipboard(sqlTxt)
                     break
