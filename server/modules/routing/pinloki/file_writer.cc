@@ -76,18 +76,19 @@ void FileWriter::commit_txn()
 
 void FileWriter::add_event(maxsql::RplEvent& rpl_event)     // FIXME, move into here
 {
-    bool is_artificial = rpl_event.flags() & LOG_EVENT_ARTIFICIAL_F;
     auto etype = rpl_event.event_type();
+
     if (etype == HEARTBEAT_LOG_EVENT)
     {
         // Heartbeat event, don't process it
     }
-    else if (is_artificial)
+    else if (etype == ROTATE_EVENT)
     {
-        if (etype == ROTATE_EVENT)
-        {
-            m_rotate = rpl_event.rotate();
-        }
+        // Regardless if this is steady state or pinloki just started to run there
+        // will be an initial ROTATE_EVENT followed by a FORMAT_DESCRIPTION_EVENT
+        // which is when the actual rotate will be performed, unless it has already
+        // been performed. In the latter case events will be appended to an existing file.
+        m_rotate = rpl_event.rotate();
     }
     else
     {
