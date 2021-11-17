@@ -843,7 +843,7 @@ private:
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/findAndModify/
-class FindAndModify : public TableCreating<MultiCommand>
+class FindAndModify final : public TableCreating<MultiCommand>
 {
 public:
     static constexpr const char* const KEY = "findAndModify";

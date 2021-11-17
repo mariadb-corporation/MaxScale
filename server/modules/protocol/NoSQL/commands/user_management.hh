@@ -25,7 +25,7 @@ namespace command
 // https://docs.mongodb.com/v4.4/reference/command/createUser/
 
 // https://docs.mongodb.com/v4.4/reference/command/dropAllUsersFromDatabase/
-class DropAllUsersFromDatabase : public ImmediateCommand
+class DropAllUsersFromDatabase final : public ImmediateCommand
 {
 public:
     static constexpr const char* const KEY = "dropAllUsersFromDatabase";

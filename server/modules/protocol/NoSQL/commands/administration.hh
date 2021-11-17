@@ -752,7 +752,8 @@ struct IsAdmin<command::CurrentOp>
     static const bool is_admin { true };
 };
 
-class CurrentOp : public ImmediateCommand
+// NOTE: This is currently disabled. It has to work properly before it can be enabled.
+class CurrentOp final : public ImmediateCommand
 {
 public:
     static constexpr const char* const KEY = "currentOp";
@@ -982,7 +983,7 @@ private:
 // https://docs.mongodb.com/v4.4/reference/command/filemd5/
 
 // https://docs.mongodb.com/v4.4/reference/command/fsync/
-class FSync : public ImmediateCommand
+class FSync final : public ImmediateCommand
 {
 public:
     static constexpr const char* const KEY = "fsync";
@@ -1582,7 +1583,7 @@ struct IsAdmin<command::SetParameter>
     static const bool is_admin { true };
 };
 
-class SetParameter : public ImmediateCommand
+class SetParameter final : public ImmediateCommand
 {
 public:
     static constexpr const char* const KEY = "setParameter";

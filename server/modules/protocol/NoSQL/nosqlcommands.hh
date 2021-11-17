@@ -203,7 +203,7 @@ private:
 //
 // OpDeleteCommand
 //
-class OpDeleteCommand : public PacketCommand<packet::Delete>
+class OpDeleteCommand final : public PacketCommand<packet::Delete>
 {
 public:
     OpDeleteCommand(Database* pDatabase,
@@ -223,7 +223,7 @@ public:
 //
 // OpInsertCommand
 //
-class OpInsertCommand : public TableCreating<PacketCommand<packet::Insert>>
+class OpInsertCommand final : public TableCreating<PacketCommand<packet::Insert>>
 {
 public:
     OpInsertCommand(Database* pDatabase,
@@ -253,7 +253,7 @@ private:
 //
 // OpUpdateCommand
 //
-class OpUpdateCommand : public TableCreating<PacketCommand<packet::Update>>
+class OpUpdateCommand final : public TableCreating<PacketCommand<packet::Update>>
 {
 public:
     OpUpdateCommand(Database* pDatabase,
@@ -301,7 +301,7 @@ private:
 //
 // OpQueryCommand
 //
-class OpQueryCommand : public PacketCommand<packet::Query>
+class OpQueryCommand final : public PacketCommand<packet::Query>
 {
 public:
     OpQueryCommand(Database* pDatabase,
@@ -330,7 +330,7 @@ private:
 //
 // OpGetMoreCommand
 //
-class OpGetMoreCommand : public PacketCommand<packet::GetMore>
+class OpGetMoreCommand final : public PacketCommand<packet::GetMore>
 {
 public:
     OpGetMoreCommand(Database* pDatabase,
@@ -350,7 +350,7 @@ public:
 //
 // OpKillCursorsCommand
 //
-class OpKillCursorsCommand : public PacketCommand<packet::KillCursors>
+class OpKillCursorsCommand final : public PacketCommand<packet::KillCursors>
 {
 public:
     OpKillCursorsCommand(Database* pDatabase,

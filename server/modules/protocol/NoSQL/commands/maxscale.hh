@@ -208,7 +208,7 @@ struct IsAdmin<MxsCreateDatabase>
     static const bool is_admin { true };
 };
 
-class MxsCreateDatabase : public SingleCommand
+class MxsCreateDatabase final : public SingleCommand
 {
 public:
     static constexpr const char* const KEY = "mxsCreateDatabase";
