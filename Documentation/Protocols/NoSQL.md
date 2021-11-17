@@ -286,6 +286,8 @@ The following operators are currently supported.
 * $not
 * $nor
 * $or
+* $alwaysFalse
+* $alwaysTrue
 
 ### Element Query Operators
 
@@ -313,6 +315,7 @@ The _"number"_ alias is supported and will match values whose MariaDB type is
 ### Evaluation Query Operators
 
 * $mod
+* $regex
 
 ### Array Query Operators
 
@@ -327,8 +330,15 @@ As arguments, only the operators `$eq` and `$ne` are supported.
 
 ### Field Update Operators
 
+* $bit
+* $currentDate
 * $inc
+* $max
+* $min
 * $mul
+* $pop
+* $push
+* $rename
 * $set
 * $unset
 
@@ -458,6 +468,23 @@ and in the latter
 ```
 That is, in the former case the _indexed_ column `id` will be used, in the
 latter it will not.
+
+### findAndModify
+
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+findAndModify| string | The name of the target table.
+query| document | Optional. The query predicate.
+sort | document | Optional. The sort specification used when the document is selected.
+remove | boolean | Mandatory, if `update` is _not_ specified. If `true`, the document will be deleted.
+update | document | Mandatory, if `remove` is _not_ specified. See [Update.behavior](#behavior) for details.
+new | boolean | Optional. If `true` the modified document and not the original document is returned. If `remove` is specified, then the original document is always returned.
+fields | document | Optional. Specified which fields to return. See [Find.projection](#projection) for details.
+upsert | boolean | Optional. If `true` then a document will be created, if one is not found.
+
+All other fields are ignored.
 
 ### getLastError
 
@@ -645,6 +672,26 @@ Field | Type | Description
 ------|------|------------
 isMaster | any | Ignored.
 
+### replSetGetStatus
+
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+replSetGetStatus | any | Ignored.
+
+All other fields are ignored.
+
+This command will always return the document
+```
+{
+	"ok" : 0,
+	"errmsg" : "not running with --replSet",
+	"code" : 76,
+	"codeName" : "NoReplicationEnabled"
+}
+```
+
 ## Sessions Commands
 
 ### endSessions
@@ -792,6 +839,19 @@ renameCollection | string | The namespace of the collection to rename. The names
 to | string | The new namespace of the collection. Moving a collection/table from one database to another succeeds provided the databases reside in the same filesystem.
 dropTarget| boolean | Optional. If `true`, the target collection/table will be dropped before the renaming is made. The default value is `false`.
 
+### setParameter
+
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+setParameter | any | Ignored.
+
+Any kind of parameter is accepted and the response will always be:
+```
+{ "ok" : 1 }
+```
+
 ## Diagnostic Commands
 
 ### buildInfo
@@ -803,6 +863,17 @@ Field | Type | Description
 buildInfo | any | Ignored.
 
 The command returns a document containing the stable fields. In addition, there is a field `maxscale` whose value is the MaxScale version, expressed as a string.
+
+### explain
+
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+explain | document | Document specifying the command to be explained. The commands are `aggregate`, `count`, `delete`, `distinct`, `find`, `findAndModify`, `mapReduce` and `update`.
+verbosity | string | Either `queryPlanner`, `executionStats` or `allPlansExecution`.
+
+The command will return a document of the expected layout, but the content is only rudimentary.
 
 ### getCmdLineOpts
 
@@ -846,18 +917,13 @@ Field | Type | Description
 ------|------|------------
 ping | any | Ignored.
 
-### setParameter
+### serverStatus
 
 The following fields are relevant.
 
 Field | Type | Description
 ------|------|------------
-setParameter | any | Ignored.
-
-Any kind of parameter is accepted and the response will always be:
-```
-{ "ok" : 1 }
-```
+serverStatus | any | Ignored.
 
 ### validate
 
