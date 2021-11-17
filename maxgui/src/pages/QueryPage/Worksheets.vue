@@ -1,5 +1,27 @@
 <template>
     <div class="fill-height worksheet-wrapper">
+        <base-dialog
+            v-model="showReconnDialog"
+            :title="queryErrMsg"
+            minBodyWidth="624px"
+            :onSave="reconnect"
+            cancelText="disconnect"
+            saveText="reconnect"
+            :showCloseIcon="false"
+            @on-cancel="deleteConn"
+        >
+            <template v-slot:form-body>
+                <table v-if="showReconnDialog" class="err-tbl-code pa-4">
+                    <tr v-for="(v, key) in getQueryErrMsgObj" :key="key">
+                        <td>
+                            <b>{{ key }}</b>
+                        </td>
+                        <td>{{ v }}</td>
+                    </tr>
+                </table>
+            </template>
+        </base-dialog>
+
         <div class="d-flex flex-row">
             <v-tabs
                 v-model="activeWkeID"
@@ -103,7 +125,7 @@
  * Public License.
  */
 
-import { mapActions, mapMutations, mapState } from 'vuex'
+import { mapActions, mapGetters, mapMutations, mapState } from 'vuex'
 import Worksheet from './Worksheet'
 import WorksheetToolbar from './WorksheetToolbar'
 import PageToolbar from './PageToolbar.vue'
@@ -127,8 +149,12 @@ export default {
         ...mapState({
             worksheets_arr: state => state.query.worksheets_arr,
             active_wke_id: state => state.query.active_wke_id,
+            curr_cnct_resource: state => state.query.curr_cnct_resource,
             query_results_map: state => state.query.query_results_map,
             is_querying_map: state => state.query.is_querying_map,
+        }),
+        ...mapGetters({
+            getQueryErrMsgObj: 'query/getQueryErrMsgObj',
         }),
         activeWkeID: {
             get() {
@@ -138,14 +164,34 @@ export default {
                 if (v) this.SET_ACTIVE_WKE_ID(v)
             },
         },
+        queryErrMsg() {
+            return this.$typy(this.getQueryErrMsgObj, 'message').safeString
+        },
+        queryErrno() {
+            return this.$typy(this.getQueryErrMsgObj, 'errno').safeNumber
+        },
+        showReconnDialog: {
+            get() {
+                return Boolean(this.queryErrMsg)
+            },
+            set() {
+                this.UPDATE_LOST_CNN_ERR_MSG_OBJ_MAP({ id: this.active_wke_id })
+            },
+        },
     },
     methods: {
         ...mapMutations({
             SET_ACTIVE_WKE_ID: 'query/SET_ACTIVE_WKE_ID',
+            UPDATE_LOST_CNN_ERR_MSG_OBJ_MAP: 'query/UPDATE_LOST_CNN_ERR_MSG_OBJ_MAP',
         }),
         ...mapActions({
             handleDeleteWke: 'query/handleDeleteWke',
+            reconnect: 'query/reconnect',
+            disconnect: 'query/disconnect',
         }),
+        async deleteConn() {
+            await this.disconnect({ id: this.curr_cnct_resource.id })
+        },
     },
 }
 </script>

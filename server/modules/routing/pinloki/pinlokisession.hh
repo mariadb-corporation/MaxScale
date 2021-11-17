@@ -62,7 +62,16 @@ private:
     int64_t                 m_heartbeat_period = 0;
     uint32_t                m_mgw_dcid = 0; // MASTER_GTID_WAIT delayed call
 
-    mxs::Buffer package(const uint8_t* ptr, size_t size);
+    // Prefix the packet in make_buffer(). Essentially this is just to add
+    // an OK = '\0' as the first byte of the payload of the first packet.
+    // The value of Prefix is also the number of bytes of the prefix.
+    enum Prefix
+    {
+        PREFIX_NONE = 0,
+        PREFIX_OK   = 1
+    };
+
+    mxs::Buffer make_buffer(Prefix prefix, const uint8_t* ptr, size_t size);
 
     bool send_event(const maxsql::RplEvent& event);
     void send(GWBUF* buffer);

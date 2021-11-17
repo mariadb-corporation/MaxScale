@@ -188,39 +188,43 @@ bool PinlokiSession::handleError(mxs::ErrorType type, GWBUF* pMessage,
     return false;
 }
 
-mxs::Buffer PinlokiSession::package(const uint8_t* ptr, size_t size)
+mxs::Buffer PinlokiSession::make_buffer(Prefix prefix, const uint8_t* ptr, size_t size)
 {
-    mxs::Buffer buffer(MYSQL_HEADER_LEN + size);
+    mxs::Buffer buffer(MYSQL_HEADER_LEN + size + prefix);
 
-    mariadb::set_byte3(buffer.data(), size);
+    mariadb::set_byte3(buffer.data(), size + prefix);
     buffer.data()[3] = m_seq++;
-    memcpy(buffer.data() + MYSQL_HEADER_LEN, ptr, size);
+    if (prefix == PREFIX_OK)
+    {
+        buffer.data()[MYSQL_HEADER_LEN + 1] = 0;
+    }
+    memcpy(buffer.data() + MYSQL_HEADER_LEN + prefix, ptr, size);
 
     return buffer;
 }
 
 bool PinlokiSession::send_event(const maxsql::RplEvent& event)
 {
-    // Not the prettiest way of detecting a full network buffer but it should work
-    bool can_write = m_pSession->client_dcb->writeq() == nullptr;
+    bool can_write = m_pSession->client_dcb->writeq() == nullptr
+        || gwbuf_length(m_pSession->client_dcb->writeq()) < mxs::Config::get().writeq_high_water.get();
 
     if (can_write)
     {
-        std::vector<uint8_t> data = {0};    // The OK command byte
-        data.insert(data.end(), event.pBuffer(), event.pBuffer() + event.buffer_size());
-        size_t size = data.size();
-        const uint8_t* ptr = data.data();
+        const uint8_t* ptr = reinterpret_cast<const uint8_t*>(event.pBuffer());
+        long size = event.buffer_size();
+        Prefix prefix = PREFIX_OK;
 
         while (size > 0)
         {
-            size_t payload_len = std::min(size, (size_t)GW_MYSQL_MAX_PACKET_LEN);
-            send(package(ptr, payload_len).release());
+            size_t payload_len = std::min(size, GW_MYSQL_MAX_PACKET_LEN - prefix);
+            send(make_buffer(prefix, ptr, payload_len).release());
 
-            if (size == GW_MYSQL_MAX_PACKET_LEN)
+            if (size == GW_MYSQL_MAX_PACKET_LEN - prefix)
             {
-                send(package(nullptr, 0).release());
+                send(make_buffer(PREFIX_NONE, nullptr, 0).release());
             }
 
+            prefix = PREFIX_NONE;
             ptr += payload_len;
             size -= payload_len;
         }

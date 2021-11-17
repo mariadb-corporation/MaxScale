@@ -35,10 +35,11 @@ export const APP_CONFIG = Object.freeze({
     }),
     SQL_SYS_SCHEMAS: ['information_schema', 'performance_schema', 'mysql', 'sys'],
     // schema tree node context option types
-    SQL_NODE_CTX_OPTS: Object.freeze({
-        SQL_TXT_EDITOR_OPT_TYPES: { INSERT: 'INSERT', QUERY: 'QUERY' },
-        SQL_DDL_OPT_TYPES: { DD: 'DD' }, // Data definition
-        SQL_ADMIN_OPT_TYPES: { USE: 'USE' }, // Data definition
+    SQL_NODE_CTX_OPT_TYPES: Object.freeze({
+        CLIPBOARD: 'CLIPBOARD',
+        TXT_EDITOR: { INSERT: 'INSERT', QUERY: 'QUERY' },
+        DDL: { DD: 'DD' }, // Data definition
+        ADMIN: { USE: 'USE' }, // Data definition
     }),
 
     SQL_QUERY_MODES: Object.freeze({
@@ -59,4 +60,5 @@ export const APP_CONFIG = Object.freeze({
         USER_LOGS: i18n.t('userQueryLogs'),
         ACTION_LOGS: i18n.t('actionLogs'),
     }),
+    MARIADB_NET_ERRNO: [2001, 2002, 2003, 2004, 2006, 2011, 2013],
 })

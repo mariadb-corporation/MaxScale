@@ -31,7 +31,7 @@ export default new Vuetify({
                 success: '#7dd012',
                 error: '#eb5757',
                 warning: '#f59d34',
-                info: '#1c9dd6',
+                info: '#2d9cdb',
                 anchor: '#2d9cdb',
                 navigation: '#424F62',
                 ['deep-ocean']: '#003545',

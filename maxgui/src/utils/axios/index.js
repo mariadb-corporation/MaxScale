@@ -105,16 +105,51 @@ function http(store) {
     )
     return http
 }
+
+function updateIsQueryingMap({ store, value }) {
+    const active_wke_id = store.state.query.active_wke_id
+    if (active_wke_id)
+        store.commit('query/UPDATE_IS_QUERYING_MAP', {
+            id: active_wke_id,
+            payload: value,
+        })
+}
+/**
+ * This function helps to check if there is a lost connection error that has either
+ * 2006 or 2013 errno value and update the corresponding error message object to lost_cnn_err_msg_obj_map state
+ * @param {Object} param.res - response of every request from queryHttp axios instance
+ * @param {Object} param.store - vuex store
+ */
+function analyzeRes({ res, store }) {
+    const results = store.vue.$typy(res, 'data.data.attributes.results').safeArray
+    const lostCnnErrMsgs = results.filter(res => {
+        const errno = store.vue.$typy(res, 'errno').safeNumber
+        return store.state.app_config.MARIADB_NET_ERRNO.includes(errno)
+    })
+    if (lostCnnErrMsgs.length) {
+        const active_wke_id = store.state.query.active_wke_id
+        store.commit('query/UPDATE_LOST_CNN_ERR_MSG_OBJ_MAP', {
+            id: active_wke_id,
+            payload: lostCnnErrMsgs[0],
+        })
+    }
+}
 // axios instance for `/sql` endpoint
 function queryHttp(store) {
     let queryHttp = baseConf()
     queryHttp.interceptors.request.use(
-        config => ({ ...config, cancelToken: cancelSource.token }),
+        config => {
+            updateIsQueryingMap({ store, value: true })
+            return { ...config, cancelToken: cancelSource.token }
+        },
         error => Promise.reject(error)
     )
-
     queryHttp.interceptors.response.use(
-        response => response,
+        response => {
+            updateIsQueryingMap({ store, value: false })
+            analyzeRes({ res: response, store })
+            return response
+        },
         async error => {
             const { getErrorsArr } = store.vue.$help
             const { response: { status = null } = {} } = error || {}
@@ -127,6 +162,7 @@ function queryHttp(store) {
                     type: 'error',
                 })
             } else defErrStatusHandler({ store, error })
+            updateIsQueryingMap({ store, value: false })
         }
     )
     return queryHttp

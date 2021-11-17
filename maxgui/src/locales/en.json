@@ -103,10 +103,15 @@
     "previewData": "Preview Data (top 1000)",
     "viewDetails": "View Details",
     "placeToEditor": "Place to Editor",
-    "placeSchemaInEditor": "Place Schema in Editor",
-    "placeSchemaInEditorEscaped": "Place Schema in Editor (Escaped)",
+    "placeQualifiedNameQuoted": "Place Qualified Name in Editor (Quoted)",
+    "placeQualifiedName": "Place Qualified Name in Editor",
+    "placeNameInEditorQuoted": "Place Name in Editor (Quoted)",
     "placeNameInEditor": "Place Name in Editor",
-    "placeNameInEditorEscaped": "Place Name in Editor (Escaped)",
+    "copyToClipboard": "Copy to clipboard",
+    "clipboardQualifiedNameQuoted": "Copy Qualified Name to clipboard (Quoted)",
+    "clipboardQualifiedName": "Copy Qualified Name to clipboard",
+    "clipboardNameQuoted": "Copy Name to clipboard (Quoted)",
+    "clipboardName": "Copy Name to clipboard",
     "queryEditor": "Query Editor",
     "export": "Export",
     "connectTo": "Connect to",
@@ -214,6 +219,7 @@
     "dropSp": "Drop Stored Procedure",
     "dropTrigger": "Drop Trigger",
     "truncateTbl": "Truncate Table",
+    "reconnect": "Reconnect",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
@@ -229,7 +235,8 @@
         "existingRsrcConnection": "All {resourceType} have been connected, please use the existing ones",
         "persistentStorage": "Persistent storage maximum size reached, please navigate to History/Favorite tab and delete some to create more space.",
         "failedToExeStatements": "Failed to execute SQL statement. | Failed to execute SQL statements.",
-        "failedToExeAction": "Failed to {action}"
+        "failedToExeAction": "Failed to {action}",
+        "reconnFailed": "Reconnection failed or connection is already in use"
     },
     "confirmations": {
         "maintain": "Are you sure you want to set {targetId} into maintenance mode?",
@@ -259,7 +266,8 @@
         "clearSelectedQueries": "You’re about to delete the {quantity} {targetType}. This action is irreversible. The {quantity} {targetType} will be erased from all logs.",
         "exeStatementsInfo": "This action is irreversible, so please review the above statement.\nYou can also manually change the SQL statement in the editor above. | This action is irreversible, so please review the above statements.\nYou can also manually change the SQL statements in the editor above.",
         "alterTableSuccessfully": "Alter table successfully",
-        "exeActionSuccessfully": "Successfully {action}"
+        "exeActionSuccessfully": "Successfully {action}",
+        "reconnSuccessfully": "Reconnection was successful"
     },
 
     "$vuetify": {

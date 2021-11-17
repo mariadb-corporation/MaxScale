@@ -237,31 +237,26 @@ export default {
          */
         buildTblOptSql({ dbName }) {
             let sql = ''
-            //TODO: replace objectDiff with deep-diff
-            const { escapeIdentifiers: escape, objectDiff } = this.$help
-            //Diff of table_opts_data
-            const diff = objectDiff({
-                base: this.initialData.table_opts_data,
-                object: this.formData.table_opts_data,
-            })
-            const keys = Object.keys(diff)
-            keys.forEach((key, i) => {
+            const { escapeIdentifiers: escape, deepDiff } = this.$help
+            const diffs = deepDiff(this.initialData.table_opts_data, this.formData.table_opts_data)
+            diffs.forEach((diff, i) => {
                 sql += this.handleAddComma({ ignore: i === 0 })
+                const key = diff.path[0]
                 switch (key) {
                     case 'table_name':
-                        sql += `RENAME TO ${escape(dbName)}.${escape(diff[key])}`
+                        sql += `RENAME TO ${escape(dbName)}.${escape(diff.rhs)}`
                         break
                     case 'table_engine':
-                        sql += `ENGINE = ${diff[key]}`
+                        sql += `ENGINE = ${diff.rhs}`
                         break
                     case 'table_charset':
-                        sql += `CHARACTER SET = ${diff[key]}`
+                        sql += `CHARACTER SET = ${diff.rhs}`
                         break
                     case 'table_collation':
-                        sql += `COLLATE = ${diff[key]}`
+                        sql += `COLLATE = ${diff.rhs}`
                         break
                     case 'table_comment':
-                        sql += `COMMENT = '${diff[key]}'`
+                        sql += `COMMENT = '${diff.rhs}'`
                         break
                 }
             })

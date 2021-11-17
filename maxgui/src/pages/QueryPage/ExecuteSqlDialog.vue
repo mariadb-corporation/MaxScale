@@ -11,7 +11,7 @@
         v-on="$listeners"
     >
         <template v-slot:body-prepend>
-            <table v-if="hasSavingErr" class="alter-err-tbl pa-4">
+            <table v-if="hasSavingErr" class="err-tbl-code pa-4">
                 <tr>
                     <td><b>sql</b></td>
                     <td>{{ executedSql }}</td>
@@ -116,18 +116,3 @@ export default {
     },
 }
 </script>
-
-<style lang="scss" scoped>
-.alter-err-tbl {
-    width: 100%;
-    background-color: $reflection;
-    td {
-        color: $code-color;
-        vertical-align: top;
-        padding-bottom: 4px;
-        &:first-of-type {
-            padding-right: 16px;
-        }
-    }
-}
-</style>
