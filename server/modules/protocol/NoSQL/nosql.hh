@@ -27,6 +27,7 @@
 #include <maxscale/routingworker.hh>
 #include <maxscale/session.hh>
 #include <maxscale/target.hh>
+#include "config.hh"
 #include "nosqlbase.hh"
 #include "nosqlcursor.hh"
 #include "../../filter/masking/mysql.hh"
@@ -348,6 +349,7 @@ namespace key
 {
 
 const char ADMIN_ONLY[]                      = "adminOnly";
+const char ALL_PLANS_EXECUTION[]             = "allPlansExecution";
 const char ARGV[]                            = "argv";
 const char ASSERTS[]                         = "asserts";
 const char BATCH_SIZE[]                      = "batchSize";
@@ -376,6 +378,7 @@ const char CURSOR[]                          = "cursor";
 const char DATABASES[]                       = "databases";
 const char DEBUG[]                           = "debug";
 const char DELETES[]                         = "deletes";
+const char DIRECTION[]                       = "direction";
 const char DOCUMENTS[]                       = "documents";
 const char DROPPED[]                         = "dropped";
 const char DROP_TARGET[]                     = "dropTarget";
@@ -385,6 +388,8 @@ const char ERRMSG[]                          = "errmsg";
 const char ERROR[]                           = "error";
 const char ERRORS[]                          = "errors";
 const char ERR[]                             = "err";
+const char EXECUTION_STATS[]                 = "executionStats";
+const char EXECUTION_SUCCESS[]               = "executionSuccess";
 const char EXTRA_INDEX_ENTRIES[]             = "extraIndexEntries";
 const char EXTRA_INFO[]                      = "extraInfo";
 const char EXTRA[]                           = "extra";
@@ -394,11 +399,13 @@ const char FIRST_BATCH[]                     = "firstBatch";
 const char FLOW_CONTROL[]                    = "flowControl";
 const char GIT_VERSION[]                     = "gitVersion";
 const char HELP[]                            = "help";
+const char HOST[]                            = "host";
 const char HOSTNAME[]                        = "hostname";
 const char ID[]                              = "id";
 const char ID_INDEX[]                        = "idIndex";
 const char INDEX_DETAILS[]                   = "indexDetails";
 const char INDEX[]                           = "index";
+const char INDEX_FILTER_SET[]                = "indexFilterSet";
 const char INDEXES[]                         = "indexes";
 const char INFO[]                            = "info";
 const char INPROG[]                          = "inprog";
@@ -415,6 +422,7 @@ const char LOCAL_TIME[]                      = "localTime";
 const char LOGICAL_SESSION_TIMEOUT_MINUTES[] = "logicalSessionTimeoutMinutes";
 const char LOG[]                             = "log";
 const char MARIADB[]                         = "mariadb";
+const char MAX[]                             = "max";
 const char MAX_BSON_OBJECT_SIZE[]            = "maxBsonObjectSize";
 const char MAX_MESSAGE_SIZE_BYTES[]          = "maxMessageSizeBytes";
 const char MAXSCALE[]                        = "maxscale";
@@ -423,6 +431,7 @@ const char MAX_WRITE_BATCH_SIZE[]            = "maxWriteBatchSize";
 const char MEM_LIMIT_MB[]                    = "memLimitMB";
 const char MEM_SIZE_MB[]                     = "memSizeMB";
 const char MESSAGE[]                         = "message";
+const char MIN[]                             = "min";
 const char MIN_WIRE_VERSION[]                = "minWireVersion";
 const char MISSING_INDEX_ENTRIES[]           = "missingIndexEntries";
 const char MODULES[]                         = "modules";
@@ -441,6 +450,7 @@ const char N_INDEXES[]                       = "nIndexes";
 const char N_INDEXES_WAS[]                   = "nIndexesWas";
 const char N_INVALID_DOCUMENTS[]             = "nInvalidDocuments";
 const char N_MODIFIED[]                      = "nModified";
+const char N_RETURNED[]                      = "nReturned";
 const char OK[]                              = "ok";
 const char OPENSSL[]                         = "openssl";
 const char OPTIONS[]                         = "options";
@@ -448,15 +458,21 @@ const char ORDERBY[]                         = "orderby";
 const char ORDERED[]                         = "ordered";
 const char OS[]                              = "os";
 const char PARSED[]                          = "parsed";
+const char PARSED_QUERY[]                    = "parsedQuery";
 const char PID[]                             = "pid";
+const char PLANNER_VERSION[]                 = "plannerVersion";
+const char PORT[]                            = "port";
 const char PROJECTION[]                      = "projection";
 const char QUERY[]                           = "query";
+const char QUERY_PLANNER[]                   = "queryPlanner";
 const char Q[]                               = "q";
 const char READ_ONLY[]                       = "readOnly";
+const char REJECTED_PLANS[]                  = "rejectedPlans";
 const char REMOVE[]                          = "remove";
 const char RESPONSE[]                        = "response";
 const char REQUIRES_AUTH[]                   = "requiresAuth";
 const char RUNNING[]                         = "running";
+const char SERVER_INFO[]                     = "serverInfo";
 const char SINGLE_BATCH[]                    = "singleBatch";
 const char SIZE_ON_DISK[]                    = "sizeOnDisk";
 const char SKIP[]                            = "skip";
@@ -464,6 +480,7 @@ const char SLAVE_OK[]                        = "slaveOk";
 const char SORT[]                            = "sort";
 const char SQL[]                             = "sql";
 const char STORAGE_ENGINE[]                  = "storageEngine";
+const char STAGE[]                           = "stage";
 const char STATE[]                           = "state";
 const char STORAGE_ENGINES[]                 = "storageEngines";
 const char SYNC_MILLIS[]                     = "syncMillis";
@@ -484,11 +501,13 @@ const char U[]                               = "u";
 const char V[]                               = "v";
 const char VALID[]                           = "valid";
 const char VALUE[]                           = "value";
+const char VERBOSITY[]                       = "verbosity";
 const char VERSION_ARRAY[]                   = "versionArray";
 const char VERSION[]                         = "version";
 const char VIEW_ON[]                         = "viewOn";
 const char WARNINGS[]                        = "warnings";
 const char WAS[]                             = "was";
+const char WINNING_PLAN[]                    = "winningPlan";
 const char WRITE_CONCERN[]                   = "writeConcern";
 const char WRITE_ERRORS[]                    = "writeErrors";
 const char WRITTEN_TO[]                      = "writtenTo";
@@ -553,18 +572,18 @@ bool get_number_as_double(const bsoncxx::document::element& element, double* pDo
  */
 std::string to_string(const bsoncxx::document::element& element);
 
-std::vector<std::string> projection_to_extractions(const bsoncxx::document::view& projection);
-std::string extractions_to_columns(const std::vector<std::string>& extractions);
+std::vector<std::string> extractions_from_projection(const bsoncxx::document::view& projection);
+std::string columns_from_extractions(const std::vector<std::string>& extractions);
 
-std::string query_to_where_condition(const bsoncxx::document::view& filter);
-std::string query_to_where_clause(const bsoncxx::document::view& filter);
+std::string where_condition_from_query(const bsoncxx::document::view& filter);
+std::string where_clause_from_query(const bsoncxx::document::view& filter);
 
-std::string sort_to_order_by(const bsoncxx::document::view& sort);
+std::string order_by_value_from_sort(const bsoncxx::document::view& sort);
 
-std::string update_specification_to_set_value(const bsoncxx::document::view& update_command,
-                                              const bsoncxx::document::element& update_specification);
+std::string set_value_from_update_specification(const bsoncxx::document::view& update_command,
+                                                const bsoncxx::document::element& update_specification);
 
-std::string update_specification_to_set_value(const bsoncxx::document::view& update_specification);
+std::string set_value_from_update_specification(const bsoncxx::document::view& update_specification);
 
 namespace packet
 {
@@ -1328,6 +1347,15 @@ public:
     int32_t clientReply(GWBUF* sMariaDB_response, DCB* pDcb);
 
 private:
+    template<class T>
+    void log_in(const char* zContext, const T& req)
+    {
+        if (m_config.should_log_in())
+        {
+            MXS_NOTICE("%s: %s", zContext, req.to_string().c_str());
+        }
+    }
+
     void kill_client();
 
     using SDatabase = std::unique_ptr<Database>;

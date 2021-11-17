@@ -15,12 +15,14 @@
 
 #include "nosqlprotocol.hh"
 #include <string>
+#include <sstream>
 #include <utility>
 #include <vector>
 #include <bsoncxx/builder/basic/array.hpp>
 #include <bsoncxx/builder/basic/document.hpp>
 #include <maxscale/buffer.hh>
 #include "../../filter/masking/mysql.hh"
+#include "nosqldatabase.hh"
 #include "nosql.hh"
 
 namespace nosql
@@ -124,7 +126,8 @@ protected:
 
     void send_downstream(const std::string& sql);
 
-    void log_unexpected_packet();
+    void send_downstream_via_loop(const std::string& sql);
+
     void throw_unexpected_packet();
 
     mxs::RoutingWorker& worker() const;
@@ -133,8 +136,11 @@ protected:
     GWBUF*        m_pRequest;
     const int32_t m_request_id;
     std::string   m_last_statement;
+    uint32_t      m_dcid { 0 };
 
 private:
+    void log_back(const char* zContext, const bsoncxx::document::value& doc) const;
+
     static std::pair<GWBUF*, uint8_t*> create_reply_response_buffer(int32_t request_id,
                                                                     int32_t response_to,
                                                                     int64_t cursor_id,
@@ -192,6 +198,131 @@ protected:
     Packet m_req;
 };
 
+template<class T>
+class TableCreating : public T
+{
+public:
+    using T::T;
+
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override final
+    {
+        State state;
+
+        if (m_creating_table)
+        {
+            state = translate_create_table(std::move(mariadb_response), ppResponse);
+        }
+        else
+        {
+            state = translate2(std::move(mariadb_response), ppResponse);
+        }
+
+        return state;
+    }
+
+protected:
+    virtual State translate2(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) = 0;
+
+    virtual State table_created(GWBUF** ppResponse) = 0;
+
+    void create_table()
+    {
+        const auto& config = T::m_database.config();
+
+        if (!config.auto_create_tables)
+        {
+            std::ostringstream ss;
+            ss << "Table " << T::table() << " does not exist, and 'auto_create_tables' "
+               << "is false.";
+
+            throw HardError(ss.str(), error::COMMAND_FAILED);
+        }
+
+        mxb_assert(!m_creating_table);
+        m_creating_table = true;
+
+        bool if_not_exists = true;
+
+        std::ostringstream sql;
+
+        if (config.auto_create_databases)
+        {
+            sql << "CREATE DATABASE IF NOT EXISTS `" << T::m_database.name() << "`; ";
+        }
+
+        sql << table_create_statement(T::table(), config.id_length, if_not_exists);
+
+        T::send_downstream_via_loop(sql.str());
+    }
+
+private:
+    State translate_create_table(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+    {
+        mxb_assert(m_creating_table);
+        m_creating_table = false;
+
+        State state = State::BUSY;
+
+        uint8_t* pBuffer = mariadb_response.data();
+        uint8_t* pEnd = pBuffer + mariadb_response.length();
+
+        if (T::m_database.config().auto_create_databases)
+        {
+            ComResponse create_database_response(&pBuffer);
+
+            switch (create_database_response.type())
+            {
+            case ComResponse::OK_PACKET:
+                {
+                    ComResponse create_table_response(&pBuffer);
+
+                    state = translate_create_table(create_table_response, ppResponse);
+                }
+                break;
+
+            case ComResponse::ERR_PACKET:
+                throw MariaDBError(ComERR(create_database_response));
+                break;
+
+            default:
+                T::throw_unexpected_packet();
+            }
+        }
+        else
+        {
+            ComResponse create_table_response(&pBuffer);
+
+            state = translate_create_table(create_table_response, ppResponse);
+        }
+
+        return state;
+    }
+
+    State translate_create_table(const ComResponse& create_table_response, GWBUF** ppResponse)
+    {
+        State state = State::BUSY;
+
+        switch (create_table_response.type())
+        {
+        case ComResponse::OK_PACKET:
+            state = table_created(ppResponse);
+            break;
+
+        case ComResponse::ERR_PACKET:
+            throw MariaDBError(ComERR(create_table_response));
+            break;
+
+        default:
+            T::throw_unexpected_packet();
+        }
+
+        return state;
+    }
+
+private:
+    bool m_creating_table { false };
+};
+
 //
 // OpDeleteCommand
 //
@@ -215,21 +346,13 @@ public:
 //
 // OpInsertCommand
 //
-class OpInsertCommand : public PacketCommand<packet::Insert>
+class OpInsertCommand : public TableCreating<PacketCommand<packet::Insert>>
 {
 public:
-    enum Action
-    {
-        INSERTING_DATA,
-        CREATING_TABLE,
-        CREATING_DATABASE
-    };
-
     OpInsertCommand(Database* pDatabase,
                     GWBUF* pRequest,
                     packet::Insert&& req)
-        : PacketCommand<packet::Insert>(pDatabase, pRequest, std::move(req), ResponseKind::NONE)
-        , m_action(INSERTING_DATA)
+        : TableCreating<PacketCommand<packet::Insert>>(pDatabase, pRequest, std::move(req), ResponseKind::NONE)
     {
         mxb_assert(m_req.documents().size() == 1);
     }
@@ -238,13 +361,14 @@ public:
 
     State execute(GWBUF** ppNoSQL_response) override final;
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+    State translate2(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+
+    State table_created(GWBUF** ppResponse) override final;
 
 private:
     std::string convert_document_data(const bsoncxx::document::view& doc);
 
 private:
-    Action                                m_action;
     std::string                           m_statement;
     std::vector<bsoncxx::document::value> m_stashed_documents;
 };
@@ -252,13 +376,13 @@ private:
 //
 // OpUpdateCommand
 //
-class OpUpdateCommand : public PacketCommand<packet::Update>
+class OpUpdateCommand : public TableCreating<PacketCommand<packet::Update>>
 {
 public:
     OpUpdateCommand(Database* pDatabase,
                     GWBUF* pRequest,
                     packet::Update&& req)
-        : PacketCommand<packet::Update>(pDatabase, pRequest, std::move(req), ResponseKind::NONE)
+        : TableCreating<PacketCommand<packet::Update>>(pDatabase, pRequest, std::move(req), ResponseKind::NONE)
     {
     }
 
@@ -268,26 +392,30 @@ public:
 
     State execute(GWBUF** ppNoSQL_response) override final;
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+    State translate2(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+
+    State table_created(GWBUF** ppResponse) override final;
 
 private:
     enum class Action
     {
         UPDATING_DOCUMENT,
         INSERTING_DOCUMENT,
-        CREATING_TABLE
     };
 
     State translate_updating_document(ComResponse& response);
     State translate_inserting_document(ComResponse& response);
-    State translate_creating_table(ComResponse& response);
 
-    State update_document(const std::string& sql);
-    State create_table();
+    enum class Send
+    {
+        DIRECTLY,
+        VIA_LOOP
+    };
+
+    void update_document(const std::string& sql, Send send);
     State insert_document();
 
     Action                       m_action { Action::UPDATING_DOCUMENT };
-    uint32_t                     m_dcid { 0 };
     std::string                  m_update;
     std::string                  m_insert;
     std::unique_ptr<NoError::Id> m_sId;

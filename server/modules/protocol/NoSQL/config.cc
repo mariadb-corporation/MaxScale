@@ -97,6 +97,17 @@ mxs::config::ParamBool GlobalConfig::s_log_unknown_command(
     "Whether an unknown command should be logged.",
     false);
 
+mxs::config::ParamEnumMask<GlobalConfig::Debug> GlobalConfig::s_debug(
+    &nosqlprotocol::specification,
+    "debug",
+    "To what extent debugging logging should be performed.",
+    {
+        {GlobalConfig::DEBUG_NONE, "none"},
+        {GlobalConfig::DEBUG_IN, "in"},
+        {GlobalConfig::DEBUG_OUT, "out"},
+        {GlobalConfig::DEBUG_BACK, "back"}
+    },
+    0);
 
 GlobalConfig::GlobalConfig(const std::string& name, ProtocolModule* instance)
     : mxs::config::Configuration(name, &nosqlprotocol::specification)
@@ -111,6 +122,7 @@ GlobalConfig::GlobalConfig(const std::string& name, ProtocolModule* instance)
     add_native(&GlobalConfig::ordered_insert_behavior, &s_ordered_insert_behavior);
     add_native(&GlobalConfig::cursor_timeout, &s_cursor_timeout);
     add_native(&GlobalConfig::log_unknown_command, &s_log_unknown_command);
+    add_native(&GlobalConfig::debug, &s_debug);
 }
 
 bool GlobalConfig::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)

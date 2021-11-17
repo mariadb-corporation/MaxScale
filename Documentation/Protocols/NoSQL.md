@@ -204,6 +204,29 @@ document) is used, has an impact on the performance. Please see the discussion a
 Specifies how long a cursor can be idle, that is, not accessed, before it is
 automatically closed.
 
+## `debug`
+
+   * Type: enumeration (multiple values separated by `,` can be specified)
+   * Mandatory: false
+   * Values: `none`, `in`, `out`, `back`
+   * Default `none`
+
+Specifies what should be logged as _notice_ messages.
+
+Enumeration values:
+
+   * `none`: Nothing is logged.
+   * `in`: The _incoming_ protocol command is logged.
+   * `out`: The _outgoing_ SQL sent to the backend is logged.
+   * `back`: The response sent _back_ to the client is logged.
+
+So, specify
+```
+nosqlprotocol.debug=in,out,back
+```
+to have the incoming command, the corresponding SQL sent to the backend
+and the resulting response sent to the client logged.
+
 # Databases and Tables
 
 By default, _nosqlprotocol_ automatically creates databases as needed.

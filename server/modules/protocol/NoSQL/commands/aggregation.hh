@@ -53,7 +53,7 @@ public:
         bsoncxx::document::view query;
         if (optional(key::QUERY, &query))
         {
-            sql << query_to_where_clause(query);
+            sql << where_clause_from_query(query) << " ";
         }
 
         if (!limit.empty())
@@ -174,16 +174,7 @@ public:
         bsoncxx::document::view query;
         if (optional(key::QUERY, &query, Conversion::RELAXED))
         {
-            auto w = query_to_where_clause(query);
-
-            if (w.empty())
-            {
-                where = "WHERE ";
-            }
-            else
-            {
-                where = w + " AND ";
-            }
+            where = where_clause_from_query(query) + " AND ";
         }
         else
         {

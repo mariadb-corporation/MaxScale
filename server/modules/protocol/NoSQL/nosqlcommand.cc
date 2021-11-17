@@ -17,7 +17,6 @@
 #include <maxbase/string.hh>
 #include <maxbase/worker.hh>
 #include <maxscale/modutil.hh>
-#include "nosqldatabase.hh"
 #include "crc32.h"
 
 using mxb::Worker;
@@ -79,14 +78,10 @@ public:
         switch (m_database.config().on_unknown_command)
         {
         case GlobalConfig::RETURN_ERROR:
-            {
-                MXS_INFO("%s", s.c_str());
-                throw nosql::SoftError(s, nosql::error::COMMAND_NOT_FOUND);
-            }
+            throw nosql::SoftError(s, nosql::error::COMMAND_NOT_FOUND);
             break;
 
         case GlobalConfig::RETURN_EMPTY:
-            MXS_INFO("%s", s.c_str());
             break;
         }
     }
@@ -199,6 +194,7 @@ struct ThisUnit
         { tolower(command::DropDatabase::KEY),             create_info<command::DropDatabase>() },
         { tolower(command::DropIndexes::KEY),              create_info<command::DropIndexes>() },
         { tolower(command::EndSessions::KEY),              create_info<command::EndSessions>() },
+        { tolower(command::Explain::KEY),                  create_info<command::Explain>() },
         { tolower(command::FSync::KEY),                    create_info<command::FSync>() },
         { tolower(command::Find::KEY),                     create_info<command::Find>() },
         { tolower(command::FindAndModify::KEY),            create_info<command::FindAndModify>() },
@@ -243,6 +239,12 @@ namespace nosql
 Command::~Command()
 {
     free_request();
+
+    if (m_dcid != 0)
+    {
+        m_database.context().worker().cancel_delayed_call(m_dcid);
+        m_dcid = 0;
+    }
 }
 
 bool Command::is_admin() const
@@ -296,7 +298,10 @@ GWBUF* create_packet(const char* zSql, size_t sql_len, uint8_t seq_no)
 
 void Command::send_downstream(const string& sql)
 {
-    MXB_INFO("SQL: %s", sql.c_str());
+    if (m_database.config().should_log_out())
+    {
+        MXB_NOTICE("SQL: %s", sql.c_str());
+    }
 
     uint8_t seq_no = 0;
 
@@ -330,6 +335,22 @@ void Command::send_downstream(const string& sql)
     m_last_statement = sql;
 }
 
+void Command::send_downstream_via_loop(const string& sql)
+{
+    mxb_assert(m_dcid == 0);
+
+    m_dcid = m_database.context().worker().delayed_call(0, [this, sql](Worker::Call::action_t action) {
+            m_dcid = 0;
+
+            if (action == Worker::Call::EXECUTE)
+            {
+                send_downstream(sql);
+            }
+
+            return false;
+        });
+}
+
 namespace
 {
 
@@ -341,11 +362,6 @@ string unexpected_message(const std::string& who, const std::string& statement)
     return ss.str();
 }
 
-}
-
-void Command::log_unexpected_packet()
-{
-    MXS_ERROR("%s", unexpected_message(description(), m_last_statement).c_str());
 }
 
 void Command::throw_unexpected_packet()
@@ -381,6 +397,14 @@ GWBUF* Command::create_response(const bsoncxx::document::value& doc, IsError is_
     }
 
     return pResponse;
+}
+
+void Command::log_back(const char* zContext, const bsoncxx::document::value& doc) const
+{
+    if (m_database.config().should_log_back())
+    {
+        MXS_NOTICE("%s: %s", zContext, bsoncxx::to_json(doc).c_str());
+    }
 }
 
 //static
@@ -470,7 +494,7 @@ GWBUF* Command::create_reply_response(int64_t cursor_id,
 
 GWBUF* Command::create_reply_response(const bsoncxx::document::value& doc, IsError is_error) const
 {
-    MXB_INFO("Response(REPLY): %s", bsoncxx::to_json(doc).c_str());
+    log_back("Response(Reply)", doc);
 
     auto doc_view = doc.view();
     size_t doc_len = doc_view.length();
@@ -488,7 +512,7 @@ GWBUF* Command::create_reply_response(const bsoncxx::document::value& doc, IsErr
 
 GWBUF* Command::create_msg_response(const bsoncxx::document::value& doc) const
 {
-    MXB_INFO("Response(MSG): %s", bsoncxx::to_json(doc).c_str());
+    log_back("Response(Msg)", doc);
 
     uint32_t flag_bits = 0;
     uint8_t kind = 0;
@@ -540,11 +564,11 @@ std::string OpDeleteCommand::description() const
 State OpDeleteCommand::execute(GWBUF** ppNoSQL_response)
 {
     ostringstream ss;
-    ss << "DELETE FROM " << table() << query_to_where_clause(m_req.selector());
+    ss << "DELETE FROM " << table() << where_clause_from_query(m_req.selector()) << " ";
 
     if (m_req.is_single_remove())
     {
-        ss << " LIMIT 1";
+        ss << "LIMIT 1";
     }
 
     auto statement = ss.str();
@@ -585,8 +609,7 @@ State OpDeleteCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL
         break;
 
     default:
-        // We do not throw, as that would generate a response.
-        log_unexpected_packet();
+        throw_unexpected_packet();
     }
 
     *ppNoSQL_response = nullptr;
@@ -626,9 +649,9 @@ State OpInsertCommand::execute(GWBUF** ppNoSQL_response)
     return State::BUSY;
 }
 
-State OpInsertCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+State OpInsertCommand::translate2(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
 {
-    State state = State::READY;
+    State state = State::BUSY;
     GWBUF* pResponse = nullptr;
 
     ComResponse response(mariadb_response.data());
@@ -636,98 +659,23 @@ State OpInsertCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL
     switch (response.type())
     {
     case ComResponse::OK_PACKET:
-        if (m_action == CREATING_TABLE || m_action == CREATING_DATABASE)
-        {
-            worker().delayed_call(0, [this](Worker::Call::action_t action) {
-                    if (action == Worker::Call::EXECUTE)
-                    {
-                        m_action = INSERTING_DATA;
-                        send_downstream(m_statement);
-                    }
-
-                    return false;
-                });
-            state = State::BUSY;
-        }
-        else
-        {
-            m_database.context().set_last_error(std::make_unique<NoError>(1));
-            state = State::READY;
-        }
+        m_database.context().set_last_error(std::make_unique<NoError>(1));
+        state = State::READY;
         break;
 
     case ComResponse::ERR_PACKET:
         {
             ComERR err(response);
             auto s = err.message();
-            MXS_INFO("%s", s.c_str());
 
             switch (err.code())
             {
             case ER_NO_SUCH_TABLE:
-                {
-                    worker().delayed_call(0, [this](Worker::Call::action_t action) {
-                            if (action == Worker::Call::EXECUTE)
-                            {
-                                auto id_length = m_database.config().id_length;
-                                auto sql = nosql::table_create_statement(table(), id_length);
-
-                                m_action = CREATING_TABLE;
-                                send_downstream(sql);
-                            }
-
-                            return false;
-                        });
-                    state = State::BUSY;
-                }
-                break;
-
-            case ER_BAD_DB_ERROR:
-                {
-                    if (err.message().find("Unknown database") == 0)
-                    {
-                        worker().delayed_call(0, [this](Worker::Call::action_t action) {
-                                if (action == Worker::Call::EXECUTE)
-                                {
-                                    ostringstream ss;
-                                    ss << "CREATE DATABASE `" << m_database.name() << "`";
-
-                                    m_action = CREATING_DATABASE;
-                                    send_downstream(ss.str());
-                                }
-
-                                return false;
-                            });
-                        state = State::BUSY;
-                    }
-                    else
-                    {
-                        MXS_ERROR("Inserting '%s' failed with: (%d) %s",
-                                  m_statement.c_str(), err.code(), err.message().c_str());
-                        state = State::READY;
-                    }
-                }
-                break;
-
-            case ER_DB_CREATE_EXISTS:
-            case ER_TABLE_EXISTS_ERROR:
-                // Ok, someone else got there first.
-                worker().delayed_call(0, [this](Worker::Call::action_t action) {
-                        if (action == Worker::Call::EXECUTE)
-                        {
-                            m_action = INSERTING_DATA;
-                            send_downstream(m_statement);
-                        }
-
-                        return false;
-                    });
-                state = State::BUSY;
+                create_table();
                 break;
 
             default:
-                MXS_ERROR("Inserting '%s' failed with: (%d) %s",
-                          m_statement.c_str(), err.code(), err.message().c_str());
-                state = State::READY;
+                throw MariaDBError(err);
             }
         }
         break;
@@ -740,6 +688,14 @@ State OpInsertCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL
     *ppNoSQL_response = pResponse;
     return state;
 };
+
+State OpInsertCommand::table_created(GWBUF** ppResponse)
+{
+    send_downstream_via_loop(m_statement);
+
+    *ppResponse = nullptr;
+    return State::BUSY;
+}
 
 string OpInsertCommand::convert_document_data(const bsoncxx::document::view& doc)
 {
@@ -789,10 +745,6 @@ string OpInsertCommand::convert_document_data(const bsoncxx::document::view& doc
 //
 OpUpdateCommand::~OpUpdateCommand()
 {
-    if (m_dcid)
-    {
-        worker().cancel_delayed_call(m_dcid);
-    }
 }
 
 string OpUpdateCommand::description() const
@@ -806,21 +758,20 @@ State OpUpdateCommand::execute(GWBUF** ppNoSQL_response)
 
     ostringstream ss;
     ss << "UPDATE " << table() << " SET DOC = "
-       << update_specification_to_set_value(m_req.update())
-       << " "
-       << query_to_where_clause(m_req.selector());
+       << set_value_from_update_specification(m_req.update()) << " "
+       << where_clause_from_query(m_req.selector()) << " ";
 
     if (!m_req.is_multi())
     {
-        ss << " LIMIT 1";
+        ss << "LIMIT 1";
     }
 
-    auto sql = ss.str();
+    update_document(ss.str(), Send::DIRECTLY);
 
-    return update_document(sql);
+    return State::BUSY;
 }
 
-State OpUpdateCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+State OpUpdateCommand::translate2(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
 {
     State state = State::READY;
 
@@ -838,16 +789,11 @@ State OpUpdateCommand::translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL
         case Action::INSERTING_DOCUMENT:
             state = translate_inserting_document(response);
             break;
-
-        case Action::CREATING_TABLE:
-            state = translate_creating_table(response);
-            break;
         }
     }
     else
     {
-        // We do not throw, as that would generate a response.
-        log_unexpected_packet();
+        throw_unexpected_packet();
     }
 
     *ppNoSQL_response = nullptr;
@@ -919,24 +865,12 @@ State OpUpdateCommand::translate_updating_document(ComResponse& response)
 
         if (err.code() == ER_NO_SUCH_TABLE)
         {
-            if (m_database.config().auto_create_tables)
-            {
-                state = create_table();
-            }
-            else
-            {
-                ostringstream ss;
-                ss << "Table " << table() << " does not exist, and 'auto_create_tables' "
-                   << "is false.";
-
-                MXB_WARNING("%s", ss.str().c_str());
-            }
+            create_table();
+            state = State::BUSY;
         }
         else
         {
-            MariaDBError mariadb_err(err);
-            MXB_ERROR("%s", mariadb_err.message().c_str());
-            m_database.context().set_last_error(mariadb_err.create_last_error());
+            throw MariaDBError(err);
         }
     }
 
@@ -945,88 +879,46 @@ State OpUpdateCommand::translate_updating_document(ComResponse& response)
 
 State OpUpdateCommand::translate_inserting_document(ComResponse& response)
 {
-    State state = State::BUSY;
-
     if (response.type() == ComResponse::ERR_PACKET)
     {
-        ComERR err(response);
-        m_database.context().set_last_error(MariaDBError(err).create_last_error());
-
-        state = State::READY;
+        throw MariaDBError(ComERR(response));
     }
     else
     {
         ostringstream ss;
         ss << "UPDATE " << table() << " SET DOC = "
-           << update_specification_to_set_value(m_req.update())
+           << set_value_from_update_specification(m_req.update())
            << " "
            << "WHERE id = '" << m_sId->to_string() << "'";
 
-        auto sql = ss.str();
-
-        mxb_assert(m_dcid == 0);
-        m_dcid = worker().delayed_call(0, [this, sql](Worker::Call::action_t action) {
-                m_dcid = 0;
-
-                if (action == Worker::Call::EXECUTE)
-                {
-                    update_document(sql);
-                }
-
-            return false;
-        });
+        update_document(ss.str(), Send::VIA_LOOP);
     }
 
-    return state;
+    return State::BUSY;
 }
 
-State OpUpdateCommand::translate_creating_table(ComResponse& response)
+State OpUpdateCommand::table_created(GWBUF** ppResponse)
 {
-    State state = State::READY;
+    insert_document();
 
-    if (response.type() == ComResponse::OK_PACKET)
-    {
-        state = insert_document();
-    }
-    else
-    {
-        ComERR err(response);
-        m_database.context().set_last_error(MariaDBError(err).create_last_error());
-    }
-
-    return state;
+    *ppResponse = nullptr;
+    return State::BUSY;
 }
 
-State OpUpdateCommand::update_document(const string& sql)
+void OpUpdateCommand::update_document(const string& sql, Send send)
 {
     m_action = Action::UPDATING_DOCUMENT;
 
     m_update = sql;
 
-    send_downstream(m_update);
-
-    return State::BUSY;
-}
-
-State OpUpdateCommand::create_table()
-{
-    m_action = Action::CREATING_TABLE;
-
-    mxb_assert(m_dcid == 0);
-    m_dcid = worker().delayed_call(0, [this](Worker::Call::action_t action) {
-            m_dcid = 0;
-
-            if (action == Worker::Call::EXECUTE)
-            {
-                auto sql = nosql::table_create_statement(table(), m_database.config().id_length);
-
-                send_downstream(sql);
-            }
-
-            return false;
-        });
-
-    return State::BUSY;
+    if (send == Send::DIRECTLY)
+    {
+        send_downstream(m_update);
+    }
+    else
+    {
+        send_downstream_via_loop(m_update);
+    }
 }
 
 State OpUpdateCommand::insert_document()
@@ -1110,17 +1002,7 @@ State OpUpdateCommand::insert_document()
 
     m_insert = ss.str();
 
-    mxb_assert(m_dcid == 0);
-    m_dcid = worker().delayed_call(0, [this](Worker::Call::action_t action) {
-            m_dcid = 0;
-
-            if (action == Worker::Call::EXECUTE)
-            {
-                send_downstream(m_insert);
-            }
-
-            return false;
-        });
+    send_downstream_via_loop(m_insert);
 
     return State::BUSY;
 }
@@ -1279,7 +1161,7 @@ void OpQueryCommand::send_query(const bsoncxx::document::view& query,
     ostringstream sql;
     sql << "SELECT ";
 
-    m_extractions = projection_to_extractions(m_req.fields());
+    m_extractions = extractions_from_projection(m_req.fields());
 
     if (!m_extractions.empty())
     {
@@ -1305,25 +1187,20 @@ void OpQueryCommand::send_query(const bsoncxx::document::view& query,
 
     if (!query.empty())
     {
-        auto where = query_to_where_clause(query);
-
-        if (!where.empty())
-        {
-            sql << " " << where;
-        }
+        sql << where_clause_from_query(query) << " ";
     }
 
     if (orderby)
     {
-        string s = sort_to_order_by(orderby.get_document());
+        string s = order_by_value_from_sort(orderby.get_document());
 
         if (!s.empty())
         {
-            sql << " ORDER BY " << s;
+            sql << "ORDER BY " << s << " ";
         }
     }
 
-    sql << " LIMIT ";
+    sql << "LIMIT ";
 
     auto nSkip = m_req.nSkip();
 

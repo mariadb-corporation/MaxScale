@@ -11,6 +11,8 @@
  * Public License.
  */
 
+#pragma once
+
 //
 // https://docs.mongodb.com/v4.4/reference/command/nav-crud/
 //
@@ -147,7 +149,7 @@ bool element_is_valid_as_id(const bsoncxx::document::element& element)
 namespace command
 {
 
-class OrderedCommand : public MultiCommand
+class OrderedCommand : public TableCreating<MultiCommand>
 {
 public:
     OrderedCommand(const std::string& name,
@@ -155,7 +157,7 @@ public:
                    GWBUF* pRequest,
                    packet::Msg&& req,
                    const std::string& array_key)
-        : MultiCommand(name, pDatabase, pRequest, std::move(req))
+        : TableCreating<MultiCommand>(name, pDatabase, pRequest, std::move(req))
         , m_key(array_key)
     {
     }
@@ -167,28 +169,16 @@ public:
                    const bsoncxx::document::view& doc,
                    const DocumentArguments& arguments,
                    const std::string& array_key)
-        : MultiCommand(name, pDatabase, pRequest, std::move(req), doc, arguments)
+        : TableCreating<MultiCommand>(name, pDatabase, pRequest, std::move(req), doc, arguments)
         , m_key(array_key)
     {
     }
 
     ~OrderedCommand()
     {
-        if (m_dcid)
-        {
-            worker().cancel_delayed_call(m_dcid);
-        }
     }
 
-
 public:
-    enum class Mode
-    {
-        DEFAULT,
-        CREATING_TABLE,
-        CREATING_DATABASE
-    };
-
     enum class Execution
     {
         CONTINUE,
@@ -210,31 +200,7 @@ public:
         return State::BUSY;
     }
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override final
-    {
-        // TODO: Update will be needed when DEPRECATE_EOF it turned on.
-
-        State state = State::READY;
-
-        switch (m_mode)
-        {
-        case Mode::DEFAULT:
-            state = translate_default(std::move(mariadb_response), ppResponse);
-            break;
-
-        case Mode::CREATING_TABLE:
-            state = translate_creating_table(std::move(mariadb_response), ppResponse);
-            break;
-
-        case Mode::CREATING_DATABASE:
-            state = translate_creating_database(std::move(mariadb_response), ppResponse);
-            break;
-        }
-
-        return state;
-    }
-
-    State translate_default(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
+    State translate2(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
     {
         State rv = State::BUSY;
         GWBUF* pResponse = nullptr;
@@ -245,7 +211,7 @@ public:
 
         if (response.is_err() && ComERR(response).code() == ER_NO_SUCH_TABLE && should_create_table())
         {
-            rv = create_table();
+            create_table();
         }
         else
         {
@@ -312,99 +278,15 @@ public:
         return rv;
     }
 
-    State translate_creating_table(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
-    {
-        mxb_assert(m_mode == Mode::CREATING_TABLE);
-
-        State state = State::BUSY;
-        GWBUF* pResponse = nullptr;
-
-        ComResponse response(mariadb_response.data());
-
-        switch (response.type())
-        {
-        case ComResponse::OK_PACKET:
-            MXS_INFO("Table created, now executing statment.");
-            m_mode = Mode::DEFAULT;
-            execute_one_statement();
-            break;
-
-        case ComResponse::ERR_PACKET:
-            {
-                ComERR err(response);
-
-                auto code = err.code();
-
-                if (code == ER_TABLE_EXISTS_ERROR)
-                {
-                    MXS_INFO("Table created by someone else, now executing statment.");
-                    m_mode = Mode::DEFAULT;
-                    execute_one_statement();
-                }
-                else if (code == ER_BAD_DB_ERROR && err.message().find("Unknown database") == 0)
-                {
-                    state = create_database();
-                }
-                else
-                {
-                    throw MariaDBError(err);
-                }
-            }
-            break;
-
-        default:
-            mxb_assert(!true);
-            throw_unexpected_packet();
-        }
-
-        *ppResponse = pResponse;
-        return state;
-    }
-
-    State translate_creating_database(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
-    {
-        mxb_assert(m_mode == Mode::CREATING_DATABASE);
-
-        State state = State::BUSY;
-        GWBUF* pResponse = nullptr;
-
-        ComResponse response(mariadb_response.data());
-
-        switch (response.type())
-        {
-        case ComResponse::OK_PACKET:
-            MXS_INFO("Database created, now creating table.");
-            create_table();
-            break;
-
-        case ComResponse::ERR_PACKET:
-            {
-                ComERR err(response);
-
-                auto code = err.code();
-
-                if (code == ER_DB_CREATE_EXISTS)
-                {
-                    MXS_INFO("Database created by someone else, now creating table.");
-                    create_table();
-                }
-                else
-                {
-                    throw MariaDBError(err);
-                }
-            }
-            break;
-
-        default:
-            mxb_assert(!true);
-            throw_unexpected_packet();
-        }
-
-        *ppResponse = pResponse;
-        return state;
-    }
-
 protected:
+    State table_created(GWBUF** ppResponse) override final
+    {
+        execute_one_statement();
+
+        *ppResponse = nullptr;
+        return State::BUSY;
+    }
+
     virtual bool should_create_table() const
     {
         return false;
@@ -637,73 +519,6 @@ protected:
         send_downstream(*m_it);
     }
 
-    State create_table()
-    {
-        mxb_assert(m_mode != Mode::CREATING_TABLE);
-
-        if (!m_database.config().auto_create_tables)
-        {
-            ostringstream ss;
-            ss << "Table " << table() << " does not exist, and 'auto_create_tables' "
-               << "is false.";
-
-            throw HardError(ss.str(), error::COMMAND_FAILED);
-        }
-
-        m_mode = Mode::CREATING_TABLE;
-
-        mxb_assert(m_dcid == 0);
-        m_dcid = worker().delayed_call(0, [this](Worker::Call::action_t action) {
-                m_dcid = 0;
-
-                if (action == Worker::Call::EXECUTE)
-                {
-                    auto sql = nosql::table_create_statement(table(), m_database.config().id_length);
-
-                    send_downstream(sql);
-                }
-
-                return false;
-            });
-
-        return State::BUSY;
-    }
-
-    State create_database()
-    {
-        mxb_assert(m_mode != Mode::CREATING_DATABASE);
-
-        if (!m_database.config().auto_create_databases)
-        {
-            ostringstream ss;
-            ss << "Database " << m_database.name() << " does not exist, and "
-               << "'auto_create_databases' is false.";
-
-            throw HardError(ss.str(), error::COMMAND_FAILED);
-        }
-
-        m_mode = Mode::CREATING_DATABASE;
-
-        mxb_assert(m_dcid == 0);
-        m_dcid = worker().delayed_call(0, [this](Worker::Call::action_t action) {
-                m_dcid = 0;
-
-                if (action == Worker::Call::EXECUTE)
-                {
-                    ostringstream ss;
-                    ss << "CREATE DATABASE `" << m_database.name() << "`";
-
-                    send_downstream(ss.str());
-                }
-
-                return false;
-            });
-
-        return State::BUSY;
-    }
-
-    Mode                            m_mode = { Mode::DEFAULT };
-    uint32_t                        m_dcid { 0 };
     string                          m_key;
     bool                            m_ordered { true };
     Query                           m_query;
@@ -768,7 +583,7 @@ private:
             throw SoftError(ss.str(), error::TYPE_MISMATCH);
         }
 
-        sql << query_to_where_clause(q.get_document());
+        sql << where_clause_from_query(q.get_document()) << " ";
 
         auto limit = doc["limit"];
 
@@ -797,7 +612,7 @@ private:
 
             if (nLimit == 1)
             {
-                sql << " LIMIT 1";
+                sql << "LIMIT 1";
             }
         }
 
@@ -819,7 +634,26 @@ public:
     static constexpr const char* const KEY = "find";
     static constexpr const char* const HELP = "";
 
+    class Stats
+    {
+    public:
+        int32_t nReturned { 0 };
+    };
+
     using SingleCommand::SingleCommand;
+
+    Find(const std::string& name,
+         Database* pDatabase,
+         GWBUF* pRequest,
+         packet::Msg&& req,
+         const bsoncxx::document::view& doc,
+         const DocumentArguments& arguments,
+         Stats* pStats)
+        : SingleCommand(name, pDatabase, pRequest, std::move(req), doc, arguments)
+        , m_pStats(pStats)
+    {
+    }
+
 
     void prepare() override
     {
@@ -843,9 +677,9 @@ public:
         bsoncxx::document::view projection;
         if (optional(key::PROJECTION, &projection))
         {
-            m_extractions = projection_to_extractions(projection);
+            m_extractions = extractions_from_projection(projection);
 
-            sql << extractions_to_columns(m_extractions);
+            sql << columns_from_extractions(m_extractions);
         }
         else
         {
@@ -854,16 +688,45 @@ public:
 
         sql << " FROM " << table() << " ";
 
+        string where_condition;
+
         bsoncxx::document::view filter;
         if (optional(key::FILTER, &filter))
         {
-            sql << query_to_where_clause(filter);
+            where_condition += where_condition_from_query(filter);
+        }
+
+        bsoncxx::document::view min;
+        if (optional(key::MIN, &min))
+        {
+            if (!where_condition.empty())
+            {
+                where_condition += " AND ";
+            }
+
+            where_condition += where_condition_from_min(min);
+        }
+
+        bsoncxx::document::view max;
+        if (optional(key::MAX, &max))
+        {
+            if (!where_condition.empty())
+            {
+                where_condition += " AND ";
+            }
+
+            where_condition += where_condition_from_max(max);
+        }
+
+        if (!where_condition.empty())
+        {
+            sql << "WHERE " << where_condition << " ";
         }
 
         bsoncxx::document::view sort;
         if (optional(key::SORT, &sort))
         {
-            string order_by = sort_to_order_by(sort);
+            string order_by = order_by_value_from_sort(sort);
 
             if (!order_by.empty())
             {
@@ -917,6 +780,11 @@ public:
                                                                       m_extractions,
                                                                       std::move(mariadb_response));
 
+                if (m_pStats)
+                {
+                    m_pStats->nReturned = sCursor->nRemaining();
+                }
+
                 DocumentBuilder doc;
                 sCursor->create_first_batch(worker(), doc, m_batch_size, m_single_batch);
 
@@ -934,20 +802,54 @@ public:
     }
 
 private:
+    string where_condition_from_op(const bsoncxx::document::view& doc, const char* zOp)
+    {
+        ostringstream ss;
+
+        ss << "(";
+
+        for (auto it = doc.begin(); it != doc.end(); ++it)
+        {
+            const auto& field = *it;
+
+            if (it != doc.begin())
+            {
+                ss << " AND ";
+            }
+
+            ss << "JSON_EXTRACT(doc, '$." << field.key() << "') " << zOp
+               << element_to_value(field, ValueFor::SQL);
+        }
+
+        ss << ")";
+
+        return ss.str();
+    }
+
+    string where_condition_from_min(const bsoncxx::document::view& min)
+    {
+        return where_condition_from_op(min, " >= ");
+    }
+
+    string where_condition_from_max(const bsoncxx::document::view& max)
+    {
+        return where_condition_from_op(max, " < ");
+    }
+
     int32_t        m_batch_size { DEFAULT_CURSOR_RETURN };
     bool           m_single_batch { false };
     vector<string> m_extractions;
+    Stats*         m_pStats { nullptr };
 };
 
-
 // https://docs.mongodb.com/v4.4/reference/command/findAndModify/
-class FindAndModify : public MultiCommand
+class FindAndModify : public TableCreating<MultiCommand>
 {
 public:
     static constexpr const char* const KEY = "findAndModify";
     static constexpr const char* const HELP = "";
 
-    using MultiCommand::MultiCommand;
+    using TableCreating<MultiCommand>::TableCreating;
 
     ~FindAndModify()
     {
@@ -990,9 +892,14 @@ protected:
         return m_sSub_command->create_initial_select();
     }
 
-    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
+    State translate2(mxs::Buffer&& mariadb_response, GWBUF** ppResponse) override
     {
         return m_sSub_command->translate(std::move(mariadb_response), ppResponse);
+    }
+
+    State table_created(GWBUF** ppResponse) override
+    {
+        return m_sSub_command->table_created(ppResponse);
     }
 
 private:
@@ -1010,10 +917,6 @@ private:
 
         virtual ~SubCommand()
         {
-            if (m_dcid)
-            {
-                m_super.worker().cancel_delayed_call(m_dcid);
-            }
         }
 
         Query create_initial_select()
@@ -1025,9 +928,9 @@ private:
             bsoncxx::document::view fields;
             if (optional(key::FIELDS, &fields, error::LOCATION31175))
             {
-                m_extractions = projection_to_extractions(fields);
+                m_extractions = extractions_from_projection(fields);
 
-                select << extractions_to_columns(m_extractions);
+                select << columns_from_extractions(m_extractions);
             }
             else
             {
@@ -1045,13 +948,13 @@ private:
             bsoncxx::document::view query;
             if (optional(key::QUERY, &query, error::LOCATION31160))
             {
-                sql << query_to_where_clause(query);
+                sql << where_clause_from_query(query) << " ";
             }
 
             bsoncxx::document::view sort;
             if (optional(key::SORT, &sort, error::LOCATION31174))
             {
-                string order_by = sort_to_order_by(sort);
+                string order_by = order_by_value_from_sort(sort);
 
                 if (!order_by.empty())
                 {
@@ -1059,7 +962,7 @@ private:
                 }
             }
 
-            sql << " LIMIT 1 FOR UPDATE";
+            sql << "LIMIT 1 FOR UPDATE";
 
             return Query(Query::MULTI, 2, sql.str());
         }
@@ -1083,6 +986,13 @@ private:
             }
 
             return state;
+        }
+
+        virtual State table_created(GWBUF** ppResponse)
+        {
+            mxb_assert(!true);
+            *ppResponse = nullptr;
+            return State::READY;
         }
 
     protected:
@@ -1109,10 +1019,10 @@ private:
         virtual void initial_select_succeeded(const string& json) = 0;
         virtual void initial_select_no_such_table() = 0;
 
-        void send_downstream_delayed(const string& sql, int32_t action)
+        void send_downstream_via_loop(const string& sql, int32_t action)
         {
             m_action = action;
-            send_downstream_delayed(sql);
+            send_downstream_via_loop(sql);
         }
 
         string interpret_resultset(uint8_t* pBuffer, uint8_t** ppEnd)
@@ -1179,7 +1089,7 @@ private:
 
         void commit()
         {
-            send_downstream_delayed("COMMIT", ACTION_COMMIT);
+            send_downstream_via_loop("COMMIT", ACTION_COMMIT);
         }
 
         void throw_unexpected_packet()
@@ -1187,20 +1097,9 @@ private:
             m_super.throw_unexpected_packet();
         }
 
-        void send_downstream_delayed(const string& sql)
+        void send_downstream_via_loop(const string& sql)
         {
-            mxb_assert(m_dcid == 0);
-
-            m_dcid = m_super.worker().delayed_call(0, [this, sql](Worker::Call::action_t action) {
-                    m_dcid = 0;
-
-                    if (action == Worker::Call::EXECUTE)
-                    {
-                        send_downstream(sql);
-                    }
-
-                    return false;
-                });
+            m_super.send_downstream_via_loop(sql);
         }
 
     protected:
@@ -1290,7 +1189,6 @@ private:
         }
 
     private:
-        uint32_t          m_dcid { 0 };
         unique_ptr<GWBUF> m_sResponse;
     };
 
@@ -1430,7 +1328,7 @@ private:
             ostringstream ss;
             ss << "DELETE FROM " << table() << " WHERE id='" << m_id << "'; COMMIT";
 
-            send_downstream_delayed(ss.str(), ACTION_DELETE);
+            send_downstream_via_loop(ss.str(), ACTION_DELETE);
         }
 
     private:
@@ -1442,7 +1340,6 @@ private:
     public:
         static const int32_t ACTION_UPDATE = 201;
         static const int32_t ACTION_INSERT = 202;
-        static const int32_t ACTION_CREATE_TABLE = 203;
 
         UpdateSubCommand(FindAndModify* pSuper)
             : SubCommand(pSuper)
@@ -1463,10 +1360,6 @@ private:
 
             case ACTION_INSERT:
                 state = translate_insert(std::move(mariadb_response), ppResponse);
-                break;
-
-            case ACTION_CREATE_TABLE:
-                state = translate_create_table(std::move(mariadb_response), ppResponse);
                 break;
 
             default:
@@ -1619,51 +1512,6 @@ private:
             return state;
         }
 
-        State translate_create_table(mxs::Buffer&& mariadb_response, GWBUF** ppResponse)
-        {
-            State state = State::BUSY;
-
-            uint8_t* pBuffer = mariadb_response.data();
-            uint8_t* pEnd = pBuffer + mariadb_response.length();
-
-            ComResponse commit_response(&pBuffer);
-
-            switch (commit_response.type())
-            {
-            case ComResponse::OK_PACKET:
-                {
-                    ComResponse create_database_response(&pBuffer);
-
-                    if (create_database_response.type() == ComResponse::OK_PACKET)
-                    {
-                        ComResponse create_table_response(&pBuffer);
-
-                        if (create_table_response.is_ok())
-                        {
-                            table_created();
-                        }
-                    }
-                    else
-                    {
-                        mxb_assert(create_database_response.type() == ComResponse::ERR_PACKET);
-
-                        throw MariaDBError(ComERR(create_database_response));
-                    }
-                }
-                break;
-
-            case ComResponse::ERR_PACKET:
-                throw MariaDBError(ComERR(commit_response));
-                break;
-
-            default:
-                throw_unexpected_packet();
-            }
-
-            return state;
-        }
-
-
         void initial_select_succeeded(const string& json) override
         {
             if (!m_id.empty())
@@ -1700,7 +1548,10 @@ private:
         {
             if (m_upsert)
             {
-                create_table();
+                m_aborted_action = m_action;
+                m_aborted_statement = m_super.m_last_statement;
+
+                m_super.create_table();
             }
             else
             {
@@ -1717,30 +1568,14 @@ private:
             }
         }
 
-        void table_created()
+        State table_created(GWBUF** ppResponse) override
         {
-            send_downstream_delayed(m_aborted_statement, m_aborted_action);
+            send_downstream_via_loop(m_aborted_statement, m_aborted_action);
+            *ppResponse = nullptr;
+            return State::BUSY;
         }
 
     private:
-        void create_table()
-        {
-            m_aborted_action = m_action;
-            m_aborted_statement = m_super.last_statement();
-
-            m_action = ACTION_CREATE_TABLE;
-
-
-            bool if_not_exists = true;
-
-            ostringstream sql;
-            sql << "COMMIT; "
-                << "CREATE DATABASE IF NOT EXISTS `" << m_super.m_database.name() << "`; "
-                << table_create_statement(table(), m_super.m_database.config().id_length, if_not_exists);
-
-            send_downstream_delayed(sql.str());
-        }
-
         void update()
         {
             m_action = ACTION_UPDATE;
@@ -1752,7 +1587,7 @@ private:
 
             if (u)
             {
-                sql << update_specification_to_set_value(m_doc, u)
+                sql << set_value_from_update_specification(m_doc, u)
                     << " WHERE id = '" << m_id << "'; ";
             }
             else
@@ -1763,13 +1598,13 @@ private:
 
             if (m_new)
             {
-                sql << "SELECT id, " << extractions_to_columns(m_extractions) << " FROM " << table()
+                sql << "SELECT id, " << columns_from_extractions(m_extractions) << " FROM " << table()
                     << " WHERE id = '" << m_id << "'; ";
             }
 
             sql << "COMMIT";
 
-            send_downstream_delayed(sql.str());
+            send_downstream_via_loop(sql.str());
         }
 
         void insert()
@@ -1829,7 +1664,7 @@ private:
 
             if (u)
             {
-                sql << update_specification_to_set_value(m_doc, u)
+                sql << set_value_from_update_specification(m_doc, u)
                     << " WHERE id = '" << m_id << "'; ";
             }
             else
@@ -1845,7 +1680,7 @@ private:
 
             sql << "COMMIT";
 
-            send_downstream_delayed(sql.str());
+            send_downstream_via_loop(sql.str());
         }
 
         GWBUF* create_upsert_response()
@@ -2542,15 +2377,14 @@ private:
                             error::LOCATION40414);
         }
 
-        sql << update_specification_to_set_value(update, u);
-        sql << " ";
-        sql << query_to_where_clause(q.get_document());
+        sql << set_value_from_update_specification(update, u) << " "
+            << where_clause_from_query(q.get_document()) << " ";
 
         auto multi = update[key::MULTI];
 
         if (!multi || !multi.get_bool())
         {
-            sql << " LIMIT 1";
+            sql << "LIMIT 1";
         }
 
         return sql.str();
@@ -2637,22 +2471,12 @@ private:
 
         ostringstream ss;
         ss << "UPDATE " << table() << " SET DOC = "
-           << update_specification_to_set_value(update, u)
+           << set_value_from_update_specification(update, u)
            << "WHERE id = " << m_id;
 
         string sql = ss.str();
 
-        mxb_assert(m_dcid == 0);
-        m_dcid = worker().delayed_call(0, [this, sql](Worker::Call::action_t action) {
-                m_dcid = 0;
-
-                if (action == Worker::Call::EXECUTE)
-                {
-                    send_downstream(sql);
-                }
-
-            return false;
-        });
+        send_downstream_via_loop(sql);
 
         return Execution::BUSY;
     }
@@ -2723,17 +2547,7 @@ private:
 
         m_insert = ss.str();
 
-        mxb_assert(m_dcid == 0);
-        m_dcid = worker().delayed_call(0, [this](Worker::Call::action_t action) {
-                m_dcid = 0;
-
-                if (action == Worker::Call::EXECUTE)
-                {
-                    send_downstream(m_insert);
-                }
-
-            return false;
-        });
+        send_downstream_via_loop(m_insert);
 
         return Execution::BUSY;
     }

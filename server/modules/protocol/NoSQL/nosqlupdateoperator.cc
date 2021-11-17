@@ -238,6 +238,64 @@ public:
         return convert_math_op(element, doc, "multiply", " * ");
     }
 
+    string convert_pop(const bsoncxx::document::element& element, const string& doc)
+    {
+        mxb_assert(element.key().compare("$pop") == 0);
+
+        string rv = doc;
+        auto fields = static_cast<bsoncxx::document::view>(element.get_document());
+
+        FieldRecorder rec(this);
+        for (auto field : fields)
+        {
+            ostringstream ss;
+
+            string_view sv = field.key();
+            string key = check_update_path(sv);
+            rec.push_back(sv);
+
+            double d;
+            if (!element_as(field, Conversion::RELAXED, &d))
+            {
+                ostringstream ss;
+                ss << "Expected a number: " << key << ": " << element_to_string(field);
+                throw SoftError(ss.str(), error::FAILED_TO_PARSE);
+            }
+
+            switch ((int)d)
+            {
+            case -1:
+                ss << "IF(JSON_QUERY(" << rv << ", '$." << key << "') IS NOT NULL, "
+                   << "JSON_REMOVE(" << rv << ", '$." << key << "[0]'), " << rv << ")";
+                break;
+
+            case 1:
+                {
+                    string length = "JSON_LENGTH(JSON_QUERY(" + rv + ", '$." + key + "'))";
+                    string remove = "CONCAT('$.a[', CONCAT(" + length + " - 1, ']'))";
+
+                    ss << "IF(JSON_TYPE(JSON_QUERY(" << rv << ", '$." << key << "')) = 'ARRAY' "
+                       << "AND " << length << " > 0, "
+                       << "JSON_REMOVE(" << rv << ", " << remove << "), " << rv << ")";
+                }
+                break;
+
+            default:
+                {
+                    ostringstream ss;
+                    ss << "Expected an integer: " << key << d;
+                    throw SoftError(ss.str(), error::FAILED_TO_PARSE);
+                }
+            }
+
+            rv = ss.str();
+        }
+
+        rec.flush();
+
+        return rv;
+    }
+
     string convert_push(const bsoncxx::document::element& element, const string& doc)
     {
         mxb_assert(element.key().compare("$push") == 0);
@@ -848,6 +906,7 @@ unordered_map<string, UpdateOperator::Converter> UpdateOperator::s_converters =
     { "$max",         &UpdateOperator::convert_max },
     { "$min",         &UpdateOperator::convert_min },
     { "$mul",         &UpdateOperator::convert_mul },
+    { "$pop",         &UpdateOperator::convert_pop },
     { "$push",        &UpdateOperator::convert_push },
     { "$rename",      &UpdateOperator::convert_rename },
     { "$set",         &UpdateOperator::convert_set },

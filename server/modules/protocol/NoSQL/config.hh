@@ -41,6 +41,14 @@ public:
         ID_LENGTH_MAX     = 2048,
     };
 
+    enum Debug
+    {
+        DEBUG_NONE = 0,
+        DEBUG_IN   = 1,
+        DEBUG_OUT  = 2,
+        DEBUG_BACK = 4
+    };
+
     enum
     {
         CURSOR_TIMEOUT_DEFAULT = 60     // seconds
@@ -55,6 +63,7 @@ public:
     OrderedInsertBehavior ordered_insert_behavior {OrderedInsertBehavior::DEFAULT};
     std::chrono::seconds  cursor_timeout          {std::chrono::seconds(CURSOR_TIMEOUT_DEFAULT)};
     bool                  log_unknown_command     {false};
+    uint32_t              debug                   { 0 };
 
     static mxs::config::Specification& specification();
 
@@ -67,6 +76,7 @@ public:
     static mxs::config::ParamEnum<OrderedInsertBehavior> s_ordered_insert_behavior;
     static mxs::config::ParamSeconds                     s_cursor_timeout;
     static mxs::config::ParamBool                        s_log_unknown_command;
+    static mxs::config::ParamEnumMask<Debug>             s_debug;
 
     bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override final;
 
@@ -87,7 +97,23 @@ public:
         , ordered_insert_behavior(config.ordered_insert_behavior)
         , cursor_timeout(config.cursor_timeout)
         , log_unknown_command(config.log_unknown_command)
+        , debug(config.debug)
     {
+    }
+
+    bool should_log_in() const
+    {
+        return debug & GlobalConfig::DEBUG_IN;
+    }
+
+    bool should_log_out() const
+    {
+        return debug & GlobalConfig::DEBUG_OUT;
+    }
+
+    bool should_log_back() const
+    {
+        return debug & GlobalConfig::DEBUG_BACK;
     }
 
     const std::string                   user;
@@ -99,4 +125,5 @@ public:
     GlobalConfig::OrderedInsertBehavior ordered_insert_behavior;
     std::chrono::seconds                cursor_timeout;
     bool                                log_unknown_command;
+    uint32_t                            debug;
 };

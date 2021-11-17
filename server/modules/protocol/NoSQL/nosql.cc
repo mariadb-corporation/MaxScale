@@ -1171,9 +1171,9 @@ UpdateKind get_update_kind(const bsoncxx::document::element& update_specificatio
     return kind;
 }
 
-void update_specification_to_set_value(UpdateKind kind,
-                                       const bsoncxx::document::view& update_specification,
-                                       ostream& sql)
+void set_value_from_update_specification(UpdateKind kind,
+                                         const bsoncxx::document::view& update_specification,
+                                         ostream& sql)
 {
     switch (kind)
     {
@@ -1712,7 +1712,6 @@ Msg::Msg(const Packet& packet)
                         if (pData + size <= pEnd)
                         {
                             bsoncxx::document::view doc { pData, size };
-                            MXB_INFO("DOC: %s", bsoncxx::to_json(doc).c_str());
                             documents.push_back(doc);
                             pData += size;
                         }
@@ -2961,7 +2960,7 @@ void NoSQL::kill_client()
 
 State NoSQL::handle_delete(GWBUF* pRequest, packet::Delete&& req, GWBUF** ppResponse)
 {
-    MXB_INFO("Request(DELETE): %s", req.to_string().c_str());
+    log_in("Request(Delete)", req);
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
@@ -2978,7 +2977,7 @@ State NoSQL::handle_delete(GWBUF* pRequest, packet::Delete&& req, GWBUF** ppResp
 
 State NoSQL::handle_insert(GWBUF* pRequest, packet::Insert&& req, GWBUF** ppResponse)
 {
-    MXB_INFO("Request(INSERT): %s", req.to_string().c_str());
+    log_in("Request(Insert)", req);
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
@@ -2995,7 +2994,7 @@ State NoSQL::handle_insert(GWBUF* pRequest, packet::Insert&& req, GWBUF** ppResp
 
 State NoSQL::handle_update(GWBUF* pRequest, packet::Update&& req, GWBUF** ppResponse)
 {
-    MXB_INFO("Request(UPDATE): %s", req.to_string().c_str());
+    log_in("Request(Update)", req);
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
@@ -3012,7 +3011,7 @@ State NoSQL::handle_update(GWBUF* pRequest, packet::Update&& req, GWBUF** ppResp
 
 State NoSQL::handle_query(GWBUF* pRequest, packet::Query&& req, GWBUF** ppResponse)
 {
-    MXB_INFO("Request(QUERY): %s", req.to_string().c_str());
+    log_in("Request(Query)", req);
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
@@ -3029,7 +3028,7 @@ State NoSQL::handle_query(GWBUF* pRequest, packet::Query&& req, GWBUF** ppRespon
 
 State NoSQL::handle_get_more(GWBUF* pRequest, packet::GetMore&& req, GWBUF** ppResponse)
 {
-    MXB_INFO("Request(GetMore): %s", req.to_string().c_str());
+    log_in("Request(GetMore)", req);
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create(extract_database(req.collection()), &m_context, &m_config));
@@ -3046,7 +3045,7 @@ State NoSQL::handle_get_more(GWBUF* pRequest, packet::GetMore&& req, GWBUF** ppR
 
 State NoSQL::handle_kill_cursors(GWBUF* pRequest, packet::KillCursors&& req, GWBUF** ppResponse)
 {
-    MXB_INFO("Request(KillCursors): %s", req.to_string().c_str());
+    log_in("Request(KillCursors)", req);
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = std::move(Database::create("admin", &m_context, &m_config));
@@ -3063,7 +3062,7 @@ State NoSQL::handle_kill_cursors(GWBUF* pRequest, packet::KillCursors&& req, GWB
 
 State NoSQL::handle_msg(GWBUF* pRequest, packet::Msg&& req, GWBUF** ppResponse)
 {
-    MXB_INFO("Request(MSG): %s", req.to_string().c_str());
+    log_in("Request(Msg)", req);
 
     State state = State::READY;
 
@@ -3508,7 +3507,7 @@ const char* nosql::opcode_to_string(int code)
     }
 }
 
-vector<string> nosql::projection_to_extractions(const bsoncxx::document::view& projection)
+vector<string> nosql::extractions_from_projection(const bsoncxx::document::view& projection)
 {
     vector<string> extractions;
 
@@ -3584,7 +3583,7 @@ vector<string> nosql::projection_to_extractions(const bsoncxx::document::view& p
     return extractions;
 }
 
-string nosql::extractions_to_columns(const vector<string>& extractions)
+string nosql::columns_from_extractions(const vector<string>& extractions)
 {
     string columns;
 
@@ -3613,29 +3612,26 @@ string nosql::to_string(const bsoncxx::document::element& element)
     return element_to_string(element);
 }
 
-string nosql::query_to_where_condition(const bsoncxx::document::view& query)
+string nosql::where_condition_from_query(const bsoncxx::document::view& query)
 {
-    return get_condition(query);
-}
+    string condition = get_condition(query);
 
-string nosql::query_to_where_clause(const bsoncxx::document::view& query)
-{
-    string clause;
-    string condition = query_to_where_condition(query);
-
-    if (!condition.empty())
+    if (condition.empty())
     {
-        clause += "WHERE ";
-        clause += condition;
-        clause += " ";
+        condition = "true";
     }
 
-    return clause;
+    return condition;
+}
+
+string nosql::where_clause_from_query(const bsoncxx::document::view& query)
+{
+    return "WHERE " + where_condition_from_query(query);
 }
 
 
 // https://docs.mongodb.com/manual/reference/method/cursor.sort/
-string nosql::sort_to_order_by(const bsoncxx::document::view& sort)
+string nosql::order_by_value_from_sort(const bsoncxx::document::view& sort)
 {
     string order_by;
 
@@ -3684,8 +3680,8 @@ string nosql::sort_to_order_by(const bsoncxx::document::view& sort)
     return order_by;
 }
 
-string nosql::update_specification_to_set_value(const bsoncxx::document::view& update_command,
-                                                const bsoncxx::document::element& update_specification)
+string nosql::set_value_from_update_specification(const bsoncxx::document::view& update_command,
+                                                  const bsoncxx::document::element& update_specification)
 {
     ostringstream sql;
 
@@ -3705,19 +3701,19 @@ string nosql::update_specification_to_set_value(const bsoncxx::document::view& u
         break;
 
     default:
-        update_specification_to_set_value(kind, update_specification.get_document(), sql);
+        set_value_from_update_specification(kind, update_specification.get_document(), sql);
     }
 
     return sql.str();
 }
 
-string nosql::update_specification_to_set_value(const bsoncxx::document::view& update_specification)
+string nosql::set_value_from_update_specification(const bsoncxx::document::view& update_specification)
 {
     ostringstream sql;
 
     auto kind = get_update_kind(update_specification);
 
-    update_specification_to_set_value(kind, update_specification, sql);
+    set_value_from_update_specification(kind, update_specification, sql);
 
     return sql.str();
 }
