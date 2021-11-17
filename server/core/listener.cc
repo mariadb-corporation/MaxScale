@@ -607,7 +607,14 @@ std::vector<SListener> listener_find_by_service(const SERVICE* service)
 
 std::ostream& Listener::persist(std::ostream& os) const
 {
-    return m_config.persist(os);
+    m_config.persist(os);
+
+    for (const auto& kv : m_protocol_params)
+    {
+        os << protocol() << "." << kv.first << "=" << kv.second << '\n';
+    }
+
+    return os;
 }
 
 json_t* Listener::to_json(const char* host) const
@@ -1134,6 +1141,7 @@ bool Listener::post_configure(const mxs::ConfigParameters& protocol_params)
             stop();
         }
 
+        m_protocol_params = protocol_params;
         m_shared_data = data;
         rval = true;
 

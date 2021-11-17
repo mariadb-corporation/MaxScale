@@ -249,6 +249,9 @@ private:
     // used to construct the authenticators.
     mxs::ConfigParameters m_params;
 
+    // The protocol-specific parameters for modules that use nested parameters.
+    mxs::ConfigParameters m_protocol_params;
+
     Type m_type;    /**< The type of the listener */
 
     mxs::WorkerLocal<int> m_local_fd {-1};  /**< File descriptor the listener listens on */
