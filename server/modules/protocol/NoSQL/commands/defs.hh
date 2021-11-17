@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "../nosqlcommand.hh"
+#include "../nosqlcommands.hh"
 #include <bsoncxx/builder/basic/array.hpp>
 #include <bsoncxx/builder/stream/document.hpp>
 #include <mysqld_error.h>
