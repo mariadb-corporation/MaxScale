@@ -38,7 +38,7 @@
                     :activeRow="activeCtxItem"
                     @on-delete-selected="handleDeleteSelectedRows"
                     @custom-group="customGroup"
-                    @on-row-right-click="openCtxMenu"
+                    @on-cell-right-click="onCellRClick"
                     v-on="$listeners"
                 >
                     <template v-slot:header-connection_name="{ data: { maxWidth } }">
@@ -371,7 +371,7 @@ export default {
 
             this[`SET_QUERY_${this.activeView}`](newData)
         },
-        openCtxMenu({ e, row }) {
+        onCellRClick({ e, row }) {
             if (this.$help.lodash.isEqual(this.activeCtxItem, row)) {
                 this.showCtxMenu = false
                 this.activeCtxItem = null
