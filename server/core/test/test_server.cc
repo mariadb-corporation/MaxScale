@@ -73,11 +73,11 @@ static int test1()
 
 bool test_load_config(const char* input, Server* server)
 {
-    DUPLICATE_CONTEXT dcontext;
     CONFIG_CONTEXT ccontext;
 
     auto load_res = mxb::ini::parse_config_file_to_map(input);
-    if (config_load_single_file(input, &dcontext, &ccontext, load_res.config))
+    if (config_add_to_context(input,
+                              CONFIG_CONTEXT::SourceType::STATIC, load_res.config, &ccontext))
     {
         CONFIG_CONTEXT* obj = ccontext.m_next;
         mxs::ConfigParameters* param = &obj->m_parameters;

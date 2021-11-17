@@ -35,6 +35,33 @@
 extern const char* config_pre_parse_global_params[];
 
 /**
+ * The config context structure. Holds configuration data during startup.
+ */
+class CONFIG_CONTEXT
+{
+public:
+    CONFIG_CONTEXT(std::string section = "");
+
+    std::string           m_name;           /**< The name of the object being configured */
+    mxs::ConfigParameters m_parameters;     /**< The list of parameter values */
+    CONFIG_CONTEXT*       m_next {nullptr}; /**< Next pointer in the linked list */
+
+    enum class SourceType
+    {
+        STATIC,
+        RUNTIME
+    };
+
+    SourceType  source_type {SourceType::STATIC};   /**< Source file type */
+    std::string source_file;                        /**< Source file path */
+
+    const char* name() const
+    {
+        return m_name.c_str();
+    }
+};
+
+/**
  * @brief Add default parameters for a module to the configuration context
  *
  * Only parameters that aren't yet in the destination container are added.
@@ -205,22 +232,18 @@ bool missing_required_parameters(const MXS_MODULE_PARAM* mod_params,
                                  const mxs::ConfigParameters& params,
                                  const char* name);
 
-struct DUPLICATE_CONTEXT
-{
-    std::set<std::string> sections;
-};
-
 /**
- * Load single configuration file.
+ * Check and add contents of config file to config context object.
  *
- * @param file     The file to load.
- * @param dcontext The context object used when tracking duplicate sections.
- * @param ccontext The context object used when parsing.
+ * @param source_file Source filename. Used for log messages.
+ * @param source_type Source file type
+ * @param input Source object
+ * @param output Destination object
  *
- * @return True if the file could be parsed, false otherwise.
+ * @return True if config was valid.
  */
-bool config_load_single_file(const char* file, DUPLICATE_CONTEXT* dcontext, CONFIG_CONTEXT* ccontext,
-                             const mxb::ini::map_result::Configuration& config);
+bool config_add_to_context(const std::string& source_file, CONFIG_CONTEXT::SourceType source_type,
+                           const mxb::ini::map_result::Configuration& input, CONFIG_CONTEXT* output);
 
 /**
  * Enable or disable masking of passwords
@@ -235,3 +258,22 @@ void config_set_mask_passwords(bool enable);
  * @return True if passwords should be masked.
  */
 bool config_mask_passwords();
+
+/**
+ * @brief Check if a configuration parameter is valid
+ *
+ * If a module has declared parameters and parameters were given to the module,
+ * the given parameters are compared to the expected ones. This function also
+ * does preliminary type checking for various basic values as well as enumerations.
+ *
+ * @param params Module parameters
+ * @param key Parameter key
+ * @param value Parameter value
+ * @param context Configuration context or NULL for no context (uses runtime checks)
+ *
+ * @return True if the configuration parameter is valid
+ */
+bool config_param_is_valid(const MXS_MODULE_PARAM* params,
+                           const char* key,
+                           const char* value,
+                           const CONFIG_CONTEXT* context);

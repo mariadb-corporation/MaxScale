@@ -382,46 +382,6 @@ mxs::ConfigParameters::get_duration<std::chrono::seconds>(const std::string& key
 }
 }
 
-
-/**
- * The config context structure, used to build the configuration
- * data during the parse process
- */
-class CONFIG_CONTEXT
-{
-public:
-    CONFIG_CONTEXT(const std::string& section = "");
-
-    std::string           m_name;           /**< The name of the object being configured */
-    mxs::ConfigParameters m_parameters;     /**< The list of parameter values */
-    bool                  m_was_persisted;  /**< True if this object was persisted */
-    CONFIG_CONTEXT*       m_next {nullptr}; /**< Next pointer in the linked list */
-
-    const char* name() const
-    {
-        return m_name.c_str();
-    }
-};
-
-/**
- * @brief Check if a configuration parameter is valid
- *
- * If a module has declared parameters and parameters were given to the module,
- * the given parameters are compared to the expected ones. This function also
- * does preliminary type checking for various basic values as well as enumerations.
- *
- * @param params Module parameters
- * @param key Parameter key
- * @param value Parameter value
- * @param context Configuration context or NULL for no context (uses runtime checks)
- *
- * @return True if the configuration parameter is valid
- */
-bool config_param_is_valid(const MXS_MODULE_PARAM* params,
-                           const char* key,
-                           const char* value,
-                           const CONFIG_CONTEXT* context);
-
 /**
  * Break a comma-separated list into a string array. Removes whitespace from list items.
  *
@@ -500,9 +460,9 @@ bool config_parse_disk_space_threshold(DiskSpaceLimits* disk_space_threshold,
  */
 bool config_is_valid_name(const char* name, std::string* reason = nullptr);
 
-inline bool config_is_valid_name(const std::string& name, std::string* reason = nullptr)
+inline bool config_is_valid_name(const std::string& name, std::string* reason)
 {
-    return config_is_valid_name(name.c_str());
+    return config_is_valid_name(name.c_str(), reason);
 }
 
 // TEMPORARILY EXPOSED.
