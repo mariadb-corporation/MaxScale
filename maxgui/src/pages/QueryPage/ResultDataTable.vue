@@ -115,9 +115,9 @@
             :key="ctxMenuActivator"
             v-model="showCtxMenu"
             left
-            :items="[...baseOpts, ...menuOpts]"
+            :items="menuItems"
             :activator="ctxMenuActivator"
-            @item-click="optHandler"
+            @item-click="onChooseOpt"
         />
     </div>
 </template>
@@ -138,7 +138,6 @@
 
 /*
 @on-delete-selected: selectedItems:any[]. Event is emitted when showSelect props is true
-@on-choose-opt: { opt:object, data:object}. Emit when menuOpts props is provided
 Also emits other events from virtual-scroll-table via v-on="$listeners"
 */
 import ResultExport from './ResultExport'
@@ -164,6 +163,7 @@ export default {
         showSelect: { type: Boolean, default: false },
         groupBy: { type: String, default: '' },
         showGroupBy: { type: Boolean, default: false },
+        //menuOpts:[{ text:string, type:string, action:function}]
         menuOpts: { type: Array, default: () => [] },
     },
     data() {
@@ -271,6 +271,9 @@ export default {
             if (!this.$refs.tableTools) return
             this.tableToolsHeight = this.$refs.tableTools.clientHeight
         },
+        /**
+         * @param {Object} data { e: event, row:[], cell:string, cellID:string }
+         */
         onCellRClick(data) {
             const { cellID } = data
             if (this.$typy(this.ctxMenuData, 'cellID').safeString === cellID) {
@@ -281,8 +284,9 @@ export default {
                 this.ctxMenuData = data
             }
         },
-        optHandler(opt) {
-            this.$emit('on-choose-opt', { opt, data: this.ctxMenuData })
+        onChooseOpt(opt) {
+            // pass arguments opt and data to action function
+            opt.action({ opt, data: this.ctxMenuData })
         },
     },
 }
