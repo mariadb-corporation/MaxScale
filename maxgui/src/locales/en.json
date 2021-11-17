@@ -109,6 +109,8 @@
     "placeNameInEditorQuoted": "Place Name in Editor (Quoted)",
     "placeNameInEditor": "Place Name in Editor",
     "placeSqlInEditor": "Place SQL in Editor",
+    "placeFieldInEditorQuoted": "Place Field in Editor (Quoted)",
+    "placeFieldInEditor": "Place Field in Editor",
 
     "copyToClipboard": "Copy to clipboard",
     "clipboardQualifiedNameQuoted": "Copy Qualified Name to clipboard (Quoted)",
@@ -116,6 +118,8 @@
     "clipboardNameQuoted": "Copy Name to clipboard (Quoted)",
     "clipboardName": "Copy Name to clipboard",
     "clipboardSql": "Copy SQL to clipboard",
+    "clipboardFieldQuoted": "Copy Field to clipboard (Quoted)",
+    "clipboardField": "Copy Field to clipboard",
 
     "queryEditor": "Query Editor",
     "export": "Export",

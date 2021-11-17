@@ -142,6 +142,7 @@ Also emits other events from virtual-scroll-table via v-on="$listeners"
 */
 import ResultExport from './ResultExport'
 import ColumnList from './ColumnList.vue'
+import { mapState } from 'vuex'
 export default {
     name: 'result-data-table',
     components: {
@@ -181,6 +182,9 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            SQL_RES_TBL_CTX_OPT_TYPES: state => state.app_config.SQL_RES_TBL_CTX_OPT_TYPES,
+        }),
         tableHeight() {
             return this.height - this.tableToolsHeight - 8
         },
@@ -233,9 +237,37 @@ export default {
         ctxMenuActivator() {
             return `#${this.$typy(this.ctxMenuData, 'cellID').safeString}`
         },
+        clipboardOpts() {
+            const { CLIPBOARD } = this.SQL_RES_TBL_CTX_OPT_TYPES
+            return [this.$t('clipboardFieldQuoted'), this.$t('clipboardField')].map(text => ({
+                text,
+                type: CLIPBOARD,
+                action: ({ opt, data }) => this.optHandler({ opt, data }),
+            }))
+        },
+        insertOpts() {
+            const {
+                TXT_EDITOR: { INSERT },
+            } = this.SQL_RES_TBL_CTX_OPT_TYPES
+            return [this.$t('placeFieldInEditorQuoted'), this.$t('placeFieldInEditor')].map(
+                text => ({
+                    text,
+                    type: INSERT,
+                    action: ({ opt, data }) => this.optHandler({ opt, data }),
+                })
+            )
+        },
         baseOpts() {
-            //TODO: add opts
-            return []
+            return [
+                {
+                    text: this.$t('copyToClipboard'),
+                    children: this.clipboardOpts,
+                },
+                {
+                    text: this.$t('placeToEditor'),
+                    children: this.insertOpts,
+                },
+            ]
         },
         menuItems() {
             if (this.menuOpts.length) {
@@ -282,6 +314,61 @@ export default {
             } else {
                 this.showCtxMenu = true
                 this.ctxMenuData = data
+            }
+        },
+        // Handle edge case when cell value is an object. e.g. In History table
+        processField(cell) {
+            // convert to string with template literals
+            return this.$typy(cell).isObject ? `${cell.name}` : `${cell}`
+        },
+        /**
+         * @param {data} item - data
+         * @param {Object} opt - context menu option
+         */
+        handleCopyToClipboardOpt({ opt, data }) {
+            let v = ''
+            switch (opt.text) {
+                case this.$t('clipboardFieldQuoted'):
+                    v = this.$help.escapeIdentifiers(this.processField(data.cell))
+                    break
+                case this.$t('clipboardField'):
+                    v = this.processField(data.cell)
+                    break
+            }
+            this.$help.copyTextToClipboard(v)
+        },
+        /**
+         * @param {data} item - data
+         * @param {Object} opt - context menu option
+         */
+        handleEmitInsertOpt({ opt, data }) {
+            let v = ''
+            switch (opt.text) {
+                case this.$t('placeFieldInEditorQuoted'):
+                    v = this.$help.escapeIdentifiers(this.processField(data.cell))
+                    break
+                case this.$t('placeFieldInEditor'):
+                    v = this.processField(data.cell)
+                    break
+            }
+            this.$emit('place-to-editor', v)
+        },
+        /**
+         * @param {data} item - data
+         * @param {Object} opt - context menu option
+         */
+        optHandler({ opt, data }) {
+            const {
+                CLIPBOARD,
+                TXT_EDITOR: { INSERT },
+            } = this.SQL_RES_TBL_CTX_OPT_TYPES
+            switch (opt.type) {
+                case CLIPBOARD:
+                    this.handleCopyToClipboardOpt({ opt, data })
+                    break
+                case INSERT:
+                    this.handleEmitInsertOpt({ opt, data })
+                    break
             }
         },
         onChooseOpt(opt) {
