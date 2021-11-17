@@ -261,6 +261,9 @@ export default {
                         header.groupable = false
                         header.draggable = true
                         break
+                    case 'name':
+                        header.width = 240
+                        break
                     case 'sql':
                         header.draggable = true
                 }
