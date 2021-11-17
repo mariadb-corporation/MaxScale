@@ -1194,84 +1194,6 @@ const char* config_pre_parse_global_params[] =
     NULL
 };
 
-
-/**
- * Remove extra commas and whitespace from a string. This string is interpreted
- * as a list of string values separated by commas.
- * @param strptr String to clean
- * @return pointer to a new string or NULL if an error occurred
- */
-char* config_clean_string_list(const char* str)
-{
-    size_t destsize = strlen(str) + 1;
-    char* dest = (char*)MXS_MALLOC(destsize);
-
-    if (dest)
-    {
-        pcre2_code* re;
-        pcre2_match_data* data;
-        int re_err;
-        size_t err_offset;
-
-        if ((re = pcre2_compile((PCRE2_SPTR) "[[:space:],]*([^,]*[^[:space:],])[[:space:],]*",
-                                PCRE2_ZERO_TERMINATED,
-                                0,
-                                &re_err,
-                                &err_offset,
-                                NULL)) == NULL
-            || (data = pcre2_match_data_create_from_pattern(re, NULL)) == NULL)
-        {
-            PCRE2_UCHAR errbuf[MXS_STRERROR_BUFLEN];
-            pcre2_get_error_message(re_err, errbuf, sizeof(errbuf));
-            MXS_ERROR("[%s] Regular expression compilation failed at %d: %s",
-                      __FUNCTION__,
-                      (int)err_offset,
-                      errbuf);
-            pcre2_code_free(re);
-            MXS_FREE(dest);
-            return NULL;
-        }
-
-        const char* replace = "$1,";
-        int rval = 0;
-        size_t destsize_tmp = destsize;
-        while ((rval = pcre2_substitute(re,
-                                        (PCRE2_SPTR) str,
-                                        PCRE2_ZERO_TERMINATED,
-                                        0,
-                                        PCRE2_SUBSTITUTE_GLOBAL,
-                                        data,
-                                        NULL,
-                                        (PCRE2_SPTR) replace,
-                                        PCRE2_ZERO_TERMINATED,
-                                        (PCRE2_UCHAR*) dest,
-                                        &destsize_tmp)) == PCRE2_ERROR_NOMEMORY)
-        {
-            destsize_tmp = 2 * destsize;
-            char* tmp = (char*)MXS_REALLOC(dest, destsize_tmp);
-            if (tmp == NULL)
-            {
-                MXS_FREE(dest);
-                dest = NULL;
-                break;
-            }
-            dest = tmp;
-            destsize = destsize_tmp;
-        }
-
-        /** Remove the trailing comma */
-        if (dest && dest[strlen(dest) - 1] == ',')
-        {
-            dest[strlen(dest) - 1] = '\0';
-        }
-
-        pcre2_code_free(re);
-        pcre2_match_data_free(data);
-    }
-
-    return dest;
-}
-
 CONFIG_CONTEXT::CONFIG_CONTEXT(const string& section)
     : m_name(section)
     , m_was_persisted(this_unit.is_persisted_config)
@@ -1445,36 +1367,6 @@ static int apply_configuration(CONFIG_CONTEXT* cntxt, const mxb::ini::map_result
         }
     }
     return errors;
-}
-
-static void log_config_error(const char* file, int rval)
-{
-    char errorbuffer[1024 + 1];
-
-    if (rval > 0)
-    {
-        snprintf(errorbuffer,
-                 sizeof(errorbuffer),
-                 "Failed to parse configuration file %s. Error on line %d.",
-                 file,
-                 rval);
-    }
-    else if (rval == -1)
-    {
-        snprintf(errorbuffer,
-                 sizeof(errorbuffer),
-                 "Failed to parse configuration file %s. Could not open file.",
-                 file);
-    }
-    else
-    {
-        snprintf(errorbuffer,
-                 sizeof(errorbuffer),
-                 "Failed to parse configuration file %s. Memory allocation failed.",
-                 file);
-    }
-
-    MXS_ERROR("%s", errorbuffer);
 }
 
 static bool
@@ -2540,17 +2432,6 @@ std::vector<mxs::Target*> mxs::ConfigParameters::get_target_list(const string& k
     return targets;
 }
 
-char* mxs::ConfigParameters::get_c_str_copy(const string& key) const
-{
-    string value = get_string(key);
-    char* rval = NULL;
-    if (!value.empty())
-    {
-        rval = MXS_STRDUP_A(value.c_str());
-    }
-    return rval;
-}
-
 std::unique_ptr<pcre2_code> mxs::ConfigParameters::get_compiled_regex(const string& key, uint32_t options,
                                                                       uint32_t* output_ovec_size) const
 {
@@ -2654,14 +2535,6 @@ int64_t mxs::ConfigParameters::get_integer(const std::string& key) const
     return value.empty() ? 0 : strtoll(value.c_str(), NULL, 10);
 }
 
-void config_free_one_param(mxs::ConfigParameters* p1)
-{
-    if (p1)
-    {
-        delete p1;
-    }
-}
-
 void config_context_free(CONFIG_CONTEXT& context)
 {
     CONFIG_CONTEXT* obj = context.m_next;
@@ -2678,23 +2551,6 @@ bool config_add_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
     mxb_assert(!obj->m_parameters.contains(key));
     obj->m_parameters.set(key, value);
     return true;
-}
-
-bool config_append_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
-{
-    mxb_assert(obj->m_parameters.contains(key));
-    auto old_val = obj->m_parameters.get_string(key);
-    string new_val = old_val + "," + value;
-    char* new_val_z = config_clean_string_list(new_val.c_str());
-
-    bool rval = false;
-    if (new_val_z)
-    {
-        obj->m_parameters.set(key, new_val_z);
-        MXS_FREE(new_val_z);
-        rval = true;
-    }
-    return rval;
 }
 
 void mxs::ConfigParameters::set(const std::string& key, const std::string& value)
@@ -2783,40 +2639,9 @@ uint32_t config_writeq_high_water()
     return mxs::Config::get().writeq_high_water.get();
 }
 
-bool config_set_writeq_high_water(uint32_t size)
-{
-    return mxs::Config::get().writeq_high_water.set(size);
-}
-
 uint32_t config_writeq_low_water()
 {
     return mxs::Config::get().writeq_low_water.get();
-}
-
-bool config_set_writeq_low_water(uint32_t size)
-{
-    return mxs::Config::get().writeq_low_water.set(size);
-}
-
-bool config_can_modify_at_runtime(const char* name)
-{
-    for (int i = 0; config_pre_parse_global_params[i]; ++i)
-    {
-        if (strcmp(name, config_pre_parse_global_params[i]) == 0)
-        {
-            return true;
-        }
-    }
-    std::unordered_set<std::string> static_params
-    {
-        CN_LOG_THROTTLING,
-        "sql_mode",
-        CN_QUERY_CLASSIFIER_ARGS,
-        CN_QUERY_CLASSIFIER,
-        CN_THREADS
-    };
-
-    return static_params.count(name);
 }
 
 bool missing_required_parameters(const MXS_MODULE_PARAM* mod_params,
@@ -3447,22 +3272,6 @@ void config_add_module_params_json(const mxs::ConfigParameters& parameters,
     }
 }
 
-void log_exclusive_param_error(CONFIG_CONTEXT* obj)
-{
-    std::vector<std::string> types;
-
-    for (auto a : {CN_SERVERS, CN_TARGETS, CN_CLUSTER})
-    {
-        if (obj->m_parameters.contains(a))
-        {
-            types.push_back("'" + std::string(a) + "'");
-        }
-    }
-
-    MXS_ERROR("Service '%s' is configured with mutually exclusive parameters (%s). "
-              "Only one of them is allowed.", obj->name(), mxb::join(types, ", ").c_str());
-}
-
 /**
  * Create a new router for a service
  * @param obj Service configuration context
@@ -3568,33 +3377,6 @@ int create_new_filter(CONFIG_CONTEXT* obj)
     }
 
     return error_count;
-}
-
-bool config_is_ssl_parameter(const char* key)
-{
-    const char* ssl_params[] =
-    {
-        CN_SSL_CERT,
-        CN_SSL_CA_CERT,
-        CN_SSL,
-        CN_SSL_KEY,
-        CN_SSL_VERSION,
-        CN_SSL_CERT_VERIFY_DEPTH,
-        CN_SSL_VERIFY_PEER_CERTIFICATE,
-        CN_SSL_VERIFY_PEER_HOST,
-        CN_SSL_CIPHER,
-        NULL
-    };
-
-    for (int i = 0; ssl_params[i]; i++)
-    {
-        if (strcmp(key, ssl_params[i]) == 0)
-        {
-            return true;
-        }
-    }
-
-    return false;
 }
 
 // TEMPORARILY EXPOSED
@@ -4826,25 +4608,6 @@ bool param_is_valid(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* modul
 {
     return config_param_is_valid(basic, key, value, NULL)
            || (module && config_param_is_valid(module, key, value, NULL));
-}
-
-bool config_set_rebalance_threshold(const char* value)
-{
-    bool rv = false;
-
-    char* endptr;
-    int intval = strtol(value, &endptr, 0);
-    if (*endptr == '\0' && intval >= 0 && intval <= 100)
-    {
-        mxs::Config::get().rebalance_threshold.set(intval);
-        rv = true;
-    }
-    else
-    {
-        MXS_ERROR("Invalid value (percentage expected) for '%s': %s", CN_REBALANCE_THRESHOLD, value);
-    }
-
-    return rv;
 }
 
 void config_set_mask_passwords(bool enable)

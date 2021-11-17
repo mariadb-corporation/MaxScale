@@ -141,20 +141,6 @@ public:
     std::string get_string(const std::string& key) const;
 
     /**
-     * @brief Get copy of parameter value if it is defined
-     *
-     * If a parameter with the name of @c key is defined in @c params, a copy of the
-     * value of that parameter is returned. The caller must free the returned string.
-     *
-     * @param key Parameter name
-     * @return Pointer to copy of value or NULL if the parameter was not found
-     *
-     * @note The use of this function should be avoided after startup as the function
-     * will abort the process if memory allocation fails.
-     */
-    char* get_c_str_copy(const std::string& key) const;
-
-    /**
      * Get an integer value. Should be used for both MXS_MODULE_PARAM_INT and MXS_MODULE_PARAM_COUNT
      * parameter types.
      *
@@ -418,14 +404,6 @@ public:
 };
 
 /**
- * @brief Helper function for checking SSL parameters
- *
- * @param key Parameter name
- * @return True if the parameter is an SSL parameter
- */
-bool config_is_ssl_parameter(const char* key);
-
-/**
  * @brief Check if a configuration parameter is valid
  *
  * If a module has declared parameters and parameters were given to the module,
@@ -493,29 +471,11 @@ json_t* config_maxscale_to_json(const char* host);
 uint32_t config_writeq_high_water();
 
 /**
- * Set writeq high water mark
- *
- * @param size The high water mark in bytes
- *
- * @return True if the parameter was larger than MIN_WRITEQ_HIGH_WATER
- */
-bool config_set_writeq_high_water(uint32_t size);
-
-/**
  * @brief  Get DCB write queue low water mark
  *
  * @return @return  Number of low water mark in bytes
  */
 uint32_t config_writeq_low_water();
-
-/**
- * Set writeq low water mark
- *
- * @param size The low water mark in bytes
- *
- * @return True if the parameter was larger than MIN_WRITEQ_LOW_WATER
- */
-bool config_set_writeq_low_water(uint32_t size);
 
 /**
  * @brief Interpret a @disk_space_threshold configuration string.

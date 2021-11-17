@@ -27,20 +27,9 @@
 #include <maxscale/cn_strings.hh>
 #include <maxscale/ssl.hh>
 
-#define DEFAULT_NTHREADS                    1       /**< Default number of polling threads */
 #define DEFAULT_QUERY_RETRIES               1       /**< Number of retries for interrupted queries */
 #define DEFAULT_QUERY_RETRY_TIMEOUT         5       /**< Timeout for query retries */
-#define MIN_WRITEQ_HIGH_WATER               4096UL  /**< Min high water mark of dcb write queue */
-#define MIN_WRITEQ_LOW_WATER                512UL   /**< Min low water mark of dcb write queue */
 #define DEFAULT_MAX_AUTH_ERRORS_UNTIL_BLOCK 10      /**< Max allowed authentication failures */
-
-/**
- * Maximum length for configuration parameter value.
- */
-enum
-{
-    MAX_PARAM_LEN = 256
-};
 
 /** Object type specific parameter lists */
 extern const char* config_pre_parse_global_params[];
@@ -55,8 +44,6 @@ extern const char* config_pre_parse_global_params[];
  * @param params Module parameter definitions
  */
 void config_add_defaults(mxs::ConfigParameters* dest, const MXS_MODULE_PARAM* params);
-
-char* config_clean_string_list(const char* str);
 
 /**
  * @brief Load the specified configuration file for MaxScale
@@ -107,16 +94,6 @@ void config_context_free(CONFIG_CONTEXT& context);
  * @return True on success, false on memory allocation error
  */
 bool config_add_param(CONFIG_CONTEXT* obj, const char* key, const char* value);
-
-/**
- * @brief Append to an existing parameter
- *
- * @param obj Configuration context
- * @param key Parameter name
- * @param value Value to append to the parameter
- * @return True on success, false on memory allocation error
- */
-bool config_append_param(CONFIG_CONTEXT* obj, const char* key, const char* value);
 
 /**
  * @brief Replace an existing parameter
@@ -195,15 +172,6 @@ std::string generate_config_string(const std::string& instance_name, const mxs::
  */
 std::string serialize_params(const mxs::ConfigParameters& parameters, const MXS_MODULE_PARAM* defs);
 
-/**
- * Check whether a parameter can be modified at runtime
- *
- * @param name Name of the parameter
- *
- * @return True if the parameter can be modified at runtime
- */
-bool config_can_modify_at_runtime(const char* name);
-
 // Value returned for unknown enumeration values
 constexpr int64_t MXS_UNKNOWN_ENUM_VALUE {-1};
 
@@ -224,15 +192,6 @@ bool param_is_known(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* modul
 
 bool param_is_valid(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* module,
                     const char* key, const char* value);
-
-/**
- * Set value for 'rebalance_threshold'
- *
- * @param value  New value, expected to be 0 <= value <= 100.
- *
- * @return True, if the value was valid, false otherwise.
- */
-bool config_set_rebalance_threshold(const char* value);
 
 /**
  * @brief Check if required parameters are missing
@@ -262,13 +221,6 @@ struct DUPLICATE_CONTEXT
  */
 bool config_load_single_file(const char* file, DUPLICATE_CONTEXT* dcontext, CONFIG_CONTEXT* ccontext,
                              const mxb::ini::map_result::Configuration& config);
-
-/**
- * Turn parameters into json.
- *
- * @return Parameters as json.
- */
-json_t* config_core_params_to_json(const char* host);
 
 /**
  * Enable or disable masking of passwords
