@@ -1419,7 +1419,6 @@ public:
         }
 
         log_exit_status();
-        config_finish();
         restore_signals();
     }
 
@@ -2043,7 +2042,8 @@ int main(int argc, char** argv)
 
             if (use_static_cnf)
             {
-                if (!config_load(cnf_file_path.c_str(), cfg_file_read_res.config))
+                CONFIG_CONTEXT config_context;
+                if (!config_load_and_process(cnf_file_path, cfg_file_read_res.config, config_context))
                 {
                     print_alert("Failed to open, read or process the MaxScale configuration "
                                 "file. See the error log for details.");
@@ -2051,6 +2051,7 @@ int main(int argc, char** argv)
                               cnf_file_path.c_str());
                     rc = MAXSCALE_BADCONFIG;
                     maxscale_shutdown();
+                    config_context_free(config_context);
                     return;
                 }
 
@@ -2058,15 +2059,18 @@ int main(int argc, char** argv)
                 {
                     MXS_NOTICE("Configuration was successfully verified.");
 
-                    if (*export_cnf && export_config_file(export_cnf))
+                    if (*export_cnf && export_config_file(export_cnf, config_context))
                     {
                         MXS_NOTICE("Configuration exported to '%s'", export_cnf);
                     }
 
                     rc = MAXSCALE_SHUTDOWN;
                     maxscale_shutdown();
+                    config_context_free(config_context);
                     return;
                 }
+
+                config_context_free(config_context);
             }
             else
             {

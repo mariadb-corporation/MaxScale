@@ -409,7 +409,7 @@ public:
     std::string           m_name;           /**< The name of the object being configured */
     mxs::ConfigParameters m_parameters;     /**< The list of parameter values */
     bool                  m_was_persisted;  /**< True if this object was persisted */
-    CONFIG_CONTEXT*       m_next;           /**< Next pointer in the linked list */
+    CONFIG_CONTEXT*       m_next {nullptr}; /**< Next pointer in the linked list */
 
     const char* name() const
     {

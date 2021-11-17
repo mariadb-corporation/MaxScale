@@ -622,11 +622,8 @@ namespace
 
 struct ThisUnit
 {
-    const char*    config_file = nullptr;
-    bool           is_persisted_config = false; /**< True if a persisted configuration file is being parsed */
-    CONFIG_CONTEXT config_context;
-    bool           is_root_config_file = true;  /**< The first one will be. */
-    bool           mask_passwords = true;
+    bool is_persisted_config = false;   /**< True if a persisted configuration file is being parsed */
+    bool mask_passwords = true;
 } this_unit;
 
 void reconnect_config_manager(const std::string& ignored)
@@ -1149,9 +1146,8 @@ bool Config::ParamThreadsCount::from_string(const std::string& value_as_string,
 }
 
 static bool process_config_context(CONFIG_CONTEXT*);
-static bool process_config_update(CONFIG_CONTEXT*);
 static bool check_config_objects(CONFIG_CONTEXT* context);
-static int  maxscale_getline(char** dest, int* size, FILE* file);
+
 static bool check_first_last_char(const char* string, char expected);
 static void remove_first_last_char(char* value);
 static bool test_regex_string_validity(const char* regex_string, const char* key);
@@ -1197,11 +1193,6 @@ const char* config_pre_parse_global_params[] =
     CN_SUBSTITUTE_VARIABLES,
     NULL
 };
-
-void config_finish()
-{
-    config_context_free(this_unit.config_context.m_next);
-}
 
 
 /**
@@ -1284,7 +1275,6 @@ char* config_clean_string_list(const char* str)
 CONFIG_CONTEXT::CONFIG_CONTEXT(const string& section)
     : m_name(section)
     , m_was_persisted(this_unit.is_persisted_config)
-    , m_next(nullptr)
 {
 }
 
@@ -1388,7 +1378,7 @@ static int apply_configuration(CONFIG_CONTEXT* cntxt, const mxb::ini::map_result
 
             if (is_maxscale_section(section.first.c_str()))
             {
-                if (!this_unit.is_root_config_file && !this_unit.is_persisted_config)
+                if (!this_unit.is_persisted_config)
                 {
                     MXS_ERROR("The [maxscale] section must only be defined in the root configuration file.");
                     errors++;
@@ -1568,13 +1558,6 @@ bool config_load_single_file(const char* file, DUPLICATE_CONTEXT* dcontext, CONF
     return rval == 0;
 }
 
-/**
- * The current parsing contexts must be managed explicitly since the ftw callback
- * can not have user data.
- */
-static CONFIG_CONTEXT* current_ccontext;
-static DUPLICATE_CONTEXT* current_dcontext;
-
 namespace
 {
 struct ConfFilePath
@@ -1676,9 +1659,6 @@ bool config_load_dir(const string& dir, DUPLICATE_CONTEXT* dcontext, CONFIG_CONT
     int rc = nftw(dir.c_str(), config_files_search_cb, nopenfd, FTW_PHYS);
     const auto file_list = move(config_files_list);
 
-    current_dcontext = dcontext;
-    current_ccontext = ccontext;
-
     bool success = false;
     if (rc == 0)
     {
@@ -1699,7 +1679,7 @@ bool config_load_dir(const string& dir, DUPLICATE_CONTEXT* dcontext, CONFIG_CONT
                 }
 
                 if (success
-                    && !config_load_single_file(file.total_path.c_str(), current_dcontext, current_ccontext,
+                    && !config_load_single_file(file.total_path.c_str(), dcontext, ccontext,
                                                 load_res.config))
                 {
                     success = false;
@@ -1721,9 +1701,6 @@ bool config_load_dir(const string& dir, DUPLICATE_CONTEXT* dcontext, CONFIG_CONT
         MXB_ERROR("File tree walk (nftw) failed for '%s'. Error %i: %s",
                   dir.c_str(), eno, mxb_strerror(eno));
     }
-
-    current_ccontext = nullptr;
-    current_dcontext = nullptr;
     return success;
 }
 }
@@ -1809,14 +1786,14 @@ static bool contains_cnf_files(const char* path)
     return rval;
 }
 
-bool export_config_file(const char* filename)
+bool export_config_file(const char* filename, CONFIG_CONTEXT& config)
 {
     bool rval = true;
     std::vector<CONFIG_CONTEXT*> contexts;
 
     // The config objects are stored in reverse order so first convert it back
     // to the correct order
-    for (CONFIG_CONTEXT* ctx = this_unit.config_context.m_next; ctx; ctx = ctx->m_next)
+    for (CONFIG_CONTEXT* ctx = config.m_next; ctx; ctx = ctx->m_next)
     {
         contexts.push_back(ctx);
     }
@@ -1860,35 +1837,23 @@ bool export_config_file(const char* filename)
     return rval;
 }
 
-/**
- * @brief Load the specified configuration file for MaxScale
- *
- * This function will parse the configuration file, check for duplicate sections,
- * validate the module parameters and finally turn it into a set of objects.
- *
- * @param filename        The filename of the configuration file
- * @param cfg_file_contents Main config file contents, with variable substitution performed.
- *
- * @return True on success, false on fatal error
- */
-static bool config_load_and_process(const char* filename,
-                                    const mxb::ini::map_result::Configuration& cfg_file_contents)
+bool config_load_and_process(const string& main_cfg_filepath,
+                             const mxb::ini::map_result::Configuration& cfg_file_contents,
+                             CONFIG_CONTEXT& config_cntx_out)
 {
     bool rval = false;
     DUPLICATE_CONTEXT dcontext;
     bool have_persisted_configs = false;
 
-    if (config_load_single_contents(cfg_file_contents, &this_unit.config_context))
+    if (config_load_single_contents(cfg_file_contents, &config_cntx_out))
     {
-        this_unit.is_root_config_file = false;
-        const char DIR_SUFFIX[] = ".d";
-
-        string dir = string(filename) + DIR_SUFFIX;
         rval = true;
 
-        if (is_directory(dir.c_str()))
+        // Search for more config files in a directory named <main_cfg_filename>.d.
+        string config_dir = main_cfg_filepath + ".d";
+        if (is_directory(config_dir.c_str()))
         {
-            rval = config_load_dir(dir, &dcontext, &this_unit.config_context);
+            rval = config_load_dir(config_dir, &dcontext, &config_cntx_out);
         }
 
         const char* persist_cnf = mxs::config_persistdir();
@@ -1919,14 +1884,14 @@ static bool config_load_and_process(const char* filename,
              * use, and thus should not be treated as errors.
              */
             DUPLICATE_CONTEXT p_dcontext;
-            rval = config_load_dir(persist_cnf, &p_dcontext, &this_unit.config_context);
+            rval = config_load_dir(persist_cnf, &p_dcontext, &config_cntx_out);
             this_unit.is_persisted_config = false;
         }
 
         if (rval)
         {
-            if (!check_config_objects(this_unit.config_context.m_next)
-                || !process_config_context(this_unit.config_context.m_next))
+            if (!check_config_objects(config_cntx_out.m_next)
+                || !process_config_context(config_cntx_out.m_next))
             {
                 rval = false;
                 if (have_persisted_configs)
@@ -1967,21 +1932,6 @@ bool apply_main_config(const mxb::ini::map_result::Configuration& config)
         rval = global_config.configure(params);
     }
     return rval;
-}
-
-/**
- * @brief Load the configuration file for the MaxScale
- *
- * @param filename The filename of the configuration file
- * @param cfg_file_contents Contents of main config file
- * @return True on success, false on fatal error
- */
-bool config_load(const char* filename, const mxb::ini::map_result::Configuration& cfg_file_contents)
-{
-    mxb_assert(!this_unit.config_file);
-
-    this_unit.config_file = filename;
-    return config_load_and_process(filename, cfg_file_contents);
 }
 
 bool valid_object_type(std::string type)
@@ -2478,10 +2428,7 @@ static bool process_config_context(CONFIG_CONTEXT* context)
     }
     else
     {
-        MXS_ERROR("%d errors were encountered while processing the configuration "
-                  "file '%s'.",
-                  error_count,
-                  this_unit.config_file);
+        MXS_ERROR("%d errors were encountered while processing configuration.", error_count);
     }
 
     return error_count == 0;
@@ -2715,14 +2662,14 @@ void config_free_one_param(mxs::ConfigParameters* p1)
     }
 }
 
-void config_context_free(CONFIG_CONTEXT* context)
+void config_context_free(CONFIG_CONTEXT& context)
 {
-    CONFIG_CONTEXT* obj;
-    while (context)
+    CONFIG_CONTEXT* obj = context.m_next;
+    while (obj)
     {
-        obj = context->m_next;
-        delete context;
-        context = obj;
+        auto next = obj->m_next;
+        delete obj;
+        obj = next;
     }
 }
 
@@ -3391,69 +3338,6 @@ static int get_release_string(char* release)
     {
         return 0;
     }
-}
-
-
-/**
- * Read from a FILE pointer until a newline character or the end of the file is found.
- * The provided buffer will be reallocated if it is too small to store the whole
- * line. The size after the reallocation will be stored in @c size. The read line
- * will be stored in @c dest and it will always be null terminated. The newline
- * character will not be copied into the buffer.
- * @param dest Pointer to a buffer of at least @c size bytes
- * @param size Size of the buffer
- * @param file A valid file stream
- * @return When a complete line was successfully read the function returns 1. If
- * the end of the file was reached before any characters were read the return value
- * will be 0. If the provided buffer could not be reallocated to store the complete
- * line the original size will be retained, everything read up to this point
- * will be stored in it as a null terminated string and -1 will be returned.
- */
-int maxscale_getline(char** dest, int* size, FILE* file)
-{
-    char* destptr = *dest;
-    int offset = 0;
-
-    if (feof(file) || ferror(file))
-    {
-        return 0;
-    }
-
-    while (true)
-    {
-        if (*size <= offset)
-        {
-            char* tmp = (char*)MXS_REALLOC(destptr, *size * 2);
-            if (tmp)
-            {
-                destptr = tmp;
-                *size *= 2;
-            }
-            else
-            {
-                destptr[offset - 1] = '\0';
-                *dest = destptr;
-                return -1;
-            }
-        }
-
-        int c = fgetc(file);
-
-        if ((c == '\n') || (c == EOF))
-        {
-            destptr[offset] = '\0';
-            break;
-        }
-        else
-        {
-            destptr[offset] = c;
-        }
-
-        offset++;
-    }
-
-    *dest = destptr;
-    return 1;
 }
 
 void config_add_defaults(mxs::ConfigParameters* dest, const MXS_MODULE_PARAM* params)

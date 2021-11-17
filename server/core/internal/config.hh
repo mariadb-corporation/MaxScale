@@ -46,11 +46,6 @@ enum
 extern const char* config_pre_parse_global_params[];
 
 /**
- * Finalize the configuration subsystem
- */
-void config_finish();
-
-/**
  * @brief Add default parameters for a module to the configuration context
  *
  * Only parameters that aren't yet in the destination container are added.
@@ -62,7 +57,23 @@ void config_finish();
 void config_add_defaults(mxs::ConfigParameters* dest, const MXS_MODULE_PARAM* params);
 
 char* config_clean_string_list(const char* str);
-bool  config_load(const char*, const mxb::ini::map_result::Configuration& cfg_file_contents);
+
+/**
+ * @brief Load the specified configuration file for MaxScale
+ *
+ * This function loads and parses the configuration file, checks for duplicate sections,
+ * validates the module parameters and adds the parameter values to the context. Also loads
+ * config files from user-generated directory and the runtime config directory.
+ *
+ * @param main_cfg_filepath Path to main configuration file
+ * @param cfg_file_contents Main config file contents, with variable substitution performed.
+ * @param config_cntx_out   Destination object
+ *
+ * @return True on success, false on fatal error
+ */
+bool config_load_and_process(const std::string& main_cfg_filepath,
+                             const mxb::ini::map_result::Configuration& cfg_file_contents,
+                             CONFIG_CONTEXT& config_cntx_out);
 
 /**
  * Apply the [maxscale]-section from the main configuration file.
@@ -85,7 +96,7 @@ CONFIG_CONTEXT* config_context_create(const char* section);
  *
  * @param context The context to free
  */
-void config_context_free(CONFIG_CONTEXT* context);
+void config_context_free(CONFIG_CONTEXT& context);
 
 /**
  * @brief Add a parameter to a configuration context
@@ -158,7 +169,7 @@ void fix_object_name(std::string& name);
  *
  * @return True if configuration was successfully exported
  */
-bool export_config_file(const char* filename);
+bool export_config_file(const char* filename, CONFIG_CONTEXT& config);
 
 /**
  * Generate configuration file contents out of module configuration parameters. Only parameters defined
