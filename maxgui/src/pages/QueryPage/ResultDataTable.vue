@@ -237,6 +237,25 @@ export default {
             //TODO: add opts
             return []
         },
+        menuItems() {
+            if (this.menuOpts.length) {
+                // Deep merge of menuOpts with baseOpts
+                const { deepMergeWith, keyBy, values } = this.$help.lodash
+                const merged = values(
+                    deepMergeWith(
+                        keyBy(this.baseOpts, 'text'),
+                        keyBy(this.menuOpts, 'text'),
+                        (objVal, srcVal) => {
+                            if (Array.isArray(objVal)) {
+                                return objVal.concat(srcVal)
+                            }
+                        }
+                    )
+                )
+                return merged
+            }
+            return this.baseOpts
+        },
     },
     watch: {
         showCtxMenu(v) {
