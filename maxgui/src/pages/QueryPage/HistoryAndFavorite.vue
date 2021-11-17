@@ -375,7 +375,7 @@ export default {
                     break
                 }
                 case this.$t('placeSqlInEditor'):
-                    this.$emit('place-sql-in-editor', sqlTxt)
+                    this.$emit('place-to-editor', sqlTxt)
                     break
             }
         },
