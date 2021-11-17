@@ -84,6 +84,8 @@ private:
     ProtocolModule* m_instance;
 };
 
+// The actual config is copied for each session, so that the config can be
+// changed directly from the session itself.
 class Config final
 {
 public:

@@ -1117,6 +1117,7 @@ the session. For example:
 		"on_unknown_command" : "return_error",
 		"auto_create_tables" : true,
 		"id_length" : 35
+                ...
 	},
 	"ok" : 1
 }
@@ -1170,6 +1171,7 @@ the session. For example:
 		"on_unknown_command" : "return_error",
 		"auto_create_tables" : true,
 		"id_length" : 35
+                ...
 	},
 	"ok" : 1
 }
@@ -1179,6 +1181,7 @@ the session. For example:
 		"on_unknown_command" : "return_error",
 		"auto_create_tables" : false,
 		"id_length" : 35
+                ...
 	},
 	"ok" : 1
 }

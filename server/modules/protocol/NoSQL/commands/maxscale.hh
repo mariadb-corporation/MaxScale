@@ -103,6 +103,10 @@ public:
         config.append(kvp(C::s_id_length.name(), static_cast<int32_t>(c.id_length)));
         config.append(kvp(C::s_ordered_insert_behavior.name(),
                           C::s_ordered_insert_behavior.to_string(c.ordered_insert_behavior)));
+        config.append(kvp(C::s_cursor_timeout.name(), C::s_cursor_timeout.to_string(c.cursor_timeout)));
+        config.append(kvp(C::s_log_unknown_command.name(),
+                          C::s_log_unknown_command.to_string(c.log_unknown_command)));
+        config.append(kvp(C::s_debug.name(), C::s_debug.to_string(c.debug)));
 
         doc.append(kvp(key::CONFIG, config.extract()));
         doc.append(kvp(key::OK, 1));
@@ -141,6 +145,9 @@ public:
         auto auto_create_tables = c.auto_create_tables;
         auto id_length = c.id_length;
         auto ordered_insert_behavior = c.ordered_insert_behavior;
+        auto cursor_timeout = c.cursor_timeout;
+        auto log_unknown_command = c.log_unknown_command;
+        auto debug = c.debug;
 
         const auto& config = value_as<bsoncxx::document::view>();
 
@@ -178,6 +185,33 @@ public:
             }
         }
 
+        if (optional(config, C::s_cursor_timeout.name(), &s))
+        {
+            string message;
+            if (!C::s_cursor_timeout.from_string(s, &cursor_timeout, &message))
+            {
+                throw SoftError(message, error::BAD_VALUE);
+            }
+        }
+
+        if (optional(config, C::s_log_unknown_command.name(), &s))
+        {
+            string message;
+            if (!C::s_log_unknown_command.from_string(s, &log_unknown_command, &message))
+            {
+                throw SoftError(message, error::BAD_VALUE);
+            }
+        }
+
+        if (optional(config, C::s_debug.name(), &s))
+        {
+            string message;
+            if (!C::s_debug.from_string(s, &debug, &message))
+            {
+                throw SoftError(message, error::BAD_VALUE);
+            }
+        }
+
         const auto& specification = C::specification();
 
         for (const auto& element : config)
@@ -195,6 +229,9 @@ public:
         c.auto_create_tables = auto_create_tables;
         c.id_length = id_length;
         c.ordered_insert_behavior = ordered_insert_behavior;
+        c.cursor_timeout = cursor_timeout;
+        c.log_unknown_command = log_unknown_command;
+        c.debug = debug;
 
         MxsGetConfig::populate_response(doc, c);
     }
