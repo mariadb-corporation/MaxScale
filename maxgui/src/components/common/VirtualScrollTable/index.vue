@@ -41,12 +41,14 @@
                 <vertical-row
                     v-if="isVertTable"
                     :row="row"
+                    :rowIdx="rowIdx"
                     :tableHeaders="tableHeaders"
                     :lineHeight="lineHeight"
                     :headerWidthMap="headerWidthMap"
                     :isYOverflowed="isYOverflowed"
                     :scrollBarThicknessOffset="scrollBarThicknessOffset"
-                    @contextmenu.native.prevent="e => $emit('on-row-right-click', { e, row })"
+                    :genCellID="genCellID"
+                    v-on="$listeners"
                 >
                     <template
                         v-for="h in tableHeaders"
@@ -102,7 +104,6 @@
                         'tr--active': $help.lodash.isEqual(activeRow, row),
                     }"
                     :style="{ lineHeight }"
-                    @contextmenu.prevent="e => $emit('on-row-right-click', { e, row })"
                 >
                     <div
                         v-if="!areHeadersHidden && showSelect"
@@ -131,6 +132,7 @@
                         <!-- dependency keys to force a rerender -->
                         <div
                             v-if="!h.hidden"
+                            :id="genCellID({ rowIdx, colIdx: i })"
                             :key="`${h.text}_${headerWidthMap[i]}_${i}`"
                             class="td"
                             :class="[
@@ -144,6 +146,15 @@
                                 minWidth: $help.handleAddPxUnit(headerWidthMap[i]),
                             }"
                             v-on="h.draggable ? { mousedown: e => onCellDragStart(e) } : null"
+                            @contextmenu.prevent="
+                                e =>
+                                    $emit('on-cell-right-click', {
+                                        e,
+                                        row,
+                                        cell: row[i],
+                                        cellID: genCellID({ rowIdx, colIdx: i }),
+                                    })
+                            "
                         >
                             <slot
                                 :name="h.text"
@@ -194,6 +205,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+/*
+@on-cell-right-click: { e: event, row:[], cell:string, cellID:string }
+@item-selected: value:any[][]. Event is emitted when showSelect props is true
+@scroll-end: Emit when table scroll to the last row
+Emit when the header has groupable and hasCustomGroup keys.
+@custom-group: data:{ rows:any[][], idx:number, header:object}, callback():Map
+@is-grouping: boolean
+*/
 import TableHeader from './TableHeader'
 import VerticalRow from './VerticalRow.vue'
 import RowGroup from './RowGroup.vue'
@@ -366,6 +385,7 @@ export default {
             return this.$typy(this.headerWidthMap[i]).safeNumber - 24
         },
 
+        genCellID: ({ rowIdx, colIdx }) => `cell_id-${rowIdx}-${colIdx}`,
         /**
          * @param {String} payload.sortBy  sort by header name
          * @param {Boolean} payload.isDesc  isDesc

@@ -189,10 +189,21 @@ int32_t ClientConnection::write(GWBUF* pMariaDB_response)
 
         case ComResponse::ERR_PACKET:
             {
-                // The session is likely to be terminated by the router.
                 ComERR err(response);
-                MXS_ERROR("ERR packet received from server when no request was in progress: (%d) %s",
-                          err.code(), err.message().c_str());
+
+                switch (err.code())
+                {
+                case ER_ACCESS_DENIED_ERROR:
+                case ER_CONNECTION_KILLED:
+                    // Errors should have been logged already.
+                    MXS_INFO("ERR packet received from server when no request was in progress: (%d) %s",
+                             err.code(), err.message().c_str());
+                    break;
+
+                default:
+                    MXS_ERROR("ERR packet received from server when no request was in progress: (%d) %s",
+                              err.code(), err.message().c_str());
+                }
             }
             break;
 
@@ -200,6 +211,8 @@ int32_t ClientConnection::write(GWBUF* pMariaDB_response)
             MXS_ERROR("Unexpected %d bytes received from server when no request was in progress, ignoring.",
                       gwbuf_length(pMariaDB_response));
         }
+
+        gwbuf_free(pMariaDB_response);
     }
 
     return rv;

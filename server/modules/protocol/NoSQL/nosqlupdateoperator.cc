@@ -296,6 +296,73 @@ public:
         return rv;
     }
 
+    pair<string,string> get_push_each_values(const string& key, const bsoncxx::array::view& array)
+    {
+        auto k = "'$." + key + "'";
+
+        string append_values = k + ", ";
+        string set_values = k + ", JSON_ARRAY(";
+
+        for (auto it = array.begin(); it != array.end(); ++it)
+        {
+            if (it != array.begin())
+            {
+                append_values += ", ";
+                set_values += ", ";
+            }
+
+            const auto& element = *it;
+
+            const auto& v = element_to_value(element, ValueFor::JSON_NESTED);
+
+            append_values += v;
+            set_values += v;
+        }
+
+        set_values += ")";
+
+        return make_pair(append_values, set_values);
+    }
+
+    pair<string,string> get_push_values(const string& key, const bsoncxx::document::element& field)
+    {
+        pair<string, string> rv;
+
+        switch (field.type())
+        {
+        case bsoncxx::type::k_document:
+            {
+                bsoncxx::document::view doc = field.get_document();
+
+                auto each = doc[key::DEACH];
+
+                if (each)
+                {
+                    if (each.type() != bsoncxx::type::k_array)
+                    {
+                        ostringstream ss;
+                        ss << "The argument to $each in $push must be an array but it was of type: "
+                           << bsoncxx::to_string(each.type());
+                        throw SoftError(ss.str(), error::BAD_VALUE);
+                    }
+
+                    rv = get_push_each_values(key, each.get_array());
+                    break;
+                }
+            }
+            //[[fallthrough]];
+        default:
+            {
+                auto value = element_to_value(field, ValueFor::JSON_NESTED);
+
+                rv.first = "'$." + key + "', " + value;
+                rv.second = "'$." + key + "', JSON_ARRAY(" + value + ")";
+            }
+        }
+
+        return rv;
+    }
+
     string convert_push(const bsoncxx::document::element& element, const string& doc)
     {
         mxb_assert(element.key().compare("$push") == 0);
@@ -312,13 +379,11 @@ public:
             string key = check_update_path(sv);
             rec.push_back(sv);
 
-            auto value = element_to_value(field, ValueFor::JSON_NESTED);
+            auto p = get_push_values(key, field);
 
             ss << "IF(JSON_QUERY(" << rv << ", '$." << key << "') IS NOT NULL, "
-               << "JSON_ARRAY_APPEND(" << rv << ", '$." << key << "', " << value << "), "
-               << "JSON_SET(" << rv << ", '$." << key << "', JSON_ARRAY("
-               << value
-               << ")))";
+               << "JSON_ARRAY_APPEND(" << rv << ", " << p.first << "), "
+               << "JSON_SET(" << rv << ", " << p.second << "))";
 
             rv = ss.str();
         }

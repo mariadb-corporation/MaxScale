@@ -124,6 +124,10 @@ void MXS_SESSION::kill(GWBUF* error)
 
         ClientDCB::close(client_dcb);
     }
+    else
+    {
+        gwbuf_free(error);
+    }
 }
 
 MXS_SESSION::ProtocolData* MXS_SESSION::protocol_data() const

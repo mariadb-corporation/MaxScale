@@ -843,7 +843,7 @@ private:
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/findAndModify/
-class FindAndModify : public TableCreating<MultiCommand>
+class FindAndModify final : public TableCreating<MultiCommand>
 {
 public:
     static constexpr const char* const KEY = "findAndModify";
@@ -2537,7 +2537,33 @@ private:
             // We skip the id, as it was added above.
             if (e.key().compare(key::_ID) != 0)
             {
-                append(builder, e.key(), e);
+                // We also skip fields starting with a '$'.
+                if (e.key().front() != '$')
+                {
+                    if (e.type() == bsoncxx::type::k_document)
+                    {
+                        bsoncxx::document::view doc = e.get_document();
+
+                        auto it = doc.begin();
+                        for (; it != doc.end(); ++it)
+                        {
+                            if (it->key().front() == '$')
+                            {
+                                // And fields that are query conditions.
+                                break;
+                            }
+                        }
+
+                        if (it == doc.end())
+                        {
+                            builder.append(kvp(e.key(), doc));
+                        }
+                    }
+                    else
+                    {
+                        append(builder, e.key(), e);
+                    }
+                }
             }
         }
 

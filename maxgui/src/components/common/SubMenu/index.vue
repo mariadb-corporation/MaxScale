@@ -12,6 +12,7 @@
         :close-on-content-click="false"
         :open-on-hover="openOnHover"
         :open-delay="openDelay"
+        min-width="auto"
         @input="$emit('input', $event)"
     >
         <template v-if="!activator" v-slot:activator="{ on }">

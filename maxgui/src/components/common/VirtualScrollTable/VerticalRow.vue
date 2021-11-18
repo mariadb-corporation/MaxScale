@@ -8,6 +8,7 @@
                 :style="{ height: lineHeight }"
             >
                 <div
+                    :id="genCellID({ rowIdx, colIdx: 0 })"
                     :key="`${h.text}_${headerWidthMap[0]}_0`"
                     class="td border-bottom-none px-3"
                     :style="{
@@ -15,6 +16,15 @@
                         lineHeight,
                         height: lineHeight,
                     }"
+                    @contextmenu.prevent="
+                        e =>
+                            $emit('on-cell-right-click', {
+                                e,
+                                row,
+                                cell: row[i],
+                                cellID: genCellID({ rowIdx, colIdx: 0 }),
+                            })
+                    "
                 >
                     <slot
                         :name="`vertical-header-${h.text}`"
@@ -31,6 +41,7 @@
                     </slot>
                 </div>
                 <div
+                    :id="genCellID({ rowIdx, colIdx: 1 })"
                     :key="`${h.text}_${headerWidthMap[1]}_1`"
                     class="td no-border px-3"
                     :style="{
@@ -38,6 +49,15 @@
                         lineHeight,
                         height: lineHeight,
                     }"
+                    @contextmenu.prevent="
+                        e =>
+                            $emit('on-cell-right-click', {
+                                e,
+                                row,
+                                cell: row[i],
+                                cellID: genCellID({ rowIdx, colIdx: 1 }),
+                            })
+                    "
                 >
                     <slot :name="h.text" :data="{ cell: row[i], header: h, colIdx: i }" />
                 </div>
@@ -68,6 +88,7 @@ export default {
     name: 'vertical-row',
     props: {
         row: { type: Array, required: true },
+        rowIdx: { type: Number, required: true },
         tableHeaders: {
             type: Array,
             validator: arr => {
@@ -80,6 +101,7 @@ export default {
         headerWidthMap: { type: Object, required: true },
         isYOverflowed: { type: Boolean, required: true },
         scrollBarThicknessOffset: { type: Number, required: true },
+        genCellID: { type: Function, required: true },
     },
 }
 </script>
