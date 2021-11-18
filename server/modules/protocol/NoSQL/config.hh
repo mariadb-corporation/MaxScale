@@ -90,6 +90,9 @@ private:
     ProtocolModule* m_instance;
 };
 
+namespace nosql
+{
+
 // The actual config is copied for each session, so that the config can be
 // changed directly from the session itself.
 class Config final
@@ -138,3 +141,5 @@ public:
     GlobalConfig::OnUnknownCommand      on_unknown_command;
     GlobalConfig::OrderedInsertBehavior ordered_insert_behavior;
 };
+
+}
