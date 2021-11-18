@@ -239,33 +239,23 @@ export default {
         },
         clipboardOpts() {
             const { CLIPBOARD } = this.SQL_RES_TBL_CTX_OPT_TYPES
-            return [this.$t('clipboardFieldQuoted'), this.$t('clipboardField')].map(text => ({
-                text,
-                type: CLIPBOARD,
-                action: ({ opt, data }) => this.optHandler({ opt, data }),
-            }))
+            return this.genTxtOpts(CLIPBOARD)
         },
         insertOpts() {
             const {
                 TXT_EDITOR: { INSERT },
             } = this.SQL_RES_TBL_CTX_OPT_TYPES
-            return [this.$t('placeFieldInEditorQuoted'), this.$t('placeFieldInEditor')].map(
-                text => ({
-                    text,
-                    type: INSERT,
-                    action: ({ opt, data }) => this.optHandler({ opt, data }),
-                })
-            )
+            return this.genTxtOpts(INSERT)
         },
         baseOpts() {
             return [
                 {
-                    text: this.$t('copyToClipboard'),
-                    children: this.clipboardOpts,
-                },
-                {
                     text: this.$t('placeToEditor'),
                     children: this.insertOpts,
+                },
+                {
+                    text: this.$t('copyToClipboard'),
+                    children: this.clipboardOpts,
                 },
             ]
         },
@@ -316,58 +306,50 @@ export default {
                 this.ctxMenuData = data
             }
         },
+        /**
+         * Both INSERT and CLIPBOARD types have same options & action
+         * This generates txt options based on provided type
+         * @param {String} type - INSERT OR CLIPBOARD
+         * @returns {Array} - return context options
+         */
+        genTxtOpts(type) {
+            return [this.$t('fieldQuoted'), this.$t('field')].map(text => ({
+                text,
+                action: ({ opt, data }) => this.handleTxtOpt({ opt, data }),
+                type,
+            }))
+        },
         // Handle edge case when cell value is an object. e.g. In History table
         processField(cell) {
             // convert to string with template literals
             return this.$typy(cell).isObject ? `${cell.name}` : `${cell}`
         },
         /**
+         * Both INSERT and CLIPBOARD types have same options and action
+         * This handles INSERT and CLIPBOARD options
          * @param {data} item - data
          * @param {Object} opt - context menu option
          */
-        handleCopyToClipboardOpt({ opt, data }) {
-            let v = ''
-            switch (opt.text) {
-                case this.$t('clipboardFieldQuoted'):
-                    v = this.$help.escapeIdentifiers(this.processField(data.cell))
-                    break
-                case this.$t('clipboardField'):
-                    v = this.processField(data.cell)
-                    break
-            }
-            this.$help.copyTextToClipboard(v)
-        },
-        /**
-         * @param {data} item - data
-         * @param {Object} opt - context menu option
-         */
-        handleEmitInsertOpt({ opt, data }) {
-            let v = ''
-            switch (opt.text) {
-                case this.$t('placeFieldInEditorQuoted'):
-                    v = this.$help.escapeIdentifiers(this.processField(data.cell))
-                    break
-                case this.$t('placeFieldInEditor'):
-                    v = this.processField(data.cell)
-                    break
-            }
-            this.$emit('place-to-editor', v)
-        },
-        /**
-         * @param {data} item - data
-         * @param {Object} opt - context menu option
-         */
-        optHandler({ opt, data }) {
+        handleTxtOpt({ opt, data }) {
             const {
                 CLIPBOARD,
                 TXT_EDITOR: { INSERT },
             } = this.SQL_RES_TBL_CTX_OPT_TYPES
-            switch (opt.type) {
-                case CLIPBOARD:
-                    this.handleCopyToClipboardOpt({ opt, data })
+            let v = ''
+            switch (opt.text) {
+                case this.$t('fieldQuoted'):
+                    v = this.$help.escapeIdentifiers(this.processField(data.cell))
                     break
+                case this.$t('field'):
+                    v = this.processField(data.cell)
+                    break
+            }
+            switch (opt.type) {
                 case INSERT:
-                    this.handleEmitInsertOpt({ opt, data })
+                    this.$emit('place-to-editor', v)
+                    break
+                case CLIPBOARD:
+                    this.$help.copyTextToClipboard(v)
                     break
             }
         },

@@ -303,9 +303,9 @@ export default {
                     text: this.$t('copyToClipboard'),
                     children: [
                         {
-                            text: this.$t('clipboardSql'),
+                            text: 'SQL',
                             type: CLIPBOARD,
-                            action: ({ opt, data }) => this.optHandler({ opt, data }),
+                            action: ({ opt, data }) => this.txtOptHandler({ opt, data }),
                         },
                     ],
                 },
@@ -313,9 +313,9 @@ export default {
                     text: this.$t('placeToEditor'),
                     children: [
                         {
-                            text: this.$t('placeSqlInEditor'),
+                            text: 'SQL',
                             type: INSERT,
-                            action: ({ opt, data }) => this.optHandler({ opt, data }),
+                            action: ({ opt, data }) => this.txtOptHandler({ opt, data }),
                         },
                     ],
                 },
@@ -377,7 +377,7 @@ export default {
 
             this[`SET_QUERY_${this.activeView}`](newData)
         },
-        optHandler({ opt, data }) {
+        txtOptHandler({ opt, data }) {
             let rowData = this.$help.getObjectRows({
                 columns: this.headers.map(h => h.text),
                 rows: [data.row.filter((_, i) => i !== 0)], // Remove # col
@@ -392,13 +392,17 @@ export default {
                 case this.SQL_QUERY_MODES.FAVORITE:
                     sql = rowData[0].sql
             }
+            const {
+                TXT_EDITOR: { INSERT },
+                CLIPBOARD,
+            } = this.SQL_RES_TBL_CTX_OPT_TYPES
             // if no name is defined when storing the query, sql query is stored to name
             let sqlTxt = sql ? sql : name
-            switch (opt.text) {
-                case this.$t('clipboardSql'):
+            switch (opt.type) {
+                case CLIPBOARD:
                     this.$help.copyTextToClipboard(sqlTxt)
                     break
-                case this.$t('placeSqlInEditor'):
+                case INSERT:
                     this.$emit('place-to-editor', sqlTxt)
                     break
             }
