@@ -14,6 +14,7 @@
 
 #include "nosqlprotocol.hh"
 #include <maxscale/config2.hh>
+#include "nosqlbase.hh"
 
 class ProtocolModule;
 
@@ -127,10 +128,25 @@ public:
         return debug & GlobalConfig::DEBUG_BACK;
     }
 
+    void copy_from(const Config& that)
+    {
+        // There are const members, hence no assignment operator.
+        this->auto_create_databases = that.auto_create_databases;
+        this->auto_create_tables = that.auto_create_tables;
+        this->cursor_timeout = that.cursor_timeout;
+        this->debug = that.debug;
+        this->log_unknown_command = that.log_unknown_command;
+        this->on_unknown_command = that.on_unknown_command;
+        this->ordered_insert_behavior = that.ordered_insert_behavior;
+    }
+
+    void copy_from(const std::string& command, const bsoncxx::document::view& doc);
+    void copy_to(nosql::DocumentBuilder& doc) const;
+
     // Can only be changed via MaxScale
-    const std::string                   user;
-    const std::string                   password;
-    int64_t                             id_length;
+    const std::string user;
+    const std::string password;
+    const int64_t     id_length;
 
     // Can be changed from the NosQL API.
     bool                                auto_create_databases;
