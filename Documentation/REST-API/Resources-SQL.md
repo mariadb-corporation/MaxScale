@@ -181,6 +181,14 @@ This endpoint supports the following request parameters.
     retrieve the connection ID from the cookies if the browser session is
     closed.
 
+- `max-age`
+
+  - Sets the connection token maximum age in seconds. The default is
+    `max-age=28800`. Only positive values are accepted and if a non-positive or
+    a non-integer value is found, the parameter is ignored. Once the token age
+    exceeds the configured maximum value, the token can no longer be used and a
+    new connection must be created.
+
 #### Response
 
 Connection was opened:
@@ -222,6 +230,35 @@ DELETE /v1/sql/:id
 Connection was closed:
 
 `Status: 204 No Content`
+
+Missing or invalid connection token:
+
+`Status: 403 Forbidden`
+
+### Reconnect an opened SQL connection
+
+```
+POST /v1/sql/:id/reconnect
+```
+
+Reconnects an existing connection. This can also be used if the connection to
+the backend server was lost due to a network error.
+
+The connection will use the same credentials that were passed to the `POST
+/v1/sql` endpoint. The new connection will still have the same ID in the REST
+API but will be treated as a new connection by the database. A reconnection
+re-initializes the connection and resets the session state. Reconnections cannot
+take place while a transaction is open.
+
+#### Response
+
+Reconnection was successful:
+
+`Status: 204 No Content`
+
+Reconnection failed or connection is already in use:
+
+`Status: 503 Service Unavailable`
 
 Missing or invalid connection token:
 

@@ -111,6 +111,7 @@ Get a single service.
             "statistics": {
                 "active_operations": 0,
                 "connections": 0,
+                "failed_auths": 0,
                 "max_connections": 0,
                 "routed_packets": 0,
                 "total_connections": 0
@@ -386,6 +387,7 @@ Get all services.
                 "statistics": {
                     "active_operations": 0,
                     "connections": 1,
+                    "failed_auths": 0,
                     "max_connections": 1,
                     "routed_packets": 2,
                     "total_connections": 1
@@ -584,6 +586,7 @@ Get all services.
                 "statistics": {
                     "active_operations": 0,
                     "connections": 0,
+                    "failed_auths": 0,
                     "max_connections": 0,
                     "routed_packets": 0,
                     "total_connections": 0
