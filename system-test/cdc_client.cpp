@@ -132,37 +132,41 @@ bool cdc_com(TestConnections* Test)
 
         if (nfds > 0)
         {
-            char* json = read_sc(sock);
-            Test->tprintf("%s", json);
+            char* data = read_sc(sock);
+            std::istringstream iss(data);
+            free(data);
 
-            if (ignore_first > 0)
+            for (std::string json; std::getline(iss, json);)
             {
-                ignore_first--;     // ignoring first reads
-                if (ignore_first == 0)
+                Test->tprintf("%s", json.c_str());
+
+                if (ignore_first > 0)
                 {
-                    // first reads done, starting inserting
-                    insert_val = 10;
-                    inserted_val = insert_val;
+                    ignore_first--;     // ignoring first reads
+                    if (ignore_first == 0)
+                    {
+                        // first reads done, starting inserting
+                        insert_val = 10;
+                        inserted_val = insert_val;
+                    }
+                }
+                else
+                {
+                    // trying to check JSON
+                    long long int x1;
+                    long long int fl;
+                    get_x_fl_from_json(json.c_str(), &x1, &fl);
+                    Test->tprintf("data received, x1=%lld fl=%lld", x1, fl);
+
+                    if (x1 != inserted_val || fl != inserted_val + 100)
+                    {
+                        Test->tprintf("wrong values in JSON");
+                    }
+
+                    inserted_val++;
+                    insert_val = inserted_val;
                 }
             }
-            else
-            {
-                // trying to check JSON
-                long long int x1;
-                long long int fl;
-                get_x_fl_from_json(json, &x1, &fl);
-                Test->tprintf("data received, x1=%lld fl=%lld", x1, fl);
-
-                if (x1 != inserted_val || fl != inserted_val + 100)
-                {
-                    Test->tprintf("wrong values in JSON");
-                }
-
-                inserted_val++;
-                insert_val = inserted_val;
-            }
-
-            free(json);
         }
         else
         {

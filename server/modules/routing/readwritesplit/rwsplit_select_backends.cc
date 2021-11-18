@@ -74,12 +74,6 @@ RWBackend* best_score(PRWBackends& sBackends, std::function<double(mxs::Endpoint
     {
         double score = server_score(b->backend());
 
-        if (!b->in_use())
-        {
-            // To prefer servers that we are connected to, inflate the score of unconnected servers
-            score = (score + 5.0) * 1.5;
-        }
-
         if (score > max_score)
         {
             // Cap values to a maximum value. This guarantees that we choose a server from the set of
