@@ -143,10 +143,9 @@ on [the schema sidebar](#schema-sidebar) and choose _Alter Table_.
 ### Current limitations
 A connection is bound to a worksheet, so sessions querying of a connection is
 not yet supported.
-The hard limit rows of each result are set to 10000 rows. Though it can be increased,
-it can cause MaxScale to run out of memory. In addition, pagination of the query result
-set is not supported. To work around this, use LIMIT offset, row_count to navigate
-through the result set.
+The hard limit rows of each result are set to 10000 rows which means
+MaxScale returns 10000 rows regardless value of the LIMIT clause. In addition,
+`LIMIT` is not automatically injected into statements written in the SQL editor.
 
 ## Logs Viewer
 To access logs viewer, clicking the gear icon in the sidebar navigation
