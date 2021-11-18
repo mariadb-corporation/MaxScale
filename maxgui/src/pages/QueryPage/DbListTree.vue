@@ -27,7 +27,13 @@
                     <v-icon class="mr-1" size="12" color="deep-ocean">
                         {{ iconSheet(item) }}
                     </v-icon>
-                    <span class="text-truncate d-inline-block">
+                    <span
+                        class="text-truncate d-inline-block"
+                        :class="{
+                            'font-weight-bold':
+                                item.type === SQL_NODE_TYPES.SCHEMA && active_db === item.name,
+                        }"
+                    >
                         {{ item.name }}
                     </span>
                 </div>
@@ -110,6 +116,7 @@ export default {
             SQL_NODE_CTX_OPT_TYPES: state => state.app_config.SQL_NODE_CTX_OPT_TYPES,
             expanded_nodes: state => state.query.expanded_nodes,
             active_wke_id: state => state.query.active_wke_id,
+            active_db: state => state.query.active_db,
         }),
         ...mapGetters({
             getDbTreeData: 'query/getDbTreeData',
