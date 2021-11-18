@@ -94,14 +94,24 @@ long search_gtid_in_file(std::ifstream& file, long file_pos, const maxsql::Gtid&
     {
         auto this_pos = file_pos;
 
-        maxsql::RplEvent rpl = maxsql::read_event(file, &file_pos);
+        maxsql::RplEvent rpl = maxsql::RplEvent::read_header_only(file, &file_pos);
         if (rpl.is_empty())
         {
             break;
         }
 
-        if (rpl.event_type() == GTID_EVENT)
+        if (rpl.event_type() != GTID_EVENT)
         {
+            file_pos = rpl.next_event_pos();
+        }
+        else
+        {
+            rpl.read_body(file, &file_pos);
+            if (rpl.is_empty())
+            {
+                break;
+            }
+
             maxsql::GtidEvent event = rpl.gtid_event();
             if (event.gtid.domain_id() == gtid.domain_id()
                 && event.gtid.sequence_nr() == gtid.sequence_nr())
@@ -133,15 +143,25 @@ bool search_file(const std::string& file_name,
 
     while (result == NotFound)
     {
-        maxsql::RplEvent rpl = maxsql::read_event(file, &file_pos);
+        maxsql::RplEvent rpl = maxsql::RplEvent::read_header_only(file, &file_pos);
 
         if (rpl.is_empty())
         {
             break;
         }
 
-        if (rpl.event_type() == GTID_LIST_EVENT)
+        if (rpl.event_type() != GTID_LIST_EVENT)
         {
+            file_pos = rpl.next_event_pos();
+        }
+        else
+        {
+            rpl.read_body(file, &file_pos);
+            if (rpl.is_empty())
+            {
+                break;
+            }
+
             maxsql::GtidListEvent event = rpl.gtid_list();
 
             uint32_t highest_seq = 0;
@@ -163,6 +183,10 @@ bool search_file(const std::string& file_name,
             else if (highest_seq == gtid.sequence_nr())
             {
                 result = GtidInPriorFile;
+            }
+            else
+            {
+                break;
             }
         }
     }
