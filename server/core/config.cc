@@ -1232,7 +1232,11 @@ int config_cb(const char* fpath, const struct stat* sb, int typeflag, struct FTW
                 mxb_assert(current_dcontext);
                 mxb_assert(current_ccontext);
 
-                if (!config_load_single_file(fpath, current_dcontext, current_ccontext))
+                if (strcmp(filename, "maxscale.cnf") == 0 && !config_load_global(fpath))
+                {
+                    rval = -1;
+                }
+                else if (!config_load_single_file(fpath, current_dcontext, current_ccontext))
                 {
                     rval = -1;
                 }
@@ -4749,7 +4753,7 @@ static bool create_global_config(const char* filename)
 
 bool config_global_serialize()
 {
-    static const char* GLOBAL_CONFIG_NAME = "global-options";
+    static const char* GLOBAL_CONFIG_NAME = "maxscale";
     bool rval = false;
     char filename[PATH_MAX];
 
