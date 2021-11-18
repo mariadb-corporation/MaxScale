@@ -2042,7 +2042,7 @@ int main(int argc, char** argv)
 
             if (use_static_cnf)
             {
-                ConfContextMap config_context;
+                ConfigSectionMap config_context;
                 if (!config_load_and_process(cnf_file_path, cfg_file_read_res.config, config_context))
                 {
                     print_alert("Failed to open, read or process the MaxScale configuration "

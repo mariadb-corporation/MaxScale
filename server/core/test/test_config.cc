@@ -48,7 +48,7 @@ int test_validity()
         {MXS_END_MODULE_PARAMS}
     };
 
-    ConfContextMap ctx;
+    ConfigSectionMap ctx;
 
     /** Int parameter */
     TEST(config_param_is_valid(params, "p1", "1", &ctx));
@@ -112,7 +112,7 @@ int test_validity()
     TEST(!config_param_is_valid(params, "p10", "4711ms", &ctx));
 
     /** Service parameter */
-    CONFIG_CONTEXT svc("test-service");
+    ConfigSection svc("test-service");
     config_add_param(&svc, "type", "service");
     ctx.emplace("test-service", std::move(svc));
     TEST(config_param_is_valid(params, "p7", "test-service", &ctx));
@@ -156,9 +156,9 @@ int test_add_parameter()
     };
 
 
-    CONFIG_CONTEXT svc1("my-service");
-    CONFIG_CONTEXT svc2("some-service");
-    CONFIG_CONTEXT ctx;
+    ConfigSection svc1("my-service");
+    ConfigSection svc2("some-service");
+    ConfigSection ctx;
     config_add_param(&svc1, "type", "service");
     config_add_param(&svc2, "type", "service");
 
@@ -207,7 +207,7 @@ int test_required_parameters()
         {MXS_END_MODULE_PARAMS}
     };
 
-    CONFIG_CONTEXT ctx;
+    ConfigSection ctx;
 
     TEST(missing_required_parameters(params, ctx.m_parameters, "test"));
     config_add_defaults(&ctx.m_parameters, params);

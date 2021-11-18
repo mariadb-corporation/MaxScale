@@ -35,12 +35,11 @@
 extern const char* config_pre_parse_global_params[];
 
 /**
- * The config context structure. Holds configuration data during startup.
+ * Config section structure. Holds configuration data during startup.
  */
-class CONFIG_CONTEXT
+struct ConfigSection
 {
-public:
-    CONFIG_CONTEXT(std::string section = "");
+    ConfigSection(std::string section = "");
 
     std::string           m_name;           /**< The name of the object being configured */
     mxs::ConfigParameters m_parameters;     /**< The list of parameter values */
@@ -60,7 +59,7 @@ public:
     }
 };
 
-using ConfContextMap = std::map<std::string, CONFIG_CONTEXT>;
+using ConfigSectionMap = std::map<std::string, ConfigSection>;
 
 /**
  * @brief Add default parameters for a module to the configuration context
@@ -80,15 +79,15 @@ void config_add_defaults(mxs::ConfigParameters* dest, const MXS_MODULE_PARAM* pa
  * validates the module parameters and adds the parameter values to the context. Also loads
  * config files from user-generated directory and the runtime config directory.
  *
- * @param main_cfg_filepath Path to main configuration file
- * @param cfg_file_contents Main config file contents, with variable substitution performed.
- * @param config_cntx_out   Destination object
+ * @param main_cfg_file Path to main configuration file
+ * @param main_cfg_in Main config file contents, with variable substitution performed.
+ * @param output   Destination object
  *
  * @return True on success, false on fatal error
  */
-bool config_load_and_process(const std::string& main_cfg_filepath,
-                             const mxb::ini::map_result::Configuration& cfg_file_contents,
-                             ConfContextMap& config_cntx_out);
+bool config_load_and_process(const std::string& main_cfg_file,
+                             const mxb::ini::map_result::Configuration& main_cfg_in,
+                             ConfigSectionMap& output);
 
 /**
  * Apply the [maxscale]-section from the main configuration file.
@@ -99,31 +98,13 @@ bool config_load_and_process(const std::string& main_cfg_filepath,
 bool apply_main_config(const mxb::ini::map_result::Configuration& config);
 
 /**
- * @brief Creates an empty configuration context
- *
- * @param section Context name
- * @return New context or NULL on memory allocation failure
- */
-CONFIG_CONTEXT* config_context_create(const char* section);
-
-/**
  * @brief Add a parameter to a configuration context
  *
  * @param obj Context where the parameter should be added
  * @param key Key to add
  * @param value Value for the key
  */
-void config_add_param(CONFIG_CONTEXT* obj, const char* key, const char* value);
-
-/**
- * @brief Replace an existing parameter
- *
- * @param obj Configuration context
- * @param key Parameter name
- * @param value Parameter value
- * @return True on success, false on memory allocation error
- */
-bool config_replace_param(CONFIG_CONTEXT* obj, const char* key, const char* value);
+void config_add_param(ConfigSection* obj, const char* key, const char* value);
 
 /**
  * @brief Remove a parameter
@@ -131,7 +112,7 @@ bool config_replace_param(CONFIG_CONTEXT* obj, const char* key, const char* valu
  * @param obj Configuration context
  * @param key Name of the parameter to remove
  */
-void config_remove_param(CONFIG_CONTEXT* obj, const char* name);
+void config_remove_param(ConfigSection* obj, const char* name);
 
 /**
  * @brief Add non-standard configuration parameters to a JSON object
@@ -166,7 +147,7 @@ void fix_object_name(std::string& name);
  *
  * @return True if configuration was successfully exported
  */
-bool export_config_file(const char* filename, ConfContextMap& config);
+bool export_config_file(const char* filename, ConfigSectionMap& config);
 
 /**
  * Generate configuration file contents out of module configuration parameters. Only parameters defined
@@ -235,8 +216,8 @@ bool missing_required_parameters(const MXS_MODULE_PARAM* mod_params,
  *
  * @return True if config was valid.
  */
-bool config_add_to_context(const std::string& source_file, CONFIG_CONTEXT::SourceType source_type,
-                           const mxb::ini::map_result::Configuration& input, ConfContextMap& output);
+bool config_add_to_context(const std::string& source_file, ConfigSection::SourceType source_type,
+                           const mxb::ini::map_result::Configuration& input, ConfigSectionMap& output);
 
 /**
  * Enable or disable masking of passwords
@@ -269,4 +250,4 @@ bool config_mask_passwords();
 bool config_param_is_valid(const MXS_MODULE_PARAM* params,
                            const char* key,
                            const char* value,
-                           const ConfContextMap* context);
+                           const ConfigSectionMap* context);
