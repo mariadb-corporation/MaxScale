@@ -27,7 +27,13 @@
                     <v-icon class="mr-1" size="12" color="deep-ocean">
                         {{ iconSheet(item) }}
                     </v-icon>
-                    <span class="text-truncate d-inline-block">
+                    <span
+                        class="text-truncate d-inline-block"
+                        :class="{
+                            'font-weight-bold':
+                                item.type === SQL_NODE_TYPES.SCHEMA && active_db === item.name,
+                        }"
+                    >
                         {{ item.name }}
                     </span>
                 </div>
@@ -110,6 +116,7 @@ export default {
             SQL_NODE_CTX_OPT_TYPES: state => state.app_config.SQL_NODE_CTX_OPT_TYPES,
             expanded_nodes: state => state.query.expanded_nodes,
             active_wke_id: state => state.query.active_wke_id,
+            active_db: state => state.query.active_db,
         }),
         ...mapGetters({
             getDbTreeData: 'query/getDbTreeData',
@@ -136,12 +143,7 @@ export default {
             return [
                 {
                     text: this.$t('placeToEditor'),
-                    children: [
-                        { text: this.$t('placeQualifiedNameQuoted'), type: INSERT },
-                        { text: this.$t('placeQualifiedName'), type: INSERT },
-                        { text: this.$t('placeNameInEditorQuoted'), type: INSERT },
-                        { text: this.$t('placeNameInEditor'), type: INSERT },
-                    ],
+                    children: this.genTxtOpts(INSERT),
                 },
             ]
         },
@@ -150,12 +152,7 @@ export default {
             return [
                 {
                     text: this.$t('copyToClipboard'),
-                    children: [
-                        { text: this.$t('clipboardQualifiedNameQuoted'), type: CLIPBOARD },
-                        { text: this.$t('clipboardQualifiedName'), type: CLIPBOARD },
-                        { text: this.$t('clipboardNameQuoted'), type: CLIPBOARD },
-                        { text: this.$t('clipboardName'), type: CLIPBOARD },
-                    ],
+                    children: this.genTxtOpts(CLIPBOARD),
                 },
             ]
         },
@@ -302,12 +299,27 @@ export default {
         updateActiveNode(item) {
             this.activeNodes = [item]
         },
+
+        /**
+         * Both INSERT and CLIPBOARD types have same options.
+         * This generates txt options based on provided type
+         * @param {String} type - INSERT OR CLIPBOARD
+         * @returns {Array} - return context options
+         */
+        genTxtOpts(type) {
+            return [
+                { text: this.$t('qualifiedNameQuoted'), type },
+                { text: this.$t('qualifiedName'), type },
+                { text: this.$t('nameQuoted'), type },
+                { text: this.$t('name'), type },
+            ]
+        },
+
         /**
          * @param {Object} item - node
          * @param {Object} opt - context menu option
-         * @param {String} schema - node identifier
          */
-        handleEmitQueryOpt({ item, opt, schema }) {
+        handleEmitQueryOpt({ item, opt }) {
             /**
              * If altered_active_node exists, clear it first so that
              * activeNodes can be updated
@@ -323,63 +335,53 @@ export default {
             this.updateActiveNode(item)
             switch (opt.text) {
                 case this.$t('previewData'):
-                    this.$emit('preview-data', schema)
+                    this.$emit('preview-data', item.id)
                     break
                 case this.$t('viewDetails'):
-                    this.$emit('view-details', schema)
+                    this.$emit('view-details', item.id)
                     break
             }
         },
         /**
+         * Both INSERT and CLIPBOARD types have same options.
+         * This handles INSERT and CLIPBOARD options
          * @param {Object} item - node
          * @param {Object} opt - context menu option
-         * @param {String} schema - node identifier
          */
-        handleEmitInsertOpt({ item, opt, schema }) {
-            switch (opt.text) {
-                case this.$t('placeQualifiedNameQuoted'):
-                    this.$emit('place-to-editor', this.$help.escapeIdentifiers(schema))
-                    break
-                case this.$t('placeQualifiedName'):
-                    this.$emit('place-to-editor', schema)
-                    break
-                case this.$t('placeNameInEditorQuoted'):
-                    this.$emit('place-to-editor', this.$help.escapeIdentifiers(item.name))
-                    break
-                case this.$t('placeNameInEditor'):
-                    this.$emit('place-to-editor', item.name)
-                    break
-            }
-        },
-        /**
-         * @param {Object} item - node
-         * @param {Object} opt - context menu option
-         * @param {String} schema - node identifier
-         */
-        handleCopyToClipboardOpt({ item, opt, schema }) {
+        handleTxtOpt({ item, opt }) {
+            const {
+                CLIPBOARD,
+                TXT_EDITOR: { INSERT },
+            } = this.SQL_NODE_CTX_OPT_TYPES
             let v = ''
             switch (opt.text) {
-                case this.$t('clipboardQualifiedNameQuoted'):
-                    v = this.$help.escapeIdentifiers(schema)
+                case this.$t('qualifiedNameQuoted'):
+                    v = this.$help.escapeIdentifiers(item.id)
                     break
-                case this.$t('clipboardQualifiedName'):
-                    v = schema
+                case this.$t('qualifiedName'):
+                    v = item.id
                     break
-                case this.$t('clipboardNameQuoted'):
+                case this.$t('nameQuoted'):
                     v = this.$help.escapeIdentifiers(item.name)
                     break
-                case this.$t('clipboardName'):
+                case this.$t('name'):
                     v = item.name
                     break
             }
-            this.$help.copyTextToClipboard(v)
+            switch (opt.type) {
+                case INSERT:
+                    this.$emit('place-to-editor', v)
+                    break
+                case CLIPBOARD:
+                    this.$help.copyTextToClipboard(v)
+                    break
+            }
         },
         /**
          * @param {Object} item - node
          * @param {Object} opt - context menu option
-         * @param {String} schema - node identifier
          */
-        handleEmitDD_opt({ item, opt, schema }) {
+        handleEmitDD_opt({ item, opt }) {
             switch (opt.text) {
                 case this.$t('alterTbl'):
                     {
@@ -406,19 +408,18 @@ export default {
                 case this.$t('dropSchema'):
                 case this.$t('dropSp'):
                 case this.$t('dropTrigger'):
-                    this.$emit('drop-action', { id: schema, type: item.type })
+                    this.$emit('drop-action', { id: item.id, type: item.type })
                     break
                 case this.$t('truncateTbl'):
-                    this.$emit('truncate-tbl', schema)
+                    this.$emit('truncate-tbl', item.id)
                     break
             }
         },
         /**
          * @param {Object} item - node
          * @param {Object} opt - context menu option
-         * @param {String} schema - node identifier
          */
-        handleTxtEditorOpt({ item, opt, schema }) {
+        handleTxtEditorOpt({ item, opt }) {
             const {
                 TXT_EDITOR: { INSERT, QUERY },
             } = this.SQL_NODE_CTX_OPT_TYPES
@@ -428,10 +429,10 @@ export default {
             })
             switch (opt.type) {
                 case QUERY:
-                    this.handleEmitQueryOpt({ item, opt, schema })
+                    this.handleEmitQueryOpt({ item, opt })
                     break
                 case INSERT:
-                    this.handleEmitInsertOpt({ item, opt, schema })
+                    this.handleTxtOpt({ item, opt })
                     break
             }
         },
@@ -440,7 +441,6 @@ export default {
          * @param {Object} opt - context menu option
          */
         optionHandler({ item, opt }) {
-            const schema = item.id
             const {
                 CLIPBOARD,
                 TXT_EDITOR: { INSERT, QUERY },
@@ -449,17 +449,17 @@ export default {
             } = this.SQL_NODE_CTX_OPT_TYPES
             switch (opt.type) {
                 case DD:
-                    this.handleEmitDD_opt({ item, opt, schema })
+                    this.handleEmitDD_opt({ item, opt })
                     break
                 case USE:
-                    this.$emit('use-db', schema)
+                    this.$emit('use-db', item.id)
                     break
                 case INSERT:
                 case QUERY:
-                    this.handleTxtEditorOpt({ item, opt, schema })
+                    this.handleTxtEditorOpt({ item, opt })
                     break
                 case CLIPBOARD:
-                    this.handleCopyToClipboardOpt({ item, opt, schema })
+                    this.handleTxtOpt({ item, opt })
                     break
             }
         },

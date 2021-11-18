@@ -28,6 +28,9 @@ export const uniqBy = require('lodash/uniqBy')
 export const merge = require('lodash/merge')
 export const differenceWith = require('lodash/differenceWith')
 export const countBy = require('lodash/countBy')
+export const keyBy = require('lodash/keyBy')
+export const values = require('lodash/values')
+export const mergeWith = require('lodash/mergeWith')
 export const lodash = {
     isEmpty,
     cloneDeep,
@@ -40,8 +43,11 @@ export const lodash = {
     pickBy,
     uniqBy,
     deepMerge: merge,
+    deepMergeWith: mergeWith,
     differenceWith,
     countBy,
+    keyBy,
+    values,
 }
 
 export function isNull(v) {

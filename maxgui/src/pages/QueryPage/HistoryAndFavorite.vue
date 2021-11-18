@@ -35,13 +35,9 @@
                     showSelect
                     showGroupBy
                     groupBy="date"
-                    :menuOpts="[
-                        { text: $t('copySqlToClipboard') },
-                        { text: $t('placeSqlInEditor') },
-                    ]"
+                    :menuOpts="menuOpts"
                     @on-delete-selected="handleDeleteSelectedRows"
                     @custom-group="customGroup"
-                    @on-choose-opt="onChooseOpt"
                     v-on="$listeners"
                 >
                     <template v-slot:header-connection_name="{ data: { maxWidth } }">
@@ -211,6 +207,7 @@ export default {
         ...mapState({
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             QUERY_LOG_TYPES: state => state.app_config.QUERY_LOG_TYPES,
+            SQL_RES_TBL_CTX_OPT_TYPES: state => state.app_config.SQL_RES_TBL_CTX_OPT_TYPES,
             curr_query_mode: state => state.query.curr_query_mode,
             query_history: state => state.persisted.query_history,
             query_favorite: state => state.persisted.query_favorite,
@@ -296,6 +293,34 @@ export default {
             }
             return data.map(item => Object.values(item))
         },
+        menuOpts() {
+            const {
+                CLIPBOARD,
+                TXT_EDITOR: { INSERT },
+            } = this.SQL_RES_TBL_CTX_OPT_TYPES
+            return [
+                {
+                    text: this.$t('copyToClipboard'),
+                    children: [
+                        {
+                            text: 'SQL',
+                            type: CLIPBOARD,
+                            action: ({ opt, data }) => this.txtOptHandler({ opt, data }),
+                        },
+                    ],
+                },
+                {
+                    text: this.$t('placeToEditor'),
+                    children: [
+                        {
+                            text: 'SQL',
+                            type: INSERT,
+                            action: ({ opt, data }) => this.txtOptHandler({ opt, data }),
+                        },
+                    ],
+                },
+            ]
+        },
     },
     activated() {
         this.setHeaderHeight()
@@ -352,7 +377,7 @@ export default {
 
             this[`SET_QUERY_${this.activeView}`](newData)
         },
-        onChooseOpt({ opt, data }) {
+        txtOptHandler({ opt, data }) {
             let rowData = this.$help.getObjectRows({
                 columns: this.headers.map(h => h.text),
                 rows: [data.row.filter((_, i) => i !== 0)], // Remove # col
@@ -367,15 +392,18 @@ export default {
                 case this.SQL_QUERY_MODES.FAVORITE:
                     sql = rowData[0].sql
             }
+            const {
+                TXT_EDITOR: { INSERT },
+                CLIPBOARD,
+            } = this.SQL_RES_TBL_CTX_OPT_TYPES
             // if no name is defined when storing the query, sql query is stored to name
             let sqlTxt = sql ? sql : name
-            switch (opt.text) {
-                case this.$t('copySqlToClipboard'): {
+            switch (opt.type) {
+                case CLIPBOARD:
                     this.$help.copyTextToClipboard(sqlTxt)
                     break
-                }
-                case this.$t('placeSqlInEditor'):
-                    this.$emit('place-sql-in-editor', sqlTxt)
+                case INSERT:
+                    this.$emit('place-to-editor', sqlTxt)
                     break
             }
         },

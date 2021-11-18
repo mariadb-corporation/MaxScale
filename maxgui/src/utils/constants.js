@@ -41,7 +41,11 @@ export const APP_CONFIG = Object.freeze({
         DDL: { DD: 'DD' }, // Data definition
         ADMIN: { USE: 'USE' }, // Data definition
     }),
-
+    // Option types for context menu in result-data-table
+    SQL_RES_TBL_CTX_OPT_TYPES: Object.freeze({
+        CLIPBOARD: 'CLIPBOARD',
+        TXT_EDITOR: { INSERT: 'INSERT' },
+    }),
     SQL_QUERY_MODES: Object.freeze({
         PRVW_DATA: 'PRVW_DATA',
         PRVW_DATA_DETAILS: 'PRVW_DATA_DETAILS',

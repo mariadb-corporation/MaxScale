@@ -54,7 +54,7 @@
                         ref="queryResultPane"
                         :dynDim="resultPaneDim"
                         class="query-result"
-                        @place-sql-in-editor="placeToEditor"
+                        @place-to-editor="placeToEditor"
                         @on-dragging="draggingTxt"
                         @on-dragend="dropTxtToEditor({ e: $event, type: 'sql' })"
                     />

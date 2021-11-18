@@ -115,9 +115,9 @@
             :key="ctxMenuActivator"
             v-model="showCtxMenu"
             left
-            :items="[...baseOpts, ...menuOpts]"
+            :items="menuItems"
             :activator="ctxMenuActivator"
-            @item-click="optHandler"
+            @item-click="onChooseOpt"
         />
     </div>
 </template>
@@ -138,11 +138,11 @@
 
 /*
 @on-delete-selected: selectedItems:any[]. Event is emitted when showSelect props is true
-@on-choose-opt: { opt:object, data:object}. Emit when menuOpts props is provided
 Also emits other events from virtual-scroll-table via v-on="$listeners"
 */
 import ResultExport from './ResultExport'
 import ColumnList from './ColumnList.vue'
+import { mapState } from 'vuex'
 export default {
     name: 'result-data-table',
     components: {
@@ -164,6 +164,7 @@ export default {
         showSelect: { type: Boolean, default: false },
         groupBy: { type: String, default: '' },
         showGroupBy: { type: Boolean, default: false },
+        //menuOpts:[{ text:string, type:string, action:function}]
         menuOpts: { type: Array, default: () => [] },
     },
     data() {
@@ -181,6 +182,9 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            SQL_RES_TBL_CTX_OPT_TYPES: state => state.app_config.SQL_RES_TBL_CTX_OPT_TYPES,
+        }),
         tableHeight() {
             return this.height - this.tableToolsHeight - 8
         },
@@ -233,9 +237,46 @@ export default {
         ctxMenuActivator() {
             return `#${this.$typy(this.ctxMenuData, 'cellID').safeString}`
         },
+        clipboardOpts() {
+            const { CLIPBOARD } = this.SQL_RES_TBL_CTX_OPT_TYPES
+            return this.genTxtOpts(CLIPBOARD)
+        },
+        insertOpts() {
+            const {
+                TXT_EDITOR: { INSERT },
+            } = this.SQL_RES_TBL_CTX_OPT_TYPES
+            return this.genTxtOpts(INSERT)
+        },
         baseOpts() {
-            //TODO: add opts
-            return []
+            return [
+                {
+                    text: this.$t('placeToEditor'),
+                    children: this.insertOpts,
+                },
+                {
+                    text: this.$t('copyToClipboard'),
+                    children: this.clipboardOpts,
+                },
+            ]
+        },
+        menuItems() {
+            if (this.menuOpts.length) {
+                // Deep merge of menuOpts with baseOpts
+                const { deepMergeWith, keyBy, values } = this.$help.lodash
+                const merged = values(
+                    deepMergeWith(
+                        keyBy(this.baseOpts, 'text'),
+                        keyBy(this.menuOpts, 'text'),
+                        (objVal, srcVal) => {
+                            if (Array.isArray(objVal)) {
+                                return objVal.concat(srcVal)
+                            }
+                        }
+                    )
+                )
+                return merged
+            }
+            return this.baseOpts
         },
     },
     watch: {
@@ -252,6 +293,9 @@ export default {
             if (!this.$refs.tableTools) return
             this.tableToolsHeight = this.$refs.tableTools.clientHeight
         },
+        /**
+         * @param {Object} data { e: event, row:[], cell:string, cellID:string }
+         */
         onCellRClick(data) {
             const { cellID } = data
             if (this.$typy(this.ctxMenuData, 'cellID').safeString === cellID) {
@@ -262,8 +306,56 @@ export default {
                 this.ctxMenuData = data
             }
         },
-        optHandler(opt) {
-            this.$emit('on-choose-opt', { opt, data: this.ctxMenuData })
+        /**
+         * Both INSERT and CLIPBOARD types have same options & action
+         * This generates txt options based on provided type
+         * @param {String} type - INSERT OR CLIPBOARD
+         * @returns {Array} - return context options
+         */
+        genTxtOpts(type) {
+            return [this.$t('fieldQuoted'), this.$t('field')].map(text => ({
+                text,
+                action: ({ opt, data }) => this.handleTxtOpt({ opt, data }),
+                type,
+            }))
+        },
+        // Handle edge case when cell value is an object. e.g. In History table
+        processField(cell) {
+            // convert to string with template literals
+            return this.$typy(cell).isObject ? `${cell.name}` : `${cell}`
+        },
+        /**
+         * Both INSERT and CLIPBOARD types have same options and action
+         * This handles INSERT and CLIPBOARD options
+         * @param {data} item - data
+         * @param {Object} opt - context menu option
+         */
+        handleTxtOpt({ opt, data }) {
+            const {
+                CLIPBOARD,
+                TXT_EDITOR: { INSERT },
+            } = this.SQL_RES_TBL_CTX_OPT_TYPES
+            let v = ''
+            switch (opt.text) {
+                case this.$t('fieldQuoted'):
+                    v = this.$help.escapeIdentifiers(this.processField(data.cell))
+                    break
+                case this.$t('field'):
+                    v = this.processField(data.cell)
+                    break
+            }
+            switch (opt.type) {
+                case INSERT:
+                    this.$emit('place-to-editor', v)
+                    break
+                case CLIPBOARD:
+                    this.$help.copyTextToClipboard(v)
+                    break
+            }
+        },
+        onChooseOpt(opt) {
+            // pass arguments opt and data to action function
+            opt.action({ opt, data: this.ctxMenuData })
         },
     },
 }
