@@ -744,35 +744,19 @@ private:
                            const char* zOperation,
                            const char* zOp)
     {
-
-        ostringstream ss;
-
-        ss << "JSON_SET(" << doc;
+        string rv = doc;
 
         auto fields = static_cast<bsoncxx::document::view>(element.get_document());
 
         FieldRecorder rec(this);
         for (auto field : fields)
         {
-            ss << ", ";
-
             string_view sv = field.key();
             string key = get_key(sv);
             rec.push_back(sv);
 
-            ss << "'$." << key << "', ";
-
             double d;
-            if (element_as(field, Conversion::RELAXED, &d))
-            {
-                auto value = double_to_string(d);
-
-                ss << "IF(JSON_EXTRACT(" << doc << ", '$." + key + "') IS NOT NULL, "
-                   << "JSON_VALUE(" << doc << ", '$." + key + "')" << zOp << value << ", "
-                   << value
-                   << ")";
-            }
-            else
+            if (!element_as(field, Conversion::RELAXED, &d))
             {
                 DocumentBuilder value;
                 append(value, key, field);
@@ -783,13 +767,27 @@ private:
 
                 throw SoftError(ss.str(), error::TYPE_MISMATCH);
             }
-        }
 
-        ss << ")";
+            ostringstream ss;
+            ss << "JSON_SET(" << rv << ", ";
+
+            ss << "'$." << key << "', ";
+
+            auto value = double_to_string(d);
+
+            ss << "IF(JSON_EXTRACT(" << rv << ", '$." + key + "') IS NOT NULL, "
+               << "JSON_VALUE(" << rv << ", '$." + key + "')" << zOp << value << ", "
+               << value
+               << ")";
+
+            ss << ")";
+
+            rv = ss.str();
+        }
 
         rec.flush();
 
-        return ss.str();
+        return rv;
     }
 
     string convert_min_max(const bsoncxx::document::element& element,
