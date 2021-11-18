@@ -48,7 +48,7 @@ int test_validity()
         {MXS_END_MODULE_PARAMS}
     };
 
-    CONFIG_CONTEXT ctx;
+    ConfContextMap ctx;
 
     /** Int parameter */
     TEST(config_param_is_valid(params, "p1", "1", &ctx));
@@ -113,10 +113,10 @@ int test_validity()
 
     /** Service parameter */
     CONFIG_CONTEXT svc("test-service");
-    ctx.m_next = &svc;
     config_add_param(&svc, "type", "service");
+    ctx.emplace("test-service", std::move(svc));
     TEST(config_param_is_valid(params, "p7", "test-service", &ctx));
-    TEST(!config_param_is_valid(params, "p7", "test-service", NULL));
+    TEST(!config_param_is_valid(params, "p7", "test-service", nullptr));
     TEST(!config_param_is_valid(params, "p7", "no-such-service", &ctx));
 
     /** Unique enum parameter */
@@ -159,8 +159,6 @@ int test_add_parameter()
     CONFIG_CONTEXT svc1("my-service");
     CONFIG_CONTEXT svc2("some-service");
     CONFIG_CONTEXT ctx;
-    svc2.m_next = &svc1;
-    ctx.m_next = &svc2;
     config_add_param(&svc1, "type", "service");
     config_add_param(&svc2, "type", "service");
 

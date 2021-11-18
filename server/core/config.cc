@@ -69,6 +69,7 @@
 #include "internal/service.hh"
 #include "internal/configmanager.hh"
 
+using std::move;
 using std::set;
 using std::string;
 using maxscale::Monitor;
@@ -1144,8 +1145,8 @@ bool Config::ParamThreadsCount::from_string(const std::string& value_as_string,
 }
 }
 
-static bool process_config_context(CONFIG_CONTEXT*);
-static bool check_config_objects(CONFIG_CONTEXT* context);
+static bool process_config_context(ConfContextMap& context);
+static bool check_config_objects(ConfContextMap& context);
 
 static bool check_first_last_char(const char* string, char expected);
 static void remove_first_last_char(char* value);
@@ -1235,7 +1236,7 @@ static bool is_maxscale_section(const char* section)
 }
 
 bool config_add_to_context(const std::string& source_file, CONFIG_CONTEXT::SourceType source_type,
-                           const mxb::ini::map_result::Configuration& input, CONFIG_CONTEXT* output)
+                           const mxb::ini::map_result::Configuration& input, ConfContextMap& output)
 {
     int errors = 0;
     using SourceType = CONFIG_CONTEXT::SourceType;
@@ -1255,34 +1256,31 @@ bool config_add_to_context(const std::string& source_file, CONFIG_CONTEXT::Sourc
         else
         {
             // Search for a matching header in the config.
-            CONFIG_CONTEXT* ptr = output;
-            while (ptr && strcmp(ptr->name(), header.c_str()) != 0)
-            {
-                ptr = ptr->m_next;
-            }
+            auto it = output.find(header);
 
             bool header_ok = false;
-            if (ptr)
+            if (it != output.end())
             {
                 // If the previous entry is from a static file and the new entry is from a runtime file,
                 // then overwrite. Otherwise, we have an error.
-                if (ptr->source_type == source_type)
+                auto& prev_entry = it->second;
+                if (prev_entry.source_type == source_type)
                 {
                     MXB_ERROR("Configuration section '%s' in %s configuration file '%s' is a duplicate. "
                               "Previous definition in %s file '%s'.",
                               header.c_str(), source_str(source_type), source_file.c_str(),
-                              source_str(ptr->source_type), ptr->source_file.c_str());
+                              source_str(prev_entry.source_type), prev_entry.source_file.c_str());
                 }
                 else if (source_type == SourceType::RUNTIME)
                 {
                     const char msg[] = "Overwriting configuration section '%s' from static file '%s' "
                                        "with contents from runtime file '%s'. To prevent this warning "
                                        "message, manually move the runtime changes to the static file.";
-                    MXS_WARNING(msg, header.c_str(), ptr->source_file.c_str(), source_file.c_str());
+                    MXS_WARNING(msg, header.c_str(), prev_entry.source_file.c_str(), source_file.c_str());
 
-                    ptr->source_type = source_type;
-                    ptr->source_file = source_file;
-                    ptr->m_parameters.clear();
+                    prev_entry.source_type = source_type;
+                    prev_entry.source_file = source_file;
+                    prev_entry.m_parameters.clear();
                     header_ok = true;
                 }
                 else
@@ -1293,19 +1291,21 @@ bool config_add_to_context(const std::string& source_file, CONFIG_CONTEXT::Sourc
             }
             else
             {
-                ptr = new CONFIG_CONTEXT(header);
-                ptr->source_type = source_type;
-                ptr->source_file = source_file;
-                ptr->m_next = output->m_next;
-                output->m_next = ptr;
+                // Add new entry.
+                CONFIG_CONTEXT new_ctxt(header);
+                new_ctxt.source_type = source_type;
+                new_ctxt.source_file = source_file;
 
-                if (!std::all_of(ptr->m_name.begin(), ptr->m_name.end(), [](char c) {
+                if (!std::all_of(new_ctxt.m_name.begin(), new_ctxt.m_name.end(), [](char c) {
                                      return isalnum(c) || c == '_' || c == '.' || c == '~' || c == '-';
                                  }))
                 {
                     MXS_WARNING("The name '%s' contains URL-unsafe characters, it cannot be safely used with "
-                                "the REST API or MaxCtrl.", ptr->name());
+                                "the REST API or MaxCtrl.", new_ctxt.name());
                 }
+
+                auto ret = output.emplace(header, move(new_ctxt));
+                it = ret.first;
                 header_ok = true;
             }
 
@@ -1319,6 +1319,8 @@ bool config_add_to_context(const std::string& source_file, CONFIG_CONTEXT::Sourc
             {
                 bool is_persisted = (source_type == SourceType::RUNTIME);
                 const auto& kvs = section.second.key_values;
+                auto& params_out = it->second.m_parameters;
+
                 for (const auto& kv : kvs)
                 {
                     const string& name = kv.first;
@@ -1351,7 +1353,7 @@ bool config_add_to_context(const std::string& source_file, CONFIG_CONTEXT::Sourc
                     }
                     else
                     {
-                        ptr->m_parameters.set(name, value);
+                        params_out.set(name, value);
                     }
                 }
             }
@@ -1365,7 +1367,7 @@ bool config_add_to_context(const std::string& source_file, CONFIG_CONTEXT::Sourc
 }
 
 static bool
-config_load_single_contents(const mxb::ini::map_result::Configuration& config, CONFIG_CONTEXT* cntxt)
+config_load_single_contents(const mxb::ini::map_result::Configuration& config, ConfContextMap& cntxt)
 {
     bool success = true;
 
@@ -1380,14 +1382,12 @@ config_load_single_contents(const mxb::ini::map_result::Configuration& config, C
         string reason;
         if (config_is_valid_name(section.first, &reason))
         {
-            auto new_ctx = config_context_create(section.first.c_str());
-            new_ctx->m_next = cntxt->m_next;
-            cntxt->m_next = new_ctx;
+            CONFIG_CONTEXT new_ctx(section.first);
 
-            if (is_url_unsafe(new_ctx->m_name))
+            if (is_url_unsafe(new_ctx.name()))
             {
                 MXS_WARNING("The name '%s' contains URL-unsafe characters, it cannot be safely used with "
-                            "the REST API or MaxCtrl.", new_ctx->name());
+                            "the REST API or MaxCtrl.", new_ctx.name());
             }
 
             auto& kvs = section.second.key_values;
@@ -1403,10 +1403,11 @@ config_load_single_contents(const mxb::ini::map_result::Configuration& config, C
                 }
                 else
                 {
-                    mxb_assert(!new_ctx->m_parameters.contains(name));
-                    new_ctx->m_parameters.set(name, value);
+                    mxb_assert(!new_ctx.m_parameters.contains(name));
+                    new_ctx.m_parameters.set(name, value);
                 }
             }
+            cntxt.emplace(section.first, std::move(new_ctx));
         }
         else
         {
@@ -1510,7 +1511,7 @@ int config_files_search_cb(const char* fpath, const struct stat* sb, int typefla
  * @return True, if all configuration files in the directory hierarchy could be loaded,
  *         otherwise false.
  */
-bool config_load_dir(const string& dir, CONFIG_CONTEXT::SourceType source_type, CONFIG_CONTEXT* ccontext)
+bool config_load_dir(const string& dir, CONFIG_CONTEXT::SourceType source_type, ConfContextMap& ccontext)
 {
     int nopenfd = 5;    // Maximum concurrently opened directory descriptors
 
@@ -1645,16 +1646,16 @@ static bool contains_cnf_files(const char* path)
     return rval;
 }
 
-bool export_config_file(const char* filename, CONFIG_CONTEXT& config)
+bool export_config_file(const char* filename, ConfContextMap& config)
 {
     bool rval = true;
     std::vector<CONFIG_CONTEXT*> contexts;
 
     // The config objects are stored in reverse order so first convert it back
-    // to the correct order
-    for (CONFIG_CONTEXT* ctx = config.m_next; ctx; ctx = ctx->m_next)
+    // to the correct order. TODO: preserve order somehow
+    for (auto& elem : config)
     {
-        contexts.push_back(ctx);
+        contexts.push_back(&elem.second);
     }
 
     std::ostringstream ss;
@@ -1698,12 +1699,12 @@ bool export_config_file(const char* filename, CONFIG_CONTEXT& config)
 
 bool config_load_and_process(const string& main_cfg_filepath,
                              const mxb::ini::map_result::Configuration& cfg_file_contents,
-                             CONFIG_CONTEXT& config_cntx_out)
+                             ConfContextMap& config_cntx_out)
 {
     bool rval = false;
     bool have_persisted_configs = false;
 
-    if (config_load_single_contents(cfg_file_contents, &config_cntx_out))
+    if (config_load_single_contents(cfg_file_contents, config_cntx_out))
     {
         rval = true;
 
@@ -1711,7 +1712,7 @@ bool config_load_and_process(const string& main_cfg_filepath,
         string config_dir = main_cfg_filepath + ".d";
         if (is_directory(config_dir.c_str()))
         {
-            rval = config_load_dir(config_dir, CONFIG_CONTEXT::SourceType::STATIC, &config_cntx_out);
+            rval = config_load_dir(config_dir, CONFIG_CONTEXT::SourceType::STATIC, config_cntx_out);
         }
 
         const char* persist_cnf = mxs::config_persistdir();
@@ -1733,13 +1734,13 @@ bool config_load_and_process(const string& main_cfg_filepath,
                        "These changes can override the values of the main configuration file: "
                        "To revert them, remove all the files in '%s'.", persist_cnf);
 
-            rval = config_load_dir(persist_cnf, CONFIG_CONTEXT::SourceType::RUNTIME, &config_cntx_out);
+            rval = config_load_dir(persist_cnf, CONFIG_CONTEXT::SourceType::RUNTIME, config_cntx_out);
         }
 
         if (rval)
         {
-            if (!check_config_objects(config_cntx_out.m_next)
-                || !process_config_context(config_cntx_out.m_next))
+            if (!check_config_objects(config_cntx_out)
+                || !process_config_context(config_cntx_out))
             {
                 rval = false;
                 if (have_persisted_configs)
@@ -2197,12 +2198,13 @@ bool resolve_dependencies(std::vector<CONFIG_CONTEXT*>& objects)
  * @param context The parsed configuration context
  * @return False on fatal error, true on success
  */
-static bool process_config_context(CONFIG_CONTEXT* context)
+static bool process_config_context(ConfContextMap& context)
 {
     std::vector<CONFIG_CONTEXT*> objects;
 
-    for (CONFIG_CONTEXT* obj = context; obj; obj = obj->m_next)
+    for (auto& elem : context)
     {
+        auto* obj = &elem.second;
         if (!is_maxscale_section(obj->name()))
         {
             objects.push_back(obj);
@@ -2491,22 +2493,10 @@ int64_t mxs::ConfigParameters::get_integer(const std::string& key) const
     return value.empty() ? 0 : strtoll(value.c_str(), NULL, 10);
 }
 
-void config_context_free(CONFIG_CONTEXT& context)
-{
-    CONFIG_CONTEXT* obj = context.m_next;
-    while (obj)
-    {
-        auto next = obj->m_next;
-        delete obj;
-        obj = next;
-    }
-}
-
-bool config_add_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
+void config_add_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
 {
     mxb_assert(!obj->m_parameters.contains(key));
     obj->m_parameters.set(key, value);
-    return true;
 }
 
 void mxs::ConfigParameters::set(const std::string& key, const std::string& value)
@@ -2774,12 +2764,13 @@ const char* param_type_to_str(const MXS_MODULE_PARAM* params, const char* name)
  * @param context Configuration context
  * @return True if the configuration is OK, false if errors were detected
  */
-static bool check_config_objects(CONFIG_CONTEXT* context)
+static bool check_config_objects(ConfContextMap& context)
 {
     bool rval = true;
 
-    for (CONFIG_CONTEXT* obj = context; obj; obj = obj->m_next)
+    for (auto& elem : context)
     {
+        auto* obj = &elem.second;
         if (is_maxscale_section(obj->name()))
         {
             continue;
@@ -2863,7 +2854,7 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
             }
 
             const string param_value = iter->second;
-            if (config_param_is_valid(fix_params, param_namez, param_value.c_str(), context))
+            if (config_param_is_valid(fix_params, param_namez, param_value.c_str(), &context))
             {
                 auto temp = param_value;
                 if (is_path_parameter(fix_params, param_namez))
@@ -3423,20 +3414,17 @@ int create_new_filter(CONFIG_CONTEXT* obj)
     return valid;
 }
 
-static bool config_contains_type(const CONFIG_CONTEXT* ctx, const char* name,
-                                 std::set<std::string> types)
+static bool config_contains_type(const ConfContextMap& ctx, const string& name,
+                                 const std::set<std::string>& types)
 {
-    while (ctx)
+    bool rval = false;
+    auto it = ctx.find(name);
+    if (it != ctx.end())
     {
-        if (strcmp(ctx->name(), name) == 0 && types.count(ctx->m_parameters.get_string(CN_TYPE)))
-        {
-            return true;
-        }
-
-        ctx = ctx->m_next;
+        string section_type = it->second.m_parameters.get_string(CN_TYPE);
+        rval = types.count(section_type) > 0;
     }
-
-    return false;
+    return rval;
 }
 
 void fix_serverlist(char* value)
@@ -3511,7 +3499,7 @@ void config_fix_param(const MXS_MODULE_PARAM* params, const string& name, string
 bool config_param_is_valid(const MXS_MODULE_PARAM* params,
                            const char* key,
                            const char* value,
-                           const CONFIG_CONTEXT* context)
+                           const ConfContextMap* context)
 {
     bool valid = false;
     char fixed_value[strlen(value) + 1];
@@ -3684,7 +3672,7 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
                 break;
 
             case MXS_MODULE_PARAM_SERVICE:
-                if ((context && config_contains_type(context, fixed_value, {CN_SERVICE}))
+                if ((context && config_contains_type(*context, fixed_value, {CN_SERVICE}))
                     || (!context && service_find(fixed_value)))
                 {
                     valid = true;
@@ -3692,7 +3680,7 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
                 break;
 
             case MXS_MODULE_PARAM_SERVER:
-                if ((context && config_contains_type(context, fixed_value, {CN_SERVER}))
+                if ((context && config_contains_type(*context, fixed_value, {CN_SERVER}))
                     || (!context && ServerManager::find_by_unique_name(fixed_value)))
                 {
                     valid = true;
@@ -3700,7 +3688,7 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
                 break;
 
             case MXS_MODULE_PARAM_TARGET:
-                if ((context && config_contains_type(context, fixed_value, {CN_SERVER, CN_SERVICE}))
+                if ((context && config_contains_type(*context, fixed_value, {CN_SERVER, CN_SERVICE}))
                     || (!context && mxs::Target::find(fixed_value)))
                 {
                     valid = true;
@@ -3714,7 +3702,7 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
 
                     for (const auto& elem : names)
                     {
-                        if ((context && !config_contains_type(context, elem.c_str(), {CN_SERVER}))
+                        if ((context && !config_contains_type(*context, elem.c_str(), {CN_SERVER}))
                             || (!context && !ServerManager::find_by_unique_name(elem)))
                         {
                             valid = false;
@@ -3731,7 +3719,8 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
 
                     for (const auto& elem : names)
                     {
-                        if ((context && !config_contains_type(context, elem.c_str(), {CN_SERVER, CN_SERVICE}))
+                        if ((context
+                             && !config_contains_type(*context, elem.c_str(), {CN_SERVER, CN_SERVICE}))
                             || (!context && !mxs::Target::find(elem)))
                         {
                             valid = false;

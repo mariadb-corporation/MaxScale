@@ -2042,7 +2042,7 @@ int main(int argc, char** argv)
 
             if (use_static_cnf)
             {
-                CONFIG_CONTEXT config_context;
+                ConfContextMap config_context;
                 if (!config_load_and_process(cnf_file_path, cfg_file_read_res.config, config_context))
                 {
                     print_alert("Failed to open, read or process the MaxScale configuration "
@@ -2051,7 +2051,6 @@ int main(int argc, char** argv)
                               cnf_file_path.c_str());
                     rc = MAXSCALE_BADCONFIG;
                     maxscale_shutdown();
-                    config_context_free(config_context);
                     return;
                 }
 
@@ -2066,11 +2065,8 @@ int main(int argc, char** argv)
 
                     rc = MAXSCALE_SHUTDOWN;
                     maxscale_shutdown();
-                    config_context_free(config_context);
                     return;
                 }
-
-                config_context_free(config_context);
             }
             else
             {

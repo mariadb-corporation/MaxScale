@@ -44,7 +44,6 @@ public:
 
     std::string           m_name;           /**< The name of the object being configured */
     mxs::ConfigParameters m_parameters;     /**< The list of parameter values */
-    CONFIG_CONTEXT*       m_next {nullptr}; /**< Next pointer in the linked list */
 
     enum class SourceType
     {
@@ -60,6 +59,8 @@ public:
         return m_name.c_str();
     }
 };
+
+using ConfContextMap = std::map<std::string, CONFIG_CONTEXT>;
 
 /**
  * @brief Add default parameters for a module to the configuration context
@@ -87,7 +88,7 @@ void config_add_defaults(mxs::ConfigParameters* dest, const MXS_MODULE_PARAM* pa
  */
 bool config_load_and_process(const std::string& main_cfg_filepath,
                              const mxb::ini::map_result::Configuration& cfg_file_contents,
-                             CONFIG_CONTEXT& config_cntx_out);
+                             ConfContextMap& config_cntx_out);
 
 /**
  * Apply the [maxscale]-section from the main configuration file.
@@ -106,21 +107,13 @@ bool apply_main_config(const mxb::ini::map_result::Configuration& config);
 CONFIG_CONTEXT* config_context_create(const char* section);
 
 /**
- * @brief Free a configuration context
- *
- * @param context The context to free
- */
-void config_context_free(CONFIG_CONTEXT& context);
-
-/**
  * @brief Add a parameter to a configuration context
  *
  * @param obj Context where the parameter should be added
  * @param key Key to add
  * @param value Value for the key
- * @return True on success, false on memory allocation error
  */
-bool config_add_param(CONFIG_CONTEXT* obj, const char* key, const char* value);
+void config_add_param(CONFIG_CONTEXT* obj, const char* key, const char* value);
 
 /**
  * @brief Replace an existing parameter
@@ -173,7 +166,7 @@ void fix_object_name(std::string& name);
  *
  * @return True if configuration was successfully exported
  */
-bool export_config_file(const char* filename, CONFIG_CONTEXT& config);
+bool export_config_file(const char* filename, ConfContextMap& config);
 
 /**
  * Generate configuration file contents out of module configuration parameters. Only parameters defined
@@ -243,7 +236,7 @@ bool missing_required_parameters(const MXS_MODULE_PARAM* mod_params,
  * @return True if config was valid.
  */
 bool config_add_to_context(const std::string& source_file, CONFIG_CONTEXT::SourceType source_type,
-                           const mxb::ini::map_result::Configuration& input, CONFIG_CONTEXT* output);
+                           const mxb::ini::map_result::Configuration& input, ConfContextMap& output);
 
 /**
  * Enable or disable masking of passwords
@@ -276,4 +269,4 @@ bool config_mask_passwords();
 bool config_param_is_valid(const MXS_MODULE_PARAM* params,
                            const char* key,
                            const char* value,
-                           const CONFIG_CONTEXT* context);
+                           const ConfContextMap* context);
