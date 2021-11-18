@@ -2535,6 +2535,7 @@ void MariaDBClientConnection::perform_check_token(AuthType auth_type)
         // Add only the true authentication failures into listener's host blocking counters. This way internal
         // reasons (e.g. no valid master found) don't trigger blocking of hosts.
         mxs::mark_auth_as_failed(m_dcb->remote());
+        m_session->service->stats().add_failed_auth();
     }
 }
 

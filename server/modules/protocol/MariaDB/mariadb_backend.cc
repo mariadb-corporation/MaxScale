@@ -243,6 +243,8 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
     }
     else if (errcode == ER_ACCESS_DENIED_ERROR)
     {
+        m_session->service->stats().add_failed_auth();
+
         // Authentication to backend failed. MaxScale must be operating on old user account data. This
         // session will fail, but update account data.
         auto user_cache = user_account_cache();

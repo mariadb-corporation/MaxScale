@@ -220,6 +220,11 @@ void Target::Stats::remove_client_connection() const
     mxb_assert(rc > 0);
 }
 
+void Target::Stats::add_failed_auth() const
+{
+    mxb::atomic::add(&failed_auths, 1, mxb::atomic::RELAXED);
+}
+
 json_t* Target::Stats::to_json() const
 {
     json_t* stats = json_object();
@@ -229,6 +234,7 @@ json_t* Target::Stats::to_json() const
     json_object_set_new(stats, "max_connections", json_integer(n_max_connections));
     json_object_set_new(stats, "active_operations", json_integer(n_current_ops));
     json_object_set_new(stats, "routed_packets", json_integer(packets));
+    json_object_set_new(stats, "failed_auths", json_integer(failed_auths));
 
     return stats;
 }

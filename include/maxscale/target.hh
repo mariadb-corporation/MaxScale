@@ -273,11 +273,13 @@ public:
         mutable int      n_current_ops = 0;     /**< Current number of active db operations */
         mutable uint64_t packets = 0;           /**< Number of packets routed to this server */
         mutable int      n_clients_conns = 0;   /**< Current number of client connections */
+        mutable uint64_t failed_auths = 0;      /**< Number of failed authentication attempts */
 
         void add_connection() const;
         void remove_connection() const;
         void add_client_connection() const;
         void remove_client_connection() const;
+        void add_failed_auth() const;
 
         json_t* to_json() const;
     };
