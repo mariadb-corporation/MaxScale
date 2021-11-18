@@ -1404,7 +1404,7 @@ export default {
             return loading_tbl_creation_info
         },
         getAlteredActiveNode: (state, getters) => {
-            const { altered_active_node = null } = getters.getTblCreationInfo
+            const { altered_active_node = {} } = getters.getTblCreationInfo
             return altered_active_node
         },
         // exe_stmt_result_map getters

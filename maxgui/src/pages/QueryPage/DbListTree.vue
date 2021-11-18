@@ -204,13 +204,17 @@ export default {
         // Use either getActiveTreeNode or getAlteredActiveNode
         activeNodes: {
             get() {
-                if (this.getAlteredActiveNode) return [this.getAlteredActiveNode]
-                else return [this.getActiveTreeNode]
+                let nodes = []
+                if (this.$typy(this.getAlteredActiveNode, 'id').safeString)
+                    nodes = [...nodes, this.getAlteredActiveNode]
+                else if (this.$typy(this.getActiveTreeNode, 'id').safeString)
+                    nodes = [...nodes, this.getActiveTreeNode]
+                return nodes
             },
             set(v) {
                 if (v.length) {
                     const activeNodes = this.minimizeNodes(v)
-                    if (this.getAlteredActiveNode) {
+                    if (this.$typy(this.getAlteredActiveNode, 'id').safeString) {
                         this.UPDATE_TBL_CREATION_INFO_MAP({
                             id: this.active_wke_id,
                             payload: {
@@ -324,7 +328,7 @@ export default {
              * If altered_active_node exists, clear it first so that
              * activeNodes can be updated
              */
-            if (this.getAlteredActiveNode)
+            if (this.$typy(this.getAlteredActiveNode, 'id').safeString)
                 // Clear altered active node
                 this.UPDATE_TBL_CREATION_INFO_MAP({
                     id: this.active_wke_id,
