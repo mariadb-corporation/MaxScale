@@ -638,6 +638,31 @@ public:
     static bool is_supported(const string& name);
 
 private:
+    static string build_document_hierarchy(const string& key, const string& value)
+    {
+        ostringstream ss;
+
+        ss << "JSON_OBJECT(";
+
+        auto i = key.find('.');
+
+        if (i == string::npos)
+        {
+            ss << "\"" + key + "\", " << value;
+        }
+        else
+        {
+            string head = key.substr(0, i);
+            string tail = key.substr(i + 1);
+
+            ss << "\"" << head << "\", " << build_document_hierarchy(tail, value);
+        }
+
+        ss << ")";
+
+        return ss.str();
+    }
+
     static string set_value(const string& doc,
                             string consumed_path,
                             string remaining_path,
@@ -768,19 +793,13 @@ private:
                 throw SoftError(ss.str(), error::TYPE_MISMATCH);
             }
 
-            ostringstream ss;
-            ss << "JSON_SET(" << rv << ", ";
-
-            ss << "'$." << key << "', ";
-
             auto value = double_to_string(d);
+            auto modified_value = "JSON_VALUE(" + rv + ", '$." + key + "')" + zOp + value;
 
-            ss << "IF(JSON_EXTRACT(" << rv << ", '$." + key + "') IS NOT NULL, "
-               << "JSON_VALUE(" << rv << ", '$." + key + "')" << zOp << value << ", "
-               << value
-               << ")";
-
-            ss << ")";
+            ostringstream ss;
+            ss << "IF(JSON_EXTRACT(" << rv << ", '$." << key << "') IS NOT NULL, "
+               << "JSON_SET(" << rv << ", '$." << key << "', " << modified_value << "), "
+               << "JSON_MERGE_PATCH(" << rv << ", " << build_document_hierarchy(key, value) << "))";
 
             rv = ss.str();
         }
