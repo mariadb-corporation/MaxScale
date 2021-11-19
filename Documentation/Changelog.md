@@ -8,6 +8,12 @@
 * Most filters can now be reconfigured at runtime
 * Synchronous mode for the Tee filter
 * New `list queries` command for MaxCtrl that lists all active queries
+* MaxScale can read client user accounts from a file and map them to backend
+  users. See service setting
+  [user_accounts_file](Getting-Started/Configuration-Guide.md#user_accounts_file)
+  and listener setting
+  [user_mapping_file](Getting-Started/Configuration-Guide.md#user_mapping_file)
+  for more information.
 
 For more details, please refer to:
 * [MariaDB MaxScale 6.2.0 Release Notes](Release-Notes/MaxScale-6.2.0-Release-Notes.md)
