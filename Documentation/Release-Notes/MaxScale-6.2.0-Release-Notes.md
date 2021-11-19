@@ -23,7 +23,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 * [MXS-3680](https://jira.mariadb.org/browse/MXS-3680) Multiple SQL connections
 * [MXS-3675](https://jira.mariadb.org/browse/MXS-3675) History/favorite queries
 * [MXS-3659](https://jira.mariadb.org/browse/MXS-3659) Show Slave Status in GUI
-* [MXS-3645](https://jira.mariadb.org/browse/MXS-3645) Make Transaction Performance Monitoring Filter non-experimental
+* [MXS-3645](https://jira.mariadb.org/browse/MXS-3645) Transaction Performance Monitoring Filter functionality moved to Qlafilter
 * [MXS-3639](https://jira.mariadb.org/browse/MXS-3639) Show Stored procedures and Triggers  in schema tree
 * [MXS-3638](https://jira.mariadb.org/browse/MXS-3638) Multi-tab query editor
 * [MXS-3636](https://jira.mariadb.org/browse/MXS-3636) Filter result by specific column
