@@ -9,7 +9,25 @@ For more details, please refer to:
   have been removed. The first two were ineffective, the latter three are
   replaced by `master_conditions` and `slave_conditions`.
 
-## MariaDB MaxScale 6
+## MariaDB MaxScale 6.2
+
+* Significant improvements and feature additions to MaxGUI
+* Significant improvements to nosqlprotocol
+* Transaction Performance Monitoring Filter functionality moved to Qlafilter
+* Most filters can now be reconfigured at runtime
+* Synchronous mode for the Tee filter
+* New `list queries` command for MaxCtrl that lists all active queries
+* MaxScale can read client user accounts from a file and map them to backend
+  users. See service setting
+  [user_accounts_file](Getting-Started/Configuration-Guide.md#user_accounts_file)
+  and listener setting
+  [user_mapping_file](Getting-Started/Configuration-Guide.md#user_mapping_file)
+  for more information.
+
+For more details, please refer to:
+* [MariaDB MaxScale 6.2.0 Release Notes](Release-Notes/MaxScale-6.2.0-Release-Notes.md)
+
+## MariaDB MaxScale 6.1
 
 * The versioning scheme has changed; earlier this would have been version 2.6.
 * A `nosqlprotocol` protocol module that implements the MongoDB® wire protocol

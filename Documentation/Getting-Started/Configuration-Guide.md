@@ -1855,7 +1855,7 @@ An example users file is below.
 
 ### `user_accounts_file_usage`
 
-Defines when *user_accounts_file* is read. The value an enum, either
+Defines when *user_accounts_file* is read. The value is an enum, either
 "add_when_load_ok" (default) or "file_only_always".
 
 "add_when_load_ok" means that the file is only read when users are successfully
