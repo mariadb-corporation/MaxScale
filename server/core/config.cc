@@ -1554,9 +1554,12 @@ int config_cb(const char* fpath, const struct stat* sb, int typeflag, struct FTW
                 mxb_assert(current_dcontext);
                 mxb_assert(current_ccontext);
 
-                if (strcmp(filename, "maxscale.cnf") == 0 && !config_load_global(fpath))
+                if (this_unit.is_persisted_config && strcmp(filename, "maxscale.cnf") == 0)
                 {
-                    rval = -1;
+                    if (!config_load_global(fpath))
+                    {
+                        rval = -1;
+                    }
                 }
                 else if (!config_load_single_file(fpath, current_dcontext, current_ccontext))
                 {
