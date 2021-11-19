@@ -96,14 +96,15 @@ int main(int argc, char* argv[])
     std::thread([&test]() {
                     sleep(3);
                     test.repl->block_node(0);
+                    test.maxscale->wait_for_monitor();
                 }).detach();
 
-    test.expect(!conn.query("SELECT @@last_insert_id, SLEEP(10)"),
+    test.expect(!conn.query("SELECT @@last_insert_id, SLEEP(15)"),
                 "Master read should fail when sub-service fails");
     test.expect(!conn.query("SELECT 1"), "Subsequent read after failure should fail");
 
     test.repl->unblock_node(0);
-    test.maxscale->wait_for_monitor();
+    test.maxscale->wait_for_monitor(2);
 
     test.expect(conn.connect(), "Reconnection should work: %s", conn.error());
     test.expect(conn.query("SELECT 1"), "Read after reconnection should work: %s", conn.error());
