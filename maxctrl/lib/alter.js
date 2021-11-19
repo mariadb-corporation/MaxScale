@@ -98,7 +98,7 @@ function updateParams(host, resource, val, extra) {
   var params = {};
 
   keys.forEach((k, i) => {
-    params[k] = parseValue(values[i]);
+    _.set(params, k, parseValue(values[i]));
   });
 
   return updateValue(host, resource, "data.attributes.parameters", params);

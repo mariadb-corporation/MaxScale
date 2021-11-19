@@ -313,7 +313,7 @@ private:
         if (m_query_queue.empty() || gwbuf_is_replayed(buffer.get()))
         {
             if (m_expected_responses == 0
-                || route_info().load_data_state() == mariadb::QueryClassifier::LOAD_DATA_ACTIVE
+                || route_info().load_data_state() != mariadb::QueryClassifier::LOAD_DATA_INACTIVE
                 || route_info().large_query())
             {
                 // Not currently doing anything or we're processing a multi-packet query
