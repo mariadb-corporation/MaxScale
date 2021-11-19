@@ -1,6 +1,15 @@
 # Changelog
 
-## MariaDB MaxScale 6
+## MariaDB MaxScale 6.2
+
+* Significant improvements and feature additions to MaxGUI
+* Significant improvements to nosqlprotocol
+* Transaction Performance Monitor filter is now non-experimental
+
+For more details, please refer to:
+* [MariaDB MaxScale 6.2.0 Release Notes](Release-Notes/MaxScale-6.2.0-Release-Notes.md)
+
+## MariaDB MaxScale 6.1
 
 * The versioning scheme has changed; earlier this would have been version 2.6.
 * A `nosqlprotocol` protocol module that implements the MongoDB® wire protocol
