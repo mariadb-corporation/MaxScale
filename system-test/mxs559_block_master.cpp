@@ -49,13 +49,13 @@ int main(int argc, char* argv[])
         sleep(sleep_interval);
 
         test.reset_timeout();
-        test.tprintf("Block master");
+        test.log_printf("Block master");
         test.repl->block_node(0);
 
         sleep(sleep_interval);
 
         test.reset_timeout();
-        test.tprintf("Unblock master");
+        test.log_printf("Unblock master");
         test.repl->unblock_node(0);
     }
 
@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
         thr.join();
     }
 
-    test.tprintf("Check that replication works");
+    test.log_printf("Check that replication works");
     auto& mxs = *test.maxscale;
     mxs.wait_for_monitor();
     mxs.check_servers_status({mxt::ServerInfo::master_st, mxt::ServerInfo::slave_st});
