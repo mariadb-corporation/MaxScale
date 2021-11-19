@@ -86,6 +86,14 @@ R"(\" RATE_LIMIT 3 30
 71963974)";
     const char gauth_secret_path[] = "/tmp/.google_authenticator";
 
+    // The MariaDB SystemD service doesn't allow CAP_SETGID or CAP_SETUID unless we remove
+    // CapabilityBoundingSet from it. Not super pretty but it seems to work.
+    const char remove_cap_limits[] =
+        R"(
+sed -i 's/CapabilityBoundingSet/#CapabilityBoundingSet/' /lib/systemd/system/mariadb.service;
+systemctl daemon-reload;
+systemctl restart mariadb;)";
+
     const char write_file_fmt[] = "printf \"%s\" > %s";
     const string create_pam_conf_mxs_cmd = string_printf(write_file_fmt, pam_config_mxs_contents.c_str(),
                                                          pam_config_file_path.c_str());
@@ -126,6 +134,7 @@ R"(\" RATE_LIMIT 3 30
             {
                 MYSQL* conn = test.repl->nodes[i];
                 test.try_query(conn, "%s", install_plugin);
+                test.repl->ssh_node_f(i, true, "%s", remove_cap_limits);
                 test.repl->ssh_node_f(i, true, "%s", install_google_auth);
                 test.repl->ssh_node_f(i, true, "%s", add_user_cmd.c_str());
                 test.repl->ssh_node_f(i, true, "%s", add_pw_cmd.c_str());
