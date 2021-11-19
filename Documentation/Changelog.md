@@ -4,7 +4,7 @@
 
 * Significant improvements and feature additions to MaxGUI
 * Significant improvements to nosqlprotocol
-* Transaction Performance Monitor filter is now non-experimental
+* Transaction Performance Monitoring Filter functionality moved to Qlafilter
 
 For more details, please refer to:
 * [MariaDB MaxScale 6.2.0 Release Notes](Release-Notes/MaxScale-6.2.0-Release-Notes.md)
