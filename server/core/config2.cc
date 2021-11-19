@@ -722,7 +722,7 @@ void insert_value(mxs::ConfigParameters& params, const char* zName, json_t* pVal
         break;
 
     case JSON_INTEGER:
-        params.set(zName, std::to_string(json_real_value(pValue)));
+        params.set(zName, std::to_string(json_integer_value(pValue)));
         break;
 
     case JSON_REAL:

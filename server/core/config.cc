@@ -1651,10 +1651,12 @@ int config_cb(const char* fpath, const struct stat* sb, int typeflag, struct FTW
                 {
                     // If the file looks like the main config file (likely runtime-generated?),
                     // apply the main "maxscale"-section first.
-                    if (strcmp(filename, "maxscale.cnf") == 0
-                        && !apply_main_config(load_res.config))
+                    if (this_unit.is_persisted_config && strcmp(filename, "maxscale.cnf") == 0)
                     {
-                        success = false;
+                        if (!apply_main_config(load_res.config))
+                        {
+                            success = false;
+                        }
                     }
 
                     if (success && !config_load_single_file(fpath, current_dcontext, current_ccontext,
