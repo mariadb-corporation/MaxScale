@@ -5,6 +5,9 @@
 * Significant improvements and feature additions to MaxGUI
 * Significant improvements to nosqlprotocol
 * Transaction Performance Monitoring Filter functionality moved to Qlafilter
+* Most filters can now be reconfigured at runtime
+* Synchronous mode for the Tee filter
+* New `list queries` command for MaxCtrl that lists all active queries
 
 For more details, please refer to:
 * [MariaDB MaxScale 6.2.0 Release Notes](Release-Notes/MaxScale-6.2.0-Release-Notes.md)
