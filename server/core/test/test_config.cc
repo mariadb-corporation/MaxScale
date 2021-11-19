@@ -20,6 +20,7 @@
 #include "../internal/config.hh"
 
 using namespace std;
+auto def_source_type = ConfigSection::SourceType::MAIN;
 
 #define TEST(a) do {if (!(a)) {printf("Error: `" #a "` was not true\n"); return 1;}} while (false)
 
@@ -112,7 +113,7 @@ int test_validity()
     TEST(!config_param_is_valid(params, "p10", "4711ms", &ctx));
 
     /** Service parameter */
-    ConfigSection svc("test-service");
+    ConfigSection svc("test-service", def_source_type);
     config_add_param(&svc, "type", "service");
     ctx.emplace("test-service", std::move(svc));
     TEST(config_param_is_valid(params, "p7", "test-service", &ctx));
@@ -156,9 +157,9 @@ int test_add_parameter()
     };
 
 
-    ConfigSection svc1("my-service");
-    ConfigSection svc2("some-service");
-    ConfigSection ctx;
+    ConfigSection svc1("my-service", def_source_type);
+    ConfigSection svc2("some-service", def_source_type);
+    ConfigSection ctx("test", def_source_type);
     config_add_param(&svc1, "type", "service");
     config_add_param(&svc2, "type", "service");
 
@@ -207,7 +208,7 @@ int test_required_parameters()
         {MXS_END_MODULE_PARAMS}
     };
 
-    ConfigSection ctx;
+    ConfigSection ctx("test", ConfigSection::SourceType::MAIN);
 
     TEST(missing_required_parameters(params, ctx.m_parameters, "test"));
     config_add_defaults(&ctx.m_parameters, params);

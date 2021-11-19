@@ -39,19 +39,21 @@ extern const char* config_pre_parse_global_params[];
  */
 struct ConfigSection
 {
-    ConfigSection(std::string section = "");
-
-    std::string           m_name;           /**< The name of the object being configured */
-    mxs::ConfigParameters m_parameters;     /**< The list of parameter values */
-
     enum class SourceType
     {
-        STATIC,
-        RUNTIME
+        MAIN,       /**< Main config file, may contain [maxscale] */
+        ADDITIONAL, /**< Additional config files located in the .d-directory */
+        RUNTIME     /**< Runtime generated files. Can contain any section and will overwrite existing. */
     };
 
-    SourceType  source_type {SourceType::STATIC};   /**< Source file type */
-    std::string source_file;                        /**< Source file path */
+    ConfigSection(std::string header, SourceType source_type);
+    ConfigSection(std::string header, SourceType source_type, std::string source_file);
+
+    const std::string m_name;                           /**< The name of the object being configured */
+    const SourceType  source_type {SourceType::MAIN};   /**< Source file type */
+    const std::string source_file;                      /**< Source file path */
+
+    mxs::ConfigParameters m_parameters;     /**< The list of parameter values */
 
     const char* name() const
     {
@@ -209,14 +211,14 @@ bool missing_required_parameters(const MXS_MODULE_PARAM* mod_params,
 /**
  * Check and add contents of config file to config context object.
  *
- * @param source_file Source filename. Used for log messages.
+ * @param type Source filename. Used for log messages.
  * @param source_type Source file type
  * @param input Source object
  * @param output Destination object
  *
  * @return True if config was valid.
  */
-bool config_add_to_context(const std::string& source_file, ConfigSection::SourceType source_type,
+bool config_add_to_context(const std::string& type, ConfigSection::SourceType source_type,
                            const mxb::ini::map_result::Configuration& input, ConfigSectionMap& output);
 
 /**

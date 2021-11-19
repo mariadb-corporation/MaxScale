@@ -76,7 +76,7 @@ bool test_load_config(const char* input, Server* server)
     ConfigSectionMap ccontext;
     auto load_res = mxb::ini::parse_config_file_to_map(input);
     if (config_add_to_context(input,
-                              ConfigSection::SourceType::STATIC, load_res.config, ccontext))
+                              ConfigSection::SourceType::ADDITIONAL, load_res.config, ccontext))
     {
         auto& obj = ccontext.begin()->second;
         auto& params2 = obj.m_parameters;

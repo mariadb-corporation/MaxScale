@@ -93,7 +93,6 @@ constexpr char CN_ADMIN_SSL_VERSION[] = "admin_ssl_version";
 constexpr char CN_AUTO[] = "auto";
 constexpr char CN_DEBUG[] = "debug";
 constexpr char CN_DUMP_LAST_STATEMENTS[] = "dump_last_statements";
-constexpr char CN_GATEWAY[] = "gateway";
 constexpr char CN_LOAD_PERSISTED_CONFIGS[] = "load_persisted_configs";
 constexpr char CN_LOCAL_ADDRESS[] = "local_address";
 constexpr char CN_LOG_DEBUG[] = "log_debug";
@@ -1194,8 +1193,16 @@ const char* config_pre_parse_global_params[] =
     NULL
 };
 
-ConfigSection::ConfigSection(string section)
-    : m_name(std::move(section))
+ConfigSection::ConfigSection(string header, SourceType source_type)
+    : m_name(std::move(header))
+    , source_type(source_type)
+{
+}
+
+ConfigSection::ConfigSection(std::string header, SourceType source_type, std::string source_file)
+    : m_name(move(header))
+    , source_type(source_type)
+    , source_file(move(source_file))
 {
 }
 
@@ -1217,19 +1224,26 @@ static bool is_empty_string(const string& str)
     return std::all_of(str.begin(), str.end(), isspace);
 }
 
-static bool is_maxscale_section(const char* section)
-{
-    return strcasecmp(section, CN_GATEWAY) == 0 || strcasecmp(section, CN_MAXSCALE) == 0;
-}
-
 bool config_add_to_context(const std::string& source_file, ConfigSection::SourceType source_type,
                            const mxb::ini::map_result::Configuration& input, ConfigSectionMap& output)
 {
-    int errors = 0;
-    using SourceType = ConfigSection::SourceType;
-    auto source_str = [](SourceType source_type) {
-            return (source_type == SourceType::STATIC) ? "static" : "runtime";
+    using Type = ConfigSection::SourceType;
+    auto type_to_str = [](Type type) {
+            switch (type)
+            {
+            case Type::MAIN:
+                return "main";
+
+            case Type::ADDITIONAL:
+                return "additional";
+
+            case Type::RUNTIME:
+                return "runtime";
+            }
+            return "";
         };
+
+    int errors = 0;
 
     for (const auto& section : input)
     {
@@ -1248,47 +1262,47 @@ bool config_add_to_context(const std::string& source_file, ConfigSection::Source
             bool header_ok = false;
             if (it != output.end())
             {
-                // If the previous entry is from a static file and the new entry is from a runtime file,
-                // then overwrite. Otherwise, we have an error.
+                // If the previous entry is from a static file (main or additional) and the new entry is
+                // from a runtime file, then overwrite. Otherwise, we have an error.
                 auto& prev_entry = it->second;
-                if (prev_entry.source_type == source_type)
+                auto prev_type = prev_entry.source_type;
+                if ((prev_type == Type::MAIN || prev_type == Type::ADDITIONAL)
+                    && source_type == Type::RUNTIME)
                 {
-                    MXB_ERROR("Configuration section '%s' in %s configuration file '%s' is a duplicate. "
-                              "Previous definition in %s file '%s'.",
-                              header.c_str(), source_str(source_type), source_file.c_str(),
-                              source_str(prev_entry.source_type), prev_entry.source_file.c_str());
-                }
-                else if (source_type == SourceType::RUNTIME)
-                {
-                    const char msg[] = "Overwriting configuration section '%s' from static file '%s' "
+                    const char msg[] = "Overwriting configuration section '%s' from %s file '%s' "
                                        "with contents from runtime file '%s'. To prevent this warning "
-                                       "message, manually move the runtime changes to the static file.";
-                    MXS_WARNING(msg, header.c_str(), prev_entry.source_file.c_str(), source_file.c_str());
+                                       "message, manually move the runtime changes to the %s file.";
+                    auto* prev_type_str = type_to_str(prev_type);
+                    MXS_WARNING(msg, header.c_str(), prev_type_str, prev_entry.source_file.c_str(),
+                                source_file.c_str(), prev_type_str);
 
-                    prev_entry.source_type = source_type;
-                    prev_entry.source_file = source_file;
-                    prev_entry.m_parameters.clear();
+                    output.erase(it);
+                    ConfigSection replacement(header, source_type, source_file);
+                    auto res = output.emplace(header, move(replacement));
+                    it = res.first;
                     header_ok = true;
                 }
                 else
                 {
-                    // Should not happen, runtime files are processed after static.
-                    mxb_assert(!true);
+                    MXB_ERROR("Configuration section '%s' in %s file '%s' is a duplicate. "
+                              "Previous definition in %s file '%s'.",
+                              header.c_str(), type_to_str(source_type), source_file.c_str(),
+                              type_to_str(prev_type), prev_entry.source_file.c_str());
                 }
             }
             else
             {
                 // Add new entry.
-                ConfigSection new_ctxt(header);
-                new_ctxt.source_type = source_type;
-                new_ctxt.source_file = source_file;
+                ConfigSection new_ctxt(header, source_type, source_file);
 
-                if (!std::all_of(new_ctxt.m_name.begin(), new_ctxt.m_name.end(), [](char c) {
-                                     return isalnum(c) || c == '_' || c == '.' || c == '~' || c == '-';
-                                 }))
+                auto is_url_char = [](char c) {
+                        return isalnum(c) || c == '_' || c == '.' || c == '~' || c == '-';
+                    };
+                if (!std::all_of(new_ctxt.m_name.begin(), new_ctxt.m_name.end(), is_url_char))
                 {
-                    MXS_WARNING("The name '%s' contains URL-unsafe characters, it cannot be safely used with "
-                                "the REST API or MaxCtrl.", new_ctxt.name());
+                    MXS_WARNING("Configuration section name '%s' in %s file '%s' contains URL-unsafe "
+                                "characters. It cannot be safely used with the REST API or MaxCtrl.",
+                                new_ctxt.name(), type_to_str(source_type), source_file.c_str());
                 }
 
                 auto ret = output.emplace(header, move(new_ctxt));
@@ -1296,15 +1310,17 @@ bool config_add_to_context(const std::string& source_file, ConfigSection::Source
                 header_ok = true;
             }
 
-            if (header_ok && is_maxscale_section(header.c_str()) && source_type == SourceType::STATIC)
+            if (header_ok && header == CN_MAXSCALE && source_type == Type::ADDITIONAL)
             {
-                MXS_ERROR("The [maxscale] section must only be defined in the root configuration file.");
+                MXB_ERROR("Additional configuration file '%s' contains a [maxscale] section. Only the main "
+                          "configuration file or a runtime file may contain this section.",
+                          source_file.c_str());
                 header_ok = false;
             }
 
             if (header_ok)
             {
-                bool is_persisted = (source_type == SourceType::RUNTIME);
+                bool is_persisted = (source_type == Type::RUNTIME);
                 const auto& kvs = section.second.key_values;
                 auto& params_out = it->second.m_parameters;
 
@@ -1334,7 +1350,7 @@ bool config_add_to_context(const std::string& source_file, ConfigSection::Source
                         else
                         {
                             MXS_ERROR("Empty value given to parameter '%s' in %s file '%s'.",
-                                      name.c_str(), source_str(source_type), source_file.c_str());
+                                      name.c_str(), type_to_str(source_type), source_file.c_str());
                             errors++;
                         }
                     }
@@ -1351,59 +1367,6 @@ bool config_add_to_context(const std::string& source_file, ConfigSection::Source
         }
     }
     return errors == 0;
-}
-
-static bool
-config_load_single_contents(const mxb::ini::map_result::Configuration& config, ConfigSectionMap& cntxt)
-{
-    bool success = true;
-
-    auto is_url_unsafe = [](const string& str) {
-            return !std::all_of(str.begin(), str.end(), [](char c) {
-                                    return isalnum(c) || c == '_' || c == '.' || c == '~' || c == '-';
-                                });
-        };
-
-    for (const auto& section : config)
-    {
-        string reason;
-        if (config_is_valid_name(section.first, &reason))
-        {
-            ConfigSection new_ctx(section.first);
-
-            if (is_url_unsafe(new_ctx.name()))
-            {
-                MXS_WARNING("The name '%s' contains URL-unsafe characters, it cannot be safely used with "
-                            "the REST API or MaxCtrl.", new_ctx.name());
-            }
-
-            auto& kvs = section.second.key_values;
-            for (const auto& kv : kvs)
-            {
-                const string& name = kv.first;
-                const string& value = kv.second.value;
-
-                if (is_empty_string(value))
-                {
-                    MXS_ERROR("Empty value given to parameter '%s'", name.c_str());
-                    success = false;
-                }
-                else
-                {
-                    mxb_assert(!new_ctx.m_parameters.contains(name));
-                    new_ctx.m_parameters.set(name, value);
-                }
-            }
-            cntxt.emplace(section.first, std::move(new_ctx));
-        }
-        else
-        {
-            MXS_ERROR("%s", reason.c_str());
-            success = false;
-        }
-    }
-
-    return success;
 }
 
 namespace
@@ -1516,16 +1479,7 @@ bool config_load_dir(const string& dir, ConfigSection::SourceType source_type, C
             auto load_res = mxb::ini::parse_config_file_to_map(file.total_path);
             if (load_res.errors.empty())
             {
-                // If the file looks like the main config file (likely runtime-generated?),
-                // apply the main "maxscale"-section first.
-                if (source_type == ConfigSection::SourceType::RUNTIME && file.filename == "maxscale.cnf"
-                    && !apply_main_config(load_res.config))
-                {
-                    success = false;
-                }
-
-                if (success
-                    && !config_add_to_context(file.total_path, source_type, load_res.config, output))
+                if (success && !config_add_to_context(file.total_path, source_type, load_res.config, output))
                 {
                     success = false;
                 }
@@ -1547,6 +1501,28 @@ bool config_load_dir(const string& dir, ConfigSection::SourceType source_type, C
                   dir.c_str(), eno, mxb_strerror(eno));
     }
     return success;
+}
+
+/**
+ * Take into use global ([maxscale]-section) configuration.
+ *
+ * @param global_params Text-form parameters
+ * @return True on success
+ */
+bool apply_global_config(const mxs::ConfigParameters& global_params)
+{
+    mxs::Config& global_config = mxs::Config::get();
+    bool rval = true;
+
+    if (!global_config.specification().validate(global_params))
+    {
+        rval = false;
+    }
+    else
+    {
+        rval = global_config.configure(global_params);
+    }
+    return rval;
 }
 }
 
@@ -1686,58 +1662,36 @@ bool config_load_and_process(const string& main_cfg_file,
                              const mxb::ini::map_result::Configuration& main_cfg_in,
                              ConfigSectionMap& output)
 {
-    bool rval = false;
-    bool have_persisted_configs = false;
+    using Type = ConfigSection::SourceType;
+    bool success = false;
 
-    if (config_load_single_contents(main_cfg_in, output))
+    if (config_add_to_context(main_cfg_file, Type::MAIN, main_cfg_in, output))
     {
-        rval = true;
+        success = true;
 
         // Search for more config files in a directory named <main_cfg_filename>.d.
         string config_dir = main_cfg_file + ".d";
         if (is_directory(config_dir.c_str()))
         {
-            rval = config_load_dir(config_dir, ConfigSection::SourceType::STATIC, output);
+            success = config_load_dir(config_dir, Type::ADDITIONAL, output);
         }
 
+        // If loading the additional config files failed, do not load runtime files.
         const char* persist_cnf = mxs::config_persistdir();
-
-        if (mxs::Config::get().load_persisted_configs
-            && is_directory(persist_cnf) && contains_cnf_files(persist_cnf))
+        if (success && mxs::Config::get().load_persisted_configs && is_directory(persist_cnf))
         {
-            /**
-             * Set the global flag that we are processing a persisted configuration.
-             * This will tell the modules whether it is OK to completely overwrite
-             * the persisted configuration when changes are made.
-             *
-             * TODO: Figure out a cleaner way to do this
-             */
-            have_persisted_configs = true;
-
-            MXS_NOTICE("Runtime configuration changes have been done to MaxScale. Loading persisted "
-                       "configuration files and applying them on top of the main configuration file. "
-                       "These changes can override the values of the main configuration file: "
-                       "To revert them, remove all the files in '%s'.", persist_cnf);
-
-            rval = config_load_dir(persist_cnf, ConfigSection::SourceType::RUNTIME, output);
+            success = config_load_dir(persist_cnf, Type::RUNTIME, output);
         }
 
-        if (rval)
+        if (success)
         {
             if (!check_config_objects(output) || !process_config_context(output))
             {
-                rval = false;
-                if (have_persisted_configs)
-                {
-                    MXS_WARNING("Persisted configuration files generated by runtime configuration "
-                                "changes were found at '%s' and at least one configuration error was "
-                                "encountered. If the errors relate to any of the persisted configuration "
-                                "files, remove the offending files and restart MaxScale.", persist_cnf);
-                }
+                success = false;
             }
         }
     }
-    return rval;
+    return success;
 }
 
 bool apply_main_config(const mxb::ini::map_result::Configuration& config)
@@ -1752,19 +1706,7 @@ bool apply_main_config(const mxb::ini::map_result::Configuration& config)
             params.set(kv.first, kv.second.value);
         }
     }
-
-    mxs::Config& global_config = mxs::Config::get();
-    bool rval = true;
-
-    if (!global_config.specification().validate(params))
-    {
-        rval = false;
-    }
-    else
-    {
-        rval = global_config.configure(params);
-    }
-    return rval;
+    return apply_global_config(params);
 }
 
 bool valid_object_type(std::string type)
@@ -2185,17 +2127,26 @@ bool resolve_dependencies(std::vector<ConfigSection*>& objects)
 static bool process_config_context(ConfigSectionMap& context)
 {
     std::vector<ConfigSection*> objects;
+    int error_count = 0;
 
     for (auto& elem : context)
     {
-        auto* obj = &elem.second;
-        if (!is_maxscale_section(obj->name()))
+        if (elem.first == CN_MAXSCALE)
         {
-            objects.push_back(obj);
+            // Apply main configuration again if it was overwritten by a runtime file.
+            if (elem.second.source_type == ConfigSection::SourceType::RUNTIME)
+            {
+                if (!apply_global_config(elem.second.m_parameters))
+                {
+                    error_count++;
+                }
+            }
+        }
+        else
+        {
+            objects.push_back(&elem.second);
         }
     }
-
-    int error_count = 0;
 
     /**
      * Build the servers first to keep them in configuration file order. As
@@ -2747,7 +2698,7 @@ static bool check_config_objects(ConfigSectionMap& context)
     for (auto& elem : context)
     {
         auto* obj = &elem.second;
-        if (is_maxscale_section(obj->name()))
+        if (obj->m_name == CN_MAXSCALE)
         {
             continue;
         }
