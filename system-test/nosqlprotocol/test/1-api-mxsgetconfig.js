@@ -41,16 +41,20 @@ describe(name, function () {
         assert.equal(rv.ok, 1);
         assert.notEqual(rv.config, undefined);
         var c = rv.config;
-        assert.notEqual(c.on_unknown_command, undefined);
         assert.notEqual(c.auto_create_databases, undefined);
         assert.notEqual(c.auto_create_tables, undefined);
-        assert.notEqual(c.id_length, undefined);
+        assert.notEqual(c.cursor_timeout, undefined);
+        assert.notEqual(c.debug, undefined);
+        assert.notEqual(c.log_unknown_command, undefined);
+        assert.notEqual(c.on_unknown_command, undefined);
         assert.notEqual(c.ordered_insert_behavior, undefined);
 
-        delete c.on_unknown_command;
         delete c.auto_create_databases;
         delete c.auto_create_tables;
-        delete c.id_length;
+        delete c.cursor_timeout;
+        delete c.debug;
+        delete c.log_unknown_command;
+        delete c.on_unknown_command;
         delete c.ordered_insert_behavior;
 
         assert.equal(Object.keys(c).length, 0);

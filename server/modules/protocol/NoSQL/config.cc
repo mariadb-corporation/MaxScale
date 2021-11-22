@@ -180,6 +180,34 @@ void Config::copy_from(const string& command, const bsoncxx::document::view& doc
     optional(command, doc, C::s_auto_create_tables.name(), &that.auto_create_tables);
 
     string s;
+
+    if (optional(command, doc, C::s_cursor_timeout.name(), &s))
+    {
+        string message;
+        if (!C::s_cursor_timeout.from_string(s, &that.cursor_timeout, &message))
+        {
+            throw SoftError(message, error::BAD_VALUE);
+        }
+    }
+
+    if (optional(command, doc, C::s_debug.name(), &s))
+    {
+        string message;
+        if (!C::s_debug.from_string(s, &that.debug, &message))
+        {
+            throw SoftError(message, error::BAD_VALUE);
+        }
+    }
+
+    if (optional(command, doc, C::s_log_unknown_command.name(), &s))
+    {
+        string message;
+        if (!C::s_log_unknown_command.from_string(s, &that.log_unknown_command, &message))
+        {
+            throw SoftError(message, error::BAD_VALUE);
+        }
+    }
+
     if (optional(command, doc, C::s_on_unknown_command.name(), &s))
     {
         string message;
@@ -198,37 +226,19 @@ void Config::copy_from(const string& command, const bsoncxx::document::view& doc
         }
     }
 
-    if (optional(command, doc, C::s_cursor_timeout.name(), &s))
-    {
-        string message;
-        if (!C::s_cursor_timeout.from_string(s, &that.cursor_timeout, &message))
-        {
-            throw SoftError(message, error::BAD_VALUE);
-        }
-    }
-
-    if (optional(command, doc, C::s_log_unknown_command.name(), &s))
-    {
-        string message;
-        if (!C::s_log_unknown_command.from_string(s, &that.log_unknown_command, &message))
-        {
-            throw SoftError(message, error::BAD_VALUE);
-        }
-    }
-
-    if (optional(command, doc, C::s_debug.name(), &s))
-    {
-        string message;
-        if (!C::s_debug.from_string(s, &that.debug, &message))
-        {
-            throw SoftError(message, error::BAD_VALUE);
-        }
-    }
-
     const auto& specification = C::specification();
 
     for (const auto& element : doc)
     {
+        auto key = static_cast<string>(element.key());
+
+        if (key == C::s_user.name() || key == C::s_password.name() || key == C::s_id_length.name())
+        {
+            ostringstream ss;
+            ss << "Configuration parameter '" << key << "', can only be changed via MaxScale.";
+            throw SoftError(ss.str(), error::NO_SUCH_KEY);
+        }
+
         if (!specification.find_param(static_cast<string>(element.key())))
         {
             ostringstream ss;
