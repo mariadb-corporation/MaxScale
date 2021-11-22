@@ -20,6 +20,7 @@
     "reports": "report | reports",
     "statistics": "statistic | statistics",
     "settings": "setting | settings",
+    "logsArchive": "Logs Archive",
     "not": "Not {action}",
     "users": "Users",
     "connections": "Connection | connections",
