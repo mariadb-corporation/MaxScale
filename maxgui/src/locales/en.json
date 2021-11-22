@@ -92,7 +92,6 @@
     "listeners": "listener | listeners",
     "relationships": "relationship | relationships",
     "maxScaleParameters": "MaxScale Parameters",
-    "maxscaleLogs": "MaxScale Logs",
     "newMessagesAvailable": "New messages available",
     "loadingLogs": "Loading logs",
     "noLogsFound": "No logs found",
