@@ -28,7 +28,7 @@ port=4008
 [NoSQL-Listener]
 type=listener
 service=RCR-Master
-protocol=nosqlprototol
-nosqlprototol.user=maxskysql
-nosqlprototol.password=skysql
+protocol=nosqlprotocol
+nosqlprotocol.user=maxskysql
+nosqlprotocol.password=skysql
 port=17017
