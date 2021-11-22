@@ -849,7 +849,8 @@ const MXS_MODULE* get_module(const std::string& name, mxs::ModuleType type)
                           "library name and module name are different.", fname.c_str());
             }
         }
-        else
+        // In some cases the error message has already been printed.
+        else if (!res.error.empty())
         {
             MXS_ERROR("%s", res.error.c_str());
         }

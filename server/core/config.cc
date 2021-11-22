@@ -1566,47 +1566,6 @@ static bool is_directory(const char* dir)
     return rval;
 }
 
-/**
- * @brief Check if a directory contains .cnf files
- *
- * @param path Path to a directory
- * @return True if the directory contained one or more .cnf files
- */
-static bool contains_cnf_files(const char* path)
-{
-    bool rval = false;
-    glob_t matches;
-    const char suffix[] = "/*.cnf";
-    char pattern[strlen(path) + sizeof(suffix)];
-
-    strcpy(pattern, path);
-    strcat(pattern, suffix);
-    int rc = glob(pattern, GLOB_NOSORT, NULL, &matches);
-
-    switch (rc)
-    {
-    case 0:
-        rval = true;
-        break;
-
-    case GLOB_NOSPACE:
-        MXS_OOM();
-        break;
-
-    case GLOB_ABORTED:
-        MXS_ERROR("Failed to read directory '%s'", path);
-        break;
-
-    default:
-        mxb_assert(rc == GLOB_NOMATCH);
-        break;
-    }
-
-    globfree(&matches);
-
-    return rval;
-}
-
 bool export_config_file(const char* filename, ConfigSectionMap& config)
 {
     bool rval = true;
@@ -1709,10 +1668,10 @@ bool apply_main_config(const mxb::ini::map_result::Configuration& config)
     return apply_global_config(params);
 }
 
-bool valid_object_type(std::string type)
+bool valid_object_type(const std::string& type)
 {
-    std::set<std::string> types {CN_SERVICE, CN_LISTENER, CN_SERVER, CN_MONITOR, CN_FILTER};
-    return types.count(type);
+    return type == CN_SERVICE || type == CN_LISTENER || type == CN_SERVER
+           || type == CN_MONITOR || type == CN_FILTER;
 }
 
 const char* get_missing_module_parameter_name(const ConfigSection* obj)
@@ -1732,32 +1691,40 @@ const char* get_missing_module_parameter_name(const ConfigSection* obj)
 
 bool is_valid_module(const ConfigSection* obj)
 {
+    using mxs::ModuleType;
+    ModuleType expected;
+    string type_str = obj->m_parameters.get_string(CN_TYPE);
+    string param_name;
+
+    if (type_str == CN_SERVICE)
+    {
+        param_name = CN_ROUTER;
+        expected = ModuleType::ROUTER;
+    }
+    else if (type_str == CN_MONITOR)
+    {
+        param_name = CN_MODULE;
+        expected = ModuleType::MONITOR;
+    }
+    else if (type_str == CN_FILTER)
+    {
+        param_name = CN_MODULE;
+        expected = ModuleType::FILTER;
+    }
+
     bool rval = true;
-    std::string type = obj->m_parameters.get_string(CN_TYPE);
-    std::string name;
 
-    if (type == CN_SERVICE)
+    if (!param_name.empty())
     {
-        name = obj->m_parameters.get_string(CN_ROUTER);
-        rval = get_module(name, mxs::ModuleType::ROUTER);
+        string param_value = obj->m_parameters.get_string(param_name);
+        if (!get_module(param_value, expected))
+        {
+            // An error is already printed by get_module, but we can print additional info.
+            MXS_ERROR("'%s' is not a valid %s for %s '%s'",
+                      param_value.c_str(), param_name.c_str(), type_str.c_str(), obj->m_name.c_str());
+            rval = false;
+        }
     }
-    else if (type == CN_MONITOR)
-    {
-        name = obj->m_parameters.get_string(CN_MODULE);
-        rval = get_module(name, mxs::ModuleType::MONITOR);
-    }
-    else if (type == CN_FILTER)
-    {
-        name = obj->m_parameters.get_string(CN_MODULE);
-        rval = get_module(name, mxs::ModuleType::FILTER);
-    }
-
-    if (!rval)
-    {
-        MXS_ERROR("Module '%s' is not a valid module name for %s '%s'",
-                  name.c_str(), type.c_str(), obj->m_name.c_str());
-    }
-
     return rval;
 }
 
@@ -2697,31 +2664,33 @@ static bool check_config_objects(ConfigSectionMap& context)
 
     for (auto& elem : context)
     {
-        auto* obj = &elem.second;
-        if (obj->m_name == CN_MAXSCALE)
+        auto& obj = elem.second;
+        if (obj.m_name == CN_MAXSCALE)
         {
             continue;
         }
 
-        std::string type = obj->m_parameters.get_string(CN_TYPE);
+        std::string type = obj.m_parameters.get_string(CN_TYPE);
+        const char* filec = obj.source_file.c_str();
 
         if (!valid_object_type(type))
         {
-            MXS_ERROR("Unknown module type for object '%s': %s", obj->name(), type.c_str());
+            MXB_ERROR("Invalid module type '%s' for object '%s' in file '%s'.",
+                      type.c_str(), obj.name(), filec);
             rval = false;
             continue;
         }
 
-        const char* no_module_defined = get_missing_module_parameter_name(obj);
-
-        if (no_module_defined)
+        const char* missing_module_def = get_missing_module_parameter_name(&obj);
+        if (missing_module_def)
         {
-            MXS_ERROR("'%s' is missing the required parameter '%s'", obj->name(), no_module_defined);
+            MXS_ERROR("'%s' in file '%s' is missing a required parameter '%s'.",
+                      obj.name(), filec, missing_module_def);
             rval = false;
             continue;
         }
 
-        if (!is_valid_module(obj))
+        if (!is_valid_module(&obj))
         {
             rval = false;
             continue;
@@ -2739,7 +2708,7 @@ static bool check_config_objects(ConfigSectionMap& context)
         mxb_assert(type == CN_MONITOR);
         const MXS_MODULE_PARAM* param_set = nullptr;
         const MXS_MODULE* mod = nullptr;
-        std::tie(param_set, mod) = get_module_details(obj);
+        std::tie(param_set, mod) = get_module_details(&obj);
 
         if (!mod)       // Error is logged in load_module
         {
@@ -2758,7 +2727,7 @@ static bool check_config_objects(ConfigSectionMap& context)
             continue;
         }
 
-        for (auto iter = obj->m_parameters.begin(); iter != obj->m_parameters.end(); ++iter)
+        for (auto iter = obj.m_parameters.begin(); iter != obj.m_parameters.end(); ++iter)
         {
             const char* param_namez = iter->first.c_str();
             const MXS_MODULE_PARAM* fix_params;
@@ -2773,8 +2742,8 @@ static bool check_config_objects(ConfigSectionMap& context)
             }
             else
             {
-                MXS_ERROR("Unknown parameter '%s' for object '%s' of type '%s'. %s",
-                          param_namez, obj->name(), type.c_str(),
+                MXS_ERROR("Unknown parameter '%s' for %s '%s' in file '%s'. %s",
+                          param_namez, type.c_str(), obj.name(), obj.source_file.c_str(),
                           closest_matching_parameter(param_namez, param_set, mod->parameters).c_str());
                 rval = false;
                 continue;
@@ -2792,19 +2761,18 @@ static bool check_config_objects(ConfigSectionMap& context)
                 {
                     config_fix_param(fix_params, param_namez, &temp);
                 }
-                obj->m_parameters.set(param_namez, temp);
+                obj.m_parameters.set(param_namez, temp);
 
-                if (param_is_deprecated(fix_params, param_namez, obj->name()))
+                if (param_is_deprecated(fix_params, param_namez, obj.name()))
                 {
-                    to_be_removed.push_back(param_namez);
+                    to_be_removed.emplace_back(param_namez);
                 }
             }
             else
             {
-                MXS_ERROR("Invalid value '%s' for parameter '%s' for object '%s' "
-                          "of type '%s' (was expecting %s)",
-                          param_value.c_str(), param_namez, obj->name(),
-                          type.c_str(),
+                MXS_ERROR("Invalid value '%s' for parameter '%s' for %s '%s' in file '%s'. "
+                          "Was expecting %s.",
+                          param_value.c_str(), param_namez, type.c_str(), obj.name(), obj.source_file.c_str(),
                           param_type_to_str(fix_params, param_namez));
                 rval = false;
             }
@@ -2812,11 +2780,11 @@ static bool check_config_objects(ConfigSectionMap& context)
 
         for (const auto& a : to_be_removed)
         {
-            config_remove_param(obj, a.c_str());
+            config_remove_param(&obj, a.c_str());
         }
 
-        if (missing_required_parameters(param_set, obj->m_parameters, obj->name())
-            || missing_required_parameters(mod->parameters, obj->m_parameters, obj->name()))
+        if (missing_required_parameters(param_set, obj.m_parameters, obj.name())
+            || missing_required_parameters(mod->parameters, obj.m_parameters, obj.name()))
         {
             rval = false;
         }
