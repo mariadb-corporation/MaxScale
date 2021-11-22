@@ -20,6 +20,7 @@ import Delete from 'icons/Delete'
 import Drain from 'icons/Drain'
 import Edit from 'icons/Edit'
 import NotFound from 'icons/NotFound'
+import Logs from 'icons/Logs'
 import Paused from 'icons/Paused'
 import QueryEditor from 'icons/QueryEditor'
 import Reports from 'icons/Reports'
@@ -70,6 +71,9 @@ export default {
     },
     notFound: {
         component: NotFound,
+    },
+    logs: {
+        component: Logs,
     },
     paused: {
         component: Paused,
