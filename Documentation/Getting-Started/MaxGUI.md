@@ -148,8 +148,7 @@ MaxScale returns 10000 rows regardless value of the LIMIT clause. In addition,
 `LIMIT` is not automatically injected into statements written in the SQL editor.
 
 ## Logs Viewer
-To access logs viewer, clicking the gear icon in the sidebar navigation
-and choose _MaxScale Logs_ tab.
+To access logs viewer, choose _Logs Archive_ in the sidebar navigation.
 
 ## Resource creation
 
