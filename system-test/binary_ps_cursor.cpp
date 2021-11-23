@@ -234,6 +234,33 @@ void test4(TestConnections& test)
     test.maxscale->close_maxscale_connections();
 }
 
+void test_mxs3801(TestConnections& test)
+{
+    test.reset_timeout();
+    auto c = test.maxscale->rwsplit();
+    test.expect(c.connect(), "Failed to connect: %s", c.error());
+
+    test.expect(c.query("CREATE OR REPLACE PROCEDURE sp() SELECT 1"),
+                "CREATE failed: %s", c.error());
+
+    MYSQL_STMT* stmt = c.stmt();
+    std::string query = "CALL sp()";
+
+    test.expect(mysql_stmt_prepare(stmt, query.c_str(), query.length()) == 0,
+                "Failed to prepare: %s", mysql_stmt_error(stmt));
+
+    unsigned long cursor_type = CURSOR_TYPE_READ_ONLY;
+    unsigned long rows = 1;
+    test.expect(mysql_stmt_attr_set(stmt, STMT_ATTR_CURSOR_TYPE, &cursor_type) == 0,
+                "Failed to set attributes: %s", mysql_stmt_error(stmt));
+
+    test.expect(mysql_stmt_execute(stmt) == 0,
+                "Failed to execute: %s", mysql_stmt_error(stmt));
+
+    mysql_stmt_close(stmt);
+    c.query("DROP PROCEDURE sp");
+}
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -252,6 +279,10 @@ int main(int argc, char** argv)
 
     cout << "Test 4: Testing multiple rows in one fetch" << endl;
     test4(test);
+    cout << "Done" << endl << endl;
+
+    cout << "Test 5: MXS-3801 single-row results do not use the requested cursor" << endl;
+    test_mxs3801(test);
     cout << "Done" << endl << endl;
 
     return test.global_result;
