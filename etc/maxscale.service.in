@@ -26,7 +26,7 @@ WatchdogSec=60s
 NotifyAccess=all
 
 # Only relevant when MaxScale is linked with -fsanitize=address
-Environment=ASAN_OPTIONS=abort_on_error=1
+Environment=ASAN_OPTIONS=abort_on_error=1:unmap_shadow_on_exit=1
 
 [Install]
 WantedBy=multi-user.target
