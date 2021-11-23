@@ -151,27 +151,4 @@ describe('Settings index', () => {
         expect(isTree).to.be.true
         expect(expandAll).to.be.true
     })
-
-    it(`Should set shouldFetchLogs to true to trigger sending
-      request to get maxscale log in log-container component
-      and fetchMaxScaleOverviewInfo`, async () => {
-        expect(wrapper.vm.$data.shouldFetchLogs).to.be.false
-        await wrapper.setData({
-            currentActiveTab: wrapper.vm.$t('maxscaleLogs'),
-        })
-        expect(wrapper.vm.$data.shouldFetchLogs).to.be.true
-        await axiosStub.should.have.been.calledWith(
-            '/maxscale?fields[maxscale]=version,commit,started_at,activated_at,uptime'
-        )
-    })
-
-    it(`Should pass necessary props to log-container component`, async () => {
-        await wrapper.setData({
-            currentActiveTab: wrapper.vm.$t('maxscaleLogs'),
-        })
-        const logContainer = wrapper.findComponent({ name: 'log-container' })
-        expect(logContainer.vm.$props.shouldFetchLogs).to.be.equals(
-            wrapper.vm.$data.shouldFetchLogs
-        )
-    })
 })

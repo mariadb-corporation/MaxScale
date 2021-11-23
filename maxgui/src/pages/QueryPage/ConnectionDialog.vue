@@ -213,7 +213,7 @@ export default {
                 ],
             },
             isFormValid: false,
-            resourceTypes: ['servers', 'services', 'listeners'],
+            resourceTypes: ['listeners', 'servers', 'services'],
             errRsrcMsg: '',
         }
     },
@@ -270,6 +270,7 @@ export default {
         isOpened(v) {
             // reset to initial state and bind this context
             if (!v) this.$nextTick(() => Object.assign(this.$data, this.$options.data.apply(this)))
+            else this.selectedResourceType = 'listeners'
         },
     },
     methods: {

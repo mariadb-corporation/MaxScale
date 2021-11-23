@@ -22,15 +22,6 @@
                             />
                         </v-col>
                     </v-tab-item>
-
-                    <v-tab-item :value="tabs[1]" class="pt-5">
-                        <v-col cols="12">
-                            <log-container
-                                :maxscaleOverviewInfo="maxscale_overview_info"
-                                :shouldFetchLogs="shouldFetchLogs"
-                            />
-                        </v-col>
-                    </v-tab-item>
                 </v-tabs-items>
             </v-tabs>
         </v-sheet>
@@ -52,42 +43,34 @@
  */
 import { mapActions, mapState } from 'vuex'
 import PageHeader from './PageHeader'
-import LogContainer from './LogContainer'
 export default {
     name: 'settings',
     components: {
         PageHeader,
-        LogContainer,
     },
     data() {
         return {
             currentActiveTab: null,
-            tabs: [this.$t('maxScaleParameters'), this.$t('maxscaleLogs')],
+            tabs: [this.$t('maxScaleParameters')],
             overridingModuleParams: [],
-            shouldFetchLogs: false,
         }
     },
     computed: {
         ...mapState({
             module_parameters: 'module_parameters',
             maxscale_parameters: state => state.maxscale.maxscale_parameters,
-            maxscale_overview_info: state => state.maxscale.maxscale_overview_info,
         }),
     },
     watch: {
         currentActiveTab: async function(val) {
             switch (val) {
                 case this.$t('maxScaleParameters'):
-                    this.shouldFetchLogs = false
                     await Promise.all([
                         this.fetchMaxScaleParameters(),
                         this.fetchModuleParameters('maxscale'),
                     ])
-                    this.processingModuleParams()
+                    this.processModuleParams()
                     break
-                case this.$t('maxscaleLogs'):
-                    this.fetchMaxScaleOverviewInfo()
-                    this.shouldFetchLogs = true
             }
         },
     },
@@ -97,9 +80,8 @@ export default {
             fetchModuleParameters: 'fetchModuleParameters',
             fetchMaxScaleParameters: 'maxscale/fetchMaxScaleParameters',
             updateMaxScaleParameters: 'maxscale/updateMaxScaleParameters',
-            fetchMaxScaleOverviewInfo: 'maxscale/fetchMaxScaleOverviewInfo',
         }),
-        processingModuleParams() {
+        processModuleParams() {
             const parameters = this.$help.lodash.cloneDeep(this.module_parameters)
             // hard code type for child parameter of log_throttling
             const log_throttingIndex = parameters.findIndex(

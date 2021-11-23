@@ -1,66 +1,33 @@
 <template>
-    <div class="log-view-container">
-        <p>
-            <span class="color text-field-text">
-                <span class="d-block mr-2"> log_source: {{ log_source }} </span>
-                {{
-                    $help.dateFormat({
-                        value: maxscaleOverviewInfo.started_at,
-                        formatType: 'DATE_RFC2822',
-                    })
-                }}
-            </span>
-        </p>
+    <v-card
+        id="scrollable-wrapper"
+        ref="scrollableWrapper"
+        :tile="false"
+        class="overflow-y-auto color no-border bg-reflection"
+        :min-height="logViewHeight"
+        :max-height="logViewHeight"
+        outlined
+        :loading="isLoading"
+    >
+        <template slot="progress">
+            <div class="d-flex flex-column align-center justify-center mt-2">
+                <v-progress-circular color="primary" indeterminate size="24" />
+                <p class="mt-1 loading-logs-text-indicator color text-field-text">
+                    {{ $t('loadingLogs') }}...
+                </p>
+            </div>
+        </template>
 
-        <log-filter @get-chosen-log-levels="chosenLogLevels = $event" />
-        <div class="log-lines-container pa-4 color bg-reflection">
-            <v-btn
-                v-if="isNotifShown"
-                class="pa-2 new-log-btn font-weight-medium px-7 text-capitalize"
-                small
-                height="36"
-                color="primary"
-                rounded
-                depressed
-                @click="clickToBottom"
-            >
-                {{ $t('newMessagesAvailable') }}!
-                <v-icon class="arrow-down" size="32">
-                    $expand
-                </v-icon>
-            </v-btn>
-
-            <v-card
-                id="scrollable-wrapper"
-                ref="scrollableWrapper"
-                :tile="false"
-                class="overflow-y-auto color no-border bg-reflection"
-                :min-height="containerHeight"
-                :max-height="containerHeight"
-                outlined
-                :loading="isLoading"
-            >
-                <template slot="progress">
-                    <div class="d-flex flex-column align-center justify-center mt-2">
-                        <v-progress-circular color="primary" indeterminate size="24" />
-                        <p class="mt-1 loading-logs-text-indicator color text-field-text">
-                            {{ $t('loadingLogs') }}...
-                        </p>
-                    </div>
-                </template>
-
-                <div ref="scrollableContent" v-scroll:#scrollable-wrapper="onScroll">
-                    <log-lines
-                        :isLoading="isLoading"
-                        :isFiltering="isFiltering"
-                        :allLogData="allLogData"
-                        :filteredLog="filteredLog"
-                    />
-                    <div ref="bottomLogLine" />
-                </div>
-            </v-card>
+        <div ref="scrollableContent" v-scroll:#scrollable-wrapper="onScroll">
+            <log-lines
+                :isLoading="isLoading"
+                :isFiltering="isFiltering"
+                :allLogData="allLogData"
+                :filteredLog="filteredLog"
+            />
+            <div ref="bottomLogLine" />
         </div>
-    </div>
+    </v-card>
 </template>
 
 <script>
@@ -76,23 +43,20 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import LogLines from './LogLines'
-import LogFilter from './LogFilter'
 import { mapActions, mapMutations, mapState } from 'vuex'
+import LogLines from './LogLines'
 
 export default {
-    name: 'log-container',
+    name: 'settings',
     components: {
         LogLines,
-        LogFilter,
     },
     props: {
-        maxscaleOverviewInfo: { type: Object, required: true },
-        shouldFetchLogs: { type: Boolean, required: true },
+        logViewHeight: { type: Number, required: true },
+        chosenLogLevels: { type: Array, required: true },
     },
     data() {
         return {
-            containerHeight: 0,
             isLoading: false,
             allLogData: [],
             filteredLog: [],
@@ -100,35 +64,27 @@ export default {
             connection: null,
             isNotifShown: false,
             isAtBottom: false,
-            chosenLogLevels: [],
         }
     },
     computed: {
-        ...mapState('maxscale', {
-            latest_logs: state => state.latest_logs,
-            prev_log_link: state => state.prev_log_link,
-            log_source: state => state.log_source,
-            prev_log_data: state => state.prev_log_data,
-            prev_filtered_log_link: state => state.prev_filtered_log_link,
-            prev_filtered_log_data: state => state.prev_filtered_log_data,
+        ...mapState({
+            latest_logs: state => state.maxscale.latest_logs,
+            prev_log_link: state => state.maxscale.prev_log_link,
+            prev_log_data: state => state.maxscale.prev_log_data,
+            prev_filtered_log_link: state => state.maxscale.prev_filtered_log_link,
+            prev_filtered_log_data: state => state.maxscale.prev_filtered_log_data,
         }),
         isFiltering: function() {
             return this.chosenLogLevels.length > 0
         },
     },
     watch: {
-        // controls by parent component
-        shouldFetchLogs: async function(val) {
-            if (val) {
-                await this.getLatestLogs()
-                await this.$nextTick(async () => {
-                    this.toBottom('auto')
-                })
-            }
+        isNotifShown(v) {
+            this.$emit('is-notif-shown', v)
         },
-        isAtBottom: function(val) {
+        isAtBottom(v) {
             // Turn off notif if scroll position is at bottom already
-            if (val) this.isNotifShown = false
+            if (v) this.isNotifShown = false
         },
         isFiltering: async function(val) {
             if (val) {
@@ -174,26 +130,22 @@ export default {
             this.prevLogData = val
         },
     },
-
     async mounted() {
-        this.setContainerHeight()
-        window.addEventListener('resize', this.setContainerHeight)
+        this.cleanUp()
         await this.getLatestLogs()
         await this.loopGetOlderLogs()
-        // go to bottom on mounted
+        // scroll to bottom of the log container
         this.toBottom('auto')
         await this.openConnection()
     },
     beforeDestroy() {
         this.cleanUp()
     },
-
     methods: {
         ...mapMutations('maxscale', ['SET_PREV_FILTERED_LOG_LINK']),
         ...mapActions('maxscale', ['fetchLatestLogs', 'fetchPrevLog', 'fetchPrevFilteredLog']),
         cleanUp() {
             if (this.connection) this.disconnect()
-            window.removeEventListener('resize', this.setContainerHeight)
         },
         /**
          * This function get latest 1000 log lines.
@@ -320,10 +272,9 @@ export default {
             }
         },
 
-        /* if scrolled position is at bottom already,
-         * scroll to bottom to see latest data. Otherwise,
-         * show notification button (let user controls scroll
-         * to bottom)
+        /* if scrolled position is at bottom position before new logs are appended,
+         * scroll to bottom to see latest data. Otherwise, how notification button
+         * (let user controls scroll to bottom)
          */
         showNotifHandler() {
             if (this.isAtBottom) this.toBottom()
@@ -340,16 +291,6 @@ export default {
          */
         isMatchedFilter(log) {
             return this.chosenLogLevels.includes(log.priority)
-        },
-
-        setContainerHeight() {
-            this.containerHeight = document.documentElement.clientHeight * 0.6
-        },
-
-        clickToBottom() {
-            this.toBottom()
-            // hide notification
-            this.isNotifShown = false
         },
 
         /**
@@ -401,15 +342,9 @@ export default {
     },
 }
 </script>
+
 <style lang="scss" scoped>
 .loading-logs-text-indicator {
     font-size: 0.825rem;
-}
-.new-log-btn {
-    position: absolute;
-    right: 50%;
-    transform: translateX(50%);
-    bottom: 6%;
-    z-index: 1;
 }
 </style>

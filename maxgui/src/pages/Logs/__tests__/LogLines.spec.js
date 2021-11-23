@@ -12,7 +12,7 @@
  */
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
-import LogLines from '@/pages/Settings/LogLines'
+import LogLines from '@/pages/Logs/LogLines'
 import { dummy_log_data } from '@tests/unit/utils'
 
 const dummyChosenLogLevels = ['debug']
