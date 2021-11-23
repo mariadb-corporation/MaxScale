@@ -19,13 +19,15 @@
         </template>
 
         <div ref="scrollableContent" v-scroll:#scrollable-wrapper="onScroll">
-            <log-lines
-                :isLoading="isLoading"
-                :isFiltering="isFiltering"
-                :allLogData="allLogData"
-                :filteredLog="filteredLog"
-            />
-            <div ref="bottomLogLine" />
+            <code class="d-block mariadb-code-style">
+                <transition-group v-if="logToShow.length" name="log-lines-wrapper" tag="pre">
+                    <log-line v-for="log in logToShow" :key="`${log.id}`" :log="log" />
+                </transition-group>
+                <div v-else-if="!isLoading">
+                    {{ $t('noLogsFound') }}
+                </div>
+                <div ref="bottomLogLine" />
+            </code>
         </div>
     </v-card>
 </template>
@@ -44,12 +46,12 @@
  * Public License.
  */
 import { mapActions, mapMutations, mapState } from 'vuex'
-import LogLines from './LogLines'
+import LogLine from './LogLine'
 
 export default {
     name: 'settings',
     components: {
-        LogLines,
+        LogLine,
     },
     props: {
         logViewHeight: { type: Number, required: true },
@@ -77,6 +79,10 @@ export default {
         isFiltering: function() {
             return this.chosenLogLevels.length > 0
         },
+        logToShow() {
+            if (this.isFiltering) return this.filteredLog
+            else return this.allLogData
+        },
     },
     watch: {
         isNotifShown(v) {
@@ -98,7 +104,6 @@ export default {
                     ...this.prevLogData.filter(log => this.chosenLogLevels.includes(log.priority)),
                     ...filteredAllLogData,
                 ])
-
                 await this.$nextTick(async () => {
                     /* TODO: instead of looping fetching older logs until scroll is
                      * scrollable, there should be a way to filter older logs in maxscale
