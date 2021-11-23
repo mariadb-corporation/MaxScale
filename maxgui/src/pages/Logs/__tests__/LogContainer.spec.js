@@ -15,19 +15,11 @@ import chai, { expect } from 'chai'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
 import mount from '@tests/unit/setup'
-import LogContainer from '@/pages/Logs'
+import LogContainer from '@/pages/Logs/LogContainer'
 import { dummy_log_data } from '@tests/unit/utils'
 
 chai.should()
 chai.use(sinonChai)
-
-const dummyMaxscaleOverviewInfo = {
-    activated_at: 'Wed, 23 Sep 2020 13:35:59 GMT',
-    commit: '5061f7bd14ea3f6dd814b704f2309f806a878a60',
-    started_at: 'Wed, 23 Sep 2020 13:35:59 GMT',
-    uptime: 404,
-    version: '2.5.4',
-}
 
 const dummyChosenLogLevels = ['warning']
 const dummyFilteredLog = dummy_log_data.filter(log => dummyChosenLogLevels.includes(log.priority))
@@ -37,8 +29,8 @@ const mountFactory = () =>
         shallow: false,
         component: LogContainer,
         props: {
-            shouldFetchLogs: false,
-            maxscaleOverviewInfo: dummyMaxscaleOverviewInfo,
+            logViewHeight: 500,
+            chosenLogLevels: [],
         },
         computed: {
             prev_log_link: () => null, // prevent loopGetOlderLogs from being called
