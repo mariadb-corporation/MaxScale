@@ -19,6 +19,7 @@ export default {
         thread_stats: [],
         threads_datasets: [],
         maxscale_parameters: {},
+        logs_page_size: 100,
         latest_logs: [],
         prev_log_link: null,
         log_source: null,
@@ -135,9 +136,11 @@ export default {
                 commit('SET_THREADS_DATASETS', dataSets)
             }
         },
-        async fetchLatestLogs({ commit }) {
+        async fetchLatestLogs({ commit, state }) {
             try {
-                const res = await this.$http.get(`/maxscale/logs/data?page[size]=1000`)
+                const res = await this.$http.get(
+                    `/maxscale/logs/data?page[size]=${state.logs_page_size}`
+                )
                 const {
                     data: { attributes: { log = [], log_source = null } = {} } = {},
                     links: { prev = null } = {},

@@ -13,27 +13,9 @@
                     @get-chosen-log-levels="chosenLogLevels = $event"
                 />
                 <div v-if="logViewHeight" class="log-lines-container pa-4 color bg-reflection">
-                    <v-btn
-                        v-if="isNotifShown"
-                        class="pa-2 new-log-btn font-weight-medium px-7 text-capitalize"
-                        small
-                        height="36"
-                        color="primary"
-                        rounded
-                        depressed
-                        @click="scrollToBottom"
-                    >
-                        {{ $t('newMessagesAvailable') }}!
-                        <v-icon class="arrow-down" size="32">
-                            $expand
-                        </v-icon>
-                    </v-btn>
-
                     <log-container
-                        ref="logContainer"
                         :logViewHeight="logViewHeight"
                         :chosenLogLevels="chosenLogLevels"
-                        @is-notif-shown="isNotifShown = $event"
                     />
                 </div>
             </div>
@@ -60,7 +42,7 @@ import LogHeader from './LogHeader'
 import LogContainer from './LogContainer.vue'
 
 export default {
-    name: 'settings',
+    name: 'logs',
     components: {
         PageHeader,
         LogHeader,
@@ -89,22 +71,6 @@ export default {
                 if (pageContentHeight) this.logViewHeight = pageContentHeight - 32
             })
         },
-
-        scrollToBottom() {
-            this.$refs.logContainer.toBottom()
-            // hide notification
-            this.isNotifShown = false
-        },
     },
 }
 </script>
-
-<style lang="scss" scoped>
-.new-log-btn {
-    position: absolute;
-    right: 50%;
-    transform: translateX(50%);
-    bottom: 6%;
-    z-index: 1;
-}
-</style>
