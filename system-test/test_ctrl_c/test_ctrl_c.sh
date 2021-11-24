@@ -10,7 +10,7 @@ fi
 
 T="$(date +%s)"
 
-sudo maxscale -d -U maxscale
+sudo ASAN_OPTIONS=detect_leaks=0 maxscale -d -U maxscale
 if [ $? -ne 0 ] ; then
 	exit 1
 fi
