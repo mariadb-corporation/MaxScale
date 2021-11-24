@@ -98,7 +98,6 @@ test_set|Meaning
 ```-I 4,4,1,25,30```|Run tests number 4, 25 and 30 (the number '1' is a 'Stride' parameter)|
 ```-I 1,10```|Run tests from 1 to 10|
 ```-L REPL_BACKED```|Run all tests with 'REPL_BACKEND' label|
-```-LE UNSTABLE```|Run all tests EXCEPT tests with 'UNSTABLE' label|
 
 If ```galera_version``` is not defined the value of ```version``` is used also for Galera backend
 

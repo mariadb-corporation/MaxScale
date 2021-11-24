@@ -224,14 +224,6 @@ macro(light_weight_tests)
   endforeach()
 endmacro()
 
-# Unstable tests. Ideally, there should be no tests with this label.
-macro(unstable_tests)
-  foreach(name IN ITEMS ${ARGN})
-    set_property(TEST ${name} PROPERTY LABELS "UNSTABLE")
-    set_property(TEST ${name} PROPERTY LABELS "HEAVY")
-  endforeach()
-endmacro()
-
 # Test utilities
 add_test_executable_notest(non_native_setup.cpp non_native_setup replication)
 add_test_executable_notest(sysbench_example.cpp sysbench_example replication)
