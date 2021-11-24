@@ -1680,3 +1680,8 @@ MXS_SESSION::EventSubscriber::~EventSubscriber()
 {
     m_session->remove_userdata_subscriber(this);
 }
+
+bool MXS_SESSION::log_is_enabled(int level) const
+{
+    return m_log_level & (1 << level) || service->log_is_enabled(level);
+}

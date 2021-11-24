@@ -140,12 +140,29 @@ public:
             return m_values;
         }
 
+        /**
+         * Get enabled log levels
+         *
+         * The returned value has one bit for each LOG_... flag, with the bits left-shifted by the value of
+         * the macro. For example, LOG_NOTICE has the value 5 which means the sixth bit is set:
+         * `1 << LOG_NOTICE == 1 << 5`
+         *
+         * @return The enabled log levels
+         */
+        int log_levels() const;
+
     private:
         bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;
 
         Values                    m_v;
         mxs::WorkerGlobal<Values> m_values;
         SERVICE*                  m_service;
+
+        // These aren't used directly so we don't need to expose them
+        bool m_log_debug;
+        bool m_log_info;
+        bool m_log_notice;
+        bool m_log_warning;
     };
 
     State  state {State::ALLOC};        /**< The service state */
@@ -231,6 +248,15 @@ public:
      * @param client Client connection to remove
      */
     virtual void unmark_for_wakeup(mxs::ClientConnection* client) = 0;
+
+    /**
+     * Whether to log a message at a specific level for this service.
+     *
+     * @param level The log level to inspect
+     *
+     * @return True if the mesage should be logged
+     */
+    virtual bool log_is_enabled(int level) const = 0;
 
     /**
      * Has a connection limit been reached?

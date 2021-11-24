@@ -1595,7 +1595,48 @@ Enable or disable the logging of authentication failures and warnings. If
 enabled, messages about failed authentication attempts will be logged with
 details about who tried to connect to MariaDB MaxScale and from where.
 
+### `log_warning`
 
+- **Type**: [boolean](#booleans)
+- **Default**: false
+- **Dynamic**: Yes
+
+When enabled, this allows a service to log warning messages even if the global
+log level configuration disables them.
+
+Note that disabling the service level logging does not override the global
+logging configuration: with `log_warning=false` in the service and
+`log_warning=true` globally, warnings will still be logged for all services.
+
+### `log_notice`
+
+- **Type**: [boolean](#booleans)
+- **Default**: false
+- **Dynamic**: Yes
+
+When enabled, this allows a service to log notice messages even if the global
+log level configuration disables them.
+
+### `log_info`
+
+- **Type**: [boolean](#booleans)
+- **Default**: false
+- **Dynamic**: Yes
+
+When enabled, this allows a service to log info messages even if the global log
+level configuration disables them.
+
+### `log_debug`
+
+- **Type**: [boolean](#booleans)
+- **Default**: false
+- **Dynamic**: Yes
+
+When enabled, this allows a service to log debug messages even if the global log
+level configuration disables them.
+
+Debug messages are only enabled for debug builds. Enabling `log_debug` in a
+release build does nothing.
 
 ### `connection_timeout`
 
