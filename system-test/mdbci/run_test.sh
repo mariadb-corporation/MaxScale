@@ -32,7 +32,7 @@
 # $do_not_destroy_vm - if 'yes' VM won't be destored afther the test
 
 # $test_set - parameters to be send to 'ctest' (e.g. '-I 1,100',
-# '-LE UNSTABLE'
+# '-LE HEAVY'
 # if $test_set starts from 'NAME#' ctest will not be executed,
 # the value of $test_set after 'NAME#' is used as bash command 
 # line

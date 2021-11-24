@@ -211,7 +211,6 @@ Most common cases:
 |-------------|:--------------------------------------------------|
 |-I 1,5,,45,77| Execute tests from 1 to 5 and tests 45 and 77|
 |-L HEAVY|Execute all tests with 'HEAVY' label|
-|-LE UNSTABLE|Execute all tests except tests with 'UNSTABLE' label|
 
 
 ### Run_test_snapshot
