@@ -231,10 +231,10 @@ describe(name, function () {
     });
 
     it('Errors on unsupported operator.', async function () {
-        var command = {update: name, updates: [{q: {}, u: { $inc: { a: 1 }}}]};
+        var command = {update: name, updates: [{q: {}, u: { $dummy: { a: 1 }}}]};
         var rv = await mxs.ntRunCommand(command);
 
-        assert.equal(rv.code, error.COMMAND_FAILED);
+        assert.equal(rv.writeErrors[0].code, error.COMMAND_FAILED);
     });
 
     it('Can update multiple documents.', async function () {

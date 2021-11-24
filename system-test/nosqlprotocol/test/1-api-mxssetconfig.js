@@ -40,18 +40,24 @@ describe(name, function () {
         await mxs.adminCommand({mxsSetConfig: c});
 
         // Valid values
-        c.on_unknown_command = 'return_empty';
-        await mxs.adminCommand({mxsSetConfig: c});
-        c.on_unknown_command = 'return_error';
-        await mxs.adminCommand({mxsSetConfig: c});
-
         c.auto_create_databases = true;
         await mxs.adminCommand({mxsSetConfig: c});
 
         c.auto_create_tables = true;
         await mxs.adminCommand({mxsSetConfig: c});
 
-        c.id_length = 80;
+        c.cursor_timeout = "60s";
+        await mxs.adminCommand({mxsSetConfig: c});
+
+        c.debug = "in,out,back";
+        await mxs.adminCommand({mxsSetConfig: c});
+
+        c.log_unknown_command = 'true';
+        await mxs.adminCommand({mxsSetConfig: c});
+
+        c.on_unknown_command = 'return_empty';
+        await mxs.adminCommand({mxsSetConfig: c});
+        c.on_unknown_command = 'return_error';
         await mxs.adminCommand({mxsSetConfig: c});
 
         c.ordered_insert_behavior = "atomic";
@@ -61,10 +67,6 @@ describe(name, function () {
 
         var rv;
         // Invalid values
-        c = { on_unknown_command: 'blah' };
-        rv = await mxs.ntAdminCommand({mxsSetConfig: c});
-        assert.equal(rv.code, error.BAD_VALUE);
-
         c = { auto_create_databases: 'blah' };
         rv = await mxs.ntAdminCommand({mxsSetConfig: c});
         assert.equal(rv.code, error.TYPE_MISMATCH);
@@ -73,7 +75,19 @@ describe(name, function () {
         rv = await mxs.ntAdminCommand({mxsSetConfig: c});
         assert.equal(rv.code, error.TYPE_MISMATCH);
 
-        c = { id_length: 0 };
+        c = { cursor_timeout: '10xyzh' };
+        rv = await mxs.ntAdminCommand({mxsSetConfig: c});
+        assert.equal(rv.code, error.BAD_VALUE);
+
+        c = { debug: 'blah' };
+        rv = await mxs.ntAdminCommand({mxsSetConfig: c});
+        assert.equal(rv.code, error.BAD_VALUE);
+
+        c = { log_unknown_command: 'blah' };
+        rv = await mxs.ntAdminCommand({mxsSetConfig: c});
+        assert.equal(rv.code, error.BAD_VALUE);
+
+        c = { on_unknown_command: 'blah' };
         rv = await mxs.ntAdminCommand({mxsSetConfig: c});
         assert.equal(rv.code, error.BAD_VALUE);
 

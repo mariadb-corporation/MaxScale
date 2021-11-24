@@ -69,7 +69,7 @@ describe(name, function () {
         var documents = [];
 
         var doc = {
-            s: new Array(16776972).join("a")
+            s: new Array(16777216).join("a")
         }
 
         documents.push(doc);
@@ -81,8 +81,8 @@ describe(name, function () {
 
         var rv = await nosql.ntRunCommand(command);
 
-        assert.notEqual(rv.ok, 1);
-        assert.notEqual(rv.$err, undefined);
+        assert.equal(rv.ok, 1);
+        assert.equal(rv.writeErrors[0].code, error.BAD_VALUE);
     });
 
     it('Can insert many big documents.', async function () {

@@ -371,7 +371,8 @@ public:
             // TODO: Not checked.
         }
 
-        m_statement = nosql::table_create_statement(table(), m_database.config().id_length);
+        bool if_not_exists = false;
+        m_statement = nosql::table_create_statement(table(), m_database.config().id_length, if_not_exists);
 
         return m_statement;
     }
