@@ -231,7 +231,19 @@ As the object names are used to form URLs in the MaxScale REST API, they must be
 safe for use in URLs. This means that only alphanumeric characters (i.e. `a-z`
 `A-Z` and `0-9`) and the special characters `_.~-` can be used.
 
+## Dynamic Parameters
+
+If a parameter is described to be dynamic, it can be modified at runtime via
+MaxCtrl or the REST API. If the parameter is not dynamic (i.e. static), it can
+only be defined at startup via the MaxScale configuration file.
+
 ## Special Parameter Types
+
+### Booleans
+
+Boolean type parameters interpret the values `true`, `yes`, `on` and `1` as
+_true_ values and `false`, `no`, `off` and `0` as _false_ values. The REST API
+only accepts JSON boolean values for boolean type parameters.
 
 ### Sizes
 
@@ -469,8 +481,12 @@ even if the duration is longer than a second.
 
 ### `passive`
 
+- **Type**: [boolean](#booleans)
+- **Default**: false
+- **Dynamic**: Yes
+
 Controls whether MaxScale is a passive node in a cluster of multiple MaxScale
-instances. The default value is false.
+instances.
 
 This parameter is intended to be used with multiple MaxScale instances that use
 failover functionality to manipulate the cluster in some form. Passive nodes
@@ -488,20 +504,21 @@ The following functionality is disabled when passive mode is enabled:
 
 ### `ms_timestamp`
 
+- **Type**: [boolean](#booleans)
+- **Default**: false
+- **Dynamic**: Yes
+
 Enable or disable the high precision timestamps in logfiles. Enabling this adds
 millisecond precision to all logfile timestamps.
 
-```
-# Valid options are:
-#       ms_timestamp=<0|1>
-ms_timestamp=1
-```
-
 ### `skip_permission_checks`
 
+- **Type**: [boolean](#booleans)
+- **Default**: false
+- **Dynamic**: Yes
+
 Skip service and monitor user permission checks. This is useful when you know
-the permissions are OK and you want to speed up the startup process. This
-parameter takes a boolean value and is disabled by default.
+the permissions are OK and you want to speed up the startup process.
 
 It is recommended to not disable the permission checks so that any missing
 privileges are detected when maxscale is starting up. If you are experiencing a
@@ -515,103 +532,83 @@ skip_permission_checks=true
 
 ### `syslog`
 
-Enable or disable the logging of messages to *syslog*.
+- **Type**: [boolean](#booleans)
+- **Default**: true
+- **Dynamic**: Yes
 
-By default logging to *syslog* is enabled.
-
-```
-# Valid options are:
-#       syslog=<0|1>
-syslog=1
-```
-
-To enable logging to syslog use the value 1 and to disable use the value 0.
+Log messages to *syslog*.
 
 ### `maxlog`
 
-Enable to disable to logging of messages to MariaDB MaxScale's log file.
+- **Type**: [boolean](#booleans)
+- **Default**: true
+- **Dynamic**: Yes
 
-By default logging to *maxlog* is enabled.
-
-```
-# Valid options are:
-#       syslog=<0|1>
-maxlog=1
-```
-
-To enable logging to the MariaDB MaxScale log file use the value 1 and to
-disable use the value 0.
+Log messages to MariaDB MaxScale's log file.
 
 ### `log_warning`
 
-Enable or disable the logging of messages whose syslog priority is *warning*.
-Messages of this priority are enabled by default.
+- **Type**: [boolean](#booleans)
+- **Default**: true
+- **Dynamic**: Yes
 
-```
-# Valid options are:
-#       log_warning=<0|1>
-log_warning=0
-```
-
-To disable these messages use the value 0 and to enable them use the value 1.
+Log messages whose syslog priority is *warning*.
 
 ### `log_notice`
 
-Enable or disable the logging of messages whose syslog priority is *notice*.
+- **Type**: [boolean](#booleans)
+- **Default**: true
+- **Dynamic**: Yes
+
+Log messages whose syslog priority is *notice*.
+
 Messages of this priority provide information about the functioning of MariaDB
-MaxScale and are enabled by default.
-
-```
-# Valid options are:
-#       log_notice=<0|1>
-log_notice=0
-```
-
-To disable these messages use the value 0 and to enable them use the value 1.
+MaxScale.
 
 ### `log_info`
 
-Enable or disable the logging of messages whose syslog priority is *info*. These
-messages provide detailed information about the internal workings of MariaDB
-MaxScale and should not, due to their frequency, be enabled, unless there is a
-specific reason for that. For instance, from these messages it will be evident,
-e.g., why a particular query was routed to the master instead of to a slave.
-These informational messages are disabled by default.
+- **Type**: [boolean](#booleans)
+- **Default**: false
+- **Dynamic**: Yes
 
-```
-# Valid options are:
-#       log_info=<0|1>
-log_info=1
-```
+Log messages whose syslog priority is *info*.
 
-To disable these messages use the value 0 and to enable them use the value 1.
+These messages provide detailed information about the internal workings of
+MariaDB MaxScale and should not, due to their frequency, be enabled, unless
+there is a specific reason for that. For instance, from these messages it will
+be evident, e.g., why a particular query was routed to the master instead of to
+a slave.
 
 ### `log_debug`
 
-Enable or disable the logging of messages whose syslog priority is *debug*. This
-kind of messages are intended for development purposes and are disabled by
+- **Type**: [boolean](#booleans)
+- **Default**: false
+- **Dynamic**: Yes
+
+Log messages whose syslog priority is *debug*.
+
+These messages are intended for development purposes and are disabled by
 default. Note that if MariaDB MaxScale has been built in release mode, then
 debug messages are excluded from the build and this setting will not have any
 effect.
 
-```
-# Valid options are:
-#       log_debug=<0|1>
-log_debug=1
-```
-
-To disable these messages use the value 0 and to enable them use the value 1.
-
 ### `log_warn_super_user`
 
-Boolean, default:false. When enabled, a warning is logged whenever a client with
-SUPER-privilege successfully authenticates. This also applies to
-COM_CHANGE_USER-commands. The setting is intended for diagnosing situations
-where a client interferes with a master server switchover. Super-users bypass
-the *read_only*-flag which switchover uses to block writes to the master. This
-setting cannot be modified during runtime.
+- **Type**: [boolean](#booleans)
+- **Default**: false
+- **Dynamic**: No
+
+When enabled, a warning is logged whenever a client with SUPER-privilege
+successfully authenticates. This also applies to COM_CHANGE_USER-commands. The
+setting is intended for diagnosing situations where a client interferes with a
+master server switchover. Super-users bypass the *read_only*-flag which
+switchover uses to block writes to the master.
 
 ### `log_augmentation`
+
+- **Type**: integer
+- **Default**: 0
+- **Dynamic**: Yes
 
 Enable or disable the augmentation of messages. If this is enabled, then each
 logged message is appended with the name of the function where the message was
@@ -894,6 +891,10 @@ server (e.g. to a slave instead of to a master).
 
 ### `substitute_variables`
 
+- **Type**: [boolean](#booleans)
+- **Default**: false
+- **Dynamic**: No
+
 Enable or disable the substitution of environment variables in the MaxScale
 configuration file. If the substitution of variables is enabled and a
 configuration line like
@@ -908,10 +909,10 @@ of the environment variable `SOME_VALUE`. Note:
   variable.
 * Referring to a non-existing environment variable is a fatal error.
 
-By default, the value of `substitute_variables` is `false`.
 ```
 substitute_variables=true
 ```
+
 The setting of `substitute_variables` will have an effect on all parameters
 in the all other sections, irrespective of where the `[maxscale]` section
 is placed in the configuration file. However, in the `[maxscale]` section,
@@ -1093,8 +1094,12 @@ to 0.
 
 ### `load_persisted_configs`
 
-Load persisted runtime changes on startup. This parameter accepts boolean values
-and is enabled by default. This parameter was added in MaxScale 2.3.6.
+- **Type**: [boolean](#booleans)
+- **Default**: true
+- **Dynamic**: No
+
+Load persisted runtime changes on startup. This parameter was added in MaxScale
+2.3.6.
 
 All runtime configuration changes are persisted in generated configuration files
 located by default in `/var/lib/maxscale/maxscale.cnf.d/` and are loaded on
@@ -1142,9 +1147,13 @@ The port where the REST API listens on. The default value is port 8989.
 
 ### `admin_auth`
 
+- **Type**: [boolean](#booleans)
+- **Default**: true
+- **Dynamic**: No
+
 Enable REST API authentication using HTTP Basic Access
 authentication. This is not a secure method of authentication without HTTPS but
-it does add a small layer of security. This option is enabled by default.
+it does add a small layer of security.
 
 For more information, read the [REST API documentation](../REST-API/API.md).
 
@@ -1186,13 +1195,20 @@ This parameter was added in MaxScale 2.5.7.
 
 ### `admin_enabled`
 
+- **Type**: [boolean](#booleans)
+- **Default**: true
+- **Dynamic**: No
+
 Enable or disable the admin interface. This allows the admin interface to
 be completely disabled to prevent access to it.
 
 ### `admin_gui`
 
-Enable or disable the admin graphical user interface. This parameter takes
-a boolean value and is enabled by default.
+- **Type**: [boolean](#booleans)
+- **Default**: true
+- **Dynamic**: No
+
+Enable or disable the admin graphical user interface.
 
 MaxScale provides a GUI for administrative operations via the REST API. When the
 GUI is enabled, the root REST API resource (i.e. `http://localhost:8989/`) will
@@ -1202,8 +1218,11 @@ health check.
 
 ### `admin_secure_gui`
 
-Whether to serve the GUI only over secure HTTPS connections. The default value
-is true.
+- **Type**: [boolean](#booleans)
+- **Default**: true
+- **Dynamic**: No
+
+Whether to serve the GUI only over secure HTTPS connections.
 
 To be secure by default, the GUI is only served over HTTPS connections as
 it uses a token authentication scheme. This also controls whether the
@@ -1214,8 +1233,11 @@ the MaxScale REST API, set this parameter to false.
 
 ### `admin_log_auth_failures`
 
-Log authentication failures for the admin interface. This parameter expects a
-boolean value and is enabled by default.
+- **Type**: [boolean](#booleans)
+- **Default**: true
+- **Dynamic**: Yes
+
+Log authentication failures for the admin interface.
 
 ### `admin_pam_readwrite_service` and `admin_pam_readonly_service`
 
@@ -1490,24 +1512,12 @@ regarding user account management and client authentication.
 
 ### `enable_root_user`
 
+- **Type**: [boolean](#booleans)
+- **Default**: false
+- **Dynamic**: Yes
+
 This parameter controls the ability of the root user to connect to MariaDB
 MaxScale and hence onwards to the backend servers via MariaDB MaxScale.
-
-The default value is `0`, disabling the ability of the root user to connect to
-MariaDB MaxScale.
-
-Example for enabling root user:
-
-```
-enable_root_user=1
-```
-
-Values of `on` or `true` may also be given to enable the root user and `off` or
-`false` may be given to disable the use of the root user.
-
-```
-enable_root_user=true
-```
 
 ### `localhost_match_wildcard_host`
 
@@ -1541,18 +1551,27 @@ and the value is ignored.
 
 ### `auth_all_servers`
 
+- **Type**: [boolean](#booleans)
+- **Default**: false
+- **Dynamic**: Yes
+
 This parameter controls whether only a single server or all of the servers are
-used when loading the users from the backend servers. This takes a boolean value
-and when enabled, creates a union of all the users and grants on all the
-servers.
+used when loading the users from the backend servers.
+
+By default MaxScale uses the first server labeled as `Master` as the source of
+the authentication data. When this option is enabled, the authentication data is
+loaded from all the servers and combined into one big data set.
 
 ### `strip_db_esc`
 
+- **Type**: [boolean](#booleans)
+- **Default**: true
+- **Dynamic**: Yes
+
 This setting controls whether escape characters (`\`) are removed from database
-names when loading user grants from a backend server. The setting takes a
-boolean value and is on by default. When enabled, a grant such as
-``grant select on `test\_`.* to 'user'@'%';`` is read as
-``grant select on `test_`.* to 'user'@'%';``
+names when loading user grants from a backend server.  When enabled, a grant
+such as ``grant select on `test\_`.* to 'user'@'%';`` is read as ``grant select
+on `test_`.* to 'user'@'%';``
 
 This setting has no effect on database-level grants fetched from a MariaDB
 Server. The database names of a MariaDB Server are compared using the LIKE
@@ -1568,12 +1587,15 @@ this might cause conflicts when MaxScale tries to authenticate users.
 
 ### `log_auth_warnings`
 
-Enable or disable the logging of authentication failures and warnings. This
-parameter takes a boolean value.
+- **Type**: [boolean](#booleans)
+- **Default**: true
+- **Dynamic**: Yes
 
-MariaDB MaxScale normally suppresses warning messages about failed
-authentication. Enabling this option will log those messages into the message
-log with details about who tried to connect to MariaDB MaxScale and from where.
+Enable or disable the logging of authentication failures and warnings. If
+enabled, messages about failed authentication attempts will be logged with
+details about who tried to connect to MariaDB MaxScale and from where.
+
+
 
 ### `connection_timeout`
 
@@ -1617,6 +1639,10 @@ max_connections=100
 ```
 
 ### `session_track_trx_state`
+
+- **Type**: [boolean](#booleans)
+- **Default**: false
+- **Dynamic**: Yes
 
 Enable or disable session transaction state tracking by offloading it to the backend servers.
 Getting current session transaction state from server side will be more accurate for that state
@@ -1717,11 +1743,14 @@ history. Currently only `readwritesplit` and `schemarouter` support it.
 
 ### `prune_sescmd_history`
 
+- **Type**: [boolean](#booleans)
+- **Default**: true
+- **Dynamic**: Yes
+
 This option enables pruning of the session command history when it exceeds the
 value configured in `max_sescmd_history`. When this option is enabled, only a
 set number of statements are stored in the history. This limits the per-session
-memory use while still allowing safe reconnections. This parameter is enabled by
-default.
+memory use while still allowing safe reconnections.
 
 This parameter is intended to be used with pooled connections that remain in use
 for a very long time. Most connection pool implementations do not reset the
@@ -1752,6 +1781,10 @@ can be configured for all routers that support the session command
 history. Currently only `readwritesplit` and `schemarouter` support it.
 
 ### `disable_sescmd_history`
+
+- **Type**: [boolean](#booleans)
+- **Default**: false
+- **Dynamic**: Yes
 
 This option disables the session command history. This way no history is stored
 and if a slave server fails, the router will not try to replace the failed
@@ -2014,7 +2047,11 @@ the DCB will be discarded and the connection closed.
 
 ### `proxy_protocol`
 
-If `proxy_protocol` is set to `on`, MaxScale will send a
+- **Type**: [boolean](#booleans)
+- **Default**: false
+- **Dynamic**: Yes
+
+If `proxy_protocol` is enabled, MaxScale will send a
 [PROXY protocol](http://www.haproxy.org/download/1.8/doc/proxy-protocol.txt)
 header when connecting client sessions to the server. The header contains the
 original client IP address and port, as seen by MaxScale. The server will then
@@ -2387,9 +2424,12 @@ the TLS can be enabled after creation but it cannot be disabled or altered.
 
 ### `ssl`
 
-This enables SSL connections when set to true. The parameter takes a boolean
-value and is disabled by default. The legacy values `required` and `disabled`
-were removed in MaxScale 6.0.
+- **Type**: [boolean](#booleans)
+- **Default**: false
+- **Dynamic**: Yes
+
+This enables SSL connections when set to true. The legacy values `required` and
+`disabled` were removed in MaxScale 6.0.
 
 If enabled, the certificate files mentioned above must also be
 supplied. MaxScale connections to will then be encrypted with TLS/SSL.
@@ -2460,8 +2500,11 @@ make sure the peer is who they claim to be. For listeners, this behaves as if
 
 ### `ssl_verify_peer_host`
 
-Peer host verification. This parameter takes a boolean value and is disabled by
-default.
+- **Type**: [boolean](#booleans)
+- **Default**: false
+- **Dynamic**: Yes
+
+Peer host verification.
 
 When this feature is enabled, the peer hostname or IP is verified against the
 certificate that is sent by the peer. If the IP address or the hostname does not
