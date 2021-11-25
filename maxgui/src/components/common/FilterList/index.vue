@@ -8,24 +8,29 @@
         :close-on-content-click="false"
     >
         <template v-slot:activator="{ on, attrs, value }">
-            <v-btn
-                x-small
-                class="text-capitalize font-weight-medium"
-                outlined
-                depressed
-                color="accent-dark"
-                v-bind="attrs"
-                v-on="on"
-            >
-                {{ label }}
-                <v-icon
-                    size="24"
+            <slot name="activator" :data="{ on, attrs, value, label }">
+                <v-btn
+                    x-small
+                    class="text-capitalize font-weight-medium"
+                    outlined
+                    depressed
                     color="accent-dark"
-                    :class="{ 'column-list-toggle--active': value }"
+                    v-bind="attrs"
+                    v-on="on"
                 >
-                    arrow_drop_down
-                </v-icon>
-            </v-btn>
+                    <v-icon size="12" color="accent-dark" class="mr-1">
+                        $vuetify.icons.filter
+                    </v-icon>
+                    {{ label }}
+                    <v-icon
+                        size="24"
+                        color="accent-dark"
+                        :class="{ 'column-list-toggle--active': value }"
+                    >
+                        arrow_drop_down
+                    </v-icon>
+                </v-btn>
+            </slot>
         </template>
         <v-list max-width="220px" :max-height="maxHeight" class="column-list">
             <v-list-item class="px-0" dense>
@@ -101,7 +106,7 @@
  it returns selected objects.
  */
 export default {
-    name: 'columns-list',
+    name: 'filter-list',
     props: {
         value: { type: Array, required: true },
         label: { type: String, required: true },

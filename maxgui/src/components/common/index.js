@@ -30,6 +30,7 @@ import MTreeVIew from './MTreeView'
 import VirtualScrollTable from './VirtualScrollTable'
 import TruncateString from './TruncateString'
 import SubMenu from './SubMenu'
+import FilterList from './FilterList'
 
 export default {
     'page-wrapper': PageWrapper,
@@ -49,4 +50,5 @@ export default {
     'virtual-scroll-table': VirtualScrollTable,
     'truncate-string': TruncateString,
     'sub-menu': SubMenu,
+    'filter-list': FilterList,
 }

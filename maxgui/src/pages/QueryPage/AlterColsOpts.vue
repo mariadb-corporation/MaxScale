@@ -43,7 +43,7 @@
                 </template>
                 <span>{{ $t('addNewCol') }}</span>
             </v-tooltip>
-            <column-list
+            <filter-list
                 v-model="selectedColSpecs"
                 returnObject
                 :label="$t('alterSpecs')"
@@ -178,13 +178,11 @@
 import { mapState } from 'vuex'
 import column_types from './column_types'
 import ColumnInput from './ColumnInput.vue'
-import ColumnList from './ColumnList.vue'
 import { check_charset_support, check_UN_ZF_support, check_AI_support } from './colOptHelpers'
 export default {
     name: 'alter-cols-opts',
     components: {
         'column-input': ColumnInput,
-        'column-list': ColumnList,
     },
     props: {
         value: { type: Object, required: true },

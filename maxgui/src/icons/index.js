@@ -19,6 +19,7 @@ import Database from 'icons/Database'
 import Delete from 'icons/Delete'
 import Drain from 'icons/Drain'
 import Edit from 'icons/Edit'
+import Filter from 'icons/Filter.vue'
 import NotFound from 'icons/NotFound'
 import Logs from 'icons/Logs'
 import Paused from 'icons/Paused'
@@ -68,6 +69,9 @@ export default {
     },
     edit: {
         component: Edit,
+    },
+    filter: {
+        component: Filter,
     },
     notFound: {
         component: NotFound,
