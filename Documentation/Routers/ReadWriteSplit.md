@@ -587,18 +587,6 @@ modifications done by the client itself.
   addition to this, the `session_track_system_variables` parameter must include
   `last_gtid` in its list of tracked system variables.
 
-**Note:** This feature does not work with prepared statements. Only SQL
-  statements executed individually (inside a COM_QUERY packet) can be handled by
-  the causal read mechanism.
-
-**Note:** This feature does not work with Galera or any other non-standard
-  replication mechanisms. As Galera does not update the `gtid_slave_pos`
-  variable when events are replicated via the Galera library, the
-  [`MASTER_GTID_WAIT`](https://mariadb.com/kb/en/library/master_gtid_wait/)
-  function used by MaxScale to synchronize reads will wait until the
-  timeout. With Galera this is not a serious issue as it, by nature, is a
-  mostly-synchronous replication mechanism.
-
 The possible values for this parameter are:
 
 * `none` (default)
@@ -706,6 +694,24 @@ Message:  Causal read timed out while in a read-only transaction, cannot retry c
 
 Older versions of MaxScale attempted to retry the command on the current master
 server which would cause the connection to be closed and a warning to be logged.
+
+#### Limitations of Causal Reads
+
+- This feature does not work with prepared statements. Only SQL
+  statements executed individually (inside a COM_QUERY packet) can be handled by
+  the causal read mechanism.
+
+- This feature does not work with Galera or any other non-standard
+  replication mechanisms. As Galera does not update the `gtid_slave_pos`
+  variable when events are replicated via the Galera library, the
+  [`MASTER_GTID_WAIT`](https://mariadb.com/kb/en/library/master_gtid_wait/)
+  function used by MaxScale to synchronize reads will wait until the
+  timeout. With Galera this is not a serious issue as it, by nature, is a
+  mostly-synchronous replication mechanism.
+
+- If the combination of the original SQL statement and the modifications
+  added to it by readwritesplit exceed the maximum packet size (16777213 bytes),
+  the causal read will not be attempted and a non-causal read is done instead.
 
 ### `causal_reads_timeout`
 
