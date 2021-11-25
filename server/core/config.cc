@@ -1472,6 +1472,10 @@ bool config_load_dir(const string& dir, ConfigSection::SourceType source_type, C
     if (rc == 0)
     {
         success = true;
+        // Substitution does not apply to runtime files as it's not supposed to work with REST-API.
+        bool substitute_vars = mxs::Config::get().substitute_variables
+            && source_type != ConfigSection::SourceType::RUNTIME;
+
         for (auto it = file_list.begin(); it != file_list.end() && success; it++)
         {
             auto& file = *it;
@@ -1479,6 +1483,19 @@ bool config_load_dir(const string& dir, ConfigSection::SourceType source_type, C
             auto load_res = mxb::ini::parse_config_file_to_map(file.total_path);
             if (load_res.errors.empty())
             {
+                if (substitute_vars)
+                {
+                    auto errors = maxbase::ini::substitute_env_vars(load_res.config);
+                    if (!errors.empty())
+                    {
+                        string errmsg = mxb::string_printf("Variable substitution to file '%s' failed. ",
+                                                           file.total_path.c_str());
+                        errmsg += mxb::create_list_string(errors, " ");
+                        MXB_ERROR("%s", errmsg.c_str());
+                        success = false;
+                    }
+                }
+
                 if (success && !config_add_to_context(file.total_path, source_type, load_res.config, output))
                 {
                     success = false;
