@@ -11,7 +11,6 @@ add_library(maxscale-common SHARED
   config_runtime.cc
   configmanager.cc
   dcb.cc
-  encryption.cc
   event.cc
   externcmd.cc
   filter.cc

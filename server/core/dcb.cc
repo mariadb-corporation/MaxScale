@@ -48,10 +48,8 @@
 #include <maxbase/atomic.h>
 #include <maxbase/atomic.hh>
 #include <maxscale/clock.h>
-#include <maxscale/limits.h>
 #include <maxscale/listener.hh>
 #include <maxscale/mainworker.hh>
-#include <maxscale/poll.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol2.hh>
 #include <maxscale/router.hh>

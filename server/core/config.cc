@@ -46,7 +46,6 @@
 #include <maxscale/clock.h>
 #include <maxscale/http.hh>
 #include <maxscale/json_api.hh>
-#include <maxscale/limits.h>
 #include <maxscale/log.hh>
 #include <maxscale/maxscale.h>
 #include <maxscale/paths.hh>
@@ -1103,6 +1102,7 @@ bool Config::ParamThreadsCount::from_string(const std::string& value_as_string,
                                             value_type* pValue,
                                             std::string* pMessage) const
 {
+    const int MXS_MAX_ROUTING_THREADS = 100;
     bool rv = true;
 
     if (value_as_string == CN_AUTO)

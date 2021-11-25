@@ -26,7 +26,6 @@
 #include <maxscale/cn_strings.hh>
 #include <maxscale/config.hh>
 #include <maxscale/clock.h>
-#include <maxscale/limits.h>
 #include <maxscale/mainworker.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/utils.hh>
@@ -35,10 +34,9 @@
 #include "internal/modules.hh"
 #include "internal/poll.hh"
 #include "internal/server.hh"
-#include "internal/service.hh"
 #include "internal/session.hh"
 
-#define WORKER_ABSENT_ID -1
+#define WORKER_ABSENT_ID (-1)
 
 using maxbase::AverageN;
 using maxbase::Semaphore;
@@ -51,7 +49,7 @@ using std::stringstream;
 
 namespace
 {
-
+const int MXS_MAX_THREADS = 128;    // The maximum number of threads/workers.
 /**
  * Unit variables.
  */
