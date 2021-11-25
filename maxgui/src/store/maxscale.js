@@ -144,9 +144,8 @@ export default {
         },
         async fetchLatestLogs({ commit, state }) {
             try {
-                const priority = state.chosen_log_levels.join(',')
                 const res = await this.$http.get(
-                    `/maxscale/logs/data?page[size]=${state.logs_page_size}&priority=${priority}`
+                    `/maxscale/logs/data?page[size]=${state.logs_page_size}`
                 )
                 const {
                     data: { attributes: { log = [], log_source = null } = {} } = {},
@@ -170,7 +169,6 @@ export default {
             try {
                 const indexOfEndpoint = state.prev_log_link.indexOf('/maxscale/logs/')
                 const endpoint = state.prev_log_link.slice(indexOfEndpoint)
-                //TODO: use chosen_log_levels for current priority
                 const res = await this.$http.get(endpoint)
                 const {
                     data: { attributes: { log = [] } = {} } = {},
@@ -183,15 +181,22 @@ export default {
             }
         },
 
-        // TODO: add filter params once maxscale supports it
         async fetchPrevFilteredLog({ commit, state }) {
             try {
+                const currPriority = state.chosen_log_levels.join(',')
                 const prevLink = state.prev_filtered_log_link
                     ? state.prev_filtered_log_link
                     : state.prev_log_link
                 const indexOfEndpoint = prevLink.indexOf('/maxscale/logs/')
-                const endpoint = prevLink.slice(indexOfEndpoint)
-                //TODO: use chosen_log_levels for current priority
+                const prevEndPoint = prevLink.slice(indexOfEndpoint)
+                let endpoint = ''
+                if (prevEndPoint.includes('&priority')) {
+                    // remove old priority from prevEndPoint
+                    let regex = /(alert|debug|error|info|notice|warning),?/g
+                    const tmp = prevEndPoint.replace(regex, '')
+                    // add current priority
+                    endpoint = tmp.replace(/priority=/g, `priority=${currPriority}`)
+                } else endpoint = `${prevEndPoint}&priority=${currPriority}`
                 const res = await this.$http.get(endpoint)
                 const {
                     data: { attributes: { log = [] } = {} } = {},
