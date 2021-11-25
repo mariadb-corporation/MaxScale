@@ -70,7 +70,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions, mapState } from 'vuex'
+import { mapActions, mapMutations, mapState } from 'vuex'
 import VirtualList from 'vue-virtual-scroll-list'
 import LogLine from './LogLine'
 export default {
@@ -91,26 +91,52 @@ export default {
             finished: false,
             allLogData: [],
             prevLogData: [],
+            filteredLogData: [],
             isNotifShown: false,
             isAtBottom: false,
         }
     },
     computed: {
         ...mapState({
+            MAXSCALE_LOG_LEVELS: state => state.app_config.MAXSCALE_LOG_LEVELS,
             logs_page_size: state => state.maxscale.logs_page_size,
             latest_logs: state => state.maxscale.latest_logs,
             prev_log_link: state => state.maxscale.prev_log_link,
             prev_log_data: state => state.maxscale.prev_log_data,
             chosen_log_levels: state => state.maxscale.chosen_log_levels,
+            prev_filtered_log_link: state => state.maxscale.prev_filtered_log_link,
+            prev_filtered_log_data: state => state.maxscale.prev_filtered_log_data,
         }),
         logToShow() {
-            return this.allLogData
+            if (this.isFiltering) return this.filteredLogData
+            else return this.allLogData
+        },
+        isFiltering: function() {
+            /* Default chosen_log_levels length is equal to the length of MAXSCALE_LOG_LEVELS
+             * so, if it's not equal, then user's filtering logs
+             */
+            return this.chosen_log_levels.length !== this.MAXSCALE_LOG_LEVELS.length
         },
     },
     watch: {
         prev_log_data: function(val) {
             // assign prev_log_data when it changes
             this.prevLogData = val
+        },
+        chosen_log_levels: {
+            deep: true,
+            async handler(v) {
+                if (v.length && this.isFiltering) {
+                    // filter allLogData based on chosen_log_levels and assign it to filteredLogData
+                    this.filteredLogData = this.allLogData.filter(log =>
+                        this.chosen_log_levels.includes(log.priority)
+                    )
+                } else {
+                    this['SET_PREV_FILTERED_LOG_LINK'](null)
+                    this.filteredLogData = []
+                }
+                this.$nextTick(() => this.setVirtualListToBottom())
+            },
         },
     },
     async created() {
@@ -126,7 +152,8 @@ export default {
         this.cleanUp()
     },
     methods: {
-        ...mapActions('maxscale', ['fetchLatestLogs', 'fetchPrevLog']),
+        ...mapActions('maxscale', ['fetchLatestLogs', 'fetchPrevLog', 'fetchPrevFilteredLog']),
+        ...mapMutations('maxscale', ['SET_PREV_FILTERED_LOG_LINK']),
         /**
          * This function get latest log line
          * It assigns latest_logs to allLogData
@@ -161,7 +188,12 @@ export default {
         async onTotop() {
             if (this.isFetching || this.finished) return
             this.isFetching = true
-            await this.handleUnionPrevLogs()
+            if (this.isFiltering) {
+                await this.handleUnionPrevFilteredLogs()
+                // Check overflow to auto fetch older logs to enough logs so that the container is overflow
+                this.checkOverFlow()
+                if (!this.overflow) await this.loopGetOlderLogs()
+            } else await this.handleUnionPrevLogs()
             this.isFetching = false
         },
 
@@ -190,8 +222,14 @@ export default {
                 const newEntry = JSON.parse(e.data)
 
                 this.allLogData = Object.freeze([...this.allLogData, newEntry])
-                //TODO: Filter incoming log by chosen_log_levels
-                this.$nextTick(() => this.showNotifHandler())
+
+                if (this.isFiltering && this.isMatchedFilter(newEntry))
+                    this.filteredLogData = Object.freeze([...this.filteredLogData, newEntry])
+
+                this.$nextTick(() => {
+                    if (!this.isFiltering | (this.isFiltering && this.isMatchedFilter(newEntry)))
+                        this.showNotifHandler()
+                })
             }
         },
         disconnect() {
@@ -202,6 +240,7 @@ export default {
             if (this.connection) this.disconnect()
         },
 
+        //TODO: DRY below union handlers
         /**
          * This function handles unioning prevLogData to current allLogData.
          * and preserves current scrolling position
@@ -213,18 +252,26 @@ export default {
             } else await this.fetchPrevLog()
             const ids = this.getIds(this.prevLogData)
             this.allLogData = this.$help.lodash.unionBy(this.prevLogData, this.allLogData, 'id')
-            this.$nextTick(() => {
-                const vsl = this.$refs.vsl
-                const offset = ids.reduce((previousValue, currentID) => {
-                    const previousSize =
-                        typeof previousValue === 'string'
-                            ? vsl.getSize(previousValue)
-                            : previousValue
-                    return previousSize + this.$refs.vsl.getSize(currentID)
-                })
-                this.setVirtualListToOffset(offset)
-            })
+            this.$nextTick(() => this.preserveScrollHeight(ids))
             this.prevLogData = [] // clear logs as it has been prepended to allLogData
+        },
+        /**
+         * This function handles unioning prev filtered log to current filteredLog
+         * and preserves current scrolling position
+         */
+        async handleUnionPrevFilteredLogs() {
+            if (this.prev_filtered_log_link || this.prev_log_link) {
+                await this.fetchPrevFilteredLog()
+                this.filteredLogData = Object.freeze(
+                    this.$help.lodash.unionBy(
+                        this.prev_filtered_log_data,
+                        this.filteredLogData,
+                        'id'
+                    )
+                )
+                const ids = this.getIds(this.prev_filtered_log_data)
+                this.$nextTick(() => this.preserveScrollHeight(ids))
+            }
         },
 
         /**
@@ -235,12 +282,14 @@ export default {
          * multiple log lines in maxscale is now ignored.
          */
         async loopGetOlderLogs() {
-            while (!this.overflow && this.prev_log_link) {
+            const prevLink = this.prev_filtered_log_link || this.prev_log_link
+            while (!this.overflow && prevLink) {
                 this.isFetching = true
-                await this.handleUnionPrevLogs()
-                this.$nextTick(() => {
-                    this.checkOverFlow()
-                })
+                this.isFiltering
+                    ? await this.handleUnionPrevFilteredLogs()
+                    : await this.handleUnionPrevLogs()
+
+                this.$nextTick(() => this.checkOverFlow())
             }
             this.isFetching = false
         },
@@ -266,6 +315,29 @@ export default {
          * @returns returns boolean
          */
         checkIsAtBottom: e => e.target.clientHeight === e.target.scrollHeight - e.target.scrollTop,
+        /**
+         * @param {Object} log - log object
+         */
+        isMatchedFilter(log) {
+            return this.chosen_log_levels.includes(log.priority)
+        },
+        /**
+         * @param {Array} ids - ids of new items to be prepended
+         */
+        preserveScrollHeight(ids) {
+            if (ids.length) {
+                const vsl = this.$refs.vsl
+                const offset = ids.reduce((previousValue, currentID) => {
+                    const previousSize =
+                        typeof previousValue === 'string'
+                            ? vsl.getSize(previousValue)
+                            : previousValue
+                    return previousSize + this.$refs.vsl.getSize(currentID)
+                })
+                this.setVirtualListToOffset(offset)
+            }
+            //TODO: Handle when ids is empty
+        },
     },
 }
 </script>
