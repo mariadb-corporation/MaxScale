@@ -252,7 +252,7 @@ export default {
             } else await this.fetchPrevLog()
             const ids = this.getIds(this.prevLogData)
             this.allLogData = this.$help.lodash.unionBy(this.prevLogData, this.allLogData, 'id')
-            this.$nextTick(() => this.preserveScrollHeight(ids))
+            if (ids.length) this.$nextTick(() => this.preserveScrollHeight(ids))
             this.prevLogData = [] // clear logs as it has been prepended to allLogData
         },
         /**
@@ -270,7 +270,9 @@ export default {
                     )
                 )
                 const ids = this.getIds(this.prev_filtered_log_data)
-                this.$nextTick(() => this.preserveScrollHeight(ids))
+                if (ids.length) this.$nextTick(() => this.preserveScrollHeight(ids))
+                // recursive until prev_filtered_log_link is null
+                else await this.handleUnionPrevFilteredLogs()
             }
         },
 
@@ -325,18 +327,13 @@ export default {
          * @param {Array} ids - ids of new items to be prepended
          */
         preserveScrollHeight(ids) {
-            if (ids.length) {
-                const vsl = this.$refs.vsl
-                const offset = ids.reduce((previousValue, currentID) => {
-                    const previousSize =
-                        typeof previousValue === 'string'
-                            ? vsl.getSize(previousValue)
-                            : previousValue
-                    return previousSize + this.$refs.vsl.getSize(currentID)
-                })
-                this.setVirtualListToOffset(offset)
-            }
-            //TODO: Handle when ids is empty
+            const vsl = this.$refs.vsl
+            const offset = ids.reduce((previousValue, currentID) => {
+                const previousSize =
+                    typeof previousValue === 'string' ? vsl.getSize(previousValue) : previousValue
+                return previousSize + this.$refs.vsl.getSize(currentID)
+            })
+            this.setVirtualListToOffset(offset)
         },
     },
 }
