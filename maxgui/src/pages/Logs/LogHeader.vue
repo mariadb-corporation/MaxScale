@@ -11,7 +11,7 @@
         </div>
         <v-spacer />
         <div>
-            <log-filter :style="{ width: '210px' }" v-on="$listeners" />
+            <log-filter v-model="chosenLogLevels" :style="{ width: '210px' }" />
         </div>
     </div>
 </template>
@@ -37,13 +37,20 @@ export default {
         LogFilter,
     },
     data() {
-        return {}
+        return {
+            chosenLogLevels: [],
+        }
     },
     computed: {
         ...mapState({
             maxscale_overview_info: state => state.maxscale.maxscale_overview_info,
             log_source: state => state.maxscale.log_source,
         }),
+    },
+    watch: {
+        chosenLogLevels(v) {
+            this.$emit('get-chosen-log-levels', v)
+        },
     },
 }
 </script>

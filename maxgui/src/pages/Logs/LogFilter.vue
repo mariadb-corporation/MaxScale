@@ -1,29 +1,35 @@
 <template>
-    <v-select
+    <filter-list
         v-model="chosenLogLevels"
-        multiple
-        :items="allLogLevels"
-        outlined
-        dense
-        :height="36"
-        class="std mariadb-select-input"
-        :menu-props="{ contentClass: 'mariadb-select-v-menu', bottom: true, offsetY: true }"
-        placeholder="Filter by"
-        clearable
-        @change="updateValue"
+        returnObject
+        :label="$t('filterBy')"
+        :cols="allLogLevels"
+        :maxHeight="400"
     >
-        <template v-slot:selection="{ item, index }">
-            <span v-if="index === 0" class="v-select__selection v-select__selection--comma">
-                {{ item }}
-            </span>
-            <span
-                v-if="index === 1"
-                class="v-select__selection v-select__selection--comma color text-caption text-field-text "
+        <template v-slot:activator="{ data: { on, attrs, value, label } }">
+            <v-btn
+                small
+                class="text-capitalize font-weight-medium"
+                outlined
+                depressed
+                color="accent-dark"
+                v-bind="attrs"
+                v-on="on"
             >
-                (+{{ chosenLogLevels.length - 1 }} {{ $t('others') }})
-            </span>
+                <v-icon size="16" color="accent-dark" class="mr-1">
+                    $vuetify.icons.filter
+                </v-icon>
+                {{ label }}
+                <v-icon
+                    size="24"
+                    color="accent-dark"
+                    :class="{ 'column-list-toggle--active': value }"
+                >
+                    arrow_drop_down
+                </v-icon>
+            </v-btn>
         </template>
-    </v-select>
+    </filter-list>
 </template>
 <script>
 /*
@@ -40,18 +46,33 @@
  */
 export default {
     name: 'log-filter',
-
+    props: {
+        value: { type: Array, required: true },
+    },
     data() {
         return {
-            chosenLogLevels: [],
-            allLogLevels: ['alert', 'error', 'warning', 'notice', 'info', 'debug'],
+            allLogLevels: [
+                { text: 'alert' },
+                { text: 'error' },
+                { text: 'warning' },
+                { text: 'notice' },
+                { text: 'info' },
+                { text: 'debug' },
+            ],
         }
     },
-
-    methods: {
-        updateValue: function(value) {
-            this.$emit('get-chosen-log-levels', value)
+    computed: {
+        chosenLogLevels: {
+            get() {
+                return this.value
+            },
+            set(value) {
+                this.$emit('input', value)
+            },
         },
+    },
+    mounted() {
+        this.chosenLogLevels = this.allLogLevels
     },
 }
 </script>

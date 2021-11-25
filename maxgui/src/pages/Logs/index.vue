@@ -15,7 +15,7 @@
                 <div v-if="logViewHeight" class="log-lines-container pa-4 color bg-reflection">
                     <log-container
                         :logViewHeight="logViewHeight"
-                        :chosenLogLevels="chosenLogLevels"
+                        :chosenLogLevels="chosenLogLevels.map(item => item.text)"
                     />
                 </div>
             </div>
