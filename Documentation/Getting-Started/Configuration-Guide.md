@@ -1654,9 +1654,13 @@ even if the duration is longer than a second.
 
 **Warning:** If a connection is idle for longer than the configured connection
 timeout, it will be forcefully disconnected and a warning will be logged in the
-MaxScale log file. If you are performing long-running maintenance operations
-(e.g. `ALTER TABLE`) either do them with a direct connection to the server or
-set `connection_timeout` to zero before executing them.
+MaxScale log file.
+
+In MaxScale versions 6.2.0 and older, if long-running operations (e.g. `ALTER
+TABLE`) were performed, MaxScale would close the connections if they look longer
+than `connection_timeout` seconds to execute
+([MXS-3893](https://jira.mariadb.org/browse/MXS-3893)). In MaxScale 6.2.1 this
+has been fixed and the active operations are now correctly tracked.
 
 Example:
 
