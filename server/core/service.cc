@@ -233,6 +233,22 @@ cfg::ParamEnum<UserAccountManager::UsersFileUsage> s_user_accounts_file_usage(
         {UserAccountManager::UsersFileUsage::FILE_ONLY_ALWAYS, "file_only_always"},
     }, UserAccountManager::UsersFileUsage::ADD_WHEN_LOAD_OK, cfg::Param::AT_STARTUP);
 
+cfg::ParamBool s_log_debug(
+    &s_spec, "log_debug", "Log debug messages for this service (debug builds only)",
+    false, cfg::Param::Modifiable::AT_RUNTIME);
+
+cfg::ParamBool s_log_info(
+    &s_spec, "log_info", "Log info messages for this service",
+    false, cfg::Param::Modifiable::AT_RUNTIME);
+
+cfg::ParamBool s_log_notice(
+    &s_spec, "log_notice", "Log notice messages for this service",
+    false, cfg::Param::Modifiable::AT_RUNTIME);
+
+cfg::ParamBool s_log_warning(
+    &s_spec, "log_warning", "Log warning messages for this service",
+    false, cfg::Param::Modifiable::AT_RUNTIME);
+
 template<class Params>
 bool ServiceSpec::do_post_validate(Params params) const
 {
@@ -513,6 +529,11 @@ Service::Config::Config(SERVICE* service)
     add_native(&Config::m_v, &Values::idle_session_pooling_time, &s_idle_session_pool_time);
     add_native(&Config::m_v, &Values::user_accounts_file_path, &s_user_accounts_file);
     add_native(&Config::m_v, &Values::user_accounts_file_usage, &s_user_accounts_file_usage);
+
+    add_native(&Config::m_log_debug, &s_log_debug);
+    add_native(&Config::m_log_info, &s_log_info);
+    add_native(&Config::m_log_notice, &s_log_notice);
+    add_native(&Config::m_log_warning, &s_log_warning);
 }
 
 Service::Service(const std::string& name, const std::string& router_name)
@@ -2073,6 +2094,11 @@ void Service::unmark_for_wakeup(mxs::ClientConnection* session)
     m_sleeping_clients->erase(session);
 }
 
+bool Service::log_is_enabled(int level) const
+{
+    return m_log_level.load(std::memory_order_relaxed) & (1 << level);
+}
+
 bool Service::check_update_user_account_manager(mxs::ProtocolModule* protocol_module, const string& listener)
 {
     // If the service does not yet have a user data manager, create one and set to service.
@@ -2165,6 +2191,18 @@ bool Service::remove_cluster(mxs::Monitor* monitor)
     return rval;
 }
 
+int SERVICE::Config::log_levels() const
+{
+    int logs = 0;
+
+    logs |= m_log_debug ? 1 << LOG_DEBUG : 0;
+    logs |= m_log_info ? 1 << LOG_INFO : 0;
+    logs |= m_log_notice ? 1 << LOG_NOTICE : 0;
+    logs |= m_log_warning ? 1 << LOG_WARNING : 0;
+
+    return logs;
+}
+
 bool SERVICE::Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
 {
     m_values.assign(m_v);
@@ -2187,6 +2225,8 @@ bool Service::post_configure()
         m_usermanager->set_union_over_backends(config.users_from_all);
         m_usermanager->set_strip_db_esc(config.strip_db_esc);
     }
+
+    m_log_level.store(m_config.log_levels(), std::memory_order_relaxed);
 
     return true;
 }

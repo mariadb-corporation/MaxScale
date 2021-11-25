@@ -236,6 +236,8 @@ public:
     void mark_for_wakeup(mxs::ClientConnection* session) override;
     void unmark_for_wakeup(mxs::ClientConnection* session) override;
 
+    bool log_is_enabled(int level) const override final;
+
 private:
 
     struct Data
@@ -293,6 +295,7 @@ private:
     bool                    m_active {true};
     mxs::Monitor*           m_monitor {nullptr};    /**< A possibly associated monitor */
     std::vector<Service*>   m_parents;
+    std::atomic<int>        m_log_level {0};        /**< Enabled log levels for this service*/
 
     // User account manager. Can only be set once.
     SAccountManager m_usermanager;

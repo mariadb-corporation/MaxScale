@@ -318,10 +318,7 @@ public:
      *
      * @return True if the log is enabled
      */
-    bool log_is_enabled(int level) const
-    {
-        return m_log_level & (1 << level);
-    }
+    bool log_is_enabled(int level) const;
 
     virtual void append_session_log(const std::string& msg) = 0;
     virtual void dump_session_log() = 0;
