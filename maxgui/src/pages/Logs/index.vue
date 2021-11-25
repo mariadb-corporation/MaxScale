@@ -7,16 +7,9 @@
             }"
         >
             <div ref="pageContent" class="fill-height">
-                <log-header
-                    ref="logHeader"
-                    class="pb-4 pt-2"
-                    @get-chosen-log-levels="chosenLogLevels = $event"
-                />
+                <log-header ref="logHeader" class="pb-4 pt-2" />
                 <div v-if="logViewHeight" class="log-lines-container pa-4 color bg-reflection">
-                    <log-container
-                        :logViewHeight="logViewHeight"
-                        :chosenLogLevels="chosenLogLevels.map(item => item.text)"
-                    />
+                    <log-container :logViewHeight="logViewHeight" />
                 </div>
             </div>
         </v-sheet>
@@ -51,7 +44,6 @@ export default {
         return {
             logViewHeight: 0,
             isNotifShown: false,
-            chosenLogLevels: [],
         }
     },
     methods: {

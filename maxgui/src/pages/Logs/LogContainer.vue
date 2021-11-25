@@ -80,7 +80,6 @@ export default {
     },
     props: {
         logViewHeight: { type: Number, required: true },
-        chosenLogLevels: { type: Array, required: true },
     },
     data() {
         return {
@@ -102,6 +101,7 @@ export default {
             latest_logs: state => state.maxscale.latest_logs,
             prev_log_link: state => state.maxscale.prev_log_link,
             prev_log_data: state => state.maxscale.prev_log_data,
+            chosen_log_levels: state => state.maxscale.chosen_log_levels,
         }),
         logToShow() {
             return this.allLogData
@@ -190,7 +190,7 @@ export default {
                 const newEntry = JSON.parse(e.data)
 
                 this.allLogData = Object.freeze([...this.allLogData, newEntry])
-                //TODO: Filter incoming log by chosenLogLevels
+                //TODO: Filter incoming log by chosen_log_levels
                 this.$nextTick(() => this.showNotifHandler())
             }
         },

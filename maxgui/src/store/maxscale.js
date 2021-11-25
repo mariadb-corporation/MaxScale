@@ -10,6 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { APP_CONFIG } from 'utils/constants'
 
 export default {
     namespaced: true,
@@ -26,6 +27,7 @@ export default {
         prev_log_data: [],
         prev_filtered_log_link: null,
         prev_filtered_log_data: [],
+        chosen_log_levels: APP_CONFIG.MAXSCALE_LOG_LEVELS,
     },
     mutations: {
         SET_MAXSCALE_OVERVIEW_INFO(state, payload) {
@@ -60,6 +62,10 @@ export default {
         },
         SET_PREV_FILTERED_LOG_DATA(state, payload) {
             state.prev_filtered_log_data = payload
+        },
+
+        SET_CHOSEN_LOG_LEVELS(state, payload) {
+            state.chosen_log_levels = payload
         },
     },
     actions: {
@@ -138,8 +144,9 @@ export default {
         },
         async fetchLatestLogs({ commit, state }) {
             try {
+                const priority = state.chosen_log_levels.join(',')
                 const res = await this.$http.get(
-                    `/maxscale/logs/data?page[size]=${state.logs_page_size}`
+                    `/maxscale/logs/data?page[size]=${state.logs_page_size}&priority=${priority}`
                 )
                 const {
                     data: { attributes: { log = [], log_source = null } = {} } = {},
@@ -163,6 +170,7 @@ export default {
             try {
                 const indexOfEndpoint = state.prev_log_link.indexOf('/maxscale/logs/')
                 const endpoint = state.prev_log_link.slice(indexOfEndpoint)
+                //TODO: use chosen_log_levels for current priority
                 const res = await this.$http.get(endpoint)
                 const {
                     data: { attributes: { log = [] } = {} } = {},
@@ -183,6 +191,7 @@ export default {
                     : state.prev_log_link
                 const indexOfEndpoint = prevLink.indexOf('/maxscale/logs/')
                 const endpoint = prevLink.slice(indexOfEndpoint)
+                //TODO: use chosen_log_levels for current priority
                 const res = await this.$http.get(endpoint)
                 const {
                     data: { attributes: { log = [] } = {} } = {},
