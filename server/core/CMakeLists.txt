@@ -37,7 +37,6 @@ add_library(maxscale-common SHARED
   packet_tracker.cc
   paths.cc
   poll.cc
-  random.cc
   resource.cc
   response_stat.cc
   router.cc

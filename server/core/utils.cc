@@ -47,10 +47,7 @@
 
 #include <maxbase/alloc.h>
 #include <maxscale/config.hh>
-#include <maxscale/dcb.hh>
-#include <maxscale/random.h>
 #include <maxscale/secrets.hh>
-#include <maxscale/session.hh>
 
 #if !defined (PATH_MAX)
 # if defined (__USE_POSIX)
@@ -184,32 +181,6 @@ char* gw_strend(const char* s)
     {
     }
     return (char*) (s - 1);
-}
-
-/*****************************************
-* generate a random char
-*****************************************/
-static char gw_randomchar()
-{
-    return (char)((mxs_random() % 78) + 30);
-}
-
-/*****************************************
-* generate a random string
-* output must be pre allocated
-*****************************************/
-int gw_generate_random_str(char* output, int len)
-{
-    int i;
-
-    for (i = 0; i < len; ++i)
-    {
-        output[i] = gw_randomchar();
-    }
-
-    output[len] = '\0';
-
-    return 0;
 }
 
 /**********************************************************
@@ -419,70 +390,6 @@ bool mxs_mkdir_all(const char* path, int mask, bool log_errors)
     }
 
     return mkdir_all_internal(local_path, (mode_t)mask, log_errors);
-}
-
-/**
- * @brief Replace whitespace with hyphens
- *
- * @param str String to replace
- */
-void replace_whitespace(char* str)
-{
-    for (char* s = str; *s; s++)
-    {
-        if (isspace(*s))
-        {
-            *s = '-';
-        }
-    }
-}
-
-/**
- * Replace all whitespace with spaces and squeeze repeating whitespace characters
- *
- * @param str String to squeeze
- * @return Squeezed string
- */
-char* squeeze_whitespace(char* str)
-{
-    char* store = str;
-    char* ptr = str;
-
-    /** Remove leading whitespace */
-    while (isspace(*ptr) && *ptr != '\0')
-    {
-        ptr++;
-    }
-
-    /** Squeeze all repeating whitespace */
-    while (*ptr != '\0')
-    {
-        while (isspace(*ptr) && isspace(*(ptr + 1)))
-        {
-            ptr++;
-        }
-
-        if (isspace(*ptr))
-        {
-            *store++ = ' ';
-            ptr++;
-        }
-        else
-        {
-            *store++ = *ptr++;
-        }
-    }
-
-    *store = '\0';
-
-    /** Remove trailing whitespace */
-    while (store > str && isspace(*(store - 1)))
-    {
-        store--;
-        *store = '\0';
-    }
-
-    return str;
 }
 
 bool configure_network_socket(int so, int type)
@@ -740,27 +647,6 @@ std::string to_hex(uint8_t value)
     out += hex_lower[value >> 4];
     out += hex_lower[value & 0x0F];
     return out;
-}
-
-uint64_t get_byteN(const uint8_t* ptr, int bytes)
-{
-    uint64_t rval = 0;
-    mxb_assert(bytes >= 0 && bytes <= (int)sizeof(rval));
-    for (int i = 0; i < bytes; i++)
-    {
-        rval += (uint64_t)ptr[i] << (i * 8);
-    }
-    return rval;
-}
-
-uint8_t* set_byteN(uint8_t* ptr, uint64_t value, int bytes)
-{
-    mxb_assert(bytes >= 0 && bytes <= (int)sizeof(value));
-    for (int i = 0; i < bytes; i++)
-    {
-        ptr[i] = (uint8_t)(value >> (i * 8));
-    }
-    return ptr + bytes;
 }
 
 int get_kernel_version()

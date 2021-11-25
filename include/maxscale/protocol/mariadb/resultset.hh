@@ -20,7 +20,7 @@
 
 #include <maxscale/buffer.hh>
 #include <maxscale/dcb.hh>
-#include <maxscale/mysql_binlog.h>
+#include <maxscale/mysql_binlog.hh>
 
 /**
  * A result set consisting of VARCHAR(255) columns

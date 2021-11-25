@@ -30,12 +30,6 @@ MXS_BEGIN_DECLS
 
 #define MXS_ARRAY_NELEMS(array) ((size_t)(sizeof(array) / sizeof(array[0])))
 
-/** Macro for safe pointer arithmetic on void pointers
- * @param a The void pointer
- * @param b The offset into @c a
- */
-#define MXS_PTR(a, b) (((uint8_t*)(a)) + (b))
-
 /** The type of the socket */
 enum mxs_socket_type
 {
@@ -104,14 +98,9 @@ int open_unix_socket(enum mxs_socket_type type,
 int         setnonblocking(int fd);
 int         setblocking(int fd);
 char*       gw_strend(const char* s);
-static char gw_randomchar();
-int         gw_generate_random_str(char* output, int len);
 void        gw_sha1_str(const uint8_t* in, int in_len, uint8_t* out);
 void        gw_sha1_2_str(const uint8_t* in, int in_len, const uint8_t* in2, int in2_len, uint8_t* out);
 int         gw_getsockerrno(int fd);
-
-void  replace_whitespace(char* str);
-char* squeeze_whitespace(char* str);
 
 bool is_valid_posix_path(char* path);
 
@@ -139,36 +128,5 @@ long get_processor_count();
  * @return Total memory in bytes or 0 if the information is not available
  */
 int64_t get_total_memory();
-
-/**
- * Store a 4 byte integer
- *
- * @param ptr   Pointer where value is stored
- * @param value Value to store
- *
- * @return The next byte after the stored value
- */
-static inline uint8_t* mxs_set_byte4(uint8_t* ptr, uint32_t value)
-{
-    *ptr++ = value;
-    *ptr++ = (value >> 8);
-    *ptr++ = (value >> 16);
-    *ptr++ = (value >> 24);
-    return ptr;
-}
-
-/**
- * Read a 4 byte integer
- *
- * @param ptr   Pointer where value is stored
- * @param value Value to store
- *
- * @return The next byte after the stored value
- */
-static inline uint32_t mxs_get_byte4(const uint8_t* ptr)
-{
-    return ((uint32_t) ptr[0]) | ((uint32_t) ptr[1] << 8)
-           | ((uint32_t) ptr[2] << 16) | ((uint32_t) ptr[3] << 24);
-}
 
 MXS_END_DECLS

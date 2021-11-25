@@ -20,7 +20,6 @@
 #include <maxscale/protocol/mariadb/resultset.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/dcb.hh>
-#include <maxscale/mysql_binlog.h>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/modutil.hh>
 

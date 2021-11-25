@@ -19,7 +19,7 @@
 #include <glob.h>
 
 #include <maxbase/assert.h>
-#include <maxscale/mysql_binlog.h>
+#include <maxscale/mysql_binlog.hh>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/query_classifier.hh>

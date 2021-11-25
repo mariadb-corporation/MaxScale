@@ -21,7 +21,6 @@
 #include <pthread.h>
 #include <sched.h>
 #include <semaphore.h>
-#include <maxscale/random.h>
 
 using std::cerr;
 using std::cout;
