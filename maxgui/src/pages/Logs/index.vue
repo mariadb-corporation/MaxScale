@@ -36,7 +36,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions } from 'vuex'
 import PageHeader from './PageHeader'
 import LogHeader from './LogHeader'
 import LogContainer from './LogContainer.vue'
@@ -55,13 +54,7 @@ export default {
             chosenLogLevels: [],
         }
     },
-    async created() {
-        await this.fetchMaxScaleOverviewInfo()
-    },
     methods: {
-        ...mapActions({
-            fetchMaxScaleOverviewInfo: 'maxscale/fetchMaxScaleOverviewInfo',
-        }),
         setPageContentDim() {
             this.$nextTick(() => {
                 const pageContentHeight =

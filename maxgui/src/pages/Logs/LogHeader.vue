@@ -1,13 +1,7 @@
 <template>
-    <div class="d-flex flex-row">
+    <div class="d-flex flex-row align-center">
         <div class="color text-field-text">
             <span class="d-block mr-2"> log_source: {{ log_source }} </span>
-            {{
-                $help.dateFormat({
-                    value: maxscale_overview_info.started_at,
-                    formatType: 'DATE_RFC2822',
-                })
-            }}
         </div>
         <v-spacer />
         <div>
@@ -43,7 +37,6 @@ export default {
     },
     computed: {
         ...mapState({
-            maxscale_overview_info: state => state.maxscale.maxscale_overview_info,
             log_source: state => state.maxscale.log_source,
         }),
     },

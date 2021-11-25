@@ -10,40 +10,28 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import store from 'store'
-import chai from 'chai'
-import sinon from 'sinon'
+import chai, { expect } from 'chai'
 import sinonChai from 'sinon-chai'
 import mount from '@tests/unit/setup'
 import Logs from '@/pages/Logs'
 
 chai.should()
 chai.use(sinonChai)
-
 describe('Logs index', () => {
-    let wrapper, axiosStub
+    let wrapper
     beforeEach(async () => {
-        axiosStub = sinon.stub(store.$http, 'get').returns(
-            Promise.resolve({
-                data: {
-                    data: {},
-                },
-            })
-        )
         wrapper = mount({
             shallow: false,
             component: Logs,
         })
     })
     afterEach(async function() {
-        await axiosStub.restore()
         await wrapper.destroy()
     })
 
-    it(`Should send requests to get maxscale overview info`, async () => {
-        await axiosStub.should.have.been.calledWith(
-            '/maxscale?fields[maxscale]=version,commit,started_at,activated_at,uptime'
-        )
-        axiosStub.should.have.been.called
+    it(`Should not show log-container when logViewHeight is not calculated yet`, async () => {
+        expect(wrapper.vm.$data.logViewHeight).to.be.equal(0)
+        const logContainer = wrapper.findComponent({ name: 'log-container' })
+        expect(logContainer.exists()).to.be.false
     })
 })
