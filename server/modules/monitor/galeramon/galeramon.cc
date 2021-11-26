@@ -700,18 +700,18 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
         if (mxs_mysql_query(ptr->con, "SHOW VARIABLES LIKE 'wsrep_node_name'") == 0
             && (result = mysql_store_result(ptr->con)) != NULL)
         {
-            if (mysql_field_count(ptr->con) < 2)
+            if (mysql_field_count(ptr->con) == 2)
             {
-                mysql_free_result(result);
+                while ((row = mysql_fetch_row(result)))
+                {
+                    strncat(donor_list, row[1], DONOR_NODE_NAME_MAX_LEN);
+                    strcat(donor_list, ",");
+                }
+            }
+            else
+            {
                 MXS_ERROR("Unexpected result for \"SHOW VARIABLES LIKE 'wsrep_node_name'\". "
                           "Expected 2 columns");
-                return;
-            }
-
-            while ((row = mysql_fetch_row(result)))
-            {
-                strncat(donor_list, row[1], DONOR_NODE_NAME_MAX_LEN);
-                strcat(donor_list, ",");
             }
 
             mysql_free_result(result);
