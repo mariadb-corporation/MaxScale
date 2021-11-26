@@ -1247,6 +1247,7 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
         char* errmsg = handle_variables(&packetbuf);
         if (errmsg)
         {
+            gwbuf_free(packetbuf);
             rval = write(modutil_create_mysql_err_msg(1, 0, 1193, "HY000", errmsg)) != 0;
             MXS_FREE(errmsg);
             keep_processing = false;
