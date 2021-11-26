@@ -10,6 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import '@/plugins/vuex'
 import store from 'store'
 import chai, { expect } from 'chai'
 import sinon from 'sinon'
@@ -22,9 +23,8 @@ chai.should()
 chai.use(sinonChai)
 
 const dummyChosenLogLevels = ['warning']
-const dummyFilteredLog = dummy_log_data.filter(log => dummyChosenLogLevels.includes(log.priority))
 
-const mountFactory = () =>
+const mountFactory = opts =>
     mount({
         shallow: false,
         component: LogContainer,
@@ -34,7 +34,9 @@ const mountFactory = () =>
         },
         computed: {
             prev_log_link: () => null, // prevent loopGetOlderLogs from being called
+            logToShow: () => dummy_log_data,
         },
+        ...opts,
     })
 
 // mockup websocket
@@ -47,7 +49,7 @@ class WebSocket {
 
 global.WebSocket = WebSocket
 
-describe('Logs index', () => {
+describe('LogContainer', () => {
     let wrapper, axiosStub, wsStub
     beforeEach(async () => {
         wsStub = sinon.stub(window, 'WebSocket')
@@ -75,28 +77,33 @@ describe('Logs index', () => {
         await wrapper.destroy()
     })
 
-    it(`Should send requests to get maxscale log when shouldFetchLogs is true`, async () => {
-        await wrapper.setProps({
-            shouldFetchLogs: true,
-        })
+    it(`Should send requests to get maxscale log`, async () => {
         await axiosStub.should.have.been.calledWith('/maxscale/logs/data?page[size]=1000')
         axiosStub.should.have.been.called
     })
 
-    it(`Should pass necessary props to log-lines component`, async () => {
-        const logLines = wrapper.findComponent({ name: 'log-lines' })
-        expect(logLines.vm.$props.allLogData).to.be.deep.equals(wrapper.vm.$data.allLogData)
-        expect(logLines.vm.$props.filteredLog).to.be.deep.equals(wrapper.vm.$data.filteredLog)
-        expect(logLines.vm.$props.isFiltering).to.be.equals(wrapper.vm.isFiltering)
-        expect(logLines.vm.$props.isLoading).to.be.deep.equals(wrapper.vm.$data.isLoading)
-    })
-
     it(`Should return accurate boolean value for computed property 'isFiltering'`, async () => {
         expect(wrapper.vm.isFiltering).to.be.false
-        await wrapper.setData({
+        await wrapper.setProps({
             chosenLogLevels: dummyChosenLogLevels,
-            filteredLog: dummyFilteredLog,
         })
         expect(wrapper.vm.isFiltering).to.be.true
+    })
+
+    it(`Should show no logs found when logToShow is empty`, async () => {
+        wrapper = mountFactory({
+            computed: {
+                logToShow: () => [],
+            },
+        })
+        expect(wrapper.html().includes('No logs found'))
+    })
+
+    it(`Should return accurate log data for computed property 'logToShow'`, async () => {
+        expect(wrapper.vm.logToShow).to.be.deep.equals(dummy_log_data)
+
+        await wrapper.setProps({
+            chosenLogLevels: dummyChosenLogLevels,
+        })
     })
 })
