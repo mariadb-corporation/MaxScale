@@ -78,15 +78,13 @@ describe('LogContainer', () => {
     })
 
     it(`Should send requests to get maxscale log`, async () => {
-        await axiosStub.should.have.been.calledWith('/maxscale/logs/data?page[size]=1000')
+        await axiosStub.should.have.been.calledWith('/maxscale/logs/data?page[size]=100')
         axiosStub.should.have.been.called
     })
 
     it(`Should return accurate boolean value for computed property 'isFiltering'`, async () => {
         expect(wrapper.vm.isFiltering).to.be.false
-        await wrapper.setProps({
-            chosenLogLevels: dummyChosenLogLevels,
-        })
+        wrapper.vm.$store.commit('maxscale/SET_CHOSEN_LOG_LEVELS', dummyChosenLogLevels)
         expect(wrapper.vm.isFiltering).to.be.true
     })
 
