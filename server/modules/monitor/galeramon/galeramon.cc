@@ -480,6 +480,7 @@ static bool using_xtrabackup(MonitorServer* database, const char* server_string)
                       "'wsrep_sst_method'\". Expected 2 columns."
                       " MySQL Version: %s",
                       server_string);
+            return false;
         }
 
         MYSQL_ROW row;
