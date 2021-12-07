@@ -29,7 +29,7 @@
                 hide-slider
                 :height="wkeNavHeight"
                 class="tab-navigation--btn-style wke-navigation flex-grow-0"
-                :style="{ maxWidth: `calc(100% - ${pageToolbarWidth}px)` }"
+                :style="{ maxWidth: `calc(100% - ${pageToolbarBtnWidth + 1}px)` }"
             >
                 <v-tab
                     v-for="wke in worksheets_arr"
@@ -93,7 +93,7 @@
                     </v-tooltip>
                 </v-tab>
             </v-tabs>
-            <page-toolbar ref="pageToolbar" />
+            <page-toolbar ref="pageToolbar" @get-total-btn-width="pageToolbarBtnWidth = $event" />
         </div>
         <worksheet-toolbar ref="wkeToolbar" />
         <keep-alive>
@@ -142,7 +142,7 @@ export default {
     data() {
         return {
             wkeNavHeight: 32,
-            pageToolbarWidth: 106,
+            pageToolbarBtnWidth: 128,
         }
     },
     computed: {
