@@ -490,6 +490,41 @@ the transaction is automatically retried. If the retrying of the transaction
 results in another deadlock error, it is retried until it either succeeds or a
 transaction checksum error is encountered.
 
+### `transaction_replay_checksum`
+
+Selects which transaction checksum method is used to verify the result of the
+replayed transaction.
+
+Note that only `transaction_replay_checksum=full` is guaranteed to retain the
+consistency of the replayed transaction.
+
+Possible values are:
+
+* `full` (default)
+
+  * All responses from the server are included in the checksum. This retains the
+    full consistency guarantee of the replayed transaction as it must match
+    exactly the one that was already returned to the client.
+
+* `result_only`
+
+  * Only resultsets and errors are included in the checksum. OK packets
+    (i.e. successful queries that do not return results) are ignored. This mode
+    is intended to be used in cases where the extra information (auto-generated
+    ID, warnings etc.) returned in the OK packet is not used by the
+    application.
+
+    This mode is safe to use only if the auto-generated ID is not actually used
+    by any following queries. An example of such behavior would be a transaction
+    that ends with an `INSERT` into a table with an `AUTO_INCREMENT` field.
+
+* `no_insert_id`
+
+  * The same as `result_only` but results from queries that use
+    `LAST_INSERT_ID()` are also ignored. This mode is safe to use only if the
+    result of the query is not used by any subsequent statement in the
+    transaction.
+
 ### `optimistic_trx`
 
 Enable optimistic transaction execution. This parameter controls whether normal
