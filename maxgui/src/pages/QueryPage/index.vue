@@ -1,14 +1,7 @@
 <template>
     <div
         v-resize.quiet="setCtrDim"
-        v-shortkey="{
-            'win-ctrl-s': ['ctrl', 's'],
-            'mac-cmd-s': ['meta', 's'],
-            'win-ctrl-enter': ['ctrl', 'enter'],
-            'mac-cmd-enter': ['meta', 'enter'],
-            'win-ctrl-shift-enter': ['ctrl', 'shift', 'enter'],
-            'mac-cmd-shift-enter': ['meta', 'shift', 'enter'],
-        }"
+        v-shortkey="QUERY_SHORTCUT_KEYS"
         class="fill-height"
         @shortkey="isTxtEditor ? handleShortkey($event) : null"
     >
@@ -73,6 +66,7 @@ export default {
     },
     computed: {
         ...mapState({
+            QUERY_SHORTCUT_KEYS: state => state.app_config.QUERY_SHORTCUT_KEYS,
             SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
             is_fullscreen: state => state.query.is_fullscreen,
             active_wke_id: state => state.query.active_wke_id,

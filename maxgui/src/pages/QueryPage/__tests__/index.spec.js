@@ -33,12 +33,13 @@ function mockBeforeRouteLeave(wrapper) {
     QueryPage.beforeRouteLeave.call(wrapper.vm, to_route_mock, from_route_mock, next)
 }
 describe('QueryPage index', () => {
-    let wrapper, handleAutoClearQueryHistorySpy, validatingConnSpy
+    let wrapper, handleAutoClearQueryHistorySpy, validatingConnSpy, disconnectAllSpy
 
     beforeEach(async () => {
         // spy on actions before mounting occurs
         handleAutoClearQueryHistorySpy = sinon.spy(QueryPage.methods, 'handleAutoClearQueryHistory')
         validatingConnSpy = sinon.spy(QueryPage.methods, 'validatingConn')
+        disconnectAllSpy = sinon.spy(QueryPage.methods, 'disconnectAll')
         wrapper = mount({
             shallow: true,
             component: QueryPage,
@@ -48,6 +49,7 @@ describe('QueryPage index', () => {
     afterEach(async () => {
         handleAutoClearQueryHistorySpy.restore()
         validatingConnSpy.restore()
+        disconnectAllSpy.restore()
         await routeChangesMock(wrapper, '/settings') // Mockup leaving page
     })
 
@@ -70,5 +72,29 @@ describe('QueryPage index', () => {
         expect(wrapper.vm.cnct_resources).to.be.empty
         mockBeforeRouteLeave(wrapper)
         expect(wrapper.vm.$data.isConfDlgOpened).to.be.false
+    })
+
+    it(`Should disconnect all opened connections by default when
+     confirming leaving the page`, async () => {
+        // mockup leaving page
+        wrapper.vm.$store.commit('query/SET_CNCT_RESOURCES', cnct_resources_mock)
+        mockBeforeRouteLeave(wrapper)
+        expect(wrapper.vm.$data.confirmDelAll).to.be.true
+        // mock confirm leaving
+        await wrapper.vm.onLeave()
+        disconnectAllSpy.should.have.been.calledOnce
+    })
+
+    it(`Should keep connections even when leaving the page`, async () => {
+        // mockup leaving page
+        wrapper.vm.$store.commit('query/SET_CNCT_RESOURCES', cnct_resources_mock)
+        mockBeforeRouteLeave(wrapper)
+        // mockup un-checking "Disconnect all" checkbox
+        await wrapper.setData({
+            confirmDelAll: false,
+        })
+        // mock confirm leaving
+        await wrapper.vm.onLeave()
+        disconnectAllSpy.should.have.not.been.called
     })
 })
