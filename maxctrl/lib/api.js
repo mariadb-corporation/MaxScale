@@ -11,6 +11,7 @@
  * Public License.
  */
 require("./common.js")();
+var utils = require("./utils.js");
 
 exports.command = "api <command>";
 exports.desc = "Raw REST API access";
@@ -54,7 +55,13 @@ exports.builder = function (yargs) {
               res = res.reduce((sum, value) => (value ? sum + value : sum));
             }
 
-            return argv.pretty ? JSON.stringify(res, null, 2) : JSON.stringify(res);
+            // TODO: The colorization of the output should be done at a later stage or the doRequest
+            // method should be altered with a "don't return OK on success" option.
+            if (typeof res == "string" && utils.strip_colors(res) == "OK") {
+              return res;
+            } else {
+              return argv.pretty ? JSON.stringify(res, null, 2) : JSON.stringify(res);
+            }
           });
         });
       }
