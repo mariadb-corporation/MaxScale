@@ -293,6 +293,28 @@ private:
                             });
     }
 
+    inline bool include_in_checksum(const mxs::Reply& reply) const
+    {
+        switch (m_config.trx_checksum)
+        {
+        case TrxChecksum::FULL:
+            return true;
+
+        case TrxChecksum::RESULT_ONLY:
+            return !reply.is_ok();
+
+        case TrxChecksum::NO_INSERT_ID:
+            // TODO: QUERY_TYPE_MASTER_READ implies LAST_INSERT_ID() but explicitly looking for it might
+            // be better. However, this only requires the storage of the type bitmask instead of the whole
+            // buffer which would be required for the function information.
+            return !reply.is_ok()
+                   && !qc_query_is_type(m_qc.current_route_info().type_mask(), QUERY_TYPE_MASTER_READ);
+        }
+
+        mxb_assert(!true);
+        return true;
+    }
+
     std::string get_verbose_status()
     {
         std::string status;

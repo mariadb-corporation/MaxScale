@@ -332,7 +332,11 @@ void RWSplitSession::manage_transactions(RWBackend* backend, GWBUF* writebuf, co
             {
                 /** Transaction size is OK, store the statement for replaying and
                  * update the checksum of the result */
-                m_trx.add_result(writebuf);
+
+                if (include_in_checksum(reply))
+                {
+                    m_trx.add_result(writebuf);
+                }
 
                 if (m_current_query.get())
                 {

@@ -93,6 +93,13 @@ enum CausalReads
     FAST    // Causal reads use GTID position to pick an up-to-date server
 };
 
+enum class TrxChecksum
+{
+    FULL,           // Checksum all responses
+    RESULT_ONLY,    // Checksum resultsets and errors, ignore OK packets
+    NO_INSERT_ID,   // Same as RESULT_ONLY but also ignores results from queries that use LAST_INSERT_ID()
+};
+
 static cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::ROUTER);
 
 static cfg::ParamEnum<mxs_target_t> s_use_sql_variables_in(
@@ -199,6 +206,14 @@ static cfg::ParamBool s_transaction_replay_retry_on_deadlock(
     &s_spec, "transaction_replay_retry_on_deadlock", "Retry transaction on deadlock",
     false, cfg::Param::AT_RUNTIME);
 
+static cfg::ParamEnum<TrxChecksum> s_transaction_replay_checksum(
+    &s_spec, "transaction_replay_checksum", "Type of checksum to calculate for results",
+{
+    {TrxChecksum::FULL, "full"},
+    {TrxChecksum::RESULT_ONLY, "result_only"},
+    {TrxChecksum::NO_INSERT_ID, "no_insert_id"},
+}, TrxChecksum::FULL, cfg::Param::AT_RUNTIME);
+
 static cfg::ParamBool s_optimistic_trx(
     &s_spec, "optimistic_trx", "Optimistically offload transactions to slaves",
     false, cfg::Param::AT_RUNTIME);
@@ -246,10 +261,11 @@ struct RWSConfig : public mxs::config::Configuration
         bool        delayed_retry;          /**< Delay routing if no target found */
         seconds     delayed_retry_timeout;  /**< How long to delay until an error is returned */
 
-        bool    transaction_replay;     /**< Replay failed transactions */
-        int64_t trx_max_size;           /**< Max transaction size for replaying */
-        int64_t trx_max_attempts;       /**< Maximum number of transaction replay attempts */
-        bool    trx_retry_on_deadlock;  /**< Replay the transaction if it ends up in a deadlock */
+        bool        transaction_replay;     /**< Replay failed transactions */
+        int64_t     trx_max_size;           /**< Max transaction size for replaying */
+        int64_t     trx_max_attempts;       /**< Maximum number of transaction replay attempts */
+        bool        trx_retry_on_deadlock;  /**< Replay the transaction if it ends up in a deadlock */
+        TrxChecksum trx_checksum;           /**< The type of checksum to calculate */
 
         bool reuse_ps;      /**< Reuse prepared statements */
     };
