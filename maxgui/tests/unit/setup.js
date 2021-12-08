@@ -47,17 +47,19 @@ export default options => {
     Object.keys(commonComponents).forEach(name => {
         localVue.component(name, commonComponents[name])
     })
+
+    const opts = Vue.prototype.$help.lodash.pickBy(
+        options,
+        (v, key) => !['shallow', 'component'].includes(key)
+    )
     let mountOptions = {
         localVue,
         store,
         router,
         vuetify,
         i18n,
-        propsData: options.propsData,
-        slots: options.slots,
-        stubs: options.stubs,
-        computed: options.computed,
         attachTo: '#app',
+        ...opts,
     }
     return doMount(options.shallow, options.component, mountOptions)
 }
