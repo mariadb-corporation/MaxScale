@@ -19,7 +19,7 @@
 #include <mysql.h>
 #include <maxbase/stopwatch.hh>
 #include <maxbase/format.hh>
-#include <maxscale/clock.h>
+#include <maxscale/clock.hh>
 #include <maxscale/mysql_utils.hh>
 
 using std::string;

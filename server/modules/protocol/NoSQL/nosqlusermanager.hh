@@ -15,7 +15,7 @@
 #include "nosqlprotocol.hh"
 #include "nosqlbase.hh"
 #include <memory>
-#include <maxscale/sqlite3.h>
+#include <maxscale/sqlite3.hh>
 
 namespace nosql
 {

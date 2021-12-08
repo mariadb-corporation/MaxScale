@@ -43,7 +43,7 @@
 #include <maxbase/format.hh>
 #include <maxbase/ini.hh>
 #include <maxbase/pretty_print.hh>
-#include <maxscale/clock.h>
+#include <maxscale/clock.hh>
 #include <maxscale/http.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/log.hh>

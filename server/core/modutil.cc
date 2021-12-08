@@ -29,7 +29,6 @@
 #include <maxbase/alloc.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/modutil.hh>
-#include <maxscale/poll.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/utils.h>
 #include <maxscale/mysql_utils.hh>

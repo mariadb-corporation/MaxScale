@@ -32,7 +32,6 @@
 #include <maxscale/listener.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
-#include <maxscale/poll.hh>
 #include <maxscale/protocol.hh>
 #include <maxscale/protocol/mariadb/authenticator.hh>
 #include <maxscale/protocol/mariadb/backend_connection.hh>

@@ -42,7 +42,6 @@
 #include <maxbase/log.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/paths.hh>
-#include <maxscale/poll.hh>
 #include <maxscale/protocol.hh>
 #include <maxscale/router.hh>
 #include <maxscale/server.hh>

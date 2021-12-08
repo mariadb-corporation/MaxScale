@@ -12,9 +12,7 @@
  */
 #pragma once
 
-#include <maxscale/cdefs.h>
-
-MXS_BEGIN_DECLS
+#include <maxscale/ccdefs.hh>
 
 /**
  * The global clock
@@ -43,4 +41,3 @@ static inline int64_t MXS_SEC_TO_CLOCK(int64_t a)
     return a * 10;
 }
 
-MXS_END_DECLS

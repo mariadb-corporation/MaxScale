@@ -20,7 +20,6 @@
 #include <maxscale/filter.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/mysql_utils.hh>
-#include <maxscale/poll.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/query_classifier.hh>
 

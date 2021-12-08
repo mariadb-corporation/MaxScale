@@ -29,7 +29,6 @@
 #include <fcntl.h>
 
 #include <maxbase/atomic.h>
-#include <maxscale/clock.h>
 #include <maxscale/jansson.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/paths.hh>
@@ -38,7 +37,6 @@
 
 #include "internal/adminusers.hh"
 #include "internal/config.hh"
-#include "internal/config_runtime.hh"
 #include "internal/filter.hh"
 #include "internal/listener.hh"
 #include "internal/modules.hh"

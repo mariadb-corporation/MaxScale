@@ -25,7 +25,6 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/utils.h>
-#include <maxscale/poll.hh>
 #include <maxscale/routing.hh>
 #include <maxscale/service.hh>
 #include <maxscale/target.hh>

@@ -29,13 +29,12 @@
 #include <maxbase/atomic.hh>
 #include <maxbase/host.hh>
 #include <maxbase/alloc.h>
-#include <maxscale/clock.h>
+#include <maxscale/clock.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/modutil.hh>
-#include <maxscale/poll.hh>
 #include <maxscale/router.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/service.hh>

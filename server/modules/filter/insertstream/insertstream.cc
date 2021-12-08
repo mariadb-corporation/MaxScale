@@ -21,7 +21,6 @@
 #include <maxscale/filter.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
-#include <maxscale/poll.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxscale/protocol/mariadb/query_classifier.hh>

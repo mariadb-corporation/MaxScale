@@ -13,8 +13,15 @@
 #pragma once
 
 /**
- * The private poll header
+ * @file sqlite3.h
+ *
+ * Common SQLite defines
  */
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/poll.hh>
+#include <sqlite3.h>
+
+/** SQLite3 version 3.7.14 introduced the new v2 close interface */
+#if SQLITE_VERSION_NUMBER < 3007014
+#define sqlite3_close_v2 sqlite3_close
+#endif

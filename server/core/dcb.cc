@@ -47,7 +47,7 @@
 #include <maxbase/alloc.h>
 #include <maxbase/atomic.h>
 #include <maxbase/atomic.hh>
-#include <maxscale/clock.h>
+#include <maxscale/clock.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/mainworker.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>

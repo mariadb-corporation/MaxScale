@@ -245,11 +245,7 @@ bool MainWorker::wait_for_shutdown(Call::action_t action)
 }
 }
 
-extern "C"
-{
-
 int64_t mxs_clock()
 {
     return mxs::MainWorker::ticks();
-}
 }

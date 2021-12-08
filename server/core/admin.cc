@@ -22,18 +22,13 @@
 #include <unordered_map>
 
 #include <microhttpd.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
-#include <sys/stat.h>
 
 #include <maxbase/atomic.h>
 #include <maxbase/assert.h>
 #include <maxscale/utils.h>
 #include <maxscale/config.hh>
-#include <maxscale/clock.h>
-#include <maxscale/http.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/threadpool.hh>
 

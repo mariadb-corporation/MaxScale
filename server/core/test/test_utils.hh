@@ -30,7 +30,6 @@
 
 #include <sys/stat.h>
 
-#include "../internal/poll.hh"
 #include "../internal/modules.hh"
 #include "../internal/listener.hh"
 

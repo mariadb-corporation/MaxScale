@@ -29,7 +29,6 @@
 #include <maxbase/watchedworker.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/indexedstorage.hh>
-#include <maxscale/poll.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/session.hh>
 
@@ -353,15 +352,6 @@ public:
      *             100% consistent set.
      */
     static STATISTICS get_statistics();
-
-    /**
-     * Return a specific combined statistic value.
-     *
-     * @param what  What to return.
-     *
-     * @return The corresponding value.
-     */
-    static int64_t get_one_statistic(POLL_STAT what);
 
     /**
      * Get next worker

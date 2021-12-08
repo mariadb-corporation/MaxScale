@@ -56,12 +56,11 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/mainworker.hh>
 #include <maxscale/maxscale.h>
-#include <maxscale/mysql_utils.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/server.hh>
-#include <maxscale/sqlite3.h>
+#include <maxscale/sqlite3.hh>
 #include <maxscale/threadpool.hh>
 #include <maxscale/utils.h>
 #include <maxscale/version.hh>

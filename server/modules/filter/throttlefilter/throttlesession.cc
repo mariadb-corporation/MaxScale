@@ -15,7 +15,6 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/modutil.hh>
-#include <maxscale/poll.hh>
 #include <maxscale/session.hh>
 
 #include "throttlesession.hh"

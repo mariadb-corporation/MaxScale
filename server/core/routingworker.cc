@@ -25,14 +25,13 @@
 #include <maxbase/alloc.h>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/config.hh>
-#include <maxscale/clock.h>
+#include <maxscale/clock.hh>
 #include <maxscale/mainworker.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/utils.hh>
 #include <maxscale/statistics.hh>
 
 #include "internal/modules.hh"
-#include "internal/poll.hh"
 #include "internal/server.hh"
 #include "internal/session.hh"
 
@@ -1253,58 +1252,6 @@ Worker::STATISTICS RoutingWorker::get_statistics()
     cs.exectimes = mxs::avg_element(s, &STATISTICS::exectimes);
 
     return cs;
-}
-
-// static
-int64_t RoutingWorker::get_one_statistic(POLL_STAT what)
-{
-    auto s = get_stats();
-
-    int64_t rv = 0;
-
-    switch (what)
-    {
-    case POLL_STAT_READ:
-        rv = mxs::sum(s, &STATISTICS::n_read);
-        break;
-
-    case POLL_STAT_WRITE:
-        rv = mxs::sum(s, &STATISTICS::n_write);
-        break;
-
-    case POLL_STAT_ERROR:
-        rv = mxs::sum(s, &STATISTICS::n_error);
-        break;
-
-    case POLL_STAT_HANGUP:
-        rv = mxs::sum(s, &STATISTICS::n_hup);
-        break;
-
-    case POLL_STAT_ACCEPT:
-        rv = mxs::sum(s, &STATISTICS::n_accept);
-        break;
-
-    case POLL_STAT_EVQ_AVG:
-        rv = mxs::avg(s, &STATISTICS::evq_avg);
-        break;
-
-    case POLL_STAT_EVQ_MAX:
-        rv = mxs::max(s, &STATISTICS::evq_max);
-        break;
-
-    case POLL_STAT_MAX_QTIME:
-        rv = mxs::max(s, &STATISTICS::maxqtime);
-        break;
-
-    case POLL_STAT_MAX_EXECTIME:
-        rv = mxs::max(s, &STATISTICS::maxexectime);
-        break;
-
-    default:
-        mxb_assert(!true);
-    }
-
-    return rv;
 }
 
 // static

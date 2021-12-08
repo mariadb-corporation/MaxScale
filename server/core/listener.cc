@@ -31,7 +31,6 @@
 #include <maxbase/log.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/modutil.hh>
-#include <maxscale/poll.hh>
 #include <maxscale/protocol2.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/secrets.hh>

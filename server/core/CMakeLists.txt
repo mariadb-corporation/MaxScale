@@ -36,7 +36,6 @@ add_library(maxscale-common SHARED
   mysql_utils.cc
   packet_tracker.cc
   paths.cc
-  poll.cc
   resource.cc
   response_stat.cc
   router.cc

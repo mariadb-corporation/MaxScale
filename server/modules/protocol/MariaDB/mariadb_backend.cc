@@ -20,12 +20,11 @@
 #include <maxbase/alloc.h>
 #include <maxbase/format.hh>
 #include <maxsql/mariadb.hh>
-#include <maxscale/clock.h>
+#include <maxscale/clock.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/mainworker.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
-#include <maxscale/poll.hh>
 #include <maxscale/router.hh>
 #include <maxscale/server.hh>
 #include <maxscale/service.hh>
