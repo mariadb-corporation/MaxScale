@@ -13,26 +13,26 @@
 
 import { expect } from 'chai'
 import mount from '@tests/unit/setup'
-import GlobalSearch from '@/components/common/GlobalSearch'
+import App from 'App.vue'
+import { routeChangesMock } from '@tests/unit/utils'
 
-describe('GlobalSearch.vue', () => {
+describe('App.vue', () => {
     let wrapper
 
     beforeEach(() => {
         wrapper = mount({
             shallow: true,
-            component: GlobalSearch,
+            component: App,
         })
     })
     afterEach(() => {
         wrapper.vm.SET_SEARCH_KEYWORD('')
     })
 
-    it(`computed search as well as $store.state.search_keyword are updated correctly`, () => {
-        // searching for 'row_server_1'
-        const dummy_search = 'row_server_1'
-        wrapper.vm.SET_SEARCH_KEYWORD(dummy_search)
-        expect(wrapper.vm.search_keyword).to.be.equal(dummy_search)
-        expect(wrapper.vm.search).to.be.equal(dummy_search)
+    it(`Should cleared search_keyword when route changes`, async () => {
+        wrapper.vm.SET_SEARCH_KEYWORD('row_server_1')
+        // go to settings page
+        await routeChangesMock(wrapper, '/settings')
+        expect(wrapper.vm.$store.state.search_keyword).to.be.empty
     })
 })
