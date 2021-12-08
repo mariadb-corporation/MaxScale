@@ -29,7 +29,7 @@ describe('ResourceRelationships.vue', () => {
         wrapper = mount({
             shallow: false,
             component: ResourceRelationships,
-            props: {
+            propsData: {
                 items: mockupResourceItems,
                 required: false, // whether relationship needs to be defined or not
                 relationshipsType: 'servers', // resource name, always plural word

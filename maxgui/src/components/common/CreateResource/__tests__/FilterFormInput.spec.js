@@ -42,7 +42,7 @@ describe('FilterFormInput.vue', () => {
         wrapper = mount({
             shallow: false,
             component: FilterFormInput,
-            props: {
+            propsData: {
                 resourceModules: mockupResourceModules,
             },
         })

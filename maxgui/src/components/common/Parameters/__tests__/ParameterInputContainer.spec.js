@@ -55,7 +55,7 @@ describe('ParameterInputContainer.vue', () => {
         wrapper = mount({
             shallow: false,
             component: ParameterInputContainer,
-            props: {
+            propsData: {
                 item: {}, // required props which will be added on each test
                 changedParametersArr: [],
                 /* changedParametersArr is a required props which

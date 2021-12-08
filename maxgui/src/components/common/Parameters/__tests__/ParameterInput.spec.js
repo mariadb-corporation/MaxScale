@@ -232,7 +232,7 @@ describe('ParameterInput.vue', () => {
         wrapper = mount({
             shallow: false,
             component: ParameterInput,
-            props: {
+            propsData: {
                 item: {},
             },
         })

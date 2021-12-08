@@ -34,7 +34,7 @@ const propsMountFactory = props =>
     mount({
         shallow: false,
         component: OverviewHeader,
-        props: props,
+        propsData: props,
     })
 
 describe('ServiceDetail - OverviewHeader', () => {
@@ -45,7 +45,7 @@ describe('ServiceDetail - OverviewHeader', () => {
         wrapper = mount({
             shallow: false,
             component: OverviewHeader,
-            props: defaultProps,
+            propsData: defaultProps,
         })
     })
     afterEach(async function() {

@@ -28,7 +28,7 @@ describe('FilterDetail - PageHeader', () => {
         wrapper = mount({
             shallow: false,
             component: PageHeader,
-            props: {
+            propsData: {
                 currentFilter: dummy_all_filters[0],
             },
         })

@@ -36,7 +36,7 @@ describe('ParameterTooltipActivator.vue', () => {
         wrapper = mount({
             shallow: false,
             component: ParameterTooltipActivator,
-            props: {
+            propsData: {
                 /*
                 'type' in item || 'description' in item || 'unit' in item || 'default_value' in item
                 A typical required item object

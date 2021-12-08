@@ -209,7 +209,7 @@ const computedFactory = (computed = {}) =>
     mount({
         shallow: false,
         component: DetailsParametersTable,
-        props: defaultProps,
+        propsData: defaultProps,
         computed,
     })
 

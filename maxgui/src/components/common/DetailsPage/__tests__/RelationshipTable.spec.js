@@ -100,7 +100,7 @@ describe('RelationshipTable.vue with readOnly mode and not addable', () => {
         wrapper = mount({
             shallow: false,
             component: RelationshipTable,
-            props: {
+            propsData: {
                 relationshipType: 'services',
                 tableRows: serviceStateTableRowsStub,
                 readOnly: true,
@@ -183,7 +183,7 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
         wrapper = mount({
             shallow: false,
             component: RelationshipTable,
-            props: {
+            propsData: {
                 relationshipType: 'services',
                 tableRows: serviceStateTableRowsStub,
                 readOnly: false,
@@ -207,7 +207,7 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
         wrapper = mount({
             shallow: false,
             component: RelationshipTable,
-            props: {
+            propsData: {
                 relationshipType: 'services',
                 loading: false,
                 tableRows: serviceStateTableRowsStub,

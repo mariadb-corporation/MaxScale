@@ -26,7 +26,7 @@ const mountFactory = opts =>
     mount({
         shallow: false,
         component: Worksheets,
-        props: {
+        propsData: {
             ctrDim: { width: 1280, height: 800 },
         },
         stubs: {

@@ -53,7 +53,7 @@ export default options => {
         router,
         vuetify,
         i18n,
-        propsData: options.props,
+        propsData: options.propsData,
         slots: options.slots,
         stubs: options.stubs,
         computed: options.computed,

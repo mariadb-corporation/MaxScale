@@ -85,7 +85,7 @@ describe('ParametersCollapse.vue', () => {
         wrapper = mount({
             shallow: false,
             component: ParametersCollapse,
-            props: {
+            propsData: {
                 parameters: [
                     addressParam,
                     durationParam,

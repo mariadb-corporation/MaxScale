@@ -29,7 +29,7 @@ const computedFactory = (computed = {}) =>
     mount({
         shallow: false,
         component: PageHeader,
-        props: {
+        propsData: {
             currentServer: dummy_all_servers[0],
         },
         computed,
@@ -77,7 +77,7 @@ describe('ServerDetail - PageHeader', () => {
         wrapper = mount({
             shallow: false,
             component: PageHeader,
-            props: {
+            propsData: {
                 currentServer: dummy_all_servers[0],
             },
         })

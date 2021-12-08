@@ -62,7 +62,7 @@ describe('ModuleParameters.vue', () => {
         wrapper = mount({
             shallow: false,
             component: ModuleParameters,
-            props: {
+            propsData: {
                 modules: mockupModules,
                 // for displaying label
                 moduleName: moduleName, // 'server', 'module', 'protocol'

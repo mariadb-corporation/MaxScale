@@ -64,7 +64,7 @@ describe('ServerFormInput.vue', () => {
         wrapper = mount({
             shallow: false,
             component: ServerFormInput,
-            props: {
+            propsData: {
                 resourceModules: mockupResourceModules,
                 allServices: dummy_all_services,
                 allMonitors: dummy_all_monitors,

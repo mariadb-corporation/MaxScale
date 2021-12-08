@@ -19,7 +19,7 @@ const mountFactory = () =>
     mount({
         shallow: false,
         component: LogLine,
-        props: {
+        propsData: {
             log: dummy_log_data[0],
         },
     })

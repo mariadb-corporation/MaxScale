@@ -22,7 +22,7 @@ describe('TableCell.vue', () => {
         wrapper = mount({
             shallow: false,
             component: TableCell,
-            props: {
+            propsData: {
                 cellIndex: 0,
                 rowIndex: 0,
                 indexOfLastColumn: 0,

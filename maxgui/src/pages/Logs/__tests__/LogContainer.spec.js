@@ -28,7 +28,7 @@ const mountFactory = opts =>
     mount({
         shallow: false,
         component: LogContainer,
-        props: {
+        propsData: {
             logViewHeight: 500,
             chosenLogLevels: [],
         },

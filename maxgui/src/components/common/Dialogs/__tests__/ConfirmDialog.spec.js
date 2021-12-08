@@ -33,7 +33,7 @@ describe('ConfirmDialog.vue', () => {
         wrapper = mount({
             shallow: false,
             component: ConfirmDialog,
-            props: initialProps,
+            propsData: initialProps,
         })
     })
 
@@ -42,7 +42,7 @@ describe('ConfirmDialog.vue', () => {
         wrapper = mount({
             shallow: false,
             component: ConfirmDialog,
-            props: initialProps,
+            propsData: initialProps,
         })
         // get confirmation text span
         let span = wrapper.find('.confirmations-text').html()
@@ -66,7 +66,7 @@ describe('ConfirmDialog.vue', () => {
         wrapper = mount({
             shallow: false,
             component: ConfirmDialog,
-            props: initialProps,
+            propsData: initialProps,
             slots: {
                 'body-append': '<div class="body-append">test div</div>',
             },

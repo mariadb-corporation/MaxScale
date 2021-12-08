@@ -29,7 +29,7 @@ const computedFactory = (computed = {}) =>
     mount({
         shallow: false,
         component: PageHeader,
-        props: {
+        propsData: {
             currentMonitor: dummy_all_monitors[0],
         },
         computed,
@@ -44,7 +44,7 @@ describe('MonitorDetail - PageHeader', () => {
         wrapper = mount({
             shallow: false,
             component: PageHeader,
-            props: {
+            propsData: {
                 currentMonitor: dummy_all_monitors[0],
             },
         })

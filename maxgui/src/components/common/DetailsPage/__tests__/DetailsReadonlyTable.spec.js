@@ -57,7 +57,7 @@ describe('DetailsReadonlyTable.vue', () => {
         wrapper = mount({
             shallow: false,
             component: DetailsReadonlyTable,
-            props: {
+            propsData: {
                 loading: false,
                 title: 'STATISTICS',
                 tableData: dummy_data_obj,

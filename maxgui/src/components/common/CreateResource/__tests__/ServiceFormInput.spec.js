@@ -53,7 +53,7 @@ describe('ServiceFormInput.vue', () => {
         wrapper = mount({
             shallow: false,
             component: ServiceFormInput,
-            props: {
+            propsData: {
                 resourceModules: mockupResourceModules,
                 allServers: dummy_all_servers,
                 allFilters: dummy_all_filters,

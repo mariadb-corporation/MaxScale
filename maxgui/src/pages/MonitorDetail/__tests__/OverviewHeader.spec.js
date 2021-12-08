@@ -39,7 +39,7 @@ describe('OverviewHeader index', () => {
         wrapper = mount({
             shallow: false,
             component: OverviewHeader,
-            props: {
+            propsData: {
                 currentMonitor: dummy_all_monitors[0],
             },
         })

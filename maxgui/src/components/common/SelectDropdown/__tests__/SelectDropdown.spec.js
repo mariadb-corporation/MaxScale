@@ -42,7 +42,7 @@ describe('SelectDropdown.vue', () => {
         wrapper = mount({
             shallow: false,
             component: SelectDropdown,
-            props: {
+            propsData: {
                 // entityName is always plural by default, this makes translating process easier
                 entityName: 'servers',
                 items: [

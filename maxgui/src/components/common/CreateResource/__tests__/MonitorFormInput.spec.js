@@ -55,7 +55,7 @@ describe('MonitorFormInput.vue', () => {
         wrapper = mount({
             shallow: false,
             component: MonitorFormInput,
-            props: {
+            propsData: {
                 resourceModules: dummyResourceModules,
                 allServers: dummy_all_servers,
             },

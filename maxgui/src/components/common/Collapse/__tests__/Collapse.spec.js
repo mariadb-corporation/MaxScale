@@ -21,7 +21,7 @@ describe('Collapse.vue', () => {
         wrapper = mount({
             shallow: false,
             component: Collapse,
-            props: {
+            propsData: {
                 isContentVisible: true,
                 title: 'Collapse title',
                 toggleOnClick: () => {

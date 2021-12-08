@@ -21,11 +21,11 @@ import {
     itemSelectMock,
 } from '@tests/unit/utils'
 
-const propsMountFactory = props =>
+const propsMountFactory = propsData =>
     mount({
         shallow: false,
         component: OverviewHeader,
-        props: props,
+        propsData,
     })
 
 const getRelationshipDataStub = async () => dummy_all_monitors
@@ -48,7 +48,7 @@ describe('ServerDetail - OverviewHeader', () => {
         wrapper = mount({
             shallow: false,
             component: OverviewHeader,
-            props: {
+            propsData: {
                 currentServer: dummy_all_servers[0],
                 getRelationshipData: getRelationshipDataStub,
             },

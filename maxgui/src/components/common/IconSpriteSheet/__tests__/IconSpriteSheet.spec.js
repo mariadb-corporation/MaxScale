@@ -18,20 +18,18 @@ import IconSpriteSheet from '@/components/common/IconSpriteSheet'
 /**
  * This function mockups defining slot content of the component by returning
  * mount function.
- * @param {Object} props props passing to IconSpriteSheet component
+ * @param {Object} propsData props passing to IconSpriteSheet component
  * @param {Boolean} isShallow shallow mount the component
  * @returns mount function
  */
-function mockupSlotDefining(props, isShallow = true) {
+function mockupSlotDefining(propsData, isShallow = true) {
     let mountOption = {
+        propsData,
         shallow: isShallow,
         component: IconSpriteSheet,
         slots: {
             default: 'status', // currently, maxgui only needs 'status' frame
         },
-    }
-    if (props) {
-        mountOption.props = props
     }
     return mount(mountOption)
 }
@@ -54,7 +52,7 @@ describe('IconSpriteSheet.vue', () => {
         wrapper = mount({
             shallow: false,
             component: IconSpriteSheet,
-            props: {
+            propsData: {
                 frame: 0,
                 size: 13,
                 color: undefined, // defining this to override color class of frames

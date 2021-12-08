@@ -111,11 +111,11 @@ const defaultProps = {
     ],
 }
 
-const mountPropsFactory = props =>
+const mountPropsFactory = propsData =>
     mount({
         shallow: false,
         component: DataTable,
-        props: props ? props : defaultProps,
+        propsData: propsData ? propsData : defaultProps,
     })
 
 describe('DataTable.vue', () => {

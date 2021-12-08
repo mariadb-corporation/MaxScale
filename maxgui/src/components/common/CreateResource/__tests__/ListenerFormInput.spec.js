@@ -48,7 +48,7 @@ describe('ListenerFormInput.vue', () => {
         wrapper = mount({
             shallow: false,
             component: ListenerFormInput,
-            props: {
+            propsData: {
                 resourceModules: mockupResourceModules,
                 allServices: dummy_all_services,
                 parentForm: { validate: () => null },

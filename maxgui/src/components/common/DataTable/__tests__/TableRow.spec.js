@@ -23,7 +23,7 @@ describe('TableRow.vue', () => {
         wrapper = mount({
             shallow: false,
             component: TableRow,
-            props: {
+            propsData: {
                 rowIndex: 0,
                 editableCell: false,
                 draggable: false,

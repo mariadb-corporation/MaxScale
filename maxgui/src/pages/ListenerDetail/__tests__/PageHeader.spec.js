@@ -27,7 +27,7 @@ describe('ListenerDetail - PageHeader', () => {
         wrapper = mount({
             shallow: false,
             component: PageHeader,
-            props: {
+            propsData: {
                 currentListener: dummy_all_listeners[0],
             },
         })

@@ -34,7 +34,7 @@ describe('TableHeader.vue', () => {
         wrapper = mount({
             shallow: false,
             component: TableHeader,
-            props: {
+            propsData: {
                 headers: headers,
                 sortBy: 'groupId',
                 sortDesc: true,

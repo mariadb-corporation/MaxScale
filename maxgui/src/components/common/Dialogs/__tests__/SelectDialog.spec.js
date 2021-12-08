@@ -37,7 +37,7 @@ describe('SelectDialog.vue', () => {
         wrapper = mount({
             shallow: false,
             component: SelectDialog,
-            props: initialProps,
+            propsData: initialProps,
         })
     })
 
@@ -46,7 +46,7 @@ describe('SelectDialog.vue', () => {
         wrapper = mount({
             shallow: true,
             component: SelectDialog,
-            props: { ...initialProps, multiple: true },
+            propsData: { ...initialProps, multiple: true },
         })
         // get the label p
         let label = wrapper.find('.select-label').html()
@@ -59,7 +59,7 @@ describe('SelectDialog.vue', () => {
         wrapper = mount({
             shallow: true,
             component: SelectDialog,
-            props: initialProps,
+            propsData: initialProps,
         })
         // get the label p
         let label = wrapper.find('.select-label').html()
@@ -131,7 +131,7 @@ describe('SelectDialog.vue', () => {
         wrapper = mount({
             shallow: false,
             component: SelectDialog,
-            props: initialProps,
+            propsData: initialProps,
             slots: {
                 'body-append': '<small class="body-append">body append</small>',
             },

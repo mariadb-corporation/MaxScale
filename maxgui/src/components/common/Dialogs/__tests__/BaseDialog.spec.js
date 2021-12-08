@@ -31,7 +31,7 @@ describe('BaseDialog.vue', () => {
         wrapper = mount({
             shallow: false,
             component: BaseDialog,
-            props: {
+            propsData: {
                 value: false,
                 title: 'dialog title',
                 onSave: () => null,
