@@ -47,7 +47,6 @@ export default options => {
     Object.keys(commonComponents).forEach(name => {
         localVue.component(name, commonComponents[name])
     })
-
     let mountOptions = {
         localVue,
         store,
@@ -56,13 +55,10 @@ export default options => {
         i18n,
         propsData: options.props,
         slots: options.slots,
+        stubs: options.stubs,
+        computed: options.computed,
         attachTo: '#app',
     }
-
-    if (options.computed) {
-        mountOptions.computed = options.computed
-    }
-
     return doMount(options.shallow, options.component, mountOptions)
 }
 export const router = new Router({ routes: routes })
