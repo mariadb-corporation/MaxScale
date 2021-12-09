@@ -51,7 +51,7 @@ std::vector<cdc::Server> service_to_servers(SERVICE* service)
         [&]() {
             for (auto s : service->reachable_servers())
             {
-                if (s->is_master())
+                if (s->is_master() || status_is_blr(s->status()))
                 {
                     // TODO: per-server credentials aren't exposed in the public class
                     const auto& cfg = *service->config();
