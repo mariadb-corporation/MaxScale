@@ -109,7 +109,7 @@
                         v-slot:left-table-tools-append
                     >
                         <div class="ml-2">
-                            <item-list
+                            <filter-list
                                 v-model="selectedLogTypes"
                                 selectAllOnActivated
                                 :label="$t('logTypes')"
@@ -179,12 +179,10 @@
  */
 import { mapState, mapMutations } from 'vuex'
 import ResultDataTable from './ResultDataTable'
-import ColumnList from './ColumnList.vue'
 export default {
     name: 'history-and-favorite',
     components: {
         'table-list': ResultDataTable,
-        'item-list': ColumnList,
     },
     props: {
         dynDim: {

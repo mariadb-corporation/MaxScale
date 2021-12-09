@@ -891,6 +891,9 @@ add_test_executable(mxs3803_trx_replay_hints.cc mxs3803_trx_replay_hints mxs3803
 # MXS-3881: LOAD DATA LOCAL INFILE inside of a transaction with transaction_replay enabled
 add_test_executable(mxs3881_ldli_trx_replay.cc mxs3881_ldli_trx_replay mxs3881_ldli_trx_replay LABELS REPL_BACKEND readwritesplit)
 
+# MXS-3894: Test for transaction_replay_checksum
+add_test_executable(mxs3894_trx_checksum.cc mxs3894_trx_checksum mxs3894_trx_checksum LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################

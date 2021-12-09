@@ -1,77 +1,81 @@
 <template>
-    <div ref="pageToolbar" class="page-toolbar d-flex align-center flex-grow-1 pr-2">
-        <v-btn
-            :disabled="!cnct_resources.length"
-            small
-            class="ml-2 float-left"
-            icon
-            @click="addNewWs"
-        >
-            <v-icon size="18" color="deep-ocean">add</v-icon>
-        </v-btn>
+    <div ref="pageToolbar" class="page-toolbar d-flex align-center flex-grow-1">
+        <div ref="leftBtns" class="d-flex align-center left-buttons pl-2">
+            <v-btn
+                :disabled="!cnct_resources.length"
+                small
+                class="float-left"
+                icon
+                @click="addNewWs"
+            >
+                <v-icon size="18" color="deep-ocean">add</v-icon>
+            </v-btn>
+        </div>
+
         <v-spacer />
-        <v-tooltip
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop color text-navigation py-1 px-4"
-        >
-            <template v-slot:activator="{ on }">
-                <v-btn
-                    class="text-capitalize font-weight-medium"
-                    icon
-                    small
-                    color="accent-dark"
-                    :disabled="!query_txt"
-                    v-on="on"
-                    @click="openFavoriteDialog"
-                >
-                    <v-icon size="20">
-                        bookmark
-                    </v-icon>
-                </v-btn>
-            </template>
-            <span style="white-space: pre;" class="d-inline-block text-center">
-                {{
-                    selected_query_txt
-                        ? `${$t('saveStatementsToFavorite', {
-                              quantity: $t('selected'),
-                          })}\nCmd/Ctrl + S`
-                        : `${$t('saveStatementsToFavorite', {
-                              quantity: $t('all'),
-                          })}\nCmd/Ctrl + S`
-                }}
-            </span>
-        </v-tooltip>
+        <div ref="rightBtns" class="d-flex align-center right-buttons pr-2">
+            <v-tooltip
+                top
+                transition="slide-y-transition"
+                content-class="shadow-drop color text-navigation py-1 px-4"
+            >
+                <template v-slot:activator="{ on }">
+                    <v-btn
+                        class="text-capitalize font-weight-medium"
+                        icon
+                        small
+                        color="accent-dark"
+                        :disabled="!query_txt"
+                        v-on="on"
+                        @click="openFavoriteDialog"
+                    >
+                        <v-icon size="20">
+                            bookmark
+                        </v-icon>
+                    </v-btn>
+                </template>
+                <span style="white-space: pre;" class="d-inline-block text-center">
+                    {{
+                        selected_query_txt
+                            ? `${$t('saveStatementsToFavorite', {
+                                  quantity: $t('selected'),
+                              })}\nCmd/Ctrl + S`
+                            : `${$t('saveStatementsToFavorite', {
+                                  quantity: $t('all'),
+                              })}\nCmd/Ctrl + S`
+                    }}
+                </span>
+            </v-tooltip>
+            <v-tooltip
+                top
+                transition="slide-y-transition"
+                content-class="shadow-drop color text-navigation py-1 px-4"
+            >
+                <template v-slot:activator="{ on }">
+                    <v-btn icon small v-on="on" @click="queryConfigDialog = !queryConfigDialog">
+                        <v-icon size="16" color="accent-dark">
+                            $vuetify.icons.settings
+                        </v-icon>
+                    </v-btn>
+                </template>
+                <span class="text-capitalize"> {{ $tc('settings', 2) }}</span>
+            </v-tooltip>
+            <v-tooltip
+                top
+                transition="slide-y-transition"
+                content-class="shadow-drop color text-navigation py-1 px-4"
+            >
+                <template v-slot:activator="{ on }">
+                    <v-btn icon small v-on="on" @click="SET_FULLSCREEN(!is_fullscreen)">
+                        <v-icon size="20" color="accent-dark">
+                            fullscreen{{ is_fullscreen ? '_exit' : '' }}
+                        </v-icon>
+                    </v-btn>
+                </template>
+                <span>{{ is_fullscreen ? $t('minimize') : $t('maximize') }}</span>
+            </v-tooltip>
+        </div>
 
-        <v-tooltip
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop color text-navigation py-1 px-4"
-        >
-            <template v-slot:activator="{ on }">
-                <v-btn icon small v-on="on" @click="queryConfigDialog = !queryConfigDialog">
-                    <v-icon size="16" color="accent-dark">
-                        $vuetify.icons.settings
-                    </v-icon>
-                </v-btn>
-            </template>
-            <span class="text-capitalize"> {{ $tc('settings', 2) }}</span>
-        </v-tooltip>
-
-        <v-tooltip
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop color text-navigation py-1 px-4"
-        >
-            <template v-slot:activator="{ on }">
-                <v-btn icon small v-on="on" @click="SET_FULLSCREEN(!is_fullscreen)">
-                    <v-icon size="20" color="accent-dark">
-                        fullscreen{{ is_fullscreen ? '_exit' : '' }}
-                    </v-icon>
-                </v-btn>
-            </template>
-            <span>{{ is_fullscreen ? $t('minimize') : $t('maximize') }}</span>
-        </v-tooltip>
         <query-config-dialog v-model="queryConfigDialog" />
 
         <confirm-dialog
@@ -152,6 +156,14 @@ export default {
             query_txt: state => state.query.query_txt,
             selected_query_txt: state => state.query.selected_query_txt,
         }),
+    },
+    mounted() {
+        this.$nextTick(() =>
+            this.$emit(
+                'get-total-btn-width',
+                this.$refs.rightBtns.clientWidth + this.$refs.leftBtns.clientWidth
+            )
+        )
     },
     methods: {
         ...mapMutations({

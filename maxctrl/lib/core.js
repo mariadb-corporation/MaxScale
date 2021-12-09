@@ -101,6 +101,24 @@ function configParser(filename) {
   return config.maxctrl;
 }
 
+function readOneLine() {
+  var res = "";
+
+  do {
+    var buffer = Buffer.alloc(1);
+    if (fs.readSync(0, buffer, 0, 1) == 0) {
+      break;
+    }
+    res += buffer.toString();
+  } while (!res.endsWith(os.EOL));
+
+  if (res.endsWith(os.EOL)) {
+    res = res.slice(0, res.length - os.EOL.length);
+  }
+
+  return res;
+}
+
 function program() {
   return yargs()
     .version(maxctrl_version)
@@ -263,8 +281,11 @@ function program() {
               hideEchoBack: true,
             });
           } else {
-            var line = fs.readFileSync(0);
-            argv.password = line.toString().trim();
+            // As it's possible for both the password and the commands to be sent over the same input,
+            // we must only read the first line of input, otherwise the commands are interpreted as
+            // a part of the password. Unfortunately, this isn't trivial to do in NodeJS as it
+            // doesn't have the equivalent of the std::getline C++ function.
+            argv.password = argv.p = readOneLine();
           }
         }
 
@@ -315,7 +336,7 @@ module.exports.execute = function (argv, opts) {
   return doCommand(argv);
 };
 
-async function readCommands(argv) {
+async function readCommands(argv, options) {
   var rval = [];
   var input = fs
     .readFileSync(0)
@@ -326,7 +347,7 @@ async function readCommands(argv) {
 
   for (line of input) {
     try {
-      rval.push(await doCommand(line));
+      rval.push(await doCommand(options + " " + line));
     } catch (e) {
       rval.push(e);
     }
@@ -336,8 +357,16 @@ async function readCommands(argv) {
 }
 
 async function askQuestion(argv) {
+  // All short and long form options, for checking if they are used.
+  const keys = base_opts_keys.concat(base_opts_short_keys);
+
+  // The actual base options given during startup, joined into one string.
+  const options = Object.keys(base_opts)
+    .map((k) => "--" + k + "=" + base_opts[k])
+    .join(" ");
+
   if (!process.stdin.isTTY) {
-    return readCommands(argv);
+    return readCommands(argv, options);
   }
 
   const inquirer = require("inquirer");
@@ -355,14 +384,6 @@ async function askQuestion(argv) {
 
   const _ = require("lodash");
   const parse = require("shell-quote").parse;
-
-  // All short and long form options, for checking if they are used.
-  const keys = base_opts_keys.concat(base_opts_short_keys);
-
-  // The actual base options given during startup, joined into one string.
-  const options = Object.keys(base_opts)
-    .map((k) => "--" + k + "=" + base_opts[k])
-    .join(" ");
 
   while (true) {
     try {

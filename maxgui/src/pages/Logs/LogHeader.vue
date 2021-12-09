@@ -1,18 +1,38 @@
 <template>
-    <div class="d-flex flex-row">
-        <div class="color text-field-text">
-            <span class="d-block mr-2"> log_source: {{ log_source }} </span>
-            {{
-                $help.dateFormat({
-                    value: maxscale_overview_info.started_at,
-                    formatType: 'DATE_RFC2822',
-                })
-            }}
-        </div>
+    <div class="d-flex flex-row align-center">
+        <span class="color text-field-text d-block mr-2"> log_source: {{ log_source }} </span>
         <v-spacer />
-        <div>
-            <log-filter :style="{ width: '210px' }" v-on="$listeners" />
-        </div>
+        <filter-list
+            v-model="chosenLogLevels"
+            returnObject
+            :label="$t('filterBy')"
+            :cols="allLogLevels"
+            :maxHeight="400"
+        >
+            <template v-slot:activator="{ data: { on, attrs, value, label } }">
+                <v-btn
+                    small
+                    class="text-capitalize font-weight-medium"
+                    outlined
+                    depressed
+                    color="accent-dark"
+                    v-bind="attrs"
+                    v-on="on"
+                >
+                    <v-icon size="16" color="accent-dark" class="mr-1">
+                        $vuetify.icons.filter
+                    </v-icon>
+                    {{ label }}
+                    <v-icon
+                        size="24"
+                        color="accent-dark"
+                        :class="{ 'column-list-toggle--active': value }"
+                    >
+                        arrow_drop_down
+                    </v-icon>
+                </v-btn>
+            </template>
+        </filter-list>
     </div>
 </template>
 
@@ -29,21 +49,36 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
-import LogFilter from './LogFilter'
+import { mapMutations, mapState } from 'vuex'
 export default {
     name: 'log-header',
-    components: {
-        LogFilter,
-    },
-    data() {
-        return {}
-    },
     computed: {
         ...mapState({
-            maxscale_overview_info: state => state.maxscale.maxscale_overview_info,
             log_source: state => state.maxscale.log_source,
+            chosen_log_levels: state => state.maxscale.chosen_log_levels,
+            MAXSCALE_LOG_LEVELS: state => state.app_config.MAXSCALE_LOG_LEVELS,
         }),
+        allLogLevels() {
+            return this.strToObj(this.MAXSCALE_LOG_LEVELS)
+        },
+        /**
+         * Chosen_log_levels is an array of strings but chosenLogLevels has
+         * to be an array of objects with `text` as a property
+         */
+        chosenLogLevels: {
+            get() {
+                return this.strToObj(this.chosen_log_levels)
+            },
+            set(v) {
+                this.SET_CHOSEN_LOG_LEVELS(v.map(item => item.text))
+            },
+        },
+    },
+    methods: {
+        ...mapMutations({
+            SET_CHOSEN_LOG_LEVELS: 'maxscale/SET_CHOSEN_LOG_LEVELS',
+        }),
+        strToObj: arr => arr.map(str => ({ text: str })),
     },
 }
 </script>

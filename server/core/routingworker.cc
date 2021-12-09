@@ -458,7 +458,7 @@ void RoutingWorker::process_timeouts()
             ClientDCB* pClient = pSes->client_dcb;
             if (pClient->state() == DCB::State::POLLING)
             {
-                auto idle = now - pClient->last_read();
+                auto idle = now - std::max(pClient->last_read(), pClient->last_write());
                 pSes->tick(MXS_CLOCK_TO_SEC(idle));
 
                 if (pooling_time >= 0 && idle >= pooling_time && pSes->can_pool_backends())

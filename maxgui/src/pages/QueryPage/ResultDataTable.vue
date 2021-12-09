@@ -12,7 +12,7 @@
                 :placeholder="$t('filterResult')"
                 hide-details
             />
-            <column-list
+            <filter-list
                 v-model="filterHeaderIdxs"
                 selectAllOnActivated
                 :label="$t('filterBy')"
@@ -44,7 +44,7 @@
                 <span>{{ $t('deleteSelectedRows') }}</span>
             </v-tooltip>
             <result-export :rows="filteredRows_wo_idx" :headers="visHeaders_wo_idx" />
-            <column-list
+            <filter-list
                 v-model="visHeaderIdxs"
                 selectAllOnActivated
                 :label="$t('columns')"
@@ -141,13 +141,11 @@
 Also emits other events from virtual-scroll-table via v-on="$listeners"
 */
 import ResultExport from './ResultExport'
-import ColumnList from './ColumnList.vue'
 import { mapState } from 'vuex'
 export default {
     name: 'result-data-table',
     components: {
         'result-export': ResultExport,
-        'column-list': ColumnList,
     },
     props: {
         headers: {

@@ -10,6 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { APP_CONFIG } from 'utils/constants'
 
 export default {
     namespaced: true,
@@ -19,12 +20,14 @@ export default {
         thread_stats: [],
         threads_datasets: [],
         maxscale_parameters: {},
+        logs_page_size: 100,
         latest_logs: [],
         prev_log_link: null,
         log_source: null,
         prev_log_data: [],
         prev_filtered_log_link: null,
         prev_filtered_log_data: [],
+        chosen_log_levels: APP_CONFIG.MAXSCALE_LOG_LEVELS,
     },
     mutations: {
         SET_MAXSCALE_OVERVIEW_INFO(state, payload) {
@@ -59,6 +62,10 @@ export default {
         },
         SET_PREV_FILTERED_LOG_DATA(state, payload) {
             state.prev_filtered_log_data = payload
+        },
+
+        SET_CHOSEN_LOG_LEVELS(state, payload) {
+            state.chosen_log_levels = payload
         },
     },
     actions: {
@@ -135,9 +142,11 @@ export default {
                 commit('SET_THREADS_DATASETS', dataSets)
             }
         },
-        async fetchLatestLogs({ commit }) {
+        async fetchLatestLogs({ commit, state }) {
             try {
-                const res = await this.$http.get(`/maxscale/logs/data?page[size]=1000`)
+                const res = await this.$http.get(
+                    `/maxscale/logs/data?page[size]=${state.logs_page_size}`
+                )
                 const {
                     data: { attributes: { log = [], log_source = null } = {} } = {},
                     links: { prev = null } = {},
@@ -172,14 +181,22 @@ export default {
             }
         },
 
-        // TODO: add filter params once maxscale supports it
         async fetchPrevFilteredLog({ commit, state }) {
             try {
+                const currPriority = state.chosen_log_levels.join(',')
                 const prevLink = state.prev_filtered_log_link
                     ? state.prev_filtered_log_link
                     : state.prev_log_link
                 const indexOfEndpoint = prevLink.indexOf('/maxscale/logs/')
-                const endpoint = prevLink.slice(indexOfEndpoint)
+                const prevEndPoint = prevLink.slice(indexOfEndpoint)
+                let endpoint = ''
+                if (prevEndPoint.includes('&priority')) {
+                    // remove old priority from prevEndPoint
+                    let regex = /(alert|debug|error|info|notice|warning),?/g
+                    const tmp = prevEndPoint.replace(regex, '')
+                    // add current priority
+                    endpoint = tmp.replace(/priority=/g, `priority=${currPriority}`)
+                } else endpoint = `${prevEndPoint}&priority=${currPriority}`
                 const res = await this.$http.get(endpoint)
                 const {
                     data: { attributes: { log = [] } = {} } = {},

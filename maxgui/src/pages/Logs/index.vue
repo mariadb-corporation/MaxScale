@@ -7,34 +7,9 @@
             }"
         >
             <div ref="pageContent" class="fill-height">
-                <log-header
-                    ref="logHeader"
-                    class="pb-4 pt-2"
-                    @get-chosen-log-levels="chosenLogLevels = $event"
-                />
+                <log-header ref="logHeader" class="pb-4 pt-2" />
                 <div v-if="logViewHeight" class="log-lines-container pa-4 color bg-reflection">
-                    <v-btn
-                        v-if="isNotifShown"
-                        class="pa-2 new-log-btn font-weight-medium px-7 text-capitalize"
-                        small
-                        height="36"
-                        color="primary"
-                        rounded
-                        depressed
-                        @click="scrollToBottom"
-                    >
-                        {{ $t('newMessagesAvailable') }}!
-                        <v-icon class="arrow-down" size="32">
-                            $expand
-                        </v-icon>
-                    </v-btn>
-
-                    <log-container
-                        ref="logContainer"
-                        :logViewHeight="logViewHeight"
-                        :chosenLogLevels="chosenLogLevels"
-                        @is-notif-shown="isNotifShown = $event"
-                    />
+                    <log-container :logViewHeight="logViewHeight" />
                 </div>
             </div>
         </v-sheet>
@@ -54,13 +29,12 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions } from 'vuex'
 import PageHeader from './PageHeader'
 import LogHeader from './LogHeader'
 import LogContainer from './LogContainer.vue'
 
 export default {
-    name: 'settings',
+    name: 'logs',
     components: {
         PageHeader,
         LogHeader,
@@ -70,16 +44,9 @@ export default {
         return {
             logViewHeight: 0,
             isNotifShown: false,
-            chosenLogLevels: [],
         }
     },
-    async created() {
-        await this.fetchMaxScaleOverviewInfo()
-    },
     methods: {
-        ...mapActions({
-            fetchMaxScaleOverviewInfo: 'maxscale/fetchMaxScaleOverviewInfo',
-        }),
         setPageContentDim() {
             this.$nextTick(() => {
                 const pageContentHeight =
@@ -89,22 +56,6 @@ export default {
                 if (pageContentHeight) this.logViewHeight = pageContentHeight - 32
             })
         },
-
-        scrollToBottom() {
-            this.$refs.logContainer.toBottom()
-            // hide notification
-            this.isNotifShown = false
-        },
     },
 }
 </script>
-
-<style lang="scss" scoped>
-.new-log-btn {
-    position: absolute;
-    right: 50%;
-    transform: translateX(50%);
-    bottom: 6%;
-    z-index: 1;
-}
-</style>

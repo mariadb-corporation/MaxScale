@@ -554,6 +554,10 @@ Log messages to MariaDB MaxScale's log file.
 
 Log messages whose syslog priority is *warning*.
 
+MaxScale logs warning level messages whenever a condition is encountered that
+the user should be notified of but does not require immediate action or it
+indicates a minor problem.
+
 ### `log_notice`
 
 - **Type**: [boolean](#booleans)
@@ -562,8 +566,9 @@ Log messages whose syslog priority is *warning*.
 
 Log messages whose syslog priority is *notice*.
 
-Messages of this priority provide information about the functioning of MariaDB
-MaxScale.
+These messages contain information that is helpful for the user and they usually
+do not indicate a problem. These are logged whenever something worth nothing
+happens in either MaxScale or in the servers it monitors.
 
 ### `log_info`
 
@@ -574,10 +579,11 @@ MaxScale.
 Log messages whose syslog priority is *info*.
 
 These messages provide detailed information about the internal workings of
-MariaDB MaxScale and should not, due to their frequency, be enabled, unless
-there is a specific reason for that. For instance, from these messages it will
-be evident, e.g., why a particular query was routed to the master instead of to
-a slave.
+MariaDB MaxScale. These messages should only be enabled when there is a need to
+inspect the internal logic of MaxScale. A common use-case is to see why a
+particular query was handled in a certain way. Almost all modules log some
+messages on the info level and this can be very helpful when trying to solve
+routing related problems.
 
 ### `log_debug`
 
@@ -588,9 +594,11 @@ a slave.
 Log messages whose syslog priority is *debug*.
 
 These messages are intended for development purposes and are disabled by
-default. Note that if MariaDB MaxScale has been built in release mode, then
-debug messages are excluded from the build and this setting will not have any
-effect.
+default. These are rarely useful outside of debugging core MaxScale issues.
+
+**Note:** If MariaDB MaxScale has been built in release mode, then debug
+messages are excluded from the build and this setting will not have any
+effect. If an attempt to enable these is made, a warning is logged.
 
 ### `log_warn_super_user`
 
@@ -1654,9 +1662,13 @@ even if the duration is longer than a second.
 
 **Warning:** If a connection is idle for longer than the configured connection
 timeout, it will be forcefully disconnected and a warning will be logged in the
-MaxScale log file. If you are performing long-running maintenance operations
-(e.g. `ALTER TABLE`) either do them with a direct connection to the server or
-set `connection_timeout` to zero before executing them.
+MaxScale log file.
+
+In MaxScale versions 6.2.0 and older, if long-running operations (e.g. `ALTER
+TABLE`) were performed, MaxScale would close the connections if they look longer
+than `connection_timeout` seconds to execute
+([MXS-3893](https://jira.mariadb.org/browse/MXS-3893)). In MaxScale 6.2.1 this
+has been fixed and the active operations are now correctly tracked.
 
 Example:
 
