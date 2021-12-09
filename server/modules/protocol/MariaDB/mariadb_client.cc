@@ -42,7 +42,6 @@
 #include <maxscale/routingworker.hh>
 #include <maxscale/session.hh>
 #include <maxscale/ssl.hh>
-#include <maxscale/utils.h>
 #include <maxbase/format.hh>
 #include <maxscale/event.hh>
 #include <maxscale/version.hh>

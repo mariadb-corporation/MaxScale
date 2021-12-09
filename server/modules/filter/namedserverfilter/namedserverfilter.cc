@@ -43,7 +43,6 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/server.hh>
 #include <maxscale/session.hh>
-#include <maxscale/utils.h>
 #include <maxscale/config2.hh>
 
 using std::string;

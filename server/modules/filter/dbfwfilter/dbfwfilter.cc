@@ -77,7 +77,6 @@
 #include <maxscale/protocol/mariadb/query_classifier.hh>
 #include <maxscale/pcre2.hh>
 #include <maxbase/alloc.h>
-#include <maxscale/utils.h>
 
 #include "rules.hh"
 #include "user.hh"

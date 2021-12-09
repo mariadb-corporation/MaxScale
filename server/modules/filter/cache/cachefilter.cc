@@ -18,7 +18,6 @@
 #include <maxscale/jansson.hh>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/paths.hh>
-#include <maxscale/utils.h>
 
 #include "cacheconfig.hh"
 #include "cachemt.hh"

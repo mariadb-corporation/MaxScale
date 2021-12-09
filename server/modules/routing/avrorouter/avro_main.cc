@@ -17,7 +17,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <glob.h>
-#include <maxscale/maxscale.h>
+#include <maxscale/maxscale.hh>
 #include <maxbase/worker.hh>
 #include <maxbase/alloc.h>
 #include <maxscale/modulecmd.hh>

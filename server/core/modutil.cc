@@ -30,7 +30,7 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
-#include <maxscale/utils.h>
+#include <maxscale/utils.hh>
 #include <maxscale/mysql_utils.hh>
 
 /** These are used when converting MySQL wildcards to regular expressions */

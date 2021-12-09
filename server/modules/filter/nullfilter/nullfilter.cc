@@ -14,7 +14,6 @@
 #define MXS_MODULE_NAME "nullfilter"
 #include "nullfilter.hh"
 #include <string>
-#include <maxscale/utils.h>
 
 using std::string;
 namespace config = mxs::config;

@@ -27,7 +27,6 @@
 
 #include <maxbase/atomic.h>
 #include <maxbase/assert.h>
-#include <maxscale/utils.h>
 #include <maxscale/config.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/threadpool.hh>

@@ -17,7 +17,6 @@
 #include <maxscale/json_api.hh>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/paths.hh>
-#include <maxscale/utils.h>
 
 #include "maskingrules.hh"
 

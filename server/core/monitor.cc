@@ -39,11 +39,9 @@
 #include <maxscale/json_api.hh>
 #include <maxscale/mariadb.hh>
 #include <maxscale/mainworker.hh>
-#include <maxscale/maxscale.h>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/secrets.hh>
-#include <maxscale/utils.hh>
 
 #include "internal/config.hh"
 #include "internal/externcmd.hh"

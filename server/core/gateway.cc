@@ -55,14 +55,14 @@
 #include <maxscale/built_in_modules.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/mainworker.hh>
-#include <maxscale/maxscale.h>
+#include <maxscale/maxscale.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/server.hh>
 #include <maxscale/sqlite3.hh>
 #include <maxscale/threadpool.hh>
-#include <maxscale/utils.h>
+#include <maxscale/utils.hh>
 #include <maxscale/version.hh>
 
 #include "internal/admin.hh"
@@ -192,6 +192,17 @@ static bool is_maxscale_already_running();
 
 namespace
 {
+
+/* Exit status for MaxScale */
+const int MAXSCALE_SHUTDOWN = 0;        /* Normal shutdown */
+const int MAXSCALE_BADCONFIG = 1;       /* Configuration file error */
+const int MAXSCALE_NOLIBRARY = 2;       /* No embedded library found */
+const int MAXSCALE_NOSERVICES = 3;      /* No services could be started */
+const int MAXSCALE_ALREADYRUNNING = 4;  /* MaxScale is already running */
+const int MAXSCALE_BADARG = 5;          /* Bad command line argument */
+const int MAXSCALE_INTERNALERROR = 6;   /* Internal error, see error log */
+const int MAXSCALE_RESTARTING = 75;     /* MaxScale must restart (same as EX_TEMPFAIL from BSD sysexits.h */
+
 // The default configuration file name
 const char default_cnf_fname[] = "maxscale.cnf";
 

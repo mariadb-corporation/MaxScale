@@ -47,7 +47,6 @@
 #include <maxscale/server.hh>
 #include <maxscale/session.hh>
 #include <maxscale/users.hh>
-#include <maxscale/utils.h>
 #include <maxscale/utils.hh>
 #include <maxscale/version.hh>
 #include <maxscale/json_api.hh>

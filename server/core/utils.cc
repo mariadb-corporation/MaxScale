@@ -28,7 +28,6 @@
  * @endverbatim
  */
 
-#include <maxscale/utils.h>
 #include <maxscale/utils.hh>
 
 #include <fcntl.h>
@@ -454,10 +453,7 @@ static void set_port(struct sockaddr_storage* addr, uint16_t port)
     }
 }
 
-int open_network_socket(enum mxs_socket_type type,
-                        struct sockaddr_storage* addr,
-                        const char* host,
-                        uint16_t port)
+int open_network_socket(mxs_socket_type type, sockaddr_storage* addr, const char* host, uint16_t port)
 {
     mxb_assert(type == MXS_SOCKET_NETWORK || type == MXS_SOCKET_LISTENER);
     struct addrinfo* ai = NULL, hint = {};
@@ -565,7 +561,7 @@ static bool configure_unix_socket(int so)
     return setnonblocking(so) == 0;
 }
 
-int open_unix_socket(enum mxs_socket_type type, struct sockaddr_un* addr, const char* path)
+int open_unix_socket(mxs_socket_type type, sockaddr_un* addr, const char* path)
 {
     int fd = -1;
 

@@ -11,44 +11,33 @@
  * Public License.
  */
 
-#include <maxscale/ccdefs.hh>
-#include <maxscale/maxscale.h>
+#include <maxscale/maxscale.hh>
 
-#include <time.h>
-
+#include <ctime>
 #include <maxscale/mainworker.hh>
-#include <maxscale/routingworker.hh>
-
 #include "internal/maxscale.hh"
-#include "internal/service.hh"
-
-static time_t started;
 
 namespace
 {
-struct ThisUnit
-{
-    std::atomic<const mxb::Worker*> admin_worker {nullptr};
-};
-ThisUnit this_unit;
+time_t started;
+sig_atomic_t n_shutdowns {0};
+bool teardown_in_progress {false};
 }
 
-void maxscale_reset_starttime(void)
+void maxscale_reset_starttime()
 {
-    started = time(0);
+    started = time(nullptr);
 }
 
-time_t maxscale_started(void)
+time_t maxscale_started()
 {
     return started;
 }
 
 int maxscale_uptime()
 {
-    return time(0) - started;
+    return time(nullptr) - started;
 }
-
-static sig_atomic_t n_shutdowns = 0;
 
 bool maxscale_is_shutting_down()
 {
@@ -66,8 +55,6 @@ int maxscale_shutdown()
 
     return n + 1;
 }
-
-static bool teardown_in_progress = false;
 
 bool maxscale_teardown_in_progress()
 {

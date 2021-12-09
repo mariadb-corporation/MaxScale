@@ -12,7 +12,6 @@
  */
 
 #include <maxbase/assert.h>
-#include <maxscale/utils.h>
 #include <maxscale/utils.hh>
 #include <maxbase/random.hh>
 #include <string.h>

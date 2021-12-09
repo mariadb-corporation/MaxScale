@@ -37,14 +37,11 @@
 #include <sstream>
 #include <string>
 
-#include <maxbase/alloc.h>
-#include <maxbase/atomic.h>
 #include <maxscale/config2.hh>
 #include <maxbase/format.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/service.hh>
-#include <maxscale/utils.h>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>

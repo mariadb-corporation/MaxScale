@@ -38,7 +38,6 @@
 #include <maxscale/router.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/service.hh>
-#include <maxscale/utils.h>
 #include <maxscale/protocol/mariadb/mysql.hh>
 
 #include "internal/filter.hh"

@@ -19,13 +19,10 @@
 #include <maxscale/protocol/mariadb/authenticator.hh>
 
 #include <mysql.h>
-#include <maxsql/mariadb.hh>
 #include <maxbase/alloc.h>
 #include <maxbase/format.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/mysql_utils.hh>
-#include <maxscale/utils.h>
-#include <maxscale/routing.hh>
 #include <maxscale/service.hh>
 #include <maxscale/target.hh>
 #include "packet_parser.hh"

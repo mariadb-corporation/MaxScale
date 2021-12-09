@@ -16,7 +16,7 @@
 #include <vector>
 #include <sys/epoll.h>
 
-#include <maxscale/utils.h>
+#include <maxscale/utils.hh>
 #include <maxscale/mainworker.hh>
 
 #include "internal/websocket.hh"

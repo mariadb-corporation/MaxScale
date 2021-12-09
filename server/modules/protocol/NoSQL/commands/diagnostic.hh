@@ -19,7 +19,7 @@
 #include <openssl/opensslv.h>
 #include <map>
 #include <maxscale/config.hh>
-#include <maxscale/maxscale.h>
+#include <maxscale/maxscale.hh>
 #include "query_and_write_operation.hh"
 
 namespace nosql

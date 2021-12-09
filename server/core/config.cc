@@ -47,12 +47,11 @@
 #include <maxscale/http.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/log.hh>
-#include <maxscale/maxscale.h>
+#include <maxscale/maxscale.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/pcre2.hh>
 #include <maxscale/router.hh>
 #include <maxscale/secrets.hh>
-#include <maxscale/utils.h>
 #include <maxscale/utils.hh>
 #include <maxscale/version.hh>
 

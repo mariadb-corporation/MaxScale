@@ -8,16 +8,11 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/config2.hh>
-#include <maxscale/utils.h>
-#include <maxscale/json_api.hh>
-#include <maxscale/jansson.hh>
 
 #include "throttlefilter.hh"
 
 #include <string>
 #include <algorithm>
-#include <sstream>
-#include <fstream>
 #include <unistd.h>
 
 namespace

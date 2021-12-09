@@ -23,9 +23,8 @@
 
 #include <maxbase/alloc.h>
 #include <maxbase/ini.hh>
-#include <maxscale/maxscale.h>
+#include <maxscale/maxscale.hh>
 #include <maxscale/pcre2.hh>
-#include <maxscale/utils.h>
 #include <maxscale/routingworker.hh>
 
 static const char* statefile_section = "avro-conversion";

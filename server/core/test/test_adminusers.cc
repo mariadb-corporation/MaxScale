@@ -20,10 +20,8 @@
 #endif
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <maxscale/paths.hh>
-#include <maxbase/alloc.h>
-#include <maxscale/utils.h>
+#include <maxscale/utils.hh>
 #include <maxscale/users.hh>
 #include "../internal/adminusers.hh"
 

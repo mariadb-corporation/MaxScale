@@ -21,7 +21,6 @@
 #include <maxscale/config.hh>
 #include <maxscale/hint.hh>
 #include <maxscale/routingworker.hh>
-#include <maxscale/utils.h>
 #include <maxscale/modutil.hh>
 
 using mxs::RoutingWorker;

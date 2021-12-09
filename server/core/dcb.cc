@@ -55,7 +55,7 @@
 #include <maxscale/router.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/service.hh>
-#include <maxscale/utils.h>
+#include <maxscale/utils.hh>
 
 #include "internal/modules.hh"
 #include "internal/server.hh"

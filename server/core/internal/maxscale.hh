@@ -16,7 +16,7 @@
  * @file core/maxscale/maxscale.hh - The private maxscale general definitions
  */
 
-#include <maxscale/maxscale.h>
+#include <maxscale/maxscale.hh>
 
 /**
  * Initiate shutdown of MaxScale.
@@ -26,12 +26,12 @@
  *
  * @return How many times maxscale_shutdown() has been called.
  */
-int maxscale_shutdown(void);
+int maxscale_shutdown();
 
 /**
  * Reset the start time from which the uptime is calculated.
  */
-void maxscale_reset_starttime(void);
+void maxscale_reset_starttime();
 
 // Helper functions for debug assertions
 bool maxscale_teardown_in_progress();

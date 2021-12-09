@@ -26,7 +26,6 @@
 #include <maxscale/json_api.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/routingworker.hh>
-#include <maxscale/utils.h>
 #include <maxscale/buffer.hh>
 #include <maxsimd/canonical.hh>
 
