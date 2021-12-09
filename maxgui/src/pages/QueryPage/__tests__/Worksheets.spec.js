@@ -60,7 +60,7 @@ function stubCnctWke(wrapper) {
 describe('Worksheets', () => {
     let wrapper
 
-    beforeEach(async () => {
+    beforeEach(() => {
         wrapper = mountFactory()
         // mount again to getCurrActiveWkeId
         wrapper = mountFactory({

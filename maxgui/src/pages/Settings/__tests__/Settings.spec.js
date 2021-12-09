@@ -79,7 +79,7 @@ const processedModuleParamsStub = [
 describe('Settings index', () => {
     let wrapper, axiosStub
 
-    before(async () => {
+    before(() => {
         axiosStub = sinon.stub(store.$http, 'get').returns(
             Promise.resolve({
                 data: {},
@@ -97,8 +97,8 @@ describe('Settings index', () => {
         })
     })
 
-    after(async () => {
-        await axiosStub.restore()
+    after(() => {
+        axiosStub.restore()
     })
 
     it(`Should send request to get maxscale and module parameters`, async () => {
@@ -112,11 +112,11 @@ describe('Settings index', () => {
         axiosStub.should.have.callCount(2)
     })
 
-    it(`Should process module parameters as expected`, async () => {
+    it(`Should process module parameters as expected`, () => {
         expect(wrapper.vm.$data.overridingModuleParams).to.be.deep.equals(processedModuleParamsStub)
     })
 
-    it(`Should pass necessary props to details-parameters-table`, async () => {
+    it(`Should pass necessary props to details-parameters-table`, () => {
         const detailsParametersTable = wrapper.findComponent({
             name: 'details-parameters-table',
         })

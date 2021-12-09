@@ -25,23 +25,11 @@ describe('FilterDetail index', () => {
     let wrapper, axiosStub
 
     before(async () => {
-        axiosStub = sinon.stub(store.$http, 'get').returns(
-            Promise.resolve({
-                data: {},
-            })
-        )
-
         const filterPath = `/dashboard/filters/${dummy_all_filters[0].id}`
         if (router.history.current.path !== filterPath) await router.push(filterPath)
     })
 
-    after(async () => {
-        await axiosStub.reset()
-        await wrapper.destroy()
-    })
-
-    beforeEach(async () => {
-        await axiosStub.restore()
+    beforeEach(() => {
         axiosStub = sinon.stub(store.$http, 'get').returns(
             Promise.resolve({
                 data: {},
@@ -55,8 +43,8 @@ describe('FilterDetail index', () => {
             },
         })
     })
-    afterEach(async () => {
-        await axiosStub.restore()
+    afterEach(() => {
+        axiosStub.restore()
     })
 
     it(`Should send request to get listener, relationships service state

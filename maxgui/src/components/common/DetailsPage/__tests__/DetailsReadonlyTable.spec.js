@@ -84,12 +84,12 @@ describe('DetailsReadonlyTable.vue', () => {
         processTableRowsSpy.should.have.been.calledOnce
     })
 
-    it(`Should show table by default`, async () => {
+    it(`Should show table by default`, () => {
         expect(wrapper.vm.$data.showTable).to.be.true
     })
 
     it(`Should render table headers having 'Variable' and 'Value' columns with
-      with as 65%, 35%, respectively`, async () => {
+      with as 65%, 35%, respectively`, () => {
         expect(wrapper.vm.tableHeaders).to.be.deep.equals(expectDefaultHeaders)
     })
 
@@ -107,7 +107,7 @@ describe('DetailsReadonlyTable.vue', () => {
         expect(wrapper.vm.$data.tableRows).to.be.deep.equals(dummy_processed_data_arr)
     })
 
-    it(`Should pass necessary props to data-table`, async () => {
+    it(`Should pass necessary props to data-table`, () => {
         const dataTable = wrapper.findComponent({
             name: 'data-table',
         })

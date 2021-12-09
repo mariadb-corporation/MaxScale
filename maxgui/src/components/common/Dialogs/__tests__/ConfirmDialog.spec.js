@@ -29,7 +29,6 @@ describe('ConfirmDialog.vue', () => {
         smallInfo: '', // translate before passing
     }
     beforeEach(() => {
-        localStorage.clear()
         wrapper = mount({
             shallow: false,
             component: ConfirmDialog,
@@ -61,7 +60,7 @@ describe('ConfirmDialog.vue', () => {
         expect(span.exists()).to.be.equal(false)
     })
 
-    it(`Testing component renders accurate slot if body-append slot is used`, async () => {
+    it(`Testing component renders accurate slot if body-append slot is used`, () => {
         // component need to be shallowed, ignoring child components
         wrapper = mount({
             shallow: false,

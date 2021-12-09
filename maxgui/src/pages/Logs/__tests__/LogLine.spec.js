@@ -26,11 +26,8 @@ const mountFactory = () =>
 
 describe('LogLine', () => {
     let wrapper
-    beforeEach(async () => {
+    beforeEach(() => {
         wrapper = mountFactory()
-    })
-    afterEach(async function() {
-        await wrapper.destroy()
     })
     it(`Should return accurate color classes for log level section`, async () => {
         dummy_log_data.forEach(async log => {

@@ -18,15 +18,14 @@ import PageWrapper from '@/components/common/PageWrapper'
 describe('PageWrapper.vue', () => {
     let wrapper
 
-    beforeEach(async () => {
-        localStorage.clear()
+    beforeEach(() => {
         wrapper = mount({
             shallow: false,
             component: PageWrapper,
         })
     })
 
-    it(`Should render accurate content when default slot is used`, async () => {
+    it(`Should render accurate content when default slot is used`, () => {
         wrapper = mount({
             shallow: true,
             component: PageWrapper,

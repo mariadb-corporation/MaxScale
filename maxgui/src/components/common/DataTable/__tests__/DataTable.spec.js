@@ -222,7 +222,7 @@ describe('DataTable.vue - Tree data feature', () => {
         })
     })
 
-    it(`It processes data as expected when isTree props is true.`, async () => {
+    it(`It processes data as expected when isTree props is true.`, () => {
         expect(wrapper.vm.$props.isTree).to.equal(true)
         expect(wrapper.vm.$data.hasValidChild).to.equal(true)
     })

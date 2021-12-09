@@ -19,17 +19,14 @@ chai.should()
 chai.use(sinonChai)
 describe('Logs index', () => {
     let wrapper
-    beforeEach(async () => {
+    beforeEach(() => {
         wrapper = mount({
             shallow: false,
             component: Logs,
         })
     })
-    afterEach(async function() {
-        await wrapper.destroy()
-    })
 
-    it(`Should not show log-container when logViewHeight is not calculated yet`, async () => {
+    it(`Should not show log-container when logViewHeight is not calculated yet`, () => {
         expect(wrapper.vm.$data.logViewHeight).to.be.equal(0)
         const logContainer = wrapper.findComponent({ name: 'log-container' })
         expect(logContainer.exists()).to.be.false

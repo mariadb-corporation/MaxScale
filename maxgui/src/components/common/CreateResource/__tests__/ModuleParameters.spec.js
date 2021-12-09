@@ -56,9 +56,7 @@ const moduleName = 'router'
 
 describe('ModuleParameters.vue', () => {
     let wrapper
-
-    beforeEach(async () => {
-        localStorage.clear()
+    beforeEach(() => {
         wrapper = mount({
             shallow: false,
             component: ModuleParameters,
@@ -70,7 +68,7 @@ describe('ModuleParameters.vue', () => {
         })
     })
 
-    it(`Should render module name as input label accurately`, async () => {
+    it(`Should render module name as input label accurately`, () => {
         const arrayClasses = wrapper.find('.field__label').classes()
         const strClasses = arrayClasses.toString().replace(/,/g, ' ')
         expect(strClasses).to.be.equals(

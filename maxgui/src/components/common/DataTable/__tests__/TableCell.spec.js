@@ -18,7 +18,6 @@ import TableCell from '@/components/common/DataTable/TableCell'
 describe('TableCell.vue', () => {
     let wrapper
     beforeEach(() => {
-        localStorage.clear()
         wrapper = mount({
             shallow: false,
             component: TableCell,

@@ -32,7 +32,6 @@ describe('ParameterTooltipActivator.vue', () => {
     }
     let componentId = 'component_tooltip_0'
     beforeEach(() => {
-        localStorage.clear()
         wrapper = mount({
             shallow: false,
             component: ParameterTooltipActivator,

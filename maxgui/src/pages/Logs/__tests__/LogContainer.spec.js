@@ -71,10 +71,10 @@ describe('LogContainer', () => {
          */
         await wrapper.vm.$help.delay(350)
     })
-    afterEach(async function() {
-        await axiosStub.restore()
-        await wsStub.restore()
-        await wrapper.destroy()
+    afterEach(function() {
+        axiosStub.restore()
+        wsStub.restore()
+        wrapper.destroy()
     })
 
     it(`Should send requests to get maxscale log`, async () => {
@@ -88,7 +88,7 @@ describe('LogContainer', () => {
         expect(wrapper.vm.isFiltering).to.be.true
     })
 
-    it(`Should show no logs found when logToShow is empty`, async () => {
+    it(`Should show no logs found when logToShow is empty`, () => {
         wrapper = mountFactory({
             computed: {
                 logToShow: () => [],

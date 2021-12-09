@@ -228,7 +228,6 @@ describe('ParameterInput.vue', () => {
     let wrapper
 
     beforeEach(() => {
-        localStorage.clear()
         wrapper = mount({
             shallow: false,
             component: ParameterInput,

@@ -80,8 +80,7 @@ const pathParam = {
 describe('ParametersCollapse.vue', () => {
     let wrapper
 
-    beforeEach(async () => {
-        localStorage.clear()
+    beforeEach(() => {
         wrapper = mount({
             shallow: false,
             component: ParametersCollapse,
@@ -120,7 +119,7 @@ describe('ParametersCollapse.vue', () => {
         expect(tds[0].vm.$props.item.id).to.be.equals(wrapper.vm.$data.parameterTooltip.item.id)
     })
 
-    it(`Should render total number of table row on the first row of the first column`, async () => {
+    it(`Should render total number of table row on the first row of the first column`, () => {
         const { wrappers: ths } = wrapper.findAll('th')
         expect(ths.length).to.be.equals(2)
         ths.forEach((th, i) => {
@@ -183,14 +182,14 @@ describe('ParametersCollapse.vue', () => {
     })
 
     it(`Should have default value as true for the following properties in data object:
-      showAll, editableCell, keepPrimitiveValue `, async () => {
+      showAll, editableCell, keepPrimitiveValue `, () => {
         expect(wrapper.vm.$data.showAll).to.be.true
         expect(wrapper.vm.$data.editableCell).to.be.true
         expect(wrapper.vm.$data.keepPrimitiveValue).to.be.true
     })
 
     it(`Should pass the following properties: showAll, editableCell, keepPrimitiveValue
-      in data object to data-table`, async () => {
+      in data object to data-table`, () => {
         const dataTable = wrapper.findComponent({ name: 'data-table' })
         expect(dataTable.vm.$props.showAll).to.be.equals(wrapper.vm.$data.showAll)
         expect(dataTable.vm.$props.editableCell).to.be.equals(wrapper.vm.$data.editableCell)

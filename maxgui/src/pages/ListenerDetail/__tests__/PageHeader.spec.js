@@ -23,7 +23,7 @@ chai.use(sinonChai)
 describe('ListenerDetail - PageHeader', () => {
     let wrapper, axiosStub
 
-    beforeEach(async () => {
+    beforeEach(() => {
         wrapper = mount({
             shallow: false,
             component: PageHeader,
@@ -38,13 +38,13 @@ describe('ListenerDetail - PageHeader', () => {
         await axiosStub.restore()
     })
 
-    it(`Should render listener state accurately`, async () => {
+    it(`Should render listener state accurately`, () => {
         const span = wrapper.find('.resource-state')
         expect(span.exists()).to.be.true
         expect(span.text()).to.be.equals(dummy_all_listeners[0].attributes.state)
     })
 
-    it(`Should pass necessary props to confirm-dialog`, async () => {
+    it(`Should pass necessary props to confirm-dialog`, () => {
         const confirmDialog = wrapper.findComponent({ name: 'confirm-dialog' })
         expect(confirmDialog.exists()).to.be.true
         const { title, type, item, onSave, onClose, onCancel } = confirmDialog.vm.$props

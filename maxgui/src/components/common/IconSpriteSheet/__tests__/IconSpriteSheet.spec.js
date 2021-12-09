@@ -47,40 +47,29 @@ const hardCodingStatusSheet = {
 describe('IconSpriteSheet.vue', () => {
     let wrapper
 
-    beforeEach(() => {
-        localStorage.clear()
-        wrapper = mount({
-            shallow: false,
-            component: IconSpriteSheet,
-            propsData: {
-                frame: 0,
-                size: 13,
-                color: undefined, // defining this to override color class of frames
-                frames: undefined, // defining valid frame icons if using other icons
-                colorClasses: undefined, // defining frame colors if frames is defined
-            },
-        })
+    afterEach(() => {
+        wrapper.destroy()
     })
 
     it(`Should choose accurately frame and color classes when
-      'default' slot is defined`, async () => {
+      'default' slot is defined`, () => {
         wrapper = mockupSlotDefining()
         expect(wrapper.vm.sheet).to.be.deep.equals(hardCodingStatusSheet)
     })
 
-    it(`Should render accurately status icon`, async () => {
+    it(`Should render accurately status icon`, () => {
         const indexOfFrame = hardCodingStatusSheet.frames.length - 1
         wrapper = mockupSlotDefining({ frame: indexOfFrame })
         expect(wrapper.vm.icon).to.be.equals(hardCodingStatusSheet.frames[indexOfFrame])
     })
 
-    it(`Should render fallback bug_report icon if there is a missing frame`, async () => {
+    it(`Should render fallback bug_report icon if there is a missing frame`, () => {
         const indexOfFrame = hardCodingStatusSheet.frames.length
         wrapper = mockupSlotDefining({ frame: indexOfFrame })
         expect(wrapper.vm.icon).to.be.equals('bug_report')
     })
 
-    it(`Should assign accurately class to icon`, async () => {
+    it(`Should assign accurately class to icon`, () => {
         const indexOfFrame = hardCodingStatusSheet.frames.length - 1
         wrapper = mockupSlotDefining({ frame: indexOfFrame })
         expect(wrapper.vm.iconClass).to.be.equals(
@@ -88,20 +77,20 @@ describe('IconSpriteSheet.vue', () => {
         )
     })
 
-    it(`Should ignore frame color class if color props is defined`, async () => {
+    it(`Should ignore frame color class if color props is defined`, () => {
         const indexOfFrame = hardCodingStatusSheet.frames.length - 1
         wrapper = mockupSlotDefining({ frame: indexOfFrame, color: 'blue' })
         expect(wrapper.vm.iconClass).to.be.equals('')
     })
 
-    it(`Should assign accurate color to v-icon component when color props is defined`, async () => {
+    it(`Should assign accurate color to v-icon component when color props is defined`, () => {
         const indexOfFrame = hardCodingStatusSheet.frames.length - 1
         const isShallow = false
         wrapper = mockupSlotDefining({ frame: indexOfFrame, color: 'blue' }, isShallow)
         expect(wrapper.find('.blue--text').exists()).to.be.true
     })
 
-    it(`Should pass accurately props to v-icon`, async () => {
+    it(`Should pass accurately props to v-icon`, () => {
         const indexOfFrame = hardCodingStatusSheet.frames.length - 1
         const isShallow = false
         const passedProps = {

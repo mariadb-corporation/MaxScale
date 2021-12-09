@@ -15,7 +15,6 @@ import mount from '@tests/unit/setup'
 import QueryPage from '@/pages/QueryPage'
 import sinon from 'sinon'
 import sinonChai from 'sinon-chai'
-import { routeChangesMock } from '@tests/unit/utils'
 
 chai.should()
 chai.use(sinonChai)
@@ -35,7 +34,7 @@ function mockBeforeRouteLeave(wrapper) {
 describe('QueryPage index', () => {
     let wrapper, handleAutoClearQueryHistorySpy, validatingConnSpy, disconnectAllSpy
 
-    beforeEach(async () => {
+    beforeEach(() => {
         // spy on actions before mounting occurs
         handleAutoClearQueryHistorySpy = sinon.spy(QueryPage.methods, 'handleAutoClearQueryHistory')
         validatingConnSpy = sinon.spy(QueryPage.methods, 'validatingConn')
@@ -44,13 +43,11 @@ describe('QueryPage index', () => {
             shallow: true,
             component: QueryPage,
         })
-        await routeChangesMock(wrapper, '/query') // Mockup leaving page
     })
-    afterEach(async () => {
+    afterEach(() => {
         handleAutoClearQueryHistorySpy.restore()
         validatingConnSpy.restore()
         disconnectAllSpy.restore()
-        await routeChangesMock(wrapper, '/settings') // Mockup leaving page
     })
 
     it('Should call `handleAutoClearQueryHistory` action once when component is created', () => {
@@ -60,13 +57,13 @@ describe('QueryPage index', () => {
         validatingConnSpy.should.have.been.calledOnce
     })
     it(`Should open confirmation dialog on leaving page when there
-      is an active connection`, async () => {
+      is an active connection`, () => {
         // mockup to have active connection
         wrapper.vm.$store.commit('query/SET_CNCT_RESOURCES', cnct_resources_mock)
         mockBeforeRouteLeave(wrapper)
         expect(wrapper.vm.$data.isConfDlgOpened).to.be.true
     })
-    it(`Should allow user to leave page when there is no active connection`, async () => {
+    it(`Should allow user to leave page when there is no active connection`, () => {
         // mockup to have no active connection
         wrapper.vm.$store.commit('query/SET_CNCT_RESOURCES', [])
         expect(wrapper.vm.cnct_resources).to.be.empty
@@ -75,26 +72,26 @@ describe('QueryPage index', () => {
     })
 
     it(`Should disconnect all opened connections by default when
-     confirming leaving the page`, async () => {
+     confirming leaving the page`, () => {
         // mockup leaving page
         wrapper.vm.$store.commit('query/SET_CNCT_RESOURCES', cnct_resources_mock)
         mockBeforeRouteLeave(wrapper)
         expect(wrapper.vm.$data.confirmDelAll).to.be.true
         // mock confirm leaving
-        await wrapper.vm.onLeave()
+        wrapper.vm.onLeave()
         disconnectAllSpy.should.have.been.calledOnce
     })
 
-    it(`Should keep connections even when leaving the page`, async () => {
+    it(`Should keep connections even when leaving the page`, () => {
         // mockup leaving page
         wrapper.vm.$store.commit('query/SET_CNCT_RESOURCES', cnct_resources_mock)
         mockBeforeRouteLeave(wrapper)
         // mockup un-checking "Disconnect all" checkbox
-        await wrapper.setData({
+        wrapper.setData({
             confirmDelAll: false,
         })
         // mock confirm leaving
-        await wrapper.vm.onLeave()
+        wrapper.vm.onLeave()
         disconnectAllSpy.should.have.not.been.called
     })
 })

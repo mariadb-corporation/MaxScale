@@ -50,8 +50,6 @@ const dummyResourceModules = [
 describe('MonitorFormInput.vue', () => {
     let wrapper
     beforeEach(() => {
-        localStorage.clear()
-
         wrapper = mount({
             shallow: false,
             component: MonitorFormInput,
@@ -87,7 +85,7 @@ describe('MonitorFormInput.vue', () => {
         expect(wrapper.vm.$refs.serversRelationship).to.be.not.null
     })
 
-    it(`Should get only server that are not monitored`, async () => {
+    it(`Should get only server that are not monitored`, () => {
         expect(wrapper.vm.serversList).to.be.deep.equals(getUnMonitoredServersStub())
     })
 

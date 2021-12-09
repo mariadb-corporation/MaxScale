@@ -30,7 +30,6 @@ describe('TableHeader.vue', () => {
     ]
 
     beforeEach(() => {
-        localStorage.clear()
         wrapper = mount({
             shallow: false,
             component: TableHeader,

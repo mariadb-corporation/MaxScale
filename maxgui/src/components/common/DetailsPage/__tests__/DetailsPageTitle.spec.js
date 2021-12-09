@@ -20,12 +20,7 @@ import sinon from 'sinon'
 describe('DetailsPageTitle.vue', () => {
     let wrapper, axiosStub
 
-    after(async () => {
-        await axiosStub.reset()
-    })
-
-    beforeEach(async () => {
-        localStorage.clear()
+    beforeEach(() => {
         wrapper = mount({
             shallow: false,
             component: DetailsPageTitle,
@@ -36,8 +31,8 @@ describe('DetailsPageTitle.vue', () => {
             })
         )
     })
-    afterEach(async () => {
-        await axiosStub.restore()
+    afterEach(() => {
+        axiosStub.restore()
     })
 
     it(`Should render accurate page title`, async () => {
@@ -52,7 +47,7 @@ describe('DetailsPageTitle.vue', () => {
         expect(pageTitleEle.html()).to.be.include('row_server_1')
     })
 
-    it(`Should render accurate content when setting-menu slot is used`, async () => {
+    it(`Should render accurate content when setting-menu slot is used`, () => {
         wrapper = mount({
             shallow: true,
             component: DetailsPageTitle,
@@ -63,7 +58,7 @@ describe('DetailsPageTitle.vue', () => {
         expect(wrapper.find('.details-page-title__setting-menu').text()).to.be.equal('setting-menu')
     })
 
-    it(`Should render accurate content when append slot is used`, async () => {
+    it(`Should render accurate content when append slot is used`, () => {
         wrapper = mount({
             shallow: false,
             component: DetailsPageTitle,

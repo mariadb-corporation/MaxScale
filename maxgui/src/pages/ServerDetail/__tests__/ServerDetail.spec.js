@@ -244,7 +244,7 @@ describe('ServerDetail index', () => {
         await fetchMonitorDiagnosticsSpy.should.have.been.calledOnce
     })
 
-    it(`Should pass necessary props value to 'STATISTICS' table`, async () => {
+    it(`Should pass necessary props value to 'STATISTICS' table`, () => {
         const statsTable = wrapper.findComponent({ ref: 'statistics-table' })
         expect(statsTable.exists()).to.be.true
         const { title, tableData, isTree } = statsTable.vm.$props
@@ -253,7 +253,7 @@ describe('ServerDetail index', () => {
         expect(isTree).to.be.true
     })
 
-    it(`Should pass necessary props value to 'CURRENT SESSIONS' table`, async () => {
+    it(`Should pass necessary props value to 'CURRENT SESSIONS' table`, () => {
         const sessionsTable = wrapper.findComponent({ ref: 'sessions-table' })
         expect(sessionsTable.exists()).to.be.true
         const {
@@ -275,16 +275,16 @@ describe('ServerDetail index', () => {
         expect(customTableHeaders).to.be.deep.equals(sessionsTableHeader)
     })
 
-    it(`Should use accurate table headers for 'CURRENT SESSIONS' table`, async () => {
+    it(`Should use accurate table headers for 'CURRENT SESSIONS' table`, () => {
         const sessionsTable = wrapper.findComponent({ ref: 'sessions-table' })
         expect(sessionsTable.vm.$props.customTableHeaders).to.be.deep.equals(EXPECT_SESSIONS_HEADER)
     })
 
-    it(`Should compute sessions for this server to accurate data format`, async () => {
+    it(`Should compute sessions for this server to accurate data format`, () => {
         expect(wrapper.vm.sessionsTableRow).to.be.deep.equals(sessionsTableRowStub)
     })
 
-    it(`Should pass necessary props value to 'MONITOR DIAGNOSTICS' table`, async () => {
+    it(`Should pass necessary props value to 'MONITOR DIAGNOSTICS' table`, () => {
         const diagnosticsTable = wrapper.findComponent({ ref: 'diagnostics-table' })
         expect(diagnosticsTable.exists()).to.be.true
         const { title, tableData, isTree, expandAll } = diagnosticsTable.vm.$props
@@ -295,11 +295,11 @@ describe('ServerDetail index', () => {
         expect(tableData).to.be.deep.equals(wrapper.vm.monitorDiagnostics)
     })
 
-    it(`Should compute monitor diagnostics for this server to accurate data format`, async () => {
+    it(`Should compute monitor diagnostics for this server to accurate data format`, () => {
         expect(wrapper.vm.monitorDiagnostics).to.be.deep.equals(monitorDiagnosticsStub)
     })
 
-    it(`Should pass necessary props value to 'SERVICES' table`, async () => {
+    it(`Should pass necessary props value to 'SERVICES' table`, () => {
         const servicesTable = wrapper.findComponent({ name: 'relationship-table' })
         expect(servicesTable.exists()).to.be.true
         const { relationshipType, tableRows, getRelationshipData } = servicesTable.vm.$props
@@ -339,7 +339,7 @@ describe('ServerDetail index', () => {
         expect(wrapper.vm.$data.serviceTableRow).to.be.deep.equals(serviceTableRowStub)
     })
 
-    it(`Should pass necessary props value to 'PARAMETERS' table`, async () => {
+    it(`Should pass necessary props value to 'PARAMETERS' table`, () => {
         const paramsTable = wrapper.findComponent({ name: 'details-parameters-table' })
         expect(paramsTable.exists()).to.be.true
         const {

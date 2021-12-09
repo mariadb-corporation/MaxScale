@@ -166,7 +166,7 @@ describe('MonitorDetail index', () => {
 
     describe('Module command fetch-cmd-results assertions', () => {
         let fetchAsyncResultsSpy
-        beforeEach(async () => {
+        beforeEach(() => {
             fetchAsyncResultsSpy = sinon.spy(MonitorDetail.methods, 'fetchAsyncResults')
             wrapper = computedFactory()
         })

@@ -40,7 +40,7 @@ const computedFactory = (computed = {}) =>
  * @param {Number} payload.dummyServiceState - dummyServiceState: Started, Stopped
  */
 const serviceStateTestAssertions = ({ wrapper, dummyServiceState }) => {
-    it(`Should render ${dummyServiceState}`, async () => {
+    it(`Should render ${dummyServiceState}`, () => {
         // stateIconFrame stub
         wrapper = computedFactory({
             serviceState: () => dummyServiceState,
@@ -58,7 +58,7 @@ const DUMMY_CLICKABLE_STATES = ['Started', 'Stopped', 'Started']
 describe('ServiceDetail - PageHeader', () => {
     let wrapper, axiosDeleteStub, axiosPutStub
 
-    beforeEach(async () => {
+    beforeEach(() => {
         wrapper = mount({
             shallow: false,
             component: PageHeader,
@@ -71,12 +71,12 @@ describe('ServiceDetail - PageHeader', () => {
         axiosPutStub = sinon.stub(wrapper.vm.$store.$http, 'put').returns(Promise.resolve())
     })
 
-    afterEach(async () => {
-        await axiosDeleteStub.restore()
-        await axiosPutStub.restore()
+    afterEach(() => {
+        axiosDeleteStub.restore()
+        axiosPutStub.restore()
     })
 
-    it(`Should pass necessary props to confirm-dialog`, async () => {
+    it(`Should pass necessary props to confirm-dialog`, () => {
         const confirmDialog = wrapper.findComponent({
             name: 'confirm-dialog',
         })
@@ -122,7 +122,7 @@ describe('ServiceDetail - PageHeader', () => {
         )
     })
 
-    describe('button disable test assertions', async () => {
+    describe('button disable test assertions', () => {
         // states that disables btn with prefix in ALL_BTN_CLASS_PREFIXES
         const dummyStates = ['Stopped', 'Started']
         dummyStates.forEach((state, i) => {
@@ -140,7 +140,7 @@ describe('ServiceDetail - PageHeader', () => {
         })
     })
 
-    describe('Service state update and service deletion test assertions', async () => {
+    describe('Service state update and service deletion test assertions', () => {
         ALL_BTN_CLASS_PREFIXES.forEach((prefix, i) => {
             const wrapper = computedFactory({
                 serviceState: () => DUMMY_CLICKABLE_STATES[i],

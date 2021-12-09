@@ -59,8 +59,6 @@ const mockupResourceModules = [
 describe('ServerFormInput.vue', () => {
     let wrapper
     beforeEach(() => {
-        localStorage.clear()
-
         wrapper = mount({
             shallow: false,
             component: ServerFormInput,
@@ -124,11 +122,11 @@ describe('ServerFormInput.vue', () => {
         expect(wrapper.vm.$refs.monitorsRelationship).to.be.not.null
     })
 
-    it(`Should compute servicesList from allServices accurately`, async () => {
+    it(`Should compute servicesList from allServices accurately`, () => {
         expect(wrapper.vm.servicesList).to.be.deep.equals(getServiceListStub)
     })
 
-    it(`Should compute monitorsList from allMonitors accurately`, async () => {
+    it(`Should compute monitorsList from allMonitors accurately`, () => {
         expect(wrapper.vm.monitorsList).to.be.deep.equals(getMonitorListStub)
     })
 

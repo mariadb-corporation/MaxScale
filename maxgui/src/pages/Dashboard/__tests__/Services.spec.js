@@ -55,11 +55,7 @@ const expectedTableRows = [
 describe('Dashboard Services tab', () => {
     let wrapper, axiosStub
 
-    after(async () => {
-        await axiosStub.reset()
-    })
-
-    beforeEach(async () => {
+    beforeEach(() => {
         wrapper = mount({
             shallow: false,
             component: Services,
@@ -74,15 +70,15 @@ describe('Dashboard Services tab', () => {
         )
     })
 
-    afterEach(async function() {
-        await axiosStub.restore()
+    afterEach(() => {
+        axiosStub.restore()
     })
 
-    it(`Should process table rows accurately`, async () => {
+    it(`Should process table rows accurately`, () => {
         expect(wrapper.vm.tableRows).to.be.deep.equals(expectedTableRows)
     })
 
-    it(`Should pass expected table headers to data-table`, async () => {
+    it(`Should pass expected table headers to data-table`, () => {
         const dataTable = wrapper.findComponent({ name: 'data-table' })
         expect(wrapper.vm.tableHeaders).to.be.deep.equals(expectedTableHeaders)
         expect(dataTable.vm.$props.headers).to.be.deep.equals(expectedTableHeaders)
@@ -111,7 +107,7 @@ describe('Dashboard Services tab', () => {
         expect(wrapper.vm.$route.path).to.be.equals(`/dashboard/servers/${serverId}`)
     })
 
-    it(`Should get total number of unique server names accurately`, async () => {
+    it(`Should get total number of unique server names accurately`, () => {
         const uniqueServerNames = getUniqueResourceNamesStub(expectedTableRows, 'serverIds')
         expect(wrapper.vm.$data.serversLength).to.be.equals(uniqueServerNames.length)
     })

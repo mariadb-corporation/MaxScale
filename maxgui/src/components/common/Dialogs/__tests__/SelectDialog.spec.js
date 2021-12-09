@@ -41,7 +41,7 @@ describe('SelectDialog.vue', () => {
         })
     })
 
-    it(`Should render correct label value when multiple props is true`, async () => {
+    it(`Should render correct label value when multiple props is true`, () => {
         // component need to be shallowed, ignoring child components
         wrapper = mount({
             shallow: true,
@@ -53,7 +53,7 @@ describe('SelectDialog.vue', () => {
         // check include correct label value
         expect(label).to.be.include('Specify monitors')
     })
-    it(`Should render correct label value when multiple props is false`, async () => {
+    it(`Should render correct label value when multiple props is false`, () => {
         // component need to be shallowed, ignoring child components
 
         wrapper = mount({
@@ -127,7 +127,7 @@ describe('SelectDialog.vue', () => {
         expect(showPlaceHolder).to.be.false
     })
 
-    it(`Should render accurate content when body-append slot is used`, async () => {
+    it(`Should render accurate content when body-append slot is used`, () => {
         wrapper = mount({
             shallow: false,
             component: SelectDialog,

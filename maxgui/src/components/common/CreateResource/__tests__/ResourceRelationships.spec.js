@@ -24,8 +24,7 @@ const mockupResourceItems = [
 describe('ResourceRelationships.vue', () => {
     let wrapper
 
-    beforeEach(async () => {
-        localStorage.clear()
+    beforeEach(() => {
         wrapper = mount({
             shallow: false,
             component: ResourceRelationships,
@@ -40,7 +39,7 @@ describe('ResourceRelationships.vue', () => {
     })
 
     it(`Should render relationship name as singular word accurately
-      when multiple props is false`, async () => {
+      when multiple props is false`, () => {
         const label = wrapper.find('.collapse-title').text()
         expect(label).to.be.equals('server')
     })
@@ -55,7 +54,7 @@ describe('ResourceRelationships.vue', () => {
         expect(label).to.be.equals('services')
     })
 
-    it(`Should show select-dropdown by default`, async () => {
+    it(`Should show select-dropdown by default`, () => {
         expect(wrapper.find('.collapse-content').attributes().style).to.be.undefined
     })
 

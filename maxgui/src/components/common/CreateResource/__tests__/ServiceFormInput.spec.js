@@ -48,8 +48,6 @@ const getServersListStub = () => dummy_all_servers.map(({ id, type }) => ({ id, 
 describe('ServiceFormInput.vue', () => {
     let wrapper
     beforeEach(() => {
-        localStorage.clear()
-
         wrapper = mount({
             shallow: false,
             component: ServiceFormInput,
@@ -102,11 +100,11 @@ describe('ServiceFormInput.vue', () => {
         expect(wrapper.vm.$refs.filtersRelationship).to.be.not.null
     })
 
-    it(`Should compute serversList from allServers accurately`, async () => {
+    it(`Should compute serversList from allServers accurately`, () => {
         expect(wrapper.vm.serversList).to.be.deep.equals(getServersListStub())
     })
 
-    it(`Should compute filtersList from allFilters accurately`, async () => {
+    it(`Should compute filtersList from allFilters accurately`, () => {
         expect(wrapper.vm.filtersList).to.be.deep.equals(getFilterListStub)
     })
 

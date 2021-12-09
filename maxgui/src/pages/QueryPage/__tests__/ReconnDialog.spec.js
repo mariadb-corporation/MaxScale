@@ -32,7 +32,7 @@ const mountFactory = opts =>
 describe('ReconnDialog', () => {
     let wrapper, deleteConnSpy
 
-    beforeEach(async () => {
+    beforeEach(() => {
         deleteConnSpy = sinon.spy(ReconnDialog.methods, 'deleteConn')
         wrapper = mountFactory()
     })

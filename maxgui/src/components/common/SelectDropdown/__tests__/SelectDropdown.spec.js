@@ -57,7 +57,7 @@ describe('SelectDropdown.vue', () => {
         })
     })
 
-    it(`Should render accurate placeholder when multiple props is false`, async () => {
+    it(`Should render accurate placeholder when multiple props is false`, () => {
         // get the wrapper div
         let placeholderWrapper = wrapper.find('.v-select__selections').html()
         // check include correct placeholder value

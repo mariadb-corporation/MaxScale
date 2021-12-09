@@ -24,7 +24,7 @@ chai.use(sinonChai)
 describe('FilterDetail - PageHeader', () => {
     let wrapper, axiosStub
 
-    beforeEach(async () => {
+    beforeEach(() => {
         wrapper = mount({
             shallow: false,
             component: PageHeader,
@@ -35,11 +35,11 @@ describe('FilterDetail - PageHeader', () => {
         axiosStub = sinon.stub(wrapper.vm.$store.$http, 'delete').returns(Promise.resolve())
     })
 
-    afterEach(async () => {
-        await axiosStub.restore()
+    afterEach(() => {
+        axiosStub.restore()
     })
 
-    it(`Should pass necessary props to confirm-dialog`, async () => {
+    it(`Should pass necessary props to confirm-dialog`, () => {
         const confirmDialog = wrapper.findComponent({ name: 'confirm-dialog' })
         expect(confirmDialog.exists()).to.be.true
         const { title, type, item, onSave, onClose, onCancel } = confirmDialog.vm.$props

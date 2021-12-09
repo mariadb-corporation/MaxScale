@@ -32,7 +32,7 @@ async function mockupCheckingTheBox(wrapper) {
 
 let api
 let originalXMLHttpRequest = XMLHttpRequest
-describe('LoginForm.vue', async () => {
+describe('LoginForm.vue', () => {
     let wrapper
     beforeEach(() => {
         api = makeServer({ environment: 'test' })
@@ -103,7 +103,7 @@ describe('LoginForm.vue', async () => {
         expect(input.find('[type = "text"]').exists()).to.be.equal(true)
     })
 
-    it('Should have rememberMe checked by default', async () => {
+    it('Should have rememberMe checked by default', () => {
         expect(wrapper.vm.$data.rememberMe).to.be.true
     })
 

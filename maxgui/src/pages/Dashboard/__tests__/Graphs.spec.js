@@ -23,11 +23,7 @@ chai.use(sinonChai)
 describe('Graphs index', () => {
     let wrapper, axiosStub
 
-    after(async () => {
-        await axiosStub.reset()
-    })
-
-    beforeEach(async () => {
+    beforeEach(() => {
         axiosStub = sinon.stub(store.$http, 'get').resolves(
             Promise.resolve({
                 data: {},
@@ -77,8 +73,8 @@ describe('Graphs index', () => {
         })
     })
 
-    afterEach(async function() {
-        await axiosStub.restore()
+    afterEach(() => {
+        axiosStub.restore()
     })
 
     it(`Should update graphs by first sending requests in parallel to
