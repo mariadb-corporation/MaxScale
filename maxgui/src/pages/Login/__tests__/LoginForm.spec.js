@@ -10,15 +10,12 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import chai, { expect } from 'chai'
+
 import mount from '@tests/unit/setup'
 import LoginForm from '@/pages/Login/LoginForm'
 import { inputChangeMock, routeChangesMock } from '@tests/unit/utils'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
+
 import { makeServer } from '@tests/unit/mirage/api'
-chai.should()
-chai.use(sinonChai)
 
 /**
  * This function mockup checking remember me box

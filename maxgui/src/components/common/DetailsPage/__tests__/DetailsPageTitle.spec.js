@@ -11,11 +11,9 @@
  * Public License.
  */
 
-import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import DetailsPageTitle from '@/components/common/DetailsPage/DetailsPageTitle'
 import { routeChangesMock } from '@tests/unit/utils'
-import sinon from 'sinon'
 
 describe('DetailsPageTitle.vue', () => {
     let wrapper, axiosStub

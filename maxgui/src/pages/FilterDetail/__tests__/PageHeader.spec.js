@@ -11,15 +11,10 @@
  * Public License.
  */
 
-import chai, { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import PageHeader from '@/pages/FilterDetail/PageHeader'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
-import { dummy_all_filters, triggerBtnClick, openConfirmDialog } from '@tests/unit/utils'
 
-chai.should()
-chai.use(sinonChai)
+import { dummy_all_filters, triggerBtnClick, openConfirmDialog } from '@tests/unit/utils'
 
 describe('FilterDetail - PageHeader', () => {
     let wrapper, axiosStub

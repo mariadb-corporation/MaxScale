@@ -11,14 +11,8 @@
  * Public License.
  */
 
-import chai, { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import DetailsReadonlyTable from '@/components/common/DetailsPage/DetailsReadonlyTable'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
-
-chai.should()
-chai.use(sinonChai)
 
 const expectDefaultHeaders = [
     { text: 'Variable', value: 'id', width: '65%', autoTruncate: true },

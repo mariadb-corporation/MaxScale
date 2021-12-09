@@ -11,15 +11,11 @@
  * Public License.
  */
 import store from 'store'
-import chai, { expect } from 'chai'
+
 import mount from '@tests/unit/setup'
 import Settings from '@/pages/Settings'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
-import { dummy_maxscale_parameters, dummy_maxscale_module_parameters } from '@tests/unit/utils'
 
-chai.should()
-chai.use(sinonChai)
+import { dummy_maxscale_parameters, dummy_maxscale_module_parameters } from '@tests/unit/utils'
 
 const processedModuleParamsStub = [
     {

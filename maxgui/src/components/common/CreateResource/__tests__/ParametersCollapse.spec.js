@@ -11,7 +11,6 @@
  * Public License.
  */
 
-import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import ParametersCollapse from '@CreateResource/ParametersCollapse'
 import { itemSelectMock, inputChangeMock } from '@tests/unit/utils'

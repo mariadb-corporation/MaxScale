@@ -11,19 +11,16 @@
  * Public License.
  */
 import store from 'store'
-import chai, { expect } from 'chai'
+
 import mount, { router } from '@tests/unit/setup'
 import ServiceDetail from '@/pages/ServiceDetail'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
+
 import {
     dummy_all_services,
     testRelationshipUpdate,
     dummy_service_connection_datasets,
     dummy_service_connection_info,
 } from '@tests/unit/utils'
-chai.should()
-chai.use(sinonChai)
 
 const dummy_sessions_by_service = [
     {

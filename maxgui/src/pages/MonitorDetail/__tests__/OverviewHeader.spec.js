@@ -11,15 +11,9 @@
  * Public License.
  */
 
-import chai, { expect } from 'chai'
-import sinon from 'sinon'
 import mount from '@tests/unit/setup'
 import OverviewHeader from '@/pages/MonitorDetail/OverviewHeader'
 import { dummy_all_monitors } from '@tests/unit/utils'
-import sinonChai from 'sinon-chai'
-
-chai.should()
-chai.use(sinonChai)
 
 /**
  * @param {Object} wrapper - mounted component

@@ -11,7 +11,6 @@
  * Public License.
  */
 
-import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import App from 'App.vue'
 import { routeChangesMock } from '@tests/unit/utils'

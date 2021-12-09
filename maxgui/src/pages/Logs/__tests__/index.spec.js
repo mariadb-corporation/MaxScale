@@ -10,13 +10,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import chai, { expect } from 'chai'
-import sinonChai from 'sinon-chai'
+
 import mount from '@tests/unit/setup'
 import Logs from '@/pages/Logs'
 
-chai.should()
-chai.use(sinonChai)
 describe('Logs index', () => {
     let wrapper
     beforeEach(() => {

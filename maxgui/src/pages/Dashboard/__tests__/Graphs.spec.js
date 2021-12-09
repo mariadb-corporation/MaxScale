@@ -10,15 +10,12 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import chai from 'chai'
+
 import mount from '@tests/unit/setup'
 import Graphs from '@/pages/Dashboard/Graphs'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
+
 import { dummy_all_servers } from '@tests/unit/utils'
 import store from 'store'
-chai.should()
-chai.use(sinonChai)
 
 describe('Graphs index', () => {
     let wrapper, axiosStub

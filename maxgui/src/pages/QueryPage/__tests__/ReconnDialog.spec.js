@@ -10,14 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import chai, { expect } from 'chai'
+
 import mount from '@tests/unit/setup'
 import ReconnDialog from '@/pages/QueryPage/ReconnDialog'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
-
-chai.should()
-chai.use(sinonChai)
 
 const dummy_conn_err_obj = {
     message: 'Lost connection to server during query',

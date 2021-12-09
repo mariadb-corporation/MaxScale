@@ -11,7 +11,6 @@
  * Public License.
  */
 
-import chai, { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import OverviewHeader from '@/pages/ServiceDetail/OverviewHeader'
 import {
@@ -19,10 +18,6 @@ import {
     dummy_service_connection_datasets,
     dummy_service_connection_info,
 } from '@tests/unit/utils'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
-chai.should()
-chai.use(sinonChai)
 
 const defaultProps = {
     currentService: dummy_all_services[0],

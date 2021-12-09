@@ -11,14 +11,11 @@
  * Public License.
  */
 import store from 'store'
-import chai from 'chai'
+
 import mount, { router } from '@tests/unit/setup'
 import ListenerDetail from '@/pages/ListenerDetail'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
+
 import { dummy_all_listeners } from '@tests/unit/utils'
-chai.should()
-chai.use(sinonChai)
 
 describe('ListenerDetail index', () => {
     let wrapper, axiosStub

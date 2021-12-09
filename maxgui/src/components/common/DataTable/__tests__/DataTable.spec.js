@@ -11,7 +11,7 @@
  * Public License.
  */
 import Vue from 'vue'
-import { expect } from 'chai'
+
 import mount from '@tests/unit/setup'
 import DataTable from '@/components/common/DataTable'
 

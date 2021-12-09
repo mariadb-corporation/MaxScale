@@ -10,15 +10,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import chai, { expect } from 'chai'
+
 import mount from '@tests/unit/setup'
 import RelationshipTable from '@/components/common/DetailsPage/RelationshipTable'
 import { serviceStateTableRowsStub, getFilterListStub, itemSelectMock } from '@tests/unit/utils'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
 
-chai.should()
-chai.use(sinonChai)
 /**
  * This function mockups opening confirmation dialog when clicking
  * delete icon in data-table.

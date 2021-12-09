@@ -11,7 +11,6 @@
  * Public License.
  */
 
-import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import ResourceRelationships from '@CreateResource/ResourceRelationships'
 import { itemSelectMock } from '@tests/unit/utils'

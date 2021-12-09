@@ -11,11 +11,10 @@
  * Public License.
  */
 import store from 'store'
-import chai, { expect } from 'chai'
+
 import mount, { router } from '@tests/unit/setup'
 import MonitorDetail from '@/pages/MonitorDetail'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
+
 import {
     dummy_all_monitors,
     all_modules_map_stub,
@@ -23,8 +22,6 @@ import {
     getUnMonitoredServersStub,
     testRelationshipUpdate,
 } from '@tests/unit/utils'
-chai.should()
-chai.use(sinonChai)
 
 const allMonitorModules = all_modules_map_stub['Monitor']
 const dummy_module_parameters = allMonitorModules.find(

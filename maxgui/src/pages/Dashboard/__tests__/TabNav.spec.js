@@ -10,9 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import chai, { expect } from 'chai'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
+
 import mount from '@tests/unit/setup'
 import TabNav from '@/pages/Dashboard/TabNav'
 import tabRoutes from 'router/tabRoutes'
@@ -25,9 +23,6 @@ import {
     dummy_all_services,
     routeChangesMock,
 } from '@tests/unit/utils'
-
-chai.should()
-chai.use(sinonChai)
 
 const mockupComputed = {
     all_sessions: () => dummy_all_sessions,

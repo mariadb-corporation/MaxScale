@@ -11,14 +11,11 @@
  * Public License.
  */
 import store from 'store'
-import chai, { expect } from 'chai'
+
 import mount, { router } from '@tests/unit/setup'
 import ServerDetail from '@/pages/ServerDetail'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
+
 import { dummy_all_servers, testRelationshipUpdate } from '@tests/unit/utils'
-chai.should()
-chai.use(sinonChai)
 
 const dummy_server_stats = {
     active_operations: 0,

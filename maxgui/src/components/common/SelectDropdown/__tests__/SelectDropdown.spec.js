@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { expect } from 'chai'
+
 import mount from '@tests/unit/setup'
 import SelectDropdown from '@/components/common/SelectDropdown'
 import { itemSelectMock } from '@tests/unit/utils'

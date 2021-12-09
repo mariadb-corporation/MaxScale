@@ -10,19 +10,15 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import chai, { expect } from 'chai'
+
 import mount from '@tests/unit/setup'
 import Filters from '@/pages/Dashboard/Filters'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
+
 import {
     dummy_all_filters,
     findAnchorLinkInTable,
     getUniqueResourceNamesStub,
 } from '@tests/unit/utils'
-
-chai.should()
-chai.use(sinonChai)
 
 const expectedTableHeaders = [
     { text: 'Filter', value: 'id', autoTruncate: true },

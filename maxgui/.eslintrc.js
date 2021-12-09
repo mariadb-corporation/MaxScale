@@ -81,9 +81,15 @@ module.exports = {
                 '**/__tests__/*.{j,t}s?(x)',
                 '**/tests/unit/**/*.spec.{j,t}s?(x)',
                 '**/src/*/**/*.spec.{j,t}s?(x)',
+                '**/tests/unit/bootstrap.js',
             ],
             env: {
                 mocha: true,
+            },
+            globals: {
+                expect: true,
+                chai: true,
+                sinon: true,
             },
         },
     ],

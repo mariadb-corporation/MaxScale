@@ -11,7 +11,6 @@
  * Public License.
  */
 
-import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import DetailsParametersTable from '@/components/common/DetailsPage/DetailsParametersTable'
 import { itemSelectMock } from '@tests/unit/utils'

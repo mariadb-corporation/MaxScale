@@ -10,19 +10,15 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import chai, { expect } from 'chai'
+
 import mount from '@tests/unit/setup'
 import Listeners from '@/pages/Dashboard/Listeners'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
+
 import {
     dummy_all_listeners,
     findAnchorLinkInTable,
     getUniqueResourceNamesStub,
 } from '@tests/unit/utils'
-
-chai.should()
-chai.use(sinonChai)
 
 const expectedTableHeaders = [
     { text: 'Listener', value: 'id', autoTruncate: true },

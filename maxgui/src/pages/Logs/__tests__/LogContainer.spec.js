@@ -12,15 +12,10 @@
  */
 import '@/plugins/vuex'
 import store from 'store'
-import chai, { expect } from 'chai'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
+
 import mount from '@tests/unit/setup'
 import LogContainer from '@/pages/Logs/LogContainer'
 import { dummy_log_data } from '@tests/unit/utils'
-
-chai.should()
-chai.use(sinonChai)
 
 const dummyChosenLogLevels = ['warning']
 
