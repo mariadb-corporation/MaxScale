@@ -14,6 +14,7 @@
 
 #include "nosqlprotocol.hh"
 #include <maxscale/protocol2.hh>
+#include "nosqlusermanager.hh"
 #include "config.hh"
 
 class ProtocolModule : public mxs::ProtocolModule
@@ -47,8 +48,9 @@ public:
     void post_configure();
 
 private:
-    ProtocolModule(const std::string& name);
+    ProtocolModule(const std::string& name, std::unique_ptr<nosql::UserManager> sUm);
 
 private:
-    GlobalConfig m_config;
+    GlobalConfig                        m_config;
+    std::unique_ptr<nosql::UserManager> m_sUm;
 };

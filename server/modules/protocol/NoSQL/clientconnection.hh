@@ -14,8 +14,9 @@
 
 #include "nosqlprotocol.hh"
 #include <maxscale/protocol2.hh>
-#include "nosql.hh"
 #include "config.hh"
+#include "nosql.hh"
+#include "nosqlusermanager.hh"
 
 class MYSQL_session;
 
@@ -28,7 +29,10 @@ public:
         READY
     };
 
-    ClientConnection(const GlobalConfig& config, MXS_SESSION* pSession, mxs::Component* pComponent);
+    ClientConnection(const GlobalConfig& config,
+                     nosql::UserManager* pUm,
+                     MXS_SESSION* pSession,
+                     mxs::Component* pComponent);
     ~ClientConnection();
 
     bool init_connection() override;

@@ -383,6 +383,7 @@ const char PID[]                             = "pid";
 const char PLANNER_VERSION[]                 = "plannerVersion";
 const char PORT[]                            = "port";
 const char PROJECTION[]                      = "projection";
+const char PWD[]                             = "pwd";
 const char QUERY[]                           = "query";
 const char QUERY_PLANNER[]                   = "queryPlanner";
 const char Q[]                               = "q";
@@ -391,6 +392,7 @@ const char REJECTED_PLANS[]                  = "rejectedPlans";
 const char REMOVE[]                          = "remove";
 const char RESPONSE[]                        = "response";
 const char REQUIRES_AUTH[]                   = "requiresAuth";
+const char ROLES[]                           = "roles";
 const char RUNNING[]                         = "running";
 const char SERVER_INFO[]                     = "serverInfo";
 const char SINGLE_BATCH[]                    = "singleBatch";
@@ -1150,6 +1152,7 @@ private:
 }
 
 class Database;
+class UserManager;
 
 class NoSQL
 {
@@ -1160,9 +1163,15 @@ public:
         Context(const Context&) = delete;
         Context& operator = (const Context&) = delete;
 
-        Context(MXS_SESSION* pSession,
+        Context(UserManager* pUm,
+                MXS_SESSION* pSession,
                 mxs::ClientConnection* pClient_connection,
                 mxs::Component* pDownstream);
+
+        UserManager& um() const
+        {
+            return m_um;
+        }
 
         mxs::ClientConnection& client_connection()
         {
@@ -1214,6 +1223,7 @@ public:
         }
 
     private:
+        UserManager&               m_um;
         MXS_SESSION&               m_session;
         mxs::ClientConnection&     m_client_connection;
         mxs::Component&            m_downstream;
@@ -1227,8 +1237,9 @@ public:
 
     NoSQL(MXS_SESSION*           pSession,
           mxs::ClientConnection* pClient_connection,
-          mxs::Component* pDownstream,
-          Config* pConfig);
+          mxs::Component*        pDownstream,
+          Config*                pConfig,
+          UserManager*           pUm);
     ~NoSQL();
 
     NoSQL(const NoSQL&) = delete;
