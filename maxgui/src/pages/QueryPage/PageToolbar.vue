@@ -4,7 +4,7 @@
             <v-btn
                 :disabled="!cnct_resources.length"
                 small
-                class="float-left"
+                class="float-left add-wke-btn"
                 icon
                 @click="addNewWs"
             >
@@ -21,7 +21,7 @@
             >
                 <template v-slot:activator="{ on }">
                     <v-btn
-                        class="text-capitalize font-weight-medium"
+                        class="save-to-fav-btn"
                         icon
                         small
                         color="accent-dark"
@@ -171,7 +171,6 @@ export default {
             SET_ACTIVE_WKE_ID: 'query/SET_ACTIVE_WKE_ID',
         }),
         ...mapActions({
-            handleDeleteWke: 'query/handleDeleteWke',
             handleAddNewWke: 'query/handleAddNewWke',
             pushQueryFavorite: 'persisted/pushQueryFavorite',
         }),
@@ -185,8 +184,7 @@ export default {
                 this.favorite.name = `Favorite statements - ${this.$help.dateFormat({
                     value: this.favorite.date,
                     formatType: 'DATE_RFC2822',
-                })}
-                           `
+                })}`
                 this.isConfDlgOpened = true
             }
         },
