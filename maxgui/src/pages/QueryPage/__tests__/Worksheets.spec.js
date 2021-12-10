@@ -14,9 +14,6 @@
 import mount from '@tests/unit/setup'
 import Worksheets from '@/pages/QueryPage/Worksheets'
 
-function getCurrActiveWkeId({ wrapper, idx }) {
-    return wrapper.vm.worksheets_arr[idx].id
-}
 const mountFactory = opts =>
     mount({
         shallow: false,
@@ -57,15 +54,14 @@ describe('Worksheets', () => {
 
     beforeEach(() => {
         wrapper = mountFactory()
-        // mount again to getCurrActiveWkeId
-        wrapper = mountFactory({
-            computed: {
-                active_wke_id: () => getCurrActiveWkeId({ wrapper, idx: 0 }),
-            },
-        })
     })
 
     it('Should pass accurate data to worksheet component via props', () => {
+        wrapper = mountFactory({
+            computed: {
+                active_wke_id: () => wrapper.vm.worksheets_arr[0].id,
+            },
+        })
         const wke = wrapper.findComponent({ name: 'worksheet' })
         expect(wke.vm.$props.ctrDim).to.be.equals(wrapper.vm.$props.ctrDim)
     })
@@ -98,36 +94,36 @@ describe('Worksheets', () => {
         wrapper = stubCnctWke(wrapper)
         expect(wrapper.findComponent({ name: 'v-tooltip' }).vm.$props.disabled).to.be.false
     })
+})
 
-    describe('Should assign corresponding handler for worksheet shortcut keys accurately', () => {
-        let wkeToolbar, pageToolbar, wke, handleRunSpy, openFavoriteDialogSpy
-        beforeEach(() => {
-            wrapper = mountFactory()
-            wkeToolbar = wrapper.vm.$refs.wkeToolbar
-            pageToolbar = wrapper.vm.$refs.pageToolbar
-            wke = wrapper.findComponent({ name: 'worksheet' })
-            handleRunSpy = sinon.spy(wkeToolbar, 'handleRun')
-            openFavoriteDialogSpy = sinon.spy(pageToolbar, 'openFavoriteDialog')
-        })
+describe('Should assign corresponding handler for worksheet shortcut keys accurately', () => {
+    let wrapper, wkeToolbar, pageToolbar, wke, handleRunSpy, openFavoriteDialogSpy
+    beforeEach(() => {
+        wrapper = mountFactory()
+        wkeToolbar = wrapper.vm.$refs.wkeToolbar
+        pageToolbar = wrapper.vm.$refs.pageToolbar
+        wke = wrapper.findComponent({ name: 'worksheet' })
+        handleRunSpy = sinon.spy(wkeToolbar, 'handleRun')
+        openFavoriteDialogSpy = sinon.spy(pageToolbar, 'openFavoriteDialog')
+    })
 
-        afterEach(() => {
-            handleRunSpy.restore()
-            openFavoriteDialogSpy.restore()
-        })
+    afterEach(() => {
+        handleRunSpy.restore()
+        openFavoriteDialogSpy.restore()
+    })
 
-        it('Handle onCtrlEnter evt', () => {
-            wke.vm.$emit('onCtrlEnter')
-            handleRunSpy.should.have.been.calledOnce
-            handleRunSpy.should.have.been.calledWith('selected')
-        })
-        it('Handle onCtrlShiftEnter evt', () => {
-            wke.vm.$emit('onCtrlShiftEnter')
-            handleRunSpy.should.have.been.calledOnce
-            handleRunSpy.should.have.been.calledWith('all')
-        })
-        it('Handle onCtrlS evt', () => {
-            wke.vm.$emit('onCtrlS')
-            openFavoriteDialogSpy.should.have.been.calledOnce
-        })
+    it('Handle onCtrlEnter evt', () => {
+        wke.vm.$emit('onCtrlEnter')
+        handleRunSpy.should.have.been.calledOnce
+        handleRunSpy.should.have.been.calledWith('selected')
+    })
+    it('Handle onCtrlShiftEnter evt', () => {
+        wke.vm.$emit('onCtrlShiftEnter')
+        handleRunSpy.should.have.been.calledOnce
+        handleRunSpy.should.have.been.calledWith('all')
+    })
+    it('Handle onCtrlS evt', () => {
+        wke.vm.$emit('onCtrlS')
+        openFavoriteDialogSpy.should.have.been.calledOnce
     })
 })
