@@ -376,6 +376,12 @@ module.exports = function () {
     args.auth = { username: argv.u, password: argv.p };
     args.timeout = this.argv.timeout;
 
+    // This prevents http_proxy from interfering with maxctrl if no_proxy is not defined. There's really
+    // no practical reason to use a proxy with localhost so this shouldn't have any negative side-effects.
+    if (host.startsWith("127.0.0.1") || host.startsWith("localhost")) {
+      args.proxy = false;
+    }
+
     try {
       setTlsCerts(args);
     } catch (err) {
