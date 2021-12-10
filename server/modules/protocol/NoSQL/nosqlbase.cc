@@ -407,6 +407,25 @@ string nosql::element_as<string>(const string& command,
 }
 
 template<>
+nosql::string_view nosql::element_as<nosql::string_view>(const string& command,
+                                                         const char* zKey,
+                                                         const bsoncxx::document::element& element,
+                                                         int error_code,
+                                                         Conversion)
+{
+    if (element.type() != bsoncxx::type::k_utf8)
+    {
+        ostringstream ss;
+        ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
+           << bsoncxx::to_string(element.type()) << "', expected type 'string'";
+
+        throw SoftError(ss.str(), error_code);
+    }
+
+    return element.get_utf8();
+}
+
+template<>
 int64_t nosql::element_as<int64_t>(const string& command,
                                    const char* zKey,
                                    const bsoncxx::document::element& element,
@@ -541,4 +560,25 @@ bool nosql::element_as<bool>(const string& command,
     }
 
     return rv;
+}
+
+template<>
+bsoncxx::types::b_binary
+nosql::element_as<bsoncxx::types::b_binary>(const std::string& command,
+                                            const char* zKey,
+                                            const bsoncxx::document::element& element,
+                                            int error_code,
+                                            Conversion)
+{
+    if (element.type() != bsoncxx::type::k_binary)
+    {
+        ostringstream ss;
+        ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
+           << bsoncxx::to_string(element.type()) << "', expected type '"
+           << bsoncxx::to_string(bsoncxx::type::k_binary) << "'";
+
+        throw SoftError(ss.str(), error_code);
+    }
+
+    return element.get_binary();
 }
