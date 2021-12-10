@@ -112,25 +112,31 @@ enum class CapTypes
     MARIADB,    // All capabilities
 };
 
-CapTypes get_supported_cap_types(SERVICE* service)
+std::pair<CapTypes, uint64_t> get_supported_cap_types(SERVICE* service)
 {
+    CapTypes type = CapTypes::MARIADB;
+    uint64_t version = std::numeric_limits<uint64_t>::max();
+
     for (SERVER* s : service->reachable_servers())
     {
         if (s->info().type() == SERVER::VersionInfo::Type::XPAND)
         {
             // At least one node is XPand and since it's the most restrictive, we can return early.
-            return CapTypes::XPAND;
+            type = CapTypes::XPAND;
+            break;
         }
-        else if (s->info().version_num().total >= 100200)
+        else
         {
-            // TODO: This is "bug compatible" with older releases where the MariaDB extra capabilities are
-            // sent if at least one node is version 10.2 or higher. This should behave according to the lowest
-            // version reachable from this service to make sure all nodes behave in a roughly similar manner.
-            return CapTypes::MARIADB;
+            version = std::min(s->info().version_num().total, version);
+
+            if (version < 100200)
+            {
+                type = CapTypes::NORMAL;
+            }
         }
     }
 
-    return CapTypes::NORMAL;
+    return {type, version};
 }
 
 mariadb::HeaderData parse_header(GWBUF* buffer)
@@ -501,7 +507,9 @@ bool MariaDBClientConnection::send_server_handshake()
 
     // 8 bytes of capabilities, sent in three parts.
     uint64_t caps = GW_MYSQL_CAPABILITIES_SERVER;
-    auto cap_types = get_supported_cap_types(service);
+    CapTypes cap_types;
+    int min_version;
+    std::tie(cap_types, min_version) = get_supported_cap_types(service);
 
     if (cap_types == CapTypes::MARIADB)
     {
@@ -520,10 +528,17 @@ bool MariaDBClientConnection::send_server_handshake()
         mxb_assert((caps & GW_MYSQL_CAPABILITIES_DEPRECATE_EOF) == 0);
     }
 
+    if (min_version < 100600)
+    {
+        // The metadata caching was added in 10.6 and should only be enabled if all nodes support it.
+        caps &= ~(MXS_MARIA_CAP_CACHE_METADATA << 32);
+        mxb_assert((caps & MXS_EXTRA_CAPS_SERVER64) == (MXS_MARIA_CAP_STMT_BULK_OPERATIONS << 32));
+    }
+
     if (cap_types == CapTypes::XPAND)
     {
-        // XPand doesn't support SESSION_TRACK
-        caps &= ~GW_MYSQL_CAPABILITIES_SESSION_TRACK;
+        // XPand doesn't support SESSION_TRACK or DEPRECATE_EOF
+        caps &= ~(GW_MYSQL_CAPABILITIES_SESSION_TRACK | GW_MYSQL_CAPABILITIES_DEPRECATE_EOF);
     }
 
     if (require_ssl())
