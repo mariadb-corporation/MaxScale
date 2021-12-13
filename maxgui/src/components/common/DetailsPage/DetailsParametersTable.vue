@@ -210,8 +210,7 @@ export default {
                 : this.module_parameters
         },
         isTableEditable() {
-            // only enable editable feature when at least a module param is modifiable
-            return this.editable && this.moduleParams.some(param => param.modifiable)
+            return this.editable
         },
     },
     watch: {
