@@ -1655,6 +1655,13 @@ bool Session::is_movable() const
             return false;
         }
     }
+
+    mxb_assert(m_endpoints_waiting >= 0);
+    if (m_endpoints_waiting == 0)
+    {
+        // Do not move a session which is waiting for a connection.
+        return false;
+    }
     return true;
 }
 
@@ -1676,6 +1683,16 @@ void Session::remove_userdata_subscriber(MXS_SESSION::EventSubscriber* obj)
 {
     mxb_assert(m_event_subscribers.count(obj) == 1);
     m_event_subscribers.erase(obj);
+}
+
+void Session::endpoint_waiting_for_conn()
+{
+    m_endpoints_waiting++;
+}
+
+void Session::endpoint_no_longer_waiting_for_conn()
+{
+    m_endpoints_waiting--;
 }
 
 MXS_SESSION::EventSubscriber::EventSubscriber(MXS_SESSION* session)

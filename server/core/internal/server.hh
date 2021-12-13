@@ -470,9 +470,13 @@ public:
         return m_server;
     }
 
+    SERVER*      server() const;
+    MXS_SESSION* session() const;
+
     bool connect() override;
 
     void close() override;
+    void handle_failed_continue();
 
     bool is_open() const override;
 
@@ -486,17 +490,24 @@ public:
     bool can_try_pooling() const;
     void try_to_pool();
 
+    enum class ContinueRes {SUCCESS, WAIT, FAIL};
+    ContinueRes continue_connecting();
+
 private:
     mxs::Component* m_up;
     MXS_SESSION*    m_session;
     Server*         m_server;
     bool            m_can_try_pooling {true};   /**< If pooling fails, don't try it again */
 
+    std::vector<mxs::Buffer> m_delayed_packets;     /**< Packets waiting for a connection */
+
     enum class ConnStatus
     {
         NO_CONN,            /**< Not connected yet, or connection error */
         CONNECTED,          /**< Connection is open (or at least opening) */
+        CONNECTED_FAILED,   /**< Connection is open but failed */
         IDLE_POOLED,        /**< Connection pooled due to inactivity */
+        WAITING_FOR_CONN,   /**< Waiting for a connection slot to become available */
     };
     ConnStatus m_connstatus {ConnStatus::NO_CONN};
 

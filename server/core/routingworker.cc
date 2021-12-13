@@ -554,67 +554,89 @@ void RoutingWorker::remove(DCB* pDcb)
     m_dcbs.erase(it);
 }
 
-mxs::BackendConnection*
+RoutingWorker::ConnectionResult
 RoutingWorker::get_backend_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Component* pUpstream)
 {
     auto* pServer = static_cast<Server*>(pSrv);
     auto* pSession = static_cast<Session*>(pSes);
-    mxs::BackendConnection* pConn = nullptr;
 
     if (pServer->persistent_conns_enabled() && pServer->is_running())
     {
-        pConn = pool_get_connection(pSrv, pSession, pUpstream);
+        auto pool_conn = pool_get_connection(pSrv, pSession, pUpstream);
+        if (pool_conn)
+        {
+            // Connection found from pool, return it.
+            return {false, pool_conn};
+        }
     }
 
-    if (!pConn)
-    {
-        const auto max_allowed_conns = pServer->max_connections();
-        auto& stats = pServer->stats();
+    ConnectionResult rval;
+    const auto max_allowed_conns = pServer->max_connections();
+    auto& stats = pServer->stats();
 
-        if (max_allowed_conns > 0)
+    if (max_allowed_conns > 0)
+    {
+        // Server has a connection count limit. Check that we are not already at the limit.
+        bool conn_limit_reached = false;
+
+        auto curr_conns = stats.n_current_conns() + stats.n_conn_intents();
+        if (curr_conns >= max_allowed_conns)
         {
-            // Server has a connection count limit. Check that we are not already at the limit.
-            const char limit_err[] = "'%s' connection count limit reached. No new connections can "
-                                     "be made until an existing session quits.";
-            auto curr_conns = stats.n_current_conns() + stats.n_conn_intents();
-            if (curr_conns >= max_allowed_conns)
-            {
-                // Looks like all connection slots are in use. This may be pessimistic in case an intended
-                // connection fails in another thread. The error message can be spammy.
-                MXB_ERROR(limit_err, pServer->name());
-            }
-            else
-            {
-                // Mark intent, then read current conn value again. This is not entirely accurate, but does
-                // avoid overshoot (assuming memory orderings are correct).
-                auto intents = stats.add_conn_intent();
-                if (intents + stats.n_current_conns() <= max_allowed_conns)
-                {
-                    pConn = pSession->create_backend_connection(pServer, this, pUpstream);
-                    if (pConn)
-                    {
-                        stats.add_connection();
-                    }
-                }
-                else
-                {
-                    MXB_ERROR(limit_err, pServer->name());
-                }
-                stats.remove_conn_intent();
-            }
+            // Looks like all connection slots are in use. This may be pessimistic in case an intended
+            // connection fails in another thread. The error message can be spammy.
+            conn_limit_reached = true;
         }
         else
         {
-            // No limit, just create new connection.
-            pConn = pSession->create_backend_connection(pServer, this, pUpstream);
-            if (pConn)
+            // Mark intent, then read current conn value again. This is not entirely accurate, but does
+            // avoid overshoot (assuming memory orderings are correct).
+            auto intents = stats.add_conn_intent();
+            if (intents + stats.n_current_conns() <= max_allowed_conns)
             {
-                stats.add_connection();
+                auto new_conn = pSession->create_backend_connection(pServer, this, pUpstream);
+                if (new_conn)
+                {
+                    stats.add_connection();
+                    rval.conn = new_conn;
+                }
+            }
+            else
+            {
+                conn_limit_reached = true;
+            }
+            stats.remove_conn_intent();
+        }
+
+        if (conn_limit_reached)
+        {
+            auto idle_pool_time = pSession->service->config()->idle_session_pooling_time;
+            if (idle_pool_time >= 0s)
+            {
+                // Connection count limit exceeded, but pre-emptive pooling is on. Assume that a
+                // connection will soon be available.
+                rval.wait_for_conn = true;
+                MXB_INFO("Server '%s' connection count limit reached while pre-emptive pooling is on. "
+                         "Delaying first query until a connection becomes available.", pServer->name());
+            }
+            else
+            {
+                MXB_ERROR("'%s' connection count limit reached. No new connections can "
+                          "be made until an existing session quits.", pServer->name());
             }
         }
     }
+    else
+    {
+        // No limit, just create new connection.
+        auto new_conn = pSession->create_backend_connection(pServer, this, pUpstream);
+        if (new_conn)
+        {
+            stats.add_connection();
+            rval.conn = new_conn;
+        }
+    }
 
-    return pConn;
+    return rval;
 }
 
 mxs::BackendConnection* RoutingWorker::ConnectionPool::get_connection()
@@ -1778,6 +1800,111 @@ RoutingWorker::ConnectionPoolStats RoutingWorker::pool_get_stats(const SERVER* p
         rval.add(stats);
     }
     return rval;
+}
+
+void RoutingWorker::add_conn_wait_entry(ServerEndpoint* ep, Session* session)
+{
+    m_eps_waiting_for_conn[ep->server()].push_back(ep);
+    session->endpoint_waiting_for_conn();
+}
+
+void RoutingWorker::notify_connection_available(SERVER* server)
+{
+    // A connection to a server should be available, either in the pool or a new one can be created.
+    // Cannot be certain due to other threads. Do not activate any connections here, only schedule a check.
+
+    // In the vast majority of cases (whenever idle pooling is disabled) the map is empty.
+    if (!m_eps_waiting_for_conn.empty() && !m_ep_activation_scheduled)
+    {
+        if (m_eps_waiting_for_conn.count(server) > 0)
+        {
+            // An endpoint is waiting for connection to this server.
+            auto func = [this](Worker::Call::action_t action) {
+                    this->activate_waiting_endpoints();
+                    return false;
+                };
+            // The check will run once execution returns to the event loop.
+            delayed_call(0, func);
+            m_ep_activation_scheduled = true;
+        }
+    }
+}
+
+/**
+ * A connection slot to at least one server should be available. Add as many connections as possible.
+ */
+void RoutingWorker::activate_waiting_endpoints()
+{
+    auto map_iter = m_eps_waiting_for_conn.begin();
+    while (map_iter != m_eps_waiting_for_conn.end())
+    {
+        auto& ep_set = map_iter->second;
+        bool keep_activating = true;
+
+        while (keep_activating && !ep_set.empty())
+        {
+            bool erase_from_set = false;
+            auto it_first = ep_set.begin();
+            auto* ep = *it_first;
+            auto res = ep->continue_connecting();
+
+            switch (res)
+            {
+            case ServerEndpoint::ContinueRes::SUCCESS:
+                // Success, remove from wait list.
+                erase_from_set = true;
+                break;
+
+            case ServerEndpoint::ContinueRes::WAIT:
+                // No connection was available, perhaps connection limit was reached. Continue waiting.
+                // Do not try to connect to this server again right now.
+                keep_activating = false;
+                break;
+
+            case ServerEndpoint::ContinueRes::FAIL:
+                // Resuming the connection failed. Either connection was resumed but writing packets failed
+                // or something went wrong in creating a new connection. Close the endpoint. The endpoint map
+                // must not be modified by the following call.
+                erase_from_set = true;
+                ep->handle_failed_continue();
+                break;
+            }
+
+            if (erase_from_set)
+            {
+                ep_set.erase(it_first);
+                static_cast<Session*>(ep->session())->endpoint_no_longer_waiting_for_conn();
+            }
+        }
+
+        if (ep_set.empty())
+        {
+            map_iter = m_eps_waiting_for_conn.erase(map_iter);
+        }
+        else
+        {
+            map_iter++;
+        }
+    }
+
+    m_ep_activation_scheduled = false;
+}
+
+void RoutingWorker::erase_conn_wait_entry(ServerEndpoint* ep, Session* session)
+{
+    auto map_iter = m_eps_waiting_for_conn.find(ep->server());
+    mxb_assert(map_iter != m_eps_waiting_for_conn.end());
+    // The element is surely found in both the map and the set.
+    auto& ep_deque = map_iter->second;
+    // Erasing from the middle of a deque is inefficient, as possibly a large number of elements
+    // needs to be moved. TODO: set the element to null and erase later.
+    ep_deque.erase(std::find(ep_deque.begin(), ep_deque.end(), ep));
+
+    session->endpoint_no_longer_waiting_for_conn();
+    if (ep_deque.empty())
+    {
+        m_eps_waiting_for_conn.erase(map_iter);
+    }
 }
 
 void RoutingWorker::ConnectionPoolStats::add(const ConnectionPoolStats& rhs)

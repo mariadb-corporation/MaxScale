@@ -756,15 +756,15 @@ public:
      *            be called again.
      */
     uint32_t delayed_call(int32_t delay,
-                          std::function<bool(Worker::Call::action_t action)> f)
+                          std::function<bool(Worker::Call::action_t action)>&& f)
     {
-        return add_delayed_call(new DelayedCallFunctor(delay, next_delayed_call_id(), f));
+        return add_delayed_call(new DelayedCallFunctor(delay, next_delayed_call_id(), std::move(f)));
     }
 
     uint32_t delayed_call(const std::chrono::milliseconds& delay,
-                          std::function<bool(Worker::Call::action_t action)> f)
+                          std::function<bool(Worker::Call::action_t action)>&& f)
     {
-        return add_delayed_call(new DelayedCallFunctor(delay.count(), next_delayed_call_id(), f));
+        return add_delayed_call(new DelayedCallFunctor(delay.count(), next_delayed_call_id(), std::move(f)));
     }
 
     /**
@@ -1046,9 +1046,9 @@ private:
     public:
         DelayedCallFunctor(int32_t delay,
                            int32_t id,
-                           std::function<bool(Worker::Call::action_t)> f)
+                           std::function<bool(Worker::Call::action_t)>&& f)
             : DelayedCall(delay, id)
-            , m_f(f)
+            , m_f(std::move(f))
         {
         }
 

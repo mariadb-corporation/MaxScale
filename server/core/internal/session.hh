@@ -233,6 +233,9 @@ public:
      */
     bool move_to(mxs::RoutingWorker* worker);
 
+    void endpoint_waiting_for_conn();
+    void endpoint_no_longer_waiting_for_conn();
+
     /**
      * Set session time-to-live value
      *
@@ -324,6 +327,7 @@ private:
     Log               m_log;                    /*< Session specific in-memory log */
     int64_t           m_ttl = 0;                /*< How many seconds the session has until it is killed  */
     int64_t           m_ttl_start = 0;          /*< The clock tick when TTL was assigned */
+    int               m_endpoints_waiting {0};  /*< How many endpoints are waiting for a new connection */
 
     SessionRoutable m_routable;
     mxs::Routable*  m_head;
