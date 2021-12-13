@@ -12,11 +12,11 @@
             id="active-db"
             outlined
             max-width="160"
-            class="ml-2 text-none px-2 font-weight-regular"
+            class="ml-2 text-none px-2 font-weight-regular use-db-btn"
             depressed
             small
             color="accent-dark"
-            :disabled="!curr_cnct_resource.id || getIsQuerying"
+            :disabled="!hasActiveConn || getIsQuerying"
         >
             <v-icon class="mr-1" size="16">
                 $vuetify.icons.database
@@ -74,7 +74,7 @@
                         :loading="getLoadingQueryResult"
                         :disabled="
                             !query_txt ||
-                                !curr_cnct_resource.id ||
+                                !hasActiveConn ||
                                 (getIsQuerying && !getLoadingQueryResult)
                         "
                         v-on="on"
@@ -106,19 +106,19 @@
             >
                 <template v-slot:activator="{ on }">
                     <v-btn
-                        class="ml-2 visualize"
+                        class="ml-2 visualize-btn"
                         :outlined="!show_vis_sidebar"
                         depressed
                         small
                         :color="show_vis_sidebar ? 'primary' : 'accent-dark'"
-                        :disabled="!curr_cnct_resource.id || getIsQuerying"
+                        :disabled="!hasActiveConn || getIsQuerying"
                         v-on="on"
                         @click="SET_SHOW_VIS_SIDEBAR(!show_vis_sidebar)"
                     >
                         <v-icon
                             size="16"
                             :color="
-                                curr_cnct_resource.id
+                                hasActiveConn
                                     ? show_vis_sidebar
                                         ? 'background'
                                         : 'accent-dark'
@@ -225,9 +225,12 @@ export default {
         shouldDisableExecute() {
             return (
                 !this.query_txt ||
-                !this.curr_cnct_resource.id ||
+                !this.hasActiveConn ||
                 (this.getIsQuerying && this.getLoadingQueryResult)
             )
+        },
+        hasActiveConn() {
+            return this.$typy(this.curr_cnct_resource, 'id').isDefined
         },
     },
     methods: {
