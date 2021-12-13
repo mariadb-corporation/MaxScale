@@ -1198,10 +1198,11 @@ ConfigSection::ConfigSection(string header, SourceType source_type)
 {
 }
 
-ConfigSection::ConfigSection(std::string header, SourceType source_type, std::string source_file)
+ConfigSection::ConfigSection(std::string header, SourceType source_type, std::string source_file, int lineno)
     : m_name(move(header))
     , source_type(source_type)
     , source_file(move(source_file))
+    , source_lineno(lineno)
 {
 }
 
@@ -1276,7 +1277,7 @@ bool config_add_to_context(const std::string& source_file, ConfigSection::Source
                                 source_file.c_str(), prev_type_str);
 
                     output.erase(it);
-                    ConfigSection replacement(header, source_type, source_file);
+                    ConfigSection replacement(header, source_type, source_file, section.second.lineno);
                     auto res = output.emplace(header, move(replacement));
                     it = res.first;
                     header_ok = true;
@@ -1292,7 +1293,7 @@ bool config_add_to_context(const std::string& source_file, ConfigSection::Source
             else
             {
                 // Add new entry.
-                ConfigSection new_ctxt(header, source_type, source_file);
+                ConfigSection new_ctxt(header, source_type, source_file, section.second.lineno);
 
                 auto is_url_char = [](char c) {
                         return isalnum(c) || c == '_' || c == '.' || c == '~' || c == '-';
@@ -2130,6 +2131,46 @@ static bool process_config_context(ConfigSectionMap& context)
             objects.push_back(&elem.second);
         }
     }
+
+    // At this point, sort the objects in the array such that the order resembles the original definition
+    // order, at least to some extent. TODO: Think more of how the ordering should work with runtime
+    // modified and created objects.
+    auto compare = [](const ConfigSection* lhs, const ConfigSection* rhs) {
+            bool rval = false;
+            // 1. Objects in main config file go first, then dir files, then runtime files.
+            using Type = ConfigSection::SourceType;
+            auto type_lhs = lhs->source_type;
+            auto type_rhs = rhs->source_type;
+            if (type_lhs != type_rhs)
+            {
+                if (type_lhs == Type::MAIN || (type_lhs == Type::ADDITIONAL && type_rhs == Type::RUNTIME))
+                {
+                    rval = true;
+                }
+            }
+            else
+            {
+                // 2. Same file type. Order by file name.
+                int comp_res = lhs->source_file.compare(rhs->source_file);
+                if (comp_res != 0)
+                {
+                    if (comp_res < 0)
+                    {
+                        rval = true;
+                    }
+                }
+                else
+                {
+                    // 3. Same file. Order by line number.
+                    if (lhs->source_lineno < rhs->source_lineno)
+                    {
+                        rval = true;
+                    }
+                }
+            }
+            return rval;
+        };
+    std::sort(objects.begin(), objects.end(), compare);
 
     /**
      * Build the servers first to keep them in configuration file order. As

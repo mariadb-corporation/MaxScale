@@ -47,11 +47,12 @@ struct ConfigSection
     };
 
     ConfigSection(std::string header, SourceType source_type);
-    ConfigSection(std::string header, SourceType source_type, std::string source_file);
+    ConfigSection(std::string header, SourceType source_type, std::string source_file, int lineno);
 
     const std::string m_name;                           /**< The name of the object being configured */
     const SourceType  source_type {SourceType::MAIN};   /**< Source file type */
     const std::string source_file;                      /**< Source file path */
+    const int         source_lineno {-1};               /**< Source file line number */
 
     mxs::ConfigParameters m_parameters;     /**< The list of parameter values */
 

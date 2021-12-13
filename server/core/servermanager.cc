@@ -63,9 +63,10 @@ public:
             // servers used only as bootstrap servers. But that's ok.
             if (!other || m_allow_duplicates || strncmp(server->name(), "@@", 2) == 0)
             {
+                auto server_ptr = server.release();
                 Guard guard(m_all_servers_lock);
-                // This keeps the order of the servers the same as in 2.2
-                rval = *m_all_servers.insert(m_all_servers.begin(), server.release());
+                m_all_servers.push_back(server_ptr);
+                rval = server_ptr;
             }
             else
             {
