@@ -52,7 +52,13 @@
                 content-class="shadow-drop color text-navigation py-1 px-4"
             >
                 <template v-slot:activator="{ on }">
-                    <v-btn icon small v-on="on" @click="queryConfigDialog = !queryConfigDialog">
+                    <v-btn
+                        icon
+                        small
+                        class="query-setting-btn"
+                        v-on="on"
+                        @click="queryConfigDialog = !queryConfigDialog"
+                    >
                         <v-icon size="16" color="accent-dark">
                             $vuetify.icons.settings
                         </v-icon>
@@ -66,7 +72,13 @@
                 content-class="shadow-drop color text-navigation py-1 px-4"
             >
                 <template v-slot:activator="{ on }">
-                    <v-btn icon small v-on="on" @click="SET_FULLSCREEN(!is_fullscreen)">
+                    <v-btn
+                        icon
+                        small
+                        class="min-max-btn"
+                        v-on="on"
+                        @click="SET_FULLSCREEN(!is_fullscreen)"
+                    >
                         <v-icon size="20" color="accent-dark">
                             fullscreen{{ is_fullscreen ? '_exit' : '' }}
                         </v-icon>
