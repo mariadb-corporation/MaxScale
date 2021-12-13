@@ -73,6 +73,36 @@ public:
         doc.append(kvp(key::MIN_WIRE_VERSION, MIN_WIRE_VERSION));
         doc.append(kvp(key::MAX_WIRE_VERSION, MAX_WIRE_VERSION));
         doc.append(kvp(key::READ_ONLY, false));
+
+        // TODO: Handle "speculativeAuthenticate";
+
+        auto element = query[key::SASL_SUPPORTED_MECHS];
+
+        if (element)
+        {
+            if (element.type() != bsoncxx::type::k_utf8)
+            {
+                ostringstream ss;
+                ss << "\"" << key::SASL_SUPPORTED_MECHS << "\" had the wrong type. Expected string, "
+                   << "found " << bsoncxx::to_string(element.type()) << ".";
+
+                throw SoftError(ss.str(), error::TYPE_MISMATCH);
+            }
+
+            auto user = static_cast<string_view>(element.get_utf8());
+
+            auto& context = database.context();
+
+            if (context.um().user_exists(user))
+            {
+                ArrayBuilder sasl_supported_mechs;
+
+                sasl_supported_mechs.append("SCRAM-SHA-256");
+
+                doc.append(kvp(key::SASL_SUPPORTED_MECHS, sasl_supported_mechs.extract()));
+            }
+        }
+
         doc.append(kvp(key::OK, 1));
     }
 };

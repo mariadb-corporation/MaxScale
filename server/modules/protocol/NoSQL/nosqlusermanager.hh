@@ -45,6 +45,11 @@ public:
         return get_pwd(user, nullptr);
     }
 
+    bool user_exists(const string_view& user) const
+    {
+        return get_pwd(std::string(user.data(), user.length()), nullptr);
+    }
+
 private:
     UserManager(std::string path, sqlite3* pDb);
 
