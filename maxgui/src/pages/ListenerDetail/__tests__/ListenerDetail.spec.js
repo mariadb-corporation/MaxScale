@@ -11,36 +11,21 @@
  * Public License.
  */
 import store from 'store'
-import chai from 'chai'
+
 import mount, { router } from '@tests/unit/setup'
 import ListenerDetail from '@/pages/ListenerDetail'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
+
 import { dummy_all_listeners } from '@tests/unit/utils'
-chai.should()
-chai.use(sinonChai)
 
 describe('ListenerDetail index', () => {
     let wrapper, axiosStub
 
     before(async () => {
-        axiosStub = sinon.stub(store.$http, 'get').returns(
-            Promise.resolve({
-                data: {},
-            })
-        )
-
         const listenerPath = `/dashboard/listeners/${dummy_all_listeners[0].id}`
         if (router.history.current.path !== listenerPath) await router.push(listenerPath)
     })
 
-    after(async () => {
-        await axiosStub.reset()
-        await wrapper.destroy()
-    })
-
     beforeEach(async () => {
-        await axiosStub.restore()
         axiosStub = sinon.stub(store.$http, 'get').returns(
             Promise.resolve({
                 data: {},
@@ -54,8 +39,8 @@ describe('ListenerDetail index', () => {
             },
         })
     })
-    afterEach(async () => {
-        await axiosStub.restore()
+    afterEach(() => {
+        axiosStub.restore()
     })
 
     it(`Should send request to get listener, relationships service state

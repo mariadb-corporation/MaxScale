@@ -11,7 +11,6 @@
  * Public License.
  */
 
-import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import ParameterTooltipActivator from '@/components/common/Parameters/ParameterTooltipActivator'
 
@@ -32,11 +31,10 @@ describe('ParameterTooltipActivator.vue', () => {
     }
     let componentId = 'component_tooltip_0'
     beforeEach(() => {
-        localStorage.clear()
         wrapper = mount({
             shallow: false,
             component: ParameterTooltipActivator,
-            props: {
+            propsData: {
                 /*
                 'type' in item || 'description' in item || 'unit' in item || 'default_value' in item
                 A typical required item object

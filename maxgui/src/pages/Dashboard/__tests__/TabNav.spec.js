@@ -10,9 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import chai, { expect } from 'chai'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
+
 import mount from '@tests/unit/setup'
 import TabNav from '@/pages/Dashboard/TabNav'
 import tabRoutes from 'router/tabRoutes'
@@ -25,9 +23,6 @@ import {
     dummy_all_services,
     routeChangesMock,
 } from '@tests/unit/utils'
-
-chai.should()
-chai.use(sinonChai)
 
 const mockupComputed = {
     all_sessions: () => dummy_all_sessions,
@@ -50,11 +45,7 @@ function testGetTotalMethod({ wrapper, resourceType, allResources }) {
 describe('Dashboard TabNav', () => {
     let wrapper, axiosStub
 
-    after(async () => {
-        await axiosStub.reset()
-    })
-
-    beforeEach(async () => {
+    beforeEach(() => {
         wrapper = mount({
             shallow: false,
             component: TabNav,
@@ -66,12 +57,12 @@ describe('Dashboard TabNav', () => {
             })
         )
     })
-    afterEach(async function() {
-        await axiosStub.restore()
-        await wrapper.destroy()
+    afterEach(() => {
+        axiosStub.restore()
+        wrapper.destroy()
     })
 
-    it(`Should show total number of table rows on each tab`, async () => {
+    it(`Should show total number of table rows on each tab`, () => {
         const resourceTypes = ['servers', 'sessions', 'services', 'listeners', 'filters']
 
         resourceTypes.forEach(type => {
@@ -84,7 +75,7 @@ describe('Dashboard TabNav', () => {
         })
     })
 
-    it(`Should show route text in tab as link with accurate content`, async () => {
+    it(`Should show route text in tab as link with accurate content`, () => {
         const { wrappers: aTags } = wrapper.findAll('a')
         expect(aTags.length).to.be.equals(5)
         aTags.forEach((aTag, i) => {
@@ -99,7 +90,7 @@ describe('Dashboard TabNav', () => {
         expect(wrapper.vm.$data.activeTab).to.be.equals('/dashboard/sessions')
     })
 
-    it(`Should pass tab route.path as id to v-tab-item`, async () => {
+    it(`Should pass tab route.path as id to v-tab-item`, () => {
         const { wrappers: vTabItems } = wrapper.findAllComponents({ name: 'v-tab-item' })
         vTabItems.forEach((tabItem, i) => {
             expect(tabItem.vm.$props.id).to.be.equals(tabRoutes[i].path)

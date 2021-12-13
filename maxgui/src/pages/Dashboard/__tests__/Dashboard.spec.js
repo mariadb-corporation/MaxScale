@@ -10,23 +10,16 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import chai, { expect } from 'chai'
+
 import mount from '@tests/unit/setup'
 import Dashboard from '@/pages/Dashboard'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
+
 import store from 'store'
-chai.should()
-chai.use(sinonChai)
 
 describe('Dashboard index', () => {
     let wrapper, axiosStub
 
-    after(async () => {
-        await axiosStub.reset()
-    })
-
-    beforeEach(async () => {
+    beforeEach(() => {
         axiosStub = sinon.stub(store.$http, 'get').resolves(
             Promise.resolve({
                 data: {},
@@ -38,12 +31,12 @@ describe('Dashboard index', () => {
         })
     })
 
-    afterEach(async function() {
-        await axiosStub.restore()
-        await wrapper.setData({
+    afterEach(() => {
+        axiosStub.restore()
+        wrapper.setData({
             loop: false,
         })
-        await wrapper.destroy()
+        wrapper.destroy()
     })
 
     it(`Should send requests in parallel to get maxscale overview info,
@@ -66,15 +59,15 @@ describe('Dashboard index', () => {
         })
     })
 
-    it(`Should render page-wrapper component`, async () => {
+    it(`Should render page-wrapper component`, () => {
         expect(wrapper.findComponent({ name: 'page-wrapper' }).exists()).to.be.true
     })
 
-    it(`Should render page-header component`, async () => {
+    it(`Should render page-header component`, () => {
         expect(wrapper.findComponent({ name: 'page-header' }).exists()).to.be.true
     })
 
-    it(`Should render graphs component`, async () => {
+    it(`Should render graphs component`, () => {
         expect(wrapper.findComponent({ name: 'graphs' }).exists()).to.be.true
     })
 })

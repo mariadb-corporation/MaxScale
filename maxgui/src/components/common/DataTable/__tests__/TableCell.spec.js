@@ -11,18 +11,16 @@
  * Public License.
  */
 
-import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import TableCell from '@/components/common/DataTable/TableCell'
 
 describe('TableCell.vue', () => {
     let wrapper
     beforeEach(() => {
-        localStorage.clear()
         wrapper = mount({
             shallow: false,
             component: TableCell,
-            props: {
+            propsData: {
                 cellIndex: 0,
                 rowIndex: 0,
                 indexOfLastColumn: 0,

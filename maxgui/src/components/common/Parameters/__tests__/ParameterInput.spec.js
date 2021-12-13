@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { expect } from 'chai'
+
 import mount from '@tests/unit/setup'
 import ParameterInput from '@/components/common/Parameters/ParameterInput'
 import { itemSelectMock } from '@tests/unit/utils'
@@ -228,11 +228,10 @@ describe('ParameterInput.vue', () => {
     let wrapper
 
     beforeEach(() => {
-        localStorage.clear()
         wrapper = mount({
             shallow: false,
             component: ParameterInput,
-            props: {
+            propsData: {
                 item: {},
             },
         })

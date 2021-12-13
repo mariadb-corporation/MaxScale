@@ -11,7 +11,6 @@
  * Public License.
  */
 
-import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import BaseDialog from '@/components/common/Dialogs/BaseDialog'
 
@@ -31,7 +30,7 @@ describe('BaseDialog.vue', () => {
         wrapper = mount({
             shallow: false,
             component: BaseDialog,
-            props: {
+            propsData: {
                 value: false,
                 title: 'dialog title',
                 onSave: () => null,

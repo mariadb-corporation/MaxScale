@@ -48,21 +48,19 @@ export default options => {
         localVue.component(name, commonComponents[name])
     })
 
+    const opts = Vue.prototype.$help.lodash.pickBy(
+        options,
+        (v, key) => !['shallow', 'component'].includes(key)
+    )
     let mountOptions = {
         localVue,
         store,
         router,
         vuetify,
         i18n,
-        propsData: options.props,
-        slots: options.slots,
         attachTo: '#app',
+        ...opts,
     }
-
-    if (options.computed) {
-        mountOptions.computed = options.computed
-    }
-
     return doMount(options.shallow, options.component, mountOptions)
 }
 export const router = new Router({ routes: routes })

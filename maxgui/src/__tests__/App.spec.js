@@ -12,20 +12,26 @@
  */
 
 import mount from '@tests/unit/setup'
-import Logs from '@/pages/Logs'
+import App from 'App.vue'
+import { routeChangesMock } from '@tests/unit/utils'
 
-describe('Logs index', () => {
+describe('App.vue', () => {
     let wrapper
+
     beforeEach(() => {
         wrapper = mount({
-            shallow: false,
-            component: Logs,
+            shallow: true,
+            component: App,
         })
     })
+    afterEach(() => {
+        wrapper.vm.SET_SEARCH_KEYWORD('')
+    })
 
-    it(`Should not show log-container when logViewHeight is not calculated yet`, () => {
-        expect(wrapper.vm.$data.logViewHeight).to.be.equal(0)
-        const logContainer = wrapper.findComponent({ name: 'log-container' })
-        expect(logContainer.exists()).to.be.false
+    it(`Should cleared search_keyword when route changes`, async () => {
+        wrapper.vm.SET_SEARCH_KEYWORD('row_server_1')
+        // go to settings page
+        await routeChangesMock(wrapper, '/settings')
+        expect(wrapper.vm.$store.state.search_keyword).to.be.empty
     })
 })

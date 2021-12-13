@@ -11,19 +11,16 @@
  * Public License.
  */
 import store from 'store'
-import chai, { expect } from 'chai'
+
 import mount, { router } from '@tests/unit/setup'
 import ServiceDetail from '@/pages/ServiceDetail'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
+
 import {
     dummy_all_services,
     testRelationshipUpdate,
     dummy_service_connection_datasets,
     dummy_service_connection_info,
 } from '@tests/unit/utils'
-chai.should()
-chai.use(sinonChai)
 
 const dummy_sessions_by_service = [
     {
@@ -259,7 +256,7 @@ describe('ServiceDetail index', () => {
             expect(customTableHeaders).to.be.equals(sessionsTableHeader)
         })
 
-        it(`Should use accurate table headers for 'CURRENT SESSIONS' table`, async () => {
+        it(`Should use accurate table headers for 'CURRENT SESSIONS' table`, () => {
             const sessionsTable = wrapper.findComponent({
                 ref: 'sessions-table',
             })
@@ -268,7 +265,7 @@ describe('ServiceDetail index', () => {
             )
         })
 
-        it(`Should compute sessions for this service with accurate data format`, async () => {
+        it(`Should compute sessions for this service with accurate data format`, () => {
             expect(wrapper.vm.sessionsTableRows).to.be.deep.equals(sessionsTableRowStub)
         })
 
@@ -291,13 +288,13 @@ describe('ServiceDetail index', () => {
             })
         })
 
-        it(`Should compute router diagnostics with accurate data format`, async () => {
+        it(`Should compute router diagnostics with accurate data format`, () => {
             expect(wrapper.vm.routerDiagnostics).to.be.deep.equals(
                 routerDiagnosticsResStub.attributes.router_diagnostics
             )
         })
 
-        it(`Should pass necessary props to details-parameters-table`, async () => {
+        it(`Should pass necessary props to details-parameters-table`, () => {
             const paramsTable = wrapper.findComponent({
                 name: 'details-parameters-table',
             })
@@ -346,7 +343,7 @@ describe('ServiceDetail index', () => {
 
         describe('Props passes to relationship-table test assertions', () => {
             ALL_RELATIONSHIP_TABLES.forEach(name => {
-                it(`Should pass necessary props to ${name} relationship-table`, async () => {
+                it(`Should pass necessary props to ${name} relationship-table`, () => {
                     const relationshipTable = wrapper.findComponent({
                         ref: `${name}-relationship-table`,
                     })

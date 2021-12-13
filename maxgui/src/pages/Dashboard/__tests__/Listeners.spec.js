@@ -10,19 +10,15 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import chai, { expect } from 'chai'
+
 import mount from '@tests/unit/setup'
 import Listeners from '@/pages/Dashboard/Listeners'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
+
 import {
     dummy_all_listeners,
     findAnchorLinkInTable,
     getUniqueResourceNamesStub,
 } from '@tests/unit/utils'
-
-chai.should()
-chai.use(sinonChai)
 
 const expectedTableHeaders = [
     { text: 'Listener', value: 'id', autoTruncate: true },
@@ -59,11 +55,7 @@ const expectedTableRows = [
 describe('Dashboard Listeners tab', () => {
     let wrapper, axiosStub
 
-    after(async () => {
-        await axiosStub.reset()
-    })
-
-    beforeEach(async () => {
+    beforeEach(() => {
         wrapper = mount({
             shallow: false,
             component: Listeners,
@@ -78,15 +70,15 @@ describe('Dashboard Listeners tab', () => {
         )
     })
 
-    afterEach(async function() {
-        await axiosStub.restore()
+    afterEach(() => {
+        axiosStub.restore()
     })
 
-    it(`Should process table rows accurately`, async () => {
+    it(`Should process table rows accurately`, () => {
         expect(wrapper.vm.tableRows).to.be.deep.equals(expectedTableRows)
     })
 
-    it(`Should pass expected table headers to data-table`, async () => {
+    it(`Should pass expected table headers to data-table`, () => {
         const dataTable = wrapper.findComponent({ name: 'data-table' })
         expect(wrapper.vm.tableHeaders).to.be.deep.equals(expectedTableHeaders)
         expect(dataTable.vm.$props.headers).to.be.deep.equals(expectedTableHeaders)
@@ -101,7 +93,9 @@ describe('Dashboard Listeners tab', () => {
             cellIndex: expectedTableHeaders.findIndex(item => item.value === 'serviceIds'),
         })
         await aTag.trigger('click')
-        expect(wrapper.vm.$route.path).to.be.equals(`/dashboard/services/${serviceId}`)
+        wrapper.vm.$nextTick(() =>
+            expect(wrapper.vm.$route.path).to.be.equals(`/dashboard/services/${serviceId}`)
+        )
     })
 
     it(`Should navigate to listener detail page when a listener is clicked`, async () => {
@@ -112,10 +106,12 @@ describe('Dashboard Listeners tab', () => {
             cellIndex: expectedTableHeaders.findIndex(item => item.value === 'id'),
         })
         await aTag.trigger('click')
-        expect(wrapper.vm.$route.path).to.be.equals(`/dashboard/listeners/${listenerId}`)
+        wrapper.vm.$nextTick(() =>
+            expect(wrapper.vm.$route.path).to.be.equals(`/dashboard/listeners/${listenerId}`)
+        )
     })
 
-    it(`Should get total number of unique service names accurately`, async () => {
+    it(`Should get total number of unique service names accurately`, () => {
         const uniqueServiceNames = getUniqueResourceNamesStub(expectedTableRows, 'serviceIds')
         expect(wrapper.vm.$data.servicesLength).to.be.equals(uniqueServiceNames.length)
     })

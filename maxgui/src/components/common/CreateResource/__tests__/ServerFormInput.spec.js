@@ -11,7 +11,6 @@
  * Public License.
  */
 
-import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import {
     itemSelectMock,
@@ -59,12 +58,10 @@ const mockupResourceModules = [
 describe('ServerFormInput.vue', () => {
     let wrapper
     beforeEach(() => {
-        localStorage.clear()
-
         wrapper = mount({
             shallow: false,
             component: ServerFormInput,
-            props: {
+            propsData: {
                 resourceModules: mockupResourceModules,
                 allServices: dummy_all_services,
                 allMonitors: dummy_all_monitors,
@@ -124,11 +121,11 @@ describe('ServerFormInput.vue', () => {
         expect(wrapper.vm.$refs.monitorsRelationship).to.be.not.null
     })
 
-    it(`Should compute servicesList from allServices accurately`, async () => {
+    it(`Should compute servicesList from allServices accurately`, () => {
         expect(wrapper.vm.servicesList).to.be.deep.equals(getServiceListStub)
     })
 
-    it(`Should compute monitorsList from allMonitors accurately`, async () => {
+    it(`Should compute monitorsList from allMonitors accurately`, () => {
         expect(wrapper.vm.monitorsList).to.be.deep.equals(getMonitorListStub)
     })
 

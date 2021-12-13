@@ -11,14 +11,8 @@
  * Public License.
  */
 
-import chai, { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import DetailsReadonlyTable from '@/components/common/DetailsPage/DetailsReadonlyTable'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
-
-chai.should()
-chai.use(sinonChai)
 
 const expectDefaultHeaders = [
     { text: 'Variable', value: 'id', width: '65%', autoTruncate: true },
@@ -57,7 +51,7 @@ describe('DetailsReadonlyTable.vue', () => {
         wrapper = mount({
             shallow: false,
             component: DetailsReadonlyTable,
-            props: {
+            propsData: {
                 loading: false,
                 title: 'STATISTICS',
                 tableData: dummy_data_obj,
@@ -84,12 +78,12 @@ describe('DetailsReadonlyTable.vue', () => {
         processTableRowsSpy.should.have.been.calledOnce
     })
 
-    it(`Should show table by default`, async () => {
+    it(`Should show table by default`, () => {
         expect(wrapper.vm.$data.showTable).to.be.true
     })
 
     it(`Should render table headers having 'Variable' and 'Value' columns with
-      with as 65%, 35%, respectively`, async () => {
+      with as 65%, 35%, respectively`, () => {
         expect(wrapper.vm.tableHeaders).to.be.deep.equals(expectDefaultHeaders)
     })
 
@@ -107,7 +101,7 @@ describe('DetailsReadonlyTable.vue', () => {
         expect(wrapper.vm.$data.tableRows).to.be.deep.equals(dummy_processed_data_arr)
     })
 
-    it(`Should pass necessary props to data-table`, async () => {
+    it(`Should pass necessary props to data-table`, () => {
         const dataTable = wrapper.findComponent({
             name: 'data-table',
         })

@@ -11,7 +11,6 @@
  * Public License.
  */
 
-import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import OverviewHeader from '@/pages/ServerDetail/OverviewHeader'
 import {
@@ -21,14 +20,14 @@ import {
     itemSelectMock,
 } from '@tests/unit/utils'
 
-const propsMountFactory = props =>
+const propsMountFactory = propsData =>
     mount({
         shallow: false,
         component: OverviewHeader,
-        props: props,
+        propsData,
     })
 
-const getRelationshipDataStub = async () => dummy_all_monitors
+const getRelationshipDataStub = () => dummy_all_monitors
 
 /**
  * @param {Object} wrapper mounted component
@@ -44,18 +43,18 @@ const openSelectDialogMock = async (wrapper, btnSelector) => {
 
 describe('ServerDetail - OverviewHeader', () => {
     let wrapper
-    beforeEach(async () => {
+    beforeEach(() => {
         wrapper = mount({
             shallow: false,
             component: OverviewHeader,
-            props: {
+            propsData: {
                 currentServer: dummy_all_servers[0],
                 getRelationshipData: getRelationshipDataStub,
             },
         })
     })
 
-    describe('outlined-overview-card render counts assertions', async () => {
+    describe('outlined-overview-card render counts assertions', () => {
         // 6 means when server is using port, 5 is when server is using socket
         const countCases = [6, 5]
 
@@ -63,7 +62,7 @@ describe('ServerDetail - OverviewHeader', () => {
             let des = `Should render ${count} outlined-overview-card components`
             if (count === 6) des += 'if server is using port'
             else des += 'if server is using socket'
-            it(des, async () => {
+            it(des, () => {
                 let currentServer = wrapper.vm.$help.lodash.cloneDeep(dummy_all_servers[0])
                 currentServer.attributes.parameters = {
                     address: '127.0.0.1',
@@ -82,7 +81,7 @@ describe('ServerDetail - OverviewHeader', () => {
         })
     })
 
-    it(`Should automatically assign 'undefined' string if attribute is not defined`, async () => {
+    it(`Should automatically assign 'undefined' string if attribute is not defined`, () => {
         let currentServer = wrapper.vm.$help.lodash.cloneDeep(dummy_all_servers[0])
         delete currentServer.attributes.last_event
         delete currentServer.attributes.triggered_at
@@ -96,7 +95,7 @@ describe('ServerDetail - OverviewHeader', () => {
         expect(triggered_at).to.be.equals('undefined')
     })
 
-    describe('Should show accurate keys', async () => {
+    describe('Should show accurate keys', () => {
         // 6 means when server is using port, 5 is when server is using socket
         const countCases = [6, 5]
 
@@ -111,7 +110,7 @@ describe('ServerDetail - OverviewHeader', () => {
             }
             des += expectKeys.join(', ')
 
-            it(des, async () => {
+            it(des, () => {
                 let currentServer = wrapper.vm.$help.lodash.cloneDeep(dummy_all_servers[0])
                 currentServer.attributes.parameters = {
                     address: '127.0.0.1',
@@ -127,7 +126,7 @@ describe('ServerDetail - OverviewHeader', () => {
         })
     })
 
-    it(`Should pass necessary props to select-dialog`, async () => {
+    it(`Should pass necessary props to select-dialog`, () => {
         const selectDialog = wrapper.findComponent({
             name: 'select-dialog',
         })

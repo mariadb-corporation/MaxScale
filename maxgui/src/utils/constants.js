@@ -22,6 +22,14 @@ export const APP_CONFIG = Object.freeze({
 |  |  |  |  /  _____  \\   /  .  \\  .----)   |   |  '----. /  _____  \\  |  '----.|  |____
 |__|  |__| /__/     \\__\\ /__/ \\__\\ |_______/     \\______|/__/     \\__\\ |_______||_______|
 `,
+    QUERY_SHORTCUT_KEYS: Object.freeze({
+        'win-ctrl-s': ['ctrl', 's'],
+        'mac-cmd-s': ['meta', 's'],
+        'win-ctrl-enter': ['ctrl', 'enter'],
+        'mac-cmd-enter': ['meta', 'enter'],
+        'win-ctrl-shift-enter': ['ctrl', 'shift', 'enter'],
+        'mac-cmd-shift-enter': ['meta', 'shift', 'enter'],
+    }),
     SQL_NODE_TYPES: Object.freeze({
         SCHEMA: 'Schema',
         TABLES: 'Tables',

@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { expect } from 'chai'
+
 import mount from '@tests/unit/setup'
 import ParameterInputContainer from '@/components/common/Parameters/ParameterInputContainer'
 import { itemSelectMock, inputChangeMock } from '@tests/unit/utils'
@@ -51,11 +51,10 @@ describe('ParameterInputContainer.vue', () => {
     let wrapper
 
     beforeEach(() => {
-        localStorage.clear()
         wrapper = mount({
             shallow: false,
             component: ParameterInputContainer,
-            props: {
+            propsData: {
                 item: {}, // required props which will be added on each test
                 changedParametersArr: [],
                 /* changedParametersArr is a required props which

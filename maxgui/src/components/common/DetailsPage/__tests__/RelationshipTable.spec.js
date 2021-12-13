@@ -10,15 +10,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import chai, { expect } from 'chai'
+
 import mount from '@tests/unit/setup'
 import RelationshipTable from '@/components/common/DetailsPage/RelationshipTable'
 import { serviceStateTableRowsStub, getFilterListStub, itemSelectMock } from '@tests/unit/utils'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
 
-chai.should()
-chai.use(sinonChai)
 /**
  * This function mockups opening confirmation dialog when clicking
  * delete icon in data-table.
@@ -100,7 +96,7 @@ describe('RelationshipTable.vue with readOnly mode and not addable', () => {
         wrapper = mount({
             shallow: false,
             component: RelationshipTable,
-            props: {
+            propsData: {
                 relationshipType: 'services',
                 tableRows: serviceStateTableRowsStub,
                 readOnly: true,
@@ -112,21 +108,17 @@ describe('RelationshipTable.vue with readOnly mode and not addable', () => {
         })
     })
 
-    afterEach(async function() {
-        await wrapper.destroy()
-    })
-
-    it(`Should not render 'add button' when readOnly is true`, async () => {
+    it(`Should not render 'add button' when readOnly is true`, () => {
         expect(wrapper.find('.add-btn').exists()).to.be.false
     })
 
     it(`Should not render confirm-dialog and select-dialog components if
-      readOnly is true and addable is false`, async () => {
+      readOnly is true and addable is false`, () => {
         expect(wrapper.findComponent({ name: 'confirm-dialog' }).exists()).to.be.false
         expect(wrapper.findComponent({ name: 'select-dialog' }).exists()).to.be.false
     })
 
-    it(`Should render router-link components and assign accurate target location`, async () => {
+    it(`Should render router-link components and assign accurate target location`, () => {
         const { wrappers: routerLinks } = wrapper.findAllComponents({ name: 'router-link' })
         expect(routerLinks.length).to.be.equals(serviceStateTableRowsStub.length)
         routerLinks.forEach((routerLink, i) => {
@@ -183,7 +175,7 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
         wrapper = mount({
             shallow: false,
             component: RelationshipTable,
-            props: {
+            propsData: {
                 relationshipType: 'services',
                 tableRows: serviceStateTableRowsStub,
                 readOnly: false,
@@ -196,18 +188,16 @@ describe('RelationshipTable.vue with editable and addable mode', () => {
         getRelationshipDataSpy = sinon.spy(getRelationshipDataStub)
     })
 
-    afterEach(async function() {
-        await wrapper.destroy()
-        await RelationshipTable.computed.logger.restore()
+    afterEach(() => {
+        RelationshipTable.computed.logger.restore()
     })
 
     it(`When readOnly is false, should throw error if getRelationshipData
-      props is not defined`, async () => {
-        await wrapper.destroy()
+      props is not defined`, () => {
         wrapper = mount({
             shallow: false,
             component: RelationshipTable,
-            props: {
+            propsData: {
                 relationshipType: 'services',
                 loading: false,
                 tableRows: serviceStateTableRowsStub,

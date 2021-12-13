@@ -11,7 +11,6 @@
  * Public License.
  */
 
-import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import {
     itemSelectMock,
@@ -43,12 +42,10 @@ const mockupResourceModules = [
 describe('ListenerFormInput.vue', () => {
     let wrapper
     beforeEach(() => {
-        localStorage.clear()
-
         wrapper = mount({
             shallow: false,
             component: ListenerFormInput,
-            props: {
+            propsData: {
                 resourceModules: mockupResourceModules,
                 allServices: dummy_all_services,
                 parentForm: { validate: () => null },
@@ -94,7 +91,7 @@ describe('ListenerFormInput.vue', () => {
         expect(wrapper.vm.$refs.servicesRelationship).to.be.not.null
     })
 
-    it(`Should compute serviceList from allServices accurately`, async () => {
+    it(`Should compute serviceList from allServices accurately`, () => {
         expect(wrapper.vm.serviceList).to.be.deep.equals(getServiceListStub)
     })
 

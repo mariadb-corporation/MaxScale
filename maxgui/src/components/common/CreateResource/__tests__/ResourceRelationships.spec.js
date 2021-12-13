@@ -11,7 +11,6 @@
  * Public License.
  */
 
-import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import ResourceRelationships from '@CreateResource/ResourceRelationships'
 import { itemSelectMock } from '@tests/unit/utils'
@@ -24,12 +23,11 @@ const mockupResourceItems = [
 describe('ResourceRelationships.vue', () => {
     let wrapper
 
-    beforeEach(async () => {
-        localStorage.clear()
+    beforeEach(() => {
         wrapper = mount({
             shallow: false,
             component: ResourceRelationships,
-            props: {
+            propsData: {
                 items: mockupResourceItems,
                 required: false, // whether relationship needs to be defined or not
                 relationshipsType: 'servers', // resource name, always plural word
@@ -40,7 +38,7 @@ describe('ResourceRelationships.vue', () => {
     })
 
     it(`Should render relationship name as singular word accurately
-      when multiple props is false`, async () => {
+      when multiple props is false`, () => {
         const label = wrapper.find('.collapse-title').text()
         expect(label).to.be.equals('server')
     })
@@ -55,7 +53,7 @@ describe('ResourceRelationships.vue', () => {
         expect(label).to.be.equals('services')
     })
 
-    it(`Should show select-dropdown by default`, async () => {
+    it(`Should show select-dropdown by default`, () => {
         expect(wrapper.find('.collapse-content').attributes().style).to.be.undefined
     })
 

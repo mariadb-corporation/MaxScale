@@ -10,24 +10,20 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import chai, { expect } from 'chai'
+
 import mount from '@tests/unit/setup'
 import PageHeader from '@/pages/ListenerDetail/PageHeader'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
-import { dummy_all_listeners, triggerBtnClick, openConfirmDialog } from '@tests/unit/utils'
 
-chai.should()
-chai.use(sinonChai)
+import { dummy_all_listeners, triggerBtnClick, openConfirmDialog } from '@tests/unit/utils'
 
 describe('ListenerDetail - PageHeader', () => {
     let wrapper, axiosStub
 
-    beforeEach(async () => {
+    beforeEach(() => {
         wrapper = mount({
             shallow: false,
             component: PageHeader,
-            props: {
+            propsData: {
                 currentListener: dummy_all_listeners[0],
             },
         })
@@ -38,13 +34,13 @@ describe('ListenerDetail - PageHeader', () => {
         await axiosStub.restore()
     })
 
-    it(`Should render listener state accurately`, async () => {
+    it(`Should render listener state accurately`, () => {
         const span = wrapper.find('.resource-state')
         expect(span.exists()).to.be.true
         expect(span.text()).to.be.equals(dummy_all_listeners[0].attributes.state)
     })
 
-    it(`Should pass necessary props to confirm-dialog`, async () => {
+    it(`Should pass necessary props to confirm-dialog`, () => {
         const confirmDialog = wrapper.findComponent({ name: 'confirm-dialog' })
         expect(confirmDialog.exists()).to.be.true
         const { title, type, item, onSave, onClose, onCancel } = confirmDialog.vm.$props

@@ -11,7 +11,7 @@
  * Public License.
  */
 import Vue from 'vue'
-import { expect } from 'chai'
+
 import mount from '@tests/unit/setup'
 import DataTable from '@/components/common/DataTable'
 
@@ -111,11 +111,11 @@ const defaultProps = {
     ],
 }
 
-const mountPropsFactory = props =>
+const mountPropsFactory = propsData =>
     mount({
         shallow: false,
         component: DataTable,
-        props: props ? props : defaultProps,
+        propsData: propsData ? propsData : defaultProps,
     })
 
 describe('DataTable.vue', () => {
@@ -222,7 +222,7 @@ describe('DataTable.vue - Tree data feature', () => {
         })
     })
 
-    it(`It processes data as expected when isTree props is true.`, async () => {
+    it(`It processes data as expected when isTree props is true.`, () => {
         expect(wrapper.vm.$props.isTree).to.equal(true)
         expect(wrapper.vm.$data.hasValidChild).to.equal(true)
     })

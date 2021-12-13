@@ -11,7 +11,6 @@
  * Public License.
  */
 
-import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import OutlinedOverviewCard from '@/components/common/OutlinedOverviewCard'
 
@@ -19,7 +18,6 @@ describe('OutlinedOverviewCard.vue', () => {
     let wrapper
 
     beforeEach(() => {
-        localStorage.clear()
         wrapper = mount({
             shallow: false,
             component: OutlinedOverviewCard,

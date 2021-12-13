@@ -10,6 +10,12 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+const sinonChai = require('sinon-chai')
+require('chai/register-expect')
+require('chai/register-should')
+global.sinon = require('sinon')
+global.chai = require('chai')
+chai.use(sinonChai)
 // Required for Vuetify (Create div with a data-app attribute)
 const app = document.createElement('div')
 app.setAttribute('data-app', 'true')

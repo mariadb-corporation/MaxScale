@@ -10,11 +10,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import chai, { expect } from 'chai'
+
 import mount from '@tests/unit/setup'
 import PageHeader from '@/pages/MonitorDetail/PageHeader'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
+
 import {
     dummy_all_monitors,
     triggerBtnClick,
@@ -22,14 +21,11 @@ import {
     assertSendingRequest,
 } from '@tests/unit/utils'
 
-chai.should()
-chai.use(sinonChai)
-
 const computedFactory = (computed = {}) =>
     mount({
         shallow: false,
         component: PageHeader,
-        props: {
+        propsData: {
             currentMonitor: dummy_all_monitors[0],
         },
         computed,
@@ -40,11 +36,11 @@ const ALL_BTN_CLASS_PREFIXES = ['stop', 'start', 'delete']
 describe('MonitorDetail - PageHeader', () => {
     let wrapper, axiosDeleteStub, axiosPutStub
 
-    beforeEach(async () => {
+    beforeEach(() => {
         wrapper = mount({
             shallow: false,
             component: PageHeader,
-            props: {
+            propsData: {
                 currentMonitor: dummy_all_monitors[0],
             },
         })
@@ -52,24 +48,24 @@ describe('MonitorDetail - PageHeader', () => {
         axiosPutStub = sinon.stub(wrapper.vm.$store.$http, 'put').returns(Promise.resolve())
     })
 
-    afterEach(async () => {
-        await axiosDeleteStub.restore()
-        await axiosPutStub.restore()
+    afterEach(() => {
+        axiosDeleteStub.restore()
+        axiosPutStub.restore()
     })
 
-    it(`Should render monitor state accurately`, async () => {
+    it(`Should render monitor state accurately`, () => {
         const span = wrapper.find('.resource-state')
         expect(span.exists()).to.be.true
         expect(span.text()).to.be.equals(dummy_all_monitors[0].attributes.state)
     })
 
-    it(`Should render monitor module accurately`, async () => {
+    it(`Should render monitor module accurately`, () => {
         const span = wrapper.find('.resource-module')
         expect(span.exists()).to.be.true
         expect(span.text()).to.be.equals(dummy_all_monitors[0].attributes.module)
     })
 
-    it(`Should pass necessary props to confirm-dialog`, async () => {
+    it(`Should pass necessary props to confirm-dialog`, () => {
         const confirmDialog = wrapper.findComponent({
             name: 'confirm-dialog',
         })
@@ -103,7 +99,7 @@ describe('MonitorDetail - PageHeader', () => {
         )
     })
 
-    describe('button disable test assertions', async () => {
+    describe('button disable test assertions', () => {
         const dummyState = ['Stopped', 'Running']
         const btnClassPrefixes = ['stop', 'start']
         btnClassPrefixes.forEach((prefix, i) => {
@@ -120,7 +116,7 @@ describe('MonitorDetail - PageHeader', () => {
         })
     })
 
-    describe('Monitor state update and monitor deletion test assertions', async () => {
+    describe('Monitor state update and monitor deletion test assertions', () => {
         // dummy states that btn can be clicked
         const dummyState = ['Running', 'Stopped', 'Running']
         ALL_BTN_CLASS_PREFIXES.forEach((prefix, i) => {

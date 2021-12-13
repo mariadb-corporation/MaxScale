@@ -10,11 +10,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import chai, { expect } from 'chai'
+
 import mount from '@tests/unit/setup'
 import PageHeader from '@/pages/ServerDetail/PageHeader'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
+
 import {
     dummy_all_servers,
     triggerBtnClick,
@@ -22,14 +21,11 @@ import {
     assertSendingRequest,
 } from '@tests/unit/utils'
 
-chai.should()
-chai.use(sinonChai)
-
 const computedFactory = (computed = {}) =>
     mount({
         shallow: false,
         component: PageHeader,
-        props: {
+        propsData: {
             currentServer: dummy_all_servers[0],
         },
         computed,
@@ -41,7 +37,7 @@ const computedFactory = (computed = {}) =>
  * @param {Number} payload.dummyIconFrameIndex - index value for stateIconFrame stub
  */
 const serverStatusTestAssertions = ({ wrapper, status, dummyIconFrameIndex }) => {
-    it(`Should render ${status}`, async () => {
+    it(`Should render ${status}`, () => {
         // stateIconFrame stub
         wrapper = computedFactory({
             stateIconFrame: () => dummyIconFrameIndex,
@@ -59,7 +55,7 @@ const serverStatusTestAssertions = ({ wrapper, status, dummyIconFrameIndex }) =>
  */
 const serverStateModeAssertion = ({ wrapper, expectStateMode, dummyServerState }) => {
     it(`stateMode should compute current state: '${dummyServerState}' to
-        return lowercase state mode: '${expectStateMode}'`, async () => {
+        return lowercase state mode: '${expectStateMode}'`, () => {
         // serverState stub
         wrapper = computedFactory({
             serverState: () => dummyServerState,
@@ -73,11 +69,11 @@ const ALL_BTN_CLASS_PREFIXES = ['maintain', 'clear', 'drain', 'delete']
 describe('ServerDetail - PageHeader', () => {
     let wrapper, axiosDeleteStub, axiosPutStub
 
-    beforeEach(async () => {
+    beforeEach(() => {
         wrapper = mount({
             shallow: false,
             component: PageHeader,
-            props: {
+            propsData: {
                 currentServer: dummy_all_servers[0],
             },
         })
@@ -91,7 +87,7 @@ describe('ServerDetail - PageHeader', () => {
         await axiosPutStub.restore()
     })
 
-    it(`Should render version_string if it has value`, async () => {
+    it(`Should render version_string if it has value`, () => {
         const span = wrapper.find('.version-string')
         expect(span.exists()).to.be.true
         expect(span.text()).to.be.equals(
@@ -99,7 +95,7 @@ describe('ServerDetail - PageHeader', () => {
         )
     })
 
-    it(`Should not render version_string if it doesn't have value`, async () => {
+    it(`Should not render version_string if it doesn't have value`, () => {
         // version_string mocks
         wrapper = computedFactory({
             version_string: () => '',
@@ -108,7 +104,7 @@ describe('ServerDetail - PageHeader', () => {
         expect(span.exists()).to.be.false
     })
 
-    it(`Should pass necessary props to confirm-dialog`, async () => {
+    it(`Should pass necessary props to confirm-dialog`, () => {
         const confirmDialog = wrapper.findComponent({
             name: 'confirm-dialog',
         })
@@ -169,7 +165,7 @@ describe('ServerDetail - PageHeader', () => {
         )
     })
 
-    describe('button disable test assertions', async () => {
+    describe('button disable test assertions', () => {
         const btnClassPrefixes = ['maintain', 'clear', 'drain', 'drain']
         const dummyStateModes = ['maintenance', 'slave', 'drained', 'maintenance']
         btnClassPrefixes.forEach((prefix, i) => {
@@ -188,7 +184,7 @@ describe('ServerDetail - PageHeader', () => {
         })
     })
 
-    describe('Server state update and server deletion test assertions', async () => {
+    describe('Server state update and server deletion test assertions', () => {
         // dummy states that btn can be clicked
         const dummyStateModes = ['slave', 'drained', 'slave', 'maintenance']
         ALL_BTN_CLASS_PREFIXES.forEach((prefix, i) => {

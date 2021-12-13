@@ -10,15 +10,12 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import chai, { expect } from 'chai'
+
 import mount from '@tests/unit/setup'
 import LoginForm from '@/pages/Login/LoginForm'
 import { inputChangeMock, routeChangesMock } from '@tests/unit/utils'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
+
 import { makeServer } from '@tests/unit/mirage/api'
-chai.should()
-chai.use(sinonChai)
 
 /**
  * This function mockup checking remember me box
@@ -32,7 +29,7 @@ async function mockupCheckingTheBox(wrapper) {
 
 let api
 let originalXMLHttpRequest = XMLHttpRequest
-describe('LoginForm.vue', async () => {
+describe('LoginForm.vue', () => {
     let wrapper
     beforeEach(() => {
         api = makeServer({ environment: 'test' })
@@ -103,7 +100,7 @@ describe('LoginForm.vue', async () => {
         expect(input.find('[type = "text"]').exists()).to.be.equal(true)
     })
 
-    it('Should have rememberMe checked by default', async () => {
+    it('Should have rememberMe checked by default', () => {
         expect(wrapper.vm.$data.rememberMe).to.be.true
     })
 

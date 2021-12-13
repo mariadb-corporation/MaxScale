@@ -1,10 +1,5 @@
 {
-    "git.ignoreMissingGitWarning": true,
-    "javascript.updateImportsOnFileMove.enabled": "always",
-    "explorer.confirmDragAndDrop": false,
-    "explorer.confirmDelete": false,
-    "window.zoomLevel": 0,
-    "eslint.validate": ["javascript", "javascriptreact", "vue", "vue-html"],
+    "eslint.validate": ["javascript", "vue", "vue-html"],
     "eslint.alwaysShowStatus": true,
     "vetur.completion.tagCasing": "initial",
     "[vue]": {
@@ -13,29 +8,24 @@
     "[javascript]": {
         "editor.defaultFormatter": "esbenp.prettier-vscode"
     },
-    "editor.multiCursorModifier": "ctrlCmd",
-    "[javascriptreact]": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode"
-    },
     "[html]": {
         "editor.defaultFormatter": "vscode.html-language-features"
+    },
+    "[json]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[jsonc]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
     },
     "prettier.trailingComma": "all",
     "prettier.singleQuote": true,
     "vetur.format.defaultFormatter.html": "prettier",
     "prettier.printWidth": 100,
-    "[json]": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode"
-    },
-    "sync.forceUpload": true,
     "prettier.tabWidth": 4,
     "prettier.useEditorConfig": false,
     "vetur.format.options.tabSize": 4,
     "prettier.semi": false,
     "editor.formatOnSave": true,
-    "[jsonc]": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode"
-    },
     "cSpell.userWords": ["camelcase", "mariadb", "vuetify"],
     "cSpell.words": ["devtool", "loginpage", "maxgui", "maxscale", "nightwatch", "vuex"],
     "files.trimTrailingWhitespace": true

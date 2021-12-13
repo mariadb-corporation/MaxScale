@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { expect } from 'chai'
+
 import mount from '@tests/unit/setup'
 import SelectDialog from '@/components/common/Dialogs/SelectDialog'
 import { itemSelectMock } from '@tests/unit/utils'
@@ -37,29 +37,29 @@ describe('SelectDialog.vue', () => {
         wrapper = mount({
             shallow: false,
             component: SelectDialog,
-            props: initialProps,
+            propsData: initialProps,
         })
     })
 
-    it(`Should render correct label value when multiple props is true`, async () => {
+    it(`Should render correct label value when multiple props is true`, () => {
         // component need to be shallowed, ignoring child components
         wrapper = mount({
             shallow: true,
             component: SelectDialog,
-            props: { ...initialProps, multiple: true },
+            propsData: { ...initialProps, multiple: true },
         })
         // get the label p
         let label = wrapper.find('.select-label').html()
         // check include correct label value
         expect(label).to.be.include('Specify monitors')
     })
-    it(`Should render correct label value when multiple props is false`, async () => {
+    it(`Should render correct label value when multiple props is false`, () => {
         // component need to be shallowed, ignoring child components
 
         wrapper = mount({
             shallow: true,
             component: SelectDialog,
-            props: initialProps,
+            propsData: initialProps,
         })
         // get the label p
         let label = wrapper.find('.select-label').html()
@@ -127,11 +127,11 @@ describe('SelectDialog.vue', () => {
         expect(showPlaceHolder).to.be.false
     })
 
-    it(`Should render accurate content when body-append slot is used`, async () => {
+    it(`Should render accurate content when body-append slot is used`, () => {
         wrapper = mount({
             shallow: false,
             component: SelectDialog,
-            props: initialProps,
+            propsData: initialProps,
             slots: {
                 'body-append': '<small class="body-append">body append</small>',
             },

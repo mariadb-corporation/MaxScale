@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { expect } from 'chai'
+
 import mount from '@tests/unit/setup'
 import ConfirmDialog from '@/components/common/Dialogs/ConfirmDialog'
 
@@ -29,11 +29,10 @@ describe('ConfirmDialog.vue', () => {
         smallInfo: '', // translate before passing
     }
     beforeEach(() => {
-        localStorage.clear()
         wrapper = mount({
             shallow: false,
             component: ConfirmDialog,
-            props: initialProps,
+            propsData: initialProps,
         })
     })
 
@@ -42,7 +41,7 @@ describe('ConfirmDialog.vue', () => {
         wrapper = mount({
             shallow: false,
             component: ConfirmDialog,
-            props: initialProps,
+            propsData: initialProps,
         })
         // get confirmation text span
         let span = wrapper.find('.confirmations-text').html()
@@ -61,12 +60,12 @@ describe('ConfirmDialog.vue', () => {
         expect(span.exists()).to.be.equal(false)
     })
 
-    it(`Testing component renders accurate slot if body-append slot is used`, async () => {
+    it(`Testing component renders accurate slot if body-append slot is used`, () => {
         // component need to be shallowed, ignoring child components
         wrapper = mount({
             shallow: false,
             component: ConfirmDialog,
-            props: initialProps,
+            propsData: initialProps,
             slots: {
                 'body-append': '<div class="body-append">test div</div>',
             },

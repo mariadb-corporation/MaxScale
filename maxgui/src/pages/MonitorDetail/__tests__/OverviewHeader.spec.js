@@ -11,15 +11,9 @@
  * Public License.
  */
 
-import chai, { expect } from 'chai'
-import sinon from 'sinon'
 import mount from '@tests/unit/setup'
 import OverviewHeader from '@/pages/MonitorDetail/OverviewHeader'
 import { dummy_all_monitors } from '@tests/unit/utils'
-import sinonChai from 'sinon-chai'
-
-chai.should()
-chai.use(sinonChai)
 
 /**
  * @param {Object} wrapper - mounted component
@@ -35,17 +29,17 @@ async function mockOpenSwitchOverDialog(wrapper) {
 const selectedItemsStub = [{ id: 'test-server', type: 'servers' }]
 describe('OverviewHeader index', () => {
     let wrapper
-    beforeEach(async () => {
+    beforeEach(() => {
         wrapper = mount({
             shallow: false,
             component: OverviewHeader,
-            props: {
+            propsData: {
                 currentMonitor: dummy_all_monitors[0],
             },
         })
     })
 
-    it(`Should render four outlined-overview-card components`, async () => {
+    it(`Should render four outlined-overview-card components`, () => {
         const outlineOverviewCards = wrapper.findAllComponents({ name: 'outlined-overview-card' })
         expect(outlineOverviewCards.length).to.be.equals(4)
     })
@@ -60,7 +54,7 @@ describe('OverviewHeader index', () => {
         Object.values(getTopOverviewInfo).forEach(value => expect(value).to.be.equals('undefined'))
     })
 
-    it(`Should shows master, master_gtid_domain_id, state, primary value`, async () => {
+    it(`Should shows master, master_gtid_domain_id, state, primary value`, () => {
         const expectKeys = ['master', 'master_gtid_domain_id', 'state', 'primary']
         const getTopOverviewInfo = wrapper.vm.getTopOverviewInfo
         expect(Object.keys(getTopOverviewInfo)).to.be.deep.equals(expectKeys)
@@ -80,7 +74,7 @@ describe('OverviewHeader index', () => {
         expect(selectDialog.vm.isDlgOpened).to.be.true
     })
 
-    it(`Should pass necessary props to select-dialog`, async () => {
+    it(`Should pass necessary props to select-dialog`, () => {
         const selectDialog = wrapper.findComponent({ name: 'select-dialog' })
 
         const { title, mode, entityName, onSave, itemsList, defaultItems } = selectDialog.vm.$props

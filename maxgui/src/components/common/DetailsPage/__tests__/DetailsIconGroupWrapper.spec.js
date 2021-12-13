@@ -11,7 +11,6 @@
  * Public License.
  */
 
-import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import DetailsIconGroupWrapper from '@/components/common/DetailsPage/DetailsIconGroupWrapper'
 
@@ -19,25 +18,22 @@ describe('DetailsIconGroupWrapper.vue', () => {
     let wrapper
 
     beforeEach(() => {
-        localStorage.clear()
         wrapper = mount({
             shallow: false,
             component: DetailsIconGroupWrapper,
         })
     })
 
-    it(`By default, should not add '.icon-group__multi' class`, async () => {
+    it(`By default, should not add '.icon-group__multi' class`, () => {
         expect(wrapper.find('.icon-group__multi').exists()).to.be.equal(false)
     })
 
     it(`Should add '.icon-group__multi' class when multiIcons props is true`, async () => {
-        await wrapper.setProps({
-            multiIcons: true,
-        })
+        await wrapper.setProps({ multiIcons: true })
         expect(wrapper.find('.icon-group__multi').exists()).to.be.equal(true)
     })
 
-    it(`Should render accurate content when body slot is used`, async () => {
+    it(`Should render accurate content when body slot is used`, () => {
         wrapper = mount({
             shallow: false,
             component: DetailsIconGroupWrapper,

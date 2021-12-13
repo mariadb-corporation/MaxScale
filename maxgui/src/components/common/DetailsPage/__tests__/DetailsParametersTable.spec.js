@@ -11,7 +11,6 @@
  * Public License.
  */
 
-import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import DetailsParametersTable from '@/components/common/DetailsPage/DetailsParametersTable'
 import { itemSelectMock } from '@tests/unit/utils'
@@ -191,8 +190,8 @@ async function mockupOpenConfirmationDialog(wrapper, intercept, cb) {
 const defaultProps = {
     resourceId: 'row_server_1',
     parameters: resourceParameters,
-    updateResourceParameters: async () => null, // send ajax
-    onEditSucceeded: async () => null, // send ajax to get resource data after update
+    updateResourceParameters: () => null, // send ajax
+    onEditSucceeded: () => null, // send ajax to get resource data after update
     // specical props to manipulate required or dependent input attribute
     usePortOrSocket: true, // set true for server resource
     isTree: false, // true if a parameter has value as an object or array,
@@ -209,14 +208,14 @@ const computedFactory = (computed = {}) =>
     mount({
         shallow: false,
         component: DetailsParametersTable,
-        props: defaultProps,
+        propsData: defaultProps,
         computed,
     })
 
 describe('DetailsParametersTable.vue', () => {
     let wrapper
 
-    beforeEach(async () => {
+    beforeEach(() => {
         wrapper = computedFactory(defaultComputed)
     })
 
@@ -226,14 +225,14 @@ describe('DetailsParametersTable.vue', () => {
         })
     })
 
-    it(`Should convert parameter object to array of object`, async () => {
+    it(`Should convert parameter object to array of object`, () => {
         let tableRow = wrapper.vm.parametersTableRow
         let paramSize = Object.keys(wrapper.vm.$props.parameters).length
         expect(tableRow).to.be.an('array')
         expect(tableRow.length).to.be.equal(paramSize)
     })
 
-    describe('Test assign module_parameter type info', async () => {
+    describe('Test assign module_parameter type info', () => {
         const dummyAllTypes = dummy_module_params.map(param => param.type)
         const dummyAllParamKeys = [
             ['name', 'default_value', 'description', 'mandatory', 'unit'],
@@ -251,7 +250,7 @@ describe('DetailsParametersTable.vue', () => {
                 case 'path':
                     des = 'Should assign accurately unmodifiable module parameter info'
             }
-            it(des, async () => {
+            it(des, () => {
                 wrapper = computedFactory(defaultComputed)
                 testParameterInfoAssigned({
                     wrapper,
@@ -272,7 +271,7 @@ describe('DetailsParametersTable.vue', () => {
         })
     })
 
-    it(`Should have the following classes 'color border-left-table-border'`, async () => {
+    it(`Should have the following classes 'color border-left-table-border'`, () => {
         const { wrappers: tds } = wrapper.findAll('td')
         tds.forEach(td =>
             expect(td.classes()).to.include.members(['color', 'border-left-table-border'])
@@ -325,7 +324,7 @@ describe('DetailsParametersTable.vue', () => {
         expect(tds[0].vm.$props.item.id).to.be.equals(wrapper.vm.$data.parameterTooltip.item.id)
     })
 
-    it(`Should render total number of table row on the first row of the first column`, async () => {
+    it(`Should render total number of table row on the first row of the first column`, () => {
         const { wrappers: ths } = wrapper.findAll('th')
         expect(ths.length).to.be.equals(2)
         ths.forEach((th, i) => {
@@ -335,7 +334,7 @@ describe('DetailsParametersTable.vue', () => {
         })
     })
 
-    it(`Should not open confirmation dialog when it is not in editable mode`, async () => {
+    it(`Should not open confirmation dialog when it is not in editable mode`, () => {
         expect(wrapper.vm.$data.showConfirmDialog).to.be.false
     })
 

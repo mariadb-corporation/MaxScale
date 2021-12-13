@@ -10,18 +10,17 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { expect } from 'chai'
+
 import mount from '@tests/unit/setup'
 import Collapse from '@/components/common/Collapse'
 
 describe('Collapse.vue', () => {
     let wrapper
     beforeEach(() => {
-        localStorage.clear()
         wrapper = mount({
             shallow: false,
             component: Collapse,
-            props: {
+            propsData: {
                 isContentVisible: true,
                 title: 'Collapse title',
                 toggleOnClick: () => {
@@ -49,7 +48,7 @@ describe('Collapse.vue', () => {
         expect(wrapper.vm.$data.showEditBtn).to.be.true
     })
 
-    it(`Should not display "add" button if onAddClick function props is null`, async () => {
+    it(`Should not display "add" button if onAddClick function props is null`, () => {
         expect(wrapper.find('.add-btn').exists()).to.be.equal(false)
     })
 
@@ -66,7 +65,7 @@ describe('Collapse.vue', () => {
         expect(eventFired).to.equal(1)
     })
 
-    it(`Should not display "Done Editing" button when isEditing props is false`, async () => {
+    it(`Should not display "Done Editing" button when isEditing props is false`, () => {
         expect(wrapper.find('.done-editing-btn').exists()).to.be.equal(false)
     })
     it(`Should trigger doneEditingCb function props when the props is passed and

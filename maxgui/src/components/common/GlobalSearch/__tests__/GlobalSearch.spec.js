@@ -11,43 +11,27 @@
  * Public License.
  */
 
-import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import GlobalSearch from '@/components/common/GlobalSearch'
-import { routeChangesMock } from '@tests/unit/utils'
-import sinon from 'sinon'
 
 describe('GlobalSearch.vue', () => {
-    let wrapper, axiosStub
+    let wrapper
 
-    beforeEach(async () => {
+    beforeEach(() => {
         wrapper = mount({
             shallow: true,
             component: GlobalSearch,
         })
-        axiosStub = sinon.stub(wrapper.vm.$store.$http, 'get').resolves(
-            Promise.resolve({
-                data: {},
-            })
-        )
-        await routeChangesMock(wrapper, '/dashboard/servers')
     })
-    afterEach(async function() {
-        await axiosStub.restore()
-        wrapper.destroy()
+    afterEach(() => {
+        wrapper.vm.SET_SEARCH_KEYWORD('')
     })
 
-    it(`$data.search as well as $store.state.search_keyword is updated correctly`, async () => {
+    it(`computed search as well as $store.state.search_keyword are updated correctly`, () => {
         // searching for 'row_server_1'
-        await wrapper.setData({ search: 'row_server_1' })
-        expect(wrapper.vm.$store.state.search_keyword).to.be.equal('row_server_1')
-    })
-
-    it(`Should cleared search and search_keyword when route changes`, async () => {
-        await wrapper.setData({ search: 'row_server_1' })
-        // go to settings page
-        await routeChangesMock(wrapper, '/settings')
-        expect(wrapper.vm.$data.search).to.be.empty
-        expect(wrapper.vm.$store.state.search_keyword).to.be.empty
+        const dummy_search = 'row_server_1'
+        wrapper.vm.SET_SEARCH_KEYWORD(dummy_search)
+        expect(wrapper.vm.search_keyword).to.be.equal(dummy_search)
+        expect(wrapper.vm.search).to.be.equal(dummy_search)
     })
 })

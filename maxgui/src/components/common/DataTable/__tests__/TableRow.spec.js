@@ -11,7 +11,6 @@
  * Public License.
  */
 
-import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import TableRow from '@/components/common/DataTable/TableRow'
 
@@ -19,11 +18,10 @@ describe('TableRow.vue', () => {
     let wrapper
 
     beforeEach(() => {
-        localStorage.clear()
         wrapper = mount({
             shallow: false,
             component: TableRow,
-            props: {
+            propsData: {
                 rowIndex: 0,
                 editableCell: false,
                 draggable: false,

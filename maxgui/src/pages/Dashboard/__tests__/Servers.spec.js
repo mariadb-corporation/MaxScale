@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { expect } from 'chai'
+
 import mount from '@tests/unit/setup'
 import Servers from '@/pages/Dashboard/Servers'
 import { findAnchorLinkInTable, getUniqueResourceNamesStub } from '@tests/unit/utils'
@@ -98,11 +98,11 @@ describe('Dashboard Servers tab', () => {
         XMLHttpRequest = originalXMLHttpRequest
     })
 
-    it(`Should process table rows accurately`, async () => {
+    it(`Should process table rows accurately`, () => {
         expect(wrapper.vm.tableRows).to.be.deep.equals(expectedTableRows)
     })
 
-    it(`Should pass expected table headers to data-table`, async () => {
+    it(`Should pass expected table headers to data-table`, () => {
         const dataTable = wrapper.findComponent({ name: 'data-table' })
         expect(wrapper.vm.tableHeaders).to.be.deep.equals(expectedTableHeaders)
         expect(dataTable.vm.$props.headers).to.be.deep.equals(expectedTableHeaders)
@@ -143,7 +143,7 @@ describe('Dashboard Servers tab', () => {
         expect(wrapper.vm.$route.path).to.be.equals(`/dashboard/monitors/${monitorId}`)
     })
 
-    it(`Should get total number of unique service names accurately`, async () => {
+    it(`Should get total number of unique service names accurately`, () => {
         const uniqueServiceNames = getUniqueResourceNamesStub(expectedTableRows, 'serviceIds')
         expect(wrapper.vm.$data.servicesLength).to.be.equals(uniqueServiceNames.length)
     })

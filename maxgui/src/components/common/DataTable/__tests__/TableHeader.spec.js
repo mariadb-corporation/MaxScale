@@ -11,7 +11,6 @@
  * Public License.
  */
 
-import { expect } from 'chai'
 import mount from '@tests/unit/setup'
 import TableHeader from '@/components/common/DataTable/TableHeader'
 
@@ -30,11 +29,10 @@ describe('TableHeader.vue', () => {
     ]
 
     beforeEach(() => {
-        localStorage.clear()
         wrapper = mount({
             shallow: false,
             component: TableHeader,
-            props: {
+            propsData: {
                 headers: headers,
                 sortBy: 'groupId',
                 sortDesc: true,

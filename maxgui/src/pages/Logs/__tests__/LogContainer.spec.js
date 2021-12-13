@@ -12,15 +12,10 @@
  */
 import '@/plugins/vuex'
 import store from 'store'
-import chai, { expect } from 'chai'
-import sinon from 'sinon'
-import sinonChai from 'sinon-chai'
+
 import mount from '@tests/unit/setup'
 import LogContainer from '@/pages/Logs/LogContainer'
 import { dummy_log_data } from '@tests/unit/utils'
-
-chai.should()
-chai.use(sinonChai)
 
 const dummyChosenLogLevels = ['warning']
 
@@ -28,7 +23,7 @@ const mountFactory = opts =>
     mount({
         shallow: false,
         component: LogContainer,
-        props: {
+        propsData: {
             logViewHeight: 500,
             chosenLogLevels: [],
         },
@@ -71,10 +66,10 @@ describe('LogContainer', () => {
          */
         await wrapper.vm.$help.delay(350)
     })
-    afterEach(async function() {
-        await axiosStub.restore()
-        await wsStub.restore()
-        await wrapper.destroy()
+    afterEach(function() {
+        axiosStub.restore()
+        wsStub.restore()
+        wrapper.destroy()
     })
 
     it(`Should send requests to get maxscale log`, async () => {
@@ -88,7 +83,7 @@ describe('LogContainer', () => {
         expect(wrapper.vm.isFiltering).to.be.true
     })
 
-    it(`Should show no logs found when logToShow is empty`, async () => {
+    it(`Should show no logs found when logToShow is empty`, () => {
         wrapper = mountFactory({
             computed: {
                 logToShow: () => [],

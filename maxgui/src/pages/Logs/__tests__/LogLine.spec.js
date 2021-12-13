@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { expect } from 'chai'
+
 import mount from '@tests/unit/setup'
 import LogLine from '@/pages/Logs/LogLine'
 import { dummy_log_data } from '@tests/unit/utils'
@@ -19,18 +19,15 @@ const mountFactory = () =>
     mount({
         shallow: false,
         component: LogLine,
-        props: {
+        propsData: {
             log: dummy_log_data[0],
         },
     })
 
 describe('LogLine', () => {
     let wrapper
-    beforeEach(async () => {
+    beforeEach(() => {
         wrapper = mountFactory()
-    })
-    afterEach(async function() {
-        await wrapper.destroy()
     })
     it(`Should return accurate color classes for log level section`, async () => {
         dummy_log_data.forEach(async log => {

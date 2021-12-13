@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { expect } from 'chai'
+
 import mount from '@tests/unit/setup'
 import SelectDropdown from '@/components/common/SelectDropdown'
 import { itemSelectMock } from '@tests/unit/utils'
@@ -42,7 +42,7 @@ describe('SelectDropdown.vue', () => {
         wrapper = mount({
             shallow: false,
             component: SelectDropdown,
-            props: {
+            propsData: {
                 // entityName is always plural by default, this makes translating process easier
                 entityName: 'servers',
                 items: [
@@ -57,7 +57,7 @@ describe('SelectDropdown.vue', () => {
         })
     })
 
-    it(`Should render accurate placeholder when multiple props is false`, async () => {
+    it(`Should render accurate placeholder when multiple props is false`, () => {
         // get the wrapper div
         let placeholderWrapper = wrapper.find('.v-select__selections').html()
         // check include correct placeholder value
