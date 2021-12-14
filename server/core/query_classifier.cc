@@ -399,7 +399,7 @@ public:
 
     ~QCInfoCacheScope()
     {
-        if (!m_canonical.empty())
+        if (store_in_cache())
         {
             void* pData = gwbuf_get_buffer_object_data(m_pStmt, GWBUF_PARSING_INFO);
             mxb_assert(pData);
@@ -412,6 +412,12 @@ public:
 private:
     GWBUF*      m_pStmt;
     std::string m_canonical;
+
+    bool store_in_cache() const
+    {
+        constexpr const int is_autocommit = QUERY_TYPE_ENABLE_AUTOCOMMIT | QUERY_TYPE_DISABLE_AUTOCOMMIT;
+        return !m_canonical.empty() && (qc_get_type_mask(m_pStmt) & is_autocommit) == 0;
+    }
 };
 }
 
