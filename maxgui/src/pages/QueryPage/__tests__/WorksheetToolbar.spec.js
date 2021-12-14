@@ -24,9 +24,6 @@ const mountFactory = opts =>
         ...opts,
     })
 
-// stub cnct_resources
-const dummy_curr_cnct_resource = { id: '1', name: 'server_0', type: 'servers' }
-
 describe(`WorksheetToolbar - child component's data communication tests`, () => {
     let wrapper
     it('Should pass accurate data to connection-manager', () => {
@@ -60,7 +57,7 @@ describe('WorksheetToolbar - use-db-btn, run-btn and visualize-btn common tests'
             wrapper = mountFactory({
                 computed: {
                     query_txt: () => 'SELECT 1',
-                    curr_cnct_resource: () => dummy_curr_cnct_resource,
+                    hasActiveConn: () => true,
                     getIsQuerying: () => true,
                     getLoadingQueryResult: () => false,
                 },
@@ -71,11 +68,10 @@ describe('WorksheetToolbar - use-db-btn, run-btn and visualize-btn common tests'
     })
     btns.forEach(btn => {
         it(`Should disable ${btn} if there is no connected connection to current worksheet`, () => {
-            // stub curr_cnct_resource
             wrapper = mountFactory({
                 computed: {
                     query_txt: () => 'SELECT 1',
-                    curr_cnct_resource: () => {},
+                    hasActiveConn: () => false,
                     getIsQuerying: () => false,
                     getLoadingQueryResult: () => false,
                 },
@@ -89,7 +85,7 @@ describe('WorksheetToolbar - use-db-btn, run-btn and visualize-btn common tests'
             wrapper = mountFactory({
                 computed: {
                     query_txt: () => 'SELECT 1',
-                    curr_cnct_resource: () => dummy_curr_cnct_resource,
+                    hasActiveConn: () => true,
                     getIsQuerying: () => false,
                     getLoadingQueryResult: () => false,
                 },
@@ -108,35 +104,32 @@ describe('WorksheetToolbar - Use database button tests', () => {
         const useDbBtn = wrapper.find('.use-db-btn')
         expect(useDbBtn.text()).to.be.equals(wrapper.vm.$t('useDb'))
     })
-
     it(`Should render accurate active db name`, () => {
         const dummy_active_db = 'test'
         wrapper = mountFactory({
             computed: {
                 active_db: () => dummy_active_db,
-                curr_cnct_resource: () => dummy_curr_cnct_resource,
+                hasActiveConn: () => true,
             },
         })
         const useDbBtn = wrapper.find('.use-db-btn')
         expect(useDbBtn.text()).to.be.equals(dummy_active_db)
     })
-    //TODO: Add test for changing active db
+    //TODO: Add test for changing active db dbListMenu
 })
 
 describe('WorksheetToolbar - Run button tests', () => {
     let wrapper
-
     it(`Should disable the button if query_txt is empty`, () => {
         wrapper = mountFactory({ computed: { query_txt: () => '' } })
         const btn = wrapper.find('.run-btn')
         expect(btn.element.disabled).to.be.true
     })
-
     it(`Should not disable run-btn if query result is still loading`, () => {
         wrapper = mountFactory({
             computed: {
                 query_txt: () => 'SELECT 1',
-                curr_cnct_resource: () => dummy_curr_cnct_resource,
+                hasActiveConn: () => true,
                 getIsQuerying: () => true,
                 getLoadingQueryResult: () => true,
             },
@@ -144,7 +137,92 @@ describe('WorksheetToolbar - Run button tests', () => {
         const btnComponent = wrapper.find(`.run-btn`)
         expect(btnComponent.element.disabled).to.be.false
     })
-    //TODO: Add test for clicking run-btn
+    const runModes = ['all', 'selected']
+    const getConditionsToRun = (mode = 'all') => ({
+        query_txt: () => 'SELECT 1; SELECT 2;',
+        selected_query_txt: () => (mode === 'selected' ? 'SELECT 2;' : ''),
+        hasActiveConn: () => true,
+        getIsQuerying: () => false,
+        getLoadingQueryResult: () => false,
+    })
+    runModes.forEach(mode => {
+        it(`Should call handleRun with accurate mode '${mode}'`, () => {
+            wrapper = mountFactory({ computed: getConditionsToRun(mode) })
+            const handleRunSpy = sinon.spy(wrapper.vm, 'handleRun')
+            sinon.stub(wrapper.vm, 'onRun') // stub onRun
+            const btn = wrapper.find('.run-btn')
+            btn.trigger('click')
+            handleRunSpy.should.have.been.calledOnceWith(mode)
+        })
+    })
+    runModes.forEach(mode => {
+        it(`Should call onRun with mode '${mode}' when query_confirm_flag = 0`, () => {
+            wrapper = mountFactory({
+                computed: { ...getConditionsToRun(mode), query_confirm_flag: () => 0 },
+            })
+            const onRunSpy = sinon.spy(wrapper.vm, 'onRun')
+            sinon.stub(wrapper.vm, 'fetchQueryResult')
+            sinon.stub(wrapper.vm, 'SET_CURR_QUERY_MODE')
+            const btn = wrapper.find('.run-btn')
+            btn.trigger('click')
+            onRunSpy.should.have.been.calledOnceWith(mode)
+        })
+    })
+    it(`Should popup query confirmation dialog with accurate data
+      when query_confirm_flag = 1`, () => {
+        wrapper = mountFactory({
+            computed: {
+                ...getConditionsToRun(),
+                query_confirm_flag: () => 1,
+            },
+        })
+        const onRunSpy = sinon.spy(wrapper.vm, 'onRun')
+        sinon.stub(wrapper.vm, 'fetchQueryResult')
+        sinon.stub(wrapper.vm, 'SET_CURR_QUERY_MODE')
+        const btn = wrapper.find('.run-btn')
+        btn.trigger('click')
+        onRunSpy.should.have.not.been.called
+        expect(wrapper.vm.activeRunMode).to.be.equals('all')
+        expect(wrapper.vm.dontShowConfirm).to.be.false
+        expect(wrapper.vm.isConfDlgOpened).to.be.true
+    })
+    it(`Should call SET_QUERY_CONFIRM_FLAG action if dontShowConfirm
+      checkbox is checked when confirm running query`, async () => {
+        let setQueryConfirmFlagCallCount = 0
+        wrapper = mountFactory({
+            computed: { ...getConditionsToRun(), query_confirm_flag: () => 1 },
+            methods: {
+                SET_QUERY_CONFIRM_FLAG: () => setQueryConfirmFlagCallCount++,
+            },
+        })
+        sinon.stub(wrapper.vm, 'fetchQueryResult')
+        sinon.stub(wrapper.vm, 'SET_CURR_QUERY_MODE')
+        await wrapper.setData({
+            dontShowConfirm: true,
+            isConfDlgOpened: true,
+            activeRunMode: 'all',
+        })
+        await wrapper.vm.confirmRunning()
+        expect(setQueryConfirmFlagCallCount).to.be.equals(1)
+    })
 })
 
-//TODO: Add test for clicking visualize-btn
+describe('WorksheetToolbar - visualize-btn tests', () => {
+    let wrapper
+    it(`Should call SET_SHOW_VIS_SIDEBAR action with accurate argument`, () => {
+        let setShowVisSidebarCallCount = 0
+        let argVal
+        wrapper = mountFactory({
+            computed: { hasActiveConn: () => true, getIsQuerying: () => false },
+            methods: {
+                SET_SHOW_VIS_SIDEBAR: val => {
+                    setShowVisSidebarCallCount++
+                    argVal = val
+                },
+            },
+        })
+        wrapper.find('.visualize-btn').trigger('click')
+        expect(setShowVisSidebarCallCount).to.be.equals(1)
+        expect(argVal).to.be.equals(!wrapper.vm.show_vis_sidebar)
+    })
+})
