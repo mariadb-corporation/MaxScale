@@ -177,6 +177,7 @@ struct ThisUnit
         { tolower(command::Count::KEY),                    create_info<command::Count>() },
         { tolower(command::Create::KEY),                   create_info<command::Create>() },
         { tolower(command::CreateIndexes::KEY),            create_info<command::CreateIndexes>() },
+        { tolower(command::CreateUser::KEY),               create_info<command::CreateUser>() },
         //Cannot be included as a mockup, causes hangs.
         //{ tolower(command::CurrentOp::KEY),                create_info<command::CurrentOp>() },
         { tolower(command::Delete::KEY),                   create_info<command::Delete>() },
@@ -185,6 +186,7 @@ struct ThisUnit
         { tolower(command::DropAllUsersFromDatabase::KEY), create_info<command::DropAllUsersFromDatabase>() },
         { tolower(command::DropDatabase::KEY),             create_info<command::DropDatabase>() },
         { tolower(command::DropIndexes::KEY),              create_info<command::DropIndexes>() },
+        { tolower(command::DropUser::KEY),                 create_info<command::DropUser>() },
         { tolower(command::EndSessions::KEY),              create_info<command::EndSessions>() },
         { tolower(command::Explain::KEY),                  create_info<command::Explain>() },
         { tolower(command::FSync::KEY),                    create_info<command::FSync>() },

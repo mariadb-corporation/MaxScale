@@ -546,6 +546,13 @@ std::string element_as<std::string>(const std::string& command,
                                     Conversion conversion);
 
 template<>
+nosql::string_view element_as<nosql::string_view>(const std::string& command,
+                                                  const char* zKey,
+                                                  const bsoncxx::document::element& element,
+                                                  int error_code,
+                                                  Conversion conversion);
+
+template<>
 int64_t element_as<int64_t>(const std::string& command,
                             const char* zKey,
                             const bsoncxx::document::element& element,
@@ -564,5 +571,12 @@ bool element_as<bool>(const std::string& command,
                       const bsoncxx::document::element& element,
                       int error_code,
                       Conversion conversion);
+
+template<>
+bsoncxx::types::b_binary element_as<bsoncxx::types::b_binary>(const std::string& command,
+                                                              const char* zKey,
+                                                              const bsoncxx::document::element& element,
+                                                              int error_code,
+                                                              Conversion conversion);
 
 }

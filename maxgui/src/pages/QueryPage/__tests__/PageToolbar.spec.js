@@ -13,7 +13,6 @@
 
 import mount from '@tests/unit/setup'
 import PageToolbar from '@/pages/QueryPage/PageToolbar'
-import { expect } from 'chai'
 
 const mountFactory = opts =>
     mount({
@@ -116,5 +115,28 @@ describe('PageToolbar - save to favorite tests', () => {
         const confirmDialog = wrapper.findComponent({ name: 'confirm-dialog' })
         await confirmDialog.find('.save').trigger('click')
         addToFavoriteSpy.should.have.been.calledOnce
+    })
+})
+
+describe('PageToolbar - query setting button tests', () => {
+    it(`Should popup query setting dialog`, () => {
+        let wrapper = mountFactory()
+        expect(wrapper.vm.queryConfigDialog).to.be.false
+        wrapper.find('.query-setting-btn').trigger('click')
+        expect(wrapper.vm.queryConfigDialog).to.be.true
+    })
+})
+
+describe('PageToolbar - maximize/minimize button tests', () => {
+    const is_fullscreen_values = [true, false]
+    is_fullscreen_values.forEach(v => {
+        it(`Should call SET_FULLSCREEN action to ${
+            v ? 'maximize' : 'minimize'
+        } page content`, () => {
+            let wrapper = mountFactory()
+            const btn = wrapper.find('.min-max-btn')
+            btn.trigger('click')
+            expect(wrapper.vm.is_fullscreen).to.be.equals(v)
+        })
     })
 })

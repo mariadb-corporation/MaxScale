@@ -2781,10 +2781,12 @@ string Path::not_to_condition(const bsoncxx::document::element& element) const
 //
 std::atomic<int64_t> nosql::NoSQL::Context::s_connection_id;
 
-NoSQL::Context::Context(MXS_SESSION* pSession,
+NoSQL::Context::Context(UserManager* pUm,
+                        MXS_SESSION* pSession,
                         mxs::ClientConnection* pClient_connection,
                         mxs::Component* pDownstream)
-    : m_session(*pSession)
+    : m_um(*pUm)
+    , m_session(*pSession)
     , m_client_connection(*pClient_connection)
     , m_downstream(*pDownstream)
     , m_connection_id(++s_connection_id)
@@ -2812,8 +2814,9 @@ void NoSQL::Context::reset_error(int32_t n)
 NoSQL::NoSQL(MXS_SESSION* pSession,
              mxs::ClientConnection* pClient_connection,
              mxs::Component* pDownstream,
-             Config* pConfig)
-    : m_context(pSession, pClient_connection, pDownstream)
+             Config* pConfig,
+             UserManager* pUm)
+    : m_context(pUm, pSession, pClient_connection, pDownstream)
     , m_config(*pConfig)
 {
 }

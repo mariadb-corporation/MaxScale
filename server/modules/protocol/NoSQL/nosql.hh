@@ -348,6 +348,7 @@ const char MAX_MESSAGE_SIZE_BYTES[]          = "maxMessageSizeBytes";
 const char MAXSCALE[]                        = "maxscale";
 const char MAX_WIRE_VERSION[]                = "maxWireVersion";
 const char MAX_WRITE_BATCH_SIZE[]            = "maxWriteBatchSize";
+const char MECHANISM[]                       = "mechanism";
 const char MEM_LIMIT_MB[]                    = "memLimitMB";
 const char MEM_SIZE_MB[]                     = "memSizeMB";
 const char MESSAGE[]                         = "message";
@@ -383,6 +384,7 @@ const char PID[]                             = "pid";
 const char PLANNER_VERSION[]                 = "plannerVersion";
 const char PORT[]                            = "port";
 const char PROJECTION[]                      = "projection";
+const char PWD[]                             = "pwd";
 const char QUERY[]                           = "query";
 const char QUERY_PLANNER[]                   = "queryPlanner";
 const char Q[]                               = "q";
@@ -391,7 +393,9 @@ const char REJECTED_PLANS[]                  = "rejectedPlans";
 const char REMOVE[]                          = "remove";
 const char RESPONSE[]                        = "response";
 const char REQUIRES_AUTH[]                   = "requiresAuth";
+const char ROLES[]                           = "roles";
 const char RUNNING[]                         = "running";
+const char SASL_SUPPORTED_MECHS[]            = "saslSupportedMechs";
 const char SERVER_INFO[]                     = "serverInfo";
 const char SINGLE_BATCH[]                    = "singleBatch";
 const char SIZE_ON_DISK[]                    = "sizeOnDisk";
@@ -1150,6 +1154,7 @@ private:
 }
 
 class Database;
+class UserManager;
 
 class NoSQL
 {
@@ -1160,9 +1165,15 @@ public:
         Context(const Context&) = delete;
         Context& operator = (const Context&) = delete;
 
-        Context(MXS_SESSION* pSession,
+        Context(UserManager* pUm,
+                MXS_SESSION* pSession,
                 mxs::ClientConnection* pClient_connection,
                 mxs::Component* pDownstream);
+
+        UserManager& um() const
+        {
+            return m_um;
+        }
 
         mxs::ClientConnection& client_connection()
         {
@@ -1213,7 +1224,20 @@ public:
             return m_metadata_sent;
         }
 
+        // TODO: Once authentication is properly done, 'user' here will disappear
+        // TODO: and the information will be stored in the session.
+        const std::string& user() const
+        {
+            return m_user;
+        };
+
+        void set_user(const string_view& user)
+        {
+            m_user = std::string(user.data(), user.length());
+        }
+
     private:
+        UserManager&               m_um;
         MXS_SESSION&               m_session;
         mxs::ClientConnection&     m_client_connection;
         mxs::Component&            m_downstream;
@@ -1221,14 +1245,16 @@ public:
         int64_t                    m_connection_id;
         std::unique_ptr<LastError> m_sLast_error;
         bool                       m_metadata_sent { false };
+        std::string                m_user;
 
         static std::atomic<int64_t> s_connection_id;
     };
 
     NoSQL(MXS_SESSION*           pSession,
           mxs::ClientConnection* pClient_connection,
-          mxs::Component* pDownstream,
-          Config* pConfig);
+          mxs::Component*        pDownstream,
+          Config*                pConfig,
+          UserManager*           pUm);
     ~NoSQL();
 
     NoSQL(const NoSQL&) = delete;

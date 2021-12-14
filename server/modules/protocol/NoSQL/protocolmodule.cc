@@ -21,8 +21,9 @@
 
 using namespace std;
 
-ProtocolModule::ProtocolModule(const std::string& name)
+ProtocolModule::ProtocolModule(const std::string& name, std::unique_ptr<nosql::UserManager> sUm)
     : m_config(name, this)
+    , m_sUm(std::move(sUm))
 {
 }
 
@@ -34,7 +35,16 @@ void ProtocolModule::post_configure()
 // static
 ProtocolModule* ProtocolModule::create(const std::string& name)
 {
-    return new ProtocolModule(name);
+    ProtocolModule* pThis = nullptr;
+
+    unique_ptr<nosql::UserManager> sUm = nosql::UserManager::create(name);
+
+    if (sUm)
+    {
+        pThis = new ProtocolModule(name, std::move(sUm));
+    }
+
+    return pThis;
 }
 
 unique_ptr<mxs::ClientConnection>
@@ -46,7 +56,10 @@ ProtocolModule::create_client_protocol(MXS_SESSION* pSession, mxs::Component* pC
     sSession_data->set_client_protocol_capabilities(RCAP_TYPE_RESULTSET_OUTPUT);
     pSession->set_protocol_data(std::move(sSession_data));
 
-    return unique_ptr<mxs::ClientConnection>(new ClientConnection(m_config, pSession, pComponent));
+    return unique_ptr<mxs::ClientConnection>(new ClientConnection(m_config,
+                                                                  m_sUm.get(),
+                                                                  pSession,
+                                                                  pComponent));
 }
 
 unique_ptr<mxs::BackendConnection>
