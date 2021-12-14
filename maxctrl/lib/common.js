@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2025-11-19
+ * Change Date: 2025-12-13
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -375,6 +375,12 @@ module.exports = function () {
     args.url = getUri(host, resource);
     args.auth = { username: argv.u, password: argv.p };
     args.timeout = this.argv.timeout;
+
+    // This prevents http_proxy from interfering with maxctrl if no_proxy is not defined. There's really
+    // no practical reason to use a proxy with localhost so this shouldn't have any negative side-effects.
+    if (host.startsWith("127.0.0.1") || host.startsWith("localhost")) {
+      args.proxy = false;
+    }
 
     try {
       setTlsCerts(args);
