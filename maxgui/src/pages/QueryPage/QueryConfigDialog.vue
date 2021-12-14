@@ -3,7 +3,7 @@
         ref="connDialog"
         v-model="isOpened"
         :onSave="onSave"
-        :title="`Query configuration`"
+        :title="$t('queryConfig')"
         :lazyValidation="false"
         minBodyWidth="512px"
         :hasChanged="hasChanged"
@@ -19,7 +19,7 @@
                             v-model.number="config.maxRows"
                             type="number"
                             :rules="rules.maxRows"
-                            class="std error--text__bottom mb-2"
+                            class="std error--text__bottom mb-2 maxRows"
                             dense
                             :height="36"
                             hide-details="auto"
@@ -40,7 +40,7 @@
                             v-model.number="config.queryHistoryRetentionPeriod"
                             type="number"
                             :rules="rules.queryHistoryRetentionPeriod"
-                            class="std error--text__bottom mb-2"
+                            class="std error--text__bottom mb-2 queryHistoryRetentionPeriod"
                             dense
                             :height="36"
                             hide-details="auto"
@@ -61,6 +61,7 @@
                         <v-checkbox
                             v-model="config[key]"
                             class="config-checkbox pa-0 ma-0"
+                            :class="[key]"
                             :label="$t(key)"
                             color="primary"
                             hide-details="auto"
@@ -104,7 +105,7 @@ export default {
                         }),
                 ],
             },
-            defConfig: {},
+            curCnf: {},
             config: {
                 maxRows: 10000,
                 showQueryConfirm: true,
@@ -122,7 +123,6 @@ export default {
         }),
         isOpened: {
             get() {
-                if (this.value) this.$emit('on-open')
                 return this.value
             },
             set(value) {
@@ -130,15 +130,14 @@ export default {
             },
         },
         hasChanged() {
-            if (!this.isOpened) return false
-            return !this.$help.lodash.isEqual(this.defConfig, this.config)
+            return !this.$help.lodash.isEqual(this.curCnf, this.config)
         },
     },
     watch: {
         isOpened(v) {
             if (v) {
-                this.handleSetDefConfig()
-                this.config = this.$help.lodash.cloneDeep(this.defConfig)
+                this.setCurCnf()
+                this.config = this.$help.lodash.cloneDeep(this.curCnf)
             }
         },
     },
@@ -154,8 +153,8 @@ export default {
             if (v <= 0) return this.$t('errors.largerThanZero', { inputName })
             if (v > 0) return true
         },
-        handleSetDefConfig() {
-            this.defConfig = {
+        setCurCnf() {
+            this.curCnf = {
                 maxRows: this.query_max_rows,
                 showQueryConfirm: Boolean(this.query_confirm_flag),
                 queryHistoryRetentionPeriod: this.$help.daysDiff(this.query_history_expired_time),
