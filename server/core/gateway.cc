@@ -106,6 +106,7 @@ static struct ThisUnit
     volatile sig_atomic_t      last_signal = 0;
     bool                       unload_modules_at_exit = true;
     std::string                redirect_output_to;
+    bool                       print_stacktrace_to_stdout = true;
 #ifndef OPENSSL_1_1
     /** SSL multi-threading functions and structures */
     pthread_mutex_t* ssl_locks = nullptr;
@@ -476,7 +477,12 @@ static void sigfatal_handler(int i)
 
     mxb::dump_stacktrace(cb);
 
-    print_alert("%s\n", msg.c_str());
+    if (this_unit.print_stacktrace_to_stdout)
+    {
+        // If stdout is not redirected to the log, print the stacktrace there as well.
+        print_alert("%s\n", msg.c_str());
+    }
+
     MXS_ALERT("\n%s", msg.c_str());
 
     /* re-raise signal to enforce core dump */
@@ -1874,6 +1880,7 @@ int main(int argc, char** argv)
     if (cnf.log_target != MXB_LOG_TARGET_STDOUT && this_unit.daemon_mode)
     {
         mxs_log_redirect_stdout(true);
+        this_unit.print_stacktrace_to_stdout = false;
     }
 
     if (!init_log())
