@@ -134,11 +134,14 @@ export default {
         },
     },
     watch: {
-        isOpened(v) {
-            if (v) {
-                this.setCurCnf()
-                this.config = this.$help.lodash.cloneDeep(this.curCnf)
-            }
+        isOpened: {
+            immediate: true,
+            handler(v) {
+                if (v) {
+                    this.setCurCnf()
+                    this.config = this.$help.lodash.cloneDeep(this.curCnf)
+                }
+            },
         },
     },
     methods: {

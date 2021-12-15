@@ -13,7 +13,7 @@
 
 import mount from '@tests/unit/setup'
 import QueryConfigDialog from '@/pages/QueryPage/QueryConfigDialog'
-import { inputChangeMock } from '@tests/unit/utils'
+import { getErrMsgEle, inputChangeMock, triggerBtnClick } from '@tests/unit/utils'
 
 const mountFactory = opts =>
     mount({
@@ -21,6 +21,7 @@ const mountFactory = opts =>
         component: QueryConfigDialog,
         ...opts,
     })
+
 /**
  * a mock to change a config value
  */
@@ -29,11 +30,13 @@ async function mockChangingConfig({ wrapper, key, value }) {
         config: { ...wrapper.vm.config, [key]: value },
     })
 }
+
 describe(`QueryConfigDialog - child component's data communication tests `, () => {
     it(`Should pass accurate data to base-dialog via props`, () => {
         let wrapper = mountFactory()
-        const dlg = wrapper.findComponent({ name: 'base-dialog' })
-        const { value, title, onSave, lazyValidation, hasChanged } = dlg.vm.$props
+        const { value, title, onSave, lazyValidation, hasChanged } = wrapper.findComponent({
+            name: 'base-dialog',
+        }).vm.$props
         expect(value).to.be.equals(wrapper.vm.isOpened)
         expect(title).to.be.equals(wrapper.vm.$t('queryConfig'))
         expect(onSave).to.be.equals(wrapper.vm.onSave)
@@ -71,14 +74,13 @@ describe(`QueryConfigDialog - tests after dialog is opened `, () => {
 describe(`QueryConfigDialog - form input tests`, () => {
     let wrapper
     beforeEach(() => {
-        wrapper = mountFactory({ shallow: false })
+        //open dialog when component is mounted by assigning true to isOpened
+        wrapper = mountFactory({ shallow: false, computed: { isOpened: () => true } })
     })
     const intFields = ['maxRows', 'queryHistoryRetentionPeriod']
     intFields.forEach(field => {
         it(`Should parse value as number for ${field} field`, async () => {
-            await wrapper.setProps({ value: true }) // open dialog
-            const dlg = wrapper.findComponent({ name: 'base-dialog' })
-            const inputComponent = dlg.find(`.${field}`)
+            const inputComponent = wrapper.findComponent({ name: 'base-dialog' }).find(`.${field}`)
             await inputChangeMock(inputComponent, '10')
             expect(wrapper.vm.config[field]).to.be.equals(10)
         })
@@ -87,16 +89,104 @@ describe(`QueryConfigDialog - form input tests`, () => {
     const boolFields = ['showQueryConfirm', 'showSysSchemas']
     boolFields.forEach(field => {
         it(`Should parse value as boolean for ${field} checkbox`, async () => {
-            await wrapper.setProps({ value: true }) // open dialog
-            const dlg = wrapper.findComponent({ name: 'base-dialog' })
-            const checkboxComponent = dlg.find(`.${field}`).find('input')
+            const checkboxComponent = wrapper
+                .findComponent({ name: 'base-dialog' })
+                .find(`.${field}`)
+                .find('input')
             const curVal = wrapper.vm.curCnf[field]
             await checkboxComponent.trigger('click')
             expect(wrapper.vm.config[field]).to.be.equals(!curVal)
         })
     })
 
-    //TODO: add validation tests for maxRows & queryHistoryRetentionPeriod
+    intFields.forEach(field => {
+        it(`Should show accurate error message when ${field} value is 0`, async () => {
+            const inputComponent = wrapper.findComponent({ name: 'base-dialog' }).find(`.${field}`)
+            await inputChangeMock(inputComponent, 0)
+            expect(getErrMsgEle(inputComponent).text()).to.be.equals(
+                wrapper.vm.$t('errors.largerThanZero', { inputName: wrapper.vm.$t(field) })
+            )
+        })
+        it(`Should show accurate error message when ${field} value is empty`, async () => {
+            const inputComponent = wrapper.findComponent({ name: 'base-dialog' }).find(`.${field}`)
+            await inputChangeMock(inputComponent, '')
+            expect(getErrMsgEle(inputComponent).text()).to.be.equals(
+                wrapper.vm.$t('errors.requiredInput', { inputName: wrapper.vm.$t(field) })
+            )
+        })
+    })
 })
 
-//TODO: add tests for save action
+describe(`QueryConfigDialog - form save tests`, () => {
+    let wrapper
+    const intActionsRelated = ['SET_QUERY_MAX_ROW', 'SET_QUERY_HISTORY_EXPIRED_TIME']
+    intActionsRelated.forEach(action => {
+        it(`Should call ${action} with accurate argument`, async () => {
+            let actionCallCount = 0
+            let argVal
+            wrapper = mountFactory({
+                shallow: false,
+                computed: { isOpened: () => true },
+                methods: {
+                    [action]: val => {
+                        actionCallCount++
+                        argVal = val
+                    },
+                },
+            })
+            const mockVal = 10
+            await mockChangingConfig({
+                wrapper,
+                key: action === 'SET_QUERY_MAX_ROW' ? 'maxRows' : 'queryHistoryRetentionPeriod',
+                value: mockVal,
+            })
+            const dlg = wrapper.findComponent({ name: 'base-dialog' })
+            await triggerBtnClick(dlg, '.save')
+            expect(actionCallCount).to.be.equals(1)
+            switch (action) {
+                case 'SET_QUERY_HISTORY_EXPIRED_TIME':
+                    expect(argVal).to.be.equals(wrapper.vm.$help.addDaysToNow(mockVal))
+                    break
+                case 'SET_QUERY_MAX_ROW':
+                    expect(argVal).to.be.equals(mockVal)
+                    break
+            }
+        })
+    })
+
+    const boolActionsRelated = ['SET_QUERY_CONFIRM_FLAG', 'SET_QUERY_SHOW_SYS_SCHEMAS_FLAG']
+    boolActionsRelated.forEach(action => {
+        it(`Should call ${action} with accurate argument`, async () => {
+            let actionCallCount = 0
+            let argVal
+            wrapper = mountFactory({
+                shallow: false,
+                computed: { isOpened: () => true },
+                methods: {
+                    [action]: val => {
+                        actionCallCount++
+                        argVal = val
+                    },
+                },
+            })
+
+            let mockVal, configKey
+            switch (action) {
+                case 'SET_QUERY_CONFIRM_FLAG':
+                    configKey = 'showQueryConfirm'
+                    break
+                case 'SET_QUERY_SHOW_SYS_SCHEMAS_FLAG':
+                    configKey = 'showSysSchemas'
+                    break
+            }
+            mockVal = !wrapper.vm.config[configKey]
+
+            await mockChangingConfig({ wrapper, key: configKey, value: mockVal })
+            const dlg = wrapper.findComponent({ name: 'base-dialog' })
+            await triggerBtnClick(dlg, '.save')
+
+            expect(actionCallCount).to.be.equals(1)
+            expect(argVal).to.be.equals(Number(mockVal))
+        })
+    })
+})
