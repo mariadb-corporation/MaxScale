@@ -1874,7 +1874,7 @@ void BackendDCB::hangup_cb(MXB_WORKER* worker, const SERVER* server)
                     this_thread.current_dcb = backend_dcb;
                     backend_dcb->m_is_fake_event = true;
                     backend_dcb->m_protocol->hangup(dcb);
-                    backend_dcb->m_is_fake_event = true;
+                    backend_dcb->m_is_fake_event = false;
                     backend_dcb->m_hanged_up = true;
                 }
             }
