@@ -268,7 +268,7 @@ int mxb_log_message(int priority,
                     ...) mxb_attribute((format(printf, 6, 7)));
 
 /**
- * Log an Out-Of-Memory message.
+ * Log a fatal error message.
  *
  * @param message  The message to be logged.
  *
@@ -276,7 +276,7 @@ int mxb_log_message(int priority,
  *
  * @return 0 for success, non-zero otherwise.
  */
-int mxb_log_oom(const char* message);
+int mxb_log_fatal_error(const char* message);
 
 /**
  * Log an error, warning, notice, info, or debug  message.
@@ -330,7 +330,7 @@ int mxb_log_oom(const char* message);
  *
  * @return 0 for success, non-zero otherwise.
  */
-#define MXB_OOM_MESSAGE(message) mxb_log_oom("OOM: " message "\n")
+#define MXB_OOM_MESSAGE(message) mxb_log_fatal_error("OOM: " message "\n")
 
 #define MXB_OOM_FROM_STRINGIZED_MACRO(macro) MXB_OOM_MESSAGE(#macro)
 
