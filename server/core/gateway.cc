@@ -487,7 +487,7 @@ static void sigfatal_handler(int i)
         print_alert("%s\n", msg.c_str());
     }
 
-    MXS_ALERT("\n%s", msg.c_str());
+    mxb_log_fatal_error(msg.c_str());
 
     /* re-raise signal to enforce core dump */
     print_alert("Writing core dump.");
