@@ -16,11 +16,12 @@
 #include <cstring>
 #include <cstdio>
 #include <functional>
+#include <cstdarg>
+#include <climits>
 
 #ifdef HAVE_GLIBC
 #include <execinfo.h>
-#include <limits.h>
-#include <stdarg.h>
+#endif
 
 namespace
 {
@@ -50,6 +51,32 @@ static void get_command_output(char* output, size_t size, const char* format, ..
         while (output + nread > output && output[nread] == '\n')
         {
             output[nread--] = '\0';
+        }
+
+        pclose(file);
+    }
+}
+
+static void get_command_output_cb(void (* cb)(const char*), const char* format, ...)
+{
+    va_list valist;
+    va_start(valist, format);
+    int cmd_len = vsnprintf(NULL, 0, format, valist);
+    va_end(valist);
+
+    va_start(valist, format);
+    char cmd[cmd_len + 1];
+    vsnprintf(cmd, cmd_len + 1, format, valist);
+    va_end(valist);
+
+    if (FILE* file = popen(cmd, "r"))
+    {
+        char buf[512];
+
+        while (size_t n = fread(buf, 1, sizeof(buf) - 1, file))
+        {
+            buf[n] = '\0';
+            cb(buf);
         }
 
         pclose(file);
@@ -151,6 +178,7 @@ static void extract_file_and_line(char* symbols, char* cmd, size_t size)
 namespace maxbase
 {
 
+#ifdef HAVE_GLIBC
 void dump_stacktrace(std::function<void(const char*, const char*)> handler)
 {
     void* addrs[128];
@@ -184,17 +212,27 @@ void dump_stacktrace(void (* handler)(const char* symbol, const char* command))
                         handler(symbol, command);
                     });
 }
-}
 
 #else
-
-namespace maxbase
-{
 
 void dump_stacktrace(void (* handler)(const char*, const char*))
 {
     // We can't dump stacktraces on non-GLIBC systems
 }
-}
 
 #endif
+
+void dump_gdb_stacktrace(void (* handler)(const char*))
+{
+    get_command_output_cb(
+        handler,
+        "gdb --pid=%d -batch -iex 'set print thread-events off' -ex 'thr a a bt'",
+        getpid());
+}
+
+bool have_gdb()
+{
+    int rc = system("command -v gdb > /dev/null");
+    return WIFEXITED(rc) && WEXITSTATUS(rc) == 0;
+}
+}

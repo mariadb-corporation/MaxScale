@@ -469,13 +469,25 @@ static void sigfatal_handler(int i)
 
     thread_local std::string msg;
 
-    auto cb = [](const char* symbol, const char* cmd) {
-            char buf[512];
-            snprintf(buf, sizeof(buf), "  %s: %s\n", symbol, cmd);
-            msg += buf;
-        };
+    if (mxb::have_gdb())
+    {
+        mxb::dump_gdb_stacktrace(
+            [](const char* line) {
+                msg += line;
+            });
+    }
+    else
+    {
+        MXS_ALERT("For a more detailed stacktrace, install GDB.");
 
-    mxb::dump_stacktrace(cb);
+        auto cb = [](const char* symbol, const char* cmd) {
+                char buf[512];
+                snprintf(buf, sizeof(buf), "  %s: %s\n", symbol, cmd);
+                msg += buf;
+            };
+
+        mxb::dump_stacktrace(cb);
+    }
 
     if (this_unit.print_stacktrace_to_stdout)
     {
