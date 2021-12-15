@@ -150,6 +150,20 @@ void test_rwsplit(TestConnections& test)
     test.maxscale->disconnect();
 }
 
+void test_mxs3915(TestConnections& test)
+{
+    auto c = test.maxscale->rwsplit();
+    test.expect(c.connect(), "Failed to connect: %s", c.error());
+    c.query("SET autocommit=0");
+    c.query("COMMIT");
+    c.query("SET autocommit=1");
+    auto id = c.field("SELECT @@server_id");
+
+    test.repl->connect();
+    auto master_id = test.repl->get_server_id_str(0);
+    test.expect(id != master_id, "SELECT was routed to master after re-enabling autocommit");
+}
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -177,6 +191,9 @@ int main(int argc, char** argv)
 
     // Readwritesplit sanity checks
     test_rwsplit(test);
+
+    // MXS-3915: Autocommit tracking is broken
+    test_mxs3915(test);
 
     return test.global_result;
 }
