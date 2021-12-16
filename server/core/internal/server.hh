@@ -138,6 +138,11 @@ public:
         return m_settings.m_priority.get();
     }
 
+    int64_t max_connections() const
+    {
+        return m_settings.m_max_connections.get();
+    }
+
     /**
      * Print server details to a dcb.
      *
@@ -389,6 +394,8 @@ private:
         mxs::config::ConcreteType<ParamDiskSpaceLimits> m_disk_space_threshold;
         // The ranking of this server, used to prioritize certain servers over others during routing
         mxs::config::Enum<int64_t> m_rank;
+        // How many simultaneous connections are allowed to this server. Only counts routing connections.
+        mxs::config::Count m_max_connections;
 
         // TLS configuration parameters
         mxs::config::Bool m_ssl;
@@ -483,8 +490,15 @@ private:
     mxs::Component* m_up;
     MXS_SESSION*    m_session;
     Server*         m_server;
-    bool            m_conn_pooled {false};      /**< Is the actual connection currently pooled away? */
     bool            m_can_try_pooling {true};   /**< If pooling fails, don't try it again */
+
+    enum class ConnStatus
+    {
+        NO_CONN,            /**< Not connected yet, or connection error */
+        CONNECTED,          /**< Connection is open (or at least opening) */
+        IDLE_POOLED,        /**< Connection pooled due to inactivity */
+    };
+    ConnStatus m_connstatus {ConnStatus::NO_CONN};
 
     mxs::BackendConnection* m_conn {nullptr};
 

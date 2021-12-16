@@ -271,6 +271,10 @@ public:
         int64_t n_current_conns() const;
         int64_t n_total_conns() const;
 
+        int64_t add_conn_intent();
+        void    remove_conn_intent();
+        int64_t n_conn_intents() const;
+
         void    add_client_connection();
         void    remove_client_connection();
         int64_t n_client_conns() const;
@@ -290,6 +294,7 @@ public:
         NumType m_n_current_conns {0};  /**< Current number of connections */
         NumType m_n_total_conns {0};    /**< Total cumulative number of connections */
         NumType m_n_max_conns {0};      /**< Maximum instantaneous number of connections */
+        NumType m_n_intended_conns {0}; /**< How many threads are intending on making a connection */
 
         NumType m_n_current_ops {0};    /**< Current number of active operations */
         NumType m_n_packets {0};        /**< Number of packets routed to this server */

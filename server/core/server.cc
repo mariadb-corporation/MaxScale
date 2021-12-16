@@ -150,6 +150,9 @@ static cfg::ParamEnum<int64_t> s_rank(
         {RANK_SECONDARY, "secondary"}
     }, RANK_PRIMARY, AT_RUNTIME);
 
+static cfg::ParamCount s_max_connections(
+    &s_spec, "max_connections", "Maximum connections", 0, AT_RUNTIME);
+
 //
 // TLS parameters
 //
@@ -388,6 +391,7 @@ Server::Settings::Settings(const std::string& name)
     , m_proxy_protocol(this, &s_proxy_protocol)
     , m_disk_space_threshold(this, &s_disk_space_threshold)
     , m_rank(this, &s_rank)
+    , m_max_connections(this, &s_max_connections)
     , m_ssl(this, &s_ssl)
     , m_ssl_cert(this, &s_ssl_cert)
     , m_ssl_key(this, &s_ssl_key)
@@ -963,18 +967,29 @@ ServerEndpoint::~ServerEndpoint()
 
 bool ServerEndpoint::connect()
 {
-    mxb_assert(!m_conn || m_conn_pooled);
+    mxb_assert(m_connstatus != ConnStatus::CONNECTED);
     mxb::LogScope scope(m_server->name());
-    auto worker = mxs::RoutingWorker::get_current();
-    m_conn = worker->get_backend_connection(m_server, m_session, this);
-    return m_conn != nullptr;
+    auto conn = m_session->worker()->get_backend_connection(m_server, m_session, this);
+    bool rval = false;
+    if (conn)
+    {
+        m_conn = conn;
+        m_connstatus = ConnStatus::CONNECTED;
+        rval = true;
+    }
+    else
+    {
+        // Connection failure.
+        m_connstatus = ConnStatus::NO_CONN;
+    }
+    return rval;
 }
 
 void ServerEndpoint::close()
 {
     mxb::LogScope scope(m_server->name());
 
-    if (!m_conn_pooled)
+    if (m_connstatus == ConnStatus::CONNECTED)
     {
         auto* dcb = m_conn->dcb();
         // Try to move the connection into the pool. If it fails, close normally.
@@ -989,12 +1004,13 @@ void ServerEndpoint::close()
             m_server->stats().remove_connection();
         }
         m_conn = nullptr;
+        m_connstatus = ConnStatus::NO_CONN;
     }
 }
 
 bool ServerEndpoint::is_open() const
 {
-    return m_conn || m_conn_pooled;
+    return m_connstatus != ConnStatus::NO_CONN;
 }
 
 bool ServerEndpoint::routeQuery(GWBUF* buffer)
@@ -1023,20 +1039,38 @@ bool ServerEndpoint::routeQuery(GWBUF* buffer)
     auto not_master = !(m_server->status() & SERVER_MASTER);
     auto opr = (not_master || is_read_only || is_read_only_trx) ? Operation::READ : Operation::WRITE;
 
-    if (m_conn_pooled && connect())
-    {
-        m_conn_pooled = false;
-        MXB_INFO("Session %lu connection to %s restored from pool.", m_session->id(), m_server->name());
-    }
+    auto write_buffer = [this, &rval, buffer]() {
+            rval = m_conn->write(buffer);
+            m_server->stats().add_packet();
+        };
 
-    if (!m_conn_pooled)
+    switch (m_connstatus)
     {
-        rval = m_conn->write(buffer);
-        m_server->stats().add_packet();
+    case ConnStatus::NO_CONN:
+        mxb_assert(!true);      // Means that an earlier failure was not properly handled.
+        break;
+
+    case ConnStatus::CONNECTED:
+        write_buffer();
+        break;
+
+    case ConnStatus::IDLE_POOLED:
+        // Connection was pre-emptively pooled. Try to get another one.
+        if (connect())
+        {
+            MXB_INFO("Session %lu connection to %s restored from pool.",
+                     m_session->id(), m_server->name());
+            write_buffer();
+        }
+        else
+        {
+            // Connection failed, return error.
+            gwbuf_free(buffer);
+        }
+        break;
     }
 
     m_query_time.start(opr);    // always measure
-
     return rval;
 }
 
@@ -1070,7 +1104,7 @@ bool ServerEndpoint::handleError(mxs::ErrorType type, GWBUF* error,
 
 bool ServerEndpoint::can_try_pooling() const
 {
-    return m_conn && !m_conn_pooled && m_can_try_pooling;
+    return m_connstatus == ConnStatus::CONNECTED && m_can_try_pooling;
 }
 
 void ServerEndpoint::try_to_pool()
@@ -1080,7 +1114,7 @@ void ServerEndpoint::try_to_pool()
     bool moved_to_pool = dcb->manager()->move_to_conn_pool(dcb);
     if (moved_to_pool)
     {
-        m_conn_pooled = true;
+        m_connstatus = ConnStatus::IDLE_POOLED;
         m_conn = nullptr;
         MXB_INFO("Session %lu connection to %s pooled.", m_session->id(), m_server->name());
     }
