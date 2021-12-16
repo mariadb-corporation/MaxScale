@@ -200,9 +200,9 @@ mxs::RouterSession* RCR::newSession(MXS_SESSION* session, const mxs::Endpoints& 
         {
             rses = new RCRSession(this, session, candidate, endpoints, m_config.router_options.get());
 
-            MXS_INFO("New session for server %s. Connections : %d",
+            MXS_INFO("New session for server %s. Connections : %ld",
                      candidate->target()->name(),
-                     candidate->target()->stats().n_current);
+                     candidate->target()->stats().n_current_conns());
         }
     }
     else
@@ -291,7 +291,8 @@ mxs::Endpoint* RCR::get_connection(const mxs::Endpoints& endpoints)
                 candidate = e;
             }
             else if (e->target()->rank() == best_rank
-                     && e->target()->stats().n_current < candidate->target()->stats().n_current)
+                     && e->target()->stats().n_current_conns()
+                     < candidate->target()->stats().n_current_conns())
             {
                 // This one is better
                 candidate = e;

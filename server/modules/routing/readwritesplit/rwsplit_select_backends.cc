@@ -64,7 +64,7 @@ bool gtid_pos_is_ok(mxs::RWBackend* backend, RWSplit::gtid gtid_pos)
     return gtid_pos.sequence == 0 || backend->target()->gtid_pos(gtid_pos.domain) >= gtid_pos.sequence;
 }
 
-RWBackend* best_score(PRWBackends& sBackends, std::function<double(mxs::Endpoint*)> server_score)
+RWBackend* best_score(PRWBackends& sBackends, const std::function<double(mxs::Endpoint*)>& server_score)
 {
     const double max_score = std::nexttoward(std::numeric_limits<double>::max(), 0.0);
     double min {std::numeric_limits<double>::max()};
@@ -108,8 +108,8 @@ RWBackend* best_score(PRWBackends& sBackends, std::function<double(mxs::Endpoint
 /** Compare number of global connections in backend servers */
 RWBackend* backend_cmp_global_conn(PRWBackends& sBackends)
 {
-    static auto server_score = [](mxs::Endpoint* e) {
-            return e->target()->stats().n_current;
+    auto server_score = [](mxs::Endpoint* e) {
+            return e->target()->stats().n_current_conns();
         };
 
     return best_score(sBackends, server_score);
@@ -128,8 +128,8 @@ RWBackend* backend_cmp_behind_master(PRWBackends& sBackends)
 /** Compare number of current operations in backend servers */
 RWBackend* backend_cmp_current_load(PRWBackends& sBackends)
 {
-    static auto server_score = [](mxs::Endpoint* e) {
-            return e->target()->stats().n_current_ops;
+    auto server_score = [](mxs::Endpoint* e) {
+            return e->target()->stats().n_current_ops();
         };
 
     return best_score(sBackends, server_score);
@@ -161,7 +161,7 @@ RWBackend* backend_cmp_response_time(PRWBackends& pBackends)
     for (size_t i {}; i < SZ; ++i)
     {
         estimated_time[i] = pBackends[i]->target()->response_time_average();
-        estimated_time[i] += estimated_time[i] * pBackends[i]->target()->stats().n_current_ops;
+        estimated_time[i] += estimated_time[i] * pBackends[i]->target()->stats().n_current_ops();
         pBackends[i]->sync_averages();
     }
 
@@ -352,14 +352,14 @@ static void log_server_connections(select_criteria_t criteria, const PRWBackends
         {
         case LEAST_GLOBAL_CONNECTIONS:
         case LEAST_ROUTER_CONNECTIONS:
-            MXS_INFO("MaxScale connections : %d in \t%s %s",
-                     b->target()->stats().n_current,
+            MXS_INFO("MaxScale connections : %ld in \t%s %s",
+                     b->target()->stats().n_current_conns(),
                      b->name(), b->target()->status_string().c_str());
             break;
 
         case LEAST_CURRENT_OPERATIONS:
-            MXS_INFO("current operations : %d in \t%s %s",
-                     b->target()->stats().n_current_ops,
+            MXS_INFO("current operations : %ld in \t%s %s",
+                     b->target()->stats().n_current_ops(),
                      b->name(), b->target()->status_string().c_str());
             break;
 

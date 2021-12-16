@@ -1162,7 +1162,7 @@ void MonitorServer::log_connect_error(ConnectResult rval)
 
 void MonitorServer::log_state_change(const std::string& reason)
 {
-    string prev = Target::status_to_string(mon_prev_status, server->stats().n_current);
+    string prev = Target::status_to_string(mon_prev_status, server->stats().n_current_conns());
     string next = server->status_string();
     MXS_NOTICE("Server changed state: %s[%s:%u]: %s. [%s] -> [%s]%s%s",
                server->name(), server->address(), server->port(),

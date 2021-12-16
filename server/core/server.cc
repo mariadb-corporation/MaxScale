@@ -1032,7 +1032,7 @@ bool ServerEndpoint::routeQuery(GWBUF* buffer)
     if (!m_conn_pooled)
     {
         rval = m_conn->write(buffer);
-        mxb::atomic::add(&m_server->stats().packets, 1, mxb::atomic::RELAXED);
+        m_server->stats().add_packet();
     }
 
     m_query_time.start(opr);    // always measure

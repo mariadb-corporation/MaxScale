@@ -977,7 +977,7 @@ int serviceSessionCountAll()
 
     for (Service* service : this_unit.services)
     {
-        rval += service->stats().n_current;
+        rval += service->stats().n_current_conns();
     }
 
     return rval;
@@ -1219,8 +1219,8 @@ json_t* service_attributes(const char* host, const SERVICE* svc)
     mxb::trim(timebuf);
 
     json_object_set_new(attr, "started", json_string(timebuf));
-    json_object_set_new(attr, "total_connections", json_integer(service->stats().n_connections));
-    json_object_set_new(attr, "connections", json_integer(service->stats().n_current));
+    json_object_set_new(attr, "total_connections", json_integer(service->stats().n_total_conns()));
+    json_object_set_new(attr, "connections", json_integer(service->stats().n_current_conns()));
 
     // The statistics for servers and services are located in different places in older versions. Newer
     // versions always have them in the statistics object of the attributes but they are also duplicated in
@@ -1689,7 +1689,7 @@ bool ServiceEndpoint::routeQuery(GWBUF* buffer)
 
     // Track the number of packets sent through this service. Although the traffic can consist of multiple
     // packets in some cases, most of the time the packet count statistic is close to the real packet count.
-    mxb::atomic::add(&m_service->stats().packets, 1, mxb::atomic::RELAXED);
+    m_service->stats().add_packet();
 
     return m_head->routeQuery(buffer);
 }
