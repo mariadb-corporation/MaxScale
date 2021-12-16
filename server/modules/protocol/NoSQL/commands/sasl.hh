@@ -12,16 +12,13 @@
  */
 
 #include "defs.hh"
-#include <maxscale/random.h>
-#include <maxscale/utils.hh>
+#include "../nosqlscram.hh"
 
 namespace nosql
 {
 
 namespace
 {
-
-const size_t SERVER_NONCE_SIZE = 24;
 
 string decode_name(string_view::const_iterator begin, string_view::const_iterator end)
 {
@@ -62,41 +59,6 @@ string decode_name(string_view::const_iterator begin, string_view::const_iterato
     }
 
     return name;
-}
-
-vector<uint8_t> create_nonce(size_t nBytes)
-{
-    vector<uint8_t> v;
-    v.reserve(nBytes);
-
-    auto n = nBytes / 4;
-
-    for (size_t i = 0; i < n; ++i)
-    {
-        uint32_t r = mxs_random();
-
-        v.push_back((r >>= 0) & 0xff);
-        v.push_back((r >>= 8) & 0xff);
-        v.push_back((r >>= 8) & 0xff);
-        v.push_back((r >>= 8) & 0xff);
-    }
-
-    n = nBytes % 4;
-
-    if (n != 0)
-    {
-        uint32_t r = mxs_random();
-
-        for (size_t i = 0; i < n; ++i)
-        {
-            v.push_back(r & 0xff);
-            r >>= 8;
-        }
-    }
-
-    mxb_assert(v.size() == nBytes);
-
-    return v;
 }
 
 }
@@ -167,7 +129,8 @@ private:
 
         auto& um = m_database.context().um();
 
-        if (!um.user_exists(user))
+        UserManager::User data;
+        if (!um.get_user(user, &data))
         {
             MXS_WARNING("User '%s' does not exist.", user.c_str());
             throw SoftError("Authentication failed", error::AUTHENTICATION_FAILED);
@@ -187,12 +150,13 @@ private:
 
         auto client_nonce_b64 = payload.substr(i + 2); // Skip "r="
 
-        authenticate(gs2_header, user, client_nonce_b64, doc);
+        authenticate(gs2_header, user, client_nonce_b64, data.salt_b64, doc);
     }
 
     void authenticate(string_view gs2_header,
                       string_view user,
                       string_view client_nonce_b64,
+                      const string& server_salt_b64,
                       DocumentBuilder& doc)
     {
         MXS_NOTICE("User: %.*s, nonce: %.*s",
@@ -201,12 +165,9 @@ private:
 
         auto cn = mxs::from_base64(to_string(client_nonce_b64));
 
-        vector<uint8_t> server_nonce = create_nonce(SERVER_NONCE_SIZE);
+        vector<uint8_t> server_nonce = scram::create_random_vector(scram::SERVER_NONCE_SIZE);
 
         auto server_nonce_b64 = mxs::to_base64(server_nonce.data(), server_nonce.size());
-
-        string salt = "1234567890123456";
-        string salt_b64 = mxs::to_base64(reinterpret_cast<const uint8_t*>(salt.data()), salt.length());
 
         auto& sasl = m_database.context().sasl();
 
@@ -214,13 +175,13 @@ private:
         sasl.set_user(user);
         sasl.set_client_nonce_b64(client_nonce_b64);
         sasl.set_server_nonce_b64(server_nonce_b64);
-        sasl.set_salt(salt);
+        sasl.set_salt_b64(server_salt_b64);
 
         ostringstream ss;
 
         ss << "r=" << client_nonce_b64 << server_nonce_b64
-           << ",s=" << salt_b64
-           << ",i=" << NoSQL::Sasl::ITERATIONS;
+           << ",s=" << server_salt_b64
+           << ",i=" << scram::ITERATIONS;
 
         auto s = ss.str();
 

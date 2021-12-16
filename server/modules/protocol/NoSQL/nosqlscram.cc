@@ -1,0 +1,31 @@
+/*
+ * Copyright (c) 2020 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2025-12-13
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
+
+#include "nosqlscram.hh"
+#include <maxbase/worker.hh>
+
+using namespace std;
+
+namespace nosql
+{
+
+vector<uint8_t> scram::create_random_vector(size_t size)
+{
+    vector<uint8_t> rv(size);
+
+    mxb::Worker::gen_random_bytes(rv.data(), rv.size());
+
+    return rv;
+}
+
+}

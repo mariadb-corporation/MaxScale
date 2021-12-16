@@ -229,14 +229,6 @@ inline int32_t set_byte8(uint8_t* pBuffer, uint64_t val)
 
 }
 
-namespace scram
-{
-
-constexpr int32_t SHA_1_HASH_SIZE = 20;
-constexpr int32_t SHA_256_HASH_SIZE = 32;
-
-}
-
 enum class State
 {
     BUSY,
@@ -1173,8 +1165,6 @@ public:
     class Sasl
     {
     public:
-        static constexpr int32_t ITERATIONS = 4096;
-
         int32_t conversation_id() const
         {
             return m_conversation_id;
@@ -1205,9 +1195,9 @@ public:
             return m_client_nonce_b64 + m_server_nonce_b64;
         }
 
-        const std::string& salt() const
+        const std::string& salt_b64() const
         {
-            return m_salt;
+            return m_salt_b64;
         }
 
         const std::string& user() const
@@ -1235,9 +1225,9 @@ public:
             set_gs2_header(std::string(s.data(), s.length()));
         }
 
-        void set_salt(const std::string& s)
+        void set_salt_b64(const std::string& s)
         {
-            m_salt = s;
+            m_salt_b64 = s;
         }
 
         void set_server_nonce_b64(const std::string s)
@@ -1263,7 +1253,7 @@ public:
     private:
         std::string m_client_nonce_b64;
         std::string m_gs2_header;
-        std::string m_salt;
+        std::string m_salt_b64;
         std::string m_server_nonce_b64;
         std::string m_user;
         int32_t     m_conversation_id { 0 };

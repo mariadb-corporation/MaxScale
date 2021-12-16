@@ -15,6 +15,7 @@
 // https://docs.mongodb.com/v4.4/reference/command/nav-user-management/
 //
 #include "defs.hh"
+#include "../nosqlscram.hh"
 #include "../nosqlusermanager.hh"
 
 namespace nosql
@@ -44,7 +45,10 @@ public:
             {
                 auto& um = m_database.context().um();
 
-                if (um.add_user(m_user, m_pwd, m_roles))
+                vector<uint8_t> salt = scram::create_random_vector(scram::SERVER_SALT_SIZE);
+                string salt_b64 = mxs::to_base64(salt);
+
+                if (um.add_user(m_user, m_pwd, salt_b64, m_roles))
                 {
                     doc.append(kvp("ok", 1));
                 }

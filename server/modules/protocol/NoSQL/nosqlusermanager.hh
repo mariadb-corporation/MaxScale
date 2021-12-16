@@ -25,6 +25,14 @@ class UserManager
 public:
     ~UserManager();
 
+    class User
+    {
+    public:
+        std::string user;
+        std::string pwd;
+        std::string salt_b64;
+    };
+
     static std::unique_ptr<UserManager> create(const std::string& name);
 
     const std::string& path() const
@@ -34,20 +42,25 @@ public:
 
     bool add_user(const std::string& user,
                   const string_view& pwd,
+                  const std::string& salt_b64,
                   const bsoncxx::array::view& roles);
 
     bool remove_user(const std::string& user);
 
+    bool get_user(const std::string& user, User* pUser) const;
+
     bool get_pwd(const std::string& user, std::string* pPwd) const;
+
+    bool get_salt_b64(const std::string& user, std::string* pSalt_b64) const;
 
     bool user_exists(const std::string& user) const
     {
-        return get_pwd(user, nullptr);
+        return get_user(user, nullptr);
     }
 
     bool user_exists(const string_view& user) const
     {
-        return get_pwd(std::string(user.data(), user.length()), nullptr);
+        return get_user(std::string(user.data(), user.length()), nullptr);
     }
 
 private:

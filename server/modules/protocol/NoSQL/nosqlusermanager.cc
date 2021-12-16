@@ -25,18 +25,30 @@ const int SCHEMA_VERSION = 1;
 //
 // User Database
 //
-static const char SQL_CREATE[] = "CREATE TABLE IF NOT EXISTS accounts (user TEXT UNIQUE, pwd TEXT)";
-static const char SQL_INSERT_HEAD[] = "INSERT INTO accounts (user, pwd) VALUES ";
-static const char SQL_DELETE_HEAD[] = "DELETE FROM accounts WHERE user = ";
-static const char SQL_SELECT_ONE_HEAD[] = "SELECT pwd FROM accounts WHERE user = ";
+static const char SQL_CREATE[] =
+    "CREATE TABLE IF NOT EXISTS accounts (user TEXT UNIQUE, pwd TEXT, salt_b64 TEXT)";
+
+static const char SQL_INSERT_HEAD[] =
+    "INSERT INTO accounts (user, pwd, salt_b64) VALUES ";
+
+static const char SQL_DELETE_HEAD[] =
+    "DELETE FROM accounts WHERE user = ";
+
+static const char SQL_SELECT_ONE_HEAD[] =
+    "SELECT user, pwd, salt_b64 FROM accounts WHERE user = ";
 
 int select_one_cb(void* pData, int nColumns, char** ppColumn, char** ppNames)
 {
-    mxb_assert(nColumns == 1);
+    mxb_assert(nColumns == 3);
 
-    auto* pNames = static_cast<vector<string>*>(pData);
+    auto* pUsers = static_cast<vector<nosql::UserManager::User>*>(pData);
 
-    pNames->push_back(ppColumn[0]);
+    nosql::UserManager::User user;
+    user.user = ppColumn[0];
+    user.pwd = ppColumn[1];
+    user.salt_b64 = ppColumn[2];
+
+    pUsers->push_back(user);
 
     return 0;
 }
@@ -153,10 +165,11 @@ unique_ptr<UserManager> UserManager::create(const string& name)
 
 bool UserManager::add_user(const string& user,
                            const string_view& pwd,
+                           const string& salt_b64,
                            const bsoncxx::array::view& roles)
 {
     ostringstream ss;
-    ss << SQL_INSERT_HEAD << "(\"" << user << "\", \"" << pwd << "\")";
+    ss << SQL_INSERT_HEAD << "(\"" << user << "\", \"" << pwd << "\", \"" << salt_b64 << "\")";
 
     string sql = ss.str();
 
@@ -193,30 +206,57 @@ bool UserManager::remove_user(const string& user)
     return rv == SQLITE_OK;
 }
 
-bool UserManager::get_pwd(const std::string& user, std::string* pPwd) const
+bool UserManager::get_user(const std::string& user, User* pUser) const
 {
     ostringstream ss;
     ss << SQL_SELECT_ONE_HEAD << "\"" << user << "\"";
 
     string sql = ss.str();
 
-    vector<string> pwds;
+    vector<User> users;
     char* pError = nullptr;
-    int rv = sqlite3_exec(&m_db, sql.c_str(), select_one_cb, &pwds, &pError);
+    int rv = sqlite3_exec(&m_db, sql.c_str(), select_one_cb, &users, &pError);
 
     if (rv != SQLITE_OK)
     {
-        MXS_ERROR("Could not get password for user '%s' from local database: %s",
+        MXS_ERROR("Could not get data for user '%s' from local database: %s",
                   user.c_str(),
                   pError ? pError : "Unknown error");
     }
 
-    if (!pwds.empty() && pPwd)
+    if (!users.empty() && pUser)
     {
-        *pPwd = pwds.front();
+        mxb_assert(users.size() == 1);
+        *pUser = users.front();
     }
 
-    return !pwds.empty();
+    return !users.empty();
+}
+
+bool UserManager::get_pwd(const std::string& user, std::string* pPwd) const
+{
+    User data;
+    bool rv = get_user(user, &data);
+
+    if (rv)
+    {
+        *pPwd = data.pwd;
+    }
+
+    return rv;
+}
+
+bool UserManager::get_salt_b64(const std::string& user, std::string* pSalt_b64) const
+{
+    User data;
+    bool rv = get_user(user, &data);
+
+    if (rv)
+    {
+        *pSalt_b64 = data.salt_b64;
+    }
+
+    return rv;
 }
 
 }
