@@ -12,6 +12,7 @@
  */
 
 #include "defs.hh"
+#include <maxscale/random.h>
 #include <maxscale/utils.hh>
 
 namespace nosql
@@ -20,9 +21,11 @@ namespace nosql
 namespace
 {
 
-string decode_user(string_view::const_iterator begin, string_view::const_iterator end)
+const size_t SERVER_NONCE_SIZE = 24;
+
+string decode_name(string_view::const_iterator begin, string_view::const_iterator end)
 {
-    string user;
+    string name;
     for (auto it = begin; it != end; ++it)
     {
         auto c = *it;
@@ -30,19 +33,19 @@ string decode_user(string_view::const_iterator begin, string_view::const_iterato
         if (c == '=')
         {
             bool fail = true;
-            // We expect "=" to be followed by "2D" or "3D", the former is ',' and the latter '='.
+            // RFC5802: We expect "=" to be followed by "2C" or "3D", the former is ',' and the latter '='.
             if (it + 3 <= end)
             {
                 ++it;
                 c = *it++;
                 if (c == '2' && *it == 'C')
                 {
-                    user += ',';
+                    name += ',';
                     fail = false;
                 }
                 else if (c == '3' && *it == 'D')
                 {
-                    user += '=';
+                    name += '=';
                     fail = false;
                 }
             }
@@ -54,11 +57,46 @@ string decode_user(string_view::const_iterator begin, string_view::const_iterato
         }
         else
         {
-            user += c;
+            name += c;
         }
     }
 
-    return user;
+    return name;
+}
+
+vector<uint8_t> create_nonce(size_t nBytes)
+{
+    vector<uint8_t> v;
+    v.reserve(nBytes);
+
+    auto n = nBytes / 4;
+
+    for (size_t i = 0; i < n; ++i)
+    {
+        uint32_t r = mxs_random();
+
+        v.push_back((r >>= 0) & 0xff);
+        v.push_back((r >>= 8) & 0xff);
+        v.push_back((r >>= 8) & 0xff);
+        v.push_back((r >>= 8) & 0xff);
+    }
+
+    n = nBytes % 4;
+
+    if (n != 0)
+    {
+        uint32_t r = mxs_random();
+
+        for (size_t i = 0; i < n; ++i)
+        {
+            v.push_back(r & 0xff);
+            r >>= 8;
+        }
+    }
+
+    mxb_assert(v.size() == nBytes);
+
+    return v;
 }
 
 }
@@ -124,7 +162,16 @@ private:
 
         auto i = payload.find(',');
 
-        string user = decode_user(payload.begin(), i != string_view::npos ? payload.begin() + i : payload.end());
+        string name = decode_name(payload.begin(), i != string_view::npos ? payload.begin() + i : payload.end());
+        string user = m_database.name() + "." + name;
+
+        auto& um = m_database.context().um();
+
+        if (!um.user_exists(user))
+        {
+            MXS_WARNING("User '%s' does not exist.", user.c_str());
+            throw SoftError("Authentication failed", error::AUTHENTICATION_FAILED);
+        }
 
         payload = payload.substr(i + 1); // Strip up until the comma, inclusive
 
@@ -152,12 +199,11 @@ private:
                    (int)user.length(), user.data(),
                    (int)client_nonce_b64.length(), client_nonce_b64.data());
 
-        // TODO: Create a proper server_nonce and salt.
+        auto cn = mxs::from_base64(to_string(client_nonce_b64));
 
-        string server_nonce = "aaaaaaaaaaaa";
+        vector<uint8_t> server_nonce = create_nonce(SERVER_NONCE_SIZE);
 
-        auto server_nonce_b64 = mxs::to_base64(reinterpret_cast<const uint8_t*>(server_nonce.data()),
-                                               server_nonce.length());
+        auto server_nonce_b64 = mxs::to_base64(server_nonce.data(), server_nonce.size());
 
         string salt = "1234567890123456";
         string salt_b64 = mxs::to_base64(reinterpret_cast<const uint8_t*>(salt.data()), salt.length());
