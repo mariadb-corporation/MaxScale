@@ -1,6 +1,5 @@
 <template>
     <div class="fill-height worksheet-wrapper">
-        <reconn-dialog />
         <div class="d-flex flex-row">
             <v-tabs
                 v-model="activeWkeID"
@@ -108,7 +107,6 @@ import { mapActions, mapMutations, mapState } from 'vuex'
 import Worksheet from './Worksheet'
 import WorksheetToolbar from './WorksheetToolbar'
 import PageToolbar from './PageToolbar.vue'
-import ReconnDialog from './ReconnDialog.vue'
 
 export default {
     name: 'worksheets',
@@ -116,7 +114,6 @@ export default {
         Worksheet,
         WorksheetToolbar,
         PageToolbar,
-        ReconnDialog,
     },
     props: {
         ctrDim: { type: Object, required: true },

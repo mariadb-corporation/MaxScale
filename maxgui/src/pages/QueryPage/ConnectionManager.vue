@@ -92,6 +92,7 @@
             :item="connToBeDel"
             :onSave="confirmDelConn"
         />
+        <reconn-dialog />
     </div>
 </template>
 
@@ -110,10 +111,13 @@
  */
 import { mapActions, mapGetters, mapMutations, mapState } from 'vuex'
 import ConnectionDialog from './ConnectionDialog'
+import ReconnDialog from './ReconnDialog.vue'
+
 export default {
     name: 'connection-manager',
     components: {
         ConnectionDialog,
+        ReconnDialog,
     },
     props: {
         disabled: { type: Boolean, required: true },

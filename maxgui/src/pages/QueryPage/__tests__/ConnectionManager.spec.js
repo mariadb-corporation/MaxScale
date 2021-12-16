@@ -38,6 +38,9 @@ describe(`ConnectionManager - child component's data communication tests `, () =
     beforeEach(() => {
         wrapper = mountFactory()
     })
+    it(`Should render reconn-dialog`, () => {
+        expect(wrapper.findComponent({ name: 'reconn-dialog' }).exists()).to.be.true
+    })
     it(`Should pass accurate data to connection-dialog via props`, () => {
         const { value, connOptions, handleSave } = wrapper.findComponent({
             name: 'connection-dialog',
