@@ -36,6 +36,7 @@
 #include "commands/free_monitoring.hh"
 //#include "commands/system_events_auditing.hh"
 
+#include "commands/sasl.hh"
 #include "commands/maxscale.hh"
 
 using namespace std;
@@ -215,6 +216,8 @@ struct ThisUnit
         { tolower(command::ReplSetGetStatus::KEY),         create_info<command::ReplSetGetStatus>() },
         { tolower(command::ResetError::KEY),               create_info<command::ResetError>() },
         { tolower(command::ServerStatus::KEY),             create_info<command::ServerStatus>() },
+        { tolower(command::SaslContinue::KEY),             create_info<command::SaslContinue>() },
+        { tolower(command::SaslStart::KEY),                create_info<command::SaslStart>() },
         { tolower(command::SetParameter::KEY),             create_info<command::SetParameter>() },
         { tolower(command::Update::KEY),                   create_info<command::Update>() },
         { tolower(command::Validate::KEY),                 create_info<command::Validate>() },

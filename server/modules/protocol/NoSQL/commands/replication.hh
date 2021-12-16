@@ -97,7 +97,7 @@ public:
             {
                 ArrayBuilder sasl_supported_mechs;
 
-                sasl_supported_mechs.append("SCRAM-SHA-256");
+                sasl_supported_mechs.append("SCRAM-SHA-1");
 
                 doc.append(kvp(key::SASL_SUPPORTED_MECHS, sasl_supported_mechs.extract()));
             }
