@@ -138,10 +138,15 @@ export default {
             getActiveWke: 'query/getActiveWke',
             getDbTreeData: 'query/getDbTreeData',
         }),
+        /**
+         * @returns connection ids that are bound to worksheets
+         */
         usedConnections() {
-            return this.worksheets_arr.map(
-                wke => this.$typy(wke, 'curr_cnct_resource.id').safeString
-            )
+            return this.worksheets_arr.reduce((acc, wke) => {
+                const connId = this.$typy(wke, 'curr_cnct_resource.id').safeString
+                if (connId) acc.push(connId)
+                return acc
+            }, [])
         },
         connOptions() {
             return this.cnct_resources.map(cnctRsrc =>
