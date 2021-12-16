@@ -10,7 +10,8 @@
             class="query-page d-flex flex-column fill-height"
             :class="{ 'query-page--fullscreen': is_fullscreen }"
         >
-            <worksheets ref="wkesRef" :ctrDim="ctrDim" />
+            <v-card v-if="is_validating_conn" class="fill-height" loading />
+            <worksheets v-else ref="wkesRef" :ctrDim="ctrDim" />
             <confirm-dialog
                 v-model="isConfDlgOpened"
                 :title="$t('confirmations.leavePage')"
@@ -71,6 +72,7 @@ export default {
             is_fullscreen: state => state.query.is_fullscreen,
             active_wke_id: state => state.query.active_wke_id,
             cnct_resources: state => state.query.cnct_resources,
+            is_validating_conn: state => state.query.is_validating_conn,
         }),
         ...mapGetters({
             getDbCmplList: 'query/getDbCmplList',

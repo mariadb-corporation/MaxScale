@@ -128,7 +128,6 @@ export default {
     },
     computed: {
         ...mapState({
-            is_validating_conn: state => state.query.is_validating_conn,
             cnct_resources: state => state.query.cnct_resources,
             curr_cnct_resource: state => state.query.curr_cnct_resource,
             worksheets_arr: state => state.query.worksheets_arr,
@@ -156,31 +155,32 @@ export default {
         },
     },
     watch: {
-        async is_validating_conn(v) {
-            if (!v) {
-                //After finish validating connections, auto open dialog if there is no connections
-                if (!this.connOptions.length) this.openConnDialog()
-                else {
-                    this.assignActiveConn()
-                    await this.handleDispatchIntialFetch({
-                        curr_cnct_resource: this.curr_cnct_resource,
-                        is_validating_conn: v,
-                    })
-                }
-            }
-        },
+        //Watcher to handle multi-worksheets
         curr_cnct_resource: {
             deep: true,
             async handler(v) {
+                /**
+                 * chosenConn is component'state, so when curr_cnct_resource query's module state
+                 * is changed by changing worksheet, chosenConn needs to be updated by calling assignActiveConn
+                 */
                 if (!this.$help.lodash.isEqual(v, this.chosenConn)) {
-                    this.chosenConn = v
-                    await this.handleDispatchIntialFetch({
-                        curr_cnct_resource: v,
-                        is_validating_conn: this.is_validating_conn,
-                    })
+                    this.assignActiveConn()
+                    /**
+                     * If the worksheet has an active connection but schema tree data which is stored
+                     * in memory is an empty array, then call initialFetch to populate the data
+                     */
+                    if (this.getDbTreeData.length === 0) await this.handleDispatchIntialFetch(v)
                 }
             },
         },
+    },
+    async created() {
+        //Auto open dialog if there is no connections
+        if (!this.connOptions.length) this.openConnDialog()
+        else {
+            this.assignActiveConn()
+            await this.handleDispatchIntialFetch(this.curr_cnct_resource)
+        }
     },
     methods: {
         ...mapActions({
@@ -192,16 +192,13 @@ export default {
             SET_CURR_CNCT_RESOURCE: 'query/SET_CURR_CNCT_RESOURCE',
             UPDATE_WKE: 'query/UPDATE_WKE',
         }),
-        /** This function should be called after validating the connections
-         * or after switching to new worksheet
+        /**
          * Dispatching initalFetch when connection is valid, curr_cnct_resource
-         * state is defined and treeData is not empty
-         * @param {Object} payload.curr_cnct_resource  curr_cnct_resource
-         * @param {Object} payload.is_validating_conn  is_validating_conn
+         * state is defined
+         * @param {Object} curr_cnct_resource  curr_cnct_resource
          */
-        async handleDispatchIntialFetch({ curr_cnct_resource, is_validating_conn }) {
-            if (curr_cnct_resource.id && this.getDbTreeData.length === 0 && !is_validating_conn)
-                await this.initialFetch(curr_cnct_resource)
+        async handleDispatchIntialFetch(curr_cnct_resource) {
+            if (curr_cnct_resource.id) await this.initialFetch(curr_cnct_resource)
         },
         async onSelectConn(v) {
             if (this.$typy(v, 'id').isDefined) {
