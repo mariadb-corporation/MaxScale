@@ -51,6 +51,11 @@ void md5hex(const void* pData, size_t data_len, char* pOut);
 
 std::string md5hex(const void* pData, size_t data_len);
 
+inline std::string md5hex(const std::string& s)
+{
+    return md5hex(s.data(), s.length());
+}
+
 std::vector<uint8_t> sha_1(const uint8_t* pData, size_t data_len);
 
 inline std::vector<uint8_t> sha_1(const std::vector<uint8_t>& data)

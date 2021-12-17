@@ -30,6 +30,7 @@
 #include "config.hh"
 #include "nosqlbase.hh"
 #include "nosqlcursor.hh"
+#include "nosqlusermanager.hh"
 #include "../../filter/masking/mysql.hh"
 
 class DCB;
@@ -1165,6 +1166,11 @@ public:
     class Sasl
     {
     public:
+        const UserManager::UserInfo& user_info() const
+        {
+            return m_user_info;
+        }
+
         int32_t conversation_id() const
         {
             return m_conversation_id;
@@ -1193,16 +1199,6 @@ public:
         std::string nonce_b64() const
         {
             return m_client_nonce_b64 + m_server_nonce_b64;
-        }
-
-        const std::string& salt_b64() const
-        {
-            return m_salt_b64;
-        }
-
-        const std::string& scoped_user() const
-        {
-            return m_scoped_user;
         }
 
         const std::string& initial_message() const
@@ -1235,11 +1231,6 @@ public:
             set_gs2_header(to_string(s));
         }
 
-        void set_salt_b64(const std::string& s)
-        {
-            m_salt_b64 = s;
-        }
-
         void set_server_nonce_b64(std::string s)
         {
             m_server_nonce_b64 = std::move(s);
@@ -1248,16 +1239,6 @@ public:
         void set_server_nonce_b64(const std::vector<uint8_t>& v)
         {
             set_server_nonce_b64(std::string(reinterpret_cast<const char*>(v.data()), v.size()));
-        }
-
-        void set_scoped_user(std::string s)
-        {
-            m_scoped_user = std::move(s);
-        }
-
-        void set_scoped_user(const string_view& s)
-        {
-            set_scoped_user(to_string(s));
         }
 
         void set_initial_message(std::string s)
@@ -1275,15 +1256,19 @@ public:
             m_server_first_message = std::move(s);
         }
 
+        void set_user_info(UserManager::UserInfo&& user_info)
+        {
+            m_user_info = std::move(user_info);
+        }
+
     private:
-        std::string m_client_nonce_b64;
-        std::string m_gs2_header;
-        std::string m_salt_b64;
-        std::string m_server_nonce_b64;
-        std::string m_scoped_user;
-        int32_t     m_conversation_id { 0 };
-        std::string m_initial_message;
-        std::string m_server_first_message;
+        UserManager::UserInfo m_user_info;
+        std::string           m_client_nonce_b64;
+        std::string           m_gs2_header;
+        std::string           m_server_nonce_b64;
+        int32_t               m_conversation_id { 0 };
+        std::string           m_initial_message;
+        std::string           m_server_first_message;
     };
 
     class Context

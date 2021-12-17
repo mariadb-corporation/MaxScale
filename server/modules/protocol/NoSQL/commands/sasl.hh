@@ -112,6 +112,8 @@ private:
 
         payload = payload.substr(3); // Strip the "n,," header.
 
+        auto initial_message = payload;
+
         if (payload.find("n=") != 0)
         {
             ostringstream ss;
@@ -151,41 +153,33 @@ private:
 
         auto client_nonce_b64 = payload.substr(i + 2); // Skip "r="
 
-        string scoped_user = scope + "." + user;
-        authenticate(gs2_header, scoped_user, client_nonce_b64, info.salt_b64, doc);
+        auto& sasl = m_database.context().sasl();
+
+        sasl.set_user_info(std::move(info));
+        sasl.set_gs2_header(gs2_header);
+        sasl.set_client_nonce_b64(client_nonce_b64);
+        sasl.set_initial_message(initial_message);
+
+        authenticate(sasl, doc);
     }
 
-    void authenticate(string_view gs2_header,
-                      const string& scoped_user,
-                      string_view client_nonce_b64,
-                      const string& server_salt_b64,
-                      DocumentBuilder& doc)
+    void authenticate(NoSQL::Sasl& sasl, DocumentBuilder& doc)
     {
-        MXS_NOTICE("User: %.*s, nonce: %.*s",
-                   (int)scoped_user.length(), scoped_user.data(),
-                   (int)client_nonce_b64.length(), client_nonce_b64.data());
-
-        auto cn = mxs::from_base64(to_string(client_nonce_b64));
-
         vector<uint8_t> server_nonce = scram::create_random_vector(scram::SERVER_NONCE_SIZE);
 
         auto server_nonce_b64 = mxs::to_base64(server_nonce.data(), server_nonce.size());
 
-        auto& sasl = m_database.context().sasl();
-
-        sasl.set_gs2_header(gs2_header);
-        sasl.set_scoped_user(scoped_user);
-        sasl.set_client_nonce_b64(client_nonce_b64);
         sasl.set_server_nonce_b64(server_nonce_b64);
-        sasl.set_salt_b64(server_salt_b64);
 
         ostringstream ss;
 
-        ss << "r=" << client_nonce_b64 << server_nonce_b64
-           << ",s=" << server_salt_b64
+        ss << "r=" << sasl.client_nonce_b64() << sasl.server_nonce_b64()
+           << ",s=" << sasl.user_info().salt_b64
            << ",i=" << scram::ITERATIONS;
 
         auto s = ss.str();
+
+        sasl.set_server_first_message(s);
 
         auto sub_type = bsoncxx::binary_sub_type::k_binary;
         uint32_t size = s.length();
@@ -193,8 +187,8 @@ private:
 
         bsoncxx::types::b_binary payload { sub_type, size, bytes };
 
-        doc.append(kvp(key::DONE, false));
         doc.append(kvp(key::CONVERSATION_ID, sasl.bump_conversation_id()));
+        doc.append(kvp(key::DONE, false));
         doc.append(kvp(key::PAYLOAD, payload));
         doc.append(kvp(key::OK, 1));
     }
@@ -223,17 +217,16 @@ public:
             throw SoftError(ss.str(), error::BAD_VALUE);
         }
 
-        auto payload = required<bsoncxx::types::b_binary>(key::PAYLOAD);
+        auto b = required<bsoncxx::types::b_binary>(key::PAYLOAD);
+        string_view payload(reinterpret_cast<const char*>(b.bytes), b.size);
 
-        authenticate(conversation_id,
-                     string_view(reinterpret_cast<const char*>(payload.bytes), payload.size),
-                     doc);
+        authenticate(sasl, payload, doc);
     }
 
 private:
-    void authenticate(int32_t conversation_id, string_view payload, DocumentBuilder& doc)
+    void authenticate(const NoSQL::Sasl& sasl, string_view payload, DocumentBuilder& doc)
     {
-        MXS_NOTICE("Payload: %.*s", (int)payload.length(), payload.data());
+        auto backup = payload;
 
         // We are expecting a string like "c=GS2_HEADER,r=NONCE,p=CLIENT_PROOF
 
@@ -252,8 +245,6 @@ private:
         auto c_b64 = payload.substr(0, i);
         vector<uint8_t> c = mxs::from_base64(to_string(c_b64));
         string_view gs2_header(reinterpret_cast<const char*>(c.data()), c.size());
-
-        auto& sasl = m_database.context().sasl();
 
         if (gs2_header != sasl.gs2_header())
         {
@@ -298,21 +289,62 @@ private:
 
         auto client_proof_b64 = payload.substr(2);
 
-        MXS_NOTICE("ClientProof r_b64: %.*s", (int)client_proof_b64.length(), client_proof_b64.data());
+        // c=GS2_HEADER,r=NONCE
+        string_view s = backup.substr(0, 2 + c_b64.length() + 1 + 2 + nonce_b64.length());
+        string client_final_message_bare = to_string(s);
 
-        authenticate(client_proof_b64, doc);
+        authenticate(sasl, client_final_message_bare, client_proof_b64, doc);
     }
 
-    void authenticate(string_view client_proof_64, DocumentBuilder& doc)
+    void authenticate(const NoSQL::Sasl& sasl,
+                      const string& client_final_message_bare,
+                      string_view client_proof_64,
+                      DocumentBuilder& doc)
     {
-        // TODO: Check the client proof and generate the server signature.
+        const auto& info = sasl.user_info();
 
-        string server_signature("todo");
-        string server_signature_b64 = mxs::to_base64(reinterpret_cast<const uint8_t*>(server_signature.data()),
-                                                     server_signature.length());
+        string password = info.user + ":mongo:" + info.pwd; // MongoDB SCRAM-SHA-1
+
+        string md5_password = scram::md5hex(password);
+
+        auto salted_password = scram::pbkdf2_sha_1(md5_password.c_str(), info.salt, scram::ITERATIONS);
+        auto client_key = scram::hmac_sha_1(salted_password, "Client Key");
+        auto stored_key = scram::sha_1(client_key);
+        string auth_message = sasl.initial_message()
+            + "," + sasl.server_first_message()
+            + "," + client_final_message_bare;
+
+        auto client_signature = scram::hmac_sha_1(stored_key, auth_message);
+
+        vector<uint8_t> server_client_proof;
+
+        for (size_t i = 0; i < client_key.size(); ++i)
+        {
+            server_client_proof.push_back(client_key[i] ^ client_signature[i]);
+        }
+
+        auto client_proof = mxs::from_base64(to_string(client_proof_64));
+
+        if (server_client_proof != client_proof)
+        {
+            MXS_WARNING("Invalid client proof.");
+            throw SoftError("Authentication failed", error::AUTHENTICATION_FAILED);
+        }
+
+        // Ok, the client was authenticated, the response can be generated.
+        authenticate(sasl, salted_password, auth_message, doc);
+    }
+
+    void authenticate(const NoSQL::Sasl& sasl,
+                      const vector<uint8_t>& salted_password,
+                      const string& auth_message,
+                      DocumentBuilder& doc)
+    {
+        auto server_key = scram::hmac_sha_1(salted_password, "Server Key");
+        auto server_signature = scram::hmac_sha_1(server_key, auth_message);
+        string server_signature_b64 = mxs::to_base64(server_signature);
 
         ostringstream ss;
-
         ss << "v=" << server_signature_b64;
 
         auto s = ss.str();
@@ -323,6 +355,8 @@ private:
 
         bsoncxx::types::b_binary payload { sub_type, size, bytes };
 
+        doc.append(kvp(key::CONVERSATION_ID, sasl.conversation_id()));
+        doc.append(kvp(key::DONE, true));
         doc.append(kvp(key::PAYLOAD, payload));
         doc.append(kvp(key::OK, 1));
     }
