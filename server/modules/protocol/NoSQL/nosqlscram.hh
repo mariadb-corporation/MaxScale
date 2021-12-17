@@ -13,6 +13,7 @@
 #pragma once
 
 #include "nosqlprotocol.hh"
+#include "nosqlbase.hh"
 
 namespace nosql
 {
@@ -29,6 +30,46 @@ constexpr int32_t SERVER_SALT_SIZE = 16;
 constexpr int32_t ITERATIONS = 4096;
 
 std::vector<uint8_t> create_random_vector(size_t size);
+
+void hmac_sha_1(const uint8_t* pKey, size_t key_len, const uint8_t* pData, size_t data_len, uint8_t* pOut);
+
+std::vector<uint8_t> hmac_sha_1(const uint8_t* pKey, size_t key_len, const uint8_t* pData, size_t data_len);
+
+inline std::vector<uint8_t> hmac_sha_1(const std::vector<uint8_t>& key, const char* zData)
+{
+    return hmac_sha_1(key.data(), key.size(), reinterpret_cast<const uint8_t*>(zData), strlen(zData));
+}
+
+inline std::vector<uint8_t> hmac_sha_1(const std::vector<uint8_t>& key, const std::string& data)
+{
+    return hmac_sha_1(key.data(), key.size(), reinterpret_cast<const uint8_t*>(data.data()), data.length());
+}
+
+std::vector<uint8_t> sha_1(const uint8_t* pData, size_t data_len);
+
+inline std::vector<uint8_t> sha_1(const std::vector<uint8_t>& data)
+{
+    return sha_1(data.data(), data.size());
+}
+
+void pbkdf2_sha_1(const char* pPassword, size_t password_len,
+                  const uint8_t* pSalt, size_t salt_len,
+                  size_t iterations,
+                  uint8_t* pOut);
+
+std::vector<uint8_t> pbkdf2_sha_1(const char* pPassword, size_t password_len,
+                                  const uint8_t* pSalt, size_t salt_len,
+                                  size_t iterations);
+
+
+inline std::vector<uint8_t> pbkdf2_sha_1(const std::string& password,
+                                         const std::vector<uint8_t>& salt,
+                                         size_t iterations)
+{
+    return pbkdf2_sha_1(password.data(), password.length(),
+                        salt.data(), salt.size(),
+                        iterations);
+}
 
 }
 
