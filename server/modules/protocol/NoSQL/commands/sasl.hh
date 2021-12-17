@@ -20,9 +20,9 @@ namespace nosql
 namespace
 {
 
-string decode_name(string_view::const_iterator begin, string_view::const_iterator end)
+string decode_user(string_view::const_iterator begin, string_view::const_iterator end)
 {
-    string name;
+    string user;
     for (auto it = begin; it != end; ++it)
     {
         auto c = *it;
@@ -37,12 +37,12 @@ string decode_name(string_view::const_iterator begin, string_view::const_iterato
                 c = *it++;
                 if (c == '2' && *it == 'C')
                 {
-                    name += ',';
+                    user += ',';
                     fail = false;
                 }
                 else if (c == '3' && *it == 'D')
                 {
-                    name += '=';
+                    user += '=';
                     fail = false;
                 }
             }
@@ -54,11 +54,11 @@ string decode_name(string_view::const_iterator begin, string_view::const_iterato
         }
         else
         {
-            name += c;
+            user += c;
         }
     }
 
-    return name;
+    return user;
 }
 
 }
@@ -124,13 +124,14 @@ private:
 
         auto i = payload.find(',');
 
-        string name = decode_name(payload.begin(), i != string_view::npos ? payload.begin() + i : payload.end());
-        string user = m_database.name() + "." + name;
+        auto end = i != string_view::npos ? payload.begin() + i : payload.end();
+        string user = decode_user(payload.begin(), end);
+        string scope = m_database.name();
 
         auto& um = m_database.context().um();
 
         UserManager::UserInfo info;
-        if (!um.get_info(user, &info))
+        if (!um.get_info(scope, user, &info))
         {
             MXS_WARNING("User '%s' does not exist.", user.c_str());
             throw SoftError("Authentication failed", error::AUTHENTICATION_FAILED);
@@ -150,17 +151,18 @@ private:
 
         auto client_nonce_b64 = payload.substr(i + 2); // Skip "r="
 
-        authenticate(gs2_header, user, client_nonce_b64, info.salt_b64, doc);
+        string scoped_user = scope + "." + user;
+        authenticate(gs2_header, scoped_user, client_nonce_b64, info.salt_b64, doc);
     }
 
     void authenticate(string_view gs2_header,
-                      string_view user,
+                      const string& scoped_user,
                       string_view client_nonce_b64,
                       const string& server_salt_b64,
                       DocumentBuilder& doc)
     {
         MXS_NOTICE("User: %.*s, nonce: %.*s",
-                   (int)user.length(), user.data(),
+                   (int)scoped_user.length(), scoped_user.data(),
                    (int)client_nonce_b64.length(), client_nonce_b64.data());
 
         auto cn = mxs::from_base64(to_string(client_nonce_b64));
@@ -172,7 +174,7 @@ private:
         auto& sasl = m_database.context().sasl();
 
         sasl.set_gs2_header(gs2_header);
-        sasl.set_user(user);
+        sasl.set_scoped_user(scoped_user);
         sasl.set_client_nonce_b64(client_nonce_b64);
         sasl.set_server_nonce_b64(server_nonce_b64);
         sasl.set_salt_b64(server_salt_b64);

@@ -1200,9 +1200,9 @@ public:
             return m_salt_b64;
         }
 
-        const std::string& user() const
+        const std::string& scoped_user() const
         {
-            return m_user;
+            return m_scoped_user;
         }
 
         const std::string& initial_message() const
@@ -1250,14 +1250,14 @@ public:
             set_server_nonce_b64(std::string(reinterpret_cast<const char*>(v.data()), v.size()));
         }
 
-        void set_user(std::string s)
+        void set_scoped_user(std::string s)
         {
-            m_user = std::move(s);
+            m_scoped_user = std::move(s);
         }
 
-        void set_user(const string_view& s)
+        void set_scoped_user(const string_view& s)
         {
-            set_user(to_string(s));
+            set_scoped_user(to_string(s));
         }
 
         void set_initial_message(std::string s)
@@ -1280,7 +1280,7 @@ public:
         std::string m_gs2_header;
         std::string m_salt_b64;
         std::string m_server_nonce_b64;
-        std::string m_user;
+        std::string m_scoped_user;
         int32_t     m_conversation_id { 0 };
         std::string m_initial_message;
         std::string m_server_first_message;

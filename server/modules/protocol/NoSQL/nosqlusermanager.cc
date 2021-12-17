@@ -26,27 +26,30 @@ const int SCHEMA_VERSION = 1;
 // User Database
 //
 static const char SQL_CREATE[] =
-    "CREATE TABLE IF NOT EXISTS accounts (user TEXT UNIQUE, pwd TEXT, salt_b64 TEXT)";
+    "CREATE TABLE IF NOT EXISTS accounts "
+    "(scoped_user TEXT UNIQUE, scope TEXT, user TEXT, pwd TEXT, salt_b64 TEXT)";
 
 static const char SQL_INSERT_HEAD[] =
-    "INSERT INTO accounts (user, pwd, salt_b64) VALUES ";
+    "INSERT INTO accounts (scoped_user, scope, user, pwd, salt_b64) VALUES ";
 
 static const char SQL_DELETE_HEAD[] =
-    "DELETE FROM accounts WHERE user = ";
+    "DELETE FROM accounts WHERE scoped_user = ";
 
 static const char SQL_SELECT_ONE_HEAD[] =
-    "SELECT user, pwd, salt_b64 FROM accounts WHERE user = ";
+    "SELECT scoped_user, scope, user, pwd, salt_b64 FROM accounts WHERE scoped_user = ";
 
 int select_one_cb(void* pData, int nColumns, char** ppColumn, char** ppNames)
 {
-    mxb_assert(nColumns == 3);
+    mxb_assert(nColumns == 5);
 
     auto* pInfos = static_cast<vector<nosql::UserManager::UserInfo>*>(pData);
 
     nosql::UserManager::UserInfo info;
-    info.user = ppColumn[0];
-    info.pwd = ppColumn[1];
-    info.salt_b64 = ppColumn[2];
+    info.scoped_user = ppColumn[0];
+    info.scope = ppColumn[1];
+    info.user = ppColumn[2];
+    info.pwd = ppColumn[3];
+    info.salt_b64 = ppColumn[4];
     info.salt = mxs::from_base64(info.salt_b64);
 
     pInfos->push_back(info);
@@ -62,6 +65,7 @@ bool create_schema(sqlite3* pDb)
     if (rv != SQLITE_OK)
     {
         MXS_ERROR("Could not initialize sqlite3 database: %s", pError ? pError : "Unknown error");
+        sqlite3_free(pError);
     }
 
     return rv == SQLITE_OK;
@@ -164,13 +168,22 @@ unique_ptr<UserManager> UserManager::create(const string& name)
     return unique_ptr<UserManager>(pThis);
 }
 
-bool UserManager::add_user(const string& user,
+bool UserManager::add_user(const string& scope,
+                           const string_view& user,
                            const string_view& pwd,
                            const string& salt_b64,
                            const bsoncxx::array::view& roles)
 {
+    string scoped_user = scope + "." + string(user.data(), user.length());
+
     ostringstream ss;
-    ss << SQL_INSERT_HEAD << "(\"" << user << "\", \"" << pwd << "\", \"" << salt_b64 << "\")";
+    ss << SQL_INSERT_HEAD << "('"
+       << scoped_user << "', '"
+       << scope << "', '"
+       << user << "', '"
+       << pwd << "', '"
+       << salt_b64
+       << "')";
 
     string sql = ss.str();
 
@@ -180,17 +193,20 @@ bool UserManager::add_user(const string& user,
     if (rv != SQLITE_OK)
     {
         MXS_ERROR("Could not add user '%s' to local database: %s",
-                  user.c_str(),
+                  scoped_user.c_str(),
                   pError ? pError : "Unknown error");
+        sqlite3_free(pError);
     }
 
     return rv == SQLITE_OK;
 }
 
-bool UserManager::remove_user(const string& user)
+bool UserManager::remove_user(const string& scope, const string& user)
 {
+    string scoped_user = scope + "." + user;
+
     ostringstream ss;
-    ss << SQL_DELETE_HEAD << "\"" << user << "\"";
+    ss << SQL_DELETE_HEAD << "\"" << scoped_user << "\"";
 
     string sql = ss.str();
 
@@ -202,15 +218,23 @@ bool UserManager::remove_user(const string& user)
         MXS_ERROR("Could not remove user '%s' from local database: %s",
                   user.c_str(),
                   pError ? pError : "Unknown error");
+        sqlite3_free(pError);
     }
 
     return rv == SQLITE_OK;
 }
 
-bool UserManager::get_info(const std::string& user, UserInfo* pInfo) const
+bool UserManager::get_info(const string& scope, const string& user, UserInfo* pInfo) const
+{
+    string scoped_user = scope + "." + user;
+
+    return get_scoped_info(scoped_user, pInfo);
+}
+
+bool UserManager::get_scoped_info(const string& scoped_user, UserInfo* pInfo) const
 {
     ostringstream ss;
-    ss << SQL_SELECT_ONE_HEAD << "\"" << user << "\"";
+    ss << SQL_SELECT_ONE_HEAD << "\"" << scoped_user << "\"";
 
     string sql = ss.str();
 
@@ -221,8 +245,9 @@ bool UserManager::get_info(const std::string& user, UserInfo* pInfo) const
     if (rv != SQLITE_OK)
     {
         MXS_ERROR("Could not get data for user '%s' from local database: %s",
-                  user.c_str(),
+                  scoped_user.c_str(),
                   pError ? pError : "Unknown error");
+        sqlite3_free(pError);
     }
 
     if (!infos.empty() && pInfo)
@@ -234,10 +259,10 @@ bool UserManager::get_info(const std::string& user, UserInfo* pInfo) const
     return !infos.empty();
 }
 
-bool UserManager::get_pwd(const std::string& user, std::string* pPwd) const
+bool UserManager::get_pwd(const string& scope, const string& user, std::string* pPwd) const
 {
     UserInfo info;
-    bool rv = get_info(user, &info);
+    bool rv = get_info(scope, user, &info);
 
     if (rv)
     {
@@ -247,10 +272,10 @@ bool UserManager::get_pwd(const std::string& user, std::string* pPwd) const
     return rv;
 }
 
-bool UserManager::get_salt_b64(const std::string& user, std::string* pSalt_b64) const
+bool UserManager::get_salt_b64(const string& scope, const string& user, std::string* pSalt_b64) const
 {
     UserInfo info;
-    bool rv = get_info(user, &info);
+    bool rv = get_info(scope, user, &info);
 
     if (rv)
     {
