@@ -478,6 +478,8 @@ export default {
                     dispatch('deleteInvalidConn', invalidCnctResources)
                     commit('SET_CNCT_RESOURCES', validCnctResources)
                 }
+                if (state.worksheets_arr.length)
+                    commit('SET_ACTIVE_WKE_ID', state.worksheets_arr[0].id)
                 commit('SET_IS_VALIDATING_CONN', false)
             } catch (e) {
                 commit('SET_IS_VALIDATING_CONN', false)
