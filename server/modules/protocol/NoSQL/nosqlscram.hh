@@ -45,6 +45,12 @@ inline std::vector<uint8_t> hmac_sha_1(const std::vector<uint8_t>& key, const st
     return hmac_sha_1(key.data(), key.size(), reinterpret_cast<const uint8_t*>(data.data()), data.length());
 }
 
+void md5(const void* pData, size_t data_len, uint8_t* pOut);
+
+void md5hex(const void* pData, size_t data_len, char* pOut);
+
+std::string md5hex(const void* pData, size_t data_len);
+
 std::vector<uint8_t> sha_1(const uint8_t* pData, size_t data_len);
 
 inline std::vector<uint8_t> sha_1(const std::vector<uint8_t>& data)

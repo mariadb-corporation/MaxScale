@@ -12,9 +12,10 @@
  */
 
 #include "nosqlscram.hh"
-#include <openssl/sha.h>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
+#include <openssl/md5.h>
+#include <openssl/sha.h>
 #include <maxbase/worker.hh>
 
 using namespace std;
@@ -54,6 +55,31 @@ std::vector<uint8_t> scram::sha_1(const uint8_t* pData, size_t data_len)
     SHA1(pData, data_len, rv.data());
 
     return rv;
+}
+
+void scram::md5(const void* pData, size_t data_len, uint8_t* pOut)
+{
+    MD5_CTX md5;
+    MD5_Init(&md5);
+    MD5_Update(&md5, pData, data_len);
+    MD5_Final(pOut, &md5);
+}
+
+void scram::md5hex(const void* pData, size_t data_len, char* pOut)
+{
+    uint8_t digest[MD5_DIGEST_LENGTH];
+    md5(pData, data_len, digest);
+
+    for (size_t i = 0; i < sizeof(digest); ++i) {
+        snprintf(&pOut[i * 2], 3, "%02x", digest[i]);
+    }
+}
+
+std::string scram::md5hex(const void* pData, size_t data_len)
+{
+    char str[2 * MD5_DIGEST_LENGTH + 1];
+    scram::md5hex(pData, data_len, str);
+    return str;
 }
 
 void scram::pbkdf2_sha_1(const char* pPassword, size_t password_len,
