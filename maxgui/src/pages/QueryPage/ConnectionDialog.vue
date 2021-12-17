@@ -1,6 +1,5 @@
 <template>
     <base-dialog
-        ref="connDialog"
         v-model="isOpened"
         :onSave="onSave"
         :title="`${$t('connectTo')}...`"
@@ -45,7 +44,7 @@
                 :items="resourceTypes"
                 name="resourceName"
                 outlined
-                class="mt-4 std mariadb-select-input error--text__bottom"
+                class="mt-4 std mariadb-select-input error--text__bottom resource-type-dropdown"
                 :menu-props="{
                     contentClass: 'mariadb-select-v-menu',
                     bottom: true,
@@ -54,8 +53,7 @@
                 dense
                 :height="36"
                 hide-details="auto"
-                :rules="[v => !!v || $t('errors.requiredInput', { inputName: 'This field' })]"
-                required
+                @change="handleResourceSelect"
             >
                 <template v-slot:selection="{ item }">
                     <div class="v-select__selection v-select__selection--comma">
@@ -82,6 +80,7 @@
                         </label>
                         <select-dropdown
                             v-model="selectedResource"
+                            class="resource-dropdown"
                             :items="resourceItems"
                             :defaultItems="defSelectedRsrc"
                             :entityName="selectedResourceType"
@@ -214,6 +213,7 @@ export default {
             },
             isFormValid: false,
             resourceTypes: ['listeners', 'servers', 'services'],
+            defRcType: 'listeners',
             errRsrcMsg: '',
         }
     },
@@ -224,7 +224,6 @@ export default {
         }),
         isOpened: {
             get() {
-                if (this.value) this.$emit('on-open')
                 return this.value
             },
             set(value) {
@@ -240,11 +239,10 @@ export default {
                 }
                 return acc
             }, [])
-
             const allRsrcs = this.rc_target_names_map[selectedRsrcType] || []
 
             // Keep only resources that have not been connected
-            const availRsrcs = allRsrcs.reduce(function(acc, rsrc) {
+            const availRsrcs = allRsrcs.reduce((acc, rsrc) => {
                 if (!connectedResourceNames.includes(rsrc.id)) {
                     acc.push(rsrc)
                 }
@@ -257,37 +255,33 @@ export default {
         },
     },
     watch: {
-        async selectedResourceType(v) {
-            if (v) {
-                await this.handleResourceSelect(v)
-                if (this.resourceItems.length) {
-                    this.defSelectedRsrc = this.resourceItems[0]
-                    this.errRsrcMsg = ''
-                } else
-                    this.errRsrcMsg = this.$t('errors.existingRsrcConnection', { resourceType: v })
-            }
-        },
-        isOpened(v) {
-            // reset to initial state and bind this context
-            if (!v) this.$nextTick(() => Object.assign(this.$data, this.$options.data.apply(this)))
-            else this.selectedResourceType = 'listeners'
+        isOpened: {
+            immediate: true,
+            async handler(v) {
+                if (v) {
+                    this.selectedResourceType = this.defRcType
+                    await this.handleResourceSelect(this.defRcType)
+                } // reset to initial state and bind this context
+                else this.$nextTick(() => Object.assign(this.$data, this.$options.data.apply(this)))
+            },
         },
     },
     methods: {
         ...mapActions({
             fetchRcTargetNames: 'query/fetchRcTargetNames',
         }),
-        async handleResourceSelect(val) {
+        async handleResourceSelect(v) {
             // fetch if it's not been fetched
-            if (!this.rc_target_names_map[val]) await this.fetchRcTargetNames(val)
+            if (!this.rc_target_names_map[v]) await this.fetchRcTargetNames(v)
+            if (this.resourceItems.length) {
+                this.defSelectedRsrc = this.resourceItems[0]
+                this.errRsrcMsg = ''
+            } else this.errRsrcMsg = this.$t('errors.existingRsrcConnection', { resourceType: v })
         },
         async onSave() {
             const { id: resourceName = null } = this.selectedResource
             await this.handleSave({
-                body: {
-                    target: resourceName,
-                    ...this.body,
-                },
+                body: { target: resourceName, ...this.body },
                 resourceType: this.selectedResourceType,
             })
         },
