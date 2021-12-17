@@ -1205,6 +1205,16 @@ public:
             return m_user;
         }
 
+        const std::string& initial_message() const
+        {
+            return m_initial_message;
+        }
+
+        const std::string& server_first_message() const
+        {
+            return m_server_first_message;
+        }
+
         void set_client_nonce_b64(const std::string s)
         {
             m_client_nonce_b64 = std::move(s);
@@ -1212,7 +1222,7 @@ public:
 
         void set_client_nonce_b64(const string_view& s)
         {
-            set_client_nonce_b64(std::string(s.data(), s.length()));
+            set_client_nonce_b64(to_string(s));
         }
 
         void set_gs2_header(const std::string s)
@@ -1222,7 +1232,7 @@ public:
 
         void set_gs2_header(const string_view& s)
         {
-            set_gs2_header(std::string(s.data(), s.length()));
+            set_gs2_header(to_string(s));
         }
 
         void set_salt_b64(const std::string& s)
@@ -1230,7 +1240,7 @@ public:
             m_salt_b64 = s;
         }
 
-        void set_server_nonce_b64(const std::string s)
+        void set_server_nonce_b64(std::string s)
         {
             m_server_nonce_b64 = std::move(s);
         }
@@ -1242,12 +1252,27 @@ public:
 
         void set_user(std::string s)
         {
-            m_user = s;
+            m_user = std::move(s);
         }
 
         void set_user(const string_view& s)
         {
-            set_user(std::string(s.data(), s.length()));
+            set_user(to_string(s));
+        }
+
+        void set_initial_message(std::string s)
+        {
+            m_initial_message = std::move(s);
+        }
+
+        void set_initial_message(const string_view& s)
+        {
+            set_initial_message(to_string(s));
+        }
+
+        void set_server_first_message(std::string s)
+        {
+            m_server_first_message = std::move(s);
         }
 
     private:
@@ -1257,6 +1282,8 @@ public:
         std::string m_server_nonce_b64;
         std::string m_user;
         int32_t     m_conversation_id { 0 };
+        std::string m_initial_message;
+        std::string m_server_first_message;
     };
 
     class Context
