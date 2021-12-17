@@ -13,6 +13,7 @@
 
 import mount from '@tests/unit/setup'
 import ConnectionManager from '@/pages/QueryPage/ConnectionManager'
+import { itemSelectMock } from '@tests/unit/utils'
 
 const dummy_cnct_resources = [
     { id: '1', name: 'server_0', type: 'servers' },
@@ -31,6 +32,19 @@ function mockActiveConnState() {
     return {
         cnct_resources: () => dummy_cnct_resources,
         curr_cnct_resource: () => dummy_cnct_resources[0],
+    }
+}
+
+function mockNewConnData() {
+    return {
+        body: {
+            target: 'server_0',
+            user: 'maxskysql',
+            password: 'skysql',
+            db: '',
+            timeout: 300,
+        },
+        resourceType: 'servers',
     }
 }
 describe(`ConnectionManager - child component's data communication tests `, () => {
@@ -94,6 +108,7 @@ describe(`ConnectionManager - on created hook tests `, () => {
             const fnSpy = sinon.spy(ConnectionManager.methods, fn)
             wrapper = mountFactory({ computed: { ...mockActiveConnState() } })
             fnSpy.should.have.been.calledOnce
+            fnSpy.restore()
         })
     })
 })
@@ -151,4 +166,87 @@ describe(`ConnectionManager - methods and computed properties tests `, () => {
     })
 })
 
-//TODO: Add more tests
+describe(`ConnectionManager - connection list dropdown tests`, () => {
+    let wrapper
+    it(`Should call onSelectConn method when select new connection`, async () => {
+        const onSelectConnSpy = sinon.spy(ConnectionManager.methods, 'onSelectConn')
+        wrapper = mountFactory({
+            shallow: false,
+            computed: { ...mockActiveConnState() },
+            methods: { SET_CURR_CNCT_RESOURCE: () => null, initialFetch: () => null },
+        })
+        await itemSelectMock(wrapper, wrapper.vm.connOptions[1], '.conn-dropdown')
+        onSelectConnSpy.should.have.been.calledOnce
+        onSelectConnSpy.restore()
+    })
+    it(`Should call SET_CURR_CNCT_RESOURCE and initialFetch with accurate arguments
+      when onSelectConn is called`, () => {
+        let initialFetchArgs, setCurrCnctResourceArgs
+        wrapper = mountFactory({
+            computed: { ...mockActiveConnState() },
+            methods: {
+                SET_CURR_CNCT_RESOURCE: v => (setCurrCnctResourceArgs = v),
+                initialFetch: v => (initialFetchArgs = v),
+            },
+        })
+        const selectConn = wrapper.vm.connOptions[1]
+        wrapper.vm.onSelectConn(selectConn)
+        expect(initialFetchArgs).to.be.deep.equals(selectConn)
+        expect(setCurrCnctResourceArgs).to.be.deep.equals({
+            payload: selectConn,
+            active_wke_id: wrapper.vm.active_wke_id,
+        })
+    })
+})
+
+describe(`ConnectionManager - other tests`, () => {
+    let wrapper
+    it(`Should open confirm dialog when unlinkConn method is called`, () => {
+        wrapper = mountFactory({
+            computed: { ...mockActiveConnState() },
+        })
+        const connToBeDeleted = wrapper.vm.connOptions[0]
+        wrapper.vm.unlinkConn(connToBeDeleted)
+        expect(wrapper.vm.isConfDlgOpened).to.be.true
+        expect(wrapper.vm.targetConn).to.be.deep.equals(connToBeDeleted)
+    })
+    it(`Should call disconnect action with accurate args when
+      confirm deleting a connection`, () => {
+        const connToBeDeleted = wrapper.vm.connOptions[0]
+        const disconnectSpy = sinon.spy(ConnectionManager.methods, 'disconnect')
+        wrapper = mountFactory({
+            shallow: false,
+            computed: { ...mockActiveConnState() },
+            // mock opening confirm dialog
+            data: () => ({ isConfDlgOpened: true, targetConn: connToBeDeleted }),
+        })
+        wrapper.vm.confirmDelConn()
+        disconnectSpy.should.have.been.calledOnceWith({
+            showSnackbar: true,
+            id: connToBeDeleted.id,
+        })
+        disconnectSpy.restore()
+    })
+
+    const handleOpenConnCases = [
+        'worksheet is bound to a connection',
+        'worksheet is not bound to a connection',
+    ]
+    handleOpenConnCases.forEach(c => {
+        it(`Should handle dispatch openConnect action accurately when ${c}`, () => {
+            const initialFetchSpy = sinon.spy(ConnectionManager.methods, 'initialFetch')
+            let openConnectArgs
+            const hasConnectionAlready = c === 'worksheet is bound to a connection'
+            wrapper = mountFactory({
+                computed: { ...(hasConnectionAlready ? mockActiveConnState() : {}) },
+                methods: { openConnect: args => (openConnectArgs = args) },
+            })
+            wrapper.vm.handleOpenConn(mockNewConnData())
+            expect(openConnectArgs).to.be.deep.equals(mockNewConnData())
+            hasConnectionAlready
+                ? initialFetchSpy.should.have.been.calledOnce
+                : initialFetchSpy.should.have.not.been.called
+            initialFetchSpy.restore()
+        })
+    })
+})
