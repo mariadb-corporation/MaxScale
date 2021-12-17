@@ -25,7 +25,7 @@ class UserManager
 public:
     ~UserManager();
 
-    class User
+    class UserInfo
     {
     public:
         std::string          user;
@@ -48,7 +48,7 @@ public:
 
     bool remove_user(const std::string& user);
 
-    bool get_user(const std::string& user, User* pUser) const;
+    bool get_info(const std::string& user, UserInfo* pInfo) const;
 
     bool get_pwd(const std::string& user, std::string* pPwd) const;
 
@@ -56,12 +56,12 @@ public:
 
     bool user_exists(const std::string& user) const
     {
-        return get_user(user, nullptr);
+        return get_info(user, nullptr);
     }
 
     bool user_exists(const string_view& user) const
     {
-        return get_user(std::string(user.data(), user.length()), nullptr);
+        return get_info(std::string(user.data(), user.length()), nullptr);
     }
 
 private:

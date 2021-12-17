@@ -41,15 +41,15 @@ int select_one_cb(void* pData, int nColumns, char** ppColumn, char** ppNames)
 {
     mxb_assert(nColumns == 3);
 
-    auto* pUsers = static_cast<vector<nosql::UserManager::User>*>(pData);
+    auto* pInfos = static_cast<vector<nosql::UserManager::UserInfo>*>(pData);
 
-    nosql::UserManager::User user;
-    user.user = ppColumn[0];
-    user.pwd = ppColumn[1];
-    user.salt_b64 = ppColumn[2];
-    user.salt = mxs::from_base64(user.salt_b64);
+    nosql::UserManager::UserInfo info;
+    info.user = ppColumn[0];
+    info.pwd = ppColumn[1];
+    info.salt_b64 = ppColumn[2];
+    info.salt = mxs::from_base64(info.salt_b64);
 
-    pUsers->push_back(user);
+    pInfos->push_back(info);
 
     return 0;
 }
@@ -207,16 +207,16 @@ bool UserManager::remove_user(const string& user)
     return rv == SQLITE_OK;
 }
 
-bool UserManager::get_user(const std::string& user, User* pUser) const
+bool UserManager::get_info(const std::string& user, UserInfo* pInfo) const
 {
     ostringstream ss;
     ss << SQL_SELECT_ONE_HEAD << "\"" << user << "\"";
 
     string sql = ss.str();
 
-    vector<User> users;
+    vector<UserInfo> infos;
     char* pError = nullptr;
-    int rv = sqlite3_exec(&m_db, sql.c_str(), select_one_cb, &users, &pError);
+    int rv = sqlite3_exec(&m_db, sql.c_str(), select_one_cb, &infos, &pError);
 
     if (rv != SQLITE_OK)
     {
@@ -225,23 +225,23 @@ bool UserManager::get_user(const std::string& user, User* pUser) const
                   pError ? pError : "Unknown error");
     }
 
-    if (!users.empty() && pUser)
+    if (!infos.empty() && pInfo)
     {
-        mxb_assert(users.size() == 1);
-        *pUser = users.front();
+        mxb_assert(infos.size() == 1);
+        *pInfo = infos.front();
     }
 
-    return !users.empty();
+    return !infos.empty();
 }
 
 bool UserManager::get_pwd(const std::string& user, std::string* pPwd) const
 {
-    User data;
-    bool rv = get_user(user, &data);
+    UserInfo info;
+    bool rv = get_info(user, &info);
 
     if (rv)
     {
-        *pPwd = data.pwd;
+        *pPwd = info.pwd;
     }
 
     return rv;
@@ -249,12 +249,12 @@ bool UserManager::get_pwd(const std::string& user, std::string* pPwd) const
 
 bool UserManager::get_salt_b64(const std::string& user, std::string* pSalt_b64) const
 {
-    User data;
-    bool rv = get_user(user, &data);
+    UserInfo info;
+    bool rv = get_info(user, &info);
 
     if (rv)
     {
-        *pSalt_b64 = data.salt_b64;
+        *pSalt_b64 = info.salt_b64;
     }
 
     return rv;

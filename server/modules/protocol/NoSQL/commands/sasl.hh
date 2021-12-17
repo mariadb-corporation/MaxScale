@@ -129,8 +129,8 @@ private:
 
         auto& um = m_database.context().um();
 
-        UserManager::User data;
-        if (!um.get_user(user, &data))
+        UserManager::UserInfo info;
+        if (!um.get_info(user, &info))
         {
             MXS_WARNING("User '%s' does not exist.", user.c_str());
             throw SoftError("Authentication failed", error::AUTHENTICATION_FAILED);
@@ -150,7 +150,7 @@ private:
 
         auto client_nonce_b64 = payload.substr(i + 2); // Skip "r="
 
-        authenticate(gs2_header, user, client_nonce_b64, data.salt_b64, doc);
+        authenticate(gs2_header, user, client_nonce_b64, info.salt_b64, doc);
     }
 
     void authenticate(string_view gs2_header,
