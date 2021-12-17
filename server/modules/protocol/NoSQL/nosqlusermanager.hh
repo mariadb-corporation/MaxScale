@@ -28,9 +28,10 @@ public:
     class User
     {
     public:
-        std::string user;
-        std::string pwd;
-        std::string salt_b64;
+        std::string          user;
+        std::string          pwd;
+        std::vector<uint8_t> salt;
+        std::string          salt_b64;
     };
 
     static std::unique_ptr<UserManager> create(const std::string& name);

@@ -47,6 +47,7 @@ int select_one_cb(void* pData, int nColumns, char** ppColumn, char** ppNames)
     user.user = ppColumn[0];
     user.pwd = ppColumn[1];
     user.salt_b64 = ppColumn[2];
+    user.salt = mxs::from_base64(user.salt_b64);
 
     pUsers->push_back(user);
 
