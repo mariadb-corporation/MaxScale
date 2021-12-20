@@ -129,6 +129,14 @@ export async function openConfirmDialog({ wrapper, cssSelector }) {
 }
 
 /**
+ * @param {Object} inputComponent - mounted input component
+ * @returns {Object} - returns v-messages__message element
+ */
+export function getErrMsgEle(inputComponent) {
+    return inputComponent.find('.v-messages__message')
+}
+
+/**
  * This function asserts if request is sent with accurate endpoint and payload when
  * clicking save btn of confirm-dialog in page-header component
  * @param {Object} payload.wrapper - mounted component

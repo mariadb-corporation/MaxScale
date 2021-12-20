@@ -217,6 +217,7 @@
     "dropTrigger": "Drop Trigger",
     "truncateTbl": "Truncate Table",
     "reconnect": "Reconnect",
+    "noConnAvail": "No connections available",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",

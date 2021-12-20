@@ -8,30 +8,46 @@
     >
         <connection-manager :disabled="getIsQuerying" />
         <!-- Use database section-->
-        <v-btn
-            id="active-db"
-            outlined
-            max-width="160"
-            class="ml-2 text-none px-2 font-weight-regular use-db-btn"
-            depressed
-            small
-            color="accent-dark"
-            :disabled="!hasActiveConn || getIsQuerying"
-        >
-            <v-icon class="mr-1" size="16">
-                $vuetify.icons.database
-            </v-icon>
-            <div class="d-inline-block text-truncate" :style="{ maxWidth: `122px` }">
-                {{ active_db ? active_db : $t('useDb') }}
-            </div>
-        </v-btn>
+
         <v-menu
             transition="slide-y-transition"
             offset-y
             content-class="mariadb-select-v-menu mariadb-select-v-menu--full-border"
-            activator="#active-db"
             :max-width="200"
         >
+            <template v-slot:activator="{ on: menu, attrs }">
+                <v-tooltip
+                    :disabled="!active_db"
+                    top
+                    transition="slide-y-transition"
+                    content-class="shadow-drop color text-navigation py-1 px-4"
+                >
+                    <template v-slot:activator="{ on: tooltip }">
+                        <v-btn
+                            outlined
+                            max-width="160"
+                            class="ml-2 text-none px-2 font-weight-regular use-db-btn"
+                            depressed
+                            small
+                            color="accent-dark"
+                            :disabled="!hasActiveConn || getIsQuerying"
+                            v-bind="attrs"
+                            v-on="{ ...tooltip, ...menu }"
+                        >
+                            <v-icon class="mr-1" size="16">
+                                $vuetify.icons.database
+                            </v-icon>
+                            <div
+                                class="d-inline-block text-truncate"
+                                :style="{ maxWidth: `122px` }"
+                            >
+                                {{ active_db ? active_db : $t('useDb') }}
+                            </div>
+                        </v-btn>
+                    </template>
+                    <span>{{ $t('useDb') }}: {{ active_db }} </span>
+                </v-tooltip>
+            </template>
             <v-list>
                 <v-list-item
                     v-for="db in getDbNodes"
@@ -46,15 +62,6 @@
                 </v-list-item>
             </v-list>
         </v-menu>
-        <v-tooltip
-            v-if="active_db"
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop color text-navigation py-1 px-4"
-            activator="#active-db"
-        >
-            <span>{{ $t('useDb') }}: {{ active_db }} </span>
-        </v-tooltip>
 
         <v-spacer></v-spacer>
         <portal-target name="wke-toolbar-right">
