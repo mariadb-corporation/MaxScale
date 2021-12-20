@@ -245,13 +245,14 @@ bool file_in_dir(const char* dir, const char* file)
  */
 void AvroSession::queue_client_callback()
 {
-    mxs::RoutingWorker::get_current()->execute(
-        [this]() {
+    auto callback = [this]() {
             if (m_state == AVRO_CLIENT_REQUEST_DATA)
             {
                 client_callback();
             }
-        }, mxs::RoutingWorker::EXECUTE_QUEUED);
+        };
+
+    mxs::RoutingWorker::get_current()->execute(callback, mxs::RoutingWorker::EXECUTE_QUEUED);
 }
 
 /**
@@ -386,6 +387,21 @@ int AvroSession::send_row(json_t* row)
     return rc;
 }
 
+int AvroSession::high_water_mark_reached(DCB* dcb, DCB::Reason reason, void* userdata)
+{
+    AvroSession* session = static_cast<AvroSession*>(userdata);
+    session->m_in_high_waters = true;
+    return 0;
+}
+
+int AvroSession::low_water_mark_reached(DCB* dcb, DCB::Reason reason, void* userdata)
+{
+    AvroSession* session = static_cast<AvroSession*>(userdata);
+    session->m_in_high_waters = false;
+    session->queue_client_callback();
+    return 0;
+}
+
 void AvroSession::set_current_gtid(json_t* row)
 {
     json_t* obj = json_object_get(row, avro_sequence);
@@ -411,20 +427,24 @@ void AvroSession::set_current_gtid(json_t* row)
 bool AvroSession::stream_json()
 {
     int bytes = 0;
-
     do
     {
         json_t* row;
         int rc = 1;
-        while (rc > 0 && (row = maxavro_record_read_json(m_file_handle)))
+
+        auto begin_ptr = m_file_handle->buffer_ptr;
+        while (rc > 0
+               && bytes < AVRO_DATA_BURST_SIZE
+               && (row = maxavro_record_read_json(m_file_handle)))
         {
             rc = send_row(row);
             set_current_gtid(row);
             json_decref(row);
+            bytes += m_file_handle->buffer_ptr - begin_ptr;
+            begin_ptr = m_file_handle->buffer_ptr;
         }
-        bytes += m_file_handle->buffer_size;
     }
-    while (maxavro_next_block(m_file_handle) && bytes < AVRO_DATA_BURST_SIZE);
+    while (bytes < AVRO_DATA_BURST_SIZE && maxavro_next_block(m_file_handle));
 
     return bytes >= AVRO_DATA_BURST_SIZE;
 }
@@ -700,50 +720,54 @@ void AvroSession::client_callback()
 {
     mxb_assert(m_state == AVRO_CLIENT_REQUEST_DATA);
 
-    if (m_last_sent_pos == 0)
+    bool read_more = true;
+
+    while (read_more && !m_in_high_waters)
     {
-        // TODO: Don't use DCB callbacks to stream the data
-        m_last_sent_pos = 1;
-
-        /** Send the schema of the current file */
-        GWBUF* schema = NULL;
-
-        switch (m_format)
+        if (m_last_sent_pos == 0)
         {
-        case AVRO_FORMAT_JSON:
-            schema = read_avro_json_schema(m_avro_binfile, m_router->avrodir);
-            break;
+            m_last_sent_pos = 1;
 
-        case AVRO_FORMAT_AVRO:
-            schema = read_avro_binary_schema(m_avro_binfile, m_router->avrodir);
-            break;
+            /** Send the schema of the current file */
+            GWBUF* schema = NULL;
 
-        default:
-            MXS_ERROR("Unknown client format: %d", m_format);
-            break;
+            switch (m_format)
+            {
+            case AVRO_FORMAT_JSON:
+                schema = read_avro_json_schema(m_avro_binfile, m_router->avrodir);
+                break;
+
+            case AVRO_FORMAT_AVRO:
+                schema = read_avro_binary_schema(m_avro_binfile, m_router->avrodir);
+                break;
+
+            default:
+                MXS_ERROR("Unknown client format: %d", m_format);
+                break;
+            }
+
+            if (schema)
+            {
+                m_client->write(schema);
+            }
         }
 
-        if (schema)
+        /** Stream the data to the client */
+        read_more = stream_data();
+        mxb_assert(!m_avro_binfile.empty() && strstr(m_avro_binfile.c_str(), ".avro"));
+
+        if (!read_more)
         {
-            m_client->write(schema);
+            std::string filename = get_next_filename(m_avro_binfile, m_router->avrodir);
+
+            bool next_file;
+            /** If the next file is available, send it to the client */
+            if ((next_file = (access(filename.c_str(), R_OK) == 0)))
+            {
+                rotate_avro_file(filename);
+                read_more = true;
+            }
         }
-    }
-
-    /** Stream the data to the client */
-    bool read_more = stream_data();
-    mxb_assert(!m_avro_binfile.empty() && strstr(m_avro_binfile.c_str(), ".avro"));
-    std::string filename = get_next_filename(m_avro_binfile, m_router->avrodir);
-
-    bool next_file;
-    /** If the next file is available, send it to the client */
-    if ((next_file = (access(filename.c_str(), R_OK) == 0)))
-    {
-        rotate_avro_file(filename);
-    }
-
-    if (next_file || read_more)
-    {
-        queue_client_callback();
     }
 }
 
@@ -784,6 +808,9 @@ AvroSession::AvroSession(Avro* instance, MXS_SESSION* session)
     , m_requested_gtid(false)
 {
     client_sessions.push_back(this);
+
+    m_session->client_dcb->add_callback(DCB::Reason::HIGH_WATER, high_water_mark_reached, this);
+    m_session->client_dcb->add_callback(DCB::Reason::LOW_WATER, low_water_mark_reached, this);
 }
 
 AvroSession::~AvroSession()
