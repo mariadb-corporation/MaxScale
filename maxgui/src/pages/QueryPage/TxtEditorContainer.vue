@@ -56,7 +56,7 @@
                         class="query-result"
                         @place-to-editor="placeToEditor"
                         @on-dragging="draggingTxt"
-                        @on-dragend="dropTxtToEditor({ e: $event, type: 'sql' })"
+                        @on-dragend="dropTxtToEditor"
                     />
                 </template>
             </split-pane>
@@ -241,7 +241,7 @@ export default {
             const dropTarget = editor.getTargetAtClientPoint(e.clientX, e.clientY)
             this.handleGenMouseDropWidget(dropTarget)
         },
-        dropTxtToEditor({ e, type }) {
+        dropTxtToEditor(e) {
             if (e.target.textContent) {
                 const { editor, monaco, insertAtCursor } = this.$refs.queryEditor
                 const dropTarget = editor.getTargetAtClientPoint(e.clientX, e.clientY)
@@ -256,11 +256,6 @@ export default {
                         dropPos.column
                     )
                     let text = e.target.textContent.trim()
-                    switch (type) {
-                        case 'schema':
-                            text = this.$help.escapeIdentifiers(text)
-                            break
-                    }
                     insertAtCursor({ text, range })
                     if (this.mouseDropWidget) editor.removeContentWidget(this.mouseDropWidget)
                 }

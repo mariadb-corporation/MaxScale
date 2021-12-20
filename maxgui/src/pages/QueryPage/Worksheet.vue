@@ -10,12 +10,7 @@
             <sidebar-container
                 @place-to-editor="$typy($refs.txtEditorPane, 'placeToEditor').safeFunction($event)"
                 @on-dragging="$typy($refs.txtEditorPane, 'draggingTxt').safeFunction($event)"
-                @on-dragend="
-                    $typy($refs.txtEditorPane, 'dropTxtToEditor').safeFunction({
-                        e: $event,
-                        type: 'schema',
-                    })
-                "
+                @on-dragend="$typy($refs.txtEditorPane, 'dropTxtToEditor').safeFunction($event)"
             />
         </template>
         <template slot="pane-right">
