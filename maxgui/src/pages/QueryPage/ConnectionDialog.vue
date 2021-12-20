@@ -99,7 +99,7 @@
                             id="db-user"
                             v-model="body.user"
                             :rules="rules.user"
-                            class="std error--text__bottom"
+                            class="std error--text__bottom user"
                             name="db-user"
                             autocomplete="new-username"
                             dense
@@ -119,7 +119,7 @@
                             v-model="body.password"
                             :rules="rules.password"
                             :type="isPwdVisible ? 'text' : 'password'"
-                            class="std error--text__bottom"
+                            class="std error--text__bottom password"
                             name="db-password"
                             autocomplete="new-password"
                             dense
@@ -155,7 +155,7 @@
                         <v-text-field
                             v-model.number="body.timeout"
                             type="number"
-                            class="std error--text__bottom"
+                            class="std error--text__bottom timeout"
                             name="timeout"
                             dense
                             :height="36"
@@ -206,9 +206,15 @@ export default {
                 timeout: 300,
             },
             rules: {
-                user: [val => !!val || this.$t('errors.requiredInput', { inputName: 'Username' })],
+                user: [
+                    val =>
+                        !!val ||
+                        this.$t('errors.requiredInput', { inputName: this.$t('username') }),
+                ],
                 password: [
-                    val => !!val || this.$t('errors.requiredInput', { inputName: 'Password' }),
+                    val =>
+                        !!val ||
+                        this.$t('errors.requiredInput', { inputName: this.$t('password') }),
                 ],
             },
             isFormValid: false,

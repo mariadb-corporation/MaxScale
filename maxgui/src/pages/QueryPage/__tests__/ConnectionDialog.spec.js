@@ -14,6 +14,7 @@
 import mount from '@tests/unit/setup'
 import ConnectionDialog from '@/pages/QueryPage/ConnectionDialog'
 import { merge } from 'utils/helpers'
+import { getErrMsgEle, inputChangeMock, itemSelectMock } from '@tests/unit/utils'
 
 const dummy_rc_target_names_map = {
     listeners: [
@@ -216,4 +217,55 @@ describe(`ConnectionDialog - methods and computed properties tests `, () => {
         })
     })
 })
-//TODO: Add more form validation tests
+describe(`ConnectionDialog - form input tests`, () => {
+    let wrapper
+    it(`Should parse value as number for timeout field`, async () => {
+        wrapper = mountFactory({ shallow: false })
+        const inputComponent = wrapper.findComponent({ name: 'base-dialog' }).find(`.timeout`)
+        await inputChangeMock(inputComponent, '300')
+        expect(wrapper.vm.body.timeout).to.be.equals(300)
+    })
+
+    const requiredFields = ['user', 'password', 'selectedResource']
+    requiredFields.forEach(field => {
+        it(`Should show error message if ${field} value is empty`, async () => {
+            wrapper = mountFactory({
+                shallow: false,
+                data: () => ({
+                    selectedResourceType: 'listeners',
+                    defSelectedRsrc: dummy_rc_target_names_map.listeners[0],
+                    body: {
+                        user: 'maxskysql',
+                        password: 'skysql',
+                        db: '',
+                        timeout: 300,
+                    },
+                }),
+            })
+            const dlg = wrapper.findComponent({ name: 'base-dialog' })
+            switch (field) {
+                case 'user':
+                case 'password': {
+                    const inputComponent = dlg.find(`.${field}`)
+                    await inputChangeMock(inputComponent, '')
+                    expect(getErrMsgEle(inputComponent).text()).to.be.equals(
+                        wrapper.vm.$t('errors.requiredInput', {
+                            inputName: wrapper.vm.$t(field === 'user' ? 'username' : 'password'),
+                        })
+                    )
+                    break
+                }
+                case 'selectedResource': {
+                    const dropDownComponent = dlg.find('.resource-dropdown')
+                    await itemSelectMock(dropDownComponent, null)
+                    expect(getErrMsgEle(dropDownComponent).text()).to.be.equals(
+                        wrapper.vm.$t('errors.requiredInput', {
+                            inputName: wrapper.vm.$tc(wrapper.vm.selectedResourceType, 1),
+                        })
+                    )
+                    break
+                }
+            }
+        })
+    })
+})
