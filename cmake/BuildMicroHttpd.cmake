@@ -6,11 +6,15 @@ else()
 endif()
 
 message(STATUS "Using libmicrohttpd version ${LIBMICROHTTPD_VERSION}")
-set(LIBMICROHTTPD_URL "http://ftpmirror.gnu.org/libmicrohttpd/libmicrohttpd-${LIBMICROHTTPD_VERSION}.tar.gz"
-  CACHE STRING "GNU libmicrochttpd source code")
+
+set(LIBMICROHTTPD_FILE "libmicrohttpd/libmicrohttpd-${LIBMICROHTTPD_VERSION}.tar.gz")
+set(LIBMICROHTTPD_URLS
+  "http://ftpmirror.gnu.org/${LIBMICROHTTPD_FILE}"
+  "http://ftp.funet.fi/pub/gnu/prep/${LIBMICROHTTPD_FILE}"
+  "http://mirrors.kernel.org/gnu/${LIBMICROHTTPD_FILE}")
 
 ExternalProject_Add(libmicrohttpd
-  URL ${LIBMICROHTTPD_URL}
+  URL ${LIBMICROHTTPD_URLS}
   SOURCE_DIR ${CMAKE_BINARY_DIR}/libmicrohttpd/
   CONFIGURE_COMMAND ${CMAKE_BINARY_DIR}/libmicrohttpd//configure --prefix=${CMAKE_BINARY_DIR}/libmicrohttpd/ --enable-shared --with-pic --libdir=${CMAKE_BINARY_DIR}/libmicrohttpd/lib/
   BINARY_DIR ${CMAKE_BINARY_DIR}/libmicrohttpd/
@@ -25,4 +29,4 @@ ExternalProject_Add(libmicrohttpd
 include_directories(${CMAKE_BINARY_DIR}/libmicrohttpd/include/)
 set(MICROHTTPD_LIBRARIES ${CMAKE_BINARY_DIR}/libmicrohttpd/lib/libmicrohttpd.a)
 
-mark_as_advanced(LIBMICROHTTPD_VERSION LIBMICROHTTPD_URL MICROHTTPD_LIBRARIES)
+mark_as_advanced(LIBMICROHTTPD_VERSION LIBMICROHTTPD_URL MICROHTTPD_LIBRARIES LIBMICROHTTPD_FILE)
