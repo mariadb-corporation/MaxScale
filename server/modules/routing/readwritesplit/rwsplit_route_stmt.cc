@@ -580,6 +580,19 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
                 mxb_assert(m_expected_responses == 1);
                 MXS_INFO("Will return response from '%s' to the client", m_sescmd_replier->name());
             }
+
+            if (m_config.transaction_replay)
+            {
+                if (trx_is_open() && !m_trx.target())
+                {
+                    mxb_assert(trx_is_starting());
+                    m_trx.set_target(m_sescmd_replier);
+                }
+                else
+                {
+                    mxb_assert(!trx_is_open() || m_trx.target() == m_sescmd_replier);
+                }
+            }
         }
         else
         {
