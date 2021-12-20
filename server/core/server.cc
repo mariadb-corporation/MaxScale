@@ -978,7 +978,7 @@ void ServerEndpoint::close()
     {
         auto* dcb = m_conn->dcb();
         // Try to move the connection into the pool. If it fails, close normally.
-        bool moved_to_pool = dcb->manager()->move_to_conn_pool(dcb);
+        bool moved_to_pool = dcb->session()->normal_quit() && dcb->manager()->move_to_conn_pool(dcb);
         if (moved_to_pool)
         {
             mxb_assert(dcb->is_open());

@@ -437,8 +437,21 @@ private:
 
     bool store_in_cache() const
     {
-        constexpr const int is_autocommit = QUERY_TYPE_ENABLE_AUTOCOMMIT | QUERY_TYPE_DISABLE_AUTOCOMMIT;
-        return !m_canonical.empty() && (qc_get_type_mask(m_pStmt) & is_autocommit) == 0;
+        bool store = false;
+
+        if (!m_canonical.empty())
+        {
+            constexpr const int is_autocommit = QUERY_TYPE_ENABLE_AUTOCOMMIT | QUERY_TYPE_DISABLE_AUTOCOMMIT;
+            uint32_t type_mask = QUERY_TYPE_UNKNOWN;
+            this_unit.classifier->qc_get_type_mask(m_pStmt, &type_mask);
+
+            if ((type_mask & is_autocommit) == 0)
+            {
+                store = true;
+            }
+        }
+
+        return store;
     }
 };
 }
