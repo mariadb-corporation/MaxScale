@@ -103,7 +103,6 @@
                             : $tc('info.exeStatementsInfo', stmtI18nPluralization)
                     "
                     :hasSavingErr="isExeStatementsFailed"
-                    :executedSql="executedSql"
                     :errMsgObj="stmtErrMsgObj"
                     :sqlTobeExecuted.sync="sql"
                     :editorHeight="200"
@@ -181,9 +180,6 @@ export default {
         isExeStatementsFailed() {
             if (this.$typy(this.getExeStmtResultMap).isEmptyObject) return false
             return !this.$typy(this.stmtErrMsgObj).isEmptyObject
-        },
-        executedSql() {
-            return this.$typy(this.getExeStmtResultMap, 'data.sql').safeString
         },
         stmtErrMsgObj() {
             return this.$typy(this.getExeStmtResultMap, 'stmt_err_msg_obj').safeObjectOrEmpty

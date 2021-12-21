@@ -49,7 +49,6 @@
                     isAlterFailed ? '' : $tc('info.exeStatementsInfo', stmtI18nPluralization)
                 "
                 :hasSavingErr="isAlterFailed"
-                :executedSql="alterSql"
                 :errMsgObj="stmtErrMsgObj"
                 :sqlTobeExecuted.sync="sql"
                 :onSave="confirmAlter"
@@ -147,9 +146,6 @@ export default {
         },
         stmtErrMsgObj() {
             return this.$typy(this.getExeStmtResultMap, 'stmt_err_msg_obj').safeObjectOrEmpty
-        },
-        alterSql() {
-            return this.$typy(this.getExeStmtResultMap, 'data.sql').safeString
         },
         currColsData() {
             return this.$typy(this.formData, 'cols_opts_data.data').safeArray
