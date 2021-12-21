@@ -78,12 +78,12 @@ describe(`Worksheet - created hook and child component's data communication test
 const editorModes = ['TXT_EDITOR', 'DDL_EDITOR']
 editorModes.forEach(mode => {
     let wrapper
-    beforeEach(() => {
-        wrapper = mountFactory({
-            computed: { isTxtEditor: () => (mode === 'TXT_EDITOR' ? true : false) },
-        })
-    })
     describe(`Worksheet - ${mode} mode: child component's data communication tests`, () => {
+        beforeEach(() => {
+            wrapper = mountFactory({
+                computed: { isTxtEditor: () => (mode === 'TXT_EDITOR' ? true : false) },
+            })
+        })
         const renCom = mode === 'TXT_EDITOR' ? 'txt-editor-container' : 'ddl-editor-container'
         const hiddenCom = mode === 'TXT_EDITOR' ? 'ddl-editor-container' : 'txt-editor-container'
         it(`Should render ${renCom}`, () => {
