@@ -95,6 +95,18 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+/*
+This component emits the following events
+@get-node-data: { SQL_QUERY_MODE: string, schemaId:string }
+@place-to-editor: v:string. Place text to editor
+@alter-tbl: Node. Alter table node
+@drop-action: { id:string, type:string }: Node.
+@truncate-tbl: { id:string }: Node.
+@use-db: { id:string }: Node.
+@load-children: Node. Async event.
+@on-dragging: Event.
+@on-dragend: Event.
+*/
 import { mapGetters, mapMutations, mapState } from 'vuex'
 import customDragEvt from 'mixins/customDragEvt'
 export default {

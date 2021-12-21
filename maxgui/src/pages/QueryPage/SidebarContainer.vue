@@ -25,11 +25,11 @@
                                 <v-btn
                                     icon
                                     small
-                                    :disabled="shouldDisableBtn"
+                                    :disabled="isConnecting"
                                     v-on="on"
                                     @click="reloadSchema"
                                 >
-                                    <v-icon size="12" :color="shouldDisableBtn ? '' : 'deep-ocean'">
+                                    <v-icon size="12" :color="isConnecting ? '' : 'deep-ocean'">
                                         $vuetify.icons.reload
                                     </v-icon>
                                 </v-btn>
@@ -73,12 +73,12 @@
                         height="28"
                         class="std filter-objects"
                         :placeholder="$t('filterSchemaObjects')"
-                        :disabled="shouldDisableBtn"
+                        :disabled="isConnecting"
                     />
                 </div>
                 <keep-alive>
                     <db-list-tree
-                        v-if="curr_cnct_resource.id && !getLoadingDbTree"
+                        v-if="!isConnecting"
                         v-show="!is_sidebar_collapsed"
                         class="schema-list-wrapper"
                         @get-node-data="handleGetNodeData"
@@ -170,8 +170,8 @@ export default {
                 this.SET_SEARCH_SCHEMA(value)
             },
         },
-        shouldDisableBtn() {
-            return !this.curr_cnct_resource.id || this.getLoadingDbTree
+        isConnecting() {
+            return !this.$typy(this.curr_cnct_resource, 'id').safeString || this.getLoadingDbTree
         },
         stmtI18nPluralization() {
             const statementCounts = (this.sql.match(/;/g) || []).length
@@ -234,7 +234,7 @@ export default {
          * @param {String} payload.id - identifier
          * @param {String} payload.type - db tree node type
          */
-        async onDropAction({ id, type }) {
+        onDropAction({ id, type }) {
             const { escapeIdentifiers: escape } = this.$help
             let sql = 'DROP'
             const { SCHEMA, TABLE, SP, TRIGGER } = this.SQL_NODE_TYPES
@@ -259,7 +259,7 @@ export default {
         /**
          * @param {String} id - identifier
          */
-        async onTruncateTbl(id) {
+        onTruncateTbl(id) {
             const { escapeIdentifiers: escape } = this.$help
             this.sql = `truncate ${escape(id)};`
             this.actionName = this.sql.slice(0, -1)
