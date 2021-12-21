@@ -81,20 +81,7 @@
                         v-if="curr_cnct_resource.id && !getLoadingDbTree"
                         v-show="!is_sidebar_collapsed"
                         class="schema-list-wrapper"
-                        @preview-data="
-                            schemaId =>
-                                handleFetchPreview({
-                                    SQL_QUERY_MODE: SQL_QUERY_MODES.PRVW_DATA,
-                                    schemaId,
-                                })
-                        "
-                        @view-details="
-                            schemaId =>
-                                handleFetchPreview({
-                                    SQL_QUERY_MODE: SQL_QUERY_MODES.PRVW_DATA_DETAILS,
-                                    schemaId,
-                                })
-                        "
+                        @get-node-data="handleGetNodeData"
                         @load-children="handleLoadChildren"
                         @use-db="useDb"
                         @alter-tbl="onAlterTable"
@@ -224,7 +211,7 @@ export default {
         async reloadSchema() {
             await this.reloadTreeNodes()
         },
-        async handleFetchPreview({ SQL_QUERY_MODE, schemaId }) {
+        async handleGetNodeData({ SQL_QUERY_MODE, schemaId }) {
             this.clearDataPreview()
             this.SET_CURR_QUERY_MODE(SQL_QUERY_MODE)
             switch (SQL_QUERY_MODE) {
