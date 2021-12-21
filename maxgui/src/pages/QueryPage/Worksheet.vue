@@ -97,7 +97,10 @@ export default {
         },
     },
     created() {
-        this.handleSetSidebarPct()
+        // handleSetSidebarPct should be called in doubleRAF to ensure all components are completely rendered
+        this.$help.doubleRAF(() => {
+            this.handleSetSidebarPct()
+        })
     },
     activated() {
         this.addIsSidebarCollapsedsWatcher()
