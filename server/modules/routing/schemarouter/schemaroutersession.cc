@@ -1077,15 +1077,8 @@ void SchemaRouterSession::route_queued_query()
     GWBUF* tmp = m_queue.front().release();
     m_queue.pop_front();
 
-#ifdef SS_DEBUG
-    char* querystr = modutil_get_SQL(tmp);
-    MXS_DEBUG("Sending queued buffer for session %p: %s",
-              m_client->session,
-              querystr);
-    MXS_FREE(querystr);
-#endif
-
-    poll_add_epollin_event_to_dcb(m_client, tmp);
+    MXS_INFO("Routing queued query: %s", mxs::extract_sql(tmp).c_str());
+    session_delay_routing(m_pSession, router_as_downstream(m_pSession), tmp, 0);
 }
 
 /**
