@@ -62,10 +62,7 @@ std::vector<uint8_t> crypto::sha_1(const uint8_t* pData, size_t data_len)
 
 void crypto::md5(const void* pData, size_t data_len, uint8_t* pOut)
 {
-    MD5_CTX md5;
-    MD5_Init(&md5);
-    MD5_Update(&md5, pData, data_len);
-    MD5_Final(pOut, &md5);
+    MD5(reinterpret_cast<const uint8_t*>(pData), data_len, pOut);
 }
 
 void crypto::md5hex(const void* pData, size_t data_len, char* pOut)
@@ -76,6 +73,8 @@ void crypto::md5hex(const void* pData, size_t data_len, char* pOut)
     for (size_t i = 0; i < sizeof(digest); ++i) {
         snprintf(&pOut[i * 2], 3, "%02x", digest[i]);
     }
+
+    // TODO: mxs::bin2hex() can't be used as it uses uppercase and SCRAM requires lowercase.
 }
 
 std::string crypto::md5hex(const void* pData, size_t data_len)
