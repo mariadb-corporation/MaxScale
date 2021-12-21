@@ -235,21 +235,21 @@ bool ClientConnection::is_movable() const
     return true;
 }
 
-bool ClientConnection::setup_session()
+bool ClientConnection::setup_session(const string& user, const string& password)
 {
     mxb_assert(!is_ready());
 
     m_session_data.auth_data = std::make_unique<mariadb::AuthenticationData>();
     auto& auth_data = *m_session_data.auth_data;
-    auth_data.user = m_config.user;
+    auth_data.user = user;
     m_session.set_user(auth_data.user);
     auth_data.default_db = "";
     m_session_data.current_db = "";
     auth_data.plugin = "mysql_native_password";
 
-    if (!m_config.password.empty())
+    if (!password.empty())
     {
-        const uint8_t* pPassword = reinterpret_cast<const uint8_t*>(m_config.password.data());
+        const uint8_t* pPassword = reinterpret_cast<const uint8_t*>(password.data());
         auto nPassword = m_config.password.length();
         uint8_t auth_token[SHA_DIGEST_LENGTH];
 

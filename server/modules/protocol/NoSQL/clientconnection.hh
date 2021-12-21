@@ -54,7 +54,7 @@ public:
         return m_state == READY;
     }
 
-    bool setup_session();
+    bool setup_session(const std::string& user, const std::string& password);
 
 private:
     // DCBHandler

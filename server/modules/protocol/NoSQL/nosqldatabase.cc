@@ -178,7 +178,7 @@ State Database::execute_command(std::unique_ptr<Command> sCommand, GWBUF** ppRes
 
     if (sCommand->session_must_be_ready() && !m_context.client_connection().is_ready())
     {
-        ready = m_context.client_connection().setup_session();
+        ready = m_context.client_connection().setup_session(m_config.user, m_config.password);
 
         if (!ready)
         {
