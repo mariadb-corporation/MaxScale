@@ -31,6 +31,31 @@ namespace nosql
 
 using bsoncxx::stdx::string_view;
 
+inline bool operator == (const string_view& lhs, const std::string& rhs)
+{
+    return lhs.compare(rhs.c_str()) == 0;
+}
+
+inline bool operator != (const string_view& lhs, const std::string& rhs)
+{
+    return !(lhs == rhs);
+}
+
+inline bool operator == (const std::string& lhs, const string_view& rhs)
+{
+    return rhs.compare(lhs.c_str()) == 0;
+}
+
+inline bool operator != (const std::string& lhs, const string_view& rhs)
+{
+    return !(lhs == rhs);
+}
+
+inline std::string to_string(const string_view& s)
+{
+    return std::string(s.data(), s.length());
+}
+
 using DocumentBuilder = bsoncxx::builder::basic::document;
 using ArrayBuilder = bsoncxx::builder::basic::array;
 using bsoncxx::builder::basic::kvp;

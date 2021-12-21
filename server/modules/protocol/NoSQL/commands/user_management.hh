@@ -15,6 +15,7 @@
 // https://docs.mongodb.com/v4.4/reference/command/nav-user-management/
 //
 #include "defs.hh"
+#include "../nosqlscram.hh"
 #include "../nosqlusermanager.hh"
 
 namespace nosql
@@ -44,7 +45,10 @@ public:
             {
                 auto& um = m_database.context().um();
 
-                if (um.add_user(m_user, m_pwd, m_roles))
+                vector<uint8_t> salt = scram::create_random_vector(scram::SERVER_SALT_SIZE);
+                string salt_b64 = mxs::to_base64(salt);
+
+                if (um.add_user(m_scope, m_user, m_pwd, salt_b64, m_roles))
                 {
                     doc.append(kvp("ok", 1));
                 }
@@ -107,9 +111,7 @@ public:
 protected:
     void prepare() override
     {
-        // Users are specific to databases; hence we prepend the database name.
-        m_user = m_database.name();
-        m_user += ".";
+        m_scope = m_database.name();
         m_user += value_as<string>();
 
         bsoncxx::document::element element;
@@ -148,10 +150,10 @@ protected:
 
         auto& um = m_database.context().um();
 
-        if (um.user_exists(m_user))
+        if (um.user_exists(m_scope, m_user))
         {
             ostringstream ss;
-            ss << "User \"" << m_user << "\" already exists";
+            ss << "User \"" << m_user << "@" << m_scope << "\" already exists";
 
             throw SoftError(ss.str(), error::LOCATION51003);
         }
@@ -161,12 +163,13 @@ protected:
     {
         ostringstream sql;
 
-        sql << "CREATE USER '" << m_user << "'@'%' IDENTIFIED BY '" << m_pwd << "'";
+        sql << "CREATE USER '" << m_scope << "." << m_user << "'@'%' IDENTIFIED BY '" << m_pwd << "'";
 
         return sql.str();
     }
 
 private:
+    string               m_scope;
     string               m_user;
     string_view          m_pwd;
     bsoncxx::array::view m_roles;
@@ -215,7 +218,7 @@ public:
                     {
                         // We assume it's because the user does not exist.
                         ostringstream ss;
-                        ss << "User \"" << m_user << "\" not found";
+                        ss << "User \"" << m_user << "@" << m_scope << "\" not found";
 
                         throw SoftError(ss.str(), error::USER_NOT_FOUND);
                     }
@@ -238,7 +241,22 @@ public:
             break;
 
         case ComResponse::OK_PACKET:
-            doc.append(kvp("ok", 1));
+            {
+                auto& um = m_database.context().um();
+
+                if (um.remove_user(m_scope, m_user))
+                {
+                    doc.append(kvp("ok", 1));
+                }
+                else
+                {
+                    ostringstream ss;
+                    ss << "Could remove user \"" << m_user << "@" << m_scope << "\" from "
+                       << "MariaDB backend, but not from local database.";
+
+                    throw SoftError(ss.str(), error::INTERNAL_ERROR);
+                }
+            }
             break;
 
         default:
@@ -253,17 +271,15 @@ public:
 protected:
     void prepare() override
     {
-        // User are specific to databases, hence we append the database name.
+        m_scope = m_database.name();
         m_user = value_as<string>();
-        m_user += "@";
-        m_user += m_database.name();
 
         auto& um = m_database.context().um();
 
-        if (!um.user_exists(m_user))
+        if (!um.user_exists(m_scope, m_user))
         {
             ostringstream ss;
-            ss << "User \"" << m_user << "\" not found";
+            ss << "User \"" << m_user << "@" << m_scope << "\" not found";
 
             throw SoftError(ss.str(), error::USER_NOT_FOUND);
         }
@@ -273,12 +289,13 @@ protected:
     {
         ostringstream sql;
 
-        sql << "DROP USER '" << m_user << "'@'%'";
+        sql << "DROP USER '" << m_scope << "." << m_user << "'@'%'";
 
         return sql.str();
     }
 
 private:
+    string m_scope;
     string m_user;
 };
 

@@ -89,15 +89,15 @@ public:
                 throw SoftError(ss.str(), error::TYPE_MISMATCH);
             }
 
-            auto user = static_cast<string_view>(element.get_utf8());
+            auto scoped_user = static_cast<string_view>(element.get_utf8());
 
             auto& context = database.context();
 
-            if (context.um().user_exists(user))
+            if (context.um().scoped_user_exists(scoped_user))
             {
                 ArrayBuilder sasl_supported_mechs;
 
-                sasl_supported_mechs.append("SCRAM-SHA-256");
+                sasl_supported_mechs.append("SCRAM-SHA-1");
 
                 doc.append(kvp(key::SASL_SUPPORTED_MECHS, sasl_supported_mechs.extract()));
             }

@@ -30,6 +30,7 @@
 #include "config.hh"
 #include "nosqlbase.hh"
 #include "nosqlcursor.hh"
+#include "nosqlusermanager.hh"
 #include "../../filter/masking/mysql.hh"
 
 class DCB;
@@ -284,6 +285,7 @@ const char COMPILED[]                        = "compiled";
 const char CONFIG[]                          = "config";
 const char CONNECTION_ID[]                   = "connectionId";
 const char CONNECTIONS[]                     = "connections";
+const char CONVERSATION_ID[]                 = "conversationId";
 const char CPU_ADDR_SIZE[]                   = "cpuAddrSize";
 const char CPU_ARCH[]                        = "cpuArch";
 const char CREATED_COLLECTION_AUTOMATICALLY[]= "createdCollectionAutomatically";
@@ -300,6 +302,7 @@ const char DEBUG[]                           = "debug";
 const char DELETES[]                         = "deletes";
 const char DIRECTION[]                       = "direction";
 const char DOCUMENTS[]                       = "documents";
+const char DONE[]                            = "done";
 const char DROPPED[]                         = "dropped";
 const char DROP_TARGET[]                     = "dropTarget";
 const char ELECTION_METRICS[]                = "electionMetrics";
@@ -380,6 +383,7 @@ const char ORDERED[]                         = "ordered";
 const char OS[]                              = "os";
 const char PARSED[]                          = "parsed";
 const char PARSED_QUERY[]                    = "parsedQuery";
+const char PAYLOAD[]                         = "payload";
 const char PID[]                             = "pid";
 const char PLANNER_VERSION[]                 = "plannerVersion";
 const char PORT[]                            = "port";
@@ -1159,6 +1163,114 @@ class UserManager;
 class NoSQL
 {
 public:
+    class Sasl
+    {
+    public:
+        const UserManager::UserInfo& user_info() const
+        {
+            return m_user_info;
+        }
+
+        int32_t conversation_id() const
+        {
+            return m_conversation_id;
+        }
+
+        int32_t bump_conversation_id()
+        {
+            return ++m_conversation_id;
+        }
+
+        const std::string& client_nonce_b64() const
+        {
+            return m_client_nonce_b64;
+        }
+
+        const std::string& gs2_header() const
+        {
+            return m_gs2_header;
+        }
+
+        const std::string& server_nonce_b64() const
+        {
+            return m_server_nonce_b64;
+        }
+
+        std::string nonce_b64() const
+        {
+            return m_client_nonce_b64 + m_server_nonce_b64;
+        }
+
+        const std::string& initial_message() const
+        {
+            return m_initial_message;
+        }
+
+        const std::string& server_first_message() const
+        {
+            return m_server_first_message;
+        }
+
+        void set_client_nonce_b64(const std::string s)
+        {
+            m_client_nonce_b64 = std::move(s);
+        }
+
+        void set_client_nonce_b64(const string_view& s)
+        {
+            set_client_nonce_b64(to_string(s));
+        }
+
+        void set_gs2_header(const std::string s)
+        {
+            m_gs2_header = std::move(s);
+        }
+
+        void set_gs2_header(const string_view& s)
+        {
+            set_gs2_header(to_string(s));
+        }
+
+        void set_server_nonce_b64(std::string s)
+        {
+            m_server_nonce_b64 = std::move(s);
+        }
+
+        void set_server_nonce_b64(const std::vector<uint8_t>& v)
+        {
+            set_server_nonce_b64(std::string(reinterpret_cast<const char*>(v.data()), v.size()));
+        }
+
+        void set_initial_message(std::string s)
+        {
+            m_initial_message = std::move(s);
+        }
+
+        void set_initial_message(const string_view& s)
+        {
+            set_initial_message(to_string(s));
+        }
+
+        void set_server_first_message(std::string s)
+        {
+            m_server_first_message = std::move(s);
+        }
+
+        void set_user_info(UserManager::UserInfo&& user_info)
+        {
+            m_user_info = std::move(user_info);
+        }
+
+    private:
+        UserManager::UserInfo m_user_info;
+        std::string           m_client_nonce_b64;
+        std::string           m_gs2_header;
+        std::string           m_server_nonce_b64;
+        int32_t               m_conversation_id { 0 };
+        std::string           m_initial_message;
+        std::string           m_server_first_message;
+    };
+
     class Context
     {
     public:
@@ -1236,6 +1348,11 @@ public:
             m_user = std::string(user.data(), user.length());
         }
 
+        Sasl& sasl()
+        {
+            return m_sasl;
+        }
+
     private:
         UserManager&               m_um;
         MXS_SESSION&               m_session;
@@ -1246,6 +1363,7 @@ public:
         std::unique_ptr<LastError> m_sLast_error;
         bool                       m_metadata_sent { false };
         std::string                m_user;
+        Sasl                       m_sasl;
 
         static std::atomic<int64_t> s_connection_id;
     };
