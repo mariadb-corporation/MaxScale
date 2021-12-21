@@ -20,6 +20,7 @@
 #include <maxscale/session.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include "../../filter/masking/mysql.hh"
+#include "clientconnection.hh"
 #include "nosqldatabase.hh"
 #include "nosqlupdateoperator.hh"
 #include "crc32.h"
@@ -2783,7 +2784,7 @@ std::atomic<int64_t> nosql::NoSQL::Context::s_connection_id;
 
 NoSQL::Context::Context(UserManager* pUm,
                         MXS_SESSION* pSession,
-                        mxs::ClientConnection* pClient_connection,
+                        ClientConnection* pClient_connection,
                         mxs::Component* pDownstream)
     : m_um(*pUm)
     , m_session(*pSession)
@@ -2812,7 +2813,7 @@ void NoSQL::Context::reset_error(int32_t n)
 // NoSQL
 //
 NoSQL::NoSQL(MXS_SESSION* pSession,
-             mxs::ClientConnection* pClient_connection,
+             ClientConnection* pClient_connection,
              mxs::Component* pDownstream,
              Config* pConfig,
              UserManager* pUm)

@@ -290,39 +290,22 @@ bool ClientConnection::setup_session()
     m_session_data.history.push_back(mxs::Buffer(pStmt));
     m_session_data.history_responses.insert(std::make_pair(id, true));
 
-    return m_session.start();
+    bool ready = m_session.start();
+
+    if (ready)
+    {
+        m_state = READY;
+    }
+
+    return ready;
 }
 
 GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)
 {
-    bool ready = true;
-    GWBUF* pResponse = nullptr;
+    mxb_assert(gwbuf_is_contiguous(pPacket));
+    mxb_assert(gwbuf_length(pPacket) >= protocol::HEADER_LEN);
 
-    if (!is_ready())
-    {
-        ready = setup_session();
-
-        if (ready)
-        {
-            set_ready();
-        }
-        else
-        {
-            MXB_ERROR("Could not start session, closing client connection.");
-            gwbuf_free(pPacket);
-            m_session.kill();
-        }
-    }
-
-    if (ready)
-    {
-        mxb_assert(gwbuf_is_contiguous(pPacket));
-        mxb_assert(gwbuf_length(pPacket) >= protocol::HEADER_LEN);
-
-        pResponse = m_nosql.handle_request(pPacket);
-    }
-
-    return pResponse;
+    return m_nosql.handle_request(pPacket);
 }
 
 bool ClientConnection::clientReply(GWBUF* pBuffer, mxs::ReplyRoute& down, const mxs::Reply& reply)

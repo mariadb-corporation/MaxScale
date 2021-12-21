@@ -15,6 +15,7 @@
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <bsoncxx/exception/exception.hpp>
+#include "clientconnection.hh"
 #include "config.hh"
 #include "nosqlcommands.hh"
 
@@ -173,62 +174,78 @@ State Database::execute_command(std::unique_ptr<Command> sCommand, GWBUF** ppRes
     State state = State::READY;
     GWBUF* pResponse = nullptr;
 
-    try
+    bool ready = true;
+
+    if (sCommand->session_must_be_ready() && !m_context.client_connection().is_ready())
     {
-        m_sCommand = std::move(sCommand);
-        set_busy();
+        ready = m_context.client_connection().setup_session();
 
-        // This check could be made earlier, but it is more convenient to do it here.
-        if (m_name.empty() || m_name.find_first_of(" /\\.\"$") != string::npos)
+        if (!ready)
         {
-            ostringstream ss;
-            ss << "Invalid database name: '" << m_name << "'";
-
-            throw SoftError(ss.str(), error::INVALID_NAMESPACE);
-        }
-
-        state = m_sCommand->execute(&pResponse);
-    }
-    catch (const Exception& x)
-    {
-        const char* zMessage = x.what();
-
-        // If there is no message, the error was 1) stored in the returned 'writeErrors'
-        // array and 2) already warned for.
-        if (*zMessage != 0)
-        {
-            MXB_WARNING("nosql exception occurred when executing NoSQL command: %s", zMessage);
-        }
-
-        m_context.set_last_error(x.create_last_error());
-
-        if (!m_sCommand->is_silent())
-        {
-            pResponse = x.create_response(*m_sCommand.get());
+            MXB_ERROR("Could not start session, closing client connection.");
+            m_context.session().kill();
         }
     }
-    catch (const bsoncxx::exception& x)
+
+    if (ready)
     {
-        MXB_ERROR("bsoncxx exeception occurred when parsing NoSQL command: %s", x.what());
-
-        HardError error(x.what(), error::FAILED_TO_PARSE);
-        m_context.set_last_error(error.create_last_error());
-
-        if (!m_sCommand->is_silent())
+        try
         {
-            pResponse = error.create_response(*m_sCommand);
+            m_sCommand = std::move(sCommand);
+            set_busy();
+
+            // This check could be made earlier, but it is more convenient to do it here.
+            if (m_name.empty() || m_name.find_first_of(" /\\.\"$") != string::npos)
+            {
+                ostringstream ss;
+                ss << "Invalid database name: '" << m_name << "'";
+
+                throw SoftError(ss.str(), error::INVALID_NAMESPACE);
+            }
+
+            state = m_sCommand->execute(&pResponse);
         }
-    }
-    catch (const std::exception& x)
-    {
-        MXB_ERROR("std exception occurred when parsing NoSQL command: %s", x.what());
-
-        HardError error(x.what(), error::FAILED_TO_PARSE);
-        m_context.set_last_error(error.create_last_error());
-
-        if (!m_sCommand->is_silent())
+        catch (const Exception& x)
         {
-            pResponse = error.create_response(*m_sCommand);
+            const char* zMessage = x.what();
+
+            // If there is no message, the error was 1) stored in the returned 'writeErrors'
+            // array and 2) already warned for.
+            if (*zMessage != 0)
+            {
+                MXB_WARNING("nosql exception occurred when executing NoSQL command: %s", zMessage);
+            }
+
+            m_context.set_last_error(x.create_last_error());
+
+            if (!m_sCommand->is_silent())
+            {
+                pResponse = x.create_response(*m_sCommand.get());
+            }
+        }
+        catch (const bsoncxx::exception& x)
+        {
+            MXB_ERROR("bsoncxx exeception occurred when parsing NoSQL command: %s", x.what());
+
+            HardError error(x.what(), error::FAILED_TO_PARSE);
+            m_context.set_last_error(error.create_last_error());
+
+            if (!m_sCommand->is_silent())
+            {
+                pResponse = error.create_response(*m_sCommand);
+            }
+        }
+        catch (const std::exception& x)
+        {
+            MXB_ERROR("std exception occurred when parsing NoSQL command: %s", x.what());
+
+            HardError error(x.what(), error::FAILED_TO_PARSE);
+            m_context.set_last_error(error.create_last_error());
+
+            if (!m_sCommand->is_silent())
+            {
+                pResponse = error.create_response(*m_sCommand);
+            }
         }
     }
 

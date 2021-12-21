@@ -35,6 +35,7 @@
 
 class DCB;
 
+class ClientConnection;
 class Config;
 class ComERR;
 
@@ -1279,7 +1280,7 @@ public:
 
         Context(UserManager* pUm,
                 MXS_SESSION* pSession,
-                mxs::ClientConnection* pClient_connection,
+                ClientConnection* pClient_connection,
                 mxs::Component* pDownstream);
 
         UserManager& um() const
@@ -1287,9 +1288,14 @@ public:
             return m_um;
         }
 
-        mxs::ClientConnection& client_connection()
+        ClientConnection& client_connection()
         {
             return m_client_connection;
+        }
+
+        MXS_SESSION& session()
+        {
+            return m_session;
         }
 
         mxs::Component& downstream()
@@ -1356,7 +1362,7 @@ public:
     private:
         UserManager&               m_um;
         MXS_SESSION&               m_session;
-        mxs::ClientConnection&     m_client_connection;
+        ClientConnection&          m_client_connection;
         mxs::Component&            m_downstream;
         int32_t                    m_request_id { 1 };
         int64_t                    m_connection_id;
@@ -1368,11 +1374,11 @@ public:
         static std::atomic<int64_t> s_connection_id;
     };
 
-    NoSQL(MXS_SESSION*           pSession,
-          mxs::ClientConnection* pClient_connection,
-          mxs::Component*        pDownstream,
-          Config*                pConfig,
-          UserManager*           pUm);
+    NoSQL(MXS_SESSION*      pSession,
+          ClientConnection* pClient_connection,
+          mxs::Component*   pDownstream,
+          Config*           pConfig,
+          UserManager*      pUm);
     ~NoSQL();
 
     NoSQL(const NoSQL&) = delete;

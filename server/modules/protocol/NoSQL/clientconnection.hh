@@ -49,6 +49,13 @@ public:
         return true;
     }
 
+    bool is_ready() const
+    {
+        return m_state == READY;
+    }
+
+    bool setup_session();
+
 private:
     // DCBHandler
     void ready_for_reading(DCB* dcb) override;
@@ -64,18 +71,6 @@ private:
     bool is_movable() const override;
 
 private:
-    bool is_ready() const
-    {
-        return m_state == READY;
-    }
-
-    void set_ready()
-    {
-        m_state = READY;
-    }
-
-    bool setup_session();
-
     GWBUF* handle_one_packet(GWBUF* pPacket);
 
 private:

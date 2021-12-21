@@ -20,6 +20,7 @@
 #include <map>
 #include <maxscale/config.hh>
 #include <maxscale/maxscale.h>
+#include "../clientconnection.hh"
 #include "query_and_write_operation.hh"
 
 namespace nosql
