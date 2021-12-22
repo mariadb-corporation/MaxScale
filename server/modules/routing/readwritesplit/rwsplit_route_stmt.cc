@@ -590,6 +590,7 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
     {
         MXS_ERROR("No valid candidates for session command `%s`. Connection status: %s",
                   mxs::extract_sql(buffer).c_str(), get_verbose_status().c_str());
+        ok = false;
     }
 
     return ok;
