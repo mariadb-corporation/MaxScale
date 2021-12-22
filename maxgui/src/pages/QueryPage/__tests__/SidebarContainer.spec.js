@@ -171,4 +171,145 @@ describe(`SidebarContainer - computed properties tests`, () => {
         expect(wrapper.vm.stmtErrMsgObj).to.be.deep.equals(dummy_exe_stmt_result.stmt_err_msg_obj)
     })
 })
-//TODO: add more method tests
+describe(`SidebarContainer - button tests (If there is no connection)`, () => {
+    let wrapper
+    it(`Should disable reload-btn `, () => {
+        wrapper = mountFactory({
+            shallow: false,
+            computed: { isConnecting: () => true },
+        })
+        expect(wrapper.find('.reload-btn').attributes().disabled).to.be.equals('disabled')
+    })
+    it(`Should disable filter-objects input`, () => {
+        wrapper = mountFactory({
+            shallow: false,
+            computed: { isConnecting: () => true },
+        })
+        expect(
+            wrapper
+                .find('.filter-objects')
+                .find('input')
+                .attributes().disabled
+        ).to.be.equals('disabled')
+    })
+    it(`Should call SET_IS_SIDEBAR_COLLAPSED when collapse-btn is clicked`, () => {
+        let is_sidebar_collapsed = false
+        wrapper = mountFactory({
+            shallow: false,
+            //SET_IS_SIDEBAR_COLLAPSED is a mutation, so it should be stubbed
+            methods: { SET_IS_SIDEBAR_COLLAPSED: () => (is_sidebar_collapsed = true) },
+        })
+        wrapper.find('.collapse-btn').trigger('click')
+        expect(is_sidebar_collapsed).to.be.true
+    })
+    it(`Should call reloadTreeNodes when reload button is clicked`, () => {
+        wrapper = mountFactory({
+            shallow: false,
+            computed: { ...mockShowingDbListTree(), is_sidebar_collapsed: () => false },
+        })
+        const reloadTreeNodesSpy = sinon.spy(wrapper.vm, 'reloadTreeNodes')
+        wrapper.find('.reload-btn').trigger('click')
+        reloadTreeNodesSpy.should.have.been.calledOnce
+    })
+})
+describe(`SidebarContainer - methods tests`, () => {
+    let wrapper
+    it(`Should process handleGetNodeData method as expected`, () => {
+        let clearDataPreviewCallCount = 0
+        let queryModeParam, fetchPrvwParams
+        wrapper = mountFactory({
+            methods: {
+                clearDataPreview: () => clearDataPreviewCallCount++,
+                SET_CURR_QUERY_MODE: mode => (queryModeParam = mode),
+                fetchPrvw: params => (fetchPrvwParams = params),
+            },
+        })
+        const mockParam = { SQL_QUERY_MODE: 'PRVW_DATA', schemaId: 'test.t1' }
+        wrapper.vm.handleGetNodeData(mockParam)
+        expect(clearDataPreviewCallCount).to.be.equals(1)
+        expect(queryModeParam).to.be.equals(mockParam.SQL_QUERY_MODE)
+        expect(fetchPrvwParams).to.be.deep.equals({
+            tblId: mockParam.schemaId,
+            prvwMode: mockParam.SQL_QUERY_MODE,
+        })
+    })
+    it(`Should call updateTreeNodes when handleLoadChildren is called`, () => {
+        let updateTreeNodesParam
+        wrapper = mountFactory({
+            methods: {
+                updateTreeNodes: param => (updateTreeNodesParam = param),
+            },
+        })
+        const mockNode = { key: 'node_key_20', type: 'Tables', name: 'Tables', id: 'test.Tables' }
+        wrapper.vm.handleLoadChildren(mockNode)
+        expect(updateTreeNodesParam).to.be.deep.equals(mockNode)
+    })
+    it(`Should process onAlterTable method as expected`, async () => {
+        let queryTblCreationInfoParam
+        wrapper = mountFactory({
+            computed: {
+                engines: () => [],
+                charset_collation_map: () => new Map(),
+                def_db_charset_map: () => new Map(),
+            },
+            methods: {
+                queryTblCreationInfo: param => (queryTblCreationInfoParam = param),
+            },
+        })
+        const mockNode = { key: 'node_key_20', type: 'Table', name: 't1', id: 'test.t1' }
+        const fnsToBeSpied = ['queryEngines', 'queryCharsetCollationMap', 'queryDefDbCharsetMap']
+        fnsToBeSpied.forEach(fn => {
+            sinon.spy(wrapper.vm, fn)
+        })
+
+        await wrapper.vm.onAlterTable(mockNode) // trigger the method
+
+        expect(queryTblCreationInfoParam).to.be.deep.equals(mockNode)
+        wrapper.vm.queryEngines.should.have.been.calledOnce
+        wrapper.vm.queryCharsetCollationMap.should.have.been.calledOnce
+        wrapper.vm.queryDefDbCharsetMap.should.have.been.calledOnce
+        // restore
+        wrapper.vm.queryEngines.restore()
+        wrapper.vm.queryCharsetCollationMap.restore()
+        wrapper.vm.queryDefDbCharsetMap.restore()
+    })
+    it(`Should process onDropAction method as expected`, () => {
+        wrapper = mountFactory()
+        const mockNode = { type: 'Table', id: 'test.t1' }
+        wrapper.vm.onDropAction(mockNode) // trigger the method
+        expect(wrapper.vm.sql).to.be.equals('DROP TABLE `test`.`t1`;')
+        expect(wrapper.vm.actionName).to.be.equals('DROP TABLE `test`.`t1`')
+        expect(wrapper.vm.isExeDlgOpened).to.be.true
+    })
+    it(`Should process onTruncateTbl method as expected`, () => {
+        wrapper = mountFactory()
+        wrapper.vm.onTruncateTbl('test.t1') // trigger the method
+        expect(wrapper.vm.sql).to.be.equals('truncate `test`.`t1`;')
+        expect(wrapper.vm.actionName).to.be.equals('truncate `test`.`t1`')
+        expect(wrapper.vm.isExeDlgOpened).to.be.true
+    })
+    it(`Should call exeStmtAction method when confirmExeStatements is called`, () => {
+        const mockSql = 'truncate `test`.`t1`;'
+        const mockActionName = 'truncate `test`.`t1`'
+        wrapper = mountFactory({ data: () => ({ sql: mockSql, actionName: mockActionName }) })
+        sinon.spy(wrapper.vm, 'exeStmtAction')
+        wrapper.vm.confirmExeStatements() // trigger the method
+        wrapper.vm.exeStmtAction.should.have.been.calledOnceWith({
+            sql: mockSql,
+            action: mockActionName,
+        })
+        wrapper.vm.exeStmtAction.restore()
+    })
+    it(`Should call UPDATE_EXE_STMT_RESULT_MAP mutation when
+      clearExeStatementsResult is called`, () => {
+        const mockActive_wke_id = 'wke_abcd'
+        wrapper = mountFactory({
+            computed: { active_wke_id: () => mockActive_wke_id },
+            methods: { UPDATE_EXE_STMT_RESULT_MAP: () => null },
+        })
+        sinon.spy(wrapper.vm, 'UPDATE_EXE_STMT_RESULT_MAP')
+        wrapper.vm.clearExeStatementsResult() // trigger the method
+        wrapper.vm.UPDATE_EXE_STMT_RESULT_MAP.should.have.been.calledWith({ id: mockActive_wke_id })
+        wrapper.vm.UPDATE_EXE_STMT_RESULT_MAP.restore()
+    })
+})
