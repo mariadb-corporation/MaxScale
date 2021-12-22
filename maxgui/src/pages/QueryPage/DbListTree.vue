@@ -2,8 +2,9 @@
     <!-- TODO: Virtual scroll treeview -->
     <div v-if="getDbTreeData.length">
         <m-treeview
+            class="m-treeview"
             :items="getDbTreeData"
-            :search="$parent.searchSchema"
+            :search="search_schema"
             :filter="filter"
             hoverable
             dense
@@ -28,7 +29,7 @@
                         {{ iconSheet(item) }}
                     </v-icon>
                     <span
-                        class="text-truncate d-inline-block"
+                        class="text-truncate d-inline-block node-name"
                         :class="{
                             'font-weight-bold':
                                 item.type === SQL_NODE_TYPES.SCHEMA && active_db === item.name,
@@ -130,6 +131,7 @@ export default {
             expanded_nodes: state => state.query.expanded_nodes,
             active_wke_id: state => state.query.active_wke_id,
             active_db: state => state.query.active_db,
+            search_schema: state => state.query.search_schema,
         }),
         ...mapGetters({
             getDbTreeData: 'query/getDbTreeData',
