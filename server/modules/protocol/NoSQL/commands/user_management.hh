@@ -45,7 +45,7 @@ public:
             {
                 auto& um = m_database.context().um();
 
-                vector<uint8_t> salt = scram::create_random_vector(scram::SERVER_SALT_SIZE);
+                vector<uint8_t> salt = crypto::create_random_bytes(scram::SERVER_SALT_SIZE);
                 string salt_b64 = mxs::to_base64(salt);
 
                 if (um.add_user(m_scope, m_user, m_pwd, salt_b64, m_roles))

@@ -87,7 +87,7 @@ export default {
         is_fullscreen() {
             this.$help.doubleRAF(() => this.setCtrDim())
         },
-        async active_wke_id(v) {
+        active_wke_id(v) {
             if (v) this.UPDATE_SA_WKE_STATES(this.getActiveWke)
         },
     },

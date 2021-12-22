@@ -235,21 +235,21 @@ bool ClientConnection::is_movable() const
     return true;
 }
 
-bool ClientConnection::setup_session()
+bool ClientConnection::setup_session(const string& user, const string& password)
 {
     mxb_assert(!is_ready());
 
     m_session_data.auth_data = std::make_unique<mariadb::AuthenticationData>();
     auto& auth_data = *m_session_data.auth_data;
-    auth_data.user = m_config.user;
+    auth_data.user = user;
     m_session.set_user(auth_data.user);
     auth_data.default_db = "";
     m_session_data.current_db = "";
     auth_data.plugin = "mysql_native_password";
 
-    if (!m_config.password.empty())
+    if (!password.empty())
     {
-        const uint8_t* pPassword = reinterpret_cast<const uint8_t*>(m_config.password.data());
+        const uint8_t* pPassword = reinterpret_cast<const uint8_t*>(password.data());
         auto nPassword = m_config.password.length();
         uint8_t auth_token[SHA_DIGEST_LENGTH];
 
@@ -290,39 +290,22 @@ bool ClientConnection::setup_session()
     m_session_data.history.push_back(mxs::Buffer(pStmt));
     m_session_data.history_responses.insert(std::make_pair(id, true));
 
-    return m_session.start();
+    bool ready = m_session.start();
+
+    if (ready)
+    {
+        m_state = READY;
+    }
+
+    return ready;
 }
 
 GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)
 {
-    bool ready = true;
-    GWBUF* pResponse = nullptr;
+    mxb_assert(gwbuf_is_contiguous(pPacket));
+    mxb_assert(gwbuf_length(pPacket) >= protocol::HEADER_LEN);
 
-    if (!is_ready())
-    {
-        ready = setup_session();
-
-        if (ready)
-        {
-            set_ready();
-        }
-        else
-        {
-            MXB_ERROR("Could not start session, closing client connection.");
-            gwbuf_free(pPacket);
-            m_session.kill();
-        }
-    }
-
-    if (ready)
-    {
-        mxb_assert(gwbuf_is_contiguous(pPacket));
-        mxb_assert(gwbuf_length(pPacket) >= protocol::HEADER_LEN);
-
-        pResponse = m_nosql.handle_request(pPacket);
-    }
-
-    return pResponse;
+    return m_nosql.handle_request(pPacket);
 }
 
 bool ClientConnection::clientReply(GWBUF* pBuffer, mxs::ReplyRoute& down, const mxs::Reply& reply)

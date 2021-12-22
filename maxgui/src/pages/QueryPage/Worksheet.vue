@@ -8,25 +8,20 @@
     >
         <template slot="pane-left">
             <sidebar-container
-                @place-to-editor="$typy($refs.txtEditorPane, 'placeToEditor').safeFunction($event)"
-                @on-dragging="$typy($refs.txtEditorPane, 'draggingTxt').safeFunction($event)"
-                @on-dragend="
-                    $typy($refs.txtEditorPane, 'dropTxtToEditor').safeFunction({
-                        e: $event,
-                        type: 'schema',
-                    })
-                "
+                @place-to-editor="$typy($refs.txtEditor, 'placeToEditor').safeFunction($event)"
+                @on-dragging="$typy($refs.txtEditor, 'draggingTxt').safeFunction($event)"
+                @on-dragend="$typy($refs.txtEditor, 'dropTxtToEditor').safeFunction($event)"
             />
         </template>
         <template slot="pane-right">
             <keep-alive>
                 <txt-editor-container
                     v-if="isTxtEditor"
-                    ref="txtEditorPane"
-                    :dim="txtEditorPaneDim"
+                    ref="txtEditor"
+                    :dim="txtEditorDim"
                     v-on="$listeners"
                 />
-                <ddl-editor-container v-else ref="ddlEditor" :dynDim="ddlDim" />
+                <ddl-editor-container v-else ref="ddlEditor" :dim="ddlEditorDim" />
             </keep-alive>
         </template>
     </split-pane>
@@ -62,8 +57,8 @@ export default {
     data() {
         return {
             // split-pane states
-            txtEditorPaneDim: { width: 0, height: 0 },
-            ddlDim: { height: 0, width: 0 },
+            txtEditorDim: { width: 0, height: 0 },
+            ddlEditorDim: { height: 0, width: 0 },
             sidebarPct: 0,
         }
     },
@@ -82,7 +77,6 @@ export default {
             return this.getCurrEditorMode === this.SQL_EDITOR_MODES.TXT_EDITOR
         },
         minSidebarPct() {
-            if (!this.ctrDim.width) return 0
             if (this.is_sidebar_collapsed)
                 return this.$help.pxToPct({ px: 40, containerPx: this.ctrDim.width })
             else return this.$help.pxToPct({ px: 200, containerPx: this.ctrDim.width })
@@ -103,9 +97,7 @@ export default {
         },
     },
     created() {
-        this.$help.doubleRAF(() => {
-            this.handleSetSidebarPct()
-        })
+        this.handleSetSidebarPct()
     },
     activated() {
         this.addIsSidebarCollapsedsWatcher()
@@ -126,15 +118,15 @@ export default {
             else this.sidebarPct = this.$help.pxToPct({ px: 240, containerPx: this.ctrDim.width })
         },
         setTxtEditorPaneDim() {
-            if (this.$refs.txtEditorPane.$el) {
-                const { width, height } = this.$refs.txtEditorPane.$el.getBoundingClientRect()
-                if (width !== 0 || height !== 0) this.txtEditorPaneDim = { width, height }
+            if (this.$refs.txtEditor.$el) {
+                const { width, height } = this.$refs.txtEditor.$el.getBoundingClientRect()
+                if (width !== 0 || height !== 0) this.txtEditorDim = { width, height }
             }
         },
         setDdlDim() {
             if (this.$refs.ddlEditor) {
                 const { width, height } = this.$refs.ddlEditor.$el.getBoundingClientRect()
-                if (width !== 0 || height !== 0) this.ddlDim = { width, height }
+                if (width !== 0 || height !== 0) this.ddlEditorDim = { width, height }
             }
         },
         handleRecalPanesDim() {

@@ -14,7 +14,7 @@
             <table v-if="hasSavingErr" class="err-tbl-code pa-4">
                 <tr>
                     <td><b>sql</b></td>
-                    <td>{{ executedSql }}</td>
+                    <td>{{ currSql }}</td>
                 </tr>
                 <tr v-for="(v, key) in errMsgObj" :key="key">
                     <td>
@@ -80,7 +80,6 @@ export default {
         title: { type: String, required: true },
         smallInfo: { type: String, default: '' },
         hasSavingErr: { type: Boolean, required: true },
-        executedSql: { type: String, required: true },
         errMsgObj: { type: Object, required: true },
         sqlTobeExecuted: { type: String, required: true },
         editorHeight: { type: Number, default: 250 },

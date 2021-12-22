@@ -59,6 +59,11 @@ public:
         return false;
     }
 
+    virtual bool session_must_be_ready() const
+    {
+        return true;
+    }
+
     virtual std::string description() const = 0;
 
     virtual std::string to_json() const;

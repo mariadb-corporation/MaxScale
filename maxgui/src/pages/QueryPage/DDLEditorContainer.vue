@@ -35,7 +35,7 @@
 
             <ddl-editor-form
                 v-model="formData"
-                :dynDim="formDim"
+                :dim="formDim"
                 @is-form-valid="isFormValid = $event"
             />
             <execute-sql-dialog
@@ -49,7 +49,6 @@
                     isAlterFailed ? '' : $tc('info.exeStatementsInfo', stmtI18nPluralization)
                 "
                 :hasSavingErr="isAlterFailed"
-                :executedSql="alterSql"
                 :errMsgObj="stmtErrMsgObj"
                 :sqlTobeExecuted.sync="sql"
                 :onSave="confirmAlter"
@@ -85,7 +84,7 @@ export default {
         'execute-sql-dialog': ExecuteSqlDialog,
     },
     props: {
-        dynDim: { type: Object, required: true },
+        dim: { type: Object, required: true },
     },
     data() {
         return {
@@ -109,7 +108,7 @@ export default {
         }),
         formDim() {
             // title height: 36, border thickness: 2
-            return { ...this.dynDim, height: this.dynDim.height - 36 - 2 }
+            return { ...this.dim, height: this.dim.height - 36 - 2 }
         },
         isLoading() {
             return Boolean(this.getLoadingTblCreationInfo && !this.initialData)
@@ -147,9 +146,6 @@ export default {
         },
         stmtErrMsgObj() {
             return this.$typy(this.getExeStmtResultMap, 'stmt_err_msg_obj').safeObjectOrEmpty
-        },
-        alterSql() {
-            return this.$typy(this.getExeStmtResultMap, 'data.sql').safeString
         },
         currColsData() {
             return this.$typy(this.formData, 'cols_opts_data.data').safeArray

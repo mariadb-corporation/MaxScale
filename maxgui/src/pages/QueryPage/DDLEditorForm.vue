@@ -68,7 +68,7 @@ export default {
     },
     props: {
         formData: { type: Object, required: true },
-        dynDim: { type: Object, required: true },
+        dim: { type: Object, required: true },
     },
     data() {
         return {
@@ -114,9 +114,9 @@ export default {
         },
         tabDim() {
             return {
-                width: this.dynDim.width - 24, // v-tab-item class px-3
+                width: this.dim.width - 24, // v-tab-item class px-3
                 // v-tab-item class py-2: 16 && v-tabs-bar: 24
-                height: this.dynDim.height - this.headerHeight - 24 - 16,
+                height: this.dim.height - this.headerHeight - 24 - 16,
             }
         },
         isEmptyFormData() {

@@ -34,6 +34,11 @@ public:
 
     using ImmediateCommand::ImmediateCommand;
 
+    bool session_must_be_ready() const override
+    {
+        return false;
+    }
+
     void populate_response(DocumentBuilder& doc) override
     {
         populate_response(m_database, m_doc, doc);

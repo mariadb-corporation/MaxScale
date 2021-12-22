@@ -165,7 +165,7 @@ private:
 
     void authenticate(NoSQL::Sasl& sasl, DocumentBuilder& doc)
     {
-        vector<uint8_t> server_nonce = scram::create_random_vector(scram::SERVER_NONCE_SIZE);
+        vector<uint8_t> server_nonce = crypto::create_random_bytes(scram::SERVER_NONCE_SIZE);
 
         auto server_nonce_b64 = mxs::to_base64(server_nonce.data(), server_nonce.size());
 
@@ -305,16 +305,16 @@ private:
 
         string password = info.user + ":mongo:" + info.pwd; // MongoDB SCRAM-SHA-1
 
-        string md5_password = scram::md5hex(password);
+        string md5_password = crypto::md5hex(password);
 
-        auto salted_password = scram::pbkdf2_sha_1(md5_password.c_str(), info.salt, scram::ITERATIONS);
-        auto client_key = scram::hmac_sha_1(salted_password, "Client Key");
-        auto stored_key = scram::sha_1(client_key);
+        auto salted_password = scram::pbkdf2_hmac_sha_1(md5_password.c_str(), info.salt, scram::ITERATIONS);
+        auto client_key = crypto::hmac_sha_1(salted_password, "Client Key");
+        auto stored_key = crypto::sha_1(client_key);
         string auth_message = sasl.initial_message()
             + "," + sasl.server_first_message()
             + "," + client_final_message_bare;
 
-        auto client_signature = scram::hmac_sha_1(stored_key, auth_message);
+        auto client_signature = crypto::hmac_sha_1(stored_key, auth_message);
 
         vector<uint8_t> server_client_proof;
 
@@ -340,8 +340,8 @@ private:
                       const string& auth_message,
                       DocumentBuilder& doc)
     {
-        auto server_key = scram::hmac_sha_1(salted_password, "Server Key");
-        auto server_signature = scram::hmac_sha_1(server_key, auth_message);
+        auto server_key = crypto::hmac_sha_1(salted_password, "Server Key");
+        auto server_signature = crypto::hmac_sha_1(server_key, auth_message);
         string server_signature_b64 = mxs::to_base64(server_signature);
 
         ostringstream ss;

@@ -95,6 +95,18 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+/*
+This component emits the following events
+@get-node-data: { SQL_QUERY_MODE: string, schemaId:string }
+@place-to-editor: v:string. Place text to editor
+@alter-tbl: Node. Alter table node
+@drop-action: { id:string, type:string }: Node.
+@truncate-tbl: { id:string }: Node.
+@use-db: { id:string }: Node.
+@load-children: Node. Async event.
+@on-dragging: Event.
+@on-dragend: Event.
+*/
 import { mapGetters, mapMutations, mapState } from 'vuex'
 import customDragEvt from 'mixins/customDragEvt'
 export default {
@@ -110,6 +122,7 @@ export default {
     },
     computed: {
         ...mapState({
+            SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             SQL_DDL_ALTER_SPECS: state => state.app_config.SQL_DDL_ALTER_SPECS,
             SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
             SQL_NODE_TYPES: state => state.app_config.SQL_NODE_TYPES,
@@ -339,10 +352,16 @@ export default {
             this.updateActiveNode(item)
             switch (opt.text) {
                 case this.$t('previewData'):
-                    this.$emit('preview-data', item.id)
+                    this.$emit('get-node-data', {
+                        SQL_QUERY_MODE: this.SQL_QUERY_MODES.PRVW_DATA,
+                        schemaId: item.id,
+                    })
                     break
                 case this.$t('viewDetails'):
-                    this.$emit('view-details', item.id)
+                    this.$emit('get-node-data', {
+                        SQL_QUERY_MODE: this.SQL_QUERY_MODES.PRVW_DATA_DETAILS,
+                        schemaId: item.id,
+                    })
                     break
             }
         },
@@ -489,7 +508,11 @@ export default {
             ]
         },
         onNodeClick(item) {
-            if (item.canBeHighlighted) this.$emit('preview-data', this.activeNodes[0].id)
+            if (item.canBeHighlighted)
+                this.$emit('get-node-data', {
+                    SQL_QUERY_MODE: this.SQL_QUERY_MODES.PRVW_DATA,
+                    schemaId: this.activeNodes[0].id,
+                })
         },
         onContextMenu({ e, item }) {
             if (this.nodesHaveCtxMenu.includes(item.type)) this.handleOpenCtxMenu({ e, item })

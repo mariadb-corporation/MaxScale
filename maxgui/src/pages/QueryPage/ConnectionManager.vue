@@ -92,6 +92,7 @@
             :item="connToBeDel"
             :onSave="confirmDelConn"
         />
+        <reconn-dialog />
     </div>
 </template>
 
@@ -110,10 +111,13 @@
  */
 import { mapActions, mapGetters, mapMutations, mapState } from 'vuex'
 import ConnectionDialog from './ConnectionDialog'
+import ReconnDialog from './ReconnDialog.vue'
+
 export default {
     name: 'connection-manager',
     components: {
         ConnectionDialog,
+        ReconnDialog,
     },
     props: {
         disabled: { type: Boolean, required: true },
@@ -138,10 +142,15 @@ export default {
             getActiveWke: 'query/getActiveWke',
             getDbTreeData: 'query/getDbTreeData',
         }),
+        /**
+         * @returns connection ids that are bound to worksheets
+         */
         usedConnections() {
-            return this.worksheets_arr.map(
-                wke => this.$typy(wke, 'curr_cnct_resource.id').safeString
-            )
+            return this.worksheets_arr.reduce((acc, wke) => {
+                const connId = this.$typy(wke, 'curr_cnct_resource.id').safeString
+                if (connId) acc.push(connId)
+                return acc
+            }, [])
         },
         connOptions() {
             return this.cnct_resources.map(cnctRsrc =>
@@ -155,7 +164,7 @@ export default {
         },
     },
     watch: {
-        //Watcher to handle multi-worksheets
+        //Watcher to handle multi-worksheets or after creating a connection
         curr_cnct_resource: {
             deep: true,
             async handler(v) {
@@ -167,9 +176,9 @@ export default {
                     this.assignActiveConn()
                     /**
                      * If the worksheet has an active connection but schema tree data which is stored
-                     * in memory is an empty array, then call initialFetch to populate the data
+                     * in memory is an empty array, then call initialFetch to populate the data.
                      */
-                    if (this.getDbTreeData.length === 0) await this.handleDispatchIntialFetch(v)
+                    if (this.getDbTreeData.length === 0) await this.handleDispatchInitialFetch(v)
                 }
             },
         },
@@ -179,7 +188,7 @@ export default {
         if (!this.connOptions.length) this.openConnDialog()
         else {
             this.assignActiveConn()
-            await this.handleDispatchIntialFetch(this.curr_cnct_resource)
+            await this.handleDispatchInitialFetch(this.curr_cnct_resource)
         }
     },
     methods: {
@@ -197,16 +206,12 @@ export default {
          * state is defined
          * @param {Object} curr_cnct_resource  curr_cnct_resource
          */
-        async handleDispatchIntialFetch(curr_cnct_resource) {
+        async handleDispatchInitialFetch(curr_cnct_resource) {
             if (curr_cnct_resource.id) await this.initialFetch(curr_cnct_resource)
         },
         async onSelectConn(v) {
-            if (this.$typy(v, 'id').isDefined) {
-                this.SET_CURR_CNCT_RESOURCE({ payload: v, active_wke_id: this.active_wke_id })
-                if (this.curr_cnct_resource.id) {
-                    await this.initialFetch(v)
-                }
-            }
+            this.SET_CURR_CNCT_RESOURCE({ payload: v, active_wke_id: this.active_wke_id })
+            if (this.curr_cnct_resource.id) await this.initialFetch(v)
         },
         assignActiveConn() {
             if (this.curr_cnct_resource) this.chosenConn = this.curr_cnct_resource
@@ -221,11 +226,12 @@ export default {
         },
         async handleOpenConn(opts) {
             /**
-             *  When creating new connection, if current worksheet has been binded to
+             *  When creating new connection, if current worksheet has been bound to
              *  a connection already, after successful connecting, dispatch initialFetch
-             *  to reload schemas tree and other related components
+             *  to reload schemas tree and other related components. Otherwise,
+             *  after creating a connection, curr_cnct_resource watcher will handle
+             *  calling handleDispatchInitialFetch
              */
-
             const hasConnectionAlready = Boolean(this.curr_cnct_resource.id)
             await this.openConnect(opts)
             if (hasConnectionAlready && !this.conn_err_state)

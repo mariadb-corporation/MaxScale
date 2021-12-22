@@ -613,6 +613,11 @@ class ImmediateCommand : public OpMsgCommand
 public:
     using OpMsgCommand::OpMsgCommand;
 
+    bool session_must_be_ready() const override
+    {
+        return false;
+    }
+
     State execute(GWBUF** ppNoSQL_response) override final;
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final;
