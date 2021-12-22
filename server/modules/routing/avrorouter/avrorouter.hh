@@ -203,6 +203,7 @@ private:
     bool             m_requested_gtid;  /*< If the client requested */
     gtid_pos_t       m_gtid;            /*< Current/requested GTID */
     gtid_pos_t       m_gtid_start;      /*< First sent GTID */
+    bool             m_in_high_waters = false;
 
     AvroSession(Avro* instance, MXS_SESSION* session);
 
@@ -217,6 +218,9 @@ private:
     void rotate_avro_file(std::string fullname);
     void client_callback();
     int  send_row(json_t* row);
+
+    static int high_water_mark_reached(DCB* dcb, DCB::Reason reason, void* userdata);
+    static int low_water_mark_reached(DCB* dcb, DCB::Reason reason, void* userdata);
 };
 
 bool              avro_open_binlog(const char* binlogdir, const char* file, int* fd);
