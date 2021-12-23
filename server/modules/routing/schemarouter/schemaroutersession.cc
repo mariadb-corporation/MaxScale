@@ -45,7 +45,8 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session,
     , m_backends(backends)
     , m_config(router->m_config)
     , m_router(router)
-    , m_shard(m_router->m_shard_manager.get_shard(get_cache_key(), m_config->refresh_min_interval))
+    , m_key(get_cache_key())
+    , m_shard(m_router->m_shard_manager.get_shard(m_key, m_config->refresh_min_interval))
     , m_state(0)
     , m_sent_sescmd(0)
     , m_replied_sescmd(0)
@@ -109,6 +110,11 @@ void SchemaRouterSession::close()
             {
                 bref->close();
             }
+        }
+
+        if (m_state & INIT_MAPPING)
+        {
+            m_router->m_shard_manager.cancel_update(m_key);
         }
 
         std::lock_guard<std::mutex> guard(m_router->m_lock);
@@ -283,8 +289,26 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
 
     if (m_shard.empty())
     {
-        /* Generate database list */
-        query_databases();
+        // Check if another session has managed to update the shard cache
+        m_shard = m_router->m_shard_manager.get_shard(m_key, m_config->refresh_min_interval);
+
+        if (m_shard.empty())
+        {
+            // No entries in the cache, try to start an update
+            if (m_router->m_shard_manager.start_update(m_key))
+            {
+                // No other sessions are doing an update for this user, start one
+                query_databases();
+            }
+            else
+            {
+                // Too many concurrent updates
+
+                // TODO: Queue this session instead of killing it
+                m_pSession->kill(modutil_create_mysql_err_msg(1, 0, 1096, "HY000", "Too many updates"));
+                return 0;
+            }
+        }
     }
 
     int ret = 0;
@@ -753,7 +777,7 @@ void SchemaRouterSession::handleError(GWBUF* pMessage,
 void SchemaRouterSession::synchronize_shards()
 {
     m_router->m_stats.shmap_cache_miss++;
-    m_router->m_shard_manager.update_shard(m_shard, get_cache_key());
+    m_router->m_shard_manager.update_shard(m_shard, m_key);
 }
 
 /**

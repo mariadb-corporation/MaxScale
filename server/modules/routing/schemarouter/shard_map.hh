@@ -111,7 +111,8 @@ private:
     time_t      m_last_updated;
 };
 
-typedef std::unordered_map<std::string, Shard> ShardMap;
+typedef std::unordered_map<std::string, Shard>   ShardMap;
+typedef std::unordered_map<std::string, int64_t> MapLimits;
 
 class ShardManager
 {
@@ -141,7 +142,38 @@ public:
      */
     void update_shard(Shard& shard, std::string user);
 
+    /**
+     * Set how many concurrent shard updates are allowed per user
+     *
+     * By default only one update per user is allowed.
+     *
+     * @param limit Number of concurrent users to allow
+     */
+    void set_update_limit(int64_t limit);
+
+    /**
+     * Start a shard update
+     *
+     * The update is considered finished when either update_shard() or cancel_update() is called. One of these
+     * two must be called by the session once start_update() has returned true.
+     *
+     * @param user The user whose shard is about to be updated
+     *
+     * @return True if an update can be done. False if there are too many concurrent
+     *         updates being done by this user.
+     */
+    bool start_update(const std::string& user);
+
+    /**
+     * Cancels a started shard update
+     *
+     * @param user The user whose shard was being updated
+     */
+    void cancel_update(const std::string& user);
+
 private:
     mutable std::mutex m_lock;
     ShardMap           m_maps;
+    MapLimits          m_limits;
+    int64_t            m_update_limit {1};
 };

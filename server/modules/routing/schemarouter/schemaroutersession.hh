@@ -160,6 +160,7 @@ private:
     SSRBackendList         m_backends;      /**< Backend references */
     SConfig                m_config;        /**< Session specific configuration */
     SchemaRouter*          m_router;        /**< The router instance */
+    std::string            m_key;           /**< Shard cache key */
     Shard                  m_shard;         /**< Database to server mapping */
     std::string            m_connect_db;    /**< Database the user was trying to connect to */
     std::string            m_current_db;    /**< Current active database */
