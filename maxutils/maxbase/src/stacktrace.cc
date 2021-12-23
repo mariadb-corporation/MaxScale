@@ -19,6 +19,8 @@
 #include <cstdarg>
 #include <climits>
 
+#include <sys/prctl.h>
+
 #ifdef HAVE_GLIBC
 #include <execinfo.h>
 #endif
@@ -224,10 +226,12 @@ void dump_stacktrace(void (* handler)(const char*, const char*))
 
 void dump_gdb_stacktrace(void (* handler)(const char*))
 {
+    prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY);
     get_command_output_cb(
         handler,
         "gdb --pid=%d -batch -iex 'set print thread-events off' -ex 'thr a a bt'",
         getpid());
+    prctl(PR_SET_PTRACER, 0);
 }
 
 bool have_gdb()
