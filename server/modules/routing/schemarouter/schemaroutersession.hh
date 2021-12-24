@@ -148,6 +148,7 @@ private:
     int                  inspect_mapping_states(SSRBackend& bref, GWBUF** wbuf);
     enum showdb_response parse_mapping_response(SSRBackend& bref, GWBUF** buffer);
     void                 route_queued_query();
+    bool                 delay_routing(mxb::Worker::Call::action_t action);
     void                 synchronize_shards();
     void                 handle_mapping_reply(SSRBackend& bref, GWBUF** pPacket);
     bool                 handle_statement(GWBUF* querybuf, SSRBackend& bref, uint8_t command, uint32_t type);
@@ -170,5 +171,6 @@ private:
     uint64_t               m_sent_sescmd;   /**< The latest session command being executed */
     uint64_t               m_replied_sescmd;/**< The last session command reply that was sent to the client */
     SERVER*                m_load_target;   /**< Target for LOAD DATA LOCAL INFILE */
+    uint32_t               m_dcid {0};
 };
 }
