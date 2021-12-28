@@ -101,7 +101,7 @@ void test_rwsplit(TestConnections& test)
 
 void test_mxs3915(TestConnections& test)
 {
-    auto c = test.maxscale->rwsplit();
+    auto c = test.maxscales->rwsplit();
     test.expect(c.connect(), "Failed to connect: %s", c.error());
     c.query("SET autocommit=0");
     c.query("COMMIT");
