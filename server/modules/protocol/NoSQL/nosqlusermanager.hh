@@ -20,6 +20,32 @@
 namespace nosql
 {
 
+namespace role
+{
+
+enum class Id
+{
+    DB_ADMIN,
+    READ,
+    READ_WRITE
+};
+
+std::string to_string(Id id);
+
+bool from_string(const std::string& key, Id* pId);
+
+inline bool from_string(const char* zKey, Id* pValue)
+{
+    return from_string(std::string(zKey), pValue);
+}
+
+inline bool from_string(const string_view& key, Id* pValue)
+{
+    return from_string(std::string(key.data(), key.length()), pValue);
+}
+
+}
+
 class UserManager
 {
 public:

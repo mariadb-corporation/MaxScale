@@ -15,7 +15,6 @@
 // https://docs.mongodb.com/v4.4/reference/command/nav-user-management/
 //
 #include "defs.hh"
-#include <map>
 #include "../nosqlscram.hh"
 #include "../nosqlusermanager.hh"
 
@@ -23,65 +22,6 @@ using namespace std;
 
 namespace nosql
 {
-
-namespace role
-{
-
-enum class Id
-{
-    DB_ADMIN,
-    READ,
-    READ_WRITE
-};
-
-const map<string, Id> roles =
-{
-    { "dbAdmin",   Id::DB_ADMIN },
-    { "read",      Id::READ },
-    { "readWrite", Id::READ_WRITE }
-};
-
-string to_string(Id id)
-{
-    for (const auto& kv : roles)
-    {
-        if (id == kv.second)
-        {
-            return kv.first;
-        }
-    }
-
-    mxb_assert(!true);
-
-    return "unknown";
-}
-
-bool from_string(const string& key, Id* pValue)
-{
-    auto it = roles.find(key);
-
-    bool found = (it != roles.end());
-
-    if (found)
-    {
-        *pValue = it->second;
-    }
-
-    return found;
-}
-
-bool from_string(const char* zKey, Id* pValue)
-{
-    return from_string(string(zKey), pValue);
-}
-
-bool from_string(const string_view& key, Id* pValue)
-{
-    return from_string(string(key.data(), key.length()), pValue);
-}
-
-
-}
 
 namespace command
 {

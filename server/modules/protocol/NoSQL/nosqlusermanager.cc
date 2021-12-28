@@ -12,6 +12,7 @@
  */
 
 #include "nosqlusermanager.hh"
+#include <map>
 #include <maxscale/paths.hh>
 #include <maxscale/utils.hh>
 
@@ -117,6 +118,53 @@ sqlite3* open_or_create_db(const std::string& path)
 
 namespace nosql
 {
+
+namespace role
+{
+
+namespace
+{
+
+const map<string, Id> roles =
+{
+    { "dbAdmin",   Id::DB_ADMIN },
+    { "read",      Id::READ },
+    { "readWrite", Id::READ_WRITE }
+};
+
+}
+
+}
+
+string role::to_string(role::Id id)
+{
+    for (const auto& kv : roles)
+    {
+        if (id == kv.second)
+        {
+            return kv.first;
+        }
+    }
+
+    mxb_assert(!true);
+
+    return "unknown";
+}
+
+bool role::from_string(const string& key, role::Id* pValue)
+{
+    auto it = roles.find(key);
+
+    bool found = (it != roles.end());
+
+    if (found)
+    {
+        *pValue = it->second;
+    }
+
+    return found;
+}
+
 
 UserManager::UserManager(string path, sqlite3* pDb)
     : m_path(std::move(path))
