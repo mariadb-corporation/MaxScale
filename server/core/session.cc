@@ -43,6 +43,7 @@
 #include <maxscale/utils.h>
 #include <maxscale/protocol/mariadb/mysql.hh>
 
+#include "internal/dcb.hh"
 #include "internal/filter.hh"
 #include "internal/session.hh"
 #include "internal/server.hh"
@@ -528,7 +529,15 @@ public:
                 GWBUF* buffer = m_buffer;
                 m_buffer = NULL;
 
-                if (m_down->routeQuery(buffer) == 0)
+                // Setting the current client DCB adds the session ID to the log messages
+                DCB* old_dcb = dcb_get_current();
+                dcb_set_current(m_session->client_dcb);
+
+                int rc = m_down->routeQuery(buffer);
+
+                dcb_set_current(old_dcb);
+
+                if (rc == 0)
                 {
                     // Routing failed, send a hangup to the client.
                     m_session->client_connection()->dcb()->trigger_hangup_event();
