@@ -30,6 +30,12 @@ enum class Id
     READ_WRITE
 };
 
+struct Role
+{
+    std::string db;
+    Id          id;
+};
+
 std::string to_string(Id id);
 
 bool from_string(const std::string& key, Id* pId);
@@ -44,6 +50,8 @@ inline bool from_string(const string_view& key, Id* pValue)
     return from_string(std::string(key.data(), key.length()), pValue);
 }
 
+std::string to_json(const std::vector<role::Role>& roles);
+
 }
 
 class UserManager
@@ -54,12 +62,13 @@ public:
     class UserInfo
     {
     public:
-        std::string          scoped_user;
-        std::string          scope;
-        std::string          user;
-        std::string          pwd;
-        std::vector<uint8_t> salt;
-        std::string          salt_b64;
+        std::string             scoped_user;
+        std::string             scope;
+        std::string             user;
+        std::string             pwd;
+        std::vector<uint8_t>    salt;
+        std::string             salt_b64;
+        std::vector<role::Role> roles;
     };
 
     static std::unique_ptr<UserManager> create(const std::string& name);
@@ -73,7 +82,7 @@ public:
                   const string_view& user,
                   const string_view& pwd,
                   const std::string& salt_b64,
-                  const bsoncxx::array::view& roles);
+                  const std::vector<role::Role>& roles);
 
     bool remove_user(const std::string& scope, const std::string& user);
 

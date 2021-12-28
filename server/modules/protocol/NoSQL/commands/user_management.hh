@@ -120,16 +120,13 @@ protected:
 
         m_statements.push_back("CREATE USER " + user + " IDENTIFIED BY '" + pwd + "'");
 
-        for (const auto& kv : m_role_by_dbs)
+        for (const auto& role : m_roles)
         {
-            const string& db = kv.first;
-            const role::Id role_id = kv.second;
-
-            string scope = (db == "admin" ? "*" : db);
+            string scope = (role.db == "admin" ? "*" : role.db);
 
             vector<string> privileges;
 
-            switch (role_id)
+            switch (role.id)
             {
             case role::Id::DB_ADMIN:
                 privileges.push_back("ALTER");
@@ -363,7 +360,7 @@ private:
 
     void add_role(const string& db, role::Id role_id)
     {
-        m_role_by_dbs.push_back(make_pair(db, role_id));
+        m_roles.push_back(role::Role { db, role_id });
     }
 
     void check_role(const string_view& role_name, const string& db)
@@ -452,14 +449,13 @@ private:
         DROP
     };
 
-    Action                        m_action = Action::CREATE;
-    string                        m_scope;
-    string                        m_user;
-    string_view                   m_pwd;
-    bsoncxx::array::view          m_roles;
-    vector<pair<string,role::Id>> m_role_by_dbs;
-    vector<string>                m_statements;
-    uint32_t                      m_dcid = { 0 };
+    Action             m_action = Action::CREATE;
+    string             m_scope;
+    string             m_user;
+    string_view        m_pwd;
+    vector<role::Role> m_roles;
+    vector<string>     m_statements;
+    uint32_t           m_dcid = { 0 };
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/dropAllUsersFromDatabase/

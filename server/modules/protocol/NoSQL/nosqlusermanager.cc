@@ -23,25 +23,141 @@ namespace
 
 const int SCHEMA_VERSION = 1;
 
+bool get_string_role_id(const string& key, const string& role_name, nosql::role::Id* pId)
+{
+    bool rv = nosql::role::from_string(role_name, pId);
+
+    if (!rv)
+    {
+        MXS_ERROR("Role '%s' of '%s' is unknown.", role_name.c_str(), key.c_str());
+    }
+
+    return rv;
+}
+
+bool get_object_role(const string& key, const mxb::Json& json, nosql::role::Role* pRole)
+{
+    bool rv = false;
+
+    string db;
+    if (json.try_get_string("db", &db))
+    {
+        string role_name;
+        if (json.try_get_string("role", &role_name))
+        {
+            nosql::role::Id id;
+            rv = get_string_role_id(key, role_name, &id);
+
+            if (rv)
+            {
+                pRole->db = std::move(db);
+                pRole->id = id;
+            }
+        }
+        else
+        {
+            MXS_ERROR("An object role of '%s' does not have the 'role' field, or "
+                      "the value is not a string.", key.c_str());
+        }
+    }
+    else
+    {
+        MXS_ERROR("An object role of '%s' does not have the 'db' field.", key.c_str());
+    }
+
+    return rv;
+}
+
+bool get_roles(const string& key,
+               const string& db,
+               const char* zJson,
+               vector<nosql::role::Role>* pRoles)
+{
+    bool rv = false;
+
+    mxb::Json json;
+
+    if (json.load_string(zJson))
+    {
+        if (json.type() == mxb::Json::Type::ARRAY)
+        {
+            vector<mxb::Json> elements = json.get_array_elems();
+            vector<nosql::role::Role> roles;
+
+            auto it = elements.begin();
+            for (; it != elements.end(); ++it)
+            {
+                auto element = *it;
+                auto type = element.type();
+
+                nosql::role::Role role;
+
+                if (type == mxb::Json::Type::STRING)
+                {
+                    role.db = db;
+                    if (!get_string_role_id(key, element.get_string(), &role.id))
+                    {
+                        break;
+                    }
+                }
+                else if (type == mxb::Json::Type::OBJECT)
+                {
+                    if (!get_object_role(key, element, &role))
+                    {
+                        break;
+                    }
+                }
+                else
+                {
+                    break;
+                }
+
+                roles.push_back(role);
+            }
+
+            if (it == elements.end())
+            {
+                pRoles->swap(roles);
+                rv = true;
+            }
+            else
+            {
+                MXS_ERROR("Roles '%s' of '%s' is a JSON array, but all elements are not strings.",
+                          zJson, key.c_str());
+            }
+        }
+        else
+        {
+            MXS_ERROR("Roles '%s' of '%s' is JSON, but not an array.", zJson, key.c_str());
+        }
+    }
+    else
+    {
+        MXS_ERROR("Roles '%s' of '%s' is not valid JSON: %s", zJson, key.c_str(), json.error_msg().c_str());
+    }
+
+    return rv;
+}
+
 //
 // User Database
 //
 static const char SQL_CREATE[] =
     "CREATE TABLE IF NOT EXISTS accounts "
-    "(scoped_user TEXT UNIQUE, scope TEXT, user TEXT, pwd TEXT, salt_b64 TEXT)";
+    "(scoped_user TEXT UNIQUE, scope TEXT, user TEXT, pwd TEXT, salt_b64 TEXT, roles TEXT)";
 
 static const char SQL_INSERT_HEAD[] =
-    "INSERT INTO accounts (scoped_user, scope, user, pwd, salt_b64) VALUES ";
+    "INSERT INTO accounts (scoped_user, scope, user, pwd, salt_b64, roles) VALUES ";
 
 static const char SQL_DELETE_HEAD[] =
     "DELETE FROM accounts WHERE scoped_user = ";
 
 static const char SQL_SELECT_ONE_HEAD[] =
-    "SELECT scoped_user, scope, user, pwd, salt_b64 FROM accounts WHERE scoped_user = ";
+    "SELECT scoped_user, scope, user, pwd, salt_b64, roles FROM accounts WHERE scoped_user = ";
 
 int select_one_cb(void* pData, int nColumns, char** ppColumn, char** ppNames)
 {
-    mxb_assert(nColumns == 5);
+    mxb_assert(nColumns == 6);
 
     auto* pInfos = static_cast<vector<nosql::UserManager::UserInfo>*>(pData);
 
@@ -53,7 +169,18 @@ int select_one_cb(void* pData, int nColumns, char** ppColumn, char** ppNames)
     info.salt_b64 = ppColumn[4];
     info.salt = mxs::from_base64(info.salt_b64);
 
-    pInfos->push_back(info);
+    vector<nosql::role::Role> roles;
+
+    if (get_roles(info.scoped_user, info.scope, ppColumn[5], &roles))
+    {
+        info.roles = std::move(roles);
+
+        pInfos->push_back(info);
+    }
+    else
+    {
+        MXS_WARNING("Ignoring user '%s'.", info.user.c_str());
+    }
 
     return 0;
 }
@@ -165,6 +292,32 @@ bool role::from_string(const string& key, role::Id* pValue)
     return found;
 }
 
+string role::to_json(const std::vector<role::Role>& roles)
+{
+    ostringstream ss;
+
+    ss << "[";
+
+    auto it = roles.begin();
+    for (; it != roles.end(); ++it)
+    {
+        const auto& role = *it;
+
+        if (it != roles.begin())
+        {
+            ss << ", ";
+        }
+
+        ss << "{"
+           << "\"db\": \"" << role.db << "\", "
+           << "\"role\": \"" << to_string(role.id) << "\""
+           << "}";
+    }
+
+    ss << "]";
+
+    return ss.str();
+}
 
 UserManager::UserManager(string path, sqlite3* pDb)
     : m_path(std::move(path))
@@ -220,7 +373,7 @@ bool UserManager::add_user(const string& scope,
                            const string_view& user,
                            const string_view& pwd,
                            const string& salt_b64,
-                           const bsoncxx::array::view& roles)
+                           const vector<role::Role>& roles)
 {
     string scoped_user = scope + "." + string(user.data(), user.length());
 
@@ -230,7 +383,8 @@ bool UserManager::add_user(const string& scope,
        << scope << "', '"
        << user << "', '"
        << pwd << "', '"
-       << salt_b64
+       << salt_b64 << "', '"
+       << role::to_json(roles)
        << "')";
 
     string sql = ss.str();
