@@ -62,8 +62,8 @@ public:
     class UserInfo
     {
     public:
-        std::string             scoped_user;
-        std::string             scope;
+        std::string             db_user;
+        std::string             db;
         std::string             user;
         std::string             pwd;
         std::vector<uint8_t>    salt;
@@ -78,47 +78,47 @@ public:
         return m_path;
     }
 
-    bool add_user(const std::string& scope,
+    bool add_user(const std::string& db,
                   const string_view& user,
                   const string_view& pwd,
                   const std::string& salt_b64,
                   const std::vector<role::Role>& roles);
 
-    bool remove_user(const std::string& scope, const std::string& user);
+    bool remove_user(const std::string& db, const std::string& user);
 
-    bool get_info(const std::string& scope, const std::string& user, UserInfo* pInfo) const;
+    bool get_info(const std::string& db, const std::string& user, UserInfo* pInfo) const;
 
-    bool get_scoped_info(const std::string& scoped_user, UserInfo* pInfo) const;
+    bool get_info(const std::string& db_user, UserInfo* pInfo) const;
 
-    bool get_pwd(const std::string& scope, const std::string& user, std::string* pPwd) const;
+    bool get_pwd(const std::string& db, const std::string& user, std::string* pPwd) const;
 
-    bool get_salt_b64(const std::string& scope, const std::string& user, std::string* pSalt_b64) const;
+    bool get_salt_b64(const std::string& db, const std::string& user, std::string* pSalt_b64) const;
 
-    bool user_exists(const std::string& scope, const std::string& user) const
+    bool user_exists(const std::string& db, const std::string& user) const
     {
-        return get_info(scope, user, nullptr);
+        return get_info(db, user, nullptr);
     }
 
-    bool user_exists(const std::string& scope, const string_view& user) const
+    bool user_exists(const std::string& db, const string_view& user) const
     {
-        return get_info(scope, std::string(user.data(), user.length()), nullptr);
+        return get_info(db, std::string(user.data(), user.length()), nullptr);
     }
 
-    bool scoped_user_exists(const std::string& scoped_user) const
+    bool user_exists(const std::string& db_user) const
     {
-        return get_scoped_info(scoped_user, nullptr);
+        return get_info(db_user, nullptr);
     }
 
-    bool scoped_user_exists(const string_view& scoped_user) const
+    bool user_exists(const string_view& db_user) const
     {
-        return get_scoped_info(std::string(scoped_user.data(), scoped_user.length()), nullptr);
+        return get_info(std::string(db_user.data(), db_user.length()), nullptr);
     }
 
     std::vector<UserInfo> get_infos() const;
 
-    std::vector<UserInfo> get_infos(const std::string& scope) const;
+    std::vector<UserInfo> get_infos(const std::string& db) const;
 
-    std::vector<UserInfo> get_infos(const std::vector<std::string>& scoped_users) const;
+    std::vector<UserInfo> get_infos(const std::vector<std::string>& db_users) const;
 
 private:
     UserManager(std::string path, sqlite3* pDb);

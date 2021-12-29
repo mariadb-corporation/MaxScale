@@ -144,25 +144,25 @@ bool get_roles(const string& key,
 //
 static const char SQL_CREATE[] =
     "CREATE TABLE IF NOT EXISTS accounts "
-    "(scoped_user TEXT UNIQUE, scope TEXT, user TEXT, pwd TEXT, salt_b64 TEXT, roles TEXT)";
+    "(db_user TEXT UNIQUE, db TEXT, user TEXT, pwd TEXT, salt_b64 TEXT, roles TEXT)";
 
 static const char SQL_INSERT_HEAD[] =
-    "INSERT INTO accounts (scoped_user, scope, user, pwd, salt_b64, roles) VALUES ";
+    "INSERT INTO accounts (db_user, db, user, pwd, salt_b64, roles) VALUES ";
 
 static const char SQL_DELETE_HEAD[] =
-    "DELETE FROM accounts WHERE scoped_user = ";
+    "DELETE FROM accounts WHERE db_user = ";
 
 static const char SQL_SELECT_ONE_HEAD[] =
-    "SELECT scoped_user, scope, user, pwd, salt_b64, roles FROM accounts WHERE scoped_user = ";
+    "SELECT db_user, db, user, pwd, salt_b64, roles FROM accounts WHERE db_user = ";
 
 static const char SQL_SELECT_ALL_USERS[] =
-    "SELECT scoped_user, scope, user, pwd, salt_b64, roles FROM accounts";
+    "SELECT db_user, db, user, pwd, salt_b64, roles FROM accounts";
 
-static const char SQL_SELECT_ALL_SCOPE_USERS_HEAD[] =
-    "SELECT scoped_user, scope, user, pwd, salt_b64, roles FROM accounts WHERE scope = ";
+static const char SQL_SELECT_ALL_DB_USERS_HEAD[] =
+    "SELECT db_user, db, user, pwd, salt_b64, roles FROM accounts WHERE db = ";
 
-static const char SQL_SELECT_SOME_SCOPE_USERS_HEAD[] =
-    "SELECT scoped_user, scope, user, pwd, salt_b64, roles FROM accounts WHERE ";
+static const char SQL_SELECT_SOME_DB_USERS_HEAD[] =
+    "SELECT db_user, db, user, pwd, salt_b64, roles FROM accounts WHERE ";
 
 int select_cb(void* pData, int nColumns, char** ppColumn, char** ppNames)
 {
@@ -171,8 +171,8 @@ int select_cb(void* pData, int nColumns, char** ppColumn, char** ppNames)
     auto* pInfos = static_cast<vector<nosql::UserManager::UserInfo>*>(pData);
 
     nosql::UserManager::UserInfo info;
-    info.scoped_user = ppColumn[0];
-    info.scope = ppColumn[1];
+    info.db_user = ppColumn[0];
+    info.db = ppColumn[1];
     info.user = ppColumn[2];
     info.pwd = ppColumn[3];
     info.salt_b64 = ppColumn[4];
@@ -180,7 +180,7 @@ int select_cb(void* pData, int nColumns, char** ppColumn, char** ppNames)
 
     vector<nosql::role::Role> roles;
 
-    if (get_roles(info.scoped_user, info.scope, ppColumn[5], &roles))
+    if (get_roles(info.db_user, info.db, ppColumn[5], &roles))
     {
         info.roles = std::move(roles);
 
@@ -378,18 +378,18 @@ unique_ptr<UserManager> UserManager::create(const string& name)
     return unique_ptr<UserManager>(pThis);
 }
 
-bool UserManager::add_user(const string& scope,
+bool UserManager::add_user(const string& db,
                            const string_view& user,
                            const string_view& pwd,
                            const string& salt_b64,
                            const vector<role::Role>& roles)
 {
-    string scoped_user = scope + "." + string(user.data(), user.length());
+    string db_user = db + "." + string(user.data(), user.length());
 
     ostringstream ss;
     ss << SQL_INSERT_HEAD << "('"
-       << scoped_user << "', '"
-       << scope << "', '"
+       << db_user << "', '"
+       << db << "', '"
        << user << "', '"
        << pwd << "', '"
        << salt_b64 << "', '"
@@ -404,7 +404,7 @@ bool UserManager::add_user(const string& scope,
     if (rv != SQLITE_OK)
     {
         MXS_ERROR("Could not add user '%s' to local database: %s",
-                  scoped_user.c_str(),
+                  db_user.c_str(),
                   pError ? pError : "Unknown error");
         sqlite3_free(pError);
     }
@@ -412,12 +412,12 @@ bool UserManager::add_user(const string& scope,
     return rv == SQLITE_OK;
 }
 
-bool UserManager::remove_user(const string& scope, const string& user)
+bool UserManager::remove_user(const string& db, const string& user)
 {
-    string scoped_user = scope + "." + user;
+    string db_user = db + "." + user;
 
     ostringstream ss;
-    ss << SQL_DELETE_HEAD << "\"" << scoped_user << "\"";
+    ss << SQL_DELETE_HEAD << "\"" << db_user << "\"";
 
     string sql = ss.str();
 
@@ -435,17 +435,17 @@ bool UserManager::remove_user(const string& scope, const string& user)
     return rv == SQLITE_OK;
 }
 
-bool UserManager::get_info(const string& scope, const string& user, UserInfo* pInfo) const
+bool UserManager::get_info(const string& db, const string& user, UserInfo* pInfo) const
 {
-    string scoped_user = scope + "." + user;
+    string db_user = db + "." + user;
 
-    return get_scoped_info(scoped_user, pInfo);
+    return get_info(db_user, pInfo);
 }
 
-bool UserManager::get_scoped_info(const string& scoped_user, UserInfo* pInfo) const
+bool UserManager::get_info(const string& db_user, UserInfo* pInfo) const
 {
     ostringstream ss;
-    ss << SQL_SELECT_ONE_HEAD << "\"" << scoped_user << "\"";
+    ss << SQL_SELECT_ONE_HEAD << "\"" << db_user << "\"";
 
     string sql = ss.str();
 
@@ -456,7 +456,7 @@ bool UserManager::get_scoped_info(const string& scoped_user, UserInfo* pInfo) co
     if (rv != SQLITE_OK)
     {
         MXS_ERROR("Could not get data for user '%s' from local database: %s",
-                  scoped_user.c_str(),
+                  db_user.c_str(),
                   pError ? pError : "Unknown error");
         sqlite3_free(pError);
     }
@@ -470,10 +470,10 @@ bool UserManager::get_scoped_info(const string& scoped_user, UserInfo* pInfo) co
     return !infos.empty();
 }
 
-bool UserManager::get_pwd(const string& scope, const string& user, std::string* pPwd) const
+bool UserManager::get_pwd(const string& db, const string& user, std::string* pPwd) const
 {
     UserInfo info;
-    bool rv = get_info(scope, user, &info);
+    bool rv = get_info(db, user, &info);
 
     if (rv)
     {
@@ -483,10 +483,10 @@ bool UserManager::get_pwd(const string& scope, const string& user, std::string* 
     return rv;
 }
 
-bool UserManager::get_salt_b64(const string& scope, const string& user, std::string* pSalt_b64) const
+bool UserManager::get_salt_b64(const string& db, const string& user, std::string* pSalt_b64) const
 {
     UserInfo info;
-    bool rv = get_info(scope, user, &info);
+    bool rv = get_info(db, user, &info);
 
     if (rv)
     {
@@ -512,10 +512,10 @@ vector<UserManager::UserInfo> UserManager::get_infos() const
     return infos;
 }
 
-vector<UserManager::UserInfo> UserManager::get_infos(const std::string& scope) const
+vector<UserManager::UserInfo> UserManager::get_infos(const std::string& db) const
 {
     ostringstream ss;
-    ss << SQL_SELECT_ALL_SCOPE_USERS_HEAD << "\"" << scope << "\"";
+    ss << SQL_SELECT_ALL_DB_USERS_HEAD << "\"" << db << "\"";
 
     string sql = ss.str();
 
@@ -533,24 +533,24 @@ vector<UserManager::UserInfo> UserManager::get_infos(const std::string& scope) c
     return infos;
 }
 
-vector<UserManager::UserInfo> UserManager::get_infos(const vector<string>& scoped_users) const
+vector<UserManager::UserInfo> UserManager::get_infos(const vector<string>& db_users) const
 {
     vector<UserInfo> infos;
 
-    if (!scoped_users.empty())
+    if (!db_users.empty())
     {
         ostringstream ss;
-        ss << SQL_SELECT_SOME_SCOPE_USERS_HEAD;
+        ss << SQL_SELECT_SOME_DB_USERS_HEAD;
 
-        auto it = scoped_users.begin();
-        for (; it != scoped_users.end(); ++it)
+        auto it = db_users.begin();
+        for (; it != db_users.end(); ++it)
         {
-            if (it != scoped_users.begin())
+            if (it != db_users.begin())
             {
                 ss << " OR ";
             }
 
-            ss << "scoped_user = '" << *it << "'";
+            ss << "db_user = '" << *it << "'";
         }
 
         string sql = ss.str();

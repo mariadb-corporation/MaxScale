@@ -65,7 +65,7 @@ public:
 protected:
     void prepare() override
     {
-        m_scope = m_database.name();
+        m_db = m_database.name();
         m_user += value_as<string>();
 
         bsoncxx::document::element element;
@@ -104,10 +104,10 @@ protected:
 
         auto& um = m_database.context().um();
 
-        if (um.user_exists(m_scope, m_user))
+        if (um.user_exists(m_db, m_user))
         {
             ostringstream ss;
-            ss << "User \"" << m_user << "@" << m_scope << "\" already exists";
+            ss << "User \"" << m_user << "@" << m_db << "\" already exists";
 
             throw SoftError(ss.str(), error::LOCATION51003);
         }
@@ -115,14 +115,14 @@ protected:
 
     string generate_sql() override
     {
-        string user = "'" + m_scope + "." + m_user + "'@'%'";
+        string user = "'" + m_db + "." + m_user + "'@'%'";
         string pwd(m_pwd.data(), m_pwd.length());
 
         m_statements.push_back("CREATE USER " + user + " IDENTIFIED BY '" + pwd + "'");
 
         for (const auto& role : m_roles)
         {
-            string scope = (role.db == "admin" ? "*" : role.db);
+            string db = (role.db == "admin" ? "*" : role.db);
 
             vector<string> privileges;
 
@@ -146,7 +146,7 @@ protected:
                 mxb_assert(!true);
             }
 
-            string grant = "GRANT " + mxb::join(privileges) + " ON " + scope + ".* to " + user;
+            string grant = "GRANT " + mxb::join(privileges) + " ON " + db + ".* to " + user;
 
             m_statements.push_back(grant);
         }
@@ -216,7 +216,7 @@ private:
                 MXS_ERROR("Could create user '%s.%s'@'%%', but granting access with the "
                           "statement \"%s\" failed with: (%d) \"%s\". Will now attempt to "
                           "DROP the user.",
-                          m_scope.c_str(),
+                          m_db.c_str(),
                           m_user.c_str(),
                           m_statements[i].c_str(),
                           err.code(),
@@ -270,7 +270,7 @@ private:
             vector<uint8_t> salt = crypto::create_random_bytes(scram::SERVER_SALT_SIZE);
             string salt_b64 = mxs::to_base64(salt);
 
-            if (um.add_user(m_scope, m_user, m_pwd, salt_b64, m_roles))
+            if (um.add_user(m_db, m_user, m_pwd, salt_b64, m_roles))
             {
                 doc.append(kvp("ok", 1));
             }
@@ -303,10 +303,10 @@ private:
 
                     if (action == Worker::Call::EXECUTE)
                     {
-                        string user = "'" + m_scope + "." + m_user + "'@'%'";
+                        string user = "'" + m_db + "." + m_user + "'@'%'";
 
                         ostringstream sql;
-                        sql << "DROP USER '" << m_scope << "." << m_user << "'@'%'";
+                        sql << "DROP USER '" << m_db << "." << m_user << "'@'%'";
 
                         send_downstream(sql.str());
                     }
@@ -327,7 +327,7 @@ private:
         case ComResponse::OK_PACKET:
             {
                 ostringstream ss;
-                ss << "Could create MariaDB user '" << m_scope << "." << m_user << "'@'%', but "
+                ss << "Could create MariaDB user '" << m_db << "." << m_user << "'@'%', but "
                    << "could not give the required GRANTs. The current used does not have "
                    << "the required privileges. See the MaxScale log for more details.";
 
@@ -340,7 +340,7 @@ private:
                 ComERR err(response);
 
                 ostringstream ss;
-                ss << "Could create MariaDB user '" << m_scope << "." << m_user << "'@'%', but "
+                ss << "Could create MariaDB user '" << m_db << "." << m_user << "'@'%', but "
                    << "could not give the required GRANTs and the subsequent attempt to delete "
                    << "the user failed: (" << err.code() << ") \"" << err.message() << "\". "
                    << "You should now DROP the user manually.";
@@ -450,7 +450,7 @@ private:
     };
 
     Action             m_action = Action::CREATE;
-    string             m_scope;
+    string             m_db;
     string             m_user;
     string_view        m_pwd;
     vector<role::Role> m_roles;
@@ -501,7 +501,7 @@ public:
                     {
                         // We assume it's because the user does not exist.
                         ostringstream ss;
-                        ss << "User \"" << m_user << "@" << m_scope << "\" not found";
+                        ss << "User \"" << m_user << "@" << m_db << "\" not found";
 
                         throw SoftError(ss.str(), error::USER_NOT_FOUND);
                     }
@@ -527,14 +527,14 @@ public:
             {
                 auto& um = m_database.context().um();
 
-                if (um.remove_user(m_scope, m_user))
+                if (um.remove_user(m_db, m_user))
                 {
                     doc.append(kvp("ok", 1));
                 }
                 else
                 {
                     ostringstream ss;
-                    ss << "Could remove user \"" << m_user << "@" << m_scope << "\" from "
+                    ss << "Could remove user \"" << m_user << "@" << m_db << "\" from "
                        << "MariaDB backend, but not from local database.";
 
                     throw SoftError(ss.str(), error::INTERNAL_ERROR);
@@ -554,15 +554,15 @@ public:
 protected:
     void prepare() override
     {
-        m_scope = m_database.name();
+        m_db = m_database.name();
         m_user = value_as<string>();
 
         auto& um = m_database.context().um();
 
-        if (!um.user_exists(m_scope, m_user))
+        if (!um.user_exists(m_db, m_user))
         {
             ostringstream ss;
-            ss << "User \"" << m_user << "@" << m_scope << "\" not found";
+            ss << "User \"" << m_user << "@" << m_db << "\" not found";
 
             throw SoftError(ss.str(), error::USER_NOT_FOUND);
         }
@@ -572,13 +572,13 @@ protected:
     {
         ostringstream sql;
 
-        sql << "DROP USER '" << m_scope << "." << m_user << "'@'%'";
+        sql << "DROP USER '" << m_db << "." << m_user << "'@'%'";
 
         return sql.str();
     }
 
 private:
-    string m_scope;
+    string m_db;
     string m_user;
 };
 
@@ -645,7 +645,7 @@ private:
             throw SoftError("$and/$or/$nor must be a nonempty array", error::BAD_VALUE);
         }
 
-        vector<string> su; // Scoped users.
+        vector<string> db_users;
 
         for (const auto& element: users)
         {
@@ -656,9 +656,9 @@ private:
                     string_view user = element.get_utf8();
                     ostringstream ss;
                     ss << m_database.name() << "." << user;
-                    auto scoped_user = ss.str();
+                    auto db_user = ss.str();
 
-                    su.push_back(scoped_user);
+                    db_users.push_back(db_user);
                 }
                 break;
 
@@ -669,9 +669,9 @@ private:
                     string user = get_string(doc, key::USER);
                     string db = get_string(doc, key::DB);
 
-                    auto scoped_user = db + "." + user;
+                    auto db_user = db + "." + user;
 
-                    su.push_back(scoped_user);
+                    db_users.push_back(db_user);
                 }
                 break;
 
@@ -680,7 +680,7 @@ private:
             }
         }
 
-        vector<UserManager::UserInfo> infos = um.get_infos(su);
+        vector<UserManager::UserInfo> infos = um.get_infos(db_users);
 
         add_users(doc, infos);
         doc.append(kvp(key::OK, 1));
@@ -704,13 +704,13 @@ private:
 
     void get_users(DocumentBuilder& doc,
                    const UserManager& um,
-                   const string& scope,
+                   const string& db,
                    const string& user) const
     {
         ArrayBuilder users;
 
         UserManager::UserInfo info;
-        if (um.get_info(scope, user, &info))
+        if (um.get_info(db, user, &info))
         {
             add_user(users, info);
         }
@@ -748,10 +748,10 @@ private:
         mechanisms.append("SCRAM-SHA-1");
 
         DocumentBuilder user;
-        user.append(kvp(key::_ID, info.scoped_user));
+        user.append(kvp(key::_ID, info.db_user));
         //user.append(kvp(key::USER_ID, info.uuid));
         user.append(kvp(key::USER, info.user));
-        user.append(kvp(key::DB, info.scope));
+        user.append(kvp(key::DB, info.db));
         user.append(kvp(key::ROLES, roles.extract()));
         user.append(kvp(key::MECHANISMS, mechanisms.extract()));
 
