@@ -114,6 +114,12 @@ public:
         return get_scoped_info(std::string(scoped_user.data(), scoped_user.length()), nullptr);
     }
 
+    std::vector<UserInfo> get_infos() const;
+
+    std::vector<UserInfo> get_infos(const std::string& scope) const;
+
+    std::vector<UserInfo> get_infos(const std::vector<std::string>& scoped_users) const;
+
 private:
     UserManager(std::string path, sqlite3* pDb);
 

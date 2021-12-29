@@ -155,7 +155,16 @@ static const char SQL_DELETE_HEAD[] =
 static const char SQL_SELECT_ONE_HEAD[] =
     "SELECT scoped_user, scope, user, pwd, salt_b64, roles FROM accounts WHERE scoped_user = ";
 
-int select_one_cb(void* pData, int nColumns, char** ppColumn, char** ppNames)
+static const char SQL_SELECT_ALL_USERS[] =
+    "SELECT scoped_user, scope, user, pwd, salt_b64, roles FROM accounts";
+
+static const char SQL_SELECT_ALL_SCOPE_USERS_HEAD[] =
+    "SELECT scoped_user, scope, user, pwd, salt_b64, roles FROM accounts WHERE scope = ";
+
+static const char SQL_SELECT_SOME_SCOPE_USERS_HEAD[] =
+    "SELECT scoped_user, scope, user, pwd, salt_b64, roles FROM accounts WHERE ";
+
+int select_cb(void* pData, int nColumns, char** ppColumn, char** ppNames)
 {
     mxb_assert(nColumns == 6);
 
@@ -442,7 +451,7 @@ bool UserManager::get_scoped_info(const string& scoped_user, UserInfo* pInfo) co
 
     vector<UserInfo> infos;
     char* pError = nullptr;
-    int rv = sqlite3_exec(&m_db, sql.c_str(), select_one_cb, &infos, &pError);
+    int rv = sqlite3_exec(&m_db, sql.c_str(), select_cb, &infos, &pError);
 
     if (rv != SQLITE_OK)
     {
@@ -485,6 +494,79 @@ bool UserManager::get_salt_b64(const string& scope, const string& user, std::str
     }
 
     return rv;
+}
+
+vector<UserManager::UserInfo> UserManager::get_infos() const
+{
+    vector<UserInfo> infos;
+    char* pError = nullptr;
+    int rv = sqlite3_exec(&m_db, SQL_SELECT_ALL_USERS, select_cb, &infos, &pError);
+
+    if (rv != SQLITE_OK)
+    {
+        MXS_ERROR("Could not get user data from local database: %s",
+                  pError ? pError : "Unknown error");
+        sqlite3_free(pError);
+    }
+
+    return infos;
+}
+
+vector<UserManager::UserInfo> UserManager::get_infos(const std::string& scope) const
+{
+    ostringstream ss;
+    ss << SQL_SELECT_ALL_SCOPE_USERS_HEAD << "\"" << scope << "\"";
+
+    string sql = ss.str();
+
+    vector<UserInfo> infos;
+    char* pError = nullptr;
+    int rv = sqlite3_exec(&m_db, sql.c_str(), select_cb, &infos, &pError);
+
+    if (rv != SQLITE_OK)
+    {
+        MXS_ERROR("Could not get user data from local database: %s",
+                  pError ? pError : "Unknown error");
+        sqlite3_free(pError);
+    }
+
+    return infos;
+}
+
+vector<UserManager::UserInfo> UserManager::get_infos(const vector<string>& scoped_users) const
+{
+    vector<UserInfo> infos;
+
+    if (!scoped_users.empty())
+    {
+        ostringstream ss;
+        ss << SQL_SELECT_SOME_SCOPE_USERS_HEAD;
+
+        auto it = scoped_users.begin();
+        for (; it != scoped_users.end(); ++it)
+        {
+            if (it != scoped_users.begin())
+            {
+                ss << " OR ";
+            }
+
+            ss << "scoped_user = '" << *it << "'";
+        }
+
+        string sql = ss.str();
+
+        char* pError = nullptr;
+        int rv = sqlite3_exec(&m_db, sql.c_str(), select_cb, &infos, &pError);
+
+        if (rv != SQLITE_OK)
+        {
+            MXS_ERROR("Could not get user data from local database: %s",
+                      pError ? pError : "Unknown error");
+            sqlite3_free(pError);
+        }
+    }
+
+    return infos;
 }
 
 }
