@@ -16,6 +16,7 @@
 #include "nosqlbase.hh"
 #include <memory>
 #include <maxscale/sqlite3.h>
+#include "nosqlscram.hh"
 
 namespace nosql
 {
@@ -62,14 +63,15 @@ public:
     class UserInfo
     {
     public:
-        std::string             db_user;
-        std::string             db;
-        std::string             user;
-        std::string             pwd;
-        std::string             uuid;
-        std::vector<uint8_t>    salt;
-        std::string             salt_b64;
-        std::vector<role::Role> roles;
+        std::string                   db_user;
+        std::string                   db;
+        std::string                   user;
+        std::string                   pwd;
+        std::string                   uuid;
+        std::vector<uint8_t>          salt;
+        std::string                   salt_b64;
+        std::vector<scram::Mechanism> mechanisms;
+        std::vector<role::Role>       roles;
     };
 
     static std::unique_ptr<UserManager> create(const std::string& name);
@@ -83,6 +85,7 @@ public:
                   const string_view& user,
                   const string_view& pwd,
                   const std::string& salt_b64,
+                  const std::vector<scram::Mechanism>& mechanisms,
                   const std::vector<role::Role>& roles);
 
     bool remove_user(const std::string& db, const std::string& user);

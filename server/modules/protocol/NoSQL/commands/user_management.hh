@@ -271,7 +271,10 @@ private:
             vector<uint8_t> salt = crypto::create_random_bytes(scram::SERVER_SALT_SIZE);
             string salt_b64 = mxs::to_base64(salt);
 
-            if (um.add_user(m_db, m_user, m_pwd, salt_b64, m_roles))
+            vector<scram::Mechanism> mechanisms;
+            mechanisms.push_back(scram::Mechanism::SHA_1);
+
+            if (um.add_user(m_db, m_user, m_pwd, salt_b64, mechanisms, m_roles))
             {
                 doc.append(kvp("ok", 1));
             }
@@ -746,7 +749,10 @@ private:
         }
 
         ArrayBuilder mechanisms;
-        mechanisms.append("SCRAM-SHA-1");
+        for (const auto& m : info.mechanisms)
+        {
+            mechanisms.append(scram::to_string(m));
+        }
 
         DocumentBuilder user;
         user.append(kvp(key::_ID, info.db_user));
