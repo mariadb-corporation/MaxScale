@@ -589,7 +589,200 @@ private:
 // https://docs.mongodb.com/v4.4/reference/command/updateUser/
 
 // https://docs.mongodb.com/v4.4/reference/command/usersInfo/
+class UsersInfo : public ImmediateCommand
+{
+public:
+    static constexpr const char* const KEY = "usersInfo";
+    static constexpr const char* const HELP = "";
 
+    using ImmediateCommand::ImmediateCommand;
+
+    void populate_response(DocumentBuilder& doc) override
+    {
+        auto element = m_doc[KEY];
+
+        switch (element.type())
+        {
+        case bsoncxx::type::k_utf8:
+            get_users(doc, m_database.context().um(), element.get_utf8());
+            break;
+
+        case bsoncxx::type::k_array:
+            get_users(doc, m_database.context().um(), element.get_array());
+            break;
+
+        case bsoncxx::type::k_document:
+            get_users(doc, m_database.context().um(), element.get_document());
+            break;
+
+        case bsoncxx::type::k_int32:
+        case bsoncxx::type::k_int64:
+        case bsoncxx::type::k_double:
+            {
+                int32_t value;
+                if (element_as<int32_t>(element, Conversion::RELAXED, &value) && (value == 1))
+                {
+                    get_users(doc, m_database.context().um());
+                    break;
+                }
+            }
+            // fallthrough
+        default:
+            throw SoftError("User and role names must be either strings or objects", error::BAD_VALUE);
+        }
+    }
+
+private:
+    void get_users(DocumentBuilder& doc, const UserManager& um, const string_view& user_name)
+    {
+        get_users(doc, um, m_database.name(), string(user_name.data(), user_name.length()));
+    }
+
+    void get_users(DocumentBuilder& doc, const UserManager& um, const bsoncxx::array::view& users)
+    {
+        if (users.empty())
+        {
+            throw SoftError("$and/$or/$nor must be a nonempty array", error::BAD_VALUE);
+        }
+
+        vector<string> su; // Scoped users.
+
+        for (const auto& element: users)
+        {
+            switch (element.type())
+            {
+            case bsoncxx::type::k_utf8:
+                {
+                    string_view user = element.get_utf8();
+                    ostringstream ss;
+                    ss << m_database.name() << "." << user;
+                    auto scoped_user = ss.str();
+
+                    su.push_back(scoped_user);
+                }
+                break;
+
+            case bsoncxx::type::k_document:
+                {
+                    bsoncxx::document::view doc = element.get_document();
+
+                    string user = get_string(doc, key::USER);
+                    string db = get_string(doc, key::DB);
+
+                    auto scoped_user = db + "." + user;
+
+                    su.push_back(scoped_user);
+                }
+                break;
+
+            default:
+                throw SoftError("User and role names must be either strings or objects", error::BAD_VALUE);
+            }
+        }
+
+        vector<UserManager::UserInfo> infos = um.get_infos(su);
+
+        add_users(doc, infos);
+        doc.append(kvp(key::OK, 1));
+    }
+
+    void get_users(DocumentBuilder& doc, const UserManager& um, const bsoncxx::document::view& user)
+    {
+        auto name = get_string(doc, key::USER);
+        auto db = get_string(doc, key::DB);
+
+        get_users(doc, um, db, name);
+    }
+
+    void get_users(DocumentBuilder& doc, const UserManager& um)
+    {
+        vector<UserManager::UserInfo> infos = um.get_infos(m_database.name());
+
+        add_users(doc, infos);
+        doc.append(kvp(key::OK, 1));
+    }
+
+    void get_users(DocumentBuilder& doc,
+                   const UserManager& um,
+                   const string& scope,
+                   const string& user) const
+    {
+        ArrayBuilder users;
+
+        UserManager::UserInfo info;
+        if (um.get_info(scope, user, &info))
+        {
+            add_user(users, info);
+        }
+
+        doc.append(kvp(key::USERS, users.extract()));
+        doc.append(kvp(key::OK, 1));
+    }
+
+    static void add_users(DocumentBuilder& doc, const vector<UserManager::UserInfo>& infos)
+    {
+        ArrayBuilder users;
+
+        for (const auto& info : infos)
+        {
+            add_user(users, info);
+        }
+
+        doc.append(kvp(key::USERS, users.extract()));
+    }
+
+    static void add_user(ArrayBuilder& users, const UserManager::UserInfo& info)
+    {
+        ArrayBuilder roles;
+        for (const auto& r : info.roles)
+        {
+            DocumentBuilder role;
+
+            role.append(kvp(key::DB, r.db));
+            role.append(kvp(key::ROLE, role::to_string(r.id)));
+
+            roles.append(role.extract());
+        }
+
+        ArrayBuilder mechanisms;
+        mechanisms.append("SCRAM-SHA-1");
+
+        DocumentBuilder user;
+        user.append(kvp(key::_ID, info.scoped_user));
+        //user.append(kvp(key::USER_ID, info.uuid));
+        user.append(kvp(key::USER, info.user));
+        user.append(kvp(key::DB, info.scope));
+        user.append(kvp(key::ROLES, roles.extract()));
+        user.append(kvp(key::MECHANISMS, mechanisms.extract()));
+
+        users.append(user.extract());
+    }
+
+    string get_string(const bsoncxx::document::view& doc, const char* zKey)
+    {
+        bsoncxx::document::element e = doc[zKey];
+
+        if (!e)
+        {
+            ostringstream ss;
+            ss << "Missing expected field \"" << zKey << "\"";
+
+            throw SoftError(ss.str(), error::NO_SUCH_KEY);
+        }
+
+        string s;
+        if (!element_as(e, &s))
+        {
+            ostringstream ss;
+            ss << "\"" << zKey << "\" had wrong type. Expected string, found "
+               << bsoncxx::to_string(e.type());
+
+            throw SoftError(ss.str(), error::TYPE_MISMATCH);
+        }
+
+        return s;
+    }
+};
 
 }
 
