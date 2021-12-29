@@ -66,6 +66,7 @@ public:
         std::string             db;
         std::string             user;
         std::string             pwd;
+        std::string             uuid;
         std::vector<uint8_t>    salt;
         std::string             salt_b64;
         std::vector<role::Role> roles;

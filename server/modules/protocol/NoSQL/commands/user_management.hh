@@ -15,6 +15,7 @@
 // https://docs.mongodb.com/v4.4/reference/command/nav-user-management/
 //
 #include "defs.hh"
+#include <uuid/uuid.h>
 #include "../nosqlscram.hh"
 #include "../nosqlusermanager.hh"
 
@@ -749,7 +750,22 @@ private:
 
         DocumentBuilder user;
         user.append(kvp(key::_ID, info.db_user));
-        //user.append(kvp(key::USER_ID, info.uuid));
+
+        uuid_t uuid;
+        if (uuid_parse(info.uuid.c_str(), uuid) == 0)
+        {
+            bsoncxx::types::b_binary user_id;
+            user_id.sub_type = bsoncxx::binary_sub_type::k_uuid;
+            user_id.bytes = uuid;
+            user_id.size = sizeof(uuid);
+
+            user.append(kvp(key::USER_ID, user_id));
+        }
+        else
+        {
+            MXS_ERROR("The uuid '%s' of '%s' is invalid.", info.uuid.c_str(), info.db_user.c_str());
+        }
+
         user.append(kvp(key::USER, info.user));
         user.append(kvp(key::DB, info.db));
         user.append(kvp(key::ROLES, roles.extract()));

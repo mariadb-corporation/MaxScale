@@ -12,6 +12,7 @@
  */
 
 #include "nosqlusermanager.hh"
+#include <uuid/uuid.h>
 #include <map>
 #include <maxscale/paths.hh>
 #include <maxscale/utils.hh>
@@ -144,43 +145,44 @@ bool get_roles(const string& key,
 //
 static const char SQL_CREATE[] =
     "CREATE TABLE IF NOT EXISTS accounts "
-    "(db_user TEXT UNIQUE, db TEXT, user TEXT, pwd TEXT, salt_b64 TEXT, roles TEXT)";
+    "(db_user TEXT UNIQUE, db TEXT, user TEXT, pwd TEXT, uuid TEXT, salt_b64 TEXT, roles TEXT)";
 
 static const char SQL_INSERT_HEAD[] =
-    "INSERT INTO accounts (db_user, db, user, pwd, salt_b64, roles) VALUES ";
+    "INSERT INTO accounts (db_user, db, user, pwd, uuid, salt_b64, roles) VALUES ";
 
 static const char SQL_DELETE_HEAD[] =
     "DELETE FROM accounts WHERE db_user = ";
 
 static const char SQL_SELECT_ONE_HEAD[] =
-    "SELECT db_user, db, user, pwd, salt_b64, roles FROM accounts WHERE db_user = ";
+    "SELECT db_user, db, user, pwd, uuid, salt_b64, roles FROM accounts WHERE db_user = ";
 
 static const char SQL_SELECT_ALL_USERS[] =
-    "SELECT db_user, db, user, pwd, salt_b64, roles FROM accounts";
+    "SELECT db_user, db, user, pwd, uuid, salt_b64, roles FROM accounts";
 
 static const char SQL_SELECT_ALL_DB_USERS_HEAD[] =
-    "SELECT db_user, db, user, pwd, salt_b64, roles FROM accounts WHERE db = ";
+    "SELECT db_user, db, user, pwd, uuid, salt_b64, roles FROM accounts WHERE db = ";
 
 static const char SQL_SELECT_SOME_DB_USERS_HEAD[] =
-    "SELECT db_user, db, user, pwd, salt_b64, roles FROM accounts WHERE ";
+    "SELECT db_user, db, user, pwd, uuid, salt_b64, roles FROM accounts WHERE ";
 
-int select_cb(void* pData, int nColumns, char** ppColumn, char** ppNames)
+int select_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
 {
-    mxb_assert(nColumns == 6);
+    mxb_assert(nColumns == 7);
 
     auto* pInfos = static_cast<vector<nosql::UserManager::UserInfo>*>(pData);
 
     nosql::UserManager::UserInfo info;
-    info.db_user = ppColumn[0];
-    info.db = ppColumn[1];
-    info.user = ppColumn[2];
-    info.pwd = ppColumn[3];
-    info.salt_b64 = ppColumn[4];
+    info.db_user = pzColumn[0];
+    info.db = pzColumn[1];
+    info.user = pzColumn[2];
+    info.pwd = pzColumn[3];
+    info.uuid = pzColumn[4];
+    info.salt_b64 = pzColumn[5];
     info.salt = mxs::from_base64(info.salt_b64);
 
     vector<nosql::role::Role> roles;
 
-    if (get_roles(info.db_user, info.db, ppColumn[5], &roles))
+    if (get_roles(info.db_user, info.db, pzColumn[6], &roles))
     {
         info.roles = std::move(roles);
 
@@ -386,12 +388,19 @@ bool UserManager::add_user(const string& db,
 {
     string db_user = db + "." + string(user.data(), user.length());
 
+    uuid_t uuid;
+    uuid_generate(uuid);
+
+    char zUuid[UUID_STR_LEN];
+    uuid_unparse(uuid, zUuid);
+
     ostringstream ss;
     ss << SQL_INSERT_HEAD << "('"
        << db_user << "', '"
        << db << "', '"
        << user << "', '"
        << pwd << "', '"
+       << zUuid << "', '"
        << salt_b64 << "', '"
        << role::to_json(roles)
        << "')";
