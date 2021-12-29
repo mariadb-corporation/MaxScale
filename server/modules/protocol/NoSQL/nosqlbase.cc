@@ -328,6 +328,60 @@ bool nosql::element_as(const bsoncxx::document::element& element,
 }
 
 template<>
+bool nosql::element_as(const bsoncxx::document::element& element,
+                       Conversion conversion,
+                       int32_t* pT)
+{
+    bool rv = true;
+
+    auto type = element.type();
+
+    if (conversion == Conversion::STRICT && type != bsoncxx::type::k_int32)
+    {
+        rv = false;
+    }
+    else
+    {
+        switch (type)
+        {
+        case bsoncxx::type::k_int32:
+            *pT = element.get_int32();
+            break;
+
+        case bsoncxx::type::k_int64:
+            *pT = element.get_int64();
+            break;
+
+        case bsoncxx::type::k_double:
+            *pT = element.get_double();
+            break;
+
+        default:
+            rv = false;
+        }
+    }
+
+    return rv;
+}
+
+template<>
+bool nosql::element_as(const bsoncxx::document::element& element,
+                       Conversion conversion,
+                       string* pT)
+{
+    bool rv = (element.type() == bsoncxx::type::k_utf8);
+
+    if (rv)
+    {
+        string_view sv = element.get_utf8();
+
+        *pT = string(sv.data(), sv.length());
+    }
+
+    return rv;
+}
+
+template<>
 bsoncxx::document::view nosql::element_as<bsoncxx::document::view>(const string& command,
                                                                    const char* zKey,
                                                                    const bsoncxx::document::element& element,
