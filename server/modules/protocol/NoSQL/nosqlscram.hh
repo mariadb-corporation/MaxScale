@@ -21,6 +21,23 @@ namespace nosql
 namespace scram
 {
 
+enum class Mechanism
+{
+    SHA_1,
+    SHA_256
+};
+
+const char* to_string(Mechanism mechanism);
+bool from_string(const char* zMechanism, Mechanism* pMechanism);
+inline bool from_string(const std::string& mechanism, Mechanism* pMechanism)
+{
+    return from_string(mechanism.c_str(), pMechanism);
+}
+
+std::string to_json(const std::vector<Mechanism>& mechanisms);
+bool from_json(const std::string& json, std::vector<Mechanism>* pMechanisms);
+
+
 constexpr int32_t SERVER_NONCE_SIZE = 24;
 constexpr int32_t SERVER_SALT_SIZE = 16;
 
