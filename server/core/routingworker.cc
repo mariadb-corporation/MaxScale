@@ -558,12 +558,52 @@ RoutingWorker::get_backend_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Comp
 
     if (!pConn)
     {
-        pConn = pSession->create_backend_connection(pServer, this, pUpstream);
-        if (pConn)
+        const auto max_allowed_conns = pServer->max_connections();
+        auto& stats = pServer->stats();
+
+        if (max_allowed_conns > 0)
         {
-            pServer->stats().add_connection();
+            // Server has a connection count limit. Check that we are not already at the limit.
+            const char limit_err[] = "'%s' connection count limit reached. No new connections can "
+                                     "be made until an existing session quits.";
+            auto curr_conns = stats.n_current_conns() + stats.n_conn_intents();
+            if (curr_conns >= max_allowed_conns)
+            {
+                // Looks like all connection slots are in use. This may be pessimistic in case an intended
+                // connection fails in another thread. The error message can be spammy.
+                MXB_ERROR(limit_err, pServer->name());
+            }
+            else
+            {
+                // Mark intent, then read current conn value again. This is not entirely accurate, but does
+                // avoid overshoot (assuming memory orderings are correct).
+                auto intents = stats.add_conn_intent();
+                if (intents + stats.n_current_conns() <= max_allowed_conns)
+                {
+                    pConn = pSession->create_backend_connection(pServer, this, pUpstream);
+                    if (pConn)
+                    {
+                        stats.add_connection();
+                    }
+                }
+                else
+                {
+                    MXB_ERROR(limit_err, pServer->name());
+                }
+                stats.remove_conn_intent();
+            }
+        }
+        else
+        {
+            // No limit, just create new connection.
+            pConn = pSession->create_backend_connection(pServer, this, pUpstream);
+            if (pConn)
+            {
+                stats.add_connection();
+            }
         }
     }
+
     return pConn;
 }
 
@@ -671,6 +711,7 @@ RoutingWorker::pool_get_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Compone
                     pDcb->disable_events();
                     pDcb->shutdown();
                 }
+
                 BackendDCB::close(pDcb);
                 pServer->stats().remove_connection();
             }
@@ -887,8 +928,9 @@ void RoutingWorker::close_pooled_dcb(BackendDCB* pDcb)
         pDcb->shutdown();
     }
 
-    pDcb->server()->stats().remove_connection();
+    auto* srv = pDcb->server();
     BackendDCB::close(pDcb);
+    srv->stats().remove_connection();
 }
 
 bool RoutingWorker::pre_run()

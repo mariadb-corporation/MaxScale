@@ -17,11 +17,6 @@
 
 #include <mysqld_error.h>
 
-namespace
-{
-const auto RELAXED = std::memory_order_relaxed;
-}
-
 const MXS_ENUM_VALUE rank_values[] =
 {
     {"primary",   RANK_PRIMARY  },
@@ -210,73 +205,89 @@ void Target::Stats::add_connection()
 
 void Target::Stats::remove_connection()
 {
-    MXB_AT_DEBUG(auto val_before = ) m_n_current_conns.fetch_sub(1, RELAXED);
+    MXB_AT_DEBUG(auto val_before = ) m_n_current_conns.fetch_sub(1, std::memory_order_relaxed);
     mxb_assert(val_before > 0);
 }
 
 int64_t Target::Stats::n_current_conns() const
 {
-    return m_n_current_conns.load(RELAXED);
+    // The returned result is used in if-statements, so use acquire ordering.
+    return m_n_current_conns.load(std::memory_order_acquire);
 }
 
 int64_t Target::Stats::n_total_conns() const
 {
-    return m_n_total_conns.load(RELAXED);
+    return m_n_total_conns.load(std::memory_order_relaxed);
+}
+
+int64_t Target::Stats::add_conn_intent()
+{
+    return m_n_intended_conns.fetch_add(1, std::memory_order_acq_rel) + 1;
+}
+
+void Target::Stats::remove_conn_intent()
+{
+    m_n_intended_conns.fetch_sub(1, std::memory_order_release);
+}
+
+int64_t Target::Stats::n_conn_intents() const
+{
+    return m_n_intended_conns.load(std::memory_order_acquire);
 }
 
 void Target::Stats::add_client_connection()
 {
-    m_n_clients_conns.fetch_add(1, RELAXED);
+    m_n_clients_conns.fetch_add(1, std::memory_order_relaxed);
 }
 
 void Target::Stats::remove_client_connection()
 {
-    MXB_AT_DEBUG(auto val_before = ) m_n_clients_conns.fetch_sub(1, RELAXED);
+    MXB_AT_DEBUG(auto val_before = ) m_n_clients_conns.fetch_sub(1, std::memory_order_relaxed);
     mxb_assert(val_before > 0);
 }
 
 int64_t Target::Stats::n_client_conns() const
 {
-    return m_n_clients_conns.load(RELAXED);
+    return m_n_clients_conns.load(std::memory_order_relaxed);
 }
 
 void Target::Stats::add_failed_auth()
 {
-    m_failed_auths.fetch_add(1, RELAXED);
+    m_failed_auths.fetch_add(1, std::memory_order_relaxed);
 }
 
 void Target::Stats::add_packet()
 {
-    m_n_packets.fetch_add(1, RELAXED);
+    m_n_packets.fetch_add(1, std::memory_order_relaxed);
 }
 
 void Target::Stats::add_current_op()
 {
-    m_n_current_ops.fetch_add(1, RELAXED);
+    m_n_current_ops.fetch_add(1, std::memory_order_relaxed);
 }
 
 void Target::Stats::remove_current_op()
 {
-    MXB_AT_DEBUG(auto val_before = ) m_n_current_ops.fetch_sub(1, RELAXED);
+    MXB_AT_DEBUG(auto val_before = ) m_n_current_ops.fetch_sub(1, std::memory_order_relaxed);
     mxb_assert(val_before > 0);
 }
 
 int64_t Target::Stats::n_current_ops() const
 {
-    return m_n_current_ops.load(RELAXED);
+    return m_n_current_ops.load(std::memory_order_relaxed);
 }
 
 json_t* Target::Stats::to_json() const
 {
-    json_t* stats = json_object();
+    const auto relaxed = std::memory_order_relaxed;
 
+    json_t* stats = json_object();
     json_object_set_new(stats, "connections", json_integer(n_current_conns()));
     json_object_set_new(stats, "total_connections", json_integer(n_total_conns()));
-    json_object_set_new(stats, "max_connections", json_integer(m_n_max_conns.load(RELAXED)));
+    json_object_set_new(stats, "max_connections", json_integer(m_n_max_conns.load(relaxed)));
     json_object_set_new(stats, "active_operations", json_integer(n_current_ops()));
-    json_object_set_new(stats, "routed_packets", json_integer(m_n_packets.load(RELAXED)));
-    json_object_set_new(stats, "failed_auths", json_integer(m_failed_auths.load(RELAXED)));
-
+    json_object_set_new(stats, "routed_packets", json_integer(m_n_packets.load(relaxed)));
+    json_object_set_new(stats, "failed_auths", json_integer(m_failed_auths.load(relaxed)));
     return stats;
 }
 
