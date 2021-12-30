@@ -25,16 +25,7 @@
 
 using mxs::RoutingWorker;
 
-struct buffer_object_t
-{
-    bufobj_id_t      bo_id;
-    void*            bo_data;
-    void             (* bo_donefun_fp)(void*);
-    buffer_object_t* bo_next;
-};
-
-static void             gwbuf_free_one(GWBUF* buf);
-static buffer_object_t* gwbuf_remove_buffer_object(GWBUF* buf, buffer_object_t* bufobj);
+static void gwbuf_free_one(GWBUF* buf);
 
 namespace
 {
@@ -221,7 +212,6 @@ GWBUF::GWBUF(const GWBUF& rhs)
 #endif
 }
 
-
 /**
  * Allocate a new gateway buffer structure of size bytes and load with data.
  *
@@ -270,19 +260,6 @@ static void gwbuf_free_one(GWBUF* buf)
     ensure_owned(buf);
 
     delete buf;
-}
-
-SHARED_BUF::~SHARED_BUF()
-{
-    buffer_object_t* bo = bufobj;
-
-    while (bo != NULL)
-    {
-        auto next = bo->bo_next;
-        bo->bo_donefun_fp(bufobj->bo_data);
-        MXS_FREE(bo);
-        bo = next;
-    }
 }
 
 /**
@@ -634,44 +611,18 @@ void gwbuf_set_type(GWBUF* buf, uint32_t type)
     }
 }
 
-void gwbuf_add_buffer_object(GWBUF* buf,
-                             bufobj_id_t id,
-                             void* data,
-                             void (* donefun_fp)(void*))
+void GWBUF::set_classifier_data(void* new_data, void (* deleter)(void*))
 {
-    validate_buffer(buf);
-
-    buffer_object_t* newb = (buffer_object_t*)MXS_MALLOC(sizeof(buffer_object_t));
-    MXS_ABORT_IF_NULL(newb);
-
-    newb->bo_id = id;
-    newb->bo_data = data;
-    newb->bo_donefun_fp = donefun_fp;
-    newb->bo_next = NULL;
-
-    buffer_object_t** p_b = &buf->sbuf->bufobj;
-    /** Search the end of the list and add there */
-    while (*p_b != NULL)
-    {
-        p_b = &(*p_b)->bo_next;
-    }
-    *p_b = newb;
-    /** Set flag */
-    buf->sbuf->info |= GWBUF_INFO_PARSED;
+    auto& obj = sbuf->classifier_data;
+    mxb_assert(obj.data == nullptr && obj.deleter == nullptr);
+    mxb_assert(!new_data || deleter);   // If data is given, a deleter must also be set.
+    obj.data = new_data;
+    obj.deleter = deleter;
 }
 
-void* gwbuf_get_buffer_object_data(GWBUF* buf, bufobj_id_t id)
+void* GWBUF::get_classifier_data() const
 {
-    validate_buffer(buf);
-
-    buffer_object_t* bo = buf->sbuf->bufobj;
-
-    while (bo != NULL && bo->bo_id != id)
-    {
-        bo = bo->bo_next;
-    }
-
-    return bo ? bo->bo_data : NULL;
+    return sbuf->classifier_data.data;
 }
 
 void gwbuf_set_id(GWBUF* buffer, uint32_t id)
@@ -686,19 +637,6 @@ uint32_t gwbuf_get_id(GWBUF* buffer)
     validate_buffer(buffer);
     return buffer->id;
 }
-
-///**
-// * @return pointer to next buffer object or NULL
-// */
-// static buffer_object_t* gwbuf_remove_buffer_object(GWBUF* buf, buffer_object_t* bufobj)
-// {
-//    ensure_owned(buf);
-//    buffer_object_t* next = bufobj->bo_next;
-//    /** Call corresponding clean-up function to clean buffer object's data */
-//    bufobj->bo_donefun_fp(bufobj->bo_data);
-//    MXS_FREE(bufobj);
-//    return next;
-// }
 
 GWBUF* gwbuf_make_contiguous(GWBUF* orig)
 {
@@ -913,4 +851,12 @@ uint8_t* maxscale::Buffer::data()
 const uint8_t* maxscale::Buffer::data() const
 {
     return GWBUF_DATA(m_pBuffer);
+}
+
+BufferObject::~BufferObject()
+{
+    if (deleter)
+    {
+        deleter(data);
+    }
 }

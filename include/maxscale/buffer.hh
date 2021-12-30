@@ -38,24 +38,16 @@ enum gwbuf_type_t
     GWBUF_TYPE_TRACK_STATE    = (1 << 2),
 };
 
-enum  gwbuf_info_t
-{
-    GWBUF_INFO_NONE   = 0x0,
-    GWBUF_INFO_PARSED = 0x1
-};
-
 /**
- * A structure for cleaning up memory allocations of structures which are
- * referred to by GWBUF and deallocated in gwbuf_free but GWBUF doesn't
- * know what they are.
- * All functions on the list are executed before freeing memory of GWBUF struct.
+ * A structure for adding arbitrary data to a buffer.
  */
-enum bufobj_id_t
+struct BufferObject
 {
-    GWBUF_PARSING_INFO
-};
+    void* data = nullptr;
+    void  (* deleter)(void*) = nullptr;
 
-struct buffer_object_t;
+    ~BufferObject();
+};
 
 /**
  * A structure to encapsulate the data in a form that the data itself can be
@@ -69,11 +61,8 @@ public:
         : data(len)
     {
     }
-    buffer_object_t*     bufobj = nullptr;      /*< List of objects referred to by GWBUF */
-    uint32_t             info = GWBUF_INFO_NONE;/*< Info bits */
-    std::vector<uint8_t> data;                  /*< Actual memory that was allocated */
-
-    ~SHARED_BUF();
+    BufferObject         classifier_data;       /**< Parsing info */
+    std::vector<uint8_t> data;                  /**< Actual memory that was allocated */
 };
 
 /**
@@ -111,6 +100,22 @@ public:
     explicit GWBUF(const GWBUF& rhs);
 
     GWBUF(GWBUF&&) = delete;
+
+    /**
+     * Set classifier data. Can only be set once.
+     *
+     * @param new_data Data of the object
+     * @param deleter Deleter function
+     */
+    void set_classifier_data(void* new_data, void (* deleter)(void*));
+
+    /**
+     * Get classifier data.
+     *
+     * @return Data or null
+     */
+    void* get_classifier_data() const;
+
 private:
     std::shared_ptr<SHARED_BUF> m_payload;
     mutable std::string         m_sql;
@@ -142,7 +147,7 @@ inline bool gwbuf_should_track_state(const GWBUF* b)
 
 inline bool gwbuf_is_parsed(const GWBUF* b)
 {
-    return b->sbuf->info & GWBUF_INFO_PARSED;
+    return b->get_classifier_data() != nullptr;
 }
 
 /*<
@@ -213,10 +218,6 @@ inline void GWBUF_RTRIM(GWBUF* b, unsigned int bytes)
 {
     gwbuf_link_rtrim(b, bytes);
 }
-
-/*<
- * Function prototypes for the API to maniplate the buffers
- */
 
 /**
  * Allocate a new gateway buffer of specified size.
@@ -395,28 +396,6 @@ extern void gwbuf_set_type(GWBUF* head, uint32_t type);
  */
 extern GWBUF* gwbuf_make_contiguous(GWBUF* buf);
 
-/**
- * Add a buffer object to GWBUF buffer.
- *
- * @param buf         GWBUF where object is added
- * @param id          Type identifier for object
- * @param data        Object data
- * @param donefun_fp  Clean-up function to be executed before buffer is freed.
- */
-void gwbuf_add_buffer_object(GWBUF* buf,
-                             bufobj_id_t id,
-                             void* data,
-                             void (* donefun_fp)(void*));
-
-/**
- * Search buffer object which matches with the id.
- *
- * @param buf  GWBUF to be searched
- * @param id   Identifier for the object
- *
- * @return Searched buffer object or NULL if not found
- */
-void* gwbuf_get_buffer_object_data(GWBUF* buf, bufobj_id_t id);
 #if defined (BUFFER_TRACE)
 extern void dprintAllBuffers(void* pdcb);
 #endif
