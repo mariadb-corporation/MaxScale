@@ -57,9 +57,14 @@ std::string to_json(const Role& role);
 bool from_json(const mxb::Json& json, Role* pRole);
 bool from_json(const std::string& json, Role* pRole);
 
-std::string to_json(const std::vector<role::Role>& roles);
+std::string to_json(const std::vector<Role>& roles);
 
-bool from_json(const std::string& json, std::vector<role::Role>* pRoles);
+bool from_json(const std::string& json, std::vector<Role>* pRoles);
+
+// throws if invalid.
+void from_bson(const bsoncxx::array::view& bson,
+               const std::string& default_db,
+               std::vector<Role>* pRoles);
 
 }
 

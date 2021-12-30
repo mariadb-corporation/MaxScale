@@ -101,7 +101,7 @@ protected:
             throw SoftError(ss.str(), error::BAD_VALUE);
         }
 
-        check_roles(element.get_array());
+        role::from_bson(element.get_array(), m_db, &m_roles);
 
         auto& um = m_database.context().um();
 
@@ -360,90 +360,6 @@ private:
 
         mxb_assert(!true);
         return State::READY;
-    }
-
-    void add_role(const string& db, role::Id role_id)
-    {
-        m_roles.push_back(role::Role { db, role_id });
-    }
-
-    void check_role(const string_view& role_name, const string& db)
-    {
-        role::Id role_id;
-        if (!role::from_string(role_name, &role_id))
-        {
-            ostringstream ss;
-            ss << "No role named " << role_name << "@" << db;
-
-            throw SoftError(ss.str(), error::ROLE_NOT_FOUND);
-        }
-
-        add_role(db, role_id);
-    }
-
-    void check_role(const string_view& role_name, const string_view& db)
-    {
-        check_role(role_name, string(db.data(), db.length()));
-    }
-
-    void check_role(const string_view& role_name)
-    {
-        return check_role(role_name, m_database.name());
-    }
-
-    void check_role(const bsoncxx::document::view& role_doc)
-    {
-        auto e = role_doc[key::ROLE];
-        if (!e)
-        {
-            throw SoftError("Missing expected field \"role\"", error::NO_SUCH_KEY);
-        }
-
-        if (e.type() != bsoncxx::type::k_utf8)
-        {
-            ostringstream ss;
-            ss << "\"role\" had the wrong type. Expected string, found " << bsoncxx::to_string(e.type());
-            throw SoftError(ss.str(), error::TYPE_MISMATCH);
-        }
-
-        string_view role_name = e.get_utf8();
-
-        e = role_doc[key::DB];
-        if (!e)
-        {
-            throw SoftError("Missing expected field \"db\"", error::NO_SUCH_KEY);
-        }
-
-        if (e.type() != bsoncxx::type::k_utf8)
-        {
-            ostringstream ss;
-            ss << "\"db\" had the wrong type. Expected string, found " << bsoncxx::to_string(e.type());
-            throw SoftError(ss.str(), error::TYPE_MISMATCH);
-        }
-
-        string_view db = e.get_utf8();
-
-        check_role(role_name, db);
-    }
-
-    void check_roles(const bsoncxx::array::view& roles)
-    {
-        for (const auto& element : roles)
-        {
-            switch (element.type())
-            {
-            case bsoncxx::type::k_utf8:
-                check_role(element.get_utf8());
-                break;
-
-            case bsoncxx::type::k_document:
-                check_role(element.get_document());
-                break;
-
-            default:
-                throw SoftError("Role names must be either strings or objects", error::BAD_VALUE);
-            }
-        }
     }
 
 private:

@@ -16,6 +16,7 @@
 #include <map>
 #include <maxscale/paths.hh>
 #include <maxscale/utils.hh>
+#include "nosqlkeys.hh"
 
 using namespace std;
 
@@ -366,6 +367,96 @@ bool role::from_json(const string& s, std::vector<role::Role>* pRoles)
     }
 
     return rv;
+}
+
+namespace
+{
+
+void add_role(role::Id role_id, const string& db, vector<role::Role>& roles)
+{
+    roles.push_back(role::Role { db, role_id });
+}
+
+void add_role(const string_view& role_name, const string& db, vector<role::Role>& roles)
+{
+    role::Id role_id;
+    if (!role::from_string(role_name, &role_id))
+    {
+        ostringstream ss;
+        ss << "No role named " << role_name << "@" << db;
+
+        throw SoftError(ss.str(), error::ROLE_NOT_FOUND);
+    }
+
+    add_role(role_id, db, roles);
+}
+
+void add_role(const string_view& role_name, const string_view& db, vector<role::Role>& roles)
+{
+    add_role(role_name, string(db.data(), db.length()), roles);
+}
+
+void add_role(const bsoncxx::document::view& role_doc, vector<role::Role>& roles)
+{
+    auto e = role_doc[key::ROLE];
+    if (!e)
+    {
+        throw SoftError("Missing expected field \"role\"", error::NO_SUCH_KEY);
+    }
+
+    if (e.type() != bsoncxx::type::k_utf8)
+    {
+        ostringstream ss;
+        ss << "\"role\" had the wrong type. Expected string, found " << bsoncxx::to_string(e.type());
+        throw SoftError(ss.str(), error::TYPE_MISMATCH);
+    }
+
+    string_view role_name = e.get_utf8();
+
+    e = role_doc[key::DB];
+    if (!e)
+    {
+        throw SoftError("Missing expected field \"db\"", error::NO_SUCH_KEY);
+    }
+
+    if (e.type() != bsoncxx::type::k_utf8)
+    {
+        ostringstream ss;
+        ss << "\"db\" had the wrong type. Expected string, found " << bsoncxx::to_string(e.type());
+        throw SoftError(ss.str(), error::TYPE_MISMATCH);
+    }
+
+    string_view db = e.get_utf8();
+
+    add_role(role_name, db, roles);
+}
+
+}
+
+void role::from_bson(const bsoncxx::array::view& bson,
+                     const std::string& default_db,
+                     std::vector<Role>* pRoles)
+{
+    vector<Role> roles;
+
+    for (const auto& element : bson)
+    {
+        switch (element.type())
+        {
+        case bsoncxx::type::k_utf8:
+            add_role(element.get_utf8(), default_db, roles);
+            break;
+
+        case bsoncxx::type::k_document:
+            add_role(element.get_document(), roles);
+            break;
+
+        default:
+            throw SoftError("Role names must be either strings or objects", error::BAD_VALUE);
+        }
+    }
+
+    pRoles->swap(roles);
 }
 
 UserManager::UserManager(string path, sqlite3* pDb)
