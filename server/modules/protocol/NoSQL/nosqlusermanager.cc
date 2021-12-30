@@ -24,122 +24,6 @@ namespace
 
 const int SCHEMA_VERSION = 1;
 
-bool get_string_role_id(const string& key, const string& role_name, nosql::role::Id* pId)
-{
-    bool rv = nosql::role::from_string(role_name, pId);
-
-    if (!rv)
-    {
-        MXS_ERROR("Role '%s' of '%s' is unknown.", role_name.c_str(), key.c_str());
-    }
-
-    return rv;
-}
-
-bool get_object_role(const string& key, const mxb::Json& json, nosql::role::Role* pRole)
-{
-    bool rv = false;
-
-    string db;
-    if (json.try_get_string("db", &db))
-    {
-        string role_name;
-        if (json.try_get_string("role", &role_name))
-        {
-            nosql::role::Id id;
-            rv = get_string_role_id(key, role_name, &id);
-
-            if (rv)
-            {
-                pRole->db = std::move(db);
-                pRole->id = id;
-            }
-        }
-        else
-        {
-            MXS_ERROR("An object role of '%s' does not have the 'role' field, or "
-                      "the value is not a string.", key.c_str());
-        }
-    }
-    else
-    {
-        MXS_ERROR("An object role of '%s' does not have the 'db' field.", key.c_str());
-    }
-
-    return rv;
-}
-
-bool get_roles(const string& key,
-               const string& db,
-               const char* zJson,
-               vector<nosql::role::Role>* pRoles)
-{
-    bool rv = false;
-
-    mxb::Json json;
-
-    if (json.load_string(zJson))
-    {
-        if (json.type() == mxb::Json::Type::ARRAY)
-        {
-            vector<mxb::Json> elements = json.get_array_elems();
-            vector<nosql::role::Role> roles;
-
-            auto it = elements.begin();
-            for (; it != elements.end(); ++it)
-            {
-                auto element = *it;
-                auto type = element.type();
-
-                nosql::role::Role role;
-
-                if (type == mxb::Json::Type::STRING)
-                {
-                    role.db = db;
-                    if (!get_string_role_id(key, element.get_string(), &role.id))
-                    {
-                        break;
-                    }
-                }
-                else if (type == mxb::Json::Type::OBJECT)
-                {
-                    if (!get_object_role(key, element, &role))
-                    {
-                        break;
-                    }
-                }
-                else
-                {
-                    break;
-                }
-
-                roles.push_back(role);
-            }
-
-            if (it == elements.end())
-            {
-                pRoles->swap(roles);
-                rv = true;
-            }
-            else
-            {
-                MXS_ERROR("Roles '%s' of '%s' is a JSON array, but all elements are not strings.",
-                          zJson, key.c_str());
-            }
-        }
-        else
-        {
-            MXS_ERROR("Roles '%s' of '%s' is JSON, but not an array.", zJson, key.c_str());
-        }
-    }
-    else
-    {
-        MXS_ERROR("Roles '%s' of '%s' is not valid JSON: %s", zJson, key.c_str(), json.error_msg().c_str());
-    }
-
-    return rv;
-}
-
 //
 // User Database
 //
@@ -181,26 +65,29 @@ int select_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
     info.salt_b64 = pzColumn[5];
     info.salt = mxs::from_base64(info.salt_b64);
 
-    vector<nosql::scram::Mechanism> mechanisms;
-
     bool ok = false;
+
+    vector<nosql::scram::Mechanism> mechanisms;
     if (nosql::scram::from_json(pzColumn[6], &mechanisms))
     {
         info.mechanisms = std::move(mechanisms);
 
         vector<nosql::role::Role> roles;
-
-        if (get_roles(info.db_user, info.db, pzColumn[7], &roles))
+        if (nosql::role::from_json(pzColumn[7], &roles))
         {
             info.roles = std::move(roles);
 
             pInfos->push_back(info);
             ok = true;
         }
+        else
+        {
+            MXS_ERROR("The 'roles' value of '%s' is not valid.", info.db_user.c_str());
+        }
     }
     else
     {
-        MXS_ERROR("The 'mechanisms' value '%s' of '%s' is not valid.", pzColumn[6], info.db_user.c_str());
+        MXS_ERROR("The 'mechanisms' value of '%s' is not valid.", info.db_user.c_str());
     }
 
     if (!ok)
@@ -289,7 +176,7 @@ const map<string, Id> roles =
 
 }
 
-string role::to_string(role::Id id)
+string role::to_string(Id id)
 {
     for (const auto& kv : roles)
     {
@@ -304,7 +191,7 @@ string role::to_string(role::Id id)
     return "unknown";
 }
 
-bool role::from_string(const string& key, role::Id* pValue)
+bool role::from_string(const string& key, Id* pValue)
 {
     auto it = roles.find(key);
 
@@ -316,6 +203,59 @@ bool role::from_string(const string& key, role::Id* pValue)
     }
 
     return found;
+}
+
+string role::to_json(const Role& role)
+{
+    ostringstream ss;
+
+    ss << "{"
+       << "\"db\": \"" << role.db << "\", "
+       << "\"role\": \"" << to_string(role.id) << "\""
+       << "}";
+
+    return ss.str();
+}
+
+bool role::from_json(const mxb::Json& json, Role* pRole)
+{
+    bool rv = false;
+
+    if (json.type() == mxb::Json::Type::OBJECT)
+    {
+        string db;
+        if (json.try_get_string("db", &db))
+        {
+            string role_name;
+            if (json.try_get_string("role", &role_name))
+            {
+                Id id;
+                rv = from_string(role_name, &id);
+
+                if (rv)
+                {
+                    pRole->db = std::move(db);
+                    pRole->id = id;
+                }
+            }
+        }
+    }
+
+    return rv;
+}
+
+bool role::from_json(const string& s, Role* pRole)
+{
+    bool rv = false;
+
+    mxb::Json json;
+
+    if (json.load_string(s))
+    {
+        rv = from_json(json, pRole);
+    }
+
+    return rv;
 }
 
 string role::to_json(const std::vector<role::Role>& roles)
@@ -343,6 +283,66 @@ string role::to_json(const std::vector<role::Role>& roles)
     ss << "]";
 
     return ss.str();
+}
+
+bool role::from_json(const string& s, std::vector<role::Role>* pRoles)
+{
+    bool rv = false;
+
+    mxb::Json json;
+
+    if (json.load_string(s))
+    {
+        if (json.type() == mxb::Json::Type::ARRAY)
+        {
+            vector<Role> roles;
+
+            auto elements = json.get_array_elems();
+
+            rv = true;
+            for (const auto& element : elements)
+            {
+                auto type = element.type();
+
+                Role role;
+
+                if (type == mxb::Json::Type::OBJECT)
+                {
+                    rv = from_json(element, &role);
+
+                    if (!rv)
+                    {
+                        MXB_ERROR("'%s' is not a valid.role.",
+                                  element.to_string(mxb::Json::Format::NORMAL).c_str());
+                        break;
+                    }
+                }
+                else
+                {
+                    MXB_ERROR("'%s' is a JSON array, but all elements are not objects.", s.c_str());
+                    rv = false;
+                    break;
+                }
+
+                roles.push_back(role);
+            }
+
+            if (rv)
+            {
+                pRoles->swap(roles);
+            }
+        }
+        else
+        {
+            MXS_ERROR("'%s' is valid JSON, but not an array.", s.c_str());
+        }
+    }
+    else
+    {
+        MXS_ERROR("'%s' is not valid JSON: %s", s.c_str(), json.error_msg().c_str());
+    }
+
+    return rv;
 }
 
 UserManager::UserManager(string path, sqlite3* pDb)

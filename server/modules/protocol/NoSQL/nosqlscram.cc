@@ -128,12 +128,12 @@ bool scram::from_json(const std::string& s, std::vector<Mechanism>* pMechanisms)
         }
         else
         {
-            MXB_ERROR("'%s' is valid Json, but not an array.", s.c_str());
+            MXB_ERROR("'%s' is valid JSON, but not an array.", s.c_str());
         }
     }
     else
     {
-        MXB_ERROR("'%s' is not valid Json.", s.c_str());
+        MXB_ERROR("'%s' is not valid JSON: %s", s.c_str(), json.error_msg().c_str());
     }
 
     return rv;

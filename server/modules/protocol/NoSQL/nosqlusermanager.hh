@@ -15,6 +15,7 @@
 #include "nosqlprotocol.hh"
 #include "nosqlbase.hh"
 #include <memory>
+#include <maxbase/json.hh>
 #include <maxscale/sqlite3.h>
 #include "nosqlscram.hh"
 
@@ -51,7 +52,14 @@ inline bool from_string(const string_view& key, Id* pValue)
     return from_string(std::string(key.data(), key.length()), pValue);
 }
 
+std::string to_json(const Role& role);
+
+bool from_json(const mxb::Json& json, Role* pRole);
+bool from_json(const std::string& json, Role* pRole);
+
 std::string to_json(const std::vector<role::Role>& roles);
+
+bool from_json(const std::string& json, std::vector<role::Role>* pRoles);
 
 }
 
