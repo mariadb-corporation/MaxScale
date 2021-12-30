@@ -907,11 +907,3 @@ bool dcb_foreach(bool (* func)(DCB* dcb, void* data), void* data);
  * @param data User provided data passed as the second parameter to @c func
  */
 void dcb_foreach_local(bool (* func)(DCB* dcb, void* data), void* data);
-
-/**
- * @brief Return the DCB currently being handled by the calling thread.
- *
- * @return A DCB, or NULL if the calling thread is not currently handling
- *         a DCB or if the calling thread is not a polling/worker thread.
- */
-DCB* dcb_get_current();

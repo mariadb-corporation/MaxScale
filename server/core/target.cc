@@ -17,6 +17,11 @@
 
 #include <mysqld_error.h>
 
+namespace
+{
+const auto RELAXED = std::memory_order_relaxed;
+}
+
 const MXS_ENUM_VALUE rank_values[] =
 {
     {"primary",   RANK_PRIMARY  },
@@ -184,57 +189,93 @@ void Target::set_rlag_state(RLagState new_state, int max_rlag)
     }
 }
 
-void Target::Stats::add_connection() const
+void Target::Stats::add_connection()
 {
-    mxb::atomic::add(&n_connections, 1, mxb::atomic::RELAXED);
-    MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&n_current, 1, mxb::atomic::RELAXED);
-    mxb_assert(rc >= 0);
-
-    while (true)
+    // TODO: Looks a bit heavy to run every time a connection is made to server. The n_max_conns is only
+    // shown to user, does it need to be accurate or is it required at all?
+    m_n_total_conns.fetch_add(1, std::memory_order_relaxed);
+    const auto val_after = m_n_current_conns.fetch_add(1, std::memory_order_relaxed) + 1;
+    // Only update the max value if it's smaller than the new value. It's possible another thread
+    // manages to update it while this thread is reading the value.
+    auto old_max = m_n_max_conns.load(std::memory_order_acquire);
+    while (val_after > old_max)
     {
-        int n_max = mxb::atomic::load(&n_max_connections, mxb::atomic::RELAXED);
-        int n_curr = mxb::atomic::load(&n_current, mxb::atomic::RELAXED);
-
-        if (n_curr <= n_max || mxb::atomic::compare_exchange(&n_max_connections, &n_max, n_curr))
+        // Updates old_max if it's not equal to m_n_max_conns.
+        if (m_n_max_conns.compare_exchange_weak(old_max, val_after, std::memory_order_acq_rel))
         {
             break;
         }
     }
 }
 
-void Target::Stats::remove_connection() const
+void Target::Stats::remove_connection()
 {
-    MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&n_current, -1, mxb::atomic::RELAXED);
-    mxb_assert(rc > 0);
+    MXB_AT_DEBUG(auto val_before = ) m_n_current_conns.fetch_sub(1, RELAXED);
+    mxb_assert(val_before > 0);
 }
 
-void Target::Stats::add_client_connection() const
+int64_t Target::Stats::n_current_conns() const
 {
-    MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&n_clients_conns, 1, mxb::atomic::RELAXED);
-    mxb_assert(rc >= 0);
+    return m_n_current_conns.load(RELAXED);
 }
 
-void Target::Stats::remove_client_connection() const
+int64_t Target::Stats::n_total_conns() const
 {
-    MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&n_clients_conns, -1, mxb::atomic::RELAXED);
-    mxb_assert(rc > 0);
+    return m_n_total_conns.load(RELAXED);
 }
 
-void Target::Stats::add_failed_auth() const
+void Target::Stats::add_client_connection()
 {
-    mxb::atomic::add(&failed_auths, 1, mxb::atomic::RELAXED);
+    m_n_clients_conns.fetch_add(1, RELAXED);
+}
+
+void Target::Stats::remove_client_connection()
+{
+    MXB_AT_DEBUG(auto val_before = ) m_n_clients_conns.fetch_sub(1, RELAXED);
+    mxb_assert(val_before > 0);
+}
+
+int64_t Target::Stats::n_client_conns() const
+{
+    return m_n_clients_conns.load(RELAXED);
+}
+
+void Target::Stats::add_failed_auth()
+{
+    m_failed_auths.fetch_add(1, RELAXED);
+}
+
+void Target::Stats::add_packet()
+{
+    m_n_packets.fetch_add(1, RELAXED);
+}
+
+void Target::Stats::add_current_op()
+{
+    m_n_current_ops.fetch_add(1, RELAXED);
+}
+
+void Target::Stats::remove_current_op()
+{
+    MXB_AT_DEBUG(auto val_before = ) m_n_current_ops.fetch_sub(1, RELAXED);
+    mxb_assert(val_before > 0);
+}
+
+int64_t Target::Stats::n_current_ops() const
+{
+    return m_n_current_ops.load(RELAXED);
 }
 
 json_t* Target::Stats::to_json() const
 {
     json_t* stats = json_object();
 
-    json_object_set_new(stats, "connections", json_integer(n_current));
-    json_object_set_new(stats, "total_connections", json_integer(n_connections));
-    json_object_set_new(stats, "max_connections", json_integer(n_max_connections));
-    json_object_set_new(stats, "active_operations", json_integer(n_current_ops));
-    json_object_set_new(stats, "routed_packets", json_integer(packets));
-    json_object_set_new(stats, "failed_auths", json_integer(failed_auths));
+    json_object_set_new(stats, "connections", json_integer(n_current_conns()));
+    json_object_set_new(stats, "total_connections", json_integer(n_total_conns()));
+    json_object_set_new(stats, "max_connections", json_integer(m_n_max_conns.load(RELAXED)));
+    json_object_set_new(stats, "active_operations", json_integer(n_current_ops()));
+    json_object_set_new(stats, "routed_packets", json_integer(m_n_packets.load(RELAXED)));
+    json_object_set_new(stats, "failed_auths", json_integer(m_failed_auths.load(RELAXED)));
 
     return stats;
 }

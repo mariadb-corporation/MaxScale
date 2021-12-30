@@ -109,10 +109,7 @@ bool Backend::write(GWBUF* buffer, response_type type)
     if (rval && type != NO_RESPONSE)
     {
         m_responses.push_back(type);
-
-        MXB_AT_DEBUG(int prev2 = ) mxb::atomic::add(&m_backend->target()->stats().n_current_ops,
-                                                    1, mxb::atomic::RELAXED);
-        mxb_assert(prev2 >= 0);
+        m_backend->target()->stats().add_current_op();
     }
 
     return rval;
@@ -122,10 +119,7 @@ void Backend::ack_write()
 {
     mxb_assert(!m_responses.empty());
     m_responses.pop_front();
-
-    MXB_AT_DEBUG(int prev2 = ) mxb::atomic::add(&m_backend->target()->stats().n_current_ops,
-                                                -1, mxb::atomic::RELAXED);
-    mxb_assert(prev2 > 0);
+    m_backend->target()->stats().remove_current_op();
 }
 
 const maxbase::StopWatch& Backend::session_timer() const

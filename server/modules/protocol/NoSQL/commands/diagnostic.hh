@@ -21,6 +21,7 @@
 #include <maxscale/config.hh>
 #include <maxscale/maxscale.hh>
 #include "query_and_write_operation.hh"
+#include "../clientconnection.hh"
 
 namespace nosql
 {

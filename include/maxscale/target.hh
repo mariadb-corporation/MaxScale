@@ -263,25 +263,40 @@ public:
     virtual const std::vector<Target*>& get_children() const = 0;
 
     /* Target connection and usage statistics */
-    struct Stats
+    class Stats
     {
-        // NOTE: Currently mutable as various parts of the system modify these when they should only be
-        //       modified by the inherited objects.
-        mutable int      n_connections = 0;     /**< Total number of client connections */
-        mutable int      n_max_connections = 0; /**< Maximum number of client connections */
-        mutable int      n_current = 0;         /**< Current number of db connections */
-        mutable int      n_current_ops = 0;     /**< Current number of active db operations */
-        mutable uint64_t packets = 0;           /**< Number of packets routed to this server */
-        mutable int      n_clients_conns = 0;   /**< Current number of client connections */
-        mutable uint64_t failed_auths = 0;      /**< Number of failed authentication attempts */
+    public:
+        void    add_connection();
+        void    remove_connection();
+        int64_t n_current_conns() const;
+        int64_t n_total_conns() const;
 
-        void add_connection() const;
-        void remove_connection() const;
-        void add_client_connection() const;
-        void remove_client_connection() const;
-        void add_failed_auth() const;
+        void    add_client_connection();
+        void    remove_client_connection();
+        int64_t n_client_conns() const;
+
+        void add_failed_auth();
+        void add_packet();
+
+        void    add_current_op();
+        void    remove_current_op();
+        int64_t n_current_ops() const;
 
         json_t* to_json() const;
+
+    private:
+        using NumType = std::atomic_int64_t;
+
+        NumType m_n_current_conns {0};  /**< Current number of connections */
+        NumType m_n_total_conns {0};    /**< Total cumulative number of connections */
+        NumType m_n_max_conns {0};      /**< Maximum instantaneous number of connections */
+
+        NumType m_n_current_ops {0};    /**< Current number of active operations */
+        NumType m_n_packets {0};        /**< Number of packets routed to this server */
+
+        // The following only apply to services?
+        NumType m_n_clients_conns {0};  /**< Current number of client connections */
+        NumType m_failed_auths {0};     /**< Number of failed authentication attempts */
     };
 
     /**
@@ -291,7 +306,7 @@ public:
      */
     std::string status_string() const
     {
-        return status_to_string(status(), stats().n_current);
+        return status_to_string(status(), stats().n_current_conns());
     }
 
     // Converts status bits to strings
@@ -310,6 +325,11 @@ public:
      * Get target statistics
      */
     const Stats& stats() const
+    {
+        return m_stats;
+    }
+
+    Stats& stats()
     {
         return m_stats;
     }

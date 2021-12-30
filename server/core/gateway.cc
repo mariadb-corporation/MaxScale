@@ -69,6 +69,7 @@
 #include "internal/adminusers.hh"
 #include "internal/config.hh"
 #include "internal/defaults.hh"
+#include "internal/dcb.hh"
 #include "internal/http_sql.hh"
 #include "internal/maxscale.hh"
 #include "internal/modules.hh"

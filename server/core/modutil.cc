@@ -781,6 +781,32 @@ const char* STRPACKETTYPE(int p)
 namespace maxscale
 {
 
+std::string extract_sql(const mxs::Buffer& buffer, size_t len)
+{
+    std::string rval;
+    uint8_t cmd = mxs_mysql_get_command(buffer.get());
+
+    if (cmd == MXS_COM_QUERY || cmd == MXS_COM_STMT_PREPARE)
+    {
+        size_t header_len = MYSQL_HEADER_LEN + 1;
+        size_t total_len = std::min(buffer.length() - header_len, len);
+        rval.reserve(total_len);
+
+        // Skip the packet header and the command byte
+        std::copy_n(std::next(buffer.begin(), header_len), total_len, std::back_inserter(rval));
+    }
+
+    return rval;
+}
+
+std::string extract_sql(GWBUF* buffer, size_t len)
+{
+    mxs::Buffer buf(buffer);
+    std::string rval = extract_sql(buf);
+    buf.release();
+    return rval;
+}
+
 /**
  * Extract the SQL state from an error packet.
  *
