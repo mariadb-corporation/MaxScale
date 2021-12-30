@@ -132,6 +132,10 @@ public:
 
     std::vector<UserInfo> get_infos(const std::vector<std::string>& db_users) const;
 
+    std::vector<std::string> get_db_users(const std::string& db) const;
+
+    bool remove_db_users(const std::vector<std::string>& db_users) const;
+
 private:
     UserManager(std::string path, sqlite3* pDb);
 

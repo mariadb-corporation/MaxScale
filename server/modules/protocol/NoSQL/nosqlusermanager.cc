@@ -38,19 +38,25 @@ static const char SQL_INSERT_HEAD[] =
 static const char SQL_DELETE_HEAD[] =
     "DELETE FROM accounts WHERE db_user = ";
 
-static const char SQL_SELECT_ONE_HEAD[] =
+static const char SQL_SELECT_ONE_INFO_HEAD[] =
     "SELECT db_user, db, user, pwd, uuid, salt_b64, mechanisms, roles FROM accounts WHERE db_user = ";
 
-static const char SQL_SELECT_ALL_USERS[] =
+static const char SQL_SELECT_ALL_INFOS[] =
     "SELECT db_user, db, user, pwd, uuid, salt_b64, mechanisms, roles FROM accounts";
 
-static const char SQL_SELECT_ALL_DB_USERS_HEAD[] =
+static const char SQL_SELECT_ALL_DB_INFOS_HEAD[] =
     "SELECT db_user, db, user, pwd, uuid, salt_b64, mechanisms, roles FROM accounts WHERE db = ";
 
-static const char SQL_SELECT_SOME_DB_USERS_HEAD[] =
+static const char SQL_SELECT_SOME_DB_INFOS_HEAD[] =
     "SELECT db_user, db, user, pwd, uuid, salt_b64, mechanisms, roles FROM accounts WHERE ";
 
-int select_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
+static const char SQL_SELECT_ALL_DB_USERS_HEAD[] =
+    "SELECT db_user FROM accounts WHERE db = ";
+
+static const char SQL_DELETE_SOME_DB_USERS_HEAD[] =
+    "DELETE FROM accounts WHERE ";
+
+int select_info_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
 {
     mxb_assert(nColumns == 8);
 
@@ -95,6 +101,23 @@ int select_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
         MXS_WARNING("Ignoring user '%s'.", info.db_user.c_str());
     }
 
+    return 0;
+}
+
+int select_db_users_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
+{
+    mxb_assert(nColumns == 1);
+
+    auto* pDb_users = static_cast<vector<string>*>(pData);
+
+    pDb_users->push_back(pzColumn[0]);
+
+    return 0;
+}
+
+int remove_db_user_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
+{
+    MXB_NOTICE("YES YES YES YES YES");
     return 0;
 }
 
@@ -471,13 +494,13 @@ bool UserManager::get_info(const string& db, const string& user, UserInfo* pInfo
 bool UserManager::get_info(const string& db_user, UserInfo* pInfo) const
 {
     ostringstream ss;
-    ss << SQL_SELECT_ONE_HEAD << "\"" << db_user << "\"";
+    ss << SQL_SELECT_ONE_INFO_HEAD << "\"" << db_user << "\"";
 
     string sql = ss.str();
 
     vector<UserInfo> infos;
     char* pError = nullptr;
-    int rv = sqlite3_exec(&m_db, sql.c_str(), select_cb, &infos, &pError);
+    int rv = sqlite3_exec(&m_db, sql.c_str(), select_info_cb, &infos, &pError);
 
     if (rv != SQLITE_OK)
     {
@@ -526,7 +549,7 @@ vector<UserManager::UserInfo> UserManager::get_infos() const
 {
     vector<UserInfo> infos;
     char* pError = nullptr;
-    int rv = sqlite3_exec(&m_db, SQL_SELECT_ALL_USERS, select_cb, &infos, &pError);
+    int rv = sqlite3_exec(&m_db, SQL_SELECT_ALL_INFOS, select_info_cb, &infos, &pError);
 
     if (rv != SQLITE_OK)
     {
@@ -541,13 +564,13 @@ vector<UserManager::UserInfo> UserManager::get_infos() const
 vector<UserManager::UserInfo> UserManager::get_infos(const std::string& db) const
 {
     ostringstream ss;
-    ss << SQL_SELECT_ALL_DB_USERS_HEAD << "\"" << db << "\"";
+    ss << SQL_SELECT_ALL_DB_INFOS_HEAD << "\"" << db << "\"";
 
     string sql = ss.str();
 
     vector<UserInfo> infos;
     char* pError = nullptr;
-    int rv = sqlite3_exec(&m_db, sql.c_str(), select_cb, &infos, &pError);
+    int rv = sqlite3_exec(&m_db, sql.c_str(), select_info_cb, &infos, &pError);
 
     if (rv != SQLITE_OK)
     {
@@ -566,7 +589,7 @@ vector<UserManager::UserInfo> UserManager::get_infos(const vector<string>& db_us
     if (!db_users.empty())
     {
         ostringstream ss;
-        ss << SQL_SELECT_SOME_DB_USERS_HEAD;
+        ss << SQL_SELECT_SOME_DB_INFOS_HEAD;
 
         auto it = db_users.begin();
         for (; it != db_users.end(); ++it)
@@ -582,7 +605,7 @@ vector<UserManager::UserInfo> UserManager::get_infos(const vector<string>& db_us
         string sql = ss.str();
 
         char* pError = nullptr;
-        int rv = sqlite3_exec(&m_db, sql.c_str(), select_cb, &infos, &pError);
+        int rv = sqlite3_exec(&m_db, sql.c_str(), select_info_cb, &infos, &pError);
 
         if (rv != SQLITE_OK)
         {
@@ -593,6 +616,65 @@ vector<UserManager::UserInfo> UserManager::get_infos(const vector<string>& db_us
     }
 
     return infos;
+}
+
+vector<string> UserManager::get_db_users(const string& db) const
+{
+    vector<string> db_users;
+
+    ostringstream ss;
+    ss << SQL_SELECT_ALL_DB_USERS_HEAD << "'" << db << "'";
+
+    string sql = ss.str();
+
+    char* pError = nullptr;
+    int rv = sqlite3_exec(&m_db, sql.c_str(), select_db_users_cb, &db_users, &pError);
+
+    if (rv != SQLITE_OK)
+    {
+        MXS_ERROR("Could not get user data from local database: %s",
+                  pError ? pError : "Unknown error");
+        sqlite3_free(pError);
+    }
+
+    return db_users;
+}
+
+bool UserManager::remove_db_users(const std::vector<std::string>& db_users) const
+{
+    int rv = SQLITE_OK;
+
+    if (!db_users.empty())
+    {
+        ostringstream ss;
+
+        ss << SQL_DELETE_SOME_DB_USERS_HEAD;
+
+        auto it = db_users.begin();
+        for (; it != db_users.end(); ++it)
+        {
+            if (it != db_users.begin())
+            {
+                ss << " OR ";
+            }
+
+            ss << "db_user = '" << *it << "'";
+        }
+
+        auto sql = ss.str();
+
+        char* pError = nullptr;
+        rv = sqlite3_exec(&m_db, sql.c_str(), remove_db_user_cb, nullptr, &pError);
+
+        if (rv != SQLITE_OK)
+        {
+            MXS_ERROR("Could not remove data from local database: %s",
+                      pError ? pError : "Unknown error");
+            sqlite3_free(pError);
+        }
+    }
+
+    return rv == SQLITE_OK;
 }
 
 }
