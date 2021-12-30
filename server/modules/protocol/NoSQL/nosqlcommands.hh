@@ -639,7 +639,7 @@ class SingleCommand : public OpMsgCommand
 public:
     using OpMsgCommand::OpMsgCommand;
 
-    State execute(GWBUF** ppNoSQL_response) override final;
+    State execute(GWBUF** ppNoSQL_response) override;
     virtual State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override = 0;
 
     void diagnose(DocumentBuilder& doc) override;

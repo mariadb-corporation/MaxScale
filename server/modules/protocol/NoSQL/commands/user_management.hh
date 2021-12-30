@@ -463,19 +463,144 @@ private:
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/dropAllUsersFromDatabase/
-class DropAllUsersFromDatabase final : public ImmediateCommand
+class DropAllUsersFromDatabase final : public SingleCommand
 {
 public:
     static constexpr const char* const KEY = "dropAllUsersFromDatabase";
     static constexpr const char* const HELP = "";
 
-    using ImmediateCommand::ImmediateCommand;
+    using SingleCommand::SingleCommand;
 
-    void populate_response(DocumentBuilder& doc) override
+    State execute(GWBUF** ppNoSQL_response) override final
     {
-        doc.append(kvp(key::N, 0));
-        doc.append(kvp(key::OK, 1));
+        State state = State::READY;
+
+        const auto& um = m_database.context().um();
+
+        m_db_users = um.get_db_users(m_database.name());
+
+        if (m_db_users.empty())
+        {
+            DocumentBuilder doc;
+            long n = 0;
+            doc.append(kvp(key::N, n));
+            doc.append(kvp(key::OK, 1));
+
+            *ppNoSQL_response = create_response(doc.extract());
+        }
+        else
+        {
+            state = SingleCommand::execute(ppNoSQL_response);
+        }
+
+        return state;
     }
+
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final
+    {
+        State state = State::READY;
+
+        uint8_t* pData = mariadb_response.data();
+        uint8_t* pEnd = pData + mariadb_response.length();
+
+        long n = 0;
+        while (pData < pEnd)
+        {
+            ComResponse response(&pData);
+
+            switch (response.type())
+            {
+            case ComResponse::OK_PACKET:
+                ++n;
+                break;
+
+            case ComResponse::ERR_PACKET:
+                {
+                    ComERR err(response);
+
+                    switch (err.code())
+                    {
+                    case ER_SPECIFIC_ACCESS_DENIED_ERROR:
+                        if (n == 0)
+                        {
+                            ostringstream ss;
+                            ss << "not authorized on " << m_database.name() << " to execute command "
+                               << bsoncxx::to_json(m_doc).c_str();
+
+                            throw SoftError(ss.str(), error::UNAUTHORIZED);
+                        }
+                        else
+                        {
+                            vector<string> users;
+                            for (int i = 0; i < n; ++i)
+                            {
+                                string db_user = "'" + m_db_users[i] + "'";
+                                users.push_back(db_user);
+                            }
+
+                            MXS_WARNING("Dropping users %s succeeded, but dropping '%s' failed: %s",
+                                        mxb::join(users, ",").c_str(),
+                                        m_db_users[n].c_str(),
+                                        err.message().c_str());
+                        }
+                        break;
+
+                    case ER_CANNOT_USER:
+                        MXS_WARNING("User '%s' apparently did not exist in the MariaDB server, even "
+                                    "though it should according to the nosqlprotocol book-keeping.",
+                                    m_db_users[n].c_str());
+                        break;
+
+                    default:
+                        MXS_ERROR("Dropping user '%s' failed: %s",
+                                  m_db_users[n].c_str(),
+                                  err.message().c_str());
+                    };
+                };
+            }
+        }
+
+        mxb_assert(pData == pEnd);
+
+        vector<string> users = m_db_users;
+        users.resize(n);
+
+        const auto& um = m_database.context().um();
+
+        if (!um.remove_db_users(users))
+        {
+            ostringstream ss;
+            ss << "Could remove " << n << " users from MariaDB, but could not remove "
+               << "users from the local nosqlprotocol database. The user information "
+               << "may now be out of sync.";
+
+            throw SoftError(ss.str(), error::INTERNAL_ERROR);
+        }
+
+        DocumentBuilder doc;
+        doc.append(kvp(key::N, n));
+        doc.append(kvp(key::OK, 1));
+
+        *ppNoSQL_response = create_response(doc.extract());
+        return State::READY;
+    }
+
+protected:
+    string generate_sql() override final
+    {
+        mxb_assert(!m_db_users.empty());
+
+        vector<string> statements;
+        for (const auto& db_user : m_db_users)
+        {
+            statements.push_back("DROP USER '" + db_user + "'@'%'");
+        }
+
+        return mxb::join(statements, ";");
+    };
+
+private:
+    vector<string> m_db_users;
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/dropUser/
