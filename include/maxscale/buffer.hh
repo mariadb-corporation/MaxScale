@@ -117,11 +117,46 @@ public:
      */
     void* get_classifier_data() const;
 
+    const uint8_t* data() const;
+    uint8_t*       data();
+    size_t         length() const;
+    bool           empty() const;
+
+    /**
+     * Append bytes to buffer, starting at the end pointer. May invalidate start and end pointers.
+     * If underlying data is shared, will clone it.
+     *
+     * @param new_data Pointer to data. The bytes will be copied.
+     * @param n_bytes Number of bytes to copy
+     */
+    void append(const uint8_t* new_data, uint64_t n_bytes);
+
+    /**
+     * Append contents of the buffer given as parameter to this buffer.
+     *
+     * @param buffer Buffer to copy from. The object is left untouched.
+     */
+    void append(GWBUF* buffer);
+
+    /**
+     * Moves the start-pointer forward.
+     *
+     * @param bytes Number of bytes to consume
+     * @return New start pointer
+     */
+    uint8_t* consume(uint64_t bytes);
+
+    /**
+     * Moves the end-pointer backward.
+     *
+     * @param bytes Number of bytes to trim
+     */
+    void rtrim(uint64_t bytes);
+
 private:
-    std::shared_ptr<SHARED_BUF> m_payload;
-    mutable std::string         m_sql;
-    mutable std::string         m_canonical;
-    mutable maxsimd::Markers    m_markers;
+    mutable std::string      m_sql;
+    mutable std::string      m_canonical;
+    mutable maxsimd::Markers m_markers;
 };
 
 inline bool gwbuf_is_type_undefined(const GWBUF* b)
@@ -156,34 +191,51 @@ inline bool gwbuf_is_parsed(const GWBUF* b)
     return b->get_classifier_data() != nullptr;
 }
 
-/*<
- * Macros to access the data in the buffers
- */
+inline uint8_t* GWBUF::data()
+{
+    return start;
+}
+
+inline const uint8_t* GWBUF::data() const
+{
+    return start;
+}
+
 /*< First valid, unconsumed byte in the buffer */
 inline uint8_t* gwbuf_link_data(GWBUF* b)
 {
-    return b->start;
+    return b->data();
 }
 
 inline const uint8_t* gwbuf_link_data(const GWBUF* b)
 {
-    return b->start;
+    return b->data();
 }
 
 inline uint8_t* GWBUF_DATA(GWBUF* b)
 {
-    return gwbuf_link_data(b);
+    return b->data();
 }
 
 inline const uint8_t* GWBUF_DATA(const GWBUF* b)
 {
-    return gwbuf_link_data(b);
+    return b->data();
+}
+
+inline size_t GWBUF::length() const
+{
+    return end - start;
+}
+
+inline bool GWBUF::empty() const
+{
+    return start == end;
 }
 
 /*< Number of bytes in the individual buffer */
 inline size_t gwbuf_link_length(const GWBUF* b)
 {
-    return b->end - b->start;
+    return b->length();
 }
 
 /*< Check whether the buffer is contiguous*/
@@ -204,20 +256,9 @@ inline bool GWBUF_EMPTY(const GWBUF* b)
     return gwbuf_link_empty(b);
 }
 
-/*< Consume a number of bytes in the buffer */
-inline void gwbuf_link_consume(GWBUF* b, unsigned int bytes)
-{
-    b->start = bytes > (b->end - b->start) ? b->end : (b->start + bytes);
-}
-
-inline void GWBUF_CONSUME(GWBUF* b, unsigned int bytes)
-{
-    gwbuf_link_consume(b, bytes);
-}
-
 inline void gwbuf_link_rtrim(GWBUF* b, unsigned int bytes)
 {
-    b->end = bytes > (b->end - b->start) ? b->start : (b->end - bytes);
+    b->rtrim(bytes);
 }
 
 inline void GWBUF_RTRIM(GWBUF* b, unsigned int bytes)
@@ -306,7 +347,7 @@ extern int gwbuf_compare(const GWBUF* lhs, const GWBUF* rhs);
  *
  * @return The new head of the linked list
  */
-extern GWBUF* gwbuf_append(GWBUF* head, GWBUF* tail);
+GWBUF* gwbuf_append(GWBUF* head, GWBUF* tail);
 
 /**
  * @brief Consume data from buffer chain
@@ -321,7 +362,7 @@ extern GWBUF* gwbuf_append(GWBUF* head, GWBUF* tail);
  *
  * @return The head of the linked list or NULL if everything was consumed
  */
-extern GWBUF* gwbuf_consume(GWBUF* head, unsigned int length);
+GWBUF* gwbuf_consume(GWBUF* head, uint64_t length);
 
 /**
  * Trim bytes from the end of a GWBUF structure that may be the first
@@ -333,7 +374,7 @@ extern GWBUF* gwbuf_consume(GWBUF* head, unsigned int length);
  *
  * @return The buffer chain or NULL if buffer chain now empty
  */
-extern GWBUF* gwbuf_rtrim(GWBUF* head, unsigned int length);
+extern GWBUF* gwbuf_rtrim(GWBUF* head, uint64_t length);
 
 /**
  * Return the number of bytes of data in the linked list.

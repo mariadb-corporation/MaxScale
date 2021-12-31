@@ -25,7 +25,6 @@
 #include <maxbase/semaphore.hh>
 #include <maxbase/stopwatch.hh>
 #include <maxbase/worker.hh>
-#include <maxbase/iterator.hh>
 #include <maxscale/config.hh>
 #include <maxscale/server.hh>
 

@@ -121,7 +121,6 @@ inline void ensure_owned(const GWBUF* buf)
 inline bool validate_buffer(const GWBUF* buf)
 {
     mxb_assert(buf);
-    ensure_not_empty(buf);
     ensure_at_head(buf);
     ensure_owned(buf);
     return true;
@@ -195,7 +194,7 @@ GWBUF::GWBUF(uint64_t size)
     owner = RoutingWorker::get_current_id();
 #endif
     tail = this;
-    start = &sbuf->data.front();
+    start = sbuf->data.data();
     end = start + size;
 }
 
@@ -505,51 +504,33 @@ int gwbuf_compare(const GWBUF* lhs, const GWBUF* rhs)
 
 GWBUF* gwbuf_append(GWBUF* head, GWBUF* tail)
 {
-    mxb_assert(!head || validate_buffer(head));
-    mxb_assert(validate_buffer(tail));
-
-    if (!head)
+    // This function is used such that 'head' should take ownership of 'tail'. Since 'append' now copies
+    // the contents, free the tail.
+    // In the long run, this function should not be required. The most common use is in reading from a
+    // network socket. That should be optimized to write directly to the buffer.
+    if (head)
+    {
+        head->append(tail);
+        gwbuf_free(tail);
+        return head;
+    }
+    else
     {
         return tail;
     }
-
-    head->tail->next = tail;
-    head->tail = tail->tail;
-
-    invalidate_tail_pointers(head);
-
-    return head;
 }
 
-GWBUF* gwbuf_consume(GWBUF* head, unsigned int length)
+GWBUF* gwbuf_consume(GWBUF* head, uint64_t length)
 {
-    validate_buffer(head);
-    mxb_assert(length > 0);
-
-    while (head && length > 0)
+    // TODO: Avoid calling this function.
+    auto rval = head;
+    head->consume(length);
+    if (head->empty())
     {
-        ensure_owned(head);
-        unsigned int buflen = gwbuf_link_length(head);
-
-        GWBUF_CONSUME(head, length);
-        length = buflen < length ? length - buflen : 0;
-
-        if (GWBUF_EMPTY(head))
-        {
-            if (head->next)
-            {
-                head->next->tail = head->tail;
-            }
-            GWBUF* tmp = head;
-            head = head->next;
-            gwbuf_free_one(tmp);
-        }
+        gwbuf_free(head);
+        rval = nullptr;
     }
-
-    invalidate_tail_pointers(head);
-
-    mxb_assert(head == NULL || (head->end > head->start));
-    return head;
+    return rval;
 }
 
 unsigned int gwbuf_length(const GWBUF* head)
@@ -584,19 +565,10 @@ int gwbuf_count(const GWBUF* head)
     return result;
 }
 
-GWBUF* gwbuf_rtrim(GWBUF* head, unsigned int n_bytes)
+GWBUF* gwbuf_rtrim(GWBUF* head, uint64_t n_bytes)
 {
-    validate_buffer(head);
-
-    GWBUF* rval = head;
-    GWBUF_RTRIM(head, n_bytes);
-
-    if (GWBUF_EMPTY(head))
-    {
-        rval = head->next;
-        gwbuf_free_one(head);
-    }
-    return rval;
+    head->rtrim(n_bytes);
+    return head->empty() ? nullptr : head;
 }
 
 void gwbuf_set_type(GWBUF* buf, uint32_t type)
@@ -623,6 +595,80 @@ void GWBUF::set_classifier_data(void* new_data, void (* deleter)(void*))
 void* GWBUF::get_classifier_data() const
 {
     return sbuf->classifier_data.data;
+}
+
+void GWBUF::append(const uint8_t* new_data, uint64_t n_bytes)
+{
+    auto old_len = length();
+    auto new_len = old_len + n_bytes;
+
+    if (sbuf.unique())
+    {
+        auto& bufdata = sbuf->data;
+        auto bytes_consumed = start - bufdata.data();
+
+        auto vec_size_required = bytes_consumed + new_len;
+        if (vec_size_required > bufdata.size())
+        {
+            // Resize the vector so that the additional data can be easily added. The vector may reallocate,
+            // so recalculate pointers.
+            bufdata.resize(vec_size_required);
+            start = bufdata.data() + bytes_consumed;
+            end = start + old_len;
+        }
+
+        // This may overwrite trimmed data.
+        memcpy(end, new_data, n_bytes);
+        end += n_bytes;
+    }
+    else
+    {
+        // If called for a shared (shallow-cloned) buffer, make a new copy of the underlying data. The custom
+        // data is not copied, as it does not have a copy-function.
+        // TODO: think if custom data should be copied.
+        auto new_sbuf = std::make_shared<SHARED_BUF>(new_len);
+        auto* new_vec_begin = new_sbuf->data.data();
+        memcpy(new_vec_begin, start, old_len);
+        memcpy(new_vec_begin + old_len, new_data, n_bytes);
+        sbuf = move(new_sbuf);
+        start = sbuf->data.data();
+        end = start + new_len;
+    }
+}
+
+void GWBUF::append(GWBUF* buffer)
+{
+    append(buffer->data(), buffer->length());
+}
+
+uint8_t* GWBUF::consume(uint64_t bytes)
+{
+    // TODO: attempting to consume more than 'length' should be an error.
+    // Avoid reallocations and copies here, as the GWBUF is typically freed after consume anyways.
+    if (bytes > length())
+    {
+        mxb_assert(!true);
+        start = end;
+    }
+    else
+    {
+        start += bytes;
+    }
+    return start;
+}
+
+void GWBUF::rtrim(uint64_t bytes)
+{
+    // TODO: attempting to trim more than 'length' should be an error.
+    if (bytes > length())
+    {
+        mxb_assert(!true);
+        end = start;
+    }
+    else
+    {
+        end -= bytes;
+    }
 }
 
 void gwbuf_set_id(GWBUF* buffer, uint32_t id)

@@ -152,11 +152,7 @@ void test_split()
     GWBUF* newchain = gwbuf_split(&oldchain, headsize + 5);
     mxb_assert_message(newchain && oldchain, "Both chains should be non-NULL");
     mxb_assert_message(gwbuf_length(newchain) == headsize + 5, "New chain should be 15 bytes long");
-    mxb_assert_message(gwbuf_link_length(newchain) == headsize && gwbuf_link_length(newchain->next) == 5,
-                       "The new chain should have a 10 byte buffer and a 5 byte buffer");
     mxb_assert_message(gwbuf_length(oldchain) == tailsize - 5, "Old chain should be 15 bytes long");
-    mxb_assert_message(gwbuf_link_length(oldchain) == tailsize - 5 && oldchain->next == NULL,
-                       "The old chain should have a 15 byte buffer and no next buffer");
     gwbuf_free(oldchain);
     gwbuf_free(newchain);
 
@@ -282,23 +278,18 @@ void test_consume()
     mxb_assert_message(gwbuf_length(buffer) == 10, "Buffer should be 10 bytes after consuming 0 bytes");
 
     buffer = gwbuf_consume(buffer, 1);
-    mxb_assert_message(gwbuf_link_length(buffer) == 4, "First buffer should be 4 bytes long");
-    mxb_assert_message(buffer->next, "Buffer should have next pointer set");
-    mxb_assert_message(gwbuf_link_length(buffer->next) == 5, "Next buffer should be 5 bytes long");
     mxb_assert_message(gwbuf_length(buffer) == 9, "Buffer should be 9 bytes after consuming 1 bytes");
     mxb_assert_message(*(buffer->start) == 2, "First byte should be 2");
 
     buffer = gwbuf_consume(buffer, 5);
-    mxb_assert_message(buffer->next == NULL, "Buffer should not have the next pointer set");
-    mxb_assert_message(gwbuf_link_length(buffer) == 4, "Buffer should be 4 bytes after consuming 6 bytes");
     mxb_assert_message(gwbuf_length(buffer) == 4, "Buffer should be 4 bytes after consuming 6 bytes");
     mxb_assert_message(*(buffer->start) == 7, "First byte should be 7");
     mxb_assert_message(gwbuf_consume(buffer, 4) == NULL, "Consuming all bytes should return NULL");
 
     buffer = gwbuf_append(gwbuf_alloc_and_load(5, data),
                           gwbuf_alloc_and_load(5, data + 5));
-    mxb_assert_message(gwbuf_consume(buffer, 100) == NULL,
-                       "Consuming more bytes than are available should return NULL");
+    mxb_assert_message(gwbuf_consume(buffer, 10) == NULL,
+                       "Consuming all bytes should return NULL");
 
 
     /** Consuming near buffer boudaries */
@@ -491,7 +482,7 @@ static int test1()
     mxb_assert_message((size - bite1 - bite2) == buflen, "Incorrect buffer size");
     mxb_assert_message(0 == GWBUF_EMPTY(buffer), "Buffer should not be empty");
     fprintf(stderr, "\t..done\n");
-    buffer = gwbuf_consume(buffer, bite3);
+    buffer = gwbuf_consume(buffer, 5);
     fprintf(stderr, "Consumed %lu bytes, should have null buffer", bite3);
     mxb_assert_message(NULL == buffer, "Buffer should be null");
 
@@ -514,13 +505,12 @@ static int test1()
     mxb_assert_message((size * 2) == gwbuf_length(buffer), "Incorrect size for set of buffers");
     buffer = gwbuf_rtrim(buffer, 60000);
     buflen = gwbuf_link_length(buffer);
-    fprintf(stderr, "\t..done\nTrimmed 60 bytes from buffer, now size is %lu.", buflen);
-    mxb_assert_message((size - 60000) == buflen, "Incorrect buffer size");
+    fprintf(stderr, "\t..done\nTrimmed 60k bytes from buffer, now size is %lu.", buflen);
+    mxb_assert_message(((size * 2) - 60000) == buflen, "Incorrect buffer size");
     buffer = gwbuf_rtrim(buffer, 60000);
     buflen = gwbuf_link_length(buffer);
-    fprintf(stderr, "\t..done\nTrimmed another 60 bytes from buffer, now size is %lu.", buflen);
-    mxb_assert_message(100000 == buflen, "Incorrect buffer size");
-    mxb_assert_message(buffer == extra, "The buffer pointer should now point to the extra buffer");
+    fprintf(stderr, "\t..done\nTrimmed another 60k bytes from buffer, now size is %lu.", buflen);
+    mxb_assert_message(80000 == buflen, "Incorrect buffer size");
     fprintf(stderr, "\t..done\n");
     gwbuf_free(buffer);
     /** gwbuf_clone_all test  */
@@ -532,12 +522,8 @@ static int test1()
     mxb_assert_message(head && tail, "Head and tail buffers should both be non-NULL");
     GWBUF* append = gwbuf_append(head, tail);
     mxb_assert_message(append == head, "gwbuf_append should return head");
-    mxb_assert_message(append->next == tail, "After append tail should be in the next pointer of head");
-    mxb_assert_message(append->tail == tail, "After append tail should be in the tail pointer of head");
     GWBUF* all_clones = gwbuf_clone(head);
-    mxb_assert_message(all_clones && all_clones->next, "Cloning all should work");
-    mxb_assert_message(gwbuf_link_length(all_clones) == headsize, "First buffer should be 10 bytes");
-    mxb_assert_message(gwbuf_link_length(all_clones->next) == tailsize, "Second buffer should be 20 bytes");
+    mxb_assert_message(all_clones, "Cloning all should work");
     mxb_assert_message(gwbuf_length(all_clones) == headsize + tailsize,
                        "Total buffer length should be 30 bytes");
     gwbuf_free(all_clones);
