@@ -294,6 +294,13 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
 
     if (m_shard.empty() && (m_state & INIT_MAPPING) == 0)
     {
+        if (m_dcid)
+        {
+            // The delayed call is already in place, let it take care of the shard update
+            m_queue.push_back(pPacket);
+            return 1;
+        }
+
         // Check if another session has managed to update the shard cache
         m_shard = m_router->m_shard_manager.get_shard(m_key, m_config->refresh_min_interval);
 
@@ -307,16 +314,13 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
             }
             else
             {
-                // Too many concurrent updates
+                // Wait for the other session to finish its update and reuse that result
+                mxb_assert(m_dcid == 0);
                 m_queue.push_back(pPacket);
 
-                if (m_dcid == 0)
-                {
-                    // Wait for the other session to finish its update
-                    auto worker = mxs::RoutingWorker::get_current();
-                    m_dcid = worker->delayed_call(1000, &SchemaRouterSession::delay_routing, this);
-                    MXS_INFO("Waiting for the database mapping to be completed by another session");
-                }
+                auto worker = mxs::RoutingWorker::get_current();
+                m_dcid = worker->delayed_call(1000, &SchemaRouterSession::delay_routing, this);
+                MXS_INFO("Waiting for the database mapping to be completed by another session");
 
                 return 1;
             }
