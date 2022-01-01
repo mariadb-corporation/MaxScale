@@ -878,7 +878,6 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
     auto& ses_trx_state = m_session_data->trx_state;
     const auto trx_starting_active = TrxState::TRX_ACTIVE | TrxState::TRX_STARTING;
 
-    mxb_assert(gwbuf_is_contiguous(packetbuf));
     mxb_assert((ses_trx_state & (TrxState::TRX_STARTING | TrxState::TRX_ENDING))
                != (TrxState::TRX_STARTING | TrxState::TRX_ENDING));
 

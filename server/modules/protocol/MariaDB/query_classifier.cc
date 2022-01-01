@@ -390,8 +390,6 @@ public:
     {
         if (has_not_been_parsed(m_pStmt) && use_cached_result())
         {
-            mxb_assert(gwbuf_is_contiguous(m_pStmt));
-
             m_canonical = m_pStmt->get_canonical();
 
             if (modutil_is_SQL_prepare(pStmt))

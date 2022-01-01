@@ -242,7 +242,7 @@ inline size_t gwbuf_link_length(const GWBUF* b)
 inline bool gwbuf_is_contiguous(const GWBUF* b)
 {
     mxb_assert(b);
-    return b->next == nullptr;
+    return true;
 }
 
 /*< True if all bytes in the buffer have been consumed */
@@ -386,17 +386,6 @@ extern GWBUF* gwbuf_rtrim(GWBUF* head, uint64_t length);
 extern unsigned int gwbuf_length(const GWBUF* head);
 
 /**
- * Return the number of individual buffers in the linked list.
- *
- * Currently not used, provided mainly for use during debugging sessions.
- *
- * @param head  The current head of the linked list
- *
- * @return The number of bytes of data in the linked list
- */
-extern int gwbuf_count(const GWBUF* head);
-
-/**
  * @brief Copy bytes from a buffer
  *
  * Copy bytes from a chain of buffers. Supports copying data from buffers where
@@ -505,27 +494,8 @@ extern uint8_t* gwbuf_byte_pointer(GWBUF* buffer, size_t offset);
 inline void gwbuf_set_owner(GWBUF* buf, int owner)
 {
     buf->owner = owner;
-    buf = buf->next;
-    while (buf)
-    {
-        buf->owner = owner;
-        buf = buf->next;
-    }
 }
 #endif
-
-namespace std
-{
-
-template<>
-struct default_delete<GWBUF>
-{
-    void operator()(GWBUF* pBuffer)
-    {
-        gwbuf_free(pBuffer);
-    }
-};
-}
 
 namespace maxscale
 {
@@ -1240,16 +1210,6 @@ public:
     }
 
     /**
-     * Whether the buffer is contiguous.
-     *
-     * @return  True, if the buffer is contiguous.
-     */
-    bool is_contiguous() const
-    {
-        return gwbuf_is_contiguous(m_pBuffer);
-    }
-
-    /**
      * Make the buffer contiguous.
      *
      * @return  True, if the buffer could be made contiguous.
@@ -1258,14 +1218,7 @@ public:
      */
     bool make_contiguous(std::nothrow_t)
     {
-        GWBUF* pBuffer = gwbuf_make_contiguous(m_pBuffer);
-
-        if (pBuffer)
-        {
-            m_pBuffer = pBuffer;
-        }
-
-        return pBuffer != NULL;
+        return m_pBuffer != NULL;
     }
 
     /**

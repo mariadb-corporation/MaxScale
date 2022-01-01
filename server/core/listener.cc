@@ -1016,10 +1016,7 @@ void Listener::reject_connection(int fd, const char* host)
 {
     if (GWBUF* buf = m_shared_data->m_proto_module->reject(host))
     {
-        for (auto b = buf; b; b = b->next)
-        {
-            write(fd, GWBUF_DATA(b), gwbuf_link_length(b));
-        }
+        write(fd, buf->start, buf->length());
         gwbuf_free(buf);
     }
 

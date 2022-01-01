@@ -332,8 +332,6 @@ bool MaskingFilterSession::routeQuery(GWBUF* pPacket)
 
 bool MaskingFilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    mxb_assert(gwbuf_is_contiguous(pPacket));
-
     if (m_bypass)
     {
         return FilterSession::clientReply(pPacket, down, reply);

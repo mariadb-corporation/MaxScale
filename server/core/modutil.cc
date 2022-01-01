@@ -76,19 +76,12 @@ char* modutil_get_SQL(GWBUF* buf)
             ptr += 2;   // Skip sequence id  and COM_QUERY byte
             len = gwbuf_link_length(buf) - 5;
 
-            while (buf && length > 0)
+            if (buf && length > 0)
             {
                 int clen = length > len ? len : length;
                 memcpy(dptr, ptr, clen);
                 dptr += clen;
                 length -= clen;
-                buf = buf->next;
-
-                if (buf)
-                {
-                    ptr = GWBUF_DATA(buf);
-                    len = gwbuf_link_length(buf);
-                }
             }
             *dptr = 0;
         }

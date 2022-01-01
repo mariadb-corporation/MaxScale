@@ -42,7 +42,6 @@ static int test1()
     fprintf(stderr,
             "testmodutil : Rudimentary tests.");
     buffer = gwbuf_alloc(100);
-    mxb_assert_message(gwbuf_is_contiguous(buffer), "Allocated buffer should be continuos");
     memset(GWBUF_DATA(buffer), 0, gwbuf_link_length(buffer));
     mxb_assert_message(0 == modutil_is_SQL(buffer), "Default buffer should be diagnosed as not SQL");
     /* There would ideally be some straightforward way to create a SQL buffer? */

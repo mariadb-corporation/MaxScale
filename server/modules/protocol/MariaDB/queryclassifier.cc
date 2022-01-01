@@ -806,7 +806,6 @@ QueryClassifier::current_target_t QueryClassifier::handle_multi_temp_and_load(
         {
             // This is wasteful, the sql is extracted multiple times
             // it should be in the Context, after first call.
-            mxb_assert(gwbuf_is_contiguous(querybuf));
             const auto& sql = querybuf->get_sql();
             is_multi = maxsimd::is_multi_stmt(sql, &m_markers);
         }

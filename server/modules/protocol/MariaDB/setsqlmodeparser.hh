@@ -248,8 +248,6 @@ private:
 
     result_t initialize(GWBUF* pBuffer)
     {
-        mxb_assert(gwbuf_is_contiguous(pBuffer));
-
         result_t rv = ERROR;
 
         char* pSql;

@@ -536,10 +536,7 @@ public:
      */
     void update(GWBUF* buffer)
     {
-        for (GWBUF* b = buffer; b; b = b->next)
-        {
-            update(GWBUF_DATA(b), gwbuf_link_length(b));
-        }
+        update(buffer->start, buffer->length());
     }
 
     /**

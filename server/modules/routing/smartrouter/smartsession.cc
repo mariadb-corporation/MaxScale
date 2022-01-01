@@ -151,7 +151,6 @@ bool SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down
 {
     using maxbase::operator<<;
 
-    mxb_assert(gwbuf_is_contiguous(pPacket));
     Cluster& cluster = *static_cast<Cluster*>(down.back()->get_userdata());
 
     auto tracker_state_before = cluster.tracker.state();

@@ -2520,8 +2520,6 @@ MariaDBBackendConnection::TrackedQuery::TrackedQuery(GWBUF* buffer)
     , collect_rows(gwbuf_should_collect_rows(buffer))
     , id(gwbuf_get_id(buffer))
 {
-    mxb_assert(gwbuf_is_contiguous(buffer));
-
     if (command == MXS_COM_STMT_EXECUTE)
     {
         // Extract the flag byte after the statement ID
