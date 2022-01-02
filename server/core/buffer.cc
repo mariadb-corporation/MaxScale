@@ -51,11 +51,6 @@ std::string extract_sql_real(const GWBUF* pBuf)
 
 #if defined (SS_DEBUG)
 
-inline void ensure_at_head(const GWBUF* buf)
-{
-    mxb_assert(buf->tail != reinterpret_cast<GWBUF*>(0xdeadbeef));
-}
-
 inline void ensure_not_empty(const GWBUF* buf)
 {
     if (buf)
@@ -85,17 +80,11 @@ inline void ensure_owned(const GWBUF* buf)
 inline bool validate_buffer(const GWBUF* buf)
 {
     mxb_assert(buf);
-    ensure_at_head(buf);
     ensure_owned(buf);
     return true;
 }
 
 #else
-
-inline void ensure_at_head(const GWBUF* head)
-{
-}
-
 inline void ensure_not_empty(const GWBUF* buf)
 {
 }
@@ -154,7 +143,6 @@ GWBUF::GWBUF(uint64_t size)
 #ifdef SS_DEBUG
     owner = RoutingWorker::get_current_id();
 #endif
-    tail = this;
     start = sbuf->data.data();
     end = start + size;
 }
@@ -205,9 +193,7 @@ void gwbuf_free(GWBUF* buf)
 
 GWBUF* gwbuf_clone(GWBUF* buf)
 {
-    auto* rval = new GWBUF(*buf);
-    rval->tail = rval;
-    return rval;
+    return new GWBUF(*buf);
 }
 
 static GWBUF* gwbuf_deep_clone_portion(const GWBUF* buf, size_t length)
@@ -250,7 +236,7 @@ GWBUF* gwbuf_split(GWBUF** buf, size_t length)
     if (length > 0 && buf && *buf)
     {
         GWBUF* buffer = *buf;
-        GWBUF* orig_tail = buffer->tail;
+        GWBUF* orig_tail = nullptr;
         head = buffer;
         ensure_owned(buffer);
 
@@ -258,23 +244,12 @@ GWBUF* gwbuf_split(GWBUF** buf, size_t length)
         while (buffer && length && length >= gwbuf_link_length(buffer))
         {
             length -= gwbuf_link_length(buffer);
-            head->tail = buffer;
-            buffer = buffer->next;
+            buffer = nullptr;
         }
 
         /** Some data is left in the original buffer */
         if (buffer)
         {
-            /** We're splitting a chain of buffers */
-            if (head->tail != orig_tail)
-            {
-                /** Make sure the original buffer's tail points to the right place */
-                buffer->tail = orig_tail;
-
-                /** Remove the pointer to the original buffer */
-                head->tail->next = NULL;
-            }
-
             if (length > 0)
             {
                 mxb_assert(gwbuf_link_length(buffer) > length);
@@ -327,7 +302,7 @@ static inline bool gwbuf_get_byte(const GWBUF** buf, size_t* offset, uint8_t* b)
     {
         mxb_assert((*buf)->owner == RoutingWorker::get_current_id());
         *offset -= gwbuf_link_length(*buf);
-        *buf = (*buf)->next;
+        *buf = nullptr;
     }
 
     mxb_assert(!*buf || (gwbuf_link_length(*buf) > *offset));

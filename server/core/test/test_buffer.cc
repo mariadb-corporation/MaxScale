@@ -160,10 +160,6 @@ void test_split()
     newchain = gwbuf_split(&oldchain, headsize);
     mxb_assert_message(gwbuf_length(newchain) == headsize, "New chain should be 10 bytes long");
     mxb_assert_message(gwbuf_length(oldchain) == tailsize, "Old chain should be 20 bytes long");
-    mxb_assert_message(oldchain->tail == oldchain, "Old chain tail should point to old chain");
-    mxb_assert_message(oldchain->next == NULL, "Old chain should not have next buffer");
-    mxb_assert_message(newchain->tail == newchain, "Old chain tail should point to old chain");
-    mxb_assert_message(newchain->next == NULL, "new chain should not have next buffer");
     gwbuf_free(oldchain);
     gwbuf_free(newchain);
 
@@ -182,10 +178,6 @@ void test_split()
                        "Old buffer should be 5 bytes");
     mxb_assert_message(gwbuf_length(newbuf) == 5 && gwbuf_link_length(newbuf) == 5,
                        "New buffer should be 5 bytes");
-    mxb_assert_message(buffer->tail == buffer, "Old buffer's tail should point to itself");
-    mxb_assert_message(newbuf->tail == newbuf, "New buffer's tail should point to itself");
-    mxb_assert_message(buffer->next == NULL, "Old buffer's next pointer should be NULL");
-    mxb_assert_message(newbuf->next == NULL, "New buffer's next pointer should be NULL");
     gwbuf_free(buffer);
     gwbuf_free(newbuf);
 
@@ -403,8 +395,8 @@ void test_clone()
             ++j;
         }
 
-        o = o->next;
-        c = c->next;
+        o = nullptr;
+        c = nullptr;
     }
 
     mxb_assert(c == NULL);

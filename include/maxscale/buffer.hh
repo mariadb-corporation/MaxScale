@@ -79,8 +79,6 @@ class GWBUF
 public:
     using HintVector = std::vector<Hint>;
 
-    GWBUF*   next {nullptr};    /*< Next buffer in a linked chain of buffers */
-    GWBUF*   tail {nullptr};    /*< Last buffer in a linked chain of buffers */
     uint8_t* start {nullptr};   /*< Start of the valid data */
     uint8_t* end {nullptr};     /*< First byte after the valid data */
 
@@ -557,18 +555,10 @@ public:
             while (m_i && m_i + i >= m_end)
             {
                 i -= m_end - m_i;
-                m_pBuffer = m_pBuffer->next;
+                m_pBuffer = nullptr;
 
-                if (m_pBuffer)
-                {
-                    m_i = GWBUF_DATA(m_pBuffer);
-                    m_end = m_i + gwbuf_link_length(m_pBuffer);
-                }
-                else
-                {
-                    m_i = NULL;
-                    m_end = NULL;
-                }
+                m_i = nullptr;
+                m_end = nullptr;
             }
 
             if (m_i)
@@ -593,18 +583,9 @@ public:
 
             if (m_i == m_end)
             {
-                m_pBuffer = m_pBuffer->next;
-
-                if (m_pBuffer)
-                {
-                    m_i = GWBUF_DATA(m_pBuffer);
-                    m_end = m_i + gwbuf_link_length(m_pBuffer);
-                }
-                else
-                {
-                    m_i = NULL;
-                    m_end = NULL;
-                }
+                m_pBuffer = nullptr;
+                m_i = nullptr;
+                m_end = nullptr;
             }
         }
 
