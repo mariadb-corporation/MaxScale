@@ -293,7 +293,7 @@ bool MariaDBUserManager::update_users()
     sett.password = mxs::decrypt_password(sett.password);
     sett.multiquery = true;
     sett.clear_sql_mode = true;
-    sett.charset = "latin1";
+    sett.charset = "utf8mb4";
     sett.plugin_dir = mxs::connector_plugindir();
 
     mxs::Config& glob_config = mxs::Config::get();
