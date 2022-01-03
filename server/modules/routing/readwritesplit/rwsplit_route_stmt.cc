@@ -597,14 +597,14 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
         else
         {
             error << "Could not route session command "
-                  << "(" << STRPACKETTYPE(command) << ": " << mxs::extract_sql(buffer) << "). "
+                  << "(" << STRPACKETTYPE(command) << ": " << buffer.get_sql() << "). "
                   << "Connection status: " << get_verbose_status();
         }
     }
     else
     {
         error << "No valid candidates for session command "
-              << "(" << STRPACKETTYPE(command) << ": " << mxs::extract_sql(buffer) << "). "
+              << "(" << STRPACKETTYPE(command) << ": " << buffer.get_sql() << "). "
               << "Connection status: " << get_verbose_status();
         ok = false;
     }
@@ -613,7 +613,7 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
     {
         if (can_retry_query() || can_continue_trx_replay())
         {
-            MXS_INFO("Delaying routing: %s", mxs::extract_sql(buffer).c_str());
+            MXS_INFO("Delaying routing: %s", buffer.get_sql().c_str());
             retry_query(buffer.release());
             ok = true;
         }
