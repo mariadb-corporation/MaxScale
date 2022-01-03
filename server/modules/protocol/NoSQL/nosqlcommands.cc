@@ -216,6 +216,7 @@ struct ThisUnit
         { tolower(command::RenameCollection::KEY),         create_info<command::RenameCollection>() },
         { tolower(command::ReplSetGetStatus::KEY),         create_info<command::ReplSetGetStatus>() },
         { tolower(command::ResetError::KEY),               create_info<command::ResetError>() },
+        { tolower(command::RevokeRolesFromUser::KEY),      create_info<command::RevokeRolesFromUser>() },
         { tolower(command::ServerStatus::KEY),             create_info<command::ServerStatus>() },
         { tolower(command::SaslContinue::KEY),             create_info<command::SaslContinue>() },
         { tolower(command::SaslStart::KEY),                create_info<command::SaslStart>() },

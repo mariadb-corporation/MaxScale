@@ -27,9 +27,11 @@ namespace nosql
 namespace
 {
 
-vector<string> create_grant_statements(const string& user,
-                                       const string& db,
-                                       const vector<role::Role>& roles)
+vector<string> create_grant_or_revoke_statements(const string& user,
+                                                 const string& db,
+                                                 const string& command,
+                                                 const string& preposition,
+                                                 const vector<role::Role>& roles)
 {
     vector<string> statements;
 
@@ -59,12 +61,26 @@ vector<string> create_grant_statements(const string& user,
             mxb_assert(!true);
         }
 
-        string grant = "GRANT " + mxb::join(privileges) + " ON " + db + ".* to " + user;
+        string statement = command + mxb::join(privileges) + " ON " + db + ".*" + preposition + user;
 
-        statements.push_back(grant);
+        statements.push_back(statement);
     }
 
     return statements;
+}
+
+vector<string> create_grant_statements(const string& user,
+                                       const string& db,
+                                       const vector<role::Role>& roles)
+{
+    return create_grant_or_revoke_statements(user, db, " GRANT ", " TO ", roles);
+}
+
+vector<string> create_revoke_statements(const string& user,
+                                        const string& db,
+                                        const vector<role::Role>& roles)
+{
+    return create_grant_or_revoke_statements(user, db, " REVOKE ", " FROM ", roles);
 }
 
 }
@@ -820,6 +836,183 @@ private:
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/revokeRolesFromUser/
+class RevokeRolesFromUser : public SingleCommand
+{
+public:
+    static constexpr const char* const KEY = "revokeRolesFromUser";
+    static constexpr const char* const HELP = "";
+
+    using SingleCommand::SingleCommand;
+
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final
+    {
+        uint8_t* pData = mariadb_response.data();
+        uint8_t* pEnd = pData + mariadb_response.length();
+
+        size_t n = 0;
+        while (pData < pEnd)
+        {
+            ComResponse response(&pData);
+
+            switch (response.type())
+            {
+            case ComResponse::OK_PACKET:
+                ++n;
+                break;
+
+            case ComResponse::ERR_PACKET:
+                {
+                    ComERR err(response);
+
+                    switch (err.code())
+                    {
+                    case ER_SPECIFIC_ACCESS_DENIED_ERROR:
+                        if (n == 0)
+                        {
+                            ostringstream ss;
+                            ss << "not authorized on " << m_database.name() << " to execute command "
+                               << bsoncxx::to_json(m_doc).c_str();
+
+                            throw SoftError(ss.str(), error::UNAUTHORIZED);
+                        }
+                        // fallthrough
+                    default:
+                        MXS_ERROR("Revoke statement '%s' failed: %s",
+                                  m_statements[n].c_str(), err.message().c_str());
+                    }
+                };
+                break;
+
+            default:
+                throw_unexpected_packet();
+            }
+        }
+
+        auto revoked_roles = m_roles;
+        revoked_roles.resize(n);
+
+        map<string, set<role::Id>> roles_by_db;
+
+        for (const auto& role : m_info.roles)
+        {
+            roles_by_db[role.db].insert(role.id);
+        }
+
+        for (const auto& role : revoked_roles)
+        {
+            set<role::Id>& role_ids = roles_by_db[role.db];
+
+            role_ids.erase(role.id);
+        }
+
+        vector<role::Role> final_roles;
+
+        for (const auto& kv : roles_by_db)
+        {
+            const auto& db = kv.first;
+
+            if (!kv.second.empty())
+            {
+                for (const auto& id : kv.second)
+                {
+                    role::Role role { db, id };
+
+                    final_roles.push_back(role);
+                }
+            }
+        }
+
+        const auto& um = m_database.context().um();
+
+        if (um.set_roles(m_db, m_user, final_roles))
+        {
+            if (n == m_roles.size())
+            {
+                DocumentBuilder doc;
+                doc.append(kvp(key::OK, 1));
+
+                *ppNoSQL_response = create_response(doc.extract());
+            }
+            else
+            {
+                ostringstream ss;
+
+                ss << "Could partially update the MariaDB grants and could update the corresponding "
+                   << "roles in the local nosqlprotocol database. See the MaxScale log for more details.";
+
+                throw SoftError(ss.str(), error::INTERNAL_ERROR);
+            }
+        }
+        else
+        {
+            ostringstream ss;
+
+            if (n == m_roles.size())
+            {
+                ss << "Could update the MariaDB grants";
+            }
+            else
+            {
+                ss << "Could partially update the MariaDB grants";
+            }
+
+            ss << ", but could not update the roles in the local nosqlprotocol database. "
+               << "There is now a discrepancy between the grants the user has and the roles "
+               << "nosqlprotocol think it has.";
+
+            throw SoftError(ss.str(), error::INTERNAL_ERROR);
+        }
+
+        return State::READY;
+    }
+
+private:
+    void prepare() override
+    {
+        m_db = m_database.name();
+        m_user = value_as<string>();
+
+        auto element = m_doc[key::ROLES];
+
+        if (!element
+            || (element.type() != bsoncxx::type::k_array)
+            || (static_cast<bsoncxx::array::view>(element.get_array()).empty()))
+        {
+            ostringstream ss;
+            ss << "\"revokeRoles\" command requires a non-empty \"" << key::ROLES << "\" array";
+
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+
+        role::from_bson(element.get_array(), m_db, &m_roles);
+
+        auto& um = m_database.context().um();
+
+        if (!um.get_info(m_db, m_user, &m_info))
+        {
+            ostringstream ss;
+            ss << "Could not find user \"" << m_user << " for db \"" << m_db << "\"";
+
+            throw SoftError(ss.str(), error::USER_NOT_FOUND);
+        }
+    }
+
+    string generate_sql() override
+    {
+        string user = "'" + m_db + "." + m_user + "'@'%'";
+
+        m_statements = create_revoke_statements(user, m_db, m_roles);
+
+        return mxb::join(m_statements, ";");
+    }
+
+private:
+    string                m_db;
+    string                m_user;
+    UserManager::UserInfo m_info;
+    vector<role::Role>    m_roles;
+    vector<string>        m_statements;
+};
 
 // https://docs.mongodb.com/v4.4/reference/command/updateUser/
 
