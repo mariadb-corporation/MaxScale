@@ -138,22 +138,22 @@ const std::string& GWBUF::get_canonical() const
 }
 
 GWBUF::GWBUF(uint64_t size)
-    : sbuf(std::make_shared<SHARED_BUF>(size))
+    : m_sbuf(std::make_shared<SHARED_BUF>(size))
 {
 #ifdef SS_DEBUG
     owner = RoutingWorker::get_current_id();
 #endif
-    start = sbuf->data.data();
+    start = m_sbuf->data.data();
     end = start + size;
 }
 
 GWBUF::GWBUF(const GWBUF& rhs)
     : start(rhs.start)
     , end(rhs.end)
-    , sbuf(rhs.sbuf)
     , hints(rhs.hints)
     , gwbuf_type(rhs.gwbuf_type)
     , id(rhs.id)
+    , m_sbuf(rhs.m_sbuf)
 {
 #ifdef SS_DEBUG
     owner = RoutingWorker::get_current_id();
@@ -423,7 +423,7 @@ void gwbuf_set_type(GWBUF* buf, uint32_t type)
 
 void GWBUF::set_classifier_data(void* new_data, void (* deleter)(void*))
 {
-    auto& obj = sbuf->classifier_data;
+    auto& obj = m_sbuf->classifier_data;
     mxb_assert(obj.data == nullptr && obj.deleter == nullptr);
     mxb_assert(!new_data || deleter);   // If data is given, a deleter must also be set.
     obj.data = new_data;
@@ -432,7 +432,7 @@ void GWBUF::set_classifier_data(void* new_data, void (* deleter)(void*))
 
 void* GWBUF::get_classifier_data() const
 {
-    return sbuf->classifier_data.data;
+    return m_sbuf->classifier_data.data;
 }
 
 void GWBUF::append(const uint8_t* new_data, uint64_t n_bytes)
@@ -440,9 +440,9 @@ void GWBUF::append(const uint8_t* new_data, uint64_t n_bytes)
     auto old_len = length();
     auto new_len = old_len + n_bytes;
 
-    if (sbuf.unique())
+    if (m_sbuf.unique())
     {
-        auto& bufdata = sbuf->data;
+        auto& bufdata = m_sbuf->data;
         auto bytes_consumed = start - bufdata.data();
 
         auto vec_size_required = bytes_consumed + new_len;
@@ -468,8 +468,8 @@ void GWBUF::append(const uint8_t* new_data, uint64_t n_bytes)
         auto* new_vec_begin = new_sbuf->data.data();
         memcpy(new_vec_begin, start, old_len);
         memcpy(new_vec_begin + old_len, new_data, n_bytes);
-        sbuf = move(new_sbuf);
-        start = sbuf->data.data();
+        m_sbuf = move(new_sbuf);
+        start = m_sbuf->data.data();
         end = start + new_len;
     }
 }
