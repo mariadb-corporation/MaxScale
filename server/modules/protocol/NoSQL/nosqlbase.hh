@@ -533,6 +533,16 @@ bool element_as(const bsoncxx::document::element& element,
                 Conversion conversion,
                 double* pT);
 
+template<>
+bool element_as(const bsoncxx::document::element& element,
+                Conversion conversion,
+                int32_t* pT);
+
+template<>
+bool element_as(const bsoncxx::document::element& element,
+                Conversion conversion,
+                std::string* pT);
+
 template<class T>
 T element_as(const std::string& command,
              const char* zKey,

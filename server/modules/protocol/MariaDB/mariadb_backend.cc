@@ -2172,6 +2172,12 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
         {
             // OK packet pretending to be an EOF packet
             process_ok_packet(it, end);
+
+            if (m_reply.state() != ReplyState::DONE)
+            {
+                // Resultset is complete but more data will follow
+                set_reply_state(ReplyState::START);
+            }
         }
         else if (cmd == MYSQL_REPLY_ERR)
         {

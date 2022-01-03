@@ -15,10 +15,58 @@
 #include "nosqlprotocol.hh"
 #include "nosqlbase.hh"
 #include <memory>
+#include <maxbase/json.hh>
 #include <maxscale/sqlite3.hh>
+#include "nosqlscram.hh"
 
 namespace nosql
 {
+
+namespace role
+{
+
+enum class Id
+{
+    DB_ADMIN,
+    READ,
+    READ_WRITE
+};
+
+struct Role
+{
+    std::string db;
+    Id          id;
+};
+
+std::string to_string(Id id);
+
+bool from_string(const std::string& key, Id* pId);
+
+inline bool from_string(const char* zKey, Id* pValue)
+{
+    return from_string(std::string(zKey), pValue);
+}
+
+inline bool from_string(const string_view& key, Id* pValue)
+{
+    return from_string(std::string(key.data(), key.length()), pValue);
+}
+
+std::string to_json(const Role& role);
+
+bool from_json(const mxb::Json& json, Role* pRole);
+bool from_json(const std::string& json, Role* pRole);
+
+std::string to_json(const std::vector<Role>& roles);
+
+bool from_json(const std::string& json, std::vector<Role>* pRoles);
+
+// throws if invalid.
+void from_bson(const bsoncxx::array::view& bson,
+               const std::string& default_db,
+               std::vector<Role>* pRoles);
+
+}
 
 class UserManager
 {
@@ -28,12 +76,15 @@ public:
     class UserInfo
     {
     public:
-        std::string          scoped_user;
-        std::string          scope;
-        std::string          user;
-        std::string          pwd;
-        std::vector<uint8_t> salt;
-        std::string          salt_b64;
+        std::string                   db_user;
+        std::string                   db;
+        std::string                   user;
+        std::string                   pwd;
+        std::string                   uuid;
+        std::vector<uint8_t>          salt;
+        std::string                   salt_b64;
+        std::vector<scram::Mechanism> mechanisms;
+        std::vector<role::Role>       roles;
     };
 
     static std::unique_ptr<UserManager> create(const std::string& name);
@@ -43,41 +94,52 @@ public:
         return m_path;
     }
 
-    bool add_user(const std::string& scope,
+    bool add_user(const std::string& db,
                   const string_view& user,
                   const string_view& pwd,
                   const std::string& salt_b64,
-                  const bsoncxx::array::view& roles);
+                  const std::vector<scram::Mechanism>& mechanisms,
+                  const std::vector<role::Role>& roles);
 
-    bool remove_user(const std::string& scope, const std::string& user);
+    bool remove_user(const std::string& db, const std::string& user);
 
-    bool get_info(const std::string& scope, const std::string& user, UserInfo* pInfo) const;
+    bool get_info(const std::string& db, const std::string& user, UserInfo* pInfo) const;
 
-    bool get_scoped_info(const std::string& scoped_user, UserInfo* pInfo) const;
+    bool get_info(const std::string& db_user, UserInfo* pInfo) const;
 
-    bool get_pwd(const std::string& scope, const std::string& user, std::string* pPwd) const;
+    bool get_pwd(const std::string& db, const std::string& user, std::string* pPwd) const;
 
-    bool get_salt_b64(const std::string& scope, const std::string& user, std::string* pSalt_b64) const;
+    bool get_salt_b64(const std::string& db, const std::string& user, std::string* pSalt_b64) const;
 
-    bool user_exists(const std::string& scope, const std::string& user) const
+    bool user_exists(const std::string& db, const std::string& user) const
     {
-        return get_info(scope, user, nullptr);
+        return get_info(db, user, nullptr);
     }
 
-    bool user_exists(const std::string& scope, const string_view& user) const
+    bool user_exists(const std::string& db, const string_view& user) const
     {
-        return get_info(scope, std::string(user.data(), user.length()), nullptr);
+        return get_info(db, std::string(user.data(), user.length()), nullptr);
     }
 
-    bool scoped_user_exists(const std::string& scoped_user) const
+    bool user_exists(const std::string& db_user) const
     {
-        return get_scoped_info(scoped_user, nullptr);
+        return get_info(db_user, nullptr);
     }
 
-    bool scoped_user_exists(const string_view& scoped_user) const
+    bool user_exists(const string_view& db_user) const
     {
-        return get_scoped_info(std::string(scoped_user.data(), scoped_user.length()), nullptr);
+        return get_info(std::string(db_user.data(), db_user.length()), nullptr);
     }
+
+    std::vector<UserInfo> get_infos() const;
+
+    std::vector<UserInfo> get_infos(const std::string& db) const;
+
+    std::vector<UserInfo> get_infos(const std::vector<std::string>& db_users) const;
+
+    std::vector<std::string> get_db_users(const std::string& db) const;
+
+    bool remove_db_users(const std::vector<std::string>& db_users) const;
 
 private:
     UserManager(std::string path, sqlite3* pDb);

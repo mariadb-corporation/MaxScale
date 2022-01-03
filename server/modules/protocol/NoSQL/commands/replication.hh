@@ -94,11 +94,11 @@ public:
                 throw SoftError(ss.str(), error::TYPE_MISMATCH);
             }
 
-            auto scoped_user = static_cast<string_view>(element.get_utf8());
+            auto db_user = static_cast<string_view>(element.get_utf8());
 
             auto& context = database.context();
 
-            if (context.um().scoped_user_exists(scoped_user))
+            if (context.um().user_exists(db_user))
             {
                 ArrayBuilder sasl_supported_mechs;
 
