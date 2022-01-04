@@ -25,6 +25,9 @@ namespace
 
 const int SCHEMA_VERSION = 1;
 
+// Not all uuid/uuid.h appears to have UUID_STR_LEN defined.
+const int NOSQL_UUID_STR_LEN = 37;
+
 //
 // User Database
 //
@@ -518,7 +521,7 @@ bool UserManager::add_user(const string& db,
     uuid_t uuid;
     uuid_generate(uuid);
 
-    char zUuid[UUID_STR_LEN];
+    char zUuid[NOSQL_UUID_STR_LEN];
     uuid_unparse(uuid, zUuid);
 
     ostringstream ss;
