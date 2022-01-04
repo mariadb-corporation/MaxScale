@@ -133,6 +133,7 @@ private:
     int                  inspect_mapping_states(SRBackend* bref, GWBUF** wbuf);
     enum showdb_response parse_mapping_response(SRBackend* bref, GWBUF** buffer);
     void                 route_queued_query();
+    bool                 delay_routing(mxb::Worker::Call::action_t action);
     void                 synchronize_shards();
     void                 handle_mapping_reply(SRBackend* bref, GWBUF** pPacket);
     bool                 handle_statement(GWBUF* querybuf, SRBackend* bref, uint8_t command, uint32_t type);
@@ -146,6 +147,7 @@ private:
     SRBackendList          m_backends;      /**< Backend references */
     SConfig                m_config;        /**< Session specific configuration */
     SchemaRouter*          m_router;        /**< The router instance */
+    std::string            m_key;           /**< Shard cache key */
     Shard                  m_shard;         /**< Database to server mapping */
     std::string            m_connect_db;    /**< Database the user was trying to connect to */
     std::string            m_current_db;    /**< Current active database */
@@ -157,5 +159,6 @@ private:
     mxs::Target*           m_load_target;   /**< Target for LOAD DATA LOCAL INFILE */
     SRBackend*             m_sescmd_replier {nullptr};
     int                    m_num_init_db = 0;
+    uint32_t               m_dcid {0};
 };
 }

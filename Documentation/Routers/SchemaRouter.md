@@ -64,6 +64,21 @@ db1.t2   |MyServer1    |
 db2.t1   |MyServer2    |
 ```
 
+### Database Mapping
+
+The schemarouter maps each of the servers to know where each database and table
+is located. As each user has access to a different set of tables and databases,
+the result is unique to the username and the set of servers that the service
+uses. These results are cached by the schemarouter. The lifetime of the cached
+result is controlled by the `refresh_interval` parameter.
+
+When a server needs to be mapped, the schemarouter will route a query to each of
+the servers using the client's credentials. While this query is being executed,
+all other sessions that would otherwise share the cached result will wait for
+the update to complete. This waiting functionality was added in MaxScale 2.4.19,
+older versions did not wait for existing updates to finish and would perform
+parallel database mapping queries.
+
 ## Configuration
 
 Here is an example configuration of the schemarouter:
