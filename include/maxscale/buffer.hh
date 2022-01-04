@@ -1288,11 +1288,23 @@ public:
         return gwbuf_get_id(m_pBuffer);
     }
 
-    /** Get the sql of the buffer (if any)
+    /**
+     * Get the sql of the buffer (if any)
      */
     const std::string& get_sql() const
     {
         return m_pBuffer->get_sql();
+    }
+
+    /**
+     * Append a hint to the buffer
+     *
+     * @param args Arguments given to the Hint class constructor
+     */
+    template<typename ... Args>
+    void add_hint(Args&& ... args)
+    {
+        m_pBuffer->hints.emplace_back(std::forward<Args>(args)...);
     }
 
     /**
