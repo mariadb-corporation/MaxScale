@@ -57,6 +57,9 @@ static const char SQL_SELECT_ALL_DB_USERS_HEAD[] =
 static const char SQL_DELETE_SOME_DB_USERS_HEAD[] =
     "DELETE FROM accounts WHERE ";
 
+static const char SQL_SET_ROLES_FORMAT[] =
+    "UPDATE accounts SET roles = '%s' WHERE db_user = '%s'";
+
 int select_info_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
 {
     mxb_assert(nColumns == 8);
@@ -113,12 +116,6 @@ int select_db_users_cb(void* pData, int nColumns, char** pzColumn, char** pzName
 
     pDb_users->push_back(pzColumn[0]);
 
-    return 0;
-}
-
-int remove_db_user_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
-{
-    MXB_NOTICE("YES YES YES YES YES");
     return 0;
 }
 
@@ -516,7 +513,7 @@ bool UserManager::add_user(const string& db,
                            const vector<scram::Mechanism>& mechanisms,
                            const vector<role::Role>& roles)
 {
-    string db_user = db + "." + string(user.data(), user.length());
+    string db_user = get_db_user(db, user);
 
     uuid_t uuid;
     uuid_generate(uuid);
@@ -554,7 +551,7 @@ bool UserManager::add_user(const string& db,
 
 bool UserManager::remove_user(const string& db, const string& user)
 {
-    string db_user = db + "." + user;
+    string db_user = get_db_user(db, user);
 
     ostringstream ss;
     ss << SQL_DELETE_HEAD << "\"" << db_user << "\"";
@@ -577,9 +574,7 @@ bool UserManager::remove_user(const string& db, const string& user)
 
 bool UserManager::get_info(const string& db, const string& user, UserInfo* pInfo) const
 {
-    string db_user = db + "." + user;
-
-    return get_info(db_user, pInfo);
+    return get_info(get_db_user(db, user), pInfo);
 }
 
 bool UserManager::get_info(const string& db_user, UserInfo* pInfo) const
@@ -755,7 +750,7 @@ bool UserManager::remove_db_users(const std::vector<std::string>& db_users) cons
         auto sql = ss.str();
 
         char* pError = nullptr;
-        rv = sqlite3_exec(&m_db, sql.c_str(), remove_db_user_cb, nullptr, &pError);
+        rv = sqlite3_exec(&m_db, sql.c_str(), nullptr, nullptr, &pError);
 
         if (rv != SQLITE_OK)
         {
@@ -763,6 +758,30 @@ bool UserManager::remove_db_users(const std::vector<std::string>& db_users) cons
                       pError ? pError : "Unknown error");
             sqlite3_free(pError);
         }
+    }
+
+    return rv == SQLITE_OK;
+}
+
+bool UserManager::set_roles(const string& db, const string& user, const std::vector<role::Role>& roles) const
+{
+    int rv = SQLITE_OK;
+
+    string db_user = get_db_user(db, user);
+    string json_roles = role::to_json(roles);
+
+    char sql[sizeof(SQL_SET_ROLES_FORMAT) + db_user.length() + json_roles.length()];
+
+    sprintf(sql, SQL_SET_ROLES_FORMAT, json_roles.c_str(), db_user.c_str());
+
+    char* pError = nullptr;
+    rv = sqlite3_exec(&m_db, sql, nullptr, nullptr, &pError);
+
+    if (rv != SQLITE_OK)
+    {
+        MXS_ERROR("Could not set roles of '%s': %s", db_user.c_str(),
+                  pError ? pError : "Unknown error");
+        sqlite3_free(pError);
     }
 
     return rv == SQLITE_OK;

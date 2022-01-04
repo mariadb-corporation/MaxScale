@@ -141,6 +141,18 @@ public:
 
     bool remove_db_users(const std::vector<std::string>& db_users) const;
 
+    bool set_roles(const std::string& db, const std::string& user, const std::vector<role::Role>& roles) const;
+
+    static std::string get_db_user(const std::string& db, const std::string& user)
+    {
+        return db + "." + user;
+    }
+
+    static std::string get_db_user(const std::string& db, const string_view& user)
+    {
+        return db + "." + std::string(user.data(), user.length());
+    }
+
 private:
     UserManager(std::string path, sqlite3* pDb);
 
