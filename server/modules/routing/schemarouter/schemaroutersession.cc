@@ -49,7 +49,8 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session,
     , m_backends(std::move(backends))
     , m_config(*router->m_config.values())
     , m_router(router)
-    , m_shard(m_router->m_shard_manager.get_shard(get_cache_key(), m_config.refresh_interval.count()))
+    , m_key(get_cache_key())
+    , m_shard(m_router->m_shard_manager.get_shard(m_key, m_config.refresh_interval.count()))
     , m_state(0)
     , m_load_target(NULL)
 {
@@ -87,12 +88,22 @@ SchemaRouterSession::~SchemaRouterSession()
     {
         m_closed = true;
 
+        if (m_dcid)
+        {
+            mxb::Worker::get_current()->cancel_delayed_call(m_dcid);
+        }
+
         for (const auto& a : m_backends)
         {
             if (a->in_use())
             {
                 a->close();
             }
+        }
+
+        if (m_state & INIT_MAPPING)
+        {
+            m_router->m_shard_manager.cancel_update(m_key);
         }
 
         std::lock_guard<std::mutex> guard(m_router->m_lock);
@@ -264,8 +275,37 @@ bool SchemaRouterSession::routeQuery(GWBUF* pPacket)
 
     if (m_shard.empty() && (m_state & INIT_MAPPING) == 0)
     {
-        /* Generate database list */
-        query_databases();
+        if (m_dcid)
+        {
+            // The delayed call is already in place, let it take care of the shard update
+            m_queue.push_back(pPacket);
+            return 1;
+        }
+
+        // Check if another session has managed to update the shard cache
+        m_shard = m_router->m_shard_manager.get_shard(m_key, m_config.refresh_interval.count());
+
+        if (m_shard.empty())
+        {
+            // No entries in the cache, try to start an update
+            if (m_router->m_shard_manager.start_update(m_key))
+            {
+                // No other sessions are doing an update for this user, start one
+                query_databases();
+            }
+            else
+            {
+                // Wait for the other session to finish its update and reuse that result
+                mxb_assert(m_dcid == 0);
+                m_queue.push_back(pPacket);
+
+                auto worker = mxs::RoutingWorker::get_current();
+                m_dcid = worker->delayed_call(1000, &SchemaRouterSession::delay_routing, this);
+                MXS_INFO("Waiting for the database mapping to be completed by another session");
+
+                return 1;
+            }
+        }
     }
 
     int ret = 0;
@@ -594,7 +634,7 @@ bool SchemaRouterSession::handleError(mxs::ErrorType type,
 void SchemaRouterSession::synchronize_shards()
 {
     m_router->m_stats.shmap_cache_miss++;
-    m_router->m_shard_manager.update_shard(m_shard, get_cache_key());
+    m_router->m_shard_manager.update_shard(m_shard, m_key);
 }
 
 /**
@@ -866,13 +906,40 @@ void SchemaRouterSession::route_queued_query()
     GWBUF* tmp = m_queue.front().release();
     m_queue.pop_front();
 
-#ifdef SS_DEBUG
-    char* querystr = modutil_get_SQL(tmp);
-    MXS_DEBUG("Sending queued buffer for session %p: %s", m_pSession, querystr);
-    MXS_FREE(querystr);
-#endif
+    MXS_INFO("Routing queued query: %s", mxs::extract_sql(tmp).c_str());
 
     session_delay_routing(m_pSession, this, tmp, 0);
+}
+
+bool SchemaRouterSession::delay_routing(mxb::Worker::Call::action_t action)
+{
+    bool rv = false;
+
+    if (action == mxb::Worker::Call::EXECUTE)
+    {
+        mxb_assert(m_shard.empty());
+        m_shard = m_router->m_shard_manager.get_shard(m_key, m_config.refresh_interval.count());
+
+        if (!m_shard.empty())
+        {
+            MXS_INFO("Another session updated the shard information, reusing the result");
+            route_queued_query();
+            m_dcid = 0;
+        }
+        else if (m_router->m_shard_manager.start_update(m_key))
+        {
+            // No other sessions are doing an update, start our own update
+            query_databases();
+            m_dcid = 0;
+        }
+        else
+        {
+            // We're still waiting for an update from another session
+            rv = true;
+        }
+    }
+
+    return rv;
 }
 
 /**
@@ -1186,6 +1253,7 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
  */
 void SchemaRouterSession::query_databases()
 {
+    MXS_INFO("Mapping databases");
 
     for (const auto& b : m_backends)
     {
