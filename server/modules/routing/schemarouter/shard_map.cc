@@ -192,4 +192,34 @@ void ShardManager::update_shard(Shard& shard, const std::string& user)
         MXS_INFO("Updated shard map for user '%s'", user.c_str());
         m_maps[user] = shard;
     }
+
+    mxb_assert(m_limits[user] > 0);
+    --m_limits[user];
+}
+
+void ShardManager::set_update_limit(int64_t limit)
+{
+    std::lock_guard<std::mutex> guard(m_lock);
+    m_update_limit = limit;
+}
+
+bool ShardManager::start_update(const std::string& user)
+{
+    bool rval = false;
+    std::lock_guard<std::mutex> guard(m_lock);
+
+    if (m_limits[user] < m_update_limit)
+    {
+        ++m_limits[user];
+        rval = true;
+    }
+
+    return rval;
+}
+
+void ShardManager::cancel_update(const std::string& user)
+{
+    std::lock_guard<std::mutex> guard(m_lock);
+    mxb_assert(m_limits[user] > 0);
+    --m_limits[user];
 }
