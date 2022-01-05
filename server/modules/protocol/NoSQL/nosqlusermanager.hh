@@ -76,6 +76,15 @@ public:
     class UserInfo
     {
     public:
+        enum What
+        {
+            PWD        = 1 << 0,
+            MECHANISMS = 1 << 1,
+            ROLES      = 1 << 2,
+
+            MASK = (PWD | MECHANISMS | ROLES)
+        };
+
         std::string                   db_user;
         std::string                   db;
         std::string                   user;
@@ -141,7 +150,25 @@ public:
 
     bool remove_db_users(const std::vector<std::string>& db_users) const;
 
-    bool set_roles(const std::string& db, const std::string& user, const std::vector<role::Role>& roles) const;
+    bool update(const std::string& db, const std::string& user, uint32_t what, const UserInfo& info) const;
+
+    bool set_mechanisms(const std::string& db,
+                        const std::string& user,
+                        const std::vector<scram::Mechanism>& mechanisms) const
+    {
+        UserInfo info;
+        info.mechanisms = mechanisms;
+
+        return update(db, user, UserInfo::MECHANISMS, info);
+    }
+
+    bool set_roles(const std::string& db, const std::string& user, const std::vector<role::Role>& roles) const
+    {
+        UserInfo info;
+        info.roles = roles;
+
+        return update(db, user, UserInfo::ROLES, info);
+    }
 
     static std::string get_db_user(const std::string& db, const std::string& user)
     {

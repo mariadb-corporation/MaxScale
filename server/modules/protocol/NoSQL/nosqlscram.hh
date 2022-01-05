@@ -27,16 +27,24 @@ enum class Mechanism
     SHA_256
 };
 
+std::set<Mechanism> supported_mechanisms();
+
 const char* to_string(Mechanism mechanism);
-bool from_string(const char* zMechanism, Mechanism* pMechanism);
-inline bool from_string(const std::string& mechanism, Mechanism* pMechanism)
+bool from_string(const std::string& mechanism, Mechanism* pMechanism);
+inline bool from_string(const char* zMechanism, Mechanism* pMechanism)
 {
-    return from_string(mechanism.c_str(), pMechanism);
+    return from_string(std::string(zMechanism), pMechanism);
+}
+inline bool from_string(const string_view& mechanism, Mechanism* pMechanism)
+{
+    return from_string(std::string(mechanism.data(), mechanism.length()), pMechanism);
 }
 
 std::string to_json(const std::vector<Mechanism>& mechanisms);
 bool from_json(const std::string& json, std::vector<Mechanism>* pMechanisms);
 
+// throws if invalid.
+void from_bson(const bsoncxx::array::view& bson, std::vector<Mechanism>* pRoles);
 
 constexpr int32_t SERVER_NONCE_SIZE = 24;
 constexpr int32_t SERVER_SALT_SIZE = 16;

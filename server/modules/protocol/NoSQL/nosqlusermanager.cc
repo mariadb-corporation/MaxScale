@@ -60,8 +60,14 @@ static const char SQL_SELECT_ALL_DB_USERS_HEAD[] =
 static const char SQL_DELETE_SOME_DB_USERS_HEAD[] =
     "DELETE FROM accounts WHERE ";
 
-static const char SQL_SET_ROLES_FORMAT[] =
-    "UPDATE accounts SET roles = '%s' WHERE db_user = '%s'";
+static const char SQL_UPDATE_HEAD[] =
+    "UPDATE accounts SET ";
+
+static const char SQL_UPDATE_TAIL[] =
+    " WHERE db_user = ";
+
+static const char SQL_SET_PWD_FORMAT[] =
+    "UPDATE accounts SET pwd = '%s', mechanisms = '%s' WHERE db_user = '%s'";
 
 int select_info_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
 {
@@ -766,23 +772,47 @@ bool UserManager::remove_db_users(const std::vector<std::string>& db_users) cons
     return rv == SQLITE_OK;
 }
 
-bool UserManager::set_roles(const string& db, const string& user, const std::vector<role::Role>& roles) const
+bool UserManager::update(const string& db, const string& user, uint32_t what, const UserInfo& info) const
 {
+    mxb_assert((what & UserInfo::MASK) != 0);
+
     int rv = SQLITE_OK;
 
     string db_user = get_db_user(db, user);
-    string json_roles = role::to_json(roles);
 
-    char sql[sizeof(SQL_SET_ROLES_FORMAT) + db_user.length() + json_roles.length()];
+    ostringstream ss;
 
-    sprintf(sql, SQL_SET_ROLES_FORMAT, json_roles.c_str(), db_user.c_str());
+    ss << SQL_UPDATE_HEAD;
+    string delimiter = "";
+
+    if (what & UserInfo::PWD)
+    {
+        ss << delimiter << "pwd = '" << info.pwd << "'";
+        delimiter = ", ";
+    }
+
+    if (what & UserInfo::MECHANISMS)
+    {
+        ss << delimiter << "mechanisms = '" << scram::to_json(info.mechanisms) << "'";
+        delimiter = ", ";
+    }
+
+    if (what & UserInfo::ROLES)
+    {
+        ss << delimiter << "roles = '" << role::to_json(info.roles) << "'";
+        delimiter = ", ";
+    }
+
+    ss << SQL_UPDATE_TAIL << "'" << db_user << "'";
+
+    auto sql = ss.str();
 
     char* pError = nullptr;
-    rv = sqlite3_exec(&m_db, sql, nullptr, nullptr, &pError);
+    rv = sqlite3_exec(&m_db, sql.c_str(), nullptr, nullptr, &pError);
 
     if (rv != SQLITE_OK)
     {
-        MXS_ERROR("Could not set roles of '%s': %s", db_user.c_str(),
+        MXS_ERROR("Could update '%s': %s", db_user.c_str(),
                   pError ? pError : "Unknown error");
         sqlite3_free(pError);
     }

@@ -222,6 +222,7 @@ struct ThisUnit
         { tolower(command::SaslStart::KEY),                create_info<command::SaslStart>() },
         { tolower(command::SetParameter::KEY),             create_info<command::SetParameter>() },
         { tolower(command::Update::KEY),                   create_info<command::Update>() },
+        { tolower(command::UpdateUser::KEY),               create_info<command::UpdateUser>() },
         { tolower(command::UsersInfo::KEY),                create_info<command::UsersInfo>() },
         { tolower(command::Validate::KEY),                 create_info<command::Validate>() },
         { tolower(command::WhatsMyUri::KEY),               create_info<command::WhatsMyUri>() },
