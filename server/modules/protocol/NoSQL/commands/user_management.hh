@@ -94,15 +94,6 @@ public:
 
     using SingleCommand::SingleCommand;
 
-    ~CreateUser()
-    {
-        if (m_dcid)
-        {
-            worker().cancel_delayed_call(m_dcid);
-            m_dcid = 0;
-        }
-    }
-
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final
     {
         State state = State::READY;
@@ -339,21 +330,11 @@ private:
             state = State::BUSY;
 
             m_action = Action::DROP;
-            m_dcid = worker().delayed_call(0, [this](Worker::Call::action_t action) {
-                    m_dcid = 0;
 
-                    if (action == Worker::Call::EXECUTE)
-                    {
-                        string user = "'" + m_db + "." + m_user + "'@'%'";
+            ostringstream sql;
+            sql << "DROP USER '" << m_db << "." << m_user << "'@'%'";
 
-                        ostringstream sql;
-                        sql << "DROP USER '" << m_db << "." << m_user << "'@'%'";
-
-                        send_downstream(sql.str());
-                    }
-
-                    return false;
-                });
+            send_downstream_via_loop(sql.str());
         }
 
         return state;
