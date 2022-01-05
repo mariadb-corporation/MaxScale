@@ -1911,9 +1911,9 @@ bool Service::change_cluster(mxs::Monitor* monitor)
 
     if (m_monitor == nullptr && m_data->targets.empty())
     {
-        for (auto a : monitor->servers())
+        for (SERVER* server : monitor->real_servers())
         {
-            m_data->targets.push_back(a->server);
+            m_data->targets.push_back(server);
         }
 
         targets_updated();
