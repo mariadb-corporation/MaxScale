@@ -921,7 +921,7 @@ void Session::retain_statement(GWBUF* pBuffer)
     {
         mxb_assert(m_last_queries.size() <= m_retain_last_statements);
 
-        std::shared_ptr<GWBUF> sBuffer(gwbuf_clone(pBuffer), std::default_delete<GWBUF>());
+        std::shared_ptr<GWBUF> sBuffer(gwbuf_clone_shallow(pBuffer), std::default_delete<GWBUF>());
 
         m_last_queries.push_front(QueryInfo(sBuffer));
 
@@ -1214,7 +1214,7 @@ bool Session::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply
 
 bool Session::handleError(mxs::ErrorType type, GWBUF* error, Endpoint* down, const mxs::Reply& reply)
 {
-    kill(gwbuf_clone(error));
+    kill(gwbuf_clone_shallow(error));
     return false;
 }
 

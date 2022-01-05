@@ -127,7 +127,7 @@ protected:
             int32_t request_id,
             ResponseKind response_kind)
         : m_database(*pDatabase)
-        , m_pRequest(gwbuf_clone(pRequest))
+        , m_pRequest(gwbuf_clone_shallow(pRequest))
         , m_request_id(request_id)
         , m_response_kind(response_kind)
     {

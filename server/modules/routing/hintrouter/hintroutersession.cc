@@ -38,7 +38,7 @@ public:
     {
         bool rv = false;
         auto endpoint = elem.second;
-        GWBUF* pPacket = gwbuf_clone(m_pPacket);
+        GWBUF* pPacket = gwbuf_clone_shallow(m_pPacket);
 
         if (pPacket)
         {

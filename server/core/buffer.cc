@@ -24,6 +24,7 @@
 #include <maxscale/modutil.hh>
 
 using mxs::RoutingWorker;
+using std::move;
 
 namespace
 {
@@ -51,14 +52,6 @@ std::string extract_sql_real(const GWBUF* pBuf)
 
 #if defined (SS_DEBUG)
 
-inline void ensure_not_empty(const GWBUF* buf)
-{
-    if (buf)
-    {
-        mxb_assert(!buf->empty());
-    }
-}
-
 inline void ensure_owned(const GWBUF* buf)
 {
     // TODO: Currently not possible to know whether manually triggered
@@ -85,10 +78,6 @@ inline bool validate_buffer(const GWBUF* buf)
 }
 
 #else
-inline void ensure_not_empty(const GWBUF* buf)
-{
-}
-
 inline void ensure_owned(const GWBUF* head)
 {
 }
@@ -137,27 +126,49 @@ const std::string& GWBUF::get_canonical() const
     return m_canonical;
 }
 
-GWBUF::GWBUF(uint64_t size)
-    : m_sbuf(std::make_shared<SHARED_BUF>(size))
+GWBUF::GWBUF()
 {
 #ifdef SS_DEBUG
     owner = RoutingWorker::get_current_id();
 #endif
+}
+
+GWBUF::GWBUF(uint64_t size)
+    : GWBUF()
+{
+    m_sbuf = std::make_shared<SHARED_BUF>(size);
     start = m_sbuf->data.data();
     end = start + size;
 }
 
-GWBUF::GWBUF(const GWBUF& rhs)
-    : start(rhs.start)
-    , end(rhs.end)
-    , hints(rhs.hints)
-    , gwbuf_type(rhs.gwbuf_type)
-    , id(rhs.id)
-    , m_sbuf(rhs.m_sbuf)
+GWBUF::GWBUF(GWBUF&& rhs) noexcept
+    : GWBUF()
 {
-#ifdef SS_DEBUG
-    owner = RoutingWorker::get_current_id();
-#endif
+    move_helper(move(rhs));
+}
+
+GWBUF& GWBUF::operator=(GWBUF&& rhs) noexcept
+{
+    if (this != &rhs)
+    {
+        move_helper(move(rhs));
+    }
+    return *this;
+}
+
+void GWBUF::move_helper(GWBUF&& rhs) noexcept
+{
+    using std::exchange;
+    start = exchange(rhs.start, nullptr);
+    end = exchange(rhs.end, nullptr);
+    gwbuf_type = exchange(rhs.gwbuf_type, GWBUF_TYPE_UNDEFINED);
+    id = exchange(rhs.id, 0);
+
+    hints = move(rhs.hints);
+    m_sbuf = move(rhs.m_sbuf);
+    m_sql = move(rhs.m_sql);
+    m_canonical = move(rhs.m_canonical);
+    m_markers = move(rhs.m_markers);
 }
 
 /**
@@ -191,9 +202,44 @@ void gwbuf_free(GWBUF* buf)
     delete buf;
 }
 
-GWBUF* gwbuf_clone(GWBUF* buf)
+void GWBUF::clone_helper(const GWBUF& other)
 {
-    return new GWBUF(*buf);
+    hints = other.hints;
+    gwbuf_type = other.gwbuf_type;
+    id = other.id;
+
+    m_sql = other.m_sql;
+    m_canonical = other.m_canonical;
+    // No need to copy 'markers'.
+}
+
+GWBUF GWBUF::clone_shallow() const
+{
+    GWBUF rval;
+    rval.clone_helper(*this);
+
+    rval.start = start;
+    rval.end = end;
+    rval.m_sbuf = m_sbuf;
+    return rval;
+}
+
+GWBUF GWBUF::clone_deep() const
+{
+    auto len = length();
+    GWBUF rval(len);
+    rval.clone_helper(*this);
+
+    memcpy(rval.start, start, len);
+    // TODO: clone BufferObject
+    return rval;
+}
+
+GWBUF* gwbuf_clone_shallow(GWBUF* buf)
+{
+    auto* rval = new GWBUF();
+    *rval = buf->clone_shallow();
+    return rval;
 }
 
 static GWBUF* gwbuf_deep_clone_portion(const GWBUF* buf, size_t length)
@@ -224,8 +270,9 @@ static GWBUF* gwbuf_deep_clone_portion(const GWBUF* buf, size_t length)
 
 GWBUF* gwbuf_deep_clone(const GWBUF* buf)
 {
-    validate_buffer(buf);
-    return gwbuf_deep_clone_portion(buf, gwbuf_length(buf));
+    auto rval = new GWBUF();
+    *rval = buf->clone_deep();
+    return rval;
 }
 
 GWBUF* gwbuf_split(GWBUF** buf, size_t length)
@@ -464,6 +511,7 @@ void GWBUF::append(const uint8_t* new_data, uint64_t n_bytes)
         // If called for a shared (shallow-cloned) buffer, make a new copy of the underlying data. The custom
         // data is not copied, as it does not have a copy-function.
         // TODO: think if custom data should be copied.
+        // Also ends up here if the shared ptr is null.
         auto new_sbuf = std::make_shared<SHARED_BUF>(new_len);
         auto* new_vec_begin = new_sbuf->data.data();
         memcpy(new_vec_begin, start, old_len);

@@ -536,7 +536,7 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
         if (m_current_query.get() && !backend->should_ignore_response())
         {
             const auto& current_sql = m_current_query.get_sql();
-            m_ps_cache[current_sql].append(gwbuf_clone(writebuf));
+            m_ps_cache[current_sql].append(gwbuf_clone_shallow(writebuf));
         }
     }
 
@@ -1051,7 +1051,7 @@ bool RWSplitSession::handle_error_new_connection(RWBackend* backend, GWBUF* errm
         {
             // Send an error so that the client knows to proceed.
             mxs::ReplyRoute route;
-            RouterSession::clientReply(gwbuf_clone(errmsg), route, mxs::Reply());
+            RouterSession::clientReply(gwbuf_clone_shallow(errmsg), route, mxs::Reply());
             m_current_query.reset();
             route_stored = true;
         }

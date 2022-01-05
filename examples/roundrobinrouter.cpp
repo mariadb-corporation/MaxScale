@@ -358,7 +358,7 @@ bool RRRouterSession::routeQuery(GWBUF* querybuf)
             {
                 ++n_targets;
 
-                if (b->routeQuery(gwbuf_clone(querybuf)))
+                if (b->routeQuery(gwbuf_clone_shallow(querybuf)))
                 {
                     ++route_success;
                 }

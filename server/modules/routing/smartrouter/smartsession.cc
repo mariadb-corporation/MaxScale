@@ -336,7 +336,7 @@ bool SmartRouterSession::write_to_all(GWBUF* pBuf, Mode mode)
         a.tracker = maxsql::PacketTracker(pBuf);
         a.is_replying_to_client = false;
 
-        if (!a.pBackend->routeQuery(gwbuf_clone(pBuf)))
+        if (!a.pBackend->routeQuery(gwbuf_clone_shallow(pBuf)))
         {
             success = false;
         }
@@ -362,7 +362,7 @@ bool SmartRouterSession::write_split_packets(GWBUF* pBuf)
         {
             a.tracker.update_request(pBuf);
 
-            if (!a.pBackend->routeQuery(gwbuf_clone(pBuf)))
+            if (!a.pBackend->routeQuery(gwbuf_clone_shallow(pBuf)))
             {
                 success = false;
                 break;
@@ -391,7 +391,7 @@ bool SmartRouterSession::handleError(mxs::ErrorType type,
                << pProblem->target()->name() << " Error code=" << err_code << " "
                << mxs::extract_error(pPacket));
 
-    m_pSession->kill(gwbuf_clone(pPacket));
+    m_pSession->kill(gwbuf_clone_shallow(pPacket));
     return false;
 }
 

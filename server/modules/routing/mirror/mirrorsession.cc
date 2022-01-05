@@ -67,7 +67,7 @@ bool MirrorSession::routeQuery(GWBUF* pPacket)
                 type = a.get() == m_main ? mxs::Backend::EXPECT_RESPONSE : mxs::Backend::IGNORE_RESPONSE;
             }
 
-            if (a->in_use() && a->write(gwbuf_clone(pPacket), type))
+            if (a->in_use() && a->write(gwbuf_clone_shallow(pPacket), type))
             {
                 if (a.get() == m_main)
                 {

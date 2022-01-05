@@ -1,5 +1,5 @@
 /**
- * MXS-2326: Routing hints aren't cloned in gwbuf_clone
+ * MXS-2326: Routing hints aren't cloned in gwbuf_clone_shallow
  */
 
 #include <maxtest/testconnections.hh>

@@ -635,7 +635,7 @@ public:
         mxb_assert(m_invalidate || invalidation_words.empty());
         vector<char> rkey = key.to_vector();
 
-        GWBUF* pClone = gwbuf_clone(const_cast<GWBUF*>(pValue));
+        GWBUF* pClone = gwbuf_clone_shallow(const_cast<GWBUF*>(pValue));
         MXS_ABORT_IF_NULL(pClone);
 
         auto sThis = get_shared();

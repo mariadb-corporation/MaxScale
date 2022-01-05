@@ -93,10 +93,23 @@ public:
     const std::string& get_sql() const;
     const std::string& get_canonical() const;
 
-    explicit GWBUF(uint64_t size);
-    explicit GWBUF(const GWBUF& rhs);
+    /**
+     * Constructs an empty GWBUF. Does not allocate any storage. Calling most storage-accessing functions
+     * on an empty buffer is an error.
+     */
+    GWBUF();
 
-    GWBUF(GWBUF&&) = delete;
+    explicit GWBUF(uint64_t size);
+
+    GWBUF(GWBUF&& rhs) noexcept;
+    GWBUF& operator=(GWBUF&& rhs) noexcept;
+
+    // No copy-ctor, as it is not intuitively clear whether it should deep or shallow clone. Separate
+    // functions keep things clear.
+    GWBUF(GWBUF& rhs) = delete;
+
+    GWBUF clone_shallow() const;
+    GWBUF clone_deep() const;
 
     /**
      * Set classifier data. Can only be set once.
@@ -155,6 +168,9 @@ private:
     mutable std::string      m_sql;
     mutable std::string      m_canonical;
     mutable maxsimd::Markers m_markers;
+
+    void move_helper(GWBUF&& other) noexcept;
+    void clone_helper(const GWBUF& other);
 };
 
 inline bool gwbuf_is_type_undefined(const GWBUF* b)
@@ -301,7 +317,7 @@ extern void gwbuf_free(GWBUF* buf);
  *
  * @return The cloned GWBUF, or NULL if any part of @buf could not be cloned.
  */
-extern GWBUF* gwbuf_clone(GWBUF* buf);
+GWBUF* gwbuf_clone_shallow(GWBUF* buf);
 
 /**
  * @brief Deep clone a GWBUF
@@ -724,7 +740,7 @@ public:
     {
         if (rhs.m_pBuffer)
         {
-            m_pBuffer = gwbuf_clone(rhs.m_pBuffer);
+            m_pBuffer = gwbuf_clone_shallow(rhs.m_pBuffer);
 
             if (!m_pBuffer)
             {
@@ -947,7 +963,7 @@ public:
 
         if (pBuffer)
         {
-            pBuffer = gwbuf_clone(pBuffer);
+            pBuffer = gwbuf_clone_shallow(pBuffer);
 
             if (!pBuffer)
             {

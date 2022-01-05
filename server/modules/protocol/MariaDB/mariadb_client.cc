@@ -1455,7 +1455,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
     case RoutingState::LARGE_HISTORY_PACKET:
         {
             // A continuation of a recoded command, append it to the current command and route it forward
-            m_pending_cmd.append(gwbuf_clone(buffer.get()));
+            m_pending_cmd.append(gwbuf_clone_shallow(buffer.get()));
             bool is_large = large_query_continues(buffer);
             routed = m_downstream->routeQuery(buffer.release()) != 0;
 

@@ -605,7 +605,7 @@ bool SchemaRouterSession::handleError(mxs::ErrorType type,
         {
             /** If the client is waiting for a reply, send an error. */
             mxs::ReplyRoute route;
-            RouterSession::clientReply(gwbuf_clone(pMessage), route, mxs::Reply());
+            RouterSession::clientReply(gwbuf_clone_shallow(pMessage), route, mxs::Reply());
         }
     }
 
@@ -1275,7 +1275,7 @@ void SchemaRouterSession::query_databases()
     {
         if (b->in_use() && !b->is_closed() && b->target()->is_usable())
         {
-            GWBUF* clone = gwbuf_clone(buffer);
+            GWBUF* clone = gwbuf_clone_shallow(buffer);
             MXS_ABORT_IF_NULL(clone);
 
             if (!b->write(clone))

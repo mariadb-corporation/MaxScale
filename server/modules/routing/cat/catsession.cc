@@ -56,7 +56,7 @@ bool CatSession::routeQuery(GWBUF* pPacket)
     {
         // We have a backend, write the query only to this one. It will be
         // propagated onwards in clientReply.
-        rval = (*m_current)->write(gwbuf_clone(pPacket));
+        rval = (*m_current)->write(gwbuf_clone_shallow(pPacket));
     }
 
     return rval;
@@ -81,7 +81,7 @@ bool CatSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const 
         }
         else
         {
-            (*m_current)->write(gwbuf_clone(m_query));
+            (*m_current)->write(gwbuf_clone_shallow(m_query));
         }
     }
 

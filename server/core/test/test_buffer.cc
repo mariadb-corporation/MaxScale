@@ -372,7 +372,7 @@ void test_clone()
     original = gwbuf_append(original, gwbuf_alloc_and_load(13, "1234567890123"));
     original = gwbuf_append(original, gwbuf_alloc_and_load(21, "123456789012345678901"));
 
-    GWBUF* clone = gwbuf_clone(original);
+    GWBUF* clone = gwbuf_clone_shallow(original);
 
     GWBUF* o = original;
     GWBUF* c = clone;
@@ -408,7 +408,7 @@ void test_clone()
     original = gwbuf_append(original, gwbuf_alloc_and_load(1, "1"));
     original = gwbuf_append(original, gwbuf_alloc_and_load(2, "12"));
 
-    clone = gwbuf_clone(original);
+    clone = gwbuf_clone_shallow(original);
     clone = gwbuf_append(clone, gwbuf_alloc_and_load(3, "123"));
 
     mxb_assert(gwbuf_length(clone) == 1 + 2 + 3);
@@ -450,7 +450,7 @@ static int test1()
     strcpy((char*)GWBUF_DATA(buffer), "1234\x03SELECT * FROM sometable");
     fprintf(stderr, "\t..done\nLoad SQL data into the buffer");
     mxb_assert_message(1 == GWBUF_IS_SQL(buffer), "Must say buffer is SQL, as it does have marker");
-    clone = gwbuf_clone(buffer);
+    clone = gwbuf_clone_shallow(buffer);
     fprintf(stderr, "\t..done\nCloned buffer");
     buflen = gwbuf_link_length(clone);
     fprintf(stderr, "\nCloned buffer length is now %lu", buflen);
@@ -514,7 +514,7 @@ static int test1()
     mxb_assert_message(head && tail, "Head and tail buffers should both be non-NULL");
     GWBUF* append = gwbuf_append(head, tail);
     mxb_assert_message(append == head, "gwbuf_append should return head");
-    GWBUF* all_clones = gwbuf_clone(head);
+    GWBUF* all_clones = gwbuf_clone_shallow(head);
     mxb_assert_message(all_clones, "Cloning all should work");
     mxb_assert_message(gwbuf_length(all_clones) == headsize + tailsize,
                        "Total buffer length should be 30 bytes");
