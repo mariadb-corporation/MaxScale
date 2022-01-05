@@ -215,6 +215,19 @@ bool maxavro_read_datablock_start(MAXAVRO_FILE* file)
     {
         clearerr(file->file);
     }
+
+    // Restore file read position if something went wrong
+    // (reader ahead of writer).
+    if (rval == false)
+    {
+        if (fseek(file->file, file->block_start_pos, SEEK_SET))
+        {
+            MXS_SERROR("Failed to restore read position for " << file->filename <<
+                       " to position " << file->block_start_pos
+                       << " " << mxs_strerror(errno));
+        }
+    }
+
     return rval;
 }
 
