@@ -46,6 +46,7 @@ const char CURSORS_KILLED[]                  = "cursorsKilled";
 const char CURSORS_NOT_FOUND[]               = "cursorsNotFound";
 const char CURSORS_UNKNOWN[]                 = "cursorsUnknown";
 const char CURSOR[]                          = "cursor";
+const char CUSTOM_DATA[]                     = "customData";
 const char DB[]                              = "db";
 const char DATABASES[]                       = "databases";
 const char DEACH[]                           = "$each";

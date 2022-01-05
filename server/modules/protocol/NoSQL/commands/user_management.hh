@@ -150,6 +150,12 @@ protected:
 
         m_pwd = element.get_utf8();
 
+        bsoncxx::document::view custom_data;
+        if (optional(key::CUSTOM_DATA, &custom_data))
+        {
+            m_custom_data = bsoncxx::to_json(custom_data);
+        }
+
         element = m_doc[key::ROLES];
         if (!element || (element.type() != bsoncxx::type::k_array))
         {
@@ -305,7 +311,7 @@ private:
             vector<scram::Mechanism> mechanisms;
             mechanisms.push_back(scram::Mechanism::SHA_1);
 
-            if (um.add_user(m_db, m_user, m_pwd, salt_b64, mechanisms, m_roles))
+            if (um.add_user(m_db, m_user, m_pwd, salt_b64, m_custom_data, mechanisms, m_roles))
             {
                 doc.append(kvp("ok", 1));
             }
@@ -404,6 +410,7 @@ private:
     string             m_db;
     string             m_user;
     string_view        m_pwd;
+    std::string        m_custom_data;
     vector<role::Role> m_roles;
     vector<string>     m_statements;
     uint32_t           m_dcid = { 0 };
@@ -1115,6 +1122,13 @@ private:
             m_what |= UserInfo::PWD;
         }
 
+        bsoncxx::document::view custom_data;
+        if (optional(key::CUSTOM_DATA, &custom_data))
+        {
+            m_custom_data = bsoncxx::to_json(custom_data);
+            m_what |= UserInfo::CUSTOM_DATA;
+        }
+
         bsoncxx::array::view mechanism_names;
         if (optional(key::MECHANISMS, &mechanism_names))
         {
@@ -1239,15 +1253,23 @@ private:
             {
                 const auto& um = m_database.context().um();
 
-                uint32_t what = UserInfo::PWD;
                 UserInfo info;
                 info.pwd = m_pwd;
+                uint32_t what = UserInfo::PWD;
+
+                if (m_what & UserInfo::CUSTOM_DATA)
+                {
+                    info.custom_data = m_custom_data;
+                    what |= UserInfo::CUSTOM_DATA;
+                }
 
                 if (m_what & UserInfo::MECHANISMS)
                 {
-                    what |= UserInfo::MECHANISMS;
                     info.mechanisms = m_mechanisms;
+                    what |= UserInfo::MECHANISMS;
                 }
+
+                m_what &= ~(UserInfo::PWD | UserInfo::CUSTOM_DATA | UserInfo::MECHANISMS);
 
                 if (um.update(m_db, m_user, what, info))
                 {
@@ -1325,22 +1347,20 @@ private:
 
         auto& um = m_database.context().um();
 
-        uint32_t what = UserInfo::ROLES;
-
         UserInfo info;
         info.roles = m_roles;
+        uint32_t what = UserInfo::ROLES;
+
+        if (m_what & UserInfo::CUSTOM_DATA)
+        {
+            info.custom_data = m_custom_data;
+            what |= UserInfo::CUSTOM_DATA;
+        }
 
         if (m_what & UserInfo::MECHANISMS)
         {
-            // So, the mechanisms where specified.
-            if (!(m_what & UserInfo::PWD))
-            {
-                // But the password was not, in which case the mechanisms would
-                // have been set already. So need to be set now.
-
-                info.mechanisms = m_mechanisms;
-                what |= UserInfo::MECHANISMS;
-            }
+            info.mechanisms = m_mechanisms;
+            what |= UserInfo::MECHANISMS;
         }
 
         if (um.update(m_db, m_user, what, info))
@@ -1480,6 +1500,7 @@ private:
     string                   m_db;
     string                   m_user;
     string                   m_pwd;
+    string                   m_custom_data;
     vector<scram::Mechanism> m_mechanisms;
     vector<role::Role>       m_roles;
     UserInfo                 m_info;
@@ -1667,6 +1688,12 @@ private:
         else
         {
             MXS_ERROR("The uuid '%s' of '%s' is invalid.", info.uuid.c_str(), info.db_user.c_str());
+        }
+
+        if (!info.custom_data.empty())
+        {
+            bsoncxx::document::value custom_data = bsoncxx::from_json(info.custom_data);
+            user.append(kvp(key::CUSTOM_DATA, custom_data));
         }
 
         user.append(kvp(key::USER, info.user));

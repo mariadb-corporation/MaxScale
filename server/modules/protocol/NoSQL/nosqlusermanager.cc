@@ -33,26 +33,27 @@ const int NOSQL_UUID_STR_LEN = 37;
 //
 static const char SQL_CREATE[] =
     "CREATE TABLE IF NOT EXISTS accounts "
-    "(db_user TEXT UNIQUE, db TEXT, user TEXT, pwd TEXT, uuid TEXT, salt_b64 TEXT, "
+    "(db_user TEXT UNIQUE, db TEXT, user TEXT, pwd TEXT, custom_data TEXT, uuid TEXT, salt_b64 TEXT, "
     "mechanisms TEXT, roles TEXT)";
 
 static const char SQL_INSERT_HEAD[] =
-    "INSERT INTO accounts (db_user, db, user, pwd, uuid, salt_b64, mechanisms, roles) VALUES ";
+    "INSERT INTO accounts (db_user, db, user, pwd, custom_data, uuid, salt_b64, mechanisms, roles) VALUES ";
 
 static const char SQL_DELETE_HEAD[] =
     "DELETE FROM accounts WHERE db_user = ";
 
 static const char SQL_SELECT_ONE_INFO_HEAD[] =
-    "SELECT db_user, db, user, pwd, uuid, salt_b64, mechanisms, roles FROM accounts WHERE db_user = ";
+    "SELECT db_user, db, user, pwd, custom_data, uuid, salt_b64, mechanisms, roles "
+    "FROM accounts WHERE db_user = ";
 
 static const char SQL_SELECT_ALL_INFOS[] =
-    "SELECT db_user, db, user, pwd, uuid, salt_b64, mechanisms, roles FROM accounts";
+    "SELECT db_user, db, user, pwd, custom_data, uuid, salt_b64, mechanisms, roles FROM accounts";
 
 static const char SQL_SELECT_ALL_DB_INFOS_HEAD[] =
-    "SELECT db_user, db, user, pwd, uuid, salt_b64, mechanisms, roles FROM accounts WHERE db = ";
+    "SELECT db_user, db, user, pwd, custom_data, uuid, salt_b64, mechanisms, roles FROM accounts WHERE db = ";
 
 static const char SQL_SELECT_SOME_DB_INFOS_HEAD[] =
-    "SELECT db_user, db, user, pwd, uuid, salt_b64, mechanisms, roles FROM accounts WHERE ";
+    "SELECT db_user, db, user, pwd, custom_data, uuid, salt_b64, mechanisms, roles FROM accounts WHERE ";
 
 static const char SQL_SELECT_ALL_DB_USERS_HEAD[] =
     "SELECT db_user FROM accounts WHERE db = ";
@@ -66,12 +67,10 @@ static const char SQL_UPDATE_HEAD[] =
 static const char SQL_UPDATE_TAIL[] =
     " WHERE db_user = ";
 
-static const char SQL_SET_PWD_FORMAT[] =
-    "UPDATE accounts SET pwd = '%s', mechanisms = '%s' WHERE db_user = '%s'";
 
 int select_info_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
 {
-    mxb_assert(nColumns == 8);
+    mxb_assert(nColumns == 9);
 
     auto* pInfos = static_cast<vector<nosql::UserManager::UserInfo>*>(pData);
 
@@ -80,33 +79,46 @@ int select_info_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
     info.db = pzColumn[1];
     info.user = pzColumn[2];
     info.pwd = pzColumn[3];
-    info.uuid = pzColumn[4];
-    info.salt_b64 = pzColumn[5];
+    info.custom_data = pzColumn[4];
+    info.uuid = pzColumn[5];
+    info.salt_b64 = pzColumn[6];
     info.salt = mxs::from_base64(info.salt_b64);
 
-    bool ok = false;
+    bool ok = true;
+
+    if (!info.custom_data.empty())
+    {
+        mxb::Json json;
+
+        if (!json.load_string(info.custom_data) || json.type() != mxb::Json::Type::OBJECT)
+        {
+            MXB_ERROR("The 'custom_data' field of '%s' is not a JSON object.", info.db_user.c_str());
+            ok = false;
+        }
+    }
 
     vector<nosql::scram::Mechanism> mechanisms;
-    if (nosql::scram::from_json(pzColumn[6], &mechanisms))
+    if (nosql::scram::from_json(pzColumn[7], &mechanisms))
     {
         info.mechanisms = std::move(mechanisms);
 
         vector<nosql::role::Role> roles;
-        if (nosql::role::from_json(pzColumn[7], &roles))
+        if (nosql::role::from_json(pzColumn[8], &roles))
         {
             info.roles = std::move(roles);
 
             pInfos->push_back(info);
-            ok = true;
         }
         else
         {
             MXS_ERROR("The 'roles' value of '%s' is not valid.", info.db_user.c_str());
+            ok = false;
         }
     }
     else
     {
         MXS_ERROR("The 'mechanisms' value of '%s' is not valid.", info.db_user.c_str());
+        ok = false;
     }
 
     if (!ok)
@@ -519,9 +531,12 @@ bool UserManager::add_user(const string& db,
                            const string_view& user,
                            const string_view& pwd,
                            const string& salt_b64,
+                           const std::string& custom_data, // Assumed to be JSON document.
                            const vector<scram::Mechanism>& mechanisms,
                            const vector<role::Role>& roles)
 {
+    mxb_assert(custom_data.empty() || mxb::Json().load_string(custom_data));
+
     string db_user = get_db_user(db, user);
 
     uuid_t uuid;
@@ -536,6 +551,7 @@ bool UserManager::add_user(const string& db,
        << db << "', '"
        << user << "', '"
        << pwd << "', '"
+       << custom_data << "', '"
        << zUuid << "', '"
        << salt_b64 << "', '"
        << scram::to_json(mechanisms) << "', '"
@@ -785,15 +801,21 @@ bool UserManager::update(const string& db, const string& user, uint32_t what, co
     ss << SQL_UPDATE_HEAD;
     string delimiter = "";
 
-    if (what & UserInfo::PWD)
+    if (what & UserInfo::CUSTOM_DATA)
     {
-        ss << delimiter << "pwd = '" << info.pwd << "'";
+        ss << delimiter << "custom_data = '" << info.custom_data << "'";
         delimiter = ", ";
     }
 
     if (what & UserInfo::MECHANISMS)
     {
         ss << delimiter << "mechanisms = '" << scram::to_json(info.mechanisms) << "'";
+        delimiter = ", ";
+    }
+
+    if (what & UserInfo::PWD)
+    {
+        ss << delimiter << "pwd = '" << info.pwd << "'";
         delimiter = ", ";
     }
 

@@ -78,11 +78,12 @@ public:
     public:
         enum What
         {
-            PWD        = 1 << 0,
-            MECHANISMS = 1 << 1,
-            ROLES      = 1 << 2,
+            CUSTOM_DATA = 1 << 0,
+            MECHANISMS  = 1 << 1,
+            PWD         = 1 << 2,
+            ROLES       = 1 << 3,
 
-            MASK = (PWD | MECHANISMS | ROLES)
+            MASK = (PWD | MECHANISMS | ROLES | CUSTOM_DATA)
         };
 
         std::string                   db_user;
@@ -91,6 +92,7 @@ public:
         std::string                   pwd;
         std::string                   uuid;
         std::vector<uint8_t>          salt;
+        std::string                   custom_data; // JSON document
         std::string                   salt_b64;
         std::vector<scram::Mechanism> mechanisms;
         std::vector<role::Role>       roles;
@@ -107,6 +109,7 @@ public:
                   const string_view& user,
                   const string_view& pwd,
                   const std::string& salt_b64,
+                  const std::string& custom_data, // Assumed to be JSON document.
                   const std::vector<scram::Mechanism>& mechanisms,
                   const std::vector<role::Role>& roles);
 
