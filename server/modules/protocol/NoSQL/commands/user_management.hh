@@ -115,6 +115,24 @@ public:
 protected:
     void prepare() override
     {
+        bool digest_password = true;
+        if (optional(key::DIGEST_PASSWORD, &digest_password) && !digest_password)
+        {
+            // Basically either the client or the server can digest the password.
+            // If the client digested the password, then we could use the digested
+            // password as the MariaDB password, which would mean that the actual
+            // NoSQL password would not be stored on the MaxScale host. However,
+            // since the MariaDB password really is the important one, it would not
+            // add much value. Furthermore, a client digested password is not
+            // supported with SCRAM-SHA-256, which is the default mechanism (not
+            // supported yet), so we just won't bother.
+            ostringstream ss;
+            ss << "nosqlprotocol does not support that the client digests the password, "
+               << "'digestPassword' must be true.";
+
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+
         m_db = m_database.name();
         m_user = value_as<string>();
 
@@ -1085,6 +1103,16 @@ protected:
 private:
     void parse()
     {
+        bool digest_password = true;
+        if (optional(key::DIGEST_PASSWORD, &digest_password) && !digest_password)
+        {
+            ostringstream ss;
+            ss << "nosqlprotocol does not support that the client digests the password, "
+               << "'digestPassword' must be true.";
+
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+
         m_db = m_database.name();
         m_user = value_as<string>();
 

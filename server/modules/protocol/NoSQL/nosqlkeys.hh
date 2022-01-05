@@ -51,6 +51,7 @@ const char DB[]                              = "db";
 const char DATABASES[]                       = "databases";
 const char DEACH[]                           = "$each";
 const char DEBUG[]                           = "debug";
+const char DIGEST_PASSWORD[]                 = "digestPassword";
 const char DELETES[]                         = "deletes";
 const char DIRECTION[]                       = "direction";
 const char DOCUMENTS[]                       = "documents";
