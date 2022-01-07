@@ -263,7 +263,8 @@ void RWSplitSession::trx_replay_next_stmt()
 
             if (chksum == m_replayed_trx.checksum())
             {
-                MXS_INFO("Checksums match, replay successful.");
+                MXS_INFO("Checksums match, replay successful. Replay took %ld seconds.",
+                         trx_replay_seconds());
 
                 if (m_interrupted_query.get())
                 {
@@ -681,11 +682,49 @@ void RWSplitSession::execute_queued_commands(mxs::RWBackend* backend)
     }
 }
 
+bool RWSplitSession::can_start_trx_replay() const
+{
+    bool can_replay = false;
+
+    if (m_can_replay_trx)
+    {
+        if (m_config.trx_timeout > 0s)
+        {
+            // m_trx_replay_timer is only set when the first replay starts, this is why we must check how many
+            // attempts we've made.
+            if (m_num_trx_replays == 0 || m_trx_replay_timer.split() < m_config.trx_timeout)
+            {
+                can_replay = true;
+            }
+            else
+            {
+                MXS_INFO("Transaction replay time limit of %ld seconds exceeded, not attempting replay",
+                         m_config.trx_timeout.count());
+            }
+        }
+        else
+        {
+            if (m_num_trx_replays < m_config.trx_max_attempts)
+            {
+                can_replay = true;
+            }
+            else
+            {
+                mxb_assert(m_num_trx_replays == m_config.trx_max_attempts);
+                MXS_INFO("Transaction replay attempt cap of %ld exceeded, not attempting replay",
+                         m_config.trx_max_attempts);
+            }
+        }
+    }
+
+    return can_replay;
+}
+
 bool RWSplitSession::start_trx_replay()
 {
     bool rval = false;
 
-    if (m_config.transaction_replay && m_can_replay_trx && m_num_trx_replays < m_config.trx_max_attempts)
+    if (m_config.transaction_replay && can_start_trx_replay())
     {
         ++m_num_trx_replays;
 
@@ -694,6 +733,7 @@ bool RWSplitSession::start_trx_replay()
             // This is the first time we're retrying this transaction, store it and the interrupted query
             m_orig_trx = m_trx;
             m_orig_stmt.copy_from(m_current_query);
+            m_trx_replay_timer.restart();
         }
         else
         {
@@ -714,7 +754,8 @@ bool RWSplitSession::start_trx_replay()
             // Stash any interrupted queries while we replay the transaction
             m_interrupted_query.reset(m_current_query.release());
 
-            MXS_INFO("Starting transaction replay %ld", m_num_trx_replays);
+            MXS_INFO("Starting transaction replay %ld. Replay has been ongoing for %ld seconds.",
+                     m_num_trx_replays, trx_replay_seconds());
             m_state = TRX_REPLAY;
 
             /**
@@ -759,12 +800,6 @@ bool RWSplitSession::start_trx_replay()
         }
 
         rval = true;
-    }
-    else if (m_num_trx_replays >= m_config.trx_max_attempts)
-    {
-        mxb_assert(m_num_trx_replays == m_config.trx_max_attempts);
-        MXS_INFO("Transaction replay attempt cap of %ld exceeded, not attempting replay",
-                 m_config.trx_max_attempts);
     }
 
     return rval;

@@ -198,6 +198,10 @@ static cfg::ParamSize s_transaction_replay_max_size(
     &s_spec, "transaction_replay_max_size", "Maximum size of transaction to retry",
     1024 * 1024 * 1024, cfg::Param::AT_RUNTIME);
 
+static cfg::ParamSeconds s_transaction_replay_timeout(
+    &s_spec, "transaction_replay_timeout", "Timeout for transaction replay",
+    cfg::NO_INTERPRETATION, 0s, cfg::Param::AT_RUNTIME);
+
 static cfg::ParamCount s_transaction_replay_attempts(
     &s_spec, "transaction_replay_attempts", "Maximum number of times to retry a transaction",
     5, cfg::Param::AT_RUNTIME);
@@ -263,6 +267,7 @@ struct RWSConfig : public mxs::config::Configuration
 
         bool        transaction_replay;     /**< Replay failed transactions */
         int64_t     trx_max_size;           /**< Max transaction size for replaying */
+        seconds     trx_timeout;            /**< How long can the transaction be replayed for */
         int64_t     trx_max_attempts;       /**< Maximum number of transaction replay attempts */
         bool        trx_retry_on_deadlock;  /**< Replay the transaction if it ends up in a deadlock */
         TrxChecksum trx_checksum;           /**< The type of checksum to calculate */
