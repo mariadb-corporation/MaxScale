@@ -461,6 +461,7 @@ bool RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Error
         backend->ack_write();
         m_expected_responses--;
         m_pSession->reset_server_bookkeeping();
+        backend->close();
     }
 
     return ok;
