@@ -522,6 +522,16 @@ the transaction is automatically retried. If the retrying of the transaction
 results in another deadlock error, it is retried until it either succeeds or a
 transaction checksum error is encountered.
 
+### `transaction_replay_retry_on_mismatch`
+
+Retry transactions that end in checksum mismatch. This parameter was added in
+MaxScale 6.2.1 is disabled by default.
+
+When enabled, any replayed transactions that end with a checksum mismatch are
+retried until they either succeeds or one of the transaction replay limits is
+reached (`delayed_retry_timeout`, `transaction_replay_timeout` or
+`transaction_replay_attempts`).
+
 ### `transaction_replay_checksum`
 
 Selects which transaction checksum method is used to verify the result of the

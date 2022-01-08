@@ -210,6 +210,10 @@ static cfg::ParamBool s_transaction_replay_retry_on_deadlock(
     &s_spec, "transaction_replay_retry_on_deadlock", "Retry transaction on deadlock",
     false, cfg::Param::AT_RUNTIME);
 
+static cfg::ParamBool s_transaction_replay_retry_on_mismatch(
+    &s_spec, "transaction_replay_retry_on_mismatch", "Retry transaction on checksum mismatch",
+    false, cfg::Param::AT_RUNTIME);
+
 static cfg::ParamEnum<TrxChecksum> s_transaction_replay_checksum(
     &s_spec, "transaction_replay_checksum", "Type of checksum to calculate for results",
 {
@@ -270,6 +274,7 @@ struct RWSConfig : public mxs::config::Configuration
         seconds     trx_timeout;            /**< How long can the transaction be replayed for */
         int64_t     trx_max_attempts;       /**< Maximum number of transaction replay attempts */
         bool        trx_retry_on_deadlock;  /**< Replay the transaction if it ends up in a deadlock */
+        bool        trx_retry_on_mismatch;  /**< Replay the transaction on checksum mismatch */
         TrxChecksum trx_checksum;           /**< The type of checksum to calculate */
 
         bool reuse_ps;      /**< Reuse prepared statements */

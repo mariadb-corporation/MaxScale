@@ -232,6 +232,7 @@ RWSConfig::RWSConfig(SERVICE* service)
     add_native(&RWSConfig::m_v, &Values::trx_max_attempts, &s_transaction_replay_attempts);
     add_native(&RWSConfig::m_v, &Values::trx_timeout, &s_transaction_replay_timeout);
     add_native(&RWSConfig::m_v, &Values::trx_retry_on_deadlock, &s_transaction_replay_retry_on_deadlock);
+    add_native(&RWSConfig::m_v, &Values::trx_retry_on_mismatch, &s_transaction_replay_retry_on_mismatch);
     add_native(&RWSConfig::m_v, &Values::trx_checksum, &s_transaction_replay_checksum);
     add_native(&RWSConfig::m_v, &Values::optimistic_trx, &s_optimistic_trx);
     add_native(&RWSConfig::m_v, &Values::lazy_connect, &s_lazy_connect);
