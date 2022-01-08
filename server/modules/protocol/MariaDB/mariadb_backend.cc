@@ -706,6 +706,15 @@ void MariaDBBackendConnection::normal_read()
 
         if (!result_collected && rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT))
         {
+            // This happens if a session with RCAP_TYPE_STMT_OUTPUT closes the connection before all
+            // the packets have been processed.
+            if (!m_dcb->is_open())
+            {
+                gwbuf_free(read_buffer),
+                read_buffer = nullptr;
+                break;
+            }
+
             // TODO: Get rid of RCAP_TYPE_STMT_OUTPUT and iterate over all packets in the resultset
             stmt = modutil_get_next_MySQL_packet(&read_buffer);
             mxb_assert_message(stmt, "There should be only complete packets in read_buffer");
@@ -736,7 +745,9 @@ void MariaDBBackendConnection::normal_read()
     }
     while (read_buffer);
 
-    if (m_reply.is_complete())
+    // The call to clientReply can cause the connection to be closed. Check that it is still
+    // open before comparing the responses.
+    if (m_dcb->is_open() && m_reply.is_complete())
     {
         if (m_current_id)
         {
