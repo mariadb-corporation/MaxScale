@@ -786,7 +786,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_history
 {
     StateMachineRes rval = StateMachineRes::DONE;
 
-    while (!m_history_responses.empty())
+    while (!m_history_responses.empty() && rval == StateMachineRes::DONE)
     {
         DCB::ReadResult read_res = m_dcb->read(MYSQL_HEADER_LEN, 0);
 
@@ -830,13 +830,11 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_history
                 // The result is not yet complete. In practice this only happens with a COM_STMT_PREPARE that
                 // has multiple input/output parameters.
                 rval = StateMachineRes::IN_PROGRESS;
-                break;
             }
         }
         else
         {
             rval = StateMachineRes::IN_PROGRESS;
-            break;
         }
     }
 
