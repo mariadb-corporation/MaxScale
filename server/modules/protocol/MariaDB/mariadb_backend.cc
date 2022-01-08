@@ -745,22 +745,13 @@ void MariaDBBackendConnection::normal_read()
     }
     while (read_buffer);
 
-    // The call to clientReply can cause the connection to be closed. Check that it is still
-    // open before comparing the responses.
-    if (m_dcb->is_open() && m_reply.is_complete())
+    if (!m_dcb->is_open())
     {
-        if (m_current_id)
-        {
-            // It's possible that there's already a response for this command. This can happen if the session
-            // command is executed multiple times before the accepted answer has arrived. We only care about
-            // the latest result.
-            m_ids_to_check[m_current_id] = m_reply.is_ok();
-
-            // Reset the ID after storing it to make sure debug assertions will catch any cases where a PS
-            // response is read without a pre-assigned ID.
-            m_current_id = 0;
-        }
-
+        // The router closed the session, erase the callbacks to prevent the client protocol from calling it.
+        mysql_session()->history_info.erase(this);
+    }
+    else if (m_reply.is_complete())
+    {
         if (!compare_responses())
         {
             do_handle_error(m_dcb, create_response_mismatch_error(), mxs::ErrorType::PERMANENT);
@@ -887,6 +878,20 @@ void MariaDBBackendConnection::pin_history_responses()
 
 bool MariaDBBackendConnection::compare_responses()
 {
+    MYSQL_session* data = mysql_session();
+
+    if (m_current_id)
+    {
+        // It's possible that there's already a response for this command. This can happen if the session
+        // command is executed multiple times before the accepted answer has arrived. We only care about
+        // the latest result.
+        m_ids_to_check[m_current_id] = m_reply.is_ok();
+
+        // Reset the ID after storing it to make sure debug assertions will catch any cases where a PS
+        // response is read without a pre-assigned ID.
+        m_current_id = 0;
+    }
+
     // It is possible that the same command is verified twice if the session command ends up being executed
     // more than once. This happens as each failed attempt to execute it causes the response callback to be
     // installed and if the accepted answer arrives before the final response for this backend arrives, the
@@ -897,7 +902,6 @@ bool MariaDBBackendConnection::compare_responses()
 
     bool ok = true;
     bool found = false;
-    MYSQL_session* data = mysql_session();
     auto it = m_ids_to_check.begin();
 
     while (it != m_ids_to_check.end())
