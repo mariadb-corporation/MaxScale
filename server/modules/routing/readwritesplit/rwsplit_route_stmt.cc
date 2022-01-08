@@ -468,7 +468,7 @@ bool RWSplitSession::write_session_command(RWBackend* backend, mxs::Buffer buffe
     {
         m_server_stats[backend->target()].inc_total();
         m_server_stats[backend->target()].inc_read();
-        MXS_INFO("Route query to %s: %s", backend->is_master() ? "master" : "slave", backend->name());
+        MXS_INFO("Route query to %s: %s", backend == m_current_master ? "master" : "slave", backend->name());
     }
     else
     {
@@ -512,13 +512,17 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
 
     if (!have_open_connections())
     {
+        MXS_INFO("No connections available for session command");
+
         if (command == MXS_COM_QUIT)
         {
             // We have no open connections and opening one just to close it is pointless.
+            MXS_INFO("Ignoring COM_QUIT");
             return true;
         }
         else if (can_recover_servers())
         {
+            MXS_INFO("Attempting to create a connection");
             // No connections are open, create one and execute the session command on it
             create_one_connection_for_sescmd();
         }
@@ -1043,7 +1047,7 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
 {
     mxb_assert_message(target->in_use(), "Target must be in use before routing to it");
 
-    MXS_INFO("Route query to %s: %s <", target->is_master() ? "master" : "slave", target->name());
+    MXS_INFO("Route query to %s: %s <", target == m_current_master ? "master" : "slave", target->name());
 
     if (!m_target_node && trx_is_read_only())
     {
