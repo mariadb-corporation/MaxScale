@@ -50,8 +50,12 @@ bool RWSplitSession::create_one_connection_for_sescmd()
             {
                 if (prepare_target(backend, TARGET_MASTER))
                 {
+                    if (backend != m_current_master)
+                    {
+                        replace_master(backend);
+                    }
+
                     MXS_INFO("Chose '%s' as master due to session write", backend->name());
-                    replace_master(backend);
                     return true;
                 }
             }
