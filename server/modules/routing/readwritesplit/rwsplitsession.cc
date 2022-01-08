@@ -996,7 +996,7 @@ bool RWSplitSession::handle_error_new_connection(RWBackend* backend, GWBUF* errm
 
             MXS_INFO("Re-routing failed read after server '%s' failed", backend->name());
             route_stored = false;
-            retry_query(m_current_query.release(), 0);
+            retry_query(m_current_query.release());
         }
         else
         {
