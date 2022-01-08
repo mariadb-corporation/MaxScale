@@ -244,7 +244,8 @@ void RWSplitSession::trx_replay_next_stmt()
     {
         // More statements to replay, pop the oldest one and execute it
         GWBUF* buf = m_replayed_trx.pop_stmt();
-        MXS_INFO("Replaying: %s", mxs::extract_sql(buf, 1024).c_str());
+        const char* cmd = STRPACKETTYPE(mxs_mysql_get_command(buf));
+        MXS_INFO("Replaying %s: %s", cmd, mxs::extract_sql(buf, 1024).c_str());
         retry_query(buf, 0);
     }
     else
@@ -340,6 +341,9 @@ void RWSplitSession::manage_transactions(RWBackend* backend, GWBUF* writebuf, co
 
                 if (m_current_query.get())
                 {
+                    const char* cmd = STRPACKETTYPE(mxs_mysql_get_command(m_current_query.get()));
+                    MXS_INFO("Adding %s to trx: %s", cmd, mxs::extract_sql(m_current_query, 512).c_str());
+
                     // Add the statement to the transaction once the first part of the result is received.
                     m_trx.add_stmt(backend, m_current_query.release());
                 }
@@ -544,7 +548,7 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
         }
         else
         {
-            MXS_INFO("Reply complete from '%s'", backend->name());
+            MXS_INFO("Reply complete from '%s' (%s)", backend->name(), reply.describe().c_str());
             /** Got a complete reply, decrement expected response count */
             m_expected_responses--;
             mxb_assert(m_expected_responses >= 0);
@@ -726,7 +730,8 @@ bool RWSplitSession::start_trx_replay()
             {
                 // Pop the first statement and start replaying the transaction
                 GWBUF* buf = m_replayed_trx.pop_stmt();
-                MXS_INFO("Replaying: %s", mxs::extract_sql(buf, 1024).c_str());
+                const char* cmd = STRPACKETTYPE(mxs_mysql_get_command(buf));
+                MXS_INFO("Replaying %s: %s", cmd, mxs::extract_sql(buf, 1024).c_str());
                 retry_query(buf, 1);
             }
             else

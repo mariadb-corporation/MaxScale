@@ -298,6 +298,38 @@ void Error::clear()
     m_message.clear();
 }
 
+std::string Reply::describe() const
+{
+    std::ostringstream ss;
+
+    if (is_complete())
+    {
+        if (error())
+        {
+            ss << "Error: " << error().code() << ", " << error().sql_state() << " " << error().message();
+        }
+        else if (is_ok())
+        {
+            ss << "OK: " << num_warnings() << " warnings";
+        }
+        else if (is_resultset())
+        {
+            ss << "Resultset: " << rows_read() << " rows";
+        }
+        else
+        {
+            // TODO: Is this really unknown?
+            ss << "Unknown result type";
+        }
+    }
+    else
+    {
+        ss << "Partial reply";
+    }
+
+    return ss.str();
+}
+
 ReplyState Reply::state() const
 {
     return m_reply_state;
