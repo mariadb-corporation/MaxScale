@@ -947,7 +947,7 @@ bool RWSplitSession::should_replace_master(RWBackend* target)
            &&   // We have a target server and it's not the current master
            target && target != m_current_master
            &&   // We are not inside a transaction (also checks for autocommit=1)
-           (!trx_is_open() || trx_is_starting() || m_state == TRX_REPLAY)
+           (!trx_is_open() || trx_is_starting() || (m_state == TRX_REPLAY && !m_trx.target()))
            &&   // We are not locked to the old master
            !is_locked_to_master();
 }
