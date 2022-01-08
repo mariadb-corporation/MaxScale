@@ -751,9 +751,13 @@ void MariaDBBackendConnection::normal_read()
     {
         if (m_current_id)
         {
+            // It's possible that there's already a response for this command. This can happen if the session
+            // command is executed multiple times before the accepted answer has arrived. We only care about
+            // the latest result.
+            m_ids_to_check[m_current_id] = m_reply.is_ok();
+
             // Reset the ID after storing it to make sure debug assertions will catch any cases where a PS
             // response is read without a pre-assigned ID.
-            m_ids_to_check.emplace_back(m_current_id, m_reply.is_ok());
             m_current_id = 0;
         }
 
@@ -883,6 +887,14 @@ void MariaDBBackendConnection::pin_history_responses()
 
 bool MariaDBBackendConnection::compare_responses()
 {
+    // It is possible that the same command is verified twice if the session command ends up being executed
+    // more than once. This happens as each failed attempt to execute it causes the response callback to be
+    // installed and if the accepted answer arrives before the final response for this backend arrives, the
+    // latest completed response from this backend is used. This can cause the connection to be closed even if
+    // it would be considered valid later on.
+    //
+    // TODO: We could probably use m_current_id to prevent this from happening.
+
     bool ok = true;
     bool found = false;
     MYSQL_session* data = mysql_session();
@@ -910,9 +922,6 @@ bool MariaDBBackendConnection::compare_responses()
             ++it;
         }
     }
-
-    mxb_assert_message(ok || !data->history_info[this].response_cb,
-                       "History response callback must not be installed on failure");
 
     if (ok && !found && !m_ids_to_check.empty())
     {
