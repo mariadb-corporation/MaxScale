@@ -262,8 +262,10 @@ void check_login(TestConnections& test)
     test.maxscale->start();
     sleep(1);
 
+    int port = test.maxscale->rwsplit_port;
+
     auto test_login = [&](const char* user, const char* pw, const char* db, bool expect_success) {
-            int port = test.maxscale->rwsplit_port;
+
             auto ip = test.maxscale->ip();
 
             MYSQL* rwsplit_conn = db ? open_conn_db(port, ip, db, user, pw) :
@@ -293,6 +295,18 @@ void check_login(TestConnections& test)
     }
     if (test.ok())
     {
+        test_login(db_user, db_pw, "test", true);
+    }
+
+    // MXS-3934: Services created at runtime don't work with xpandmon
+    if (test.ok())
+    {
+        test.check_maxctrl("create service my-test-service readwritesplit user=maxskysql password=skysql");
+        test.check_maxctrl("link service my-test-service Xpand-Monitor");
+        test.check_maxctrl("create listener my-test-service my-test-listener 4009");
+
+        port = 4009;
+        test_login(svc_user, svc_pw, nullptr, true);
         test_login(db_user, db_pw, "test", true);
     }
 
