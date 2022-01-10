@@ -27,15 +27,8 @@ const mountFactory = opts =>
         },
         ...opts,
     })
-
 describe(`Worksheet - created hook and child component's data communication tests`, () => {
     let wrapper
-    it(`Should call handleSetSidebarPct on created hook`, () => {
-        const handleSetSidebarPctSpy = sinon.spy(Worksheet.methods, 'handleSetSidebarPct')
-        wrapper = mountFactory()
-        handleSetSidebarPctSpy.should.have.been.calledOnce
-        handleSetSidebarPctSpy.restore()
-    })
     it(`Should pass accurate data to split-pane via props`, () => {
         wrapper = mountFactory()
         const { value, minPercent, split, disable } = wrapper.findComponent({

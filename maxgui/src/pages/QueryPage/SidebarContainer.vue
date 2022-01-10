@@ -26,6 +26,7 @@
                                     icon
                                     small
                                     :disabled="isConnecting"
+                                    class="reload-btn"
                                     v-on="on"
                                     @click="reloadSchema"
                                 >
@@ -45,6 +46,7 @@
                                 <v-btn
                                     icon
                                     small
+                                    class="collapse-btn"
                                     v-on="on"
                                     @click="SET_IS_SIDEBAR_COLLAPSED(!is_sidebar_collapsed)"
                                 >
@@ -67,7 +69,6 @@
                         v-if="!is_sidebar_collapsed"
                         v-model="searchSchema"
                         name="searchSchema"
-                        required
                         dense
                         outlined
                         height="28"
