@@ -45,6 +45,7 @@ public:
         mxq::MariaDB     conn;
         int64_t          current_query_id {0};
         mxb::TimePoint   last_query_time;
+        int64_t          last_max_rows {0};
     };
 
     /**
