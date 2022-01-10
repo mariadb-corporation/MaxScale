@@ -151,6 +151,9 @@ bool RWSplitSession::handle_target_is_all(mxs::Buffer&& buffer, const RoutingPla
     }
     else if (route_session_write(buffer.release(), info.command(), info.type_mask()))
     {
+        // Session command routed, reset retry duration
+        m_retry_duration = 0;
+
         m_prev_plan = res;
         result = true;
         mxb::atomic::add(&m_router->stats().n_all, 1, mxb::atomic::RELAXED);
@@ -601,15 +604,13 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
         else
         {
             error << "Could not route session command "
-                  << "(" << STRPACKETTYPE(command) << ": " << mxs::extract_sql(buffer) << "). "
-                  << "Connection status: " << get_verbose_status();
+                  << "(" << STRPACKETTYPE(command) << ": " << mxs::extract_sql(buffer) << ").";
         }
     }
     else
     {
         error << "No valid candidates for session command "
-              << "(" << STRPACKETTYPE(command) << ": " << mxs::extract_sql(buffer) << "). "
-              << "Connection status: " << get_verbose_status();
+              << "(" << STRPACKETTYPE(command) << ": " << mxs::extract_sql(buffer) << ").";
         ok = false;
     }
 
@@ -623,6 +624,13 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
         }
         else
         {
+            if (m_retry_duration >= m_config.delayed_retry_timeout.count())
+            {
+                error << " Retry took too long (" << m_retry_duration << " seconds).";
+            }
+
+            error << " Connection status: " << get_verbose_status();
+
             MXS_ERROR("%s", error.str().c_str());
         }
     }
