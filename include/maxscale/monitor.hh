@@ -365,7 +365,23 @@ public:
 
     const char* name() const;
 
+    /**
+     * Get the configured servers for this monitor
+     *
+     * @return The list of servers the monitor was configured with
+     */
     const ServerVector& servers() const;
+
+    /**
+     * Get the real list of servers that are a part of this cluster
+     *
+     * For dynamic monitors, this is the set of servers that were derived from the initial set of bootstrap
+     * servers. For static monitors, this is the same as the list of servers returned by servers().
+     *
+     * @return The real list of servers that are a part of this cluster. This should be used whenever a set of
+     *         servers is needed for routing or querying purposes.
+     */
+    virtual std::vector<SERVER*> real_servers() const;
 
     /**
      * Configure the monitor. Called by monitor creation and altering code. Any inheriting classes
