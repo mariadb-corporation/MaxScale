@@ -379,6 +379,11 @@ void XpandMonitor::server_removed(SERVER* pServer)
     // @see server_added(), no action is needed.
 }
 
+std::vector<SERVER*> XpandMonitor::real_servers() const
+{
+    mxb_assert(mxs::MainWorker::is_main_worker());
+    return m_cluster_servers;
+}
 
 void XpandMonitor::pre_loop()
 {
@@ -695,6 +700,7 @@ bool XpandMonitor::refresh_nodes(MYSQL* pHub_con)
                                 // use this monitor for defining its cluster of servers.
                                 run_in_mainworker([this, pServer]() {
                                         service_add_server(this, pServer);
+                                        m_cluster_servers.push_back(pServer);
                                     });
                             }
                             else
@@ -1015,6 +1021,7 @@ void XpandMonitor::populate_from_bootstrap_servers()
         // use this monitor for defining its cluster of servers.
         run_in_mainworker([this, pServer]() {
                               service_add_server(this, pServer);
+                              m_cluster_servers.push_back(pServer);
                           });
     }
 

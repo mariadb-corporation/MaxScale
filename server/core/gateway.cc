@@ -107,6 +107,7 @@ static struct ThisUnit
     bool                       unload_modules_at_exit = true;
     std::string                redirect_output_to;
     bool                       print_stacktrace_to_stdout = true;
+    bool                       use_gdb = false;
 #ifndef OPENSSL_1_1
     /** SSL multi-threading functions and structures */
     pthread_mutex_t* ssl_locks = nullptr;
@@ -184,6 +185,7 @@ static void enable_statement_logging(const char* arg);
 static void disable_statement_logging(const char* arg);
 static void enable_cors(const char* arg);
 static void allow_duplicate_servers(const char* arg);
+static void   use_gdb(const char* arg);
 static void redirect_output_to_file(const char* arg);
 static bool user_is_acceptable(const char* specified_user);
 static bool init_sqlite3();
@@ -272,6 +274,9 @@ const DEBUG_ARGUMENT debug_arguments[] =
     {
         "allow-duplicate-servers", allow_duplicate_servers,
         "allow multiple servers to have the same address/port combination"
+    },
+    {
+        "gdb-stacktrace", use_gdb, "Use GDB to generate stacktraces"
     },
     {NULL, NULL, NULL}
 };
@@ -489,7 +494,7 @@ static void sigfatal_handler(int i)
 
     thread_local std::string msg;
 
-    if (mxb::have_gdb())
+    if (this_unit.use_gdb && mxb::have_gdb())
     {
         mxb::dump_gdb_stacktrace(
             [](const char* line) {
@@ -498,7 +503,8 @@ static void sigfatal_handler(int i)
     }
     else
     {
-        MXS_ALERT("For a more detailed stacktrace, install GDB.");
+        MXS_NOTICE("For a more detailed stacktrace, install GDB and "
+                   "add 'debug=gdb-stacktrace' under the [maxscale] section.");
 
         auto cb = [](const char* symbol, const char* cmd) {
                 char buf[512];
@@ -3044,6 +3050,11 @@ static void enable_cors(const char* arg)
 static void allow_duplicate_servers(const char* arg)
 {
     ServerManager::set_allow_duplicates(true);
+}
+
+static void use_gdb(const char* arg)
+{
+    this_unit.use_gdb = true;
 }
 
 static void redirect_output_to_file(const char* arg)

@@ -229,7 +229,7 @@ void dump_gdb_stacktrace(void (* handler)(const char*))
     prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY);
     get_command_output_cb(
         handler,
-        "gdb --pid=%d -batch -iex 'set print thread-events off' -ex 'thr a a bt'",
+        "gdb --pid=%d -batch -nx -iex 'set auto-load off' -iex 'set print thread-events off' -ex 'thr a a bt'",
         getpid());
     prctl(PR_SET_PTRACER, 0);
 }

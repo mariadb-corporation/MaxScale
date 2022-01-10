@@ -1490,6 +1490,13 @@ const Monitor::ServerVector& Monitor::servers() const
     return m_servers;
 }
 
+std::vector<SERVER*> Monitor::real_servers() const
+{
+    std::vector<SERVER*> rval(m_servers.size());
+    std::transform(m_servers.begin(), m_servers.end(), rval.begin(), std::mem_fn(&MonitorServer::server));
+    return rval;
+}
+
 MonitorServer* Monitor::create_server(SERVER* server, const MonitorServer::SharedSettings& shared)
 {
     return new MonitorServer(server, shared);

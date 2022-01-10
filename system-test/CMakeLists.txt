@@ -1016,6 +1016,8 @@ add_test_executable(mxs2441_galera_slaves.cpp mxs2441_galera_slaves mxs2441_gale
 # BEGIN: tests for Xpand monitor           #
 ############################################
 
+# Also covers the following bugs:
+# MXS-3934: https://jira.mariadb.org/browse/MXS-3934
 add_test_executable(xpand_basics.cpp xpand_basics xpand_basics LABELS XPAND_BACKEND)
 set_tests_properties(xpand_basics PROPERTIES TIMEOUT 7200)
 
