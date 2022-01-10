@@ -597,7 +597,10 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
                 }
                 else
                 {
-                    mxb_assert(!trx_is_open() || m_trx.target() == m_sescmd_replier);
+                    mxb_assert_message(!trx_is_open() || m_trx.target() == m_sescmd_replier,
+                                       "Trx target is %s when m_sescmd_replier is %s while trx is open",
+                                       m_trx.target() ? m_trx.target()->name() : "nullptr",
+                                       m_sescmd_replier->name());
                 }
             }
         }

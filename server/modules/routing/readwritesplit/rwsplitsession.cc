@@ -392,17 +392,9 @@ void RWSplitSession::close_stale_connections()
 
             if (!server->is_usable())
             {
-                if (backend == m_current_master
-                    && can_continue_using_master(m_current_master)
-                    && !trx_is_ending())
-                {
-                    MXS_INFO("Keeping connection to '%s' open until transaction ends", backend->name());
-                }
-                else
-                {
-                    MXS_INFO("Discarding connection to '%s': Server is in maintenance", backend->name());
-                    backend->close();
-                }
+                MXS_INFO("Discarding connection to '%s', server in state: %s",
+                         backend->name(), backend->target()->status_string().c_str());
+                backend->close();
             }
             else if (server->rank() != current_rank)
             {
@@ -664,11 +656,11 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
         execute_queued_commands(backend);
     }
 
-    if (m_expected_responses == 0)
+    if (m_expected_responses == 0 && !trx_is_open())
     {
         /**
          * Close stale connections to servers in maintenance. Done here to avoid closing the connections
-         * before all responses have been received.
+         * before all responses have been received. Must not be done inside a transaction.
          */
         close_stale_connections();
     }
