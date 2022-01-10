@@ -856,6 +856,13 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
         MXS_INFO("Master '%s' failed: %s", backend->name(), mxs::extract_error(errmsgbuf).c_str());
         /** The connection to the master has failed */
 
+        if (reply.command() == MXS_COM_BINLOG_DUMP || reply.command() == MXS_COM_REGISTER_SLAVE)
+        {
+            MXS_INFO("Session is a replication client, closing connection immediately.");
+            m_pSession->kill(); // Not sending an error causes the replication client to connect again
+            return false;
+        }
+
         bool expected_response = backend->is_waiting_result();
 
         if (!expected_response)
