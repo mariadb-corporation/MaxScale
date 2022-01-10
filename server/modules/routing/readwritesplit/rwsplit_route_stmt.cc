@@ -592,7 +592,7 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
             {
                 if (trx_is_open() && !m_trx.target())
                 {
-                    mxb_assert(trx_is_starting());
+                    mxb_assert(trx_is_starting() || trx_is_ending() || m_state == TRX_REPLAY);
                     m_trx.set_target(m_sescmd_replier);
                 }
                 else

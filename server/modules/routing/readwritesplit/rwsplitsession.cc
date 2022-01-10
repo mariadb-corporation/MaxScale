@@ -789,12 +789,14 @@ bool RWSplitSession::start_trx_replay()
                 /**
                  * The transaction was only opened and no queries have been
                  * executed. The buffer should contain a query that starts
-                 * a transaction or autocommit should be disabled.
+                 * or ends a transaction or autocommit should be disabled.
                  */
-                mxb_assert_message(qc_get_trx_type_mask(m_interrupted_query.get()) & QUERY_TYPE_BEGIN_TRX
+                MXB_AT_DEBUG(uint32_t type_mask = qc_get_trx_type_mask(m_interrupted_query.get()));
+                mxb_assert_message((type_mask & (QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_COMMIT))
                                    || !protocol_data()->is_autocommit,
-                                   "The current query should start a transaction "
-                                   "or autocommit should be disabled");
+                                   "The current query (%s) should start or stop a transaction "
+                                   "or autocommit should be disabled",
+                                   mxs::extract_sql(m_interrupted_query).c_str());
 
                 MXS_INFO("Retrying interrupted query: %s",
                          mxs::extract_sql(m_interrupted_query.get()).c_str());
