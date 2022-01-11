@@ -246,7 +246,7 @@ private:
     void read_db_privs_xpand(QResult acl, UserDatabase* output);
 
     void check_show_dbs_priv(mxq::MariaDB& con, const UserDatabase& userdata,
-                             const char* servername);
+                             SERVER::VersionInfo::Type type, const char* servername);
 
     mutable std::mutex m_userdb_lock;   /**< Protects UserDatabase from concurrent access */
     UserDatabase       m_userdb;        /**< Contains user account info */

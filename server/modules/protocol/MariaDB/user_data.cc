@@ -371,7 +371,7 @@ bool MariaDBUserManager::update_users()
                 got_data = true;
                 if (m_check_showdb_priv)
                 {
-                    check_show_dbs_priv(con, temp_userdata, srv->name());
+                    check_show_dbs_priv(con, temp_userdata, srv_info.type(), srv->name());
                 }
                 break;
 
@@ -831,11 +831,12 @@ SERVICE* MariaDBUserManager::service() const
  * such as "SELECT ON *.*".
  *
  * @param con Connection to use
- * @param servername Servername, for logging
  * @param userdata Fetched user account data
+ * @param type Server type
+ * @param servername Servername, for logging
  */
 void MariaDBUserManager::check_show_dbs_priv(mxq::MariaDB& con, const UserDatabase& userdata,
-                                             const char* servername)
+                                             SERVER::VersionInfo::Type type, const char* servername)
 {
     const char invalid_data_fmt[] = "Received invalid data from '%s' to query '%s'.";
     vector<string> queries = {mariadb_queries::my_grants_query, mariadb_queries::current_user_query};
@@ -880,6 +881,20 @@ void MariaDBUserManager::check_show_dbs_priv(mxq::MariaDB& con, const UserDataba
                 {
                     string username = userhost.substr(0, pos);
                     string hostpattern = userhost.substr(pos + 1);
+                    if (type == SERVER::VersionInfo::Type::XPAND)
+                    {
+                        // The username and host pattern may be quoted on Xpand.
+                        auto remove_quotes = [](string& str){
+                                if (str.length() >= 2 && str[0] == '\'' && str.back() == '\'')
+                                {
+                                    str.pop_back();
+                                    str.erase(0, 1);
+                                }
+                            };
+                        remove_quotes(username);
+                        remove_quotes(hostpattern);
+                    }
+
                     auto my_entry = userdata.find_entry_equal(username, hostpattern);
                     if (my_entry && my_entry->global_db_priv)
                     {
