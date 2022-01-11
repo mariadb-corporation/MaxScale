@@ -384,6 +384,13 @@ void XpandMonitor::pre_loop()
 
 void XpandMonitor::post_loop()
 {
+    // NOTE: If dynamic node detection is used, the conceptually and logically
+    // NOTE: right thing to do would be to here deactivate all volatile servers.
+    // NOTE: However, that would mean that the number of deactivated volatile
+    // NOTE: servers hanging around could quickly grow unwieldy if the monitor
+    // NOTE: is frequently directly or indirectly (e.g. alter monitor) stopped
+    // NOTE: and started.
+
     if (m_pHub_con)
     {
         mysql_close(m_pHub_con);
@@ -668,46 +675,54 @@ bool XpandMonitor::refresh_nodes(MYSQL* pHub_con)
                         }
                         else if (mit != memberships.end())
                         {
-                            // New node.
-                            mxb_assert(!SERVER::find_by_unique_name(server_name));
+                            // Seems like a new node. However, if the xpand monitor is
+                            // reconfigured at runtime, then the corresponding server
+                            // may be found in the book-keeping.
+                            SERVER* pServer = SERVER::find_by_unique_name(server_name);
 
-                            if (runtime_create_volatile_server(server_name, ip, mysql_port))
+                            if (pServer)
                             {
-                                SERVER* pServer = SERVER::find_by_unique_name(server_name);
-                                mxb_assert(pServer);
-
-                                if (pServer)
-                                {
-                                    if (softfailed)
-                                    {
-                                        pServer->set_status(SERVER_DRAINING);
-                                    }
-
-                                    const XpandMembership& membership = mit->second;
-                                    int health_check_threshold = m_config.health_check_threshold();
-
-                                    XpandNode node(this, membership, ip, mysql_port, health_port,
-                                                   health_check_threshold, pServer);
-
-                                    m_nodes_by_id.insert(make_pair(id, node));
-
-                                    // New server, so it needs to be added to all services that
-                                    // use this monitor for defining its cluster of servers.
-                                    run_in_mainworker([this, pServer]() {
-                                                          add_server(pServer);
-                                                      });
-                                }
-                                else
-                                {
-                                    MXS_ERROR("%s: Created server %s (at %s:%d) could not be "
-                                              "looked up using its name.",
-                                              name(), server_name.c_str(), ip.c_str(), mysql_port);
-                                }
+                                MXS_INFO("%s: Reusing volatile server %s.", name(), server_name.c_str());
                             }
                             else
                             {
-                                MXS_ERROR("%s: Could not create server %s at %s:%d.",
-                                          name(), server_name.c_str(), ip.c_str(), mysql_port);
+                                // It was a new node, so the corresponding server must be created.
+                                if (runtime_create_volatile_server(server_name, ip, mysql_port))
+                                {
+                                    pServer = SERVER::find_by_unique_name(server_name);
+
+                                    if (!pServer)
+                                    {
+                                        MXS_ERROR("%s: Created server %s (at %s:%d) could not be "
+                                                  "looked up using its name.",
+                                                  name(), server_name.c_str(), ip.c_str(), mysql_port);
+                                    }
+                                }
+                                else
+                                {
+                                    MXS_ERROR("%s: Could not create server %s at %s:%d.",
+                                              name(), server_name.c_str(), ip.c_str(), mysql_port);
+                                }
+                            }
+
+                            if (pServer)
+                            {
+                                if (softfailed)
+                                {
+                                    pServer->set_status(SERVER_DRAINING);
+                                }
+
+                                const XpandMembership& membership = mit->second;
+                                int health_check_threshold = m_config.health_check_threshold();
+
+                                XpandNode node(this, membership, ip, mysql_port, health_port,
+                                               health_check_threshold, pServer);
+
+                                m_nodes_by_id.insert(make_pair(id, node));
+
+                                run_in_mainworker([this, pServer]() {
+                                                          add_server(pServer);
+                                                      });
                             }
 
                             memberships.erase(mit);
