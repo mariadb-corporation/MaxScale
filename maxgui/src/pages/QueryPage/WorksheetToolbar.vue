@@ -58,118 +58,133 @@
 
         <v-spacer></v-spacer>
         <portal-target name="wke-toolbar-right">
-            <!-- Run section-->
-            <v-tooltip
-                top
-                transition="slide-y-transition"
-                content-class="shadow-drop color text-navigation py-1 px-4"
-            >
-                <template v-slot:activator="{ on }">
-                    <v-btn
-                        outlined
-                        class="run-btn text-capitalize px-2 font-weight-medium"
-                        depressed
-                        small
-                        color="accent-dark"
-                        :loading="getLoadingQueryResult"
-                        :disabled="
-                            !query_txt ||
-                                !curr_cnct_resource.id ||
-                                (getIsQuerying && !getLoadingQueryResult)
-                        "
-                        v-on="on"
-                        @click="() => handleRun(selected_query_txt ? 'selected' : 'all')"
-                    >
-                        <v-icon size="16" class="mr-2">
-                            $vuetify.icons.running
-                        </v-icon>
-                        {{ $t('run') }}
-                    </v-btn>
-                </template>
-                <span style="white-space: pre;" class="d-inline-block text-center">
-                    {{
-                        selected_query_txt
-                            ? `${$t('runStatements', {
-                                  quantity: $t('selected'),
-                              })}\nCmd/Ctrl + Enter`
-                            : `${$t('runStatements', {
-                                  quantity: $t('all'),
-                              })}\nCmd/Ctrl + Shift + Enter`
-                    }}
-                </span>
-            </v-tooltip>
-            <!-- Visualize section-->
-            <v-tooltip
-                top
-                transition="slide-y-transition"
-                content-class="shadow-drop color text-navigation py-1 px-4"
-            >
-                <template v-slot:activator="{ on }">
-                    <v-btn
-                        class="ml-2 visualize"
-                        :outlined="!show_vis_sidebar"
-                        depressed
-                        small
-                        :color="show_vis_sidebar ? 'primary' : 'accent-dark'"
-                        :disabled="!curr_cnct_resource.id || getIsQuerying"
-                        v-on="on"
-                        @click="SET_SHOW_VIS_SIDEBAR(!show_vis_sidebar)"
-                    >
-                        <v-icon
-                            size="16"
-                            :color="
-                                curr_cnct_resource.id
-                                    ? show_vis_sidebar
-                                        ? 'background'
-                                        : 'accent-dark'
-                                    : ''
+            <div class="d-flex">
+                <max-rows-input
+                    :style="{ maxWidth: '180px' }"
+                    :height="28"
+                    @change="SET_QUERY_MAX_ROW($event)"
+                >
+                    <template v-slot:prepend-inner>
+                        <label class="field__label color text-small-text">
+                            {{ $t('maxRows') }}
+                        </label>
+                    </template>
+                </max-rows-input>
+                <!-- Run section-->
+                <v-tooltip
+                    top
+                    transition="slide-y-transition"
+                    content-class="shadow-drop color text-navigation py-1 px-4"
+                >
+                    <template v-slot:activator="{ on }">
+                        <v-btn
+                            outlined
+                            class="run-btn ml-2 text-capitalize px-2 font-weight-medium"
+                            depressed
+                            small
+                            color="accent-dark"
+                            :loading="getLoadingQueryResult"
+                            :disabled="
+                                !query_txt ||
+                                    !curr_cnct_resource.id ||
+                                    (getIsQuerying && !getLoadingQueryResult)
                             "
+                            v-on="on"
+                            @click="() => handleRun(selected_query_txt ? 'selected' : 'all')"
                         >
-                            $vuetify.icons.reports
-                        </v-icon>
-                    </v-btn>
-                </template>
-                <span class="text-capitalize">
-                    {{
-                        $t('visualizedConfig', {
-                            action: show_vis_sidebar ? $t('hide') : $t('show'),
-                        })
-                    }}
-                </span>
-            </v-tooltip>
-            <confirm-dialog
-                v-if="query_confirm_flag"
-                v-model="isConfDlgOpened"
-                :title="$t('confirmations.runQuery')"
-                type="run"
-                minBodyWidth="768px"
-                closeImmediate
-                :onSave="confirmRunning"
-            >
-                <template v-slot:body-prepend>
-                    <div class="mb-4 readonly-sql-code-wrapper pa-2">
-                        <readonly-query-editor
-                            :value="activeRunMode === 'selected' ? selected_query_txt : query_txt"
-                            class="readonly-editor fill-height"
-                            readOnly
-                            :options="{
-                                fontSize: 10,
-                                contextmenu: false,
-                            }"
+                            <v-icon size="16" class="mr-2">
+                                $vuetify.icons.running
+                            </v-icon>
+                            {{ $t('run') }}
+                        </v-btn>
+                    </template>
+                    <span style="white-space: pre;" class="d-inline-block text-center">
+                        {{
+                            selected_query_txt
+                                ? `${$t('runStatements', {
+                                      quantity: $t('selected'),
+                                  })}\nCmd/Ctrl + Enter`
+                                : `${$t('runStatements', {
+                                      quantity: $t('all'),
+                                  })}\nCmd/Ctrl + Shift + Enter`
+                        }}
+                    </span>
+                </v-tooltip>
+                <!-- Visualize section-->
+                <v-tooltip
+                    top
+                    transition="slide-y-transition"
+                    content-class="shadow-drop color text-navigation py-1 px-4"
+                >
+                    <template v-slot:activator="{ on }">
+                        <v-btn
+                            class="ml-2 visualize"
+                            :outlined="!show_vis_sidebar"
+                            depressed
+                            small
+                            :color="show_vis_sidebar ? 'primary' : 'accent-dark'"
+                            :disabled="!curr_cnct_resource.id || getIsQuerying"
+                            v-on="on"
+                            @click="SET_SHOW_VIS_SIDEBAR(!show_vis_sidebar)"
+                        >
+                            <v-icon
+                                size="16"
+                                :color="
+                                    curr_cnct_resource.id
+                                        ? show_vis_sidebar
+                                            ? 'background'
+                                            : 'accent-dark'
+                                        : ''
+                                "
+                            >
+                                $vuetify.icons.reports
+                            </v-icon>
+                        </v-btn>
+                    </template>
+                    <span class="text-capitalize">
+                        {{
+                            $t('visualizedConfig', {
+                                action: show_vis_sidebar ? $t('hide') : $t('show'),
+                            })
+                        }}
+                    </span>
+                </v-tooltip>
+                <confirm-dialog
+                    v-if="query_confirm_flag"
+                    v-model="isConfDlgOpened"
+                    :title="$t('confirmations.runQuery')"
+                    type="run"
+                    minBodyWidth="768px"
+                    closeImmediate
+                    :onSave="confirmRunning"
+                >
+                    <template v-slot:body-prepend>
+                        <div class="mb-4 readonly-sql-code-wrapper pa-2">
+                            <readonly-query-editor
+                                :value="
+                                    activeRunMode === 'selected' ? selected_query_txt : query_txt
+                                "
+                                class="readonly-editor fill-height"
+                                readOnly
+                                :options="{
+                                    fontSize: 10,
+                                    contextmenu: false,
+                                }"
+                            />
+                        </div>
+                    </template>
+                    <template v-slot:action-prepend>
+                        <v-checkbox
+                            v-model="dontShowConfirm"
+                            class="pa-0 ma-0"
+                            :label="$t('dontAskMeAgain')"
+                            color="primary"
+                            hide-details
                         />
-                    </div>
-                </template>
-                <template v-slot:action-prepend>
-                    <v-checkbox
-                        v-model="dontShowConfirm"
-                        class="pa-0 ma-0"
-                        :label="$t('dontAskMeAgain')"
-                        color="primary"
-                        hide-details
-                    />
-                    <v-spacer />
-                </template>
-            </confirm-dialog>
+                        <v-spacer />
+                    </template>
+                </confirm-dialog>
+            </div>
         </portal-target>
     </v-toolbar>
 </template>
@@ -191,12 +206,14 @@
 import { mapActions, mapState, mapMutations, mapGetters } from 'vuex'
 import ConnectionManager from './ConnectionManager'
 import QueryEditor from '@/components/QueryEditor'
+import MaxRowsInput from './MaxRowsInput.vue'
 
 export default {
     name: 'worksheet-toolbar',
     components: {
         ConnectionManager,
         'readonly-query-editor': QueryEditor,
+        'max-rows-input': MaxRowsInput,
     },
     data() {
         return {
@@ -235,6 +252,7 @@ export default {
             SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE',
             SET_QUERY_CONFIRM_FLAG: 'persisted/SET_QUERY_CONFIRM_FLAG',
             SET_SHOW_VIS_SIDEBAR: 'query/SET_SHOW_VIS_SIDEBAR',
+            SET_QUERY_MAX_ROW: 'persisted/SET_QUERY_MAX_ROW',
         }),
         ...mapActions({
             fetchQueryResult: 'query/fetchQueryResult',
