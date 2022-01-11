@@ -694,8 +694,7 @@ bool XpandMonitor::refresh_nodes(MYSQL* pHub_con)
                                     // New server, so it needs to be added to all services that
                                     // use this monitor for defining its cluster of servers.
                                     run_in_mainworker([this, pServer]() {
-                                                          service_add_server(this, pServer);
-                                                          m_cluster_servers.push_back(pServer);
+                                                          add_server(pServer);
                                                       });
                                 }
                                 else
@@ -1022,12 +1021,30 @@ void XpandMonitor::populate_from_bootstrap_servers()
         // New server, so it needs to be added to all services that
         // use this monitor for defining its cluster of servers.
         run_in_mainworker([this, pServer]() {
-                              service_add_server(this, pServer);
-                              m_cluster_servers.push_back(pServer);
+                              add_server(pServer);
                           });
     }
 
     update_http_urls();
+}
+
+void XpandMonitor::add_server(SERVER* pServer)
+{
+    mxb_assert(mxs::MainWorker::is_main_worker());
+
+    // Servers are never deleted, but once created they stay around, also
+    // in m_cluster_servers. Thus, to prevent double book-keeping it must
+    // be checked whether the server already is present in the vector
+    // before adding it.
+
+    auto b = m_cluster_servers.begin();
+    auto e = m_cluster_servers.end();
+
+    if (std::find(b, e, pServer) == e)
+    {
+        service_add_server(this, pServer);
+        m_cluster_servers.push_back(pServer);
+    }
 }
 
 void XpandMonitor::update_server_statuses()

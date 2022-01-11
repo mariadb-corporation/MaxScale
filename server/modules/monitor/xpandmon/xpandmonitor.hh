@@ -110,6 +110,8 @@ private:
 
     void populate_from_bootstrap_servers();
 
+    void add_server(SERVER* pServer);
+
     void update_server_statuses();
 
     void make_health_check();
