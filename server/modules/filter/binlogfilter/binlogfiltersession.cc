@@ -184,8 +184,7 @@ bool BinlogFilterSession::routeQuery(GWBUF* pPacket)
  * @param event    The replication event
  * @param hdr      Pointer to repliction header to fill
  */
-static void extract_header(register const uint8_t* event,
-                           register REP_HEADER* hdr)
+static void extract_header(const uint8_t* event, REP_HEADER* hdr)
 {
     hdr->seqno = event[3];
     hdr->payload_len = gw_mysql_get_byte3(event);
