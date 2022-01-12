@@ -386,6 +386,11 @@ public:
         m_db = db;
     }
 
+    void set_charset(const std::string& charset)
+    {
+        m_charset = charset;
+    }
+
     void set_timeout(int timeout)
     {
         m_timeout = timeout;
@@ -417,6 +422,7 @@ private:
     std::string m_user;
     std::string m_pw;
     std::string m_db;
+    std::string m_charset;
     bool        m_ssl;
     int         m_timeout = 0;
     MYSQL*      m_conn = nullptr;
