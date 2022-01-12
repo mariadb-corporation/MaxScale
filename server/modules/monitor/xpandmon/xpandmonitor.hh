@@ -112,6 +112,8 @@ private:
 
     void populate_from_bootstrap_servers();
 
+    void add_server(SERVER* pServer);
+
     void update_server_statuses();
 
     SERVER* create_volatile_server(const std::string& name, const std::string& ip, int port);

@@ -310,6 +310,15 @@ void check_login(TestConnections& test)
         test_login(db_user, db_pw, "test", true);
     }
 
+    // MXS-3938: Should be possible to unlink servers
+    if (test.ok())
+    {
+        test.check_maxctrl("unlink monitor Xpand-Monitor xpand_server2 xpand_server3 xpand_server4");
+
+        // Remove the created (if success) dynamic config file, so as not to cause trouble later.
+        test.maxscale->ssh_node("rm -f /var/lib/maxscale/maxscale.cnf.d/Xpand-Monitor.cnf", true);
+    }
+
     /*
      *  if (test.ok())
      *  {

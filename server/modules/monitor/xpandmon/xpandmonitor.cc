@@ -392,7 +392,16 @@ void XpandMonitor::pre_loop()
 
 void XpandMonitor::post_loop()
 {
+
     write_journal();
+
+    // NOTE: If dynamic node detection is used, the conceptually and logically
+    // NOTE: right thing to do would be to here deactivate all volatile servers.
+    // NOTE: However, that would mean that the number of deactivated volatile
+    // NOTE: servers hanging around could quickly grow unwieldy if the monitor
+    // NOTE: is frequently directly or indirectly (e.g. alter monitor) stopped
+    // NOTE: and started.
+
     if (m_pHub_con)
     {
         mysql_close(m_pHub_con);
@@ -677,10 +686,27 @@ bool XpandMonitor::refresh_nodes(MYSQL* pHub_con)
                         }
                         else if (mit != memberships.end())
                         {
-                            // New node.
-                            mxb_assert(!SERVER::find_by_unique_name(server_name));
+                            // Seems like a new node. However, if the xpand monitor is
+                            // reconfigured at runtime, then the corresponding server
+                            // may be found in the book-keeping.
+                            SERVER* pServer = SERVER::find_by_unique_name(server_name);
 
-                            SERVER* pServer = create_volatile_server(server_name, ip, mysql_port);
+                            if (pServer)
+                            {
+                                MXS_INFO("%s: Reusing volatile server %s.", name(), server_name.c_str());
+                            }
+                            else
+                            {
+                                // It was a new node, so the corresponding server must be created.
+                                pServer = create_volatile_server(server_name, ip, mysql_port);
+
+                                if (!pServer)
+                                {
+                                    MXS_ERROR("%s: Could not create server %s at %s:%d.",
+                                              name(), server_name.c_str(), ip.c_str(), mysql_port);
+                                }
+                            }
+
                             if (pServer)
                             {
                                 if (softfailed)
@@ -696,17 +722,9 @@ bool XpandMonitor::refresh_nodes(MYSQL* pHub_con)
 
                                 m_nodes_by_id.insert(make_pair(id, node));
 
-                                // New server, so it needs to be added to all services that
-                                // use this monitor for defining its cluster of servers.
                                 run_in_mainworker([this, pServer]() {
-                                        service_add_server(this, pServer);
-                                        m_cluster_servers.push_back(pServer);
-                                    });
-                            }
-                            else
-                            {
-                                MXS_ERROR("%s: Could not create server %s at %s:%d.",
-                                          name(), server_name.c_str(), ip.c_str(), mysql_port);
+                                                          add_server(pServer);
+                                                      });
                             }
 
                             memberships.erase(mit);
@@ -1020,12 +1038,30 @@ void XpandMonitor::populate_from_bootstrap_servers()
         // New server, so it needs to be added to all services that
         // use this monitor for defining its cluster of servers.
         run_in_mainworker([this, pServer]() {
-                              service_add_server(this, pServer);
-                              m_cluster_servers.push_back(pServer);
+                              add_server(pServer);
                           });
     }
 
     update_http_urls();
+}
+
+void XpandMonitor::add_server(SERVER* pServer)
+{
+    mxb_assert(mxs::MainWorker::is_main_worker());
+
+    // Servers are never deleted, but once created they stay around, also
+    // in m_cluster_servers. Thus, to prevent double book-keeping it must
+    // be checked whether the server already is present in the vector
+    // before adding it.
+
+    auto b = m_cluster_servers.begin();
+    auto e = m_cluster_servers.end();
+
+    if (std::find(b, e, pServer) == e)
+    {
+        service_add_server(this, pServer);
+        m_cluster_servers.push_back(pServer);
+    }
 }
 
 void XpandMonitor::update_server_statuses()
