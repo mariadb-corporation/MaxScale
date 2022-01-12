@@ -27,8 +27,9 @@ namespace nosql
 namespace
 {
 
+using UserInfo = nosql::UserManager::UserInfo;
+
 vector<string> create_grant_or_revoke_statements(const string& user,
-                                                 const string& db,
                                                  const string& command,
                                                  const string& preposition,
                                                  const vector<role::Role>& roles)
@@ -69,18 +70,14 @@ vector<string> create_grant_or_revoke_statements(const string& user,
     return statements;
 }
 
-vector<string> create_grant_statements(const string& user,
-                                       const string& db,
-                                       const vector<role::Role>& roles)
+vector<string> create_grant_statements(const string& user, const vector<role::Role>& roles)
 {
-    return create_grant_or_revoke_statements(user, db, " GRANT ", " TO ", roles);
+    return create_grant_or_revoke_statements(user, "GRANT ", " TO ", roles);
 }
 
-vector<string> create_revoke_statements(const string& user,
-                                        const string& db,
-                                        const vector<role::Role>& roles)
+vector<string> create_revoke_statements(const string& user,const vector<role::Role>& roles)
 {
-    return create_grant_or_revoke_statements(user, db, " REVOKE ", " FROM ", roles);
+    return create_grant_or_revoke_statements(user, "REVOKE ", " FROM ", roles);
 }
 
 }
@@ -96,15 +93,6 @@ public:
     static constexpr const char* const HELP = "";
 
     using SingleCommand::SingleCommand;
-
-    ~CreateUser()
-    {
-        if (m_dcid)
-        {
-            worker().cancel_delayed_call(m_dcid);
-            m_dcid = 0;
-        }
-    }
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final
     {
@@ -127,8 +115,26 @@ public:
 protected:
     void prepare() override
     {
+        bool digest_password = true;
+        if (optional(key::DIGEST_PASSWORD, &digest_password) && !digest_password)
+        {
+            // Basically either the client or the server can digest the password.
+            // If the client digested the password, then we could use the digested
+            // password as the MariaDB password, which would mean that the actual
+            // NoSQL password would not be stored on the MaxScale host. However,
+            // since the MariaDB password really is the important one, it would not
+            // add much value. Furthermore, a client digested password is not
+            // supported with SCRAM-SHA-256, which is the default mechanism (not
+            // supported yet), so we just won't bother.
+            ostringstream ss;
+            ss << "nosqlprotocol does not support that the client digests the password, "
+               << "'digestPassword' must be true.";
+
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+
         m_db = m_database.name();
-        m_user += value_as<string>();
+        m_user = value_as<string>();
 
         bsoncxx::document::element element;
 
@@ -152,6 +158,12 @@ protected:
         }
 
         m_pwd = element.get_utf8();
+
+        bsoncxx::document::view custom_data;
+        if (optional(key::CUSTOM_DATA, &custom_data))
+        {
+            m_custom_data = bsoncxx::to_json(custom_data);
+        }
 
         element = m_doc[key::ROLES];
         if (!element || (element.type() != bsoncxx::type::k_array))
@@ -182,7 +194,7 @@ protected:
 
         m_statements.push_back("CREATE USER " + user + " IDENTIFIED BY '" + pwd + "'");
 
-        auto grants = create_grant_statements(user, m_db, m_roles);
+        auto grants = create_grant_statements(user, m_roles);
 
         m_statements.insert(m_statements.end(), grants.begin(), grants.end());
 
@@ -308,7 +320,7 @@ private:
             vector<scram::Mechanism> mechanisms;
             mechanisms.push_back(scram::Mechanism::SHA_1);
 
-            if (um.add_user(m_db, m_user, m_pwd, salt_b64, mechanisms, m_roles))
+            if (um.add_user(m_db, m_user, m_pwd, salt_b64, m_custom_data, mechanisms, m_roles))
             {
                 doc.append(kvp("ok", 1));
             }
@@ -336,21 +348,11 @@ private:
             state = State::BUSY;
 
             m_action = Action::DROP;
-            m_dcid = worker().delayed_call(0, [this](Worker::Call::action_t action) {
-                    m_dcid = 0;
 
-                    if (action == Worker::Call::EXECUTE)
-                    {
-                        string user = "'" + m_db + "." + m_user + "'@'%'";
+            ostringstream sql;
+            sql << "DROP USER '" << m_db << "." << m_user << "'@'%'";
 
-                        ostringstream sql;
-                        sql << "DROP USER '" << m_db << "." << m_user << "'@'%'";
-
-                        send_downstream(sql.str());
-                    }
-
-                    return false;
-                });
+            send_downstream_via_loop(sql.str());
         }
 
         return state;
@@ -407,6 +409,7 @@ private:
     string             m_db;
     string             m_user;
     string_view        m_pwd;
+    std::string        m_custom_data;
     vector<role::Role> m_roles;
     vector<string>     m_statements;
     uint32_t           m_dcid = { 0 };
@@ -745,7 +748,10 @@ public:
 
         const auto& um = m_database.context().um();
 
-        if (um.set_roles(m_db, m_user, final_roles))
+        UserManager::UserInfo info;
+        info.roles = final_roles;
+
+        if (um.update(m_db, m_user, UserInfo::ROLES, info))
         {
             if (n == m_roles.size())
             {
@@ -822,7 +828,7 @@ private:
     {
         string user = "'" + m_db + "." + m_user + "'@'%'";
 
-        m_statements = create_grant_statements(user, m_db, m_roles);
+        m_statements = create_grant_statements(user, m_roles);
 
         return mxb::join(m_statements, ";");
     }
@@ -1001,7 +1007,7 @@ private:
     {
         string user = "'" + m_db + "." + m_user + "'@'%'";
 
-        m_statements = create_revoke_statements(user, m_db, m_roles);
+        m_statements = create_revoke_statements(user, m_roles);
 
         return mxb::join(m_statements, ";");
     }
@@ -1015,6 +1021,503 @@ private:
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/updateUser/
+class UpdateUser : public SingleCommand
+{
+public:
+    static constexpr const char* const KEY = "updateUser";
+    static constexpr const char* const HELP = "";
+
+    using SingleCommand::SingleCommand;
+
+    State execute(GWBUF** ppNoSQL_response) override
+    {
+        State state;
+
+        parse();
+
+        if ((m_what & ~UserInfo::MECHANISMS) != 0)
+        {
+            // Something else but the mechanisms are updated.
+            state = SingleCommand::execute(ppNoSQL_response);
+        }
+        else
+        {
+            const auto &um = m_database.context().um();
+
+            if (um.set_mechanisms(m_db, m_user, m_mechanisms))
+            {
+                DocumentBuilder doc;
+                doc.append(kvp(key::OK, 1));
+
+                *ppNoSQL_response = create_response(doc.extract());
+                state = State::READY;
+            }
+            else
+            {
+                throw SoftError("Could not update the mechanisms.", error::INTERNAL_ERROR);
+            }
+        }
+
+        return state;
+    }
+
+    State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final
+    {
+        State state = State::READY;
+
+        switch (m_action)
+        {
+        case Action::UPDATE_PASSWORD:
+            state = translate_update_pwd(std::move(mariadb_response), ppNoSQL_response);
+            break;
+
+        case Action::UPDATE_GRANTS:
+            state = translate_update_grants(std::move(mariadb_response), ppNoSQL_response);
+            break;
+        }
+
+        return state;
+    }
+
+protected:
+    string generate_sql() override
+    {
+        string sql;
+
+        if (m_what & UserInfo::PWD)
+        {
+            sql = generate_update_pwd();
+        }
+        else if (m_what & UserInfo::ROLES)
+        {
+            sql = generate_update_grants();
+        }
+        else
+        {
+            mxb_assert(!true);
+        }
+
+        return sql;
+    }
+
+private:
+    void parse()
+    {
+        bool digest_password = true;
+        if (optional(key::DIGEST_PASSWORD, &digest_password) && !digest_password)
+        {
+            ostringstream ss;
+            ss << "nosqlprotocol does not support that the client digests the password, "
+               << "'digestPassword' must be true.";
+
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+
+        m_db = m_database.name();
+        m_user = value_as<string>();
+
+        auto& um = m_database.context().um();
+
+        if (!um.get_info(m_db, m_user, &m_info))
+        {
+            ostringstream ss;
+            ss << "Could not find user \"" << m_user << "\" for db \"" << m_db << "\"";
+
+            throw SoftError(ss.str(), error::USER_NOT_FOUND);
+        }
+
+        if (optional(key::PWD, &m_pwd))
+        {
+            m_what |= UserInfo::PWD;
+        }
+
+        bsoncxx::document::view custom_data;
+        if (optional(key::CUSTOM_DATA, &custom_data))
+        {
+            m_custom_data = bsoncxx::to_json(custom_data);
+            m_what |= UserInfo::CUSTOM_DATA;
+        }
+
+        bsoncxx::array::view mechanism_names;
+        if (optional(key::MECHANISMS, &mechanism_names))
+        {
+            scram::from_bson(mechanism_names, &m_mechanisms);
+
+            if (m_what & UserInfo::PWD)
+            {
+                // Password is changed => mechanisms can be changed-
+
+                auto supported_mechanisms = scram::supported_mechanisms();
+
+                for (const auto mechanism : m_mechanisms)
+                {
+                    if (supported_mechanisms.count(mechanism) == 0)
+                    {
+                        ostringstream ss;
+                        ss << "Mechanism \"" << scram::to_string(mechanism) << "\" is not supported";
+
+                        throw SoftError(ss.str(), error::BAD_VALUE);
+                    }
+                }
+            }
+            else
+            {
+                // Password is not changed => new mechanisms must be subset of old.
+                for (const auto mechanism : m_mechanisms)
+                {
+                    auto begin = m_info.mechanisms.begin();
+                    auto end = m_info.mechanisms.end();
+
+                    if (std::find(begin, end, mechanism) == end)
+                    {
+                        ostringstream ss;
+                        ss << "mechanisms field must be a subset of previously set mechanisms";
+
+                        throw SoftError(ss.str(), error::BAD_VALUE);
+                    }
+                }
+            }
+
+            m_what |= UserInfo::MECHANISMS;
+        }
+        else
+        {
+            m_mechanisms = m_info.mechanisms;
+        }
+
+        bsoncxx::array::view role_names;
+        if (optional(key::ROLES, &role_names))
+        {
+            role::from_bson(role_names, m_db, &m_roles);
+
+            m_what |= UserInfo::ROLES;
+        }
+
+        if (m_what == 0)
+        {
+            throw SoftError("Must specify at least one field to update in updateUser", error::BAD_VALUE);
+        }
+    }
+
+    string generate_update_pwd()
+    {
+        m_action = Action::UPDATE_PASSWORD;
+
+        m_statements.clear();
+
+        string user = "'" + m_db + "." + m_user + "'@'%'";
+
+        mxb_assert(m_what & UserInfo::PWD);
+
+        ostringstream ss;
+        ss << "SET PASSWORD FOR " << user << " = PASSWORD('" << m_pwd << "')";
+
+        string s = ss.str();
+
+        m_statements.push_back(s);
+
+
+        return s;
+    }
+
+    string generate_update_grants()
+    {
+        m_action = Action::UPDATE_GRANTS;
+
+        m_statements.clear();
+
+        string user = "'" + m_db + "." + m_user + "'@'%'";
+
+        auto revokes = create_revoke_statements(user, m_info.roles); // Revoke according to current roles.
+        m_nRevokes = revokes.size();
+
+        for (const auto& revoke : revokes)
+        {
+            m_statements.push_back(revoke);
+        }
+
+        auto grants = create_grant_statements(user, m_roles); // Grant according to new roles.
+        m_nGrants = grants.size();
+
+        for (const auto& grant : grants)
+        {
+            m_statements.push_back(grant);
+        }
+
+        return mxb::join(m_statements, ";");
+    }
+
+    State translate_update_pwd(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+    {
+        State state = State::READY;
+
+        uint8_t* pData = mariadb_response.data();
+
+        ComResponse response(&pData);
+        mxb_assert(pData == mariadb_response.data() + mariadb_response.length());
+
+        switch (response.type())
+        {
+        case ComResponse::OK_PACKET:
+            {
+                const auto& um = m_database.context().um();
+
+                UserInfo info;
+                info.pwd = m_pwd;
+                uint32_t what = UserInfo::PWD;
+
+                if (m_what & UserInfo::CUSTOM_DATA)
+                {
+                    info.custom_data = m_custom_data;
+                    what |= UserInfo::CUSTOM_DATA;
+                }
+
+                if (m_what & UserInfo::MECHANISMS)
+                {
+                    info.mechanisms = m_mechanisms;
+                    what |= UserInfo::MECHANISMS;
+                }
+
+                m_what &= ~(UserInfo::PWD | UserInfo::CUSTOM_DATA | UserInfo::MECHANISMS);
+
+                if (um.update(m_db, m_user, what, info))
+                {
+                    if (m_what & UserInfo::ROLES)
+                    {
+                        auto sql = generate_update_grants();
+
+                        send_downstream_via_loop(sql);
+                        state = State::BUSY;
+                    }
+                    else
+                    {
+                        DocumentBuilder doc;
+                        doc.append(kvp(key::OK, 1));
+
+                        *ppNoSQL_response = create_response(doc.extract());
+                        state = State::READY;
+                    }
+                }
+                else
+                {
+                    ostringstream ss;
+                    ss << "Could update the password in the MariaDB server, but could not store "
+                       << "it in the local nosqlprotocol database. It will no longer be possible "
+                       << "to log in as " << m_user << "@" << m_db << ".";
+
+                    throw SoftError(ss.str(), error::INTERNAL_ERROR);
+                }
+            }
+            break;
+
+        case ComResponse::ERR_PACKET:
+            {
+                ComERR err(response);
+
+                switch (err.code())
+                {
+                case ER_SPECIFIC_ACCESS_DENIED_ERROR:
+                    {
+                        ostringstream ss;
+                        ss << "not authorized on " << m_database.name() << " to execute command "
+                           << bsoncxx::to_json(m_doc);
+
+                        throw SoftError(ss.str(), error::UNAUTHORIZED);
+                    }
+                    break;
+
+                default:
+                    {
+                        ostringstream ss;
+                        ss << "unable to change password: " << err.message();
+
+                        throw SoftError(ss.str(), error::INTERNAL_ERROR);
+                    }
+                }
+            }
+            break;
+
+        default:
+            mxb_assert(!true);
+            throw_unexpected_packet();
+        }
+
+        return state;
+    }
+
+    State translate_update_grants(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response)
+    {
+        uint8_t* pData = mariadb_response.data();
+        uint8_t* pEnd = pData + mariadb_response.length();
+
+        pData = translate_revokes(pData, pEnd);
+        pData = translate_grants(pData, pEnd);
+        mxb_assert(pData == pEnd);
+
+        auto& um = m_database.context().um();
+
+        UserInfo info;
+        info.roles = m_roles;
+        uint32_t what = UserInfo::ROLES;
+
+        if (m_what & UserInfo::CUSTOM_DATA)
+        {
+            info.custom_data = m_custom_data;
+            what |= UserInfo::CUSTOM_DATA;
+        }
+
+        if (m_what & UserInfo::MECHANISMS)
+        {
+            info.mechanisms = m_mechanisms;
+            what |= UserInfo::MECHANISMS;
+        }
+
+        if (um.update(m_db, m_user, what, info))
+        {
+            DocumentBuilder doc;
+            doc.append(kvp(key::OK, 1));
+
+            *ppNoSQL_response = create_response(doc.extract());
+        }
+        else
+        {
+            ostringstream ss;
+
+            if (m_what & UserInfo::PWD)
+            {
+                ss << "Could update password both in the MariaDB server and in the local "
+                   << "nosqlprotocol database and could ";
+            }
+            else
+            {
+                ss << "Could ";
+            }
+
+            ss << "update the grants in the MariaDB server, but could not store the corresponing "
+               << "roles in the local database.";
+
+            throw SoftError(ss.str(), error::INTERNAL_ERROR);
+        }
+
+        return State::READY;
+    }
+
+    uint8_t* translate_revokes(uint8_t* pData, const uint8_t* pEnd)
+    {
+        int32_t i = 0;
+
+        while ((i != m_nRevokes) && (pData < pEnd))
+        {
+            ComResponse response(&pData);
+
+            switch (response.type())
+            {
+            case ComResponse::OK_PACKET:
+                break;
+
+            case ComResponse::ERR_PACKET:
+                {
+                    ComERR err(response);
+
+                    ostringstream ss;
+
+                    if (m_what & UserInfo::PWD)
+                    {
+                        ss << "Changing the password succeeded, but revoking privileges with \"";
+                    }
+                    else
+                    {
+                        ss << "Revoking privileges with '";
+                    }
+
+                    ss << m_statements[i] << "\" failed with \"" << err.message() << "\". "
+                       << "The grants in the MariaDB server and the roles in the local "
+                       << "nosqlprotocl database are now not in sync.";
+
+                    throw SoftError(ss.str(), error::INTERNAL_ERROR);
+                }
+                break;
+
+            default:
+                mxb_assert(!true);
+                throw_unexpected_packet();
+            }
+
+            ++i;
+        }
+
+        return pData;
+    }
+
+    uint8_t* translate_grants(uint8_t* pData, const uint8_t* pEnd)
+    {
+        int32_t i = 0;
+
+        while ((i != m_nGrants) && (pData < pEnd))
+        {
+            ComResponse response(&pData);
+
+            switch (response.type())
+            {
+            case ComResponse::OK_PACKET:
+                break;
+
+            case ComResponse::ERR_PACKET:
+                {
+                    ComERR err(response);
+
+                    ostringstream ss;
+
+                    if (m_what & UserInfo::PWD)
+                    {
+                        ss << "Changing the password and revoking privileges succeeded, ";
+                    }
+                    else
+                    {
+                        ss << "Revoking privileges succeeded, ";
+                    }
+
+                    ss << "but granting privileges with \"" << m_statements[i]
+                       << "\" failed with \"" << err.message() << "\". "
+                       << "The grants in the MariaDB server and the roles in the local "
+                       << "nosqlprotocl database are now not in sync.";
+
+                    throw SoftError(ss.str(), error::INTERNAL_ERROR);
+                }
+                break;
+
+            default:
+                mxb_assert(!true);
+                throw_unexpected_packet();
+            }
+
+            ++i;
+        }
+
+        return pData;
+    }
+
+
+private:
+    enum class Action
+    {
+        UPDATE_PASSWORD,
+        UPDATE_GRANTS
+    };
+
+    Action                   m_action = Action::UPDATE_PASSWORD;
+    string                   m_db;
+    string                   m_user;
+    string                   m_pwd;
+    string                   m_custom_data;
+    vector<scram::Mechanism> m_mechanisms;
+    vector<role::Role>       m_roles;
+    UserInfo                 m_info;
+    uint32_t                 m_what { 0 };
+    vector<string>           m_statements;
+    int32_t                  m_nRevokes { 0 };
+    int32_t                  m_nGrants { 0 };
+};
 
 // https://docs.mongodb.com/v4.4/reference/command/usersInfo/
 class UsersInfo : public ImmediateCommand
@@ -1108,7 +1611,7 @@ private:
             }
         }
 
-        vector<UserManager::UserInfo> infos = um.get_infos(db_users);
+        vector<UserInfo> infos = um.get_infos(db_users);
 
         add_users(doc, infos);
         doc.append(kvp(key::OK, 1));
@@ -1124,7 +1627,7 @@ private:
 
     void get_users(DocumentBuilder& doc, const UserManager& um)
     {
-        vector<UserManager::UserInfo> infos = um.get_infos(m_database.name());
+        vector<UserInfo> infos = um.get_infos(m_database.name());
 
         add_users(doc, infos);
         doc.append(kvp(key::OK, 1));
@@ -1137,7 +1640,7 @@ private:
     {
         ArrayBuilder users;
 
-        UserManager::UserInfo info;
+        UserInfo info;
         if (um.get_info(db, user, &info))
         {
             add_user(users, info);
@@ -1147,7 +1650,7 @@ private:
         doc.append(kvp(key::OK, 1));
     }
 
-    static void add_users(DocumentBuilder& doc, const vector<UserManager::UserInfo>& infos)
+    static void add_users(DocumentBuilder& doc, const vector<UserInfo>& infos)
     {
         ArrayBuilder users;
 
@@ -1159,7 +1662,7 @@ private:
         doc.append(kvp(key::USERS, users.extract()));
     }
 
-    static void add_user(ArrayBuilder& users, const UserManager::UserInfo& info)
+    static void add_user(ArrayBuilder& users, const UserInfo& info)
     {
         ArrayBuilder roles;
         for (const auto& r : info.roles)
@@ -1194,6 +1697,12 @@ private:
         else
         {
             MXS_ERROR("The uuid '%s' of '%s' is invalid.", info.uuid.c_str(), info.db_user.c_str());
+        }
+
+        if (!info.custom_data.empty())
+        {
+            bsoncxx::document::value custom_data = bsoncxx::from_json(info.custom_data);
+            user.append(kvp(key::CUSTOM_DATA, custom_data));
         }
 
         user.append(kvp(key::USER, info.user));

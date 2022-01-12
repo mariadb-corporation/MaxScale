@@ -76,12 +76,23 @@ public:
     class UserInfo
     {
     public:
+        enum What
+        {
+            CUSTOM_DATA = 1 << 0,
+            MECHANISMS  = 1 << 1,
+            PWD         = 1 << 2,
+            ROLES       = 1 << 3,
+
+            MASK = (PWD | MECHANISMS | ROLES | CUSTOM_DATA)
+        };
+
         std::string                   db_user;
         std::string                   db;
         std::string                   user;
         std::string                   pwd;
         std::string                   uuid;
         std::vector<uint8_t>          salt;
+        std::string                   custom_data; // JSON document
         std::string                   salt_b64;
         std::vector<scram::Mechanism> mechanisms;
         std::vector<role::Role>       roles;
@@ -98,6 +109,7 @@ public:
                   const string_view& user,
                   const string_view& pwd,
                   const std::string& salt_b64,
+                  const std::string& custom_data, // Assumed to be JSON document.
                   const std::vector<scram::Mechanism>& mechanisms,
                   const std::vector<role::Role>& roles);
 
@@ -141,7 +153,25 @@ public:
 
     bool remove_db_users(const std::vector<std::string>& db_users) const;
 
-    bool set_roles(const std::string& db, const std::string& user, const std::vector<role::Role>& roles) const;
+    bool update(const std::string& db, const std::string& user, uint32_t what, const UserInfo& info) const;
+
+    bool set_mechanisms(const std::string& db,
+                        const std::string& user,
+                        const std::vector<scram::Mechanism>& mechanisms) const
+    {
+        UserInfo info;
+        info.mechanisms = mechanisms;
+
+        return update(db, user, UserInfo::MECHANISMS, info);
+    }
+
+    bool set_roles(const std::string& db, const std::string& user, const std::vector<role::Role>& roles) const
+    {
+        UserInfo info;
+        info.roles = roles;
+
+        return update(db, user, UserInfo::ROLES, info);
+    }
 
     static std::string get_db_user(const std::string& db, const std::string& user)
     {

@@ -24,6 +24,13 @@ using namespace std;
 namespace nosql
 {
 
+std::set<scram::Mechanism> scram::supported_mechanisms()
+{
+    static set<Mechanism> mechanisms = { Mechanism::SHA_1 };
+
+    return mechanisms;
+}
+
 const char* scram::to_string(scram::Mechanism mechanism)
 {
     switch (mechanism)
@@ -39,14 +46,14 @@ const char* scram::to_string(scram::Mechanism mechanism)
     return "unknown";
 }
 
-bool scram::from_string(const char* zMechanism, scram::Mechanism* pMechanism)
+bool scram::from_string(const string& mechanism, scram::Mechanism* pMechanism)
 {
     bool rv = true;
-    if (strcmp(zMechanism, "SCRAM-SHA-1") == 0)
+    if (mechanism == "SCRAM-SHA-1")
     {
         *pMechanism = scram::Mechanism::SHA_1;
     }
-    else if (strcmp(zMechanism, "SCRAM-SHA-256") == 0)
+    else if (mechanism == "SCRAM-SHA-256")
     {
         *pMechanism = scram::Mechanism::SHA_256;
     }
@@ -137,6 +144,46 @@ bool scram::from_json(const std::string& s, std::vector<Mechanism>* pMechanisms)
     }
 
     return rv;
+}
+
+namespace
+{
+
+void add_mechanism(const string_view& mechanism_name, vector<scram::Mechanism>& mechanisms)
+{
+    scram::Mechanism mechanism;
+
+    if (!scram::from_string(mechanism_name, &mechanism))
+    {
+        ostringstream ss;
+        ss << "\"" << mechanism_name << "\" is an unknown mechanism";
+
+        throw SoftError(ss.str(), error::BAD_VALUE);
+    }
+
+    mechanisms.push_back(mechanism);
+}
+
+}
+
+void scram::from_bson(const bsoncxx::array::view& bson, std::vector<Mechanism>* pMechanisms)
+{
+    vector<Mechanism> mechanisms;
+
+    for (const auto& element : bson)
+    {
+        switch (element.type())
+        {
+        case bsoncxx::type::k_utf8:
+            add_mechanism(element.get_utf8(), mechanisms);
+            break;
+
+        default:
+            throw SoftError("mechanism field must be an array of strings", error::BAD_VALUE);
+        }
+    }
+
+    pMechanisms->swap(mechanisms);
 }
 
 
