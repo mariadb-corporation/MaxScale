@@ -274,7 +274,7 @@ private:
     void read_db_privs_xpand(QResult acl, UserDatabase* output);
 
     void check_show_dbs_priv(mxq::MariaDB& con, const UserDatabase& userdata,
-                             const char* servername);
+                             SERVER::VersionInfo::Type type, const char* servername);
 
     static void remove_star(std::string& pw);
 
