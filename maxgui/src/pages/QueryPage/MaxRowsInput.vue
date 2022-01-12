@@ -71,11 +71,18 @@ export default {
                 if (this.$typy(obj, 'value').isNumber) this.$emit('change', obj.value)
             },
         },
+        // When query_max_rows value is changed elsewhere, it should be updated
+        query_max_rows(v) {
+            if (this.maxRows && this.maxRows.value !== v) this.updateMaxRows()
+        },
     },
     created() {
-        this.maxRows = this.genDropDownItem(this.query_max_rows)
+        this.updateMaxRows()
     },
     methods: {
+        updateMaxRows() {
+            this.maxRows = this.genDropDownItem(this.query_max_rows)
+        },
         handleValidateMaxRows(v) {
             /* Normally it returns object if the user selects provided options,
              * but v-combobox allows user input, so it may return string or number

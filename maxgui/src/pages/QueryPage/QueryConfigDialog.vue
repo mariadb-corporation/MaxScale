@@ -15,17 +15,14 @@
                         <label class="field__label color text-small-text label-required">
                             {{ $t('maxRows') }}
                         </label>
-                        <v-text-field
-                            v-model.number="config.maxRows"
-                            type="number"
-                            :rules="rules.maxRows"
-                            class="std error--text__bottom mb-2"
-                            dense
+                        <!-- Add key to trigger rerender when dialog is opened, otherwise the input will be empty -->
+                        <max-rows-input
+                            :key="isOpened"
                             :height="36"
                             hide-details="auto"
-                            outlined
-                            required
-                            @keypress="$help.preventNonNumericalVal($event)"
+                            :hasFieldsetBorder="false"
+                            class="std error--text__bottom mb-2 maxRows"
+                            @change="config.maxRows = $event"
                         />
                         <v-icon size="16" color="warning" class="mr-2">
                             $vuetify.icons.alertWarning
@@ -86,16 +83,18 @@
  * Public License.
  */
 import { mapMutations, mapState } from 'vuex'
-
+import MaxRowsInput from './MaxRowsInput.vue'
 export default {
     name: 'query-config-dialog',
+    components: {
+        'max-rows-input': MaxRowsInput,
+    },
     props: {
         value: { type: Boolean, required: true },
     },
     data() {
         return {
             rules: {
-                maxRows: [v => this.validatePositiveNumber({ v, inputName: this.$t('maxRows') })],
                 queryHistoryRetentionPeriod: [
                     v =>
                         this.validatePositiveNumber({
