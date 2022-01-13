@@ -189,13 +189,9 @@ constexpr int64_t MXS_UNKNOWN_ENUM_VALUE {-1};
  */
 int64_t config_enum_to_value(const std::string& key, const MXS_ENUM_VALUE* values);
 
-bool validate_param(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* module,
+// Legacy parameter validation function
+bool validate_param(const MXS_MODULE_PARAM* basic, const MXS_MODULE* module,
                     const std::string& key, const std::string& value, std::string* error_out);
-
-bool param_is_known(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* module, const char* key);
-
-bool param_is_valid(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* module,
-                    const char* key, const char* value);
 
 /**
  * @brief Check if required parameters are missing

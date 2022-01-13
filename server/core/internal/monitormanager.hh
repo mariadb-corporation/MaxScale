@@ -123,18 +123,6 @@ public:
     static bool reconfigure_monitor(mxs::Monitor* monitor, const mxs::ConfigParameters& parameters);
 
     /**
-     * Change one parameter in the monitor during runtime. Should only be called from the admin thread.
-     *
-     * @param monitor Monitor to reconfigure
-     * @param key Setting to change
-     * @param value New value
-     * @param error_out Error output
-     * @return True if reconfiguration was successful
-     */
-    static bool alter_monitor(mxs::Monitor* monitor, const std::string& key, const std::string& value,
-                              std::string* error_out);
-
-    /**
      * Add server to monitor during runtime. Should only be called from the admin thread.
      *
      * @param mon Target monitor

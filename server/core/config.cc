@@ -4460,7 +4460,40 @@ int64_t config_enum_to_value(const std::string& value, const MXS_ENUM_VALUE* val
     return MXS_UNKNOWN_ENUM_VALUE;
 }
 
-bool validate_param(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* module,
+bool param_is_known(const MXS_MODULE_PARAM* basic, const MXS_MODULE* module, const char* key)
+{
+    for (auto param : {basic, module->parameters})
+    {
+        for (int i = 0; param[i].name; i++)
+        {
+            if (strcmp(key, param[i].name) == 0)
+            {
+                return true;
+            }
+        }
+    }
+
+    // Parameter not found in the legacy parameter definitions, check if the module uses the new system
+    return module->specification && module->specification->find_param(key);
+}
+
+bool param_is_valid(const MXS_MODULE_PARAM* basic, const MXS_MODULE* module,
+                    const char* key, const char* value)
+{
+    if (module->specification)
+    {
+        if (const auto* param = module->specification->find_param(key))
+        {
+            std::string err;
+            return param->validate(value, &err);
+        }
+    }
+
+    return config_param_is_valid(basic, key, value, NULL)
+           || config_param_is_valid(module->parameters, key, value, NULL);
+}
+
+bool validate_param(const MXS_MODULE_PARAM* basic, const MXS_MODULE* module,
                     const string& key, const string& value, string* error_out)
 {
     bool success = false;
@@ -4505,6 +4538,25 @@ bool param_is_valid(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* modul
 {
     return config_param_is_valid(basic, key, value, NULL)
            || (module && config_param_is_valid(module, key, value, NULL));
+}
+
+bool config_set_rebalance_threshold(const char* value)
+{
+    bool rv = false;
+
+    char* endptr;
+    int intval = strtol(value, &endptr, 0);
+    if (*endptr == '\0' && intval >= 0 && intval <= 100)
+    {
+        mxs::Config::get().rebalance_threshold.set(intval);
+        rv = true;
+    }
+    else
+    {
+        MXS_ERROR("Invalid value (percentage expected) for '%s': %s", CN_REBALANCE_THRESHOLD, value);
+    }
+
+    return rv;
 }
 
 void config_set_mask_passwords(bool enable)

@@ -627,26 +627,34 @@ bool is_valid_integer(const char* value)
     return strtol(value, &endptr, 10) >= 0 && *value && *endptr == '\0';
 }
 
-bool undefined_mandatory_parameter(const MXS_MODULE_PARAM* mod_params,
+bool undefined_mandatory_parameter(const MXS_MODULE_PARAM* basic_params,
+                                   const MXS_MODULE* module,
                                    const mxs::ConfigParameters* params)
 {
     bool rval = false;
-    mxb_assert(mod_params);
 
-    for (int i = 0; mod_params[i].name; i++)
+    for (auto mod_params : {basic_params, module->parameters})
     {
-        if ((mod_params[i].options & MXS_MODULE_OPT_REQUIRED) && !params->contains(mod_params[i].name))
+        for (int i = 0; mod_params[i].name; i++)
         {
-            MXS_ERROR("Mandatory parameter '%s' is not defined.", mod_params[i].name);
-            rval = true;
+            if ((mod_params[i].options & MXS_MODULE_OPT_REQUIRED) && !params->contains(mod_params[i].name))
+            {
+                MXS_ERROR("Mandatory parameter '%s' is not defined.", mod_params[i].name);
+                rval = true;
+            }
         }
+    }
+
+    if (module->specification && !module->specification->validate(*params))
+    {
+        rval = false;
     }
 
     return rval;
 }
 
 bool validate_param(const MXS_MODULE_PARAM* basic,
-                    const MXS_MODULE_PARAM* module,
+                    const MXS_MODULE* module,
                     const char* key,
                     const char* value)
 {
@@ -660,7 +668,7 @@ bool validate_param(const MXS_MODULE_PARAM* basic,
 }
 
 bool validate_param(const MXS_MODULE_PARAM* basic,
-                    const MXS_MODULE_PARAM* module,
+                    const MXS_MODULE* module,
                     mxs::ConfigParameters* params)
 {
     bool rval = std::all_of(params->begin(), params->end(),
@@ -668,7 +676,7 @@ bool validate_param(const MXS_MODULE_PARAM* basic,
                                 return validate_param(basic, module, p.first.c_str(), p.second.c_str());
                             });
 
-    if (undefined_mandatory_parameter(basic, params) || undefined_mandatory_parameter(module, params))
+    if (undefined_mandatory_parameter(basic, module, params))
     {
         rval = false;
     }
@@ -1189,7 +1197,7 @@ extract_and_validate_params(json_t* json, const char* module, mxs::ModuleType mo
         mxb_assert(ok);
 
         params.set_multiple(extract_parameters(json));
-        ok = validate_param(get_type_parameters(module_param_name), mod->parameters, &params);
+        ok = validate_param(get_type_parameters(module_param_name), mod, &params);
 
         if (ok && mod->specification)
         {
@@ -2162,7 +2170,7 @@ bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
     params.set_multiple(extract_parameters(new_json));
 
     if (is_valid_resource_body(new_json)
-        && validate_param(common_monitor_params(), mod->parameters, &params)
+        && validate_param(common_monitor_params(), mod, &params)
         && server_relationship_to_parameter(new_json, &params)
         && monitor_to_service_relations(monitor->name(), old_json.get(), new_json))
     {
