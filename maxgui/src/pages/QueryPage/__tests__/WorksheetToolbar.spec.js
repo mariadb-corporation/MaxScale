@@ -47,6 +47,28 @@ describe(`WorksheetToolbar - child component's data communication tests`, () => 
         wrapper = mountFactory({ shallow: true, computed: { query_confirm_flag: () => 0 } })
         expect(wrapper.findComponent({ name: 'confirm-dialog' }).exists()).to.be.false
     })
+    it(`Should render max-rows-input`, () => {
+        wrapper = mountFactory({ shallow: true })
+        const input = wrapper.findComponent({ name: 'max-rows-input' })
+        expect(input.exists()).to.be.true
+    })
+    it(`Should call SET_QUERY_MAX_ROW when @change event is emitted from max-rows-input`, () => {
+        let callCount = 0,
+            arg
+        wrapper = mountFactory({
+            shallow: true,
+            methods: {
+                SET_QUERY_MAX_ROW: val => {
+                    callCount++
+                    arg = val
+                },
+            },
+        })
+        const newVal = 123
+        wrapper.findComponent({ name: 'max-rows-input' }).vm.$emit('change', newVal)
+        expect(callCount).to.be.equals(1)
+        expect(arg).to.be.equals(newVal)
+    })
 })
 
 describe('WorksheetToolbar - use-db-btn, run-btn and visualize-btn common tests', () => {
