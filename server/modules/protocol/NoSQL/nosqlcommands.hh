@@ -306,10 +306,9 @@ class OpQueryCommand final : public PacketCommand<packet::Query>
 public:
     OpQueryCommand(Database* pDatabase,
                    GWBUF* pRequest,
-                   packet::Query&& req)
-        : PacketCommand<packet::Query>(pDatabase, pRequest, std::move(req), ResponseKind::REPLY)
-    {
-    }
+                   packet::Query&& req);
+
+    bool session_must_be_ready() const override;
 
     std::string description() const override;
 
@@ -322,9 +321,18 @@ private:
                     const bsoncxx::document::element& orderby = bsoncxx::document::element());
 
 private:
+    enum class Kind
+    {
+        EMPTY,
+        IS_MASTER,
+        QUERY,
+        IMPLICIT_QUERY,
+    };
+
     int32_t                  m_nReturn      { DEFAULT_CURSOR_RETURN };
     bool                     m_single_batch { false };
     std::vector<std::string> m_extractions;
+    Kind                     m_kind         { Kind::EMPTY };
 };
 
 //

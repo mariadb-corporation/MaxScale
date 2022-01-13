@@ -691,23 +691,18 @@ State OpUpdateCommand::insert_document()
 //
 // OpQueryCommand
 //
-std::string OpQueryCommand::description() const
+OpQueryCommand::OpQueryCommand(Database* pDatabase,
+                               GWBUF* pRequest,
+                               packet::Query&& req)
+    : PacketCommand<packet::Query>(pDatabase, pRequest, std::move(req), ResponseKind::REPLY)
 {
-    return "OP_QUERY";
-}
-
-State OpQueryCommand::execute(GWBUF** ppNoSQL_response)
-{
-    State state = State::BUSY;
-    GWBUF* pResponse = nullptr;
-
-    auto it = m_req.query().begin();
-    auto end = m_req.query().end();
+    const auto& query = m_req.query();
+    auto it = query.begin();
+    auto end = query.end();
 
     if (it == end)
     {
-        bsoncxx::document::view query;
-        send_query(query);
+        m_kind = Kind::EMPTY;
     }
     else
     {
@@ -718,16 +713,12 @@ State OpQueryCommand::execute(GWBUF** ppNoSQL_response)
 
             if (key.compare(command::IsMaster::KEY) == 0 || key.compare(key::ISMASTER) == 0)
             {
-                DocumentBuilder doc;
-                command::IsMaster::populate_response(m_database, m_req.query(), doc);
-
-                pResponse = create_response(doc.extract());
-                state = State::READY;
+                m_kind = Kind::IS_MASTER;
                 break;
             }
             else if (key.compare(key::QUERY) == 0)
             {
-                send_query(element.get_document(), m_req.query()[key::ORDERBY]);
+                m_kind = Kind::QUERY;
                 break;
             }
             else
@@ -738,9 +729,56 @@ State OpQueryCommand::execute(GWBUF** ppNoSQL_response)
 
         if (it == end)
         {
-            // Ok, we assume the whole document is a query.
-            send_query(m_req.query());
+            m_kind = Kind::IMPLICIT_QUERY;
         }
+    }
+}
+
+bool OpQueryCommand::session_must_be_ready() const
+{
+    return m_kind != Kind::IS_MASTER;
+}
+
+std::string OpQueryCommand::description() const
+{
+    return "OP_QUERY";
+}
+
+State OpQueryCommand::execute(GWBUF** ppNoSQL_response)
+{
+    State state = State::BUSY;
+    GWBUF* pResponse = nullptr;
+
+    switch (m_kind)
+    {
+    case Kind::EMPTY:
+        {
+            bsoncxx::document::view query;
+            send_query(query);
+        }
+        break;
+
+    case Kind::IS_MASTER:
+        {
+            DocumentBuilder doc;
+            command::IsMaster::populate_response(m_database, m_req.query(), doc);
+
+            pResponse = create_response(doc.extract());
+            state = State::READY;
+        }
+        break;
+
+    case Kind::QUERY:
+        {
+            const auto& query = m_req.query();
+
+            send_query(query[key::QUERY].get_document(), query[key::ORDERBY]);
+        }
+        break;
+
+    case Kind::IMPLICIT_QUERY:
+        send_query(m_req.query());
+        break;
     }
 
     *ppNoSQL_response = pResponse;
