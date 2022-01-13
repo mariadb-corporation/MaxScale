@@ -4981,7 +4981,40 @@ int64_t config_enum_to_value(const std::string& value, const MXS_ENUM_VALUE* val
     return MXS_UNKNOWN_ENUM_VALUE;
 }
 
-bool validate_param(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* module,
+bool param_is_known(const MXS_MODULE_PARAM* basic, const MXS_MODULE* module, const char* key)
+{
+    for (auto param : {basic, module->parameters})
+    {
+        for (int i = 0; param[i].name; i++)
+        {
+            if (strcmp(key, param[i].name) == 0)
+            {
+                return true;
+            }
+        }
+    }
+
+    // Parameter not found in the legacy parameter definitions, check if the module uses the new system
+    return module->specification && module->specification->find_param(key);
+}
+
+bool param_is_valid(const MXS_MODULE_PARAM* basic, const MXS_MODULE* module,
+                    const char* key, const char* value)
+{
+    if (module->specification)
+    {
+        if (const auto* param = module->specification->find_param(key))
+        {
+            std::string err;
+            return param->validate(value, &err);
+        }
+    }
+
+    return config_param_is_valid(basic, key, value, NULL)
+           || config_param_is_valid(module->parameters, key, value, NULL);
+}
+
+bool validate_param(const MXS_MODULE_PARAM* basic, const MXS_MODULE* module,
                     const string& key, const string& value, string* error_out)
 {
     bool success = false;
@@ -5004,28 +5037,6 @@ bool validate_param(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* modul
         *error_out = error_msg;
     }
     return success;
-}
-
-bool param_is_known(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* module, const char* key)
-{
-    std::unordered_set<std::string> names;
-
-    for (auto param : {basic, module})
-    {
-        for (int i = 0; param[i].name; i++)
-        {
-            names.insert(param[i].name);
-        }
-    }
-
-    return names.count(key);
-}
-
-bool param_is_valid(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* module,
-                    const char* key, const char* value)
-{
-    return config_param_is_valid(basic, key, value, NULL)
-           || (module && config_param_is_valid(module, key, value, NULL));
 }
 
 bool config_set_rebalance_threshold(const char* value)

@@ -349,26 +349,6 @@ bool MonitorManager::reconfigure_monitor(mxs::Monitor* monitor, const mxs::Confi
     return success;
 }
 
-bool MonitorManager::alter_monitor(mxs::Monitor* monitor, const std::string& key, const std::string& value,
-                                   std::string* error_out)
-{
-    const MXS_MODULE* mod = get_module(monitor->m_module, mxs::ModuleType::MONITOR);
-    if (!validate_param(common_monitor_params(), mod->parameters, key, value, error_out))
-    {
-        return false;
-    }
-
-    mxs::ConfigParameters modified = monitor->parameters();
-    modified.set(key, value);
-
-    bool success = MonitorManager::reconfigure_monitor(monitor, modified);
-    if (!success)
-    {
-        *error_out = string_printf(RECONFIG_FAILED, "changing a parameter");
-    }
-    return success;
-}
-
 json_t* MonitorManager::monitor_to_json(const Monitor* monitor, const char* host)
 {
     string self = MXS_JSON_API_MONITORS;
