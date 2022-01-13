@@ -47,6 +47,11 @@ public:
 
     virtual ~Command();
 
+    Database& database() const
+    {
+        return m_database;
+    }
+
     virtual bool is_admin() const;
 
     virtual bool is_silent() const
