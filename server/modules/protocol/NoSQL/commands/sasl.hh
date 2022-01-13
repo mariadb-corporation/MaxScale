@@ -359,6 +359,12 @@ private:
         doc.append(kvp(key::DONE, true));
         doc.append(kvp(key::PAYLOAD, payload));
         doc.append(kvp(key::OK, 1));
+
+        const auto& info = sasl.user_info();
+        auto& config = m_database.config();
+
+        config.user = info.db_user;
+        config.password = info.pwd;
     }
 };
 

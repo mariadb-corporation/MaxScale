@@ -52,7 +52,17 @@ same JSON object.
 
 A complete example can be found at the [end](#example) of this document.
 
-# Client Authentication
+# Authentication
+
+Nosqlprotocol supports _SCRAM_ _authentication_ as implemented by MongoDB®.
+Currently the `SCRAM-SHA-1` mechanism is supported, but support for
+`SCRAM-SHA-256` will be added.
+
+Nosqlprotocol bascially performs no _authorization_, but any limitations on
+what a user is allowed to perform are controlled by the grants of the
+corresponding MariaDB user.
+
+FOLLOWING PARAGRAPH TO BE TUNED
 
 Currently no authentication is supported in the communication between
 the MongoDB® client application and MaxScale. That is, when connecting, only
@@ -71,6 +81,45 @@ MongoDB shell version v4.4.1
 ...
 >
 ```
+
+## Client Authentication
+
+Authenticationwise nosqlprotocol can be used in three different ways:
+- Anonymously
+- Shared credentials
+- Unique credentials
+
+### Anonymously
+
+If there is an anonymous user on the MariaDB server and if nosqlprotocol
+is configured without a user/password, then all nosqlprotocol clients will
+access the MariaDB server as anonymous users.
+
+Note that the anonymous MariaDB user is only intended for testing and
+should in general not be used.
+
+### Shared Credentials
+
+If nosqlprotocol is configured with
+```
+...
+nosqlprotocol.user=theuser
+nosqlprotocol.password=thepassword
+```
+then each MongoDB® client will use those credentials when accessing the
+MariaDB server. Note that from the perspective of the MariaDB server, it
+is not possibe to distinguish between different MongoDB® clients.
+
+### Unique Credentials
+
+If nosqlprotocol authentication has been taken into use and a MongoDB®
+client authenticates, either when connecting or later, then the credentials
+of MongoDB® client will be used when accessing the MariaDB server.
+
+Note that even if nosqlprotocol authentication has been enabled, authentication
+is not required, and if the MongoDB® client has not authenticated itself, the
+credentials specified with `nosqlprotocol.[user|password]` (or the anonymous
+user) will be used when accessing the MariaDB server.
 
 # Client Library
 
@@ -102,20 +151,19 @@ nosqlprotocol.on_unknown_command=return_error
 ## `user`
 
    * Type: string
-   * Mandatory: true
+   * Optional: true
 
-Specifies the _user_ to be used when connecting to the backend. Note that the
-same _user_/_password_ combination will be used for all MongoDB® clients connecting
-to the same listener port.
+Specifies the _user_ to be used when connecting to the backend, if the MongoDB®
+client is not authenticated.
 
 ## `password`
 
    * Type: string
-   * Mandatory: true
+   * Optional: true
 
-Specifies the _password_ to be used when connecting to the backend. Note that the
-same _user_/_password_ combination will be used for all MongoDB® clients connecting
-to the same listener port.
+Specifies the _password_ to be used when connecting to the backend, is the MongoDB®
+client is not authenticated. Note that the same _user_/_password_ combination will be
+used for all unauthenticated MongoDB® clients connecting to the same listener port.
 
 ## `on_unknown_command`
 

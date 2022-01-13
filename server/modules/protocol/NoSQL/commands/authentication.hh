@@ -38,6 +38,11 @@ public:
 
     void populate_response(DocumentBuilder& doc) override
     {
+        auto& config = m_database.config();
+
+        config.user.clear();
+        config.password.clear();
+
         doc.append(kvp(key::OK, 1));
     }
 };
