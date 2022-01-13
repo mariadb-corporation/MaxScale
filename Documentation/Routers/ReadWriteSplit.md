@@ -443,8 +443,10 @@ When the server where the transaction is in progress fails, readwritesplit can
 migrate the transaction to a replacement server. This can completely hide the
 failure of a master node without any visible effects to the client.
 
-If no replacement node becomes available before the timeout controlled by
-`delayed_retry_timeout` is exceeded, the client connection is closed.
+If no replacement node becomes available, the client connection is closed.
+
+To control how long a transaction replay can take, use
+`transaction_replay_timeout`.
 
 Please refer to the
 [Transaction Replay Limitations](#transaction-replay-limitations) section for
@@ -477,6 +479,36 @@ controls how many server and network failures a single transaction replay
 tolerates. If a transaction is replayed successfully, the counter for failed
 attempts is reset.
 
+### `transaction_replay_timeout`
+
+The time how long transactions are attempted for. This feature is disabled by
+default and was added in MaxScale 6.2.1.
+
+The timeout is
+[a duration type](../Getting-Started/Configuration-Guide.md#durations)
+and the value must include a unit for the duration.
+
+When `transaction_replay_timeout` is enabled, the time a transaction replay can
+take is controlled solely by this parameter. This is a more convenient and
+predictable method of controlling how long a transaction replay can be attempted
+before the connection is closed.
+
+If `delayed_retry_timeout` is less than `transaction_replay_timeout`, it is set
+to the same value.
+
+By default the time how long a transaction can be retried is controlled by
+`delayed_retry_timeout` and `transaction_replay_attempts`. This can result in a
+maximum replay time limit of `delayed_retry_timeout` multiplied by
+`transaction_replay_attempts`, by default this is 50 seconds. The minimum replay
+time limit can be as low as `transaction_replay_attempts` seconds (5 seconds by
+default) in cases where the connection fails after it was created. Usually this
+happens due to problems like the max_connections limit being hit on the database
+server or an Xpand group change being in progress.
+
+With the introduction of `transaction_replay_timeout`, these problems are
+avoided. Starting with MaxScale 6.2.1, this is the recommended method of
+controlling the timeouts for transaction replay.
+
 ### `transaction_replay_retry_on_deadlock`
 
 Enable automatic retrying of transactions that end up in a deadlock. This
@@ -489,6 +521,16 @@ If this feature is enabled and a transaction returns a deadlock error
 the transaction is automatically retried. If the retrying of the transaction
 results in another deadlock error, it is retried until it either succeeds or a
 transaction checksum error is encountered.
+
+### `transaction_replay_retry_on_mismatch`
+
+Retry transactions that end in checksum mismatch. This parameter was added in
+MaxScale 6.2.1 is disabled by default.
+
+When enabled, any replayed transactions that end with a checksum mismatch are
+retried until they either succeeds or one of the transaction replay limits is
+reached (`delayed_retry_timeout`, `transaction_replay_timeout` or
+`transaction_replay_attempts`).
 
 ### `transaction_replay_checksum`
 

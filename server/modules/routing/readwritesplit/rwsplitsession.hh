@@ -19,6 +19,7 @@
 #include <string>
 #include <deque>
 
+#include <maxbase/stopwatch.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/protocol/mariadb/queryclassifier.hh>
@@ -251,6 +252,10 @@ private:
         return m_state == TRX_REPLAY && m_retry_duration < m_config.delayed_retry_timeout.count();
     }
 
+    // Whether a new transaction replay can be started, limited by transaction_replay_max_attempts and
+    // transaction_replay_timeout
+    inline bool can_start_trx_replay() const;
+
     inline bool can_recover_servers() const
     {
         const auto& config = *m_pSession->service->config();
@@ -431,6 +436,12 @@ private:
         return m_state == OTRX_STARTING || m_state == OTRX_ACTIVE || m_state == OTRX_ROLLBACK;
     }
 
+    // How many seconds has the replay took so far. Only accurate during transaction replay.
+    int64_t trx_replay_seconds() const
+    {
+        return std::chrono::duration_cast<std::chrono::seconds>(m_trx_replay_timer.split()).count();
+    }
+
     enum State
     {
         ROUTING,        // Normal routing
@@ -473,6 +484,8 @@ private:
     Trx         m_orig_trx;             /**< The backup of the transaction we're replaying */
     mxs::Buffer m_orig_stmt;            /**< The backup of the statement that was interrupted */
     int64_t     m_num_trx_replays = 0;  /**< How many times trx replay has been attempted */
+
+    mxb::StopWatch m_trx_replay_timer;  /**< When the last transaction replay started */
 
     TargetSessionStats& m_server_stats;     /**< The server stats local to this thread, cached in the
                                              * session object. This avoids the lookup involved in getting
