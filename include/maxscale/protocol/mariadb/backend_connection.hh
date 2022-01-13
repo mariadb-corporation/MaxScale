@@ -197,6 +197,7 @@ private:
         uint32_t payload_len = 0;
         uint8_t  command = 0;
         bool     opening_cursor = false;
+        bool     collect_rows = false;
         uint32_t id = 0;
     };
 
@@ -235,6 +236,9 @@ private:
 
     // The internal ID of the current query
     uint32_t m_current_id {0};
+
+    // Whether to collect the rows from the next resultset
+    bool m_collect_rows {false};
 
     // The ID and response to the command that will be added to the history. This is stored in a separate
     // variable in case the correct response that is delivered to the client isn't available when this backend

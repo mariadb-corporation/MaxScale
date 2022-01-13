@@ -643,6 +643,17 @@ public:
      */
     std::string get_variable(const std::string& name) const;
 
+    /**
+     * Get rows returned in the result
+     *
+     * The rows can contain binary data. Don't rely on c_str() working correctly unless you know the result
+     * doesn't have embedded nulls in it.
+     *
+     * @return The rows of the resultset if it returned any. If no rows were returned, an empty array is
+     *         returned. To distinguish OK packets from empty results, use is_ok().
+     */
+    const std::vector<std::vector<std::string>>& row_data() const;
+
     //
     // Setters
     //
@@ -669,6 +680,8 @@ public:
 
     void set_server_status(uint16_t status);
 
+    void add_row_data(std::vector<std::string> row);
+
     void clear();
 
     template<typename ... Args>
@@ -691,5 +704,6 @@ private:
     std::vector<uint64_t> m_field_counts;
 
     std::unordered_map<std::string, std::string> m_variables;
+    std::vector<std::vector<std::string>>        m_row_data;
 };
 }

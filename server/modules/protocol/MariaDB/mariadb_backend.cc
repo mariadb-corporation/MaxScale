@@ -2189,6 +2189,18 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
         else
         {
             m_reply.add_rows(1);
+
+            if (m_collect_rows)
+            {
+                std::vector<std::string> row;
+
+                for (uint64_t i = 0; i < m_reply.field_counts().back(); i++)
+                {
+                    row.push_back(get_encoded_str(it));
+                }
+
+                m_reply.add_row_data(std::move(row));
+            }
         }
         break;
 
@@ -2505,6 +2517,7 @@ void MariaDBBackendConnection::assign_session(MXS_SESSION* session, mxs::Compone
 MariaDBBackendConnection::TrackedQuery::TrackedQuery(GWBUF* buffer)
     : payload_len(MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buffer)))
     , command(MYSQL_GET_COMMAND(GWBUF_DATA(buffer)))
+    , collect_rows(gwbuf_should_collect_rows(buffer))
     , id(gwbuf_get_id(buffer))
 {
     mxb_assert(gwbuf_is_contiguous(buffer));
@@ -2539,6 +2552,8 @@ void MariaDBBackendConnection::track_query(const TrackedQuery& query)
     // Track the ID that the client protocol assigned to this query. It is used to verify that the result
     // from this backend matches the one that was sent upstream.
     m_current_id = query.id;
+
+    m_collect_rows = query.collect_rows;
 
     if (mxs_mysql_command_will_respond(m_reply.command()))
     {

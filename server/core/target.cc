@@ -486,6 +486,11 @@ std::string Reply::get_variable(const std::string& name) const
     return it != m_variables.end() ? it->second : "";
 }
 
+const std::vector<std::vector<std::string>>& Reply::row_data() const
+{
+    return m_row_data;
+}
+
 void Reply::set_command(uint8_t command)
 {
     m_command = command;
@@ -541,6 +546,11 @@ void Reply::set_server_status(uint16_t status)
     m_server_status = status;
 }
 
+void Reply::add_row_data(std::vector<std::string> row)
+{
+    m_row_data.push_back(std::move(row));
+}
+
 void Reply::clear()
 {
     m_command = 0;
@@ -554,5 +564,6 @@ void Reply::clear()
     m_is_ok = false;
     m_field_counts.clear();
     m_variables.clear();
+    m_row_data.clear();
 }
 }

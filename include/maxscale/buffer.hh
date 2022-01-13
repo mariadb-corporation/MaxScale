@@ -36,6 +36,7 @@ enum gwbuf_type_t
     GWBUF_TYPE_COLLECT_RESULT = (1 << 0),
     GWBUF_TYPE_REPLAYED       = (1 << 1),
     GWBUF_TYPE_TRACK_STATE    = (1 << 2),
+    GWBUF_TYPE_COLLECT_ROWS   = (1 << 3),
 };
 
 /**
@@ -131,6 +132,11 @@ inline bool gwbuf_is_type_undefined(const GWBUF* b)
 inline bool gwbuf_should_collect_result(const GWBUF* b)
 {
     return b->gwbuf_type & GWBUF_TYPE_COLLECT_RESULT;
+}
+
+inline bool gwbuf_should_collect_rows(const GWBUF* b)
+{
+    return b->gwbuf_type & GWBUF_TYPE_COLLECT_ROWS;
 }
 
 // True if the query is not initiated by the client but an internal replaying mechanism
@@ -1284,6 +1290,16 @@ public:
     void add_hint(Args&& ... args)
     {
         m_pBuffer->hints.emplace_back(std::forward<Args>(args)...);
+    }
+
+    /**
+     * Set the buffer type
+     *
+     * @param type The type to set
+     */
+    void set_type(gwbuf_type_t type)
+    {
+        gwbuf_set_type(m_pBuffer, type);
     }
 
     /**
