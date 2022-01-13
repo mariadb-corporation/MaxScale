@@ -372,11 +372,6 @@ static std::vector<std::tuple<std::string, uint32_t, qc_query_op_t>> test_cases
         QUERY_OP_KILL
     },
     {
-        "KILL QUERY ID USER 'bob'",
-        QUERY_TYPE_WRITE,
-        QUERY_OP_KILL
-    },
-    {
         "KILL HARD 5",
         QUERY_TYPE_WRITE,
         QUERY_OP_KILL
@@ -408,11 +403,6 @@ static std::vector<std::tuple<std::string, uint32_t, qc_query_op_t>> test_cases
     },
     {
         "KILL HARD QUERY ID 8",
-        QUERY_TYPE_WRITE,
-        QUERY_OP_KILL
-    },
-    {
-        "KILL HARD QUERY ID USER 'bob'",
         QUERY_TYPE_WRITE,
         QUERY_OP_KILL
     },
@@ -451,11 +441,6 @@ static std::vector<std::tuple<std::string, uint32_t, qc_query_op_t>> test_cases
         QUERY_TYPE_WRITE,
         QUERY_OP_KILL
     },
-    {
-        "KILL SOFT QUERY ID USER 'bob'",
-        QUERY_TYPE_WRITE,
-        QUERY_OP_KILL
-    },
 };
 
 void test_kill(Tester& tester)
@@ -486,17 +471,21 @@ void test_kill(Tester& tester)
             expect(res_id.target == id, "Target should be '%s', not '%s' for: %s",
                    id.c_str(), res_id.target.c_str(), sql_user.c_str());
 
-            auto res_user = tester.get_kill(sql_user);
+            if (qtype != QC_KILL_QUERY_ID)
+            {
+                auto res_user = tester.get_kill(sql_user);
 
-            expect(res_user.soft == soft, "Soft is not %s for: %s",
-                   soft ? "true" : "false", sql_user.c_str());
-            expect(res_user.user == true, "User should be true for: %s", sql_user.c_str());
+                expect(res_user.soft == soft, "Soft is not %s for: %s",
+                       soft ? "true" : "false", sql_user.c_str());
+                expect(res_user.user == true, "User should be true for: %s", sql_user.c_str());
 
-            expect(res_user.type == qtype, "Type should be '%s', not '%s' for: %s",
-                   qc_kill_type_to_string(res_user.type), qc_kill_type_to_string(qtype), sql_user.c_str());
+                expect(res_user.type == qtype, "Type should be '%s', not '%s' for: %s",
+                       qc_kill_type_to_string(res_user.type), qc_kill_type_to_string(qtype),
+                       sql_user.c_str());
 
-            expect(res_user.target == "bob", "Target should be 'bob', not '%s' for: %s",
-                   res_user.target.c_str(), sql_user.c_str());
+                expect(res_user.target == "bob", "Target should be 'bob', not '%s' for: %s",
+                       res_user.target.c_str(), sql_user.c_str());
+            }
         }
     }
 }

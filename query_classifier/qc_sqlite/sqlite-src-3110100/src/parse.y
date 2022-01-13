@@ -630,13 +630,13 @@ columnid(A) ::= nm(X). {
   /*EACH*/ END ENGINE ENUM EXCLUSIVE /*EXPLAIN*/ EXTENDED
   FIELDS FIRST FLUSH /*FOR*/ FORMAT
   GLOBAL
-  HANDLER
+  HANDLER HARD
   // TODO: IF is a reserved word and should not automatically convert into an identifer.
   IF IMMEDIATE INITIALLY INSTEAD ISOLATION
   /*KEY*/
   /*LIKE_KW*/
   LOCAL LEVEL
-  MASTER /*MATCH*/ MERGE MODE
+  MASTER /*MATCH*/ MERGE MODE MIGRATE
   // TODO: MOD is a keyword that should not decay into an id. However, now that is does,
   // TODO: also "mod(a, 2)" kind of usage will be accepted. Incorrect use will anyway be
   // TODO: rejected by the server.
@@ -647,13 +647,13 @@ columnid(A) ::= nm(X). {
   OF OFFSET OPEN ONLY
   PARTITIONS PASSWORD PREVIOUS
   QUERY QUICK
-  RAISE RECURSIVE /*REINDEX*/ RELEASE /*RENAME*/ /*REPLACE*/ RESET RESTRICT ROLE ROLLBACK ROLLUP ROW REPEATABLE
-  SAVEPOINT SELECT_OPTIONS_KW /*SEQUENCE*/ SHARE SLAVE /*START*/ STATEMENT STATUS SERIALIZABLE
+  RAISE RECURSIVE /*REINDEX*/ RELEASE /*RENAME*/ /*REPLACE*/ RESET RESTRICT ROLE ROLLBACK ROLLUP ROW REPEATABLE RESUME
+  SAVEPOINT SELECT_OPTIONS_KW /*SEQUENCE*/ SHARE SLAVE /*START*/ STATEMENT STATUS SERIALIZABLE SUSPEND SOFT
   TABLES TEMP TEMPTABLE TRANSACTION /*TRIGGER*/ TRIM TRIM_ARG
   /*TRUNCATE*/
   // TODO: UNSIGNED is a reserved word and should not automatically convert into an identifer.
   // TODO: However, if not here then rules such as CAST need to be modified.
-  UNSIGNED UNCOMMITTED
+  UNSIGNED UNCOMMITTED USER
   VALUE VIEW /*VIRTUAL*/
   WAIT
   /*WITH*/
@@ -3618,20 +3618,25 @@ kill_hardness_opt(A) ::= .     {A = 0;}
 kill_hardness_opt(A) ::= HARD. {A = 0;}
 kill_hardness_opt(A) ::= SOFT. {A = 1;}
 
-%type kill_type_opt {mxs_kill_type_t}
-kill_type_opt(A) ::= .           {A = MXS_KILL_TYPE_CONNECTION;}
-kill_type_opt(A) ::= CONNECTION. {A = MXS_KILL_TYPE_CONNECTION;}
-kill_type_opt(A) ::= QUERY.      {A = MXS_KILL_TYPE_QUERY;}
-kill_type_opt(A) ::= QUERY ID.   {A = MXS_KILL_TYPE_QUERY_ID;}
+%type kill_id_type_opt {mxs_kill_type_t}
+kill_id_type_opt(A) ::= .           {A = MXS_KILL_TYPE_CONNECTION;}
+kill_id_type_opt(A) ::= CONNECTION. {A = MXS_KILL_TYPE_CONNECTION;}
+kill_id_type_opt(A) ::= QUERY.      {A = MXS_KILL_TYPE_QUERY;}
+kill_id_type_opt(A) ::= QUERY ID.   {A = MXS_KILL_TYPE_QUERY_ID;}
 
-kill(A) ::= KILL kill_hardness_opt(X) kill_type_opt(Y) INTEGER(Z). {
+%type kill_user_type_opt {mxs_kill_type_t}
+kill_user_type_opt(A) ::= .           {A = MXS_KILL_TYPE_CONNECTION;}
+kill_user_type_opt(A) ::= CONNECTION. {A = MXS_KILL_TYPE_CONNECTION;}
+kill_user_type_opt(A) ::= QUERY.      {A = MXS_KILL_TYPE_QUERY;}
+
+kill(A) ::= KILL kill_hardness_opt(X) kill_id_type_opt(Y) INTEGER(Z). {
     A.user = 0;
     A.soft = X;
     A.type = Y;
     A.pTarget = &Z;
 }
 
-kill(A) ::= KILL kill_hardness_opt(X) kill_type_opt(Y) USER STRING(Z). {
+kill(A) ::= KILL kill_hardness_opt(X) kill_user_type_opt(Y) USER STRING(Z). {
     A.user = 1;
     A.soft = X;
     A.type = Y;
