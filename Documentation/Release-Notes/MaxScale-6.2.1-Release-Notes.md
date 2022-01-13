@@ -1,4 +1,4 @@
-# MariaDB MaxScale 6.2.1 Release Notes
+# MariaDB MaxScale 6.2.1 Release Notes -- 2022-01-13
 
 Release 6.2.1 is a GA release.
 
