@@ -261,8 +261,8 @@ bool RegexSession::routeQuery(GWBUF* queue)
             if (m_config.match.match(sql))
             {
                 auto newsql = m_config.match.replace(sql, m_config.replace.c_str());
-                queue = modutil_replace_SQL(queue, newsql.c_str());
-                queue = gwbuf_make_contiguous(queue);
+                gwbuf_free(queue);
+                queue = modutil_create_query(newsql.c_str());
                 log_match(sql, newsql);
                 m_replacements++;
             }

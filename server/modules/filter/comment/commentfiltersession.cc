@@ -50,19 +50,8 @@ bool CommentFilterSession::routeQuery(GWBUF* pPacket)
         const auto& sql = pPacket->get_sql();
         string comment = parseComment(m_inject);
         string newsql = string("/* ").append(comment).append(" */").append(sql);
-        pPacket = modutil_replace_SQL(pPacket, (char*)newsql.c_str());
-        // maxscale expects contiguous memory to arrive from client so we must make the buffer contiguous
-        // after using modutil_replace_SQL.
-        GWBUF* pModified_packet = gwbuf_make_contiguous(pPacket);
-        if (pModified_packet)
-        {
-            pPacket = pModified_packet;
-        }
-        else
-        {
-            gwbuf_free(pPacket);
-            pPacket = NULL;
-        }
+        gwbuf_free(pPacket);
+        pPacket = modutil_create_query(newsql.c_str());
     }
 
     return pPacket ? mxs::FilterSession::routeQuery(pPacket) : 1;

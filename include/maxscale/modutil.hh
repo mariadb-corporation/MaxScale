@@ -60,8 +60,7 @@ inline bool modutil_is_SQL_prepare(GWBUF* buf)
     return ptr[4] == 0x16;          // COM_STMT_PREPARE
 }
 
-extern char*  modutil_get_SQL(GWBUF*);
-extern GWBUF* modutil_replace_SQL(GWBUF*, const char*);
+extern char* modutil_get_SQL(GWBUF*);
 
 GWBUF* modutil_get_next_MySQL_packet(GWBUF** p_readbuf);
 GWBUF* modutil_get_complete_packets(GWBUF** p_readbuf);

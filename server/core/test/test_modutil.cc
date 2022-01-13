@@ -49,9 +49,6 @@ static int test1()
     fprintf(stderr, "\t..done\nExtract SQL from buffer");
     mxb_assert_message(0 == modutil_extract_SQL(buffer, &sql, &length), "Default buffer should fail");
     fprintf(stderr, "\t..done\nExtract SQL from buffer different way?");
-    fprintf(stderr, "\t..done\nReplace SQL in buffer");
-    mxb_assert_message(0 == modutil_replace_SQL(buffer, (char*)"select * from some_table;"),
-                       "Default buffer should fail");
     fprintf(stderr, "\t..done\nTidy up.");
     gwbuf_free(buffer);
     fprintf(stderr, "\t..done\n");

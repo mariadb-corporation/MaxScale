@@ -46,64 +46,6 @@ static const char* sub_single = "$1.";
 static const char* sub_escape = "\\.";
 
 /**
- * Replace the contents of a GWBUF with the new SQL statement passed as a text string.
- * The routine takes care of the modification needed to the MySQL packet,
- * returning a GWBUF chain that can be used to send the data to a MySQL server
- *
- * @param orig  The original request in a GWBUF
- * @param sql   The SQL text to replace in the packet
- * @return A newly formed GWBUF containing the MySQL packet.
- */
-GWBUF* modutil_replace_SQL(GWBUF* orig, const char* sql)
-{
-    unsigned char* ptr;
-    int length, newlength;
-    GWBUF* addition;
-
-    if (!modutil_is_SQL(orig))
-    {
-        return NULL;
-    }
-    ptr = GWBUF_DATA(orig);
-    length = *ptr++;
-    length += (*ptr++ << 8);
-    length += (*ptr++ << 16);
-    ptr += 2;   // Skip sequence id  and COM_QUERY byte
-
-    newlength = strlen(sql);
-    if (length - 1 == newlength)
-    {
-        /* New SQL is the same length as old */
-        memcpy(ptr, sql, newlength);
-    }
-    else if (length - 1 > newlength)
-    {
-        /* New SQL is shorter */
-        memcpy(ptr, sql, newlength);
-        GWBUF_RTRIM(orig, (length - 1) - newlength);
-        ptr = GWBUF_DATA(orig);
-        *ptr++ = (newlength + 1) & 0xff;
-        *ptr++ = ((newlength + 1) >> 8) & 0xff;
-        *ptr++ = ((newlength + 1) >> 16) & 0xff;
-    }
-    else
-    {
-        memcpy(ptr, sql, length - 1);
-        addition = gwbuf_alloc(newlength - (length - 1));
-        memcpy(GWBUF_DATA(addition), &sql[length - 1], newlength - (length - 1));
-        ptr = GWBUF_DATA(orig);
-        *ptr++ = (newlength + 1) & 0xff;
-        *ptr++ = ((newlength + 1) >> 8) & 0xff;
-        *ptr++ = ((newlength + 1) >> 16) & 0xff;
-        addition->gwbuf_type = orig->gwbuf_type;
-        orig->next = addition;
-    }
-
-    return orig;
-}
-
-
-/**
  * Extract the SQL from a COM_QUERY packet and return in a NULL terminated buffer.
  * The buffer should be freed by the caller when it is no longer required.
  *
