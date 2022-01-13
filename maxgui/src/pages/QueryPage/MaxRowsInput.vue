@@ -84,24 +84,12 @@ export default {
             this.maxRows = this.genDropDownItem(this.query_max_rows)
         },
         handleValidateMaxRows(v) {
-            /* Normally it returns object if the user selects provided options,
-             * but v-combobox allows user input, so it may return string or number
-             */
-            const isObject = this.$typy(v).isObject
-            if (isObject) {
-                if (this.$typy(v, 'value').isEmpty)
-                    return this.$t('errors.requiredInput', { inputName: this.$t('maxRows') })
-                return this.validateMaxRows(v.value)
-            } else {
-                if (this.$typy(v).isEmptyString)
-                    return this.$t('errors.requiredInput', { inputName: this.$t('maxRows') })
-                return this.validateMaxRows(parseInt(v))
-            }
-        },
-        validateMaxRows(v) {
-            if (!this.$typy(v).isNumber) return this.$t('errors.nonInteger')
-            else if (v >= 0) return true
-            return false
+            if (this.$typy(v, 'value').isEmptyString)
+                return this.$t('errors.requiredInput', { inputName: this.$t('maxRows') })
+            else if (!this.$typy(v, 'value').isNumber) return this.$t('errors.nonInteger')
+            else if (v.value < 0)
+                return this.$t('errors.largerThanZero', { inputName: this.$t('maxRows') })
+            return true
         },
         genDropDownItem(v) {
             let num = parseInt(v)
