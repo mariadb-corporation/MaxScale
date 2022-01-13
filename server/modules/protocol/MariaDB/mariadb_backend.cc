@@ -704,6 +704,15 @@ void MariaDBBackendConnection::normal_read()
 
         if (!result_collected && rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT))
         {
+            // This happens if a session with RCAP_TYPE_STMT_OUTPUT closes the connection before all
+            // the packets have been processed.
+            if (!m_dcb->is_open())
+            {
+                gwbuf_free(read_buffer),
+                read_buffer = nullptr;
+                break;
+            }
+
             // TODO: Get rid of RCAP_TYPE_STMT_OUTPUT and iterate over all packets in the resultset
             stmt = modutil_get_next_MySQL_packet(&read_buffer);
             mxb_assert_message(stmt, "There should be only complete packets in read_buffer");
@@ -734,16 +743,13 @@ void MariaDBBackendConnection::normal_read()
     }
     while (read_buffer);
 
-    if (m_reply.is_complete())
+    if (!m_dcb->is_open())
     {
-        if (m_current_id)
-        {
-            // Reset the ID after storing it to make sure debug assertions will catch any cases where a PS
-            // response is read without a pre-assigned ID.
-            m_ids_to_check.emplace_back(m_current_id, m_reply.is_ok());
-            m_current_id = 0;
-        }
-
+        // The router closed the session, erase the callbacks to prevent the client protocol from calling it.
+        mysql_session()->history_info.erase(this);
+    }
+    else if (m_reply.is_complete())
+    {
         if (!compare_responses())
         {
             do_handle_error(m_dcb, create_response_mismatch_error(), mxs::ErrorType::PERMANENT);
@@ -784,7 +790,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_history
 {
     StateMachineRes rval = StateMachineRes::DONE;
 
-    while (!m_history_responses.empty())
+    while (!m_history_responses.empty() && rval == StateMachineRes::DONE)
     {
         DCB::ReadResult read_res = m_dcb->read(MYSQL_HEADER_LEN, 0);
 
@@ -828,13 +834,11 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_history
                 // The result is not yet complete. In practice this only happens with a COM_STMT_PREPARE that
                 // has multiple input/output parameters.
                 rval = StateMachineRes::IN_PROGRESS;
-                break;
             }
         }
         else
         {
             rval = StateMachineRes::IN_PROGRESS;
-            break;
         }
     }
 
@@ -872,9 +876,30 @@ void MariaDBBackendConnection::pin_history_responses()
 
 bool MariaDBBackendConnection::compare_responses()
 {
+    MYSQL_session* data = mysql_session();
+
+    if (m_current_id)
+    {
+        // It's possible that there's already a response for this command. This can happen if the session
+        // command is executed multiple times before the accepted answer has arrived. We only care about
+        // the latest result.
+        m_ids_to_check[m_current_id] = m_reply.is_ok();
+
+        // Reset the ID after storing it to make sure debug assertions will catch any cases where a PS
+        // response is read without a pre-assigned ID.
+        m_current_id = 0;
+    }
+
+    // It is possible that the same command is verified twice if the session command ends up being executed
+    // more than once. This happens as each failed attempt to execute it causes the response callback to be
+    // installed and if the accepted answer arrives before the final response for this backend arrives, the
+    // latest completed response from this backend is used. This can cause the connection to be closed even if
+    // it would be considered valid later on.
+    //
+    // TODO: We could probably use m_current_id to prevent this from happening.
+
     bool ok = true;
     bool found = false;
-    MYSQL_session* data = mysql_session();
     auto it = m_ids_to_check.begin();
 
     while (it != m_ids_to_check.end())
@@ -899,9 +924,6 @@ bool MariaDBBackendConnection::compare_responses()
             ++it;
         }
     }
-
-    mxb_assert_message(ok || !data->history_info[this].response_cb,
-                       "History response callback must not be installed on failure");
 
     if (ok && !found && !m_ids_to_check.empty())
     {

@@ -541,6 +541,11 @@ class Reply
 {
 public:
     /**
+     * Get a short human readable description of the reply
+     */
+    std::string describe() const;
+
+    /**
      * Get the current state
      */
     ReplyState state() const;

@@ -166,7 +166,7 @@ json_t* generate_resultdata_row(mxq::MariaDBQueryResult* resultset,
     return rval;
 }
 
-json_t* generate_json_representation(mxq::MariaDB& conn, int max_rows)
+json_t* generate_json_representation(mxq::MariaDB& conn, int64_t max_rows)
 {
     using ResultType = mxq::MariaDB::ResultType;
     json_t* resultset_arr = json_array();
@@ -206,7 +206,7 @@ json_t* generate_json_representation(mxq::MariaDB& conn, int max_rows)
                 json_object_set_new(resultset, "fields", generate_column_info(fields));
                 json_t* rows = json_array();
 
-                int rows_read = 0;
+                int64_t rows_read = 0;
                 bool have_more = res->next_row();
                 bool rows_limit_reached = (rows_read == max_rows);
                 while (have_more && !rows_limit_reached)
@@ -500,6 +500,13 @@ HttpResponse query(const HttpRequest& request)
             auto managed_conn = this_unit.manager.get_connection(id);
             if (managed_conn)
             {
+                if (managed_conn->last_max_rows != max_rows)
+                {
+                    std::string limit = max_rows ? std::to_string(max_rows) : "DEFAULT";
+                    managed_conn->conn.cmd("SET sql_select_limit=" + limit);
+                    managed_conn->last_max_rows = max_rows ? max_rows : std::numeric_limits<int64_t>::max();
+                }
+
                 int64_t query_id = ++managed_conn->current_query_id;
                 auto time_before = mxb::Clock::now();
                 managed_conn->conn.streamed_query(sql);
@@ -507,7 +514,8 @@ HttpResponse query(const HttpRequest& request)
                 auto exec_time = time_after - time_before;
                 managed_conn->last_query_time = time_after;
 
-                json_t* result_data = generate_json_representation(managed_conn->conn, max_rows);
+                json_t* result_data = generate_json_representation(managed_conn->conn,
+                                                                   managed_conn->last_max_rows);
                 managed_conn->release();
                 // 'managed_conn' is now effectively back in storage and should not be used.
 

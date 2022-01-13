@@ -239,7 +239,7 @@ private:
     // The ID and response to the command that will be added to the history. This is stored in a separate
     // variable in case the correct response that is delivered to the client isn't available when this backend
     // receive the response.
-    std::vector<std::pair<uint32_t, bool>> m_ids_to_check;
+    std::map<uint32_t, bool> m_ids_to_check;
 
     // The responses to the history that's being replayed. The IDs are not needed as we know any future
     // commands will be queued until we complete the history replay.

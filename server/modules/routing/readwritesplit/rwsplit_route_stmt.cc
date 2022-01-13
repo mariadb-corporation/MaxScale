@@ -151,6 +151,9 @@ bool RWSplitSession::handle_target_is_all(mxs::Buffer&& buffer, const RoutingPla
     }
     else if (route_session_write(buffer.release(), info.command(), info.type_mask()))
     {
+        // Session command routed, reset retry duration
+        m_retry_duration = 0;
+
         m_prev_plan = res;
         result = true;
         mxb::atomic::add(&m_router->stats().n_all, 1, mxb::atomic::RELAXED);
@@ -468,7 +471,7 @@ bool RWSplitSession::write_session_command(RWBackend* backend, mxs::Buffer buffe
     {
         m_server_stats[backend->target()].inc_total();
         m_server_stats[backend->target()].inc_read();
-        MXS_INFO("Route query to %s: %s", backend->is_master() ? "master" : "slave", backend->name());
+        MXS_INFO("Route query to %s: %s", backend == m_current_master ? "master" : "slave", backend->name());
     }
     else
     {
@@ -512,13 +515,17 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
 
     if (!have_open_connections())
     {
+        MXS_INFO("No connections available for session command");
+
         if (command == MXS_COM_QUIT)
         {
             // We have no open connections and opening one just to close it is pointless.
+            MXS_INFO("Ignoring COM_QUIT");
             return true;
         }
         else if (can_recover_servers())
         {
+            MXS_INFO("Attempting to create a connection");
             // No connections are open, create one and execute the session command on it
             create_one_connection_for_sescmd();
         }
@@ -585,27 +592,28 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
             {
                 if (trx_is_open() && !m_trx.target())
                 {
-                    mxb_assert(trx_is_starting());
+                    mxb_assert(trx_is_starting() || trx_is_ending() || m_state == TRX_REPLAY);
                     m_trx.set_target(m_sescmd_replier);
                 }
                 else
                 {
-                    mxb_assert(!trx_is_open() || m_trx.target() == m_sescmd_replier);
+                    mxb_assert_message(!trx_is_open() || m_trx.target() == m_sescmd_replier,
+                                       "Trx target is %s when m_sescmd_replier is %s while trx is open",
+                                       m_trx.target() ? m_trx.target()->name() : "nullptr",
+                                       m_sescmd_replier->name());
                 }
             }
         }
         else
         {
             error << "Could not route session command "
-                  << "(" << STRPACKETTYPE(command) << ": " << buffer.get_sql() << "). "
-                  << "Connection status: " << get_verbose_status();
+                  << "(" << STRPACKETTYPE(command) << ": " << buffer.get_sql() << ").";
         }
     }
     else
     {
         error << "No valid candidates for session command "
-              << "(" << STRPACKETTYPE(command) << ": " << buffer.get_sql() << "). "
-              << "Connection status: " << get_verbose_status();
+              << "(" << STRPACKETTYPE(command) << ": " << buffer.get_sql() << ").";
         ok = false;
     }
 
@@ -619,6 +627,13 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
         }
         else
         {
+            if (m_retry_duration >= m_config.delayed_retry_timeout.count())
+            {
+                error << " Retry took too long (" << m_retry_duration << " seconds).";
+            }
+
+            error << " Connection status: " << get_verbose_status();
+
             MXS_ERROR("%s", error.str().c_str());
         }
     }
@@ -945,7 +960,7 @@ bool RWSplitSession::should_replace_master(RWBackend* target)
            &&   // We have a target server and it's not the current master
            target && target != m_current_master
            &&   // We are not inside a transaction (also checks for autocommit=1)
-           (!trx_is_open() || trx_is_starting() || m_state == TRX_REPLAY)
+           (!trx_is_open() || trx_is_starting() || (m_state == TRX_REPLAY && !m_trx.target()))
            &&   // We are not locked to the old master
            !is_locked_to_master();
 }
@@ -1045,7 +1060,7 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
 {
     mxb_assert_message(target->in_use(), "Target must be in use before routing to it");
 
-    MXS_INFO("Route query to %s: %s <", target->is_master() ? "master" : "slave", target->name());
+    MXS_INFO("Route query to %s: %s <", target == m_current_master ? "master" : "slave", target->name());
 
     if (!m_target_node && trx_is_read_only())
     {
