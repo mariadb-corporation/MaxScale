@@ -365,6 +365,11 @@ public:
         return mysql_error(m_conn);
     }
 
+    unsigned int errnum() const
+    {
+        return mysql_errno(m_conn);
+    }
+
     bool change_user(std::string user, std::string pw, std::string db = "test")
     {
         return mysql_change_user(m_conn, user.c_str(), pw.c_str(), db.c_str()) == 0;
