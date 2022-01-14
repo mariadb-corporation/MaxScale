@@ -58,20 +58,14 @@
                 />
             </v-list-item>
             <v-divider />
-            <v-list-item
-                v-for="(item, index) in columnList"
-                :key="`${item.text}`"
-                class="px-2"
-                dense
-                link
-            >
+            <v-list-item v-for="item in columnList" :key="`${item.text}`" class="px-2" dense link>
                 <!-- value of checkbox cannot be object, so using text then get object via colsMapByName -->
                 <v-checkbox
                     v-model="selectedCols"
                     dense
                     color="primary"
                     class="pa-0 ma-0 checkbox d-flex align-center"
-                    :value="returnObject ? item.text : index"
+                    :value="item.text"
                     hide-details
                 >
                     <template v-slot:label>
@@ -138,16 +132,30 @@ export default {
         selectedCols: {
             get() {
                 if (this.returnObject) return this.value.map(col => col.text)
-                return this.value
+                else {
+                    // this.value is array of indexes
+                    let cols = []
+                    this.cols.forEach((c, i) => {
+                        if (this.value.includes(i)) cols.push(c.text)
+                    })
+                    return cols
+                }
             },
-            set(v) {
+            set(arr) {
+                // arr is an array of strings
                 if (this.returnObject) {
-                    const cols = v.reduce((arr, name) => {
+                    const cols = arr.reduce((arr, name) => {
                         arr.push(this.colsMapByName[name])
                         return arr
                     }, [])
-                    this.$emit('input', cols)
-                } else this.$emit('input', v)
+                    this.$emit('input', cols) // emit array of the original objects from this.cols
+                } else {
+                    let idxs = []
+                    this.cols.forEach((h, i) => {
+                        if (arr.includes(h.text)) idxs.push(i)
+                    })
+                    this.$emit('input', idxs) // emit array of indexes
+                }
             },
         },
         columnList() {
@@ -167,8 +175,8 @@ export default {
             else this.showAllHeaders()
         },
         showAllHeaders() {
-            //When returnObject, value of checkbox cannot be object, so using text here
-            this.selectedCols = this.cols.map((h, i) => (this.returnObject ? h.text : i))
+            //value of checkbox cannot be object, so using text here
+            this.selectedCols = this.cols.map(h => h.text)
         },
     },
 }
