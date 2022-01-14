@@ -315,13 +315,10 @@ private:
 
             auto& um = m_database.context().um();
 
-            vector<uint8_t> salt = crypto::create_random_bytes(scram::SERVER_SALT_SIZE);
-            string salt_b64 = mxs::to_base64(salt);
-
             vector<scram::Mechanism> mechanisms;
             mechanisms.push_back(scram::Mechanism::SHA_1);
 
-            if (um.add_user(m_db, m_user, m_pwd, salt_b64, m_custom_data, mechanisms, m_roles))
+            if (um.add_user(m_db, m_user, m_pwd, m_custom_data, mechanisms, m_roles))
             {
                 doc.append(kvp("ok", 1));
             }
