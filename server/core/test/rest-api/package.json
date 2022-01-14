@@ -10,7 +10,7 @@
   "license": "SEE LICENSE IN ../../../../LICENSE.txt",
   "dependencies": {
     "ajv": "^5.5.2",
-    "axios": "^0.21.1",
+    "axios": "^0.21.2",
     "axios-cookiejar-support": "^1.0.1",
     "chai": "^3.5.0",
     "chai-as-promised": "^6.0.0",
