@@ -120,7 +120,12 @@ int main(int argc, char* argv[])
 
     // Turn on 'event.authentication_failure.facility=LOG_AUTH'
     test.maxscale->stop();
-    test.maxscale->ssh_node_f(true, "sed -i 's/#event/event/' /etc/maxscale.cnf");
+
+    std::string replacement = "event.authentication_failure.facility=LOG_AUTH\\\n"
+                              "event.authentication_failure.level=LOG_ERR\\\n";
+    test.maxscale->ssh_node_f(
+        true, "sed -i 's/\\[maxscale\\]/\\[maxscale\\]\\\n%s/' /etc/maxscale.cnf", replacement.c_str());
+
     test.maxscale->start();
 
     // Connect again. This should cause an error to be logged to the authentication log.

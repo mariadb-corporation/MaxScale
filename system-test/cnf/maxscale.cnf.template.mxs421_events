@@ -1,9 +1,5 @@
 [maxscale]
 threads=###threads###
-
-#event.authentication_failure.facility=LOG_AUTH
-#event.authentication_failure.level=LOG_ERR
-
 syslog=true
 
 [MySQL-Monitor]
