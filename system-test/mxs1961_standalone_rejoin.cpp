@@ -10,8 +10,11 @@ using namespace std;
 
 void checkpoint(TestConnections& test)
 {
-    const int v = 2;
-    test.maxscale->wait_for_monitor(v);
+    for (int i = 0; i < 2; i++)
+    {
+        sleep(1);
+        test.maxscale->wait_for_monitor(1);
+    }
 
     for (auto&& s : {
         "server1", "server2", "server3"
