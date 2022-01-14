@@ -47,7 +47,7 @@
                 v-model="selectedColSpecs"
                 returnObject
                 :label="$t('alterSpecs')"
-                :cols="colSpecs"
+                :items="colSpecs"
                 :maxHeight="tableMaxHeight - 20"
             />
 
