@@ -130,6 +130,10 @@ implements them, it should be possible to use any language specific driver.
 However, during the development of _nosqlprotocol_, the _only_ client library
 that has been verified to work is version 3.6 of _MongoDB Node.JS Driver_.
 
+## Roles and Grants
+
+TBD
+
 # Parameters
 
 Using the following parameters, the behavior of _nosqlprotocol_ can be
@@ -1011,6 +1015,78 @@ The following document will always be returned:
 ```
 
 ## MaxScale Specific Commands
+
+### mxsAddUser
+
+#### Definition
+
+##### **mxsAddUser**
+
+The `mxsAddUser` command adds an _existing_ MariaDB user to the local
+nosqlprotocol account database. Use [createUser](#createUser) if the
+MariaDB user should be created as well.
+
+Note that the `mxsAddUser` command does not check that the user exists
+or that the specified roles are compatible with the grants of the user.
+
+#### Syntax
+
+The 'mxsAddUser' command has the following syntax:
+```
+db.runCommand(
+    {
+        mxsAddUser: "<name>",
+        pwd: passwordPrompt(),  // Or "<cleartext password>"
+        customData: { <any information> },
+        roles: [
+            { role: "<role>", db: "<database>" } | "<role>",
+            ...
+        ],
+        mechanisms: [ "<scram-mechanism>", ...],
+        digestPassword: <boolean>
+    }
+)
+```
+
+##### Command Fields
+
+The command has the following fields:
+
+Field | Type | Description
+------|------|------------
+mxsAddUser| string | The name of the user to be added.
+pwd | string | The password in cleartext.
+customData | document | Optional. Any arbitrary information.
+roles | array | The roles granted to the user.
+mechanisms | array | Optional. The specific supported SCRAM mechanisms for this user. Must be a subset of the supported mechanisms.
+digestPassword | boolean | Optional. If specified, must be `true`.
+
+The value of `mxsAddUser` should be the name (without the host part) of
+an existing user in the MariaDB server and the value of `pwd` should be
+that user's password  in cleartext.
+
+The `roles` array should contain roles that a compatible with the
+grants of the user. Please check [roles and grants](#roles_and_grants)
+for a discussion on how to map roles map to grants.
+
+##### Returns
+
+If the addition of the user succeeds, the command returns a document
+with the single field `ok` whose value is `1`.
+```
+> db.runCommand({mxsAddUser: "user", pwd: "pwd", roles: ["readWrite"]});
+{ "ok" : 1 }
+```
+If there is a failure of some kind, the command returns an error document
+```
+> db.runCommand({mxsAddUser: "user2", pwd: "pwd2", roles: ["redWrite"]});
+{
+	"ok" : 0,
+	"errmsg" : "No role named redWrite@test",
+	"code" : 31,
+	"codeName" : "RoleNotFound"
+}
+```
 
 ### mxsCreateDatabase
 

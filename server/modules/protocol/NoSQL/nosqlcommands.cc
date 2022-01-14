@@ -208,6 +208,7 @@ struct ThisUnit
         { tolower(command::ListDatabases::KEY),            create_info<command::ListDatabases>() },
         { tolower(command::ListIndexes::KEY),              create_info<command::ListIndexes>() },
         { tolower(command::Logout::KEY),                   create_info<command::Logout>() },
+        { tolower(command::MxsAddUser::KEY),               create_info<command::MxsAddUser>() },
         { tolower(command::MxsCreateDatabase::KEY),        create_info<command::MxsCreateDatabase>() },
         { tolower(command::MxsDiagnose::KEY),              create_info<command::MxsDiagnose>() },
         { tolower(command::MxsGetConfig::KEY),             create_info<command::MxsGetConfig>() },

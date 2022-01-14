@@ -19,6 +19,7 @@
 #include <uuid/uuid.h>
 #include "../nosqlscram.hh"
 #include "../nosqlusermanager.hh"
+#include "maxscale.hh"
 
 using namespace std;
 
@@ -116,84 +117,19 @@ public:
 protected:
     void prepare() override
     {
-        bool digest_password = true;
-        if (optional(key::DIGEST_PASSWORD, &digest_password) && !digest_password)
-        {
-            // Basically either the client or the server can digest the password.
-            // If the client digested the password, then we could use the digested
-            // password as the MariaDB password, which would mean that the actual
-            // NoSQL password would not be stored on the MaxScale host. However,
-            // since the MariaDB password really is the important one, it would not
-            // add much value. Furthermore, a client digested password is not
-            // supported with SCRAM-SHA-256, which is the default mechanism (not
-            // supported yet), so we just won't bother.
-            ostringstream ss;
-            ss << "nosqlprotocol does not support that the client digests the password, "
-               << "'digestPassword' must be true.";
-
-            throw SoftError(ss.str(), error::BAD_VALUE);
-        }
+        auto& um = m_database.context().um();
 
         m_db = m_database.name();
         m_user = value_as<string>();
 
-        bsoncxx::document::element element;
-
-        element = m_doc[key::PWD];
-        if (!element)
-        {
-            ostringstream ss;
-            ss << "Must provide a '" << key::PWD << "' field for all user documents";
-
-            throw SoftError(ss.str(), error::BAD_VALUE);
-        }
-
-        auto type = element.type();
-        if (type != bsoncxx::type::k_utf8)
-        {
-            ostringstream ss;
-            ss << "\"" << key::PWD << "\" has the wrong type. Expected string, found "
-               << bsoncxx::to_string(type);
-
-            throw SoftError(ss.str(), error::TYPE_MISMATCH);
-        }
-
-        m_pwd = element.get_utf8();
-
-        bsoncxx::document::view custom_data;
-        if (optional(key::CUSTOM_DATA, &custom_data))
-        {
-            m_custom_data = bsoncxx::to_json(custom_data);
-        }
-
-        element = m_doc[key::ROLES];
-        if (!element || (element.type() != bsoncxx::type::k_array))
-        {
-            ostringstream ss;
-            ss << "\"createUser\" command requires a \"" << key::ROLES << "\" array";
-
-            throw SoftError(ss.str(), error::BAD_VALUE);
-        }
-
-        role::from_bson(element.get_array(), m_db, &m_roles);
-
-        auto& um = m_database.context().um();
-
-        if (um.user_exists(m_db, m_user))
-        {
-            ostringstream ss;
-            ss << "User \"" << m_user << "@" << m_db << "\" already exists";
-
-            throw SoftError(ss.str(), error::LOCATION51003);
-        }
+        MxsAddUser::parse(KEY, um, m_doc, m_db, m_user, &m_pwd, &m_custom_data, &m_mechanisms, &m_roles);
     }
 
     string generate_sql() override
     {
         string user = "'" + m_db + "." + m_user + "'@'%'";
-        string pwd(m_pwd.data(), m_pwd.length());
 
-        m_statements.push_back("CREATE USER " + user + " IDENTIFIED BY '" + pwd + "'");
+        m_statements.push_back("CREATE USER " + user + " IDENTIFIED BY '" + m_pwd + "'");
 
         auto grants = create_grant_statements(user, m_roles);
 
@@ -315,10 +251,7 @@ private:
 
             auto& um = m_database.context().um();
 
-            vector<scram::Mechanism> mechanisms;
-            mechanisms.push_back(scram::Mechanism::SHA_1);
-
-            if (um.add_user(m_db, m_user, m_pwd, m_custom_data, mechanisms, m_roles))
+            if (um.add_user(m_db, m_user, m_pwd, m_custom_data, m_mechanisms, m_roles))
             {
                 doc.append(kvp("ok", 1));
             }
@@ -403,14 +336,15 @@ private:
         DROP
     };
 
-    Action             m_action = Action::CREATE;
-    string             m_db;
-    string             m_user;
-    string_view        m_pwd;
-    std::string        m_custom_data;
-    vector<role::Role> m_roles;
-    vector<string>     m_statements;
-    uint32_t           m_dcid = { 0 };
+    Action                   m_action = Action::CREATE;
+    string                   m_db;
+    string                   m_user;
+    string                   m_pwd;
+    std::string              m_custom_data;
+    vector<scram::Mechanism> m_mechanisms;
+    vector<role::Role>       m_roles;
+    vector<string>           m_statements;
+    uint32_t                 m_dcid = { 0 };
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/dropAllUsersFromDatabase/
@@ -1141,24 +1075,7 @@ private:
         {
             scram::from_bson(mechanism_names, &m_mechanisms);
 
-            if (m_what & UserInfo::PWD)
-            {
-                // Password is changed => mechanisms can be changed-
-
-                auto supported_mechanisms = scram::supported_mechanisms();
-
-                for (const auto mechanism : m_mechanisms)
-                {
-                    if (supported_mechanisms.count(mechanism) == 0)
-                    {
-                        ostringstream ss;
-                        ss << "Mechanism \"" << scram::to_string(mechanism) << "\" is not supported";
-
-                        throw SoftError(ss.str(), error::BAD_VALUE);
-                    }
-                }
-            }
-            else
+            if (!(m_what & UserInfo::PWD))
             {
                 // Password is not changed => new mechanisms must be subset of old.
                 for (const auto mechanism : m_mechanisms)

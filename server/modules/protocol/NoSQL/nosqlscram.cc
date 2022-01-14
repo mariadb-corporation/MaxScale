@@ -24,9 +24,9 @@ using namespace std;
 namespace nosql
 {
 
-std::set<scram::Mechanism> scram::supported_mechanisms()
+vector<scram::Mechanism> scram::supported_mechanisms()
 {
-    static set<Mechanism> mechanisms = { Mechanism::SHA_1 };
+    static vector<Mechanism> mechanisms = { Mechanism::SHA_1 };
 
     return mechanisms;
 }
@@ -38,8 +38,10 @@ const char* scram::to_string(scram::Mechanism mechanism)
     case scram::Mechanism::SHA_1:
         return "SCRAM-SHA-1";
 
+    /*
     case scram::Mechanism::SHA_256:
         return "SCRAM-SHA-256";
+    */
     }
 
     mxb_assert(!true);
@@ -53,10 +55,12 @@ bool scram::from_string(const string& mechanism, scram::Mechanism* pMechanism)
     {
         *pMechanism = scram::Mechanism::SHA_1;
     }
+    /*
     else if (mechanism == "SCRAM-SHA-256")
     {
         *pMechanism = scram::Mechanism::SHA_256;
     }
+    */
     else
     {
         rv = false;
