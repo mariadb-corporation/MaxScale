@@ -257,14 +257,14 @@ bsoncxx::document::value& topology_version();
 
 const char* opcode_to_string(int code);
 
-void append(DocumentBuilder& doc, const core::string_view& key, const bsoncxx::document::element& element);
+void append(DocumentBuilder& doc, const string_view& key, const bsoncxx::document::element& element);
 inline void append(DocumentBuilder& doc, const std::string& key, const bsoncxx::document::element& element)
 {
-    append(doc, core::string_view(key.data(), key.length()), element);
+    append(doc, string_view(key.data(), key.length()), element);
 }
 inline void append(DocumentBuilder& doc, const char* zKey, const bsoncxx::document::element& element)
 {
-    append(doc, core::string_view(zKey), element);
+    append(doc, string_view(zKey), element);
 }
 
 namespace value

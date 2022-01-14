@@ -147,10 +147,10 @@ namespace
 {
 
 template<class Type>
-bool optional(const string& command,
-              const bsoncxx::document::view& doc,
-              const string& key,
-              Type* pElement)
+bool get_optional(const string& command,
+                  const bsoncxx::document::view& doc,
+                  const string& key,
+                  Type* pElement)
 {
     bool rv = false;
 
@@ -176,12 +176,12 @@ void Config::copy_from(const string& command, const bsoncxx::document::view& doc
 
     Config that(*this);
 
-    optional(command, doc, C::s_auto_create_databases.name(), &that.auto_create_databases);
-    optional(command, doc, C::s_auto_create_tables.name(), &that.auto_create_tables);
+    get_optional(command, doc, C::s_auto_create_databases.name(), &that.auto_create_databases);
+    get_optional(command, doc, C::s_auto_create_tables.name(), &that.auto_create_tables);
 
     string s;
 
-    if (optional(command, doc, C::s_cursor_timeout.name(), &s))
+    if (get_optional(command, doc, C::s_cursor_timeout.name(), &s))
     {
         string message;
         if (!C::s_cursor_timeout.from_string(s, &that.cursor_timeout, &message))
@@ -190,7 +190,7 @@ void Config::copy_from(const string& command, const bsoncxx::document::view& doc
         }
     }
 
-    if (optional(command, doc, C::s_debug.name(), &s))
+    if (get_optional(command, doc, C::s_debug.name(), &s))
     {
         string message;
         if (!C::s_debug.from_string(s, &that.debug, &message))
@@ -199,7 +199,7 @@ void Config::copy_from(const string& command, const bsoncxx::document::view& doc
         }
     }
 
-    if (optional(command, doc, C::s_log_unknown_command.name(), &s))
+    if (get_optional(command, doc, C::s_log_unknown_command.name(), &s))
     {
         string message;
         if (!C::s_log_unknown_command.from_string(s, &that.log_unknown_command, &message))
@@ -208,7 +208,7 @@ void Config::copy_from(const string& command, const bsoncxx::document::view& doc
         }
     }
 
-    if (optional(command, doc, C::s_on_unknown_command.name(), &s))
+    if (get_optional(command, doc, C::s_on_unknown_command.name(), &s))
     {
         string message;
         if (!C::s_on_unknown_command.from_string(s, &that.on_unknown_command, &message))
@@ -217,7 +217,7 @@ void Config::copy_from(const string& command, const bsoncxx::document::view& doc
         }
     }
 
-    if (optional(command, doc, C::s_ordered_insert_behavior.name(), &s))
+    if (get_optional(command, doc, C::s_ordered_insert_behavior.name(), &s))
     {
         string message;
         if (!C::s_ordered_insert_behavior.from_string(s, &that.ordered_insert_behavior, &message))
