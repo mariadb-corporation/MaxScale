@@ -369,7 +369,7 @@ private:
     {
         mariadb::QueryClassifier::current_target_t current_target;
 
-        if (m_target_node == NULL)
+        if (m_target_node == nullptr)
         {
             current_target = mariadb::QueryClassifier::CURRENT_TARGET_UNDEFINED;
         }

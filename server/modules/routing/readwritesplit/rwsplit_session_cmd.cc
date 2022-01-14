@@ -26,10 +26,8 @@ using namespace maxscale;
 
 void RWSplitSession::continue_large_session_write(GWBUF* querybuf, uint32_t type)
 {
-    for (auto it = m_raw_backends.begin(); it != m_raw_backends.end(); it++)
+    for (auto backend : m_raw_backends)
     {
-        RWBackend* backend = *it;
-
         if (backend->in_use())
         {
             backend->write(gwbuf_clone(querybuf), mxs::Backend::NO_RESPONSE);

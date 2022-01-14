@@ -43,7 +43,7 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::SRW
 
 RWSplitSession* RWSplitSession::create(RWSplit* router, MXS_SESSION* session, const Endpoints& endpoints)
 {
-    RWSplitSession* rses = NULL;
+    RWSplitSession* rses = nullptr;
 
     if (router->have_enough_servers())
     {
@@ -491,7 +491,7 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
 
     if (!backend->should_ignore_response())
     {
-        if ((writebuf = handle_causal_read_reply(writebuf, reply, backend)) == NULL)
+        if ((writebuf = handle_causal_read_reply(writebuf, reply, backend)) == nullptr)
         {
             return 1;       // Nothing to route, return
         }

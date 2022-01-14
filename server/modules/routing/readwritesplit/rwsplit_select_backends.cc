@@ -40,7 +40,7 @@ namespace
  * Check whether it's possible to use this server as a slave
  *
  * @param server The slave candidate
- * @param master The master server or NULL if no master is available
+ * @param master The master server or nullptr if no master is available
  *
  * @return True if this server is a valid slave candidate
  */

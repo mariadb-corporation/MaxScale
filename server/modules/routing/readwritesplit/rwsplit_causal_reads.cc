@@ -20,7 +20,7 @@
  *
  * @param buffer Original reply buffer
  *
- * @return Any data after the ERR/OK packet, NULL for no data
+ * @return Any data after the ERR/OK packet, nullptr for no data
  */
 GWBUF* RWSplitSession::discard_master_wait_gtid_result(GWBUF* buffer)
 {

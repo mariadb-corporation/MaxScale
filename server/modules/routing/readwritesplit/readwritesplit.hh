@@ -367,7 +367,7 @@ public:
      * @param service The service this router is being create for
      * @param options The options for this query router
      *
-     * @return New router instance or NULL on error
+     * @return New router instance or nullptr on error
      */
     static RWSplit* create(SERVICE* pService);
 
@@ -386,7 +386,7 @@ public:
      *
      * @param session  The MaxScale session (generic connection data)
      *
-     * @return New router session or NULL on error
+     * @return New router session or nullptr on error
      */
     mxs::RouterSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints) override;
 

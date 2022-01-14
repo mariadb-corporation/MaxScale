@@ -645,10 +645,8 @@ RWBackend* RWSplitSession::get_hinted_backend(const char* name)
 {
     RWBackend* rval = nullptr;
 
-    for (auto it = m_raw_backends.begin(); it != m_raw_backends.end(); it++)
+    for (auto backend : m_raw_backends)
     {
-        auto& backend = *it;
-
         /** The server must be a valid slave, relay server, or master */
         if ((backend->in_use() || (can_recover_servers() && backend->can_connect()))
             && strcasecmp(name, backend->name()) == 0)
@@ -686,7 +684,7 @@ RWBackend* RWSplitSession::get_last_used_backend()
  *
  * @param rses     Pointer to router client session
  * @param btype    Backend type
- * @param name     Name of the requested backend. May be NULL if any name is accepted.
+ * @param name     Name of the requested backend. May be nullptr if any name is accepted.
  * @param max_rlag Maximum replication lag
  * @param target   The target backend
  *
@@ -757,10 +755,8 @@ RWBackend* RWSplitSession::handle_hinted_target(const GWBUF* querybuf, route_tar
     int config_max_rlag = get_max_replication_lag();    // From router configuration.
     RWBackend* target = nullptr;
 
-    const auto& hints = querybuf->hints;
-    for (auto it = hints.begin(); !target && it != hints.end(); it++)
+    for (const Hint& hint : querybuf->hints)
     {
-        const Hint& hint = *it;
         if (hint.type == Hint::Type::ROUTE_TO_NAMED_SERVER)
         {
             // Set the name of searched backend server.
@@ -809,6 +805,11 @@ RWBackend* RWSplitSession::handle_hinted_target(const GWBUF* querybuf, route_tar
                           rlag_hint_tag, str_val);
             }
         }
+
+        if (target)
+        {
+            break;
+        }
     }
 
     if (!target)
@@ -818,7 +819,7 @@ RWBackend* RWSplitSession::handle_hinted_target(const GWBUF* querybuf, route_tar
         // e.g. target=server1,->slave
 
         backend_type_t btype = route_target & TARGET_SLAVE ? BE_SLAVE : BE_MASTER;
-        target = get_target_backend(btype, NULL, config_max_rlag);
+        target = get_target_backend(btype, nullptr, config_max_rlag);
     }
     return target;
 }
@@ -862,7 +863,7 @@ RWBackend* RWSplitSession::handle_slave_is_target(uint8_t cmd, uint32_t stmt_id)
     }
     else
     {
-        target = get_target_backend(BE_SLAVE, NULL, rlag_max);
+        target = get_target_backend(BE_SLAVE, nullptr, rlag_max);
     }
 
     if (!target)
@@ -1040,7 +1041,7 @@ bool RWSplitSession::start_trx_migration(RWBackend* target, GWBUF* querybuf)
  */
 RWBackend* RWSplitSession::handle_master_is_target()
 {
-    RWBackend* target = get_target_backend(BE_MASTER, NULL, mxs::Target::RLAG_UNDEFINED);
+    RWBackend* target = get_target_backend(BE_MASTER, nullptr, mxs::Target::RLAG_UNDEFINED);
 
     if (!m_locked_to_master && m_target_node == m_current_master)
     {
