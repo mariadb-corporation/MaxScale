@@ -3115,7 +3115,7 @@ State NoSQL::handle_msg(GWBUF* pRequest, packet::Msg&& req, GWBUF** ppResponse)
 // nosql free functions
 //
 void nosql::append(DocumentBuilder& doc,
-                   const core::string_view& key,
+                   const string_view& key,
                    const bsoncxx::document::element& element)
 {
     auto i = key.find('.');
