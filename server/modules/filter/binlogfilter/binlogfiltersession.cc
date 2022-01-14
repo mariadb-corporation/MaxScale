@@ -410,7 +410,9 @@ static bool should_skip(const BinlogConfig::Values& config, const std::string& s
     return (config.match && !config.match.match(str)) || (config.exclude && config.exclude.match(str));
 }
 
-static bool should_skip_query(const BinlogConfig::Values& config, const std::string& sql, const std::string& db = "")
+static bool should_skip_query(const BinlogConfig::Values& config,
+                              const std::string& sql,
+                              const std::string& db = "")
 {
     GWBUF* buf = modutil_create_query(sql.c_str());
     bool rval = false;
