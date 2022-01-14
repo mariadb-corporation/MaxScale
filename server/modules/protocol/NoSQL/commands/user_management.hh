@@ -10,6 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+#pragma once
 
 //
 // https://docs.mongodb.com/v4.4/reference/command/nav-user-management/
