@@ -314,4 +314,78 @@ describe(`DbListTree - context menu tests`, () => {
         })
     })
 })
-//TODO: Add computed and method tests
+describe(`DbListTree - computed and other method tests`, () => {
+    let wrapper
+    it(`Should return accurate value for nodesHaveCtxMenu computed property`, () => {
+        wrapper = mountFactory()
+        expect(wrapper.vm.nodesHaveCtxMenu).to.eql([
+            'Schema',
+            'Table',
+            'Stored Procedure',
+            'Column',
+            'Trigger',
+        ])
+    })
+    it(`Should return accurate value for queryOpts computed property`, () => {
+        wrapper = mountFactory()
+        expect(wrapper.vm.queryOpts).to.eql([
+            { text: wrapper.vm.$t('previewData'), type: 'QUERY' },
+            { text: wrapper.vm.$t('viewDetails'), type: 'QUERY' },
+        ])
+    })
+    it(`Should return accurate value for insertOpts computed property`, () => {
+        wrapper = mountFactory()
+        expect(wrapper.vm.insertOpts).to.eql([
+            {
+                text: wrapper.vm.$t('placeToEditor'),
+                children: wrapper.vm.genTxtOpts('INSERT'),
+            },
+        ])
+    })
+    it(`Should return accurate value for clipboardOpts computed property`, () => {
+        wrapper = mountFactory()
+        expect(wrapper.vm.clipboardOpts).to.eql([
+            {
+                text: wrapper.vm.$t('copyToClipboard'),
+                children: wrapper.vm.genTxtOpts('CLIPBOARD'),
+            },
+        ])
+    })
+    it(`Should return accurate value for txtEditorRelatedOpts computed property`, () => {
+        wrapper = mountFactory()
+        expect(wrapper.vm.txtEditorRelatedOpts).to.eql([
+            ...wrapper.vm.queryOpts,
+            { divider: true },
+            ...wrapper.vm.insertOpts,
+        ])
+    })
+    it(`Should return accurate value for baseOptsMap computed property`, () => {
+        wrapper = mountFactory()
+        expect(wrapper.vm.baseOptsMap).to.eql({
+            Schema: [
+                { text: wrapper.vm.$t('useDb'), type: 'USE' },
+                ...wrapper.vm.insertOpts,
+                ...wrapper.vm.clipboardOpts,
+            ],
+            Table: [...wrapper.vm.txtEditorRelatedOpts, ...wrapper.vm.clipboardOpts],
+            'Stored Procedure': [...wrapper.vm.insertOpts, ...wrapper.vm.clipboardOpts],
+            Column: [...wrapper.vm.insertOpts, ...wrapper.vm.clipboardOpts],
+            Trigger: [...wrapper.vm.insertOpts, ...wrapper.vm.clipboardOpts],
+        })
+    })
+    it(`Should return accurate value for userNodeOptsMap computed property`, () => {
+        wrapper = mountFactory()
+        expect(wrapper.vm.userNodeOptsMap).to.eql({
+            Schema: [{ text: wrapper.vm.$t('dropSchema'), type: 'DD' }],
+            Table: [
+                { text: wrapper.vm.$t('alterTbl'), type: 'DD' },
+                { text: wrapper.vm.$t('dropTbl'), type: 'DD' },
+                { text: wrapper.vm.$t('truncateTbl'), type: 'DD' },
+            ],
+            'Stored Procedure': [{ text: wrapper.vm.$t('dropSp'), type: 'DD' }],
+            Column: [],
+            Trigger: [{ text: wrapper.vm.$t('dropTrigger'), type: 'DD' }],
+        })
+    })
+    //TODO: Add method tests
+})

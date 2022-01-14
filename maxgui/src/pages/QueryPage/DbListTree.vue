@@ -210,12 +210,6 @@ export default {
                 [TRIGGER]: [{ text: this.$t('dropTrigger'), type: DD }],
             }
         },
-        filter() {
-            return (item, search, textKey) => item[textKey].indexOf(search) > -1
-        },
-        showCtxBtn() {
-            return item => this.activeCtxItem && item.id === this.activeCtxItem.id
-        },
         // Use either getActiveTreeNode or getAlteredActiveNode
         activeNodes: {
             get() {
@@ -267,6 +261,12 @@ export default {
             SET_CURR_DDL_COL_SPEC: 'query/SET_CURR_DDL_COL_SPEC',
             UPDATE_TBL_CREATION_INFO_MAP: 'query/UPDATE_TBL_CREATION_INFO_MAP',
         }),
+        filter(item, search, textKey) {
+            return item[textKey].indexOf(search) > -1
+        },
+        showCtxBtn(item) {
+            return this.activeCtxItem && item.id === this.activeCtxItem.id
+        },
         addExpandedNodesWatcher() {
             this.rmExpandedNodesWatcher = this.$watch(
                 'expandedNodes',
