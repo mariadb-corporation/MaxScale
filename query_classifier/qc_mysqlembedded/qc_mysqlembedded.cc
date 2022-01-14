@@ -437,8 +437,7 @@ int32_t qc_mysql_parse(GWBUF* querybuf, uint32_t collect, int32_t* result)
 
     if (parsed)
     {
-        parsing_info_t* pi = (parsing_info_t*) gwbuf_get_buffer_object_data(querybuf,
-                                                                            GWBUF_PARSING_INFO);
+        parsing_info_t* pi = (parsing_info_t*) querybuf->get_classifier_data();
         mxb_assert(pi);
 
         *result = pi->result;
@@ -474,8 +473,7 @@ int32_t qc_mysql_get_type_mask(GWBUF* querybuf, uint32_t* type_mask)
     {
         parsing_info_t* pi;
 
-        pi = (parsing_info_t*) gwbuf_get_buffer_object_data(querybuf,
-                                                            GWBUF_PARSING_INFO);
+        pi = (parsing_info_t*) querybuf->get_classifier_data();
 
         if (pi != NULL)
         {
@@ -585,10 +583,7 @@ static bool parse_query(GWBUF* querybuf)
     }
 
     /** Add complete parsing info struct to the query buffer */
-    gwbuf_add_buffer_object(querybuf,
-                            GWBUF_PARSING_INFO,
-                            (void*) pi,
-                            parsing_info_done);
+    querybuf->set_classifier_data(pi, parsing_info_done);
 
     succp = true;
 retblock:
@@ -1614,7 +1609,7 @@ parsing_info_t* get_pinfo(GWBUF* querybuf)
 
     if ((querybuf != NULL) && gwbuf_is_parsed(querybuf))
     {
-        pi = (parsing_info_t*) gwbuf_get_buffer_object_data(querybuf, GWBUF_PARSING_INFO);
+        pi = (parsing_info_t*) querybuf->get_classifier_data();
     }
 
     return pi;
