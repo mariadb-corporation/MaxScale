@@ -28,7 +28,6 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::SRW
     , m_backends(std::move(backends))
     , m_raw_backends(sptr_vec_to_ptr_vec(m_backends))
     , m_current_master(nullptr)
-    , m_target_node(nullptr)
     , m_config(instance->config())
     , m_expected_responses(0)
     , m_router(instance)
@@ -474,15 +473,10 @@ bool RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Error
 
 void RWSplitSession::finish_transaction(mxs::RWBackend* backend)
 {
-    MXS_INFO("Transaction complete");
+    mxb_assert_message(m_trx.target(), "Transaction target must be assigned when it ends");
+    MXS_INFO("Transaction complete on '%s'", m_trx.target()->name());
     m_trx.close();
     m_can_replay_trx = true;
-
-    if (m_target_node && trx_is_read_only())
-    {
-        // Read-only transaction is over, stop routing queries to a specific node
-        m_target_node = nullptr;
-    }
 }
 
 bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, const mxs::Reply& reply)
@@ -561,7 +555,6 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
             {
                 MXS_INFO("Transaction isolation level set to %s, locking session to master", LEVEL);
                 m_locked_to_master = true;
-                lock_to_master();
             }
 
             if (reply.command() == MXS_COM_STMT_PREPARE && reply.is_ok())
@@ -635,7 +628,7 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
                 return 1;
             }
         }
-        else if (m_config.transaction_replay && trx_is_ending())
+        else if (trx_is_ending())
         {
             finish_transaction(backend);
         }
@@ -948,18 +941,13 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
     {
         MXS_INFO("Slave '%s' failed: %s", backend->name(), mxs::extract_error(errmsgbuf).c_str());
 
-        if (m_target_node && m_target_node == backend && trx_is_read_only())
+        if (trx_is_read_only() && m_trx.target() == backend)
         {
-            mxb_assert(!m_config.transaction_replay || m_trx.target() == backend);
-
             if (backend->is_waiting_result())
             {
                 mxb_assert(m_expected_responses == 1);
                 m_expected_responses--;
             }
-
-            // We're no longer locked to this server as it failed
-            m_target_node = nullptr;
 
             // Try to replay the transaction on another node
             can_continue = start_trx_replay();
@@ -1079,25 +1067,19 @@ bool RWSplitSession::handle_error_new_connection(RWBackend* backend, GWBUF* errm
 
 bool RWSplitSession::lock_to_master()
 {
-    bool rv = false;
-
-    if (m_current_master && m_current_master->in_use())
+    if (m_config.strict_multi_stmt || m_config.strict_sp_calls)
     {
-        m_target_node = m_current_master;
-        rv = true;
-
-        if (m_config.strict_multi_stmt || m_config.strict_sp_calls)
-        {
-            m_locked_to_master = true;
-        }
+        MXS_INFO("Multi-statement query or stored procedure call, routing "
+                 "all future queries to master.");
+        m_locked_to_master = true;
     }
 
-    return rv;
+    return m_current_master && m_current_master->in_use();
 }
 
 bool RWSplitSession::is_locked_to_master() const
 {
-    return m_current_master && m_target_node == m_current_master;
+    return m_locked_to_master;
 }
 
 bool RWSplitSession::supports_hint(Hint::Type hint_type) const

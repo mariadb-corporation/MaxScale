@@ -588,20 +588,17 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
                 MXS_INFO("Will return response from '%s' to the client", m_sescmd_replier->name());
             }
 
-            if (m_config.transaction_replay)
+            if (trx_is_open() && !m_trx.target())
             {
-                if (trx_is_open() && !m_trx.target())
-                {
-                    mxb_assert(trx_is_starting() || trx_is_ending() || m_state == TRX_REPLAY);
-                    m_trx.set_target(m_sescmd_replier);
-                }
-                else
-                {
-                    mxb_assert_message(!trx_is_open() || m_trx.target() == m_sescmd_replier,
-                                       "Trx target is %s when m_sescmd_replier is %s while trx is open",
-                                       m_trx.target() ? m_trx.target()->name() : "nullptr",
-                                       m_sescmd_replier->name());
-                }
+                mxb_assert(trx_is_starting() || trx_is_ending() || m_state == TRX_REPLAY);
+                m_trx.set_target(m_sescmd_replier);
+            }
+            else
+            {
+                mxb_assert_message(!trx_is_open() || m_trx.target() == m_sescmd_replier,
+                                   "Trx target is %s when m_sescmd_replier is %s while trx is open",
+                                   m_trx.target() ? m_trx.target()->name() : "nullptr",
+                                   m_sescmd_replier->name());
             }
         }
         else
@@ -682,26 +679,26 @@ RWBackend* RWSplitSession::get_last_used_backend()
 /**
  * Provide the router with a reference to a suitable backend
  *
- * @param rses     Pointer to router client session
  * @param btype    Backend type
  * @param name     Name of the requested backend. May be nullptr if any name is accepted.
  * @param max_rlag Maximum replication lag
- * @param target   The target backend
  *
- * @return True if a backend was found
+ * @return The backend if one was found
  */
-RWBackend* RWSplitSession::get_target_backend(backend_type_t btype,
-                                              const char* name,
-                                              int max_rlag)
+RWBackend* RWSplitSession::get_target_backend(backend_type_t btype, const char* name, int max_rlag)
 {
-    /** Check whether using target_node as target SLAVE */
-    if (m_target_node && trx_is_read_only())
-    {
-        return m_target_node;
-    }
-
     RWBackend* rval = nullptr;
-    if (name)
+    auto target = m_trx.target();
+
+    if (target && trx_is_read_only())
+    {
+        // Continue the read-only transaction on this backend if it's still qualifies for it
+        if (target->in_use() && (target->is_slave() || target->is_master()))
+        {
+            rval = target;
+        }
+    }
+    else if (name)
     {
         // Choose backend by name from a hint
         rval = get_hinted_backend(name);
@@ -714,6 +711,7 @@ RWBackend* RWSplitSession::get_target_backend(backend_type_t btype,
     {
         rval = get_master_backend();
     }
+
     return rval;
 }
 
@@ -1041,15 +1039,7 @@ bool RWSplitSession::start_trx_migration(RWBackend* target, GWBUF* querybuf)
  */
 RWBackend* RWSplitSession::handle_master_is_target()
 {
-    RWBackend* target = get_target_backend(BE_MASTER, nullptr, mxs::Target::RLAG_UNDEFINED);
-
-    if (!m_locked_to_master && m_target_node == m_current_master)
-    {
-        // Reset the forced node as we're not permanently locked to it
-        m_target_node = nullptr;
-    }
-
-    return target;
+    return get_target_backend(BE_MASTER, nullptr, mxs::Target::RLAG_UNDEFINED);
 }
 
 /**
@@ -1062,12 +1052,6 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
     mxb_assert_message(target->in_use(), "Target must be in use before routing to it");
 
     MXS_INFO("Route query to %s: %s <", target == m_current_master ? "master" : "slave", target->name());
-
-    if (!m_target_node && trx_is_read_only())
-    {
-        // Lock the session to this node until the read-only transaction ends
-        m_target_node = target;
-    }
 
     uint8_t cmd = mxs_mysql_get_command(buffer.get());
 
@@ -1138,7 +1122,7 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
         response = mxs::Backend::EXPECT_RESPONSE;
     }
 
-    if (m_config.transaction_replay && trx_is_open())
+    if (trx_is_open())
     {
         mxb_assert(!m_trx.target() || m_trx.target() == target);
 

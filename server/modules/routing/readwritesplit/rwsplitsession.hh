@@ -367,22 +367,9 @@ private:
 
     inline mariadb::QueryClassifier::current_target_t get_current_target() const
     {
-        mariadb::QueryClassifier::current_target_t current_target;
-
-        if (m_target_node == nullptr)
-        {
-            current_target = mariadb::QueryClassifier::CURRENT_TARGET_UNDEFINED;
-        }
-        else if (m_target_node == m_current_master)
-        {
-            current_target = mariadb::QueryClassifier::CURRENT_TARGET_MASTER;
-        }
-        else
-        {
-            current_target = mariadb::QueryClassifier::CURRENT_TARGET_SLAVE;
-        }
-
-        return current_target;
+        return m_locked_to_master ?
+               mariadb::QueryClassifier::CURRENT_TARGET_MASTER :
+               mariadb::QueryClassifier::CURRENT_TARGET_UNDEFINED;
     }
 
     void update_statistics(const RoutingPlan& res)
@@ -456,7 +443,6 @@ private:
     mxs::SRWBackends  m_backends;               /**< Mem. management, not for use outside RWSplitSession */
     mxs::PRWBackends  m_raw_backends;           /**< Backend pointers for use in interfaces . */
     mxs::RWBackend*   m_current_master;         /**< Current master server */
-    mxs::RWBackend*   m_target_node;            /**< The currently locked target node */
     RoutingPlan       m_prev_plan;              /**< The previous routing plan */
     RWSConfig::Values m_config;                 /**< Configuration for this session */
 

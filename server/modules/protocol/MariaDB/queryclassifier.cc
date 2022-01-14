@@ -813,8 +813,6 @@ QueryClassifier::current_target_t QueryClassifier::handle_multi_temp_and_load(
 
         if (is_multi)
         {
-            MXS_INFO("Multi-statement query or stored procedure call, routing "
-                     "all future queries to master.");
             rv = QueryClassifier::CURRENT_TARGET_MASTER;
         }
     }
