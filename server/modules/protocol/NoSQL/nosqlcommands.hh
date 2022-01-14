@@ -480,17 +480,7 @@ protected:
                   int error_code,
                   Conversion conversion = Conversion::STRICT) const
     {
-        bool rv = false;
-
-        auto element = doc[zKey];
-
-        if (element)
-        {
-            *pElement = element_as<Type>(m_name, zKey, element, error_code, conversion);
-            rv = true;
-        }
-
-        return rv;
+        return nosql::optional(m_name, doc, zKey, pElement, error_code, conversion);
     }
 
     template<class Type>
@@ -499,7 +489,7 @@ protected:
                   Type* pElement,
                   Conversion conversion = Conversion::STRICT) const
     {
-        return optional(doc, zKey, pElement, error::TYPE_MISMATCH, conversion);
+        return nosql::optional(m_name, doc, zKey, pElement, conversion);
     }
 
     template<class Type>
@@ -508,7 +498,7 @@ protected:
                   Type* pElement,
                   Conversion conversion = Conversion::STRICT) const
     {
-        return optional(doc, key.c_str(), pElement, error::TYPE_MISMATCH, conversion);
+        return optional(doc, key.c_str(), pElement, conversion);
     }
 
     template<class Type>
@@ -526,7 +516,7 @@ protected:
                   Type* pElement,
                   Conversion conversion = Conversion::STRICT) const
     {
-        return optional(m_doc, zKey, pElement, error::TYPE_MISMATCH, conversion);
+        return optional(m_doc, zKey, pElement, conversion);
     }
 
     template<class Type>
