@@ -6,7 +6,7 @@
             v-model="chosenLogLevels"
             returnObject
             :label="$t('filterBy')"
-            :cols="allLogLevels"
+            :items="allLogLevels"
             :maxHeight="400"
         >
             <template v-slot:activator="{ data: { on, attrs, value, label } }">
@@ -26,7 +26,7 @@
                     <v-icon
                         size="24"
                         color="accent-dark"
-                        :class="{ 'column-list-toggle--active': value }"
+                        :class="{ 'filter-list-toggle--active': value }"
                     >
                         arrow_drop_down
                     </v-icon>
