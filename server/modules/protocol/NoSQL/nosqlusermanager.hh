@@ -27,9 +27,9 @@ namespace role
 
 enum class Id
 {
-    DB_ADMIN,
-    READ,
-    READ_WRITE
+#define NOSQL_ROLE(id, name) id,
+#include "nosqlrole.hh"
+#undef NOSQL_ROLE
 };
 
 struct Role

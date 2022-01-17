@@ -207,11 +207,18 @@ namespace role
 namespace
 {
 
-const map<string, Id> roles =
+const map<string, Id> roles_by_name =
 {
-    { "dbAdmin",   Id::DB_ADMIN },
-    { "read",      Id::READ },
-    { "readWrite", Id::READ_WRITE }
+#define NOSQL_ROLE(id, name) { name, Id:: id },
+#include "nosqlrole.hh"
+#undef NOSQL_ROLE
+};
+
+const map<Id, string> roles_by_id =
+{
+#define NOSQL_ROLE(id, name) { Id:: id, name },
+#include "nosqlrole.hh"
+#undef NOSQL_ROLE
 };
 
 }
@@ -220,24 +227,17 @@ const map<string, Id> roles =
 
 string role::to_string(Id id)
 {
-    for (const auto& kv : roles)
-    {
-        if (id == kv.second)
-        {
-            return kv.first;
-        }
-    }
+    auto it = roles_by_id.find(id);
+    mxb_assert(it != roles_by_id.end());
 
-    mxb_assert(!true);
-
-    return "unknown";
+    return it->second;
 }
 
 bool role::from_string(const string& key, Id* pValue)
 {
-    auto it = roles.find(key);
+    auto it = roles_by_name.find(key);
 
-    bool found = (it != roles.end());
+    bool found = (it != roles_by_name.end());
 
     if (found)
     {
