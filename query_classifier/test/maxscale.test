@@ -189,3 +189,8 @@ update mailbox_queue as mb inner join ( select * from mailbox_queue where parsin
 # "current_timestamp" is handled explicitly by sqlite3, which causes the function usage
 # to be parsed as token + parenthesis and not id + parenthesis.
 SET STATEMENT max_statement_time = 60 FOR INSERT INTO t (f) VALUES (current_timestamp());
+
+# MXS-3949
+# "transaction" is always parsed as a registered keyword. It should be parsed as an
+# identifier if it cannot be used as a keyword.
+SELECT uuid FROM Transaction LIMIT 1;
