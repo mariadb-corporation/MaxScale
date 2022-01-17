@@ -216,4 +216,176 @@ describe(`DbListTree - draggable node tests`, () => {
         wrapper.vm.onNodeDragStart.should.have.been.calledOnceWith(evtParam)
     })
 })
-//TODO: Add context menu tests and computed and method tests
+describe(`DbListTree - context menu tests`, () => {
+    let wrapper
+    const activeCtxItem = dummy_db_tree_data[0]
+    /**
+     * @param {Object} param.wrapper - mounted wrapper (not shallow mount)
+     *  @param {Object} param.node - tree node
+     * @returns {Object} - more option icon
+     */
+    async function getMoreOptIcon({ wrapper, node }) {
+        const target = wrapper.find(`#node-tooltip-activator-${node.key}`)
+        await target.trigger('mouseover') // show more option icon button
+        return wrapper.find(`#ctx-menu-activator-${node.key}`)
+    }
+    afterEach(() => wrapper.destroy())
+    it(`Should pass accurate data to sub-menu via props`, () => {
+        wrapper = mountFactory({ data: () => ({ activeCtxItem }) }) // condition to render the menu
+        const menu = wrapper.findComponent({ name: 'sub-menu' })
+        const { value, left, items, activator } = menu.vm.$props
+        expect(value).to.be.equals(wrapper.vm.showCtxMenu)
+        expect(left).to.be.true
+        expect(items).to.be.deep.equals(wrapper.vm.getNodeOpts(activeCtxItem))
+        expect(activator).to.be.equals(`#ctx-menu-activator-${activeCtxItem.key}`)
+        expect(menu.vm.$vnode.key).to.be.equals(activeCtxItem.key)
+    })
+    it(`Should handle @item-click event emitted from sub-menu`, async () => {
+        wrapper = mountFactory({ data: () => ({ activeCtxItem }) })
+        const fnSpy = sinon.spy(wrapper.vm, 'optionHandler')
+        const menu = wrapper.findComponent({ name: 'sub-menu' })
+        const mockOpt = { text: 'Qualified Name', type: 'INSERT' }
+        await menu.vm.$emit('item-click', mockOpt)
+        fnSpy.should.have.been.calledOnceWithExactly({ item: activeCtxItem, opt: mockOpt })
+        fnSpy.restore()
+    })
+    it(`Should show more option icon button when hovering a tree node`, async () => {
+        wrapper = mountFactory({ shallow: false })
+        const btn = await getMoreOptIcon({ wrapper, node: activeCtxItem })
+        expect(btn.exists()).to.be.true
+    })
+    it(`Should call handleOpenCtxMenu when clicking more option icon button`, async () => {
+        wrapper = mountFactory({ shallow: false })
+        const fnSpy = sinon.spy(wrapper.vm, 'handleOpenCtxMenu')
+        const btn = await getMoreOptIcon({ wrapper, node: activeCtxItem })
+        await btn.trigger('click')
+        fnSpy.should.have.been.calledOnce
+        fnSpy.restore()
+    })
+    it(`Should return base opts for system node when calling getNodeOpts method`, () => {
+        wrapper = mountFactory()
+        const sysNode = dummy_db_tree_data.find(node => node.isSys)
+        expect(wrapper.vm.getNodeOpts(sysNode)).to.be.deep.equals(
+            wrapper.vm.baseOptsMap[sysNode.type]
+        )
+    })
+    it(`Should return accurate opts for user node when calling getNodeOpts method`, () => {
+        wrapper = mountFactory()
+        const userNode = dummy_db_tree_data.find(node => !node.isSys)
+        const expectOpts = [
+            ...wrapper.vm.baseOptsMap[userNode.type],
+            { divider: true },
+            ...wrapper.vm.userNodeOptsMap[userNode.type],
+        ]
+        expect(wrapper.vm.getNodeOpts(userNode)).to.be.deep.equals(expectOpts)
+    })
+    const mockOpts = [
+        { text: 'Use database', type: 'USE' },
+        { text: 'Alter Table', type: 'DD' },
+        { text: 'Qualified Name', type: 'INSERT' },
+        { text: 'Preview Data (top 1000)', type: 'QUERY' },
+        { text: 'Qualified Name (Quoted)', type: 'CLIPBOARD' },
+    ]
+    mockOpts.forEach(opt => {
+        it(`Should handle optionHandler method as expected`, () => {
+            const fnsToBeCalled = ['handleEmitDD_opt', 'handleTxtEditorOpt', 'handleTxtOpt']
+            let methods = {}
+            for (const fn of fnsToBeCalled) {
+                methods[fn] = () => null
+            }
+            wrapper = mountFactory({ methods: { ...methods } })
+            let fnSpy
+            // All types will call corresponding handler function except `USE` type
+            switch (opt.type) {
+                case 'DD':
+                    fnSpy = sinon.spy(wrapper.vm, 'handleEmitDD_opt')
+                    break
+                case 'INSERT':
+                case 'QUERY':
+                    fnSpy = sinon.spy(wrapper.vm, 'handleTxtEditorOpt')
+                    break
+                case 'CLIPBOARD':
+                    fnSpy = sinon.spy(wrapper.vm, 'handleTxtOpt')
+                    break
+            }
+            wrapper.vm.optionHandler({ item: activeCtxItem, opt })
+            if (opt.type === 'USE') expect(wrapper.emitted()).to.have.property('use-db')
+            else fnSpy.should.have.been.calledWith({ item: activeCtxItem, opt })
+        })
+    })
+})
+describe(`DbListTree - computed and other method tests`, () => {
+    let wrapper
+    it(`Should return accurate value for nodesHaveCtxMenu computed property`, () => {
+        wrapper = mountFactory()
+        expect(wrapper.vm.nodesHaveCtxMenu).to.eql([
+            'Schema',
+            'Table',
+            'Stored Procedure',
+            'Column',
+            'Trigger',
+        ])
+    })
+    it(`Should return accurate value for queryOpts computed property`, () => {
+        wrapper = mountFactory()
+        expect(wrapper.vm.queryOpts).to.eql([
+            { text: wrapper.vm.$t('previewData'), type: 'QUERY' },
+            { text: wrapper.vm.$t('viewDetails'), type: 'QUERY' },
+        ])
+    })
+    it(`Should return accurate value for insertOpts computed property`, () => {
+        wrapper = mountFactory()
+        expect(wrapper.vm.insertOpts).to.eql([
+            {
+                text: wrapper.vm.$t('placeToEditor'),
+                children: wrapper.vm.genTxtOpts('INSERT'),
+            },
+        ])
+    })
+    it(`Should return accurate value for clipboardOpts computed property`, () => {
+        wrapper = mountFactory()
+        expect(wrapper.vm.clipboardOpts).to.eql([
+            {
+                text: wrapper.vm.$t('copyToClipboard'),
+                children: wrapper.vm.genTxtOpts('CLIPBOARD'),
+            },
+        ])
+    })
+    it(`Should return accurate value for txtEditorRelatedOpts computed property`, () => {
+        wrapper = mountFactory()
+        expect(wrapper.vm.txtEditorRelatedOpts).to.eql([
+            ...wrapper.vm.queryOpts,
+            { divider: true },
+            ...wrapper.vm.insertOpts,
+        ])
+    })
+    it(`Should return accurate value for baseOptsMap computed property`, () => {
+        wrapper = mountFactory()
+        expect(wrapper.vm.baseOptsMap).to.eql({
+            Schema: [
+                { text: wrapper.vm.$t('useDb'), type: 'USE' },
+                ...wrapper.vm.insertOpts,
+                ...wrapper.vm.clipboardOpts,
+            ],
+            Table: [...wrapper.vm.txtEditorRelatedOpts, ...wrapper.vm.clipboardOpts],
+            'Stored Procedure': [...wrapper.vm.insertOpts, ...wrapper.vm.clipboardOpts],
+            Column: [...wrapper.vm.insertOpts, ...wrapper.vm.clipboardOpts],
+            Trigger: [...wrapper.vm.insertOpts, ...wrapper.vm.clipboardOpts],
+        })
+    })
+    it(`Should return accurate value for userNodeOptsMap computed property`, () => {
+        wrapper = mountFactory()
+        expect(wrapper.vm.userNodeOptsMap).to.eql({
+            Schema: [{ text: wrapper.vm.$t('dropSchema'), type: 'DD' }],
+            Table: [
+                { text: wrapper.vm.$t('alterTbl'), type: 'DD' },
+                { text: wrapper.vm.$t('dropTbl'), type: 'DD' },
+                { text: wrapper.vm.$t('truncateTbl'), type: 'DD' },
+            ],
+            'Stored Procedure': [{ text: wrapper.vm.$t('dropSp'), type: 'DD' }],
+            Column: [],
+            Trigger: [{ text: wrapper.vm.$t('dropTrigger'), type: 'DD' }],
+        })
+    })
+    //TODO: Add method tests
+})

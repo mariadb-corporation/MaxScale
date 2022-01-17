@@ -43,6 +43,21 @@ describe(`QueryConfigDialog - child component's data communication tests `, () =
         expect(lazyValidation).to.be.false
         expect(hasChanged).to.be.equals(wrapper.vm.hasChanged)
     })
+    it(`Should pass accurate data to max-rows-input via props`, () => {
+        let wrapper = mountFactory()
+        const input = wrapper.findComponent({ name: 'max-rows-input' })
+        const { height, hideDetails, hasFieldsetBorder } = input.vm.$props
+        expect(input.vm.$vnode.key).to.be.equals(wrapper.vm.isOpened)
+        expect(height).to.be.equals(36)
+        expect(hideDetails).to.be.equals('auto')
+        expect(hasFieldsetBorder).to.be.false
+    })
+    it(`Should handle @change event emitted from max-rows-input`, () => {
+        let wrapper = mountFactory()
+        const newVal = wrapper.vm.$data.config.maxRows + 123
+        wrapper.findComponent({ name: 'max-rows-input' }).vm.$emit('change', newVal)
+        expect(wrapper.vm.$data.config.maxRows).to.be.equals(newVal)
+    })
 })
 
 describe(`QueryConfigDialog - tests after dialog is opened `, () => {
@@ -77,7 +92,7 @@ describe(`QueryConfigDialog - form input tests`, () => {
         //open dialog when component is mounted by assigning true to isOpened
         wrapper = mountFactory({ shallow: false, computed: { isOpened: () => true } })
     })
-    const intFields = ['maxRows', 'queryHistoryRetentionPeriod']
+    const intFields = ['queryHistoryRetentionPeriod']
     intFields.forEach(field => {
         it(`Should parse value as number for ${field} field`, async () => {
             const inputComponent = wrapper.findComponent({ name: 'base-dialog' }).find(`.${field}`)
@@ -123,18 +138,22 @@ describe(`QueryConfigDialog - form save tests`, () => {
     intActionsRelated.forEach(action => {
         it(`Should call ${action} with accurate argument`, async () => {
             let actionCallCount = 0
-            let argVal
+            const mockVal = 10
+            let argVal, timestamp
             wrapper = mountFactory({
                 shallow: false,
+                stubs: {
+                    'max-rows-input': "<div class='stub'></div>",
+                },
                 computed: { isOpened: () => true },
                 methods: {
                     [action]: val => {
                         actionCallCount++
                         argVal = val
+                        timestamp = wrapper.vm.$help.addDaysToNow(mockVal)
                     },
                 },
             })
-            const mockVal = 10
             await mockChangingConfig({
                 wrapper,
                 key: action === 'SET_QUERY_MAX_ROW' ? 'maxRows' : 'queryHistoryRetentionPeriod',
@@ -145,7 +164,7 @@ describe(`QueryConfigDialog - form save tests`, () => {
             expect(actionCallCount).to.be.equals(1)
             switch (action) {
                 case 'SET_QUERY_HISTORY_EXPIRED_TIME':
-                    expect(argVal).to.be.equals(wrapper.vm.$help.addDaysToNow(mockVal))
+                    expect(argVal).to.be.equals(timestamp)
                     break
                 case 'SET_QUERY_MAX_ROW':
                     expect(argVal).to.be.equals(mockVal)
