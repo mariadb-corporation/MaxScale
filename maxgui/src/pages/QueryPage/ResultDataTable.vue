@@ -16,7 +16,7 @@
                 v-model="filterHeaderIdxs"
                 selectAllOnActivated
                 :label="$t('filterBy')"
-                :cols="tableHeaders"
+                :items="tableHeaders"
                 :maxHeight="tableHeight - 20"
             />
             <slot name="left-table-tools-append" />
@@ -48,7 +48,7 @@
                 v-model="visHeaderIdxs"
                 selectAllOnActivated
                 :label="$t('columns')"
-                :cols="tableHeaders"
+                :items="tableHeaders"
                 :maxHeight="tableHeight - 20"
             />
             <v-tooltip

@@ -113,7 +113,7 @@
                                 v-model="selectedLogTypes"
                                 selectAllOnActivated
                                 :label="$t('logTypes')"
-                                :cols="queryLogTypes"
+                                :items="queryLogTypes"
                                 returnObject
                                 :maxHeight="200"
                             />

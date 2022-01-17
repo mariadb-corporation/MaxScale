@@ -25,21 +25,21 @@
                     <v-icon
                         size="24"
                         color="accent-dark"
-                        :class="{ 'column-list-toggle--active': value }"
+                        :class="{ 'filter-list-toggle--active': value }"
                     >
                         arrow_drop_down
                     </v-icon>
                 </v-btn>
             </slot>
         </template>
-        <v-list max-width="220px" :max-height="maxHeight" class="column-list">
+        <v-list max-width="220px" :max-height="maxHeight" class="filter-list">
             <v-list-item class="px-0" dense>
                 <v-text-field
-                    v-model="filterHeader"
+                    v-model="filterTxt"
                     dense
                     outlined
                     height="36"
-                    class="std column-list__search"
+                    class="std filter-list__search"
                     :placeholder="$t('search')"
                     hide-details
                 />
@@ -53,25 +53,19 @@
                     class="pa-0 ma-0 checkbox d-flex align-center"
                     hide-details
                     :label="$t('selectAll')"
-                    :input-value="isAllHeaderChecked"
-                    @change="toggleAllHeaders"
+                    :input-value="isAllSelected"
+                    @change="toggleAll"
                 />
             </v-list-item>
             <v-divider />
-            <v-list-item
-                v-for="(item, index) in columnList"
-                :key="`${item.text}`"
-                class="px-2"
-                dense
-                link
-            >
-                <!-- value of checkbox cannot be object, so using text then get object via colsMapByName -->
+            <v-list-item v-for="item in itemsList" :key="`${item.text}`" class="px-2" dense link>
+                <!-- value of checkbox cannot be object, so using text then get object via itemsMapByText -->
                 <v-checkbox
-                    v-model="selectedCols"
+                    v-model="selectedItems"
                     dense
                     color="primary"
                     class="pa-0 ma-0 checkbox d-flex align-center"
-                    :value="returnObject ? item.text : index"
+                    :value="item.text"
                     hide-details
                 >
                     <template v-slot:label>
@@ -99,7 +93,7 @@
 
 /*
  *
- cols?: Array of objects. This props accepts `virtual-scroll-table` headers
+ items?: Array of objects. This props accepts `virtual-scroll-table` headers
  or at least the object needs to have `text` property in order to make the search
  filter work.
  returnObject?: boolean, by default this component returns selected index, if true,
@@ -110,7 +104,7 @@ export default {
     props: {
         value: { type: Array, required: true },
         label: { type: String, required: true },
-        cols: {
+        items: {
             type: Array,
             validator: arr => {
                 if (!arr.length) return true
@@ -124,62 +118,76 @@ export default {
     },
     data() {
         return {
-            filterHeader: '',
+            filterTxt: '',
         }
     },
     computed: {
-        colsMapByName() {
+        itemsMapByText() {
             const map = {}
-            this.cols.forEach(col => {
+            this.items.forEach(col => {
                 map[col.text] = col
             })
             return map
         },
-        selectedCols: {
+        selectedItems: {
             get() {
                 if (this.returnObject) return this.value.map(col => col.text)
-                return this.value
+                else {
+                    // this.value is array of indexes
+                    let items = []
+                    this.items.forEach((c, i) => {
+                        if (this.value.includes(i)) items.push(c.text)
+                    })
+                    return items
+                }
             },
-            set(v) {
+            set(arr) {
+                // arr is an array of strings
                 if (this.returnObject) {
-                    const cols = v.reduce((arr, name) => {
-                        arr.push(this.colsMapByName[name])
+                    const items = arr.reduce((arr, name) => {
+                        arr.push(this.itemsMapByText[name])
                         return arr
                     }, [])
-                    this.$emit('input', cols)
-                } else this.$emit('input', v)
+                    this.$emit('input', items) // emit array of the original objects from this.items
+                } else {
+                    let idxs = []
+                    this.items.forEach((h, i) => {
+                        if (arr.includes(h.text)) idxs.push(i)
+                    })
+                    this.$emit('input', idxs) // emit array of indexes
+                }
             },
         },
-        columnList() {
-            let list = this.$help.lodash.cloneDeep(this.cols)
-            return list.filter(obj => this.$help.ciStrIncludes(`${obj.text}`, this.filterHeader))
+        itemsList() {
+            let list = this.$help.lodash.cloneDeep(this.items)
+            return list.filter(obj => this.$help.ciStrIncludes(`${obj.text}`, this.filterTxt))
         },
-        isAllHeaderChecked() {
-            return this.selectedCols.length === this.cols.length
+        isAllSelected() {
+            return this.selectedItems.length === this.items.length
         },
     },
     activated() {
-        if (this.selectAllOnActivated) this.showAllHeaders()
+        if (this.selectAllOnActivated) this.selectAll()
     },
     methods: {
-        toggleAllHeaders(v) {
-            if (!v) this.selectedCols = []
-            else this.showAllHeaders()
+        toggleAll(v) {
+            if (!v) this.selectedItems = []
+            else this.selectAll()
         },
-        showAllHeaders() {
-            //When returnObject, value of checkbox cannot be object, so using text here
-            this.selectedCols = this.cols.map((h, i) => (this.returnObject ? h.text : i))
+        selectAll() {
+            //value of checkbox cannot be object, so using text here
+            this.selectedItems = this.items.map(h => h.text)
         },
     },
 }
 </script>
 
 <style lang="scss" scoped>
-.column-list-toggle--active {
+.filter-list-toggle--active {
     transform: rotate(180deg);
     transition: 0.3s cubic-bezier(0.25, 0.8, 0.5, 1), visibility 0s;
 }
-.column-list {
+.filter-list {
     overflow-y: auto;
     &__search {
         ::v-deep .v-input__control {
