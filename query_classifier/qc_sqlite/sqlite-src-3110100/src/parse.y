@@ -646,7 +646,7 @@ columnid(A) ::= nm(X). {
   QUERY QUICK
   RAISE RECURSIVE /*REINDEX*/ RELEASE /*RENAME*/ /*REPLACE*/ RESET RESTRICT ROLE ROLLBACK ROLLUP ROW
   SAVEPOINT SELECT_OPTIONS_KW /*SEQUENCE*/ SHARE SLAVE /*START*/ STATEMENT STATUS
-  TABLES TEMP TEMPTABLE /*TRIGGER*/ TRIM TRIM_ARG
+  TABLES TEMP TEMPTABLE TRANSACTION /*TRIGGER*/ TRIM TRIM_ARG
   /*TRUNCATE*/
   // TODO: UNSIGNED is a reserved word and should not automatically convert into an identifer.
   // TODO: However, if not here then rules such as CAST need to be modified.
