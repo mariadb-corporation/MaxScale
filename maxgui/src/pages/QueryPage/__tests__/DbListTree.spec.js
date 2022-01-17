@@ -387,5 +387,137 @@ describe(`DbListTree - computed and other method tests`, () => {
             Trigger: [{ text: wrapper.vm.$t('dropTrigger'), type: 'DD' }],
         })
     })
-    //TODO: Add method tests
+    const expectedBoolVal = [true, false]
+    expectedBoolVal.forEach(v => {
+        it(`Should return ${v} when filter method is called`, () => {
+            wrapper = mountFactory()
+            const mockSearchItem = dummy_db_tree_data.find(node => node.name === 'mysql')
+            const textKey = 'name'
+            const searchKeyword = v ? 'sql' : 'test'
+            expect(wrapper.vm.filter(mockSearchItem, searchKeyword, textKey)).to.be[v]
+        })
+        it(`Should return ${v} when showCtxBtn method is called`, () => {
+            const node = dummy_db_tree_data.find(node => node.type === 'Schema')
+            wrapper = mountFactory({
+                data: () => ({
+                    // mock activeCtxItem
+                    activeCtxItem: v ? node : null,
+                }),
+            })
+            expect(wrapper.vm.showCtxBtn(node)).to.be[v]
+        })
+    })
+    it(`Should return nodes with less properties when minimizeNodes is called`, () => {
+        const node = dummy_db_tree_data.find(node => node.type === 'Schema')
+        wrapper = mountFactory()
+        const minimizeNode = wrapper.vm.minimizeNodes([node])[0]
+        expect(Object.keys(minimizeNode).length).to.be.below(Object.keys(node).length)
+        expect(minimizeNode).to.be.eql({ id: node.id, type: node.type, level: node.level })
+    })
+    it(`Should emit load-children event when handleLoadChildren is called`, async () => {
+        const tablesNode = dummy_db_tree_data.find(node => node.type === 'Schema').children[0]
+        let isEmitted = false
+        let expectedArg
+        const handler = param => {
+            isEmitted = true
+            expectedArg = param
+        }
+        wrapper = mountFactory({
+            // handleLoadChildren uses listeners instead of emit
+            listeners: { 'load-children': handler },
+        })
+        await wrapper.vm.handleLoadChildren(tablesNode)
+        expect(isEmitted).to.be.true
+        expect(expectedArg).to.be.eql(tablesNode)
+    })
+    it(`Should handle updateActiveNode as expected`, () => {
+        const node = dummy_db_tree_data.find(node => node.type === 'Schema')
+        wrapper = mountFactory()
+        wrapper.vm.updateActiveNode(node)
+        expect(wrapper.vm.activeNodes).to.be.eql(wrapper.vm.minimizeNodes([node]))
+    })
+    const txtOptTypes = ['INSERT', 'CLIPBOARD']
+    txtOptTypes.forEach(type => {
+        it(`Should return valid text option for type ${type} genTxtOpts is called`, () => {
+            wrapper = mountFactory()
+            expect(wrapper.vm.genTxtOpts(type)).to.be.eql([
+                { text: wrapper.vm.$t('qualifiedNameQuoted'), type },
+                { text: wrapper.vm.$t('qualifiedName'), type },
+                { text: wrapper.vm.$t('nameQuoted'), type },
+                { text: wrapper.vm.$t('name'), type },
+            ])
+        })
+    })
+
+    const prvw_node = dummy_db_tree_data.find(node => node.type === 'Schema')
+    const mockQueryOpts = [
+        { text: 'Preview Data (top 1000)', type: 'QUERY' },
+        { text: 'View Details', type: 'QUERY' },
+    ]
+    mockQueryOpts.forEach(opt => {
+        it(`Should handle ${opt.text} option as expected when handleEmitQueryOpt is called`, () => {
+            wrapper = mountFactory()
+            let updateActiveNodeSpy = sinon.spy(wrapper.vm, 'updateActiveNode')
+            wrapper.vm.handleEmitQueryOpt({ item: prvw_node, opt })
+            updateActiveNodeSpy.should.have.been.calledOnceWithExactly(prvw_node)
+            expect(wrapper.emitted()).to.have.property('get-node-data')
+            switch (opt.text) {
+                case wrapper.vm.$t('previewData'):
+                    expect(wrapper.emitted()['get-node-data'][0][0]).to.be.eql({
+                        SQL_QUERY_MODE: wrapper.vm.SQL_QUERY_MODES.PRVW_DATA,
+                        schemaId: prvw_node.id,
+                    })
+                    break
+                case wrapper.vm.$t('viewDetails'):
+                    expect(wrapper.emitted()['get-node-data'][0][0]).to.be.eql({
+                        SQL_QUERY_MODE: wrapper.vm.SQL_QUERY_MODES.PRVW_DATA_DETAILS,
+                        schemaId: prvw_node.id,
+                    })
+                    break
+            }
+        })
+    })
+    it(`Should clear altered active node when handleEmitQueryOpt is called`, () => {
+        wrapper = mountFactory({
+            computed: {
+                getAlteredActiveNode: () => ({ id: 'mock_altered_active_node' }),
+            },
+        })
+        let fnSpy = sinon.spy(wrapper.vm, 'UPDATE_TBL_CREATION_INFO_MAP')
+        wrapper.vm.handleEmitQueryOpt({ item: prvw_node, opt: mockQueryOpts[0] })
+        fnSpy.should.have.been.calledWithExactly({
+            id: wrapper.vm.active_wke_id,
+            payload: { altered_active_node: null },
+        })
+    })
+    const mockTxtOptStrs = ['Qualified Name (Quoted)', 'Qualified Name', 'Name (Quoted)', 'Name']
+
+    mockTxtOptStrs.forEach(text => {
+        it(`Should process handleTxtOpt as expected when the user selects ${text} option`, () => {
+            wrapper = mountFactory()
+            txtOptTypes.forEach(type => {
+                let copySpy
+                if (type === 'CLIPBOARD') copySpy = sinon.spy(document, 'execCommand')
+                wrapper.vm.handleTxtOpt({ item: prvw_node, opt: { text, type } })
+                switch (type) {
+                    case 'INSERT':
+                        expect(wrapper.emitted()).to.have.property('place-to-editor')
+                        if (text.includes('(Quoted)'))
+                            expect(wrapper.emitted()['place-to-editor'][0][0]).to.be.eql(
+                                wrapper.vm.$help.escapeIdentifiers(prvw_node.id)
+                            )
+                        else
+                            expect(wrapper.emitted()['place-to-editor'][0][0]).to.be.eql(
+                                prvw_node.name
+                            )
+                        break
+                    case 'CLIPBOARD':
+                        copySpy.should.have.been.calledOnceWith('copy')
+                        copySpy.restore()
+                        break
+                }
+            })
+        })
+    })
+    //TODO: Add more method tests
 })
