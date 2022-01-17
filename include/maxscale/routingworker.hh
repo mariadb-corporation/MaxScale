@@ -15,6 +15,7 @@
 #include <maxscale/ccdefs.hh>
 
 #include <atomic>
+#include <deque>
 #include <list>
 #include <mutex>
 #include <type_traits>
@@ -59,6 +60,8 @@ int mxs_rworker_get_current_id();
 
 
 MXS_END_DECLS
+
+class ServerEndpoint;
 
 namespace maxscale
 {
@@ -406,13 +409,23 @@ public:
         return m_dcbs;
     }
 
-    mxs::BackendConnection*
+    struct ConnectionResult
+    {
+        bool                    wait_for_conn {false};
+        mxs::BackendConnection* conn {nullptr};
+    };
+
+    ConnectionResult
     get_backend_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Component* pUpstream);
 
     mxs::BackendConnection* pool_get_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Component* pUpstream);
 
     void pool_close_all_conns();
     void pool_close_all_conns_by_server(SERVER* pSrv);
+
+    void add_conn_wait_entry(ServerEndpoint* ep, Session* session);
+    void erase_conn_wait_entry(ServerEndpoint* ep, Session* session);
+    void notify_connection_available(SERVER* server);
 
     static void pool_set_size(const std::string& srvname, int64_t size);
 
@@ -511,6 +524,7 @@ private:
     void process_timeouts();
     void delete_zombies();
     void rebalance();
+    void activate_waiting_endpoints();
 
     static uint32_t epoll_instance_handler(POLL_DATA* data, WORKER* worker, uint32_t events);
     uint32_t        handle_epoll_events(uint32_t events);
@@ -598,11 +612,19 @@ private:
         int                         m_capacity {0}; // Capacity for this pool.
         mutable ConnectionPoolStats m_stats;
     };
-    using ConnPoolGroup = std::map<const SERVER*, ConnectionPool>;
 
+    using ConnPoolGroup = std::map<const SERVER*, ConnectionPool>;
     ConnPoolGroup m_pool_group;     /**< Pooled connections for each server */
-    DCBHandler    m_pool_handler;
-    long          m_next_timeout_check {0};
+
+    using EndpointsBySrv = std::map<const SERVER*, std::deque<ServerEndpoint*>>;
+
+    /** Has a ServerEndpoint activation round been scheduled already? Used to avoid adding multiple identical
+     * delayed calls. */
+    bool           m_ep_activation_scheduled {false};
+    EndpointsBySrv m_eps_waiting_for_conn;      /**< ServerEndpoints waiting for a connection */
+
+    DCBHandler m_pool_handler;
+    long       m_next_timeout_check {0};
 
     std::vector<std::function<void()>> m_epoll_tick_funcs;
 };

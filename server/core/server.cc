@@ -35,6 +35,7 @@
 #include <maxscale/modutil.hh>
 
 #include "internal/config.hh"
+#include "internal/session.hh"
 
 using maxbase::Worker;
 using maxscale::RoutingWorker;
@@ -967,14 +968,23 @@ ServerEndpoint::~ServerEndpoint()
 
 bool ServerEndpoint::connect()
 {
-    mxb_assert(m_connstatus != ConnStatus::CONNECTED);
+    mxb_assert(m_connstatus == ConnStatus::NO_CONN || m_connstatus == ConnStatus::IDLE_POOLED);
     mxb::LogScope scope(m_server->name());
-    auto conn = m_session->worker()->get_backend_connection(m_server, m_session, this);
+    auto worker = m_session->worker();
+    auto res = worker->get_backend_connection(m_server, m_session, this);
     bool rval = false;
-    if (conn)
+    if (res.conn)
     {
-        m_conn = conn;
+        m_conn = res.conn;
         m_connstatus = ConnStatus::CONNECTED;
+        rval = true;
+    }
+    else if (res.wait_for_conn)
+    {
+        // 'get_backend_connection' succeeded without a connection. This means that a backend connection
+        // limit with idle pooling is in effect. A connection slot may become available soon.
+        m_connstatus = ConnStatus::WAITING_FOR_CONN;
+        worker->add_conn_wait_entry(this, static_cast<Session*>(m_session));
         rval = true;
     }
     else
@@ -989,11 +999,17 @@ void ServerEndpoint::close()
 {
     mxb::LogScope scope(m_server->name());
 
-    if (m_connstatus == ConnStatus::CONNECTED)
+    bool normal_close = (m_connstatus == ConnStatus::CONNECTED);
+    if (normal_close || m_connstatus == ConnStatus::CONNECTED_FAILED)
     {
         auto* dcb = m_conn->dcb();
-        // Try to move the connection into the pool. If it fails, close normally.
-        bool moved_to_pool = dcb->session()->normal_quit() && dcb->manager()->move_to_conn_pool(dcb);
+        bool moved_to_pool = false;
+        if (normal_close)
+        {
+            // Try to move the connection into the pool. If it fails, close normally.
+            moved_to_pool = dcb->session()->normal_quit() && dcb->manager()->move_to_conn_pool(dcb);
+        }
+
         if (moved_to_pool)
         {
             mxb_assert(dcb->is_open());
@@ -1004,8 +1020,27 @@ void ServerEndpoint::close()
             m_server->stats().remove_connection();
         }
         m_conn = nullptr;
-        m_connstatus = ConnStatus::NO_CONN;
+        m_session->worker()->notify_connection_available(m_server);
     }
+    else if (m_connstatus == ConnStatus::WAITING_FOR_CONN)
+    {
+        // Erase the entry in the wait list.
+        m_session->worker()->erase_conn_wait_entry(this, static_cast<Session*>(m_session));
+    }
+
+    // This function seems to be called twice when closing an Endpoint. Take this into account by always
+    // setting connstatus. Should be fixed properly at some point.
+    m_connstatus = ConnStatus::NO_CONN;
+}
+
+void ServerEndpoint::handle_failed_continue()
+{
+    mxs::Reply dummy;
+    // Need to give some kind of error packet or handleError will crash. The Endpoint will be closed
+    // after the call.
+    auto errorbuf = mysql_create_custom_error(
+        1, 0, 1927, "Lost connection to server when reusing connection.");
+    m_up->handleError(mxs::ErrorType::PERMANENT, errorbuf, this, dummy);
 }
 
 bool ServerEndpoint::is_open() const
@@ -1039,28 +1074,35 @@ bool ServerEndpoint::routeQuery(GWBUF* buffer)
     auto not_master = !(m_server->status() & SERVER_MASTER);
     auto opr = (not_master || is_read_only || is_read_only_trx) ? Operation::READ : Operation::WRITE;
 
-    auto write_buffer = [this, &rval, buffer]() {
-            rval = m_conn->write(buffer);
-            m_server->stats().add_packet();
-        };
-
     switch (m_connstatus)
     {
     case ConnStatus::NO_CONN:
+    case ConnStatus::CONNECTED_FAILED:
         mxb_assert(!true);      // Means that an earlier failure was not properly handled.
         break;
 
     case ConnStatus::CONNECTED:
-        write_buffer();
+        rval = m_conn->write(buffer);
+        m_server->stats().add_packet();
         break;
 
     case ConnStatus::IDLE_POOLED:
         // Connection was pre-emptively pooled. Try to get another one.
         if (connect())
         {
-            MXB_INFO("Session %lu connection to %s restored from pool.",
-                     m_session->id(), m_server->name());
-            write_buffer();
+            if (m_connstatus == ConnStatus::CONNECTED)
+            {
+                MXB_INFO("Session %lu connection to %s restored from pool.",
+                         m_session->id(), m_server->name());
+                rval = m_conn->write(buffer);
+                m_server->stats().add_packet();
+            }
+            else
+            {
+                // Waiting for another one.
+                m_delayed_packets.emplace_back(buffer);
+                rval = 1;
+            }
         }
         else
         {
@@ -1068,8 +1110,14 @@ bool ServerEndpoint::routeQuery(GWBUF* buffer)
             gwbuf_free(buffer);
         }
         break;
-    }
 
+    case ConnStatus::WAITING_FOR_CONN:
+        // Already waiting for a connection. Save incoming buffer so it can be sent once a connection
+        // is available.
+        m_delayed_packets.emplace_back(buffer);
+        rval = 1;
+        break;
+    }
     m_query_time.start(opr);    // always measure
     return rval;
 }
@@ -1117,11 +1165,67 @@ void ServerEndpoint::try_to_pool()
         m_connstatus = ConnStatus::IDLE_POOLED;
         m_conn = nullptr;
         MXB_INFO("Session %lu connection to %s pooled.", m_session->id(), m_server->name());
+        m_session->worker()->notify_connection_available(m_server);
     }
     else
     {
         m_can_try_pooling = false;
     }
+}
+
+ServerEndpoint::ContinueRes ServerEndpoint::continue_connecting()
+{
+    mxb_assert(m_connstatus == ConnStatus::WAITING_FOR_CONN);
+    auto res = m_session->worker()->get_backend_connection(m_server, m_session, this);
+    auto rval = ContinueRes::FAIL;
+    if (res.conn)
+    {
+        m_conn = res.conn;
+        m_connstatus = ConnStatus::CONNECTED;
+
+        // Send all pending packets one by one to the connection. The physical connection may not be ready
+        // yet, but the protocol should keep track of the state.
+        bool success = true;
+        for (auto& packet : m_delayed_packets)
+        {
+            if (m_conn->write(packet.release()) == 0)
+            {
+                success = false;
+                break;
+            }
+        }
+        m_delayed_packets.clear();
+
+        if (success)
+        {
+            rval = ContinueRes::SUCCESS;
+        }
+        else
+        {
+            // This special state ensures the connection is not pooled.
+            m_connstatus = ConnStatus::CONNECTED_FAILED;
+        }
+    }
+    else if (res.wait_for_conn)
+    {
+        // Still no connection.
+        rval = ContinueRes::WAIT;
+    }
+    else
+    {
+        m_connstatus = ConnStatus::NO_CONN;
+    }
+    return rval;
+}
+
+SERVER* ServerEndpoint::server() const
+{
+    return m_server;
+}
+
+MXS_SESSION* ServerEndpoint::session() const
+{
+    return m_session;
 }
 
 std::unique_ptr<mxs::Endpoint> Server::get_connection(mxs::Component* up, MXS_SESSION* session)
