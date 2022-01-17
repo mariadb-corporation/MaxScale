@@ -1247,6 +1247,54 @@ the session. For example:
 }
 ```
 
+### mxsRemoveUser
+
+#### Definition
+
+##### **mxsRemoveUser**
+
+The `mxsRemoveUser` removes a user from the local nosqlprotocol account
+database. Use [dropUser](#dropUser) if the MariaDB user should be dropped
+as well.
+
+#### Syntax
+
+The 'mxsRemoveUser' command has the following syntax:
+```
+db.runCommand(
+    {
+        mxsRemoveUser: "<name>"
+    }
+)
+```
+
+##### Command Fields
+
+The command has the following fields:
+
+Field | Type | Description
+------|------|------------
+mxsRemoveUser| string | The name of the user to be removed.
+
+##### Returns
+
+If the removal of the user succeeds, the command returns a document
+with the single field `ok` whose value is `1`.
+```
+> db.runCommand({mxsRemoveUser: "user"});
+{ "ok" : 1 }
+```
+If there is a failure of some kind, the command returns an error document
+```
+> db.runCommand({mxsRemoveUser: "user"});
+{
+	"ok" : 0,
+	"errmsg" : "User 'user@test' not found",
+	"code" : 11,
+	"codeName" : "UserNotFound"
+}
+```
+
 ### mxsSetConfig
 
 #### Definition

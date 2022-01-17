@@ -247,6 +247,40 @@ public:
     }
 };
 
+class MxsRemoveUser final : public ImmediateCommand
+{
+public:
+    static constexpr const char* const KEY = "mxsRemoveUser";
+    static constexpr const char* const HELP = "";
+
+    using ImmediateCommand::ImmediateCommand;
+
+    void populate_response(DocumentBuilder& doc) override
+    {
+        auto& um = m_database.context().um();
+
+        string db = m_database.name();
+        string user = value_as<string>();
+
+        if (!um.user_exists(db, user))
+        {
+            ostringstream ss;
+            ss << "User '" << user << "@" << db << "' not found";
+
+            throw SoftError(ss.str(), error::USER_NOT_FOUND);
+        }
+
+        if (!um.remove_user(db, user))
+        {
+            ostringstream ss;
+            ss << "Could not remove user '" << user << "@" << db << "' not found";
+
+            throw SoftError(ss.str(), error::INTERNAL_ERROR);
+        }
+
+        doc.append(kvp(key::OK, 1));
+    }
+};
 
 class MxsSetConfig;
 
