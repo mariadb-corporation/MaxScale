@@ -622,6 +622,11 @@ bool Connection::connect()
         set_ssl(m_conn);
     }
 
+    if (!m_charset.empty())
+    {
+        mysql_optionsv(m_conn, MYSQL_SET_CHARSET_NAME, m_charset.c_str());
+    }
+
     if (m_timeout)
     {
         unsigned int timeout = m_timeout;

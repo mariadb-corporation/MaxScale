@@ -58,6 +58,7 @@ int main(int argc, char** argv)
     for (std::string db : test_cases)
     {
         auto c = test.maxscale->rwsplit();
+        c.set_charset("utf8mb4");
         c.set_database(db);
 
         if (test.expect(c.connect(), "Failed to connect with database %s: %s", db.c_str(), c.error()))
