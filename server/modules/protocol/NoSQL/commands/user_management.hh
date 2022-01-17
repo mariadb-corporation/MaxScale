@@ -965,18 +965,29 @@ public:
     {
         State state;
 
-        parse();
+        m_db = m_database.name();
+        m_user = value_as<string>();
 
-        if ((m_what & ~UserInfo::MECHANISMS) != 0)
+        auto& um = m_database.context().um();
+
+        if (!um.get_info(m_db, m_user, &m_old_info))
         {
-            // Something else but the mechanisms are updated.
+            ostringstream ss;
+            ss << "Could not find user \"" << m_user << "\" for db \"" << m_db << "\"";
+
+            throw SoftError(ss.str(), error::USER_NOT_FOUND);
+        }
+
+        m_what = MxsUpdateUser::parse(KEY, um, m_doc, m_db, m_user, &m_new_info);
+
+        if ((m_what & ~(UserInfo::CUSTOM_DATA | UserInfo::MECHANISMS)) != 0)
+        {
+            // Something else but the mechanisms and/or custom_data is updated.
             state = SingleCommand::execute(ppNoSQL_response);
         }
         else
         {
-            const auto &um = m_database.context().um();
-
-            if (um.set_mechanisms(m_db, m_user, m_mechanisms))
+            if (um.update(m_db, m_user, m_what, m_new_info))
             {
                 DocumentBuilder doc;
                 doc.append(kvp(key::OK, 1));
@@ -986,7 +997,7 @@ public:
             }
             else
             {
-                throw SoftError("Could not update the mechanisms.", error::INTERNAL_ERROR);
+                throw SoftError("Could not update 'mechanisms' and/or 'custom_data'.", error::INTERNAL_ERROR);
             }
         }
 
@@ -1033,87 +1044,6 @@ protected:
     }
 
 private:
-    void parse()
-    {
-        bool digest_password = true;
-        if (optional(key::DIGEST_PASSWORD, &digest_password) && !digest_password)
-        {
-            ostringstream ss;
-            ss << "nosqlprotocol does not support that the client digests the password, "
-               << "'digestPassword' must be true.";
-
-            throw SoftError(ss.str(), error::BAD_VALUE);
-        }
-
-        m_db = m_database.name();
-        m_user = value_as<string>();
-
-        auto& um = m_database.context().um();
-
-        if (!um.get_info(m_db, m_user, &m_info))
-        {
-            ostringstream ss;
-            ss << "Could not find user \"" << m_user << "\" for db \"" << m_db << "\"";
-
-            throw SoftError(ss.str(), error::USER_NOT_FOUND);
-        }
-
-        if (optional(key::PWD, &m_pwd))
-        {
-            m_what |= UserInfo::PWD;
-        }
-
-        bsoncxx::document::view custom_data;
-        if (optional(key::CUSTOM_DATA, &custom_data))
-        {
-            m_custom_data = bsoncxx::to_json(custom_data);
-            m_what |= UserInfo::CUSTOM_DATA;
-        }
-
-        bsoncxx::array::view mechanism_names;
-        if (optional(key::MECHANISMS, &mechanism_names))
-        {
-            scram::from_bson(mechanism_names, &m_mechanisms);
-
-            if (!(m_what & UserInfo::PWD))
-            {
-                // Password is not changed => new mechanisms must be subset of old.
-                for (const auto mechanism : m_mechanisms)
-                {
-                    auto begin = m_info.mechanisms.begin();
-                    auto end = m_info.mechanisms.end();
-
-                    if (std::find(begin, end, mechanism) == end)
-                    {
-                        ostringstream ss;
-                        ss << "mechanisms field must be a subset of previously set mechanisms";
-
-                        throw SoftError(ss.str(), error::BAD_VALUE);
-                    }
-                }
-            }
-
-            m_what |= UserInfo::MECHANISMS;
-        }
-        else
-        {
-            m_mechanisms = m_info.mechanisms;
-        }
-
-        bsoncxx::array::view role_names;
-        if (optional(key::ROLES, &role_names))
-        {
-            role::from_bson(role_names, m_db, &m_roles);
-
-            m_what |= UserInfo::ROLES;
-        }
-
-        if (m_what == 0)
-        {
-            throw SoftError("Must specify at least one field to update in updateUser", error::BAD_VALUE);
-        }
-    }
-
     string generate_update_pwd()
     {
         m_action = Action::UPDATE_PASSWORD;
@@ -1125,7 +1055,7 @@ private:
         mxb_assert(m_what & UserInfo::PWD);
 
         ostringstream ss;
-        ss << "SET PASSWORD FOR " << user << " = PASSWORD('" << m_pwd << "')";
+        ss << "SET PASSWORD FOR " << user << " = PASSWORD('" << m_new_info.pwd << "')";
 
         string s = ss.str();
 
@@ -1143,7 +1073,7 @@ private:
 
         string user = "'" + m_db + "." + m_user + "'@'%'";
 
-        auto revokes = create_revoke_statements(user, m_info.roles); // Revoke according to current roles.
+        auto revokes = create_revoke_statements(user, m_old_info.roles); // Revoke according to current roles.
         m_nRevokes = revokes.size();
 
         for (const auto& revoke : revokes)
@@ -1151,7 +1081,7 @@ private:
             m_statements.push_back(revoke);
         }
 
-        auto grants = create_grant_statements(user, m_roles); // Grant according to new roles.
+        auto grants = create_grant_statements(user, m_new_info.roles); // Grant according to new roles.
         m_nGrants = grants.size();
 
         for (const auto& grant : grants)
@@ -1178,18 +1108,18 @@ private:
                 const auto& um = m_database.context().um();
 
                 UserInfo info;
-                info.pwd = m_pwd;
+                info.pwd = m_new_info.pwd;
                 uint32_t what = UserInfo::PWD;
 
                 if (m_what & UserInfo::CUSTOM_DATA)
                 {
-                    info.custom_data = m_custom_data;
+                    info.custom_data = m_new_info.custom_data;
                     what |= UserInfo::CUSTOM_DATA;
                 }
 
                 if (m_what & UserInfo::MECHANISMS)
                 {
-                    info.mechanisms = m_mechanisms;
+                    info.mechanisms = m_new_info.mechanisms;
                     what |= UserInfo::MECHANISMS;
                 }
 
@@ -1272,18 +1202,18 @@ private:
         auto& um = m_database.context().um();
 
         UserInfo info;
-        info.roles = m_roles;
+        info.roles = m_new_info.roles;
         uint32_t what = UserInfo::ROLES;
 
         if (m_what & UserInfo::CUSTOM_DATA)
         {
-            info.custom_data = m_custom_data;
+            info.custom_data = m_new_info.custom_data;
             what |= UserInfo::CUSTOM_DATA;
         }
 
         if (m_what & UserInfo::MECHANISMS)
         {
-            info.mechanisms = m_mechanisms;
+            info.mechanisms = m_new_info.mechanisms;
             what |= UserInfo::MECHANISMS;
         }
 
@@ -1423,11 +1353,8 @@ private:
     Action                   m_action = Action::UPDATE_PASSWORD;
     string                   m_db;
     string                   m_user;
-    string                   m_pwd;
-    string                   m_custom_data;
-    vector<scram::Mechanism> m_mechanisms;
-    vector<role::Role>       m_roles;
-    UserInfo                 m_info;
+    UserInfo                 m_old_info;
+    UserInfo                 m_new_info;
     uint32_t                 m_what { 0 };
     vector<string>           m_statements;
     int32_t                  m_nRevokes { 0 };

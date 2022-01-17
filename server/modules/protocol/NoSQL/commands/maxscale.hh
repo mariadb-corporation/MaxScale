@@ -57,7 +57,7 @@ public:
         }
     }
 
-    static void parse(const std::string& command,
+    static void parse(const string& command,
                       const UserManager& um,
                       const bsoncxx::document::view& doc,
                       const string& db,
@@ -390,6 +390,130 @@ public:
 
 private:
     string m_name;
+};
+
+class MxsUpdateUser final : public ImmediateCommand
+{
+public:
+    static constexpr const char* const KEY = "mxsUpdateUser";
+    static constexpr const char* const HELP = "";
+
+    using ImmediateCommand::ImmediateCommand;
+    using UserInfo = nosql::UserManager::UserInfo;
+
+    void populate_response(DocumentBuilder& doc) override
+    {
+        auto& um = m_database.context().um();
+        string db = m_database.name();
+        string user = value_as<string>();
+
+        UserInfo info;
+
+        uint32_t what = parse(KEY, um, m_doc, db, user, &info);
+
+        if (um.update(db, user, what, info))
+        {
+            doc.append(kvp(key::OK, 1));
+        }
+        else
+        {
+            ostringstream ss;
+            ss << "Could not update the user " << user << "@" << db << ".";
+
+            throw SoftError(ss.str(), error::INTERNAL_ERROR);
+        }
+    }
+
+    static uint32_t parse(const string& command,
+                          const UserManager& um,
+                          const bsoncxx::document::view& doc,
+                          const string& db,
+                          const string& user,
+                          UserInfo* pInfo)
+    {
+        uint32_t what = 0;
+
+        bool digest_password = true;
+        if (nosql::optional(command, doc, key::DIGEST_PASSWORD, &digest_password) && !digest_password)
+        {
+            ostringstream ss;
+            ss << "nosqlprotocol does not support that the client digests the password, "
+               << "'digestPassword' must be true.";
+
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+
+        UserInfo info;
+        if (!um.get_info(db, user, &info))
+        {
+            ostringstream ss;
+            ss << "Could not find user \"" << user << "\" for db \"" << db << "\"";
+
+            throw SoftError(ss.str(), error::USER_NOT_FOUND);
+        }
+
+        string pwd;
+        if (nosql::optional(command, doc, key::PWD, &pwd))
+        {
+            what |= UserInfo::PWD;
+        }
+
+        string custom_data;
+        bsoncxx::document::view custom_data_doc;
+        if (nosql::optional(command, doc, key::CUSTOM_DATA, &custom_data_doc))
+        {
+            custom_data = bsoncxx::to_json(custom_data_doc);
+            what |= UserInfo::CUSTOM_DATA;
+        }
+
+        vector<scram::Mechanism> mechanisms;
+        bsoncxx::array::view mechanism_names;
+        if (nosql::optional(command, doc, key::MECHANISMS, &mechanism_names))
+        {
+            scram::from_bson(mechanism_names, &mechanisms);
+
+            if (!(what & UserInfo::PWD))
+            {
+                // Password is not changed => new mechanisms must be subset of old.
+                for (const auto mechanism : mechanisms)
+                {
+                    auto begin = info.mechanisms.begin();
+                    auto end = info.mechanisms.end();
+
+                    if (std::find(begin, end, mechanism) == end)
+                    {
+                        ostringstream ss;
+                        ss << "mechanisms field must be a subset of previously set mechanisms";
+
+                        throw SoftError(ss.str(), error::BAD_VALUE);
+                    }
+                }
+            }
+
+            what |= UserInfo::MECHANISMS;
+        }
+
+        vector<role::Role> roles;
+        bsoncxx::array::view role_names;
+        if (nosql::optional(command, doc, key::ROLES, &role_names))
+        {
+            role::from_bson(role_names, db, &roles);
+
+            what |= UserInfo::ROLES;
+        }
+
+        if (what == 0)
+        {
+            throw SoftError("Must specify at least one field to update in mxsUpdateUser", error::BAD_VALUE);
+        }
+
+        pInfo->pwd = std::move(pwd);
+        pInfo->custom_data = std::move(custom_data);
+        pInfo->mechanisms = std::move(mechanisms);
+        pInfo->roles = std::move(roles);
+
+        return what;
+    }
 };
 
 }
