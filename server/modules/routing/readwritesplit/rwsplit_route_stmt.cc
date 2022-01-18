@@ -166,15 +166,14 @@ bool RWSplitSession::handle_target_is_all(mxs::Buffer&& buffer, const RoutingPla
 bool RWSplitSession::handle_routing_failure(mxs::Buffer&& buffer, const RoutingPlan& res)
 {
     bool ok = true;
-    auto next_master = get_master_backend();
 
-    if (should_migrate_trx(next_master))
+    if (should_migrate_trx())
     {
-        ok = start_trx_migration(next_master, buffer.get());
+        // If the connection to the previous transaction target is still open, we must close it to prevent the
+        // transaction from being accidentally committed whenever a new transaction is started on it.
+        discard_connection(m_trx.target(), "Closed due to transaction migration");
 
-        // If the current master connection is still open, we must close it to prevent the transaction from
-        // being accidentally committed whenever a new transaction is started on it.
-        discard_master_connection("Closed due to transaction migration");
+        ok = start_trx_migration(buffer.get());
     }
     else if (can_retry_query() || can_continue_trx_replay())
     {
@@ -186,7 +185,7 @@ bool RWSplitSession::handle_routing_failure(mxs::Buffer&& buffer, const RoutingP
         MXS_INFO("Sending read-only error, no valid target found for %s",
                  route_target_to_string(res.route_target));
         send_readonly_error();
-        discard_master_connection("The original master is not available");
+        discard_connection(m_current_master, "The original master is not available");
     }
     else if (res.route_target == TARGET_MASTER
              && (!m_config.delayed_retry || m_retry_duration >= m_config.delayed_retry_timeout.count()))
@@ -547,6 +546,12 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
         }
     }
 
+    if (trx_is_open() && m_trx.target() && m_trx.target()->in_use())
+    {
+        // A transaction is open on a backend, use it instead.
+        m_sescmd_replier = m_trx.target();
+    }
+
     if (m_sescmd_replier)
     {
         for (RWBackend* backend : m_raw_backends)
@@ -688,14 +693,13 @@ RWBackend* RWSplitSession::get_last_used_backend()
 RWBackend* RWSplitSession::get_target_backend(backend_type_t btype, const char* name, int max_rlag)
 {
     RWBackend* rval = nullptr;
-    auto target = m_trx.target();
 
-    if (target && trx_is_read_only())
+    if (trx_is_open() && m_trx.target())
     {
-        // Continue the read-only transaction on this backend if it's still qualifies for it
-        if (target->in_use() && (target->is_slave() || target->is_master()))
+        // A transaction that has an existing target. Continue using it as long as it remains valid.
+        if (trx_target_still_valid())
         {
-            rval = target;
+            rval = m_trx.target();
         }
     }
     else if (name)
@@ -964,23 +968,39 @@ bool RWSplitSession::should_replace_master(RWBackend* target)
            !is_locked_to_master();
 }
 
-void RWSplitSession::discard_master_connection(const std::string& error)
+void RWSplitSession::discard_connection(mxs::RWBackend* target, const std::string& error)
 {
-    if (m_current_master && m_current_master->in_use())
+    if (target && target->in_use())
     {
-        m_current_master->close();
-        m_current_master->set_close_reason(error);
-        m_qc.master_replaced();
+        target->close();
+        target->set_close_reason(error);
+
+        if (target == m_current_master)
+        {
+            m_qc.master_replaced();
+        }
     }
 }
 
 void RWSplitSession::replace_master(RWBackend* target)
 {
-    discard_master_connection("The original master is not available");
+    discard_connection(m_current_master, "The original master is not available");
     m_current_master = target;
 }
 
-bool RWSplitSession::should_migrate_trx(RWBackend* target)
+bool RWSplitSession::trx_target_still_valid() const
+{
+    bool ok = false;
+
+    if (auto target = m_trx.target(); target != nullptr && target->in_use())
+    {
+        ok = target->is_master() || (trx_is_read_only() && target->is_slave());
+    }
+
+    return ok;
+}
+
+bool RWSplitSession::should_migrate_trx() const
 {
     bool migrate = false;
 
@@ -989,14 +1009,8 @@ bool RWSplitSession::should_migrate_trx(RWBackend* target)
         && trx_is_open()        // We have an open transaction
         && m_can_replay_trx)    // The transaction can be replayed
     {
-        if (target && target != m_current_master)
+        if (!trx_target_still_valid())
         {
-            // We have a target server and it's not the current master
-            migrate = true;
-        }
-        else if (!target && (!m_current_master || !m_current_master->is_master()))
-        {
-            // We don't have a target but our current master is no longer usable
             migrate = true;
         }
     }
@@ -1004,11 +1018,11 @@ bool RWSplitSession::should_migrate_trx(RWBackend* target)
     return migrate;
 }
 
-bool RWSplitSession::start_trx_migration(RWBackend* target, GWBUF* querybuf)
+bool RWSplitSession::start_trx_migration(GWBUF* querybuf)
 {
-    if (target)
+    if (mxb_log_should_log(LOG_INFO) && m_trx.target())
     {
-        MXS_INFO("Starting transaction migration to '%s'", target->name());
+        MXS_INFO("Transaction target '%s' is no longer valid, replaying transaction", m_trx.target()->name());
     }
 
     /**

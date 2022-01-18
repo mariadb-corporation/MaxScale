@@ -388,8 +388,7 @@ static void log_server_connections(select_criteria_t criteria, const PRWBackends
 
 RWBackend* RWSplitSession::get_root_master()
 {
-    if (m_current_master && m_current_master->in_use()
-        && can_continue_using_master(m_current_master))
+    if (m_current_master && m_current_master->in_use() && m_current_master->is_master())
     {
         return m_current_master;
     }

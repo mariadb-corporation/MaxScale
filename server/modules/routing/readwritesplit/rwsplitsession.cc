@@ -863,7 +863,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
             // write to the backend is done. The mxs::Reply is updated only when the backend protocol
             // processes the query which can be out of sync when handleError is called if the disconnection
             // happens before authentication completes.
-            mxb_assert(reply.is_complete());
+            mxb_assert(reply.is_complete() || backend->should_ignore_response());
 
             /** The failure of a master is not considered a critical
              * failure as partial functionality still remains. If
@@ -1107,21 +1107,6 @@ bool RWSplitSession::supports_hint(Hint::Type hint_type) const
     }
 
     return rv;
-}
-
-/**
- * See if the current master is still a valid TARGET_MASTER candidate
- *
- * The master is valid if it's a master state or it is in maintenance mode while a transaction is open. If a
- * transaction is open to a master in maintenance mode, the connection is closed on the next COMMIT or
- * ROLLBACK.
- *
- * @see RWSplitSession::close_stale_connections()
- */
-bool RWSplitSession::can_continue_using_master(const mxs::RWBackend* master)
-{
-    auto tgt = master->target();
-    return tgt->is_master() || (master->in_use() && tgt->is_in_maint() && trx_is_open());
 }
 
 bool RWSplitSession::is_valid_for_master(const mxs::RWBackend* master)
