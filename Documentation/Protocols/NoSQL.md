@@ -118,7 +118,14 @@ readWrite|CREATE, DELETE, INDEX, INSERT, SELECT, UPDATE
 read|SELECT
 userAdmin|CREATE USER, GRANT OPTION
 
-TBW
+In addition there are `AnyDatabase` versions of `dbAdmin`, `read` and
+`readWrite` (e.g `readAnyDatabase`) that can be assigned to a user in
+the `admin` database. If so, then the privilege is granted on `*.*`,
+otherwise on `<db>.*`.
+
+Other pre-defined roles are recognized and stored in the local
+nosqlprotocol account database, but they do not affect what privileges
+are granted to the MariaDB user.
 
 ## Client Authentication
 

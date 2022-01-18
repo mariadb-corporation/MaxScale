@@ -40,28 +40,76 @@ vector<string> create_grant_or_revoke_statements(const string& user,
 
     for (const auto& role : roles)
     {
-        string db = (role.db == "admin" ? "*" : role.db);
+        bool is_admin = (role.db == "admin");
+
+        string db = role.db;
 
         vector<string> privileges;
 
         switch (role.id)
         {
+        case role::Id::DB_ADMIN_ANY_DATABASE:
+            if (is_admin)
+            {
+                db = "*";
+            }
+            else
+            {
+                ostringstream ss;
+                ss << "No role names dbAdminAnyDatabase@" << role.db;
+                throw SoftError(ss.str(), error::ROLE_NOT_FOUND);
+            }
         case role::Id::DB_ADMIN:
             privileges.push_back("ALTER");
             privileges.push_back("CREATE");
             privileges.push_back("DROP");
+            privileges.push_back("SHOW DATABASES");
+            privileges.push_back("SELECT");
             break;
 
+        case role::Id::READ_WRITE_ANY_DATABASE:
+            if (is_admin)
+            {
+                db = "*";
+            }
+            else
+            {
+                ostringstream ss;
+                ss << "No role names readWriteAnyDatabase@" << role.db;
+                throw SoftError(ss.str(), error::ROLE_NOT_FOUND);
+            }
         case role::Id::READ_WRITE:
+            privileges.push_back("CREATE");
             privileges.push_back("DELETE");
+            privileges.push_back("INDEX");
             privileges.push_back("INSERT");
+            privileges.push_back("SELECT");
             privileges.push_back("UPDATE");
+            break;
+
+        case role::Id::READ_ANY_DATABASE:
+            if (is_admin)
+            {
+                db = "*";
+            }
+            else
+            {
+                ostringstream ss;
+                ss << "No role names readAnyDatabase@" << role.db;
+                throw SoftError(ss.str(), error::ROLE_NOT_FOUND);
+            }
         case role::Id::READ:
             privileges.push_back("SELECT");
             break;
 
+        case role::Id::USER_ADMIN:
+            privileges.push_back("CREATE USER");
+            privileges.push_back("GRANT OPTION");
+            break;
+
         default:
-            mxb_assert(!true);
+            MXS_WARNING("Role %s granted/revoked to/from %s is ignored.",
+                        role::to_string(role.id).c_str(), user.c_str());
         }
 
         string statement = command + mxb::join(privileges) + " ON " + db + ".*" + preposition + user;
