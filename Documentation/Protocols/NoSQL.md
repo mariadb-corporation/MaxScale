@@ -193,7 +193,8 @@ nosqlprotocol.on_unknown_command=return_error
 ## `user`
 
    * Type: string
-   * Optional: true
+   * Mandatory: false
+   * Default: ""
 
 Specifies the _user_ to be used when connecting to the backend, if the MongoDB®
 client is not authenticated.
@@ -201,11 +202,26 @@ client is not authenticated.
 ## `password`
 
    * Type: string
-   * Optional: true
+   * Mandatory: false
+   * Default: ""
 
 Specifies the _password_ to be used when connecting to the backend, is the MongoDB®
 client is not authenticated. Note that the same _user_/_password_ combination will be
 used for all unauthenticated MongoDB® clients connecting to the same listener port.
+
+## `host`
+
+   * Type: string
+   * Mandatory: false
+   * Default: "%"
+
+Specifies the _host_ to be used when a MariaDB user is created via nosqlprotocol.
+By default all users are created as `...@'%'`, which means that it is possible to
+connect to the MariaDB server from any host using the credentials of the created
+user. For tighter security, the IP-address of the MaxScale host can be specified.
+
+NOTE: This value does **not** specify from which host it is allowed to connect to
+MaxScale.
 
 ## `on_unknown_command`
 

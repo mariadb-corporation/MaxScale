@@ -123,11 +123,13 @@ protected:
         m_user = value_as<string>();
 
         MxsAddUser::parse(KEY, um, m_doc, m_db, m_user, &m_pwd, &m_custom_data, &m_mechanisms, &m_roles);
+
+        m_host = m_database.config().host;
     }
 
     string generate_sql() override
     {
-        string user = "'" + m_db + "." + m_user + "'@'%'";
+        string user = "'" + m_db + "." + m_user + "'@'" + m_host + "'";
 
         m_statements.push_back("CREATE USER " + user + " IDENTIFIED BY '" + m_pwd + "'");
 
@@ -197,11 +199,12 @@ private:
             {
                 ComERR err(response);
 
-                MXS_ERROR("Could create user '%s.%s'@'%%', but granting access with the "
+                MXS_ERROR("Could create user '%s.%s'@'%s', but granting access with the "
                           "statement \"%s\" failed with: (%d) \"%s\". Will now attempt to "
                           "DROP the user.",
                           m_db.c_str(),
                           m_user.c_str(),
+                          m_host.c_str(),
                           m_statements[i].c_str(),
                           err.code(),
                           err.message().c_str());
@@ -249,9 +252,10 @@ private:
         {
             mxb_assert(i == m_statements.size());
 
+            const auto& config = m_database.config();
             auto& um = m_database.context().um();
 
-            if (um.add_user(m_db, m_user, m_pwd, m_custom_data, m_mechanisms, m_roles))
+            if (um.add_user(m_db, m_user, m_pwd, config.host, m_custom_data, m_mechanisms, m_roles))
             {
                 doc.append(kvp("ok", 1));
             }
@@ -281,7 +285,7 @@ private:
             m_action = Action::DROP;
 
             ostringstream sql;
-            sql << "DROP USER '" << m_db << "." << m_user << "'@'%'";
+            sql << "DROP USER '" << m_db << "." << m_user << "'@'" << m_host << "'";
 
             send_downstream_via_loop(sql.str());
         }
@@ -298,8 +302,8 @@ private:
         case ComResponse::OK_PACKET:
             {
                 ostringstream ss;
-                ss << "Could create MariaDB user '" << m_db << "." << m_user << "'@'%', but "
-                   << "could not give the required GRANTs. The current used does not have "
+                ss << "Could create MariaDB user '" << m_db << "." << m_user << "'@'" << m_host << "', "
+                   << "but could not give the required GRANTs. The current used does not have "
                    << "the required privileges. See the MaxScale log for more details.";
 
                 throw SoftError(ss.str(), error::UNAUTHORIZED);
@@ -311,8 +315,8 @@ private:
                 ComERR err(response);
 
                 ostringstream ss;
-                ss << "Could create MariaDB user '" << m_db << "." << m_user << "'@'%', but "
-                   << "could not give the required GRANTs and the subsequent attempt to delete "
+                ss << "Could create MariaDB user '" << m_db << "." << m_user << "'@'" << m_host << "', "
+                   << "but could not give the required GRANTs and the subsequent attempt to delete "
                    << "the user failed: (" << err.code() << ") \"" << err.message() << "\". "
                    << "You should now DROP the user manually.";
 
@@ -340,6 +344,7 @@ private:
     string                   m_db;
     string                   m_user;
     string                   m_pwd;
+    string                   m_host;
     std::string              m_custom_data;
     vector<scram::Mechanism> m_mechanisms;
     vector<role::Role>       m_roles;
@@ -362,9 +367,9 @@ public:
 
         const auto& um = m_database.context().um();
 
-        m_db_users = um.get_db_users(m_database.name());
+        m_mariadb_users = um.get_mariadb_users(m_database.name());
 
-        if (m_db_users.empty())
+        if (m_mariadb_users.empty())
         {
             DocumentBuilder doc;
             long n = 0;
@@ -419,13 +424,13 @@ public:
                             vector<string> users;
                             for (int i = 0; i < n; ++i)
                             {
-                                string db_user = "'" + m_db_users[i] + "'";
+                                string db_user = "'" + m_mariadb_users[i].user + "'";
                                 users.push_back(db_user);
                             }
 
                             MXS_WARNING("Dropping users %s succeeded, but dropping '%s' failed: %s",
                                         mxb::join(users, ",").c_str(),
-                                        m_db_users[n].c_str(),
+                                        m_mariadb_users[n].user.c_str(),
                                         err.message().c_str());
                         }
                         break;
@@ -433,12 +438,12 @@ public:
                     case ER_CANNOT_USER:
                         MXS_WARNING("User '%s' apparently did not exist in the MariaDB server, even "
                                     "though it should according to the nosqlprotocol book-keeping.",
-                                    m_db_users[n].c_str());
+                                    m_mariadb_users[n].user.c_str());
                         break;
 
                     default:
                         MXS_ERROR("Dropping user '%s' failed: %s",
-                                  m_db_users[n].c_str(),
+                                  m_mariadb_users[n].user.c_str(),
                                   err.message().c_str());
                     };
                 };
@@ -447,12 +452,12 @@ public:
 
         mxb_assert(pData == pEnd);
 
-        vector<string> users = m_db_users;
+        vector<UserManager::MariaDBUser> users = m_mariadb_users;
         users.resize(n);
 
         const auto& um = m_database.context().um();
 
-        if (!um.remove_db_users(users))
+        if (!um.remove_mariadb_users(users))
         {
             ostringstream ss;
             ss << "Could remove " << n << " users from MariaDB, but could not remove "
@@ -473,19 +478,19 @@ public:
 protected:
     string generate_sql() override final
     {
-        mxb_assert(!m_db_users.empty());
+        mxb_assert(!m_mariadb_users.empty());
 
         vector<string> statements;
-        for (const auto& db_user : m_db_users)
+        for (const auto& mariadb_user : m_mariadb_users)
         {
-            statements.push_back("DROP USER '" + db_user + "'@'%'");
+            statements.push_back("DROP USER '" + mariadb_user.user + "'@'" + mariadb_user.host + "'");
         }
 
         return mxb::join(statements, ";");
     };
 
 private:
-    vector<string> m_db_users;
+    vector<UserManager::MariaDBUser> m_mariadb_users;
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/dropUser/
@@ -573,20 +578,23 @@ protected:
 
         auto& um = m_database.context().um();
 
-        if (!um.user_exists(m_db, m_user))
+        UserManager::MariaDBUser mariadb_user;
+        if (!um.get_mariadb_user(m_db, m_user, &mariadb_user))
         {
             ostringstream ss;
             ss << "User \"" << m_user << "@" << m_db << "\" not found";
 
             throw SoftError(ss.str(), error::USER_NOT_FOUND);
         }
+
+        m_host = mariadb_user.host;
     }
 
     string generate_sql() override
     {
         ostringstream sql;
 
-        sql << "DROP USER '" << m_db << "." << m_user << "'@'%'";
+        sql << "DROP USER '" << m_db << "." << m_user << "'@'" << m_host << "'";
 
         return sql.str();
     }
@@ -594,6 +602,7 @@ protected:
 private:
     string m_db;
     string m_user;
+    string m_host;
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/grantRolesToUser/
@@ -758,7 +767,7 @@ private:
 
     string generate_sql() override
     {
-        string user = "'" + m_db + "." + m_user + "'@'%'";
+        string user = "'" + m_db + "." + m_user + "'@'" + m_info.host + "'";
 
         m_statements = create_grant_statements(user, m_roles);
 
@@ -937,7 +946,7 @@ private:
 
     string generate_sql() override
     {
-        string user = "'" + m_db + "." + m_user + "'@'%'";
+        string user = "'" + m_db + "." + m_user + "'@'" + m_info.host + "'";
 
         m_statements = create_revoke_statements(user, m_roles);
 
@@ -1050,7 +1059,7 @@ private:
 
         m_statements.clear();
 
-        string user = "'" + m_db + "." + m_user + "'@'%'";
+        string user = "'" + m_db + "." + m_user + "'@'" + m_old_info.host + "'";
 
         mxb_assert(m_what & UserInfo::PWD);
 
@@ -1071,7 +1080,7 @@ private:
 
         m_statements.clear();
 
-        string user = "'" + m_db + "." + m_user + "'@'%'";
+        string user = "'" + m_db + "." + m_user + "'@'" + m_old_info.host + "'";
 
         auto revokes = create_revoke_statements(user, m_old_info.roles); // Revoke according to current roles.
         m_nRevokes = revokes.size();

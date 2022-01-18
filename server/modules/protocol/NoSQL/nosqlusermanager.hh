@@ -90,6 +90,7 @@ public:
         std::string                   db;
         std::string                   user;
         std::string                   pwd;
+        std::string                   host;
         std::string                   uuid;
         std::vector<uint8_t>          salt;
         std::string                   custom_data; // JSON document
@@ -108,6 +109,7 @@ public:
     bool add_user(const std::string& db,
                   const string_view& user,
                   const string_view& pwd,
+                  const std::string& host,
                   const std::string& custom_data, // Assumed to be JSON document.
                   const std::vector<scram::Mechanism>& mechanisms,
                   const std::vector<role::Role>& roles);
@@ -148,9 +150,29 @@ public:
 
     std::vector<UserInfo> get_infos(const std::vector<std::string>& db_users) const;
 
-    std::vector<std::string> get_db_users(const std::string& db) const;
+    struct MariaDBUser
+    {
+        std::string user; // NoSQL db and user, i.e. "db.user"
+        std::string host;
+    };
 
-    bool remove_db_users(const std::vector<std::string>& db_users) const;
+    bool get_mariadb_user(const std::string& db, const std::string& user, MariaDBUser* pMariadb_user)
+    {
+        UserInfo info;
+        bool rv = get_info(db, user, &info);
+
+        if (rv)
+        {
+            pMariadb_user->user = info.db_user;
+            pMariadb_user->host = info.host;
+        }
+
+        return rv;
+    }
+
+    std::vector<MariaDBUser> get_mariadb_users(const std::string& db) const;
+
+    bool remove_mariadb_users(const std::vector<MariaDBUser>& db_users) const;
 
     bool update(const std::string& db, const std::string& user, uint32_t what, const UserInfo& info) const;
 

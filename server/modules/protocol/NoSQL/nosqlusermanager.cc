@@ -33,30 +33,34 @@ const int NOSQL_UUID_STR_LEN = 37;
 //
 static const char SQL_CREATE[] =
     "CREATE TABLE IF NOT EXISTS accounts "
-    "(db_user TEXT UNIQUE, db TEXT, user TEXT, pwd TEXT, custom_data TEXT, uuid TEXT, salt_b64 TEXT, "
-    "mechanisms TEXT, roles TEXT)";
+    "(db_user TEXT UNIQUE, db TEXT, user TEXT, pwd TEXT, host TEXT, "
+    "custom_data TEXT, uuid TEXT, salt_b64 TEXT, mechanisms TEXT, roles TEXT)";
 
 static const char SQL_INSERT_HEAD[] =
-    "INSERT INTO accounts (db_user, db, user, pwd, custom_data, uuid, salt_b64, mechanisms, roles) VALUES ";
+    "INSERT INTO accounts (db_user, db, user, pwd, host, custom_data, uuid, salt_b64, mechanisms, roles) "
+    "VALUES ";
 
 static const char SQL_DELETE_HEAD[] =
     "DELETE FROM accounts WHERE db_user = ";
 
 static const char SQL_SELECT_ONE_INFO_HEAD[] =
-    "SELECT db_user, db, user, pwd, custom_data, uuid, salt_b64, mechanisms, roles "
+    "SELECT db_user, db, user, pwd, host, custom_data, uuid, salt_b64, mechanisms, roles "
     "FROM accounts WHERE db_user = ";
 
 static const char SQL_SELECT_ALL_INFOS[] =
-    "SELECT db_user, db, user, pwd, custom_data, uuid, salt_b64, mechanisms, roles FROM accounts";
+    "SELECT db_user, db, user, pwd, host, custom_data, uuid, salt_b64, mechanisms, roles "
+    "FROM accounts";
 
 static const char SQL_SELECT_ALL_DB_INFOS_HEAD[] =
-    "SELECT db_user, db, user, pwd, custom_data, uuid, salt_b64, mechanisms, roles FROM accounts WHERE db = ";
+    "SELECT db_user, db, user, pwd, host, custom_data, uuid, salt_b64, mechanisms, roles "
+    "FROM accounts WHERE db = ";
 
 static const char SQL_SELECT_SOME_DB_INFOS_HEAD[] =
-    "SELECT db_user, db, user, pwd, custom_data, uuid, salt_b64, mechanisms, roles FROM accounts WHERE ";
+    "SELECT db_user, db, user, pwd, host, custom_data, uuid, salt_b64, mechanisms, roles "
+    "FROM accounts WHERE ";
 
-static const char SQL_SELECT_ALL_DB_USERS_HEAD[] =
-    "SELECT db_user FROM accounts WHERE db = ";
+static const char SQL_SELECT_ALL_MARIADB_USERS_HEAD[] =
+    "SELECT db_user, host FROM accounts WHERE db = ";
 
 static const char SQL_DELETE_SOME_DB_USERS_HEAD[] =
     "DELETE FROM accounts WHERE ";
@@ -70,7 +74,7 @@ static const char SQL_UPDATE_TAIL[] =
 
 int select_info_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
 {
-    mxb_assert(nColumns == 9);
+    mxb_assert(nColumns == 10);
 
     auto* pInfos = static_cast<vector<nosql::UserManager::UserInfo>*>(pData);
 
@@ -79,9 +83,10 @@ int select_info_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
     info.db = pzColumn[1];
     info.user = pzColumn[2];
     info.pwd = pzColumn[3];
-    info.custom_data = pzColumn[4];
-    info.uuid = pzColumn[5];
-    info.salt_b64 = pzColumn[6];
+    info.pwd = pzColumn[4];
+    info.custom_data = pzColumn[5];
+    info.uuid = pzColumn[6];
+    info.salt_b64 = pzColumn[7];
     info.salt = mxs::from_base64(info.salt_b64);
 
     bool ok = true;
@@ -98,12 +103,12 @@ int select_info_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
     }
 
     vector<nosql::scram::Mechanism> mechanisms;
-    if (nosql::scram::from_json(pzColumn[7], &mechanisms))
+    if (nosql::scram::from_json(pzColumn[8], &mechanisms))
     {
         info.mechanisms = std::move(mechanisms);
 
         vector<nosql::role::Role> roles;
-        if (nosql::role::from_json(pzColumn[8], &roles))
+        if (nosql::role::from_json(pzColumn[9], &roles))
         {
             info.roles = std::move(roles);
 
@@ -129,13 +134,13 @@ int select_info_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
     return 0;
 }
 
-int select_db_users_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
+int select_mariadb_users_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
 {
-    mxb_assert(nColumns == 1);
+    mxb_assert(nColumns == 2);
 
-    auto* pDb_users = static_cast<vector<string>*>(pData);
+    auto* pMariaDb_users = static_cast<vector<nosql::UserManager::MariaDBUser>*>(pData);
 
-    pDb_users->push_back(pzColumn[0]);
+    pMariaDb_users->emplace_back(nosql::UserManager::MariaDBUser { pzColumn[0], pzColumn[1] });
 
     return 0;
 }
@@ -530,6 +535,7 @@ unique_ptr<UserManager> UserManager::create(const string& name)
 bool UserManager::add_user(const string& db,
                            const string_view& user,
                            const string_view& pwd,
+                           const std::string& host,
                            const std::string& custom_data, // Assumed to be JSON document.
                            const vector<scram::Mechanism>& mechanisms,
                            const vector<role::Role>& roles)
@@ -553,6 +559,7 @@ bool UserManager::add_user(const string& db,
        << db << "', '"
        << user << "', '"
        << pwd << "', '"
+       << host << "', '"
        << custom_data << "', '"
        << zUuid << "', '"
        << salt_b64 << "', '"
@@ -731,17 +738,17 @@ vector<UserManager::UserInfo> UserManager::get_infos(const vector<string>& db_us
     return infos;
 }
 
-vector<string> UserManager::get_db_users(const string& db) const
+vector<UserManager::MariaDBUser> UserManager::get_mariadb_users(const string& db) const
 {
-    vector<string> db_users;
+    vector<MariaDBUser> mariadb_users;
 
     ostringstream ss;
-    ss << SQL_SELECT_ALL_DB_USERS_HEAD << "'" << db << "'";
+    ss << SQL_SELECT_ALL_MARIADB_USERS_HEAD << "'" << db << "'";
 
     string sql = ss.str();
 
     char* pError = nullptr;
-    int rv = sqlite3_exec(&m_db, sql.c_str(), select_db_users_cb, &db_users, &pError);
+    int rv = sqlite3_exec(&m_db, sql.c_str(), select_mariadb_users_cb, &mariadb_users, &pError);
 
     if (rv != SQLITE_OK)
     {
@@ -750,28 +757,28 @@ vector<string> UserManager::get_db_users(const string& db) const
         sqlite3_free(pError);
     }
 
-    return db_users;
+    return mariadb_users;
 }
 
-bool UserManager::remove_db_users(const std::vector<std::string>& db_users) const
+bool UserManager::remove_mariadb_users(const std::vector<MariaDBUser>& mariadb_users) const
 {
     int rv = SQLITE_OK;
 
-    if (!db_users.empty())
+    if (!mariadb_users.empty())
     {
         ostringstream ss;
 
         ss << SQL_DELETE_SOME_DB_USERS_HEAD;
 
-        auto it = db_users.begin();
-        for (; it != db_users.end(); ++it)
+        auto it = mariadb_users.begin();
+        for (; it != mariadb_users.end(); ++it)
         {
-            if (it != db_users.begin())
+            if (it != mariadb_users.begin())
             {
                 ss << " OR ";
             }
 
-            ss << "db_user = '" << *it << "'";
+            ss << "db_user = '" << it->user << "'";
         }
 
         auto sql = ss.str();

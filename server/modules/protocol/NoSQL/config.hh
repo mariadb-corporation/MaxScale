@@ -58,6 +58,7 @@ public:
     // Can only be changed via MaxScale
     std::string           user;
     std::string           password;
+    std::string           host;
     int64_t               id_length {ID_LENGTH_DEFAULT};
 
     // Can be changed from the NosQL API.
@@ -74,6 +75,7 @@ public:
     // Can only be changed via MaxScale
     static mxs::config::ParamString                      s_user;
     static mxs::config::ParamString                      s_password;
+    static mxs::config::ParamString                      s_host;
     static mxs::config::ParamCount                       s_id_length;
 
     // Can be changed from the NosQL API.
@@ -102,6 +104,7 @@ public:
     Config(const GlobalConfig& config)
         : user(config.user)
         , password(config.password)
+        , host(config.host)
         , id_length(config.id_length)
         , auto_create_databases(config.auto_create_databases)
         , auto_create_tables(config.auto_create_tables)
@@ -144,9 +147,10 @@ public:
     void copy_to(nosql::DocumentBuilder& doc) const;
 
     // Can only be changed via MaxScale
-    std::string   user;
-    std::string   password;
-    const int64_t id_length;
+    std::string       user;
+    std::string       password;
+    const std::string host;
+    const int64_t     id_length;
 
     // Can be changed from the NosQL API.
     bool                                auto_create_databases;

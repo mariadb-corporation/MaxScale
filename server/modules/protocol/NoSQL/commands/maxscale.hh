@@ -43,7 +43,9 @@ public:
 
         parse(KEY, um, m_doc, db, user, &pwd, &custom_data, &mechanisms, &roles);
 
-        if (um.add_user(db, user, pwd, custom_data, mechanisms, roles))
+        string host = m_database.config().host;
+
+        if (um.add_user(db, user, pwd, host, custom_data, mechanisms, roles))
         {
             doc.append(kvp("ok", 1));
         }
