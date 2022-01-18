@@ -173,28 +173,32 @@ changed by destroying and recreating the object in question.
 
 # Configuration
 
-The MariaDB MaxScale configuration is read from a file that MariaDB MaxScale
-will look for in the following places:
+MaxScale by default reads configuration from the file `/etc/maxscale.cnf`. If
+the command line argument `--configdir=<path>` is given, `maxscale.cnf` is
+searched for in *\<path\>* instead.  If the argument `--config=<file>` is given,
+configuration is read from the file *\<file\>*.
 
-1. By default, the file `maxscale.cnf` in the directory `/etc`
-2. The location given with the `--configdir=<path>` command line argument.
+MaxScale also looks for a directory with the same name as the configuration
+file, followed by ".d" (for example `/etc/maxscale.cnf.d`). If found, MaxScale
+recursively reads all files with the ".cnf" suffix in the directory hierarchy.
+Other files are ignored.
 
-MariaDB MaxScale will further look for a directory with the same name as the
-configuration file, followed by `.d` (for instance `/etc/maxscale.cnf.d`) and
-recursively read all files, having a `.cnf` suffix, it finds in the directory
-hierarchy. All other files will be ignored.
+After loading normal configuration files, MaxScale reads runtime-generated
+configuration files, if any, from the
+[persisted configuration files directory](#persistdir).
 
-There are no restrictions on how different configuration sections are arranged,
-but the strong suggestion is to place global settings into the configuration
-file MariaDB MaxScale is invoked with, and then, if deemed necessary, create
-separate configuration files for _servers_, _filters_, etc.
+Different configuration sections can be arranged with little restrictions.
+Global path settings such as `logdir`, `piddir` and `datadir` are only read from
+the main configuration file.  Other global settings are also best left in the
+main file to ensure they are read before other configuration sections are
+parsed.
 
-The configuration file itself is based on the
-[.ini](https://en.wikipedia.org/wiki/INI_file) file format and consists of
-various sections that are used to build the configuration; these sections define
-services, servers, listeners, monitors and global settings.
+The configuration file format used is
+[INI](https://en.wikipedia.org/wiki/INI_file), similar to the
+MariaDB Server. The files contain sections and each section can contain multiple
+key-value pairs.
 
-Comments are defined by prefixing a row with a hash (`#`). Trailing comments are
+Comments are defined by prefixing a row with a hash (#). Trailing comments are
 not supported.
 
 ```
@@ -202,13 +206,9 @@ not supported.
 some_parameter=123
 ```
 
-**Note:** Multi-line parameters have been deprecated in MaxScale 6.0 due to
-  the unintuitive way they worked when the same parameter was declared multiple
-  times.
-
-Parameters, which expect a comma-separated list of values can be defined on
-multiple lines. The following is an example of a multi-line definition.
-
+A parameter can be defined on multiple lines as shown below. A value spread over
+multiple lines is simply concatenated. The additional lines of the value
+definition need to have at least one whitespace character in the beginning.
 ```
 [MyService]
 type=service
@@ -218,14 +218,10 @@ servers=server1,
         server3
 ```
 
-The values of the parameter that are not on the first line need to have at least
-one whitespace character before them in order for them to be recognized as a
-part of the multi-line parameter.
-
 ## Names
 
 Section names may not contain whitespace and must not start with the characters
-`@@`, but otherwise there are no restrictions.
+`@@`.
 
 As the object names are used to form URLs in the MaxScale REST API, they must be
 safe for use in URLs. This means that only alphanumeric characters (i.e. `a-z`
