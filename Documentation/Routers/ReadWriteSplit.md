@@ -815,13 +815,12 @@ writes are written to binlog and thus become replicated to slaves.
 
 The following operations are routed to master:
 
-* write statements,
-* all statements within an open transaction,
-* stored procedure calls
-* user-defined function calls
-* DDL statements (`DROP`|`CREATE`|`ALTER TABLE` … etc.)
-* `EXECUTE` (prepared) statements that modify the database
-* all statements using temporary tables
+* DML statements (`INSERT`, `UPDATE`, `DELETE` etc.)
+* DDL statements (`DROP`, `CREATE`, `ALTER` etc.)
+* All statements within an open read-write transaction
+* Stored procedure calls
+* User-defined function calls
+* Statements that use `LAST_INSERT_ID()`
 
 In addition to these, if the **readwritesplit** service is configured with the
 `max_slave_replication_lag` parameter, and if all slaves suffer from too much
@@ -855,10 +854,12 @@ slaves to share the load in contrast to single master.
 Queries which can be routed to slaves must be auto committed and belong to one
 of the following group:
 
-* read-only database queries,
-* read-only queries to system, or user-defined variables,
-* `SHOW` statements
-* system function calls.
+* Read-only statements (i.e. `SELECT`) that only use read-only built-in functions
+* All statements within an explicit read-only transaction (`START TRANSACTION READ ONLY`)
+* `SHOW` statements except `SHOW MASTER STATUS`
+
+The list of supported built-in fuctions can be found
+[here](../../query_classifier/qc_sqlite/builtin_functions.c).
 
 ### Routing to every session backend
 
@@ -870,12 +871,10 @@ servers that could execute statements on behalf of this client.
 
 Session commands include for example:
 
-* `SET` statements
-* `USE `*`<dbname>`*
-* system/user-defined variable assignments embedded in read-only statements, such
-as `SELECT (@myvar := 5)`
-* `PREPARE` statements
-* `QUIT`, `PING`, `STMT RESET`, `CHANGE USER`, etc. commands
+* Commands that modify the session state (`SET`, `USE`, `CHANGE USER`)
+* Text protocol `PREPARE` statements
+* Binary protocol prepared statements
+* Other miscellaneous commands (COM_QUIT, COM_PING etc.)
 
 **NOTE**: if variable assignment is embedded in a write statement it is routed
 to _Master_ only. For example, `INSERT INTO t1 values(@myvar:=5, 7)` would be
@@ -906,9 +905,9 @@ current master.
 
 Read queries are routed to the master server in the following situations:
 
-* query is executed inside an open transaction
-* statement includes a stored procedure or an UDF call
-* if there are multiple statements inside one query e.g.
+* Query is executed inside an open read-write transaction
+* Statement includes a stored procedure or an UDF call
+* If there are multiple statements inside one query e.g.
   `INSERT INTO ... ; SELECT LAST_INSERT_ID();`
 
 ### Prepares Statement Limitations
