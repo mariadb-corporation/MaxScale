@@ -114,6 +114,7 @@ private:
 
     bool open_connections();
 
+    bool route_query(mxs::Buffer&& buffer);
     bool route_session_write(GWBUF* querybuf, uint8_t command, uint32_t type);
     void continue_large_session_write(GWBUF* querybuf, uint32_t type);
     bool write_session_command(mxs::RWBackend* backend, mxs::Buffer buffer, uint8_t cmd);
@@ -121,7 +122,6 @@ private:
     bool route_single_stmt(mxs::Buffer&& buffer, const RoutingPlan& res);
     bool route_stored_query();
     void close_stale_connections();
-    void execute_queued_commands(mxs::RWBackend* backend);
 
     int64_t         get_current_rank();
     mxs::RWBackend* get_hinted_backend(const char* name);
@@ -337,29 +337,26 @@ private:
     {
         bool can_route = false;
 
-        if (m_query_queue.empty() || gwbuf_is_replayed(buffer.get()))
+        if (m_expected_responses == 0
+            || route_info().load_data_state() != mariadb::QueryClassifier::LOAD_DATA_INACTIVE
+            || route_info().large_query())
         {
-            if (m_expected_responses == 0
-                || route_info().load_data_state() != mariadb::QueryClassifier::LOAD_DATA_INACTIVE
-                || route_info().large_query())
-            {
-                // Not currently doing anything or we're processing a multi-packet query
-                can_route = true;
-            }
-            else if (route_info().stmt_id() != MARIADB_PS_DIRECT_EXEC_ID
-                     && res.route_target == TARGET_MASTER
-                     && m_prev_plan.route_target == TARGET_MASTER
-                     && res.type == m_prev_plan.type
-                     && res.target == m_prev_plan.target
-                     && res.target == m_current_master
-                    // If transaction replay is configured, we cannot stream the queries as we need to know
-                    // what they returned in case the transaction is replayed.
-                     && (!m_config.transaction_replay || !trx_is_open()))
-            {
-                mxb_assert(res.type == RoutingPlan::Type::NORMAL);
-                mxb_assert(m_current_master->is_waiting_result());
-                can_route = true;
-            }
+            // Not currently doing anything or we're processing a multi-packet query
+            can_route = true;
+        }
+        else if (route_info().stmt_id() != MARIADB_PS_DIRECT_EXEC_ID
+                 && res.route_target == TARGET_MASTER
+                 && m_prev_plan.route_target == TARGET_MASTER
+                 && res.type == m_prev_plan.type
+                 && res.target == m_prev_plan.target
+                 && res.target == m_current_master
+                // If transaction replay is configured, we cannot stream the queries as we need to know
+                // what they returned in case the transaction is replayed.
+                 && (!m_config.transaction_replay || !trx_is_open()))
+        {
+            mxb_assert(res.type == RoutingPlan::Type::NORMAL);
+            mxb_assert(m_current_master->is_waiting_result());
+            can_route = true;
         }
 
         return can_route;
@@ -476,6 +473,10 @@ private:
     TargetSessionStats& m_server_stats;     /**< The server stats local to this thread, cached in the
                                              * session object. This avoids the lookup involved in getting
                                              * the worker-local value from the worker's container. */
+
+    // Number of queries being replayed. If this is larger than zero, the normal routeQuery method is "corked"
+    // until the retried queries have been processed. In practice this should always be either 1 or 0.
+    int m_pending_retries {0};
 
     // Map of COM_STMT_PREPARE responses mapped to their SQL
     std::unordered_map<std::string, mxs::Buffer> m_ps_cache;

@@ -496,10 +496,10 @@ class DelayedRoutingTask
     DelayedRoutingTask& operator=(const DelayedRoutingTask&) = delete;
 
 public:
-    DelayedRoutingTask(MXS_SESSION* session, mxs::Routable* down, GWBUF* buffer)
+    DelayedRoutingTask(MXS_SESSION* session, GWBUF* buffer, std::function<bool(GWBUF*)> fn)
         : m_session(session_get_ref(session))
-        , m_down(down)
         , m_buffer(buffer)
+        , m_fn(std::move(fn))
     {
     }
 
@@ -530,11 +530,11 @@ public:
                 DCB* old_dcb = dcb_get_current();
                 dcb_set_current(m_session->client_dcb);
 
-                int rc = m_down->routeQuery(buffer);
+                bool ok = m_fn(buffer);
 
                 dcb_set_current(old_dcb);
 
-                if (rc == 0)
+                if (!ok)
                 {
                     // Routing failed, send a hangup to the client.
                     m_session->client_connection()->dcb()->trigger_hangup_event();
@@ -562,9 +562,9 @@ public:
     }
 
 private:
-    MXS_SESSION*   m_session;
-    mxs::Routable* m_down;
-    GWBUF*         m_buffer;
+    MXS_SESSION*                m_session;
+    GWBUF*                      m_buffer;
+    std::function<bool(GWBUF*)> m_fn;
 };
 
 static bool delayed_routing_cb(Worker::Call::action_t action, DelayedRoutingTask* task)
@@ -584,28 +584,24 @@ static bool delayed_routing_cb(Worker::Call::action_t action, DelayedRoutingTask
     return false;
 }
 
-bool session_delay_routing(MXS_SESSION* session, mxs::Routable* down, GWBUF* buffer, int seconds)
+void session_delay_routing(MXS_SESSION* session, GWBUF* buffer, int seconds, std::function<bool(GWBUF*)> fn)
 {
-    bool success = false;
+    Worker* worker = Worker::get_current();
+    mxb_assert(worker == session->client_connection()->dcb()->owner);
 
-    try
-    {
-        Worker* worker = Worker::get_current();
-        mxb_assert(worker == session->client_connection()->dcb()->owner);
-        std::unique_ptr<DelayedRoutingTask> task(new DelayedRoutingTask(session, down, buffer));
+    auto task = std::make_unique<DelayedRoutingTask>(session, buffer, std::move(fn));
 
-        // Delay the routing for at least a millisecond
-        int32_t delay = 1 + seconds * 1000;
-        worker->delayed_call(delay, delayed_routing_cb, task.release());
+    // Delay the routing for at least a millisecond
+    int32_t delay = 1 + seconds * 1000;
+    worker->delayed_call(delay, delayed_routing_cb, task.release());
+}
 
-        success = true;
-    }
-    catch (std::bad_alloc&)
-    {
-        MXS_OOM();
-    }
-
-    return success;
+void session_delay_routing(MXS_SESSION* session, mxs::Routable* down, GWBUF* buffer, int seconds)
+{
+    session_delay_routing(
+        session, buffer, seconds, [down](GWBUF* buffer){
+            return down->routeQuery(buffer);
+        });
 }
 
 const char* session_get_close_reason(const MXS_SESSION* session)

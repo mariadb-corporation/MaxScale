@@ -100,16 +100,22 @@ bool RWSplitSession::routeQuery(GWBUF* querybuf)
     mxs::Buffer buffer(querybuf);
     mxb_assert(buffer.is_contiguous());
 
-    int rval = 0;
-
-    if (m_state == TRX_REPLAY && !gwbuf_is_replayed(buffer.get()))
+    if (m_state == TRX_REPLAY || m_pending_retries > 0 || !m_query_queue.empty())
     {
-        MXS_INFO("New %s received while transaction replay is active: %s",
-                 STRPACKETTYPE(buffer.data()[4]),
-                 buffer.get_sql().c_str());
+        MXS_INFO("New %s received while %s is active: %s",
+                 m_state == TRX_REPLAY ?  "transaction replay" : "query execution",
+                 STRPACKETTYPE(buffer.data()[4]), buffer.get_sql().c_str());
+
         m_query_queue.emplace_back(std::move(buffer));
-        return 1;
+        return true;
     }
+
+    return route_query(std::move(buffer));
+}
+
+bool RWSplitSession::route_query(mxs::Buffer&& buffer)
+{
+    bool rval = false;
 
     m_qc.update_route_info(get_current_target(), buffer.get());
     RoutingPlan res = resolve_route(buffer, route_info());
@@ -117,13 +123,13 @@ bool RWSplitSession::routeQuery(GWBUF* querybuf)
     if (can_route_query(buffer, res))
     {
         /** No active or pending queries */
-        if (route_stmt(std::move(buffer), res))
-        {
-            rval = 1;
-        }
+        rval = route_stmt(std::move(buffer), res);
     }
     else
     {
+        // The buffer should not be a replayed one
+        mxb_assert(!gwbuf_is_replayed(buffer.get()));
+
         // Roll back the query classifier state to keep it consistent.
         m_qc.revert_update();
 
@@ -136,10 +142,9 @@ bool RWSplitSession::routeQuery(GWBUF* querybuf)
                  res.target ? res.target->name() : "<no target>");
 
         mxb_assert(m_expected_responses >= 1 || !m_query_queue.empty());
-        mxb_assert(!gwbuf_is_replayed(querybuf));
 
         m_query_queue.emplace_back(std::move(buffer));
-        rval = 1;
+        rval = true;
         mxb_assert(m_expected_responses >= 1);
     }
 
@@ -643,9 +648,9 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
         rc = RouterSession::clientReply(writebuf, down, reply);
     }
 
-    if (reply.is_complete() && m_expected_responses == 0)
+    if (reply.is_complete() && m_expected_responses == 0 && m_state != TRX_REPLAY)
     {
-        execute_queued_commands(backend);
+        route_stored_query();
     }
 
     if (m_expected_responses == 0 && !trx_is_open())
@@ -658,21 +663,6 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
     }
 
     return rc;
-}
-
-void RWSplitSession::execute_queued_commands(mxs::RWBackend* backend)
-{
-    mxb_assert(m_expected_responses == 0);
-
-    if (!m_query_queue.empty() && m_state != TRX_REPLAY)
-    {
-        /**
-         * All replies received, route any stored queries. This should be done
-         * even when transaction replay is active as long as we just completed
-         * a session command.
-         */
-        route_stored_query();
-    }
 }
 
 bool RWSplitSession::can_start_trx_replay() const
@@ -735,6 +725,10 @@ bool RWSplitSession::start_trx_replay()
             m_trx.close();
             m_trx = m_orig_trx;
             m_current_query.copy_from(m_orig_stmt);
+
+            mxb_assert(std::none_of(m_query_queue.begin(), m_query_queue.end(), [](mxs::Buffer b) {
+                                        return gwbuf_is_replayed(b.get());
+                                    }));
 
             // Erase all replayed queries from the query queue to prevent checksum mismatches
             m_query_queue.erase(std::remove_if(m_query_queue.begin(), m_query_queue.end(), [](mxs::Buffer b) {

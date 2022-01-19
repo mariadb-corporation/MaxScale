@@ -63,18 +63,24 @@ bool RWSplitSession::prepare_target(RWBackend* target, route_target_t route_targ
 
 void RWSplitSession::retry_query(GWBUF* querybuf, int delay)
 {
-    /**
-     * Used to distinguish retried queries from new ones while we're doing transaction replay.
-     * Not the cleanest way to do things but this will have to do for 2.3.
-     *
-     * TODO: Figure out a way to "cork" the client DCB as that would remove the need for this and be
-     * architecturally more clear.
-     */
+    // TODO: Make sure this is no longer needed. The only place where it might matter is when a retried query
+    // is put into the query queue. This should not be possible as no retried query should be put into the
+    // pool. If it does happen, there are debug assertions that catch it.
     gwbuf_set_type(querybuf, GWBUF_TYPE_REPLAYED);
 
     // Route the query again later
-    session_delay_routing(m_pSession, this, querybuf, delay);
+    session_delay_routing(
+        m_pSession, querybuf, delay, [this](GWBUF* buffer){
+            mxb_assert(m_pending_retries > 0);
+            --m_pending_retries;
+
+            return route_query(buffer);
+        });
+
     ++m_retry_duration;
+
+    mxb_assert(m_pending_retries >= 0);
+    ++m_pending_retries;
 }
 
 bool RWSplitSession::have_connected_slaves() const

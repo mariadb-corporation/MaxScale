@@ -527,10 +527,20 @@ const char* session_get_dump_statements_str();
  * @param down    The downstream component, either a filter or a router
  * @param buffer  The buffer to route
  * @param seconds Number of seconds to wait before routing the query. Use 0 for immediate re-routing.
- *
- * @return True if queuing of the query was successful
  */
-bool session_delay_routing(MXS_SESSION* session, mxs::Routable* down, GWBUF* buffer, int seconds);
+void session_delay_routing(MXS_SESSION* session, mxs::Routable* down, GWBUF* buffer, int seconds);
+
+/**
+ * @brief Route the query again but using a custom function
+ *
+ * This version of the function can be used to
+ *
+ * @param session The current session
+ * @param buffer  The buffer to route
+ * @param seconds Number of seconds to wait before routing the query. Use 0 for immediate re-routing.
+ * @param fn      The function to call
+ */
+void session_delay_routing(MXS_SESSION* session, GWBUF* buffer, int seconds, std::function<bool(GWBUF*)> fn);
 
 /**
  * Get the reason why a session was closed
