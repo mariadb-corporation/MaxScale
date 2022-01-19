@@ -48,21 +48,22 @@ int main(int argc, char** argv)
     TestConnections::require_repl_version("10.3.8");
     TestConnections test(argc, argv);
     test.repl->execute_query_all_nodes("SET GLOBAL session_track_system_variables='last_gtid'");
+    test.repl->set_replication_delay(1);
 
     auto conn = test.maxscale->rwsplit();
     conn.connect();
-    test.expect(conn.query("CREATE OR REPLACE TABLE test.t1 (a LONGTEXT)"),
+    test.expect(conn.query("CREATE OR REPLACE TABLE test.t1 (a INT)"),
                 "Table creation should work: %s", conn.error());
     conn.disconnect();
 
-    std::string data(1000000, 'a');
     auto secondary = test.maxscale->rwsplit();
     secondary.connect();
 
-    for (int i = 0; i < 50 && test.ok(); i++)
+    for (int i = 0; i < 20 && test.ok(); i++)
     {
         test.reset_timeout();
         conn.connect();
+        std::string data = std::to_string(i);
         test.expect(conn.query("INSERT INTO test.t1 VALUES ('" + data + "')"),
                     "INSERT should work: %s", conn.error());
 
@@ -77,7 +78,6 @@ int main(int argc, char** argv)
         auto second_count = atoi(conn.field("SELECT COUNT(*) FROM test.t1").c_str());
         test.expect(second_count == i + 1, "Missing `%d` rows.", (i + 1) - second_count);
         conn.disconnect();
-
     }
 
     conn.connect();
@@ -88,5 +88,6 @@ int main(int argc, char** argv)
     // MXS-3856: Errors with causal_reads and read-only transactions
     readonly_trx_test(test);
 
+    test.repl->set_replication_delay(0);
     return test.global_result;
 }
