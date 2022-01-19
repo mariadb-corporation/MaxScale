@@ -533,8 +533,8 @@ unique_ptr<UserManager> UserManager::create(const string& name)
 }
 
 bool UserManager::add_user(const string& db,
-                           const string_view& user,
-                           const string_view& pwd,
+                           string user,
+                           string pwd,
                            const std::string& host,
                            const std::string& custom_data, // Assumed to be JSON document.
                            const vector<scram::Mechanism>& mechanisms,
@@ -545,6 +545,8 @@ bool UserManager::add_user(const string& db,
     vector<uint8_t> salt = crypto::create_random_bytes(scram::SERVER_SALT_SIZE);
     string salt_b64 = mxs::to_base64(salt);
 
+    user = nosql::escape_essential_chars(user);
+    pwd = nosql::escape_essential_chars(pwd);
     string mariadb_user = get_mariadb_user(db, user);
 
     uuid_t uuid;
@@ -585,7 +587,7 @@ bool UserManager::add_user(const string& db,
 
 bool UserManager::remove_user(const string& db, const string& user)
 {
-    string mariadb_user = get_mariadb_user(db, user);
+    string mariadb_user = get_mariadb_user(db, nosql::escape_essential_chars(user));
 
     ostringstream ss;
     ss << SQL_DELETE_HEAD << "\"" << mariadb_user << "\"";
@@ -608,7 +610,7 @@ bool UserManager::remove_user(const string& db, const string& user)
 
 bool UserManager::get_info(const string& db, const string& user, UserInfo* pInfo) const
 {
-    return get_info(get_mariadb_user(db, user), pInfo);
+    return get_info(get_mariadb_user(db, nosql::escape_essential_chars(user)), pInfo);
 }
 
 bool UserManager::get_info(const string& mariadb_user, UserInfo* pInfo) const
@@ -803,7 +805,7 @@ bool UserManager::update(const string& db, const string& user, uint32_t what, co
 
     int rv = SQLITE_OK;
 
-    string mariadb_user = get_mariadb_user(db, user);
+    string mariadb_user = get_mariadb_user(db, nosql::escape_essential_chars(user));
 
     ostringstream ss;
 

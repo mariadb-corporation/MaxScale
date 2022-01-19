@@ -107,8 +107,8 @@ public:
     }
 
     bool add_user(const std::string& db,
-                  const string_view& user,
-                  const string_view& pwd,
+                  std::string user,
+                  std::string pwd,
                   const std::string& host,
                   const std::string& custom_data, // Assumed to be JSON document.
                   const std::vector<scram::Mechanism>& mechanisms,

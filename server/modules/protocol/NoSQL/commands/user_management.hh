@@ -130,6 +130,25 @@ vector<string> create_revoke_statements(const string& user,const vector<role::Ro
     return create_grant_or_revoke_statements(user, "REVOKE ", " FROM ", roles);
 }
 
+string get_nosql_account(const string& db, const string& user)
+{
+    return user + "@" + db;
+}
+
+string get_mariadb_account(string db, string user, const string& host)
+{
+    ostringstream ss;
+    ss << "'"
+       << nosql::escape_essential_chars(db)
+       << "."
+       << nosql::escape_essential_chars(user)
+       << "'@'"
+       << host
+       << "'";
+
+    return ss.str();
+}
+
 }
 
 namespace command
@@ -177,11 +196,11 @@ protected:
 
     string generate_sql() override
     {
-        string user = "'" + m_db + "." + m_user + "'@'" + m_host + "'";
+        string account = get_mariadb_account(m_db, m_user, m_host);
 
-        m_statements.push_back("CREATE USER " + user + " IDENTIFIED BY '" + m_pwd + "'");
+        m_statements.push_back("CREATE USER " + account + " IDENTIFIED BY '" + m_pwd + "'");
 
-        auto grants = create_grant_statements(user, m_roles);
+        auto grants = create_grant_statements(account, m_roles);
 
         m_statements.insert(m_statements.end(), grants.begin(), grants.end());
 
@@ -568,7 +587,7 @@ public:
                     {
                         // We assume it's because the user does not exist.
                         ostringstream ss;
-                        ss << "User \"" << m_user << "@" << m_db << "\" not found";
+                        ss << "User \"" << get_nosql_account(m_db, m_user) << "\" not found";
 
                         throw SoftError(ss.str(), error::USER_NOT_FOUND);
                     }
@@ -601,7 +620,7 @@ public:
                 else
                 {
                     ostringstream ss;
-                    ss << "Could remove user \"" << m_user << "@" << m_db << "\" from "
+                    ss << "Could remove user \"" << get_nosql_account(m_db, m_user) << "\" from "
                        << "MariaDB backend, but not from local database.";
 
                     throw SoftError(ss.str(), error::INTERNAL_ERROR);
@@ -630,7 +649,7 @@ protected:
         if (!um.get_mariadb_account(m_db, m_user, &mariadb_account))
         {
             ostringstream ss;
-            ss << "User \"" << m_user << "@" << m_db << "\" not found";
+            ss << "User \"" << get_nosql_account(m_db, m_user) << "\" not found";
 
             throw SoftError(ss.str(), error::USER_NOT_FOUND);
         }
@@ -815,9 +834,9 @@ private:
 
     string generate_sql() override
     {
-        string user = "'" + m_db + "." + m_user + "'@'" + m_info.host + "'";
+        string account = get_mariadb_account(m_db, m_user, m_info.host);
 
-        m_statements = create_grant_statements(user, m_roles);
+        m_statements = create_grant_statements(account, m_roles);
 
         return mxb::join(m_statements, ";");
     }
@@ -994,9 +1013,9 @@ private:
 
     string generate_sql() override
     {
-        string user = "'" + m_db + "." + m_user + "'@'" + m_info.host + "'";
+        string account = get_mariadb_account(m_db, m_user, m_info.host);
 
-        m_statements = create_revoke_statements(user, m_roles);
+        m_statements = create_revoke_statements(account, m_roles);
 
         return mxb::join(m_statements, ";");
     }
@@ -1107,12 +1126,12 @@ private:
 
         m_statements.clear();
 
-        string user = "'" + m_db + "." + m_user + "'@'" + m_old_info.host + "'";
+        string account = get_mariadb_account(m_db, m_user, m_old_info.host);
 
         mxb_assert(m_what & UserInfo::PWD);
 
         ostringstream ss;
-        ss << "SET PASSWORD FOR " << user << " = PASSWORD('" << m_new_info.pwd << "')";
+        ss << "SET PASSWORD FOR " << account << " = PASSWORD('" << m_new_info.pwd << "')";
 
         string s = ss.str();
 
@@ -1128,9 +1147,10 @@ private:
 
         m_statements.clear();
 
-        string user = "'" + m_db + "." + m_user + "'@'" + m_old_info.host + "'";
+        string account = get_mariadb_account(m_db, m_user, m_old_info.host);
 
-        auto revokes = create_revoke_statements(user, m_old_info.roles); // Revoke according to current roles.
+         // Revoke according to current roles.
+        auto revokes = create_revoke_statements(account, m_old_info.roles);
         m_nRevokes = revokes.size();
 
         for (const auto& revoke : revokes)
@@ -1138,7 +1158,8 @@ private:
             m_statements.push_back(revoke);
         }
 
-        auto grants = create_grant_statements(user, m_new_info.roles); // Grant according to new roles.
+        // Grant according to new roles.
+        auto grants = create_grant_statements(account, m_new_info.roles);
         m_nGrants = grants.size();
 
         for (const auto& grant : grants)
@@ -1205,7 +1226,7 @@ private:
                     ostringstream ss;
                     ss << "Could update the password in the MariaDB server, but could not store "
                        << "it in the local nosqlprotocol database. It will no longer be possible "
-                       << "to log in as " << m_user << "@" << m_db << ".";
+                       << "to log in as \"" << get_nosql_account(m_db, m_user) << "\".";
 
                     throw SoftError(ss.str(), error::INTERNAL_ERROR);
                 }
