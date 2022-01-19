@@ -345,6 +345,11 @@ string nosql::escape_essential_chars(string&& from)
     return to;
 }
 
+bool nosql::is_valid_database_name(const std::string& name)
+{
+    return !name.empty() && name.find_first_of(" /\\.\"$") == string::npos;
+}
+
 template<>
 bool nosql::element_as(const bsoncxx::document::element& element,
                        Conversion conversion,
