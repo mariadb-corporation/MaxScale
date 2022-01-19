@@ -19,7 +19,7 @@ exports.builder = function (yargs) {
   yargs
     .group(["force"], "Set options:")
     .option("force", {
-      describe: "Forcefully close all connections to the target server",
+      describe: "If combined with the `maintenance` state, this forcefully closes all connections to the target server",
       type: "boolean",
       default: false,
     })
@@ -40,7 +40,9 @@ exports.builder = function (yargs) {
               "it are allowed but existing connections are allowed to gracefully close. " +
               "Servers with the `Master` status cannot be drained or " +
               "set into maintenance mode. To clear a state set by this command, use " +
-              "the `clear server` command."
+              "the `clear server` command.\n" +
+              "\n" +
+              "To forcefully close all connections to a server, use `set server <name> maintenance --force`\n"
           )
           .usage("Usage: set server <server> <state>");
       },

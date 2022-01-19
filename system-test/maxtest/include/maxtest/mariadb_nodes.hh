@@ -334,6 +334,15 @@ public:
     int execute_query_all_nodes(const char* sql);
 
     /**
+     * Add MASTER_DELAY to the replication configuration
+     *
+     * This introduces artificial replication lag that can be used to test various lag related things.
+     *
+     * @param delay The number of seconds to delay the replication for, zero for no delay
+     */
+    void set_replication_delay(uint32_t delay);
+
+    /**
      * @brief Close all connections to this node
      *
      * This will kill all connections that have been created to this node.

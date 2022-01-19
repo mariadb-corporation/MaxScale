@@ -667,6 +667,20 @@ int MariaDBCluster::execute_query_all_nodes(const char* sql)
     return local_result;
 }
 
+void MariaDBCluster::set_replication_delay(uint32_t delay)
+{
+    for (int i = 0; i < N; i++)
+    {
+        auto c = get_connection(i);
+        c.connect();
+
+        if (!c.rows("SHOW SLAVE STATUS").empty())
+        {
+            c.query("STOP SLAVE; CHANGE MASTER TO MASTER_DELAY=" + std::to_string(delay) + "; START SLAVE");
+        }
+    }
+}
+
 void MariaDBCluster::close_active_connections()
 {
     if (this->nodes[0] == NULL)
