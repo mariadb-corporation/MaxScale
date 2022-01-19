@@ -415,9 +415,9 @@ public:
 
         const auto& um = m_database.context().um();
 
-        m_mariadb_users = um.get_mariadb_users(m_database.name());
+        m_mariadb_accounts = um.get_mariadb_accounts(m_database.name());
 
-        if (m_mariadb_users.empty())
+        if (m_mariadb_accounts.empty())
         {
             DocumentBuilder doc;
             long n = 0;
@@ -472,13 +472,13 @@ public:
                             vector<string> users;
                             for (int i = 0; i < n; ++i)
                             {
-                                string db_user = "'" + m_mariadb_users[i].user + "'";
-                                users.push_back(db_user);
+                                string mariadb_user = "'" + m_mariadb_accounts[i].user + "'";
+                                users.push_back(mariadb_user);
                             }
 
                             MXS_WARNING("Dropping users %s succeeded, but dropping '%s' failed: %s",
                                         mxb::join(users, ",").c_str(),
-                                        m_mariadb_users[n].user.c_str(),
+                                        m_mariadb_accounts[n].user.c_str(),
                                         err.message().c_str());
                         }
                         break;
@@ -486,12 +486,12 @@ public:
                     case ER_CANNOT_USER:
                         MXS_WARNING("User '%s' apparently did not exist in the MariaDB server, even "
                                     "though it should according to the nosqlprotocol book-keeping.",
-                                    m_mariadb_users[n].user.c_str());
+                                    m_mariadb_accounts[n].user.c_str());
                         break;
 
                     default:
                         MXS_ERROR("Dropping user '%s' failed: %s",
-                                  m_mariadb_users[n].user.c_str(),
+                                  m_mariadb_accounts[n].user.c_str(),
                                   err.message().c_str());
                     };
                 };
@@ -500,12 +500,12 @@ public:
 
         mxb_assert(pData == pEnd);
 
-        vector<UserManager::MariaDBUser> users = m_mariadb_users;
-        users.resize(n);
+        vector<UserManager::MariaDBAccount> accounts = m_mariadb_accounts;
+        accounts.resize(n);
 
         const auto& um = m_database.context().um();
 
-        if (!um.remove_mariadb_users(users))
+        if (!um.remove_mariadb_accounts(accounts))
         {
             ostringstream ss;
             ss << "Could remove " << n << " users from MariaDB, but could not remove "
@@ -526,19 +526,19 @@ public:
 protected:
     string generate_sql() override final
     {
-        mxb_assert(!m_mariadb_users.empty());
+        mxb_assert(!m_mariadb_accounts.empty());
 
         vector<string> statements;
-        for (const auto& mariadb_user : m_mariadb_users)
+        for (const auto& mariadb_account : m_mariadb_accounts)
         {
-            statements.push_back("DROP USER '" + mariadb_user.user + "'@'" + mariadb_user.host + "'");
+            statements.push_back("DROP USER '" + mariadb_account.user + "'@'" + mariadb_account.host + "'");
         }
 
         return mxb::join(statements, ";");
     };
 
 private:
-    vector<UserManager::MariaDBUser> m_mariadb_users;
+    vector<UserManager::MariaDBAccount> m_mariadb_accounts;
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/dropUser/
@@ -626,8 +626,8 @@ protected:
 
         auto& um = m_database.context().um();
 
-        UserManager::MariaDBUser mariadb_user;
-        if (!um.get_mariadb_user(m_db, m_user, &mariadb_user))
+        UserManager::MariaDBAccount mariadb_account;
+        if (!um.get_mariadb_account(m_db, m_user, &mariadb_account))
         {
             ostringstream ss;
             ss << "User \"" << m_user << "@" << m_db << "\" not found";
@@ -635,7 +635,7 @@ protected:
             throw SoftError(ss.str(), error::USER_NOT_FOUND);
         }
 
-        m_host = mariadb_user.host;
+        m_host = mariadb_account.host;
     }
 
     string generate_sql() override
@@ -1475,7 +1475,7 @@ private:
             throw SoftError("$and/$or/$nor must be a nonempty array", error::BAD_VALUE);
         }
 
-        vector<string> db_users;
+        vector<string> mariadb_users;
 
         for (const auto& element: users)
         {
@@ -1486,9 +1486,9 @@ private:
                     string_view user = element.get_utf8();
                     ostringstream ss;
                     ss << m_database.name() << "." << user;
-                    auto db_user = ss.str();
+                    auto mariadb_user = ss.str();
 
-                    db_users.push_back(db_user);
+                    mariadb_users.push_back(mariadb_user);
                 }
                 break;
 
@@ -1499,9 +1499,9 @@ private:
                     string user = get_string(doc, key::USER);
                     string db = get_string(doc, key::DB);
 
-                    auto db_user = db + "." + user;
+                    auto mariadb_user = db + "." + user;
 
-                    db_users.push_back(db_user);
+                    mariadb_users.push_back(mariadb_user);
                 }
                 break;
 
@@ -1510,7 +1510,7 @@ private:
             }
         }
 
-        vector<UserInfo> infos = um.get_infos(db_users);
+        vector<UserInfo> infos = um.get_infos(mariadb_users);
 
         add_users(doc, infos);
         doc.append(kvp(key::OK, 1));
@@ -1581,7 +1581,7 @@ private:
         }
 
         DocumentBuilder user;
-        user.append(kvp(key::_ID, info.db_user));
+        user.append(kvp(key::_ID, info.mariadb_user));
 
         uuid_t uuid;
         if (uuid_parse(info.uuid.c_str(), uuid) == 0)
@@ -1595,7 +1595,7 @@ private:
         }
         else
         {
-            MXS_ERROR("The uuid '%s' of '%s' is invalid.", info.uuid.c_str(), info.db_user.c_str());
+            MXS_ERROR("The uuid '%s' of '%s' is invalid.", info.uuid.c_str(), info.mariadb_user.c_str());
         }
 
         if (!info.custom_data.empty())

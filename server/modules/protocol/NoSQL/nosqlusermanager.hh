@@ -86,7 +86,7 @@ public:
             MASK = (PWD | MECHANISMS | ROLES | CUSTOM_DATA)
         };
 
-        std::string                   db_user;
+        std::string                   mariadb_user;
         std::string                   db;
         std::string                   user;
         std::string                   pwd;
@@ -118,7 +118,7 @@ public:
 
     bool get_info(const std::string& db, const std::string& user, UserInfo* pInfo) const;
 
-    bool get_info(const std::string& db_user, UserInfo* pInfo) const;
+    bool get_info(const std::string& mariadb_user, UserInfo* pInfo) const;
 
     bool get_pwd(const std::string& db, const std::string& user, std::string* pPwd) const;
 
@@ -134,45 +134,45 @@ public:
         return get_info(db, std::string(user.data(), user.length()), nullptr);
     }
 
-    bool user_exists(const std::string& db_user) const
+    bool user_exists(const std::string& mariadb_user) const
     {
-        return get_info(db_user, nullptr);
+        return get_info(mariadb_user, nullptr);
     }
 
-    bool user_exists(const string_view& db_user) const
+    bool user_exists(const string_view& mariadb_user) const
     {
-        return get_info(std::string(db_user.data(), db_user.length()), nullptr);
+        return get_info(std::string(mariadb_user.data(), mariadb_user.length()), nullptr);
     }
 
     std::vector<UserInfo> get_infos() const;
 
     std::vector<UserInfo> get_infos(const std::string& db) const;
 
-    std::vector<UserInfo> get_infos(const std::vector<std::string>& db_users) const;
+    std::vector<UserInfo> get_infos(const std::vector<std::string>& mariadb_users) const;
 
-    struct MariaDBUser
+    struct MariaDBAccount
     {
         std::string user; // NoSQL db and user, i.e. "db.user"
         std::string host;
     };
 
-    bool get_mariadb_user(const std::string& db, const std::string& user, MariaDBUser* pMariadb_user)
+    bool get_mariadb_account(const std::string& db, const std::string& user, MariaDBAccount* pMariadb_account)
     {
         UserInfo info;
         bool rv = get_info(db, user, &info);
 
         if (rv)
         {
-            pMariadb_user->user = info.db_user;
-            pMariadb_user->host = info.host;
+            pMariadb_account->user = info.mariadb_user;
+            pMariadb_account->host = info.host;
         }
 
         return rv;
     }
 
-    std::vector<MariaDBUser> get_mariadb_users(const std::string& db) const;
+    std::vector<MariaDBAccount> get_mariadb_accounts(const std::string& db) const;
 
-    bool remove_mariadb_users(const std::vector<MariaDBUser>& db_users) const;
+    bool remove_mariadb_accounts(const std::vector<MariaDBAccount>& mariadb_accounts) const;
 
     bool update(const std::string& db, const std::string& user, uint32_t what, const UserInfo& info) const;
 
@@ -194,12 +194,12 @@ public:
         return update(db, user, UserInfo::ROLES, info);
     }
 
-    static std::string get_db_user(const std::string& db, const std::string& user)
+    static std::string get_mariadb_user(const std::string& db, const std::string& user)
     {
         return db + "." + user;
     }
 
-    static std::string get_db_user(const std::string& db, const string_view& user)
+    static std::string get_mariadb_user(const std::string& db, const string_view& user)
     {
         return db + "." + std::string(user.data(), user.length());
     }
