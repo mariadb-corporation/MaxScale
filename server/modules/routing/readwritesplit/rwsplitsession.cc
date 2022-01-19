@@ -902,20 +902,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
             }
             else if (m_wait_gtid == READING_GTID)
             {
-                mxb_assert_message(m_current_query.empty(),
-                                   "Current query should be empty but it contains: %s",
-                                   m_current_query.get_sql().c_str());
-                mxb_assert_message(!m_query_queue.empty(), "Query queue should contain at least one query");
-                GWBUF* tmp = m_query_queue.front().release();
-                m_query_queue.pop_front();
-
-                // Retry the the original query that triggered the GTID probe.
-                retry_query(tmp, 0);
-                can_continue = true;
-
-                // Revert back to the default state. This causes the GTID probe to start again. If we cannot
-                // reconnect to the master, the session will be closed when the next GTID probe is routed.
-                m_wait_gtid = NONE;
+                can_continue = retry_gtid_probe();
             }
             else if (can_retry_query() && can_recover_master())
             {

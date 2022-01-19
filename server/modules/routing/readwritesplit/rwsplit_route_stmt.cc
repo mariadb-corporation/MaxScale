@@ -186,6 +186,11 @@ bool RWSplitSession::handle_routing_failure(mxs::Buffer&& buffer, const RoutingP
         MXS_INFO("Delaying routing: %s", buffer.get_sql().c_str());
         retry_query(buffer.release());
     }
+    else if (m_wait_gtid == READING_GTID)
+    {
+        mxb_assert(buffer.get_sql() == "SELECT @@gtid_current_pos");
+        ok = retry_gtid_probe();
+    }
     else if (m_config.master_failure_mode == RW_ERROR_ON_WRITE)
     {
         MXS_INFO("Sending read-only error, no valid target found for %s",

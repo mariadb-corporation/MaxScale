@@ -292,6 +292,29 @@ std::pair<mxs::Buffer, RWSplitSession::RoutingPlan> RWSplitSession::start_gtid_p
     return {buffer, plan};
 }
 
+bool RWSplitSession::retry_gtid_probe()
+{
+    bool ok = false;
+
+    if (m_config.delayed_retry && m_retry_duration < m_config.delayed_retry_timeout.count())
+    {
+        mxb_assert_message(m_current_query.empty(), "Current query should be empty but it contains: %s",
+                           m_current_query.get_sql().c_str());
+        mxb_assert_message(!m_query_queue.empty(), "Query queue should contain at least one query");
+
+        // Retry the the original query that triggered the GTID probe.
+        retry_query(m_query_queue.front().release(), 1);
+        m_query_queue.pop_front();
+
+        // Revert back to the default state. This causes the GTID probe to start again. If we cannot
+        // reconnect to the master, the session will be closed when the next GTID probe is routed.
+        m_wait_gtid = NONE;
+        ok = true;
+    }
+
+    return ok;
+}
+
 GWBUF* RWSplitSession::parse_gtid_result(GWBUF* buffer, const mxs::Reply& reply)
 {
     mxb_assert(!reply.error());

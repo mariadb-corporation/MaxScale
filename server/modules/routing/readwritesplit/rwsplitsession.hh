@@ -180,6 +180,7 @@ private:
 
     bool                                need_gtid_probe(GWBUF* buffer, const RoutingPlan& plan) const;
     std::pair<mxs::Buffer, RoutingPlan> start_gtid_probe();
+    bool                                retry_gtid_probe();
     GWBUF*                              parse_gtid_result(GWBUF* buffer, const mxs::Reply& reply);
 
     int get_max_replication_lag();
