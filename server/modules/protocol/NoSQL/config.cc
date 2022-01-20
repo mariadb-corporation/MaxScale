@@ -33,12 +33,14 @@ mxs::config::Specification specification(MXS_MODULE_NAME, mxs::config::Specifica
 mxs::config::ParamString GlobalConfig::s_user(
     &nosqlprotocol::specification,
     "user",
-    "The user to use when connecting to the backend.");
+    "The user to use when connecting to the backend.",
+    "");
 
 mxs::config::ParamString GlobalConfig::s_password(
     &nosqlprotocol::specification,
     "password",
-    "The password to use when connecting to the backend.");
+    "The password to use when connecting to the backend.",
+    "");
 
 mxs::config::ParamCount GlobalConfig::s_id_length(
     &nosqlprotocol::specification,

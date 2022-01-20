@@ -10,7 +10,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
 #pragma once
 
 #include "nosqlprotocol.hh"
@@ -306,10 +305,9 @@ class OpQueryCommand final : public PacketCommand<packet::Query>
 public:
     OpQueryCommand(Database* pDatabase,
                    GWBUF* pRequest,
-                   packet::Query&& req)
-        : PacketCommand<packet::Query>(pDatabase, pRequest, std::move(req), ResponseKind::REPLY)
-    {
-    }
+                   packet::Query&& req);
+
+    bool session_must_be_ready() const override;
 
     std::string description() const override;
 
@@ -322,9 +320,18 @@ private:
                     const bsoncxx::document::element& orderby = bsoncxx::document::element());
 
 private:
+    enum class Kind
+    {
+        EMPTY,
+        IS_MASTER,
+        QUERY,
+        IMPLICIT_QUERY,
+    };
+
     int32_t                  m_nReturn      { DEFAULT_CURSOR_RETURN };
     bool                     m_single_batch { false };
     std::vector<std::string> m_extractions;
+    Kind                     m_kind         { Kind::EMPTY };
 };
 
 //
@@ -472,17 +479,7 @@ protected:
                   int error_code,
                   Conversion conversion = Conversion::STRICT) const
     {
-        bool rv = false;
-
-        auto element = doc[zKey];
-
-        if (element)
-        {
-            *pElement = element_as<Type>(m_name, zKey, element, error_code, conversion);
-            rv = true;
-        }
-
-        return rv;
+        return nosql::optional(m_name, doc, zKey, pElement, error_code, conversion);
     }
 
     template<class Type>
@@ -491,7 +488,7 @@ protected:
                   Type* pElement,
                   Conversion conversion = Conversion::STRICT) const
     {
-        return optional(doc, zKey, pElement, error::TYPE_MISMATCH, conversion);
+        return nosql::optional(m_name, doc, zKey, pElement, conversion);
     }
 
     template<class Type>
@@ -500,7 +497,7 @@ protected:
                   Type* pElement,
                   Conversion conversion = Conversion::STRICT) const
     {
-        return optional(doc, key.c_str(), pElement, error::TYPE_MISMATCH, conversion);
+        return optional(doc, key.c_str(), pElement, conversion);
     }
 
     template<class Type>
@@ -518,7 +515,7 @@ protected:
                   Type* pElement,
                   Conversion conversion = Conversion::STRICT) const
     {
-        return optional(m_doc, zKey, pElement, error::TYPE_MISMATCH, conversion);
+        return optional(m_doc, zKey, pElement, conversion);
     }
 
     template<class Type>

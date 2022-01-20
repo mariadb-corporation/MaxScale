@@ -13,6 +13,8 @@
 
 #include "nosqlbase.hh"
 #include "nosqlcommand.hh"
+#include "nosqldatabase.hh"
+#include <mysqld_error.h>
 
 using namespace std;
 
@@ -147,24 +149,77 @@ GWBUF* MariaDBError::create_response(const Command& command) const
 
 void MariaDBError::create_response(const Command& command, DocumentBuilder& doc) const
 {
-    string json = command.to_json();
-    string sql = command.last_statement();
+    bool create_default = true;
 
-    DocumentBuilder mariadb;
-    mariadb.append(kvp(key::CODE, m_mariadb_code));
-    mariadb.append(kvp(key::MESSAGE, m_mariadb_message));
-    mariadb.append(kvp(key::COMMAND, json));
-    mariadb.append(kvp(key::SQL, sql));
+    if (m_mariadb_code == ER_CONNECTION_KILLED)
+    {
+        // This may be due to an authentication error, but that information is lost
+        // except in the message itself.
 
-    doc.append(kvp("$err", what()));
-    auto protocol_code = error::from_mariadb_code(m_mariadb_code);;
-    doc.append(kvp(key::CODE, protocol_code));
-    doc.append(kvp(key::CODE_NAME, error::name(protocol_code)));
-    doc.append(kvp(key::MARIADB, mariadb.extract()));
+        static const char AUTHENTICATION_TO[] = "Authentication to ";
 
-    MXS_ERROR("Protocol command failed due to MariaDB error: "
-              "json = \"%s\", code = %d, message = \"%s\", sql = \"%s\"",
-              json.c_str(), m_mariadb_code, m_mariadb_message.c_str(), sql.c_str());
+        if (m_mariadb_message.substr(0, sizeof(AUTHENTICATION_TO) - 1) == AUTHENTICATION_TO)
+        {
+            // Ok, we have something like "Authentication to 'Server1' failed: 1045, #28000: ..."
+
+            auto message = m_mariadb_message.substr(sizeof(AUTHENTICATION_TO));
+
+            static const char FAILED[] = "' failed: ";
+
+            auto i = message.find(FAILED);
+
+            if (i != string::npos)
+            {
+                i += sizeof(FAILED) - 1;
+                auto j = message.find(",", i);
+
+                if (j != string::npos)
+                {
+                    // So, in the string "...failed: 1045,...", i points at "1" and j at ",".
+                    auto s = message.substr(i, j);
+
+                    if (atoi(s.c_str()) == ER_ACCESS_DENIED_ERROR)
+                    {
+                        // Ok, it was an authentication error that lead to the
+                        // connection being closed.
+
+                        ostringstream ss;
+                        ss << "not authorized on " << command.database().name() << " to execute command "
+                           << command.to_json();
+
+                        doc.append(kvp(key::OK, 0));
+                        doc.append(kvp(key::ERRMSG, ss.str()));
+                        doc.append(kvp(key::CODE, error::UNAUTHORIZED));
+                        doc.append(kvp(key::CODE_NAME, error::name(error::UNAUTHORIZED)));
+
+                        create_default = false;
+                    }
+                }
+            }
+        }
+    }
+
+    if (create_default)
+    {
+        string json = command.to_json();
+        string sql = command.last_statement();
+
+        DocumentBuilder mariadb;
+        mariadb.append(kvp(key::CODE, m_mariadb_code));
+        mariadb.append(kvp(key::MESSAGE, m_mariadb_message));
+        mariadb.append(kvp(key::COMMAND, json));
+        mariadb.append(kvp(key::SQL, sql));
+
+        doc.append(kvp("$err", what()));
+        auto protocol_code = error::from_mariadb_code(m_mariadb_code);;
+        doc.append(kvp(key::CODE, protocol_code));
+        doc.append(kvp(key::CODE_NAME, error::name(protocol_code)));
+        doc.append(kvp(key::MARIADB, mariadb.extract()));
+
+        MXS_ERROR("Protocol command failed due to MariaDB error: "
+                  "json = \"%s\", code = %d, message = \"%s\", sql = \"%s\"",
+                  json.c_str(), m_mariadb_code, m_mariadb_message.c_str(), sql.c_str());
+    }
 }
 
 unique_ptr<LastError> MariaDBError::create_last_error() const

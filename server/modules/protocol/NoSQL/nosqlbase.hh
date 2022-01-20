@@ -614,4 +614,35 @@ bsoncxx::types::b_binary element_as<bsoncxx::types::b_binary>(const std::string&
                                                               int error_code,
                                                               Conversion conversion);
 
+template<class Type>
+bool optional(const std::string& command,
+              const bsoncxx::document::view& doc,
+              const char* zKey,
+              Type* pElement,
+              int error_code,
+              Conversion conversion = Conversion::STRICT)
+{
+    bool rv = false;
+
+    auto element = doc[zKey];
+
+    if (element)
+    {
+        *pElement = element_as<Type>(command, zKey, element, error_code, conversion);
+        rv = true;
+    }
+
+    return rv;
+}
+
+template<class Type>
+bool optional(const std::string& command,
+              const bsoncxx::document::view& doc,
+              const char* zKey,
+              Type* pElement,
+              Conversion conversion = Conversion::STRICT)
+{
+    return optional(command, doc, zKey, pElement, error::TYPE_MISMATCH, conversion);
+}
+
 }

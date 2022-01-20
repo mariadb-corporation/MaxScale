@@ -904,6 +904,9 @@ add_test_executable(mxs3920_unicode_db.cc mxs3920_unicode_db replication LABELS 
 # MXS-3924: Session commands aren't retried when delayed_retry is enabled
 add_test_executable(mxs3924_sescmd_retry.cc mxs3924_sescmd_retry mxs3924_sescmd_retry LABELS REPL_BACKEND readwritesplit)
 
+add_test_executable_ex(NAME idle_pool_max_conns SOURCE idle_pool_max_conns.cc CONFIG idle_pool_max_conns.cnf
+        VMS repl_backend)
+
 ############################################
 # END: Normal tests                        #
 ############################################

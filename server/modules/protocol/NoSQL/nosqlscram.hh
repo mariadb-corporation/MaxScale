@@ -24,10 +24,10 @@ namespace scram
 enum class Mechanism
 {
     SHA_1,
-    SHA_256
+    //SHA_256
 };
 
-std::set<Mechanism> supported_mechanisms();
+std::vector<Mechanism> supported_mechanisms();
 
 const char* to_string(Mechanism mechanism);
 bool from_string(const std::string& mechanism, Mechanism* pMechanism);

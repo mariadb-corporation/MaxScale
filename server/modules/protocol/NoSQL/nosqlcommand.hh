@@ -10,7 +10,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
 #pragma once
 
 #include "nosqlprotocol.hh"
@@ -46,6 +45,11 @@ public:
     static const int32_t MAX_PACKET_LEN = MYSQL_HEADER_LEN + MAX_PAYLOAD_LEN;
 
     virtual ~Command();
+
+    Database& database() const
+    {
+        return m_database;
+    }
 
     virtual bool is_admin() const;
 

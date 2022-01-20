@@ -108,7 +108,6 @@ public:
     bool add_user(const std::string& db,
                   const string_view& user,
                   const string_view& pwd,
-                  const std::string& salt_b64,
                   const std::string& custom_data, // Assumed to be JSON document.
                   const std::vector<scram::Mechanism>& mechanisms,
                   const std::vector<role::Role>& roles);

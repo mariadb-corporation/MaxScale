@@ -10,14 +10,160 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+#pragma once
 
 #include "defs.hh"
+#include "../nosqlscram.hh"
+#include "../nosqlusermanager.hh"
 
 namespace nosql
 {
 
 namespace command
 {
+
+class MxsAddUser final : public ImmediateCommand
+{
+public:
+    static constexpr const char* const KEY = "mxsAddUser";
+    static constexpr const char* const HELP = "";
+
+    using ImmediateCommand::ImmediateCommand;
+
+    void populate_response(DocumentBuilder& doc) override
+    {
+        auto& um = m_database.context().um();
+
+        string db = m_database.name();
+        string user = value_as<string>();
+        string pwd;
+        string custom_data;
+        vector<scram::Mechanism> mechanisms;
+        vector<role::Role> roles;
+
+        parse(KEY, um, m_doc, db, user, &pwd, &custom_data, &mechanisms, &roles);
+
+        if (um.add_user(db, user, pwd, custom_data, mechanisms, roles))
+        {
+            doc.append(kvp("ok", 1));
+        }
+        else
+        {
+            ostringstream ss;
+            ss << "Could not add user " << user << "@" << db << " to the local nosqlprotocol "
+               << "database. See maxscale.log for details.";
+
+            throw SoftError(ss.str(), error::INTERNAL_ERROR);
+        }
+    }
+
+    static void parse(const std::string& command,
+                      const UserManager& um,
+                      const bsoncxx::document::view& doc,
+                      const string& db,
+                      const string& user,
+                      string* pPwd,
+                      string* pCustom_data,
+                      vector<scram::Mechanism>* pMechanisms,
+                      vector<role::Role>* pRoles)
+    {
+        bool digest_password = true;
+        if (nosql::optional(command, doc, key::DIGEST_PASSWORD, &digest_password) && !digest_password)
+        {
+            // Basically either the client or the server can digest the password.
+            // If the client digested the password, then we could use the digested
+            // password as the MariaDB password, which would mean that the actual
+            // NoSQL password would not be stored on the MaxScale host. However,
+            // since the MariaDB password really is the important one, it would not
+            // add much value. Furthermore, a client digested password is not
+            // supported with SCRAM-SHA-256, which is the default mechanism (not
+            // supported yet), so we just won't bother.
+            ostringstream ss;
+            ss << "nosqlprotocol does not support that the client digests the password, "
+               << "'digestPassword' must be true.";
+
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+
+        bsoncxx::document::element element;
+
+        element = doc[key::PWD];
+        if (!element)
+        {
+            ostringstream ss;
+            ss << "Must provide a '" << key::PWD << "' field for all user documents";
+
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+
+        auto type = element.type();
+        if (type != bsoncxx::type::k_utf8)
+        {
+            ostringstream ss;
+            ss << "\"" << key::PWD << "\" has the wrong type. Expected string, found "
+               << bsoncxx::to_string(type);
+
+            throw SoftError(ss.str(), error::TYPE_MISMATCH);
+        }
+
+        string_view pwd = element.get_utf8();
+
+        string custom_data;
+        bsoncxx::document::view custom_data_doc;
+        if (nosql::optional(command, doc, key::CUSTOM_DATA, &custom_data))
+        {
+            custom_data = bsoncxx::to_json(custom_data_doc);
+        }
+
+        vector<scram::Mechanism> mechanisms;
+        element = doc[key::MECHANISMS];
+        if (element)
+        {
+            if (element.type() != bsoncxx::type::k_array)
+            {
+                throw SoftError("mechanisms field must be an array", error::UNSUPPORTED_FORMAT);
+            }
+
+            bsoncxx::array::view array = element.get_array();
+
+            if (array.empty())
+            {
+                throw SoftError("mechanisms field must not be empty", error::UNSUPPORTED_FORMAT);
+            }
+
+            scram::from_bson(array, &mechanisms); // Throws if invalid.
+        }
+        else
+        {
+            mechanisms = scram::supported_mechanisms();
+        }
+
+        element = doc[key::ROLES];
+        if (!element || (element.type() != bsoncxx::type::k_array))
+        {
+            ostringstream ss;
+            ss << "\"" << command << "\" command requires a \"" << key::ROLES << "\" array";
+
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+
+        vector<role::Role> roles;
+        role::from_bson(element.get_array(), db, &roles);
+
+        if (um.user_exists(db, user))
+        {
+            ostringstream ss;
+            ss << "User \"" << user << "@" << db << "\" already exists";
+
+            throw SoftError(ss.str(), error::LOCATION51003);
+        }
+
+        *pPwd = string(pwd.data(), pwd.length());
+        *pCustom_data = std::move(custom_data);
+        *pMechanisms = std::move(mechanisms);
+        *pRoles = std::move(roles);
+    }
+};
 
 class MxsDiagnose final : public ImmediateCommand
 {
@@ -101,6 +247,40 @@ public:
     }
 };
 
+class MxsRemoveUser final : public ImmediateCommand
+{
+public:
+    static constexpr const char* const KEY = "mxsRemoveUser";
+    static constexpr const char* const HELP = "";
+
+    using ImmediateCommand::ImmediateCommand;
+
+    void populate_response(DocumentBuilder& doc) override
+    {
+        auto& um = m_database.context().um();
+
+        string db = m_database.name();
+        string user = value_as<string>();
+
+        if (!um.user_exists(db, user))
+        {
+            ostringstream ss;
+            ss << "User '" << user << "@" << db << "' not found";
+
+            throw SoftError(ss.str(), error::USER_NOT_FOUND);
+        }
+
+        if (!um.remove_user(db, user))
+        {
+            ostringstream ss;
+            ss << "Could not remove user '" << user << "@" << db << "' not found";
+
+            throw SoftError(ss.str(), error::INTERNAL_ERROR);
+        }
+
+        doc.append(kvp(key::OK, 1));
+    }
+};
 
 class MxsSetConfig;
 

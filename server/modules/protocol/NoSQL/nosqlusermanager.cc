@@ -530,12 +530,14 @@ unique_ptr<UserManager> UserManager::create(const string& name)
 bool UserManager::add_user(const string& db,
                            const string_view& user,
                            const string_view& pwd,
-                           const string& salt_b64,
                            const std::string& custom_data, // Assumed to be JSON document.
                            const vector<scram::Mechanism>& mechanisms,
                            const vector<role::Role>& roles)
 {
     mxb_assert(custom_data.empty() || mxb::Json().load_string(custom_data));
+
+    vector<uint8_t> salt = crypto::create_random_bytes(scram::SERVER_SALT_SIZE);
+    string salt_b64 = mxs::to_base64(salt);
 
     string db_user = get_db_user(db, user);
 

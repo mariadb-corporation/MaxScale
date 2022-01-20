@@ -10,6 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+#pragma once
 
 //
 // https://docs.mongodb.com/v4.4/reference/command/nav-authentication/
@@ -38,6 +39,11 @@ public:
 
     void populate_response(DocumentBuilder& doc) override
     {
+        auto& config = m_database.config();
+
+        config.user.clear();
+        config.password.clear();
+
         doc.append(kvp(key::OK, 1));
     }
 };

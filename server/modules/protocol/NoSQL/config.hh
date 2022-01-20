@@ -144,9 +144,9 @@ public:
     void copy_to(nosql::DocumentBuilder& doc) const;
 
     // Can only be changed via MaxScale
-    const std::string user;
-    const std::string password;
-    const int64_t     id_length;
+    std::string   user;
+    std::string   password;
+    const int64_t id_length;
 
     // Can be changed from the NosQL API.
     bool                                auto_create_databases;
