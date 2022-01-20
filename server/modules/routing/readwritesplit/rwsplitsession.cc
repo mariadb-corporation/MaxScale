@@ -546,7 +546,9 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
 
     if (reply.is_complete())
     {
-        if (backend->should_ignore_response())
+        bool ignore_response = backend->should_ignore_response();
+
+        if (ignore_response)
         {
             MXS_INFO("Reply complete from '%s', discarding it.", backend->name());
             gwbuf_free(writebuf);
@@ -596,9 +598,12 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
 
         mxb_assert(m_expected_responses >= 0);
 
-        if (continue_causal_read())
+        if (!ignore_response && continue_causal_read())
         {
-            // GTID sync part of causal reads is complete, continue with the actual reading part
+            // GTID sync part of causal reads is complete, continue with the actual reading part. This must be
+            // done after the ack_write() call to make sure things are correctly marked as done. It must also
+            // be done only if we didn't ignore a response: there can be multiple pending queries ongoing
+            // during the GTID sync and only the response which isn't discarded is the correct one.
             gwbuf_free(writebuf);
             return 1;
         }
