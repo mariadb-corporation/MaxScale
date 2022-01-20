@@ -85,7 +85,7 @@ enum failure_mode
     RW_ERROR_ON_WRITE           /**< Don't close the connection but send an error for writes */
 };
 
-enum CausalReads
+enum class CausalReads
 {
     NONE,       // No causal reads, default
     LOCAL,      // Causal reads are done on a session level with MASTER_GTID_WAIT
