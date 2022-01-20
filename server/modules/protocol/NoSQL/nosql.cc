@@ -1335,12 +1335,20 @@ string get_account(string db, string user, const string& host)
 {
     ostringstream ss;
     ss << "'"
-       << nosql::escape_essential_chars(db)
-       << "."
-       << nosql::escape_essential_chars(user)
+       << get_user_name(std::move(db), std::move(user))
        << "'@'"
        << host
        << "'";
+
+    return ss.str();
+}
+
+string get_user_name(std::string db, std::string user)
+{
+    ostringstream ss;
+    ss << nosql::escape_essential_chars(db)
+       << "."
+       << nosql::escape_essential_chars(user);
 
     return ss.str();
 }

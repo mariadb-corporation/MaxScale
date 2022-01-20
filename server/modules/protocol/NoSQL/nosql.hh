@@ -58,15 +58,25 @@ const char* to_string(Op op);
 /**
  * Get the MariaDB account
  *
- * @param db    The current NoSQL database.
+ * @param db    The NoSQL database.
  * @param user  The user name.
  * @param host  The host.
  *
- * @return A properly quoted MariaDB account.
+ * @return A properly quoted and escaped MariaDB account.
  *
  * The MariaDB account will be like 'db.user'@'host'
  */
 std::string get_account(std::string db, std::string user, const std::string& host);
+
+/**
+ * Get the MariaDB user name
+ *
+ * @param db    The NoSQL database.
+ * @param user  The user name.
+ *
+ * @return A properly escaped MariaDB user name.
+ */
+std::string get_user_name(std::string db, std::string user);
 
 }
 
