@@ -1656,13 +1656,9 @@ bool Session::is_movable() const
         }
     }
 
+    // Do not move a session which is waiting for a connection.
     mxb_assert(m_endpoints_waiting >= 0);
-    if (m_endpoints_waiting == 0)
-    {
-        // Do not move a session which is waiting for a connection.
-        return false;
-    }
-    return true;
+    return m_endpoints_waiting == 0;
 }
 
 void Session::notify_userdata_change()
