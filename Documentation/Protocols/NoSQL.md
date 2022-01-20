@@ -102,7 +102,86 @@ From the above it should be clear that there is not a 1-to-1
 correspondence between the concept of a user in NoSQL and the concept
 of a user in MariaDB, but that some additional conventions are needed.
 
-TBW
+To make it possible to have different NoSQL users with the same name,
+the database in whose context the user is created is prepended to the
+user name, separated with a dot, when the MariaDB user is created.
+
+This is perhaps easiest to illustrate using an example:
+```
+MariaDB [(none)]> select user, host from mysql.user;
++-------------+-----------+
+| User        | Host      |
++-------------+-----------+
+| bob         | %         |
+| mysql       | localhost |
++-------------+-----------+
+2 rows in set (0.001 sec)
+```
+Currently there are two user accounts defined. Even though there is
+a user `bob`, creating a NoSQL user `bob` succeeds.
+```
+> use test;
+switched to db test
+> db.runCommand({createUser: "bob", pwd: "bobspwd", roles: []});
+{ "ok" : 1 }
+```
+If we now, from the MariaDB prompt, check the users we will see:
+```
+MariaDB [(none)]> select user, host from mysql.user;
++-------------+-----------+
+| User        | Host      |
++-------------+-----------+
+| bob         | %         |
+| test.bob    | %         |
+| mysql       | localhost |
++-------------+-----------+
+3 rows in set (0.001 sec)
+```
+The MariaDB user corresponding to the NoSQL user `bob`, created in the
+context of the database `test`, has `test` as a prefix.
+
+### The `mariadb` database
+
+The fact that NoSQL users have the database embedded in the MariaDB
+name may be inconvenient if the same data is accessed both as NoSQL
+via nosqlprotocol and as SQL directly from MariaDB. It also makes
+it impossible to use an existing MariaDB account from NoSQL.
+
+To provide a solution for this problem, the database `mariadb` is treated
+in a specific fashion. A user created in the context of the `mariadb`
+database is created in the MariaDB server without the database prefix.
+If we now try to create a user `bob` in the `mariadb` database it will fail,
+because the user `'bob'@'%'` exists already.
+```
+> use mariadb
+switched to db mariadb
+> db.runCommand({createUser: "bob", pwd: "bobspwd", roles: []});
+{
+	"ok" : 0,
+	"errmsg" : "User \"bob\" already exists",
+	"code" : 51003,
+	"codeName" : "Location51003"
+}
+```
+If we create a user with another name it will succeed.
+```
+> db.runCommand({createUser: "alice", pwd: "alicespwd", roles: []});
+{ "ok" : 1 }
+```
+And if we check the situation from MariaDB,
+```
+MariaDB [(none)]> select user, host from mysql.user;
++-------------+-----------+
+| User        | Host      |
++-------------+-----------+
+| alice       | %         |
+| bob         | %         |
+| test.bob    | %         |
+| mysql       | localhost |
++-------------+-----------+
+4 rows in set (0.001 sec)
+```
+we will see that `alice` was created without a database prefix.
 
 ## Roles and Privileges
 

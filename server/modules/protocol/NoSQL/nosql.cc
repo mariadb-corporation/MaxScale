@@ -1346,9 +1346,14 @@ string get_account(string db, string user, const string& host)
 string get_user_name(std::string db, std::string user)
 {
     ostringstream ss;
-    ss << nosql::escape_essential_chars(db)
-       << "."
-       << nosql::escape_essential_chars(user);
+
+    if (db != "mariadb")
+    {
+        ss << nosql::escape_essential_chars(db)
+           << ".";
+    }
+
+    ss << nosql::escape_essential_chars(user);
 
     return ss.str();
 }
