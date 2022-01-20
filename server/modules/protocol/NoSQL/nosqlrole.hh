@@ -2,6 +2,7 @@
 #error nosqlrole.hh cannot be included without NOSQL_ROLE being defined.
 #endif
 
+// *INDENT-OFF*
 NOSQL_ROLE(BACKUP,                  "backup")
 NOSQL_ROLE(CLUSTER_ADMIN,           "clusterAdmin")
 NOSQL_ROLE(CLUSTER_MANAGER,         "clusterManager")
@@ -18,3 +19,4 @@ NOSQL_ROLE(RESTORE,                 "restore")
 NOSQL_ROLE(ROOT,                    "root")
 NOSQL_ROLE(USER_ADMIN,              "userAdmin")
 NOSQL_ROLE(USER_ADMIN_ANY_DATABASE, "userAdminAnyDatabase")
+// *INDENT-ON*
