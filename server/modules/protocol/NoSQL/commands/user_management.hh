@@ -135,20 +135,6 @@ string get_nosql_account(const string& db, const string& user)
     return user + "@" + db;
 }
 
-string get_mariadb_account(string db, string user, const string& host)
-{
-    ostringstream ss;
-    ss << "'"
-       << nosql::escape_essential_chars(db)
-       << "."
-       << nosql::escape_essential_chars(user)
-       << "'@'"
-       << host
-       << "'";
-
-    return ss.str();
-}
-
 }
 
 namespace command
@@ -196,7 +182,7 @@ protected:
 
     string generate_sql() override
     {
-        string account = get_mariadb_account(m_db, m_user, m_host);
+        string account = mariadb::get_account(m_db, m_user, m_host);
 
         m_statements.push_back("CREATE USER " + account + " IDENTIFIED BY '" + m_pwd + "'");
 
@@ -834,7 +820,7 @@ private:
 
     string generate_sql() override
     {
-        string account = get_mariadb_account(m_db, m_user, m_info.host);
+        string account = mariadb::get_account(m_db, m_user, m_info.host);
 
         m_statements = create_grant_statements(account, m_roles);
 
@@ -1013,7 +999,7 @@ private:
 
     string generate_sql() override
     {
-        string account = get_mariadb_account(m_db, m_user, m_info.host);
+        string account = mariadb::get_account(m_db, m_user, m_info.host);
 
         m_statements = create_revoke_statements(account, m_roles);
 
@@ -1126,7 +1112,7 @@ private:
 
         m_statements.clear();
 
-        string account = get_mariadb_account(m_db, m_user, m_old_info.host);
+        string account = mariadb::get_account(m_db, m_user, m_old_info.host);
 
         mxb_assert(m_what & UserInfo::PWD);
 
@@ -1147,7 +1133,7 @@ private:
 
         m_statements.clear();
 
-        string account = get_mariadb_account(m_db, m_user, m_old_info.host);
+        string account = mariadb::get_account(m_db, m_user, m_old_info.host);
 
          // Revoke according to current roles.
         auto revokes = create_revoke_statements(account, m_old_info.roles);

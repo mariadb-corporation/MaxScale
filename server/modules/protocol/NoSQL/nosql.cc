@@ -1331,6 +1331,20 @@ const char* to_string(Op op)
     return "unknown";
 }
 
+string get_account(string db, string user, const string& host)
+{
+    ostringstream ss;
+    ss << "'"
+       << nosql::escape_essential_chars(db)
+       << "."
+       << nosql::escape_essential_chars(user)
+       << "'@'"
+       << host
+       << "'";
+
+    return ss.str();
+}
+
 }
 
 namespace nosql
