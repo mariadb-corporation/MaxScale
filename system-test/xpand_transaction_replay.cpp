@@ -253,9 +253,10 @@ void run_test(TestConnections& test)
     cout << "\nTESTING transaction replay when group change error occurs." << endl;
     test_transaction_replay(test, pMysql, server2.name, node);
 
-    server2 = get_current_server(test, pMysql);
-
-    test.expect(server.address == server2.address, "Huh, server has switched.");
+    // It used to be so that if a node _other_ than the one we were connected to
+    // went down, the connection stayed on the node we were connected to. That
+    // is no longer the case and is in any case also something this test should
+    // not be concerned about, so that is no longer checked.
 }
 
 }
