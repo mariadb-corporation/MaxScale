@@ -84,6 +84,10 @@ export default {
             root.y0 = 0
             return root
         },
+        maxDepth() {
+            const nodes = this.root.descendants() || []
+            return nodes.length ? nodes[nodes.length - 1].depth : 1
+        },
     },
     watch: {
         data: {
@@ -112,19 +116,19 @@ export default {
                 )
         },
         /**
-         * Creates a curved (diagonal) path from source node to the destination nodes
+         * Creates a curved or orthogonal (diagonal) path from source node to the destination nodes
+         * For the tree has depth >= 3, using the orthogonal line between nodes helps to avoid
+         * overlapping rectangular node div.
          * @param {Object} src - hierarchy d3 source node
          * @param {Object} dest - hierarchy d3 destination node
          */
         diagonal(src, dest) {
-            // draw link start at the border of source circle to border of the destination circle
-            const srcY = src.y - this.circleRadius
-            const destY = dest.y + this.circleRadius
-            let path = `M ${srcY} ${src.x}
-            C ${(srcY + destY) / 2} ${src.x},
-              ${(srcY + destY) / 2} ${dest.x},
-              ${destY} ${dest.x}`
-            return path
+            if (this.maxDepth >= 3) return 'M' + src.y + ',' + src.x + 'V' + dest.x + 'H' + dest.y
+            else
+                return `M ${src.y} ${src.x}
+            C ${(src.y + dest.y) / 2} ${src.x},
+              ${(src.y + dest.y) / 2} ${dest.x},
+              ${dest.y} ${dest.x}`
         },
         /**
          * Collapse the node and all it's children
@@ -205,7 +209,7 @@ export default {
                 )
                 .attr('r', this.circleRadius)
                 .style('fill', d => {
-                    return d._children ? d.data.stroke : 'transparent'
+                    return d._children ? d.data.stroke : 'white'
                 })
                 .style('stroke', d => d.data.stroke)
 
