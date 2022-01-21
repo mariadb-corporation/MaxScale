@@ -65,9 +65,10 @@ ClientCapsResult parse_client_capabilities(ByteVec& data, const ClientInfo& old_
      * We OR the capability bits in order to retain the starting bits sent
      * when an SSL connection is opened. Oracle Connector/J 8.0 appears to drop
      * the SSL capability bit mid-authentication which causes MaxScale to think
-     * that SSL is not used.
+     * that SSL is not used. We also AND the bytes with the ones we sent in the handshake.
      */
     caps.basic_capabilities |= mariadb::get_byte4(ptr);
+    caps.basic_capabilities &= caps.advertised_capabilities;
     ptr += 4;
 
     // Next is max packet size, skip it.
@@ -90,6 +91,11 @@ ClientCapsResult parse_client_capabilities(ByteVec& data, const ClientInfo& old_
         // some extra work to implement correctly.
         caps.ext_capabilities = (mariadb::get_byte4(ptr) & MXS_EXTRA_CAPABILITIES_SERVER);
     }
+
+    // AND the extra capabilities with the ones we sent in the handshake. This makes sure we use only the
+    // capabilities that both the client and MaxScale support.
+    caps.ext_capabilities &= (caps.advertised_capabilities >> 32);
+
     ptr += 4;
     pop_front(data, ptr - data.data());
     return rval;

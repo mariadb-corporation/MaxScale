@@ -547,6 +547,8 @@ bool MariaDBClientConnection::send_server_handshake()
         caps |= GW_MYSQL_CAPABILITIES_SSL;
     }
 
+    m_session_data->client_caps.advertised_capabilities = caps;
+
     // Convert to little endian, write 2 bytes.
     uint8_t caps_le[8];
     mariadb::set_byte8(caps_le, caps);
