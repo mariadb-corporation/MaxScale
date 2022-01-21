@@ -230,6 +230,18 @@ const map<Id, string> roles_by_id =
 
 }
 
+unordered_map<string, uint32_t> role::to_bitmasks(const vector<role::Role>& roles)
+{
+    unordered_map<string, uint32_t> bitmasks;
+
+    for (const auto& role : roles)
+    {
+        bitmasks[role.db] |= role.id;
+    }
+
+    return bitmasks;
+}
+
 string role::to_string(Id id)
 {
     auto it = roles_by_id.find(id);

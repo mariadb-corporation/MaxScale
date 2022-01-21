@@ -1184,24 +1184,19 @@ public:
             return m_metadata_sent;
         }
 
-        // TODO: Once authentication is properly done, 'user' here will disappear
-        // TODO: and the information will be stored in the session.
-        const std::string& user() const
-        {
-            return m_user;
-        };
-
-        void set_user(const string_view& user)
-        {
-            m_user = std::string(user.data(), user.length());
-        }
-
         Sasl& sasl()
         {
             return m_sasl;
         }
 
+        void set_roles(std::unordered_map<std::string, uint32_t>&& roles)
+        {
+            m_roles = roles;
+        }
+
     private:
+        using Roles = std::unordered_map<std::string, uint32_t>;
+
         UserManager&               m_um;
         MXS_SESSION&               m_session;
         ClientConnection&          m_client_connection;
@@ -1210,8 +1205,8 @@ public:
         int64_t                    m_connection_id;
         std::unique_ptr<LastError> m_sLast_error;
         bool                       m_metadata_sent { false };
-        std::string                m_user;
         Sasl                       m_sasl;
+        Roles                      m_roles;
 
         static std::atomic<int64_t> s_connection_id;
     };

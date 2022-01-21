@@ -15,6 +15,7 @@
 #include "nosqlprotocol.hh"
 #include "nosqlbase.hh"
 #include <memory>
+#include <unordered_map>
 #include <maxbase/json.hh>
 #include <maxscale/sqlite3.h>
 #include "nosqlscram.hh"
@@ -25,7 +26,7 @@ namespace nosql
 namespace role
 {
 
-enum class Id
+enum Id
 {
 #define NOSQL_ROLE(id, value, name) id = value,
 #include "nosqlrole.hh"
@@ -37,6 +38,8 @@ struct Role
     std::string db;
     Id          id;
 };
+
+std::unordered_map<std::string, uint32_t> to_bitmasks(const std::vector<Role>& roles);
 
 std::string to_string(Id id);
 
