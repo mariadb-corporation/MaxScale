@@ -77,6 +77,10 @@ public:
         return m_last_statement;
     }
 
+    virtual void authorize(uint32_t role_mask)
+    {
+    }
+
     virtual State execute(GWBUF** ppNoSQL_response) = 0;
 
     virtual State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) = 0;

@@ -1194,6 +1194,13 @@ public:
             m_roles = roles;
         }
 
+        uint32_t role_mask_of(const std::string& name) const
+        {
+            auto it = m_roles.find(name);
+
+            return it == m_roles.end() ? 0 : it->second;
+        }
+
     private:
         using Roles = std::unordered_map<std::string, uint32_t>;
 
