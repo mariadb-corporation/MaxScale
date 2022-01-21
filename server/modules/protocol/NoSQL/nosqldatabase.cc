@@ -203,7 +203,10 @@ State Database::execute_command(std::unique_ptr<Command> sCommand, GWBUF** ppRes
                 throw SoftError(ss.str(), error::INVALID_NAMESPACE);
             }
 
-            m_sCommand->authorize(m_context.role_mask_of(m_name));
+            if (m_config.should_authorize())
+            {
+                m_sCommand->authorize(m_context.role_mask_of(m_name));
+            }
 
             state = m_sCommand->execute(&pResponse);
         }

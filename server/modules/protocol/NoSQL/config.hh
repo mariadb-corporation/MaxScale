@@ -127,17 +127,22 @@ public:
 
     bool should_log_in() const
     {
-        return debug & GlobalConfig::DEBUG_IN;
+        return this->debug & GlobalConfig::DEBUG_IN;
     }
 
     bool should_log_out() const
     {
-        return debug & GlobalConfig::DEBUG_OUT;
+        return this->debug & GlobalConfig::DEBUG_OUT;
     }
 
     bool should_log_back() const
     {
-        return debug & GlobalConfig::DEBUG_BACK;
+        return this->debug & GlobalConfig::DEBUG_BACK;
+    }
+
+    bool should_authorize() const
+    {
+        return this->authorization == GlobalConfig::Authorization::ENABLED;
     }
 
     void copy_from(const Config& that)
