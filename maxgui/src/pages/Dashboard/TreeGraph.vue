@@ -1,11 +1,34 @@
 <template>
     <div
+        class="tree-graph-container"
         :style="{
             width: dim.width + 'px',
             height: dim.height + 'px',
         }"
     >
         <svg ref="svg" class="tree-graph" />
+        <div
+            class="node-rect-wrapper fill-height"
+            :style="{
+                top: 0,
+                height: 0,
+                width: 0,
+                position: 'absolute',
+                transform: `translate(${layout.margin.left}px, ${layout.margin.top}px)`,
+            }"
+        >
+            <div
+                v-for="(pos, key) in nodeRectPosMap"
+                :key="key"
+                class="node-rect"
+                :style="{
+                    top: `${pos.top}px`,
+                    left: `${pos.left}px`,
+                }"
+            >
+                <slot name="node-rect" :data="{ id: key }" />
+            </div>
+        </div>
     </div>
 </template>
 
@@ -20,7 +43,7 @@ export default {
     },
     data() {
         return {
-            duration: 500,
+            duration: 300,
             layout: {
                 link: {
                     length: 320,
@@ -29,6 +52,7 @@ export default {
             },
             circleRadius: 7,
             svg: null, // svg obj
+            nodeRectPosMap: {},
         }
     },
     computed: {
@@ -52,14 +76,14 @@ export default {
     watch: {
         data: {
             deep: true,
-            handler() {
-                this.update(this.root)
+            async handler() {
+                await this.update(this.root)
             },
         },
     },
-    mounted() {
+    async mounted() {
         this.initSvg()
-        this.update(this.root)
+        await this.update(this.root)
     },
 
     methods: {
@@ -69,6 +93,7 @@ export default {
                 .attr('width', this.dim.width)
                 .attr('height', this.dim.height)
                 .append('g')
+                .attr('id', 'node-group')
                 .attr(
                     'transform',
                     'translate(' + this.layout.margin.left + ',' + this.layout.margin.top + ')'
@@ -101,20 +126,32 @@ export default {
             }
         },
         /**
+         * Delete rectangular node div when node is toggled. The div is deleted by removing
+         * key in nodeRectPosMap.
+         * @param {Array} nodes - hierarchy d3 nodes
+         */
+        deleteNodeRect(nodes) {
+            nodes.forEach(node => {
+                this.$delete(this.nodeRectPosMap, node.id)
+                if (node.children) this.deleteNodeRect(node.children)
+            })
+        },
+        /**
          * Toggle node on click.
          * @param {Object} node - hierarchy d3 node
          */
-        onNodeClick(node) {
+        async onNodeClick(node) {
             if (node.children) {
                 //collapse
                 node._children = node.children
                 node.children = null
+                this.deleteNodeRect(node._children)
             } else {
                 // expand
                 node.children = node._children
                 node._children = null
             }
-            this.update(node)
+            await this.update(node)
         },
         drawNodes({ srcNode, nodes }) {
             // ****************** Nodes drawing transition ***************************
@@ -125,9 +162,14 @@ export default {
                 .enter()
                 .append('g')
                 .attr('class', 'node')
+                .attr('data-node-id', n => n.id)
                 // use srcNode.y as x for translate to make horizontal graph
                 .attr('transform', () => 'translate(' + srcNode.y0 + ',' + srcNode.x0 + ')')
-                .on('click', (e, n) => this.onNodeClick(n))
+                .on('click', async (e, n) => {
+                    e.stopPropagation()
+                    await this.onNodeClick(n)
+                })
+
             nodeEnter
                 .append('circle')
                 .attr('class', 'node__circle')
@@ -144,12 +186,16 @@ export default {
             // Update the node attributes and style
             nodeUpdate
                 .select('circle.node__circle')
+                .attr('class', d =>
+                    d.children || d._children
+                        ? 'node__circle node__circle--clickable'
+                        : 'node__circle'
+                )
                 .attr('r', this.circleRadius)
                 .style('fill', d => {
                     return d._children ? d.data.stroke : 'transparent'
                 })
                 .style('stroke', d => d.data.stroke)
-                .attr('cursor', d => (d.children || d._children ? 'pointer' : ''))
 
             // Remove any exiting nodes on exit
             let nodeExit = node
@@ -195,11 +241,31 @@ export default {
                 })
                 .remove()
         },
+        renderNodeRect() {
+            this.nodeRectPosMap = this.getNodeRectPos()
+        },
+        getNodeRectPos() {
+            let nodeRectPosMap = {}
+            Array.from(this.$refs.svg.getElementsByClassName('node')).forEach(ele => {
+                const nodeId = ele.getAttribute('data-node-id')
+                let transform = ele.getAttribute('transform')
+                let pos = {}
+                transform.split(',').forEach((part, i) => {
+                    let lat = part.replace(/[^\d.]/g, '')
+                    let v = Math.round(Number(lat))
+                    // offset 10 for rect arrow
+                    if (i === 0) pos.left = v + this.circleRadius + 10
+                    else pos.top = v
+                })
+                nodeRectPosMap[nodeId] = pos
+            })
+            return nodeRectPosMap
+        },
         /**
          * Update node
          * @param {Object} srcNode - hierarchy d3 node to be updated
          */
-        update(srcNode) {
+        async update(srcNode) {
             // Recompute x,y coord for all nodes
             let treeData = this.treeLayout(this.root)
             // Compute the new tree layout.
@@ -216,17 +282,64 @@ export default {
                 d.x0 = d.x
                 d.y0 = d.y
             })
+            await this.$help.delay(this.duration).then(() => this.renderNodeRect())
         },
     },
 }
 </script>
 
 <style lang="scss" scoped>
+.tree-graph-container {
+    position: relative;
+    overflow: auto;
+}
 ::v-deep.tree-graph {
     .link {
         fill: none;
         stroke: #e7eef1;
         stroke-width: 1.5px;
+    }
+    .node__circle {
+        &--clickable {
+            cursor: pointer;
+            &:hover {
+                transform: scale(1.2, 1.2);
+            }
+        }
+    }
+}
+.node-rect {
+    width: 276px;
+    min-height: 50px;
+    max-height: 80px;
+    position: absolute;
+    transform: translateY(-50%);
+    box-shadow: 1px 1px 7px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e3e6ea;
+    background-color: $background;
+    &::after,
+    &::before {
+        right: 100%;
+        top: 50%;
+        border: solid transparent;
+        content: ' ';
+        height: 0;
+        width: 0;
+        position: absolute;
+        pointer-events: none;
+        box-sizing: border-box;
+    }
+    &::before {
+        border-color: transparent;
+        border-right-color: #e3e6ea;
+        border-width: 11px;
+        margin-top: -11px;
+    }
+    &:after {
+        border-color: transparent;
+        border-right-color: $background;
+        border-width: 10px;
+        margin-top: -10px;
     }
 }
 </style>
