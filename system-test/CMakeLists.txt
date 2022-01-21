@@ -862,7 +862,10 @@ add_test_executable(mxs3623_persistent_change_user.cc mxs3623_persistent_change_
 add_test_executable(mxs3782_session_track_trx_state.cc mxs3782_session_track_trx_state mxs3782_session_track_trx_state LABELS REPL_BACKEND readwritesplit)
 
 # MXS-3920: Unicode characters in database names don't work
-add_test_executable(mxs3920_unicode_db.cc mxs3920_unicode_db replication LABELS REPL_BACKEND REPL_BACKEND)
+add_test_executable(mxs3920_unicode_db.cc mxs3920_unicode_db replication LABELS REPL_BACKEND)
+
+# MXS-3959: Transaction replay doesn't reset transaction on implicit commit
+add_test_executable(mxs3959_implicit_commit.cc mxs3959_implicit_commit mxs3959_implicit_commit LABELS REPL_BACKEND readwritesplit)
 
 ############################################
 # END: Normal tests                        #

@@ -953,6 +953,13 @@ considered a success case as the transaction replay detected that the results of
 the two transactions are different. In these cases readwritesplit will abort the
 transaction and close the client connection.
 
+Statements that result in an implicit commit do not reset the transaction when
+transaction_replay is enabled. This means that if the transaction is replayed,
+the transaction will be committed twice due to the implicit commit being
+present. The exception to this are the transaction management statements such as
+`BEGIN` and `START TRANSACTION`: they are detected and will cause the
+transaction to be correctly reset.
+
 Any changes to the session state (e.g. autocommit state, SQL mode) done inside a
 transaction will remain in effect even if the connection to the server where the
 transaction is being executed fails. When readwritesplit creates a new
