@@ -214,14 +214,14 @@ namespace
 
 const map<string, Id> roles_by_name =
 {
-#define NOSQL_ROLE(id, name) { name, Id:: id },
+#define NOSQL_ROLE(id, value, name) { name, Id:: id },
 #include "nosqlrole.hh"
 #undef NOSQL_ROLE
 };
 
 const map<Id, string> roles_by_id =
 {
-#define NOSQL_ROLE(id, name) { Id:: id, name },
+#define NOSQL_ROLE(id, value, name) { Id:: id, name },
 #include "nosqlrole.hh"
 #undef NOSQL_ROLE
 };

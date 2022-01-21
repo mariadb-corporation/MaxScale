@@ -27,7 +27,7 @@ namespace role
 
 enum class Id
 {
-#define NOSQL_ROLE(id, name) id,
+#define NOSQL_ROLE(id, value, name) id = value,
 #include "nosqlrole.hh"
 #undef NOSQL_ROLE
 };
