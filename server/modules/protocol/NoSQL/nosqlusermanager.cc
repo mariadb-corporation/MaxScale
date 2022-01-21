@@ -83,7 +83,7 @@ int select_info_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
     info.db = pzColumn[1];
     info.user = pzColumn[2];
     info.pwd = pzColumn[3];
-    info.pwd = pzColumn[4];
+    info.host = pzColumn[4];
     info.custom_data = pzColumn[5];
     info.uuid = pzColumn[6];
     info.salt_b64 = pzColumn[7];
