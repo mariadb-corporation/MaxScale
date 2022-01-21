@@ -487,7 +487,6 @@ public:
     bool handleError(mxs::ErrorType type, GWBUF* error,
                      mxs::Endpoint* down, const mxs::Reply& reply) override;
 
-    bool can_try_pooling() const;
     bool try_to_pool();
 
     enum class ContinueRes {SUCCESS, WAIT, FAIL};

@@ -1150,28 +1150,22 @@ bool ServerEndpoint::handleError(mxs::ErrorType type, GWBUF* error,
     return m_up->handleError(type, error, this, reply);
 }
 
-bool ServerEndpoint::can_try_pooling() const
-{
-    return m_connstatus == ConnStatus::CONNECTED && m_can_try_pooling;
-}
-
 bool ServerEndpoint::try_to_pool()
 {
-    auto* dcb = m_conn->dcb();
-    // Try to move the connection into the pool. If it fails, do not try again.
-    bool moved_to_pool = dcb->manager()->move_to_conn_pool(dcb);
-    if (moved_to_pool)
+    bool rval = false;
+    if (m_connstatus == ConnStatus::CONNECTED)
     {
-        m_connstatus = ConnStatus::IDLE_POOLED;
-        m_conn = nullptr;
-        MXB_INFO("Session %lu connection to %s pooled.", m_session->id(), m_server->name());
-        m_session->worker()->notify_connection_available(m_server);
+        auto* dcb = m_conn->dcb();
+        if (dcb->manager()->move_to_conn_pool(dcb))
+        {
+            rval = true;
+            m_connstatus = ConnStatus::IDLE_POOLED;
+            m_conn = nullptr;
+            MXB_INFO("Session %lu connection to %s pooled.", m_session->id(), m_server->name());
+            m_session->worker()->notify_connection_available(m_server);
+        }
     }
-    else
-    {
-        m_can_try_pooling = false;
-    }
-    return moved_to_pool;
+    return rval;
 }
 
 ServerEndpoint::ContinueRes ServerEndpoint::continue_connecting()

@@ -1775,13 +1775,12 @@ bool Session::pool_backends_cb(mxb::Worker::Call::action_t action)
                     if (backend->established() && backend->is_idle())
                     {
                         auto pEp = static_cast<ServerEndpoint*>(backend->upstream());
-                        if (pEp->can_try_pooling())
+                        if (pEp->try_to_pool())
                         {
-                            if (pEp->try_to_pool())
-                            {
-                                n_pooled++;
-                            }
+                            n_pooled++;
                         }
+                        // TODO: If pooling failed, increase time until next check to reduce rate of
+                        // pointless pooling attempts.
                     }
                 }
 
