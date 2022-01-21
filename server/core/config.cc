@@ -109,6 +109,7 @@ constexpr char CN_QUERY_RETRIES[] = "query_retries";
 constexpr char CN_QUERY_RETRY_TIMEOUT[] = "query_retry_timeout";
 constexpr char CN_REBALANCE_PERIOD[] = "rebalance_period";
 constexpr char CN_REBALANCE_WINDOW[] = "rebalance_window";
+constexpr char CN_SKIP_NAME_RESOLVE[] = "skip_name_resolve";
 constexpr char CN_SKIP_PERMISSION_CHECKS[] = "skip_permission_checks";
 constexpr char CN_USERS_REFRESH_INTERVAL[] = "users_refresh_interval";
 constexpr char CN_USERS_REFRESH_TIME[] = "users_refresh_time";
@@ -390,6 +391,12 @@ config::ParamCount Config::s_rebalance_window(
     1, 60,  // min, max
     config::Param::Modifiable::AT_RUNTIME);
 
+config::ParamBool Config::s_skip_name_resolve(
+    &Config::s_specification,
+    CN_SKIP_NAME_RESOLVE,
+    "Do not resolve client IP addresses to hostnames during authentication",
+    false);
+
 Config::ParamThreadsCount Config::s_n_threads(
     &Config::s_specification,
     CN_THREADS,
@@ -629,9 +636,9 @@ Config::Config()
                          mxb_assert(MainWorker::get());
                          MainWorker::get()->start_rebalancing();
                      }),
-    rebalance_window(this, &s_rebalance_window)
-
-    , config_check(false),
+    rebalance_window(this, &s_rebalance_window),
+    skip_name_resolve(this, &s_skip_name_resolve),
+    config_check(false),
     log_target(MXB_LOG_TARGET_DEFAULT),
     substitute_variables(false),
     promoted_at(0)

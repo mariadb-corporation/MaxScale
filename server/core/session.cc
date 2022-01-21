@@ -418,7 +418,7 @@ json_t* session_json_data(const Session* session, const char* host, bool rdns)
     string result_address;
     auto client_dcb = session->client_connection()->dcb();
     auto& remote = client_dcb->remote();
-    if (rdns)
+    if (rdns && !mxs::Config::get().skip_name_resolve.get())
     {
         maxbase::reverse_name_lookup(remote, &result_address);
     }
