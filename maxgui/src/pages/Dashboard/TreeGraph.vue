@@ -56,10 +56,22 @@ export default {
         }
     },
     computed: {
+        scrollBarThickness() {
+            return this.$help.getScrollbarWidth()
+        },
+        svgDim() {
+            return {
+                width: this.dim.width - this.scrollBarThickness,
+                height: this.dim.height - this.scrollBarThickness,
+            }
+        },
         // return the width/height of tree content after subtracting margin)
         treeDim() {
             const { top, right, bottom, left } = this.layout.margin
-            return { width: this.dim.width - left - right, height: this.dim.height - top - bottom }
+            return {
+                width: this.svgDim.width - left - right,
+                height: this.svgDim.height - top - bottom,
+            }
         },
         treeLayout() {
             // create a tree layout and assigns the size of the tree
@@ -90,8 +102,8 @@ export default {
         initSvg() {
             // select svg to append a `g` element and that element to the top left margin
             this.svg = d3Select(this.$refs.svg)
-                .attr('width', this.dim.width)
-                .attr('height', this.dim.height)
+                .attr('width', this.svgDim.width)
+                .attr('height', this.svgDim.height)
                 .append('g')
                 .attr('id', 'node-group')
                 .attr(
