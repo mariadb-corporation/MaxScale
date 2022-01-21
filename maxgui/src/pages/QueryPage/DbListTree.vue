@@ -265,7 +265,7 @@ export default {
             return item[textKey].indexOf(search) > -1
         },
         showCtxBtn(item) {
-            return this.activeCtxItem && item.id === this.activeCtxItem.id
+            return Boolean(this.activeCtxItem && item.id === this.activeCtxItem.id)
         },
         addExpandedNodesWatcher() {
             this.rmExpandedNodesWatcher = this.$watch(
