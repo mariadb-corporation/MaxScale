@@ -295,6 +295,22 @@ Specifies the _password_ to be used when connecting to the backend, is the Mongo
 client is not authenticated. Note that the same _user_/_password_ combination will be
 used for all unauthenticated MongoDB® clients connecting to the same listener port.
 
+## `authorization`
+
+    * Type: enumeration
+    * Mandatory: false
+    * Values: `disabled`, `enabled`
+    * Default: `disabled`
+
+Specifies whether nosqlprotocol itself should perform authorization in the context
+of the commands (mxsAddUser)[#mxsAddUser], (mxsRemoveUser)[#mxsRemoveUser] and
+(mxsUpdateUser)[#mxsUpdateUser]. Authorization should not be enabled before users
+have been created with (createUser)[#createUser] or added with (mxsAddUser)[#mxsAddUser]
+with authorization being disabled.
+
+NOTE: All client activity is _always_ subject to authorization performed by the
+MariaDB server.
+
 ## `host`
 
    * Type: string

@@ -50,6 +50,12 @@ public:
         DEBUG_BACK = 4
     };
 
+    enum class Authorization
+    {
+        DISABLED,
+        ENABLED,
+    };
+
     enum
     {
         CURSOR_TIMEOUT_DEFAULT = 60     // seconds
@@ -59,6 +65,7 @@ public:
     std::string           user;
     std::string           password;
     std::string           host;
+    Authorization         authorization;
     int64_t               id_length {ID_LENGTH_DEFAULT};
 
     // Can be changed from the NosQL API.
@@ -76,6 +83,7 @@ public:
     static mxs::config::ParamString                      s_user;
     static mxs::config::ParamString                      s_password;
     static mxs::config::ParamString                      s_host;
+    static mxs::config::ParamEnum<Authorization>         s_authorization;
     static mxs::config::ParamCount                       s_id_length;
 
     // Can be changed from the NosQL API.
@@ -105,6 +113,7 @@ public:
         : user(config.user)
         , password(config.password)
         , host(config.host)
+        , authorization(config.authorization)
         , id_length(config.id_length)
         , auto_create_databases(config.auto_create_databases)
         , auto_create_tables(config.auto_create_tables)
@@ -147,10 +156,11 @@ public:
     void copy_to(nosql::DocumentBuilder& doc) const;
 
     // Can only be changed via MaxScale
-    std::string       user;
-    std::string       password;
-    const std::string host;
-    const int64_t     id_length;
+    std::string                       user;
+    std::string                       password;
+    const std::string                 host;
+    const GlobalConfig::Authorization authorization;
+    const int64_t                     id_length;
 
     // Can be changed from the NosQL API.
     bool                                auto_create_databases;
