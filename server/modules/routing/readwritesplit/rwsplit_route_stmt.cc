@@ -601,7 +601,12 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
 
             if (trx_is_open() && !m_trx.target())
             {
-                mxb_assert(trx_is_starting() || trx_is_ending() || m_state == TRX_REPLAY);
+                mxb_assert(trx_is_starting() || trx_is_ending() || m_state == TRX_REPLAY
+                            // The transaction state is only valid for the uppermost service. All lower-level
+                            // services in a service-to-service configuration cannot rely on the transaction
+                            // state being the same for its connections when a command is being routed.
+                            // TODO: Figure out how to make it so that both services know their own states.
+                           || m_pSession->service != m_router->service());
                 m_trx.set_target(m_sescmd_replier);
             }
             else
