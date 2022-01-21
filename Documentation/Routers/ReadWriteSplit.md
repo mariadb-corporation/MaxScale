@@ -995,6 +995,14 @@ state after which the actual transaction is replayed. Due to the fact that the
 SQL_MODE was changed mid-transaction, one of the queries will now return an
 error instead of the result we expected leading to a transaction replay failure.
 
+In a service-to-service configuration (i.e. a service using another service in
+its `targets` list ), if the topmost service starts a transaction, all
+lower-level readwritesplit services will also behave as if a transaction is
+open. If a connection to a backend database fails during this, it can result in
+unnecessary transaction replays which in turn can end up with checksum
+conflicts. The recommended approach is to not use any commands inside a
+transaction that would be routed to more than one node.
+
 ### Legacy Configuration
 
 In older versions of MaxScale, routers were configured via the _router_options_
