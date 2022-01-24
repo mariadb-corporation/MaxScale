@@ -171,7 +171,7 @@ export default {
         getOverallRepStat({ repStats, pickBy, isNumber }) {
             if (isNumber) return Math.max(...repStats.map(item => item[pickBy]))
             let countObj = this.$help.lodash.countBy(repStats, pickBy)
-            return Object.keys(countObj).reduce((a, b) => (countObj[a] > countObj[b] ? a : b))
+            return Object.keys(countObj).reduce((a, b) => (countObj[a] > countObj[b] ? a : b), [])
         },
         getSlaveStatus(serverId) {
             const slaveServerIds = this.slaveServersByMasterMap.get(serverId) || []
