@@ -436,6 +436,8 @@ public:
         return "OP_MSG(" + m_name + ")";
     }
 
+    void authenticate() override final;
+
     virtual void diagnose(DocumentBuilder& doc) = 0;
 
     std::string to_json() const override

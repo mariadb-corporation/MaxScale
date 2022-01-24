@@ -50,6 +50,12 @@ public:
         DEBUG_BACK = 4
     };
 
+    enum class Authentication
+    {
+        OPTIONAL,
+        REQUIRED,
+    };
+
     enum class Authorization
     {
         DISABLED,
@@ -65,6 +71,7 @@ public:
     std::string           user;
     std::string           password;
     std::string           host;
+    Authentication        authentication;
     Authorization         authorization;
     int64_t               id_length {ID_LENGTH_DEFAULT};
 
@@ -83,6 +90,7 @@ public:
     static mxs::config::ParamString                      s_user;
     static mxs::config::ParamString                      s_password;
     static mxs::config::ParamString                      s_host;
+    static mxs::config::ParamEnum<Authentication>        s_authentication;
     static mxs::config::ParamEnum<Authorization>         s_authorization;
     static mxs::config::ParamCount                       s_id_length;
 
@@ -113,6 +121,7 @@ public:
         : user(config.user)
         , password(config.password)
         , host(config.host)
+        , authentication(config.authentication)
         , authorization(config.authorization)
         , id_length(config.id_length)
         , auto_create_databases(config.auto_create_databases)
@@ -140,6 +149,11 @@ public:
         return this->debug & GlobalConfig::DEBUG_BACK;
     }
 
+    bool should_authenticate() const
+    {
+        return this->authentication == GlobalConfig::Authentication::REQUIRED;
+    }
+
     bool should_authorize() const
     {
         return this->authorization == GlobalConfig::Authorization::ENABLED;
@@ -161,11 +175,12 @@ public:
     void copy_to(nosql::DocumentBuilder& doc) const;
 
     // Can only be changed via MaxScale
-    std::string                       user;
-    std::string                       password;
-    const std::string                 host;
-    const GlobalConfig::Authorization authorization;
-    const int64_t                     id_length;
+    std::string                        user;
+    std::string                        password;
+    const std::string                  host;
+    const GlobalConfig::Authentication authentication;
+    const GlobalConfig::Authorization  authorization;
+    const int64_t                      id_length;
 
     // Can be changed from the NosQL API.
     bool                                auto_create_databases;

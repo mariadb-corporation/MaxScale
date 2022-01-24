@@ -1201,6 +1201,16 @@ public:
             return it == m_roles.end() ? 0 : it->second;
         }
 
+        bool authenticated() const
+        {
+            return m_authenticated;
+        }
+
+        void set_authenticated(bool authenticated)
+        {
+            m_authenticated = authenticated;
+        }
+
     private:
         using Roles = std::unordered_map<std::string, uint32_t>;
 
@@ -1214,6 +1224,7 @@ public:
         bool                       m_metadata_sent { false };
         Sasl                       m_sasl;
         Roles                      m_roles;
+        bool                       m_authenticated { false };
 
         static std::atomic<int64_t> s_connection_id;
     };

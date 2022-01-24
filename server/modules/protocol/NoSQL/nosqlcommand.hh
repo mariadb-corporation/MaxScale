@@ -77,6 +77,10 @@ public:
         return m_last_statement;
     }
 
+    virtual void authenticate()
+    {
+    }
+
     virtual void authorize(uint32_t role_mask)
     {
     }

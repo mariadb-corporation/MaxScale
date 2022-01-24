@@ -369,6 +369,7 @@ private:
 
         auto& context = m_database.context();
         context.set_roles(role::to_bitmasks(info.roles));
+        context.set_authenticated(true);
     }
 };
 

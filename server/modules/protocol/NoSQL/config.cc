@@ -48,6 +48,16 @@ mxs::config::ParamString GlobalConfig::s_host(
     "The host to use when creating new users in the backend.",
     "%");
 
+mxs::config::ParamEnum<GlobalConfig::Authentication> GlobalConfig::s_authentication(
+    &nosqlprotocol::specification,
+    "authentication",
+    "Whether nosqlprotocol authentication is optional or required.",
+    {
+        {GlobalConfig::Authentication::OPTIONAL, "optional"},
+        {GlobalConfig::Authentication::REQUIRED, "required"},
+    },
+    GlobalConfig::Authentication::OPTIONAL);
+
 mxs::config::ParamEnum<GlobalConfig::Authorization> GlobalConfig::s_authorization(
     &nosqlprotocol::specification,
     "authorization",
@@ -139,6 +149,7 @@ GlobalConfig::GlobalConfig(const std::string& name, ProtocolModule* instance)
     add_native(&GlobalConfig::user, &s_user);
     add_native(&GlobalConfig::password, &s_password);
     add_native(&GlobalConfig::host, &s_host);
+    add_native(&GlobalConfig::authentication, &s_authentication);
     add_native(&GlobalConfig::authorization, &s_authorization);
     add_native(&GlobalConfig::id_length, &s_id_length);
 
