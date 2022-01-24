@@ -58,15 +58,16 @@ Nosqlprotocol supports _SCRAM_ _authentication_ as implemented by MongoDB®.
 Currently the `SCRAM-SHA-1` mechanism is supported, but support for
 `SCRAM-SHA-256` will be added.
 
-Nosqlprotocol bascially performs no _authorization_, but any limitations on
-what a user is allowed to perform are controlled by the grants of the
-corresponding MariaDB user.
+By default nosqlprotocol performs no _authorization_, but any limitations
+on what a user is allowed to perform are controlled by the grants of the
+MariaDB user used when accessing the MariaDB server. If nosqlprotocol
+authorization has been enabled, then nosqlprotocol performs independently
+some authorization.
 
-FOLLOWING PARAGRAPH TO BE TUNED
+If nosqlprotocol has been setup so that no authentication is required, then
+when connecting only the host and port should be provided, but neither a
+username nor a password.
 
-Currently no authentication is supported in the communication between
-the MongoDB® client application and MaxScale. That is, when connecting, only
-the host and port should be provided, but neither username nor password.
 For instance, if the _MongoDB Node.JS Driver_ is used, then the connection
 string should look like:
 ```
@@ -245,6 +246,99 @@ is not required, and if the MongoDB® client has not authenticated itself, the
 credentials specified with `nosqlprotocol.[user|password]` (or the anonymous
 user) will be used when accessing the MariaDB server.
 
+## Authorization
+
+By default nosqlprotocol does no authorization. However, a nosqlprotocol
+client is _always_ subject to the authorization performed by the MariaDB
+server.
+
+When nosqlprotocol authorization is enabled by adding
+```
+nosqlprotocol.authorization = enabled
+```
+to the configuration file, some commands will be subject to authorization,
+by nosqlprotocol. The following table lists the commands and what role they
+require.
+
+Command | Role
+--------------
+[createUser](#createUser) | `userAdmin`
+[dropUser](#dropUser) | `userAdmin`
+[grantRolesToUser](#grantRolesToUser) | `userAdmin`
+[revokeRolesFromUser](#revokeRolesFromUser) | `userAdmin`
+[mxsAddUser](#mxsAddUser) | `userAdmin`
+[mxsRemoveUser](#mxsRemoveUser) | `userAdmin`
+[mxsUpdateUser](#mxsUpdateUser) | `userAdmin`
+[updateUser](#updateUser) | `userAdmin`
+[usersInfo](#usersInfo) | `userAdmin`
+
+It is important to note that even if nosqlprotocol authorization
+is enabled, the MariaDB server has the final word. That is, even if the
+roles of a user would be sufficient for a particular operation, if the
+granted privileges are not, the operation will not succeed. There may
+be a mismatch between roles and grants, for instance, if the wrong roles
+were specified when the user was added, or if the grants have been
+altered directly and not via nosqlprotocol.
+
+## Bootstrapping the Authorization
+
+In order to enable authorization you need to have NoSQL users and
+those can be created with [createUser](#createUser) or added
+with [mxsAddUser](#addUser).
+
+If you want to _create_ a user, then you first need to configure
+nosqlprotocol with credentials that are sufficient for creating a user:
+```
+nosqlprotocol.user = user_with_privileges_for_creating_a_user
+nosqlprotocol.password = the_users_password
+nosqlprotocol.authorization = disabled
+```
+Start MaxScale and connect to it with the MongoDB® command line client
+```
+$ mongo --port 17017
+...
+>
+```
+Then create the user.
+```
+> use admin;
+switched to db admin
+> db.runCommand({createUser: "nosql_admin", pwd: "nosql_pwd", roles: ["userAdmin"]});
+{ "ok" : 1 }
+```
+Alternatively you can add an existing user. Note that it should be
+added to the `mariadb` database, unless it was created with the
+convention of having the database as a prefix, e.g. `db.bob`.
+```
+> use mariadb;
+switched to db admin
+> db.runCommand({mxsAddUser: "bob", pwd: "bob_pwd", roles: ["userAdmin"]});
+{ "ok" : 1 }
+```
+
+Now you should shutdown MaxScale, remove the `nosqlprotocol.user` and
+`nosqlprotocol.password` entries from the configuration file, add the
+entry
+```
+nosqlprotocol.authorization=enabled
+```
+and start MaxScale.
+
+If you now try to create a user when not having been authenticated or
+when authenticated as a user without the `userAdmin` role, the result
+will be:
+```
+> use test;
+switched to db test
+> db.runCommand({createUser: "alice", pwd: "alices_pwd", roles: []});
+{
+	"ok" : 0,
+	"errmsg" : "command createUser requires authentication",
+	"code" : 13,
+	"codeName" : "Unauthorized"
+}
+```
+
 # Client Library
 
 As the goal of _nosqlprotocol_ is to implement, to the extent that it
@@ -253,10 +347,6 @@ implements them, it should be possible to use any language specific driver.
 
 However, during the development of _nosqlprotocol_, the _only_ client library
 that has been verified to work is version 3.6 of _MongoDB Node.JS Driver_.
-
-## Roles and Grants
-
-TBD
 
 # Parameters
 
@@ -303,9 +393,9 @@ used for all unauthenticated MongoDB® clients connecting to the same listener p
     * Default: `disabled`
 
 Specifies whether nosqlprotocol itself should perform authorization in the context
-of the commands (mxsAddUser)[#mxsAddUser], (mxsRemoveUser)[#mxsRemoveUser] and
-(mxsUpdateUser)[#mxsUpdateUser]. Authorization should not be enabled before users
-have been created with (createUser)[#createUser] or added with (mxsAddUser)[#mxsAddUser]
+of the commands [mxsAddUser](#mxsAddUser), [mxsRemoveUser](#mxsRemoveUser) and
+[mxsUpdateUser](#mxsUpdateUser). Authorization should not be enabled before users
+have been created with [createUser](#createUser) or added with [mxsAddUser](#mxsAddUser)
 with authorization being disabled.
 
 NOTE: All client activity is _always_ subject to authorization performed by the
