@@ -40,28 +40,76 @@ vector<string> create_grant_or_revoke_statements(const string& user,
 
     for (const auto& role : roles)
     {
-        string db = (role.db == "admin" ? "*" : role.db);
+        bool is_admin = (role.db == "admin");
+
+        string db = role.db;
 
         vector<string> privileges;
 
         switch (role.id)
         {
+        case role::Id::DB_ADMIN_ANY_DATABASE:
+            if (is_admin)
+            {
+                db = "*";
+            }
+            else
+            {
+                ostringstream ss;
+                ss << "No role names dbAdminAnyDatabase@" << role.db;
+                throw SoftError(ss.str(), error::ROLE_NOT_FOUND);
+            }
         case role::Id::DB_ADMIN:
             privileges.push_back("ALTER");
             privileges.push_back("CREATE");
             privileges.push_back("DROP");
+            privileges.push_back("SHOW DATABASES");
+            privileges.push_back("SELECT");
             break;
 
+        case role::Id::READ_WRITE_ANY_DATABASE:
+            if (is_admin)
+            {
+                db = "*";
+            }
+            else
+            {
+                ostringstream ss;
+                ss << "No role names readWriteAnyDatabase@" << role.db;
+                throw SoftError(ss.str(), error::ROLE_NOT_FOUND);
+            }
         case role::Id::READ_WRITE:
+            privileges.push_back("CREATE");
             privileges.push_back("DELETE");
+            privileges.push_back("INDEX");
             privileges.push_back("INSERT");
+            privileges.push_back("SELECT");
             privileges.push_back("UPDATE");
+            break;
+
+        case role::Id::READ_ANY_DATABASE:
+            if (is_admin)
+            {
+                db = "*";
+            }
+            else
+            {
+                ostringstream ss;
+                ss << "No role names readAnyDatabase@" << role.db;
+                throw SoftError(ss.str(), error::ROLE_NOT_FOUND);
+            }
         case role::Id::READ:
             privileges.push_back("SELECT");
             break;
 
+        case role::Id::USER_ADMIN:
+            privileges.push_back("CREATE USER");
+            privileges.push_back("GRANT OPTION");
+            break;
+
         default:
-            mxb_assert(!true);
+            MXS_WARNING("Role %s granted/revoked to/from %s is ignored.",
+                        role::to_string(role.id).c_str(), user.c_str());
         }
 
         string statement = command + mxb::join(privileges) + " ON " + db + ".*" + preposition + user;
@@ -80,6 +128,11 @@ vector<string> create_grant_statements(const string& user, const vector<role::Ro
 vector<string> create_revoke_statements(const string& user,const vector<role::Role>& roles)
 {
     return create_grant_or_revoke_statements(user, "REVOKE ", " FROM ", roles);
+}
+
+string get_nosql_account(const string& db, const string& user)
+{
+    return user + "@" + db;
 }
 
 }
@@ -123,15 +176,17 @@ protected:
         m_user = value_as<string>();
 
         MxsAddUser::parse(KEY, um, m_doc, m_db, m_user, &m_pwd, &m_custom_data, &m_mechanisms, &m_roles);
+
+        m_host = m_database.config().host;
     }
 
     string generate_sql() override
     {
-        string user = "'" + m_db + "." + m_user + "'@'%'";
+        string account = mariadb::get_account(m_db, m_user, m_host);
 
-        m_statements.push_back("CREATE USER " + user + " IDENTIFIED BY '" + m_pwd + "'");
+        m_statements.push_back("CREATE USER " + account + " IDENTIFIED BY '" + m_pwd + "'");
 
-        auto grants = create_grant_statements(user, m_roles);
+        auto grants = create_grant_statements(account, m_roles);
 
         m_statements.insert(m_statements.end(), grants.begin(), grants.end());
 
@@ -197,11 +252,12 @@ private:
             {
                 ComERR err(response);
 
-                MXS_ERROR("Could create user '%s.%s'@'%%', but granting access with the "
+                MXS_ERROR("Could create user '%s.%s'@'%s', but granting access with the "
                           "statement \"%s\" failed with: (%d) \"%s\". Will now attempt to "
                           "DROP the user.",
                           m_db.c_str(),
                           m_user.c_str(),
+                          m_host.c_str(),
                           m_statements[i].c_str(),
                           err.code(),
                           err.message().c_str());
@@ -249,9 +305,10 @@ private:
         {
             mxb_assert(i == m_statements.size());
 
+            const auto& config = m_database.config();
             auto& um = m_database.context().um();
 
-            if (um.add_user(m_db, m_user, m_pwd, m_custom_data, m_mechanisms, m_roles))
+            if (um.add_user(m_db, m_user, m_pwd, config.host, m_custom_data, m_mechanisms, m_roles))
             {
                 doc.append(kvp("ok", 1));
             }
@@ -281,7 +338,7 @@ private:
             m_action = Action::DROP;
 
             ostringstream sql;
-            sql << "DROP USER '" << m_db << "." << m_user << "'@'%'";
+            sql << "DROP USER '" << m_db << "." << m_user << "'@'" << m_host << "'";
 
             send_downstream_via_loop(sql.str());
         }
@@ -298,8 +355,8 @@ private:
         case ComResponse::OK_PACKET:
             {
                 ostringstream ss;
-                ss << "Could create MariaDB user '" << m_db << "." << m_user << "'@'%', but "
-                   << "could not give the required GRANTs. The current used does not have "
+                ss << "Could create MariaDB user '" << m_db << "." << m_user << "'@'" << m_host << "', "
+                   << "but could not give the required GRANTs. The current used does not have "
                    << "the required privileges. See the MaxScale log for more details.";
 
                 throw SoftError(ss.str(), error::UNAUTHORIZED);
@@ -311,8 +368,8 @@ private:
                 ComERR err(response);
 
                 ostringstream ss;
-                ss << "Could create MariaDB user '" << m_db << "." << m_user << "'@'%', but "
-                   << "could not give the required GRANTs and the subsequent attempt to delete "
+                ss << "Could create MariaDB user '" << m_db << "." << m_user << "'@'" << m_host << "', "
+                   << "but could not give the required GRANTs and the subsequent attempt to delete "
                    << "the user failed: (" << err.code() << ") \"" << err.message() << "\". "
                    << "You should now DROP the user manually.";
 
@@ -340,6 +397,7 @@ private:
     string                   m_db;
     string                   m_user;
     string                   m_pwd;
+    string                   m_host;
     std::string              m_custom_data;
     vector<scram::Mechanism> m_mechanisms;
     vector<role::Role>       m_roles;
@@ -362,9 +420,9 @@ public:
 
         const auto& um = m_database.context().um();
 
-        m_db_users = um.get_db_users(m_database.name());
+        m_mariadb_accounts = um.get_mariadb_accounts(m_database.name());
 
-        if (m_db_users.empty())
+        if (m_mariadb_accounts.empty())
         {
             DocumentBuilder doc;
             long n = 0;
@@ -419,13 +477,13 @@ public:
                             vector<string> users;
                             for (int i = 0; i < n; ++i)
                             {
-                                string db_user = "'" + m_db_users[i] + "'";
-                                users.push_back(db_user);
+                                string mariadb_user = "'" + m_mariadb_accounts[i].user + "'";
+                                users.push_back(mariadb_user);
                             }
 
                             MXS_WARNING("Dropping users %s succeeded, but dropping '%s' failed: %s",
                                         mxb::join(users, ",").c_str(),
-                                        m_db_users[n].c_str(),
+                                        m_mariadb_accounts[n].user.c_str(),
                                         err.message().c_str());
                         }
                         break;
@@ -433,12 +491,12 @@ public:
                     case ER_CANNOT_USER:
                         MXS_WARNING("User '%s' apparently did not exist in the MariaDB server, even "
                                     "though it should according to the nosqlprotocol book-keeping.",
-                                    m_db_users[n].c_str());
+                                    m_mariadb_accounts[n].user.c_str());
                         break;
 
                     default:
                         MXS_ERROR("Dropping user '%s' failed: %s",
-                                  m_db_users[n].c_str(),
+                                  m_mariadb_accounts[n].user.c_str(),
                                   err.message().c_str());
                     };
                 };
@@ -447,12 +505,12 @@ public:
 
         mxb_assert(pData == pEnd);
 
-        vector<string> users = m_db_users;
-        users.resize(n);
+        vector<UserManager::MariaDBAccount> accounts = m_mariadb_accounts;
+        accounts.resize(n);
 
         const auto& um = m_database.context().um();
 
-        if (!um.remove_db_users(users))
+        if (!um.remove_mariadb_accounts(accounts))
         {
             ostringstream ss;
             ss << "Could remove " << n << " users from MariaDB, but could not remove "
@@ -473,19 +531,19 @@ public:
 protected:
     string generate_sql() override final
     {
-        mxb_assert(!m_db_users.empty());
+        mxb_assert(!m_mariadb_accounts.empty());
 
         vector<string> statements;
-        for (const auto& db_user : m_db_users)
+        for (const auto& mariadb_account : m_mariadb_accounts)
         {
-            statements.push_back("DROP USER '" + db_user + "'@'%'");
+            statements.push_back("DROP USER '" + mariadb_account.user + "'@'" + mariadb_account.host + "'");
         }
 
         return mxb::join(statements, ";");
     };
 
 private:
-    vector<string> m_db_users;
+    vector<UserManager::MariaDBAccount> m_mariadb_accounts;
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/dropUser/
@@ -515,7 +573,7 @@ public:
                     {
                         // We assume it's because the user does not exist.
                         ostringstream ss;
-                        ss << "User \"" << m_user << "@" << m_db << "\" not found";
+                        ss << "User \"" << get_nosql_account(m_db, m_user) << "\" not found";
 
                         throw SoftError(ss.str(), error::USER_NOT_FOUND);
                     }
@@ -548,7 +606,7 @@ public:
                 else
                 {
                     ostringstream ss;
-                    ss << "Could remove user \"" << m_user << "@" << m_db << "\" from "
+                    ss << "Could remove user \"" << get_nosql_account(m_db, m_user) << "\" from "
                        << "MariaDB backend, but not from local database.";
 
                     throw SoftError(ss.str(), error::INTERNAL_ERROR);
@@ -573,20 +631,23 @@ protected:
 
         auto& um = m_database.context().um();
 
-        if (!um.user_exists(m_db, m_user))
+        UserManager::MariaDBAccount mariadb_account;
+        if (!um.get_mariadb_account(m_db, m_user, &mariadb_account))
         {
             ostringstream ss;
-            ss << "User \"" << m_user << "@" << m_db << "\" not found";
+            ss << "User \"" << get_nosql_account(m_db, m_user) << "\" not found";
 
             throw SoftError(ss.str(), error::USER_NOT_FOUND);
         }
+
+        m_host = mariadb_account.host;
     }
 
     string generate_sql() override
     {
         ostringstream sql;
 
-        sql << "DROP USER '" << m_db << "." << m_user << "'@'%'";
+        sql << "DROP USER '" << m_db << "." << m_user << "'@'" << m_host << "'";
 
         return sql.str();
     }
@@ -594,6 +655,7 @@ protected:
 private:
     string m_db;
     string m_user;
+    string m_host;
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/grantRolesToUser/
@@ -758,9 +820,9 @@ private:
 
     string generate_sql() override
     {
-        string user = "'" + m_db + "." + m_user + "'@'%'";
+        string account = mariadb::get_account(m_db, m_user, m_info.host);
 
-        m_statements = create_grant_statements(user, m_roles);
+        m_statements = create_grant_statements(account, m_roles);
 
         return mxb::join(m_statements, ";");
     }
@@ -937,9 +999,9 @@ private:
 
     string generate_sql() override
     {
-        string user = "'" + m_db + "." + m_user + "'@'%'";
+        string account = mariadb::get_account(m_db, m_user, m_info.host);
 
-        m_statements = create_revoke_statements(user, m_roles);
+        m_statements = create_revoke_statements(account, m_roles);
 
         return mxb::join(m_statements, ";");
     }
@@ -965,18 +1027,29 @@ public:
     {
         State state;
 
-        parse();
+        m_db = m_database.name();
+        m_user = value_as<string>();
 
-        if ((m_what & ~UserInfo::MECHANISMS) != 0)
+        auto& um = m_database.context().um();
+
+        if (!um.get_info(m_db, m_user, &m_old_info))
         {
-            // Something else but the mechanisms are updated.
+            ostringstream ss;
+            ss << "Could not find user \"" << m_user << "\" for db \"" << m_db << "\"";
+
+            throw SoftError(ss.str(), error::USER_NOT_FOUND);
+        }
+
+        m_what = MxsUpdateUser::parse(KEY, um, m_doc, m_db, m_user, &m_new_info);
+
+        if ((m_what & ~(UserInfo::CUSTOM_DATA | UserInfo::MECHANISMS)) != 0)
+        {
+            // Something else but the mechanisms and/or custom_data is updated.
             state = SingleCommand::execute(ppNoSQL_response);
         }
         else
         {
-            const auto &um = m_database.context().um();
-
-            if (um.set_mechanisms(m_db, m_user, m_mechanisms))
+            if (um.update(m_db, m_user, m_what, m_new_info))
             {
                 DocumentBuilder doc;
                 doc.append(kvp(key::OK, 1));
@@ -986,7 +1059,7 @@ public:
             }
             else
             {
-                throw SoftError("Could not update the mechanisms.", error::INTERNAL_ERROR);
+                throw SoftError("Could not update 'mechanisms' and/or 'custom_data'.", error::INTERNAL_ERROR);
             }
         }
 
@@ -1033,99 +1106,18 @@ protected:
     }
 
 private:
-    void parse()
-    {
-        bool digest_password = true;
-        if (optional(key::DIGEST_PASSWORD, &digest_password) && !digest_password)
-        {
-            ostringstream ss;
-            ss << "nosqlprotocol does not support that the client digests the password, "
-               << "'digestPassword' must be true.";
-
-            throw SoftError(ss.str(), error::BAD_VALUE);
-        }
-
-        m_db = m_database.name();
-        m_user = value_as<string>();
-
-        auto& um = m_database.context().um();
-
-        if (!um.get_info(m_db, m_user, &m_info))
-        {
-            ostringstream ss;
-            ss << "Could not find user \"" << m_user << "\" for db \"" << m_db << "\"";
-
-            throw SoftError(ss.str(), error::USER_NOT_FOUND);
-        }
-
-        if (optional(key::PWD, &m_pwd))
-        {
-            m_what |= UserInfo::PWD;
-        }
-
-        bsoncxx::document::view custom_data;
-        if (optional(key::CUSTOM_DATA, &custom_data))
-        {
-            m_custom_data = bsoncxx::to_json(custom_data);
-            m_what |= UserInfo::CUSTOM_DATA;
-        }
-
-        bsoncxx::array::view mechanism_names;
-        if (optional(key::MECHANISMS, &mechanism_names))
-        {
-            scram::from_bson(mechanism_names, &m_mechanisms);
-
-            if (!(m_what & UserInfo::PWD))
-            {
-                // Password is not changed => new mechanisms must be subset of old.
-                for (const auto mechanism : m_mechanisms)
-                {
-                    auto begin = m_info.mechanisms.begin();
-                    auto end = m_info.mechanisms.end();
-
-                    if (std::find(begin, end, mechanism) == end)
-                    {
-                        ostringstream ss;
-                        ss << "mechanisms field must be a subset of previously set mechanisms";
-
-                        throw SoftError(ss.str(), error::BAD_VALUE);
-                    }
-                }
-            }
-
-            m_what |= UserInfo::MECHANISMS;
-        }
-        else
-        {
-            m_mechanisms = m_info.mechanisms;
-        }
-
-        bsoncxx::array::view role_names;
-        if (optional(key::ROLES, &role_names))
-        {
-            role::from_bson(role_names, m_db, &m_roles);
-
-            m_what |= UserInfo::ROLES;
-        }
-
-        if (m_what == 0)
-        {
-            throw SoftError("Must specify at least one field to update in updateUser", error::BAD_VALUE);
-        }
-    }
-
     string generate_update_pwd()
     {
         m_action = Action::UPDATE_PASSWORD;
 
         m_statements.clear();
 
-        string user = "'" + m_db + "." + m_user + "'@'%'";
+        string account = mariadb::get_account(m_db, m_user, m_old_info.host);
 
         mxb_assert(m_what & UserInfo::PWD);
 
         ostringstream ss;
-        ss << "SET PASSWORD FOR " << user << " = PASSWORD('" << m_pwd << "')";
+        ss << "SET PASSWORD FOR " << account << " = PASSWORD('" << m_new_info.pwd << "')";
 
         string s = ss.str();
 
@@ -1141,9 +1133,10 @@ private:
 
         m_statements.clear();
 
-        string user = "'" + m_db + "." + m_user + "'@'%'";
+        string account = mariadb::get_account(m_db, m_user, m_old_info.host);
 
-        auto revokes = create_revoke_statements(user, m_info.roles); // Revoke according to current roles.
+         // Revoke according to current roles.
+        auto revokes = create_revoke_statements(account, m_old_info.roles);
         m_nRevokes = revokes.size();
 
         for (const auto& revoke : revokes)
@@ -1151,7 +1144,8 @@ private:
             m_statements.push_back(revoke);
         }
 
-        auto grants = create_grant_statements(user, m_roles); // Grant according to new roles.
+        // Grant according to new roles.
+        auto grants = create_grant_statements(account, m_new_info.roles);
         m_nGrants = grants.size();
 
         for (const auto& grant : grants)
@@ -1178,18 +1172,18 @@ private:
                 const auto& um = m_database.context().um();
 
                 UserInfo info;
-                info.pwd = m_pwd;
+                info.pwd = m_new_info.pwd;
                 uint32_t what = UserInfo::PWD;
 
                 if (m_what & UserInfo::CUSTOM_DATA)
                 {
-                    info.custom_data = m_custom_data;
+                    info.custom_data = m_new_info.custom_data;
                     what |= UserInfo::CUSTOM_DATA;
                 }
 
                 if (m_what & UserInfo::MECHANISMS)
                 {
-                    info.mechanisms = m_mechanisms;
+                    info.mechanisms = m_new_info.mechanisms;
                     what |= UserInfo::MECHANISMS;
                 }
 
@@ -1218,7 +1212,7 @@ private:
                     ostringstream ss;
                     ss << "Could update the password in the MariaDB server, but could not store "
                        << "it in the local nosqlprotocol database. It will no longer be possible "
-                       << "to log in as " << m_user << "@" << m_db << ".";
+                       << "to log in as \"" << get_nosql_account(m_db, m_user) << "\".";
 
                     throw SoftError(ss.str(), error::INTERNAL_ERROR);
                 }
@@ -1272,18 +1266,18 @@ private:
         auto& um = m_database.context().um();
 
         UserInfo info;
-        info.roles = m_roles;
+        info.roles = m_new_info.roles;
         uint32_t what = UserInfo::ROLES;
 
         if (m_what & UserInfo::CUSTOM_DATA)
         {
-            info.custom_data = m_custom_data;
+            info.custom_data = m_new_info.custom_data;
             what |= UserInfo::CUSTOM_DATA;
         }
 
         if (m_what & UserInfo::MECHANISMS)
         {
-            info.mechanisms = m_mechanisms;
+            info.mechanisms = m_new_info.mechanisms;
             what |= UserInfo::MECHANISMS;
         }
 
@@ -1423,11 +1417,8 @@ private:
     Action                   m_action = Action::UPDATE_PASSWORD;
     string                   m_db;
     string                   m_user;
-    string                   m_pwd;
-    string                   m_custom_data;
-    vector<scram::Mechanism> m_mechanisms;
-    vector<role::Role>       m_roles;
-    UserInfo                 m_info;
+    UserInfo                 m_old_info;
+    UserInfo                 m_new_info;
     uint32_t                 m_what { 0 };
     vector<string>           m_statements;
     int32_t                  m_nRevokes { 0 };
@@ -1491,7 +1482,7 @@ private:
             throw SoftError("$and/$or/$nor must be a nonempty array", error::BAD_VALUE);
         }
 
-        vector<string> db_users;
+        vector<string> mariadb_users;
 
         for (const auto& element: users)
         {
@@ -1502,9 +1493,9 @@ private:
                     string_view user = element.get_utf8();
                     ostringstream ss;
                     ss << m_database.name() << "." << user;
-                    auto db_user = ss.str();
+                    auto mariadb_user = ss.str();
 
-                    db_users.push_back(db_user);
+                    mariadb_users.push_back(mariadb_user);
                 }
                 break;
 
@@ -1515,9 +1506,9 @@ private:
                     string user = get_string(doc, key::USER);
                     string db = get_string(doc, key::DB);
 
-                    auto db_user = db + "." + user;
+                    auto mariadb_user = db + "." + user;
 
-                    db_users.push_back(db_user);
+                    mariadb_users.push_back(mariadb_user);
                 }
                 break;
 
@@ -1526,7 +1517,7 @@ private:
             }
         }
 
-        vector<UserInfo> infos = um.get_infos(db_users);
+        vector<UserInfo> infos = um.get_infos(mariadb_users);
 
         add_users(doc, infos);
         doc.append(kvp(key::OK, 1));
@@ -1597,7 +1588,7 @@ private:
         }
 
         DocumentBuilder user;
-        user.append(kvp(key::_ID, info.db_user));
+        user.append(kvp(key::_ID, info.mariadb_user));
 
         uuid_t uuid;
         if (uuid_parse(info.uuid.c_str(), uuid) == 0)
@@ -1611,7 +1602,7 @@ private:
         }
         else
         {
-            MXS_ERROR("The uuid '%s' of '%s' is invalid.", info.uuid.c_str(), info.db_user.c_str());
+            MXS_ERROR("The uuid '%s' of '%s' is invalid.", info.uuid.c_str(), info.mariadb_user.c_str());
         }
 
         if (!info.custom_data.empty())

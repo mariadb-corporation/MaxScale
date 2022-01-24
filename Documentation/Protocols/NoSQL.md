@@ -82,6 +82,51 @@ MongoDB shell version v4.4.1
 >
 ```
 
+## NoSQL and MariaDB Users
+
+A MariaDB user consists of a name and a host part. A user `'user'@'%'`
+and a user `'user'@'127.0.0.1'` are completely different. The host part
+specifies where a user may connect from, with `%` being a wildcard that
+matches all hosts. What data a user is allowed to access and modify is
+specified by what _privileges_ are granted to the user.
+
+A NoSQL user is somewhat different. It is created in the context of a
+particular database, so there may be a user `user` in the database `dbA`
+and different user with the same name `user` in the database `dbB`. What
+hosts a user may connect from can be restricted, but that is property of
+the user and not an implicit part of it. What data a user is allowed to
+access and modify is specified by the _roles_ that have been assigned to
+the user.
+
+From the above it should be clear that there is not a 1-to-1
+correspondence between the concept of a user in NoSQL and the concept
+of a user in MariaDB, but that some additional conventions are needed.
+
+TBW
+
+## Roles and Privileges
+
+When creating a user nosqlprotocol accepts all roles as predefined by
+MongoDB®, but not all of them are translated into GRANT privileges.
+The following table shows what privilege(s) a particular role is
+converted to.
+
+Role | Privilege
+-----|------
+dbAdmin|ALTER, CREATE, DROP, SHOW DATABASES, SELECT
+readWrite|CREATE, DELETE, INDEX, INSERT, SELECT, UPDATE
+read|SELECT
+userAdmin|CREATE USER, GRANT OPTION
+
+In addition there are `AnyDatabase` versions of `dbAdmin`, `read` and
+`readWrite` (e.g `readAnyDatabase`) that can be assigned to a user in
+the `admin` database. If so, then the privilege is granted on `*.*`,
+otherwise on `<db>.*`.
+
+Other pre-defined roles are recognized and stored in the local
+nosqlprotocol account database, but they do not affect what privileges
+are granted to the MariaDB user.
+
 ## Client Authentication
 
 Authenticationwise nosqlprotocol can be used in three different ways:
@@ -155,7 +200,8 @@ nosqlprotocol.on_unknown_command=return_error
 ## `user`
 
    * Type: string
-   * Optional: true
+   * Mandatory: false
+   * Default: ""
 
 Specifies the _user_ to be used when connecting to the backend, if the MongoDB®
 client is not authenticated.
@@ -163,11 +209,26 @@ client is not authenticated.
 ## `password`
 
    * Type: string
-   * Optional: true
+   * Mandatory: false
+   * Default: ""
 
 Specifies the _password_ to be used when connecting to the backend, is the MongoDB®
 client is not authenticated. Note that the same _user_/_password_ combination will be
 used for all unauthenticated MongoDB® clients connecting to the same listener port.
+
+## `host`
+
+   * Type: string
+   * Mandatory: false
+   * Default: "%"
+
+Specifies the _host_ to be used when a MariaDB user is created via nosqlprotocol.
+By default all users are created as `...@'%'`, which means that it is possible to
+connect to the MariaDB server from any host using the credentials of the created
+user. For tighter security, the IP-address of the MaxScale host can be specified.
+
+NOTE: This value does **not** specify from which host it is allowed to connect to
+MaxScale.
 
 ## `on_unknown_command`
 
@@ -701,7 +762,47 @@ the command has no effect.
 
 ## User Management Commands
 
+### createUser
+
+Creates a new MariaDB user and adds an entry to the local nosqlprotocol
+account database.
+
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+createUser | string | The name of the user to be added.
+pwd | string | The password in cleartext.
+customData | document | Optional. Any arbitrary information.
+roles | array | The roles granted to the user.
+mechanisms | array | Optional. The specific supported SCRAM mechanisms for this user. Must be a subset of the supported mechanisms.
+digestPassword | boolean | Optional. If specified, must be `true`.
+
+The MariaDB user will be created as `'<db>.<user>'@'%'` where `<db>` is
+the name of the NoSQL database in whose context the user is created, and
+`<user>` the value of the `createUser` field. For instance, with the
+following command
+```
+> use myDatabase;
+> db.runCommand({createUser: "user1", pwd: "pwd1", roles: []});
+```
+the MariaDB user `'myDatabase.user1'@'%'` will be created.
+
+The elements of the `roles` array are converted into privileges
+as explained in [here](#roles_and_privileges).
+
+In practice the creation is performed as follows:
+* First the MariaDB user is created.
+* Then the privileges are granted.
+* Finally the local nosqlprotocol account database is updated.
+
+If the granting of privileges fails, an attempt will be made to
+drop the user.
+
 ### dropAllUsersFromDatabase
+
+Drops all users from the local nosqlprotocol account database and
+the corresponding MariaDB users.
 
 The following fields are relevant.
 
@@ -709,10 +810,66 @@ Field | Type | Description
 ------|------|------------
 dropAllUsersFromDatabase | any | Ignored.
 
-As there are no users, the response will always be:
-```
-{ "n" : 0, "ok" : 1 }
-```
+If _no_ users can be dropped, e.g. due to an authorization error,
+then an error will be returned. If even a single user can be dropped
+the returned document tells how many were dropped, which does not
+necessarily indicate that _all_ users were dropped.
+
+### dropUser
+
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+dropUser | string | The name of the user to be dropped.
+
+The user will first be dropped from the MariaDB server and if
+that succeeds also from the local nosqlprotocol account database.
+
+### grantRolesToUser
+
+This command _adds_ more roles to a NoSQL user, which may imply
+that additional privileges are granted to the corresponding MariaDB
+user.
+
+Field | Type | Description
+------|------|------------
+grantRolesToUser | string | The name of the user to give additional roles.
+roles | array | An array of additional roles.
+
+Note that roles assigned to different databases will result in separate
+GRANT statements, which means that it is possible that some succeed and
+others do not.
+
+### revokeRolesFromUser
+
+This command _removes roles fron an NoSQL user, which may imply
+that privileges are revoked from the corresponding MariaDB user.
+
+Field | Type | Description
+------|------|------------
+revokeRolesFromUser | string | The name of the user to remove roles from.
+roles | array | An array of roles to remove.
+
+Note that roles to be removed from different databases will result in
+separate REVOKE statements, which means that it is possible that some
+succeed and others do not.
+
+### updateUser
+
+This command updates the information about a particular user.
+
+Field | Type | Description
+------|------|------------
+updateUser | string | The user whose information should be updated.
+pwd | string | Optional. The new password in cleartext.
+customData | document | Optional. Any arbitrary information.
+roles | array | Optional. The roles granted to the user. Note that the existing ones are _replaced_ and not amended with these roles.
+mechanisms | array | Optional. The specific SCRAM mechanisms for user credentials. Note that if a new `pwd` is provided, then the array can contain all supported SCRAM mechanisms. If a new `pwd` is not provided, then the array must be a subset of the existing mechanisms of the user.
+
+Changes to `customData` or `mechanisism` are made only to the local
+nosqlprotocol database, but changes to `pwd` or `roles` require
+the MariaDB server to be updated.
 
 ## Replication Commands
 
@@ -1358,6 +1515,75 @@ the session. For example:
 	"ok" : 1
 }
 
+```
+
+### mxsUpdateUser
+
+#### Definition
+
+##### **mxsUpdateUser**
+
+The `mxsUpdateUser` command updates a user in the local nosqlprotocol
+account database. Use [updateUser](#updateUser) to update MariaDB user
+as well.
+
+Note that the `mxsUpdateUser` command does not check that the changed
+data is compatible e.g. with the grants of the corresponding MariaDB
+user.
+
+#### Syntax
+
+The 'mxsUpdateUser' command has the following syntax:
+```
+db.runCommand(
+    {
+        mxsUpdateUser: "<name>",
+        pwd: passwordPrompt(),  // Or "<cleartext password>"
+        customData: { <any information> },
+        roles: [
+            { role: "<role>", db: "<database>" } | "<role>",
+            ...
+        ],
+        mechanisms: [ "<scram-mechanism>", ...],
+        digestPassword: <boolean>
+    }
+)
+```
+
+##### Command Fields
+
+The command has the following fields:
+
+Field | Type | Description
+------|------|------------
+mxsUpdateUser| string | The name of the user to be updated.
+pwd | string | The password in cleartext.
+customData | document | Optional. Any arbitrary information.
+roles | array | The roles granted to the user.
+mechanisms | array | Optional. The specific supported SCRAM mechanisms for this user. If a new password is not provided, the specified mechanisms must be a subset of the current mechanisms.
+digestPassword | boolean | Optional. If specified, must be `true`.
+
+The `roles` array should contain roles that a compatible with the
+grants of the user. Please check [roles and grants](#roles_and_grants)
+for a discussion on how to map roles map to grants.
+
+##### Returns
+
+If the updating of the user succeeds, the command returns a document
+with the single field `ok` whose value is `1`.
+```
+> db.runCommand({mxsUpdateUser: "user", pwd: "pwd", roles: ["readWrite"]});
+{ "ok" : 1 }
+```
+If there is a failure of some kind, the command returns an error document
+```
+> db.runCommand({mxsUpdateUser: "user", roles: ["redWrite"]});
+{
+	"ok" : 0,
+	"errmsg" : "No role named redWrite@test",
+	"code" : 31,
+	"codeName" : "RoleNotFound"
+}
 ```
 
 # Object Id

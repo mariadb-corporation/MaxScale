@@ -7,6 +7,7 @@
 // The "location" errors are not documented, but appears to be created
 // more or less on the spot in the MongoDB code and used for fringe cases.
 
+// *INDENT-OFF*
 NOSQL_ERROR(OK,                                    0, "OK")
 NOSQL_ERROR(INTERNAL_ERROR,                        1, "InternalError")
 NOSQL_ERROR(BAD_VALUE,                             2, "BadValue")
@@ -50,3 +51,4 @@ NOSQL_ERROR(LOCATION40352,                     40352, "Location40352")
 NOSQL_ERROR(LOCATION40353,                     40353, "Location40353")
 NOSQL_ERROR(LOCATION40414,                     40414, "Location40414")
 NOSQL_ERROR(LOCATION51003,                     51003, "Location51003")
+// *INDENT-ON*

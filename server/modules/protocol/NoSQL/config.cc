@@ -42,6 +42,12 @@ mxs::config::ParamString GlobalConfig::s_password(
     "The password to use when connecting to the backend.",
     "");
 
+mxs::config::ParamString GlobalConfig::s_host(
+    &nosqlprotocol::specification,
+    "host",
+    "The host to use when creating new users in the backend.",
+    "%");
+
 mxs::config::ParamCount GlobalConfig::s_id_length(
     &nosqlprotocol::specification,
     "id_length",
@@ -122,6 +128,7 @@ GlobalConfig::GlobalConfig(const std::string& name, ProtocolModule* instance)
 {
     add_native(&GlobalConfig::user, &s_user);
     add_native(&GlobalConfig::password, &s_password);
+    add_native(&GlobalConfig::host, &s_host);
     add_native(&GlobalConfig::id_length, &s_id_length);
 
     add_native(&GlobalConfig::auto_create_databases, &s_auto_create_databases);

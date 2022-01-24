@@ -345,6 +345,15 @@ string nosql::escape_essential_chars(string&& from)
     return to;
 }
 
+bool nosql::is_valid_database_name(const std::string& name)
+{
+    // Backtick - '`' - is actually a valid character for database names, but
+    // as it is 1) likely that it is exceedingly rare that it would be used
+    // in a database name and 2) if allowed, it would have to be encoded, we
+    // reject it.
+    return !name.empty() && name.find_first_of(" /\\.\"$`") == string::npos;
+}
+
 template<>
 bool nosql::element_as(const bsoncxx::document::element& element,
                        Conversion conversion,

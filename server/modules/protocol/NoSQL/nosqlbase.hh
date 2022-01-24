@@ -207,6 +207,16 @@ inline std::string escape_essential_chars(const string_view& sv)
     return escape_essential_chars(std::string(sv.data(), sv.length()));
 }
 
+/**
+ * Checks whether a string is a valid database name.
+ *
+ * @param name  The string to check.
+ *
+ * @return True, if the name is valid.
+ */
+bool is_valid_database_name(const std::string& name);
+
+
 enum class ValueFor
 {
     JSON,

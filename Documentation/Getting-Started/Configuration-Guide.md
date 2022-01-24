@@ -1983,7 +1983,8 @@ exceeds the value of *max_sescmd_history*, pre-emptive pooling is disabled for
 the session.
 
 This feature should only be used when minimizing the backend connection count is
-a priority, even at the cost of query delay and throughput.
+a priority, even at the cost of query delay and throughput. Also, see server
+setting [max_routing_connections](#max_routing_connections).
 
 #### Limitations in `idle_session_pool_time`
 
@@ -2097,6 +2098,35 @@ duration is longer than a second.
 A DCB placed in the persistent pool for a server will only be reused if the
 elapsed time since it joined the pool is less than the given value. Otherwise,
 the DCB will be discarded and the connection closed.
+
+### `max_routing_connections`
+
+Maximum number of routing connections to this server. Does not limit monitor
+connections or user account fetching. The effect of this setting depends on if
+the service setting [idle_session_pool_time](#idle_session_pool_time),
+i.e. pre-emptive pooling, is enabled or not. A value of 0 (default) means no
+limit.
+
+If pre-emptive pooling is not on, *max_routing_connections* simply sets a limit.
+Any sessions attempting to exceed this limit will fail to connect to the
+backend. The client can still connect to MaxScale, but queries will fail.
+
+If pre-emptive pooling is on, sessions exceeding the limit will be put on hold
+until a connection is available. Such sessions will appear unresponsive, as
+queries will hang possibly for several seconds. This feature is best used in a
+situation where most sessions are idle, so that backend connections are usually
+available.
+
+Each MaxScale routing thread has its own connection pool. If the pool of thread
+1 has 100 connections to *serverA* with `max_routing_connections=100`, other
+threads cannot connect to the server. For this reason, it's best to set
+[persistmaxtime](#persistmaxtime) of *serverA* to a rather low value (e.g. twice
+*idle_session_pool_time*) so that unneeded connections are simply closed. Such
+connection slots then become available to other routing threads.
+
+```
+max_routing_connections=1234
+```
 
 ### `proxy_protocol`
 

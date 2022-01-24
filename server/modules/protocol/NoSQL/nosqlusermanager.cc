@@ -33,55 +33,60 @@ const int NOSQL_UUID_STR_LEN = 37;
 //
 static const char SQL_CREATE[] =
     "CREATE TABLE IF NOT EXISTS accounts "
-    "(db_user TEXT UNIQUE, db TEXT, user TEXT, pwd TEXT, custom_data TEXT, uuid TEXT, salt_b64 TEXT, "
-    "mechanisms TEXT, roles TEXT)";
+    "(mariadb_user TEXT UNIQUE, db TEXT, user TEXT, pwd TEXT, host TEXT, "
+    "custom_data TEXT, uuid TEXT, salt_b64 TEXT, mechanisms TEXT, roles TEXT)";
 
 static const char SQL_INSERT_HEAD[] =
-    "INSERT INTO accounts (db_user, db, user, pwd, custom_data, uuid, salt_b64, mechanisms, roles) VALUES ";
+    "INSERT INTO accounts (mariadb_user, db, user, pwd, host, custom_data, uuid, salt_b64, mechanisms, roles) "
+    "VALUES ";
 
 static const char SQL_DELETE_HEAD[] =
-    "DELETE FROM accounts WHERE db_user = ";
+    "DELETE FROM accounts WHERE mariadb_user = ";
 
 static const char SQL_SELECT_ONE_INFO_HEAD[] =
-    "SELECT db_user, db, user, pwd, custom_data, uuid, salt_b64, mechanisms, roles "
-    "FROM accounts WHERE db_user = ";
+    "SELECT mariadb_user, db, user, pwd, host, custom_data, uuid, salt_b64, mechanisms, roles "
+    "FROM accounts WHERE mariadb_user = ";
 
 static const char SQL_SELECT_ALL_INFOS[] =
-    "SELECT db_user, db, user, pwd, custom_data, uuid, salt_b64, mechanisms, roles FROM accounts";
+    "SELECT mariadb_user, db, user, pwd, host, custom_data, uuid, salt_b64, mechanisms, roles "
+    "FROM accounts";
 
 static const char SQL_SELECT_ALL_DB_INFOS_HEAD[] =
-    "SELECT db_user, db, user, pwd, custom_data, uuid, salt_b64, mechanisms, roles FROM accounts WHERE db = ";
+    "SELECT mariadb_user, db, user, pwd, host, custom_data, uuid, salt_b64, mechanisms, roles "
+    "FROM accounts WHERE db = ";
 
 static const char SQL_SELECT_SOME_DB_INFOS_HEAD[] =
-    "SELECT db_user, db, user, pwd, custom_data, uuid, salt_b64, mechanisms, roles FROM accounts WHERE ";
+    "SELECT mariadb_user, db, user, pwd, host, custom_data, uuid, salt_b64, mechanisms, roles "
+    "FROM accounts WHERE ";
 
-static const char SQL_SELECT_ALL_DB_USERS_HEAD[] =
-    "SELECT db_user FROM accounts WHERE db = ";
+static const char SQL_SELECT_ALL_MARIADB_USERS_HEAD[] =
+    "SELECT mariadb_user, host FROM accounts WHERE db = ";
 
-static const char SQL_DELETE_SOME_DB_USERS_HEAD[] =
+static const char SQL_DELETE_WHERE_HEAD[] =
     "DELETE FROM accounts WHERE ";
 
 static const char SQL_UPDATE_HEAD[] =
     "UPDATE accounts SET ";
 
 static const char SQL_UPDATE_TAIL[] =
-    " WHERE db_user = ";
+    " WHERE mariadb_user = ";
 
 
 int select_info_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
 {
-    mxb_assert(nColumns == 9);
+    mxb_assert(nColumns == 10);
 
     auto* pInfos = static_cast<vector<nosql::UserManager::UserInfo>*>(pData);
 
     nosql::UserManager::UserInfo info;
-    info.db_user = pzColumn[0];
+    info.mariadb_user = pzColumn[0];
     info.db = pzColumn[1];
     info.user = pzColumn[2];
     info.pwd = pzColumn[3];
-    info.custom_data = pzColumn[4];
-    info.uuid = pzColumn[5];
-    info.salt_b64 = pzColumn[6];
+    info.pwd = pzColumn[4];
+    info.custom_data = pzColumn[5];
+    info.uuid = pzColumn[6];
+    info.salt_b64 = pzColumn[7];
     info.salt = mxs::from_base64(info.salt_b64);
 
     bool ok = true;
@@ -92,18 +97,18 @@ int select_info_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
 
         if (!json.load_string(info.custom_data) || json.type() != mxb::Json::Type::OBJECT)
         {
-            MXB_ERROR("The 'custom_data' field of '%s' is not a JSON object.", info.db_user.c_str());
+            MXB_ERROR("The 'custom_data' field of '%s' is not a JSON object.", info.mariadb_user.c_str());
             ok = false;
         }
     }
 
     vector<nosql::scram::Mechanism> mechanisms;
-    if (nosql::scram::from_json(pzColumn[7], &mechanisms))
+    if (nosql::scram::from_json(pzColumn[8], &mechanisms))
     {
         info.mechanisms = std::move(mechanisms);
 
         vector<nosql::role::Role> roles;
-        if (nosql::role::from_json(pzColumn[8], &roles))
+        if (nosql::role::from_json(pzColumn[9], &roles))
         {
             info.roles = std::move(roles);
 
@@ -111,31 +116,31 @@ int select_info_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
         }
         else
         {
-            MXS_ERROR("The 'roles' value of '%s' is not valid.", info.db_user.c_str());
+            MXS_ERROR("The 'roles' value of '%s' is not valid.", info.mariadb_user.c_str());
             ok = false;
         }
     }
     else
     {
-        MXS_ERROR("The 'mechanisms' value of '%s' is not valid.", info.db_user.c_str());
+        MXS_ERROR("The 'mechanisms' value of '%s' is not valid.", info.mariadb_user.c_str());
         ok = false;
     }
 
     if (!ok)
     {
-        MXS_WARNING("Ignoring user '%s'.", info.db_user.c_str());
+        MXS_WARNING("Ignoring user '%s'.", info.mariadb_user.c_str());
     }
 
     return 0;
 }
 
-int select_db_users_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
+int select_mariadb_accounts_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
 {
-    mxb_assert(nColumns == 1);
+    mxb_assert(nColumns == 2);
 
-    auto* pDb_users = static_cast<vector<string>*>(pData);
+    auto* pMariaDb_accounts = static_cast<vector<nosql::UserManager::MariaDBAccount>*>(pData);
 
-    pDb_users->push_back(pzColumn[0]);
+    pMariaDb_accounts->emplace_back(nosql::UserManager::MariaDBAccount { pzColumn[0], pzColumn[1] });
 
     return 0;
 }
@@ -207,11 +212,18 @@ namespace role
 namespace
 {
 
-const map<string, Id> roles =
+const map<string, Id> roles_by_name =
 {
-    { "dbAdmin",   Id::DB_ADMIN },
-    { "read",      Id::READ },
-    { "readWrite", Id::READ_WRITE }
+#define NOSQL_ROLE(id, name) { name, Id:: id },
+#include "nosqlrole.hh"
+#undef NOSQL_ROLE
+};
+
+const map<Id, string> roles_by_id =
+{
+#define NOSQL_ROLE(id, name) { Id:: id, name },
+#include "nosqlrole.hh"
+#undef NOSQL_ROLE
 };
 
 }
@@ -220,24 +232,17 @@ const map<string, Id> roles =
 
 string role::to_string(Id id)
 {
-    for (const auto& kv : roles)
-    {
-        if (id == kv.second)
-        {
-            return kv.first;
-        }
-    }
+    auto it = roles_by_id.find(id);
+    mxb_assert(it != roles_by_id.end());
 
-    mxb_assert(!true);
-
-    return "unknown";
+    return it->second;
 }
 
 bool role::from_string(const string& key, Id* pValue)
 {
-    auto it = roles.find(key);
+    auto it = roles_by_name.find(key);
 
-    bool found = (it != roles.end());
+    bool found = (it != roles_by_name.end());
 
     if (found)
     {
@@ -528,8 +533,9 @@ unique_ptr<UserManager> UserManager::create(const string& name)
 }
 
 bool UserManager::add_user(const string& db,
-                           const string_view& user,
-                           const string_view& pwd,
+                           string user,
+                           string pwd,
+                           const std::string& host,
                            const std::string& custom_data, // Assumed to be JSON document.
                            const vector<scram::Mechanism>& mechanisms,
                            const vector<role::Role>& roles)
@@ -539,7 +545,9 @@ bool UserManager::add_user(const string& db,
     vector<uint8_t> salt = crypto::create_random_bytes(scram::SERVER_SALT_SIZE);
     string salt_b64 = mxs::to_base64(salt);
 
-    string db_user = get_db_user(db, user);
+    user = nosql::escape_essential_chars(user);
+    pwd = nosql::escape_essential_chars(pwd);
+    string mariadb_user = get_mariadb_user(db, user);
 
     uuid_t uuid;
     uuid_generate(uuid);
@@ -549,10 +557,11 @@ bool UserManager::add_user(const string& db,
 
     ostringstream ss;
     ss << SQL_INSERT_HEAD << "('"
-       << db_user << "', '"
+       << mariadb_user << "', '"
        << db << "', '"
        << user << "', '"
        << pwd << "', '"
+       << host << "', '"
        << custom_data << "', '"
        << zUuid << "', '"
        << salt_b64 << "', '"
@@ -568,7 +577,7 @@ bool UserManager::add_user(const string& db,
     if (rv != SQLITE_OK)
     {
         MXS_ERROR("Could not add user '%s' to local database: %s",
-                  db_user.c_str(),
+                  mariadb_user.c_str(),
                   pError ? pError : "Unknown error");
         sqlite3_free(pError);
     }
@@ -578,10 +587,10 @@ bool UserManager::add_user(const string& db,
 
 bool UserManager::remove_user(const string& db, const string& user)
 {
-    string db_user = get_db_user(db, user);
+    string mariadb_user = get_mariadb_user(db, nosql::escape_essential_chars(user));
 
     ostringstream ss;
-    ss << SQL_DELETE_HEAD << "\"" << db_user << "\"";
+    ss << SQL_DELETE_HEAD << "\"" << mariadb_user << "\"";
 
     string sql = ss.str();
 
@@ -601,13 +610,13 @@ bool UserManager::remove_user(const string& db, const string& user)
 
 bool UserManager::get_info(const string& db, const string& user, UserInfo* pInfo) const
 {
-    return get_info(get_db_user(db, user), pInfo);
+    return get_info(get_mariadb_user(db, nosql::escape_essential_chars(user)), pInfo);
 }
 
-bool UserManager::get_info(const string& db_user, UserInfo* pInfo) const
+bool UserManager::get_info(const string& mariadb_user, UserInfo* pInfo) const
 {
     ostringstream ss;
-    ss << SQL_SELECT_ONE_INFO_HEAD << "\"" << db_user << "\"";
+    ss << SQL_SELECT_ONE_INFO_HEAD << "\"" << mariadb_user << "\"";
 
     string sql = ss.str();
 
@@ -618,7 +627,7 @@ bool UserManager::get_info(const string& db_user, UserInfo* pInfo) const
     if (rv != SQLITE_OK)
     {
         MXS_ERROR("Could not get data for user '%s' from local database: %s",
-                  db_user.c_str(),
+                  mariadb_user.c_str(),
                   pError ? pError : "Unknown error");
         sqlite3_free(pError);
     }
@@ -695,24 +704,24 @@ vector<UserManager::UserInfo> UserManager::get_infos(const std::string& db) cons
     return infos;
 }
 
-vector<UserManager::UserInfo> UserManager::get_infos(const vector<string>& db_users) const
+vector<UserManager::UserInfo> UserManager::get_infos(const vector<string>& mariadb_users) const
 {
     vector<UserInfo> infos;
 
-    if (!db_users.empty())
+    if (!mariadb_users.empty())
     {
         ostringstream ss;
         ss << SQL_SELECT_SOME_DB_INFOS_HEAD;
 
-        auto it = db_users.begin();
-        for (; it != db_users.end(); ++it)
+        auto it = mariadb_users.begin();
+        for (; it != mariadb_users.end(); ++it)
         {
-            if (it != db_users.begin())
+            if (it != mariadb_users.begin())
             {
                 ss << " OR ";
             }
 
-            ss << "db_user = '" << *it << "'";
+            ss << "mariadb_user = '" << *it << "'";
         }
 
         string sql = ss.str();
@@ -731,17 +740,17 @@ vector<UserManager::UserInfo> UserManager::get_infos(const vector<string>& db_us
     return infos;
 }
 
-vector<string> UserManager::get_db_users(const string& db) const
+vector<UserManager::MariaDBAccount> UserManager::get_mariadb_accounts(const string& db) const
 {
-    vector<string> db_users;
+    vector<MariaDBAccount> mariadb_accounts;
 
     ostringstream ss;
-    ss << SQL_SELECT_ALL_DB_USERS_HEAD << "'" << db << "'";
+    ss << SQL_SELECT_ALL_MARIADB_USERS_HEAD << "'" << db << "'";
 
     string sql = ss.str();
 
     char* pError = nullptr;
-    int rv = sqlite3_exec(&m_db, sql.c_str(), select_db_users_cb, &db_users, &pError);
+    int rv = sqlite3_exec(&m_db, sql.c_str(), select_mariadb_accounts_cb, &mariadb_accounts, &pError);
 
     if (rv != SQLITE_OK)
     {
@@ -750,28 +759,28 @@ vector<string> UserManager::get_db_users(const string& db) const
         sqlite3_free(pError);
     }
 
-    return db_users;
+    return mariadb_accounts;
 }
 
-bool UserManager::remove_db_users(const std::vector<std::string>& db_users) const
+bool UserManager::remove_mariadb_accounts(const std::vector<MariaDBAccount>& mariadb_accounts) const
 {
     int rv = SQLITE_OK;
 
-    if (!db_users.empty())
+    if (!mariadb_accounts.empty())
     {
         ostringstream ss;
 
-        ss << SQL_DELETE_SOME_DB_USERS_HEAD;
+        ss << SQL_DELETE_WHERE_HEAD;
 
-        auto it = db_users.begin();
-        for (; it != db_users.end(); ++it)
+        auto it = mariadb_accounts.begin();
+        for (; it != mariadb_accounts.end(); ++it)
         {
-            if (it != db_users.begin())
+            if (it != mariadb_accounts.begin())
             {
                 ss << " OR ";
             }
 
-            ss << "db_user = '" << *it << "'";
+            ss << "mariadb_user = '" << it->user << "'";
         }
 
         auto sql = ss.str();
@@ -796,7 +805,7 @@ bool UserManager::update(const string& db, const string& user, uint32_t what, co
 
     int rv = SQLITE_OK;
 
-    string db_user = get_db_user(db, user);
+    string mariadb_user = get_mariadb_user(db, nosql::escape_essential_chars(user));
 
     ostringstream ss;
 
@@ -827,7 +836,7 @@ bool UserManager::update(const string& db, const string& user, uint32_t what, co
         delimiter = ", ";
     }
 
-    ss << SQL_UPDATE_TAIL << "'" << db_user << "'";
+    ss << SQL_UPDATE_TAIL << "'" << mariadb_user << "'";
 
     auto sql = ss.str();
 
@@ -836,7 +845,7 @@ bool UserManager::update(const string& db, const string& user, uint32_t what, co
 
     if (rv != SQLITE_OK)
     {
-        MXS_ERROR("Could update '%s': %s", db_user.c_str(),
+        MXS_ERROR("Could update '%s': %s", mariadb_user.c_str(),
                   pError ? pError : "Unknown error");
         sqlite3_free(pError);
     }

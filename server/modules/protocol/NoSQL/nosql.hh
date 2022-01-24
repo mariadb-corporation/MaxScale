@@ -55,6 +55,19 @@ enum class Op
 
 const char* to_string(Op op);
 
+/**
+ * Get the MariaDB account
+ *
+ * @param db    The current NoSQL database.
+ * @param user  The user name.
+ * @param host  The host.
+ *
+ * @return A properly quoted MariaDB account.
+ *
+ * The MariaDB account will be like 'db.user'@'host'
+ */
+std::string get_account(std::string db, std::string user, const std::string& host);
+
 }
 
 inline std::ostream& operator << (std::ostream& out, mariadb::Op op)

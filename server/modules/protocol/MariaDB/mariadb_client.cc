@@ -2853,8 +2853,7 @@ MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, 
         {
             // TODO: Configurable? Also, must be many other situations where backend conns should not be
             // runtime-pooled.
-            if (m_session_data->history.size() > m_max_sescmd_history
-                || reply.command() == MXS_COM_STMT_PREPARE)
+            if (m_session_data->history.size() > m_max_sescmd_history)
             {
                 m_pooling_permanent_disable = true;
                 m_session->set_can_pool_backends(false);

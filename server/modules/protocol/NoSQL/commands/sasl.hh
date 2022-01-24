@@ -364,7 +364,7 @@ private:
         const auto& info = sasl.user_info();
         auto& config = m_database.config();
 
-        config.user = info.db_user;
+        config.user = info.mariadb_user;
         config.password = info.pwd;
     }
 };
