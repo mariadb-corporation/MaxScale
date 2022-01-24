@@ -193,15 +193,8 @@ public:
         m_user = user;
     }
 
-    bool can_pool_backends() const
-    {
-        return m_can_pool_backends;
-    }
-
-    void set_can_pool_backends(bool value)
-    {
-        m_can_pool_backends = value;
-    }
+    virtual bool can_pool_backends() const = 0;
+    virtual void set_can_pool_backends(bool value) = 0;
 
     bool normal_quit() const
     {
@@ -393,11 +386,6 @@ private:
      * Is the session shutting down "normally" e.g. via COM_QUIT? If session ended abnormally,
      * last statements can be logged. */
     bool m_normal_quit {false};
-
-    /**
-     * Is session in a state where backend connections can be donated to pool and reattached to session?
-     * Updated by protocol code. */
-    bool m_can_pool_backends {false};
 
     virtual void add_userdata_subscriber(MXS_SESSION::EventSubscriber* obj) = 0;
     virtual void remove_userdata_subscriber(MXS_SESSION::EventSubscriber* obj) = 0;

@@ -488,7 +488,7 @@ public:
                      mxs::Endpoint* down, const mxs::Reply& reply) override;
 
     bool can_try_pooling() const;
-    void try_to_pool();
+    bool try_to_pool();
 
     enum class ContinueRes {SUCCESS, WAIT, FAIL};
     ContinueRes continue_connecting();

@@ -1155,7 +1155,7 @@ bool ServerEndpoint::can_try_pooling() const
     return m_connstatus == ConnStatus::CONNECTED && m_can_try_pooling;
 }
 
-void ServerEndpoint::try_to_pool()
+bool ServerEndpoint::try_to_pool()
 {
     auto* dcb = m_conn->dcb();
     // Try to move the connection into the pool. If it fails, do not try again.
@@ -1171,6 +1171,7 @@ void ServerEndpoint::try_to_pool()
     {
         m_can_try_pooling = false;
     }
+    return moved_to_pool;
 }
 
 ServerEndpoint::ContinueRes ServerEndpoint::continue_connecting()
