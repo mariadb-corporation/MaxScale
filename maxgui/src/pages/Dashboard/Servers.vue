@@ -120,15 +120,14 @@
                 <span v-if="typeof serviceIds === 'string'">{{ serviceIds }} </span>
 
                 <template v-else-if="serviceIds.length < 2">
-                    <template v-for="serviceId in serviceIds">
-                        <router-link
-                            :key="serviceId"
-                            :to="`/dashboard/services/${serviceId}`"
-                            class="rsrc-link"
-                        >
-                            <span>{{ serviceId }} </span>
-                        </router-link>
-                    </template>
+                    <router-link
+                        v-for="(serviceId, i) in serviceIds"
+                        :key="i"
+                        :to="`/dashboard/services/${serviceId}`"
+                        class="rsrc-link"
+                    >
+                        <span>{{ serviceId }} </span>
+                    </router-link>
                 </template>
 
                 <v-menu
@@ -152,15 +151,14 @@
                     </template>
 
                     <v-sheet class="pa-4">
-                        <template v-for="serviceId in serviceIds">
-                            <router-link
-                                :key="serviceId"
-                                :to="`/dashboard/services/${serviceId}`"
-                                class="text-body-2 d-block rsrc-link"
-                            >
-                                <span>{{ serviceId }} </span>
-                            </router-link>
-                        </template>
+                        <router-link
+                            v-for="(serviceId, i) in serviceIds"
+                            :key="i"
+                            :to="`/dashboard/services/${serviceId}`"
+                            class="text-body-2 d-block rsrc-link"
+                        >
+                            <span>{{ serviceId }} </span>
+                        </router-link>
                     </v-sheet>
                 </v-menu>
             </template>

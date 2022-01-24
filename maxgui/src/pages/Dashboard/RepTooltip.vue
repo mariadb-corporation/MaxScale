@@ -54,33 +54,35 @@
             </template>
 
             <table v-else class="rep-table px-1">
-                <template v-for="(stat, i) in getRepStats(serverId)">
-                    <tbody :key="`${i}`" :class="{ 'tbody-src-replication': !showSlaveStats }">
-                        <tr v-for="(value, key) in stat" :key="`${key}`">
-                            <td class="pr-5">
-                                {{ key }}
-                            </td>
-                            <td>
-                                <div class="d-flex align-center fill-height">
-                                    <icon-sprite-sheet
-                                        v-if="key === 'replication_state'"
-                                        size="13"
-                                        class="mr-1 rep-icon"
-                                        :frame="$help.repStateIcon(value)"
-                                    >
-                                        status
-                                    </icon-sprite-sheet>
-                                    <truncate-string
-                                        wrap
-                                        :text="`${value}`"
-                                        :maxWidth="400"
-                                        :nudgeTop="10"
-                                    />
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </template>
+                <tbody
+                    v-for="(stat, i) in getRepStats(serverId)"
+                    :key="`${i}`"
+                    :class="{ 'tbody-src-replication': !showSlaveStats }"
+                >
+                    <tr v-for="(value, key) in stat" :key="`${key}`">
+                        <td class="pr-5">
+                            {{ key }}
+                        </td>
+                        <td>
+                            <div class="d-flex align-center fill-height">
+                                <icon-sprite-sheet
+                                    v-if="key === 'replication_state'"
+                                    size="13"
+                                    class="mr-1 rep-icon"
+                                    :frame="$help.repStateIcon(value)"
+                                >
+                                    status
+                                </icon-sprite-sheet>
+                                <truncate-string
+                                    wrap
+                                    :text="`${value}`"
+                                    :maxWidth="400"
+                                    :nudgeTop="10"
+                                />
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
             </table>
         </v-sheet>
     </v-menu>

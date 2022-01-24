@@ -41,7 +41,7 @@
 
             <template v-slot:item="{ item, index: rowIndex }">
                 <table-row
-                    :key="item.nodeId || item.id"
+                    :key="item.nodeId || item.id || rowIndex"
                     :rowIndex="rowIndex"
                     :editableCell="editableCell"
                     :draggable="draggable"
