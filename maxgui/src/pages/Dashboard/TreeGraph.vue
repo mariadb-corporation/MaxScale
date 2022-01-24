@@ -53,6 +53,7 @@ export default {
             circleRadius: 7,
             svg: null, // svg obj
             nodeRectPosMap: {},
+            root: {},
         }
     },
     computed: {
@@ -77,13 +78,6 @@ export default {
             // create a tree layout and assigns the size of the tree
             return tree().size([this.treeDim.height, this.treeDim.width])
         },
-        root() {
-            let root = hierarchy(this.data) //  compute a hierarchical layout
-            // vertically center root node
-            root.x0 = this.treeDim.height / 2
-            root.y0 = 0
-            return root
-        },
         maxDepth() {
             const nodes = this.root.descendants() || []
             return nodes.length ? nodes[nodes.length - 1].depth : 1
@@ -99,6 +93,11 @@ export default {
     },
     async mounted() {
         this.initSvg()
+        //  compute a hierarchical layout
+        this.root = hierarchy(this.data)
+        // vertically center root node
+        this.$set(this.root, 'x0', this.treeDim.height / 2)
+        this.$set(this.root, 'y0', 0)
         await this.update(this.root)
     },
 
@@ -327,7 +326,7 @@ export default {
 .node-rect {
     width: 276px;
     min-height: 50px;
-    max-height: 80px;
+    max-height: 100px;
     position: absolute;
     transform: translateY(-50%);
     box-shadow: 1px 1px 7px rgba(0, 0, 0, 0.1);
