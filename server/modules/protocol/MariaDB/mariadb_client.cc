@@ -1682,7 +1682,8 @@ int MariaDBClientConnection::send_auth_error(int packet_number, const char* mysq
     mysql_state = "28000";
 
     field_count = 0xff;
-    mariadb::set_byte2(mysql_err,    /*mysql_errno */ 1045);
+    const int mysql_errno = 1045;
+    mariadb::set_byte2(mysql_err, mysql_errno);
     mysql_statemsg[0] = '#';
     memcpy(mysql_statemsg + 1, mysql_state, 5);
 
