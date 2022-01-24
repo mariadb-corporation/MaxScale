@@ -220,11 +220,11 @@ private:
     // The latest processed configuration version
     int64_t m_version {0};
 
-    mxq::MariaDB m_conn;
-    bool         m_reconnect {false};
-    bool         m_row_exists {false};
-    SERVER*      m_server {nullptr};
-    uint32_t     m_dcid {0};
+    mxq::MariaDB      m_conn;
+    bool              m_reconnect {false};
+    bool              m_row_exists {false};
+    SERVER*           m_server {nullptr};
+    mxb::Worker::DCId m_dcid {0};
 
     // The current cluster being used.
     std::string m_cluster;

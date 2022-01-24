@@ -60,7 +60,7 @@ private:
     mxq::GtidList           m_gtid_list;
     std::unique_ptr<Reader> m_reader;
     int64_t                 m_heartbeat_period = 0;
-    uint32_t                m_mgw_dcid = 0; // MASTER_GTID_WAIT delayed call
+    mxb::Worker::DCId       m_mgw_dcid = 0; // MASTER_GTID_WAIT delayed call
 
     // Prefix the packet in make_buffer(). Essentially this is just to add
     // an OK = '\0' as the first byte of the payload of the first packet.

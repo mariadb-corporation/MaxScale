@@ -149,8 +149,8 @@ public:
     int         binlog_fd;  /*< File descriptor of the binlog file being read */
     int64_t     trx_count;  /*< Transactions processed */
     int64_t     row_count;  /*< Row events processed */
-    uint32_t    task_handle;/**< Delayed task handle */
 
+    mxb::Worker::DCId    task_handle;   /*< Delayed task handle */
     std::unique_ptr<Rpl> handler;
 
 private:

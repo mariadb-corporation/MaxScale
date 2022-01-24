@@ -55,7 +55,7 @@ private:
     MHD_UpgradeResponseHandle* m_urh;
     Handler                    m_cb;
     std::vector<uint8_t>       m_buffer;
-    uint32_t                   m_dcid = 0;
+    mxb::Worker::DCId          m_dcid = 0;
 
     enum Result
     {

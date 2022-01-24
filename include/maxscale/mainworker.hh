@@ -126,12 +126,12 @@ private:
         {
         }
 
-        std::string name;
-        TASKFN      func;
-        void*       pData;
-        int         frequency;
-        time_t      nextdue;
-        uint32_t    id;
+        std::string       name;
+        TASKFN            func;
+        void*             pData;
+        int               frequency;
+        time_t            nextdue;
+        mxb::Worker::DCId id;
     };
 
     bool        call_task(Worker::Call::action_t action, Task* pTask);
@@ -145,7 +145,7 @@ private:
 
     std::map<std::string, Task> m_tasks_by_name;
     IndexedStorage              m_storage;
-    uint32_t                    m_rebalancing_dc {0};
+    mxb::Worker::DCId           m_rebalancing_dc {0};
     mxb::TimePoint              m_last_rebalancing;
 };
 }

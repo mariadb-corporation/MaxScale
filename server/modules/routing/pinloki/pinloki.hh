@@ -112,7 +112,7 @@ private:
     InventoryWriter         m_inventory;
     std::unique_ptr<Writer> m_writer;
     MasterConfig            m_master_config;
-    uint32_t                m_dcid { 0 }; // Delayed call ID for updating the Writer's connection details
+    mxb::Worker::DCId       m_dcid {0};     // Delayed call ID for updating the Writer's connection details
     mutable std::mutex      m_lock;
 };
 
