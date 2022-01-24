@@ -86,19 +86,19 @@ export default {
     watch: {
         data: {
             deep: true,
-            async handler() {
-                await this.update(this.root)
+            handler() {
+                this.update(this.root)
             },
         },
     },
-    async mounted() {
+    mounted() {
         this.initSvg()
         //  compute a hierarchical layout
         this.root = hierarchy(this.data)
         // vertically center root node
         this.$set(this.root, 'x0', this.treeDim.height / 2)
         this.$set(this.root, 'y0', 0)
-        await this.update(this.root)
+        this.update(this.root)
     },
 
     methods: {
@@ -141,32 +141,20 @@ export default {
             }
         },
         /**
-         * Delete rectangular node div when node is toggled. The div is deleted by removing
-         * key in nodeRectPosMap.
-         * @param {Array} nodes - hierarchy d3 nodes
-         */
-        deleteNodeRect(nodes) {
-            nodes.forEach(node => {
-                this.$delete(this.nodeRectPosMap, node.id)
-                if (node.children) this.deleteNodeRect(node.children)
-            })
-        },
-        /**
          * Toggle node on click.
          * @param {Object} node - hierarchy d3 node
          */
-        async onNodeClick(node) {
+        onNodeClick(node) {
             if (node.children) {
                 //collapse
                 node._children = node.children
                 node.children = null
-                this.deleteNodeRect(node._children)
             } else {
                 // expand
                 node.children = node._children
                 node._children = null
             }
-            await this.update(node)
+            this.update(node)
         },
         drawNodes({ srcNode, nodes }) {
             // ****************** Nodes drawing transition ***************************
@@ -180,9 +168,9 @@ export default {
                 .attr('data-node-id', n => n.id)
                 // use srcNode.y as x for translate to make horizontal graph
                 .attr('transform', () => 'translate(' + srcNode.y0 + ',' + srcNode.x0 + ')')
-                .on('click', async (e, n) => {
+                .on('click', (e, n) => {
                     e.stopPropagation()
-                    await this.onNodeClick(n)
+                    this.onNodeClick(n)
                 })
 
             nodeEnter
@@ -256,22 +244,14 @@ export default {
                 })
                 .remove()
         },
-        renderNodeRect() {
-            this.nodeRectPosMap = this.getNodeRectPos()
+        renderNodeRect(nodes) {
+            this.nodeRectPosMap = this.getNodeRectPos(nodes)
         },
-        getNodeRectPos() {
+        getNodeRectPos(nodes) {
             let nodeRectPosMap = {}
-            Array.from(this.$refs.svg.getElementsByClassName('node')).forEach(ele => {
-                const nodeId = ele.getAttribute('data-node-id')
-                let transform = ele.getAttribute('transform')
-                let pos = {}
-                transform.split(',').forEach((part, i) => {
-                    let lat = part.replace(/[^\d.]/g, '')
-                    let v = Math.round(Number(lat))
-                    // offset 10 for rect arrow
-                    if (i === 0) pos.left = v + this.circleRadius + 10
-                    else pos.top = v
-                })
+            nodes.forEach(node => {
+                const nodeId = node.id
+                let pos = { left: node.y + this.circleRadius + 10, top: node.x }
                 nodeRectPosMap[nodeId] = pos
             })
             return nodeRectPosMap
@@ -280,7 +260,7 @@ export default {
          * Update node
          * @param {Object} srcNode - hierarchy d3 node to be updated
          */
-        async update(srcNode) {
+        update(srcNode) {
             // Recompute x,y coord for all nodes
             let treeData = this.treeLayout(this.root)
             // Compute the new tree layout.
@@ -297,7 +277,7 @@ export default {
                 d.x0 = d.x
                 d.y0 = d.y
             })
-            await this.$help.delay(this.duration).then(() => this.renderNodeRect())
+            this.renderNodeRect(nodes)
         },
     },
 }
