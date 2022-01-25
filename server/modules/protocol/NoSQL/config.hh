@@ -50,18 +50,6 @@ public:
         DEBUG_BACK = 4
     };
 
-    enum class Authentication
-    {
-        OPTIONAL,
-        REQUIRED,
-    };
-
-    enum class Authorization
-    {
-        DISABLED,
-        ENABLED,
-    };
-
     enum
     {
         CURSOR_TIMEOUT_DEFAULT = 60     // seconds
@@ -71,8 +59,8 @@ public:
     std::string           user;
     std::string           password;
     std::string           host;
-    Authentication        authentication;
-    Authorization         authorization;
+    bool                  authentication_required;
+    bool                  authorization_enabled;
     int64_t               id_length {ID_LENGTH_DEFAULT};
 
     // Can be changed from the NosQL API.
@@ -90,8 +78,8 @@ public:
     static mxs::config::ParamString                      s_user;
     static mxs::config::ParamString                      s_password;
     static mxs::config::ParamString                      s_host;
-    static mxs::config::ParamEnum<Authentication>        s_authentication;
-    static mxs::config::ParamEnum<Authorization>         s_authorization;
+    static mxs::config::ParamBool                        s_authentication_required;
+    static mxs::config::ParamBool                        s_authorization_enabled;
     static mxs::config::ParamCount                       s_id_length;
 
     // Can be changed from the NosQL API.
@@ -121,8 +109,8 @@ public:
         : user(config.user)
         , password(config.password)
         , host(config.host)
-        , authentication(config.authentication)
-        , authorization(config.authorization)
+        , authentication_required(config.authentication_required)
+        , authorization_enabled(config.authorization_enabled)
         , id_length(config.id_length)
         , auto_create_databases(config.auto_create_databases)
         , auto_create_tables(config.auto_create_tables)
@@ -151,12 +139,12 @@ public:
 
     bool should_authenticate() const
     {
-        return this->authentication == GlobalConfig::Authentication::REQUIRED;
+        return this->authentication_required;
     }
 
     bool should_authorize() const
     {
-        return this->authorization == GlobalConfig::Authorization::ENABLED;
+        return this->authorization_enabled;
     }
 
     void copy_from(const Config& that)
@@ -175,12 +163,12 @@ public:
     void copy_to(nosql::DocumentBuilder& doc) const;
 
     // Can only be changed via MaxScale
-    std::string                        user;
-    std::string                        password;
-    const std::string                  host;
-    const GlobalConfig::Authentication authentication;
-    const GlobalConfig::Authorization  authorization;
-    const int64_t                      id_length;
+    std::string       user;
+    std::string       password;
+    const std::string host;
+    const bool        authentication_required;
+    const bool        authorization_enabled;
+    const int64_t     id_length;
 
     // Can be changed from the NosQL API.
     bool                                auto_create_databases;

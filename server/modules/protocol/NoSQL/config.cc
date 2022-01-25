@@ -48,25 +48,17 @@ mxs::config::ParamString GlobalConfig::s_host(
     "The host to use when creating new users in the backend.",
     "%");
 
-mxs::config::ParamEnum<GlobalConfig::Authentication> GlobalConfig::s_authentication(
+mxs::config::ParamBool GlobalConfig::s_authentication_required(
     &nosqlprotocol::specification,
     "authentication",
-    "Whether nosqlprotocol authentication is optional or required.",
-    {
-        {GlobalConfig::Authentication::OPTIONAL, "optional"},
-        {GlobalConfig::Authentication::REQUIRED, "required"},
-    },
-    GlobalConfig::Authentication::OPTIONAL);
+    "Whether nosqlprotocol authentication is required.",
+    false);
 
-mxs::config::ParamEnum<GlobalConfig::Authorization> GlobalConfig::s_authorization(
+mxs::config::ParamBool GlobalConfig::s_authorization_enabled(
     &nosqlprotocol::specification,
     "authorization",
-    "Whether nosqlprotocol authorization is disabled or enabled.",
-    {
-        {GlobalConfig::Authorization::DISABLED, "disabled"},
-        {GlobalConfig::Authorization::ENABLED, "enabled"},
-    },
-    GlobalConfig::Authorization::DISABLED);
+    "Whether nosqlprotocol authorization is enabled.",
+    false);
 
 mxs::config::ParamCount GlobalConfig::s_id_length(
     &nosqlprotocol::specification,
@@ -149,8 +141,8 @@ GlobalConfig::GlobalConfig(const std::string& name, ProtocolModule* instance)
     add_native(&GlobalConfig::user, &s_user);
     add_native(&GlobalConfig::password, &s_password);
     add_native(&GlobalConfig::host, &s_host);
-    add_native(&GlobalConfig::authentication, &s_authentication);
-    add_native(&GlobalConfig::authorization, &s_authorization);
+    add_native(&GlobalConfig::authentication_required, &s_authentication_required);
+    add_native(&GlobalConfig::authorization_enabled, &s_authorization_enabled);
     add_native(&GlobalConfig::id_length, &s_id_length);
 
     add_native(&GlobalConfig::auto_create_databases, &s_auto_create_databases);

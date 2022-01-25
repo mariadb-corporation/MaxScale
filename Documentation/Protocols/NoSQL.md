@@ -244,10 +244,10 @@ user) will be used when accessing the MariaDB server.
 
 To enforce authentication, specify
 ```
-nosqlprotocol.authentication=required
+nosqlprotocol.authentication_required=true
 ```
 in the configuration. If authentication is required, then any command
-that require access to the MariaDB server will fail, unless the client
+that requires access to the MariaDB server will fail, unless the client
 has authenticated.
 
 ## Authorization
@@ -258,7 +258,7 @@ server.
 
 When nosqlprotocol authorization is enabled by adding
 ```
-nosqlprotocol.authorization = enabled
+nosqlprotocol.authorization_enabled=true
 ```
 to the configuration file, some commands will be subject to authorization,
 by nosqlprotocol. The following table lists the commands and what role they
@@ -296,9 +296,9 @@ nosqlprotocol with credentials that are sufficient for creating a user:
 nosqlprotocol.user = user_with_privileges_for_creating_a_user
 nosqlprotocol.password = the_users_password
 ```
-At this point `nosqlprotocol.authentication` should be `optional` and
-`nosqlprotocol.authorization` should be `disabled`. However, as those
-are their default values, they do not have to be specified.
+At this point `nosqlprotocol.authentication_required` and
+`nosqlprotocol.authorization_enabled` should both be `false`. However,
+as those are their default values, they do not have to be specified.
 
 Start MaxScale and connect to it with the MongoDB® command line client
 ```
@@ -325,13 +325,13 @@ switched to db admin
 
 Now you should shutdown MaxScale and add the entries
 ```
-nosqlprotocol.authentication=required
-nosqlprotocol.authorization=enabled
+nosqlprotocol.authentication_required=true
+nosqlprotocol.authorization_enabled=true
 ```
 and start MaxScale.
 
 The `nosqlprotocol.user` and `nosqlprotocol.password` can be removed but
-as they will be ignored with `nosqlprotocol.authentication = required`
+as they will be ignored with `nosqlprotocol.authentication_required=true`
 being present, it is not mandatory.
 
 If you now try to create a user when not having been authenticated or
@@ -463,12 +463,11 @@ Specifies the _password_ to be used when connecting to the backend, is the Mongo
 client is not authenticated. Note that the same _user_/_password_ combination will be
 used for all unauthenticated MongoDB® clients connecting to the same listener port.
 
-## `authentication`
+## `authentication_required`
 
-    * Type: enumeration
+    * Type: boolean
     * Mandatory: false
-    * Values: `optional`, `required`
-    * Default: `optional`
+    * Default: `false`
 
 Specifies whether the client always must authenticate. If authentication is required,
 it does not matter whether `user` and `password` have been specified, the client must
@@ -481,12 +480,11 @@ with authentication being optional and authorization being disabled.
 NOTE: All client activity is _always_ subject to authorization performed by the
 MariaDB server.
 
-## `authorization`
+## `authorization_enabled`
 
-    * Type: enumeration
+    * Type: boolean
     * Mandatory: false
-    * Values: `disabled`, `enabled`
-    * Default: `disabled`
+    * Default: `false`
 
 Specifies whether nosqlprotocol itself should perform authorization in the context
 of the commands [mxsAddUser](#mxsAddUser), [mxsRemoveUser](#mxsRemoveUser) and
