@@ -35,6 +35,9 @@ vector<uint8_t> crypto::create_random_bytes(size_t size)
     return rv;
 }
 
+//
+// HMAC SHA 1
+//
 void crypto::hmac_sha_1(const uint8_t* pKey, size_t key_len,
                         const uint8_t* pData, size_t data_len,
                         uint8_t* pOut)
@@ -51,6 +54,29 @@ vector<uint8_t> crypto::hmac_sha_1(const uint8_t* pKey, size_t key_len, const ui
     return rv;
 }
 
+//
+// HMAC SHA 256
+//
+void crypto::hmac_sha_256(const uint8_t* pKey, size_t key_len,
+                          const uint8_t* pData, size_t data_len,
+                          uint8_t* pOut)
+{
+    HMAC(EVP_sha256(), pKey, key_len, pData, data_len, pOut, nullptr);
+}
+
+vector<uint8_t> crypto::hmac_sha_256(const uint8_t* pKey, size_t key_len,
+                                     const uint8_t* pData, size_t data_len)
+{
+    vector<uint8_t> rv(NOSQL_SHA_256_HASH_SIZE);
+
+    hmac_sha_256(pKey, key_len, pData, data_len, rv.data());
+
+    return rv;
+}
+
+//
+// SHA 1
+//
 std::vector<uint8_t> crypto::sha_1(const uint8_t* pData, size_t data_len)
 {
     vector<uint8_t> rv(NOSQL_SHA_DIGEST_LENGTH);
@@ -60,6 +86,21 @@ std::vector<uint8_t> crypto::sha_1(const uint8_t* pData, size_t data_len)
     return rv;
 }
 
+//
+// SHA 256
+//
+std::vector<uint8_t> crypto::sha_256(const uint8_t* pData, size_t data_len)
+{
+    vector<uint8_t> rv(NOSQL_SHA_DIGEST_LENGTH);
+
+    SHA256(pData, data_len, rv.data());
+
+    return rv;
+}
+
+//
+// MD5
+//
 void crypto::md5(const void* pData, size_t data_len, uint8_t* pOut)
 {
     MD5(reinterpret_cast<const uint8_t*>(pData), data_len, pOut);
