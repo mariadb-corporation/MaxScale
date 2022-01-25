@@ -70,6 +70,53 @@ inline std::vector<uint8_t> pbkdf2_hmac_sha_1(const std::string& password,
                              iterations);
 }
 
+class Scram
+{
+public:
+    // The somewhat unorthodox naming-convention is taken from the
+    // standard itself: https://datatracker.ietf.org/doc/html/rfc5802
+
+    virtual ~Scram();
+
+    virtual std::vector<uint8_t> Hi(const std::string& password,
+                                    const std::vector<uint8_t>& salt,
+                                    size_t iterations) const = 0;
+
+    virtual std::vector<uint8_t> HMAC(const std::vector<uint8_t>& key,
+                                      const uint8_t* pData,
+                                      size_t len) const = 0;
+
+    std::vector<uint8_t> HMAC(const std::vector<uint8_t>& key, const char* zData) const
+    {
+        return HMAC(key, reinterpret_cast<const uint8_t*>(zData), strlen(zData));
+    }
+
+    std::vector<uint8_t> HMAC(const std::vector<uint8_t>& key, const std::string& data) const
+    {
+        return HMAC(key, reinterpret_cast<const uint8_t*>(data.data()), data.length());
+    }
+
+    virtual std::vector<uint8_t> H(const std::vector<uint8_t>& data) const = 0;
+};
+
+
+class ScramSHA1 : public Scram
+{
+public:
+    std::vector<uint8_t> Hi(const std::string& password,
+                            const std::vector<uint8_t>& salt,
+                            size_t iterations) const override;
+
+    std::vector<uint8_t> HMAC(const std::vector<uint8_t>& key,
+                              const uint8_t* pData,
+                              size_t len) const override;
+    using Scram::HMAC;
+
+    std::vector<uint8_t> H(const std::vector<uint8_t>& data) const override;
+};
+
+std::unique_ptr<Scram> create(Mechanism mechanism);
+
 }
 
 }

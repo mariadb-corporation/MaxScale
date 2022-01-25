@@ -237,4 +237,40 @@ vector<uint8_t> scram::pbkdf2_hmac_sha_1(const char* pPassword, size_t password_
     return rv;
 }
 
+unique_ptr<scram::Scram> scram::create(Mechanism mechanism)
+{
+    switch (mechanism)
+    {
+    case Mechanism::SHA_1:
+        return make_unique<ScramSHA1>();
+    }
+
+    mxb_assert(!true);
+    return unique_ptr<Scram>();
+}
+
+namespace scram
+{
+
+Scram::~Scram()
+{
+}
+
+vector<uint8_t> ScramSHA1::Hi(const string& password, const vector<uint8_t>& salt, size_t iterations) const
+{
+    return scram::pbkdf2_hmac_sha_1(password, salt, iterations);
+}
+
+vector<uint8_t> ScramSHA1::HMAC(const vector<uint8_t>& key, const uint8_t* pData, size_t len) const
+{
+    return crypto::hmac_sha_1(key.data(), key.size(), pData, len);
+}
+
+vector<uint8_t> ScramSHA1::H(const vector<uint8_t>& data) const
+{
+    return crypto::sha_1(data);
+}
+
+}
+
 }

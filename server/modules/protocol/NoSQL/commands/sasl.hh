@@ -308,7 +308,7 @@ private:
 
         string md5_password = crypto::md5hex(password);
 
-        auto salted_password = scram::pbkdf2_hmac_sha_1(md5_password.c_str(), info.salt, scram::ITERATIONS);
+        auto salted_password = scram::pbkdf2_hmac_sha_1(md5_password, info.salt, scram::ITERATIONS);
         auto client_key = crypto::hmac_sha_1(salted_password, "Client Key");
         auto stored_key = crypto::sha_1(client_key);
         string auth_message = sasl.initial_message()
