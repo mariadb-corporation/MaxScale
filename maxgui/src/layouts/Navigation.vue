@@ -3,7 +3,7 @@
         :mini-variant.sync="isMini"
         color="navigation"
         class="main-nav color bg-navigation"
-        width="200"
+        width="250"
         mini-variant-width="50"
         fixed
         left
@@ -14,9 +14,8 @@
         @mouseout.native="isMini = true"
     >
         <v-list>
-            <template v-for="item in items">
+            <v-list-item-group v-for="item in items" :key="item.name">
                 <v-list-item
-                    :key="item.name"
                     :class="{
                         navitem: true,
                         active: currentPath.includes(item.path),
@@ -37,7 +36,7 @@
                     </v-list-item-content>
                 </v-list-item>
                 <v-divider :key="`divider-${item.name}`"></v-divider>
-            </template>
+            </v-list-item-group>
         </v-list>
     </v-navigation-drawer>
 </template>
