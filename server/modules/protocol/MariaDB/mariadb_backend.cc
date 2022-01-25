@@ -1838,7 +1838,7 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
     }
 
     const auto& default_db = client_data->auth_data->default_db;
-    uint32_t capabilities = create_capabilities(with_ssl, default_db[0], service_capabilities);
+    uint32_t capabilities = create_capabilities(with_ssl, service_capabilities);
     mariadb::set_byte4(client_capabilities, capabilities);
 
     /**
@@ -1954,14 +1954,9 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
  * @return Bit mask (32 bits)
  * @note Capability bits are defined in maxscale/protocol/mysql.h
  */
-uint32_t MariaDBBackendConnection::create_capabilities(bool with_ssl, bool db_specified,
-                                                       uint64_t capabilities)
+uint32_t MariaDBBackendConnection::create_capabilities(bool with_ssl, uint64_t capabilities)
 {
-    uint32_t final_capabilities;
-
-    /** Copy client's flags to backend but with the known capabilities mask */
-    final_capabilities =
-        (m_auth_data.client_data->client_capabilities() & (uint32_t)GW_MYSQL_CAPABILITIES_CLIENT);
+    uint32_t final_capabilities = m_auth_data.client_data->client_capabilities();
 
     if (with_ssl)
     {
@@ -1978,22 +1973,6 @@ uint32_t MariaDBBackendConnection::create_capabilities(bool with_ssl, bool db_sp
         /** add session track */
         final_capabilities |= (uint32_t)GW_MYSQL_CAPABILITIES_SESSION_TRACK;
     }
-
-    /** support multi statments  */
-    final_capabilities |= (uint32_t)GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
-
-    if (db_specified)
-    {
-        /* With database specified */
-        final_capabilities |= (int)GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB;
-    }
-    else
-    {
-        /* Without database specified */
-        final_capabilities &= ~(int)GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB;
-    }
-
-    final_capabilities |= (int)GW_MYSQL_CAPABILITIES_PLUGIN_AUTH;
 
     return final_capabilities;
 }

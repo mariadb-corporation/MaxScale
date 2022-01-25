@@ -92,8 +92,9 @@ public:
      */
     struct ClientCapabilities
     {
-        uint32_t basic_capabilities {0};    /*< Basic client capabilities */
-        uint32_t ext_capabilities {0};      /*< MariaDB 10.2 capabilities (extended capabilities) */
+        uint32_t basic_capabilities {0};        /*< Basic client capabilities */
+        uint32_t ext_capabilities {0};          /*< MariaDB 10.2 capabilities (extended capabilities) */
+        uint64_t advertised_capabilities {0};   /*< The capabilities that were sent in the handshake packet */
     };
 
     // The struct used to communicate information from the backend protocol to the client protocol.

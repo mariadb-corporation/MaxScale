@@ -166,7 +166,7 @@ private:
 
     std::string create_response_mismatch_error();
 
-    uint32_t create_capabilities(bool with_ssl, bool db_specified, uint64_t capabilities);
+    uint32_t create_capabilities(bool with_ssl, uint64_t capabilities);
     GWBUF*   process_packets(GWBUF** result);
     void     process_one_packet(Iter it, Iter end, uint32_t len);
     void     process_reply_start(Iter it, Iter end);
