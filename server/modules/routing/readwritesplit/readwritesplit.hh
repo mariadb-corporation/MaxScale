@@ -87,10 +87,11 @@ enum failure_mode
 
 enum CausalReads
 {
-    NONE,   // No causal reads, default
-    LOCAL,  // Causal reads are done on a session level with MASTER_GTID_WAIT
-    GLOBAL, // Causal reads are done globally with MASTER_GTID_WAIT
-    FAST    // Causal reads use GTID position to pick an up-to-date server
+    NONE,       // No causal reads, default
+    LOCAL,      // Causal reads are done on a session level with MASTER_GTID_WAIT
+    GLOBAL,     // Causal reads are done globally with MASTER_GTID_WAIT
+    FAST,       // Causal reads use GTID position to pick an up-to-date server
+    UNIVERSAL   // Causal reads verifies the GTID before starting the read
 };
 
 enum class TrxChecksum
@@ -143,6 +144,7 @@ static cfg::ParamEnum<CausalReads> s_causal_reads(
     {CausalReads::LOCAL, "local"},
     {CausalReads::GLOBAL, "global"},
     {CausalReads::FAST, "fast"},
+    {CausalReads::UNIVERSAL, "universal"},
 }, CausalReads::NONE, cfg::Param::AT_RUNTIME);
 
 static cfg::ParamSeconds s_max_slave_replication_lag(
@@ -333,6 +335,7 @@ public:
         uint64_t sequence {0};
 
         static gtid from_string(const std::string& str);
+        void        parse(const std::string& str);
         std::string to_string() const;
         bool        empty() const;
     };

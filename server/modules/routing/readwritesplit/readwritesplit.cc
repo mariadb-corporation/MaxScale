@@ -185,17 +185,22 @@ void RWSplit::set_last_gtid(const std::string& str)
 RWSplit::gtid RWSplit::gtid::from_string(const std::string& str)
 {
     gtid g;
+    g.parse(str);
+    return g;
+}
+
+void RWSplit::gtid::parse(const std::string& str)
+{
     const char* ptr = str.c_str();
     char* end;
-    g.domain = strtoul(ptr, &end, 10);
+    domain = strtoul(ptr, &end, 10);
     mxb_assert(*end == '-');
     ptr = end + 1;
-    g.server_id = strtoul(ptr, &end, 10);
+    server_id = strtoul(ptr, &end, 10);
     mxb_assert(*end == '-');
     ptr = end + 1;
-    g.sequence = strtoul(ptr, &end, 10);
+    sequence = strtoul(ptr, &end, 10);
     mxb_assert(*end == '\0');
-    return g;
 }
 
 std::string RWSplit::gtid::to_string() const

@@ -68,7 +68,9 @@ public:
         NONE,
         WAITING_FOR_HEADER,
         RETRYING_ON_MASTER,
-        UPDATING_PACKETS
+        UPDATING_PACKETS,
+        READING_GTID,
+        GTID_READ_DONE
     };
 
     ~RWSplitSession();
@@ -168,11 +170,17 @@ private:
     bool query_not_supported(GWBUF* querybuf);
 
     GWBUF* handle_causal_read_reply(GWBUF* writebuf, const mxs::Reply& reply, mxs::RWBackend* backend);
+    bool   should_do_causal_read() const;
     bool   finish_causal_read();
+    bool   continue_causal_read();
     GWBUF* add_prefix_wait_gtid(GWBUF* origin);
     void   correct_packet_sequence(GWBUF* buffer);
     GWBUF* discard_master_wait_gtid_result(GWBUF* buffer);
     void   send_sync_query(mxs::RWBackend* target);
+
+    bool                                need_gtid_probe(GWBUF* buffer, const RoutingPlan& plan) const;
+    std::pair<mxs::Buffer, RoutingPlan> start_gtid_probe();
+    GWBUF*                              parse_gtid_result(GWBUF* buffer, const mxs::Reply& reply);
 
     int get_max_replication_lag();
 
@@ -352,7 +360,9 @@ private:
                  && res.target == m_current_master
                 // If transaction replay is configured, we cannot stream the queries as we need to know
                 // what they returned in case the transaction is replayed.
-                 && (!m_config.transaction_replay || !trx_is_open()))
+                 && (!m_config.transaction_replay || !trx_is_open())
+                // Causal reads can't support multiple ongoing queries
+                 && m_wait_gtid == NONE)
         {
             mxb_assert(res.type == RoutingPlan::Type::NORMAL);
             mxb_assert(m_current_master->is_waiting_result());

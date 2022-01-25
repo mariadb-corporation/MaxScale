@@ -122,6 +122,12 @@ bool RWSplitSession::route_query(mxs::Buffer&& buffer)
 
     if (can_route_query(buffer, res))
     {
+        if (need_gtid_probe(buffer.get(), res))
+        {
+            m_query_queue.push_front(std::move(buffer));
+            std::tie(buffer, res) = start_gtid_probe();
+        }
+
         /** No active or pending queries */
         rval = route_stmt(std::move(buffer), res);
     }
@@ -589,6 +595,13 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
         backend->select_finished();
 
         mxb_assert(m_expected_responses >= 0);
+
+        if (continue_causal_read())
+        {
+            // GTID sync part of causal reads is complete, continue with the actual reading part
+            gwbuf_free(writebuf);
+            return 1;
+        }
     }
     else if (backend->should_ignore_response())
     {
@@ -887,6 +900,23 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
                 can_continue = false;
                 errmsg += " Cannot retry query as multiple queries were in progress.";
             }
+            else if (m_wait_gtid == READING_GTID)
+            {
+                mxb_assert_message(m_current_query.empty(),
+                                   "Current query should be empty but it contains: %s",
+                                   m_current_query.get_sql().c_str());
+                mxb_assert_message(!m_query_queue.empty(), "Query queue should contain at least one query");
+                GWBUF* tmp = m_query_queue.front().release();
+                m_query_queue.pop_front();
+
+                // Retry the the original query that triggered the GTID probe.
+                retry_query(tmp, 0);
+                can_continue = true;
+
+                // Revert back to the default state. This causes the GTID probe to start again. If we cannot
+                // reconnect to the master, the session will be closed when the next GTID probe is routed.
+                m_wait_gtid = NONE;
+            }
             else if (can_retry_query() && can_recover_master())
             {
                 can_continue = retry_master_query(backend);
@@ -1010,6 +1040,8 @@ bool RWSplitSession::handle_error_new_connection(RWBackend* backend, GWBUF* errm
         mxb_assert(m_expected_responses == 1);
         m_expected_responses--;
 
+        mxb_assert_message(m_wait_gtid != READING_GTID, "Should not be in READING_GTID state");
+
         // The backend was busy executing command and the client is expecting a response.
         if (m_current_query.get() && m_config.retry_failed_reads)
         {
@@ -1115,4 +1147,14 @@ bool RWSplitSession::is_valid_for_master(const mxs::RWBackend* master)
     }
 
     return rval;
+}
+
+bool RWSplitSession::need_gtid_probe(GWBUF* buffer, const RoutingPlan& plan) const
+{
+    return m_config.causal_reads == CausalReads::UNIVERSAL
+           && plan.route_target == TARGET_SLAVE
+           && m_wait_gtid == NONE
+           && m_state != TRX_REPLAY
+           && m_qc.current_route_info().command() == MXS_COM_QUERY
+           && qc_get_operation(buffer) == QUERY_OP_SELECT;
 }

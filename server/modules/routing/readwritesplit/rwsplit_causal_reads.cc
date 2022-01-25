@@ -101,6 +101,11 @@ GWBUF* RWSplitSession::handle_causal_read_reply(GWBUF* writebuf,
             }
         }
 
+        if (m_wait_gtid == READING_GTID)
+        {
+            writebuf = parse_gtid_result(writebuf, reply);
+        }
+
         if (m_wait_gtid == WAITING_FOR_HEADER)
         {
             mxb_assert(m_prev_plan.target == backend);
@@ -117,11 +122,36 @@ GWBUF* RWSplitSession::handle_causal_read_reply(GWBUF* writebuf,
     return writebuf;
 }
 
+bool RWSplitSession::should_do_causal_read() const
+{
+    switch (m_config.causal_reads)
+    {
+    case CausalReads::LOCAL:
+        // Only do a causal read if we have a GTID to wait for
+        return !m_gtid_pos.empty();
+
+    case CausalReads::GLOBAL:
+        return true;
+
+    case CausalReads::UNIVERSAL:
+        // The universal mode behaves like CausalReads::LOCAL after the GTID probe has completed.
+        return m_wait_gtid == GTID_READ_DONE && !m_gtid_pos.empty();
+
+    case CausalReads::FAST:
+    case CausalReads::NONE:
+        return false;
+
+    default:
+        mxb_assert(!true);
+        return false;
+    }
+}
+
 bool RWSplitSession::finish_causal_read()
 {
     bool rval = true;
 
-    if (m_config.causal_reads != CausalReads::NONE)
+    if (m_config.causal_reads != CausalReads::NONE && m_wait_gtid != GTID_READ_DONE)
     {
         if (m_wait_gtid == RETRYING_ON_MASTER)
         {
@@ -135,6 +165,24 @@ bool RWSplitSession::finish_causal_read()
         // The reply should never be complete while we are still waiting for the header.
         mxb_assert(m_wait_gtid != WAITING_FOR_HEADER);
         m_wait_gtid = NONE;
+    }
+
+    return rval;
+}
+
+bool RWSplitSession::continue_causal_read()
+{
+    bool rval = false;
+
+    if (m_wait_gtid == GTID_READ_DONE)
+    {
+        MXS_INFO("Continuing with causal read");
+        mxb_assert(m_current_query.empty());
+        mxb_assert(!m_query_queue.empty());
+
+        retry_query(m_query_queue.front().release(), 0);
+        m_query_queue.pop_front();
+        rval = true;
     }
 
     return rval;
@@ -226,4 +274,41 @@ void RWSplitSession::send_sync_query(mxs::RWBackend* target)
 
     GWBUF* query = modutil_create_query(ss.str().c_str());
     target->write(query, mxs::Backend::IGNORE_RESPONSE);
+}
+
+std::pair<mxs::Buffer, RWSplitSession::RoutingPlan> RWSplitSession::start_gtid_probe()
+{
+    MXS_INFO("Starting GTID probe");
+
+    m_wait_gtid = READING_GTID;
+    mxs::Buffer buffer(modutil_create_query("SELECT @@gtid_current_pos"));
+    buffer.add_hint(Hint::Type::ROUTE_TO_MASTER);
+    buffer.set_type(GWBUF_TYPE_COLLECT_ROWS);
+
+    m_qc.revert_update();
+    m_qc.update_route_info(get_current_target(), buffer.get());
+    RoutingPlan plan = resolve_route(buffer, route_info());
+
+    return {buffer, plan};
+}
+
+GWBUF* RWSplitSession::parse_gtid_result(GWBUF* buffer, const mxs::Reply& reply)
+{
+    mxb_assert(!reply.error());
+    GWBUF* rval = nullptr;
+
+    if (reply.is_complete())
+    {
+        mxb_assert(reply.row_data().size() == 1);
+        mxb_assert(reply.row_data().front().size() == 1);
+
+        m_gtid_pos.parse(reply.row_data().front().front());
+        m_wait_gtid = GTID_READ_DONE;
+        MXS_INFO("GTID probe complete, GTID is: %s", m_gtid_pos.to_string().c_str());
+
+        // We need to return something for the upper layer, an OK packet should be adequate
+        rval = modutil_create_ok();
+    }
+
+    return rval;
 }
