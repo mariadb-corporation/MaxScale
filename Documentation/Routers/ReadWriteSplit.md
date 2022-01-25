@@ -654,6 +654,23 @@ The possible values for this parameter are:
     improved version of the functionality that the
     [CCRFilter](../Filters/CCRFilter.md) module provides.
 
+* `universal`
+
+  * The universal mode guarantees that all SELECT statements always see the
+    latest observable transaction state on a database cluster. The basis of this
+    is the `@@gtid_current_pos` variable which is read from the current master
+    server before each read. This guarantees that if a transaction was visible
+    at the time the read is received by readwritesplit, the transaction is
+    guaranteed to be complete on the slave server where the read is done.
+
+    This mode is the most consistent of all the modes. It provides consistency
+    regardless of where a write originated from but it comes at the cost of
+    increased latency. For every read, a round trip to the current master server
+    is done. This means that the latency of any given SELECT statement increases
+    by roughly twice the network latency between MaxScale and the database
+    cluster. In addition, an extra SELECT statement is always executed on the
+    master which places some load on the server.
+
 Before MaxScale 2.5.0, the `causal_reads` parameter was a boolean
 parameter. False values translated to `none` and true values translated to
 `local`. The use of boolean parameters is deprecated but still accepted in
@@ -669,6 +686,10 @@ help of the `MASTER_GTID_WAIT` function.
 If the slave has not caught up to the master within the configured time, it will
 be retried on the master. In MaxScale 2.3.0 an error was returned to the client
 when the slave timed out.
+
+The exception to this rule is the `fast` mode which does not do any
+synchronization at all. This can be done as any reads that would go to
+out-of-date servers will be re-routed to the current master.
 
 ##### Normal SQL
 
@@ -763,10 +784,6 @@ server which would cause the connection to be closed and a warning to be logged.
 
 #### Limitations of Causal Reads
 
-- This feature does not work with prepared statements. Only SQL
-  statements executed individually (inside a COM_QUERY packet) can be handled by
-  the causal read mechanism.
-
 - This feature does not work with Galera or any other non-standard
   replication mechanisms. As Galera does not update the `gtid_slave_pos`
   variable when events are replicated via the Galera library, the
@@ -778,6 +795,8 @@ server which would cause the connection to be closed and a warning to be logged.
 - If the combination of the original SQL statement and the modifications
   added to it by readwritesplit exceed the maximum packet size (16777213 bytes),
   the causal read will not be attempted and a non-causal read is done instead.
+  This applies only to text protocol queries as the binary protocol queries use
+  a different synchronization mechanism.
 
 ### `causal_reads_timeout`
 
