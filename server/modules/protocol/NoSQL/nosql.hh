@@ -31,6 +31,7 @@
 #include "nosqlbase.hh"
 #include "nosqlcursor.hh"
 #include "nosqlkeys.hh"
+#include "nosqlscram.hh"
 #include "nosqlusermanager.hh"
 #include "../../filter/masking/mysql.hh"
 
@@ -1054,6 +1055,12 @@ public:
             return m_server_first_message;
         }
 
+        scram::Scram* scram() const
+        {
+            mxb_assert(m_sScram.get());
+            return m_sScram.get();
+        }
+
         void set_client_nonce_b64(const std::string s)
         {
             m_client_nonce_b64 = std::move(s);
@@ -1104,14 +1111,20 @@ public:
             m_user_info = std::move(user_info);
         }
 
+        void set_scram(std::unique_ptr<scram::Scram> sScram)
+        {
+            m_sScram = std::move(sScram);
+        }
+
     private:
-        UserManager::UserInfo m_user_info;
-        std::string           m_client_nonce_b64;
-        std::string           m_gs2_header;
-        std::string           m_server_nonce_b64;
-        int32_t               m_conversation_id { 0 };
-        std::string           m_initial_message;
-        std::string           m_server_first_message;
+        UserManager::UserInfo         m_user_info;
+        std::string                   m_client_nonce_b64;
+        std::string                   m_gs2_header;
+        std::string                   m_server_nonce_b64;
+        int32_t                       m_conversation_id { 0 };
+        std::string                   m_initial_message;
+        std::string                   m_server_first_message;
+        std::unique_ptr<scram::Scram> m_sScram;
     };
 
     class Context

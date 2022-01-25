@@ -77,12 +77,13 @@ public:
 
     void populate_response(DocumentBuilder& doc) override
     {
-        auto mechanism = required<string_view>(key::MECHANISM);
+        auto mechanism_name = required<string_view>(key::MECHANISM);
+        scram::Mechanism mechanism;
 
-        if (mechanism.compare("SCRAM-SHA-1") != 0)
+        if (!scram::from_string(mechanism_name, &mechanism))
         {
             ostringstream ss;
-            ss << "Received authentication for mechanism " << mechanism
+            ss << "Received authentication for mechanism " << mechanism_name
                << " which is unknown or not enabled";
 
             throw SoftError(ss.str(), error::MECHANISM_UNAVAILABLE);
@@ -90,11 +91,13 @@ public:
 
         auto payload = required<bsoncxx::types::b_binary>(key::PAYLOAD);
 
-        authenticate(string_view(reinterpret_cast<const char*>(payload.bytes), payload.size), doc);
+        authenticate(mechanism,
+                     string_view(reinterpret_cast<const char*>(payload.bytes), payload.size),
+                     doc);
     }
 
 private:
-    void authenticate(string_view payload, DocumentBuilder& doc)
+    void authenticate(scram::Mechanism mechanism, string_view payload, DocumentBuilder& doc)
     {
         MXS_NOTICE("Payload: %.*s", (int)payload.length(), payload.data());
 
@@ -160,6 +163,7 @@ private:
         sasl.set_gs2_header(gs2_header);
         sasl.set_client_nonce_b64(client_nonce_b64);
         sasl.set_initial_message(initial_message);
+        sasl.set_scram(scram::create(mechanism));
 
         authenticate(sasl, doc);
     }
@@ -302,20 +306,21 @@ private:
                       string_view client_proof_64,
                       DocumentBuilder& doc)
     {
+        const auto* pScram = sasl.scram();
         const auto& info = sasl.user_info();
 
         string password = info.user + ":mongo:" + info.pwd; // MongoDB SCRAM-SHA-1
 
         string md5_password = crypto::md5hex(password);
 
-        auto salted_password = scram::pbkdf2_hmac_sha_1(md5_password, info.salt, scram::ITERATIONS);
-        auto client_key = crypto::hmac_sha_1(salted_password, "Client Key");
-        auto stored_key = crypto::sha_1(client_key);
+        auto salted_password = pScram->Hi(md5_password, info.salt, scram::ITERATIONS);
+        auto client_key = pScram->HMAC(salted_password, "Client Key");
+        auto stored_key = pScram->H(client_key);
         string auth_message = sasl.initial_message()
             + "," + sasl.server_first_message()
             + "," + client_final_message_bare;
 
-        auto client_signature = crypto::hmac_sha_1(stored_key, auth_message);
+        auto client_signature = pScram->HMAC(stored_key, auth_message);
 
         vector<uint8_t> server_client_proof;
 
@@ -341,8 +346,10 @@ private:
                       const string& auth_message,
                       DocumentBuilder& doc)
     {
-        auto server_key = crypto::hmac_sha_1(salted_password, "Server Key");
-        auto server_signature = crypto::hmac_sha_1(server_key, auth_message);
+        const auto* pScram = sasl.scram();
+
+        auto server_key = pScram->HMAC(salted_password, "Server Key");
+        auto server_signature = pScram->HMAC(server_key, auth_message);
         string server_signature_b64 = mxs::to_base64(server_signature);
 
         ostringstream ss;
