@@ -13,10 +13,10 @@
 #include "server_utils.hh"
 
 #include <algorithm>
-#include <inttypes.h>
+#include <cinttypes>
 #include <maxbase/format.hh>
 #include <maxbase/assert.h>
-
+#include "mariadbserver.hh"
 
 using std::string;
 using maxbase::string_printf;
@@ -85,6 +85,10 @@ json_t* SlaveStatus::to_json() const
     json_object_set_new(result, "last_io_error", json_string(last_io_error.c_str()));
     json_object_set_new(result, "last_sql_error", json_string(last_sql_error.c_str()));
     json_object_set_new(result, "gtid_io_pos", json_string(gtid_io_pos.to_string().c_str()));
+    if (master_server)
+    {
+        json_object_set_new(result, "master_server_name", json_string(master_server->name()));
+    }
     return result;
 }
 
