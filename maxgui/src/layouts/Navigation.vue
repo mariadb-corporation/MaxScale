@@ -69,15 +69,16 @@ export default {
         },
     },
     methods: {
-        navigate({ path, url }) {
+        navigate(nxtRoute) {
+            const { path, url, meta } = nxtRoute
             if (url) {
                 return window.open(url)
             }
             /**
-             * Sidebar dashboard path is /dashboard, but it'll be redirected to /dashboard/servers
+             * E.g. Sidebar dashboard path is /dashboard, but it'll be redirected to /dashboard/servers
              * This checks it and prevent redundant navigation
              */
-            const isDupRoute = path === '/dashboard' && this.currentPath === '/dashboard/servers'
+            const isDupRoute = this.currentPath.includes(meta.redirect || path)
             if (path && path !== this.currentPath && !isDupRoute) {
                 this.$router.push(path)
             }

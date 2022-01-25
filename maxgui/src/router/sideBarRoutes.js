@@ -28,6 +28,7 @@ export default [
             layout: 'app-layout',
             size: 22,
             icon: '$vuetify.icons.tachometer',
+            redirect: '/dashboard/servers',
         },
         name: 'dashboards',
         children: tabRoutes,
