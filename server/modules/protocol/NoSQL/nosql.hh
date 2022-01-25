@@ -58,15 +58,25 @@ const char* to_string(Op op);
 /**
  * Get the MariaDB account
  *
- * @param db    The current NoSQL database.
+ * @param db    The NoSQL database.
  * @param user  The user name.
  * @param host  The host.
  *
- * @return A properly quoted MariaDB account.
+ * @return A properly quoted and escaped MariaDB account.
  *
  * The MariaDB account will be like 'db.user'@'host'
  */
 std::string get_account(std::string db, std::string user, const std::string& host);
+
+/**
+ * Get the MariaDB user name
+ *
+ * @param db    The NoSQL database.
+ * @param user  The user name.
+ *
+ * @return A properly escaped MariaDB user name.
+ */
+std::string get_user_name(std::string db, std::string user);
 
 }
 
@@ -1174,24 +1184,36 @@ public:
             return m_metadata_sent;
         }
 
-        // TODO: Once authentication is properly done, 'user' here will disappear
-        // TODO: and the information will be stored in the session.
-        const std::string& user() const
-        {
-            return m_user;
-        };
-
-        void set_user(const string_view& user)
-        {
-            m_user = std::string(user.data(), user.length());
-        }
-
         Sasl& sasl()
         {
             return m_sasl;
         }
 
+        void set_roles(std::unordered_map<std::string, uint32_t>&& roles)
+        {
+            m_roles = roles;
+        }
+
+        uint32_t role_mask_of(const std::string& name) const
+        {
+            auto it = m_roles.find(name);
+
+            return it == m_roles.end() ? 0 : it->second;
+        }
+
+        bool authenticated() const
+        {
+            return m_authenticated;
+        }
+
+        void set_authenticated(bool authenticated)
+        {
+            m_authenticated = authenticated;
+        }
+
     private:
+        using Roles = std::unordered_map<std::string, uint32_t>;
+
         UserManager&               m_um;
         MXS_SESSION&               m_session;
         ClientConnection&          m_client_connection;
@@ -1200,8 +1222,9 @@ public:
         int64_t                    m_connection_id;
         std::unique_ptr<LastError> m_sLast_error;
         bool                       m_metadata_sent { false };
-        std::string                m_user;
         Sasl                       m_sasl;
+        Roles                      m_roles;
+        bool                       m_authenticated { false };
 
         static std::atomic<int64_t> s_connection_id;
     };

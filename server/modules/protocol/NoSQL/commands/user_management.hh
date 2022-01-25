@@ -103,8 +103,19 @@ vector<string> create_grant_or_revoke_statements(const string& user,
             break;
 
         case role::Id::USER_ADMIN:
-            privileges.push_back("CREATE USER");
-            privileges.push_back("GRANT OPTION");
+            {
+                if (is_admin)
+                {
+                    db = "*";
+                }
+
+                // CREATE USER is global, so must be applied to *.*. Easiest is just
+                // use a specific statement.
+                string statement = command + "CREATE USER ON *.*" + preposition + user;
+                statements.push_back(statement);
+
+                privileges.push_back("GRANT OPTION");
+            }
             break;
 
         default:
@@ -141,13 +152,14 @@ namespace command
 {
 
 // https://docs.mongodb.com/v4.4/reference/command/createUser/
-class CreateUser final : public SingleCommand
+class CreateUser final : public UserAdminAuthorize<SingleCommand>
 {
 public:
     static constexpr const char* const KEY = "createUser";
     static constexpr const char* const HELP = "";
 
-    using SingleCommand::SingleCommand;
+    using Base = UserAdminAuthorize<SingleCommand>;
+    using Base::Base;
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final
     {
@@ -406,13 +418,14 @@ private:
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/dropAllUsersFromDatabase/
-class DropAllUsersFromDatabase final : public SingleCommand
+class DropAllUsersFromDatabase final : public UserAdminAuthorize<SingleCommand>
 {
 public:
     static constexpr const char* const KEY = "dropAllUsersFromDatabase";
     static constexpr const char* const HELP = "";
 
-    using SingleCommand::SingleCommand;
+    using Base = UserAdminAuthorize<SingleCommand>;
+    using Base::Base;
 
     State execute(GWBUF** ppNoSQL_response) override final
     {
@@ -547,13 +560,14 @@ private:
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/dropUser/
-class DropUser final : public SingleCommand
+class DropUser final : public UserAdminAuthorize<SingleCommand>
 {
 public:
     static constexpr const char* const KEY = "dropUser";
     static constexpr const char* const HELP = "";
 
-    using SingleCommand::SingleCommand;
+    using Base = UserAdminAuthorize<SingleCommand>;
+    using Base::Base;
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final
     {
@@ -659,13 +673,14 @@ private:
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/grantRolesToUser/
-class GrantRolesToUser : public SingleCommand
+class GrantRolesToUser : public UserAdminAuthorize<SingleCommand>
 {
 public:
     static constexpr const char* const KEY = "grantRolesToUser";
     static constexpr const char* const HELP = "";
 
-    using SingleCommand::SingleCommand;
+    using Base = UserAdminAuthorize<SingleCommand>;
+    using Base::Base;
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final
     {
@@ -836,13 +851,14 @@ private:
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/revokeRolesFromUser/
-class RevokeRolesFromUser : public SingleCommand
+class RevokeRolesFromUser : public UserAdminAuthorize<SingleCommand>
 {
 public:
     static constexpr const char* const KEY = "revokeRolesFromUser";
     static constexpr const char* const HELP = "";
 
-    using SingleCommand::SingleCommand;
+    using Base = UserAdminAuthorize<SingleCommand>;
+    using Base::Base;
 
     State translate(mxs::Buffer&& mariadb_response, GWBUF** ppNoSQL_response) override final
     {
@@ -1015,13 +1031,14 @@ private:
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/updateUser/
-class UpdateUser : public SingleCommand
+class UpdateUser : public UserAdminAuthorize<SingleCommand>
 {
 public:
     static constexpr const char* const KEY = "updateUser";
     static constexpr const char* const HELP = "";
 
-    using SingleCommand::SingleCommand;
+    using Base = UserAdminAuthorize<SingleCommand>;
+    using Base::Base;
 
     State execute(GWBUF** ppNoSQL_response) override
     {
@@ -1426,13 +1443,14 @@ private:
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/usersInfo/
-class UsersInfo : public ImmediateCommand
+class UsersInfo : public UserAdminAuthorize<ImmediateCommand>
 {
 public:
     static constexpr const char* const KEY = "usersInfo";
     static constexpr const char* const HELP = "";
 
-    using ImmediateCommand::ImmediateCommand;
+    using Base = UserAdminAuthorize<ImmediateCommand>;
+    using Base::Base;
 
     void populate_response(DocumentBuilder& doc) override
     {

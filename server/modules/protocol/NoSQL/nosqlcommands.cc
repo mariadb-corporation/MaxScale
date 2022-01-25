@@ -1091,6 +1091,16 @@ unique_ptr<OpMsgCommand> OpMsgCommand::get(nosql::Database* pDatabase,
     return create(name, pDatabase, pRequest, std::move(msg), doc, arguments);
 }
 
+void OpMsgCommand::authenticate()
+{
+    if (session_must_be_ready() && !m_database.context().authenticated())
+    {
+        ostringstream ss;
+        ss << "command " << m_name << " requires authentication";
+        throw SoftError(ss.str(), error::UNAUTHORIZED);
+    }
+}
+
 GWBUF* OpMsgCommand::create_empty_response() const
 {
     auto builder = bsoncxx::builder::stream::document{};

@@ -436,6 +436,8 @@ public:
         return "OP_MSG(" + m_name + ")";
     }
 
+    void authenticate() override final;
+
     virtual void diagnose(DocumentBuilder& doc) = 0;
 
     std::string to_json() const override
@@ -728,5 +730,47 @@ protected:
     virtual Query generate_sql() = 0;
 };
 
+//
+// Authorize
+//
+template<class BaseCommand, uint32_t ROLE_MASK>
+class Authorize : public BaseCommand
+{
+public:
+    using BaseCommand::BaseCommand;
+
+    void authorize(uint32_t role_mask) override
+    {
+        if ((role_mask & ROLE_MASK) != ROLE_MASK)
+        {
+            std::ostringstream ss;
+            ss << "command " << this->m_name << " requires authentication";
+
+            throw SoftError(ss.str(), error::UNAUTHORIZED);
+        }
+    }
+};
+
+//
+// UserAdminAuthorize
+//
+// If a user has the USER_ADMIN role in the "admin" database, then
+// it may create users in any database.
+//
+template<class BaseCommand>
+class UserAdminAuthorize : public Authorize<BaseCommand, role::USER_ADMIN>
+{
+public:
+    using Base = Authorize<BaseCommand, role::USER_ADMIN>;
+
+    using Base::Base;
+
+    void authorize(uint32_t role_mask) override final
+    {
+        role_mask |= this->m_database.context().role_mask_of("admin");
+
+        Base::authorize(role_mask);
+    }
+};
 
 }

@@ -22,13 +22,14 @@ namespace nosql
 namespace command
 {
 
-class MxsAddUser final : public ImmediateCommand
+class MxsAddUser final : public UserAdminAuthorize<ImmediateCommand>
 {
 public:
     static constexpr const char* const KEY = "mxsAddUser";
     static constexpr const char* const HELP = "";
 
-    using ImmediateCommand::ImmediateCommand;
+    using Base = UserAdminAuthorize<ImmediateCommand>;
+    using Base::Base;
 
     void populate_response(DocumentBuilder& doc) override
     {
@@ -249,13 +250,14 @@ public:
     }
 };
 
-class MxsRemoveUser final : public ImmediateCommand
+class MxsRemoveUser final : public UserAdminAuthorize<ImmediateCommand>
 {
 public:
     static constexpr const char* const KEY = "mxsRemoveUser";
     static constexpr const char* const HELP = "";
 
-    using ImmediateCommand::ImmediateCommand;
+    using Base = UserAdminAuthorize<ImmediateCommand>;
+    using Base::Base;
 
     void populate_response(DocumentBuilder& doc) override
     {
@@ -394,13 +396,15 @@ private:
     string m_name;
 };
 
-class MxsUpdateUser final : public ImmediateCommand
+class MxsUpdateUser final : public UserAdminAuthorize<ImmediateCommand>
 {
 public:
     static constexpr const char* const KEY = "mxsUpdateUser";
     static constexpr const char* const HELP = "";
 
-    using ImmediateCommand::ImmediateCommand;
+    using Base = UserAdminAuthorize<ImmediateCommand>;
+    using Base::Base;
+
     using UserInfo = nosql::UserManager::UserInfo;
 
     void populate_response(DocumentBuilder& doc) override

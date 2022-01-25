@@ -362,10 +362,14 @@ private:
         doc.append(kvp(key::OK, 1));
 
         const auto& info = sasl.user_info();
-        auto& config = m_database.config();
 
-        config.user = info.mariadb_user;
+        auto& config = m_database.config();
+        config.user = mariadb::get_user_name(info.db, info.user);
         config.password = info.pwd;
+
+        auto& context = m_database.context();
+        context.set_roles(role::to_bitmasks(info.roles));
+        context.set_authenticated(true);
     }
 };
 

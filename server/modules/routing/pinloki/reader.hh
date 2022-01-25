@@ -52,20 +52,20 @@ private:
 
     std::unique_ptr<FileReader> m_sFile_reader;
 
-    Callback        m_cb;
-    InventoryReader m_inventory;
-    PollData        m_reader_poll_data;
-    mxb::Worker*    m_worker;
-    uint32_t        m_dcid = 0;
-    mxq::RplEvent   m_event;    // Stores the latest event that hasn't been processed
-    maxbase::Timer  m_timer {10s};
+    Callback          m_cb;
+    InventoryReader   m_inventory;
+    PollData          m_reader_poll_data;
+    mxb::Worker*      m_worker;
+    mxb::Worker::DCId m_dcid = 0;
+    mxq::RplEvent     m_event;  // Stores the latest event that hasn't been processed
+    maxbase::Timer    m_timer {10s};
 
     // Related to delayed start
-    maxsql::GtidList m_start_gtid_list;
-    uint32_t         m_startup_poll_dcid = 0;
+    maxsql::GtidList  m_start_gtid_list;
+    mxb::Worker::DCId m_startup_poll_dcid = 0;
 
     // Heartbeat related variables
-    uint32_t                              m_heartbeat_dcid = 0;
+    mxb::Worker::DCId                     m_heartbeat_dcid = 0;
     std::chrono::seconds                  m_heartbeat_interval;
     std::chrono::steady_clock::time_point m_last_event;
 };

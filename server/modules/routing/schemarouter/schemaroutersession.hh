@@ -140,6 +140,6 @@ private:
     mxs::Target*           m_load_target;   /**< Target for LOAD DATA LOCAL INFILE */
     SRBackend*             m_sescmd_replier {nullptr};
     int                    m_num_init_db = 0;
-    uint32_t               m_dcid {0};
+    mxb::Worker::DCId      m_dcid {0};
 };
 }

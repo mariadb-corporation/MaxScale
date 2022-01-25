@@ -12,6 +12,7 @@
  */
 
 #include "nosqlusermanager.hh"
+#include <sys/stat.h>
 #include <uuid/uuid.h>
 #include <map>
 #include <maxscale/paths.hh>
@@ -83,7 +84,7 @@ int select_info_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
     info.db = pzColumn[1];
     info.user = pzColumn[2];
     info.pwd = pzColumn[3];
-    info.pwd = pzColumn[4];
+    info.host = pzColumn[4];
     info.custom_data = pzColumn[5];
     info.uuid = pzColumn[6];
     info.salt_b64 = pzColumn[7];
@@ -214,20 +215,32 @@ namespace
 
 const map<string, Id> roles_by_name =
 {
-#define NOSQL_ROLE(id, name) { name, Id:: id },
+#define NOSQL_ROLE(id, value, name) { name, Id:: id },
 #include "nosqlrole.hh"
 #undef NOSQL_ROLE
 };
 
 const map<Id, string> roles_by_id =
 {
-#define NOSQL_ROLE(id, name) { Id:: id, name },
+#define NOSQL_ROLE(id, value, name) { Id:: id, name },
 #include "nosqlrole.hh"
 #undef NOSQL_ROLE
 };
 
 }
 
+}
+
+unordered_map<string, uint32_t> role::to_bitmasks(const vector<role::Role>& roles)
+{
+    unordered_map<string, uint32_t> bitmasks;
+
+    for (const auto& role : roles)
+    {
+        bitmasks[role.db] |= role.id;
+    }
+
+    return bitmasks;
 }
 
 string role::to_string(Id id)
@@ -493,6 +506,26 @@ UserManager::~UserManager()
     sqlite3_close_v2(&m_db);
 }
 
+namespace
+{
+
+bool is_accessible_by_others(const string& path)
+{
+    bool rv = false;
+
+    struct stat s;
+    if (stat(path.c_str(), &s) == 0)
+    {
+        mode_t permissions = s.st_mode & ACCESSPERMS;
+
+        rv = (permissions & ~(S_IRWXU)) != 0;
+    }
+
+    return rv;
+}
+
+}
+
 //static
 unique_ptr<UserManager> UserManager::create(const string& name)
 {
@@ -501,25 +534,59 @@ unique_ptr<UserManager> UserManager::create(const string& name)
     string path = mxs::datadir();
 
     path += "/nosqlprotocol/";
-    path += name;
 
-    if (mxs_mkdir_all(path.c_str(), 0744))
+    if (mxs_mkdir_all(path.c_str(), S_IRWXU))
     {
-        path += "/users-v";
-        path += std::to_string(SCHEMA_VERSION);
-        path += ".db";
-
-        sqlite3* pDb = open_or_create_db(path);
-
-        if (pDb)
+        // The directory is created on first start and at that point the permissions
+        // should be right, but thereafter someone might change them.
+        if (is_accessible_by_others(path))
         {
-            pThis = new UserManager(std::move(path), pDb);
+            MXS_ERROR("The directory '%s' is accessible by others. The nosqlprotocol "
+                      "directory must only be accessible by MaxScale.",
+                      path.c_str());
         }
         else
         {
-            // The handle will be null, *only* if the opening fails due to a memory
-            // allocation error.
-            MXS_ALERT("sqlite3 memory allocation failed, nosqlprotocol cannot continue.");
+            path += name;
+            path += "-v";
+            path += std::to_string(SCHEMA_VERSION);
+            path += ".db";
+
+            if (is_accessible_by_others(path))
+            {
+                MXS_ERROR("The file '%s' is accessible by others. The nosqlprotocol account "
+                          "database must only be accessible by MaxScale.",
+                          path.c_str());
+            }
+            else
+            {
+                sqlite3* pDb = open_or_create_db(path);
+
+                if (pDb)
+                {
+                    // Ensure it is readable/writeable only by MaxScale. This should be
+                    // necessary only when the database is created, but as you cannot
+                    // provide a file mask to sqlite3, it's simpler to just do it always.
+                    if (chmod(path.c_str(), S_IRUSR | S_IWUSR) == 0)
+                    {
+                        pThis = new UserManager(std::move(path), pDb);
+                    }
+                    else
+                    {
+                        MXS_ERROR("Could not make '%s' usable only by MaxScale: %s",
+                                  path.c_str(), mxs_strerror(errno));
+
+                        sqlite3_close_v2(pDb);
+                        pDb = nullptr;
+                    }
+                }
+                else
+                {
+                    // The handle will be null, *only* if the opening fails due to a memory
+                    // allocation error.
+                    MXS_ALERT("sqlite3 memory allocation failed, nosqlprotocol cannot continue.");
+                }
+            }
         }
     }
     else

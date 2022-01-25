@@ -58,15 +58,10 @@ Nosqlprotocol supports _SCRAM_ _authentication_ as implemented by MongoDB®.
 Currently the `SCRAM-SHA-1` mechanism is supported, but support for
 `SCRAM-SHA-256` will be added.
 
-Nosqlprotocol bascially performs no _authorization_, but any limitations on
-what a user is allowed to perform are controlled by the grants of the
-corresponding MariaDB user.
+If nosqlprotocol has been setup so that no authentication is required, then
+when connecting only the host and port should be provided, but neither a
+username nor a password.
 
-FOLLOWING PARAGRAPH TO BE TUNED
-
-Currently no authentication is supported in the communication between
-the MongoDB® client application and MaxScale. That is, when connecting, only
-the host and port should be provided, but neither username nor password.
 For instance, if the _MongoDB Node.JS Driver_ is used, then the connection
 string should look like:
 ```
@@ -102,7 +97,86 @@ From the above it should be clear that there is not a 1-to-1
 correspondence between the concept of a user in NoSQL and the concept
 of a user in MariaDB, but that some additional conventions are needed.
 
-TBW
+To make it possible to have different NoSQL users with the same name,
+the database in whose context the user is created is prepended to the
+user name, separated with a dot, when the MariaDB user is created.
+
+This is perhaps easiest to illustrate using an example:
+```
+MariaDB [(none)]> select user, host from mysql.user;
++-------------+-----------+
+| User        | Host      |
++-------------+-----------+
+| bob         | %         |
+| mysql       | localhost |
++-------------+-----------+
+2 rows in set (0.001 sec)
+```
+Currently there are two user accounts defined. Even though there is
+a user `bob`, creating a NoSQL user `bob` succeeds.
+```
+> use test;
+switched to db test
+> db.runCommand({createUser: "bob", pwd: "bobspwd", roles: []});
+{ "ok" : 1 }
+```
+If we now, from the MariaDB prompt, check the users we will see:
+```
+MariaDB [(none)]> select user, host from mysql.user;
++-------------+-----------+
+| User        | Host      |
++-------------+-----------+
+| bob         | %         |
+| test.bob    | %         |
+| mysql       | localhost |
++-------------+-----------+
+3 rows in set (0.001 sec)
+```
+The MariaDB user corresponding to the NoSQL user `bob`, created in the
+context of the database `test`, has `test` as a prefix.
+
+### The `mariadb` database
+
+The fact that NoSQL users have the database embedded in the MariaDB
+name may be inconvenient if the same data is accessed both as NoSQL
+via nosqlprotocol and as SQL directly from MariaDB. It also makes
+it impossible to use an existing MariaDB account from NoSQL.
+
+To provide a solution for this problem, the database `mariadb` is treated
+in a specific fashion. A user created in the context of the `mariadb`
+database is created in the MariaDB server without the database prefix.
+If we now try to create a user `bob` in the `mariadb` database it will fail,
+because the user `'bob'@'%'` exists already.
+```
+> use mariadb
+switched to db mariadb
+> db.runCommand({createUser: "bob", pwd: "bobspwd", roles: []});
+{
+	"ok" : 0,
+	"errmsg" : "User \"bob\" already exists",
+	"code" : 51003,
+	"codeName" : "Location51003"
+}
+```
+If we create a user with another name it will succeed.
+```
+> db.runCommand({createUser: "alice", pwd: "alicespwd", roles: []});
+{ "ok" : 1 }
+```
+And if we check the situation from MariaDB,
+```
+MariaDB [(none)]> select user, host from mysql.user;
++-------------+-----------+
+| User        | Host      |
++-------------+-----------+
+| alice       | %         |
+| bob         | %         |
+| test.bob    | %         |
+| mysql       | localhost |
++-------------+-----------+
+4 rows in set (0.001 sec)
+```
+we will see that `alice` was created without a database prefix.
 
 ## Roles and Privileges
 
@@ -166,6 +240,183 @@ is not required, and if the MongoDB® client has not authenticated itself, the
 credentials specified with `nosqlprotocol.[user|password]` (or the anonymous
 user) will be used when accessing the MariaDB server.
 
+### Enforce Authentication
+
+To enforce authentication, specify
+```
+nosqlprotocol.authentication_required=true
+```
+in the configuration. If authentication is required, then any command
+that requires access to the MariaDB server will fail, unless the client
+has authenticated.
+
+## Authorization
+
+By default nosqlprotocol does no authorization. However, a nosqlprotocol
+client is _always_ subject to the authorization performed by the MariaDB
+server.
+
+When nosqlprotocol authorization is enabled by adding
+```
+nosqlprotocol.authorization_enabled=true
+```
+to the configuration file, some commands will be subject to authorization,
+by nosqlprotocol. The following table lists the commands and what role they
+require.
+
+Command | Role
+--------------
+[createUser](#createUser) | `userAdmin`
+[dropUser](#dropUser) | `userAdmin`
+[grantRolesToUser](#grantRolesToUser) | `userAdmin`
+[revokeRolesFromUser](#revokeRolesFromUser) | `userAdmin`
+[mxsAddUser](#mxsAddUser) | `userAdmin`
+[mxsRemoveUser](#mxsRemoveUser) | `userAdmin`
+[mxsUpdateUser](#mxsUpdateUser) | `userAdmin`
+[updateUser](#updateUser) | `userAdmin`
+[usersInfo](#usersInfo) | `userAdmin`
+
+It is important to note that even if nosqlprotocol authorization
+is enabled, the MariaDB server has the final word. That is, even if the
+roles of a user would be sufficient for a particular operation, if the
+granted privileges are not, the operation will not succeed. There may
+be a mismatch between roles and grants, for instance, if the wrong roles
+were specified when the user was added, or if the grants have been
+altered directly and not via nosqlprotocol.
+
+## Bootstrapping the Authentication/Authorization
+
+In order to enable authorization you need to have NoSQL users and
+those can be created with [createUser](#createUser) or added
+with [mxsAddUser](#addUser).
+
+If you want to _create_ a user, then you first need to configure
+nosqlprotocol with credentials that are sufficient for creating a user:
+```
+nosqlprotocol.user = user_with_privileges_for_creating_a_user
+nosqlprotocol.password = the_users_password
+```
+At this point `nosqlprotocol.authentication_required` and
+`nosqlprotocol.authorization_enabled` should both be `false`. However,
+as those are their default values, they do not have to be specified.
+
+Start MaxScale and connect to it with the MongoDB® command line client
+```
+$ mongo --port 17017
+...
+>
+```
+Then create the user.
+```
+> use admin;
+switched to db admin
+> db.runCommand({createUser: "nosql_admin", pwd: "nosql_pwd", roles: ["userAdmin"]});
+{ "ok" : 1 }
+```
+Alternatively you can add an existing user. Note that it should be
+added to the `mariadb` database, unless it was created with the
+convention of having the database as a prefix, e.g. `db.bob`.
+```
+> use mariadb;
+switched to db admin
+> db.runCommand({mxsAddUser: "bob", pwd: "bob_pwd", roles: ["userAdmin"]});
+{ "ok" : 1 }
+```
+
+Now you should shutdown MaxScale and add the entries
+```
+nosqlprotocol.authentication_required=true
+nosqlprotocol.authorization_enabled=true
+```
+and start MaxScale.
+
+The `nosqlprotocol.user` and `nosqlprotocol.password` can be removed but
+as they will be ignored with `nosqlprotocol.authentication_required=true`
+being present, it is not mandatory.
+
+If you now try to create a user when not having been authenticated or
+when authenticated as a user without the `userAdmin` role, the result
+will be:
+```
+> use test;
+switched to db test
+> db.runCommand({createUser: "alice", pwd: "alices_pwd", roles: []});
+{
+	"ok" : 0,
+	"errmsg" : "command createUser requires authentication",
+	"code" : 13,
+	"codeName" : "Unauthorized"
+}
+```
+
+**NOTE** When a client authenticates, the password will not be
+transferred in cleartext over the network, so, even without SSL,
+(currently not supported) it is not possible to gain access to a
+password by monitoring the network traffic.
+
+However, when a user is created or added (or the password is changed),
+the password will be transferred in _cleartext_. To prevent eavesdropping,
+create/add users when connecting over a domain socket.
+
+## Local Account Database
+
+**NOTE** The following information is provided in the hope that
+it may be useful. We make no guarantees that the way in which
+the account information is stored by nosqlprotocol will remain
+the same _even_ between maintenance releases. We do guarantee,
+however, that even if the way in which the account information
+is stored changes, existing account information will automatically
+be converted and no manual intervention, such as re-creation of
+accounts, will be needed.
+
+So as to be able to log in on behalf of clients, nosqlprotocol
+must know their password. As the password is _not_ transferred
+in cleartext to nosqlprotocol during the authentication, the
+password must be stored locally when the user is created with
+[createUser](#createUser) or added with [mxsAddUser](#mxsAddUser).
+
+The account information of nosqlprotocol is stored in an
+[sqlite3](https://sqlite.org/index.html) database whose name is
+`<libdir>/nosqlprotocol/<listener-name>-v1.db`, where
+`<libdir>` is the _libdir_ of MaxScale, typically
+`/var/lib/maxscale`, `<listener-name>` is the name of the
+listener section in the MaxScale configuration file, and `-v1`
+a suffix for making schema evolution easier, should there be
+a need for that.
+
+For instance, given a configuration like
+```
+[NoSQL-Listener]
+type=listener
+service=TheService
+protocol=nosqlprotocol
+...
+```
+the account information will be stored in the file
+`<libdir>/nosqlprotocol/NoSQL-Listener-v1.db`.
+
+Note that since the database name is derived from the listener
+name, changing the name of the listener in the configuration
+file will have the effect of making all accounts disappear.
+To retain the accounts, the database file should also be
+renamed.
+
+At first startup, the `nosqlprotocol` directory and
+the file `NoSQL-Listener-v1.db` will be created. They will
+be created with file permissions that only allow MaxScale
+access. At subsequent startups the permissions will be checked
+and MaxScale will refuse to start if the permissions allow
+access to others.
+
+The file can be accessed with the `sqlite3` command line program.
+```
+$ sqlite3 NoSQL-Listener-v1.db
+SQLite version 3.22.0 2018-01-22 18:45:57
+Enter ".help" for usage hints.
+sqlite> .schema
+CREATE TABLE accounts (mariadb_user TEXT UNIQUE, db TEXT, user TEXT, pwd TEXT, host TEXT, custom_data TEXT, uuid TEXT, salt_b64 TEXT, mechanisms TEXT, roles TEXT);
+```
+
 # Client Library
 
 As the goal of _nosqlprotocol_ is to implement, to the extent that it
@@ -174,10 +425,6 @@ implements them, it should be possible to use any language specific driver.
 
 However, during the development of _nosqlprotocol_, the _only_ client library
 that has been verified to work is version 3.6 of _MongoDB Node.JS Driver_.
-
-## Roles and Grants
-
-TBD
 
 # Parameters
 
@@ -215,6 +462,38 @@ client is not authenticated.
 Specifies the _password_ to be used when connecting to the backend, is the MongoDB®
 client is not authenticated. Note that the same _user_/_password_ combination will be
 used for all unauthenticated MongoDB® clients connecting to the same listener port.
+
+## `authentication_required`
+
+    * Type: boolean
+    * Mandatory: false
+    * Default: `false`
+
+Specifies whether the client always must authenticate. If authentication is required,
+it does not matter whether `user` and `password` have been specified, the client must
+authenticate.
+
+Authentication should not be required before users have been created with
+(createUser)[#createUser] or added with (mxsAddUser)[#mxsAddUser],
+with authentication being optional and authorization being disabled.
+
+NOTE: All client activity is _always_ subject to authorization performed by the
+MariaDB server.
+
+## `authorization_enabled`
+
+    * Type: boolean
+    * Mandatory: false
+    * Default: `false`
+
+Specifies whether nosqlprotocol itself should perform authorization in the context
+of the commands [mxsAddUser](#mxsAddUser), [mxsRemoveUser](#mxsRemoveUser) and
+[mxsUpdateUser](#mxsUpdateUser). Authorization should not be enabled before users
+have been created with [createUser](#createUser) or added with [mxsAddUser](#mxsAddUser)
+with authorization being disabled.
+
+NOTE: All client activity is _always_ subject to authorization performed by the
+MariaDB server.
 
 ## `host`
 
