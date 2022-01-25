@@ -536,9 +536,11 @@ bool MariaDBClientConnection::send_server_handshake()
         mxb_assert((caps & GW_MYSQL_CAPABILITIES_DEPRECATE_EOF) == 0);
     }
 
-    if (cap_types == CapTypes::XPAND)
+    if (cap_types == CapTypes::XPAND || min_version < 50705)
     {
-        // XPand doesn't support SESSION_TRACK or DEPRECATE_EOF
+        // The DEPRECATE_EOF and session tracking were added in MySQL 5.7, anything older than that shouldn't
+        // advertise them. This includes XPand: it doesn't support SESSION_TRACK or DEPRECATE_EOF as it's
+        // MySQL 5.1 compatible on the protocol layer.
         caps &= ~(GW_MYSQL_CAPABILITIES_SESSION_TRACK | GW_MYSQL_CAPABILITIES_DEPRECATE_EOF);
     }
 
@@ -546,6 +548,8 @@ bool MariaDBClientConnection::send_server_handshake()
     {
         caps |= GW_MYSQL_CAPABILITIES_SSL;
     }
+
+    m_session_data->client_caps.advertised_capabilities = caps;
 
     // Convert to little endian, write 2 bytes.
     uint8_t caps_le[8];
@@ -1680,7 +1684,8 @@ int MariaDBClientConnection::send_auth_error(int packet_number, const char* mysq
     mysql_state = "28000";
 
     field_count = 0xff;
-    mariadb::set_byte2(mysql_err,    /*mysql_errno */ 1045);
+    const int mysql_errno = 1045;
+    mariadb::set_byte2(mysql_err, mysql_errno);
     mysql_statemsg[0] = '#';
     memcpy(mysql_statemsg + 1, mysql_state, 5);
 
@@ -2184,12 +2189,16 @@ void MariaDBClientConnection::complete_change_user_p2()
     m_session_data->role = curr_auth_data->user_entry.entry.default_role;
 }
 
-void MariaDBClientConnection::cancel_change_user_p2()
+void MariaDBClientConnection::cancel_change_user_p2(GWBUF* buffer)
 {
     auto& curr_auth_data = m_session_data->auth_data;
     auto& orig_auth_data = m_change_user.auth_data_bu;
-    MXB_WARNING("COM_CHANGE_USER from '%s' to '%s' succeeded on MaxScale yet failed on backends.",
-                orig_auth_data->user.c_str(), curr_auth_data->user.c_str());
+
+    MXB_WARNING("COM_CHANGE_USER from '%s' to '%s' succeeded on MaxScale but "
+                "returned (0x%0hhx) on backends: %s",
+                orig_auth_data->user.c_str(), curr_auth_data->user.c_str(),
+                mxs_mysql_get_command(buffer), mxs::extract_error(buffer).c_str());
+
     // Restore original auth data from backup.
     curr_auth_data = move(orig_auth_data);
 }
@@ -2771,7 +2780,7 @@ MariaDBClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down, 
             else
             {
                 // Change user succeeded on MaxScale but failed on backends. Cancel it.
-                cancel_change_user_p2();
+                cancel_change_user_p2(buffer);
             }
             m_routing_state = RoutingState::PACKET_START;
             m_dcb->trigger_read_event();

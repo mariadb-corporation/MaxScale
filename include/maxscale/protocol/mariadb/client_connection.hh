@@ -152,7 +152,7 @@ private:
     bool complete_change_user_p1();
     void complete_change_user_p2();
     void cancel_change_user_p1();
-    void cancel_change_user_p2();
+    void cancel_change_user_p2(GWBUF* buffer);
 
     void  handle_use_database(GWBUF* read_buffer);
     char* handle_variables(mxs::Buffer& buffer);
