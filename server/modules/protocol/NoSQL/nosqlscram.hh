@@ -122,6 +122,8 @@ public:
 class ScramSHA1 : public Scram
 {
 public:
+    static const ScramSHA1& get();
+
     std::vector<uint8_t> Hi(const std::string& password,
                             const std::vector<uint8_t>& salt,
                             size_t iterations) const override;
@@ -132,11 +134,16 @@ public:
     using Scram::HMAC;
 
     std::vector<uint8_t> H(const std::vector<uint8_t>& data) const override;
+
+private:
+    ScramSHA1() {}
 };
 
 class ScramSHA256 : public Scram
 {
 public:
+    static const ScramSHA256& get();
+
     std::vector<uint8_t> Hi(const std::string& password,
                             const std::vector<uint8_t>& salt,
                             size_t iterations) const override;
@@ -147,9 +154,12 @@ public:
     using Scram::HMAC;
 
     std::vector<uint8_t> H(const std::vector<uint8_t>& data) const override;
+
+private:
+    ScramSHA256() {}
 };
 
-std::unique_ptr<Scram> create(Mechanism mechanism);
+const Scram& get(Mechanism mechanism);
 
 }
 

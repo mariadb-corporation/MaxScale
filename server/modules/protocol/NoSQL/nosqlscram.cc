@@ -253,7 +253,7 @@ void scram::pbkdf2_hmac_sha_256(const char* pPassword, size_t password_len,
 
     uint8_t intermediate_digest[NOSQL_SHA_256_HASH_SIZE];
 
-    memcpy(intermediate_digest, pOutput, NOSQL_SHA_1_HASH_SIZE);
+    memcpy(intermediate_digest, pOutput, NOSQL_SHA_256_HASH_SIZE);
 
     for (size_t i = 2; i <= iterations; ++i)
     {
@@ -279,19 +279,19 @@ vector<uint8_t> scram::pbkdf2_hmac_sha_256(const char* pPassword, size_t passwor
     return rv;
 }
 
-unique_ptr<scram::Scram> scram::create(Mechanism mechanism)
+const scram::Scram& scram::get(Mechanism mechanism)
 {
     switch (mechanism)
     {
     case Mechanism::SHA_1:
-        return make_unique<ScramSHA1>();
+        return ScramSHA1::get();
 
     case Mechanism::SHA_256:
-        return make_unique<ScramSHA256>();
+        return ScramSHA256::get();
     }
 
     mxb_assert(!true);
-    return unique_ptr<Scram>();
+    throw SoftError("Invalid scram mechanism", error::INTERNAL_ERROR);
 }
 
 namespace scram
@@ -299,6 +299,18 @@ namespace scram
 
 Scram::~Scram()
 {
+}
+
+//
+// SHA1
+//
+
+//static
+const ScramSHA1& ScramSHA1::get()
+{
+    static ScramSHA1 s;
+
+    return s;
 }
 
 vector<uint8_t> ScramSHA1::Hi(const string& password, const vector<uint8_t>& salt, size_t iterations) const
@@ -314,6 +326,18 @@ vector<uint8_t> ScramSHA1::HMAC(const vector<uint8_t>& key, const uint8_t* pData
 vector<uint8_t> ScramSHA1::H(const vector<uint8_t>& data) const
 {
     return crypto::sha_1(data);
+}
+
+//
+// SHA256
+//
+
+//static
+const ScramSHA256& ScramSHA256::get()
+{
+    static ScramSHA256 s;
+
+    return s;
 }
 
 vector<uint8_t> ScramSHA256::Hi(const string& password, const vector<uint8_t>& salt, size_t iterations) const

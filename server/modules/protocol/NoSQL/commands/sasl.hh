@@ -163,7 +163,7 @@ private:
         sasl.set_gs2_header(gs2_header);
         sasl.set_client_nonce_b64(client_nonce_b64);
         sasl.set_initial_message(initial_message);
-        sasl.set_scram(scram::create(mechanism));
+        sasl.set_mechanism(mechanism);
 
         authenticate(sasl, doc);
     }
@@ -306,21 +306,21 @@ private:
                       string_view client_proof_64,
                       DocumentBuilder& doc)
     {
-        const auto* pScram = sasl.scram();
+        const auto& scram = nosql::scram::get(sasl.mechanism());
         const auto& info = sasl.user_info();
 
         string password = info.user + ":mongo:" + info.pwd; // MongoDB SCRAM-SHA-1
 
         string md5_password = crypto::md5hex(password);
 
-        auto salted_password = pScram->Hi(md5_password, info.salt, scram::ITERATIONS);
-        auto client_key = pScram->HMAC(salted_password, "Client Key");
-        auto stored_key = pScram->H(client_key);
+        auto salted_password = scram.Hi(md5_password, info.salt, scram::ITERATIONS);
+        auto client_key = scram.HMAC(salted_password, "Client Key");
+        auto stored_key = scram.H(client_key);
         string auth_message = sasl.initial_message()
             + "," + sasl.server_first_message()
             + "," + client_final_message_bare;
 
-        auto client_signature = pScram->HMAC(stored_key, auth_message);
+        auto client_signature = scram.HMAC(stored_key, auth_message);
 
         vector<uint8_t> server_client_proof;
 
@@ -346,10 +346,10 @@ private:
                       const string& auth_message,
                       DocumentBuilder& doc)
     {
-        const auto* pScram = sasl.scram();
+        const auto& scram = nosql::scram::get(sasl.mechanism());
 
-        auto server_key = pScram->HMAC(salted_password, "Server Key");
-        auto server_signature = pScram->HMAC(server_key, auth_message);
+        auto server_key = scram.HMAC(salted_password, "Server Key");
+        auto server_signature = scram.HMAC(server_key, auth_message);
         string server_signature_b64 = mxs::to_base64(server_signature);
 
         ostringstream ss;

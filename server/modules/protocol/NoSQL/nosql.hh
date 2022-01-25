@@ -1055,10 +1055,9 @@ public:
             return m_server_first_message;
         }
 
-        scram::Scram* scram() const
+        scram::Mechanism mechanism() const
         {
-            mxb_assert(m_sScram.get());
-            return m_sScram.get();
+            return m_mechanism;
         }
 
         void set_client_nonce_b64(const std::string s)
@@ -1111,20 +1110,20 @@ public:
             m_user_info = std::move(user_info);
         }
 
-        void set_scram(std::unique_ptr<scram::Scram> sScram)
+        void set_mechanism(scram::Mechanism m)
         {
-            m_sScram = std::move(sScram);
+            m_mechanism = m;
         }
 
     private:
-        UserManager::UserInfo         m_user_info;
-        std::string                   m_client_nonce_b64;
-        std::string                   m_gs2_header;
-        std::string                   m_server_nonce_b64;
-        int32_t                       m_conversation_id { 0 };
-        std::string                   m_initial_message;
-        std::string                   m_server_first_message;
-        std::unique_ptr<scram::Scram> m_sScram;
+        UserManager::UserInfo m_user_info;
+        std::string           m_client_nonce_b64;
+        std::string           m_gs2_header;
+        std::string           m_server_nonce_b64;
+        int32_t               m_conversation_id { 0 };
+        std::string           m_initial_message;
+        std::string           m_server_first_message;
+        scram::Mechanism      m_mechanism = scram::Mechanism::SHA_1;
     };
 
     class Context
