@@ -66,7 +66,7 @@ For MaxScale 2.5.12 and newer, the minimum value is 0.
 
 For MaxScale versions 2.5.11 and older, the minimum value is 1. These versions
 suffer from a bug ([MXS-3536](https://jira.mariadb.org/browse/MXS-3536)) that
-causes the parameter to accept any values but only function when a value greated
+causes the parameter to accept any values but only function when a value greater
 than one was given.
 
 Starting with MaxScale 2.5.0, the use of percentage values in
@@ -701,7 +701,7 @@ INSERT INTO test.t1 (id) VALUES (1);
 SELECT * FROM test.t1 WHERE id = 1;
 ```
 
-As the statements are not executed inside a transaction, from the load balancers
+As the statements are not executed inside a transaction, from the load balancer's
 point of view, the latter statement can be routed to a slave server. The problem
 with this is that if the value that was inserted on the master has not yet
 replicated to the server where the SELECT statement is being performed, it can
@@ -900,7 +900,7 @@ hints when you are sure that they can cause no harm.
 
 An exception to this rule is `transaction_replay`: when it is enabled, all
 routing hints inside transaction are ignored. This is done to prevent changes
-done inside a replayable transaction from affecting servers outside of the
+done inside a re-playable transaction from affecting servers outside of the
 transaction. This behavior was added in MaxScale 6.1.4. Older versions allowed
 routing hints to override the transaction logic.
 
@@ -964,7 +964,7 @@ of the following group:
 * All statements within an explicit read-only transaction (`START TRANSACTION READ ONLY`)
 * `SHOW` statements except `SHOW MASTER STATUS`
 
-The list of supported built-in fuctions can be found
+The list of supported built-in functions can be found
 [here](../../query_classifier/qc_sqlite/builtin_functions.c).
 
 ### Routing to every session backend
