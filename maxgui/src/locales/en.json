@@ -218,6 +218,8 @@
     "truncateTbl": "Truncate Table",
     "reconnect": "Reconnect",
     "noConnAvail": "No connections available",
+    "clusters": "Clusters",
+    "configuration": "Configuration",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",

@@ -37,6 +37,7 @@ import { select as d3Select } from 'd3-selection'
 import { hierarchy, tree } from 'd3-hierarchy'
 import 'd3-transition'
 export default {
+    name: 'tree-graph',
     props: {
         data: { type: Object, required: true },
         dim: { type: Object, required: true },

@@ -15,7 +15,9 @@ const Dashboard = () => import(/* webpackChunkName: "sidebar-routes-dashboard" *
 const Settings = () => import(/* webpackChunkName: "sidebar-routes-settings" */ 'pages/Settings')
 const Logs = () => import(/* webpackChunkName: "sidebar-routes-logs" */ 'pages/Logs')
 const QueryPage = () => import(/* webpackChunkName: "query-page" */ 'pages/QueryPage')
+const Visualization = () => import(/* webpackChunkName: "visualization" */ 'pages/Visualization')
 import tabRoutes from './tabRoutes'
+import visRoutes from './visRoutes'
 
 export default [
     // Sidebar Routes
@@ -32,6 +34,20 @@ export default [
         },
         name: 'dashboards',
         children: tabRoutes,
+    },
+    {
+        path: '/visualization',
+        component: Visualization,
+        meta: {
+            requiresAuth: true,
+            keepAlive: true,
+            layout: 'app-layout',
+            size: 22,
+            icon: '$vuetify.icons.reports',
+            redirect: '/visualization/configuration',
+        },
+        name: 'visualization',
+        children: visRoutes,
     },
     {
         path: '/settings',

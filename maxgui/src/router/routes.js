@@ -23,6 +23,8 @@ const ListenerDetail = () =>
     import(/* webpackChunkName: "listener-details-page" */ 'pages/ListenerDetail')
 const FilterDetail = () =>
     import(/* webpackChunkName: "filter-details-page" */ 'pages/FilterDetail')
+const Cluster = () =>
+    import(/* webpackChunkName: "visualization-cluster" */ 'pages/Visualization/Cluster')
 const NotFound404 = () => import(/* webpackChunkName: "not-found-page" */ 'pages/NotFound404')
 
 export const routes = [
@@ -33,6 +35,10 @@ export const routes = [
     {
         path: '/dashboard',
         redirect: '/dashboard/servers',
+    },
+    {
+        path: '/visualization',
+        redirect: '/visualization/configuration',
     },
     {
         path: '*',
@@ -96,6 +102,15 @@ export const routes = [
             layout: 'app-layout',
         },
         name: 'filter',
+    },
+    {
+        path: '/visualization/clusters/:id',
+        component: Cluster,
+        meta: {
+            requiresAuth: true,
+            layout: 'app-layout',
+        },
+        name: 'cluster',
     },
     {
         path: '/404',
