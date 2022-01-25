@@ -358,6 +358,65 @@ However, when a user is created or added (or the password is changed),
 the password will be transferred in _cleartext_. To prevent eavesdropping,
 create/add users when connecting over a domain socket.
 
+## Local Account Database
+
+**NOTE** The following information is provided in the hope that
+it may be useful. We make no guarantees that the way in which
+the account information is stored by nosqlprotocol will remain
+the same _even_ between maintenance releases. We do guarantee,
+however, that even if the way in which the account information
+is stored changes, existing account information will automatically
+be converted and no manual intervention, such as re-creation of
+accounts, will be needed.
+
+So as to be able to log in on behalf of clients, nosqlprotocol
+must know their password. As the password is _not_ transferred
+in cleartext to nosqlprotocol during the authentication, the
+password must be stored locally when the user is created with
+[createUser](#createUser) or added with [mxsAddUser](#mxsAddUser).
+
+The account information of nosqlprotocol is stored in an
+[sqlite3](https://sqlite.org/index.html) database whose name is
+`<libdir>/nosqlprotocol/<listener-name>-v1.db`, where
+`<libdir>` is the _libdir_ of MaxScale, typically
+`/var/lib/maxscale`, `<listener-name>` is the name of the
+listener section in the MaxScale configuration file, and `-v1`
+a suffix for making schema evolution easier, should there be
+a need for that.
+
+For instance, given a configuration like
+```
+[NoSQL-Listener]
+type=listener
+service=TheService
+protocol=nosqlprotocol
+...
+```
+the account information will be stored in the file
+`<libdir>/nosqlprotocol/NoSQL-Listener-v1.db`.
+
+Note that since the database name is derived from the listener
+name, changing the name of the listener in the configuration
+file will have the effect of making all accounts disappear.
+To retain the accounts, the database file should also be
+renamed.
+
+At first startup, the `nosqlprotocol` directory and
+the file `NoSQL-Listener-v1.db` will be created. They will
+be created with file permissions that only allow MaxScale
+access. At subsequent startups the permissions will be checked
+and MaxScale will refuse to start if the permissions allow
+access to others.
+
+The file can be accessed with the `sqlite3` command line program.
+```
+$ sqlite3 NoSQL-Listener-v1.db
+SQLite version 3.22.0 2018-01-22 18:45:57
+Enter ".help" for usage hints.
+sqlite> .schema
+CREATE TABLE accounts (mariadb_user TEXT UNIQUE, db TEXT, user TEXT, pwd TEXT, host TEXT, custom_data TEXT, uuid TEXT, salt_b64 TEXT, mechanisms TEXT, roles TEXT);
+```
+
 # Client Library
 
 As the goal of _nosqlprotocol_ is to implement, to the extent that it
