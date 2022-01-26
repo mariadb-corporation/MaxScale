@@ -1,6 +1,6 @@
 <template>
     <page-wrapper>
-        <v-sheet v-if="!$help.lodash.isEmpty(current_filter)" class="px-6">
+        <v-sheet v-if="!$help.lodash.isEmpty(current_filter)" class="pl-6">
             <page-header :currentFilter="current_filter" />
             <v-row class="my-0">
                 <!-- PARAMETERS TABLE -->

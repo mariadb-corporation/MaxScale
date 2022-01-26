@@ -1,6 +1,6 @@
 <template>
     <page-wrapper>
-        <v-sheet v-if="!$help.lodash.isEmpty(current_server)" class="px-6">
+        <v-sheet v-if="!$help.lodash.isEmpty(current_server)" class="pl-6">
             <page-header :currentServer="current_server" :onEditSucceeded="dispatchFetchServer" />
             <overview-header
                 :currentServer="current_server"

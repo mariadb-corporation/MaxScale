@@ -1,5 +1,5 @@
 <template>
-    <div class="wrapper-container fill-height">
+    <div class="wrapper-container d-flex flex-column fill-height">
         <div class="d-flex ml-n1">
             <portal-target name="page-header" />
             <v-spacer />

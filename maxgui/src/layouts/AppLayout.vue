@@ -4,7 +4,7 @@
         <navigation />
         <snackbars />
         <v-main class="fill-height">
-            <div class="fill-height py-6 px-10">
+            <div class="fill-height py-6 px-9">
                 <transition name="fade" mode="out-in">
                     <router-view v-if="$route.meta.requiresAuth" />
                 </transition>

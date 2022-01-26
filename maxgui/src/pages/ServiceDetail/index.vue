@@ -1,6 +1,6 @@
 <template>
     <page-wrapper>
-        <v-sheet v-if="!$help.lodash.isEmpty(current_service)" class="px-6">
+        <v-sheet v-if="!$help.lodash.isEmpty(current_service)" class="pl-6">
             <page-header :currentService="current_service" :onEditSucceeded="fetchService" />
             <!--
                 @update-chart is emitted every 10s

@@ -1,6 +1,6 @@
 <template>
     <page-wrapper>
-        <v-sheet v-if="!$help.lodash.isEmpty(current_listener)" class="px-6">
+        <v-sheet v-if="!$help.lodash.isEmpty(current_listener)" class="pl-6">
             <page-header :currentListener="current_listener" />
             <v-row class="my-0">
                 <!-- PARAMETERS TABLE -->
