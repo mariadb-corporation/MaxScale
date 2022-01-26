@@ -1685,6 +1685,7 @@ MariaDBClientConnection::MariaDBClientConnection(MXS_SESSION* session, mxs::Comp
     , m_version(service_get_version(session->service, SERVICE_VERSION_MIN))
     , m_qc(this, session, TYPE_ALL)
 {
+    m_qc.set_verbose(false);
     const auto& svc_config = *m_session->service->config();
     m_max_sescmd_history = svc_config.disable_sescmd_history ? 0 : svc_config.max_sescmd_history;
     m_track_pooling_status = svc_config.idle_session_pooling_time.count() >= 0;

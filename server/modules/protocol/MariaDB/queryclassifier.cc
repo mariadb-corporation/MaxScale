@@ -1034,7 +1034,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
         }
     }
 
-    if (mxb_log_should_log(LOG_INFO))
+    if (m_verbose && mxb_log_should_log(LOG_INFO))
     {
         log_transaction_status(pBuffer, type_mask);
     }

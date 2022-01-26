@@ -423,6 +423,16 @@ public:
         m_route_info = m_prev_route_info;
     }
 
+    /**
+     * Set verbose mode
+     *
+     * @param value If true (the default), query classification is logged on the INFO level.
+     */
+    void set_verbose(bool value)
+    {
+        m_verbose = value;
+    }
+
 private:
     bool multi_statements_allowed() const
     {
@@ -491,6 +501,7 @@ private:
     SPSManager   m_sPs_manager;
     RouteInfo    m_route_info;
     RouteInfo    m_prev_route_info; // Previous state, used for rollback of state
+    bool         m_verbose = true;  // Whether to log info level messages for classified queries
 
     std::vector<const char*> m_markers;     // for simd
 
