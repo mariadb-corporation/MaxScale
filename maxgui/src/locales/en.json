@@ -220,6 +220,7 @@
     "noConnAvail": "No connections available",
     "clusters": "Clusters",
     "configuration": "Configuration",
+    "master": "Master",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
