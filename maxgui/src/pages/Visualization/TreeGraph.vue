@@ -1,19 +1,10 @@
 <template>
-    <div
-        class="tree-graph-container"
-        :style="{
-            width: dim.width + 'px',
-            height: dim.height + 'px',
-        }"
-    >
+    <div class="tree-graph-container">
+        <svg ref="svgGridBg" class="svg-grid-bg" />
         <svg ref="svg" class="tree-graph" />
         <div
-            class="node-rect-wrapper fill-height"
+            class="node-rect-wrapper"
             :style="{
-                top: 0,
-                height: 0,
-                width: 0,
-                position: 'absolute',
                 transform: `translate(${layout.margin.left}px, ${layout.margin.top}px)`,
             }"
         >
@@ -110,7 +101,37 @@ export default {
             this.$set(this.root, 'y0', 0)
         },
         initSvg() {
-            // select svg to append a `g` element and that element to the top left margin
+            // Draw grid background
+            let svgGridBg = d3Select(this.$refs.svgGridBg)
+            let pattern = svgGridBg.append('defs').append('pattern')
+            pattern
+                .attr('id', 'grid')
+                .attr('width', 60)
+                .attr('height', 20)
+                .attr('patternUnits', 'userSpaceOnUse')
+                .append('line')
+                .attr('x1', 4)
+                .attr('x2', 60)
+                .attr('y1', 20)
+                .attr('y2', 20)
+                .attr('stroke', '#e3e6ea')
+                .attr('stroke-width', 2)
+                .attr('stroke-dasharray', 4)
+            pattern
+                .insert('line')
+                .attr('x1', 60)
+                .attr('x2', 60)
+                .attr('y1', 0)
+                .attr('y2', 20)
+                .attr('stroke', '#e3e6ea')
+
+            svgGridBg
+                .append('rect')
+                .attr('width', '100%')
+                .attr('height', '100%')
+                .attr('fill', 'url(#grid)')
+
+            // Draw svg tree-graph
             this.svg = d3Select(this.$refs.svg)
                 .attr('width', this.svgDim.width)
                 .attr('height', this.svgDim.height)
@@ -292,56 +313,76 @@ export default {
 
 <style lang="scss" scoped>
 .tree-graph-container {
+    width: 100%;
     position: relative;
     overflow: auto;
-}
-::v-deep.tree-graph {
-    .link {
-        fill: none;
-        stroke: #e7eef1;
-        stroke-width: 1.5px;
+    .svg-grid-bg {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        z-index: 1;
+        left: 0;
+        pointer-events: none;
+        background: transparent;
     }
-    .node__circle {
-        &--clickable {
-            cursor: pointer;
-            &:hover {
-                transform: scale(1.2, 1.2);
+    ::v-deep.tree-graph {
+        position: relative;
+        left: 0;
+        z-index: 2;
+        .link {
+            fill: none;
+            stroke: #e7eef1;
+            stroke-width: 1.5px;
+        }
+        .node__circle {
+            &--clickable {
+                cursor: pointer;
+                &:hover {
+                    transform: scale(1.2, 1.2);
+                }
             }
         }
     }
-}
-.node-rect {
-    width: 276px;
-    min-height: 50px;
-    max-height: 100px;
-    position: absolute;
-    transform: translateY(-50%);
-    box-shadow: 1px 1px 7px rgba(0, 0, 0, 0.1);
-    border: 1px solid #e3e6ea;
-    background-color: $background;
-    &::after,
-    &::before {
-        right: 100%;
-        top: 50%;
-        border: solid transparent;
-        content: ' ';
+    .node-rect-wrapper {
+        top: 0;
         height: 0;
         width: 0;
         position: absolute;
-        pointer-events: none;
-        box-sizing: border-box;
-    }
-    &::before {
-        border-color: transparent;
-        border-right-color: #e3e6ea;
-        border-width: 11px;
-        margin-top: -11px;
-    }
-    &:after {
-        border-color: transparent;
-        border-right-color: $background;
-        border-width: 10px;
-        margin-top: -10px;
+        z-index: 3;
+        .node-rect {
+            width: 276px;
+            min-height: 50px;
+            max-height: 100px;
+            position: absolute;
+            transform: translateY(-50%);
+            box-shadow: 1px 1px 7px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e3e6ea;
+            background-color: $background;
+            &::after,
+            &::before {
+                right: 100%;
+                top: 50%;
+                border: solid transparent;
+                content: ' ';
+                height: 0;
+                width: 0;
+                position: absolute;
+                pointer-events: none;
+                box-sizing: border-box;
+            }
+            &::before {
+                border-color: transparent;
+                border-right-color: #e3e6ea;
+                border-width: 11px;
+                margin-top: -11px;
+            }
+            &:after {
+                border-color: transparent;
+                border-right-color: $background;
+                border-width: 10px;
+                margin-top: -10px;
+            }
+        }
     }
 }
 </style>
