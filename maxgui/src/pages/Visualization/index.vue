@@ -1,28 +1,26 @@
 <template>
     <page-wrapper class="d-flex flex-column">
         <v-sheet class="pt-2 fill-height d-flex flex-column">
-            <page-header />
-            <v-tabs
-                v-model="activeTab"
-                class="tab-navigation-wrapper d-flex flex-column fill-height"
-            >
+            <portal to="page-header">
+                <div class="d-flex align-center">
+                    <div class="d-inline-flex align-center">
+                        <h4
+                            style="line-height: normal;"
+                            class="ml-1 mb-0 color text-navigation text-h4 text-capitalize"
+                        >
+                            {{ $t($route.name) }}
+                        </h4>
+                    </div>
+                </div>
+            </portal>
+            <v-tabs v-model="activeTab" class="tab-navigation-wrapper">
                 <v-tab v-for="route in visRoutes" :key="route.path" :to="route.path">
                     {{ $t(route.name) }}
                 </v-tab>
-
-                <v-tabs-items v-model="activeTab">
-                    <v-tab-item
-                        v-for="route in visRoutes"
-                        :id="route.path"
-                        :key="route.name"
-                        class="pt-5"
-                    >
-                        <div class="fill-height">
-                            <router-view />
-                        </div>
-                    </v-tab-item>
-                </v-tabs-items>
             </v-tabs>
+            <div class="pt-5 fill-height">
+                <router-view />
+            </div>
         </v-sheet>
     </page-wrapper>
 </template>
@@ -40,14 +38,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import PageHeader from './PageHeader'
 import visRoutes from 'router/visRoutes'
 
 export default {
     name: 'visualization',
-    components: {
-        PageHeader,
-    },
     data() {
         return {
             activeTab: null,
