@@ -527,16 +527,26 @@ public:
      * @param ptr Pointer to data
      * @param len Length of the data
      */
-    virtual void update(uint8_t* ptr, size_t len) = 0;
+    virtual void update(const uint8_t* ptr, size_t len) = 0;
 
     /**
      * Update the checksum calculation
      *
      * @param buffer Buffer to add to the calculation
      */
-    void update(GWBUF* buffer)
+    void update(const GWBUF* buffer)
     {
-        update(buffer->start, buffer->length());
+        update(gwbuf_link_data(buffer), buffer->length());
+    }
+
+    /**
+     * Update the checksum calculation
+     *
+     * @param buffer String to add to the calculation
+     */
+    void update(const std::string& str)
+    {
+        update(reinterpret_cast<const uint8_t*>(str.c_str()), str.length());
     }
 
     /**
@@ -587,7 +597,7 @@ public:
         m_sum.fill(0);      // CentOS 6 doesn't like aggregate initialization...
     }
 
-    void update(uint8_t* ptr, size_t len) override
+    void update(const uint8_t* ptr, size_t len) override
     {
         SHA1_Update(&m_ctx, ptr, len);
     }
@@ -642,7 +652,7 @@ public:
         m_ctx = crc32(0L, NULL, 0);
     }
 
-    void update(uint8_t* ptr, size_t len) override
+    void update(const uint8_t* ptr, size_t len) override
     {
         m_ctx = crc32(m_ctx, ptr, len);
     }
