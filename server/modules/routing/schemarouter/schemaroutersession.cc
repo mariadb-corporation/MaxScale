@@ -1534,11 +1534,8 @@ void SchemaRouterSession::query_databases()
     m_state |= INIT_MAPPING;
     m_state &= ~INIT_UNINT;
 
-    GWBUF* buffer = modutil_create_query("SELECT CONCAT(schema_name, '.') FROM information_schema.schemata AS s "
-                                         "LEFT JOIN information_schema.tables AS t ON s.schema_name = t.table_schema "
-                                         "WHERE t.table_name IS NULL "
-                                         "UNION "
-                                         "SELECT CONCAT (table_schema, '.', table_name) FROM information_schema.tables");
+    GWBUF* buffer = modutil_create_query("SELECT CONCAT(s.schema_name, '.', IFNULL(t.table_name, '')) FROM information_schema.schemata s "
+                                         "LEFT JOIN information_schema.tables t ON s.schema_name = t.table_schema ");
     gwbuf_set_type(buffer, GWBUF_TYPE_COLLECT_RESULT);
 
     for (SSRBackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
