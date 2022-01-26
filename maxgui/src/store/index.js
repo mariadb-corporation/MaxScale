@@ -22,6 +22,7 @@ import session from './session'
 import listener from './listener'
 import query, { defWorksheetState } from './query'
 import persisted from './persisted'
+import visualization from './visualization'
 import { APP_CONFIG } from 'utils/constants'
 import router from 'router'
 import i18n from 'plugins/i18n'
@@ -180,6 +181,7 @@ const store = new Vuex.Store({
         user,
         query,
         persisted,
+        visualization,
     },
 })
 export default store
