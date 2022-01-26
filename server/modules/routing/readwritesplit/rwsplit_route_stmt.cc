@@ -172,8 +172,15 @@ bool RWSplitSession::handle_target_is_all(mxs::Buffer&& buffer, const RoutingPla
 bool RWSplitSession::handle_routing_failure(mxs::Buffer&& buffer, const RoutingPlan& res)
 {
     bool ok = true;
+    auto old_wait_gtid = m_wait_gtid;
 
-    if (should_migrate_trx())
+    if (m_wait_gtid == READING_GTID)
+    {
+        mxb_assert(buffer.get_sql() == "SELECT @@gtid_current_pos");
+        buffer = reset_gtid_probe();
+    }
+
+    if (should_migrate_trx() || (trx_is_open() && old_wait_gtid == READING_GTID))
     {
         // If the connection to the previous transaction target is still open, we must close it to prevent the
         // transaction from being accidentally committed whenever a new transaction is started on it.
@@ -185,11 +192,6 @@ bool RWSplitSession::handle_routing_failure(mxs::Buffer&& buffer, const RoutingP
     {
         MXS_INFO("Delaying routing: %s", buffer.get_sql().c_str());
         retry_query(buffer.release());
-    }
-    else if (m_wait_gtid == READING_GTID)
-    {
-        mxb_assert(buffer.get_sql() == "SELECT @@gtid_current_pos");
-        ok = retry_gtid_probe();
     }
     else if (m_config.master_failure_mode == RW_ERROR_ON_WRITE)
     {
@@ -711,7 +713,7 @@ RWBackend* RWSplitSession::get_target_backend(backend_type_t btype, const char* 
 {
     RWBackend* rval = nullptr;
 
-    if (trx_is_open() && m_trx.target())
+    if (trx_is_open() && m_trx.target() && m_wait_gtid != READING_GTID)
     {
         // A transaction that has an existing target. Continue using it as long as it remains valid.
         if (trx_target_still_valid())

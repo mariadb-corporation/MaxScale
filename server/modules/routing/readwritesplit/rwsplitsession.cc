@@ -342,7 +342,7 @@ void RWSplitSession::manage_transactions(RWBackend* backend, GWBUF* writebuf, co
         // Never add something we should ignore into the transaction. The checksum is calculated from the
         // response that is sent upstream via clientReply and this is implied by `should_ignore_response()`
         // being false.
-        if (!backend->should_ignore_response())
+        if (!backend->should_ignore_response() && m_wait_gtid != READING_GTID)
         {
             int64_t size = m_trx.size() + m_current_query.length();
 
@@ -866,6 +866,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
             return false;
         }
 
+        auto old_wait_gtid = m_wait_gtid;
         bool expected_response = backend->is_waiting_result();
 
         if (!expected_response)
@@ -906,7 +907,14 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
             }
             else if (m_wait_gtid == READING_GTID)
             {
-                can_continue = retry_gtid_probe();
+                m_current_query = reset_gtid_probe();
+
+                if (can_retry_query())
+                {
+                    // Not inside a transaction, we can retry the original query
+                    retry_query(m_current_query.release(), 0);
+                    can_continue = true;
+                }
             }
             else if (can_retry_query() && can_recover_master())
             {
@@ -922,7 +930,8 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
             }
         }
 
-        if (trx_is_open() && !in_optimistic_trx() && (!m_trx.target() || m_trx.target() == backend))
+        if (trx_is_open() && !in_optimistic_trx()
+            && (!m_trx.target() || m_trx.target() == backend || old_wait_gtid == READING_GTID))
         {
             can_continue = start_trx_replay();
             errmsg += " A transaction is active and cannot be replayed.";
