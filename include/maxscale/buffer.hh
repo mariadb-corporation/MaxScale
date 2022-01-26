@@ -103,7 +103,12 @@ public:
      */
     GWBUF();
 
-    explicit GWBUF(uint64_t size);
+    /**
+     * Create an empty buffer. The buffer has no data initially.
+     *
+     * @param reserve_size Reserved size of the underlying buffer
+     */
+    explicit GWBUF(size_t reserve_size);
 
     GWBUF(GWBUF&& rhs) noexcept;
     GWBUF& operator=(GWBUF&& rhs) noexcept;
@@ -134,6 +139,14 @@ public:
     uint8_t*       data();
     size_t         length() const;
     bool           empty() const;
+
+    /**
+     * Tell the GWBUF that a write is complete. Advances the end pointer. Writing more than there is space
+     * for is an error.
+     *
+     * @param n_bytes How much to advance the pointer
+     */
+    void write_complete(size_t n_bytes);
 
     /**
      * Append bytes to buffer, starting at the end pointer. May invalidate start and end pointers.
@@ -248,6 +261,12 @@ inline size_t GWBUF::length() const
 inline bool GWBUF::empty() const
 {
     return start == end;
+}
+
+inline void GWBUF::write_complete(size_t n_bytes)
+{
+    end += n_bytes;
+    mxb_assert(end <= m_sbuf->buf_end);
 }
 
 /*< Number of bytes in the individual buffer */

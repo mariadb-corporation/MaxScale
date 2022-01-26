@@ -102,7 +102,9 @@ inline bool validate_buffer(const GWBUF* head)
 GWBUF* gwbuf_alloc(unsigned int size)
 {
     mxb_assert(size > 0);
-    return new GWBUF(size);
+    auto rval = new GWBUF(size);
+    rval->write_complete(size); // Callers expect the end-pointer to point to buffer end
+    return rval;
 }
 
 const std::string& GWBUF::get_sql() const
@@ -133,12 +135,12 @@ GWBUF::GWBUF()
 #endif
 }
 
-GWBUF::GWBUF(uint64_t size)
+GWBUF::GWBUF(size_t reserve_size)
     : GWBUF()
 {
-    m_sbuf = std::make_shared<SHARED_BUF>(size);
+    m_sbuf = std::make_shared<SHARED_BUF>(reserve_size);
     start = m_sbuf->buf_start.get();
-    end = start + size;
+    end = start;
 }
 
 GWBUF::GWBUF(GWBUF&& rhs) noexcept
@@ -231,6 +233,7 @@ GWBUF GWBUF::clone_deep() const
     rval.clone_helper(*this);
 
     memcpy(rval.start, start, len);
+    rval.write_complete(len);
     // TODO: clone BufferObject
     return rval;
 }
