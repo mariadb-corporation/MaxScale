@@ -168,8 +168,6 @@ void Writer::run()
                     break;
                 }
 
-                file.add_event(rpl_event);
-
                 m_inventory.set_master_id(rpl_event.server_id());
                 m_inventory.set_is_writer_connected(true);
 
@@ -179,6 +177,7 @@ void Writer::run()
                     {
                         maxsql::GtidEvent gtid_event = rpl_event.gtid_event();
                         file.begin_txn();
+                        file.add_event(rpl_event);
                         update_gtid_list(gtid_event.gtid);
 
                         if (gtid_event.flags & mxq::F_STANDALONE)
@@ -189,6 +188,7 @@ void Writer::run()
                     break;
 
                 case QUERY_EVENT:
+                    file.add_event(rpl_event);
                     if (m_commit_on_query)
                     {
                         save_gtid_list(file);
@@ -201,10 +201,12 @@ void Writer::run()
                     break;
 
                 case XID_EVENT:
+                    file.add_event(rpl_event);
                     save_gtid_list(file);
                     break;
 
                 default:
+                    file.add_event(rpl_event);
                     break;
                 }
             }
