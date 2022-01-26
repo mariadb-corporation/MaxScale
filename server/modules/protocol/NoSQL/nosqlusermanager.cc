@@ -708,32 +708,6 @@ bool UserManager::get_info(const string& mariadb_user, UserInfo* pInfo) const
     return !infos.empty();
 }
 
-bool UserManager::get_pwd(const string& db, const string& user, std::string* pPwd) const
-{
-    UserInfo info;
-    bool rv = get_info(db, user, &info);
-
-    if (rv)
-    {
-        *pPwd = info.pwd;
-    }
-
-    return rv;
-}
-
-bool UserManager::get_salt_b64(const string& db, const string& user, std::string* pSalt_b64) const
-{
-    UserInfo info;
-    bool rv = get_info(db, user, &info);
-
-    if (rv)
-    {
-        *pSalt_b64 = info.salt_b64;
-    }
-
-    return rv;
-}
-
 vector<UserManager::UserInfo> UserManager::get_infos() const
 {
     vector<UserInfo> infos;

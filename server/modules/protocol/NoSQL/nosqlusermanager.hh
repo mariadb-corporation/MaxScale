@@ -128,10 +128,6 @@ public:
         return get_info(std::string(mariadb_user.data(), mariadb_user.length()), pInfo);
     }
 
-    bool get_pwd(const std::string& db, const std::string& user, std::string* pPwd) const;
-
-    bool get_salt_b64(const std::string& db, const std::string& user, std::string* pSalt_b64) const;
-
     bool user_exists(const std::string& db, const std::string& user) const
     {
         return get_info(db, user, nullptr);
