@@ -1967,9 +1967,7 @@ backends connections. This *pre-emptive pooling* only affects idle sessions.
 session must be idle before its backend connections may be pooled. It defaults
 to -1 seconds, which means disabled. All negative values disable this
 feature. If configured to a value of zero seconds, all connections that are idle
-are put back into the pool as soon as possible. As the worker threads check for
-idle connections roughly once per second, the worst-case idle time for a
-connection in this configuration is one second.
+are put back into the pool as soon as possible.
 
 This feature has a significant drawback: when a backend connection is reused, it
 needs to be restored to a correct state. This means reauthenticating and
@@ -1982,27 +1980,73 @@ This feature should only be used when minimizing the backend connection count is
 a priority, even at the cost of query delay and throughput. Also, see server
 setting [max_routing_connections](#max_routing_connections).
 
-#### Limitations in `idle_session_pool_time`
+```
+idle_session_pool_time=10
+```
 
-There are several situations where pooling needs to be disabled (temporarily or
-permanently) to avoid interfering with session state. MaxScale only detects the
-most obvious cases, e.g. open transactions.
+#### Details, limitations and suggestions for pre-emptive pooling
 
-When using pre-emptive pooling, the connection state can only be considered
-stable for the duration of an open transaction. This means that the following
-should not be used:
+As noted above, when a connection is pooled and reused its state is lost.
+Although session variables and prepared statements are restored by replaying
+session commands, some state information cannot be transferred.
+
+The most common such state is a transaction. When a transaction is on, pooling
+is disabled for that session until the transaction completes. Other similar
+situations may not be properly detected, and it's the responsibility of the user
+to avoid introducing such state to the session when using pre-emptive pooling.
+This means that the following should not be used:
 
 * Statements such as `LOCK TABLES` and `GET LOCK` or any other statement that
-  introduce state into the connection.
+  introduces state into the connection.
 
-* Temporary tables, user variable or session variables. This includes
-  `LAST_INSERT_ID()` which means the value returned by the connector must be
-  used and it should not be referred to in SQL.
+* Temporary tables and some problematic user or session variables such as
+ `LAST_INSERT_ID()`. For `LAST_INSERT_ID()`, the value returned by the connector
+  must be used instead of the variable.
 
 * Stored procedures that cause session level side-effects.
 
-* Use of prepared statements causes the pooling to be disabled for the duration
-  of the session.
+Several settings affect pre-emptive pooling and its effectiveness. Reusing a
+connection is an expensive operation so its frequency should be minimized. The
+important configuration settings in addition to
+*idle_session_pool_time* are server settings
+[persistpoolmax](#persistpoolmax),
+[persistmaxtime](#persistmaxtime) and
+[max_routing_connections](#max_routing_connections).
+The service settings [max_sescmd_history](#max_sescmd_history) and
+[prune_sescmd_history](#prune_sescmd_history) also have an effect. Tuning these
+settings will likely involve plenty of trial and error as use cases differ.
+
+*persistpoolmax* limits how many connections can be kept in a pool for a given
+server. If the pool is full, no more connections are detached from sessions even
+if they are idle. To minimize unnecessary pooling and reusing, the pool maximum
+size should be large enough to accomodate any sudden need for connections yet
+not be unnecessarily large. For example, if the application is estimated to only
+activate 1000 connections in any given *idle_session_pool_time* length cycle,
+perhaps having 1500 connections in the pool is enough. This would allow other
+MaxScale sessions to keep their backend connections for any sudden queries.
+
+*persistmaxtime* limits the time a connection may stay in the pool. This should
+be high enough so that pooled connections are not unnecessarily closed. As
+stated above, a full pool allows sessions to hold on to their backend
+connections, reducing connection ping-pong. Cleaning clearly unneeded
+connections from the pool may be useful when *max_routing_connections* is
+restrictively tuned. Because each MaxScale routing thread has its own connection
+pool, one thread can monopolize access to a server. For example, if the pool of
+thread 1 has 100 connections to *ServerA* with `max_routing_connections=100`,
+other threads can no longer connect to the server. In such a situation,
+reducing *persistmaxtime* of *ServerA* may help as it would cause unneeded
+connections in the pool to be closed faster. Such connection slots then become
+available to other routing threads. Reducing the number of
+[routing threads](#threads) may also help, as it reduces pool fracturing. This
+may reduce overall throughput, though.
+
+If a client session exceeds *max_sescmd_history* (default 50), pooling is
+disabled for that session. If many sessions do this and
+*max_routing_connections* is set, other sessions will stall as they cannot find
+a backend connection. This can be avoided with *prune_sescmd_history*. However,
+pruning means that old session commands will not be replayed when a pooled
+connection is reused. If the pruned commands are important
+(e.g. statement preparations), the session may fail later on.
 
 ## Server
 
@@ -2097,11 +2141,15 @@ the DCB will be discarded and the connection closed.
 
 ### `max_routing_connections`
 
-Maximum number of routing connections to this server. Does not limit monitor
-connections or user account fetching. The effect of this setting depends on if
-the service setting [idle_session_pool_time](#idle_session_pool_time),
-i.e. pre-emptive pooling, is enabled or not. A value of 0 (default) means no
-limit.
+Maximum number of routing connections to this server. Connections held in a pool
+also count towards this maximum. Does not limit monitor connections or user
+account fetching. A value of 0 (default) means no limit.
+
+Since every client session can generate a connection to a server, the server may
+run out of memory when the number of clients is high enough. This setting limits
+server memory use caused by MaxScale. The effect depends on if the service
+setting [idle_session_pool_time](#idle_session_pool_time), i.e. pre-emptive
+pooling, is enabled or not.
 
 If pre-emptive pooling is not on, *max_routing_connections* simply sets a limit.
 Any sessions attempting to exceed this limit will fail to connect to the
@@ -2109,16 +2157,9 @@ backend. The client can still connect to MaxScale, but queries will fail.
 
 If pre-emptive pooling is on, sessions exceeding the limit will be put on hold
 until a connection is available. Such sessions will appear unresponsive, as
-queries will hang possibly for several seconds. This feature is best used in a
+queries will hang, possibly for a long time. This feature is best used in a
 situation where most sessions are idle, so that backend connections are usually
-available.
-
-Each MaxScale routing thread has its own connection pool. If the pool of thread
-1 has 100 connections to *serverA* with `max_routing_connections=100`, other
-threads cannot connect to the server. For this reason, it's best to set
-[persistmaxtime](#persistmaxtime) of *serverA* to a rather low value (e.g. twice
-*idle_session_pool_time*) so that unneeded connections are simply closed. Such
-connection slots then become available to other routing threads.
+available from the pool.
 
 ```
 max_routing_connections=1234

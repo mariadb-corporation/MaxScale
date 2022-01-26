@@ -445,33 +445,11 @@ void RoutingWorker::process_timeouts()
         for (auto& elem : m_sessions)
         {
             auto* pSes = static_cast<Session*>(elem.second);
-            // TODO: indexing the config() for every session every second may cost some. Could be
-            // improved by storing sessions ordered by service.
-            int64_t pooling_time = pSes->service->config()->idle_session_pooling_time.count();
-
-            // Convert this into the internal tick representation, keeps things more accurate
-            pooling_time = MXS_SEC_TO_CLOCK(pooling_time);
-
             ClientDCB* pClient = pSes->client_dcb;
             if (pClient->state() == DCB::State::POLLING)
             {
                 auto idle = now - std::max(pClient->last_read(), pClient->last_write());
                 pSes->tick(MXS_CLOCK_TO_SEC(idle));
-
-                if (pooling_time >= 0 && idle >= pooling_time && pSes->can_pool_backends())
-                {
-                    for (auto& backend : pSes->backend_connections())
-                    {
-                        if (backend->established() && backend->is_idle())
-                        {
-                            auto pEp = static_cast<ServerEndpoint*>(backend->upstream());
-                            if (pEp->can_try_pooling())
-                            {
-                                pEp->try_to_pool();
-                            }
-                        }
-                    }
-                }
             }
         }
 
@@ -490,7 +468,6 @@ void RoutingWorker::process_timeouts()
                 server_pool.close_expired();
             }
         }
-        // TODO: Should pool connections also be pinged regularly?
     }
 }
 

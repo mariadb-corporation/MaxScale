@@ -269,6 +269,9 @@ public:
 
     void notify_userdata_change() override;
 
+    bool can_pool_backends() const override;
+    void set_can_pool_backends(bool value) override;
+
 protected:
     std::unique_ptr<mxs::Endpoint> m_down;
 
@@ -279,6 +282,7 @@ private:
 
     void add_userdata_subscriber(MXS_SESSION::EventSubscriber* obj) override;
     void remove_userdata_subscriber(MXS_SESSION::EventSubscriber* obj) override;
+    bool pool_backends_cb(mxb::Worker::Call::action_t action);
 
     // Delivers a provided response to the upstream filter that should receive it
     void deliver_response();
@@ -328,6 +332,19 @@ private:
     int64_t           m_ttl = 0;                /*< How many seconds the session has until it is killed  */
     int64_t           m_ttl_start = 0;          /*< The clock tick when TTL was assigned */
     int               m_endpoints_waiting {0};  /*< How many endpoints are waiting for a new connection */
+
+    int64_t m_pooling_time_ms {0};  /**< Pre-emptive pooling time. Set at session begin. */
+
+    /**
+     * Delayed call id for idle connection pooling. Needs to be cancelled on dtor or session move.
+     * If more such timers are added, add also functions to cancel/move them all.
+     */
+    mxb::Worker::DCId m_idle_pool_call_id {mxb::Worker::NO_CALL};
+
+    /**
+     * Is session in a state where backend connections can be donated to pool and reattached to session?
+     * Updated by protocol code. */
+    bool m_can_pool_backends {false};
 
     SessionRoutable m_routable;
     mxs::Routable*  m_head;
