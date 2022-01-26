@@ -137,7 +137,7 @@ GWBUF::GWBUF(uint64_t size)
     : GWBUF()
 {
     m_sbuf = std::make_shared<SHARED_BUF>(size);
-    start = m_sbuf->data.data();
+    start = m_sbuf->buf_start.get();
     end = start + size;
 }
 
@@ -313,7 +313,6 @@ GWBUF* gwbuf_split(GWBUF** buf, size_t length)
         }
 
         *buf = buffer;
-
     }
 
     return head;
@@ -487,24 +486,47 @@ void GWBUF::append(const uint8_t* new_data, uint64_t n_bytes)
     auto old_len = length();
     auto new_len = old_len + n_bytes;
 
+    auto clone_sbuf = [this, old_len, new_len, new_data, n_bytes](bool swap_cl_data, size_t alloc_size) {
+            auto new_sbuf = std::make_shared<SHARED_BUF>(alloc_size);
+
+            auto* new_buf_start = new_sbuf->buf_start.get();
+            memcpy(new_buf_start, start, old_len);
+            memcpy(new_buf_start + old_len, new_data, n_bytes);
+            if (swap_cl_data)
+            {
+                std::swap(new_sbuf->classifier_data, m_sbuf->classifier_data);
+            }
+
+            m_sbuf = move(new_sbuf);
+            start = new_buf_start;
+            end = start + new_len;
+        };
+
     if (m_sbuf.unique())
     {
-        auto& bufdata = m_sbuf->data;
-        auto bytes_consumed = start - bufdata.data();
-
-        auto vec_size_required = bytes_consumed + new_len;
-        if (vec_size_required > bufdata.size())
+        if (m_sbuf->buf_end - end >= (int64_t)n_bytes)
         {
-            // Resize the vector so that the additional data can be easily added. The vector may reallocate,
-            // so recalculate pointers.
-            bufdata.resize(vec_size_required);
-            start = bufdata.data() + bytes_consumed;
-            end = start + old_len;
+            // Have enough space at end of buffer. May overwrite trimmed data.
+            memcpy(end, new_data, n_bytes);
+            end += n_bytes;
         }
-
-        // This may overwrite trimmed data.
-        memcpy(end, new_data, n_bytes);
-        end += n_bytes;
+        else if (m_sbuf->size() >= new_len)
+        {
+            // Did not have enough space at the end, but the allocated space is enough. This can happen if
+            // most of the buffer has been consumed. Make space by moving data.
+            const auto buf_start = m_sbuf->buf_start.get();
+            memmove(buf_start, start, old_len);
+            memcpy(buf_start + old_len, new_data, n_bytes);
+            start = buf_start;
+            end = start + new_len;
+        }
+        else
+        {
+            // Have to reallocate the shared buffer. At least double the previous size to handle future
+            // appends.
+            auto alloc_size = std::max(new_len, 2 * m_sbuf->size());
+            clone_sbuf(true, alloc_size);
+        }
     }
     else
     {
@@ -512,13 +534,7 @@ void GWBUF::append(const uint8_t* new_data, uint64_t n_bytes)
         // data is not copied, as it does not have a copy-function.
         // TODO: think if custom data should be copied.
         // Also ends up here if the shared ptr is null.
-        auto new_sbuf = std::make_shared<SHARED_BUF>(new_len);
-        auto* new_vec_begin = new_sbuf->data.data();
-        memcpy(new_vec_begin, start, old_len);
-        memcpy(new_vec_begin + old_len, new_data, n_bytes);
-        m_sbuf = move(new_sbuf);
-        start = m_sbuf->data.data();
-        end = start + new_len;
+        clone_sbuf(false, new_len);
     }
 }
 
@@ -739,4 +755,10 @@ BufferObject::~BufferObject()
     {
         deleter(data);
     }
+}
+
+SHARED_BUF::SHARED_BUF(size_t len)
+    : buf_start(std::make_unique<uint8_t[]>(len))
+    , buf_end(buf_start.get() + len)
+{
 }

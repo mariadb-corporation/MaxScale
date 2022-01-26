@@ -58,12 +58,16 @@ struct BufferObject
 class SHARED_BUF
 {
 public:
-    explicit SHARED_BUF(size_t len)
-        : data(len)
+    explicit SHARED_BUF(size_t len);
+
+    size_t size() const
     {
+        return buf_end - buf_start.get();
     }
-    BufferObject         classifier_data;       /**< Parsing info */
-    std::vector<uint8_t> data;                  /**< Actual memory that was allocated */
+
+    BufferObject               classifier_data;     /**< Parsing info */
+    std::unique_ptr<uint8_t[]> buf_start;           /**< Actual memory that was allocated */
+    uint8_t*                   buf_end {nullptr};   /**< Past end pointer of allocated memory */
 };
 
 /**
