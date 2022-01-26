@@ -462,22 +462,6 @@ void RoutingWorker::process_timeouts()
                 pSes->tick(MXS_CLOCK_TO_SEC(idle));
             }
         }
-
-        // Close expired connections in the thread local pool. If the server is down, purge all connections.
-        for (auto it = m_pool_group.begin(); it != m_pool_group.end(); ++it)
-        {
-            auto* pServer = it->first;
-            auto& server_pool = it->second;
-
-            if (pServer->is_down())
-            {
-                server_pool.close_all();
-            }
-            else
-            {
-                server_pool.close_expired();
-            }
-        }
     }
 }
 
@@ -950,7 +934,20 @@ bool RoutingWorker::pre_run()
 
     bool rv = modules_thread_init() && qc_thread_init(QC_INIT_SELF);
 
-    if (!rv)
+    if (rv)
+    {
+        // Every few seconds, check connection pool for expired connections. Ideally, every pooled
+        // connection would set their own timer.
+        auto check_pool_cb = [this](Worker::Call::action_t action){
+                if (action == mxb::Worker::Call::action_t::EXECUTE)
+                {
+                    pool_close_expired();
+                }
+                return true;
+            };
+        delayed_call(5000, check_pool_cb);
+    }
+    else
     {
         MXS_ERROR("Could not perform thread initialization for all modules. Thread exits.");
         this_thread.current_worker_id = WORKER_ABSENT_ID;
@@ -1883,6 +1880,25 @@ void RoutingWorker::erase_conn_wait_entry(ServerEndpoint* ep, Session* session)
     if (ep_deque.empty())
     {
         m_eps_waiting_for_conn.erase(map_iter);
+    }
+}
+
+void RoutingWorker::pool_close_expired()
+{
+    // Close expired connections in the thread local pool. If the server is down, purge all connections.
+    for (auto& kv : m_pool_group)
+    {
+        auto* pServer = kv.first;
+        auto& server_pool = kv.second;
+
+        if (pServer->is_down())
+        {
+            server_pool.close_all();
+        }
+        else
+        {
+            server_pool.close_expired();
+        }
     }
 }
 

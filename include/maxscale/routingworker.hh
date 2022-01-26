@@ -534,6 +534,7 @@ private:
     void process_timeouts();
     void delete_zombies();
     void rebalance();
+    void pool_close_expired();
 
     void activate_waiting_endpoints();
 
