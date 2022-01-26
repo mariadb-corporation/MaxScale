@@ -341,8 +341,9 @@ bool RWSplitSession::route_single_stmt(mxs::Buffer&& buffer, const RoutingPlan& 
                      target->name());
             replace_master(target);
         }
-        else
+        else if (target)
         {
+            MXS_INFO("Cannot replace old master with '%s'", target->name());
             target = nullptr;
         }
     }
@@ -981,7 +982,9 @@ bool RWSplitSession::should_replace_master(RWBackend* target)
            &&   // We are not inside a transaction (also checks for autocommit=1)
            (!trx_is_open() || trx_is_starting() || (m_state == TRX_REPLAY && !m_trx.target()))
            &&   // We are not locked to the old master
-           !is_locked_to_master();
+           !is_locked_to_master()
+           &&   // The server is actually labeled as a master
+           target->is_master();
 }
 
 void RWSplitSession::discard_connection(mxs::RWBackend* target, const std::string& error)
