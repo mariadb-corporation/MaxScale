@@ -141,8 +141,17 @@ public:
     bool           empty() const;
 
     /**
-     * Tell the GWBUF that a write is complete. Advances the end pointer. Writing more than there is space
-     * for is an error.
+     * Prepare the buffer for writing. May reserve more space if needed. write_complete should be called
+     * once the write is ready.
+     *
+     * @param bytes How many bytes may be written
+     * @return Pointer to the start of the write
+     */
+    uint8_t* prepare_to_write(size_t n_bytes);
+
+    /**
+     * Tell the buffer that the write is complete. Advances the end pointer. Writing more than
+     * there is space for is an error.
      *
      * @param n_bytes How much to advance the pointer
      */
