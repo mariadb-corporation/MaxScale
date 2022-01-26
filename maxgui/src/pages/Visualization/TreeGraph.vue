@@ -87,22 +87,28 @@ export default {
     watch: {
         data: {
             deep: true,
-            handler() {
+            handler(v) {
+                this.computeHrchyLayout(v)
                 this.update(this.root)
             },
         },
     },
     mounted() {
         this.initSvg()
-        //  compute a hierarchical layout
-        this.root = hierarchy(this.data)
-        // vertically center root node
-        this.$set(this.root, 'x0', this.treeDim.height / 2)
-        this.$set(this.root, 'y0', 0)
-        this.update(this.root)
+        if (this.data) {
+            this.computeHrchyLayout(this.data)
+            this.update(this.root)
+        }
     },
 
     methods: {
+        computeHrchyLayout(data) {
+            // compute a hierarchical layout
+            this.root = hierarchy(data)
+            // vertically center root node
+            this.$set(this.root, 'x0', this.treeDim.height / 2)
+            this.$set(this.root, 'y0', 0)
+        },
         initSvg() {
             // select svg to append a `g` element and that element to the top left margin
             this.svg = d3Select(this.$refs.svg)
