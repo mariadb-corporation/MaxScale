@@ -1142,10 +1142,12 @@ bool RWSplitSession::is_valid_for_master(const mxs::RWBackend* master)
 
 bool RWSplitSession::need_gtid_probe(GWBUF* buffer, const RoutingPlan& plan) const
 {
+    uint8_t cmd = route_info().command();
+
     return m_config.causal_reads == CausalReads::UNIVERSAL
            && plan.route_target == TARGET_SLAVE
            && m_wait_gtid == NONE
            && m_state != TRX_REPLAY
-           && m_qc.current_route_info().command() == MXS_COM_QUERY
-           && qc_get_operation(buffer) == QUERY_OP_SELECT;
+           && (cmd == MXS_COM_QUERY || cmd == MXS_COM_STMT_EXECUTE)
+           && (route_info().type_mask() & (QUERY_TYPE_COMMIT | QUERY_TYPE_ROLLBACK)) == 0;
 }
