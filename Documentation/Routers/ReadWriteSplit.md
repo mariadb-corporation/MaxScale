@@ -57,6 +57,11 @@ taken into use by new sessions.
 
 ### `max_slave_connections`
 
+- **Type**: integer
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: 255
+
 `max_slave_connections` sets the maximum number of slaves a router session uses
 at any moment. The default is to use at most 255 slave connections per client
 connection. In older versions the default was to use all available slaves with
@@ -90,6 +95,11 @@ response time and performance. Longer sessions are less affected by a high
 
 ### `slave_connections`
 
+- **Type**: integer
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: 255
+
 This parameter controls how many slave connections each new session starts
 with. The default value is 255 which is the same as the default value of
 `max_slave_connections`.
@@ -105,6 +115,11 @@ connections. It is recommended to use `slave_connections=1` when the
 lifetime of the client connections is short.
 
 ### `max_slave_replication_lag`
+
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: 0s
 
 Specify how many seconds a slave is allowed to be behind the master. The lag of
 a slave must be less than the configured value in order for it to be used for
@@ -138,6 +153,12 @@ is logged. These messages are only logged when a query is being routed and the
 replication state changes.
 
 ### `use_sql_variables_in`
+
+- **Type**: enum
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Values**: `master`, `all`
+- **Default**: `all`
 
 **`use_sql_variables_in`** specifies where should queries, which read session
 variable, be routed. The syntax for `use_sql_variable_in` is:
@@ -181,6 +202,11 @@ a service parameter in MaxScale 2.5.0.
 
 ### `master_reconnection`
 
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: false
+
 Allow the master server to change mid-session. This feature was introduced in
 MaxScale 2.3.0 and is disabled by default.
 
@@ -206,6 +232,12 @@ read-only mode (described in detail in the
 [`master_failure_mode`](#master_failure_mode) documentation).
 
 ### `slave_selection_criteria`
+
+- **Type**: enum
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Values**: `LEAST_CURRENT_OPERATIONS`, `ADAPTIVE_ROUTING`, `LEAST_BEHIND_MASTER`, `LEAST_ROUTER_CONNECTIONS`, `LEAST_GLOBAL_CONNECTIONS`
+- **Default**: `LEAST_CURRENT_OPERATIONS`
 
 This option controls how the readwritesplit router chooses the slaves it
 connects to and how the load balancing is done. The default behavior is to route
@@ -305,6 +337,11 @@ in MaxScale 6.0.
 
 ### `master_accept_reads`
 
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: false
+
 **`master_accept_reads`** allows the master server to be used for reads. This is
 a useful option to enable if you are using a small number of servers and wish to
 use the master for reads as well.
@@ -319,6 +356,11 @@ master_accept_reads=true
 ```
 
 ### `strict_multi_stmt`
+
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: false
 
 This option is disabled by default since MaxScale 2.2.1. In older versions, this
 option was enabled by default.
@@ -341,6 +383,11 @@ strict_multi_stmt=true
 
 ### `strict_sp_calls`
 
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: false
+
 Similar to `strict_multi_stmt`, this option allows all queries after a CALL
 operation on a stored procedure to be routed to the master. This option is
 disabled by default and was added in MaxScale 2.1.9.
@@ -349,6 +396,12 @@ All warnings and restrictions that apply to `strict_multi_stmt` also apply to
 `strict_sp_calls`.
 
 ### `master_failure_mode`
+
+- **Type**: enum
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Values**: `fail_instantly`, `fail_on_write`, `error_on_write`
+- **Default**: `fail_instantly`
 
 This option controls how the failure of a master server is handled. By default,
 the router will close the client connection as soon as the master is lost.
@@ -383,6 +436,11 @@ session can recover if one of the slaves is promoted as the master.
 
 ### `retry_failed_reads`
 
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: true
+
 This option controls whether autocommit selects are retried in case of failure.
 This option is enabled by default.
 
@@ -392,6 +450,11 @@ retry the read on a replacement server. This makes the failure of a slave
 transparent to the client.
 
 ### `delayed_retry`
+
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: false
 
 Retry queries over a period of time. This parameter takes a boolean value, was
 added in Maxscale 2.3.0 and is disabled by default.
@@ -422,6 +485,11 @@ execution is an acceptable risk.
 
 ### `delayed_retry_timeout`
 
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: 10s
+
 The duration to wait until an error is returned to the client when
 `delayed_retry` is enabled. The default value is 10 seconds.
 
@@ -433,6 +501,11 @@ of the timeout is seconds, a timeout specified in milliseconds will be rejected,
 even if the duration is longer than a second.
 
 ### `transaction_replay`
+
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: false
 
 Replay interrupted transactions. This parameter was added in MaxScale 2.3.0 and
 is disabled by default. Enabling this parameter enables both `delayed_retry` and
@@ -455,6 +528,11 @@ transaction replay.
 
 ### `transaction_replay_max_size`
 
+- **Type**: [size](../Getting-Started/Configuration-Guide.md#sizes)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: 1 MiB
+
 The limit on transaction size for transaction replay in bytes. Any transaction
 that exceeds this limit will not be replayed. The default value is 1 MiB. This
 limit applies at a session level which means that the total peak memory
@@ -470,6 +548,11 @@ for more details on size type parameters in MaxScale.
 
 ### `transaction_replay_attempts`
 
+- **Type**: integer
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: 5
+
 The upper limit on how many times a transaction replay is attempted before
 giving up. The default value is 5.
 
@@ -481,8 +564,14 @@ attempts is reset.
 
 ### `transaction_replay_timeout`
 
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: 0s
+
 The time how long transactions are attempted for. This feature is disabled by
-default and was added in MaxScale 6.2.1.
+default and was added in MaxScale 6.2.1. To explicitly disable this feature, set
+the value to 0 seconds.
 
 The timeout is
 [a duration type](../Getting-Started/Configuration-Guide.md#durations)
@@ -511,6 +600,11 @@ controlling the timeouts for transaction replay.
 
 ### `transaction_replay_retry_on_deadlock`
 
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: false
+
 Enable automatic retrying of transactions that end up in a deadlock. This
 parameter was added in MaxScale 2.4.6 and the feature is disabled by
 default. MaxScale versions from 2.4.0 to 2.4.5 always tried to replay deadlocked
@@ -524,6 +618,11 @@ transaction checksum error is encountered.
 
 ### `transaction_replay_retry_on_mismatch`
 
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: false
+
 Retry transactions that end in checksum mismatch. This parameter was added in
 MaxScale 6.2.1 is disabled by default.
 
@@ -533,6 +632,12 @@ reached (`delayed_retry_timeout`, `transaction_replay_timeout` or
 `transaction_replay_attempts`).
 
 ### `transaction_replay_checksum`
+
+- **Type**: enum
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Values**: `full`, `result_only`, `no_insert_id`
+- **Default**: `full`
 
 Selects which transaction checksum method is used to verify the result of the
 replayed transaction.
@@ -569,6 +674,11 @@ Possible values are:
 
 ### `optimistic_trx`
 
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: false
+
 Enable optimistic transaction execution. This parameter controls whether normal
 transactions (i.e. `START TRANSACTION` or `BEGIN`) are load balanced across
 slaves. This feature is disabled by default and enabling it implicitly enables
@@ -591,6 +701,12 @@ All limitations that apply to `transaction_replay` also apply to
 `optimistic_trx`.
 
 ### `causal_reads`
+
+- **Type**: enum
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Values**: `none`, `local`, `global`, `fast`, `universal`
+- **Default**: `none`
 
 Enable causal reads. This parameter is disabled by default and was introduced in
 MaxScale 2.3.0.
@@ -800,6 +916,11 @@ server which would cause the connection to be closed and a warning to be logged.
 
 ### `causal_reads_timeout`
 
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: 10s
+
 The timeout for the slave synchronization done by `causal_reads`. The
 default value is 10 seconds.
 
@@ -811,6 +932,11 @@ of the timeout is seconds, a timeout specified in milliseconds will be rejected,
 even if the duration is longer than a second.
 
 ### `lazy_connect`
+
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: false
 
 Lazy connection creation causes connections to backend servers to be opened only
 when they are needed. This reduces the load that is placed on the backend
@@ -825,6 +951,11 @@ queries, no connection to the master is made. If only write queries are made,
 only the master connection is used.
 
 ### `reuse_prepared_statements`
+
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: false
 
 Reuse identical prepared statements inside the same client connection. This is a
 boolean parameter and is disabled by default. This feature only applies to
