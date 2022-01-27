@@ -7,7 +7,7 @@
             v-sortable="draggable"
             class="rect-node-wrapper"
             :style="{
-                transform: `translate(${layout.margin.left}px, ${layout.margin.top}px)`,
+                transform: `translate(${initialZoom.x}px, ${initialZoom.y}px) scale(${initialZoom.k})`,
             }"
         >
             <div
@@ -31,7 +31,7 @@
 import { select as d3Select } from 'd3-selection'
 import { hierarchy, tree } from 'd3-hierarchy'
 import 'd3-transition'
-import { zoom } from 'd3-zoom'
+import { zoom, zoomIdentity } from 'd3-zoom'
 import Sortable from 'sortablejs'
 /*
 If draggable props is true, this component emits the following events
@@ -73,6 +73,8 @@ export default {
         data: { type: Object, required: true },
         dim: { type: Object, required: true },
         draggable: { type: Boolean, default: false },
+        // 100 is the vertical space, 320 is the horizontal space between nodes
+        nodeSize: { type: Array, default: () => [100, 320] },
     },
     data() {
         return {
@@ -81,29 +83,22 @@ export default {
                 link: {
                     length: 320,
                 },
-                margin: { top: 20, right: 20, bottom: 20, left: 48 },
+                margin: { left: 48 },
             },
             circleRadius: 7,
             svg: null, // svg obj
             rectNodePosMap: {},
             root: {},
+            initialZoom: { x: 48, y: this.dim.height / 2, k: 1 },
         }
     },
     computed: {
         scrollBarThickness() {
             return this.$help.getScrollbarWidth()
         },
-        // return the width/height of tree content after subtracting margin)
-        treeDim() {
-            const { top, right, bottom, left } = this.layout.margin
-            return {
-                width: this.dim.width - left - right,
-                height: this.dim.height - top - bottom,
-            }
-        },
         treeLayout() {
-            // create a tree layout and assigns the size of the tree
-            return tree().size([this.treeDim.height, this.treeDim.width])
+            // create a tree layout and use nodeSize to prevent nodes from being overlapped
+            return tree().nodeSize(this.nodeSize)
         },
     },
     watch: {
@@ -124,13 +119,6 @@ export default {
     },
 
     methods: {
-        computeHrchyLayout(data) {
-            // compute a hierarchical layout
-            this.root = hierarchy(data)
-            // vertically center root node
-            this.$set(this.root, 'x0', this.treeDim.height / 2)
-            this.$set(this.root, 'y0', 0)
-        },
         initSvg() {
             // Draw grid background
             let svgGridBg = d3Select(this.$refs.svgGridBg)
@@ -155,17 +143,18 @@ export default {
                 .attr('y1', 0)
                 .attr('y2', 20)
                 .attr('stroke', '#e3e6ea')
-
+            const { left } = this.layout.margin
             svgGridBg
                 .append('rect')
                 .attr('width', '100%')
                 .attr('height', '100%')
                 .attr('fill', 'url(#grid)')
-
+            this.initialZoom = zoomIdentity.translate(left, this.dim.height / 2).scale(1)
             // Draw svg tree-graph
             this.svg = d3Select(this.$refs.svg)
                 .attr('width', this.dim.width)
                 .attr('height', this.dim.height)
+                .call(zoom().transform, this.initialZoom)
                 .call(
                     zoom().on('zoom', e => {
                         this.svg.attr('transform', e.transform)
@@ -176,17 +165,23 @@ export default {
                 )
                 .append('g')
                 .attr('id', 'node-group')
-                .attr(
-                    'transform',
-                    'translate(' + this.layout.margin.left + ',' + this.layout.margin.top + ')'
-                )
+                .attr('transform', `translate(${left},${this.dim.height / 2}) scale(1)`)
+        },
+        /**
+         * compute a hierarchical layout
+         * @param {Object} data - tree data
+         */
+        computeHrchyLayout(data) {
+            this.root = hierarchy(data)
+            // vertically center root node
+            this.$set(this.root, 'x0', this.dim.height / 2)
+            this.$set(this.root, 'y0', 0)
         },
         /**
          * Creates a curved path from source node to the destination nodes
          * @param {Object} src - hierarchy d3 source node
          * @param {Object} dest - hierarchy d3 destination node
-         */
-        diagonal(src, dest) {
+         */ diagonal(src, dest) {
             return `M ${src.y} ${src.x}
             C ${(src.y + dest.y) / 2} ${src.x},
               ${(src.y + dest.y) / 2} ${dest.x},
@@ -283,6 +278,9 @@ export default {
                 .enter()
                 .insert('path', 'g')
                 .attr('class', 'link')
+                .attr('fill', 'none')
+                .attr('stroke-width', 2.5)
+                .attr('stroke', d => d.data.stroke)
                 .attr('d', () => {
                     let o = { x: srcNode.x0, y: srcNode.y0 }
                     return this.diagonal(o, o)
@@ -308,16 +306,13 @@ export default {
                 .remove()
         },
         renderRectNode(nodes) {
-            this.rectNodePosMap = this.getRectNodePos(nodes)
-        },
-        getRectNodePos(nodes) {
             let rectNodePosMap = {}
             nodes.forEach(node => {
                 const nodeId = node.id
                 let pos = { left: node.y + this.circleRadius + 10, top: node.x }
                 rectNodePosMap[nodeId] = pos
             })
-            return rectNodePosMap
+            this.rectNodePosMap = rectNodePosMap
         },
         /**
          * Update node
@@ -364,11 +359,6 @@ export default {
         position: relative;
         left: 0;
         z-index: 2;
-        .link {
-            fill: none;
-            stroke: #e7eef1;
-            stroke-width: 1.5px;
-        }
         .node__circle {
             &--clickable {
                 cursor: pointer;
@@ -385,38 +375,10 @@ export default {
         position: absolute;
         z-index: 3;
         .rect-node {
-            width: 276px;
-            min-height: 50px;
-            max-height: 100px;
+            width: 275px;
             position: absolute;
             transform: translateY(-50%) !important;
-            box-shadow: 1px 1px 7px rgba(0, 0, 0, 0.1);
-            border: 1px solid #e3e6ea;
             background-color: $background;
-            &::after,
-            &::before {
-                right: 100%;
-                top: 50%;
-                border: solid transparent;
-                content: ' ';
-                height: 0;
-                width: 0;
-                position: absolute;
-                pointer-events: none;
-                box-sizing: border-box;
-            }
-            &::before {
-                border-color: transparent;
-                border-right-color: #e3e6ea;
-                border-width: 11px;
-                margin-top: -11px;
-            }
-            &:after {
-                border-color: transparent;
-                border-right-color: $background;
-                border-width: 10px;
-                margin-top: -10px;
-            }
         }
     }
 }
