@@ -25,6 +25,7 @@ namespace nosql
 
 static_assert(NOSQL_MD5_DIGEST_LENGTH == MD5_DIGEST_LENGTH);
 static_assert(NOSQL_SHA_DIGEST_LENGTH == SHA_DIGEST_LENGTH);
+static_assert(NOSQL_SHA256_DIGEST_LENGTH == SHA256_DIGEST_LENGTH);
 
 vector<uint8_t> crypto::create_random_bytes(size_t size)
 {
@@ -91,7 +92,7 @@ std::vector<uint8_t> crypto::sha_1(const uint8_t* pData, size_t data_len)
 //
 std::vector<uint8_t> crypto::sha_256(const uint8_t* pData, size_t data_len)
 {
-    vector<uint8_t> rv(NOSQL_SHA_DIGEST_LENGTH);
+    vector<uint8_t> rv(NOSQL_SHA256_DIGEST_LENGTH);
 
     SHA256(pData, data_len, rv.data());
 

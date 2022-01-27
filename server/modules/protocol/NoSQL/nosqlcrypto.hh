@@ -23,6 +23,7 @@ constexpr int32_t NOSQL_SHA_256_HASH_SIZE = 32;
 
 constexpr int32_t NOSQL_MD5_DIGEST_LENGTH = 16;
 constexpr int32_t NOSQL_SHA_DIGEST_LENGTH = 20;
+constexpr int32_t NOSQL_SHA256_DIGEST_LENGTH = 32;
 
 namespace crypto
 {
