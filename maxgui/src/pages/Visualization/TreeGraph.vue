@@ -3,6 +3,7 @@
         <svg ref="svgGridBg" class="svg-grid-bg" />
         <svg ref="svg" class="tree-graph" />
         <div
+            ref="nodeRectWrapper"
             class="node-rect-wrapper"
             :style="{
                 transform: `translate(${layout.margin.left}px, ${layout.margin.top}px)`,
@@ -27,6 +28,7 @@
 import { select as d3Select } from 'd3-selection'
 import { hierarchy, tree } from 'd3-hierarchy'
 import 'd3-transition'
+import { zoom } from 'd3-zoom'
 export default {
     name: 'tree-graph',
     props: {
@@ -52,18 +54,12 @@ export default {
         scrollBarThickness() {
             return this.$help.getScrollbarWidth()
         },
-        svgDim() {
-            return {
-                width: this.dim.width - this.scrollBarThickness,
-                height: this.dim.height - this.scrollBarThickness,
-            }
-        },
         // return the width/height of tree content after subtracting margin)
         treeDim() {
             const { top, right, bottom, left } = this.layout.margin
             return {
-                width: this.svgDim.width - left - right,
-                height: this.svgDim.height - top - bottom,
+                width: this.dim.width - left - right,
+                height: this.dim.height - top - bottom,
             }
         },
         treeLayout() {
@@ -133,8 +129,16 @@ export default {
 
             // Draw svg tree-graph
             this.svg = d3Select(this.$refs.svg)
-                .attr('width', this.svgDim.width)
-                .attr('height', this.svgDim.height)
+                .attr('width', this.dim.width)
+                .attr('height', this.dim.height)
+                .call(
+                    zoom().on('zoom', e => {
+                        this.svg.attr('transform', e.transform)
+                        const { x, y, k } = e.transform
+                        const transform = `translate(${x}px,${y}px) scale(${k})`
+                        this.$refs.nodeRectWrapper.style.transform = transform
+                    })
+                )
                 .append('g')
                 .attr('id', 'node-group')
                 .attr(
@@ -315,7 +319,7 @@ export default {
 .tree-graph-container {
     width: 100%;
     position: relative;
-    overflow: auto;
+    overflow: hidden;
     .svg-grid-bg {
         width: 100%;
         height: 100%;
