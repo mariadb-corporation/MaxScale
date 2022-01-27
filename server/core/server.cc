@@ -950,7 +950,7 @@ maxscale::ResponseDistribution Server::get_complete_response_distribution(Operat
 
 ServerEndpoint::ServerEndpoint(mxs::Component* up, MXS_SESSION* session, Server* server)
     : m_up(up)
-    , m_session(session)
+    , m_session(static_cast<Session*>(session))
     , m_server(server)
     , m_query_time(RoutingWorker::get_current())
     , m_read_distribution(server->response_distribution(Operation::READ))
@@ -979,13 +979,26 @@ bool ServerEndpoint::connect()
         m_connstatus = ConnStatus::CONNECTED;
         rval = true;
     }
-    else if (res.wait_for_conn)
+    else if (res.conn_limit_reached)
     {
-        // 'get_backend_connection' succeeded without a connection. This means that a backend connection
-        // limit with idle pooling is in effect. A connection slot may become available soon.
-        m_connstatus = ConnStatus::WAITING_FOR_CONN;
-        worker->add_conn_wait_entry(this, static_cast<Session*>(m_session));
-        rval = true;
+        if (m_session->pooling_time_ms() > 0)
+        {
+            // Connection count limit exceeded, but pre-emptive pooling is on. Assume that a
+            // connection will soon be available. Add an entry to the worker so that the endpoint can
+            // be notified as soon as a connection becomes available.
+
+            m_connstatus = ConnStatus::WAITING_FOR_CONN;
+            worker->add_conn_wait_entry(this, m_session);
+            rval = true;
+
+            MXB_INFO("Server '%s' connection count limit reached while pre-emptive pooling is on. "
+                     "Delaying first query until a connection becomes available.", m_server->name());
+        }
+        else
+        {
+            MXB_ERROR("'%s' connection count limit reached. No new connections can "
+                      "be made until an existing session quits.", m_server->name());
+        }
     }
     else
     {
@@ -1025,7 +1038,7 @@ void ServerEndpoint::close()
     else if (m_connstatus == ConnStatus::WAITING_FOR_CONN)
     {
         // Erase the entry in the wait list.
-        m_session->worker()->erase_conn_wait_entry(this, static_cast<Session*>(m_session));
+        m_session->worker()->erase_conn_wait_entry(this, m_session);
     }
 
     // This function seems to be called twice when closing an Endpoint. Take this into account by always
@@ -1201,7 +1214,7 @@ ServerEndpoint::ContinueRes ServerEndpoint::continue_connecting()
             m_connstatus = ConnStatus::CONNECTED_FAILED;
         }
     }
-    else if (res.wait_for_conn)
+    else if (res.conn_limit_reached)
     {
         // Still no connection.
         rval = ContinueRes::WAIT;

@@ -538,14 +538,12 @@ RoutingWorker::get_backend_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Comp
     if (max_allowed_conns > 0)
     {
         // Server has a connection count limit. Check that we are not already at the limit.
-        bool conn_limit_reached = false;
-
         auto curr_conns = stats.n_current_conns() + stats.n_conn_intents();
         if (curr_conns >= max_allowed_conns)
         {
             // Looks like all connection slots are in use. This may be pessimistic in case an intended
-            // connection fails in another thread. The error message can be spammy.
-            conn_limit_reached = true;
+            // connection fails in another thread.
+            rval.conn_limit_reached = true;
         }
         else
         {
@@ -563,27 +561,9 @@ RoutingWorker::get_backend_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Comp
             }
             else
             {
-                conn_limit_reached = true;
+                rval.conn_limit_reached = true;
             }
             stats.remove_conn_intent();
-        }
-
-        if (conn_limit_reached)
-        {
-            auto idle_pool_time = pSession->service->config()->idle_session_pooling_time;
-            if (idle_pool_time >= 0s)
-            {
-                // Connection count limit exceeded, but pre-emptive pooling is on. Assume that a
-                // connection will soon be available.
-                rval.wait_for_conn = true;
-                MXB_INFO("Server '%s' connection count limit reached while pre-emptive pooling is on. "
-                         "Delaying first query until a connection becomes available.", pServer->name());
-            }
-            else
-            {
-                MXB_ERROR("'%s' connection count limit reached. No new connections can "
-                          "be made until an existing session quits.", pServer->name());
-            }
         }
     }
     else
@@ -1840,7 +1820,7 @@ void RoutingWorker::activate_waiting_endpoints()
             case ServerEndpoint::ContinueRes::FAIL:
                 // Resuming the connection failed. Either connection was resumed but writing packets failed
                 // or something went wrong in creating a new connection. Close the endpoint. The endpoint map
-                // must not be modified by the following call.
+                // must not be modified by the handle_failed_continue call.
                 erase_from_set = true;
                 ep->handle_failed_continue();
                 break;

@@ -269,8 +269,9 @@ public:
 
     void notify_userdata_change() override;
 
-    bool can_pool_backends() const override;
-    void set_can_pool_backends(bool value) override;
+    bool    can_pool_backends() const override;
+    void    set_can_pool_backends(bool value) override;
+    int64_t pooling_time_ms() const;
 
 protected:
     std::unique_ptr<mxs::Endpoint> m_down;

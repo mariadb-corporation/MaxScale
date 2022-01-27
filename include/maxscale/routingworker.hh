@@ -421,7 +421,7 @@ public:
 
     struct ConnectionResult
     {
-        bool                    wait_for_conn {false};
+        bool                    conn_limit_reached {false};
         mxs::BackendConnection* conn {nullptr};
     };
 
