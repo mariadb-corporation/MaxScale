@@ -163,6 +163,7 @@ export default {
                         this.$refs.rectNodeWrapper.style.transform = transform
                     })
                 )
+                .on('dblclick.zoom', null)
                 .append('g')
                 .attr('id', 'node-group')
                 .attr('transform', `translate(${left},${this.dim.height / 2}) scale(1)`)
