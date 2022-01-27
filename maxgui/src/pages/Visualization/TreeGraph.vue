@@ -4,6 +4,7 @@
         <svg ref="svg" class="tree-graph" />
         <div
             ref="rectNodeWrapper"
+            v-sortable="draggable"
             class="rect-node-wrapper"
             :style="{
                 transform: `translate(${layout.margin.left}px, ${layout.margin.top}px)`,
@@ -13,6 +14,8 @@
                 v-for="(pos, key) in rectNodePosMap"
                 :key="key"
                 class="rect-node"
+                :node_id="key"
+                :class="[draggable ? 'draggable-rect-node drag-handle' : '']"
                 :style="{
                     top: `${pos.top}px`,
                     left: `${pos.left}px`,
@@ -29,11 +32,47 @@ import { select as d3Select } from 'd3-selection'
 import { hierarchy, tree } from 'd3-hierarchy'
 import 'd3-transition'
 import { zoom } from 'd3-zoom'
+import Sortable from 'sortablejs'
+/*
+If draggable props is true, this component emits the following events
+@on-node-dragStart: e: Event. Starts dragging a rect-node
+@on-node-move: e: Event, callback: (v: bool):void. Move a node in the list
+@on-node-dragend: e: Event. Node dragging ended
+*/
 export default {
     name: 'tree-graph',
+    directives: {
+        sortable: {
+            bind(el, binding, vnode) {
+                if (binding.value) {
+                    const options = {
+                        handle: '.drag-handle',
+                        draggable: '.draggable-rect-node',
+                        ghostClass: 'rect-node-ghost',
+                        chosenClass: 'rect-node-chosen',
+                        animation: 200,
+                        onStart: e => {
+                            vnode.context.$emit('on-node-dragStart', e)
+                        },
+                        onMove: e => {
+                            let isDroppable = true
+                            // emit on-node-move and provide callback to assign return value
+                            vnode.context.$emit('on-node-move', e, v => (isDroppable = v))
+                            return isDroppable
+                        },
+                        onEnd: e => {
+                            vnode.context.$emit('on-node-dragend', e)
+                        },
+                    }
+                    Sortable.create(el, options)
+                }
+            },
+        },
+    },
     props: {
         data: { type: Object, required: true },
         dim: { type: Object, required: true },
+        draggable: { type: Boolean, default: false },
     },
     data() {
         return {
@@ -380,5 +419,19 @@ export default {
             }
         }
     }
+}
+.draggable-rect-node {
+    cursor: move;
+    &:hover {
+        background-color: $table-row-hover !important;
+    }
+}
+
+.rect-node-chosen:hover {
+    background: #f2fcff !important;
+}
+.rect-node-ghost {
+    background: #f2fcff !important;
+    opacity: 0.6;
 }
 </style>
