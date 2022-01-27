@@ -77,7 +77,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
+import { mapState, mapActions } from 'vuex'
 import TreeGraph from './TreeGraph.vue'
 import goBack from 'mixins/goBack'
 
@@ -99,8 +99,13 @@ export default {
     },
     created() {
         this.$nextTick(() => this.setCtrDim())
+        if (this.$typy(this.current_cluster).isEmptyObject)
+            this.fetchClusterById(this.$route.params.id)
     },
     methods: {
+        ...mapActions({
+            fetchClusterById: 'visualization/fetchClusterById',
+        }),
         setCtrDim() {
             const { clientHeight, clientWidth } = this.$refs.graphContainer.$el
             this.ctrDim = { width: clientWidth, height: clientHeight - 2 }

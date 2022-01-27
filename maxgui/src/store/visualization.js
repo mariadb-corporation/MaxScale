@@ -46,6 +46,16 @@ export default {
                 logger.error(e)
             }
         },
+        async fetchClusterById({ commit, dispatch, state }, id) {
+            try {
+                await dispatch('discoveryClusters')
+                const cluster = this.vue.$typy(state, `clusters[${id}]`).safeObject
+                commit('SET_CURR_CLUSTER', cluster)
+            } catch (e) {
+                const logger = this.vue.$logger('store-visualization-fetchClusterById')
+                logger.error(e)
+            }
+        },
     },
     getters: {
         getMariadbmonCluster: () => {
