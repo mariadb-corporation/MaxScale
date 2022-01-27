@@ -18,9 +18,24 @@ export default {
     },
     methods: {
         goBack() {
-            this.prev_route.name === 'login' || this.prev_route.name === null
-                ? this.$router.push('/dashboard/servers')
-                : this.$router.go(-1)
+            switch (this.prev_route.name) {
+                case 'login':
+                    this.$router.push('/dashboard/servers')
+                    break
+                case null: {
+                    /**
+                     * Navigate to parent path. e.g. current path is /dashboard/servers/server_0,
+                     * it navigates to /dashboard/servers/
+                     */
+                    const parentPath = this.$route.path.slice(0, this.$route.path.lastIndexOf('/'))
+                    if (parentPath) this.$router.push(parentPath)
+                    else this.$router.push('/dashboard/servers')
+                    break
+                }
+                default:
+                    this.$router.go(-1)
+                    break
+            }
         },
     },
 }
