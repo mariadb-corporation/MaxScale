@@ -40,7 +40,7 @@ vector<string> create_grant_or_revoke_statements(const string& user,
 
     for (const auto& role : roles)
     {
-        bool is_admin = (role.db == "admin");
+        bool is_on_admin = (role.db == "admin");
 
         string db = role.db;
 
@@ -49,7 +49,7 @@ vector<string> create_grant_or_revoke_statements(const string& user,
         switch (role.id)
         {
         case role::Id::DB_ADMIN_ANY_DATABASE:
-            if (is_admin)
+            if (is_on_admin)
             {
                 db = "*";
             }
@@ -68,7 +68,7 @@ vector<string> create_grant_or_revoke_statements(const string& user,
             break;
 
         case role::Id::READ_WRITE_ANY_DATABASE:
-            if (is_admin)
+            if (is_on_admin)
             {
                 db = "*";
             }
@@ -88,7 +88,7 @@ vector<string> create_grant_or_revoke_statements(const string& user,
             break;
 
         case role::Id::READ_ANY_DATABASE:
-            if (is_admin)
+            if (is_on_admin)
             {
                 db = "*";
             }
@@ -102,9 +102,30 @@ vector<string> create_grant_or_revoke_statements(const string& user,
             privileges.push_back("SELECT");
             break;
 
+        case role::Id::ROOT:
+            {
+                if (is_on_admin)
+                {
+                    db = "*";
+                }
+
+                // CREATE USER is global, so must be applied to *.*. Easiest is just
+                // use a specific statement.
+                string statement = command + "CREATE USER ON *.*" + preposition + user;
+                statements.push_back(statement);
+
+                privileges.push_back("CREATE");
+                privileges.push_back("DELETE");
+                privileges.push_back("INDEX");
+                privileges.push_back("INSERT");
+                privileges.push_back("SELECT");
+                privileges.push_back("UPDATE");
+            }
+            break;
+
         case role::Id::USER_ADMIN:
             {
-                if (is_admin)
+                if (is_on_admin)
                 {
                     db = "*";
                 }
