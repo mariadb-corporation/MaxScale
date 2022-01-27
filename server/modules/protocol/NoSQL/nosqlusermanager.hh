@@ -103,6 +103,16 @@ public:
 
         std::vector<uint8_t> salt_sha1() const;
         std::vector<uint8_t> salt_sha256() const;
+
+        std::vector<uint8_t> salt(scram::Mechanism mechanism) const
+        {
+            return mechanism == scram::Mechanism::SHA_1 ? this->salt_sha1() : this->salt_sha256();
+        }
+
+        std::string salt_b64(scram::Mechanism mechanism) const
+        {
+            return mechanism == scram::Mechanism::SHA_1 ? this->salt_sha1_b64 : this->salt_sha256_b64;
+        }
     };
 
     static std::unique_ptr<UserManager> create(const std::string& name);

@@ -627,14 +627,18 @@ bool UserManager::add_user(const string& db,
         {
         case scram::Mechanism::SHA_1:
             {
-                vector<uint8_t> salt = crypto::create_random_bytes(scram::SERVER_SALT_SIZE);
+                size_t hash_size = scram::ScramSHA1::HASH_SIZE;
+                size_t salt_size = hash_size - 4; // To leave room for scram stuff.
+                vector<uint8_t> salt = crypto::create_random_bytes(salt_size);
                 salt_sha1_b64 = mxs::to_base64(salt);
             }
             break;
 
         case scram::Mechanism::SHA_256:
             {
-                vector<uint8_t> salt = crypto::create_random_bytes(scram::SERVER_SALT_SIZE);
+                size_t hash_size = scram::ScramSHA256::HASH_SIZE;
+                size_t salt_size = hash_size - 4; // To leave room for scram stuff.
+                vector<uint8_t> salt = crypto::create_random_bytes(salt_size);
                 salt_sha256_b64 = mxs::to_base64(salt);
             }
             break;

@@ -97,6 +97,8 @@ public:
 
     virtual ~Scram();
 
+    virtual size_t hash_size() const = 0;
+
     virtual std::vector<uint8_t> Hi(const std::string& password,
                                     const std::vector<uint8_t>& salt,
                                     size_t iterations) const = 0;
@@ -119,10 +121,14 @@ public:
 };
 
 
-class ScramSHA1 : public Scram
+class ScramSHA1 final : public Scram
 {
 public:
     static const ScramSHA1& get();
+
+    static constexpr size_t HASH_SIZE = NOSQL_SHA_1_HASH_SIZE;
+
+    size_t hash_size() const override;
 
     std::vector<uint8_t> Hi(const std::string& password,
                             const std::vector<uint8_t>& salt,
@@ -139,10 +145,14 @@ private:
     ScramSHA1() {}
 };
 
-class ScramSHA256 : public Scram
+class ScramSHA256 final : public Scram
 {
 public:
     static const ScramSHA256& get();
+
+    static constexpr size_t HASH_SIZE = NOSQL_SHA_256_HASH_SIZE;
+
+    size_t hash_size() const override;
 
     std::vector<uint8_t> Hi(const std::string& password,
                             const std::vector<uint8_t>& salt,

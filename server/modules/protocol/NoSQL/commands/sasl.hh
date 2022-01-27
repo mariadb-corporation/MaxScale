@@ -165,10 +165,10 @@ private:
         sasl.set_initial_message(initial_message);
         sasl.set_mechanism(mechanism);
 
-        authenticate(sasl, doc);
+        authenticate(mechanism, sasl, doc);
     }
 
-    void authenticate(NoSQL::Sasl& sasl, DocumentBuilder& doc)
+    void authenticate(scram::Mechanism mechanism, NoSQL::Sasl& sasl, DocumentBuilder& doc)
     {
         vector<uint8_t> server_nonce = crypto::create_random_bytes(scram::SERVER_NONCE_SIZE);
 
@@ -179,7 +179,7 @@ private:
         ostringstream ss;
 
         ss << "r=" << sasl.client_nonce_b64() << sasl.server_nonce_b64()
-           << ",s=" << sasl.user_info().salt_sha1_b64
+           << ",s=" << sasl.user_info().salt_b64(mechanism)
            << ",i=" << scram::ITERATIONS;
 
         auto s = ss.str();
@@ -306,14 +306,15 @@ private:
                       string_view client_proof_64,
                       DocumentBuilder& doc)
     {
-        const auto& scram = nosql::scram::get(sasl.mechanism());
+        const auto mechanism = sasl.mechanism();
+        const auto& scram = nosql::scram::get(mechanism);
         const auto& info = sasl.user_info();
 
         string password = info.user + ":mongo:" + info.pwd; // MongoDB SCRAM-SHA-1
 
         string md5_password = crypto::md5hex(password);
 
-        auto salted_password = scram.Hi(md5_password, info.salt_sha1(), scram::ITERATIONS);
+        auto salted_password = scram.Hi(md5_password, info.salt(mechanism), scram::ITERATIONS);
         auto client_key = scram.HMAC(salted_password, "Client Key");
         auto stored_key = scram.H(client_key);
         string auth_message = sasl.initial_message()

@@ -313,6 +313,11 @@ const ScramSHA1& ScramSHA1::get()
     return s;
 }
 
+size_t ScramSHA1::hash_size() const
+{
+    return HASH_SIZE;
+}
+
 vector<uint8_t> ScramSHA1::Hi(const string& password, const vector<uint8_t>& salt, size_t iterations) const
 {
     return scram::pbkdf2_hmac_sha_1(password, salt, iterations);
@@ -338,6 +343,11 @@ const ScramSHA256& ScramSHA256::get()
     static ScramSHA256 s;
 
     return s;
+}
+
+size_t ScramSHA256::hash_size() const
+{
+    return HASH_SIZE;
 }
 
 vector<uint8_t> ScramSHA256::Hi(const string& password, const vector<uint8_t>& salt, size_t iterations) const
