@@ -14,6 +14,8 @@
 
 #include "defs.hh"
 #include "../nosqlscram.hh"
+#define MONGOC_INSIDE
+#include <mongoc-scram-private.h>
 
 namespace nosql
 {
@@ -310,11 +312,39 @@ private:
         const auto& scram = nosql::scram::get(mechanism);
         const auto& info = sasl.user_info();
 
-        string password = info.user + ":mongo:" + info.pwd; // MongoDB SCRAM-SHA-1
+        string hashed_password;
 
-        string md5_password = crypto::md5hex(password);
+        switch (mechanism)
+        {
+        case scram::Mechanism::SHA_1:
+            {
+                string password = info.user + ":mongo:" + info.pwd;
+                hashed_password = crypto::md5hex(password);
+            }
+            break;
 
-        auto salted_password = scram.Hi(md5_password, info.salt(mechanism), scram::ITERATIONS);
+        case scram::Mechanism::SHA_256:
+            {
+                bson_error_t error;
+                char* zPassword = _mongoc_sasl_prep(info.pwd.data(), info.pwd.length(), &error);
+
+                if (!zPassword)
+                {
+                    ostringstream ss;
+                    ss << "Could not prepare password for sasl: " << error.message;
+                    throw SoftError(ss.str(), error::INTERNAL_ERROR);
+                }
+
+                hashed_password = zPassword;
+                MXS_FREE(zPassword);
+            }
+            break;
+
+        default:
+            mxb_assert(!true);
+        }
+
+        auto salted_password = scram.Hi(hashed_password, info.salt(mechanism), scram::ITERATIONS);
         auto client_key = scram.HMAC(salted_password, "Client Key");
         auto stored_key = scram.H(client_key);
         string auth_message = sasl.initial_message()
