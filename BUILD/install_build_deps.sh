@@ -77,7 +77,7 @@ then
        perl libtool tcl tcl-dev uuid \
        uuid-dev libsqlite3-dev liblzma-dev libpam0g-dev pkg-config \
        libedit-dev libcurl4-openssl-dev libatomic1 \
-       libsasl2-dev libxml2-dev libkrb5-dev
+       libsasl2-dev libxml2-dev libkrb5-dev libicu-dev
 
   # One of these will work, older systems use libsystemd-daemon-dev
   ${apt_cmd} install libsystemd-dev || \
@@ -132,7 +132,7 @@ then
          gnupg flex rpmdevtools git wget tcl tcl-devel openssl libuuid-devel xz-devel \
          sqlite sqlite-devel pkgconfig rpm-build createrepo yum-utils \
          gnutls-devel libgcrypt-devel pam-devel libcurl-devel libatomic \
-         cyrus-sasl-devel libxml2-devel krb5-devel
+         cyrus-sasl-devel libxml2-devel krb5-devel libicu-devel
 
     sudo yum install -y --nogpgcheck ${enable_power_tools} lua lua-devel libedit-devel
 
@@ -186,7 +186,7 @@ then
          git wget tcl tcl-devel libuuid-devel \
          xz-devel sqlite3 sqlite3-devel pkg-config lua lua-devel \
          gnutls-devel libgcrypt-devel pam-devel systemd-devel libcurl-devel libatomic1 \
-         cyrus-sasl-devel libxml2-devel krb5-devel
+         cyrus-sasl-devel libxml2-devel krb5-devel libicu-devel
     sudo zypper -n install rpm-build
     cat /etc/*-release | grep "SUSE Linux Enterprise Server 11"
 
