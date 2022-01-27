@@ -66,10 +66,6 @@ export default {
             // create a tree layout and assigns the size of the tree
             return tree().size([this.treeDim.height, this.treeDim.width])
         },
-        maxDepth() {
-            const nodes = this.root.descendants() || []
-            return nodes.length ? nodes[nodes.length - 1].depth : 1
-        },
     },
     watch: {
         data: {
@@ -147,16 +143,12 @@ export default {
                 )
         },
         /**
-         * Creates a curved or orthogonal (diagonal) path from source node to the destination nodes
-         * For the tree has depth >= 3, using the orthogonal line between nodes helps to avoid
-         * overlapping rectangular node div.
+         * Creates a curved path from source node to the destination nodes
          * @param {Object} src - hierarchy d3 source node
          * @param {Object} dest - hierarchy d3 destination node
          */
         diagonal(src, dest) {
-            if (this.maxDepth >= 3) return 'M' + src.y + ',' + src.x + 'V' + dest.x + 'H' + dest.y
-            else
-                return `M ${src.y} ${src.x}
+            return `M ${src.y} ${src.x}
             C ${(src.y + dest.y) / 2} ${src.x},
               ${(src.y + dest.y) / 2} ${dest.x},
               ${dest.y} ${dest.x}`
