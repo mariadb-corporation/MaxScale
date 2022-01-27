@@ -3,22 +3,22 @@
         <svg ref="svgGridBg" class="svg-grid-bg" />
         <svg ref="svg" class="tree-graph" />
         <div
-            ref="nodeRectWrapper"
-            class="node-rect-wrapper"
+            ref="rectNodeWrapper"
+            class="rect-node-wrapper"
             :style="{
                 transform: `translate(${layout.margin.left}px, ${layout.margin.top}px)`,
             }"
         >
             <div
-                v-for="(pos, key) in nodeRectPosMap"
+                v-for="(pos, key) in rectNodePosMap"
                 :key="key"
-                class="node-rect"
+                class="rect-node"
                 :style="{
                     top: `${pos.top}px`,
                     left: `${pos.left}px`,
                 }"
             >
-                <slot name="node-rect" :data="{ id: key }" />
+                <slot name="rect-node-content" :data="{ id: key }" />
             </div>
         </div>
     </div>
@@ -46,7 +46,7 @@ export default {
             },
             circleRadius: 7,
             svg: null, // svg obj
-            nodeRectPosMap: {},
+            rectNodePosMap: {},
             root: {},
         }
     },
@@ -132,7 +132,7 @@ export default {
                         this.svg.attr('transform', e.transform)
                         const { x, y, k } = e.transform
                         const transform = `translate(${x}px,${y}px) scale(${k})`
-                        this.$refs.nodeRectWrapper.style.transform = transform
+                        this.$refs.rectNodeWrapper.style.transform = transform
                     })
                 )
                 .append('g')
@@ -268,17 +268,17 @@ export default {
                 })
                 .remove()
         },
-        renderNodeRect(nodes) {
-            this.nodeRectPosMap = this.getNodeRectPos(nodes)
+        renderRectNode(nodes) {
+            this.rectNodePosMap = this.getRectNodePos(nodes)
         },
-        getNodeRectPos(nodes) {
-            let nodeRectPosMap = {}
+        getRectNodePos(nodes) {
+            let rectNodePosMap = {}
             nodes.forEach(node => {
                 const nodeId = node.id
                 let pos = { left: node.y + this.circleRadius + 10, top: node.x }
-                nodeRectPosMap[nodeId] = pos
+                rectNodePosMap[nodeId] = pos
             })
-            return nodeRectPosMap
+            return rectNodePosMap
         },
         /**
          * Update node
@@ -301,7 +301,7 @@ export default {
                 d.x0 = d.x
                 d.y0 = d.y
             })
-            this.renderNodeRect(nodes)
+            this.renderRectNode(nodes)
         },
     },
 }
@@ -339,18 +339,18 @@ export default {
             }
         }
     }
-    .node-rect-wrapper {
+    .rect-node-wrapper {
         top: 0;
         height: 0;
         width: 0;
         position: absolute;
         z-index: 3;
-        .node-rect {
+        .rect-node {
             width: 276px;
             min-height: 50px;
             max-height: 100px;
             position: absolute;
-            transform: translateY(-50%);
+            transform: translateY(-50%) !important;
             box-shadow: 1px 1px 7px rgba(0, 0, 0, 0.1);
             border: 1px solid #e3e6ea;
             background-color: $background;

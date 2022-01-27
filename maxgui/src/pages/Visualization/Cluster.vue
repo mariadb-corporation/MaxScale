@@ -52,7 +52,7 @@
                 :data="$typy(current_cluster, 'children[0]').safeObjectOrEmpty"
                 :dim="ctrDim"
             >
-                <template v-slot:node-rect="{ data: { id } }">
+                <template v-slot:rect-node-content="{ data: { id } }">
                     <div
                         class="d-flex flex-column justify-center fill-height px-4 py-2 server-node"
                     >
