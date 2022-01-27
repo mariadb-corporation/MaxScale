@@ -179,7 +179,7 @@ private:
         ostringstream ss;
 
         ss << "r=" << sasl.client_nonce_b64() << sasl.server_nonce_b64()
-           << ",s=" << sasl.user_info().salt_b64
+           << ",s=" << sasl.user_info().salt_sha1_b64
            << ",i=" << scram::ITERATIONS;
 
         auto s = ss.str();
@@ -313,7 +313,7 @@ private:
 
         string md5_password = crypto::md5hex(password);
 
-        auto salted_password = scram.Hi(md5_password, info.salt, scram::ITERATIONS);
+        auto salted_password = scram.Hi(md5_password, info.salt_sha1(), scram::ITERATIONS);
         auto client_key = scram.HMAC(salted_password, "Client Key");
         auto stored_key = scram.H(client_key);
         string auth_message = sasl.initial_message()

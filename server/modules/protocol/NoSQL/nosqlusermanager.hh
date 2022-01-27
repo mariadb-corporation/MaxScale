@@ -95,11 +95,14 @@ public:
         std::string                   pwd;
         std::string                   host;
         std::string                   uuid;
-        std::vector<uint8_t>          salt;
         std::string                   custom_data; // JSON document
-        std::string                   salt_b64;
+        std::string                   salt_sha1_b64;
+        std::string                   salt_sha256_b64;
         std::vector<scram::Mechanism> mechanisms;
         std::vector<role::Role>       roles;
+
+        std::vector<uint8_t> salt_sha1() const;
+        std::vector<uint8_t> salt_sha256() const;
     };
 
     static std::unique_ptr<UserManager> create(const std::string& name);
