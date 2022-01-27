@@ -926,6 +926,27 @@ bool RoutingWorker::pre_run()
                 return true;
             };
         delayed_call(5000, check_pool_cb);
+
+        // The normal connection availability notification is not fool-proof, as it's only sent to the
+        // current worker. Every now and then, each worker should check for connections regardless since
+        // some may be available.
+        auto activate_eps_cb = [this](Worker::Call::action_t action) {
+                if (action == mxb::Worker::Call::action_t::EXECUTE)
+                {
+                    activate_waiting_endpoints();
+                }
+                return true;
+            };
+        delayed_call(5s, activate_eps_cb);
+
+        auto timeout_eps_cb = [this](Worker::Call::action_t action) {
+                if (action == mxb::Worker::Call::action_t::EXECUTE)
+                {
+                    fail_timed_out_endpoints();
+                }
+                return true;
+            };
+        delayed_call(10s, timeout_eps_cb);
     }
     else
     {
@@ -1775,12 +1796,14 @@ void RoutingWorker::notify_connection_available(SERVER* server)
         if (m_eps_waiting_for_conn.count(server) > 0)
         {
             // An endpoint is waiting for connection to this server.
-            auto func = [this](Worker::Call::action_t action) {
-                    this->activate_waiting_endpoints();
+            auto func = [this]() {
+                    activate_waiting_endpoints();
+                    m_ep_activation_scheduled = false;
                     return false;
                 };
+
             // The check will run once execution returns to the event loop.
-            delayed_call(0, func);
+            execute(func, execute_mode_t::EXECUTE_QUEUED);
             m_ep_activation_scheduled = true;
         }
     }
@@ -1829,7 +1852,7 @@ void RoutingWorker::activate_waiting_endpoints()
             if (erase_from_set)
             {
                 ep_set.erase(it_first);
-                static_cast<Session*>(ep->session())->endpoint_no_longer_waiting_for_conn();
+                ep->session()->endpoint_no_longer_waiting_for_conn();
             }
         }
 
@@ -1842,8 +1865,44 @@ void RoutingWorker::activate_waiting_endpoints()
             map_iter++;
         }
     }
+}
 
-    m_ep_activation_scheduled = false;
+void RoutingWorker::fail_timed_out_endpoints()
+{
+    // Check the oldest endpoints. Fail the ones which have been waiting for too long.
+    auto now = epoll_tick_now();
+    auto it_map = m_eps_waiting_for_conn.begin();
+    while (it_map != m_eps_waiting_for_conn.end())
+    {
+        auto& ep_deq = it_map->second;
+        // The oldest ep:s are at the front of the deque. Close timed out ones until an element is no
+        // longer timed out.
+        auto it = ep_deq.begin();
+
+        while (it != ep_deq.end())
+        {
+            auto* ep = *it;
+            if (now - ep->conn_wait_start() >= 60s)
+            {
+                ep->handle_timed_out_continue();
+                it = ep_deq.erase(it);
+                ep->session()->endpoint_no_longer_waiting_for_conn();
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        if (ep_deq.empty())
+        {
+            it_map = m_eps_waiting_for_conn.erase(it_map);
+        }
+        else
+        {
+            ++it_map;
+        }
+    }
 }
 
 void RoutingWorker::erase_conn_wait_entry(ServerEndpoint* ep, Session* session)
