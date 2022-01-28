@@ -157,34 +157,34 @@ private:
 
         auto client_nonce_b64 = payload.substr(i + 2); // Skip "r="
 
-        auto& sasl = m_database.context().sasl();
+        unique_ptr<NoSQL::Sasl> sSasl { new NoSQL::Sasl };
 
-        sasl.set_user_info(std::move(info));
-        sasl.set_gs2_header(gs2_header);
-        sasl.set_client_nonce_b64(client_nonce_b64);
-        sasl.set_initial_message(initial_message);
-        sasl.set_mechanism(mechanism);
+        sSasl->set_user_info(std::move(info));
+        sSasl->set_gs2_header(gs2_header);
+        sSasl->set_client_nonce_b64(client_nonce_b64);
+        sSasl->set_initial_message(initial_message);
+        sSasl->set_mechanism(mechanism);
 
-        authenticate(mechanism, sasl, doc);
+        authenticate(mechanism, std::move(sSasl), doc);
     }
 
-    void authenticate(scram::Mechanism mechanism, NoSQL::Sasl& sasl, DocumentBuilder& doc)
+    void authenticate(scram::Mechanism mechanism, unique_ptr<NoSQL::Sasl> sSasl, DocumentBuilder& doc)
     {
         vector<uint8_t> server_nonce = crypto::create_random_bytes(scram::SERVER_NONCE_SIZE);
 
         auto server_nonce_b64 = mxs::to_base64(server_nonce.data(), server_nonce.size());
 
-        sasl.set_server_nonce_b64(server_nonce_b64);
+        sSasl->set_server_nonce_b64(server_nonce_b64);
 
         ostringstream ss;
 
-        ss << "r=" << sasl.client_nonce_b64() << sasl.server_nonce_b64()
-           << ",s=" << sasl.user_info().salt_b64(mechanism)
+        ss << "r=" << sSasl->client_nonce_b64() << sSasl->server_nonce_b64()
+           << ",s=" << sSasl->user_info().salt_b64(mechanism)
            << ",i=" << scram::ITERATIONS;
 
         auto s = ss.str();
 
-        sasl.set_server_first_message(s);
+        sSasl->set_server_first_message(s);
 
         auto sub_type = bsoncxx::binary_sub_type::k_binary;
         uint32_t size = s.length();
@@ -192,10 +192,12 @@ private:
 
         bsoncxx::types::b_binary payload { sub_type, size, bytes };
 
-        doc.append(kvp(key::CONVERSATION_ID, sasl.bump_conversation_id()));
+        doc.append(kvp(key::CONVERSATION_ID, sSasl->bump_conversation_id()));
         doc.append(kvp(key::DONE, false));
         doc.append(kvp(key::PAYLOAD, payload));
         doc.append(kvp(key::OK, 1));
+
+        m_database.context().put_sasl(std::move(sSasl));
     }
 };
 
@@ -211,13 +213,13 @@ public:
     {
         auto conversation_id = required<int32_t>(key::CONVERSATION_ID);
 
-        auto& sasl = m_database.context().sasl();
+        unique_ptr<NoSQL::Sasl> sSasl = m_database.context().get_sasl();
 
-        if (conversation_id != sasl.conversation_id())
+        if (conversation_id != sSasl->conversation_id())
         {
             ostringstream ss;
             ss << "Invalid conversation id, got " << conversation_id
-               << ", expected " << sasl.conversation_id() << ".";
+               << ", expected " << sSasl->conversation_id() << ".";
 
             throw SoftError(ss.str(), error::BAD_VALUE);
         }
@@ -225,7 +227,7 @@ public:
         auto b = required<bsoncxx::types::b_binary>(key::PAYLOAD);
         string_view payload(reinterpret_cast<const char*>(b.bytes), b.size);
 
-        authenticate(sasl, payload, doc);
+        authenticate(*sSasl.get(), payload, doc);
     }
 
 private:

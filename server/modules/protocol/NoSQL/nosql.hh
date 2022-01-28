@@ -1196,9 +1196,14 @@ public:
             return m_metadata_sent;
         }
 
-        Sasl& sasl()
+        std::unique_ptr<Sasl> get_sasl()
         {
-            return m_sasl;
+            return std::move(m_sSasl);
+        }
+
+        void put_sasl(std::unique_ptr<Sasl> sSasl)
+        {
+            m_sSasl = std::move(sSasl);
         }
 
         void set_roles(std::unordered_map<std::string, uint32_t>&& roles)
@@ -1234,7 +1239,7 @@ public:
         int64_t                    m_connection_id;
         std::unique_ptr<LastError> m_sLast_error;
         bool                       m_metadata_sent { false };
-        Sasl                       m_sasl;
+        std::unique_ptr<Sasl>      m_sSasl;
         Roles                      m_roles;
         bool                       m_authenticated { false };
 
