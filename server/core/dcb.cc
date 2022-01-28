@@ -280,10 +280,11 @@ DCB::ReadResult DCB::read(uint32_t min_bytes, uint32_t max_bytes)
     return rval;
 }
 
-int DCB::read(GWBUF** head, int maxbytes)
+int DCB::read(GWBUF** ppHead, int maxbytes)
 {
     mxb_assert(this->owner == RoutingWorker::get_current());
     mxb_assert(m_fd != FD_CLOSED);
+    mxb_assert(*ppHead == nullptr);
 
     if (m_fd == FD_CLOSED)
     {
@@ -291,20 +292,13 @@ int DCB::read(GWBUF** head, int maxbytes)
         return -1;
     }
 
-    int nsingleread = 0;
-    int nreadtotal = 0;
-
-    if (m_readq)
-    {
-        *head = gwbuf_append(*head, m_readq);
-        m_readq = NULL;
-        nreadtotal = gwbuf_length(*head);
-    }
+    GWBUF* result_buf = m_readq;
+    m_readq = nullptr;
+    int nreadtotal = result_buf ? result_buf->length() : 0;
 
     if (m_encryption.state == SSLState::ESTABLISHED)
     {
-        int n = read_SSL(head);
-
+        int n = read_SSL(&result_buf);
         if (n < 0)
         {
             if (nreadtotal != 0)
@@ -323,46 +317,49 @@ int DCB::read(GWBUF** head, int maxbytes)
         {
             nreadtotal += n;
         }
-
-        return nreadtotal;
     }
-
-    while (0 == maxbytes || nreadtotal < maxbytes)
+    else
     {
-        int bytes_available;
-
-        bytes_available = socket_bytes_readable();
-        if (bytes_available <= 0)
+        int nsingleread = 0;
+        while (0 == maxbytes || nreadtotal < maxbytes)
         {
-            return bytes_available < 0 ? -1
-                                       :/** Handle closed client socket */
-                   dcb_read_no_bytes_available(this, m_fd, nreadtotal);
-        }
-        else
-        {
-            GWBUF* buffer;
+            int bytes_available = socket_bytes_readable();
 
-            buffer = basic_read(bytes_available, maxbytes, nreadtotal, &nsingleread);
-            if (buffer)
+            if (bytes_available <= 0)
             {
-                m_last_read = mxs_clock();
-                nreadtotal += nsingleread;
-                MXS_DEBUG("Read %d bytes from dcb %p in state %s fd %d.",
-                          nsingleread,
-                          this,
-                          mxs::to_string(m_state),
-                          m_fd);
-
-                /*< Append read data to the gwbuf */
-                *head = gwbuf_append(*head, buffer);
+                if (bytes_available < 0)
+                {
+                    nreadtotal = -1;
+                }
+                else
+                {
+                    /** Handle closed client socket */
+                    nreadtotal = dcb_read_no_bytes_available(this, m_fd, nreadtotal);
+                }
+                break;
             }
             else
             {
-                break;
+                GWBUF* buffer = basic_read(bytes_available, maxbytes, nreadtotal, &nsingleread);
+                if (buffer)
+                {
+                    m_last_read = mxs_clock();
+                    nreadtotal += nsingleread;
+                    MXS_DEBUG("Read %d bytes from dcb %p in state %s fd %d.",
+                              nsingleread, this, mxs::to_string(m_state), m_fd);
+
+                    /*< Append read data to the gwbuf */
+                    result_buf = gwbuf_append(result_buf, buffer);
+                }
+                else
+                {
+                    break;
+                }
             }
         }
-    }   /*< while (0 == maxbytes || nreadtotal < maxbytes) */
+    }
 
+    *ppHead = result_buf;
     return nreadtotal;
 }
 

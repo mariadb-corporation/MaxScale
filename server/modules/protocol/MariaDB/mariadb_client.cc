@@ -2070,6 +2070,8 @@ bool MariaDBClientConnection::read_first_client_packet(mxs::Buffer* output)
     else if (prot_packet_len >= NORMAL_HS_RESP_MIN_SIZE)
     {
         // Normal response. Need to read again. Likely the entire packet is available at the socket.
+        m_dcb->readq_prepend(read_buffer);
+        read_buffer = nullptr;
         int ret = m_dcb->read(&read_buffer, prot_packet_len);
         buffer_len = gwbuf_length(read_buffer);
         if (ret < 0)
