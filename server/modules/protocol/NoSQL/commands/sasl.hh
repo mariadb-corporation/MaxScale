@@ -77,12 +77,13 @@ public:
 
     void populate_response(DocumentBuilder& doc) override
     {
-        auto mechanism = required<string_view>(key::MECHANISM);
+        auto mechanism_name = required<string_view>(key::MECHANISM);
+        scram::Mechanism mechanism;
 
-        if (mechanism.compare("SCRAM-SHA-1") != 0)
+        if (!scram::from_string(mechanism_name, &mechanism))
         {
             ostringstream ss;
-            ss << "Received authentication for mechanism " << mechanism
+            ss << "Received authentication for mechanism " << mechanism_name
                << " which is unknown or not enabled";
 
             throw SoftError(ss.str(), error::MECHANISM_UNAVAILABLE);
@@ -90,13 +91,28 @@ public:
 
         auto payload = required<bsoncxx::types::b_binary>(key::PAYLOAD);
 
-        authenticate(string_view(reinterpret_cast<const char*>(payload.bytes), payload.size), doc);
+        authenticate(mechanism,
+                     string_view(reinterpret_cast<const char*>(payload.bytes), payload.size),
+                     doc);
     }
 
 private:
-    void authenticate(string_view payload, DocumentBuilder& doc)
+    void authenticate(scram::Mechanism mechanism, string_view payload, DocumentBuilder& doc)
     {
-        MXS_NOTICE("Payload: %.*s", (int)payload.length(), payload.data());
+        unique_ptr<NoSQL::Sasl> sSasl = m_database.context().get_sasl();
+
+        if (sSasl)
+        {
+            throw SoftError("Was expecting saslContinue, authentication attempt aborted",
+                            error::PROTOCOL_ERROR);
+        }
+
+        // TODO: Make it possible to re-authenticate, i.e. generate COM_CHANGE_USER and whatnot.
+        if (m_database.context().authenticated())
+        {
+            throw SoftError("Client already authenticated, re-authentication not yet supported.",
+                            error::AUTHENTICATION_FAILED);
+        }
 
         // We are expecting a string like "n,,n=USER,r=NONCE" where "n,," is the gs2 header,
         // USER is the user name and NONCE the nonce created by the client.
@@ -154,33 +170,34 @@ private:
 
         auto client_nonce_b64 = payload.substr(i + 2); // Skip "r="
 
-        auto& sasl = m_database.context().sasl();
+        sSasl.reset(new NoSQL::Sasl);
 
-        sasl.set_user_info(std::move(info));
-        sasl.set_gs2_header(gs2_header);
-        sasl.set_client_nonce_b64(client_nonce_b64);
-        sasl.set_initial_message(initial_message);
+        sSasl->set_user_info(std::move(info));
+        sSasl->set_gs2_header(gs2_header);
+        sSasl->set_client_nonce_b64(client_nonce_b64);
+        sSasl->set_initial_message(initial_message);
+        sSasl->set_mechanism(mechanism);
 
-        authenticate(sasl, doc);
+        authenticate(mechanism, std::move(sSasl), doc);
     }
 
-    void authenticate(NoSQL::Sasl& sasl, DocumentBuilder& doc)
+    void authenticate(scram::Mechanism mechanism, unique_ptr<NoSQL::Sasl> sSasl, DocumentBuilder& doc)
     {
         vector<uint8_t> server_nonce = crypto::create_random_bytes(scram::SERVER_NONCE_SIZE);
 
         auto server_nonce_b64 = mxs::to_base64(server_nonce.data(), server_nonce.size());
 
-        sasl.set_server_nonce_b64(server_nonce_b64);
+        sSasl->set_server_nonce_b64(server_nonce_b64);
 
         ostringstream ss;
 
-        ss << "r=" << sasl.client_nonce_b64() << sasl.server_nonce_b64()
-           << ",s=" << sasl.user_info().salt_b64
+        ss << "r=" << sSasl->client_nonce_b64() << sSasl->server_nonce_b64()
+           << ",s=" << sSasl->user_info().salt_b64(mechanism)
            << ",i=" << scram::ITERATIONS;
 
         auto s = ss.str();
 
-        sasl.set_server_first_message(s);
+        sSasl->set_server_first_message(s);
 
         auto sub_type = bsoncxx::binary_sub_type::k_binary;
         uint32_t size = s.length();
@@ -188,10 +205,12 @@ private:
 
         bsoncxx::types::b_binary payload { sub_type, size, bytes };
 
-        doc.append(kvp(key::CONVERSATION_ID, sasl.bump_conversation_id()));
+        doc.append(kvp(key::CONVERSATION_ID, sSasl->bump_conversation_id()));
         doc.append(kvp(key::DONE, false));
         doc.append(kvp(key::PAYLOAD, payload));
         doc.append(kvp(key::OK, 1));
+
+        m_database.context().put_sasl(std::move(sSasl));
     }
 };
 
@@ -205,15 +224,20 @@ public:
 
     void populate_response(DocumentBuilder& doc) override
     {
+        unique_ptr<NoSQL::Sasl> sSasl = m_database.context().get_sasl();
+
+        if (!sSasl)
+        {
+            throw SoftError("No SASL session state found", error::PROTOCOL_ERROR);
+        }
+
         auto conversation_id = required<int32_t>(key::CONVERSATION_ID);
 
-        auto& sasl = m_database.context().sasl();
-
-        if (conversation_id != sasl.conversation_id())
+        if (conversation_id != sSasl->conversation_id())
         {
             ostringstream ss;
             ss << "Invalid conversation id, got " << conversation_id
-               << ", expected " << sasl.conversation_id() << ".";
+               << ", expected " << sSasl->conversation_id() << ".";
 
             throw SoftError(ss.str(), error::BAD_VALUE);
         }
@@ -221,7 +245,7 @@ public:
         auto b = required<bsoncxx::types::b_binary>(key::PAYLOAD);
         string_view payload(reinterpret_cast<const char*>(b.bytes), b.size);
 
-        authenticate(sasl, payload, doc);
+        authenticate(*sSasl.get(), payload, doc);
     }
 
 private:
@@ -302,20 +326,20 @@ private:
                       string_view client_proof_64,
                       DocumentBuilder& doc)
     {
+        const auto mechanism = sasl.mechanism();
+        const auto& scram = nosql::scram::get(mechanism);
         const auto& info = sasl.user_info();
 
-        string password = info.user + ":mongo:" + info.pwd; // MongoDB SCRAM-SHA-1
+        string digested_password = scram.get_digested_password(info.user, info.pwd);
 
-        string md5_password = crypto::md5hex(password);
-
-        auto salted_password = scram::pbkdf2_hmac_sha_1(md5_password.c_str(), info.salt, scram::ITERATIONS);
-        auto client_key = crypto::hmac_sha_1(salted_password, "Client Key");
-        auto stored_key = crypto::sha_1(client_key);
+        auto salted_password = scram.Hi(digested_password, info.salt(mechanism), scram::ITERATIONS);
+        auto client_key = scram.HMAC(salted_password, "Client Key");
+        auto stored_key = scram.H(client_key);
         string auth_message = sasl.initial_message()
             + "," + sasl.server_first_message()
             + "," + client_final_message_bare;
 
-        auto client_signature = crypto::hmac_sha_1(stored_key, auth_message);
+        auto client_signature = scram.HMAC(stored_key, auth_message);
 
         vector<uint8_t> server_client_proof;
 
@@ -341,8 +365,10 @@ private:
                       const string& auth_message,
                       DocumentBuilder& doc)
     {
-        auto server_key = crypto::hmac_sha_1(salted_password, "Server Key");
-        auto server_signature = crypto::hmac_sha_1(server_key, auth_message);
+        const auto& scram = nosql::scram::get(sasl.mechanism());
+
+        auto server_key = scram.HMAC(salted_password, "Server Key");
+        auto server_signature = scram.HMAC(server_key, auth_message);
         string server_signature_b64 = mxs::to_base64(server_signature);
 
         ostringstream ss;

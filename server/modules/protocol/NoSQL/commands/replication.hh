@@ -99,11 +99,15 @@ public:
 
             auto& context = database.context();
 
-            if (context.um().user_exists(db_user))
+            UserManager::UserInfo info;
+            if (context.um().get_info(db_user, &info))
             {
                 ArrayBuilder sasl_supported_mechs;
 
-                sasl_supported_mechs.append("SCRAM-SHA-1");
+                for (const auto mechanism: info.mechanisms)
+                {
+                    sasl_supported_mechs.append(scram::to_string(mechanism));
+                }
 
                 doc.append(kvp(key::SASL_SUPPORTED_MECHS, sasl_supported_mechs.extract()));
             }

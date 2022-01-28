@@ -31,6 +31,7 @@
 #include "nosqlbase.hh"
 #include "nosqlcursor.hh"
 #include "nosqlkeys.hh"
+#include "nosqlscram.hh"
 #include "nosqlusermanager.hh"
 #include "../../filter/masking/mysql.hh"
 
@@ -1054,6 +1055,11 @@ public:
             return m_server_first_message;
         }
 
+        scram::Mechanism mechanism() const
+        {
+            return m_mechanism;
+        }
+
         void set_client_nonce_b64(const std::string s)
         {
             m_client_nonce_b64 = std::move(s);
@@ -1104,6 +1110,11 @@ public:
             m_user_info = std::move(user_info);
         }
 
+        void set_mechanism(scram::Mechanism m)
+        {
+            m_mechanism = m;
+        }
+
     private:
         UserManager::UserInfo m_user_info;
         std::string           m_client_nonce_b64;
@@ -1112,6 +1123,7 @@ public:
         int32_t               m_conversation_id { 0 };
         std::string           m_initial_message;
         std::string           m_server_first_message;
+        scram::Mechanism      m_mechanism = scram::Mechanism::SHA_1;
     };
 
     class Context
@@ -1184,9 +1196,14 @@ public:
             return m_metadata_sent;
         }
 
-        Sasl& sasl()
+        std::unique_ptr<Sasl> get_sasl()
         {
-            return m_sasl;
+            return std::move(m_sSasl);
+        }
+
+        void put_sasl(std::unique_ptr<Sasl> sSasl)
+        {
+            m_sSasl = std::move(sSasl);
         }
 
         void set_roles(std::unordered_map<std::string, uint32_t>&& roles)
@@ -1222,7 +1239,7 @@ public:
         int64_t                    m_connection_id;
         std::unique_ptr<LastError> m_sLast_error;
         bool                       m_metadata_sent { false };
-        Sasl                       m_sasl;
+        std::unique_ptr<Sasl>      m_sSasl;
         Roles                      m_roles;
         bool                       m_authenticated { false };
 

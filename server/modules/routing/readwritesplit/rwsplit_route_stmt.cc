@@ -1168,14 +1168,23 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
 
     if (trx_is_open())
     {
-        // The only case where a query is routed to another server than the original transaction target is
-        // when the GTID sync query is done for causal_reads=universal.
-        mxb_assert(!m_trx.target() || m_trx.target() == target || m_wait_gtid == READING_GTID);
-
         if (!m_trx.target())
         {
             MXS_INFO("Transaction starting on '%s'", target->name());
             m_trx.set_target(target);
+        }
+        else if (trx_is_starting())
+        {
+            MXS_INFO("Transaction did not finish on '%s' before a new one started on '%s'",
+                     m_trx.target()->name(), target->name());
+            m_trx.close();
+            m_trx.set_target(target);
+        }
+        else
+        {
+            // The only case where a query is routed to another server than the original transaction target is
+            // when the GTID sync query is done for causal_reads=universal.
+            mxb_assert(m_trx.target() == target || m_wait_gtid == READING_GTID);
         }
     }
 

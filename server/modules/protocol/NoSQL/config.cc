@@ -50,13 +50,13 @@ mxs::config::ParamString GlobalConfig::s_host(
 
 mxs::config::ParamBool GlobalConfig::s_authentication_required(
     &nosqlprotocol::specification,
-    "authentication",
+    "authentication_required",
     "Whether nosqlprotocol authentication is required.",
     false);
 
 mxs::config::ParamBool GlobalConfig::s_authorization_enabled(
     &nosqlprotocol::specification,
-    "authorization",
+    "authorization_enabled",
     "Whether nosqlprotocol authorization is enabled.",
     false);
 

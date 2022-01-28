@@ -95,11 +95,24 @@ public:
         std::string                   pwd;
         std::string                   host;
         std::string                   uuid;
-        std::vector<uint8_t>          salt;
         std::string                   custom_data; // JSON document
-        std::string                   salt_b64;
+        std::string                   salt_sha1_b64;
+        std::string                   salt_sha256_b64;
         std::vector<scram::Mechanism> mechanisms;
         std::vector<role::Role>       roles;
+
+        std::vector<uint8_t> salt_sha1() const;
+        std::vector<uint8_t> salt_sha256() const;
+
+        std::vector<uint8_t> salt(scram::Mechanism mechanism) const
+        {
+            return mechanism == scram::Mechanism::SHA_1 ? this->salt_sha1() : this->salt_sha256();
+        }
+
+        std::string salt_b64(scram::Mechanism mechanism) const
+        {
+            return mechanism == scram::Mechanism::SHA_1 ? this->salt_sha1_b64 : this->salt_sha256_b64;
+        }
     };
 
     static std::unique_ptr<UserManager> create(const std::string& name);
@@ -123,9 +136,10 @@ public:
 
     bool get_info(const std::string& mariadb_user, UserInfo* pInfo) const;
 
-    bool get_pwd(const std::string& db, const std::string& user, std::string* pPwd) const;
-
-    bool get_salt_b64(const std::string& db, const std::string& user, std::string* pSalt_b64) const;
+    bool get_info(const string_view& mariadb_user, UserInfo* pInfo) const
+    {
+        return get_info(std::string(mariadb_user.data(), mariadb_user.length()), pInfo);
+    }
 
     bool user_exists(const std::string& db, const std::string& user) const
     {

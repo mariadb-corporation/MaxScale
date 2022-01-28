@@ -35,29 +35,29 @@ const int NOSQL_UUID_STR_LEN = 37;
 static const char SQL_CREATE[] =
     "CREATE TABLE IF NOT EXISTS accounts "
     "(mariadb_user TEXT UNIQUE, db TEXT, user TEXT, pwd TEXT, host TEXT, "
-    "custom_data TEXT, uuid TEXT, salt_b64 TEXT, mechanisms TEXT, roles TEXT)";
+    "custom_data TEXT, uuid TEXT, salt_sha1_b64 TEXT, salt_sha256_b64 TEXT, roles TEXT)";
 
 static const char SQL_INSERT_HEAD[] =
-    "INSERT INTO accounts (mariadb_user, db, user, pwd, host, custom_data, uuid, salt_b64, mechanisms, roles) "
+    "INSERT INTO accounts (mariadb_user, db, user, pwd, host, custom_data, uuid, salt_sha1_b64, salt_sha256_b64, roles) "
     "VALUES ";
 
 static const char SQL_DELETE_HEAD[] =
     "DELETE FROM accounts WHERE mariadb_user = ";
 
 static const char SQL_SELECT_ONE_INFO_HEAD[] =
-    "SELECT mariadb_user, db, user, pwd, host, custom_data, uuid, salt_b64, mechanisms, roles "
+    "SELECT mariadb_user, db, user, pwd, host, custom_data, uuid, salt_sha1_b64, salt_sha256_b64, roles "
     "FROM accounts WHERE mariadb_user = ";
 
 static const char SQL_SELECT_ALL_INFOS[] =
-    "SELECT mariadb_user, db, user, pwd, host, custom_data, uuid, salt_b64, mechanisms, roles "
+    "SELECT mariadb_user, db, user, pwd, host, custom_data, uuid, salt_sha1_b64, salt_sha256_b64, roles "
     "FROM accounts";
 
 static const char SQL_SELECT_ALL_DB_INFOS_HEAD[] =
-    "SELECT mariadb_user, db, user, pwd, host, custom_data, uuid, salt_b64, mechanisms, roles "
+    "SELECT mariadb_user, db, user, pwd, host, custom_data, uuid, salt_sha1_b64, salt_sha256_b64, roles "
     "FROM accounts WHERE db = ";
 
 static const char SQL_SELECT_SOME_DB_INFOS_HEAD[] =
-    "SELECT mariadb_user, db, user, pwd, host, custom_data, uuid, salt_b64, mechanisms, roles "
+    "SELECT mariadb_user, db, user, pwd, host, custom_data, uuid, salt_sha1_b64, salt_sha256_b64, roles "
     "FROM accounts WHERE ";
 
 static const char SQL_SELECT_ALL_MARIADB_USERS_HEAD[] =
@@ -87,8 +87,18 @@ int select_info_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
     info.host = pzColumn[4];
     info.custom_data = pzColumn[5];
     info.uuid = pzColumn[6];
-    info.salt_b64 = pzColumn[7];
-    info.salt = mxs::from_base64(info.salt_b64);
+    info.salt_sha1_b64 = pzColumn[7];
+    info.salt_sha256_b64 = pzColumn[8];
+
+    if (!info.salt_sha1_b64.empty())
+    {
+        info.mechanisms.push_back(nosql::scram::Mechanism::SHA_1);
+    }
+
+    if (!info.salt_sha256_b64.empty())
+    {
+        info.mechanisms.push_back(nosql::scram::Mechanism::SHA_256);
+    }
 
     bool ok = true;
 
@@ -103,27 +113,16 @@ int select_info_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
         }
     }
 
-    vector<nosql::scram::Mechanism> mechanisms;
-    if (nosql::scram::from_json(pzColumn[8], &mechanisms))
+    vector<nosql::role::Role> roles;
+    if (nosql::role::from_json(pzColumn[9], &roles))
     {
-        info.mechanisms = std::move(mechanisms);
+        info.roles = std::move(roles);
 
-        vector<nosql::role::Role> roles;
-        if (nosql::role::from_json(pzColumn[9], &roles))
-        {
-            info.roles = std::move(roles);
-
-            pInfos->push_back(info);
-        }
-        else
-        {
-            MXS_ERROR("The 'roles' value of '%s' is not valid.", info.mariadb_user.c_str());
-            ok = false;
-        }
+        pInfos->push_back(info);
     }
     else
     {
-        MXS_ERROR("The 'mechanisms' value of '%s' is not valid.", info.mariadb_user.c_str());
+        MXS_ERROR("The 'roles' value of '%s' is not valid.", info.mariadb_user.c_str());
         ok = false;
     }
 
@@ -495,6 +494,16 @@ void role::from_bson(const bsoncxx::array::view& bson,
     pRoles->swap(roles);
 }
 
+vector<uint8_t> UserManager::UserInfo::salt_sha1() const
+{
+    return mxs::from_base64(this->salt_sha1_b64);
+}
+
+vector<uint8_t> UserManager::UserInfo::salt_sha256() const
+{
+    return mxs::from_base64(this->salt_sha256_b64);
+}
+
 UserManager::UserManager(string path, sqlite3* pDb)
     : m_path(std::move(path))
     , m_db(*pDb)
@@ -609,8 +618,35 @@ bool UserManager::add_user(const string& db,
 {
     mxb_assert(custom_data.empty() || mxb::Json().load_string(custom_data));
 
-    vector<uint8_t> salt = crypto::create_random_bytes(scram::SERVER_SALT_SIZE);
-    string salt_b64 = mxs::to_base64(salt);
+    string salt_sha1_b64;
+    string salt_sha256_b64;
+
+    for (const auto mechanism : mechanisms)
+    {
+        switch (mechanism)
+        {
+        case scram::Mechanism::SHA_1:
+            {
+                size_t hash_size = scram::ScramSHA1::HASH_SIZE;
+                size_t salt_size = hash_size - 4; // To leave room for scram stuff.
+                vector<uint8_t> salt = crypto::create_random_bytes(salt_size);
+                salt_sha1_b64 = mxs::to_base64(salt);
+            }
+            break;
+
+        case scram::Mechanism::SHA_256:
+            {
+                size_t hash_size = scram::ScramSHA256::HASH_SIZE;
+                size_t salt_size = hash_size - 4; // To leave room for scram stuff.
+                vector<uint8_t> salt = crypto::create_random_bytes(salt_size);
+                salt_sha256_b64 = mxs::to_base64(salt);
+            }
+            break;
+
+        default:
+            mxb_assert(!true);
+        }
+    }
 
     user = nosql::escape_essential_chars(user);
     pwd = nosql::escape_essential_chars(pwd);
@@ -631,8 +667,8 @@ bool UserManager::add_user(const string& db,
        << host << "', '"
        << custom_data << "', '"
        << zUuid << "', '"
-       << salt_b64 << "', '"
-       << scram::to_json(mechanisms) << "', '"
+       << salt_sha1_b64 << "', '"
+       << salt_sha256_b64 << "', '"
        << role::to_json(roles)
        << "')";
 
@@ -706,32 +742,6 @@ bool UserManager::get_info(const string& mariadb_user, UserInfo* pInfo) const
     }
 
     return !infos.empty();
-}
-
-bool UserManager::get_pwd(const string& db, const string& user, std::string* pPwd) const
-{
-    UserInfo info;
-    bool rv = get_info(db, user, &info);
-
-    if (rv)
-    {
-        *pPwd = info.pwd;
-    }
-
-    return rv;
-}
-
-bool UserManager::get_salt_b64(const string& db, const string& user, std::string* pSalt_b64) const
-{
-    UserInfo info;
-    bool rv = get_info(db, user, &info);
-
-    if (rv)
-    {
-        *pSalt_b64 = info.salt_b64;
-    }
-
-    return rv;
 }
 
 vector<UserManager::UserInfo> UserManager::get_infos() const
@@ -887,8 +897,20 @@ bool UserManager::update(const string& db, const string& user, uint32_t what, co
 
     if (what & UserInfo::MECHANISMS)
     {
-        ss << delimiter << "mechanisms = '" << scram::to_json(info.mechanisms) << "'";
-        delimiter = ", ";
+        auto begin = info.mechanisms.begin();
+        auto end = info.mechanisms.end();
+
+        if (std::find(begin, end, scram::Mechanism::SHA_1) == end)
+        {
+            ss << delimiter << "salt_sha1_b64 = ''";
+            delimiter = ", ";
+        }
+
+        if (std::find(begin, end, scram::Mechanism::SHA_256) == end)
+        {
+            ss << delimiter << "salt_sha256_b64 = ''";
+            delimiter = ", ";
+        }
     }
 
     if (what & UserInfo::PWD)

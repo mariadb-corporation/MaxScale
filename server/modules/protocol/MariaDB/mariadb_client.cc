@@ -1945,7 +1945,7 @@ bool MariaDBClientConnection::parse_ssl_request_packet(GWBUF* buffer)
         packet_parser::ByteVec data;
         data.resize(CLIENT_CAPABILITIES_LEN);
         gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, CLIENT_CAPABILITIES_LEN, data.data());
-        auto res = packet_parser::parse_client_capabilities(data, MYSQL_session::ClientCapabilities());
+        auto res = packet_parser::parse_client_capabilities(data, m_session_data->client_caps);
         m_session_data->client_caps = res.capabilities;
         m_session_data->auth_data->collation = res.collation;
         rval = true;

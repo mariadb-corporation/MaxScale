@@ -902,7 +902,10 @@ add_test_executable(mxs3881_ldli_trx_replay.cc mxs3881_ldli_trx_replay mxs3881_l
 add_test_executable(mxs3894_trx_checksum.cc mxs3894_trx_checksum mxs3894_trx_checksum LABELS REPL_BACKEND readwritesplit)
 
 # MXS-3920: Unicode characters in database names don't work
-add_test_executable(mxs3920_unicode_db.cc mxs3920_unicode_db replication LABELS REPL_BACKEND REPL_BACKEND)
+add_test_executable(mxs3920_unicode_db.cc mxs3920_unicode_db replication LABELS REPL_BACKEND)
+
+# MXS-3959: Transaction replay doesn't reset transaction on implicit commit
+add_test_executable(mxs3959_implicit_commit.cc mxs3959_implicit_commit mxs3959_implicit_commit LABELS REPL_BACKEND readwritesplit)
 
 # MXS-3924: Session commands aren't retried when delayed_retry is enabled
 add_test_executable(mxs3924_sescmd_retry.cc mxs3924_sescmd_retry mxs3924_sescmd_retry LABELS REPL_BACKEND readwritesplit)
