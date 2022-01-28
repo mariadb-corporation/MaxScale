@@ -33,15 +33,22 @@ Reader::PollData::PollData(Reader* reader, mxb::Worker* worker)
 {
 }
 
-Reader::Reader(Callback cb, const Config& conf, mxb::Worker* worker, const maxsql::GtidList& start_gl,
+Reader::Reader(Callback cb,
+               const Config& conf,
+               mxb::Worker* worker,
+               const maxsql::GtidList& start_gl,
                const std::chrono::seconds& heartbeat_interval)
-    : m_cb(cb)
+    : m_send_callback(cb)
     , m_inventory(conf)
     , m_reader_poll_data(this, worker)
     , m_worker(worker)
     , m_start_gtid_list(start_gl)
     , m_heartbeat_interval(heartbeat_interval)
     , m_last_event(std::chrono::steady_clock::now())
+{
+}
+
+void Reader::start()
 {
     auto gtid_list = m_inventory.rpl_state();
 
@@ -61,7 +68,8 @@ void Reader::start_reading()
 {
     m_sFile_reader.reset(new FileReader(m_start_gtid_list, &m_inventory));
     m_worker->add_fd(m_sFile_reader->fd(), EPOLLIN, &m_reader_poll_data);
-    handle_messages();
+
+    send_events();
 
     if (m_heartbeat_interval.count())
     {
@@ -111,11 +119,6 @@ bool Reader::poll_start_reading(mxb::Worker::Call::action_t action)
 
 Reader::~Reader()
 {
-    if (m_dcid)
-    {
-        m_worker->cancel_delayed_call(m_dcid);
-    }
-
     if (m_startup_poll_dcid)
     {
         m_worker->cancel_delayed_call(m_startup_poll_dcid);
@@ -125,6 +128,11 @@ Reader::~Reader()
     {
         m_worker->cancel_delayed_call(m_heartbeat_dcid);
     }
+}
+
+void Reader::set_in_high_water(bool in_high_water)
+{
+    m_in_high_water = in_high_water;
 }
 
 uint32_t Reader::epoll_update(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events)
@@ -138,64 +146,29 @@ uint32_t Reader::epoll_update(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t 
 void Reader::notify_concrete_reader(uint32_t events)
 {
     m_sFile_reader->fd_notify(events);
-    handle_messages();
+    send_events();
 }
 
-void Reader::handle_messages()
+void Reader::send_events()
 {
-    if (m_dcid == 0)
+    maxsql::RplEvent event;
+    while (!m_in_high_water && (event = m_sFile_reader->fetch_event()))
     {
-        while ((m_event = m_sFile_reader->fetch_event()))
-        {
-            if (!m_cb(m_event))
-            {
-                // Note: This is a very crude, albeit simple, form of flow control. Installing event handlers
-                // that deal with the outbound network buffer being full would be far more efficient.
-                m_dcid = m_worker->delayed_call(10, &Reader::resend_event, this);
-                break;
-            }
-
-            m_last_event = std::chrono::steady_clock::now();
-        }
+        m_send_callback(event);
+        m_last_event = maxbase::Clock::now();
     }
-}
-
-bool Reader::resend_event(mxb::Worker::Call::action_t action)
-{
-    bool call_again = false;
-
-    if (action == mxb::Worker::Call::EXECUTE)
-    {
-        mxb_assert(m_event);
-
-        // Try to process the event we failed to process earlier
-        if (m_cb(m_event))
-        {
-            // Event successfully processed, try to continue event processing. Clearing out m_dcid before the
-            // call allows handle_messages to install a new delayed call in case we have more data than we can
-            // send in one go.
-            m_dcid = 0;
-            handle_messages();
-        }
-        else
-        {
-            // Event still cannot be processed, keep retrying.
-            call_again = true;
-        }
-    }
-
-    return call_again;
 }
 
 bool Reader::generate_heartbeats(mxb::Worker::Call::action_t action)
 {
-    auto now = std::chrono::steady_clock::now();
+    auto now = maxbase::Clock::now();
 
-    // Only send heartbeats if the connection is idle and no data is buffered.
+    // Only send heartbeats if the connection is idle
     if (action == mxb::Worker::Call::EXECUTE
-        && now - m_last_event >= m_heartbeat_interval && m_dcid == 0)
+        && !m_in_high_water
+        && now - m_last_event >= m_heartbeat_interval)
     {
-        m_cb(m_sFile_reader->create_heartbeat_event());
+        m_send_callback(m_sFile_reader->create_heartbeat_event());
         m_last_event = now;
     }
 
