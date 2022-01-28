@@ -16,7 +16,7 @@ void test_reads(TestConnections& test)
     auto conn = test.maxscale->rwsplit();
     conn.connect();
     test.expect(conn.query("CREATE OR REPLACE TABLE " + table + " (a INT)"),
-                "Table creation should work: %s", conn.error());
+                "Table creation should work: %u, %s", conn.thread_id(), conn.error());
     conn.disconnect();
 
     auto secondary = test.maxscale->rwsplit();
@@ -27,7 +27,7 @@ void test_reads(TestConnections& test)
         test.reset_timeout();
         conn.connect();
         test.expect(conn.query("INSERT INTO " + table + " VALUES ('" + std::to_string(i) + "')"),
-                    "INSERT should work: %s", conn.error());
+                    "INSERT should work: %u, %s", conn.thread_id(), conn.error());
 
         // Existing connections should also see the inserted rows
         auto count = atoi(secondary.field("SELECT COUNT(*) FROM " + table).c_str());
@@ -49,7 +49,7 @@ void test_queries(TestConnections& test, std::initializer_list<std::string> befo
     auto conn = test.maxscale->rwsplit();
     conn.connect();
     test.expect(conn.query("CREATE OR REPLACE TABLE " + table + " (a INT)"),
-                "Table creation should work: %s", conn.error());
+                "Table creation should work: %u, %s", conn.thread_id(), conn.error());
     conn.disconnect();
 
     for (int i = 0; i < 100 && running && test.ok(); i++)
@@ -59,19 +59,21 @@ void test_queries(TestConnections& test, std::initializer_list<std::string> befo
 
         for (const auto& query : before)
         {
-            test.expect(conn.query(query), "%s should work: %s", query.c_str(), conn.error());
+            test.expect(conn.query(query),
+                        "%s should work: %u, %s", query.c_str(), conn.thread_id(), conn.error());
         }
 
         bool ok = conn.query("INSERT INTO " + table + " VALUES ('" + std::to_string(i) + "')");
         bool ro_error = conn.errnum() == ER_CANT_EXECUTE_IN_READ_ONLY_TRANSACTION && ignore_errors;
-        test.expect(ok || ignore_errors, "INSERT should work: %s", conn.error());
+        test.expect(ok || ignore_errors, "INSERT should work: %u, %s", conn.thread_id(), conn.error());
         auto first_count = atoi(conn.field("SELECT COUNT(*) FROM " + table).c_str());
         test.expect(first_count == i + 1 || ro_error, "Missing %d rows.", (i + 1) - first_count);
 
 
         for (const auto& query : after)
         {
-            test.expect(conn.query(query), "%s should work: %s", query.c_str(), conn.error());
+            test.expect(conn.query(query),
+                        "%s should work: %u, %s", query.c_str(), conn.thread_id(), conn.error());
         }
 
         conn.disconnect();
