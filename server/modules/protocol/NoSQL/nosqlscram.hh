@@ -99,6 +99,8 @@ public:
 
     virtual size_t hash_size() const = 0;
 
+    virtual std::string get_digested_password(const std::string& user, const std::string& password) const = 0;
+
     virtual std::vector<uint8_t> Hi(const std::string& password,
                                     const std::vector<uint8_t>& salt,
                                     size_t iterations) const = 0;
@@ -130,6 +132,8 @@ public:
 
     size_t hash_size() const override;
 
+    std::string get_digested_password(const std::string& user, const std::string& password) const override;
+
     std::vector<uint8_t> Hi(const std::string& password,
                             const std::vector<uint8_t>& salt,
                             size_t iterations) const override;
@@ -153,6 +157,8 @@ public:
     static constexpr size_t HASH_SIZE = NOSQL_SHA_256_HASH_SIZE;
 
     size_t hash_size() const override;
+
+    std::string get_digested_password(const std::string& user, const std::string& password) const override;
 
     std::vector<uint8_t> Hi(const std::string& password,
                             const std::vector<uint8_t>& salt,

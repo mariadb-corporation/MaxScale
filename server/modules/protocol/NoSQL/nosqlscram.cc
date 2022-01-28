@@ -16,8 +16,11 @@
 #include <openssl/hmac.h>
 #include <openssl/md5.h>
 #include <openssl/sha.h>
+#include <maxbase/alloc.h>
 #include <maxbase/json.hh>
 #include <maxbase/worker.hh>
+#define MONGOC_INSIDE
+#include <mongoc-scram-private.h>
 
 using namespace std;
 
@@ -318,6 +321,12 @@ size_t ScramSHA1::hash_size() const
     return HASH_SIZE;
 }
 
+string ScramSHA1::get_digested_password(const std::string& user, const std::string& password) const
+{
+    string digested_password = user + ":mongo:" + password;
+    return crypto::md5hex(digested_password);
+}
+
 vector<uint8_t> ScramSHA1::Hi(const string& password, const vector<uint8_t>& salt, size_t iterations) const
 {
     return scram::pbkdf2_hmac_sha_1(password, salt, iterations);
@@ -348,6 +357,24 @@ const ScramSHA256& ScramSHA256::get()
 size_t ScramSHA256::hash_size() const
 {
     return HASH_SIZE;
+}
+
+string ScramSHA256::get_digested_password(const std::string&, const std::string& password) const
+{
+    bson_error_t error;
+    char* zPassword = _mongoc_sasl_prep(password.data(), password.length(), &error);
+
+    if (!zPassword)
+    {
+        ostringstream ss;
+        ss << "Could not digest password: " << error.message;
+        throw SoftError(ss.str(), error::INTERNAL_ERROR);
+    }
+
+    string digested_password = zPassword;
+    MXS_FREE(zPassword);
+
+    return digested_password;
 }
 
 vector<uint8_t> ScramSHA256::Hi(const string& password, const vector<uint8_t>& salt, size_t iterations) const
