@@ -2205,7 +2205,7 @@ bool MariaDBServer::update_enabled_events()
  *
  * @param server The server to update
  */
-void MariaDBServer::update_server(bool time_to_update_disk_space)
+void MariaDBServer::update_server(bool time_to_update_disk_space, bool first_tick)
 {
     auto server = this;
     m_new_events.clear();
@@ -2265,8 +2265,9 @@ void MariaDBServer::update_server(bool time_to_update_disk_space)
         }
 
         /* Log connect failure only once, that is, if server was RUNNING or MAINTENANCE during last
-         * iteration. If we failed to log in due to authentication failure, log that as well. */
-        if (server->had_status(SERVER_RUNNING) || server->had_status(SERVER_MAINT)
+         * iteration. Always log on first tick. If we failed to log in due to authentication failure,
+         * log that as well. */
+        if (first_tick || server->had_status(SERVER_RUNNING) || server->had_status(SERVER_MAINT)
             || (conn_status == ConnectResult::ACCESS_DENIED && !server->had_status(SERVER_AUTH_ERROR)))
         {
             mon_srv->log_connect_error(conn_status);

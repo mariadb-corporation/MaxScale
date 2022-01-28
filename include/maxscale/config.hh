@@ -143,6 +143,7 @@ public:
                                                      */
     config::Milliseconds rebalance_period;          /**< How often should rebalancing be made. */
     config::Count        rebalance_window;          /**< How many seconds should be taken into account. */
+    config::Bool         skip_name_resolve;         /**< Reverse DNS lookups */
 
     // NON-modifiable automatically configured parameters.
     int64_t       n_threads;                    /**< Number of polling threads */
@@ -243,6 +244,7 @@ private:
     static config::ParamInteger                         s_rebalance_threshold;
     static config::ParamMilliseconds                    s_rebalance_period;
     static config::ParamCount                           s_rebalance_window;
+    static config::ParamBool                            s_skip_name_resolve;
 
     static ParamThreadsCount                            s_n_threads;
     static config::ParamString                          s_qc_name;

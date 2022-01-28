@@ -1625,7 +1625,8 @@ UserDatabase::address_matches_host_pattern(const std::string& addr, const UserEn
         {
             // Need a reverse lookup on the client address. This is slow. TODO: use a separate thread/cache
             string resolved_addr;
-            if (mxb::reverse_name_lookup(addr, &resolved_addr))
+            if (!mxs::Config::get().skip_name_resolve.get()
+                && mxb::reverse_name_lookup(addr, &resolved_addr))
             {
                 if (like(host_pattern, resolved_addr))
                 {
