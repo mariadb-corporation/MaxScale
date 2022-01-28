@@ -1960,14 +1960,17 @@ uint32_t MariaDBBackendConnection::create_capabilities(bool with_ssl, uint64_t c
 {
     uint32_t final_capabilities = m_auth_data.client_data->client_capabilities();
 
+    // Disable the cert verification capability, it has never been enabled in MaxScale.
+    // TODO: Figure out if this is correct, the documentation doesn't mention this capability at all
+    final_capabilities &= ~GW_MYSQL_CAPABILITIES_SSL_VERIFY_SERVER_CERT;
+
     if (with_ssl)
     {
         final_capabilities |= (uint32_t)GW_MYSQL_CAPABILITIES_SSL;
-        /*
-         * Unclear whether we should include this
-         * Maybe it should depend on whether CA certificate is provided
-         * final_capabilities |= (uint32_t)GW_MYSQL_CAPABILITIES_SSL_VERIFY_SERVER_CERT;
-         */
+    }
+    else
+    {
+        final_capabilities &= ~GW_MYSQL_CAPABILITIES_SSL;
     }
 
     if (rcap_type_required(capabilities, RCAP_TYPE_SESSION_STATE_TRACKING))
@@ -1975,6 +1978,28 @@ uint32_t MariaDBBackendConnection::create_capabilities(bool with_ssl, uint64_t c
         /** add session track */
         final_capabilities |= (uint32_t)GW_MYSQL_CAPABILITIES_SESSION_TRACK;
     }
+
+    // We need to enable the CONNECT_WITH_DB capability depending on whether a default database exists. We
+    // can't rely on the client's capabilities as the default database might have changed when a
+    // COM_CHANGE_USER is executed.
+    if (!m_auth_data.client_data->auth_data->default_db.empty())
+    {
+        final_capabilities |= GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB;
+    }
+    else
+    {
+        final_capabilities &= ~GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB;
+    }
+
+    // The current handshake response generation code assumes that the follwing capabilites are always
+    // enabled. Since the plugin is always mysql_native_password, the AUTH_LELENC_DATA isn't really needed as
+    // the auth data size is always 20 bytes and both the length-encoded string representation and the string
+    // prefixed with fixed size integer representation are the same for payloads less than 251 bytes.
+    //
+    // TODO: Send a handshake response that the client's original capabilities would require
+    final_capabilities |= GW_MYSQL_CAPABILITIES_PLUGIN_AUTH
+        | GW_MYSQL_CAPABILITIES_SECURE_CONNECTION
+        | GW_MYSQL_CAPABILITIES_AUTH_LENENC_DATA;
 
     return final_capabilities;
 }
