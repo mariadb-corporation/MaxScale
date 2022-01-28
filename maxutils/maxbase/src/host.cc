@@ -88,6 +88,7 @@ static std::vector<std::string> host_type_names = {"Invalid", "UnixDomainSocket"
 
 namespace maxbase
 {
+
 std::string to_string(Host::Type type)
 {
     size_t i = size_t(type);

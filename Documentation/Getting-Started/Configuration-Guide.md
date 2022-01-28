@@ -427,6 +427,22 @@ seconds is considered when deciding whether work should be moved.
 
 The minimum value is 1 and the maximum 60.
 
+### `skip_name_resolve`
+
+- **Type**: boolean
+- **Default**: false
+- **Dynamic**: Yes
+
+This parameter controls whether reverse domain name lookups are made to convert
+client IP addresses to hostnames. If enabled, client IP addresses will not be
+resolved to hostnames during authentication or for the REST API even if requested.
+
+If you have database users that use a hostname in the host part of the user
+(i.e. `'user'@'my-hostname.org'`), a reverse lookup on the client IP address is
+done to see if it matches the host. Reverse DNS lookups can be very slow which
+is why it is recommended that they are disabled and that users are defined using
+an IP address.
+
 ### `auth_connect_timeout`
 
 Duration, default 10s. This setting defines the connection timeout when

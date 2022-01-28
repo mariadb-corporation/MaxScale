@@ -1137,12 +1137,21 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
 
     if (m_config.transaction_replay && trx_is_open())
     {
-        mxb_assert(!m_trx.target() || m_trx.target() == target);
-
         if (!m_trx.target())
         {
             MXS_INFO("Transaction starting on '%s'", target->name());
             m_trx.set_target(target);
+        }
+        else if (trx_is_starting())
+        {
+            MXS_INFO("Transaction did not finish on '%s' before a new one started on '%s'",
+                     m_trx.target()->name(), target->name());
+            m_trx.close();
+            m_trx.set_target(target);
+        }
+        else
+        {
+            mxb_assert(m_trx.target() == target);
         }
     }
 

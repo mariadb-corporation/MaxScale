@@ -71,4 +71,6 @@ int main(int argc, char** argv)
     {
         other.query("DROP DATABASE `" + db + "`");
     }
+
+    return test.global_result;
 }
