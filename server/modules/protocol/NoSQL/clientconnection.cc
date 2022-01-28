@@ -38,6 +38,7 @@ ClientConnection::ClientConnection(const GlobalConfig& config,
     , m_session_data(*static_cast<MYSQL_session*>(pSession->protocol_data()))
     , m_nosql(pSession, this, pDownstream, &m_config, pUm)
 {
+    prepare_session();
 }
 
 ClientConnection::~ClientConnection()
@@ -239,13 +240,9 @@ bool ClientConnection::setup_session(const string& user, const string& password)
 {
     mxb_assert(!is_ready());
 
-    m_session_data.auth_data = std::make_unique<mariadb::AuthenticationData>();
     auto& auth_data = *m_session_data.auth_data;
     auth_data.user = user;
     m_session.set_user(auth_data.user);
-    auth_data.default_db = "";
-    m_session_data.current_db = "";
-    auth_data.plugin = "mysql_native_password";
 
     if (!password.empty())
     {
@@ -258,6 +255,25 @@ bool ClientConnection::setup_session(const string& user, const string& password)
         // This will be used when authenticating with the backend.
         auth_data.backend_token.assign(auth_token, auth_token + SHA_DIGEST_LENGTH);
     }
+
+    bool ready = m_session.start();
+
+    if (ready)
+    {
+        m_state = READY;
+    }
+
+    return ready;
+}
+
+void ClientConnection::prepare_session()
+{
+    mxb_assert(!is_ready());
+
+    m_session_data.auth_data = std::make_unique<mariadb::AuthenticationData>();
+    auto& auth_data = *m_session_data.auth_data;
+    auth_data.default_db = "";
+    auth_data.plugin = "mysql_native_password";
 
     const auto& authenticators = m_session.listener_data()->m_authenticators;
     mxb_assert(authenticators.size() == 1);
@@ -289,15 +305,6 @@ bool ClientConnection::setup_session(const string& user, const string& password)
 
     m_session_data.history.push_back(mxs::Buffer(pStmt));
     m_session_data.history_responses.insert(std::make_pair(id, true));
-
-    bool ready = m_session.start();
-
-    if (ready)
-    {
-        m_state = READY;
-    }
-
-    return ready;
 }
 
 GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)

@@ -73,6 +73,8 @@ private:
 private:
     GWBUF* handle_one_packet(GWBUF* pPacket);
 
+    void prepare_session();
+
 private:
     State          m_state { CONNECTED };
     nosql::Config  m_config;
