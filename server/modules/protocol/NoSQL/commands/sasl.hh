@@ -99,7 +99,20 @@ public:
 private:
     void authenticate(scram::Mechanism mechanism, string_view payload, DocumentBuilder& doc)
     {
-        MXS_NOTICE("Payload: %.*s", (int)payload.length(), payload.data());
+        unique_ptr<NoSQL::Sasl> sSasl = m_database.context().get_sasl();
+
+        if (sSasl)
+        {
+            throw SoftError("Was expecting saslContinue, authentication attempt aborted",
+                            error::PROTOCOL_ERROR);
+        }
+
+        // TODO: Make it possible to re-authenticate, i.e. generate COM_CHANGE_USER and whatnot.
+        if (m_database.context().authenticated())
+        {
+            throw SoftError("Client already authenticated, re-authentication not yet supported.",
+                            error::AUTHENTICATION_FAILED);
+        }
 
         // We are expecting a string like "n,,n=USER,r=NONCE" where "n,," is the gs2 header,
         // USER is the user name and NONCE the nonce created by the client.
@@ -157,7 +170,7 @@ private:
 
         auto client_nonce_b64 = payload.substr(i + 2); // Skip "r="
 
-        unique_ptr<NoSQL::Sasl> sSasl { new NoSQL::Sasl };
+        sSasl.reset(new NoSQL::Sasl);
 
         sSasl->set_user_info(std::move(info));
         sSasl->set_gs2_header(gs2_header);
@@ -211,9 +224,14 @@ public:
 
     void populate_response(DocumentBuilder& doc) override
     {
-        auto conversation_id = required<int32_t>(key::CONVERSATION_ID);
-
         unique_ptr<NoSQL::Sasl> sSasl = m_database.context().get_sasl();
+
+        if (!sSasl)
+        {
+            throw SoftError("No SASL session state found", error::PROTOCOL_ERROR);
+        }
+
+        auto conversation_id = required<int32_t>(key::CONVERSATION_ID);
 
         if (conversation_id != sSasl->conversation_id())
         {
