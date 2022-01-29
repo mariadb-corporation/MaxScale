@@ -280,7 +280,7 @@ DCB::ReadResult DCB::read(uint32_t min_bytes, uint32_t max_bytes)
     return rval;
 }
 
-int DCB::read(GWBUF** ppHead, int maxbytes)
+int DCB::read(GWBUF** ppHead, size_t maxbytes)
 {
     mxb_assert(this->owner == RoutingWorker::get_current());
     mxb_assert(m_fd != FD_CLOSED);
@@ -322,49 +322,20 @@ int DCB::read(GWBUF** ppHead, int maxbytes)
     }
     else
     {
-        if (maxbytes > 0 && nreadtotal >= maxbytes)
+        if (maxbytes > 0 && (size_t)nreadtotal >= maxbytes)
         {
             // Already have enough data. May have more, so read again later.
             trigger_read_event();
         }
         else
         {
-            int nsingleread = 0;
-            while (0 == maxbytes || nreadtotal < maxbytes)
+            if (basic_read(maxbytes))
             {
-                int bytes_available = socket_bytes_readable();
-
-                if (bytes_available <= 0)
-                {
-                    if (bytes_available < 0)
-                    {
-                        nreadtotal = -1;
-                    }
-                    else
-                    {
-                        /** Handle closed client socket */
-                        nreadtotal = dcb_read_no_bytes_available(this, m_fd, nreadtotal);
-                    }
-                    break;
-                }
-                else
-                {
-                    GWBUF* buffer = basic_read(bytes_available, maxbytes, nreadtotal, &nsingleread);
-                    if (buffer)
-                    {
-                        m_last_read = mxs_clock();
-                        nreadtotal += nsingleread;
-                        MXS_DEBUG("Read %d bytes from dcb %p in state %s fd %d.",
-                                  nsingleread, this, mxs::to_string(m_state), m_fd);
-
-                        /*< Append read data to the gwbuf */
-                        m_readq = gwbuf_append(m_readq, buffer);
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
+                nreadtotal = m_readq->length();
+            }
+            else
+            {
+                nreadtotal = -1;
             }
         }
     }
@@ -437,45 +408,105 @@ static int dcb_read_no_bytes_available(DCB* dcb, int fd, int nreadtotal)
 }
 
 /**
- * Basic read function to carry out a single read operation on the DCB socket.
+ * Basic read function. Reads bytes from socket.
  *
- * @param dcb               The DCB to read from
- * @param bytesavailable    Pointer to linked list to append data to
- * @param maxbytes          Maximum bytes to read (0 = no limit)
- * @param nreadtotal        Total number of bytes already read
- * @param nsingleread       To be set as the number of bytes read this time
- * @return                  GWBUF* buffer containing new data, or null.
+ * @param maxbytes Maximum bytes to read (0 = no limit)
  */
-GWBUF* DCB::basic_read(int bytesavailable, int maxbytes, int nreadtotal, int* nsingleread)
+bool DCB::basic_read(size_t maxbytes)
 {
-    GWBUF* buffer;
-    int bufsize = maxbytes == 0 ? bytesavailable : MXS_MIN(bytesavailable, maxbytes - nreadtotal);
-
-    if ((buffer = gwbuf_alloc(bufsize)) == NULL)
-    {
-        *nsingleread = -1;
-    }
-    else
-    {
-        *nsingleread = ::read(m_fd, GWBUF_DATA(buffer), bufsize);
-        m_stats.n_reads++;
-
-        if (*nsingleread <= 0)
-        {
-            if (errno != 0 && errno != EAGAIN && errno != EWOULDBLOCK)
+    auto calc_read_limit = [this, maxbytes](bool expect_more) {
+            // The guess is tricky. Higher values mean less reallocations, but also more wasted memory.
+            const size_t base_read_size_limit = expect_more ? 4096 : 128;
+            size_t max_read;
+            if (maxbytes > 0)
             {
-                MXS_ERROR("Read failed, dcb %p in state %s fd %d: %d, %s",
-                          this,
-                          mxs::to_string(m_state),
-                          m_fd,
-                          errno,
-                          mxs_strerror(errno));
+                max_read = std::min(maxbytes - m_readq->length(), base_read_size_limit);
             }
-            gwbuf_free(buffer);
-            buffer = NULL;
+            else
+            {
+                max_read = base_read_size_limit;
+            }
+            return max_read;
+        };
+
+    bool keep_reading = true;
+    bool expect_more_data = true;
+    bool socket_cleared = false;
+    bool success = true;
+    size_t bytes_from_socket = 0;
+
+    while (keep_reading)
+    {
+        auto max_read = calc_read_limit(expect_more_data);
+        auto ptr = m_readq->prepare_to_write(max_read);
+        auto ret = ::read(m_fd, ptr, max_read);
+        m_stats.n_reads++;
+        if (ret > 0)
+        {
+            m_readq->write_complete(ret);
+            bytes_from_socket += ret;
+            if (ret < (int64_t)max_read)
+            {
+                // Likely no more data is available and next read will give an error or eof. No need to
+                // enlarge buffer as much as before.
+                expect_more_data = false;
+            }
+            else
+            {
+                expect_more_data = true;
+            }
+
+            mxb_assert(maxbytes == 0 || m_readq->length() <= maxbytes);
+            if (maxbytes > 0 && m_readq->length() == maxbytes)
+            {
+                keep_reading = false;
+            }
+        }
+        else if (ret == 0)
+        {
+            // Eof, received on disconnect. This can happen repeatedly in an endless loop. Assume that fd is
+            // cleared and will trigger epoll if needed.
+            keep_reading = false;
+            socket_cleared = true;
+        }
+        else
+        {
+            int eno = errno;
+            if (eno == EAGAIN || eno == EWOULDBLOCK)
+            {
+                // Done for now, no more can be read.
+                keep_reading = false;
+                socket_cleared = true;
+            }
+            else if (eno == EINTR)
+            {
+                // Just try again.
+            }
+            else
+            {
+                // Unexpected error.
+                MXB_ERROR("Read from socket fd %i failed. Error %i: %s. Dcb in state %s.",
+                          m_fd, eno, mxb_strerror(eno), mxs::to_string(m_state));
+                keep_reading = false;
+                socket_cleared = true;
+                success = false;
+            }
         }
     }
-    return buffer;
+
+    if (success)
+    {
+        if (bytes_from_socket > 0)
+        {
+            m_last_read = mxs_clock();      // Empty reads do not delay idle status.
+        }
+        if (!socket_cleared)
+        {
+            // TODO: uncomment the next line once protocol code handles it properly.
+            // trigger_read_event();   // Edge-triggered, so add to ready list.
+        }
+    }
+    return success;
 }
 
 /**

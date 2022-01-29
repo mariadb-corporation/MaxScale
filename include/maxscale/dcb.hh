@@ -281,7 +281,7 @@ public:
      *
      * @note The read operation will return data from the readq and the network.
      */
-    int read(GWBUF** ppHead, int maxbytes);
+    int read(GWBUF** ppHead, size_t maxbytes);
 
     struct ReadResult
     {
@@ -680,7 +680,7 @@ private:
 
     bool m_open {true};     /**< Is dcb still open, i.e. close() not called? */
 
-    GWBUF* basic_read(int bytesavailable, int maxbytes, int nreadtotal, int* nsingleread);
+    bool basic_read(size_t maxbytes);
 
     int    read_SSL();
     GWBUF* basic_read_SSL(int* nsingleread);
