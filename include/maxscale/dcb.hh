@@ -682,7 +682,7 @@ private:
 
     GWBUF* basic_read(int bytesavailable, int maxbytes, int nreadtotal, int* nsingleread);
 
-    int    read_SSL(GWBUF** head);
+    int    read_SSL();
     GWBUF* basic_read_SSL(int* nsingleread);
 
     int socket_write_SSL(GWBUF* writeq, bool* stop_writing);

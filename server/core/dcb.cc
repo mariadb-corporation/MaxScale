@@ -292,13 +292,15 @@ int DCB::read(GWBUF** ppHead, int maxbytes)
         return -1;
     }
 
-    GWBUF* result_buf = m_readq;
-    m_readq = nullptr;
-    int nreadtotal = result_buf ? result_buf->length() : 0;
+    if (!m_readq)
+    {
+        m_readq = new GWBUF;
+    }
+    int nreadtotal = m_readq->length();
 
     if (m_encryption.state == SSLState::ESTABLISHED)
     {
-        int n = read_SSL(&result_buf);
+        int n = read_SSL();
         if (n < 0)
         {
             if (nreadtotal != 0)
@@ -320,46 +322,65 @@ int DCB::read(GWBUF** ppHead, int maxbytes)
     }
     else
     {
-        int nsingleread = 0;
-        while (0 == maxbytes || nreadtotal < maxbytes)
+        if (maxbytes > 0 && nreadtotal >= maxbytes)
         {
-            int bytes_available = socket_bytes_readable();
-
-            if (bytes_available <= 0)
+            // Already have enough data. May have more, so read again later.
+            trigger_read_event();
+        }
+        else
+        {
+            int nsingleread = 0;
+            while (0 == maxbytes || nreadtotal < maxbytes)
             {
-                if (bytes_available < 0)
-                {
-                    nreadtotal = -1;
-                }
-                else
-                {
-                    /** Handle closed client socket */
-                    nreadtotal = dcb_read_no_bytes_available(this, m_fd, nreadtotal);
-                }
-                break;
-            }
-            else
-            {
-                GWBUF* buffer = basic_read(bytes_available, maxbytes, nreadtotal, &nsingleread);
-                if (buffer)
-                {
-                    m_last_read = mxs_clock();
-                    nreadtotal += nsingleread;
-                    MXS_DEBUG("Read %d bytes from dcb %p in state %s fd %d.",
-                              nsingleread, this, mxs::to_string(m_state), m_fd);
+                int bytes_available = socket_bytes_readable();
 
-                    /*< Append read data to the gwbuf */
-                    result_buf = gwbuf_append(result_buf, buffer);
-                }
-                else
+                if (bytes_available <= 0)
                 {
+                    if (bytes_available < 0)
+                    {
+                        nreadtotal = -1;
+                    }
+                    else
+                    {
+                        /** Handle closed client socket */
+                        nreadtotal = dcb_read_no_bytes_available(this, m_fd, nreadtotal);
+                    }
                     break;
+                }
+                else
+                {
+                    GWBUF* buffer = basic_read(bytes_available, maxbytes, nreadtotal, &nsingleread);
+                    if (buffer)
+                    {
+                        m_last_read = mxs_clock();
+                        nreadtotal += nsingleread;
+                        MXS_DEBUG("Read %d bytes from dcb %p in state %s fd %d.",
+                                  nsingleread, this, mxs::to_string(m_state), m_fd);
+
+                        /*< Append read data to the gwbuf */
+                        m_readq = gwbuf_append(m_readq, buffer);
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
             }
         }
     }
 
-    *ppHead = result_buf;
+    if (nreadtotal > 0)
+    {
+        if (maxbytes > 0 && m_readq->length() > (size_t)maxbytes)
+        {
+            *ppHead = gwbuf_split(&m_readq, maxbytes);
+        }
+        else
+        {
+            *ppHead = m_readq;
+            m_readq = nullptr;
+        }
+    }
     return nreadtotal;
 }
 
@@ -459,32 +480,28 @@ GWBUF* DCB::basic_read(int bytesavailable, int maxbytes, int nreadtotal, int* ns
 
 /**
  * General purpose read routine to read data from a socket through the SSL
- * structure lined with this DCB and append it to a linked list of buffers.
- * The list may be empty, in which case *head == NULL. The SSL structure should
+ * structure lined with this DCB. The SSL structure should
  * be initialized and the SSL handshake should be done.
  *
- * @param dcb   The DCB to read from
- * @param head  Pointer to linked list to append data to
- * @return      -1 on error, otherwise the total number of bytes read
+ * @return -1 on error, otherwise the total number of bytes read
  */
-int DCB::read_SSL(GWBUF** head)
+int DCB::read_SSL()
 {
     mxb_assert(m_fd != FD_CLOSED);
 
-    GWBUF* buffer;
-    int nsingleread = 0, nreadtotal = 0;
-    int start_length = *head ? gwbuf_length(*head) : 0;
+    int nsingleread = 0;
+    int nreadtotal = m_readq->length();
 
     if (m_encryption.write_want_read)
     {
         writeq_drain();
     }
 
-    buffer = basic_read_SSL(&nsingleread);
+    GWBUF* buffer = basic_read_SSL(&nsingleread);
     if (buffer)
     {
         nreadtotal += nsingleread;
-        *head = gwbuf_append(*head, buffer);
+        m_readq = gwbuf_append(m_readq, buffer);
 
         while (buffer)
         {
@@ -493,12 +510,10 @@ int DCB::read_SSL(GWBUF** head)
             {
                 nreadtotal += nsingleread;
                 /*< Append read data to the gwbuf */
-                *head = gwbuf_append(*head, buffer);
+                m_readq = gwbuf_append(m_readq, buffer);
             }
         }
     }
-
-    mxb_assert((*head ? gwbuf_length(*head) : 0) == (size_t)(start_length + nreadtotal));
 
     return nsingleread < 0 ? nsingleread : nreadtotal;
 }
