@@ -15,6 +15,7 @@
 
 #include <maxbase/hexdump.hh>
 #include <maxbase/log.hh>
+#include <maxscale/routingworker.hh>
 
 #include <iostream>
 #include <iomanip>
@@ -152,10 +153,21 @@ void Reader::notify_concrete_reader(uint32_t events)
 void Reader::send_events()
 {
     maxsql::RplEvent event;
-    while (!m_in_high_water && (event = m_sFile_reader->fetch_event()))
+    maxbase::Timer timer(1ms);
+    bool timer_alarm = false;
+    while (!m_in_high_water && (event = m_sFile_reader->fetch_event()) && !(timer_alarm = timer.alarm()))
     {
         m_send_callback(event);
         m_last_event = maxbase::Clock::now();
+    }
+
+    if (timer_alarm)
+    {
+        auto callback = [this]() {
+                send_events();
+            };
+
+        mxs::RoutingWorker::get_current()->execute(callback, mxs::RoutingWorker::EXECUTE_QUEUED);
     }
 }
 
