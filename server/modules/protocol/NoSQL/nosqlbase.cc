@@ -151,48 +151,50 @@ void MariaDBError::create_response(const Command& command, DocumentBuilder& doc)
 {
     bool create_default = true;
 
-    if (m_mariadb_code == ER_CONNECTION_KILLED)
+    switch (m_mariadb_code)
     {
-        // This may be due to an authentication error, but that information is lost
-        // except in the message itself.
+    case ER_ACCESS_DENIED_ERROR:
+    case ER_COLUMNACCESS_DENIED_ERROR:
+    case ER_DBACCESS_DENIED_ERROR:
+    case ER_TABLEACCESS_DENIED_ERROR:
+        create_authorization_error(command, doc);
+        create_default = false;
+        break;
 
-        static const char AUTHENTICATION_TO[] = "Authentication to ";
-
-        if (m_mariadb_message.substr(0, sizeof(AUTHENTICATION_TO) - 1) == AUTHENTICATION_TO)
+    case ER_CONNECTION_KILLED:
         {
-            // Ok, we have something like "Authentication to 'Server1' failed: 1045, #28000: ..."
+            // This may be due to an authentication error, but that information is lost
+            // except in the message itself.
 
-            auto message = m_mariadb_message.substr(sizeof(AUTHENTICATION_TO));
+            static const char AUTHENTICATION_TO[] = "Authentication to ";
 
-            static const char FAILED[] = "' failed: ";
-
-            auto i = message.find(FAILED);
-
-            if (i != string::npos)
+            if (m_mariadb_message.substr(0, sizeof(AUTHENTICATION_TO) - 1) == AUTHENTICATION_TO)
             {
-                i += sizeof(FAILED) - 1;
-                auto j = message.find(",", i);
+                // Ok, we have something like "Authentication to 'Server1' failed: 1045, #28000: ..."
 
-                if (j != string::npos)
+                auto message = m_mariadb_message.substr(sizeof(AUTHENTICATION_TO));
+
+                static const char FAILED[] = "' failed: ";
+
+                auto i = message.find(FAILED);
+
+                if (i != string::npos)
                 {
-                    // So, in the string "...failed: 1045,...", i points at "1" and j at ",".
-                    auto s = message.substr(i, j);
+                    i += sizeof(FAILED) - 1;
+                    auto j = message.find(",", i);
 
-                    if (atoi(s.c_str()) == ER_ACCESS_DENIED_ERROR)
+                    if (j != string::npos)
                     {
-                        // Ok, it was an authentication error that lead to the
-                        // connection being closed.
+                        // So, in the string "...failed: 1045,...", i points at "1" and j at ",".
+                        auto s = message.substr(i, j);
 
-                        ostringstream ss;
-                        ss << "not authorized on " << command.database().name() << " to execute command "
-                           << command.to_json();
-
-                        doc.append(kvp(key::OK, 0));
-                        doc.append(kvp(key::ERRMSG, ss.str()));
-                        doc.append(kvp(key::CODE, error::UNAUTHORIZED));
-                        doc.append(kvp(key::CODE_NAME, error::name(error::UNAUTHORIZED)));
-
-                        create_default = false;
+                        if (atoi(s.c_str()) == ER_ACCESS_DENIED_ERROR)
+                        {
+                            // Ok, it was an authentication error that lead to the
+                            // connection being closed.
+                            create_authorization_error(command, doc);
+                            create_default = false;
+                        }
                     }
                 }
             }
@@ -253,6 +255,29 @@ unique_ptr<LastError> MariaDBError::create_last_error() const
     };
 
     return std::make_unique<ConcreteLastError>(what(), m_code);
+}
+
+void MariaDBError::create_authorization_error(const Command& command, DocumentBuilder& doc) const
+{
+    string json = command.to_json();
+    string sql = command.last_statement();
+
+    DocumentBuilder mariadb;
+    mariadb.append(kvp(key::CODE, m_mariadb_code));
+    mariadb.append(kvp(key::MESSAGE, m_mariadb_message));
+    mariadb.append(kvp(key::COMMAND, json));
+    mariadb.append(kvp(key::SQL, sql));
+
+    ostringstream ss;
+    ss << "not authorized on " << command.database().name() << " to execute command "
+       << command.to_json();
+
+    doc.append(kvp(key::OK, 0));
+    doc.append(kvp(key::ERRMSG, ss.str()));
+    doc.append(kvp(key::CODE, error::UNAUTHORIZED));
+    doc.append(kvp(key::CODE_NAME, error::name(error::UNAUTHORIZED)));
+
+    doc.append(kvp(key::MARIADB, mariadb.extract()));
 }
 
 //
