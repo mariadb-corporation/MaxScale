@@ -178,6 +178,16 @@ public:
         return m_state;
     }
 
+    bool is_started() const
+    {
+        return m_state == State::STARTED;
+    }
+
+    bool is_stopping() const
+    {
+        return m_state == State::STOPPING;
+    }
+
     uint64_t id() const
     {
         return m_id;
