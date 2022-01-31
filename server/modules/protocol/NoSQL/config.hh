@@ -106,7 +106,9 @@ class Config final
 {
 public:
     Config(const GlobalConfig& config)
-        : user(config.user)
+        : config_user(config.user)
+        , config_password(config.password)
+        , user(config.user)
         , password(config.password)
         , host(config.host)
         , authentication_required(config.authentication_required)
@@ -163,6 +165,8 @@ public:
     void copy_to(nosql::DocumentBuilder& doc) const;
 
     // Can only be changed via MaxScale
+    const std::string config_user;
+    const std::string config_password;
     std::string       user;
     std::string       password;
     const std::string host;
