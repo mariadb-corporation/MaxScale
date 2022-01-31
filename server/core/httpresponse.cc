@@ -53,7 +53,7 @@ HttpResponse::HttpResponse(Handler handler)
 }
 
 HttpResponse::HttpResponse(Callback callback)
-    : HttpResponse(MHD_HTTP_FORBIDDEN)
+    : HttpResponse(MHD_HTTP_BAD_REQUEST)
 {
     m_cb = callback;
 }

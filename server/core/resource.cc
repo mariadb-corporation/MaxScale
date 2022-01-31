@@ -348,7 +348,7 @@ HttpResponse cb_create_server(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+    return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
 }
 
 HttpResponse cb_alter_server(const HttpRequest& request)
@@ -361,7 +361,7 @@ HttpResponse cb_alter_server(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+    return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
 }
 
 HttpResponse do_alter_server_relationship(const HttpRequest& request, const char* type)
@@ -374,7 +374,7 @@ HttpResponse do_alter_server_relationship(const HttpRequest& request, const char
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+    return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
 }
 
 HttpResponse cb_alter_server_service_relationship(const HttpRequest& request)
@@ -396,7 +396,7 @@ HttpResponse cb_create_monitor(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+    return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
 }
 
 HttpResponse cb_create_filter(const HttpRequest& request)
@@ -408,7 +408,7 @@ HttpResponse cb_create_filter(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+    return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
 }
 
 HttpResponse cb_create_service(const HttpRequest& request)
@@ -420,7 +420,7 @@ HttpResponse cb_create_service(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+    return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
 }
 
 HttpResponse cb_create_service_listener(const HttpRequest& request)
@@ -433,7 +433,7 @@ HttpResponse cb_create_service_listener(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+    return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
 }
 
 HttpResponse cb_create_listener(const HttpRequest& request)
@@ -445,7 +445,7 @@ HttpResponse cb_create_listener(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+    return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
 }
 
 HttpResponse cb_alter_monitor(const HttpRequest& request)
@@ -458,7 +458,7 @@ HttpResponse cb_alter_monitor(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+    return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
 }
 
 HttpResponse cb_alter_monitor_relationship(const HttpRequest& request, const char* type)
@@ -471,7 +471,7 @@ HttpResponse cb_alter_monitor_relationship(const HttpRequest& request, const cha
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+    return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
 }
 
 HttpResponse cb_alter_monitor_server_relationship(const HttpRequest& request)
@@ -494,7 +494,7 @@ HttpResponse cb_alter_service(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+    return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
 }
 
 HttpResponse cb_alter_filter(const HttpRequest& request)
@@ -507,7 +507,7 @@ HttpResponse cb_alter_filter(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+    return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
 }
 
 HttpResponse cb_alter_listener(const HttpRequest& request)
@@ -520,7 +520,7 @@ HttpResponse cb_alter_listener(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+    return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
 }
 
 HttpResponse cb_alter_service_relationship(const HttpRequest& request, const char* type)
@@ -533,7 +533,7 @@ HttpResponse cb_alter_service_relationship(const HttpRequest& request, const cha
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+    return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
 }
 
 HttpResponse cb_alter_service_server_relationship(const HttpRequest& request)
@@ -582,7 +582,7 @@ HttpResponse cb_alter_qc(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+    return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
 }
 
 HttpResponse cb_delete_server(const HttpRequest& request)
@@ -595,7 +595,7 @@ HttpResponse cb_delete_server(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+    return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
 }
 
 HttpResponse cb_delete_monitor(const HttpRequest& request)
@@ -608,7 +608,7 @@ HttpResponse cb_delete_monitor(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+    return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
 }
 
 HttpResponse cb_delete_service_listener(const HttpRequest& request)
@@ -625,7 +625,7 @@ HttpResponse cb_delete_service_listener(const HttpRequest& request)
     }
     else if (!runtime_destroy_listener(listener))
     {
-        return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+        return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
     }
 
     return HttpResponse(MHD_HTTP_NO_CONTENT);
@@ -638,7 +638,7 @@ HttpResponse cb_delete_listener(const HttpRequest& request)
 
     if (!runtime_destroy_listener(listener))
     {
-        return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+        return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
     }
 
     return HttpResponse(MHD_HTTP_NO_CONTENT);
@@ -654,7 +654,7 @@ HttpResponse cb_delete_service(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+    return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
 }
 
 HttpResponse cb_delete_filter(const HttpRequest& request)
@@ -667,7 +667,7 @@ HttpResponse cb_delete_filter(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+    return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
 }
 HttpResponse cb_all_servers(const HttpRequest& request)
 {
@@ -839,7 +839,7 @@ HttpResponse cb_alter_maxscale(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+    return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
 }
 
 HttpResponse cb_logs(const HttpRequest& request)
@@ -862,7 +862,7 @@ HttpResponse cb_log_data(const HttpRequest& request)
         if (rows <= 0 || *end != '\0')
         {
             MXS_ERROR("Invalid value for 'page[size]': %s", size.c_str());
-            return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+            return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
         }
     }
 
@@ -880,7 +880,7 @@ HttpResponse cb_log_stream(const HttpRequest& request)
         return HttpResponse(fn);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+    return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
 }
 
 HttpResponse cb_flush(const HttpRequest& request)
@@ -915,7 +915,7 @@ HttpResponse cb_thread_rebalance(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+    return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
 }
 
 HttpResponse cb_threads_rebalance(const HttpRequest& request)
@@ -925,7 +925,7 @@ HttpResponse cb_threads_rebalance(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+    return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
 }
 
 HttpResponse cb_reload_users(const HttpRequest& request)
@@ -974,7 +974,7 @@ HttpResponse cb_all_modules(const HttpRequest& request)
     {
         if (!load_all_modules())
         {
-            return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+            return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
         }
 
         all_modules_loaded = true;
@@ -1042,7 +1042,7 @@ HttpResponse cb_create_user(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+    return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
 }
 
 HttpResponse cb_sql_connect(const HttpRequest& request)
@@ -1087,7 +1087,7 @@ HttpResponse cb_alter_user(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+    return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
 }
 
 HttpResponse cb_alter_session(const HttpRequest& request)
@@ -1119,7 +1119,7 @@ HttpResponse cb_alter_session(const HttpRequest& request)
         }
         else
         {
-            rval = HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+            rval = HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
         }
 
         session_put_ref(session);
@@ -1138,7 +1138,7 @@ HttpResponse cb_delete_user(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+    return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
 }
 
 HttpResponse cb_set_server(const HttpRequest& request)
@@ -1160,11 +1160,11 @@ HttpResponse cb_set_server(const HttpRequest& request)
         }
         else
         {
-            return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("%s", errmsg.c_str()));
+            return HttpResponse(MHD_HTTP_BAD_REQUEST, mxs_json_error("%s", errmsg.c_str()));
         }
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN,
+    return HttpResponse(MHD_HTTP_BAD_REQUEST,
                         mxs_json_error("Invalid or missing value for the `%s` parameter", CN_STATE));
 }
 
@@ -1182,11 +1182,11 @@ HttpResponse cb_clear_server(const HttpRequest& request)
         }
         else
         {
-            return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("%s", errmsg.c_str()));
+            return HttpResponse(MHD_HTTP_BAD_REQUEST, mxs_json_error("%s", errmsg.c_str()));
         }
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN,
+    return HttpResponse(MHD_HTTP_BAD_REQUEST,
                         mxs_json_error("Invalid or missing value for the `%s` parameter", CN_STATE));
 }
 
@@ -1246,7 +1246,7 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
             }
             else
             {
-                rc = MHD_HTTP_FORBIDDEN;
+                rc = MHD_HTTP_BAD_REQUEST;
                 json_t* err = modulecmd_get_json_error();
 
                 if (err)
@@ -1724,7 +1724,7 @@ static HttpResponse handle_request(const HttpRequest& request)
 
         if (resource->requires_body() && !request.get_json())
         {
-            return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("Missing request body"));
+            return HttpResponse(MHD_HTTP_BAD_REQUEST, mxs_json_error("Missing request body"));
         }
     }
 
@@ -1733,7 +1733,7 @@ static HttpResponse handle_request(const HttpRequest& request)
 
     if (requires_sync && !skip_sync && !manager->start())
     {
-        return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+        return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
     }
 
     HttpResponse rval = this_unit.resources.process_request(request, resource);
@@ -1762,7 +1762,7 @@ static HttpResponse handle_request(const HttpRequest& request)
                     }
                     else if (!manager->commit())
                     {
-                        rval = HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+                        rval = HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
                     }
                 }
                 break;

@@ -38,7 +38,7 @@ const std::string TOKEN_ISSUER = "mxs-query";
 
 const std::string COLLECTION_NAME = "sql";
 
-HttpResponse create_error(const std::string& err, int errcode = MHD_HTTP_FORBIDDEN)
+HttpResponse create_error(const std::string& err, int errcode = MHD_HTTP_BAD_REQUEST)
 {
     mxb_assert(!err.empty());
     return HttpResponse(errcode, mxs_json_error("%s", err.c_str()));
@@ -410,7 +410,7 @@ HttpResponse connect(const HttpRequest& request)
             }
             else
             {
-                return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("%s", err.c_str()));
+                return HttpResponse(MHD_HTTP_BAD_REQUEST, mxs_json_error("%s", err.c_str()));
             }
         });
 }
@@ -481,7 +481,7 @@ HttpResponse query(const HttpRequest& request)
     }
     else if (!json.try_get_string("sql", &sql))
     {
-        return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("No `sql` defined."));
+        return HttpResponse(MHD_HTTP_BAD_REQUEST, mxs_json_error("No `sql` defined."));
     }
 
     // Optional row limit. 1000 is default. Can crash if client asks for more data than MaxScale has memory
@@ -490,7 +490,7 @@ HttpResponse query(const HttpRequest& request)
     json.try_get_int("max_rows", &max_rows);
     if (max_rows < 0)
     {
-        return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("`max_rows` cannot be negative."));
+        return HttpResponse(MHD_HTTP_BAD_REQUEST, mxs_json_error("`max_rows` cannot be negative."));
     }
 
     string host = request.host();
