@@ -161,18 +161,6 @@ export default {
 
             return repStats
         },
-        /**
-         * This returns maximum value or the most frequent value
-         * @param {Array} payload.repStats - replication status get from getRepStats method
-         * @param {String} payload.pickBy - property to count. e.g. replication_state or seconds_behind_master
-         * @param {Boolean} payload.isNumber - If it is true, returns maximum value instead of the most frequent value
-         * @returns {String|Number} - returns maximum value or the most frequent value
-         */
-        getOverallRepStat({ repStats, pickBy, isNumber }) {
-            if (isNumber) return Math.max(...repStats.map(item => item[pickBy]))
-            let countObj = this.$help.lodash.countBy(repStats, pickBy)
-            return Object.keys(countObj).reduce((a, b) => (countObj[a] > countObj[b] ? a : b), [])
-        },
         getSlaveStatus(serverId) {
             const slaveServerIds = this.slaveServersByMasterMap.get(serverId) || []
             if (!slaveServerIds.length) return []
@@ -181,11 +169,11 @@ export default {
                 const repStats = this.getRepStats(id)
                 slaveStats.push({
                     id,
-                    overall_replication_state: this.getOverallRepStat({
+                    overall_replication_state: this.$help.getOverallRepStat({
                         repStats,
                         pickBy: 'replication_state',
                     }),
-                    overall_seconds_behind_master: this.getOverallRepStat({
+                    overall_seconds_behind_master: this.$help.getOverallRepStat({
                         repStats,
                         pickBy: 'seconds_behind_master',
                         isNumber: true,

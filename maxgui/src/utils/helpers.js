@@ -760,7 +760,18 @@ export function formatSQL(v) {
         linesBetweenQueries: 2,
     })
 }
-
+/**
+ * This returns maximum value or the most frequent value
+ * @param {Array} payload.repStats - replication status. Array of objects
+ * @param {String} payload.pickBy - property to count. e.g. replication_state or seconds_behind_master
+ * @param {Boolean} payload.isNumber - If it is true, returns maximum value instead of the most frequent value
+ * @returns {String|Number} - returns maximum value or the most frequent value
+ */
+export function getOverallRepStat({ repStats, pickBy, isNumber }) {
+    if (isNumber) return Math.max(...repStats.map(item => item[pickBy]))
+    let countObj = countBy(repStats, pickBy)
+    return Object.keys(countObj).reduce((a, b) => (countObj[a] > countObj[b] ? a : b), [])
+}
 Object.defineProperties(Vue.prototype, {
     $help: {
         get() {
@@ -817,6 +828,7 @@ Object.defineProperties(Vue.prototype, {
                 arrOfObjsDiff,
                 formatSQL,
                 deepDiff,
+                getOverallRepStat,
             }
         },
     },
