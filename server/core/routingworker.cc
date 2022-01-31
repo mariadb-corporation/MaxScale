@@ -713,6 +713,7 @@ RoutingWorker::pool_get_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Compone
 
                 BackendDCB::close(pDcb);
                 pServer->stats().remove_connection();
+                notify_connection_available(pServer);
             }
         }
 
@@ -930,6 +931,7 @@ void RoutingWorker::close_pooled_dcb(BackendDCB* pDcb)
     auto* srv = pDcb->server();
     BackendDCB::close(pDcb);
     srv->stats().remove_connection();
+    notify_connection_available(srv);
 }
 
 bool RoutingWorker::pre_run()
