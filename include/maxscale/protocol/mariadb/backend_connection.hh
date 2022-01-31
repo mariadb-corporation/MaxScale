@@ -163,6 +163,7 @@ private:
     int    gw_decode_mysql_server_handshake(uint8_t* payload);
     GWBUF* gw_generate_auth_response(bool with_ssl, bool ssl_established, uint64_t service_capabilities);
     bool   expecting_reply() const;
+    bool   capability_mismatch() const;
 
     std::string create_response_mismatch_error();
 

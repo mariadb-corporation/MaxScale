@@ -1701,6 +1701,27 @@ bool MariaDBBackendConnection::read_backend_handshake(mxs::Buffer&& buffer)
     return rval;
 }
 
+bool MariaDBBackendConnection::capability_mismatch() const
+{
+    bool mismatch = false;
+
+    if (use_deprecate_eof() && (server_capabilities & GW_MYSQL_CAPABILITIES_DEPRECATE_EOF) == 0)
+    {
+        // This is an unexpected situation but it can happen if the server is swapped out without MaxScale
+        // recalculating the version. Mostly this is here to catch any possible bugs that there might be in
+        // the capability handling of MaxScale. Separate code should exist for routers for any unexpected
+        // responses as bugs in the server can cause mismatching result types to be sent,
+        // https://bugs.mysql.com/bug.php?id=83346 is one example of such.
+        MXS_INFO("Client uses DEPRECATE_EOF protocol but the server does not implement it");
+        mxb_assert_message(!true, "DEPRECATE_EOF should be used by both client and backend");
+        mismatch = true;
+    }
+
+    // TODO: Check that the server sends MXS_MARIA_CAP_CACHE_METADATA if the client expects it
+
+    return mismatch;
+}
+
 /**
  * Sends a response for an AuthSwitchRequest to the default auth plugin
  */
@@ -2723,8 +2744,16 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::handshake()
                     buffer.make_contiguous();
                     if (read_backend_handshake(std::move(buffer)))
                     {
-                        m_hs_state = m_dcb->using_ssl() ? HandShakeState::START_SSL :
-                            HandShakeState::SEND_HS_RESP;
+                        if (capability_mismatch())
+                        {
+                            do_handle_error(m_dcb, "Capability mismatch", mxs::ErrorType::PERMANENT);
+                            m_hs_state = HandShakeState::FAIL;
+                        }
+                        else
+                        {
+                            m_hs_state = m_dcb->using_ssl() ? HandShakeState::START_SSL :
+                                HandShakeState::SEND_HS_RESP;
+                        }
                     }
                     else
                     {
