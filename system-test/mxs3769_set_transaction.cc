@@ -39,12 +39,14 @@ int main(int argc, char** argv)
     // SET TRANSACTION affects only the next transaction. As the default access mode is READ WRITE, the next
     // transaction should be routed to a slave server.
     rws.query("SET TRANSACTION READ ONLY");
+    sleep(2);
     slave_trx("START TRANSACTION");
     master_trx("START TRANSACTION");
 
     // Changing the default access mode should cause transactions to be routed to slave servers unless an
     // explicit READ WRITE transaction is used.
     rws.query("SET SESSION TRANSACTION READ ONLY");
+    sleep(2);
     slave_trx("START TRANSACTION");
     slave_trx("START TRANSACTION");
     master_trx("START TRANSACTION READ WRITE");
@@ -53,15 +55,18 @@ int main(int argc, char** argv)
     // Setting the access mode to READ WRITE while the session default is READ ONLY should cause the next
     // transaction to be routed to the master server.
     rws.query("SET TRANSACTION READ WRITE");
+    sleep(2);
     master_trx("START TRANSACTION");
     slave_trx("START TRANSACTION");
 
     // Changing the default back to READ WRITE should make transactions behave normally.
     rws.query("SET SESSION TRANSACTION READ WRITE");
+    sleep(2);
     master_trx("START TRANSACTION");
 
     // SET TRANSACTION READ ONLY should now again only redirect one transaction.
     rws.query("SET TRANSACTION READ ONLY");
+    sleep(2);
     slave_trx("START TRANSACTION");
     master_trx("START TRANSACTION");
 
