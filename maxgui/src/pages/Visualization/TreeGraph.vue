@@ -51,6 +51,8 @@ export default {
                         ghostClass: 'rect-node-ghost',
                         chosenClass: 'rect-node-chosen',
                         animation: 200,
+                        forceFallback: true,
+                        fallbackClass: 'rect-node-clone',
                         onStart: e => {
                             vnode.context.$emit('on-node-dragStart', e)
                         },
@@ -375,7 +377,7 @@ export default {
         width: 0;
         position: absolute;
         z-index: 3;
-        .rect-node {
+        .rect-node:not(.rect-node-clone) {
             position: absolute;
             transform: translateY(-50%) !important;
             background-color: $background;
@@ -395,5 +397,8 @@ export default {
 .rect-node-ghost {
     background: #f2fcff !important;
     opacity: 0.6;
+}
+.rect-node-clone {
+    opacity: 1 !important;
 }
 </style>
