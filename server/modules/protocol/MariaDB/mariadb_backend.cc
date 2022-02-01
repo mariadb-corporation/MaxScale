@@ -1810,9 +1810,6 @@ int MariaDBBackendConnection::gw_decode_mysql_server_handshake(uint8_t* payload)
 
     conn->server_capabilities = mysql_server_capabilities_one | mysql_server_capabilities_two << 16;
 
-    // If the client uses DEPRECATE_EOF, the backend must use it as well.
-    mxb_assert(!use_deprecate_eof() || (server_capabilities & GW_MYSQL_CAPABILITIES_DEPRECATE_EOF));
-
     // 2 bytes shift
     payload += 2;
 
