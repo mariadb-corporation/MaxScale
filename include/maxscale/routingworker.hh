@@ -411,7 +411,7 @@ public:
 
     struct ConnectionResult
     {
-        bool                    wait_for_conn {false};
+        bool                    conn_limit_reached {false};
         mxs::BackendConnection* conn {nullptr};
     };
 
@@ -524,6 +524,7 @@ private:
     void process_timeouts();
     void delete_zombies();
     void rebalance();
+    void pool_close_expired();
     void activate_waiting_endpoints();
 
     static uint32_t epoll_instance_handler(POLL_DATA* data, WORKER* worker, uint32_t events);

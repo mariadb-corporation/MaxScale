@@ -494,9 +494,8 @@ public:
 
 private:
     mxs::Component* m_up;
-    MXS_SESSION*    m_session;
+    Session*        m_session;
     Server*         m_server;
-    bool            m_can_try_pooling {true};   /**< If pooling fails, don't try it again */
 
     std::vector<mxs::Buffer> m_delayed_packets;     /**< Packets waiting for a connection */
 

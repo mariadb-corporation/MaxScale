@@ -1783,6 +1783,11 @@ bool Session::pool_backends_cb(mxb::Worker::Call::action_t action)
     return call_again;
 }
 
+int64_t Session::pooling_time_ms() const
+{
+    return m_pooling_time_ms;
+}
+
 MXS_SESSION::EventSubscriber::EventSubscriber(MXS_SESSION* session)
     : m_session(session)
 {

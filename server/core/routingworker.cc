@@ -452,22 +452,6 @@ void RoutingWorker::process_timeouts()
                 pSes->tick(MXS_CLOCK_TO_SEC(idle));
             }
         }
-
-        // Close expired connections in the thread local pool. If the server is down, purge all connections.
-        for (auto it = m_pool_group.begin(); it != m_pool_group.end(); ++it)
-        {
-            auto* pServer = it->first;
-            auto& server_pool = it->second;
-
-            if (pServer->is_down())
-            {
-                server_pool.close_all();
-            }
-            else
-            {
-                server_pool.close_expired();
-            }
-        }
     }
 }
 
@@ -544,14 +528,12 @@ RoutingWorker::get_backend_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Comp
     if (max_allowed_conns > 0)
     {
         // Server has a connection count limit. Check that we are not already at the limit.
-        bool conn_limit_reached = false;
-
         auto curr_conns = stats.n_current_conns() + stats.n_conn_intents();
         if (curr_conns >= max_allowed_conns)
         {
             // Looks like all connection slots are in use. This may be pessimistic in case an intended
-            // connection fails in another thread. The error message can be spammy.
-            conn_limit_reached = true;
+            // connection fails in another thread.
+            rval.conn_limit_reached = true;
         }
         else
         {
@@ -569,27 +551,9 @@ RoutingWorker::get_backend_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Comp
             }
             else
             {
-                conn_limit_reached = true;
+                rval.conn_limit_reached = true;
             }
             stats.remove_conn_intent();
-        }
-
-        if (conn_limit_reached)
-        {
-            auto idle_pool_time = pSession->service->config()->idle_session_pooling_time;
-            if (idle_pool_time >= 0s)
-            {
-                // Connection count limit exceeded, but pre-emptive pooling is on. Assume that a
-                // connection will soon be available.
-                rval.wait_for_conn = true;
-                MXB_INFO("Server '%s' connection count limit reached while pre-emptive pooling is on. "
-                         "Delaying first query until a connection becomes available.", pServer->name());
-            }
-            else
-            {
-                MXB_ERROR("'%s' connection count limit reached. No new connections can "
-                          "be made until an existing session quits.", pServer->name());
-            }
         }
     }
     else
@@ -940,7 +904,20 @@ bool RoutingWorker::pre_run()
 
     bool rv = modules_thread_init() && qc_thread_init(QC_INIT_SELF);
 
-    if (!rv)
+    if (rv)
+    {
+        // Every few seconds, check connection pool for expired connections. Ideally, every pooled
+        // connection would set their own timer.
+        auto check_pool_cb = [this](Worker::Call::action_t action){
+                if (action == mxb::Worker::Call::action_t::EXECUTE)
+                {
+                    pool_close_expired();
+                }
+                return true;
+            };
+        delayed_call(5000, check_pool_cb);
+    }
+    else
     {
         MXS_ERROR("Could not perform thread initialization for all modules. Thread exits.");
         this_thread.current_worker_id = WORKER_ABSENT_ID;
@@ -1781,7 +1758,7 @@ void RoutingWorker::activate_waiting_endpoints()
             case ServerEndpoint::ContinueRes::FAIL:
                 // Resuming the connection failed. Either connection was resumed but writing packets failed
                 // or something went wrong in creating a new connection. Close the endpoint. The endpoint map
-                // must not be modified by the following call.
+                // must not be modified by the handle_failed_continue call.
                 erase_from_set = true;
                 ep->handle_failed_continue();
                 break;
@@ -1821,6 +1798,25 @@ void RoutingWorker::erase_conn_wait_entry(ServerEndpoint* ep, Session* session)
     if (ep_deque.empty())
     {
         m_eps_waiting_for_conn.erase(map_iter);
+    }
+}
+
+void RoutingWorker::pool_close_expired()
+{
+    // Close expired connections in the thread local pool. If the server is down, purge all connections.
+    for (auto& kv : m_pool_group)
+    {
+        auto* pServer = kv.first;
+        auto& server_pool = kv.second;
+
+        if (pServer->is_down())
+        {
+            server_pool.close_all();
+        }
+        else
+        {
+            server_pool.close_expired();
+        }
     }
 }
 
