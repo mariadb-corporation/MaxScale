@@ -46,6 +46,7 @@ export default {
             bind(el, binding, vnode) {
                 if (binding.value) {
                     const options = {
+                        swap: true,
                         handle: '.drag-handle',
                         draggable: '.draggable-rect-node',
                         ghostClass: 'rect-node-ghost',

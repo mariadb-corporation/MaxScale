@@ -52,13 +52,22 @@
                 :data="graphData"
                 :dim="ctrDim"
                 :nodeSize="[125, 320]"
+                draggable
+                @on-node-dragStart="onNodeSwapStart"
+                @on-node-move="onMove"
+                @on-node-dragend="onNodeSwapEnd"
             >
                 <template v-slot:rect-node-content="{ data: { node } }">
                     <v-card outlined class="server-node" width="273" height="88">
-                        <div class="d-flex align-center flex-row node-title-wrapper px-2 py-1">
+                        <div
+                            class="d-flex align-center flex-row node-title-wrapper px-2 py-1"
+                            :class="[
+                                droppableTargets.includes(node.id) ? 'server-node__droppable' : '',
+                            ]"
+                        >
                             <icon-sprite-sheet
                                 size="13"
-                                class="mr-1 status-icon"
+                                class="mr-1 server-state-icon"
                                 :frame="$help.serverStateIcon($typy(node, 'data.state').safeString)"
                             >
                                 status
@@ -75,7 +84,10 @@
                             <div class="button-container">
                                 <!--TODO: open a dialog to config the node -->
                                 <v-btn small class="ml-2 gear-btn" icon>
-                                    <v-icon size="16" color="primary">
+                                    <v-icon
+                                        size="16"
+                                        :color="droppableTargets.includes(node.id) ? 'background' : 'primary',"
+                                    >
                                         $vuetify.icons.settings
                                     </v-icon>
                                 </v-btn>
@@ -149,6 +161,10 @@ export default {
     data() {
         return {
             ctrDim: {},
+            isDroppable: false,
+            droppableTargets: [],
+            opType: '',
+            initialNodeInnerHTML: null,
         }
     },
     computed: {
@@ -157,6 +173,15 @@ export default {
         }),
         graphData() {
             return this.$typy(this.current_cluster, 'children[0]').safeObjectOrEmpty
+        },
+        graphDataHash() {
+            let hash = {}
+            const getAllItemsPerChildren = item => {
+                hash[item.id] = item
+                if (item.children) return item.children.map(n => getAllItemsPerChildren(n))
+            }
+            getAllItemsPerChildren(this.graphData)
+            return hash
         },
     },
     async created() {
@@ -179,6 +204,97 @@ export default {
                 isNumber: true,
             })
         },
+        /**
+         * This helps to store the current innerHTML of the dragging node to initialNodeInnerHTML
+         */
+        setDefNodeTxt() {
+            let cloneEle = document.getElementsByClassName('rect-node-clone')
+            if (cloneEle.length) {
+                const nodeTxtWrapper = cloneEle[0].getElementsByClassName('node-text-wrapper')
+                this.initialNodeInnerHTML = nodeTxtWrapper[0].innerHTML
+            }
+        },
+        /**
+         * This finds out which nodes in the cluster that the dragging node can be dropped to
+         * @param {Object} node - dragging node to be dropped
+         */
+        detectDroppableTargets(node) {
+            if (node.isMaster) {
+                this.droppableTargets = []
+            } else {
+                //switchover: dragging a slave to a master
+                this.droppableTargets = [node.masterServerName]
+            }
+        },
+        /**
+         * This helps to change the text content(node-text-wrapper) of the dragging node
+         * @param {String} type - operation type
+         */
+        changeNodeTxt(type) {
+            let cloneEle = document.getElementsByClassName('rect-node-clone')
+            if (cloneEle.length) {
+                let nodeTxtWrapper = cloneEle[0].getElementsByClassName('node-text-wrapper')
+                switch (type) {
+                    case 'switchover': {
+                        const newInnerHTML = `Promote as Master (Switchover)`
+                        nodeTxtWrapper[0].innerHTML = newInnerHTML
+                        break
+                    }
+                    default:
+                        nodeTxtWrapper[0].innerHTML = this.initialNodeInnerHTML
+                        break
+                }
+            }
+        },
+        /**
+         *
+         * @param {Object} draggingNode - dragging node
+         */
+        detectOperationType(draggingNode) {
+            if (draggingNode.isMaster) this.opType = ''
+            else this.opType = 'switchover'
+            this.changeNodeTxt(this.opType)
+        },
+        onNodeSwapStart(e) {
+            let nodeId = e.item.getAttribute('node_id')
+            const node = this.graphDataHash[nodeId]
+            this.setDefNodeTxt()
+            this.detectDroppableTargets(node)
+        },
+        /**
+         * This helps to change the dragging node's innerHTML back
+         * to its initial value. i.e. `initialNodeInnerHTML`
+         */
+        onNodeSwapLeave() {
+            this.changeNodeTxt()
+            this.onCancelSwap()
+        },
+        onCancelSwap() {
+            this.isDroppable = false
+        },
+        onMove(e, cb) {
+            const draggingNode = this.graphDataHash[e.dragged.getAttribute('node_id')]
+            const targetEle = e.related // drop target node element
+            // listen on the target element
+            targetEle.addEventListener('mouseleave', this.onNodeSwapLeave)
+            const dropTarget = targetEle.getAttribute('node_id')
+            this.isDroppable = this.droppableTargets.includes(dropTarget)
+            if (this.isDroppable) {
+                this.detectOperationType(draggingNode)
+            } else this.onCancelSwap()
+            // return false to cancel automatically swap by sortable.js
+            cb(false)
+        },
+        onNodeSwapEnd() {
+            if (this.isDroppable) {
+                switch (this.opType) {
+                    case 'switchover':
+                        // TODO: open switchover confirm dialog
+                        break
+                }
+            }
+            this.droppableTargets = []
+        },
     },
 }
 </script>
@@ -186,6 +302,13 @@ export default {
 <style lang="scss" scoped>
 .server-node {
     font-size: 12px;
+    &__droppable {
+        background: $success;
+        color: $background;
+        .rsrc-link {
+            color: $background;
+        }
+    }
 }
 .graph-card {
     border: 1px solid #e3e6ea !important;

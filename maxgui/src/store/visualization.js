@@ -139,6 +139,7 @@ export default {
                                 state: getters.getNodeState(server.name),
                                 connections: getters.getCurrConn(server.name),
                                 isMaster: false,
+                                masterServerName: masterName,
                                 server_info: {
                                     ...server,
                                     slave_connections: connectionsToMaster,
