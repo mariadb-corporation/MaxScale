@@ -58,7 +58,45 @@ export default {
         },
     },
     getters: {
-        getMariadbmonCluster: () => {
+        getNodeState: (state, getters, rootState, rootGetters) => {
+            return id => {
+                const serverData = rootGetters['server/getAllServersMap'].get(id)
+                return serverData.attributes.state
+            }
+        },
+        getNodeTitle: (state, getters, rootState, rootGetters) => {
+            return id => {
+                const serverData = rootGetters['server/getAllServersMap'].get(id)
+                if (serverData) {
+                    const {
+                        attributes: {
+                            parameters: { address, port, socket },
+                        },
+                    } = serverData
+                    let title = ''
+                    if (socket) title += `${socket}`
+                    else title += `${address}:${port}`
+                    title += ` (${id})`
+                    return title
+                }
+                return `${id}`
+            }
+        },
+        getCurrConn: (state, getters, rootState, rootGetters) => {
+            return id => {
+                const serverData = rootGetters['server/getAllServersMap'].get(id)
+                if (serverData) {
+                    const {
+                        attributes: {
+                            statistics: { connections },
+                        },
+                    } = serverData
+                    return connections
+                }
+                return 0
+            }
+        },
+        getMariadbmonCluster: (state, getters) => {
             return monitor => {
                 const {
                     id: monitorId,
@@ -81,19 +119,30 @@ export default {
                     root.children.push({
                         id: masterName,
                         name: masterName,
+                        title: getters.getNodeTitle(masterName),
+                        state: getters.getNodeState(masterName),
+                        connections: getters.getCurrConn(masterName),
+                        isMaster: true,
                         stroke: '#0e9bc0',
                         children: [], // contains replicate servers data
                     })
                 if (root.children.length)
                     server_info.forEach(server => {
-                        const isConnectedToMaster = server.slave_connections.some(
+                        const connectionsToMaster = server.slave_connections.filter(
                             conn => conn.master_server_name === masterName
                         )
-                        if (isConnectedToMaster)
+                        if (connectionsToMaster.length)
                             root.children[0].children.push({
-                                ...server,
                                 id: server.name,
                                 name: server.name,
+                                title: getters.getNodeTitle(server.name),
+                                state: getters.getNodeState(server.name),
+                                connections: getters.getCurrConn(server.name),
+                                isMaster: false,
+                                server_info: {
+                                    ...server,
+                                    slave_connections: connectionsToMaster,
+                                },
                                 stroke: '#0e9bc0',
                             })
                     })

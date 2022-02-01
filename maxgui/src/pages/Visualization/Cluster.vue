@@ -49,15 +49,74 @@
             <tree-graph
                 v-if="ctrDim.height"
                 :style="{ width: `${ctrDim.width}px`, height: `${ctrDim.height}px` }"
-                :data="$typy(current_cluster, 'children[0]').safeObjectOrEmpty"
+                :data="graphData"
                 :dim="ctrDim"
+                :nodeSize="[125, 320]"
             >
-                <template v-slot:rect-node-content="{ data: { id } }">
-                    <div
-                        class="d-flex flex-column justify-center fill-height px-4 py-2 server-node"
-                    >
-                        <truncate-string :text="id" />
-                    </div>
+                <template v-slot:rect-node-content="{ data: { node } }">
+                    <v-card outlined class="server-node" width="273" height="88">
+                        <div class="d-flex align-center flex-row node-title-wrapper px-2 py-1">
+                            <icon-sprite-sheet
+                                size="13"
+                                class="mr-1 status-icon"
+                                :frame="$help.serverStateIcon($typy(node, 'data.state').safeString)"
+                            >
+                                status
+                            </icon-sprite-sheet>
+                            <div class="text-truncate">
+                                <router-link
+                                    :to="`/dashboard/servers/${node.id}`"
+                                    class="rsrc-link"
+                                >
+                                    {{ $typy(node, 'data.title').safeString }}
+                                </router-link>
+                            </div>
+                            <v-spacer />
+                            <div class="button-container">
+                                <!--TODO: open a dialog to config the node -->
+                                <v-btn small class="ml-2 gear-btn" icon>
+                                    <v-icon size="16" color="primary">
+                                        $vuetify.icons.settings
+                                    </v-icon>
+                                </v-btn>
+                            </div>
+                        </div>
+                        <v-divider />
+                        <div class="d-flex justify-center flex-column node-text-wrapper px-2 py-1">
+                            <div class="d-flex flex-row flex-grow-1">
+                                <span>{{ node.data.state }}</span>
+                                <v-spacer />
+                                <v-tooltip
+                                    top
+                                    transition="slide-y-transition"
+                                    content-class="shadow-drop color text-navigation py-1 px-4"
+                                >
+                                    <template v-slot:activator="{ on }">
+                                        <span
+                                            v-if="
+                                                !$typy(node.data).isEmptyObject &&
+                                                    !$typy(node, 'data.isMaster').safeBoolean
+                                            "
+                                            class="ml-1 color text-field-text"
+                                            v-on="on"
+                                        >
+                                            (+{{ getSBM(node.data) }}s)
+                                        </span>
+                                    </template>
+                                    <span>
+                                        <!-- TODO: Show Replication status by re-using rep-tooltip -->
+                                        {{ $t('repLag') }}
+                                    </span>
+                                </v-tooltip>
+                            </div>
+                            <div class="d-flex flex-grow-1">
+                                <span class="text-capitalize">{{ $tc('connections', 2) }}:</span>
+                                <span class="ml-1">
+                                    {{ node.data.connections }}
+                                </span>
+                            </div>
+                        </div>
+                    </v-card>
                 </template>
             </tree-graph>
         </v-card>
@@ -96,11 +155,14 @@ export default {
         ...mapState({
             current_cluster: state => state.visualization.current_cluster,
         }),
+        graphData() {
+            return this.$typy(this.current_cluster, 'children[0]').safeObjectOrEmpty
+        },
     },
-    created() {
+    async created() {
         this.$nextTick(() => this.setCtrDim())
         if (this.$typy(this.current_cluster).isEmptyObject)
-            this.fetchClusterById(this.$route.params.id)
+            await this.fetchClusterById(this.$route.params.id)
     },
     methods: {
         ...mapActions({
@@ -110,13 +172,20 @@ export default {
             const { clientHeight, clientWidth } = this.$refs.graphContainer.$el
             this.ctrDim = { width: clientWidth, height: clientHeight - 2 }
         },
+        getSBM(node) {
+            return this.$help.getOverallRepStat({
+                repStats: node.server_info.slave_connections,
+                pickBy: 'seconds_behind_master',
+                isNumber: true,
+            })
+        },
     },
 }
 </script>
 
 <style lang="scss" scoped>
 .server-node {
-    font-size: 14px;
+    font-size: 12px;
 }
 .graph-card {
     border: 1px solid #e3e6ea !important;

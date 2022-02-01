@@ -221,6 +221,7 @@
     "clusters": "Clusters",
     "configuration": "Configuration",
     "master": "Master",
+    "repLag": "Replication lag",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",

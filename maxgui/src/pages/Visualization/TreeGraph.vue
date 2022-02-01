@@ -376,7 +376,6 @@ export default {
         position: absolute;
         z-index: 3;
         .rect-node {
-            width: 275px;
             position: absolute;
             transform: translateY(-50%) !important;
             background-color: $background;
