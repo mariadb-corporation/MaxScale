@@ -375,6 +375,16 @@ public:
         m_autocommit = autocommit;
     }
 
+    /**
+     * Get session capabilities
+     *
+     * @return The capabilities required the services and filters used by this session
+     */
+    uint64_t capabilities() const
+    {
+        return m_capabilities;
+    }
+
 protected:
     State                    m_state;    /**< Current descriptor state */
     uint64_t                 m_id;       /**< Unique session identifier */
@@ -412,6 +422,7 @@ private:
     std::unique_ptr<ProtocolData> m_protocol_data;
     uint32_t                      m_trx_state {SESSION_TRX_INACTIVE};
     bool                          m_killed {false};
+    uint64_t                      m_capabilities;
 };
 
 /**

@@ -90,6 +90,7 @@ MXS_SESSION::MXS_SESSION(const std::string& host, SERVICE* service)
     , response{}
     , close_reason(SESSION_CLOSE_NONE)
     , load_active(false)
+    , m_capabilities(service->capabilities())
 {
     mxs_rworker_register_session(this);
 }

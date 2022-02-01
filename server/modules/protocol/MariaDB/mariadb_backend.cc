@@ -575,7 +575,7 @@ int MariaDBBackendConnection::normal_read()
     }
 
     /** Ask what type of output the router/filter chain expects */
-    uint64_t capabilities = service_get_capabilities(session->service);
+    uint64_t capabilities = session->capabilities();
     bool result_collected = false;
     auto proto = this;
 

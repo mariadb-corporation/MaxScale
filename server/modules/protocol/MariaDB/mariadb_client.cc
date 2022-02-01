@@ -1273,7 +1273,7 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
 
         if (keep_processing)
         {
-            auto capabilities = service_get_capabilities(m_session->service);
+            auto capabilities = m_session->capabilities();
             if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING)
                 && !session->service->config()->session_track_trx_state
                 && !session_is_load_active(session))

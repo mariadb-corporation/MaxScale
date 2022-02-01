@@ -309,19 +309,6 @@ void serviceGetUser(SERVICE* service, const char** user, const char** auth);
 int serviceSessionCountAll(void);
 
 /**
- * Get the capabilities of the servive.
- *
- * The capabilities of a service are the union of the capabilities of
- * its router and all filters.
- *
- * @return The service capabilities.
- */
-static inline uint64_t service_get_capabilities(const SERVICE* service)
-{
-    return service->capabilities();
-}
-
-/**
  * Return the version of the service. The returned version can be
  *
  * - the version of any (in practice the first) server associated
