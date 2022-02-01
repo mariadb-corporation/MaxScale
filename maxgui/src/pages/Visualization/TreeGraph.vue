@@ -11,17 +11,17 @@
             }"
         >
             <div
-                v-for="(pos, key) in rectNodePosMap"
+                v-for="(node, key) in rectNodeData"
                 :key="key"
                 class="rect-node"
                 :node_id="key"
                 :class="[draggable ? 'draggable-rect-node drag-handle' : '']"
                 :style="{
-                    top: `${pos.top}px`,
-                    left: `${pos.left}px`,
+                    top: `${node.top}px`,
+                    left: `${node.left}px`,
                 }"
             >
-                <slot name="rect-node-content" :data="{ id: key }" />
+                <slot name="rect-node-content" :data="{ node }" />
             </div>
         </div>
     </div>
@@ -87,7 +87,7 @@ export default {
             },
             circleRadius: 7,
             svg: null, // svg obj
-            rectNodePosMap: {},
+            rectNodeData: {},
             root: {},
             initialZoom: { x: 48, y: this.dim.height / 2, k: 1 },
         }
@@ -307,13 +307,13 @@ export default {
                 .remove()
         },
         renderRectNode(nodes) {
-            let rectNodePosMap = {}
+            let rectNodeData = {}
             nodes.forEach(node => {
                 const nodeId = node.id
                 let pos = { left: node.y + this.circleRadius + 10, top: node.x }
-                rectNodePosMap[nodeId] = pos
+                rectNodeData[nodeId] = { ...node, ...pos }
             })
-            this.rectNodePosMap = rectNodePosMap
+            this.rectNodeData = rectNodeData
         },
         /**
          * Update node
