@@ -15,7 +15,10 @@
                 :key="key"
                 class="rect-node"
                 :node_id="key"
-                :class="[draggable ? 'draggable-rect-node drag-handle' : '']"
+                :class="[
+                    draggable ? 'draggable-rect-node drag-handle' : '',
+                    noDragNodes.includes(node.id) ? 'no-drag' : '',
+                ]"
                 :style="{
                     top: `${node.top}px`,
                     left: `${node.left}px`,
@@ -54,6 +57,7 @@ export default {
                         animation: 200,
                         forceFallback: true,
                         fallbackClass: 'rect-node-clone',
+                        filter: '.no-drag',
                         onStart: e => {
                             vnode.context.$emit('on-node-dragStart', e)
                         },
@@ -61,6 +65,7 @@ export default {
                             let isDroppable = true
                             // emit on-node-move and provide callback to assign return value
                             vnode.context.$emit('on-node-move', e, v => (isDroppable = v))
+                            if (e.related.classList.contains('no-drag')) return false
                             return isDroppable
                         },
                         onEnd: e => {
@@ -76,6 +81,7 @@ export default {
         data: { type: Object, required: true },
         dim: { type: Object, required: true },
         draggable: { type: Boolean, default: false },
+        noDragNodes: { type: Array, default: () => [] }, // list of node ids that are not draggable
         // 100 is the vertical space, 320 is the horizontal space between nodes
         nodeSize: { type: Array, default: () => [100, 320] },
     },
@@ -385,11 +391,8 @@ export default {
         }
     }
 }
-.draggable-rect-node {
+.draggable-rect-node:not(.no-drag) {
     cursor: move;
-    &:hover {
-        background-color: $table-row-hover !important;
-    }
 }
 
 .rect-node-chosen:hover {

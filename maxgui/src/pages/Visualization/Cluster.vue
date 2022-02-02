@@ -14,6 +14,7 @@
                 :dim="ctrDim"
                 :nodeSize="[125, 320]"
                 draggable
+                :noDragNodes="noDragNodes"
                 @on-node-dragStart="onNodeSwapStart"
                 @on-node-move="onMove"
                 @on-node-dragend="onNodeSwapEnd"
@@ -75,6 +76,10 @@ export default {
             }
             getAllItemsPerChildren(this.graphData)
             return hash
+        },
+        noDragNodes() {
+            // disable draggable on master node
+            return [this.graphData.id] // root node of graphData is always a master server node
         },
     },
     async created() {
