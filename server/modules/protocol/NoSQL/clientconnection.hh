@@ -14,8 +14,8 @@
 
 #include "nosqlprotocol.hh"
 #include <maxscale/protocol2.hh>
-#include "config.hh"
 #include "nosql.hh"
+#include "nosqlconfig.hh"
 #include "nosqlusermanager.hh"
 
 class MYSQL_session;

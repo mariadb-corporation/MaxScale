@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "config.hh"
+#include "nosqlconfig.hh"
 #include "protocolmodule.hh"
 
 using namespace std;

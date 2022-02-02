@@ -24,8 +24,8 @@
 #include <maxscale/service.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
+#include "nosqlconfig.hh"
 #include "nosqldatabase.hh"
-#include "config.hh"
 
 using namespace std;
 using namespace nosql;

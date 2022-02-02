@@ -27,8 +27,8 @@
 #include <maxscale/routingworker.hh>
 #include <maxscale/session.hh>
 #include <maxscale/target.hh>
-#include "config.hh"
 #include "nosqlbase.hh"
+#include "nosqlconfig.hh"
 #include "nosqlcursor.hh"
 #include "nosqlkeys.hh"
 #include "nosqlscram.hh"

@@ -16,8 +16,8 @@
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <bsoncxx/exception/exception.hpp>
 #include "clientconnection.hh"
-#include "config.hh"
 #include "nosqlcommands.hh"
+#include "nosqlconfig.hh"
 
 using namespace std;
 

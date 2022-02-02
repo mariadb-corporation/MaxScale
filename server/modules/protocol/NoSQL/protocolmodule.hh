@@ -14,8 +14,8 @@
 
 #include "nosqlprotocol.hh"
 #include <maxscale/protocol2.hh>
+#include "nosqlconfig.hh"
 #include "nosqlusermanager.hh"
-#include "config.hh"
 
 class ProtocolModule : public mxs::ProtocolModule
 {
