@@ -30,47 +30,47 @@ mxs::config::Specification specification(MXS_MODULE_NAME, mxs::config::Specifica
 }
 
 // Can only be changed via MaxScale
-mxs::config::ParamString GlobalConfig::s_user(
+mxs::config::ParamString Configuration::s_user(
     &nosqlprotocol::specification,
     "user",
     "The user to use when connecting to the backend.",
     "");
 
-mxs::config::ParamString GlobalConfig::s_password(
+mxs::config::ParamString Configuration::s_password(
     &nosqlprotocol::specification,
     "password",
     "The password to use when connecting to the backend.",
     "");
 
-mxs::config::ParamString GlobalConfig::s_host(
+mxs::config::ParamString Configuration::s_host(
     &nosqlprotocol::specification,
     "host",
     "The host to use when creating new users in the backend.",
     "%");
 
-mxs::config::ParamBool GlobalConfig::s_authentication_required(
+mxs::config::ParamBool Configuration::s_authentication_required(
     &nosqlprotocol::specification,
     "authentication_required",
     "Whether nosqlprotocol authentication is required.",
     false);
 
-mxs::config::ParamBool GlobalConfig::s_authorization_enabled(
+mxs::config::ParamBool Configuration::s_authorization_enabled(
     &nosqlprotocol::specification,
     "authorization_enabled",
     "Whether nosqlprotocol authorization is enabled.",
     false);
 
-mxs::config::ParamCount GlobalConfig::s_id_length(
+mxs::config::ParamCount Configuration::s_id_length(
     &nosqlprotocol::specification,
     "id_length",
     "The VARCHAR length of automatically created tables. A changed value only affects "
     "tables created after the change; existing tables are not altered.",
-    GlobalConfig::ID_LENGTH_DEFAULT,
-    GlobalConfig::ID_LENGTH_MIN,
-    GlobalConfig::ID_LENGTH_MAX);
+    Configuration::ID_LENGTH_DEFAULT,
+    Configuration::ID_LENGTH_MIN,
+    Configuration::ID_LENGTH_MAX);
 
 // Can be changed from the NosQL API.
-mxs::config::ParamBool GlobalConfig::s_auto_create_databases(
+mxs::config::ParamBool Configuration::s_auto_create_databases(
     &nosqlprotocol::specification,
     "auto_create_databases",
     "Whether databases should be created automatically. If enabled, whenever a document is "
@@ -78,7 +78,7 @@ mxs::config::ParamBool GlobalConfig::s_auto_create_databases(
     "it does not exist already.",
     true);
 
-mxs::config::ParamBool GlobalConfig::s_auto_create_tables(
+mxs::config::ParamBool Configuration::s_auto_create_tables(
     &nosqlprotocol::specification,
     "auto_create_tables",
     "Whether tables should be created automatically. If enabled, whenever a document is "
@@ -86,82 +86,82 @@ mxs::config::ParamBool GlobalConfig::s_auto_create_tables(
     "it does not exist already.",
     true);
 
-mxs::config::ParamEnumMask<GlobalConfig::Debug> GlobalConfig::s_debug(
+mxs::config::ParamEnumMask<Configuration::Debug> Configuration::s_debug(
     &nosqlprotocol::specification,
     "debug",
     "To what extent debugging logging should be performed.",
     {
-        {GlobalConfig::DEBUG_NONE, "none"},
-        {GlobalConfig::DEBUG_IN, "in"},
-        {GlobalConfig::DEBUG_OUT, "out"},
-        {GlobalConfig::DEBUG_BACK, "back"}
+        {Configuration::DEBUG_NONE, "none"},
+        {Configuration::DEBUG_IN, "in"},
+        {Configuration::DEBUG_OUT, "out"},
+        {Configuration::DEBUG_BACK, "back"}
     },
     0);
 
-mxs::config::ParamSeconds GlobalConfig::s_cursor_timeout(
+mxs::config::ParamSeconds Configuration::s_cursor_timeout(
     &nosqlprotocol::specification,
     "cursor_timeout",
     "How long can a cursor be idle, that is, not accessed, before it is automatically closed.",
     mxs::config::NO_INTERPRETATION,
-    std::chrono::seconds(GlobalConfig::CURSOR_TIMEOUT_DEFAULT));
+    std::chrono::seconds(Configuration::CURSOR_TIMEOUT_DEFAULT));
 
-mxs::config::ParamBool GlobalConfig::s_log_unknown_command(
+mxs::config::ParamBool Configuration::s_log_unknown_command(
     &nosqlprotocol::specification,
     "log_unknown_command",
     "Whether an unknown command should be logged.",
     false);
 
-mxs::config::ParamEnum<GlobalConfig::OnUnknownCommand> GlobalConfig::s_on_unknown_command(
+mxs::config::ParamEnum<Configuration::OnUnknownCommand> Configuration::s_on_unknown_command(
     &nosqlprotocol::specification,
     "on_unknown_command",
     "Whether to return an error or an empty document in case an unknown NoSQL "
     "command is encountered.",
     {
-        {GlobalConfig::RETURN_ERROR, "return_error"},
-        {GlobalConfig::RETURN_EMPTY, "return_empty"}
+        {Configuration::RETURN_ERROR, "return_error"},
+        {Configuration::RETURN_EMPTY, "return_empty"}
     },
-    GlobalConfig::RETURN_ERROR);
+    Configuration::RETURN_ERROR);
 
-mxs::config::ParamEnum<GlobalConfig::OrderedInsertBehavior> GlobalConfig::s_ordered_insert_behavior(
+mxs::config::ParamEnum<Configuration::OrderedInsertBehavior> Configuration::s_ordered_insert_behavior(
     &nosqlprotocol::specification,
     "ordered_insert_behavior",
     "Whether documents will be inserted in a way true to how NoSQL behaves, "
     "or in a way that is efficient from MariaDB's point of view.",
     {
-        {GlobalConfig::OrderedInsertBehavior::DEFAULT, "default"},
-        {GlobalConfig::OrderedInsertBehavior::ATOMIC, "atomic"}
+        {Configuration::OrderedInsertBehavior::DEFAULT, "default"},
+        {Configuration::OrderedInsertBehavior::ATOMIC, "atomic"}
     },
-    GlobalConfig::OrderedInsertBehavior::DEFAULT);
+    Configuration::OrderedInsertBehavior::DEFAULT);
 
 
-GlobalConfig::GlobalConfig(const std::string& name, ProtocolModule* instance)
+Configuration::Configuration(const std::string& name, ProtocolModule* instance)
     : mxs::config::Configuration(name, &nosqlprotocol::specification)
     , m_instance(instance)
 {
-    add_native(&GlobalConfig::user, &s_user);
-    add_native(&GlobalConfig::password, &s_password);
-    add_native(&GlobalConfig::host, &s_host);
-    add_native(&GlobalConfig::authentication_required, &s_authentication_required);
-    add_native(&GlobalConfig::authorization_enabled, &s_authorization_enabled);
-    add_native(&GlobalConfig::id_length, &s_id_length);
+    add_native(&Configuration::user, &s_user);
+    add_native(&Configuration::password, &s_password);
+    add_native(&Configuration::host, &s_host);
+    add_native(&Configuration::authentication_required, &s_authentication_required);
+    add_native(&Configuration::authorization_enabled, &s_authorization_enabled);
+    add_native(&Configuration::id_length, &s_id_length);
 
-    add_native(&GlobalConfig::auto_create_databases, &s_auto_create_databases);
-    add_native(&GlobalConfig::auto_create_tables, &s_auto_create_tables);
-    add_native(&GlobalConfig::cursor_timeout, &s_cursor_timeout);
-    add_native(&GlobalConfig::debug, &s_debug);
-    add_native(&GlobalConfig::log_unknown_command, &s_log_unknown_command);
-    add_native(&GlobalConfig::on_unknown_command, &s_on_unknown_command);
-    add_native(&GlobalConfig::ordered_insert_behavior, &s_ordered_insert_behavior);
+    add_native(&Configuration::auto_create_databases, &s_auto_create_databases);
+    add_native(&Configuration::auto_create_tables, &s_auto_create_tables);
+    add_native(&Configuration::cursor_timeout, &s_cursor_timeout);
+    add_native(&Configuration::debug, &s_debug);
+    add_native(&Configuration::log_unknown_command, &s_log_unknown_command);
+    add_native(&Configuration::on_unknown_command, &s_on_unknown_command);
+    add_native(&Configuration::ordered_insert_behavior, &s_ordered_insert_behavior);
 }
 
-bool GlobalConfig::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
+bool Configuration::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
 {
     m_instance->post_configure();
     return true;
 }
 
 // static
-mxs::config::Specification& GlobalConfig::specification()
+mxs::config::Specification& Configuration::specification()
 {
     return nosqlprotocol::specification;
 }
@@ -195,7 +195,7 @@ namespace nosql
 
 void Config::copy_from(const string& command, const bsoncxx::document::view& doc)
 {
-    using C = GlobalConfig;
+    using C = Configuration;
 
     Config that(*this);
 
@@ -275,7 +275,7 @@ void Config::copy_from(const string& command, const bsoncxx::document::view& doc
 
 void Config::copy_to(nosql::DocumentBuilder& doc) const
 {
-    using C = GlobalConfig;
+    using C = Configuration;
 
     doc.append(kvp(C::s_auto_create_databases.name(),
                    auto_create_databases));

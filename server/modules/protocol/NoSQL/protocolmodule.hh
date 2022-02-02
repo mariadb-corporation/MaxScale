@@ -51,6 +51,6 @@ private:
     ProtocolModule(const std::string& name, std::unique_ptr<nosql::UserManager> sUm);
 
 private:
-    GlobalConfig                        m_config;
+    Configuration                       m_config;
     std::unique_ptr<nosql::UserManager> m_sUm;
 };

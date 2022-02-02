@@ -23,7 +23,7 @@ class MYSQL_session;
 class ClientConnection : public mxs::ClientConnection
 {
 public:
-    ClientConnection(const GlobalConfig& config,
+    ClientConnection(const Configuration& config,
                      nosql::UserManager* pUm,
                      MXS_SESSION* pSession,
                      mxs::Component* pComponent);

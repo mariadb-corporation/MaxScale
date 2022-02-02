@@ -18,10 +18,10 @@
 
 class ProtocolModule;
 
-class GlobalConfig final : public mxs::config::Configuration
+class Configuration final : public mxs::config::Configuration
 {
 public:
-    GlobalConfig(const std::string& name, ProtocolModule* instance);
+    Configuration(const std::string& name, ProtocolModule* instance);
 
     enum OnUnknownCommand
     {
@@ -105,7 +105,7 @@ namespace nosql
 class Config final
 {
 public:
-    Config(const GlobalConfig& config)
+    Config(const Configuration& config)
         : config_user(config.user)
         , config_password(config.password)
         , user(config.user)
@@ -126,17 +126,17 @@ public:
 
     bool should_log_in() const
     {
-        return this->debug & GlobalConfig::DEBUG_IN;
+        return this->debug & Configuration::DEBUG_IN;
     }
 
     bool should_log_out() const
     {
-        return this->debug & GlobalConfig::DEBUG_OUT;
+        return this->debug & Configuration::DEBUG_OUT;
     }
 
     bool should_log_back() const
     {
-        return this->debug & GlobalConfig::DEBUG_BACK;
+        return this->debug & Configuration::DEBUG_BACK;
     }
 
     bool should_authenticate() const
@@ -180,8 +180,8 @@ public:
     std::chrono::seconds                cursor_timeout;
     uint32_t                            debug;
     bool                                log_unknown_command;
-    GlobalConfig::OnUnknownCommand      on_unknown_command;
-    GlobalConfig::OrderedInsertBehavior ordered_insert_behavior;
+    Configuration::OnUnknownCommand      on_unknown_command;
+    Configuration::OrderedInsertBehavior ordered_insert_behavior;
 };
 
 }

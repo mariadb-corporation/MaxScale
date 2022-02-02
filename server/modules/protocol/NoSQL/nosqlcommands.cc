@@ -70,11 +70,11 @@ public:
 
         switch (m_database.config().on_unknown_command)
         {
-        case GlobalConfig::RETURN_ERROR:
+        case Configuration::RETURN_ERROR:
             throw nosql::SoftError(s, nosql::error::COMMAND_NOT_FOUND);
             break;
 
-        case GlobalConfig::RETURN_EMPTY:
+        case Configuration::RETURN_EMPTY:
             break;
         }
     }

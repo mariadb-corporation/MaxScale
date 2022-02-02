@@ -30,7 +30,7 @@
 using namespace std;
 using namespace nosql;
 
-ClientConnection::ClientConnection(const GlobalConfig& config,
+ClientConnection::ClientConnection(const Configuration& config,
                                    nosql::UserManager* pUm,
                                    MXS_SESSION* pSession,
                                    mxs::Component* pDownstream)
