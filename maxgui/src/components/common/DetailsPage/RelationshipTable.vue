@@ -13,7 +13,7 @@
                 :headers="tableHeader"
                 :data="tableRowsData"
                 :noDataText="$t('noEntity', { entityName: $tc(relationshipType, 2) })"
-                :sortBy="relationshipType === 'filters' ? '' : 'id'"
+                sortBy=""
                 :loading="isLoading"
                 :showActionsOnHover="!readOnly"
                 :draggable="relationshipType === 'filters'"
