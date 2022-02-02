@@ -100,7 +100,6 @@ export default {
 
     methods: {
         ...mapMutations({
-            SET_SNACK_BAR_MESSAGE: 'SET_SNACK_BAR_MESSAGE',
             SET_REFRESH_RESOURCE: 'SET_REFRESH_RESOURCE',
         }),
         ...mapActions({
@@ -110,7 +109,6 @@ export default {
             updateMonitorParameters: 'monitor/updateMonitorParameters',
             updateMonitorRelationship: 'monitor/updateMonitorRelationship',
             switchOver: 'monitor/switchOver',
-            fetchAsyncResults: 'monitor/fetchAsyncResults',
             fetchAllServers: 'server/fetchAllServers',
         }),
 
@@ -158,64 +156,8 @@ export default {
                 monitorModule: this.monitorModule,
                 monitorId: this.monitorId,
                 masterId,
-                callback: this.switchOverCb,
+                successCb: this.fetchMonitor,
             })
-        },
-
-        /**
-         * This function should be called right after switchover action is called
-         * in order to see switchover status message on snackbar.
-         * If response meta equals to'switchover completed successfully.',
-         * send request to get updated monitor otherwise recursive this function
-         * every 2500ms until receive meta string
-         */
-        async switchOverCb() {
-            let res = await this.fetchAsyncResults({
-                monitorModule: this.monitorModule,
-                monitorId: this.monitorId,
-            })
-            const { status, data: { meta } = {} } = res
-            // response ok
-            if (status === 200)
-                if (meta === 'switchover completed successfully.')
-                    await this.handleSwitchoverDone(meta)
-                else await this.handleSwitchoverPending(meta)
-        },
-
-        /**
-         * @param {String} meta - meta string message
-         */
-        async handleSwitchoverDone(meta) {
-            this.SET_SNACK_BAR_MESSAGE({
-                text: [meta],
-                type: 'success',
-            })
-            await this.fetchMonitor()
-        },
-
-        /**
-         * @param {Object} meta - meta error object
-         */
-        async handleSwitchoverPending(meta) {
-            if (this.shouldPollAsyncResult(meta.errors[0].detail)) {
-                this.SET_SNACK_BAR_MESSAGE({
-                    text: ['switchover is still running'],
-                    type: 'warning',
-                })
-                // loop fetch until receive success meta
-                await this.$help.delay(2500).then(async () => await this.switchOverCb())
-            } else {
-                const errArr = meta.errors.map(error => error.detail)
-                this.SET_SNACK_BAR_MESSAGE({
-                    text: errArr,
-                    type: 'error',
-                })
-            }
-        },
-
-        shouldPollAsyncResult(msg) {
-            let base = 'No manual command results are available, switchover is still'
-            return msg === `${base} running.` || msg === `${base} pending.`
         },
     },
 }

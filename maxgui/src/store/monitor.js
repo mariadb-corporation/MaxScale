@@ -10,7 +10,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
+function isSwitchingOver(msg) {
+    let base = 'No manual command results are available, switchover is still'
+    return msg === `${base} running.` || msg === `${base} pending.`
+}
 export default {
     namespaced: true,
     state: {
@@ -213,39 +216,91 @@ export default {
                 logger.error(e)
             }
         },
-
         /**
          * @param {String} payload.monitorModule Monitor module
          * @param {String} payload.monitorId Monitor id
-         * @param {String} payload.master Name of the new master server
-         * @param {Function} payload.callback callback function after successfully updated
+         * @param {String} payload.masterId Name of the new master server
+         * @param {Function} successCb - callback function after successfully switchover
          */
-        async switchOver(_, { monitorModule, monitorId, masterId, callback }) {
+        async switchOver({ dispatch }, { monitorModule, monitorId, masterId, successCb }) {
             try {
-                let res
-                res = await this.$http.post(
+                const { status } = await this.$http.post(
                     `/maxscale/modules/${monitorModule}/async-switchover?${monitorId}&${masterId}`
                 )
                 // response ok
-                if (res.status === 204) if (this.vue.$help.isFunction(callback)) await callback()
+                if (status === 204)
+                    await dispatch('checkSwitchOverRes', { monitorModule, monitorId, successCb })
             } catch (e) {
                 const logger = this.vue.$logger('store-monitor-switchOver')
                 logger.error(e)
             }
         },
-
         /**
+         * This function should be called right after switchover action is called
+         * in order to show switchover status message on snackbar.
          * @param {String} payload.monitorModule Monitor module
          * @param {String} payload.monitorId Monitor id
-         * @return {Object} response object
+         * @param {Function} successCb - callback function after successfully switchover
          */
-        async fetchAsyncResults(_, { monitorModule, monitorId }) {
+        async checkSwitchOverRes({ dispatch }, { monitorModule, monitorId, successCb }) {
             try {
-                return await this.$http.get(
+                const { status, data: { meta } = {} } = await this.$http.get(
                     `/maxscale/modules/${monitorModule}/fetch-cmd-results?${monitorId}`
                 )
+                // response ok
+                if (status === 200) {
+                    if (meta === 'switchover completed successfully.')
+                        await dispatch('handleSwitchoverDone', { meta, successCb })
+                    else
+                        await dispatch('handleSwitchoverPending', {
+                            meta,
+                            monitorModule,
+                            monitorId,
+                            successCb,
+                        })
+                }
             } catch (e) {
-                this.vue.$logger('store-monitor-fetchAsyncResults').error(e)
+                this.vue.$logger('store-monitor-checkSwitchOverRes').error(e)
+            }
+        },
+        /**
+         * @param {String} meta - meta string message
+         * @param {Function} successCb - callback function after successfully switchover
+         */
+        async handleSwitchoverDone({ commit }, { meta, successCb }) {
+            commit('SET_SNACK_BAR_MESSAGE', { text: [meta], type: 'success' }, { root: true })
+            if (this.vue.$help.isFunction(successCb)) await successCb()
+        },
+
+        /**
+         * This handles calling checkSwitchOverRes every 2500ms until receive success msg
+         * @param {Object} meta - meta error object
+         * @param {String} payload.monitorModule Monitor module
+         * @param {String} payload.monitorId Monitor id
+         * @param {Function} successCb - callback function after successfully switchover
+         */
+        async handleSwitchoverPending(
+            { commit, dispatch },
+            { meta, monitorModule, monitorId, successCb }
+        ) {
+            if (isSwitchingOver(meta.errors[0].detail)) {
+                commit(
+                    'SET_SNACK_BAR_MESSAGE',
+                    { text: ['switchover is still running'], type: 'warning' },
+                    { root: true }
+                )
+                // loop fetch until receive success meta
+                await this.vue.$help.delay(2500).then(
+                    async () =>
+                        await dispatch('checkSwitchOverRes', {
+                            monitorModule,
+                            monitorId,
+                            successCb,
+                        })
+                )
+            } else {
+                const errArr = meta.errors.map(error => error.detail)
+                commit('SET_SNACK_BAR_MESSAGE', { text: errArr, type: 'error' }, { root: true })
             }
         },
     },
