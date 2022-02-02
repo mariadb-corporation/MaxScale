@@ -24,6 +24,17 @@
                 </template>
             </tree-graph>
         </v-card>
+        <confirm-dialog
+            v-model="isConfDlgOpened"
+            :title="confDlgTitle"
+            :type="confDlgType"
+            closeImmediate
+            :onSave="onConfirm"
+        >
+            <template v-slot:body-prepend>
+                <span v-html="confDlgBody" />
+            </template>
+        </confirm-dialog>
     </page-wrapper>
 </template>
 
@@ -59,6 +70,12 @@ export default {
             droppableTargets: [],
             opType: '',
             initialNodeInnerHTML: null,
+            srcNodeId: null,
+            targetNodeId: null,
+            isConfDlgOpened: false,
+            confDlgTitle: '',
+            confDlgBody: '',
+            confDlgType: '',
         }
     },
     computed: {
@@ -84,13 +101,16 @@ export default {
     },
     async created() {
         this.$nextTick(() => this.setCtrDim())
-        if (this.$typy(this.current_cluster).isEmptyObject)
-            await this.fetchClusterById(this.$route.params.id)
+        if (this.$typy(this.current_cluster).isEmptyObject) await this.fetchCluster()
     },
     methods: {
         ...mapActions({
             fetchClusterById: 'visualization/fetchClusterById',
+            switchOver: 'monitor/switchOver',
         }),
+        async fetchCluster() {
+            await this.fetchClusterById(this.$route.params.id)
+        },
         setCtrDim() {
             const { clientHeight, clientWidth } = this.$refs.graphContainer.$el
             this.ctrDim = { width: clientWidth, height: clientHeight - 2 }
@@ -126,11 +146,9 @@ export default {
             if (cloneEle.length) {
                 let nodeTxtWrapper = cloneEle[0].getElementsByClassName('node-text-wrapper')
                 switch (type) {
-                    case 'switchover': {
-                        const newInnerHTML = `Promote as Master (Switchover)`
-                        nodeTxtWrapper[0].innerHTML = newInnerHTML
+                    case 'switchover':
+                        nodeTxtWrapper[0].innerHTML = this.$t('info.switchoverPromote')
                         break
-                    }
                     default:
                         nodeTxtWrapper[0].innerHTML = this.initialNodeInnerHTML
                         break
@@ -139,11 +157,14 @@ export default {
         },
         /**
          *
-         * @param {Object} draggingNode - dragging node
+         * @param {Object} srcNode - dragging node
+         * @param {Object} targetNode - target node
          */
-        detectOperationType(draggingNode) {
-            if (draggingNode.isMaster) this.opType = ''
-            else this.opType = 'switchover'
+        detectOperationType({ srcNode, targetNode }) {
+            if (srcNode.isMaster) this.opType = ''
+            else if (targetNode.isMaster) {
+                this.opType = 'switchover'
+            }
             this.changeNodeTxt(this.opType)
         },
         onNodeSwapStart(e) {
@@ -164,14 +185,18 @@ export default {
             this.isDroppable = false
         },
         onMove(e, cb) {
-            const draggingNode = this.graphDataHash[e.dragged.getAttribute('node_id')]
+            this.srcNodeId = e.dragged.getAttribute('node_id')
+            const srcNode = this.graphDataHash[this.srcNodeId]
+
             const targetEle = e.related // drop target node element
             // listen on the target element
             targetEle.addEventListener('mouseleave', this.onNodeSwapLeave)
-            const dropTarget = targetEle.getAttribute('node_id')
-            this.isDroppable = this.droppableTargets.includes(dropTarget)
+
+            this.targetNodeId = targetEle.getAttribute('node_id')
+            const targetNode = this.graphDataHash[this.targetNodeId]
+            this.isDroppable = this.droppableTargets.includes(this.targetNodeId)
             if (this.isDroppable) {
-                this.detectOperationType(draggingNode)
+                this.detectOperationType({ srcNode, targetNode })
             } else this.onCancelSwap()
             // return false to cancel automatically swap by sortable.js
             cb(false)
@@ -180,11 +205,28 @@ export default {
             if (this.isDroppable) {
                 switch (this.opType) {
                     case 'switchover':
-                        // TODO: open switchover confirm dialog
+                        this.confDlgType = 'promote'
+                        this.confDlgTitle = this.$t('switchover')
+                        this.confDlgBody = this.$t('confirmations.switchoverPromote', {
+                            newMaster: this.srcNodeId,
+                        })
                         break
                 }
+                this.isConfDlgOpened = true
             }
             this.droppableTargets = []
+        },
+        async onConfirm() {
+            switch (this.opType) {
+                case 'switchover':
+                    await this.switchOver({
+                        monitorModule: this.current_cluster.module,
+                        monitorId: this.current_cluster.id,
+                        masterId: this.srcNodeId,
+                        successCb: this.fetchCluster,
+                    })
+                    break
+            }
         },
     },
 }

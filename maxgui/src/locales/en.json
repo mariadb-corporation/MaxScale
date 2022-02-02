@@ -222,6 +222,7 @@
     "configuration": "Configuration",
     "master": "Master",
     "repLag": "Replication lag",
+    "promote": "Promote",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
@@ -253,7 +254,8 @@
         "runQuery": "Run the following statements?",
         "leavePage": "Are you sure you want to leave?",
         "addToFavorite": "Add the following statements to favorite?",
-        "exeStatements": "Execute the following statement? | Execute the following statements?"
+        "exeStatements": "Execute the following statement? | Execute the following statements?",
+        "switchoverPromote": "Promote <b>{newMaster}</b> as a new master?"
     },
     "info": {
         "serverDrain": "Server is drained of connections",
@@ -269,7 +271,8 @@
         "exeStatementsInfo": "This action is irreversible, so please review the above statement.\nYou can also manually change the SQL statement in the editor above. | This action is irreversible, so please review the above statements.\nYou can also manually change the SQL statements in the editor above.",
         "alterTableSuccessfully": "Alter table successfully",
         "exeActionSuccessfully": "Successfully {action}",
-        "reconnSuccessfully": "Reconnection was successful"
+        "reconnSuccessfully": "Reconnection was successful",
+        "switchoverPromote": "Promote as Master (Switchover)"
     },
 
     "$vuetify": {
