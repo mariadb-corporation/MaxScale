@@ -34,15 +34,13 @@ Reader::PollData::PollData(Reader* reader, mxb::Worker* worker)
 {
 }
 
-Reader::Reader(Callback cb,
+Reader::Reader(SendCallback cb, WorkerCallback worker_cb,
                const Config& conf,
-               mxb::Worker* worker,
                const maxsql::GtidList& start_gl,
                const std::chrono::seconds& heartbeat_interval)
     : m_send_callback(cb)
+    , m_get_worker(worker_cb)
     , m_inventory(conf)
-    , m_reader_poll_data(this, worker)
-    , m_worker(worker)
     , m_start_gtid_list(start_gl)
     , m_heartbeat_interval(heartbeat_interval)
     , m_last_event(std::chrono::steady_clock::now())
@@ -61,20 +59,21 @@ void Reader::start()
     {
         MXB_SINFO("ReplSYNC: reader waiting for primary to synchronize "
                   << "primary: " << gtid_list << ", replica: " << m_start_gtid_list);
-        m_startup_poll_dcid = m_worker->delayed_call(1000, &Reader::poll_start_reading, this);
+        m_startup_poll_dcid = m_get_worker().delayed_call(1000, &Reader::poll_start_reading, this);
     }
 }
 
 void Reader::start_reading()
 {
     m_sFile_reader.reset(new FileReader(m_start_gtid_list, &m_inventory));
-    m_worker->add_fd(m_sFile_reader->fd(), EPOLLIN, &m_reader_poll_data);
+    m_reader_poll_data = PollData(this, &m_get_worker());
+    m_get_worker().add_fd(m_sFile_reader->fd(), EPOLLIN, &m_reader_poll_data);
 
     send_events();
 
     if (m_heartbeat_interval.count())
     {
-        m_heartbeat_dcid = m_worker->delayed_call(1000, &Reader::generate_heartbeats, this);
+        m_heartbeat_dcid = m_get_worker().delayed_call(1000, &Reader::generate_heartbeats, this);
     }
 }
 
@@ -122,12 +121,12 @@ Reader::~Reader()
 {
     if (m_startup_poll_dcid)
     {
-        m_worker->cancel_delayed_call(m_startup_poll_dcid);
+        m_get_worker().cancel_delayed_call(m_startup_poll_dcid);
     }
 
     if (m_heartbeat_dcid)
     {
-        m_worker->cancel_delayed_call(m_heartbeat_dcid);
+        m_get_worker().cancel_delayed_call(m_heartbeat_dcid);
     }
 }
 
@@ -167,7 +166,7 @@ void Reader::send_events()
                 send_events();
             };
 
-        mxs::RoutingWorker::get_current()->execute(callback, mxs::RoutingWorker::EXECUTE_QUEUED);
+        m_get_worker().execute(callback, mxs::RoutingWorker::EXECUTE_QUEUED);
     }
 }
 

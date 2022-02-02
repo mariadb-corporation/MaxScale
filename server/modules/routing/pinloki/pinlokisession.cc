@@ -100,7 +100,7 @@ void PinlokiSession::close()
 {
     if (m_mgw_dcid)
     {
-        mxs::RoutingWorker::get_current()->cancel_delayed_call(m_mgw_dcid);
+        m_pSession->worker()->cancel_delayed_call(m_mgw_dcid);
     }
 }
 
@@ -124,13 +124,15 @@ int32_t PinlokiSession::routeQuery(GWBUF* pPacket)
         MXS_INFO("COM_BINLOG_DUMP");
         try
         {
-            pinloki::Callback cb = [this](const mxq::RplEvent& event) {
+            pinloki::SendCallback send_cb = [this](const mxq::RplEvent& event) {
                     return send_event(event);
+                };
+            pinloki::WorkerCallback worker_cb = [this]() -> mxb::Worker& {
+                    return *m_pSession->worker();
                 };
 
             m_reader = std::make_unique<Reader>(
-                cb, m_router->inventory()->config(),
-                mxs::RoutingWorker::get_current(),
+                send_cb, worker_cb, m_router->inventory()->config(),
                 m_gtid_list, std::chrono::seconds(m_heartbeat_period));
             m_reader->start();
             rval = 1;
@@ -250,7 +252,7 @@ int PinlokiSession::low_water_mark_reached(DCB* dcb, DCB::Reason reason, void* u
             pSession->m_reader->send_events();
         };
 
-    mxs::RoutingWorker::get_current()->execute(callback, mxs::RoutingWorker::EXECUTE_QUEUED);
+    pSession->m_pSession->worker()->execute(callback, mxs::RoutingWorker::EXECUTE_QUEUED);
 
     return 0;
 }
@@ -557,7 +559,7 @@ void PinlokiSession::master_gtid_wait(const std::string& gtid, int timeout)
     {
         if (cb(mxb::Worker::Call::EXECUTE))
         {
-            m_mgw_dcid = mxs::RoutingWorker::get_current()->delayed_call(1000, cb);
+            m_mgw_dcid = m_pSession->worker()->delayed_call(1000, cb);
         }
     }
     else

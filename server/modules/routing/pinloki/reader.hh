@@ -25,14 +25,15 @@ using namespace std::chrono_literals;
 namespace pinloki
 {
 
-using Callback = std::function<void (const maxsql::RplEvent&)>;
+using SendCallback = std::function<void (const maxsql::RplEvent&)>;
+using WorkerCallback = std::function<mxb::Worker& ()>;
 
 class Reader
 {
 public:
-    Reader(Callback cb,
+    Reader(SendCallback cb,
+           WorkerCallback worker_cb,
            const Config& conf,
-           mxb::Worker* worker,
            const maxsql::GtidList& start_gl,
            const std::chrono::seconds& heartbeat_interval);
     ~Reader();
@@ -52,18 +53,18 @@ private:
 
     struct PollData : public MXB_POLL_DATA
     {
+        PollData() = default;
         PollData(Reader* reader, mxb::Worker* worker);
         Reader* reader;
     };
 
     std::unique_ptr<FileReader> m_sFile_reader;
 
-    Callback        m_send_callback;
-    PinlokiSession* m_pSession;
+    SendCallback    m_send_callback;
+    WorkerCallback  m_get_worker;
     bool            m_in_high_water = false;
     InventoryReader m_inventory;
     PollData        m_reader_poll_data;
-    mxb::Worker*    m_worker;
     maxbase::Timer  m_timer {10s};
 
     // Related to delayed start
