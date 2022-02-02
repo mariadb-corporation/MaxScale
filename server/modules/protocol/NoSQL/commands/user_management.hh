@@ -1115,7 +1115,12 @@ public:
             throw SoftError(ss.str(), error::USER_NOT_FOUND);
         }
 
-        m_what = MxsUpdateUser::parse(KEY, um, m_doc, m_db, m_user, &m_new_info);
+        MxsUpdateUser::Data data;
+        m_what = MxsUpdateUser::parse(KEY, um, m_doc, m_db, m_user, &data);
+        m_new_info.custom_data = std::move(data.custom_data);
+        m_new_info.mechanisms = std::move(data.mechanisms);
+        m_new_info.pwd = data.pwd;
+        m_new_info.roles = std::move(data.roles);
 
         if ((m_what & ~(UserInfo::CUSTOM_DATA | UserInfo::MECHANISMS)) != 0)
         {
