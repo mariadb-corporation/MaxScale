@@ -100,7 +100,7 @@ public:
 private:
     void authenticate(scram::Mechanism mechanism, string_view payload, DocumentBuilder& doc)
     {
-        unique_ptr<NoSQL::Sasl> sSasl = m_database.context().get_sasl();
+        unique_ptr<Sasl> sSasl = m_database.context().get_sasl();
 
         if (sSasl)
         {
@@ -169,7 +169,7 @@ private:
 
         auto client_nonce_b64 = payload.substr(i + 2); // Skip "r="
 
-        sSasl.reset(new NoSQL::Sasl);
+        sSasl.reset(new Sasl);
 
         sSasl->set_user_info(std::move(info));
         sSasl->set_gs2_header(gs2_header);
@@ -180,7 +180,7 @@ private:
         authenticate(mechanism, std::move(sSasl), doc);
     }
 
-    void authenticate(scram::Mechanism mechanism, unique_ptr<NoSQL::Sasl> sSasl, DocumentBuilder& doc)
+    void authenticate(scram::Mechanism mechanism, unique_ptr<Sasl> sSasl, DocumentBuilder& doc)
     {
         vector<uint8_t> server_nonce = crypto::create_random_bytes(scram::SERVER_NONCE_SIZE);
 
@@ -223,7 +223,7 @@ public:
 
     void populate_response(DocumentBuilder& doc) override
     {
-        unique_ptr<NoSQL::Sasl> sSasl = m_database.context().get_sasl();
+        unique_ptr<Sasl> sSasl = m_database.context().get_sasl();
 
         if (!sSasl)
         {
@@ -248,7 +248,7 @@ public:
     }
 
 private:
-    void authenticate(const NoSQL::Sasl& sasl, string_view payload, DocumentBuilder& doc)
+    void authenticate(const Sasl& sasl, string_view payload, DocumentBuilder& doc)
     {
         auto backup = payload;
 
@@ -320,7 +320,7 @@ private:
         authenticate(sasl, client_final_message_bare, client_proof_b64, doc);
     }
 
-    void authenticate(const NoSQL::Sasl& sasl,
+    void authenticate(const Sasl& sasl,
                       const string& client_final_message_bare,
                       string_view client_proof_64,
                       DocumentBuilder& doc)
@@ -359,7 +359,7 @@ private:
         authenticate(sasl, salted_password, auth_message, doc);
     }
 
-    void authenticate(const NoSQL::Sasl& sasl,
+    void authenticate(const Sasl& sasl,
                       const vector<uint8_t>& salted_password,
                       const string& auth_message,
                       DocumentBuilder& doc)
