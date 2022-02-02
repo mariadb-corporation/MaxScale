@@ -98,11 +98,15 @@ public:
         std::string                   custom_data; // JSON document
         std::string                   salt_sha1_b64;
         std::string                   salt_sha256_b64;
+        std::string                   salted_pwd_sha1_b64;
+        std::string                   salted_pwd_sha256_b64;
         std::vector<scram::Mechanism> mechanisms;
         std::vector<role::Role>       roles;
 
         std::vector<uint8_t> salt_sha1() const;
         std::vector<uint8_t> salt_sha256() const;
+        std::vector<uint8_t> salted_pwd_sha1() const;
+        std::vector<uint8_t> salted_pwd_sha256() const;
 
         std::vector<uint8_t> salt(scram::Mechanism mechanism) const
         {
@@ -112,6 +116,18 @@ public:
         std::string salt_b64(scram::Mechanism mechanism) const
         {
             return mechanism == scram::Mechanism::SHA_1 ? this->salt_sha1_b64 : this->salt_sha256_b64;
+        }
+
+        std::vector<uint8_t> salted_pwd(scram::Mechanism mechanism) const
+        {
+            return mechanism == scram::Mechanism::SHA_1 ? this->salted_pwd_sha1() : this->salted_pwd_sha256();
+        }
+
+        std::string salted_pwd_b64(scram::Mechanism mechanism) const
+        {
+            return mechanism == scram::Mechanism::SHA_1
+                ? this->salted_pwd_sha1_b64
+                : this->salted_pwd_sha256_b64;
         }
     };
 

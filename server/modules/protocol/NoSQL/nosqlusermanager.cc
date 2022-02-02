@@ -34,11 +34,14 @@ const int NOSQL_UUID_STR_LEN = 37;
 //
 static const char SQL_CREATE[] =
     "CREATE TABLE IF NOT EXISTS accounts "
-    "(mariadb_user TEXT UNIQUE, db TEXT, user TEXT, pwd TEXT, host TEXT, "
-    "custom_data TEXT, uuid TEXT, salt_sha1_b64 TEXT, salt_sha256_b64 TEXT, roles TEXT)";
+    "(mariadb_user TEXT UNIQUE, db TEXT, user TEXT, pwd TEXT, host TEXT, custom_data TEXT, uuid TEXT, "
+    "salt_sha1_b64 TEXT, salt_sha256_b64 TEXT, salted_pwd_sha1_b64 TEXT, salted_pwd_sha256_b64 TEXT, "
+    "roles TEXT)";
 
 static const char SQL_INSERT_HEAD[] =
-    "INSERT INTO accounts (mariadb_user, db, user, pwd, host, custom_data, uuid, salt_sha1_b64, salt_sha256_b64, roles) "
+    "INSERT INTO accounts "
+    "(mariadb_user, db, user, pwd, host, custom_data, uuid, salt_sha1_b64, salt_sha256_b64, "
+    "salted_pwd_sha1_b64, salted_pwd_sha256_b64, roles) "
     "VALUES ";
 
 static const char SQL_DELETE_WHERE_MARIADB_USER_HEAD[] =
@@ -71,7 +74,7 @@ static const char SQL_UPDATE_TAIL[] =
 
 int select_info_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
 {
-    mxb_assert(nColumns == 10);
+    mxb_assert(nColumns == 12);
 
     auto* pInfos = static_cast<vector<nosql::UserManager::UserInfo>*>(pData);
 
@@ -85,6 +88,8 @@ int select_info_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
     info.uuid = pzColumn[6];
     info.salt_sha1_b64 = pzColumn[7];
     info.salt_sha256_b64 = pzColumn[8];
+    info.salted_pwd_sha1_b64 = pzColumn[9];
+    info.salted_pwd_sha256_b64 = pzColumn[10];
 
     if (!info.salt_sha1_b64.empty())
     {
@@ -110,7 +115,7 @@ int select_info_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
     }
 
     vector<nosql::role::Role> roles;
-    if (nosql::role::from_json(pzColumn[9], &roles))
+    if (nosql::role::from_json(pzColumn[11], &roles))
     {
         info.roles = std::move(roles);
 
@@ -500,6 +505,16 @@ vector<uint8_t> UserManager::UserInfo::salt_sha256() const
     return mxs::from_base64(this->salt_sha256_b64);
 }
 
+vector<uint8_t> UserManager::UserInfo::salted_pwd_sha1() const
+{
+    return mxs::from_base64(this->salted_pwd_sha1_b64);
+}
+
+vector<uint8_t> UserManager::UserInfo::salted_pwd_sha256() const
+{
+    return mxs::from_base64(this->salted_pwd_sha256_b64);
+}
+
 UserManager::UserManager(string path, sqlite3* pDb)
     : m_path(std::move(path))
     , m_db(*pDb)
@@ -616,6 +631,8 @@ bool UserManager::add_user(const string& db,
 
     string salt_sha1_b64;
     string salt_sha256_b64;
+    string salted_pwd_sha1_b64;
+    string salted_pwd_sha256_b64;
 
     for (const auto mechanism : mechanisms)
     {
@@ -627,6 +644,9 @@ bool UserManager::add_user(const string& db,
                 size_t salt_size = hash_size - 4; // To leave room for scram stuff.
                 vector<uint8_t> salt = crypto::create_random_bytes(salt_size);
                 salt_sha1_b64 = mxs::to_base64(salt);
+
+                auto salted_pwd = scram::ScramSHA1::get().get_salted_password(user, pwd, salt);
+                salted_pwd_sha1_b64 = mxs::to_base64(salted_pwd);
             }
             break;
 
@@ -636,6 +656,9 @@ bool UserManager::add_user(const string& db,
                 size_t salt_size = hash_size - 4; // To leave room for scram stuff.
                 vector<uint8_t> salt = crypto::create_random_bytes(salt_size);
                 salt_sha256_b64 = mxs::to_base64(salt);
+
+                auto salted_pwd = scram::ScramSHA256::get().get_salted_password(user, pwd, salt);
+                salted_pwd_sha256_b64 = mxs::to_base64(salted_pwd);
             }
             break;
 
@@ -665,6 +688,8 @@ bool UserManager::add_user(const string& db,
        << zUuid << "', '"
        << salt_sha1_b64 << "', '"
        << salt_sha256_b64 << "', '"
+       << salted_pwd_sha1_b64 << "', '"
+       << salted_pwd_sha256_b64 << "', '"
        << role::to_json(roles)
        << "')";
 
@@ -898,13 +923,13 @@ bool UserManager::update(const string& db, const string& user, uint32_t what, co
 
         if (std::find(begin, end, scram::Mechanism::SHA_1) == end)
         {
-            ss << delimiter << "salt_sha1_b64 = ''";
+            ss << delimiter << "salt_sha1_b64 = '', salted_pwd_sha1_b64 = ''";
             delimiter = ", ";
         }
 
         if (std::find(begin, end, scram::Mechanism::SHA_256) == end)
         {
-            ss << delimiter << "salt_sha256_b64 = ''";
+            ss << delimiter << "salt_sha256_b64 = '', salted_pwd_sha256_b64 = ''";
             delimiter = ", ";
         }
     }

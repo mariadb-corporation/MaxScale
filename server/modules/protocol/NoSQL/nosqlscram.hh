@@ -101,6 +101,10 @@ public:
 
     virtual std::string get_digested_password(const std::string& user, const std::string& password) const = 0;
 
+    std::vector<uint8_t> get_salted_password(const std::string& user,
+                                             const std::string& password,
+                                             const std::vector<uint8_t>& salt) const;
+
     virtual std::vector<uint8_t> Hi(const std::string& password,
                                     const std::vector<uint8_t>& salt,
                                     size_t iterations) const = 0;

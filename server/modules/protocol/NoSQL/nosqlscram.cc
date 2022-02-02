@@ -304,6 +304,17 @@ Scram::~Scram()
 {
 }
 
+vector<uint8_t> Scram::get_salted_password(const string& user,
+                                           const string& password,
+                                           const vector<uint8_t>& salt) const
+{
+    string digested_password = get_digested_password(user, password);
+
+    auto salted_password = Hi(digested_password, salt, scram::ITERATIONS);
+
+    return salted_password;
+}
+
 //
 // SHA1
 //
