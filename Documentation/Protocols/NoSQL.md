@@ -55,8 +55,7 @@ A complete example can be found at the [end](#example) of this document.
 # Authentication
 
 Nosqlprotocol supports _SCRAM_ _authentication_ as implemented by MongoDB®.
-Currently the `SCRAM-SHA-1` mechanism is supported, but support for
-`SCRAM-SHA-256` will be added.
+The mechanisms `SCRAM-SHA-1` and `SCRAM-SHA-256` are both supported.
 
 If nosqlprotocol has been setup so that no authentication is required, then
 when connecting only the host and port should be provided, but neither a
@@ -86,9 +85,9 @@ matches all hosts. What data a user is allowed to access and modify is
 specified by what _privileges_ are granted to the user.
 
 A NoSQL user is somewhat different. It is created in the context of a
-particular database, so there may be a user `user` in the database `dbA`
-and different user with the same name `user` in the database `dbB`. What
-hosts a user may connect from can be restricted, but that is property of
+particular database, so there may be a user `userx` in the database `dbA`
+and different user with the same name `userx` in the database `dbB`. What
+hosts a user may connect from can be restricted, but that is a property of
 the user and not an implicit part of it. What data a user is allowed to
 access and modify is specified by the _roles_ that have been assigned to
 the user.
@@ -188,18 +187,34 @@ converted to.
 Role | Privilege
 -----|------
 dbAdmin|ALTER, CREATE, DROP, SHOW DATABASES, SELECT
-readWrite|CREATE, DELETE, INDEX, INSERT, SELECT, UPDATE
 read|SELECT
+readWrite|CREATE, DELETE, INDEX, INSERT, SELECT, UPDATE
 userAdmin|CREATE USER, GRANT OPTION
+
+The following roles are shorthands for several other roles.
+
+Role | Shorthand for
+-----|----
+dbOwner|dbAdmin, readWrite, userAdmin
+root|dbAdmin, readWrite, userAdmin
+
+`dbOwner` differs from `root` in that the privileges of the former
+apply only to a particular database, while the privileges of the
+latter apply to _all_ databases. However, the role `root` can
+only be assigned to a user in the `admin` database.
 
 In addition there are `AnyDatabase` versions of `dbAdmin`, `read` and
 `readWrite` (e.g `readAnyDatabase`) that can be assigned to a user in
 the `admin` database. If so, then the privilege is granted on `*.*`,
 otherwise on `<db>.*`.
 
+If the `root` role is assigned to a user in the `admin` database,
+then the privileges are granted on `*.*`, otherwise on `<db>.*`.
+
 Other pre-defined roles are recognized and stored in the local
 nosqlprotocol account database, but they do not affect what privileges
-are granted to the MariaDB user.
+are granted to the MariaDB user. Currently user-defined roles are
+not supported.
 
 ## Client Authentication
 
@@ -215,7 +230,7 @@ is configured without a user/password, then all nosqlprotocol clients will
 access the MariaDB server as anonymous users.
 
 Note that the anonymous MariaDB user is only intended for testing and
-should in general not be used.
+should in general not be used, but deleted.
 
 ### Shared Credentials
 
@@ -297,7 +312,7 @@ nosqlprotocol.user = user_with_privileges_for_creating_a_user
 nosqlprotocol.password = the_users_password
 ```
 At this point `nosqlprotocol.authentication_required` and
-`nosqlprotocol.authorization_enabled` should both be `false`. However,
+`nosqlprotocol.authorization_enabled` should both be `false`. Note that
 as those are their default values, they do not have to be specified.
 
 Start MaxScale and connect to it with the MongoDB® command line client
@@ -351,8 +366,8 @@ switched to db test
 
 **NOTE** When a client authenticates, the password will not be
 transferred in cleartext over the network, so, even without SSL,
-(currently not supported) it is not possible to gain access to a
-password by monitoring the network traffic.
+it is not possible to gain access to a password by monitoring the
+network traffic.
 
 However, when a user is created or added (or the password is changed),
 the password will be transferred in _cleartext_. To prevent eavesdropping,
@@ -378,10 +393,11 @@ be converted and no manual intervention, such as re-creation of
 accounts, will be needed.
 
 So as to be able to log in on behalf of clients, nosqlprotocol
-must know their password. As the password is _not_ transferred
-in cleartext to nosqlprotocol during the authentication, the
-password must be stored locally when the user is created with
-[createUser](#createUser) or added with [mxsAddUser](#mxsAddUser).
+must know their password. As the password is not transferred
+to nosqlprotocol during the authentication in a way that could
+be used when logging into MariaDB, the password must be stored
+locally when the user is created with [createUser](#createUser)
+or added with [mxsAddUser](#mxsAddUser).
 
 The account information of nosqlprotocol is stored in an
 [sqlite3](https://sqlite.org/index.html) database whose name is
@@ -422,7 +438,8 @@ $ sqlite3 NoSQL-Listener-v1.db
 SQLite version 3.22.0 2018-01-22 18:45:57
 Enter ".help" for usage hints.
 sqlite> .schema
-CREATE TABLE accounts (mariadb_user TEXT UNIQUE, db TEXT, user TEXT, pwd TEXT, host TEXT, custom_data TEXT, uuid TEXT, salt_b64 TEXT, mechanisms TEXT, roles TEXT);
+sqlite> .schema
+CREATE TABLE accounts (mariadb_user TEXT UNIQUE, db TEXT, user TEXT, pwd TEXT, host TEXT, custom_data TEXT, uuid TEXT, salt_sha1_b64 TEXT, salt_sha256_b64 TEXT, roles TEXT);
 ```
 
 # Client Library
