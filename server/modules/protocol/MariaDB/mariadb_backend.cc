@@ -646,7 +646,7 @@ void MariaDBBackendConnection::normal_read()
 
     /** Ask what type of output the router/filter chain expects */
     MXS_SESSION* session = m_dcb->session();
-    uint64_t capabilities = service_get_capabilities(session->service);
+    uint64_t capabilities = session->capabilities();
     capabilities |= mysql_session()->client_protocol_capabilities();
     bool result_collected = false;
 
@@ -2273,7 +2273,7 @@ void MariaDBBackendConnection::process_ok_packet(Iter it, Iter end)
     warnings |= (*it++) << 8;
     m_reply.set_num_warnings(warnings);
 
-    if (rcap_type_required(m_session->service->capabilities(), RCAP_TYPE_SESSION_STATE_TRACKING)
+    if (rcap_type_required(m_session->capabilities(), RCAP_TYPE_SESSION_STATE_TRACKING)
         && (status & SERVER_SESSION_STATE_CHANGED))
     {
         // TODO: Benchmark the extra cost of always processing the session tracking variables and see if it's

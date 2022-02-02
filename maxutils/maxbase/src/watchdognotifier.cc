@@ -63,11 +63,9 @@ public:
 
     void start()
     {
-        Guard guard(m_lock);
-        int clients = ++m_nClients;
-        guard.unlock();
+        int clients = m_nClients.fetch_add(1, std::memory_order_relaxed);
 
-        if (clients == 1)
+        if (clients == 0)
         {
             m_cond.notify_one();
         }
@@ -75,16 +73,8 @@ public:
 
     void stop()
     {
-        Guard guard(m_lock);
-        int clients = --m_nClients;
-        guard.unlock();
-
-        mxb_assert(clients >= 0);
-
-        if (clients == 0)
-        {
-            m_cond.notify_one();
-        }
+        MXB_AT_DEBUG(int clients = ) m_nClients.fetch_sub(1, std::memory_order_relaxed);
+        mxb_assert(clients > 0);
     }
 
 private:
@@ -97,7 +87,7 @@ private:
         {
             Guard guard(m_lock);
 
-            if (m_nClients > 0)
+            if (m_nClients.load(std::memory_order_relaxed) > 0)
             {
                 m_owner.mark_ticking_if_currently_not();
             }
@@ -109,7 +99,7 @@ private:
     using Guard = std::unique_lock<std::mutex>;
 
     Dependent&             m_owner;
-    int                    m_nClients;
+    std::atomic<int>       m_nClients;
     std::atomic<bool>      m_terminate;
     std::thread            m_thread;
     std::mutex             m_lock;
