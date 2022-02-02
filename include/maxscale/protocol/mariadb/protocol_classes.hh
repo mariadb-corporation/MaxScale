@@ -111,6 +111,7 @@ public:
     bool     ssl_capable() const;
     uint32_t client_capabilities() const;
     uint32_t extra_capabilities() const;
+    uint64_t full_capabilities() const;
 
     uint8_t scramble[MYSQL_SCRAMBLE_LEN] {0};   /*< Created server scramble */
 

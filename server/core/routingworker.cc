@@ -577,13 +577,16 @@ RoutingWorker::get_backend_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Comp
     return pConn;
 }
 
-mxs::BackendConnection* RoutingWorker::ConnectionPool::get_connection()
+mxs::BackendConnection* RoutingWorker::ConnectionPool::get_connection(MXS_SESSION* session)
 {
     mxs::BackendConnection* rval = nullptr;
-    if (!m_contents.empty())
+
+    auto it = std::find_if(m_contents.begin(), m_contents.end(), [&](const auto& kv){
+                               return kv.first->can_reuse(session);
+                           });
+
+    if (it != m_contents.end())
     {
-        // In the normal case (no proxy protocol) just take the first connection.
-        auto it = m_contents.begin();
         rval = it->second.release_conn();
         m_contents.erase(it);
         m_stats.times_found++;
@@ -592,28 +595,7 @@ mxs::BackendConnection* RoutingWorker::ConnectionPool::get_connection()
     {
         m_stats.times_empty++;
     }
-    return rval;
-}
 
-mxs::BackendConnection* RoutingWorker::ConnectionPool::get_connection(const std::string& client_remote)
-{
-    mxs::BackendConnection* rval = nullptr;
-    for (auto it = m_contents.begin(); it != m_contents.end(); ++it)
-    {
-        auto& pool_entry = it->second;
-        if (pool_entry.conn()->dcb()->client_remote() == client_remote)
-        {
-            rval = pool_entry.release_conn();
-            m_contents.erase(it);
-            m_stats.times_found++;
-            break;
-        }
-    }
-    if (!rval)
-    {
-        // The pool may not have been empty, but the effect is the same.
-        m_stats.times_empty++;
-    }
     return rval;
 }
 
@@ -643,17 +625,7 @@ RoutingWorker::pool_get_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Compone
 
         while (!found_conn)
         {
-            mxs::BackendConnection* candidate = nullptr;
-            if (proxy_protocol)
-            {
-                // If proxy protocol is in use, we can only use DCBs that were
-                // opened by a client from the same host.
-                candidate = conn_pool.get_connection(pSession->client_remote());
-            }
-            else
-            {
-                candidate = conn_pool.get_connection();
-            }
+            mxs::BackendConnection* candidate = conn_pool.get_connection(pSession);
 
             // If no candidate could be found, stop right away.
             if (!candidate)
