@@ -1784,7 +1784,11 @@ std::string SERVICE::version_string() const
             }
         }
 
-        if (!m_custom_version_suffix.empty() && !rval.empty())
+        // Add custom version suffix if the normal version also exists. Check that the suffix is not
+        // already somewhere in the string, as various service-as-a-server etc setups can lead to
+        // multiple similar suffixes being added.
+        if (!m_custom_version_suffix.empty() && !rval.empty()
+            && rval.find(m_custom_version_suffix) == string::npos)
         {
             rval.append(m_custom_version_suffix);
         }
