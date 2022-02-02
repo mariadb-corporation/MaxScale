@@ -41,30 +41,26 @@ static const char SQL_INSERT_HEAD[] =
     "INSERT INTO accounts (mariadb_user, db, user, pwd, host, custom_data, uuid, salt_sha1_b64, salt_sha256_b64, roles) "
     "VALUES ";
 
-static const char SQL_DELETE_HEAD[] =
+static const char SQL_DELETE_WHERE_MARIADB_USER_HEAD[] =
     "DELETE FROM accounts WHERE mariadb_user = ";
-
-static const char SQL_SELECT_ONE_INFO_HEAD[] =
-    "SELECT mariadb_user, db, user, pwd, host, custom_data, uuid, salt_sha1_b64, salt_sha256_b64, roles "
-    "FROM accounts WHERE mariadb_user = ";
-
-static const char SQL_SELECT_ALL_INFOS[] =
-    "SELECT mariadb_user, db, user, pwd, host, custom_data, uuid, salt_sha1_b64, salt_sha256_b64, roles "
-    "FROM accounts";
-
-static const char SQL_SELECT_ALL_DB_INFOS_HEAD[] =
-    "SELECT mariadb_user, db, user, pwd, host, custom_data, uuid, salt_sha1_b64, salt_sha256_b64, roles "
-    "FROM accounts WHERE db = ";
-
-static const char SQL_SELECT_SOME_DB_INFOS_HEAD[] =
-    "SELECT mariadb_user, db, user, pwd, host, custom_data, uuid, salt_sha1_b64, salt_sha256_b64, roles "
-    "FROM accounts WHERE ";
-
-static const char SQL_SELECT_ALL_MARIADB_USERS_HEAD[] =
-    "SELECT mariadb_user, host FROM accounts WHERE db = ";
 
 static const char SQL_DELETE_WHERE_HEAD[] =
     "DELETE FROM accounts WHERE ";
+
+static const char SQL_SELECT_WHERE_MARIADB_USER_HEAD[] =
+    "SELECT * FROM accounts WHERE mariadb_user = ";
+
+static const char SQL_SELECT_ALL[] =
+    "SELECT * FROM accounts";
+
+static const char SQL_SELECT_WHERE_DB_HEAD[] =
+    "SELECT * FROM accounts WHERE db = ";
+
+static const char SQL_SELECT_WHERE_HEAD[] =
+    "SELECT * FROM accounts WHERE ";
+
+static const char SQL_SELECT_MARIADB_USER_HOST_WHERE_DB_HEAD[] =
+    "SELECT mariadb_user, host FROM accounts WHERE db = ";
 
 static const char SQL_UPDATE_HEAD[] =
     "UPDATE accounts SET ";
@@ -693,7 +689,7 @@ bool UserManager::remove_user(const string& db, const string& user)
     string mariadb_user = get_mariadb_user(db, nosql::escape_essential_chars(user));
 
     ostringstream ss;
-    ss << SQL_DELETE_HEAD << "\"" << mariadb_user << "\"";
+    ss << SQL_DELETE_WHERE_MARIADB_USER_HEAD << "\"" << mariadb_user << "\"";
 
     string sql = ss.str();
 
@@ -719,7 +715,7 @@ bool UserManager::get_info(const string& db, const string& user, UserInfo* pInfo
 bool UserManager::get_info(const string& mariadb_user, UserInfo* pInfo) const
 {
     ostringstream ss;
-    ss << SQL_SELECT_ONE_INFO_HEAD << "\"" << mariadb_user << "\"";
+    ss << SQL_SELECT_WHERE_MARIADB_USER_HEAD << "\"" << mariadb_user << "\"";
 
     string sql = ss.str();
 
@@ -748,7 +744,7 @@ vector<UserManager::UserInfo> UserManager::get_infos() const
 {
     vector<UserInfo> infos;
     char* pError = nullptr;
-    int rv = sqlite3_exec(&m_db, SQL_SELECT_ALL_INFOS, select_info_cb, &infos, &pError);
+    int rv = sqlite3_exec(&m_db, SQL_SELECT_ALL, select_info_cb, &infos, &pError);
 
     if (rv != SQLITE_OK)
     {
@@ -763,7 +759,7 @@ vector<UserManager::UserInfo> UserManager::get_infos() const
 vector<UserManager::UserInfo> UserManager::get_infos(const std::string& db) const
 {
     ostringstream ss;
-    ss << SQL_SELECT_ALL_DB_INFOS_HEAD << "\"" << db << "\"";
+    ss << SQL_SELECT_WHERE_DB_HEAD << "\"" << db << "\"";
 
     string sql = ss.str();
 
@@ -788,7 +784,7 @@ vector<UserManager::UserInfo> UserManager::get_infos(const vector<string>& maria
     if (!mariadb_users.empty())
     {
         ostringstream ss;
-        ss << SQL_SELECT_SOME_DB_INFOS_HEAD;
+        ss << SQL_SELECT_WHERE_HEAD;
 
         auto it = mariadb_users.begin();
         for (; it != mariadb_users.end(); ++it)
@@ -822,7 +818,7 @@ vector<UserManager::MariaDBAccount> UserManager::get_mariadb_accounts(const stri
     vector<MariaDBAccount> mariadb_accounts;
 
     ostringstream ss;
-    ss << SQL_SELECT_ALL_MARIADB_USERS_HEAD << "'" << db << "'";
+    ss << SQL_SELECT_MARIADB_USER_HOST_WHERE_DB_HEAD << "'" << db << "'";
 
     string sql = ss.str();
 
