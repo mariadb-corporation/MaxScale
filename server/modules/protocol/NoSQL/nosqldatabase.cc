@@ -24,7 +24,7 @@ using namespace std;
 namespace nosql
 {
 
-Database::Database(const std::string& name, NoSQL::Context* pContext, Config* pConfig)
+Database::Database(const std::string& name, Context* pContext, Config* pConfig)
     : m_name(name)
     , m_context(*pContext)
     , m_config(*pConfig)
@@ -36,7 +36,7 @@ Database::~Database()
 }
 
 //static
-unique_ptr<Database> Database::create(const std::string& name, NoSQL::Context* pContext, Config* pConfig)
+unique_ptr<Database> Database::create(const std::string& name, Context* pContext, Config* pConfig)
 {
     return unique_ptr<Database>(new Database(name, pContext, pConfig));
 }

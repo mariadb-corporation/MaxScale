@@ -42,12 +42,12 @@ public:
     /**
      * @return The context.
      */
-    NoSQL::Context& context()
+    Context& context()
     {
         return m_context;
     }
 
-    const NoSQL::Context& context() const
+    const Context& context() const
     {
         return m_context;
     }
@@ -75,7 +75,7 @@ public:
      * @return Unique pointer to the instance.
      */
     static std::unique_ptr<Database> create(const std::string& name,
-                                            NoSQL::Context* pContext,
+                                            Context* pContext,
                                             Config* pConfig);
 
     State handle_delete(GWBUF* pRequest, packet::Delete&& req, GWBUF** ppResponse);
@@ -107,7 +107,7 @@ public:
 
 private:
     Database(const std::string& name,
-             NoSQL::Context* pContext,
+             Context* pContext,
              Config* pConfig);
 
     bool is_busy() const
@@ -131,7 +131,7 @@ private:
 
     State             m_state { State::READY };
     const std::string m_name;
-    NoSQL::Context&   m_context;
+    Context&          m_context;
     Config&           m_config;
     SCommand          m_sCommand;
 };
