@@ -1920,7 +1920,7 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
     payload += 19;
 
     // Either MariaDB 10.2 extra capabilities or 4 bytes filler
-    uint32_t extra_capabilities = client_data->extra_capabilitites();
+    uint32_t extra_capabilities = client_data->extra_capabilities();
     memcpy(payload, &extra_capabilities, sizeof(extra_capabilities));
     payload += 4;
 
@@ -2503,7 +2503,7 @@ void MariaDBBackendConnection::process_result_start(Iter it, Iter end)
         m_num_coldefs = get_encoded_int(it);
         m_reply.add_field_count(m_num_coldefs);
 
-        if ((mysql_session()->extra_capabilitites() & MXS_MARIA_CAP_CACHE_METADATA) && *it == 0)
+        if ((mysql_session()->extra_capabilities() & MXS_MARIA_CAP_CACHE_METADATA) && *it == 0)
         {
             set_reply_state(use_deprecate_eof() ? ReplyState::RSET_ROWS : ReplyState::RSET_COLDEF_EOF);
         }
