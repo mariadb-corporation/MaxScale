@@ -92,7 +92,7 @@ public:
         std::string                   mariadb_user;
         std::string                   db;
         std::string                   user;
-        std::string                   pwd;
+        std::string                   pwd_sha1_b64;
         std::string                   host;
         std::string                   uuid;
         std::string                   custom_data; // JSON document
@@ -103,6 +103,7 @@ public:
         std::vector<scram::Mechanism> mechanisms;
         std::vector<role::Role>       roles;
 
+        std::vector<uint8_t> pwd_sha1() const;
         std::vector<uint8_t> salt_sha1() const;
         std::vector<uint8_t> salt_sha256() const;
         std::vector<uint8_t> salted_pwd_sha1() const;
@@ -140,7 +141,7 @@ public:
 
     bool add_user(const std::string& db,
                   std::string user,
-                  std::string pwd,
+                  std::string password, // Cleartext
                   const std::string& host,
                   const std::string& custom_data, // Assumed to be JSON document.
                   const std::vector<scram::Mechanism>& mechanisms,

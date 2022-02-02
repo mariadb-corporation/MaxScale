@@ -389,7 +389,7 @@ private:
 
         auto& config = m_database.config();
         config.user = mariadb::get_user_name(info.db, info.user);
-        config.password = info.pwd;
+        config.password = info.pwd_sha1();
 
         auto& context = m_database.context();
         context.client_connection().setup_session(config.user, config.password);

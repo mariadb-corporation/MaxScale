@@ -1115,12 +1115,11 @@ public:
             throw SoftError(ss.str(), error::USER_NOT_FOUND);
         }
 
-        MxsUpdateUser::Data data;
-        m_what = MxsUpdateUser::parse(KEY, um, m_doc, m_db, m_user, &data);
-        m_new_info.custom_data = std::move(data.custom_data);
-        m_new_info.mechanisms = std::move(data.mechanisms);
-        m_new_info.pwd = data.pwd;
-        m_new_info.roles = std::move(data.roles);
+        m_what = MxsUpdateUser::parse(KEY, um, m_doc, m_db, m_user, &m_new_data);
+        m_new_info.custom_data = std::move(m_new_data.custom_data);
+        m_new_info.mechanisms = std::move(m_new_data.mechanisms);
+        m_new_info.pwd_sha1_b64 = mxs::to_base64(crypto::sha_1(m_new_data.pwd));
+        m_new_info.roles = std::move(m_new_data.roles);
 
         if ((m_what & ~(UserInfo::CUSTOM_DATA | UserInfo::MECHANISMS)) != 0)
         {
@@ -1197,7 +1196,7 @@ private:
         mxb_assert(m_what & UserInfo::PWD);
 
         ostringstream ss;
-        ss << "SET PASSWORD FOR " << account << " = PASSWORD('" << m_new_info.pwd << "')";
+        ss << "SET PASSWORD FOR " << account << " = PASSWORD('" << m_new_data.pwd << "')";
 
         string s = ss.str();
 
@@ -1252,7 +1251,7 @@ private:
                 const auto& um = m_database.context().um();
 
                 UserInfo info;
-                info.pwd = m_new_info.pwd;
+                info.pwd_sha1_b64 = m_new_info.pwd_sha1_b64;
                 uint32_t what = UserInfo::PWD;
 
                 if (m_what & UserInfo::CUSTOM_DATA)
@@ -1494,15 +1493,16 @@ private:
         UPDATE_GRANTS
     };
 
-    Action                   m_action = Action::UPDATE_PASSWORD;
-    string                   m_db;
-    string                   m_user;
-    UserInfo                 m_old_info;
-    UserInfo                 m_new_info;
-    uint32_t                 m_what { 0 };
-    vector<string>           m_statements;
-    int32_t                  m_nRevokes { 0 };
-    int32_t                  m_nGrants { 0 };
+    Action              m_action = Action::UPDATE_PASSWORD;
+    string              m_db;
+    string              m_user;
+    UserInfo            m_old_info;
+    UserInfo            m_new_info;
+    MxsUpdateUser::Data m_new_data;
+    uint32_t            m_what { 0 };
+    vector<string>      m_statements;
+    int32_t             m_nRevokes { 0 };
+    int32_t             m_nGrants { 0 };
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/usersInfo/

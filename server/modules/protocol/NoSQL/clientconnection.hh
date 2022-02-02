@@ -43,7 +43,7 @@ public:
         return true;
     }
 
-    void setup_session(const std::string& user, const std::string& password);
+    void setup_session(const std::string& user, const std::vector<uint8_t>& password);
     bool start_session();
 
 private:
@@ -65,7 +65,7 @@ private:
 private:
     GWBUF* handle_one_packet(GWBUF* pPacket);
 
-    void prepare_session(const std::string& user, const std::string& password);
+    void prepare_session(const std::string& user, const std::vector<uint8_t>& password);
 
     bool ssl_is_ready();
     bool setup_ssl();

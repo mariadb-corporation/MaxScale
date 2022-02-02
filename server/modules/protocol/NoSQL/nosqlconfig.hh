@@ -16,6 +16,7 @@
 #include <maxscale/config2.hh>
 #include "configuration.hh"
 #include "nosqlbase.hh"
+#include "nosqlcrypto.hh"
 
 namespace nosql
 {
@@ -27,9 +28,9 @@ class Config final
 public:
     Config(const Configuration& config)
         : config_user(config.user)
-        , config_password(config.password)
+        , config_password(crypto::sha_1(config.password))
         , user(config.user)
-        , password(config.password)
+        , password(this->config_password)
         , host(config.host)
         , authentication_required(config.authentication_required)
         , authorization_enabled(config.authorization_enabled)
@@ -84,22 +85,22 @@ public:
     void copy_from(const std::string& command, const bsoncxx::document::view& doc);
     void copy_to(nosql::DocumentBuilder& doc) const;
 
-    // Can only be changed via MaxScale
-    const std::string config_user;
-    const std::string config_password;
-    std::string       user;
-    std::string       password;
-    const std::string host;
-    const bool        authentication_required;
-    const bool        authorization_enabled;
-    const int64_t     id_length;
+    // Can only be changed via MaxScale or by nosqlprotocol itself.
+    const std::string          config_user;
+    const std::vector<uint8_t> config_password;
+    std::string                user;
+    std::vector<uint8_t>       password;
+    const std::string          host;
+    const bool                 authentication_required;
+    const bool                 authorization_enabled;
+    const int64_t              id_length;
 
     // Can be changed from the NosQL API.
-    bool                                auto_create_databases;
-    bool                                auto_create_tables;
-    std::chrono::seconds                cursor_timeout;
-    uint32_t                            debug;
-    bool                                log_unknown_command;
+    bool                                 auto_create_databases;
+    bool                                 auto_create_tables;
+    std::chrono::seconds                 cursor_timeout;
+    uint32_t                             debug;
+    bool                                 log_unknown_command;
     Configuration::OnUnknownCommand      on_unknown_command;
     Configuration::OrderedInsertBehavior ordered_insert_behavior;
 };

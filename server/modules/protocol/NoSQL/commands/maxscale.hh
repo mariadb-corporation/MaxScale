@@ -419,7 +419,7 @@ public:
         UserManager::UserInfo info;
         info.custom_data = std::move(data.custom_data);
         info.mechanisms = std::move(data.mechanisms);
-        info.pwd = data.pwd;
+        info.pwd_sha1_b64 = mxs::to_base64(crypto::sha_1(data.pwd));
         info.roles = std::move(data.roles);
 
         if (um.update(db, user, what, info))

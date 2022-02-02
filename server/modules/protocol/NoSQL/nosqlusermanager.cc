@@ -34,13 +34,14 @@ const int NOSQL_UUID_STR_LEN = 37;
 //
 static const char SQL_CREATE[] =
     "CREATE TABLE IF NOT EXISTS accounts "
-    "(mariadb_user TEXT UNIQUE, db TEXT, user TEXT, pwd TEXT, host TEXT, custom_data TEXT, uuid TEXT, "
+    "(mariadb_user TEXT UNIQUE, db TEXT, user TEXT, pwd_sha1_b64 TEXT, host TEXT, "
+    "custom_data TEXT, uuid TEXT, "
     "salt_sha1_b64 TEXT, salt_sha256_b64 TEXT, salted_pwd_sha1_b64 TEXT, salted_pwd_sha256_b64 TEXT, "
     "roles TEXT)";
 
 static const char SQL_INSERT_HEAD[] =
     "INSERT INTO accounts "
-    "(mariadb_user, db, user, pwd, host, custom_data, uuid, salt_sha1_b64, salt_sha256_b64, "
+    "(mariadb_user, db, user, pwd_sha1_b64, host, custom_data, uuid, salt_sha1_b64, salt_sha256_b64, "
     "salted_pwd_sha1_b64, salted_pwd_sha256_b64, roles) "
     "VALUES ";
 
@@ -82,7 +83,7 @@ int select_info_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
     info.mariadb_user = pzColumn[0];
     info.db = pzColumn[1];
     info.user = pzColumn[2];
-    info.pwd = pzColumn[3];
+    info.pwd_sha1_b64 = pzColumn[3];
     info.host = pzColumn[4];
     info.custom_data = pzColumn[5];
     info.uuid = pzColumn[6];
@@ -495,6 +496,11 @@ void role::from_bson(const bsoncxx::array::view& bson,
     pRoles->swap(roles);
 }
 
+std::vector<uint8_t> UserManager::UserInfo::pwd_sha1() const
+{
+    return mxs::from_base64(this->pwd_sha1_b64);
+}
+
 vector<uint8_t> UserManager::UserInfo::salt_sha1() const
 {
     return mxs::from_base64(this->salt_sha1_b64);
@@ -629,6 +635,8 @@ bool UserManager::add_user(const string& db,
 {
     mxb_assert(custom_data.empty() || mxb::Json().load_string(custom_data));
 
+    pwd = nosql::escape_essential_chars(pwd);
+
     string salt_sha1_b64;
     string salt_sha256_b64;
     string salted_pwd_sha1_b64;
@@ -668,8 +676,11 @@ bool UserManager::add_user(const string& db,
     }
 
     user = nosql::escape_essential_chars(user);
-    pwd = nosql::escape_essential_chars(pwd);
+
     string mariadb_user = get_mariadb_user(db, user);
+
+    vector<uint8_t> pwd_sha1 = crypto::sha_1(pwd);
+    string pwd_sha1_b64 = mxs::to_base64(pwd_sha1);
 
     uuid_t uuid;
     uuid_generate(uuid);
@@ -682,7 +693,7 @@ bool UserManager::add_user(const string& db,
        << mariadb_user << "', '"
        << db << "', '"
        << user << "', '"
-       << pwd << "', '"
+       << pwd_sha1_b64 << "', '"
        << host << "', '"
        << custom_data << "', '"
        << zUuid << "', '"
@@ -936,7 +947,7 @@ bool UserManager::update(const string& db, const string& user, uint32_t what, co
 
     if (what & UserInfo::PWD)
     {
-        ss << delimiter << "pwd = '" << info.pwd << "'";
+        ss << delimiter << "pwd_sha1_b64 = '" << info.pwd_sha1_b64 << "'";
         delimiter = ", ";
     }
 
