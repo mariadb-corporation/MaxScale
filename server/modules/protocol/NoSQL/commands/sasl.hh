@@ -110,7 +110,7 @@ private:
 
         if (m_database.context().authenticated())
         {
-            Logout::logout(m_database);
+            Logout::logout(m_database, Logout::Approach::UNCONDITIONAL);
         }
 
         // We are expecting a string like "n,,n=USER,r=NONCE" where "n,," is the gs2 header,

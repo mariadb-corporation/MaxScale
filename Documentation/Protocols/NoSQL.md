@@ -1039,13 +1039,15 @@ Field | Type | Description
 ------|------|------------
 logout | any | Ignored.
 
+If you are not logged in and using authentication, `logout` has no effect.
+
+Note that in order to be logged out, the logging out must be done while
+using the same database that was used when you logged on.
+
 Always returns
 ```
 { ok: 1 }
 ```
-
-Since authentication and logging in is currently not supported,
-the command has no effect.
 
 ## User Management Commands
 
