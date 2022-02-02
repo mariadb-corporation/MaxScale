@@ -536,11 +536,13 @@ bool MariaDBClientConnection::send_server_handshake()
         mxb_assert((caps & GW_MYSQL_CAPABILITIES_DEPRECATE_EOF) == 0);
     }
 
-    if (cap_types == CapTypes::XPAND || min_version < 50705)
+    if (cap_types == CapTypes::XPAND || min_version < 80000)
     {
         // The DEPRECATE_EOF and session tracking were added in MySQL 5.7, anything older than that shouldn't
         // advertise them. This includes XPand: it doesn't support SESSION_TRACK or DEPRECATE_EOF as it's
-        // MySQL 5.1 compatible on the protocol layer.
+        // MySQL 5.1 compatible on the protocol layer. Additionally, MySQL 5.7 has a broken query cache
+        // implementation where it sends non-DEPRECATE_EOF results even when a client requested results in the
+        // DEPRECATE_EOF format.
         caps &= ~(GW_MYSQL_CAPABILITIES_SESSION_TRACK | GW_MYSQL_CAPABILITIES_DEPRECATE_EOF);
     }
 
