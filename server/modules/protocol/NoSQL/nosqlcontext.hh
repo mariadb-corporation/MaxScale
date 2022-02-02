@@ -117,12 +117,22 @@ public:
 
     bool authenticated() const
     {
-        return m_authenticated;
+        return !m_authentication_db.empty();
     }
 
-    void set_authenticated(bool authenticated)
+    const std::string& authentication_db() const
     {
-        m_authenticated = authenticated;
+        return m_authentication_db;
+    }
+
+    void set_authenticated(const std::string& authentication_db)
+    {
+        m_authentication_db = authentication_db;
+    }
+
+    void set_unauthenticated()
+    {
+        m_authentication_db.clear();
     }
 
 private:
@@ -138,7 +148,7 @@ private:
     bool                       m_metadata_sent { false };
     std::unique_ptr<Sasl>      m_sSasl;
     Roles                      m_roles;
-    bool                       m_authenticated { false };
+    std::string                m_authentication_db;
 
     static std::atomic<int64_t> s_connection_id;
 };

@@ -395,7 +395,7 @@ private:
         auto& context = m_database.context();
         context.client_connection().setup_session(config.user, config.password);
         context.set_roles(role::to_bitmasks(info.roles));
-        context.set_authenticated(true);
+        context.set_authenticated(info.db);
     }
 };
 

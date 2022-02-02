@@ -64,7 +64,7 @@ public:
         config.user = config.config_user;
         config.password = config.config_password;
 
-        context.set_authenticated(false);
+        context.set_unauthenticated();
         context.client_connection().setup_session(config.user, config.password);
     }
 };
