@@ -329,11 +329,10 @@ private:
         const auto& scram = nosql::scram::get(mechanism);
         const auto& info = sasl.user_info();
 
-        string digested_password = scram.get_digested_password(info.user, info.pwd);
-
-        auto salted_password = scram.Hi(digested_password, info.salt(mechanism), scram::ITERATIONS);
+        auto salted_password = info.salted_pwd(mechanism);
         auto client_key = scram.HMAC(salted_password, "Client Key");
         auto stored_key = scram.H(client_key);
+
         string auth_message = sasl.initial_message()
             + "," + sasl.server_first_message()
             + "," + client_final_message_bare;
