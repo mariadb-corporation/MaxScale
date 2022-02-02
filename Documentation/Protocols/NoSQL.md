@@ -383,21 +383,19 @@ for details.
 
 ## Local Account Database
 
-**NOTE** The following information is provided in the hope that
-it may be useful. We make no guarantees that the way in which
-the account information is stored by nosqlprotocol will remain
-the same _even_ between maintenance releases. We do guarantee,
-however, that even if the way in which the account information
-is stored changes, existing account information will automatically
-be converted and no manual intervention, such as re-creation of
-accounts, will be needed.
-
 So as to be able to log in on behalf of clients, nosqlprotocol
 must know their password. As the password is not transferred
 to nosqlprotocol during the authentication in a way that could
 be used when logging into MariaDB, the password must be stored
 locally when the user is created with [createUser](#createUser)
 or added with [mxsAddUser](#mxsAddUser).
+
+Note that the password is not stored in cleartext but as three
+different hashes; hashed with sha1 for use with MariaDB, salted
+and hashed with sha1 for use with the `SCRAM-SHA-1` authentication
+mechanism (if that is enabled for the user) and salted and hashed
+with sha256 for use with the `SCRAM-SHA-256` authentication mechanism
+(if that is enabled for the user).
 
 The account information of nosqlprotocol is stored in an
 [sqlite3](https://sqlite.org/index.html) database whose name is
@@ -432,15 +430,16 @@ access. At subsequent startups the permissions will be checked
 and MaxScale will refuse to start if the permissions allow
 access to others.
 
-The file can be accessed with the `sqlite3` command line program.
-```
-$ sqlite3 NoSQL-Listener-v1.db
-SQLite version 3.22.0 2018-01-22 18:45:57
-Enter ".help" for usage hints.
-sqlite> .schema
-sqlite> .schema
-CREATE TABLE accounts (mariadb_user TEXT UNIQUE, db TEXT, user TEXT, pwd TEXT, host TEXT, custom_data TEXT, uuid TEXT, salt_sha1_b64 TEXT, salt_sha256_b64 TEXT, roles TEXT);
-```
+**We strongly recommend that no manual modifications are made
+to the database.**
+
+Note that we make **no** guarantees that the way in which the
+account information is stored by nosqlprotocol will remain the
+same _even_ between maintenance releases. We do guarantee,
+however, that even if the way in which the account information is
+stored changes, existing account information will automatically
+be converted and no manual intervention, such as re-creation of
+accounts, will be needed.
 
 # Client Library
 
