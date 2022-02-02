@@ -1716,9 +1716,8 @@ bool Session::is_movable() const
         }
     }
 
-    // Do not move a session which is waiting for a connection.
-    mxb_assert(m_endpoints_waiting >= 0);
-    return m_endpoints_waiting == 0;
+    // Do not move a session which may be waiting for a connection.
+    return m_pooling_time_ms == 0;
 }
 
 void Session::notify_userdata_change()
@@ -1739,16 +1738,6 @@ void Session::remove_userdata_subscriber(MXS_SESSION::EventSubscriber* obj)
 {
     mxb_assert(m_event_subscribers.count(obj) == 1);
     m_event_subscribers.erase(obj);
-}
-
-void Session::endpoint_waiting_for_conn()
-{
-    m_endpoints_waiting++;
-}
-
-void Session::endpoint_no_longer_waiting_for_conn()
-{
-    m_endpoints_waiting--;
 }
 
 bool Session::pool_backends_cb(mxb::Worker::Call::action_t action)

@@ -988,7 +988,7 @@ bool ServerEndpoint::connect()
             // be notified as soon as a connection becomes available.
 
             m_connstatus = ConnStatus::WAITING_FOR_CONN;
-            worker->add_conn_wait_entry(this, m_session);
+            worker->add_conn_wait_entry(this);
             m_conn_wait_start = worker->epoll_tick_now();
             rval = true;
 
@@ -1039,7 +1039,7 @@ void ServerEndpoint::close()
     else if (m_connstatus == ConnStatus::WAITING_FOR_CONN)
     {
         // Erase the entry in the wait list.
-        m_session->worker()->erase_conn_wait_entry(this, m_session);
+        m_session->worker()->erase_conn_wait_entry(this);
     }
 
     // This function seems to be called twice when closing an Endpoint. Take this into account by always

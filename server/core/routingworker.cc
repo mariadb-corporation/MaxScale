@@ -1751,10 +1751,25 @@ RoutingWorker::ConnectionPoolStats RoutingWorker::pool_get_stats(const SERVER* p
     return rval;
 }
 
-void RoutingWorker::add_conn_wait_entry(ServerEndpoint* ep, Session* session)
+void RoutingWorker::add_conn_wait_entry(ServerEndpoint* ep)
 {
     m_eps_waiting_for_conn[ep->server()].push_back(ep);
-    session->endpoint_waiting_for_conn();
+}
+
+void RoutingWorker::erase_conn_wait_entry(ServerEndpoint* ep)
+{
+    auto map_iter = m_eps_waiting_for_conn.find(ep->server());
+    mxb_assert(map_iter != m_eps_waiting_for_conn.end());
+    // The element is surely found in both the map and the set.
+    auto& ep_deque = map_iter->second;
+    // Erasing from the middle of a deque is inefficient, as possibly a large number of elements
+    // needs to be moved. TODO: set the element to null and erase later.
+    ep_deque.erase(std::find(ep_deque.begin(), ep_deque.end(), ep));
+
+    if (ep_deque.empty())
+    {
+        m_eps_waiting_for_conn.erase(map_iter);
+    }
 }
 
 void RoutingWorker::notify_connection_available(SERVER* server)
@@ -1824,7 +1839,6 @@ void RoutingWorker::activate_waiting_endpoints()
             if (erase_from_set)
             {
                 ep_set.erase(it_first);
-                ep->session()->endpoint_no_longer_waiting_for_conn();
             }
         }
 
@@ -1858,7 +1872,6 @@ void RoutingWorker::fail_timed_out_endpoints()
             {
                 ep->handle_timed_out_continue();
                 it = ep_deq.erase(it);
-                ep->session()->endpoint_no_longer_waiting_for_conn();
             }
             else
             {
@@ -1874,23 +1887,6 @@ void RoutingWorker::fail_timed_out_endpoints()
         {
             ++it_map;
         }
-    }
-}
-
-void RoutingWorker::erase_conn_wait_entry(ServerEndpoint* ep, Session* session)
-{
-    auto map_iter = m_eps_waiting_for_conn.find(ep->server());
-    mxb_assert(map_iter != m_eps_waiting_for_conn.end());
-    // The element is surely found in both the map and the set.
-    auto& ep_deque = map_iter->second;
-    // Erasing from the middle of a deque is inefficient, as possibly a large number of elements
-    // needs to be moved. TODO: set the element to null and erase later.
-    ep_deque.erase(std::find(ep_deque.begin(), ep_deque.end(), ep));
-
-    session->endpoint_no_longer_waiting_for_conn();
-    if (ep_deque.empty())
-    {
-        m_eps_waiting_for_conn.erase(map_iter);
     }
 }
 

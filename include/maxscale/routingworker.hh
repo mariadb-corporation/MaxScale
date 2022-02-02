@@ -433,8 +433,8 @@ public:
     void pool_close_all_conns();
     void pool_close_all_conns_by_server(SERVER* pSrv);
 
-    void add_conn_wait_entry(ServerEndpoint* ep, Session* session);
-    void erase_conn_wait_entry(ServerEndpoint* ep, Session* session);
+    void add_conn_wait_entry(ServerEndpoint* ep);
+    void erase_conn_wait_entry(ServerEndpoint* ep);
     void notify_connection_available(SERVER* server);
 
     static void pool_set_size(const std::string& srvname, int64_t size);
