@@ -644,7 +644,7 @@ void MariaDBBackendConnection::normal_read()
 
     /** Ask what type of output the router/filter chain expects */
     MXS_SESSION* session = m_dcb->session();
-    uint64_t capabilities = service_get_capabilities(session->service);
+    uint64_t capabilities = session->capabilities();
     capabilities |= mysql_session()->client_protocol_capabilities();
     bool result_collected = false;
 
@@ -1699,6 +1699,27 @@ bool MariaDBBackendConnection::read_backend_handshake(mxs::Buffer&& buffer)
     return rval;
 }
 
+bool MariaDBBackendConnection::capability_mismatch() const
+{
+    bool mismatch = false;
+
+    if (use_deprecate_eof() && (server_capabilities & GW_MYSQL_CAPABILITIES_DEPRECATE_EOF) == 0)
+    {
+        // This is an unexpected situation but it can happen if the server is swapped out without MaxScale
+        // recalculating the version. Mostly this is here to catch any possible bugs that there might be in
+        // the capability handling of MaxScale. Separate code should exist for routers for any unexpected
+        // responses as bugs in the server can cause mismatching result types to be sent,
+        // https://bugs.mysql.com/bug.php?id=83346 is one example of such.
+        MXS_INFO("Client uses DEPRECATE_EOF protocol but the server does not implement it");
+        mxb_assert_message(!true, "DEPRECATE_EOF should be used by both client and backend");
+        mismatch = true;
+    }
+
+    // TODO: Check that the server sends MXS_MARIA_CAP_CACHE_METADATA if the client expects it
+
+    return mismatch;
+}
+
 /**
  * Sends a response for an AuthSwitchRequest to the default auth plugin
  */
@@ -1897,7 +1918,7 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
     payload += 19;
 
     // Either MariaDB 10.2 extra capabilities or 4 bytes filler
-    uint32_t extra_capabilities = client_data->extra_capabilitites();
+    uint32_t extra_capabilities = client_data->extra_capabilities();
     memcpy(payload, &extra_capabilities, sizeof(extra_capabilities));
     payload += 4;
 
@@ -2262,7 +2283,7 @@ void MariaDBBackendConnection::process_ok_packet(Iter it, Iter end)
     warnings |= (*it++) << 8;
     m_reply.set_num_warnings(warnings);
 
-    if (rcap_type_required(m_session->service->capabilities(), RCAP_TYPE_SESSION_STATE_TRACKING)
+    if (rcap_type_required(m_session->capabilities(), RCAP_TYPE_SESSION_STATE_TRACKING)
         && (status & SERVER_SESSION_STATE_CHANGED))
     {
         // TODO: Benchmark the extra cost of always processing the session tracking variables and see if it's
@@ -2492,7 +2513,7 @@ void MariaDBBackendConnection::process_result_start(Iter it, Iter end)
         m_num_coldefs = get_encoded_int(it);
         m_reply.add_field_count(m_num_coldefs);
 
-        if ((mysql_session()->extra_capabilitites() & MXS_MARIA_CAP_CACHE_METADATA) && *it == 0)
+        if ((mysql_session()->extra_capabilities() & MXS_MARIA_CAP_CACHE_METADATA) && *it == 0)
         {
             set_reply_state(use_deprecate_eof() ? ReplyState::RSET_ROWS : ReplyState::RSET_COLDEF_EOF);
         }
@@ -2734,8 +2755,16 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::handshake()
                     buffer.make_contiguous();
                     if (read_backend_handshake(std::move(buffer)))
                     {
-                        m_hs_state = m_dcb->using_ssl() ? HandShakeState::START_SSL :
-                            HandShakeState::SEND_HS_RESP;
+                        if (capability_mismatch())
+                        {
+                            do_handle_error(m_dcb, "Capability mismatch", mxs::ErrorType::PERMANENT);
+                            m_hs_state = HandShakeState::FAIL;
+                        }
+                        else
+                        {
+                            m_hs_state = m_dcb->using_ssl() ? HandShakeState::START_SSL :
+                                HandShakeState::SEND_HS_RESP;
+                        }
                     }
                     else
                     {

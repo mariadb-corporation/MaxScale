@@ -178,6 +178,16 @@ public:
         return m_state;
     }
 
+    bool is_started() const
+    {
+        return m_state == State::STARTED;
+    }
+
+    bool is_stopping() const
+    {
+        return m_state == State::STOPPING;
+    }
+
     uint64_t id() const
     {
         return m_id;
@@ -346,6 +356,16 @@ public:
      */
     virtual void reset_server_bookkeeping() = 0;
 
+    /**
+     * Get session capabilities
+     *
+     * @return The capabilities required the services and filters used by this session
+     */
+    uint64_t capabilities() const
+    {
+        return m_capabilities;
+    }
+
 protected:
     State                    m_state;   /**< Current descriptor state */
     uint64_t                 m_id;      /**< Unique session identifier */
@@ -353,6 +373,7 @@ protected:
     std::string              m_user;    /**< The session user. */
     std::string              m_host;
     int                      m_log_level = 0;
+    uint64_t                 m_capabilities;
 
     MXS_SESSION(const std::string& host, SERVICE* service);
 

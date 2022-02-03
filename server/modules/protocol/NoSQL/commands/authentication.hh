@@ -17,6 +17,7 @@
 //
 
 #include "defs.hh"
+#include "../clientconnection.hh"
 
 namespace nosql
 {
@@ -39,12 +40,32 @@ public:
 
     void populate_response(DocumentBuilder& doc) override
     {
-        auto& config = m_database.config();
-
-        config.user.clear();
-        config.password.clear();
+        logout(m_database);
 
         doc.append(kvp(key::OK, 1));
+    }
+
+    static void logout(Database& database)
+    {
+        auto& context = database.context();
+        auto& session = context.session();
+
+        if (session.is_started())
+        {
+            // This could (in some cases) be handled as a COM_CHANGE_USER,
+            // but simpler to just close the session as that will cause the
+            // backend connections to be closed and a reauthentication when
+            // needed.
+            session.close();
+        }
+
+        auto& config = database.config();
+
+        config.user = config.config_user;
+        config.password = config.config_password;
+
+        context.set_authenticated(false);
+        context.client_connection().setup_session(config.user, config.password);
     }
 };
 

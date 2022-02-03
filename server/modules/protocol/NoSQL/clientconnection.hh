@@ -23,12 +23,6 @@ class MYSQL_session;
 class ClientConnection : public mxs::ClientConnection
 {
 public:
-    enum State
-    {
-        CONNECTED,
-        READY
-    };
-
     ClientConnection(const GlobalConfig& config,
                      nosql::UserManager* pUm,
                      MXS_SESSION* pSession,
@@ -49,14 +43,12 @@ public:
         return true;
     }
 
-    bool is_ready() const
-    {
-        return m_state == READY;
-    }
-
-    bool setup_session(const std::string& user, const std::string& password);
+    void setup_session(const std::string& user, const std::string& password);
+    bool start_session();
 
 private:
+    void ready_for_reading(GWBUF* pBuffer);
+
     // DCBHandler
     void ready_for_reading(DCB* dcb) override;
     void write_ready(DCB* dcb) override;
@@ -73,11 +65,16 @@ private:
 private:
     GWBUF* handle_one_packet(GWBUF* pPacket);
 
+    void prepare_session(const std::string& user, const std::string& password);
+
+    bool ssl_is_ready();
+    bool setup_ssl();
+
 private:
-    State          m_state { CONNECTED };
     nosql::Config  m_config;
     MXS_SESSION&   m_session;
     MYSQL_session& m_session_data;
     DCB*           m_pDcb = nullptr;
     nosql::NoSQL   m_nosql;
+    bool           m_ssl_required;
 };

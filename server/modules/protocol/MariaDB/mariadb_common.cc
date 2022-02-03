@@ -430,7 +430,7 @@ uint32_t MYSQL_session::client_capabilities() const
     return client_caps.basic_capabilities;
 }
 
-uint32_t MYSQL_session::extra_capabilitites() const
+uint32_t MYSQL_session::extra_capabilities() const
 {
     return client_caps.ext_capabilities;
 }

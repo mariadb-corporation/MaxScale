@@ -189,6 +189,8 @@ public:
     std::unique_ptr<LastError> create_last_error() const override final;
 
 private:
+    void create_authorization_error(const Command& command, DocumentBuilder& doc) const;
+
     int         m_mariadb_code;
     std::string m_mariadb_message;
 };

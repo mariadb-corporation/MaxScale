@@ -21,6 +21,7 @@
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/session.hh>
+#include <maxscale/service.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include "nosqldatabase.hh"
@@ -37,7 +38,9 @@ ClientConnection::ClientConnection(const GlobalConfig& config,
     , m_session(*pSession)
     , m_session_data(*static_cast<MYSQL_session*>(pSession->protocol_data()))
     , m_nosql(pSession, this, pDownstream, &m_config, pUm)
+    , m_ssl_required(m_session.listener_data()->m_ssl.config().enabled)
 {
+    prepare_session(m_config.user, m_config.password);
 }
 
 ClientConnection::~ClientConnection()
@@ -65,26 +68,53 @@ const ClientDCB* ClientConnection::dcb() const
     return static_cast<const ClientDCB*>(m_pDcb);
 }
 
-void ClientConnection::ready_for_reading(DCB* dcb)
+bool ClientConnection::ssl_is_ready()
 {
-    if (m_session.listener_data()->m_ssl.config().enabled
-        && dcb->ssl_state() == DCB::SSLState::HANDSHAKE_UNKNOWN)
+    mxb_assert(m_ssl_required);
+
+    return m_pDcb->ssl_state() == DCB::SSLState::ESTABLISHED ? true : setup_ssl();
+}
+
+bool ClientConnection::setup_ssl()
+{
+    auto state = m_pDcb->ssl_state();
+    mxb_assert(state != DCB::SSLState::ESTABLISHED);
+
+    if (state == DCB::SSLState::HANDSHAKE_UNKNOWN)
     {
-        if (dcb->ssl_handshake() != 1)
+        m_pDcb->set_ssl_state(DCB::SSLState::HANDSHAKE_REQUIRED);
+    }
+
+    auto rv = m_pDcb->ssl_handshake();
+
+    const char* zRemote = m_pDcb->remote().c_str();
+    const char* zService = m_session.service->name();
+
+    if (rv == 1)
+    {
+        MXS_INFO("NoSQL client from '%s' connected to service '%s' with SSL.",
+                 zRemote, zService);
+    }
+    else
+    {
+        if (rv < 0)
         {
-            // The handshake is in progress or it failed, in both cases we just return.
-            return;
+            MXS_INFO("NoSQL client from '%s' failed to connect to service '%s' with SSL.",
+                     zRemote, zService);
+        }
+        else
+        {
+            MXS_INFO("NoSQL client from '%s' is in progress of connecting to service '%s' with SSL.",
+                     zRemote, zService);
         }
     }
 
-    DCB::ReadResult read_res = m_pDcb->read(protocol::HEADER_LEN, protocol::MAX_MSG_SIZE);
-    if (!read_res)
-    {
-        return;
-    }
+    return rv == 1;
+}
 
+void ClientConnection::ready_for_reading(GWBUF* pBuffer)
+{
     // Got the header, the full packet may be available.
-    GWBUF* pBuffer = read_res.data.release();
     auto link_len = gwbuf_link_length(pBuffer);
 
     if (link_len < protocol::HEADER_LEN)
@@ -135,6 +165,21 @@ void ClientConnection::ready_for_reading(DCB* dcb)
         MXB_INFO("%d bytes received, still need %d bytes for the package.",
                  buffer_len, pHeader->msg_len - buffer_len);
         m_pDcb->readq_prepend(pBuffer);
+    }
+}
+
+void ClientConnection::ready_for_reading(DCB* pDcb)
+{
+    mxb_assert(m_pDcb == pDcb);
+
+    if (!m_ssl_required || ssl_is_ready())
+    {
+        DCB::ReadResult result = m_pDcb->read(protocol::HEADER_LEN, protocol::MAX_MSG_SIZE);
+
+        if (result)
+        {
+            ready_for_reading(result.data.release());
+        }
     }
 }
 
@@ -235,17 +280,11 @@ bool ClientConnection::is_movable() const
     return true;
 }
 
-bool ClientConnection::setup_session(const string& user, const string& password)
+void ClientConnection::setup_session(const string& user, const string& password)
 {
-    mxb_assert(!is_ready());
-
-    m_session_data.auth_data = std::make_unique<mariadb::AuthenticationData>();
     auto& auth_data = *m_session_data.auth_data;
     auth_data.user = user;
     m_session.set_user(auth_data.user);
-    auth_data.default_db = "";
-    m_session_data.current_db = "";
-    auth_data.plugin = "mysql_native_password";
 
     if (!password.empty())
     {
@@ -258,6 +297,18 @@ bool ClientConnection::setup_session(const string& user, const string& password)
         // This will be used when authenticating with the backend.
         auth_data.backend_token.assign(auth_token, auth_token + SHA_DIGEST_LENGTH);
     }
+    else
+    {
+        auth_data.backend_token.clear();
+    }
+}
+
+void ClientConnection::prepare_session(const string& user, const string& password)
+{
+    m_session_data.auth_data = std::make_unique<mariadb::AuthenticationData>();
+    auto& auth_data = *m_session_data.auth_data;
+    auth_data.default_db = "";
+    auth_data.plugin = "mysql_native_password";
 
     const auto& authenticators = m_session.listener_data()->m_authenticators;
     mxb_assert(authenticators.size() == 1);
@@ -290,14 +341,7 @@ bool ClientConnection::setup_session(const string& user, const string& password)
     m_session_data.history.push_back(mxs::Buffer(pStmt));
     m_session_data.history_responses.insert(std::make_pair(id, true));
 
-    bool ready = m_session.start();
-
-    if (ready)
-    {
-        m_state = READY;
-    }
-
-    return ready;
+    setup_session(user, password);
 }
 
 GWBUF* ClientConnection::handle_one_packet(GWBUF* pPacket)

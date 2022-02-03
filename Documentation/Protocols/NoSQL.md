@@ -356,7 +356,15 @@ password by monitoring the network traffic.
 
 However, when a user is created or added (or the password is changed),
 the password will be transferred in _cleartext_. To prevent eavesdropping,
-create/add users when connecting over a domain socket.
+create/add users when connecting over a domain socket, or use
+[TLS/SSL](#tlsssl)
+
+### TLS/SSL
+
+Since `nosqlprotocol` is a regular protocol module used in a listener,
+the TLS/SSL support of listeners is available. Please see
+[TSLSSL encryption](Getting-Started/Configuration-Guide.md#tsl-encryption)
+for details.
 
 ## Local Account Database
 

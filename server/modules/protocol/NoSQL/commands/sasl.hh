@@ -14,6 +14,7 @@
 
 #include "defs.hh"
 #include "../nosqlscram.hh"
+#include "authentication.hh"
 
 namespace nosql
 {
@@ -107,11 +108,9 @@ private:
                             error::PROTOCOL_ERROR);
         }
 
-        // TODO: Make it possible to re-authenticate, i.e. generate COM_CHANGE_USER and whatnot.
         if (m_database.context().authenticated())
         {
-            throw SoftError("Client already authenticated, re-authentication not yet supported.",
-                            error::AUTHENTICATION_FAILED);
+            Logout::logout(m_database);
         }
 
         // We are expecting a string like "n,,n=USER,r=NONCE" where "n,," is the gs2 header,
@@ -394,6 +393,7 @@ private:
         config.password = info.pwd;
 
         auto& context = m_database.context();
+        context.client_connection().setup_session(config.user, config.password);
         context.set_roles(role::to_bitmasks(info.roles));
         context.set_authenticated(true);
     }

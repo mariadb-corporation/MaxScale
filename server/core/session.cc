@@ -81,6 +81,7 @@ MXS_SESSION::MXS_SESSION(const std::string& host, SERVICE* service)
     , m_id(session_get_next_id())
     , m_worker(mxs::RoutingWorker::get_current())
     , m_host(host)
+    , m_capabilities(service->capabilities())
     , client_dcb(nullptr)
     , stats{time(0)}
     , service(service)
@@ -1460,6 +1461,8 @@ void Session::setup_routing_chain()
     }
 
     m_tail = chain_tail;
+
+    // TODO: The capabilities of these filters aren't taken into account
 }
 
 // static
