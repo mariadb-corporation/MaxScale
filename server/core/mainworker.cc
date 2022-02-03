@@ -87,9 +87,15 @@ bool MainWorker::is_main_worker()
     return this_thread.pMain != nullptr;
 }
 
-void MainWorker::start_rebalancing()
+void MainWorker::update_rebalancing()
 {
     mxb_assert(is_main_worker());
+
+    // MainWorker must be running
+    if (get_current() == nullptr)
+    {
+        return;
+    }
 
     const auto& config = mxs::Config::get();
 
@@ -117,12 +123,7 @@ bool MainWorker::pre_run()
 
     delayed_call(100, &MainWorker::inc_ticks);
 
-    const auto& config = mxs::Config::get();
-
-    if (config.rebalance_period.get() != std::chrono::milliseconds(0))
-    {
-        order_balancing_dc();
-    }
+    update_rebalancing();
 
     if (modules_thread_init() && qc_thread_init(QC_INIT_SELF))
     {

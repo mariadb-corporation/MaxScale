@@ -79,7 +79,7 @@ public:
      *
      * @note Must *only* be called from the main worker thread.
      */
-    void start_rebalancing();
+    void update_rebalancing();
 
     enum BalancingApproach
     {
