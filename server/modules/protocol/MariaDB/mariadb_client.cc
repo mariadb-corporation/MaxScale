@@ -526,7 +526,7 @@ bool MariaDBClientConnection::send_server_handshake()
         }
     }
 
-    if (service->capabilities() & RCAP_TYPE_OLD_PROTOCOL)
+    if (m_session->capabilities() & RCAP_TYPE_OLD_PROTOCOL)
     {
         // Some module requires that only the base protocol is used, most likely due to the fact
         // that it processes the contents of the resultset.
@@ -536,11 +536,13 @@ bool MariaDBClientConnection::send_server_handshake()
         mxb_assert((caps & GW_MYSQL_CAPABILITIES_DEPRECATE_EOF) == 0);
     }
 
-    if (cap_types == CapTypes::XPAND || min_version < 50705)
+    if (cap_types == CapTypes::XPAND || min_version < 80000)
     {
         // The DEPRECATE_EOF and session tracking were added in MySQL 5.7, anything older than that shouldn't
         // advertise them. This includes XPand: it doesn't support SESSION_TRACK or DEPRECATE_EOF as it's
-        // MySQL 5.1 compatible on the protocol layer.
+        // MySQL 5.1 compatible on the protocol layer. Additionally, MySQL 5.7 has a broken query cache
+        // implementation where it sends non-DEPRECATE_EOF results even when a client requested results in the
+        // DEPRECATE_EOF format.
         caps &= ~(GW_MYSQL_CAPABILITIES_SESSION_TRACK | GW_MYSQL_CAPABILITIES_DEPRECATE_EOF);
     }
 
@@ -911,7 +913,7 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
     if (mxs_mysql_get_command(packetbuf) == MXS_COM_QUERY)
     {
         const auto parser_type = rcap_type_required(
-            m_session->service->capabilities(), RCAP_TYPE_QUERY_CLASSIFICATION) ?
+            m_session->capabilities(), RCAP_TYPE_QUERY_CLASSIFICATION) ?
             QC_TRX_PARSE_USING_QC : QC_TRX_PARSE_USING_PARSER;
 
         uint32_t type = qc_get_trx_type_mask_using(packetbuf, parser_type);
@@ -1216,7 +1218,7 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
 
     buffer.make_contiguous();
 
-    if (m_session->service->capabilities() & RCAP_TYPE_SESCMD_HISTORY)
+    if (m_session->capabilities() & RCAP_TYPE_SESCMD_HISTORY)
     {
         recording = record_for_history(buffer, cmd);
     }
@@ -1238,7 +1240,7 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
     qc_set_server_version(m_version);
 
     auto service = m_session->service;
-    auto capabilities = service->capabilities();
+    auto capabilities = m_session->capabilities();
 
     if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING)
         && !service->config()->session_track_trx_state && !m_session->load_active)
@@ -1402,7 +1404,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
 
     case RoutingState::LARGE_PACKET:
         {
-            if (rcap_type_required(m_session->service->capabilities(), RCAP_TYPE_STMT_INPUT))
+            if (rcap_type_required(m_session->capabilities(), RCAP_TYPE_STMT_INPUT))
             {
                 buffer.make_contiguous();
             }
@@ -2664,7 +2666,7 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
 
     case MXS_COM_QUERY:
         {
-            if (rcap_type_required(m_session->service->capabilities(), RCAP_TYPE_QUERY_CLASSIFICATION))
+            if (rcap_type_required(m_session->capabilities(), RCAP_TYPE_QUERY_CLASSIFICATION))
             {
                 buffer.make_contiguous();
             }
