@@ -248,13 +248,14 @@ export default {
 
             let ids = relationshipData.length ? relationshipData.map(item => `${item.id}`) : []
             let arr = []
-            ids.forEach(async id => {
+
+            for (const id of ids) {
                 let data = await this.getRelationshipData(relationshipType, id)
                 const { id: relationshipId, type, attributes: { state = null } = {} } = data
                 let row = { id: relationshipId, type: type }
                 if (relationshipType !== 'filters') row.state = state
                 arr.push(row)
-            })
+            }
 
             this[`${relationshipType}TableRows`] = arr
         },
@@ -273,7 +274,6 @@ export default {
                 resourceType: type,
                 caller: 'service-detail-page-getRelationshipData',
             })
-
             return data
         },
 

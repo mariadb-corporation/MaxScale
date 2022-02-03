@@ -129,9 +129,8 @@ export default {
             const {
                 relationships: { servers: { data: serversData = [] } = {} } = {},
             } = this.current_monitor
-
             let arr = []
-            serversData.forEach(async server => {
+            for (const server of serversData) {
                 const data = await this.getResourceState({
                     resourceId: server.id,
                     resourceType: 'servers',
@@ -140,7 +139,7 @@ export default {
 
                 const { id, type, attributes: { state = null } = {} } = data
                 arr.push({ id: id, state: state, type: type })
-            })
+            }
             this.serverStateTableRow = arr
         },
 
