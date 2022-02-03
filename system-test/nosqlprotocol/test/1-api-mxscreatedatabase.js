@@ -20,7 +20,7 @@ const name = "mxsCreateDatabase";
 describe(name, function () {
     this.timeout(test.timeout);
 
-    let mxs;
+    let nosql;
     let conn;
 
     var random_db = "db" + Math.random().toString(10).substring(2);
@@ -29,25 +29,25 @@ describe(name, function () {
      * MOCHA
      */
     before(async function () {
-        mxs = await test.MDB.create(test.MxsMongo);
+        nosql = await test.NoSQL.create();
         conn = await test.MariaDB.createConnection();
     });
 
     it('Cannot create a database using non-admin database.', async function () {
-        var rv = await mxs.ntRunCommand({mxsCreateDatabase: random_db});
+        var rv = await nosql.ntRunCommand({mxsCreateDatabase: random_db});
 
         assert.equal(rv.code, error.UNAUTHORIZED);
     });
 
     it('Can create a database using admin database.', async function () {
-        await mxs.close();
-        mxs = undefined;
+        await nosql.close();
+        nosql = undefined;
 
         await conn.query("DROP DATABASE IF EXISTS " + random_db);
 
-        mxs = await test.MDB.create(test.MxsMongo, "admin");
+        nosql = await test.NoSQL.create("admin");
 
-        var rv = await mxs.runCommand({mxsCreateDatabase: random_db});
+        var rv = await nosql.runCommand({mxsCreateDatabase: random_db});
         assert.equal(rv.ok, 1);
 
         await conn.query("USE " + random_db);
@@ -56,8 +56,8 @@ describe(name, function () {
     });
 
     after(async function () {
-        if (mxs) {
-            await mxs.close();
+        if (nosql) {
+            await nosql.close();
         }
 
         if (conn) {
