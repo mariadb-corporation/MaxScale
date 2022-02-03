@@ -126,8 +126,7 @@ public:
      * The configure method of the returned configuration will be called after the initial creation of the
      * router as well as any time a parameter is modified at runtime.
      *
-     * @return The configuration for the router instance or nullptr if the router does not use the new
-     *         configuration mechanism
+     * @return The configuration for the router instance
      */
     virtual mxs::config::Configuration& getConfiguration() = 0;
 };
