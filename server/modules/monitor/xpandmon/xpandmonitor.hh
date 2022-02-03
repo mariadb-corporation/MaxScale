@@ -75,6 +75,8 @@ public:
 
     std::vector<SERVER*> real_servers() const override final;
 
+    json_t* diagnostics() const override;
+
 protected:
     void populate_services() override;
 
