@@ -243,7 +243,7 @@ bool Specification::validate(const mxs::ConfigParameters& params,
                     }
                 }
 
-                if (!param_valid)
+                if (!param_valid && !unrecognized.empty())
                 {
                     valid = false;
                 }
@@ -380,7 +380,7 @@ bool Specification::validate(json_t* pParams, std::set<std::string>* pUnrecogniz
                     }
                 }
 
-                if (!param_valid)
+                if (!param_valid && !unrecognized.empty())
                 {
                     valid = false;
                 }
@@ -1512,18 +1512,14 @@ bool ParamModule::validate_parameters(const std::string& value,
     const mxs::config::Specification* pSpecification = pModule ? pModule->specification : nullptr;
 
     bool valid;
-    if (pSpecification->prefix().empty())
+    if (!pSpecification || pSpecification->prefix().empty())
     {
         // The module does not expect nested parameters.
-        valid = true;
+        valid = Param::validate_parameters(value, params, pUnrecognized);
     }
     else if (pSpecification)
     {
         valid = pSpecification->validate(params, pUnrecognized);
-    }
-    else
-    {
-        valid = Param::validate_parameters(value, params, pUnrecognized);
     }
 
     return valid;
@@ -1537,18 +1533,14 @@ bool ParamModule::validate_parameters(const std::string& value,
     const mxs::config::Specification* pSpecification = pModule ? pModule->specification : nullptr;
 
     bool valid;
-    if (pSpecification->prefix().empty())
+    if (!pSpecification || pSpecification->prefix().empty())
     {
         // The module does not expect nested parameters.
-        valid = true;
+        valid = Param::validate_parameters(value, pParams, pUnrecognized);
     }
     else if (pSpecification)
     {
         valid = pSpecification->validate(pParams, pUnrecognized);
-    }
-    else
-    {
-        valid = Param::validate_parameters(value, pParams, pUnrecognized);
     }
 
     return valid;
