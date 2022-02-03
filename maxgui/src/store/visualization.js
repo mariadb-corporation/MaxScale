@@ -46,10 +46,17 @@ export default {
                 logger.error(e)
             }
         },
-        async fetchClusterById({ commit, dispatch, state }, id) {
+        async fetchClusterById({ commit, dispatch, rootState, getters }, id) {
             try {
-                await dispatch('discoveryClusters')
-                const cluster = this.vue.$typy(state, `clusters[${id}]`).safeObject
+                await Promise.all([
+                    dispatch('server/fetchAllServers', {}, { root: true }),
+                    dispatch('monitor/fetchMonitorById', id, { root: true }),
+                ])
+                let cluster = {}
+                const monitor = rootState.monitor.current_monitor
+                //TODO: Handle other monitors, now it only handles mariadbmon
+                if (monitor.attributes.module === 'mariadbmon')
+                    cluster = getters.getMariadbmonCluster(monitor)
                 commit('SET_CURR_CLUSTER', cluster)
             } catch (e) {
                 const logger = this.vue.$logger('store-visualization-fetchClusterById')
