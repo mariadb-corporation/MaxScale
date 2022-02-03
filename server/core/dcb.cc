@@ -417,16 +417,20 @@ bool DCB::basic_read(size_t maxbytes)
     auto calc_read_limit = [this, maxbytes](bool expect_more) {
             // The guess is tricky. Higher values mean less reallocations, but also more wasted memory.
             const size_t base_read_size_limit = expect_more ? 4096 : 128;
-            size_t max_read;
             if (maxbytes > 0)
             {
-                max_read = std::min(maxbytes - m_readq->length(), base_read_size_limit);
+                // Never read more in total than maxbytes. Since maxbytes can be large, limit
+                // the allocation size to something reasonable.
+                auto max_read_limit = maxbytes - m_readq->length();
+                auto min_read_limit = std::min(max_read_limit, base_read_size_limit);
+                auto [ptr, space_available] = m_readq->prepare_to_write(min_read_limit);
+                auto eff_read_limit = std::min(max_read_limit, space_available);
+                return std::tuple(ptr, eff_read_limit);
             }
             else
             {
-                max_read = base_read_size_limit;
+                return m_readq->prepare_to_write(base_read_size_limit);
             }
-            return max_read;
         };
 
     bool keep_reading = true;
@@ -437,15 +441,14 @@ bool DCB::basic_read(size_t maxbytes)
 
     while (keep_reading)
     {
-        auto max_read = calc_read_limit(expect_more_data);
-        auto ptr = m_readq->prepare_to_write(max_read);
-        auto ret = ::read(m_fd, ptr, max_read);
+        auto [ptr, read_limit] = calc_read_limit(expect_more_data);
+        auto ret = ::read(m_fd, ptr, read_limit);
         m_stats.n_reads++;
         if (ret > 0)
         {
             m_readq->write_complete(ret);
             bytes_from_socket += ret;
-            if (ret < (int64_t)max_read)
+            if (ret < (int64_t)read_limit)
             {
                 // Likely no more data is available and next read will give an error or eof. No need to
                 // enlarge buffer as much as before.

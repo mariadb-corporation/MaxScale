@@ -145,9 +145,9 @@ public:
      * once the write is ready.
      *
      * @param bytes How many bytes may be written
-     * @return Pointer to the start of the write
+     * @return Pointer to the start of the write and the space available
      */
-    uint8_t* prepare_to_write(size_t n_bytes);
+    std::tuple<uint8_t*, size_t> prepare_to_write(size_t n_bytes);
 
     /**
      * Tell the buffer that the write is complete. Advances the end pointer. Writing more than

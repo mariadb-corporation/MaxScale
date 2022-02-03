@@ -486,12 +486,12 @@ void* GWBUF::get_classifier_data() const
 
 void GWBUF::append(const uint8_t* new_data, uint64_t n_bytes)
 {
-    auto ptr = prepare_to_write(n_bytes);
+    auto [ptr, dummy] = prepare_to_write(n_bytes);
     memcpy(ptr, new_data, n_bytes);
     write_complete(n_bytes);
 }
 
-uint8_t* GWBUF::prepare_to_write(uint64_t n_bytes)
+std::tuple<uint8_t*, size_t> GWBUF::prepare_to_write(uint64_t n_bytes)
 {
     auto old_len = length();
     auto new_len = old_len + n_bytes;
@@ -542,7 +542,7 @@ uint8_t* GWBUF::prepare_to_write(uint64_t n_bytes)
         // Also ends up here if the shared ptr is null.
         clone_sbuf(false, new_len);
     }
-    return end;
+    return {end, m_sbuf->buf_end - end};
 }
 
 void GWBUF::append(GWBUF* buffer)
