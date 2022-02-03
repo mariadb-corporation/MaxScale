@@ -120,7 +120,7 @@ public:
 
         vector<scram::Mechanism> mechanisms;
         element = doc[key::MECHANISMS];
-        if (element)
+        if (element && element.type() != bsoncxx::type::k_null)
         {
             if (element.type() != bsoncxx::type::k_array)
             {
