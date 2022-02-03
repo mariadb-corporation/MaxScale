@@ -1132,20 +1132,16 @@ bool validate_object_json(json_t* json)
 
 bool server_relationship_to_parameter(json_t* json, mxs::ConfigParameters* params)
 {
-    StringSet relations;
+    StringVector relations;
     bool rval = false;
 
-    if (extract_relations(json, relations, to_server_rel))
+    if (extract_ordered_relations(json, relations, to_server_rel))
     {
         rval = true;
 
         if (!relations.empty())
         {
-            auto servers = std::accumulate(std::next(relations.begin()), relations.end(), *relations.begin(),
-                                           [](std::string sum, std::string s) {
-                                               return sum + ',' + s;
-                                           });
-            params->set(CN_SERVERS, servers);
+            params->set(CN_SERVERS, mxb::join(relations, ","));
         }
         else if (json_t* rel = mxs_json_pointer(json, MXS_JSON_PTR_RELATIONSHIPS_SERVERS))
         {
