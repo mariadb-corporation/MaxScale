@@ -989,10 +989,11 @@ bool ServerEndpoint::connect()
 
             m_connstatus = ConnStatus::WAITING_FOR_CONN;
             worker->add_conn_wait_entry(this, m_session);
+            m_conn_wait_start = worker->epoll_tick_now();
             rval = true;
 
             MXB_INFO("Server '%s' connection count limit reached while pre-emptive pooling is on. "
-                     "Delaying first query until a connection becomes available.", m_server->name());
+                     "Delaying query until a connection becomes available.", m_server->name());
         }
         else
         {
@@ -1054,6 +1055,17 @@ void ServerEndpoint::handle_failed_continue()
     auto errorbuf = mysql_create_custom_error(
         1, 0, 1927, "Lost connection to server when reusing connection.");
     m_up->handleError(mxs::ErrorType::PERMANENT, errorbuf, this, dummy);
+    gwbuf_free(errorbuf);
+}
+
+void ServerEndpoint::handle_timed_out_continue()
+{
+    m_connstatus = ConnStatus::NO_CONN;
+    mxs::Reply dummy;
+    auto errorbuf = mysql_create_custom_error(
+        1, 0, 1927, "Timed out when waiting for a connection.");
+    m_up->handleError(mxs::ErrorType::PERMANENT, errorbuf, this, dummy);
+    gwbuf_free(errorbuf);
 }
 
 bool ServerEndpoint::is_open() const
@@ -1226,9 +1238,14 @@ SERVER* ServerEndpoint::server() const
     return m_server;
 }
 
-MXS_SESSION* ServerEndpoint::session() const
+Session* ServerEndpoint::session() const
 {
     return m_session;
+}
+
+mxb::TimePoint ServerEndpoint::conn_wait_start() const
+{
+    return m_conn_wait_start;
 }
 
 std::unique_ptr<mxs::Endpoint> Server::get_connection(mxs::Component* up, MXS_SESSION* session)

@@ -526,6 +526,7 @@ private:
     void rebalance();
     void pool_close_expired();
     void activate_waiting_endpoints();
+    void fail_timed_out_endpoints();
 
     static uint32_t epoll_instance_handler(POLL_DATA* data, WORKER* worker, uint32_t events);
     uint32_t        handle_epoll_events(uint32_t events);

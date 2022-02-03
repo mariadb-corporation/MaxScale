@@ -470,13 +470,14 @@ public:
         return m_server;
     }
 
-    SERVER*      server() const;
-    MXS_SESSION* session() const;
+    SERVER*  server() const;
+    Session* session() const;
 
     bool connect() override;
 
     void close() override;
     void handle_failed_continue();
+    void handle_timed_out_continue();
 
     bool is_open() const override;
 
@@ -491,6 +492,8 @@ public:
 
     enum class ContinueRes {SUCCESS, WAIT, FAIL};
     ContinueRes continue_connecting();
+
+    mxb::TimePoint conn_wait_start() const;
 
 private:
     mxs::Component* m_up;
@@ -515,4 +518,5 @@ private:
 
     maxscale::ResponseDistribution& m_read_distribution;    // reference to entry in WorkerGlobal
     maxscale::ResponseDistribution& m_write_distribution;   // reference to entry in WorkerGlobal
+    mxb::TimePoint                  m_conn_wait_start;
 };
