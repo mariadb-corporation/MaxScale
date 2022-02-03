@@ -763,7 +763,7 @@ Config::Config(int argc, char** argv)
     rebalance_threshold(this, &s_rebalance_threshold),
     rebalance_period(this, &s_rebalance_period, [](const std::chrono::milliseconds&) {
                          mxb_assert(MainWorker::get());
-                         MainWorker::get()->start_rebalancing();
+                         MainWorker::get()->update_rebalancing();
                      }),
     rebalance_window(this, &s_rebalance_window),
     skip_name_resolve(this, &s_skip_name_resolve),

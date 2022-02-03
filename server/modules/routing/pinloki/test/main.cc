@@ -70,8 +70,16 @@ void prog_main(const maxsql::GtidList& gtid_list, const std::string& host,
         pinloki::Reader reader([](const auto& event) {
                                    std::cout << event << std::endl;
                                    return true;
-                               }, config(), &worker, gtid_list, 30s);
+                               },
+                               [&worker]() -> mxb::Worker& {
+                                   return worker;
+                               },
+                               config(), gtid_list, 30s);
+
         worker.start();
+        worker.execute([&reader]{
+                           reader.start();
+                       }, mxb::Worker::EXECUTE_QUEUED);
         worker.join();
     }
 }
@@ -91,7 +99,7 @@ try
     bool help = false;
     std::string mode;
     maxsql::GtidList override_gtid_list;
-    int port = 4001;
+    int port = 4000;
     std::string host = "127.0.0.1";
     std::string user = "maxskysql";
     std::string pw = "skysql";

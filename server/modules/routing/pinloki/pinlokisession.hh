@@ -73,7 +73,10 @@ private:
 
     mxs::Buffer make_buffer(Prefix prefix, const uint8_t* ptr, size_t size);
 
-    bool send_event(const maxsql::RplEvent& event);
+    void send_event(const maxsql::RplEvent& event);
     void send(GWBUF* buffer);
+
+    static int high_water_mark_reached(DCB* dcb, DCB::Reason reason, void* userdata);
+    static int low_water_mark_reached(DCB* dcb, DCB::Reason reason, void* userdata);
 };
 }
