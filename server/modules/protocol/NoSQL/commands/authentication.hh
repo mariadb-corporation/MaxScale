@@ -38,34 +38,45 @@ public:
 
     using ImmediateCommand::ImmediateCommand;
 
+    enum class Approach
+    {
+        UNCONDITIONAL, // Always.
+        CONDITIONAL    // Only if current database is the authentication database.
+    };
+
     void populate_response(DocumentBuilder& doc) override
     {
-        logout(m_database);
+        logout(m_database, Approach::CONDITIONAL);
 
         doc.append(kvp(key::OK, 1));
     }
 
-    static void logout(Database& database)
+    static void logout(Database& database, Approach approach)
     {
         auto& context = database.context();
-        auto& session = context.session();
 
-        if (session.is_started())
+        if (context.authenticated()
+            && (approach == Approach::UNCONDITIONAL || context.authentication_db() == database.name()))
         {
-            // This could (in some cases) be handled as a COM_CHANGE_USER,
-            // but simpler to just close the session as that will cause the
-            // backend connections to be closed and a reauthentication when
-            // needed.
-            session.close();
+            auto& session = context.session();
+
+            if (session.is_started())
+            {
+                // This could (in some cases) be handled as a COM_CHANGE_USER,
+                // but simpler to just close the session as that will cause the
+                // backend connections to be closed and a reauthentication when
+                // needed.
+                session.close();
+            }
+
+            auto& config = database.config();
+
+            config.user = config.config_user;
+            config.password = config.config_password;
+
+            context.set_unauthenticated();
+            context.client_connection().setup_session(config.user, config.password);
         }
-
-        auto& config = database.config();
-
-        config.user = config.config_user;
-        config.password = config.config_password;
-
-        context.set_authenticated(false);
-        context.client_connection().setup_session(config.user, config.password);
     }
 };
 

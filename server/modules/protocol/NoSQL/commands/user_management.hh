@@ -16,6 +16,7 @@
 // https://docs.mongodb.com/v4.4/reference/command/nav-user-management/
 //
 #include "defs.hh"
+#include <set>
 #include <uuid/uuid.h>
 #include "../nosqlscram.hh"
 #include "../nosqlusermanager.hh"
@@ -31,6 +32,42 @@ namespace
 
 using UserInfo = nosql::UserManager::UserInfo;
 
+namespace add_privileges
+{
+
+// Unorthodox naming convention in order to exactly match the role-name.
+
+void dbAdmin(set<string>& privileges)
+{
+    privileges.insert("ALTER");
+    privileges.insert("CREATE");
+    privileges.insert("DROP");
+    privileges.insert("SHOW DATABASES");
+    privileges.insert("SELECT");
+}
+
+void read(set<string>& privileges)
+{
+    privileges.insert("SELECT");
+}
+
+void readWrite(set<string>& privileges)
+{
+    privileges.insert("CREATE");
+    privileges.insert("DELETE");
+    privileges.insert("INDEX");
+    privileges.insert("INSERT");
+    privileges.insert("SELECT");
+    privileges.insert("UPDATE");
+}
+
+void userAdmin(set<string>& privileges)
+{
+    privileges.insert("GRANT OPTION");
+}
+
+}
+
 vector<string> create_grant_or_revoke_statements(const string& user,
                                                  const string& command,
                                                  const string& preposition,
@@ -44,7 +81,7 @@ vector<string> create_grant_or_revoke_statements(const string& user,
 
         string db = role.db;
 
-        vector<string> privileges;
+        set<string> privileges;
 
         switch (role.id)
         {
@@ -60,11 +97,13 @@ vector<string> create_grant_or_revoke_statements(const string& user,
                 throw SoftError(ss.str(), error::ROLE_NOT_FOUND);
             }
         case role::Id::DB_ADMIN:
-            privileges.push_back("ALTER");
-            privileges.push_back("CREATE");
-            privileges.push_back("DROP");
-            privileges.push_back("SHOW DATABASES");
-            privileges.push_back("SELECT");
+            add_privileges::dbAdmin(privileges);
+            break;
+
+        case role::Id::DB_OWNER:
+            add_privileges::dbAdmin(privileges);
+            add_privileges::readWrite(privileges);
+            add_privileges::userAdmin(privileges);
             break;
 
         case role::Id::READ_WRITE_ANY_DATABASE:
@@ -79,12 +118,7 @@ vector<string> create_grant_or_revoke_statements(const string& user,
                 throw SoftError(ss.str(), error::ROLE_NOT_FOUND);
             }
         case role::Id::READ_WRITE:
-            privileges.push_back("CREATE");
-            privileges.push_back("DELETE");
-            privileges.push_back("INDEX");
-            privileges.push_back("INSERT");
-            privileges.push_back("SELECT");
-            privileges.push_back("UPDATE");
+            add_privileges::readWrite(privileges);
             break;
 
         case role::Id::READ_ANY_DATABASE:
@@ -99,7 +133,7 @@ vector<string> create_grant_or_revoke_statements(const string& user,
                 throw SoftError(ss.str(), error::ROLE_NOT_FOUND);
             }
         case role::Id::READ:
-            privileges.push_back("SELECT");
+            add_privileges::read(privileges);
             break;
 
         case role::Id::ROOT:
@@ -108,18 +142,21 @@ vector<string> create_grant_or_revoke_statements(const string& user,
                 {
                     db = "*";
                 }
+                else
+                {
+                    ostringstream ss;
+                    ss << "No role names root@" << role.db;
+                    throw SoftError(ss.str(), error::ROLE_NOT_FOUND);
+                }
 
                 // CREATE USER is global, so must be applied to *.*. Easiest is just
                 // use a specific statement.
                 string statement = command + "CREATE USER ON *.*" + preposition + user;
                 statements.push_back(statement);
 
-                privileges.push_back("CREATE");
-                privileges.push_back("DELETE");
-                privileges.push_back("INDEX");
-                privileges.push_back("INSERT");
-                privileges.push_back("SELECT");
-                privileges.push_back("UPDATE");
+                add_privileges::readWrite(privileges);
+                add_privileges::dbAdmin(privileges);
+                add_privileges::userAdmin(privileges);
             }
             break;
 
@@ -135,7 +172,7 @@ vector<string> create_grant_or_revoke_statements(const string& user,
                 string statement = command + "CREATE USER ON *.*" + preposition + user;
                 statements.push_back(statement);
 
-                privileges.push_back("GRANT OPTION");
+                add_privileges::userAdmin(privileges);
             }
             break;
 
@@ -1078,7 +1115,11 @@ public:
             throw SoftError(ss.str(), error::USER_NOT_FOUND);
         }
 
-        m_what = MxsUpdateUser::parse(KEY, um, m_doc, m_db, m_user, &m_new_info);
+        m_what = MxsUpdateUser::parse(KEY, um, m_doc, m_db, m_user, &m_new_data);
+        m_new_info.custom_data = std::move(m_new_data.custom_data);
+        m_new_info.mechanisms = std::move(m_new_data.mechanisms);
+        m_new_info.pwd_sha1_b64 = mxs::to_base64(crypto::sha_1(m_new_data.pwd));
+        m_new_info.roles = std::move(m_new_data.roles);
 
         if ((m_what & ~(UserInfo::CUSTOM_DATA | UserInfo::MECHANISMS)) != 0)
         {
@@ -1155,7 +1196,7 @@ private:
         mxb_assert(m_what & UserInfo::PWD);
 
         ostringstream ss;
-        ss << "SET PASSWORD FOR " << account << " = PASSWORD('" << m_new_info.pwd << "')";
+        ss << "SET PASSWORD FOR " << account << " = PASSWORD('" << m_new_data.pwd << "')";
 
         string s = ss.str();
 
@@ -1210,7 +1251,7 @@ private:
                 const auto& um = m_database.context().um();
 
                 UserInfo info;
-                info.pwd = m_new_info.pwd;
+                info.pwd_sha1_b64 = m_new_info.pwd_sha1_b64;
                 uint32_t what = UserInfo::PWD;
 
                 if (m_what & UserInfo::CUSTOM_DATA)
@@ -1452,15 +1493,16 @@ private:
         UPDATE_GRANTS
     };
 
-    Action                   m_action = Action::UPDATE_PASSWORD;
-    string                   m_db;
-    string                   m_user;
-    UserInfo                 m_old_info;
-    UserInfo                 m_new_info;
-    uint32_t                 m_what { 0 };
-    vector<string>           m_statements;
-    int32_t                  m_nRevokes { 0 };
-    int32_t                  m_nGrants { 0 };
+    Action              m_action = Action::UPDATE_PASSWORD;
+    string              m_db;
+    string              m_user;
+    UserInfo            m_old_info;
+    UserInfo            m_new_info;
+    MxsUpdateUser::Data m_new_data;
+    uint32_t            m_what { 0 };
+    vector<string>      m_statements;
+    int32_t             m_nRevokes { 0 };
+    int32_t             m_nGrants { 0 };
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/usersInfo/

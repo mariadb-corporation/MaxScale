@@ -24,13 +24,13 @@
 #include <maxscale/service.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
+#include "nosqlconfig.hh"
 #include "nosqldatabase.hh"
-#include "config.hh"
 
 using namespace std;
 using namespace nosql;
 
-ClientConnection::ClientConnection(const GlobalConfig& config,
+ClientConnection::ClientConnection(const Configuration& config,
                                    nosql::UserManager* pUm,
                                    MXS_SESSION* pSession,
                                    mxs::Component* pDownstream)
@@ -280,7 +280,7 @@ bool ClientConnection::is_movable() const
     return true;
 }
 
-void ClientConnection::setup_session(const string& user, const string& password)
+void ClientConnection::setup_session(const string& user, const vector<uint8_t>& password)
 {
     auto& auth_data = *m_session_data.auth_data;
     auth_data.user = user;
@@ -288,14 +288,8 @@ void ClientConnection::setup_session(const string& user, const string& password)
 
     if (!password.empty())
     {
-        const uint8_t* pPassword = reinterpret_cast<const uint8_t*>(password.data());
-        auto nPassword = m_config.password.length();
-        uint8_t auth_token[SHA_DIGEST_LENGTH];
-
-        gw_sha1_str(pPassword, nPassword, auth_token);
-
         // This will be used when authenticating with the backend.
-        auth_data.backend_token.assign(auth_token, auth_token + SHA_DIGEST_LENGTH);
+        auth_data.backend_token = password;
     }
     else
     {
@@ -303,7 +297,7 @@ void ClientConnection::setup_session(const string& user, const string& password)
     }
 }
 
-void ClientConnection::prepare_session(const string& user, const string& password)
+void ClientConnection::prepare_session(const string& user, const vector<uint8_t>& password)
 {
     m_session_data.auth_data = std::make_unique<mariadb::AuthenticationData>();
     auto& auth_data = *m_session_data.auth_data;

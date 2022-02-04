@@ -34,37 +34,37 @@ const int NOSQL_UUID_STR_LEN = 37;
 //
 static const char SQL_CREATE[] =
     "CREATE TABLE IF NOT EXISTS accounts "
-    "(mariadb_user TEXT UNIQUE, db TEXT, user TEXT, pwd TEXT, host TEXT, "
-    "custom_data TEXT, uuid TEXT, salt_sha1_b64 TEXT, salt_sha256_b64 TEXT, roles TEXT)";
+    "(mariadb_user TEXT UNIQUE, db TEXT, user TEXT, pwd_sha1_b64 TEXT, host TEXT, "
+    "custom_data TEXT, uuid TEXT, "
+    "salt_sha1_b64 TEXT, salt_sha256_b64 TEXT, salted_pwd_sha1_b64 TEXT, salted_pwd_sha256_b64 TEXT, "
+    "roles TEXT)";
 
 static const char SQL_INSERT_HEAD[] =
-    "INSERT INTO accounts (mariadb_user, db, user, pwd, host, custom_data, uuid, salt_sha1_b64, salt_sha256_b64, roles) "
+    "INSERT INTO accounts "
+    "(mariadb_user, db, user, pwd_sha1_b64, host, custom_data, uuid, salt_sha1_b64, salt_sha256_b64, "
+    "salted_pwd_sha1_b64, salted_pwd_sha256_b64, roles) "
     "VALUES ";
 
-static const char SQL_DELETE_HEAD[] =
+static const char SQL_DELETE_WHERE_MARIADB_USER_HEAD[] =
     "DELETE FROM accounts WHERE mariadb_user = ";
-
-static const char SQL_SELECT_ONE_INFO_HEAD[] =
-    "SELECT mariadb_user, db, user, pwd, host, custom_data, uuid, salt_sha1_b64, salt_sha256_b64, roles "
-    "FROM accounts WHERE mariadb_user = ";
-
-static const char SQL_SELECT_ALL_INFOS[] =
-    "SELECT mariadb_user, db, user, pwd, host, custom_data, uuid, salt_sha1_b64, salt_sha256_b64, roles "
-    "FROM accounts";
-
-static const char SQL_SELECT_ALL_DB_INFOS_HEAD[] =
-    "SELECT mariadb_user, db, user, pwd, host, custom_data, uuid, salt_sha1_b64, salt_sha256_b64, roles "
-    "FROM accounts WHERE db = ";
-
-static const char SQL_SELECT_SOME_DB_INFOS_HEAD[] =
-    "SELECT mariadb_user, db, user, pwd, host, custom_data, uuid, salt_sha1_b64, salt_sha256_b64, roles "
-    "FROM accounts WHERE ";
-
-static const char SQL_SELECT_ALL_MARIADB_USERS_HEAD[] =
-    "SELECT mariadb_user, host FROM accounts WHERE db = ";
 
 static const char SQL_DELETE_WHERE_HEAD[] =
     "DELETE FROM accounts WHERE ";
+
+static const char SQL_SELECT_WHERE_MARIADB_USER_HEAD[] =
+    "SELECT * FROM accounts WHERE mariadb_user = ";
+
+static const char SQL_SELECT_ALL[] =
+    "SELECT * FROM accounts";
+
+static const char SQL_SELECT_WHERE_DB_HEAD[] =
+    "SELECT * FROM accounts WHERE db = ";
+
+static const char SQL_SELECT_WHERE_HEAD[] =
+    "SELECT * FROM accounts WHERE ";
+
+static const char SQL_SELECT_MARIADB_USER_HOST_WHERE_DB_HEAD[] =
+    "SELECT mariadb_user, host FROM accounts WHERE db = ";
 
 static const char SQL_UPDATE_HEAD[] =
     "UPDATE accounts SET ";
@@ -75,7 +75,7 @@ static const char SQL_UPDATE_TAIL[] =
 
 int select_info_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
 {
-    mxb_assert(nColumns == 10);
+    mxb_assert(nColumns == 12);
 
     auto* pInfos = static_cast<vector<nosql::UserManager::UserInfo>*>(pData);
 
@@ -83,12 +83,14 @@ int select_info_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
     info.mariadb_user = pzColumn[0];
     info.db = pzColumn[1];
     info.user = pzColumn[2];
-    info.pwd = pzColumn[3];
+    info.pwd_sha1_b64 = pzColumn[3];
     info.host = pzColumn[4];
     info.custom_data = pzColumn[5];
     info.uuid = pzColumn[6];
     info.salt_sha1_b64 = pzColumn[7];
     info.salt_sha256_b64 = pzColumn[8];
+    info.salted_pwd_sha1_b64 = pzColumn[9];
+    info.salted_pwd_sha256_b64 = pzColumn[10];
 
     if (!info.salt_sha1_b64.empty())
     {
@@ -114,7 +116,7 @@ int select_info_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
     }
 
     vector<nosql::role::Role> roles;
-    if (nosql::role::from_json(pzColumn[9], &roles))
+    if (nosql::role::from_json(pzColumn[11], &roles))
     {
         info.roles = std::move(roles);
 
@@ -494,6 +496,11 @@ void role::from_bson(const bsoncxx::array::view& bson,
     pRoles->swap(roles);
 }
 
+std::vector<uint8_t> UserManager::UserInfo::pwd_sha1() const
+{
+    return mxs::from_base64(this->pwd_sha1_b64);
+}
+
 vector<uint8_t> UserManager::UserInfo::salt_sha1() const
 {
     return mxs::from_base64(this->salt_sha1_b64);
@@ -502,6 +509,16 @@ vector<uint8_t> UserManager::UserInfo::salt_sha1() const
 vector<uint8_t> UserManager::UserInfo::salt_sha256() const
 {
     return mxs::from_base64(this->salt_sha256_b64);
+}
+
+vector<uint8_t> UserManager::UserInfo::salted_pwd_sha1() const
+{
+    return mxs::from_base64(this->salted_pwd_sha1_b64);
+}
+
+vector<uint8_t> UserManager::UserInfo::salted_pwd_sha256() const
+{
+    return mxs::from_base64(this->salted_pwd_sha256_b64);
 }
 
 UserManager::UserManager(string path, sqlite3* pDb)
@@ -618,8 +635,12 @@ bool UserManager::add_user(const string& db,
 {
     mxb_assert(custom_data.empty() || mxb::Json().load_string(custom_data));
 
+    pwd = nosql::escape_essential_chars(pwd);
+
     string salt_sha1_b64;
     string salt_sha256_b64;
+    string salted_pwd_sha1_b64;
+    string salted_pwd_sha256_b64;
 
     for (const auto mechanism : mechanisms)
     {
@@ -631,6 +652,9 @@ bool UserManager::add_user(const string& db,
                 size_t salt_size = hash_size - 4; // To leave room for scram stuff.
                 vector<uint8_t> salt = crypto::create_random_bytes(salt_size);
                 salt_sha1_b64 = mxs::to_base64(salt);
+
+                auto salted_pwd = scram::ScramSHA1::get().get_salted_password(user, pwd, salt);
+                salted_pwd_sha1_b64 = mxs::to_base64(salted_pwd);
             }
             break;
 
@@ -640,6 +664,9 @@ bool UserManager::add_user(const string& db,
                 size_t salt_size = hash_size - 4; // To leave room for scram stuff.
                 vector<uint8_t> salt = crypto::create_random_bytes(salt_size);
                 salt_sha256_b64 = mxs::to_base64(salt);
+
+                auto salted_pwd = scram::ScramSHA256::get().get_salted_password(user, pwd, salt);
+                salted_pwd_sha256_b64 = mxs::to_base64(salted_pwd);
             }
             break;
 
@@ -649,8 +676,11 @@ bool UserManager::add_user(const string& db,
     }
 
     user = nosql::escape_essential_chars(user);
-    pwd = nosql::escape_essential_chars(pwd);
+
     string mariadb_user = get_mariadb_user(db, user);
+
+    vector<uint8_t> pwd_sha1 = crypto::sha_1(pwd);
+    string pwd_sha1_b64 = mxs::to_base64(pwd_sha1);
 
     uuid_t uuid;
     uuid_generate(uuid);
@@ -663,12 +693,14 @@ bool UserManager::add_user(const string& db,
        << mariadb_user << "', '"
        << db << "', '"
        << user << "', '"
-       << pwd << "', '"
+       << pwd_sha1_b64 << "', '"
        << host << "', '"
        << custom_data << "', '"
        << zUuid << "', '"
        << salt_sha1_b64 << "', '"
        << salt_sha256_b64 << "', '"
+       << salted_pwd_sha1_b64 << "', '"
+       << salted_pwd_sha256_b64 << "', '"
        << role::to_json(roles)
        << "')";
 
@@ -693,7 +725,7 @@ bool UserManager::remove_user(const string& db, const string& user)
     string mariadb_user = get_mariadb_user(db, nosql::escape_essential_chars(user));
 
     ostringstream ss;
-    ss << SQL_DELETE_HEAD << "\"" << mariadb_user << "\"";
+    ss << SQL_DELETE_WHERE_MARIADB_USER_HEAD << "\"" << mariadb_user << "\"";
 
     string sql = ss.str();
 
@@ -719,7 +751,7 @@ bool UserManager::get_info(const string& db, const string& user, UserInfo* pInfo
 bool UserManager::get_info(const string& mariadb_user, UserInfo* pInfo) const
 {
     ostringstream ss;
-    ss << SQL_SELECT_ONE_INFO_HEAD << "\"" << mariadb_user << "\"";
+    ss << SQL_SELECT_WHERE_MARIADB_USER_HEAD << "\"" << mariadb_user << "\"";
 
     string sql = ss.str();
 
@@ -748,7 +780,7 @@ vector<UserManager::UserInfo> UserManager::get_infos() const
 {
     vector<UserInfo> infos;
     char* pError = nullptr;
-    int rv = sqlite3_exec(&m_db, SQL_SELECT_ALL_INFOS, select_info_cb, &infos, &pError);
+    int rv = sqlite3_exec(&m_db, SQL_SELECT_ALL, select_info_cb, &infos, &pError);
 
     if (rv != SQLITE_OK)
     {
@@ -763,7 +795,7 @@ vector<UserManager::UserInfo> UserManager::get_infos() const
 vector<UserManager::UserInfo> UserManager::get_infos(const std::string& db) const
 {
     ostringstream ss;
-    ss << SQL_SELECT_ALL_DB_INFOS_HEAD << "\"" << db << "\"";
+    ss << SQL_SELECT_WHERE_DB_HEAD << "\"" << db << "\"";
 
     string sql = ss.str();
 
@@ -788,7 +820,7 @@ vector<UserManager::UserInfo> UserManager::get_infos(const vector<string>& maria
     if (!mariadb_users.empty())
     {
         ostringstream ss;
-        ss << SQL_SELECT_SOME_DB_INFOS_HEAD;
+        ss << SQL_SELECT_WHERE_HEAD;
 
         auto it = mariadb_users.begin();
         for (; it != mariadb_users.end(); ++it)
@@ -822,7 +854,7 @@ vector<UserManager::MariaDBAccount> UserManager::get_mariadb_accounts(const stri
     vector<MariaDBAccount> mariadb_accounts;
 
     ostringstream ss;
-    ss << SQL_SELECT_ALL_MARIADB_USERS_HEAD << "'" << db << "'";
+    ss << SQL_SELECT_MARIADB_USER_HOST_WHERE_DB_HEAD << "'" << db << "'";
 
     string sql = ss.str();
 
@@ -902,20 +934,20 @@ bool UserManager::update(const string& db, const string& user, uint32_t what, co
 
         if (std::find(begin, end, scram::Mechanism::SHA_1) == end)
         {
-            ss << delimiter << "salt_sha1_b64 = ''";
+            ss << delimiter << "salt_sha1_b64 = '', salted_pwd_sha1_b64 = ''";
             delimiter = ", ";
         }
 
         if (std::find(begin, end, scram::Mechanism::SHA_256) == end)
         {
-            ss << delimiter << "salt_sha256_b64 = ''";
+            ss << delimiter << "salt_sha256_b64 = '', salted_pwd_sha256_b64 = ''";
             delimiter = ", ";
         }
     }
 
     if (what & UserInfo::PWD)
     {
-        ss << delimiter << "pwd = '" << info.pwd << "'";
+        ss << delimiter << "pwd_sha1_b64 = '" << info.pwd_sha1_b64 << "'";
         delimiter = ", ";
     }
 

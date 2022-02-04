@@ -94,16 +94,15 @@ export default {
          */
         async serviceTableRowProcessing(servicesData) {
             let arr = []
-            servicesData.forEach(async service => {
+            for (const service of servicesData) {
                 const data = await this.getResourceState({
                     resourceId: service.id,
                     resourceType: 'services',
                     caller: 'listener-details-serviceTableRowProcessing',
                 })
                 const { id, type, attributes: { state = null } = {} } = data
-                await arr.push({ id: id, state: state, type: type })
-            })
-
+                arr.push({ id: id, state: state, type: type })
+            }
             this.serviceTableRow = arr
         },
     },

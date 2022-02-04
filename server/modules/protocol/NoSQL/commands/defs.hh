@@ -16,7 +16,7 @@
 #include <bsoncxx/builder/basic/array.hpp>
 #include <bsoncxx/builder/stream/document.hpp>
 #include <mysqld_error.h>
+#include "../nosqlconfig.hh"
 #include "../nosqldatabase.hh"
-#include "../config.hh"
 
 using namespace std;

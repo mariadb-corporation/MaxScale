@@ -100,7 +100,7 @@ public:
 private:
     void authenticate(scram::Mechanism mechanism, string_view payload, DocumentBuilder& doc)
     {
-        unique_ptr<NoSQL::Sasl> sSasl = m_database.context().get_sasl();
+        unique_ptr<Sasl> sSasl = m_database.context().get_sasl();
 
         if (sSasl)
         {
@@ -110,7 +110,7 @@ private:
 
         if (m_database.context().authenticated())
         {
-            Logout::logout(m_database);
+            Logout::logout(m_database, Logout::Approach::UNCONDITIONAL);
         }
 
         // We are expecting a string like "n,,n=USER,r=NONCE" where "n,," is the gs2 header,
@@ -169,7 +169,7 @@ private:
 
         auto client_nonce_b64 = payload.substr(i + 2); // Skip "r="
 
-        sSasl.reset(new NoSQL::Sasl);
+        sSasl.reset(new Sasl);
 
         sSasl->set_user_info(std::move(info));
         sSasl->set_gs2_header(gs2_header);
@@ -180,7 +180,7 @@ private:
         authenticate(mechanism, std::move(sSasl), doc);
     }
 
-    void authenticate(scram::Mechanism mechanism, unique_ptr<NoSQL::Sasl> sSasl, DocumentBuilder& doc)
+    void authenticate(scram::Mechanism mechanism, unique_ptr<Sasl> sSasl, DocumentBuilder& doc)
     {
         vector<uint8_t> server_nonce = crypto::create_random_bytes(scram::SERVER_NONCE_SIZE);
 
@@ -223,7 +223,7 @@ public:
 
     void populate_response(DocumentBuilder& doc) override
     {
-        unique_ptr<NoSQL::Sasl> sSasl = m_database.context().get_sasl();
+        unique_ptr<Sasl> sSasl = m_database.context().get_sasl();
 
         if (!sSasl)
         {
@@ -248,7 +248,7 @@ public:
     }
 
 private:
-    void authenticate(const NoSQL::Sasl& sasl, string_view payload, DocumentBuilder& doc)
+    void authenticate(const Sasl& sasl, string_view payload, DocumentBuilder& doc)
     {
         auto backup = payload;
 
@@ -320,7 +320,7 @@ private:
         authenticate(sasl, client_final_message_bare, client_proof_b64, doc);
     }
 
-    void authenticate(const NoSQL::Sasl& sasl,
+    void authenticate(const Sasl& sasl,
                       const string& client_final_message_bare,
                       string_view client_proof_64,
                       DocumentBuilder& doc)
@@ -329,11 +329,10 @@ private:
         const auto& scram = nosql::scram::get(mechanism);
         const auto& info = sasl.user_info();
 
-        string digested_password = scram.get_digested_password(info.user, info.pwd);
-
-        auto salted_password = scram.Hi(digested_password, info.salt(mechanism), scram::ITERATIONS);
+        auto salted_password = info.salted_pwd(mechanism);
         auto client_key = scram.HMAC(salted_password, "Client Key");
         auto stored_key = scram.H(client_key);
+
         string auth_message = sasl.initial_message()
             + "," + sasl.server_first_message()
             + "," + client_final_message_bare;
@@ -359,7 +358,7 @@ private:
         authenticate(sasl, salted_password, auth_message, doc);
     }
 
-    void authenticate(const NoSQL::Sasl& sasl,
+    void authenticate(const Sasl& sasl,
                       const vector<uint8_t>& salted_password,
                       const string& auth_message,
                       DocumentBuilder& doc)
@@ -390,12 +389,12 @@ private:
 
         auto& config = m_database.config();
         config.user = mariadb::get_user_name(info.db, info.user);
-        config.password = info.pwd;
+        config.password = info.pwd_sha1();
 
         auto& context = m_database.context();
         context.client_connection().setup_session(config.user, config.password);
         context.set_roles(role::to_bitmasks(info.roles));
-        context.set_authenticated(true);
+        context.set_authenticated(info.db);
     }
 };
 

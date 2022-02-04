@@ -14,8 +14,8 @@
 #include "nosqlprotocol.hh"
 #include <bsoncxx/builder/stream/document.hpp>
 #include "nosql.hh"
+#include "nosqlconfig.hh"
 #include "protocolmodule.hh"
-#include "config.hh"
 
 namespace
 {
@@ -67,7 +67,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         {
             {MXS_END_MODULE_PARAMS}
         },
-        &GlobalConfig::specification()
+        &Configuration::specification()
     };
 
     return &info;

@@ -248,11 +248,11 @@ export default {
                 relationships: { services: { data: servicesData = [] } = {} } = {},
             } = this.current_server
             let arr = []
-            servicesData.forEach(async service => {
+            for (const service of servicesData) {
                 const data = await this.getRelationshipData('services', service.id)
                 const { id, type, attributes: { state = null } = {} } = data
                 arr.push({ id, state, type })
-            })
+            }
             this.serviceTableRow = arr
         },
 

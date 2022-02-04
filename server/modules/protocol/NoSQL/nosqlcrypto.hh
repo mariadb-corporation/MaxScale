@@ -88,6 +88,11 @@ inline std::vector<uint8_t> sha_1(const std::vector<uint8_t>& data)
     return sha_1(data.data(), data.size());
 }
 
+inline std::vector<uint8_t> sha_1(const std::string& s)
+{
+    return sha_1(reinterpret_cast<const uint8_t*>(s.data()), s.size());
+}
+
 //
 // SHA 256
 //

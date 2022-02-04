@@ -2805,38 +2805,6 @@ string Path::not_to_condition(const bsoncxx::document::element& element) const
 }
 
 //
-// NoSQL::Context
-//
-std::atomic<int64_t> nosql::NoSQL::Context::s_connection_id;
-
-NoSQL::Context::Context(UserManager* pUm,
-                        MXS_SESSION* pSession,
-                        ClientConnection* pClient_connection,
-                        mxs::Component* pDownstream)
-    : m_um(*pUm)
-    , m_session(*pSession)
-    , m_client_connection(*pClient_connection)
-    , m_downstream(*pDownstream)
-    , m_connection_id(++s_connection_id)
-    , m_sLast_error(std::make_unique<NoError>())
-{
-}
-
-void NoSQL::Context::get_last_error(DocumentBuilder& doc)
-{
-    int32_t connection_id = m_connection_id; // MongoDB returns this as a 32-bit integer.
-
-    doc.append(kvp(key::CONNECTION_ID, connection_id));
-    m_sLast_error->populate(doc);
-    doc.append(kvp(key::OK, 1));
-}
-
-void NoSQL::Context::reset_error(int32_t n)
-{
-    m_sLast_error = std::make_unique<NoError>(n);
-}
-
-//
 // NoSQL
 //
 NoSQL::NoSQL(MXS_SESSION* pSession,

@@ -1807,7 +1807,7 @@ public:
 
             auto oib = m_database.config().ordered_insert_behavior;
 
-            if (oib == GlobalConfig::OrderedInsertBehavior::ATOMIC && m_ordered == true)
+            if (oib == Configuration::OrderedInsertBehavior::ATOMIC && m_ordered == true)
             {
                 // Ok, so the documents were not inserted one by one, but everything
                 // in one go. As 'index' refers to the n:th statement being executed,
@@ -1903,7 +1903,7 @@ protected:
 
         auto oib = m_database.config().ordered_insert_behavior;
 
-        if (oib == GlobalConfig::OrderedInsertBehavior::DEFAULT || m_ordered == false)
+        if (oib == Configuration::OrderedInsertBehavior::DEFAULT || m_ordered == false)
         {
             if (m_ordered)
             {

@@ -11,11 +11,13 @@ include_directories(${BSON_CXX_INCLUDE_DIR})
 
 add_library(nosqlprotocol SHARED
   clientconnection.cc
-  config.cc
+  configuration.cc
   nosql.cc
   nosqlbase.cc
   nosqlcommand.cc
   nosqlcommands.cc
+  nosqlconfig.cc
+  nosqlcontext.cc
   nosqlcrypto.cc
   nosqlcursor.cc
   nosqldatabase.cc
