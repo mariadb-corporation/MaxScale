@@ -54,7 +54,6 @@
                     :disabled="!(isSlave || isMaster)"
                     :serverInfo="serverInfo"
                     :isMaster="isMaster"
-                    :serverId="id"
                     :openDelay="400"
                 >
                     <template v-slot:activator="{ on }">
@@ -81,7 +80,7 @@
             <template
                 v-slot:serverState="{
                     data: {
-                        item: { id, serverState, isSlave, isMaster, serverInfo = [] },
+                        item: {  serverState, isSlave, isMaster, serverInfo = [] },
                     },
                 }"
             >
@@ -90,7 +89,6 @@
                     :disabled="!(isSlave || isMaster)"
                     :serverInfo="serverInfo"
                     :isMaster="isMaster"
-                    :serverId="id"
                 >
                     <template v-slot:activator="{ on }">
                         <div
@@ -177,11 +175,7 @@
  * Public License.
  */
 import { mapGetters, mapState } from 'vuex'
-import RepTooltip from './RepTooltip.vue'
 export default {
-    components: {
-        'rep-tooltip': RepTooltip,
-    },
     data() {
         return {
             tableHeaders: [
