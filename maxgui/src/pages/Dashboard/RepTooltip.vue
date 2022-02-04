@@ -9,24 +9,20 @@
         allow-overflow
         :max-height="350"
         :open-delay="openDelay"
-        :disabled="!(showRepStats || showSlaveStats)"
+        :disabled="disabled"
     >
         <template v-slot:activator="{ on }">
             <slot name="activator" :on="on" />
         </template>
         <v-sheet class="py-4 px-3 text-body-2">
             <div class="px-1 py-1 font-weight-bold ">
-                {{ showSlaveStats ? $t('slaveRepStatus') : $t('replicationStatus') }}
+                {{ isMaster ? $t('slaveRepStatus') : $t('replicationStatus') }}
             </div>
             <v-divider class="color border-separator" />
 
-            <template v-if="showSlaveStats">
+            <template v-if="isMaster">
                 <table class="rep-table px-1">
-                    <tr
-                        v-for="(slaveStat, i) in getSlaveStatus(serverId)"
-                        :key="`${i}`"
-                        class="mb-1"
-                    >
+                    <tr v-for="(slaveStat, i) in getSlaveStatus" :key="`${i}`" class="mb-1">
                         <td>
                             <icon-sprite-sheet
                                 size="13"
@@ -52,12 +48,12 @@
                     </tr>
                 </table>
             </template>
-
+            <!-- Slave server replication status, serverInfo length is always <= 1 -->
             <table v-else class="rep-table px-1">
                 <tbody
-                    v-for="(stat, i) in getRepStats(serverId)"
+                    v-for="(stat, i) in getRepStats(serverInfo[0])"
                     :key="`${i}`"
-                    :class="{ 'tbody-src-replication': !showSlaveStats }"
+                    :class="{ 'tbody-src-replication': !isMaster }"
                 >
                     <tr v-for="(value, key) in stat" :key="`${key}`">
                         <td class="pr-5">
@@ -104,20 +100,46 @@
 export default {
     name: 'rep-tooltip',
     props: {
-        slaveConnectionsMap: { type: Map, required: true },
-        slaveServersByMasterMap: { type: Map, required: true },
-        showRepStats: { type: Boolean, default: false },
-        showSlaveStats: { type: Boolean, required: false },
-        serverId: { type: String, required: false },
+        serverInfo: { type: Array, required: true },
+        isMaster: { type: Boolean, required: false },
         openDelay: { type: Number, default: 0 },
+        disabled: { type: Boolean, default: false },
+    },
+    computed: {
+        /**
+         * If isMaster is true, the component is used to get overall slave replication status
+         */
+        getSlaveStatus() {
+            if (!this.serverInfo.length) return []
+            const slaveStats = []
+            this.serverInfo.forEach(item => {
+                const repStats = this.getRepStats(item)
+                slaveStats.push({
+                    id: item.name,
+                    overall_replication_state: this.$help.getOverallRepStat({
+                        repStats,
+                        pickBy: 'replication_state',
+                    }),
+                    overall_seconds_behind_master: this.$help.getOverallRepStat({
+                        repStats,
+                        pickBy: 'seconds_behind_master',
+                        isNumber: true,
+                    }),
+                })
+            })
+            return slaveStats
+        },
     },
     methods: {
-        getRepStats(serverId) {
-            const slave_connections = this.slaveConnectionsMap.get(serverId) || []
-            if (!slave_connections.length) return []
-
+        /**
+         * If isMaster is false, the component is used to get slave replication status
+         * @param {Object} serverInfo
+         * @returns {Array}- replication status
+         */
+        getRepStats(serverInfo) {
+            if (!serverInfo || !serverInfo.slave_connections.length) return []
             const repStats = []
-            slave_connections.forEach(slave_conn => {
+            serverInfo.slave_connections.forEach(slave_conn => {
                 const {
                     seconds_behind_master,
                     slave_io_running,
@@ -128,7 +150,8 @@ export default {
                 } = slave_conn
                 let srcRep = {}
                 // show connection_name only when multi-source replication is in use
-                if (slave_connections.length > 1) srcRep.connection_name = connection_name
+                if (serverInfo.slave_connections.length > 1)
+                    srcRep.connection_name = connection_name
 
                 // Determine replication_state (Stopped||Running||Lagging)
                 if (slave_io_running === 'No' || slave_sql_running === 'No')
@@ -142,7 +165,7 @@ export default {
                             slave_io_running !== 'Yes' ? slave_io_running : slave_sql_running
                     }
                 } else srcRep.replication_state = 'Lagging'
-                srcRep.server_id = serverId
+                srcRep.server_id = serverInfo.name
                 // only show last_io_error and last_sql_error when replication_state === 'Stopped'
                 if (srcRep.replication_state === 'Stopped')
                     srcRep = {
@@ -160,27 +183,6 @@ export default {
             })
 
             return repStats
-        },
-        getSlaveStatus(serverId) {
-            const slaveServerIds = this.slaveServersByMasterMap.get(serverId) || []
-            if (!slaveServerIds.length) return []
-            const slaveStats = []
-            slaveServerIds.forEach(id => {
-                const repStats = this.getRepStats(id)
-                slaveStats.push({
-                    id,
-                    overall_replication_state: this.$help.getOverallRepStat({
-                        repStats,
-                        pickBy: 'replication_state',
-                    }),
-                    overall_seconds_behind_master: this.$help.getOverallRepStat({
-                        repStats,
-                        pickBy: 'seconds_behind_master',
-                        isNumber: true,
-                    }),
-                })
-            })
-            return slaveStats
         },
     },
 }

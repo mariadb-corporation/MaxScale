@@ -45,16 +45,15 @@
             <template
                 v-slot:id="{
                     data: {
-                        item: { id, showRepStats, showSlaveStats },
+                        item: { id, isSlave, isMaster,  serverInfo = [] },
                     },
                 }"
             >
                 <rep-tooltip
-                    v-if="showRepStats || showSlaveStats"
-                    :slaveConnectionsMap="slaveConnectionsMap"
-                    :slaveServersByMasterMap="slaveServersByMasterMap"
-                    :showRepStats="showRepStats"
-                    :showSlaveStats="showSlaveStats"
+                    v-if="isSlave || isMaster"
+                    :disabled="!(isSlave || isMaster)"
+                    :serverInfo="serverInfo"
+                    :isMaster="isMaster"
                     :serverId="id"
                     :openDelay="400"
                 >
@@ -62,7 +61,7 @@
                         <div
                             class="override-td--padding disable-auto-truncate"
                             :class="{
-                                pointer: showRepStats || showSlaveStats,
+                                pointer: isSlave || isMaster,
                             }"
                             v-on="on"
                         >
@@ -74,7 +73,6 @@
                         </div>
                     </template>
                 </rep-tooltip>
-
                 <router-link v-else :to="`/dashboard/servers/${id}`" class="rsrc-link">
                     {{ id }}
                 </router-link>
@@ -83,23 +81,22 @@
             <template
                 v-slot:serverState="{
                     data: {
-                        item: { id, serverState, showRepStats, showSlaveStats },
+                        item: { id, serverState, isSlave, isMaster, serverInfo = [] },
                     },
                 }"
             >
                 <rep-tooltip
                     v-if="serverState"
-                    :slaveConnectionsMap="slaveConnectionsMap"
-                    :slaveServersByMasterMap="slaveServersByMasterMap"
-                    :showRepStats="showRepStats"
-                    :showSlaveStats="showSlaveStats"
+                    :disabled="!(isSlave || isMaster)"
+                    :serverInfo="serverInfo"
+                    :isMaster="isMaster"
                     :serverId="id"
                 >
                     <template v-slot:activator="{ on }">
                         <div
                             class="override-td--padding"
                             :class="{
-                                pointer: showRepStats || showSlaveStats,
+                                pointer: isSlave || isMaster,
                             }"
                             v-on="on"
                         >
@@ -259,7 +256,7 @@ export default {
                             attributes: {
                                 state: monitorState,
                                 module: monitorModule,
-                                monitor_diagnostics: { master },
+                                monitor_diagnostics: { master: masterName, server_info },
                             },
                         } = this.getAllMonitorsMap.get(monitorsData[0].id) || {}
 
@@ -267,10 +264,23 @@ export default {
                             allMonitorIds.push(monitorId)
                             row.groupId = monitorId
                             row.monitorState = monitorState
-                            row.showSlaveStats =
-                                master === row.id && monitorModule === this.monitorSupportsReplica
-                            row.showRepStats =
-                                master !== row.id && monitorModule === this.monitorSupportsReplica
+                            if (monitorModule === this.monitorSupportsReplica) {
+                                if (masterName === row.id) {
+                                    row.isMaster = true
+                                    row.serverInfo = this.getAllSlaveServersInfo({
+                                        masterName,
+                                        server_info,
+                                    })
+                                } else {
+                                    row.isSlave = true
+                                    // get info of the server has name equal to row.id
+                                    row.serverInfo = this.getSlaveServerInfo({
+                                        masterName,
+                                        slaveName: row.id,
+                                        server_info,
+                                    })
+                                }
+                            }
                             // delete monitor that already grouped from allMonitorsMapClone
                             allMonitorsMapClone.delete(monitorId)
                         }
@@ -304,36 +314,6 @@ export default {
             }
             return rows
         },
-        slaveConnectionsMap() {
-            let map = new Map()
-            this.tableRows
-                .filter(row => row.showRepStats)
-                .forEach(row => {
-                    const key = row.id
-                    const server = this.getAllServersMap.get(row.id)
-                    let slave_connections =
-                        map.get(key) || this.$typy(server, 'attributes.slave_connections').safeArray
-                    map.set(key, slave_connections)
-                })
-            return map
-        },
-        slaveServersByMasterMap() {
-            let map = new Map()
-            let group = this.$help.hashMapByPath({
-                arr: this.tableRows.filter(row => row.groupId), // Group monitored servers
-                path: 'groupId', //monitorId
-            })
-            Object.keys(group).forEach(key => {
-                let master = null
-                let slaves = []
-                group[key].forEach(server => {
-                    if (server.showSlaveStats) master = server.id
-                    else slaves.push(server.id)
-                })
-                map.set(master, slaves)
-            })
-            return map
-        },
     },
     methods: {
         setServicesLength(total) {
@@ -341,6 +321,55 @@ export default {
         },
         setMonitorsLength(total) {
             this.monitorsLength = total
+        },
+        /**
+         * Keep only connections to master
+         * @param {Array} param.slave_connections - slave_connections in monitor_diagnostics.server_info
+         * @param {String} param.masterName - master server name
+         * @returns {Array} returns connections that are connected to the provided masterName
+         */
+        filterSlaveConn({ slave_connections, masterName }) {
+            return slave_connections.filter(conn => conn.master_server_name === masterName)
+        },
+        /**
+         * Get info of the slave servers
+         * @param {String} param.masterName - master server name
+         * @param {Array} param.server_info - monitor_diagnostics.server_info
+         * @returns {Array} returns all slave servers info of the provided masterName
+         */
+        getAllSlaveServersInfo({ masterName, server_info }) {
+            return server_info.reduce((arr, item) => {
+                if (item.name !== masterName)
+                    arr.push({
+                        ...item,
+                        // Keep only connections to master
+                        slave_connections: this.filterSlaveConn({
+                            slave_connections: item.slave_connections,
+                            masterName,
+                        }),
+                    })
+                return arr
+            }, [])
+        },
+        /**
+         * Get info of the slave servers
+         * @param {String} param.masterName - master server name
+         * @param {String} param.slaveName - slave server name
+         * @param {Array} param.server_info - monitor_diagnostics.server_info
+         * @returns {Array} All slave servers info of the provided masterName
+         */
+        getSlaveServerInfo({ masterName, slaveName, server_info }) {
+            return server_info.reduce((arr, item) => {
+                if (item.name === slaveName)
+                    arr.push({
+                        ...item,
+                        slave_connections: this.filterSlaveConn({
+                            slave_connections: item.slave_connections,
+                            masterName,
+                        }),
+                    })
+                return arr
+            }, [])
         },
     },
 }
