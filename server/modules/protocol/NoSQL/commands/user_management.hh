@@ -815,10 +815,10 @@ public:
 
         const auto& um = m_database.context().um();
 
-        UserManager::UserInfo info;
-        info.roles = final_roles;
+        UserManager::Update data;
+        data.roles = final_roles;
 
-        if (um.update(m_db, m_user, UserInfo::ROLES, info))
+        if (um.update(m_db, m_user, UserManager::Update::ROLES, data))
         {
             if (n == m_roles.size())
             {
@@ -1116,19 +1116,15 @@ public:
         }
 
         m_what = MxsUpdateUser::parse(KEY, um, m_doc, m_db, m_user, &m_new_data);
-        m_new_info.custom_data = std::move(m_new_data.custom_data);
-        m_new_info.mechanisms = std::move(m_new_data.mechanisms);
-        m_new_info.pwd_sha1_b64 = mxs::to_base64(crypto::sha_1(m_new_data.pwd));
-        m_new_info.roles = std::move(m_new_data.roles);
 
-        if ((m_what & ~(UserInfo::CUSTOM_DATA | UserInfo::MECHANISMS)) != 0)
+        if ((m_what & ~(UserManager::Update::CUSTOM_DATA | UserManager::Update::MECHANISMS)) != 0)
         {
             // Something else but the mechanisms and/or custom_data is updated.
             state = SingleCommand::execute(ppNoSQL_response);
         }
         else
         {
-            if (um.update(m_db, m_user, m_what, m_new_info))
+            if (um.update(m_db, m_user, m_what, m_new_data))
             {
                 DocumentBuilder doc;
                 doc.append(kvp(key::OK, 1));
@@ -1168,11 +1164,11 @@ protected:
     {
         string sql;
 
-        if (m_what & UserInfo::PWD)
+        if (m_what & UserManager::Update::PWD)
         {
             sql = generate_update_pwd();
         }
-        else if (m_what & UserInfo::ROLES)
+        else if (m_what & UserManager::Update::ROLES)
         {
             sql = generate_update_grants();
         }
@@ -1193,7 +1189,7 @@ private:
 
         string account = mariadb::get_account(m_db, m_user, m_old_info.host);
 
-        mxb_assert(m_what & UserInfo::PWD);
+        mxb_assert(m_what & UserManager::Update::PWD);
 
         ostringstream ss;
         ss << "SET PASSWORD FOR " << account << " = PASSWORD('" << m_new_data.pwd << "')";
@@ -1224,7 +1220,7 @@ private:
         }
 
         // Grant according to new roles.
-        auto grants = create_grant_statements(account, m_new_info.roles);
+        auto grants = create_grant_statements(account, m_new_data.roles);
         m_nGrants = grants.size();
 
         for (const auto& grant : grants)
@@ -1250,27 +1246,25 @@ private:
             {
                 const auto& um = m_database.context().um();
 
-                UserInfo info;
-                info.pwd_sha1_b64 = m_new_info.pwd_sha1_b64;
-                uint32_t what = UserInfo::PWD;
+                uint32_t what = UserManager::Update::PWD;
 
-                if (m_what & UserInfo::CUSTOM_DATA)
+                if (m_what & UserManager::Update::CUSTOM_DATA)
                 {
-                    info.custom_data = m_new_info.custom_data;
-                    what |= UserInfo::CUSTOM_DATA;
+                    what |= UserManager::Update::CUSTOM_DATA;
                 }
 
-                if (m_what & UserInfo::MECHANISMS)
+                if (m_what & UserManager::Update::MECHANISMS)
                 {
-                    info.mechanisms = m_new_info.mechanisms;
-                    what |= UserInfo::MECHANISMS;
+                    what |= UserManager::Update::MECHANISMS;
                 }
 
-                m_what &= ~(UserInfo::PWD | UserInfo::CUSTOM_DATA | UserInfo::MECHANISMS);
+                m_what &= ~(UserManager::Update::PWD
+                            | UserManager::Update::CUSTOM_DATA
+                            | UserManager::Update::MECHANISMS);
 
-                if (um.update(m_db, m_user, what, info))
+                if (um.update(m_db, m_user, what, m_new_data))
                 {
-                    if (m_what & UserInfo::ROLES)
+                    if (m_what & UserManager::Update::ROLES)
                     {
                         auto sql = generate_update_grants();
 
@@ -1344,23 +1338,19 @@ private:
 
         auto& um = m_database.context().um();
 
-        UserInfo info;
-        info.roles = m_new_info.roles;
-        uint32_t what = UserInfo::ROLES;
+        uint32_t what = UserManager::Update::ROLES;
 
-        if (m_what & UserInfo::CUSTOM_DATA)
+        if (m_what & UserManager::Update::CUSTOM_DATA)
         {
-            info.custom_data = m_new_info.custom_data;
-            what |= UserInfo::CUSTOM_DATA;
+            what |= UserManager::Update::CUSTOM_DATA;
         }
 
-        if (m_what & UserInfo::MECHANISMS)
+        if (m_what & UserManager::Update::MECHANISMS)
         {
-            info.mechanisms = m_new_info.mechanisms;
-            what |= UserInfo::MECHANISMS;
+            what |= UserManager::Update::MECHANISMS;
         }
 
-        if (um.update(m_db, m_user, what, info))
+        if (um.update(m_db, m_user, what, m_new_data))
         {
             DocumentBuilder doc;
             doc.append(kvp(key::OK, 1));
@@ -1371,7 +1361,7 @@ private:
         {
             ostringstream ss;
 
-            if (m_what & UserInfo::PWD)
+            if (m_what & UserManager::Update::PWD)
             {
                 ss << "Could update password both in the MariaDB server and in the local "
                    << "nosqlprotocol database and could ";
@@ -1409,7 +1399,7 @@ private:
 
                     ostringstream ss;
 
-                    if (m_what & UserInfo::PWD)
+                    if (m_what & UserManager::Update::PWD)
                     {
                         ss << "Changing the password succeeded, but revoking privileges with \"";
                     }
@@ -1456,7 +1446,7 @@ private:
 
                     ostringstream ss;
 
-                    if (m_what & UserInfo::PWD)
+                    if (m_what & UserManager::Update::PWD)
                     {
                         ss << "Changing the password and revoking privileges succeeded, ";
                     }
@@ -1497,8 +1487,7 @@ private:
     string              m_db;
     string              m_user;
     UserInfo            m_old_info;
-    UserInfo            m_new_info;
-    MxsUpdateUser::Data m_new_data;
+    UserManager::Update m_new_data;
     uint32_t            m_what { 0 };
     vector<string>      m_statements;
     int32_t             m_nRevokes { 0 };

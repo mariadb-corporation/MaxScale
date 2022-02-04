@@ -24,6 +24,8 @@ using namespace std;
 namespace
 {
 
+using namespace nosql;
+
 const int SCHEMA_VERSION = 1;
 
 // Not all uuid/uuid.h appears to have UUID_STR_LEN defined.
@@ -201,6 +203,59 @@ sqlite3* open_or_create_db(const std::string& path)
     return pDb;
 }
 
+void get_sha1_salt_and_salted_password(const string& user,
+                                       const string& pwd,
+                                       string* pSalt_b64,
+                                       string* pSalted_pwd_b64)
+{
+    size_t hash_size = scram::ScramSHA1::HASH_SIZE;
+    size_t salt_size = hash_size - 4; // To leave room for scram stuff.
+    vector<uint8_t> salt = crypto::create_random_bytes(salt_size);
+    *pSalt_b64 = mxs::to_base64(salt);
+
+    auto salted_pwd = scram::ScramSHA1::get().get_salted_password(user, pwd, salt);
+    *pSalted_pwd_b64 = mxs::to_base64(salted_pwd);
+}
+
+void get_sha256_salt_and_salted_password(const string& user,
+                                         const string& pwd,
+                                         string* pSalt_b64,
+                                         string* pSalted_pwd_b64)
+{
+    size_t hash_size = scram::ScramSHA256::HASH_SIZE;
+    size_t salt_size = hash_size - 4; // To leave room for scram stuff.
+    vector<uint8_t> salt = crypto::create_random_bytes(salt_size);
+    *pSalt_b64 = mxs::to_base64(salt);
+
+    auto salted_pwd = scram::ScramSHA256::get().get_salted_password(user, pwd, salt);
+    *pSalted_pwd_b64 = mxs::to_base64(salted_pwd);
+}
+
+void get_salts_and_salted_passwords(const string& user,
+                                    const string& pwd,
+                                    const vector<scram::Mechanism>& mechanisms,
+                                    string* pSalt_sha1_b64,
+                                    string* pSalted_pwd_sha1_b64,
+                                    string* pSalt_sha256_b64,
+                                    string* pSalted_pwd_sha256_b64)
+{
+    for (const auto mechanism : mechanisms)
+    {
+        switch (mechanism)
+        {
+        case scram::Mechanism::SHA_1:
+            get_sha1_salt_and_salted_password(user, pwd, pSalt_sha1_b64, pSalted_pwd_sha1_b64);
+            break;
+
+        case scram::Mechanism::SHA_256:
+            get_sha256_salt_and_salted_password(user, pwd, pSalt_sha256_b64, pSalted_pwd_sha256_b64);
+            break;
+
+        default:
+            mxb_assert(!true);
+        }
+    }
+}
 
 }
 
@@ -638,42 +693,14 @@ bool UserManager::add_user(const string& db,
     pwd = nosql::escape_essential_chars(pwd);
 
     string salt_sha1_b64;
-    string salt_sha256_b64;
     string salted_pwd_sha1_b64;
+    string salt_sha256_b64;
     string salted_pwd_sha256_b64;
 
-    for (const auto mechanism : mechanisms)
-    {
-        switch (mechanism)
-        {
-        case scram::Mechanism::SHA_1:
-            {
-                size_t hash_size = scram::ScramSHA1::HASH_SIZE;
-                size_t salt_size = hash_size - 4; // To leave room for scram stuff.
-                vector<uint8_t> salt = crypto::create_random_bytes(salt_size);
-                salt_sha1_b64 = mxs::to_base64(salt);
-
-                auto salted_pwd = scram::ScramSHA1::get().get_salted_password(user, pwd, salt);
-                salted_pwd_sha1_b64 = mxs::to_base64(salted_pwd);
-            }
-            break;
-
-        case scram::Mechanism::SHA_256:
-            {
-                size_t hash_size = scram::ScramSHA256::HASH_SIZE;
-                size_t salt_size = hash_size - 4; // To leave room for scram stuff.
-                vector<uint8_t> salt = crypto::create_random_bytes(salt_size);
-                salt_sha256_b64 = mxs::to_base64(salt);
-
-                auto salted_pwd = scram::ScramSHA256::get().get_salted_password(user, pwd, salt);
-                salted_pwd_sha256_b64 = mxs::to_base64(salted_pwd);
-            }
-            break;
-
-        default:
-            mxb_assert(!true);
-        }
-    }
+    get_salts_and_salted_passwords(user, pwd,
+                                   mechanisms,
+                                   &salt_sha1_b64, &salted_pwd_sha1_b64,
+                                   &salt_sha256_b64, &salted_pwd_sha256_b64);
 
     user = nosql::escape_essential_chars(user);
 
@@ -908,9 +935,9 @@ bool UserManager::remove_mariadb_accounts(const std::vector<MariaDBAccount>& mar
     return rv == SQLITE_OK;
 }
 
-bool UserManager::update(const string& db, const string& user, uint32_t what, const UserInfo& info) const
+bool UserManager::update(const string& db, const string& user, uint32_t what, const Update& data) const
 {
-    mxb_assert((what & UserInfo::MASK) != 0);
+    mxb_assert((what & Update::MASK) != 0);
 
     int rv = SQLITE_OK;
 
@@ -921,16 +948,43 @@ bool UserManager::update(const string& db, const string& user, uint32_t what, co
     ss << SQL_UPDATE_HEAD;
     string delimiter = "";
 
-    if (what & UserInfo::CUSTOM_DATA)
+    if (what & Update::CUSTOM_DATA)
     {
-        ss << delimiter << "custom_data = '" << info.custom_data << "'";
+        ss << delimiter << "custom_data = '" << data.custom_data << "'";
         delimiter = ", ";
     }
 
-    if (what & UserInfo::MECHANISMS)
+    if (what & Update::PWD)
     {
-        auto begin = info.mechanisms.begin();
-        auto end = info.mechanisms.end();
+        auto pwd = nosql::escape_essential_chars(data.pwd);
+        vector<uint8_t> pwd_sha1 = crypto::sha_1(pwd);
+        string pwd_sha1_b64 = mxs::to_base64(pwd_sha1);
+
+        ss << delimiter << "pwd_sha1_b64 = '" << pwd_sha1_b64 << "'";
+
+        string salt_sha1_b64;
+        string salted_pwd_sha1_b64;
+        string salt_sha256_b64;
+        string salted_pwd_sha256_b64;
+
+        mxb_assert(!data.mechanisms.empty());
+        get_salts_and_salted_passwords(user, pwd,
+                                       data.mechanisms,
+                                       &salt_sha1_b64, &salted_pwd_sha1_b64,
+                                       &salt_sha256_b64, &salted_pwd_sha256_b64);
+
+        ss << ", salt_sha1_b64 = '" << salt_sha1_b64 << "'"
+           << ", salt_sha256_b64 = '" << salt_sha256_b64 << "'"
+           << ", salted_pwd_sha1_b64 = '" << salted_pwd_sha1_b64 << "'"
+           << ", salted_pwd_sha256_b64 = '" << salted_pwd_sha256_b64 << "'";
+
+        delimiter = ", ";
+    }
+
+    if ((what & Update::MECHANISMS) && !(what & Update::PWD))
+    {
+        auto begin = data.mechanisms.begin();
+        auto end = data.mechanisms.end();
 
         if (std::find(begin, end, scram::Mechanism::SHA_1) == end)
         {
@@ -945,15 +999,9 @@ bool UserManager::update(const string& db, const string& user, uint32_t what, co
         }
     }
 
-    if (what & UserInfo::PWD)
+    if (what & Update::ROLES)
     {
-        ss << delimiter << "pwd_sha1_b64 = '" << info.pwd_sha1_b64 << "'";
-        delimiter = ", ";
-    }
-
-    if (what & UserInfo::ROLES)
-    {
-        ss << delimiter << "roles = '" << role::to_json(info.roles) << "'";
+        ss << delimiter << "roles = '" << role::to_json(data.roles) << "'";
         delimiter = ", ";
     }
 

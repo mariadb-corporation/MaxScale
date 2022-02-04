@@ -79,16 +79,6 @@ public:
     class UserInfo
     {
     public:
-        enum What
-        {
-            CUSTOM_DATA = 1 << 0,
-            MECHANISMS  = 1 << 1,
-            PWD         = 1 << 2,
-            ROLES       = 1 << 3,
-
-            MASK = (PWD | MECHANISMS | ROLES | CUSTOM_DATA)
-        };
-
         std::string                   mariadb_user;
         std::string                   db;
         std::string                   user;
@@ -208,24 +198,42 @@ public:
 
     bool remove_mariadb_accounts(const std::vector<MariaDBAccount>& mariadb_accounts) const;
 
-    bool update(const std::string& db, const std::string& user, uint32_t what, const UserInfo& info) const;
+    struct Update
+    {
+        enum What
+        {
+            CUSTOM_DATA = 1 << 0,
+            MECHANISMS  = 1 << 1,
+            PWD         = 1 << 2,
+            ROLES       = 1 << 3,
+
+            MASK = (PWD | MECHANISMS | ROLES | CUSTOM_DATA)
+        };
+
+        std::string                   pwd;
+        std::string                   custom_data;
+        std::vector<scram::Mechanism> mechanisms;
+        std::vector<role::Role>       roles;
+    };
+
+    bool update(const std::string& db, const std::string& user, uint32_t what, const Update& data) const;
 
     bool set_mechanisms(const std::string& db,
                         const std::string& user,
                         const std::vector<scram::Mechanism>& mechanisms) const
     {
-        UserInfo info;
-        info.mechanisms = mechanisms;
+        Update data;
+        data.mechanisms = mechanisms;
 
-        return update(db, user, UserInfo::MECHANISMS, info);
+        return update(db, user, Update::MECHANISMS, data);
     }
 
     bool set_roles(const std::string& db, const std::string& user, const std::vector<role::Role>& roles) const
     {
-        UserInfo info;
-        info.roles = roles;
+        Update data;
+        data.roles = roles;
 
-        return update(db, user, UserInfo::ROLES, info);
+        return update(db, user, Update::ROLES, data);
     }
 
     static std::string get_mariadb_user(const std::string& db, const std::string& user)
