@@ -22,7 +22,12 @@
                         </span>
                     </truncate-string>
 
-                    <v-menu transition="slide-y-transition" offset-y content-class="setting-menu">
+                    <v-menu
+                        v-if="$slots['setting-menu-list-item'] || $slots['setting-menu']"
+                        transition="slide-y-transition"
+                        offset-y
+                        content-class="setting-menu"
+                    >
                         <template v-slot:activator="{ on }">
                             <v-btn class="ml-2 gear-btn" icon v-on="on">
                                 <v-icon size="18" color="primary">
@@ -30,8 +35,17 @@
                                 </v-icon>
                             </v-btn>
                         </template>
+                        <v-list
+                            v-if="$slots['setting-menu-list-item']"
+                            class="color bg-color-background"
+                        >
+                            <slot name="setting-menu-list-item"></slot>
+                        </v-list>
 
-                        <div class="color bg-color-background d-inline-flex icon-wrapper-list">
+                        <div
+                            v-if="$slots['setting-menu']"
+                            class="color bg-color-background d-inline-flex icon-wrapper-list"
+                        >
                             <slot name="setting-menu"></slot>
                         </div>
                     </v-menu>
