@@ -1,39 +1,24 @@
 <template>
-    <portal to="page-header">
-        <div class="d-flex align-center">
-            <v-btn class="ml-n4" icon @click="goBack">
-                <v-icon class="mr-1" style="transform:rotate(90deg)" size="28" color="deep-ocean">
-                    $vuetify.icons.arrowDown
-                </v-icon>
-            </v-btn>
-            <div class="d-inline-flex align-center">
-                <truncate-string :text="$route.params.id" :maxWidth="600">
-                    <span
-                        style="line-height: normal;"
-                        class="ml-1 mb-0 color text-navigation text-h4 page-title"
-                    >
-                        {{ $route.params.id }}
-                    </span>
-                </truncate-string>
+    <details-page-title>
+        <template v-slot:append>
+            <div class="pl-6">
+                <icon-sprite-sheet
+                    size="13"
+                    class="status-icon mr-1"
+                    :frame="$help.monitorStateIcon(current_cluster.state)"
+                >
+                    status
+                </icon-sprite-sheet>
+                <span class="resource-state color text-navigation text-body-2">
+                    {{ current_cluster.state }}
+                </span>
+                <span class="color text-field-text text-body-2">
+                    |
+                    <span class="resource-module">{{ current_cluster.module }}</span>
+                </span>
             </div>
-        </div>
-        <div class="pl-6">
-            <icon-sprite-sheet
-                size="13"
-                class="status-icon mr-1"
-                :frame="$help.monitorStateIcon(current_cluster.state)"
-            >
-                status
-            </icon-sprite-sheet>
-            <span class="resource-state color text-navigation text-body-2">
-                {{ current_cluster.state }}
-            </span>
-            <span class="color text-field-text text-body-2">
-                |
-                <span class="resource-module">{{ current_cluster.module }}</span>
-            </span>
-        </div>
-    </portal>
+        </template>
+    </details-page-title>
 </template>
 
 <script>
@@ -50,11 +35,9 @@
  * Public License.
  */
 import { mapState } from 'vuex'
-import goBack from 'mixins/goBack'
 
 export default {
     name: 'cluster-page-header',
-    mixins: [goBack],
     computed: {
         ...mapState({
             current_cluster: state => state.visualization.current_cluster,
