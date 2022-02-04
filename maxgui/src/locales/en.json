@@ -221,7 +221,6 @@
     "clusters": "Clusters",
     "configuration": "Configuration",
     "master": "Master",
-    "repLag": "Replication lag",
     "promote": "Promote",
     "errors": {
         "requiredInput": "{inputName} is required",
