@@ -1,6 +1,5 @@
 <template>
     <v-menu
-        top
         offset-y
         transition="slide-y-transition"
         :close-on-content-click="false"
@@ -8,8 +7,8 @@
         content-class="shadow-drop color text-navigation"
         allow-overflow
         :max-height="350"
-        :open-delay="openDelay"
-        :disabled="disabled"
+        v-bind="{ ...$attrs }"
+        v-on="$listeners"
     >
         <template v-slot:activator="{ on }">
             <slot name="activator" :on="on" />
@@ -99,11 +98,10 @@
  */
 export default {
     name: 'rep-tooltip',
+    inheritAttrs: false,
     props: {
         serverInfo: { type: Array, required: true },
         isMaster: { type: Boolean, required: false },
-        openDelay: { type: Number, default: 0 },
-        disabled: { type: Boolean, default: false },
     },
     computed: {
         /**

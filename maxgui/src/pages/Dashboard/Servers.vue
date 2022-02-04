@@ -54,7 +54,8 @@
                     :disabled="!(isSlave || isMaster)"
                     :serverInfo="serverInfo"
                     :isMaster="isMaster"
-                    :openDelay="400"
+                    :open-delay="400"
+                    :top="true"
                 >
                     <template v-slot:activator="{ on }">
                         <div
@@ -89,6 +90,7 @@
                     :disabled="!(isSlave || isMaster)"
                     :serverInfo="serverInfo"
                     :isMaster="isMaster"
+                    :top="true"
                 >
                     <template v-slot:activator="{ on }">
                         <div
