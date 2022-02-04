@@ -37,6 +37,10 @@ export const routes = [
         redirect: '/dashboard/servers',
     },
     {
+        path: '/dashboard/monitors',
+        redirect: '/dashboard/servers',
+    },
+    {
         path: '/visualization',
         redirect: '/visualization/configuration',
     },
