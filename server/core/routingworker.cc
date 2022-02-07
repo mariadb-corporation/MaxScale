@@ -532,7 +532,7 @@ RoutingWorker::get_backend_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Comp
     }
 
     ConnectionResult rval;
-    const auto max_allowed_conns = pServer->max_connections();
+    const auto max_allowed_conns = pServer->max_routing_connections();
     auto& stats = pServer->stats();
 
     if (max_allowed_conns > 0)

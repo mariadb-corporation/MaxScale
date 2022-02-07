@@ -138,9 +138,9 @@ public:
         return m_settings.m_priority.get();
     }
 
-    int64_t max_connections() const
+    int64_t max_routing_connections() const
     {
-        return m_settings.m_max_connections.get();
+        return m_settings.m_max_routing_connections.get();
     }
 
     /**
@@ -395,7 +395,7 @@ private:
         // The ranking of this server, used to prioritize certain servers over others during routing
         mxs::config::Enum<int64_t> m_rank;
         // How many simultaneous connections are allowed to this server. Only counts routing connections.
-        mxs::config::Count m_max_connections;
+        mxs::config::Count m_max_routing_connections;
 
         // TLS configuration parameters
         mxs::config::Bool m_ssl;

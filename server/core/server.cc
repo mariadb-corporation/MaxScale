@@ -151,8 +151,8 @@ static cfg::ParamEnum<int64_t> s_rank(
         {RANK_SECONDARY, "secondary"}
     }, RANK_PRIMARY, AT_RUNTIME);
 
-static cfg::ParamCount s_max_connections(
-    &s_spec, "max_connections", "Maximum connections", 0, AT_RUNTIME);
+static cfg::ParamCount s_max_routing_connections(
+    &s_spec, "max_routing_connections", "Maximum routing connections", 0, AT_RUNTIME);
 
 //
 // TLS parameters
@@ -392,7 +392,7 @@ Server::Settings::Settings(const std::string& name)
     , m_proxy_protocol(this, &s_proxy_protocol)
     , m_disk_space_threshold(this, &s_disk_space_threshold)
     , m_rank(this, &s_rank)
-    , m_max_connections(this, &s_max_connections)
+    , m_max_routing_connections(this, &s_max_routing_connections)
     , m_ssl(this, &s_ssl)
     , m_ssl_cert(this, &s_ssl_cert)
     , m_ssl_key(this, &s_ssl_key)
