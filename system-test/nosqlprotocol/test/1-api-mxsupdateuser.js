@@ -16,14 +16,13 @@ const test = require('./nosqltest')
 const error = test.error;
 
 const name = "mxsUpdateUser";
+const db = "nosql";
 
 describe(name, function () {
     this.timeout(test.timeout);
 
     let nosql;
     let conn;
-
-    var db = name;
 
     async function fetch_bob() {
         var rv = await nosql.runCommand({usersInfo: "bob"});

@@ -23,7 +23,7 @@ describe(name, function () {
     let nosql;
     let conn;
 
-    var random_db = "db" + Math.random().toString(10).substring(2);
+    var random_db = name + Math.random().toString(10).substring(2);
 
     /*
      * MOCHA
@@ -51,7 +51,6 @@ describe(name, function () {
         assert.equal(rv.ok, 1);
 
         await conn.query("USE " + random_db);
-
         await conn.query("DROP DATABASE " + random_db);
     });
 

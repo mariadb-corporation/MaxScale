@@ -14,8 +14,9 @@
 var maxscale_host = process.env.maxscale_000_network;
 
 if (!maxscale_host) {
-    console.log("The environment variable 'maxscale_000_network' must be set.");
-    process.exit(1);
+    console.log("The environment variable 'maxscale_000_network' is not set, " +
+                "assuming 127.0.0.1.");
+    maxscale_host = "127.0.0.1"
 }
 
 var timeout;
@@ -31,7 +32,7 @@ else {
 }
 
 var config = {
-    host: process.env.maxscale_000_network,
+    host: maxscale_host,
     mariadb_port: 4008,
     nosql_port: 17017,
     user: 'maxskysql',
@@ -81,7 +82,7 @@ class NoSQL {
         var client = await MxsMongo.createClient();
 
         if (!dbname) {
-            dbname = "test";
+            dbname = "nosql";
         }
 
         var db = client.db(dbname);

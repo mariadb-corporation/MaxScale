@@ -16,14 +16,13 @@ const test = require('./nosqltest')
 const error = test.error;
 
 const name = "mxsAddUser";
+const db = "nosql";
 
 describe(name, function () {
     this.timeout(test.timeout);
 
     let nosql;
     let conn;
-
-    var db = "mxsAddUser";
 
     async function remove_user(user) {
         await nosql.ntRunCommand({mxsRemoveUser: user.user});
@@ -59,8 +58,6 @@ describe(name, function () {
      */
     before(async function () {
         nosql = await test.NoSQL.create(db);
-
-        await nosql.ntRunCommand({mxsRemoveUser: "bob"});
     });
 
     it('Can add user 1.', async function () {
