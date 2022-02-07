@@ -266,6 +266,37 @@ std::string join(const T& container, const std::string& separator = ",", const s
 }
 
 /**
+ * Transform and join objects into a string delimited by separators
+ *
+ * @param container Container that provides iterators, stored value must support writing to ostream with
+ *                  operator<<
+ * @param op        Unary operation to perform on all container values
+ * @param separator Value used as the separator
+ * @param quotation Quotation marker used to quote the values
+ *
+ * @return String created by joining all values and delimiting them with `separator` (no trailing delimiter)
+ */
+template<class T, class UnaryOperator>
+std::string transform_join(const T& container, UnaryOperator op,
+                           const std::string& separator = ",", const std::string& quotation = "")
+{
+    std::ostringstream ss;
+    auto it = std::begin(container);
+
+    if (it != std::end(container))
+    {
+        ss << quotation << op(*it++) << quotation;
+
+        while (it != std::end(container))
+        {
+            ss << separator << quotation << op(*it++) << quotation;
+        }
+    }
+
+    return ss.str();
+}
+
+/**
  * Convert a string to a long.
  *
  * @param s      The string to convert.
