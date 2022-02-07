@@ -330,6 +330,8 @@ public:
     bool handleError(mxs::ErrorType type, GWBUF* error,
                      mxs::Endpoint* down, const mxs::Reply& reply) override;
 
+    void endpointConnReleased(Endpoint* down) override;
+
 private:
 
     // Class that holds the session specific filter data (TODO: Remove duplicate from session.cc)

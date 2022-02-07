@@ -90,6 +90,8 @@ public:
     bool handleError(mxs::ErrorType type, GWBUF* pMessage,
                      mxs::Endpoint* pProblem, const mxs::Reply& pReply) override;
 
+    void endpointConnReleased(mxs::Endpoint* down) override;
+
     mariadb::QueryClassifier& qc()
     {
         return m_qc;

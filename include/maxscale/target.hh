@@ -144,6 +144,10 @@ public:
     virtual bool clientReply(GWBUF* buffer, ReplyRoute& down, const mxs::Reply& reply) = 0;
 
     virtual bool handleError(ErrorType type, GWBUF* error, Endpoint* down, const mxs::Reply& reply) = 0;
+
+    virtual void endpointConnReleased(Endpoint* down)
+    {
+    }
 };
 
 // A connectable routing endpoint (a service or a server)

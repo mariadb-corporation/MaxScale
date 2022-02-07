@@ -436,6 +436,7 @@ public:
     void add_conn_wait_entry(ServerEndpoint* ep);
     void erase_conn_wait_entry(ServerEndpoint* ep);
     void notify_connection_available(SERVER* server);
+    bool conn_to_server_needed(const SERVER* srv) const;
 
     static void pool_set_size(const std::string& srvname, int64_t size);
 

@@ -686,13 +686,14 @@ Session::Session(std::shared_ptr<const ListenerData> listener_data,
     {
         m_retain_last_statements = this_unit.retain_last_statements;
     }
+
     // Pooling time is pinned at session creation. Service config changes will not affect it.
     auto pooling_time = svc_config.idle_session_pooling_time.count();
     if (pooling_time == 0)
     {
-        m_pooling_time_ms = 1;  // Quickly check for idle sessions.
+        m_pooling_time_ms = 1;      // Quickly check for idle sessions.
     }
-    else
+    else if (pooling_time > 0)
     {
         m_pooling_time_ms = 1000 * pooling_time;
     }
@@ -1751,37 +1752,39 @@ bool Session::pool_backends_cb(mxb::Worker::Call::action_t action)
         auto* client = client_dcb;
         if (client->state() == DCB::State::POLLING)
         {
-            // TODO: should use 'epoll_tick_now' from Worker, but dcb uses 'mxs_clock'.
-            // This hurts accuracy.
-            auto now = mxs_clock();
-            auto client_idle_tics = now - std::max(client->last_read(), client->last_write());
-            auto client_idle_ms = 100 * client_idle_tics;
-            if (client_idle_ms >= m_pooling_time_ms)
+            const auto& backends = backend_connections();
+            size_t n_pooled = 0;
+
+            // Pooling modifies the backends-vector. Use a temporary array.
+            size_t n_backends = backends.size();
+            std::vector<ServerEndpoint*> poolable_eps;
+
+            for (auto& backend : backends)
             {
-                // Client connection is idle, try to pool backends.
-                const auto& backends = backend_connections();
-                size_t n_pooled = 0;
-                size_t n_backends = backends.size();// Need to read now, pooling modifies the vector.
-                for (auto& backend : backends)
+                if (backend->established() && backend->is_idle())
                 {
-                    if (backend->established() && backend->is_idle())
+                    auto pEp = static_cast<ServerEndpoint*>(backend->upstream());
+                    if (m_worker->conn_to_server_needed(pEp->server()))
                     {
-                        auto pEp = static_cast<ServerEndpoint*>(backend->upstream());
-                        if (pEp->try_to_pool())
-                        {
-                            n_pooled++;
-                        }
-                        // TODO: If pooling failed, increase time until next check to reduce rate of
-                        // pointless pooling attempts.
+                        poolable_eps.push_back(pEp);
                     }
                 }
+            }
 
-                if (n_pooled == n_backends)
+            for (auto* pEp : poolable_eps)
+            {
+                if (pEp->try_to_pool())
                 {
-                    // TODO: Think if there is some corner case where a connection is
-                    // reattached to a session but clientReply is not called.
-                    call_again = false;
+                    n_pooled++;
                 }
+                // TODO: If pooling failed, increase time until next check to reduce rate of
+                // pointless pooling attempts.
+            }
+            if (n_pooled == n_backends)
+            {
+                // TODO: Think if there is some corner case where a connection is
+                // reattached to a session but clientReply is not called.
+                call_again = false;
             }
         }
 
@@ -1797,7 +1800,7 @@ bool Session::pool_backends_cb(mxb::Worker::Call::action_t action)
             // been in a poolable state. This is not so ok if the time is very short. Enforce
             // a minimum delay.
 
-            // TODO: Nicer if delayed call could modify it's own timing.
+            // TODO: Nicer if delayed call could modify its own timing.
             call_again = false;
             m_idle_pool_call_id = m_worker->delayed_call(1000, &Session::pool_backends_cb, this);
         }

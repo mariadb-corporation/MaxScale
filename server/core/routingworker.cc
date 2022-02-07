@@ -1909,6 +1909,11 @@ void RoutingWorker::pool_close_expired()
     }
 }
 
+bool RoutingWorker::conn_to_server_needed(const SERVER* srv) const
+{
+    return m_eps_waiting_for_conn.find(srv) != m_eps_waiting_for_conn.end();
+}
+
 void RoutingWorker::ConnectionPoolStats::add(const ConnectionPoolStats& rhs)
 {
     curr_size += rhs.curr_size;

@@ -1003,6 +1003,11 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
     return can_continue;
 }
 
+void RWSplitSession::endpointConnReleased(mxs::Endpoint* down)
+{
+    // TODO
+}
+
 /**
  * Check if there is backend reference pointing at failed DCB, and reset its
  * flags. Then clear DCB's callback and finally : try to find replacement(s)

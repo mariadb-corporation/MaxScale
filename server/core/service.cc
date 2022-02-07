@@ -1716,6 +1716,11 @@ bool ServiceEndpoint::handleError(mxs::ErrorType type, GWBUF* error,
     return ok;
 }
 
+void ServiceEndpoint::endpointConnReleased(Endpoint* down)
+{
+    m_router_session->endpointConnReleased(down);
+}
+
 std::unique_ptr<mxs::Endpoint> Service::get_connection(mxs::Component* up, MXS_SESSION* session)
 {
     std::unique_ptr<ServiceEndpoint> my_connection(new(std::nothrow) ServiceEndpoint(session, this, up));

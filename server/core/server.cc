@@ -1186,6 +1186,7 @@ bool ServerEndpoint::try_to_pool()
             rval = true;
             m_connstatus = ConnStatus::IDLE_POOLED;
             m_conn = nullptr;
+            m_up->endpointConnReleased(this);
             MXB_INFO("Session %lu connection to %s pooled.", m_session->id(), m_server->name());
             m_session->worker()->notify_connection_available(m_server);
         }

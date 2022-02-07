@@ -71,6 +71,17 @@ public:
     virtual bool
     handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& reply) = 0;
 
+    /**
+     * Called by the service when a ServerEndpoint connection has been released and placed to the pool.
+     * A router should implement this function if it can use it to optimize its behavior. E.g. avoid sending
+     * queries to the affected endpoint.
+     *
+     * @param down The pooled endpoint
+     */
+    virtual void endpointConnReleased(Endpoint* down)
+    {
+    }
+
     // Sets the upstream component (don't override this in the inherited class)
     void setUpstream(mxs::Routable* up)
     {
