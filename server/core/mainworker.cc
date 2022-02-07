@@ -33,13 +33,13 @@ namespace
 
 static struct ThisUnit
 {
-    maxscale::MainWorker* pMain;
+    maxscale::MainWorker* pMain = nullptr;
     int64_t               clock_ticks;
 } this_unit;
 
 thread_local struct ThisThread
 {
-    maxscale::MainWorker* pMain;
+    maxscale::MainWorker* pMain = nullptr;
 } this_thread;
 }
 
@@ -192,6 +192,8 @@ void MainWorker::update_rebalancing()
 
 bool MainWorker::pre_run()
 {
+    this_thread.pMain = this;
+
     bool rval = false;
 
     delayed_call(100, &MainWorker::inc_ticks);

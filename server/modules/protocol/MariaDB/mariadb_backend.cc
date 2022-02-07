@@ -170,6 +170,26 @@ void MariaDBBackendConnection::finish_connection()
     m_dcb->writeq_append(mysql_create_com_quit(nullptr, 0));
 }
 
+bool MariaDBBackendConnection::can_reuse(MXS_SESSION* session) const
+{
+    MYSQL_session* data = static_cast<MYSQL_session*>(session->protocol_data());
+
+    const uint64_t RELEVANT_CAPS = GW_MYSQL_CAPABILITIES_DEPRECATE_EOF | GW_MYSQL_CAPABILITIES_MULTI_RESULTS
+        | GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS | GW_MYSQL_CAPABILITIES_SESSION_TRACK
+        | GW_MYSQL_CAPABILITIES_PS_MULTI_RESULTS | MXS_EXTRA_CAPS_SERVER64;
+
+    // The relevant capability bits that change how the protocol works must match with the ones used by this
+    // session. Some of them, like the connection attributes, aren't relevant as the connection has already
+    // been created.
+    bool caps_ok = (m_capabilities & RELEVANT_CAPS) == (data->full_capabilities() & RELEVANT_CAPS);
+
+    // If proxy_protocol is enabled, the client IP address must exactly match the one that was used to create
+    // this connection. This prevents sharing of the same connection between different user accounts.
+    bool remote_ok = !m_server.proxy_protocol() || m_dcb->client_remote() == session->client_remote();
+
+    return caps_ok && remote_ok;
+}
+
 bool MariaDBBackendConnection::reuse(MXS_SESSION* session, mxs::Component* upstream)
 {
     bool rv = false;
@@ -3009,7 +3029,9 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::send_connect
 
 void MariaDBBackendConnection::set_to_pooled()
 {
-    mysql_session()->history_info.erase(this);
+    auto* ms = mysql_session();
+    m_capabilities = ms->full_capabilities();
+    ms->history_info.erase(this);
 
     m_session = nullptr;
     m_upstream = nullptr;

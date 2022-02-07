@@ -439,6 +439,11 @@ uint32_t MYSQL_session::extra_capabilities() const
     return client_caps.ext_capabilities;
 }
 
+uint64_t MYSQL_session::full_capabilities() const
+{
+    return client_capabilities() | (uint64_t)extra_capabilities() << 32;
+}
+
 std::string MYSQL_session::user_and_host() const
 {
     return mxb::string_printf("'%s'@'%s'", auth_data->user.c_str(), remote.c_str());
