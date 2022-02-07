@@ -90,6 +90,10 @@ class NoSQL {
         return new NoSQL(client, db);
     }
 
+    dbName() {
+        return this.db.s.namespace.db;
+    }
+
     async set_db(dbname) {
         this.db = this.client.db(dbname);
     }
