@@ -319,15 +319,6 @@ export default {
             this.monitorsLength = total
         },
         /**
-         * Keep only connections to master
-         * @param {Array} param.slave_connections - slave_connections in monitor_diagnostics.server_info
-         * @param {String} param.masterName - master server name
-         * @returns {Array} returns connections that are connected to the provided masterName
-         */
-        filterSlaveConn({ slave_connections, masterName }) {
-            return slave_connections.filter(conn => conn.master_server_name === masterName)
-        },
-        /**
          * Get info of the slave servers
          * @param {String} param.masterName - master server name
          * @param {Array} param.server_info - monitor_diagnostics.server_info
@@ -339,7 +330,7 @@ export default {
                     arr.push({
                         ...item,
                         // Keep only connections to master
-                        slave_connections: this.filterSlaveConn({
+                        slave_connections: this.$help.filterSlaveConn({
                             slave_connections: item.slave_connections,
                             masterName,
                         }),
@@ -359,7 +350,7 @@ export default {
                 if (item.name === slaveName)
                     arr.push({
                         ...item,
-                        slave_connections: this.filterSlaveConn({
+                        slave_connections: this.$help.filterSlaveConn({
                             slave_connections: item.slave_connections,
                             masterName,
                         }),

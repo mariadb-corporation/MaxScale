@@ -772,6 +772,69 @@ export function getOverallRepStat({ repStats, pickBy, isNumber }) {
     let countObj = countBy(repStats, pickBy)
     return Object.keys(countObj).reduce((a, b) => (countObj[a] > countObj[b] ? a : b), [])
 }
+
+/**
+ * Keep only connections to master
+ * @param {Array} param.slave_connections - slave_connections in monitor_diagnostics.server_info
+ * @param {String} param.masterName - master server name
+ * @returns {Array} returns connections that are connected to the provided masterName
+ */
+export function filterSlaveConn({ slave_connections, masterName }) {
+    return slave_connections.filter(conn => conn.master_server_name === masterName)
+}
+
+/**
+ * Get slave replication status
+ * @param {Object} serverInfo
+ * @returns {Array}- replication status
+ */
+export function getRepStats(serverInfo) {
+    if (!serverInfo || !serverInfo.slave_connections.length) return []
+    const repStats = []
+    serverInfo.slave_connections.forEach(slave_conn => {
+        const {
+            seconds_behind_master,
+            slave_io_running,
+            slave_sql_running,
+            last_io_error,
+            last_sql_error,
+            connection_name,
+        } = slave_conn
+        let srcRep = {}
+        // show connection_name only when multi-source replication is in use
+        if (serverInfo.slave_connections.length > 1) srcRep.connection_name = connection_name
+
+        // Determine replication_state (Stopped||Running||Lagging)
+        if (slave_io_running === 'No' || slave_sql_running === 'No')
+            srcRep.replication_state = 'Stopped'
+        else if (seconds_behind_master === 0) {
+            if (slave_sql_running === 'Yes' && slave_io_running === 'Yes')
+                srcRep.replication_state = 'Running'
+            else {
+                // use value of either slave_io_running or slave_sql_running
+                srcRep.replication_state =
+                    slave_io_running !== 'Yes' ? slave_io_running : slave_sql_running
+            }
+        } else srcRep.replication_state = 'Lagging'
+        srcRep.server_id = serverInfo.name
+        // only show last_io_error and last_sql_error when replication_state === 'Stopped'
+        if (srcRep.replication_state === 'Stopped')
+            srcRep = {
+                ...srcRep,
+                last_io_error,
+                last_sql_error,
+            }
+        srcRep = {
+            ...srcRep,
+            seconds_behind_master,
+            slave_io_running,
+            slave_sql_running,
+        }
+        repStats.push(srcRep)
+    })
+
+    return repStats
+}
 Object.defineProperties(Vue.prototype, {
     $help: {
         get() {
@@ -829,6 +892,8 @@ Object.defineProperties(Vue.prototype, {
                 formatSQL,
                 deepDiff,
                 getOverallRepStat,
+                getRepStats,
+                filterSlaveConn,
             }
         },
     },
