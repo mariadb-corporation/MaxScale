@@ -1,5 +1,5 @@
 <template>
-    <details-page-title>
+    <details-page-title :showSearch="false" :showCreateRscBtn="false">
         <template v-slot:append>
             <div class="pl-6">
                 <icon-sprite-sheet

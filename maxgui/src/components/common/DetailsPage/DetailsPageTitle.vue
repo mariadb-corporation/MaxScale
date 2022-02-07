@@ -52,10 +52,10 @@
                 </div>
             </div>
         </portal>
-        <portal to="page-search">
+        <portal v-if="showSearch" to="page-search">
             <global-search />
         </portal>
-        <portal to="create-resource">
+        <portal v-if="showCreateRscBtn" to="create-resource">
             <create-resource />
         </portal>
         <slot name="append"></slot>
@@ -67,6 +67,10 @@ import goBack from 'mixins/goBack'
 export default {
     name: 'details-page-title',
     mixins: [goBack],
+    props: {
+        showSearch: { type: Boolean, default: true },
+        showCreateRscBtn: { type: Boolean, default: true },
+    },
     computed: {
         ...mapState(['prev_route']),
     },
