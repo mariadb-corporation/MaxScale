@@ -88,10 +88,9 @@ export default {
     },
     computed: {
         sbm() {
-            return this.$help.getOverallRepStat({
-                repStats: this.node.data.server_info.slave_connections,
+            return this.$help.getMin({
+                arr: this.node.data.server_info.slave_connections,
                 pickBy: 'seconds_behind_master',
-                isNumber: true,
             })
         },
     },

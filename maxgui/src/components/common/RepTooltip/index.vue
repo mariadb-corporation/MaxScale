@@ -114,14 +114,13 @@ export default {
                 const repStats = this.$help.getRepStats(item)
                 slaveStats.push({
                     id: item.name,
-                    overall_replication_state: this.$help.getOverallRepStat({
-                        repStats,
+                    overall_replication_state: this.$help.getMostFreq({
+                        arr: repStats,
                         pickBy: 'replication_state',
                     }),
-                    overall_seconds_behind_master: this.$help.getOverallRepStat({
-                        repStats,
+                    overall_seconds_behind_master: this.$help.getMin({
+                        arr: repStats,
                         pickBy: 'seconds_behind_master',
-                        isNumber: true,
                     }),
                 })
             })
