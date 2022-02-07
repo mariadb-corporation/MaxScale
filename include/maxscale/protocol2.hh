@@ -270,6 +270,18 @@ public:
     virtual void finish_connection() = 0;
 
     /**
+     * Test if this connection can be reused by the session
+     *
+     * The protocol can have limitations that prevent it from being reused with some sessions. Mainly these
+     * are caused by connection level differences that cannot be changed once it has been established.
+     *
+     * @param session The session to check compatibility for
+     *
+     * @return True if this connection can be reused by the session
+     */
+    virtual bool can_reuse(MXS_SESSION* session) const = 0;
+
+    /**
      * Reuse a connection. The connection was in the persistent pool
      * and will now be taken into use again.
      *

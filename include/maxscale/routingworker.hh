@@ -602,8 +602,7 @@ private:
 
         ConnectionPoolStats stats() const;
 
-        mxs::BackendConnection* get_connection();
-        mxs::BackendConnection* get_connection(const std::string& client_remote);
+        mxs::BackendConnection* get_connection(MXS_SESSION* session);
         void                    add_connection(mxs::BackendConnection* conn);
 
     private:

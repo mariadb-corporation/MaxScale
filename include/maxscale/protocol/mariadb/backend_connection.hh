@@ -38,6 +38,7 @@ public:
     int32_t write(GWBUF* buffer) override;
 
     void    finish_connection() override;
+    bool    can_reuse(MXS_SESSION* session) const override;
     bool    reuse(MXS_SESSION* session, mxs::Component* upstream) override;
     bool    established() override;
     void    set_to_pooled() override;
@@ -216,6 +217,7 @@ private:
     static std::string to_string(State auth_state);
 
     uint64_t    m_thread_id {0};                    /**< Backend thread id, received in backend handshake */
+    uint64_t    m_capabilities {0};                 /**< Connection capability bits */
     bool        m_collect_result {false};           /**< Collect the next result set as one buffer */
     bool        m_track_state {false};              /**< Track session state */
     bool        m_skip_next {false};
