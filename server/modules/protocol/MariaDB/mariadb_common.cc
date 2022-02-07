@@ -31,10 +31,6 @@ using std::string;
 using mxs::ReplyState;
 using UserEntry = mariadb::UserEntry;
 
-uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN] = "";
-
-const char* const USERS_RECENTLY_UPDATED_FMT = "User accounts have been recently updated, "
-                                               "cannot update again for %s.";
 GWBUF* mysql_create_com_quit(GWBUF* bufparam,
                              int packet_number)
 {
