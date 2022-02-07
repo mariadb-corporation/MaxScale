@@ -80,6 +80,12 @@ public:
         UNDEFINED
     };
 
+    enum class RefType
+    {
+        COPY,
+        STEAL,
+    };
+
     /**
      * Construct a new Json wrapper object. The contained object is initialized with the given type.
      *
@@ -92,9 +98,10 @@ public:
     /**
      * Construct a new Json wrapper object. Increments reference count of obj.
      *
-     * @param obj The object to manage
+     * @param obj  The object to manage
+     * @param type Whether to copy or steal the reference
      */
-    explicit Json(json_t* obj);
+    explicit Json(json_t* obj, RefType type = RefType::COPY);
 
     Json(const Json& rhs);
     Json& operator=(const Json& rhs);

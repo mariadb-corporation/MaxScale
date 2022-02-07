@@ -107,10 +107,13 @@ bool Json::load_string(const string& source)
     return res;
 }
 
-Json::Json(json_t* obj)
+Json::Json(json_t* obj, RefType type)
     : m_obj(obj)
 {
-    json_incref(m_obj);
+    if (type == RefType::COPY)
+    {
+        json_incref(m_obj);
+    }
 }
 
 Json::~Json()
