@@ -39,8 +39,19 @@ const expectedTableRows = [
         gtid: '0-1000-9',
         groupId: 'Monitor',
         monitorState: 'Running',
-        showSlaveStats: true,
-        showRepStats: false,
+        isMaster: true,
+        serverInfo: [
+            {
+                gtid_binlog_pos: '0-1000-9',
+                gtid_current_pos: '0-1000-9',
+                lock_held: null,
+                master_group: null,
+                name: 'server_1_with_longgggggggggggggggggggggggggggggggggg_name',
+                read_only: false,
+                server_id: 1001,
+                slave_connections: [],
+            },
+        ],
     },
     {
         id: 'server_1_with_longgggggggggggggggggggggggggggggggggg_name',
@@ -52,8 +63,19 @@ const expectedTableRows = [
         gtid: '0-1000-9',
         groupId: 'Monitor',
         monitorState: 'Running',
-        showSlaveStats: false,
-        showRepStats: true,
+        isSlave: true,
+        serverInfo: [
+            {
+                gtid_binlog_pos: '0-1000-9',
+                gtid_current_pos: '0-1000-9',
+                lock_held: null,
+                master_group: null,
+                name: 'server_1_with_longgggggggggggggggggggggggggggggggggg_name',
+                read_only: false,
+                server_id: 1001,
+                slave_connections: [],
+            },
+        ],
     },
     {
         id: 'server_2',
@@ -162,10 +184,12 @@ describe('Dashboard Servers tab', () => {
     function assertRepTooltipRequiredProps({ wrapper, rowId, cellId }) {
         const repTooltip = getRepTooltipCell({ wrapper, rowId, cellId })
         expect(repTooltip.exists()).to.be.true
-        const { slaveConnectionsMap, slaveServersByMasterMap, serverId } = repTooltip.vm.$props
-        expect(slaveConnectionsMap).to.be.equals(wrapper.vm.slaveConnectionsMap)
-        expect(slaveServersByMasterMap).to.be.equals(wrapper.vm.slaveServersByMasterMap)
-        expect(serverId).to.be.equals(rowId)
+        const { serverInfo } = repTooltip.vm.$props
+        const { top } = repTooltip.vm.$attrs
+        expect(serverInfo).to.be.deep.equals(
+            expectedTableRows.find(row => row.id === rowId).serverInfo
+        )
+        expect(top).to.be.true
     }
 
     const cells = ['id', 'serverState']
@@ -186,30 +210,28 @@ describe('Dashboard Servers tab', () => {
                         des = `Rendering rep-tooltip to show replication stats`
                 }
                 it(des, () => {
-                    const { showRepStats, showSlaveStats } = getRepTooltipCell({
+                    const { isMaster } = getRepTooltipCell({
                         wrapper,
                         rowId: serverId,
                         cellId: cell,
                     }).vm.$props
                     switch (testCase) {
                         case 'master':
-                            expect(showRepStats).to.be.deep.equals(false)
-                            expect(showSlaveStats).to.be.equals(true)
+                            expect(isMaster).to.be.equals(true)
                             break
                         default:
-                            expect(showRepStats).to.be.deep.equals(true)
-                            expect(showSlaveStats).to.be.equals(false)
+                            expect(isMaster).to.be.equals(undefined)
                     }
                 })
                 it(`Assert required tooltip for ${testCase} server`, () => {
                     assertRepTooltipRequiredProps({ wrapper, rowId: serverId, cellId: cell })
                 })
                 it(`Assert add openDelay at server name cell for ${testCase} server`, () => {
-                    const { openDelay } = getRepTooltipCell({
+                    const { 'open-delay': openDelay } = getRepTooltipCell({
                         wrapper,
                         rowId: serverId,
                         cellId: cell,
-                    }).vm.$props
+                    }).vm.$attrs
                     if (cell === 'id') expect(openDelay).to.be.equals(400)
                 })
                 it(`Add accurate classes to server cell slot for ${testCase} server`, () => {

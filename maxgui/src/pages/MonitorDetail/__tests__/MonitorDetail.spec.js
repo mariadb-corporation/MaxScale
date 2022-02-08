@@ -63,10 +63,10 @@ describe('MonitorDetail index', () => {
         axiosPatchStub = sinon.stub(store.$http, 'patch').returns(Promise.resolve())
     })
 
-    after(async () => {
-        await axiosGetStub.restore()
-        await axiosPatchStub.restore()
-        await wrapper.destroy()
+    after(() => {
+        axiosGetStub.restore()
+        axiosPatchStub.restore()
+        wrapper.destroy()
     })
 
     it(`Should send request to get monitor, relationships servers state
@@ -144,10 +144,10 @@ describe('MonitorDetail index', () => {
             await overviewHeader.vm.$emit('switch-over', dummyMasterId)
         })
 
-        afterEach(async () => {
-            await axiosPostStub.restore()
-            await switchoverSpy.restore()
-            await wrapper.destroy()
+        afterEach(() => {
+            axiosPostStub.restore()
+            switchoverSpy.restore()
+            wrapper.destroy()
         })
 
         it(`Should call switchOver action when @switch-over is emitted`, () => {
@@ -157,28 +157,6 @@ describe('MonitorDetail index', () => {
         it(`Should send POST request with accurate params to peform switchover`, async () => {
             await axiosPostStub.firstCall.should.have.been.calledWith(
                 `/maxscale/modules/${monitorModule}/async-switchover?${monitorId}&${dummyMasterId}`
-            )
-        })
-    })
-
-    describe('Module command fetch-cmd-results assertions', () => {
-        let fetchAsyncResultsSpy
-        beforeEach(() => {
-            fetchAsyncResultsSpy = sinon.spy(MonitorDetail.methods, 'fetchAsyncResults')
-            wrapper = computedFactory()
-        })
-
-        afterEach(async () => {
-            await fetchAsyncResultsSpy.restore()
-            await wrapper.destroy()
-        })
-
-        it(`Should call fetch-cmd-results after calling async-switchover `, async () => {
-            // mock calling switchOverCb
-            await wrapper.vm.switchOverCb()
-            fetchAsyncResultsSpy.should.have.been.calledOnce
-            await axiosGetStub.should.have.been.calledWith(
-                `/maxscale/modules/${monitorModule}/fetch-cmd-results?${monitorId}`
             )
         })
     })

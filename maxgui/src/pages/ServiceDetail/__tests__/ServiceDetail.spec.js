@@ -182,7 +182,6 @@ describe('ServiceDetail index', () => {
             let des = 'Should send PATCH request with accurate payload to update'
             it(`${des} ${type} relationship`, async () => {
                 wrapper = mount(shallowMountOptions)
-                const tableRowProcessingSpy = sinon.spy(wrapper.vm, 'processingRelationshipTable')
                 await testRelationshipUpdate({
                     wrapper,
                     currentResource: dummy_all_services[0],
@@ -192,8 +191,6 @@ describe('ServiceDetail index', () => {
                 await axiosGetStub.should.have.been.calledWith(
                     `/services/${dummy_all_services[0].id}`
                 )
-                // callback after update
-                await tableRowProcessingSpy.should.have.been.calledOnce
             })
         })
     })
