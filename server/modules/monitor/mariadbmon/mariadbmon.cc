@@ -1064,7 +1064,7 @@ bool MariaDBMonitor::try_acquire_locks_this_tick()
 
     auto calc_interval = [this](int base_intervals, int deviation_max_intervals) {
             // Scale the interval calculation by the monitor interval.
-            int mon_interval_ms = settings().interval;
+            int mon_interval_ms = settings().interval.count();
             int deviation = m_random_gen.b_to_e_co(0, deviation_max_intervals);
             return (base_intervals + deviation) * mon_interval_ms;
         };

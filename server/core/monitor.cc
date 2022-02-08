@@ -103,9 +103,9 @@ MonitorSpec s_spec(CN_MONITORS, cfg::Specification::MONITOR);
 cfg::ParamString s_type(&s_spec, CN_TYPE, "The type of the object", CN_MONITOR);
 cfg::ParamModule s_module(&s_spec, CN_MODULE, "The monitor to use", mxs::ModuleType::MONITOR);
 
-cfg::ParamStringList s_servers(
+cfg::ParamServerList s_servers(
     &s_spec, "servers", "List of servers to use",
-    ",", {}, cfg::Param::AT_RUNTIME);
+    cfg::Param::OPTIONAL, cfg::Param::AT_RUNTIME);
 
 cfg::ParamString s_user(
     &s_spec, "user", "Username used to monitor the servers",
@@ -337,6 +337,7 @@ namespace maxscale
 Monitor::Monitor(const string& name, const string& module)
     : m_name(name)
     , m_module(module)
+    , m_settings(name, this)
 {
 }
 
@@ -363,64 +364,44 @@ cfg::Specification* Monitor::specification()
     return &s_spec;
 }
 
-bool Monitor::configure(const mxs::ConfigParameters* params)
+Monitor::Settings::Settings(const std::string& name, Monitor* monitor)
+    : mxs::config::Configuration(name, &s_spec)
+    , m_monitor(monitor)
 {
-    m_settings.interval = params->get_duration<milliseconds>(CN_MONITOR_INTERVAL).count();
-    m_settings.events = params->get_enum(CN_EVENTS, monitor_event_values);
+    using C = MonitorServer::ConnectionSettings;
 
-    m_settings.journal_max_age = params->get_duration<seconds>(CN_JOURNAL_MAX_AGE).count();
-    // Write journal at least once per 5 minutes, just to keep the timestamp up to date.
-    m_journal_max_save_interval = std::min(5 * 60l, m_settings.journal_max_age / 2);
+    add_native(&Settings::type, &s_type);
+    add_native(&Settings::module, &s_module);
+    add_native(&Settings::servers, &s_servers);
+    add_native(&Settings::interval, &s_monitor_interval);
+    add_native(&Settings::events, &s_events);
+    add_native(&Settings::journal_max_age, &s_journal_max_age);
+    add_native(&Settings::script, &s_script);
+    add_native(&Settings::script_timeout, &s_script_timeout);
+    add_native(&Settings::disk_space_threshold, &s_disk_space_threshold);
+    add_native(&Settings::disk_space_check_interval, &s_disk_space_check_interval);
+    add_native(&Settings::conn_settings, &C::read_timeout, &s_backend_read_timeout);
+    add_native(&Settings::conn_settings, &C::write_timeout, &s_backend_write_timeout);
+    add_native(&Settings::conn_settings, &C::connect_timeout, &s_backend_connect_timeout);
+    add_native(&Settings::conn_settings, &C::connect_attempts, &s_backend_connect_attempts);
+    add_native(&Settings::conn_settings, &C::username, &s_user);
+    add_native(&Settings::conn_settings, &C::password, &s_password);
+}
 
-    MonitorServer::ConnectionSettings& conn_settings = m_settings.shared.conn_settings;
-    conn_settings.read_timeout = params->get_duration<seconds>(CN_BACKEND_READ_TIMEOUT).count();
-    conn_settings.write_timeout = params->get_duration<seconds>(CN_BACKEND_WRITE_TIMEOUT).count();
-    conn_settings.connect_timeout = params->get_duration<seconds>(CN_BACKEND_CONNECT_TIMEOUT).count();
-    conn_settings.connect_attempts = params->get_integer(CN_BACKEND_CONNECT_ATTEMPTS);
-    conn_settings.username = params->get_string(CN_USER);
-    conn_settings.password = params->get_string(CN_PASSWORD);
+bool Monitor::Settings::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
+{
+    shared.conn_settings = conn_settings;
+    config_parse_disk_space_threshold(&shared.monitor_disk_limits, disk_space_threshold.c_str());
 
-    // Disk check interval is given in ms, duration is constructed from seconds.
-    auto dsc_interval = params->get_duration<milliseconds>(CN_DISK_SPACE_CHECK_INTERVAL).count();
-    // 0 implies disabling -> save negative value to interval.
-    m_settings.disk_space_check_interval = (dsc_interval > 0) ? milliseconds(dsc_interval) : -1s;
+    return m_monitor->post_configure();
+}
 
-    // First, remove all servers.
-    remove_all_servers();
+bool Monitor::post_configure()
+{
+    bool ok = true;
 
-    bool error = false;
-    string name_not_found;
-    auto servers_temp = params->get_server_list(CN_SERVERS, &name_not_found);
-    if (name_not_found.empty())
-    {
-        for (auto elem : servers_temp)
-        {
-            if (!add_server(elem))
-            {
-                error = true;
-            }
-        }
-    }
-    else
-    {
-        MXB_ERROR("Server '%s' configured for monitor '%s' does not exist.",
-                  name_not_found.c_str(), name());
-        error = true;
-    }
+    m_journal_max_save_interval = std::min(5 * 60L, m_settings.journal_max_age.count() / 2);
 
-
-    /* The previous config values were normal types and were checked by the config manager
-     * to be correct. The following is a complicated type and needs to be checked separately. */
-    auto threshold_string = params->get_string(CN_DISK_SPACE_THRESHOLD);
-    if (!set_disk_space_threshold(threshold_string))
-    {
-        MXS_ERROR("Invalid value for '%s' for monitor %s: %s",
-                  CN_DISK_SPACE_THRESHOLD, name(), threshold_string.c_str());
-        error = true;
-    }
-
-    m_settings.script_timeout = params->get_duration<seconds>(CN_SCRIPT_TIMEOUT).count();
-    m_settings.script = params->get_string(CN_SCRIPT);
     if (m_settings.script.empty())
     {
         // Reset current external cmd if any.
@@ -428,22 +409,26 @@ bool Monitor::configure(const mxs::ConfigParameters* params)
     }
     else
     {
-        m_scriptcmd = ExternalCmd::create(m_settings.script, m_settings.script_timeout);
+        m_scriptcmd = ExternalCmd::create(m_settings.script, m_settings.script_timeout.count());
         if (!m_scriptcmd)
         {
             MXS_ERROR("Failed to initialize script '%s'.", m_settings.script.c_str());
-            error = true;
+            ok = false;
         }
     }
 
-    if (!error)
+    // First, remove all servers.
+    remove_all_servers();
+
+    for (auto elem : m_settings.servers)
     {
-        // Store the parameters, needed for serialization.
-        m_parameters = *params;
-        // Store module name into parameter storage.
-        m_parameters.set(CN_MODULE, m_module);
+        if (!add_server(elem))
+        {
+            ok = false;
+        }
     }
-    return !error;
+
+    return ok;
 }
 
 const mxs::ConfigParameters& Monitor::parameters() const
@@ -676,8 +661,8 @@ json_t* Monitor::monitored_server_json_attributes(const SERVER* srv) const
 {
     json_t* rval = nullptr;
     auto comp = [srv](MonitorServer* ms) {
-            return ms->server == srv;
-        };
+        return ms->server == srv;
+    };
 
     auto iter = std::find_if(m_servers.begin(), m_servers.end(), comp);
     if (iter != m_servers.end())
@@ -1005,18 +990,18 @@ int Monitor::launch_command(MonitorServer* ptr, const std::string& event_name)
     // A generator function is ran only if the matching substitution keyword is found.
 
     auto gen_initiator = [ptr] {
-            return mxb::string_printf("[%s]:%d", ptr->server->address(), ptr->server->port());
-        };
+        return mxb::string_printf("[%s]:%d", ptr->server->address(), ptr->server->port());
+    };
 
     auto gen_parent = [this, ptr] {
-            string ss;
-            MonitorServer* parent = find_parent_node(ptr);
-            if (parent)
-            {
-                ss = mxb::string_printf("[%s]:%d", parent->server->address(), parent->server->port());
-            }
-            return ss;
-        };
+        string ss;
+        MonitorServer* parent = find_parent_node(ptr);
+        if (parent)
+        {
+            ss = mxb::string_printf("[%s]:%d", parent->server->address(), parent->server->port());
+        }
+        return ss;
+    };
 
     m_scriptcmd->match_substitute("$INITIATOR", gen_initiator);
     m_scriptcmd->match_substitute("$PARENT", gen_parent);
@@ -1111,18 +1096,18 @@ MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& se
     auto dpwd = mxs::decrypt_password(passwd);
 
     auto connect = [&pConn, &sett, &server, &uname, &dpwd](int port) {
-            if (pConn)
-            {
-                mysql_close(pConn);
-            }
-            pConn = mysql_init(nullptr);
-            mysql_optionsv(pConn, MYSQL_OPT_CONNECT_TIMEOUT, &sett.connect_timeout);
-            mysql_optionsv(pConn, MYSQL_OPT_READ_TIMEOUT, &sett.read_timeout);
-            mysql_optionsv(pConn, MYSQL_OPT_WRITE_TIMEOUT, &sett.write_timeout);
-            mysql_optionsv(pConn, MYSQL_PLUGIN_DIR, mxs::connector_plugindir());
-            mysql_optionsv(pConn, MARIADB_OPT_MULTI_STATEMENTS, nullptr);
-            return mxs_mysql_real_connect(pConn, &server, port, uname.c_str(), dpwd.c_str()) != nullptr;
-        };
+        if (pConn)
+        {
+            mysql_close(pConn);
+        }
+        pConn = mysql_init(nullptr);
+        mysql_optionsv(pConn, MYSQL_OPT_CONNECT_TIMEOUT, &sett.connect_timeout);
+        mysql_optionsv(pConn, MYSQL_OPT_READ_TIMEOUT, &sett.read_timeout);
+        mysql_optionsv(pConn, MYSQL_OPT_WRITE_TIMEOUT, &sett.write_timeout);
+        mysql_optionsv(pConn, MYSQL_PLUGIN_DIR, mxs::connector_plugindir());
+        mysql_optionsv(pConn, MARIADB_OPT_MULTI_STATEMENTS, nullptr);
+        return mxs_mysql_real_connect(pConn, &server, port, uname.c_str(), dpwd.c_str()) != nullptr;
+    };
 
     ConnectResult conn_result = ConnectResult::REFUSED;
     auto extra_port = server.extra_port();
@@ -1168,7 +1153,7 @@ MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& se
             {
                 conn_result = ConnectResult::ACCESS_DENIED;
             }
-            else if (difftime(time(nullptr), start) >= sett.connect_timeout)
+            else if (difftime(time(nullptr), start) >= sett.connect_timeout.count())
             {
                 conn_result = ConnectResult::TIMEOUT;
             }
@@ -1196,8 +1181,8 @@ ConnectResult MonitorServer::ping_or_connect()
 {
     auto old_type = server->info().type();
     auto connect = [this] {
-            return ping_or_connect_to_db(m_shared.conn_settings, *server, &con, &m_latest_error);
-        };
+        return ping_or_connect_to_db(m_shared.conn_settings, *server, &con, &m_latest_error);
+    };
 
     auto res = connect();
     if (res == ConnectResult::NEWCONN_OK)
@@ -1688,7 +1673,7 @@ void Monitor::read_journal()
             if (data.ok())
             {
                 auto mod = get_module(m_module, mxs::ModuleType::MONITOR);
-                auto max_age = m_settings.journal_max_age;
+                auto max_age = m_settings.journal_max_age.count();
                 time_t age = time(nullptr) - timestamp;
 
                 if (module != m_module)
@@ -1845,7 +1830,8 @@ bool MonitorWorker::start()
     bool started = false;
     if (m_checked)
     {
-        m_loop_called = get_time_ms() - settings().interval;    // Next tick should happen immediately.
+        // Next tick should happen immediately.
+        m_loop_called = get_time_ms() - settings().interval.count();
         if (!Worker::start())
         {
             MXS_ERROR("Failed to start worker for monitor '%s'.", name());
@@ -2153,7 +2139,7 @@ bool MonitorWorker::call_run_one_tick(Worker::Call::action_t action)
     {
         int64_t now = get_time_ms();
         // Enough time has passed,
-        if ((now - m_loop_called > settings().interval)
+        if ((now - m_loop_called > settings().interval.count())
             // or a server status change request is waiting,
             || server_status_request_waiting()
             // or a monitor-specific condition is met.
@@ -2164,7 +2150,7 @@ bool MonitorWorker::call_run_one_tick(Worker::Call::action_t action)
             now = get_time_ms();
         }
 
-        int64_t ms_to_next_call = settings().interval - (now - m_loop_called);
+        int64_t ms_to_next_call = settings().interval.count() - (now - m_loop_called);
         // ms_to_next_call will be negative, if the run_one_tick() call took
         // longer than one monitor interval.
         int64_t delay = ((ms_to_next_call <= 0) || (ms_to_next_call >= base_interval_ms)) ?

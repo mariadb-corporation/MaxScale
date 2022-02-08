@@ -1225,7 +1225,7 @@ void XpandMonitor::initiate_delayed_http_check()
 {
     mxb_assert(m_delayed_http_check_id == 0);
 
-    long max_delay_ms = settings().interval / 10;
+    long max_delay_ms = settings().interval.count() / 10;
 
     long ms = m_http.wait_no_more_than();
 

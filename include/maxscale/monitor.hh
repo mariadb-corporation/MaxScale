@@ -125,16 +125,18 @@ public:
     class ConnectionSettings
     {
     public:
-        std::string username;           /**< Monitor username */
-        std::string password;           /**< Monitor password */
-        int         connect_timeout {1};/**< Connect timeout in seconds for mysql_real_connect */
-        int         write_timeout {1};  /**< Timeout in seconds for each attempt to write to the server.
-                                         *   There are retries and the total effective timeout value is two
-                                         *   times the option value. */
-        int read_timeout {1};           /**< Timeout in seconds to read from the server. There are retries
-                                         *   and the total effective timeout value is three times the
-                                         *   option value. */
-        int connect_attempts {1};       /**< How many times a connection is attempted */
+        using seconds = std::chrono::seconds;
+
+        std::string username;       /**< Monitor username */
+        std::string password;       /**< Monitor password */
+        seconds     connect_timeout;/**< Connect timeout in seconds for mysql_real_connect */
+        seconds     write_timeout;  /**< Timeout in seconds for each attempt to write to the server.
+                                     *   There are retries and the total effective timeout value is two
+                                     *   times the option value. */
+        seconds read_timeout;       /**< Timeout in seconds to read from the server. There are retries
+                                     *   and the total effective timeout value is three times the
+                                     *   option value. */
+        int64_t connect_attempts;   /**< How many times a connection is attempted */
     };
 
     /**
@@ -458,14 +460,6 @@ public:
     virtual json_t* diagnostics(MonitorServer* server) const = 0;
 
     /**
-     * Set disk space threshold setting.
-     *
-     * @param dst_setting  The disk space threshold as specified in the config file.
-     * @return True, if the provided string is valid and the threshold could be set.
-     */
-    bool set_disk_space_threshold(const std::string& dst_setting);
-
-    /**
      * Set status of monitored server.
      *
      * @param srv   Server, must be monitored by this monitor.
@@ -630,21 +624,43 @@ protected:
      * Contains monitor base class settings. Since monitors are stopped before a setting change,
      * the items cannot be modified while a monitor is running. No locking required.
      */
-    class Settings
+    class Settings : public mxs::config::Configuration
     {
     public:
-        int64_t interval {0};       /**< Monitor interval in milliseconds */
+        using seconds = std::chrono::seconds;
+        using milliseconds = std::chrono::milliseconds;
 
-        std::string script;             /**< Script triggered by events */
-        int         script_timeout {0}; /**< Timeout in seconds for the monitor scripts */
-        uint64_t    events {0};         /**< Bitfield of events which trigger the script */
+        Settings(const std::string& name, Monitor* monitor);
 
-        time_t journal_max_age {0};     /**< Maximum age of journal file */
+        bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override final;
 
-        // How often should a disk space check be made at most. Negative values imply disabling.
-        maxbase::Duration disk_space_check_interval {-1};
+
+        std::string          type;      // Always "monitor"
+        const MXS_MODULE*    module;    // The monitor module
+        std::string          user;      // Username
+        std::string          password;  // Password
+        std::vector<SERVER*> servers;   // The configured servers
+
+        milliseconds interval;          /**< Monitor interval in milliseconds */
+        std::string  script;            /**< Script triggered by events */
+        seconds      script_timeout;    /**< Timeout in seconds for the monitor scripts */
+        uint32_t     events;            /**< Bitfield of events which trigger the script */
+        seconds      journal_max_age;   /**< Maximum age of journal file */
+
+        // The disk space threshold, in string form (TODO: add custom data type)
+        std::string disk_space_threshold;
+        // How often should a disk space check be made at most.
+        milliseconds disk_space_check_interval;
+
+        // TODO: Either add arbitratily deep nesting of structs in Configurations or separate these into
+        // something else. Now the values are stored twice.
+        MonitorServer::ConnectionSettings conn_settings;
+
         // Settings shared between all servers of the monitor.
         MonitorServer::SharedSettings shared;
+
+    private:
+        Monitor* m_monitor;
     };
 
     const Settings&                          settings() const;
@@ -692,6 +708,10 @@ protected:
      * Call when journal needs updating.
      */
     void request_journal_update();
+
+    bool post_configure();
+
+    friend bool Settings::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params);
 
 private:
     /**
