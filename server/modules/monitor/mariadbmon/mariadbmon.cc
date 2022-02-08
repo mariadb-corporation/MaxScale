@@ -105,6 +105,177 @@ MXS_ENUM_VALUE slave_conds_values[] =
 };
 
 const char SCRIPT_MAX_RLAG[] = "script_max_replication_lag";
+
+using namespace std::chrono_literals;
+namespace cfg = mxs::config;
+
+class Spec : public cfg::Specification
+{
+public:
+    using cfg::Specification::Specification;
+
+protected:
+    template<class Params>
+    bool do_post_validate(Params params) const;
+
+    bool post_validate(const mxs::ConfigParameters& params) const override
+    {
+        return do_post_validate(params);
+    }
+
+    bool post_validate(json_t* json) const override
+    {
+        return do_post_validate(json);
+    }
+};
+
+cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::MONITOR);
+
+cfg::ParamCount s_failcount(
+    &s_spec, CN_FAILCOUNT,
+    "Number of failures to tolerate before failover occurs",
+    5, cfg::Param::AT_RUNTIME);
+
+cfg::ParamBool s_auto_failover(
+    &s_spec, CN_AUTO_FAILOVER,
+    "Enable automatic server failover",
+    false, cfg::Param::AT_RUNTIME);
+
+cfg::ParamSeconds s_failover_timeout(
+    &s_spec, CN_FAILOVER_TIMEOUT,
+    "Timeout for failover",
+    cfg::INTERPRET_AS_SECONDS, 90s, cfg::Param::AT_RUNTIME);
+
+cfg::ParamSeconds s_switchover_timeout(
+    &s_spec, CN_SWITCHOVER_TIMEOUT,
+    "Timeout for switchover",
+    cfg::INTERPRET_AS_SECONDS, 90s, cfg::Param::AT_RUNTIME);
+
+cfg::ParamString s_replication_user(
+    &s_spec, CN_REPLICATION_USER,
+    "User used for replication",
+    "", cfg::Param::AT_RUNTIME);
+
+cfg::ParamPassword s_replication_password(
+    &s_spec, CN_REPLICATION_PASSWORD,
+    "Password for the user that is used for replication",
+    "", cfg::Param::AT_RUNTIME);
+
+cfg::ParamBool s_replication_master_ssl(
+    &s_spec, CN_REPLICATION_MASTER_SSL,
+    "Enable SSL when configuring replication",
+    false, cfg::Param::AT_RUNTIME);
+
+cfg::ParamBool s_verify_master_failure(
+    &s_spec, CN_VERIFY_MASTER_FAILURE,
+    "Verify master failure",
+    true, cfg::Param::AT_RUNTIME);
+
+cfg::ParamSeconds s_master_failure_timeout(
+    &s_spec, CN_MASTER_FAILURE_TIMEOUT,
+    "Master failure timeout",
+    cfg::INTERPRET_AS_SECONDS, 10s, cfg::Param::AT_RUNTIME);
+
+cfg::ParamBool s_auto_rejoin(
+    &s_spec, CN_AUTO_REJOIN,
+    "Enable automatic server rejoin",
+    false, cfg::Param::AT_RUNTIME);
+
+cfg::ParamBool s_enforce_read_only_slaves(
+    &s_spec, CN_ENFORCE_READONLY,
+    "Enable read_only on all slave servers",
+    false, cfg::Param::AT_RUNTIME);
+
+cfg::ParamBool s_enforce_writable_master(
+    &s_spec, ENFORCE_WRITABLE_MASTER,
+    "Disable read_only on the current master server",
+    false, cfg::Param::AT_RUNTIME);
+
+cfg::ParamServerList s_server_no_promotion(
+    &s_spec, CN_NO_PROMOTE_SERVERS,
+    "List of servers that are never promoted",
+    cfg::Param::OPTIONAL, cfg::Param::AT_RUNTIME);
+
+cfg::ParamPath s_promotion_sql_file(
+    &s_spec, CN_PROMOTION_SQL_FILE,
+    "Path to SQL file that is executed during node promotion",
+    cfg::ParamPath::R, "", cfg::Param::AT_RUNTIME);
+
+cfg::ParamPath s_demotion_sql_file(
+    &s_spec, CN_DEMOTION_SQL_FILE,
+    "Path to SQL file that is executed during node demotion",
+    cfg::ParamPath::R, "", cfg::Param::AT_RUNTIME);
+
+cfg::ParamBool s_switchover_on_low_disk_space(
+    &s_spec, CN_SWITCHOVER_ON_LOW_DISK_SPACE,
+    "Perform a switchover when a server runs out of disk space",
+    false, cfg::Param::AT_RUNTIME);
+
+cfg::ParamBool s_maintenance_on_low_disk_space(
+    &s_spec, CN_MAINTENANCE_ON_LOW_DISK_SPACE,
+    "Put the server into maintenance mode when it runs out of disk space",
+    true, cfg::Param::AT_RUNTIME);
+
+cfg::ParamBool s_handle_events(
+    &s_spec, CN_HANDLE_EVENTS,
+    "Manage server-side events",
+    true, cfg::Param::AT_RUNTIME);
+
+cfg::ParamBool s_assume_unique_hostnames(
+    &s_spec, CN_ASSUME_UNIQUE_HOSTNAMES,
+    "Assume that hostnames are unique",
+    true, cfg::Param::AT_RUNTIME);
+
+cfg::ParamBool s_enforce_simple_topology(
+    &s_spec, CN_ENFORCE_SIMPLE_TOPOLOGY,
+    "Enforce a simple topology",
+    false, cfg::Param::AT_RUNTIME);
+
+cfg::ParamEnum<MariaDBMonitor::RequireLocks> s_cooperative_monitoring_locks(
+    &s_spec, CLUSTER_OP_REQUIRE_LOCKS,
+    "Cooperative monitoring type",
+    {
+        {MariaDBMonitor::LOCKS_NONE, "none"},
+        {MariaDBMonitor::LOCKS_MAJORITY_RUNNING, "majority_of_running"},
+        {MariaDBMonitor::LOCKS_MAJORITY_ALL, "majority_of_all"},
+    }, MariaDBMonitor::LOCKS_NONE, cfg::Param::AT_RUNTIME);
+
+cfg::ParamEnumMask<MariaDBMonitor::MasterConds> s_master_conditions(
+    &s_spec, MASTER_CONDITIONS,
+    "Conditions that the master servers must meet",
+    {
+        {MariaDBMonitor::MCOND_NONE, "none"},
+        {MariaDBMonitor::MCOND_CONNECTING_S, "connecting_slave"},
+        {MariaDBMonitor::MCOND_CONNECTED_S, "connected_slave"},
+        {MariaDBMonitor::MCOND_RUNNING_S, "running_slave"},
+        {MariaDBMonitor::MCOND_COOP_M, "primary_monitor_master"}
+    },
+    MariaDBMonitor::MCOND_COOP_M, cfg::Param::AT_RUNTIME);
+
+cfg::ParamEnumMask<MariaDBMonitor::SlaveConds> s_slave_conditions(
+    &s_spec, SLAVE_CONDITIONS,
+    "Conditions that the slave servers must meet",
+    {
+        {MariaDBMonitor::SCOND_LINKED_M, "linked_master"},
+        {MariaDBMonitor::SCOND_RUNNING_M, "running_master"},
+        {MariaDBMonitor::SCOND_WRITABLE_M, "writable_master"},
+        {MariaDBMonitor::SCOND_COOP_M, "primary_monitor_master"},
+        {MariaDBMonitor::SCOND_NONE, "none"}
+    },
+    MariaDBMonitor::SCOND_NONE, cfg::Param::AT_RUNTIME);
+
+cfg::ParamInteger s_script_max_rlag(
+    &s_spec, SCRIPT_MAX_RLAG,
+    "Replication lag limit at which the script is run",
+    -1, cfg::Param::AT_RUNTIME);
+
+template<class Params>
+bool Spec::do_post_validate(Params params) const
+{
+    // TODO: Implement this
+    return true;
+}
+
 auto mo_relaxed = std::memory_order_relaxed;
 auto mo_acquire = std::memory_order_acquire;
 auto mo_release = std::memory_order_release;
