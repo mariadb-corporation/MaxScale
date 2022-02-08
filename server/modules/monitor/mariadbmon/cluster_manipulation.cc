@@ -616,7 +616,7 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
             bool op_success = false;
             // Rejoin doesn't have its own time limit setting. Use switchover time limit for now since
             // the first phase of standalone rejoin is similar to switchover.
-            maxbase::Duration time_limit(mxb::from_secs(m_settings.switchover_timeout));
+            maxbase::Duration time_limit(m_settings.switchover_timeout);
             GeneralOpData general(output, time_limit);
 
             if (joinable->m_slave_status.empty())
@@ -910,7 +910,7 @@ bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
             // Step 2 or 3 failed, try to undo step 1 by promoting the demotion target back to master.
             // Reset the time limit since the last part may have used it all.
             MXS_NOTICE("Attempting to undo changes to '%s'.", demotion_target->name());
-            const mxb::Duration demotion_undo_time_limit(mxb::from_secs(m_settings.switchover_timeout));
+            const mxb::Duration demotion_undo_time_limit(m_settings.switchover_timeout);
             GeneralOpData general_undo(op.general.error_out, demotion_undo_time_limit);
             if (demotion_target->promote(general_undo, op.promotion, OperationType::UNDO_DEMOTION, nullptr))
             {
@@ -1289,7 +1289,7 @@ MariaDBMonitor::select_promotion_target(MariaDBServer* demotion_target, Operatio
  */
 bool MariaDBMonitor::server_is_excluded(const MariaDBServer* server)
 {
-    for (MariaDBServer* excluded : m_settings.excluded_servers)
+    for (MariaDBServer* excluded : m_excluded_servers)
     {
         if (excluded == server)
         {
@@ -1984,7 +1984,7 @@ void MariaDBMonitor::delay_auto_cluster_ops(Log log)
 {
     if (log == Log::ON && cluster_ops_configured())
     {
-        const char DISABLING_AUTO_OPS[] = "Disabling automatic cluster operations for %i monitor ticks.";
+        const char DISABLING_AUTO_OPS[] = "Disabling automatic cluster operations for %li monitor ticks.";
         MXS_NOTICE(DISABLING_AUTO_OPS, m_settings.failcount);
     }
     // + 1 because the start of next tick subtracts 1.

@@ -315,6 +315,7 @@ auto mo_release = std::memory_order_release;
 
 MariaDBMonitor::MariaDBMonitor(const string& name, const string& module)
     : MonitorWorker(name, module)
+    , m_settings(name, this)
 {
 }
 
@@ -416,54 +417,94 @@ MariaDBServer* MariaDBMonitor::get_server(SERVER* server) const
     return NULL;
 }
 
-bool MariaDBMonitor::set_replication_credentials(const mxs::ConfigParameters* params)
-{
-    bool repl_user_exists = params->contains(CN_REPLICATION_USER);
-    bool repl_pw_exists = params->contains(CN_REPLICATION_PASSWORD);
-
-    // Because runtime modifications are performed 1-by-1, we must be less strict here and allow
-    // partial setups. Password is not required even if username is set. This is contrary to the
-    // general monitor username & pw, which are both required. Even this assumes that the username
-    // is given first in a "alter monitor"-command. Note: This is obsolete now that multi-parameter updates
-    // are possible.
-
-    string repl_user;
-    string repl_pw;
-    if (repl_user_exists)
-    {
-        repl_user = params->get_string(CN_REPLICATION_USER);
-        if (repl_pw_exists)
-        {
-            // Ok, both set.
-            repl_pw = params->get_string(CN_REPLICATION_PASSWORD);
-        }
-        // Password not set is ok. This needs to be accepted so that runtime modifications work.
-        // Hopefully the password is set later on.
-    }
-    else
-    {
-        if (repl_pw_exists)
-        {
-            MXS_ERROR("'%s' is defined while '%s' is not. If performing an \"alter monitor\"-command, "
-                      "give '%s' first.", CN_REPLICATION_PASSWORD, CN_REPLICATION_USER, CN_REPLICATION_USER);
-            return false;
-        }
-        else
-        {
-            // Ok, neither is set. Use monitor credentials.
-            repl_user = conn_settings().username;
-            repl_pw = conn_settings().password;
-        }
-    }
-
-    m_settings.shared.replication_user = repl_user;
-    m_settings.shared.replication_password = mxs::decrypt_password(repl_pw);
-    return true;
-}
-
 MariaDBMonitor* MariaDBMonitor::create(const string& name, const string& module)
 {
     return new MariaDBMonitor(name, module);
+}
+
+MariaDBMonitor::Settings::Settings(const std::string& name, MariaDBMonitor* monitor)
+    : mxs::config::Configuration(name, &s_spec)
+    , m_monitor(monitor)
+{
+    using Shared = MariaDBServer::SharedSettings;
+
+    add_native(&Settings::assume_unique_hostnames, &s_assume_unique_hostnames);
+    add_native(&Settings::failcount, &s_failcount);
+    add_native(&Settings::failover_timeout, &s_failover_timeout);
+    add_native(&Settings::switchover_timeout, &s_switchover_timeout);
+    add_native(&Settings::auto_failover, &s_auto_failover);
+    add_native(&Settings::auto_rejoin, &s_auto_rejoin);
+    add_native(&Settings::enforce_read_only_slaves, &s_enforce_read_only_slaves);
+    add_native(&Settings::enforce_writable_master, &s_enforce_writable_master);
+    add_native(&Settings::enforce_simple_topology, &s_enforce_simple_topology);
+    add_native(&Settings::verify_master_failure, &s_verify_master_failure);
+    add_native(&Settings::master_failure_timeout, &s_master_failure_timeout);
+    add_native(&Settings::switchover_on_low_disk_space, &s_switchover_on_low_disk_space);
+    add_native(&Settings::maintenance_on_low_disk_space, &s_maintenance_on_low_disk_space);
+    add_native(&Settings::require_server_locks, &s_cooperative_monitoring_locks);
+    add_native(&Settings::master_conds, &s_master_conditions);
+    add_native(&Settings::slave_conds, &s_slave_conditions);
+    add_native(&Settings::script_max_rlag, &s_script_max_rlag);
+    add_native(&Settings::servers_no_promotion, &s_server_no_promotion);
+    add_native(&Settings::shared, &Shared::promotion_sql_file, &s_promotion_sql_file);
+    add_native(&Settings::shared, &Shared::demotion_sql_file, &s_demotion_sql_file);
+    add_native(&Settings::shared, &Shared::handle_event_scheduler, &s_handle_events);
+    add_native(&Settings::shared, &Shared::replication_ssl, &s_replication_master_ssl);
+    add_native(&Settings::shared, &Shared::replication_user, &s_replication_user);
+    add_native(&Settings::shared, &Shared::replication_password, &s_replication_password);
+}
+
+bool MariaDBMonitor::Settings::post_configure(const std::map<std::string,
+                                                             mxs::ConfigParameters>& nested_params)
+{
+    shared.server_locks_enabled = require_server_locks != RequireLocks::LOCKS_NONE;
+
+    if (enforce_simple_topology)
+    {
+        // This is a "mega-setting" which turns on several other features regardless of their individual
+        // settings.
+        auto warn_and_enable = [](bool* setting, const char* setting_name) {
+                const char setting_activated[] = "%s enables %s, overriding any existing setting or default.";
+                if (*setting == false)
+                {
+                    *setting = true;
+                    MXB_WARNING(setting_activated, CN_ENFORCE_SIMPLE_TOPOLOGY, setting_name);
+                }
+            };
+
+        warn_and_enable(&assume_unique_hostnames, CN_ASSUME_UNIQUE_HOSTNAMES);
+        warn_and_enable(&auto_failover, CN_AUTO_FAILOVER);
+        warn_and_enable(&auto_rejoin, CN_AUTO_REJOIN);
+    }
+
+    return m_monitor->post_configure();
+}
+
+/**
+ * Load config parameters
+ *
+ * @param params Config parameters
+ * @return True if settings are ok
+ */
+bool MariaDBMonitor::post_configure()
+{
+    /* Reset all monitored state info. The server dependent values must be reset as servers could have been
+     * added, removed and modified. */
+    reset_server_info();
+
+    auto [ok, excluded] = get_monitored_serverlist(m_settings.servers_no_promotion);
+
+    if (ok)
+    {
+        m_excluded_servers.clear();
+
+        for (auto* srv : excluded)
+        {
+            m_excluded_servers.push_back(static_cast<MariaDBServer*>(srv));
+        }
+    }
+
+    return ok;
 }
 
 /**
@@ -479,100 +520,7 @@ bool MariaDBMonitor::configure(const mxs::ConfigParameters* params)
         return false;
     }
 
-    m_settings.assume_unique_hostnames = params->get_bool(CN_ASSUME_UNIQUE_HOSTNAMES);
-    m_settings.failcount = params->get_integer(CN_FAILCOUNT);
-    m_settings.failover_timeout = params->get_duration<std::chrono::seconds>(CN_FAILOVER_TIMEOUT).count();
-    m_settings.switchover_timeout = params->get_duration<std::chrono::seconds>(CN_SWITCHOVER_TIMEOUT).count();
-    m_settings.auto_failover = params->get_bool(CN_AUTO_FAILOVER);
-    m_settings.auto_rejoin = params->get_bool(CN_AUTO_REJOIN);
-    m_settings.enforce_read_only_slaves = params->get_bool(CN_ENFORCE_READONLY);
-    m_settings.enforce_writable_master = params->get_bool(ENFORCE_WRITABLE_MASTER);
-    m_settings.enforce_simple_topology = params->get_bool(CN_ENFORCE_SIMPLE_TOPOLOGY);
-    m_settings.verify_master_failure = params->get_bool(CN_VERIFY_MASTER_FAILURE);
-    m_settings.master_failure_timeout =
-        params->get_duration<std::chrono::seconds>(CN_MASTER_FAILURE_TIMEOUT).count();
-    m_settings.shared.promotion_sql_file = params->get_string(CN_PROMOTION_SQL_FILE);
-    m_settings.shared.demotion_sql_file = params->get_string(CN_DEMOTION_SQL_FILE);
-    m_settings.switchover_on_low_disk_space = params->get_bool(CN_SWITCHOVER_ON_LOW_DISK_SPACE);
-    m_settings.maintenance_on_low_disk_space = params->get_bool(CN_MAINTENANCE_ON_LOW_DISK_SPACE);
-    m_settings.shared.handle_event_scheduler = params->get_bool(CN_HANDLE_EVENTS);
-    m_settings.shared.replication_ssl = params->get_bool(CN_REPLICATION_MASTER_SSL);
-    m_settings.require_server_locks =
-        static_cast<RequireLocks>(params->get_enum(CLUSTER_OP_REQUIRE_LOCKS, require_lock_values));
-    m_settings.shared.server_locks_enabled = (m_settings.require_server_locks != RequireLocks::LOCKS_NONE);
-
-    m_settings.master_conds = params->get_enum(MASTER_CONDITIONS, master_conds_values);
-    m_settings.slave_conds = params->get_enum(SLAVE_CONDITIONS, slave_conds_values);
-
-    m_settings.script_max_rlag = params->get_integer(SCRIPT_MAX_RLAG);
-    m_settings.excluded_servers.clear();
-    /* Reset all monitored state info. The server dependent values must be reset as servers could have been
-     * added, removed and modified. */
-    reset_server_info();
-
-    bool settings_ok = true;
-    bool list_error = false;
-    auto excluded = get_monitored_serverlist(CN_NO_PROMOTE_SERVERS, &list_error);
-    if (list_error)
-    {
-        settings_ok = false;
-    }
-    else
-    {
-        for (auto elem : excluded)
-        {
-            m_settings.excluded_servers.push_back(get_server(elem));
-        }
-    }
-
-    if (!check_sql_files())
-    {
-        settings_ok = false;
-    }
-    if (!set_replication_credentials(params))
-    {
-        settings_ok = false;
-    }
-
-    if (m_settings.enforce_simple_topology)
-    {
-        // This is a "mega-setting" which turns on several other features regardless of their individual
-        // settings.
-        auto warn_and_enable = [](bool* setting, const char* setting_name) {
-                const char setting_activated[] = "%s enables %s, overriding any existing setting or default.";
-                if (*setting == false)
-                {
-                    *setting = true;
-                    MXB_WARNING(setting_activated, CN_ENFORCE_SIMPLE_TOPOLOGY, setting_name);
-                }
-            };
-
-        warn_and_enable(&m_settings.assume_unique_hostnames, CN_ASSUME_UNIQUE_HOSTNAMES);
-        warn_and_enable(&m_settings.auto_failover, CN_AUTO_FAILOVER);
-        warn_and_enable(&m_settings.auto_rejoin, CN_AUTO_REJOIN);
-    }
-
-    if (!m_settings.assume_unique_hostnames)
-    {
-        const char requires[] = "%s requires that %s is on.";
-        if (m_settings.auto_failover)
-        {
-            MXB_ERROR(requires, CN_AUTO_FAILOVER, CN_ASSUME_UNIQUE_HOSTNAMES);
-            settings_ok = false;
-        }
-        if (m_settings.switchover_on_low_disk_space)
-        {
-            MXB_ERROR(requires, CN_SWITCHOVER_ON_LOW_DISK_SPACE, CN_ASSUME_UNIQUE_HOSTNAMES);
-            settings_ok = false;
-        }
-        if (m_settings.auto_rejoin)
-        {
-            MXB_ERROR(requires, CN_AUTO_REJOIN, CN_ASSUME_UNIQUE_HOSTNAMES);
-            settings_ok = false;
-        }
-    }
-
-    return settings_ok;
+    return m_settings.configure(*params);
 }
 
 json_t* MariaDBMonitor::diagnostics() const
@@ -1649,88 +1597,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         nullptr,                                    /* Process finish. */
         nullptr,                                    /* Thread init. */
         nullptr,                                    /* Thread finish. */
-        {
-            {
-                CN_FAILCOUNT,                        MXS_MODULE_PARAM_COUNT,     "5"
-            },
-            {
-                CN_AUTO_FAILOVER,                    MXS_MODULE_PARAM_BOOL,      "false"
-            },
-            {
-                CN_FAILOVER_TIMEOUT,                 MXS_MODULE_PARAM_DURATION,  "90s",
-                MXS_MODULE_OPT_DURATION_S
-            },
-            {
-                CN_SWITCHOVER_TIMEOUT,               MXS_MODULE_PARAM_DURATION,  "90s",
-                MXS_MODULE_OPT_DURATION_S
-            },
-            {
-                CN_REPLICATION_USER,                 MXS_MODULE_PARAM_STRING
-            },
-            {
-                CN_REPLICATION_PASSWORD,             MXS_MODULE_PARAM_PASSWORD
-            },
-            {
-                CN_REPLICATION_MASTER_SSL,           MXS_MODULE_PARAM_BOOL,      "false"
-            },
-            {
-                CN_VERIFY_MASTER_FAILURE,            MXS_MODULE_PARAM_BOOL,      "true"
-            },
-            {
-                CN_MASTER_FAILURE_TIMEOUT,           MXS_MODULE_PARAM_DURATION,  "10s",
-                MXS_MODULE_OPT_DURATION_S
-            },
-            {
-                CN_AUTO_REJOIN,                      MXS_MODULE_PARAM_BOOL,      "false"
-            },
-            {
-                CN_ENFORCE_READONLY,                 MXS_MODULE_PARAM_BOOL,      "false"
-            },
-            {
-                ENFORCE_WRITABLE_MASTER,             MXS_MODULE_PARAM_BOOL,      "false"
-            },
-            {
-                CN_NO_PROMOTE_SERVERS,               MXS_MODULE_PARAM_SERVERLIST
-            },
-            {
-                CN_PROMOTION_SQL_FILE,               MXS_MODULE_PARAM_PATH
-            },
-            {
-                CN_DEMOTION_SQL_FILE,                MXS_MODULE_PARAM_PATH
-            },
-            {
-                CN_SWITCHOVER_ON_LOW_DISK_SPACE,     MXS_MODULE_PARAM_BOOL,      "false"
-            },
-            {
-                CN_MAINTENANCE_ON_LOW_DISK_SPACE,    MXS_MODULE_PARAM_BOOL,      "true"
-            },
-            {
-                CN_HANDLE_EVENTS,                    MXS_MODULE_PARAM_BOOL,      "true"
-            },
-            {
-                CN_ASSUME_UNIQUE_HOSTNAMES,          MXS_MODULE_PARAM_BOOL,      "true"
-            },
-            {
-                CN_ENFORCE_SIMPLE_TOPOLOGY,          MXS_MODULE_PARAM_BOOL,      "false"
-            },
-            {
-                CLUSTER_OP_REQUIRE_LOCKS,            MXS_MODULE_PARAM_ENUM,      lock_none.name,
-                MXS_MODULE_OPT_ENUM_UNIQUE,          require_lock_values
-            },
-            {
-                MASTER_CONDITIONS,                   MXS_MODULE_PARAM_ENUM,      master_conds_def.name,
-                MXS_MODULE_OPT_NONE,                 master_conds_values
-            },
-            {
-                SLAVE_CONDITIONS,                    MXS_MODULE_PARAM_ENUM,      slave_conds_def.name,
-                MXS_MODULE_OPT_NONE,                 slave_conds_values
-            },
-            {
-                // TODO: May change to duration type once -1 accepted.
-                SCRIPT_MAX_RLAG,                     MXS_MODULE_PARAM_INT,       "-1"
-            },
-            {MXS_END_MODULE_PARAMS}
-        }
+        {{MXS_END_MODULE_PARAMS}},
+        &s_spec
     };
     return &info;
 }

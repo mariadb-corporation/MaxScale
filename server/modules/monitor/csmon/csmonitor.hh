@@ -46,13 +46,6 @@ public:
         return m_context;
     }
 
-    ServerVector get_monitored_serverlist(const std::string& key, bool* error_out)
-    {
-        const auto& sl = Base::get_monitored_serverlist(key, error_out);
-
-        return reinterpret_cast<const ServerVector&>(sl);
-    }
-
     CsMonitorServer* get_monitored_server(SERVER* search_server);
     CsDynamicServer* get_dynamic_server(const SERVER* pServer) const;
 

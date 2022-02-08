@@ -158,6 +158,11 @@ public:
 
     bool is_cluster_owner() const override;
 
+    /**
+     * Called after the configuration has been processed
+     */
+    bool post_configure();
+
 protected:
     bool can_be_disabled(const mxs::MonitorServer& server, DisableType type,
                          std::string* errmsg_out) const override;
@@ -341,63 +346,73 @@ private:
     mxb::XorShiftRandom m_random_gen;
 
     // MariaDB-Monitor specific settings. These are only written to when configuring the monitor.
-    class Settings
+    class Settings : public mxs::config::Configuration
     {
     public:
+        Settings(const std::string& name, MariaDBMonitor* monitor);
+
+        bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override final;
+
         /* The default setting values given here may not be the actual defaults given by
          * the module configuration. */
 
         // Replication topology detection settings.
 
-        bool ignore_external_masters {false};   /* Ignore masters outside of the monitor configuration.
-                                                 * TODO: requires work */
-        bool assume_unique_hostnames {true};    /* Are server hostnames consistent between MaxScale and
-                                                 * servers */
+        bool ignore_external_masters;   /* Ignore masters outside of the monitor configuration.
+                                         * TODO: requires work */
+        bool assume_unique_hostnames;   /* Are server hostnames consistent between MaxScale and
+                                         * servers */
 
-        int failcount {1};      /* Number of ticks master must be down before it's considered
+        int64_t failcount;      /* Number of ticks master must be down before it's considered
                                  * totally down, allowing failover or master change. */
 
         // Cluster operations activation settings
 
-        bool auto_failover {false};                 /* Automatic master failover enabled? */
-        bool auto_rejoin {false};                   /* Automatic rejoin enabled? */
-        bool switchover_on_low_disk_space {false};  /* Automatically switch over a master low on disk space */
-        bool maintenance_on_low_disk_space {false}; /* Automatically set slave and unreplicating servers low
-                                                     * on disk space to maintenance. */
-        bool enforce_read_only_slaves {false};      /* If true, the monitor checks and enforces every tick
-                                                     * that all slaves are in read-only-mode. */
-        bool enforce_writable_master {false};       /* If true, set master writable if it's read-only. */
-        bool enforce_simple_topology {false};       /* Can the monitor assume and enforce a simple, 1-master
-                                                     * and N slaves topology? Also allows unsafe failover */
+        bool auto_failover;                 /* Automatic master failover enabled? */
+        bool auto_rejoin;                   /* Automatic rejoin enabled? */
+        bool switchover_on_low_disk_space;  /* Automatically switch over a master low on disk space */
+        bool maintenance_on_low_disk_space; /* Automatically set slave and unreplicating servers low
+                                             * on disk space to maintenance. */
+        bool enforce_read_only_slaves;      /* If true, the monitor checks and enforces every tick
+                                             * that all slaves are in read-only-mode. */
+        bool enforce_writable_master;       /* If true, set master writable if it's read-only. */
+        bool enforce_simple_topology;       /* Can the monitor assume and enforce a simple, 1-master
+                                             * and N slaves topology? Also allows unsafe failover */
 
         /* Should all cluster modification commands require a majority of server locks?
          * Used in multi-Maxscale situations. */
-        RequireLocks require_server_locks {LOCKS_NONE};
+        RequireLocks require_server_locks;
 
-        int64_t master_conds {MCOND_COOP_M};
-        int64_t slave_conds {SCOND_NONE};
+        uint32_t master_conds;
+        uint32_t slave_conds;
 
         // Cluster operations additional settings
-        int  failover_timeout {10};             /* Time limit in seconds for failover */
-        int  switchover_timeout {10};           /* Time limit in seconds for switchover */
-        bool verify_master_failure {true};      /* Is master failure is verified via slaves? */
-        int  master_failure_timeout {10};       /* Master failure verification (via slaves) time in seconds */
+        using seconds = std::chrono::seconds;
+        seconds failover_timeout;           /* Time limit in seconds for failover */
+        seconds switchover_timeout;         /* Time limit in seconds for switchover */
+        bool    verify_master_failure;      /* Is master failure is verified via slaves? */
+        seconds master_failure_timeout;     /* Master failure verification (via slaves) time in seconds */
 
-        ServerArray excluded_servers;           /* Servers which cannot be autoselected when deciding which
-                                                 * slave to promote during failover switchover. */
+        std::vector<SERVER*> servers_no_promotion;      /* Servers which cannot be autoselected when deciding
+                                                         * which slave to promote during failover switchover.
+                                                         */
 
-        int64_t script_max_rlag {-1};           /* Repl. lag limit for triggering custom event for script */
+        int64_t script_max_rlag;            /* Repl. lag limit for triggering custom event for script */
 
         MariaDBServer::SharedSettings shared;   /* Settings required by MariaDBServer objects */
+
+    private:
+        MariaDBMonitor* m_monitor;
     };
 
     Settings m_settings;
+
+    ServerArray m_excluded_servers;
 
     // Base methods
     MariaDBMonitor(const std::string& name, const std::string& module);
     ~MariaDBMonitor() override;
     bool configure(const mxs::ConfigParameters* params) override;
-    bool set_replication_credentials(const mxs::ConfigParameters* params);
     void reset_server_info();
 
     void reset_node_index_info();

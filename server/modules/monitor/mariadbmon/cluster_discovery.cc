@@ -771,7 +771,7 @@ bool MariaDBMonitor::master_is_valid(std::string* reason_out)
              && running_slaves(m_master) == 0)
     {
         is_valid = false;
-        reason = string_printf("it has been down over %d (failcount) monitor updates and "
+        reason = string_printf("it has been down over %ld (failcount) monitor updates and "
                                "it does not have any running slaves",
                                m_settings.failcount);
     }
@@ -1134,7 +1134,7 @@ void MariaDBMonitor::update_cluster_lock_status()
                 {
                     MXS_NOTICE("'%s' acquired the exclusive lock on a majority of its servers. "
                                "Configured automatic cluster manipulation operations (e.g. failover) can be "
-                               "performed in %i monitor ticks.", name(), m_settings.failcount);
+                               "performed in %li monitor ticks.", name(), m_settings.failcount);
                 }
                 else
                 {

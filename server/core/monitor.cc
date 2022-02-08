@@ -1380,59 +1380,32 @@ MonitorServer* Monitor::get_monitored_server(SERVER* search_server)
     return nullptr;
 }
 
-std::vector<MonitorServer*> Monitor::get_monitored_serverlist(const string& key, bool* error_out)
+std::pair<bool, std::vector<MonitorServer*>>
+Monitor::get_monitored_serverlist(const std::vector<SERVER*>& servers)
 {
+    bool ok = true;
     std::vector<MonitorServer*> monitored_array;
-    // Check that value exists.
-    if (!m_parameters.contains(key))
-    {
-        return monitored_array;
-    }
 
-    string name_error;
-    auto servers = m_parameters.get_server_list(key, &name_error);
-    if (!servers.empty())
+    // All servers in the array must be monitored by the given monitor.
+    for (auto elem : servers)
     {
-        // All servers in the array must be monitored by the given monitor.
-        for (auto elem : servers)
+        if (MonitorServer* mon_serv = get_monitored_server(elem))
         {
-            MonitorServer* mon_serv = get_monitored_server(elem);
-            if (mon_serv)
-            {
-                monitored_array.push_back(mon_serv);
-            }
-            else
-            {
-                MXS_ERROR("Server '%s' is not monitored by monitor '%s'.", elem->name(), name());
-                *error_out = true;
-            }
+            monitored_array.push_back(mon_serv);
         }
-
-        if (monitored_array.size() < servers.size())
+        else
         {
-            monitored_array.clear();
+            MXS_ERROR("Server '%s' is not monitored by monitor '%s'.", elem->name(), name());
+            ok = false;
         }
     }
-    else
+
+    if (!ok)
     {
-        MXS_ERROR("Serverlist setting '%s' contains invalid server name '%s'.",
-                  key.c_str(), name_error.c_str());
-        *error_out = true;
+        monitored_array.clear();
     }
 
-    return monitored_array;
-}
-
-bool Monitor::set_disk_space_threshold(const string& dst_setting)
-{
-    mxb_assert(!is_running());
-    DiskSpaceLimits new_dst;
-    bool rv = config_parse_disk_space_threshold(&new_dst, dst_setting.c_str());
-    if (rv)
-    {
-        m_settings.shared.monitor_disk_limits = new_dst;
-    }
-    return rv;
+    return {ok, monitored_array};
 }
 
 bool Monitor::can_be_disabled(const MonitorServer& server, DisableType type, std::string* errmsg_out) const

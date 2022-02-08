@@ -563,14 +563,14 @@ protected:
     virtual void server_removed(SERVER* server);
 
     /**
-     * Get an array of monitored servers. If a server defined in the config setting is not monitored by
-     * this monitor, the returned array will be empty.
+     * Transform the list of normal servers into their monitored counterpart
      *
-     * @param key Setting name
-     * @param error_out Set to true if an error occurs
-     * @return Output array
+     * @param servers The servers to transform
+     * @return True on success and the monitored servers, false if one or more of the servers is not monitored
+     *         by this monitor
      */
-    std::vector<MonitorServer*> get_monitored_serverlist(const std::string& key, bool* error_out);
+    std::pair<bool, std::vector<MonitorServer*>>
+    get_monitored_serverlist(const std::vector<SERVER*>& servers);
 
     /**
      * Find the monitored server representing the server.
