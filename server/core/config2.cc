@@ -31,8 +31,6 @@ bool is_core_param(Specification::Kind kind, const std::string& param)
 {
     bool rv = false;
 
-    const MXS_MODULE_PARAM* pzCore_params = nullptr;
-
     switch (kind)
     {
     case Specification::FILTER:
@@ -40,7 +38,7 @@ bool is_core_param(Specification::Kind kind, const std::string& param)
         break;
 
     case Specification::MONITOR:
-        pzCore_params = common_monitor_params();
+        return mxs::Monitor::specification()->find_param(param);
         break;
 
     case Specification::ROUTER:
@@ -57,21 +55,8 @@ bool is_core_param(Specification::Kind kind, const std::string& param)
     case Specification::SERVER:
         break;
 
-        break;
-
     default:
         mxb_assert(!true);
-    }
-
-    if (pzCore_params)
-    {
-        while (!rv && pzCore_params->name)
-        {
-            const char* zCore_param = pzCore_params->name;
-
-            rv = (param == zCore_param);
-            ++pzCore_params;
-        }
     }
 
     return rv;

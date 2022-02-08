@@ -106,6 +106,11 @@ enum mxs_monitor_event_t
     NEW_SLAVE_EVENT   = (1 << 15),  /**< new_slave */
     NEW_SYNCED_EVENT  = (1 << 16),  /**< new_synced */
     NEW_DONOR_EVENT   = (1 << 17),  /**< new_donor */
+    ALL_EVENTS        =
+        (MASTER_DOWN_EVENT | MASTER_UP_EVENT | SLAVE_DOWN_EVENT | SLAVE_UP_EVENT | SERVER_DOWN_EVENT
+         | SERVER_UP_EVENT | SYNCED_DOWN_EVENT | SYNCED_UP_EVENT | DONOR_DOWN_EVENT | DONOR_UP_EVENT
+         | LOST_MASTER_EVENT | LOST_SLAVE_EVENT | LOST_SYNCED_EVENT | LOST_DONOR_EVENT | NEW_MASTER_EVENT
+         | NEW_SLAVE_EVENT | NEW_SYNCED_EVENT | NEW_DONOR_EVENT),
 };
 
 namespace maxscale
@@ -390,6 +395,11 @@ public:
      * @return True, if the monitor could be started, false otherwise.
      */
     virtual bool configure(const mxs::ConfigParameters* params);
+
+    /**
+     * Specification for the common monitor parameters
+     */
+    static mxs::config::Specification* specification();
 
     /**
      * Get text-form settings.

@@ -75,6 +75,126 @@ const char CN_SCRIPT_TIMEOUT[] = "script_timeout";
 namespace
 {
 
+namespace cfg = mxs::config;
+using namespace std::chrono_literals;
+
+class MonitorSpec : public cfg::Specification
+{
+public:
+    using cfg::Specification::Specification;
+
+private:
+    template<class Params>
+    bool do_post_validate(Params params) const;
+
+    bool post_validate(const mxs::ConfigParameters& params) const override
+    {
+        return do_post_validate(params);
+    }
+
+    bool post_validate(json_t* json) const override
+    {
+        return do_post_validate(json);
+    }
+};
+
+MonitorSpec s_spec(CN_MONITORS, cfg::Specification::MONITOR);
+
+cfg::ParamString s_type(&s_spec, CN_TYPE, "The type of the object", CN_MONITOR);
+cfg::ParamModule s_module(&s_spec, CN_MODULE, "The monitor to use", mxs::ModuleType::MONITOR);
+
+cfg::ParamStringList s_servers(
+    &s_spec, "servers", "List of servers to use",
+    ",", {}, cfg::Param::AT_RUNTIME);
+
+cfg::ParamString s_user(
+    &s_spec, "user", "Username used to monitor the servers",
+    cfg::Param::AT_RUNTIME);
+
+cfg::ParamString s_password(
+    &s_spec, "password", "Password for the user used to monitor the servers",
+    cfg::Param::AT_RUNTIME);
+
+cfg::ParamMilliseconds s_monitor_interval(
+    &s_spec, CN_MONITOR_INTERVAL, "How often the servers are monitored",
+    cfg::INTERPRET_AS_MILLISECONDS, 2000ms, cfg::Param::AT_RUNTIME);
+
+cfg::ParamSeconds s_backend_connect_timeout(
+    &s_spec, CN_BACKEND_CONNECT_TIMEOUT, "Connection timeout for monitor connections",
+    cfg::INTERPRET_AS_SECONDS, 3s, cfg::Param::AT_RUNTIME);
+
+cfg::ParamSeconds s_backend_read_timeout(
+    &s_spec, CN_BACKEND_READ_TIMEOUT, "Read timeout for monitor connections",
+    cfg::INTERPRET_AS_SECONDS, 3s, cfg::Param::AT_RUNTIME);
+
+cfg::ParamSeconds s_backend_write_timeout(
+    &s_spec, CN_BACKEND_WRITE_TIMEOUT, "Write timeout for monitor connections",
+    cfg::INTERPRET_AS_SECONDS, 3s, cfg::Param::AT_RUNTIME);
+
+cfg::ParamCount s_backend_connect_attempts(
+    &s_spec, CN_BACKEND_CONNECT_ATTEMPTS, "Number of connection attempts to make to a server",
+    1, cfg::Param::AT_RUNTIME);
+
+cfg::ParamSeconds s_journal_max_age(
+    &s_spec, CN_JOURNAL_MAX_AGE, "The time the on-disk cached server states are valid for",
+    cfg::INTERPRET_AS_SECONDS, 28800s, cfg::Param::AT_RUNTIME);
+
+cfg::ParamString s_disk_space_threshold(
+    &s_spec, CN_DISK_SPACE_THRESHOLD, "Disk space threshold",
+    "", cfg::Param::AT_RUNTIME);
+
+cfg::ParamMilliseconds s_disk_space_check_interval(
+    &s_spec, CN_DISK_SPACE_CHECK_INTERVAL, "How often the disk space is checked",
+    cfg::INTERPRET_AS_MILLISECONDS, 0ms, cfg::Param::AT_RUNTIME);
+
+cfg::ParamString s_script(
+    &s_spec, CN_SCRIPT, "Script to run whenever an event occurs",
+    "", cfg::Param::AT_RUNTIME);
+
+cfg::ParamSeconds s_script_timeout(
+    &s_spec, CN_SCRIPT_TIMEOUT, "Timeout for the script",
+    cfg::INTERPRET_AS_SECONDS, 90s, cfg::Param::AT_RUNTIME);
+
+cfg::ParamEnumMask<mxs_monitor_event_t> s_events(
+    &s_spec, CN_EVENTS, "Events that cause the script to be called",
+    {
+        {ALL_EVENTS, "all"},
+        {MASTER_DOWN_EVENT, "master_down"},
+        {MASTER_UP_EVENT, "master_up"},
+        {SLAVE_DOWN_EVENT, "slave_down"},
+        {SLAVE_UP_EVENT, "slave_up"},
+        {SERVER_DOWN_EVENT, "server_down"},
+        {SERVER_UP_EVENT, "server_up"},
+        {SYNCED_DOWN_EVENT, "synced_down"},
+        {SYNCED_UP_EVENT, "synced_up"},
+        {DONOR_DOWN_EVENT, "donor_down"},
+        {DONOR_UP_EVENT, "donor_up"},
+        {LOST_MASTER_EVENT, "lost_master"},
+        {LOST_SLAVE_EVENT, "lost_slave"},
+        {LOST_SYNCED_EVENT, "lost_synced"},
+        {LOST_DONOR_EVENT, "lost_donor"},
+        {NEW_MASTER_EVENT, "new_master"},
+        {NEW_SLAVE_EVENT, "new_slave", },
+        {NEW_SYNCED_EVENT, "new_synced"},
+        {NEW_DONOR_EVENT, "new_donor"},
+    }, ALL_EVENTS, cfg::Param::AT_RUNTIME);
+
+template<class Params>
+bool MonitorSpec::do_post_validate(Params params) const
+{
+    bool ok = true;
+
+    std::string threshold = s_disk_space_threshold.get(params);
+
+    if (!threshold.empty())
+    {
+        DiskSpaceLimits limit;
+        ok = config_parse_disk_space_threshold(&limit, threshold.c_str());
+    }
+
+    return ok;
+}
+
 class ThisUnit
 {
 public:
@@ -235,6 +355,12 @@ void Monitor::stop()
 const char* Monitor::name() const
 {
     return m_name.c_str();
+}
+
+// static
+cfg::Specification* Monitor::specification()
+{
+    return &s_spec;
 }
 
 bool Monitor::configure(const mxs::ConfigParameters* params)

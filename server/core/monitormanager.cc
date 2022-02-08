@@ -97,6 +97,13 @@ Monitor* MonitorManager::create_monitor(const string& name, const string& module
                                         mxs::ConfigParameters* params)
 {
     mxb_assert(Monitor::is_main_worker());
+
+    mxs::ConfigParameters unknown;
+    if (!Monitor::specification()->validate(*params, &unknown))
+    {
+        return nullptr;
+    }
+
     Monitor* new_monitor = nullptr;
     const MXS_MODULE* module = get_module(module_name, mxs::ModuleType::MONITOR);
     if (module)
@@ -331,6 +338,12 @@ bool MonitorManager::reconfigure_monitor(mxs::Monitor* monitor, const mxs::Confi
     if (stopstart)
     {
         monitor->stop();
+    }
+
+    mxs::ConfigParameters unknown;
+    if (!Monitor::specification()->validate(parameters, &unknown))
+    {
+        return false;
     }
 
     bool success = monitor->configure(&parameters);
