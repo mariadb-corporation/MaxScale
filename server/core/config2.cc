@@ -13,8 +13,11 @@
 
 #include <maxscale/config2.hh>
 
+#include <sys/stat.h>
+
 #include <maxscale/monitor.hh>
 #include <maxscale/secrets.hh>
+#include <maxscale/paths.hh>
 #include "internal/config.hh"
 #include "internal/modules.hh"
 #include "internal/monitor.hh"
@@ -1265,10 +1268,83 @@ bool ParamPath::from_json(const json_t* pJson, value_type* pValue,
 
 bool ParamPath::is_valid(const value_type& value) const
 {
-    MXS_MODULE_PARAM param {};
-    param.options = m_options;
+    bool valid = false;
 
-    return check_path_parameter(&param, value.c_str());
+    if (m_options & (MXS_MODULE_OPT_PATH_W_OK
+                     | MXS_MODULE_OPT_PATH_R_OK
+                     | MXS_MODULE_OPT_PATH_X_OK
+                     | MXS_MODULE_OPT_PATH_F_OK))
+    {
+        char buf[strlen(mxs::module_configdir()) + value.length() + 3];
+
+        if (value.front() != '/')
+        {
+            sprintf(buf, "/%s/%s", mxs::module_configdir(), value.c_str());
+            strcpy(buf, clean_up_pathname(buf).c_str());
+        }
+        else
+        {
+            strcpy(buf, value.c_str());
+        }
+
+        int mode = F_OK;
+        int mask = 0;
+
+        if (m_options & MXS_MODULE_OPT_PATH_W_OK)
+        {
+            mask |= S_IWUSR | S_IWGRP;
+            mode |= W_OK;
+        }
+        if (m_options & MXS_MODULE_OPT_PATH_R_OK)
+        {
+            mask |= S_IRUSR | S_IRGRP;
+            mode |= R_OK;
+        }
+        if (m_options & MXS_MODULE_OPT_PATH_X_OK)
+        {
+            mask |= S_IXUSR | S_IXGRP;
+            mode |= X_OK;
+        }
+
+        if (access(buf, mode) == 0)
+        {
+            valid = true;
+        }
+        else
+        {
+            /** Save errno as we do a second call to `accept` */
+            int er = errno;
+
+            if (access(buf, F_OK) == 0 || (m_options & MXS_MODULE_OPT_PATH_CREAT) == 0)
+            {
+                /**
+                 * Path already exists and it doesn't have the requested access
+                 * right or the module doesn't want the directory to be created
+                 * if it doesn't exist.
+                 */
+                MXS_ERROR("Bad path parameter '%s' (absolute path '%s'): %d, %s",
+                          value.c_str(), buf, er, mxs_strerror(er));
+            }
+            else if (mxs_mkdir_all(buf, mask))
+            {
+                /** Successfully created path */
+                valid = true;
+            }
+            else
+            {
+                /** Failed to create the directory, errno is set in `mxs_mkdir_all` */
+                MXS_ERROR("Can't create path '%s' (absolute path '%s'): %d, %s",
+                          value.c_str(), buf, errno, mxs_strerror(errno));
+            }
+        }
+    }
+    else
+    {
+        /** No checks for the path are required */
+        valid = true;
+    }
+
+    return valid;
 }
 
 /**
