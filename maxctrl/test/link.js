@@ -38,7 +38,7 @@ describe("Link/Unlink Commands", function () {
 
   it("link servers to a monitor", function () {
     return verifyCommand(
-      "link monitor MariaDB-Monitor server1 server2 server3 server4",
+      "link monitor MariaDB-Monitor server2 server3 server4",
       "monitors/MariaDB-Monitor"
     ).then(function (res) {
       res.data.relationships.servers.data.length.should.equal(4);
