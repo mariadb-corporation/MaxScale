@@ -38,6 +38,8 @@ public:
 
     bool is_dynamic() const override;
 
+    mxs::config::Configuration& configuration() override final;
+
 public:
     using ServerVector = std::vector<CsMonitorServer*>;
 
@@ -118,7 +120,9 @@ protected:
 private:
     CsMonitor(const std::string& name, const std::string& module, sqlite3* pDb);
 
-    bool configure(const mxs::ConfigParameters* pParams) override;
+    bool post_configure();
+
+    friend bool CsConfig::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params);
 
     void pre_loop() override;
     void pre_tick() override;

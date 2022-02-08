@@ -76,8 +76,9 @@ static int            compare_node_index(const void*, const void*);
 static int            compare_node_priority(const void*, const void*);
 static bool           using_xtrabackup(MonitorServer* database, const char* server_string);
 
-GaleraMonitor::Config::Config(const std::string& name)
+GaleraMonitor::Config::Config(const std::string& name, GaleraMonitor* monitor)
     : mxs::config::Configuration(name, &s_spec)
+    , m_monitor(monitor)
 {
     add_native(&Config::disable_master_failback, &s_disable_master_failback);
     add_native(&Config::available_when_donor, &s_available_when_donor);
@@ -87,9 +88,14 @@ GaleraMonitor::Config::Config(const std::string& name)
     add_native(&Config::set_donor_nodes, &s_set_donor_nodes);
 }
 
+bool GaleraMonitor::Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
+{
+    return m_monitor->post_configure();
+}
+
 GaleraMonitor::GaleraMonitor(const std::string& name, const std::string& module)
     : MonitorWorkerSimple(name, module)
-    , m_config(name)
+    , m_config(name, this)
     , m_log_no_members(false)
     , m_cluster_size(0)
 {
@@ -103,6 +109,11 @@ GaleraMonitor::~GaleraMonitor()
 GaleraMonitor* GaleraMonitor::create(const std::string& name, const std::string& module)
 {
     return new GaleraMonitor(name, module);
+}
+
+mxs::config::Configuration& GaleraMonitor::configuration()
+{
+    return m_config;
 }
 
 json_t* GaleraMonitor::diagnostics() const
@@ -186,17 +197,10 @@ json_t* GaleraMonitor::diagnostics(MonitorServer* server) const
     return obj;
 }
 
-bool GaleraMonitor::configure(const mxs::ConfigParameters* params)
+bool GaleraMonitor::post_configure()
 {
-    bool ok = false;
-
-    if (MonitorWorkerSimple::configure(params))
-    {
-        ok = m_config.configure(*params);
-        m_info.clear();
-    }
-
-    return ok;
+    m_info.clear();
+    return true;
 }
 
 bool GaleraMonitor::has_sufficient_permissions()

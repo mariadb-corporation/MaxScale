@@ -51,8 +51,9 @@ public:
     json_t*               diagnostics() const override;
     json_t*               diagnostics(mxs::MonitorServer* server) const override;
 
+    mxs::config::Configuration& configuration() override final;
+
 protected:
-    bool configure(const mxs::ConfigParameters* param) override;
     bool has_sufficient_permissions() override;
     void update_server_status(mxs::MonitorServer* monitored_server) override;
     void pre_tick() override;
@@ -60,9 +61,12 @@ protected:
     bool can_be_disabled(const mxs::MonitorServer& server, DisableType type,
                          std::string* errmsg_out) const override;
 
-    struct Config : public mxs::config::Configuration
+    class Config : public mxs::config::Configuration
     {
-        Config(const std::string& name);
+    public:
+        Config(const std::string& name, GaleraMonitor* monitor);
+
+        bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override final;
 
         bool disable_master_failback;       /**< Monitor flag for Galera Cluster Master failback */
         bool available_when_donor;          /**< Monitor flag for Galera Cluster Donor availability */
@@ -70,6 +74,9 @@ protected:
         bool root_node_as_master;           /**< Use node with wsrep_local_index=0 as master */
         bool use_priority;                  /**< Use server priorities */
         bool set_donor_nodes;               /**< Set the wrep_sst_donor variable */
+
+    private:
+        GaleraMonitor* m_monitor;
     };
 
 private:
@@ -90,4 +97,7 @@ private:
     void                set_galera_cluster();
     void                update_sst_donor_nodes(int is_cluster);
     void                calculate_cluster();
+
+    bool        post_configure();
+    friend bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params);
 };

@@ -594,6 +594,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,                                   /* Process finish. */
         NULL,                                   /* Thread init. */
         NULL,                                   /* Thread finish. */
+        {{nullptr}},
+        CsConfig::specification()
     };
 
     static bool populated = false;
@@ -601,8 +603,6 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     if (!populated)
     {
         register_commands();
-
-        CsConfig::populate(info);
         populated = true;
     }
 

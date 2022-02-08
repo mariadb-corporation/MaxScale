@@ -201,24 +201,24 @@ void run_in_mainworker(const function<void(void)>& func)
 }
 }
 
-XpandMonitor::Config::Config(const std::string& name)
+XpandMonitor::Config::Config(const std::string& name, XpandMonitor* monitor)
     : config::Configuration(name, &xpandmon::specification)
     , m_cluster_monitor_interval(this, &xpandmon::cluster_monitor_interval)
     , m_health_check_threshold(this, &xpandmon::health_check_threshold)
     , m_dynamic_node_detection(this, &xpandmon::dynamic_node_detection)
     , m_health_check_port(this, &xpandmon::health_check_port)
+    , m_monitor(monitor)
 {
 }
 
-// static
-void XpandMonitor::Config::populate(MXS_MODULE& module)
+bool XpandMonitor::Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
 {
-    module.specification = &xpandmon::specification;
+    return m_monitor->post_configure();
 }
 
 XpandMonitor::XpandMonitor(const string& name, const string& module, sqlite3* pDb)
     : MonitorWorker(name, module)
-    , m_config(name)
+    , m_config(name, this)
     , m_pDb(pDb)
 {
 }
@@ -271,26 +271,12 @@ XpandMonitor* XpandMonitor::create(const string& name, const string& module)
 
 using std::chrono::milliseconds;
 
-bool XpandMonitor::configure(const mxs::ConfigParameters* pParams)
+bool XpandMonitor::post_configure()
 {
-    if (!xpandmon::specification.validate(*pParams))
-    {
-        return false;
-    }
-
-    if (!MonitorWorker::configure(pParams))
-    {
-        return false;
-    }
-
     check_bootstrap_servers();
 
     m_health_urls.clear();
     m_nodes_by_id.clear();
-
-    // Since they were validated above, failure should not be an option now.
-    MXB_AT_DEBUG(bool configured = ) m_config.configure(*pParams);
-    mxb_assert(configured);
 
     if (m_config.dynamic_node_detection())
     {
@@ -390,6 +376,11 @@ json_t* XpandMonitor::diagnostics() const
     json_t* obj = json_object();
     m_config.fill(obj);
     return obj;
+}
+
+mxs::config::Configuration& XpandMonitor::configuration()
+{
+    return m_config;
 }
 
 void XpandMonitor::pre_loop()
@@ -1466,4 +1457,10 @@ void XpandMonitor::unpersist(const XpandNode& node)
         MXS_ERROR("Could not delete Ćlustrix node %d from bookkeeping: %s",
                   id, pError ? pError : "Unknown error");
     }
+}
+
+// static
+mxs::config::Specification* XpandMonitor::specification()
+{
+    return &xpandmon::specification;
 }

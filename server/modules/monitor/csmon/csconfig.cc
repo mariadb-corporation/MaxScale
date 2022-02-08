@@ -105,11 +105,11 @@ config::ParamDuration<std::chrono::milliseconds> cluster_monitor_interval(
     "With what interval the cluster configuration should be probed.",
     mxs::config::INTERPRET_AS_MILLISECONDS,
     DEFAULT_CLUSTER_MONITOR_INTERVAL);
-
 }
 
-CsConfig::CsConfig(const string& name)
+CsConfig::CsConfig(const string& name, std::function<bool()> cb)
     : mxs::config::Configuration(name, &csmon::specification)
+    , m_cb(cb)
 {
     add_native(&CsConfig::version, &csmon::version);
     add_native(&CsConfig::admin_port, &csmon::admin_port);
@@ -118,12 +118,6 @@ CsConfig::CsConfig(const string& name)
     add_native(&CsConfig::local_address, &csmon::local_address);
     add_native(&CsConfig::dynamic_node_detection, &csmon::dynamic_node_detection);
     add_native(&CsConfig::cluster_monitor_interval, &csmon::cluster_monitor_interval);
-}
-
-//static
-void CsConfig::populate(MXS_MODULE& info)
-{
-    info.specification = &csmon::specification;
 }
 
 namespace
@@ -145,7 +139,7 @@ void complain_mandatory(cs::Version version, const string& param)
 
 }
 
-bool CsConfig::post_configure()
+bool CsConfig::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
 {
     bool rv = true;
 
@@ -173,7 +167,18 @@ bool CsConfig::post_configure()
         rv = false;
     }
 
+    if (rv)
+    {
+        rv = m_cb();
+    }
+
     return rv;
+}
+
+// static
+mxs::config::Specification* CsConfig::specification()
+{
+    return &csmon::specification;
 }
 
 namespace

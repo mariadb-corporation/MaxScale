@@ -422,6 +422,11 @@ MariaDBMonitor* MariaDBMonitor::create(const string& name, const string& module)
     return new MariaDBMonitor(name, module);
 }
 
+mxs::config::Configuration& MariaDBMonitor::configuration()
+{
+    return m_settings;
+}
+
 MariaDBMonitor::Settings::Settings(const std::string& name, MariaDBMonitor* monitor)
     : mxs::config::Configuration(name, &s_spec)
     , m_monitor(monitor)
@@ -505,22 +510,6 @@ bool MariaDBMonitor::post_configure()
     }
 
     return ok;
-}
-
-/**
- * Load config parameters
- *
- * @param params Config parameters
- * @return True if settings are ok
- */
-bool MariaDBMonitor::configure(const mxs::ConfigParameters* params)
-{
-    if (!MonitorWorker::configure(params))
-    {
-        return false;
-    }
-
-    return m_settings.configure(*params);
 }
 
 json_t* MariaDBMonitor::diagnostics() const

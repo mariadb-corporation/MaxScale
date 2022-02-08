@@ -431,6 +431,11 @@ bool Monitor::post_configure()
     return ok;
 }
 
+mxs::config::Configuration& Monitor::base_configuration()
+{
+    return m_settings;
+}
+
 const mxs::ConfigParameters& Monitor::parameters() const
 {
     return m_parameters;
@@ -1944,11 +1949,6 @@ void MonitorServer::update_disk_space_status()
                       mysql_error(pMs->con));
         }
     }
-}
-
-bool MonitorWorker::configure(const mxs::ConfigParameters* pParams)
-{
-    return Monitor::configure(pParams);
 }
 
 bool MonitorWorker::has_sufficient_permissions()

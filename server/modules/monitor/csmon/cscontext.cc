@@ -13,8 +13,8 @@
 
 #include "cscontext.hh"
 
-CsContext::CsContext(const std::string& name)
-    : m_config(name)
+CsContext::CsContext(const std::string& name, std::function<bool()> cb)
+    : m_config(name, cb)
 {
 }
 

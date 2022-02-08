@@ -444,12 +444,11 @@ sqlite3* open_or_create_db(const std::string& path)
 
     return pDb;
 }
-
 }
 
 CsMonitor::CsMonitor(const std::string& name, const std::string& module, sqlite3* pDb)
     : MonitorWorkerSimple(name, module)
-    , m_context(name)
+    , m_context(name, std::bind(&CsMonitor::post_configure, this))
     , m_pDb(pDb)
 {
 }
@@ -462,6 +461,11 @@ CsMonitor::~CsMonitor()
 bool CsMonitor::is_dynamic() const
 {
     return m_context.config().dynamic_node_detection;
+}
+
+mxs::config::Configuration& CsMonitor::configuration()
+{
+    return m_context.config();
 }
 
 // static
@@ -705,21 +709,16 @@ void CsMonitor::update_status_of_dynamic_servers()
     }
 }
 
-bool CsMonitor::configure(const mxs::ConfigParameters* pParams)
+bool CsMonitor::post_configure()
 {
-    bool rv = m_context.configure(*pParams);
+    bool rv = true;
 
-    if (rv)
+    if (m_context.config().dynamic_node_detection)
     {
-        rv = MonitorWorkerSimple::configure(pParams);
-
-        if (rv && m_context.config().dynamic_node_detection)
-        {
-            // Only if dynamic node detection is enabled do we need to check the
-            // bootstrap servers. If disabled we are going to use them directly
-            // as the servers to be monitored.
-            rv = check_bootstrap_servers();
-        }
+        // Only if dynamic node detection is enabled do we need to check the
+        // bootstrap servers. If disabled we are going to use them directly
+        // as the servers to be monitored.
+        rv = check_bootstrap_servers();
     }
 
     if (rv)

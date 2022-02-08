@@ -389,19 +389,15 @@ public:
      */
     virtual std::vector<SERVER*> real_servers() const;
 
-    /**
-     * Configure the monitor. Called by monitor creation and altering code. Any inheriting classes
-     * should override this with their own configuration processing function. The overriding function
-     * should first call the configure() of its immediate base class, similar to constructors.
-     *
-     * @return True, if the monitor could be started, false otherwise.
-     */
-    virtual bool configure(const mxs::ConfigParameters* params);
 
     /**
      * Specification for the common monitor parameters
      */
     static mxs::config::Specification* specification();
+
+    mxs::config::Configuration& base_configuration();
+
+    virtual mxs::config::Configuration& configuration() = 0;
 
     /**
      * Get text-form settings.
@@ -866,19 +862,6 @@ protected:
     MonitorWorker(const std::string& name, const std::string& module);
 
     void do_stop() override final;
-
-    /**
-     * @brief Configure the monitor.
-     *
-     * When the monitor is started, this function will be called in order
-     * to allow the concrete implementation to configure itself from
-     * configuration parameters. The default implementation returns true.
-     *
-     * @return True, if the monitor could be configured, false otherwise.
-     *
-     * @note If false is returned, then the monitor will not be started.
-     */
-    bool configure(const mxs::ConfigParameters* pParams) override;
 
     /**
      * @brief Check whether the monitor has sufficient rights

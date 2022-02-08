@@ -19,9 +19,11 @@
 class CsConfig : public mxs::config::Configuration
 {
 public:
-    CsConfig(const std::string& name);
+    CsConfig(const std::string& name, std::function<bool()> cb);
 
-    static void populate(MXS_MODULE& info);
+    bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override final;
+
+    static mxs::config::Specification* specification();
 
     cs::Version               version;                  // Optional for 1.5
     int64_t                   admin_port;               // Optional for 1.5
@@ -32,8 +34,9 @@ public:
     std::chrono::milliseconds cluster_monitor_interval; // Optional for 1.5
 
 private:
-    bool post_configure();
 
     bool check_api_key(const std::string& dir);
     bool check_mandatory();
+
+    std::function<bool()> m_cb;
 };

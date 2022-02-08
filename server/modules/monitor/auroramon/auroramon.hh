@@ -26,7 +26,8 @@ public:
     AuroraMonitor& operator=(const AuroraMonitor&) = delete;
 
     ~AuroraMonitor();
-    static AuroraMonitor* create(const std::string& name, const std::string& module);
+    static AuroraMonitor*       create(const std::string& name, const std::string& module);
+    mxs::config::Configuration& configuration() override final;
 
 protected:
     bool has_sufficient_permissions() override;
@@ -34,4 +35,6 @@ protected:
 
 private:
     AuroraMonitor(const std::string& name, const std::string& module);
+
+    mxs::config::Configuration m_config;    // Needed by the API
 };

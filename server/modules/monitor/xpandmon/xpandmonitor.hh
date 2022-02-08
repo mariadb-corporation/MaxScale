@@ -33,9 +33,9 @@ public:
     class Config : public config::Configuration
     {
     public:
-        Config(const std::string& name);
+        Config(const std::string& name, XpandMonitor* monitor);
 
-        static void populate(MXS_MODULE& module);
+        bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override final;
 
         long cluster_monitor_interval() const
         {
@@ -62,13 +62,12 @@ public:
         config::Count                               m_health_check_threshold;
         config::Bool                                m_dynamic_node_detection;
         config::Integer                             m_health_check_port;
+        XpandMonitor*                               m_monitor;
     };
 
     ~XpandMonitor();
 
     static XpandMonitor* create(const std::string& name, const std::string& module);
-
-    bool configure(const mxs::ConfigParameters* pParams) override;
 
     bool is_dynamic() const override;
 
@@ -78,6 +77,10 @@ public:
     std::vector<SERVER*> real_servers() const override final;
 
     json_t* diagnostics() const override;
+
+    mxs::config::Configuration& configuration() override final;
+
+    static mxs::config::Specification* specification();
 
 protected:
     void populate_services() override;
@@ -162,6 +165,9 @@ private:
     // XpandNode::Persister
     void persist(const XpandNode& node) override;
     void unpersist(const XpandNode& node) override;
+
+    bool        post_configure();
+    friend bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params);
 
 private:
     Config                   m_config;

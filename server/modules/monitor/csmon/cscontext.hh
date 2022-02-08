@@ -22,7 +22,7 @@ public:
     /**
      * @param name  The name of the Columnstore configuration object.
      */
-    CsContext(const std::string& name);
+    CsContext(const std::string& name, std::function<bool()> cb);
 
     bool configure(const mxs::ConfigParameters& params);
 
@@ -42,6 +42,11 @@ public:
     }
 
     const CsConfig& config() const
+    {
+        return m_config;
+    }
+
+    CsConfig& config()
     {
         return m_config;
     }

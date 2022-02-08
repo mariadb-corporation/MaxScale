@@ -28,10 +28,14 @@ public:
     ~GRMon();
     static GRMon* create(const std::string& name, const std::string& module);
 
+    mxs::config::Configuration& configuration() override final;
+
 protected:
     bool has_sufficient_permissions() override;
     void update_server_status(mxs::MonitorServer* monitored_server) override;
 
 private:
     GRMon(const std::string& name, const std::string& module);
+
+    mxs::config::Configuration m_config;    // Needed by the API
 };

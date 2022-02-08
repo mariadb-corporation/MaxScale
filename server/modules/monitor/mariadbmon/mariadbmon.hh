@@ -158,10 +158,7 @@ public:
 
     bool is_cluster_owner() const override;
 
-    /**
-     * Called after the configuration has been processed
-     */
-    bool post_configure();
+    mxs::config::Configuration& configuration() override final;
 
 protected:
     bool can_be_disabled(const mxs::MonitorServer& server, DisableType type,
@@ -412,7 +409,6 @@ private:
     // Base methods
     MariaDBMonitor(const std::string& name, const std::string& module);
     ~MariaDBMonitor() override;
-    bool configure(const mxs::ConfigParameters* params) override;
     void reset_server_info();
 
     void reset_node_index_info();
@@ -524,6 +520,9 @@ private:
     void enforce_read_only_on_slaves();
     void enforce_writable_on_master();
     void set_low_disk_slaves_maintenance();
+
+    bool        post_configure();
+    friend bool Settings::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params);
 };
 
 /**

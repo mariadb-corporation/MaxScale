@@ -26,8 +26,11 @@
 
 using maxscale::MonitorServer;
 
+mxs::config::Specification s_spec(MXS_MODULE_NAME, mxs::config::Specification::MONITOR);
+
 AuroraMonitor::AuroraMonitor(const std::string& name, const std::string& module)
     : MonitorWorkerSimple(name, module)
+    , m_config(name, &s_spec)
 {
 }
 
@@ -39,6 +42,11 @@ AuroraMonitor::~AuroraMonitor()
 AuroraMonitor* AuroraMonitor::create(const std::string& name, const std::string& module)
 {
     return new AuroraMonitor(name, module);
+}
+
+mxs::config::Configuration& AuroraMonitor::configuration()
+{
+    return m_config;
 }
 
 bool AuroraMonitor::has_sufficient_permissions()
@@ -114,7 +122,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,   /* Thread finish. */
         {
             {MXS_END_MODULE_PARAMS}
-        }
+        },
+        &s_spec
     };
 
     return &info;

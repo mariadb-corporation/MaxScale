@@ -26,8 +26,11 @@
 
 using maxscale::MonitorServer;
 
+mxs::config::Specification s_spec(MXS_MODULE_NAME, mxs::config::Specification::MONITOR);
+
 GRMon::GRMon(const std::string& name, const std::string& module)
     : MonitorWorkerSimple(name, module)
+    , m_config(name, &s_spec)
 {
 }
 
@@ -38,6 +41,11 @@ GRMon::~GRMon()
 GRMon* GRMon::create(const std::string& name, const std::string& module)
 {
     return new GRMon(name, module);
+}
+
+mxs::config::Configuration& GRMon::configuration()
+{
+    return m_config;
 }
 
 bool GRMon::has_sufficient_permissions()
@@ -153,7 +161,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,       /* Thread finish. */
         {
             {MXS_END_MODULE_PARAMS}
-        }
+        },
+        &s_spec
     };
 
     return &info;
