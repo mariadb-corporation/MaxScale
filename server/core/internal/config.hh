@@ -222,8 +222,10 @@ bool config_add_to_context(const std::string& type, ConfigSection::SourceType so
  * Enable or disable masking of passwords
  *
  * @param enable If true, passwords are masked (the default state). If false, the passwords are not masked.
+ *
+ * @return The old value
  */
-void config_set_mask_passwords(bool enable);
+bool config_set_mask_passwords(bool enable);
 
 /**
  * Check if passwords should be masked

@@ -140,7 +140,7 @@ cfg::ParamString s_user(
     &s_spec, "user", "Username used to retrieve database users",
     cfg::Param::AT_RUNTIME);
 
-cfg::ParamString s_password(
+cfg::ParamPassword s_password(
     &s_spec, "password", "Password for the user used to retrieve database users",
     cfg::Param::AT_RUNTIME);
 
@@ -1226,15 +1226,6 @@ json_t* service_attributes(const char* host, const SERVICE* svc)
 
     /** Add service parameters and listeners */
     json_t* params = service_parameters_to_json(service);
-
-    // Mask the password to prevent it from leaking. This does cause a problem when a GET request is followed
-    // by a PATCH request with the same resource.The password is changed to the masked version which causes
-    // problems that are sometimes hard to track.
-
-    if (config_mask_passwords())
-    {
-        json_object_set_new(params, CN_PASSWORD, json_string("*****"));
-    }
 
     json_object_set_new(attr, CN_PARAMETERS, params);
     json_object_set_new(attr, CN_LISTENERS, service_all_listeners_json_data(host, service));

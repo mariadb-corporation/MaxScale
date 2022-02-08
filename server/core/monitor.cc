@@ -111,7 +111,7 @@ cfg::ParamString s_user(
     &s_spec, "user", "Username used to monitor the servers",
     cfg::Param::AT_RUNTIME);
 
-cfg::ParamString s_password(
+cfg::ParamPassword s_password(
     &s_spec, "password", "Password for the user used to monitor the servers",
     cfg::Param::AT_RUNTIME);
 

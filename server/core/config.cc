@@ -577,7 +577,7 @@ config::ParamString Config::s_config_sync_user(
     "User account used for configuration synchronization.",
     "", mxs::config::Param::AT_RUNTIME);
 
-config::ParamString Config::s_config_sync_password(
+config::ParamPassword Config::s_config_sync_password(
     &Config::s_specification,
     CN_CONFIG_SYNC_PASSWORD,
     "Password for the user used for configuration synchronization.",
@@ -3739,11 +3739,6 @@ json_t* config_maxscale_to_json(const char* host)
     // This will dump all parameters defined using the new configuration mechanism.
     cnf.fill(param);
 
-    if (config_mask_passwords())
-    {
-        json_object_set_new(param, CN_CONFIG_SYNC_PASSWORD, json_string("*****"));
-    }
-
     json_t* attr = json_object();
     time_t started = maxscale_started();
     time_t activated = started + MXS_CLOCK_TO_SEC(cnf.promoted_at);
@@ -4566,9 +4561,9 @@ bool config_set_rebalance_threshold(const char* value)
     return rv;
 }
 
-void config_set_mask_passwords(bool enable)
+bool config_set_mask_passwords(bool enable)
 {
-    this_unit.mask_passwords = enable;
+    return std::exchange(this_unit.mask_passwords, enable);
 }
 
 bool config_mask_passwords()

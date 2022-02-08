@@ -264,7 +264,7 @@ private:
     static config::ParamBool                            s_load_persisted_configs;
     static config::ParamString                          s_config_sync_cluster;
     static config::ParamString                          s_config_sync_user;
-    static config::ParamString                          s_config_sync_password;
+    static config::ParamPassword                        s_config_sync_password;
     static config::ParamSeconds                         s_config_sync_timeout;
     static config::ParamMilliseconds                    s_config_sync_interval;
     static config::ParamBool                            s_log_warn_super_user;

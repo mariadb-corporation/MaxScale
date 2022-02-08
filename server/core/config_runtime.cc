@@ -116,9 +116,11 @@ bool save_config(Server* server)
 
     if (mxs::Config::get().config_sync_cluster.empty())
     {
+        bool old_val = config_set_mask_passwords(false);
         std::ostringstream ss;
         server->persist(ss);
         ok = runtime_save_config(server->name(), ss.str());
+        config_set_mask_passwords(old_val);
     }
 
     return ok;
@@ -130,9 +132,11 @@ bool save_config(Service* service)
 
     if (mxs::Config::get().config_sync_cluster.empty())
     {
+        bool old_val = config_set_mask_passwords(false);
         std::ostringstream ss;
         service->persist(ss);
         ok = runtime_save_config(service->name(), ss.str());
+        config_set_mask_passwords(old_val);
     }
 
     return ok;
@@ -144,9 +148,11 @@ bool save_config(const SListener& listener)
 
     if (mxs::Config::get().config_sync_cluster.empty())
     {
+        bool old_val = config_set_mask_passwords(false);
         std::ostringstream ss;
         listener->persist(ss);
         ok = runtime_save_config(listener->name(), ss.str());
+        config_set_mask_passwords(old_val);
     }
 
     return ok;
@@ -158,9 +164,11 @@ bool save_config(mxs::Monitor* monitor)
 
     if (mxs::Config::get().config_sync_cluster.empty())
     {
+        bool old_val = config_set_mask_passwords(false);
         std::ostringstream ss;
         MonitorManager::monitor_persist(monitor, ss);
         ok = runtime_save_config(monitor->name(), ss.str());
+        config_set_mask_passwords(old_val);
     }
 
     return ok;
@@ -172,9 +180,11 @@ bool save_config(const SFilterDef& filter)
 
     if (mxs::Config::get().config_sync_cluster.empty())
     {
+        bool old_val = config_set_mask_passwords(false);
         std::ostringstream ss;
         filter->persist(ss);
         ok = runtime_save_config(filter->name(), ss.str());
+        config_set_mask_passwords(old_val);
     }
 
     return ok;
@@ -186,9 +196,11 @@ bool save_config(const mxs::Config& config)
 
     if (config.config_sync_cluster.empty())
     {
+        bool old_val = config_set_mask_passwords(false);
         std::ostringstream ss;
         config.persist(ss);
         ok = runtime_save_config("maxscale", ss.str());
+        config_set_mask_passwords(old_val);
     }
 
     return ok;

@@ -581,8 +581,7 @@ bool ConfigManager::discard_config()
 
 mxb::Json ConfigManager::create_config(int64_t version)
 {
-    bool mask = config_mask_passwords();
-    config_set_mask_passwords(false);
+    bool mask = config_set_mask_passwords(false);
     mxb::Json arr(mxb::Json::Type::ARRAY);
 
     append_config(arr.get_json(), ServerManager::server_list_to_json(""));
