@@ -61,7 +61,6 @@
 #include "internal/service.hh"
 #include "internal/maxscale.hh"
 #include "internal/servermanager.hh"
-#include "internal/monitor.hh"
 #include "internal/monitormanager.hh"
 
 /** This define is needed in CentOS 6 systems */

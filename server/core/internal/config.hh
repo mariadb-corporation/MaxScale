@@ -65,17 +65,6 @@ struct ConfigSection
 using ConfigSectionMap = std::map<std::string, ConfigSection>;
 
 /**
- * @brief Add default parameters for a module to the configuration context
- *
- * Only parameters that aren't yet in the destination container are added.
- * This allows users to override the default values.
- *
- * @param dest Container where the default parameters are added
- * @param params Module parameter definitions
- */
-void config_add_defaults(mxs::ConfigParameters* dest, const MXS_MODULE_PARAM* params);
-
-/**
  * @brief Load the specified configuration file for MaxScale
  *
  * This function loads and parses the configuration file, checks for duplicate sections,
@@ -101,37 +90,6 @@ bool config_load_and_process(const std::string& main_cfg_file,
 bool apply_main_config(const mxb::ini::map_result::Configuration& config);
 
 /**
- * @brief Add a parameter to a configuration context
- *
- * @param obj Context where the parameter should be added
- * @param key Key to add
- * @param value Value for the key
- */
-void config_add_param(ConfigSection* obj, const char* key, const char* value);
-
-/**
- * @brief Remove a parameter
- *
- * @param obj Configuration context
- * @param key Name of the parameter to remove
- */
-void config_remove_param(ConfigSection* obj, const char* name);
-
-/**
- * @brief Add non-standard configuration parameters to a JSON object
- *
- * @param parameters List of configuration parameter values
- * @param param_info Configuration parameter type information
- * @param ignored_params Set of parameters which should not be added to the output
- * @param output Output JSON object where the parameters are added
- */
-void config_add_module_params_json(const mxs::ConfigParameters& parameters,
-                                   const std::unordered_set<std::string>& ignored_params,
-                                   const MXS_MODULE_PARAM* basic_params,
-                                   const MXS_MODULE_PARAM* module_params,
-                                   json_t* output);
-
-/**
  * @brief Convert object names to correct format
  *
  * Check that object name contains no whitespace. If the name contains
@@ -152,30 +110,6 @@ void fix_object_name(std::string& name);
  */
 bool export_config_file(const char* filename, ConfigSectionMap& config);
 
-/**
- * Generate configuration file contents out of module configuration parameters. Only parameters defined
- * in the parameter definition arrays are printed. Printing is in the order the parameters are given in
- * the definitions.
- *
- * @param instance_name The module instance name
- * @param parameters Configuration parameter values
- * @param common_param_defs Common module parameter definitions. These are printed first.
- * @param module_param_defs Module-specific parameter definitions.
- */
-std::string generate_config_string(const std::string& instance_name, const mxs::ConfigParameters& parameters,
-                                   const MXS_MODULE_PARAM* common_param_defs,
-                                   const MXS_MODULE_PARAM* module_param_defs);
-
-/**
- * Serializes parameters into key-value pairs
- *
- * @param parameter Parameters to serialize
- * @param defs      Parameter definitions
- *
- * @return The parameters as key-value pairs delimited by newlines
- */
-std::string serialize_params(const mxs::ConfigParameters& parameters, const MXS_MODULE_PARAM* defs);
-
 // Value returned for unknown enumeration values
 constexpr int64_t MXS_UNKNOWN_ENUM_VALUE {-1};
 
@@ -188,22 +122,6 @@ constexpr int64_t MXS_UNKNOWN_ENUM_VALUE {-1};
  * @return The enum value or MXS_UNKNOWN_ENUM_VALUE on unknown value
  */
 int64_t config_enum_to_value(const std::string& key, const MXS_ENUM_VALUE* values);
-
-// Legacy parameter validation function
-bool validate_param(const MXS_MODULE_PARAM* basic, const MXS_MODULE* module,
-                    const std::string& key, const std::string& value, std::string* error_out);
-
-/**
- * @brief Check if required parameters are missing
- *
- * @param name Module name
- * @param type Module type
- * @param params List of parameters for the object
- * @return True if at least one of the required parameters is missing
- */
-bool missing_required_parameters(const MXS_MODULE_PARAM* mod_params,
-                                 const mxs::ConfigParameters& params,
-                                 const char* name);
 
 /**
  * Check and add contents of config file to config context object.
@@ -233,22 +151,3 @@ bool config_set_mask_passwords(bool enable);
  * @return True if passwords should be masked.
  */
 bool config_mask_passwords();
-
-/**
- * @brief Check if a configuration parameter is valid
- *
- * If a module has declared parameters and parameters were given to the module,
- * the given parameters are compared to the expected ones. This function also
- * does preliminary type checking for various basic values as well as enumerations.
- *
- * @param params Module parameters
- * @param key Parameter key
- * @param value Parameter value
- * @param context Configuration context or NULL for no context (uses runtime checks)
- *
- * @return True if the configuration parameter is valid
- */
-bool config_param_is_valid(const MXS_MODULE_PARAM* params,
-                           const char* key,
-                           const char* value,
-                           const ConfigSectionMap* context);

@@ -834,11 +834,13 @@ int test(FilterModule& filter_module, const FW_TEST& t)
     TempFile file;
     file.write(t.zRules);
 
-    auto params = filter_module.create_default_parameters();
-    params->set("action", zAction);
-    params->set("rules", file.name());
+    mxs::ConfigParameters params;
+    params.set("type", "filter");
+    params.set("module", "dbfwfilter");
+    params.set("action", zAction);
+    params.set("rules", file.name());
 
-    auto sInstance = filter_module.createInstance("test", params);
+    auto sInstance = filter_module.createInstance("test", &params);
 
     if (sInstance.get())
     {

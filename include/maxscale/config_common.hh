@@ -465,9 +465,6 @@ inline bool config_is_valid_name(const std::string& name, std::string* reason)
     return config_is_valid_name(name.c_str(), reason);
 }
 
-// TEMPORARILY EXPOSED.
-bool check_path_parameter(const MXS_MODULE_PARAM* params, const char* value);
-
 /**
  * Converts a string into milliseconds, intepreting in a case-insensitive manner
  * an 'h'-suffix to indicate hours, an 'm'-suffix to indicate minutes, an

@@ -19,21 +19,6 @@
 namespace maxscale
 {
 
-mxs::ConfigParameters* Module::create_default_parameters() const
-{
-    mxs::ConfigParameters* rval = new mxs::ConfigParameters;
-    const MXS_MODULE_PARAM* param_definition = m_module.parameters;
-    while (param_definition->name)
-    {
-        if (param_definition->default_value)
-        {
-            rval->set(param_definition->name, param_definition->default_value);
-        }
-        ++param_definition;
-    }
-    return rval;
-}
-
 //
 // Module
 //

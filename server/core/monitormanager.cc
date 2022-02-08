@@ -19,7 +19,6 @@
 #include <maxscale/paths.hh>
 
 #include "internal/config.hh"
-#include "internal/monitor.hh"
 #include "internal/monitormanager.hh"
 #include "internal/modules.hh"
 #include "internal/externcmd.hh"

@@ -20,7 +20,6 @@
 #include <maxscale/paths.hh>
 #include "internal/config.hh"
 #include "internal/modules.hh"
-#include "internal/monitor.hh"
 #include "internal/service.hh"
 #include "internal/listener.hh"
 

@@ -43,7 +43,6 @@
 #include "internal/config.hh"
 #include "internal/listener.hh"
 #include "internal/modules.hh"
-#include "internal/monitor.hh"
 #include "internal/server.hh"
 #include "internal/service.hh"
 
@@ -571,51 +570,6 @@ static json_t* module_param_to_json(const MXS_MODULE_PARAM& param)
 namespace
 {
 
-json_t* legacy_params_to_json(const LOADED_MODULE* mod)
-{
-    json_t* params = json_array();
-
-    for (int i = 0; mod->info->parameters[i].name; i++)
-    {
-        const auto& p = mod->info->parameters[i];
-
-        if (p.type != MXS_MODULE_PARAM_DEPRECATED && (p.options & MXS_MODULE_OPT_DEPRECATED) == 0)
-        {
-            json_array_append_new(params, module_param_to_json(p));
-        }
-    }
-
-    const MXS_MODULE_PARAM* extra = nullptr;
-    std::set<std::string> ignored;
-
-    switch (mod->info->modapi)
-    {
-    case ModuleType::FILTER:
-    case ModuleType::AUTHENTICATOR:
-    case ModuleType::QUERY_CLASSIFIER:
-    case ModuleType::PROTOCOL:
-    case ModuleType::ROUTER:
-    case ModuleType::MONITOR:
-        break;
-
-    default:
-        mxb_assert(!true);      // Module type should never be unknown
-    }
-
-    if (extra)
-    {
-        for (int i = 0; extra[i].name; i++)
-        {
-            if (ignored.count(extra[i].name) == 0)
-            {
-                json_array_append_new(params, module_param_to_json(extra[i]));
-            }
-        }
-    }
-
-    return params;
-}
-
 const char* module_type_to_legacy_string(ModuleType type)
 {
     // NOTE: The names are CamelCase on purpose to be backwards compatible with 2.5. This function should only
@@ -675,7 +629,8 @@ static json_t* module_json_data(const LOADED_MODULE* mod, const char* host)
     }
     else
     {
-        params = legacy_params_to_json(mod);
+        // TODO: Authenticators etc. do not necessarily define a specification, make them define one too.
+        params = json_null();
     }
 
     json_t* core_params = nullptr;

@@ -40,7 +40,6 @@
 #include "internal/filter.hh"
 #include "internal/listener.hh"
 #include "internal/modules.hh"
-#include "internal/monitor.hh"
 #include "internal/monitormanager.hh"
 #include "internal/servermanager.hh"
 

@@ -45,7 +45,6 @@
 
 #include "internal/config.hh"
 #include "internal/externcmd.hh"
-#include "internal/monitor.hh"
 #include "internal/modules.hh"
 #include "internal/server.hh"
 #include "internal/service.hh"
@@ -2264,34 +2263,6 @@ void MonitorServer::read_journal_data(const mxb::Json& data)
 }
 }
 
-const MXS_MODULE_PARAM* common_monitor_params()
-{
-    static const MXS_MODULE_PARAM config_monitor_params[] =
-    {
-        {CN_TYPE,                      MXS_MODULE_PARAM_STRING,   CN_MONITOR, MXS_MODULE_OPT_REQUIRED  },
-        {CN_MODULE,                    MXS_MODULE_PARAM_STRING,   NULL,       MXS_MODULE_OPT_REQUIRED  },
-        {CN_USER,                      MXS_MODULE_PARAM_STRING,   NULL,       MXS_MODULE_OPT_REQUIRED  },
-        {CN_PASSWORD,                  MXS_MODULE_PARAM_PASSWORD, NULL,       MXS_MODULE_OPT_REQUIRED  },
-        {CN_SERVERS,                   MXS_MODULE_PARAM_SERVERLIST},
-        {CN_MONITOR_INTERVAL,          MXS_MODULE_PARAM_DURATION, "2000ms"},
-        {CN_BACKEND_CONNECT_TIMEOUT,   MXS_MODULE_PARAM_DURATION, "3s",       MXS_MODULE_OPT_DURATION_S},
-        {CN_BACKEND_READ_TIMEOUT,      MXS_MODULE_PARAM_DURATION, "3s",       MXS_MODULE_OPT_DURATION_S},
-        {CN_BACKEND_WRITE_TIMEOUT,     MXS_MODULE_PARAM_DURATION, "3s",       MXS_MODULE_OPT_DURATION_S},
-        {CN_BACKEND_CONNECT_ATTEMPTS,  MXS_MODULE_PARAM_COUNT,    "1"},
-        {CN_JOURNAL_MAX_AGE,           MXS_MODULE_PARAM_DURATION, "28800s",   MXS_MODULE_OPT_DURATION_S},
-        {CN_DISK_SPACE_THRESHOLD,      MXS_MODULE_PARAM_STRING},
-        {CN_DISK_SPACE_CHECK_INTERVAL, MXS_MODULE_PARAM_DURATION, "0ms"},
-        // Cannot be a path type as the script may have parameters
-        {CN_SCRIPT,                    MXS_MODULE_PARAM_STRING},
-        {CN_SCRIPT_TIMEOUT,            MXS_MODULE_PARAM_DURATION, "90s",      MXS_MODULE_OPT_DURATION_S},
-        {
-            CN_EVENTS, MXS_MODULE_PARAM_ENUM, monitor_event_default.name, MXS_MODULE_OPT_NONE,
-            monitor_event_values
-        },
-        {NULL}
-    };
-    return config_monitor_params;
-}
 
 mxs::Monitor::Test::Test(mxs::Monitor* monitor)
     : m_monitor(monitor)
