@@ -385,6 +385,13 @@ std::vector<SERVER*> XpandMonitor::real_servers() const
     return m_cluster_servers;
 }
 
+json_t* XpandMonitor::diagnostics() const
+{
+    json_t* obj = json_object();
+    m_config.fill(obj);
+    return obj;
+}
+
 void XpandMonitor::pre_loop()
 {
     read_journal();

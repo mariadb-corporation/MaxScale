@@ -121,6 +121,7 @@ private:
     bool         send_cors_preflight_request(const std::string& verb);
     std::string  get_header(const std::string& key) const;
     size_t       request_data_length() const;
+    void         send_shutting_down_error() const;
     void         send_basic_auth_error() const;
     void         send_token_auth_error() const;
     void         send_write_access_error() const;
@@ -144,8 +145,16 @@ bool mxs_admin_init();
 
 /**
  * @brief Shutdown the administrative interface
+ *
+ * This stops the REST API from accepting new requests but it will still allow existing requests to complete.
+ * All connection attempts will be rejected with a HTTP 503 error stating that MaxScale is shutting down.
  */
 void mxs_admin_shutdown();
+
+/**
+ * @brief Stop the administrative interface
+ */
+void mxs_admin_finish();
 
 /**
  * @brief Check if admin interface uses HTTPS protocol

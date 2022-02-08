@@ -48,6 +48,7 @@ using std::ifstream;
 namespace
 {
 
+static char shutting_down_response[] = "{\"errors\": [ { \"detail\": \"MaxScale is shutting down\" } ] }";
 static char auth_failure_response[] = "{\"errors\": [ { \"detail\": \"Access denied\" } ] }";
 static char no_https_response[] = "{\"errors\": [ { \"detail\": \"Connection is not encrypted\" } ] }";
 static char not_admin_response[] = "{\"errors\": [ { \"detail\": \"Administrative access required\" } ] }";
@@ -93,6 +94,7 @@ static struct ThisUnit
     bool               using_ssl = false;
     bool               log_daemon_errors = true;
     bool               cors = false;
+    std::atomic<bool>  running {true};
 
     std::unordered_map<std::string, std::string> files;
 } this_unit;
@@ -460,6 +462,17 @@ size_t Client::request_data_length() const
     return atoi(get_header("Content-Length").c_str());
 }
 
+void Client::send_shutting_down_error() const
+{
+    MHD_Response* resp =
+        MHD_create_response_from_buffer(sizeof(shutting_down_response) - 1,
+                                        shutting_down_response,
+                                        MHD_RESPMEM_PERSISTENT);
+
+    MHD_queue_response(m_connection, MHD_HTTP_SERVICE_UNAVAILABLE, resp);
+    MHD_destroy_response(resp);
+}
+
 void Client::send_basic_auth_error() const
 {
     MHD_Response* resp =
@@ -622,7 +635,12 @@ void Client::upgrade_to_ws()
 int Client::handle(const std::string& url, const std::string& method,
                    const char* upload_data, size_t* upload_data_size)
 {
-    if (this_unit.cors && send_cors_preflight_request(method))
+    if (!this_unit.running.load(std::memory_order_relaxed))
+    {
+        send_shutting_down_error();
+        return MHD_YES;
+    }
+    else if (this_unit.cors && send_cors_preflight_request(method))
     {
         return MHD_YES;
     }
@@ -1003,6 +1021,14 @@ bool mxs_admin_init()
 }
 
 void mxs_admin_shutdown()
+{
+    // Using MHD_quiesce_daemon might be an option but we'd have to manage the socket ourselves and the
+    // documentation doesn't say whether it deadlocks when a request is being processed. Having the daemon
+    // thread reject connections after the shutdown has started is simpler and is guaranteed to work.
+    this_unit.running.store(false, std::memory_order_relaxed);
+}
+
+void mxs_admin_finish()
 {
     WebSocket::shutdown();
     MHD_stop_daemon(this_unit.daemon);
