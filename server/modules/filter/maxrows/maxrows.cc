@@ -173,7 +173,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
         nullptr,        /* Process finish. */
         nullptr,        /* Thread init. */
         nullptr,        /* Thread finish. */
-        {{nullptr}},
         &maxrows::specification
     };
 

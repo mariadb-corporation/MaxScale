@@ -98,9 +98,6 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         nullptr,    /* Process finish. */
         nullptr,    /* Thread init. */
         nullptr,    /* Thread finish. */
-        {
-            {MXS_END_MODULE_PARAMS}
-        }
     };
 
     RCR::Config::populate(info);

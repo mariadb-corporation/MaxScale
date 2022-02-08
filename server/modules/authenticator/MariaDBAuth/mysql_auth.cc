@@ -372,9 +372,6 @@ MXS_MODULE* mariadbauthenticator_info()
         NULL,
         NULL,
         NULL,
-        {
-            {MXS_END_MODULE_PARAMS}
-        }
     };
 
     return &info;

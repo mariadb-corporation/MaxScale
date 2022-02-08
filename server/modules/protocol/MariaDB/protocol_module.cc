@@ -342,9 +342,6 @@ MXS_MODULE* mariadbprotocol_info()
         nullptr,
         nullptr,
         nullptr,
-        {
-            {MXS_END_MODULE_PARAMS}
-        },
         &s_spec
     };
 

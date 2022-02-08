@@ -344,7 +344,6 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,
         NULL,
         NULL,
-        {{nullptr}},
         &s_spec
     };
 

@@ -5631,9 +5631,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
         qc_sqlite_process_end,
         qc_sqlite_thread_init,
         qc_sqlite_thread_end,
-        {
-            {MXS_END_MODULE_PARAMS}
-        }
     };
 
     return &info;

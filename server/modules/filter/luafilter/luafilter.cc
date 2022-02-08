@@ -617,9 +617,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
         nullptr,
         nullptr,
         nullptr,
-        {
-            {MXS_END_MODULE_PARAMS}
-        },
         &s_spec
     };
 

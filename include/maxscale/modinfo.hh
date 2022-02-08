@@ -202,16 +202,8 @@ struct MXS_MODULE
      */
     void (* thread_finish)();
 
-    MXS_MODULE_PARAM parameters[MXS_MODULE_PARAM_MAX + 1];      /**< Declared parameters */
-
     const mxs::config::Specification* specification;        /**< Configuration specification */
 };
-
-/**
- * This should be the last value given to @c parameters. If the module has no
- * parameters, it should be the only value.
- */
-#define MXS_END_MODULE_PARAMS 0
 
 /**
  * This value should be given to the @c module_capabilities member if the module

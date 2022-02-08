@@ -594,7 +594,6 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,                                   /* Process finish. */
         NULL,                                   /* Thread init. */
         NULL,                                   /* Thread finish. */
-        {{nullptr}},
         CsConfig::specification()
     };
 

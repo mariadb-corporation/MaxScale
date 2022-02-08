@@ -673,9 +673,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
         process_finish,                 /* Process finish, can be null */
         NULL,                           /* Thread init */
         NULL,                           /* Thread finish */
-        {
-            {MXS_END_MODULE_PARAMS}
-        },
         &s_spec
     };
     return &moduleObject;

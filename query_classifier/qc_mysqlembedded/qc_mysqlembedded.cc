@@ -3950,10 +3950,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         qc_mysql_process_init,
         qc_mysql_process_end,
         qc_mysql_thread_init,
-        qc_mysql_thread_end,
-        {
-            {MXS_END_MODULE_PARAMS}
-        }
+        qc_mysql_thread_end
     };
 
     return &info;

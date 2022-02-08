@@ -30,14 +30,6 @@ class Module
 public:
 
     /**
-     * Get a ConfigParameters instance containing the default values
-     * of all parameters.
-     *
-     * @return A ConfigParameters object.
-     */
-    mxs::ConfigParameters* create_default_parameters() const;
-
-    /**
      * Load a module with a specific name, assumed to be of a specific type.
      *
      * @param zFile_name  The name of the module.

@@ -410,9 +410,6 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,
         NULL,
         NULL,
-        {
-            {MXS_END_MODULE_PARAMS}
-        },
         &s_spec
     };
 

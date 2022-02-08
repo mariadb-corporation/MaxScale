@@ -246,9 +246,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL,                               /* Process finish. */
         NULL,                               /* Thread init. */
         NULL,                               /* Thread finish. */
-        {
-            {MXS_END_MODULE_PARAMS}
-        },
         &s_spec
     };
 

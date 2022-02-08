@@ -128,7 +128,6 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         nullptr,                /* Process finish. */
         nullptr,                /* Thread init. */
         nullptr,                /* Thread finish. */
-        {{nullptr}},
         CacheConfig::specification()
     };
 
