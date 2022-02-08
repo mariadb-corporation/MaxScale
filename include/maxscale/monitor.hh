@@ -389,6 +389,16 @@ public:
      */
     virtual std::vector<SERVER*> real_servers() const;
 
+    /**
+     * Get the list of servers that were configured for this monitor
+     *
+     * This list is identical to the one given as the `servers` parameter in the configuration file or the
+     * `servers` relationship in the JSON representation. For dynamic monitors, this list of servers is not
+     * necessarily actively monitored if they are only used to bootstrap the cluster.
+     *
+     * @return The list of servers this monitor was configured with.
+     */
+    std::vector<SERVER*> configured_servers() const;
 
     /**
      * Specification for the common monitor parameters
@@ -510,6 +520,8 @@ public:
 
     const std::string m_name;           /**< Monitor instance name. */
     const std::string m_module;         /**< Name of the monitor module */
+
+    json_t* parameters_to_json() const;
 
 protected:
     /**
@@ -762,8 +774,6 @@ private:
      * @return Comma-separated list
      */
     std::string gen_serverlist(int status, CredentialsApproach approach = CredentialsApproach::EXCLUDE);
-
-    json_t* parameters_to_json() const;
 
     // Waits until the status change request is processed
     void wait_for_status_change();

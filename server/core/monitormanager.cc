@@ -93,13 +93,12 @@ ThisUnit this_unit;
 const char RECONFIG_FAILED[] = "Monitor reconfiguration failed when %s. Check log for more details.";
 }
 
-Monitor* MonitorManager::create_monitor(const string& name, const string& module_name,
-                                        mxs::ConfigParameters* params)
+template<class Params, class Unknown>
+Monitor* do_create_monitor(const string& name, const string& module_name, Params params, Unknown* unknown)
 {
     mxb_assert(Monitor::is_main_worker());
 
-    mxs::ConfigParameters unknown;
-    if (!Monitor::specification()->validate(*params, &unknown))
+    if (!Monitor::specification()->validate(params, unknown))
     {
         return nullptr;
     }
@@ -108,7 +107,9 @@ Monitor* MonitorManager::create_monitor(const string& name, const string& module
     const MXS_MODULE* module = get_module(module_name, mxs::ModuleType::MONITOR);
     if (module)
     {
-        if (module->specification && !module->specification->validate(*params))
+        mxb_assert(module->specification);
+
+        if (module->specification && !module->specification->validate(params))
         {
             return nullptr;
         }
@@ -117,9 +118,8 @@ Monitor* MonitorManager::create_monitor(const string& name, const string& module
         new_monitor = api->createInstance(name, module_name);
         if (new_monitor)
         {
-            config_add_defaults(params, common_monitor_params());
-            config_add_defaults(params, module->parameters);
-            if (new_monitor->configure(params))
+            if (new_monitor->base_configuration().configure(params, unknown)
+                && new_monitor->configuration().configure(params))
             {
                 this_unit.insert_front(new_monitor);
             }
@@ -140,6 +140,21 @@ Monitor* MonitorManager::create_monitor(const string& name, const string& module
         MXS_ERROR("Unable to load library file for monitor '%s'.", name.c_str());
     }
     return new_monitor;
+}
+
+
+Monitor* MonitorManager::create_monitor(const string& name, const string& module_name,
+                                        mxs::ConfigParameters* params)
+
+{
+    mxs::ConfigParameters unknown;
+    return do_create_monitor(name, module_name, *params, &unknown);
+}
+
+Monitor* MonitorManager::create_monitor(const string& name, const string& module_name, json_t* params)
+{
+    std::set<std::string> unknown;
+    return do_create_monitor(name, module_name, params, &unknown);
 }
 
 bool MonitorManager::wait_one_tick()
@@ -318,16 +333,13 @@ Monitor* MonitorManager::server_is_monitored(const SERVER* server)
 
 std::ostream& MonitorManager::monitor_persist(const Monitor* monitor, std::ostream& os)
 {
-    const MXS_MODULE* mod = get_module(monitor->m_module, mxs::ModuleType::MONITOR);
-    mxb_assert(mod);
-
-    os << generate_config_string(monitor->m_name, monitor->parameters(),
-                                 common_monitor_params(), mod->parameters);
-
+    auto mon = const_cast<Monitor*>(monitor);
+    mon->configuration().persist(os);
+    mon->base_configuration().persist_append(os);
     return os;
 }
 
-bool MonitorManager::reconfigure_monitor(mxs::Monitor* monitor, const mxs::ConfigParameters& parameters)
+bool MonitorManager::reconfigure_monitor(mxs::Monitor* monitor, json_t* parameters)
 {
     mxb_assert(Monitor::is_main_worker());
     // Backup monitor parameters in case configure fails.
@@ -340,20 +352,15 @@ bool MonitorManager::reconfigure_monitor(mxs::Monitor* monitor, const mxs::Confi
         monitor->stop();
     }
 
-    mxs::ConfigParameters unknown;
-    if (!Monitor::specification()->validate(parameters, &unknown))
-    {
-        return false;
-    }
+    std::set<std::string> unknown;
+    bool success = monitor->base_configuration().specification().validate(parameters, &unknown)
+        && monitor->configuration().specification().validate(parameters)
+        && monitor->base_configuration().configure(parameters, &unknown)
+        && monitor->configuration().configure(parameters);
 
-    bool success = monitor->configure(&parameters);
-
-    if (!success)
-    {
-        // Try to restore old values, it should work.
-        MXB_AT_DEBUG(bool check = ) monitor->configure(&orig);
-        mxb_assert(check);
-    }
+    // TODO: If the reconfiguration fails, the old parameters are not restored. Previously the monitor was
+    // reconfigured with the old parameters if the new one failed to be processed. Either make sure the
+    // configuration succeeds or add a generic way to roll back a partial change.
 
     if (stopstart && !monitor->start())
     {
@@ -465,22 +472,13 @@ bool MonitorManager::add_server_to_monitor(mxs::Monitor* mon, SERVER* server, st
     }
     else
     {
-        // To keep monitor modifications straightforward, all changes should go through the same
-        // reconfigure-function. As the function accepts key-value combinations (so that they are easily
-        // serialized), construct the value here.
-        mxs::ConfigParameters modified_params = mon->parameters();
-        string serverlist = modified_params.get_string(CN_SERVERS);
-        if (serverlist.empty())
-        {
-            // Unusual.
-            serverlist += server->name();
-        }
-        else
-        {
-            serverlist += string(", ") + server->name();
-        }
-        modified_params.set(CN_SERVERS, serverlist);
-        success = reconfigure_monitor(mon, modified_params);
+        mxb::Json json(mon->parameters_to_json(), mxb::Json::RefType::STEAL);
+
+        auto servers = mon->configured_servers();
+        servers.push_back(server);
+        json.set_string(CN_SERVERS, mxb::transform_join(servers, std::mem_fn(&SERVER::name), ","));
+
+        success = reconfigure_monitor(mon, json.get_json());
         if (!success)
         {
             *error_out = string_printf(RECONFIG_FAILED, "adding a server");
@@ -512,13 +510,13 @@ bool MonitorManager::remove_server_from_monitor(mxs::Monitor* mon, SERVER* serve
     }
     else
     {
-        // Construct the new server list
-        auto params = mon->parameters();
-        auto names = config_break_list_string(params.get_string(CN_SERVERS));
-        names.erase(std::remove(names.begin(), names.end(), server->name()));
-        std::string servers = mxb::join(names, ",");
-        params.set(CN_SERVERS, servers);
-        success = MonitorManager::reconfigure_monitor(mon, params);
+        mxb::Json json(mon->parameters_to_json(), mxb::Json::RefType::STEAL);
+
+        auto servers = mon->configured_servers();
+        servers.erase(std::remove(servers.begin(), servers.end(), server), servers.end());
+        json.set_string(CN_SERVERS, mxb::transform_join(servers, std::mem_fn(&SERVER::name), ","));
+
+        success = MonitorManager::reconfigure_monitor(mon, json.get_json());
         if (!success)
         {
             *error_out = string_printf(RECONFIG_FAILED, "removing a server");

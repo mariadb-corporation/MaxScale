@@ -409,6 +409,7 @@ int test_domain_matching(const char* actual_module,
     /** Create a monitor */
     mxs::set_libdir("../../modules/monitor/mariadbmon/");
     mxs::ConfigParameters params;
+    params.set("module", actual_module);
     params.set("monitor_interval", "1s");
     params.set("backend_connect_timeout", "1s");
     params.set("backend_read_timeout", "1s");

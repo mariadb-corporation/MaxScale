@@ -582,13 +582,15 @@ json_t* Monitor::to_json(const char* host) const
 
 json_t* Monitor::parameters_to_json() const
 {
-    json_t* rval = json_object();
-    const MXS_MODULE* mod = get_module(m_module, mxs::ModuleType::MONITOR);
-    config_add_module_params_json(parameters(),
-                                  {CN_TYPE, CN_SERVERS},
-                                  common_monitor_params(),
-                                  mod->parameters,
-                                  rval);
+    json_t* rval = m_settings.to_json();
+    json_t* tmp = const_cast<Monitor*>(this)->configuration().to_json();
+    json_object_update(rval, tmp);
+    json_decref(tmp);
+
+    // Remove the servers parameter from the JSON output: the relationship management is supposed to be done
+    // with the relationship object.
+    json_object_del(rval, CN_SERVERS);
+
     return rval;
 }
 
@@ -1580,6 +1582,11 @@ const Monitor::ServerVector& Monitor::servers() const
 }
 
 std::vector<SERVER*> Monitor::real_servers() const
+{
+    return Monitor::configured_servers();
+}
+
+std::vector<SERVER*> Monitor::configured_servers() const
 {
     std::vector<SERVER*> rval(m_servers.size());
     std::transform(m_servers.begin(), m_servers.end(), rval.begin(), std::mem_fn(&MonitorServer::server));

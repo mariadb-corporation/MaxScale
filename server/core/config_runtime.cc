@@ -1140,7 +1140,7 @@ bool validate_object_json(json_t* json)
     return err.empty();
 }
 
-bool server_relationship_to_parameter(json_t* json, mxs::ConfigParameters* params)
+bool inject_server_relationship_as_parameter(json_t* json)
 {
     StringVector relations;
     bool rval = false;
@@ -1148,20 +1148,26 @@ bool server_relationship_to_parameter(json_t* json, mxs::ConfigParameters* param
     if (extract_ordered_relations(json, relations, to_server_rel))
     {
         rval = true;
+        json_t* params = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
 
-        if (!relations.empty())
+        if (!params)
         {
-            params->set(CN_SERVERS, mxb::join(relations, ","));
-        }
-        else if (json_t* rel = mxs_json_pointer(json, MXS_JSON_PTR_RELATIONSHIPS_SERVERS))
-        {
-            if (json_is_array(rel) || json_is_null(rel))
+            json_t* data = json_object_get(json, CN_DATA);
+            mxb_assert(data);
+
+            json_t* attr = json_object_get(data, CN_ATTRIBUTES);
+
+            if (!attr)
             {
-                mxb_assert(json_is_null(rel) || json_array_size(rel) == 0);
-                // Empty relationship, remove the parameter
-                params->remove(CN_SERVERS);
+                json_object_set_new(data, CN_ATTRIBUTES, json_object());
+                attr = json_object_get(data, CN_ATTRIBUTES);
             }
+
+            json_object_set_new(attr, CN_PARAMETERS, json_object());
         }
+
+        // The empty string parameter makes sure this work even if the relationship is being removed
+        json_object_set_new(params, CN_SERVERS, json_string(mxb::join(relations).c_str()));
     }
 
     return rval;
@@ -2034,31 +2040,31 @@ bool runtime_create_monitor_from_json(json_t* json)
         }
         else
         {
-            mxs::ConfigParameters params;
-            bool ok;
-            tie(ok, params) = extract_and_validate_params(json, module, mxs::ModuleType::MONITOR, CN_MONITOR);
+            json_t* params = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
+            mxb_assert_message(params, "Validation should guarantee that parameters exist");
+            inject_server_relationship_as_parameter(json);
 
-            if (ok && server_relationship_to_parameter(json, &params))
+            // Copy the module into the parameters to make sure it always appears in the parameters
+            json_object_set(params, CN_MODULE, mxs_json_pointer(json, MXS_JSON_PTR_MODULE));
+
+            if (auto monitor = MonitorManager::create_monitor(name, module, params))
             {
-                if (auto monitor = MonitorManager::create_monitor(name, module, &params))
+                if (save_config(monitor))
                 {
-                    if (save_config(monitor))
-                    {
-                        MXS_NOTICE("Created monitor '%s'", name);
-                        MonitorManager::start_monitor(monitor);
-                        rval = true;
+                    MXS_NOTICE("Created monitor '%s'", name);
+                    MonitorManager::start_monitor(monitor);
+                    rval = true;
 
-                        // TODO: Do this with native types instead of JSON comparisons
-                        std::unique_ptr<json_t> old_json(monitor->to_json(""));
-                        MXB_AT_DEBUG(bool rv = )
-                        monitor_to_service_relations(monitor->name(), old_json.get(), json);
-                        mxb_assert(rv);
-                    }
+                    // TODO: Do this with native types instead of JSON comparisons
+                    mxb::Json old_json(monitor->to_json(""), mxb::Json::RefType::STEAL);
+                    MXB_AT_DEBUG(bool rv = )
+                    monitor_to_service_relations(monitor->name(), old_json.get_json(), json);
+                    mxb_assert(rv);
                 }
-                else
-                {
-                    MXS_ERROR("Could not create monitor '%s' with module '%s'", name, module);
-                }
+            }
+            else
+            {
+                MXS_ERROR("Could not create monitor '%s' with module '%s'", name, module);
             }
         }
     }
@@ -2170,22 +2176,34 @@ bool runtime_create_service_from_json(json_t* json)
 bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
 {
     bool success = false;
-    std::unique_ptr<json_t> old_json(MonitorManager::monitor_to_json(monitor, ""));
-    mxb_assert(old_json.get());
-    const MXS_MODULE* mod = get_module(monitor->m_module, mxs::ModuleType::MONITOR);
-
-    auto params = monitor->parameters();
-    params.set_multiple(extract_parameters(new_json));
+    mxb::Json old_json(MonitorManager::monitor_to_json(monitor, ""), mxb::Json::RefType::STEAL);
+    mxb_assert(old_json.get_json());
 
     if (is_valid_resource_body(new_json)
-        && validate_param(common_monitor_params(), mod, &params)
-        && server_relationship_to_parameter(new_json, &params)
-        && monitor_to_service_relations(monitor->name(), old_json.get(), new_json))
+        && monitor_to_service_relations(monitor->name(), old_json.get_json(), new_json))
     {
+        json_t* params = monitor->parameters_to_json();
+        json_t* new_params = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS);
+
+        if (new_params)
+        {
+            mxs::json_remove_nulls(new_params);
+            json_object_update(params, new_params);
+        }
+
+        // Now inject the servers from the relationship endpoint
+        inject_server_relationship_as_parameter(new_json);
+
+        // Make sure there are no null values left in the parameters, the configuration code
+        // treats that as an error.
+        mxs::json_remove_nulls(params);
+
         if (MonitorManager::reconfigure_monitor(monitor, params))
         {
             success = save_config(monitor);
         }
+
+        json_decref(params);
     }
 
     return success;

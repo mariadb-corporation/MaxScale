@@ -32,7 +32,8 @@ public:
      */
     static mxs::Monitor* create_monitor(const std::string& name, const std::string& module_name,
                                         mxs::ConfigParameters* params);
-
+    static mxs::Monitor* create_monitor(const std::string& name, const std::string& module_name,
+                                        json_t* params);
     /**
      * Mark monitor as deactivated. A deactivated monitor appears not to exist, as if it had been
      * destroyed. Any servers the monitor had are removed. The monitor should not be serialized after
@@ -113,14 +114,13 @@ public:
     static std::ostream& monitor_persist(const mxs::Monitor* monitor, std::ostream& os);
 
     /**
-     * Attempt to reconfigure a monitor. If the reconfiguration fails, the old parameters are restored.
-     * Should be only called from the admin thread.
+     * Attempt to reconfigure a monitor. Should be only called from the admin thread.
      *
      * @param monitor    Monitor to reconfigure
      * @param parameters New parameters to apply
      * @return True if reconfiguration was successful
      */
-    static bool reconfigure_monitor(mxs::Monitor* monitor, const mxs::ConfigParameters& parameters);
+    static bool reconfigure_monitor(mxs::Monitor* monitor, json_t* parameters);
 
     /**
      * Add server to monitor during runtime. Should only be called from the admin thread.
