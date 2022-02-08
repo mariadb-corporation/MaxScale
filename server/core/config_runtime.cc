@@ -52,7 +52,6 @@ using maxscale::Monitor;
 using SListener = std::shared_ptr<Listener>;
 using namespace std::literals::string_literals;
 
-#define RUNTIME_ERRMSG_BUFSIZE 512
 thread_local std::vector<std::string> runtime_errmsg;
 
 typedef std::function<bool (const std::string&, const std::string&)> JsonValidator;
@@ -204,68 +203,6 @@ bool save_config(const mxs::Config& config)
     }
 
     return ok;
-}
-
-const MXS_MODULE_PARAM* get_type_parameters(const char* type)
-{
-    if (strcmp(type, CN_MONITOR) == 0)
-    {
-        return common_monitor_params();
-    }
-
-    MXS_NOTICE("Module type with no default parameters used: %s", type);
-    mxb_assert_message(!true, "Module type with no default parameters used");
-    return NULL;
-}
-
-std::string get_module_param_name(const std::string& type)
-{
-    if (type == CN_SERVICE)
-    {
-        return CN_ROUTER;
-    }
-    else if (type == CN_LISTENER)
-    {
-        return CN_PROTOCOL;
-    }
-    else if (type == CN_MONITOR || type == CN_FILTER)
-    {
-        return CN_MODULE;
-    }
-
-    mxb_assert(!true);      // Should not be called for a server.
-    return "";
-}
-
-/**
- * @brief Load module default parameters
- *
- * @param name        Name of the module to load
- * @param module_type Type of the module
- * @param object_type Type of the object (server, service, listener etc.)
- *
- * @return Whether loading succeeded and the list of default parameters
- */
-std::pair<bool, mxs::ConfigParameters>
-load_defaults(const char* name, mxs::ModuleType module_type, const char* object_type)
-{
-    bool rval = false;
-    mxs::ConfigParameters params;
-
-    if (const MXS_MODULE* mod = get_module(name, module_type))
-    {
-        config_add_defaults(&params, get_type_parameters(object_type));
-        config_add_defaults(&params, mod->parameters);
-        params.set(get_module_param_name(object_type), name);
-        rval = true;
-    }
-    else
-    {
-        MXS_ERROR("Failed to load module '%s': %s",
-                  name, errno ? mxs_strerror(errno) : "See MaxScale logs for details");
-    }
-
-    return {rval, params};
 }
 
 std::string get_cycle_name(mxs::Target* item, mxs::Target* target)
@@ -612,102 +549,6 @@ bool runtime_unlink_target(const StringSet& children, const StringSet& parents)
     return rval;
 }
 
-/**
- * @brief Convert a string value to a positive integer
- *
- * If the value is not a positive integer, an error is printed to @c dcb.
- *
- * @param value String value
- * @return 0 on error, otherwise a positive integer
- */
-int get_positive_int(const char* value)
-{
-    char* endptr;
-    long ival = strtol(value, &endptr, 10);
-
-    if (*endptr == '\0' && ival > 0 && ival < std::numeric_limits<int>::max())
-    {
-        return ival;
-    }
-
-    return 0;
-}
-
-bool is_valid_integer(const char* value)
-{
-    char* endptr;
-    return strtol(value, &endptr, 10) >= 0 && *value && *endptr == '\0';
-}
-
-bool undefined_mandatory_parameter(const MXS_MODULE_PARAM* basic_params,
-                                   const MXS_MODULE* module,
-                                   const mxs::ConfigParameters* params)
-{
-    bool rval = false;
-
-    for (auto mod_params : {basic_params, module->parameters})
-    {
-        for (int i = 0; mod_params[i].name; i++)
-        {
-            if ((mod_params[i].options & MXS_MODULE_OPT_REQUIRED) && !params->contains(mod_params[i].name))
-            {
-                MXS_ERROR("Mandatory parameter '%s' is not defined.", mod_params[i].name);
-                rval = true;
-            }
-        }
-    }
-
-    if (module->specification && !module->specification->validate(*params))
-    {
-        rval = false;
-    }
-
-    return rval;
-}
-
-bool validate_param(const MXS_MODULE_PARAM* basic,
-                    const MXS_MODULE* module,
-                    const char* key,
-                    const char* value)
-{
-    std::string error;
-    bool rval = validate_param(basic, module, key, value, &error);
-    if (!rval)
-    {
-        MXS_ERROR("%s", error.c_str());
-    }
-    return rval;
-}
-
-bool validate_param(const MXS_MODULE_PARAM* basic,
-                    const MXS_MODULE* module,
-                    mxs::ConfigParameters* params)
-{
-    bool rval = std::all_of(params->begin(), params->end(),
-                            [basic, module](const std::pair<std::string, std::string>& p) {
-                                return validate_param(basic, module, p.first.c_str(), p.second.c_str());
-                            });
-
-    if (undefined_mandatory_parameter(basic, module, params))
-    {
-        rval = false;
-    }
-
-    return rval;
-}
-
-mxs::ConfigParameters extract_parameters(json_t* json)
-{
-    mxs::ConfigParameters rval;
-
-    if (json_t* parameters = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS))
-    {
-        rval = mxs::ConfigParameters::from_json(parameters);
-    }
-
-    return rval;
-}
-
 bool extract_ordered_relations(json_t* json,
                                StringVector& relations,
                                Relationship rel)
@@ -975,14 +816,6 @@ bool link_target_to_objects(const std::string& target, StringSet& relations)
     return rval;
 }
 
-std::string json_int_to_string(json_t* json)
-{
-    char str[25];   // Enough to store any 64-bit integer value
-    int64_t i = json_integer_value(json);
-    snprintf(str, sizeof(str), "%ld", i);
-    return std::string(str);
-}
-
 bool have_ssl_json(json_t* params)
 {
     return mxs_json_pointer(params, CN_SSL_KEY)
@@ -1198,34 +1031,6 @@ bool link_object_to_targets(const std::string& target, StringSet& relations)
     return rval;
 }
 
-std::pair<bool, mxs::ConfigParameters>
-extract_and_validate_params(json_t* json, const char* module, mxs::ModuleType module_type,
-                            const char* module_param_name)
-{
-    bool ok = false;
-    mxs::ConfigParameters params;
-
-    if (const MXS_MODULE* mod = get_module(module, module_type))
-    {
-        tie(ok, params) = load_defaults(module, module_type, module_param_name);
-        mxb_assert(ok);
-
-        params.set_multiple(extract_parameters(json));
-        ok = validate_param(get_type_parameters(module_param_name), mod, &params);
-
-        if (ok && mod->specification)
-        {
-            ok = mod->specification->validate(params);
-        }
-    }
-    else
-    {
-        MXS_ERROR("Unknown module: %s", module);
-    }
-
-    return {ok, params};
-}
-
 bool update_object_relations(const std::string& target,
                              Relationship rel,
                              json_t* old_json,
@@ -1341,20 +1146,6 @@ bool monitor_to_service_relations(const std::string& target, json_t* old_json, j
     }
 
     return rval;
-}
-
-/**
- * @brief Check if the service parameter can be altered at runtime
- *
- * @param key Parameter name
- * @return True if the parameter can be altered
- */
-bool is_dynamic_param(const std::string& key)
-{
-    return key != CN_TYPE
-           && key != CN_ROUTER
-           && key != CN_SERVERS
-           && key != CN_FILTERS;
 }
 
 bool validate_logs_json(json_t* json)
@@ -2481,6 +2272,7 @@ bool runtime_alter_maxscale_from_json(json_t* json)
         json_t* value;
         void* ptr;
 
+        // TODO: This should not be needed anymore
         json_object_foreach_safe(params, ptr, key, value)
         {
             if (ignored_core_parameters(key))
