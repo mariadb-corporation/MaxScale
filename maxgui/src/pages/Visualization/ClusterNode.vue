@@ -3,7 +3,7 @@
         :serverInfo="$typy(node, 'data.server_info').safeArray"
         :disabled="$typy(node, 'data.isMaster').safeBoolean"
         :isMaster="false"
-        :nudge-top="275 / 2"
+        :nudge-top="150"
         :offset-x="true"
     >
         <template v-slot:activator="{ on }">
@@ -25,18 +25,37 @@
                         </router-link>
                     </div>
                     <v-spacer />
-                    <div class="button-container">
-                        <!--TODO: open a dialog to config the node -->
-                        <v-btn small class="ml-2 gear-btn" icon>
-                            <v-icon
-                                size="16"
-                                :color="
-                                    droppableTargets.includes(node.id) ? 'background' : 'primary'
-                                "
-                            >
-                                $vuetify.icons.settings
-                            </v-icon>
-                        </v-btn>
+                    <span class="ml-1 color text-field-text">
+                        {{
+                            $typy(node, 'data.readonly').safeBoolean
+                                ? $t('readonly')
+                                : $t('writable')
+                        }}
+                    </span>
+                    <div class="ml-1 button-container">
+                        <v-menu
+                            transition="slide-y-transition"
+                            offset-y
+                            nudge-left="100%"
+                            content-class="mariadb-select-v-menu mariadb-select-v-menu--full-border"
+                        >
+                            <template v-slot:activator="{ on }">
+                                <v-btn small class="gear-btn" icon v-on="on">
+                                    <v-icon
+                                        size="16"
+                                        :color="
+                                            droppableTargets.includes(node.id)
+                                                ? 'background'
+                                                : 'primary'
+                                        "
+                                    >
+                                        $vuetify.icons.settings
+                                    </v-icon>
+                                </v-btn>
+                            </template>
+                            <!-- TODO: Render cluster node actions -->
+                            <v-list class="color bg-color-background"> </v-list>
+                        </v-menu>
                     </div>
                 </div>
                 <v-divider />
@@ -54,6 +73,7 @@
                             (+{{ sbm }}s)
                         </span>
                     </div>
+
                     <div class="d-flex flex-grow-1">
                         <span class="text-capitalize">{{ $tc('connections', 2) }}:</span>
                         <span class="ml-1">

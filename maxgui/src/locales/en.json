@@ -222,6 +222,8 @@
     "configuration": "Configuration",
     "master": "Master",
     "promote": "Promote",
+    "readonly": "Read-only",
+    "writable": "Writable",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",

@@ -65,12 +65,6 @@ export default {
         },
     },
     getters: {
-        getNodeState: (state, getters, rootState, rootGetters) => {
-            return id => {
-                const serverData = rootGetters['server/getAllServersMap'].get(id)
-                return serverData.attributes.state
-            }
-        },
         getNodeTitle: (state, getters, rootState, rootGetters) => {
             return id => {
                 const serverData = rootGetters['server/getAllServersMap'].get(id)
@@ -89,18 +83,16 @@ export default {
                 return `${id}`
             }
         },
-        getCurrConn: (state, getters, rootState, rootGetters) => {
+        getNodeAttrs: (state, getters, rootState, rootGetters) => {
             return id => {
-                const serverData = rootGetters['server/getAllServersMap'].get(id)
-                if (serverData) {
-                    const {
-                        attributes: {
-                            statistics: { connections },
-                        },
-                    } = serverData
-                    return connections
-                }
-                return 0
+                const {
+                    attributes: {
+                        state,
+                        read_only = false,
+                        statistics: { connections = 0 },
+                    },
+                } = rootGetters['server/getAllServersMap'].get(id)
+                return { state, read_only, connections }
             }
         },
         getMariadbmonCluster: (state, getters) => {
@@ -127,8 +119,7 @@ export default {
                         id: masterName,
                         name: masterName,
                         title: getters.getNodeTitle(masterName),
-                        state: getters.getNodeState(masterName),
-                        connections: getters.getCurrConn(masterName),
+                        ...getters.getNodeAttrs(masterName),
                         isMaster: true,
                         stroke: '#0e9bc0',
                         children: [], // contains replicate servers data
@@ -143,8 +134,7 @@ export default {
                                 id: server.name,
                                 name: server.name,
                                 title: getters.getNodeTitle(server.name),
-                                state: getters.getNodeState(server.name),
-                                connections: getters.getCurrConn(server.name),
+                                ...getters.getNodeAttrs(server.name),
                                 isMaster: false,
                                 masterServerName: masterName,
                                 server_info: {
