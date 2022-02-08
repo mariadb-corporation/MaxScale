@@ -60,15 +60,21 @@ protected:
     bool can_be_disabled(const mxs::MonitorServer& server, DisableType type,
                          std::string* errmsg_out) const override;
 
+    struct Config : public mxs::config::Configuration
+    {
+        Config(const std::string& name);
+
+        bool disable_master_failback;       /**< Monitor flag for Galera Cluster Master failback */
+        bool available_when_donor;          /**< Monitor flag for Galera Cluster Donor availability */
+        bool disable_master_role_setting;   /**< Monitor flag to disable setting master role */
+        bool root_node_as_master;           /**< Use node with wsrep_local_index=0 as master */
+        bool use_priority;                  /**< Use server priorities */
+        bool set_donor_nodes;               /**< Set the wrep_sst_donor variable */
+    };
+
 private:
-    int  m_disableMasterFailback;       /**< Monitor flag for Galera Cluster Master failback */
-    int  m_availableWhenDonor;          /**< Monitor flag for Galera Cluster Donor availability */
-    bool m_disableMasterRoleSetting;    /**< Monitor flag to disable setting master role */
-    bool m_root_node_as_master;         /**< Whether we require that the Master should
-                                         * have a wsrep_local_index of 0 */
-    bool m_use_priority;                /**< Use server priorities */
-    bool m_set_donor_nodes;             /**< set the wrep_sst_donor variable with an
-                                         * ordered list of nodes */
+
+    Config      m_config;
     std::string m_cluster_uuid;         /**< The Cluster UUID */
     bool        m_log_no_members;       /**< Should we log if no member are found. */
     NodeMap     m_info;                 /**< Contains Galera Cluster variables of all nodes */
