@@ -11,10 +11,10 @@
  * Public License.
  */
 const sinonChai = require('sinon-chai')
-require('chai/register-expect')
-require('chai/register-should')
 global.sinon = require('sinon')
 global.chai = require('chai')
+global.expect = chai.expect
+global.should = chai.should()
 chai.use(sinonChai)
 // Required for Vuetify (Create div with a data-app attribute)
 const app = document.createElement('div')
