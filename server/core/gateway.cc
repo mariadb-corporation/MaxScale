@@ -2236,6 +2236,7 @@ int main(int argc, char** argv)
                                 MXS_NOTICE("MaxScale is shutting down.");
 
                                 disable_normal_signals();
+                                mxs_admin_finish();
 
                                 // Shutting down started, wait for all routing workers.
                                 RoutingWorker::join_workers();
