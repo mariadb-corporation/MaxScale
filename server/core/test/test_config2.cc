@@ -37,6 +37,15 @@ inline ostream& operator<<(ostream& out, const std::chrono::milliseconds& x)
     return out;
 }
 
+inline ostream& operator<<(ostream& out, const std::vector<SERVER*>& x)
+{
+    std::vector<std::string> s(x.size());
+    std::transform(x.begin(), x.end(), s.begin(), std::mem_fn(&SERVER::name));
+    out << mxb::join(s);
+
+    return out;
+}
+
 config::Specification specification("test_module", config::Specification::FILTER);
 
 config::ParamBool
@@ -113,6 +122,11 @@ config::ParamServer
     param_server(&specification,
                  "server_parameter",
                  "Specifies a server.");
+
+config::ParamServerList
+    param_serverlist(&specification,
+                     "serverlist_parameter",
+                     "Specifies a list of servers.");
 
 config::ParamSize
     param_size(&specification,
@@ -381,20 +395,43 @@ int test_regex(config::Regex& value)
     return test(value, entries, elements_in_array(entries));
 }
 
-int test_server(config::Server& value)
+Server* dummy_server(const char* name, int port)
 {
     mxs::ConfigParameters params1;
-    params1.set("persistmaxtime", "0");
+    params1.set("persistmaxtime", "0s");
     params1.set(CN_RANK, "primary");
     params1.set(CN_ADDRESS, "localhost");
+    params1.set(CN_PORT, std::to_string(port));
 
-    std::unique_ptr<Server> sServer1(ServerManager::create_server("TheServer1", params1));
-    mxb_assert(sServer1.get());
+    return ServerManager::create_server(name, params1);
+}
+
+int test_server(config::Server& value)
+{
+    Server* server1 = dummy_server("TheServer1", 3306);
 
     const TestEntry<config::Server::value_type> entries[] =
     {
-        {"TheServer1", true, sServer1.get()},
+        {"TheServer1", true, server1},
         {"TheServer0", false},
+    };
+
+    return test(value, entries, elements_in_array(entries));
+}
+
+int test_serverlist(config::ServerList& value)
+{
+    auto dummy1 = dummy_server("TheServer2", 3307);
+    auto dummy2 = dummy_server("TheServer3", 3308);
+
+    const TestEntry<config::ServerList::value_type> entries[] =
+    {
+        {"TheServer2",            true,  {dummy1 }, "TheServer2"           },
+        {"TheServer3",            true,  {dummy2 }, "TheServer3"           },
+        {"TheServer2,TheServer3", true,  {dummy1, dummy2}, "TheServer2,TheServer3"},
+        {"TheServer3,TheServer2", true,  {dummy2, dummy1}, "TheServer3,TheServer2"},
+        {"TheServer0",            false, {       }},
+        {"TheServer0,TheServer3", false, {       }},
     };
 
     return test(value, entries, elements_in_array(entries));
@@ -486,11 +523,16 @@ int main()
             config::Server value_server(&configuration, &param_server);
             nErrors += test_server(value_server);
 
+            config::ServerList value_serverlist(&configuration, &param_serverlist);
+            nErrors += test_serverlist(value_serverlist);
+
             config::Size value_size(&configuration, &param_size);
             nErrors += test_size(value_size);
 
             config::String value_string(&configuration, &param_string);
             nErrors += test_string(value_string);
+
+            ServerManager::destroy_all();
         });
 
     return nErrors ? EXIT_FAILURE : EXIT_SUCCESS;

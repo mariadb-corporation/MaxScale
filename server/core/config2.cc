@@ -1457,6 +1457,80 @@ bool ParamServer::from_json(const json_t* pJson, value_type* pValue,
 }
 
 /**
+ * ParamServerList
+ */
+std::string ParamServerList::type() const
+{
+    return "serverlist";
+}
+
+std::string ParamServerList::to_string(value_type value) const
+{
+    std::vector<std::string> str(value.size());
+    std::transform(value.begin(), value.end(), str.begin(), std::mem_fn(&SERVER::name));
+    return mxb::join(str, ",");
+}
+
+bool ParamServerList::from_string(const std::string& value_as_string, value_type* pValue,
+                                  std::string* pMessage) const
+{
+    bool rv = true;
+
+    if (!value_as_string.empty())
+    {
+        std::vector<std::string> unknown;
+
+        for (auto val : mxb::strtok(value_as_string, ","))
+        {
+            mxb::trim(val);
+            if (SERVER* s = SERVER::find_by_unique_name(val))
+            {
+                pValue->push_back(s);
+            }
+            else
+            {
+                unknown.push_back(val);
+                rv = false;
+            }
+        }
+
+        if (pMessage && !rv)
+        {
+            *pMessage = "Unknown servers: ";
+            *pMessage += mxb::join(unknown, ",");
+        }
+    }
+
+    return rv;
+}
+
+json_t* ParamServerList::to_json(value_type value) const
+{
+    return !value.empty() ? json_string(to_string(value).c_str()) : json_null();
+}
+
+bool ParamServerList::from_json(const json_t* pJson, value_type* pValue,
+                                std::string* pMessage) const
+{
+    bool rv = false;
+
+    if (json_is_string(pJson))
+    {
+        const char* z = json_string_value(pJson);
+
+        rv = from_string(z, pValue, pMessage);
+    }
+    else if (pMessage)
+    {
+        *pMessage = "Expected a json string, but got a json ";
+        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += ".";
+    }
+
+    return rv;
+}
+
+/**
  * ParamModule
  */
 ParamModule::value_type ParamModule::default_value() const

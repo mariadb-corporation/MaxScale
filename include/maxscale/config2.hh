@@ -1252,6 +1252,44 @@ public:
 };
 
 /**
+ * ParamServer
+ */
+class ParamServerList : public ConcreteParam<ParamServerList, std::vector<SERVER*>>
+{
+public:
+    ParamServerList(Specification* pSpecification,
+                    const char* zName,
+                    const char* zDescription,
+                    Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ConcreteParam<ParamServerList, std::vector<SERVER*>>(
+            pSpecification, zName, zDescription,
+            modifiable, Param::MANDATORY, MXS_MODULE_PARAM_SERVER, {})
+    {
+    }
+
+    ParamServerList(Specification* pSpecification,
+                    const char* zName,
+                    const char* zDescription,
+                    Param::Kind kind,
+                    Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ConcreteParam<ParamServerList, std::vector<SERVER*>>(
+            pSpecification, zName, zDescription,
+            modifiable, kind, MXS_MODULE_PARAM_SERVER, {})
+    {
+    }
+
+    std::string type() const override;
+
+    std::string to_string(value_type value) const;
+    bool        from_string(const std::string& value, value_type* pValue,
+                            std::string* pMessage = nullptr) const;
+
+    json_t* to_json(value_type value) const;
+    bool    from_json(const json_t* pJson, value_type* pValue,
+                      std::string* pMessage = nullptr) const;
+};
+
+/**
  * ParamTarget
  */
 class ParamTarget : public ConcreteParam<ParamTarget, mxs::Target*>
@@ -2615,6 +2653,11 @@ using Size = ConcreteType<ParamSize>;
  * Server
  */
 using Server = ConcreteType<ParamServer>;
+
+/**
+ * ServerList
+ */
+using ServerList = ConcreteType<ParamServerList>;
 
 /**
  * Target
