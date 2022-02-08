@@ -272,8 +272,40 @@ cfg::ParamInteger s_script_max_rlag(
 template<class Params>
 bool Spec::do_post_validate(Params params) const
 {
-    // TODO: Implement this
-    return true;
+    bool ok = true;
+    auto repl_user = s_replication_user.get(params);
+    auto repl_pw = s_replication_password.get(params);
+
+    if (repl_user.empty() != repl_pw.empty())
+    {
+        MXB_ERROR("Both '%s' and '%s' must be defined.",
+                  s_replication_user.name().c_str(), s_replication_password.name().c_str());
+        ok = false;
+    }
+
+    if (!s_assume_unique_hostnames.get(params))
+    {
+        const char PARAM_REQUIRES[] = "'%s' requires that '%s' is enabled.";
+        if (s_auto_failover.get(params))
+        {
+            MXB_ERROR(PARAM_REQUIRES, s_auto_failover.name().c_str(),
+                      s_assume_unique_hostnames.name().c_str());
+            ok = false;
+        }
+        if (s_switchover_on_low_disk_space.get(params))
+        {
+            MXB_ERROR(PARAM_REQUIRES, s_switchover_on_low_disk_space.name().c_str(),
+                      s_assume_unique_hostnames.name().c_str());
+            ok = false;
+        }
+        if (s_auto_rejoin.get(params))
+        {
+            MXB_ERROR(PARAM_REQUIRES, s_auto_rejoin.name().c_str(), s_assume_unique_hostnames.name().c_str());
+            ok = false;
+        }
+    }
+
+    return ok;
 }
 
 auto mo_relaxed = std::memory_order_relaxed;
