@@ -675,9 +675,10 @@ TestConnections::process_template(mxt::MaxScale& mxs, const string& config_file_
     // Replace various items in the config file text, then write it to disk. Define a helper function.
     auto replace_text = [&file_contents](const string& what, const string& replacement) {
             bool found = true;
+            size_t pos = 0;
             while (found)
             {
-                auto pos = file_contents.find(what);
+                pos = file_contents.find(what, pos);
                 if (pos != string::npos)
                 {
                     file_contents.replace(pos, what.length(), replacement);
@@ -689,8 +690,39 @@ TestConnections::process_template(mxt::MaxScale& mxs, const string& config_file_
             }
         };
 
+    // The order of the replacements matters, as some may lead to others.
     replace_text("###threads###", std::to_string(m_threads));
     replace_text("###access_homedir###", mxs.access_homedir());
+
+    const string basic_mariadbmon =
+        R"([MariaDB-Monitor]
+type=monitor
+module=mariadbmon
+servers=###server_line###
+user=mariadbmon
+password=mariadbmon
+monitor_interval=1000
+replication_user=repl
+replication_password=repl
+backend_connect_timeout=5
+backend_read_timeout=5
+backend_write_timeout=5)";
+    replace_text("###mariadb_monitor###", basic_mariadbmon);
+
+    const string basic_rwsplit_svc =
+        R"([RW-Split-Router]
+type=service
+router=readwritesplit
+servers=###server_line###
+user=maxservice
+password=maxservice)";
+    replace_text("###rwsplit_service###", basic_rwsplit_svc);
+
+    const string basic_rwsplit_lst = R"([RW-Split-Listener]
+type=listener
+service=RW-Split-Router
+port=4006)";
+    replace_text("###rwsplit_listener###", basic_rwsplit_lst);
 
     MariaDBCluster* clusters[] = {repl, galera, xpand};
     for (auto cluster : clusters)

@@ -72,7 +72,7 @@ int main(int argc, char** argv)
                         "Old master did not successfully rejoin the cluster.");
 
             test.tprintf("Switchover back to server1");
-            mxs.maxctrl("call command mysqlmon switchover MySQL-Monitor server1 server2");
+            mxs.maxctrl("call command mysqlmon switchover MariaDB-Monitor server1 server2");
             mxs.wait_for_monitor(2);
             mxs.check_servers_status(mxt::ServersInfo::default_repl_states());
         }
