@@ -595,11 +595,7 @@ json_t* legacy_params_to_json(const LOADED_MODULE* mod)
     case ModuleType::QUERY_CLASSIFIER:
     case ModuleType::PROTOCOL:
     case ModuleType::ROUTER:
-        break;
-
     case ModuleType::MONITOR:
-        extra = common_monitor_params();
-        ignored = {CN_SERVERS, CN_TYPE, CN_MODULE};
         break;
 
     default:

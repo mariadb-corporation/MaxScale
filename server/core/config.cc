@@ -1752,28 +1752,28 @@ bool is_valid_module(const ConfigSection* obj)
     return rval;
 }
 
-std::pair<const MXS_MODULE_PARAM*, const MXS_MODULE*> get_module_details(const ConfigSection* obj)
+const MXS_MODULE* get_module_details(const ConfigSection* obj)
 {
     std::string type = obj->m_parameters.get_string(CN_TYPE);
 
     if (type == CN_SERVICE)
     {
         auto name = obj->m_parameters.get_string(CN_ROUTER);
-        return {nullptr, get_module(name, mxs::ModuleType::ROUTER)};
+        return get_module(name, mxs::ModuleType::ROUTER);
     }
     else if (type == CN_MONITOR)
     {
         auto name = obj->m_parameters.get_string(CN_MODULE);
-        return {common_monitor_params(), get_module(name, mxs::ModuleType::MONITOR)};
+        return get_module(name, mxs::ModuleType::MONITOR);
     }
     else if (type == CN_FILTER)
     {
         auto name = obj->m_parameters.get_string(CN_MODULE);
-        return {nullptr, get_module(name, mxs::ModuleType::FILTER)};
+        return get_module(name, mxs::ModuleType::FILTER);
     }
 
     mxb_assert(!true);
-    return {nullptr, nullptr};
+    return nullptr;
 }
 
 ConfigSection* name_to_object(const std::vector<ConfigSection*>& objects,
@@ -1817,12 +1817,21 @@ std::unordered_set<ConfigSection*> get_spec_dependencies(const std::vector<Confi
     {
         if (obj->m_parameters.contains(p.second->name()))
         {
+            // TODO: This way of expressing dependencies is fragile. The parameter itself should express what
+            // it depends on based on the given configuration object.
             auto t = p.second->type();
 
             if (t == "service" || t == "server" || t == "target")
             {
                 std::string v = obj->m_parameters.get_string(p.second->name());
                 rval.insert(name_to_object(objects, obj, v));
+            }
+            else if (t == "serverlist")
+            {
+                for (const auto& v : mxb::strtok(obj->m_parameters.get_string(p.second->name()), ","))
+                {
+                    rval.insert(name_to_object(objects, obj, v));
+                }
             }
         }
     }
@@ -1846,35 +1855,12 @@ std::unordered_set<ConfigSection*> get_dependencies(const std::vector<ConfigSect
         return get_spec_dependencies(objects, obj, Listener::specification());
     }
 
-    const MXS_MODULE_PARAM* common_params = nullptr;
-    const MXS_MODULE* module;
-    std::tie(common_params, module) = get_module_details(obj);
+    const MXS_MODULE* module = get_module_details(obj);
     mxb_assert(module);
+    mxb_assert(module->specification);
 
-    for (const auto* p : {common_params, module->parameters})
-    {
-        mxb_assert(p || type == CN_FILTER || type == CN_SERVICE);
-
-        for (int i = 0; p && p[i].name; i++)
-        {
-            if (obj->m_parameters.contains(p[i].name))
-            {
-                if (p[i].type == MXS_MODULE_PARAM_SERVICE
-                    || p[i].type == MXS_MODULE_PARAM_SERVER
-                    || p[i].type == MXS_MODULE_PARAM_TARGET)
-                {
-                    std::string v = obj->m_parameters.get_string(p[i].name);
-                    rval.insert(name_to_object(objects, obj, v));
-                }
-            }
-        }
-    }
-
-    if (module->specification)
-    {
-        auto deps = get_spec_dependencies(objects, obj, module->specification);
-        rval.insert(deps.begin(), deps.end());
-    }
+    auto deps = get_spec_dependencies(objects, obj, module->specification);
+    rval.insert(deps.begin(), deps.end());
 
     if (type == CN_SERVICE && obj->m_parameters.contains(CN_FILTERS))
     {
@@ -2742,113 +2728,14 @@ static bool check_config_objects(ConfigSectionMap& context)
             MXB_ERROR("Invalid module type '%s' for object '%s' in file '%s'.",
                       type.c_str(), obj.name(), filec);
             rval = false;
-            continue;
         }
-
-        const char* missing_module_def = get_missing_module_parameter_name(&obj);
-        if (missing_module_def)
+        else if (const char* missing_module_def = get_missing_module_parameter_name(&obj))
         {
             MXS_ERROR("'%s' in file '%s' is missing a required parameter '%s'.",
                       obj.name(), filec, missing_module_def);
             rval = false;
-            continue;
         }
-
-        if (!is_valid_module(&obj))
-        {
-            rval = false;
-            continue;
-        }
-
-        if (type == CN_SERVER || type == CN_LISTENER || type == CN_FILTER || type == CN_SERVICE)
-        {
-            // Servers are a special case as they don't have a module and the validation is done as a part of
-            // the creation process. Filters, services and listeners validate the parameters when they are
-            // being constructed. This is done after the dependency order of the modules is resolved which
-            // allows parameters that refer to other objects to be validated.
-            continue;
-        }
-
-        mxb_assert(type == CN_MONITOR);
-        const MXS_MODULE_PARAM* param_set = nullptr;
-        const MXS_MODULE* mod = nullptr;
-        std::tie(param_set, mod) = get_module_details(&obj);
-
-        if (!mod)       // Error is logged in load_module
-        {
-            rval = false;
-            continue;
-        }
-
-        mxb_assert(param_set);
-        std::vector<std::string> to_be_removed;
-
-        if (mod->specification)
-        {
-            // Modules with specifications will be validated after the construction order has
-            // been resolved. This makes sure that the parameter validation for types that
-            // expect objects (servers, services) will work.
-            continue;
-        }
-
-        for (auto iter = obj.m_parameters.begin(); iter != obj.m_parameters.end(); ++iter)
-        {
-            const char* param_namez = iter->first.c_str();
-            const MXS_MODULE_PARAM* fix_params;
-
-            if (param_in_set(param_set, param_namez))
-            {
-                fix_params = param_set;
-            }
-            else if (param_in_set(mod->parameters, param_namez))
-            {
-                fix_params = mod->parameters;
-            }
-            else
-            {
-                MXS_ERROR("Unknown parameter '%s' for %s '%s' in file '%s'. %s",
-                          param_namez, type.c_str(), obj.name(), obj.source_file.c_str(),
-                          closest_matching_parameter(param_namez, param_set, mod->parameters).c_str());
-                rval = false;
-                continue;
-            }
-
-            const string param_value = iter->second;
-            if (config_param_is_valid(fix_params, param_namez, param_value.c_str(), &context))
-            {
-                auto temp = param_value;
-                if (is_path_parameter(fix_params, param_namez))
-                {
-                    process_path_parameter(&temp);
-                }
-                else    // Fix old-style object names
-                {
-                    config_fix_param(fix_params, param_namez, &temp);
-                }
-                obj.m_parameters.set(param_namez, temp);
-
-                if (param_is_deprecated(fix_params, param_namez, obj.name()))
-                {
-                    to_be_removed.emplace_back(param_namez);
-                }
-            }
-            else
-            {
-                MXS_ERROR("Invalid value '%s' for parameter '%s' for %s '%s' in file '%s'. "
-                          "Was expecting %s.",
-                          param_value.c_str(), param_namez, type.c_str(), obj.name(), obj.source_file.c_str(),
-                          param_type_to_str(fix_params, param_namez));
-                rval = false;
-            }
-        }
-
-        for (const auto& a : to_be_removed)
-        {
-            config_remove_param(&obj, a.c_str());
-        }
-
-        if (missing_required_parameters(param_set, obj.m_parameters, obj.name())
-            || missing_required_parameters(mod->parameters, obj.m_parameters, obj.name()))
+        else if (!is_valid_module(&obj))
         {
             rval = false;
         }
