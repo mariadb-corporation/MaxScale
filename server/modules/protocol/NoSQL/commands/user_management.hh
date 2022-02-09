@@ -719,7 +719,7 @@ protected:
     {
         ostringstream sql;
 
-        sql << "DROP USER '" << m_db << "." << m_user << "'@'" << m_host << "'";
+        sql << "DROP USER " << mariadb::get_account(m_db, m_user, m_host);
 
         return sql.str();
     }
