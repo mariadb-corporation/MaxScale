@@ -41,7 +41,7 @@ config::ParamPath rules(
     &specification,
     "rules",
     "Specifies the path of the file where the masking rules are stored.",
-    MXS_MODULE_OPT_PATH_R_OK,
+    config::ParamPath::R,
     config::Param::AT_RUNTIME);
 
 config::ParamEnum<MaskingFilterConfig::warn_type_mismatch_t> warn_type_mismatch(

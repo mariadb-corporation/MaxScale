@@ -111,7 +111,6 @@ struct NAME_MAPPING
 LOADED_MODULE* find_module(const string& name);
 const char*    module_type_to_string(ModuleType type);
 const char*    module_maturity_to_string(ModuleStatus type);
-const char*    mxs_module_param_type_to_string(mxs_module_param_type type);
 
 enum class LoadResult
 {
@@ -523,49 +522,6 @@ static json_t* default_value_to_json(mxs_module_param_type type, const char* val
         return json_null();
     }
 }
-static json_t* module_param_to_json(const MXS_MODULE_PARAM& param)
-{
-    json_t* p = json_object();
-    const char* type;
-
-    if (param.type == MXS_MODULE_PARAM_ENUM && (param.options & MXS_MODULE_OPT_ENUM_UNIQUE) == 0)
-    {
-        type = "enum_mask";
-    }
-    else
-    {
-        type = mxs_module_param_type_to_string(param.type);
-    }
-
-    json_object_set_new(p, CN_NAME, json_string(param.name));
-    json_object_set_new(p, CN_TYPE, json_string(type));
-
-    if (param.default_value)
-    {
-        json_object_set_new(p, "default_value", default_value_to_json(param.type, param.default_value));
-    }
-
-    json_object_set_new(p, "mandatory", json_boolean(param.options & MXS_MODULE_OPT_REQUIRED));
-
-    if (param.type == MXS_MODULE_PARAM_ENUM && param.accepted_values)
-    {
-        json_t* arr = json_array();
-
-        for (int x = 0; param.accepted_values[x].name; x++)
-        {
-            json_array_append_new(arr, json_string(param.accepted_values[x].name));
-        }
-
-        json_object_set_new(p, "enum_values", arr);
-    }
-    else if (param.type == MXS_MODULE_PARAM_DURATION)
-    {
-        const char* value_unit = param.options & MXS_MODULE_OPT_DURATION_S ? "s" : "ms";
-        json_object_set_new(p, "unit", json_string(value_unit));
-    }
-
-    return p;
-}
 
 namespace
 {
@@ -946,64 +902,6 @@ const char* module_maturity_to_string(ModuleStatus type)
     default:
         mxb_assert(!true);
         return "Unknown";
-    }
-}
-
-const char* mxs_module_param_type_to_string(mxs_module_param_type type)
-{
-    switch (type)
-    {
-    case MXS_MODULE_PARAM_COUNT:
-        return "count";
-
-    case MXS_MODULE_PARAM_INT:
-        return "int";
-
-    case MXS_MODULE_PARAM_SIZE:
-        return "size";
-
-    case MXS_MODULE_PARAM_BOOL:
-        return "bool";
-
-    case MXS_MODULE_PARAM_STRING:
-        return "string";
-
-    case MXS_MODULE_PARAM_QUOTEDSTRING:
-        return "quoted string";
-
-    case MXS_MODULE_PARAM_PASSWORD:
-        return "password string";
-
-    case MXS_MODULE_PARAM_ENUM:
-        return "enum";
-
-    case MXS_MODULE_PARAM_PATH:
-        return "path";
-
-    case MXS_MODULE_PARAM_SERVICE:
-        return "service";
-
-    case MXS_MODULE_PARAM_SERVER:
-        return "server";
-
-    case MXS_MODULE_PARAM_TARGET:
-        return "target";
-
-    case MXS_MODULE_PARAM_SERVERLIST:
-        return "serverlist";
-
-    case MXS_MODULE_PARAM_TARGETLIST:
-        return "list of targets";
-
-    case MXS_MODULE_PARAM_REGEX:
-        return "regular expression";
-
-    case MXS_MODULE_PARAM_DURATION:
-        return "duration";
-
-    default:
-        mxb_assert(!true);
-        return "unknown";
     }
 }
 

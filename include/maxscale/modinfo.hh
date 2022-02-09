@@ -100,31 +100,6 @@ enum mxs_module_param_type
     MXS_MODULE_PARAM_DEPRECATED,    /**< Deprecated value (only here until the legacy system is removed) */
 };
 
-/** Maximum and minimum values for integer types */
-#define MXS_MODULE_PARAM_COUNT_MAX "2147483647"
-#define MXS_MODULE_PARAM_COUNT_MIN "0"
-#define MXS_MODULE_PARAM_INT_MAX   "2147483647"
-#define MXS_MODULE_PARAM_INT_MIN   "-2147483647"
-
-/** Parameter options
- *
- * If no type is specified, the option can be used with all parameter types
- */
-enum mxs_module_param_options
-{
-    MXS_MODULE_OPT_NONE        = 0,
-    MXS_MODULE_OPT_REQUIRED    = (1 << 0),  /**< A required parameter */
-    MXS_MODULE_OPT_PATH_X_OK   = (1 << 1),  /**< PATH: Execute permission to path required */
-    MXS_MODULE_OPT_PATH_R_OK   = (1 << 2),  /**< PATH: Read permission to path required */
-    MXS_MODULE_OPT_PATH_W_OK   = (1 << 3),  /**< PATH: Write permission to path required */
-    MXS_MODULE_OPT_PATH_F_OK   = (1 << 4),  /**< PATH: Path must exist */
-    MXS_MODULE_OPT_PATH_CREAT  = (1 << 5),  /**< PATH: Create path if it doesn't exist */
-    MXS_MODULE_OPT_ENUM_UNIQUE = (1 << 6),  /**< ENUM: Only one value can be defined */
-    MXS_MODULE_OPT_DURATION_S  = (1 << 7),  /**< DURATION: Cannot be specified in milliseconds */
-    MXS_MODULE_OPT_DEPRECATED  = (1 << 8),  /**< Parameter is deprecated: Causes a warning to be logged if the
-                                             * parameter is used but will not cause a configuration error. */
-};
-
 /** String to enum value mappings */
 struct MXS_ENUM_VALUE
 {
@@ -141,9 +116,6 @@ struct MXS_MODULE_PARAM
     uint64_t              options;          /**< Parameter options */
     const MXS_ENUM_VALUE* accepted_values;  /**< Only for enum values */
 };
-
-/** Maximum number of parameters that modules can declare */
-#define MXS_MODULE_PARAM_MAX 64
 
 namespace maxscale
 {
