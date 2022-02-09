@@ -75,15 +75,6 @@ enum mxs_avro_codec_type
     MXS_AVRO_CODEC_SNAPPY,      /**< Not yet implemented */
 };
 
-static const MXS_ENUM_VALUE codec_values[] =
-{
-    {"null",    MXS_AVRO_CODEC_NULL   },
-    {"deflate", MXS_AVRO_CODEC_DEFLATE},
-// Not yet implemented
-//    {"snappy", MXS_AVRO_CODEC_SNAPPY},
-    {NULL}
-};
-
 class Avro;
 class AvroSession;
 

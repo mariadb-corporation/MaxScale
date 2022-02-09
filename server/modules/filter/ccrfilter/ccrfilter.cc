@@ -35,14 +35,6 @@ const char PARAM_MATCH[] = "match";
 const char PARAM_IGNORE[] = "ignore";
 const char PARAM_GLOBAL[] = "global";
 
-const MXS_ENUM_VALUE option_values[] =
-{
-    {"ignorecase", PCRE2_CASELESS},
-    {"case",       0             },
-    {"extended",   PCRE2_EXTENDED},
-    {NULL}
-};
-
 namespace ccr
 {
 

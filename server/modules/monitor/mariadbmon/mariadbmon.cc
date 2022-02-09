@@ -69,41 +69,8 @@ const char reset_repl_cmd[] = "reset-replication";
 const char release_locks_cmd[] = "release-locks";
 
 const char CLUSTER_OP_REQUIRE_LOCKS[] = "cooperative_monitoring_locks";
-const MXS_ENUM_VALUE lock_none = {"none", MariaDBMonitor::LOCKS_NONE};
-
-const MXS_ENUM_VALUE require_lock_values[] =
-{
-    lock_none,
-    {"majority_of_running",MariaDBMonitor::LOCKS_MAJORITY_RUNNING              },
-    {"majority_of_all",MariaDBMonitor::LOCKS_MAJORITY_ALL                  },
-    {nullptr}
-};
-
 const char MASTER_CONDITIONS[] = "master_conditions";
-const MXS_ENUM_VALUE master_conds_def = {"primary_monitor_master", MariaDBMonitor::MCOND_COOP_M};
-MXS_ENUM_VALUE master_conds_values[] =
-{
-    {"none",             MariaDBMonitor::MCOND_NONE        },
-    {"connecting_slave", MariaDBMonitor::MCOND_CONNECTING_S},
-    {"connected_slave",  MariaDBMonitor::MCOND_CONNECTED_S },
-    {"running_slave",    MariaDBMonitor::MCOND_RUNNING_S   },
-    master_conds_def,
-    {nullptr}
-};
-
 const char SLAVE_CONDITIONS[] = "slave_conditions";
-const MXS_ENUM_VALUE slave_conds_def = {"none", MariaDBMonitor::SCOND_NONE};
-
-MXS_ENUM_VALUE slave_conds_values[] =
-{
-    {"linked_master",          MariaDBMonitor::SCOND_LINKED_M  },
-    {"running_master",         MariaDBMonitor::SCOND_RUNNING_M },
-    {"writable_master",        MariaDBMonitor::SCOND_WRITABLE_M},
-    {"primary_monitor_master", MariaDBMonitor::SCOND_COOP_M    },
-    slave_conds_def,
-    {nullptr}
-};
-
 const char SCRIPT_MAX_RLAG[] = "script_max_replication_lag";
 
 using namespace std::chrono_literals;

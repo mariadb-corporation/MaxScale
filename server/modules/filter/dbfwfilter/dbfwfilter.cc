@@ -512,14 +512,6 @@ static void dbfw_thr_finish()
     MXS_EXCEPTION_GUARD(delete this_thread);
 }
 
-static const MXS_ENUM_VALUE action_values[] =
-{
-    {"allow",  FW_ACTION_ALLOW },
-    {"block",  FW_ACTION_BLOCK },
-    {"ignore", FW_ACTION_IGNORE},
-    {NULL}
-};
-
 MXS_BEGIN_DECLS
 
 /**

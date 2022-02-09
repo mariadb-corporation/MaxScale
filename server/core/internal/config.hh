@@ -110,19 +110,6 @@ void fix_object_name(std::string& name);
  */
 bool export_config_file(const char* filename, ConfigSectionMap& config);
 
-// Value returned for unknown enumeration values
-constexpr int64_t MXS_UNKNOWN_ENUM_VALUE {-1};
-
-/**
- * Convert enum name to integer value
- *
- * @param key    The enum name to convert
- * @param values The list of enum values
- *
- * @return The enum value or MXS_UNKNOWN_ENUM_VALUE on unknown value
- */
-int64_t config_enum_to_value(const std::string& key, const MXS_ENUM_VALUE* values);
-
 /**
  * Check and add contents of config file to config context object.
  *

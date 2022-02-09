@@ -2254,26 +2254,6 @@ const
     return duration;
 }
 
-int64_t mxs::ConfigParameters::get_enum(const std::string& key, const MXS_ENUM_VALUE* enum_mapping) const
-{
-    int64_t rv = 0;
-
-    for (const auto& tok : mxs::strtok(get_string(key), ", \t"))
-    {
-        auto value = config_enum_to_value(tok, enum_mapping);
-
-        if (value == MXS_UNKNOWN_ENUM_VALUE)
-        {
-            rv = MXS_UNKNOWN_ENUM_VALUE;
-            break;
-        }
-
-        rv |= value;
-    }
-
-    return rv;
-}
-
 SERVICE* mxs::ConfigParameters::get_service(const std::string& key) const
 {
     string param_value = get_string(key);
@@ -2446,28 +2426,6 @@ void mxs::ConfigParameters::set_multiple(const mxs::ConfigParameters& source)
     for (const auto& elem : source)
     {
         set(elem.first, elem.second);
-    }
-}
-
-void mxs::ConfigParameters::set_from_list(std::vector<std::pair<std::string, std::string>> list,
-                                          const MXS_MODULE_PARAM* module_params)
-{
-    // Add custom values.
-    for (const auto& a : list)
-    {
-        set(a.first, a.second);
-    }
-
-    if (module_params)
-    {
-        // Add default values for the rest of the parameters.
-        for (auto module_param = module_params; module_param->name; module_param++)
-        {
-            if (module_param->default_value && !contains(module_param->name))
-            {
-                set(module_param->name, module_param->default_value);
-            }
-        }
     }
 }
 
@@ -3416,19 +3374,6 @@ bool config_is_valid_name(const char* zName, std::string* pReason)
     }
 
     return is_valid;
-}
-
-int64_t config_enum_to_value(const std::string& value, const MXS_ENUM_VALUE* values)
-{
-    for (auto v = values; v->name; ++v)
-    {
-        if (value == v->name)
-        {
-            return v->enum_value;
-        }
-    }
-
-    return MXS_UNKNOWN_ENUM_VALUE;
 }
 
 bool config_set_rebalance_threshold(const char* value)

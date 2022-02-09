@@ -17,15 +17,6 @@
 
 #include <mysqld_error.h>
 
-const MXS_ENUM_VALUE rank_values[] =
-{
-    {"primary",   RANK_PRIMARY  },
-    {"secondary", RANK_SECONDARY},
-    {NULL}
-};
-
-const char* DEFAULT_RANK = "primary";
-
 namespace maxscale
 {
 

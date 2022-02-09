@@ -79,13 +79,6 @@ struct MXS_MODULE_VERSION
     bool operator==(const MXS_MODULE_VERSION& rhs) const;
 };
 
-/** String to enum value mappings */
-struct MXS_ENUM_VALUE
-{
-    const char* name;       /**< Name of the enum value */
-    uint64_t    enum_value; /**< The integer value of the enum */
-};
-
 namespace maxscale
 {
 constexpr uint32_t MODULE_INFO_VERSION = 10000 * MAXSCALE_VERSION_MAJOR + 100 * MAXSCALE_VERSION_MINOR

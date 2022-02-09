@@ -298,35 +298,6 @@ const char ERR_CANNOT_MODIFY[] =
 const char WRN_REQUEST_OVERWRITTEN[] =
     "Previous maintenance/draining request was not yet read by the monitor and was overwritten.";
 
-/* Is not really an event as the other values, but is a valid config setting and also the default.
- * Bitmask value matches all events. */
-const MXS_ENUM_VALUE monitor_event_default = {"all", ~0ULL};
-
-// Allowed values for the "events"-setting. Also defines the enum<->string conversion for events.
-const MXS_ENUM_VALUE monitor_event_values[] =
-{
-    monitor_event_default,
-    {"master_down",       MASTER_DOWN_EVENT },
-    {"master_up",         MASTER_UP_EVENT   },
-    {"slave_down",        SLAVE_DOWN_EVENT  },
-    {"slave_up",          SLAVE_UP_EVENT    },
-    {"server_down",       SERVER_DOWN_EVENT },
-    {"server_up",         SERVER_UP_EVENT   },
-    {"synced_down",       SYNCED_DOWN_EVENT },
-    {"synced_up",         SYNCED_UP_EVENT   },
-    {"donor_down",        DONOR_DOWN_EVENT  },
-    {"donor_up",          DONOR_UP_EVENT    },
-    {"lost_master",       LOST_MASTER_EVENT },
-    {"lost_slave",        LOST_SLAVE_EVENT  },
-    {"lost_synced",       LOST_SYNCED_EVENT },
-    {"lost_donor",        LOST_DONOR_EVENT  },
-    {"new_master",        NEW_MASTER_EVENT  },
-    {"new_slave",         NEW_SLAVE_EVENT   },
-    {"new_synced",        NEW_SYNCED_EVENT  },
-    {"new_donor",         NEW_DONOR_EVENT   },
-    {NULL}
-};
-
 const MonitorServer::EventList empty_event_list;
 }
 
@@ -842,16 +813,31 @@ mxs_monitor_event_t MonitorServer::get_event_type() const
 
 const char* Monitor::get_event_name(mxs_monitor_event_t event)
 {
-    for (int i = 0; monitor_event_values[i].name; i++)
+    static std::map<mxs_monitor_event_t, const char*> values =
     {
-        if (monitor_event_values[i].enum_value == event)
-        {
-            return monitor_event_values[i].name;
-        }
-    }
+        {MASTER_DOWN_EVENT, "master_down", },
+        {MASTER_UP_EVENT,   "master_up",   },
+        {SLAVE_DOWN_EVENT,  "slave_down",  },
+        {SLAVE_UP_EVENT,    "slave_up",    },
+        {SERVER_DOWN_EVENT, "server_down", },
+        {SERVER_UP_EVENT,   "server_up",   },
+        {SYNCED_DOWN_EVENT, "synced_down", },
+        {SYNCED_UP_EVENT,   "synced_up",   },
+        {DONOR_DOWN_EVENT,  "donor_down",  },
+        {DONOR_UP_EVENT,    "donor_up",    },
+        {LOST_MASTER_EVENT, "lost_master", },
+        {LOST_SLAVE_EVENT,  "lost_slave",  },
+        {LOST_SYNCED_EVENT, "lost_synced", },
+        {LOST_DONOR_EVENT,  "lost_donor",  },
+        {NEW_MASTER_EVENT,  "new_master",  },
+        {NEW_SLAVE_EVENT,   "new_slave",   },
+        {NEW_SYNCED_EVENT,  "new_synced",  },
+        {NEW_DONOR_EVENT,   "new_donor",   }
+    };
 
-    mxb_assert(!true);
-    return "undefined_event";
+    auto it = values.find(event);
+    mxb_assert(it != values.end());
+    return it == values.end() ? "undefined_event" : it->second;
 }
 
 const char* MonitorServer::get_event_name()

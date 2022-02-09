@@ -150,19 +150,6 @@ public:
     int64_t get_integer(const std::string& key) const;
 
     /**
-     * Get a enumeration value.
-     *
-     * @param key Parameter name
-     * @param enum_mapping Enum string->integer mapping
-     * @return The enumeration value converted to an int or -1 if the parameter was not found
-     *
-     * @note The enumeration values should not use -1 so that an undefined parameter is
-     * detected. If -1 is used, config_get_param() should be used to detect whether
-     * the parameter exists
-     */
-    int64_t get_enum(const std::string& key, const MXS_ENUM_VALUE* enum_mapping) const;
-
-    /**
      * @brief Get a boolean value
      *
      * The existence of the parameter should be checked with config_get_param() before
@@ -345,9 +332,6 @@ public:
      * @param source Parameters to copy
      */
     void set_multiple(const mxs::ConfigParameters& source);
-
-    void set_from_list(std::vector<std::pair<std::string, std::string>> list,
-                       const MXS_MODULE_PARAM* module_params = NULL);
 
     /**
      * Remove a key-value pair from the container.

@@ -73,31 +73,6 @@ int cache_process_init()
 // Global symbols of the Module
 //
 
-// Enumeration values for `cached_data`
-static const MXS_ENUM_VALUE parameter_cached_data_values[] =
-{
-    {"shared",          CACHE_THREAD_MODEL_MT},
-    {"thread_specific", CACHE_THREAD_MODEL_ST},
-    {NULL}
-};
-
-// Enumeration values for `selects`
-static const MXS_ENUM_VALUE parameter_selects_values[] =
-{
-    {"assume_cacheable", CACHE_SELECTS_ASSUME_CACHEABLE},
-    {"verify_cacheable", CACHE_SELECTS_VERIFY_CACHEABLE},
-    {NULL}
-};
-
-// Enumeration values for `cache_in_transaction`
-static const MXS_ENUM_VALUE parameter_cache_in_trxs_values[] =
-{
-    {"never",                  CACHE_IN_TRXS_NEVER    },
-    {"read_only_transactions", CACHE_IN_TRXS_READ_ONLY},
-    {"all_transactions",       CACHE_IN_TRXS_ALL      },
-    {NULL}
-};
-
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     static modulecmd_arg_type_t show_argv[] =

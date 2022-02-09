@@ -906,7 +906,6 @@ private:
 
 private:
     std::vector<std::pair<T, const char*>> m_enumeration;
-    std::vector<MXS_ENUM_VALUE>            m_enum_values;
 };
 
 /**
@@ -966,7 +965,6 @@ private:
 
 private:
     std::vector<std::pair<T, const char*>> m_enumeration;
-    std::vector<MXS_ENUM_VALUE>            m_enum_values;
 };
 
 /**
@@ -2772,19 +2770,6 @@ ParamEnum<T>::ParamEnum(Specification* pSpecification,
                                      modifiable, kind, default_value)
     , m_enumeration(enumeration)
 {
-    m_enum_values.reserve(m_enumeration.size() + 1);
-
-    for (const auto& entry : enumeration)
-    {
-        MXS_ENUM_VALUE x {};
-        x.name = entry.second;
-        x.enum_value = static_cast<uint64_t>(entry.first);
-
-        m_enum_values.emplace_back(x);
-    }
-
-    MXS_ENUM_VALUE end {NULL};
-    m_enum_values.emplace_back(end);
 }
 
 template<class T>
@@ -2908,19 +2893,6 @@ ParamEnumMask<T>::ParamEnumMask(Specification* pSpecification,
                                                 modifiable, kind, default_value)
     , m_enumeration(enumeration)
 {
-    m_enum_values.reserve(m_enumeration.size() + 1);
-
-    for (const auto& entry : enumeration)
-    {
-        MXS_ENUM_VALUE x {};
-        x.name = entry.second;
-        x.enum_value = entry.first;
-
-        m_enum_values.emplace_back(x);
-    }
-
-    MXS_ENUM_VALUE end {NULL};
-    m_enum_values.emplace_back(end);
 }
 
 template<class T>

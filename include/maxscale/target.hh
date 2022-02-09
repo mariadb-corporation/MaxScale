@@ -28,12 +28,6 @@ class MXS_SESSION;
 constexpr int RANK_PRIMARY = 1;
 constexpr int RANK_SECONDARY = 2;
 
-// The enum values for `rank`
-extern const MXS_ENUM_VALUE rank_values[];
-
-// Default value for `rank`
-extern const char* DEFAULT_RANK;
-
 /**
  * Status bits in the status() method, which describes the general state of a target. Although the
  * individual bits are independent, not all combinations make sense or are used. The bitfield is 64bits wide.
