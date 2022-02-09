@@ -65,8 +65,8 @@ static const char SQL_SELECT_WHERE_DB_HEAD[] =
 static const char SQL_SELECT_WHERE_HEAD[] =
     "SELECT * FROM accounts WHERE ";
 
-static const char SQL_SELECT_MARIADB_USER_HOST_WHERE_DB_HEAD[] =
-    "SELECT mariadb_user, host FROM accounts WHERE db = ";
+static const char SQL_SELECT_ACCOUNT_INFO_WHERE_DB_HEAD[] =
+    "SELECT mariadb_user, user, db, host FROM accounts WHERE db = ";
 
 static const char SQL_UPDATE_HEAD[] =
     "UPDATE accounts SET ";
@@ -138,13 +138,14 @@ int select_info_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
     return 0;
 }
 
-int select_mariadb_accounts_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
+int select_account_info_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
 {
-    mxb_assert(nColumns == 2);
+    mxb_assert(nColumns == 4);
 
-    auto* pMariaDb_accounts = static_cast<vector<nosql::UserManager::MariaDBAccount>*>(pData);
+    using Account = nosql::UserManager::Account;
+    auto* pAccounts = static_cast<vector<Account>*>(pData);
 
-    pMariaDb_accounts->emplace_back(nosql::UserManager::MariaDBAccount { pzColumn[0], pzColumn[1] });
+    pAccounts->emplace_back(Account { pzColumn[0], pzColumn[1], pzColumn[2], pzColumn[3] });
 
     return 0;
 }
@@ -876,17 +877,17 @@ vector<UserManager::UserInfo> UserManager::get_infos(const vector<string>& maria
     return infos;
 }
 
-vector<UserManager::MariaDBAccount> UserManager::get_mariadb_accounts(const string& db) const
+vector<UserManager::Account> UserManager::get_accounts(const string& db) const
 {
-    vector<MariaDBAccount> mariadb_accounts;
+    vector<Account> mariadb_accounts;
 
     ostringstream ss;
-    ss << SQL_SELECT_MARIADB_USER_HOST_WHERE_DB_HEAD << "'" << db << "'";
+    ss << SQL_SELECT_ACCOUNT_INFO_WHERE_DB_HEAD << "'" << db << "'";
 
     string sql = ss.str();
 
     char* pError = nullptr;
-    int rv = sqlite3_exec(&m_db, sql.c_str(), select_mariadb_accounts_cb, &mariadb_accounts, &pError);
+    int rv = sqlite3_exec(&m_db, sql.c_str(), select_account_info_cb, &mariadb_accounts, &pError);
 
     if (rv != SQLITE_OK)
     {
@@ -898,25 +899,25 @@ vector<UserManager::MariaDBAccount> UserManager::get_mariadb_accounts(const stri
     return mariadb_accounts;
 }
 
-bool UserManager::remove_mariadb_accounts(const std::vector<MariaDBAccount>& mariadb_accounts) const
+bool UserManager::remove_accounts(const std::vector<Account>& accounts) const
 {
     int rv = SQLITE_OK;
 
-    if (!mariadb_accounts.empty())
+    if (!accounts.empty())
     {
         ostringstream ss;
 
         ss << SQL_DELETE_WHERE_HEAD;
 
-        auto it = mariadb_accounts.begin();
-        for (; it != mariadb_accounts.end(); ++it)
+        auto it = accounts.begin();
+        for (; it != accounts.end(); ++it)
         {
-            if (it != mariadb_accounts.begin())
+            if (it != accounts.begin())
             {
                 ss << " OR ";
             }
 
-            ss << "mariadb_user = '" << it->user << "'";
+            ss << "mariadb_user = '" << it->mariadb_user << "'";
         }
 
         auto sql = ss.str();

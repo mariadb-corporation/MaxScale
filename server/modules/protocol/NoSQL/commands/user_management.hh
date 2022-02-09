@@ -408,7 +408,7 @@ private:
             m_action = Action::DROP;
 
             ostringstream sql;
-            sql << "DROP USER '" << m_db << "." << m_user << "'@'" << m_host << "'";
+            sql << "DROP USER " << mariadb::get_account(m_db, m_user, m_host);
 
             send_downstream_via_loop(sql.str());
         }
@@ -491,9 +491,9 @@ public:
 
         const auto& um = m_database.context().um();
 
-        m_mariadb_accounts = um.get_mariadb_accounts(m_database.name());
+        m_accounts = um.get_accounts(m_database.name());
 
-        if (m_mariadb_accounts.empty())
+        if (m_accounts.empty())
         {
             DocumentBuilder doc;
             long n = 0;
@@ -548,27 +548,37 @@ public:
                             vector<string> users;
                             for (int i = 0; i < n; ++i)
                             {
-                                string mariadb_user = "'" + m_mariadb_accounts[i].user + "'";
-                                users.push_back(mariadb_user);
+                                auto& a = m_accounts[i];
+
+                                string user = mariadb::get_account(a.db, a.user, a.host);
+                                users.push_back(user);
                             }
 
-                            MXS_WARNING("Dropping users %s succeeded, but dropping '%s' failed: %s",
-                                        mxb::join(users, ",").c_str(),
-                                        m_mariadb_accounts[n].user.c_str(),
-                                        err.message().c_str());
+                            auto& a = m_accounts[n];
+                            string user = mariadb::get_account(a.db, a.user, a.host);
+
+                            MXS_WARNING("Dropping users %s succeeded, but dropping %s failed: %s",
+                                        mxb::join(users, ",").c_str(), user.c_str(), err.message().c_str());
                         }
                         break;
 
                     case ER_CANNOT_USER:
-                        MXS_WARNING("User '%s' apparently did not exist in the MariaDB server, even "
-                                    "though it should according to the nosqlprotocol book-keeping.",
-                                    m_mariadb_accounts[n].user.c_str());
+                        {
+                            auto& a = m_accounts[n];
+                            string user = mariadb::get_account(a.db, a.user, a.host);
+                            MXS_WARNING("User %s apparently did not exist in the MariaDB server, even "
+                                        "though it should according to the nosqlprotocol book-keeping.",
+                                        user.c_str());
+                        }
                         break;
 
                     default:
-                        MXS_ERROR("Dropping user '%s' failed: %s",
-                                  m_mariadb_accounts[n].user.c_str(),
-                                  err.message().c_str());
+                        {
+                            auto& a = m_accounts[n];
+                            string user = mariadb::get_account(a.db, a.user, a.host);
+
+                            MXS_ERROR("Dropping user '%s' failed: %s", user.c_str(), err.message().c_str());
+                        }
                     };
                 };
             }
@@ -576,12 +586,12 @@ public:
 
         mxb_assert(pData == pEnd);
 
-        vector<UserManager::MariaDBAccount> accounts = m_mariadb_accounts;
+        vector<UserManager::Account> accounts = m_accounts;
         accounts.resize(n);
 
         const auto& um = m_database.context().um();
 
-        if (!um.remove_mariadb_accounts(accounts))
+        if (!um.remove_accounts(accounts))
         {
             ostringstream ss;
             ss << "Could remove " << n << " users from MariaDB, but could not remove "
@@ -602,19 +612,19 @@ public:
 protected:
     string generate_sql() override final
     {
-        mxb_assert(!m_mariadb_accounts.empty());
+        mxb_assert(!m_accounts.empty());
 
         vector<string> statements;
-        for (const auto& mariadb_account : m_mariadb_accounts)
+        for (const auto& a : m_accounts)
         {
-            statements.push_back("DROP USER '" + mariadb_account.user + "'@'" + mariadb_account.host + "'");
+            statements.push_back("DROP USER " + mariadb::get_account(a.db, a.user, a.host));
         }
 
         return mxb::join(statements, ";");
     };
 
 private:
-    vector<UserManager::MariaDBAccount> m_mariadb_accounts;
+    vector<UserManager::Account> m_accounts;
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/dropUser/
@@ -703,8 +713,8 @@ protected:
 
         auto& um = m_database.context().um();
 
-        UserManager::MariaDBAccount mariadb_account;
-        if (!um.get_mariadb_account(m_db, m_user, &mariadb_account))
+        UserManager::Account account;
+        if (!um.get_account(m_db, m_user, &account))
         {
             ostringstream ss;
             ss << "User \"" << get_nosql_account(m_db, m_user) << "\" not found";
@@ -712,7 +722,7 @@ protected:
             throw SoftError(ss.str(), error::USER_NOT_FOUND);
         }
 
-        m_host = mariadb_account.host;
+        m_host = account.host;
     }
 
     string generate_sql() override

@@ -174,29 +174,33 @@ public:
 
     std::vector<UserInfo> get_infos(const std::vector<std::string>& mariadb_users) const;
 
-    struct MariaDBAccount
+    struct Account
     {
-        std::string user; // NoSQL db and user, i.e. "db.user"
+        std::string mariadb_user;
+        std::string user;
+        std::string db;
         std::string host;
     };
 
-    bool get_mariadb_account(const std::string& db, const std::string& user, MariaDBAccount* pMariadb_account)
+    bool get_account(const std::string& db, const std::string& user, Account* pAccount)
     {
         UserInfo info;
         bool rv = get_info(db, user, &info);
 
         if (rv)
         {
-            pMariadb_account->user = info.mariadb_user;
-            pMariadb_account->host = info.host;
+            pAccount->mariadb_user = info.mariadb_user;
+            pAccount->user = info.user;
+            pAccount->db = info.db;
+            pAccount->host = info.host;
         }
 
         return rv;
     }
 
-    std::vector<MariaDBAccount> get_mariadb_accounts(const std::string& db) const;
+    std::vector<Account> get_accounts(const std::string& db) const;
 
-    bool remove_mariadb_accounts(const std::vector<MariaDBAccount>& mariadb_accounts) const;
+    bool remove_accounts(const std::vector<Account>& accounts) const;
 
     struct Update
     {
