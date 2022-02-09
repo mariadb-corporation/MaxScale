@@ -391,6 +391,9 @@ rebalance_period=10s
 Note that the value of `rebalance_period` should not be smaller than the
 value of `rebalance_window` whose default value is 10.
 
+**NOTE** The rebalancing functionality is currently disabled and an attempt
+to enable it will be ignored.
+
 If the value of `rebalance_period` is significantly shorter than that
 of `rebalance_window`, it may lead to oscillation where work is constantly
 moved from one thread to another.
