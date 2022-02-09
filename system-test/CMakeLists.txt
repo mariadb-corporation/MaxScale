@@ -803,8 +803,9 @@ add_test_executable(test_mirror.cpp test_mirror test_mirror LABELS mirror LIGHT 
 # Test connection_keepalive
 add_test_executable(connection_keepalive.cpp connection_keepalive connection_keepalive LABELS readwritesplit REPL_BACKEND)
 
-# MXS-2729 Thread rebalancing
-add_test_executable(mxs2729_rebalance.cc mxs2729_rebalance replication LABELS REPL_BACKEND)
+# MXS-3989 Disable rebalancing test until issues have been fixed.
+## MXS-2729 Thread rebalancing
+#add_test_executable(mxs2729_rebalance.cc mxs2729_rebalance replication LABELS REPL_BACKEND)
 
 # MXS-2750: Test COM_STMT_EXECUTE metadata addition
 # MXS-3565: Target selection for COM_STMT_EXECUTION without metadata isn't done correctly
