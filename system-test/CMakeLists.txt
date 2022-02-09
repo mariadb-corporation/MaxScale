@@ -295,7 +295,9 @@ add_test_executable(load_balancing.cpp load_balancing load LABELS readwritesplit
 add_test_derived(load_balancing_pers10 load_balancing load_pers10 LABELS readwritesplit HEAVY REPL_BACKEND)
 
 # Test with extremely big blob inserting
-add_test_executable(longblob.cpp longblob longblob LABELS readwritesplit readconnroute HEAVY REPL_BACKEND)
+add_test_executable(longblob.cpp longblob longblob LABELS readwritesplit readconnroute REPL_BACKEND)
+add_test_derived(longblob_ssl longblob longblob LABELS readwritesplit readconnroute BACKEND_SSL LISTENER_SSL
+        REPL_BACKEND)
 
 # Retry reads with persistent connections
 add_test_executable(mxs1323_retry_read.cpp mxs1323_retry_read mxs1323 LABELS readwritesplit LIGHT REPL_BACKEND)
@@ -622,10 +624,8 @@ add_test_executable(session_limits.cpp session_limits session_limits LABELS read
 
 # Do short sessions (open conn, short query, close conn) in the loop
 add_test_executable(short_sessions.cpp short_sessions replication LABELS readwritesplit readconnroute REPL_BACKEND)
-
-# Do short sessions (open conn, short query, close conn) in the loop, client ssl is ON
-add_test_derived(short_sessions_ssl short_sessions ssl LABELS readwritesplit readconnroute BACKEND_SSL LISTENER_SSL
-        REPL_BACKEND)
+add_test_derived(short_sessions_ssl short_sessions replication LABELS readwritesplit readconnroute
+        BACKEND_SSL LISTENER_SSL REPL_BACKEND)
 
 # Regression case for crash if 'show monitors' command is issued, but no monitor is not running
 add_test_executable(show_monitor_crash.cpp show_monitor_crash show_monitor_crash LABELS maxscale REPL_BACKEND)
@@ -997,7 +997,10 @@ add_test_executable(mxs1751_available_when_donor_crash.cpp mxs1751_available_whe
 add_test_executable(pers_01.cpp pers_01 pers_01 LABELS maxscale REPL_BACKEND readwritesplit)
 
 # Test with extremely big blob inserting/selecting with > 16 mb data blocks
-add_test_executable(mxs1110_16mb.cpp mxs1110_16mb longblob_filters LABELS readwritesplit readconnroute HEAVY REPL_BACKEND GALERA_BACKEND)
+add_test_executable(mxs1110_16mb.cpp mxs1110_16mb longblob_filters LABELS readwritesplit readconnroute
+        REPL_BACKEND GALERA_BACKEND)
+add_test_derived(mxs1110_16mb_ssl mxs1110_16mb longblob_filters LABELS readwritesplit readconnroute
+        REPL_BACKEND GALERA_BACKEND LISTENER_SSL BACKEND_SSL)
 
 # A set of MariaDB server tests executed against Maxscale RWSplit (Galera backend)
 add_test_script(mariadb_tests_hartmut_galera.sh mariadb_tests_hartmut.sh galera_hartmut LABELS readwritesplit GALERA_BACKEND)
