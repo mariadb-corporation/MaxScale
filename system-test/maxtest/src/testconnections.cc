@@ -767,34 +767,53 @@ port=4006)";
     {
         auto& config = parse_res.config;
 
+        auto enable_ssl = [this, &config](const string& mod_type, const string& ssl_cert,
+                                          const string& ssl_key, const string& ssl_ca_cert) {
+                // Check every section with the correct "type".
+                std::vector<string> affected_sections;
+                for (auto& section : config)
+                {
+                    auto& kvs = section.second.key_values;
+                    auto it = kvs.find("type");
+                    if (it != kvs.end() && it->second.value == mod_type)
+                    {
+                        // Only edit the section if "ssl" is not set.
+                        if (kvs.count("ssl") == 0)
+                        {
+                            kvs.emplace("ssl", "true");
+                            kvs.emplace("ssl_cert", ssl_cert);
+                            kvs.emplace("ssl_key", ssl_key);
+                            kvs.emplace("ssl_ca_cert", ssl_ca_cert);
+                            kvs.emplace("ssl_cert_verify_depth", "9");
+                            kvs.emplace("ssl_version", "MAX");
+                            affected_sections.push_back(section.first);
+                        }
+                    }
+                }
+                auto list_str = mxb::create_list_string(affected_sections, ", ", " and ");
+                if (!list_str.empty())
+                {
+                    tprintf("Configured ssl for %s.", list_str.c_str());
+                }
+            };
+
         if (backend_ssl)
         {
-            tprintf("Adding ssl settings.");
             string ssl_cert = mxb::string_printf("%s/certs/client-cert.pem", mxs.access_homedir());
             string ssl_key = mxb::string_printf("%s/certs/client-key.pem", mxs.access_homedir());
             string ssl_ca_cert = mxb::string_printf("%s/certs/ca.pem", mxs.access_homedir());
-            // Check every section with a "type=server".
-            for (auto& section : config)
-            {
-                auto& kvs = section.second.key_values;
-                auto it = kvs.find("type");
-                if (it != kvs.end() && it->second.value == "server")
-                {
-                    // Only edit the section if "ssl" is not set.
-                    if (kvs.count("ssl") == 0)
-                    {
-                        kvs.emplace("ssl", "true");
-                        kvs.emplace("ssl_cert", ssl_cert);
-                        kvs.emplace("ssl_key", ssl_key);
-                        kvs.emplace("ssl_ca_cert", ssl_ca_cert);
-                        kvs.emplace("ssl_cert_verify_depth", "9");
-                        kvs.emplace("ssl_version", "MAX");
-                    }
-                }
-            }
+            enable_ssl("server", ssl_cert, ssl_key, ssl_ca_cert);
         }
 
-        // TODO: Add more "smartness". Listener ssl, check which routers are enabled, etc ...
+        if (maxscale_ssl)
+        {
+            string ssl_cert = mxb::string_printf("%s/certs/server-cert.pem", mxs.access_homedir());
+            string ssl_key = mxb::string_printf("%s/certs/server-key.pem", mxs.access_homedir());
+            string ssl_ca_cert = mxb::string_printf("%s/certs/ca.pem", mxs.access_homedir());
+            enable_ssl("listener", ssl_cert, ssl_key, ssl_ca_cert);
+        }
+
+        // TODO: Add more "smartness". Check which routers are enabled, etc ...
         const string target_file = "maxscale.cnf";
         std::ofstream output_file(target_file);
         if (output_file.is_open())
