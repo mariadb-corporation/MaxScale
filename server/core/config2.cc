@@ -15,6 +15,7 @@
 
 #include <sys/stat.h>
 
+#include <maxbase/format.hh>
 #include <maxscale/monitor.hh>
 #include <maxscale/secrets.hh>
 #include <maxscale/paths.hh>
@@ -1269,43 +1270,39 @@ bool ParamPath::is_valid(const value_type& value) const
 {
     bool valid = false;
 
-    if (m_options & (MXS_MODULE_OPT_PATH_W_OK
-                     | MXS_MODULE_OPT_PATH_R_OK
-                     | MXS_MODULE_OPT_PATH_X_OK
-                     | MXS_MODULE_OPT_PATH_F_OK))
+    if (m_options & (W | R | X | F))
     {
-        char buf[strlen(mxs::module_configdir()) + value.length() + 3];
+        std::string buf;
 
         if (value.front() != '/')
         {
-            sprintf(buf, "/%s/%s", mxs::module_configdir(), value.c_str());
-            strcpy(buf, clean_up_pathname(buf).c_str());
+            buf = clean_up_pathname(mxb::string_printf("/%s/%s", mxs::module_configdir(), value.c_str()));
         }
         else
         {
-            strcpy(buf, value.c_str());
+            buf = value;
         }
 
         int mode = F_OK;
         int mask = 0;
 
-        if (m_options & MXS_MODULE_OPT_PATH_W_OK)
+        if (m_options & W)
         {
             mask |= S_IWUSR | S_IWGRP;
             mode |= W_OK;
         }
-        if (m_options & MXS_MODULE_OPT_PATH_R_OK)
+        if (m_options & R)
         {
             mask |= S_IRUSR | S_IRGRP;
             mode |= R_OK;
         }
-        if (m_options & MXS_MODULE_OPT_PATH_X_OK)
+        if (m_options & X)
         {
             mask |= S_IXUSR | S_IXGRP;
             mode |= X_OK;
         }
 
-        if (access(buf, mode) == 0)
+        if (access(buf.c_str(), mode) == 0)
         {
             valid = true;
         }
@@ -1314,7 +1311,7 @@ bool ParamPath::is_valid(const value_type& value) const
             /** Save errno as we do a second call to `accept` */
             int er = errno;
 
-            if (access(buf, F_OK) == 0 || (m_options & MXS_MODULE_OPT_PATH_CREAT) == 0)
+            if (access(buf.c_str(), F_OK) == 0 || (m_options & C) == 0)
             {
                 /**
                  * Path already exists and it doesn't have the requested access
@@ -1322,9 +1319,9 @@ bool ParamPath::is_valid(const value_type& value) const
                  * if it doesn't exist.
                  */
                 MXS_ERROR("Bad path parameter '%s' (absolute path '%s'): %d, %s",
-                          value.c_str(), buf, er, mxs_strerror(er));
+                          value.c_str(), buf.c_str(), er, mxs_strerror(er));
             }
-            else if (mxs_mkdir_all(buf, mask))
+            else if (mxs_mkdir_all(buf.c_str(), mask))
             {
                 /** Successfully created path */
                 valid = true;
@@ -1333,7 +1330,7 @@ bool ParamPath::is_valid(const value_type& value) const
             {
                 /** Failed to create the directory, errno is set in `mxs_mkdir_all` */
                 MXS_ERROR("Can't create path '%s' (absolute path '%s'): %d, %s",
-                          value.c_str(), buf, errno, mxs_strerror(errno));
+                          value.c_str(), buf.c_str(), errno, mxs_strerror(errno));
             }
         }
     }

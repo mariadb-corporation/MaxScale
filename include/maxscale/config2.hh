@@ -1065,11 +1065,11 @@ class ParamPath : public ConcreteParam<ParamPath, std::string>
 public:
     enum Options
     {
-        X = MXS_MODULE_OPT_PATH_X_OK,   // Execute permission required.
-        R = MXS_MODULE_OPT_PATH_R_OK,   // Read permission required.
-        W = MXS_MODULE_OPT_PATH_W_OK,   // Write permission required.
-        F = MXS_MODULE_OPT_PATH_F_OK,   // File existence required.
-        C = MXS_MODULE_OPT_PATH_CREAT   // Create path if does not exist.
+        X,  // Execute permission required.
+        R,  // Read permission required.
+        W,  // Write permission required.
+        F,  // File existence required.
+        C   // Create path if does not exist.
     };
 
     const uint32_t MASK = X | R | W | F | C;
