@@ -12,7 +12,7 @@
                 :style="{ width: `${ctrDim.width}px`, height: `${ctrDim.height}px` }"
                 :data="graphData"
                 :dim="ctrDim"
-                :nodeSize="[125, 320]"
+                :nodeSize="nodeSize"
                 draggable
                 :noDragNodes="noDragNodes"
                 @on-node-dragStart="onNodeSwapStart"
@@ -20,7 +20,11 @@
                 @on-node-dragend="onNodeSwapEnd"
             >
                 <template v-slot:rect-node-content="{ data: { node } }">
-                    <cluster-node :node="node" :droppableTargets="droppableTargets" />
+                    <cluster-node
+                        :node="node"
+                        :droppableTargets="droppableTargets"
+                        @get-expanded-node="handleExpandedNode"
+                    />
                 </template>
             </tree-graph>
         </v-card>
@@ -76,6 +80,7 @@ export default {
             confDlgTitle: '',
             confDlgBody: '',
             confDlgType: '',
+            expandedNodes: [],
         }
     },
     computed: {
@@ -98,6 +103,14 @@ export default {
             // disable draggable on master node
             return [this.graphData.id] // root node of graphData is always a master server node
         },
+        hasExpandedNode() {
+            return Boolean(this.expandedNodes.length)
+        },
+        nodeSize() {
+            // TODO: replace hard-coded height with value from get-expanded-node evt
+            if (this.hasExpandedNode) return [150, 320]
+            return [125, 320]
+        },
     },
     async created() {
         this.$nextTick(() => this.setCtrDim())
@@ -114,6 +127,11 @@ export default {
         setCtrDim() {
             const { clientHeight, clientWidth } = this.$refs.graphContainer.$el
             this.ctrDim = { width: clientWidth, height: clientHeight - 2 }
+        },
+        handleExpandedNode(id) {
+            if (this.expandedNodes.includes(id))
+                this.expandedNodes.splice(this.expandedNodes.indexOf(id), 1)
+            else this.expandedNodes.push(id)
         },
         /**
          * This helps to store the current innerHTML of the dragging node to initialNodeInnerHTML

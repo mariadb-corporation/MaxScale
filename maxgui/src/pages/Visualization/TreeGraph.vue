@@ -118,6 +118,9 @@ export default {
                 this.update(this.root)
             },
         },
+        nodeSize() {
+            this.update(this.root)
+        },
     },
     mounted() {
         this.initSvg()

@@ -224,6 +224,8 @@
     "promote": "Promote",
     "readonly": "Read-only",
     "writable": "Writable",
+    "serverState": "Server State",
+    "lag": "Lag",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
