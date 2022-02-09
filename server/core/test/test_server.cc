@@ -83,7 +83,7 @@ bool test_load_config(const char* input, Server* server)
 
         TEST(obj.m_name == server->name(), "Server names differ");
         TEST(params2.get_string("address") == server->address(), "Server addresses differ");
-        TEST(params2.get_integer("port") == server->port(), "Server ports differ");
+        TEST(params2.get_string("port") == std::to_string(server->port()), "Server ports differ");
         TEST(ServerManager::create_server(obj.name(), obj.m_parameters),
              "Failed to create server from loaded config");
     }

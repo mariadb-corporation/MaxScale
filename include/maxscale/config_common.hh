@@ -141,15 +141,6 @@ public:
     std::string get_string(const std::string& key) const;
 
     /**
-     * Get an integer value. Should be used for both MXS_MODULE_PARAM_INT and MXS_MODULE_PARAM_COUNT
-     * parameter types.
-     *
-     * @param key Parameter name
-     * @return Parameter parsed to integer. 0 if key was not found.
-     */
-    int64_t get_integer(const std::string& key) const;
-
-    /**
      * @brief Get a boolean value
      *
      * The existence of the parameter should be checked with config_get_param() before
@@ -162,159 +153,12 @@ public:
     bool get_bool(const std::string& key) const;
 
     /**
-     * @brief Get a size in bytes
-     *
-     * The value can have either one of the IEC binary prefixes or SI prefixes as
-     * a suffix. For example, the value 1Ki will be converted to 1024 bytes whereas
-     * 1k will be converted to 1000 bytes. Supported SI suffix values are k, m, g and t
-     * in both lower and upper case. Supported IEC binary suffix values are
-     * Ki, Mi, Gi and Ti both in upper and lower case.
-     *
-     * @param key Parameter name
-     * @return Number of bytes or 0 if no parameter was found
-     */
-    uint64_t get_size(const std::string& key) const;
-
-    /**
-     * @brief Get a duration.
-     *
-     * Should be used for MXS_MODULE_PARAM_DURATION parameter types.
-     *
-     * @param key             Parameter name.
-     * @param interpretation  How a value NOT having a unit suffix should be interpreted.
-     *
-     * @return Duration in milliseconds; 0 if the parameter is not found.
-     */
-    std::chrono::milliseconds get_duration_in_ms(const std::string& key,
-                                                 mxs::config::DurationInterpretation interpretation) const;
-
-    /**
-     * @brief Get a duration in a specific unit.
-     *
-     * @param key  Parameter name
-     *
-     * @return The duration in the desired unit.
-     *
-     * @note The type the function is specialized with dictates how values without a
-     *       suffix should be interpreted; if @c std::chrono::seconds, they will be
-     *       interpreted as seconds, if @c std::chrono::milliseconds, they will be
-     *       interpreted as milliseconds.
-     *
-     * @note There is no default implementation, but only specializations for
-     *       @c std::chrono::seconds and @c std::chrono::milliseconds.
-     */
-    template<class T>
-    T get_duration(const std::string& key) const = delete;
-
-    /**
-     * @brief Get a target value
-     *
-     * @param key Parameter name
-     *
-     * @return Pointer to target
-     */
-    mxs::Target* get_target(const std::string& key) const;
-
-
-    /**
-     * Get a list of targets
-     *
-     * @param key Parameter name
-     *
-     * @return List of found servers
-     */
-    std::vector<mxs::Target*> get_target_list(const std::string& key) const;
-
-    /**
-     * @brief Get a service value
-     *
-     * @param key Parameter name
-     * @return Pointer to configured service
-     */
-    SERVICE* get_service(const std::string& key) const;
-
-    /**
-     * @brief Get a server value
-     *
-     * @param key Parameter name
-     * @return Pointer to configured server
-     */
-    SERVER* get_server(const std::string& key) const;
-
-    /**
-     * Get an array of servers. The value is expected to be a comma-separated list of server names.
-     *
-     * @param key Parameter name
-     * @param name_error_out If a server name was not found, it is written here. Only the first such name
-     * is written.
-     * @return Found servers. If even one server name was invalid, the array will be empty.
-     */
-    std::vector<SERVER*> get_server_list(const std::string& key, std::string* name_error_out = nullptr) const;
-
-    /**
-     * Get a compiled regular expression and the ovector size of the pattern. The
-     * return value should be freed by the caller.
-     *
-     * @param key Parameter name
-     * @param options PCRE2 compilation options
-     * @param output_ovec_size Output for match data ovector size. On error,
-     * nothing is written. If NULL, the parameter is ignored.
-     * @return Compiled regex code on success. NULL if key was not found or compilation failed.
-     */
-    std::unique_ptr<pcre2_code>
-    get_compiled_regex(const std::string& key, uint32_t options, uint32_t* output_ovec_size) const;
-
-    /**
-     * Get multiple compiled regular expressions and the maximum ovector size of
-     * the patterns. The returned regex codes should be freed by the caller.
-     *
-     * @param keys An array of parameter keys.
-     * @param options PCRE2 compilation options
-     * @param ovec_size_out If not null, the maximum ovector size of successfully
-     * compiled patterns is written here.
-     * @param compile_error_out If not null, is set to true if a pattern compilation failed.
-     * @return Array of compiled patterns, one element for each key. If a key is not found or the pattern
-     * cannot be compiled, the corresponding element will be null.
-     */
-    std::vector<std::unique_ptr<pcre2_code>>
-    get_compiled_regexes(const std::vector<std::string>& keys, uint32_t options,
-                         uint32_t* ovec_size_out, bool* compile_error_out);
-
-    /**
      * Check if a key exists.
      *
      * @param key Parameter name
      * @return True if key was found
      */
     bool contains(const std::string& key) const;
-
-    /**
-     * Check if any of the given keys are defined
-     *
-     * @param keys The keys to check
-     *
-     * @return True if at least one of the keys is defined
-     */
-    bool contains_any(const std::initializer_list<std::string>& keys) const
-    {
-        return std::any_of(keys.begin(), keys.end(), [this](const std::string& a) {
-                               return contains(a);
-                           });
-    }
-
-    /**
-     * Check if all of the given keys are defined
-     *
-     * @param keys The keys to check
-     *
-     * @return True if all of the keys are defined
-     */
-    bool contains_all(const std::initializer_list<std::string>& keys) const
-    {
-        return std::all_of(keys.begin(), keys.end(), [this](const std::string& a) {
-                               return contains(a);
-                           });
-    }
 
     /**
      * Set a key-value combination. If the key doesn't exist, it is added. The function is static
@@ -325,13 +169,6 @@ public:
      * @param value Value to set
      */
     void set(const std::string& key, const std::string& value);
-
-    /**
-     * Copy all key-value pairs from a set to this container. If a key doesn't exist, it is added.
-     *
-     * @param source Parameters to copy
-     */
-    void set_multiple(const mxs::ConfigParameters& source);
 
     /**
      * Remove a key-value pair from the container.
@@ -349,21 +186,6 @@ public:
 private:
     ContainerType m_contents;
 };
-
-template<>
-inline std::chrono::milliseconds
-mxs::ConfigParameters::get_duration<std::chrono::milliseconds>(const std::string& key) const
-{
-    return get_duration_in_ms(key, mxs::config::INTERPRET_AS_MILLISECONDS);
-}
-
-template<>
-inline std::chrono::seconds
-mxs::ConfigParameters::get_duration<std::chrono::seconds>(const std::string& key) const
-{
-    std::chrono::milliseconds ms = get_duration_in_ms(key, mxs::config::INTERPRET_AS_SECONDS);
-    return std::chrono::duration_cast<std::chrono::seconds>(ms);
-}
 }
 
 /**

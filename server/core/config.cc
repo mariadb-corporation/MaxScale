@@ -2233,143 +2233,12 @@ bool mxs::ConfigParameters::get_bool(const std::string& key) const
     return param_value.empty() ? false : config_truth_value(param_value.c_str());
 }
 
-uint64_t mxs::ConfigParameters::get_size(const std::string& key) const
-{
-    string param_value = get_string(key);
-    uint64_t intval = 0;
-    MXB_AT_DEBUG(bool rval = ) get_suffixed_size(param_value.c_str(), &intval);
-    mxb_assert(rval);
-    return intval;
-}
-
-milliseconds mxs::ConfigParameters::get_duration_in_ms(const std::string& key,
-                                                       mxs::config::DurationInterpretation interpretation)
-const
-{
-    string value = get_string(key);
-    milliseconds duration {0};
-    MXB_AT_DEBUG(bool rval = ) get_suffixed_duration(value.c_str(), interpretation, &duration);
-    // When this function is called, the validity of the value should have been checked.
-    mxb_assert_message(rval, "Invalid value for '%s': %s", key.c_str(), value.c_str());
-    return duration;
-}
-
-SERVICE* mxs::ConfigParameters::get_service(const std::string& key) const
-{
-    string param_value = get_string(key);
-    return service_find(param_value.c_str());
-}
-
-SERVER* mxs::ConfigParameters::get_server(const std::string& key) const
-{
-    string param_value = get_string(key);
-    return ServerManager::find_by_unique_name(param_value.c_str());
-}
-
 bool mxs::ConfigParameters::contains(const string& key) const
 {
     // Because of how the parameters are used, this method can be called through a null pointer.
     // Handle this here for now. TODO: Refactor away.
     auto can_be_null = this;
     return can_be_null ? m_contents.count(key) > 0 : false;
-}
-
-std::vector<SERVER*> mxs::ConfigParameters::get_server_list(const string& key, string* name_error_out) const
-{
-    auto names_list = get_string(key);
-    auto server_names = config_break_list_string(names_list);
-    std::vector<SERVER*> server_arr = SERVER::server_find_by_unique_names(server_names);
-    for (size_t i = 0; i < server_arr.size(); i++)
-    {
-        if (server_arr[i] == nullptr)
-        {
-            if (name_error_out)
-            {
-                *name_error_out = server_names[i];
-            }
-            // If even one server name was not found, the parameter is in error.
-            server_arr.clear();
-            break;
-        }
-    }
-    return server_arr;
-}
-
-mxs::Target* mxs::ConfigParameters::get_target(const string& key) const
-{
-    return mxs::Target::find(get_string(key));
-}
-
-std::vector<mxs::Target*> mxs::ConfigParameters::get_target_list(const string& key) const
-{
-    std::vector<mxs::Target*> targets;
-
-    for (auto t : mxb::strtok(get_string(key), ", "))
-    {
-        targets.push_back(mxs::Target::find(t));
-        mxb_assert(targets.back());
-    }
-
-    return targets;
-}
-
-std::unique_ptr<pcre2_code> mxs::ConfigParameters::get_compiled_regex(const string& key, uint32_t options,
-                                                                      uint32_t* output_ovec_size) const
-{
-    auto regex_string = get_string(key);
-    std::unique_ptr<pcre2_code> code;
-
-    if (!regex_string.empty())
-    {
-        uint32_t jit_available = 0;
-        pcre2_config(PCRE2_CONFIG_JIT, &jit_available);
-        code.reset(compile_regex_string(regex_string.c_str(), jit_available, options, output_ovec_size));
-    }
-
-    return code;
-}
-
-std::vector<std::unique_ptr<pcre2_code>> mxs::ConfigParameters::get_compiled_regexes(
-    const std::vector<string>& keys,
-    uint32_t options,
-    uint32_t* ovec_size_out,
-    bool* compile_error_out)
-{
-    std::vector<std::unique_ptr<pcre2_code>> rval;
-    bool compile_error = false;
-    uint32_t max_ovec_size = 0;
-    uint32_t ovec_size_temp = 0;
-    for (auto& key : keys)
-    {
-        std::unique_ptr<pcre2_code> code;
-        /* get_compiled_regex() returns null if the config setting didn't exist. */
-        if (contains(key))
-        {
-            code = get_compiled_regex(key, options, &ovec_size_temp);
-            if (code)
-            {
-                if (ovec_size_temp > max_ovec_size)
-                {
-                    max_ovec_size = ovec_size_temp;
-                }
-            }
-            else
-            {
-                compile_error = true;
-            }
-        }
-        rval.push_back(std::move(code));
-    }
-
-    if (ovec_size_out)
-    {
-        *ovec_size_out = max_ovec_size;
-    }
-    if (compile_error_out)
-    {
-        *compile_error_out = compile_error;
-    }
-    return rval;
 }
 
 // static
@@ -2410,23 +2279,9 @@ string mxs::ConfigParameters::get_string(const std::string& key) const
     return rval;
 }
 
-int64_t mxs::ConfigParameters::get_integer(const std::string& key) const
-{
-    string value = get_string(key);
-    return value.empty() ? 0 : strtoll(value.c_str(), NULL, 10);
-}
-
 void mxs::ConfigParameters::set(const std::string& key, const std::string& value)
 {
     m_contents[key] = value;
-}
-
-void mxs::ConfigParameters::set_multiple(const mxs::ConfigParameters& source)
-{
-    for (const auto& elem : source)
-    {
-        set(elem.first, elem.second);
-    }
 }
 
 void mxs::ConfigParameters::remove(const string& key)
