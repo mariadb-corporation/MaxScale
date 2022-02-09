@@ -174,19 +174,27 @@ void MainWorker::update_rebalancing()
 
     std::chrono::milliseconds period = config.rebalance_period.get();
 
-    if (m_rebalancing_dc == 0 && period != std::chrono::milliseconds(0))
+    if (period != std::chrono::milliseconds(0))
     {
-        // If the rebalancing delayed call is not currently active and the
-        // period is now != 0, then we order a delayed call.
-        order_balancing_dc();
+        MXS_WARNING("An attempt to enable rebalancing was made, but the functionality "
+                    "is disabled in this release.");
     }
-    else if (m_rebalancing_dc != 0 && period == std::chrono::milliseconds(0))
+    else
     {
-        // If the rebalancing delayed call is currently active and the
-        // period is now 0, then we cancel the call, effectively shutting
-        // down the rebalancing.
-        cancel_delayed_call(m_rebalancing_dc);
-        m_rebalancing_dc = 0;
+        if (m_rebalancing_dc == 0 && period != std::chrono::milliseconds(0))
+        {
+            // If the rebalancing delayed call is not currently active and the
+            // period is now != 0, then we order a delayed call.
+            order_balancing_dc();
+        }
+        else if (m_rebalancing_dc != 0 && period == std::chrono::milliseconds(0))
+        {
+            // If the rebalancing delayed call is currently active and the
+            // period is now 0, then we cancel the call, effectively shutting
+            // down the rebalancing.
+            cancel_delayed_call(m_rebalancing_dc);
+            m_rebalancing_dc = 0;
+        }
     }
 }
 
