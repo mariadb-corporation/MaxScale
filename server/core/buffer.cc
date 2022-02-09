@@ -278,6 +278,31 @@ GWBUF* gwbuf_deep_clone(const GWBUF* buf)
     return rval;
 }
 
+GWBUF GWBUF::split(uint64_t n_bytes)
+{
+    auto len = length();
+    GWBUF rval;
+    // Splitting more than is available is an error.
+    mxb_assert(n_bytes <= len);
+
+    if (n_bytes == 0)
+    {
+        // Do nothing, return empty buffer.
+    }
+    else if (n_bytes == len)
+    {
+        rval.move_helper(move(*this));
+    }
+    else
+    {
+        // Shallow clone buffer, then consume and trim accordingly.
+        rval = clone_shallow();
+        consume(n_bytes);
+        rval.rtrim(len - n_bytes);
+    }
+    return rval;
+}
+
 GWBUF* gwbuf_split(GWBUF** buf, size_t length)
 {
     validate_buffer(*buf);
@@ -552,32 +577,17 @@ void GWBUF::append(GWBUF* buffer)
 
 uint8_t* GWBUF::consume(uint64_t bytes)
 {
-    // TODO: attempting to consume more than 'length' should be an error.
-    // Avoid reallocations and copies here, as the GWBUF is typically freed after consume anyways.
-    if (bytes > length())
-    {
-        mxb_assert(!true);
-        start = end;
-    }
-    else
-    {
-        start += bytes;
-    }
+    // Consuming more than 'length' is an error.
+    mxb_assert(bytes <= length());
+    start += bytes;
     return start;
 }
 
 void GWBUF::rtrim(uint64_t bytes)
 {
-    // TODO: attempting to trim more than 'length' should be an error.
-    if (bytes > length())
-    {
-        mxb_assert(!true);
-        end = start;
-    }
-    else
-    {
-        end -= bytes;
-    }
+    // Trimming more than 'length' is an error.
+    mxb_assert(bytes <= length());
+    end -= bytes;
 }
 
 void gwbuf_set_id(GWBUF* buffer, uint32_t id)

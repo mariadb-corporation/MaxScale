@@ -174,6 +174,15 @@ public:
     void append(GWBUF* buffer);
 
     /**
+     * Split a part from the front of the current buffer. The splitted part is returned, rest remains in
+     * the buffer.
+     *
+     * @param n_bytes Bytes to split
+     * @return Splitted bytes
+     */
+    GWBUF split(uint64_t n_bytes);
+
+    /**
      * Moves the start-pointer forward.
      *
      * @param bytes Number of bytes to consume
