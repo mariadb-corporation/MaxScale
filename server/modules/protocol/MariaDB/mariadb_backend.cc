@@ -191,7 +191,7 @@ bool MariaDBBackendConnection::can_reuse(MXS_SESSION* session) const
 bool MariaDBBackendConnection::reuse(MXS_SESSION* session, mxs::Component* upstream)
 {
     bool rv = false;
-    mxb_assert(!m_dcb->session() && !m_dcb->readq() && !m_dcb->writeq());
+    mxb_assert(!m_dcb->session() && m_dcb->readq_empty() && !m_dcb->writeq());
 
     if (m_dcb->state() != DCB::State::POLLING || m_state != State::POOLED || !m_delayed_packets.empty())
     {
@@ -686,7 +686,7 @@ void MariaDBBackendConnection::normal_read()
         // Store any partial packets in the DCB's read buffer
         if (read_buffer)
         {
-            m_dcb->readq_set(read_buffer);
+            m_dcb->unread(read_buffer);
 
             if (m_reply.is_complete())
             {
@@ -826,7 +826,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_history
 
             if (read_buffer)
             {
-                m_dcb->readq_set(read_buffer);
+                m_dcb->unread(read_buffer);
             }
 
             if (m_reply.is_complete())
@@ -1223,7 +1223,9 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
 
                         // Send the error as a separate event. This allows the routeQuery of the router to
                         // finish before we deliver the response.
-                        m_dcb->readq_append(err);
+                        // TODO: questionable code. Deliver the error in some other way.
+                        mxb_assert(m_dcb->readq_empty());
+                        m_dcb->unread(err);
                         m_dcb->trigger_read_event();
                     }
 
@@ -1667,7 +1669,7 @@ int64_t MariaDBBackendConnection::seconds_idle() const
     int64_t idle = 0;
 
     // Only treat the connection as idle if there's no buffered data
-    if ((!m_dcb->writeq() || m_dcb->writeq()->empty()) && (!m_dcb->readq() || m_dcb->readq()->empty()))
+    if ((!m_dcb->writeq() || m_dcb->writeq()->empty()) && m_dcb->readq_empty())
     {
         idle = MXS_CLOCK_TO_SEC(mxs_clock() - std::max(m_dcb->last_read(), m_dcb->last_write()));
     }

@@ -408,70 +408,17 @@ public:
      *
      * @return A buffer of NULL if there is no read queue.
      */
-    inline GWBUF* readq()
+    inline bool readq_empty()
     {
-        return m_readq;
+        return m_readq.empty();
     }
 
     /**
-     * @brief Append a buffer the DCB's readqueue
-     *
-     * Usually data is stored into the DCB's readqueue when not enough data is
-     * available and the processing needs to be deferred until more data is available.
-     *
-     * @param buffer The buffer to append.
-     */
-    void readq_append(GWBUF* buffer)
-    {
-        m_readq = gwbuf_append(m_readq, buffer);
-    }
-
-    /**
-     * @brief Prepend a buffer the DCB's readqueue
+     * Prepend a buffer to the DCB's readqueue. Effectively unreads data so it may be read again.
      *
      * @param buffer The buffer to prepend
      */
-    void readq_prepend(GWBUF* buffer)
-    {
-        m_readq = m_readq ? gwbuf_append(buffer, m_readq) : buffer;
-    }
-
-    /**
-     * @brief Returns the read queue of the DCB and sets the read queue to NULL.
-     *
-     * @note The read queue becomes the property of the caller.
-     *
-     * @return A buffer of NULL if there is no read queue.
-     */
-    GWBUF* readq_release()
-    {
-        GWBUF* readq = m_readq;
-        m_readq = NULL;
-        return readq;
-    }
-
-    /**
-     * @brief Set read queue of a DCB
-     *
-     * The expectation is that there is no readqueue when this is done.
-     * The ownership of the provided buffer moved to the DCB.
-     *
-     * @param buffer The buffer to reset with
-     */
-    void readq_set(GWBUF* buffer)
-    {
-        mxb_assert(!m_readq);
-        if (m_readq)
-        {
-            MXS_ERROR("Read-queue set when there already is a read-queue.");
-            // TODO: Conceptually this should be freed here. However, currently
-            // TODO: the code just assigns without checking, so we do the same
-            // TODO: for now. If this is not set to NULL when it has been consumed,
-            // TODO: we would get a double free.
-            // TODO: gwbuf_free(m_readq);
-        }
-        m_readq = buffer;
-    }
+    void unread(GWBUF* buffer);
 
     int64_t last_read() const
     {
@@ -568,10 +515,7 @@ public:
         {
             gwbuf_set_owner(m_writeq, wid);
         }
-        if (m_readq)
-        {
-            gwbuf_set_owner(m_readq, wid);
-        }
+        gwbuf_set_owner(&m_readq, wid);
 #endif
     }
 
@@ -666,7 +610,7 @@ protected:
 
     uint64_t m_writeqlen = 0;           /**< Bytes in writeq */
     GWBUF*   m_writeq = nullptr;        /**< Write Data Queue */
-    GWBUF*   m_readq = nullptr;         /**< Read queue for incomplete reads */
+    GWBUF    m_readq;                   /**< Read queue for incomplete reads */
     uint32_t m_triggered_event = 0;     /**< Triggered event to be delivered to handler */
     uint32_t m_triggered_event_old = 0; /**< Triggered event before disabling events */
 

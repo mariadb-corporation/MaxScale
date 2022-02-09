@@ -142,7 +142,7 @@ void ClientConnection::ready_for_reading(GWBUF* pBuffer)
             pPacket = gwbuf_split(&pBuffer, pHeader->msg_len);
             mxb_assert((int)gwbuf_length(pPacket) == pHeader->msg_len);
 
-            m_pDcb->readq_prepend(pBuffer);
+            m_pDcb->unread(pBuffer);
             m_pDcb->trigger_read_event();
         }
 
@@ -164,7 +164,7 @@ void ClientConnection::ready_for_reading(GWBUF* pBuffer)
     {
         MXB_INFO("%d bytes received, still need %d bytes for the package.",
                  buffer_len, pHeader->msg_len - buffer_len);
-        m_pDcb->readq_prepend(pBuffer);
+        m_pDcb->unread(pBuffer);
     }
 }
 

@@ -64,6 +64,7 @@
 using maxscale::RoutingWorker;
 using maxbase::Worker;
 using std::string;
+using std::move;
 using mxs::ClientConnection;
 using mxs::BackendConnection;
 
@@ -194,16 +195,14 @@ DCB::~DCB()
     }
 
     gwbuf_free(m_writeq);
-    gwbuf_free(m_readq);
 
     POLL_DATA::owner = reinterpret_cast<mxb::WORKER*>(0xdeadbeef);
 }
 
 void DCB::clear()
 {
-    gwbuf_free(m_readq);
+    m_readq.clear();
     gwbuf_free(m_writeq);
-    m_readq = NULL;
     m_writeq = NULL;
 
     remove_callbacks();
@@ -269,7 +268,7 @@ DCB::ReadResult DCB::read(uint32_t min_bytes, uint32_t max_bytes)
         else
         {
             // Not enough data, save any read data to readq.
-            readq_prepend(read_buffer);
+            unread(read_buffer);
             rval.status = ReadResult::Status::INSUFFICIENT_DATA;
         }
     }
@@ -292,11 +291,7 @@ int DCB::read(GWBUF** ppHead, size_t maxbytes)
         return -1;
     }
 
-    if (!m_readq)
-    {
-        m_readq = new GWBUF;
-    }
-    int nreadtotal = m_readq->length();
+    int nreadtotal = m_readq.length();
 
     if (m_encryption.state == SSLState::ESTABLISHED)
     {
@@ -331,7 +326,7 @@ int DCB::read(GWBUF** ppHead, size_t maxbytes)
         {
             if (basic_read(maxbytes))
             {
-                nreadtotal = m_readq->length();
+                nreadtotal = m_readq.length();
             }
             else
             {
@@ -342,15 +337,16 @@ int DCB::read(GWBUF** ppHead, size_t maxbytes)
 
     if (nreadtotal > 0)
     {
-        if (maxbytes > 0 && m_readq->length() > (size_t)maxbytes)
+        auto res = new GWBUF;
+        if (maxbytes > 0 && m_readq.length() > maxbytes)
         {
-            *ppHead = gwbuf_split(&m_readq, maxbytes);
+            *res = m_readq.split(maxbytes);
         }
         else
         {
-            *ppHead = m_readq;
-            m_readq = nullptr;
+            *res = move(m_readq);
         }
+        *ppHead = res;
     }
     return nreadtotal;
 }
@@ -421,15 +417,15 @@ bool DCB::basic_read(size_t maxbytes)
             {
                 // Never read more in total than maxbytes. Since maxbytes can be large, limit
                 // the allocation size to something reasonable.
-                auto max_read_limit = maxbytes - m_readq->length();
+                auto max_read_limit = maxbytes - m_readq.length();
                 auto min_read_limit = std::min(max_read_limit, base_read_size_limit);
-                auto [ptr, space_available] = m_readq->prepare_to_write(min_read_limit);
+                auto [ptr, space_available] = m_readq.prepare_to_write(min_read_limit);
                 auto eff_read_limit = std::min(max_read_limit, space_available);
                 return std::tuple(ptr, eff_read_limit);
             }
             else
             {
-                return m_readq->prepare_to_write(base_read_size_limit);
+                return m_readq.prepare_to_write(base_read_size_limit);
             }
         };
 
@@ -446,7 +442,7 @@ bool DCB::basic_read(size_t maxbytes)
         m_stats.n_reads++;
         if (ret > 0)
         {
-            m_readq->write_complete(ret);
+            m_readq.write_complete(ret);
             bytes_from_socket += ret;
             if (ret < (int64_t)read_limit)
             {
@@ -459,8 +455,8 @@ bool DCB::basic_read(size_t maxbytes)
                 expect_more_data = true;
             }
 
-            mxb_assert(maxbytes == 0 || m_readq->length() <= maxbytes);
-            if (maxbytes > 0 && m_readq->length() == maxbytes)
+            mxb_assert(maxbytes == 0 || m_readq.length() <= maxbytes);
+            if (maxbytes > 0 && m_readq.length() == maxbytes)
             {
                 keep_reading = false;
             }
@@ -524,7 +520,7 @@ int DCB::read_SSL()
     mxb_assert(m_fd != FD_CLOSED);
 
     int nsingleread = 0;
-    int nreadtotal = m_readq->length();
+    int nreadtotal = m_readq.length();
 
     if (m_encryption.write_want_read)
     {
@@ -535,7 +531,8 @@ int DCB::read_SSL()
     if (buffer)
     {
         nreadtotal += nsingleread;
-        m_readq = gwbuf_append(m_readq, buffer);
+        m_readq.append(buffer);
+        delete buffer;
 
         while (buffer)
         {
@@ -544,7 +541,8 @@ int DCB::read_SSL()
             {
                 nreadtotal += nsingleread;
                 /*< Append read data to the gwbuf */
-                m_readq = gwbuf_append(m_readq, buffer);
+                m_readq.append(buffer);
+                delete buffer;
             }
         }
     }
@@ -1858,6 +1856,17 @@ void DCB::close(DCB* dcb)
         // TODO: Will this happen on a regular basis?
         MXS_WARNING("DCB::close(%p) called on a closed dcb.", dcb);
         mxb_assert(!true);
+    }
+}
+
+void DCB::unread(GWBUF* buffer)
+{
+    // TODO: write a more efficient "merge"-function for GWBUF.
+    if (buffer)
+    {
+        buffer->append(&m_readq);
+        m_readq = move(*buffer);
+        delete buffer;
     }
 }
 

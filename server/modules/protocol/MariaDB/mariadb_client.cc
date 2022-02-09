@@ -733,7 +733,7 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
         case AuthState::COMPLETE:
             m_sql_mode = m_session->listener_data()->m_default_sql_mode;
             write_ok_packet(m_next_sequence);
-            if (m_dcb->readq())
+            if (!m_dcb->readq_empty())
             {
                 // The user has already sent more data, process it
                 m_dcb->trigger_read_event();
@@ -2047,7 +2047,7 @@ bool MariaDBClientConnection::read_first_client_packet(mxs::Buffer* output)
     else if (buffer_len >= 0)
     {
         // Didn't read enough, try again.
-        m_dcb->readq_prepend(read_buffer);
+        m_dcb->unread(read_buffer);
         return true;
     }
     else
@@ -2063,14 +2063,14 @@ bool MariaDBClientConnection::read_first_client_packet(mxs::Buffer* output)
         // SSLRequest packet. Most likely the entire packet was already read out. If not, try again later.
         if (buffer_len < prot_packet_len)
         {
-            m_dcb->readq_prepend(read_buffer);
+            m_dcb->unread(read_buffer);
             read_buffer = nullptr;
         }
     }
     else if (prot_packet_len >= NORMAL_HS_RESP_MIN_SIZE)
     {
         // Normal response. Need to read again. Likely the entire packet is available at the socket.
-        m_dcb->readq_prepend(read_buffer);
+        m_dcb->unread(read_buffer);
         read_buffer = nullptr;
         int ret = m_dcb->read(&read_buffer, prot_packet_len);
         buffer_len = gwbuf_length(read_buffer);
@@ -2081,7 +2081,7 @@ bool MariaDBClientConnection::read_first_client_packet(mxs::Buffer* output)
         else if (buffer_len < prot_packet_len)
         {
             // Still didn't get the full response.
-            m_dcb->readq_prepend(read_buffer);
+            m_dcb->unread(read_buffer);
             read_buffer = nullptr;
         }
     }

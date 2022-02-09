@@ -103,7 +103,7 @@ GWBUF* gwbuf_alloc(unsigned int size)
 {
     mxb_assert(size > 0);
     auto rval = new GWBUF(size);
-    rval->write_complete(size); // Callers expect the end-pointer to point to buffer end
+    rval->write_complete(size);     // Callers expect the end-pointer to point to buffer end
     return rval;
 }
 
@@ -588,6 +588,11 @@ void GWBUF::rtrim(uint64_t bytes)
     // Trimming more than 'length' is an error.
     mxb_assert(bytes <= length());
     end -= bytes;
+}
+
+void GWBUF::clear()
+{
+    move_helper(GWBUF());
 }
 
 void gwbuf_set_id(GWBUF* buffer, uint32_t id)

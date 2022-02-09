@@ -197,6 +197,11 @@ public:
      */
     void rtrim(uint64_t bytes);
 
+    /**
+     * Clears the buffer. Releases any internal data.
+     */
+    void clear();
+
 private:
     std::shared_ptr<SHARED_BUF> m_sbuf;     /*< The shared buffer with the real data */
 
