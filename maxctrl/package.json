@@ -32,7 +32,7 @@
   "devDependencies": {
     "chai": "^3.5.0",
     "chai-as-promised": "^6.0.0",
-    "mariadb": "^2.2.0",
+    "mariadb": "^2.5.5",
     "mocha": "^5.2.0",
     "nyc": "^15.0.0"
   },
