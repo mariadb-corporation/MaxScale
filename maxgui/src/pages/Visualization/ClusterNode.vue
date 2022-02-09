@@ -86,20 +86,35 @@
                     <span>{{ node.data.connections }} </span>
                 </div>
                 <v-expand-transition>
-                    <div v-if="isExpanded" class="node-text--expanded-content">
-                        <div
-                            v-for="(value, key) in extraInfo"
-                            :key="`${key}`"
-                            class="d-flex"
-                            :style="{ lineHeight }"
+                    <div
+                        v-if="isExpanded"
+                        class="node-text--expanded-content mx-n2 mb-n2 px-2 pt-0 pb-2"
+                    >
+                        <v-carousel
+                            v-model="activeInfoSlide"
+                            class="extra-info-carousel"
+                            :show-arrows="false"
+                            hide-delimiter-background
+                            :height="numOfExtraLines * lineHeightNum + 24"
                         >
-                            <span class="mr-2 font-weight-bold">
-                                {{ key }}
-                            </span>
-                            <truncate-string :text="`${value}`" />
-                        </div>
-
-                        <!-- TODO: Show more info here, could be a carousel to show different slide of info  -->
+                            <v-carousel-item
+                                v-for="(slide, i) in extraInfoSlides"
+                                :key="i"
+                                class="mt-6"
+                            >
+                                <div
+                                    v-for="(value, key) in slide"
+                                    :key="`${key}`"
+                                    class="d-flex"
+                                    :style="{ lineHeight }"
+                                >
+                                    <span class="mr-2 font-weight-bold">
+                                        {{ key }}
+                                    </span>
+                                    <truncate-string :text="`${value}`" />
+                                </div>
+                            </v-carousel-item>
+                        </v-carousel>
                     </div>
                 </v-expand-transition>
             </div>
@@ -151,11 +166,15 @@ export default {
         return {
             isExpanded: false,
             defHeight: 0,
+            activeInfoSlide: 0,
         }
     },
     computed: {
         lineHeight() {
             return `18px`
+        },
+        lineHeightNum() {
+            return Number(this.lineHeight.replace('px', ''))
         },
         sbm() {
             return this.$help.getMin({
@@ -182,14 +201,26 @@ export default {
                 }
             return {}
         },
+        /*  TODO: after determining what info should be shown, separated into "slides".
+            i.e. extraInfo return an array instead of an object
+         */
         extraInfo() {
             if (this.$typy(this.node, 'data.isMaster').safeBoolean) return this.masterExtraInfo
             else return this.slaveExtraInfo
         },
+        extraInfoSlides() {
+            return [this.extraInfo]
+        },
         // Determine number of new lines added when isExpanded is true
         numOfExtraLines() {
             if (this.$typy(this.node, 'data.isMaster').safeBoolean) return 0
-            return Object.keys(this.slaveExtraInfo).length
+            return Object.keys(this.extraInfoSlides[this.activeInfoSlide]).length
+        },
+    },
+    watch: {
+        activeInfoSlide() {
+            // recalculate node height when slide is changed
+            this.$emit('cluster-node-height', this.getExpandedNodeHeight())
         },
     },
     mounted() {
@@ -199,13 +230,16 @@ export default {
         })
     },
     methods: {
+        getExpandedNodeHeight() {
+            // 24 is carousel delimiters height
+            return this.defHeight + this.numOfExtraLines * this.lineHeightNum + 24
+        },
         toggleExpand(node) {
             let height = this.defHeight
             this.isExpanded = !this.isExpanded
             // calculate the new height of the card before it's actually expanded
             if (this.isExpanded) {
-                const lineHeight = Number(this.lineHeight.replace('px', ''))
-                height += this.numOfExtraLines * lineHeight
+                height = this.getExpandedNodeHeight()
             }
             this.$emit('get-expanded-node', node.id)
             this.$emit('cluster-node-height', height)
@@ -225,6 +259,43 @@ export default {
         }
         .readonly-val {
             color: $background !important;
+        }
+    }
+    .node-text--expanded-content {
+        background: $reflection;
+        box-sizing: content-box;
+        ::v-deep .extra-info-carousel {
+            .v-carousel__controls {
+                top: 0;
+                height: 24px;
+                .v-item-group {
+                    height: 24px;
+                    .v-carousel__controls__item {
+                        background: white;
+                        width: 32px;
+                        height: 6px;
+                        border-radius: 4px;
+                        &::before {
+                            // make it easier to click even the button height is visible as 6px, but it's actually 24px
+                            top: -10px;
+                            opacity: 0;
+                            width: 32px;
+                            height: 24px;
+                            background: white;
+                            pointer-events: all;
+                        }
+                        i {
+                            display: none;
+                        }
+                    }
+                    .v-item--active {
+                        background: $electric-ele;
+                        &::before {
+                            background: $electric-ele;
+                        }
+                    }
+                }
+            }
         }
     }
 }
