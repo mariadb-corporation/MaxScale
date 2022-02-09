@@ -2235,10 +2235,7 @@ bool mxs::ConfigParameters::get_bool(const std::string& key) const
 
 bool mxs::ConfigParameters::contains(const string& key) const
 {
-    // Because of how the parameters are used, this method can be called through a null pointer.
-    // Handle this here for now. TODO: Refactor away.
-    auto can_be_null = this;
-    return can_be_null ? m_contents.count(key) > 0 : false;
+    return m_contents.find(key) != m_contents.end();
 }
 
 // static
