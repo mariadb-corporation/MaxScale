@@ -1,9 +1,9 @@
 <template>
-    <div ref="nodeWrapper" class="cluster-node-wrapper">
-        <v-card outlined class="server-node" width="273">
+    <div ref="nodeWrapper" class="cluster-node-wrapper fill-height">
+        <v-card outlined class="node-card fill-height" width="273">
             <div
                 class="node-title-wrapper d-flex align-center flex-row px-2 py-1"
-                :class="[droppableTargets.includes(node.id) ? 'server-node__droppable' : '']"
+                :class="[droppableTargets.includes(node.id) ? 'node-card__droppable' : '']"
             >
                 <icon-sprite-sheet
                     size="13"
@@ -49,7 +49,9 @@
             </div>
             <v-divider />
             <div
-                class="node-text-wrapper color text-navigation d-flex justify-center flex-column px-2 py-1"
+                :class="
+                    `color text-navigation d-flex justify-center flex-column px-2 py-1 ${nodeTxtWrapperClassName}`
+                "
             >
                 <div
                     class="node-state d-flex flex-row flex-grow-1 text-capitalize"
@@ -130,16 +132,21 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
+/*
+@cluster-node-height: v: Number. Cluster node height
+@get-expanded-node: v: String. Id of expanded cluster node
+*/
 export default {
     name: 'cluster-node',
     props: {
         node: { type: Object, required: true },
         droppableTargets: { type: Array, required: true },
+        nodeTxtWrapperClassName: { type: String, default: '' },
     },
     data() {
         return {
             isExpanded: false,
+            defHeight: 0,
         }
     },
     computed: {
@@ -158,26 +165,42 @@ export default {
                     arr: this.node.data.server_info.slave_connections,
                     pickBy: 'slave_io_running',
                 }),
-
                 'Slave SQL Running': this.$help.getMostFreq({
                     arr: this.node.data.server_info.slave_connections,
                     pickBy: 'slave_sql_running',
                 }),
             }
         },
+        // Determine number of new lines added when isExpanded is true
+        numOfExtraLines() {
+            if (this.$typy(this.node, 'data.isMaster').safeBoolean) return 0
+            return Object.keys(this.repStat).length
+        },
+    },
+    mounted() {
+        this.$nextTick(() => {
+            this.defHeight = this.$refs.nodeWrapper.clientHeight
+            this.$emit('cluster-node-height', this.defHeight)
+        })
     },
     methods: {
         toggleExpand(node) {
-            //TODO: get current height and height after expanding and pass to get-expanded-node evt
+            let height = this.defHeight
             this.isExpanded = !this.isExpanded
+            // calculate the new height of the card before it's actually expanded
+            if (this.isExpanded) {
+                const lineHeight = Number(this.lineHeight.replace('px', ''))
+                height += this.numOfExtraLines * lineHeight
+            }
             this.$emit('get-expanded-node', node.id)
+            this.$emit('cluster-node-height', height)
         },
     },
 }
 </script>
 
 <style lang="scss" scoped>
-.server-node {
+.node-card {
     font-size: 12px;
     &__droppable {
         background: $success;

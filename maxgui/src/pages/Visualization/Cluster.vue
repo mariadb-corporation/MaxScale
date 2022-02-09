@@ -23,7 +23,11 @@
                     <cluster-node
                         :node="node"
                         :droppableTargets="droppableTargets"
+                        :nodeTxtWrapperClassName="nodeTxtWrapperClassName"
                         @get-expanded-node="handleExpandedNode"
+                        @cluster-node-height="
+                            handleAssignNodeHeightMap({ height: $event, nodeId: node.id })
+                        "
                     />
                 </template>
             </tree-graph>
@@ -80,7 +84,11 @@ export default {
             confDlgTitle: '',
             confDlgBody: '',
             confDlgType: '',
+            nodeTxtWrapperClassName: 'node-text-wrapper',
             expandedNodes: [],
+            defClusterNodeHeight: 101,
+            clusterNodeHeightMap: {},
+            nodeGap: 24,
         }
     },
     computed: {
@@ -106,10 +114,14 @@ export default {
         hasExpandedNode() {
             return Boolean(this.expandedNodes.length)
         },
+        maxClusterNodeHeight() {
+            const v = Math.max(...Object.values(this.clusterNodeHeightMap))
+            if (this.$typy(v).isNumber) return v
+            return this.defClusterNodeHeight
+        },
         nodeSize() {
-            // TODO: replace hard-coded height with value from get-expanded-node evt
-            if (this.hasExpandedNode) return [150, 320]
-            return [125, 320]
+            if (this.hasExpandedNode) return [this.maxClusterNodeHeight + this.nodeGap, 320]
+            return [this.defClusterNodeHeight + this.nodeGap, 320]
         },
     },
     async created() {
@@ -133,13 +145,18 @@ export default {
                 this.expandedNodes.splice(this.expandedNodes.indexOf(id), 1)
             else this.expandedNodes.push(id)
         },
+        handleAssignNodeHeightMap({ height, nodeId }) {
+            this.$set(this.clusterNodeHeightMap, nodeId, height)
+        },
         /**
          * This helps to store the current innerHTML of the dragging node to initialNodeInnerHTML
          */
         setDefNodeTxt() {
             let cloneEle = document.getElementsByClassName('rect-node-clone')
             if (cloneEle.length) {
-                const nodeTxtWrapper = cloneEle[0].getElementsByClassName('node-text-wrapper')
+                const nodeTxtWrapper = cloneEle[0].getElementsByClassName(
+                    this.nodeTxtWrapperClassName
+                )
                 this.initialNodeInnerHTML = nodeTxtWrapper[0].innerHTML
             }
         },
@@ -156,13 +173,15 @@ export default {
             }
         },
         /**
-         * This helps to change the text content(node-text-wrapper) of the dragging node
+         * This helps to change the text content(nodeTxtWrapperClassName) of the dragging node
          * @param {String} type - operation type
          */
         changeNodeTxt(type) {
             let cloneEle = document.getElementsByClassName('rect-node-clone')
             if (cloneEle.length) {
-                let nodeTxtWrapper = cloneEle[0].getElementsByClassName('node-text-wrapper')
+                let nodeTxtWrapper = cloneEle[0].getElementsByClassName(
+                    this.nodeTxtWrapperClassName
+                )
                 switch (type) {
                     case 'switchover':
                         nodeTxtWrapper[0].innerHTML = this.$t('info.switchoverPromote')
