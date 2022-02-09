@@ -285,7 +285,7 @@ void persistpoolmax_modified(const std::string& srvname, int64_t pool_size)
 Server::ParamDiskSpaceLimits::ParamDiskSpaceLimits(cfg::Specification* pSpecification,
                                                    const char* zName, const char* zDescription)
     : cfg::ConcreteParam<ParamDiskSpaceLimits, DiskSpaceLimits>(
-        pSpecification, zName, zDescription, AT_RUNTIME, OPTIONAL, MXS_MODULE_PARAM_STRING, value_type())
+        pSpecification, zName, zDescription, AT_RUNTIME, OPTIONAL, value_type())
 {
 }
 

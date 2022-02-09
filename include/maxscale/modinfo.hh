@@ -79,42 +79,11 @@ struct MXS_MODULE_VERSION
     bool operator==(const MXS_MODULE_VERSION& rhs) const;
 };
 
-enum mxs_module_param_type
-{
-    MXS_MODULE_PARAM_COUNT,         /**< Non-negative number */
-    MXS_MODULE_PARAM_INT,           /**< Integer number */
-    MXS_MODULE_PARAM_SIZE,          /**< Size in bytes */
-    MXS_MODULE_PARAM_BOOL,          /**< Boolean value */
-    MXS_MODULE_PARAM_STRING,        /**< String value */
-    MXS_MODULE_PARAM_QUOTEDSTRING,  /**< String enclosed in '"':s */
-    MXS_MODULE_PARAM_PASSWORD,      /**< Password value that is masked in all output  */
-    MXS_MODULE_PARAM_ENUM,          /**< Enumeration of string values */
-    MXS_MODULE_PARAM_PATH,          /**< Path to a file or a directory */
-    MXS_MODULE_PARAM_SERVICE,       /**< Service name */
-    MXS_MODULE_PARAM_SERVER,        /**< Server name */
-    MXS_MODULE_PARAM_TARGET,        /**< Target name (server or service) */
-    MXS_MODULE_PARAM_SERVERLIST,    /**< List of server names, separated by ',' */
-    MXS_MODULE_PARAM_TARGETLIST,    /**< List of target names, separated by ',' */
-    MXS_MODULE_PARAM_REGEX,         /**< A regex string enclosed in '/' */
-    MXS_MODULE_PARAM_DURATION,      /**< Duration in milliseconds */
-    MXS_MODULE_PARAM_DEPRECATED,    /**< Deprecated value (only here until the legacy system is removed) */
-};
-
 /** String to enum value mappings */
 struct MXS_ENUM_VALUE
 {
     const char* name;       /**< Name of the enum value */
     uint64_t    enum_value; /**< The integer value of the enum */
-};
-
-/** Module parameter declaration */
-struct MXS_MODULE_PARAM
-{
-    const char*           name;             /**< Name of the parameter */
-    mxs_module_param_type type;             /**< Type of the parameter */
-    const char*           default_value;    /**< Default value for the parameter, NULL for no default value */
-    uint64_t              options;          /**< Parameter options */
-    const MXS_ENUM_VALUE* accepted_values;  /**< Only for enum values */
 };
 
 namespace maxscale

@@ -69,7 +69,7 @@ public:
                 pSpecification, zName, zDescription,
                 Modifiable::AT_RUNTIME,
                 Param::OPTIONAL,
-                MXS_MODULE_PARAM_STRING, MXS_LOG_THROTTLING {10, 1000, 10000})
+                MXS_LOG_THROTTLING {10, 1000, 10000})
         {
         }
 

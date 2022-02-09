@@ -441,11 +441,7 @@ json_t* Specification::to_json() const
     for (const auto& kv : m_params)
     {
         const Param* pParam = kv.second;
-
-        if (!pParam->is_deprecated())
-        {
-            json_array_append_new(pSpecification, pParam->to_json());
-        }
+        json_array_append_new(pSpecification, pParam->to_json());
     }
 
     return pSpecification;
@@ -458,14 +454,12 @@ Param::Param(Specification* pSpecification,
              const char* zName,
              const char* zDescription,
              Modifiable modifiable,
-             Kind kind,
-             mxs_module_param_type legacy_type)
+             Kind kind)
     : m_specification(*pSpecification)
     , m_name(zName)
     , m_description(zDescription)
     , m_modifiable(modifiable)
     , m_kind(kind)
-    , m_legacy_type(legacy_type)
 {
     m_specification.insert(this);
 }
@@ -518,11 +512,6 @@ bool Param::is_mandatory() const
 bool Param::is_optional() const
 {
     return m_kind == OPTIONAL;
-}
-
-bool Param::is_deprecated() const
-{
-    return m_legacy_type == MXS_MODULE_PARAM_DEPRECATED;
 }
 
 bool Param::has_default_value() const

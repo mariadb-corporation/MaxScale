@@ -485,44 +485,6 @@ bool modulecmd_cb(const MODULECMD* cmd, void* data)
     return true;
 }
 
-static json_t* default_value_to_json(mxs_module_param_type type, const char* value)
-{
-    switch (type)
-    {
-    case MXS_MODULE_PARAM_COUNT:
-    case MXS_MODULE_PARAM_INT:
-        return json_integer(strtol(value, nullptr, 10));
-
-    case MXS_MODULE_PARAM_SIZE:
-        {
-            uint64_t val = 0;
-            get_suffixed_size(value, &val);
-            return json_integer(val);
-        }
-
-    case MXS_MODULE_PARAM_BOOL:
-        return json_boolean(config_truth_value(value));
-
-    case MXS_MODULE_PARAM_STRING:
-    case MXS_MODULE_PARAM_QUOTEDSTRING:
-    case MXS_MODULE_PARAM_PASSWORD:
-    case MXS_MODULE_PARAM_ENUM:
-    case MXS_MODULE_PARAM_PATH:
-    case MXS_MODULE_PARAM_SERVICE:
-    case MXS_MODULE_PARAM_SERVER:
-    case MXS_MODULE_PARAM_TARGET:
-    case MXS_MODULE_PARAM_SERVERLIST:
-    case MXS_MODULE_PARAM_TARGETLIST:
-    case MXS_MODULE_PARAM_REGEX:
-    case MXS_MODULE_PARAM_DURATION:
-        return json_string(value);
-
-    default:
-        mxb_assert(!true);
-        return json_null();
-    }
-}
-
 namespace
 {
 

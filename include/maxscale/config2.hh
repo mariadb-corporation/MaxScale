@@ -295,11 +295,6 @@ public:
     bool is_optional() const;
 
     /**
-     * @return True if the parameter is deprecated
-     */
-    bool is_deprecated() const;
-
-    /**
      * Synonym for @c is_optional.
      *
      * @return True, if the parameter has a default value.
@@ -382,49 +377,14 @@ protected:
           const char* zName,
           const char* zDescription,
           Modifiable modifiable,
-          Kind kind,
-          mxs_module_param_type legacy_type);
+          Kind kind);
 
 protected:
-    Specification&              m_specification;
-    const std::string           m_name;
-    const std::string           m_description;
-    const Modifiable            m_modifiable;
-    const Kind                  m_kind;
-    const mxs_module_param_type m_legacy_type;
-};
-
-/**
- * Deprecated parameter. Causes a warning to be logged if it is used.
- */
-class ParamDeprecated : public Param
-{
-public:
-    ParamDeprecated(Specification* pSpecification, const char* zName)
-        : Param(pSpecification, zName, "This parameter is deprecated",
-                AT_STARTUP, OPTIONAL, MXS_MODULE_PARAM_DEPRECATED)
-    {
-    }
-
-    std::string type() const override
-    {
-        return "deprecated";
-    }
-
-    std::string default_to_string() const override
-    {
-        return "deprecated";
-    }
-
-    bool validate(const std::string& value_as_string, std::string* pMessage) const override
-    {
-        return true;
-    }
-
-    bool validate(json_t* value_as_json, std::string* pMessage) const override
-    {
-        return true;
-    }
+    Specification&    m_specification;
+    const std::string m_name;
+    const std::string m_description;
+    const Modifiable  m_modifiable;
+    const Kind        m_kind;
 };
 
 /**
@@ -552,9 +512,8 @@ protected:
                   const char* zDescription,
                   Modifiable modifiable,
                   Kind kind,
-                  mxs_module_param_type legacy_type,
                   value_type default_value)
-        : Param(pSpecification, zName, zDescription, modifiable, kind, legacy_type)
+        : Param(pSpecification, zName, zDescription, modifiable, kind)
         , m_default_value(default_value)
     {
     }
@@ -603,7 +562,7 @@ private:
               Kind kind,
               value_type default_value)
         : ConcreteParam<ParamBool, bool>(pSpecification, zName, zDescription,
-                                         modifiable, kind, MXS_MODULE_PARAM_BOOL, default_value)
+                                         modifiable, kind, default_value)
     {
     }
 };
@@ -640,12 +599,11 @@ protected:
                 const char* zDescription,
                 Modifiable modifiable,
                 Kind kind,
-                mxs_module_param_type legacy_type,
                 value_type default_value,
                 value_type min_value,
                 value_type max_value)
         : ConcreteParam<ParamNumber, int64_t>(pSpecification, zName, zDescription,
-                                              modifiable, kind, legacy_type, default_value)
+                                              modifiable, kind, default_value)
         , m_min_value(min_value <= max_value ? min_value : max_value)
         , m_max_value(max_value)
     {
@@ -720,7 +678,7 @@ private:
                value_type default_value,
                value_type min_value,
                value_type max_value)
-        : ParamNumber(pSpecification, zName, zDescription, modifiable, kind, MXS_MODULE_PARAM_COUNT,
+        : ParamNumber(pSpecification, zName, zDescription, modifiable, kind,
                       default_value,
                       min_value >= 0 ? min_value : 0,
                       max_value <= std::numeric_limits<value_type>::max() ?
@@ -796,7 +754,7 @@ private:
                  value_type default_value,
                  value_type min_value,
                  value_type max_value)
-        : ParamNumber(pSpecification, zName, zDescription, modifiable, kind, MXS_MODULE_PARAM_INT,
+        : ParamNumber(pSpecification, zName, zDescription, modifiable, kind,
                       default_value,
                       min_value >= std::numeric_limits<value_type>::min() ?
                       min_value : std::numeric_limits<value_type>::min(),
@@ -877,7 +835,7 @@ private:
                   DurationType duration_type,
                   value_type default_value)
         : ConcreteParam<ParamDuration<T>, T>(pSpecification, zName, zDescription,
-                                             modifiable, kind, MXS_MODULE_PARAM_DURATION, default_value)
+                                             modifiable, kind, default_value)
         , m_interpretation(interpretation)
         , m_duration_type(duration_type)
     {
@@ -1052,7 +1010,7 @@ private:
               Kind kind,
               const value_type& default_value)
         : ConcreteParam<ParamHost, maxbase::Host>(pSpecification, zName, zDescription,
-                                                  modifiable, kind, MXS_MODULE_PARAM_STRING, default_value)
+                                                  modifiable, kind, default_value)
     {
     }
 };
@@ -1115,7 +1073,7 @@ private:
               uint32_t options,
               value_type default_value)
         : ConcreteParam<ParamPath, std::string>(pSpecification, zName, zDescription,
-                                                modifiable, kind, MXS_MODULE_PARAM_PATH, default_value)
+                                                modifiable, kind, default_value)
         , m_options(options)
     {
     }
@@ -1176,8 +1134,7 @@ public:
                const char* zDescription,
                Modifiable modifiable = Modifiable::AT_STARTUP)
         : ConcreteParam<ParamRegex, RegexValue>(pSpecification, zName, zDescription,
-                                                modifiable, Param::MANDATORY, MXS_MODULE_PARAM_REGEX,
-                                                value_type())
+                                                modifiable, Param::MANDATORY, value_type())
     {
     }
 
@@ -1187,8 +1144,7 @@ public:
                const char* zRegex,
                Modifiable modifiable = Modifiable::AT_STARTUP)
         : ConcreteParam<ParamRegex, RegexValue>(pSpecification, zName, zDescription,
-                                                modifiable, Param::OPTIONAL, MXS_MODULE_PARAM_REGEX,
-                                                create_default(zRegex))
+                                                modifiable, Param::OPTIONAL, create_default(zRegex))
     {
     }
 
@@ -1224,8 +1180,7 @@ public:
                 const char* zDescription,
                 Modifiable modifiable = Modifiable::AT_STARTUP)
         : ConcreteParam<ParamServer, SERVER*>(pSpecification, zName, zDescription,
-                                              modifiable, Param::MANDATORY, MXS_MODULE_PARAM_SERVER,
-                                              nullptr)
+                                              modifiable, Param::MANDATORY, nullptr)
     {
     }
 
@@ -1235,8 +1190,7 @@ public:
                 Param::Kind kind,
                 Modifiable modifiable = Modifiable::AT_STARTUP)
         : ConcreteParam<ParamServer, SERVER*>(pSpecification, zName, zDescription,
-                                              modifiable, kind, MXS_MODULE_PARAM_SERVER,
-                                              nullptr)
+                                              modifiable, kind, nullptr)
     {
     }
 
@@ -1263,7 +1217,7 @@ public:
                     Modifiable modifiable = Modifiable::AT_STARTUP)
         : ConcreteParam<ParamServerList, std::vector<SERVER*>>(
             pSpecification, zName, zDescription,
-            modifiable, Param::MANDATORY, MXS_MODULE_PARAM_SERVER, {})
+            modifiable, Param::MANDATORY, {})
     {
     }
 
@@ -1274,7 +1228,7 @@ public:
                     Modifiable modifiable = Modifiable::AT_STARTUP)
         : ConcreteParam<ParamServerList, std::vector<SERVER*>>(
             pSpecification, zName, zDescription,
-            modifiable, kind, MXS_MODULE_PARAM_SERVER, {})
+            modifiable, kind, {})
     {
     }
 
@@ -1301,8 +1255,7 @@ public:
                 Param::Kind kind = Param::MANDATORY,
                 Modifiable modifiable = Modifiable::AT_STARTUP)
         : ConcreteParam<ParamTarget, mxs::Target*>(pSpecification, zName, zDescription,
-                                                   modifiable, kind, MXS_MODULE_PARAM_TARGET,
-                                                   nullptr)
+                                                   modifiable, kind, nullptr)
     {
     }
 
@@ -1329,8 +1282,7 @@ public:
                  Param::Kind kind = Param::MANDATORY,
                  Modifiable modifiable = Modifiable::AT_STARTUP)
         : ConcreteParam<ParamService, SERVICE*>(pSpecification, zName, zDescription,
-                                                modifiable, kind, MXS_MODULE_PARAM_SERVICE,
-                                                nullptr)
+                                                modifiable, kind, nullptr)
     {
     }
 
@@ -1417,7 +1369,7 @@ private:
               value_type default_value,
               value_type min_value,
               value_type max_value)
-        : ParamNumber(pSpecification, zName, zDescription, modifiable, kind, MXS_MODULE_PARAM_SIZE,
+        : ParamNumber(pSpecification, zName, zDescription, modifiable, kind,
                       default_value, min_value, max_value)
     {
     }
@@ -1493,11 +1445,7 @@ private:
                 Kind kind,
                 value_type default_value)
         : ConcreteParam<ParamString, std::string>(pSpecification, zName, zDescription,
-                                                  modifiable, kind,
-                                                  quotes != REQUIRED ?
-                                                  MXS_MODULE_PARAM_STRING :
-                                                  MXS_MODULE_PARAM_QUOTEDSTRING,
-                                                  default_value)
+                                                  modifiable, kind, default_value)
         , m_quotes(quotes)
     {
     }
@@ -1551,7 +1499,7 @@ private:
                     Kind kind,
                     value_type default_value)
         : ConcreteParam<ParamStringList, std::vector<std::string>>(
-            pSpecification, zName, zDescription, modifiable, kind, MXS_MODULE_PARAM_STRING, default_value)
+            pSpecification, zName, zDescription, modifiable, kind, default_value)
         , m_delimiter(zDelimiter)
     {
     }
@@ -1588,9 +1536,8 @@ public:
                 const char* zName,
                 const char* zDescription,
                 mxs::ModuleType module_type)
-        : ConcreteParam<ParamModule, const MXS_MODULE*>(pSpecification, zName, zDescription,
-                                                        Param::AT_STARTUP, Param::MANDATORY,
-                                                        MXS_MODULE_PARAM_STRING, nullptr)
+        : ConcreteParam<ParamModule, const MXS_MODULE*>(
+            pSpecification, zName, zDescription, Param::AT_STARTUP, Param::MANDATORY, nullptr)
         , m_module_type(module_type)
     {
     }
@@ -1600,9 +1547,8 @@ public:
                 const char* zDescription,
                 mxs::ModuleType module_type,
                 const std::string& default_value)
-        : ConcreteParam<ParamModule, const MXS_MODULE*>(pSpecification, zName, zDescription,
-                                                        Param::AT_STARTUP, Param::OPTIONAL,
-                                                        MXS_MODULE_PARAM_STRING, nullptr)
+        : ConcreteParam<ParamModule, const MXS_MODULE*>(
+            pSpecification, zName, zDescription, Param::AT_STARTUP, Param::OPTIONAL, nullptr)
         , m_module_type(module_type)
         , m_default_module(default_value)
     {
@@ -2823,7 +2769,7 @@ ParamEnum<T>::ParamEnum(Specification* pSpecification,
                         const std::vector<std::pair<T, const char*>>& enumeration,
                         value_type default_value)
     : ConcreteParam<ParamEnum<T>, T>(pSpecification, zName, zDescription,
-                                     modifiable, kind, MXS_MODULE_PARAM_ENUM, default_value)
+                                     modifiable, kind, default_value)
     , m_enumeration(enumeration)
 {
     m_enum_values.reserve(m_enumeration.size() + 1);
@@ -2959,7 +2905,7 @@ ParamEnumMask<T>::ParamEnumMask(Specification* pSpecification,
                                 const std::vector<std::pair<T, const char*>>& enumeration,
                                 value_type default_value)
     : ConcreteParam<ParamEnumMask<T>, uint32_t>(pSpecification, zName, zDescription,
-                                                modifiable, kind, MXS_MODULE_PARAM_ENUM, default_value)
+                                                modifiable, kind, default_value)
     , m_enumeration(enumeration)
 {
     m_enum_values.reserve(m_enumeration.size() + 1);
