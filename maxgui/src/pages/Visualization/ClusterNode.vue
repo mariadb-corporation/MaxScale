@@ -1,5 +1,5 @@
 <template>
-    <div ref="nodeWrapper" class="cluster-node-wrapper fill-height">
+    <div ref="nodeWrapper" class="cluster-node-wrapper d-flex flex-column fill-height">
         <v-card outlined class="node-card fill-height" width="273">
             <div
                 class="node-title-wrapper d-flex align-center flex-row px-2 py-1"
@@ -13,7 +13,11 @@
                     status
                 </icon-sprite-sheet>
                 <div class="text-truncate">
-                    <router-link :to="`/dashboard/servers/${node.id}`" class="rsrc-link">
+                    <router-link
+                        target="_blank"
+                        :to="`/dashboard/servers/${node.id}`"
+                        class="rsrc-link"
+                    >
                         {{ $typy(node, 'data.title').safeString }}
                     </router-link>
                 </div>
@@ -83,39 +87,39 @@
                 </div>
                 <v-expand-transition>
                     <div v-if="isExpanded" class="node-text--expanded-content">
-                        <template v-if="!$typy(node, 'data.isMaster').safeBoolean">
-                            <div
-                                v-for="(value, key) in repStat"
-                                :key="`${key}`"
-                                class="d-flex"
-                                :style="{ lineHeight }"
-                            >
-                                <span class="mr-2 font-weight-bold">
-                                    {{ key }}
-                                </span>
-                                <truncate-string :text="`${value}`" />
-                            </div>
-                        </template>
+                        <div
+                            v-for="(value, key) in extraInfo"
+                            :key="`${key}`"
+                            class="d-flex"
+                            :style="{ lineHeight }"
+                        >
+                            <span class="mr-2 font-weight-bold">
+                                {{ key }}
+                            </span>
+                            <truncate-string :text="`${value}`" />
+                        </div>
+
                         <!-- TODO: Show more info here, could be a carousel to show different slide of info  -->
                     </div>
                 </v-expand-transition>
             </div>
         </v-card>
-        <div class="d-flex justify-center">
-            <v-btn
-                x-small
-                height="16"
-                class="arrow-toggle text-capitalize font-weight-medium px-2 color bg-background"
-                depressed
-                outlined
-                color="#e3e6ea"
-                @click="toggleExpand(node)"
-            >
-                <v-icon :class="[isExpanded ? 'arrow-up' : 'arrow-down']" size="20" color="primary">
-                    $expand
-                </v-icon>
-            </v-btn>
-        </div>
+
+        <v-btn
+            v-if="Object.keys(extraInfo).length"
+            x-small
+            height="16"
+            class="arrow-toggle mx-auto text-capitalize font-weight-medium px-2 color bg-background"
+            style="box-sizing: content-box;"
+            depressed
+            outlined
+            color="#e3e6ea"
+            @click="toggleExpand(node)"
+        >
+            <v-icon :class="[isExpanded ? 'arrow-up' : 'arrow-down']" size="20" color="primary">
+                $expand
+            </v-icon>
+        </v-btn>
     </div>
 </template>
 
@@ -159,22 +163,33 @@ export default {
                 pickBy: 'seconds_behind_master',
             })
         },
-        repStat() {
-            return {
-                'Slave IO Running': this.$help.getMostFreq({
-                    arr: this.node.data.server_info.slave_connections,
-                    pickBy: 'slave_io_running',
-                }),
-                'Slave SQL Running': this.$help.getMostFreq({
-                    arr: this.node.data.server_info.slave_connections,
-                    pickBy: 'slave_sql_running',
-                }),
-            }
+        masterExtraInfo() {
+            //TODO: determine what info should be shown for master node
+            return {}
+        },
+        slaveExtraInfo() {
+            //TODO: determine what other info should be shown for slave node
+            if (this.$typy(this.node, 'data.server_info').safeObject)
+                return {
+                    'Slave IO Running': this.$help.getMostFreq({
+                        arr: this.node.data.server_info.slave_connections,
+                        pickBy: 'slave_io_running',
+                    }),
+                    'Slave SQL Running': this.$help.getMostFreq({
+                        arr: this.node.data.server_info.slave_connections,
+                        pickBy: 'slave_sql_running',
+                    }),
+                }
+            return {}
+        },
+        extraInfo() {
+            if (this.$typy(this.node, 'data.isMaster').safeBoolean) return this.masterExtraInfo
+            else return this.slaveExtraInfo
         },
         // Determine number of new lines added when isExpanded is true
         numOfExtraLines() {
             if (this.$typy(this.node, 'data.isMaster').safeBoolean) return 0
-            return Object.keys(this.repStat).length
+            return Object.keys(this.slaveExtraInfo).length
         },
     },
     mounted() {

@@ -398,9 +398,6 @@ export default {
     cursor: move;
 }
 
-.rect-node-chosen:hover {
-    background: #f2fcff !important;
-}
 .rect-node-ghost {
     background: #f2fcff !important;
     opacity: 0.6;
