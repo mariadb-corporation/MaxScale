@@ -89,7 +89,7 @@
                             class="extra-info-carousel"
                             :show-arrows="false"
                             hide-delimiter-background
-                            :height="numOfExtraLines * lineHeightNum + 24"
+                            :height="maxNumOfExtraLines * lineHeightNum + 24"
                         >
                             <v-carousel-item
                                 v-for="(slide, i) in extraInfoSlides"
@@ -231,15 +231,14 @@ export default {
         activeInfoSlide() {
             return this.extraInfoSlides[this.activeInfoSlideIdx]
         },
-        // Determine number of new lines added when isExpanded is true
-        numOfExtraLines() {
-            return Object.keys(this.activeInfoSlide).length
-        },
-    },
-    watch: {
-        activeInfoSlideIdx() {
-            // recalculate node height when slide is changed
-            this.$emit('cluster-node-height', this.getExpandedNodeHeight())
+        // Determine maximum number of new lines will be shown
+        maxNumOfExtraLines() {
+            let max = 0
+            this.extraInfoSlides.forEach(slide => {
+                let numOfLines = Object.keys(slide).length
+                if (numOfLines > max) max = numOfLines
+            })
+            return max
         },
     },
     mounted() {
@@ -251,7 +250,7 @@ export default {
     methods: {
         getExpandedNodeHeight() {
             // 24 is carousel delimiters height
-            return this.defHeight + this.numOfExtraLines * this.lineHeightNum + 24
+            return this.defHeight + this.maxNumOfExtraLines * this.lineHeightNum + 24
         },
         toggleExpand(node) {
             let height = this.defHeight
