@@ -1,6 +1,6 @@
 <template>
     <div ref="nodeWrapper" class="cluster-node-wrapper d-flex flex-column fill-height">
-        <v-card outlined class="node-card fill-height" width="273">
+        <v-card outlined class="node-card fill-height" width="288">
             <div
                 class="node-title-wrapper d-flex align-center flex-row px-2 py-1"
                 :class="[droppableTargets.includes(node.id) ? 'node-card__droppable' : '']"

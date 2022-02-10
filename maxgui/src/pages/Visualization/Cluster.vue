@@ -15,6 +15,7 @@
                 :nodeSize="nodeSize"
                 draggable
                 :noDragNodes="noDragNodes"
+                :layoutConf="{ link: { length: defClusterNodeWidth + nodeGap * 2 } }"
                 @on-node-dragStart="onNodeSwapStart"
                 @on-node-move="onMove"
                 @on-node-dragend="onNodeSwapEnd"
@@ -89,6 +90,7 @@ export default {
             nodeTxtWrapperClassName: 'node-text-wrapper',
             expandedNodes: [],
             defClusterNodeHeight: 101,
+            defClusterNodeWidth: 290,
             clusterNodeHeightMap: {},
             nodeGap: 24,
         }
@@ -122,8 +124,10 @@ export default {
             return this.defClusterNodeHeight
         },
         nodeSize() {
-            if (this.hasExpandedNode) return [this.maxClusterNodeHeight + this.nodeGap, 320]
-            return [this.defClusterNodeHeight + this.nodeGap, 320]
+            let height = this.hasExpandedNode
+                ? this.maxClusterNodeHeight
+                : this.defClusterNodeHeight
+            return [height + this.nodeGap, this.defClusterNodeWidth + this.nodeGap * 2]
         },
     },
     async created() {

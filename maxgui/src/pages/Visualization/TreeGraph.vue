@@ -84,16 +84,11 @@ export default {
         noDragNodes: { type: Array, default: () => [] }, // list of node ids that are not draggable
         // 100 is the vertical space, 320 is the horizontal space between nodes
         nodeSize: { type: Array, default: () => [100, 320] },
+        layoutConf: { type: Object, default: () => {} },
     },
     data() {
         return {
             duration: 300,
-            layout: {
-                link: {
-                    length: 320,
-                },
-                margin: { left: 48 },
-            },
             circleRadius: 7,
             svg: null, // svg obj
             rectNodeData: {},
@@ -102,8 +97,16 @@ export default {
         }
     },
     computed: {
-        scrollBarThickness() {
-            return this.$help.getScrollbarWidth()
+        layout() {
+            return this.$help.lodash.deepMerge(
+                {
+                    link: {
+                        length: 320,
+                    },
+                    margin: { left: 48 },
+                },
+                this.layoutConf
+            )
         },
         treeLayout() {
             // create a tree layout and use nodeSize to prevent nodes from being overlapped
