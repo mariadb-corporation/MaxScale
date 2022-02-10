@@ -21,9 +21,8 @@
     "cli-table": "^0.3.1",
     "colors": "^1.4.0",
     "flat": "^5.0.0",
-    "globby": "^8.0.2",
-    "inquirer": "^6.2.1",
-    "inquirer-command-prompt": "0.0.26",
+    "inquirer": "^8.2.0",
+    "inquirer-command-prompt": "^0.1.0",
     "js-beautify": "^1.11.0",
     "lodash": "^4.17.21",
     "lodash-getpath": "^0.2.4",
@@ -35,8 +34,8 @@
   "devDependencies": {
     "chai": "^3.5.0",
     "chai-as-promised": "^6.0.0",
-    "mariadb": "^2.2.0",
-    "mocha": "^7.1.1",
+    "mariadb": "^2.5.5",
+    "mocha": "^9.2.0",
     "nyc": "^15.0.0",
     "prettier": "^2.0.4"
   },
