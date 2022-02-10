@@ -38,7 +38,7 @@ describe(name, function () {
      * MOCHA
      */
     before(async function () {
-        nosql = await test.MDB.create(test.MxsMongo);
+        nosql = await test.NoSQL.create();
     });
 
     it('Can insert max size document.', async function () {

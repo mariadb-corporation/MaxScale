@@ -20,90 +20,90 @@ const name = "mxsSetConfig";
 describe(name, function () {
     this.timeout(test.timeout);
 
-    let mxs;
+    let nosql;
 
     /*
      * MOCHA
      */
     before(async function () {
-        mxs = await test.MDB.create(test.MxsMongo);
+        nosql = await test.NoSQL.create();
     });
 
     it('Cannot use with non-admin database.', async function () {
-        var rv = await mxs.ntRunCommand({mxsSetConfig: {}});
+        var rv = await nosql.ntRunCommand({mxsSetConfig: {}});
 
         assert.equal(rv.code, error.UNAUTHORIZED);
     });
 
     it('Can use with admin database.', async function () {
         var c = {};
-        await mxs.adminCommand({mxsSetConfig: c});
+        await nosql.adminCommand({mxsSetConfig: c});
 
         // Valid values
         c.auto_create_databases = true;
-        await mxs.adminCommand({mxsSetConfig: c});
+        await nosql.adminCommand({mxsSetConfig: c});
 
         c.auto_create_tables = true;
-        await mxs.adminCommand({mxsSetConfig: c});
+        await nosql.adminCommand({mxsSetConfig: c});
 
         c.cursor_timeout = "60s";
-        await mxs.adminCommand({mxsSetConfig: c});
+        await nosql.adminCommand({mxsSetConfig: c});
 
         c.debug = "in,out,back";
-        await mxs.adminCommand({mxsSetConfig: c});
+        await nosql.adminCommand({mxsSetConfig: c});
 
         c.log_unknown_command = 'true';
-        await mxs.adminCommand({mxsSetConfig: c});
+        await nosql.adminCommand({mxsSetConfig: c});
 
         c.on_unknown_command = 'return_empty';
-        await mxs.adminCommand({mxsSetConfig: c});
+        await nosql.adminCommand({mxsSetConfig: c});
         c.on_unknown_command = 'return_error';
-        await mxs.adminCommand({mxsSetConfig: c});
+        await nosql.adminCommand({mxsSetConfig: c});
 
         c.ordered_insert_behavior = "atomic";
-        await mxs.adminCommand({mxsSetConfig: c});
+        await nosql.adminCommand({mxsSetConfig: c});
         c.ordered_insert_behavior = "default";
-        await mxs.adminCommand({mxsSetConfig: c});
+        await nosql.adminCommand({mxsSetConfig: c});
 
         var rv;
         // Invalid values
         c = { auto_create_databases: 'blah' };
-        rv = await mxs.ntAdminCommand({mxsSetConfig: c});
+        rv = await nosql.ntAdminCommand({mxsSetConfig: c});
         assert.equal(rv.code, error.TYPE_MISMATCH);
 
         c = { auto_create_tables: 'blah' };
-        rv = await mxs.ntAdminCommand({mxsSetConfig: c});
+        rv = await nosql.ntAdminCommand({mxsSetConfig: c});
         assert.equal(rv.code, error.TYPE_MISMATCH);
 
         c = { cursor_timeout: '10xyzh' };
-        rv = await mxs.ntAdminCommand({mxsSetConfig: c});
+        rv = await nosql.ntAdminCommand({mxsSetConfig: c});
         assert.equal(rv.code, error.BAD_VALUE);
 
         c = { debug: 'blah' };
-        rv = await mxs.ntAdminCommand({mxsSetConfig: c});
+        rv = await nosql.ntAdminCommand({mxsSetConfig: c});
         assert.equal(rv.code, error.BAD_VALUE);
 
         c = { log_unknown_command: 'blah' };
-        rv = await mxs.ntAdminCommand({mxsSetConfig: c});
+        rv = await nosql.ntAdminCommand({mxsSetConfig: c});
         assert.equal(rv.code, error.BAD_VALUE);
 
         c = { on_unknown_command: 'blah' };
-        rv = await mxs.ntAdminCommand({mxsSetConfig: c});
+        rv = await nosql.ntAdminCommand({mxsSetConfig: c});
         assert.equal(rv.code, error.BAD_VALUE);
 
         c = { ordered_insert_behavior: 'blah' };
-        rv = await mxs.ntAdminCommand({mxsSetConfig: c});
+        rv = await nosql.ntAdminCommand({mxsSetConfig: c});
         assert.equal(rv.code, error.BAD_VALUE);
 
         // Invalid key
         c = { no_such_key: 1 };
-        rv = await mxs.ntAdminCommand({mxsSetConfig: c});
+        rv = await nosql.ntAdminCommand({mxsSetConfig: c});
         assert.equal(rv.code, error.NO_SUCH_KEY);
     });
 
     after(async function () {
-        if (mxs) {
-            await mxs.close();
+        if (nosql) {
+            await nosql.close();
         }
     });
 });

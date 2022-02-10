@@ -20,18 +20,18 @@ const name = "mxsDiagnose";
 describe(name, function () {
     this.timeout(test.timeout);
 
-    let mxs;
+    let nosql;
 
     /*
      * MOCHA
      */
     before(async function () {
-        mxs = await test.MDB.create(test.MxsMongo);
+        nosql = await test.NoSQL.create();
     });
 
     it('Works.', async function () {
         // Valid command.
-        var rv = await mxs.runCommand({mxsDiagnose: { ping: 1 }});
+        var rv = await nosql.runCommand({mxsDiagnose: { ping: 1 }});
 
         assert.equal(rv.ok, 1);
         assert.equal(rv.error, undefined);
@@ -39,7 +39,7 @@ describe(name, function () {
         assert.notEqual(rv.response, undefined);
 
         // Invalid command.
-        var rv = await mxs.runCommand({mxsDiagnose: { pingX: 1 }});
+        var rv = await nosql.runCommand({mxsDiagnose: { pingX: 1 }});
 
         assert.equal(rv.ok, 1);
         assert.notEqual(rv.error, undefined);
@@ -48,8 +48,8 @@ describe(name, function () {
     });
 
     after(async function () {
-        if (mxs) {
-            await mxs.close();
+        if (nosql) {
+            await nosql.close();
         }
     });
 });

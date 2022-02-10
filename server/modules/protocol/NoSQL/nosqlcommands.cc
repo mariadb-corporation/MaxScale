@@ -214,6 +214,7 @@ struct ThisUnit
         { tolower(command::MxsGetConfig::KEY),             create_info<command::MxsGetConfig>() },
         { tolower(command::MxsRemoveUser::KEY),            create_info<command::MxsRemoveUser>() },
         { tolower(command::MxsSetConfig::KEY),             create_info<command::MxsSetConfig>() },
+        { tolower(command::MxsUpdateUser::KEY),            create_info<command::MxsUpdateUser>() },
         { tolower(command::Ping::KEY),                     create_info<command::Ping>() },
         { tolower(command::RenameCollection::KEY),         create_info<command::RenameCollection>() },
         { tolower(command::ReplSetGetStatus::KEY),         create_info<command::ReplSetGetStatus>() },

@@ -120,7 +120,7 @@ public:
 
         vector<scram::Mechanism> mechanisms;
         element = doc[key::MECHANISMS];
-        if (element)
+        if (element && element.type() != bsoncxx::type::k_null)
         {
             if (element.type() != bsoncxx::type::k_array)
             {
@@ -406,6 +406,7 @@ public:
     using Base::Base;
 
     using UserInfo = nosql::UserManager::UserInfo;
+    using Update = nosql::UserManager::Update;
 
     void populate_response(DocumentBuilder& doc) override
     {
@@ -413,16 +414,10 @@ public:
         string db = m_database.name();
         string user = value_as<string>();
 
-        Data data;
+        Update data;
         uint32_t what = parse(KEY, um, m_doc, db, user, &data);
 
-        UserManager::UserInfo info;
-        info.custom_data = std::move(data.custom_data);
-        info.mechanisms = std::move(data.mechanisms);
-        info.pwd_sha1_b64 = mxs::to_base64(crypto::sha_1(data.pwd));
-        info.roles = std::move(data.roles);
-
-        if (um.update(db, user, what, info))
+        if (um.update(db, user, what, data))
         {
             doc.append(kvp(key::OK, 1));
         }
@@ -435,20 +430,12 @@ public:
         }
     }
 
-    struct Data
-    {
-        string                   pwd;
-        string                   custom_data;
-        vector<scram::Mechanism> mechanisms;
-        vector<role::Role>       roles;
-    };
-
     static uint32_t parse(const string& command,
                           const UserManager& um,
                           const bsoncxx::document::view& doc,
                           const string& db,
                           const string& user,
-                          Data* pData)
+                          Update* pData)
     {
         uint32_t what = 0;
 
@@ -471,17 +458,17 @@ public:
             throw SoftError(ss.str(), error::USER_NOT_FOUND);
         }
 
-        Data data;
+        Update data;
         if (nosql::optional(command, doc, key::PWD, &data.pwd))
         {
-            what |= UserInfo::PWD;
+            what |= Update::PWD;
         }
 
         bsoncxx::document::view custom_data_doc;
         if (nosql::optional(command, doc, key::CUSTOM_DATA, &custom_data_doc))
         {
             data.custom_data = bsoncxx::to_json(custom_data_doc);
-            what |= UserInfo::CUSTOM_DATA;
+            what |= Update::CUSTOM_DATA;
         }
 
         bsoncxx::array::view mechanism_names;
@@ -489,7 +476,7 @@ public:
         {
             scram::from_bson(mechanism_names, &data.mechanisms);
 
-            if (!(what & UserInfo::PWD))
+            if (!(what & Update::PWD))
             {
                 // Password is not changed => new mechanisms must be subset of old.
                 for (const auto mechanism : data.mechanisms)
@@ -507,7 +494,7 @@ public:
                 }
             }
 
-            what |= UserInfo::MECHANISMS;
+            what |= Update::MECHANISMS;
         }
 
         bsoncxx::array::view role_names;
@@ -515,12 +502,19 @@ public:
         {
             role::from_bson(role_names, db, &data.roles);
 
-            what |= UserInfo::ROLES;
+            what |= Update::ROLES;
         }
 
         if (what == 0)
         {
             throw SoftError("Must specify at least one field to update in mxsUpdateUser", error::BAD_VALUE);
+        }
+
+        if ((what & Update::PWD) && !(what & Update::MECHANISMS))
+        {
+            // If the password is changed, but the mechanisms are not explicitly
+            // specified, we use the current mechanisms.
+            data.mechanisms = info.mechanisms;
         }
 
         *pData = std::move(data);

@@ -14,8 +14,9 @@
 var maxscale_host = process.env.maxscale_000_network;
 
 if (!maxscale_host) {
-    console.log("The environment variable 'maxscale_000_network' must be set.");
-    process.exit(1);
+    console.log("The environment variable 'maxscale_000_network' is not set, " +
+                "assuming 127.0.0.1.");
+    maxscale_host = "127.0.0.1"
 }
 
 var timeout;
@@ -31,10 +32,9 @@ else {
 }
 
 var config = {
-    host: process.env.maxscale_000_network,
+    host: maxscale_host,
     mariadb_port: 4008,
     nosql_port: 17017,
-    mongodb_port: 27017,
     user: 'maxskysql',
     password: 'skysql'
 };
@@ -71,32 +71,27 @@ var MxsMongo = {
     }
 };
 
-var MngMongo = {
-    createClient: async function () {
-        var uri = "mongodb://" + config.host + ":" + config.mongodb_port;
-        client = new mongodb.MongoClient(uri, { useUnifiedTopology: true });
-        await client.connect();
-        return client;
-    }
-};
-
-class MDB {
+class NoSQL {
     constructor(client, db) {
         this.client = client;
         this.db = db;
         this.admin = this.client.db('admin');
     }
 
-    static async create(m, dbname) {
-        var client = await m.createClient();
+    static async create(dbname) {
+        var client = await MxsMongo.createClient();
 
         if (!dbname) {
-            dbname = "test";
+            dbname = "nosql";
         }
 
         var db = client.db(dbname);
 
-        return new MDB(client, db);
+        return new NoSQL(client, db);
+    }
+
+    dbName() {
+        return this.db.s.namespace.db;
     }
 
     async set_db(dbname) {
@@ -231,9 +226,7 @@ module.exports = {
     mongodb,
     assert,
     MariaDB,
-    MxsMongo,
-    MngMongo,
-    MDB,
+    NoSQL,
     error,
     timeout
 };

@@ -20,23 +20,23 @@ const name = "mxsGetConfig";
 describe(name, function () {
     this.timeout(test.timeout);
 
-    let mxs;
+    let nosql;
 
     /*
      * MOCHA
      */
     before(async function () {
-        mxs = await test.MDB.create(test.MxsMongo);
+        nosql = await test.NoSQL.create();
     });
 
     it('Cannot use with non-admin database.', async function () {
-        var rv = await mxs.ntRunCommand({mxsGetConfig: 1});
+        var rv = await nosql.ntRunCommand({mxsGetConfig: 1});
 
         assert.equal(rv.code, error.UNAUTHORIZED);
     });
 
     it('Can use with admin database.', async function () {
-        var rv = await mxs.adminCommand({mxsGetConfig: 1});
+        var rv = await nosql.adminCommand({mxsGetConfig: 1});
 
         assert.equal(rv.ok, 1);
         assert.notEqual(rv.config, undefined);
@@ -61,8 +61,8 @@ describe(name, function () {
     });
 
     after(async function () {
-        if (mxs) {
-            await mxs.close();
+        if (nosql) {
+            await nosql.close();
         }
     });
 });
