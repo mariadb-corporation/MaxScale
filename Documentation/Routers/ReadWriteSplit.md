@@ -879,10 +879,6 @@ server which would cause the connection to be closed and a warning to be logged.
 
 #### Limitations of Causal Reads
 
-- This feature does not work with prepared statements. Only SQL
-  statements executed individually (inside a COM_QUERY packet) can be handled by
-  the causal read mechanism.
-
 - This feature does not work with Galera or any other non-standard
   replication mechanisms. As Galera does not update the `gtid_slave_pos`
   variable when events are replicated via the Galera library, the
