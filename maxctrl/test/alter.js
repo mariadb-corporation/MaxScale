@@ -67,20 +67,22 @@ describe("Alter Commands", function () {
 
   it("alters monitor", function () {
     return verifyCommand(
-      "alter monitor MariaDB-Monitor monitor_interval 1000",
+      "alter monitor MariaDB-Monitor monitor_interval 1000ms",
       "monitors/MariaDB-Monitor"
     ).then(function (res) {
-      res.data.attributes.parameters.monitor_interval.should.equal(1000);
+      res.data.attributes.parameters.monitor_interval.should.equal("1000ms");
     });
   });
 
   it("alters monitor with multiple parameters", function () {
     return verifyCommand(
-      "alter monitor MariaDB-Monitor monitor_interval 1234 backend_read_timeout 1234",
+      "alter monitor MariaDB-Monitor monitor_interval 1234ms backend_read_timeout 1234ms",
       "monitors/MariaDB-Monitor"
     ).then(function (res) {
-      res.data.attributes.parameters.monitor_interval.should.equal(1234);
-      res.data.attributes.parameters.backend_read_timeout.should.equal(1234);
+      res.data.attributes.parameters.monitor_interval.should.equal("1234ms");
+
+      // The timeouts are in seconds and should be truncated to the nearest whole second
+      res.data.attributes.parameters.backend_read_timeout.should.equal("1000ms");
     });
   });
 
@@ -89,16 +91,16 @@ describe("Alter Commands", function () {
       "alter monitor MariaDB-Monitor backend_connect_timeout=1s",
       "monitors/MariaDB-Monitor"
     );
-    res.data.attributes.parameters.backend_connect_timeout.should.equal(1);
+    res.data.attributes.parameters.backend_connect_timeout.should.equal("1000ms");
   });
 
   it("alters monitor with multiple key=value parameters", async function () {
     var res = await verifyCommand(
-      "alter monitor MariaDB-Monitor monitor_interval=1234 backend_read_timeout=4321",
+      "alter monitor MariaDB-Monitor monitor_interval=1234ms backend_read_timeout=4321ms",
       "monitors/MariaDB-Monitor"
     );
-    res.data.attributes.parameters.monitor_interval.should.equal(1234);
-    res.data.attributes.parameters.backend_read_timeout.should.equal(4321);
+    res.data.attributes.parameters.monitor_interval.should.equal("1234ms");
+    res.data.attributes.parameters.backend_read_timeout.should.equal("4000ms");
   });
 
   it("will not alter monitor with bad parameters", function () {

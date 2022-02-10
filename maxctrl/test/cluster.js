@@ -165,7 +165,7 @@ describe("Cluster Sync", function () {
   });
 
   it("sync after monitor alteration", function () {
-    return doCommand("alter monitor MariaDB-Monitor monitor_interval 12345 --hosts " + secondary_host)
+    return doCommand("alter monitor MariaDB-Monitor monitor_interval 12345ms --hosts " + secondary_host)
       .then(() =>
         verifyCommand(
           "cluster sync " + secondary_host + " --hosts " + primary_host,
@@ -173,7 +173,7 @@ describe("Cluster Sync", function () {
         )
       )
       .then(function (res) {
-        res.data.attributes.parameters.monitor_interval.should.equal(12345);
+        res.data.attributes.parameters.monitor_interval.should.equal("12345ms");
       });
   });
 
