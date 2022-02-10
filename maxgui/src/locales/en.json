@@ -229,7 +229,6 @@
     "gtid_current_pos": "GTID Current Pos",
     "slave_io_running": "Slave IO Running",
     "slave_sql_running": "Slave SQL Running",
-    "triggered_at": "Triggered At",
     "version_string": "Version String",
     "address": "Address",
     "socket": "Socket",

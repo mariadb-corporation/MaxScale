@@ -162,7 +162,7 @@
                                     class="text-no-wrap d-flex"
                                     :style="{ lineHeight }"
                                 >
-                                    <span class="mr-2 font-weight-bold">
+                                    <span class="mr-2 font-weight-bold text-capitalize">
                                         {{ $t(key) }}
                                     </span>
                                     <truncate-string :text="`${value}`" />
@@ -273,8 +273,9 @@ export default {
         },
         secondSlideCommonInfo() {
             return {
-                //TODO: calc uptime and replace triggered_at with it
-                triggered_at: this.nodeAttrs.triggered_at,
+                uptime: this.$moment
+                    .duration(this.nodeAttrs.uptime * 1000) // s to ms
+                    .format('format', 'y [years] d [days] h [hours]'),
                 version_string: this.nodeAttrs.version_string,
             }
         },
