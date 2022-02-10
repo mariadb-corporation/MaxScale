@@ -972,34 +972,17 @@ bool validate_object_json(json_t* json)
     return err.empty();
 }
 
-bool inject_server_relationship_as_parameter(json_t* json)
+bool inject_server_relationship_as_parameter(json_t* params, json_t* json)
 {
+    mxb_assert(params);
     StringVector relations;
     bool rval = false;
 
     if (extract_ordered_relations(json, relations, to_server_rel))
     {
-        rval = true;
-        json_t* params = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
-
-        if (!params)
-        {
-            json_t* data = json_object_get(json, CN_DATA);
-            mxb_assert(data);
-
-            json_t* attr = json_object_get(data, CN_ATTRIBUTES);
-
-            if (!attr)
-            {
-                json_object_set_new(data, CN_ATTRIBUTES, json_object());
-                attr = json_object_get(data, CN_ATTRIBUTES);
-            }
-
-            json_object_set_new(attr, CN_PARAMETERS, json_object());
-        }
-
         // The empty string parameter makes sure this work even if the relationship is being removed
         json_object_set_new(params, CN_SERVERS, json_string(mxb::join(relations).c_str()));
+        rval = true;
     }
 
     return rval;
@@ -1832,7 +1815,7 @@ bool runtime_create_monitor_from_json(json_t* json)
         {
             json_t* params = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
             mxb_assert_message(params, "Validation should guarantee that parameters exist");
-            inject_server_relationship_as_parameter(json);
+            inject_server_relationship_as_parameter(params, json);
 
             // Copy the module into the parameters to make sure it always appears in the parameters
             json_object_set(params, CN_MODULE, mxs_json_pointer(json, MXS_JSON_PTR_MODULE));
@@ -1982,7 +1965,7 @@ bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
         }
 
         // Now inject the servers from the relationship endpoint
-        inject_server_relationship_as_parameter(new_json);
+        inject_server_relationship_as_parameter(params, new_json);
 
         // Make sure there are no null values left in the parameters, the configuration code
         // treats that as an error.
