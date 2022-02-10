@@ -1824,6 +1824,7 @@ bool runtime_create_monitor_from_json(json_t* json)
         else
         {
             json_t* params = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
+            mxb::json_remove_nulls(params);
             mxb_assert_message(params, "Validation should guarantee that parameters exist");
             inject_server_relationship_as_parameter(params, json);
 
