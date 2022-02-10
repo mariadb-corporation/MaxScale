@@ -27,6 +27,7 @@
                         :node="node"
                         :droppableTargets="droppableTargets"
                         :nodeTxtWrapperClassName="nodeTxtWrapperClassName"
+                        :expandOnMount="expandOnMount"
                         @get-expanded-node="handleExpandedNode"
                         @cluster-node-height="
                             handleAssignNodeHeightMap({ height: $event, nodeId: node.id })
@@ -128,6 +129,14 @@ export default {
                 ? this.maxClusterNodeHeight
                 : this.defClusterNodeHeight
             return [height + this.nodeGap, this.defClusterNodeWidth + this.nodeGap * 2]
+        },
+        expandOnMount() {
+            if (
+                this.$vuetify.breakpoint.height >= 1080 &&
+                Object.keys(this.graphDataHash).length <= 4
+            )
+                return true
+            return false
         },
     },
     async created() {

@@ -155,6 +155,7 @@ export default {
         node: { type: Object, required: true },
         droppableTargets: { type: Array, required: true },
         nodeTxtWrapperClassName: { type: String, default: '' },
+        expandOnMount: { type: Boolean, default: false },
     },
     data() {
         return {
@@ -245,6 +246,7 @@ export default {
         this.$nextTick(() => {
             this.defHeight = this.$refs.nodeWrapper.clientHeight
             this.$emit('cluster-node-height', this.defHeight)
+            if (this.expandOnMount) this.toggleExpand(this.node)
         })
     },
     methods: {
