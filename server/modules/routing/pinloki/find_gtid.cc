@@ -16,6 +16,7 @@
 #include "pinloki.hh"
 #include "rpl_event.hh"
 #include <maxbase/log.hh>
+#include <maxscale/routingworker.hh>
 #include <fstream>
 #include <iostream>
 #include <iomanip>
