@@ -20,6 +20,7 @@ const name = "grantRolesToUser";
 describe(name, function () {
     this.timeout(test.timeout);
 
+    let nosql2;
     let nosql1;
     let mariadb;
 
@@ -46,56 +47,6 @@ describe(name, function () {
                                 pwd: user.pwd,
                                 mechanisms: user.mechanisms,
                                 roles: user.roles});
-    }
-
-    async function fetch_grants(name) {
-        var results = await mariadb.query("SHOW GRANTS FOR '" + name + "'@'%'");
-
-        var grants = {};
-
-        results.forEach(function (result) {
-            // There is just one field in result, so this will give the actual GRANT statment.
-            var grant = Object.values(result)[0];
-            grant = grant.substring(6); // Strip the initial "GRANT "
-
-            var i = grant.search(" ON ");
-            var privileges_string = grant.substring(0, i);
-            var privileges = privileges_string.split(', ');
-
-            var resource = grant.substring(i + 4);
-            i = resource.search(" TO ");
-            resource = resource.substring(0, i);
-
-            grants[resource] = privileges.sort();
-        });
-
-        return grants;
-    }
-
-    var privileges_by_role = {
-        // Keep the values in alphabetical order.
-        "dbAdmin": {
-            db:["ALTER", "CREATE", "DROP", "SELECT" ],
-            blanket: [ "SHOW DATABASES" ]
-        },
-        "dbOwner": {
-            db: ["ALTER", "CREATE", "DELETE", "DROP",
-                 "INDEX", "INSERT", "SELECT", "UPDATE" ],
-            blanket: [ "CREATE USER", "SHOW DATABASES" ]
-        },
-        "read": {
-            db: ["SELECT"]
-        },
-        "readWrite": {
-            db: ["CREATE", "DELETE", "INDEX", "INSERT", "SELECT", "UPDATE" ]
-        },
-        "userAdmin": {
-            db: ["USAGE"],
-        },
-        "root": {
-            db: ["ALTER", "CREATE", "CREATE USER", "DELETE", "DROP", "INDEX",
-                 "INSERT", "SELECT", "SHOW DATABASES", "UPDATE" ]
-        }
     }
 
     function check(role, expected, found, exact) {
@@ -126,7 +77,7 @@ describe(name, function () {
     }
 
     async function check_privileges(user, roles) {
-        var grants = await fetch_grants(user);
+        var grants = await mariadb.fetch_grants_for(user);
 
         for (var i in roles) {
             var role = roles[i];
@@ -139,18 +90,20 @@ describe(name, function () {
                 db = "`" + role.db + "`.*";
             }
 
-            var privileges = privileges_by_role[role.role];
+            var privileges = test.privileges_by_role[role.role];
             var expected = privileges.db;
             var found = grants[db]
 
             check(role, expected, found, true);
 
-            expected = privileges.blanket;
+            if (role.db == "admin") {
+                expected = privileges.adminDb;
 
-            if (expected) {
-                found = grants["*.*"];
+                if (expected) {
+                    found = grants["*.*"];
 
-                check(role, expected, found, false);
+                    check(role, expected, found, false);
+                }
             }
         }
     }

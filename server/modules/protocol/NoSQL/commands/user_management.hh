@@ -37,20 +37,17 @@ namespace add_privileges
 
 // Unorthodox naming convention in order to exactly match the role-name.
 
-void dbAdmin(const string& user,
-             const string& command,
-             const string& preposition,
-             set<string>& privileges,
-             vector<string>& statements)
+void dbAdmin(bool is_on_admin, set<string>& privileges)
 {
     privileges.insert("ALTER");
     privileges.insert("CREATE");
     privileges.insert("DROP");
     privileges.insert("SELECT");
 
-    string statement = command + "SHOW DATABASES ON *.*" + preposition + user;
-
-    statements.push_back(statement);
+    if (is_on_admin)
+    {
+        privileges.insert("SHOW DATABASES");
+    }
 }
 
 void read(set<string>& privileges)
@@ -110,11 +107,11 @@ vector<string> create_grant_or_revoke_statements(const string& user,
         }
         // [[fallthrough]]
     case role::Id::DB_ADMIN:
-        add_privileges::dbAdmin(user, command, preposition, privileges, statements);
+        add_privileges::dbAdmin(is_on_admin, privileges);
         break;
 
     case role::Id::DB_OWNER:
-        add_privileges::dbAdmin(user, command, preposition, privileges, statements);
+        add_privileges::dbAdmin(is_on_admin, privileges);
         add_privileges::readWrite(privileges);
         add_privileges::userAdmin(user, command, preposition, privileges, statements);
         break;
@@ -164,7 +161,7 @@ vector<string> create_grant_or_revoke_statements(const string& user,
         }
 
         add_privileges::readWrite(privileges);
-        add_privileges::dbAdmin(user, command, preposition, privileges, statements);
+        add_privileges::dbAdmin(is_on_admin, privileges);
         add_privileges::userAdmin(user, command, preposition, privileges, statements);
         break;
 
