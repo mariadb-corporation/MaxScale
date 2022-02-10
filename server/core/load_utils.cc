@@ -571,7 +571,8 @@ static json_t* module_json_data(const LOADED_MODULE* mod, const char* host)
     }
     else if (mod_info->modapi == mxs::ModuleType::MONITOR)
     {
-        // TODO: Use new config params in monitors
+        core_params = mxs::Monitor::specification()->to_json();
+        ignored = {CN_TYPE, CN_MODULE};
     }
 
     if (core_params)
