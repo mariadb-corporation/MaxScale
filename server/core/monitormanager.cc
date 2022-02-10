@@ -476,6 +476,7 @@ bool MonitorManager::add_server_to_monitor(mxs::Monitor* mon, SERVER* server, st
         auto servers = mon->configured_servers();
         servers.push_back(server);
         json.set_string(CN_SERVERS, mxb::transform_join(servers, std::mem_fn(&SERVER::name), ","));
+        json.remove_nulls();
 
         success = reconfigure_monitor(mon, json.get_json());
         if (!success)
@@ -514,6 +515,7 @@ bool MonitorManager::remove_server_from_monitor(mxs::Monitor* mon, SERVER* serve
         auto servers = mon->configured_servers();
         servers.erase(std::remove(servers.begin(), servers.end(), server), servers.end());
         json.set_string(CN_SERVERS, mxb::transform_join(servers, std::mem_fn(&SERVER::name), ","));
+        json.remove_nulls();
 
         success = MonitorManager::reconfigure_monitor(mon, json.get_json());
         if (!success)

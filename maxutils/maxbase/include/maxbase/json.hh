@@ -55,6 +55,15 @@ json_t* json_ptr(const json_t* json, const char* json_ptr);
 const char* json_type_to_string(const json_t* json);
 
 /**
+ * Remove null values from JSON objects
+ *
+ * Removes any keys with JSON null values.
+ *
+ * @param json JSON to modify
+ */
+void json_remove_nulls(json_t* json);
+
+/**
  * Wrapper class for Jansson json-objects.
  */
 class Json
@@ -401,6 +410,13 @@ public:
      * @return True if values compare equal
      */
     bool equal(const Json& other) const;
+
+    /**
+     * Remove keys with null values
+     *
+     * Only applicable when a JSON object is being held.
+     */
+    void remove_nulls();
 
     using ElemOkHandler = std::function<void (int ind, const char*)>;
     using ElemFailHandler = std::function<void (int ind, const char*, const char*)>;

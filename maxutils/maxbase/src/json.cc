@@ -543,6 +543,14 @@ bool Json::equal(const Json& other) const
     return valid() == other.valid() && (!valid() || json_equal(m_obj, other.m_obj));
 }
 
+void Json::remove_nulls()
+{
+    if (m_obj && json_typeof(m_obj) == JSON_OBJECT)
+    {
+        return mxb::json_remove_nulls(m_obj);
+    }
+}
+
 bool Json::ok() const
 {
     return m_errormsg.empty();
@@ -651,5 +659,20 @@ const char* json_type_to_string(const json_t* json)
     }
 
     return "unknown";
+}
+
+void json_remove_nulls(json_t* json)
+{
+    const char* key;
+    json_t* value;
+    void* tmp;
+
+    json_object_foreach_safe(json, tmp, key, value)
+    {
+        if (json_is_null(value))
+        {
+            json_object_del(json, key);
+        }
+    }
 }
 }

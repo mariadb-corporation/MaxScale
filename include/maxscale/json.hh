@@ -91,6 +91,8 @@ bool get_json_bool(json_t* json, const char* ptr, bool* out);
  *
  * Removes any keys with JSON null values.
  *
+ * @note Use mxb::json_remove_nulls in new code
+ *
  * @param json JSON to modify
  */
 void json_remove_nulls(json_t* json);
