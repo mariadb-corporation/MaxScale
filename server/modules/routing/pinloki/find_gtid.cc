@@ -50,6 +50,8 @@ bool search_file(const std::string& file_name,
 std::vector<GtidPosition> find_gtid_position(const std::vector<maxsql::Gtid>& gtids,
                                              const InventoryReader& inv)
 {
+    mxb::WatchdogNotifier::Workaround workaround(mxs::RoutingWorker::get_current());
+
     std::vector<GtidPosition> ret;
     // Simple linear search. If there can be a lot of files, make this a binary search, or
     // if it really becomes slow, create an index
