@@ -226,6 +226,13 @@
     "writable": "Writable",
     "serverState": "Server State",
     "lag": "Lag",
+    "last_event": "Last Event",
+    "gtid_binlog_pos": "GTID Binlog Pos",
+    "gtid_current_pos": "GTID Current Pos",
+    "slave_io_running": "Slave IO Running",
+    "slave_sql_running": "Slave SQL Running",
+    "triggered_at": "Triggered At",
+    "version_string": "Version String",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",

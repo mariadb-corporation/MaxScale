@@ -99,11 +99,11 @@
                                 <div
                                     v-for="(value, key) in slide"
                                     :key="`${key}`"
-                                    class="d-flex"
+                                    class="extra-info__line d-flex"
                                     :style="{ lineHeight }"
                                 >
                                     <span class="mr-2 font-weight-bold">
-                                        {{ key }}
+                                        {{ $t(key) }}
                                     </span>
                                     <truncate-string :text="`${value}`" />
                                 </div>
@@ -183,33 +183,50 @@ export default {
                 pickBy: 'seconds_behind_master',
             })
         },
-        masterExtraInfo() {
-            //TODO: determine what info should be shown for master node
-            return {}
-        },
-        slaveExtraInfo() {
-            //TODO: determine what other info should be shown for slave node
+        firstSlideCommonInfo() {
             return {
-                'Last Event': this.nodeAttrs.last_event,
-                'Slave IO Running': this.$help.getMostFreq({
-                    arr: this.slave_connections,
-                    pickBy: 'slave_io_running',
-                }),
-                'Slave SQL Running': this.$help.getMostFreq({
-                    arr: this.slave_connections,
-                    pickBy: 'slave_sql_running',
-                }),
+                last_event: this.nodeAttrs.last_event,
+                gtid_binlog_pos: this.nodeAttrs.gtid_binlog_pos,
+                gtid_current_pos: this.nodeAttrs.gtid_current_pos,
             }
         },
-        /*  TODO: after determining what info should be shown, separated into "slides".
-            i.e. extraInfo return an array instead of an object
-         */
+        secondSlideCommonInfo() {
+            return {
+                //TODO: calc uptime and replace triggered_at with it
+                triggered_at: this.nodeAttrs.triggered_at,
+                version_string: this.nodeAttrs.version_string,
+            }
+        },
+        masterExtraInfo() {
+            return [
+                {
+                    ...this.firstSlideCommonInfo,
+                },
+                this.secondSlideCommonInfo,
+            ]
+        },
+        slaveExtraInfo() {
+            return [
+                {
+                    ...this.firstSlideCommonInfo,
+                    slave_io_running: this.$help.getMostFreq({
+                        arr: this.slave_connections,
+                        pickBy: 'slave_io_running',
+                    }),
+                    slave_sql_running: this.$help.getMostFreq({
+                        arr: this.slave_connections,
+                        pickBy: 'slave_sql_running',
+                    }),
+                },
+                this.secondSlideCommonInfo,
+            ]
+        },
         extraInfo() {
             if (this.node.data.isMaster) return this.masterExtraInfo
             else return this.slaveExtraInfo
         },
         extraInfoSlides() {
-            return [this.extraInfo]
+            return this.extraInfo
         },
         activeInfoSlide() {
             return this.extraInfoSlides[this.activeInfoSlideIdx]
@@ -297,6 +314,9 @@ export default {
                         }
                     }
                 }
+            }
+            .extra-info__line {
+                white-space: nowrap;
             }
         }
     }
