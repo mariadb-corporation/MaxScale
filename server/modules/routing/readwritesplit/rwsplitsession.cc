@@ -1005,7 +1005,12 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
 
 void RWSplitSession::endpointConnReleased(mxs::Endpoint* down)
 {
-    // TODO
+    auto* backend = static_cast<RWBackend*>(down->get_userdata());
+    if (can_recover_servers() && (!backend->is_master() || m_config.master_reconnection))
+    {
+        backend->close(RWBackend::CLOSE_NORMAL);
+        backend->set_close_reason("Backend pooled");
+    }
 }
 
 /**
