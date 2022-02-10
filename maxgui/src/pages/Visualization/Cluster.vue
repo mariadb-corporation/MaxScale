@@ -20,7 +20,9 @@
                 @on-node-dragend="onNodeSwapEnd"
             >
                 <template v-slot:rect-node-content="{ data: { node } }">
+                    <!-- Render cluster-node only when `data` object is passed from tree-graph -->
                     <cluster-node
+                        v-if="!$typy(node, 'data').isEmptyObject"
                         :node="node"
                         :droppableTargets="droppableTargets"
                         :nodeTxtWrapperClassName="nodeTxtWrapperClassName"

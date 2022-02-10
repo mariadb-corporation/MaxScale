@@ -83,16 +83,9 @@ export default {
                 return `${id}`
             }
         },
-        getNodeAttrs: (state, getters, rootState, rootGetters) => {
+        getServerData: (state, getters, rootState, rootGetters) => {
             return id => {
-                const {
-                    attributes: {
-                        state,
-                        read_only = false,
-                        statistics: { connections = 0 },
-                    },
-                } = rootGetters['server/getAllServersMap'].get(id)
-                return { state, read_only, connections }
+                return rootGetters['server/getAllServersMap'].get(id)
             }
         },
         getMariadbmonCluster: (state, getters) => {
@@ -119,7 +112,7 @@ export default {
                         id: masterName,
                         name: masterName,
                         title: getters.getNodeTitle(masterName),
-                        ...getters.getNodeAttrs(masterName),
+                        serverData: getters.getServerData(masterName),
                         isMaster: true,
                         stroke: '#0e9bc0',
                         children: [], // contains replicate servers data
@@ -134,7 +127,7 @@ export default {
                                 id: server.name,
                                 name: server.name,
                                 title: getters.getNodeTitle(server.name),
-                                ...getters.getNodeAttrs(server.name),
+                                serverData: getters.getServerData(server.name),
                                 isMaster: false,
                                 masterServerName: masterName,
                                 server_info: {

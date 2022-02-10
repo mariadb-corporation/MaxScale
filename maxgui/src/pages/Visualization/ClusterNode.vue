@@ -8,7 +8,7 @@
                 <icon-sprite-sheet
                     size="13"
                     class="server-state-icon mr-1"
-                    :frame="$help.serverStateIcon($typy(node, 'data.state').safeString)"
+                    :frame="$help.serverStateIcon(nodeAttrs.state)"
                 >
                     status
                 </icon-sprite-sheet>
@@ -18,12 +18,12 @@
                         :to="`/dashboard/servers/${node.id}`"
                         class="rsrc-link"
                     >
-                        {{ $typy(node, 'data.title').safeString }}
+                        {{ node.data.title }}
                     </router-link>
                 </div>
                 <v-spacer />
                 <span class="readonly-val ml-1 color text-field-text font-weight-medium">
-                    {{ $typy(node, 'data.readonly').safeBoolean ? $t('readonly') : $t('writable') }}
+                    {{ nodeAttrs.read_only ? $t('readonly') : $t('writable') }}
                 </span>
                 <div class="ml-1 button-container">
                     <v-menu
@@ -64,15 +64,9 @@
                     <span class="sbm mr-2 font-weight-bold">
                         {{ $t('serverState') }}
                     </span>
-                    <truncate-string :text="`${node.data.state}`" />
+                    <truncate-string :text="`${nodeAttrs.state}`" />
                     <v-spacer />
-                    <span
-                        v-if="
-                            !$typy(node.data).isEmptyObject &&
-                                !$typy(node, 'data.isMaster').safeBoolean
-                        "
-                        class="sbm ml-1"
-                    >
+                    <span v-if="!node.data.isMaster" class="sbm ml-1">
                         <span class="font-weight-bold text-capitalize">
                             {{ $t('lag') }}
                         </span>
@@ -83,7 +77,7 @@
                     <span class="text-capitalize font-weight-bold mr-2">
                         {{ $tc('connections', 2) }}
                     </span>
-                    <span>{{ node.data.connections }} </span>
+                    <span>{{ nodeAttrs.statistics.connections }} </span>
                 </div>
                 <v-expand-transition>
                     <div
@@ -91,7 +85,7 @@
                         class="node-text--expanded-content mx-n2 mb-n2 px-2 pt-0 pb-2"
                     >
                         <v-carousel
-                            v-model="activeInfoSlide"
+                            v-model="activeInfoSlideIdx"
                             class="extra-info-carousel"
                             :show-arrows="false"
                             hide-delimiter-background
@@ -121,7 +115,7 @@
         </v-card>
 
         <v-btn
-            v-if="Object.keys(extraInfo).length"
+            v-if="Object.keys(activeInfoSlide).length"
             x-small
             height="16"
             class="arrow-toggle mx-auto text-capitalize font-weight-medium px-2 color bg-background"
@@ -166,7 +160,7 @@ export default {
         return {
             isExpanded: false,
             defHeight: 0,
-            activeInfoSlide: 0,
+            activeInfoSlideIdx: 0,
         }
     },
     computed: {
@@ -176,9 +170,16 @@ export default {
         lineHeightNum() {
             return Number(this.lineHeight.replace('px', ''))
         },
+        nodeAttrs() {
+            return this.node.data.serverData.attributes
+        },
+        // only slave node has this property
+        slave_connections() {
+            return this.$typy(this.node.data, 'server_info.slave_connections').safeArray
+        },
         sbm() {
             return this.$help.getMin({
-                arr: this.node.data.server_info.slave_connections,
+                arr: this.slave_connections,
                 pickBy: 'seconds_behind_master',
             })
         },
@@ -188,37 +189,38 @@ export default {
         },
         slaveExtraInfo() {
             //TODO: determine what other info should be shown for slave node
-            if (this.$typy(this.node, 'data.server_info').safeObject)
-                return {
-                    'Slave IO Running': this.$help.getMostFreq({
-                        arr: this.node.data.server_info.slave_connections,
-                        pickBy: 'slave_io_running',
-                    }),
-                    'Slave SQL Running': this.$help.getMostFreq({
-                        arr: this.node.data.server_info.slave_connections,
-                        pickBy: 'slave_sql_running',
-                    }),
-                }
-            return {}
+            return {
+                'Last Event': this.nodeAttrs.last_event,
+                'Slave IO Running': this.$help.getMostFreq({
+                    arr: this.slave_connections,
+                    pickBy: 'slave_io_running',
+                }),
+                'Slave SQL Running': this.$help.getMostFreq({
+                    arr: this.slave_connections,
+                    pickBy: 'slave_sql_running',
+                }),
+            }
         },
         /*  TODO: after determining what info should be shown, separated into "slides".
             i.e. extraInfo return an array instead of an object
          */
         extraInfo() {
-            if (this.$typy(this.node, 'data.isMaster').safeBoolean) return this.masterExtraInfo
+            if (this.node.data.isMaster) return this.masterExtraInfo
             else return this.slaveExtraInfo
         },
         extraInfoSlides() {
             return [this.extraInfo]
         },
+        activeInfoSlide() {
+            return this.extraInfoSlides[this.activeInfoSlideIdx]
+        },
         // Determine number of new lines added when isExpanded is true
         numOfExtraLines() {
-            if (this.$typy(this.node, 'data.isMaster').safeBoolean) return 0
-            return Object.keys(this.extraInfoSlides[this.activeInfoSlide]).length
+            return Object.keys(this.activeInfoSlide).length
         },
     },
     watch: {
-        activeInfoSlide() {
+        activeInfoSlideIdx() {
             // recalculate node height when slide is changed
             this.$emit('cluster-node-height', this.getExpandedNodeHeight())
         },
