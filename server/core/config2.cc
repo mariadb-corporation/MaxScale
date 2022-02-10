@@ -804,8 +804,13 @@ bool Configuration::configure(json_t* json, std::set<std::string>* pUnrecognized
         // have to be manually called in the constructor of each object that uses a Configuration.
         m_first_time = false;
 
+        // Mark the configuration as changed on the first attempt even if it really didn't
+        changed = true;
+
         configured = post_configure(nested_parameters);
     }
+
+    m_was_modified = changed;
 
     return configured;
 }

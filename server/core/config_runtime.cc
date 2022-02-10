@@ -976,13 +976,23 @@ bool inject_server_relationship_as_parameter(json_t* params, json_t* json)
 {
     mxb_assert(params);
     StringVector relations;
-    bool rval = false;
+    bool rval = true;
 
-    if (extract_ordered_relations(json, relations, to_server_rel))
+    // We need to check first if there's a value defined. If there isn't, we do nothing and treat the
+    // relationships as the same.
+    if (mxs_json_pointer(json, to_server_rel.first))
     {
-        // The empty string parameter makes sure this work even if the relationship is being removed
-        json_object_set_new(params, CN_SERVERS, json_string(mxb::join(relations).c_str()));
-        rval = true;
+        if (extract_ordered_relations(json, relations, to_server_rel))
+        {
+            // The empty string parameter makes sure this work even if the relationship is being removed. This
+            // currently includes setting the `data` field to null which is documented as not being supported
+            // but has been for quite some time.
+            json_object_set_new(params, CN_SERVERS, json_string(mxb::join(relations).c_str()));
+        }
+        else
+        {
+            rval = false;
+        }
     }
 
     return rval;

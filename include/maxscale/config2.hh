@@ -1719,6 +1719,26 @@ public:
      */
     json_t* to_json() const;
 
+    /**
+     * Whether the configuration was changed by the last call to configure()
+     */
+    bool was_modified() const
+    {
+        return m_was_modified;
+    }
+
+    /**
+     * Mark the configuration as changed even if all the values are the same
+     *
+     * This is relevant when a configuration depends on the core configuration and performs some actions in
+     * post_configure. By forcing a call to post_configure() in these cases, we make sure that it is always
+     * called whenever either a core or a module parameter is changed.
+     */
+    void mark_as_modified()
+    {
+        m_first_time = true;
+    }
+
 protected:
     /**
      * Called when configuration has initially been configured, to allow a Configuration to configure
@@ -1796,6 +1816,7 @@ private:
     ValuesByName         m_values;
     Natives              m_natives;
     bool                 m_first_time {true};
+    bool                 m_was_modified {false};
 };
 
 

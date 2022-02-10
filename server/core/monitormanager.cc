@@ -352,10 +352,25 @@ bool MonitorManager::reconfigure_monitor(mxs::Monitor* monitor, json_t* paramete
     }
 
     std::set<std::string> unknown;
-    bool success = monitor->base_configuration().specification().validate(parameters, &unknown)
-        && monitor->configuration().specification().validate(parameters)
-        && monitor->base_configuration().configure(parameters, &unknown)
-        && monitor->configuration().configure(parameters);
+    bool success = false;
+    auto& base = monitor->base_configuration();
+    auto& mod = monitor->configuration();
+
+    if (base.specification().validate(parameters, &unknown) && mod.specification().validate(parameters))
+    {
+        if (base.configure(parameters, &unknown))
+        {
+            if (base.was_modified())
+            {
+                // This forces post_configure() to be called even if the module's parameters do not change.
+                mod.mark_as_modified();
+            }
+
+            success = mod.configure(parameters);
+        }
+    }
+
+
 
     // TODO: If the reconfiguration fails, the old parameters are not restored. Previously the monitor was
     // reconfigured with the old parameters if the new one failed to be processed. Either make sure the
