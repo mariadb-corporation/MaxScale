@@ -56,7 +56,7 @@ int main(int argc, char** argv)
         // A monitor for the servers
         create
         +
-        "monitor monitor1 mysqlmon monitor_interval=1000 user=skysql password=skysql --servers server1 server2 server3 server4",
+        "monitor monitor1 mysqlmon monitor_interval=1000ms user=skysql password=skysql --servers server1 server2 server3 server4",
         // Services, one readwritesplit and one readconnroute
         create
         +
