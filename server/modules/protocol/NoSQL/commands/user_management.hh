@@ -191,6 +191,11 @@ vector<string> create_grant_statements(const string& user, const role::Role& rol
     return create_grant_or_revoke_statements(user, "GRANT ", " TO ", role);
 }
 
+vector<string> create_revoke_statements(const string& user, const role::Role& role)
+{
+    return create_grant_or_revoke_statements(user, "REVOKE ", " FROM ", role);
+}
+
 vector<string> create_grant_or_revoke_statements(const string& user,
                                                  const string& command,
                                                  const string& preposition,
@@ -870,8 +875,8 @@ public:
 
                 if (nStatements == 0)
                 {
-                    ss << "Could update some, but not all of the granted roles and their corresponding "
-                       << "MariaDB privileges. See the MaxScale log for more details.";
+                    ss << "Could partially update the MariaDB grants and could update the corresponding "
+                       << "roles in the local nosqlprotocol database. See the MaxScale log for more details.";
                 }
                 else
                 {
@@ -976,7 +981,7 @@ public:
         uint8_t* pData = mariadb_response.data();
         uint8_t* pEnd = pData + mariadb_response.length();
 
-        size_t n = 0;
+        size_t nStatements = 0;
         while (pData < pEnd)
         {
             ComResponse response(&pData);
@@ -984,7 +989,7 @@ public:
             switch (response.type())
             {
             case ComResponse::OK_PACKET:
-                ++n;
+                ++nStatements;
                 break;
 
             case ComResponse::ERR_PACKET:
@@ -994,7 +999,7 @@ public:
                     switch (err.code())
                     {
                     case ER_SPECIFIC_ACCESS_DENIED_ERROR:
-                        if (n == 0)
+                        if (nStatements == 0)
                         {
                             ostringstream ss;
                             ss << "not authorized on " << m_database.name() << " to execute command "
@@ -1005,7 +1010,7 @@ public:
                         // [[fallthrough]]
                     default:
                         MXS_ERROR("Revoke statement '%s' failed: %s",
-                                  m_statements[n].c_str(), err.message().c_str());
+                                  m_statements[nStatements].c_str(), err.message().c_str());
                     }
                 };
                 break;
@@ -1015,8 +1020,16 @@ public:
             }
         }
 
+        size_t nRoles = 0;
+
+        while (nStatements > 0)
+        {
+            nStatements -= m_nStatements_per_role[nRoles];
+            ++nRoles;
+        }
+
         auto revoked_roles = m_roles;
-        revoked_roles.resize(n);
+        revoked_roles.resize(nRoles);
 
         map<string, set<role::Id>> roles_by_db;
 
@@ -1053,7 +1066,7 @@ public:
 
         if (um.set_roles(m_db, m_user, final_roles))
         {
-            if (n == m_roles.size())
+            if (nRoles == m_roles.size())
             {
                 DocumentBuilder doc;
                 doc.append(kvp(key::OK, 1));
@@ -1064,8 +1077,17 @@ public:
             {
                 ostringstream ss;
 
-                ss << "Could partially update the MariaDB grants and could update the corresponding "
-                   << "roles in the local nosqlprotocol database. See the MaxScale log for more details.";
+                if (nStatements == 0)
+                {
+                    ss << "Could partially update the MariaDB grants and could update the corresponding "
+                       << "roles in the local nosqlprotocol database. See the MaxScale log for more details.";
+                }
+                else
+                {
+                    ss << "Could only partially update the MariaDB privileges corresponding to a "
+                       << "particular role. There is now a discrepancy between the MariaDB privileges "
+                       << "the user has and the roles nosqlprotocol reports it has.";
+                }
 
                 throw SoftError(ss.str(), error::INTERNAL_ERROR);
             }
@@ -1074,7 +1096,7 @@ public:
         {
             ostringstream ss;
 
-            if (n == m_roles.size())
+            if (nRoles == m_roles.size())
             {
                 ss << "Could update the MariaDB grants";
             }
@@ -1128,6 +1150,14 @@ private:
     {
         string account = mariadb::get_account(m_db, m_user, m_info.host);
 
+        for (const auto& role : m_roles)
+        {
+            auto statements = create_revoke_statements(account, role);
+
+            m_nStatements_per_role.push_back(statements.size());
+            m_statements.insert(m_statements.begin(), statements.begin(), statements.end());
+        }
+
         m_statements = create_revoke_statements(account, m_roles);
 
         return mxb::join(m_statements, ";");
@@ -1139,6 +1169,7 @@ private:
     UserManager::UserInfo m_info;
     vector<role::Role>    m_roles;
     vector<string>        m_statements;
+    vector<size_t>        m_nStatements_per_role;
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/updateUser/
