@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2026-01-04
+ * Change Date: 2026-02-11
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -233,9 +233,6 @@ public:
      */
     bool move_to(mxs::RoutingWorker* worker);
 
-    void endpoint_waiting_for_conn();
-    void endpoint_no_longer_waiting_for_conn();
-
     /**
      * Set session time-to-live value
      *
@@ -332,7 +329,6 @@ private:
     Log               m_log;                    /*< Session specific in-memory log */
     int64_t           m_ttl = 0;                /*< How many seconds the session has until it is killed  */
     int64_t           m_ttl_start = 0;          /*< The clock tick when TTL was assigned */
-    int               m_endpoints_waiting {0};  /*< How many endpoints are waiting for a new connection */
 
     int64_t m_pooling_time_ms {0};  /**< Pre-emptive pooling time. Set at session begin. */
 

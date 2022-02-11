@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2026-01-04
+ * Change Date: 2026-02-11
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -70,6 +70,17 @@ public:
      */
     virtual bool
     handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& reply) = 0;
+
+    /**
+     * Called by the service when a ServerEndpoint connection has been released and placed to the pool.
+     * A router should implement this function if it can use it to optimize its behavior. E.g. avoid sending
+     * queries to the affected endpoint.
+     *
+     * @param down The pooled endpoint
+     */
+    virtual void endpointConnReleased(Endpoint* down)
+    {
+    }
 
     // Sets the upstream component (don't override this in the inherited class)
     void setUpstream(mxs::Routable* up)

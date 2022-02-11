@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2026-01-04
+ * Change Date: 2026-02-11
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -522,7 +522,7 @@ RoutingWorker::get_backend_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Comp
     }
 
     ConnectionResult rval;
-    const auto max_allowed_conns = pServer->max_connections();
+    const auto max_allowed_conns = pServer->max_routing_connections();
     auto& stats = pServer->stats();
 
     if (max_allowed_conns > 0)
@@ -1689,10 +1689,25 @@ RoutingWorker::ConnectionPoolStats RoutingWorker::pool_get_stats(const SERVER* p
     return rval;
 }
 
-void RoutingWorker::add_conn_wait_entry(ServerEndpoint* ep, Session* session)
+void RoutingWorker::add_conn_wait_entry(ServerEndpoint* ep)
 {
     m_eps_waiting_for_conn[ep->server()].push_back(ep);
-    session->endpoint_waiting_for_conn();
+}
+
+void RoutingWorker::erase_conn_wait_entry(ServerEndpoint* ep)
+{
+    auto map_iter = m_eps_waiting_for_conn.find(ep->server());
+    mxb_assert(map_iter != m_eps_waiting_for_conn.end());
+    // The element is surely found in both the map and the set.
+    auto& ep_deque = map_iter->second;
+    // Erasing from the middle of a deque is inefficient, as possibly a large number of elements
+    // needs to be moved. TODO: set the element to null and erase later.
+    ep_deque.erase(std::find(ep_deque.begin(), ep_deque.end(), ep));
+
+    if (ep_deque.empty())
+    {
+        m_eps_waiting_for_conn.erase(map_iter);
+    }
 }
 
 void RoutingWorker::notify_connection_available(SERVER* server)
@@ -1762,7 +1777,6 @@ void RoutingWorker::activate_waiting_endpoints()
             if (erase_from_set)
             {
                 ep_set.erase(it_first);
-                ep->session()->endpoint_no_longer_waiting_for_conn();
             }
         }
 
@@ -1796,7 +1810,6 @@ void RoutingWorker::fail_timed_out_endpoints()
             {
                 ep->handle_timed_out_continue();
                 it = ep_deq.erase(it);
-                ep->session()->endpoint_no_longer_waiting_for_conn();
             }
             else
             {
@@ -1812,23 +1825,6 @@ void RoutingWorker::fail_timed_out_endpoints()
         {
             ++it_map;
         }
-    }
-}
-
-void RoutingWorker::erase_conn_wait_entry(ServerEndpoint* ep, Session* session)
-{
-    auto map_iter = m_eps_waiting_for_conn.find(ep->server());
-    mxb_assert(map_iter != m_eps_waiting_for_conn.end());
-    // The element is surely found in both the map and the set.
-    auto& ep_deque = map_iter->second;
-    // Erasing from the middle of a deque is inefficient, as possibly a large number of elements
-    // needs to be moved. TODO: set the element to null and erase later.
-    ep_deque.erase(std::find(ep_deque.begin(), ep_deque.end(), ep));
-
-    session->endpoint_no_longer_waiting_for_conn();
-    if (ep_deque.empty())
-    {
-        m_eps_waiting_for_conn.erase(map_iter);
     }
 }
 
@@ -1849,6 +1845,11 @@ void RoutingWorker::pool_close_expired()
             server_pool.close_expired();
         }
     }
+}
+
+bool RoutingWorker::conn_to_server_needed(const SERVER* srv) const
+{
+    return m_eps_waiting_for_conn.find(srv) != m_eps_waiting_for_conn.end();
 }
 
 void RoutingWorker::ConnectionPoolStats::add(const ConnectionPoolStats& rhs)

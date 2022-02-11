@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2026-01-04
+ * Change Date: 2026-02-11
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -151,8 +151,8 @@ static cfg::ParamEnum<int64_t> s_rank(
         {RANK_SECONDARY, "secondary"}
     }, RANK_PRIMARY, AT_RUNTIME);
 
-static cfg::ParamCount s_max_connections(
-    &s_spec, "max_connections", "Maximum connections", 0, AT_RUNTIME);
+static cfg::ParamCount s_max_routing_connections(
+    &s_spec, "max_routing_connections", "Maximum routing connections", 0, AT_RUNTIME);
 
 //
 // TLS parameters
@@ -392,7 +392,7 @@ Server::Settings::Settings(const std::string& name)
     , m_proxy_protocol(this, &s_proxy_protocol)
     , m_disk_space_threshold(this, &s_disk_space_threshold)
     , m_rank(this, &s_rank)
-    , m_max_connections(this, &s_max_connections)
+    , m_max_routing_connections(this, &s_max_routing_connections)
     , m_ssl(this, &s_ssl)
     , m_ssl_cert(this, &s_ssl_cert)
     , m_ssl_key(this, &s_ssl_key)
@@ -988,7 +988,7 @@ bool ServerEndpoint::connect()
             // be notified as soon as a connection becomes available.
 
             m_connstatus = ConnStatus::WAITING_FOR_CONN;
-            worker->add_conn_wait_entry(this, m_session);
+            worker->add_conn_wait_entry(this);
             m_conn_wait_start = worker->epoll_tick_now();
             rval = true;
 
@@ -1039,7 +1039,7 @@ void ServerEndpoint::close()
     else if (m_connstatus == ConnStatus::WAITING_FOR_CONN)
     {
         // Erase the entry in the wait list.
-        m_session->worker()->erase_conn_wait_entry(this, m_session);
+        m_session->worker()->erase_conn_wait_entry(this);
     }
 
     // This function seems to be called twice when closing an Endpoint. Take this into account by always
@@ -1181,6 +1181,7 @@ bool ServerEndpoint::try_to_pool()
             rval = true;
             m_connstatus = ConnStatus::IDLE_POOLED;
             m_conn = nullptr;
+            m_up->endpointConnReleased(this);
             MXB_INFO("Session %lu connection to %s pooled.", m_session->id(), m_server->name());
             m_session->worker()->notify_connection_available(m_server);
         }

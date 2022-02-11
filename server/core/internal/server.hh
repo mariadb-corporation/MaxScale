@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2026-01-04
+ * Change Date: 2026-02-11
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -138,9 +138,9 @@ public:
         return m_settings.m_priority.get();
     }
 
-    int64_t max_connections() const
+    int64_t max_routing_connections() const
     {
-        return m_settings.m_max_connections.get();
+        return m_settings.m_max_routing_connections.get();
     }
 
     /**
@@ -395,7 +395,7 @@ private:
         // The ranking of this server, used to prioritize certain servers over others during routing
         mxs::config::Enum<int64_t> m_rank;
         // How many simultaneous connections are allowed to this server. Only counts routing connections.
-        mxs::config::Count m_max_connections;
+        mxs::config::Count m_max_routing_connections;
 
         // TLS configuration parameters
         mxs::config::Bool m_ssl;

@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2026-01-04
+ * Change Date: 2026-02-11
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -423,9 +423,10 @@ public:
     void pool_close_all_conns();
     void pool_close_all_conns_by_server(SERVER* pSrv);
 
-    void add_conn_wait_entry(ServerEndpoint* ep, Session* session);
-    void erase_conn_wait_entry(ServerEndpoint* ep, Session* session);
+    void add_conn_wait_entry(ServerEndpoint* ep);
+    void erase_conn_wait_entry(ServerEndpoint* ep);
     void notify_connection_available(SERVER* server);
+    bool conn_to_server_needed(const SERVER* srv) const;
 
     static void pool_set_size(const std::string& srvname, int64_t size);
 
