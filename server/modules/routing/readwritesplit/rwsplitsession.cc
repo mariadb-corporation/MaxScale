@@ -102,8 +102,9 @@ bool RWSplitSession::routeQuery(GWBUF* querybuf)
     if (m_state == TRX_REPLAY || m_pending_retries > 0 || !m_query_queue.empty())
     {
         MXS_INFO("New %s received while %s is active: %s",
+                 STRPACKETTYPE(buffer.data()[4]),
                  m_state == TRX_REPLAY ?  "transaction replay" : "query execution",
-                 STRPACKETTYPE(buffer.data()[4]), buffer.get_sql().c_str());
+                 buffer.get_sql().c_str());
 
         m_query_queue.emplace_back(std::move(buffer));
         return true;
