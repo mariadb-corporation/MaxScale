@@ -287,13 +287,18 @@ export default {
         },
         drawLinks({ srcNode, links }) {
             // Update the links...
-            let link = this.svg.selectAll('path.link').data(links, d => d.id)
+            let linkGroup = this.svg.selectAll('.link-group').data(links, d => d.id)
 
             // Enter any new links at the parent's previous position.
-            let linkEnter = link
+            let linkGroupEnter = linkGroup
                 .enter()
-                .insert('path', 'g')
-                .attr('class', 'link')
+                .insert('g', 'g.node')
+                .attr('class', 'link-group')
+
+            // create link_line
+            linkGroupEnter
+                .append('path')
+                .attr('class', 'link_line')
                 .attr('fill', 'none')
                 .attr('stroke-width', 2.5)
                 .attr('stroke', d => d.data.stroke)
@@ -301,20 +306,27 @@ export default {
                     let o = { x: srcNode.x0, y: srcNode.y0 }
                     return this.diagonal(o, o)
                 })
-
+            // TODO: create link__arrow
             // UPDATE
-            let linkUpdate = linkEnter.merge(link)
-
+            let linkGroupUpdate = linkGroupEnter.merge(linkGroup)
             // Transition back to the parent element position
-            linkUpdate
+            // update link_line
+            linkGroupUpdate
+                .select('path.link_line')
                 .transition()
                 .duration(this.duration)
                 .attr('d', d => this.diagonal(d, d.parent))
 
             // Remove any exiting links
-            link.exit()
+            let linkExit = linkGroup
+                .exit()
                 .transition()
                 .duration(this.duration)
+                .remove()
+
+            // remove link_line
+            linkExit
+                .select('path.link_line')
                 .attr('d', () => {
                     let o = { x: srcNode.x, y: srcNode.y }
                     return this.diagonal(o, o)
