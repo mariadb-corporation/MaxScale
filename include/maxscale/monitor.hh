@@ -645,8 +645,6 @@ protected:
 
         std::string          type;      // Always "monitor"
         const MXS_MODULE*    module;    // The monitor module
-        std::string          user;      // Username
-        std::string          password;  // Password
         std::vector<SERVER*> servers;   // The configured servers
 
         milliseconds interval;          /**< Monitor interval in milliseconds */

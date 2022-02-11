@@ -464,6 +464,12 @@ bool MariaDBMonitor::post_configure()
      * added, removed and modified. */
     reset_server_info();
 
+    if (m_settings.shared.replication_user.empty())
+    {
+        m_settings.shared.replication_user = conn_settings().username;
+        m_settings.shared.replication_password = conn_settings().password;
+    }
+
     auto [ok, excluded] = get_monitored_serverlist(m_settings.servers_no_promotion);
 
     if (ok)
