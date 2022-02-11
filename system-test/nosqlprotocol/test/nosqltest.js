@@ -54,11 +54,37 @@ const assert = require('assert');
 
 var MariaDB = {
     createConnection: async function () {
-        return mariadb.createConnection({
+        var conn = await mariadb.createConnection({
             host: config.host,
             port: config.mariadb_port,
             user: config.user,
             password: config.password });
+
+        conn.fetch_grants_for = async function (name) {
+            var results = await this.query("SHOW GRANTS FOR '" + name + "'@'%'");
+
+            var grants = {};
+
+            results.forEach(function (result) {
+                // There is just one field in result, so this will give the actual GRANT statment.
+                var grant = Object.values(result)[0];
+                grant = grant.substring(6); // Strip the initial "GRANT "
+
+                var i = grant.search(" ON ");
+                var privileges_string = grant.substring(0, i);
+                var privileges = privileges_string.split(', ');
+
+                var resource = grant.substring(i + 4);
+                i = resource.search(" TO ");
+                resource = resource.substring(0, i);
+
+                grants[resource] = privileges.sort();
+            });
+
+            return grants;
+        };
+
+        return conn;
     }
 }
 
@@ -220,6 +246,32 @@ class NoSQL {
     }
 };
 
+var privileges_by_role = {
+    // Keep the values in alphabetical order.
+    "dbAdmin": {
+        db:["ALTER", "CREATE", "DROP", "SELECT" ],
+        adminDb: [ "SHOW DATABASES" ]
+    },
+    "dbOwner": {
+        db: ["ALTER", "CREATE", "DELETE", "DROP",
+             "INDEX", "INSERT", "SELECT", "UPDATE" ],
+        adminDb: [ "CREATE USER", "SHOW DATABASES" ]
+    },
+    "read": {
+        db: ["SELECT"]
+    },
+    "readWrite": {
+        db: ["CREATE", "DELETE", "INDEX", "INSERT", "SELECT", "UPDATE" ]
+    },
+    "userAdmin": {
+        db: ["USAGE"],
+    },
+    "root": {
+        db: ["ALTER", "CREATE", "CREATE USER", "DELETE", "DROP", "INDEX",
+             "INSERT", "SELECT", "SHOW DATABASES", "UPDATE" ]
+    }
+}
+
 module.exports = {
     config,
     mariadb,
@@ -228,5 +280,6 @@ module.exports = {
     MariaDB,
     NoSQL,
     error,
-    timeout
+    timeout,
+    privileges_by_role
 };

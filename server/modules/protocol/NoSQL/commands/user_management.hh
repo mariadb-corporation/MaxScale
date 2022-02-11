@@ -37,13 +37,17 @@ namespace add_privileges
 
 // Unorthodox naming convention in order to exactly match the role-name.
 
-void dbAdmin(set<string>& privileges)
+void dbAdmin(bool is_on_admin, set<string>& privileges)
 {
     privileges.insert("ALTER");
     privileges.insert("CREATE");
     privileges.insert("DROP");
-    privileges.insert("SHOW DATABASES");
     privileges.insert("SELECT");
+
+    if (is_on_admin)
+    {
+        privileges.insert("SHOW DATABASES");
+    }
 }
 
 void read(set<string>& privileges)
@@ -61,9 +65,16 @@ void readWrite(set<string>& privileges)
     privileges.insert("UPDATE");
 }
 
-void userAdmin(set<string>& privileges)
+void userAdmin(const string& user,
+               const string& command,
+               const string& preposition,
+               set<string>& privileges,
+               vector<string>& statements)
 {
     privileges.insert("GRANT OPTION");
+
+    string statement = command + "CREATE USER ON *.*" + preposition + user;
+    statements.push_back(statement);
 }
 
 }
@@ -71,122 +82,135 @@ void userAdmin(set<string>& privileges)
 vector<string> create_grant_or_revoke_statements(const string& user,
                                                  const string& command,
                                                  const string& preposition,
-                                                 const vector<role::Role>& roles)
+                                                 const role::Role& role)
 {
     vector<string> statements;
 
-    for (const auto& role : roles)
+    bool is_on_admin = (role.db == "admin");
+
+    string db = role.db;
+
+    set<string> privileges;
+
+    switch (role.id)
     {
-        bool is_on_admin = (role.db == "admin");
-
-        string db = role.db;
-
-        set<string> privileges;
-
-        switch (role.id)
+    case role::Id::DB_ADMIN_ANY_DATABASE:
+        if (is_on_admin)
         {
-        case role::Id::DB_ADMIN_ANY_DATABASE:
-            if (is_on_admin)
-            {
-                db = "*";
-            }
-            else
-            {
-                ostringstream ss;
-                ss << "No role names dbAdminAnyDatabase@" << role.db;
-                throw SoftError(ss.str(), error::ROLE_NOT_FOUND);
-            }
-        case role::Id::DB_ADMIN:
-            add_privileges::dbAdmin(privileges);
-            break;
+            db = "*";
+        }
+        else
+        {
+            ostringstream ss;
+            ss << "No role names dbAdminAnyDatabase@" << role.db;
+            throw SoftError(ss.str(), error::ROLE_NOT_FOUND);
+        }
+        // [[fallthrough]]
+    case role::Id::DB_ADMIN:
+        add_privileges::dbAdmin(is_on_admin, privileges);
+        break;
 
-        case role::Id::DB_OWNER:
-            add_privileges::dbAdmin(privileges);
-            add_privileges::readWrite(privileges);
-            add_privileges::userAdmin(privileges);
-            break;
+    case role::Id::DB_OWNER:
+        add_privileges::dbAdmin(is_on_admin, privileges);
+        add_privileges::readWrite(privileges);
+        add_privileges::userAdmin(user, command, preposition, privileges, statements);
+        break;
 
-        case role::Id::READ_WRITE_ANY_DATABASE:
-            if (is_on_admin)
-            {
-                db = "*";
-            }
-            else
-            {
-                ostringstream ss;
-                ss << "No role names readWriteAnyDatabase@" << role.db;
-                throw SoftError(ss.str(), error::ROLE_NOT_FOUND);
-            }
-        case role::Id::READ_WRITE:
-            add_privileges::readWrite(privileges);
-            break;
+    case role::Id::READ_WRITE_ANY_DATABASE:
+        if (is_on_admin)
+        {
+            db = "*";
+        }
+        else
+        {
+            ostringstream ss;
+            ss << "No role names readWriteAnyDatabase@" << role.db;
+            throw SoftError(ss.str(), error::ROLE_NOT_FOUND);
+        }
+        // [[fallthrough]]
+    case role::Id::READ_WRITE:
+        add_privileges::readWrite(privileges);
+        break;
 
-        case role::Id::READ_ANY_DATABASE:
-            if (is_on_admin)
-            {
-                db = "*";
-            }
-            else
-            {
-                ostringstream ss;
-                ss << "No role names readAnyDatabase@" << role.db;
-                throw SoftError(ss.str(), error::ROLE_NOT_FOUND);
-            }
-        case role::Id::READ:
-            add_privileges::read(privileges);
-            break;
+    case role::Id::READ_ANY_DATABASE:
+        if (is_on_admin)
+        {
+            db = "*";
+        }
+        else
+        {
+            ostringstream ss;
+            ss << "No role names readAnyDatabase@" << role.db;
+            throw SoftError(ss.str(), error::ROLE_NOT_FOUND);
+        }
+        // [[fallthrough]]
+    case role::Id::READ:
+        add_privileges::read(privileges);
+        break;
 
-        case role::Id::ROOT:
-            {
-                if (is_on_admin)
-                {
-                    db = "*";
-                }
-                else
-                {
-                    ostringstream ss;
-                    ss << "No role names root@" << role.db;
-                    throw SoftError(ss.str(), error::ROLE_NOT_FOUND);
-                }
-
-                // CREATE USER is global, so must be applied to *.*. Easiest is just
-                // use a specific statement.
-                string statement = command + "CREATE USER ON *.*" + preposition + user;
-                statements.push_back(statement);
-
-                add_privileges::readWrite(privileges);
-                add_privileges::dbAdmin(privileges);
-                add_privileges::userAdmin(privileges);
-            }
-            break;
-
-        case role::Id::USER_ADMIN:
-            {
-                if (is_on_admin)
-                {
-                    db = "*";
-                }
-
-                // CREATE USER is global, so must be applied to *.*. Easiest is just
-                // use a specific statement.
-                string statement = command + "CREATE USER ON *.*" + preposition + user;
-                statements.push_back(statement);
-
-                add_privileges::userAdmin(privileges);
-            }
-            break;
-
-        default:
-            MXS_WARNING("Role %s granted/revoked to/from %s is ignored.",
-                        role::to_string(role.id).c_str(), user.c_str());
+    case role::Id::ROOT:
+        if (is_on_admin)
+        {
+            db = "*";
+        }
+        else
+        {
+            ostringstream ss;
+            ss << "No role names root@" << role.db;
+            throw SoftError(ss.str(), error::ROLE_NOT_FOUND);
         }
 
-        string statement = command + mxb::join(privileges) + " ON " + db + ".*" + preposition + user;
+        add_privileges::readWrite(privileges);
+        add_privileges::dbAdmin(is_on_admin, privileges);
+        add_privileges::userAdmin(user, command, preposition, privileges, statements);
+        break;
 
-        statements.push_back(statement);
+    case role::Id::USER_ADMIN:
+        if (is_on_admin)
+        {
+            db = "*";
+        }
+
+        add_privileges::userAdmin(user, command, preposition, privileges, statements);
+        break;
+
+    default:
+        MXS_WARNING("Role %s granted/revoked to/from %s is ignored.",
+                    role::to_string(role.id).c_str(), user.c_str());
     }
 
+    string statement = command + mxb::join(privileges) + " ON " + db + ".*" + preposition + user;
+
+    statements.push_back(statement);
+
     return statements;
+}
+
+vector<string> create_grant_statements(const string& user, const role::Role& role)
+{
+    return create_grant_or_revoke_statements(user, "GRANT ", " TO ", role);
+}
+
+vector<string> create_revoke_statements(const string& user, const role::Role& role)
+{
+    return create_grant_or_revoke_statements(user, "REVOKE ", " FROM ", role);
+}
+
+vector<string> create_grant_or_revoke_statements(const string& user,
+                                                 const string& command,
+                                                 const string& preposition,
+                                                 const vector<role::Role>& roles)
+{
+    vector<string> all_statements;
+
+    for (const auto& role : roles)
+    {
+        vector<string> some_statements = create_grant_or_revoke_statements(user, command, preposition, role);
+
+        all_statements.insert(all_statements.end(), some_statements.begin(), some_statements.end());
+    }
+
+    return all_statements;
 }
 
 vector<string> create_grant_statements(const string& user, const vector<role::Role>& roles)
@@ -408,7 +432,7 @@ private:
             m_action = Action::DROP;
 
             ostringstream sql;
-            sql << "DROP USER '" << m_db << "." << m_user << "'@'" << m_host << "'";
+            sql << "DROP USER " << mariadb::get_account(m_db, m_user, m_host);
 
             send_downstream_via_loop(sql.str());
         }
@@ -491,9 +515,9 @@ public:
 
         const auto& um = m_database.context().um();
 
-        m_mariadb_accounts = um.get_mariadb_accounts(m_database.name());
+        m_accounts = um.get_accounts(m_database.name());
 
-        if (m_mariadb_accounts.empty())
+        if (m_accounts.empty())
         {
             DocumentBuilder doc;
             long n = 0;
@@ -548,27 +572,37 @@ public:
                             vector<string> users;
                             for (int i = 0; i < n; ++i)
                             {
-                                string mariadb_user = "'" + m_mariadb_accounts[i].user + "'";
-                                users.push_back(mariadb_user);
+                                auto& a = m_accounts[i];
+
+                                string user = mariadb::get_account(a.db, a.user, a.host);
+                                users.push_back(user);
                             }
 
-                            MXS_WARNING("Dropping users %s succeeded, but dropping '%s' failed: %s",
-                                        mxb::join(users, ",").c_str(),
-                                        m_mariadb_accounts[n].user.c_str(),
-                                        err.message().c_str());
+                            auto& a = m_accounts[n];
+                            string user = mariadb::get_account(a.db, a.user, a.host);
+
+                            MXS_WARNING("Dropping users %s succeeded, but dropping %s failed: %s",
+                                        mxb::join(users, ",").c_str(), user.c_str(), err.message().c_str());
                         }
                         break;
 
                     case ER_CANNOT_USER:
-                        MXS_WARNING("User '%s' apparently did not exist in the MariaDB server, even "
-                                    "though it should according to the nosqlprotocol book-keeping.",
-                                    m_mariadb_accounts[n].user.c_str());
+                        {
+                            auto& a = m_accounts[n];
+                            string user = mariadb::get_account(a.db, a.user, a.host);
+                            MXS_WARNING("User %s apparently did not exist in the MariaDB server, even "
+                                        "though it should according to the nosqlprotocol book-keeping.",
+                                        user.c_str());
+                        }
                         break;
 
                     default:
-                        MXS_ERROR("Dropping user '%s' failed: %s",
-                                  m_mariadb_accounts[n].user.c_str(),
-                                  err.message().c_str());
+                        {
+                            auto& a = m_accounts[n];
+                            string user = mariadb::get_account(a.db, a.user, a.host);
+
+                            MXS_ERROR("Dropping user '%s' failed: %s", user.c_str(), err.message().c_str());
+                        }
                     };
                 };
             }
@@ -576,12 +610,12 @@ public:
 
         mxb_assert(pData == pEnd);
 
-        vector<UserManager::MariaDBAccount> accounts = m_mariadb_accounts;
+        vector<UserManager::Account> accounts = m_accounts;
         accounts.resize(n);
 
         const auto& um = m_database.context().um();
 
-        if (!um.remove_mariadb_accounts(accounts))
+        if (!um.remove_accounts(accounts))
         {
             ostringstream ss;
             ss << "Could remove " << n << " users from MariaDB, but could not remove "
@@ -602,19 +636,19 @@ public:
 protected:
     string generate_sql() override final
     {
-        mxb_assert(!m_mariadb_accounts.empty());
+        mxb_assert(!m_accounts.empty());
 
         vector<string> statements;
-        for (const auto& mariadb_account : m_mariadb_accounts)
+        for (const auto& a : m_accounts)
         {
-            statements.push_back("DROP USER '" + mariadb_account.user + "'@'" + mariadb_account.host + "'");
+            statements.push_back("DROP USER " + mariadb::get_account(a.db, a.user, a.host));
         }
 
         return mxb::join(statements, ";");
     };
 
 private:
-    vector<UserManager::MariaDBAccount> m_mariadb_accounts;
+    vector<UserManager::Account> m_accounts;
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/dropUser/
@@ -703,8 +737,8 @@ protected:
 
         auto& um = m_database.context().um();
 
-        UserManager::MariaDBAccount mariadb_account;
-        if (!um.get_mariadb_account(m_db, m_user, &mariadb_account))
+        UserManager::Account account;
+        if (!um.get_account(m_db, m_user, &account))
         {
             ostringstream ss;
             ss << "User \"" << get_nosql_account(m_db, m_user) << "\" not found";
@@ -712,7 +746,7 @@ protected:
             throw SoftError(ss.str(), error::USER_NOT_FOUND);
         }
 
-        m_host = mariadb_account.host;
+        m_host = account.host;
     }
 
     string generate_sql() override
@@ -745,7 +779,7 @@ public:
         uint8_t* pData = mariadb_response.data();
         uint8_t* pEnd = pData + mariadb_response.length();
 
-        size_t n = 0;
+        int nStatements = 0;
         while (pData < pEnd)
         {
             ComResponse response(&pData);
@@ -753,7 +787,7 @@ public:
             switch (response.type())
             {
             case ComResponse::OK_PACKET:
-                ++n;
+                ++nStatements;
                 break;
 
             case ComResponse::ERR_PACKET:
@@ -763,7 +797,7 @@ public:
                     switch (err.code())
                     {
                     case ER_SPECIFIC_ACCESS_DENIED_ERROR:
-                        if (n == 0)
+                        if (nStatements == 0)
                         {
                             ostringstream ss;
                             ss << "not authorized on " << m_database.name() << " to execute command "
@@ -771,10 +805,10 @@ public:
 
                             throw SoftError(ss.str(), error::UNAUTHORIZED);
                         }
-                        // fallthrough
+                        // [[fallthrough]]
                     default:
                         MXS_ERROR("Grant statement '%s' failed: %s",
-                                  m_statements[n].c_str(), err.message().c_str());
+                                  m_statements[nStatements].c_str(), err.message().c_str());
                     }
                 };
                 break;
@@ -784,8 +818,16 @@ public:
             }
         }
 
+        size_t nRoles = 0;
+
+        while (nStatements > 0)
+        {
+            nStatements -= m_nStatements_per_role[nRoles];
+            ++nRoles;
+        }
+
         auto granted_roles = m_roles;
-        granted_roles.resize(n);
+        granted_roles.resize(nRoles);
 
         map<string, set<role::Id>> roles_by_db;
 
@@ -820,7 +862,7 @@ public:
 
         if (um.update(m_db, m_user, UserManager::Update::ROLES, data))
         {
-            if (n == m_roles.size())
+            if (nRoles == m_roles.size())
             {
                 DocumentBuilder doc;
                 doc.append(kvp(key::OK, 1));
@@ -831,8 +873,17 @@ public:
             {
                 ostringstream ss;
 
-                ss << "Could partially update the MariaDB grants and could update the corresponding "
-                   << "roles in the local nosqlprotocol database. See the MaxScale log for more details.";
+                if (nStatements == 0)
+                {
+                    ss << "Could partially update the MariaDB grants and could update the corresponding "
+                       << "roles in the local nosqlprotocol database. See the MaxScale log for more details.";
+                }
+                else
+                {
+                    ss << "Could only partially update the MariaDB privileges corresponding to a "
+                       << "particular role. There is now a discrepancy between the MariaDB privileges "
+                       << "the user has and the roles nosqlprotocol reports it has.";
+                }
 
                 throw SoftError(ss.str(), error::INTERNAL_ERROR);
             }
@@ -841,18 +892,18 @@ public:
         {
             ostringstream ss;
 
-            if (n == m_roles.size())
+            if (nRoles == m_roles.size())
             {
-                ss << "Could update the MariaDB grants";
+                ss << "Could update the MariaDB privileges";
             }
             else
             {
-                ss << "Could partially update the MariaDB grants";
+                ss << "Could partially update the MariaDB privileges";
             }
 
             ss << ", but could not update the roles in the local nosqlprotocol database. "
-               << "There is now a discrepancy between the grants the user has and the roles "
-               << "nosqlprotocol think it has.";
+               << "There is now a discrepancy between the MariaDB privileges the user has and "
+               << "the roles nosqlprotocol reports it has.";
 
             throw SoftError(ss.str(), error::INTERNAL_ERROR);
         }
@@ -895,7 +946,13 @@ private:
     {
         string account = mariadb::get_account(m_db, m_user, m_info.host);
 
-        m_statements = create_grant_statements(account, m_roles);
+        for (const auto& role : m_roles)
+        {
+            auto statements = create_grant_statements(account, role);
+
+            m_nStatements_per_role.push_back(statements.size());
+            m_statements.insert(m_statements.begin(), statements.begin(), statements.end());
+        }
 
         return mxb::join(m_statements, ";");
     }
@@ -906,6 +963,7 @@ private:
     UserManager::UserInfo m_info;
     vector<role::Role>    m_roles;
     vector<string>        m_statements;
+    vector<size_t>        m_nStatements_per_role;
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/revokeRolesFromUser/
@@ -923,7 +981,7 @@ public:
         uint8_t* pData = mariadb_response.data();
         uint8_t* pEnd = pData + mariadb_response.length();
 
-        size_t n = 0;
+        size_t nStatements = 0;
         while (pData < pEnd)
         {
             ComResponse response(&pData);
@@ -931,7 +989,7 @@ public:
             switch (response.type())
             {
             case ComResponse::OK_PACKET:
-                ++n;
+                ++nStatements;
                 break;
 
             case ComResponse::ERR_PACKET:
@@ -941,7 +999,7 @@ public:
                     switch (err.code())
                     {
                     case ER_SPECIFIC_ACCESS_DENIED_ERROR:
-                        if (n == 0)
+                        if (nStatements == 0)
                         {
                             ostringstream ss;
                             ss << "not authorized on " << m_database.name() << " to execute command "
@@ -949,10 +1007,10 @@ public:
 
                             throw SoftError(ss.str(), error::UNAUTHORIZED);
                         }
-                        // fallthrough
+                        // [[fallthrough]]
                     default:
                         MXS_ERROR("Revoke statement '%s' failed: %s",
-                                  m_statements[n].c_str(), err.message().c_str());
+                                  m_statements[nStatements].c_str(), err.message().c_str());
                     }
                 };
                 break;
@@ -962,8 +1020,16 @@ public:
             }
         }
 
+        size_t nRoles = 0;
+
+        while (nStatements > 0)
+        {
+            nStatements -= m_nStatements_per_role[nRoles];
+            ++nRoles;
+        }
+
         auto revoked_roles = m_roles;
-        revoked_roles.resize(n);
+        revoked_roles.resize(nRoles);
 
         map<string, set<role::Id>> roles_by_db;
 
@@ -1000,7 +1066,7 @@ public:
 
         if (um.set_roles(m_db, m_user, final_roles))
         {
-            if (n == m_roles.size())
+            if (nRoles == m_roles.size())
             {
                 DocumentBuilder doc;
                 doc.append(kvp(key::OK, 1));
@@ -1011,8 +1077,17 @@ public:
             {
                 ostringstream ss;
 
-                ss << "Could partially update the MariaDB grants and could update the corresponding "
-                   << "roles in the local nosqlprotocol database. See the MaxScale log for more details.";
+                if (nStatements == 0)
+                {
+                    ss << "Could partially update the MariaDB grants and could update the corresponding "
+                       << "roles in the local nosqlprotocol database. See the MaxScale log for more details.";
+                }
+                else
+                {
+                    ss << "Could only partially update the MariaDB privileges corresponding to a "
+                       << "particular role. There is now a discrepancy between the MariaDB privileges "
+                       << "the user has and the roles nosqlprotocol reports it has.";
+                }
 
                 throw SoftError(ss.str(), error::INTERNAL_ERROR);
             }
@@ -1021,7 +1096,7 @@ public:
         {
             ostringstream ss;
 
-            if (n == m_roles.size())
+            if (nRoles == m_roles.size())
             {
                 ss << "Could update the MariaDB grants";
             }
@@ -1075,6 +1150,14 @@ private:
     {
         string account = mariadb::get_account(m_db, m_user, m_info.host);
 
+        for (const auto& role : m_roles)
+        {
+            auto statements = create_revoke_statements(account, role);
+
+            m_nStatements_per_role.push_back(statements.size());
+            m_statements.insert(m_statements.begin(), statements.begin(), statements.end());
+        }
+
         m_statements = create_revoke_statements(account, m_roles);
 
         return mxb::join(m_statements, ";");
@@ -1086,6 +1169,7 @@ private:
     UserManager::UserInfo m_info;
     vector<role::Role>    m_roles;
     vector<string>        m_statements;
+    vector<size_t>        m_nStatements_per_role;
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/updateUser/
@@ -1533,7 +1617,7 @@ public:
                     break;
                 }
             }
-            // fallthrough
+            // [[fallthrough]]
         default:
             throw SoftError("User and role names must be either strings or objects", error::BAD_VALUE);
         }
