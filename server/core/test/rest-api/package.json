@@ -9,7 +9,7 @@
   "author": "",
   "license": "SEE LICENSE IN ../../../../LICENSE.txt",
   "dependencies": {
-    "ajv": "^5.5.2",
+    "ajv": "^6.12.3",
     "axios": "^0.24.0",
     "axios-cookiejar-support": "^1.0.1",
     "chai": "^3.5.0",
