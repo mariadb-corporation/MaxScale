@@ -161,7 +161,7 @@ describe(name, function () {
         await test_role_revoking("bob", "nosql.bob", user.roles, nosql1);
     });
 
-    it('Can revoke roles.', async function () {
+    it('Can revoke roles from "mariadb".', async function () {
         var user = {
             user: "bob",
             pwd: "bobspwd",
@@ -173,10 +173,12 @@ describe(name, function () {
             ]
         };
 
-        await create_user(user, nosql1);
-        await check_privileges("nosql.bob", user.roles);
+        nosql2 = await test.NoSQL.create("mariadb");
 
-        await test_role_revoking("bob", "nosql.bob", user.roles, nosql1);
+        await create_user(user, nosql2);
+        await check_privileges("bob", user.roles);
+
+        await test_role_revoking("bob", "bob", user.roles, nosql2);
     });
 
     after(async function () {
