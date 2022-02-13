@@ -1667,7 +1667,7 @@ int64_t MariaDBBackendConnection::seconds_idle() const
     int64_t idle = 0;
 
     // Only treat the connection as idle if there's no buffered data
-    if (!m_dcb->writeq() && !m_dcb->readq())
+    if ((!m_dcb->writeq() || m_dcb->writeq()->empty()) && (!m_dcb->readq() || m_dcb->readq()->empty()))
     {
         idle = MXS_CLOCK_TO_SEC(mxs_clock() - std::max(m_dcb->last_read(), m_dcb->last_write()));
     }

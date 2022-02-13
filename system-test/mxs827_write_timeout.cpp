@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
     Test->tprintf("Doing reads for 30 seconds");
     time_t start = time(NULL);
 
-    while (time(NULL) - start < 30)
+    while (time(NULL) - start < 30 && Test->ok())
     {
         Test->reset_timeout();
         Test->try_query(Test->maxscale->conn_rwsplit, "SELECT 1");
