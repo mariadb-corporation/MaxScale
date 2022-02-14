@@ -65,24 +65,6 @@ export default {
         },
     },
     getters: {
-        getNodeTitle: (state, getters, rootState, rootGetters) => {
-            return id => {
-                const serverData = rootGetters['server/getAllServersMap'].get(id)
-                if (serverData) {
-                    const {
-                        attributes: {
-                            parameters: { address, port, socket },
-                        },
-                    } = serverData
-                    let title = ''
-                    if (socket) title += `${socket}`
-                    else title += `${address}:${port}`
-                    title += ` (${id})`
-                    return title
-                }
-                return `${id}`
-            }
-        },
         getServerData: (state, getters, rootState, rootGetters) => {
             return id => {
                 return rootGetters['server/getAllServersMap'].get(id)
@@ -111,7 +93,6 @@ export default {
                     root.children.push({
                         id: masterName,
                         name: masterName,
-                        title: getters.getNodeTitle(masterName),
                         serverData: getters.getServerData(masterName),
                         isMaster: true,
                         stroke: '#0e9bc0',
@@ -126,7 +107,6 @@ export default {
                             root.children[0].children.push({
                                 id: server.name,
                                 name: server.name,
-                                title: getters.getNodeTitle(server.name),
                                 serverData: getters.getServerData(server.name),
                                 isMaster: false,
                                 masterServerName: masterName,

@@ -224,7 +224,7 @@
     "promote": "Promote",
     "readonly": "Read-only",
     "writable": "Writable",
-    "serverState": "Server State",
+    "state": "State",
     "lag": "Lag",
     "last_event": "Last Event",
     "gtid_binlog_pos": "GTID Binlog Pos",
@@ -233,6 +233,8 @@
     "slave_sql_running": "Slave SQL Running",
     "triggered_at": "Triggered At",
     "version_string": "Version String",
+    "address": "Address",
+    "socket": "Socket",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",

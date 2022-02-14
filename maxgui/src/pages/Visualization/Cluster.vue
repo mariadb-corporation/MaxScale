@@ -91,7 +91,7 @@ export default {
             confDlgType: '',
             nodeTxtWrapperClassName: 'node-text-wrapper',
             expandedNodes: [],
-            defClusterNodeHeight: 101,
+            defClusterNodeHeight: 119,
             defClusterNodeWidth: 290,
             clusterNodeHeightMap: {},
         }

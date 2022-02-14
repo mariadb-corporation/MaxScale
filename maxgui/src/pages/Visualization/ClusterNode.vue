@@ -12,15 +12,13 @@
                 >
                     status
                 </icon-sprite-sheet>
-                <div class="text-truncate">
-                    <router-link
-                        target="_blank"
-                        :to="`/dashboard/servers/${node.id}`"
-                        class="rsrc-link"
-                    >
-                        {{ node.data.title }}
-                    </router-link>
-                </div>
+                <router-link
+                    target="_blank"
+                    :to="`/dashboard/servers/${node.id}`"
+                    class="text-truncate rsrc-link"
+                >
+                    {{ node.id }}
+                </router-link>
                 <v-spacer />
                 <span class="readonly-val ml-1 color text-field-text font-weight-medium">
                     {{ nodeAttrs.read_only ? $t('readonly') : $t('writable') }}
@@ -62,7 +60,7 @@
                     :style="{ lineHeight }"
                 >
                     <span class="sbm mr-2 font-weight-bold">
-                        {{ $t('serverState') }}
+                        {{ $t('state') }}
                     </span>
                     <truncate-string :text="`${nodeAttrs.state}`" />
                     <v-spacer />
@@ -79,6 +77,20 @@
                     </span>
                     <span>{{ nodeAttrs.statistics.connections }} </span>
                 </div>
+                <div class="node-address-socket d-flex flex-grow-1" :style="{ lineHeight }">
+                    <span class="text-capitalize font-weight-bold mr-2">
+                        {{ nodeAttrs.parameters.socket ? $t('socket') : $t('address') }}
+                    </span>
+                    <truncate-string
+                        :text="
+                            `${
+                                nodeAttrs.parameters.socket
+                                    ? nodeAttrs.parameters.socket
+                                    : `${nodeAttrs.parameters.address}:${nodeAttrs.parameters.port}`
+                            }`
+                        "
+                    />
+                </div>
                 <v-expand-transition>
                     <div
                         v-if="isExpanded"
@@ -89,12 +101,12 @@
                             class="extra-info-carousel"
                             :show-arrows="false"
                             hide-delimiter-background
-                            :height="maxNumOfExtraLines * lineHeightNum + 24"
+                            :height="maxNumOfExtraLines * lineHeightNum + carouselDelimiterHeight"
                         >
                             <v-carousel-item
                                 v-for="(slide, i) in extraInfoSlides"
                                 :key="i"
-                                class="mt-6"
+                                class="mt-4"
                             >
                                 <div
                                     v-for="(value, key) in slide"
@@ -165,6 +177,9 @@ export default {
         }
     },
     computed: {
+        carouselDelimiterHeight() {
+            return 20
+        },
         lineHeight() {
             return `18px`
         },
@@ -254,8 +269,11 @@ export default {
     },
     methods: {
         getExpandedNodeHeight() {
-            // 24 is carousel delimiters height
-            return this.defHeight + this.maxNumOfExtraLines * this.lineHeightNum + 24
+            return (
+                this.defHeight +
+                this.maxNumOfExtraLines * this.lineHeightNum +
+                this.carouselDelimiterHeight
+            )
         },
         toggleExpand(node) {
             let height = this.defHeight
@@ -293,9 +311,9 @@ export default {
         ::v-deep .extra-info-carousel {
             .v-carousel__controls {
                 top: 0;
-                height: 24px;
+                height: 20px;
                 .v-item-group {
-                    height: 24px;
+                    height: 20px;
                     .v-carousel__controls__item {
                         background: white;
                         width: 32px;
@@ -303,10 +321,10 @@ export default {
                         border-radius: 4px;
                         &::before {
                             // make it easier to click even the button height is visible as 6px, but it's actually 24px
-                            top: -10px;
+                            top: -7px;
                             opacity: 0;
                             width: 32px;
-                            height: 24px;
+                            height: 20px;
                             background: white;
                             pointer-events: all;
                         }
