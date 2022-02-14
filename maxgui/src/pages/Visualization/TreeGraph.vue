@@ -1,20 +1,28 @@
 <template>
     <div class="tree-graph-container">
         <svg ref="svgGridBg" class="svg-grid-bg" />
-        <svg ref="svg" class="tree-graph" />
+        <svg ref="svg" class="tree-graph">
+            <g
+                id="node-group"
+                :transform="
+                    `translate(${nodeGroupTransform.x},
+                ${nodeGroupTransform.y}) scale(${nodeGroupTransform.k})`
+                "
+            />
+        </svg>
         <div
-            ref="rectNodeWrapper"
             v-sortable="draggable"
-            class="rect-node-wrapper"
+            class="node-div-wrapper"
             :style="{
-                transform: `translate(${initialZoom.x}px, ${initialZoom.y}px) scale(${initialZoom.k})`,
+                transform: `translate(${nodeGroupTransform.x}px,
+                ${nodeGroupTransform.y}px) scale(${nodeGroupTransform.k})`,
             }"
         >
             <div
-                v-for="(node, key) in rectNodeData"
-                :key="key"
+                v-for="node in nodeDivData"
+                :key="node.id"
                 class="rect-node"
-                :node_id="key"
+                :node_id="node.id"
                 :class="[
                     draggable ? 'draggable-rect-node drag-handle' : '',
                     noDragNodes.includes(node.id) ? 'no-drag' : '',
@@ -82,35 +90,25 @@ export default {
         dim: { type: Object, required: true },
         draggable: { type: Boolean, default: false },
         noDragNodes: { type: Array, default: () => [] }, // list of node ids that are not draggable
-        // 100 is the vertical space, 320 is the horizontal space between nodes
-        nodeSize: { type: Array, default: () => [100, 320] },
+        nodeSize: { type: Object, default: () => ({ width: 320, height: 100 }) },
         layoutConf: { type: Object, default: () => {} },
     },
     data() {
         return {
             duration: 300,
             circleRadius: 7,
-            svg: null, // svg obj
-            rectNodeData: {},
+            nodeDivData: [],
             root: {},
-            initialZoom: { x: 48, y: this.dim.height / 2, k: 1 },
+            nodeGroupTransform: { x: 48, y: this.dim.height / 2, k: 1 },
+            nodeSizeChangesCount: 0,
         }
     },
     computed: {
         layout() {
-            return this.$help.lodash.deepMerge(
-                {
-                    link: {
-                        length: 320,
-                    },
-                    margin: { left: 48 },
-                },
-                this.layoutConf
-            )
+            return this.$help.lodash.deepMerge({ margin: { left: 48 } }, this.layoutConf)
         },
         treeLayout() {
-            // create a tree layout and use nodeSize to prevent nodes from being overlapped
-            return tree().nodeSize(this.nodeSize)
+            return tree().size([this.dim.height, this.dim.width])
         },
     },
     watch: {
@@ -121,19 +119,33 @@ export default {
                 this.update(this.root)
             },
         },
-        nodeSize() {
+        nodeSize(v) {
+            if (this.nodeSizeChangesCount === 0) {
+                this.nodeSizeChangesCount += 1
+                // center root node should be run once
+                this.$set(this.nodeGroupTransform, 'y', -v.height / 2)
+            }
             this.update(this.root)
         },
     },
     mounted() {
-        this.initSvg()
         if (this.data) {
             this.computeHrchyLayout(this.data)
+            this.initSvg()
             this.update(this.root)
         }
     },
-
     methods: {
+        /**
+         * compute a hierarchical layout
+         * @param {Object} data - tree data
+         */
+        computeHrchyLayout(data) {
+            this.root = hierarchy(data)
+            // vertically center root node
+            this.$set(this.root, 'x0', this.dim.height / 2)
+            this.$set(this.root, 'y0', 0)
+        },
         initSvg() {
             // Draw grid background
             let svgGridBg = d3Select(this.$refs.svgGridBg)
@@ -164,34 +176,21 @@ export default {
                 .attr('width', '100%')
                 .attr('height', '100%')
                 .attr('fill', 'url(#grid)')
-            this.initialZoom = zoomIdentity.translate(left, this.dim.height / 2).scale(1)
+            this.nodeGroupTransform = zoomIdentity
+                .translate(left, -this.nodeSize.height / 2)
+                .scale(1)
             // Draw svg tree-graph
             this.svg = d3Select(this.$refs.svg)
                 .attr('width', this.dim.width)
                 .attr('height', this.dim.height)
-                .call(zoom().transform, this.initialZoom)
+                .call(zoom().transform, this.nodeGroupTransform)
                 .call(
                     zoom().on('zoom', e => {
-                        this.svg.attr('transform', e.transform)
-                        const { x, y, k } = e.transform
-                        const transform = `translate(${x}px,${y}px) scale(${k})`
-                        this.$refs.rectNodeWrapper.style.transform = transform
+                        this.nodeGroupTransform = e.transform
                     })
                 )
                 .on('dblclick.zoom', null)
-                .append('g')
-                .attr('id', 'node-group')
-                .attr('transform', `translate(${left},${this.dim.height / 2}) scale(1)`)
-        },
-        /**
-         * compute a hierarchical layout
-         * @param {Object} data - tree data
-         */
-        computeHrchyLayout(data) {
-            this.root = hierarchy(data)
-            // vertically center root node
-            this.$set(this.root, 'x0', this.dim.height / 2)
-            this.$set(this.root, 'y0', 0)
+            this.svgGroup = this.svg.select('g#node-group')
         },
         /**
          * Creates a curved path from source node to the destination nodes
@@ -233,7 +232,9 @@ export default {
         drawNodes({ srcNode, nodes }) {
             // ****************** Nodes drawing transition ***************************
             // Declare the nodes…
-            let node = this.svg.selectAll('g.node').data(nodes, node => (node.id = node.data.name))
+            let node = this.svgGroup
+                .selectAll('g.node')
+                .data(nodes, node => (node.id = node.data.name))
             // Enter any new nodes at the parent's previous position.
             let nodeEnter = node
                 .enter()
@@ -241,7 +242,7 @@ export default {
                 .attr('class', 'node')
                 .attr('data-node-id', n => n.id)
                 // use srcNode.y as x for translate to make horizontal graph
-                .attr('transform', () => 'translate(' + srcNode.y0 + ',' + srcNode.x0 + ')')
+                .attr('transform', () => `translate(${srcNode.y0},${srcNode.x0})`)
                 .on('click', (e, n) => {
                     e.stopPropagation()
                     this.onNodeClick(n)
@@ -258,7 +259,7 @@ export default {
             nodeUpdate
                 .transition()
                 .duration(this.duration)
-                .attr('transform', d => 'translate(' + d.y + ',' + d.x + ')')
+                .attr('transform', d => `translate(${d.y},${d.x})`)
 
             // Update the node attributes and style
             nodeUpdate
@@ -287,7 +288,7 @@ export default {
         },
         drawLinks({ srcNode, links }) {
             // Update the links...
-            let linkGroup = this.svg.selectAll('.link-group').data(links, d => d.id)
+            let linkGroup = this.svgGroup.selectAll('.link-group').data(links, d => d.id)
 
             // Enter any new links at the parent's previous position.
             let linkGroupEnter = linkGroup
@@ -334,13 +335,12 @@ export default {
                 .remove()
         },
         renderRectNode(nodes) {
-            let rectNodeData = {}
+            let nodeDivData = []
             nodes.forEach(node => {
-                const nodeId = node.id
                 let pos = { left: node.y + this.circleRadius + 10, top: node.x }
-                rectNodeData[nodeId] = { ...node, ...pos }
+                nodeDivData.push({ ...node, ...pos })
             })
-            this.rectNodeData = rectNodeData
+            this.nodeDivData = nodeDivData
         },
         /**
          * Update node
@@ -351,10 +351,11 @@ export default {
             let treeData = this.treeLayout(this.root)
             // Compute the new tree layout.
             let nodes = treeData.descendants(),
-                links = treeData.descendants().slice(1)
+                links = nodes.slice(1)
+            this.breadthFirstTraversal(nodes, this.collision)
             // Normalize for fixed-depth.
             nodes.forEach(node => {
-                node.y = node.depth * this.layout.link.length
+                node.y = node.depth * (this.nodeSize.width * 1.5)
             })
             this.drawNodes({ srcNode, nodes })
             this.drawLinks({ srcNode, links })
@@ -363,7 +364,58 @@ export default {
                 d.x0 = d.x
                 d.y0 = d.y
             })
-            this.renderRectNode(nodes)
+            this.nodeDivData = nodes
+            this.renderRectNode(this.nodeDivData)
+        },
+        /**
+         *   Breadth-first traversal of the tree
+         *  cb function is processed on every node of a same level
+         * @param {Array} nodes - flatten tree nodes
+         * @param {Function} cb
+         * @returns {Number} - max number of nodes on a the same level
+         */
+        breadthFirstTraversal(nodes, cb) {
+            let max = 0
+            if (nodes && nodes.length > 0) {
+                let currentDepth = nodes[0].depth
+                let fifo = []
+                let currentLevel = []
+
+                fifo.push(nodes[0])
+                while (fifo.length > 0) {
+                    let node = fifo.shift()
+                    if (node.depth > currentDepth) {
+                        cb(currentLevel)
+                        currentDepth++
+                        max = Math.max(max, currentLevel.length)
+                        currentLevel = []
+                    }
+                    currentLevel.push(node)
+                    if (node.children) {
+                        for (let j = 0; j < node.children.length; j++) {
+                            fifo.push(node.children[j])
+                        }
+                    }
+                }
+                cb(currentLevel)
+                return Math.max(max, currentLevel.length)
+            }
+            return 0
+        },
+
+        /**
+         * This handles add a padding of 10px to x property of a node
+         * which represents y cord as the graph is render horizontally
+         * @param {Array} siblings - siblings nodes
+         */
+        collision(siblings) {
+            let minPadding = 10
+            if (siblings) {
+                for (let i = 0; i < siblings.length - 1; i++) {
+                    if (siblings[i + 1].x - (siblings[i].x + this.nodeSize.height) < minPadding)
+                        siblings[i + 1].x = siblings[i].x + this.nodeSize.height + minPadding
+                }
+            }
         },
     },
 }
@@ -396,7 +448,7 @@ export default {
             }
         }
     }
-    .rect-node-wrapper {
+    .node-div-wrapper {
         top: 0;
         height: 0;
         width: 0;
