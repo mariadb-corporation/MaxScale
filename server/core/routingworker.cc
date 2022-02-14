@@ -884,7 +884,7 @@ bool RoutingWorker::pre_run()
 
     if (rv)
     {
-        // Every few seconds, check connection pool for expired connections. Ideally, every pooled
+        // Every second, check connection pool for expired connections. Ideally, every pooled
         // connection would set their own timer.
         auto check_pool_cb = [this](Worker::Call::action_t action){
                 if (action == mxb::Worker::Call::action_t::EXECUTE)
@@ -893,7 +893,7 @@ bool RoutingWorker::pre_run()
                 }
                 return true;
             };
-        delayed_call(5000, check_pool_cb);
+        delayed_call(1s, check_pool_cb);
 
         // The normal connection availability notification is not fool-proof, as it's only sent to the
         // current worker. Every now and then, each worker should check for connections regardless since
