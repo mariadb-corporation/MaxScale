@@ -695,7 +695,7 @@ Session::Session(std::shared_ptr<const ListenerData> listener_data,
     }
     else if (pooling_time > 0)
     {
-        m_pooling_time_ms = 1000 * pooling_time;
+        m_pooling_time_ms = pooling_time;
     }
 }
 

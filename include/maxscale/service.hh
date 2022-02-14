@@ -126,9 +126,9 @@ public:
             int64_t max_sescmd_history;
 
             /**
-             * Can backend connections be pooled while session is still running? Configured as seconds the
+             * Can backend connections be pooled while session is still running? This is the time a
              * session must be idle before backend connections can be pooled. */
-            std::chrono::seconds idle_session_pooling_time;
+            std::chrono::milliseconds idle_session_pooling_time;
 
             /** User accounts file settings. Given to user account manager. **/
             std::string                             user_accounts_file_path;

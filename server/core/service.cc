@@ -218,10 +218,10 @@ cfg::ParamCount s_max_sescmd_history(
     &s_spec, "max_sescmd_history", "Session command history size",
     50, cfg::Param::AT_RUNTIME);
 
-cfg::ParamSeconds s_idle_session_pool_time(
+cfg::ParamMilliseconds s_idle_session_pool_time(
     &s_spec, "idle_session_pool_time", "Put connections into pool after session has been idle for this long",
-    cfg::INTERPRET_AS_SECONDS, std::chrono::seconds(-1),
-    cfg::ParamSeconds::DurationType::SIGNED, cfg::Param::AT_RUNTIME);
+    cfg::INTERPRET_AS_SECONDS_RELAXED, std::chrono::milliseconds(-1),
+    cfg::ParamMilliseconds::DurationType::SIGNED, cfg::Param::AT_RUNTIME);
 
 cfg::ParamPath s_user_accounts_file(
     &s_spec, "user_accounts_file", "Load additional users from a file",
