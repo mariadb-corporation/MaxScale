@@ -16,6 +16,7 @@
   for more information.
 
 For more details, please refer to:
+* [MariaDB MaxScale 6.2.2 Release Notes](Release-Notes/MaxScale-6.2.2-Release-Notes.md)
 * [MariaDB MaxScale 6.2.1 Release Notes](Release-Notes/MaxScale-6.2.1-Release-Notes.md)
 * [MariaDB MaxScale 6.2.0 Release Notes](Release-Notes/MaxScale-6.2.0-Release-Notes.md)
 
