@@ -224,11 +224,16 @@ export default {
             return res
         },
         /**
-         * Creates a curved path from source node to the destination nodes
-         * @param {Object} src - hierarchy d3 source node
-         * @param {Object} dest - hierarchy d3 destination node
+         * Return cubic bezier point to create a bezier curve line from source node to dest node
+         * @param {Object} param.dest - hierarchy d3 destination node
+         * @param {Object} param.src - hierarchy d3 source node
+         * @returns {Object} - returns { start: [x0, y0], p1: [x1, y1], p2: [x2, y2], end: [x, y] }
+         * start point cord: x0,y0
+         * control point 1 cord: x1,y1
+         * control point 2 cord: x2,y2
+         * end point cord: x,y
          */
-        diagonal(dest, src) {
+        getCubicBezierPoints({ dest, src }) {
             // since the graph is draw horizontally, node.y is x0 and node.x is y0
             let x0 = src.y + this.nodeSize.width,
                 y0 = src.x + this.nodeSize.height / 2,
@@ -239,7 +244,88 @@ export default {
                 x2 = x1,
                 y1 = y0,
                 y2 = y
-            return `M ${x0},${y0} C ${x1} ${y1}, ${x2} ${y2}, ${x} ${y}`
+            return { start: [x0, y0], p1: [x1, y1], p2: [x2, y2], end: [x, y] }
+        },
+        /**
+         * De Casteljau's algorithm
+         * B(t) = (1 - t)^3*P0 + 3(1 - t)^2*t*P1 + 3(1 - t)t^2*P2 + t^3*P3
+         * @param {Array} param.start - starting point cord [x,y] (P0)
+         * @param {Array} param.p1 - point 1 cord [x,y] (P1)
+         * @param {Array} param.p2 - point 2 cord [x,y] (P2)
+         * @param {Array} param.end - ending point cord [x,y] (P3)
+         * @returns {Function} - returns interpolator function which returns a point coord {x,y} at t
+         */
+        interpolateCubicBezier({ start, p1, p2, end }) {
+            /**
+             * @param {Number} t - arbitrary parameter value 0 <= t <= 1
+             * @returns {Object} - point coord {x,y}
+             */
+            return t => ({
+                x:
+                    Math.pow(1 - t, 3) * start[0] +
+                    3 * Math.pow(1 - t, 2) * t * p1[0] +
+                    3 * (1 - t) * Math.pow(t, 2) * p2[0] +
+                    Math.pow(t, 3) * end[0],
+                y:
+                    Math.pow(1 - t, 3) * start[1] +
+                    3 * Math.pow(1 - t, 2) * t * p1[1] +
+                    3 * (1 - t) * Math.pow(t, 2) * p2[1] +
+                    Math.pow(t, 3) * end[1],
+            })
+        },
+        /**
+         * B'(t) = 3(1- t)^2(P1 - P0) + 6(1 - t)t(P2 - P1) + 3t^2(P3 - P2)
+         * https://en.wikipedia.org/wiki/B%C3%A9zier_curve
+         * @param {Array} param.start - starting point cord [x,y] (P0)
+         * @param {Array} param.p1 - point 1 cord [x,y] (P1)
+         * @param {Array} param.p2 - point 2 cord [x,y] (P2)
+         * @param {Array} param.end - ending point cord [x,y] (P3)
+         * @returns {Function} - returns interpolator function which returns a point coord {x,y}
+         */
+        interpolateAngle({ start, p1, p2, end }) {
+            /**
+             * @param {Number} t - arbitrary parameter value 0 <= t <= 1
+             * @returns {Number} - returns angle of the point
+             */
+            return function interpolator(t) {
+                const tangentX =
+                    3 * Math.pow(1 - t, 2) * (p1[0] - start[0]) +
+                    6 * (1 - t) * t * (p2[0] - p1[0]) +
+                    3 * Math.pow(t, 2) * (end[0] - p2[0])
+                const tangentY =
+                    3 * Math.pow(1 - t, 2) * (p1[1] - start[1]) +
+                    6 * (1 - t) * t * (p2[1] - p1[1]) +
+                    3 * Math.pow(t, 2) * (end[1] - p2[1])
+
+                return Math.atan2(tangentY, tangentX) * (180 / Math.PI)
+            }
+        },
+        /**
+         *
+         * @param {Object} param.dest - hierarchy d3 destination node
+         * @param {Object} param.src - hierarchy d3 source node
+         * @param {Number} param.numOfPoints - Divide a single Cubic Bézier curves into number of points
+         * @param {Number} param.pointIdx - index of point to be returned
+         * @returns {Object} - obj point at provided pointIdx {position, angle}
+         */
+        getRotatedPoint({ dest, src, numOfPoints, pointIdx }) {
+            const cubicBezierPoints = this.getCubicBezierPoints({ dest, src })
+            const cubicInterpolator = this.interpolateCubicBezier(cubicBezierPoints)
+            const cubicAngleInterpolator = this.interpolateAngle(cubicBezierPoints)
+            const t = pointIdx / (numOfPoints - 1)
+            return {
+                position: cubicInterpolator(t),
+                angle: cubicAngleInterpolator(t),
+            }
+        },
+        /**
+         * Creates a Cubic Bézier curves path from source node to the destination nodes
+         * @param {Object} param.dest - hierarchy d3 destination node
+         * @param {Object} param.src - hierarchy d3 source node
+         */
+        diagonal({ dest, src }) {
+            const { start, p1, p2, end } = this.getCubicBezierPoints({ dest, src })
+            return `M ${start} C ${p1}, ${p2}, ${end}`
         },
         /**
          * Collapse the node and all it's children
@@ -331,15 +417,38 @@ export default {
                 .attr('fill', 'none')
                 .attr('stroke-width', 2.5)
                 .attr('stroke', d => d.data.stroke)
-                .attr('d', () => {
+                .attr('d', () =>
+                    this.diagonal({
+                        dest: {
+                            x: srcNode.x0,
+                            // start at the right edge of the rect node
+                            y: srcNode.y0 + this.nodeSize.width,
+                        },
+                        src: { x: srcNode.x0, y: srcNode.y0 },
+                    })
+                )
+            linkGroupEnter
+                .append('path')
+                .attr('class', 'link__arrow')
+                .attr('stroke-width', 3)
+                .attr('d', 'M12,0 L-5,-8 L0,0 L-5,8 Z')
+                .attr('stroke-linecap', 'round')
+                .attr('stroke-linejoin', 'round')
+                .attr('transform', () => {
                     let o = {
                         x: srcNode.x0,
                         // start at the right edge of the rect node
                         y: srcNode.y0 + this.nodeSize.width,
                     }
-                    return this.diagonal(o, { x: srcNode.x0, y: srcNode.y0 })
+                    const p = this.getRotatedPoint({
+                        dest: o,
+                        src: { x: srcNode.x0, y: srcNode.y0 },
+                        numOfPoints: 10,
+                        pointIdx: 0,
+                    })
+                    return `translate(${p.position.x}, ${p.position.y})`
                 })
-            // TODO: create link__arrow
+
             // UPDATE
             let linkGroupUpdate = linkGroupEnter.merge(linkGroup)
             // Transition back to the parent element position
@@ -348,8 +457,22 @@ export default {
                 .select('path.link_line')
                 .transition()
                 .duration(this.duration)
-                .attr('d', d => this.diagonal(d, d.parent))
-
+                .attr('d', d => this.diagonal({ dest: d, src: d.parent }))
+            // update link__arrow
+            linkGroupUpdate
+                .select('path.link__arrow')
+                .transition()
+                .duration(this.duration)
+                .attr('fill', d => d.data.stroke)
+                .attr('transform', d => {
+                    const p = this.getRotatedPoint({
+                        dest: d,
+                        src: d.parent,
+                        numOfPoints: 10,
+                        pointIdx: 7, // show arrow at point 7
+                    })
+                    return `translate(${p.position.x}, ${p.position.y}) rotate(${p.angle})`
+                })
             // Remove any exiting links
             let linkExit = linkGroup
                 .exit()
@@ -360,13 +483,31 @@ export default {
             // remove link_line
             linkExit
                 .select('path.link_line')
-                .attr('d', () => {
-                    let o = {
-                        x: srcNode.x,
-                        // end at the right edge of the rect node
-                        y: srcNode.y + this.nodeSize.width,
-                    }
-                    return this.diagonal(o, srcNode)
+                .attr('d', () =>
+                    this.diagonal({
+                        dest: {
+                            x: srcNode.x, // end at the right edge of the rect node
+                            y: srcNode.y + this.nodeSize.width,
+                        },
+                        src: srcNode,
+                    })
+                )
+                .remove()
+            // remove link__arrow
+            linkExit
+                .select('path.link__arrow')
+                .attr('fill', 'transparent')
+                .attr('transform', () => {
+                    const p = this.getRotatedPoint({
+                        dest: {
+                            x: srcNode.x, // end at the right edge of the rect node
+                            y: srcNode.y + this.nodeSize.width,
+                        },
+                        src: srcNode,
+                        numOfPoints: 10,
+                        pointIdx: 0,
+                    })
+                    return `translate(${p.position.x}, ${p.position.y})`
                 })
                 .remove()
         },
