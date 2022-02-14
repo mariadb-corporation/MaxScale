@@ -12,7 +12,7 @@ int main(int argc, char** argv)
 
     std::vector<std::string> commands =
     {
-        "create monitor cluster-monitor mysqlmon  user=maxskysql password=skysql monitor_interval=1000",
+        "create monitor cluster-monitor mysqlmon  user=maxskysql password=skysql monitor_interval=1000ms",
         "create listener rwsplit-service rwsplit-listener 4006",
         "create listener rwsplit-service rwsplit-listener2 4008",
         "create listener rwsplit-service rwsplit-listener3 4009",
