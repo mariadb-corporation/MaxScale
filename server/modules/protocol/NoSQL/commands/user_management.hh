@@ -765,7 +765,7 @@ private:
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/grantRolesToUser/
-class GrantRolesToUser : public UserAdminAuthorize<SingleCommand>
+class GrantRolesToUser final : public UserAdminAuthorize<SingleCommand>
 {
 public:
     static constexpr const char* const KEY = "grantRolesToUser";
@@ -967,7 +967,7 @@ private:
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/revokeRolesFromUser/
-class RevokeRolesFromUser : public UserAdminAuthorize<SingleCommand>
+class RevokeRolesFromUser final : public UserAdminAuthorize<SingleCommand>
 {
 public:
     static constexpr const char* const KEY = "revokeRolesFromUser";
@@ -1173,7 +1173,7 @@ private:
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/updateUser/
-class UpdateUser : public UserAdminAuthorize<SingleCommand>
+class UpdateUser final : public UserAdminAuthorize<SingleCommand>
 {
 public:
     static constexpr const char* const KEY = "updateUser";
@@ -1579,7 +1579,7 @@ private:
 };
 
 // https://docs.mongodb.com/v4.4/reference/command/usersInfo/
-class UsersInfo : public UserAdminAuthorize<ImmediateCommand>
+class UsersInfo final : public UserAdminAuthorize<ImmediateCommand>
 {
 public:
     static constexpr const char* const KEY = "usersInfo";
