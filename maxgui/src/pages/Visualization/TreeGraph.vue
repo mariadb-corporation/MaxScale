@@ -28,10 +28,18 @@
                     noDragNodes.includes(node.id) ? 'no-drag' : '',
                 ]"
                 :style="{
-                    top: `${node.top}px`,
-                    left: `${node.left}px`,
+                    top: handleCenterRectNodeVert(node),
+                    left: `${node.y}px`,
                 }"
             >
+                <div
+                    class="node__circle"
+                    :class="{ 'node__circle--clickable': node.children || node._children }"
+                    :style="{
+                        border: `1px solid ${node.data.stroke}`,
+                    }"
+                    @click="onNodeClick(node)"
+                />
                 <slot name="rect-node-content" :data="{ node }" />
             </div>
         </div>
@@ -92,20 +100,21 @@ export default {
         noDragNodes: { type: Array, default: () => [] }, // list of node ids that are not draggable
         nodeSize: { type: Object, default: () => ({ width: 320, height: 100 }) },
         layoutConf: { type: Object, default: () => {} },
+        expandedNodes: { type: Array, default: () => [] },
+        nodeDivHeightMap: { type: Object, default: () => {} },
     },
     data() {
         return {
             duration: 300,
-            circleRadius: 7,
             nodeDivData: [],
             root: {},
-            nodeGroupTransform: { x: 48, y: this.dim.height / 2, k: 1 },
+            nodeGroupTransform: { x: 24, y: this.dim.height / 2, k: 1 },
             nodeSizeChangesCount: 0,
         }
     },
     computed: {
         layout() {
-            return this.$help.lodash.deepMerge({ margin: { left: 48 } }, this.layoutConf)
+            return this.$help.lodash.deepMerge({ margin: { left: 24 } }, this.layoutConf)
         },
         treeLayout() {
             return tree().size([this.dim.height, this.dim.width])
@@ -193,14 +202,44 @@ export default {
             this.svgGroup = this.svg.select('g#node-group')
         },
         /**
+         * @param {Object} param.node - node to be vertically centered
+         * @param {Object} param.recHeight - height of the svg rect
+         * @param {Object} param.divHeight - height of the rectangular div
+         * @returns {String} px string
+         */
+        centerNode({ node, rectHeight, divHeight }) {
+            return `${node.x + (rectHeight - divHeight) / 2}px`
+        },
+        /**
+         * @param {Object} node - node to be vertically centered
+         */
+        handleCenterRectNodeVert(node) {
+            let res = `${node.x}px`
+            if (!this.expandedNodes.length) return res
+            else {
+                const rectHeight = this.nodeSize.height
+                const divHeight = this.nodeDivHeightMap[node.id]
+                if (rectHeight > divHeight) res = this.centerNode({ node, rectHeight, divHeight })
+            }
+            return res
+        },
+        /**
          * Creates a curved path from source node to the destination nodes
          * @param {Object} src - hierarchy d3 source node
          * @param {Object} dest - hierarchy d3 destination node
-         */ diagonal(src, dest) {
-            return `M ${src.y} ${src.x}
-            C ${(src.y + dest.y) / 2} ${src.x},
-              ${(src.y + dest.y) / 2} ${dest.x},
-              ${dest.y} ${dest.x}`
+         */
+        diagonal(dest, src) {
+            // since the graph is draw horizontally, node.y is x0 and node.x is y0
+            let x0 = src.y + this.nodeSize.width,
+                y0 = src.x + this.nodeSize.height / 2,
+                x = dest.y, // ending point
+                y = dest.x + this.nodeSize.height / 2, // ending point
+                // curves
+                x1 = (x0 + x) / 2,
+                x2 = x1,
+                y1 = y0,
+                y2 = y
+            return `M ${x0},${y0} C ${x1} ${y1}, ${x2} ${y2}, ${x} ${y}`
         },
         /**
          * Collapse the node and all it's children
@@ -249,9 +288,12 @@ export default {
                 })
 
             nodeEnter
-                .append('circle')
-                .attr('class', 'node__circle')
-                .attr('r', 0)
+                .append('g')
+                .append('rect')
+                .attr('width', this.nodeSize.width)
+                .attr('height', this.nodeSize.height)
+                .attr('class', 'node-rect')
+                .style('visibility', 'hidden')
 
             // On node update
             let nodeUpdate = nodeEnter.merge(node)
@@ -263,28 +305,14 @@ export default {
 
             // Update the node attributes and style
             nodeUpdate
-                .select('circle.node__circle')
-                .attr('class', d =>
-                    d.children || d._children
-                        ? 'node__circle node__circle--clickable'
-                        : 'node__circle'
-                )
-                .attr('r', this.circleRadius)
-                .style('fill', d => {
-                    return d._children ? d.data.stroke : 'white'
-                })
-                .style('stroke', d => d.data.stroke)
-
-            // Remove any exiting nodes on exit
-            let nodeExit = node
-                .exit()
+                .select('rect')
+                .attr('width', this.nodeSize.width)
+                .attr('height', this.nodeSize.height)
+            node.exit()
                 .transition()
                 .duration(this.duration)
-                .attr('transform', () => 'translate(' + srcNode.y + ',' + srcNode.x + ')')
+                .attr('transform', () => `translate(${srcNode.y},${srcNode.x})`)
                 .remove()
-
-            // On exit reduce the node circles size to 0
-            nodeExit.select('circle.node__circle').attr('r', 0)
         },
         drawLinks({ srcNode, links }) {
             // Update the links...
@@ -304,8 +332,12 @@ export default {
                 .attr('stroke-width', 2.5)
                 .attr('stroke', d => d.data.stroke)
                 .attr('d', () => {
-                    let o = { x: srcNode.x0, y: srcNode.y0 }
-                    return this.diagonal(o, o)
+                    let o = {
+                        x: srcNode.x0,
+                        // start at the right edge of the rect node
+                        y: srcNode.y0 + this.nodeSize.width,
+                    }
+                    return this.diagonal(o, { x: srcNode.x0, y: srcNode.y0 })
                 })
             // TODO: create link__arrow
             // UPDATE
@@ -329,18 +361,14 @@ export default {
             linkExit
                 .select('path.link_line')
                 .attr('d', () => {
-                    let o = { x: srcNode.x, y: srcNode.y }
-                    return this.diagonal(o, o)
+                    let o = {
+                        x: srcNode.x,
+                        // end at the right edge of the rect node
+                        y: srcNode.y + this.nodeSize.width,
+                    }
+                    return this.diagonal(o, srcNode)
                 })
                 .remove()
-        },
-        renderRectNode(nodes) {
-            let nodeDivData = []
-            nodes.forEach(node => {
-                let pos = { left: node.y + this.circleRadius + 10, top: node.x }
-                nodeDivData.push({ ...node, ...pos })
-            })
-            this.nodeDivData = nodeDivData
         },
         /**
          * Update node
@@ -365,7 +393,6 @@ export default {
                 d.y0 = d.y
             })
             this.nodeDivData = nodes
-            this.renderRectNode(this.nodeDivData)
         },
         /**
          *   Breadth-first traversal of the tree
@@ -439,14 +466,6 @@ export default {
         position: relative;
         left: 0;
         z-index: 2;
-        .node__circle {
-            &--clickable {
-                cursor: pointer;
-                &:hover {
-                    transform: scale(1.2, 1.2);
-                }
-            }
-        }
     }
     .node-div-wrapper {
         top: 0;
@@ -456,8 +475,31 @@ export default {
         z-index: 3;
         .rect-node:not(.rect-node-clone) {
             position: absolute;
-            transform: translateY(-50%) !important;
-            background-color: $background;
+            background: transparent;
+            .node__circle {
+                position: absolute;
+                z-index: 4;
+                top: calc(50% + 7px);
+                left: 0;
+                transform: translate(-50%, -100%);
+                background: white;
+                width: 14px;
+                height: 14px;
+                border-radius: 50%;
+                transition: all 0.1s linear;
+                visibility: hidden;
+                &--clickable {
+                    visibility: visible;
+                    cursor: pointer;
+                    left: unset;
+                    right: 0;
+                    transform: translate(50%, -100%);
+                    &:hover {
+                        width: 16.8px;
+                        height: 16.8px;
+                    }
+                }
+            }
         }
     }
 }

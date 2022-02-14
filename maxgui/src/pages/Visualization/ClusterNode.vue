@@ -2,7 +2,7 @@
     <div ref="nodeWrapper" class="cluster-node-wrapper d-flex flex-column fill-height">
         <v-card outlined class="node-card fill-height" width="288">
             <div
-                class="node-title-wrapper d-flex align-center flex-row px-2 py-1"
+                class="node-title-wrapper d-flex align-center flex-row px-3 py-1"
                 :class="[droppableTargets.includes(node.id) ? 'node-card__droppable' : '']"
             >
                 <icon-sprite-sheet
@@ -54,7 +54,7 @@
             <v-divider />
             <div
                 :class="
-                    `color text-navigation d-flex justify-center flex-column px-2 py-1 ${nodeTxtWrapperClassName}`
+                    `color text-navigation d-flex justify-center flex-column px-3 py-1 ${nodeTxtWrapperClassName}`
                 "
             >
                 <div
@@ -82,7 +82,7 @@
                 <v-expand-transition>
                     <div
                         v-if="isExpanded"
-                        class="node-text--expanded-content mx-n2 mb-n2 px-2 pt-0 pb-2"
+                        class="node-text--expanded-content mx-n3 mb-n2 px-3 pt-0 pb-2"
                     >
                         <v-carousel
                             v-model="activeInfoSlideIdx"
@@ -249,6 +249,9 @@ export default {
             if (this.expandOnMount) this.toggleExpand(this.node)
         })
     },
+    beforeDestroy() {
+        this.$emit('get-expanded-node', { type: 'destroy', id: this.node.id })
+    },
     methods: {
         getExpandedNodeHeight() {
             // 24 is carousel delimiters height
@@ -261,7 +264,7 @@ export default {
             if (this.isExpanded) {
                 height = this.getExpandedNodeHeight()
             }
-            this.$emit('get-expanded-node', node.id)
+            this.$emit('get-expanded-node', { type: 'update', id: node.id })
             this.$emit('cluster-node-height', height)
         },
     },
@@ -269,6 +272,9 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.cluster-node-wrapper {
+    background: transparent;
+}
 .node-card {
     font-size: 12px;
     &__droppable {

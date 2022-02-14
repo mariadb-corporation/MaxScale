@@ -8,14 +8,15 @@
             outlined
         >
             <tree-graph
-                v-if="ctrDim.height"
+                v-if="ctrDim.height && !$typy(graphData).isEmptyObject"
                 :style="{ width: `${ctrDim.width}px`, height: `${ctrDim.height}px` }"
                 :data="graphData"
                 :dim="ctrDim"
                 :nodeSize="nodeSize"
                 draggable
                 :noDragNodes="noDragNodes"
-                :layoutConf="{ link: { length: defClusterNodeWidth + nodeGap * 2 } }"
+                :expandedNodes="expandedNodes"
+                :nodeDivHeightMap="clusterNodeHeightMap"
                 @on-node-dragStart="onNodeSwapStart"
                 @on-node-move="onMove"
                 @on-node-dragend="onNodeSwapEnd"
@@ -93,7 +94,6 @@ export default {
             defClusterNodeHeight: 101,
             defClusterNodeWidth: 290,
             clusterNodeHeightMap: {},
-            nodeGap: 24,
         }
     },
     computed: {
@@ -125,10 +125,12 @@ export default {
             return this.defClusterNodeHeight
         },
         nodeSize() {
-            let height = this.hasExpandedNode
-                ? this.maxClusterNodeHeight
-                : this.defClusterNodeHeight
-            return [height + this.nodeGap, this.defClusterNodeWidth + this.nodeGap * 2]
+            return {
+                width: this.defClusterNodeWidth,
+                height: this.hasExpandedNode
+                    ? this.maxClusterNodeHeight
+                    : this.defClusterNodeHeight,
+            }
         },
         expandOnMount() {
             if (
@@ -155,10 +157,17 @@ export default {
             const { clientHeight, clientWidth } = this.$refs.graphContainer.$el
             this.ctrDim = { width: clientWidth, height: clientHeight - 2 }
         },
-        handleExpandedNode(id) {
-            if (this.expandedNodes.includes(id))
-                this.expandedNodes.splice(this.expandedNodes.indexOf(id), 1)
-            else this.expandedNodes.push(id)
+        handleExpandedNode({ type, id }) {
+            let target = this.expandedNodes.indexOf(id)
+            switch (type) {
+                case 'destroy':
+                    this.$delete(this.expandedNodes, target)
+                    break
+                case 'update':
+                    if (this.expandedNodes.includes(id)) this.expandedNodes.splice(target, 1)
+                    else this.expandedNodes.push(id)
+                    break
+            }
         },
         handleAssignNodeHeightMap({ height, nodeId }) {
             this.$set(this.clusterNodeHeightMap, nodeId, height)
@@ -168,6 +177,7 @@ export default {
          */
         setDefNodeTxt() {
             let cloneEle = document.getElementsByClassName('rect-node-clone')
+
             if (cloneEle.length) {
                 const nodeTxtWrapper = cloneEle[0].getElementsByClassName(
                     this.nodeTxtWrapperClassName
