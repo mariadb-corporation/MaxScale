@@ -12,11 +12,18 @@
  */
 
 var maxscale_host = process.env.maxscale_000_network;
+var nosql_port;
 
 if (!maxscale_host) {
     console.log("The environment variable 'maxscale_000_network' is not set, " +
                 "assuming 127.0.0.1.");
-    maxscale_host = "127.0.0.1"
+    nosql_port = 17017;
+}
+else
+{
+    // In the system-test environment we use 4006, which is open. The default
+    // nosqlprotocol port of 17017 is not.
+    nosql_port = 4006;
 }
 
 var timeout;
@@ -34,7 +41,7 @@ else {
 var config = {
     host: maxscale_host,
     mariadb_port: 4008,
-    nosql_port: 17017,
+    nosql_port: nosql_port,
     user: 'maxskysql',
     password: 'skysql'
 };
