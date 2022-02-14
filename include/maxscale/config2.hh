@@ -1021,11 +1021,11 @@ class ParamPath : public ConcreteParam<ParamPath, std::string>
 public:
     enum Options
     {
-        X,  // Execute permission required.
-        R,  // Read permission required.
-        W,  // Write permission required.
-        F,  // File existence required.
-        C   // Create path if does not exist.
+        X = 1 << 0,     // Execute permission required.
+        R = 1 << 1,     // Read permission required.
+        W = 1 << 2,     // Write permission required.
+        F = 1 << 3,     // File existence required.
+        C = 1 << 4      // Create path if does not exist.
     };
 
     const uint32_t MASK = X | R | W | F | C;
