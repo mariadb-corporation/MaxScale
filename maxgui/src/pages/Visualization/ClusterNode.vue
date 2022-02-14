@@ -20,7 +20,9 @@
                     {{ node.id }}
                 </router-link>
                 <v-spacer />
-                <span class="readonly-val ml-1 color text-field-text font-weight-medium">
+                <span
+                    class="readonly-val ml-1 color text-field-text font-weight-medium text-no-wrap"
+                >
                     {{ nodeAttrs.read_only ? $t('readonly') : $t('writable') }}
                 </span>
                 <div class="ml-1 button-container">
@@ -111,7 +113,7 @@
                                 <div
                                     v-for="(value, key) in slide"
                                     :key="`${key}`"
-                                    class="extra-info__line d-flex"
+                                    class="text-no-wrap d-flex"
                                     :style="{ lineHeight }"
                                 >
                                     <span class="mr-2 font-weight-bold">
@@ -325,7 +327,6 @@ export default {
                             opacity: 0;
                             width: 32px;
                             height: 20px;
-                            background: white;
                             pointer-events: all;
                         }
                         i {
@@ -334,14 +335,8 @@ export default {
                     }
                     .v-item--active {
                         background: $electric-ele;
-                        &::before {
-                            background: $electric-ele;
-                        }
                     }
                 }
-            }
-            .extra-info__line {
-                white-space: nowrap;
             }
         }
     }
