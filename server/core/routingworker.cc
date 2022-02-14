@@ -692,22 +692,18 @@ bool RoutingWorker::move_to_conn_pool(BackendDCB* pDcb)
         {
             // All ok. Try to add the connection to pool.
             auto pool_iter = m_pool_group.find(pServer);
-            if (pool_iter != m_pool_group.end())
-            {
-                auto& pool = pool_iter->second;
-                if (pool.has_space())
-                {
-                    pool.add_connection(pConn);
-                    moved_to_pool = true;
-                }
-            }
-            else
+
+            if (pool_iter == m_pool_group.end())
             {
                 // First pooled connection for the server.
                 ConnectionPool new_pool(this, pServer, global_pool_cap);
-                new_pool.add_connection(pConn);
-                auto kv = std::make_pair(pServer, std::move(new_pool));
-                m_pool_group.insert(std::move(kv));
+                pool_iter = m_pool_group.emplace(pServer, std::move(new_pool)).first;
+            }
+
+            auto& pool = pool_iter->second;
+            if (pool.has_space())
+            {
+                pool.add_connection(pConn);
                 moved_to_pool = true;
             }
 
