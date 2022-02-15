@@ -110,6 +110,7 @@ options are enabled.
 | transaction_time  | The duration of a transaction (v6.2)                   |
 | num_warnings      | Number of warnings in the server reply (v6.2)          |
 | error_msg         | Error message from the server (if any) (v6.2)          |
+| server            | The server where the query was routed (if any) (v7.0)  |
 
 ```
 log_data=date, user, query, total_reply_time

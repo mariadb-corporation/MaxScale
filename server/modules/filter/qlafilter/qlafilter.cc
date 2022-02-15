@@ -131,6 +131,7 @@ cfg::ParamEnumMask<int64_t> s_log_data(
         {QlaInstance::LOG_DATA_TRANSACTION_DUR, "transaction_time"},
         {QlaInstance::LOG_DATA_NUM_WARNINGS, "num_warnings"},
         {QlaInstance::LOG_DATA_ERR_MSG, "error_msg"},
+        {QlaInstance::LOG_DATA_SERVER, "server"},
     },
     QlaInstance::LOG_DATA_DATE | QlaInstance::LOG_DATA_USER | QlaInstance::LOG_DATA_QUERY,
     cfg::Param::AT_RUNTIME);
@@ -512,7 +513,8 @@ bool QlaFilterSession::clientReply(GWBUF* queue, const mxs::ReplyRoute& down, co
                             m_sql,
                             m_first_response_time,
                             m_pSession->worker()->epoll_tick_now(),
-                            reply);
+                            reply,
+                            down);
 
         write_log_entries(elems);
     }
@@ -593,6 +595,7 @@ string QlaInstance::LogManager::generate_log_header(uint64_t data_flags) const
     const char ERR_MSG[] = "Error_msg";
     const char TRANSACTION[] = "Transaction";
     const char TRANSACTION_DUR[] = "Transaction_time";
+    const char SERVER[] = "Server";
 
     std::stringstream header;
     string curr_sep;    // Use empty string as the first separator
@@ -664,6 +667,11 @@ string QlaInstance::LogManager::generate_log_header(uint64_t data_flags) const
     if (data_flags & LOG_DATA_ERR_MSG)
     {
         header << curr_sep << ERR_MSG;
+        curr_sep = real_sep;
+    }
+    if (data_flags & LOG_DATA_SERVER)
+    {
+        header << curr_sep << SERVER;
         curr_sep = real_sep;
     }
     header << '\n';
@@ -782,6 +790,15 @@ string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventE
         if (elems.reply.error())
         {
             output << elems.reply.error().message();
+        }
+        curr_sep = real_sep;
+    }
+    if (data_flags & QlaInstance::LOG_DATA_SERVER)
+    {
+        output << curr_sep;
+        if (!elems.down.empty())
+        {
+            output << elems.down.front()->target()->name();
         }
         curr_sep = real_sep;
     }

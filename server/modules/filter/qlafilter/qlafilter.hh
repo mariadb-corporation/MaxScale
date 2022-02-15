@@ -66,6 +66,7 @@ public:
     static const int64_t LOG_DATA_ERR_MSG = (1 << 11);
     static const int64_t LOG_DATA_TRANSACTION = (1 << 12);
     static const int64_t LOG_DATA_TRANSACTION_DUR = (1 << 13);
+    static const int64_t LOG_DATA_SERVER = (1 << 14);
 
     enum DurationMultiplier
     {
@@ -259,22 +260,26 @@ private:
  */
 struct LogEventElems
 {
-    mxb::TimePoint     begin_time;
-    const std::string& sql;
-    mxb::TimePoint     first_response_time;
-    mxb::TimePoint     last_response_time;
-    const mxs::Reply&  reply;
+    mxb::TimePoint         begin_time;
+    const std::string&     sql;
+    mxb::TimePoint         first_response_time;
+    mxb::TimePoint         last_response_time;
+    const mxs::Reply&      reply;
+    const mxs::ReplyRoute& down;
+
 
     LogEventElems(mxb::TimePoint begin_time,
                   const std::string& sql,
                   mxb::TimePoint first_response_time,
                   mxb::TimePoint last_response_time,
-                  const mxs::Reply& reply)
+                  const mxs::Reply& reply,
+                  const mxs::ReplyRoute& down)
         : begin_time(begin_time)
         , sql(sql)
         , first_response_time(first_response_time)
         , last_response_time(last_response_time)
         , reply(reply)
+        , down(down)
     {
     }
 };
