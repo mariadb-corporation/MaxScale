@@ -230,6 +230,7 @@ export default {
             this.changeNodeTxt(this.opType)
         },
         onNodeSwapStart(e) {
+            document.body.classList.add('cursor--all-move')
             let nodeId = e.item.getAttribute('node_id')
             const node = this.graphDataHash[nodeId]
             this.setDefNodeTxt()
@@ -277,6 +278,7 @@ export default {
                 this.isConfDlgOpened = true
             }
             this.droppableTargets = []
+            document.body.classList.remove('cursor--all-move')
         },
         async onConfirm() {
             switch (this.opType) {

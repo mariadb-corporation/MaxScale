@@ -17,6 +17,12 @@
 .move {
     cursor: move;
 }
+.cursor--all-move {
+    cursor: move !important;
+    * {
+        cursor: move !important;
+    }
+}
 .not-allowed {
     cursor: not-allowed !important;
     z-index: 1;
