@@ -33,8 +33,8 @@
                 }"
             >
                 <div
-                    class="node__circle"
-                    :class="{ 'node__circle--clickable': node.children || node._children }"
+                    v-if="node.children || node._children"
+                    class="node__circle node__circle--clickable"
                     :style="{
                         border: `1px solid ${node.data.stroke}`,
                     }"
@@ -74,6 +74,7 @@ export default {
                         forceFallback: true,
                         fallbackClass: 'rect-node-clone',
                         filter: '.no-drag',
+                        swapThreshold: 0.2,
                         onStart: e => {
                             vnode.context.$emit('on-node-dragStart', e)
                         },
@@ -628,9 +629,7 @@ export default {
                 height: 14px;
                 border-radius: 50%;
                 transition: all 0.1s linear;
-                visibility: hidden;
                 &--clickable {
-                    visibility: visible;
                     cursor: pointer;
                     left: unset;
                     right: 0;
