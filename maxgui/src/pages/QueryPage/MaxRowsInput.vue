@@ -68,7 +68,8 @@ export default {
         maxRows: {
             deep: true,
             handler(obj) {
-                if (this.$typy(obj, 'value').isNumber) this.$emit('change', obj.value)
+                if (this.$typy(obj, 'value').isNumber && this.$typy(obj, 'value').safeNumber > 0)
+                    this.$emit('change', obj.value)
             },
         },
         // When query_max_rows value is changed elsewhere, it should be updated
@@ -87,14 +88,13 @@ export default {
             if (this.$typy(v, 'value').isEmptyString)
                 return this.$t('errors.requiredInput', { inputName: this.$t('maxRows') })
             else if (!this.$typy(v, 'value').isNumber) return this.$t('errors.nonInteger')
-            else if (v.value < 0)
-                return this.$t('errors.largerThanZero', { inputName: this.$t('maxRows') })
+            else if (v.value <= 0) return this.$t('errors.largerThanZero', { inputName: 'Value' })
             return true
         },
         genDropDownItem(v) {
             let num = parseInt(v)
             if (!this.$typy(num).isNumber) return { text: '', value: '' }
-            return { text: num === 0 ? `Don't Limit` : num, value: num }
+            return { text: num, value: num }
         },
         onInput(evt) {
             this.maxRows = this.genDropDownItem(evt.srcElement.value)
