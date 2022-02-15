@@ -74,6 +74,7 @@ export default {
                         forceFallback: true,
                         fallbackClass: 'rect-node-clone',
                         filter: '.no-drag',
+                        preventOnFilter: false,
                         swapThreshold: 0.2,
                         onStart: e => {
                             vnode.context.$emit('on-node-dragStart', e)
@@ -82,7 +83,6 @@ export default {
                             let isDroppable = true
                             // emit on-node-move and provide callback to assign return value
                             vnode.context.$emit('on-node-move', e, v => (isDroppable = v))
-                            if (e.related.classList.contains('no-drag')) return false
                             return isDroppable
                         },
                         onEnd: e => {
