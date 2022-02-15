@@ -31,4 +31,4 @@ service=RCR-Master
 protocol=nosqlprotocol
 nosqlprotocol.user=maxskysql
 nosqlprotocol.password=skysql
-port=17017
+port=4006

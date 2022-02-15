@@ -121,7 +121,7 @@ describe(name, function () {
             assert.fail("Could not create duplicate in different database.");
         }
         finally {
-            drop_user("bob", nosql2);
+            await drop_user("bob", nosql2);
             nosql2.close();
         }
     });
@@ -136,7 +136,7 @@ describe(name, function () {
             assert.fail("Could not create user in 'mariadb' database.");
         }
         finally {
-            drop_user("bob", nosql3);
+            await drop_user("bob", nosql3);
             nosql3.close();
         }
     });
