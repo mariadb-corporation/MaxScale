@@ -53,17 +53,17 @@
 
 namespace
 {
-using AuthRes = mariadb::ClientAuthenticator::AuthRes;
-using ExcRes = mariadb::ClientAuthenticator::ExchRes;
+using AuthRes       = mariadb::ClientAuthenticator::AuthRes;
+using ExcRes        = mariadb::ClientAuthenticator::ExchRes;
 using UserEntryType = mariadb::UserEntryType;
 using std::move;
 using std::string;
 
-const char WORD_KILL[] = "KILL";
+const char WORD_KILL[]            = "KILL";
 const int CLIENT_CAPABILITIES_LEN = 32;
 const int SSL_REQUEST_PACKET_SIZE = MYSQL_HEADER_LEN + CLIENT_CAPABILITIES_LEN;
 const int NORMAL_HS_RESP_MIN_SIZE = MYSQL_AUTH_PACKET_BASE_SIZE + 2;
-const int MAX_PACKET_SIZE = MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN;
+const int MAX_PACKET_SIZE         = MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN;
 
 // Default version string sent to clients
 const string default_version = "5.5.5-10.2.12 " MAXSCALE_VERSION "-maxscale";
@@ -82,16 +82,16 @@ string get_version_string(SERVICE* service)
     if (service_vrs[0] != '5' && service_vrs[0] != '8')
     {
         const char prefix[] = "5.5.5-";
-        service_vrs = prefix + service_vrs;
+        service_vrs         = prefix + service_vrs;
     }
     return service_vrs;
 }
 
 enum class CapTypes
 {
-    XPAND,      // XPand, doesn't include SESSION_TRACK as it doesn't support it
-    NORMAL,     // The normal capabilities but without the extra MariaDB-only bits
-    MARIADB,    // All capabilities
+    XPAND,    // XPand, doesn't include SESSION_TRACK as it doesn't support it
+    NORMAL,   // The normal capabilities but without the extra MariaDB-only bits
+    MARIADB,  // All capabilities
 };
 
 CapTypes get_supported_cap_types(SERVICE* service)
@@ -132,29 +132,28 @@ uint32_t parse_packet_length(GWBUF* buffer)
     }
     return prot_packet_len;
 }
-}
+}  // namespace
 
 // Servers and queries to execute on them
 typedef std::map<SERVER*, std::string> TargetList;
 
 struct KillInfo
 {
-    typedef  bool (* DcbCallback)(DCB* dcb, void* data);
+    typedef bool (*DcbCallback)(DCB* dcb, void* data);
 
     KillInfo(std::string query, MXS_SESSION* ses, DcbCallback callback)
         : origin(mxs_rworker_get_current_id())
         , session(ses)
         , query_base(query)
         , cb(callback)
-    {
-    }
+    {}
 
-    int          origin;
+    int origin;
     MXS_SESSION* session;
-    std::string  query_base;
-    DcbCallback  cb;
-    TargetList   targets;
-    std::mutex   lock;
+    std::string query_base;
+    DcbCallback cb;
+    TargetList targets;
+    std::mutex lock;
 };
 
 static bool kill_func(DCB* dcb, void* data);
@@ -165,8 +164,7 @@ struct ConnKillInfo : public KillInfo
         : KillInfo(query, ses, kill_func)
         , target_id(id)
         , keep_thread_id(keep_thread_id)
-    {
-    }
+    {}
 
     uint64_t target_id;
     uint64_t keep_thread_id;
@@ -179,8 +177,7 @@ struct UserKillInfo : public KillInfo
     UserKillInfo(std::string name, std::string query, MXS_SESSION* ses)
         : KillInfo(query, ses, kill_user_func)
         , user(name)
-    {
-    }
+    {}
 
     std::string user;
 };
@@ -191,7 +188,7 @@ static bool kill_func(DCB* dcb, void* data)
 
     if (dcb->session()->id() == info->target_id && dcb->role() == DCB::Role::BACKEND)
     {
-        auto proto = static_cast<MariaDBBackendConnection*>(dcb->protocol());
+        auto proto                 = static_cast<MariaDBBackendConnection*>(dcb->protocol());
         uint64_t backend_thread_id = proto->thread_id();
 
         if (info->keep_thread_id == 0 || backend_thread_id != info->keep_thread_id)
@@ -223,7 +220,7 @@ static bool kill_func(DCB* dcb, void* data)
 
 static bool kill_user_func(DCB* dcb, void* data)
 {
-    UserKillInfo* info = (UserKillInfo*)data;
+    UserKillInfo* info = (UserKillInfo*) data;
 
     if (dcb->role() == DCB::Role::BACKEND
         && strcasecmp(dcb->session()->user().c_str(), info->user.c_str()) == 0)
@@ -247,8 +244,8 @@ MariaDBClientConnection::SSLState MariaDBClientConnection::ssl_authenticate_chec
      * data needs to be read from the socket.
      */
     bool health_before = (m_dcb->ssl_state() == DCB::SSLState::ESTABLISHED);
-    int ssl_ret = ssl_authenticate_client();
-    bool health_after = (m_dcb->ssl_state() == DCB::SSLState::ESTABLISHED);
+    int ssl_ret        = ssl_authenticate_client();
+    bool health_after  = (m_dcb->ssl_state() == DCB::SSLState::ESTABLISHED);
 
     auto rval = SSLState::FAIL;
     if (ssl_ret != 0)
@@ -281,7 +278,7 @@ int MariaDBClientConnection::ssl_authenticate_client()
 {
     auto dcb = m_dcb;
 
-    const char* remote = m_dcb->remote().c_str();
+    const char* remote  = m_dcb->remote().c_str();
     const char* service = m_session->service->name();
 
     /* Now we require an SSL connection */
@@ -290,7 +287,8 @@ int MariaDBClientConnection::ssl_authenticate_client()
         /* Should be SSL, but client is not SSL capable. Cannot print the username, as client has not
          * sent that yet. */
         MXS_INFO("Client from '%s' attempted to connect to service '%s' without SSL when SSL was required.",
-                 remote, service);
+            remote,
+            service);
         return SSL_ERROR_CLIENT_NOT_SSL;
     }
 
@@ -314,21 +312,20 @@ int MariaDBClientConnection::ssl_authenticate_client()
         return_code = dcb->ssl_handshake();
         if (return_code < 0)
         {
-            MXS_INFO("Client from '%s' failed to connect to service '%s' with SSL.",
-                     remote, service);
+            MXS_INFO("Client from '%s' failed to connect to service '%s' with SSL.", remote, service);
             return SSL_ERROR_ACCEPT_FAILED;
         }
         else if (mxs_log_is_priority_enabled(LOG_INFO))
         {
             if (return_code == 1)
             {
-                MXS_INFO("Client from '%s' connected to service '%s' with SSL.",
-                         remote, service);
+                MXS_INFO("Client from '%s' connected to service '%s' with SSL.", remote, service);
             }
             else
             {
                 MXS_INFO("Client from '%s' is in progress of connecting to service '%s' with SSL.",
-                         remote, service);
+                    remote,
+                    service);
             }
         }
     }
@@ -347,7 +344,7 @@ int MariaDBClientConnection::send_mysql_client_handshake()
     uint8_t mysql_packet_header[4];
     uint8_t mysql_packet_id = 0;
     /* uint8_t mysql_filler = GW_MYSQL_HANDSHAKE_FILLER; not needed*/
-    uint8_t mysql_protocol_version = GW_MYSQL_PROTOCOL_VERSION;
+    uint8_t mysql_protocol_version   = GW_MYSQL_PROTOCOL_VERSION;
     uint8_t* mysql_handshake_payload = NULL;
     uint8_t mysql_thread_id_num[4];
     uint8_t mysql_scramble_buf[9] = "";
@@ -362,7 +359,7 @@ int MariaDBClientConnection::send_mysql_client_handshake()
     }
 
     uint8_t mysql_server_status[2];
-    uint8_t mysql_scramble_len = 21;
+    uint8_t mysql_scramble_len   = 21;
     uint8_t mysql_filler_ten[10] = {};
 
     /* gen_random_bytes() generates random bytes (0-255). This is ok as scramble for most clients
@@ -375,13 +372,13 @@ int MariaDBClientConnection::send_mysql_client_handshake()
     mxb::Worker::gen_random_bytes(random_bytes, sizeof(random_bytes));
     for (size_t i = 0; i < sizeof(server_scramble); i++)
     {
-        auto ptr = &random_bytes[2 * i];
-        auto val16 = *(reinterpret_cast<uint16_t*>(ptr));
+        auto ptr           = &random_bytes[2 * i];
+        auto val16         = *(reinterpret_cast<uint16_t*>(ptr));
         server_scramble[i] = '!' + (val16 % (('~' + 1) - '!'));
     }
 
     auto cap_types = get_supported_cap_types(service);
-    bool is_maria = cap_types == CapTypes::MARIADB;
+    bool is_maria  = cap_types == CapTypes::MARIADB;
 
     // copy back to the caller
     memcpy(m_session_data->scramble, server_scramble, GW_MYSQL_SCRAMBLE_SIZE);
@@ -398,7 +395,7 @@ int MariaDBClientConnection::send_mysql_client_handshake()
 
     // Send the session id as the server thread id. Only the low 32bits are sent in the handshake.
     auto thread_id = m_session->id();
-    mariadb::set_byte4(mysql_thread_id_num, (uint32_t)(thread_id));
+    mariadb::set_byte4(mysql_thread_id_num, (uint32_t) (thread_id));
     memcpy(mysql_scramble_buf, server_scramble, 8);
 
     memcpy(mysql_plugin_data, server_scramble + 8, 12);
@@ -409,17 +406,16 @@ int MariaDBClientConnection::send_mysql_client_handshake()
      * an AuthSwitchRequest packet to the client.
      */
     const char* plugin_name = DEFAULT_MYSQL_AUTH_PLUGIN;
-    int plugin_name_len = strlen(plugin_name);
+    int plugin_name_len     = strlen(plugin_name);
 
     std::string version = get_version_string(service);
 
-    uint32_t mysql_payload_size =
-        sizeof(mysql_protocol_version) + (version.length() + 1) + sizeof(mysql_thread_id_num) + 8
-        + sizeof(    /* mysql_filler */ uint8_t) + sizeof(mysql_server_capabilities_one)
-        + sizeof(mysql_server_language)
-        + sizeof(mysql_server_status) + sizeof(mysql_server_capabilities_two) + sizeof(mysql_scramble_len)
-        + sizeof(mysql_filler_ten) + 12 + sizeof(    /* mysql_last_byte */ uint8_t) + plugin_name_len
-        + sizeof(    /* mysql_last_byte */ uint8_t);
+    uint32_t mysql_payload_size
+        = sizeof(mysql_protocol_version) + (version.length() + 1) + sizeof(mysql_thread_id_num) + 8
+        + sizeof(/* mysql_filler */ uint8_t) + sizeof(mysql_server_capabilities_one)
+        + sizeof(mysql_server_language) + sizeof(mysql_server_status) + sizeof(mysql_server_capabilities_two)
+        + sizeof(mysql_scramble_len) + sizeof(mysql_filler_ten) + 12 + sizeof(/* mysql_last_byte */ uint8_t)
+        + plugin_name_len + sizeof(/* mysql_last_byte */ uint8_t);
 
     // allocate memory for packet header + payload
     GWBUF* buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size);
@@ -445,7 +441,7 @@ int MariaDBClientConnection::send_mysql_client_handshake()
     mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_protocol_version);
 
     // write server version plus 0 filler
-    strcpy((char*)mysql_handshake_payload, version.c_str());
+    strcpy((char*) mysql_handshake_payload, version.c_str());
     mysql_handshake_payload = mysql_handshake_payload + version.length();
 
     *mysql_handshake_payload = 0x00;
@@ -458,7 +454,7 @@ int MariaDBClientConnection::send_mysql_client_handshake()
 
     // write scramble buf
     memcpy(mysql_handshake_payload, mysql_scramble_buf, 8);
-    mysql_handshake_payload = mysql_handshake_payload + 8;
+    mysql_handshake_payload  = mysql_handshake_payload + 8;
     *mysql_handshake_payload = GW_MYSQL_HANDSHAKE_FILLER;
     mysql_handshake_payload++;
 
@@ -471,19 +467,19 @@ int MariaDBClientConnection::send_mysql_client_handshake()
     }
 
     // write server capabilities part one
-    mysql_server_capabilities_one[0] = (uint8_t)server_capabilities;
-    mysql_server_capabilities_one[1] = (uint8_t)(server_capabilities >> 8);
+    mysql_server_capabilities_one[0] = (uint8_t) server_capabilities;
+    mysql_server_capabilities_one[1] = (uint8_t) (server_capabilities >> 8);
 
     if (is_maria)
     {
         /** A MariaDB 10.2 server doesn't send the CLIENT_MYSQL capability
          * to signal that it supports extended capabilities */
-        mysql_server_capabilities_one[0] &= ~(uint8_t)GW_MYSQL_CAPABILITIES_CLIENT_MYSQL;
+        mysql_server_capabilities_one[0] &= ~(uint8_t) GW_MYSQL_CAPABILITIES_CLIENT_MYSQL;
     }
 
     if (require_ssl())
     {
-        mysql_server_capabilities_one[1] |= (int)GW_MYSQL_CAPABILITIES_SSL >> 8;
+        mysql_server_capabilities_one[1] |= (int) GW_MYSQL_CAPABILITIES_SSL >> 8;
     }
 
     memcpy(mysql_handshake_payload, mysql_server_capabilities_one, sizeof(mysql_server_capabilities_one));
@@ -500,8 +496,8 @@ int MariaDBClientConnection::send_mysql_client_handshake()
     mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_server_status);
 
     // write server capabilities part two
-    mysql_server_capabilities_two[0] = (uint8_t)(server_capabilities >> 16);
-    mysql_server_capabilities_two[1] = (uint8_t)(server_capabilities >> 24);
+    mysql_server_capabilities_two[0] = (uint8_t) (server_capabilities >> 16);
+    mysql_server_capabilities_two[1] = (uint8_t) (server_capabilities >> 24);
 
     /** NOTE: pre-2.1 versions sent the fourth byte of the capabilities as
      *  the value 128 even though there's no such capability. */
@@ -543,10 +539,9 @@ int MariaDBClientConnection::send_mysql_client_handshake()
  *
  * @return Instruction for upper level state machine
  */
-MariaDBClientConnection::StateMachineRes
-MariaDBClientConnection::process_authentication(AuthType auth_type)
+MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_authentication(AuthType auth_type)
 {
-    auto rval = StateMachineRes::IN_PROGRESS;
+    auto rval                   = StateMachineRes::IN_PROGRESS;
     bool state_machine_continue = true;
     // The referenced object may be updated during this function.
     const auto& user_entry = m_session_data->user_entry;
@@ -556,69 +551,71 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
         switch (m_auth_state)
         {
         case AuthState::FIND_ENTRY:
+        {
+            update_user_account_entry();
+            if (user_entry.type == UserEntryType::USER_ACCOUNT_OK)
             {
-                update_user_account_entry();
-                if (user_entry.type == UserEntryType::USER_ACCOUNT_OK)
+                m_auth_state = AuthState::START_EXCHANGE;
+            }
+            else
+            {
+                // Something is wrong with the entry. Authentication will likely fail.
+                if (user_account_cache()->can_update_immediately())
                 {
-                    m_auth_state = AuthState::START_EXCHANGE;
+                    // User data may be outdated, send update message through the service.
+                    // The current session will stall until userdata has been updated.
+                    m_session->service->request_user_account_update();
+                    m_session->service->mark_for_wakeup(this);
+                    m_auth_state           = AuthState::TRY_AGAIN;
+                    state_machine_continue = false;
                 }
                 else
                 {
-                    // Something is wrong with the entry. Authentication will likely fail.
-                    if (user_account_cache()->can_update_immediately())
-                    {
-                        // User data may be outdated, send update message through the service.
-                        // The current session will stall until userdata has been updated.
-                        m_session->service->request_user_account_update();
-                        m_session->service->mark_for_wakeup(this);
-                        m_auth_state = AuthState::TRY_AGAIN;
-                        state_machine_continue = false;
-                    }
-                    else
-                    {
-                        MXS_WARNING("User accounts have been recently updated, cannot update again for %s.",
-                                    m_session->user_and_host().c_str());
-                        // If plugin exists, start exchange. Authentication will surely fail.
-                        m_auth_state = (user_entry.type == UserEntryType::PLUGIN_IS_NOT_LOADED) ?
-                            AuthState::NO_PLUGIN : AuthState::START_EXCHANGE;
-                    }
+                    MXS_WARNING("User accounts have been recently updated, cannot update again for %s.",
+                        m_session->user_and_host().c_str());
+                    // If plugin exists, start exchange. Authentication will surely fail.
+                    m_auth_state = (user_entry.type == UserEntryType::PLUGIN_IS_NOT_LOADED)
+                                     ? AuthState::NO_PLUGIN
+                                     : AuthState::START_EXCHANGE;
                 }
             }
-            break;
+        }
+        break;
 
         case AuthState::TRY_AGAIN:
+        {
+            // Waiting for user account update.
+            if (m_user_update_wakeup)
             {
-                // Waiting for user account update.
-                if (m_user_update_wakeup)
+                // Only recheck user if the user account data has actually changed since the previous
+                // attempt.
+                if (user_account_cache()->version() > m_previous_userdb_version)
                 {
-                    // Only recheck user if the user account data has actually changed since the previous
-                    // attempt.
-                    if (user_account_cache()->version() > m_previous_userdb_version)
-                    {
-                        update_user_account_entry();
-                    }
+                    update_user_account_entry();
+                }
 
-                    if (user_entry.type == UserEntryType::USER_ACCOUNT_OK)
-                    {
-                        MXB_DEBUG("Found user account entry for %s after updating user account data.",
-                                  m_session->user_and_host().c_str());
-                    }
-                    m_auth_state = (user_entry.type == UserEntryType::PLUGIN_IS_NOT_LOADED) ?
-                        AuthState::NO_PLUGIN : AuthState::START_EXCHANGE;
-                }
-                else
+                if (user_entry.type == UserEntryType::USER_ACCOUNT_OK)
                 {
-                    // Should not get client data (or read events) before users have actually been updated.
-                    // This can happen if client hangs up while MaxScale is waiting for the update.
-                    MXB_ERROR("Client %s sent data when waiting for user account update. Closing session.",
-                              m_session->user_and_host().c_str());
-                    send_misc_error("Unexpected client event");
-                    // Unmark because auth state is modified.
-                    m_session->service->unmark_for_wakeup(this);
-                    m_auth_state = AuthState::FAIL;
+                    MXB_DEBUG("Found user account entry for %s after updating user account data.",
+                        m_session->user_and_host().c_str());
                 }
+                m_auth_state = (user_entry.type == UserEntryType::PLUGIN_IS_NOT_LOADED)
+                                 ? AuthState::NO_PLUGIN
+                                 : AuthState::START_EXCHANGE;
             }
-            break;
+            else
+            {
+                // Should not get client data (or read events) before users have actually been updated.
+                // This can happen if client hangs up while MaxScale is waiting for the update.
+                MXB_ERROR("Client %s sent data when waiting for user account update. Closing session.",
+                    m_session->user_and_host().c_str());
+                send_misc_error("Unexpected client event");
+                // Unmark because auth state is modified.
+                m_session->service->unmark_for_wakeup(this);
+                m_auth_state = AuthState::FAIL;
+            }
+        }
+        break;
 
         case AuthState::NO_PLUGIN:
             send_authentication_error(AuthErrorType::NO_PLUGIN);
@@ -644,21 +641,24 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
             else
             {
                 // Send internal error, as in this case the client has done nothing wrong.
-                send_mysql_err_packet(m_session_data->next_sequence, 0, 1815, "HY000",
-                                      "Internal error: Session creation failed");
+                send_mysql_err_packet(m_session_data->next_sequence,
+                    0,
+                    1815,
+                    "HY000",
+                    "Internal error: Session creation failed");
                 MXB_ERROR("Failed to create session for %s.", m_session->user_and_host().c_str());
                 m_auth_state = AuthState::FAIL;
             }
             break;
 
         case AuthState::CHANGE_USER_OK:
-            {
-                // Reauthentication to MaxScale succeeded, but the query still needs to be successfully
-                // routed.
-                rval = complete_change_user() ? StateMachineRes::DONE : StateMachineRes::ERROR;
-                state_machine_continue = false;
-                break;
-            }
+        {
+            // Reauthentication to MaxScale succeeded, but the query still needs to be successfully
+            // routed.
+            rval                   = complete_change_user() ? StateMachineRes::DONE : StateMachineRes::ERROR;
+            state_machine_continue = false;
+            break;
+        }
 
         case AuthState::COMPLETE:
             m_sql_mode = m_session->listener_data()->m_default_sql_mode;
@@ -669,7 +669,7 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
                 m_dcb->trigger_read_event();
             }
             state_machine_continue = false;
-            rval = StateMachineRes::DONE;
+            rval                   = StateMachineRes::DONE;
             break;
 
         case AuthState::FAIL:
@@ -695,12 +695,12 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
 void MariaDBClientConnection::update_user_account_entry()
 {
     const auto mses = m_session_data;
-    auto users = user_account_cache();
+    auto users      = user_account_cache();
     auto search_res = users->find_user(mses->user, mses->remote, mses->db, mses->user_search_settings);
-    m_previous_userdb_version = users->version();   // Can use this to skip user entry check after update.
+    m_previous_userdb_version = users->version();  // Can use this to skip user entry check after update.
 
     mariadb::AuthenticatorModule* selected_module = nullptr;
-    auto& auth_modules = m_session->listener_data()->m_authenticators;
+    auto& auth_modules                            = m_session->listener_data()->m_authenticators;
     for (const auto& auth_module : auth_modules)
     {
         auto protocol_auth = static_cast<mariadb::AuthenticatorModule*>(auth_module.get());
@@ -725,8 +725,9 @@ void MariaDBClientConnection::update_user_account_entry()
         search_res.type = UserEntryType::PLUGIN_IS_NOT_LOADED;
         MXB_INFO("User entry '%s@'%s' uses unrecognized authenticator plugin '%s'. "
                  "Cannot authenticate user.",
-                 search_res.entry.username.c_str(), search_res.entry.host_pattern.c_str(),
-                 search_res.entry.plugin.c_str());
+            search_res.entry.username.c_str(),
+            search_res.entry.host_pattern.c_str(),
+            search_res.entry.plugin.c_str());
     }
     mses->user_entry = move(search_res);
 }
@@ -753,61 +754,58 @@ char* MariaDBClientConnection::handle_variables(GWBUF** read_buffer)
         break;
 
     case SetParser::IS_SET_SQL_MODE:
+    {
+        SqlModeParser sql_mode_parser;
+
+        const SetParser::Result::Items& values = result.values();
+
+        for (SetParser::Result::Items::const_iterator i = values.begin(); i != values.end(); ++i)
         {
-            SqlModeParser sql_mode_parser;
+            const SetParser::Result::Item& value = *i;
 
-            const SetParser::Result::Items& values = result.values();
-
-            for (SetParser::Result::Items::const_iterator i = values.begin(); i != values.end(); ++i)
+            switch (sql_mode_parser.get_sql_mode(value.first, value.second))
             {
-                const SetParser::Result::Item& value = *i;
+            case SqlModeParser::ORACLE:
+                m_session->set_autocommit(false);
+                m_sql_mode = QC_SQL_MODE_ORACLE;
+                break;
 
-                switch (sql_mode_parser.get_sql_mode(value.first, value.second))
-                {
-                case SqlModeParser::ORACLE:
-                    m_session->set_autocommit(false);
-                    m_sql_mode = QC_SQL_MODE_ORACLE;
-                    break;
+            case SqlModeParser::DEFAULT:
+                m_session->set_autocommit(true);
+                m_sql_mode = QC_SQL_MODE_DEFAULT;
+                break;
 
-                case SqlModeParser::DEFAULT:
-                    m_session->set_autocommit(true);
-                    m_sql_mode = QC_SQL_MODE_DEFAULT;
-                    break;
+            case SqlModeParser::SOMETHING:
+                break;
 
-                case SqlModeParser::SOMETHING:
-                    break;
-
-                default:
-                    mxb_assert(!true);
-                }
+            default:
+                mxb_assert(!true);
             }
         }
-        break;
+    }
+    break;
 
     case SetParser::IS_SET_MAXSCALE:
+    {
+        const SetParser::Result::Items& variables = result.variables();
+        const SetParser::Result::Items& values    = result.values();
+
+        SetParser::Result::Items::const_iterator i = variables.begin();
+        SetParser::Result::Items::const_iterator j = values.begin();
+
+        while (!message && (i != variables.end()))
         {
-            const SetParser::Result::Items& variables = result.variables();
-            const SetParser::Result::Items& values = result.values();
+            const SetParser::Result::Item& variable = *i;
+            const SetParser::Result::Item& value    = *j;
 
-            SetParser::Result::Items::const_iterator i = variables.begin();
-            SetParser::Result::Items::const_iterator j = values.begin();
+            message = session_set_variable_value(
+                m_session, variable.first, variable.second, value.first, value.second);
 
-            while (!message && (i != variables.end()))
-            {
-                const SetParser::Result::Item& variable = *i;
-                const SetParser::Result::Item& value = *j;
-
-                message = session_set_variable_value(m_session,
-                                                     variable.first,
-                                                     variable.second,
-                                                     value.first,
-                                                     value.second);
-
-                ++i;
-                ++j;
-            }
+            ++i;
+            ++j;
         }
-        break;
+    }
+    break;
 
     case SetParser::NOT_RELEVANT:
         break;
@@ -900,32 +898,32 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
  * @param user_out Kill command target user output
  * @return true on success, false on error
  */
-bool MariaDBClientConnection::parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out,
-                                               std::string* user_out)
+bool MariaDBClientConnection::parse_kill_query(
+    char* query, uint64_t* thread_id_out, kill_type_t* kt_out, std::string* user_out)
 {
     const char WORD_CONNECTION[] = "CONNECTION";
-    const char WORD_QUERY[] = "QUERY";
-    const char WORD_HARD[] = "HARD";
-    const char WORD_SOFT[] = "SOFT";
-    const char WORD_USER[] = "USER";
-    const char DELIM[] = " \n\t";
+    const char WORD_QUERY[]      = "QUERY";
+    const char WORD_HARD[]       = "HARD";
+    const char WORD_SOFT[]       = "SOFT";
+    const char WORD_USER[]       = "USER";
+    const char DELIM[]           = " \n\t";
 
-    int kill_type = KT_CONNECTION;
+    int kill_type                    = KT_CONNECTION;
     unsigned long long int thread_id = 0;
     std::string tmpuser;
 
     auto extract_user = [](char* token, std::string* user) {
-            char* end = strchr(token, ';');
+        char* end = strchr(token, ';');
 
-            if (end)
-            {
-                user->assign(token, end - token);
-            }
-            else
-            {
-                user->assign(token);
-            }
-        };
+        if (end)
+        {
+            user->assign(token, end - token);
+        }
+        else
+        {
+            user->assign(token);
+        }
+    };
 
     enum kill_parse_state_t
     {
@@ -935,9 +933,11 @@ bool MariaDBClientConnection::parse_kill_query(char* query, uint64_t* thread_id_
         USER,
         SEMICOLON,
         DONE
-    } state = KILL;
+    } state
+        = KILL;
+
     char* saveptr = NULL;
-    bool error = false;
+    bool error    = false;
 
     char* token = strtok_r(query, DELIM, &saveptr);
 
@@ -949,7 +949,7 @@ bool MariaDBClientConnection::parse_kill_query(char* query, uint64_t* thread_id_
         case KILL:
             if (strncasecmp(token, WORD_KILL, sizeof(WORD_KILL) - 1) == 0)
             {
-                state = CONN_QUERY;
+                state    = CONN_QUERY;
                 get_next = true;
             }
             else
@@ -991,7 +991,7 @@ bool MariaDBClientConnection::parse_kill_query(char* query, uint64_t* thread_id_
         case ID:
             if (strncasecmp(token, WORD_USER, sizeof(WORD_USER) - 1) == 0)
             {
-                state = USER;
+                state    = USER;
                 get_next = true;
                 break;
             }
@@ -1001,9 +1001,8 @@ bool MariaDBClientConnection::parse_kill_query(char* query, uint64_t* thread_id_
 
                 long long int l = strtoll(token, &endptr_id, 0);
 
-                if ((l == LLONG_MAX && errno == ERANGE)
-                    || (*endptr_id != '\0' && *endptr_id != ';')
-                    || l <= 0 || endptr_id == token)
+                if ((l == LLONG_MAX && errno == ERANGE) || (*endptr_id != '\0' && *endptr_id != ';') || l <= 0
+                    || endptr_id == token)
                 {
                     // Not a positive 32-bit integer
                     error = true;
@@ -1011,8 +1010,8 @@ bool MariaDBClientConnection::parse_kill_query(char* query, uint64_t* thread_id_
                 else
                 {
                     mxb_assert(*endptr_id == '\0' || *endptr_id == ';');
-                    state = SEMICOLON;      // In case we have space before ;
-                    get_next = true;
+                    state     = SEMICOLON;  // In case we have space before ;
+                    get_next  = true;
                     thread_id = l;
                 }
             }
@@ -1020,14 +1019,14 @@ bool MariaDBClientConnection::parse_kill_query(char* query, uint64_t* thread_id_
 
         case USER:
             extract_user(token, &tmpuser);
-            state = SEMICOLON;
+            state    = SEMICOLON;
             get_next = true;
             break;
 
         case SEMICOLON:
             if (strncmp(token, ";", 1) == 0)
             {
-                state = DONE;
+                state    = DONE;
                 get_next = true;
             }
             else
@@ -1054,8 +1053,8 @@ bool MariaDBClientConnection::parse_kill_query(char* query, uint64_t* thread_id_
     else
     {
         *thread_id_out = thread_id;
-        *kt_out = (kill_type_t)kill_type;
-        *user_out = tmpuser;
+        *kt_out        = (kill_type_t) kill_type;
+        *user_out      = tmpuser;
         return true;
     }
 }
@@ -1070,32 +1069,27 @@ bool MariaDBClientConnection::parse_kill_query(char* query, uint64_t* thread_id_
  *
  * @return RES_CONTINUE or RES_END
  */
-MariaDBClientConnection::SpecialCmdRes
-MariaDBClientConnection::handle_query_kill(GWBUF* read_buffer, uint32_t packet_len)
+MariaDBClientConnection::SpecialCmdRes MariaDBClientConnection::handle_query_kill(
+    GWBUF* read_buffer, uint32_t packet_len)
 {
     auto rval = SpecialCmdRes::CONTINUE;
     /* First, we need to detect the text "KILL" (ignorecase) in the start
      * of the packet. Copy just enough characters. */
     const size_t KILL_BEGIN_LEN = sizeof(WORD_KILL) - 1;
-    char startbuf[KILL_BEGIN_LEN];      // Not 0-terminated, careful...
-    size_t copied_len = gwbuf_copy_data(read_buffer,
-                                        MYSQL_HEADER_LEN + 1,
-                                        KILL_BEGIN_LEN,
-                                        (uint8_t*)startbuf);
+    char startbuf[KILL_BEGIN_LEN];  // Not 0-terminated, careful...
+    size_t copied_len
+        = gwbuf_copy_data(read_buffer, MYSQL_HEADER_LEN + 1, KILL_BEGIN_LEN, (uint8_t*) startbuf);
 
     if (strncasecmp(WORD_KILL, startbuf, KILL_BEGIN_LEN) == 0)
     {
         /* Good chance that the query is a KILL-query. Copy the entire
          * buffer and process. */
         size_t buffer_len = packet_len - (MYSQL_HEADER_LEN + 1);
-        char querybuf[buffer_len + 1];          // 0-terminated
-        copied_len = gwbuf_copy_data(read_buffer,
-                                     MYSQL_HEADER_LEN + 1,
-                                     buffer_len,
-                                     (uint8_t*)querybuf);
+        char querybuf[buffer_len + 1];  // 0-terminated
+        copied_len = gwbuf_copy_data(read_buffer, MYSQL_HEADER_LEN + 1, buffer_len, (uint8_t*) querybuf);
         querybuf[copied_len] = '\0';
-        kill_type_t kt = KT_CONNECTION;
-        uint64_t thread_id = 0;
+        kill_type_t kt       = KT_CONNECTION;
+        uint64_t thread_id   = 0;
         std::string user;
 
         if (parse_kill_query(querybuf, &thread_id, &kt, &user))
@@ -1137,24 +1131,24 @@ void MariaDBClientConnection::handle_use_database(GWBUF* read_buffer)
  *
  * @return see @c spec_com_res_t
  */
-MariaDBClientConnection::SpecialCmdRes
-MariaDBClientConnection::process_special_commands(GWBUF* read_buffer, uint8_t cmd)
+MariaDBClientConnection::SpecialCmdRes MariaDBClientConnection::process_special_commands(
+    GWBUF* read_buffer, uint8_t cmd)
 {
     auto is_use_database = [](GWBUF* buffer, size_t packet_len) -> bool {
-            const char USE[] = "USE ";
-            char* ptr = (char*)GWBUF_DATA(buffer) + MYSQL_HEADER_LEN + 1;
+        const char USE[] = "USE ";
+        char* ptr        = (char*) GWBUF_DATA(buffer) + MYSQL_HEADER_LEN + 1;
 
-            return packet_len > MYSQL_HEADER_LEN + 1 + (sizeof(USE) - 1)
-                   && strncasecmp(ptr, USE, sizeof(USE) - 1) == 0;
-        };
+        return packet_len > MYSQL_HEADER_LEN + 1 + (sizeof(USE) - 1)
+            && strncasecmp(ptr, USE, sizeof(USE) - 1) == 0;
+    };
 
     auto is_kill_query = [](GWBUF* buffer, size_t packet_len) -> bool {
-            const char KILL[] = "KILL ";
-            char* ptr = (char*)GWBUF_DATA(buffer) + MYSQL_HEADER_LEN + 1;
+        const char KILL[] = "KILL ";
+        char* ptr         = (char*) GWBUF_DATA(buffer) + MYSQL_HEADER_LEN + 1;
 
-            return packet_len > MYSQL_HEADER_LEN + 1 + (sizeof(KILL) - 1)
-                   && strncasecmp(ptr, KILL, sizeof(KILL) - 1) == 0;
-        };
+        return packet_len > MYSQL_HEADER_LEN + 1 + (sizeof(KILL) - 1)
+            && strncasecmp(ptr, KILL, sizeof(KILL) - 1) == 0;
+    };
 
     auto rval = SpecialCmdRes::CONTINUE;
     if (cmd == MXS_COM_QUIT)
@@ -1195,8 +1189,8 @@ MariaDBClientConnection::process_special_commands(GWBUF* read_buffer, uint8_t cm
     }
     else if (m_command == MXS_COM_INIT_DB)
     {
-        char* start = (char*)GWBUF_DATA(read_buffer);
-        char* end = start + GWBUF_LENGTH(read_buffer);
+        char* start = (char*) GWBUF_DATA(read_buffer);
+        char* end   = start + GWBUF_LENGTH(read_buffer);
         start += MYSQL_HEADER_LEN + 1;
         m_session->start_database_change(std::string(start, end));
     }
@@ -1228,7 +1222,7 @@ MariaDBClientConnection::process_special_commands(GWBUF* read_buffer, uint8_t cm
  */
 bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
 {
-    bool rval = true;
+    bool rval    = true;
     auto session = m_session;
 
     GWBUF* packetbuf = buffer.release();
@@ -1267,7 +1261,7 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
             && process_special_commands(packetbuf, m_command) == SpecialCmdRes::END)
         {
             gwbuf_free(packetbuf);
-            packetbuf = nullptr;
+            packetbuf       = nullptr;
             keep_processing = false;
         }
 
@@ -1275,8 +1269,7 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
         {
             auto capabilities = m_session->capabilities();
             if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING)
-                && !session->service->config()->session_track_trx_state
-                && !session_is_load_active(session))
+                && !session->service->config()->session_track_trx_state && !session_is_load_active(session))
             {
                 track_transaction_state(session, packetbuf);
             }
@@ -1310,7 +1303,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
         if (session_state_value != MXS_SESSION::State::STOPPING)
         {
             MXS_ERROR("Session received a query in incorrect state: %s",
-                      session_state_to_string(session_state_value));
+                session_state_to_string(session_state_value));
         }
         return StateMachineRes::ERROR;
     }
@@ -1346,35 +1339,35 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
         {
             // Unexpected, client should not be sending empty (header-only) packets in this case.
             MXS_ERROR("Client %s sent empty packet when a normal packet was expected.",
-                      m_session->user_and_host().c_str());
+                m_session->user_and_host().c_str());
             buffer.reset();
         }
         break;
 
     case RoutingState::LARGE_PACKET:
+    {
+        // No command bytes, just continue routing large packet.
+        bool is_large = large_query_continues(buffer);
+        routed        = route_statement(move(buffer));
+        if (!is_large)
         {
-            // No command bytes, just continue routing large packet.
-            bool is_large = large_query_continues(buffer);
-            routed = route_statement(move(buffer));
-            if (!is_large)
-            {
-                // Large packet routing completed.
-                m_routing_state = RoutingState::PACKET_START;
-            }
+            // Large packet routing completed.
+            m_routing_state = RoutingState::PACKET_START;
         }
-        break;
+    }
+    break;
 
     case RoutingState::LOAD_DATA:
+    {
+        // Local-infile routing continues until client sends an empty packet. Again, tracked by backend
+        // but this time on the downstream side.
+        routed = route_statement(move(buffer));
+        if (!session_is_load_active(m_session))
         {
-            // Local-infile routing continues until client sends an empty packet. Again, tracked by backend
-            // but this time on the downstream side.
-            routed = route_statement(move(buffer));
-            if (!session_is_load_active(m_session))
-            {
-                m_routing_state = RoutingState::PACKET_START;
-            }
+            m_routing_state = RoutingState::PACKET_START;
         }
-        break;
+    }
+    break;
     }
 
     auto rval = StateMachineRes::IN_PROGRESS;
@@ -1382,7 +1375,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
     {
         /** Routing failed, close the client connection */
         m_session->close_reason = SESSION_CLOSE_ROUTING_FAILED;
-        rval = StateMachineRes::ERROR;
+        rval                    = StateMachineRes::ERROR;
         MXS_ERROR("Routing the query failed. Session will be closed.");
     }
     else if (m_command == MXS_COM_QUIT)
@@ -1390,7 +1383,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
         /** Close router session which causes closing of backends */
         mxb_assert_message(session_valid_for_pool(m_session), "Session should qualify for pooling");
         m_state = State::QUIT;
-        rval = StateMachineRes::DONE;
+        rval    = StateMachineRes::DONE;
     }
 
     return rval;
@@ -1402,7 +1395,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
 
 void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
 {
-    mxb_assert(m_dcb == event_dcb);     // The protocol should only handle its own events.
+    mxb_assert(m_dcb == event_dcb);  // The protocol should only handle its own events.
 
     bool state_machine_continue = true;
     while (state_machine_continue)
@@ -1420,11 +1413,11 @@ void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
                 switch (ret)
                 {
                 case StateMachineRes::IN_PROGRESS:
-                    state_machine_continue = false;     // need more data
+                    state_machine_continue = false;  // need more data
                     break;
 
                 case StateMachineRes::DONE:
-                    m_state = State::AUTHENTICATING;        // continue directly to next state
+                    m_state = State::AUTHENTICATING;  // continue directly to next state
                     break;
 
                 case StateMachineRes::ERROR:
@@ -1436,46 +1429,46 @@ void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
 
         case State::AUTHENTICATING:
         case State::CHANGING_USER:
+        {
+            auto auth_type
+                = (m_state == State::CHANGING_USER) ? AuthType::CHANGE_USER : AuthType::NORMAL_AUTH;
+            auto ret = process_authentication(auth_type);
+            switch (ret)
             {
-                auto auth_type = (m_state == State::CHANGING_USER) ? AuthType::CHANGE_USER :
-                    AuthType::NORMAL_AUTH;
-                auto ret = process_authentication(auth_type);
-                switch (ret)
-                {
-                case StateMachineRes::IN_PROGRESS:
-                    state_machine_continue = false;     // need more data
-                    break;
+            case StateMachineRes::IN_PROGRESS:
+                state_machine_continue = false;  // need more data
+                break;
 
-                case StateMachineRes::DONE:
-                    m_state = State::READY;
-                    break;
+            case StateMachineRes::DONE:
+                m_state = State::READY;
+                break;
 
-                case StateMachineRes::ERROR:
-                    m_state = State::FAILED;
-                    break;
-                }
+            case StateMachineRes::ERROR:
+                m_state = State::FAILED;
+                break;
             }
-            break;
+        }
+        break;
 
         case State::READY:
+        {
+            auto ret = process_normal_read();
+            switch (ret)
             {
-                auto ret = process_normal_read();
-                switch (ret)
-                {
-                case StateMachineRes::IN_PROGRESS:
-                    state_machine_continue = false;
-                    break;
+            case StateMachineRes::IN_PROGRESS:
+                state_machine_continue = false;
+                break;
 
-                case StateMachineRes::DONE:
-                    // In this case, next m_state was written by 'process_normal_read'.
-                    break;
+            case StateMachineRes::DONE:
+                // In this case, next m_state was written by 'process_normal_read'.
+                break;
 
-                case StateMachineRes::ERROR:
-                    m_state = State::FAILED;
-                    break;
-                }
+            case StateMachineRes::ERROR:
+                m_state = State::FAILED;
+                break;
             }
-            break;
+        }
+        break;
 
         case State::QUIT:
         case State::FAILED:
@@ -1572,8 +1565,7 @@ MariaDBClientConnection::MariaDBClientConnection(MXS_SESSION* session, mxs::Comp
     , m_session(session)
     , m_session_data(static_cast<MYSQL_session*>(session->protocol_data()))
     , m_version(service_get_version(session->service, SERVICE_VERSION_MIN))
-{
-}
+{}
 
 /**
  * mysql_send_auth_error
@@ -1587,22 +1579,22 @@ MariaDBClientConnection::MariaDBClientConnection(MXS_SESSION* session, mxs::Comp
  */
 int MariaDBClientConnection::send_auth_error(int packet_number, const char* mysql_message)
 {
-    uint8_t* outbuf = NULL;
+    uint8_t* outbuf             = NULL;
     uint32_t mysql_payload_size = 0;
     uint8_t mysql_packet_header[4];
     uint8_t* mysql_payload = NULL;
-    uint8_t field_count = 0;
+    uint8_t field_count    = 0;
     uint8_t mysql_err[2];
     uint8_t mysql_statemsg[6];
     const char* mysql_error_msg = NULL;
-    const char* mysql_state = NULL;
+    const char* mysql_state     = NULL;
 
     mxb_assert(m_dcb->state() == DCB::State::POLLING);
     mysql_error_msg = "Access denied!";
-    mysql_state = "28000";
+    mysql_state     = "28000";
 
     field_count = 0xff;
-    mariadb::set_byte2(mysql_err,    /*mysql_errno */ 1045);
+    mariadb::set_byte2(mysql_err, /*mysql_errno */ 1045);
     mysql_statemsg[0] = '#';
     memcpy(mysql_statemsg + 1, mysql_state, 5);
 
@@ -1611,8 +1603,8 @@ int MariaDBClientConnection::send_auth_error(int packet_number, const char* mysq
         mysql_error_msg = mysql_message;
     }
 
-    mysql_payload_size =
-        sizeof(field_count) + sizeof(mysql_err) + sizeof(mysql_statemsg) + strlen(mysql_error_msg);
+    mysql_payload_size
+        = sizeof(field_count) + sizeof(mysql_err) + sizeof(mysql_statemsg) + strlen(mysql_error_msg);
 
     // allocate memory for packet header + payload
     GWBUF* buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size);
@@ -1665,8 +1657,8 @@ int MariaDBClientConnection::send_auth_error(int packet_number, const char* mysq
  * @param error_message Text message to be included
  * @return 0 on failure, 1 on success
  */
-int MariaDBClientConnection::send_standard_error(int packet_number, int error_number,
-                                                 const char* error_message)
+int MariaDBClientConnection::send_standard_error(
+    int packet_number, int error_number, const char* error_message)
 {
     GWBUF* buf = create_standard_error(packet_number, error_number, error_message);
     return buf ? write(buf) : 0;
@@ -1685,10 +1677,10 @@ int MariaDBClientConnection::send_standard_error(int packet_number, int error_nu
  * @param msg Text message to be included
  * @return GWBUF        A buffer containing the error message, ready to send
  */
-GWBUF* MariaDBClientConnection::create_standard_error(int packet_number, int error_number,
-                                                      const char* error_message)
+GWBUF* MariaDBClientConnection::create_standard_error(
+    int packet_number, int error_number, const char* error_message)
 {
-    uint8_t* outbuf = NULL;
+    uint8_t* outbuf             = NULL;
     uint32_t mysql_payload_size = 0;
     uint8_t mysql_packet_header[4];
     uint8_t mysql_error_number[2];
@@ -1731,36 +1723,34 @@ GWBUF* MariaDBClientConnection::create_standard_error(int packet_number, int err
 void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info)
 {
     MXS_SESSION* ref = session_get_ref(m_session);
-    auto origin = mxs::RoutingWorker::get_current();
+    auto origin      = mxs::RoutingWorker::get_current();
 
     auto func = [this, info, ref, origin]() {
-            // First, gather the list of servers where the KILL should be sent
-            mxs::RoutingWorker::execute_concurrently(
-                [info, ref]() {
-                    dcb_foreach_local(info->cb, info.get());
-                });
+        // First, gather the list of servers where the KILL should be sent
+        mxs::RoutingWorker::execute_concurrently([info, ref]() { dcb_foreach_local(info->cb, info.get()); });
 
-            // Then move execution back to the original worker to keep all connections on the same thread
-            origin->call(
-                [this, info, ref]() {
-                    for (const auto& a : info->targets)
-                    {
-                        if (LocalClient* client = LocalClient::create(info->session, a.first))
-                        {
-                            client->connect();
-                            // TODO: There can be multiple connections to the same server. Currently only one
-                            // connection per server is killed.
-                            client->queue_query(modutil_create_query(a.second.c_str()));
-                            client->queue_query(mysql_create_com_quit(NULL, 0));
+        // Then move execution back to the original worker to keep all connections on the same thread
+        origin->call(
+            [this, info, ref]() {
+            for (const auto& a : info->targets)
+            {
+                if (LocalClient* client = LocalClient::create(info->session, a.first))
+                {
+                    client->connect();
+                    // TODO: There can be multiple connections to the same server. Currently only one
+                    // connection per server is killed.
+                    client->queue_query(modutil_create_query(a.second.c_str()));
+                    client->queue_query(mysql_create_com_quit(NULL, 0));
 
-                            mxb_assert(ref->state() != MXS_SESSION::State::STOPPING);
-                            add_local_client(client);
-                        }
-                    }
+                    mxb_assert(ref->state() != MXS_SESSION::State::STOPPING);
+                    add_local_client(client);
+                }
+            }
 
-                    session_put_ref(ref);
-                }, mxs::RoutingWorker::EXECUTE_AUTO);
-        };
+            session_put_ref(ref);
+            },
+            mxs::RoutingWorker::EXECUTE_AUTO);
+    };
 
     std::thread(func).detach();
 }
@@ -1776,11 +1766,10 @@ void MariaDBClientConnection::mxs_mysql_execute_kill(uint64_t target_id, kill_ty
  *       and really goes to the heart of explaining what the session_id/thread_id means in terms
  *       of a service/server pipeline and the recursiveness of this call.
  */
-void MariaDBClientConnection::execute_kill_all_others(uint64_t target_id,
-                                                      uint64_t keep_protocol_thread_id,
-                                                      kill_type_t type)
+void MariaDBClientConnection::execute_kill_all_others(
+    uint64_t target_id, uint64_t keep_protocol_thread_id, kill_type_t type)
 {
-    const char* hard = (type & KT_HARD) ? "HARD " : (type & KT_SOFT) ? "SOFT " : "";
+    const char* hard  = (type & KT_HARD) ? "HARD " : (type & KT_SOFT) ? "SOFT " : "";
     const char* query = (type & KT_QUERY) ? "QUERY " : "";
     std::stringstream ss;
     ss << "KILL " << hard << query;
@@ -1791,7 +1780,7 @@ void MariaDBClientConnection::execute_kill_all_others(uint64_t target_id,
 
 void MariaDBClientConnection::execute_kill_user(const char* user, kill_type_t type)
 {
-    const char* hard = (type & KT_HARD) ? "HARD " : (type & KT_SOFT) ? "SOFT " : "";
+    const char* hard  = (type & KT_HARD) ? "HARD " : (type & KT_SOFT) ? "SOFT " : "";
     const char* query = (type & KT_QUERY) ? "QUERY " : "";
     std::stringstream ss;
     ss << "KILL " << hard << query << "USER " << user;
@@ -1809,7 +1798,7 @@ void MariaDBClientConnection::track_current_command(const mxs::Buffer& buffer)
 {
     mxb_assert(m_routing_state == RoutingState::PACKET_START);
     const uint8_t* data = GWBUF_DATA(buffer.get());
-    m_command = MYSQL_GET_COMMAND(data);
+    m_command           = MYSQL_GET_COMMAND(data);
 }
 
 const MariaDBUserCache* MariaDBClientConnection::user_account_cache()
@@ -1829,7 +1818,7 @@ bool MariaDBClientConnection::parse_ssl_request_packet(GWBUF* buffer)
         data.resize(CLIENT_CAPABILITIES_LEN);
         gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, CLIENT_CAPABILITIES_LEN, data.data());
         m_session_data->client_info = packet_parser::parse_client_capabilities(data, nullptr);
-        rval = true;
+        rval                        = true;
     }
     return rval;
 }
@@ -1837,7 +1826,7 @@ bool MariaDBClientConnection::parse_ssl_request_packet(GWBUF* buffer)
 bool MariaDBClientConnection::parse_handshake_response_packet(GWBUF* buffer)
 {
     size_t buflen = gwbuf_length(buffer);
-    bool rval = false;
+    bool rval     = false;
 
     /**
      * The packet should contain client capabilities at the beginning. Some other fields are also
@@ -1847,17 +1836,17 @@ bool MariaDBClientConnection::parse_handshake_response_packet(GWBUF* buffer)
      * is just a guess, but it seems the packets from most plugins are < 100 bytes.
      */
     size_t min_expected_len = NORMAL_HS_RESP_MIN_SIZE;
-    auto max_expected_len = min_expected_len + MYSQL_USER_MAXLEN + MYSQL_DATABASE_MAXLEN + 1000;
+    auto max_expected_len   = min_expected_len + MYSQL_USER_MAXLEN + MYSQL_DATABASE_MAXLEN + 1000;
     if ((buflen >= min_expected_len) && buflen <= max_expected_len)
     {
         int datalen = buflen - MYSQL_HEADER_LEN;
         packet_parser::ByteVec data;
         data.resize(datalen + 1);
         gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, datalen, data.data());
-        data[datalen] = '\0';   // Simplifies some later parsing.
+        data[datalen] = '\0';  // Simplifies some later parsing.
 
         auto client_info = packet_parser::parse_client_capabilities(data, &m_session_data->client_info);
-        auto parse_res = packet_parser::parse_client_response(data, client_info.m_client_capabilities);
+        auto parse_res   = packet_parser::parse_client_response(data, client_info.m_client_capabilities);
 
         if (parse_res.success)
         {
@@ -1870,7 +1859,7 @@ bool MariaDBClientConnection::parse_handshake_response_packet(GWBUF* buffer)
                 m_session_data->user = parse_res.username;
                 m_session->set_user(parse_res.username);
                 m_session_data->auth_token = move(parse_res.token_res.auth_token);
-                m_session_data->db = parse_res.db;
+                m_session_data->db         = parse_res.db;
                 m_session->set_database(parse_res.db);
                 m_session_data->plugin = move(parse_res.plugin);
 
@@ -1892,7 +1881,9 @@ bool MariaDBClientConnection::parse_handshake_response_packet(GWBUF* buffer)
         else if (parse_res.token_res.old_protocol)
         {
             MXB_ERROR("Client %s@%s attempted to connect with pre-4.1 authentication "
-                      "which is not supported.", parse_res.username.c_str(), m_dcb->remote().c_str());
+                      "which is not supported.",
+                parse_res.username.c_str(),
+                m_dcb->remote().c_str());
         }
     }
     return rval;
@@ -1915,7 +1906,7 @@ bool MariaDBClientConnection::read_first_client_packet(mxs::Buffer* output)
      * authentication for non-ssl-connections.
      */
     GWBUF* read_buffer = nullptr;
-    int buffer_len = m_dcb->read(&read_buffer, SSL_REQUEST_PACKET_SIZE);
+    int buffer_len     = m_dcb->read(&read_buffer, SSL_REQUEST_PACKET_SIZE);
     if (buffer_len < 0)
     {
         return false;
@@ -1947,7 +1938,7 @@ bool MariaDBClientConnection::read_first_client_packet(mxs::Buffer* output)
     else if (prot_packet_len >= NORMAL_HS_RESP_MIN_SIZE)
     {
         // Normal response. Need to read again. Likely the entire packet is available at the socket.
-        int ret = m_dcb->read(&read_buffer, prot_packet_len);
+        int ret    = m_dcb->read(&read_buffer, prot_packet_len);
         buffer_len = gwbuf_length(read_buffer);
         if (ret < 0)
         {
@@ -1995,17 +1986,17 @@ bool MariaDBClientConnection::start_change_user(mxs::Buffer&& buffer)
 {
     // Parse the COM_CHANGE_USER-packet. The packet is somewhat similar to a typical handshake response.
     size_t buflen = buffer.length();
-    bool rval = false;
+    bool rval     = false;
 
     size_t min_expected_len = MYSQL_HEADER_LEN + 5;
-    auto max_expected_len = min_expected_len + MYSQL_USER_MAXLEN + MYSQL_DATABASE_MAXLEN + 1000;
+    auto max_expected_len   = min_expected_len + MYSQL_USER_MAXLEN + MYSQL_DATABASE_MAXLEN + 1000;
     if ((buflen >= min_expected_len) && buflen <= max_expected_len)
     {
         int datalen = buflen - MYSQL_HEADER_LEN;
         packet_parser::ByteVec data;
         data.resize(datalen + 1);
         gwbuf_copy_data(buffer.get(), MYSQL_HEADER_LEN, datalen, data.data());
-        data[datalen] = '\0';   // Simplifies some later parsing.
+        data[datalen] = '\0';  // Simplifies some later parsing.
 
         auto parse_res = packet_parser::parse_change_user_packet(data, m_session_data->client_capabilities());
         if (parse_res.success)
@@ -2017,26 +2008,28 @@ bool MariaDBClientConnection::start_change_user(mxs::Buffer&& buffer)
 
                 // Make a temporary session for the change user. Some of the fields persist for the new
                 // user, some need to be overwritten. The client authenticator does not need to be preserved.
-                m_change_user.session = std::make_unique<MYSQL_session>(*m_session_data);
-                m_change_user.session->user = parse_res.username;
-                m_change_user.session->db = parse_res.db;
+                m_change_user.session         = std::make_unique<MYSQL_session>(*m_session_data);
+                m_change_user.session->user   = parse_res.username;
+                m_change_user.session->db     = parse_res.db;
                 m_change_user.session->plugin = parse_res.plugin;
                 m_change_user.session->client_info.m_charset = parse_res.charset;
-                m_change_user.session->auth_token = parse_res.token_res.auth_token;
-                m_change_user.session->connect_attrs = parse_res.attr_res.attr_data;
+                m_change_user.session->auth_token            = parse_res.token_res.auth_token;
+                m_change_user.session->connect_attrs         = parse_res.attr_res.attr_data;
 
                 // Point the session used by the connection to the temporary session so other authentication-
                 // related functions access it. Backend connections will still see the old session data.
                 m_session_data = m_change_user.session.get();
-                rval = true;
+                rval           = true;
                 MXB_INFO("Client %s is attempting a COM_CHANGE_USER to '%s'.",
-                         m_session->user_and_host().c_str(), m_change_user.session->user.c_str());
+                    m_session->user_and_host().c_str(),
+                    m_change_user.session->user.c_str());
             }
         }
         else if (parse_res.token_res.old_protocol)
         {
             MXB_ERROR("Client %s attempted a COM_CHANGE_USER with pre-4.1 authentication, "
-                      "which is not supported.", m_session->user_and_host().c_str());
+                      "which is not supported.",
+                m_session->user_and_host().c_str());
         }
     }
     return rval;
@@ -2048,14 +2041,16 @@ bool MariaDBClientConnection::complete_change_user()
     if (m_change_user.session->user_entry.entry.super_priv && mxs::Config::get().log_warn_super_user)
     {
         MXB_WARNING("COM_CHANGE_USER from %s to super user '%s' in service '%s'.",
-                    m_session->user_and_host().c_str(), m_change_user.session->user.c_str(),
-                    m_session->service->name());
+            m_session->user_and_host().c_str(),
+            m_change_user.session->user.c_str(),
+            m_session->service->name());
     }
     else
     {
         MXB_INFO("COM_CHANGE_USER from %s to '%s' in service '%s' succeeded.",
-                 m_session->user_and_host().c_str(), m_change_user.session->user.c_str(),
-                 m_session->service->name());
+            m_session->user_and_host().c_str(),
+            m_change_user.session->user.c_str(),
+            m_session->service->name());
     }
     m_session_data = static_cast<MYSQL_session*>(m_session->protocol_data());
     // The old session data must be overwritten in-place, as other connections etc may have
@@ -2069,7 +2064,8 @@ bool MariaDBClientConnection::complete_change_user()
 void MariaDBClientConnection::cancel_change_user()
 {
     MXB_INFO("COM_CHANGE_USER from %s to '%s' failed.",
-             m_session->user_and_host().c_str(), m_change_user.session->user.c_str());
+        m_session->user_and_host().c_str(),
+        m_change_user.session->user.c_str());
     // Cancel by restoring old values. An error message should have been sent to the client.
     m_session_data = static_cast<MYSQL_session*>(m_session->protocol_data());
     m_change_user.client_query.reset();
@@ -2079,9 +2075,11 @@ void MariaDBClientConnection::cancel_change_user()
 MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handshake()
 {
     mxs::Buffer read_buffer;
-    bool read_success = (m_handshake_state == HSState::INIT) ?
-        // The first response from client requires special handling.
-        read_first_client_packet(&read_buffer) : read_protocol_packet(m_dcb, &read_buffer);
+    bool read_success = (m_handshake_state == HSState::INIT)
+                          ?
+                          // The first response from client requires special handling.
+                            read_first_client_packet(&read_buffer)
+                          : read_protocol_packet(m_dcb, &read_buffer);
 
     if (!read_success)
     {
@@ -2095,17 +2093,17 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
 
     auto buffer = read_buffer.get();
     update_sequence(buffer);
-    uint8_t next_seq = m_sequence + 1;
+    uint8_t next_seq              = m_sequence + 1;
     m_session_data->next_sequence = next_seq;
 
     const char wrong_sequence[] = "Client (%s) sent packet with unexpected sequence number. "
                                   "Expected %i, got %i.";
-    const char packets_ooo[] = "Got packets out of order";
-    const char sql_errstate[] = "08S01";
-    const int er_bad_handshake = 1043;
-    const int er_out_of_order = 1156;
+    const char packets_ooo[]    = "Got packets out of order";
+    const char sql_errstate[]   = "08S01";
+    const int er_bad_handshake  = 1043;
+    const int er_out_of_order   = 1156;
 
-    auto rval = StateMachineRes::IN_PROGRESS;   // Returned to upper level SM
+    auto rval                   = StateMachineRes::IN_PROGRESS;  // Returned to upper level SM
     bool state_machine_continue = true;
     while (state_machine_continue)
     {
@@ -2116,97 +2114,95 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
             break;
 
         case HSState::EXPECT_SSL_REQ:
+        {
+            // Expecting SSLRequest
+            if (m_sequence == 1)
             {
-                // Expecting SSLRequest
-                if (m_sequence == 1)
+                if (parse_ssl_request_packet(buffer))
                 {
-                    if (parse_ssl_request_packet(buffer))
-                    {
-                        m_handshake_state = HSState::SSL_NEG;
-                    }
-                    else if (parse_handshake_response_packet(buffer))
-                    {
-                        send_authentication_error(AuthErrorType::ACCESS_DENIED);
-                        m_handshake_state = HSState::FAIL;
-                    }
-                    else
-                    {
-                        send_mysql_err_packet(next_seq, 0, er_bad_handshake, sql_errstate,
-                                              "Bad SSL handshake");
-                        MXB_ERROR("Client (%s) sent an invalid SSLRequest.", m_dcb->remote().c_str());
-                        m_handshake_state = HSState::FAIL;
-                    }
+                    m_handshake_state = HSState::SSL_NEG;
+                }
+                else if (parse_handshake_response_packet(buffer))
+                {
+                    send_authentication_error(AuthErrorType::ACCESS_DENIED);
+                    m_handshake_state = HSState::FAIL;
                 }
                 else
                 {
-                    send_mysql_err_packet(next_seq, 0, er_out_of_order, sql_errstate, packets_ooo);
-                    MXB_ERROR(wrong_sequence, m_session_data->remote.c_str(), 1, m_sequence);
+                    send_mysql_err_packet(next_seq, 0, er_bad_handshake, sql_errstate, "Bad SSL handshake");
+                    MXB_ERROR("Client (%s) sent an invalid SSLRequest.", m_dcb->remote().c_str());
                     m_handshake_state = HSState::FAIL;
                 }
             }
-            break;
+            else
+            {
+                send_mysql_err_packet(next_seq, 0, er_out_of_order, sql_errstate, packets_ooo);
+                MXB_ERROR(wrong_sequence, m_session_data->remote.c_str(), 1, m_sequence);
+                m_handshake_state = HSState::FAIL;
+            }
+        }
+        break;
 
         case HSState::SSL_NEG:
+        {
+            // Client should be negotiating ssl.
+            auto ssl_status = ssl_authenticate_check_status();
+            if (ssl_status == SSLState::COMPLETE)
             {
-                // Client should be negotiating ssl.
-                auto ssl_status = ssl_authenticate_check_status();
-                if (ssl_status == SSLState::COMPLETE)
-                {
-                    m_handshake_state = HSState::EXPECT_HS_RESP;
-                }
-                else if (ssl_status == SSLState::INCOMPLETE)
-                {
-                    // SSL negotiation should complete in the background. Execution returns here once
-                    // complete.
-                    state_machine_continue = false;
-                }
-                else
-                {
-                    send_auth_error(next_seq, "Access without SSL denied");
-                    MXB_ERROR("Client (%s) failed SSL negotiation.", m_session_data->remote.c_str());
-                    m_handshake_state = HSState::FAIL;
-                }
+                m_handshake_state = HSState::EXPECT_HS_RESP;
             }
-            break;
+            else if (ssl_status == SSLState::INCOMPLETE)
+            {
+                // SSL negotiation should complete in the background. Execution returns here once
+                // complete.
+                state_machine_continue = false;
+            }
+            else
+            {
+                send_auth_error(next_seq, "Access without SSL denied");
+                MXB_ERROR("Client (%s) failed SSL negotiation.", m_session_data->remote.c_str());
+                m_handshake_state = HSState::FAIL;
+            }
+        }
+        break;
 
         case HSState::EXPECT_HS_RESP:
+        {
+            // Expecting normal Handshake response
+            // @see https://mariadb.com/kb/en/library/connection/#client-handshake-response
+            int expected_seq = require_ssl() ? 2 : 1;
+            if (m_sequence == expected_seq)
             {
-                // Expecting normal Handshake response
-                // @see https://mariadb.com/kb/en/library/connection/#client-handshake-response
-                int expected_seq = require_ssl() ? 2 : 1;
-                if (m_sequence == expected_seq)
+                if (parse_handshake_response_packet(buffer))
                 {
-                    if (parse_handshake_response_packet(buffer))
-                    {
-                        m_handshake_state = HSState::COMPLETE;
-                    }
-                    else
-                    {
-                        send_mysql_err_packet(next_seq, 0, er_bad_handshake, sql_errstate,
-                                              "Bad handshake");
-                        MXB_ERROR("Client (%s) sent an invalid HandShakeResponse.",
-                                  m_session_data->remote.c_str());
-                        m_handshake_state = HSState::FAIL;
-                    }
+                    m_handshake_state = HSState::COMPLETE;
                 }
                 else
                 {
-                    send_mysql_err_packet(next_seq, 0, er_out_of_order, sql_errstate, packets_ooo);
-                    MXB_ERROR(wrong_sequence, m_session_data->remote.c_str(), expected_seq, m_sequence);
+                    send_mysql_err_packet(next_seq, 0, er_bad_handshake, sql_errstate, "Bad handshake");
+                    MXB_ERROR(
+                        "Client (%s) sent an invalid HandShakeResponse.", m_session_data->remote.c_str());
                     m_handshake_state = HSState::FAIL;
                 }
             }
-            break;
+            else
+            {
+                send_mysql_err_packet(next_seq, 0, er_out_of_order, sql_errstate, packets_ooo);
+                MXB_ERROR(wrong_sequence, m_session_data->remote.c_str(), expected_seq, m_sequence);
+                m_handshake_state = HSState::FAIL;
+            }
+        }
+        break;
 
         case HSState::COMPLETE:
             state_machine_continue = false;
-            rval = StateMachineRes::DONE;
+            rval                   = StateMachineRes::DONE;
             break;
 
         case HSState::FAIL:
             // An error message should have already been sent.
             state_machine_continue = false;
-            rval = StateMachineRes::ERROR;
+            rval                   = StateMachineRes::ERROR;
             break;
         }
     }
@@ -2228,14 +2224,17 @@ void MariaDBClientConnection::send_authentication_error(AuthErrorType error, con
     {
     case AuthErrorType::ACCESS_DENIED:
         mariadb_msg = mxb::string_printf("Access denied for user '%s'@'%s' (using password: %s)",
-                                         ses->user.c_str(), ses->remote.c_str(),
-                                         ses->auth_token.empty() ? "NO" : "YES");
+            ses->user.c_str(),
+            ses->remote.c_str(),
+            ses->auth_token.empty() ? "NO" : "YES");
         send_mysql_err_packet(ses->next_sequence, 0, 1045, "28000", mariadb_msg.c_str());
         break;
 
     case AuthErrorType::DB_ACCESS_DENIED:
         mariadb_msg = mxb::string_printf("Access denied for user '%s'@'%s' to database '%s'",
-                                         ses->user.c_str(), ses->remote.c_str(), ses->db.c_str());
+            ses->user.c_str(),
+            ses->remote.c_str(),
+            ses->db.c_str());
         send_mysql_err_packet(ses->next_sequence, 0, 1044, "42000", mariadb_msg.c_str());
         break;
 
@@ -2255,10 +2254,11 @@ void MariaDBClientConnection::send_authentication_error(AuthErrorType error, con
     {
         string total_msg = mxb::string_printf("Authentication failed for user '%s'@[%s] to service '%s'. "
                                               "Originating listener: '%s'. MariaDB error: '%s'.",
-                                              ses->user.c_str(), ses->remote.c_str(),
-                                              m_session->service->name(),
-                                              m_session->listener_data()->m_listener_name.c_str(),
-                                              mariadb_msg.c_str());
+            ses->user.c_str(),
+            ses->remote.c_str(),
+            m_session->service->name(),
+            m_session->listener_data()->m_listener_name.c_str(),
+            mariadb_msg.c_str());
         if (!auth_mod_msg.empty())
         {
             total_msg += mxb::string_printf(" Authenticator error: '%s'.", auth_mod_msg.c_str());
@@ -2332,8 +2332,8 @@ bool MariaDBClientConnection::perform_auth_exchange()
     else
     {
         // Exchange failed. Usually a communication or memory error.
-        auto msg = mxb::string_printf("Authentication plugin '%s' failed",
-                                      m_session_data->m_current_authenticator->name().c_str());
+        auto msg = mxb::string_printf(
+            "Authentication plugin '%s' failed", m_session_data->m_current_authenticator->name().c_str());
         send_misc_error(msg);
         m_auth_state = AuthState::FAIL;
     }
@@ -2345,7 +2345,7 @@ void MariaDBClientConnection::perform_check_token(AuthType auth_type)
     // If the user entry didn't exist in the first place, don't check token and just fail.
     // TODO: server likely checks some random token to spend time, could add it later.
     const auto& user_entry = m_session_data->user_entry;
-    const auto entrytype = user_entry.type;
+    const auto entrytype   = user_entry.type;
 
     if (entrytype == UserEntryType::USER_NOT_FOUND)
     {
@@ -2376,7 +2376,8 @@ void MariaDBClientConnection::perform_check_token(AuthType auth_type)
                     if (user_entry.entry.super_priv && mxs::Config::get().log_warn_super_user)
                     {
                         MXB_WARNING("Super user %s logged in to service '%s'.",
-                                    m_session_data->user_and_host().c_str(), m_session->service->name());
+                            m_session_data->user_and_host().c_str(),
+                            m_session->service->name());
                     }
                 }
                 else
@@ -2460,7 +2461,7 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
         // Client sent a change-user-packet. Parse it but only route it once change-user completes.
         if (start_change_user(move(buffer)))
         {
-            m_state = State::CHANGING_USER;
+            m_state      = State::CHANGING_USER;
             m_auth_state = AuthState::FIND_ENTRY;
             m_dcb->trigger_read_event();
             success = true;
@@ -2483,12 +2484,14 @@ void MariaDBClientConnection::write_ok_packet(int sequence, uint8_t affected_row
     write(mxs_mysql_create_ok(sequence, affected_rows, message));
 }
 
-bool MariaDBClientConnection::send_mysql_err_packet(int packet_number, int in_affected_rows,
-                                                    int mysql_errno, const char* sqlstate_msg,
-                                                    const char* mysql_message)
+bool MariaDBClientConnection::send_mysql_err_packet(int packet_number,
+    int in_affected_rows,
+    int mysql_errno,
+    const char* sqlstate_msg,
+    const char* mysql_message)
 {
-    GWBUF* buf = modutil_create_mysql_err_msg(packet_number, in_affected_rows, mysql_errno,
-                                              sqlstate_msg, mysql_message);
+    GWBUF* buf = modutil_create_mysql_err_msg(
+        packet_number, in_affected_rows, mysql_errno, sqlstate_msg, mysql_message);
     return write(buf);
 }
 
@@ -2496,8 +2499,8 @@ void MariaDBClientConnection::add_local_client(LocalClient* client)
 {
     // Prune stale LocalClients before adding the new one
     auto it = std::remove_if(m_local_clients.begin(), m_local_clients.end(), [](const auto& client) {
-                                 return !client->is_open();
-                             });
+        return !client->is_open();
+    });
 
     m_local_clients.erase(it, m_local_clients.end());
 

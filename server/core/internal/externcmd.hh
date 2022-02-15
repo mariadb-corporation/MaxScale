@@ -57,9 +57,9 @@ public:
 private:
     static const int MAX_ARGS {256};
 
-    std::string m_orig_command;        /**< Original command */
-    std::string m_subst_command;       /**< Command with substitutions */
-    int         m_timeout;             /**< Command timeout in seconds */
+    std::string m_orig_command;  /**< Original command */
+    std::string m_subst_command; /**< Command with substitutions */
+    int m_timeout;               /**< Command timeout in seconds */
 
     ExternalCmd(const std::string& script, int timeout);
 
@@ -73,4 +73,3 @@ private:
      */
     void substitute_arg(const std::string& match, const std::string& replace);
 };
-

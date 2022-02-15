@@ -19,171 +19,122 @@
 
 config::Specification CacheConfig::s_specification(MXS_MODULE_NAME, config::Specification::FILTER);
 
-config::ParamString CacheConfig::s_storage(
-    &s_specification,
+config::ParamString CacheConfig::s_storage(&s_specification,
     "storage",
     "The name of the module that provides the storage implementation for the cache.",
-    CACHE_ZDEFAULT_STORAGE
-    );
+    CACHE_ZDEFAULT_STORAGE);
 
-config::ParamString CacheConfig::s_storage_options(
-    &s_specification,
+config::ParamString CacheConfig::s_storage_options(&s_specification,
     "storage_options",
     "A comma separated list of arguments to be provided to the storage module "
     "specified with 'storage'.",
-    "\"\""
-    );
+    "\"\"");
 
-config::ParamDuration<std::chrono::milliseconds> CacheConfig::s_hard_ttl(
-    &s_specification,
+config::ParamDuration<std::chrono::milliseconds> CacheConfig::s_hard_ttl(&s_specification,
     "hard_ttl",
     "Hard time to live; the maximum amount of time the cached result is "
     "used before it is discarded and the result is fetched from the backend. "
     "See also 'soft_ttl'.",
     mxs::config::INTERPRET_AS_SECONDS,
-    std::chrono::milliseconds {0}
-    );
+    std::chrono::milliseconds {0});
 
-config::ParamDuration<std::chrono::milliseconds> CacheConfig::s_soft_ttl(
-    &s_specification,
+config::ParamDuration<std::chrono::milliseconds> CacheConfig::s_soft_ttl(&s_specification,
     "soft_ttl",
     "Soft time to live; the maximum amount of time the cached result is "
     "used before the first client querying for the result is used for refreshing "
     "the cached data from the backend. See also 'hard_ttl'.",
     mxs::config::INTERPRET_AS_SECONDS,
-    std::chrono::milliseconds {0}
-    );
+    std::chrono::milliseconds {0});
 
-config::ParamCount CacheConfig::s_max_resultset_rows(
-    &s_specification,
+config::ParamCount CacheConfig::s_max_resultset_rows(&s_specification,
     "max_resultset_rows",
     "Specifies the maximum number of rows a resultset can have in order to be "
     "stored in the cache. A resultset larger than this, will not be stored.",
-    0
-    );
+    0);
 
-config::ParamSize CacheConfig::s_max_resultset_size(
-    &s_specification,
+config::ParamSize CacheConfig::s_max_resultset_size(&s_specification,
     "max_resultset_size",
     "Specifies the maximum size of a resultset, for it to be stored in the cache. "
     "A resultset larger than this, will not be stored.",
-    0
-    );
+    0);
 
-config::ParamCount CacheConfig::s_max_count(
-    &s_specification,
+config::ParamCount CacheConfig::s_max_count(&s_specification,
     "max_count",
     "The maximum number of items the cache may contain. If the limit has been "
     "reached and a new item should be stored, then an older item will be evicted.",
-    0
-    );
+    0);
 
-config::ParamSize CacheConfig::s_max_size(
-    &s_specification,
+config::ParamSize CacheConfig::s_max_size(&s_specification,
     "max_size",
     "The maximum size the cache may occupy. If the limit has been reached and a new "
     "item should be stored, then some older item(s) will be evicted to make space.",
-    0
-    );
+    0);
 
-config::ParamPath CacheConfig::s_rules(
-    &s_specification,
+config::ParamPath CacheConfig::s_rules(&s_specification,
     "rules",
     "Specifies the path of the file where the caching rules are stored. A relative "
     "path is interpreted relative to the data directory of MariaDB MaxScale.",
     0,
-    ""
-    );
+    "");
 
-config::ParamBitMask CacheConfig::s_debug(
-    &s_specification,
+config::ParamBitMask CacheConfig::s_debug(&s_specification,
     "debug",
     "An integer value, using which the level of debug logging made by the cache "
     "can be controlled.",
-    0
-    );
+    0);
 
-config::ParamEnum<cache_thread_model_t> CacheConfig::s_thread_model(
-    &s_specification,
+config::ParamEnum<cache_thread_model_t> CacheConfig::s_thread_model(&s_specification,
     "cached_data",
     "An enumeration option specifying how data is shared between threads.",
-{
-    {CACHE_THREAD_MODEL_MT, "shared"},
-    {CACHE_THREAD_MODEL_ST, "thread_specific"}
-},
-    CACHE_THREAD_MODEL_ST
-    );
+    {{CACHE_THREAD_MODEL_MT, "shared"}, {CACHE_THREAD_MODEL_ST, "thread_specific"}},
+    CACHE_THREAD_MODEL_ST);
 
-config::ParamEnum<cache_selects_t> CacheConfig::s_selects(
-    &s_specification,
+config::ParamEnum<cache_selects_t> CacheConfig::s_selects(&s_specification,
     "selects",
     "An enumeration option specifying what approach the cache should take with "
     "respect to SELECT statements.",
-{
-    {CACHE_SELECTS_ASSUME_CACHEABLE, "assume_cacheable"},
-    {CACHE_SELECTS_VERIFY_CACHEABLE, "verify_cacheable"}
-},
-    CACHE_SELECTS_ASSUME_CACHEABLE
-    );
+    {{CACHE_SELECTS_ASSUME_CACHEABLE, "assume_cacheable"},
+        {CACHE_SELECTS_VERIFY_CACHEABLE, "verify_cacheable"}},
+    CACHE_SELECTS_ASSUME_CACHEABLE);
 
-config::ParamEnum<cache_in_trxs_t> CacheConfig::s_cache_in_trxs(
-    &s_specification,
+config::ParamEnum<cache_in_trxs_t> CacheConfig::s_cache_in_trxs(&s_specification,
     "cache_in_transactions",
     "An enumeration option specifying how the cache should behave when there "
     "are active transactions.",
-{
-    {CACHE_IN_TRXS_NEVER, "never"},
-    {CACHE_IN_TRXS_READ_ONLY, "read_only_transactions"},
-    {CACHE_IN_TRXS_ALL, "all_transactions"}
-},
-    CACHE_IN_TRXS_ALL
-    );
+    {{CACHE_IN_TRXS_NEVER, "never"},
+        {CACHE_IN_TRXS_READ_ONLY, "read_only_transactions"},
+        {CACHE_IN_TRXS_ALL, "all_transactions"}},
+    CACHE_IN_TRXS_ALL);
 
-config::ParamEnum<cache_invalidate_t> CacheConfig::s_invalidate(
-    &s_specification,
+config::ParamEnum<cache_invalidate_t> CacheConfig::s_invalidate(&s_specification,
     "invalidate",
     "An enumeration options specifying how the cache should perform cache invalidation.",
     {
         {CACHE_INVALIDATE_NEVER, "never"},
         {CACHE_INVALIDATE_CURRENT, "current"},
     },
-    CACHE_INVALIDATE_NEVER
-    );
+    CACHE_INVALIDATE_NEVER);
 
 config::ParamBool CacheConfig::s_enabled(
-    &s_specification,
-    "enabled",
-    "Specifies whether the cache is initially enabled or disabled.",
-    true
-    );
+    &s_specification, "enabled", "Specifies whether the cache is initially enabled or disabled.", true);
 
-config::ParamBool CacheConfig::s_clear_cache_on_parse_errors(
-    &s_specification,
+config::ParamBool CacheConfig::s_clear_cache_on_parse_errors(&s_specification,
     "clear_cache_on_parse_errors",
     "Specifies whether the cache should be cleared if an UPDATE/INSERT/DELETE statement "
     "cannot be parsed. This setting has only effect if invalidation has been enabled.",
-    true
-    );
+    true);
 
-config::ParamEnum<cache_users_t> CacheConfig::s_users(
-    &s_specification,
+config::ParamEnum<cache_users_t> CacheConfig::s_users(&s_specification,
     "users",
     "Specifies whether cached data is shared between users.",
-    {
-        {CACHE_USERS_ISOLATED, "isolated"},
-        {CACHE_USERS_MIXED, "mixed"}
-    },
-    CACHE_USERS_MIXED
-    );
+    {{CACHE_USERS_ISOLATED, "isolated"}, {CACHE_USERS_MIXED, "mixed"}},
+    CACHE_USERS_MIXED);
 
-config::ParamDuration<std::chrono::milliseconds> CacheConfig::s_timeout(
-    &s_specification,
+config::ParamDuration<std::chrono::milliseconds> CacheConfig::s_timeout(&s_specification,
     "timeout",
     "The timeout when performing operations to distributed storages.",
     mxs::config::NO_INTERPRETATION,
-    CACHE_DEFAULT_TIMEOUT
-    );
-
+    CACHE_DEFAULT_TIMEOUT);
 
 CacheConfig::CacheConfig(const std::string& name)
     : config::Configuration(name, &s_specification)
@@ -208,9 +159,7 @@ CacheConfig::CacheConfig(const std::string& name)
     add_native(&timeout, &s_timeout);
 }
 
-CacheConfig::~CacheConfig()
-{
-}
+CacheConfig::~CacheConfig() {}
 
 bool CacheConfig::post_configure()
 {
@@ -220,8 +169,8 @@ bool CacheConfig::post_configure()
     {
         MXS_ERROR("The value of the configuration entry 'debug' must "
                   "be between %d and %d, inclusive.",
-                  CACHE_DEBUG_MIN,
-                  CACHE_DEBUG_MAX);
+            CACHE_DEBUG_MIN,
+            CACHE_DEBUG_MAX);
         configured = false;
     }
 
@@ -248,9 +197,9 @@ bool CacheConfig::post_configure()
             MXS_WARNING("The value of 'max_resultset_size' %ld should not be larger than "
                         "the value of 'max_size' %ld. Adjusting the value of 'max_resultset_size' "
                         "down to %ld.",
-                        this->max_resultset_size,
-                        this->max_size,
-                        this->max_size);
+                this->max_resultset_size,
+                this->max_size,
+                this->max_size);
             this->max_resultset_size = this->max_size;
         }
     }

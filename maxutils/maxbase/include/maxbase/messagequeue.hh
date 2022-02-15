@@ -28,7 +28,7 @@ class Worker;
  * the caller's and recipient's responsibility to manage the lifetime and
  * concurrent access of anything possibly pointed to from the message.
  */
-class MessageQueueMessage   /* final */
+class MessageQueueMessage /* final */
 {
 public:
     /**
@@ -43,23 +43,13 @@ public:
         : m_id(id)
         , m_arg1(arg1)
         , m_arg2(arg2)
-    {
-    }
+    {}
 
-    uint32_t id() const
-    {
-        return m_id;
-    }
+    uint32_t id() const { return m_id; }
 
-    intptr_t arg1() const
-    {
-        return m_arg1;
-    }
+    intptr_t arg1() const { return m_arg1; }
 
-    intptr_t arg2() const
-    {
-        return m_arg2;
-    }
+    intptr_t arg2() const { return m_arg2; }
 
     MessageQueueMessage& set_id(uint64_t id)
     {
@@ -85,7 +75,6 @@ private:
     intptr_t m_arg2;
 };
 
-
 /**
  * A @c MessageQueueHandler will be delivered messages received over a
  * @c MessageQueue.
@@ -101,7 +90,6 @@ public:
      */
     virtual void handle_message(MessageQueue& queue, const MessageQueueMessage& message) = 0;
 };
-
 
 /**
  * The class @c MessageQueue provides a cross thread message queue implemented
@@ -189,8 +177,8 @@ private:
 
 private:
     Handler& m_handler;
-    int      m_read_fd;
-    int      m_write_fd;
-    Worker*  m_pWorker;
+    int m_read_fd;
+    int m_write_fd;
+    Worker* m_pWorker;
 };
-}
+}  // namespace maxbase

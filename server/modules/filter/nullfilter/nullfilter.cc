@@ -28,24 +28,21 @@ namespace nullfilter
 
 config::Specification specification(MXS_MODULE_NAME, config::Specification::FILTER);
 
-config::ParamEnumMask<mxs_routing_capability_t> capabilities(
-    &specification,
+config::ParamEnumMask<mxs_routing_capability_t> capabilities(&specification,
     "capabilities",
     "Combination of mxs_routing_capabilitiy_t values.",
-    {
-        { RCAP_TYPE_STMT_INPUT, "RCAP_TYPE_STMT_INPUT" },
-        { RCAP_TYPE_CONTIGUOUS_INPUT, "RCAP_TYPE_CONTIGUOUS_INPUT" },
-        { RCAP_TYPE_TRANSACTION_TRACKING, "RCAP_TYPE_TRANSACTION_TRACKING" },
-        { RCAP_TYPE_STMT_OUTPUT, "RCAP_TYPE_STMT_OUTPUT" },
-        { RCAP_TYPE_CONTIGUOUS_OUTPUT, "RCAP_TYPE_CONTIGUOUS_OUTPUT" },
-        { RCAP_TYPE_RESULTSET_OUTPUT, "RCAP_TYPE_RESULTSET_OUTPUT" },
-        { RCAP_TYPE_PACKET_OUTPUT, "RCAP_TYPE_PACKET_OUTPUT" },
-        { RCAP_TYPE_SESSION_STATE_TRACKING, "RCAP_TYPE_SESSION_STATE_TRACKING" },
-        { RCAP_TYPE_REQUEST_TRACKING, "RCAP_TYPE_REQUEST_TRACKING" }
-    },
+    {{RCAP_TYPE_STMT_INPUT, "RCAP_TYPE_STMT_INPUT"},
+        {RCAP_TYPE_CONTIGUOUS_INPUT, "RCAP_TYPE_CONTIGUOUS_INPUT"},
+        {RCAP_TYPE_TRANSACTION_TRACKING, "RCAP_TYPE_TRANSACTION_TRACKING"},
+        {RCAP_TYPE_STMT_OUTPUT, "RCAP_TYPE_STMT_OUTPUT"},
+        {RCAP_TYPE_CONTIGUOUS_OUTPUT, "RCAP_TYPE_CONTIGUOUS_OUTPUT"},
+        {RCAP_TYPE_RESULTSET_OUTPUT, "RCAP_TYPE_RESULTSET_OUTPUT"},
+        {RCAP_TYPE_PACKET_OUTPUT, "RCAP_TYPE_PACKET_OUTPUT"},
+        {RCAP_TYPE_SESSION_STATE_TRACKING, "RCAP_TYPE_SESSION_STATE_TRACKING"},
+        {RCAP_TYPE_REQUEST_TRACKING, "RCAP_TYPE_REQUEST_TRACKING"}},
     0);
-}
-}
+}  // namespace nullfilter
+}  // namespace
 
 //
 // Global symbols of the Module
@@ -53,8 +50,7 @@ config::ParamEnumMask<mxs_routing_capability_t> capabilities(
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_MODULE info =
-    {
+    static MXS_MODULE info = {
         MXS_MODULE_API_FILTER,
         MXS_MODULE_IN_DEVELOPMENT,
         MXS_FILTER_VERSION,
@@ -62,10 +58,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         VERSION_STRING,
         MXS_NO_MODULE_CAPABILITIES,
         &NullFilter::s_object,
-        NULL,   /* Process init. */
-        NULL,   /* Process finish. */
-        NULL,   /* Thread init. */
-        NULL,   /* Thread finish. */
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
     };
 
     static bool populated = false;
@@ -116,9 +112,7 @@ NullFilter::NullFilter(Config&& config)
     MXS_NOTICE("%s", os.str().c_str());
 }
 
-NullFilter::~NullFilter()
-{
-}
+NullFilter::~NullFilter() {}
 
 // static
 NullFilter* NullFilter::create(const char* zName, mxs::ConfigParameters* pParams)
@@ -134,7 +128,6 @@ NullFilter* NullFilter::create(const char* zName, mxs::ConfigParameters* pParams
 
     return pFilter;
 }
-
 
 NullFilterSession* NullFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {

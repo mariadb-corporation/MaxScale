@@ -37,9 +37,9 @@ public:
 
     enum Capabilities
     {
-        CAP_AUTHDATA     = (1u << 0),   // Protocol implements a user account manager
-        CAP_BACKEND      = (1u << 1),   // Protocol supports backend communication
-        CAP_AUTH_MODULES = (1u << 2),   // Protocol uses authenticator modules and does not integrate one
+        CAP_AUTHDATA     = (1u << 0),  // Protocol implements a user account manager
+        CAP_BACKEND      = (1u << 1),  // Protocol supports backend communication
+        CAP_AUTH_MODULES = (1u << 2),  // Protocol uses authenticator modules and does not integrate one
     };
 
     /**
@@ -50,8 +50,9 @@ public:
      *
      * @return New protocol session or null on error
      */
-    virtual std::unique_ptr<mxs::ClientConnection>
-    create_client_protocol(MXS_SESSION* session, mxs::Component* component) = 0;
+    virtual std::unique_ptr<mxs::ClientConnection> create_client_protocol(
+        MXS_SESSION* session, mxs::Component* component)
+        = 0;
 
     /**
      * Allocate new backend protocol session
@@ -61,8 +62,8 @@ public:
      *
      * @return New protocol session or null on error
      */
-    virtual std::unique_ptr<BackendConnection>
-    create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component)
+    virtual std::unique_ptr<BackendConnection> create_backend_protocol(
+        MXS_SESSION* session, SERVER* server, mxs::Component* component)
     {
         mxb_assert(!true);
         return nullptr;
@@ -83,10 +84,7 @@ public:
      * @param host The host that is blocked
      * @return A buffer containing the error message
      */
-    virtual GWBUF* reject(const std::string& host)
-    {
-        return nullptr;
-    }
+    virtual GWBUF* reject(const std::string& host) { return nullptr; }
 
     /**
      * Get protocol module name.
@@ -101,10 +99,7 @@ public:
      *
      * @return JSON user list
      */
-    virtual json_t* print_auth_users_json()
-    {
-        return nullptr;
-    }
+    virtual json_t* print_auth_users_json() { return nullptr; }
 
     /**
      * Create a user account manager. Will be only called for protocols with CAP_AUTHDATA.
@@ -117,10 +112,7 @@ public:
         return nullptr;
     }
 
-    virtual uint64_t capabilities() const
-    {
-        return 0;
-    }
+    virtual uint64_t capabilities() const { return 0; }
 
     /**
      * The protocol module should read the listener parameters for the list of authenticators and their
@@ -162,22 +154,16 @@ public:
      * @param limit Maximum number of connections
      * @return 1 on success, 0 on error
      */
-    virtual int32_t connlimit(int limit)
-    {
-        return 0;
-    }
+    virtual int32_t connlimit(int limit) { return 0; }
 
     /**
      * Return current database. Only required by query classifier.
      *
      * @return Current database
      */
-    virtual std::string current_db() const
-    {
-        return "";
-    }
+    virtual std::string current_db() const { return ""; }
 
-    virtual ClientDCB*       dcb() = 0;
+    virtual ClientDCB* dcb()             = 0;
     virtual const ClientDCB* dcb() const = 0;
 
     virtual void wakeup()
@@ -194,9 +180,7 @@ public:
      *
      * The default implementation does nothing.
      */
-    virtual void kill()
-    {
-    }
+    virtual void kill() {}
 };
 
 /**
@@ -205,12 +189,13 @@ public:
 class ClientConnectionBase : public ClientConnection
 {
 public:
-    json_t*          diagnostics() const override;
-    void             set_dcb(DCB* dcb) override;
-    ClientDCB*       dcb() override;
+    json_t* diagnostics() const override;
+    void set_dcb(DCB* dcb) override;
+    ClientDCB* dcb() override;
     const ClientDCB* dcb() const override;
+
 protected:
-    ClientDCB* m_dcb {nullptr};     /**< Dcb used by this protocol connection */
+    ClientDCB* m_dcb {nullptr}; /**< Dcb used by this protocol connection */
 };
 
 /**
@@ -279,7 +264,7 @@ public:
     virtual int64_t seconds_idle() const = 0;
 
     virtual const BackendDCB* dcb() const = 0;
-    virtual BackendDCB*       dcb() = 0;
+    virtual BackendDCB* dcb()             = 0;
 };
 
 class UserAccountCache;
@@ -354,7 +339,7 @@ public:
 class UserAccountCache
 {
 public:
-    virtual ~UserAccountCache() = default;
+    virtual ~UserAccountCache()       = default;
     virtual void update_from_master() = 0;
 };
 
@@ -362,8 +347,8 @@ template<class ProtocolImplementation>
 class ProtocolApiGenerator
 {
 public:
-    ProtocolApiGenerator() = delete;
-    ProtocolApiGenerator(const ProtocolApiGenerator&) = delete;
+    ProtocolApiGenerator()                                       = delete;
+    ProtocolApiGenerator(const ProtocolApiGenerator&)            = delete;
     ProtocolApiGenerator& operator=(const ProtocolApiGenerator&) = delete;
 
     static mxs::ProtocolModule* create_protocol_module()
@@ -379,8 +364,7 @@ public:
 };
 
 template<class ProtocolImplementation>
-MXS_PROTOCOL_API ProtocolApiGenerator<ProtocolImplementation>::s_api =
-{
+MXS_PROTOCOL_API ProtocolApiGenerator<ProtocolImplementation>::s_api = {
     &ProtocolApiGenerator<ProtocolImplementation>::create_protocol_module,
 };
-}
+}  // namespace maxscale

@@ -38,14 +38,14 @@ public:
     void begin_txn();
     void add_event(maxsql::RplEvent& rpl_event);
     void commit_txn();
+
 private:
     struct WritePosition
     {
-        std::string   name;
+        std::string name;
         std::ofstream file;
-        int           write_pos;
+        int write_pos;
     };
-
 
     bool open_for_appending(const maxsql::Rotate& rotate, const maxsql::RplEvent& fmt_event);
     void perform_rotate(const maxsql::Rotate& rotate);
@@ -54,14 +54,14 @@ private:
     void write_rotate(WritePosition& fn, const std::string& to_file_name);
     void write_gtid_list(WritePosition& fn);
 
-    bool             m_newborn = true;
-    bool             m_ignore_preamble = false;
+    bool m_newborn         = true;
+    bool m_ignore_preamble = false;
     InventoryWriter& m_inventory;
-    const Writer&    m_writer;
-    WritePosition    m_current_pos;
-    maxsql::Rotate   m_rotate;
+    const Writer& m_writer;
+    WritePosition m_current_pos;
+    maxsql::Rotate m_rotate;
 
-    bool              m_in_transaction = false;
+    bool m_in_transaction = false;
     std::vector<char> m_tx_buffer;
 };
-}
+}  // namespace pinloki

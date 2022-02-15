@@ -12,10 +12,10 @@
  */
 
 // To ensure that ss_info_assert asserts also when building in non-debug mode.
-#if !defined (SS_DEBUG)
+#if !defined(SS_DEBUG)
 #define SS_DEBUG
 #endif
-#if defined (NDEBUG)
+#if defined(NDEBUG)
 #undef NDEBUG
 #endif
 #include <stdio.h>
@@ -56,7 +56,7 @@ static int test1()
 int main(int argc, char** argv)
 {
     int result = 0;
-    char* home, buf[1024];
+    char *home, buf[1024];
 
     /** Set datadir to /tmp */
     mxs::set_datadir("/tmp");

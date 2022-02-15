@@ -34,8 +34,8 @@ GWBUF* RWSplitSession::discard_master_wait_gtid_result(GWBUF* buffer)
 
         // Discard the OK packet and start updating sequence numbers
         uint8_t packet_len = MYSQL_GET_PAYLOAD_LEN(header_and_command) + MYSQL_HEADER_LEN;
-        m_next_seq = 1;
-        buffer = gwbuf_consume(buffer, packet_len);
+        m_next_seq         = 1;
+        buffer             = gwbuf_consume(buffer, packet_len);
     }
     else if (MYSQL_GET_COMMAND(header_and_command) == MYSQL_REPLY_ERR)
     {
@@ -44,8 +44,10 @@ GWBUF* RWSplitSession::discard_master_wait_gtid_result(GWBUF* buffer)
             // If a causal read fails inside of a read-only transaction, it cannot be retried on the master.
             m_wait_gtid = NONE;
             gwbuf_free(buffer);
-            buffer = modutil_create_mysql_err_msg(
-                0, 0, 1792, "25006",
+            buffer = modutil_create_mysql_err_msg(0,
+                0,
+                1792,
+                "25006",
                 "Causal read timed out while in a read-only transaction, cannot retry command.");
         }
         else
@@ -72,15 +74,14 @@ void RWSplitSession::correct_packet_sequence(GWBUF* buffer)
     while (gwbuf_copy_data(buffer, offset, 3, header) == 3)
     {
         uint32_t packet_len = MYSQL_GET_PAYLOAD_LEN(header) + MYSQL_HEADER_LEN;
-        uint8_t* seq = gwbuf_byte_pointer(buffer, offset + MYSQL_SEQ_OFFSET);
-        *seq = m_next_seq++;
+        uint8_t* seq        = gwbuf_byte_pointer(buffer, offset + MYSQL_SEQ_OFFSET);
+        *seq                = m_next_seq++;
         offset += packet_len;
     }
 }
 
-GWBUF* RWSplitSession::handle_causal_read_reply(GWBUF* writebuf,
-                                                const mxs::Reply& reply,
-                                                mxs::RWBackend* backend)
+GWBUF* RWSplitSession::handle_causal_read_reply(
+    GWBUF* writebuf, const mxs::Reply& reply, mxs::RWBackend* backend)
 {
     if (m_config.causal_reads != CausalReads::NONE)
     {
@@ -127,7 +128,7 @@ bool RWSplitSession::finish_causal_read()
         {
             // Retry the query on the master
             GWBUF* buf = m_current_query.release();
-            buf->hint = hint_create_route(buf->hint, HINT_ROUTE_TO_MASTER, NULL);
+            buf->hint  = hint_create_route(buf->hint, HINT_ROUTE_TO_MASTER, NULL);
             retry_query(buf, 0);
             rval = false;
         }
@@ -164,16 +165,16 @@ GWBUF* RWSplitSession::add_prefix_wait_gtid(uint64_t version, GWBUF* origin)
     GWBUF* rval = origin;
 
     // If the version is not known, assume MariaDB backend
-    const char* wait_func = (version > 50700 && version < 100000) ?
-        MYSQL_WAIT_GTID_FUNC : MARIADB_WAIT_GTID_FUNC;
+    const char* wait_func
+        = (version > 50700 && version < 100000) ? MYSQL_WAIT_GTID_FUNC : MARIADB_WAIT_GTID_FUNC;
 
     const char* gtid_wait_timeout = m_config.causal_reads_timeout.c_str();
-    std::string gtid_position = m_config.causal_reads == CausalReads::GLOBAL ?
-        m_router->last_gtid() : m_gtid_pos.to_string();
+    std::string gtid_position
+        = m_config.causal_reads == CausalReads::GLOBAL ? m_router->last_gtid() : m_gtid_pos.to_string();
 
     /* Create a new buffer to store prefix sql */
-    size_t prefix_len = strlen(gtid_wait_stmt) + gtid_position.length()
-        + strlen(gtid_wait_timeout) + strlen(wait_func);
+    size_t prefix_len
+        = strlen(gtid_wait_stmt) + gtid_position.length() + strlen(gtid_wait_timeout) + strlen(wait_func);
 
     // Only do the replacement if it fits into one packet
     if (gwbuf_length(origin) + prefix_len < GW_MYSQL_MAX_PACKET_LEN + MYSQL_HEADER_LEN)
@@ -192,7 +193,7 @@ GWBUF* RWSplitSession::add_prefix_wait_gtid(uint64_t version, GWBUF* origin)
         size_t origin_sql_len = MYSQL_GET_PAYLOAD_LEN(header) - 1;
         /* Trim mysql header and command */
         origin = gwbuf_consume(origin, MYSQL_HEADER_LEN + 1);
-        rval = gwbuf_append(prefix_buff, origin);
+        rval   = gwbuf_append(prefix_buff, origin);
 
         /* Modify totol length: Prefix sql len + origin sql len + command len */
         size_t new_payload_len = strlen(prefix_sql) + origin_sql_len + 1;

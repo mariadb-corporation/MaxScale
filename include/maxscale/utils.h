@@ -25,21 +25,21 @@
 
 MXS_BEGIN_DECLS
 
-#define CALCLEN(i) ((size_t)(floor(log10(abs((int64_t)i))) + 1))
+#define CALCLEN(i) ((size_t) (floor(log10(abs((int64_t) i))) + 1))
 #define UINTLEN(i) (i < 10 ? 1 : (i < 100 ? 2 : (i < 1000 ? 3 : CALCLEN(i))))
 
-#define MXS_ARRAY_NELEMS(array) ((size_t)(sizeof(array) / sizeof(array[0])))
+#define MXS_ARRAY_NELEMS(array) ((size_t) (sizeof(array) / sizeof(array[0])))
 
 /** Macro for safe pointer arithmetic on void pointers
  * @param a The void pointer
  * @param b The offset into @c a
  */
-#define MXS_PTR(a, b) (((uint8_t*)(a)) + (b))
+#define MXS_PTR(a, b) (((uint8_t*) (a)) + (b))
 
 /** The type of the socket */
 enum mxs_socket_type
 {
-    MXS_SOCKET_LISTENER,    /**< */
+    MXS_SOCKET_LISTENER, /**< */
     MXS_SOCKET_NETWORK,
 };
 
@@ -78,10 +78,8 @@ bool configure_network_socket(int so, int type);
  *
  * @return The opened socket or -1 on failure
  */
-int open_network_socket(enum mxs_socket_type type,
-                        struct sockaddr_storage* addr,
-                        const char* host,
-                        uint16_t port);
+int open_network_socket(
+    enum mxs_socket_type type, struct sockaddr_storage* addr, const char* host, uint16_t port);
 
 /**
  * @brief Create a UNIX domain socket
@@ -97,20 +95,18 @@ int open_network_socket(enum mxs_socket_type type,
  *
  * @return The opened socket or -1 on failure
  */
-int open_unix_socket(enum mxs_socket_type type,
-                     struct sockaddr_un* addr,
-                     const char* path);
+int open_unix_socket(enum mxs_socket_type type, struct sockaddr_un* addr, const char* path);
 
-int         setnonblocking(int fd);
-int         setblocking(int fd);
-char*       gw_strend(const char* s);
+int setnonblocking(int fd);
+int setblocking(int fd);
+char* gw_strend(const char* s);
 static char gw_randomchar();
-int         gw_generate_random_str(char* output, int len);
-void        gw_sha1_str(const uint8_t* in, int in_len, uint8_t* out);
-void        gw_sha1_2_str(const uint8_t* in, int in_len, const uint8_t* in2, int in2_len, uint8_t* out);
-int         gw_getsockerrno(int fd);
+int gw_generate_random_str(char* output, int len);
+void gw_sha1_str(const uint8_t* in, int in_len, uint8_t* out);
+void gw_sha1_2_str(const uint8_t* in, int in_len, const uint8_t* in2, int in2_len, uint8_t* out);
+int gw_getsockerrno(int fd);
 
-void  replace_whitespace(char* str);
+void replace_whitespace(char* str);
 char* squeeze_whitespace(char* str);
 
 bool is_valid_posix_path(char* path);
@@ -167,8 +163,8 @@ static inline uint8_t* mxs_set_byte4(uint8_t* ptr, uint32_t value)
  */
 static inline uint32_t mxs_get_byte4(const uint8_t* ptr)
 {
-    return ((uint32_t) ptr[0]) | ((uint32_t) ptr[1] << 8)
-           | ((uint32_t) ptr[2] << 16) | ((uint32_t) ptr[3] << 24);
+    return ((uint32_t) ptr[0]) | ((uint32_t) ptr[1] << 8) | ((uint32_t) ptr[2] << 16)
+         | ((uint32_t) ptr[3] << 24);
 }
 
 MXS_END_DECLS

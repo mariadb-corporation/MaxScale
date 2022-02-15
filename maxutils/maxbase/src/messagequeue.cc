@@ -31,15 +31,12 @@ namespace
 static struct
 {
     bool initialized;
-    int  pipe_max_size;
-} this_unit =
-{
-    false
-};
+    int pipe_max_size;
+} this_unit = {false};
 
 int get_pipe_max_size()
 {
-    int size = 65536;   // Default value from pipe(7)
+    int size = 65536;  // Default value from pipe(7)
     std::ifstream file("/proc/sys/fs/pipe-max-size");
 
     if (file.good())
@@ -49,7 +46,7 @@ int get_pipe_max_size()
 
     return size;
 }
-}
+}  // namespace
 
 namespace maxbase
 {
@@ -82,7 +79,7 @@ bool MessageQueue::init()
 {
     mxb_assert(!this_unit.initialized);
 
-    this_unit.initialized = true;
+    this_unit.initialized   = true;
     this_unit.pipe_max_size = get_pipe_max_size();
 
     return this_unit.initialized;
@@ -139,7 +136,7 @@ MessageQueue* MessageQueue::create(Handler* pHandler)
 
     if (rv == 0)
     {
-        int read_fd = fds[0];
+        int read_fd  = fds[0];
         int write_fd = fds[1];
 #ifdef F_SETPIPE_SZ
         /**
@@ -151,7 +148,9 @@ MessageQueue* MessageQueue::create(Handler* pHandler)
             MXB_WARNING("Failed to increase pipe buffer size to '%d': %d, %s. "
                         "Increase pipe-user-pages-soft (sysctl fs.pipe-user-pages-soft) "
                         "or reduce pipe-max-size (sysctl fs.pipe-max-size).",
-                        this_unit.pipe_max_size, errno, mxb_strerror(errno));
+                this_unit.pipe_max_size,
+                errno,
+                mxb_strerror(errno));
         }
         else
         {
@@ -162,12 +161,12 @@ MessageQueue* MessageQueue::create(Handler* pHandler)
             if (current_pipe_max_size == 0)
             {
                 current_pipe_max_size = this_unit.pipe_max_size;
-                MXB_NOTICE("Worker message queue size: %s",
-                           mxb::pretty_size(this_unit.pipe_max_size).c_str());
+                MXB_NOTICE(
+                    "Worker message queue size: %s", mxb::pretty_size(this_unit.pipe_max_size).c_str());
             }
         }
 #endif
-        pThis = new(std::nothrow) MessageQueue(pHandler, read_fd, write_fd);
+        pThis = new (std::nothrow) MessageQueue(pHandler, read_fd, write_fd);
 
         if (!pThis)
         {
@@ -199,15 +198,15 @@ bool MessageQueue::post(const Message& message) const
          * up, the success rate for posted messages under heavy load increases
          * significantly.
          */
-        int fast = 0;
-        int slow = 0;
-        const int fast_size = 100;
+        int fast             = 0;
+        int slow             = 0;
+        const int fast_size  = 100;
         const int slow_limit = 3;
         ssize_t n;
 
         while (true)
         {
-            n = write(m_write_fd, &message, sizeof(message));
+            n  = write(m_write_fd, &message, sizeof(message));
             rv = (n == sizeof(message));
 
             if (n == -1 && (errno == EAGAIN || errno == EWOULDBLOCK))
@@ -234,8 +233,8 @@ bool MessageQueue::post(const Message& message) const
 
         if (n == -1)
         {
-            MXB_ERROR("Failed to write message to worker %d: %d, %s",
-                      m_pWorker->id(), errno, mxb_strerror(errno));
+            MXB_ERROR(
+                "Failed to write message to worker %d: %d, %s", m_pWorker->id(), errno, mxb_strerror(errno));
 
             static bool warn_pipe_buffer_size = true;
 
@@ -321,8 +320,8 @@ uint32_t MessageQueue::handle_poll_events(Worker* pWorker, uint32_t events)
                 // thread may hang.
                 MXB_ERROR("MessageQueue could only read %ld bytes from pipe, although "
                           "expected %lu bytes.",
-                          n,
-                          sizeof(message));
+                    n,
+                    sizeof(message));
                 mxb_assert(!true);
             }
         }
@@ -341,4 +340,4 @@ uint32_t MessageQueue::poll_handler(MXB_POLL_DATA* pData, MXB_WORKER* pWorker, u
 
     return pThis->handle_poll_events(static_cast<Worker*>(pWorker), events);
 }
-}
+}  // namespace maxbase

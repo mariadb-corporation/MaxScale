@@ -29,23 +29,22 @@ namespace pinloki
 {
 
 Reader::PollData::PollData(Reader* reader, mxb::Worker* worker)
-    : MXB_POLL_DATA{Reader::epoll_update, worker}
+    : MXB_POLL_DATA {Reader::epoll_update, worker}
     , reader(reader)
-{
-}
+{}
 
-Reader::Reader(SendCallback cb, WorkerCallback worker_cb,
-               const Config& conf,
-               const maxsql::GtidList& start_gl,
-               const std::chrono::seconds& heartbeat_interval)
+Reader::Reader(SendCallback cb,
+    WorkerCallback worker_cb,
+    const Config& conf,
+    const maxsql::GtidList& start_gl,
+    const std::chrono::seconds& heartbeat_interval)
     : m_send_callback(cb)
     , m_get_worker(worker_cb)
     , m_inventory(conf)
     , m_start_gtid_list(start_gl)
     , m_heartbeat_interval(heartbeat_interval)
     , m_last_event(std::chrono::steady_clock::now())
-{
-}
+{}
 
 void Reader::start()
 {
@@ -154,9 +153,7 @@ void Reader::send_events()
     maxsql::RplEvent event;
     maxbase::Timer timer(1ms);
     bool timer_alarm = false;
-    while (!m_in_high_water
-           && !(timer_alarm = timer.alarm())
-           && (event = m_sFile_reader->fetch_event()))
+    while (!m_in_high_water && !(timer_alarm = timer.alarm()) && (event = m_sFile_reader->fetch_event()))
     {
         m_send_callback(event);
         m_last_event = maxbase::Clock::now();
@@ -165,8 +162,8 @@ void Reader::send_events()
     if (timer_alarm)
     {
         auto callback = [this]() {
-                send_events();
-            };
+            send_events();
+        };
 
         m_get_worker().execute(callback, mxs::RoutingWorker::EXECUTE_QUEUED);
     }
@@ -177,8 +174,7 @@ bool Reader::generate_heartbeats(mxb::Worker::Call::action_t action)
     auto now = maxbase::Clock::now();
 
     // Only send heartbeats if the connection is idle
-    if (action == mxb::Worker::Call::EXECUTE
-        && !m_in_high_water
+    if (action == mxb::Worker::Call::EXECUTE && !m_in_high_water
         && now - m_last_event >= m_heartbeat_interval)
     {
         m_send_callback(m_sFile_reader->create_heartbeat_event());
@@ -187,4 +183,4 @@ bool Reader::generate_heartbeats(mxb::Worker::Call::action_t action)
 
     return true;
 }
-}
+}  // namespace pinloki

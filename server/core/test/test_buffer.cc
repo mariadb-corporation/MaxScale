@@ -12,10 +12,10 @@
  */
 
 // To ensure that ss_info_assert asserts also when building in non-debug mode.
-#if !defined (SS_DEBUG)
+#if !defined(SS_DEBUG)
 #define SS_DEBUG
 #endif
-#if defined (NDEBUG)
+#if defined(NDEBUG)
 #undef NDEBUG
 #endif
 #include <stdio.h>
@@ -29,7 +29,7 @@
 #include <maxscale/hint.h>
 
 /*< Return the byte at offset byte from the start of the unconsumed portion of the buffer */
-#define GWBUF_DATA_CHAR(b, byte) (GWBUF_LENGTH(b) < ((byte) + 1) ? -1 : * (((char*)(b)->start) + 4))
+#define GWBUF_DATA_CHAR(b, byte) (GWBUF_LENGTH(b) < ((byte) + 1) ? -1 : *(((char*) (b)->start) + 4))
 
 /*< Check that the data in a buffer has the SQL marker*/
 #define GWBUF_IS_SQL(b) (0x03 == GWBUF_DATA_CHAR(b, 4))
@@ -42,7 +42,7 @@
  */
 uint8_t* generate_data(size_t count)
 {
-    uint8_t* data = (uint8_t*)MXS_MALLOC(count);
+    uint8_t* data = (uint8_t*) MXS_MALLOC(count);
     MXS_ABORT_IF_NULL(data);
 
     srand(0);
@@ -55,17 +55,47 @@ uint8_t* generate_data(size_t count)
     return data;
 }
 
-size_t buffers[] =
-{
-    2,  3,  5,  7,  11, 13, 17,  19,  23,  29,  31,  37,  41,  43,  47,  53, 59, 61, 67,
-    71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149
-};
+size_t buffers[] = {2,
+    3,
+    5,
+    7,
+    11,
+    13,
+    17,
+    19,
+    23,
+    29,
+    31,
+    37,
+    41,
+    43,
+    47,
+    53,
+    59,
+    61,
+    67,
+    71,
+    73,
+    79,
+    83,
+    89,
+    97,
+    101,
+    103,
+    107,
+    109,
+    113,
+    127,
+    131,
+    137,
+    139,
+    149};
 
 const int n_buffers = sizeof(buffers) / sizeof(size_t);
 
 GWBUF* create_test_buffer()
 {
-    GWBUF* head = NULL;
+    GWBUF* head  = NULL;
     size_t total = 0;
 
     for (int i = 0; i < n_buffers; i++)
@@ -74,7 +104,7 @@ GWBUF* create_test_buffer()
     }
 
     uint8_t* data = generate_data(total);
-    total = 0;
+    total         = 0;
 
     for (size_t i = 0; i < sizeof(buffers) / sizeof(size_t); i++)
     {
@@ -103,7 +133,7 @@ void split_buffer(int n, int offset)
 {
     size_t cutoff = get_length_at(n) + offset;
     GWBUF* buffer = create_test_buffer();
-    int len = gwbuf_length(buffer);
+    int len       = gwbuf_length(buffer);
     GWBUF* newbuf = gwbuf_split(&buffer, cutoff);
 
     mxb_assert_message(buffer && newbuf, "Both buffers should be non-NULL");
@@ -113,13 +143,12 @@ void split_buffer(int n, int offset)
     gwbuf_free(newbuf);
 }
 
-
 void consume_buffer(int n, int offset)
 {
     size_t cutoff = get_length_at(n) + offset;
     GWBUF* buffer = create_test_buffer();
-    int len = gwbuf_length(buffer);
-    buffer = gwbuf_consume(buffer, cutoff);
+    int len       = gwbuf_length(buffer);
+    buffer        = gwbuf_consume(buffer, cutoff);
 
     mxb_assert_message(buffer, "Buffer should be non-NULL");
     mxb_assert_message(gwbuf_length(buffer) == len - cutoff, "Buffer should be have correct length");
@@ -131,7 +160,7 @@ void copy_buffer(int n, int offset)
     size_t cutoff = get_length_at(n) + offset;
     uint8_t* data = generate_data(cutoff);
     GWBUF* buffer = create_test_buffer();
-    int len = gwbuf_length(buffer);
+    int len       = gwbuf_length(buffer);
     uint8_t dest[cutoff];
 
     memset(dest, 0, sizeof(dest));
@@ -153,10 +182,10 @@ void test_split()
     mxb_assert_message(newchain && oldchain, "Both chains should be non-NULL");
     mxb_assert_message(gwbuf_length(newchain) == headsize + 5, "New chain should be 15 bytes long");
     mxb_assert_message(GWBUF_LENGTH(newchain) == headsize && GWBUF_LENGTH(newchain->next) == 5,
-                       "The new chain should have a 10 byte buffer and a 5 byte buffer");
+        "The new chain should have a 10 byte buffer and a 5 byte buffer");
     mxb_assert_message(gwbuf_length(oldchain) == tailsize - 5, "Old chain should be 15 bytes long");
     mxb_assert_message(GWBUF_LENGTH(oldchain) == tailsize - 5 && oldchain->next == NULL,
-                       "The old chain should have a 15 byte buffer and no next buffer");
+        "The old chain should have a 15 byte buffer and no next buffer");
     gwbuf_free(oldchain);
     gwbuf_free(newchain);
 
@@ -182,10 +211,10 @@ void test_split()
     GWBUF* buffer = gwbuf_alloc(10);
     GWBUF* newbuf = gwbuf_split(&buffer, 5);
     mxb_assert_message(buffer != newbuf, "gwbuf_split should return different pointers");
-    mxb_assert_message(gwbuf_length(buffer) == 5 && GWBUF_LENGTH(buffer) == 5,
-                       "Old buffer should be 5 bytes");
-    mxb_assert_message(gwbuf_length(newbuf) == 5 && GWBUF_LENGTH(newbuf) == 5,
-                       "New buffer should be 5 bytes");
+    mxb_assert_message(
+        gwbuf_length(buffer) == 5 && GWBUF_LENGTH(buffer) == 5, "Old buffer should be 5 bytes");
+    mxb_assert_message(
+        gwbuf_length(newbuf) == 5 && GWBUF_LENGTH(newbuf) == 5, "New buffer should be 5 bytes");
     mxb_assert_message(buffer->tail == buffer, "Old buffer's tail should point to itself");
     mxb_assert_message(newbuf->tail == newbuf, "New buffer's tail should point to itself");
     mxb_assert_message(buffer->next == NULL, "Old buffer's next pointer should be NULL");
@@ -252,13 +281,13 @@ void test_load_and_copy()
 
     memset(dest, 0, sizeof(dest));
     mxb_assert_message(gwbuf_copy_data(head, 0, -1, dest) == sizeof(data),
-                       "Copying -1 bytes should copy all available data (cast to unsigned)");
+        "Copying -1 bytes should copy all available data (cast to unsigned)");
     mxb_assert_message(memcmp(dest, data, 8) == 0, "Copied data should be from 1 to 8");
 
     mxb_assert_message(gwbuf_copy_data(head, -1, -1, dest) == 0,
-                       "Copying -1 bytes at an offset of -1 should not copy any bytes");
+        "Copying -1 bytes at an offset of -1 should not copy any bytes");
     mxb_assert_message(gwbuf_copy_data(head, -1, 0, dest) == 0,
-                       "Copying 0 bytes at an offset of -1 should not copy any bytes");
+        "Copying 0 bytes at an offset of -1 should not copy any bytes");
     gwbuf_free(head);
 
     /** Copying near buffer boudaries */
@@ -276,11 +305,10 @@ void test_load_and_copy()
 void test_consume()
 {
     uint8_t data[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-    GWBUF* buffer = gwbuf_append(gwbuf_alloc_and_load(5, data),
-                                 gwbuf_alloc_and_load(5, data + 5));
+    GWBUF* buffer  = gwbuf_append(gwbuf_alloc_and_load(5, data), gwbuf_alloc_and_load(5, data + 5));
 
-    mxb_assert_message(gwbuf_consume(buffer, 0) == buffer,
-                       "Consuming 0 bytes from a buffer should return original buffer");
+    mxb_assert_message(
+        gwbuf_consume(buffer, 0) == buffer, "Consuming 0 bytes from a buffer should return original buffer");
     mxb_assert_message(gwbuf_length(buffer) == 10, "Buffer should be 10 bytes after consuming 0 bytes");
 
     buffer = gwbuf_consume(buffer, 1);
@@ -288,19 +316,18 @@ void test_consume()
     mxb_assert_message(buffer->next, "Buffer should have next pointer set");
     mxb_assert_message(GWBUF_LENGTH(buffer->next) == 5, "Next buffer should be 5 bytes long");
     mxb_assert_message(gwbuf_length(buffer) == 9, "Buffer should be 9 bytes after consuming 1 bytes");
-    mxb_assert_message(*((uint8_t*)buffer->start) == 2, "First byte should be 2");
+    mxb_assert_message(*((uint8_t*) buffer->start) == 2, "First byte should be 2");
 
     buffer = gwbuf_consume(buffer, 5);
     mxb_assert_message(buffer->next == NULL, "Buffer should not have the next pointer set");
     mxb_assert_message(GWBUF_LENGTH(buffer) == 4, "Buffer should be 4 bytes after consuming 6 bytes");
     mxb_assert_message(gwbuf_length(buffer) == 4, "Buffer should be 4 bytes after consuming 6 bytes");
-    mxb_assert_message(*((uint8_t*)buffer->start) == 7, "First byte should be 7");
+    mxb_assert_message(*((uint8_t*) buffer->start) == 7, "First byte should be 7");
     mxb_assert_message(gwbuf_consume(buffer, 4) == NULL, "Consuming all bytes should return NULL");
 
-    buffer = gwbuf_append(gwbuf_alloc_and_load(5, data),
-                          gwbuf_alloc_and_load(5, data + 5));
-    mxb_assert_message(gwbuf_consume(buffer, 100) == NULL,
-                       "Consuming more bytes than are available should return NULL");
+    buffer = gwbuf_append(gwbuf_alloc_and_load(5, data), gwbuf_alloc_and_load(5, data + 5));
+    mxb_assert_message(
+        gwbuf_consume(buffer, 100) == NULL, "Consuming more bytes than are available should return NULL");
 
 
     /** Consuming near buffer boudaries */
@@ -358,11 +385,11 @@ void test_compare()
     // Both segmented and of same length, but different.
     gwbuf_free(lhs);
     lhs = NULL;
-    lhs = gwbuf_append(lhs, gwbuf_alloc_and_load(5, data + 5));     // Values in different order
+    lhs = gwbuf_append(lhs, gwbuf_alloc_and_load(5, data + 5));  // Values in different order
     lhs = gwbuf_append(lhs, gwbuf_alloc_and_load(5, data));
 
-    mxb_assert(gwbuf_compare(lhs, rhs) > 0);    // 5 > 1
-    mxb_assert(gwbuf_compare(rhs, lhs) < 0);    // 5 > 1
+    mxb_assert(gwbuf_compare(lhs, rhs) > 0);  // 5 > 1
+    mxb_assert(gwbuf_compare(rhs, lhs) < 0);  // 5 > 1
 
     // Identical, but one containing empty segments.
     gwbuf_free(rhs);
@@ -379,8 +406,6 @@ void test_compare()
     gwbuf_free(lhs);
     gwbuf_free(rhs);
 }
-
-
 
 void test_clone()
 {
@@ -406,9 +431,9 @@ void test_clone()
         mxb_assert(c);
         mxb_assert(GWBUF_LENGTH(o) == GWBUF_LENGTH(c));
 
-        const char* i = (char*)GWBUF_DATA(o);
+        const char* i   = (char*) GWBUF_DATA(o);
         const char* end = i + GWBUF_LENGTH(o);
-        const char* j = (char*)GWBUF_DATA(c);
+        const char* j   = (char*) GWBUF_DATA(c);
 
         while (i != end)
         {
@@ -445,18 +470,16 @@ void test_clone()
  */
 static int test1()
 {
-    GWBUF* buffer, * extra, * clone, * partclone;
+    GWBUF *buffer, *extra, *clone, *partclone;
     HINT* hint;
-    size_t size = 100;
+    size_t size  = 100;
     size_t bite1 = 35;
     size_t bite2 = 60;
     size_t bite3 = 10;
     size_t buflen;
 
     /* Single buffer tests */
-    fprintf(stderr,
-            "testbuffer : creating buffer with data size %lu bytes",
-            size);
+    fprintf(stderr, "testbuffer : creating buffer with data size %lu bytes", size);
     buffer = gwbuf_alloc(size);
     fprintf(stderr, "\t..done\nAllocated buffer of size %lu.", size);
     buflen = GWBUF_LENGTH(buffer);
@@ -464,13 +487,13 @@ static int test1()
     mxb_assert_message(size == buflen, "Incorrect buffer size");
     mxb_assert_message(0 == GWBUF_EMPTY(buffer), "Buffer should not be empty");
     mxb_assert_message(gwbuf_is_type_undefined(buffer), "Buffer type should be undefined");
-    strcpy((char*)GWBUF_DATA(buffer), "The quick brown fox jumps over the lazy dog");
+    strcpy((char*) GWBUF_DATA(buffer), "The quick brown fox jumps over the lazy dog");
     fprintf(stderr, "\t..done\nLoad some data into the buffer");
     mxb_assert_message('q' == GWBUF_DATA_CHAR(buffer, 4), "Fourth character of buffer must be 'q'");
-    mxb_assert_message(-1 == GWBUF_DATA_CHAR(buffer, 105),
-                       "Hundred and fifth character of buffer must return -1");
+    mxb_assert_message(
+        -1 == GWBUF_DATA_CHAR(buffer, 105), "Hundred and fifth character of buffer must return -1");
     mxb_assert_message(0 == GWBUF_IS_SQL(buffer), "Must say buffer is not SQL, as it does not have marker");
-    strcpy((char*)GWBUF_DATA(buffer), "1234\x03SELECT * FROM sometable");
+    strcpy((char*) GWBUF_DATA(buffer), "1234\x03SELECT * FROM sometable");
     fprintf(stderr, "\t..done\nLoad SQL data into the buffer");
     mxb_assert_message(1 == GWBUF_IS_SQL(buffer), "Must say buffer is SQL, as it does have marker");
     clone = gwbuf_clone(buffer);
@@ -502,7 +525,7 @@ static int test1()
     mxb_assert_message(NULL == buffer, "Buffer should be null");
 
     /* Buffer list tests */
-    size = 100000;
+    size   = 100000;
     buffer = gwbuf_alloc(size);
     fprintf(stderr, "\t..done\nAllocated buffer of size %lu.", size);
     buflen = GWBUF_LENGTH(buffer);
@@ -510,7 +533,7 @@ static int test1()
     mxb_assert_message(size == buflen, "Incorrect buffer size");
     mxb_assert_message(0 == GWBUF_EMPTY(buffer), "Buffer should not be empty");
     mxb_assert_message(gwbuf_is_type_undefined(buffer), "Buffer type should be undefined");
-    extra = gwbuf_alloc(size);
+    extra  = gwbuf_alloc(size);
     buflen = GWBUF_LENGTH(buffer);
     fprintf(stderr, "\t..done\nAllocated extra buffer of size %lu.", size);
     mxb_assert_message(size == buflen, "Incorrect buffer size");
@@ -531,9 +554,9 @@ static int test1()
     gwbuf_free(buffer);
     /** gwbuf_clone_all test  */
     size_t headsize = 10;
-    GWBUF* head = gwbuf_alloc(headsize);
+    GWBUF* head     = gwbuf_alloc(headsize);
     size_t tailsize = 20;
-    GWBUF* tail = gwbuf_alloc(tailsize);
+    GWBUF* tail     = gwbuf_alloc(tailsize);
 
     mxb_assert_message(head && tail, "Head and tail buffers should both be non-NULL");
     GWBUF* append = gwbuf_append(head, tail);
@@ -544,8 +567,8 @@ static int test1()
     mxb_assert_message(all_clones && all_clones->next, "Cloning all should work");
     mxb_assert_message(GWBUF_LENGTH(all_clones) == headsize, "First buffer should be 10 bytes");
     mxb_assert_message(GWBUF_LENGTH(all_clones->next) == tailsize, "Second buffer should be 20 bytes");
-    mxb_assert_message(gwbuf_length(all_clones) == headsize + tailsize,
-                       "Total buffer length should be 30 bytes");
+    mxb_assert_message(
+        gwbuf_length(all_clones) == headsize + tailsize, "Total buffer length should be 30 bytes");
     gwbuf_free(all_clones);
     gwbuf_free(head);
 

@@ -38,8 +38,7 @@ int main(int argc, char* argv[])
         auto end = maxbase::Clock::now();
         gwbuf_free(buf);
 
-        std::cout << line << "\n"
-                  << duration_cast<milliseconds>(end - start).count() << "ms\n\n";
+        std::cout << line << "\n" << duration_cast<milliseconds>(end - start).count() << "ms\n\n";
     }
 
     return 0;

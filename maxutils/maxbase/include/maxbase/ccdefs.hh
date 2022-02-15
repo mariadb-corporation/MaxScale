@@ -19,7 +19,7 @@
  * This file is to be included first by all C++ headers.
  */
 
-#if !defined (__cplusplus)
+#if !defined(__cplusplus)
 #error This file is only to be included by C++ code.
 #endif
 
@@ -31,8 +31,7 @@
  * All classes of MaxBase are defined in the namespace @c maxbase.
  */
 namespace maxbase
-{
-}
+{}
 
 /**
  * Shorthand for the @c maxscale namespace.

@@ -44,7 +44,7 @@ static inline void default_gdb_stacktrace_handler(const char* line)
  * @param handler A handler that is called once per stack frame with the function name and auxiliary
  *                information (file and line). By default the stacktrace is dumped to stdout.
  */
-void dump_stacktrace(void (* handler)(const char* symbol, const char* command) = default_stacktrace_handler);
+void dump_stacktrace(void (*handler)(const char* symbol, const char* command) = default_stacktrace_handler);
 
 /**
  * Dump a better stacktrace using GDB
@@ -53,7 +53,7 @@ void dump_stacktrace(void (* handler)(const char* symbol, const char* command) =
  *
  * @param handler A handler that is called to print output. By default the output is dumped to stdout.
  */
-void dump_gdb_stacktrace(void (* handler)(const char* output) = default_gdb_stacktrace_handler);
+void dump_gdb_stacktrace(void (*handler)(const char* output) = default_gdb_stacktrace_handler);
 
 /**
  * Check if GDB is installed and available
@@ -61,4 +61,4 @@ void dump_gdb_stacktrace(void (* handler)(const char* output) = default_gdb_stac
  * @return True if GDB can be invoked with the system() function
  */
 bool have_gdb();
-}
+}  // namespace maxbase

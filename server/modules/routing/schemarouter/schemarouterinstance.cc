@@ -44,12 +44,9 @@ SchemaRouter::SchemaRouter(SERVICE* service, SConfig config)
     : mxs::Router<SchemaRouter, SchemaRouterSession>(service)
     , m_config(config)
     , m_service(service)
-{
-}
+{}
 
-SchemaRouter::~SchemaRouter()
-{
-}
+SchemaRouter::~SchemaRouter() {}
 
 SchemaRouter* SchemaRouter::create(SERVICE* pService, mxs::ConfigParameters* params)
 {
@@ -102,10 +99,10 @@ bool SchemaRouter::configure(mxs::ConfigParameters* params)
  */
 bool connect_backend_servers(SRBackendList& backends, MXS_SESSION* session)
 {
-    bool succp = false;
-    int servers_found = 0;
+    bool succp            = false;
+    int servers_found     = 0;
     int servers_connected = 0;
-    int slaves_connected = 0;
+    int slaves_connected  = 0;
 
     /**
      * Scan server list and connect each of them. None should fail or session
@@ -134,7 +131,7 @@ bool connect_backend_servers(SRBackendList& backends, MXS_SESSION* session)
                     succp = false;
                     MXS_ERROR("Unable to establish "
                               "connection with slave '%s'",
-                              b->name());
+                        b->name());
                     /* handle connect error */
                     break;
                 }
@@ -152,9 +149,7 @@ bool connect_backend_servers(SRBackendList& backends, MXS_SESSION* session)
             {
                 if (b->in_use())
                 {
-                    MXS_INFO("Connected %s in \t'%s'",
-                             b->target()->status_string().c_str(),
-                             b->name());
+                    MXS_INFO("Connected %s in \t'%s'", b->target()->status_string().c_str(), b->name());
                 }
             }
         }
@@ -189,9 +184,8 @@ SchemaRouterSession* SchemaRouter::newSession(MXS_SESSION* pSession, const Endpo
 
 json_t* SchemaRouter::diagnostics() const
 {
-    double sescmd_pct = m_stats.n_sescmd != 0 ?
-        100.0 * ((double)m_stats.n_sescmd / (double)m_stats.n_queries) :
-        0.0;
+    double sescmd_pct
+        = m_stats.n_sescmd != 0 ? 100.0 * ((double) m_stats.n_sescmd / (double) m_stats.n_queries) : 0.0;
 
     json_t* rval = json_object();
     json_object_set_new(rval, "queries", json_integer(m_stats.n_queries));
@@ -214,13 +208,13 @@ json_t* SchemaRouter::diagnostics() const
 }
 
 static const uint64_t CAPABILITIES = RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_PACKET_OUTPUT
-    | RCAP_TYPE_RUNTIME_CONFIG | RCAP_TYPE_REQUEST_TRACKING;
+                                   | RCAP_TYPE_RUNTIME_CONFIG | RCAP_TYPE_REQUEST_TRACKING;
 
 uint64_t SchemaRouter::getCapabilities()
 {
     return schemarouter::CAPABILITIES;
 }
-}
+}  // namespace schemarouter
 
 /**
  * The module entry point routine. It is this routine that
@@ -232,10 +226,8 @@ uint64_t SchemaRouter::getCapabilities()
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static auto desc = "A database sharding router for simple sharding";
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_ROUTER,
+    static auto desc       = "A database sharding router for simple sharding";
+    static MXS_MODULE info = {MXS_MODULE_API_ROUTER,
         MXS_MODULE_BETA_RELEASE,
         MXS_ROUTER_VERSION,
         desc,
@@ -246,25 +238,20 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,
         NULL,
         NULL,
-        {
-            {CN_IGNORE_TABLES,                MXS_MODULE_PARAM_STRING   },
-            {CN_IGNORE_TABLES_REGEX,          MXS_MODULE_PARAM_STRING   },
-            {CN_IGNORE_DATABASES,             MXS_MODULE_PARAM_STRING   },
-            {CN_IGNORE_DATABASES_REGEX,       MXS_MODULE_PARAM_STRING   },
-            {"max_sescmd_history",            MXS_MODULE_PARAM_COUNT, "0"},
-            {"disable_sescmd_history",        MXS_MODULE_PARAM_BOOL, "false"},
-            {"refresh_databases",             MXS_MODULE_PARAM_BOOL, "true"},
-            {
-                "refresh_interval",
+        {{CN_IGNORE_TABLES, MXS_MODULE_PARAM_STRING},
+            {CN_IGNORE_TABLES_REGEX, MXS_MODULE_PARAM_STRING},
+            {CN_IGNORE_DATABASES, MXS_MODULE_PARAM_STRING},
+            {CN_IGNORE_DATABASES_REGEX, MXS_MODULE_PARAM_STRING},
+            {"max_sescmd_history", MXS_MODULE_PARAM_COUNT, "0"},
+            {"disable_sescmd_history", MXS_MODULE_PARAM_BOOL, "false"},
+            {"refresh_databases", MXS_MODULE_PARAM_BOOL, "true"},
+            {"refresh_interval",
                 MXS_MODULE_PARAM_DURATION,
                 DEFAULT_REFRESH_INTERVAL,
-                MXS_MODULE_OPT_DURATION_S
-            },
-            {"debug",                         MXS_MODULE_PARAM_BOOL, "false"},
-            {"preferred_server",              MXS_MODULE_PARAM_SERVER, nullptr, MXS_MODULE_OPT_DEPRECATED},
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+                MXS_MODULE_OPT_DURATION_S},
+            {"debug", MXS_MODULE_PARAM_BOOL, "false"},
+            {"preferred_server", MXS_MODULE_PARAM_SERVER, nullptr, MXS_MODULE_OPT_DEPRECATED},
+            {MXS_END_MODULE_PARAMS}}};
 
     return &info;
 }

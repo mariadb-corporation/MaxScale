@@ -21,21 +21,16 @@ namespace maxbase
 //
 // WorkerTask
 //
-WorkerTask::~WorkerTask()
-{
-}
+WorkerTask::~WorkerTask() {}
 
 //
 // WorkerDisposableTask
 //
 WorkerDisposableTask::WorkerDisposableTask()
     : m_count(0)
-{
-}
+{}
 
-WorkerDisposableTask::~WorkerDisposableTask()
-{
-}
+WorkerDisposableTask::~WorkerDisposableTask() {}
 
 void WorkerDisposableTask::inc_ref()
 {
@@ -51,4 +46,4 @@ void WorkerDisposableTask::dec_ref()
         delete this;
     }
 }
-}
+}  // namespace maxbase

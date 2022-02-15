@@ -49,23 +49,18 @@
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_ROUTER,
+    static MXS_MODULE info = {MXS_MODULE_API_ROUTER,
         MXS_MODULE_GA,
         MXS_ROUTER_VERSION,
         "A connection based router to load balance based on connections",
         "V2.0.0",
         RCAP_TYPE_RUNTIME_CONFIG,
         &RCR::s_object,
-        nullptr,    /* Process init. */
-        nullptr,    /* Process finish. */
-        nullptr,    /* Thread init. */
-        nullptr,    /* Thread finish. */
-        {
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+        nullptr, /* Process init. */
+        nullptr, /* Process finish. */
+        nullptr, /* Thread init. */
+        nullptr, /* Thread finish. */
+        {{MXS_END_MODULE_PARAMS}}};
 
     return &info;
 }
@@ -81,7 +76,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
  */
 static mxs::Endpoint* get_root_master(const Endpoints& endpoints)
 {
-    auto best_rank = std::numeric_limits<int64_t>::max();
+    auto best_rank             = std::numeric_limits<int64_t>::max();
     mxs::Endpoint* master_host = nullptr;
 
     for (auto e : endpoints)
@@ -97,7 +92,7 @@ static mxs::Endpoint* get_root_master(const Endpoints& endpoints)
             }
             else if (rank < best_rank)
             {
-                best_rank = rank;
+                best_rank   = rank;
                 master_host = e;
             }
         }
@@ -108,9 +103,9 @@ static mxs::Endpoint* get_root_master(const Endpoints& endpoints)
 
 bool RCR::configure(mxs::ConfigParameters* params)
 {
-    uint64_t bitmask = 0;
+    uint64_t bitmask  = 0;
     uint64_t bitvalue = 0;
-    bool ok = true;
+    bool ok           = true;
 
     for (const auto& opt : mxs::strtok(params->get_string("router_options"), ", \t"))
     {
@@ -138,7 +133,7 @@ bool RCR::configure(mxs::ConfigParameters* params)
         {
             MXS_ERROR("Unsupported router option \'%s\' for readconnroute. "
                       "Expected router options are [slave|master|synced|running]",
-                      opt.c_str());
+                opt.c_str());
             ok = false;
         }
     }
@@ -159,16 +154,14 @@ bool RCR::configure(mxs::ConfigParameters* params)
     return ok;
 }
 
-
 RCR::RCR(SERVICE* service)
     : mxs::Router<RCR, RCRSession>(service)
-{
-}
+{}
 
 // static
 RCR* RCR::create(SERVICE* service, mxs::ConfigParameters* params)
 {
-    RCR* inst = new(std::nothrow) RCR(service);
+    RCR* inst = new (std::nothrow) RCR(service);
 
     if (inst && !inst->configure(params))
     {
@@ -179,8 +172,12 @@ RCR* RCR::create(SERVICE* service, mxs::ConfigParameters* params)
     return inst;
 }
 
-RCRSession::RCRSession(RCR* inst, MXS_SESSION* session, mxs::Endpoint* backend,
-                       const Endpoints& endpoints, uint32_t bitmask, uint32_t bitvalue)
+RCRSession::RCRSession(RCR* inst,
+    MXS_SESSION* session,
+    mxs::Endpoint* backend,
+    const Endpoints& endpoints,
+    uint32_t bitmask,
+    uint32_t bitvalue)
     : mxs::RouterSession(session)
     , m_instance(inst)
     , m_bitmask(bitmask)
@@ -188,20 +185,17 @@ RCRSession::RCRSession(RCR* inst, MXS_SESSION* session, mxs::Endpoint* backend,
     , m_backend(backend)
     , m_endpoints(endpoints)
     , m_session_stats(inst->session_stats(backend->target()))
-{
-}
+{}
 
 RCRSession::~RCRSession()
 {
-    m_session_stats.update(m_session_timer.split(),
-                           m_query_timer.total(),
-                           m_session_queries);
+    m_session_stats.update(m_session_timer.split(), m_query_timer.total(), m_session_queries);
 }
 
 RCRSession* RCR::newSession(MXS_SESSION* session, const Endpoints& endpoints)
 {
-    uint64_t mask = atomic_load_uint64(&m_bitmask_and_bitvalue);
-    uint32_t bitmask = mask;
+    uint64_t mask     = atomic_load_uint64(&m_bitmask_and_bitvalue);
+    uint32_t bitmask  = mask;
     uint32_t bitvalue = mask >> 32;
 
     /**
@@ -217,7 +211,7 @@ RCRSession* RCR::newSession(MXS_SESSION* session, const Endpoints& endpoints)
      * connection router.
      */
     mxs::Endpoint* candidate = nullptr;
-    auto best_rank = std::numeric_limits<int64_t>::max();
+    auto best_rank           = std::numeric_limits<int64_t>::max();
 
     /*
      * Loop over all the servers and find any that have fewer connections
@@ -319,7 +313,8 @@ RCRSession* RCR::newSession(MXS_SESSION* session, const Endpoints& endpoints)
             {
                 mxb_assert(!connectable_master);
                 MXS_ERROR("The only possible candidate server (%s) is being drained "
-                          "and thus cannot be used.", master_host->target()->name());
+                          "and thus cannot be used.",
+                    master_host->target()->name());
             }
             return nullptr;
         }
@@ -338,8 +333,8 @@ RCRSession* RCR::newSession(MXS_SESSION* session, const Endpoints& endpoints)
     RCRSession* client_rses = new RCRSession(this, session, candidate, endpoints, bitmask, bitvalue);
 
     MXS_INFO("New session for server %s. Connections : %d",
-             candidate->target()->name(),
-             candidate->target()->stats().n_current);
+        candidate->target()->name(),
+        candidate->target()->stats().n_current);
 
     return client_rses;
 }
@@ -347,7 +342,7 @@ RCRSession* RCR::newSession(MXS_SESSION* session, const Endpoints& endpoints)
 /** Log routing failure due to closed session */
 static void log_closed_session(uint8_t mysql_command, mxs::Target* t)
 {
-    char msg[1024 + 200] = "";      // Extra space for message
+    char msg[1024 + 200] = "";  // Extra space for message
 
     if (t->is_down())
     {
@@ -419,9 +414,9 @@ int RCRSession::routeQuery(GWBUF* queue)
     }
 
     MXS_INFO("Routed [%s] to '%s' %s",
-             STRPACKETTYPE(mysql_command),
-             m_backend->target()->name(),
-             mxs::extract_sql(queue).c_str());
+        STRPACKETTYPE(mysql_command),
+        m_backend->target()->name(),
+        mxs::extract_sql(queue).c_str());
 
     m_query_timer.start_interval();
 
@@ -473,7 +468,7 @@ maxscale::TargetSessionStats RCR::combined_target_stats() const
 
 json_t* RCR::diagnostics() const
 {
-    json_t* arr = json_array();
+    json_t* arr           = json_array();
     int64_t total_packets = 0;
 
     for (const auto& a : combined_target_stats())
@@ -489,8 +484,8 @@ json_t* RCR::diagnostics() const
         json_object_set_new(obj, "total", json_integer(stats.total_queries));
         json_object_set_new(obj, "read", json_integer(stats.total_read_queries));
         json_object_set_new(obj, "write", json_integer(stats.total_write_queries));
-        json_object_set_new(obj, "avg_sess_duration",
-                            json_string(mxb::to_string(stats.ave_session_dur).c_str()));
+        json_object_set_new(
+            obj, "avg_sess_duration", json_string(mxb::to_string(stats.ave_session_dur).c_str()));
         json_object_set_new(obj, "avg_sess_active_pct", json_real(active_pct));
         json_object_set_new(obj, "avg_queries_per_session", json_integer(stats.ave_session_selects));
         json_array_append_new(arr, obj);

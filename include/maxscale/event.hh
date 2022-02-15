@@ -62,7 +62,7 @@ namespace event
 
 enum id_t
 {
-    AUTHENTICATION_FAILURE      /**< Authentication failure */
+    AUTHENTICATION_FAILURE /**< Authentication failure */
 };
 
 enum
@@ -92,6 +92,7 @@ const char* to_string(id_t id);
  * @return True, if the string could be converted, false otherwise.
  */
 bool from_string(id_t* pId, const char* zValue);
+
 inline bool from_string(id_t* pId, const std::string& value)
 {
     return from_string(pId, value.c_str());
@@ -154,14 +155,14 @@ int32_t get_log_level(id_t id);
  *
  */
 void log(id_t event_id,
-         const char* modname,
-         const char* file,
-         int line,
-         const char* function,
-         const char* format,
-         ...) mxs_attribute((format(printf, 6, 7)));
-}
-}
+    const char* modname,
+    const char* file,
+    int line,
+    const char* function,
+    const char* format,
+    ...) mxs_attribute((format(printf, 6, 7)));
+}  // namespace event
+}  // namespace maxscale
 
 /**
  * @brief Log an event.

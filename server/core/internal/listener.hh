@@ -27,9 +27,9 @@ class Listener : public MXB_POLL_DATA
 public:
     enum class Type
     {
-        UNIX_SOCKET,    // UNIX domain socket shared between workers
-        SHARED_TCP,     // TCP listening socket shared between workers
-        UNIQUE_TCP,     // Unique TCP listening socket for each worker
+        UNIX_SOCKET,  // UNIX domain socket shared between workers
+        SHARED_TCP,   // TCP listening socket shared between workers
+        UNIQUE_TCP,   // Unique TCP listening socket for each worker
     };
 
     ~Listener();
@@ -43,8 +43,8 @@ public:
      *
      * @return New listener or nullptr on error
      */
-    static std::shared_ptr<Listener> create(const std::string& name, const std::string& protocol,
-                                            const mxs::ConfigParameters& params);
+    static std::shared_ptr<Listener> create(
+        const std::string& name, const std::string& protocol, const mxs::ConfigParameters& params);
 
     /**
      * Destroy a listener
@@ -137,10 +137,7 @@ public:
      */
     static json_t* to_json_collection(const char* host);
 
-    Type type() const
-    {
-        return m_type;
-    }
+    Type type() const { return m_type; }
 
     /**
      * Persist listener configuration into a stream
@@ -151,13 +148,10 @@ public:
      */
     std::ostream& persist(std::ostream& os) const;
 
-    std::shared_ptr<mxs::ListenerSessionData> shared_data() const
-    {
-        return m_shared_data;
-    }
+    std::shared_ptr<mxs::ListenerSessionData> shared_data() const { return m_shared_data; }
 
-    static std::unique_ptr<mxs::ListenerSessionData>
-    create_shared_data(const mxs::ConfigParameters& params, const std::string& listener_name);
+    static std::unique_ptr<mxs::ListenerSessionData> create_shared_data(
+        const mxs::ConfigParameters& params, const std::string& listener_name);
 
 private:
     enum State
@@ -169,21 +163,21 @@ private:
         DESTROYED
     };
 
-    std::string m_name;             /**< Name of the listener */
-    State       m_state;            /**< Listener state */
-    std::string m_protocol;         /**< Protocol module to load */
-    uint16_t    m_port;             /**< Port to listen on */
-    std::string m_address;          /**< Address to listen with */
+    std::string m_name;     /**< Name of the listener */
+    State m_state;          /**< Listener state */
+    std::string m_protocol; /**< Protocol module to load */
+    uint16_t m_port;        /**< Port to listen on */
+    std::string m_address;  /**< Address to listen with */
 
-    Service*              m_service;        /**< The service to which new sessions are sent */
-    mxs::ConfigParameters m_params;         /**< Configuration parameters */
+    Service* m_service;             /**< The service to which new sessions are sent */
+    mxs::ConfigParameters m_params; /**< Configuration parameters */
 
-    Type m_type;    /**< The type of the listener */
+    Type m_type; /**< The type of the listener */
 
-    mxs::WorkerLocal<int> m_local_fd {-1};  /**< File descriptor the listener listens on */
-    int                   m_shared_fd {-1}; /**< File descriptor the listener listens on */
+    mxs::WorkerLocal<int> m_local_fd {-1}; /**< File descriptor the listener listens on */
+    int m_shared_fd {-1};                  /**< File descriptor the listener listens on */
 
-    std::shared_ptr<mxs::ListenerSessionData> m_shared_data;    /**< Data shared with sessions */
+    std::shared_ptr<mxs::ListenerSessionData> m_shared_data; /**< Data shared with sessions */
 
     /**
      * Creates a new listener that points to a service
@@ -194,11 +188,13 @@ private:
      * @param port          The port on which the listener listens
      * @param protocol      The protocol module to use
      */
-    Listener(Service* service, const std::string& name,
-             const std::string& address, uint16_t port,
-             const std::string& protocol,
-             const mxs::ConfigParameters& params,
-             std::unique_ptr<mxs::ListenerSessionData> shared_data);
+    Listener(Service* service,
+        const std::string& name,
+        const std::string& address,
+        uint16_t port,
+        const std::string& protocol,
+        const mxs::ConfigParameters& params,
+        std::unique_ptr<mxs::ListenerSessionData> shared_data);
 
     /**
      * Listen on a file descriptor shared between all workers
@@ -250,16 +246,13 @@ private:
      *
      * @return The worker-local file descriptor
      */
-    int fd() const
-    {
-        return m_type == Type::UNIQUE_TCP ? *m_local_fd : m_shared_fd;
-    }
+    int fd() const { return m_type == Type::UNIQUE_TCP ? *m_local_fd : m_shared_fd; }
 
     // Handler for EPOLL_IN events
     static uint32_t poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
 
-    static bool read_connection_init_sql(const std::string& filepath,
-                                         mxs::ListenerSessionData::ConnectionInitSql* output);
+    static bool read_connection_init_sql(
+        const std::string& filepath, mxs::ListenerSessionData::ConnectionInitSql* output);
 };
 
 /**

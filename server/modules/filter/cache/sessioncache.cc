@@ -23,7 +23,7 @@ std::unique_ptr<SessionCache> SessionCache::create(Cache* pCache)
 
     if (rv)
     {
-        sSession_cache.reset(new(std::nothrow) SessionCache(pCache, std::move(sToken)));
+        sSession_cache.reset(new (std::nothrow) SessionCache(pCache, std::move(sToken)));
     }
     else
     {

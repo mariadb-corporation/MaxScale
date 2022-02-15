@@ -22,7 +22,7 @@
 namespace tok
 {
 
-using Sanitizer = std::function<std::string (const char*, int)>;
+using Sanitizer = std::function<std::string(const char*, int)>;
 
 static std::string default_sanitizer(const char* sql, int len)
 {
@@ -99,57 +99,43 @@ enum Type
 class Tokenizer
 {
 public:
-
     struct Token
     {
         Token(Type t, const char* s)
             : m_type(t)
             , m_str(s)
-        {
-        }
+        {}
 
         Token(Type t, const char* s, int l, Sanitizer sanitizer)
             : m_type(t)
             , m_str(s)
             , m_len(l)
             , m_sanitizer(sanitizer)
-        {
-        }
+        {}
 
         Token(Type t)
             : m_type(t)
-        {
-        }
+        {}
 
         Token()
             : m_type(EXHAUSTED)
-        {
-        }
+        {}
 
-        static std::string to_string(Type t)
-        {
-            return Token(t).to_string();
-        }
+        static std::string to_string(Type t) { return Token(t).to_string(); }
 
         std::string to_string() const;
 
-        Type type() const
-        {
-            return m_type;
-        }
+        Type type() const { return m_type; }
 
-        const char* position() const
-        {
-            return m_str;
-        }
+        const char* position() const { return m_str; }
 
         std::string value() const;
 
     private:
-        Type        m_type;
+        Type m_type;
         const char* m_str {nullptr};
-        int         m_len {0};
-        Sanitizer   m_sanitizer {default_sanitizer};
+        int m_len {0};
+        Sanitizer m_sanitizer {default_sanitizer};
     };
 
     class Chain
@@ -182,15 +168,9 @@ public:
             return rv;
         }
 
-        Container::iterator begin()
-        {
-            return m_tokens.begin();
-        }
+        Container::iterator begin() { return m_tokens.begin(); }
 
-        Container::iterator end()
-        {
-            return m_tokens.end();
-        }
+        Container::iterator end() { return m_tokens.end(); }
 
     private:
         friend class Tokenizer;
@@ -204,4 +184,4 @@ private:
 };
 
 bool operator==(const Tokenizer::Token& lhs, const Tokenizer::Token& rhs);
-}
+}  // namespace tok

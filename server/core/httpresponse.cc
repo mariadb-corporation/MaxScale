@@ -33,7 +33,7 @@ bool json_ptr_matches(const std::string& json_ptr, json_t* obj, json_t* rhs)
     auto lhs = mxs_json_pointer(obj, json_ptr.c_str());
     return lhs && json_equal(lhs, rhs);
 }
-}
+}  // namespace
 
 HttpResponse::HttpResponse(int code, json_t* response)
     : m_body(response)
@@ -53,16 +53,15 @@ HttpResponse::HttpResponse(const HttpResponse& response)
     , m_code(response.m_code)
     , m_headers(response.m_headers)
     , m_cookies(response.m_cookies)
-{
-}
+{}
 
 HttpResponse& HttpResponse::operator=(const HttpResponse& response)
 {
     json_t* body = m_body;
-    m_body = json_incref(response.m_body);
-    m_code = response.m_code;
-    m_headers = response.m_headers;
-    m_cookies = response.m_cookies;
+    m_body       = json_incref(response.m_body);
+    m_code       = response.m_code;
+    m_headers    = response.m_headers;
+    m_cookies    = response.m_cookies;
     json_decref(body);
     return *this;
 }
@@ -131,8 +130,8 @@ void HttpResponse::remove_fields_from_object(json_t* obj, std::vector<std::strin
     }
 }
 
-void HttpResponse::remove_fields_from_resource(json_t* obj, const std::string& type,
-                                               const std::unordered_set<std::string>& fields)
+void HttpResponse::remove_fields_from_resource(
+    json_t* obj, const std::string& type, const std::unordered_set<std::string>& fields)
 {
     json_t* t = json_object_get(obj, CN_TYPE);
 

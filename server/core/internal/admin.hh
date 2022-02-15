@@ -24,7 +24,7 @@
 class Client
 {
 public:
-    Client(const Client&) = delete;
+    Client(const Client&)            = delete;
     Client& operator=(const Client&) = delete;
 
     using Headers = std::unordered_map<std::string, std::string>;
@@ -37,8 +37,8 @@ public:
     Client(MHD_Connection* connection);
 
     // Handle HTTP request
-    int handle(const std::string& url, const std::string& method,
-               const char* upload_data, size_t* upload_data_size);
+    int handle(
+        const std::string& url, const std::string& method, const char* upload_data, size_t* upload_data_size);
 
 private:
     enum state
@@ -80,20 +80,14 @@ private:
      *
      * @return The client state
      */
-    state get_state() const
-    {
-        return m_state;
-    }
+    state get_state() const { return m_state; }
 
     /**
      * Close the client connection
      *
      * All further requests will be rejected immediately
      */
-    void close()
-    {
-        m_state = CLOSED;
-    }
+    void close() { m_state = CLOSED; }
 
     /**
      * Serve a file that the client is requesting
@@ -104,23 +98,23 @@ private:
      */
     bool serve_file(const std::string& url) const;
 
-    MHD_Connection* m_connection;   /**< Connection handle */
-    std::string     m_data;         /**< Uploaded data */
-    state           m_state;        /**< Client state */
-    std::string     m_user;         /**< The user account */
-    Headers         m_headers;
+    MHD_Connection* m_connection; /**< Connection handle */
+    std::string m_data;           /**< Uploaded data */
+    state m_state;                /**< Client state */
+    std::string m_user;           /**< The user account */
+    Headers m_headers;
 
     HttpResponse generate_token(const HttpRequest& request);
-    bool         auth_with_token(const std::string& token);
-    bool         send_cors_preflight_request(const std::string& verb);
-    std::string  get_header(const std::string& key) const;
-    size_t       request_data_length() const;
-    void         send_shutting_down_error() const;
-    void         send_basic_auth_error() const;
-    void         send_token_auth_error() const;
-    void         send_write_access_error() const;
-    void         send_no_https_error() const;
-    void         add_cors_headers(MHD_Response*) const;
+    bool auth_with_token(const std::string& token);
+    bool send_cors_preflight_request(const std::string& verb);
+    std::string get_header(const std::string& key) const;
+    size_t request_data_length() const;
+    void send_shutting_down_error() const;
+    void send_basic_auth_error() const;
+    void send_token_auth_error() const;
+    void send_write_access_error() const;
+    void send_no_https_error() const;
+    void add_cors_headers(MHD_Response*) const;
 };
 
 /**

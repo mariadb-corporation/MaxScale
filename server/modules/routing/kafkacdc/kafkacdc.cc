@@ -77,9 +77,8 @@ public:
         m_producer->flush(m_timeout);
     }
 
-    static SRowEventHandler create(const std::string& broker,
-                                   const std::string& topic,
-                                   bool enable_idempotence)
+    static SRowEventHandler create(
+        const std::string& broker, const std::string& topic, bool enable_idempotence)
     {
         std::string err;
         SRowEventHandler rval;
@@ -110,8 +109,8 @@ public:
             if (auto consumer = RdKafka::KafkaConsumer::create(cnf.get(), err))
             {
                 int64_t high = RdKafka::Topic::OFFSET_INVALID;
-                int64_t low = RdKafka::Topic::OFFSET_INVALID;
-                auto rc = consumer->query_watermark_offsets(m_topic, 0, &low, &high, m_timeout);
+                int64_t low  = RdKafka::Topic::OFFSET_INVALID;
+                auto rc      = consumer->query_watermark_offsets(m_topic, 0, &low, &high, m_timeout);
 
                 if (high != RdKafka::Topic::OFFSET_INVALID && high > 0)
                 {
@@ -131,7 +130,7 @@ public:
                         {
                             rval = gtid_pos_t::from_string(*msg->key());
                             MXS_INFO("Continuing replication from latest stored GTID in Kafka: %s",
-                                     rval.to_string().c_str());
+                                rval.to_string().c_str());
                         }
                         else
                         {
@@ -166,31 +165,19 @@ public:
     bool create_table(const Table& table)
     {
         json_t* js = table.to_json();
-        auto gtid = table.gtid.to_string();
-        bool rval = produce(js, gtid.c_str(), gtid.length());
+        auto gtid  = table.gtid.to_string();
+        bool rval  = produce(js, gtid.c_str(), gtid.length());
         json_decref(js);
         return rval;
     }
 
-    bool open_table(const Table& table)
-    {
-        return true;
-    }
+    bool open_table(const Table& table) { return true; }
 
-    bool prepare_table(const Table& table)
-    {
-        return true;
-    }
+    bool prepare_table(const Table& table) { return true; }
 
-    void flush_tables()
-    {
-        m_producer->poll(0);
-    }
+    void flush_tables() { m_producer->poll(0); }
 
-    void prepare_row(const Table& create,
-                     const gtid_pos_t& gtid,
-                     const REP_HEADER& hdr,
-                     RowEvent event_type)
+    void prepare_row(const Table& create, const gtid_pos_t& gtid, const REP_HEADER& hdr, RowEvent event_type)
     {
         auto type = roweventtype_to_string(event_type);
 
@@ -243,8 +230,8 @@ public:
 
     void column_bytes(const Table& create, int i, uint8_t* value, int len)
     {
-        json_object_set_new(m_obj, create.columns[i].name.c_str(),
-                            json_stringn_nocheck((const char*)value, len));
+        json_object_set_new(
+            m_obj, create.columns[i].name.c_str(), json_stringn_nocheck((const char*) value, len));
     }
 
     void column_null(const Table& create, int i)
@@ -256,16 +243,15 @@ private:
     std::string m_key;
     std::string m_broker;
     std::string m_topic;
-    SProducer   m_producer;
-    json_t*     m_obj;
-    int         m_timeout = 10000;
+    SProducer m_producer;
+    json_t* m_obj;
+    int m_timeout = 10000;
 
     KafkaEventHandler(SProducer producer, const std::string& broker, const std::string& topic)
         : m_broker(broker)
         , m_topic(topic)
         , m_producer(std::move(producer))
-    {
-    }
+    {}
 
     /**
      * Produce a Kafka message
@@ -284,9 +270,15 @@ private:
 
         do
         {
-            err = m_producer->produce(
-                m_topic, RdKafka::Topic::PARTITION_UA, RdKafka::Producer::RK_MSG_FREE,
-                json, strlen(json), key, keylen, 0, nullptr);
+            err = m_producer->produce(m_topic,
+                RdKafka::Topic::PARTITION_UA,
+                RdKafka::Producer::RK_MSG_FREE,
+                json,
+                strlen(json),
+                key,
+                keylen,
+                0,
+                nullptr);
 
             if (err == RdKafka::ERR__QUEUE_FULL)
             {
@@ -339,7 +331,7 @@ private:
         return cnf;
     }
 };
-}
+}  // namespace
 
 // static
 KafkaCDC* KafkaCDC::create(SERVICE* pService, mxs::ConfigParameters* params)
@@ -363,15 +355,14 @@ KafkaCDC* KafkaCDC::create(SERVICE* pService, mxs::ConfigParameters* params)
 std::unique_ptr<cdc::Replicator> KafkaCDC::create_replicator(const Config& config, SERVICE* service)
 {
     std::unique_ptr<cdc::Replicator> rval;
-    if (auto handler = KafkaEventHandler::create(config.bootstrap_servers,
-                                                 config.topic,
-                                                 config.enable_idempotence))
+    if (auto handler
+        = KafkaEventHandler::create(config.bootstrap_servers, config.topic, config.enable_idempotence))
     {
         cdc::Config cnf;
-        cnf.service = service;
-        cnf.statedir = std::string(mxs::datadir()) + "/" + service->name();
-        cnf.timeout = config.timeout;
-        cnf.gtid = config.gtid;
+        cnf.service   = service;
+        cnf.statedir  = std::string(mxs::datadir()) + "/" + service->name();
+        cnf.timeout   = config.timeout;
+        cnf.gtid      = config.gtid;
         cnf.server_id = config.server_id;
 
         // Make sure the data directory exists
@@ -389,8 +380,7 @@ KafkaCDC::KafkaCDC(SERVICE* pService, Config&& config, std::unique_ptr<cdc::Repl
     : Router<KafkaCDC, KafkaCDCSession>(pService)
     , m_config(std::move(config))
     , m_replicator(std::move(rpl))
-{
-}
+{}
 
 json_t* KafkaCDC::diagnostics() const
 {
@@ -407,9 +397,9 @@ bool KafkaCDC::configure(mxs::ConfigParameters* params)
         // Resetting m_replicator before assigning the new values makes sure the old one stops
         // before the new one starts.
         m_replicator.reset();
-        m_config = Config(*params);
+        m_config     = Config(*params);
         m_replicator = create_replicator(m_config, m_pService);
-        rval = true;
+        rval         = true;
     }
 
     return rval;
@@ -417,8 +407,7 @@ bool KafkaCDC::configure(mxs::ConfigParameters* params)
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_MODULE info =
-    {
+    static MXS_MODULE info = {
         MXS_MODULE_API_ROUTER,
         MXS_MODULE_ALPHA_RELEASE,
         MXS_ROUTER_VERSION,

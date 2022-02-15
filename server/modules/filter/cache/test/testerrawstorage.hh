@@ -15,7 +15,6 @@
 #include <maxscale/ccdefs.hh>
 #include "testerstorage.hh"
 
-
 class TesterRawStorage : public TesterStorage
 {
 public:

@@ -42,12 +42,12 @@ enum cache_users_t
 
 const cache_thread_model_t CACHE_DEFAULT_THREAD_MODEL = CACHE_THREAD_MODEL_ST;
 
-const std::chrono::milliseconds CACHE_DEFAULT_TIMEOUT { 5000 };
+const std::chrono::milliseconds CACHE_DEFAULT_TIMEOUT {5000};
 
 class CacheConfig : public config::Configuration
 {
 public:
-    CacheConfig(const CacheConfig&) = delete;
+    CacheConfig(const CacheConfig&)            = delete;
     CacheConfig& operator=(const CacheConfig&) = delete;
 
     CacheConfig(const std::string& name);
@@ -57,29 +57,26 @@ public:
 
     using milliseconds = std::chrono::milliseconds;
 
-    std::string          storage;
-    std::string          storage_options;
-    milliseconds         hard_ttl;
-    milliseconds         soft_ttl;
-    int64_t              max_resultset_rows;
-    int64_t              max_resultset_size;
-    int64_t              max_count;
-    int64_t              max_size;
-    std::string          rules;
-    int64_t              debug; // bitmask
+    std::string storage;
+    std::string storage_options;
+    milliseconds hard_ttl;
+    milliseconds soft_ttl;
+    int64_t max_resultset_rows;
+    int64_t max_resultset_size;
+    int64_t max_count;
+    int64_t max_size;
+    std::string rules;
+    int64_t debug;  // bitmask
     cache_thread_model_t thread_model;
-    cache_selects_t      selects;
-    cache_in_trxs_t      cache_in_trxs;
-    bool                 enabled;
-    cache_invalidate_t   invalidate;
-    bool                 clear_cache_on_parse_errors;
-    cache_users_t        users;
-    milliseconds         timeout;
+    cache_selects_t selects;
+    cache_in_trxs_t cache_in_trxs;
+    bool enabled;
+    cache_invalidate_t invalidate;
+    bool clear_cache_on_parse_errors;
+    cache_users_t users;
+    milliseconds timeout;
 
-    static const config::Specification& specification()
-    {
-        return s_specification;
-    }
+    static const config::Specification& specification() { return s_specification; }
 
 private:
     bool post_configure() override;
@@ -87,22 +84,22 @@ private:
 private:
     static config::Specification s_specification;
 
-    static config::ParamString                     s_storage;
-    static config::ParamString                     s_storage_options;
-    static config::ParamDuration<milliseconds>     s_hard_ttl;
-    static config::ParamDuration<milliseconds>     s_soft_ttl;
-    static config::ParamCount                      s_max_resultset_rows;
-    static config::ParamSize                       s_max_resultset_size;
-    static config::ParamCount                      s_max_count;
-    static config::ParamSize                       s_max_size;
-    static config::ParamPath                       s_rules;
-    static config::ParamBitMask                    s_debug;
+    static config::ParamString s_storage;
+    static config::ParamString s_storage_options;
+    static config::ParamDuration<milliseconds> s_hard_ttl;
+    static config::ParamDuration<milliseconds> s_soft_ttl;
+    static config::ParamCount s_max_resultset_rows;
+    static config::ParamSize s_max_resultset_size;
+    static config::ParamCount s_max_count;
+    static config::ParamSize s_max_size;
+    static config::ParamPath s_rules;
+    static config::ParamBitMask s_debug;
     static config::ParamEnum<cache_thread_model_t> s_thread_model;
-    static config::ParamEnum<cache_selects_t>      s_selects;
-    static config::ParamEnum<cache_in_trxs_t>      s_cache_in_trxs;
-    static config::ParamBool                       s_enabled;
-    static config::ParamEnum<cache_invalidate_t>   s_invalidate;
-    static config::ParamBool                       s_clear_cache_on_parse_errors;
-    static config::ParamEnum<cache_users_t>        s_users;
-    static config::ParamDuration<milliseconds>     s_timeout;
+    static config::ParamEnum<cache_selects_t> s_selects;
+    static config::ParamEnum<cache_in_trxs_t> s_cache_in_trxs;
+    static config::ParamBool s_enabled;
+    static config::ParamEnum<cache_invalidate_t> s_invalidate;
+    static config::ParamBool s_clear_cache_on_parse_errors;
+    static config::ParamEnum<cache_users_t> s_users;
+    static config::ParamDuration<milliseconds> s_timeout;
 };

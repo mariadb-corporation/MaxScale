@@ -32,14 +32,14 @@ namespace
 static struct ThisUnit
 {
     maxscale::MainWorker* pMain = nullptr;
-    int64_t               clock_ticks;
+    int64_t clock_ticks;
 } this_unit;
 
 thread_local struct ThisThread
 {
     maxscale::MainWorker* pMain = nullptr;
 } this_thread;
-}
+}  // namespace
 
 namespace maxscale
 {
@@ -49,7 +49,7 @@ MainWorker::MainWorker(mxb::WatchdogNotifier* pNotifier)
 {
     mxb_assert(!this_unit.pMain);
 
-    this_unit.pMain = this;
+    this_unit.pMain   = this;
     this_thread.pMain = this;
 }
 
@@ -58,7 +58,7 @@ MainWorker::~MainWorker()
     mxb_assert(this_unit.pMain);
 
     this_thread.pMain = nullptr;
-    this_unit.pMain = nullptr;
+    this_unit.pMain   = nullptr;
 }
 
 // static
@@ -77,38 +77,36 @@ MainWorker* MainWorker::get()
 
 void MainWorker::add_task(const std::string& name, TASKFN func, void* pData, int frequency)
 {
-    execute([=]() {
-                mxb_assert_message(m_tasks_by_name.find(name) == m_tasks_by_name.end(), "%s", name.c_str());
+    execute(
+        [=]() {
+        mxb_assert_message(m_tasks_by_name.find(name) == m_tasks_by_name.end(), "%s", name.c_str());
 
-                Task task(name.c_str(), func, pData, frequency);
+        Task task(name.c_str(), func, pData, frequency);
 
-                auto p = m_tasks_by_name.insert(std::make_pair(name, task));
-                Task& inserted_task = (*p.first).second;
+        auto p              = m_tasks_by_name.insert(std::make_pair(name, task));
+        Task& inserted_task = (*p.first).second;
 
-                inserted_task.id = delayed_call(frequency * 1000,
-                                                &MainWorker::call_task,
-                                                this,
-                                                &inserted_task);
-            },
-            EXECUTE_AUTO);
+        inserted_task.id = delayed_call(frequency * 1000, &MainWorker::call_task, this, &inserted_task);
+        },
+        EXECUTE_AUTO);
 }
 
 void MainWorker::remove_task(const std::string& name)
 {
+    call(
+        [this, name]() {
+        auto it = m_tasks_by_name.find(name);
+        mxb_assert(it != m_tasks_by_name.end());
 
-    call([this, name]() {
-             auto it = m_tasks_by_name.find(name);
-             mxb_assert(it != m_tasks_by_name.end());
+        if (it != m_tasks_by_name.end())
+        {
+            MXB_AT_DEBUG(bool cancelled =) cancel_delayed_call(it->second.id);
+            mxb_assert(cancelled);
 
-             if (it != m_tasks_by_name.end())
-             {
-                 MXB_AT_DEBUG(bool cancelled = ) cancel_delayed_call(it->second.id);
-                 mxb_assert(cancelled);
-
-                 m_tasks_by_name.erase(it);
-             }
-         },
-         EXECUTE_AUTO);
+            m_tasks_by_name.erase(it);
+        }
+        },
+        EXECUTE_AUTO);
 }
 
 json_t* MainWorker::tasks_to_json(const char* zHost) const
@@ -117,33 +115,34 @@ json_t* MainWorker::tasks_to_json(const char* zHost) const
 
     // TODO: Make call() const.
     MainWorker* pThis = const_cast<MainWorker*>(this);
-    pThis->call([this, zHost, pResult]() {
-                    for (auto it = m_tasks_by_name.begin(); it != m_tasks_by_name.end(); ++it)
-                    {
-                        const Task& task = it->second;
+    pThis->call(
+        [this, zHost, pResult]() {
+        for (auto it = m_tasks_by_name.begin(); it != m_tasks_by_name.end(); ++it)
+        {
+            const Task& task = it->second;
 
-                        struct tm tm;
-                        char buf[40];
-                        localtime_r(&task.nextdue, &tm);
-                        asctime_r(&tm, buf);
-                        char* nl = strchr(buf, '\n');
-                        mxb_assert(nl);
-                        *nl = '\0';
+            struct tm tm;
+            char buf[40];
+            localtime_r(&task.nextdue, &tm);
+            asctime_r(&tm, buf);
+            char* nl = strchr(buf, '\n');
+            mxb_assert(nl);
+            *nl = '\0';
 
-                        json_t* pObject = json_object();
+            json_t* pObject = json_object();
 
-                        json_object_set_new(pObject, CN_ID, json_string(task.name.c_str()));
-                        json_object_set_new(pObject, CN_TYPE, json_string("tasks"));
+            json_object_set_new(pObject, CN_ID, json_string(task.name.c_str()));
+            json_object_set_new(pObject, CN_TYPE, json_string("tasks"));
 
-                        json_t* pAttrs = json_object();
-                        json_object_set_new(pAttrs, "frequency", json_integer(task.frequency));
-                        json_object_set_new(pAttrs, "next_execution", json_string(buf));
+            json_t* pAttrs = json_object();
+            json_object_set_new(pAttrs, "frequency", json_integer(task.frequency));
+            json_object_set_new(pAttrs, "next_execution", json_string(buf));
 
-                        json_object_set_new(pObject, CN_ATTRIBUTES, pAttrs);
-                        json_array_append_new(pResult, pObject);
-                    }
-                },
-                EXECUTE_AUTO);
+            json_object_set_new(pObject, CN_ATTRIBUTES, pAttrs);
+            json_array_append_new(pResult, pObject);
+        }
+        },
+        EXECUTE_AUTO);
 
     return pResult;
 }
@@ -241,7 +240,7 @@ bool MainWorker::call_task(Worker::Call::action_t action, MainWorker::Task* pTas
         {
             auto it = m_tasks_by_name.find(pTask->name);
 
-            if (it != m_tasks_by_name.end())    // Not found, if task function removes task.
+            if (it != m_tasks_by_name.end())  // Not found, if task function removes task.
             {
                 m_tasks_by_name.erase(it);
             }
@@ -279,10 +278,9 @@ bool MainWorker::balance_workers(BalancingApproach approach, int threshold)
 
     mxb::TimePoint now = epoll_tick_now();
 
-    if (approach == BALANCE_UNCONDITIONALLY
-        || now - m_last_rebalancing >= period)
+    if (approach == BALANCE_UNCONDITIONALLY || now - m_last_rebalancing >= period)
     {
-        rebalanced = RoutingWorker::balance_workers(threshold);
+        rebalanced         = RoutingWorker::balance_workers(threshold);
         m_last_rebalancing = now;
     }
 
@@ -312,21 +310,21 @@ void MainWorker::order_balancing_dc()
 void MainWorker::start_shutdown()
 {
     auto func = []() {
-            // Stop all monitors and listeners to prevent any state changes during shutdown and to prevent the
-            // creation of new sessions. Stop the REST API to prevent any conflicting changes from being
-            // executed while we're shutting down.
-            MonitorManager::stop_all_monitors();
-            mxs_admin_shutdown();
-            Listener::stop_all();
+        // Stop all monitors and listeners to prevent any state changes during shutdown and to prevent the
+        // creation of new sessions. Stop the REST API to prevent any conflicting changes from being
+        // executed while we're shutting down.
+        MonitorManager::stop_all_monitors();
+        mxs_admin_shutdown();
+        Listener::stop_all();
 
-            // The RoutingWorkers proceed with the shutdown on their own. Once all sessions have closed, they
-            // will exit the event loop.
-            mxs::RoutingWorker::start_shutdown();
+        // The RoutingWorkers proceed with the shutdown on their own. Once all sessions have closed, they
+        // will exit the event loop.
+        mxs::RoutingWorker::start_shutdown();
 
-            // Wait until RoutingWorkers have stopped before proceeding with MainWorker shudown
-            auto self = MainWorker::get();
-            self->delayed_call(100, &MainWorker::wait_for_shutdown, self);
-        };
+        // Wait until RoutingWorkers have stopped before proceeding with MainWorker shudown
+        auto self = MainWorker::get();
+        self->delayed_call(100, &MainWorker::wait_for_shutdown, self);
+    };
 
     MainWorker::get()->execute(func, EXECUTE_QUEUED);
 }
@@ -343,11 +341,10 @@ bool MainWorker::wait_for_shutdown(Call::action_t action)
 
     return true;
 }
-}
+}  // namespace maxscale
 
 extern "C"
 {
-
 void hktask_add(const char* zName, TASKFN func, void* pData, int frequency)
 {
     mxs::MainWorker::get()->add_task(zName, func, pData, frequency);

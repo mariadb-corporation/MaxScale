@@ -61,7 +61,7 @@ struct MXS_MONITOR_API
      * @param module Module name of the monitor
      * @return Monitor object
      */
-    maxscale::Monitor* (* createInstance)(const std::string& name, const std::string& module);
+    maxscale::Monitor* (*createInstance)(const std::string& name, const std::string& module);
 };
 
 /**
@@ -82,30 +82,33 @@ extern const char CN_SCRIPT_TIMEOUT[];
  * The monitor API version number. Any change to the monitor module API
  * must change these versions using the rules defined in modinfo.h
  */
-#define MXS_MONITOR_VERSION {5, 0, 0}
+#define MXS_MONITOR_VERSION \
+    {                       \
+        5, 0, 0             \
+    }
 
 /** Monitor events */
 enum mxs_monitor_event_t
 {
     UNDEFINED_EVENT   = 0,
-    MASTER_DOWN_EVENT = (1 << 0),   /**< master_down */
-    MASTER_UP_EVENT   = (1 << 1),   /**< master_up */
-    SLAVE_DOWN_EVENT  = (1 << 2),   /**< slave_down */
-    SLAVE_UP_EVENT    = (1 << 3),   /**< slave_up */
-    SERVER_DOWN_EVENT = (1 << 4),   /**< server_down */
-    SERVER_UP_EVENT   = (1 << 5),   /**< server_up */
-    SYNCED_DOWN_EVENT = (1 << 6),   /**< synced_down */
-    SYNCED_UP_EVENT   = (1 << 7),   /**< synced_up */
-    DONOR_DOWN_EVENT  = (1 << 8),   /**< donor_down */
-    DONOR_UP_EVENT    = (1 << 9),   /**< donor_up */
-    LOST_MASTER_EVENT = (1 << 10),  /**< lost_master */
-    LOST_SLAVE_EVENT  = (1 << 11),  /**< lost_slave */
-    LOST_SYNCED_EVENT = (1 << 12),  /**< lost_synced */
-    LOST_DONOR_EVENT  = (1 << 13),  /**< lost_donor */
-    NEW_MASTER_EVENT  = (1 << 14),  /**< new_master */
-    NEW_SLAVE_EVENT   = (1 << 15),  /**< new_slave */
-    NEW_SYNCED_EVENT  = (1 << 16),  /**< new_synced */
-    NEW_DONOR_EVENT   = (1 << 17),  /**< new_donor */
+    MASTER_DOWN_EVENT = (1 << 0),  /**< master_down */
+    MASTER_UP_EVENT   = (1 << 1),  /**< master_up */
+    SLAVE_DOWN_EVENT  = (1 << 2),  /**< slave_down */
+    SLAVE_UP_EVENT    = (1 << 3),  /**< slave_up */
+    SERVER_DOWN_EVENT = (1 << 4),  /**< server_down */
+    SERVER_UP_EVENT   = (1 << 5),  /**< server_up */
+    SYNCED_DOWN_EVENT = (1 << 6),  /**< synced_down */
+    SYNCED_UP_EVENT   = (1 << 7),  /**< synced_up */
+    DONOR_DOWN_EVENT  = (1 << 8),  /**< donor_down */
+    DONOR_UP_EVENT    = (1 << 9),  /**< donor_up */
+    LOST_MASTER_EVENT = (1 << 10), /**< lost_master */
+    LOST_SLAVE_EVENT  = (1 << 11), /**< lost_slave */
+    LOST_SYNCED_EVENT = (1 << 12), /**< lost_synced */
+    LOST_DONOR_EVENT  = (1 << 13), /**< lost_donor */
+    NEW_MASTER_EVENT  = (1 << 14), /**< new_master */
+    NEW_SLAVE_EVENT   = (1 << 15), /**< new_slave */
+    NEW_SYNCED_EVENT  = (1 << 16), /**< new_synced */
+    NEW_DONOR_EVENT   = (1 << 17), /**< new_donor */
 };
 
 namespace maxscale
@@ -120,16 +123,16 @@ public:
     class ConnectionSettings
     {
     public:
-        std::string username;           /**< Monitor username */
-        std::string password;           /**< Monitor password */
-        int         connect_timeout {1};/**< Connect timeout in seconds for mysql_real_connect */
-        int         write_timeout {1};  /**< Timeout in seconds for each attempt to write to the server.
+        std::string username;     /**< Monitor username */
+        std::string password;     /**< Monitor password */
+        int connect_timeout {1};  /**< Connect timeout in seconds for mysql_real_connect */
+        int write_timeout {1};    /**< Timeout in seconds for each attempt to write to the server.
                                          *   There are retries and the total effective timeout value is two
                                          *   times the option value. */
-        int read_timeout {1};           /**< Timeout in seconds to read from the server. There are retries
+        int read_timeout {1};     /**< Timeout in seconds to read from the server. There are retries
                                          *   and the total effective timeout value is three times the
                                          *   option value. */
-        int connect_attempts {1};       /**< How many times a connection is attempted */
+        int connect_attempts {1}; /**< How many times a connection is attempted */
     };
 
     /**
@@ -139,19 +142,19 @@ public:
     class SharedSettings
     {
     public:
-        ConnectionSettings conn_settings;       /**< Monitor-level connection settings */
-        DiskSpaceLimits    monitor_disk_limits; /**< Monitor-level disk space limits */
+        ConnectionSettings conn_settings;    /**< Monitor-level connection settings */
+        DiskSpaceLimits monitor_disk_limits; /**< Monitor-level disk space limits */
     };
 
     /* Return type of mon_ping_or_connect_to_db(). */
     enum class ConnectResult
     {
-        OLDCONN_OK,     /* Existing connection was ok and server replied to ping. */
-        NEWCONN_OK,     /* No existing connection or no ping reply. New connection created
+        OLDCONN_OK,   /* Existing connection was ok and server replied to ping. */
+        NEWCONN_OK,   /* No existing connection or no ping reply. New connection created
                          * successfully. */
-        REFUSED,        /* No existing connection or no ping reply. Server refused new connection. */
-        TIMEOUT,        /* No existing connection or no ping reply. Timeout on new connection. */
-        ACCESS_DENIED   /* Server refused new connection due to authentication failure */
+        REFUSED,      /* No existing connection or no ping reply. Server refused new connection. */
+        TIMEOUT,      /* No existing connection or no ping reply. Timeout on new connection. */
+        ACCESS_DENIED /* Server refused new connection due to authentication failure */
     };
 
     /** Status change requests */
@@ -182,9 +185,8 @@ public:
      *
      * @return Connection status.
      */
-    static ConnectResult
-    ping_or_connect_to_db(const ConnectionSettings& sett, SERVER& server, MYSQL** ppConn,
-                          std::string* pError);
+    static ConnectResult ping_or_connect_to_db(
+        const ConnectionSettings& sett, SERVER& server, MYSQL** ppConn, std::string* pError);
 
     MonitorServer(SERVER* server, const SharedSettings& shared);
 
@@ -272,24 +274,24 @@ public:
 
     bool is_database() const;
 
-    SERVER* server = nullptr;       /**< The server being monitored */
-    MYSQL*  con = nullptr;          /**< The MySQL connection */
-    int     mon_err_count = 0;
+    SERVER* server    = nullptr; /**< The server being monitored */
+    MYSQL* con        = nullptr; /**< The MySQL connection */
+    int mon_err_count = 0;
 
-    uint64_t mon_prev_status = -1;      /**< Status before starting the current monitor loop */
-    uint64_t pending_status = 0;        /**< Status during current monitor loop */
+    uint64_t mon_prev_status = -1; /**< Status before starting the current monitor loop */
+    uint64_t pending_status  = 0;  /**< Status during current monitor loop */
 
-    int64_t node_id = -1;           /**< Node id, server_id for M/S or local_index for Galera */
-    int64_t master_id = -1;         /**< Master server id of this node */
+    int64_t node_id   = -1; /**< Node id, server_id for M/S or local_index for Galera */
+    int64_t master_id = -1; /**< Master server id of this node */
 
     mxs_monitor_event_t last_event = SERVER_DOWN_EVENT; /**< The last event that occurred on this server */
-    int64_t             triggered_at = 0;               /**< Time when the last event was triggered */
+    int64_t triggered_at           = 0;                 /**< Time when the last event was triggered */
 
 private:
-    const SharedSettings& m_shared;     /**< Settings shared between all servers of the monitor */
+    const SharedSettings& m_shared; /**< Settings shared between all servers of the monitor */
 
-    std::atomic_int m_status_request{NO_CHANGE};        /**< Status change request from admin */
-    bool            m_ok_to_check_disk_space{true};     /**< Set to false if check fails */
+    std::atomic_int m_status_request {NO_CHANGE}; /**< Status change request from admin */
+    bool m_ok_to_check_disk_space {true};         /**< Set to false if check fails */
 
     mxb::TimePoint m_last_session_track_update;
 
@@ -466,8 +468,8 @@ public:
 
     json_t* monitored_server_json_attributes(const SERVER* srv) const;
 
-    const std::string m_name;           /**< Monitor instance name. */
-    const std::string m_module;         /**< Name of the monitor module */
+    const std::string m_name;   /**< Monitor instance name. */
+    const std::string m_module; /**< Name of the monitor module */
 
 protected:
     /**
@@ -587,10 +589,7 @@ protected:
      * @return The human-readable reason why the state change occurred or
      *         an empty string if no information is available
      */
-    virtual std::string annotate_state_change(mxs::MonitorServer* server)
-    {
-        return "";
-    }
+    virtual std::string annotate_state_change(mxs::MonitorServer* server) { return ""; }
 
     /**
      * Contains monitor base class settings. Since monitors are stopped before a setting change,
@@ -599,13 +598,13 @@ protected:
     class Settings
     {
     public:
-        int64_t interval {0};       /**< Monitor interval in milliseconds */
+        int64_t interval {0}; /**< Monitor interval in milliseconds */
 
-        std::string script;             /**< Script triggered by events */
-        int         script_timeout {0}; /**< Timeout in seconds for the monitor scripts */
-        uint64_t    events {0};         /**< Bitfield of events which trigger the script */
+        std::string script;     /**< Script triggered by events */
+        int script_timeout {0}; /**< Timeout in seconds for the monitor scripts */
+        uint64_t events {0};    /**< Bitfield of events which trigger the script */
 
-        time_t journal_max_age {0};     /**< Maximum age of journal file */
+        time_t journal_max_age {0}; /**< Maximum age of journal file */
 
         // How often should a disk space check be made at most. Negative values imply disabling.
         maxbase::Duration disk_space_check_interval {-1};
@@ -613,7 +612,7 @@ protected:
         MonitorServer::SharedSettings shared;
     };
 
-    const Settings&                          settings() const;
+    const Settings& settings() const;
     const MonitorServer::ConnectionSettings& conn_settings() const;
 
     /**< Number of monitor ticks ran. Derived classes should increment this whenever completing a tick. */
@@ -636,8 +635,8 @@ protected:
         MAINTENANCE,
         DRAIN,
     };
-    virtual bool can_be_disabled(const MonitorServer& server, DisableType type,
-                                 std::string* errmsg_out) const;
+    virtual bool can_be_disabled(
+        const MonitorServer& server, DisableType type, std::string* errmsg_out) const;
 
 private:
     /**
@@ -677,32 +676,32 @@ private:
      */
     std::string gen_serverlist(int status, CredentialsApproach approach = CredentialsApproach::EXCLUDE);
 
-    FILE*   open_data_file(Monitor* monitor, char* path);
-    int     get_data_file_path(char* path) const;
+    FILE* open_data_file(Monitor* monitor, char* path);
+    int get_data_file_path(char* path) const;
     json_t* parameters_to_json() const;
 
     // Waits until the status change request is processed
     void wait_for_status_change();
 
-    mxb::StopWatch   m_disk_space_checked;              /**< When was disk space checked the last time */
-    std::atomic_bool m_status_change_pending {false};   /**< Set when admin requests a status change. */
-    uint8_t          m_journal_hash[SHA_DIGEST_LENGTH]; /**< SHA1 hash of the latest written journal */
+    mxb::StopWatch m_disk_space_checked;              /**< When was disk space checked the last time */
+    std::atomic_bool m_status_change_pending {false}; /**< Set when admin requests a status change. */
+    uint8_t m_journal_hash[SHA_DIGEST_LENGTH];        /**< SHA1 hash of the latest written journal */
 
-    std::unique_ptr<ExternalCmd> m_scriptcmd;   /**< External command representing the monitor script */
+    std::unique_ptr<ExternalCmd> m_scriptcmd; /**< External command representing the monitor script */
 
-    ServerVector          m_servers;    /**< Monitored servers */
+    ServerVector m_servers;             /**< Monitored servers */
     mxs::ConfigParameters m_parameters; /**< Configuration parameters in text form */
-    Settings              m_settings;   /**< Base class settings */
+    Settings m_settings;                /**< Base class settings */
 };
 
 /**
  * An abstract class which helps implement a monitor based on a maxbase::Worker thread.
  */
-class MonitorWorker : public Monitor
-                    , protected maxbase::Worker
+class MonitorWorker : public Monitor,
+                      protected maxbase::Worker
 {
 public:
-    MonitorWorker(const MonitorWorker&) = delete;
+    MonitorWorker(const MonitorWorker&)            = delete;
     MonitorWorker& operator=(const MonitorWorker&) = delete;
 
     ~MonitorWorker() override = default;
@@ -844,12 +843,12 @@ protected:
 
 private:
     std::atomic<bool> m_thread_running; /**< Thread state. Only visible inside MonitorInstance. */
-    int32_t           m_shutdown;       /**< Non-zero if the monitor should shut down. */
-    bool              m_checked;        /**< Whether server access has been checked. */
-    mxb::Semaphore    m_semaphore;      /**< Semaphore for synchronizing with monitor thread. */
-    int64_t           m_loop_called;    /**< When was the loop called the last time. */
+    int32_t m_shutdown;                 /**< Non-zero if the monitor should shut down. */
+    bool m_checked;                     /**< Whether server access has been checked. */
+    mxb::Semaphore m_semaphore;         /**< Semaphore for synchronizing with monitor thread. */
+    int64_t m_loop_called;              /**< When was the loop called the last time. */
 
-    std::atomic_bool m_immediate_tick_requested {false};    /**< Should monitor tick immediately? */
+    std::atomic_bool m_immediate_tick_requested {false}; /**< Should monitor tick immediately? */
 
     bool pre_run() final;
     void post_run() final;
@@ -861,14 +860,13 @@ private:
 class MonitorWorkerSimple : public MonitorWorker
 {
 public:
-    MonitorWorkerSimple(const MonitorWorkerSimple&) = delete;
+    MonitorWorkerSimple(const MonitorWorkerSimple&)            = delete;
     MonitorWorkerSimple& operator=(const MonitorWorkerSimple&) = delete;
 
 protected:
     MonitorWorkerSimple(const std::string& name, const std::string& module)
         : MonitorWorker(name, module)
-    {
-    }
+    {}
 
     /**
      * @brief Update server information
@@ -892,7 +890,7 @@ protected:
      */
     virtual void post_tick();
 
-    MonitorServer* m_master {nullptr};      /**< Master server */
+    MonitorServer* m_master {nullptr}; /**< Master server */
 
 private:
     /**
@@ -933,8 +931,8 @@ template<class MonitorInstance>
 class MonitorApi
 {
 public:
-    MonitorApi() = delete;
-    MonitorApi(const MonitorApi&) = delete;
+    MonitorApi()                             = delete;
+    MonitorApi(const MonitorApi&)            = delete;
     MonitorApi& operator=(const MonitorApi&) = delete;
 
     static Monitor* createInstance(const std::string& name, const std::string& module)
@@ -948,11 +946,10 @@ public:
 };
 
 template<class MonitorInstance>
-MXS_MONITOR_API MonitorApi<MonitorInstance>::s_api =
-{
+MXS_MONITOR_API MonitorApi<MonitorInstance>::s_api = {
     &MonitorApi<MonitorInstance>::createInstance,
 };
-}
+}  // namespace maxscale
 
 /**
  * This helper class exposes some monitor private functions. Should be used with test code.

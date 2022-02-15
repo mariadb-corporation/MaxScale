@@ -42,33 +42,35 @@ enum cache_rule_op_t
     CACHE_OP_UNLIKE
 };
 
-
 struct CACHE_RULE
 {
-    cache_rule_attribute_t attribute;   // What attribute is evalued.
-    cache_rule_op_t        op;          // What operator is used.
-    char*                  value;       // The value from the rule file.
+    cache_rule_attribute_t attribute;  // What attribute is evalued.
+    cache_rule_op_t op;                // What operator is used.
+    char* value;                       // The value from the rule file.
+
     struct
     {
         char* database;
         char* table;
         char* column;
-    } simple;                           // Details, only for CACHE_OP_[EQ|NEQ]
+    } simple;  // Details, only for CACHE_OP_[EQ|NEQ]
+
     struct
     {
-        pcre2_code*        code;
+        pcre2_code* code;
         pcre2_match_data** datas;
-    }           regexp;                 // Regexp data, only for CACHE_OP_[LIKE|UNLIKE].
-    uint32_t    debug;                  // The debug level.
+    } regexp;  // Regexp data, only for CACHE_OP_[LIKE|UNLIKE].
+
+    uint32_t debug;  // The debug level.
     CACHE_RULE* next;
 };
 
 struct CACHE_RULES
 {
-    json_t*     root;           // The JSON root object.
-    uint32_t    debug;          // The debug level.
-    CACHE_RULE* store_rules;    // The rules for when to store data to the cache.
-    CACHE_RULE* use_rules;      // The rules for when to use data from the cache.
+    json_t* root;             // The JSON root object.
+    uint32_t debug;           // The debug level.
+    CACHE_RULE* store_rules;  // The rules for when to store data to the cache.
+    CACHE_RULE* use_rules;    // The rules for when to use data from the cache.
 };
 
 /**
@@ -128,10 +130,7 @@ void cache_rules_free_array(CACHE_RULES** ppRules, int32_t nRules);
  *
  * @return bool True, if the rules could be loaded, false otherwise.
  */
-bool cache_rules_load(const char* zPath,
-                      uint32_t debug,
-                      CACHE_RULES*** pppRules,
-                      int32_t* pnRules);
+bool cache_rules_load(const char* zPath, uint32_t debug, CACHE_RULES*** pppRules, int32_t* pnRules);
 
 /**
  * Parses the caching rules from a string and returns corresponding object.
@@ -146,10 +145,7 @@ bool cache_rules_load(const char* zPath,
  *
  * @return bool True, if the rules could be parsed, false otherwise.
  */
-bool cache_rules_parse(const char* json,
-                       uint32_t debug,
-                       CACHE_RULES*** pppRules,
-                       int32_t* pnRules);
+bool cache_rules_parse(const char* json, uint32_t debug, CACHE_RULES*** pppRules, int32_t* pnRules);
 
 /**
  * Prints the rules.
@@ -184,14 +180,14 @@ bool cache_rules_should_use(CACHE_RULES* rules, int thread_id, const MXS_SESSION
 
 MXS_END_DECLS
 
-#if defined (__cplusplus)
+#if defined(__cplusplus)
 
 class CacheRules
 {
 public:
     typedef std::shared_ptr<CacheRules> SCacheRules;
 
-    CacheRules(const CacheRules&) = delete;
+    CacheRules(const CacheRules&)            = delete;
     CacheRules& operator=(const CacheRules&) = delete;
 
     ~CacheRules();
@@ -226,6 +222,7 @@ public:
      * @return True, if the rules could be loaded, false otherwise.
      */
     static bool load(const char* zPath, uint32_t debug, std::vector<SCacheRules>* pRules);
+
     static bool load(const std::string& path, uint32_t debug, std::vector<SCacheRules>* pRules)
     {
         return load(path.c_str(), debug, pRules);
@@ -263,9 +260,7 @@ public:
 private:
     CacheRules(CACHE_RULES* pRules);
 
-    static bool create_cache_rules(CACHE_RULES** ppRules,
-                                   int32_t nRules,
-                                   std::vector<SCacheRules>* pRules);
+    static bool create_cache_rules(CACHE_RULES** ppRules, int32_t nRules, std::vector<SCacheRules>* pRules);
 
 private:
     CACHE_RULES* m_pRules;

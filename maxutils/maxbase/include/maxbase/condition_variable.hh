@@ -28,9 +28,9 @@ class ConditionVariable
 {
 public:
     ConditionVariable& operator=(const ConditionVariable&) = delete;
-    ConditionVariable& operator=(ConditionVariable&&) = delete;
-    ConditionVariable(const ConditionVariable&) = delete;
-    ConditionVariable(ConditionVariable&&) = delete;
+    ConditionVariable& operator=(ConditionVariable&&)      = delete;
+    ConditionVariable(const ConditionVariable&)            = delete;
+    ConditionVariable(ConditionVariable&&)                 = delete;
 
     ConditionVariable()
     {
@@ -49,7 +49,7 @@ public:
     {
         timespec ts;
         clock_gettime(CLOCK_MONOTONIC, &ts);
-        auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(d);
+        auto ns       = std::chrono::duration_cast<std::chrono::nanoseconds>(d);
         long total_ns = ns.count() + ts.tv_nsec;
         ts.tv_sec += total_ns / 1000000000;
         ts.tv_nsec = total_ns % 1000000000;
@@ -59,13 +59,10 @@ public:
         return rc != 0 && errno == ETIMEDOUT ? std::cv_status::timeout : std::cv_status::no_timeout;
     }
 
-    void notify_one()
-    {
-        pthread_cond_signal(&m_cond);
-    }
+    void notify_one() { pthread_cond_signal(&m_cond); }
 
 private:
     pthread_condattr_t m_attr;
-    pthread_cond_t     m_cond;
+    pthread_cond_t m_cond;
 };
-}
+}  // namespace maxbase

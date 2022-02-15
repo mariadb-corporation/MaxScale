@@ -26,7 +26,7 @@ int main()
     };
 
     Test tests[] = {
-            {"localhost", "127.0.0.1", "127.0.0.1"},
+        {"localhost", "127.0.0.1", "127.0.0.1"},
     };
     /*
      * Here are some additional test case examples. They may not work
@@ -46,8 +46,8 @@ int main()
     for (auto& item : tests)
     {
         string error;
-        auto& host = item.host;
-        auto& ip = item.ip;
+        auto& host            = item.host;
+        auto& ip              = item.ip;
         auto& expected_result = item.result;
         for (auto& subitem : {host, ip})
         {
@@ -68,7 +68,9 @@ int main()
                     sep = ", ";
                 }
                 printf("Lookup of '%s' gave incorrect results. Expected '%s', got '%s'.\n",
-                       subitem.c_str(), expected_result.c_str(), results_conc.c_str());
+                    subitem.c_str(),
+                    expected_result.c_str(),
+                    results_conc.c_str());
                 ok = false;
             }
         }
@@ -76,4 +78,3 @@ int main()
 
     return ok ? EXIT_SUCCESS : EXIT_FAILURE;
 }
-

@@ -24,9 +24,9 @@
  */
 mxs::Buffer GSSAPIBackendAuthenticator::generate_auth_token_packet() const
 {
-    const auto& auth_token = m_shared_data.client_data->auth_token;     // Should contain the client token.
-    auto auth_token_len = auth_token.size();
-    size_t buflen = MYSQL_HEADER_LEN + auth_token_len;
+    const auto& auth_token = m_shared_data.client_data->auth_token;  // Should contain the client token.
+    auto auth_token_len    = auth_token.size();
+    size_t buflen          = MYSQL_HEADER_LEN + auth_token_len;
     mxs::Buffer rval(buflen);
     auto* ptr = rval.data();
     mariadb::set_byte3(ptr, auth_token_len);
@@ -41,59 +41,64 @@ mxs::Buffer GSSAPIBackendAuthenticator::generate_auth_token_packet() const
 
 GSSAPIBackendAuthenticator::GSSAPIBackendAuthenticator(const mariadb::BackendAuthData& shared_data)
     : m_shared_data(shared_data)
-{
-}
+{}
 
-mariadb::BackendAuthenticator::AuthRes
-GSSAPIBackendAuthenticator::exchange(const mxs::Buffer& input, mxs::Buffer* output)
+mariadb::BackendAuthenticator::AuthRes GSSAPIBackendAuthenticator::exchange(
+    const mxs::Buffer& input, mxs::Buffer* output)
 {
     const char plugin_name[] = "auth_gssapi_client";
-    const char* srv_name = m_shared_data.servername;
+    const char* srv_name     = m_shared_data.servername;
     // Smallest buffer that is parsed, header + principal name (0-term).
     const int min_readable_buflen = MYSQL_HEADER_LEN + 2;
-    const int buflen = input.length();
+    const int buflen              = input.length();
     if (buflen <= min_readable_buflen)
     {
         MXB_ERROR("Received packet of size %i from '%s' during authentication. Expected packet size is "
-                  "at least %i.", buflen, srv_name, min_readable_buflen);
+                  "at least %i.",
+            buflen,
+            srv_name,
+            min_readable_buflen);
         return AuthRes::FAIL;
     }
 
     m_sequence = MYSQL_GET_PACKET_NO(GWBUF_DATA(input.get())) + 1;
-    auto rval = AuthRes::FAIL;
+    auto rval  = AuthRes::FAIL;
 
     switch (m_state)
     {
     case State::EXPECT_AUTHSWITCH:
+    {
+        // Server should have sent the AuthSwitchRequest.
+        auto parse_res = mariadb::parse_auth_switch_request(input);
+        if (parse_res.success)
         {
-            // Server should have sent the AuthSwitchRequest.
-            auto parse_res = mariadb::parse_auth_switch_request(input);
-            if (parse_res.success)
+            if (parse_res.plugin_name != plugin_name)
             {
-                if (parse_res.plugin_name != plugin_name)
-                {
-                    MXB_ERROR(WRONG_PLUGIN_REQ, m_shared_data.servername, parse_res.plugin_name.c_str(),
-                              m_shared_data.client_data->user_and_host().c_str(), plugin_name);
-                }
-                else if (!parse_res.plugin_data.empty())
-                {
-                    // Principal name sent by server is in parse result, but it's not required.
-                    *output = generate_auth_token_packet();
-                    m_state = State::TOKEN_SENT;
-                    rval = AuthRes::SUCCESS;
-                }
-                else
-                {
-                    MXB_ERROR("Backend server did not send any auth plugin data.");
-                }
+                MXB_ERROR(WRONG_PLUGIN_REQ,
+                    m_shared_data.servername,
+                    parse_res.plugin_name.c_str(),
+                    m_shared_data.client_data->user_and_host().c_str(),
+                    plugin_name);
+            }
+            else if (!parse_res.plugin_data.empty())
+            {
+                // Principal name sent by server is in parse result, but it's not required.
+                *output = generate_auth_token_packet();
+                m_state = State::TOKEN_SENT;
+                rval    = AuthRes::SUCCESS;
             }
             else
             {
-                // No AuthSwitchRequest, error.
-                MXB_ERROR(MALFORMED_AUTH_SWITCH, m_shared_data.servername);
+                MXB_ERROR("Backend server did not send any auth plugin data.");
             }
         }
-        break;
+        else
+        {
+            // No AuthSwitchRequest, error.
+            MXB_ERROR(MALFORMED_AUTH_SWITCH, m_shared_data.servername);
+        }
+    }
+    break;
 
     case State::TOKEN_SENT:
         // Server is sending more packets than expected. Error.

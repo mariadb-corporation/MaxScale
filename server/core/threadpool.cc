@@ -22,7 +22,7 @@ struct ThisUnit
 
 ThisUnit this_unit;
 
-}
+}  // namespace
 
 namespace maxscale
 {
@@ -32,4 +32,4 @@ mxb::ThreadPool& thread_pool()
     return this_unit.thread_pool;
 }
 
-}
+}  // namespace maxscale

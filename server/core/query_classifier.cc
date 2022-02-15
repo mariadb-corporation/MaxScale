@@ -37,7 +37,7 @@
 // #define QC_TRACE_ENABLED
 #undef QC_TRACE_ENABLED
 
-#if defined (QC_TRACE_ENABLED)
+#if defined(QC_TRACE_ENABLED)
 #define QC_TRACE() MXS_NOTICE(__func__)
 #else
 #define QC_TRACE()
@@ -49,23 +49,23 @@ namespace
 struct type_name_info
 {
     const char* name;
-    size_t      name_len;
+    size_t name_len;
 };
 
-const char DEFAULT_QC_NAME[] = "qc_sqlite";
-const char QC_TRX_PARSE_USING[] = "QC_TRX_PARSE_USING";
-const char CN_ARGUMENTS[] = "arguments";
-const char CN_CACHE[] = "cache";
-const char CN_CACHE_SIZE[] = "cache_size";
-const char CN_CLASSIFICATION[] = "classification";
-const char CN_CLASSIFY[] = "classify";
-const char CN_FIELDS[] = "fields";
-const char CN_FUNCTIONS[] = "functions";
+const char DEFAULT_QC_NAME[]     = "qc_sqlite";
+const char QC_TRX_PARSE_USING[]  = "QC_TRX_PARSE_USING";
+const char CN_ARGUMENTS[]        = "arguments";
+const char CN_CACHE[]            = "cache";
+const char CN_CACHE_SIZE[]       = "cache_size";
+const char CN_CLASSIFICATION[]   = "classification";
+const char CN_CLASSIFY[]         = "classify";
+const char CN_FIELDS[]           = "fields";
+const char CN_FUNCTIONS[]        = "functions";
 const char CN_HAS_WHERE_CLAUSE[] = "has_where_clause";
-const char CN_HITS[] = "hits";
-const char CN_OPERATION[] = "operation";
-const char CN_PARSE_RESULT[] = "parse_result";
-const char CN_TYPE_MASK[] = "type_mask";
+const char CN_HITS[]             = "hits";
+const char CN_OPERATION[]        = "operation";
+const char CN_PARSE_RESULT[]     = "parse_result";
+const char CN_TYPE_MASK[]        = "type_mask";
 
 class ThisUnit
 {
@@ -75,15 +75,14 @@ public:
         , qc_trx_parse_using(QC_TRX_PARSE_USING_PARSER)
         , qc_sql_mode(QC_SQL_MODE_DEFAULT)
         , m_cache_max_size(std::numeric_limits<int64_t>::max())
-    {
-    }
+    {}
 
-    ThisUnit(const ThisUnit&) = delete;
+    ThisUnit(const ThisUnit&)            = delete;
     ThisUnit& operator=(const ThisUnit&) = delete;
 
-    QUERY_CLASSIFIER*    classifier;
+    QUERY_CLASSIFIER* classifier;
     qc_trx_parse_using_t qc_trx_parse_using;
-    qc_sql_mode_t        qc_sql_mode;
+    qc_sql_mode_t qc_sql_mode;
 
     int64_t cache_max_size() const
     {
@@ -109,15 +108,9 @@ class QCInfoCache;
 static thread_local struct
 {
     QCInfoCache* pInfo_cache;
-    uint32_t     options;
-    bool         use_cache;
-} this_thread =
-{
-    nullptr,
-    0,
-    true
-};
-
+    uint32_t options;
+    bool use_cache;
+} this_thread = {nullptr, 0, true};
 
 /**
  * @class QCInfoCache
@@ -128,7 +121,7 @@ static thread_local struct
 class QCInfoCache
 {
 public:
-    QCInfoCache(const QCInfoCache&) = delete;
+    QCInfoCache(const QCInfoCache&)            = delete;
     QCInfoCache& operator=(const QCInfoCache&) = delete;
 
     QCInfoCache()
@@ -164,8 +157,7 @@ public:
         {
             Entry& entry = i->second;
 
-            if ((entry.sql_mode == this_unit.qc_sql_mode)
-                && (entry.options == this_thread.options))
+            if ((entry.sql_mode == this_unit.qc_sql_mode) && (entry.options == this_thread.options))
             {
                 mxb_assert(this_unit.classifier);
                 this_unit.classifier->qc_info_dup(entry.pInfo);
@@ -201,7 +193,7 @@ public:
         constexpr int64_t max_entry_size = 0xffffff - 5;
 
         int64_t cache_max_size = this_unit.cache_max_size() / mxs::Config::get().n_threads;
-        int64_t size = canonical_stmt.size();
+        int64_t size           = canonical_stmt.size();
 
         if (size < max_entry_size && size <= cache_max_size)
         {
@@ -224,17 +216,14 @@ public:
         }
     }
 
-    void get_stats(QC_CACHE_STATS* pStats)
-    {
-        *pStats = m_stats;
-    }
+    void get_stats(QC_CACHE_STATS* pStats) { *pStats = m_stats; }
 
     void get_state(std::map<std::string, QC_CACHE_ENTRY>& state) const
     {
         for (const auto& info : m_infos)
         {
             const std::string& stmt = info.first;
-            const Entry& entry = info.second;
+            const Entry& entry      = info.second;
 
             auto it = state.find(stmt);
 
@@ -242,7 +231,7 @@ public:
             {
                 QC_CACHE_ENTRY e {};
 
-                e.hits = entry.hits;
+                e.hits   = entry.hits;
                 e.result = this_unit.classifier->qc_get_result_from_info(entry.pInfo);
 
                 state.insert(std::make_pair(stmt, e));
@@ -252,7 +241,7 @@ public:
                 QC_CACHE_ENTRY& e = it->second;
 
                 e.hits += entry.hits;
-#if defined (SS_DEBUG)
+#if defined(SS_DEBUG)
                 QC_STMT_RESULT result = this_unit.classifier->qc_get_result_from_info(entry.pInfo);
 
                 mxb_assert(e.result.status == result.status);
@@ -271,13 +260,12 @@ private:
             , sql_mode(sql_mode)
             , options(options)
             , hits(0)
-        {
-        }
+        {}
 
         QC_STMT_INFO* pInfo;
         qc_sql_mode_t sql_mode;
-        uint32_t      options;
-        int64_t       hits;
+        uint32_t options;
+        int64_t hits;
     };
 
     typedef std::unordered_map<std::string, Entry> InfosByStmt;
@@ -339,17 +327,17 @@ private:
         {
             freed_space += i->first.size();
 
-            MXB_AT_DEBUG(bool erased = ) erase(i->first);
+            MXB_AT_DEBUG(bool erased =) erase(i->first);
             mxb_assert(erased);
         }
 
         return freed_space;
     }
 
-    InfosByStmt        m_infos;
-    QC_CACHE_STATS     m_stats;
+    InfosByStmt m_infos;
+    QC_CACHE_STATS m_stats;
     std::random_device m_rdev;
-    std::mt19937       m_reng;
+    std::mt19937 m_reng;
 };
 
 bool use_cached_result()
@@ -369,7 +357,6 @@ void info_object_close(void* pData)
     this_unit.classifier->qc_info_close(static_cast<QC_STMT_INFO*>(pData));
 }
 
-
 /**
  * @class QCInfoCacheScope
  *
@@ -385,7 +372,7 @@ void info_object_close(void* pData)
 class QCInfoCacheScope
 {
 public:
-    QCInfoCacheScope(const QCInfoCacheScope&) = delete;
+    QCInfoCacheScope(const QCInfoCacheScope&)            = delete;
     QCInfoCacheScope& operator=(const QCInfoCacheScope&) = delete;
 
     QCInfoCacheScope(GWBUF* pStmt)
@@ -407,7 +394,7 @@ public:
             if (pInfo)
             {
                 gwbuf_add_buffer_object(m_pStmt, GWBUF_PARSING_INFO, pInfo, info_object_close);
-                m_canonical.clear();    // Signals that nothing needs to be added in the destructor.
+                m_canonical.clear();  // Signals that nothing needs to be added in the destructor.
             }
         }
     }
@@ -425,7 +412,7 @@ public:
     }
 
 private:
-    GWBUF*      m_pStmt;
+    GWBUF* m_pStmt;
     std::string m_canonical;
 
     bool store_in_cache() const
@@ -434,13 +421,12 @@ private:
         return !m_canonical.empty() && (qc_get_type_mask(m_pStmt) & is_autocommit) == 0;
     }
 };
-}
-
+}  // namespace
 
 bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
-              qc_sql_mode_t sql_mode,
-              const char* plugin_name,
-              const char* plugin_args)
+    qc_sql_mode_t sql_mode,
+    const char* plugin_name,
+    const char* plugin_args)
 {
     QC_TRACE();
     mxb_assert(!this_unit.classifier);
@@ -451,7 +437,7 @@ bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
         plugin_name = DEFAULT_QC_NAME;
     }
 
-    int32_t rv = QC_RESULT_ERROR;
+    int32_t rv           = QC_RESULT_ERROR;
     this_unit.classifier = qc_load(plugin_name);
 
     if (this_unit.classifier)
@@ -469,7 +455,8 @@ bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
             {
                 int64_t size_per_thr = cache_max_size / mxs::Config::get().n_threads;
                 MXS_NOTICE("Query classification results are cached and reused. "
-                           "Memory used per thread: %s", mxb::pretty_size(size_per_thr).c_str());
+                           "Memory used per thread: %s",
+                    mxb::pretty_size(size_per_thr).c_str());
             }
             else
             {
@@ -488,9 +475,9 @@ bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
 }
 
 bool qc_init(const QC_CACHE_PROPERTIES* cache_properties,
-             qc_sql_mode_t sql_mode,
-             const char* plugin_name,
-             const char* plugin_args)
+    qc_sql_mode_t sql_mode,
+    const char* plugin_name,
+    const char* plugin_args)
 {
     QC_TRACE();
 
@@ -543,7 +530,7 @@ bool qc_process_init(uint32_t kind)
         {
             MXS_NOTICE("QC_TRX_PARSE_USING set, but the value %s is not known. "
                        "Parsing using QC.",
-                       parse_using);
+                parse_using);
         }
     }
 
@@ -601,8 +588,8 @@ bool qc_thread_init(uint32_t kind)
     if (kind & QC_INIT_SELF)
     {
         mxb_assert(!this_thread.pInfo_cache);
-        this_thread.pInfo_cache = new(std::nothrow) QCInfoCache;
-        rc = true;
+        this_thread.pInfo_cache = new (std::nothrow) QCInfoCache;
+        rc                      = true;
     }
     else
     {
@@ -656,7 +643,7 @@ qc_parse_result_t qc_parse(GWBUF* query, uint32_t collect)
     QCInfoCacheScope scope(query);
     this_unit.classifier->qc_parse(query, collect, &result);
 
-    return (qc_parse_result_t)result;
+    return (qc_parse_result_t) result;
 }
 
 uint32_t qc_get_type_mask(GWBUF* query)
@@ -682,7 +669,7 @@ qc_query_op_t qc_get_operation(GWBUF* query)
     QCInfoCacheScope scope(query);
     this_unit.classifier->qc_get_operation(query, &op);
 
-    return (qc_query_op_t)op;
+    return (qc_query_op_t) op;
 }
 
 char* qc_get_created_table_name(GWBUF* query)
@@ -935,219 +922,217 @@ struct type_name_info type_to_type_name_info(qc_query_type_t type)
     switch (type)
     {
     case QUERY_TYPE_UNKNOWN:
-        {
-            static const char name[] = "QUERY_TYPE_UNKNOWN";
-            info.name = name;
-            info.name_len = sizeof(name) - 1;
-        }
-        break;
+    {
+        static const char name[] = "QUERY_TYPE_UNKNOWN";
+        info.name                = name;
+        info.name_len            = sizeof(name) - 1;
+    }
+    break;
 
     case QUERY_TYPE_LOCAL_READ:
-        {
-            static const char name[] = "QUERY_TYPE_LOCAL_READ";
-            info.name = name;
-            info.name_len = sizeof(name) - 1;
-        }
-        break;
+    {
+        static const char name[] = "QUERY_TYPE_LOCAL_READ";
+        info.name                = name;
+        info.name_len            = sizeof(name) - 1;
+    }
+    break;
 
     case QUERY_TYPE_READ:
-        {
-            static const char name[] = "QUERY_TYPE_READ";
-            info.name = name;
-            info.name_len = sizeof(name) - 1;
-        }
-        break;
+    {
+        static const char name[] = "QUERY_TYPE_READ";
+        info.name                = name;
+        info.name_len            = sizeof(name) - 1;
+    }
+    break;
 
     case QUERY_TYPE_WRITE:
-        {
-            static const char name[] = "QUERY_TYPE_WRITE";
-            info.name = name;
-            info.name_len = sizeof(name) - 1;
-        }
-        break;
+    {
+        static const char name[] = "QUERY_TYPE_WRITE";
+        info.name                = name;
+        info.name_len            = sizeof(name) - 1;
+    }
+    break;
 
     case QUERY_TYPE_MASTER_READ:
-        {
-            static const char name[] = "QUERY_TYPE_MASTER_READ";
-            info.name = name;
-            info.name_len = sizeof(name) - 1;
-        }
-        break;
+    {
+        static const char name[] = "QUERY_TYPE_MASTER_READ";
+        info.name                = name;
+        info.name_len            = sizeof(name) - 1;
+    }
+    break;
 
     case QUERY_TYPE_SESSION_WRITE:
-        {
-            static const char name[] = "QUERY_TYPE_SESSION_WRITE";
-            info.name = name;
-            info.name_len = sizeof(name) - 1;
-        }
-        break;
+    {
+        static const char name[] = "QUERY_TYPE_SESSION_WRITE";
+        info.name                = name;
+        info.name_len            = sizeof(name) - 1;
+    }
+    break;
 
     case QUERY_TYPE_USERVAR_WRITE:
-        {
-            static const char name[] = "QUERY_TYPE_USERVAR_WRITE";
-            info.name = name;
-            info.name_len = sizeof(name) - 1;
-        }
-        break;
+    {
+        static const char name[] = "QUERY_TYPE_USERVAR_WRITE";
+        info.name                = name;
+        info.name_len            = sizeof(name) - 1;
+    }
+    break;
 
     case QUERY_TYPE_USERVAR_READ:
-        {
-            static const char name[] = "QUERY_TYPE_USERVAR_READ";
-            info.name = name;
-            info.name_len = sizeof(name) - 1;
-        }
-        break;
+    {
+        static const char name[] = "QUERY_TYPE_USERVAR_READ";
+        info.name                = name;
+        info.name_len            = sizeof(name) - 1;
+    }
+    break;
 
     case QUERY_TYPE_SYSVAR_READ:
-        {
-            static const char name[] = "QUERY_TYPE_SYSVAR_READ";
-            info.name = name;
-            info.name_len = sizeof(name) - 1;
-        }
-        break;
+    {
+        static const char name[] = "QUERY_TYPE_SYSVAR_READ";
+        info.name                = name;
+        info.name_len            = sizeof(name) - 1;
+    }
+    break;
 
     /** Not implemented yet */
     // case QUERY_TYPE_SYSVAR_WRITE:
     case QUERY_TYPE_GSYSVAR_READ:
-        {
-            static const char name[] = "QUERY_TYPE_GSYSVAR_READ";
-            info.name = name;
-            info.name_len = sizeof(name) - 1;
-        }
-        break;
+    {
+        static const char name[] = "QUERY_TYPE_GSYSVAR_READ";
+        info.name                = name;
+        info.name_len            = sizeof(name) - 1;
+    }
+    break;
 
     case QUERY_TYPE_GSYSVAR_WRITE:
-        {
-            static const char name[] = "QUERY_TYPE_GSYSVAR_WRITE";
-            info.name = name;
-            info.name_len = sizeof(name) - 1;
-        }
-        break;
+    {
+        static const char name[] = "QUERY_TYPE_GSYSVAR_WRITE";
+        info.name                = name;
+        info.name_len            = sizeof(name) - 1;
+    }
+    break;
 
     case QUERY_TYPE_BEGIN_TRX:
-        {
-            static const char name[] = "QUERY_TYPE_BEGIN_TRX";
-            info.name = name;
-            info.name_len = sizeof(name) - 1;
-        }
-        break;
+    {
+        static const char name[] = "QUERY_TYPE_BEGIN_TRX";
+        info.name                = name;
+        info.name_len            = sizeof(name) - 1;
+    }
+    break;
 
     case QUERY_TYPE_ENABLE_AUTOCOMMIT:
-        {
-            static const char name[] = "QUERY_TYPE_ENABLE_AUTOCOMMIT";
-            info.name = name;
-            info.name_len = sizeof(name) - 1;
-        }
-        break;
+    {
+        static const char name[] = "QUERY_TYPE_ENABLE_AUTOCOMMIT";
+        info.name                = name;
+        info.name_len            = sizeof(name) - 1;
+    }
+    break;
 
     case QUERY_TYPE_DISABLE_AUTOCOMMIT:
-        {
-            static const char name[] = "QUERY_TYPE_DISABLE_AUTOCOMMIT";
-            info.name = name;
-            info.name_len = sizeof(name) - 1;
-        }
-        break;
+    {
+        static const char name[] = "QUERY_TYPE_DISABLE_AUTOCOMMIT";
+        info.name                = name;
+        info.name_len            = sizeof(name) - 1;
+    }
+    break;
 
     case QUERY_TYPE_ROLLBACK:
-        {
-            static const char name[] = "QUERY_TYPE_ROLLBACK";
-            info.name = name;
-            info.name_len = sizeof(name) - 1;
-        }
-        break;
+    {
+        static const char name[] = "QUERY_TYPE_ROLLBACK";
+        info.name                = name;
+        info.name_len            = sizeof(name) - 1;
+    }
+    break;
 
     case QUERY_TYPE_COMMIT:
-        {
-            static const char name[] = "QUERY_TYPE_COMMIT";
-            info.name = name;
-            info.name_len = sizeof(name) - 1;
-        }
-        break;
+    {
+        static const char name[] = "QUERY_TYPE_COMMIT";
+        info.name                = name;
+        info.name_len            = sizeof(name) - 1;
+    }
+    break;
 
     case QUERY_TYPE_PREPARE_NAMED_STMT:
-        {
-            static const char name[] = "QUERY_TYPE_PREPARE_NAMED_STMT";
-            info.name = name;
-            info.name_len = sizeof(name) - 1;
-        }
-        break;
+    {
+        static const char name[] = "QUERY_TYPE_PREPARE_NAMED_STMT";
+        info.name                = name;
+        info.name_len            = sizeof(name) - 1;
+    }
+    break;
 
     case QUERY_TYPE_PREPARE_STMT:
-        {
-            static const char name[] = "QUERY_TYPE_PREPARE_STMT";
-            info.name = name;
-            info.name_len = sizeof(name) - 1;
-        }
-        break;
+    {
+        static const char name[] = "QUERY_TYPE_PREPARE_STMT";
+        info.name                = name;
+        info.name_len            = sizeof(name) - 1;
+    }
+    break;
 
     case QUERY_TYPE_EXEC_STMT:
-        {
-            static const char name[] = "QUERY_TYPE_EXEC_STMT";
-            info.name = name;
-            info.name_len = sizeof(name) - 1;
-        }
-        break;
+    {
+        static const char name[] = "QUERY_TYPE_EXEC_STMT";
+        info.name                = name;
+        info.name_len            = sizeof(name) - 1;
+    }
+    break;
 
     case QUERY_TYPE_CREATE_TMP_TABLE:
-        {
-            static const char name[] = "QUERY_TYPE_CREATE_TMP_TABLE";
-            info.name = name;
-            info.name_len = sizeof(name) - 1;
-        }
-        break;
+    {
+        static const char name[] = "QUERY_TYPE_CREATE_TMP_TABLE";
+        info.name                = name;
+        info.name_len            = sizeof(name) - 1;
+    }
+    break;
 
     case QUERY_TYPE_READ_TMP_TABLE:
-        {
-            static const char name[] = "QUERY_TYPE_READ_TMP_TABLE";
-            info.name = name;
-            info.name_len = sizeof(name) - 1;
-        }
-        break;
+    {
+        static const char name[] = "QUERY_TYPE_READ_TMP_TABLE";
+        info.name                = name;
+        info.name_len            = sizeof(name) - 1;
+    }
+    break;
 
     case QUERY_TYPE_SHOW_DATABASES:
-        {
-            static const char name[] = "QUERY_TYPE_SHOW_DATABASES";
-            info.name = name;
-            info.name_len = sizeof(name) - 1;
-        }
-        break;
+    {
+        static const char name[] = "QUERY_TYPE_SHOW_DATABASES";
+        info.name                = name;
+        info.name_len            = sizeof(name) - 1;
+    }
+    break;
 
     case QUERY_TYPE_SHOW_TABLES:
-        {
-            static const char name[] = "QUERY_TYPE_SHOW_TABLES";
-            info.name = name;
-            info.name_len = sizeof(name) - 1;
-        }
-        break;
+    {
+        static const char name[] = "QUERY_TYPE_SHOW_TABLES";
+        info.name                = name;
+        info.name_len            = sizeof(name) - 1;
+    }
+    break;
 
     case QUERY_TYPE_DEALLOC_PREPARE:
-        {
-            static const char name[] = "QUERY_TYPE_DEALLOC_PREPARE";
-            info.name = name;
-            info.name_len = sizeof(name) - 1;
-        }
-        break;
+    {
+        static const char name[] = "QUERY_TYPE_DEALLOC_PREPARE";
+        info.name                = name;
+        info.name_len            = sizeof(name) - 1;
+    }
+    break;
 
     default:
-        {
-            static const char name[] = "UNKNOWN_QUERY_TYPE";
-            info.name = name;
-            info.name_len = sizeof(name) - 1;
-        }
-        break;
+    {
+        static const char name[] = "UNKNOWN_QUERY_TYPE";
+        info.name                = name;
+        info.name_len            = sizeof(name) - 1;
+    }
+    break;
     }
 
     return info;
 }
-
 
 const char* qc_type_to_string(qc_query_type_t type)
 {
     return type_to_type_name_info(type).name;
 }
 
-static const qc_query_type_t QUERY_TYPES[] =
-{
+static const qc_query_type_t QUERY_TYPES[] = {
     /* Excluded by design */
     // QUERY_TYPE_UNKNOWN,
     QUERY_TYPE_LOCAL_READ,
@@ -1177,8 +1162,8 @@ static const qc_query_type_t QUERY_TYPES[] =
     QUERY_TYPE_DEALLOC_PREPARE,
 };
 
-static const int N_QUERY_TYPES = sizeof(QUERY_TYPES) / sizeof(QUERY_TYPES[0]);
-static const int QUERY_TYPE_MAX_LEN = 29;   // strlen("QUERY_TYPE_PREPARE_NAMED_STMT");
+static const int N_QUERY_TYPES      = sizeof(QUERY_TYPES) / sizeof(QUERY_TYPES[0]);
+static const int QUERY_TYPE_MAX_LEN = 29;  // strlen("QUERY_TYPE_PREPARE_NAMED_STMT");
 
 char* qc_typemask_to_string(uint32_t types)
 {
@@ -1191,7 +1176,7 @@ char* qc_typemask_to_string(uint32_t types)
         {
             if (len != 0)
             {
-                ++len;      // strlen("|");
+                ++len;  // strlen("|");
             }
 
             len += QUERY_TYPE_MAX_LEN;
@@ -1241,8 +1226,7 @@ static uint32_t qc_get_trx_type_mask_using_qc(GWBUF* stmt)
 {
     uint32_t type_mask = qc_get_type_mask(stmt);
 
-    if (qc_query_is_type(type_mask, QUERY_TYPE_WRITE)
-        && qc_query_is_type(type_mask, QUERY_TYPE_COMMIT))
+    if (qc_query_is_type(type_mask, QUERY_TYPE_WRITE) && qc_query_is_type(type_mask, QUERY_TYPE_COMMIT))
     {
         // This is a commit reported for "CREATE TABLE...",
         // "DROP TABLE...", etc. that cause an implicit commit.
@@ -1259,13 +1243,8 @@ static uint32_t qc_get_trx_type_mask_using_qc(GWBUF* stmt)
 
         // Then leave only the bits related to transaction and
         // autocommit state.
-        type_mask &= (QUERY_TYPE_BEGIN_TRX
-                      | QUERY_TYPE_WRITE
-                      | QUERY_TYPE_READ
-                      | QUERY_TYPE_COMMIT
-                      | QUERY_TYPE_ROLLBACK
-                      | QUERY_TYPE_ENABLE_AUTOCOMMIT
-                      | QUERY_TYPE_DISABLE_AUTOCOMMIT);
+        type_mask &= (QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_WRITE | QUERY_TYPE_READ | QUERY_TYPE_COMMIT
+                      | QUERY_TYPE_ROLLBACK | QUERY_TYPE_ENABLE_AUTOCOMMIT | QUERY_TYPE_DISABLE_AUTOCOMMIT);
     }
 
     return type_mask;
@@ -1400,7 +1379,7 @@ bool qc_set_cache_properties(const QC_CACHE_PROPERTIES* properties)
     {
         MXS_ERROR("Ignoring attempt to set size of query classifier "
                   "cache to a negative value: %" PRIi64 ".",
-                  properties->max_size);
+            properties->max_size);
     }
 
     return rv;
@@ -1479,7 +1458,7 @@ json_t* get_params(json_t* pJson)
 
     return pParams;
 }
-}
+}  // namespace
 
 bool qc_alter_from_json(json_t* pJson)
 {
@@ -1506,7 +1485,7 @@ bool qc_alter_from_json(json_t* pJson)
 
         if (rv)
         {
-            MXB_AT_DEBUG(bool set = ) qc_set_cache_properties(&cache_properties);
+            MXB_AT_DEBUG(bool set =) qc_set_cache_properties(&cache_properties);
             mxb_assert(set);
         }
     }
@@ -1517,34 +1496,33 @@ bool qc_alter_from_json(json_t* pJson)
 namespace
 {
 
-void append_field_info(json_t* pParent,
-                       const char* zName,
-                       const QC_FIELD_INFO* begin, const QC_FIELD_INFO* end)
+void append_field_info(
+    json_t* pParent, const char* zName, const QC_FIELD_INFO* begin, const QC_FIELD_INFO* end)
 {
     json_t* pFields = json_array();
 
     std::for_each(begin, end, [pFields](const QC_FIELD_INFO& info) {
-                      std::string name;
+        std::string name;
 
-                      if (info.database)
-                      {
-                          name += info.database;
-                          name += '.';
-                          mxb_assert(info.table);
-                      }
+        if (info.database)
+        {
+            name += info.database;
+            name += '.';
+            mxb_assert(info.table);
+        }
 
-                      if (info.table)
-                      {
-                          name += info.table;
-                          name += '.';
-                      }
+        if (info.table)
+        {
+            name += info.table;
+            name += '.';
+        }
 
-                      mxb_assert(info.column);
+        mxb_assert(info.column);
 
-                      name += info.column;
+        name += info.column;
 
-                      json_array_append_new(pFields, json_string(name.c_str()));
-                  });
+        json_array_append_new(pFields, json_string(name.c_str()));
+    });
 
     json_object_set_new(pParent, zName, pFields);
 }
@@ -1567,18 +1545,18 @@ void append_function_info(json_t* pParams, GWBUF* pBuffer)
     qc_get_function_info(pBuffer, &begin, &n);
 
     std::for_each(begin, begin + n, [pFunctions](const QC_FUNCTION_INFO& info) {
-                      json_t* pFunction = json_object();
+        json_t* pFunction = json_object();
 
-                      json_object_set_new(pFunction, CN_NAME, json_string(info.name));
+        json_object_set_new(pFunction, CN_NAME, json_string(info.name));
 
-                      append_field_info(pFunction, CN_ARGUMENTS, info.fields, info.fields + info.n_fields);
+        append_field_info(pFunction, CN_ARGUMENTS, info.fields, info.fields + info.n_fields);
 
-                      json_array_append_new(pFunctions, pFunction);
-                  });
+        json_array_append_new(pFunctions, pFunction);
+    });
 
     json_object_set_new(pParams, CN_FUNCTIONS, pFunctions);
 }
-}
+}  // namespace
 
 std::unique_ptr<json_t> qc_classify_as_json(const char* zHost, const std::string& statement)
 {
@@ -1597,8 +1575,8 @@ std::unique_ptr<json_t> qc_classify_as_json(const char* zHost, const std::string
         json_object_set_new(pAttributes, CN_TYPE_MASK, json_string(zType_mask));
         MXS_FREE(zType_mask);
 
-        json_object_set_new(pAttributes, CN_OPERATION,
-                            json_string(qc_op_to_string(qc_get_operation(pBuffer))));
+        json_object_set_new(
+            pAttributes, CN_OPERATION, json_string(qc_op_to_string(qc_get_operation(pBuffer))));
         bool has_clause = qc_query_has_clause(pBuffer);
         json_object_set_new(pAttributes, CN_HAS_WHERE_CLAUSE, json_boolean(has_clause));
 
@@ -1622,14 +1600,12 @@ json_t* cache_entry_as_json(const std::string& stmt, const QC_CACHE_ENTRY& entry
     json_t* pHits = json_integer(entry.hits);
 
     json_t* pClassification = json_object();
-    json_object_set_new(pClassification,
-                        CN_PARSE_RESULT, json_string(qc_result_to_string(entry.result.status)));
+    json_object_set_new(
+        pClassification, CN_PARSE_RESULT, json_string(qc_result_to_string(entry.result.status)));
     char* zType_mask = qc_typemask_to_string(entry.result.type_mask);
     json_object_set_new(pClassification, CN_TYPE_MASK, json_string(zType_mask));
     MXS_FREE(zType_mask);
-    json_object_set_new(pClassification,
-                        CN_OPERATION,
-                        json_string(qc_op_to_string(entry.result.op)));
+    json_object_set_new(pClassification, CN_OPERATION, json_string(qc_op_to_string(entry.result.op)));
 
     json_t* pAttributes = json_object();
     json_object_set_new(pAttributes, CN_HITS, pHits);
@@ -1642,7 +1618,7 @@ json_t* cache_entry_as_json(const std::string& stmt, const QC_CACHE_ENTRY& entry
 
     return pSelf;
 }
-}
+}  // namespace
 
 std::unique_ptr<json_t> qc_cache_as_json(const char* zHost)
 {
@@ -1654,15 +1630,13 @@ std::unique_ptr<json_t> qc_cache_as_json(const char* zHost)
     // memory that would be consumed if the information were collected in
     // parallel and then coalesced here.
 
-    mxs::RoutingWorker::execute_serially([&state]() {
-                                             qc_get_cache_state(state);
-                                         });
+    mxs::RoutingWorker::execute_serially([&state]() { qc_get_cache_state(state); });
 
     json_t* pData = json_array();
 
     for (const auto& p : state)
     {
-        const auto& stmt = p.first;
+        const auto& stmt  = p.first;
         const auto& entry = p.second;
 
         json_t* pEntry = cache_entry_as_json(stmt, entry);

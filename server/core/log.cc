@@ -34,13 +34,14 @@ struct ThisUnit
 {
     std::atomic<int> rotation_count {0};
 };
+
 ThisUnit this_unit;
 
 const char* LOGFILE_NAME = "maxscale.log";
 
 size_t mxs_get_context(char* buffer, size_t len)
 {
-    mxb_assert(len >= 20);      // Needed for "9223372036854775807"
+    mxb_assert(len >= 20);  // Needed for "9223372036854775807"
 
     uint64_t session_id = session_get_current_id();
 
@@ -64,7 +65,7 @@ void mxs_log_in_memory(const char* msg, size_t len)
         session_append_log(session, msg);
     }
 }
-}
+}  // namespace
 
 bool mxs_log_init(const char* ident, const char* logdir, mxs_log_target_t target)
 {
@@ -112,7 +113,7 @@ json_t* get_log_priorities()
 
     return arr;
 }
-}
+}  // namespace
 
 json_t* mxs_logs_to_json(const char* host)
 {

@@ -30,7 +30,7 @@ MXS_BEGIN_DECLS
  * executed again at a later point in time. If the function returns false,
  * the task is removed.
  */
-typedef bool (* TASKFN)(void* data);
+typedef bool (*TASKFN)(void* data);
 
 /**
  * @brief Add a new task

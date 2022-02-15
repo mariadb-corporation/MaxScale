@@ -22,16 +22,11 @@ namespace maxscale
 //
 RouterSession::RouterSession(MXS_SESSION* pSession)
     : m_pSession(pSession)
-{
-}
+{}
 
-RouterSession::~RouterSession()
-{
-}
+RouterSession::~RouterSession() {}
 
-void RouterSession::close()
-{
-}
+void RouterSession::close() {}
 
 int32_t RouterSession::routeQuery(GWBUF* pPacket)
 {
@@ -43,9 +38,9 @@ void RouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, con
     m_pUp->clientReply(m_pUp->instance, m_pUp->session, pPacket, down, reply);
 }
 
-bool RouterSession::handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem,
-                                const mxs::Reply& pReply)
+bool RouterSession::handleError(
+    mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& pReply)
 {
     return false;
 }
-}
+}  // namespace maxscale

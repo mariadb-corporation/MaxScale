@@ -26,24 +26,17 @@
 
 using namespace std;
 
-TestStorage::TestStorage(ostream* pOut,
-                         size_t threads,
-                         size_t seconds,
-                         size_t items,
-                         size_t min_size,
-                         size_t max_size)
+TestStorage::TestStorage(
+    ostream* pOut, size_t threads, size_t seconds, size_t items, size_t min_size, size_t max_size)
     : m_out(*pOut)
     , m_threads(threads)
     , m_seconds(seconds)
     , m_items(items)
     , m_min_size(min_size)
     , m_max_size(max_size)
-{
-}
+{}
 
-TestStorage::~TestStorage()
-{
-}
+TestStorage::~TestStorage() {}
 
 int TestStorage::run(int argc, char** argv)
 {
@@ -56,11 +49,11 @@ int TestStorage::run(int argc, char** argv)
             if (qc_setup(NULL, QC_SQL_MODE_DEFAULT, NULL, NULL) && qc_process_init(QC_INIT_BOTH))
             {
                 const char* zModule = NULL;
-                size_t threads = m_threads;
-                size_t seconds = m_seconds;
-                size_t items = m_items;
-                size_t min_size = m_min_size;
-                size_t max_size = m_max_size;
+                size_t threads      = m_threads;
+                size_t seconds      = m_seconds;
+                size_t items        = m_items;
+                size_t min_size     = m_min_size;
+                size_t max_size     = m_max_size;
 
                 switch (argc)
                 {

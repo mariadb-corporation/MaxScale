@@ -27,30 +27,26 @@ class MirrorSession;
 class Mirror : public mxs::Router<Mirror, MirrorSession>
 {
 public:
-    Mirror(const Mirror&) = delete;
+    Mirror(const Mirror&)            = delete;
     Mirror& operator=(const Mirror&) = delete;
 
     ~Mirror() = default;
     static Mirror* create(SERVICE* pService, mxs::ConfigParameters* params);
     MirrorSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
-    json_t*        diagnostics() const;
-    uint64_t       getCapabilities();
-    bool           configure(mxs::ConfigParameters* params);
+    json_t* diagnostics() const;
+    uint64_t getCapabilities();
+    bool configure(mxs::ConfigParameters* params);
 
     void ship(json_t* obj);
 
-    mxs::Target* get_main() const
-    {
-        return m_main;
-    }
+    mxs::Target* get_main() const { return m_main; }
 
 private:
     Mirror(SERVICE* pService)
         : Router<Mirror, MirrorSession>(pService)
-    {
-    }
+    {}
 
-    mxs::Target*              m_main;
+    mxs::Target* m_main;
     std::unique_ptr<Exporter> m_exporter;
-    mxb::shared_mutex         m_rw_lock;
+    mxb::shared_mutex m_rw_lock;
 };

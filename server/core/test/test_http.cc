@@ -22,9 +22,9 @@ using std::endl;
 
 int main(int argc, char** argv)
 {
-    time_t now = time(NULL);
-    string date = http_to_date(now);
-    time_t converted_now = http_from_date(date);
+    time_t now            = time(NULL);
+    string date           = http_to_date(now);
+    time_t converted_now  = http_from_date(date);
     string converted_date = http_to_date(converted_now);
 
     cout << "Current linux time: " << now << endl;

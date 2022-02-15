@@ -33,7 +33,7 @@ class MariaDB
 public:
     MariaDB() = default;
     virtual ~MariaDB();
-    MariaDB(const MariaDB& rhs) = delete;
+    MariaDB(const MariaDB& rhs)            = delete;
     MariaDB& operator=(const MariaDB& rhs) = delete;
 
     struct ConnectionSettings
@@ -45,25 +45,25 @@ public:
         std::string plugin_dir;
 
         mxb::SSLConfig ssl;
-        std::string    ssl_version;
+        std::string ssl_version;
 
-        int  timeout {0};
+        int timeout {0};
         bool multiquery {false};
         bool auto_reconnect {false};
 
-        bool        clear_sql_mode {false};
+        bool clear_sql_mode {false};
         std::string charset;
         // TODO: add more
     };
 
     struct VersionInfo
     {
-        uint64_t    version {0};
+        uint64_t version {0};
         std::string info;
     };
 
     static constexpr unsigned int INTERNAL_ERROR = 1;
-    static constexpr unsigned int USER_ERROR = 2;
+    static constexpr unsigned int USER_ERROR     = 2;
 
     /**
      * Set the default plugin directory.
@@ -157,14 +157,14 @@ public:
     ConnectionSettings& connection_settings();
 
     VersionInfo version_info() const;
-    bool        is_open() const;
+    bool is_open() const;
 
 private:
     void clear_errors();
 
-    st_mysql*   m_conn {nullptr};
+    st_mysql* m_conn {nullptr};
     std::string m_errormsg;
-    int64_t     m_errornum {0};
+    int64_t m_errornum {0};
 
     ConnectionSettings m_settings;
 };
@@ -175,7 +175,7 @@ private:
 class MariaDBQueryResult : public QueryResult
 {
 public:
-    MariaDBQueryResult(const MariaDBQueryResult&) = delete;
+    MariaDBQueryResult(const MariaDBQueryResult&)            = delete;
     MariaDBQueryResult& operator=(const MariaDBQueryResult&) = delete;
 
     /**
@@ -210,11 +210,11 @@ public:
 
 private:
     const char* row_elem(int64_t column_ind) const override;
-    bool        advance_row() override;
+    bool advance_row() override;
 
     static std::vector<std::string> column_names(st_mysql_res* results);
 
-    st_mysql_res*      m_resultset {nullptr};   /**< Underlying result set, freed at dtor */
-    const char* const* m_rowdata {nullptr};     /**< Data for current row */
+    st_mysql_res* m_resultset {nullptr};    /**< Underlying result set, freed at dtor */
+    const char* const* m_rowdata {nullptr}; /**< Data for current row */
 };
-}
+}  // namespace maxsql

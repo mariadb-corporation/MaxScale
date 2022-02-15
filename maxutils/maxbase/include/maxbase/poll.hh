@@ -24,13 +24,13 @@ public:
     PollData()
     {
         handler = NULL;
-        owner = nullptr;
+        owner   = nullptr;
     }
 
     PollData(mxb_poll_handler_t h)
     {
         handler = h;
-        owner = nullptr;
+        owner   = nullptr;
     }
 };
-}
+}  // namespace maxbase

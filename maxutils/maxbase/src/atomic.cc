@@ -99,12 +99,8 @@ void atomic_store_ptr(void** variable, void* value)
 
 bool atomic_cas_ptr(void** variable, void** old_value, void* new_value)
 {
-    return __atomic_compare_exchange_n(variable,
-                                       old_value,
-                                       new_value,
-                                       false,
-                                       __ATOMIC_SEQ_CST,
-                                       __ATOMIC_SEQ_CST);
+    return __atomic_compare_exchange_n(
+        variable, old_value, new_value, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 }
 
 int atomic_exchange_int(int* variable, int new_value)

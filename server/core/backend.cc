@@ -42,7 +42,7 @@ void Backend::close(close_type type)
 {
     if (!m_closed)
     {
-        m_closed = true;
+        m_closed    = true;
         m_closed_at = time(NULL);
         m_session_commands.clear();
         m_history_size = 0;
@@ -78,8 +78,8 @@ bool Backend::execute_session_command()
     }
 
     SSessionCommand& sescmd = m_session_commands.front();
-    GWBUF* buffer = sescmd->deep_copy_buffer();
-    bool rval = false;
+    GWBUF* buffer           = sescmd->deep_copy_buffer();
+    bool rval               = false;
 
     switch (sescmd->get_command())
     {
@@ -146,8 +146,8 @@ void Backend::clear_state(backend_state state)
 {
     if ((state & WAITING_RESULT) && (m_state & WAITING_RESULT))
     {
-        MXB_AT_DEBUG(int prev2 = ) mxb::atomic::add(&m_backend->target()->stats().n_current_ops,
-                                                    -1, mxb::atomic::RELAXED);
+        MXB_AT_DEBUG(int prev2 =)
+        mxb::atomic::add(&m_backend->target()->stats().n_current_ops, -1, mxb::atomic::RELAXED);
         mxb_assert(prev2 > 0);
     }
 
@@ -158,8 +158,8 @@ void Backend::set_state(backend_state state)
 {
     if ((state & WAITING_RESULT) && (m_state & WAITING_RESULT) == 0)
     {
-        MXB_AT_DEBUG(int prev2 = ) mxb::atomic::add(&m_backend->target()->stats().n_current_ops,
-                                                    1, mxb::atomic::RELAXED);
+        MXB_AT_DEBUG(int prev2 =)
+        mxb::atomic::add(&m_backend->target()->stats().n_current_ops, 1, mxb::atomic::RELAXED);
         mxb_assert(prev2 >= 0);
     }
 
@@ -173,12 +173,12 @@ bool Backend::connect(SessionCommandList* sescmd)
 
     if (m_backend->connect())
     {
-        m_closed = false;
+        m_closed    = false;
         m_closed_at = 0;
         m_opened_at = time(NULL);
-        m_state = IN_USE;
+        m_state     = IN_USE;
         m_close_reason.clear();
-        rval = true;
+        rval           = true;
         m_history_size = 0;
 
         if (sescmd && !sescmd->empty())
@@ -298,7 +298,7 @@ std::string Backend::get_verbose_status() const
 
     ss << "name: [" << name() << "] "
        << "status: [" << m_backend->target()->status_string() << "] "
-       << "state: [" << to_string((backend_state)m_state) << "] "
+       << "state: [" << to_string((backend_state) m_state) << "] "
        << "last opened at: [" << opened_at << "] "
        << "last closed at: [" << closed_at << "] "
        << "last close reason: [" << m_close_reason << "] "

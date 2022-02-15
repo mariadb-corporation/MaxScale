@@ -23,10 +23,10 @@ class Cat;
  */
 class CatSession : public mxs::RouterSession
 {
-    CatSession(const CatSession&) = delete;
+    CatSession(const CatSession&)            = delete;
     CatSession& operator=(const CatSession&) = delete;
-public:
 
+public:
     CatSession(MXS_SESSION* session, Cat* router, mxs::SRWBackends backends);
 
     /**
@@ -64,14 +64,14 @@ public:
      * @param pProblem  The DCB on which the error occurred.
      */
     bool handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& pReply);
-private:
 
-    MXS_SESSION*               m_session;
-    mxs::SRWBackends           m_backends;
-    uint64_t                   m_completed;
-    uint8_t                    m_packet_num;
+private:
+    MXS_SESSION* m_session;
+    mxs::SRWBackends m_backends;
+    uint64_t m_completed;
+    uint8_t m_packet_num;
     mxs::SRWBackends::iterator m_current;
-    GWBUF*                     m_query;
+    GWBUF* m_query;
 
     /**
      * Iterate to next backend

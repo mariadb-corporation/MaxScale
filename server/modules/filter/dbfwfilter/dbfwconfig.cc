@@ -23,66 +23,50 @@ namespace dbfwfilter
 
 config::Specification specification(MXS_MODULE_NAME, config::Specification::FILTER);
 
-config::ParamPath rules(
-    &specification,
+config::ParamPath rules(&specification,
     "rules",
     "Mandatory parameter that specifies the path of the rules file.",
-    config::ParamPath::R
-    );
+    config::ParamPath::R);
 
-config::ParamBool log_match(
-    &specification,
+config::ParamBool log_match(&specification,
     "log_match",
     "Optional boolean parameters specifying whether a query that matches a rule should be logged. "
     "Default is false.",
-    false
-    );
-config::ParamBool log_no_match(
-    &specification,
+    false);
+config::ParamBool log_no_match(&specification,
     "log_no_match",
     "Optional boolean parameters specifying whether a query that does not match a rule should be logged. "
     "Default is false.",
-    false
-    );
-config::ParamBool treat_string_as_field(
-    &specification,
+    false);
+config::ParamBool treat_string_as_field(&specification,
     "treat_string_as_field",
     "Optional boolean parameter specifying whether strings should be treated as fields. Causes "
     "column blocking rules to match even if ANSI_QUOTES has been enabled and \" is used instead of "
     "backtick. Default is true.",
-    true
-    );
+    true);
 
-config::ParamBool treat_string_arg_as_field(
-    &specification,
+config::ParamBool treat_string_arg_as_field(&specification,
     "treat_string_arg_as_field",
     "Optional boolean parameter specifying whether strings should be treated as fields when used "
     "as arguments to functions. Causes function column blocking rules to match even if ANSI_QUOTES "
     "has been enabled and \" is used instead of backtick. Default is true.",
-    true
-    );
+    true);
 
 config::ParamBool strict(
-    &specification,
-    "strict",
-    "Whether to treat unsupported SQL or multi-statement SQL as an error.",
-    true
-    );
+    &specification, "strict", "Whether to treat unsupported SQL or multi-statement SQL as an error.", true);
 
-config::ParamEnum<fw_actions> action(
-    &specification,
+config::ParamEnum<fw_actions> action(&specification,
     "action",
     "Optional enumeration parameter specifying the action to be taken when a rule matches. "
     "Default is to block.",
-        {
-            {FW_ACTION_ALLOW, "allow"},
-            {FW_ACTION_BLOCK, "block"},
-            {FW_ACTION_IGNORE, "ignore"},
-        },
-    FW_ACTION_BLOCK
-    );
-}
-}
+    {
+        {FW_ACTION_ALLOW, "allow"},
+        {FW_ACTION_BLOCK, "block"},
+        {FW_ACTION_IGNORE, "ignore"},
+    },
+    FW_ACTION_BLOCK);
+}  // namespace dbfwfilter
+}  // namespace
 
 DbfwConfig::DbfwConfig(const std::string& name)
     : config::Configuration(name, &dbfwfilter::specification)

@@ -32,14 +32,14 @@ extern const char CN_STORAGE_ARG_SERVER[];
 
 enum cache_result_bits_t
 {
-    CACHE_RESULT_OK               = 0x01, // 0b00001
-    CACHE_RESULT_NOT_FOUND        = 0x02, // 0b00010
-    CACHE_RESULT_PENDING          = 0x04, // 0b00100
-    CACHE_RESULT_ERROR            = 0x08, // 0b01000
-    CACHE_RESULT_OUT_OF_RESOURCES = 0x18, // 0b11000
+    CACHE_RESULT_OK               = 0x01,  // 0b00001
+    CACHE_RESULT_NOT_FOUND        = 0x02,  // 0b00010
+    CACHE_RESULT_PENDING          = 0x04,  // 0b00100
+    CACHE_RESULT_ERROR            = 0x08,  // 0b01000
+    CACHE_RESULT_OUT_OF_RESOURCES = 0x18,  // 0b11000
 
-    CACHE_RESULT_STALE            = 0x10000,   /*< Possibly combined with OK and NOT_FOUND. */
-    CACHE_RESULT_DISCARDED        = 0x20000,   /*< Possibly combined with NOT_FOUND. */
+    CACHE_RESULT_STALE     = 0x10000, /*< Possibly combined with OK and NOT_FOUND. */
+    CACHE_RESULT_DISCARDED = 0x20000, /*< Possibly combined with NOT_FOUND. */
 };
 
 typedef uint32_t cache_result_t;
@@ -97,11 +97,8 @@ public:
      */
     bool eq(const CacheKey& that) const
     {
-        return
-            this->full_hash == that.full_hash
-            && this->data_hash == that.data_hash
-            && this->user == that.user
-            && this->host == that.host;
+        return this->full_hash == that.full_hash && this->data_hash == that.data_hash
+            && this->user == that.user && this->host == that.host;
     }
 
     /**
@@ -114,18 +111,18 @@ public:
      */
     std::vector<char> to_vector() const;
 
-    std::string user;      // The user of the value; empty if shared.
-    std::string host;      // The host of the user of the value; empty is shared.
-    uint64_t    data_hash; // Hash of the default db and GWBUF given to Cache::get_key().
-    uint64_t    full_hash; // Hash of the entire CacheKey.
+    std::string user;    // The user of the value; empty if shared.
+    std::string host;    // The host of the user of the value; empty is shared.
+    uint64_t data_hash;  // Hash of the default db and GWBUF given to Cache::get_key().
+    uint64_t full_hash;  // Hash of the entire CacheKey.
 };
 
-inline bool operator == (const CacheKey& lhs, const CacheKey& rhs)
+inline bool operator==(const CacheKey& lhs, const CacheKey& rhs)
 {
     return lhs.eq(rhs);
 }
 
-inline bool operator != (const CacheKey& lhs, const CacheKey& rhs)
+inline bool operator!=(const CacheKey& lhs, const CacheKey& rhs)
 {
     return !lhs.eq(rhs);
 }
@@ -143,8 +140,8 @@ enum cache_storage_capabilities_t
 
 enum cache_storage_kind_t
 {
-    CACHE_STORAGE_PRIVATE = 1,  /*< The storage is private to the cache that uses it. */
-    CACHE_STORAGE_SHARED  = 2   /*< The storage is shared with other caches that use it. */
+    CACHE_STORAGE_PRIVATE = 1, /*< The storage is private to the cache that uses it. */
+    CACHE_STORAGE_SHARED  = 2  /*< The storage is shared with other caches that use it. */
 };
 
 static inline bool cache_storage_has_cap(uint32_t capabilities, uint32_t mask)
@@ -157,7 +154,7 @@ const uint32_t CACHE_USE_CONFIG_TTL = static_cast<uint32_t>(-1);
 class Storage
 {
 public:
-    Storage(const Storage&) = delete;
+    Storage(const Storage&)            = delete;
     Storage& operator=(const Storage&) = delete;
 
     class Token
@@ -173,22 +170,19 @@ public:
 
     struct Config
     {
-        Config()
-        {
-        }
+        Config() {}
 
         Config(cache_thread_model_t thread_model)
             : thread_model(thread_model)
-        {
-        }
+        {}
 
         Config(cache_thread_model_t thread_model,
-               uint32_t hard_ttl,
-               uint32_t soft_ttl,
-               uint32_t max_count,
-               uint64_t max_size,
-               cache_invalidate_t invalidate,
-               std::chrono::milliseconds timeout)
+            uint32_t hard_ttl,
+            uint32_t soft_ttl,
+            uint32_t max_count,
+            uint64_t max_size,
+            cache_invalidate_t invalidate,
+            std::chrono::milliseconds timeout)
             : thread_model(thread_model)
             , hard_ttl(hard_ttl)
             , soft_ttl(soft_ttl)
@@ -196,8 +190,7 @@ public:
             , max_size(max_size)
             , invalidate(invalidate)
             , timeout(timeout)
-        {
-        }
+        {}
 
         /**
          * Specifies whether the storage will be used in a single thread or multi
@@ -247,19 +240,16 @@ public:
         /**
          * Timeout to be used when accessing remote storages.
          */
-        std::chrono::milliseconds timeout { 0 };
+        std::chrono::milliseconds timeout {0};
     };
 
     struct Limits
     {
-        Limits()
-        {
-        }
+        Limits() {}
 
         Limits(uint32_t max_value_size)
             : max_value_size(max_value_size)
-        {
-        }
+        {}
 
         /**
          * The maximum size of a single value.
@@ -335,18 +325,19 @@ public:
      *         CACHE_RESULT_DISCARDED if the item existed but the hard TTL had passed.
      */
     virtual cache_result_t get_value(Token* pToken,
-                                     const CacheKey& key,
-                                     uint32_t flags,
-                                     uint32_t soft_ttl,
-                                     uint32_t hard_ttl,
-                                     GWBUF** ppValue,
-                                     const std::function<void (cache_result_t, GWBUF*)>& cb = nullptr) = 0;
+        const CacheKey& key,
+        uint32_t flags,
+        uint32_t soft_ttl,
+        uint32_t hard_ttl,
+        GWBUF** ppValue,
+        const std::function<void(cache_result_t, GWBUF*)>& cb = nullptr)
+        = 0;
 
     cache_result_t get_value(Token* pToken,
-                             const CacheKey& key,
-                             uint32_t flags,
-                             GWBUF** ppValue,
-                             const std::function<void (cache_result_t, GWBUF*)>& cb = nullptr)
+        const CacheKey& key,
+        uint32_t flags,
+        GWBUF** ppValue,
+        const std::function<void(cache_result_t, GWBUF*)>& cb = nullptr)
     {
         return get_value(pToken, key, flags, CACHE_USE_CONFIG_TTL, CACHE_USE_CONFIG_TTL, ppValue, cb);
     }
@@ -367,10 +358,11 @@ public:
      *         some resource having become exhausted, or some other error code.
      */
     virtual cache_result_t put_value(Token* pToken,
-                                     const CacheKey& key,
-                                     const std::vector<std::string>& invalidation_words,
-                                     const GWBUF* pValue,
-                                     const std::function<void (cache_result_t)>& cb = nullptr) = 0;
+        const CacheKey& key,
+        const std::vector<std::string>& invalidation_words,
+        const GWBUF* pValue,
+        const std::function<void(cache_result_t)>& cb = nullptr)
+        = 0;
 
     /**
      * Delete a value from the cache.
@@ -385,9 +377,9 @@ public:
      *
      *         Note that CACHE_RESULT_OK may be returned also if the entry was not present.
      */
-    virtual cache_result_t del_value(Token* pToken,
-                                     const CacheKey& key,
-                                     const std::function<void (cache_result_t)>& cb = nullptr) = 0;
+    virtual cache_result_t del_value(
+        Token* pToken, const CacheKey& key, const std::function<void(cache_result_t)>& cb = nullptr)
+        = 0;
 
     /**
      * Invalidate entries
@@ -399,8 +391,9 @@ public:
      *         CACHE_RESULT_PENDING if result delivered to cb.
      */
     virtual cache_result_t invalidate(Token* pToken,
-                                      const std::vector<std::string>& words,
-                                      const std::function<void (cache_result_t)>& cb = nullptr) = 0;
+        const std::vector<std::string>& words,
+        const std::function<void(cache_result_t)>& cb = nullptr)
+        = 0;
 
     /**
      * Clear storage
@@ -493,8 +486,8 @@ protected:
      *
      * @return True, if the string is of the valid format.
      */
-    static bool split_arguments(const std::string& argument_string,
-                                std::map<std::string, std::string>* pArguments);
+    static bool split_arguments(
+        const std::string& argument_string, std::map<std::string, std::string>* pArguments);
 
     /**
      * Converts an argument string "host[:port]" to a host string and port number.
@@ -541,14 +534,13 @@ public:
      * @return A new cache instance, or NULL if the instance could not be
      *         created.
      */
-    virtual Storage* create_storage(const char* name,
-                                    const Storage::Config& config,
-                                    const std::string& arguments) = 0;
+    virtual Storage* create_storage(
+        const char* name, const Storage::Config& config, const std::string& arguments)
+        = 0;
 };
 
-
 #define CACHE_STORAGE_ENTRY_POINT "CacheGetStorageModule"
-typedef StorageModule* (* CacheGetStorageModuleFN)();
+typedef StorageModule* (*CacheGetStorageModuleFN)();
 
 namespace std
 {
@@ -556,18 +548,12 @@ namespace std
 template<>
 struct equal_to<CacheKey>
 {
-    bool operator()(const CacheKey& lhs, const CacheKey& rhs) const
-    {
-        return lhs == rhs;
-    }
+    bool operator()(const CacheKey& lhs, const CacheKey& rhs) const { return lhs == rhs; }
 };
 
 template<>
 struct hash<CacheKey>
 {
-    size_t operator()(const CacheKey& key) const
-    {
-        return key.full_hash;
-    }
+    size_t operator()(const CacheKey& key) const { return key.full_hash; }
 };
-}
+}  // namespace std

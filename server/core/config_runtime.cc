@@ -46,7 +46,7 @@
 #include "internal/query_classifier.hh"
 #include "internal/servermanager.hh"
 
-typedef std::set<std::string>    StringSet;
+typedef std::set<std::string> StringSet;
 typedef std::vector<std::string> StringVector;
 
 using std::tie;
@@ -57,8 +57,8 @@ using namespace std::literals::string_literals;
 #define RUNTIME_ERRMSG_BUFSIZE 512
 thread_local std::vector<std::string> runtime_errmsg;
 
-typedef std::function<bool (const std::string&, const std::string&)> JsonValidator;
-typedef std::pair<const char*, JsonValidator>                        Relationship;
+typedef std::function<bool(const std::string&, const std::string&)> JsonValidator;
+typedef std::pair<const char*, JsonValidator> Relationship;
 
 namespace
 {
@@ -88,29 +88,13 @@ bool filter_relation_is_valid(const std::string& type, const std::string& value)
 //
 // Constants for relationship validation
 //
-const Relationship to_server_rel
-{
-    MXS_JSON_PTR_RELATIONSHIPS_SERVERS,
-    object_relation_is_valid
-};
+const Relationship to_server_rel {MXS_JSON_PTR_RELATIONSHIPS_SERVERS, object_relation_is_valid};
 
-const Relationship to_service_rel
-{
-    MXS_JSON_PTR_RELATIONSHIPS_SERVICES,
-    service_relation_is_valid
-};
+const Relationship to_service_rel {MXS_JSON_PTR_RELATIONSHIPS_SERVICES, service_relation_is_valid};
 
-const Relationship to_monitor_rel
-{
-    MXS_JSON_PTR_RELATIONSHIPS_MONITORS,
-    monitor_relation_is_valid
-};
+const Relationship to_monitor_rel {MXS_JSON_PTR_RELATIONSHIPS_MONITORS, monitor_relation_is_valid};
 
-const Relationship to_filter_rel
-{
-    MXS_JSON_PTR_RELATIONSHIPS_FILTERS,
-    filter_relation_is_valid
-};
+const Relationship to_filter_rel {MXS_JSON_PTR_RELATIONSHIPS_FILTERS, filter_relation_is_valid};
 
 const MXS_MODULE_PARAM* get_type_parameters(const char* type)
 {
@@ -151,7 +135,7 @@ std::string get_module_param_name(const std::string& type)
         return CN_MODULE;
     }
 
-    mxb_assert(!true);      // Should not be called for a server.
+    mxb_assert(!true);  // Should not be called for a server.
     return "";
 }
 
@@ -164,9 +148,8 @@ std::string get_module_param_name(const std::string& type)
  *
  * @return Whether loading succeeded and the list of default parameters
  */
-std::pair<bool, mxs::ConfigParameters> load_defaults(const char* name,
-                                                     const char* module_type,
-                                                     const char* object_type)
+std::pair<bool, mxs::ConfigParameters> load_defaults(
+    const char* name, const char* module_type, const char* object_type)
 {
     bool rval = false;
     mxs::ConfigParameters params;
@@ -181,7 +164,8 @@ std::pair<bool, mxs::ConfigParameters> load_defaults(const char* name,
     else
     {
         MXS_ERROR("Failed to load module '%s': %s",
-                  name, errno ? mxs_strerror(errno) : "See MaxScale logs for details");
+            name,
+            errno ? mxs_strerror(errno) : "See MaxScale logs for details");
     }
 
     return {rval, params};
@@ -235,9 +219,9 @@ bool link_service_to_monitor(Service* service, mxs::Monitor* monitor)
 
     if (!ok)
     {
-        std::string err = service->cluster() ?
-            "Service already uses cluster '"s + service->cluster()->name() + "'" :
-            "Service uses targets";
+        std::string err = service->cluster()
+                            ? "Service already uses cluster '"s + service->cluster()->name() + "'"
+                            : "Service uses targets";
         MXS_ERROR("Service '%s' cannot use cluster '%s': %s", service->name(), monitor->name(), err.c_str());
     }
 
@@ -275,7 +259,9 @@ bool check_link_target(Service* service, mxs::Target* target)
         if (!cycle.empty())
         {
             MXS_ERROR("Linking '%s' to '%s' would result in a circular configuration: %s",
-                      target->name(), service->name(), cycle.c_str());
+                target->name(),
+                service->name(),
+                cycle.c_str());
         }
         else
         {
@@ -300,7 +286,8 @@ bool runtime_link_target(const std::string& subject, const std::string& target)
         {
             MXS_ERROR("The servers of the service '%s' are defined by the monitor '%s'. "
                       "Servers cannot explicitly be added to the service.",
-                      service->name(), cluster->name());
+                service->name(),
+                cluster->name());
         }
         else if (auto server = ServerManager::find_by_unique_name(subject))
         {
@@ -387,7 +374,8 @@ bool runtime_unlink_target(const std::string& subject, const std::string& target
         {
             MXS_ERROR("The servers of the service '%s' are defined by the monitor '%s'. "
                       "Servers cannot explicitly be removed from the service.",
-                      service->name(), cluster->name());
+                service->name(),
+                cluster->name());
         }
         else if (auto server = SERVER::find_by_unique_name(subject))
         {
@@ -482,8 +470,7 @@ bool is_valid_integer(const char* value)
     return strtol(value, &endptr, 10) >= 0 && *value && *endptr == '\0';
 }
 
-bool undefined_mandatory_parameter(const MXS_MODULE_PARAM* mod_params,
-                                   const mxs::ConfigParameters* params)
+bool undefined_mandatory_parameter(const MXS_MODULE_PARAM* mod_params, const mxs::ConfigParameters* params)
 {
     bool rval = false;
     mxb_assert(mod_params);
@@ -500,10 +487,8 @@ bool undefined_mandatory_parameter(const MXS_MODULE_PARAM* mod_params,
     return rval;
 }
 
-bool validate_param(const MXS_MODULE_PARAM* basic,
-                    const MXS_MODULE_PARAM* module,
-                    const char* key,
-                    const char* value)
+bool validate_param(
+    const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* module, const char* key, const char* value)
 {
     std::string error;
     bool rval = validate_param(basic, module, key, value, &error);
@@ -514,14 +499,13 @@ bool validate_param(const MXS_MODULE_PARAM* basic,
     return rval;
 }
 
-bool validate_param(const MXS_MODULE_PARAM* basic,
-                    const MXS_MODULE_PARAM* module,
-                    mxs::ConfigParameters* params)
+bool validate_param(
+    const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* module, mxs::ConfigParameters* params)
 {
-    bool rval = std::all_of(params->begin(), params->end(),
-                            [basic, module](const std::pair<std::string, std::string>& p) {
-                                return validate_param(basic, module, p.first.c_str(), p.second.c_str());
-                            });
+    bool rval = std::all_of(
+        params->begin(), params->end(), [basic, module](const std::pair<std::string, std::string>& p) {
+            return validate_param(basic, module, p.first.c_str(), p.second.c_str());
+        });
 
     if (undefined_mandatory_parameter(basic, params) || undefined_mandatory_parameter(module, params))
     {
@@ -532,8 +516,8 @@ bool validate_param(const MXS_MODULE_PARAM* basic,
 }
 
 // Helper for runtime_create_listener
-void set_if_not_null(mxs::ConfigParameters& params, const char* name,
-                     const char* value, const char* dflt = nullptr)
+void set_if_not_null(
+    mxs::ConfigParameters& params, const char* name, const char* value, const char* dflt = nullptr)
 {
     if ((!value || strcasecmp(value, CN_DEFAULT) == 0) && dflt)
     {
@@ -546,18 +530,18 @@ void set_if_not_null(mxs::ConfigParameters& params, const char* name,
 }
 
 bool runtime_create_listener(Service* service,
-                             const char* name,
-                             const char* addr,
-                             const char* port,
-                             const char* proto,
-                             const char* auth,
-                             const char* auth_opt,
-                             const char* ssl_key,
-                             const char* ssl_cert,
-                             const char* ssl_ca,
-                             const char* ssl_version,
-                             const char* ssl_depth,
-                             const char* verify_ssl)
+    const char* name,
+    const char* addr,
+    const char* port,
+    const char* proto,
+    const char* auth,
+    const char* auth_opt,
+    const char* ssl_key,
+    const char* ssl_cert,
+    const char* ssl_ca,
+    const char* ssl_version,
+    const char* ssl_depth,
+    const char* verify_ssl)
 {
     if (proto == NULL || strcasecmp(proto, CN_DEFAULT) == 0)
     {
@@ -604,13 +588,13 @@ bool runtime_create_listener(Service* service,
     }
 
     unsigned short u_port = atoi(port);
-    bool rval = false;
+    bool rval             = false;
 
     std::string reason;
 
-    SListener old_listener = use_socket ?
-        listener_find_by_socket(params.get_string(CN_SOCKET)) :
-        listener_find_by_address(params.get_string(CN_ADDRESS), params.get_integer(CN_PORT));
+    SListener old_listener
+        = use_socket ? listener_find_by_socket(params.get_string(CN_SOCKET))
+                     : listener_find_by_address(params.get_string(CN_ADDRESS), params.get_integer(CN_PORT));
 
     if (!ok)
     {
@@ -622,8 +606,10 @@ bool runtime_create_listener(Service* service,
     }
     else if (old_listener)
     {
-        MXS_ERROR("Listener '%s' already listens on [%s]:%u", old_listener->name(),
-                  old_listener->address(), old_listener->port());
+        MXS_ERROR("Listener '%s' already listens on [%s]:%u",
+            old_listener->name(),
+            old_listener->address(),
+            old_listener->port());
     }
     else if (config_is_valid_name(name, &reason))
     {
@@ -635,7 +621,10 @@ bool runtime_create_listener(Service* service,
             if (runtime_save_config(listener->name(), ss.str()) && listener->listen())
             {
                 MXS_NOTICE("Created listener '%s' at %s:%u for service '%s'",
-                           name, listener->address(), listener->port(), service->name());
+                    name,
+                    listener->address(),
+                    listener->port(),
+                    service->name());
 
                 rval = true;
             }
@@ -649,7 +638,8 @@ bool runtime_create_listener(Service* service,
         else
         {
             MXS_ERROR("Failed to create listener '%s'. Read the MaxScale error log "
-                      "for more details.", name);
+                      "for more details.",
+                name);
         }
     }
     else
@@ -716,11 +706,9 @@ mxs::ConfigParameters extract_parameters(json_t* json)
     return rval;
 }
 
-bool extract_ordered_relations(json_t* json,
-                               StringVector& relations,
-                               Relationship rel)
+bool extract_ordered_relations(json_t* json, StringVector& relations, Relationship rel)
 {
-    bool rval = true;
+    bool rval   = true;
     json_t* arr = mxs_json_pointer(json, rel.first);
 
     if (arr && json_is_array(arr))
@@ -729,14 +717,13 @@ bool extract_ordered_relations(json_t* json,
 
         for (size_t j = 0; j < size; j++)
         {
-            json_t* obj = json_array_get(arr, j);
-            json_t* id = json_object_get(obj, CN_ID);
+            json_t* obj  = json_array_get(arr, j);
+            json_t* id   = json_object_get(obj, CN_ID);
             json_t* type = mxs_json_pointer(obj, CN_TYPE);
 
-            if (id && json_is_string(id)
-                && type && json_is_string(type))
+            if (id && json_is_string(id) && type && json_is_string(type))
             {
-                std::string id_value = json_string_value(id);
+                std::string id_value   = json_string_value(id);
                 std::string type_value = json_string_value(type);
 
                 if (rel.second(type_value, id_value))
@@ -758,9 +745,7 @@ bool extract_ordered_relations(json_t* json,
     return rval;
 }
 
-bool extract_relations(json_t* json,
-                       StringSet& relations,
-                       Relationship rel)
+bool extract_relations(json_t* json, StringSet& relations, Relationship rel)
 {
     StringVector values;
     bool rval = extract_ordered_relations(json, values, rel);
@@ -824,7 +809,7 @@ const char* json_type_to_string(const json_t* json)
 const char* get_string_or_null(json_t* json, const char* path)
 {
     const char* rval = NULL;
-    json_t* value = mxs_json_pointer(json, path);
+    json_t* value    = mxs_json_pointer(json, path);
 
     if (value && json_is_string(value))
     {
@@ -836,7 +821,7 @@ const char* get_string_or_null(json_t* json, const char* path)
 
 bool runtime_is_string_or_null(json_t* json, const char* path)
 {
-    bool rval = true;
+    bool rval     = true;
     json_t* value = mxs_json_pointer(json, path);
 
     if (value && !json_is_string(value) && !json_is_null(value))
@@ -850,7 +835,7 @@ bool runtime_is_string_or_null(json_t* json, const char* path)
 
 bool runtime_is_bool_or_null(json_t* json, const char* path)
 {
-    bool rval = true;
+    bool rval     = true;
     json_t* value = mxs_json_pointer(json, path);
 
     if (value && !json_is_boolean(value) && !json_is_null(value))
@@ -864,15 +849,15 @@ bool runtime_is_bool_or_null(json_t* json, const char* path)
 
 bool runtime_is_size_or_null(json_t* json, const char* path)
 {
-    bool rval = true;
+    bool rval     = true;
     json_t* value = mxs_json_pointer(json, path);
 
     if (value)
     {
         if (!json_is_integer(value) && !json_is_string(value) && !json_is_null(value))
         {
-            MXS_ERROR("Parameter '%s' is not an integer or a string but %s",
-                      path, json_type_to_string(value));
+            MXS_ERROR(
+                "Parameter '%s' is not an integer or a string but %s", path, json_type_to_string(value));
             rval = false;
         }
         else if ((json_is_integer(value) && json_integer_value(value) < 0)
@@ -888,7 +873,7 @@ bool runtime_is_size_or_null(json_t* json, const char* path)
 
 bool runtime_is_count_or_null(json_t* json, const char* path)
 {
-    bool rval = true;
+    bool rval     = true;
     json_t* value = mxs_json_pointer(json, path);
 
     if (value)
@@ -921,8 +906,7 @@ bool is_valid_resource_body(json_t* json)
     else
     {
         // Check that the relationship JSON is well-formed
-        const std::vector<const char*> relations =
-        {
+        const std::vector<const char*> relations = {
             MXS_JSON_PTR_RELATIONSHIPS "/servers",
             MXS_JSON_PTR_RELATIONSHIPS "/services",
             MXS_JSON_PTR_RELATIONSHIPS "/monitors",
@@ -947,7 +931,7 @@ bool is_valid_resource_body(json_t* json)
 bool server_contains_required_fields(json_t* json)
 {
     bool rval = false;
-    auto err = mxs_is_valid_json_resource(json);
+    auto err  = mxs_is_valid_json_resource(json);
 
     if (!err.empty())
     {
@@ -999,7 +983,7 @@ bool link_target_to_objects(const std::string& target, StringSet& relations)
 
 std::string json_int_to_string(json_t* json)
 {
-    char str[25];   // Enough to store any 64-bit integer value
+    char str[25];  // Enough to store any 64-bit integer value
     int64_t i = json_integer_value(json);
     snprintf(str, sizeof(str), "%ld", i);
     return std::string(str);
@@ -1007,9 +991,8 @@ std::string json_int_to_string(json_t* json)
 
 bool have_ssl_json(json_t* params)
 {
-    return mxs_json_pointer(params, CN_SSL_KEY)
-           || mxs_json_pointer(params, CN_SSL_CERT)
-           || mxs_json_pointer(params, CN_SSL_CA_CERT);
+    return mxs_json_pointer(params, CN_SSL_KEY) || mxs_json_pointer(params, CN_SSL_CERT)
+        || mxs_json_pointer(params, CN_SSL_CA_CERT);
 }
 
 enum object_type
@@ -1022,28 +1005,29 @@ bool validate_ssl_json(json_t* params, object_type type)
 {
     bool rval = true;
 
-    if (runtime_is_string_or_null(params, CN_SSL_KEY)
-        && runtime_is_string_or_null(params, CN_SSL_CERT)
+    if (runtime_is_string_or_null(params, CN_SSL_KEY) && runtime_is_string_or_null(params, CN_SSL_CERT)
         && runtime_is_string_or_null(params, CN_SSL_CA_CERT)
         && runtime_is_string_or_null(params, CN_SSL_VERSION)
         && runtime_is_count_or_null(params, CN_SSL_CERT_VERIFY_DEPTH))
     {
-        json_t* key = mxs_json_pointer(params, CN_SSL_KEY);
-        json_t* cert = mxs_json_pointer(params, CN_SSL_CERT);
+        json_t* key     = mxs_json_pointer(params, CN_SSL_KEY);
+        json_t* cert    = mxs_json_pointer(params, CN_SSL_CERT);
         json_t* ca_cert = mxs_json_pointer(params, CN_SSL_CA_CERT);
 
         if (type == OT_LISTENER && !(key && cert && ca_cert))
         {
             MXS_ERROR("SSL configuration for listeners requires '%s', '%s' and '%s' parameters",
-                      CN_SSL_KEY, CN_SSL_CERT, CN_SSL_CA_CERT);
+                CN_SSL_KEY,
+                CN_SSL_CERT,
+                CN_SSL_CA_CERT);
             rval = false;
         }
         else if (type == OT_SERVER)
         {
             if (!ca_cert)
             {
-                MXS_ERROR("SSL configuration for servers requires at least the '%s' parameter",
-                          CN_SSL_CA_CERT);
+                MXS_ERROR(
+                    "SSL configuration for servers requires at least the '%s' parameter", CN_SSL_CA_CERT);
                 rval = false;
             }
             else if ((key == nullptr) != (cert == nullptr))
@@ -1053,7 +1037,7 @@ bool validate_ssl_json(json_t* params, object_type type)
             }
         }
 
-        json_t* ssl_version = mxs_json_pointer(params, CN_SSL_VERSION);
+        json_t* ssl_version         = mxs_json_pointer(params, CN_SSL_VERSION);
         const char* ssl_version_str = ssl_version ? json_string_value(ssl_version) : NULL;
 
         if (ssl_version_str
@@ -1100,16 +1084,16 @@ bool server_to_object_relations(Server* server, json_t* old_json, json_t* new_js
         StringSet added_relations;
 
         std::set_difference(old_relations.begin(),
-                            old_relations.end(),
-                            new_relations.begin(),
-                            new_relations.end(),
-                            std::inserter(removed_relations, removed_relations.begin()));
+            old_relations.end(),
+            new_relations.begin(),
+            new_relations.end(),
+            std::inserter(removed_relations, removed_relations.begin()));
 
         std::set_difference(new_relations.begin(),
-                            new_relations.end(),
-                            old_relations.begin(),
-                            old_relations.end(),
-                            std::inserter(added_relations, added_relations.begin()));
+            new_relations.end(),
+            old_relations.begin(),
+            old_relations.end(),
+            std::inserter(added_relations, added_relations.begin()));
 
         if (!unlink_target_from_objects(server->name(), removed_relations)
             || !link_target_to_objects(server->name(), added_relations))
@@ -1173,10 +1157,10 @@ bool server_relationship_to_parameter(json_t* json, mxs::ConfigParameters* param
 
         if (!relations.empty())
         {
-            auto servers = std::accumulate(std::next(relations.begin()), relations.end(), *relations.begin(),
-                                           [](std::string sum, std::string s) {
-                                               return sum + ',' + s;
-                                           });
+            auto servers = std::accumulate(std::next(relations.begin()),
+                relations.end(),
+                *relations.begin(),
+                [](std::string sum, std::string s) { return sum + ',' + s; });
             params->set(CN_SERVERS, servers);
         }
         else if (json_t* rel = mxs_json_pointer(json, MXS_JSON_PTR_RELATIONSHIPS_SERVERS))
@@ -1226,10 +1210,8 @@ bool link_object_to_targets(const std::string& target, StringSet& relations)
     return rval;
 }
 
-std::pair<bool, mxs::ConfigParameters> extract_and_validate_params(json_t* json,
-                                                                   const char* module,
-                                                                   const char* module_type,
-                                                                   const char* module_param_name)
+std::pair<bool, mxs::ConfigParameters> extract_and_validate_params(
+    json_t* json, const char* module, const char* module_type, const char* module_param_name)
 {
     bool ok = false;
     mxs::ConfigParameters params;
@@ -1250,10 +1232,7 @@ std::pair<bool, mxs::ConfigParameters> extract_and_validate_params(json_t* json,
     return {ok, params};
 }
 
-bool update_object_relations(const std::string& target,
-                             Relationship rel,
-                             json_t* old_json,
-                             json_t* new_json)
+bool update_object_relations(const std::string& target, Relationship rel, json_t* old_json, json_t* new_json)
 {
     if (mxs_json_pointer(new_json, rel.first) == NULL)
     {
@@ -1270,13 +1249,17 @@ bool update_object_relations(const std::string& target,
         StringSet removed_relations;
         StringSet added_relations;
 
-        std::set_difference(old_relations.begin(), old_relations.end(),
-                            new_relations.begin(), new_relations.end(),
-                            std::inserter(removed_relations, removed_relations.begin()));
+        std::set_difference(old_relations.begin(),
+            old_relations.end(),
+            new_relations.begin(),
+            new_relations.end(),
+            std::inserter(removed_relations, removed_relations.begin()));
 
-        std::set_difference(new_relations.begin(), new_relations.end(),
-                            old_relations.begin(), old_relations.end(),
-                            std::inserter(added_relations, added_relations.begin()));
+        std::set_difference(new_relations.begin(),
+            new_relations.end(),
+            old_relations.begin(),
+            old_relations.end(),
+            std::inserter(added_relations, added_relations.begin()));
 
         if (unlink_object_from_targets(target, removed_relations)
             && link_object_to_targets(target, added_relations))
@@ -1336,7 +1319,6 @@ bool service_to_filter_relations(Service* service, json_t* old_json, json_t* new
     }
     else
     {
-
         MXS_ERROR("Could not find all filters that '%s' relates to", service->name());
     }
 
@@ -1375,25 +1357,19 @@ bool monitor_to_service_relations(const std::string& target, json_t* old_json, j
  */
 bool is_dynamic_param(const std::string& key)
 {
-    return key != CN_TYPE
-           && key != CN_ROUTER
-           && key != CN_SERVERS
-           && key != CN_FILTERS;
+    return key != CN_TYPE && key != CN_ROUTER && key != CN_SERVERS && key != CN_FILTERS;
 }
 
 bool validate_logs_json(json_t* json)
 {
     json_t* param = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
-    bool rval = false;
+    bool rval     = false;
 
     if (param && json_is_object(param))
     {
-        rval = runtime_is_bool_or_null(param, "highprecision")
-            && runtime_is_bool_or_null(param, "maxlog")
-            && runtime_is_bool_or_null(param, "syslog")
-            && runtime_is_bool_or_null(param, "log_info")
-            && runtime_is_bool_or_null(param, "log_warning")
-            && runtime_is_bool_or_null(param, "log_notice")
+        rval = runtime_is_bool_or_null(param, "highprecision") && runtime_is_bool_or_null(param, "maxlog")
+            && runtime_is_bool_or_null(param, "syslog") && runtime_is_bool_or_null(param, "log_info")
+            && runtime_is_bool_or_null(param, "log_warning") && runtime_is_bool_or_null(param, "log_notice")
             && runtime_is_bool_or_null(param, "log_debug")
             && runtime_is_count_or_null(param, "throttling/count")
             && runtime_is_count_or_null(param, "throttling/suppress_ms")
@@ -1424,8 +1400,7 @@ bool validate_listener_json(json_t* json)
     {
         MXS_ERROR("Value '%s' is not an object", MXS_JSON_PTR_PARAMETERS);
     }
-    else if (runtime_is_count_or_null(param, CN_PORT)
-             && runtime_is_string_or_null(param, CN_ADDRESS)
+    else if (runtime_is_count_or_null(param, CN_PORT) && runtime_is_string_or_null(param, CN_ADDRESS)
              && runtime_is_string_or_null(param, CN_AUTHENTICATOR)
              && runtime_is_string_or_null(param, CN_AUTHENTICATOR_OPTIONS)
              && (!have_ssl_json(param) || validate_ssl_json(param, OT_LISTENER)))
@@ -1438,11 +1413,11 @@ bool validate_listener_json(json_t* json)
 
 bool validate_user_json(json_t* json)
 {
-    bool rval = false;
-    json_t* id = mxs_json_pointer(json, MXS_JSON_PTR_ID);
-    json_t* type = mxs_json_pointer(json, MXS_JSON_PTR_TYPE);
+    bool rval        = false;
+    json_t* id       = mxs_json_pointer(json, MXS_JSON_PTR_ID);
+    json_t* type     = mxs_json_pointer(json, MXS_JSON_PTR_TYPE);
     json_t* password = mxs_json_pointer(json, MXS_JSON_PTR_PASSWORD);
-    json_t* account = mxs_json_pointer(json, MXS_JSON_PTR_ACCOUNT);
+    json_t* account  = mxs_json_pointer(json, MXS_JSON_PTR_ACCOUNT);
 
     if (!id)
     {
@@ -1552,7 +1527,7 @@ bool validate_service_json(json_t* json)
 
     if (rval)
     {
-        auto servers = mxs_json_pointer(json, MXS_JSON_PTR_RELATIONSHIPS_SERVERS);
+        auto servers  = mxs_json_pointer(json, MXS_JSON_PTR_RELATIONSHIPS_SERVERS);
         auto services = mxs_json_pointer(json, MXS_JSON_PTR_RELATIONSHIPS_SERVICES);
         auto monitors = mxs_json_pointer(json, MXS_JSON_PTR_RELATIONSHIPS_MONITORS);
 
@@ -1573,15 +1548,13 @@ bool validate_service_json(json_t* json)
 
 bool validate_create_service_json(json_t* json)
 {
-    return validate_service_json(json)
-           && mxs_json_pointer(json, MXS_JSON_PTR_ID)
-           && mxs_json_pointer(json, MXS_JSON_PTR_ROUTER);
+    return validate_service_json(json) && mxs_json_pointer(json, MXS_JSON_PTR_ID)
+        && mxs_json_pointer(json, MXS_JSON_PTR_ROUTER);
 }
 
 bool ignored_core_parameters(const char* key)
 {
-    static const std::unordered_set<std::string> params =
-    {
+    static const std::unordered_set<std::string> params = {
         CN_CACHEDIR,
         CN_CONNECTOR_PLUGINDIR,
         CN_DATADIR,
@@ -1600,7 +1573,7 @@ bool ignored_core_parameters(const char* key)
 
 Service* get_service_from_listener_json(json_t* json)
 {
-    Service* rval = nullptr;
+    Service* rval   = nullptr;
     const char* ptr = "/data/relationships/services/data/0/id";
 
     if (auto svc = mxs_json_pointer(json, ptr))
@@ -1677,16 +1650,16 @@ void prepare_for_destruction(Monitor* monitor)
 
 Server* get_server_by_address(json_t* params)
 {
-    auto addr_js = json_object_get(params, CN_ADDRESS);
-    auto port_js = json_object_get(params, CN_PORT);
+    auto addr_js   = json_object_get(params, CN_ADDRESS);
+    auto port_js   = json_object_get(params, CN_PORT);
     auto socket_js = json_object_get(params, CN_SOCKET);
 
-    int port = json_integer_value(port_js);
+    int port         = json_integer_value(port_js);
     std::string addr = json_string_value(addr_js ? addr_js : socket_js);
 
     return ServerManager::find_by_address(addr, port);
 }
-}
+}  // namespace
 
 void config_runtime_add_error(const std::string& error)
 {
@@ -1748,12 +1721,10 @@ bool runtime_destroy_server(Server* server, bool force)
 
     std::vector<std::string> names;
     auto services = service_server_in_use(server);
-    std::transform(services.begin(), services.end(), std::back_inserter(names),
-                   std::mem_fn(&Service::name));
+    std::transform(services.begin(), services.end(), std::back_inserter(names), std::mem_fn(&Service::name));
 
     auto filters = filter_depends_on_target(server);
-    std::transform(filters.begin(), filters.end(), std::back_inserter(names),
-                   std::mem_fn(&FilterDef::name));
+    std::transform(filters.begin(), filters.end(), std::back_inserter(names), std::mem_fn(&FilterDef::name));
 
     if (auto mon = MonitorManager::server_is_monitored(server))
     {
@@ -1763,7 +1734,8 @@ bool runtime_destroy_server(Server* server, bool force)
     if (!names.empty())
     {
         MXS_ERROR("Cannot destroy server '%s' as it is used by: %s",
-                  server->name(), mxb::join(names, ", ").c_str());
+            server->name(),
+            mxb::join(names, ", ").c_str());
     }
     else if (runtime_remove_config(server->name()))
     {
@@ -1872,8 +1844,7 @@ bool runtime_create_server_from_json(json_t* json)
     bool rval = false;
     StringSet relations;
 
-    if (server_contains_required_fields(json)
-        && extract_relations(json, relations, to_service_rel)
+    if (server_contains_required_fields(json) && extract_relations(json, relations, to_service_rel)
         && extract_relations(json, relations, to_monitor_rel))
     {
         json_t* params = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
@@ -1911,12 +1882,12 @@ bool runtime_alter_server_from_json(Server* server, json_t* new_json)
 
     if (is_valid_resource_body(new_json))
     {
-        rval = true;
+        rval                   = true;
         json_t* new_parameters = nullptr;
 
         if (json_t* parameters = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS))
         {
-            rval = false;
+            rval           = false;
             new_parameters = mxs_json_pointer(old_json.get(), MXS_JSON_PTR_PARAMETERS);
             json_object_update(new_parameters, parameters);
             remove_json_nulls_from_object(new_parameters);
@@ -1928,7 +1899,10 @@ bool runtime_alter_server_from_json(Server* server, json_t* new_json)
                 if (other && other != server)
                 {
                     MXS_ERROR("Cannot update server '%s' to '[%s]:%d', server '%s' exists there already.",
-                              server->name(), other->address(), other->port(), other->name());
+                        server->name(),
+                        other->address(),
+                        other->port(),
+                        other->name());
                 }
                 else
                 {
@@ -1975,12 +1949,8 @@ bool runtime_alter_server_relationships_from_json(Server* server, const char* ty
 
     if (is_valid_relationship_body(json))
     {
-        std::unique_ptr<json_t> j(json_pack("{s: {s: {s: {s: O}}}}",
-                                            "data",
-                                            "relationships",
-                                            type,
-                                            "data",
-                                            json_object_get(json, "data")));
+        std::unique_ptr<json_t> j(json_pack(
+            "{s: {s: {s: {s: O}}}}", "data", "relationships", type, "data", json_object_get(json, "data")));
 
         if (server_to_object_relations(server, old_json.get(), j.get()))
         {
@@ -1997,7 +1967,7 @@ bool runtime_create_monitor_from_json(json_t* json)
 
     if (validate_monitor_json(json))
     {
-        const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
+        const char* name   = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
         const char* module = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_MODULE));
 
         if (MonitorManager::find_monitor(name))
@@ -2025,7 +1995,7 @@ bool runtime_create_monitor_from_json(json_t* json)
 
                         // TODO: Do this with native types instead of JSON comparisons
                         std::unique_ptr<json_t> old_json(monitor->to_json(""));
-                        MXB_AT_DEBUG(bool rv = )
+                        MXB_AT_DEBUG(bool rv =)
                         monitor_to_service_relations(monitor->name(), old_json.get(), json);
                         mxb_assert(rv);
                     }
@@ -2047,9 +2017,9 @@ bool runtime_create_filter_from_json(json_t* json)
 
     if (validate_filter_json(json))
     {
-        const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
+        const char* name   = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
         const char* module = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_MODULE));
-        auto params = extract_parameters(json);
+        auto params        = extract_parameters(json);
 
         rval = runtime_create_filter(name, module, &params);
     }
@@ -2065,9 +2035,9 @@ bool update_service_relationships(Service* service, json_t* json)
     mxb_assert(old_json);
 
     bool rval = object_to_server_relations(service->name(), old_json, json)
-        && service_to_service_relations(service->name(), old_json, json)
-        && service_to_filter_relations(service, old_json, json)
-        && service_to_monitor_relations(service->name(), old_json, json);
+             && service_to_service_relations(service->name(), old_json, json)
+             && service_to_filter_relations(service, old_json, json)
+             && service_to_monitor_relations(service->name(), old_json, json);
 
     json_decref(old_json);
 
@@ -2135,8 +2105,7 @@ bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
     auto params = monitor->parameters();
     params.set_multiple(extract_parameters(new_json));
 
-    if (is_valid_resource_body(new_json)
-        && validate_param(common_monitor_params(), mod->parameters, &params)
+    if (is_valid_resource_body(new_json) && validate_param(common_monitor_params(), mod->parameters, &params)
         && server_relationship_to_parameter(new_json, &params)
         && monitor_to_service_relations(monitor->name(), old_json.get(), new_json))
     {
@@ -2159,12 +2128,8 @@ bool runtime_alter_monitor_relationships_from_json(Monitor* monitor, const char*
 
     if (is_valid_relationship_body(json))
     {
-        std::unique_ptr<json_t> j(json_pack("{s: {s: {s: {s: O}}}}",
-                                            "data",
-                                            "relationships",
-                                            type,
-                                            "data",
-                                            json_object_get(json, "data")));
+        std::unique_ptr<json_t> j(json_pack(
+            "{s: {s: {s: {s: O}}}}", "data", "relationships", type, "data", json_object_get(json, "data")));
 
         if (runtime_alter_monitor_from_json(monitor, j.get()))
         {
@@ -2181,12 +2146,8 @@ bool runtime_alter_service_relationships_from_json(Service* service, const char*
 
     if (is_valid_relationship_body(json))
     {
-        std::unique_ptr<json_t> j(json_pack("{s: {s: {s: {s: O}}}}",
-                                            "data",
-                                            "relationships",
-                                            type,
-                                            "data",
-                                            json_object_get(json, "data")));
+        std::unique_ptr<json_t> j(json_pack(
+            "{s: {s: {s: {s: O}}}}", "data", "relationships", type, "data", json_object_get(json, "data")));
 
         if (runtime_alter_service_from_json(service, j.get()))
         {
@@ -2213,8 +2174,11 @@ bool can_modify_service_params(Service* service, const mxs::ConfigParameters& pa
     // prevents unnecessary modifications of parameters and any log messages that the operations would
     // generate.
     std::vector<std::pair<std::string, std::string>> newparams;
-    std::set_difference(params.begin(), params.end(), service->params().begin(), service->params().end(),
-                        std::back_inserter(newparams));
+    std::set_difference(params.begin(),
+        params.end(),
+        service->params().begin(),
+        service->params().end(),
+        std::back_inserter(newparams));
 
     for (const auto& a : newparams)
     {
@@ -2231,7 +2195,8 @@ bool can_modify_service_params(Service* service, const mxs::ConfigParameters& pa
         else if (!is_dynamic_param(a.first))
         {
             MXS_ERROR("Runtime modifications to static service parameters is not supported: %s=%s",
-                      a.first.c_str(), a.second.c_str());
+                a.first.c_str(),
+                a.second.c_str());
             rval = false;
         }
     }
@@ -2250,8 +2215,7 @@ bool runtime_alter_service_from_json(Service* service, json_t* new_json)
         const MXS_MODULE* mod = get_module(service->router_name(), MODULE_ROUTER);
 
         if (validate_param(common_service_params(), mod->parameters, &params)
-            && can_modify_service_params(service, params)
-            && update_service_relationships(service, new_json))
+            && can_modify_service_params(service, params) && update_service_relationships(service, new_json))
         {
             rval = true;
             service->update_basic_parameters(params);
@@ -2262,7 +2226,7 @@ bool runtime_alter_service_from_json(Service* service, json_t* new_json)
                 {
                     rval = false;
                     MXS_ERROR("Reconfiguration of service '%s' failed. See log file for more details.",
-                              service->name());
+                        service->name());
                 }
             }
 
@@ -2389,20 +2353,20 @@ bool runtime_create_listener_from_json(json_t* json, Service* service)
     {
         std::string port = json_int_to_string(mxs_json_pointer(json, MXS_JSON_PTR_PARAM_PORT));
 
-        const char* id = get_string_or_null(json, MXS_JSON_PTR_ID);
-        const char* address = get_string_or_null(json, MXS_JSON_PTR_PARAM_ADDRESS);
-        const char* protocol = get_string_or_null(json, MXS_JSON_PTR_PARAM_PROTOCOL);
+        const char* id            = get_string_or_null(json, MXS_JSON_PTR_ID);
+        const char* address       = get_string_or_null(json, MXS_JSON_PTR_PARAM_ADDRESS);
+        const char* protocol      = get_string_or_null(json, MXS_JSON_PTR_PARAM_PROTOCOL);
         const char* authenticator = get_string_or_null(json, MXS_JSON_PTR_PARAM_AUTHENTICATOR);
-        const char* authenticator_options =
-            get_string_or_null(json, MXS_JSON_PTR_PARAM_AUTHENTICATOR_OPTIONS);
-        const char* ssl_key = get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_KEY);
-        const char* ssl_cert = get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_CERT);
+        const char* authenticator_options
+            = get_string_or_null(json, MXS_JSON_PTR_PARAM_AUTHENTICATOR_OPTIONS);
+        const char* ssl_key     = get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_KEY);
+        const char* ssl_cert    = get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_CERT);
         const char* ssl_ca_cert = get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_CA_CERT);
         const char* ssl_version = get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_VERSION);
-        const char* ssl_cert_verify_depth =
-            get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_CERT_VERIFY_DEPTH);
-        const char* ssl_verify_peer_certificate = get_string_or_null(json,
-                                                                     MXS_JSON_PTR_PARAM_SSL_VERIFY_PEER_CERT);
+        const char* ssl_cert_verify_depth
+            = get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_CERT_VERIFY_DEPTH);
+        const char* ssl_verify_peer_certificate
+            = get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_VERIFY_PEER_CERT);
 
         if (!address)
         {
@@ -2411,18 +2375,18 @@ bool runtime_create_listener_from_json(json_t* json, Service* service)
 
         // TODO: Create the listener directly from the JSON and pass ssl_verify_peer_host to it.
         rval = runtime_create_listener(service,
-                                       id,
-                                       address,
-                                       port.c_str(),
-                                       protocol,
-                                       authenticator,
-                                       authenticator_options,
-                                       ssl_key,
-                                       ssl_cert,
-                                       ssl_ca_cert,
-                                       ssl_version,
-                                       ssl_cert_verify_depth,
-                                       ssl_verify_peer_certificate);
+            id,
+            address,
+            port.c_str(),
+            protocol,
+            authenticator,
+            authenticator_options,
+            ssl_key,
+            ssl_cert,
+            ssl_ca_cert,
+            ssl_version,
+            ssl_cert_verify_depth,
+            ssl_verify_peer_certificate);
     }
 
     return rval;
@@ -2434,11 +2398,11 @@ bool runtime_create_user_from_json(json_t* json)
 
     if (validate_user_json(json))
     {
-        const char* user = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
+        const char* user     = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
         const char* password = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_PASSWORD));
-        std::string strtype = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_TYPE));
-        auto type = json_to_account_type(mxs_json_pointer(json, MXS_JSON_PTR_ACCOUNT));
-        const char* err = NULL;
+        std::string strtype  = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_TYPE));
+        auto type            = json_to_account_type(mxs_json_pointer(json, MXS_JSON_PTR_ACCOUNT));
+        const char* err      = NULL;
 
         if (strtype == CN_INET && (err = admin_add_inet_user(user, password, type)) == ADMIN_SUCCESS)
         {
@@ -2460,7 +2424,7 @@ bool runtime_create_user_from_json(json_t* json)
 
 bool runtime_remove_user(const char* id)
 {
-    bool rval = false;
+    bool rval       = false;
     const char* err = admin_remove_inet_user(id);
 
     if (err == ADMIN_SUCCESS)
@@ -2478,7 +2442,7 @@ bool runtime_remove_user(const char* id)
 
 bool runtime_alter_user(const std::string& user, const std::string& type, json_t* json)
 {
-    bool rval = false;
+    bool rval            = false;
     const char* password = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_PASSWORD));
 
     if (!password)
@@ -2507,7 +2471,7 @@ bool runtime_alter_maxscale_from_json(json_t* json)
 
     if (validate_object_json(json))
     {
-        rval = true;
+        rval           = true;
         json_t* params = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
         const char* key;
         json_t* new_val;
@@ -2569,9 +2533,8 @@ bool runtime_alter_maxscale_from_json(json_t* json)
     return rval;
 }
 
-bool runtime_thread_rebalance(mxs::RoutingWorker& from,
-                              const std::string& sessions,
-                              const std::string& recipient)
+bool runtime_thread_rebalance(
+    mxs::RoutingWorker& from, const std::string& sessions, const std::string& recipient)
 {
     bool rv = false;
 
@@ -2643,13 +2606,15 @@ bool runtime_threads_rebalance(const std::string& arg_threshold)
 
 bool runtime_remove_config(const char* name)
 {
-    bool rval = true;
+    bool rval            = true;
     std::string filename = mxs::config_persistdir() + "/"s + name + ".cnf";
 
     if (unlink(filename.c_str()) == -1 && errno != ENOENT)
     {
         MXS_ERROR("Failed to remove persisted configuration '%s': %d, %s",
-                  filename.c_str(), errno, mxs_strerror(errno));
+            filename.c_str(),
+            errno,
+            mxs_strerror(errno));
         rval = false;
     }
 
@@ -2658,13 +2623,15 @@ bool runtime_remove_config(const char* name)
 
 bool runtime_save_config(const char* name, const std::string& config)
 {
-    bool rval = false;
+    bool rval            = false;
     std::string filename = mxs::config_persistdir() + "/"s + name + ".cnf.tmp";
 
     if (unlink(filename.c_str()) == -1 && errno != ENOENT)
     {
         MXS_ERROR("Failed to remove temporary configuration at '%s': %d, %s",
-                  filename.c_str(), errno, mxs_strerror(errno));
+            filename.c_str(),
+            errno,
+            mxs_strerror(errno));
         return false;
     }
 
@@ -2673,7 +2640,10 @@ bool runtime_save_config(const char* name, const std::string& config)
     if (fd == -1)
     {
         MXS_ERROR("Failed to open file '%s' when serializing '%s': %d, %s",
-                  filename.c_str(), name, errno, mxs_strerror(errno));
+            filename.c_str(),
+            name,
+            errno,
+            mxs_strerror(errno));
         return false;
     }
 
@@ -2689,7 +2659,9 @@ bool runtime_save_config(const char* name, const std::string& config)
         if (rename(filename.c_str(), final_filename.c_str()) == -1)
         {
             MXS_ERROR("Failed to rename temporary configuration at '%s': %d, %s",
-                      filename.c_str(), errno, mxs_strerror(errno));
+                filename.c_str(),
+                errno,
+                mxs_strerror(errno));
         }
         else
         {

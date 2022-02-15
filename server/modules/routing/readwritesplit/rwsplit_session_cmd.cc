@@ -32,23 +32,25 @@ using namespace maxscale;
  * @param slave_ok   Slave's reply was OK
  * @param sescmd     The executed session command
  */
-static void discard_if_response_differs(RWBackend* backend, RWBackend* master,
-                                        const mxs::Error& master_err,
-                                        const mxs::Error& slave_err,
-                                        SSessionCommand sescmd)
+static void discard_if_response_differs(RWBackend* backend,
+    RWBackend* master,
+    const mxs::Error& master_err,
+    const mxs::Error& slave_err,
+    SSessionCommand sescmd)
 {
     if (!master_err != !slave_err && backend->in_use())
     {
-        uint8_t cmd = sescmd->get_command();
-        auto sql = sescmd->to_string();
+        uint8_t cmd       = sescmd->get_command();
+        auto sql          = sescmd->to_string();
         std::string query = sql.empty() ? "<no query>" : sql;
 
         MXS_WARNING("Slave server '%s': response (%s) differs from master's response (%s) to %s: `%s`. "
                     "Closing slave connection due to inconsistent session state.",
-                    backend->name(),
-                    slave_err ? slave_err.message().c_str() : "OK",
-                    master_err ? master_err.message().c_str() : "OK",
-                    STRPACKETTYPE(cmd), query.c_str());
+            backend->name(),
+            slave_err ? slave_err.message().c_str() : "OK",
+            master_err ? master_err.message().c_str() : "OK",
+            STRPACKETTYPE(cmd),
+            query.c_str());
         backend->close(mxs::Backend::CLOSE_FATAL);
         backend->set_close_reason("Invalid response to: " + query);
     }
@@ -57,10 +59,10 @@ static void discard_if_response_differs(RWBackend* backend, RWBackend* master,
 void RWSplitSession::process_sescmd_response(RWBackend* backend, GWBUF** ppPacket, const mxs::Reply& reply)
 {
     mxb_assert(backend->has_session_commands());
-    bool discard = true;
+    bool discard                = true;
     mxs::SSessionCommand sescmd = backend->next_session_command();
-    uint8_t command = sescmd->get_command();
-    uint64_t id = sescmd->get_position();
+    uint8_t command             = sescmd->get_command();
+    uint64_t id                 = sescmd->get_position();
 
     if (command == MXS_COM_STMT_PREPARE && !reply.error())
     {
@@ -84,7 +86,7 @@ void RWSplitSession::process_sescmd_response(RWBackend* backend, GWBUF** ppPacke
                 mxb_assert(m_current_query.empty());
 
                 // TODO: This would make more sense if it was done at the client protocol level
-                session_book_server_response(m_pSession, (SERVER*)backend->target(), true);
+                session_book_server_response(m_pSession, (SERVER*) backend->target(), true);
 
                 /** Store the master's response so that the slave responses can be compared to it */
                 m_sescmd_responses[id] = std::make_pair(backend, reply.error());
@@ -101,8 +103,8 @@ void RWSplitSession::process_sescmd_response(RWBackend* backend, GWBUF** ppPacke
 
                 if (reply.error())
                 {
-                    MXS_INFO("Session command no. %lu returned an error: %s",
-                             id, reply.error().message().c_str());
+                    MXS_INFO(
+                        "Session command no. %lu returned an error: %s", id, reply.error().message().c_str());
                 }
                 else if (command == MXS_COM_STMT_PREPARE)
                 {
@@ -212,8 +214,8 @@ mxs::SSessionCommand RWSplitSession::create_sescmd(GWBUF* buffer)
 void RWSplitSession::compress_history(mxs::SSessionCommand& sescmd)
 {
     auto eq = [&](mxs::SSessionCommand& scmd) {
-            return scmd->eq(*sescmd);
-        };
+        return scmd->eq(*sescmd);
+    };
 
     auto first = std::find_if(m_sescmd_list.begin(), m_sescmd_list.end(), eq);
 
@@ -263,10 +265,9 @@ void RWSplitSession::discard_old_history(uint64_t lowest_pos)
             discard_responses(m_sescmd_prune_pos);
         }
 
-        auto it = std::find_if(m_sescmd_list.begin(), m_sescmd_list.end(),
-                               [this](const SSessionCommand& s) {
-                                   return s->get_position() > m_sescmd_prune_pos;
-                               });
+        auto it = std::find_if(m_sescmd_list.begin(), m_sescmd_list.end(), [this](const SSessionCommand& s) {
+            return s->get_position() > m_sescmd_prune_pos;
+        });
 
         if (it != m_sescmd_list.begin() && it != m_sescmd_list.end())
         {

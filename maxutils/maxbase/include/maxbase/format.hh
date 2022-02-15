@@ -28,7 +28,7 @@ namespace maxbase
  * @param ... Items to convert according to format string
  * @return The result string
  */
-std::string string_printf(const char* format, ...) mxb_attribute((format (printf, 1, 2)));
+std::string string_printf(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
 
-std::string string_vprintf(const char *format, va_list args);
-}
+std::string string_vprintf(const char* format, va_list args);
+}  // namespace maxbase

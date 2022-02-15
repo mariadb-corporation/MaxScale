@@ -20,22 +20,23 @@
 #include <maxscale/listener.hh>
 #include <maxscale/modutil.hh>
 
-TeeSession::TeeSession(MXS_SESSION* session, SERVICE* service, LocalClient* client,
-                       const mxb::Regex& match, const mxb::Regex& exclude)
+TeeSession::TeeSession(MXS_SESSION* session,
+    SERVICE* service,
+    LocalClient* client,
+    const mxb::Regex& match,
+    const mxb::Regex& exclude)
     : mxs::FilterSession(session, service)
     , m_client(client)
     , m_match(match)
     , m_exclude(exclude)
-{
-}
+{}
 
 TeeSession* TeeSession::create(Tee* my_instance, MXS_SESSION* session, SERVICE* service)
 {
-    TeeSession* rval = nullptr;
+    TeeSession* rval    = nullptr;
     LocalClient* client = nullptr;
 
-    if (my_instance->is_enabled()
-        && my_instance->user_matches(session->user().c_str())
+    if (my_instance->is_enabled() && my_instance->user_matches(session->user().c_str())
         && my_instance->remote_matches(session->client_remote().c_str()))
     {
         if ((client = LocalClient::create(session, my_instance->get_target())))
@@ -44,15 +45,12 @@ TeeSession* TeeSession::create(Tee* my_instance, MXS_SESSION* session, SERVICE* 
         }
         else
         {
-            MXS_ERROR("Failed to create local client connection to '%s'",
-                      my_instance->get_target()->name());
+            MXS_ERROR("Failed to create local client connection to '%s'", my_instance->get_target()->name());
             return nullptr;
         }
     }
 
-    return new TeeSession(session, service, client,
-                          my_instance->get_match(),
-                          my_instance->get_exclude());
+    return new TeeSession(session, service, client, my_instance->get_match(), my_instance->get_exclude());
 }
 
 TeeSession::~TeeSession()
@@ -60,9 +58,7 @@ TeeSession::~TeeSession()
     delete m_client;
 }
 
-void TeeSession::close()
-{
-}
+void TeeSession::close() {}
 
 int TeeSession::routeQuery(GWBUF* queue)
 {

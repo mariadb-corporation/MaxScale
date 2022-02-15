@@ -57,4 +57,4 @@ std::string pretty_size(size_t sz, const char* separator = "");
  *  @return The formatted string
  */
 std::string pretty_number(double num, const char* separator = "", const char* suffix = "");
-}
+}  // namespace maxbase

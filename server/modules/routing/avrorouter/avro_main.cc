@@ -86,8 +86,8 @@ void destroyInstance(MXS_ROUTER* router)
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session,
-                                      mxs::Upstream* up, const Endpoints& endpoints)
+static MXS_ROUTER_SESSION* newSession(
+    MXS_ROUTER* instance, MXS_SESSION* session, mxs::Upstream* up, const Endpoints& endpoints)
 {
     Avro* inst = reinterpret_cast<Avro*>(instance);
     return AvroSession::create(inst, session);
@@ -118,9 +118,7 @@ static void freeSession(MXS_ROUTER* router_instance, MXS_ROUTER_SESSION* router_
  * @param instance          The router instance data
  * @param router_session    The session being closed
  */
-static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session)
-{
-}
+static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session) {}
 
 /**
  * We have data from the client, this is likely to be packets related to
@@ -148,7 +146,7 @@ static int routeQuery(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, 
  */
 static json_t* diagnostics(const MXS_ROUTER* router)
 {
-    Avro* router_inst = (Avro*)router;
+    Avro* router_inst = (Avro*) router;
 
     json_t* rval = json_object();
 
@@ -186,10 +184,10 @@ static json_t* diagnostics(const MXS_ROUTER* router)
  * @param       queue           The GWBUF with reply data
  */
 static void clientReply(MXS_ROUTER* instance,
-                        MXS_ROUTER_SESSION* router_session,
-                        GWBUF* queue,
-                        const mxs::ReplyRoute& backend_dcb,
-                        const mxs::Reply& reply)
+    MXS_ROUTER_SESSION* router_session,
+    GWBUF* queue,
+    const mxs::ReplyRoute& backend_dcb,
+    const mxs::Reply& reply)
 {
     /** We should never end up here */
     mxb_assert(false);
@@ -208,11 +206,11 @@ static void clientReply(MXS_ROUTER* instance,
  *
  */
 static bool errorReply(MXS_ROUTER* instance,
-                       MXS_ROUTER_SESSION* router_session,
-                       mxs::ErrorType type,
-                       GWBUF* message,
-                       mxs::Endpoint* backend_dcb,
-                       const mxs::Reply& reply)
+    MXS_ROUTER_SESSION* router_session,
+    mxs::ErrorType type,
+    GWBUF* message,
+    mxs::Endpoint* backend_dcb,
+    const mxs::Reply& reply)
 {
     /** We should never end up here */
     mxb_assert(false);
@@ -234,10 +232,10 @@ bool converter_func(Worker::Call::action_t action, Avro* router)
         return false;
     }
 
-    bool progress = false;
+    bool progress                = false;
     avro_binlog_end_t binlog_end = AVRO_BINLOG_ERROR;
 
-    uint64_t start_pos = router->current_pos;
+    uint64_t start_pos      = router->current_pos;
     std::string binlog_name = router->binlog_name;
 
     if (avro_open_binlog(router->binlogdir.c_str(), router->binlog_name.c_str(), &router->binlog_fd))
@@ -267,8 +265,8 @@ bool converter_func(Worker::Call::action_t action, Avro* router)
         logged = true;
         MXS_INFO("Stopped processing file %s at position %lu. Waiting until"
                  " more data is written before continuing.",
-                 router->binlog_name.c_str(),
-                 router->current_pos);
+            router->binlog_name.c_str(),
+            router->current_pos);
     }
 
     return true;
@@ -280,8 +278,7 @@ public:
     ConversionCtlTask(Avro* instance, bool start)
         : m_instance(instance)
         , m_start(start)
-    {
-    }
+    {}
 
     void execute(Worker& worker)
     {
@@ -299,7 +296,7 @@ public:
 
 private:
     Avro* m_instance;
-    bool  m_start;
+    bool m_start;
 };
 
 static bool conversion_task_ctl(Avro* inst, bool start)
@@ -309,7 +306,7 @@ static bool conversion_task_ctl(Avro* inst, bool start)
     if (!maxscale_is_shutting_down())
     {
         Worker* worker = static_cast<Worker*>(mxs_rworker_get(MXS_RWORKER_MAIN));
-        std::unique_ptr<ConversionCtlTask> task(new(std::nothrow) ConversionCtlTask(inst, start));
+        std::unique_ptr<ConversionCtlTask> task(new (std::nothrow) ConversionCtlTask(inst, start));
 
         if (task.get())
         {
@@ -326,13 +323,13 @@ bool avro_handle_convert(const MODULECMD_ARG* args, json_t** output)
     bool rval = false;
 
     if (strcmp(args->argv[1].value.string, "start") == 0
-        && conversion_task_ctl((Avro*)args->argv[0].value.service->router_instance, true))
+        && conversion_task_ctl((Avro*) args->argv[0].value.service->router_instance, true))
     {
         MXS_NOTICE("Started conversion for service '%s'.", args->argv[0].value.service->name());
         rval = true;
     }
     else if (strcmp(args->argv[1].value.string, "stop") == 0
-             && conversion_task_ctl((Avro*)args->argv[0].value.service->router_instance, false))
+             && conversion_task_ctl((Avro*) args->argv[0].value.service->router_instance, false))
     {
         MXS_NOTICE("Stopped conversion for service '%s'.", args->argv[0].value.service->name());
         rval = true;
@@ -340,7 +337,6 @@ bool avro_handle_convert(const MODULECMD_ARG* args, json_t** output)
 
     return rval;
 }
-
 
 static bool do_unlink(const char* format, ...)
 {
@@ -382,10 +378,7 @@ static bool do_unlink_with_pattern(const char* format, ...)
     }
     else if (rc != GLOB_NOMATCH)
     {
-        modulecmd_set_error("Failed to search '%s': %d, %s",
-                            filename,
-                            errno,
-                            mxs_strerror(errno));
+        modulecmd_set_error("Failed to search '%s': %d, %s", filename, errno, mxs_strerror(errno));
         rval = false;
     }
 
@@ -396,15 +389,15 @@ static bool do_unlink_with_pattern(const char* format, ...)
 
 static bool avro_handle_purge(const MODULECMD_ARG* args, json_t** output)
 {
-    Avro* inst = (Avro*)args->argv[0].value.service->router_instance;
+    Avro* inst = (Avro*) args->argv[0].value.service->router_instance;
 
     // First stop the conversion service
     conversion_task_ctl(inst, false);
 
     // Then delete the files
-    return do_unlink("%s/%s", inst->avrodir.c_str(), AVRO_PROGRESS_FILE)    // State file
-           && do_unlink_with_pattern("/%s/*.avro", inst->avrodir.c_str())   // .avro files
-           && do_unlink_with_pattern("/%s/*.avsc", inst->avrodir.c_str());  // .avsc files
+    return do_unlink("%s/%s", inst->avrodir.c_str(), AVRO_PROGRESS_FILE)  // State file
+        && do_unlink_with_pattern("/%s/*.avro", inst->avrodir.c_str())    // .avro files
+        && do_unlink_with_pattern("/%s/*.avsc", inst->avrodir.c_str());   // .avsc files
 }
 
 /**
@@ -417,40 +410,29 @@ static bool avro_handle_purge(const MODULECMD_ARG* args, json_t** output)
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static modulecmd_arg_type_t args_convert[] =
-    {
-        {MODULECMD_ARG_SERVICE | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
-         "The avrorouter service"},
-        {MODULECMD_ARG_STRING,
-         "Action, whether to 'start' or 'stop' the conversion process"}
-    };
+    static modulecmd_arg_type_t args_convert[]
+        = {{MODULECMD_ARG_SERVICE | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "The avrorouter service"},
+            {MODULECMD_ARG_STRING, "Action, whether to 'start' or 'stop' the conversion process"}};
     modulecmd_register_command(MXS_MODULE_NAME,
-                               "convert",
-                               MODULECMD_TYPE_ACTIVE,
-                               avro_handle_convert,
-                               2,
-                               args_convert,
-                               "Start or stop the binlog to avro conversion process");
+        "convert",
+        MODULECMD_TYPE_ACTIVE,
+        avro_handle_convert,
+        2,
+        args_convert,
+        "Start or stop the binlog to avro conversion process");
 
-    static modulecmd_arg_type_t args_purge[] =
-    {
-        {
-            MODULECMD_ARG_SERVICE | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
-            "The avrorouter service to purge (NOTE: THIS REMOVES ALL CONVERTED FILES)"
-        }
-    };
+    static modulecmd_arg_type_t args_purge[] = {{MODULECMD_ARG_SERVICE | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
+        "The avrorouter service to purge (NOTE: THIS REMOVES ALL CONVERTED FILES)"}};
     modulecmd_register_command(MXS_MODULE_NAME,
-                               "purge",
-                               MODULECMD_TYPE_ACTIVE,
-                               avro_handle_purge,
-                               1,
-                               args_purge,
-                               "Purge created Avro files and reset conversion state. "
-                               "NOTE: MaxScale must be restarted after this call.");
+        "purge",
+        MODULECMD_TYPE_ACTIVE,
+        avro_handle_purge,
+        1,
+        args_purge,
+        "Purge created Avro files and reset conversion state. "
+        "NOTE: MaxScale must be restarted after this call.");
 
-    static MXS_ROUTER_OBJECT MyObject =
-    {
-        createInstance,
+    static MXS_ROUTER_OBJECT MyObject = {createInstance,
         newSession,
         closeSession,
         freeSession,
@@ -459,12 +441,9 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         clientReply,
         errorReply,
         getCapabilities,
-        destroyInstance
-    };
+        destroyInstance};
 
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_ROUTER,
+    static MXS_MODULE info = {MXS_MODULE_API_ROUTER,
         MXS_MODULE_GA,
         MXS_ROUTER_VERSION,
         "Avrorouter",
@@ -475,38 +454,27 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,
         NULL,
         NULL,
-        {
-            {
-                "binlogdir",
-                MXS_MODULE_PARAM_PATH,
-                NULL,
-                MXS_MODULE_OPT_PATH_R_OK
-                | MXS_MODULE_OPT_PATH_W_OK
-                | MXS_MODULE_OPT_PATH_X_OK
-                | MXS_MODULE_OPT_PATH_CREAT
-            },
-            {
-                "avrodir",
+        {{"binlogdir",
+             MXS_MODULE_PARAM_PATH,
+             NULL,
+             MXS_MODULE_OPT_PATH_R_OK | MXS_MODULE_OPT_PATH_W_OK | MXS_MODULE_OPT_PATH_X_OK
+                 | MXS_MODULE_OPT_PATH_CREAT},
+            {"avrodir",
                 MXS_MODULE_PARAM_PATH,
                 MXS_DEFAULT_DATADIR,
-                MXS_MODULE_OPT_PATH_R_OK
-                | MXS_MODULE_OPT_PATH_W_OK
-                | MXS_MODULE_OPT_PATH_X_OK
-                | MXS_MODULE_OPT_PATH_CREAT
-            },
-            {"filestem",              MXS_MODULE_PARAM_STRING, BINLOG_NAME_ROOT},
-            {"group_rows",            MXS_MODULE_PARAM_COUNT, "1000"},
-            {"group_trx",             MXS_MODULE_PARAM_COUNT, "1"},
-            {"start_index",           MXS_MODULE_PARAM_COUNT, "1"},
-            {"block_size",            MXS_MODULE_PARAM_SIZE, "0"},
-            {"codec",                 MXS_MODULE_PARAM_ENUM, "null", MXS_MODULE_OPT_ENUM_UNIQUE, codec_values},
-            {"match",                 MXS_MODULE_PARAM_REGEX  },
-            {"exclude",               MXS_MODULE_PARAM_REGEX  },
-            {"server_id",             MXS_MODULE_PARAM_COUNT, "1234"},
-            {"gtid_start_pos",        MXS_MODULE_PARAM_STRING },
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+                MXS_MODULE_OPT_PATH_R_OK | MXS_MODULE_OPT_PATH_W_OK | MXS_MODULE_OPT_PATH_X_OK
+                    | MXS_MODULE_OPT_PATH_CREAT},
+            {"filestem", MXS_MODULE_PARAM_STRING, BINLOG_NAME_ROOT},
+            {"group_rows", MXS_MODULE_PARAM_COUNT, "1000"},
+            {"group_trx", MXS_MODULE_PARAM_COUNT, "1"},
+            {"start_index", MXS_MODULE_PARAM_COUNT, "1"},
+            {"block_size", MXS_MODULE_PARAM_SIZE, "0"},
+            {"codec", MXS_MODULE_PARAM_ENUM, "null", MXS_MODULE_OPT_ENUM_UNIQUE, codec_values},
+            {"match", MXS_MODULE_PARAM_REGEX},
+            {"exclude", MXS_MODULE_PARAM_REGEX},
+            {"server_id", MXS_MODULE_PARAM_COUNT, "1234"},
+            {"gtid_start_pos", MXS_MODULE_PARAM_STRING},
+            {MXS_END_MODULE_PARAMS}}};
 
     return &info;
 }

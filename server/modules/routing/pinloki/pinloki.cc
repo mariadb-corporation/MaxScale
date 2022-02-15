@@ -76,7 +76,7 @@ std::vector<int> get_open_inodes()
     struct dirent* ent;
     if ((dir = opendir(proc_fd_dir.c_str())) != nullptr)
     {
-        while ((ent = readdir (dir)) != nullptr)
+        while ((ent = readdir(dir)) != nullptr)
         {
             if (ent->d_type == DT_LNK)
             {
@@ -87,7 +87,7 @@ std::vector<int> get_open_inodes()
                 }
             }
         }
-        closedir (dir);
+        closedir(dir);
     }
     else
     {
@@ -102,7 +102,7 @@ std::vector<int> get_open_inodes()
 wall_time::TimePoint file_mod_time(const std::string& file_name)
 {
     auto ret = wall_time::TimePoint::max();
-    int fd = open(file_name.c_str(), O_RDONLY);
+    int fd   = open(file_name.c_str(), O_RDONLY);
     if (fd >= 0)
     {
         struct stat file_stat;
@@ -119,7 +119,7 @@ wall_time::TimePoint file_mod_time(const std::string& file_name)
 /** Modification time of the oldest log file or wall_time::TimePoint::max() if there are no logs */
 wall_time::TimePoint oldest_logfile_time(InventoryWriter* pInventory)
 {
-    auto ret = wall_time::TimePoint::max();
+    auto ret               = wall_time::TimePoint::max();
     const auto& file_names = pInventory->file_names();
     if (!file_names.empty())
     {
@@ -128,8 +128,7 @@ wall_time::TimePoint oldest_logfile_time(InventoryWriter* pInventory)
 
     return ret;
 }
-}
-
+}  // namespace
 
 std::pair<std::string, std::string> get_file_name_and_size(const std::string& filepath)
 {
@@ -236,8 +235,8 @@ json_t* Pinloki::diagnostics() const
         json_object_set_new(cnf, "ssl_crl", json_string(m_master_config.ssl_crl.c_str()));
         json_object_set_new(cnf, "ssl_crlpath", json_string(m_master_config.ssl_crlpath.c_str()));
         json_object_set_new(cnf, "ssl_key", json_string(m_master_config.ssl_key.c_str()));
-        json_object_set_new(cnf, "ssl_verify_server_cert",
-                            json_boolean(m_master_config.ssl_verify_server_cert));
+        json_object_set_new(
+            cnf, "ssl_verify_server_cert", json_boolean(m_master_config.ssl_verify_server_cert));
     }
 
     json_object_set_new(rval, "master_config", cnf);
@@ -308,7 +307,7 @@ std::string Pinloki::change_master(const parser::ChangeMasterValues& values)
         case CMT::MASTER_USE_GTID:
             // slave_pos or current_pos, does not matter which
             m_master_config.use_gtid = strcasecmp(a.second.c_str(), "slave_pos") == 0
-                || strcasecmp(a.second.c_str(), "current_pos") == 0;
+                                    || strcasecmp(a.second.c_str(), "current_pos") == 0;
 
             if (!m_master_config.use_gtid)
             {
@@ -388,8 +387,8 @@ std::string Pinloki::verify_master_settings()
     }
 
     using CMT = pinloki::ChangeMasterType;
-    std::set<CMT> mandatory {CMT::MASTER_HOST, CMT::MASTER_PORT, CMT::MASTER_USER,
-                             CMT::MASTER_PASSWORD, CMT::MASTER_USE_GTID};
+    std::set<CMT> mandatory {
+        CMT::MASTER_HOST, CMT::MASTER_PORT, CMT::MASTER_USER, CMT::MASTER_PASSWORD, CMT::MASTER_USE_GTID};
     auto mandatory_notset {mandatory};
     std::vector<std::string> errors;
 
@@ -491,7 +490,7 @@ maxsql::Connection::ConnectionDetails Pinloki::generate_details()
         {
             if (srv->is_master())
             {
-                details.host = mxb::Host(srv->address(), srv->port());
+                details.host         = mxb::Host(srv->address(), srv->port());
                 m_master_config.host = srv->address();
                 m_master_config.port = srv->port();
                 details.user = m_master_config.user = m_pService->config()->user;
@@ -505,8 +504,8 @@ maxsql::Connection::ConnectionDetails Pinloki::generate_details()
                     details.ssl_crl = m_master_config.ssl_crl = ssl->crl;
                     details.ssl_key = m_master_config.ssl_key = ssl->key;
                     details.ssl_cipher = m_master_config.ssl_cipher = ssl->cipher;
-                    details.ssl_verify_server_cert =
-                        m_master_config.ssl_verify_server_cert = ssl->verify_peer;
+                    details.ssl_verify_server_cert                  = m_master_config.ssl_verify_server_cert
+                        = ssl->verify_peer;
                 }
 
                 m_master_config.use_gtid = true;
@@ -518,20 +517,20 @@ maxsql::Connection::ConnectionDetails Pinloki::generate_details()
     }
     else
     {
-        details.host = mxb::Host(m_master_config.host, m_master_config.port);
-        details.user = m_master_config.user;
+        details.host     = mxb::Host(m_master_config.host, m_master_config.port);
+        details.user     = m_master_config.user;
         details.password = m_master_config.password;
 
         if (m_master_config.ssl)
         {
-            details.ssl = true;
-            details.ssl_ca = m_master_config.ssl_ca;
-            details.ssl_capath = m_master_config.ssl_capath;
-            details.ssl_cert = m_master_config.ssl_cert;
-            details.ssl_crl = m_master_config.ssl_crl;
-            details.ssl_crlpath = m_master_config.ssl_crlpath;
-            details.ssl_key = m_master_config.ssl_key;
-            details.ssl_cipher = m_master_config.ssl_cipher;
+            details.ssl                    = true;
+            details.ssl_ca                 = m_master_config.ssl_ca;
+            details.ssl_capath             = m_master_config.ssl_capath;
+            details.ssl_cert               = m_master_config.ssl_cert;
+            details.ssl_crl                = m_master_config.ssl_crl;
+            details.ssl_crlpath            = m_master_config.ssl_crlpath;
+            details.ssl_key                = m_master_config.ssl_key;
+            details.ssl_cipher             = m_master_config.ssl_cipher;
             details.ssl_verify_server_cert = m_master_config.ssl_verify_server_cert;
         }
     }
@@ -558,7 +557,7 @@ std::string Pinloki::start_slave()
         if (err_str.empty())
         {
             MXS_INFO("Starting slave");
-            m_writer = std::make_unique<Writer>(generate_details(), inventory());
+            m_writer                      = std::make_unique<Writer>(generate_details(), inventory());
             m_master_config.slave_running = true;
             m_master_config.save(m_config);
         }
@@ -598,7 +597,12 @@ GWBUF* Pinloki::show_slave_status(bool all) const
 
     auto error = m_writer ? m_writer->get_err() : Error {};
 
-    enum class State {Stopped, Connected, Error};
+    enum class State
+    {
+        Stopped,
+        Connected,
+        Error
+    };
 
     State state = State::Error;
     if (m_inventory.is_writer_connected())
@@ -610,14 +614,13 @@ GWBUF* Pinloki::show_slave_status(bool all) const
         state = State::Stopped;
     }
 
-    std::string sql_state =
-        state == State::Stopped ? "" :
-        "Slave has read all relay log; waiting for the slave I/O thread to update it";
+    std::string sql_state = state == State::Stopped
+                              ? ""
+                              : "Slave has read all relay log; waiting for the slave I/O thread to update it";
 
-    std::string sql_io_state =
-        state == State::Stopped ? "" :
-        state == State::Connected ? "Waiting for master to send event" :
-        "Reconnecting after a failed master event read";
+    std::string sql_io_state = state == State::Stopped   ? ""
+                             : state == State::Connected ? "Waiting for master to send event"
+                                                         : "Reconnecting after a failed master event read";
 
     if (all)
     {
@@ -635,11 +638,10 @@ GWBUF* Pinloki::show_slave_status(bool all) const
     rset->add_column("Relay_Log_Pos", "");
     rset->add_column("Relay_Master_Log_File", "");
     rset->add_column("Slave_IO_Running",
-                     state == State::Stopped ? "No" :
-                     state == State::Connected ? "Yes" :
-                     "Connecting");
-    rset->add_column("Slave_SQL_Running",
-                     state == State::Stopped ? "No" : "Yes");
+        state == State::Stopped     ? "No"
+        : state == State::Connected ? "Yes"
+                                    : "Connecting");
+    rset->add_column("Slave_SQL_Running", state == State::Stopped ? "No" : "Yes");
     rset->add_column("Replicate_Do_DB", "");
     rset->add_column("Replicate_Ignore_DB", "");
     rset->add_column("Replicate_Do_Table", "");
@@ -654,7 +656,7 @@ GWBUF* Pinloki::show_slave_status(bool all) const
     rset->add_column("Until_Condition", "None");
     rset->add_column("Until_Log_File", "");
     rset->add_column("Until_Log_Pos", "0");
-    rset->add_column("Master_SSL_Allowed", "No");   // TODO
+    rset->add_column("Master_SSL_Allowed", "No");  // TODO
     rset->add_column("Master_SSL_CA_File", "");
     rset->add_column("Master_SSL_CA_Path", "");
     rset->add_column("Master_SSL_Cert", "");
@@ -687,7 +689,7 @@ GWBUF* Pinloki::show_slave_status(bool all) const
     if (all)
     {
         rset->add_column("Retried_transactions", "0");
-        rset->add_column("Max_relay_log_size", "1073741824");   // master decides
+        rset->add_column("Max_relay_log_size", "1073741824");  // master decides
         rset->add_column("Executed_log_entries", "42");
         rset->add_column("Slave_received_heartbeats", "42");
         rset->add_column("Slave_heartbeat_period", "1");
@@ -703,9 +705,7 @@ void Pinloki::set_gtid_slave_pos(const maxsql::GtidList& gtid)
     mxb_assert(m_writer.get() == nullptr);
     if (m_inventory.rpl_state().is_included(gtid))
     {
-        MXB_SERROR("The requested gtid "
-                   << gtid
-                   << " is already in the logs. Time travel is not supported.");
+        MXB_SERROR("The requested gtid " << gtid << " is already in the logs. Time travel is not supported.");
     }
     else
     {
@@ -728,39 +728,53 @@ mxq::GtidList Pinloki::gtid_io_pos() const
 
 void Pinloki::MasterConfig::save(const Config& config) const
 {
-    auto js = json_pack(
-        "{"
-        "s: b,"     // slave_running
-        "s: s,"     // host
-        "s: i,"     // port
-        "s: s,"     // user
-        "s: s,"     // password
-        "s: b,"     // use_gtid
-        "s: b,"     // ssl
-        "s: s,"     // ssl_ca
-        "s: s,"     // ssl_capath
-        "s: s,"     // ssl_cert
-        "s: s,"     // ssl_crl
-        "s: s,"     // ssl_crlpath
-        "s: s,"     // ssl_key
-        "s: s,"     // ssl_cipher
-        "s: b"      // ssl_verify_server_cert
-        "}",
-        "slave_running", slave_running,
-        "host", host.c_str(),
-        "port", port,
-        "user", user.c_str(),
-        "password", password.c_str(),   // TODO: Encrypt this
-        "use_gtid", use_gtid,
-        "ssl", ssl,
-        "ssl_ca", ssl_ca.c_str(),
-        "ssl_capath", ssl_capath.c_str(),
-        "ssl_cert", ssl_cert.c_str(),
-        "ssl_crl", ssl_crl.c_str(),
-        "ssl_crlpath", ssl_crlpath.c_str(),
-        "ssl_key", ssl_key.c_str(),
-        "ssl_cipher", ssl_cipher.c_str(),
-        "ssl_verify_server_cert", ssl_verify_server_cert);
+    auto js = json_pack("{"
+                        "s: b,"  // slave_running
+                        "s: s,"  // host
+                        "s: i,"  // port
+                        "s: s,"  // user
+                        "s: s,"  // password
+                        "s: b,"  // use_gtid
+                        "s: b,"  // ssl
+                        "s: s,"  // ssl_ca
+                        "s: s,"  // ssl_capath
+                        "s: s,"  // ssl_cert
+                        "s: s,"  // ssl_crl
+                        "s: s,"  // ssl_crlpath
+                        "s: s,"  // ssl_key
+                        "s: s,"  // ssl_cipher
+                        "s: b"   // ssl_verify_server_cert
+                        "}",
+        "slave_running",
+        slave_running,
+        "host",
+        host.c_str(),
+        "port",
+        port,
+        "user",
+        user.c_str(),
+        "password",
+        password.c_str(),  // TODO: Encrypt this
+        "use_gtid",
+        use_gtid,
+        "ssl",
+        ssl,
+        "ssl_ca",
+        ssl_ca.c_str(),
+        "ssl_capath",
+        ssl_capath.c_str(),
+        "ssl_cert",
+        ssl_cert.c_str(),
+        "ssl_crl",
+        ssl_crl.c_str(),
+        "ssl_crlpath",
+        ssl_crlpath.c_str(),
+        "ssl_key",
+        ssl_key.c_str(),
+        "ssl_cipher",
+        ssl_cipher.c_str(),
+        "ssl_verify_server_cert",
+        ssl_verify_server_cert);
 
     mxb_assert(js);
     json_dump_file(js, config.master_info_file().c_str(), JSON_COMPACT);
@@ -809,7 +823,7 @@ bool Pinloki::MasterConfig::load(const Config& config)
 
 PurgeResult purge_binlogs(InventoryWriter* pInventory, const std::string& up_to)
 {
-    auto files = pInventory->file_names();
+    auto files     = pInventory->file_names();
     auto up_to_ite = std::find(files.begin(), files.end(), pInventory->config().path(up_to));
 
     if (up_to_ite == files.end())
@@ -846,10 +860,10 @@ bool Pinloki::purge_old_binlogs(mxb::Worker::Call::action_t action)
         return false;
     }
 
-    auto now = wall_time::Clock::now();
-    auto purge_before = now - config().expire_log_duration();
+    auto now               = wall_time::Clock::now();
+    auto purge_before      = now - config().expire_log_duration();
     const auto& file_names = m_inventory.file_names();
-    auto files_to_keep = std::max(1, config().expire_log_minimum_files());      // at least one
+    auto files_to_keep     = std::max(1, config().expire_log_minimum_files());  // at least one
     int max_files_to_purge = file_names.size() - files_to_keep;
 
     int purge_index = -1;
@@ -868,17 +882,16 @@ bool Pinloki::purge_old_binlogs(mxb::Worker::Call::action_t action)
 
     if (purge_index >= 0)
     {
-        ++purge_index;      // purge_binlogs() purges up-to, but not including the file argument
+        ++purge_index;  // purge_binlogs() purges up-to, but not including the file argument
         purge_binlogs(&m_inventory, file_names[purge_index]);
     }
 
     // Purge done, figure out when to do the next purge.
 
-    auto oldest_time = oldest_logfile_time(&m_inventory);
+    auto oldest_time                     = oldest_logfile_time(&m_inventory);
     wall_time::TimePoint next_purge_time = oldest_time + config().expire_log_duration() + 1s;
 
-    if (oldest_time == wall_time::TimePoint::max()
-        || next_purge_time < now)
+    if (oldest_time == wall_time::TimePoint::max() || next_purge_time < now)
     {
         // No logs, or purge prevented due to expire_log_minimum_files.
         next_purge_time = now + m_config.purge_poll_timeout();
@@ -894,13 +907,11 @@ bool Pinloki::purge_old_binlogs(mxb::Worker::Call::action_t action)
 
     return false;
 }
-}
+}  // namespace pinloki
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_ROUTER,
+    static MXS_MODULE info = {MXS_MODULE_API_ROUTER,
         MXS_MODULE_ALPHA_RELEASE,
         MXS_ROUTER_VERSION,
         "Pinloki",
@@ -910,8 +921,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,
         NULL,
         NULL,
-        NULL
-    };
+        NULL};
 
     pinloki::Config::spec().populate(info);
 

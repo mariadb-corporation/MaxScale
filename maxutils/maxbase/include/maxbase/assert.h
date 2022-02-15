@@ -21,33 +21,46 @@
 MXB_BEGIN_DECLS
 
 // TODO: Provide an MXB_DEBUG with the same meaning.
-#if defined (SS_DEBUG)
+#if defined(SS_DEBUG)
 
-#define mxb_assert(exp) \
-    do {if (exp) {} else { \
-            const char* debug_expr = #exp;      /** The MXB_ERROR marco doesn't seem to like stringification
-                                                 * */ \
-            MXB_ERROR("debug assert at %s:%d failed: %s\n", (char*)__FILE__, __LINE__, debug_expr); \
-            fprintf(stderr, "debug assert at %s:%d failed: %s\n", (char*)__FILE__, __LINE__, debug_expr); \
-            raise(SIGABRT);}} while (false)
+#define mxb_assert(exp)                                                                                    \
+    do                                                                                                     \
+    {                                                                                                      \
+        if (exp)                                                                                           \
+        {}                                                                                                 \
+        else                                                                                               \
+        {                                                                                                  \
+            const char* debug_expr = #exp; /** The MXB_ERROR marco doesn't seem to like stringification
+                                                 * */    \
+            MXB_ERROR("debug assert at %s:%d failed: %s\n", (char*) __FILE__, __LINE__, debug_expr);       \
+            fprintf(stderr, "debug assert at %s:%d failed: %s\n", (char*) __FILE__, __LINE__, debug_expr); \
+            raise(SIGABRT);                                                                                \
+        }                                                                                                  \
+    }                                                                                                      \
+    while (false)
 
-#define mxb_assert_message(exp, fmt, ...) \
-    do {if (exp) {} else {     \
-            const char* debug_expr = #exp; \
-            char message[1024]; \
-            snprintf(message, sizeof(message), fmt, ##__VA_ARGS__); \
-            MXB_ERROR("debug assert at %s:%d failed: %s (%s)\n", \
-                      (char*)__FILE__, \
-                      __LINE__, \
-                      message, \
-                      debug_expr); \
-            fprintf(stderr, \
-                    "debug assert at %s:%d failed: %s (%s)\n", \
-                    (char*)__FILE__, \
-                    __LINE__, \
-                    message, \
-                    debug_expr); \
-            raise(SIGABRT);}} while (false)
+#define mxb_assert_message(exp, fmt, ...)                                                                    \
+    do                                                                                                       \
+    {                                                                                                        \
+        if (exp)                                                                                             \
+        {}                                                                                                   \
+        else                                                                                                 \
+        {                                                                                                    \
+            const char* debug_expr = #exp;                                                                   \
+            char message[1024];                                                                              \
+            snprintf(message, sizeof(message), fmt, ##__VA_ARGS__);                                          \
+            MXB_ERROR(                                                                                       \
+                "debug assert at %s:%d failed: %s (%s)\n", (char*) __FILE__, __LINE__, message, debug_expr); \
+            fprintf(stderr,                                                                                  \
+                "debug assert at %s:%d failed: %s (%s)\n",                                                   \
+                (char*) __FILE__,                                                                            \
+                __LINE__,                                                                                    \
+                message,                                                                                     \
+                debug_expr);                                                                                 \
+            raise(SIGABRT);                                                                                  \
+        }                                                                                                    \
+    }                                                                                                        \
+    while (false)
 
 #define MXB_AT_DEBUG(exp) exp
 

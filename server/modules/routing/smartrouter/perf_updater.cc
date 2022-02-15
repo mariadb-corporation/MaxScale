@@ -16,20 +16,19 @@
 
 PerformanceInfoUpdater::PerformanceInfoUpdater()
     : GCUpdater(new PerformanceInfoContainer(),
-                config_threadcount(),
-                5000,                           // config, maybe. 5000 should be a pretty safe queue size.
-                3,                              // 3 copies. Not expecting the container to be very large.
-                true)                           // order updates.
-{
-}
+        config_threadcount(),
+        5000,  // config, maybe. 5000 should be a pretty safe queue size.
+        3,     // 3 copies. Not expecting the container to be very large.
+        true)  // order updates.
+{}
 
 PerformanceInfoContainer* PerformanceInfoUpdater::create_new_copy(const PerformanceInfoContainer* pCurrent)
 {
     return new PerformanceInfoContainer {*pCurrent};
 }
 
-void PerformanceInfoUpdater::make_updates(PerformanceInfoContainer* pData,
-                                          std::vector<typename SharedPerformanceInfo::InternalUpdate>& queue)
+void PerformanceInfoUpdater::make_updates(
+    PerformanceInfoContainer* pData, std::vector<typename SharedPerformanceInfo::InternalUpdate>& queue)
 {
     for (auto e : queue)
     {

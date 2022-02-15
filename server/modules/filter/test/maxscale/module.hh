@@ -28,7 +28,6 @@ namespace maxscale
 class Module
 {
 public:
-
     /**
      * Get a ConfigParameters instance containing the default values
      * of all parameters.
@@ -86,8 +85,7 @@ public:
 protected:
     Module(const MXS_MODULE* pModule)
         : m_module(*pModule)
-    {
-    }
+    {}
 
     const MXS_MODULE& m_module;
 };
@@ -127,9 +125,8 @@ protected:
     SpecificModule(const MXS_MODULE* pModule)
         : Module(pModule)
         , m_pApi(static_cast<API*>(pModule->module_object))
-    {
-    }
+    {}
 
     API* m_pApi;
 };
-}
+}  // namespace maxscale

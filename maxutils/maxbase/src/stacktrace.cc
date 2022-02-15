@@ -40,13 +40,13 @@ static void get_command_output(char* output, size_t size, const char* format, ..
     vsnprintf(cmd, cmd_len + 1, format, valist);
     va_end(valist);
 
-    *output = '\0';
+    *output    = '\0';
     FILE* file = popen(cmd, "r");
 
     if (file)
     {
-        size_t nread = fread(output, 1, size, file);
-        nread = nread < size ? nread : size - 1;
+        size_t nread    = fread(output, 1, size, file);
+        nread           = nread < size ? nread : size - 1;
         output[nread--] = '\0';
 
         // Trim trailing newlines
@@ -59,7 +59,7 @@ static void get_command_output(char* output, size_t size, const char* format, ..
     }
 }
 
-static void get_command_output_cb(void (* cb)(const char*), const char* format, ...)
+static void get_command_output_cb(void (*cb)(const char*), const char* format, ...)
 {
     va_list valist;
     va_start(valist, format);
@@ -88,7 +88,7 @@ static void get_command_output_cb(void (* cb)(const char*), const char* format, 
 static void extract_file_and_line(char* symbols, char* cmd, size_t size)
 {
     const char* filename_end = strchr(symbols, '(');
-    const char* symname_end = strchr(symbols, ')');
+    const char* symname_end  = strchr(symbols, ')');
 
     if (filename_end && symname_end)
     {
@@ -96,7 +96,7 @@ static void extract_file_and_line(char* symbols, char* cmd, size_t size)
         char filename[PATH_MAX + 1];
         char symname[512];
         char offset[512];
-        snprintf(filename, sizeof(filename), "%.*s", (int)(filename_end - symbols), symbols);
+        snprintf(filename, sizeof(filename), "%.*s", (int) (filename_end - symbols), symbols);
 
         const char* symname_start = filename_end + 1;
 
@@ -112,31 +112,24 @@ static void extract_file_and_line(char* symbols, char* cmd, size_t size)
                 addr_offset++;
             }
 
-            snprintf(symname, sizeof(symname), "%.*s", (int)(addr_offset - symname_start), symname_start);
+            snprintf(symname, sizeof(symname), "%.*s", (int) (addr_offset - symname_start), symname_start);
 
             if (addr_offset < symname_end && *addr_offset == '+')
             {
                 addr_offset++;
             }
 
-            snprintf(offset, sizeof(offset), "%.*s", (int)(symname_end - addr_offset), addr_offset);
+            snprintf(offset, sizeof(offset), "%.*s", (int) (symname_end - addr_offset), addr_offset);
 
             // Get the hexadecimal address of the symbol
-            get_command_output(cmd,
-                               size,
-                               "nm %s |grep ' %s$'|sed -e 's/ .*//' -e 's/^/0x/'",
-                               filename,
-                               symname);
-            long long symaddr = strtoll(cmd, NULL, 16);
+            get_command_output(
+                cmd, size, "nm %s |grep ' %s$'|sed -e 's/ .*//' -e 's/^/0x/'", filename, symname);
+            long long symaddr    = strtoll(cmd, NULL, 16);
             long long offsetaddr = strtoll(offset, NULL, 16);
 
             // Calculate the file and line now that we have the raw offset into
             // the library
-            get_command_output(cmd,
-                               size,
-                               "addr2line -e %s 0x%x",
-                               filename,
-                               symaddr + offsetaddr);
+            get_command_output(cmd, size, "addr2line -e %s 0x%x", filename, symaddr + offsetaddr);
         }
         else
         {
@@ -153,7 +146,7 @@ static void extract_file_and_line(char* symbols, char* cmd, size_t size)
 
             // Raw offset into library
             symname_start++;
-            snprintf(symname, sizeof(symname), "%.*s", (int)(symname_end - symname_start), symname_start);
+            snprintf(symname, sizeof(symname), "%.*s", (int) (symname_end - symname_start), symname_start);
             get_command_output(cmd, size, "addr2line -e %s %s", filename, symname);
         }
 
@@ -175,7 +168,7 @@ static void extract_file_and_line(char* symbols, char* cmd, size_t size)
         }
     }
 }
-}
+}  // namespace
 
 namespace maxbase
 {
@@ -184,10 +177,10 @@ namespace maxbase
 void dump_stacktrace(std::function<void(const char*, const char*)> handler)
 {
     void* addrs[128];
-    int count = backtrace(addrs, 128);
+    int count      = backtrace(addrs, 128);
     char** symbols = backtrace_symbols(addrs, count);
 
-    int rc = system("command -v nm > /dev/null && command -v addr2line > /dev/null");
+    int rc          = system("command -v nm > /dev/null && command -v addr2line > /dev/null");
     bool do_extract = WIFEXITED(rc) && WEXITSTATUS(rc) == 0;
 
     if (symbols)
@@ -208,28 +201,26 @@ void dump_stacktrace(std::function<void(const char*, const char*)> handler)
     }
 }
 
-void dump_stacktrace(void (* handler)(const char* symbol, const char* command))
+void dump_stacktrace(void (*handler)(const char* symbol, const char* command))
 {
-    dump_stacktrace([&](const char* symbol, const char* command) {
-                        handler(symbol, command);
-                    });
+    dump_stacktrace([&](const char* symbol, const char* command) { handler(symbol, command); });
 }
 
 #else
 
-void dump_stacktrace(void (* handler)(const char*, const char*))
+void dump_stacktrace(void (*handler)(const char*, const char*))
 {
     // We can't dump stacktraces on non-GLIBC systems
 }
 
 #endif
 
-void dump_gdb_stacktrace(void (* handler)(const char*))
+void dump_gdb_stacktrace(void (*handler)(const char*))
 {
     prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY);
-    get_command_output_cb(
-        handler,
-        "gdb --pid=%d -batch -nx -iex 'set auto-load off' -iex 'set print thread-events off' -ex 'thr a a bt'",
+    get_command_output_cb(handler,
+        "gdb --pid=%d -batch -nx -iex 'set auto-load off' -iex 'set print thread-events off' -ex 'thr a a "
+        "bt'",
         getpid());
     prctl(PR_SET_PTRACER, 0);
 }
@@ -239,4 +230,4 @@ bool have_gdb()
     int rc = system("command -v gdb > /dev/null");
     return WIFEXITED(rc) && WEXITSTATUS(rc) == 0;
 }
-}
+}  // namespace maxbase

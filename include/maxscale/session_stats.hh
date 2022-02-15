@@ -27,51 +27,30 @@ namespace maxscale
 /** SessionStats is a class holding statistics associated with a session */
 class SessionStats
 {
-
 public:
     struct CurrentStats
     {
         maxbase::Duration ave_session_dur;
-        double            ave_session_active_pct;
-        int64_t           ave_session_selects;
-        int64_t           total_queries;
-        int64_t           total_read_queries;
-        int64_t           total_write_queries;
+        double ave_session_active_pct;
+        int64_t ave_session_selects;
+        int64_t total_queries;
+        int64_t total_read_queries;
+        int64_t total_write_queries;
     };
 
-    void update(maxbase::Duration sess_duration,
-                maxbase::Duration active_duration,
-                int64_t num_selects);
+    void update(maxbase::Duration sess_duration, maxbase::Duration active_duration, int64_t num_selects);
 
-    void inc_total()
-    {
-        ++m_total;
-    }
+    void inc_total() { ++m_total; }
 
-    void inc_read()
-    {
-        ++m_read;
-    }
+    void inc_read() { ++m_read; }
 
-    void inc_write()
-    {
-        ++m_write;
-    }
+    void inc_write() { ++m_write; }
 
-    int64_t total() const
-    {
-        return m_total;
-    }
+    int64_t total() const { return m_total; }
 
-    int64_t read() const
-    {
-        return m_read;
-    }
+    int64_t read() const { return m_read; }
 
-    int64_t write() const
-    {
-        return m_write;
-    }
+    int64_t write() const { return m_write; }
 
     CurrentStats current_stats() const;
 
@@ -79,7 +58,7 @@ public:
 
 private:
     int64_t m_total = 0;
-    int64_t m_read = 0;
+    int64_t m_read  = 0;
     int64_t m_write = 0;
 
     maxbase::CumulativeAverage m_ave_session_dur;
@@ -88,4 +67,4 @@ private:
 };
 
 using TargetSessionStats = std::unordered_map<mxs::Target*, SessionStats>;
-}
+}  // namespace maxscale

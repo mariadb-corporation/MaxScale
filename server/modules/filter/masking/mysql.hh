@@ -35,10 +35,7 @@ public:
      *
      * @param pData  Pointer to the beginning of an length encoded integer.
      */
-    LEncInt(uint8_t* pData)
-    {
-        m_value = mxq::leint_value(pData);
-    }
+    LEncInt(uint8_t* pData) { m_value = mxq::leint_value(pData); }
 
     /**
      * Constructor
@@ -50,25 +47,19 @@ public:
     LEncInt(uint8_t** ppData)
     {
         size_t nBytes = mxq::leint_bytes(*ppData);
-        m_value = mxq::leint_value(*ppData);
+        m_value       = mxq::leint_value(*ppData);
         *ppData += nBytes;
     }
 
     /**
      * @return The value of the length encoded integer.
      */
-    uint64_t value() const
-    {
-        return m_value;
-    }
+    uint64_t value() const { return m_value; }
 
     /**
      * @return The value of the length encoded integer.
      */
-    operator uint64_t() const
-    {
-        return value();
-    }
+    operator uint64_t() const { return value(); }
 
     /**
      * Write the integer to an @c std::ostream.
@@ -115,17 +106,12 @@ public:
      *
      * A _random access iterator_ to a @c LEncString.
      */
-    class iterator : public std::iterator<std::random_access_iterator_tag
-                                          , char
-                                          , std::ptrdiff_t
-                                          , char*
-                                          , char&>
+    class iterator : public std::iterator<std::random_access_iterator_tag, char, std::ptrdiff_t, char*, char&>
     {
     public:
         iterator(char* pS)
             : m_pS(pS)
-        {
-        }
+        {}
 
         iterator& operator++()
         {
@@ -170,35 +156,17 @@ public:
             return m_pS - rhs.m_pS;
         }
 
-        bool operator==(const iterator& rhs) const
-        {
-            return m_pS == rhs.m_pS;
-        }
+        bool operator==(const iterator& rhs) const { return m_pS == rhs.m_pS; }
 
-        bool operator!=(const iterator& rhs) const
-        {
-            return !(*this == rhs);
-        }
+        bool operator!=(const iterator& rhs) const { return !(*this == rhs); }
 
-        bool operator<(const iterator& rhs) const
-        {
-            return m_pS < rhs.m_pS;
-        }
+        bool operator<(const iterator& rhs) const { return m_pS < rhs.m_pS; }
 
-        bool operator<=(const iterator& rhs) const
-        {
-            return m_pS < rhs.m_pS;
-        }
+        bool operator<=(const iterator& rhs) const { return m_pS < rhs.m_pS; }
 
-        bool operator>(const iterator& rhs) const
-        {
-            return m_pS > rhs.m_pS;
-        }
+        bool operator>(const iterator& rhs) const { return m_pS > rhs.m_pS; }
 
-        bool operator>=(const iterator& rhs) const
-        {
-            return m_pS > rhs.m_pS;
-        }
+        bool operator>=(const iterator& rhs) const { return m_pS > rhs.m_pS; }
 
         reference operator*()
         {
@@ -231,7 +199,7 @@ public:
         else
         {
             m_pString = NULL;
-            m_length = 0;
+            m_length  = 0;
         }
     }
 
@@ -252,7 +220,7 @@ public:
         else
         {
             m_pString = NULL;
-            m_length = 0;
+            m_length  = 0;
             ++(*ppData);
         }
     }
@@ -262,36 +230,24 @@ public:
      *
      * @return A random access iterator.
      */
-    iterator begin()
-    {
-        return iterator(m_pString);
-    }
+    iterator begin() { return iterator(m_pString); }
 
     /**
      * Returns an iterator one past the end of the string.
      *
      * @return A random access iterator.
      */
-    iterator end()
-    {
-        return iterator(m_pString + m_length);
-    }
+    iterator end() { return iterator(m_pString + m_length); }
 
     /**
      * @return The length of the string.
      */
-    size_t length() const
-    {
-        return m_length;
-    }
+    size_t length() const { return m_length; }
 
     /**
      * @return True if the string is empty, false otherwise.
      */
-    bool empty() const
-    {
-        return m_length == 0;
-    }
+    bool empty() const { return m_length == 0; }
 
     /**
      * Compare for equality in a case-sensitive fashion.
@@ -404,14 +360,11 @@ public:
      *
      * @return True, if the string represents a NULL value.
      */
-    bool is_null() const
-    {
-        return m_pString == NULL;
-    }
+    bool is_null() const { return m_pString == NULL; }
 
 private:
-    char*  m_pString;   /*<! Pointer to beginning of string, NOT zero-terminated. */
-    size_t m_length;    /*<! Length of string. */
+    char* m_pString; /*<! Pointer to beginning of string, NOT zero-terminated. */
+    size_t m_length; /*<! Length of string. */
 };
 
 /**
@@ -559,30 +512,20 @@ public:
         m_pData += MYSQL_HEADER_LEN;
     }
 
-    uint32_t payload_len() const
-    {
-        return m_payload_len;
-    }
+    uint32_t payload_len() const { return m_payload_len; }
 
-    uint32_t packet_len() const
-    {
-        return MYSQL_HEADER_LEN + m_payload_len;
-    }
+    uint32_t packet_len() const { return MYSQL_HEADER_LEN + m_payload_len; }
 
-    uint8_t packet_no() const
-    {
-        return m_packet_no;
-    }
+    uint8_t packet_no() const { return m_packet_no; }
 
 protected:
-    GWBUF*   m_pPacket;
+    GWBUF* m_pPacket;
     uint8_t* m_pData;
 
 private:
     uint32_t m_payload_len;
-    uint8_t  m_packet_no;
+    uint8_t m_packet_no;
 };
-
 
 /**
  * @class ComResponse
@@ -615,6 +558,7 @@ public:
         mxb_assert(packet_len() >= MYSQL_HEADER_LEN + 1);
         ++m_pData;
     }
+
     ComResponse(const ComResponse& packet)
         : ComPacket(packet)
         , m_type(packet.m_type)
@@ -623,25 +567,13 @@ public:
         ++m_pData;
     }
 
-    uint8_t type() const
-    {
-        return m_type;
-    }
+    uint8_t type() const { return m_type; }
 
-    bool is_ok() const
-    {
-        return m_type == ComResponse::OK_PACKET;
-    }
+    bool is_ok() const { return m_type == ComResponse::OK_PACKET; }
 
-    bool is_eof() const
-    {
-        return m_type == ComResponse::EOF_PACKET;
-    }
+    bool is_eof() const { return m_type == ComResponse::EOF_PACKET; }
 
-    bool is_err() const
-    {
-        return m_type == ComResponse::ERR_PACKET;
-    }
+    bool is_err() const { return m_type == ComResponse::ERR_PACKET; }
 
 protected:
     uint8_t m_type;
@@ -672,15 +604,9 @@ public:
         extract_payload();
     }
 
-    uint16_t warnings() const
-    {
-        return m_warnings;
-    }
+    uint16_t warnings() const { return m_warnings; }
 
-    uint16_t status() const
-    {
-        return m_status;
-    }
+    uint16_t status() const { return m_status; }
 
 private:
     void extract_payload()
@@ -716,30 +642,18 @@ public:
         extract_payload();
     }
 
-    uint64_t affected_rows() const
-    {
-        return m_affected_rows;
-    }
+    uint64_t affected_rows() const { return m_affected_rows; }
 
-    uint64_t last_insert_id() const
-    {
-        return m_last_insert_id;
-    }
+    uint64_t last_insert_id() const { return m_last_insert_id; }
 
-    uint16_t warnings() const
-    {
-        return m_warnings;
-    }
+    uint16_t warnings() const { return m_warnings; }
 
-    uint16_t status() const
-    {
-        return m_status;
-    }
+    uint16_t status() const { return m_status; }
 
 private:
     void extract_payload()
     {
-        m_affected_rows = LEncInt(&m_pData).value();
+        m_affected_rows  = LEncInt(&m_pData).value();
         m_last_insert_id = LEncInt(&m_pData).value();
 
         m_status = *m_pData++;
@@ -771,10 +685,7 @@ public:
         ++m_pData;
     }
 
-    uint8_t command() const
-    {
-        return m_command;
-    }
+    uint8_t command() const { return m_command; }
 
 protected:
     uint8_t m_command;
@@ -817,66 +728,46 @@ public:
         m_pData += 1;
     }
 
-    const LEncString& catalog() const
-    {
-        return m_catalog;
-    }
-    const LEncString& schema() const
-    {
-        return m_schema;
-    }
-    const LEncString& table() const
-    {
-        return m_table;
-    }
-    const LEncString& org_table() const
-    {
-        return m_org_table;
-    }
-    const LEncString& name() const
-    {
-        return m_name;
-    }
-    const LEncString& org_name() const
-    {
-        return m_org_name;
-    }
-    enum_field_types type() const
-    {
-        return m_type;
-    }
+    const LEncString& catalog() const { return m_catalog; }
+
+    const LEncString& schema() const { return m_schema; }
+
+    const LEncString& table() const { return m_table; }
+
+    const LEncString& org_table() const { return m_org_table; }
+
+    const LEncString& name() const { return m_name; }
+
+    const LEncString& org_name() const { return m_org_name; }
+
+    enum_field_types type() const { return m_type; }
 
     std::string to_string() const
     {
         std::stringstream ss;
-        ss << "\nCatalog      : " << m_catalog
-           << "\nSchema       : " << m_schema
-           << "\nTable        : " << m_table
-           << "\nOrg table    : " << m_org_table
-           << "\nName         : " << m_name
-           << "\nOrd name     : " << m_org_name
-           << "\nCharacer set : " << m_character_set
-           << "\nColumn length: " << m_column_length
-           << "\nType         : " << (uint16_t)m_type
-           << "\nFlags        : " << m_flags
-           << "\nDecimals     : " << (uint16_t)m_decimals;
+        ss << "\nCatalog      : " << m_catalog << "\nSchema       : " << m_schema
+           << "\nTable        : " << m_table << "\nOrg table    : " << m_org_table
+           << "\nName         : " << m_name << "\nOrd name     : " << m_org_name
+           << "\nCharacer set : " << m_character_set << "\nColumn length: " << m_column_length
+           << "\nType         : " << (uint16_t) m_type << "\nFlags        : " << m_flags
+           << "\nDecimals     : " << (uint16_t) m_decimals;
 
         return ss.str();
     }
 
 private:
-    LEncString       m_catalog;
-    LEncString       m_schema;
-    LEncString       m_table;
-    LEncString       m_org_table;
-    LEncString       m_name;
-    LEncString       m_org_name;
-    LEncInt          m_length_fixed_fields;
-    uint16_t         m_character_set;
-    uint32_t         m_column_length;
+    LEncString m_catalog;
+    LEncString m_schema;
+    LEncString m_table;
+    LEncString m_org_table;
+    LEncString m_name;
+    LEncString m_org_name;
+    LEncInt m_length_fixed_fields;
+    uint16_t m_character_set;
+    uint32_t m_column_length;
     enum_field_types m_type;
-    uint16_t         m_flags;
-    uint8_t          m_decimals;
+    uint16_t m_flags;
+    uint8_t m_decimals;
 };
 
 /**
@@ -896,14 +787,12 @@ public:
     CQRResultsetValue()
         : m_type(MYSQL_TYPE_NULL)
         , m_pData(NULL)
-    {
-    }
+    {}
 
     CQRResultsetValue(enum_field_types type, uint8_t* pData)
         : m_type(type)
         , m_pData(pData)
-    {
-    }
+    {}
 
     LEncString as_string()
     {
@@ -911,15 +800,9 @@ public:
         return LEncString(m_pData);
     }
 
-    bool is_null() const
-    {
-        return m_type == MYSQL_TYPE_NULL;
-    }
+    bool is_null() const { return m_type == MYSQL_TYPE_NULL; }
 
-    bool is_string() const
-    {
-        return is_string(m_type);
-    }
+    bool is_string() const { return is_string(m_type); }
 
     static bool is_string(enum_field_types type)
     {
@@ -954,7 +837,7 @@ public:
 
 protected:
     enum_field_types m_type;
-    uint8_t*         m_pData;
+    uint8_t* m_pData;
 };
 
 /**
@@ -996,11 +879,11 @@ typedef CQRResultsetValue CQRBinaryResultsetValue;
  * @attention The name should not be used as such, but always using the
  *            typedef @c ComQueryResponse::TextResultset::iterator.
  */
-class CQRTextResultsetRowIterator : public std::iterator<std::forward_iterator_tag
-                                                         , CQRTextResultsetValue
-                                                         , std::ptrdiff_t
-                                                         , CQRTextResultsetValue*
-                                                         , CQRTextResultsetValue>
+class CQRTextResultsetRowIterator : public std::iterator<std::forward_iterator_tag,
+                                        CQRTextResultsetValue,
+                                        std::ptrdiff_t,
+                                        CQRTextResultsetValue*,
+                                        CQRTextResultsetValue>
 {
 public:
     typedef CQRTextResultsetValue Value;
@@ -1008,13 +891,11 @@ public:
     CQRTextResultsetRowIterator(uint8_t* pData, const std::vector<enum_field_types>& types)
         : m_pData(pData)
         , m_iTypes(types.begin())
-    {
-    }
+    {}
 
     CQRTextResultsetRowIterator(uint8_t* pData)
         : m_pData(pData)
-    {
-    }
+    {}
 
     CQRTextResultsetRowIterator& operator++()
     {
@@ -1031,23 +912,14 @@ public:
         return rv;
     }
 
-    bool operator==(const CQRTextResultsetRowIterator& rhs) const
-    {
-        return m_pData == rhs.m_pData;
-    }
+    bool operator==(const CQRTextResultsetRowIterator& rhs) const { return m_pData == rhs.m_pData; }
 
-    bool operator!=(const CQRTextResultsetRowIterator& rhs) const
-    {
-        return !(*this == rhs);
-    }
+    bool operator!=(const CQRTextResultsetRowIterator& rhs) const { return !(*this == rhs); }
 
-    CQRTextResultsetValue operator*()
-    {
-        return Value(*m_iTypes, m_pData);
-    }
+    CQRTextResultsetValue operator*() { return Value(*m_iTypes, m_pData); }
 
 private:
-    uint8_t*                                      m_pData;
+    uint8_t* m_pData;
     std::vector<enum_field_types>::const_iterator m_iTypes;
 };
 
@@ -1059,11 +931,11 @@ private:
  * @attention The name should not be used as such, but always using the
  *            typedef @c ComQueryResponse::BinaryResultset::iterator.
  */
-class CQRBinaryResultsetRowIterator : public std::iterator<std::forward_iterator_tag
-                                                           , CQRBinaryResultsetValue
-                                                           , std::ptrdiff_t
-                                                           , CQRBinaryResultsetValue*
-                                                           , CQRBinaryResultsetValue>
+class CQRBinaryResultsetRowIterator : public std::iterator<std::forward_iterator_tag,
+                                          CQRBinaryResultsetValue,
+                                          std::ptrdiff_t,
+                                          CQRBinaryResultsetValue*,
+                                          CQRBinaryResultsetValue>
 {
 public:
     typedef CQRBinaryResultsetValue Value;
@@ -1079,22 +951,18 @@ public:
     public:
         bit_iterator(uint8_t* pData = 0)
             : m_pData(pData)
-            , m_mask(1 << 2)// The two first bits are not used.
-        {
-        }
+            , m_mask(1 << 2)  // The two first bits are not used.
+        {}
 
         /**
          * @return True, if the current bit is on. That is, if the corresponding
          *         column value is NULL.
          */
-        bool operator*() const
-        {
-            return (*m_pData & m_mask) ? true : false;
-        }
+        bool operator*() const { return (*m_pData & m_mask) ? true : false; }
 
         bit_iterator& operator++()
         {
-            m_mask <<= 1;   // Move to the next bit.
+            m_mask <<= 1;  // Move to the next bit.
             if (m_mask == 0)
             {
                 // We moved past the byte, so advance to next byte and the first bit of that.
@@ -1113,8 +981,8 @@ public:
         }
 
     private:
-        uint8_t* m_pData;   /*< Pointer to the NULL bitmap of a binary resultset row. */
-        uint8_t  m_mask;    /*< Mask representing the current bit of the current byte. */
+        uint8_t* m_pData; /*< Pointer to the NULL bitmap of a binary resultset row. */
+        uint8_t m_mask;   /*< Mask representing the current bit of the current byte. */
     };
 
     CQRBinaryResultsetRowIterator(uint8_t* pData, const std::vector<enum_field_types>& types)
@@ -1133,8 +1001,7 @@ public:
 
     CQRBinaryResultsetRowIterator(uint8_t* pData)
         : m_pData(pData)
-    {
-    }
+    {}
 
     CQRBinaryResultsetRowIterator& operator++()
     {
@@ -1155,10 +1022,10 @@ public:
         case MYSQL_TYPE_TINY_BLOB:
         case MYSQL_TYPE_VARCHAR:
         case MYSQL_TYPE_VAR_STRING:
-            {
-                LEncString s(&m_pData);     // Advance m_pData to the byte following the string.
-            }
-            break;
+        {
+            LEncString s(&m_pData);  // Advance m_pData to the byte following the string.
+        }
+        break;
 
         case MYSQL_TYPE_LONGLONG:
             m_pData += 8;
@@ -1189,22 +1056,22 @@ public:
         case MYSQL_TYPE_DATE:
         case MYSQL_TYPE_DATETIME:
         case MYSQL_TYPE_TIMESTAMP:
-            {
-                // A byte specifying the length, followed by that many bytes.
-                // Either 0, 4, 7 or 11.
-                uint8_t len = *m_pData++;
-                m_pData += len;
-            }
-            break;
+        {
+            // A byte specifying the length, followed by that many bytes.
+            // Either 0, 4, 7 or 11.
+            uint8_t len = *m_pData++;
+            m_pData += len;
+        }
+        break;
 
         case MYSQL_TYPE_TIME:
-            {
-                // A byte specifying the length, followed by that many bytes.
-                // Either 0, 8 or 12.
-                uint8_t len = *m_pData++;
-                m_pData += len;
-            }
-            break;
+        {
+            // A byte specifying the length, followed by that many bytes.
+            // Either 0, 8 or 12.
+            uint8_t len = *m_pData++;
+            m_pData += len;
+        }
+        break;
 
         case MYSQL_TYPE_NULL:
             break;
@@ -1230,15 +1097,9 @@ public:
         return rv;
     }
 
-    bool operator==(const CQRBinaryResultsetRowIterator& rhs) const
-    {
-        return m_pData == rhs.m_pData;
-    }
+    bool operator==(const CQRBinaryResultsetRowIterator& rhs) const { return m_pData == rhs.m_pData; }
 
-    bool operator!=(const CQRBinaryResultsetRowIterator& rhs) const
-    {
-        return !(*this == rhs);
-    }
+    bool operator!=(const CQRBinaryResultsetRowIterator& rhs) const { return !(*this == rhs); }
 
     reference operator*()
     {
@@ -1253,9 +1114,9 @@ public:
     }
 
 private:
-    uint8_t*                                      m_pData;
+    uint8_t* m_pData;
     std::vector<enum_field_types>::const_iterator m_iTypes;
-    bit_iterator                                  m_iNulls;
+    bit_iterator m_iNulls;
 };
 
 /**
@@ -1269,26 +1130,19 @@ class CQRResultsetRow : public ComPacket
 {
 public:
     typedef typename Iterator::Value Value;
-    typedef Iterator                 iterator;
+    typedef Iterator iterator;
 
-    CQRResultsetRow(GWBUF* pPacket,
-                    const std::vector<enum_field_types>& types)
+    CQRResultsetRow(GWBUF* pPacket, const std::vector<enum_field_types>& types)
         : ComPacket(pPacket)
         , m_types(types)
-    {
-    }
+    {}
 
-    CQRResultsetRow(const ComResponse& packet,
-                    const std::vector<enum_field_types>& types)
+    CQRResultsetRow(const ComResponse& packet, const std::vector<enum_field_types>& types)
         : ComPacket(packet)
         , m_types(types)
-    {
-    }
+    {}
 
-    iterator begin()
-    {
-        return iterator(m_pData, m_types);
-    }
+    iterator begin() { return iterator(m_pData, m_types); }
 
     iterator end()
     {
@@ -1322,26 +1176,21 @@ typedef CQRResultsetRow<CQRBinaryResultsetRowIterator> CQRBinaryResultsetRow;
 class ComQueryResponse : public ComPacket
 {
 public:
-    typedef CQRColumnDef          ColumnDef;
-    typedef CQRTextResultsetRow   TextResultsetRow;
+    typedef CQRColumnDef ColumnDef;
+    typedef CQRTextResultsetRow TextResultsetRow;
     typedef CQRBinaryResultsetRow BinaryResultsetRow;
 
     ComQueryResponse(GWBUF* pPacket)
         : ComPacket(pPacket)
         , m_nFields(&m_pData)
-    {
-    }
+    {}
 
     ComQueryResponse(const ComResponse& packet)
         : ComPacket(packet)
         , m_nFields(&m_pData)
-    {
-    }
+    {}
 
-    uint64_t nFields() const
-    {
-        return m_nFields;
-    }
+    uint64_t nFields() const { return m_nFields; }
 
 private:
     LEncInt m_nFields;

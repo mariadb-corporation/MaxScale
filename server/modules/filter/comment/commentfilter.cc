@@ -22,19 +22,18 @@
 // This declares a module in MaxScale
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_MODULE info =
-    {
+    static MXS_MODULE info = {
         MXS_MODULE_API_FILTER,
         MXS_MODULE_IN_DEVELOPMENT,
         MXS_FILTER_VERSION,
         "A comment filter that can inject comments in sql queries",
         "V1.0.0",
         RCAP_TYPE_NONE,
-        &CommentFilter::s_object, // This is defined in the MaxScale filter template
-        NULL,                     /* Process init. */
-        NULL,                     /* Process finish. */
-        NULL,                     /* Thread init. */
-        NULL,                     /* Thread finish. */
+        &CommentFilter::s_object,  // This is defined in the MaxScale filter template
+        NULL,                      /* Process init. */
+        NULL,                      /* Process finish. */
+        NULL,                      /* Thread init. */
+        NULL,                      /* Thread finish. */
     };
 
     static bool populated = false;
@@ -54,10 +53,7 @@ CommentFilter::CommentFilter(CommentConfig&& config)
     MXS_INFO("Comment filter with comment [%s] created.", m_config.inject.c_str());
 }
 
-
-CommentFilter::~CommentFilter()
-{
-}
+CommentFilter::~CommentFilter() {}
 
 // static
 CommentFilter* CommentFilter::create(const char* zName, mxs::ConfigParameters* pParams)

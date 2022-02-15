@@ -23,9 +23,9 @@ class TesterStorage : public Tester
 public:
     enum storage_action_t
     {
-        STORAGE_PUT,    /*< Put an item to the storage. */
-        STORAGE_GET,    /*< Get an item from the storage. */
-        STORAGE_DEL     /*< Delete an item from the storage. */
+        STORAGE_PUT, /*< Put an item to the storage. */
+        STORAGE_GET, /*< Get an item from the storage. */
+        STORAGE_DEL  /*< Delete an item from the storage. */
     };
 
     /**
@@ -44,9 +44,7 @@ public:
          * @param pStorage      The storage to hit.
          * @param pCache_items  The cache items to use when hitting the storage.
          */
-        HitTask(std::ostream* pOut,
-                Storage* pStorage,
-                const CacheItems* pCache_items);
+        HitTask(std::ostream* pOut, Storage* pStorage, const CacheItems* pCache_items);
 
         /**
          * Runs continuously until the task is terminated.
@@ -62,13 +60,13 @@ public:
     private:
         using SToken = std::shared_ptr<Storage::Token>;
 
-        Storage&          m_storage;        /*< The storage that is hit. */
-        SToken            m_sToken;         /*< The token. */
-        const CacheItems& m_cache_items;    /*< The cache items that are used. */
-        size_t            m_puts;           /*< How many puts. */
-        size_t            m_gets;           /*< How many gets. */
-        size_t            m_dels;           /*< How many deletes. */
-        size_t            m_misses;         /*< How many misses. */
+        Storage& m_storage;              /*< The storage that is hit. */
+        SToken m_sToken;                 /*< The token. */
+        const CacheItems& m_cache_items; /*< The cache items that are used. */
+        size_t m_puts;                   /*< How many puts. */
+        size_t m_gets;                   /*< How many gets. */
+        size_t m_dels;                   /*< How many deletes. */
+        size_t m_misses;                 /*< How many misses. */
     };
 
     /**
@@ -103,11 +101,7 @@ public:
      * @return EXIT_SUCCESS or EXIT_FAILURE.
      *
      */
-    virtual int run(size_t n_threads,
-                    size_t n_seconds,
-                    size_t n_items,
-                    size_t n_min_size,
-                    size_t n_max_size);
+    virtual int run(size_t n_threads, size_t n_seconds, size_t n_items, size_t n_min_size, size_t n_max_size);
 
     /**
      * Execute tests; implemented by derived class.
@@ -131,10 +125,8 @@ public:
      *
      * @return EXIT_SUCCESS or EXIT_FAILURE.
      */
-    virtual int execute_tasks(size_t n_threads,
-                              size_t n_seconds,
-                              const CacheItems& cache_items,
-                              Storage& storage);
+    virtual int execute_tasks(
+        size_t n_threads, size_t n_seconds, const CacheItems& cache_items, Storage& storage);
     /**
      * Executes the HitTask using as many threads as specified, for the specified
      * number of seconds.
@@ -146,10 +138,8 @@ public:
      *
      * @return EXIT_SUCCESS or EXIT_FAILURE.
      */
-    virtual int execute_hit_task(size_t n_threads,
-                                 size_t n_seconds,
-                                 const CacheItems& cache_items,
-                                 Storage& storage);
+    virtual int execute_hit_task(
+        size_t n_threads, size_t n_seconds, const CacheItems& cache_items, Storage& storage);
 
     /**
      * Return a storage.
@@ -182,7 +172,7 @@ protected:
     TesterStorage(std::ostream* pOut, StorageFactory* pFactory);
 
 protected:
-    StorageFactory& m_factory;      /*< The storage factory that is used. */
+    StorageFactory& m_factory; /*< The storage factory that is used. */
 
 private:
     TesterStorage(const TesterStorage&);

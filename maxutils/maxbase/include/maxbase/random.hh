@@ -36,9 +36,10 @@ public:
     explicit XorShiftRandom(uint64_t seed = 0);
     uint64_t rand();
     uint32_t rand32();
-    bool     rand_bool();
-    int64_t  b_to_e_co(int64_t b, int64_t e);
-    double   zero_to_one_co();
+    bool rand_bool();
+    int64_t b_to_e_co(int64_t b, int64_t e);
+    double zero_to_one_co();
+
 private:
     uint64_t rotl(const uint64_t x, int k);
     std::array<uint64_t, 4> m_state;
@@ -56,14 +57,15 @@ public:
 
     uint64_t rand();
     uint32_t rand32();
-    bool     rand_bool();
-    int64_t  b_to_e_co(int64_t b, int64_t e);
-    double   zero_to_one_co();
+    bool rand_bool();
+    int64_t b_to_e_co(int64_t b, int64_t e);
+    double zero_to_one_co();
 
     // Borrow the mt19937_64 engine for other distributions.
     std::mt19937_64& rnd_engine();
+
 private:
-    std::mt19937    m_twister_engine_32;
+    std::mt19937 m_twister_engine_32;
     std::mt19937_64 m_twister_engine_64;
 };
 
@@ -96,7 +98,7 @@ inline uint64_t XorShiftRandom::rand()
 
 inline uint32_t XorShiftRandom::rand32()
 {
-    return rand() >> 32;    // shifting, although low bits are good
+    return rand() >> 32;  // shifting, although low bits are good
 }
 
 inline bool XorShiftRandom::rand_bool()
@@ -112,7 +114,7 @@ inline double XorShiftRandom::zero_to_one_co()
     const union
     {
         uint64_t i;
-        double   d;
+        double d;
     } u = {.i = UINT64_C(0x3FF) << 52 | x >> 12};
 
     return u.d - 1.0;
@@ -151,4 +153,4 @@ inline int64_t StdTwisterRandom::b_to_e_co(int64_t b, int64_t e)
     std::uniform_int_distribution<int64_t> dist {b, e - 1};
     return dist(m_twister_engine_64);
 }
-}
+}  // namespace maxbase

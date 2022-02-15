@@ -18,19 +18,17 @@ config Config = {
 };
 
 /* process a line of the INI file, storing valid values into config struct */
-int handler(void* user,
-            const char* section,
-            const char* name,
-            const char* value)
+int handler(void* user, const char* section, const char* name, const char* value)
 {
-    config* cfg = (config*)user;
+    config* cfg = (config*) user;
 
     if (0)
-    {
+    {}
+#define CFG(s, n, default)                                      \
+    else if (strcmp(section, #s) == 0 && strcmp(name, #n) == 0) \
+    {                                                           \
+        cfg->s##_##n = strdup(value);                           \
     }
-#define CFG(s, n, default) \
-    else if (strcmp(section, #s) == 0    \
-             && strcmp(name, #n) == 0) {cfg->s##_##n = strdup(value);}
 #include "config.def"
 
     return 1;

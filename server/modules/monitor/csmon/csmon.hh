@@ -43,23 +43,27 @@ inline bool cs_is_not_null_workaround(json_t** ppJson)
 }
 
 /** Utility macros for printing both MXS_ERROR and json error */
-#define LOG_APPEND_JSON_ERROR(ppJson, zFormat, ...) \
-    do { \
-        MXS_ERROR(zFormat, ##__VA_ARGS__); \
-        if (cs_is_not_null_workaround(ppJson))  \
-        { \
+#define LOG_APPEND_JSON_ERROR(ppJson, zFormat, ...)                           \
+    do                                                                        \
+    {                                                                         \
+        MXS_ERROR(zFormat, ##__VA_ARGS__);                                    \
+        if (cs_is_not_null_workaround(ppJson))                                \
+        {                                                                     \
             *ppJson = mxs_json_error_append(*ppJson, zFormat, ##__VA_ARGS__); \
-        } \
-    } while (false)
+        }                                                                     \
+    }                                                                         \
+    while (false)
 
-#define LOG_PREPEND_JSON_ERROR(ppJson, zFormat, ...) \
-    do { \
-        MXS_ERROR(zFormat, ##__VA_ARGS__); \
-        if (cs_is_not_null_workaround(ppJson))  \
-        { \
+#define LOG_PREPEND_JSON_ERROR(ppJson, zFormat, ...)                                                  \
+    do                                                                                                \
+    {                                                                                                 \
+        MXS_ERROR(zFormat, ##__VA_ARGS__);                                                            \
+        if (cs_is_not_null_workaround(ppJson))                                                        \
+        {                                                                                             \
             *ppJson = mxs_json_error_push_front_new(*ppJson, mxs_json_error(zFormat, ##__VA_ARGS__)); \
-        } \
-    } while (false)
+        }                                                                                             \
+    }                                                                                                 \
+    while (false)
 
 namespace csmon
 {
@@ -69,5 +73,5 @@ const char SUCCESS[] = "success";
 const char MESSAGE[] = "message";
 const char RESULT[]  = "result";
 const char SERVERS[] = "servers";
-}
-}
+}  // namespace keys
+}  // namespace csmon

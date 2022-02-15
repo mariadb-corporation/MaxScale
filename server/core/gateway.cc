@@ -80,7 +80,7 @@
 #include "internal/secrets.hh"
 #include "internal/servermanager.hh"
 
-#if !defined (OPENSSL_THREADS)
+#if !defined(OPENSSL_THREADS)
 #error OpenSSL library does not support multi-threading.
 #endif
 
@@ -94,20 +94,20 @@ extern char* program_invocation_short_name;
 
 static struct ThisUnit
 {
-    char datadir[PATH_MAX + 1] = "";/* Data directory created for this gateway instance */
-    bool datadir_defined = false;   /*< If the datadir was already set */
+    char datadir[PATH_MAX + 1] = "";    /* Data directory created for this gateway instance */
+    bool datadir_defined       = false; /*< If the datadir was already set */
     char pidfile[PATH_MAX + 1] = "";
-    int  pidfd = PIDFD_CLOSED;
+    int pidfd                  = PIDFD_CLOSED;
 
     std::map<std::string, int> directory_locks;
-    bool                       daemon_mode = true;
-    bool                       syslog_configured = false;
-    bool                       maxlog_configured = false;
-    volatile sig_atomic_t      last_signal = 0;
-    bool                       unload_modules_at_exit = true;
-    std::string                redirect_output_to;
-    bool                       print_stacktrace_to_stdout = true;
-    bool                       use_gdb = false;
+    bool daemon_mode                  = true;
+    bool syslog_configured            = false;
+    bool maxlog_configured            = false;
+    volatile sig_atomic_t last_signal = 0;
+    bool unload_modules_at_exit       = true;
+    std::string redirect_output_to;
+    bool print_stacktrace_to_stdout = true;
+    bool use_gdb                    = false;
 #ifndef OPENSSL_1_1
     /** SSL multi-threading functions and structures */
     pthread_mutex_t* ssl_locks = nullptr;
@@ -121,148 +121,129 @@ static const char* default_cnf_fname = "maxscale.cnf";
 
 #ifdef HAVE_GLIBC
 // getopt_long is a GNU extension
-static struct option long_options[] =
-{
-    {"config-check",        no_argument,       0, 'c'},
-    {"export-config",       required_argument, 0, 'e'},
-    {"daemon",              no_argument,       0, 'n'},
-    {"nodaemon",            no_argument,       0, 'd'},
-    {"config",              required_argument, 0, 'f'},
-    {"log",                 required_argument, 0, 'l'},
-    {"logdir",              required_argument, 0, 'L'},
-    {"cachedir",            required_argument, 0, 'A'},
-    {"libdir",              required_argument, 0, 'B'},
-    {"configdir",           required_argument, 0, 'C'},
-    {"datadir",             required_argument, 0, 'D'},
-    {"execdir",             required_argument, 0, 'E'},
-    {"persistdir",          required_argument, 0, 'F'},
-    {"sharedir",            required_argument, 0, 'J'},
-    {"module_configdir",    required_argument, 0, 'M'},
-    {"language",            required_argument, 0, 'N'},
-    {"piddir",              required_argument, 0, 'P'},
-    {"basedir",             required_argument, 0, 'R'},
-    {"runtimedir",          required_argument, 0, 'r'},
-    {"user",                required_argument, 0, 'U'},
-    {"syslog",              required_argument, 0, 's'},
-    {"maxlog",              required_argument, 0, 'S'},
-    {"log_augmentation",    required_argument, 0, 'G'},
-    {"version",             no_argument,       0, 'v'},
-    {"version-full",        no_argument,       0, 'V'},
-    {"help",                no_argument,       0, '?'},
+static struct option long_options[] = {{"config-check", no_argument, 0, 'c'},
+    {"export-config", required_argument, 0, 'e'},
+    {"daemon", no_argument, 0, 'n'},
+    {"nodaemon", no_argument, 0, 'd'},
+    {"config", required_argument, 0, 'f'},
+    {"log", required_argument, 0, 'l'},
+    {"logdir", required_argument, 0, 'L'},
+    {"cachedir", required_argument, 0, 'A'},
+    {"libdir", required_argument, 0, 'B'},
+    {"configdir", required_argument, 0, 'C'},
+    {"datadir", required_argument, 0, 'D'},
+    {"execdir", required_argument, 0, 'E'},
+    {"persistdir", required_argument, 0, 'F'},
+    {"sharedir", required_argument, 0, 'J'},
+    {"module_configdir", required_argument, 0, 'M'},
+    {"language", required_argument, 0, 'N'},
+    {"piddir", required_argument, 0, 'P'},
+    {"basedir", required_argument, 0, 'R'},
+    {"runtimedir", required_argument, 0, 'r'},
+    {"user", required_argument, 0, 'U'},
+    {"syslog", required_argument, 0, 's'},
+    {"maxlog", required_argument, 0, 'S'},
+    {"log_augmentation", required_argument, 0, 'G'},
+    {"version", no_argument, 0, 'v'},
+    {"version-full", no_argument, 0, 'V'},
+    {"help", no_argument, 0, '?'},
     {"connector_plugindir", required_argument, 0, 'H'},
-    {"passive",             no_argument,       0, 'p'},
-    {"debug",               required_argument, 0, 'g'},
-    {0,                     0,                 0, 0  }
-};
+    {"passive", no_argument, 0, 'p'},
+    {"debug", required_argument, 0, 'g'},
+    {0, 0, 0, 0}};
 #endif
 
-static int    cnf_preparser(void* data, const char* section, const char* name, const char* value);
-static int    write_pid_file(); /* write MaxScale pidfile */
-static bool   lock_dir(const std::string& path);
-static bool   lock_directories();
-static void   unlock_directories();
-static void   unlink_pidfile(void); /* remove pidfile */
-static void   unlock_pidfile();
-static int    ntfw_cb(const char*, const struct stat*, int, struct FTW*);
-static bool   is_file_and_readable(const char* absolute_pathname);
-static bool   path_is_readable(const char* absolute_pathname);
-static bool   path_is_writable(const char* absolute_pathname);
-bool          handle_path_arg(std::string* dest, const char* path, const char* arg, bool rd, bool wr);
-static bool   handle_debug_args(char* args);
-static void   set_log_augmentation(const char* value);
-static void   usage(void);
+static int cnf_preparser(void* data, const char* section, const char* name, const char* value);
+static int write_pid_file(); /* write MaxScale pidfile */
+static bool lock_dir(const std::string& path);
+static bool lock_directories();
+static void unlock_directories();
+static void unlink_pidfile(void); /* remove pidfile */
+static void unlock_pidfile();
+static int ntfw_cb(const char*, const struct stat*, int, struct FTW*);
+static bool is_file_and_readable(const char* absolute_pathname);
+static bool path_is_readable(const char* absolute_pathname);
+static bool path_is_writable(const char* absolute_pathname);
+bool handle_path_arg(std::string* dest, const char* path, const char* arg, bool rd, bool wr);
+static bool handle_debug_args(char* args);
+static void set_log_augmentation(const char* value);
+static void usage(void);
 static string get_absolute_fname(const char* relative_path, const char* fname);
-static void   print_alert(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
-static void   print_alert(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
-static void   print_info(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
-static void   print_info(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
-static void   print_warning(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
-static void   print_warning(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
-static void   log_startup_error(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
-static void   log_startup_error(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
-static bool   resolve_maxscale_conf_fname(string* cnf_full_path, const string& cnf_file_arg);
-static char*  check_dir_access(char* dirname, bool, bool);
-bool          check_paths();
-static int    set_user(const char* user);
-bool          pid_file_exists();
-void          write_child_exit_code(int fd, int code);
-static bool   change_cwd();
-static void   log_exit_status();
-static int    daemonize();
-static bool   sniff_configuration(const char* filepath);
-static bool   modules_process_init();
-static void   modules_process_finish();
-static void   disable_module_unloading(const char* arg);
-static void   enable_module_unloading(const char* arg);
-static void   enable_statement_logging(const char* arg);
-static void   disable_statement_logging(const char* arg);
-static void   enable_cors(const char* arg);
-static void   allow_duplicate_servers(const char* arg);
-static void   use_gdb(const char* arg);
-static void   redirect_output_to_file(const char* arg);
-static bool   user_is_acceptable(const char* specified_user);
-static bool   init_sqlite3();
-static bool   init_base_libraries();
-static void   finish_base_libraries();
-static bool   redirect_stdout_and_stderr(const std::string& path);
-static bool   is_maxscale_already_running();
+static void print_alert(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
+static void print_alert(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
+static void print_info(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
+static void print_info(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
+static void print_warning(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
+static void print_warning(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
+static void log_startup_error(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
+static void log_startup_error(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
+static bool resolve_maxscale_conf_fname(string* cnf_full_path, const string& cnf_file_arg);
+static char* check_dir_access(char* dirname, bool, bool);
+bool check_paths();
+static int set_user(const char* user);
+bool pid_file_exists();
+void write_child_exit_code(int fd, int code);
+static bool change_cwd();
+static void log_exit_status();
+static int daemonize();
+static bool sniff_configuration(const char* filepath);
+static bool modules_process_init();
+static void modules_process_finish();
+static void disable_module_unloading(const char* arg);
+static void enable_module_unloading(const char* arg);
+static void enable_statement_logging(const char* arg);
+static void disable_statement_logging(const char* arg);
+static void enable_cors(const char* arg);
+static void allow_duplicate_servers(const char* arg);
+static void use_gdb(const char* arg);
+static void redirect_output_to_file(const char* arg);
+static bool user_is_acceptable(const char* specified_user);
+static bool init_sqlite3();
+static bool init_base_libraries();
+static void finish_base_libraries();
+static bool redirect_stdout_and_stderr(const std::string& path);
+static bool is_maxscale_already_running();
 
-#define VA_MESSAGE(message, format) \
-    va_list ap ## __LINE__; \
-    va_start(ap ## __LINE__, format); \
-    int len ## __LINE__ = vsnprintf(nullptr, 0, format, ap ## __LINE__); \
-    va_end(ap ## __LINE__); \
-    char message[len ## __LINE__ + 1]; \
-    va_start(ap ## __LINE__, format); \
-    vsnprintf(message, sizeof(message), format, ap ## __LINE__); \
-    va_end(ap ## __LINE__);
+#define VA_MESSAGE(message, format)                                  \
+    va_list ap##__LINE__;                                            \
+    va_start(ap##__LINE__, format);                                  \
+    int len##__LINE__ = vsnprintf(nullptr, 0, format, ap##__LINE__); \
+    va_end(ap##__LINE__);                                            \
+    char message[len##__LINE__ + 1];                                 \
+    va_start(ap##__LINE__, format);                                  \
+    vsnprintf(message, sizeof(message), format, ap##__LINE__);       \
+    va_end(ap##__LINE__);
 
 struct DEBUG_ARGUMENT
 {
-    const char* name;                       /**< The name of the debug argument */
-    void        (* action)(const char* arg);/**< The function implementing the argument */
-    const char* description;                /**< Help text */
+    const char* name;                /**< The name of the debug argument */
+    void (*action)(const char* arg); /**< The function implementing the argument */
+    const char* description;         /**< Help text */
 };
 
 #define SPACER "                              "
 
-const DEBUG_ARGUMENT debug_arguments[] =
-{
-    {
-        "disable-module-unloading", disable_module_unloading,
-        "disable module unloading at exit. Will produce better\n"
-        SPACER "Valgrind leak reports if leaked memory was allocated in\n"
-        SPACER "a shared library"
-    },
-    {
-        "enable-module-unloading", enable_module_unloading,
-        "cancels disable-module-unloading"
-    },
-    {
-        "redirect-output-to-file", redirect_output_to_file,
-        "redirect stdout and stderr to the file given as an argument"
-    },
-    {
-        "enable-statement-logging", enable_statement_logging,
-        "enable the logging of monitor and authenticator SQL statements sent by MaxScale to the servers"
-    },
-    {
-        "disable-statement-logging", disable_statement_logging,
-        "disable the logging of monitor and authenticator SQL statements sent by MaxScale to the servers"
-    },
-    {
-        "enable-cors", enable_cors,
-        "enable CORS support in the REST API"
-    },
-    {
-        "allow-duplicate-servers", allow_duplicate_servers,
-        "allow multiple servers to have the same address/port combination"
-    },
-    {
-        "gdb-stacktrace", use_gdb, "Use GDB to generate stacktraces"
-    },
-    {NULL, NULL, NULL}
-};
+const DEBUG_ARGUMENT debug_arguments[] = {
+    {"disable-module-unloading",
+        disable_module_unloading,
+        "disable module unloading at exit. Will produce better\n" SPACER
+        "Valgrind leak reports if leaked memory was allocated in\n" SPACER "a shared library"},
+    {"enable-module-unloading", enable_module_unloading, "cancels disable-module-unloading"},
+    {"redirect-output-to-file",
+        redirect_output_to_file,
+        "redirect stdout and stderr to the file given as an argument"},
+    {"enable-statement-logging",
+        enable_statement_logging,
+        "enable the logging of monitor and authenticator SQL statements sent by MaxScale to the servers"},
+    {"disable-statement-logging",
+        disable_statement_logging,
+        "disable the logging of monitor and authenticator SQL statements sent by MaxScale to the servers"},
+    {"enable-cors", enable_cors, "enable CORS support in the REST API"},
+    {"allow-duplicate-servers",
+        allow_duplicate_servers,
+        "allow multiple servers to have the same address/port combination"},
+    {"gdb-stacktrace", use_gdb, "Use GDB to generate stacktraces"},
+    {NULL, NULL, NULL}};
 
 #ifndef OPENSSL_1_1
 /** SSL multi-threading functions and structures */
@@ -278,6 +259,7 @@ static void ssl_locking_function(int mode, int n, const char* file, int line)
         pthread_mutex_unlock(&this_unit.ssl_locks[n]);
     }
 }
+
 /**
  * OpenSSL requires this struct to be defined in order to use dynamic locks
  */
@@ -295,8 +277,8 @@ struct CRYPTO_dynlock_value
  */
 static struct CRYPTO_dynlock_value* ssl_create_dynlock(const char* file, int line)
 {
-    struct CRYPTO_dynlock_value* lock =
-        (struct CRYPTO_dynlock_value*) MXS_MALLOC(sizeof(struct CRYPTO_dynlock_value));
+    struct CRYPTO_dynlock_value* lock
+        = (struct CRYPTO_dynlock_value*) MXS_MALLOC(sizeof(struct CRYPTO_dynlock_value));
     if (lock)
     {
         pthread_mutex_init(&lock->lock, NULL);
@@ -365,16 +347,16 @@ static void sigusr1_handler(int i)
 }
 
 static const char shutdown_msg[] = "\n\nShutting down MaxScale\n\n";
-static const char patience_msg[] =
-    "\n"
-    "Patience is a virtue...\n"
-    "Shutdown in progress, but one more Ctrl-C or SIGTERM and MaxScale goes down,\n"
-    "no questions asked.\n";
+static const char patience_msg[]
+    = "\n"
+      "Patience is a virtue...\n"
+      "Shutdown in progress, but one more Ctrl-C or SIGTERM and MaxScale goes down,\n"
+      "no questions asked.\n";
 
 static void sigterm_handler(int i)
 {
     this_unit.last_signal = i;
-    int n_shutdowns = maxscale_shutdown();
+    int n_shutdowns       = maxscale_shutdown();
 
     if (n_shutdowns == 1)
     {
@@ -395,7 +377,7 @@ static void sigterm_handler(int i)
 static void sigint_handler(int i)
 {
     this_unit.last_signal = i;
-    int n_shutdowns = maxscale_shutdown();
+    int n_shutdowns       = maxscale_shutdown();
 
     if (n_shutdowns == 1)
     {
@@ -425,7 +407,7 @@ static void sigint_handler(int i)
 
 volatile sig_atomic_t fatal_handling = 0;
 
-static int signal_set(int sig, void (* handler)(int));
+static int signal_set(int sig, void (*handler)(int));
 
 static void sigfatal_handler(int i)
 {
@@ -446,11 +428,19 @@ static void sigfatal_handler(int i)
 
     print_alert("MaxScale %s received fatal signal %d. "
                 "Commit ID: %s System name: %s Release string: %s\n\n",
-                MAXSCALE_VERSION, i, maxscale_commit, cnf.sysname, cnf.release_string);
+        MAXSCALE_VERSION,
+        i,
+        maxscale_commit,
+        cnf.sysname,
+        cnf.release_string);
 
     MXS_ALERT("MaxScale %s received fatal signal %d. "
               "Commit ID: %s System name: %s Release string: %s",
-              MAXSCALE_VERSION, i, maxscale_commit, cnf.sysname, cnf.release_string);
+        MAXSCALE_VERSION,
+        i,
+        maxscale_commit,
+        cnf.sysname,
+        cnf.release_string);
 
     const char* pStmt;
     size_t nStmt;
@@ -461,7 +451,7 @@ static void sigfatal_handler(int i)
         nStmt = strlen(pStmt);
     }
 
-    MXS_ALERT("Statement currently being classified: %.*s", (int)nStmt, pStmt);
+    MXS_ALERT("Statement currently being classified: %.*s", (int) nStmt, pStmt);
 
     if (DCB* dcb = dcb_get_current())
     {
@@ -476,10 +466,7 @@ static void sigfatal_handler(int i)
 
     if (this_unit.use_gdb && mxb::have_gdb())
     {
-        mxb::dump_gdb_stacktrace(
-            [](const char* line) {
-                msg += line;
-            });
+        mxb::dump_gdb_stacktrace([](const char* line) { msg += line; });
     }
     else
     {
@@ -487,10 +474,10 @@ static void sigfatal_handler(int i)
                    "add 'debug=gdb-stacktrace' under the [maxscale] section.");
 
         auto cb = [](const char* symbol, const char* cmd) {
-                char buf[512];
-                snprintf(buf, sizeof(buf), "  %s: %s\n", symbol, cmd);
-                msg += buf;
-            };
+            char buf[512];
+            snprintf(buf, sizeof(buf), "  %s: %s\n", symbol, cmd);
+            msg += buf;
+        };
 
         mxb::dump_stacktrace(cb);
     }
@@ -522,28 +509,28 @@ static void sigfatal_handler(int i)
  * @details (write detailed description here)
  *
  */
-static int signal_set(int sig, void (* handler)(int))
+static int signal_set(int sig, void (*handler)(int))
 {
     int rc = 0;
 
     struct sigaction sigact = {};
-    sigact.sa_handler = handler;
+    sigact.sa_handler       = handler;
 
     int err;
 
     do
     {
         errno = 0;
-        err = sigaction(sig, &sigact, NULL);
+        err   = sigaction(sig, &sigact, NULL);
     }
     while (errno == EINTR);
 
     if (err < 0)
     {
         MXS_ERROR("Failed call sigaction() in %s due to %d, %s.",
-                  program_invocation_short_name,
-                  errno,
-                  mxs_strerror(errno));
+            program_invocation_short_name,
+            errno,
+            mxs_strerror(errno));
         rc = 1;
     }
 
@@ -562,7 +549,7 @@ static int signal_set(int sig, void (* handler)(int))
 static bool create_datadir(const char* base, char* datadir)
 {
     bool created = false;
-    int len = 0;
+    int len      = 0;
 
     if ((len = snprintf(datadir, PATH_MAX, "%s", base)) < PATH_MAX
         && (mkdir(datadir, 0777) == 0 || errno == EEXIST))
@@ -575,9 +562,7 @@ static bool create_datadir(const char* base, char* datadir)
             }
             else
             {
-                MXS_ERROR("Cannot create data directory '%s': %s",
-                          datadir,
-                          mxs_strerror(errno));
+                MXS_ERROR("Cannot create data directory '%s': %s", datadir, mxs_strerror(errno));
             }
         }
     }
@@ -585,16 +570,14 @@ static bool create_datadir(const char* base, char* datadir)
     {
         if (len < PATH_MAX)
         {
-            MXS_ERROR("Cannot create data directory '%s': %s",
-                      datadir,
-                      mxs_strerror(errno));
+            MXS_ERROR("Cannot create data directory '%s': %s", datadir, mxs_strerror(errno));
         }
         else
         {
             MXS_ERROR("Data directory pathname exceeds the maximum allowed pathname "
                       "length: %s/data%d.",
-                      base,
-                      getpid());
+                base,
+                getpid());
         }
     }
 
@@ -604,12 +587,9 @@ static bool create_datadir(const char* base, char* datadir)
 /**
  * Cleanup the temporary data directory we created for the gateway
  */
-int ntfw_cb(const char* filename,
-            const struct stat* filestat,
-            int fileflags,
-            struct FTW* pfwt)
+int ntfw_cb(const char* filename, const struct stat* filestat, int fileflags, struct FTW* pfwt)
 {
-    int rc = 0;
+    int rc          = 0;
     int datadir_len = strlen(mxs::datadir());
     std::string filename_string(filename + datadir_len);
 
@@ -619,11 +599,11 @@ int ntfw_cb(const char* filename,
         if (rc != 0)
         {
             int eno = errno;
-            errno = 0;
+            errno   = 0;
             MXS_ERROR("Failed to remove the data directory %s of MaxScale due to %d, %s.",
-                      filename_string.c_str(),
-                      eno,
-                      mxs_strerror(eno));
+                filename_string.c_str(),
+                eno,
+                mxs_strerror(eno));
         }
     }
     return rc;
@@ -638,8 +618,8 @@ int ntfw_cb(const char* filename,
  */
 void cleanup_process_datadir()
 {
-    int depth = 1;
-    int flags = FTW_CHDIR | FTW_DEPTH | FTW_MOUNT;
+    int depth                = 1;
+    int flags                = FTW_CHDIR | FTW_DEPTH | FTW_MOUNT;
     const char* proc_datadir = mxs::process_datadir();
 
     if (strcmp(proc_datadir, mxs::datadir()) != 0 && access(proc_datadir, F_OK) == 0)
@@ -671,7 +651,7 @@ static bool resolve_maxscale_conf_fname(string* cnf_full_path, const string& cnf
             *cnf_full_path = resolved_path;
         }
     }
-    else    /*< default config file name is used */
+    else /*< default config file name is used */
     {
         string home_dir = mxs::configdir();
 
@@ -723,7 +703,7 @@ static bool check_dir_access(const char* dirname, bool rd, bool wr)
 
 static bool init_log()
 {
-    bool rval = false;
+    bool rval              = false;
     const mxs::Config& cnf = mxs::Config::get();
 
     if (!cnf.config_check && !mxs_mkdir_all(mxs::logdir(), 0777, false))
@@ -750,12 +730,12 @@ static bool init_log()
 static void print_message(const char* tag, int eno, const char* message)
 {
     fprintf(stderr,
-            "%s: %s%s%s%s\n",
-            tag,
-            message,
-            eno == 0 ? "" : ": ",
-            eno == 0 ? "" : mxs_strerror(eno),
-            eno == 0 ? "" : ".");
+        "%s: %s%s%s%s\n",
+        tag,
+        message,
+        eno == 0 ? "" : ": ",
+        eno == 0 ? "" : mxs_strerror(eno),
+        eno == 0 ? "" : ".");
     fflush(stderr);
 }
 
@@ -812,10 +792,10 @@ static void log_startup_message(int eno, const char* message)
     if (mxb_log_inited() || init_log())
     {
         MXS_ALERT("%s%s%s%s",
-                  message,
-                  eno == 0 ? "" : ": ",
-                  eno == 0 ? "" : mxs_strerror(eno),
-                  eno == 0 ? "" : ".");
+            message,
+            eno == 0 ? "" : ": ",
+            eno == 0 ? "" : mxs_strerror(eno),
+            eno == 0 ? "" : ".");
     }
 
     print_alert(eno, "%s", message);
@@ -922,7 +902,6 @@ static bool path_is_writable(const char* absolute_pathname)
     return succp;
 }
 
-
 /**
  * Get absolute pathname, given a relative path and a filename.
  *
@@ -932,8 +911,7 @@ static bool path_is_writable(const char* absolute_pathname)
  * @return Absolute path if resulting path exists and the file is
  *         readable, otherwise an empty string.
  */
-static string get_absolute_fname(const char* relative_path,
-                                 const char* fname)
+static string get_absolute_fname(const char* relative_path, const char* fname)
 {
     mxb_assert(relative_path);
     mxb_assert(fname);
@@ -971,86 +949,83 @@ static string get_absolute_fname(const char* relative_path,
 static void usage()
 {
     fprintf(stderr,
-            "\nUsage : %s [OPTION]...\n\n"
-            "  -c, --config-check          validate configuration file and exit\n"
-            "  -e, --export-config=FILE    export configuration to a single file\n"
-            "  -d, --nodaemon              enable running in terminal process\n"
-            "  -f, --config=FILE           relative or absolute pathname of config file\n"
-            "  -l, --log=[file|stdout]     log to file or stdout\n"
-            "                              (default: file)\n"
-            "  -L, --logdir=PATH           path to log file directory\n"
-            "  -A, --cachedir=PATH         path to cache directory\n"
-            "  -B, --libdir=PATH           path to module directory\n"
-            "  -C, --configdir=PATH        path to configuration file directory\n"
-            "  -D, --datadir=PATH          path to data directory,\n"
-            "                              stores internal MaxScale data\n"
-            "  -E, --execdir=PATH          path to the maxscale and other executable files\n"
-            "  -F, --persistdir=PATH       path to persisted configuration directory\n"
-            "  -M, --module_configdir=PATH path to module configuration directory\n"
-            "  -H, --connector_plugindir=PATH\n"
-            "                              path to MariaDB Connector-C plugin directory\n"
-            "  -J, --sharedir=PATH         path to share directory\n"
-            "  -N, --language=PATH         path to errmsg.sys file\n"
-            "  -P, --piddir=PATH           path to PID file directory\n"
-            "  -R, --basedir=PATH          base path for all other paths\n"
-            "  -r  --runtimedir=PATH       base path for all other paths expect binaries\n"
-            "  -U, --user=USER             user ID and group ID of specified user are used to\n"
-            "                              run MaxScale\n"
-            "  -s, --syslog=[yes|no]       log messages to syslog (default:yes)\n"
-            "  -S, --maxlog=[yes|no]       log messages to MaxScale log (default: yes)\n"
-            "  -G, --log_augmentation=0|1  augment messages with the name of the function\n"
-            "                              where the message was logged (default: 0)\n"
-            "  -p, --passive               start MaxScale as a passive standby\n"
-            "  -g, --debug=arg1,arg2,...   enable or disable debug features. Supported arguments:\n",
-            program_invocation_short_name);
+        "\nUsage : %s [OPTION]...\n\n"
+        "  -c, --config-check          validate configuration file and exit\n"
+        "  -e, --export-config=FILE    export configuration to a single file\n"
+        "  -d, --nodaemon              enable running in terminal process\n"
+        "  -f, --config=FILE           relative or absolute pathname of config file\n"
+        "  -l, --log=[file|stdout]     log to file or stdout\n"
+        "                              (default: file)\n"
+        "  -L, --logdir=PATH           path to log file directory\n"
+        "  -A, --cachedir=PATH         path to cache directory\n"
+        "  -B, --libdir=PATH           path to module directory\n"
+        "  -C, --configdir=PATH        path to configuration file directory\n"
+        "  -D, --datadir=PATH          path to data directory,\n"
+        "                              stores internal MaxScale data\n"
+        "  -E, --execdir=PATH          path to the maxscale and other executable files\n"
+        "  -F, --persistdir=PATH       path to persisted configuration directory\n"
+        "  -M, --module_configdir=PATH path to module configuration directory\n"
+        "  -H, --connector_plugindir=PATH\n"
+        "                              path to MariaDB Connector-C plugin directory\n"
+        "  -J, --sharedir=PATH         path to share directory\n"
+        "  -N, --language=PATH         path to errmsg.sys file\n"
+        "  -P, --piddir=PATH           path to PID file directory\n"
+        "  -R, --basedir=PATH          base path for all other paths\n"
+        "  -r  --runtimedir=PATH       base path for all other paths expect binaries\n"
+        "  -U, --user=USER             user ID and group ID of specified user are used to\n"
+        "                              run MaxScale\n"
+        "  -s, --syslog=[yes|no]       log messages to syslog (default:yes)\n"
+        "  -S, --maxlog=[yes|no]       log messages to MaxScale log (default: yes)\n"
+        "  -G, --log_augmentation=0|1  augment messages with the name of the function\n"
+        "                              where the message was logged (default: 0)\n"
+        "  -p, --passive               start MaxScale as a passive standby\n"
+        "  -g, --debug=arg1,arg2,...   enable or disable debug features. Supported arguments:\n",
+        program_invocation_short_name);
     for (int i = 0; debug_arguments[i].action != NULL; i++)
     {
-        fprintf(stderr,
-                "   %-25s  %s\n",
-                debug_arguments[i].name,
-                debug_arguments[i].description);
+        fprintf(stderr, "   %-25s  %s\n", debug_arguments[i].name, debug_arguments[i].description);
     }
     fprintf(stderr,
-            "  -v, --version               print version info and exit\n"
-            "  -V, --version-full          print full version info and exit\n"
-            "  -?, --help                  show this help\n"
-            "\n"
-            "Defaults paths:\n"
-            "  config file       : %s/%s\n"
-            "  configdir         : %s\n"
-            "  logdir            : %s\n"
-            "  cachedir          : %s\n"
-            "  libdir            : %s\n"
-            "  sharedir          : %s\n"
-            "  datadir           : %s\n"
-            "  execdir           : %s\n"
-            "  language          : %s\n"
-            "  piddir            : %s\n"
-            "  persistdir        : %s\n"
-            "  module configdir  : %s\n"
-            "  connector plugins : %s\n"
-            "\n"
-            "If '--basedir' is provided then all other paths, including the default\n"
-            "configuration file path, are defined relative to that. As an example,\n"
-            "if '--basedir /path/maxscale' is specified, then, for instance, the log\n"
-            "dir will be '/path/maxscale/var/log/maxscale', the config dir will be\n"
-            "'/path/maxscale/etc' and the default config file will be\n"
-            "'/path/maxscale/etc/maxscale.cnf'.\n\n"
-            "MaxScale documentation: https://mariadb.com/kb/en/maxscale/ \n",
-            mxs::configdir(),
-            default_cnf_fname,
-            mxs::configdir(),
-            mxs::logdir(),
-            mxs::cachedir(),
-            mxs::libdir(),
-            mxs::sharedir(),
-            mxs::datadir(),
-            mxs::execdir(),
-            mxs::langdir(),
-            mxs::piddir(),
-            mxs::config_persistdir(),
-            mxs::module_configdir(),
-            mxs::connector_plugindir());
+        "  -v, --version               print version info and exit\n"
+        "  -V, --version-full          print full version info and exit\n"
+        "  -?, --help                  show this help\n"
+        "\n"
+        "Defaults paths:\n"
+        "  config file       : %s/%s\n"
+        "  configdir         : %s\n"
+        "  logdir            : %s\n"
+        "  cachedir          : %s\n"
+        "  libdir            : %s\n"
+        "  sharedir          : %s\n"
+        "  datadir           : %s\n"
+        "  execdir           : %s\n"
+        "  language          : %s\n"
+        "  piddir            : %s\n"
+        "  persistdir        : %s\n"
+        "  module configdir  : %s\n"
+        "  connector plugins : %s\n"
+        "\n"
+        "If '--basedir' is provided then all other paths, including the default\n"
+        "configuration file path, are defined relative to that. As an example,\n"
+        "if '--basedir /path/maxscale' is specified, then, for instance, the log\n"
+        "dir will be '/path/maxscale/var/log/maxscale', the config dir will be\n"
+        "'/path/maxscale/etc' and the default config file will be\n"
+        "'/path/maxscale/etc/maxscale.cnf'.\n\n"
+        "MaxScale documentation: https://mariadb.com/kb/en/maxscale/ \n",
+        mxs::configdir(),
+        default_cnf_fname,
+        mxs::configdir(),
+        mxs::logdir(),
+        mxs::cachedir(),
+        mxs::libdir(),
+        mxs::sharedir(),
+        mxs::datadir(),
+        mxs::execdir(),
+        mxs::langdir(),
+        mxs::piddir(),
+        mxs::config_persistdir(),
+        mxs::module_configdir(),
+        mxs::connector_plugindir());
 }
 
 /**
@@ -1188,7 +1163,7 @@ bool disable_normal_signals(void)
  *
  * @return True, if the signal could be configured, false otherwise.
  */
-static bool configure_signal(int signum, const char* signame, void (* handler)(int))
+static bool configure_signal(int signum, const char* signame, void (*handler)(int))
 {
     int rc = signal_set(signum, handler);
 
@@ -1359,21 +1334,17 @@ bool set_runtime_dirs(const char* basedir)
         set_piddir(path.c_str());
     }
 
-    if (rv && (rv = handle_path_arg(&path,
-                                    basedir,
-                                    "var/" MXS_DEFAULT_DATA_SUBPATH "/"
-                                    MXS_DEFAULT_CONFIG_PERSIST_SUBPATH,
-                                    true,
-                                    true)))
+    if (rv
+        && (rv = handle_path_arg(&path,
+                basedir,
+                "var/" MXS_DEFAULT_DATA_SUBPATH "/" MXS_DEFAULT_CONFIG_PERSIST_SUBPATH,
+                true,
+                true)))
     {
         set_config_persistdir(path.c_str());
     }
 
-    if (rv && (rv = handle_path_arg(&path,
-                                    basedir,
-                                    MXS_DEFAULT_CONNECTOR_PLUGIN_SUBPATH,
-                                    true,
-                                    false)))
+    if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_CONNECTOR_PLUGIN_SUBPATH, true, false)))
     {
         set_connector_plugindir(path.c_str());
     }
@@ -1427,20 +1398,19 @@ mxb::ThreadPool& mxs::thread_pool()
 class ChildExit
 {
 public:
-    ChildExit(const ChildExit&) = delete;
+    ChildExit(const ChildExit&)            = delete;
     ChildExit& operator=(const ChildExit&) = delete;
 
     ChildExit(int child_pipe, int* pRc)
         : m_child_pipe(child_pipe)
         , m_rc(*pRc)
-    {
-    }
+    {}
 
     ~ChildExit()
     {
         if (m_child_pipe != -1 && m_rc != MAXSCALE_SHUTDOWN)
         {
-            write_child_exit_code(m_child_pipe, m_rc) ;
+            write_child_exit_code(m_child_pipe, m_rc);
             ::close(m_child_pipe);
         }
 
@@ -1455,7 +1425,7 @@ public:
     }
 
 private:
-    int        m_child_pipe;
+    int m_child_pipe;
     const int& m_rc;
 };
 
@@ -1495,19 +1465,15 @@ int main(int argc, char** argv)
     this_unit.datadir[PATH_MAX] = '\0';
 
     // Option string for getopt
-    const char accepted_opts[] = "dnce:f:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:J:p";
-    const char* specified_user = NULL;
+    const char accepted_opts[]    = "dnce:f:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:J:p";
+    const char* specified_user    = NULL;
     char export_cnf[PATH_MAX + 1] = "";
-    string cnf_file_arg;    /*< conf filename from cmd-line arg */
+    string cnf_file_arg; /*< conf filename from cmd-line arg */
     string tmp_path;
     int opt;
 #ifdef HAVE_GLIBC
     int option_index;
-    while ((opt = getopt_long(argc,
-                              argv,
-                              accepted_opts,
-                              long_options,
-                              &option_index)) != -1)
+    while ((opt = getopt_long(argc, argv, accepted_opts, long_options, &option_index)) != -1)
 #else
     while ((opt = getopt(argc, argv, accepted_opts)) != -1)
 #endif
@@ -1737,44 +1703,44 @@ int main(int argc, char** argv)
             break;
 
         case 'S':
+        {
+            char* tok = strstr(optarg, "=");
+            if (tok)
             {
-                char* tok = strstr(optarg, "=");
+                tok++;
                 if (tok)
                 {
-                    tok++;
-                    if (tok)
-                    {
-                        cnf.maxlog.set(config_truth_value(tok));
-                        this_unit.maxlog_configured = true;
-                    }
-                }
-                else
-                {
-                    cnf.maxlog.set(config_truth_value(optarg));
+                    cnf.maxlog.set(config_truth_value(tok));
                     this_unit.maxlog_configured = true;
                 }
             }
-            break;
+            else
+            {
+                cnf.maxlog.set(config_truth_value(optarg));
+                this_unit.maxlog_configured = true;
+            }
+        }
+        break;
 
         case 's':
+        {
+            char* tok = strstr(optarg, "=");
+            if (tok)
             {
-                char* tok = strstr(optarg, "=");
+                tok++;
                 if (tok)
                 {
-                    tok++;
-                    if (tok)
-                    {
-                        cnf.syslog.set(config_truth_value(tok));
-                        this_unit.syslog_configured = true;
-                    }
-                }
-                else
-                {
-                    cnf.syslog.set(config_truth_value(optarg));
+                    cnf.syslog.set(config_truth_value(tok));
                     this_unit.syslog_configured = true;
                 }
             }
-            break;
+            else
+            {
+                cnf.syslog.set(config_truth_value(optarg));
+                this_unit.syslog_configured = true;
+            }
+        }
+        break;
 
         case 'U':
             specified_user = optarg;
@@ -1833,15 +1799,15 @@ int main(int argc, char** argv)
     if (cnf.config_check)
     {
         this_unit.daemon_mode = false;
-        cnf.log_target = MXB_LOG_TARGET_STDOUT;
+        cnf.log_target        = MXB_LOG_TARGET_STDOUT;
     }
 
-    uint64_t systemd_interval = 0;      // in microseconds
+    uint64_t systemd_interval = 0;  // in microseconds
 #ifdef HAVE_SYSTEMD
     // Systemd watchdog. Must be called in the initial thread */
     if (sd_watchdog_enabled(false, &systemd_interval) <= 0)
     {
-        systemd_interval = 0;   // Disabled
+        systemd_interval = 0;  // Disabled
     }
 #endif
 
@@ -1974,29 +1940,32 @@ int main(int argc, char** argv)
     struct utsname name;
     uname(&name);
     MXS_NOTICE("Running OS: %s@%s, %s, %s with %lu processor cores.",
-               name.sysname, name.release, name.version, name.machine, get_processor_count());
+        name.sysname,
+        name.release,
+        name.version,
+        name.machine,
+        get_processor_count());
 
     struct sysinfo info;
     sysinfo(&info);
-    MXS_NOTICE("Total usable main memory: %s.",
-               mxb::pretty_size(info.mem_unit * info.totalram).c_str());
+    MXS_NOTICE("Total usable main memory: %s.", mxb::pretty_size(info.mem_unit * info.totalram).c_str());
     MXS_NOTICE("MariaDB MaxScale %s started (Commit: %s)", MAXSCALE_VERSION, MAXSCALE_COMMIT);
     MXS_NOTICE("MaxScale is running in process %i", getpid());
 
     if (!this_unit.daemon_mode)
     {
         fprintf(stderr,
-                "\n"
-                "Configuration file : %s\n"
-                "Log directory      : %s\n"
-                "Data directory     : %s\n"
-                "Module directory   : %s\n"
-                "Service cache      : %s\n\n",
-                cnf_file_path.c_str(),
-                mxs::logdir(),
-                mxs::datadir(),
-                mxs::libdir(),
-                mxs::cachedir());
+            "\n"
+            "Configuration file : %s\n"
+            "Log directory      : %s\n"
+            "Data directory     : %s\n"
+            "Module directory   : %s\n"
+            "Service cache      : %s\n\n",
+            cnf_file_path.c_str(),
+            mxs::logdir(),
+            mxs::datadir(),
+            mxs::libdir(),
+            mxs::cachedir());
     }
 
     MXS_NOTICE("Configuration file: %s", cnf_file_path.c_str());
@@ -2034,10 +2003,7 @@ int main(int argc, char** argv)
         }
     }
 
-    if (!qc_setup(&cnf.qc_cache_properties,
-                  cnf.qc_sql_mode,
-                  cnf.qc_name.c_str(),
-                  cnf.qc_args.c_str()))
+    if (!qc_setup(&cnf.qc_cache_properties, cnf.qc_sql_mode, cnf.qc_name.c_str(), cnf.qc_args.c_str()))
     {
         log_startup_error("Failed to initialise query classifier library.");
         rc = MAXSCALE_INTERNALERROR;
@@ -2068,72 +2034,71 @@ int main(int argc, char** argv)
      * the order of the events would be the way they appear to be.
      */
     auto do_startup = [&]() {
-            if (!config_load(cnf_file_path.c_str()))
+        if (!config_load(cnf_file_path.c_str()))
+        {
+            print_alert("Failed to open, read or process the MaxScale configuration "
+                        "file. See the error log for details.");
+            MXS_ALERT(
+                "Failed to open, read or process the MaxScale configuration file %s.", cnf_file_path.c_str());
+            rc = MAXSCALE_BADCONFIG;
+            maxscale_shutdown();
+            return;
+        }
+
+        if (cnf.config_check)
+        {
+            MXS_NOTICE("Configuration was successfully verified.");
+
+            if (*export_cnf && export_config_file(export_cnf))
             {
-                print_alert("Failed to open, read or process the MaxScale configuration "
-                            "file. See the error log for details.");
-                MXS_ALERT("Failed to open, read or process the MaxScale configuration file %s.",
-                          cnf_file_path.c_str());
-                rc = MAXSCALE_BADCONFIG;
+                MXS_NOTICE("Configuration exported to '%s'", export_cnf);
+            }
+
+            rc = MAXSCALE_SHUTDOWN;
+            maxscale_shutdown();
+            return;
+        }
+
+        if (cnf.admin_enabled)
+        {
+            bool success = mxs_admin_init();
+
+            if (!success && (cnf.admin_host == "::"))
+            {
+                MXS_WARNING("Failed to bind on address '::', attempting to "
+                            "bind on IPv4 address '0.0.0.0'.");
+                cnf.admin_host = "0.0.0.0";
+                success        = mxs_admin_init();
+            }
+
+            if (success)
+            {
+                MXS_NOTICE("Started REST API on [%s]:%d", cnf.admin_host.c_str(), (int) cnf.admin_port);
+            }
+            else
+            {
+                log_startup_error("Failed to initialize REST API.");
+                rc = MAXSCALE_INTERNALERROR;
                 maxscale_shutdown();
                 return;
             }
+        }
 
-            if (cnf.config_check)
-            {
-                MXS_NOTICE("Configuration was successfully verified.");
+        MonitorManager::start_all_monitors();
+        MonitorManager::wait_one_tick();
 
-                if (*export_cnf && export_config_file(export_cnf))
-                {
-                    MXS_NOTICE("Configuration exported to '%s'", export_cnf);
-                }
-
-                rc = MAXSCALE_SHUTDOWN;
-                maxscale_shutdown();
-                return;
-            }
-
-            if (cnf.admin_enabled)
-            {
-                bool success = mxs_admin_init();
-
-                if (!success && (cnf.admin_host == "::"))
-                {
-                    MXS_WARNING("Failed to bind on address '::', attempting to "
-                                "bind on IPv4 address '0.0.0.0'.");
-                    cnf.admin_host = "0.0.0.0";
-                    success = mxs_admin_init();
-                }
-
-                if (success)
-                {
-                    MXS_NOTICE("Started REST API on [%s]:%d",
-                               cnf.admin_host.c_str(), (int)cnf.admin_port);
-                }
-                else
-                {
-                    log_startup_error("Failed to initialize REST API.");
-                    rc = MAXSCALE_INTERNALERROR;
-                    maxscale_shutdown();
-                    return;
-                }
-            }
-
-            MonitorManager::start_all_monitors();
-            MonitorManager::wait_one_tick();
-
-            if (!service_launch_all())
-            {
-                log_startup_error("Failed to start all MaxScale services.");
-                rc = MAXSCALE_NOSERVICES;
-                maxscale_shutdown();
-            }
-            else if (this_unit.daemon_mode)
-            {
-                // Successful start, notify the parent process that it can exit.
-                write_child_exit_code(child_pipe, rc);
-            }
-        };
+        if (!service_launch_all())
+        {
+            log_startup_error("Failed to start all MaxScale services.");
+            rc = MAXSCALE_NOSERVICES;
+            maxscale_shutdown();
+        }
+        else if (this_unit.daemon_mode)
+        {
+            // Successful start, notify the parent process that it can exit.
+            write_child_exit_code(child_pipe, rc);
+        }
+    };
 
     watchdog_notifier.start();
 
@@ -2157,8 +2122,8 @@ int main(int argc, char** argv)
                         {
                             MXS_NOTICE("MaxScale started with %d worker threads, each with a stack "
                                        "size of %lu bytes.",
-                                       config_threadcount(),
-                                       config_thread_stack_size());
+                                config_threadcount(),
+                                config_thread_stack_size());
 
                             if (configure_normal_signals())
                             {
@@ -2242,7 +2207,7 @@ int main(int argc, char** argv)
     watchdog_notifier.stop();
 
     return rc;
-}   /*< End of main */
+} /*< End of main */
 
 static void unlock_pidfile()
 {
@@ -2337,7 +2302,7 @@ bool pid_file_exists()
         }
 
         this_unit.pidfd = fd;
-        b = read(fd, pidbuf, sizeof(pidbuf));
+        b               = read(fd, pidbuf, sizeof(pidbuf));
 
         if (b == -1)
         {
@@ -2350,20 +2315,22 @@ bool pid_file_exists()
             /** Empty file */
             log_startup_error("PID file read from '%s'. File was empty. If the file is the "
                               "correct PID file and no other MaxScale processes are running, "
-                              "please remove it manually and start MaxScale again.", pathbuf);
+                              "please remove it manually and start MaxScale again.",
+                pathbuf);
             unlock_pidfile();
             return true;
         }
 
-        pidbuf[(size_t)b < sizeof(pidbuf) ? (size_t)b : sizeof(pidbuf) - 1] = '\0';
-        pid = strtol(pidbuf, NULL, 0);
+        pidbuf[(size_t) b < sizeof(pidbuf) ? (size_t) b : sizeof(pidbuf) - 1] = '\0';
+        pid                                                                   = strtol(pidbuf, NULL, 0);
 
         if (pid < 1)
         {
             /** Bad PID */
             log_startup_error("PID file read from '%s'. File contents not valid. If the file "
                               "is the correct PID file and no other MaxScale processes are "
-                              "running, please remove it manually and start MaxScale again.", pathbuf);
+                              "running, please remove it manually and start MaxScale again.",
+                pathbuf);
             unlock_pidfile();
             return true;
         }
@@ -2372,7 +2339,8 @@ bool pid_file_exists()
         {
             log_startup_error("MaxScale is already running. Process id: %d. "
                               "Use another location for the PID file to run multiple "
-                              "instances of MaxScale on the same machine.", pid);
+                              "instances of MaxScale on the same machine.",
+                pid);
             unlock_pidfile();
         }
         else
@@ -2383,7 +2351,8 @@ bool pid_file_exists()
                 log_startup_error("Locking the PID file '%s' failed. Read PID from file "
                                   "and no process found with PID %d. Confirm that no other "
                                   "process holds the lock on the PID file.",
-                                  pathbuf, pid);
+                    pathbuf,
+                    pid);
                 close(fd);
             }
             return lock_failed;
@@ -2393,7 +2362,7 @@ bool pid_file_exists()
     {
         log_startup_error("Cannot open PID file '%s', no read permissions. Please confirm "
                           "that the user running MaxScale has read permissions on the file.",
-                          pathbuf);
+            pathbuf);
     }
     return true;
 }
@@ -2434,7 +2403,7 @@ static int write_pid_file()
                 log_startup_error("Failed to lock PID file '%s', another process is holding a lock on it. "
                                   "Please confirm that no other MaxScale process is using the same "
                                   "PID file location.",
-                                  this_unit.pidfile);
+                    this_unit.pidfile);
             }
             else
             {
@@ -2455,7 +2424,7 @@ static int write_pid_file()
     }
 
     string pidstr = std::to_string(getpid());
-    ssize_t len = pidstr.length();
+    ssize_t len   = pidstr.length();
 
     if (pwrite(this_unit.pidfd, pidstr.c_str(), len, 0) != len)
     {
@@ -2492,7 +2461,7 @@ bool handle_path_arg(std::string* dest, const char* path, const char* arg, bool 
         }
 
         *dest = pathbuffer;
-        rval = true;
+        rval  = true;
     }
 
     return rval;
@@ -2510,16 +2479,13 @@ bool check_paths()
         }
     }
 
-    return check_dir_access(mxs::logdir(), true, false)
-           && check_dir_access(mxs::cachedir(), true, true)
-           && check_dir_access(mxs::configdir(), true, false)
-           && check_dir_access(mxs::module_configdir(), true, false)
-           && check_dir_access(mxs::datadir(), true, false)
-           && check_dir_access(mxs::langdir(), true, false)
-           && check_dir_access(mxs::piddir(), true, true)
-           && check_dir_access(mxs::config_persistdir(), true, true)
-           && check_dir_access(mxs::libdir(), true, false)
-           && check_dir_access(mxs::execdir(), true, false);
+    return check_dir_access(mxs::logdir(), true, false) && check_dir_access(mxs::cachedir(), true, true)
+        && check_dir_access(mxs::configdir(), true, false)
+        && check_dir_access(mxs::module_configdir(), true, false)
+        && check_dir_access(mxs::datadir(), true, false) && check_dir_access(mxs::langdir(), true, false)
+        && check_dir_access(mxs::piddir(), true, true)
+        && check_dir_access(mxs::config_persistdir(), true, true)
+        && check_dir_access(mxs::libdir(), true, false) && check_dir_access(mxs::execdir(), true, false);
 }
 
 void set_log_augmentation(const char* value)
@@ -2563,10 +2529,10 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
 
                 if (!env_value)
                 {
-                    char** s = (char**)data;
+                    char** s = (char**) data;
 
                     static const char FORMAT[] = "The environment variable %s does not exist.";
-                    *s = (char*)MXS_MALLOC(sizeof(FORMAT) + strlen(value));
+                    *s                         = (char*) MXS_MALLOC(sizeof(FORMAT) + strlen(value));
 
                     if (*s)
                     {
@@ -2584,7 +2550,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         {
             if (strcmp(mxs::logdir(), MXS_DEFAULT_LOGDIR) == 0)
             {
-                if (handle_path_arg(&tmp, (char*)value, NULL, true, true))
+                if (handle_path_arg(&tmp, (char*) value, NULL, true, true))
                 {
                     set_logdir(tmp.c_str());
                 }
@@ -2598,7 +2564,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         {
             if (strcmp(mxs::libdir(), MXS_DEFAULT_LIBDIR) == 0)
             {
-                if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
+                if (handle_path_arg(&tmp, (char*) value, NULL, true, false))
                 {
                     set_libdir(tmp.c_str());
                 }
@@ -2612,7 +2578,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         {
             if (strcmp(mxs::sharedir(), MXS_DEFAULT_SHAREDIR) == 0)
             {
-                if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
+                if (handle_path_arg(&tmp, (char*) value, NULL, true, false))
                 {
                     set_sharedir(tmp.c_str());
                 }
@@ -2626,7 +2592,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         {
             if (strcmp(mxs::piddir(), MXS_DEFAULT_PIDDIR) == 0)
             {
-                if (handle_path_arg(&tmp, (char*)value, NULL, true, true))
+                if (handle_path_arg(&tmp, (char*) value, NULL, true, true))
                 {
                     set_piddir(tmp.c_str());
                 }
@@ -2640,7 +2606,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         {
             if (!this_unit.datadir_defined)
             {
-                if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
+                if (handle_path_arg(&tmp, (char*) value, NULL, true, false))
                 {
                     snprintf(this_unit.datadir, PATH_MAX, "%s", tmp.c_str());
                     this_unit.datadir[PATH_MAX] = '\0';
@@ -2657,7 +2623,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         {
             if (strcmp(mxs::cachedir(), MXS_DEFAULT_CACHEDIR) == 0)
             {
-                if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
+                if (handle_path_arg(&tmp, (char*) value, NULL, true, false))
                 {
                     set_cachedir(tmp.c_str());
                 }
@@ -2671,7 +2637,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         {
             if (strcmp(mxs::langdir(), MXS_DEFAULT_LANGDIR) == 0)
             {
-                if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
+                if (handle_path_arg(&tmp, (char*) value, NULL, true, false))
                 {
                     mxs::set_langdir(tmp.c_str());
                 }
@@ -2685,7 +2651,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         {
             if (strcmp(mxs::execdir(), MXS_DEFAULT_EXECDIR) == 0)
             {
-                if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
+                if (handle_path_arg(&tmp, (char*) value, NULL, true, false))
                 {
                     set_execdir(tmp.c_str());
                 }
@@ -2699,7 +2665,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         {
             if (strcmp(mxs::connector_plugindir(), MXS_DEFAULT_CONNECTOR_PLUGINDIR) == 0)
             {
-                if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
+                if (handle_path_arg(&tmp, (char*) value, NULL, true, false))
                 {
                     set_connector_plugindir(tmp.c_str());
                 }
@@ -2713,7 +2679,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         {
             if (strcmp(mxs::config_persistdir(), MXS_DEFAULT_CONFIG_PERSISTDIR) == 0)
             {
-                if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
+                if (handle_path_arg(&tmp, (char*) value, NULL, true, false))
                 {
                     set_config_persistdir(tmp.c_str());
                 }
@@ -2727,7 +2693,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         {
             if (strcmp(mxs::module_configdir(), MXS_DEFAULT_MODULE_CONFIGDIR) == 0)
             {
-                if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
+                if (handle_path_arg(&tmp, (char*) value, NULL, true, false))
                 {
                     set_module_configdir(tmp.c_str());
                 }
@@ -2741,14 +2707,14 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         {
             if (!this_unit.syslog_configured)
             {
-                cnf.syslog.set(config_truth_value((char*)value));
+                cnf.syslog.set(config_truth_value((char*) value));
             }
         }
         else if (strcmp(name, CN_MAXLOG) == 0)
         {
             if (!this_unit.maxlog_configured)
             {
-                cnf.maxlog.set(config_truth_value((char*)value));
+                cnf.maxlog.set(config_truth_value((char*) value));
             }
         }
         else if (strcmp(name, CN_LOG_AUGMENTATION) == 0)
@@ -2774,29 +2740,23 @@ static int set_user(const char* user)
     if (pwname == NULL)
     {
         printf("Error: Failed to retrieve user information for '%s': %d %s\n",
-               user,
-               errno,
-               errno == 0 ? "User not found" : mxs_strerror(errno));
+            user,
+            errno,
+            errno == 0 ? "User not found" : mxs_strerror(errno));
         return -1;
     }
 
     rval = setgid(pwname->pw_gid);
     if (rval != 0)
     {
-        printf("Error: Failed to change group to '%d': %d %s\n",
-               pwname->pw_gid,
-               errno,
-               mxs_strerror(errno));
+        printf("Error: Failed to change group to '%d': %d %s\n", pwname->pw_gid, errno, mxs_strerror(errno));
         return rval;
     }
 
     rval = setuid(pwname->pw_uid);
     if (rval != 0)
     {
-        printf("Error: Failed to change user to '%s': %d %s\n",
-               pwname->pw_name,
-               errno,
-               mxs_strerror(errno));
+        printf("Error: Failed to change user to '%s': %d %s\n", pwname->pw_name, errno, mxs_strerror(errno));
         return rval;
     }
     if (prctl(PR_GET_DUMPABLE) == 0)
@@ -2804,9 +2764,9 @@ static int set_user(const char* user)
         if (prctl(PR_SET_DUMPABLE, 1) == -1)
         {
             printf("Error: Failed to set dumpable flag on for the process '%s': %d %s\n",
-                   pwname->pw_name,
-                   errno,
-                   mxs_strerror(errno));
+                pwname->pw_name,
+                errno,
+                mxs_strerror(errno));
             return -1;
         }
     }
@@ -2852,20 +2812,17 @@ static bool change_cwd()
     {
         MXS_ERROR("Failed to change working directory to '%s': %d, %s. "
                   "Trying to change working directory to '/'.",
-                  mxs::logdir(),
-                  errno,
-                  mxs_strerror(errno));
+            mxs::logdir(),
+            errno,
+            mxs_strerror(errno));
         if (chdir("/") != 0)
         {
-            MXS_ERROR("Failed to change working directory to '/': %d, %s",
-                      errno,
-                      mxs_strerror(errno));
+            MXS_ERROR("Failed to change working directory to '/': %d, %s", errno, mxs_strerror(errno));
             rval = false;
         }
         else
         {
-            MXS_WARNING("Using '/' instead of '%s' as the current working directory.",
-                        mxs::logdir());
+            MXS_WARNING("Using '/' instead of '%s' as the current working directory.", mxs::logdir());
         }
     }
     else
@@ -2924,15 +2881,15 @@ static int daemonize(void)
 
             if (pid < 0)
             {
-                log_startup_error(errno,
-                                  "Forking MaxScale failed, the process cannot be turned into a daemon");
+                log_startup_error(
+                    errno, "Forking MaxScale failed, the process cannot be turned into a daemon");
             }
             else if (pid != 0)
             {
                 // The parent.
                 close(daemon_pipe[1]);
                 int child_status;
-                int nread = read(daemon_pipe[0], (void*)&child_status, sizeof(int));
+                int nread = read(daemon_pipe[0], (void*) &child_status, sizeof(int));
                 close(daemon_pipe[0]);
 
                 if (nread == -1)
@@ -2955,8 +2912,8 @@ static int daemonize(void)
                 close(daemon_pipe[0]);
                 if (setsid() < 0)
                 {
-                    log_startup_error(errno,
-                                      "Creating a new session for the daemonized MaxScale process failed");
+                    log_startup_error(
+                        errno, "Creating a new session for the daemonized MaxScale process failed");
                     close(daemon_pipe[1]);
                 }
                 else
@@ -2990,25 +2947,22 @@ static bool sniff_configuration(const char* filepath)
         {
             if (s)
             {
-                print_alert("Failed to pre-parse configuration file %s. Error on line %d. %s",
-                            filepath, rv, s);
+                print_alert(
+                    "Failed to pre-parse configuration file %s. Error on line %d. %s", filepath, rv, s);
                 MXS_FREE(s);
             }
             else
             {
-                print_alert("Failed to pre-parse configuration file %s. Error on line %d.",
-                            filepath, rv);
+                print_alert("Failed to pre-parse configuration file %s. Error on line %d.", filepath, rv);
             }
         }
         else if (rv == -1)
         {
-            print_alert("Failed to pre-parse configuration file %s. Failed to open file.",
-                        filepath);
+            print_alert("Failed to pre-parse configuration file %s. Failed to open file.", filepath);
         }
         else
         {
-            print_alert("Failed to pre-parse configuration file %s. Memory allocation failed.",
-                        filepath);
+            print_alert("Failed to pre-parse configuration file %s. Memory allocation failed.", filepath);
         }
     }
 
@@ -3025,7 +2979,7 @@ static bool modules_process_init()
     bool initialized = false;
 
     MXS_MODULE_ITERATOR i = mxs_module_iterator_get(NULL);
-    MXS_MODULE* module = NULL;
+    MXS_MODULE* module    = NULL;
 
     while ((module = mxs_module_iterator_get_next(&i)) != NULL)
     {
@@ -3046,7 +3000,7 @@ static bool modules_process_init()
         // that module. We now need to call finish on all modules that were
         // successfully initialized.
         MXS_MODULE* failed_module = module;
-        i = mxs_module_iterator_get(NULL);
+        i                         = mxs_module_iterator_get(NULL);
 
         while ((module = mxs_module_iterator_get_next(&i)) != failed_module)
         {
@@ -3070,7 +3024,7 @@ static bool modules_process_init()
 static void modules_process_finish()
 {
     MXS_MODULE_ITERATOR i = mxs_module_iterator_get(NULL);
-    MXS_MODULE* module = NULL;
+    MXS_MODULE* module    = NULL;
 
     while ((module = mxs_module_iterator_get_next(&i)) != NULL)
     {
@@ -3134,8 +3088,8 @@ static bool handle_debug_args(char* args)
 {
     bool arg_error = false;
     int args_found = 0;
-    char* endptr = NULL;
-    char* token = strtok_r(args, ",", &endptr);
+    char* endptr   = NULL;
+    char* token    = strtok_r(args, ",", &endptr);
     while (token)
     {
         char* value = strchr(token, '=');
@@ -3148,7 +3102,6 @@ static bool handle_debug_args(char* args)
         bool found = false;
         for (int i = 0; debug_arguments[i].action != NULL; i++)
         {
-
             // Debug features are activated by running functions in the struct-array.
             if (strcmp(token, debug_arguments[i].name) == 0)
             {
@@ -3191,7 +3144,7 @@ static bool handle_debug_args(char* args)
         log_startup_error("Debug argument identifier '-g' or '--debug' was specified "
                           "but no arguments were found or one of them was invalid. Supported "
                           "arguments are: %s.",
-                          arglist);
+            arglist);
     }
     return !arg_error;
 }
@@ -3203,8 +3156,8 @@ static bool user_is_acceptable(const char* specified_user)
     // This is very early, so we do not have logging available, but write to stderr.
     // As this is security related, we want to do as little as possible.
 
-    uid_t uid = getuid();   // Always succeeds
-    errno = 0;
+    uid_t uid         = getuid();  // Always succeeds
+    errno             = 0;
     struct passwd* pw = getpwuid(uid);
     if (pw)
     {
@@ -3239,7 +3192,7 @@ static bool init_sqlite3()
 
     // Collecting the memstatus introduces locking that, according to customer reports,
     // has a significant impact on the performance.
-    if (sqlite3_config(SQLITE_CONFIG_MEMSTATUS, (int)0) != SQLITE_OK)   // 0 turns off.
+    if (sqlite3_config(SQLITE_CONFIG_MEMSTATUS, (int) 0) != SQLITE_OK)  // 0 turns off.
     {
         MXS_WARNING("Could not turn off the collection of SQLite memory allocation statistics.");
         // Non-fatal, we simply will take a small performance hit.
@@ -3258,8 +3211,8 @@ static bool init_sqlite3()
 static bool lock_dir(const std::string& path)
 {
     std::string lock = path + "/maxscale.lock";
-    int fd = open(lock.c_str(), O_WRONLY | O_CREAT, 0777);
-    std::string pid = std::to_string(getpid());
+    int fd           = open(lock.c_str(), O_WRONLY | O_CREAT, 0777);
+    std::string pid  = std::to_string(getpid());
 
     if (fd == -1)
     {
@@ -3274,8 +3227,8 @@ static bool lock_dir(const std::string& path)
             MXS_ERROR("Failed to lock directory with file '%s', another process is holding a lock on it. "
                       "Please confirm that no other MaxScale process is using the "
                       "directory %s",
-                      lock.c_str(),
-                      path.c_str());
+                lock.c_str(),
+                path.c_str());
         }
         else
         {
@@ -3315,11 +3268,11 @@ bool lock_directories()
 static void unlock_directories()
 {
     std::for_each(this_unit.directory_locks.begin(),
-                  this_unit.directory_locks.end(),
-                  [&](std::pair<std::string, int> pair) {
-                      close(pair.second);
-                      unlink(pair.first.c_str());
-                  });
+        this_unit.directory_locks.end(),
+        [&](std::pair<std::string, int> pair) {
+        close(pair.second);
+        unlink(pair.first.c_str());
+    });
 }
 
 static bool init_ssl()
@@ -3327,8 +3280,8 @@ static bool init_ssl()
     bool initialized = true;
 
 #ifndef OPENSSL_1_1
-    int numlocks = CRYPTO_num_locks();
-    this_unit.ssl_locks = (pthread_mutex_t*)MXS_MALLOC(sizeof(pthread_mutex_t) * (numlocks + 1));
+    int numlocks        = CRYPTO_num_locks();
+    this_unit.ssl_locks = (pthread_mutex_t*) MXS_MALLOC(sizeof(pthread_mutex_t) * (numlocks + 1));
 
     if (this_unit.ssl_locks != NULL)
     {
@@ -3442,8 +3395,8 @@ static bool redirect_stdout_and_stderr(const std::string& path)
     }
     else
     {
-        log_startup_error(errno,
-                          "Failed to redirect stdout (and will not attempt to redirect stderr) to file");
+        log_startup_error(
+            errno, "Failed to redirect stdout (and will not attempt to redirect stderr) to file");
     }
 
     return rv;

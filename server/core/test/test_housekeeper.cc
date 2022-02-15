@@ -26,29 +26,29 @@ namespace
 std::atomic<int> n_oneshot;
 std::atomic<int> n_repeating;
 
-const char* ZONESHOT_NAME = "OneShot";
+const char* ZONESHOT_NAME   = "OneShot";
 const char* ZREPEATING_NAME = "Repeating";
 
 bool oneshot(void*)
 {
     ++n_oneshot;
-    return false;   // Remove from housekeeper.
+    return false;  // Remove from housekeeper.
 }
 
 bool repeating(void*)
 {
     ++n_repeating;
-    return true;    // Continue calling.
+    return true;  // Continue calling.
 }
 
 int test()
 {
     int rc = EXIT_SUCCESS;
 
-    hktask_add(ZONESHOT_NAME, oneshot, nullptr, 1);     // Call oneshot, once per second.
-    hktask_add(ZREPEATING_NAME, repeating, nullptr, 1); // Call repeating, once per second.
+    hktask_add(ZONESHOT_NAME, oneshot, nullptr, 1);      // Call oneshot, once per second.
+    hktask_add(ZREPEATING_NAME, repeating, nullptr, 1);  // Call repeating, once per second.
 
-    sleep(4);   // Should get 1 oneshot call and ~4 repeating calls.
+    sleep(4);  // Should get 1 oneshot call and ~4 repeating calls.
 
     hktask_remove(ZREPEATING_NAME);
 
@@ -84,7 +84,7 @@ int test()
 
     return rc;
 }
-}
+}  // namespace
 
 int main(int argc, char** argv)
 {

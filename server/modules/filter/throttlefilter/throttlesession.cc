@@ -34,8 +34,7 @@ ThrottleSession::ThrottleSession(MXS_SESSION* mxsSession, SERVICE* service, Thro
     , m_query_count("num-queries", filter.config().sampling_duration)
     , m_delayed_call_id(0)
     , m_state(State::MEASURING)
-{
-}
+{}
 
 ThrottleSession::~ThrottleSession()
 {
@@ -55,23 +54,19 @@ int ThrottleSession::real_routeQuery(GWBUF* buffer, bool is_delayed)
     // not in g++ 4.4: duration<float>(x).count(), so
     long micro = duration_cast<microseconds>(m_filter.config().sampling_duration).count();
     float secs = micro / 1000000.0;
-    float qps = count / secs;   // not instantaneous, but over so many seconds
+    float qps  = count / secs;  // not instantaneous, but over so many seconds
 
-    if (!is_delayed && qps >= m_filter.config().max_qps)    // trigger
+    if (!is_delayed && qps >= m_filter.config().max_qps)  // trigger
     {
         // delay the current routeQuery for at least one cycle at stated max speed.
-        int32_t delay = 1 + std::ceil(1000.0 / m_filter.config().max_qps);
+        int32_t delay           = 1 + std::ceil(1000.0 / m_filter.config().max_qps);
         maxbase::Worker* worker = maxbase::Worker::get_current();
         mxb_assert(worker);
-        m_delayed_call_id = worker->delayed_call(delay,
-                                                 &ThrottleSession::delayed_routeQuery,
-                                                 this,
-                                                 buffer);
+        m_delayed_call_id = worker->delayed_call(delay, &ThrottleSession::delayed_routeQuery, this, buffer);
         if (m_state == State::MEASURING)
         {
-            MXS_INFO("Query throttling STARTED session %ld user %s",
-                     m_pSession->id(),
-                     m_pSession->user().c_str());
+            MXS_INFO(
+                "Query throttling STARTED session %ld user %s", m_pSession->id(), m_pSession->user().c_str());
             m_state = State::THROTTLING;
             m_first_sample.restart();
         }
@@ -87,17 +82,16 @@ int ThrottleSession::real_routeQuery(GWBUF* buffer, bool is_delayed)
         if (m_last_sample.split() > m_filter.config().continuous_duration)
         {
             m_state = State::MEASURING;
-            MXS_INFO("Query throttling stopped session %ld user %s",
-                     m_pSession->id(),
-                     m_pSession->user().c_str());
+            MXS_INFO(
+                "Query throttling stopped session %ld user %s", m_pSession->id(), m_pSession->user().c_str());
         }
         else if (m_first_sample.split() > m_filter.config().throttling_duration)
         {
             MXS_NOTICE("Query throttling Session %ld user %s, throttling limit reached. Disconnect.",
-                       m_pSession->id(),
-                       m_pSession->user().c_str());
+                m_pSession->id(),
+                m_pSession->user().c_str());
             gwbuf_free(buffer);
-            return false;   // disconnect
+            return false;  // disconnect
         }
     }
 
@@ -130,4 +124,4 @@ int ThrottleSession::routeQuery(GWBUF* buffer)
 {
     return real_routeQuery(buffer, false);
 }
-}   // throttle
+}  // namespace throttle

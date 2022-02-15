@@ -33,8 +33,8 @@ class UserDatabase
 {
 public:
     // Using normal maps/sets so that entries can be printed in order.
-    using StringSet = std::set<std::string>;
-    using StringSetMap = std::map<std::string, StringSet>;
+    using StringSet     = std::set<std::string>;
+    using StringSetMap  = std::map<std::string, StringSet>;
     using DBNameCmpMode = mariadb::UserSearchSettings::DBNameCmpMode;
 
     void add_entry(const std::string& username, mariadb::UserEntry&& entry);
@@ -42,11 +42,11 @@ public:
     void add_db_grants(StringSetMap&& db_wc_grants, StringSetMap&& db_grants);
     void add_role_mapping(StringSetMap&& role_mapping);
 
-    void   add_database_name(const std::string& db_name);
-    void   clear();
+    void add_database_name(const std::string& db_name);
+    void clear();
     size_t n_usernames() const;
     size_t n_entries() const;
-    bool   empty() const;
+    bool empty() const;
 
     /**
      * Find a user entry with matching user & host.
@@ -76,8 +76,8 @@ public:
      * @return The found entry, or null if not found. The pointer should not be saved, as the
      * contents may go invalid after a refresh.
      */
-    const mariadb::UserEntry*
-    find_entry_equal(const std::string& username, const std::string& host_pattern) const;
+    const mariadb::UserEntry* find_entry_equal(
+        const std::string& username, const std::string& host_pattern) const;
 
     /**
      * Find a mutable entry with exact matching user & host pattern. This should only be used when
@@ -88,8 +88,8 @@ public:
      * @param host_pattern Host pattern to find. Must match exactly.
      * @return Entry, or null of not found
      */
-    mariadb::UserEntry*
-    find_mutable_entry_equal(const std::string& username, const std::string& host_pattern);
+    mariadb::UserEntry* find_mutable_entry_equal(
+        const std::string& username, const std::string& host_pattern);
 
     bool check_database_exists(const std::string& db, bool case_sensitive_db) const;
 
@@ -102,8 +102,8 @@ public:
      * @param case_sensitive_db If true, database names are compared case sensitive
      * @return True if user can access database
      */
-    bool check_database_access(const mariadb::UserEntry& entry, const std::string& db,
-                               bool case_sensitive_db) const;
+    bool check_database_access(
+        const mariadb::UserEntry& entry, const std::string& db, bool case_sensitive_db) const;
 
     bool equal_contents(const UserDatabase& rhs) const;
 
@@ -118,10 +118,12 @@ public:
     static std::string form_db_mapping_key(const std::string& user, const std::string& host);
 
 private:
-    bool user_can_access_db(const std::string& user, const std::string& host_pattern,
-                            const std::string& target_db, bool case_sensitive_db) const;
-    bool user_can_access_role(const std::string& user, const std::string& host_pattern,
-                              const std::string& target_role) const;
+    bool user_can_access_db(const std::string& user,
+        const std::string& host_pattern,
+        const std::string& target_db,
+        bool case_sensitive_db) const;
+    bool user_can_access_role(
+        const std::string& user, const std::string& host_pattern, const std::string& target_role) const;
     bool role_can_access_db(const std::string& role, const std::string& db, bool case_sensitive_db) const;
 
     bool address_matches_host_pattern(const std::string& addr, const mariadb::UserEntry& entry) const;
@@ -133,8 +135,8 @@ private:
         EQUAL,
     };
 
-    const mariadb::UserEntry*
-    find_entry(const std::string& username, const std::string& host, HostPatternMode mode) const;
+    const mariadb::UserEntry* find_entry(
+        const std::string& username, const std::string& host, HostPatternMode mode) const;
 
     enum class AddrType
     {
@@ -142,7 +144,7 @@ private:
         IPV4,
         MAPPED,
         IPV6,
-        LOCALHOST,      /**< If connecting via socket, the remote address is "localhost" */
+        LOCALHOST, /**< If connecting via socket, the remote address is "localhost" */
     };
 
     enum class PatternType
@@ -153,7 +155,7 @@ private:
         HOSTNAME,
     };
 
-    AddrType    parse_address_type(const std::string& addr) const;
+    AddrType parse_address_type(const std::string& addr) const;
     PatternType parse_pattern_type(const std::string& host_pattern) const;
 
     void update_mapping(StringSetMap& target, StringSetMap&& source);
@@ -177,7 +179,7 @@ private:
     /** Maps "user@host" to allowed roles. Retrieved from mysql.roles_mapping. */
     StringSetMap m_roles_mapping;
 
-    StringSet m_database_names;     /**< Set with existing database names */
+    StringSet m_database_names; /**< Set with existing database names */
 };
 
 class MariaDBUserManager : public mxs::UserAccountManager
@@ -206,7 +208,7 @@ public:
     std::unique_ptr<mxs::UserAccountCache> create_user_account_cache() override;
 
     std::string protocol_name() const override;
-    json_t*     users_to_json() const override;
+    json_t* users_to_json() const override;
 
     /**
      * Get both the user database and its version.
@@ -216,7 +218,7 @@ public:
      */
     void get_user_database(UserDatabase* userdb_out, int* version_out) const;
 
-    int      userdb_version() const;
+    int userdb_version() const;
     SERVICE* service() const;
 
 private:
@@ -229,52 +231,53 @@ private:
         INVALID_DATA,
     };
 
-    bool       update_users();
+    bool update_users();
     LoadResult load_users_mariadb(mxq::MariaDB& conn, SERVER* srv, UserDatabase* output);
     LoadResult load_users_xpand(mxq::MariaDB& con, SERVER* srv, UserDatabase* output);
 
     void updater_thread_function();
 
-    bool read_users_mariadb(QResult users, const SERVER::VersionInfo& srv_info,
-                            UserDatabase* output);
-    void read_dbs_and_roles_mariadb(QResult db_wc_grants, QResult db_grants, QResult roles,
-                                    UserDatabase* output);
+    bool read_users_mariadb(QResult users, const SERVER::VersionInfo& srv_info, UserDatabase* output);
+    void read_dbs_and_roles_mariadb(
+        QResult db_wc_grants, QResult db_grants, QResult roles, UserDatabase* output);
     void read_proxy_grants(QResult proxies, UserDatabase* output);
     void read_databases(QResult dbs, UserDatabase* output);
 
     bool read_users_xpand(QResult users, UserDatabase* output);
     void read_db_privs_xpand(QResult acl, UserDatabase* output);
 
-    void check_show_dbs_priv(mxq::MariaDB& con, const UserDatabase& userdata,
-                             SERVER::VersionInfo::Type type, const char* servername);
+    void check_show_dbs_priv(mxq::MariaDB& con,
+        const UserDatabase& userdata,
+        SERVER::VersionInfo::Type type,
+        const char* servername);
 
-    mutable std::mutex m_userdb_lock;   /**< Protects UserDatabase from concurrent access */
-    UserDatabase       m_userdb;        /**< Contains user account info */
+    mutable std::mutex m_userdb_lock; /**< Protects UserDatabase from concurrent access */
+    UserDatabase m_userdb;            /**< Contains user account info */
 
     // Fields for controlling the updater thread.
-    std::thread             m_updater_thread;
-    std::atomic_bool        m_keep_running {false};
+    std::thread m_updater_thread;
+    std::atomic_bool m_keep_running {false};
     std::condition_variable m_notifier;
-    std::mutex              m_notifier_lock;
-    std::atomic_bool        m_update_users_requested {false};
+    std::mutex m_notifier_lock;
+    std::atomic_bool m_update_users_requested {false};
 
-    mxb::Semaphore m_thread_started;    /* Communicates that the updater thread has properly started. */
+    mxb::Semaphore m_thread_started; /* Communicates that the updater thread has properly started. */
 
     // Settings and options. Access to arraylike fields is protected by the mutex.
-    std::mutex           m_settings_lock;
-    std::string          m_username;
-    std::string          m_password;
+    std::mutex m_settings_lock;
+    std::string m_username;
+    std::string m_password;
     std::vector<SERVER*> m_backends;
-    SERVICE*             m_service {nullptr};   /**< Service using this account data manager */
+    SERVICE* m_service {nullptr}; /**< Service using this account data manager */
 
     /** Fetch users from all backends and store the union. */
     std::atomic_bool m_union_over_backends {false};
     /** Remove escape characters '\' from database names when fetching user info from backend. */
     std::atomic_bool m_strip_db_esc {true};
 
-    std::atomic_bool m_can_update {false};      /**< User accounts can or are about to be updated */
-    int              m_successful_loads {0};    /**< Successful refreshes */
-    std::atomic_int  m_userdb_version {0};      /**< How many times the user database has changed */
+    std::atomic_bool m_can_update {false}; /**< User accounts can or are about to be updated */
+    int m_successful_loads {0};            /**< Successful refreshes */
+    std::atomic_int m_userdb_version {0};  /**< How many times the user database has changed */
 
     /** How many times user loading has continuously failed. User for suppressing error messages. */
     int m_consecutive_failed_loads {0};
@@ -307,19 +310,20 @@ public:
      * @param sett User search settings
      * @return Result of the search
      */
-    mariadb::UserEntryResult
-    find_user(const std::string& user, const std::string& host, const std::string& requested_db,
-              const mariadb::UserSearchSettings& sett) const;
+    mariadb::UserEntryResult find_user(const std::string& user,
+        const std::string& host,
+        const std::string& requested_db,
+        const mariadb::UserSearchSettings& sett) const;
 
     void update_from_master() override;
     bool can_update_immediately() const;
-    int  version() const;
+    int version() const;
 
 private:
     void generate_dummy_entry(const std::string& user, mariadb::UserEntry* output) const;
 
-    const MariaDBUserManager& m_master;     /**< User database master copy */
+    const MariaDBUserManager& m_master; /**< User database master copy */
 
-    UserDatabase m_userdb;              /**< Local copy of user database */
-    int          m_userdb_version {0};  /**< Version of local copy */
+    UserDatabase m_userdb;    /**< Local copy of user database */
+    int m_userdb_version {0}; /**< Version of local copy */
 };

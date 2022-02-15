@@ -19,12 +19,9 @@
 
 Shard::Shard()
     : m_last_updated(time(NULL))
-{
-}
+{}
 
-Shard::~Shard()
-{
-}
+Shard::~Shard() {}
 
 void Shard::add_location(std::string db, mxs::Target* target)
 {
@@ -70,7 +67,7 @@ std::set<mxs::Target*> Shard::get_all_locations(const std::vector<std::string>& 
         return {};
     }
 
-    auto it = tables.begin();
+    auto it                        = tables.begin();
     std::set<mxs::Target*> targets = get_all_locations(*it++);
 
     for (; it != tables.end(); ++it)
@@ -78,8 +75,8 @@ std::set<mxs::Target*> Shard::get_all_locations(const std::vector<std::string>& 
         std::set<mxs::Target*> right = get_all_locations(*it);
         std::set<mxs::Target*> left;
         left.swap(targets);
-        std::set_intersection(right.begin(), right.end(), left.begin(), left.end(),
-                              std::inserter(targets, targets.end()));
+        std::set_intersection(
+            right.begin(), right.end(), left.begin(), left.end(), std::inserter(targets, targets.end()));
     }
 
     return targets;
@@ -118,7 +115,7 @@ mxs::Target* Shard::get_location(std::string table)
 
 mxs::Target* Shard::get_statement(std::string stmt)
 {
-    mxs::Target* rval = NULL;
+    mxs::Target* rval        = NULL;
     ServerMap::iterator iter = stmt_map.find(stmt);
     if (iter != stmt_map.end())
     {
@@ -129,7 +126,7 @@ mxs::Target* Shard::get_statement(std::string stmt)
 
 mxs::Target* Shard::get_statement(uint32_t id)
 {
-    mxs::Target* rval = NULL;
+    mxs::Target* rval          = NULL;
     BinaryPSMap::iterator iter = m_binary_map.find(id);
     if (iter != m_binary_map.end())
     {
@@ -173,13 +170,9 @@ bool Shard::newer_than(const Shard& shard) const
     return m_last_updated > shard.m_last_updated;
 }
 
-ShardManager::ShardManager()
-{
-}
+ShardManager::ShardManager() {}
 
-ShardManager::~ShardManager()
-{
-}
+ShardManager::~ShardManager() {}
 
 Shard ShardManager::get_shard(std::string user, double max_interval)
 {

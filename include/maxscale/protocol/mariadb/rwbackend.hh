@@ -31,13 +31,11 @@ template<typename Smart>
 std::vector<typename Smart::pointer> sptr_vec_to_ptr_vec(const std::vector<Smart>& sVec)
 {
     std::vector<typename Smart::pointer> pVec;
-    std::for_each(sVec.begin(), sVec.end(), [&pVec](const Smart& smart) {
-                      pVec.push_back(smart.get());
-                  });
+    std::for_each(sVec.begin(), sVec.end(), [&pVec](const Smart& smart) { pVec.push_back(smart.get()); });
     return pVec;
 }
 
-typedef std::map<uint32_t, uint32_t> BackendHandleMap;      /** Internal ID to external ID */
+typedef std::map<uint32_t, uint32_t> BackendHandleMap; /** Internal ID to external ID */
 
 class RWBackend;
 
@@ -53,13 +51,12 @@ class RWBackend : public mxs::Backend
     RWBackend& operator=(const RWBackend&);
 
 public:
-
     static SRWBackends from_endpoints(const Endpoints& endpoints);
 
     RWBackend(mxs::Endpoint* endpoint);
     virtual ~RWBackend() = default;
 
-    void     add_ps_handle(uint32_t id, uint32_t handle);
+    void add_ps_handle(uint32_t id, uint32_t handle);
     uint32_t get_ps_handle(uint32_t id) const;
 
     bool execute_session_command();
@@ -84,18 +81,15 @@ public:
 
     void close(close_type type = CLOSE_NORMAL);
 
-    maxbase::TimePoint last_write() const
-    {
-        return m_last_write;
-    }
+    maxbase::TimePoint last_write() const { return m_last_write; }
 
     void sync_averages();
 
 private:
-    BackendHandleMap m_ps_handles;      /**< Internal ID to backend PS handle mapping */
-    ResponseStat     m_response_stat;
-    bool             m_large_query = false;
+    BackendHandleMap m_ps_handles; /**< Internal ID to backend PS handle mapping */
+    ResponseStat m_response_stat;
+    bool m_large_query = false;
 
     maxbase::TimePoint m_last_write;
 };
-}
+}  // namespace maxscale

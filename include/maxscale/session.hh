@@ -28,16 +28,17 @@ class SERVICE;
 struct mxs_filter;
 struct mxs_filter_session;
 class SERVER;
+
 namespace maxscale
 {
 class ListenerSessionData;
 }
 
-static constexpr uint32_t SESSION_TRX_INACTIVE = 0;
-static constexpr uint32_t SESSION_TRX_ACTIVE = 1 << 0;      /* 0b0001 */
-static constexpr uint32_t SESSION_TRX_READ_ONLY = 1 << 1;   /* 0b0010 */
-static constexpr uint32_t SESSION_TRX_ENDING = 1 << 2;      /* 0b0100*/
-static constexpr uint32_t SESSION_TRX_STARTING = 1 << 3;    /* 0b1000*/
+static constexpr uint32_t SESSION_TRX_INACTIVE  = 0;
+static constexpr uint32_t SESSION_TRX_ACTIVE    = 1 << 0; /* 0b0001 */
+static constexpr uint32_t SESSION_TRX_READ_ONLY = 1 << 1; /* 0b0010 */
+static constexpr uint32_t SESSION_TRX_ENDING    = 1 << 2; /* 0b0100*/
+static constexpr uint32_t SESSION_TRX_STARTING  = 1 << 3; /* 0b1000*/
 
 typedef enum
 {
@@ -51,7 +52,7 @@ typedef enum
  */
 typedef struct
 {
-    time_t connect;         /**< Time when the session was started */
+    time_t connect; /**< Time when the session was started */
 } MXS_SESSION_STATS;
 
 /**
@@ -67,20 +68,19 @@ namespace maxscale
 class RoutingWorker;
 
 // These are more convenient types
-typedef int32_t (* DOWNSTREAMFUNC)(struct mxs_filter* instance,
-                                   struct mxs_filter_session* session,
-                                   GWBUF* response);
-typedef int32_t (* UPSTREAMFUNC)(struct mxs_filter* instance,
-                                 struct mxs_filter_session* session,
-                                 GWBUF* response,
-                                 const mxs::ReplyRoute& down,
-                                 const mxs::Reply& reply);
+typedef int32_t (*DOWNSTREAMFUNC)(
+    struct mxs_filter* instance, struct mxs_filter_session* session, GWBUF* response);
+typedef int32_t (*UPSTREAMFUNC)(struct mxs_filter* instance,
+    struct mxs_filter_session* session,
+    GWBUF* response,
+    const mxs::ReplyRoute& down,
+    const mxs::Reply& reply);
 
 struct Downstream
 {
-    mxs_filter*         instance {nullptr};
+    mxs_filter* instance {nullptr};
     mxs_filter_session* session {nullptr};
-    DOWNSTREAMFUNC      routeQuery {nullptr};
+    DOWNSTREAMFUNC routeQuery {nullptr};
 };
 
 /**
@@ -89,21 +89,21 @@ struct Downstream
  */
 struct Upstream
 {
-    mxs_filter*         instance {nullptr};
+    mxs_filter* instance {nullptr};
     mxs_filter_session* session {nullptr};
-    UPSTREAMFUNC        clientReply {nullptr};
+    UPSTREAMFUNC clientReply {nullptr};
 };
-}
+}  // namespace maxscale
 
 /* Specific reasons why a session was closed */
 typedef enum
 {
-    SESSION_CLOSE_NONE = 0,             // No special reason
-    SESSION_CLOSE_TIMEOUT,              // Connection timed out
-    SESSION_CLOSE_HANDLEERROR_FAILED,   // Router returned an error from handleError
-    SESSION_CLOSE_ROUTING_FAILED,       // Router closed DCB
-    SESSION_CLOSE_KILLED,               // Killed by another connection
-    SESSION_CLOSE_TOO_MANY_CONNECTIONS, // Too many connections
+    SESSION_CLOSE_NONE = 0,              // No special reason
+    SESSION_CLOSE_TIMEOUT,               // Connection timed out
+    SESSION_CLOSE_HANDLEERROR_FAILED,    // Router returned an error from handleError
+    SESSION_CLOSE_ROUTING_FAILED,        // Router closed DCB
+    SESSION_CLOSE_KILLED,                // Killed by another connection
+    SESSION_CLOSE_TOO_MANY_CONNECTIONS,  // Too many connections
 } session_close_t;
 
 /**
@@ -124,10 +124,8 @@ typedef enum
  * @return  NULL if successful, otherwise a dynamically allocated string
  *          containing an end-user friendly error message.
  */
-typedef char* (* session_variable_handler_t)(void* context,
-                                             const char* name,
-                                             const char* value_begin,
-                                             const char* value_end);
+typedef char* (*session_variable_handler_t)(
+    void* context, const char* name, const char* value_begin, const char* value_end);
 
 /**
  * The session status block
@@ -144,11 +142,11 @@ class MXS_SESSION
 public:
     enum class State
     {
-        CREATED,    /*< Session created but not started */
-        STARTED,    /*< Session is fully functional */
-        STOPPING,   /*< Session and router are being closed */
-        FAILED,     /*< Creation failed */
-        FREE,       /*< The session is freed, only for completeness sake */
+        CREATED,  /*< Session created but not started */
+        STARTED,  /*< Session is fully functional */
+        STOPPING, /*< Session and router are being closed */
+        FAILED,   /*< Creation failed */
+        FREE,     /*< The session is freed, only for completeness sake */
     };
 
     /**
@@ -162,30 +160,15 @@ public:
 
     virtual ~MXS_SESSION();
 
-    maxscale::RoutingWorker* worker() const
-    {
-        return m_worker;
-    }
+    maxscale::RoutingWorker* worker() const { return m_worker; }
 
-    State state() const
-    {
-        return m_state;
-    }
+    State state() const { return m_state; }
 
-    uint64_t id() const
-    {
-        return m_id;
-    }
+    uint64_t id() const { return m_id; }
 
-    const std::string& user() const
-    {
-        return m_user;
-    }
+    const std::string& user() const { return m_user; }
 
-    void set_user(const std::string& user)
-    {
-        m_user = user;
-    }
+    void set_user(const std::string& user) { m_user = user; }
 
     /**
      * Abruptly stop the session
@@ -197,36 +180,21 @@ public:
     void kill(GWBUF* error = nullptr);
 
     // Convenience function for client identification
-    std::string user_and_host() const
-    {
-        return "'" + m_user + "'@'" + m_host + "'";
-    }
+    std::string user_and_host() const { return "'" + m_user + "'@'" + m_host + "'"; }
 
-    const std::string& client_remote() const
-    {
-        return m_host;
-    }
+    const std::string& client_remote() const { return m_host; }
 
     // The current active default database (i.e. USE <database>)
-    const std::string& database() const
-    {
-        return m_database;
-    }
+    const std::string& database() const { return m_database; }
 
-    void start_database_change(const std::string& database)
-    {
-        m_pending_database = database;
-    }
+    void start_database_change(const std::string& database) { m_pending_database = database; }
 
-    void set_database(const std::string& database)
-    {
-        m_database = database;
-    }
+    void set_database(const std::string& database) { m_database = database; }
 
-    virtual mxs::ClientConnection*       client_connection() = 0;
-    virtual const mxs::ClientConnection* client_connection() const = 0;
-    virtual void                         set_client_connection(mxs::ClientConnection* client_conn) = 0;
-    virtual mxs::ListenerSessionData*    listener_data() = 0;
+    virtual mxs::ClientConnection* client_connection()                     = 0;
+    virtual const mxs::ClientConnection* client_connection() const         = 0;
+    virtual void set_client_connection(mxs::ClientConnection* client_conn) = 0;
+    virtual mxs::ListenerSessionData* listener_data()                      = 0;
 
     /**
      * Get the transaction state of the session.
@@ -247,10 +215,7 @@ public:
      *
      * @return The transaction state.
      */
-    uint32_t get_trx_state() const
-    {
-        return m_trx_state;
-    }
+    uint32_t get_trx_state() const { return m_trx_state; }
 
     /**
      * Set the transaction state of the session.
@@ -261,10 +226,7 @@ public:
      *
      * @return The previous transaction state.
      */
-    void set_trx_state(uint32_t new_state)
-    {
-        m_trx_state = new_state;
-    }
+    void set_trx_state(uint32_t new_state) { m_trx_state = new_state; }
 
     /**
      * Tells whether an explicit READ ONLY transaction is active.
@@ -277,10 +239,7 @@ public:
      * @return True if an explicit READ ONLY transaction is active,
      *         false otherwise.
      */
-    bool is_trx_read_only() const
-    {
-        return m_trx_state & SESSION_TRX_READ_ONLY;
-    }
+    bool is_trx_read_only() const { return m_trx_state & SESSION_TRX_READ_ONLY; }
 
     /**
      * Tells whether an explicit READ WRITE transaction is active.
@@ -293,10 +252,7 @@ public:
      * @return True if an explicit READ WRITE  transaction is active,
      *         false otherwise.
      */
-    bool is_trx_read_write() const
-    {
-        return !is_trx_read_only();
-    }
+    bool is_trx_read_write() const { return !is_trx_read_only(); }
 
     /**
      * Tells whether a transaction is ending.
@@ -308,10 +264,7 @@ public:
      *
      * @return True if a transaction that was active is ending either via COMMIT or ROLLBACK.
      */
-    bool is_trx_ending() const
-    {
-        return m_trx_state & SESSION_TRX_ENDING;
-    }
+    bool is_trx_ending() const { return m_trx_state & SESSION_TRX_ENDING; }
 
     /**
      * Tells whether a transaction is starting.
@@ -321,10 +274,7 @@ public:
      *
      * @return True if a new transaction is currently starting
      */
-    bool is_trx_starting() const
-    {
-        return m_trx_state & SESSION_TRX_STARTING;
-    }
+    bool is_trx_starting() const { return m_trx_state & SESSION_TRX_STARTING; }
 
     /**
      * Tells whether a transaction is active.
@@ -336,10 +286,7 @@ public:
      *
      * @return True if a transaction is active, false otherwise.
      */
-    bool is_trx_active() const
-    {
-        return m_trx_state & SESSION_TRX_ACTIVE;
-    }
+    bool is_trx_active() const { return m_trx_state & SESSION_TRX_ACTIVE; }
 
     /**
      * Tells whether autocommit is ON or not.
@@ -358,10 +305,7 @@ public:
      *
      * @return True if autocommit has been set ON, false otherwise.
      */
-    bool is_autocommit() const
-    {
-        return m_autocommit;
-    }
+    bool is_autocommit() const { return m_autocommit; }
 
     /**
      * Sets the autocommit state of the session.
@@ -370,59 +314,54 @@ public:
      *
      * @param enable True if autocommit is enabled, false otherwise.
      */
-    void set_autocommit(bool autocommit)
-    {
-        m_autocommit = autocommit;
-    }
+    void set_autocommit(bool autocommit) { m_autocommit = autocommit; }
 
     /**
      * Get session capabilities
      *
      * @return The capabilities required the services and filters used by this session
      */
-    uint64_t capabilities() const
-    {
-        return m_capabilities;
-    }
+    uint64_t capabilities() const { return m_capabilities; }
 
 protected:
-    State                    m_state;    /**< Current descriptor state */
-    uint64_t                 m_id;       /**< Unique session identifier */
+    State m_state; /**< Current descriptor state */
+    uint64_t m_id; /**< Unique session identifier */
     maxscale::RoutingWorker* m_worker;
-    std::string              m_user;     /**< The session user. */
-    std::string              m_host;
-    std::string              m_database;
-    std::string              m_pending_database;
+    std::string m_user; /**< The session user. */
+    std::string m_host;
+    std::string m_database;
+    std::string m_pending_database;
 
     MXS_SESSION(const std::string& host, SERVICE* service);
 
 public:
+    ClientDCB* client_dcb; /*< The client connection */
 
-    ClientDCB* client_dcb;      /*< The client connection */
+    MXS_SESSION_STATS stats;    /*< Session statistics */
+    SERVICE* service;           /*< The service this session is using */
+    int refcount;               /*< Reference count on the session */
+    bool qualifies_for_pooling; /*< Whether this session qualifies for the connection pool */
 
-    MXS_SESSION_STATS stats;                    /*< Session statistics */
-    SERVICE*          service;                  /*< The service this session is using */
-    int               refcount;                 /*< Reference count on the session */
-    bool              qualifies_for_pooling;    /*< Whether this session qualifies for the connection pool */
     struct
     {
-        mxs::Upstream up;           /*< Upward component to receive buffer. */
-        GWBUF*        buffer;       /*< Buffer to deliver to up. */
-        SERVICE*      service;      /*< Service where the response originated */
-    }               response;       /*< Shortcircuited response */
-    session_close_t close_reason;   /*< Reason why the session was closed */
+        mxs::Upstream up; /*< Upward component to receive buffer. */
+        GWBUF* buffer;    /*< Buffer to deliver to up. */
+        SERVICE* service; /*< Service where the response originated */
+    } response;           /*< Shortcircuited response */
 
-    bool load_active;           /*< Data streaming state (for LOAD DATA LOCAL INFILE) */
-    bool m_autocommit {false};  /*< Whether autocommit is on. */
+    session_close_t close_reason; /*< Reason why the session was closed */
+
+    bool load_active;          /*< Data streaming state (for LOAD DATA LOCAL INFILE) */
+    bool m_autocommit {false}; /*< Whether autocommit is on. */
 
     ProtocolData* protocol_data() const;
-    void          set_protocol_data(std::unique_ptr<ProtocolData> new_data);
+    void set_protocol_data(std::unique_ptr<ProtocolData> new_data);
 
 private:
     std::unique_ptr<ProtocolData> m_protocol_data;
-    uint32_t                      m_trx_state {SESSION_TRX_INACTIVE};
-    bool                          m_killed {false};
-    uint64_t                      m_capabilities;
+    uint32_t m_trx_state {SESSION_TRX_INACTIVE};
+    bool m_killed {false};
+    uint64_t m_capabilities;
 };
 
 /**
@@ -607,10 +546,8 @@ uint64_t session_get_current_id();
  *
  * @return True, if the variable could be added, false otherwise.
  */
-bool session_add_variable(MXS_SESSION* session,
-                          const char* name,
-                          session_variable_handler_t handler,
-                          void* context);
+bool session_add_variable(
+    MXS_SESSION* session, const char* name, session_variable_handler_t handler, void* context);
 
 /**
  * @brief Remove MaxScale specific user variable from the session.
@@ -627,9 +564,7 @@ bool session_add_variable(MXS_SESSION* session,
  *
  * @return True, if the variable existed, false otherwise.
  */
-bool session_remove_variable(MXS_SESSION* session,
-                             const char* name,
-                             void** context);
+bool session_remove_variable(MXS_SESSION* session, const char* name, void** context);
 /**
  * @brief Set value of maxscale session variable.
  *
@@ -646,10 +581,10 @@ bool session_remove_variable(MXS_SESSION* session,
  *       incoming statements.
  */
 char* session_set_variable_value(MXS_SESSION* session,
-                                 const char* name_begin,
-                                 const char* name_end,
-                                 const char* value_begin,
-                                 const char* value_end);
+    const char* name_begin,
+    const char* name_end,
+    const char* value_begin,
+    const char* value_end);
 
 /**
  * @brief Specify how many statements each session should retain for
@@ -768,16 +703,11 @@ namespace maxscale
 template<>
 struct RegistryTraits<MXS_SESSION>
 {
-    typedef uint64_t     id_type;
+    typedef uint64_t id_type;
     typedef MXS_SESSION* entry_type;
 
-    static id_type get_id(entry_type entry)
-    {
-        return entry->id();
-    }
-    static entry_type null_entry()
-    {
-        return NULL;
-    }
+    static id_type get_id(entry_type entry) { return entry->id(); }
+
+    static entry_type null_entry() { return NULL; }
 };
-}
+}  // namespace maxscale

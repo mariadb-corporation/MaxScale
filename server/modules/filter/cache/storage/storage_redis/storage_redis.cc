@@ -26,7 +26,6 @@ StorageModuleT<RedisStorage> module;
 
 extern "C"
 {
-
 StorageModule* CacheGetStorageModule()
 {
     return &module;

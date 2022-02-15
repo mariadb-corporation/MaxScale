@@ -19,18 +19,16 @@
 using std::shared_ptr;
 
 CacheMT::CacheMT(const std::string& name,
-                 const CacheConfig* pConfig,
-                 const std::vector<SCacheRules>& rules,
-                 SStorageFactory sFactory,
-                 Storage* pStorage)
+    const CacheConfig* pConfig,
+    const std::vector<SCacheRules>& rules,
+    SStorageFactory sFactory,
+    Storage* pStorage)
     : CacheSimple(name, pConfig, rules, sFactory, pStorage)
 {
     MXS_NOTICE("Created multi threaded cache.");
 }
 
-CacheMT::~CacheMT()
-{
-}
+CacheMT::~CacheMT() {}
 
 CacheMT* CacheMT::create(const std::string& name, const CacheConfig* pConfig)
 {
@@ -74,19 +72,19 @@ void CacheMT::refreshed(const CacheKey& key, const CacheFilterSession* pSession)
 
 // static
 CacheMT* CacheMT::create(const std::string& name,
-                         const CacheConfig* pConfig,
-                         const std::vector<SCacheRules>& rules,
-                         SStorageFactory sFactory)
+    const CacheConfig* pConfig,
+    const std::vector<SCacheRules>& rules,
+    SStorageFactory sFactory)
 {
     CacheMT* pCache = NULL;
 
     Storage::Config storage_config(CACHE_THREAD_MODEL_MT,
-                                   pConfig->hard_ttl.count(),
-                                   pConfig->soft_ttl.count(),
-                                   pConfig->max_count,
-                                   pConfig->max_size,
-                                   pConfig->invalidate,
-                                   pConfig->timeout);
+        pConfig->hard_ttl.count(),
+        pConfig->soft_ttl.count(),
+        pConfig->max_count,
+        pConfig->max_size,
+        pConfig->invalidate,
+        pConfig->timeout);
 
     const auto& storage_arguments = pConfig->storage_options;
 
@@ -94,11 +92,7 @@ CacheMT* CacheMT::create(const std::string& name,
 
     if (pStorage)
     {
-        MXS_EXCEPTION_GUARD(pCache = new CacheMT(name,
-                                                 pConfig,
-                                                 rules,
-                                                 sFactory,
-                                                 pStorage));
+        MXS_EXCEPTION_GUARD(pCache = new CacheMT(name, pConfig, rules, sFactory, pStorage));
 
         if (!pCache)
         {

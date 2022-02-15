@@ -29,10 +29,8 @@ int32_t Session::Endpoint::clientReply(GWBUF* buffer, ReplyRoute& down, const mx
     return 0;
 }
 
-bool Session::Endpoint::handleError(mxs::ErrorType type,
-                                    GWBUF* error,
-                                    mxs::Endpoint* down,
-                                    const mxs::Reply& reply)
+bool Session::Endpoint::handleError(
+    mxs::ErrorType type, GWBUF* error, mxs::Endpoint* down, const mxs::Reply& reply)
 {
     return true;
 }
@@ -44,7 +42,7 @@ Session::Session(Client* pClient, SListenerData listener_data)
 {
     set_user(pClient->user());
 
-    m_state = MXS_SESSION::State::CREATED;
+    m_state    = MXS_SESSION::State::CREATED;
     client_dcb = &m_client_dcb;
 
     std::unique_ptr<MYSQL_session> sMysql_session(new MYSQL_session);
@@ -58,7 +56,7 @@ Session::~Session()
 {
     m_down->close();
     // This prevents the protocol module from freeing the data
-    refcount = 0;
+    refcount   = 0;
     client_dcb = nullptr;
 }
 
@@ -71,5 +69,5 @@ void Session::set_downstream(FilterModule::Session* pSession)
 {
     m_down = std::unique_ptr<mxs::Endpoint>(new Endpoint(pSession));
 }
-}
-}
+}  // namespace mock
+}  // namespace maxscale

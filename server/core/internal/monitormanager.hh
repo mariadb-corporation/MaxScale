@@ -21,7 +21,6 @@
 class MonitorManager
 {
 public:
-
     /**
      * Creates a new monitor. Loads the module, calls constructor and configure, and adds monitor to the
      * global list.
@@ -30,8 +29,8 @@ public:
      * @param module_name   The module name to load
      * @return              The newly created monitor, or NULL on error
      */
-    static mxs::Monitor* create_monitor(const std::string& name, const std::string& module_name,
-                                        mxs::ConfigParameters* params);
+    static mxs::Monitor* create_monitor(
+        const std::string& name, const std::string& module_name, mxs::ConfigParameters* params);
 
     /**
      * Mark monitor as deactivated. A deactivated monitor appears not to exist, as if it had been
@@ -81,9 +80,8 @@ public:
      *
      * @return Array of monitor links or NULL if no relations exist
      */
-    static json_t* monitor_relations_to_server(const SERVER* server,
-                                               const std::string& host,
-                                               const std::string& self);
+    static json_t* monitor_relations_to_server(
+        const SERVER* server, const std::string& host, const std::string& self);
 
     /**
      * Convert all monitors to JSON.
@@ -131,8 +129,8 @@ public:
      * @param error_out Error output
      * @return True if reconfiguration was successful
      */
-    static bool alter_monitor(mxs::Monitor* monitor, const std::string& key, const std::string& value,
-                              std::string* error_out);
+    static bool alter_monitor(
+        mxs::Monitor* monitor, const std::string& key, const std::string& value, std::string* error_out);
 
     /**
      * Add server to monitor during runtime. Should only be called from the admin thread.

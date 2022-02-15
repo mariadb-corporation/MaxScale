@@ -42,12 +42,12 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, int port, const char* 
     if (ssl)
     {
         char enforce_tls = 1;
-        mysql_optionsv(con, MYSQL_OPT_SSL_ENFORCE, (void*)&enforce_tls);
+        mysql_optionsv(con, MYSQL_OPT_SSL_ENFORCE, (void*) &enforce_tls);
 
         // If an option is empty, a null-pointer should be given to mysql_ssl_set.
-        const char* ssl_key = ssl->key.empty() ? nullptr : ssl->key.c_str();
+        const char* ssl_key  = ssl->key.empty() ? nullptr : ssl->key.c_str();
         const char* ssl_cert = ssl->cert.empty() ? nullptr : ssl->cert.c_str();
-        const char* ssl_ca = ssl->ca.empty() ? nullptr : ssl->ca.c_str();
+        const char* ssl_ca   = ssl->ca.empty() ? nullptr : ssl->ca.c_str();
         mysql_ssl_set(con, ssl_key, ssl_cert, ssl_ca, NULL, NULL);
 
         switch (ssl->version)
@@ -114,7 +114,7 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, int port, const char* 
         {
             MXS_ERROR("An encrypted connection to '%s' could not be created, "
                       "ensure that TLS is enabled on the target server.",
-                      server->name());
+                server->name());
             // Don't close the connection as it is closed elsewhere, just set to NULL
             mysql = NULL;
         }
@@ -126,14 +126,14 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, int port, const char* 
 int mxs_mysql_query(MYSQL* conn, const char* query)
 {
     const auto& cnf = mxs::Config::get();
-    return maxsql::mysql_query_ex(conn, query,
-                                  cnf.query_retries.get(), cnf.query_retry_timeout.get().count());
+    return maxsql::mysql_query_ex(
+        conn, query, cnf.query_retries.get(), cnf.query_retry_timeout.get().count());
 }
 
 const char* mxs_mysql_get_value(MYSQL_RES* result, MYSQL_ROW row, const char* key)
 {
     MYSQL_FIELD* f = mysql_fetch_fields(result);
-    int nfields = mysql_num_fields(result);
+    int nfields    = mysql_num_fields(result);
 
     for (int i = 0; i < nfields; i++)
     {
@@ -150,7 +150,7 @@ bool mxs_mysql_trim_quotes(char* s)
 {
     bool dequoted = true;
 
-    char* i = s;
+    char* i   = s;
     char* end = s + strlen(s);
 
     // Remove space from the beginning
@@ -213,10 +213,8 @@ bool mxs_mysql_trim_quotes(char* s)
     return dequoted;
 }
 
-
-mxs_mysql_name_kind_t mxs_mysql_name_to_pcre(char* pcre,
-                                             const char* mysql,
-                                             mxs_pcre_quote_approach_t approach)
+mxs_mysql_name_kind_t mxs_mysql_name_to_pcre(
+    char* pcre, const char* mysql, mxs_pcre_quote_approach_t approach)
 {
     mxs_mysql_name_kind_t rv = MXS_MYSQL_NAME_WITHOUT_WILDCARD;
 
@@ -268,7 +266,7 @@ void mxs_mysql_update_server_version(SERVER* dest, MYSQL* source)
 {
     // This function should only be called for a live connection.
     const char* version_string = mysql_get_server_info(source);
-    unsigned long version_num = mysql_get_server_version(source);
+    unsigned long version_num  = mysql_get_server_version(source);
     mxb_assert(version_string && version_num != 0);
     dest->set_version(version_num, version_string);
 }
@@ -276,8 +274,8 @@ void mxs_mysql_update_server_version(SERVER* dest, MYSQL* source)
 namespace maxscale
 {
 
-std::unique_ptr<mxq::QueryResult> execute_query(MYSQL* conn, const std::string& query,
-                                                std::string* errmsg_out, unsigned int* errno_out)
+std::unique_ptr<mxq::QueryResult> execute_query(
+    MYSQL* conn, const std::string& query, std::string* errmsg_out, unsigned int* errno_out)
 {
     using mxq::QueryResult;
     std::unique_ptr<QueryResult> rval;
@@ -301,9 +299,9 @@ std::unique_ptr<mxq::QueryResult> execute_query(MYSQL* conn, const std::string& 
 
     return rval;
 }
-}
+}  // namespace maxscale
 
-#if defined (SS_DEBUG)
+#if defined(SS_DEBUG)
 /**
  * Return decoded MySQL response packet.
  *
@@ -328,7 +326,7 @@ const char* dbg_decode_response(GWBUF* pPacket)
 
     mxs::Buffer b(pPacket);
     int nRemaining = b.length();
-    auto it = b.begin();
+    auto it        = b.begin();
 
     while (nRemaining > MYSQL_HEADER_LEN + 1)
     {
@@ -340,14 +338,14 @@ const char* dbg_decode_response(GWBUF* pPacket)
         uint8_t header[MYSQL_HEADER_LEN + 1];
 
         auto start = it;
-        auto end = std::next(it, sizeof(header));
+        auto end   = std::next(it, sizeof(header));
         std::copy(it, end, header);
         it = end;
 
         uint32_t payload_len = MYSQL_GET_PAYLOAD_LEN(header);
-        uint32_t packet_len = MYSQL_HEADER_LEN + payload_len;
-        uint32_t packet_no = MYSQL_GET_PACKET_NO(header);
-        uint32_t command = MYSQL_GET_COMMAND(header);
+        uint32_t packet_len  = MYSQL_HEADER_LEN + payload_len;
+        uint32_t packet_no   = MYSQL_GET_PACKET_NO(header);
+        uint32_t command     = MYSQL_GET_COMMAND(header);
 
         ss << "Packet no: " << packet_no << ", Payload len: " << payload_len;
 
@@ -358,28 +356,28 @@ const char* dbg_decode_response(GWBUF* pPacket)
             break;
 
         case 0xff:
-            {
-                ss << ", Command : ERR";
+        {
+            ss << ", Command : ERR";
 
-                uint8_t error[payload_len];
-                error[0] = *it;
+            uint8_t error[payload_len];
+            error[0] = *it;
 
-                end = std::next(it, sizeof(error) - 1);     // -1 due to the 1 in 'header' above.
-                std::copy(it, end, error + 1);
+            end = std::next(it, sizeof(error) - 1);  // -1 due to the 1 in 'header' above.
+            std::copy(it, end, error + 1);
 
-                uint32_t error_code = gw_mysql_get_byte2(&error[1]);
+            uint32_t error_code = gw_mysql_get_byte2(&error[1]);
 
-                ss << ", Code: " << error_code;
+            ss << ", Code: " << error_code;
 
-                const int message_index = 1 + 2 + 1 + 5;
-                uint8_t* pMessage = &error[message_index];
-                int message_len = payload_len - message_index;
+            const int message_index = 1 + 2 + 1 + 5;
+            uint8_t* pMessage       = &error[message_index];
+            int message_len         = payload_len - message_index;
 
-                ss << ", Message : ";
+            ss << ", Message : ";
 
-                ss.write(reinterpret_cast<const char*>(pMessage), message_len);
-            }
-            break;
+            ss.write(reinterpret_cast<const char*>(pMessage), message_len);
+        }
+        break;
 
         case 0xfb:
             ss << ", Command : GET_MORE_CLIENT_DATA";
@@ -405,12 +403,11 @@ const char* dbg_decode_response(GWBUF* pPacket)
 
 void mxs_update_server_charset(MYSQL* mysql, SERVER* server)
 {
-    const char* CHARSET_QUERY =
-        "SELECT co.id, @@global.character_set_server "
-        "FROM information_schema.collations AS co "
-        "JOIN information_schema.character_sets AS cs "
-        "ON (co.collation_name = cs.default_collate_name) "
-        "WHERE cs.character_set_name=@@global.character_set_server;";
+    const char* CHARSET_QUERY = "SELECT co.id, @@global.character_set_server "
+                                "FROM information_schema.collations AS co "
+                                "JOIN information_schema.character_sets AS cs "
+                                "ON (co.collation_name = cs.default_collate_name) "
+                                "WHERE cs.character_set_name=@@global.character_set_server;";
 
     if (mxs_mysql_query(mysql, CHARSET_QUERY) == 0)
     {

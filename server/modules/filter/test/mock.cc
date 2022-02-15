@@ -14,11 +14,9 @@
 #include "maxscale/mock/mock.hh"
 #include <maxscale/protocol/mariadb/mysql.hh>
 
-
 namespace maxscale
 {
 
 namespace mock
-{
-}
-}
+{}
+}  // namespace maxscale

@@ -51,25 +51,23 @@ public:
             throw std::runtime_error("Could not initialize mxb::http.");
         }
     }
-    ~Init()
-    {
-        mxb::http::finish();
-    }
+
+    ~Init() { mxb::http::finish(); }
 };
 
 // @see https://curl.haxx.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html
-static const std::chrono::seconds DEFAULT_CONNECT_TIMEOUT { 10 };
+static const std::chrono::seconds DEFAULT_CONNECT_TIMEOUT {10};
 
 // @see https://curl.haxx.se/libcurl/c/CURLOPT_TIMEOUT.html
-static const std::chrono::seconds DEFAULT_TIMEOUT { 10 };
+static const std::chrono::seconds DEFAULT_TIMEOUT {10};
 
 struct Config
 {
-    bool                               ssl_verifypeer  = true;
-    bool                               ssl_verifyhost  = true;
+    bool ssl_verifypeer = true;
+    bool ssl_verifyhost = true;
     std::map<std::string, std::string> headers;
-    std::chrono::seconds               connect_timeout = DEFAULT_CONNECT_TIMEOUT;
-    std::chrono::seconds               timeout         = DEFAULT_TIMEOUT;
+    std::chrono::seconds connect_timeout = DEFAULT_CONNECT_TIMEOUT;
+    std::chrono::seconds timeout         = DEFAULT_TIMEOUT;
 };
 
 struct Response
@@ -77,10 +75,10 @@ struct Response
     enum Category
     {
         INFORMATIONAL = 100,
-        SUCCESS = 200,
-        REDIRECTION = 300,
-        CLIENT_ERROR = 400,
-        SERVER_ERROR = 500
+        SUCCESS       = 200,
+        REDIRECTION   = 300,
+        CLIENT_ERROR  = 400,
+        SERVER_ERROR  = 500
     };
 
     enum Error
@@ -90,46 +88,29 @@ struct Response
         OPERATION_TIMEDOUT   = -3   // The operation timed out.
     };
 
-    bool is_success() const
-    {
-        return this->code >= SUCCESS && this->code < REDIRECTION;
-    }
+    bool is_success() const { return this->code >= SUCCESS && this->code < REDIRECTION; }
 
-    bool is_client_error() const
-    {
-        return this->code >= CLIENT_ERROR && this->code < SERVER_ERROR;
-    }
+    bool is_client_error() const { return this->code >= CLIENT_ERROR && this->code < SERVER_ERROR; }
 
-    bool is_server_error() const
-    {
-        return this->code >= SERVER_ERROR;
-    }
+    bool is_server_error() const { return this->code >= SERVER_ERROR; }
 
-    bool is_error() const
-    {
-        return is_client_error() || is_server_error();
-    }
+    bool is_error() const { return is_client_error() || is_server_error(); }
 
-    bool is_fatal() const
-    {
-        return this->code < 0;
-    }
+    bool is_fatal() const { return this->code < 0; }
 
     Response(Category category)
         : code(category)
-    {
-    }
+    {}
 
     Response()
         : code(0)
-    {
-    }
+    {}
 
     static const char* to_string(int code);
 
-    int                                code;    // HTTP response code
-    std::string                        body;    // Response body
-    std::map<std::string, std::string> headers; // Headers attached to the response
+    int code;                                    // HTTP response code
+    std::string body;                            // Response body
+    std::map<std::string, std::string> headers;  // Headers attached to the response
 };
 
 using Responses = std::vector<Response>;
@@ -148,8 +129,9 @@ using Responses = std::vector<Response>;
  * @return A @c Response.
  */
 Response get(const std::string& url,
-             const std::string& user, const std::string& password,
-             const Config& config = Config());
+    const std::string& user,
+    const std::string& password,
+    const Config& config = Config());
 
 inline Response get(const std::string& url, const Config& config = Config())
 {
@@ -170,11 +152,11 @@ inline Response get(const std::string& url, const Config& config = Config())
  * @return Vector of @c Responses, as many as there were @c urls.
  */
 Responses get(const std::vector<std::string>& urls,
-              const std::string& user, const std::string& password,
-              const Config& config = Config());
+    const std::string& user,
+    const std::string& password,
+    const Config& config = Config());
 
-inline Responses get(const std::vector<std::string>& urls,
-                     const Config& config = Config())
+inline Responses get(const std::vector<std::string>& urls, const Config& config = Config())
 {
     return get(urls, "", "", config);
 }
@@ -194,13 +176,15 @@ inline Responses get(const std::vector<std::string>& urls,
  * @return A @c Response.
  */
 Response put(const std::string& url,
-             const std::string& body,
-             const std::string& user, const std::string& password,
-             const Config& config = Config());
+    const std::string& body,
+    const std::string& user,
+    const std::string& password,
+    const Config& config = Config());
 
 inline Response put(const std::string& url,
-                    const std::string& user, const std::string& password,
-                    const Config& config = Config())
+    const std::string& user,
+    const std::string& password,
+    const Config& config = Config())
 {
     return put(url, std::string(), user, password, config);
 }
@@ -231,26 +215,26 @@ inline Response put(const std::string& url, const Config& config = Config())
  * @return A @c Response.
  */
 Responses put(const std::vector<std::string>& urls,
-              const std::string& body,
-              const std::string& user, const std::string& password,
-              const Config& config = Config());
+    const std::string& body,
+    const std::string& user,
+    const std::string& password,
+    const Config& config = Config());
 
 inline Responses put(const std::vector<std::string>& urls,
-                     const std::string& user, const std::string& password,
-                     const Config& config = Config())
+    const std::string& user,
+    const std::string& password,
+    const Config& config = Config())
 {
     return put(urls, std::string(), user, password, config);
 }
 
-inline Responses put(const std::vector<std::string>& urls,
-                     const std::string& body,
-                     const Config& config = Config())
+inline Responses put(
+    const std::vector<std::string>& urls, const std::string& body, const Config& config = Config())
 {
     return put(urls, body, "", "", config);
 }
 
-inline Responses put(const std::vector<std::string>& urls,
-                     const Config& config = Config())
+inline Responses put(const std::vector<std::string>& urls, const Config& config = Config())
 {
     return put(urls, std::string(), "", "", config);
 }
@@ -269,9 +253,9 @@ class Async
 public:
     enum status_t
     {
-        READY,      // The response is ready.
-        ERROR,      // The operation has failed.
-        PENDING     // The operation is pending.
+        READY,   // The response is ready.
+        ERROR,   // The operation has failed.
+        PENDING  // The operation is pending.
     };
 
     class Imp
@@ -302,8 +286,7 @@ public:
      */
     Async(const Async& rhs)
         : m_sImp(rhs.m_sImp)
-    {
-    }
+    {}
 
     /**
      * Assigns an asynchronous operation.
@@ -329,10 +312,7 @@ public:
      *
      * @return @c READY|ERROR|PENDING
      */
-    status_t status() const
-    {
-        return m_sImp->status();
-    }
+    status_t status() const { return m_sImp->status(); }
 
     /**
      * Performs a step in the operation.
@@ -342,10 +322,7 @@ public:
      *
      * @return @c READY|ERROR|PENDING
      */
-    status_t perform(long timeout_ms = 0)
-    {
-        return m_sImp->perform(timeout_ms);
-    }
+    status_t perform(long timeout_ms = 0) { return m_sImp->perform(timeout_ms); }
 
     /**
      * How much time to wait at most, before calling perform() again.
@@ -357,10 +334,7 @@ public:
      *
      * @return Maximum time to wait in milliseconds.
      */
-    long wait_no_more_than() const
-    {
-        return m_sImp->wait_no_more_than();
-    }
+    long wait_no_more_than() const { return m_sImp->wait_no_more_than(); }
 
     /**
      * The response of each operation. This function should not be called
@@ -368,26 +342,19 @@ public:
      *
      * @return Vector of responses.
      */
-    const Responses& responses() const
-    {
-        return m_sImp->responses();
-    }
+    const Responses& responses() const { return m_sImp->responses(); }
 
     /**
      * The URLs the async operation was invoked with.
      *
      * @return Vector of urls.
      */
-    const std::vector<std::string>& urls() const
-    {
-        return m_sImp->urls();
-    }
+    const std::vector<std::string>& urls() const { return m_sImp->urls(); }
 
 public:
     Async(const std::shared_ptr<Imp>& sImp)
         : m_sImp(sImp)
-    {
-    }
+    {}
 
 private:
     std::shared_ptr<Imp> m_sImp;
@@ -416,11 +383,11 @@ const char* to_string(Async::status_t status);
  * @return An Async instance using which the operation can be performed.
  */
 Async get_async(const std::vector<std::string>& urls,
-                const std::string& user, const std::string& password,
-                const Config& config = Config());
+    const std::string& user,
+    const std::string& password,
+    const Config& config = Config());
 
-inline Async get_async(const std::vector<std::string>& urls,
-                       const Config& config = Config())
+inline Async get_async(const std::vector<std::string>& urls, const Config& config = Config())
 {
     return get_async(urls, "", "", config);
 }
@@ -441,21 +408,20 @@ inline Async get_async(const std::vector<std::string>& urls,
  * @return An Async instance using which the operation can be performed.
  */
 Async put_async(const std::vector<std::string>& urls,
-                const std::string& body,
-                const std::string& user, const std::string& password,
-                const Config& config = Config());
+    const std::string& body,
+    const std::string& user,
+    const std::string& password,
+    const Config& config = Config());
 
-inline Async put_async(const std::vector<std::string>& urls,
-                       const Config& config = Config())
+inline Async put_async(const std::vector<std::string>& urls, const Config& config = Config())
 {
     return put_async(urls, std::string(), "", "", config);
 }
 
-inline Async put_async(const std::vector<std::string>& urls,
-                       const std::string& body,
-                       const Config& config = Config())
+inline Async put_async(
+    const std::vector<std::string>& urls, const std::string& body, const Config& config = Config())
 {
     return put_async(urls, body, "", "", config);
 }
-}
-}
+}  // namespace http
+}  // namespace maxbase

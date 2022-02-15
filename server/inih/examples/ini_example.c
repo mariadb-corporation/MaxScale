@@ -7,17 +7,14 @@
 
 typedef struct
 {
-    int         version;
+    int version;
     const char* name;
     const char* email;
 } configuration;
 
-static int handler(void* user,
-                   const char* section,
-                   const char* name,
-                   const char* value)
+static int handler(void* user, const char* section, const char* name, const char* value)
 {
-    configuration* pconfig = (configuration*)user;
+    configuration* pconfig = (configuration*) user;
 
 #define MATCH(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
     if (MATCH("protocol", "version"))
@@ -34,7 +31,7 @@ static int handler(void* user,
     }
     else
     {
-        return 0;   /* unknown section/name, error */
+        return 0; /* unknown section/name, error */
     }
     return 1;
 }
@@ -49,8 +46,8 @@ int main(int argc, char* argv[])
         return 1;
     }
     printf("Config loaded from 'test.ini': version=%d, name=%s, email=%s\n",
-           config.version,
-           config.name,
-           config.email);
+        config.version,
+        config.name,
+        config.email);
     return 0;
 }

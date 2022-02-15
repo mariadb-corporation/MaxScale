@@ -22,7 +22,7 @@ class CommentFilter : public maxscale::Filter<CommentFilter, CommentFilterSessio
 {
 public:
     // Prevent copy-constructor and assignment operator usage
-    CommentFilter(const CommentFilter&) = delete;
+    CommentFilter(const CommentFilter&)            = delete;
     CommentFilter& operator=(const CommentFilter&) = delete;
 
     ~CommentFilter();
@@ -39,10 +39,7 @@ public:
     // Get filter capabilities
     uint64_t getCapabilities();
 
-    const CommentConfig& config() const
-    {
-        return m_config;
-    }
+    const CommentConfig& config() const { return m_config; }
 
 private:
     // Used in the create function

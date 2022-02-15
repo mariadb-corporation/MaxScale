@@ -27,7 +27,7 @@ bool is_connection_lost(uint64_t mariadb_err)
 {
     return mariadb_err == 2006 || mariadb_err == 2013;
 }
-}
+}  // namespace
 
 Connection::Connection(const ConnectionDetails& details)
     : m_details(details)
@@ -52,16 +52,13 @@ void Connection::start_replication(unsigned int server_id, maxsql::GtidList gtid
     auto hb = "SET @master_heartbeat_period=1000000000";
 
     // TODO use config
-    std::vector<std::string> queries =
-    {
-        hb,
+    std::vector<std::string> queries = {hb,
         "SET @master_binlog_checksum = @@global.binlog_checksum",
         "SET @mariadb_slave_capability=4",
         "SET @slave_connect_state='" + gtid_str + "'",
         "SET @slave_gtid_strict_mode=1",
         "SET @slave_gtid_ignore_duplicates=1",
-        "SET NAMES latin1"
-    };
+        "SET NAMES latin1"};
 
     for (const auto& sql : queries)
     {
@@ -69,10 +66,10 @@ void Connection::start_replication(unsigned int server_id, maxsql::GtidList gtid
     }
 
     if (!(m_rpl = mariadb_rpl_init(m_conn)))
-    {   // TODO this should be of a more fatal kind
-        MXB_THROWCode(DatabaseError, mysql_errno(m_conn),
-                      "mariadb_rpl_init failed " << m_details.host << " : mysql_error "
-                                                 << mysql_error(m_conn));
+    {  // TODO this should be of a more fatal kind
+        MXB_THROWCode(DatabaseError,
+            mysql_errno(m_conn),
+            "mariadb_rpl_init failed " << m_details.host << " : mysql_error " << mysql_error(m_conn));
     }
 
     mariadb_rpl_optionsv(m_rpl, MARIADB_RPL_SERVER_ID, server_id);
@@ -81,9 +78,9 @@ void Connection::start_replication(unsigned int server_id, maxsql::GtidList gtid
 
     if (mariadb_rpl_open(m_rpl))
     {
-        MXB_THROWCode(DatabaseError, mysql_errno(m_conn),
-                      "mariadb_rpl_open failed " << m_details.host << " : mysql_error "
-                                                 << mysql_error(m_conn));
+        MXB_THROWCode(DatabaseError,
+            mysql_errno(m_conn),
+            "mariadb_rpl_open failed " << m_details.host << " : mysql_error " << mysql_error(m_conn));
     }
 }
 
@@ -97,7 +94,6 @@ MariaRplEvent Connection::get_rpl_msg()
 
     return MariaRplEvent {ptr, m_rpl};
 }
-
 
 uint64_t Connection::mariadb_error()
 {
@@ -123,9 +119,9 @@ void Connection::begin_trx()
         mysql_autocommit(m_conn, false);
         if (mysql_ping(m_conn))
         {
-            MXB_THROWCode(DatabaseError, mysql_errno(m_conn),
-                          "begin_tran failed " << m_details.host << " : mysql_error "
-                                               << mysql_error(m_conn));
+            MXB_THROWCode(DatabaseError,
+                mysql_errno(m_conn),
+                "begin_tran failed " << m_details.host << " : mysql_error " << mysql_error(m_conn));
         }
     }
 }
@@ -136,9 +132,9 @@ void Connection::commit_trx()
     {
         if (mysql_autocommit(m_conn, true))
         {
-            MXB_THROWCode(DatabaseError, mysql_errno(m_conn),
-                          "commit failed " << m_details.host << " : mysql_error "
-                                           << mysql_error(m_conn));
+            MXB_THROWCode(DatabaseError,
+                mysql_errno(m_conn),
+                "commit failed " << m_details.host << " : mysql_error " << mysql_error(m_conn));
         }
     }
 }
@@ -147,9 +143,9 @@ void Connection::rollback_trx()
 {
     if (mysql_rollback(m_conn))
     {
-        MXB_THROWCode(DatabaseError, mysql_errno(m_conn),
-                      "rollback failed " << m_details.host << " : mysql_error "
-                                         << mysql_error(m_conn));
+        MXB_THROWCode(DatabaseError,
+            mysql_errno(m_conn),
+            "rollback failed " << m_details.host << " : mysql_error " << mysql_error(m_conn));
     }
 
     mysql_autocommit(m_conn, true);
@@ -222,19 +218,21 @@ void Connection::connect()
     }
 
     if (mysql_real_connect(m_conn,
-                           m_details.host.address().c_str(),
-                           m_details.user.c_str(),
-                           m_details.password.c_str(),
-                           m_details.database.c_str(),
-                           m_details.host.port(),
-                           nullptr, m_details.flags) == nullptr)
+            m_details.host.address().c_str(),
+            m_details.user.c_str(),
+            m_details.password.c_str(),
+            m_details.database.c_str(),
+            m_details.host.port(),
+            nullptr,
+            m_details.flags)
+        == nullptr)
     {
         std::string error = mysql_error(m_conn);
-        auto errnum = mysql_errno(m_conn);
+        auto errnum       = mysql_errno(m_conn);
         mysql_close(m_conn);
         m_conn = nullptr;
-        MXB_THROWCode(DatabaseError, errnum,
-                      "Could not connect to " << m_details.host << " : mysql_error " << error);
+        MXB_THROWCode(
+            DatabaseError, errnum, "Could not connect to " << m_details.host << " : mysql_error " << error);
     }
     else if (m_details.ssl && !mysql_get_ssl_cipher(m_conn))
     {
@@ -253,10 +251,10 @@ void Connection::query(const std::string& sql)
 
     if (err_code && !is_connection_lost(err_code))
     {
-        MXB_THROWCode(DatabaseError, mysql_errno(m_conn),
-                      "mysql_real_query: '" << sql << "' failed " << m_details.host.address()
-                                            << ':' << m_details.host.port()
-                                            << " : mysql_error " << mysql_error(m_conn));
+        MXB_THROWCode(DatabaseError,
+            mysql_errno(m_conn),
+            "mysql_real_query: '" << sql << "' failed " << m_details.host.address() << ':'
+                                  << m_details.host.port() << " : mysql_error " << mysql_error(m_conn));
     }
 }
 
@@ -270,8 +268,7 @@ void Connection::discard_result()
     // TODO. There must be a fast way, mariadb_cancel?
     auto res = result_set();
     for (auto ite = res.begin(); ite != res.end(); ++ite)
-    {
-    }
+    {}
 }
 
 maxbase::Host Connection::host() const
@@ -283,4 +280,4 @@ ResultSet Connection::result_set()
 {
     return ResultSet(m_conn);
 }
-}
+}  // namespace maxsql

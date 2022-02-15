@@ -55,7 +55,6 @@ typedef struct mxs_filter_session
  */
 typedef struct mxs_filter_object
 {
-
     /**
      * @brief Create a new instance of the filter
      *
@@ -68,7 +67,7 @@ typedef struct mxs_filter_object
      *
      * @return New filter instance on NULL on error
      */
-    MXS_FILTER*(*createInstance)(const char* name, mxs::ConfigParameters* params);
+    MXS_FILTER* (*createInstance)(const char* name, mxs::ConfigParameters* params);
 
     /**
      * Called to create a new user session within the filter
@@ -88,8 +87,11 @@ typedef struct mxs_filter_object
      *
      * @return New filter session or NULL on error
      */
-    MXS_FILTER_SESSION*(*newSession)(MXS_FILTER * instance, MXS_SESSION* session, SERVICE* service,
-                                     mxs::Downstream* down, mxs::Upstream* up);
+    MXS_FILTER_SESSION* (*newSession)(MXS_FILTER* instance,
+        MXS_SESSION* session,
+        SERVICE* service,
+        mxs::Downstream* down,
+        mxs::Upstream* up);
 
     /**
      * @brief Called when a session is closed
@@ -99,7 +101,7 @@ typedef struct mxs_filter_object
      * @param instance Filter instance
      * @param fsession Filter session
      */
-    void (* closeSession)(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession);
+    void (*closeSession)(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession);
 
     /**
      * @brief Called when a session is freed
@@ -109,7 +111,7 @@ typedef struct mxs_filter_object
      * @param instance Filter instance
      * @param fsession Filter session
      */
-    void (* freeSession)(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession);
+    void (*freeSession)(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession);
 
     /**
      * @brief Called on each query that requires routing
@@ -123,7 +125,7 @@ typedef struct mxs_filter_object
      * @return If successful, the function returns 1. If an error occurs
      * and the session should be closed, the function returns 0.
      */
-    int32_t (* routeQuery)(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
+    int32_t (*routeQuery)(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
 
     /**
      * @brief Called for each reply packet
@@ -139,8 +141,11 @@ typedef struct mxs_filter_object
      * @return If successful, the function returns 1. If an error occurs and the session should be closed, the
      *         function returns 0.
      */
-    int32_t (* clientReply)(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue,
-                            const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    int32_t (*clientReply)(MXS_FILTER* instance,
+        MXS_FILTER_SESSION* fsession,
+        GWBUF* queue,
+        const mxs::ReplyRoute& down,
+        const mxs::Reply& reply);
 
     /**
      * @brief Called for diagnostic output
@@ -152,7 +157,7 @@ typedef struct mxs_filter_object
      *
      * @see jansson.h
      */
-    json_t* (*diagnostics)(const MXS_FILTER * instance, const MXS_FILTER_SESSION* fsession);
+    json_t* (*diagnostics)(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
 
     /**
      * @brief Called to obtain the capabilities of the filter
@@ -161,14 +166,14 @@ typedef struct mxs_filter_object
      *
      * @see routing.hh
      */
-    uint64_t (* getCapabilities)(MXS_FILTER* instance);
+    uint64_t (*getCapabilities)(MXS_FILTER* instance);
 
     /**
      * @brief Called for destroying a filter instance
      *
      * @param instance Filter instance
      */
-    void (* destroyInstance)(MXS_FILTER* instance);
+    void (*destroyInstance)(MXS_FILTER* instance);
 } MXS_FILTER_OBJECT;
 
 /**
@@ -176,7 +181,10 @@ typedef struct mxs_filter_object
  * is changed these values must be updated in line with the rules in the
  * file modinfo.h.
  */
-#define MXS_FILTER_VERSION {4, 0, 0}
+#define MXS_FILTER_VERSION \
+    {                      \
+        4, 0, 0            \
+    }
 
 /**
  * MXS_FILTER_DEF represents a filter definition from the configuration file.
@@ -226,7 +234,7 @@ MXS_FILTER* filter_def_get_instance(const MXS_FILTER_DEF* filter_def);
 
 typedef enum filter_capability
 {
-    FCAP_TYPE_NONE = 0x0    // TODO: remove once filter capabilities are defined
+    FCAP_TYPE_NONE = 0x0  // TODO: remove once filter capabilities are defined
 } filter_capability_t;
 
 namespace maxscale
@@ -253,14 +261,11 @@ public:
     class Downstream
     {
     public:
-        Downstream()
-        {
-        }
+        Downstream() {}
 
         Downstream(const mxs::Downstream* down)
             : m_data(down)
-        {
-        }
+        {}
 
         /**
          * Function for sending a packet from the client to the next component
@@ -286,14 +291,11 @@ public:
          *
          * An instance of this class represents a component preceeding a filter.
          */
-        Upstream()
-        {
-        }
+        Upstream() {}
 
         Upstream(const mxs::Upstream* up)
             : m_data(up)
-        {
-        }
+        {}
 
         /**
          * Function for sending a packet from the backend to the next component
@@ -380,12 +382,11 @@ protected:
     }
 
 protected:
-    MXS_SESSION* m_pSession;    /*< The MXS_SESSION this filter session is associated with. */
-    SERVICE*     m_pService;    /*< The service for which this session was created. */
-    Downstream   m_down;        /*< The downstream component. */
-    Upstream     m_up;          /*< The upstream component. */
+    MXS_SESSION* m_pSession; /*< The MXS_SESSION this filter session is associated with. */
+    SERVICE* m_pService;     /*< The service for which this session was created. */
+    Downstream m_down;       /*< The downstream component. */
+    Upstream m_up;           /*< The upstream component. */
 };
-
 
 /**
  * @class Filter filter.hh <maxscale/filter.hh>
@@ -445,10 +446,13 @@ public:
         return pFilter;
     }
 
-    static MXS_FILTER_SESSION* apiNewSession(MXS_FILTER* pInstance, MXS_SESSION* pSession, SERVICE* pService,
-                                             mxs::Downstream* pDown, mxs::Upstream* pUp)
+    static MXS_FILTER_SESSION* apiNewSession(MXS_FILTER* pInstance,
+        MXS_SESSION* pSession,
+        SERVICE* pService,
+        mxs::Downstream* pDown,
+        mxs::Upstream* pUp)
     {
-        FilterType* pFilter = static_cast<FilterType*>(pInstance);
+        FilterType* pFilter               = static_cast<FilterType*>(pInstance);
         FilterSessionType* pFilterSession = NULL;
 
         MXS_EXCEPTION_GUARD(pFilterSession = pFilter->newSession(pSession, pService));
@@ -490,10 +494,10 @@ public:
     }
 
     static int apiClientReply(MXS_FILTER* pInstance,
-                              MXS_FILTER_SESSION* pData,
-                              GWBUF* pPacket,
-                              const mxs::ReplyRoute& down,
-                              const mxs::Reply& reply)
+        MXS_FILTER_SESSION* pData,
+        GWBUF* pPacket,
+        const mxs::ReplyRoute& down,
+        const mxs::Reply& reply)
     {
         FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
@@ -545,8 +549,7 @@ public:
 };
 
 template<class FilterType, class FilterSessionType>
-MXS_FILTER_OBJECT Filter<FilterType, FilterSessionType>::s_object =
-{
+MXS_FILTER_OBJECT Filter<FilterType, FilterSessionType>::s_object = {
     &FilterType::apiCreateInstance,
     &FilterType::apiNewSession,
     &FilterType::apiCloseSession,
@@ -557,4 +560,4 @@ MXS_FILTER_OBJECT Filter<FilterType, FilterSessionType>::s_object =
     &FilterType::apiGetCapabilities,
     &FilterType::apiDestroyInstance,
 };
-}
+}  // namespace maxscale

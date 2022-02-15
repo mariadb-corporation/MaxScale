@@ -66,37 +66,37 @@
 #include "internal/monitor.hh"
 
 /** This define is needed in CentOS 6 systems */
-#if !defined (UINT64_MAX)
+#if !defined(UINT64_MAX)
 #define UINT64_MAX (18446744073709551615UL)
 #endif
 
 using std::string;
 using std::set;
 using namespace maxscale;
-using LockGuard = std::lock_guard<std::mutex>;
+using LockGuard  = std::lock_guard<std::mutex>;
 using UniqueLock = std::unique_lock<std::mutex>;
 
 namespace
 {
 struct ThisUnit
 {
-    std::mutex            lock;
+    std::mutex lock;
     std::vector<Service*> services;
 } this_unit;
 
-const char CN_AUTH_ALL_SERVERS[] = "auth_all_servers";
+const char CN_AUTH_ALL_SERVERS[]              = "auth_all_servers";
 const char CN_LOCALHOST_MATCH_WILDCARD_HOST[] = "localhost_match_wildcard_host";
-const char CN_LOG_AUTH_WARNINGS[] = "log_auth_warnings";
-const char CN_MAX_CONNECTIONS[] = "max_connections";
-const char CN_ROUTER_DIAGNOSTICS[] = "router_diagnostics";
-const char CN_ROUTER_OPTIONS[] = "router_options";
-const char CN_SESSION_TRACK_TRX_STATE[] = "session_track_trx_state";
-const char CN_STRIP_DB_ESC[] = "strip_db_esc";
-}
+const char CN_LOG_AUTH_WARNINGS[]             = "log_auth_warnings";
+const char CN_MAX_CONNECTIONS[]               = "max_connections";
+const char CN_ROUTER_DIAGNOSTICS[]            = "router_diagnostics";
+const char CN_ROUTER_OPTIONS[]                = "router_options";
+const char CN_SESSION_TRACK_TRX_STATE[]       = "session_track_trx_state";
+const char CN_STRIP_DB_ESC[]                  = "strip_db_esc";
+}  // namespace
 
 Service* Service::create(const char* name, const char* router, mxs::ConfigParameters* params)
 {
-    MXS_ROUTER_OBJECT* router_api = (MXS_ROUTER_OBJECT*)load_module(router, MODULE_ROUTER);
+    MXS_ROUTER_OBJECT* router_api = (MXS_ROUTER_OBJECT*) load_module(router, MODULE_ROUTER);
 
     if (router_api == NULL)
     {
@@ -111,7 +111,7 @@ Service* Service::create(const char* name, const char* router, mxs::ConfigParame
         params = &empty;
     }
 
-    Service* service = new(std::nothrow) Service(name, router, params);
+    Service* service = new (std::nothrow) Service(name, router, params);
 
     if (service == nullptr)
     {
@@ -225,12 +225,9 @@ Service::Config::Config(mxs::ConfigParameters* params)
     , connection_keepalive(params->get_duration<std::chrono::seconds>(CN_CONNECTION_KEEPALIVE).count())
     , strip_db_esc(params->get_bool(CN_STRIP_DB_ESC))
     , rank(params->get_enum(CN_RANK, rank_values))
-{
-}
+{}
 
-Service::Service(const std::string& name,
-                 const std::string& router_name,
-                 mxs::ConfigParameters* params)
+Service::Service(const std::string& name, const std::string& router_name, mxs::ConfigParameters* params)
     : SERVICE(name, router_name)
     , m_config(params)
     , m_params(*params)
@@ -239,7 +236,7 @@ Service::Service(const std::string& name,
     mxb_assert(module);
     mxb_assert(load_module(router_name.c_str(), MODULE_ROUTER) == module->module_object);
 
-    router = (MXS_ROUTER_OBJECT*)module->module_object;
+    router         = (MXS_ROUTER_OBJECT*) module->module_object;
     m_capabilities = module->module_capabilities;
 
     if (m_config->connection_keepalive)
@@ -292,9 +289,8 @@ void Service::destroy(Service* service)
 bool service_isvalid(Service* service)
 {
     LockGuard guard(this_unit.lock);
-    return std::find(this_unit.services.begin(),
-                     this_unit.services.end(),
-                     service) != this_unit.services.end();
+    return std::find(this_unit.services.begin(), this_unit.services.end(), service)
+        != this_unit.services.end();
 }
 
 /**
@@ -307,7 +303,7 @@ bool service_isvalid(Service* service)
  */
 int serviceStartAllPorts(Service* service)
 {
-    int listeners = 0;
+    int listeners     = 0;
     auto my_listeners = listener_find_by_service(service);
 
     if (!my_listeners.empty())
@@ -335,7 +331,7 @@ int serviceStartAllPorts(Service* service)
         }
         else if (listeners)
         {
-            service->state = SERVICE::State::STARTED;
+            service->state   = SERVICE::State::STARTED;
             service->started = time(0);
 
             if (service->get_children().empty())
@@ -347,7 +343,7 @@ int serviceStartAllPorts(Service* service)
     else
     {
         MXS_WARNING("Service '%s' has no listeners defined.", service->name());
-        listeners = 1;      /** Set this to one to suppress errors */
+        listeners = 1; /** Set this to one to suppress errors */
     }
 
     return listeners;
@@ -394,8 +390,8 @@ bool serviceStartListener(SERVICE* svc, const char* name)
 
 bool service_launch_all()
 {
-    int n = 0, i;
-    bool ok = true;
+    int n       = 0, i;
+    bool ok     = true;
     int num_svc = this_unit.services.size();
 
     if (num_svc > 0)
@@ -478,7 +474,7 @@ bool serviceStart(SERVICE* service)
 
 bool service_remove_listener(Service* service, const char* target)
 {
-    bool rval = false;
+    bool rval     = false;
     auto listener = listener_find(target);
 
     if (listener && listener->service() == service)
@@ -490,10 +486,8 @@ bool service_remove_listener(Service* service, const char* target)
     return rval;
 }
 
-std::shared_ptr<Listener> service_find_listener(Service* service,
-                                                const std::string& socket,
-                                                const std::string& address,
-                                                unsigned short port)
+std::shared_ptr<Listener> service_find_listener(
+    Service* service, const std::string& socket, const std::string& address, unsigned short port)
 {
     std::shared_ptr<Listener> rval;
     for (const auto& listener : listener_find_by_service(service))
@@ -519,34 +513,36 @@ bool Service::can_be_destroyed() const
     const auto& data = *m_data;
     std::vector<std::string> names;
 
-    std::transform(data.targets.begin(), data.targets.end(), std::back_inserter(names),
-                   std::mem_fn(&mxs::Target::name));
+    std::transform(
+        data.targets.begin(), data.targets.end(), std::back_inserter(names), std::mem_fn(&mxs::Target::name));
 
-    std::transform(data.filters.begin(), data.filters.end(), std::back_inserter(names),
-                   std::mem_fn(&FilterDef::name));
+    std::transform(
+        data.filters.begin(), data.filters.end(), std::back_inserter(names), std::mem_fn(&FilterDef::name));
 
     if (!names.empty())
     {
         MXS_ERROR("Cannot destroy service '%s', it uses the following objects: %s",
-                  name(), mxb::join(names, ", ").c_str());
+            name(),
+            mxb::join(names, ", ").c_str());
     }
     else
     {
-        std::transform(m_parents.begin(), m_parents.end(), std::back_inserter(names),
-                       std::mem_fn(&Service::name));
+        std::transform(
+            m_parents.begin(), m_parents.end(), std::back_inserter(names), std::mem_fn(&Service::name));
 
         auto filters = filter_depends_on_target(this);
-        std::transform(filters.begin(), filters.end(), std::back_inserter(names),
-                       std::mem_fn(&FilterDef::name));
+        std::transform(
+            filters.begin(), filters.end(), std::back_inserter(names), std::mem_fn(&FilterDef::name));
 
         auto listeners = listener_find_by_service(this);
-        std::transform(listeners.begin(), listeners.end(), std::back_inserter(names),
-                       std::mem_fn(&Listener::name));
+        std::transform(
+            listeners.begin(), listeners.end(), std::back_inserter(names), std::mem_fn(&Listener::name));
 
         if (!names.empty())
         {
             MXS_ERROR("Cannot destroy service '%s', the following objects depend on it: %s",
-                      name(), mxb::join(names, ", ").c_str());
+                name(),
+                mxb::join(names, ", ").c_str());
         }
     }
 
@@ -564,8 +560,8 @@ bool Service::can_be_destroyed() const
 void serviceGetUser(SERVICE* svc, const char** user, const char** auth)
 {
     Service* service = static_cast<Service*>(svc);
-    *user = service->config()->user.c_str();
-    *auth = service->config()->password.c_str();
+    *user            = service->config()->user.c_str();
+    *auth            = service->config()->password.c_str();
 }
 
 bool Service::set_filters(const std::vector<std::string>& filters)
@@ -899,10 +895,10 @@ json_t* service_parameters_to_json(const SERVICE* service)
 
     const MXS_MODULE* mod = get_module(service->router_name(), MODULE_ROUTER);
     config_add_module_params_json(&service->params(),
-                                  {CN_TYPE, CN_ROUTER, CN_SERVERS, CN_FILTERS},
-                                  common_service_params(),
-                                  mod->parameters,
-                                  rval);
+        {CN_TYPE, CN_ROUTER, CN_SERVERS, CN_FILTERS},
+        common_service_params(),
+        mod->parameters,
+        rval);
 
     return rval;
 }
@@ -934,7 +930,7 @@ static json_t* service_listener_json_data(const char* host, const SERVICE* servi
 json_t* service_attributes(const char* host, const SERVICE* svc)
 {
     const Service* service = static_cast<const Service*>(svc);
-    json_t* attr = json_object();
+    json_t* attr           = json_object();
 
     json_object_set_new(attr, CN_ROUTER, json_string(service->router_name()));
     json_object_set_new(attr, CN_STATE, json_string(service_state_to_string(service->state)));
@@ -982,7 +978,7 @@ json_t* service_attributes(const char* host, const SERVICE* svc)
 json_t* Service::json_relationships(const char* host) const
 {
     /** Store relationships to other objects */
-    json_t* rel = json_object();
+    json_t* rel      = json_object();
     const auto& data = *m_data;
     std::string self = std::string(MXS_JSON_API_SERVICES) + name() + "/relationships/";
 
@@ -1006,7 +1002,7 @@ json_t* Service::json_relationships(const char* host) const
     }
     else if (!data.targets.empty())
     {
-        json_t* servers = mxs_json_relationship(host, self + "servers", MXS_JSON_API_SERVERS);
+        json_t* servers  = mxs_json_relationship(host, self + "servers", MXS_JSON_API_SERVERS);
         json_t* services = mxs_json_relationship(host, self + "services", MXS_JSON_API_SERVICES);
 
         for (const auto& s : data.targets)
@@ -1045,7 +1041,7 @@ json_t* Service::json_relationships(const char* host) const
 json_t* service_json_data(const SERVICE* svc, const char* host)
 {
     const Service* service = static_cast<const Service*>(svc);
-    json_t* rval = json_object();
+    json_t* rval           = json_object();
     LockGuard guard(service->lock);
 
     json_object_set_new(rval, CN_ID, json_string(service->name()));
@@ -1105,8 +1101,8 @@ json_t* service_list_to_json(const char* host)
     return mxs_json_resource(host, MXS_JSON_API_SERVICES, arr);
 }
 
-json_t* service_relations_to_filter(const SFilterDef& filter, const std::string& host,
-                                    const std::string& self)
+json_t* service_relations_to_filter(
+    const SFilterDef& filter, const std::string& host, const std::string& self)
 {
     json_t* rel = nullptr;
     LockGuard guard(this_unit.lock);
@@ -1129,8 +1125,8 @@ json_t* service_relations_to_filter(const SFilterDef& filter, const std::string&
     return rel;
 }
 
-json_t* service_relations_to_monitor(const mxs::Monitor* monitor, const std::string& host,
-                                     const std::string& self)
+json_t* service_relations_to_monitor(
+    const mxs::Monitor* monitor, const std::string& host, const std::string& self)
 {
     json_t* rel = nullptr;
     LockGuard guard(this_unit.lock);
@@ -1191,9 +1187,7 @@ uint64_t service_get_version(const SERVICE* svc, service_version_which_t which)
 
 bool Service::is_basic_parameter(const std::string& name)
 {
-    static const std::set<std::string> names =
-    {
-        CN_AUTH_ALL_SERVERS,
+    static const std::set<std::string> names = {CN_AUTH_ALL_SERVERS,
         CN_CONNECTION_TIMEOUT,
         CN_NET_WRITE_TIMEOUT,
         CN_ENABLE_ROOT_USER,
@@ -1207,8 +1201,7 @@ bool Service::is_basic_parameter(const std::string& name)
         CN_FILTERS,
         CN_RETAIN_LAST_STATEMENTS,
         CN_CONNECTION_KEEPALIVE,
-        CN_RANK
-    };
+        CN_RANK};
 
     return names.find(name) != names.end();
 }
@@ -1241,41 +1234,31 @@ void Service::update_basic_parameter(const std::string& key, const std::string& 
 
 const MXS_MODULE_PARAM* common_service_params()
 {
-    static const MXS_MODULE_PARAM config_service_params[] =
-    {
-        {CN_TYPE,                 MXS_MODULE_PARAM_STRING,   CN_SERVICE, MXS_MODULE_OPT_REQUIRED  },
-        {CN_ROUTER,               MXS_MODULE_PARAM_STRING,   NULL,       MXS_MODULE_OPT_REQUIRED  },
-        {CN_ROUTER_OPTIONS,       MXS_MODULE_PARAM_STRING},
-        {CN_SERVERS,              MXS_MODULE_PARAM_STRING},
-        {CN_TARGETS,              MXS_MODULE_PARAM_STRING},
-        {CN_USER,                 MXS_MODULE_PARAM_STRING,   NULL,       MXS_MODULE_OPT_REQUIRED  },
-        {CN_PASSWORD,             MXS_MODULE_PARAM_PASSWORD, NULL,       MXS_MODULE_OPT_REQUIRED  },
-        {CN_ENABLE_ROOT_USER,     MXS_MODULE_PARAM_BOOL,     "false"},
-        {CN_MAX_CONNECTIONS,      MXS_MODULE_PARAM_COUNT,    "0"},
-        {CN_CONNECTION_TIMEOUT,   MXS_MODULE_PARAM_DURATION, "0",        MXS_MODULE_OPT_DURATION_S},
-        {CN_NET_WRITE_TIMEOUT,    MXS_MODULE_PARAM_DURATION, "0",        MXS_MODULE_OPT_DURATION_S},
-        {CN_AUTH_ALL_SERVERS,     MXS_MODULE_PARAM_BOOL,     "false"},
-        {CN_STRIP_DB_ESC,         MXS_MODULE_PARAM_BOOL,     "true"},
-        {
-            CN_LOCALHOST_MATCH_WILDCARD_HOST, MXS_MODULE_PARAM_BOOL, "true", MXS_MODULE_OPT_DEPRECATED
-        },
-        {CN_VERSION_STRING,       MXS_MODULE_PARAM_STRING},
-        {CN_FILTERS,              MXS_MODULE_PARAM_STRING},
-        {CN_LOG_AUTH_WARNINGS,    MXS_MODULE_PARAM_BOOL,     "true"},
-        {
-            CN_SESSION_TRACK_TRX_STATE, MXS_MODULE_PARAM_BOOL, "false"
-        },
-        {
-            CN_RETAIN_LAST_STATEMENTS, MXS_MODULE_PARAM_INT, "-1"
-        },
-        {CN_SESSION_TRACE,        MXS_MODULE_PARAM_BOOL,     "false"},
-        {CN_CLUSTER,              MXS_MODULE_PARAM_STRING},
-        {
-            CN_RANK, MXS_MODULE_PARAM_ENUM, DEFAULT_RANK, MXS_MODULE_OPT_ENUM_UNIQUE, rank_values
-        },
-        {CN_CONNECTION_KEEPALIVE, MXS_MODULE_PARAM_DURATION, "300s",     MXS_MODULE_OPT_DURATION_S},
-        {NULL}
-    };
+    static const MXS_MODULE_PARAM config_service_params[]
+        = {{CN_TYPE, MXS_MODULE_PARAM_STRING, CN_SERVICE, MXS_MODULE_OPT_REQUIRED},
+            {CN_ROUTER, MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED},
+            {CN_ROUTER_OPTIONS, MXS_MODULE_PARAM_STRING},
+            {CN_SERVERS, MXS_MODULE_PARAM_STRING},
+            {CN_TARGETS, MXS_MODULE_PARAM_STRING},
+            {CN_USER, MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED},
+            {CN_PASSWORD, MXS_MODULE_PARAM_PASSWORD, NULL, MXS_MODULE_OPT_REQUIRED},
+            {CN_ENABLE_ROOT_USER, MXS_MODULE_PARAM_BOOL, "false"},
+            {CN_MAX_CONNECTIONS, MXS_MODULE_PARAM_COUNT, "0"},
+            {CN_CONNECTION_TIMEOUT, MXS_MODULE_PARAM_DURATION, "0", MXS_MODULE_OPT_DURATION_S},
+            {CN_NET_WRITE_TIMEOUT, MXS_MODULE_PARAM_DURATION, "0", MXS_MODULE_OPT_DURATION_S},
+            {CN_AUTH_ALL_SERVERS, MXS_MODULE_PARAM_BOOL, "false"},
+            {CN_STRIP_DB_ESC, MXS_MODULE_PARAM_BOOL, "true"},
+            {CN_LOCALHOST_MATCH_WILDCARD_HOST, MXS_MODULE_PARAM_BOOL, "true", MXS_MODULE_OPT_DEPRECATED},
+            {CN_VERSION_STRING, MXS_MODULE_PARAM_STRING},
+            {CN_FILTERS, MXS_MODULE_PARAM_STRING},
+            {CN_LOG_AUTH_WARNINGS, MXS_MODULE_PARAM_BOOL, "true"},
+            {CN_SESSION_TRACK_TRX_STATE, MXS_MODULE_PARAM_BOOL, "false"},
+            {CN_RETAIN_LAST_STATEMENTS, MXS_MODULE_PARAM_INT, "-1"},
+            {CN_SESSION_TRACE, MXS_MODULE_PARAM_BOOL, "false"},
+            {CN_CLUSTER, MXS_MODULE_PARAM_STRING},
+            {CN_RANK, MXS_MODULE_PARAM_ENUM, DEFAULT_RANK, MXS_MODULE_OPT_ENUM_UNIQUE, rank_values},
+            {CN_CONNECTION_KEEPALIVE, MXS_MODULE_PARAM_DURATION, "300s", MXS_MODULE_OPT_DURATION_S},
+            {NULL}};
     return config_service_params;
 }
 
@@ -1299,10 +1282,10 @@ ServiceEndpoint::~ServiceEndpoint()
 
 // static
 int32_t ServiceEndpoint::upstream_function(MXS_FILTER* instance,
-                                           MXS_FILTER_SESSION* session,
-                                           GWBUF* buffer,
-                                           const mxs::ReplyRoute& down,
-                                           const mxs::Reply& reply)
+    MXS_FILTER_SESSION* session,
+    GWBUF* buffer,
+    const mxs::ReplyRoute& down,
+    const mxs::Reply& reply)
 {
     ServiceEndpoint* self = reinterpret_cast<ServiceEndpoint*>(session);
     return self->send_upstream(buffer, down, reply);
@@ -1330,25 +1313,28 @@ bool ServiceEndpoint::connect()
     mxb::LogScope scope(m_service->name());
     std::vector<mxs::Endpoint*> endpoints;
     endpoints.reserve(m_down.size());
-    std::transform(m_down.begin(), m_down.end(), std::back_inserter(endpoints),
-                   std::mem_fn(&std::unique_ptr<mxs::Endpoint>::get));
+    std::transform(m_down.begin(),
+        m_down.end(),
+        std::back_inserter(endpoints),
+        std::mem_fn(&std::unique_ptr<mxs::Endpoint>::get));
 
-    m_router_session = m_service->router->newSession(m_service->router_instance, m_session,
-                                                     &m_tail, endpoints);
+    m_router_session
+        = m_service->router->newSession(m_service->router_instance, m_session, &m_tail, endpoints);
 
     if (!m_router_session)
     {
         MXS_ERROR("Failed to create new router session for service '%s'. "
-                  "See previous errors for more details.", m_service->name());
+                  "See previous errors for more details.",
+            m_service->name());
         return false;
     }
 
-    m_head.instance = (MXS_FILTER*)m_service->router_instance;
-    m_head.session = (MXS_FILTER_SESSION*)m_router_session;
-    m_head.routeQuery = (DOWNSTREAMFUNC)m_service->router->routeQuery;
+    m_head.instance   = (MXS_FILTER*) m_service->router_instance;
+    m_head.session    = (MXS_FILTER_SESSION*) m_router_session;
+    m_head.routeQuery = (DOWNSTREAMFUNC) m_service->router->routeQuery;
 
-    m_tail.instance = (MXS_FILTER*)this;
-    m_tail.session = (MXS_FILTER_SESSION*)this;
+    m_tail.instance    = (MXS_FILTER*) this;
+    m_tail.session     = (MXS_FILTER_SESSION*) this;
     m_tail.clientReply = ServiceEndpoint::upstream_function;
 
     for (const auto& a : m_service->get_filters())
@@ -1358,7 +1344,7 @@ bool ServiceEndpoint::connect()
 
     for (auto it = m_filters.begin(); it != m_filters.end(); ++it)
     {
-        auto& f = *it;
+        auto& f   = *it;
         f.session = f.filter->obj->newSession(f.instance, m_session, m_service, &f.down, &f.up);
 
         if (!f.session)
@@ -1382,9 +1368,9 @@ bool ServiceEndpoint::connect()
 
     for (auto it = m_filters.rbegin(); it != m_filters.rend(); it++)
     {
-        it->down = chain_head;
-        chain_head.instance = it->instance;
-        chain_head.session = it->session;
+        it->down              = chain_head;
+        chain_head.instance   = it->instance;
+        chain_head.session    = it->session;
         chain_head.routeQuery = it->filter->obj->routeQuery;
     }
 
@@ -1395,9 +1381,9 @@ bool ServiceEndpoint::connect()
 
     for (auto it = m_filters.begin(); it != m_filters.end(); it++)
     {
-        it->up = chain_tail;
-        chain_tail.instance = it->instance;
-        chain_tail.session = it->session;
+        it->up                 = chain_tail;
+        chain_tail.instance    = it->instance;
+        chain_tail.session     = it->session;
         chain_tail.clientReply = it->filter->obj->clientReply;
     }
 
@@ -1470,13 +1456,13 @@ int32_t ServiceEndpoint::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const
     return 1;
 }
 
-bool ServiceEndpoint::handleError(mxs::ErrorType type, GWBUF* error,
-                                  mxs::Endpoint* down, const mxs::Reply& reply)
+bool ServiceEndpoint::handleError(
+    mxs::ErrorType type, GWBUF* error, mxs::Endpoint* down, const mxs::Reply& reply)
 {
     mxb::LogScope scope(m_service->name());
     mxb_assert(m_open);
-    bool ok = m_service->router->handleError(m_service->router_instance, m_router_session,
-                                             type, error, down, reply);
+    bool ok = m_service->router->handleError(
+        m_service->router_instance, m_router_session, type, error, down, reply);
 
     if (!ok)
     {
@@ -1488,7 +1474,7 @@ bool ServiceEndpoint::handleError(mxs::ErrorType type, GWBUF* error,
 
 std::unique_ptr<mxs::Endpoint> Service::get_connection(mxs::Component* up, MXS_SESSION* session)
 {
-    std::unique_ptr<ServiceEndpoint> my_connection(new(std::nothrow) ServiceEndpoint(session, this, up));
+    std::unique_ptr<ServiceEndpoint> my_connection(new (std::nothrow) ServiceEndpoint(session, this, up));
 
     if (my_connection)
     {
@@ -1546,7 +1532,7 @@ uint64_t get_capabilities(std::vector<mxs::Target*> targets)
 
     return rval;
 }
-}
+}  // namespace
 
 // Returns minimum and maximum server versions from the list of servers
 std::pair<uint64_t, uint64_t> Service::get_versions(const std::vector<SERVER*>& servers) const
@@ -1561,8 +1547,8 @@ std::pair<uint64_t, uint64_t> Service::get_versions(const std::vector<SERVER*>& 
         for (auto s : servers)
         {
             auto srv_version = s->info().version_num().total;
-            v_min = std::min(srv_version, v_min);
-            v_max = std::max(srv_version, v_max);
+            v_min            = std::min(srv_version, v_min);
+            v_max            = std::max(srv_version, v_max);
         }
     }
 
@@ -1575,7 +1561,7 @@ void Service::targets_updated()
 
     // Now that we have the new set of targets, recalculate the servers that this service reaches as well as
     // the new routing capabilities.
-    data.servers = get_servers(data.targets);
+    data.servers             = get_servers(data.targets);
     data.target_capabilities = get_capabilities(data.targets);
 
     // Update the global value based on the local cached value. Since modifications to services are always
@@ -1666,7 +1652,7 @@ uint64_t Service::gtid_pos(uint32_t domain) const
 int64_t Service::ping() const
 {
     int64_t undef = mxs::Target::PING_UNDEFINED;
-    auto rval = undef;
+    auto rval     = undef;
     for (auto a : m_data->targets)
     {
         auto p = a->ping();
@@ -1688,10 +1674,7 @@ void Service::decref()
     if (m_refcount.fetch_add(-1, std::memory_order_acq_rel) == 1)
     {
         // Destroy the service in the main routing worker thread
-        mxs::MainWorker::get()->execute(
-            [this]() {
-                delete this;
-            }, mxs::RoutingWorker::EXECUTE_AUTO);
+        mxs::MainWorker::get()->execute([this]() { delete this; }, mxs::RoutingWorker::EXECUTE_AUTO);
     }
 }
 
@@ -1721,7 +1704,7 @@ void Service::set_start_user_account_manager(SAccountManager user_manager)
     // Once the object is set, it can not change as this would indicate a change in service
     // backend protocol.
     mxb_assert(!m_usermanager);
-    m_usermanager = std::move(user_manager);
+    m_usermanager      = std::move(user_manager);
     const auto& config = *m_config;
     m_usermanager->set_credentials(config.user, config.password);
     m_usermanager->set_backends(m_data->servers);
@@ -1733,8 +1716,8 @@ void Service::set_start_user_account_manager(SAccountManager user_manager)
     // the admin thread and workers see the same object.
     mxb::Semaphore sem;
     auto init_cache = [this]() {
-            *m_usercache = user_account_manager()->create_user_account_cache();
-        };
+        *m_usercache = user_account_manager()->create_user_account_cache();
+    };
     auto n_threads = mxs::RoutingWorker::broadcast(init_cache, &sem, mxb::Worker::EXECUTE_AUTO);
     sem.wait_n(n_threads);
 
@@ -1755,13 +1738,13 @@ void Service::sync_user_account_caches()
     // updater thread. This is safe as the MainWorker will wait for the updater thread to return before
     // deleting the service.
     auto update_cache = [this]() {
-            auto& user_cache = *m_usercache;
-            if (user_cache)
-            {
-                user_cache->update_from_master();
-            }
-            wakeup_sessions_waiting_userdata();
-        };
+        auto& user_cache = *m_usercache;
+        if (user_cache)
+        {
+            user_cache->update_from_master();
+        }
+        wakeup_sessions_waiting_userdata();
+    };
     mxs::RoutingWorker::execute_concurrently(update_cache);
 }
 
@@ -1775,11 +1758,11 @@ std::string SERVICE::version_string() const
         uint64_t smallest_found = UINT64_MAX;
         for (auto server : reachable_servers())
         {
-            auto& info = server->info();
+            auto& info   = server->info();
             auto version = info.version_num().total;
             if (version > 0 && version < smallest_found)
             {
-                rval = info.version_string();
+                rval           = info.version_string();
                 smallest_found = version;
             }
         }
@@ -1821,7 +1804,7 @@ uint8_t SERVICE::charset() const
 
     if (rval == 0)
     {
-        rval = 0x08;    // The default charset: latin1
+        rval = 0x08;  // The default charset: latin1
     }
 
     return rval;
@@ -1834,7 +1817,7 @@ const std::string& SERVICE::custom_version_suffix()
 
 void SERVICE::set_custom_version_suffix(const string& custom_version_suffix)
 {
-    mxb_assert(m_custom_version_suffix.empty());    // Should only be set once.
+    mxb_assert(m_custom_version_suffix.empty());  // Should only be set once.
     m_custom_version_suffix = custom_version_suffix;
 }
 
@@ -1850,7 +1833,7 @@ void Service::wakeup_sessions_waiting_userdata()
 
 void Service::mark_for_wakeup(mxs::ClientConnection* session)
 {
-    MXB_AT_DEBUG(auto ret = ) m_sleeping_clients->insert(session);
+    MXB_AT_DEBUG(auto ret =) m_sleeping_clients->insert(session);
     mxb_assert(ret.second);
 }
 
@@ -1865,9 +1848,9 @@ bool Service::check_update_user_account_manager(mxs::ProtocolModule* protocol_mo
 {
     // If the service does not yet have a user data manager, create one and set to service.
     // If one already exists, check that it's for the same protocol the current listener is using.
-    bool rval = false;
+    bool rval           = false;
     auto new_proto_name = protocol_module->name();
-    auto listenerz = listener.c_str();
+    auto listenerz      = listener.c_str();
 
     if (m_usermanager)
     {
@@ -1883,8 +1866,10 @@ bool Service::check_update_user_account_manager(mxs::ProtocolModule* protocol_mo
             // multiple usermanagers are also needed.
             MXB_ERROR("The protocol of listener '%s' ('%s') differs from the protocol in the target "
                       "service '%s' ('%s') when both protocols implement user account management. ",
-                      listenerz, new_proto_name.c_str(),
-                      name(), m_usermanager->protocol_name().c_str());
+                listenerz,
+                new_proto_name.c_str(),
+                name(),
+                m_usermanager->protocol_name().c_str());
         }
     }
     else
@@ -1898,7 +1883,8 @@ bool Service::check_update_user_account_manager(mxs::ProtocolModule* protocol_mo
         else
         {
             MXB_ERROR("Failed to create an user account manager for protocol '%s' of listener '%s'.",
-                      new_proto_name.c_str(), listenerz);
+                new_proto_name.c_str(),
+                listenerz);
         }
     }
     return rval;
@@ -1922,7 +1908,7 @@ bool Service::change_cluster(mxs::Monitor* monitor)
 
         targets_updated();
         m_monitor = monitor;
-        rval = true;
+        rval      = true;
     }
 
     return rval;
@@ -1937,7 +1923,7 @@ bool Service::remove_cluster(mxs::Monitor* monitor)
         m_data->targets.clear();
         targets_updated();
         m_monitor = nullptr;
-        rval = true;
+        rval      = true;
     }
 
     return rval;

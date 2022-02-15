@@ -53,10 +53,10 @@ const char INET_USERS_FILE_NAME[] = "passwd";
 
 
 /** Return values for the functions */
-const char ADMIN_ERR_FILEOPEN[] = "Unable to create password file";
-const char ADMIN_ERR_DUPLICATE[] = "Duplicate username specified";
+const char ADMIN_ERR_FILEOPEN[]     = "Unable to create password file";
+const char ADMIN_ERR_DUPLICATE[]    = "Duplicate username specified";
 const char ADMIN_ERR_USERNOTFOUND[] = "User not found";
-}
+}  // namespace
 
 const char* ADMIN_SUCCESS = nullptr;
 
@@ -82,16 +82,13 @@ bool admin_dump_users(const Users* users, const char* fname)
     {
         if (mkdir(mxs::datadir(), S_IRWXU) != 0 && errno != EEXIST)
         {
-            MXS_ERROR("Failed to create directory '%s': %d, %s",
-                      mxs::datadir(),
-                      errno,
-                      mxs_strerror(errno));
+            MXS_ERROR("Failed to create directory '%s': %d, %s", mxs::datadir(), errno, mxs_strerror(errno));
             return false;
         }
     }
 
-    bool rval = false;
-    std::string path = std::string(mxs::datadir()) + "/" + fname;
+    bool rval           = false;
+    std::string path    = std::string(mxs::datadir()) + "/" + fname;
     std::string tmppath = path + ".tmp";
 
     int fd = open(tmppath.c_str(), O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
@@ -103,18 +100,17 @@ bool admin_dump_users(const Users* users, const char* fname)
     else
     {
         json_t* json = users->to_json();
-        char* str = json_dumps(json, 0);
+        char* str    = json_dumps(json, 0);
         json_decref(json);
 
         if (write(fd, str, strlen(str)) == -1)
         {
-            MXS_ERROR("Failed to dump admin users to '%s': %d, %s",
-                      tmppath.c_str(), errno, mxs_strerror(errno));
+            MXS_ERROR(
+                "Failed to dump admin users to '%s': %d, %s", tmppath.c_str(), errno, mxs_strerror(errno));
         }
         else if (rename(tmppath.c_str(), path.c_str()) == -1)
         {
-            MXS_ERROR("Failed to rename to '%s': %d, %s",
-                      path.c_str(), errno, mxs_strerror(errno));
+            MXS_ERROR("Failed to rename to '%s': %d, %s", path.c_str(), errno, mxs_strerror(errno));
         }
         else
         {
@@ -128,8 +124,8 @@ bool admin_dump_users(const Users* users, const char* fname)
     return rval;
 }
 
-const char* admin_add_user(Users* pusers, const char* fname, const char* uname, const char* password,
-                           user_account_type type)
+const char* admin_add_user(
+    Users* pusers, const char* fname, const char* uname, const char* password, user_account_type type)
 {
     if (!pusers->add(uname, password ? password : "", type))
     {
@@ -174,10 +170,9 @@ const char* admin_remove_user(Users* users, const char* fname, const char* uname
 
     return ADMIN_SUCCESS;
 }
-}
-static json_t* admin_user_json_data(const char* host,
-                                    const char* user,
-                                    enum user_account_type account)
+}  // namespace
+
+static json_t* admin_user_json_data(const char* host, const char* user, enum user_account_type account)
 {
     const char* type = CN_INET;
 
@@ -206,14 +201,14 @@ void user_types_to_json(Users* users, json_t* arr, const char* host)
 
     json_array_foreach(json, index, value)
     {
-        const char* user = json_string_value(json_object_get(value, CN_NAME));
+        const char* user               = json_string_value(json_object_get(value, CN_NAME));
         enum user_account_type account = json_to_account_type(json_object_get(value, CN_ACCOUNT));
         json_array_append_new(arr, admin_user_json_data(host, user, account));
     }
 
     json_decref(json);
 }
-}
+}  // namespace
 
 json_t* admin_user_to_json(const char* host, const char* user)
 {
@@ -233,7 +228,7 @@ json_t* admin_user_to_json(const char* host, const char* user)
 
 json_t* admin_all_users_to_json(const char* host)
 {
-    json_t* arr = json_array();
+    json_t* arr      = json_array();
     std::string path = MXS_JSON_API_USERS;
     path += CN_INET;
 
@@ -265,7 +260,8 @@ bool load_legacy_users(FILE* fp, const std::string& path, Users* output)
         else if (!feof(fp))
         {
             MXS_ERROR("Line length exceeds %d characters, possibly corrupted 'passwd' file in: %s",
-                      LINELEN, path.c_str());
+                LINELEN,
+                path.c_str());
             error = true;
             break;
         }
@@ -275,7 +271,7 @@ bool load_legacy_users(FILE* fp, const std::string& path, Users* output)
         if (colon)
         {
             // Inet case
-            *colon = 0;
+            *colon   = 0;
             password = colon + 1;
         }
         else
@@ -302,10 +298,10 @@ bool load_legacy_users(FILE* fp, const std::string& path, Users* output)
 bool load_rest_users()
 {
     const char* fname = INET_USERS_FILE_NAME;
-    Users& output = rest_users;
+    Users& output     = rest_users;
 
     const std::string path = mxb::string_printf("%s/%s", mxs::datadir(), fname);
-    const char* pathc = path.c_str();
+    const char* pathc      = path.c_str();
 
     FILE* fp = fopen(pathc, "r");
     if (fp)
@@ -326,7 +322,7 @@ bool load_rest_users()
                 /** Users loaded successfully, back up the original file and
                  * replace it with the new one */
                 const std::string old_users_bu = path + ".backup";
-                const char* old_users_buc = old_users_bu.c_str();
+                const char* old_users_buc      = old_users_bu.c_str();
 
                 if (rename(pathc, old_users_buc) != 0)
                 {
@@ -335,12 +331,16 @@ bool load_rest_users()
                 else if (admin_dump_users(&output, fname))
                 {
                     MXS_NOTICE("Upgraded users file at '%s' to new format, backup of the old file is stored "
-                               "in '%s'.", pathc, old_users_buc);
+                               "in '%s'.",
+                        pathc,
+                        old_users_buc);
                 }
                 else
                 {
                     MXS_ERROR("Failed to dump new users. Please rename the file '%s' manually to '%s' and "
-                              "restart MaxScale to attempt again.", old_users_buc, pathc);
+                              "restart MaxScale to attempt again.",
+                        old_users_buc,
+                        pathc);
                 }
             }
         }
@@ -350,7 +350,7 @@ bool load_rest_users()
     }
     return false;
 }
-}
+}  // namespace
 
 /**
  * Add insecure remote (network) basic user.
@@ -441,15 +441,15 @@ bool admin_user_is_inet_admin(const char* username, const char* password)
     return is_admin;
 }
 
-bool admin_user_is_pam_account(const std::string& username, const std::string& password,
-                               user_account_type min_acc_type)
+bool admin_user_is_pam_account(
+    const std::string& username, const std::string& password, user_account_type min_acc_type)
 {
     mxb_assert(min_acc_type == USER_ACCOUNT_BASIC || min_acc_type == USER_ACCOUNT_ADMIN);
     const auto& config = mxs::Config::get();
-    auto pam_ro_srv = config.admin_pam_ro_service;
-    auto pam_rw_srv = config.admin_pam_rw_service;
-    bool have_ro_srv = !pam_ro_srv.empty();
-    bool have_rw_srv = !pam_rw_srv.empty();
+    auto pam_ro_srv    = config.admin_pam_ro_service;
+    auto pam_rw_srv    = config.admin_pam_rw_service;
+    bool have_ro_srv   = !pam_ro_srv.empty();
+    bool have_rw_srv   = !pam_rw_srv.empty();
 
     if (!have_ro_srv && !have_rw_srv)
     {
@@ -464,7 +464,7 @@ bool admin_user_is_pam_account(const std::string& username, const std::string& p
         // Must be a readwrite user.
         if (have_rw_srv)
         {
-            pam_res = mxb::pam::authenticate(username, password, pam_rw_srv);
+            pam_res        = mxb::pam::authenticate(username, password, pam_rw_srv);
             auth_attempted = true;
         }
     }
@@ -475,7 +475,7 @@ bool admin_user_is_pam_account(const std::string& username, const std::string& p
         {
             // One PAM service is configured.
             auto pam_srv = have_ro_srv ? pam_ro_srv : pam_rw_srv;
-            pam_res = mxb::pam::authenticate(username, password, pam_srv);
+            pam_res      = mxb::pam::authenticate(username, password, pam_srv);
         }
         else
         {

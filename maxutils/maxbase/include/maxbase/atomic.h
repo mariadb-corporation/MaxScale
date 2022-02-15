@@ -43,9 +43,9 @@ MXB_BEGIN_DECLS
  * @param value         Value to be added
  * @return              The value of variable before the add occurred
  */
-int      atomic_add(int* variable, int value);
+int atomic_add(int* variable, int value);
 uint32_t atomic_add_uint32(uint32_t* variable, int32_t value);
-int64_t  atomic_add_int64(int64_t* variable, int64_t value);
+int64_t atomic_add_int64(int64_t* variable, int64_t value);
 uint64_t atomic_add_uint64(uint64_t* variable, int64_t value);
 
 /**
@@ -57,12 +57,12 @@ uint64_t atomic_add_uint64(uint64_t* variable, int64_t value);
  * @param variable      Pointer the the variable to load from
  * @return The stored value
  */
-int      atomic_load_int(const int* variable);
-int32_t  atomic_load_int32(const int32_t* variable);
-int64_t  atomic_load_int64(const int64_t* variable);
+int atomic_load_int(const int* variable);
+int32_t atomic_load_int32(const int32_t* variable);
+int64_t atomic_load_int64(const int64_t* variable);
 uint32_t atomic_load_uint32(const uint32_t* variable);
 uint64_t atomic_load_uint64(const uint64_t* variable);
-void*    atomic_load_ptr(void* const* variable);
+void* atomic_load_ptr(void* const* variable);
 
 /**
  * Implementation of an atomic store operation for the GCC environment.
@@ -98,7 +98,7 @@ static inline void atomic_synchronize()
 #ifdef MXB_USE_ATOMIC_BUILTINS
     __atomic_thread_fence(__ATOMIC_SEQ_CST);
 #else
-    __sync_synchronize();   /* Memory barrier. */
+    __sync_synchronize(); /* Memory barrier. */
 #endif
 
 #else

@@ -38,14 +38,10 @@ using ValueType = typename T::value_type;
  * @return Sum of member values
  */
 template<typename T, typename R>
-R sum(const T& values, R ValueType<T>::* member)
+R sum(const T& values, R ValueType<T>::*member)
 {
-    return std::accumulate(values.begin(),
-                           values.end(),
-                           R {},
-                           [&](R r, ValueType<T> t) {
-                               return r + t.*member;
-                           });
+    return std::accumulate(
+        values.begin(), values.end(), R {}, [&](R r, ValueType<T> t) { return r + t.*member; });
 }
 
 /**
@@ -57,7 +53,7 @@ R sum(const T& values, R ValueType<T>::* member)
  * @return Average of member values
  */
 template<typename T, typename R>
-R avg(const T& values, R ValueType<T>::* member)
+R avg(const T& values, R ValueType<T>::*member)
 {
     return values.empty() ? R {} : sum(values, member) / static_cast<R>(values.size());
 }
@@ -71,13 +67,10 @@ R avg(const T& values, R ValueType<T>::* member)
  * @return The minimum value of T::*member in `values`
  */
 template<typename T, typename R>
-R min(const T& values, R ValueType<T>::* member)
+R min(const T& values, R ValueType<T>::*member)
 {
-    auto it = std::min_element(values.begin(),
-                               values.end(),
-                               [&](ValueType<T> a, ValueType<T> b) {
-                                   return a.*member < b.*member;
-                               });
+    auto it = std::min_element(
+        values.begin(), values.end(), [&](ValueType<T> a, ValueType<T> b) { return a.*member < b.*member; });
     return it != values.end() ? (*it).*member : R {};
 }
 
@@ -90,13 +83,10 @@ R min(const T& values, R ValueType<T>::* member)
  * @return The maximum value of T::*member in `values`
  */
 template<typename T, typename R>
-R max(const T& values, R ValueType<T>::* member)
+R max(const T& values, R ValueType<T>::*member)
 {
-    auto it = std::max_element(values.begin(),
-                               values.end(),
-                               [&](ValueType<T> a, ValueType<T> b) {
-                                   return a.*member < b.*member;
-                               });
+    auto it = std::max_element(
+        values.begin(), values.end(), [&](ValueType<T> a, ValueType<T> b) { return a.*member < b.*member; });
     return it != values.end() ? (*it).*member : R {};
 }
 
@@ -112,23 +102,16 @@ R max(const T& values, R ValueType<T>::* member)
  * @return Accumulated container
  */
 template<typename T, typename R, typename Accum>
-R accumulate(const T& values, R ValueType<T>::* member, Accum accum)
+R accumulate(const T& values, R ValueType<T>::*member, Accum accum)
 {
-    return std::accumulate(values.begin(),
-                           values.end(),
-                           R {},
-                           [&](R r, const ValueType<T>& t) {
+    return std::accumulate(values.begin(), values.end(), R {}, [&](R r, const ValueType<T>& t) {
+        std::transform(
+            r.begin(), r.end(), (t.*member).begin(), r.begin(), [&](ValueType<R> a, ValueType<R> b) {
+                return accum(a, b);
+            });
 
-                               std::transform(r.begin(),
-                                              r.end(),
-                                              (t.*member).begin(),
-                                              r.begin(),
-                                              [&](ValueType<R> a, ValueType<R> b) {
-                                                  return accum(a, b);
-                                              });
-
-                               return r;
-                           });
+        return r;
+    });
 }
 
 /**
@@ -140,7 +123,7 @@ R accumulate(const T& values, R ValueType<T>::* member, Accum accum)
  * @return Sum of members
  */
 template<typename T, typename R>
-R sum_element(const T& values, R ValueType<T>::* member)
+R sum_element(const T& values, R ValueType<T>::*member)
 {
     return accumulate(values, member, std::plus<ValueType<R>>());
 }
@@ -154,14 +137,14 @@ R sum_element(const T& values, R ValueType<T>::* member)
  * @return Average of members
  */
 template<typename T, typename R>
-R avg_element(const T& values, R ValueType<T>::* member)
+R avg_element(const T& values, R ValueType<T>::*member)
 {
     auto result = sum_element(values, member);
 
     for (auto&& a : result)
     {
         // Using C-style cast to work around an uncrustify bug
-        a /= (ValueType<R>)(values.size());
+        a /= (ValueType<R>) (values.size());
     }
 
     return result;
@@ -176,13 +159,10 @@ R avg_element(const T& values, R ValueType<T>::* member)
  * @return Minimum of members
  */
 template<typename T, typename R>
-R min_element(const T& values, R ValueType<T>::* member)
+R min_element(const T& values, R ValueType<T>::*member)
 {
-    return accumulate(values,
-                      member,
-                      [](const ValueType<R>& a, const ValueType<R>& b) {
-                          return std::min(a, b);
-                      });
+    return accumulate(
+        values, member, [](const ValueType<R>& a, const ValueType<R>& b) { return std::min(a, b); });
 }
 
 /**
@@ -194,12 +174,9 @@ R min_element(const T& values, R ValueType<T>::* member)
  * @return Maximum of members
  */
 template<typename T, typename R>
-R max_element(const T& values, R ValueType<T>::* member)
+R max_element(const T& values, R ValueType<T>::*member)
 {
-    return accumulate(values,
-                      member,
-                      [](const ValueType<R>& a, const ValueType<R>& b) {
-                          return std::max(a, b);
-                      });
+    return accumulate(
+        values, member, [](const ValueType<R>& a, const ValueType<R>& b) { return std::max(a, b); });
 }
-}
+}  // namespace maxscale

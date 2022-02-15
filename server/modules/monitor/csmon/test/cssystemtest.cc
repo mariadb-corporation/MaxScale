@@ -30,15 +30,24 @@ class Exception : public std::runtime_error
     using std::runtime_error::runtime_error;
 };
 
-#define REQUIRE(condition, command)\
-    do { if (!(command)) { string s("Requirement '"); s+=condition;s+='"';\
-            throw Exception(s); } } while (false)
+#define REQUIRE(condition, command)    \
+    do                                 \
+    {                                  \
+        if (!(command))                \
+        {                              \
+            string s("Requirement '"); \
+            s += condition;            \
+            s += '"';                  \
+            throw Exception(s);        \
+        }                              \
+    }                                  \
+    while (false)
 
 namespace cs
 {
 const char ZCLUSTER_MODE[] = "cluster_mode";
-const char ZSERVICES[] = "services";
-const char ZTIMEOUT[]  = "timeout";
+const char ZSERVICES[]     = "services";
+const char ZTIMEOUT[]      = "timeout";
 
 namespace body
 {
@@ -46,22 +55,19 @@ string shutdown(int timeout)
 {
     stringstream ss;
     ss << "{"
-       << "\"" << ZTIMEOUT << "\": "
-       << timeout
-       << "}";
+       << "\"" << ZTIMEOUT << "\": " << timeout << "}";
 
     return ss.str();
 }
-}
-}
+}  // namespace body
+}  // namespace cs
 
 class MaxCtrl
 {
 public:
     MaxCtrl(const string& path)
         : m_path(path)
-    {
-    }
+    {}
 
     enum class Output
     {
@@ -97,7 +103,7 @@ public:
                 case '\n':
                     if (output == Output::TSV)
                     {
-                        mxb::trim(row); // Remove trailing tab
+                        mxb::trim(row);  // Remove trailing tab
                         rows.push_back(row);
                         row.clear();
                     }
@@ -126,10 +132,7 @@ public:
         return rows;
     }
 
-    vector<string> list_servers() const
-    {
-        return command("list servers", Output::TSV);
-    }
+    vector<string> list_servers() const { return command("list servers", Output::TSV); }
 
     static string get_status_from_server_row(const string& row)
     {
@@ -150,7 +153,7 @@ public:
 
     static int check_status_from_server_row(const string& row, const char* zExpectation)
     {
-        int rv = 1;
+        int rv      = 1;
         auto status = MaxCtrl::get_status_from_server_row(row);
         if (status != zExpectation)
         {
@@ -195,7 +198,7 @@ private:
 };
 
 const char ZBASE_PATH[] = "/cmapi/0.4.0/node";
-const char ZPORT[] = "8640";
+const char ZPORT[]      = "8640";
 
 unique_ptr<json_t> load_json(const string& json)
 {
@@ -213,22 +216,17 @@ unique_ptr<json_t> load_json(const string& json)
 class CSTest
 {
 public:
-    CSTest(const http::Config& config,
-           const string& address)
+    CSTest(const http::Config& config, const string& address)
         : m_config(config)
         , m_address(address)
-    {
-    }
+    {}
 
     static string get_url(const string& address, const string& command)
     {
         return string("https://") + address + ":" + ZPORT + ZBASE_PATH + "/" + command;
     }
 
-    string get_url(const string& command) const
-    {
-        return get_url(m_address, command);
-    }
+    string get_url(const string& command) const { return get_url(m_address, command); }
 
     http::Response get_status_response(const string& address) const
     {
@@ -237,10 +235,7 @@ public:
         return http::get(url, m_config);
     }
 
-    http::Response get_status_response() const
-    {
-        return get_status_response(m_address);
-    }
+    http::Response get_status_response() const { return get_status_response(m_address); }
 
     bool is_cluster_down(const string& address) const
     {
@@ -253,10 +248,7 @@ public:
         return json_array_size(pServices) == 0;
     }
 
-    bool is_cluster_down() const
-    {
-        return is_cluster_down(m_address);
-    }
+    bool is_cluster_down() const { return is_cluster_down(m_address); }
 
     enum class Mode
     {
@@ -266,9 +258,9 @@ public:
 
     Mode get_mode(const string& address) const
     {
-        auto response = get_status_response(address);
-        auto sJson = load_json(response.body);
-        json_t* pCluster_mode = json_object_get(sJson.get(), cs::ZCLUSTER_MODE);
+        auto response             = get_status_response(address);
+        auto sJson                = load_json(response.body);
+        json_t* pCluster_mode     = json_object_get(sJson.get(), cs::ZCLUSTER_MODE);
         const char* zCluster_mode = json_string_value(pCluster_mode);
 
         if (strcmp(zCluster_mode, "readonly") == 0)
@@ -287,17 +279,14 @@ public:
         return Mode::READONLY;
     }
 
-    Mode get_mode() const
-    {
-        return get_mode(m_address);
-    }
+    Mode get_mode() const { return get_mode(m_address); }
 
     bool shutdown(const string& address) const
     {
-        auto url = get_url(address, "shutdown");
+        auto url  = get_url(address, "shutdown");
         auto body = cs::body::shutdown(25);
 
-        auto config = m_config;
+        auto config    = m_config;
         config.timeout = std::chrono::seconds(30);
 
         auto response = http::put(url, body, m_config);
@@ -305,10 +294,7 @@ public:
         return response.is_success();
     }
 
-    bool shutdown() const
-    {
-        return shutdown(m_address);
-    }
+    bool shutdown() const { return shutdown(m_address); }
 
     bool start(const string& address) const
     {
@@ -319,15 +305,12 @@ public:
         return response.is_success();
     }
 
-    bool start() const
-    {
-        return start(m_address);
-    }
+    bool start() const { return start(m_address); }
 
 
 private:
     http::Config m_config;
-    string       m_address;
+    string m_address;
 };
 
 namespace test
@@ -366,22 +349,22 @@ int can_start_and_shutdown_cluster(CSTest& cs, MaxCtrl& maxctrl)
 int compare_returned_statuses(CSTest& cs, MaxCtrl& maxctrl)
 {
     auto response = cs.get_status_response();
-    auto rows = maxctrl.command("call command csmon status CSMonitor", MaxCtrl::Output::RAW);
+    auto rows     = maxctrl.command("call command csmon status CSMonitor", MaxCtrl::Output::RAW);
     REQUIRE("status returns 1 row", rows.size() == 1);
 
     auto sStatus1 = load_json(response.body);
-    json_object_del(sStatus1.get(), "timestamp"); // The timestamp will be different, so we drop it.
-    json_object_del(sStatus1.get(), "uptime"); // The uptime will be different, so we drop it.
+    json_object_del(sStatus1.get(), "timestamp");  // The timestamp will be different, so we drop it.
+    json_object_del(sStatus1.get(), "uptime");     // The uptime will be different, so we drop it.
 
-    auto sResult = load_json(rows.front());
-    auto pMeta = json_object_get(sResult.get(), "meta");
+    auto sResult  = load_json(rows.front());
+    auto pMeta    = json_object_get(sResult.get(), "meta");
     auto pServers = json_object_get(pMeta, "servers");
     REQUIRE("Result from one server returned.", json_array_size(pServers) == 1);
-    auto pServer = json_array_get(pServers, 0);
+    auto pServer  = json_array_get(pServers, 0);
     auto pStatus2 = json_object_get(pServer, "result");
-    json_object_del(pStatus2, "timestamp");  // The timestamp will be different, so we drop it.
-    json_object_del(pStatus2, "csmon_trx_active"); // Only MaxScale return object may have this.
-    json_object_del(pStatus2, "uptime"); // The uptime will be different, so we drop it.
+    json_object_del(pStatus2, "timestamp");         // The timestamp will be different, so we drop it.
+    json_object_del(pStatus2, "csmon_trx_active");  // Only MaxScale return object may have this.
+    json_object_del(pStatus2, "uptime");            // The uptime will be different, so we drop it.
 
     bool rv = json_equal(sStatus1.get(), pStatus2) == 1 ? 0 : 1;
 
@@ -516,7 +499,7 @@ int detects_when_cluster_goes_down(CSTest& cs, MaxCtrl& maxctrl)
     return rv;
 }
 
-}
+}  // namespace test
 
 void print_usage_and_exit(const char* zProgram)
 {
@@ -533,12 +516,12 @@ int main(int argc, char* argv[])
 
     int rv = 0;
 
-    string maxctrl_path = argv[1];
-    string api_key = argv[2];
+    string maxctrl_path   = argv[1];
+    string api_key        = argv[2];
     string server_address = argv[3];
 
     http::Config config;
-    config.headers["X-API-KEY"] = api_key;
+    config.headers["X-API-KEY"]    = api_key;
     config.headers["Content-Type"] = "application/json";
 
     // The CS daemon uses a self-signed certificate.

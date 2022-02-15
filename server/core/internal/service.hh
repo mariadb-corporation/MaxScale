@@ -34,16 +34,16 @@ class Listener;
  */
 
 constexpr char CN_CONNECTION_KEEPALIVE[] = "connection_keepalive";
-constexpr char CN_CONNECTION_TIMEOUT[] = "connection_timeout";
-constexpr char CN_NET_WRITE_TIMEOUT[] = "net_write_timeout";
+constexpr char CN_CONNECTION_TIMEOUT[]   = "connection_timeout";
+constexpr char CN_NET_WRITE_TIMEOUT[]    = "net_write_timeout";
 
 // The internal service representation
 class Service : public SERVICE
 {
 public:
-    using FilterList = std::vector<SFilterDef>;
+    using FilterList      = std::vector<SFilterDef>;
     using SAccountManager = std::unique_ptr<mxs::UserAccountManager>;
-    using SAccountCache = std::unique_ptr<mxs::UserAccountCache>;
+    using SAccountCache   = std::unique_ptr<mxs::UserAccountCache>;
 
     /**
      * Find a service by name
@@ -129,10 +129,7 @@ public:
      */
     void remove_filter(SFilterDef filters);
 
-    const std::vector<mxs::Target*>& get_children() const override
-    {
-        return m_data->targets;
-    }
+    const std::vector<mxs::Target*>& get_children() const override { return m_data->targets; }
 
     uint64_t status() const override;
 
@@ -152,10 +149,7 @@ public:
     mutable std::mutex lock;
 
     // Get the current cluster
-    mxs::Monitor* cluster() const
-    {
-        return m_monitor;
-    }
+    mxs::Monitor* cluster() const { return m_monitor; }
 
     // Set the current cluster without updating targets
     void set_cluster(mxs::Monitor* monitor);
@@ -174,19 +168,13 @@ public:
 
     std::unique_ptr<mxs::Endpoint> get_connection(mxs::Component* up, MXS_SESSION* session) override;
 
-    int64_t rank() const override
-    {
-        return m_config->rank;
-    }
+    int64_t rank() const override { return m_config->rank; }
 
-    int64_t  replication_lag() const override;
+    int64_t replication_lag() const override;
     uint64_t gtid_pos(uint32_t domain) const override;
-    int64_t  ping() const override;
+    int64_t ping() const override;
 
-    uint64_t capabilities() const override
-    {
-        return m_capabilities | m_data->target_capabilities;
-    }
+    uint64_t capabilities() const override { return m_capabilities | m_data->target_capabilities; }
 
     // Adds a routing target to this service
     void add_target(SERVER* target);
@@ -201,20 +189,11 @@ public:
         return std::find(m_data->targets.begin(), m_data->targets.end(), target) != m_data->targets.end();
     }
 
-    const mxs::WorkerGlobal<Config>& config() const override
-    {
-        return m_config;
-    }
+    const mxs::WorkerGlobal<Config>& config() const override { return m_config; }
 
-    std::vector<SERVER*> reachable_servers() const final
-    {
-        return m_data->servers;
-    }
+    std::vector<SERVER*> reachable_servers() const final { return m_data->servers; }
 
-    std::vector<Service*> get_parents()
-    {
-        return m_parents;
-    }
+    std::vector<Service*> get_parents() { return m_parents; }
 
     /**
      * Check whether a service can be destroyed
@@ -223,29 +202,17 @@ public:
      */
     bool can_be_destroyed() const;
 
-    const mxs::ConfigParameters& params() const override
-    {
-        return m_params;
-    }
+    const mxs::ConfigParameters& params() const override { return m_params; }
 
-    void remove_parameter(const std::string& key)
-    {
-        m_params.remove(key);
-    }
+    void remove_parameter(const std::string& key) { m_params.remove(key); }
 
-    void set_parameter(const std::string& key, const std::string& value)
-    {
-        m_params.set(key, value);
-    }
+    void set_parameter(const std::string& key, const std::string& value) { m_params.set(key, value); }
 
     void incref();
 
     void decref();
 
-    bool active() const override
-    {
-        return m_active;
-    }
+    bool active() const override { return m_active; }
 
     const mxs::UserAccountCache* user_account_cache() const override;
 
@@ -269,10 +236,9 @@ public:
     void unmark_for_wakeup(mxs::ClientConnection* session) override;
 
 private:
-
     struct Data
     {
-        FilterList filters;     // Ordered list of filters
+        FilterList filters;  // Ordered list of filters
 
         // List of servers this service reaches via its direct descendants. All servers are leaf nodes but not
         // all leaf nodes are servers. As the list of servers is relatively often required and the
@@ -287,12 +253,12 @@ private:
         uint64_t target_capabilities {0};
     };
 
-    mxs::WorkerGlobal<Data>   m_data;
+    mxs::WorkerGlobal<Data> m_data;
     mxs::WorkerGlobal<Config> m_config;
-    std::atomic<int64_t>      m_refcount {1};
-    bool                      m_active {true};
-    mxs::Monitor*             m_monitor {nullptr};  /**< A possibly associated monitor */
-    std::vector<Service*>     m_parents;
+    std::atomic<int64_t> m_refcount {1};
+    bool m_active {true};
+    mxs::Monitor* m_monitor {nullptr}; /**< A possibly associated monitor */
+    std::vector<Service*> m_parents;
 
     mxs::ConfigParameters m_params;
 
@@ -310,10 +276,7 @@ private:
 
     void propagate_target_update();
 
-    void add_parent(Service* parent)
-    {
-        m_parents.push_back(parent);
-    }
+    void add_parent(Service* parent) { m_parents.push_back(parent); }
 
     void remove_parent(Service* parent)
     {
@@ -353,45 +316,42 @@ public:
 
     int32_t clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
-    bool handleError(mxs::ErrorType type, GWBUF* error, mxs::Endpoint* down,
-                     const mxs::Reply& reply) override;
+    bool handleError(
+        mxs::ErrorType type, GWBUF* error, mxs::Endpoint* down, const mxs::Reply& reply) override;
 
 private:
-
     // Class that holds the session specific filter data (TODO: Remove duplicate from session.cc)
     class SessionFilter
     {
     public:
-
         SessionFilter(const SFilterDef& f)
             : filter(f)
             , instance(filter->filter)
             , session(nullptr)
-        {
-        }
+        {}
 
-        SFilterDef          filter;
-        MXS_FILTER*         instance;
+        SFilterDef filter;
+        MXS_FILTER* instance;
         MXS_FILTER_SESSION* session;
-        mxs::Upstream       up;
-        mxs::Downstream     down;
+        mxs::Upstream up;
+        mxs::Downstream down;
     };
 
     friend class Service;
 
-    static int32_t upstream_function(MXS_FILTER*, MXS_FILTER_SESSION*, GWBUF*,
-                                     const mxs::ReplyRoute&, const mxs::Reply&);
+    static int32_t upstream_function(
+        MXS_FILTER*, MXS_FILTER_SESSION*, GWBUF*, const mxs::ReplyRoute&, const mxs::Reply&);
     int32_t send_upstream(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply&);
-    void    set_endpoints(std::vector<std::unique_ptr<mxs::Endpoint>> down);
+    void set_endpoints(std::vector<std::unique_ptr<mxs::Endpoint>> down);
 
-    bool                m_open {false};
-    mxs::Component*     m_up;       // The upstream where replies are routed to
-    MXS_SESSION*        m_session;  // The owning session
-    Service*            m_service;  // The service where the connection points to
+    bool m_open {false};
+    mxs::Component* m_up;    // The upstream where replies are routed to
+    MXS_SESSION* m_session;  // The owning session
+    Service* m_service;      // The service where the connection points to
     MXS_ROUTER_SESSION* m_router_session {nullptr};
 
     mxs::Downstream m_head;
-    mxs::Upstream   m_tail;
+    mxs::Upstream m_tail;
 
     std::vector<SessionFilter> m_filters;
 
@@ -488,9 +448,8 @@ bool serviceHasBackend(Service* service, SERVER* server);
  *
  * @return True if service has the listener
  */
-std::shared_ptr<Listener>
-service_find_listener(Service* service, const std::string& socket, const std::string& address,
-                      unsigned short port);
+std::shared_ptr<Listener> service_find_listener(
+    Service* service, const std::string& socket, const std::string& address, unsigned short port);
 
 /**
  * @brief Check if a MaxScale service listens on a port
@@ -585,8 +544,8 @@ json_t* service_relations_to_server(const SERVER* server, const std::string& hos
  *
  * @return Array of service links
  */
-json_t* service_relations_to_filter(const SFilterDef& filter, const std::string& host,
-                                    const std::string& self);
+json_t* service_relations_to_filter(
+    const SFilterDef& filter, const std::string& host, const std::string& self);
 
 /**
  * @brief Get links to services that relate to a monitor
@@ -597,8 +556,8 @@ json_t* service_relations_to_filter(const SFilterDef& filter, const std::string&
  *
  * @return Array of service links or nullptr if no service uses the monitor
  */
-json_t* service_relations_to_monitor(const mxs::Monitor* monitor, const std::string& host,
-                                     const std::string& self);
+json_t* service_relations_to_monitor(
+    const mxs::Monitor* monitor, const std::string& host, const std::string& self);
 
 /**
  * @brief Add server to all services associated with a monitor

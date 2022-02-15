@@ -12,10 +12,10 @@
  */
 
 // To ensure that ss_info_assert asserts also when builing in non-debug mode.
-#if !defined (SS_DEBUG)
+#if !defined(SS_DEBUG)
 #define SS_DEBUG
 #endif
-#if defined (NDEBUG)
+#if defined(NDEBUG)
 #undef NDEBUG
 #endif
 #include <stdio.h>
@@ -32,6 +32,7 @@ namespace
 
 mxs::ConfigParameters empty;
 }
+
 /**
  * test1    Filter creation, finding and deletion
  *
@@ -60,7 +61,6 @@ static int test1()
     return 0;
 }
 
-
 /**
  * Passive tests for filter_add_option and filter_add_parameter
  *
@@ -82,7 +82,6 @@ static int test2()
     return 0;
 }
 
-
 /**
  * test3    Filter creation, finding and deletion soak test
  *
@@ -98,9 +97,7 @@ static int test3()
         sprintf(name, "filter%d", i);
         if ((f1 = filter_alloc(name, "qlafilter", &empty)) == NULL)
         {
-            fprintf(stderr,
-                    "filter_alloc: test 3 failed with %s.\n",
-                    name);
+            fprintf(stderr, "filter_alloc: test 3 failed with %s.\n", name);
             return 1;
         }
     }
@@ -124,8 +121,7 @@ static int test3()
         filter_free(f1);
         if ((f1 = filter_find(name)))
         {
-            fprintf(stderr,
-                    "filter_find: test 3 failed - found deleted filter.\n");
+            fprintf(stderr, "filter_find: test 3 failed - found deleted filter.\n");
             return 1;
         }
     }

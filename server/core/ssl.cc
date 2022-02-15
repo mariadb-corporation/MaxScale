@@ -16,20 +16,17 @@
 #include <maxscale/ssl.hh>
 #include <maxscale/routingworker.hh>
 
-const MXS_ENUM_VALUE ssl_version_values[] =
-{
-    {"MAX",    mxb::ssl_version::SSL_TLS_MAX},
-    {"TLSv10", mxb::ssl_version::TLS10      },
-    {"TLSv11", mxb::ssl_version::TLS11      },
-    {"TLSv12", mxb::ssl_version::TLS12      },
-    {"TLSv13", mxb::ssl_version::TLS13      },
-    {NULL}
-};
+const MXS_ENUM_VALUE ssl_version_values[] = {{"MAX", mxb::ssl_version::SSL_TLS_MAX},
+    {"TLSv10", mxb::ssl_version::TLS10},
+    {"TLSv11", mxb::ssl_version::TLS11},
+    {"TLSv12", mxb::ssl_version::TLS12},
+    {"TLSv13", mxb::ssl_version::TLS13},
+    {NULL}};
 
 namespace
 {
 
-static RSA* rsa_512 = NULL;
+static RSA* rsa_512  = NULL;
 static RSA* rsa_1024 = NULL;
 
 static RSA* create_rsa(int bits)
@@ -68,7 +65,7 @@ static RSA* tmp_rsa_callback(SSL* s, int is_export, int keylength)
         {
             /* generate on the fly, should not happen in this example */
             rsa_tmp = create_rsa(keylength);
-            rsa_512 = rsa_tmp;      /* Remember for later reuse */
+            rsa_512 = rsa_tmp; /* Remember for later reuse */
         }
         break;
 
@@ -87,7 +84,7 @@ static RSA* tmp_rsa_callback(SSL* s, int is_export, int keylength)
         }
         else
         {
-            rsa_tmp = rsa_512;      /* Use at least a shorter key */
+            rsa_tmp = rsa_512; /* Use at least a shorter key */
         }
     }
     return rsa_tmp;
@@ -97,7 +94,7 @@ static thread_local std::string ssl_errbuf;
 
 static const char* get_ssl_errors()
 {
-    char errbuf[200];   // Enough space according to OpenSSL documentation
+    char errbuf[200];  // Enough space according to OpenSSL documentation
     ssl_errbuf.clear();
 
     for (int err = ERR_get_error(); err; err = ERR_get_error())
@@ -111,14 +108,14 @@ static const char* get_ssl_errors()
 
     return ssl_errbuf.c_str();
 }
-}
+}  // namespace
 
 namespace maxscale
 {
 
 SSLConfig::SSLConfig(const mxs::ConfigParameters& params)
-    : mxb::SSLConfig(params.get_string(CN_SSL_KEY), params.get_string(CN_SSL_CERT),
-                     params.get_string(CN_SSL_CA_CERT))
+    : mxb::SSLConfig(
+        params.get_string(CN_SSL_KEY), params.get_string(CN_SSL_CERT), params.get_string(CN_SSL_CA_CERT))
 {
     if (params.contains(CN_SSL_CRL))
     {
@@ -126,7 +123,7 @@ SSLConfig::SSLConfig(const mxs::ConfigParameters& params)
     }
     if (params.contains(CN_SSL_VERSION))
     {
-        version = (mxb::ssl_version::Version)params.get_enum(CN_SSL_VERSION, ssl_version_values);
+        version = (mxb::ssl_version::Version) params.get_enum(CN_SSL_VERSION, ssl_version_values);
     }
     if (params.contains(CN_SSL_CERT_VERIFY_DEPTH))
     {
@@ -149,7 +146,7 @@ SSLConfig::SSLConfig(const mxs::ConfigParameters& params)
 // static
 std::unique_ptr<SSLContext> SSLContext::create(const mxs::ConfigParameters& params)
 {
-    std::unique_ptr<SSLContext> rval(new(std::nothrow) SSLContext());
+    std::unique_ptr<SSLContext> rval(new (std::nothrow) SSLContext());
     if (rval)
     {
         if (!rval->configure(params))
@@ -166,7 +163,7 @@ bool SSLContext::init()
     {
     case mxb::ssl_version::TLS10:
 #ifndef OPENSSL_1_1
-        m_method = (SSL_METHOD*)TLSv1_method();
+        m_method = (SSL_METHOD*) TLSv1_method();
 #else
         MXS_ERROR("TLSv1.0 is not supported on this system.");
         return false;
@@ -175,8 +172,8 @@ bool SSLContext::init()
 
 
     case mxb::ssl_version::TLS11:
-#if defined (OPENSSL_1_0) || defined (OPENSSL_1_1)
-        m_method = (SSL_METHOD*)TLSv1_1_method();
+#if defined(OPENSSL_1_0) || defined(OPENSSL_1_1)
+        m_method = (SSL_METHOD*) TLSv1_1_method();
 #else
         MXS_ERROR("TLSv1.1 is not supported on this system.");
         return false;
@@ -184,8 +181,8 @@ bool SSLContext::init()
         break;
 
     case mxb::ssl_version::TLS12:
-#if defined (OPENSSL_1_0) || defined (OPENSSL_1_1)
-        m_method = (SSL_METHOD*)TLSv1_2_method();
+#if defined(OPENSSL_1_0) || defined(OPENSSL_1_1)
+        m_method = (SSL_METHOD*) TLSv1_2_method();
 #else
         MXS_ERROR("TLSv1.2 is not supported on this system.");
         return false;
@@ -194,7 +191,7 @@ bool SSLContext::init()
 
     case mxb::ssl_version::TLS13:
 #ifdef OPENSSL_1_1
-        m_method = (SSL_METHOD*)TLS_method();
+        m_method = (SSL_METHOD*) TLS_method();
 #else
         MXS_ERROR("TLSv1.3 is not supported on this system.");
         return false;
@@ -205,11 +202,11 @@ bool SSLContext::init()
     case mxb::ssl_version::SSL_MAX:
     case mxb::ssl_version::TLS_MAX:
     case mxb::ssl_version::SSL_TLS_MAX:
-        m_method = (SSL_METHOD*)SSLv23_method();
+        m_method = (SSL_METHOD*) SSLv23_method();
         break;
 
     default:
-        m_method = (SSL_METHOD*)SSLv23_method();
+        m_method = (SSL_METHOD*) SSLv23_method();
         break;
     }
 
@@ -365,7 +362,7 @@ SSLContext::SSLContext(SSLContext&& rhs) noexcept
     , m_cfg(std::move(rhs.m_cfg))
 {
     rhs.m_method = nullptr;
-    rhs.m_ctx = nullptr;
+    rhs.m_ctx    = nullptr;
 }
 
 SSLContext& SSLContext::operator=(SSLContext&& rhs) noexcept
@@ -378,9 +375,8 @@ SSLContext& SSLContext::operator=(SSLContext&& rhs) noexcept
 }
 
 SSLProvider::SSLProvider(std::unique_ptr<mxs::SSLContext> context)
-    : m_context{std::move(context)}
-{
-}
+    : m_context {std::move(context)}
+{}
 
 mxs::SSLContext* SSLProvider::context() const
 {
@@ -415,8 +411,8 @@ std::string SSLConfig::to_string() const
     return ss.str();
 }
 
-bool SSLContext::read_configuration(const std::string& name, const mxs::ConfigParameters& params,
-                                    bool require_cert)
+bool SSLContext::read_configuration(
+    const std::string& name, const mxs::ConfigParameters& params, bool require_cert)
 {
     bool ok = true;
     // The enum values convert to bool
@@ -432,7 +428,7 @@ bool SSLContext::read_configuration(const std::string& name, const mxs::ConfigPa
                 MXS_ERROR("Server certificate missing for listener '%s'."
                           "Please provide the path to the server certificate by adding "
                           "the ssl_cert=<path> parameter",
-                          namez);
+                    namez);
                 ok = false;
             }
 
@@ -441,7 +437,7 @@ bool SSLContext::read_configuration(const std::string& name, const mxs::ConfigPa
                 MXS_ERROR("Server private key missing for listener '%s'. "
                           "Please provide the path to the server certificate key by "
                           "adding the ssl_key=<path> parameter",
-                          namez);
+                    namez);
                 ok = false;
             }
         }
@@ -461,7 +457,7 @@ bool SSLContext::read_configuration(const std::string& name, const mxs::ConfigPa
 
 void SSLContext::reset()
 {
-    m_cfg = SSLConfig();
+    m_cfg    = SSLConfig();
     m_method = nullptr;
     SSL_CTX_free(m_ctx);
     m_ctx = nullptr;
@@ -472,10 +468,10 @@ bool SSLContext::configure(const mxs::ConfigParameters& params)
     reset();
     mxb_assert(params.get_string(CN_SSL_CA_CERT).empty()
                || access(params.get_string(CN_SSL_CA_CERT).c_str(), F_OK) == 0);
-    mxb_assert(params.get_string(CN_SSL_CERT).empty()
-               || access(params.get_string(CN_SSL_CERT).c_str(), F_OK) == 0);
-    mxb_assert(params.get_string(CN_SSL_KEY).empty()
-               || access(params.get_string(CN_SSL_KEY).c_str(), F_OK) == 0);
+    mxb_assert(
+        params.get_string(CN_SSL_CERT).empty() || access(params.get_string(CN_SSL_CERT).c_str(), F_OK) == 0);
+    mxb_assert(
+        params.get_string(CN_SSL_KEY).empty() || access(params.get_string(CN_SSL_KEY).c_str(), F_OK) == 0);
 
     m_cfg = SSLConfig(params);
 
@@ -489,25 +485,22 @@ bool SSLContext::configure(const mxs::ConfigParameters& params)
 
     return init();
 }
-}
+}  // namespace maxscale
 
 const MXS_ENUM_VALUE* ssl_setting_values()
 {
     // Values for the `ssl` parameter. These are plain boolean types but for legacy
     // reasons the required and disabled keywords need to be allowed.
-    static const MXS_ENUM_VALUE ssl_values[] =
-    {
-        {"required", 1},
-        {"true",     1},
-        {"yes",      1},
-        {"on",       1},
-        {"1",        1},
+    static const MXS_ENUM_VALUE ssl_values[] = {{"required", 1},
+        {"true", 1},
+        {"yes", 1},
+        {"on", 1},
+        {"1", 1},
         {"disabled", 0},
-        {"false",    0},
-        {"no",       0},
-        {"off",      0},
-        {"0",        0},
-        {NULL}
-    };
+        {"false", 0},
+        {"no", 0},
+        {"off", 0},
+        {"0", 0},
+        {NULL}};
     return ssl_values;
 }

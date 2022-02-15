@@ -26,10 +26,7 @@ namespace
 template<typename T>
 int test_checksums()
 {
-    uint8_t data[] =
-    {
-        'h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd', '!'
-    };
+    uint8_t data[] = {'h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd', '!'};
 
     GWBUF* d1 = gwbuf_alloc_and_load(sizeof(data), data);
     GWBUF* d2 = gwbuf_alloc_and_load(sizeof(data), data);
@@ -72,7 +69,7 @@ int test_checksums()
 
     return 0;
 }
-}
+}  // namespace
 
 int main(int argc, char* argv[])
 {

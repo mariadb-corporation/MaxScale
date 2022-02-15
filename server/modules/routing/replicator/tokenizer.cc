@@ -16,14 +16,16 @@
 #include <cstring>
 #include <unordered_map>
 
-#define MAKE_VALUE(a) { #a, a}
+#define MAKE_VALUE(a) \
+    {                 \
+#a, a         \
+    }
 
 namespace tok
 {
 
 // SQL keyword to enum value map, must stay in sync with the enum values defined in tokenizer.hh
-const std::unordered_map<std::string, Type> Tokenizer::s_tokens =
-{
+const std::unordered_map<std::string, Type> Tokenizer::s_tokens = {
     MAKE_VALUE(ADD),
     MAKE_VALUE(AFTER),
     MAKE_VALUE(ALTER),
@@ -72,7 +74,7 @@ const std::unordered_map<std::string, Type> Tokenizer::s_tokens =
     MAKE_VALUE(WITHOUT),
     MAKE_VALUE(ZEROFILL),
 
-    {"NULL",                   SQLNULL},
+    {"NULL", SQLNULL},
 };
 
 std::string Tokenizer::Token::to_string() const
@@ -196,7 +198,7 @@ Tokenizer::Chain Tokenizer::tokenize(const char* sql, Sanitizer sanitizer)
             }
             else
             {
-                return rval;    // Abort tokenization
+                return rval;  // Abort tokenization
             }
 
             break;
@@ -211,7 +213,7 @@ Tokenizer::Chain Tokenizer::tokenize(const char* sql, Sanitizer sanitizer)
             }
             else
             {
-                return rval;    // Abort tokenization
+                return rval;  // Abort tokenization
             }
             break;
 
@@ -231,7 +233,7 @@ Tokenizer::Chain Tokenizer::tokenize(const char* sql, Sanitizer sanitizer)
                 }
 
                 Type type = ID;
-                auto it = s_tokens.find(buf);
+                auto it   = s_tokens.find(buf);
 
                 if (it != s_tokens.end())
                 {
@@ -252,4 +254,4 @@ bool operator==(const Tokenizer::Token& lhs, const Tokenizer::Token& rhs)
 {
     return lhs.type() == rhs.type();
 }
-}
+}  // namespace tok

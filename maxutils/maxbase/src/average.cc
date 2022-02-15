@@ -30,8 +30,7 @@ void CumulativeAverage::add(double ave, long num_samples)
     }
     else
     {
-        m_ave = (m_ave * (m_num_samples - num_samples)
-                 + ave * num_samples) / m_num_samples;
+        m_ave = (m_ave * (m_num_samples - num_samples) + ave * num_samples) / m_num_samples;
     }
 }
 
@@ -58,7 +57,7 @@ CumulativeAverage operator+(const CumulativeAverage& lhs, const CumulativeAverag
 
 void CumulativeAverage::reset()
 {
-    m_ave = 0;
+    m_ave         = 0;
     m_num_samples = 0;
 }
 
@@ -67,19 +66,17 @@ void CumulativeAverage::reset()
 //
 
 EMAverage::EMAverage(double min_alpha, double max_alpha, long sample_max)
-    : m_min_alpha{min_alpha}
-    , m_max_alpha{max_alpha}
-    , m_sample_max{sample_max}
-{
-}
+    : m_min_alpha {min_alpha}
+    , m_max_alpha {max_alpha}
+    , m_sample_max {sample_max}
+{}
 
 void EMAverage::add(double ave, long num_samples)
 {
     // Give more weight to initial samples.
     long sample_max = std::min(m_num_samples ? m_num_samples : 1, m_sample_max);
 
-    double alpha = m_min_alpha + m_max_alpha
-        * std::min(double(num_samples) / sample_max, 1.0);
+    double alpha = m_min_alpha + m_max_alpha * std::min(double(num_samples) / sample_max, 1.0);
 
     m_num_samples += num_samples;
     if (m_num_samples == num_samples)
@@ -119,16 +116,14 @@ long EMAverage::sample_max() const
 
 void EMAverage::reset()
 {
-    m_ave = 0;
+    m_ave         = 0;
     m_num_samples = 0;
 }
 
 //
 // Average, Average1, AverageN
 //
-Average::~Average()
-{
-}
+Average::~Average() {}
 
 bool Average1::add_value(uint8_t value)
 {
@@ -180,7 +175,7 @@ bool AverageN::add_value(uint8_t value)
     }
 
     *m_i = value;
-    m_sum += *m_i;          // Update the sum of all values.
+    m_sum += *m_i;  // Update the sum of all values.
 
     m_i = next(m_i);
 
@@ -282,20 +277,20 @@ void AverageN::resize(size_t n)
 
     if (m_nValues > 0)
     {
-        int nSkip = m_nValues - n; // We skip the oldest values.
+        int nSkip = m_nValues - n;  // We skip the oldest values.
 
         if (nSkip < 0)
         {
             nSkip = 0;
         }
 
-        int i = ((m_i - m_begin) + nSkip) % m_nValues;
+        int i   = ((m_i - m_begin) + nSkip) % m_nValues;
         auto it = buffer.begin();
 
         while (nValues)
         {
             *it++ = *(m_begin + i);
-            i = (i + 1) % m_nValues;
+            i     = (i + 1) % m_nValues;
             --nValues;
         }
     }
@@ -303,10 +298,10 @@ void AverageN::resize(size_t n)
     // Now buffer contains the relevant values.
 
     m_buffer.resize(n);
-    m_begin = m_buffer.begin();
-    m_end = m_buffer.end();
-    m_i = m_begin;
-    m_sum = 0;
+    m_begin   = m_buffer.begin();
+    m_end     = m_buffer.end();
+    m_i       = m_begin;
+    m_sum     = 0;
     m_nValues = 0;
 
     set_value(0);
@@ -317,4 +312,4 @@ void AverageN::resize(size_t n)
     }
 }
 
-}   // maxbase
+}  // namespace maxbase

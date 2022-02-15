@@ -18,8 +18,8 @@
 class CommentConfig : public mxs::config::Configuration
 {
 public:
-    CommentConfig(const CommentConfig&) = delete;
-    CommentConfig& operator = (const CommentConfig&) = delete;
+    CommentConfig(const CommentConfig&)            = delete;
+    CommentConfig& operator=(const CommentConfig&) = delete;
 
     CommentConfig(const char* zName);
 

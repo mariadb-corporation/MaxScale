@@ -26,20 +26,17 @@ namespace config = mxs::config;
 
 config::Specification specification(MXS_MODULE_NAME, config::Specification::FILTER);
 
-config::ParamCount max_resultset_rows(
-    &specification,
+config::ParamCount max_resultset_rows(&specification,
     "max_resultset_rows",
     "Specifies the maximum number of rows a resultset can have in order to be returned to the user.",
     std::numeric_limits<uint32_t>::max());
 
-config::ParamSize max_resultset_size(
-    &specification,
+config::ParamSize max_resultset_size(&specification,
     "max_resultset_size",
     "Specifies the maximum size a resultset can have in order to be sent to the client.",
     65536);
 
-config::ParamInteger debug(
-    &specification,
+config::ParamInteger debug(&specification,
     "debug",
     "An integer value, using which the level of debug logging made by the Maxrows "
     "filter can be controlled.",
@@ -47,19 +44,16 @@ config::ParamInteger debug(
     0,
     3);
 
-config::ParamEnum<MaxRowsConfig::Mode> max_resultset_return(
-    &specification,
+config::ParamEnum<MaxRowsConfig::Mode> max_resultset_return(&specification,
     "max_resultset_return",
     "Specifies what the filter sends to the client when the rows or size limit "
     "is hit; an empty packet, an error packet or an ok packet.",
-    {
-        { MaxRowsConfig::Mode::EMPTY, "empty" },
-        { MaxRowsConfig::Mode::ERR,   "error" },
-        { MaxRowsConfig::Mode::OK,    "ok" }
-    },
+    {{MaxRowsConfig::Mode::EMPTY, "empty"},
+        {MaxRowsConfig::Mode::ERR, "error"},
+        {MaxRowsConfig::Mode::OK, "ok"}},
     MaxRowsConfig::Mode::EMPTY);
-}
-}
+}  // namespace maxrows
+}  // namespace
 
 MaxRowsConfig::MaxRowsConfig(const char* zName)
     : mxs::config::Configuration(zName, &maxrows::specification)
@@ -85,8 +79,8 @@ int MaxRowsSession::clientReply(GWBUF* data, const mxs::ReplyRoute& down, const 
         // The resultset is stored in an internal buffer until we know whether to send it or to discard it
         m_buffer.append(buffer.release());
 
-        if (reply.rows_read() > (uint64_t)m_instance->config().max_rows
-            || reply.size() > (uint64_t)m_instance->config().max_size)
+        if (reply.rows_read() > (uint64_t) m_instance->config().max_rows
+            || reply.size() > (uint64_t) m_instance->config().max_size)
         {
             // A limit was exceeded, discard the result and replace it with a fake result
             switch (m_instance->config().mode)
@@ -98,7 +92,7 @@ int MaxRowsSession::clientReply(GWBUF* data, const mxs::ReplyRoute& down, const 
                     // to contain the start of the first resultset with no rows and inject an EOF packet into
                     // it.
                     uint64_t num_packets = reply.field_counts()[0] + 2;
-                    auto tmp = mxs::truncate_packets(m_buffer.release(), num_packets);
+                    auto tmp             = mxs::truncate_packets(m_buffer.release(), num_packets);
                     m_buffer.append(tmp);
                     m_buffer.append(modutil_create_eof(num_packets + 1));
                     m_collect = false;
@@ -106,11 +100,13 @@ int MaxRowsSession::clientReply(GWBUF* data, const mxs::ReplyRoute& down, const 
                 break;
 
             case MaxRowsConfig::Mode::ERR:
-                m_buffer.reset(
-                    modutil_create_mysql_err_msg(1, 0, 1226, "42000",
-                                                 reply.rows_read() > (uint64_t)m_instance->config().max_rows ?
-                                                 "Resultset row limit exceeded" :
-                                                 "Resultset size limit exceeded"));
+                m_buffer.reset(modutil_create_mysql_err_msg(1,
+                    0,
+                    1226,
+                    "42000",
+                    reply.rows_read() > (uint64_t) m_instance->config().max_rows
+                        ? "Resultset row limit exceeded"
+                        : "Resultset size limit exceeded"));
                 m_collect = false;
                 break;
 
@@ -129,7 +125,7 @@ int MaxRowsSession::clientReply(GWBUF* data, const mxs::ReplyRoute& down, const 
 
     if (reply.is_complete())
     {
-        rv = FilterSession::clientReply(m_buffer.release(), down, reply);
+        rv        = FilterSession::clientReply(m_buffer.release(), down, reply);
         m_collect = true;
     }
 
@@ -144,19 +140,17 @@ MaxRows* MaxRows::create(const char* name, mxs::ConfigParameters* params)
 
     if (config.configure(*params))
     {
-        filter = new(std::nothrow) MaxRows(name, std::move(config));
+        filter = new (std::nothrow) MaxRows(name, std::move(config));
     }
 
     return filter;
 }
 
-
 extern "C"
 {
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_MODULE info =
-    {
+    static MXS_MODULE info = {
         MXS_MODULE_API_FILTER,
         MXS_MODULE_IN_DEVELOPMENT,
         MXS_FILTER_VERSION,
@@ -164,10 +158,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "V1.0.0",
         MaxRows::CAPABILITIES,
         &MaxRows::s_object,
-        NULL,       /* Process init. */
-        NULL,       /* Process finish. */
-        NULL,       /* Thread init. */
-        NULL,       /* Thread finish. */
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
     };
 
     static bool populated = false;

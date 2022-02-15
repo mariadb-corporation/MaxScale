@@ -46,9 +46,9 @@ int main(int argc, char** argv)
     if (argc < 4)
     {
         fprintf(stderr,
-                "Log Manager Log Order Test\n"
-                "Writes an ascending number into the error log to determine if log writes are in order.\n"
-                "Usage:\t   testorder <iterations> <frequency of log flushes> <size of message in bytes>\n");
+            "Log Manager Log Order Test\n"
+            "Writes an ascending number into the error log to determine if log writes are in order.\n"
+            "Usage:\t   testorder <iterations> <frequency of log flushes> <size of message in bytes>\n");
         return 1;
     }
 
@@ -56,13 +56,12 @@ int main(int argc, char** argv)
     if (block_size < 1 || block_size > 1024)
     {
         fprintf(stderr,
-                "Message size too small or large, must be at least 1 byte long and "
-                "must not exceed 1024 bytes.");
+            "Message size too small or large, must be at least 1 byte long and "
+            "must not exceed 1024 bytes.");
         return 1;
     }
 
-    if (getcwd(cwd, sizeof(cwd)) == NULL
-        || (message = (char*)MXS_MALLOC(sizeof(char) * block_size)) == NULL)
+    if (getcwd(cwd, sizeof(cwd)) == NULL || (message = (char*) MXS_MALLOC(sizeof(char) * block_size)) == NULL)
     {
         fprintf(stderr, "Fatal Error, exiting...");
         return 1;
@@ -73,7 +72,7 @@ int main(int argc, char** argv)
     sprintf(tmp, "%s", cwd);
 
     iterations = atoi(argv[1]);
-    interval = atoi(argv[2]);
+    interval   = atoi(argv[2]);
 
     succp = mxs_log_init(NULL, tmp, MXS_LOG_TARGET_FS);
 

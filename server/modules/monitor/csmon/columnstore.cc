@@ -24,7 +24,7 @@ namespace
 bool get_number(const char* zNumber, long* pNumber)
 {
     char* zEnd;
-    errno = 0;
+    errno       = 0;
     long number = strtol(zNumber, &zEnd, 10);
 
     bool valid = (errno == 0 && zEnd != zNumber && *zEnd == 0);
@@ -43,7 +43,7 @@ bool is_positive_number(const char* zNumber)
     return get_number(zNumber, &number) && number > 0;
 }
 
-}
+}  // namespace
 
 namespace cs
 {
@@ -239,7 +239,7 @@ bool services_from_array(json_t* pArray, ServiceVector* pServices)
             if (pName && pPid)
             {
                 auto zName = json_string_value(pName);
-                auto pid = json_integer_value(pPid);
+                auto pid   = json_integer_value(pPid);
 
                 services.emplace_back(zName, pid);
             }
@@ -255,11 +255,8 @@ bool services_from_array(json_t* pArray, ServiceVector* pServices)
     return rv;
 }
 
-string rest::create_url(const SERVER& server,
-                        int64_t port,
-                        const string& rest_base,
-                        Scope scope,
-                        rest::Action action)
+string rest::create_url(
+    const SERVER& server, int64_t port, const string& rest_base, Scope scope, rest::Action action)
 {
     string url("https://");
     url += server.address();
@@ -290,11 +287,7 @@ namespace
 string begin_or_commit(const std::chrono::seconds& timeout, int id)
 {
     std::ostringstream body;
-    body << "{\"" << TIMEOUT << "\": "
-         << timeout.count()
-         << ", \"" << ID << "\": "
-         << id
-         << "}";
+    body << "{\"" << TIMEOUT << "\": " << timeout.count() << ", \"" << ID << "\": " << id << "}";
 
     return body.str();
 }
@@ -317,16 +310,12 @@ string start_or_shutdown(const std::chrono::seconds& timeout)
 string add_or_remove_node(const std::string& node, const std::chrono::seconds& timeout)
 {
     std::ostringstream body;
-    body << "{\"" << TIMEOUT << "\": "
-         << timeout.count()
-         << ", \"" << NODE << "\": \""
-         << node
-         << "\"}";
+    body << "{\"" << TIMEOUT << "\": " << timeout.count() << ", \"" << NODE << "\": \"" << node << "\"}";
 
     return body.str();
 }
 
-}
+}  // namespace
 
 string add_node(const std::string& node, const std::chrono::seconds& timeout)
 {
@@ -343,13 +332,10 @@ string commit(const std::chrono::seconds& timeout, int id)
     return begin_or_commit(timeout, id);
 }
 
-string config(const xmlDoc& csXml,
-              int revision,
-              const string& manager,
-              const std::chrono::seconds& timeout)
+string config(const xmlDoc& csXml, int revision, const string& manager, const std::chrono::seconds& timeout)
 {
     xmlChar* pConfig = nullptr;
-    int size = 0;
+    int size         = 0;
 
     xmlDocDumpMemory(const_cast<xmlDoc*>(&csXml), &pConfig, &size);
 
@@ -370,17 +356,17 @@ string config(const xmlDoc& csXml,
     return body;
 }
 
-std::string config_set_cluster_mode(ClusterMode mode,
-                                    int revision,
-                                    const std::string& manager,
-                                    const std::chrono::seconds& timeout)
+std::string config_set_cluster_mode(
+    ClusterMode mode, int revision, const std::string& manager, const std::chrono::seconds& timeout)
 {
     std::ostringstream body;
     body << "{"
-         << "\"" << CLUSTER_MODE << "\": " << "\"" << cs::to_string(mode) << "\", "
+         << "\"" << CLUSTER_MODE << "\": "
+         << "\"" << cs::to_string(mode) << "\", "
          << "\"" << REVISION << "\": " << revision << ","
          << "\"" << TIMEOUT << "\": " << timeout.count() << ","
-         << "\"" << MANAGER << "\": " << "\"" << manager << "\""
+         << "\"" << MANAGER << "\": "
+         << "\"" << manager << "\""
          << "}";
 
     return body.str();
@@ -395,8 +381,7 @@ string rollback(int id)
 {
     std::ostringstream body;
     body << "{"
-         << "\"" << ID << "\": " << id
-         << "}";
+         << "\"" << ID << "\": " << id << "}";
 
     return body.str();
 }
@@ -411,5 +396,5 @@ string start(const std::chrono::seconds& timeout)
     return start_or_shutdown(timeout);
 }
 
-}
-}
+}  // namespace body
+}  // namespace cs

@@ -30,7 +30,6 @@
 class SERVER : public mxs::Target
 {
 public:
-
     /**
      * Stores server version info. Encodes/decodes to/from the version number received from the server.
      * Also stores the version string and parses information from it. Assumed to rarely change, so reads
@@ -40,19 +39,19 @@ public:
     public:
         enum class Type
         {
-            UNKNOWN,    /**< Not connected yet */
-            MYSQL,      /**< MySQL 5.5 or later. */
-            MARIADB,    /**< MariaDB 5.5 or later */
-            XPAND,      /**< Xpand node */
-            BLR         /**< Binlog router */
+            UNKNOWN, /**< Not connected yet */
+            MYSQL,   /**< MySQL 5.5 or later. */
+            MARIADB, /**< MariaDB 5.5 or later */
+            XPAND,   /**< Xpand node */
+            BLR      /**< Binlog router */
         };
 
         struct Version
         {
-            uint64_t total {0};     /**< Total version number received from server */
-            uint32_t major {0};     /**< Major version */
-            uint32_t minor {0};     /**< Minor version */
-            uint32_t patch {0};     /**< Patch version */
+            uint64_t total {0}; /**< Total version number received from server */
+            uint32_t major {0}; /**< Major version */
+            uint32_t minor {0}; /**< Minor version */
+            uint32_t patch {0}; /**< Patch version */
         };
 
         /**
@@ -72,28 +71,28 @@ public:
          */
         bool is_database() const;
 
-        Type           type() const;
+        Type type() const;
         const Version& version_num() const;
-        const char*    version_string() const;
-        std::string    type_string() const;
+        const char* version_string() const;
+        std::string type_string() const;
 
     private:
         static const int MAX_VERSION_LEN = 256;
 
-        mutable std::mutex m_lock;      /**< Protects against concurrent writing */
+        mutable std::mutex m_lock; /**< Protects against concurrent writing */
 
-        Version m_version_num;          /**< Numeric version */
-        Type    m_type {Type::UNKNOWN}; /**< Server type */
+        Version m_version_num;       /**< Numeric version */
+        Type m_type {Type::UNKNOWN}; /**< Server type */
 
-        char m_version_str[MAX_VERSION_LEN + 1] {'\0'};     /**< Server version string */
+        char m_version_str[MAX_VERSION_LEN + 1] {'\0'}; /**< Server version string */
     };
 
     struct PoolStats
     {
-        int      n_persistent = 0;  /**< Current persistent pool */
-        uint64_t n_new_conn = 0;    /**< Times the current pool was empty */
-        uint64_t n_from_pool = 0;   /**< Times when a connection was available from the pool */
-        int      persistmax = 0;    /**< Maximum pool size actually achieved since startup */
+        int n_persistent     = 0; /**< Current persistent pool */
+        uint64_t n_new_conn  = 0; /**< Times the current pool was empty */
+        uint64_t n_from_pool = 0; /**< Times when a connection was available from the pool */
+        int persistmax       = 0; /**< Maximum pool size actually achieved since startup */
     };
 
     /**
@@ -272,7 +271,7 @@ public:
      * Get SSL provider
      */
     virtual const mxs::SSLProvider& ssl() const = 0;
-    virtual mxs::SSLProvider&       ssl() = 0;
+    virtual mxs::SSLProvider& ssl()             = 0;
 
     /**
      * Set value of 'session_track_system_variables'.

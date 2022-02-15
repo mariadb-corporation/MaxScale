@@ -42,7 +42,7 @@ int rowevent_to_enum_offset(RowEvent event)
         return 0;
     }
 }
-}
+}  // namespace
 
 /**
  * @brief Allocate an Avro table
@@ -51,18 +51,14 @@ int rowevent_to_enum_offset(RowEvent event)
  * @param filepath Path to the created file
  * @param json_schema The schema of the table in JSON format
  */
-AvroTable* avro_table_alloc(const char* filepath,
-                            const char* json_schema,
-                            const char* codec,
-                            size_t block_size)
+AvroTable* avro_table_alloc(
+    const char* filepath, const char* json_schema, const char* codec, size_t block_size)
 {
     avro_file_writer_t avro_file;
     avro_value_iface_t* avro_writer_iface;
     avro_schema_t avro_schema;
 
-    if (avro_schema_from_json_length(json_schema,
-                                     strlen(json_schema),
-                                     &avro_schema))
+    if (avro_schema_from_json_length(json_schema, strlen(json_schema), &avro_schema))
     {
         MXS_ERROR("Avro error: %s", avro_strerror());
         MXS_INFO("Avro schema: %s", json_schema);
@@ -77,11 +73,7 @@ AvroTable* avro_table_alloc(const char* filepath,
     }
     else
     {
-        rc = avro_file_writer_create_with_codec(filepath,
-                                                avro_schema,
-                                                &avro_file,
-                                                codec,
-                                                block_size);
+        rc = avro_file_writer_create_with_codec(filepath, avro_schema, &avro_file, codec, block_size);
     }
 
     if (rc)
@@ -99,7 +91,7 @@ AvroTable* avro_table_alloc(const char* filepath,
         return NULL;
     }
 
-    AvroTable* table = new(std::nothrow) AvroTable(avro_file, avro_writer_iface, avro_schema);
+    AvroTable* table = new (std::nothrow) AvroTable(avro_file, avro_writer_iface, avro_schema);
 
     if (!table)
     {
@@ -131,16 +123,13 @@ static const char* codec_to_string(enum mxs_avro_codec_type type)
     }
 }
 
-AvroConverter::AvroConverter(SERVICE* service,
-                             std::string avrodir,
-                             uint64_t block_size,
-                             mxs_avro_codec_type codec)
+AvroConverter::AvroConverter(
+    SERVICE* service, std::string avrodir, uint64_t block_size, mxs_avro_codec_type codec)
     : m_avrodir(avrodir)
     , m_block_size(block_size)
     , m_codec(codec)
     , m_service(service)
-{
-}
+{}
 
 bool AvroConverter::create_table(const Table& create)
 {
@@ -158,22 +147,20 @@ bool AvroConverter::open_table(const Table& create)
 
         char filepath[PATH_MAX + 1];
         snprintf(filepath,
-                 sizeof(filepath),
-                 "%s/%s.%s.%06d.avro",
-                 m_avrodir.c_str(),
-                 create.database.c_str(),
-                 create.table.c_str(),
-                 create.version);
+            sizeof(filepath),
+            "%s/%s.%s.%06d.avro",
+            m_avrodir.c_str(),
+            create.database.c_str(),
+            create.table.c_str(),
+            create.version);
 
-        SAvroTable avro_table(avro_table_alloc(filepath,
-                                               json_schema.c_str(),
-                                               codec_to_string(m_codec),
-                                               m_block_size));
+        SAvroTable avro_table(
+            avro_table_alloc(filepath, json_schema.c_str(), codec_to_string(m_codec), m_block_size));
 
         if (avro_table)
         {
             m_open_tables[create.id()] = avro_table;
-            rval = true;
+            rval                       = true;
         }
         else
         {
@@ -191,13 +178,13 @@ bool AvroConverter::open_table(const Table& create)
 bool AvroConverter::prepare_table(const Table& create)
 {
     bool rval = false;
-    auto it = m_open_tables.find(create.id());
+    auto it   = m_open_tables.find(create.id());
 
     if (it != m_open_tables.end())
     {
         m_writer_iface = it->second->avro_writer_iface;
-        m_avro_file = &it->second->avro_file;
-        rval = true;
+        m_avro_file    = &it->second->avro_file;
+        rval           = true;
     }
 
     return rval;
@@ -213,8 +200,8 @@ void AvroConverter::flush_tables()
     AvroSession::notify_all_clients(m_service);
 }
 
-void AvroConverter::prepare_row(const Table& create, const gtid_pos_t& gtid,
-                                const REP_HEADER& hdr, RowEvent event_type)
+void AvroConverter::prepare_row(
+    const Table& create, const gtid_pos_t& gtid, const REP_HEADER& hdr, RowEvent event_type)
 {
     avro_generic_value_new(m_writer_iface, &m_record);
     avro_value_get_by_name(&m_record, avro_domain, &m_field, NULL);
@@ -305,10 +292,8 @@ void AvroConverter::column_null(const Table& create, int i)
 
 void AvroConverter::set_active(const Table& create, int i)
 {
-    MXB_AT_DEBUG(int rc = ) avro_value_get_by_name(&m_record,
-                                                   create.columns[i].name.c_str(),
-                                                   &m_union_value,
-                                                   NULL);
+    MXB_AT_DEBUG(int rc =)
+    avro_value_get_by_name(&m_record, create.columns[i].name.c_str(), &m_union_value, NULL);
     mxb_assert(rc == 0);
     avro_value_set_branch(&m_union_value, 1, &m_field);
 }

@@ -28,16 +28,16 @@ namespace
 GWBUF* create_gwbuf(const char* z, size_t len)
 {
     size_t payload_len = len + 1;
-    size_t gwbuf_len = MYSQL_HEADER_LEN + payload_len;
+    size_t gwbuf_len   = MYSQL_HEADER_LEN + payload_len;
 
     GWBUF* gwbuf = gwbuf_alloc(gwbuf_len);
 
-    *((unsigned char*)((char*)GWBUF_DATA(gwbuf))) = payload_len;
-    *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 1)) = (payload_len >> 8);
-    *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 2)) = (payload_len >> 16);
-    *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 3)) = 0x00;
-    *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 4)) = 0x03;
-    memcpy((char*)GWBUF_DATA(gwbuf) + 5, z, len);
+    *((unsigned char*) ((char*) GWBUF_DATA(gwbuf)))     = payload_len;
+    *((unsigned char*) ((char*) GWBUF_DATA(gwbuf) + 1)) = (payload_len >> 8);
+    *((unsigned char*) ((char*) GWBUF_DATA(gwbuf) + 2)) = (payload_len >> 16);
+    *((unsigned char*) ((char*) GWBUF_DATA(gwbuf) + 3)) = 0x00;
+    *((unsigned char*) ((char*) GWBUF_DATA(gwbuf) + 4)) = 0x03;
+    memcpy((char*) GWBUF_DATA(gwbuf) + 5, z, len);
 
     return gwbuf;
 }
@@ -71,15 +71,15 @@ int run(const char* zStatement, int n)
 
     return EXIT_SUCCESS;
 }
-}
+}  // namespace
 
 int main(int argc, char* argv[])
 {
     int rv = EXIT_SUCCESS;
 
     QC_CACHE_PROPERTIES* pCache_properties = nullptr;
-    const char* zStatement = nullptr;
-    int n = 0;
+    const char* zStatement                 = nullptr;
+    int n                                  = 0;
 
     int c;
     while ((c = getopt(argc, argv, "cns:#:")) != -1)
@@ -87,11 +87,11 @@ int main(int argc, char* argv[])
         switch (c)
         {
         case 'c':
-            {
-                static QC_CACHE_PROPERTIES cache_properties;
-                pCache_properties = &cache_properties;
-            }
-            break;
+        {
+            static QC_CACHE_PROPERTIES cache_properties;
+            pCache_properties = &cache_properties;
+        }
+        break;
 
         case 'n':
             pCache_properties = nullptr;
@@ -120,14 +120,11 @@ int main(int argc, char* argv[])
 
         if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
         {
-            cout << n
-                 << " iterations, while "
-                 << (pCache_properties ? "using " : "NOT using ")
+            cout << n << " iterations, while " << (pCache_properties ? "using " : "NOT using ")
                  << "the query classification cache." << endl;
 
             if (qc_setup(pCache_properties, QC_SQL_MODE_DEFAULT, "qc_sqlite", NULL)
-                && qc_process_init(QC_INIT_BOTH)
-                && qc_thread_init(QC_INIT_BOTH))
+                && qc_process_init(QC_INIT_BOTH) && qc_thread_init(QC_INIT_BOTH))
             {
                 rv = run(zStatement, n);
 

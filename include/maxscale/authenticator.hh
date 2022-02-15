@@ -21,7 +21,10 @@
  * the MXS_AUTHENTICATOR structure is changed. See the rules defined in modinfo.h
  * that define how these numbers should change.
  */
-#define MXS_AUTHENTICATOR_VERSION {3, 0, 0}
+#define MXS_AUTHENTICATOR_VERSION \
+    {                             \
+        3, 0, 0                   \
+    }
 
 namespace maxscale
 {
@@ -70,8 +73,8 @@ template<class AuthenticatorImplementation>
 class AuthenticatorApiGenerator
 {
 public:
-    AuthenticatorApiGenerator() = delete;
-    AuthenticatorApiGenerator(const AuthenticatorApiGenerator&) = delete;
+    AuthenticatorApiGenerator()                                            = delete;
+    AuthenticatorApiGenerator(const AuthenticatorApiGenerator&)            = delete;
     AuthenticatorApiGenerator& operator=(const AuthenticatorApiGenerator&) = delete;
 
     static AuthenticatorModule* createInstance(mxs::ConfigParameters* options)
@@ -85,14 +88,12 @@ public:
 };
 
 template<class AuthenticatorImplementation>
-AUTHENTICATOR_API AuthenticatorApiGenerator<AuthenticatorImplementation>::s_api =
-{
-    &AuthenticatorApiGenerator<AuthenticatorImplementation>::createInstance
-};
-}
+AUTHENTICATOR_API AuthenticatorApiGenerator<AuthenticatorImplementation>::s_api
+    = {&AuthenticatorApiGenerator<AuthenticatorImplementation>::createInstance};
+}  // namespace maxscale
 
 namespace maxscale
 {
-std::unique_ptr<mxs::AuthenticatorModule> authenticator_init(const std::string& authenticator,
-                                                             mxs::ConfigParameters* options);
+std::unique_ptr<mxs::AuthenticatorModule> authenticator_init(
+    const std::string& authenticator, mxs::ConfigParameters* options);
 }

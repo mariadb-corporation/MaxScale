@@ -116,7 +116,7 @@ json_t* mxs_json_self_link(const char* host, const char* path, const char* id);
  *
  * @return The error as JSON
  */
-json_t* mxs_json_error(const char* format, ...) mxb_attribute((format (printf, 1, 2)));
+json_t* mxs_json_error(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
 json_t* mxs_json_error(const std::vector<std::string>& errors);
 
 /**
@@ -129,7 +129,7 @@ json_t* mxs_json_error(const std::vector<std::string>& errors);
  * @return @c object if it was non-NULL, otherwise a new object. A new error has been added
            to the 'errors' array of that object.
  */
-json_t* mxs_json_error_append(json_t* object, const char* format, ...) mxb_attribute((format (printf, 2, 3)));
+json_t* mxs_json_error_append(json_t* object, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
 
 /**
  * @brief Append error to existing JSON object.

@@ -288,9 +288,8 @@ bool runtime_alter_maxscale_from_json(json_t* new_json);
  *
  * @return True, if the rebalancing could be initiated.
  */
-bool runtime_thread_rebalance(maxscale::RoutingWorker& worker,
-                              const std::string& sessions,
-                              const std::string& recipient);
+bool runtime_thread_rebalance(
+    maxscale::RoutingWorker& worker, const std::string& sessions, const std::string& recipient);
 
 /**
  * Rebalance work of threads.

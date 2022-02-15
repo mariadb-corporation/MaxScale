@@ -24,8 +24,7 @@ struct test_error : public std::runtime_error
 {
     test_error(const std::string& msg)
         : std::runtime_error(msg.c_str())
-    {
-    }
+    {}
 };
 
 void eval(const maxbase::Host& host, maxbase::Host::Type expected)
@@ -35,13 +34,12 @@ void eval(const maxbase::Host& host, maxbase::Host::Type expected)
               << "  host.type()     " << to_string(host.type()) << "\n"
               << "  host.is_valid() " << host.is_valid() << "\n"
               << "  host.address()  " << host.address() << "\n"
-              << "  host.port()     " << host.port() << "\n\n"
-    ;
+              << "  host.port()     " << host.port() << "\n\n";
     if (host.type() != expected)
     {
         std::ostringstream os;
-        os << "Failed to create a Host with original input '" << host.org_input()
-           << "'. Expected type " << to_string(expected) << " got " << to_string(host.type());
+        os << "Failed to create a Host with original input '" << host.org_input() << "'. Expected type "
+           << to_string(expected) << " got " << to_string(host.type());
         throw test_error(os.str());
     }
 
@@ -56,8 +54,8 @@ void eval(const maxbase::Host& host, maxbase::Host::Type expected)
         if (host != host2)
         {
             std::ostringstream os;
-            os << "Failed to stream " << host << " with original input '" << host.org_input()
-               << "' out (" << os_host.str() << ") and back in from a stream";
+            os << "Failed to stream " << host << " with original input '" << host.org_input() << "' out ("
+               << os_host.str() << ") and back in from a stream";
             throw test_error(os.str());
         }
     }
@@ -68,7 +66,7 @@ void test(const std::string& str, maxbase::Host::Type expected)
     maxbase::Host host {maxbase::Host::from_string(str)};
     eval(host, expected);
 }
-}
+}  // namespace
 
 int main()
 try
@@ -115,6 +113,7 @@ try
 
     return EXIT_SUCCESS;
 }
+
 catch (test_error& err)
 {
     std::cerr << err.what() << std::endl;

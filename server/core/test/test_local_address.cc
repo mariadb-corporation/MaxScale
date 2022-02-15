@@ -21,54 +21,53 @@
 
 using namespace std;
 
-char USAGE[] =
-    "usage: test_local_address -u user [-p password] [-a address] [-h host] [-s success]\n"
-    "\n"
-    "user    : The user to connect as.\n"
-    "password: The password of the user, default none.\n"
-    "address : The address to connect from, default none specified.\n"
-    "host    : The address of the host to connect to, default 127.0.0.1.\n"
-    "success : (0|1), whether the connection attempt is expected to succeed or not, defaul 1.\n"
-    "\n"
-    "Example:\n"
-    "\n"
-    "MariaDB [(none)]> create user 'l1'@'192.168.1.254';\n"
-    "MariaDB [(none)]> create user 'l2'@'127.0.0.1';\n"
-    "\n"
-    "$ ./test_local_address -s 1 -u l1 -a 192.168.1.254\n"
-    "User    : l1\n"
-    "Password: (none)\n"
-    "Server  : 127.0.0.1\n"
-    "Address : 192.168.1.254\n"
-    "Success : 1\n"
-    "\n"
-    "Could connect, as expected.\n"
-    "$ ./test_local_address -s 0 -u l1 -a 127.0.0.1\n"
-    "User    : l1\n"
-    "Password: (none)\n"
-    "Server  : 127.0.0.1\n"
-    "Address : 127.0.0.1\n"
-    "Success : 0\n"
-    "\n"
-    "Could not connect, as expected. "
-    "Reported error: Access denied for user 'l1'@'localhost' (using password: NO)\n"
-    "$ ./test_local_address -s 1 -u l2 -a 127.0.0.1\n"
-    "User    : l2\n"
-    "Password: (none)\n"
-    "Server  : 127.0.0.1\n"
-    "Address : 127.0.0.1\n"
-    "Success : 1\n"
-    "\n"
-    "Could connect, as expected.\n"
-    "$ ./test_local_address -s 0 -u l2 -a 192.168.1.254\n"
-    "User    : l2\n"
-    "Password: (none)\n"
-    "Server  : 127.0.0.1\n"
-    "Address : 192.168.1.254\n"
-    "Success : 0\n"
-    "\n"
-    "Could not connect, as expected. "
-    "Reported error: Access denied for user 'l2'@'192.168.1.254' (using password: NO)\n";
+char USAGE[] = "usage: test_local_address -u user [-p password] [-a address] [-h host] [-s success]\n"
+               "\n"
+               "user    : The user to connect as.\n"
+               "password: The password of the user, default none.\n"
+               "address : The address to connect from, default none specified.\n"
+               "host    : The address of the host to connect to, default 127.0.0.1.\n"
+               "success : (0|1), whether the connection attempt is expected to succeed or not, defaul 1.\n"
+               "\n"
+               "Example:\n"
+               "\n"
+               "MariaDB [(none)]> create user 'l1'@'192.168.1.254';\n"
+               "MariaDB [(none)]> create user 'l2'@'127.0.0.1';\n"
+               "\n"
+               "$ ./test_local_address -s 1 -u l1 -a 192.168.1.254\n"
+               "User    : l1\n"
+               "Password: (none)\n"
+               "Server  : 127.0.0.1\n"
+               "Address : 192.168.1.254\n"
+               "Success : 1\n"
+               "\n"
+               "Could connect, as expected.\n"
+               "$ ./test_local_address -s 0 -u l1 -a 127.0.0.1\n"
+               "User    : l1\n"
+               "Password: (none)\n"
+               "Server  : 127.0.0.1\n"
+               "Address : 127.0.0.1\n"
+               "Success : 0\n"
+               "\n"
+               "Could not connect, as expected. "
+               "Reported error: Access denied for user 'l1'@'localhost' (using password: NO)\n"
+               "$ ./test_local_address -s 1 -u l2 -a 127.0.0.1\n"
+               "User    : l2\n"
+               "Password: (none)\n"
+               "Server  : 127.0.0.1\n"
+               "Address : 127.0.0.1\n"
+               "Success : 1\n"
+               "\n"
+               "Could connect, as expected.\n"
+               "$ ./test_local_address -s 0 -u l2 -a 192.168.1.254\n"
+               "User    : l2\n"
+               "Password: (none)\n"
+               "Server  : 127.0.0.1\n"
+               "Address : 192.168.1.254\n"
+               "Success : 0\n"
+               "\n"
+               "Could not connect, as expected. "
+               "Reported error: Access denied for user 'l2'@'192.168.1.254' (using password: NO)\n";
 
 namespace
 {
@@ -77,11 +76,11 @@ int test(bool success, const char* zHost, const char* zUser, const char* zPasswo
 {
     int rv = EXIT_FAILURE;
 
-    mxs::Config& config = mxs::Config::get();
+    mxs::Config& config  = mxs::Config::get();
     config.local_address = const_cast<char*>(zAddress);
 
     Server* pServer = Server::create_test_server();
-    Server& server = *pServer;
+    Server& server  = *pServer;
     server.set_address(zHost);
     server.set_port(3306);
 
@@ -120,7 +119,7 @@ int test(bool success, const char* zHost, const char* zUser, const char* zPasswo
 
     return rv;
 }
-}
+}  // namespace
 
 int main(int argc, char* argv[])
 {
@@ -128,11 +127,11 @@ int main(int argc, char* argv[])
 
     int opt;
 
-    const char* zUser = NULL;
+    const char* zUser     = NULL;
     const char* zPassword = NULL;
-    const char* zAddress = NULL;
-    const char* zHost = "127.0.0.1";
-    bool success = true;
+    const char* zAddress  = NULL;
+    const char* zHost     = "127.0.0.1";
+    bool success          = true;
 
     while ((opt = getopt(argc, argv, "a:h:p:s:u:")) != -1)
     {

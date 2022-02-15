@@ -32,19 +32,13 @@ void worker_local_delete_data(uint64_t key);
 template<class T>
 struct DefaultConstructor
 {
-    T* operator()(const T& t)
-    {
-        return new T;
-    }
+    T* operator()(const T& t) { return new T; }
 };
 
 template<class T>
 struct CopyConstructor
 {
-    T* operator()(const T& t)
-    {
-        return new T(t);
-    }
+    T* operator()(const T& t) { return new T(t); }
 };
 
 // Data local to a routing worker
@@ -52,58 +46,39 @@ template<class T, class TypeConstructor = CopyConstructor<T>>
 class WorkerLocal
 {
 public:
-
-    WorkerLocal(const WorkerLocal&) = delete;
+    WorkerLocal(const WorkerLocal&)            = delete;
     WorkerLocal& operator=(const WorkerLocal&) = delete;
 
     // Default initialized
     WorkerLocal()
         : m_handle(IndexedStorage::create_key())
-    {
-    }
+    {}
 
     // Forwarding constructor
-    template<typename ... Args>
-    WorkerLocal(Args&& ... args)
+    template<typename... Args>
+    WorkerLocal(Args&&... args)
         : m_handle(IndexedStorage::create_key())
         , m_value(std::forward<Args>(args)...)
-    {
-    }
+    {}
 
-    ~WorkerLocal()
-    {
-        worker_local_delete_data(m_handle);
-    }
+    ~WorkerLocal() { worker_local_delete_data(m_handle); }
 
     // Converts to a T reference
-    operator T&() const
-    {
-        return *get_local_value();
-    }
+    operator T&() const { return *get_local_value(); }
 
     // Arrow operator
-    T* operator->() const
-    {
-        return get_local_value();
-    }
+    T* operator->() const { return get_local_value(); }
 
     // Dereference operator
-    T& operator*()
-    {
-        return *get_local_value();
-    }
+    T& operator*() { return *get_local_value(); }
 
     // Const version of dereference operator
-    const T& operator*() const
-    {
-        return *get_local_value();
-    }
+    const T& operator*() const { return *get_local_value(); }
 
 protected:
-
-    uint64_t                            m_handle;   // The handle to the worker local data
-    typename std::remove_const<T>::type m_value;    // The master value, never used directly
-    mutable std::mutex                  m_lock;     // Protects the master value
+    uint64_t m_handle;                            // The handle to the worker local data
+    typename std::remove_const<T>::type m_value;  // The master value, never used directly
+    mutable std::mutex m_lock;                    // Protects the master value
 
     /**
      * Get the local value
@@ -141,10 +116,7 @@ protected:
         return my_value;
     }
 
-    static void destroy_value(void* data)
-    {
-        delete static_cast<T*>(data);
-    }
+    static void destroy_value(void* data) { delete static_cast<T*>(data); }
 };
 
 // Extends WorkerLocal with global read and write methods for updating all stored values.
@@ -153,6 +125,7 @@ class WorkerGlobal : public WorkerLocal<T>
 {
 public:
     using WorkerLocal<T>::WorkerLocal;
+
     // CentOS 7 fails to build if an alias is used to access base class methods instead of the this pointer
     // using Base = WorkerLocal<T>;
 
@@ -169,8 +142,8 @@ public:
      */
     void assign(const T& t)
     {
-        mxb_assert_message(MainWorker::is_main_worker(),
-                           "this method must be called from the main worker thread");
+        mxb_assert_message(
+            MainWorker::is_main_worker(), "this method must be called from the main worker thread");
 
         // Update the value of the master copy
         std::unique_lock<std::mutex> guard(this->m_lock);
@@ -180,10 +153,7 @@ public:
         update_local_value();
 
         // Update the local value of all workers from the master copy
-        mxs::RoutingWorker::execute_concurrently(
-            [this]() {
-                update_local_value();
-            });
+        mxs::RoutingWorker::execute_concurrently([this]() { update_local_value(); });
     }
 
     /**
@@ -195,22 +165,20 @@ public:
      */
     std::vector<T> values() const
     {
-        mxb_assert_message(MainWorker::is_main_worker(),
-                           "this method must be called from the main worker thread");
+        mxb_assert_message(
+            MainWorker::is_main_worker(), "this method must be called from the main worker thread");
         std::vector<T> rval;
         std::mutex lock;
 
-        mxs::RoutingWorker::execute_concurrently(
-            [&]() {
-                std::lock_guard<std::mutex> guard(lock);
-                rval.push_back(*this->get_local_value());
-            });
+        mxs::RoutingWorker::execute_concurrently([&]() {
+            std::lock_guard<std::mutex> guard(lock);
+            rval.push_back(*this->get_local_value());
+        });
 
         return rval;
     }
 
 private:
-
     void update_local_value()
     {
         // As get_local_value can cause a lock to be taken, we need the pointer to our value before
@@ -221,4 +189,4 @@ private:
         *my_value = this->m_value;
     }
 };
-}
+}  // namespace maxscale

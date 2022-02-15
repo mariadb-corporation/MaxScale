@@ -17,12 +17,7 @@
 
 #include <mysqld_error.h>
 
-const MXS_ENUM_VALUE rank_values[] =
-{
-    {"primary",   RANK_PRIMARY  },
-    {"secondary", RANK_SECONDARY},
-    {NULL}
-};
+const MXS_ENUM_VALUE rank_values[] = {{"primary", RANK_PRIMARY}, {"secondary", RANK_SECONDARY}, {NULL}};
 
 const char* DEFAULT_RANK = "primary";
 
@@ -50,30 +45,30 @@ std::string Target::status_to_string(uint64_t flags, int n_connections)
 
     // Helper function.
     auto concatenate_if = [&result, &separator](bool condition, const std::string& desc) {
-            if (condition)
-            {
-                result += separator + desc;
-                separator = ", ";
-            }
-        };
+        if (condition)
+        {
+            result += separator + desc;
+            separator = ", ";
+        }
+    };
 
     // TODO: The following values should be revisited at some point, but since they are printed by
     // the REST API they should not be changed suddenly. Strictly speaking, even the combinations
     // should not change, but this is more dependant on the monitors and have already changed.
     // Also, system tests compare to these strings so the output must stay constant for now.
     const std::string maintenance = "Maintenance";
-    const std::string drained = "Drained";
-    const std::string draining = "Draining";
-    const std::string master = "Master";
-    const std::string relay = "Relay Master";
-    const std::string slave = "Slave";
-    const std::string synced = "Synced";
-    const std::string slave_ext = "Slave of External Server";
-    const std::string sticky = "Master Stickiness";
-    const std::string auth_err = "Auth Error";
-    const std::string running = "Running";
-    const std::string down = "Down";
-    const std::string blr = "Binlog Relay";
+    const std::string drained     = "Drained";
+    const std::string draining    = "Draining";
+    const std::string master      = "Master";
+    const std::string relay       = "Relay Master";
+    const std::string slave       = "Slave";
+    const std::string synced      = "Synced";
+    const std::string slave_ext   = "Slave of External Server";
+    const std::string sticky      = "Master Stickiness";
+    const std::string auth_err    = "Auth Error";
+    const std::string running     = "Running";
+    const std::string down        = "Down";
+    const std::string blr         = "Binlog Relay";
 
     // Maintenance/Draining is usually set by user so is printed first.
     // Draining in the presence of Maintenance has no effect, so we only
@@ -169,9 +164,8 @@ void Target::set_rlag_state(RLagState new_state, int max_rlag)
     auto old_state = m_rlag_state.load(std::memory_order_relaxed);
 
     if (old_state != new_state
-        && m_rlag_state.compare_exchange_strong(old_state, new_state,
-                                                std::memory_order_acq_rel,
-                                                std::memory_order_relaxed))
+        && m_rlag_state.compare_exchange_strong(
+            old_state, new_state, std::memory_order_acq_rel, std::memory_order_relaxed))
     {
         if (new_state == RLagState::ABOVE_LIMIT)
         {
@@ -180,13 +174,21 @@ void Target::set_rlag_state(RLagState new_state, int max_rlag)
             if (lag != mxs::Target::RLAG_UNDEFINED)
             {
                 MXS_WARNING("Replication lag of '%s' is %ld seconds, which is above the configured "
-                            "limit %is. '%s' is excluded from query routing.", name(), lag, max_rlag, name());
+                            "limit %is. '%s' is excluded from query routing.",
+                    name(),
+                    lag,
+                    max_rlag,
+                    name());
             }
         }
         else if (old_state == RLagState::ABOVE_LIMIT)
         {
             MXS_WARNING("Replication lag of '%s' is %ld seconds, which is below the configured limit %is. "
-                        "'%s' is returned to query routing.", name(), replication_lag(), max_rlag, name());
+                        "'%s' is returned to query routing.",
+                name(),
+                replication_lag(),
+                max_rlag,
+                name());
         }
     }
 }
@@ -194,12 +196,12 @@ void Target::set_rlag_state(RLagState new_state, int max_rlag)
 void Target::Stats::add_connection() const
 {
     mxb::atomic::add(&n_connections, 1, mxb::atomic::RELAXED);
-    MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&n_current, 1, mxb::atomic::RELAXED);
+    MXB_AT_DEBUG(int rc =) mxb::atomic::add(&n_current, 1, mxb::atomic::RELAXED);
     mxb_assert(rc >= 0);
 
     while (true)
     {
-        int n_max = mxb::atomic::load(&n_max_connections, mxb::atomic::RELAXED);
+        int n_max  = mxb::atomic::load(&n_max_connections, mxb::atomic::RELAXED);
         int n_curr = mxb::atomic::load(&n_current, mxb::atomic::RELAXED);
 
         if (n_curr <= n_max || mxb::atomic::compare_exchange(&n_max_connections, &n_max, n_curr))
@@ -211,7 +213,7 @@ void Target::Stats::add_connection() const
 
 void Target::Stats::remove_connection() const
 {
-    MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&n_current, -1, mxb::atomic::RELAXED);
+    MXB_AT_DEBUG(int rc =) mxb::atomic::add(&n_current, -1, mxb::atomic::RELAXED);
     mxb_assert(rc > 0);
 }
 
@@ -448,16 +450,16 @@ void Reply::set_server_status(uint16_t status)
 
 void Reply::clear()
 {
-    m_command = 0;
+    m_command     = 0;
     m_reply_state = ReplyState::DONE;
     m_error.clear();
-    m_row_count = 0;
+    m_row_count    = 0;
     m_num_warnings = 0;
-    m_size = 0;
+    m_size         = 0;
     m_generated_id = 0;
-    m_param_count = 0;
-    m_is_ok = false;
+    m_param_count  = 0;
+    m_is_ok        = false;
     m_field_counts.clear();
     m_variables.clear();
 }
-}
+}  // namespace maxscale

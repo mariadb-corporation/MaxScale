@@ -30,12 +30,11 @@ class QueryClassifierModule : public SpecificModule<QueryClassifierModule, QUERY
     QueryClassifierModule& operator=(const QueryClassifierModule&);
 
 public:
-    static const char* zName;   /*< The name describing the module type. */
+    static const char* zName; /*< The name describing the module type. */
 
 private:
     QueryClassifierModule(const MXS_MODULE* pModule)
         : Base(pModule)
-    {
-    }
+    {}
 };
-}
+}  // namespace maxscale

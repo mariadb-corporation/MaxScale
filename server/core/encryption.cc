@@ -21,7 +21,7 @@ EVP_CIPHER_CTX* mxs_evp_cipher_ctx_alloc()
 #ifdef OPENSSL_1_1
     return EVP_CIPHER_CTX_new();
 #else
-    EVP_CIPHER_CTX* rval = (EVP_CIPHER_CTX*)MXS_MALLOC(sizeof(*rval));
+    EVP_CIPHER_CTX* rval = (EVP_CIPHER_CTX*) MXS_MALLOC(sizeof(*rval));
     EVP_CIPHER_CTX_init(rval);
     return rval;
 #endif
@@ -39,17 +39,17 @@ void mxs_evp_cipher_ctx_free(EVP_CIPHER_CTX* ctx)
 uint8_t* mxs_evp_cipher_ctx_buf(EVP_CIPHER_CTX* ctx)
 {
 #ifdef OPENSSL_1_1
-    return (uint8_t*)EVP_CIPHER_CTX_buf_noconst(ctx);
+    return (uint8_t*) EVP_CIPHER_CTX_buf_noconst(ctx);
 #else
-    return (uint8_t*)ctx->buf;
+    return (uint8_t*) ctx->buf;
 #endif
 }
 
 uint8_t* mxs_evp_cipher_ctx_oiv(EVP_CIPHER_CTX* ctx)
 {
 #ifdef OPENSSL_1_1
-    return (uint8_t*)EVP_CIPHER_CTX_original_iv(ctx);
+    return (uint8_t*) EVP_CIPHER_CTX_original_iv(ctx);
 #else
-    return (uint8_t*)ctx->oiv;
+    return (uint8_t*) ctx->oiv;
 #endif
 }

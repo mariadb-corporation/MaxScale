@@ -90,9 +90,7 @@ public:
      *     }
      * @endcode
      */
-    TrxBoundaryParser()
-    {
-    }
+    TrxBoundaryParser() {}
 
     /**
      * Return the type mask of a statement, provided the statement affects
@@ -109,9 +107,9 @@ public:
         uint32_t type_mask = 0;
 
         m_pSql = pSql;
-        m_len = len;
+        m_len  = len;
 
-        m_pI = m_pSql;
+        m_pI   = m_pSql;
         m_pEnd = m_pI + m_len;
 
         return parse();
@@ -134,7 +132,7 @@ public:
         if (modutil_extract_SQL(pBuf, &pSql, &m_len))
         {
             m_pSql = pSql;
-            m_pI = m_pSql;
+            m_pI   = m_pSql;
             m_pEnd = m_pI + m_len;
 
             type_mask = parse();
@@ -154,17 +152,17 @@ private:
     {
 #ifdef TBP_LOG_UNEXPECTED_AND_EXHAUSTED
         MXS_NOTICE("Transaction tracking: In statement '%.*s', unexpected token at '%.*s'.",
-                   (int)m_len,
-                   m_pSql,
-                   (int)(m_pEnd - m_pI),
-                   m_pI);
+            (int) m_len,
+            m_pSql,
+            (int) (m_pEnd - m_pI),
+            m_pI);
 #endif
     }
 
     void log_exhausted()
     {
 #ifdef TBP_LOG_UNEXPECTED_AND_EXHAUSTED
-        MXS_NOTICE("Transaction tracking: More tokens expected in statement '%.*s'.", (int)m_len, m_pSql);
+        MXS_NOTICE("Transaction tracking: More tokens expected in statement '%.*s'.", (int) m_len, m_pSql);
 #endif
     }
 
@@ -196,8 +194,7 @@ private:
             type_mask = parse_set(0);
             break;
 
-        default:
-            ;
+        default:;
         }
 
         return type_mask;
@@ -556,7 +553,7 @@ private:
 
     token_t expect_token(const char* zWord, int len, token_t token)
     {
-        const char* pI = m_pI;
+        const char* pI   = m_pI;
         const char* pEnd = zWord + len;
 
         while ((pI < m_pEnd) && (zWord < pEnd) && (toupper(*pI) == *zWord))
@@ -567,8 +564,8 @@ private:
 
         if (zWord == pEnd)
         {
-            if ((pI == m_pEnd) || (!isalpha(*pI)))      // Handwritten isalpha not faster than library
-                                                        // version.
+            if ((pI == m_pEnd) || (!isalpha(*pI)))  // Handwritten isalpha not faster than library
+                                                    // version.
             {
                 m_pI = pI;
             }
@@ -611,9 +608,7 @@ private:
 
             if (m_pI != m_pEnd)
             {
-                MXS_INFO("Non-space data found after semi-colon: '%.*s'.",
-                         (int)(m_pEnd - m_pI),
-                         m_pI);
+                MXS_INFO("Non-space data found after semi-colon: '%.*s'.", (int) (m_pEnd - m_pI), m_pI);
             }
 
             token = PARSER_EXHAUSTED;
@@ -688,15 +683,15 @@ private:
                 break;
 
             case '1':
+            {
+                char c;
+                if (!peek_next_char(&c) || !isdigit(c))
                 {
-                    char c;
-                    if (!peek_next_char(&c) || !isdigit(c))
-                    {
-                        ++m_pI;
-                        token = TK_ONE;
-                    }
+                    ++m_pI;
+                    token = TK_ONE;
                 }
-                break;
+            }
+            break;
 
             case 'o':
             case 'O':
@@ -784,18 +779,17 @@ private:
                 break;
 
             case '0':
+            {
+                char c;
+                if (!peek_next_char(&c) || !isdigit(c))
                 {
-                    char c;
-                    if (!peek_next_char(&c) || !isdigit(c))
-                    {
-                        ++m_pI;
-                        token = TK_ZERO;
-                    }
+                    ++m_pI;
+                    token = TK_ZERO;
                 }
-                break;
+            }
+            break;
 
-            default:
-                ;
+            default:;
             }
         }
 
@@ -807,4 +801,4 @@ private:
         return token;
     }
 };
-}
+}  // namespace maxscale

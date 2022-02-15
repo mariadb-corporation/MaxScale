@@ -27,15 +27,17 @@ RWBackend::RWBackend(mxs::Endpoint* ref)
     : mxs::Backend(ref)
     , m_response_stat(target(), 9, std::chrono::milliseconds(250))
     , m_last_write(maxbase::Clock::now(maxbase::NowType::EPollTick))
-{
-}
+{}
 
 bool RWBackend::execute_session_command()
 {
     const auto& sescmd = next_session_command();
-    const char* cmd = STRPACKETTYPE(sescmd->command());
+    const char* cmd    = STRPACKETTYPE(sescmd->command());
     MXS_INFO("Execute sescmd #%lu on '%s': [%s] %s",
-             sescmd->get_position(), name(), cmd, sescmd->to_string().c_str());
+        sescmd->get_position(),
+        name(),
+        cmd,
+        sescmd->to_string().c_str());
 
     m_last_write = maxbase::Clock::now(maxbase::NowType::EPollTick);
     return mxs::Backend::execute_session_command();
@@ -67,10 +69,10 @@ uint32_t RWBackend::get_ps_handle(uint32_t id) const
 
 bool RWBackend::write(GWBUF* buffer, response_type type)
 {
-    m_last_write = maxbase::Clock::now(maxbase::NowType::EPollTick);
-    uint32_t len = mxs_mysql_get_packet_len(buffer);
+    m_last_write         = maxbase::Clock::now(maxbase::NowType::EPollTick);
+    uint32_t len         = mxs_mysql_get_packet_len(buffer);
     bool was_large_query = m_large_query;
-    m_large_query = len == MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN;
+    m_large_query        = len == MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN;
 
     if (was_large_query)
     {
@@ -90,7 +92,7 @@ bool RWBackend::write(GWBUF* buffer, response_type type)
         buffer = tmp;
 
         uint32_t id = mxs_mysql_extract_ps_id(buffer);
-        auto it = m_ps_handles.find(id);
+        auto it     = m_ps_handles.find(id);
 
         if (it != m_ps_handles.end())
         {
@@ -143,4 +145,4 @@ void RWBackend::select_finished()
 
     m_response_stat.query_finished();
 }
-}
+}  // namespace maxscale

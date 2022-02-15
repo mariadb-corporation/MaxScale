@@ -32,7 +32,12 @@
  *
  * For obvious reasons, it cannot use its own functions for reporting errors.
  */
-#define LOG_ERROR(format, ...) do {fprintf(stderr, format, ##__VA_ARGS__);} while (false)
+#define LOG_ERROR(format, ...)                  \
+    do                                          \
+    {                                           \
+        fprintf(stderr, format, ##__VA_ARGS__); \
+    }                                           \
+    while (false)
 
 //
 // Helper functions
@@ -42,9 +47,8 @@ namespace
 
 int open_fd(const std::string& filename)
 {
-    int fd = open(filename.c_str(),
-                  O_WRONLY | O_APPEND | O_CREAT,
-                  S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+    int fd = open(
+        filename.c_str(), O_WRONLY | O_APPEND | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
 
     if (fd == -1)
     {
@@ -58,13 +62,13 @@ bool should_log_error()
 {
     using std::chrono::seconds;
     static auto last_write = maxbase::Clock::now() - seconds(61);
-    auto now = maxbase::Clock::now();
-    bool rval = false;
+    auto now               = maxbase::Clock::now();
+    bool rval              = false;
 
     if (now - last_write >= seconds(60))
     {
         last_write = now;
-        rval = true;
+        rval       = true;
     }
 
     return rval;
@@ -91,7 +95,7 @@ std::string get_ident()
 
     return this_unit.ident;
 }
-}
+}  // namespace
 
 namespace maxbase
 {
@@ -121,7 +125,7 @@ std::unique_ptr<Logger> FileLogger::create(const std::string& filename)
 
     if (fd != -1)
     {
-        logger.reset(new(std::nothrow) FileLogger(fd, filename));
+        logger.reset(new (std::nothrow) FileLogger(fd, filename));
 
         if (logger)
         {
@@ -172,7 +176,7 @@ bool FileLogger::write(const char* msg, int len)
 
         if (rc == -1)
         {
-            if (should_log_error())     // Coarse error suppression
+            if (should_log_error())  // Coarse error suppression
             {
                 LOG_ERROR("Failed to write to log: %d, %s\n", errno, mxb_strerror(errno));
             }
@@ -210,8 +214,7 @@ bool FileLogger::rotate()
 FileLogger::FileLogger(int fd, const std::string& filename)
     : Logger(filename)
     , m_fd(fd)
-{
-}
+{}
 
 void FileLogger::close(const char* msg)
 {
@@ -232,27 +235,24 @@ bool FileLogger::write_header()
     localtime_r(&t, &tm);
 
     std::string ident = get_ident();
-    char time_string[32];   // 26 would be enough, according to "man asctime".
+    char time_string[32];  // 26 would be enough, according to "man asctime".
     asctime_r(&tm, time_string);
 
-    size_t size = ident.length() + 2 * sizeof(' ') + m_filename.length() + 2 * sizeof(' ') + strlen(
-        time_string);
+    size_t size
+        = ident.length() + 2 * sizeof(' ') + m_filename.length() + 2 * sizeof(' ') + strlen(time_string);
 
-    char header[size + 2 + 1];      // For the 2 newlines and the trailing NULL.
+    char header[size + 2 + 1];  // For the 2 newlines and the trailing NULL.
     sprintf(header, "\n\n%s  %s  %s", ident.c_str(), m_filename.c_str(), time_string);
 
     char line[sizeof(header) - 1];
     memset(line, '-', sizeof(line) - 1);
     line[sizeof(line) - 1] = '\n';
 
-    bool ok = ::write(m_fd, header, sizeof(header) - 1) != -1
-        && ::write(m_fd, line, sizeof(line)) != -1;
+    bool ok = ::write(m_fd, header, sizeof(header) - 1) != -1 && ::write(m_fd, line, sizeof(line)) != -1;
 
     if (!ok)
     {
-        LOG_ERROR("Error: Writing log header failed due to %d, %s\n",
-                  errno,
-                  mxb_strerror(errno));
+        LOG_ERROR("Error: Writing log header failed due to %d, %s\n", errno, mxb_strerror(errno));
     }
 
     return ok;
@@ -266,16 +266,10 @@ bool FileLogger::write_footer(const char* suffix)
     localtime_r(&t, &tm);
 
     const char FORMAT[] = "%04d-%02d-%02d %02d:%02d:%02d";
-    char time_string[20];   // 19 chars + NULL.
+    char time_string[20];  // 19 chars + NULL.
 
-    sprintf(time_string,
-            FORMAT,
-            tm.tm_year + 1900,
-            tm.tm_mon + 1,
-            tm.tm_mday,
-            tm.tm_hour,
-            tm.tm_min,
-            tm.tm_sec);
+    sprintf(
+        time_string, FORMAT, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
 
     size_t size = sizeof(time_string) + 3 * sizeof(' ') + strlen(suffix) + sizeof('\n');
 
@@ -286,16 +280,13 @@ bool FileLogger::write_footer(const char* suffix)
     memset(line, '-', sizeof(line) - 1);
     line[sizeof(line) - 1] = '\n';
 
-    bool ok = ::write(m_fd, header, sizeof(header) - 1) != -1
-        && ::write(m_fd, line, sizeof(line)) != -1;
+    bool ok = ::write(m_fd, header, sizeof(header) - 1) != -1 && ::write(m_fd, line, sizeof(line)) != -1;
 
     if (!ok)
     {
-        LOG_ERROR("Error: Writing log footer failed due to %d, %s\n",
-                  errno,
-                  mxb_strerror(errno));
+        LOG_ERROR("Error: Writing log footer failed due to %d, %s\n", errno, mxb_strerror(errno));
     }
 
     return ok;
 }
-}
+}  // namespace maxbase

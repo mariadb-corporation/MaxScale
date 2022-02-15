@@ -27,12 +27,10 @@ namespace maxbase
 class Logger
 {
 public:
-    Logger(const Logger&) = delete;
+    Logger(const Logger&)            = delete;
     Logger& operator=(const Logger&) = delete;
 
-    virtual ~Logger()
-    {
-    }
+    virtual ~Logger() {}
 
     /**
      * Set the identification, used in log header and footer.
@@ -67,16 +65,12 @@ public:
      *
      * @return The name of the log file
      */
-    const char* filename() const
-    {
-        return m_filename.c_str();
-    }
+    const char* filename() const { return m_filename.c_str(); }
 
 protected:
     Logger(const std::string& filename)
         : m_filename(filename)
-    {
-    }
+    {}
 
     std::string m_filename;
 };
@@ -84,7 +78,7 @@ protected:
 class FileLogger : public Logger
 {
 public:
-    FileLogger(const FileLogger&) = delete;
+    FileLogger(const FileLogger&)            = delete;
     FileLogger& operator=(const FileLogger&) = delete;
 
     /**
@@ -122,7 +116,7 @@ public:
     bool rotate();
 
 private:
-    int        m_fd;
+    int m_fd;
     std::mutex m_lock;
 
     FileLogger(int fd, const std::string& filename);
@@ -134,7 +128,7 @@ private:
 class StdoutLogger : public Logger
 {
 public:
-    StdoutLogger(const StdoutLogger&) = delete;
+    StdoutLogger(const StdoutLogger&)            = delete;
     StdoutLogger& operator=(const StdoutLogger&) = delete;
 
     /**
@@ -157,25 +151,18 @@ public:
      *
      * @return True on success
      */
-    bool write(const char* msg, int len)
-    {
-        return ::write(STDOUT_FILENO, msg, len) != -1;
-    }
+    bool write(const char* msg, int len) { return ::write(STDOUT_FILENO, msg, len) != -1; }
 
     /**
      * Rotate the "logfile"
      *
      * @return Always true
      */
-    bool rotate()
-    {
-        return true;
-    }
+    bool rotate() { return true; }
 
 private:
     StdoutLogger(const std::string& filename)
         : Logger(filename)
-    {
-    }
+    {}
 };
-}
+}  // namespace maxbase

@@ -28,23 +28,22 @@ class TestRawStorage : public TestStorage
 public:
     TestRawStorage(ostream* pOut)
         : TestStorage(pOut)
-    {
-    }
+    {}
 
 private:
     int execute(StorageFactory& factory,
-                size_t threads,
-                size_t seconds,
-                size_t items,
-                size_t min_size,
-                size_t max_size)
+        size_t threads,
+        size_t seconds,
+        size_t items,
+        size_t min_size,
+        size_t max_size)
     {
         TesterRawStorage tester(&out(), &factory);
 
         return tester.run(threads, seconds, items, min_size, max_size);
     }
 };
-}
+}  // namespace
 
 int main(int argc, char* argv[])
 {

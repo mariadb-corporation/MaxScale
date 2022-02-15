@@ -24,13 +24,9 @@ public:
     MatchData()
         : m_md_size(16)
         , m_md(pcre2_match_data_create(m_md_size, nullptr))
-    {
-    }
+    {}
 
-    operator pcre2_match_data*()
-    {
-        return m_md;
-    }
+    operator pcre2_match_data*() { return m_md; }
 
     void enlarge()
     {
@@ -39,14 +35,10 @@ public:
         m_md = pcre2_match_data_create(m_md_size, nullptr);
     }
 
-    ~MatchData()
-    {
-        pcre2_match_data_free(m_md);
-    }
+    ~MatchData() { pcre2_match_data_free(m_md); }
 
 private:
-
-    size_t            m_md_size;
+    size_t m_md_size;
     pcre2_match_data* m_md;
 };
 
@@ -54,8 +46,7 @@ thread_local struct
 {
     MatchData md;
 } this_thread;
-}
-
+}  // namespace
 
 namespace maxbase
 {
@@ -72,7 +63,7 @@ Regex::Regex(const std::string& pattern, int options)
         {
             PCRE2_UCHAR errorbuf[120];
             pcre2_get_error_message(err, errorbuf, sizeof(errorbuf));
-            m_error = (const char*)errorbuf;
+            m_error = (const char*) errorbuf;
         }
         else if (pcre2_jit_compile(m_code, PCRE2_JIT_COMPLETE) < 0)
         {
@@ -83,8 +74,7 @@ Regex::Regex(const std::string& pattern, int options)
 
 Regex::Regex(const Regex& rhs)
     : Regex(rhs.pattern())
-{
-}
+{}
 
 Regex::Regex(Regex&& rhs)
     : m_pattern(std::move(rhs.m_pattern))
@@ -105,10 +95,10 @@ Regex& Regex::operator=(const Regex& rhs)
 
 Regex& Regex::operator=(Regex&& rhs)
 {
-    m_code = rhs.m_code;
+    m_code     = rhs.m_code;
     rhs.m_code = nullptr;
-    m_pattern = std::move(rhs.m_pattern);
-    m_error = rhs.m_error;
+    m_pattern  = std::move(rhs.m_pattern);
+    m_error    = rhs.m_error;
     return *this;
 }
 
@@ -141,7 +131,8 @@ bool Regex::match(const std::string& str) const
 {
     int rc;
 
-    while ((rc = pcre2_match(m_code, (PCRE2_SPTR)str.c_str(), str.length(), 0, 0, this_thread.md, NULL)) == 0)
+    while (
+        (rc = pcre2_match(m_code, (PCRE2_SPTR) str.c_str(), str.length(), 0, 0, this_thread.md, NULL)) == 0)
     {
         this_thread.md.enlarge();
     }
@@ -157,11 +148,17 @@ std::string Regex::replace(const std::string& str, const char* replacement) cons
 
     while (true)
     {
-        int rc = pcre2_substitute(
-            m_code, (PCRE2_SPTR) str.c_str(), str.length(),
-            0, PCRE2_SUBSTITUTE_GLOBAL, this_thread.md, NULL,
-            (PCRE2_SPTR) replacement, PCRE2_ZERO_TERMINATED,
-            (PCRE2_UCHAR*) &output[0], &size);
+        int rc = pcre2_substitute(m_code,
+            (PCRE2_SPTR) str.c_str(),
+            str.length(),
+            0,
+            PCRE2_SUBSTITUTE_GLOBAL,
+            this_thread.md,
+            NULL,
+            (PCRE2_SPTR) replacement,
+            PCRE2_ZERO_TERMINATED,
+            (PCRE2_UCHAR*) &output[0],
+            &size);
 
         if (rc == PCRE2_ERROR_NOMEMORY)
         {
@@ -179,20 +176,26 @@ std::string Regex::replace(const std::string& str, const char* replacement) cons
     return output;
 }
 
-std::string pcre2_substitute(pcre2_code* re,
-                             const std::string& subject,
-                             const std::string& replace,
-                             std::string* error)
+std::string pcre2_substitute(
+    pcre2_code* re, const std::string& subject, const std::string& replace, std::string* error)
 {
     mxb_assert(re);
     std::string rval = subject;
-    size_t size_tmp = rval.size();
+    size_t size_tmp  = rval.size();
     int rc;
 
-    while ((rc = pcre2_substitute(re, (PCRE2_SPTR) subject.c_str(), subject.length(),
-                                  0, PCRE2_SUBSTITUTE_GLOBAL, NULL, NULL,
-                                  (PCRE2_SPTR) replace.c_str(), replace.length(),
-                                  (PCRE2_UCHAR*) &rval[0], &size_tmp)) == PCRE2_ERROR_NOMEMORY)
+    while ((rc = pcre2_substitute(re,
+                (PCRE2_SPTR) subject.c_str(),
+                subject.length(),
+                0,
+                PCRE2_SUBSTITUTE_GLOBAL,
+                NULL,
+                NULL,
+                (PCRE2_SPTR) replace.c_str(),
+                replace.length(),
+                (PCRE2_UCHAR*) &rval[0],
+                &size_tmp))
+           == PCRE2_ERROR_NOMEMORY)
     {
         rval.resize(rval.size() * 2 + 1);
         size_tmp = rval.size();
@@ -203,7 +206,7 @@ std::string pcre2_substitute(pcre2_code* re,
         if (error)
         {
             char errbuf[1024];
-            pcre2_get_error_message(rc, (PCRE2_UCHAR*)errbuf, sizeof(errbuf));
+            pcre2_get_error_message(rc, (PCRE2_UCHAR*) errbuf, sizeof(errbuf));
             *error = errbuf;
         }
 
@@ -216,4 +219,4 @@ std::string pcre2_substitute(pcre2_code* re,
 
     return rval;
 }
-}
+}  // namespace maxbase

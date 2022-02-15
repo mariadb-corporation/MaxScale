@@ -25,7 +25,7 @@
 
 class MXS_SESSION;
 
-constexpr int RANK_PRIMARY = 1;
+constexpr int RANK_PRIMARY   = 1;
 constexpr int RANK_SECONDARY = 2;
 
 // The enum values for `rank`
@@ -40,22 +40,23 @@ extern const char* DEFAULT_RANK;
  */
 // TODO: Rename with a different prefix or something
 // Bits used by most monitors
-#define SERVER_RUNNING              (1 << 0)    /**<< The server is up and running */
-#define SERVER_MAINT                (1 << 1)    /**<< Server is in maintenance mode */
-#define SERVER_AUTH_ERROR           (1 << 2)    /**<< Authentication error from monitor */
-#define SERVER_MASTER               (1 << 3)    /**<< The server is a master, i.e. can handle writes */
-#define SERVER_SLAVE                (1 << 4)    /**<< The server is a slave, i.e. can handle reads */
-#define SERVER_DRAINING             (1 << 5)    /**<< The server is being drained, i.e. no new connection
+#define SERVER_RUNNING    (1 << 0) /**<< The server is up and running */
+#define SERVER_MAINT      (1 << 1) /**<< Server is in maintenance mode */
+#define SERVER_AUTH_ERROR (1 << 2) /**<< Authentication error from monitor */
+#define SERVER_MASTER     (1 << 3) /**<< The server is a master, i.e. can handle writes */
+#define SERVER_SLAVE      (1 << 4) /**<< The server is a slave, i.e. can handle reads */
+#define SERVER_DRAINING \
+    (1 << 5)                                 /**<< The server is being drained, i.e. no new connection
                                                  * should be created. */
-#define SERVER_DISK_SPACE_EXHAUSTED (1 << 6)    /**<< The disk space of the server is exhausted */
+#define SERVER_DISK_SPACE_EXHAUSTED (1 << 6) /**<< The disk space of the server is exhausted */
 
 // Bits used by MariaDB Monitor (mostly)
-#define SERVER_SLAVE_OF_EXT_MASTER (1 << 10)    /**<< Server is slave of a non-monitored master */
-#define SERVER_RELAY               (1 << 11)    /**<< Server is a relay */
-#define SERVER_BLR                 (1 << 12)    /**<< Server is a replicating binlog router */
+#define SERVER_SLAVE_OF_EXT_MASTER (1 << 10) /**<< Server is slave of a non-monitored master */
+#define SERVER_RELAY               (1 << 11) /**<< Server is a relay */
+#define SERVER_BLR                 (1 << 12) /**<< Server is a replicating binlog router */
 // Bits used by other monitors
-#define SERVER_JOINED            (1 << 20)      /**<< The server is joined in a Galera cluster */
-#define SERVER_MASTER_STICKINESS (1 << 21)      /**<< Server Master stickiness */
+#define SERVER_JOINED            (1 << 20) /**<< The server is joined in a Galera cluster */
+#define SERVER_MASTER_STICKINESS (1 << 21) /**<< Server Master stickiness */
 
 inline bool status_is_connectable(uint64_t status)
 {
@@ -115,7 +116,7 @@ inline bool status_is_joined(uint64_t status)
 inline bool status_is_slave_of_ext_master(uint64_t status)
 {
     return (status & (SERVER_RUNNING | SERVER_SLAVE_OF_EXT_MASTER))
-           == (SERVER_RUNNING | SERVER_SLAVE_OF_EXT_MASTER);
+        == (SERVER_RUNNING | SERVER_SLAVE_OF_EXT_MASTER);
 }
 
 inline bool status_is_disk_space_exhausted(uint64_t status)
@@ -167,18 +168,12 @@ public:
 
     virtual mxs::Target* target() const = 0;
 
-//
-// Helper functions for storing a pointer to associated data
-//
-    void set_userdata(void* data)
-    {
-        m_data = data;
-    }
+    //
+    // Helper functions for storing a pointer to associated data
+    //
+    void set_userdata(void* data) { m_data = data; }
 
-    void* get_userdata()
-    {
-        return m_data;
-    }
+    void* get_userdata() { return m_data; }
 
 private:
     void* m_data {nullptr};
@@ -195,8 +190,15 @@ enum class RLagState
 class Target
 {
 public:
-    enum : int64_t { RLAG_UNDEFINED = -1 };     // Default replication lag value
-    enum : int64_t { PING_UNDEFINED = -1 };     // Default ping value
+    enum : int64_t
+    {
+        RLAG_UNDEFINED = -1
+    };  // Default replication lag value
+
+    enum : int64_t
+    {
+        PING_UNDEFINED = -1
+    };  // Default ping value
 
     virtual ~Target() = default;
 
@@ -274,11 +276,11 @@ public:
     {
         // NOTE: Currently mutable as various parts of the system modify these when they should only be
         //       modified by the inherited objects.
-        mutable int      n_connections = 0;     /**< Number of connections */
-        mutable int      n_max_connections = 0; /**< Maximum number of connections */
-        mutable int      n_current = 0;         /**< Current connections */
-        mutable int      n_current_ops = 0;     /**< Current active operations */
-        mutable uint64_t packets = 0;           /**< Number of packets routed to this server */
+        mutable int n_connections     = 0; /**< Number of connections */
+        mutable int n_max_connections = 0; /**< Maximum number of connections */
+        mutable int n_current         = 0; /**< Current connections */
+        mutable int n_current_ops     = 0; /**< Current active operations */
+        mutable uint64_t packets      = 0; /**< Number of packets routed to this server */
 
         void add_connection() const;
         void remove_connection() const;
@@ -291,10 +293,7 @@ public:
      *
      * @return A string representation of the status
      */
-    std::string status_string() const
-    {
-        return status_to_string(status(), stats().n_current);
-    }
+    std::string status_string() const { return status_to_string(status(), stats().n_current); }
 
     // Converts status bits to strings
     static std::string status_to_string(uint64_t flags, int n_connections);
@@ -311,135 +310,90 @@ public:
     /**
      * Get target statistics
      */
-    const Stats& stats() const
-    {
-        return m_stats;
-    }
+    const Stats& stats() const { return m_stats; }
 
     /**
      * Is the target running and can be connected to?
      *
      * @return True if the target can be connected to.
      */
-    bool is_connectable() const
-    {
-        return status_is_connectable(status());
-    }
+    bool is_connectable() const { return status_is_connectable(status()); }
 
     /**
      * Is the target running and not in maintenance?
      *
      * @return True if target can be used.
      */
-    bool is_usable() const
-    {
-        return status_is_usable(status());
-    }
+    bool is_usable() const { return status_is_usable(status()); }
 
     /**
      * Is the target running?
      *
      * @return True if the target is running
      */
-    bool is_running() const
-    {
-        return status_is_running(status());
-    }
+    bool is_running() const { return status_is_running(status()); }
 
     /**
      * Is the target down?
      *
      * @return True if monitor cannot connect to the target.
      */
-    bool is_down() const
-    {
-        return status_is_down(status());
-    }
+    bool is_down() const { return status_is_down(status()); }
 
     /**
      * Is the target in maintenance mode?
      *
      * @return True if target is in maintenance.
      */
-    bool is_in_maint() const
-    {
-        return status_is_in_maint(status());
-    }
+    bool is_in_maint() const { return status_is_in_maint(status()); }
 
     /**
      * Is the target being drained?
      *
      * @return True if target is being drained.
      */
-    bool is_draining() const
-    {
-        return status_is_draining(status());
-    }
+    bool is_draining() const { return status_is_draining(status()); }
 
     /**
      * Is the target a master?
      *
      * @return True if target is running and marked as master.
      */
-    bool is_master() const
-    {
-        return status_is_master(status());
-    }
+    bool is_master() const { return status_is_master(status()); }
 
     /**
      * Is the target a slave.
      *
      * @return True if target is running and marked as slave.
      */
-    bool is_slave() const
-    {
-        return status_is_slave(status());
-    }
+    bool is_slave() const { return status_is_slave(status()); }
 
     /**
      * Is the target a relay slave?
      *
      * @return True, if target is a running relay.
      */
-    bool is_relay() const
-    {
-        return status_is_relay(status());
-    }
+    bool is_relay() const { return status_is_relay(status()); }
 
     /**
      * Is the target joined Galera node?
      *
      * @return True, if target is running and joined.
      */
-    bool is_joined() const
-    {
-        return status_is_joined(status());
-    }
+    bool is_joined() const { return status_is_joined(status()); }
 
     bool is_in_cluster() const
     {
         return (status() & (SERVER_MASTER | SERVER_SLAVE | SERVER_RELAY | SERVER_JOINED)) != 0;
     }
 
-    bool is_slave_of_ext_master() const
-    {
-        return status_is_slave_of_ext_master(status());
-    }
+    bool is_slave_of_ext_master() const { return status_is_slave_of_ext_master(status()); }
 
-    bool is_low_on_disk_space() const
-    {
-        return status_is_disk_space_exhausted(status());
-    }
+    bool is_low_on_disk_space() const { return status_is_disk_space_exhausted(status()); }
 
-    int response_time_num_samples() const
-    {
-        return m_response_time.num_samples();
-    }
+    int response_time_num_samples() const { return m_response_time.num_samples(); }
 
-    double response_time_average() const
-    {
-        return m_response_time.average();
-    }
+    double response_time_average() const { return m_response_time.average(); }
 
     /**
      * Add a response time measurement to the global server value.
@@ -458,9 +412,9 @@ public:
     void set_rlag_state(RLagState new_state, int max_rlag);
 
 protected:
-    Stats              m_stats;
-    maxbase::EMAverage m_response_time {0.04, 0.35, 500};   /**< Response time calculations for this server */
-    std::mutex         m_average_write_mutex;               /**< Protects response time modifications */
+    Stats m_stats;
+    maxbase::EMAverage m_response_time {0.04, 0.35, 500}; /**< Response time calculations for this server */
+    std::mutex m_average_write_mutex;                     /**< Protects response time modifications */
 
     std::atomic<RLagState> m_rlag_state {RLagState::NONE};
 };
@@ -490,8 +444,10 @@ public:
 
     template<class InputIterator>
     void set(uint32_t code,
-             InputIterator sql_state_begin, InputIterator sql_state_end,
-             InputIterator message_begin, InputIterator message_end)
+        InputIterator sql_state_begin,
+        InputIterator sql_state_end,
+        InputIterator message_begin,
+        InputIterator message_end)
     {
         mxb_assert(std::distance(sql_state_begin, sql_state_end) == 5);
         m_code = code;
@@ -502,19 +458,19 @@ public:
     void clear();
 
 private:
-    uint16_t    m_code {0};
+    uint16_t m_code {0};
     std::string m_sql_state;
     std::string m_message;
 };
 
 enum class ReplyState
 {
-    START,          /**< Query sent to backend */
-    DONE,           /**< Complete reply received */
-    RSET_COLDEF,    /**< Resultset response, waiting for column definitions */
-    RSET_COLDEF_EOF,/**< Resultset response, waiting for EOF for column definitions */
-    RSET_ROWS,      /**< Resultset response, waiting for rows */
-    PREPARE,        /**< COM_STMT_PREPARE response */
+    START,           /**< Query sent to backend */
+    DONE,            /**< Complete reply received */
+    RSET_COLDEF,     /**< Resultset response, waiting for column definitions */
+    RSET_COLDEF_EOF, /**< Resultset response, waiting for EOF for column definitions */
+    RSET_ROWS,       /**< Resultset response, waiting for rows */
+    PREPARE,         /**< COM_STMT_PREPARE response */
 };
 
 class Reply
@@ -646,25 +602,25 @@ public:
 
     void clear();
 
-    template<typename ... Args>
+    template<typename... Args>
     void set_error(Args... args)
     {
         m_error.set(std::forward<Args>(args)...);
     }
 
 private:
-    uint8_t               m_command {0};
-    ReplyState            m_reply_state {ReplyState::DONE};
-    Error                 m_error;
-    uint64_t              m_row_count {0};
-    uint64_t              m_size {0};
-    uint32_t              m_generated_id {0};
-    uint16_t              m_param_count {0};
-    uint16_t              m_num_warnings {0};
-    uint16_t              m_server_status {0};
-    bool                  m_is_ok {false};
+    uint8_t m_command {0};
+    ReplyState m_reply_state {ReplyState::DONE};
+    Error m_error;
+    uint64_t m_row_count {0};
+    uint64_t m_size {0};
+    uint32_t m_generated_id {0};
+    uint16_t m_param_count {0};
+    uint16_t m_num_warnings {0};
+    uint16_t m_server_status {0};
+    bool m_is_ok {false};
     std::vector<uint64_t> m_field_counts;
 
     std::unordered_map<std::string, std::string> m_variables;
 };
-}
+}  // namespace maxscale

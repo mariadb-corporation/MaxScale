@@ -23,12 +23,12 @@ public:
 
     static void populate(MXS_MODULE& info);
 
-    cs::Version version;         // Mandatory
-    SERVER*     pPrimary;        // Mandatory for 1.0, invalid for 1.2 and 1.5.
-    int64_t     admin_port;      // Optional for 1.5, invalid for 1.0 and 1.2.
-    std::string admin_base_path; // Optional for 1.5, invalid for 1.0 and 1.2.
-    std::string api_key;         // Optional for 1.5, invalid for 1.0 and 1.2.
-    std::string local_address;   // Mandatory (unless global exists) for 1.5, invalid for 1.0 and 1.2.
+    cs::Version version;          // Mandatory
+    SERVER* pPrimary;             // Mandatory for 1.0, invalid for 1.2 and 1.5.
+    int64_t admin_port;           // Optional for 1.5, invalid for 1.0 and 1.2.
+    std::string admin_base_path;  // Optional for 1.5, invalid for 1.0 and 1.2.
+    std::string api_key;          // Optional for 1.5, invalid for 1.0 and 1.2.
+    std::string local_address;    // Mandatory (unless global exists) for 1.5, invalid for 1.0 and 1.2.
 
 private:
     bool post_configure();

@@ -36,11 +36,11 @@ namespace maxscale
 class IndexedStorage
 {
 public:
-    using LocalData = std::vector<void*>;
+    using LocalData    = std::vector<void*>;
     using DataDeleters = std::vector<void (*)(void*)>;
 
-    IndexedStorage() = default;
-    IndexedStorage(const IndexedStorage&) = delete;
+    IndexedStorage()                                 = default;
+    IndexedStorage(const IndexedStorage&)            = delete;
     IndexedStorage& operator=(const IndexedStorage&) = delete;
 
     ~IndexedStorage();
@@ -62,7 +62,7 @@ public:
      * @param key  Key acquired with create_local_data
      * @param data Data to store
      */
-    void set_data(uint64_t key, void* data, void (* callback)(void*))
+    void set_data(uint64_t key, void* data, void (*callback)(void*))
     {
         if (m_local_data.size() <= key)
         {
@@ -85,10 +85,7 @@ public:
      *
      * @return Data previously stored
      */
-    void* get_data(uint64_t key) const
-    {
-        return key < m_local_data.size() ? m_local_data[key] : nullptr;
-    }
+    void* get_data(uint64_t key) const { return key < m_local_data.size() ? m_local_data[key] : nullptr; }
 
     /**
      * Deletes local data
@@ -107,13 +104,13 @@ public:
             }
 
             m_data_deleters[key] = nullptr;
-            m_local_data[key] = nullptr;
+            m_local_data[key]    = nullptr;
         }
     }
 
 private:
-    LocalData    m_local_data;
+    LocalData m_local_data;
     DataDeleters m_data_deleters;
 };
 
-}
+}  // namespace maxscale

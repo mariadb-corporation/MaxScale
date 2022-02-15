@@ -42,7 +42,7 @@ bool LocalClient::queue_query(GWBUF* buffer)
 LocalClient* LocalClient::create(MXS_SESSION* session, mxs::Target* target)
 {
     LocalClient* relay = nullptr;
-    auto state = session->state();
+    auto state         = session->state();
 
     if (state == MXS_SESSION::State::STARTED || state == MXS_SESSION::State::CREATED)
     {

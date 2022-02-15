@@ -26,158 +26,69 @@ namespace
 
 GWBUF* gwbuf_create_com_query(const char* zStmt)
 {
-    size_t len = strlen(zStmt);
+    size_t len         = strlen(zStmt);
     size_t payload_len = len + 1;
-    size_t gwbuf_len = MYSQL_HEADER_LEN + payload_len;
+    size_t gwbuf_len   = MYSQL_HEADER_LEN + payload_len;
 
     GWBUF* pBuf = gwbuf_alloc(gwbuf_len);
 
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf))) = payload_len;
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 1)) = (payload_len >> 8);
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 2)) = (payload_len >> 16);
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 3)) = 0x00;
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 4)) = 0x03;
-    memcpy((char*)GWBUF_DATA(pBuf) + 5, zStmt, len);
+    *((unsigned char*) ((char*) GWBUF_DATA(pBuf)))     = payload_len;
+    *((unsigned char*) ((char*) GWBUF_DATA(pBuf) + 1)) = (payload_len >> 8);
+    *((unsigned char*) ((char*) GWBUF_DATA(pBuf) + 2)) = (payload_len >> 16);
+    *((unsigned char*) ((char*) GWBUF_DATA(pBuf) + 3)) = 0x00;
+    *((unsigned char*) ((char*) GWBUF_DATA(pBuf) + 4)) = 0x03;
+    memcpy((char*) GWBUF_DATA(pBuf) + 5, zStmt, len);
 
     return pBuf;
 }
-}
+}  // namespace
 
 namespace
 {
 
-typedef SetParser     P1;
+typedef SetParser P1;
 typedef SqlModeParser P2;
 
 struct TEST_CASE
 {
-    const char*               zStmt;
-    SetParser::status_t       status;
+    const char* zStmt;
+    SetParser::status_t status;
     SqlModeParser::sql_mode_t sql_mode;
-} test_cases[] =
-{
-    {
-        "SET SQL_MODE=DEFAULT",
+} test_cases[] = {
+    {"SET SQL_MODE=DEFAULT", P1::IS_SET_SQL_MODE, P2::DEFAULT},
+    {"SET SQL_MODE=DEFAULT;", P1::IS_SET_SQL_MODE, P2::DEFAULT},
+    {"SET SQL_MODE=DEFAULT;   ", P1::IS_SET_SQL_MODE, P2::DEFAULT},
+    {"-- This is a comment\nSET SQL_MODE=DEFAULT", P1::IS_SET_SQL_MODE, P2::DEFAULT},
+    {"#This is a comment\nSET SQL_MODE=DEFAULT", P1::IS_SET_SQL_MODE, P2::DEFAULT},
+    {"/*blah*/ SET /*blah*/ SQL_MODE /*blah*/ = /*blah*/ DEFAULT /*blah*/ ",
         P1::IS_SET_SQL_MODE,
-        P2::DEFAULT
-    },
-    {
-        "SET SQL_MODE=DEFAULT;",
+        P2::DEFAULT},
+    {"SET SQL_MODE=ORACLE", P1::IS_SET_SQL_MODE, P2::ORACLE},
+    {"SET SQL_MODE=BLAH", P1::IS_SET_SQL_MODE, P2::SOMETHING},
+    {"SET SQL_MODE='BLAH'", P1::IS_SET_SQL_MODE, P2::SOMETHING},
+    {"SET SQL_MODE=BLAHBLAH", P1::IS_SET_SQL_MODE, P2::SOMETHING},
+    {"SET SQL_MODE='ORACLE'", P1::IS_SET_SQL_MODE, P2::ORACLE},
+    {"SET SQL_MODE='BLAH, A, B, ORACLE'", P1::IS_SET_SQL_MODE, P2::ORACLE},
+    {"SET SQL_MODE='BLAH, A, B, XYZ_123'", P1::IS_SET_SQL_MODE, P2::SOMETHING},
+    {"SET VAR1=1234, VAR2=3456, SQL_MODE='A,B, ORACLE'", P1::IS_SET_SQL_MODE, P2::ORACLE},
+    {"SET SQL_MODE=ORACLE, VAR1=3456, VAR2='A=b, c=d', SQL_MODE='A,B, ORACLE'",
         P1::IS_SET_SQL_MODE,
-        P2::DEFAULT
-    },
-    {
-        "SET SQL_MODE=DEFAULT;   ",
+        P2::ORACLE},
+    {"SET GLOBAL SQL_MODE=ORACLE", P1::IS_SET_SQL_MODE, P2::ORACLE},
+    {"SET SESSION SQL_MODE=ORACLE", P1::IS_SET_SQL_MODE, P2::ORACLE},
+    {"SET LOCAL SQL_MODE=ORACLE", P1::IS_SET_SQL_MODE, P2::ORACLE},
+    {"SET @@GLOBAL.SQL_MODE=ORACLE", P1::IS_SET_SQL_MODE, P2::ORACLE},
+    {"SET @@SESSION.SQL_MODE=ORACLE", P1::IS_SET_SQL_MODE, P2::ORACLE},
+    {"SET @@LOCAL.SQL_MODE=ORACLE", P1::IS_SET_SQL_MODE, P2::ORACLE},
+    {"SET @@LOCAL . SQL_MODE = ORACLE", P1::IS_SET_SQL_MODE, P2::ORACLE},
+    {"SET @@SESSION.blah = 1234, @@GLOBAL.blahblah = something, sql_mode=ORACLE",
         P1::IS_SET_SQL_MODE,
-        P2::DEFAULT
-    },
-    {
-        "-- This is a comment\nSET SQL_MODE=DEFAULT",
-        P1::IS_SET_SQL_MODE,
-        P2::DEFAULT
-    },
-    {
-        "#This is a comment\nSET SQL_MODE=DEFAULT",
-        P1::IS_SET_SQL_MODE,
-        P2::DEFAULT
-    },
-    {
-        "/*blah*/ SET /*blah*/ SQL_MODE /*blah*/ = /*blah*/ DEFAULT /*blah*/ ",
-        P1::IS_SET_SQL_MODE,
-        P2::DEFAULT
-    },
-    {
-        "SET SQL_MODE=ORACLE",
-        P1::IS_SET_SQL_MODE,
-        P2::ORACLE
-    },
-    {
-        "SET SQL_MODE=BLAH",
-        P1::IS_SET_SQL_MODE,
-        P2::SOMETHING
-    },
-    {
-        "SET SQL_MODE='BLAH'",
-        P1::IS_SET_SQL_MODE,
-        P2::SOMETHING
-    },
-    {
-        "SET SQL_MODE=BLAHBLAH",
-        P1::IS_SET_SQL_MODE,
-        P2::SOMETHING
-    },
-    {
-        "SET SQL_MODE='ORACLE'",
-        P1::IS_SET_SQL_MODE,
-        P2::ORACLE
-    },
-    {
-        "SET SQL_MODE='BLAH, A, B, ORACLE'",
-        P1::IS_SET_SQL_MODE,
-        P2::ORACLE
-    },
-    {
-        "SET SQL_MODE='BLAH, A, B, XYZ_123'",
-        P1::IS_SET_SQL_MODE,
-        P2::SOMETHING
-    },
-    {
-        "SET VAR1=1234, VAR2=3456, SQL_MODE='A,B, ORACLE'",
-        P1::IS_SET_SQL_MODE,
-        P2::ORACLE
-    },
-    {
-        "SET SQL_MODE=ORACLE, VAR1=3456, VAR2='A=b, c=d', SQL_MODE='A,B, ORACLE'",
-        P1::IS_SET_SQL_MODE,
-        P2::ORACLE
-    },
-    {
-        "SET GLOBAL SQL_MODE=ORACLE",
-        P1::IS_SET_SQL_MODE,
-        P2::ORACLE
-    },
-    {
-        "SET SESSION SQL_MODE=ORACLE",
-        P1::IS_SET_SQL_MODE,
-        P2::ORACLE
-    },
-    {
-        "SET LOCAL SQL_MODE=ORACLE",
-        P1::IS_SET_SQL_MODE,
-        P2::ORACLE
-    },
-    {
-        "SET @@GLOBAL.SQL_MODE=ORACLE",
-        P1::IS_SET_SQL_MODE,
-        P2::ORACLE
-    },
-    {
-        "SET @@SESSION.SQL_MODE=ORACLE",
-        P1::IS_SET_SQL_MODE,
-        P2::ORACLE
-    },
-    {
-        "SET @@LOCAL.SQL_MODE=ORACLE",
-        P1::IS_SET_SQL_MODE,
-        P2::ORACLE
-    },
-    {
-        "SET @@LOCAL . SQL_MODE = ORACLE",
-        P1::IS_SET_SQL_MODE,
-        P2::ORACLE
-    },
-    {
-        "SET @@SESSION.blah = 1234, @@GLOBAL.blahblah = something, sql_mode=ORACLE",
-        P1::IS_SET_SQL_MODE,
-        P2::ORACLE
-    },
+        P2::ORACLE},
 };
 
 const int N_TEST_CASES = sizeof(test_cases) / sizeof(test_cases[0]);
 
-int test(GWBUF** ppStmt,
-         SqlModeParser::sql_mode_t expected_sql_mode,
-         SetParser::status_t expected_status)
+int test(GWBUF** ppStmt, SqlModeParser::sql_mode_t expected_sql_mode, SetParser::status_t expected_status)
 {
     int rv = EXIT_SUCCESS;
 
@@ -289,7 +200,7 @@ int test_non_contiguous()
 
         while (pTail)
         {
-            size_t n = MYSQL_HEADER_LEN + rand() % 10;      // Between 4 and 13 bytes long chunks.
+            size_t n = MYSQL_HEADER_LEN + rand() % 10;  // Between 4 and 13 bytes long chunks.
 
             GWBUF* pHead = gwbuf_split(&pTail, n);
 
@@ -343,8 +254,7 @@ int test()
 
     return rv;
 }
-}
-
+}  // namespace
 
 int main(int argc, char* argv[])
 {

@@ -66,11 +66,11 @@ int main(int argc, char** argv)
                     size_t psize = line.size() + 1;
                     mxs::Buffer buf(psize + 4);
                     auto it = buf.begin();
-                    *it++ = (uint8_t)psize;
-                    *it++ = (uint8_t)(psize >> 8);
-                    *it++ = (uint8_t)(psize >> 16);
-                    *it++ = 0;
-                    *it++ = 3;
+                    *it++   = (uint8_t) psize;
+                    *it++   = (uint8_t) (psize >> 8);
+                    *it++   = (uint8_t) (psize >> 16);
+                    *it++   = 0;
+                    *it++   = 3;
                     std::copy(line.begin(), line.end(), it);
                     char* tok = qc_get_canonical(buf.get());
                     outfile << tok << endl;

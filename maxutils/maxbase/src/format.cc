@@ -52,7 +52,7 @@ const char* get_binary_size_suffix(int i)
         return "YiB";
     }
 }
-}
+}  // namespace
 
 namespace maxbase
 {
@@ -84,10 +84,10 @@ std::string string_vprintf(const char* format, va_list args)
     else if (characters > 0)
     {
         // 'characters' does not include the \0-byte.
-        rval.resize(characters);    // The final "length" of the string
+        rval.resize(characters);  // The final "length" of the string
         // Write directly to the string internal array, avoiding any temporary arrays.
         vsnprintf(&rval[0], characters + 1, format, args);
     }
     return rval;
 }
-}
+}  // namespace maxbase

@@ -19,7 +19,7 @@
  * This file should be included first by all maxsql headers.
  */
 
-#if !defined (__cplusplus)
+#if !defined(__cplusplus)
 #error This file is only to be included by C++ code.
 #endif
 
@@ -29,8 +29,7 @@
  * All classes of MaxSql are defined in the namespace @c maxsql.
  */
 namespace maxsql
-{
-}
+{}
 
 /**
  * Shorthand for the @c maxsql namespace.

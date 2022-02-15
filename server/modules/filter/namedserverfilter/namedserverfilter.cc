@@ -51,23 +51,20 @@ static void generate_param_names(int pairs);
 static StringVector param_names_match_indexed;
 static StringVector param_names_target_indexed;
 
-static const MXS_ENUM_VALUE option_values[] =
-{
-    {"ignorecase", PCRE2_CASELESS},
-    {"case",       0             },
-    {"extended",   PCRE2_EXTENDED},                                     // Ignore white space and # comments
-    {NULL}
-};
+static const MXS_ENUM_VALUE option_values[] = {{"ignorecase", PCRE2_CASELESS},
+    {"case", 0},
+    {"extended", PCRE2_EXTENDED},  // Ignore white space and # comments
+    {NULL}};
 
-static const char MATCH_STR[] = "match";
+static const char MATCH_STR[]  = "match";
 static const char SERVER_STR[] = "server";
 static const char TARGET_STR[] = "target";
 
 RegexHintFilter::RegexHintFilter(const std::string& user,
-                                 const SourceHostVector& addresses,
-                                 const StringVector& hostnames,
-                                 const MappingVector& mapping,
-                                 int ovector_size)
+    const SourceHostVector& addresses,
+    const StringVector& hostnames,
+    const MappingVector& mapping,
+    int ovector_size)
     : m_user(user)
     , m_sources(addresses)
     , m_hostnames(hostnames)
@@ -75,8 +72,7 @@ RegexHintFilter::RegexHintFilter(const std::string& user,
     , m_ovector_size(ovector_size)
     , m_total_diverted(0)
     , m_total_undiverted(0)
-{
-}
+{}
 
 RegexHintFilter::~RegexHintFilter()
 {
@@ -86,19 +82,15 @@ RegexHintFilter::~RegexHintFilter()
     }
 }
 
-RegexHintFSession::RegexHintFSession(MXS_SESSION* session,
-                                     SERVICE* service,
-                                     RegexHintFilter& fil_inst,
-                                     bool active,
-                                     pcre2_match_data* md)
+RegexHintFSession::RegexHintFSession(
+    MXS_SESSION* session, SERVICE* service, RegexHintFilter& fil_inst, bool active, pcre2_match_data* md)
     : maxscale::FilterSession::FilterSession(session, service)
     , m_fil_inst(fil_inst)
     , m_n_diverted(0)
     , m_n_undiverted(0)
     , m_active(active)
     , m_match_data(md)
-{
-}
+{}
 
 RegexHintFSession::~RegexHintFSession()
 {
@@ -115,23 +107,21 @@ RegexHintFSession::~RegexHintFSession()
  */
 int RegexHintFSession::routeQuery(GWBUF* queue)
 {
-    char* sql = NULL;
+    char* sql   = NULL;
     int sql_len = 0;
 
     if (modutil_is_SQL(queue) && m_active)
     {
         if (modutil_extract_SQL(queue, &sql, &sql_len))
         {
-            const RegexToServers* reg_serv =
-                m_fil_inst.find_servers(sql, sql_len, m_match_data);
+            const RegexToServers* reg_serv = m_fil_inst.find_servers(sql, sql_len, m_match_data);
 
             if (reg_serv)
             {
                 /* Add the servers in the list to the buffer routing hints */
                 for (const auto& target : reg_serv->m_targets)
                 {
-                    queue->hint =
-                        hint_create_route(queue->hint, reg_serv->m_htype, target.c_str());
+                    queue->hint = hint_create_route(queue->hint, reg_serv->m_htype, target.c_str());
                 }
                 m_n_diverted++;
                 m_fil_inst.m_total_diverted++;
@@ -155,18 +145,18 @@ int RegexHintFSession::routeQuery(GWBUF* queue)
 RegexHintFSession* RegexHintFilter::newSession(MXS_SESSION* session, SERVICE* service)
 {
     const char* remote = NULL;
-    const char* user = NULL;
+    const char* user   = NULL;
 
     pcre2_match_data* md = pcre2_match_data_create(m_ovector_size, NULL);
-    bool session_active = true;
-    bool ip_found = false;
+    bool session_active  = true;
+    bool ip_found        = false;
 
     /* Check client IP against 'source' host option */
     if ((remote = session_get_remote(session)) != NULL)
     {
         if (m_sources.size() > 0)
         {
-            ip_found = check_source_host(remote, &session->client_connection()->dcb()->ip());
+            ip_found       = check_source_host(remote, &session->client_connection()->dcb()->ip());
             session_active = ip_found;
         }
         /* Don't check hostnames if ip is already found */
@@ -176,9 +166,7 @@ RegexHintFSession* RegexHintFilter::newSession(MXS_SESSION* session, SERVICE* se
         }
     }
     /* Check client user against 'user' option */
-    if (m_user.length() > 0
-        && ((user = session_get_user(session)) != NULL)
-        && (user != m_user))
+    if (m_user.length() > 0 && ((user = session_get_user(session)) != NULL) && (user != m_user))
     {
         session_active = false;
     }
@@ -199,13 +187,7 @@ const RegexToServers* RegexHintFilter::find_servers(char* sql, int sql_len, pcre
     for (auto& regex_map : m_mapping)
     {
         pcre2_code* regex = regex_map.m_regex;
-        int result = pcre2_match(regex,
-                                 (PCRE2_SPTR)sql,
-                                 sql_len,
-                                 0,
-                                 0,
-                                 match_data,
-                                 NULL);
+        int result        = pcre2_match(regex, (PCRE2_SPTR) sql, sql_len, 0, 0, match_data, NULL);
         if (result >= 0)
         {
             /* Have a match. No need to check if the regex matches the complete
@@ -260,18 +242,18 @@ RegexHintFilter* RegexHintFilter::create(const char* name, mxs::ConfigParameters
 
     int pcre_ops = params->get_enum("options", option_values);
 
-    std::string match_val_legacy = params->get_string(MATCH_STR);
+    std::string match_val_legacy  = params->get_string(MATCH_STR);
     std::string server_val_legacy = params->get_string(SERVER_STR);
-    const bool legacy_mode = (match_val_legacy.length() || server_val_legacy.length());
+    const bool legacy_mode        = (match_val_legacy.length() || server_val_legacy.length());
 
     if (legacy_mode && (!match_val_legacy.length() || !server_val_legacy.length()))
     {
         MXS_ERROR("Only one of '%s' and '%s' is set. If using legacy mode, set both."
                   "If using indexed parameters, set neither and use '%s01' and '%s01' etc.",
-                  MATCH_STR,
-                  SERVER_STR,
-                  MATCH_STR,
-                  TARGET_STR);
+            MATCH_STR,
+            SERVER_STR,
+            MATCH_STR,
+            TARGET_STR);
         error = true;
     }
 
@@ -296,12 +278,8 @@ RegexHintFilter* RegexHintFilter::create(const char* name, mxs::ConfigParameters
         MXS_WARNING("Use of legacy parameters 'match' and 'server' is deprecated.");
         /* Using legacy mode and no indexed parameters found. Add the legacy parameters
          * to the mapping. */
-        if (!regex_compile_and_add(pcre_ops,
-                                   true,
-                                   match_val_legacy,
-                                   server_val_legacy,
-                                   &mapping,
-                                   &max_capcount))
+        if (!regex_compile_and_add(
+                pcre_ops, true, match_val_legacy, server_val_legacy, &mapping, &max_capcount))
         {
             error = true;
         }
@@ -314,13 +292,9 @@ RegexHintFilter* RegexHintFilter::create(const char* name, mxs::ConfigParameters
     else
     {
         RegexHintFilter* instance = NULL;
-        std::string user = params->get_string("user");
-        MXS_EXCEPTION_GUARD(instance =
-                                new RegexHintFilter(user,
-                                                    source_addresses,
-                                                    source_hostnames,
-                                                    mapping,
-                                                    max_capcount + 1));
+        std::string user          = params->get_string("user");
+        MXS_EXCEPTION_GUARD(instance = new RegexHintFilter(
+                                user, source_addresses, source_hostnames, mapping, max_capcount + 1));
         return instance;
     }
 }
@@ -332,7 +306,7 @@ RegexHintFilter* RegexHintFilter::create(const char* name, mxs::ConfigParameters
  */
 json_t* RegexHintFSession::diagnostics() const
 {
-    json_t* rval = m_fil_inst.diagnostics();    /* Print overall diagnostics */
+    json_t* rval = m_fil_inst.diagnostics(); /* Print overall diagnostics */
 
     json_object_set_new(rval, "session_queries_diverted", json_integer(m_n_diverted));
     json_object_set_new(rval, "session_queries_undiverted", json_integer(m_n_undiverted));
@@ -360,7 +334,7 @@ json_t* RegexHintFilter::diagnostics() const
 
         for (const auto& regex_map : m_mapping)
         {
-            json_t* obj = json_object();
+            json_t* obj     = json_object();
             json_t* targets = json_array();
 
             for (const auto& target : regex_map.m_targets)
@@ -413,7 +387,7 @@ int RegexToServers::add_servers(const std::string& server_names, bool legacy_mod
 
     /* Have to parse the server list here instead of in config loader, since the list
      * may contain special placeholder strings. */
-    bool error = false;
+    bool error     = false;
     auto names_arr = config_break_list_string(server_names.c_str());
     if (names_arr.size() > 1)
     {
@@ -472,22 +446,17 @@ int RegexToServers::add_servers(const std::string& server_names, bool legacy_mod
 }
 
 bool RegexHintFilter::regex_compile_and_add(int pcre_ops,
-                                            bool legacy_mode,
-                                            const std::string& match,
-                                            const std::string& servers,
-                                            MappingVector* mapping,
-                                            uint32_t* max_capcount)
+    bool legacy_mode,
+    const std::string& match,
+    const std::string& servers,
+    MappingVector* mapping,
+    uint32_t* max_capcount)
 {
-    bool success = true;
-    int errorcode = -1;
+    bool success            = true;
+    int errorcode           = -1;
     PCRE2_SIZE error_offset = -1;
-    pcre2_code* regex =
-        pcre2_compile((PCRE2_SPTR) match.c_str(),
-                      match.length(),
-                      pcre_ops,
-                      &errorcode,
-                      &error_offset,
-                      NULL);
+    pcre2_code* regex       = pcre2_compile(
+        (PCRE2_SPTR) match.c_str(), match.length(), pcre_ops, &errorcode, &error_offset, NULL);
 
     if (regex)
     {
@@ -496,7 +465,7 @@ bool RegexHintFilter::regex_compile_and_add(int pcre_ops,
         {
             MXS_NOTICE("PCRE2 JIT compilation of pattern '%s' failed, "
                        "falling back to normal compilation.",
-                       match.c_str());
+                match.c_str());
         }
 
         RegexToServers regex_ser(match, regex);
@@ -513,7 +482,7 @@ bool RegexHintFilter::regex_compile_and_add(int pcre_ops,
          * largest value is used to form the match data.
          */
         uint32_t capcount = 0;
-        int ret_info = pcre2_pattern_info(regex, PCRE2_INFO_CAPTURECOUNT, &capcount);
+        int ret_info      = pcre2_pattern_info(regex, PCRE2_INFO_CAPTURECOUNT, &capcount);
 
         if (ret_info != 0)
         {
@@ -530,9 +499,7 @@ bool RegexHintFilter::regex_compile_and_add(int pcre_ops,
     }
     else
     {
-        MXS_ERROR("Invalid PCRE2 regular expression '%s' (position '%zu').",
-                  match.c_str(),
-                  error_offset);
+        MXS_ERROR("Invalid PCRE2 regular expression '%s' (position '%zu').", match.c_str(), error_offset);
         MXS_PCRE2_PRINT_ERROR(errorcode);
         success = false;
     }
@@ -547,24 +514,22 @@ bool RegexHintFilter::regex_compile_and_add(int pcre_ops,
  * @param mapping An array of regex->serverlist mappings for filling in. Is cleared on error.
  * @param max_capcount_out The maximum detected pcre2 capture count is written here.
  */
-void RegexHintFilter::form_regex_server_mapping(mxs::ConfigParameters* params,
-                                                int pcre_ops,
-                                                MappingVector* mapping,
-                                                uint32_t* max_capcount_out)
+void RegexHintFilter::form_regex_server_mapping(
+    mxs::ConfigParameters* params, int pcre_ops, MappingVector* mapping, uint32_t* max_capcount_out)
 {
     mxb_assert(param_names_match_indexed.size() == param_names_target_indexed.size());
-    bool error = false;
+    bool error            = false;
     uint32_t max_capcount = 0;
-    *max_capcount_out = 0;
+    *max_capcount_out     = 0;
     /* The config parameters can be in any order and may be skipping numbers.
      * Must just search for every possibility. Quite inefficient, but this is
      * only done once. */
     for (unsigned int i = 0; i < param_names_match_indexed.size(); i++)
     {
-        std::string param_name_match = param_names_match_indexed[i];
+        std::string param_name_match  = param_names_match_indexed[i];
         std::string param_name_target = param_names_target_indexed[i];
-        std::string match = params->get_string(param_name_match);
-        std::string target = params->get_string(param_name_target);
+        std::string match             = params->get_string(param_name_match);
+        std::string target            = params->get_string(param_name_target);
 
         /* Check that both the regex and server config parameters are found */
         if (match.length() < 1 || target.length() < 1)
@@ -622,7 +587,7 @@ bool RegexHintFilter::check_source_host(const char* remote, const struct sockadd
 
         if (addr.ss_family == AF_INET6)
         {
-            struct sockaddr_in6* addr6 = (struct sockaddr_in6*)&addr;
+            struct sockaddr_in6* addr6 = (struct sockaddr_in6*) &addr;
             /* Check only bytes before netmask */
             for (int i = 0; i < source.m_netmask / 8; ++i)
             {
@@ -635,7 +600,7 @@ bool RegexHintFilter::check_source_host(const char* remote, const struct sockadd
         }
         else if (addr.ss_family == AF_INET)
         {
-            struct sockaddr_in* check_ipv4 = (struct sockaddr_in*)&addr;
+            struct sockaddr_in* check_ipv4 = (struct sockaddr_in*) &addr;
 
             switch (source.m_netmask)
             {
@@ -673,9 +638,9 @@ bool RegexHintFilter::check_source_host(const char* remote, const struct sockadd
         if (rval)
         {
             MXS_INFO("Client IP %s matches host source %s%s",
-                     remote,
-                     source.m_netmask < 128 ? "with wildcards " : "",
-                     source.m_address.c_str());
+                remote,
+                source.m_netmask < 128 ? "with wildcards " : "",
+                source.m_address.c_str());
             return rval;
         }
     }
@@ -689,7 +654,7 @@ bool RegexHintFilter::check_source_hostnames(const char* remote, const struct so
     memcpy(&addr, ip, sizeof(addr));
     char hbuf[NI_MAXHOST];
 
-    int rc = getnameinfo((struct sockaddr*)&addr, sizeof(addr), hbuf, sizeof(hbuf), NULL, 0, NI_NAMEREQD);
+    int rc = getnameinfo((struct sockaddr*) &addr, sizeof(addr), hbuf, sizeof(hbuf), NULL, 0, NI_NAMEREQD);
 
     if (rc != 0)
     {
@@ -701,9 +666,7 @@ bool RegexHintFilter::check_source_hostnames(const char* remote, const struct so
     {
         if (strcmp(hbuf, host.c_str()) == 0)
         {
-            MXS_INFO("Client hostname %s matches host source %s",
-                     hbuf,
-                     host.c_str());
+            MXS_INFO("Client hostname %s matches host source %s", hbuf, host.c_str());
             return true;
         }
     }
@@ -727,9 +690,7 @@ bool RegexHintFilter::validate_ipv4_address(const char* host)
      * Start with dot not allowed
      * Host len can't be greater than INET_ADDRSTRLEN
      */
-    if (*host == '%'
-        || *host == '.'
-        || strlen(host) > INET_ADDRSTRLEN)
+    if (*host == '%' || *host == '.' || strlen(host) > INET_ADDRSTRLEN)
     {
         return false;
     }
@@ -737,7 +698,6 @@ bool RegexHintFilter::validate_ipv4_address(const char* host)
     /* Check each byte */
     while (*host != '\0')
     {
-
         if (!isdigit(*host) && *host != '.' && *host != '%')
         {
             return false;
@@ -774,8 +734,8 @@ bool RegexHintFilter::add_source_address(const char* input_host, SourceHostVecto
 {
     std::string address(input_host);
     struct sockaddr_in6 ipv6 = {};
-    int netmask = 128;
-    std::string format_host = address;
+    int netmask              = 128;
+    std::string format_host  = address;
     /* If no wildcards, leave netmask to 128 and return */
     if (strchr(input_host, '%') && validate_ipv4_address(input_host))
     {
@@ -788,10 +748,10 @@ bool RegexHintFilter::add_source_address(const char* input_host, SourceHostVecto
         }
     }
 
-    struct addrinfo* ai = NULL, hint = {};
-    hint.ai_flags = AI_ADDRCONFIG | AI_NUMERICHOST | AI_V4MAPPED;
+    struct addrinfo *ai = NULL, hint = {};
+    hint.ai_flags  = AI_ADDRCONFIG | AI_NUMERICHOST | AI_V4MAPPED;
     hint.ai_family = AF_INET6;
-    int rc = getaddrinfo(format_host.c_str(), NULL, &hint, &ai);
+    int rc         = getaddrinfo(format_host.c_str(), NULL, &hint, &ai);
 
     /* fill IPv6 data struct */
     if (rc == 0)
@@ -808,21 +768,20 @@ bool RegexHintFilter::add_source_address(const char* input_host, SourceHostVecto
     return true;
 }
 
-void RegexHintFilter::set_source_addresses(const std::string& input_host_names,
-                                           SourceHostVector& source_hosts,
-                                           StringVector& hostnames)
+void RegexHintFilter::set_source_addresses(
+    const std::string& input_host_names, SourceHostVector& source_hosts, StringVector& hostnames)
 {
     std::string host_names(input_host_names);
 
     for (auto host : mxs::strtok(host_names, ","))
     {
-        char* trimmed_host = mxb::trim((char*)host.c_str());
+        char* trimmed_host = mxb::trim((char*) host.c_str());
 
         if (!add_source_address(trimmed_host, source_hosts))
         {
             MXS_INFO("The given 'source' parameter '%s' is not a valid IP address. "
                      "adding it as hostname.",
-                     trimmed_host);
+                trimmed_host);
             hostnames.emplace_back(trimmed_host);
         }
     }
@@ -840,38 +799,23 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MXS_FILTER_OBJECT MyObject = RegexHintFilter::s_object;
 
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_FILTER,
+    static MXS_MODULE info = {MXS_MODULE_API_FILTER,
         MXS_MODULE_GA,
         MXS_FILTER_VERSION,
         "A routing hint filter that uses regular expressions to direct queries",
         "V1.1.0",
         RCAP_TYPE_CONTIGUOUS_INPUT,
         &MyObject,
-        NULL,                                                                   /* Process init. */
-        NULL,                                                                   /* Process finish. */
-        NULL,                                                                   /* Thread init. */
-        NULL,                                                                   /* Thread finish. */
-        {
-            {"source",
-             MXS_MODULE_PARAM_STRING},
-            {"user",
-             MXS_MODULE_PARAM_STRING},
-            {MATCH_STR,
-             MXS_MODULE_PARAM_STRING},
-            {SERVER_STR,
-             MXS_MODULE_PARAM_SERVER},
-            {
-                "options",
-                MXS_MODULE_PARAM_ENUM,
-                "ignorecase",
-                MXS_MODULE_OPT_NONE,
-                option_values
-            },
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
+        {{"source", MXS_MODULE_PARAM_STRING},
+            {"user", MXS_MODULE_PARAM_STRING},
+            {MATCH_STR, MXS_MODULE_PARAM_STRING},
+            {SERVER_STR, MXS_MODULE_PARAM_SERVER},
+            {"options", MXS_MODULE_PARAM_ENUM, "ignorecase", MXS_MODULE_OPT_NONE, option_values},
+            {MXS_END_MODULE_PARAMS}}};
 
     /* This module takes parameters of the form match, match01, match02, ... matchN
      * and server, server01, server02, ... serverN. The total number of module
@@ -886,14 +830,14 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 
     /* Calculate how many pairs can be added. 100 is max (to keep the postfix
      * number within two decimals). */
-    const int max_pairs = 100;
+    const int max_pairs    = 100;
     int match_server_pairs = ((MXS_MODULE_PARAM_MAX - params_counter) / 2);
 
     if (match_server_pairs > max_pairs)
     {
         match_server_pairs = max_pairs;
     }
-    mxb_assert(match_server_pairs >= 25);   // If this limit is modified, update documentation.
+    mxb_assert(match_server_pairs >= 25);  // If this limit is modified, update documentation.
     /* Create parameter pair names */
     generate_param_names(match_server_pairs);
 
@@ -904,10 +848,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 
     for (unsigned int i = 0; i < param_names_match_indexed.size(); ++i)
     {
-        new_param_match.name = param_names_match_indexed.at(i).c_str();
+        new_param_match.name            = param_names_match_indexed.at(i).c_str();
         info.parameters[params_counter] = new_param_match;
         params_counter++;
-        new_param_target.name = param_names_target_indexed.at(i).c_str();
+        new_param_target.name           = param_names_target_indexed.at(i).c_str();
         info.parameters[params_counter] = new_param_target;
         params_counter++;
     }
@@ -924,7 +868,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
  */
 static void generate_param_names(int pairs)
 {
-    const int namelen_match = sizeof(MATCH_STR) + 2;
+    const int namelen_match  = sizeof(MATCH_STR) + 2;
     const int namelen_server = sizeof(TARGET_STR) + 2;
 
     char name_match[namelen_match];
@@ -934,9 +878,9 @@ static void generate_param_names(int pairs)
 
     for (int counter = 1; counter <= pairs; ++counter)
     {
-        MXB_AT_DEBUG(int rval = ) snprintf(name_match, namelen_match, FORMAT, MATCH_STR, counter);
+        MXB_AT_DEBUG(int rval =) snprintf(name_match, namelen_match, FORMAT, MATCH_STR, counter);
         mxb_assert(rval == namelen_match - 1);
-        MXB_AT_DEBUG(rval = ) snprintf(name_server, namelen_server, FORMAT, TARGET_STR, counter);
+        MXB_AT_DEBUG(rval =) snprintf(name_server, namelen_server, FORMAT, TARGET_STR, counter);
         mxb_assert(rval == namelen_server - 1);
 
         // Have both names, add them to the global vectors

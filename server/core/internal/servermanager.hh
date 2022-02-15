@@ -22,7 +22,6 @@
 class ServerManager
 {
 public:
-
     /**
      * @brief Allocate a new server
      *

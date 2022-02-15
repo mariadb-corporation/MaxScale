@@ -37,14 +37,14 @@ namespace
 const char not_a_db[] = "it is not a valid database.";
 }
 
-MariaDBServer::MariaDBServer(SERVER* server, int config_index,
-                             const MonitorServer::SharedSettings& base_settings,
-                             const MariaDBServer::SharedSettings& settings)
+MariaDBServer::MariaDBServer(SERVER* server,
+    int config_index,
+    const MonitorServer::SharedSettings& base_settings,
+    const MariaDBServer::SharedSettings& settings)
     : MonitorServer(server, base_settings)
     , m_config_index(config_index)
     , m_settings(settings)
-{
-}
+{}
 
 NodeData::NodeData()
     : index(INDEX_NOT_VISITED)
@@ -52,8 +52,7 @@ NodeData::NodeData()
     , in_stack(false)
     , cycle(CYCLE_NONE)
     , reach(REACH_UNKNOWN)
-{
-}
+{}
 
 void NodeData::reset_results()
 {
@@ -65,9 +64,9 @@ void NodeData::reset_results()
 
 void NodeData::reset_indexes()
 {
-    index = INDEX_NOT_VISITED;
+    index        = INDEX_NOT_VISITED;
     lowest_index = INDEX_NOT_VISITED;
-    in_stack = false;
+    in_stack     = false;
 }
 
 uint64_t MariaDBServer::relay_log_events(const SlaveStatus& slave_conn)
@@ -79,8 +78,8 @@ uint64_t MariaDBServer::relay_log_events(const SlaveStatus& slave_conn)
     return slave_conn.gtid_io_pos.events_ahead(m_gtid_current_pos, GtidList::MISSING_DOMAIN_IGNORE);
 }
 
-std::unique_ptr<QueryResult> MariaDBServer::execute_query(const string& query, string* errmsg_out,
-                                                          unsigned int* errno_out)
+std::unique_ptr<QueryResult> MariaDBServer::execute_query(
+    const string& query, string* errmsg_out, unsigned int* errno_out)
 {
     return maxscale::execute_query(con, query, errmsg_out, errno_out);
 }
@@ -93,10 +92,10 @@ std::unique_ptr<QueryResult> MariaDBServer::execute_query(const string& query, s
  * @param errmsg_out Error output.
  * @return True on success, false on error or if query returned data
  */
-bool MariaDBServer::execute_cmd_ex(const string& cmd, QueryRetryMode mode,
-                                   std::string* errmsg_out, unsigned int* errno_out)
+bool MariaDBServer::execute_cmd_ex(
+    const string& cmd, QueryRetryMode mode, std::string* errmsg_out, unsigned int* errno_out)
 {
-    auto conn = con;
+    auto conn          = con;
     bool query_success = false;
     if (mode == QueryRetryMode::ENABLED)
     {
@@ -124,7 +123,10 @@ bool MariaDBServer::execute_cmd_ex(const string& cmd, QueryRetryMode mode,
                 {
                     results_errmsg = string_printf("Query '%s' on '%s' returned %d columns and %d rows "
                                                    "of data when none was expected.",
-                                                   cmd.c_str(), name(), cols, rows);
+                        cmd.c_str(),
+                        name(),
+                        cols,
+                        rows);
                 }
             }
         }
@@ -140,7 +142,10 @@ bool MariaDBServer::execute_cmd_ex(const string& cmd, QueryRetryMode mode,
         if (errmsg_out)
         {
             *errmsg_out = string_printf("Query '%s' failed on '%s': '%s' (%i).",
-                                        cmd.c_str(), name(), mysql_error(conn), mysql_errno(conn));
+                cmd.c_str(),
+                name(),
+                mysql_error(conn),
+                mysql_errno(conn));
         }
         if (errno_out)
         {
@@ -155,8 +160,8 @@ bool MariaDBServer::execute_cmd(const std::string& cmd, std::string* errmsg_out)
     return execute_cmd_ex(cmd, QueryRetryMode::ENABLED, errmsg_out);
 }
 
-bool MariaDBServer::execute_cmd_no_retry(const std::string& cmd,
-                                         std::string* errmsg_out, unsigned int* errno_out)
+bool MariaDBServer::execute_cmd_no_retry(
+    const std::string& cmd, std::string* errmsg_out, unsigned int* errno_out)
 {
     return execute_cmd_ex(cmd, QueryRetryMode::DISABLED, errmsg_out, errno_out);
 }
@@ -173,16 +178,15 @@ bool MariaDBServer::execute_cmd_no_retry(const std::string& cmd,
  * @param errmsg_out Error output
  * @return True, if successful.
  */
-bool MariaDBServer::execute_cmd_time_limit(const std::string& cmd, maxbase::Duration time_limit,
-                                           std::string* errmsg_out)
+bool MariaDBServer::execute_cmd_time_limit(
+    const std::string& cmd, maxbase::Duration time_limit, std::string* errmsg_out)
 {
     StopWatch timer;
     string max_stmt_time;
     int connector_timeout = -1;
     if (m_capabilities.max_statement_time)
     {
-        MXB_AT_DEBUG(int rv = ) mysql_get_optionv(con, MYSQL_OPT_READ_TIMEOUT,
-                                                  &connector_timeout);
+        MXB_AT_DEBUG(int rv =) mysql_get_optionv(con, MYSQL_OPT_READ_TIMEOUT, &connector_timeout);
         mxb_assert(rv == 0);
         if (connector_timeout > 0)
         {
@@ -203,22 +207,23 @@ bool MariaDBServer::execute_cmd_time_limit(const std::string& cmd, maxbase::Dura
         StopWatch query_timer;
         string error_msg;
         unsigned int errornum = 0;
-        cmd_success = execute_cmd_no_retry(command, &error_msg, &errornum);
-        auto query_time = query_timer.lap();
+        cmd_success           = execute_cmd_no_retry(command, &error_msg, &errornum);
+        auto query_time       = query_timer.lap();
 
         // Check if there is time to retry.
-        Duration time_remaining = time_limit - timer.split();
+        Duration time_remaining      = time_limit - timer.split();
         bool non_fatal_connector_err = maxsql::mysql_is_net_error(errornum);
-        keep_trying = (time_remaining.count() > 0)
-            // Either a connector-c timeout or query was interrupted by max_statement_time.
-            && (non_fatal_connector_err || (!max_stmt_time.empty() && errornum == ER_STATEMENT_TIMEOUT));
+        keep_trying
+            = (time_remaining.count() > 0)
+           // Either a connector-c timeout or query was interrupted by max_statement_time.
+           && (non_fatal_connector_err || (!max_stmt_time.empty() && errornum == ER_STATEMENT_TIMEOUT));
 
         if (!cmd_success)
         {
             if (keep_trying)
             {
-                string retrying = string_printf("Retrying with %.1f seconds left.",
-                                                mxb::to_secs(time_remaining));
+                string retrying
+                    = string_printf("Retrying with %.1f seconds left.", mxb::to_secs(time_remaining));
                 if (non_fatal_connector_err)
                 {
                     MXS_WARNING("%s %s", error_msg.c_str(), retrying.c_str());
@@ -226,20 +231,20 @@ bool MariaDBServer::execute_cmd_time_limit(const std::string& cmd, maxbase::Dura
                 else
                 {
                     // Timed out because of max_statement_time.
-                    MXS_WARNING("Query '%s' timed out on '%s'. %s",
-                                command.c_str(), name(), retrying.c_str());
+                    MXS_WARNING(
+                        "Query '%s' timed out on '%s'. %s", command.c_str(), name(), retrying.c_str());
                 }
 
                 if (query_time < min_query_time)
                 {
                     Duration query_sleep = min_query_time - query_time;
-                    Duration this_sleep = MXS_MIN(time_remaining, query_sleep);
+                    Duration this_sleep  = MXS_MIN(time_remaining, query_sleep);
                     std::this_thread::sleep_for(this_sleep);
                 }
             }
             else if (errmsg_out)
             {
-                *errmsg_out = error_msg;    // The error string already has all required info.
+                *errmsg_out = error_msg;  // The error string already has all required info.
             }
         }
     }
@@ -253,7 +258,7 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
     if (m_capabilities.slave_status_all)
     {
         all_slaves_status = true;
-        query = "SHOW ALL SLAVES STATUS;";
+        query             = "SHOW ALL SLAVES STATUS;";
     }
     else if (m_capabilities.basic_support)
     {
@@ -261,7 +266,7 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
     }
     else
     {
-        mxb_assert(!true);      // This method should not be called for versions < 5.5
+        mxb_assert(!true);  // This method should not be called for versions < 5.5
         return false;
     }
 
@@ -272,14 +277,14 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
     }
 
     // Fields common to all server versions
-    auto i_master_host = result->get_col_index("Master_Host");
-    auto i_master_port = result->get_col_index("Master_Port");
-    auto i_slave_io_running = result->get_col_index("Slave_IO_Running");
-    auto i_slave_sql_running = result->get_col_index("Slave_SQL_Running");
-    auto i_master_server_id = result->get_col_index("Master_Server_Id");
-    auto i_last_io_errno = result->get_col_index("Last_IO_Errno");
-    auto i_last_io_error = result->get_col_index("Last_IO_Error");
-    auto i_last_sql_error = result->get_col_index("Last_SQL_Error");
+    auto i_master_host           = result->get_col_index("Master_Host");
+    auto i_master_port           = result->get_col_index("Master_Port");
+    auto i_slave_io_running      = result->get_col_index("Slave_IO_Running");
+    auto i_slave_sql_running     = result->get_col_index("Slave_SQL_Running");
+    auto i_master_server_id      = result->get_col_index("Master_Server_Id");
+    auto i_last_io_errno         = result->get_col_index("Last_IO_Errno");
+    auto i_last_io_error         = result->get_col_index("Last_IO_Error");
+    auto i_last_sql_error        = result->get_col_index("Last_SQL_Error");
     auto i_seconds_behind_master = result->get_col_index("Seconds_Behind_Master");
 
     const char INVALID_DATA[] = "'%s' returned invalid data.";
@@ -296,12 +301,12 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
     if (all_slaves_status)
     {
         i_connection_name = result->get_col_index("Connection_name");
-        i_slave_rec_hbs = result->get_col_index("Slave_received_heartbeats");
+        i_slave_rec_hbs   = result->get_col_index("Slave_received_heartbeats");
         i_slave_hb_period = result->get_col_index("Slave_heartbeat_period");
-        i_using_gtid = result->get_col_index("Using_Gtid");
-        i_gtid_io_pos = result->get_col_index("Gtid_IO_Pos");
-        if (i_connection_name < 0 || i_slave_rec_hbs < 0 || i_slave_hb_period < 0
-            || i_using_gtid < 0 || i_gtid_io_pos < 0)
+        i_using_gtid      = result->get_col_index("Using_Gtid");
+        i_gtid_io_pos     = result->get_col_index("Gtid_IO_Pos");
+        if (i_connection_name < 0 || i_slave_rec_hbs < 0 || i_slave_hb_period < 0 || i_using_gtid < 0
+            || i_gtid_io_pos < 0)
         {
             MXS_ERROR(INVALID_DATA, query.c_str());
             return false;
@@ -313,16 +318,15 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
     while (result->next_row())
     {
         SlaveStatus new_row(name());
-        new_row.settings.master_endpoint = EndPoint(result->get_string(i_master_host),
-                                                    result->get_int(i_master_port));
+        new_row.settings.master_endpoint
+            = EndPoint(result->get_string(i_master_host), result->get_int(i_master_port));
 
-        new_row.last_io_error = result->get_string(i_last_io_error);
+        new_row.last_io_error  = result->get_string(i_last_io_error);
         new_row.last_sql_error = result->get_string(i_last_sql_error);
 
-        new_row.slave_io_running =
-            SlaveStatus::slave_io_from_string(result->get_string(i_slave_io_running));
+        new_row.slave_io_running  = SlaveStatus::slave_io_from_string(result->get_string(i_slave_io_running));
         new_row.slave_sql_running = (result->get_string(i_slave_sql_running) == "Yes");
-        new_row.master_server_id = result->get_int(i_master_server_id);
+        new_row.master_server_id  = result->get_int(i_master_server_id);
 
         // If slave connection is stopped, the value given by the backend is null.
         if (result->field_is_null(i_seconds_behind_master))
@@ -338,10 +342,10 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
 
         if (all_slaves_status)
         {
-            new_row.settings.name = result->get_string(i_connection_name);
+            new_row.settings.name       = result->get_string(i_connection_name);
             new_row.received_heartbeats = result->get_int(i_slave_rec_hbs);
 
-            string using_gtid = result->get_string(i_using_gtid);
+            string using_gtid  = result->get_string(i_using_gtid);
             string gtid_io_pos = result->get_string(i_gtid_io_pos);
             if (!gtid_io_pos.empty() && (using_gtid == "Current_Pos" || using_gtid == "Slave_Pos"))
             {
@@ -408,7 +412,7 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
         // gtid:s etc may have changed.
         Guard guard(m_arraylock);
         m_old_slave_status = std::move(m_slave_status);
-        m_slave_status = std::move(slave_status_new);
+        m_slave_status     = std::move(slave_status_new);
     }
 
     return !parse_error;
@@ -417,10 +421,10 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
 bool MariaDBServer::update_gtids(string* errmsg_out)
 {
     static const string query = "SELECT @@gtid_current_pos, @@gtid_binlog_pos;";
-    const int i_current_pos = 0;
-    const int i_binlog_pos = 1;
+    const int i_current_pos   = 0;
+    const int i_binlog_pos    = 1;
 
-    bool rval = false;
+    bool rval   = false;
     auto result = execute_query(query, errmsg_out);
     if (result.get() != NULL)
     {
@@ -431,7 +435,7 @@ bool MariaDBServer::update_gtids(string* errmsg_out)
         {
             // Query returned at least some data.
             auto current_str = result->get_string(i_current_pos);
-            auto binlog_str = result->get_string(i_binlog_pos);
+            auto binlog_str  = result->get_string(i_binlog_pos);
             if (current_str.empty())
             {
                 m_gtid_current_pos = GtidList();
@@ -463,23 +467,23 @@ bool MariaDBServer::update_gtids(string* errmsg_out)
         {
             // Query succeeded but returned 0 rows. This means that the server has no gtid:s.
             m_gtid_current_pos = GtidList();
-            m_gtid_binlog_pos = GtidList();
+            m_gtid_binlog_pos  = GtidList();
         }
-    }   // If query failed, do not update gtid:s.
+    }  // If query failed, do not update gtid:s.
     return rval;
 }
 
 bool MariaDBServer::update_replication_settings(std::string* errmsg_out)
 {
     const string query = "SELECT @@gtid_strict_mode, @@log_bin, @@log_slave_updates;";
-    bool rval = false;
+    bool rval          = false;
 
     auto result = execute_query(query, errmsg_out);
     if (result.get() != NULL && result->next_row())
     {
-        rval = true;
-        m_rpl_settings.gtid_strict_mode = result->get_bool(0);
-        m_rpl_settings.log_bin = result->get_bool(1);
+        rval                             = true;
+        m_rpl_settings.gtid_strict_mode  = result->get_bool(0);
+        m_rpl_settings.log_bin           = result->get_bool(1);
         m_rpl_settings.log_slave_updates = result->get_bool(2);
     }
     return rval;
@@ -487,16 +491,16 @@ bool MariaDBServer::update_replication_settings(std::string* errmsg_out)
 
 bool MariaDBServer::read_server_variables(string* errmsg_out)
 {
-    const string query_no_gtid = "SELECT @@global.server_id, @@read_only;";
+    const string query_no_gtid   = "SELECT @@global.server_id, @@read_only;";
     const string query_with_gtid = "SELECT @@global.server_id, @@read_only, @@global.gtid_domain_id;";
-    const bool use_gtid = m_capabilities.gtid;
-    const string& query = use_gtid ? query_with_gtid : query_no_gtid;
+    const bool use_gtid          = m_capabilities.gtid;
+    const string& query          = use_gtid ? query_with_gtid : query_no_gtid;
 
-    int i_id = 0;
-    int i_ro = 1;
+    int i_id     = 0;
+    int i_ro     = 1;
     int i_domain = 2;
-    bool rval = false;
-    auto result = execute_query(query, errmsg_out);
+    bool rval    = false;
+    auto result  = execute_query(query, errmsg_out);
     if (result != nullptr)
     {
         if (!result->next_row())
@@ -507,7 +511,7 @@ bool MariaDBServer::read_server_variables(string* errmsg_out)
         else
         {
             int64_t server_id_parsed = result->get_int(i_id);
-            bool read_only_parsed = result->get_bool(i_ro);
+            bool read_only_parsed    = result->get_bool(i_ro);
             int64_t domain_id_parsed = GTID_DOMAIN_UNKNOWN;
             if (use_gtid)
             {
@@ -517,8 +521,8 @@ bool MariaDBServer::read_server_variables(string* errmsg_out)
             if (result->error())
             {
                 // This is unlikely as well.
-                *errmsg_out = string_printf("Query '%s' returned invalid data: %s",
-                                            query.c_str(), result->error_string().c_str());
+                *errmsg_out = string_printf(
+                    "Query '%s' returned invalid data: %s", query.c_str(), result->error_string().c_str());
             }
             else
             {
@@ -526,14 +530,14 @@ bool MariaDBServer::read_server_variables(string* errmsg_out)
                 rval = true;
                 if (server_id_parsed != m_server_id)
                 {
-                    m_server_id = server_id_parsed;
+                    m_server_id        = server_id_parsed;
                     m_topology_changed = true;
                 }
                 node_id = server_id_parsed;
 
                 if (read_only_parsed != m_read_only)
                 {
-                    m_read_only = read_only_parsed;
+                    m_read_only        = read_only_parsed;
                     m_topology_changed = true;
                 }
 
@@ -549,16 +553,16 @@ void MariaDBServer::warn_replication_settings() const
     const char* servername = name();
     if (m_rpl_settings.gtid_strict_mode == false)
     {
-        const char NO_STRICT[] =
-            "Slave '%s' has gtid_strict_mode disabled. Enabling this setting is recommended. "
-            "For more information, see https://mariadb.com/kb/en/library/gtid/#gtid_strict_mode";
+        const char NO_STRICT[]
+            = "Slave '%s' has gtid_strict_mode disabled. Enabling this setting is recommended. "
+              "For more information, see https://mariadb.com/kb/en/library/gtid/#gtid_strict_mode";
         MXS_WARNING(NO_STRICT, servername);
     }
     if (m_rpl_settings.log_slave_updates == false)
     {
-        const char NO_SLAVE_UPDATES[] =
-            "Slave '%s' has log_slave_updates disabled. It is a valid candidate but replication "
-            "will break for lagging slaves if '%s' is promoted.";
+        const char NO_SLAVE_UPDATES[]
+            = "Slave '%s' has log_slave_updates disabled. It is a valid candidate but replication "
+              "will break for lagging slaves if '%s' is promoted.";
         MXS_WARNING(NO_SLAVE_UPDATES, servername, servername);
     }
 }
@@ -568,12 +572,12 @@ bool MariaDBServer::catchup_to_master(GeneralOpData& op, const GtidList& target)
     /* Prefer to use gtid_binlog_pos, as that is more reliable. But if log_slave_updates is not on,
      * use gtid_current_pos. */
     const bool use_binlog_pos = m_rpl_settings.log_bin && m_rpl_settings.log_slave_updates;
-    bool time_is_up = false;    // Check at least once.
-    bool gtid_reached = false;
-    bool error = false;
-    json_t** error_out = op.error_out;
+    bool time_is_up           = false;  // Check at least once.
+    bool gtid_reached         = false;
+    bool error                = false;
+    json_t** error_out        = op.error_out;
 
-    Duration sleep_time(200ms);     // How long to sleep before next iteration. Incremented slowly.
+    Duration sleep_time(200ms);  // How long to sleep before next iteration. Incremented slowly.
     StopWatch timer;
 
     while (!time_is_up && !gtid_reached && !error)
@@ -595,7 +599,7 @@ bool MariaDBServer::catchup_to_master(GeneralOpData& op, const GtidList& target)
                     // Sleep for a moment, then try again.
                     Duration this_sleep = MXS_MIN(sleep_time, op.time_remaining);
                     std::this_thread::sleep_for(this_sleep);
-                    sleep_time += 100ms;    // Sleep a bit more next iteration.
+                    sleep_time += 100ms;  // Sleep a bit more next iteration.
                 }
                 else
                 {
@@ -606,8 +610,10 @@ bool MariaDBServer::catchup_to_master(GeneralOpData& op, const GtidList& target)
         else
         {
             error = true;
-            PRINT_MXS_JSON_ERROR(error_out, "Failed to update gtid on '%s' while waiting for catchup: %s",
-                                 name(), error_msg.c_str());
+            PRINT_MXS_JSON_ERROR(error_out,
+                "Failed to update gtid on '%s' while waiting for catchup: %s",
+                name(),
+                error_msg.c_str());
         }
     }
 
@@ -731,22 +737,22 @@ json_t* MariaDBServer::to_json() const
 
     Guard guard(m_arraylock);
     json_object_set_new(result,
-                        "gtid_current_pos",
-                        m_gtid_current_pos.empty() ? json_null() :
-                        json_string(m_gtid_current_pos.to_string().c_str()));
+        "gtid_current_pos",
+        m_gtid_current_pos.empty() ? json_null() : json_string(m_gtid_current_pos.to_string().c_str()));
 
     json_object_set_new(result,
-                        "gtid_binlog_pos",
-                        m_gtid_binlog_pos.empty() ? json_null() :
-                        json_string(m_gtid_binlog_pos.to_string().c_str()));
+        "gtid_binlog_pos",
+        m_gtid_binlog_pos.empty() ? json_null() : json_string(m_gtid_binlog_pos.to_string().c_str()));
 
     json_object_set_new(result,
-                        "master_group",
-                        (m_node.cycle == NodeData::CYCLE_NONE) ? json_null() : json_integer(m_node.cycle));
+        "master_group",
+        (m_node.cycle == NodeData::CYCLE_NONE) ? json_null() : json_integer(m_node.cycle));
 
     auto lock = m_serverlock.status();
-    json_object_set_new(result, "lock_held", (lock == ServerLock::Status::UNKNOWN) ? json_null() :
-                        json_boolean(lock == ServerLock::Status::OWNED_SELF));
+    json_object_set_new(result,
+        "lock_held",
+        (lock == ServerLock::Status::UNKNOWN) ? json_null()
+                                              : json_boolean(lock == ServerLock::Status::OWNED_SELF));
 
     json_t* slave_connections = json_array();
     for (const auto& sstatus : m_slave_status)
@@ -760,7 +766,7 @@ json_t* MariaDBServer::to_json() const
 bool MariaDBServer::can_replicate_from(MariaDBServer* master, string* reason_out)
 {
     mxb_assert(reason_out);
-    mxb_assert(is_usable());    // The server must be running.
+    mxb_assert(is_usable());  // The server must be running.
 
     bool can_replicate = false;
     if (m_gtid_current_pos.empty())
@@ -778,8 +784,10 @@ bool MariaDBServer::can_replicate_from(MariaDBServer* master, string* reason_out
         {
             *reason_out = string_printf("gtid_current_pos of '%s' (%s) is incompatible with "
                                         "gtid_binlog_pos of '%s' (%s).",
-                                        name(), m_gtid_current_pos.to_string().c_str(),
-                                        master->name(), master->m_gtid_binlog_pos.to_string().c_str());
+                name(),
+                m_gtid_current_pos.to_string().c_str(),
+                master->name(),
+                master->m_gtid_binlog_pos.to_string().c_str());
         }
     }
     return can_replicate;
@@ -788,7 +796,7 @@ bool MariaDBServer::can_replicate_from(MariaDBServer* master, string* reason_out
 bool MariaDBServer::run_sql_from_file(const string& path, json_t** error_out)
 {
     MYSQL* conn = con;
-    bool error = false;
+    bool error  = false;
     std::ifstream sql_file(path);
     if (sql_file.is_open())
     {
@@ -802,9 +810,9 @@ bool MariaDBServer::run_sql_from_file(const string& path, json_t** error_out)
             if (sql_file.bad())
             {
                 PRINT_MXS_JSON_ERROR(error_out,
-                                     "Error when reading sql text file '%s': '%s'.",
-                                     path.c_str(),
-                                     mxs_strerror(errno));
+                    "Error when reading sql text file '%s': '%s'.",
+                    path.c_str(),
+                    mxs_strerror(errno));
                 error = true;
             }
             // Skip empty lines and comment lines
@@ -823,11 +831,11 @@ bool MariaDBServer::run_sql_from_file(const string& path, json_t** error_out)
                 else
                 {
                     PRINT_MXS_JSON_ERROR(error_out,
-                                         "Failed to execute sql from text file '%s'. Query: '%s'. "
-                                         "Error: '%s'.",
-                                         path.c_str(),
-                                         line.c_str(),
-                                         mysql_error(conn));
+                        "Failed to execute sql from text file '%s'. Query: '%s'. "
+                        "Error: '%s'.",
+                        path.c_str(),
+                        line.c_str(),
+                        mysql_error(conn));
                     error = true;
                 }
             }
@@ -883,8 +891,7 @@ bool MariaDBServer::update_slave_status(string* errmsg_out)
     if (rval)
     {
         /** Store master_id of current node. */
-        master_id = !m_slave_status.empty() ?
-            m_slave_status[0].master_server_id : SERVER_ID_UNKNOWN;
+        master_id = !m_slave_status.empty() ? m_slave_status[0].master_server_id : SERVER_ID_UNKNOWN;
     }
     return rval;
 }
@@ -892,32 +899,31 @@ bool MariaDBServer::update_slave_status(string* errmsg_out)
 void MariaDBServer::update_server_version()
 {
     auto conn = con;
-    auto srv = server;
+    auto srv  = server;
 
     m_capabilities = Capabilities();
-    auto& info = srv->info();
-    auto type = info.type();
+    auto& info     = srv->info();
+    auto type      = info.type();
 
     if (type == ServerType::MARIADB || type == ServerType::MYSQL || type == ServerType::BLR)
     {
         /* Not a binlog server, check version number and supported features. */
         auto& srv_version = info.version_num();
-        auto major = srv_version.major;
-        auto minor = srv_version.minor;
-        auto patch = srv_version.patch;
+        auto major        = srv_version.major;
+        auto minor        = srv_version.minor;
+        auto patch        = srv_version.patch;
         // MariaDB/MySQL 5.5 is the oldest supported version. MySQL 6 and later are treated as 5.5.
         if ((major == 5 && minor >= 5) || major > 5)
         {
             m_capabilities.basic_support = true;
             // For more specific features, at least MariaDB 10.X is needed.
-            if ((type == ServerType::MARIADB || type == ServerType::BLR)
-                && major >= 10)
+            if ((type == ServerType::MARIADB || type == ServerType::BLR) && major >= 10)
             {
                 // 10.0.2 or 10.1.X or greater than 10
                 if (((minor == 0 && patch >= 2) || minor >= 1) || major > 10)
                 {
                     // Versions with gtid also support the extended slave status query.
-                    m_capabilities.gtid = true;
+                    m_capabilities.gtid             = true;
                     m_capabilities.slave_status_all = true;
                     if (type != ServerType::BLR)
                     {
@@ -943,7 +949,8 @@ void MariaDBServer::update_server_version()
     else
     {
         MXB_ERROR("Server '%s' (%s) is unsupported. The server is ignored by the monitor.",
-                  name(), info.version_string());
+            name(),
+            info.version_string());
     }
 }
 
@@ -993,7 +1000,7 @@ void MariaDBServer::set_status(uint64_t bits)
  */
 bool MariaDBServer::sstatus_array_topology_equal(const SlaveStatusArray& new_slave_status)
 {
-    bool rval = true;
+    bool rval                                = true;
     const SlaveStatusArray& old_slave_status = m_slave_status;
     if (old_slave_status.size() != new_slave_status.size())
     {
@@ -1028,9 +1035,9 @@ const SlaveStatus* MariaDBServer::sstatus_find_previous_row(const SlaveStatus& s
 {
     // Helper function. Checks if the connection in the new row is to the same server than in the old row.
     auto compare_rows = [](const SlaveStatus& lhs, const SlaveStatus& rhs) -> bool {
-            return lhs.settings.name == rhs.settings.name
-                   && lhs.settings.master_endpoint == rhs.settings.master_endpoint;
-        };
+        return lhs.settings.name == rhs.settings.name
+            && lhs.settings.master_endpoint == rhs.settings.master_endpoint;
+    };
 
     // Usually the same slave connection can be found from the same index than in the previous slave
     // status array, but this is not 100% (e.g. dba has just added a new connection).
@@ -1127,8 +1134,8 @@ bool MariaDBServer::can_be_demoted_failover(FailoverType failover_mode, string* 
     return demotable;
 }
 
-bool MariaDBServer::can_be_promoted(OperationType op, const MariaDBServer* demotion_target,
-                                    string* reason_out)
+bool MariaDBServer::can_be_promoted(
+    OperationType op, const MariaDBServer* demotion_target, string* reason_out)
 {
     bool promotable = false;
     string reason;
@@ -1217,27 +1224,27 @@ const SlaveStatus* MariaDBServer::slave_connection_status_host_port(const MariaD
 bool MariaDBServer::enable_events(BinlogMode binlog_mode, const EventNameSet& event_names, json_t** error_out)
 {
     EventStatusMapper mapper = [&event_names](const EventInfo& event) {
-            string rval;
-            if (event_names.count(event.name) > 0
-                && (event.status == "SLAVESIDE_DISABLED" || event.status == "DISABLED"))
-            {
-                rval = "ENABLE";
-            }
-            return rval;
-        };
+        string rval;
+        if (event_names.count(event.name) > 0
+            && (event.status == "SLAVESIDE_DISABLED" || event.status == "DISABLED"))
+        {
+            rval = "ENABLE";
+        }
+        return rval;
+    };
     return alter_events(binlog_mode, mapper, error_out);
 }
 
 bool MariaDBServer::disable_events(BinlogMode binlog_mode, json_t** error_out)
 {
     EventStatusMapper mapper = [](const EventInfo& event) {
-            string rval;
-            if (event.status == "ENABLED")
-            {
-                rval = "DISABLE ON SLAVE";
-            }
-            return rval;
-        };
+        string rval;
+        if (event.status == "ENABLED")
+        {
+            rval = "DISABLE ON SLAVE";
+        }
+        return rval;
+    };
     return alter_events(binlog_mode, mapper, error_out);
 }
 
@@ -1250,8 +1257,7 @@ bool MariaDBServer::disable_events(BinlogMode binlog_mode, json_t** error_out)
  * @param error_out Error output
  * @return True if all requested alterations succeeded.
  */
-bool
-MariaDBServer::alter_events(BinlogMode binlog_mode, const EventStatusMapper& mapper, json_t** error_out)
+bool MariaDBServer::alter_events(BinlogMode binlog_mode, const EventStatusMapper& mapper, json_t** error_out)
 {
     // If the server is rejoining the cluster, no events may be added to binlog. The ALTER EVENT query
     // itself adds events. To prevent this, disable the binlog for this method.
@@ -1267,21 +1273,21 @@ MariaDBServer::alter_events(BinlogMode binlog_mode, const EventStatusMapper& map
         }
     }
 
-    int target_events = 0;
+    int target_events  = 0;
     int events_altered = 0;
     // Helper function which alters an event depending on the mapper-function.
-    EventManipulator alterer = [this, &target_events, &events_altered, &mapper](const EventInfo& event,
-                                                                                json_t** error_out) {
-            string target_state = mapper(event);
-            if (!target_state.empty())
+    EventManipulator alterer
+        = [this, &target_events, &events_altered, &mapper](const EventInfo& event, json_t** error_out) {
+        string target_state = mapper(event);
+        if (!target_state.empty())
+        {
+            target_events++;
+            if (alter_event(event, target_state, error_out))
             {
-                target_events++;
-                if (alter_event(event, target_state, error_out))
-                {
-                    events_altered++;
-                }
+                events_altered++;
             }
-        };
+        }
+    };
 
     bool rval = false;
     // TODO: For better error handling, this function should try to re-enable any disabled events if a later
@@ -1321,7 +1327,7 @@ void MariaDBServer::warn_event_scheduler()
     string error_msg;
     const string scheduler_query = "SELECT * FROM information_schema.PROCESSLIST "
                                    "WHERE User = 'event_scheduler' AND Command = 'Daemon';";
-    auto proc_list = execute_query(scheduler_query, &error_msg);
+    auto proc_list               = execute_query(scheduler_query, &error_msg);
     if (proc_list.get() == NULL)
     {
         MXS_ERROR("Could not query the event scheduler status of '%s': %s", name(), error_msg.c_str());
@@ -1353,26 +1359,28 @@ bool MariaDBServer::events_foreach(EventManipulator& func, json_t** error_out)
     {
         MXS_ERROR("Could not query event status of '%s': %s Event handling can be disabled by "
                   "setting '%s' to false.",
-                  name(), error_msg.c_str(), CN_HANDLE_EVENTS);
+            name(),
+            error_msg.c_str(),
+            CN_HANDLE_EVENTS);
         return false;
     }
 
-    auto db_name_ind = event_info->get_col_index("EVENT_SCHEMA");
-    auto event_name_ind = event_info->get_col_index("EVENT_NAME");
+    auto db_name_ind       = event_info->get_col_index("EVENT_SCHEMA");
+    auto event_name_ind    = event_info->get_col_index("EVENT_NAME");
     auto event_definer_ind = event_info->get_col_index("DEFINER");
-    auto event_status_ind = event_info->get_col_index("STATUS");
-    auto charset_ind = event_info->get_col_index("CHARACTER_SET_CLIENT");
-    auto collation_ind = event_info->get_col_index("COLLATION_CONNECTION");
+    auto event_status_ind  = event_info->get_col_index("STATUS");
+    auto charset_ind       = event_info->get_col_index("CHARACTER_SET_CLIENT");
+    auto collation_ind     = event_info->get_col_index("COLLATION_CONNECTION");
     mxb_assert(db_name_ind > 0 && event_name_ind > 0 && event_definer_ind > 0 && event_status_ind > 0
                && charset_ind > 0 && collation_ind > 0);
 
     while (event_info->next_row())
     {
         EventInfo event;
-        event.name = event_info->get_string(db_name_ind) + "." + event_info->get_string(event_name_ind);
-        event.definer = event_info->get_string(event_definer_ind);
-        event.status = event_info->get_string(event_status_ind);
-        event.charset = event_info->get_string(charset_ind);
+        event.name      = event_info->get_string(db_name_ind) + "." + event_info->get_string(event_name_ind);
+        event.definer   = event_info->get_string(event_definer_ind);
+        event.status    = event_info->get_string(event_status_ind);
+        event.charset   = event_info->get_string(charset_ind);
         event.collation = event_info->get_string(collation_ind);
         func(event, error_out);
     }
@@ -1401,9 +1409,9 @@ bool MariaDBServer::alter_event(const EventInfo& event, const string& target_sta
     if (loc_at != string::npos)
     {
         auto host_begin = loc_at + 1;
-        quoted_definer = event.definer.substr(0, loc_at + 1)
-            +   // host_begin may be the null-char if @ was the last char
-            "'" + event.definer.substr(host_begin, string::npos) + "'";
+        quoted_definer  = event.definer.substr(0, loc_at + 1)
+                       +  // host_begin may be the null-char if @ was the last char
+                         "'" + event.definer.substr(host_begin, string::npos) + "'";
     }
     else
     {
@@ -1413,14 +1421,16 @@ bool MariaDBServer::alter_event(const EventInfo& event, const string& target_sta
 
     // Change character set and collation to the values in the event description. Otherwise, the event
     // values could be changed to whatever the monitor connection happens to be using.
-    string alter_event_query = string_printf(
-        "SET NAMES %s COLLATE %s; ALTER DEFINER = %s EVENT %s %s;",
-        event.charset.c_str(), event.collation.c_str(), quoted_definer.c_str(), event.name.c_str(),
+    string alter_event_query = string_printf("SET NAMES %s COLLATE %s; ALTER DEFINER = %s EVENT %s %s;",
+        event.charset.c_str(),
+        event.collation.c_str(),
+        quoted_definer.c_str(),
+        event.name.c_str(),
         target_status.c_str());
 
     if (execute_cmd(alter_event_query, &error_msg))
     {
-        rval = true;
+        rval             = true;
         const char FMT[] = "Event '%s' on server '%s' set to '%s'.";
         MXS_NOTICE(FMT, event.name.c_str(), name(), target_status.c_str());
     }
@@ -1439,16 +1449,20 @@ bool MariaDBServer::reset_all_slave_conns(json_t** error_out)
     for (const auto& slave_conn : m_slave_status)
     {
         auto conn_name = slave_conn.settings.name;
-        auto stop = string_printf("STOP SLAVE '%s';", conn_name.c_str());
-        auto reset = string_printf("RESET SLAVE '%s' ALL;", conn_name.c_str());
+        auto stop      = string_printf("STOP SLAVE '%s';", conn_name.c_str());
+        auto reset     = string_printf("RESET SLAVE '%s' ALL;", conn_name.c_str());
         if (!execute_cmd(stop, &error_msg) || !execute_cmd(reset, &error_msg))
         {
             error = true;
-            string log_message = conn_name.empty() ?
-                string_printf("Error when reseting the default slave connection of '%s': %s",
-                              name(), error_msg.c_str()) :
-                string_printf("Error when reseting the slave connection '%s' of '%s': %s",
-                              conn_name.c_str(), name(), error_msg.c_str());
+            string log_message
+                = conn_name.empty()
+                    ? string_printf("Error when reseting the default slave connection of '%s': %s",
+                        name(),
+                        error_msg.c_str())
+                    : string_printf("Error when reseting the slave connection '%s' of '%s': %s",
+                        conn_name.c_str(),
+                        name(),
+                        error_msg.c_str());
             PRINT_MXS_JSON_ERROR(error_out, "%s", log_message.c_str());
             break;
         }
@@ -1461,8 +1475,10 @@ bool MariaDBServer::reset_all_slave_conns(json_t** error_out)
     return !error;
 }
 
-bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, OperationType type,
-                            const MariaDBServer* demotion_target)
+bool MariaDBServer::promote(GeneralOpData& general,
+    ServerOperation& promotion,
+    OperationType type,
+    const MariaDBServer* demotion_target)
 {
     mxb_assert(type == OperationType::SWITCHOVER || type == OperationType::FAILOVER
                || type == OperationType::UNDO_DEMOTION);
@@ -1478,8 +1494,9 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
         if (master_conn == NULL)
         {
             PRINT_MXS_JSON_ERROR(error_out,
-                                 "'%s' is not a slave of '%s' and cannot be promoted to its place.",
-                                 name(), demotion_target->name());
+                "'%s' is not a slave of '%s' and cannot be promoted to its place.",
+                name(),
+                demotion_target->name());
             return false;
         }
 
@@ -1516,8 +1533,8 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
                 if (m_settings.handle_event_scheduler)
                 {
                     // TODO: Add query replying to enable_events
-                    bool events_enabled = enable_events(BinlogMode::BINLOG_OFF, promotion.events_to_enable,
-                                                        error_out);
+                    bool events_enabled
+                        = enable_events(BinlogMode::BINLOG_OFF, promotion.events_to_enable, error_out);
                     general.time_remaining -= timer.restart();
                     if (!events_enabled)
                     {
@@ -1536,8 +1553,9 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
                     {
                         promotion_error = true;
                         PRINT_MXS_JSON_ERROR(error_out,
-                                             "Execution of file '%s' failed during promotion of server '%s'.",
-                                             sql_file.c_str(), name());
+                            "Execution of file '%s' failed during promotion of server '%s'.",
+                            sql_file.c_str(),
+                            name());
                     }
                 }
             }
@@ -1555,8 +1573,10 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
                 }
                 else
                 {
-                    PRINT_MXS_JSON_ERROR(error_out, "Could not copy slave connections from '%s' to '%s'.",
-                                         demotion_target->name(), name());
+                    PRINT_MXS_JSON_ERROR(error_out,
+                        "Could not copy slave connections from '%s' to '%s'.",
+                        demotion_target->name(),
+                        name());
                 }
             }
             else if (type == OperationType::FAILOVER)
@@ -1567,8 +1587,10 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
                 }
                 else
                 {
-                    PRINT_MXS_JSON_ERROR(error_out, "Could not merge slave connections from '%s' to '%s'.",
-                                         demotion_target->name(), name());
+                    PRINT_MXS_JSON_ERROR(error_out,
+                        "Could not merge slave connections from '%s' to '%s'.",
+                        demotion_target->name(),
+                        name());
                 }
             }
             else if (type == OperationType::UNDO_DEMOTION)
@@ -1579,8 +1601,10 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
                 }
                 else
                 {
-                    PRINT_MXS_JSON_ERROR(error_out, "Could not restore slave connections of '%s' when "
-                                                    "reversing demotion.", name());
+                    PRINT_MXS_JSON_ERROR(error_out,
+                        "Could not restore slave connections of '%s' when "
+                        "reversing demotion.",
+                        name());
                 }
             }
         }
@@ -1593,7 +1617,7 @@ bool MariaDBServer::demote(GeneralOpData& general, ServerOperation& demotion, Op
     mxb_assert(demotion.target == this);
     mxb_assert(type == OperationType::SWITCHOVER || type == OperationType::REJOIN);
     json_t** const error_out = general.error_out;
-    bool success = false;
+    bool success             = false;
 
     // Step 1: Stop & reset slave connections. The promotion target will copy them. The connection
     // information has been backed up in the operation object.
@@ -1662,8 +1686,9 @@ bool MariaDBServer::demote(GeneralOpData& general, ServerOperation& demotion, Op
                 {
                     demotion_error = true;
                     PRINT_MXS_JSON_ERROR(error_out,
-                                         "Execution of file '%s' failed during demotion of server '%s'.",
-                                         sql_file.c_str(), name());
+                        "Execution of file '%s' failed during demotion of server '%s'.",
+                        sql_file.c_str(),
+                        name());
                 }
             }
 
@@ -1671,15 +1696,15 @@ bool MariaDBServer::demote(GeneralOpData& general, ServerOperation& demotion, Op
             {
                 // Step 2f: FLUSH LOGS to ensure that all events have been written to binlog.
                 string error_msg;
-                bool logs_flushed = execute_cmd_time_limit("FLUSH LOGS;", general.time_remaining,
-                                                           &error_msg);
+                bool logs_flushed = execute_cmd_time_limit("FLUSH LOGS;", general.time_remaining, &error_msg);
                 general.time_remaining -= timer.lap();
                 if (!logs_flushed)
                 {
                     demotion_error = true;
                     PRINT_MXS_JSON_ERROR(error_out,
-                                         "Failed to flush binary logs of '%s' during demotion: %s.",
-                                         name(), error_msg.c_str());
+                        "Failed to flush binary logs of '%s' during demotion: %s.",
+                        name(),
+                        error_msg.c_str());
                 }
             }
         }
@@ -1695,8 +1720,10 @@ bool MariaDBServer::demote(GeneralOpData& general, ServerOperation& demotion, Op
             else
             {
                 demotion_error = true;
-                PRINT_MXS_JSON_ERROR(error_out, "Failed to update gtid:s of '%s' during demotion: %s.",
-                                     name(), error_msg.c_str());
+                PRINT_MXS_JSON_ERROR(error_out,
+                    "Failed to update gtid:s of '%s' during demotion: %s.",
+                    name(),
+                    error_msg.c_str());
             }
         }
 
@@ -1722,8 +1749,8 @@ bool MariaDBServer::demote(GeneralOpData& general, ServerOperation& demotion, Op
  * @param error_out Error output
  * @return True on success
  */
-bool MariaDBServer::stop_slave_conn(const std::string& conn_name, StopMode mode, Duration time_limit,
-                                    json_t** error_out)
+bool MariaDBServer::stop_slave_conn(
+    const std::string& conn_name, StopMode mode, Duration time_limit, json_t** error_out)
 {
     /* STOP SLAVE is a bit problematic, since sometimes it seems to take several seconds to complete.
      * If this time is greater than the connection read timeout, connector-c will cut the connection/
@@ -1744,16 +1771,16 @@ bool MariaDBServer::stop_slave_conn(const std::string& conn_name, StopMode mode,
         // Very rare, though.
         if (mode == StopMode::RESET || mode == StopMode::RESET_ALL)
         {
-            string reset = string_printf("RESET SLAVE '%s'%s;",
-                                         conn_name.c_str(), (mode == StopMode::RESET_ALL) ? " ALL" : "");
+            string reset = string_printf(
+                "RESET SLAVE '%s'%s;", conn_name.c_str(), (mode == StopMode::RESET_ALL) ? " ALL" : "");
             if (execute_cmd_time_limit(reset, time_left, &error_msg))
             {
                 rval = true;
             }
             else
             {
-                PRINT_MXS_JSON_ERROR(error_out, "Failed to reset slave connection on '%s': %s",
-                                     name(), error_msg.c_str());
+                PRINT_MXS_JSON_ERROR(
+                    error_out, "Failed to reset slave connection on '%s': %s", name(), error_msg.c_str());
             }
         }
         else
@@ -1763,8 +1790,8 @@ bool MariaDBServer::stop_slave_conn(const std::string& conn_name, StopMode mode,
     }
     else
     {
-        PRINT_MXS_JSON_ERROR(error_out, "Failed to stop slave connection on '%s': %s",
-                             name(), error_msg.c_str());
+        PRINT_MXS_JSON_ERROR(
+            error_out, "Failed to stop slave connection on '%s': %s", name(), error_msg.c_str());
     }
     return rval;
 }
@@ -1780,7 +1807,7 @@ bool MariaDBServer::stop_slave_conn(const std::string& conn_name, StopMode mode,
  */
 bool MariaDBServer::remove_slave_conns(GeneralOpData& op, const SlaveStatusArray& conns_to_remove)
 {
-    json_t** error_out = op.error_out;
+    json_t** error_out                = op.error_out;
     maxbase::Duration& time_remaining = op.time_remaining;
     StopWatch timer;
     // Take a backup of the soon to be removed connections so they can be compared properly after an update.
@@ -1789,8 +1816,8 @@ bool MariaDBServer::remove_slave_conns(GeneralOpData& op, const SlaveStatusArray
     bool stop_slave_error = false;
     for (size_t i = 0; !stop_slave_error && i < conns_to_remove.size(); i++)
     {
-        if (!stop_slave_conn(conns_to_remove[i].settings.name, StopMode::RESET_ALL, time_remaining,
-                             error_out))
+        if (!stop_slave_conn(
+                conns_to_remove[i].settings.name, StopMode::RESET_ALL, time_remaining, error_out))
         {
             stop_slave_error = true;
         }
@@ -1834,14 +1861,16 @@ bool MariaDBServer::remove_slave_conns(GeneralOpData& op, const SlaveStatusArray
             {
                 // This means server is really bugging.
                 PRINT_MXS_JSON_ERROR(error_out,
-                                     "'%s' still has %i removed slave connections, "
-                                     "RESET SLAVE must have failed.", name(), found);
+                    "'%s' still has %i removed slave connections, "
+                    "RESET SLAVE must have failed.",
+                    name(),
+                    found);
             }
         }
         else
         {
-            PRINT_MXS_JSON_ERROR(error_out, "Failed to update slave connections of '%s': %s",
-                                 name(), error_msg.c_str());
+            PRINT_MXS_JSON_ERROR(
+                error_out, "Failed to update slave connections of '%s': %s", name(), error_msg.c_str());
         }
     }
     time_remaining -= timer.lap();
@@ -1851,15 +1880,14 @@ bool MariaDBServer::remove_slave_conns(GeneralOpData& op, const SlaveStatusArray
 bool MariaDBServer::set_read_only(ReadOnlySetting setting, maxbase::Duration time_limit, json_t** error_out)
 {
     int new_val = (setting == ReadOnlySetting::ENABLE) ? 1 : 0;
-    string cmd = string_printf("SET GLOBAL read_only=%i;", new_val);
+    string cmd  = string_printf("SET GLOBAL read_only=%i;", new_val);
     string error_msg;
     bool success = execute_cmd_time_limit(cmd, time_limit, &error_msg);
     if (!success)
     {
         string target_str = (setting == ReadOnlySetting::ENABLE) ? "enable" : "disable";
-        PRINT_MXS_JSON_ERROR(error_out,
-                             "Failed to %s read_only on '%s': %s",
-                             target_str.c_str(), name(), error_msg.c_str());
+        PRINT_MXS_JSON_ERROR(
+            error_out, "Failed to %s read_only on '%s': %s", target_str.c_str(), name(), error_msg.c_str());
     }
     return success;
 }
@@ -1888,57 +1916,59 @@ bool MariaDBServer::merge_slave_conns(GeneralOpData& op, const SlaveStatusArray&
 
     // Helper function for checking if a slave connection should be ignored.
     auto conn_can_be_merged = [this](const SlaveStatus& slave_conn, string* ignore_reason_out) -> bool {
-            bool accepted = true;
-            auto master_id = slave_conn.master_server_id;
-            EndPoint my_host_port(server);
-            // The connection is only merged if it satisfies the copy-conditions. Merging has also
-            // additional requirements.
-            string ignore_reason;
-            if (!slave_conn.should_be_copied(&ignore_reason))
+        bool accepted  = true;
+        auto master_id = slave_conn.master_server_id;
+        EndPoint my_host_port(server);
+        // The connection is only merged if it satisfies the copy-conditions. Merging has also
+        // additional requirements.
+        string ignore_reason;
+        if (!slave_conn.should_be_copied(&ignore_reason))
+        {
+            accepted = false;
+        }
+        else if (master_id == m_server_id)
+        {
+            // This is not an error but indicates a complicated topology. In any case, ignore this.
+            accepted      = false;
+            ignore_reason = string_printf("it points to '%s' (according to server id:s).", name());
+        }
+        else if (slave_conn.settings.master_endpoint == my_host_port)
+        {
+            accepted      = false;
+            ignore_reason = string_printf("it points to '%s' (according to master host:port).", name());
+        }
+        else
+        {
+            // Compare to connections already existing on this server.
+            for (const SlaveStatus& my_slave_conn : m_slave_status)
             {
-                accepted = false;
-            }
-            else if (master_id == m_server_id)
-            {
-                // This is not an error but indicates a complicated topology. In any case, ignore this.
-                accepted = false;
-                ignore_reason = string_printf("it points to '%s' (according to server id:s).", name());
-            }
-            else if (slave_conn.settings.master_endpoint == my_host_port)
-            {
-                accepted = false;
-                ignore_reason = string_printf("it points to '%s' (according to master host:port).", name());
-            }
-            else
-            {
-                // Compare to connections already existing on this server.
-                for (const SlaveStatus& my_slave_conn : m_slave_status)
+                if (my_slave_conn.seen_connected && my_slave_conn.master_server_id == master_id)
                 {
-                    if (my_slave_conn.seen_connected && my_slave_conn.master_server_id == master_id)
-                    {
-                        accepted = false;
-                        const char format[] = "its Master_Server_Id (%" PRIi64
-                            ") matches an existing slave connection on '%s'.";
-                        ignore_reason = string_printf(format, master_id, name());
-                    }
-                    else if (my_slave_conn.settings.master_endpoint == slave_conn.settings.master_endpoint)
-                    {
-                        accepted = false;
-                        const auto& endpoint = slave_conn.settings.master_endpoint;
-                        ignore_reason = string_printf(
-                            "its Master_Host (%s) and Master_Port (%i) match an existing "
-                            "slave connection on %s.",
-                            endpoint.host().c_str(), endpoint.port(), name());
-                    }
+                    accepted = false;
+                    const char format[]
+                        = "its Master_Server_Id (%" PRIi64 ") matches an existing slave connection on '%s'.";
+                    ignore_reason = string_printf(format, master_id, name());
+                }
+                else if (my_slave_conn.settings.master_endpoint == slave_conn.settings.master_endpoint)
+                {
+                    accepted             = false;
+                    const auto& endpoint = slave_conn.settings.master_endpoint;
+                    ignore_reason
+                        = string_printf("its Master_Host (%s) and Master_Port (%i) match an existing "
+                                        "slave connection on %s.",
+                            endpoint.host().c_str(),
+                            endpoint.port(),
+                            name());
                 }
             }
+        }
 
-            if (!accepted)
-            {
-                *ignore_reason_out = ignore_reason;
-            }
-            return accepted;
-        };
+        if (!accepted)
+        {
+            *ignore_reason_out = ignore_reason;
+        }
+        return accepted;
+    };
 
     // Need to keep track of connection names (both existing and new) to avoid using an existing name.
     std::set<string> connection_names;
@@ -1949,33 +1979,39 @@ bool MariaDBServer::merge_slave_conns(GeneralOpData& op, const SlaveStatusArray&
 
     // Helper function which checks that a connection name is unique and modifies it if not.
     auto check_modify_conn_name = [this, &connection_names](SlaveStatus::Settings* conn_settings) -> bool {
-            bool name_is_unique = false;
-            string conn_name = conn_settings->name;
-            if (connection_names.count(conn_name) > 0)
+        bool name_is_unique = false;
+        string conn_name    = conn_settings->name;
+        if (connection_names.count(conn_name) > 0)
+        {
+            // If the name is used, generate a name using the host:port of the master,
+            // it should be unique.
+            string second_try = "To " + conn_settings->master_endpoint.to_string();
+            if (connection_names.count(second_try) > 0)
             {
-                // If the name is used, generate a name using the host:port of the master,
-                // it should be unique.
-                string second_try = "To " + conn_settings->master_endpoint.to_string();
-                if (connection_names.count(second_try) > 0)
-                {
-                    // Even this one exists, something is really wrong. Give up.
-                    MXS_ERROR("Could not generate a unique connection name for '%s': both '%s' and '%s' are "
-                              "already taken.", name(), conn_name.c_str(), second_try.c_str());
-                }
-                else
-                {
-                    MXS_WARNING("A slave connection with name '%s' already exists on '%s', using generated "
-                                "name '%s' instead.", conn_name.c_str(), name(), second_try.c_str());
-                    conn_settings->name = second_try;
-                    name_is_unique = true;
-                }
+                // Even this one exists, something is really wrong. Give up.
+                MXS_ERROR("Could not generate a unique connection name for '%s': both '%s' and '%s' are "
+                          "already taken.",
+                    name(),
+                    conn_name.c_str(),
+                    second_try.c_str());
             }
             else
             {
-                name_is_unique = true;
+                MXS_WARNING("A slave connection with name '%s' already exists on '%s', using generated "
+                            "name '%s' instead.",
+                    conn_name.c_str(),
+                    name(),
+                    second_try.c_str());
+                conn_settings->name = second_try;
+                name_is_unique      = true;
             }
-            return name_is_unique;
-        };
+        }
+        else
+        {
+            name_is_unique = true;
+        }
+        return name_is_unique;
+    };
 
     bool error = false;
     for (size_t i = 0; !error && (i < conns_to_merge.size()); i++)
@@ -2006,21 +2042,23 @@ bool MariaDBServer::merge_slave_conns(GeneralOpData& op, const SlaveStatusArray&
         {
             mxb_assert(!ignore_reason.empty());
             MXS_WARNING("%s was ignored when promoting '%s' because %s",
-                        slave_conn.settings.to_string().c_str(), name(), ignore_reason.c_str());
+                slave_conn.settings.to_string().c_str(),
+                name(),
+                ignore_reason.c_str());
         }
     }
 
     return !error;
 }
 
-bool MariaDBServer::copy_slave_conns(GeneralOpData& op, const SlaveStatusArray& conns_to_copy,
-                                     const MariaDBServer* replacement)
+bool MariaDBServer::copy_slave_conns(
+    GeneralOpData& op, const SlaveStatusArray& conns_to_copy, const MariaDBServer* replacement)
 {
     mxb_assert(m_slave_status.empty());
     bool start_slave_error = false;
     for (size_t i = 0; i < conns_to_copy.size() && !start_slave_error; i++)
     {
-        SlaveStatus slave_conn = conns_to_copy[i];      // slave_conn may be modified
+        SlaveStatus slave_conn = conns_to_copy[i];  // slave_conn may be modified
         string reason_not_copied;
         if (slave_conn.should_be_copied(&reason_not_copied))
         {
@@ -2040,7 +2078,9 @@ bool MariaDBServer::copy_slave_conns(GeneralOpData& op, const SlaveStatusArray& 
                     ok_to_copy = false;
                     MXB_WARNING("Server id:s of '%s' and %s are identical, not copying the connection "
                                 "to '%s'.",
-                                name(), slave_conn.settings.master_endpoint.to_string().c_str(), name());
+                        name(),
+                        slave_conn.settings.master_endpoint.to_string().c_str(),
+                        name());
                 }
             }
 
@@ -2052,7 +2092,9 @@ bool MariaDBServer::copy_slave_conns(GeneralOpData& op, const SlaveStatusArray& 
         else
         {
             MXS_WARNING("%s was not copied to '%s' because %s",
-                        slave_conn.settings.to_string().c_str(), name(), reason_not_copied.c_str());
+                slave_conn.settings.to_string().c_str(),
+                name(),
+                reason_not_copied.c_str());
         }
     }
     return !start_slave_error;
@@ -2067,7 +2109,7 @@ bool MariaDBServer::create_start_slave(GeneralOpData& op, const SlaveStatus::Set
 
     SlaveStatus::Settings new_settings(conn_settings.name, conn_settings.master_endpoint, name());
     string change_master = generate_change_master_cmd(new_settings);
-    bool conn_created = execute_cmd_time_limit(change_master, time_remaining, &error_msg);
+    bool conn_created    = execute_cmd_time_limit(change_master, time_remaining, &error_msg);
     time_remaining -= timer.restart();
     if (conn_created)
     {
@@ -2081,15 +2123,13 @@ bool MariaDBServer::create_start_slave(GeneralOpData& op, const SlaveStatus::Set
         }
         else
         {
-            MXS_ERROR("%s could not be started: %s",
-                      new_settings.to_string().c_str(), error_msg.c_str());
+            MXS_ERROR("%s could not be started: %s", new_settings.to_string().c_str(), error_msg.c_str());
         }
     }
     else
     {
         // TODO: This may currently print out passwords.
-        MXS_ERROR("%s could not be created: %s",
-                  new_settings.to_string().c_str(), error_msg.c_str());
+        MXS_ERROR("%s could not be created: %s", new_settings.to_string().c_str(), error_msg.c_str());
     }
     return success;
 }
@@ -2104,9 +2144,9 @@ string MariaDBServer::generate_change_master_cmd(const SlaveStatus::Settings& co
 {
     string change_cmd;
     change_cmd += string_printf("CHANGE MASTER '%s' TO MASTER_HOST = '%s', MASTER_PORT = %i, ",
-                                conn_settings.name.c_str(),
-                                conn_settings.master_endpoint.host().c_str(),
-                                conn_settings.master_endpoint.port());
+        conn_settings.name.c_str(),
+        conn_settings.master_endpoint.host().c_str(),
+        conn_settings.master_endpoint.port());
     change_cmd += "MASTER_USE_GTID = current_pos, ";
     if (m_settings.replication_ssl)
     {
@@ -2114,7 +2154,7 @@ string MariaDBServer::generate_change_master_cmd(const SlaveStatus::Settings& co
     }
     change_cmd += string_printf("MASTER_USER = '%s', ", m_settings.replication_user.c_str());
     const char MASTER_PW[] = "MASTER_PASSWORD = '%s';";
-#if defined (SS_DEBUG)
+#if defined(SS_DEBUG)
     string change_cmd_nopw = change_cmd;
     change_cmd_nopw += string_printf(MASTER_PW, "******");
     MXS_DEBUG("Change master command is '%s'.", change_cmd_nopw.c_str());
@@ -2123,24 +2163,23 @@ string MariaDBServer::generate_change_master_cmd(const SlaveStatus::Settings& co
     return change_cmd;
 }
 
-bool
-MariaDBServer::redirect_existing_slave_conn(GeneralOpData& op, const SlaveStatus::Settings& conn_settings,
-                                            const MariaDBServer* new_master)
+bool MariaDBServer::redirect_existing_slave_conn(
+    GeneralOpData& op, const SlaveStatus::Settings& conn_settings, const MariaDBServer* new_master)
 {
-    auto error_out = op.error_out;
+    auto error_out                    = op.error_out;
     maxbase::Duration& time_remaining = op.time_remaining;
     StopWatch timer;
     bool success = false;
 
     // First, just stop the slave connection.
     string conn_name = conn_settings.name;
-    bool stopped = stop_slave_conn(conn_name, StopMode::STOP_ONLY, time_remaining, error_out);
+    bool stopped     = stop_slave_conn(conn_name, StopMode::STOP_ONLY, time_remaining, error_out);
     time_remaining -= timer.restart();
     if (stopped)
     {
         SlaveStatus::Settings modified_settings = conn_settings;
-        modified_settings.master_endpoint = EndPoint(new_master->server);
-        string change_master = generate_change_master_cmd(modified_settings);
+        modified_settings.master_endpoint       = EndPoint(new_master->server);
+        string change_master                    = generate_change_master_cmd(modified_settings);
 
         string error_msg;
         bool changed = execute_cmd_time_limit(change_master, time_remaining, &error_msg);
@@ -2157,20 +2196,21 @@ MariaDBServer::redirect_existing_slave_conn(GeneralOpData& op, const SlaveStatus
             else
             {
                 PRINT_MXS_JSON_ERROR(error_out,
-                                     "%s could not be started: %s",
-                                     modified_settings.to_string().c_str(), error_msg.c_str());
+                    "%s could not be started: %s",
+                    modified_settings.to_string().c_str(),
+                    error_msg.c_str());
             }
         }
         else
         {
             // TODO: This may currently print out passwords.
             PRINT_MXS_JSON_ERROR(error_out,
-                                 "%s could not be redirected to %s: %s",
-                                 conn_settings.to_string().c_str(),
-                                 modified_settings.master_endpoint.to_string().c_str(),
-                                 error_msg.c_str());
+                "%s could not be redirected to %s: %s",
+                conn_settings.to_string().c_str(),
+                modified_settings.master_endpoint.to_string().c_str(),
+                error_msg.c_str());
         }
-    }   // 'stop_slave_conn' prints its own errors
+    }  // 'stop_slave_conn' prints its own errors
     return success;
 }
 
@@ -2179,16 +2219,19 @@ bool MariaDBServer::update_enabled_events()
     string error_msg;
     // Get names of all enabled scheduled events on the server.
     auto event_info = execute_query("SELECT Event_schema, Event_name FROM information_schema.EVENTS WHERE "
-                                    "Status = 'ENABLED';", &error_msg);
+                                    "Status = 'ENABLED';",
+        &error_msg);
     if (event_info.get() == NULL)
     {
         MXS_ERROR("Could not query events of '%s': %s Event handling can be disabled by "
                   "setting '%s' to false.",
-                  name(), error_msg.c_str(), CN_HANDLE_EVENTS);
+            name(),
+            error_msg.c_str(),
+            CN_HANDLE_EVENTS);
         return false;
     }
 
-    auto db_name_ind = 0;
+    auto db_name_ind    = 0;
     auto event_name_ind = 1;
 
     EventNameSet full_names;
@@ -2197,7 +2240,7 @@ bool MariaDBServer::update_enabled_events()
     while (event_info->next_row())
     {
         string full_name = event_info->get_string(db_name_ind) + "." + event_info->get_string(event_name_ind);
-        full_names.insert(full_name);   // Ignore duplicates, they shouldn't exists.
+        full_names.insert(full_name);  // Ignore duplicates, they shouldn't exists.
     }
 
     m_enabled_events = std::move(full_names);
@@ -2212,8 +2255,8 @@ bool MariaDBServer::update_enabled_events()
  */
 void MariaDBServer::update_server(bool time_to_update_disk_space, bool first_tick)
 {
-    auto server = this;
-    MonitorServer* mon_srv = server;
+    auto server               = this;
+    MonitorServer* mon_srv    = server;
     ConnectResult conn_status = mon_srv->ping_or_connect();
 
     if (mxs::Monitor::connection_is_ok(conn_status))
@@ -2225,7 +2268,7 @@ void MariaDBServer::update_server(bool time_to_update_disk_space, bool first_tic
         {
             // Is a new connection or a reconnection. Check server version.
             update_server_version();
-            clear_locks_info();     // Lock expired due to lost connection.
+            clear_locks_info();  // Lock expired due to lost connection.
         }
 
         if (m_capabilities.basic_support)
@@ -2278,51 +2321,55 @@ void MariaDBServer::update_server(bool time_to_update_disk_space, bool first_tic
     }
 
     /** Increase or reset the error count of the server. */
-    bool is_running = server->is_running();
-    bool in_maintenance = server->is_in_maintenance();
+    bool is_running        = server->is_running();
+    bool in_maintenance    = server->is_in_maintenance();
     mon_srv->mon_err_count = (is_running || in_maintenance) ? 0 : mon_srv->mon_err_count + 1;
 }
 
-
 bool MariaDBServer::kick_out_super_users(GeneralOpData& op)
 {
-    bool error = false;
+    bool error              = false;
     Duration time_remaining = op.time_remaining;
-    auto error_out = op.error_out;
+    auto error_out          = op.error_out;
     // Only select unique rows...
     string get_ids_query = "SELECT DISTINCT * FROM ("
-        // select conn id and username from live connections ...
+                           // select conn id and username from live connections ...
                            "SELECT P.id,P.user FROM information_schema.PROCESSLIST as P "
-        // match with user information ...
+                           // match with user information ...
                            "INNER JOIN mysql.user as U ON (U.user = P.user) WHERE "
-        // where the user has super-privileges, is not replicating ...
+                           // where the user has super-privileges, is not replicating ...
                            "(U.Super_priv = 'Y' AND P.COMMAND != 'Binlog Dump' "
-        // and is not the current user.
+                           // and is not the current user.
                            "AND P.id != (SELECT CONNECTION_ID()))) as I;";
 
     string error_msg;
     unsigned int error_num = 0;
-    auto res = execute_query(get_ids_query, &error_msg, &error_num);
+    auto res               = execute_query(get_ids_query, &error_msg, &error_num);
     if (res)
     {
-        int id_col = 0;
+        int id_col   = 0;
         int user_col = 1;
         while (res->next_row())
         {
-            auto conn_id = res->get_int(id_col);
-            auto user = res->get_string(user_col);
+            auto conn_id      = res->get_int(id_col);
+            auto user         = res->get_string(user_col);
             string kill_query = mxb::string_printf("KILL SOFT CONNECTION %li;", conn_id);
             StopWatch timer;
             if (execute_cmd_time_limit(kill_query, time_remaining, &error_msg))
             {
                 MXB_WARNING("Killed connection id %lu to '%s' from super-user '%s' to prevent writes.",
-                            conn_id, name(), user.c_str());
+                    conn_id,
+                    name(),
+                    user.c_str());
             }
             else
             {
                 error = true;
-                PRINT_MXS_JSON_ERROR(error_out, "Could not kill connection %lu from super-user '%s': %s",
-                                     conn_id, user.c_str(), error_msg.c_str());
+                PRINT_MXS_JSON_ERROR(error_out,
+                    "Could not kill connection %lu from super-user '%s': %s",
+                    conn_id,
+                    user.c_str(),
+                    error_msg.c_str());
             }
             time_remaining -= timer.split();
         }
@@ -2336,7 +2383,8 @@ bool MariaDBServer::kick_out_super_users(GeneralOpData& op)
         {
             MXB_WARNING("Insufficient rights to query logged in super-users for server '%s': %s Super-users "
                         "may perform writes during the cluster manipulation operation.",
-                        name(), error_msg.c_str());
+                name(),
+                error_msg.c_str());
         }
         else
         {
@@ -2351,56 +2399,56 @@ void MariaDBServer::update_locks_status()
 {
     /* Read a lock status from a result row. */
     auto read_lock_status = [this](const QueryResult& is_used_row, int ind) {
-            ServerLock rval;
-            if (is_used_row.field_is_null(ind))
-            {
-                // null means the lock is free.
-                rval.set_status(ServerLock::Status::FREE);
-            }
-            else
-            {
-                auto lock_owner_id = is_used_row.get_int(ind);
-                // Either owned by this MaxScale or another.
-                auto new_status = (lock_owner_id == conn_id()) ? ServerLock::Status::OWNED_SELF :
-                    ServerLock::Status::OWNED_OTHER;
-                rval.set_status(new_status, lock_owner_id);
-            }
-            return rval;
-        };
+        ServerLock rval;
+        if (is_used_row.field_is_null(ind))
+        {
+            // null means the lock is free.
+            rval.set_status(ServerLock::Status::FREE);
+        }
+        else
+        {
+            auto lock_owner_id = is_used_row.get_int(ind);
+            // Either owned by this MaxScale or another.
+            auto new_status = (lock_owner_id == conn_id()) ? ServerLock::Status::OWNED_SELF
+                                                           : ServerLock::Status::OWNED_OTHER;
+            rval.set_status(new_status, lock_owner_id);
+        }
+        return rval;
+    };
 
-    auto report_unexpected_lock = [this](ServerLock old_status, ServerLock new_status,
-                                         const string& lock_name) {
-            bool owned_lock = (old_status.status() == ServerLock::Status::OWNED_SELF);
-            if (new_status.status() == ServerLock::Status::OWNED_SELF)
+    auto report_unexpected_lock
+        = [this](ServerLock old_status, ServerLock new_status, const string& lock_name) {
+        bool owned_lock = (old_status.status() == ServerLock::Status::OWNED_SELF);
+        if (new_status.status() == ServerLock::Status::OWNED_SELF)
+        {
+            // This MaxScale has the lock. Print warning if it got the lock without knowing it.
+            if (!owned_lock)
             {
-                // This MaxScale has the lock. Print warning if it got the lock without knowing it.
-                if (!owned_lock)
-                {
-                    MXB_WARNING("Acquired the lock '%s' on server '%s' without locking it.",
-                                lock_name.c_str(), name());
-                }
+                MXB_WARNING(
+                    "Acquired the lock '%s' on server '%s' without locking it.", lock_name.c_str(), name());
             }
-            else
+        }
+        else
+        {
+            // Don't have the lock. Print a warning if lock was lost without releasing it.
+            // This may happen if connection broke and was recreated.
+            if (owned_lock)
             {
-                // Don't have the lock. Print a warning if lock was lost without releasing it.
-                // This may happen if connection broke and was recreated.
-                if (owned_lock)
+                string msg = string_printf(
+                    "Lost the lock '%s' on server '%s' without releasing it.", lock_name.c_str(), name());
+                if (new_status.status() == ServerLock::Status::OWNED_OTHER)
                 {
-                    string msg = string_printf("Lost the lock '%s' on server '%s' without releasing it.",
-                                               lock_name.c_str(), name());
-                    if (new_status.status() == ServerLock::Status::OWNED_OTHER)
-                    {
-                        msg += string_printf(" The lock is now owned by connection %li.", new_status.owner());
-                    }
-                    MXB_WARNING("%s", msg.c_str());
+                    msg += string_printf(" The lock is now owned by connection %li.", new_status.owner());
                 }
+                MXB_WARNING("%s", msg.c_str());
             }
-        };
+        }
+    };
 
     // First, check who currently has the locks. If the query fails, assume that this MaxScale does not
     // have the locks. This is correct if connection failed.
-    string cmd = string_printf("SELECT IS_USED_LOCK('%s'), IS_USED_LOCK('%s');",
-                               SERVER_LOCK_NAME, MASTER_LOCK_NAME);
+    string cmd
+        = string_printf("SELECT IS_USED_LOCK('%s'), IS_USED_LOCK('%s');", SERVER_LOCK_NAME, MASTER_LOCK_NAME);
     string err_msg;
     ServerLock serverlock_status_new;
     ServerLock masterlock_status_new;
@@ -2433,8 +2481,8 @@ void MariaDBServer::update_locks_status()
  */
 bool MariaDBServer::release_lock(LockType lock_type)
 {
-    bool normal_lock = (lock_type == LockType::SERVER);
-    ServerLock* output = normal_lock ? &m_serverlock : &m_masterlock;
+    bool normal_lock     = (lock_type == LockType::SERVER);
+    ServerLock* output   = normal_lock ? &m_serverlock : &m_masterlock;
     const char* lockname = normal_lock ? SERVER_LOCK_NAME : MASTER_LOCK_NAME;
 
     // Try to release the lock.
@@ -2478,16 +2526,16 @@ bool MariaDBServer::release_lock(LockType lock_type)
 
 bool MariaDBServer::get_lock(LockType lock_type)
 {
-    bool normal_lock = (lock_type == LockType::SERVER);
-    ServerLock* output = normal_lock ? &m_serverlock : &m_masterlock;
+    bool normal_lock     = (lock_type == LockType::SERVER);
+    ServerLock* output   = normal_lock ? &m_serverlock : &m_masterlock;
     const char* lockname = normal_lock ? SERVER_LOCK_NAME : MASTER_LOCK_NAME;
 
-    bool rval = false;
+    bool rval  = false;
     string cmd = string_printf("SELECT GET_LOCK('%s', 0)", lockname);
     string err_msg;
     ServerLock lock_result;
     auto res_get_lock = execute_query(cmd, &err_msg);
-    const int column = 0;
+    const int column  = 0;
 
     if (res_get_lock && res_get_lock->get_col_count() == 1 && res_get_lock->next_row())
     {

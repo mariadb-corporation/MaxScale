@@ -51,10 +51,7 @@ public:
     public:
         virtual ~Dependent();
 
-        const WatchdogNotifier& notifier() const
-        {
-            return m_notifier;
-        }
+        const WatchdogNotifier& notifier() const { return m_notifier; }
 
         /**
          * Starts the watchdog workaround that will ensure that the systemd
@@ -79,10 +76,7 @@ public:
         /**
          * @return True, if the dependent is alive and kicking.
          */
-        bool is_ticking() const
-        {
-            return m_ticking.load(std::memory_order_acquire);
-        }
+        bool is_ticking() const { return m_ticking.load(std::memory_order_acquire); }
 
     protected:
         Dependent(WatchdogNotifier* pNotifier);
@@ -101,10 +95,7 @@ public:
     private:
         friend class WatchdogNotifier;
 
-        void mark_not_ticking()
-        {
-            m_ticking.store(false, std::memory_order_release);
-        }
+        void mark_not_ticking() { m_ticking.store(false, std::memory_order_release); }
 
     private:
         class Ticker;
@@ -112,7 +103,7 @@ public:
 
         WatchdogNotifier& m_notifier;
         std::atomic<bool> m_ticking;
-        Ticker*           m_pTicker {nullptr};  /*< Watchdog ticker, if systemd enabled. */
+        Ticker* m_pTicker {nullptr}; /*< Watchdog ticker, if systemd enabled. */
     };
 
     /**
@@ -128,7 +119,7 @@ public:
     class Workaround
     {
     public:
-        Workaround(const Workaround&) = delete;
+        Workaround(const Workaround&)            = delete;
         Workaround& operator=(const Workaround&) = delete;
 
         /**
@@ -147,16 +138,13 @@ public:
         /**
          * Turns off the watchdog workaround.
          */
-        ~Workaround()
-        {
-            m_dependent.stop_watchdog_workaround();
-        }
+        ~Workaround() { m_dependent.stop_watchdog_workaround(); }
 
     private:
         Dependent& m_dependent;
     };
 
-    WatchdogNotifier(const WatchdogNotifier&) = delete;
+    WatchdogNotifier(const WatchdogNotifier&)            = delete;
     WatchdogNotifier& operator=(const WatchdogNotifier&) = delete;
 
     /**
@@ -168,10 +156,7 @@ public:
     WatchdogNotifier(uint64_t usec);
     ~WatchdogNotifier();
 
-    const std::chrono::seconds& interval() const
-    {
-        return m_interval;
-    }
+    const std::chrono::seconds& interval() const { return m_interval; }
 
     /**
      * Start the watchdog notifier. Multiple calls without intervening
@@ -194,12 +179,12 @@ private:
     void run();
     void notify_systemd_watchdog();
 
-    std::thread                    m_thread;
-    std::atomic<bool>              m_running {true};
-    std::mutex                     m_cond_lock;
-    mxb::ConditionVariable         m_cond;
-    std::chrono::seconds           m_interval;  /*< Duration between notifications, if any. */
+    std::thread m_thread;
+    std::atomic<bool> m_running {true};
+    std::mutex m_cond_lock;
+    mxb::ConditionVariable m_cond;
+    std::chrono::seconds m_interval; /*< Duration between notifications, if any. */
     std::unordered_set<Dependent*> m_dependents;
-    std::mutex                     m_dependents_lock;
+    std::mutex m_dependents_lock;
 };
-}
+}  // namespace maxbase

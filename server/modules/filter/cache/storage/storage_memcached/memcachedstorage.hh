@@ -18,7 +18,7 @@
 class MemcachedStorage : public Storage
 {
 public:
-    MemcachedStorage(const MemcachedStorage&) = delete;
+    MemcachedStorage(const MemcachedStorage&)            = delete;
     MemcachedStorage& operator=(const MemcachedStorage&) = delete;
 
     static bool initialize(cache_storage_kind_t* pKind, uint32_t* pCapabilities);
@@ -26,9 +26,8 @@ public:
 
     ~MemcachedStorage();
 
-    static MemcachedStorage* create(const std::string& name,
-                                    const Config& config,
-                                    const std::string& arguments);
+    static MemcachedStorage* create(
+        const std::string& name, const Config& config, const std::string& arguments);
 
     bool create_token(std::shared_ptr<Token>* psToken) override final;
 
@@ -37,23 +36,22 @@ public:
 
     cache_result_t get_info(uint32_t what, json_t** ppInfo) const override final;
     cache_result_t get_value(Token* pToken,
-                             const CacheKey& key,
-                             uint32_t flags,
-                             uint32_t soft_ttl,
-                             uint32_t hard_ttl,
-                             GWBUF** ppResult,
-                             const std::function<void (cache_result_t, GWBUF*)>& cb) override final;
+        const CacheKey& key,
+        uint32_t flags,
+        uint32_t soft_ttl,
+        uint32_t hard_ttl,
+        GWBUF** ppResult,
+        const std::function<void(cache_result_t, GWBUF*)>& cb) override final;
     cache_result_t put_value(Token* pToken,
-                             const CacheKey& key,
-                             const std::vector<std::string>& invalidation_words,
-                             const GWBUF* pValue,
-                             const std::function<void (cache_result_t)>& cb) override final;
-    cache_result_t del_value(Token* pToken,
-                             const CacheKey& key,
-                             const std::function<void (cache_result_t)>& cb) override final;
+        const CacheKey& key,
+        const std::vector<std::string>& invalidation_words,
+        const GWBUF* pValue,
+        const std::function<void(cache_result_t)>& cb) override final;
+    cache_result_t del_value(
+        Token* pToken, const CacheKey& key, const std::function<void(cache_result_t)>& cb) override final;
     cache_result_t invalidate(Token* pToken,
-                              const std::vector<std::string>& words,
-                              const std::function<void (cache_result_t)>& cb) override final;
+        const std::vector<std::string>& words,
+        const std::function<void(cache_result_t)>& cb) override final;
     cache_result_t clear(Token* pToken) override final;
 
     cache_result_t get_head(CacheKey* pKey, GWBUF** ppHead) override final;
@@ -63,15 +61,15 @@ public:
 
 private:
     MemcachedStorage(const std::string& name,
-                     const Config& config,
-                     const std::string& address,
-                     int port,
-                     uint32_t max_value_size);
+        const Config& config,
+        const std::string& address,
+        int port,
+        uint32_t max_value_size);
 
-    std::string  m_name;
+    std::string m_name;
     const Config m_config;
-    std::string  m_address;
-    int          m_port;
+    std::string m_address;
+    int m_port;
     const Limits m_limits;
-    uint32_t     m_mcd_ttl { 0 };
+    uint32_t m_mcd_ttl {0};
 };

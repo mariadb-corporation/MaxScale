@@ -49,7 +49,7 @@ using namespace maxscale;
 
 static struct
 {
-    std::mutex              lock;
+    std::mutex lock;
     std::vector<SFilterDef> filters;
 } this_unit;
 
@@ -64,7 +64,7 @@ static struct
  */
 SFilterDef filter_alloc(const char* name, const char* module, mxs::ConfigParameters* params)
 {
-    MXS_FILTER_OBJECT* object = (MXS_FILTER_OBJECT*)load_module(module, MODULE_FILTER);
+    MXS_FILTER_OBJECT* object = (MXS_FILTER_OBJECT*) load_module(module, MODULE_FILTER);
 
     if (object == NULL)
     {
@@ -86,7 +86,7 @@ SFilterDef filter_alloc(const char* name, const char* module, mxs::ConfigParamet
         return NULL;
     }
 
-    SFilterDef filter(new(std::nothrow) FilterDef(name, module, object, instance, params));
+    SFilterDef filter(new (std::nothrow) FilterDef(name, module, object, instance, params));
 
     if (filter)
     {
@@ -102,17 +102,16 @@ SFilterDef filter_alloc(const char* name, const char* module, mxs::ConfigParamet
 }
 
 FilterDef::FilterDef(std::string name,
-                     std::string module,
-                     MXS_FILTER_OBJECT* object,
-                     MXS_FILTER* instance,
-                     mxs::ConfigParameters* params)
+    std::string module,
+    MXS_FILTER_OBJECT* object,
+    MXS_FILTER* instance,
+    mxs::ConfigParameters* params)
     : name(name)
     , module(module)
     , parameters(*params)
     , filter(instance)
     , obj(object)
-{
-}
+{}
 
 FilterDef::~FilterDef()
 {
@@ -246,11 +245,8 @@ json_t* filter_parameters_to_json(const SFilterDef& filter)
 
     /** Add custom module parameters */
     const MXS_MODULE* mod = get_module(filter->module.c_str(), MODULE_FILTER);
-    config_add_module_params_json(&filter->parameters,
-                                  {CN_TYPE, CN_MODULE},
-                                  config_filter_params,
-                                  mod->parameters,
-                                  rval);
+    config_add_module_params_json(
+        &filter->parameters, {CN_TYPE, CN_MODULE}, config_filter_params, mod->parameters, rval);
 
     return rval;
 }
@@ -333,16 +329,11 @@ namespace maxscale
 FilterSession::FilterSession(MXS_SESSION* pSession, SERVICE* pService)
     : m_pSession(pSession)
     , m_pService(pService)
-{
-}
+{}
 
-FilterSession::~FilterSession()
-{
-}
+FilterSession::~FilterSession() {}
 
-void FilterSession::close()
-{
-}
+void FilterSession::close() {}
 
 void FilterSession::setDownstream(const Downstream& down)
 {
@@ -368,7 +359,7 @@ json_t* FilterSession::diagnostics() const
 {
     return NULL;
 }
-}
+}  // namespace maxscale
 
 std::ostream& filter_persist(const SFilterDef& filter, std::ostream& os)
 {
@@ -376,7 +367,6 @@ std::ostream& filter_persist(const SFilterDef& filter, std::ostream& os)
     const MXS_MODULE* mod = get_module(filter->module.c_str(), NULL);
     mxb_assert(mod);
 
-    os << generate_config_string(filter->name, filter->parameters,
-                                 config_filter_params, mod->parameters);
+    os << generate_config_string(filter->name, filter->parameters, config_filter_params, mod->parameters);
     return os;
 }

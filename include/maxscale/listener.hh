@@ -18,6 +18,7 @@
 #include <maxscale/ssl.hh>
 
 class SERVICE;
+
 namespace maxscale
 {
 class ProtocolModule;
@@ -42,16 +43,16 @@ void mark_auth_as_failed(const std::string& remote);
 class ListenerSessionData
 {
 public:
-    using SProtocol = std::unique_ptr<mxs::ProtocolModule>;
+    using SProtocol      = std::unique_ptr<mxs::ProtocolModule>;
     using SAuthenticator = std::unique_ptr<mxs::AuthenticatorModule>;
 
     struct ConnectionInitSql
     {
-        ConnectionInitSql() = default;
+        ConnectionInitSql()                             = default;
         ConnectionInitSql(const ConnectionInitSql& rhs) = default;
 
         std::vector<std::string> queries;
-        std::vector<uint8_t>     buffer_contents;
+        std::vector<uint8_t> buffer_contents;
     };
 
     /**
@@ -63,18 +64,22 @@ public:
      */
     static std::shared_ptr<mxs::ListenerSessionData> create_test_data(const mxs::ConfigParameters& params);
 
-    ListenerSessionData(SSLContext ssl, qc_sql_mode_t default_sql_mode, SERVICE* service,
-                        SProtocol protocol_module, const std::string& listener_name,
-                        std::vector<SAuthenticator>&& authenticators, ConnectionInitSql&& init_sql);
+    ListenerSessionData(SSLContext ssl,
+        qc_sql_mode_t default_sql_mode,
+        SERVICE* service,
+        SProtocol protocol_module,
+        const std::string& listener_name,
+        std::vector<SAuthenticator>&& authenticators,
+        ConnectionInitSql&& init_sql);
 
-    ListenerSessionData(const ListenerSessionData&) = delete;
+    ListenerSessionData(const ListenerSessionData&)            = delete;
     ListenerSessionData& operator=(const ListenerSessionData&) = delete;
 
-    const SSLContext    m_ssl;                  /**< SSL settings */
-    const qc_sql_mode_t m_default_sql_mode;     /**< Default sql mode for the listener */
-    SERVICE&            m_service;              /**< The service the listener feeds */
-    const SProtocol     m_proto_module;         /**< Protocol module */
-    const std::string   m_listener_name;        /**< Name of the owning listener */
+    const SSLContext m_ssl;                 /**< SSL settings */
+    const qc_sql_mode_t m_default_sql_mode; /**< Default sql mode for the listener */
+    SERVICE& m_service;                     /**< The service the listener feeds */
+    const SProtocol m_proto_module;         /**< Protocol module */
+    const std::string m_listener_name;      /**< Name of the owning listener */
 
     /**
      * Authenticator modules used by the sessions created from the listener. The session will select
@@ -85,4 +90,4 @@ public:
     /** Connection init sql queries. Only used by MariaDB-protocol module .*/
     const ConnectionInitSql m_conn_init_sql;
 };
-}
+}  // namespace maxscale

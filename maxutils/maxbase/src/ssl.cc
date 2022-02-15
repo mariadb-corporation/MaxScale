@@ -20,8 +20,7 @@ SSLConfig::SSLConfig(const std::string& key, const std::string& cert, const std:
     : key(key)
     , cert(cert)
     , ca(ca)
-{
-}
+{}
 
 // CA must always be defined for non-empty configurations
 bool SSLConfig::empty() const
@@ -82,5 +81,5 @@ Version from_string(const char* str)
     }
     return SSL_UNKNOWN;
 }
-}
-}
+}  // namespace ssl_version
+}  // namespace maxbase

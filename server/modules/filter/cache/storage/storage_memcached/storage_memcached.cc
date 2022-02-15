@@ -26,7 +26,6 @@ StorageModuleT<MemcachedStorage> module;
 
 extern "C"
 {
-
 StorageModule* CacheGetStorageModule()
 {
     return &module;

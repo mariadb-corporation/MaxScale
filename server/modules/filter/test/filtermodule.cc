@@ -26,8 +26,8 @@ namespace maxscale
 
 const char* FilterModule::zName = MODULE_FILTER;
 
-auto_ptr<FilterModule::Instance> FilterModule::createInstance(const char* zName,
-                                                              mxs::ConfigParameters* pParameters)
+auto_ptr<FilterModule::Instance> FilterModule::createInstance(
+    const char* zName, mxs::ConfigParameters* pParameters)
 {
     auto_ptr<Instance> sInstance;
 
@@ -48,26 +48,19 @@ auto_ptr<FilterModule::Instance> FilterModule::createInstance(const char* zName,
 FilterModule::Instance::Instance(FilterModule* pModule, MXS_FILTER* pInstance)
     : m_module(*pModule)
     , m_pInstance(pInstance)
-{
-}
+{}
 
 FilterModule::Instance::~Instance()
 {
     m_module.destroyInstance(m_pInstance);
 }
 
-auto_ptr<FilterModule::Session> FilterModule::Instance::newSession(MXS_SESSION* pSession,
-                                                                   SERVICE* pService,
-                                                                   mxs::Downstream* down,
-                                                                   mxs::Upstream* up)
+auto_ptr<FilterModule::Session> FilterModule::Instance::newSession(
+    MXS_SESSION* pSession, SERVICE* pService, mxs::Downstream* down, mxs::Upstream* up)
 {
     auto_ptr<Session> sFilter_session;
 
-    MXS_FILTER_SESSION* pFilter_session = m_module.newSession(m_pInstance,
-                                                              pSession,
-                                                              pService,
-                                                              down,
-                                                              up);
+    MXS_FILTER_SESSION* pFilter_session = m_module.newSession(m_pInstance, pSession, pService, down, up);
 
     if (pFilter_session)
     {
@@ -84,11 +77,10 @@ auto_ptr<FilterModule::Session> FilterModule::Instance::newSession(MXS_SESSION* 
 FilterModule::Session::Session(Instance* pInstance, MXS_FILTER_SESSION* pFilter_session)
     : m_instance(*pInstance)
     , m_pFilter_session(pFilter_session)
-{
-}
+{}
 
 FilterModule::Session::~Session()
 {
     m_instance.freeSession(m_pFilter_session);
 }
-}
+}  // namespace maxscale

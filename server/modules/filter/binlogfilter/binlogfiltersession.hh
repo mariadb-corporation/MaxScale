@@ -34,15 +34,15 @@ class BinlogConfig;
 
 typedef struct rep_header_t
 {
-    int      payload_len;   /*< Payload length (24 bits) */
-    uint8_t  seqno;         /*< Response sequence number */
-    uint8_t  ok;            /*< OK Byte from packet */
-    uint32_t timestamp;     /*< Timestamp - start of binlog record */
-    uint8_t  event_type;    /*< Binlog event type */
-    uint32_t serverid;      /*< Server id of master */
-    uint32_t event_size;    /*< Size of header, post-header and body */
-    uint32_t next_pos;      /*< Position of next event */
-    uint16_t flags;         /*< Event flags */
+    int payload_len;     /*< Payload length (24 bits) */
+    uint8_t seqno;       /*< Response sequence number */
+    uint8_t ok;          /*< OK Byte from packet */
+    uint32_t timestamp;  /*< Timestamp - start of binlog record */
+    uint8_t event_type;  /*< Binlog event type */
+    uint32_t serverid;   /*< Server id of master */
+    uint32_t event_size; /*< Size of header, post-header and body */
+    uint32_t next_pos;   /*< Position of next event */
+    uint16_t flags;      /*< Event flags */
 } REP_HEADER;
 // End TODO
 //
@@ -58,8 +58,7 @@ public:
     ~BinlogFilterSession();
 
     // Create a new filter session
-    static BinlogFilterSession* create(MXS_SESSION* pSession, SERVICE* pService,
-                                       const BinlogFilter* pFilter);
+    static BinlogFilterSession* create(MXS_SESSION* pSession, SERVICE* pService, const BinlogFilter* pFilter);
 
     // Called when a client session has been closed
     void close();
@@ -105,26 +104,25 @@ private:
     void checkStatement(GWBUF** buffer, const REP_HEADER& hdr, int extra_len = 0);
 
     // Check DB.TABLE in ANNOTATE_ROWS event
-    void checkAnnotate(const uint8_t* event,
-                       const uint32_t event_size);
+    void checkAnnotate(const uint8_t* event, const uint32_t event_size);
 
 private:
     // Internal states for filter operations
     enum state_t
     {
-        ERRORED,        // A blocking error occurred
-        COMMAND_MODE,   // Connected client in SQL mode: no filtering
-        BINLOG_MODE     // Connected client in BINLOG_MODE: filter events
+        ERRORED,       // A blocking error occurred
+        COMMAND_MODE,  // Connected client in SQL mode: no filtering
+        BINLOG_MODE    // Connected client in BINLOG_MODE: filter events
     };
 
 private:
     // Event filtering member vars
-    uint32_t m_serverid = 0;            // server-id of connected slave
-    state_t  m_state = COMMAND_MODE;    // Internal state
-    bool     m_skip = false;            // Mark event skipping
-    bool     m_crc = false;             // CRC32 for events. Not implemented
-    uint32_t m_large_left = 0;          // Remaining bytes of a large event
-    bool     m_is_large = false;        // Large Event indicator
-    bool     m_reading_checksum = false;// Whether we are waiting for the binlog checksum response
-    bool     m_is_gtid = false;
+    uint32_t m_serverid     = 0;             // server-id of connected slave
+    state_t m_state         = COMMAND_MODE;  // Internal state
+    bool m_skip             = false;         // Mark event skipping
+    bool m_crc              = false;         // CRC32 for events. Not implemented
+    uint32_t m_large_left   = 0;             // Remaining bytes of a large event
+    bool m_is_large         = false;         // Large Event indicator
+    bool m_reading_checksum = false;         // Whether we are waiting for the binlog checksum response
+    bool m_is_gtid          = false;
 };

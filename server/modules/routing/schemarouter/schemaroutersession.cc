@@ -34,15 +34,13 @@ namespace schemarouter
 bool connect_backend_servers(SRBackendList& backends, MXS_SESSION* session);
 
 enum route_target get_shard_route_target(uint32_t qtype);
-bool              change_current_db(std::string& dest, Shard& shard, GWBUF* buf);
-bool              extract_database(GWBUF* buf, char* str);
-bool              detect_show_shards(GWBUF* query);
-void              write_error_to_client(MariaDBClientConnection* conn, int errnum,
-                                        const char* mysqlstate, const char* errmsg);
+bool change_current_db(std::string& dest, Shard& shard, GWBUF* buf);
+bool extract_database(GWBUF* buf, char* str);
+bool detect_show_shards(GWBUF* query);
+void write_error_to_client(
+    MariaDBClientConnection* conn, int errnum, const char* mysqlstate, const char* errmsg);
 
-SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session,
-                                         SchemaRouter* router,
-                                         SRBackendList backends)
+SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session, SchemaRouter* router, SRBackendList backends)
     : mxs::RouterSession(session)
     , m_closed(false)
     , m_client(static_cast<MariaDBClientConnection*>(session->client_connection()))
@@ -73,7 +71,8 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session,
         m_state |= INIT_USE_DB;
 
         MXS_INFO("Client logging in directly to a database '%s', "
-                 "postponing until databases have been mapped.", current_db.c_str());
+                 "postponing until databases have been mapped.",
+            current_db.c_str());
     }
 
     mxb::atomic::add(&m_router->m_stats.sessions, 1);
@@ -124,8 +123,8 @@ void SchemaRouterSession::close()
             m_router->m_stats.ses_shortest = ses_time;
         }
 
-        m_router->m_stats.ses_average =
-            (ses_time + ((m_router->m_stats.sessions - 1) * m_router->m_stats.ses_average))
+        m_router->m_stats.ses_average
+            = (ses_time + ((m_router->m_stats.sessions - 1) * m_router->m_stats.ses_average))
             / (m_router->m_stats.sessions);
     }
 }
@@ -133,16 +132,16 @@ void SchemaRouterSession::close()
 static void inspect_query(GWBUF* pPacket, uint32_t* type, qc_query_op_t* op, uint8_t* command)
 {
     uint8_t* data = GWBUF_DATA(pPacket);
-    *command = data[4];
+    *command      = data[4];
 
     switch (*command)
     {
-    case MXS_COM_QUIT:          /*< 1 QUIT will close all sessions */
-    case MXS_COM_INIT_DB:       /*< 2 DDL must go to the master */
-    case MXS_COM_REFRESH:       /*< 7 - I guess this is session but not sure */
-    case MXS_COM_DEBUG:         /*< 0d all servers dump debug info to stdout */
-    case MXS_COM_PING:          /*< 0e all servers are pinged */
-    case MXS_COM_CHANGE_USER:   /*< 11 all servers change it accordingly */
+    case MXS_COM_QUIT:        /*< 1 QUIT will close all sessions */
+    case MXS_COM_INIT_DB:     /*< 2 DDL must go to the master */
+    case MXS_COM_REFRESH:     /*< 7 - I guess this is session but not sure */
+    case MXS_COM_DEBUG:       /*< 0d all servers dump debug info to stdout */
+    case MXS_COM_PING:        /*< 0e all servers are pinged */
+    case MXS_COM_CHANGE_USER: /*< 11 all servers change it accordingly */
         // case MXS_COM_STMT_CLOSE: /*< free prepared statement */
         // case MXS_COM_STMT_SEND_LONG_DATA: /*< send data to column */
         // case MXS_COM_STMT_RESET: /*< resets the data of a prepared statement */
@@ -156,7 +155,7 @@ static void inspect_query(GWBUF* pPacket, uint32_t* type, qc_query_op_t* op, uin
 
     case MXS_COM_QUERY:
         *type = qc_get_type_mask(pPacket);
-        *op = qc_get_operation(pPacket);
+        *op   = qc_get_operation(pPacket);
         break;
 
     case MXS_COM_STMT_PREPARE:
@@ -169,14 +168,14 @@ static void inspect_query(GWBUF* pPacket, uint32_t* type, qc_query_op_t* op, uin
         *type = QUERY_TYPE_EXEC_STMT;
         break;
 
-    case MXS_COM_SHUTDOWN:      /**< 8 where should shutdown be routed ? */
-    case MXS_COM_STATISTICS:    /**< 9 ? */
-    case MXS_COM_PROCESS_INFO:  /**< 0a ? */
-    case MXS_COM_CONNECT:       /**< 0b ? */
-    case MXS_COM_PROCESS_KILL:  /**< 0c ? */
-    case MXS_COM_TIME:          /**< 0f should this be run in gateway ? */
-    case MXS_COM_DELAYED_INSERT:/**< 10 ? */
-    case MXS_COM_DAEMON:        /**< 1d ? */
+    case MXS_COM_SHUTDOWN:       /**< 8 where should shutdown be routed ? */
+    case MXS_COM_STATISTICS:     /**< 9 ? */
+    case MXS_COM_PROCESS_INFO:   /**< 0a ? */
+    case MXS_COM_CONNECT:        /**< 0b ? */
+    case MXS_COM_PROCESS_KILL:   /**< 0c ? */
+    case MXS_COM_TIME:           /**< 0f should this be run in gateway ? */
+    case MXS_COM_DELAYED_INSERT: /**< 10 ? */
+    case MXS_COM_DAEMON:         /**< 1d ? */
     default:
         break;
     }
@@ -186,21 +185,21 @@ static void inspect_query(GWBUF* pPacket, uint32_t* type, qc_query_op_t* op, uin
         char* sql;
         int sql_len;
         char* qtypestr = qc_typemask_to_string(*type);
-        int rc = modutil_extract_SQL(pPacket, &sql, &sql_len);
+        int rc         = modutil_extract_SQL(pPacket, &sql, &sql_len);
 
         MXS_INFO("> Command: %s, stmt: %.*s %s%s",
-                 STRPACKETTYPE(*command),
-                 rc ? sql_len : 0,
-                 rc ? sql : "",
-                 (pPacket->hint == NULL ? "" : ", Hint:"),
-                 (pPacket->hint == NULL ? "" : STRHINTTYPE(pPacket->hint->type)));
+            STRPACKETTYPE(*command),
+            rc ? sql_len : 0,
+            rc ? sql : "",
+            (pPacket->hint == NULL ? "" : ", Hint:"),
+            (pPacket->hint == NULL ? "" : STRHINTTYPE(pPacket->hint->type)));
 
         MXS_FREE(qtypestr);
     }
 }
 
-mxs::Target* SchemaRouterSession::resolve_query_target(GWBUF* pPacket, uint32_t type,
-                                                       uint8_t command, enum route_target& route_target)
+mxs::Target* SchemaRouterSession::resolve_query_target(
+    GWBUF* pPacket, uint32_t type, uint8_t command, enum route_target& route_target)
 {
     mxs::Target* target = NULL;
 
@@ -221,8 +220,7 @@ mxs::Target* SchemaRouterSession::resolve_query_target(GWBUF* pPacket, uint32_t 
          * the current default database or to the first available server. */
         target = get_shard_target(pPacket, type);
 
-        if ((!target && command != MXS_COM_INIT_DB && m_current_db.empty())
-            || command == MXS_COM_FIELD_LIST
+        if ((!target && command != MXS_COM_INIT_DB && m_current_db.empty()) || command == MXS_COM_FIELD_LIST
             || m_current_db.empty())
         {
             /** No current database and no databases in query or the database is
@@ -238,7 +236,7 @@ mxs::Target* SchemaRouterSession::resolve_query_target(GWBUF* pPacket, uint32_t 
             if (b->target()->is_usable())
             {
                 route_target = TARGET_NAMED_SERVER;
-                target = b->target();
+                target       = b->target();
                 break;
             }
         }
@@ -258,8 +256,7 @@ static bool is_empty_packet(GWBUF* pPacket)
     bool rval = false;
     uint8_t len[3];
 
-    if (gwbuf_length(pPacket) == 4
-        && gwbuf_copy_data(pPacket, 0, 3, len) == 3
+    if (gwbuf_length(pPacket) == 4 && gwbuf_copy_data(pPacket, 0, 3, len) == 3
         && gw_mysql_get_byte3(len) == 0)
     {
         rval = true;
@@ -302,7 +299,7 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
                 m_queue.push_back(pPacket);
 
                 auto worker = mxs::RoutingWorker::get_current();
-                m_dcid = worker->delayed_call(1000, &SchemaRouterSession::delay_routing, this);
+                m_dcid      = worker->delayed_call(1000, &SchemaRouterSession::delay_routing, this);
                 MXS_INFO("Waiting for the database mapping to be completed by another session");
 
                 return 1;
@@ -337,16 +334,16 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
         return ret;
     }
 
-    uint8_t command = 0;
-    mxs::Target* target = NULL;
-    uint32_t type = QUERY_TYPE_UNKNOWN;
-    qc_query_op_t op = QUERY_OP_UNDEFINED;
+    uint8_t command                = 0;
+    mxs::Target* target            = NULL;
+    uint32_t type                  = QUERY_TYPE_UNKNOWN;
+    qc_query_op_t op               = QUERY_OP_UNDEFINED;
     enum route_target route_target = TARGET_UNDEFINED;
 
     if (m_load_target)
     {
         /** A load data local infile is active */
-        target = m_load_target;
+        target       = m_load_target;
         route_target = TARGET_NAMED_SERVER;
 
         if (is_empty_packet(pPacket))
@@ -397,13 +394,11 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
             }
 
             route_target = TARGET_UNDEFINED;
-            target = m_shard.get_location(m_current_db);
+            target       = m_shard.get_location(m_current_db);
 
             if (target)
             {
-                MXS_INFO("INIT_DB for database '%s' on server '%s'",
-                         m_current_db.c_str(),
-                         target->name());
+                MXS_INFO("INIT_DB for database '%s' on server '%s'", m_current_db.c_str(), target->name());
                 route_target = TARGET_NAMED_SERVER;
             }
             else
@@ -453,7 +448,7 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
                  * session command hasn't been completed. */
                 bref->store_command(pPacket);
                 pPacket = NULL;
-                ret = 1;
+                ret     = 1;
             }
             else if (qc_query_is_type(type, QUERY_TYPE_PREPARE_STMT))
             {
@@ -468,9 +463,8 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
             {
                 uint8_t cmd = mxs_mysql_get_command(pPacket);
 
-                auto responds = mxs_mysql_command_will_respond(cmd) ?
-                    mxs::Backend::EXPECT_RESPONSE :
-                    mxs::Backend::NO_RESPONSE;
+                auto responds = mxs_mysql_command_will_respond(cmd) ? mxs::Backend::EXPECT_RESPONSE
+                                                                    : mxs::Backend::NO_RESPONSE;
 
                 if (bref->write(pPacket, responds))
                 {
@@ -488,6 +482,7 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
 
     return ret;
 }
+
 void SchemaRouterSession::handle_mapping_reply(SRBackend* bref, GWBUF** pPacket)
 {
     int rc = inspect_mapping_states(bref, pPacket);
@@ -525,7 +520,7 @@ void SchemaRouterSession::handle_mapping_reply(SRBackend* bref, GWBUF** pPacket)
 void SchemaRouterSession::process_sescmd_response(SRBackend* bref, GWBUF** ppPacket, const mxs::Reply& reply)
 {
     uint8_t command = bref->next_session_command()->get_command();
-    uint64_t id = bref->next_session_command()->get_position();
+    uint64_t id     = bref->next_session_command()->get_position();
 
     if (m_replied_sescmd < m_sent_sescmd && id == m_replied_sescmd + 1 && m_sescmd_replier == bref)
     {
@@ -577,7 +572,7 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& dow
 {
     SRBackend* bref = static_cast<SRBackend*>(down.back()->get_userdata());
 
-    if (m_closed)       // The bref should always be valid
+    if (m_closed)  // The bref should always be valid
     {
         gwbuf_free(pPacket);
         return;
@@ -634,8 +629,7 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& dow
 
         if (bref->has_session_commands() && bref->execute_session_command())
         {
-            MXS_INFO("Backend '%s' processed reply and starts to execute active cursor.",
-                     bref->name());
+            MXS_INFO("Backend '%s' processed reply and starts to execute active cursor.", bref->name());
         }
         else if (bref->write_stored_command())
         {
@@ -649,10 +643,8 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& dow
     }
 }
 
-bool SchemaRouterSession::handleError(mxs::ErrorType type,
-                                      GWBUF* pMessage,
-                                      mxs::Endpoint* pProblem,
-                                      const mxs::Reply& pReply)
+bool SchemaRouterSession::handleError(
+    mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& pReply)
 {
     SRBackend* bref = static_cast<SRBackend*>(pProblem->get_userdata());
     mxb_assert(bref);
@@ -708,21 +700,20 @@ void SchemaRouterSession::synchronize_shards()
 bool extract_database(GWBUF* buf, char* str)
 {
     uint8_t* packet;
-    char* saved, * tok, * query = NULL;
+    char *saved, *tok, *query = NULL;
     bool succp = true;
     unsigned int plen;
 
     packet = GWBUF_DATA(buf);
-    plen = gw_mysql_get_byte3(packet) - 1;
+    plen   = gw_mysql_get_byte3(packet) - 1;
 
     /** Copy database name from MySQL packet to session */
-    if (mxs_mysql_get_command(buf) == MXS_COM_QUERY
-        && qc_get_operation(buf) == QUERY_OP_CHANGE_DB)
+    if (mxs_mysql_get_command(buf) == MXS_COM_QUERY && qc_get_operation(buf) == QUERY_OP_CHANGE_DB)
     {
         const char* delim = "` \n\t;";
 
         query = modutil_get_SQL(buf);
-        tok = strtok_r(query, delim, &saved);
+        tok   = strtok_r(query, delim, &saved);
 
         if (tok == NULL || strcasecmp(tok, "use") != 0)
         {
@@ -784,9 +775,7 @@ bool SchemaRouterSession::route_session_write(GWBUF* querybuf, uint8_t command)
 
             if (mxs_log_is_priority_enabled(LOG_INFO))
             {
-                MXS_INFO("Route query to %s\t%s",
-                         b->target()->is_master() ? "master" : "slave",
-                         b->name());
+                MXS_INFO("Route query to %s\t%s", b->target()->is_master() ? "master" : "slave", b->name());
             }
 
             if (b->session_command_count() == 1)
@@ -794,7 +783,7 @@ bool SchemaRouterSession::route_session_write(GWBUF* querybuf, uint8_t command)
                 if (b->execute_session_command())
                 {
                     m_sescmd_replier = b.get();
-                    succp = true;
+                    succp            = true;
                 }
                 else
                 {
@@ -805,8 +794,7 @@ bool SchemaRouterSession::route_session_write(GWBUF* querybuf, uint8_t command)
             {
                 mxb_assert(b->session_command_count() > 1);
                 /** The server is already executing a session command */
-                MXS_INFO("Backend '%s' already executing sescmd.",
-                         b->name());
+                MXS_INFO("Backend '%s' already executing sescmd.", b->name());
                 succp = true;
             }
         }
@@ -843,7 +831,7 @@ bool SchemaRouterSession::have_servers()
 bool detect_show_shards(GWBUF* query)
 {
     bool rval = false;
-    char* querystr, * tok, * sptr;
+    char *querystr, *tok, *sptr;
 
     if (query == NULL)
     {
@@ -899,8 +887,8 @@ bool SchemaRouterSession::send_shards()
     return true;
 }
 
-void
-write_error_to_client(MariaDBClientConnection* conn, int errnum, const char* mysqlstate, const char* errmsg)
+void write_error_to_client(
+    MariaDBClientConnection* conn, int errnum, const char* mysqlstate, const char* errmsg)
 {
     GWBUF* errbuff = modutil_create_mysql_err_msg(1, 0, errnum, mysqlstate, errmsg);
     if (errbuff)
@@ -930,8 +918,8 @@ bool SchemaRouterSession::handle_default_db()
         /* Send a COM_INIT_DB packet to the server with the right database
          * and set it as the client's active database */
         unsigned int qlen = m_connect_db.length();
-        GWBUF* buffer = gwbuf_alloc(qlen + 5);
-        uint8_t* data = GWBUF_DATA(buffer);
+        GWBUF* buffer     = gwbuf_alloc(qlen + 5);
+        uint8_t* data     = GWBUF_DATA(buffer);
 
         gw_mysql_set_byte3(data, qlen + 1);
         data[3] = 0x0;
@@ -970,9 +958,9 @@ void SchemaRouterSession::route_queued_query()
     MXS_INFO("Routing queued query: %s", mxs::extract_sql(tmp).c_str());
 
     mxs::Downstream down;
-    down.instance = reinterpret_cast<mxs_filter*>(m_router);
+    down.instance   = reinterpret_cast<mxs_filter*>(m_router);
     down.routeQuery = reinterpret_cast<DOWNSTREAMFUNC>(SchemaRouter::routeQuery);
-    down.session = reinterpret_cast<mxs_filter_session*>(this);
+    down.session    = reinterpret_cast<mxs_filter_session*>(this);
 
     session_delay_routing(m_pSession, down, tmp, 0);
 }
@@ -1015,7 +1003,7 @@ bool SchemaRouterSession::delay_routing(mxb::Worker::Call::action_t action)
  */
 int SchemaRouterSession::inspect_mapping_states(SRBackend* bref, GWBUF** wbuf)
 {
-    bool mapped = true;
+    bool mapped     = true;
     GWBUF* writebuf = *wbuf;
 
     for (const auto& b : m_backends)
@@ -1058,8 +1046,10 @@ int SchemaRouterSession::inspect_mapping_states(SRBackend* bref, GWBUF** wbuf)
                      * if there is a queued query from the client. */
                     if (m_queue.size())
                     {
-                        auto err = modutil_create_mysql_err_msg(
-                            1, 0, SCHEMA_ERR_DUPLICATEDB, SCHEMA_ERRSTR_DUPLICATEDB,
+                        auto err = modutil_create_mysql_err_msg(1,
+                            0,
+                            SCHEMA_ERR_DUPLICATEDB,
+                            SCHEMA_ERRSTR_DUPLICATEDB,
                             "Error: duplicate tables found on two different shards.");
 
                         mxs::ReplyRoute route;
@@ -1139,20 +1129,20 @@ std::string get_lenenc_str(uint8_t* ptr)
 {
     if (*ptr < 251)
     {
-        return std::string((char*)ptr + 1, *ptr);
+        return std::string((char*) ptr + 1, *ptr);
     }
     else
     {
         switch (*(ptr))
         {
         case 0xfc:
-            return std::string((char*)ptr + 2, mariadb::get_byte2(ptr));
+            return std::string((char*) ptr + 2, mariadb::get_byte2(ptr));
 
         case 0xfd:
-            return std::string((char*)ptr + 3, mariadb::get_byte3(ptr));
+            return std::string((char*) ptr + 3, mariadb::get_byte3(ptr));
 
         case 0xfe:
-            return std::string((char*)ptr + 8, mariadb::get_byte8(ptr));
+            return std::string((char*) ptr + 8, mariadb::get_byte8(ptr));
 
         default:
             return "";
@@ -1181,12 +1171,13 @@ bool SchemaRouterSession::ignore_duplicate_table(const std::string& data)
         }
 
         if (pcre2_match(m_config->ignore_regex,
-                        (PCRE2_SPTR) data.c_str(),
-                        PCRE2_ZERO_TERMINATED,
-                        0,
-                        0,
-                        match_data,
-                        NULL) >= 0)
+                (PCRE2_SPTR) data.c_str(),
+                PCRE2_ZERO_TERMINATED,
+                0,
+                0,
+                match_data,
+                NULL)
+            >= 0)
         {
             rval = true;
         }
@@ -1210,7 +1201,7 @@ bool SchemaRouterSession::ignore_duplicate_table(const std::string& data)
  */
 enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref, GWBUF** buffer)
 {
-    bool duplicate_found = false;
+    bool duplicate_found      = false;
     enum showdb_response rval = SHOWDB_PARTIAL_RESPONSE;
 
     if (buffer == NULL || *buffer == NULL)
@@ -1260,9 +1251,9 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
 
     while (ptr < (uint8_t*) buf->end && !PTR_IS_EOF(ptr))
     {
-        int payloadlen = gw_mysql_get_byte3(ptr);
-        int packetlen = payloadlen + 4;
-        auto data = get_lenenc_str(ptr + 4);
+        int payloadlen      = gw_mysql_get_byte3(ptr);
+        int packetlen       = payloadlen + 4;
+        auto data           = get_lenenc_str(ptr + 4);
         mxs::Target* target = bref->target();
 
         if (!data.empty())
@@ -1273,8 +1264,10 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
                 {
                     duplicate_found = true;
                     MXS_ERROR("'%s' found on servers '%s' and '%s' for user %s.",
-                              data.c_str(), target->name(), duplicate->name(),
-                              m_pSession->user_and_host().c_str());
+                        data.c_str(),
+                        target->name(),
+                        duplicate->name(),
+                        m_pSession->user_and_host().c_str());
                 }
             }
 
@@ -1336,8 +1329,9 @@ void SchemaRouterSession::query_databases()
     m_state |= INIT_MAPPING;
     m_state &= ~INIT_UNINT;
 
-    GWBUF* buffer = modutil_create_query("SELECT CONCAT(s.schema_name, '.', IFNULL(t.table_name, '')) FROM information_schema.schemata s "
-                                         "LEFT JOIN information_schema.tables t ON s.schema_name = t.table_schema ");
+    GWBUF* buffer = modutil_create_query(
+        "SELECT CONCAT(s.schema_name, '.', IFNULL(t.table_name, '')) FROM information_schema.schemata s "
+        "LEFT JOIN information_schema.tables t ON s.schema_name = t.table_schema ");
     gwbuf_set_type(buffer, GWBUF_TYPE_COLLECT_RESULT);
 
     for (const auto& b : m_backends)
@@ -1366,20 +1360,18 @@ void SchemaRouterSession::query_databases()
 mxs::Target* SchemaRouterSession::get_shard_target(GWBUF* buffer, uint32_t qtype)
 {
     mxs::Target* rval = NULL;
-    qc_query_op_t op = QUERY_OP_UNDEFINED;
-    uint8_t command = mxs_mysql_get_command(buffer);
+    qc_query_op_t op  = QUERY_OP_UNDEFINED;
+    uint8_t command   = mxs_mysql_get_command(buffer);
 
     if (command == MXS_COM_QUERY)
     {
-        op = qc_get_operation(buffer);
+        op   = qc_get_operation(buffer);
         rval = get_query_target(buffer);
     }
 
-    if (mxs_mysql_is_ps_command(command)
-        || qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT)
+    if (mxs_mysql_is_ps_command(command) || qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT)
         || qc_query_is_type(qtype, QUERY_TYPE_DEALLOC_PREPARE)
-        || qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT)
-        || op == QUERY_OP_EXECUTE)
+        || qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT) || op == QUERY_OP_EXECUTE)
     {
         rval = get_ps_target(buffer, qtype, op);
     }
@@ -1388,7 +1380,7 @@ mxs::Target* SchemaRouterSession::get_shard_target(GWBUF* buffer, uint32_t qtype
     {
         for (const auto& b : m_backends)
         {
-            if (strcasecmp(b->name(), (char*)buffer->hint->data) == 0)
+            if (strcasecmp(b->name(), (char*) buffer->hint->data) == 0)
             {
                 rval = b->target();
                 MXS_INFO("Routing hint found (%s)", rval->name());
@@ -1406,9 +1398,7 @@ mxs::Target* SchemaRouterSession::get_shard_target(GWBUF* buffer, uint32_t qtype
 
         if (rval)
         {
-            MXS_INFO("Using active database '%s' on '%s'",
-                     m_current_db.c_str(),
-                     rval->name());
+            MXS_INFO("Using active database '%s' on '%s'", m_current_db.c_str(), rval->name());
         }
     }
     return rval;
@@ -1433,8 +1423,7 @@ SRBackend* SchemaRouterSession::get_shard_backend(const char* name)
 
     for (const auto& b : m_backends)
     {
-        if (b->in_use() && (strcasecmp(name, b->target()->name()) == 0)
-            && b->target()->is_usable())
+        if (b->in_use() && (strcasecmp(name, b->target()->name()) == 0) && b->target()->is_usable())
         {
             rval = b.get();
             break;
@@ -1443,7 +1432,6 @@ SRBackend* SchemaRouterSession::get_shard_backend(const char* name)
 
     return rval;
 }
-
 
 /**
  * Examine the query type, transaction state and routing hints. Find out the
@@ -1463,8 +1451,7 @@ enum route_target get_shard_route_target(uint32_t qtype)
     /**
      * These queries are not affected by hints
      */
-    if (qc_query_is_type(qtype, QUERY_TYPE_SESSION_WRITE)
-        || qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_WRITE)
+    if (qc_query_is_type(qtype, QUERY_TYPE_SESSION_WRITE) || qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_WRITE)
         || qc_query_is_type(qtype, QUERY_TYPE_USERVAR_WRITE)
         || qc_query_is_type(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT)
         || qc_query_is_type(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT))
@@ -1532,7 +1519,7 @@ bool SchemaRouterSession::handle_statement(GWBUF* querybuf, SRBackend* bref, uin
             if (bref->execute_session_command())
             {
                 m_sescmd_replier = bref;
-                succp = true;
+                succp            = true;
             }
             else
             {
@@ -1554,7 +1541,7 @@ bool SchemaRouterSession::handle_statement(GWBUF* querybuf, SRBackend* bref, uin
 
 mxs::Target* SchemaRouterSession::get_query_target(GWBUF* buffer)
 {
-    auto tables = qc_get_table_names(buffer, true);
+    auto tables       = qc_get_table_names(buffer, true);
     mxs::Target* rval = NULL;
 
     for (auto& t : tables)
@@ -1580,7 +1567,7 @@ mxs::Target* SchemaRouterSession::get_query_target(GWBUF* buffer)
 mxs::Target* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, qc_query_op_t op)
 {
     mxs::Target* rval = NULL;
-    uint8_t command = mxs_mysql_get_command(buffer);
+    uint8_t command   = mxs_mysql_get_command(buffer);
 
     if (qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT))
     {
@@ -1601,7 +1588,7 @@ mxs::Target* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, q
     }
     else if (op == QUERY_OP_EXECUTE)
     {
-        char* stmt = qc_get_prepare_name(buffer);
+        char* stmt             = qc_get_prepare_name(buffer);
         mxs::Target* ps_target = m_shard.get_statement(stmt);
         if (ps_target)
         {
@@ -1627,9 +1614,9 @@ mxs::Target* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, q
     }
     else if (mxs_mysql_is_ps_command(command))
     {
-        uint32_t id = mxs_mysql_extract_ps_id(buffer);
+        uint32_t id     = mxs_mysql_extract_ps_id(buffer);
         uint32_t handle = m_shard.get_ps_handle(id);
-        uint8_t* ptr = GWBUF_DATA(buffer) + MYSQL_PS_ID_OFFSET;
+        uint8_t* ptr    = GWBUF_DATA(buffer) + MYSQL_PS_ID_OFFSET;
         gw_mysql_set_byte4(ptr, handle);
         rval = m_shard.get_statement(id);
 
@@ -1656,4 +1643,4 @@ std::string SchemaRouterSession::get_cache_key() const
 
     return key;
 }
-}
+}  // namespace schemarouter

@@ -25,9 +25,9 @@ using mariadb::UserEntry;
 namespace
 {
 // Support the empty plugin as well, as that means default.
-const std::unordered_set<std::string> plugins = {"mysql_native_password", "caching_sha2_password",
-                                                 "mysql_clear_password", ""};
-}
+const std::unordered_set<std::string> plugins
+    = {"mysql_native_password", "caching_sha2_password", "mysql_clear_password", ""};
+}  // namespace
 
 /**
  * Initialize the authenticator instance
@@ -37,7 +37,7 @@ const std::unordered_set<std::string> plugins = {"mysql_native_password", "cachi
  */
 MariaDBAuthenticatorModule* MariaDBAuthenticatorModule::create(mxs::ConfigParameters* options)
 {
-    bool log_pw_mismatch = false;
+    bool log_pw_mismatch               = false;
     const std::string opt_log_mismatch = "log_password_mismatch";
     if (options->contains(opt_log_mismatch))
     {
@@ -49,8 +49,7 @@ MariaDBAuthenticatorModule* MariaDBAuthenticatorModule::create(mxs::ConfigParame
 
 MariaDBAuthenticatorModule::MariaDBAuthenticatorModule(bool log_pw_mismatch)
     : m_log_pw_mismatch(log_pw_mismatch)
-{
-}
+{}
 
 uint64_t MariaDBAuthenticatorModule::capabilities() const
 {
@@ -74,11 +73,11 @@ const std::unordered_set<std::string>& MariaDBAuthenticatorModule::supported_plu
 
 mariadb::SClientAuth MariaDBAuthenticatorModule::create_client_authenticator()
 {
-    return mariadb::SClientAuth(new(std::nothrow) MariaDBClientAuthenticator(m_log_pw_mismatch));
+    return mariadb::SClientAuth(new (std::nothrow) MariaDBClientAuthenticator(m_log_pw_mismatch));
 }
 
-mariadb::SBackendAuth
-MariaDBAuthenticatorModule::create_backend_authenticator(mariadb::BackendAuthData& auth_data)
+mariadb::SBackendAuth MariaDBAuthenticatorModule::create_backend_authenticator(
+    mariadb::BackendAuthData& auth_data)
 {
     return mariadb::SBackendAuth(new MariaDBBackendSession(auth_data));
 }
@@ -98,13 +97,13 @@ static GWBUF* gen_auth_switch_request_packet(MYSQL_session* client_data)
     /* When sending an AuthSwitchRequest for "mysql_native_password", the scramble data needs an extra
      * byte in the end. */
     unsigned int payloadlen = 1 + sizeof(plugin) + MYSQL_SCRAMBLE_LEN + 1;
-    unsigned int buflen = MYSQL_HEADER_LEN + payloadlen;
-    GWBUF* buffer = gwbuf_alloc(buflen);
-    uint8_t* bufdata = GWBUF_DATA(buffer);
+    unsigned int buflen     = MYSQL_HEADER_LEN + payloadlen;
+    GWBUF* buffer           = gwbuf_alloc(buflen);
+    uint8_t* bufdata        = GWBUF_DATA(buffer);
     gw_mysql_set_byte3(bufdata, payloadlen);
     bufdata += 3;
     *bufdata++ = client_data->next_sequence;
-    *bufdata++ = MYSQL_REPLY_AUTHSWITCHREQUEST;     // AuthSwitchRequest command
+    *bufdata++ = MYSQL_REPLY_AUTHSWITCHREQUEST;  // AuthSwitchRequest command
     memcpy(bufdata, plugin, sizeof(plugin));
     bufdata += sizeof(plugin);
     memcpy(bufdata, client_data->scramble, MYSQL_SCRAMBLE_LEN);
@@ -115,14 +114,13 @@ static GWBUF* gen_auth_switch_request_packet(MYSQL_session* client_data)
 
 MariaDBClientAuthenticator::MariaDBClientAuthenticator(bool log_pw_mismatch)
     : m_log_pw_mismatch(log_pw_mismatch)
-{
-}
+{}
 
-mariadb::ClientAuthenticator::ExchRes
-MariaDBClientAuthenticator::exchange(GWBUF* buf, MYSQL_session* session, mxs::Buffer* output_packet)
+mariadb::ClientAuthenticator::ExchRes MariaDBClientAuthenticator::exchange(
+    GWBUF* buf, MYSQL_session* session, mxs::Buffer* output_packet)
 {
     auto client_data = session;
-    auto rval = ExchRes::FAIL;
+    auto rval        = ExchRes::FAIL;
 
     switch (m_state)
     {
@@ -134,42 +132,44 @@ MariaDBClientAuthenticator::exchange(GWBUF* buf, MYSQL_session* session, mxs::Bu
         {
             // Correct plugin, token should have been read by protocol code.
             m_state = State::CHECK_TOKEN;
-            rval = ExchRes::READY;
+            rval    = ExchRes::READY;
         }
         else
         {
             // Client is attempting to use wrong authenticator, send switch request packet.
             MXS_INFO("Client '%s'@'%s' is using an unsupported authenticator "
                      "plugin '%s'. Trying to switch to '%s'.",
-                     client_data->user.c_str(), client_data->remote.c_str(),
-                     client_data->plugin.c_str(), DEFAULT_MYSQL_AUTH_PLUGIN);
+                client_data->user.c_str(),
+                client_data->remote.c_str(),
+                client_data->plugin.c_str(),
+                DEFAULT_MYSQL_AUTH_PLUGIN);
             GWBUF* switch_packet = gen_auth_switch_request_packet(client_data);
             if (switch_packet)
             {
                 output_packet->reset(switch_packet);
                 m_state = State::AUTHSWITCH_SENT;
-                rval = ExchRes::INCOMPLETE;
+                rval    = ExchRes::INCOMPLETE;
             }
         }
         break;
 
     case State::AUTHSWITCH_SENT:
+    {
+        // Client is replying to an AuthSwitch request. The packet should contain
+        // the authentication token.
+        if (gwbuf_length(buf) == MYSQL_HEADER_LEN + MYSQL_SCRAMBLE_LEN)
         {
-            // Client is replying to an AuthSwitch request. The packet should contain
-            // the authentication token.
-            if (gwbuf_length(buf) == MYSQL_HEADER_LEN + MYSQL_SCRAMBLE_LEN)
-            {
-                auto& auth_token = client_data->auth_token;
-                auth_token.clear();
-                auth_token.resize(MYSQL_SCRAMBLE_LEN);
-                gwbuf_copy_data(buf, MYSQL_HEADER_LEN, MYSQL_SCRAMBLE_LEN, auth_token.data());
-                // Assume that correct authenticator is now used. If this is not the case,
-                // authentication will fail.
-                m_state = State::CHECK_TOKEN;
-                rval = ExchRes::READY;
-            }
+            auto& auth_token = client_data->auth_token;
+            auth_token.clear();
+            auth_token.resize(MYSQL_SCRAMBLE_LEN);
+            gwbuf_copy_data(buf, MYSQL_HEADER_LEN, MYSQL_SCRAMBLE_LEN, auth_token.data());
+            // Assume that correct authenticator is now used. If this is not the case,
+            // authentication will fail.
+            m_state = State::CHECK_TOKEN;
+            rval    = ExchRes::READY;
         }
-        break;
+    }
+    break;
 
     default:
         mxb_assert(!true);
@@ -194,11 +194,10 @@ AuthRes MariaDBClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_s
  */
 AuthRes MariaDBClientAuthenticator::check_password(MYSQL_session* session, const std::string& stored_pw_hash2)
 {
-
-    const auto& auth_token = session->auth_token;   // Binary-form token sent by client.
+    const auto& auth_token = session->auth_token;  // Binary-form token sent by client.
 
     bool empty_token = auth_token.empty();
-    bool empty_pw = stored_pw_hash2.empty();
+    bool empty_pw    = stored_pw_hash2.empty();
     if (empty_token || empty_pw)
     {
         AuthRes rval;
@@ -210,8 +209,8 @@ AuthRes MariaDBClientAuthenticator::check_password(MYSQL_session* session, const
         else if (m_log_pw_mismatch)
         {
             // Save reason of failure.
-            rval.msg = empty_token ? "Client gave no password when one was expected" :
-                "Client gave a password when none was expected";
+            rval.msg = empty_token ? "Client gave no password when one was expected"
+                                   : "Client gave a password when none was expected";
         }
         return rval;
     }
@@ -219,19 +218,21 @@ AuthRes MariaDBClientAuthenticator::check_password(MYSQL_session* session, const
     {
         AuthRes rval;
         rval.msg = mxb::string_printf("Client authentication token is %zu bytes when %i was expected",
-                                      auth_token.size(), SHA_DIGEST_LENGTH);
+            auth_token.size(),
+            SHA_DIGEST_LENGTH);
         return rval;
     }
     else if (stored_pw_hash2.length() != 2 * SHA_DIGEST_LENGTH)
     {
         AuthRes rval;
         rval.msg = mxb::string_printf("Stored password hash length is %lu when %i was expected",
-                                      stored_pw_hash2.length(), 2 * SHA_DIGEST_LENGTH);
+            stored_pw_hash2.length(),
+            2 * SHA_DIGEST_LENGTH);
         return rval;
     }
 
     uint8_t stored_pw_hash2_bin[SHA_DIGEST_LENGTH] = {};
-    size_t stored_hash_len = sizeof(stored_pw_hash2_bin);
+    size_t stored_hash_len                         = sizeof(stored_pw_hash2_bin);
 
     // Convert the hexadecimal string to binary.
     mxs::hex2bin(stored_pw_hash2.c_str(), stored_pw_hash2.length(), stored_pw_hash2_bin);
@@ -276,47 +277,50 @@ AuthRes MariaDBClientAuthenticator::check_password(MYSQL_session* session, const
         // Convert the SHA1(SHA1(password)) from client to hex before printing.
         char received_pw[2 * SHA_DIGEST_LENGTH + 1];
         mxs::bin2hex(final_step, SHA_DIGEST_LENGTH, received_pw);
-        rval.msg = mxb::string_printf("Client gave wrong password. Got hash %s, expected %s",
-                                      received_pw, stored_pw_hash2.c_str());
+        rval.msg = mxb::string_printf(
+            "Client gave wrong password. Got hash %s, expected %s", received_pw, stored_pw_hash2.c_str());
     }
     return rval;
 }
 
-mariadb::BackendAuthenticator::AuthRes
-MariaDBBackendSession::exchange(const mxs::Buffer& input, mxs::Buffer* output)
+mariadb::BackendAuthenticator::AuthRes MariaDBBackendSession::exchange(
+    const mxs::Buffer& input, mxs::Buffer* output)
 {
     auto rval = AuthRes::FAIL;
     // Protocol catches Ok and Error-packets, so the only expected packet here is AuthSwitch-request.
     switch (m_state)
     {
     case State::EXPECT_AUTHSWITCH:
+    {
+        auto parse_res = mariadb::parse_auth_switch_request(input);
+        // The server scramble should be null-terminated, don't copy the null.
+        if (parse_res.success && parse_res.plugin_data.size() >= MYSQL_SCRAMBLE_LEN)
         {
-            auto parse_res = mariadb::parse_auth_switch_request(input);
-            // The server scramble should be null-terminated, don't copy the null.
-            if (parse_res.success && parse_res.plugin_data.size() >= MYSQL_SCRAMBLE_LEN)
+            // Expecting the server to only ask for native password plugin.
+            if (parse_res.plugin_name == DEFAULT_MYSQL_AUTH_PLUGIN)
             {
-                // Expecting the server to only ask for native password plugin.
-                if (parse_res.plugin_name == DEFAULT_MYSQL_AUTH_PLUGIN)
-                {
-                    // Looks ok. The server has sent a new scramble. Save it and generate a response.
-                    memcpy(m_shared_data.scramble, parse_res.plugin_data.data(), MYSQL_SCRAMBLE_LEN);
-                    int old_seqno = MYSQL_GET_PACKET_NO(GWBUF_DATA(input.get()));
-                    *output = generate_auth_response(old_seqno + 1);
-                    m_state = State::PW_SENT;
-                    rval = AuthRes::SUCCESS;
-                }
-                else
-                {
-                    MXB_ERROR(WRONG_PLUGIN_REQ, m_shared_data.servername, parse_res.plugin_name.c_str(),
-                              m_shared_data.client_data->user_and_host().c_str(), DEFAULT_MYSQL_AUTH_PLUGIN);
-                }
+                // Looks ok. The server has sent a new scramble. Save it and generate a response.
+                memcpy(m_shared_data.scramble, parse_res.plugin_data.data(), MYSQL_SCRAMBLE_LEN);
+                int old_seqno = MYSQL_GET_PACKET_NO(GWBUF_DATA(input.get()));
+                *output       = generate_auth_response(old_seqno + 1);
+                m_state       = State::PW_SENT;
+                rval          = AuthRes::SUCCESS;
             }
             else
             {
-                MXB_ERROR(MALFORMED_AUTH_SWITCH, m_shared_data.servername);
+                MXB_ERROR(WRONG_PLUGIN_REQ,
+                    m_shared_data.servername,
+                    parse_res.plugin_name.c_str(),
+                    m_shared_data.client_data->user_and_host().c_str(),
+                    DEFAULT_MYSQL_AUTH_PLUGIN);
             }
         }
-        break;
+        else
+        {
+            MXB_ERROR(MALFORMED_AUTH_SWITCH, m_shared_data.servername);
+        }
+    }
+    break;
 
     case State::PW_SENT:
         // Server is sending more packets than expected. Error.
@@ -338,8 +342,8 @@ mxs::Buffer MariaDBBackendSession::generate_auth_response(int seqno)
     mxs::Buffer buffer(MYSQL_HEADER_LEN + pload_len);
     uint8_t* data = buffer.data();
     mariadb::set_byte3(data, pload_len);
-    data[3] = seqno;
-    auto& sha_pw = m_shared_data.client_data->auth_token_phase2;
+    data[3]                    = seqno;
+    auto& sha_pw               = m_shared_data.client_data->auth_token_phase2;
     const uint8_t* curr_passwd = sha_pw.empty() ? null_client_sha1 : sha_pw.data();
     mxs_mysql_calculate_hash(m_shared_data.scramble, curr_passwd, data + MYSQL_HEADER_LEN);
     return buffer;
@@ -347,30 +351,24 @@ mxs::Buffer MariaDBBackendSession::generate_auth_response(int seqno)
 
 MariaDBBackendSession::MariaDBBackendSession(mariadb::BackendAuthData& shared_data)
     : m_shared_data(shared_data)
-{
-}
+{}
 
 extern "C"
 {
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_AUTHENTICATOR,
+    static MXS_MODULE info = {MXS_MODULE_API_AUTHENTICATOR,
         MXS_MODULE_GA,
         MXS_AUTHENTICATOR_VERSION,
         "Standard MySQL/MariaDB authentication (mysql_native_password)",
         "V2.1.0",
-        MXS_NO_MODULE_CAPABILITIES,         // Authenticator capabilities are in the instance object
+        MXS_NO_MODULE_CAPABILITIES,  // Authenticator capabilities are in the instance object
         &mxs::AuthenticatorApiGenerator<MariaDBAuthenticatorModule>::s_api,
-        NULL,           /* Process init. */
-        NULL,           /* Process finish. */
-        NULL,           /* Thread init. */
-        NULL,           /* Thread finish. */
-        {
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
+        {{MXS_END_MODULE_PARAMS}}};
 
     return &info;
 }

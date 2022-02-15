@@ -33,8 +33,8 @@ const char* mxb_strerror(int error);
  * function std::ostream& operator<<(std::ostream&, const T&) declared.
  */
 template<class T,
-         typename std::remove_reference<decltype(operator<<(*(std::ostream*)nullptr, *(T*)(0)))>::type* =
-             nullptr>
+    typename std::remove_reference<decltype(operator<<(
+        *(std::ostream*) nullptr, *(T*) (0)))>::type* = nullptr>
 std::string to_string(const T& t)
 {
     std::ostringstream os;
@@ -46,12 +46,12 @@ std::string to_string(const T& t)
  * macro MAKE_STR - Make a string out of streaming operations:
  *                  db.query(MAKE_STR("SELECT col FROM table WHERE id = " << id));
  */
-#define MAKE_STR(sstr) \
-    [&]() { \
+#define MAKE_STR(sstr)         \
+    [&]() {                    \
         std::ostringstream os; \
-        os << sstr; \
-        return os.str(); \
-    } ()
+        os << sstr;            \
+        return os.str();       \
+        }()
 
 namespace maxbase
 {
@@ -98,10 +98,7 @@ char* trim(char* str);
  */
 inline void ltrim(std::string& s)
 {
-    s.erase(s.begin(),
-            std::find_if(s.begin(),
-                         s.end(),
-                         std::not1(std::ptr_fun<int, int>(std::isspace))));
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
 }
 
 /**
@@ -111,10 +108,8 @@ inline void ltrim(std::string& s)
  */
 inline void rtrim(std::string& s)
 {
-    s.erase(std::find_if(s.rbegin(),
-                         s.rend(),
-                         std::not1(std::ptr_fun<int, int>(std::isspace))).base(),
-            s.end());
+    s.erase(
+        std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
 }
 
 /**
@@ -351,8 +346,9 @@ inline bool get_int(const std::string& s, int* value)
  * @return List as a single string
  */
 std::string create_list_string(const std::vector<std::string>& elements,
-                               const std::string& delim = ", ", const std::string& last_delim = "",
-                               const std::string& quote = "");
+    const std::string& delim      = ", ",
+    const std::string& last_delim = "",
+    const std::string& quote      = "");
 
 /**
  * Convert a string to lower case.
@@ -382,10 +378,7 @@ struct StringToTHelper
 template<>
 struct StringToTHelper<std::string>
 {
-    static std::string convert(const std::string& str)
-    {
-        return str;
-    }
+    static std::string convert(const std::string& str) { return str; }
 };
 
 template<>
@@ -410,4 +403,4 @@ struct StringToTHelper<char>
  * @param str String to process
  */
 void strip_escape_chars(std::string& str);
-}
+}  // namespace maxbase

@@ -16,18 +16,13 @@
 
 using std::unique_ptr;
 
-InMemoryStorageST::InMemoryStorageST(const std::string& name,
-                                     const Config& config)
+InMemoryStorageST::InMemoryStorageST(const std::string& name, const Config& config)
     : InMemoryStorage(name, config)
-{
-}
+{}
 
-InMemoryStorageST::~InMemoryStorageST()
-{
-}
+InMemoryStorageST::~InMemoryStorageST() {}
 
-unique_ptr<InMemoryStorageST> InMemoryStorageST::create(const std::string& name,
-                                                        const Config& config)
+unique_ptr<InMemoryStorageST> InMemoryStorageST::create(const std::string& name, const Config& config)
 {
     return unique_ptr<InMemoryStorageST>(new InMemoryStorageST(name, config));
 }
@@ -38,35 +33,33 @@ cache_result_t InMemoryStorageST::get_info(uint32_t what, json_t** ppInfo) const
 }
 
 cache_result_t InMemoryStorageST::get_value(Token* pToken,
-                                            const CacheKey& key,
-                                            uint32_t flags,
-                                            uint32_t soft_ttl,
-                                            uint32_t hard_ttl,
-                                            GWBUF** ppResult,
-                                            const std::function<void (cache_result_t, GWBUF*)>&)
+    const CacheKey& key,
+    uint32_t flags,
+    uint32_t soft_ttl,
+    uint32_t hard_ttl,
+    GWBUF** ppResult,
+    const std::function<void(cache_result_t, GWBUF*)>&)
 {
     return do_get_value(pToken, key, flags, soft_ttl, hard_ttl, ppResult);
 }
 
 cache_result_t InMemoryStorageST::put_value(Token* pToken,
-                                            const CacheKey& key,
-                                            const std::vector<std::string>& invalidation_words,
-                                            const GWBUF* pValue,
-                                            const std::function<void (cache_result_t)>&)
+    const CacheKey& key,
+    const std::vector<std::string>& invalidation_words,
+    const GWBUF* pValue,
+    const std::function<void(cache_result_t)>&)
 {
     return do_put_value(pToken, key, invalidation_words, pValue);
 }
 
-cache_result_t InMemoryStorageST::del_value(Token* pToken,
-                                            const CacheKey& key,
-                                            const std::function<void (cache_result_t)>&)
+cache_result_t InMemoryStorageST::del_value(
+    Token* pToken, const CacheKey& key, const std::function<void(cache_result_t)>&)
 {
     return do_del_value(pToken, key);
 }
 
-cache_result_t InMemoryStorageST::invalidate(Token* pToken,
-                                             const std::vector<std::string>& words,
-                                             const std::function<void (cache_result_t)>&)
+cache_result_t InMemoryStorageST::invalidate(
+    Token* pToken, const std::vector<std::string>& words, const std::function<void(cache_result_t)>&)
 {
     return do_invalidate(pToken, words);
 }

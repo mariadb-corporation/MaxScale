@@ -121,7 +121,7 @@ private:
     GWBUF* dequeue_response(const RouterSession* pSession, bool* pEmpty);
 
 private:
-    typedef std::deque<GWBUF*>                        Responses;
+    typedef std::deque<GWBUF*> Responses;
     typedef std::map<const RouterSession*, Responses> SessionResponses;
 
     SessionResponses m_session_responses;
@@ -153,16 +153,13 @@ class ResultSetBackend : public BufferBackend
 public:
     ResultSetBackend();
 
-    void reset()
-    {
-        m_created = false;
-    }
+    void reset() { m_created = false; }
 
     bool respond(RouterSession* pSession, const mxs::Reply& reply) final;
     void handle_statement(RouterSession* pSession, GWBUF* pStatement);
 
-    int  m_counter;
+    int m_counter;
     bool m_created;
 };
-}
-}
+}  // namespace mock
+}  // namespace maxscale

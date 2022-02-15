@@ -37,15 +37,15 @@ MariaRplEvent::MariaRplEvent(MariaRplEvent&& rhs)
     : m_pEvent(rhs.m_pEvent)
     , m_pRpl_handle(rhs.m_pRpl_handle)
 {
-    rhs.m_pEvent = nullptr;
+    rhs.m_pEvent      = nullptr;
     rhs.m_pRpl_handle = nullptr;
 }
 
 MariaRplEvent& MariaRplEvent::operator=(MariaRplEvent&& rhs)
 {
-    m_pEvent = rhs.m_pEvent;
-    m_pRpl_handle = rhs.m_pRpl_handle;
-    rhs.m_pEvent = nullptr;
+    m_pEvent          = rhs.m_pEvent;
+    m_pRpl_handle     = rhs.m_pRpl_handle;
+    rhs.m_pEvent      = nullptr;
     rhs.m_pRpl_handle = nullptr;
 
     return *this;
@@ -75,4 +75,4 @@ maxsql::MariaRplEvent::~MariaRplEvent()
         mariadb_free_rpl_event(m_pEvent);
     }
 }
-}
+}  // namespace maxsql

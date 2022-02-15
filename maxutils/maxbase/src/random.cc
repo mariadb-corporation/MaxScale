@@ -19,8 +19,8 @@ namespace maxbase
 static uint64_t splitmix(uint64_t& state)
 {
     uint64_t z = (state += 0x9e3779b97f4a7c15);
-    z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9;
-    z = (z ^ (z >> 27)) * 0x94d049bb133111eb;
+    z          = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9;
+    z          = (z ^ (z >> 27)) * 0x94d049bb133111eb;
     return z ^ (z >> 31);
 }
 
@@ -30,8 +30,7 @@ XorShiftRandom::XorShiftRandom(uint64_t seed)
     {
         std::random_device rdev;
         while (!(seed = rdev()))
-        {
-        }
+        {}
     }
     for (auto& s : m_state)
     {
@@ -50,4 +49,4 @@ std::mt19937_64& StdTwisterRandom::rnd_engine()
 {
     return m_twister_engine_64;
 }
-}
+}  // namespace maxbase

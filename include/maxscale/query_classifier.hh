@@ -17,15 +17,18 @@
 #include <maxbase/jansson.h>
 #include <maxscale/buffer.hh>
 
-#define MXS_QUERY_CLASSIFIER_VERSION {3, 0, 0}
+#define MXS_QUERY_CLASSIFIER_VERSION \
+    {                                \
+        3, 0, 0                      \
+    }
 
 /**
  * qc_init_kind_t specifies what kind of initialization should be performed.
  */
 enum qc_init_kind_t
 {
-    QC_INIT_SELF   = 0x01,  /*< Initialize/finalize the query classifier itself. */
-    QC_INIT_PLUGIN = 0x02,  /*< Initialize/finalize the plugin. */
+    QC_INIT_SELF   = 0x01, /*< Initialize/finalize the query classifier itself. */
+    QC_INIT_PLUGIN = 0x02, /*< Initialize/finalize the plugin. */
     QC_INIT_BOTH   = 0x03
 };
 
@@ -34,8 +37,8 @@ enum qc_init_kind_t
  */
 enum qc_option_t
 {
-    QC_OPTION_STRING_ARG_AS_FIELD = (1 << 0),   /*< Report a string argument to a function as a field. */
-    QC_OPTION_STRING_AS_FIELD     = (1 << 1),   /*< Report strings as fields. */
+    QC_OPTION_STRING_ARG_AS_FIELD = (1 << 0), /*< Report a string argument to a function as a field. */
+    QC_OPTION_STRING_AS_FIELD     = (1 << 1), /*< Report strings as fields. */
 };
 
 const uint32_t QC_OPTION_MASK = QC_OPTION_STRING_ARG_AS_FIELD | QC_OPTION_STRING_AS_FIELD;
@@ -46,8 +49,8 @@ const uint32_t QC_OPTION_MASK = QC_OPTION_STRING_ARG_AS_FIELD | QC_OPTION_STRING
  */
 enum qc_sql_mode_t
 {
-    QC_SQL_MODE_DEFAULT,    /*< Assume the statements are MariaDB SQL. */
-    QC_SQL_MODE_ORACLE      /*< Assume the statements are PL/SQL. */
+    QC_SQL_MODE_DEFAULT, /*< Assume the statements are MariaDB SQL. */
+    QC_SQL_MODE_ORACLE   /*< Assume the statements are PL/SQL. */
 };
 
 /**
@@ -55,14 +58,15 @@ enum qc_sql_mode_t
  */
 enum qc_collect_info_t
 {
-    QC_COLLECT_ESSENTIALS = 0x00,   /*< Collect only the base minimum. */
-    QC_COLLECT_TABLES     = 0x01,   /*< Collect table names. */
-    QC_COLLECT_DATABASES  = 0x02,   /*< Collect database names. */
-    QC_COLLECT_FIELDS     = 0x04,   /*< Collect field information. */
-    QC_COLLECT_FUNCTIONS  = 0x08,   /*< Collect function information. */
+    QC_COLLECT_ESSENTIALS = 0x00, /*< Collect only the base minimum. */
+    QC_COLLECT_TABLES     = 0x01, /*< Collect table names. */
+    QC_COLLECT_DATABASES  = 0x02, /*< Collect database names. */
+    QC_COLLECT_FIELDS     = 0x04, /*< Collect field information. */
+    QC_COLLECT_FUNCTIONS  = 0x08, /*< Collect function information. */
 
     QC_COLLECT_ALL = (QC_COLLECT_TABLES | QC_COLLECT_DATABASES | QC_COLLECT_FIELDS | QC_COLLECT_FUNCTIONS)
 };
+
 /**
  * qc_query_type_t defines bits that provide information about a
  * particular statement.
@@ -71,32 +75,32 @@ enum qc_collect_info_t
  */
 enum qc_query_type_t
 {
-    QUERY_TYPE_UNKNOWN       = 0x000000,    /*< Initial value, can't be tested bitwisely */
-    QUERY_TYPE_LOCAL_READ    = 0x000001,    /*< Read non-database data, execute in MaxScale:any */
-    QUERY_TYPE_READ          = 0x000002,    /*< Read database data:any */
-    QUERY_TYPE_WRITE         = 0x000004,    /*< Master data will be  modified:master */
-    QUERY_TYPE_MASTER_READ   = 0x000008,    /*< Read from the master:master */
-    QUERY_TYPE_SESSION_WRITE = 0x000010,    /*< Session data will be modified:master or all */
-    QUERY_TYPE_USERVAR_WRITE = 0x000020,    /*< Write a user variable:master or all */
-    QUERY_TYPE_USERVAR_READ  = 0x000040,    /*< Read a user variable:master or any */
-    QUERY_TYPE_SYSVAR_READ   = 0x000080,    /*< Read a system variable:master or any */
+    QUERY_TYPE_UNKNOWN       = 0x000000, /*< Initial value, can't be tested bitwisely */
+    QUERY_TYPE_LOCAL_READ    = 0x000001, /*< Read non-database data, execute in MaxScale:any */
+    QUERY_TYPE_READ          = 0x000002, /*< Read database data:any */
+    QUERY_TYPE_WRITE         = 0x000004, /*< Master data will be  modified:master */
+    QUERY_TYPE_MASTER_READ   = 0x000008, /*< Read from the master:master */
+    QUERY_TYPE_SESSION_WRITE = 0x000010, /*< Session data will be modified:master or all */
+    QUERY_TYPE_USERVAR_WRITE = 0x000020, /*< Write a user variable:master or all */
+    QUERY_TYPE_USERVAR_READ  = 0x000040, /*< Read a user variable:master or any */
+    QUERY_TYPE_SYSVAR_READ   = 0x000080, /*< Read a system variable:master or any */
     /** Not implemented yet */
     // QUERY_TYPE_SYSVAR_WRITE       = 0x000100, /*< Write a system variable:master or all */
-    QUERY_TYPE_GSYSVAR_READ       = 0x000200,   /*< Read global system variable:master or any */
-    QUERY_TYPE_GSYSVAR_WRITE      = 0x000400,   /*< Write global system variable:master or all */
-    QUERY_TYPE_BEGIN_TRX          = 0x000800,   /*< BEGIN or START TRANSACTION */
-    QUERY_TYPE_ENABLE_AUTOCOMMIT  = 0x001000,   /*< SET autocommit=1 */
-    QUERY_TYPE_DISABLE_AUTOCOMMIT = 0x002000,   /*< SET autocommit=0 */
-    QUERY_TYPE_ROLLBACK           = 0x004000,   /*< ROLLBACK */
-    QUERY_TYPE_COMMIT             = 0x008000,   /*< COMMIT */
-    QUERY_TYPE_PREPARE_NAMED_STMT = 0x010000,   /*< Prepared stmt with name from user:all */
-    QUERY_TYPE_PREPARE_STMT       = 0x020000,   /*< Prepared stmt with id provided by server:all */
-    QUERY_TYPE_EXEC_STMT          = 0x040000,   /*< Execute prepared statement:master or any */
-    QUERY_TYPE_CREATE_TMP_TABLE   = 0x080000,   /*< Create temporary table:master (could be all) */
-    QUERY_TYPE_READ_TMP_TABLE     = 0x100000,   /*< Read temporary table:master (could be any) */
-    QUERY_TYPE_SHOW_DATABASES     = 0x200000,   /*< Show list of databases */
-    QUERY_TYPE_SHOW_TABLES        = 0x400000,   /*< Show list of tables */
-    QUERY_TYPE_DEALLOC_PREPARE    = 0x1000000   /*< Dealloc named prepare stmt:all */
+    QUERY_TYPE_GSYSVAR_READ       = 0x000200, /*< Read global system variable:master or any */
+    QUERY_TYPE_GSYSVAR_WRITE      = 0x000400, /*< Write global system variable:master or all */
+    QUERY_TYPE_BEGIN_TRX          = 0x000800, /*< BEGIN or START TRANSACTION */
+    QUERY_TYPE_ENABLE_AUTOCOMMIT  = 0x001000, /*< SET autocommit=1 */
+    QUERY_TYPE_DISABLE_AUTOCOMMIT = 0x002000, /*< SET autocommit=0 */
+    QUERY_TYPE_ROLLBACK           = 0x004000, /*< ROLLBACK */
+    QUERY_TYPE_COMMIT             = 0x008000, /*< COMMIT */
+    QUERY_TYPE_PREPARE_NAMED_STMT = 0x010000, /*< Prepared stmt with name from user:all */
+    QUERY_TYPE_PREPARE_STMT       = 0x020000, /*< Prepared stmt with id provided by server:all */
+    QUERY_TYPE_EXEC_STMT          = 0x040000, /*< Execute prepared statement:master or any */
+    QUERY_TYPE_CREATE_TMP_TABLE   = 0x080000, /*< Create temporary table:master (could be all) */
+    QUERY_TYPE_READ_TMP_TABLE     = 0x100000, /*< Read temporary table:master (could be any) */
+    QUERY_TYPE_SHOW_DATABASES     = 0x200000, /*< Show list of databases */
+    QUERY_TYPE_SHOW_TABLES        = 0x400000, /*< Show list of tables */
+    QUERY_TYPE_DEALLOC_PREPARE    = 0x1000000 /*< Dealloc named prepare stmt:all */
 };
 
 /**
@@ -131,10 +135,10 @@ enum qc_query_op_t
  */
 enum qc_parse_result_t
 {
-    QC_QUERY_INVALID          = 0,  /*< The query was not recognized or could not be parsed. */
-    QC_QUERY_TOKENIZED        = 1,  /*< The query was classified based on tokens; incompletely classified. */
-    QC_QUERY_PARTIALLY_PARSED = 2,  /*< The query was only partially parsed; incompletely classified. */
-    QC_QUERY_PARSED           = 3   /*< The query was fully parsed; completely classified. */
+    QC_QUERY_INVALID          = 0, /*< The query was not recognized or could not be parsed. */
+    QC_QUERY_TOKENIZED        = 1, /*< The query was classified based on tokens; incompletely classified. */
+    QC_QUERY_PARTIALLY_PARSED = 2, /*< The query was only partially parsed; incompletely classified. */
+    QC_QUERY_PARSED           = 3  /*< The query was fully parsed; completely classified. */
 };
 
 /**
@@ -145,16 +149,16 @@ enum qc_parse_result_t
  */
 typedef enum qc_field_context
 {
-    QC_FIELD_UNION    = 1,  /** The field appears on the right hand side in a UNION. */
-    QC_FIELD_SUBQUERY = 2   /** The field appears in a subquery. */
+    QC_FIELD_UNION    = 1, /** The field appears on the right hand side in a UNION. */
+    QC_FIELD_SUBQUERY = 2  /** The field appears in a subquery. */
 } qc_field_context_t;
 
 struct QC_FIELD_INFO
 {
-    char*    database;  /** Present if the field is of the form "a.b.c", NULL otherwise. */
-    char*    table;     /** Present if the field is of the form "a.b", NULL otherwise. */
-    char*    column;    /** Always present. */
-    uint32_t context;   /** The context in which the field appears. */
+    char* database;   /** Present if the field is of the form "a.b.c", NULL otherwise. */
+    char* table;      /** Present if the field is of the form "a.b", NULL otherwise. */
+    char* column;     /** Always present. */
+    uint32_t context; /** The context in which the field appears. */
 };
 
 /**
@@ -162,9 +166,9 @@ struct QC_FIELD_INFO
  */
 struct QC_FUNCTION_INFO
 {
-    char*          name;    /** Name of function. */
-    QC_FIELD_INFO* fields;  /** What fields the function accesses. */
-    uint32_t       n_fields;/** The number of fields in @c fields. */
+    char* name;            /** Name of function. */
+    QC_FIELD_INFO* fields; /** What fields the function accesses. */
+    uint32_t n_fields;     /** The number of fields in @c fields. */
 };
 
 /**
@@ -182,8 +186,7 @@ enum qc_result_t
  * information about a statement.
  */
 struct QC_STMT_INFO
-{
-};
+{};
 
 /**
  * QC_STMT_RESULT contains limited information about a particular
@@ -192,8 +195,8 @@ struct QC_STMT_INFO
 struct QC_STMT_RESULT
 {
     qc_parse_result_t status;
-    uint32_t          type_mask;
-    qc_query_op_t     op;
+    uint32_t type_mask;
+    qc_query_op_t op;
 };
 
 /**
@@ -214,7 +217,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK, if the query classifier could be setup, otherwise
      *         some specific error code.
      */
-    int32_t (* qc_setup)(qc_sql_mode_t sql_mode, const char* args);
+    int32_t (*qc_setup)(qc_sql_mode_t sql_mode, const char* args);
 
     /**
      * Called once at process startup, after @c qc_setup has successfully
@@ -222,24 +225,24 @@ struct QUERY_CLASSIFIER
      *
      * @return QC_RESULT_OK, if the process initialization succeeded.
      */
-    int32_t (* qc_process_init)(void);
+    int32_t (*qc_process_init)(void);
 
     /**
      * Called once at process shutdown.
      */
-    void (* qc_process_end)(void);
+    void (*qc_process_end)(void);
 
     /**
      * Called once per each thread.
      *
      * @return QC_RESULT_OK, if the thread initialization succeeded.
      */
-    int32_t (* qc_thread_init)(void);
+    int32_t (*qc_thread_init)(void);
 
     /**
      * Called once when a thread finishes.
      */
-    void (* qc_thread_end)(void);
+    void (*qc_thread_end)(void);
 
     /**
      * Called to explicitly parse a statement.
@@ -253,7 +256,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_parse)(GWBUF* stmt, uint32_t collect, int32_t* result);
+    int32_t (*qc_parse)(GWBUF* stmt, uint32_t collect, int32_t* result);
 
     /**
      * Reports the type of the statement.
@@ -265,7 +268,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_get_type_mask)(GWBUF* stmt, uint32_t* type);
+    int32_t (*qc_get_type_mask)(GWBUF* stmt, uint32_t* type);
 
     /**
      * Reports the operation of the statement.
@@ -277,7 +280,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_get_operation)(GWBUF* stmt, int32_t* op);
+    int32_t (*qc_get_operation)(GWBUF* stmt, int32_t* op);
 
     /**
      * Reports the name of a created table.
@@ -289,7 +292,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_get_created_table_name)(GWBUF* stmt, char** name);
+    int32_t (*qc_get_created_table_name)(GWBUF* stmt, char** name);
 
     /**
      * Reports whether a statement is a "DROP TABLE ..." statement.
@@ -301,7 +304,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_is_drop_table_query)(GWBUF* stmt, int32_t* is_drop_table);
+    int32_t (*qc_is_drop_table_query)(GWBUF* stmt, int32_t* is_drop_table);
 
     /**
      * Returns all table names.
@@ -314,7 +317,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_get_table_names)(GWBUF* stmt, int32_t full_names, std::vector<std::string>* names);
+    int32_t (*qc_get_table_names)(GWBUF* stmt, int32_t full_names, std::vector<std::string>* names);
 
     /**
      * The canonical version of a statement.
@@ -326,7 +329,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_get_canonical)(GWBUF* stmt, char** canonical);
+    int32_t (*qc_get_canonical)(GWBUF* stmt, char** canonical);
 
     /**
      * Reports whether the statement has a where clause.
@@ -338,7 +341,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_query_has_clause)(GWBUF* stmt, int32_t* has_clause);
+    int32_t (*qc_query_has_clause)(GWBUF* stmt, int32_t* has_clause);
 
     /**
      * Reports the database names.
@@ -350,7 +353,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_get_database_names)(GWBUF* stmt, std::vector<std::string>* names);
+    int32_t (*qc_get_database_names)(GWBUF* stmt, std::vector<std::string>* names);
 
     /**
      * Reports the prepare name.
@@ -362,7 +365,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_get_prepare_name)(GWBUF* stmt, char** name);
+    int32_t (*qc_get_prepare_name)(GWBUF* stmt, char** name);
 
     /**
      * Reports field information.
@@ -374,7 +377,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_get_field_info)(GWBUF* stmt, const QC_FIELD_INFO** infos, uint32_t* n_infos);
+    int32_t (*qc_get_field_info)(GWBUF* stmt, const QC_FIELD_INFO** infos, uint32_t* n_infos);
 
     /**
      * The canonical version of a statement.
@@ -386,7 +389,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_get_function_info)(GWBUF* stmt, const QC_FUNCTION_INFO** infos, uint32_t* n_infos);
+    int32_t (*qc_get_function_info)(GWBUF* stmt, const QC_FUNCTION_INFO** infos, uint32_t* n_infos);
 
     /**
      * Return the preparable statement of a PREPARE statement.
@@ -403,7 +406,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_get_preparable_stmt)(GWBUF* stmt, GWBUF** preparable_stmt);
+    int32_t (*qc_get_preparable_stmt)(GWBUF* stmt, GWBUF** preparable_stmt);
 
     /**
      * Set the version of the server. The version may affect how a statement
@@ -413,7 +416,7 @@ struct QUERY_CLASSIFIER
      * @param version  Version encoded as MariaDB encodes the version, i.e.:
      *                 version = major * 10000 + minor * 100 + patch
      */
-    void (* qc_set_server_version)(uint64_t version);
+    void (*qc_set_server_version)(uint64_t version);
 
     /**
      * Get the thread specific version assumed of the server. If the version has
@@ -422,7 +425,7 @@ struct QUERY_CLASSIFIER
      * @param version  The version encoded as MariaDB encodes the version, i.e.:
      *                 version = major * 10000 + minor * 100 + patch
      */
-    void (* qc_get_server_version)(uint64_t* version);
+    void (*qc_get_server_version)(uint64_t* version);
 
     /**
      * Gets the sql mode of the *calling* thread.
@@ -431,7 +434,7 @@ struct QUERY_CLASSIFIER
      *
      * @return QC_RESULT_OK
      */
-    int32_t (* qc_get_sql_mode)(qc_sql_mode_t* sql_mode);
+    int32_t (*qc_get_sql_mode)(qc_sql_mode_t* sql_mode);
 
     /**
      * Sets the sql mode for the *calling* thread.
@@ -440,7 +443,7 @@ struct QUERY_CLASSIFIER
      *
      * @return QC_RESULT_OK if @sql_mode is valid, otherwise QC_RESULT_ERROR.
      */
-    int32_t (* qc_set_sql_mode)(qc_sql_mode_t sql_mode);
+    int32_t (*qc_set_sql_mode)(qc_sql_mode_t sql_mode);
 
     /**
      * Dups the provided info object. After having been dupped, the info object
@@ -450,7 +453,7 @@ struct QUERY_CLASSIFIER
      *
      * @return The same info that was provided as argument.
      */
-    QC_STMT_INFO* (* qc_info_dup)(QC_STMT_INFO* info);
+    QC_STMT_INFO* (*qc_info_dup)(QC_STMT_INFO* info);
 
     /**
      * Closes a dupped info object. After the info object has been closed, it must
@@ -458,14 +461,14 @@ struct QUERY_CLASSIFIER
      *
      * @param info  The info to be closed.
      */
-    void (* qc_info_close)(QC_STMT_INFO* info);
+    void (*qc_info_close)(QC_STMT_INFO* info);
 
     /**
      * Gets the options of the *calling* thread.
      *
      * @return Bit mask of values from qc_option_t.
      */
-    uint32_t (* qc_get_options)();
+    uint32_t (*qc_get_options)();
 
     /**
      * Sets the options for the *calling* thread.
@@ -474,7 +477,7 @@ struct QUERY_CLASSIFIER
      *
      * @return QC_RESULT_OK if @c options is valid, otherwise QC_RESULT_ERROR.
      */
-    int32_t (* qc_set_options)(uint32_t options);
+    int32_t (*qc_set_options)(uint32_t options);
 
     /**
      * Get result from info.
@@ -483,7 +486,7 @@ struct QUERY_CLASSIFIER
      *
      * @return The result of the provided info.
      */
-    QC_STMT_RESULT (* qc_get_result_from_info)(const QC_STMT_INFO* info);
+    QC_STMT_RESULT (*qc_get_result_from_info)(const QC_STMT_INFO* info);
 
     /**
      * Return statement currently being classified.
@@ -496,7 +499,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK if a statement was returned (i.e. a statement is being
      *         classified), QC_RESULT_ERROR otherwise.
      */
-    int32_t (* qc_get_current_stmt)(const char** ppStmt, size_t* pLen);
+    int32_t (*qc_get_current_stmt)(const char** ppStmt, size_t* pLen);
 };
 
 /**
@@ -504,7 +507,7 @@ struct QUERY_CLASSIFIER
  */
 struct QC_CACHE_PROPERTIES
 {
-    int64_t max_size;   /** The maximum size of the cache. */
+    int64_t max_size; /** The maximum size of the cache. */
 };
 
 /**
@@ -512,11 +515,11 @@ struct QC_CACHE_PROPERTIES
  */
 struct QC_CACHE_STATS
 {
-    int64_t size;       /** The current size of the cache. */
-    int64_t inserts;    /** The number of inserts. */
-    int64_t hits;       /** The number of hits. */
-    int64_t misses;     /** The number of misses. */
-    int64_t evictions;  /** The number of evictions. */
+    int64_t size;      /** The current size of the cache. */
+    int64_t inserts;   /** The number of inserts. */
+    int64_t hits;      /** The number of hits. */
+    int64_t misses;    /** The number of misses. */
+    int64_t evictions; /** The number of evictions. */
 };
 
 /**
@@ -540,9 +543,9 @@ struct QC_CACHE_STATS
  * @see qc_process_init qc_thread_init
  */
 bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
-              qc_sql_mode_t sql_mode,
-              const char* plugin_name,
-              const char* plugin_args);
+    qc_sql_mode_t sql_mode,
+    const char* plugin_name,
+    const char* plugin_args);
 
 /**
  * Loads and setups the default query classifier, and performs
@@ -563,9 +566,9 @@ bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
  * @see qc_end.
  */
 bool qc_init(const QC_CACHE_PROPERTIES* cache_properties,
-             qc_sql_mode_t sql_mode,
-             const char* plugin_name,
-             const char* plugin_args);
+    qc_sql_mode_t sql_mode,
+    const char* plugin_name,
+    const char* plugin_args);
 
 /**
  * Performs thread and process finalization.
@@ -899,7 +902,7 @@ const char* qc_op_to_string(qc_query_op_t op);
  */
 static inline bool qc_query_is_type(uint32_t typemask, qc_query_type_t type)
 {
-    return (typemask & (uint32_t)type) == (uint32_t)type;
+    return (typemask & (uint32_t) type) == (uint32_t) type;
 }
 
 /**
@@ -1031,7 +1034,7 @@ bool qc_set_options(uint32_t options);
  */
 struct QC_CACHE_ENTRY
 {
-    int64_t        hits;
+    int64_t hits;
     QC_STMT_RESULT result;
 };
 

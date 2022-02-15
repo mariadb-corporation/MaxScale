@@ -49,13 +49,13 @@ int test(StorageFactory& factory, istream& in)
         typedef unordered_map<CacheKey, string> Keys;
         Keys keys;
 
-        size_t n_keys = 0;
+        size_t n_keys       = 0;
         size_t n_collisions = 0;
 
         for (Statements::iterator i = statements.begin(); i < statements.end(); ++i)
         {
             string statement = *i;
-            GWBUF* pQuery = Tester::gwbuf_from_string(statement);
+            GWBUF* pQuery    = Tester::gwbuf_from_string(statement);
             mxb_assert(pQuery);
 
             if (pQuery)
@@ -72,8 +72,8 @@ int test(StorageFactory& factory, istream& in)
                         if (i->second != statement)
                         {
                             ++n_collisions;
-                            cerr << "error: Same key generated for '" << i->second << "' and '"
-                                 << statement << "'." << endl;
+                            cerr << "error: Same key generated for '" << i->second << "' and '" << statement
+                                 << "'." << endl;
                         }
                     }
                     else
@@ -96,10 +96,8 @@ int test(StorageFactory& factory, istream& in)
             }
         }
 
-        cout << statements.size() << " statements, "
-             << n_keys << " unique keys, "
-             << n_collisions << " collisions."
-             << endl;
+        cout << statements.size() << " statements, " << n_keys << " unique keys, " << n_collisions
+             << " collisions." << endl;
 
 
         if (rv == EXIT_SUCCESS)
@@ -117,11 +115,11 @@ int test(StorageFactory& factory, istream& in)
 
     return rv;
 }
-}
+}  // namespace
 
 int main(int argc, char* argv[])
 {
-    int rv = EXIT_FAILURE;
+    int rv                   = EXIT_FAILURE;
     StorageFactory* pFactory = nullptr;
     if ((argc == 2) || (argc == 3))
     {

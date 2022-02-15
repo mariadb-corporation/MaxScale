@@ -133,9 +133,7 @@ void Writer::run()
                         log_host_warning = false;
                     }
 
-                    m_cond.wait_for(guard, std::chrono::seconds(1), [this]() {
-                                        return !m_running;
-                                    });
+                    m_cond.wait_for(guard, std::chrono::seconds(1), [this]() { return !m_running; });
 
                     continue;
                 }
@@ -151,7 +149,7 @@ void Writer::run()
             ss << conn.host();
             host = ss.str();
 
-            maxbase::Timer timer(1s);   // Check if the master has changed at the most once a second
+            maxbase::Timer timer(1s);  // Check if the master has changed at the most once a second
 
             while (m_running)
             {
@@ -163,7 +161,6 @@ void Writer::run()
 
                 if (m_inventory.config().select_master() && timer.alarm() && has_master_changed(conn))
                 {
-
                     MXB_INFO("Pinloki switching to new master at '%s'", host.c_str());
                     break;
                 }
@@ -176,17 +173,17 @@ void Writer::run()
                 switch (rpl_event.event_type())
                 {
                 case GTID_EVENT:
-                    {
-                        maxsql::GtidEvent gtid_event = rpl_event.gtid_event();
-                        file.begin_txn();
-                        update_gtid_list(gtid_event.gtid);
+                {
+                    maxsql::GtidEvent gtid_event = rpl_event.gtid_event();
+                    file.begin_txn();
+                    update_gtid_list(gtid_event.gtid);
 
-                        if (gtid_event.flags & mxq::F_STANDALONE)
-                        {
-                            m_commit_on_query = true;
-                        }
+                    if (gtid_event.flags & mxq::F_STANDALONE)
+                    {
+                        m_commit_on_query = true;
                     }
-                    break;
+                }
+                break;
 
                 case QUERY_EVENT:
                     if (m_commit_on_query)
@@ -229,9 +226,7 @@ void Writer::run()
                 MXS_SERROR("Error received during replication from '" << host << "': " << error.str);
             }
 
-            m_cond.wait_for(guard, std::chrono::seconds(1), [this]() {
-                                return !m_running;
-                            });
+            m_cond.wait_for(guard, std::chrono::seconds(1), [this]() { return !m_running; });
         }
     }
 }
@@ -244,4 +239,4 @@ void Writer::save_gtid_list(FileWriter& file_writer)
         m_inventory.save_rpl_state(m_current_gtid_list);
     }
 }
-}
+}  // namespace pinloki

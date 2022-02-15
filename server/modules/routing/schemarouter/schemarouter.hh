@@ -32,10 +32,10 @@
 #include <maxscale/backend.hh>
 #include <maxscale/protocol/mariadb/rwbackend.hh>
 
-const char* const CN_IGNORE_DATABASES = "ignore_databases";
+const char* const CN_IGNORE_DATABASES       = "ignore_databases";
 const char* const CN_IGNORE_DATABASES_REGEX = "ignore_databases_regex";
-const char* const CN_IGNORE_TABLES = "ignore_tables";
-const char* const CN_IGNORE_TABLES_REGEX = "ignore_tables_regex";
+const char* const CN_IGNORE_TABLES          = "ignore_tables";
+const char* const CN_IGNORE_TABLES_REGEX    = "ignore_tables_regex";
 
 namespace schemarouter
 {
@@ -44,14 +44,14 @@ namespace schemarouter
  */
 struct Config
 {
-    double refresh_min_interval;            /**< Minimum required interval between
+    double refresh_min_interval;          /**< Minimum required interval between
                                              * refreshes of databases */
-    bool refresh_databases;                 /**< Are databases refreshed when
+    bool refresh_databases;               /**< Are databases refreshed when
                                              * they are not found in the hashtable */
-    bool                  debug;            /**< Enable verbose debug messages to clients */
-    pcre2_code*           ignore_regex;     /**< Regular expression used to ignore tables */
-    pcre2_match_data*     ignore_match_data;/**< Match data for @c ignore_regex */
-    std::set<std::string> ignored_tables;   /**< Set of ignored tables */
+    bool debug;                           /**< Enable verbose debug messages to clients */
+    pcre2_code* ignore_regex;             /**< Regular expression used to ignore tables */
+    pcre2_match_data* ignore_match_data;  /**< Match data for @c ignore_regex */
+    std::set<std::string> ignored_tables; /**< Set of ignored tables */
 
     Config(mxs::ConfigParameters* conf);
 
@@ -69,17 +69,17 @@ typedef std::shared_ptr<Config> SConfig;
  */
 struct Stats
 {
-    int n_queries;          /*< Number of queries forwarded    */
-    int n_sescmd;           /*< Number of session commands */
-    int longest_sescmd;     /*< Longest chain of stored session commands */
-    int n_hist_exceeded;    /*< Number of sessions that exceeded session
+    int n_queries;        /*< Number of queries forwarded    */
+    int n_sescmd;         /*< Number of session commands */
+    int longest_sescmd;   /*< Longest chain of stored session commands */
+    int n_hist_exceeded;  /*< Number of sessions that exceeded session
                              * command history limit */
-    int    sessions;        /*< Number of sessions */
-    int    shmap_cache_hit; /*< Shard map was found from the cache */
-    int    shmap_cache_miss;/*< No shard map found from the cache */
-    double ses_longest;     /*< Longest session */
-    double ses_shortest;    /*< Shortest session */
-    double ses_average;     /*< Average session length */
+    int sessions;         /*< Number of sessions */
+    int shmap_cache_hit;  /*< Shard map was found from the cache */
+    int shmap_cache_miss; /*< No shard map found from the cache */
+    double ses_longest;   /*< Longest session */
+    double ses_shortest;  /*< Shortest session */
+    double ses_average;   /*< Average session length */
 
     Stats()
         : n_queries(0)
@@ -92,8 +92,7 @@ struct Stats
         , ses_longest(0.0)
         , ses_shortest(std::numeric_limits<double>::max())
         , ses_average(0.0)
-    {
-    }
+    {}
 };
 
 /**
@@ -104,12 +103,10 @@ struct Stats
 class SRBackend : public mxs::RWBackend
 {
 public:
-
     SRBackend(mxs::Endpoint* ref)
         : mxs::RWBackend(ref)
         , m_mapped(false)
-    {
-    }
+    {}
 
     /**
      * @brief Set the mapping state of the backend
@@ -126,8 +123,8 @@ public:
     bool is_mapped() const;
 
 private:
-    bool m_mapped;      /**< Whether the backend has been mapped */
+    bool m_mapped; /**< Whether the backend has been mapped */
 };
 
 using SRBackendList = std::vector<std::unique_ptr<SRBackend>>;
-}
+}  // namespace schemarouter

@@ -21,12 +21,9 @@ namespace std
 template<>
 struct default_delete<HINT>
 {
-    void operator()(HINT* pHint)
-    {
-        hint_free(pHint);
-    }
+    void operator()(HINT* pHint) { hint_free(pHint); }
 };
-}
+}  // namespace std
 
 class HintSession;
 
@@ -34,9 +31,9 @@ class HintInstance : public mxs::Filter<HintInstance, HintSession>
 {
 public:
     static HintInstance* create(const char* zName, mxs::ConfigParameters* ppParams);
-    HintSession*         newSession(MXS_SESSION* pSession, SERVICE* pService);
-    json_t*              diagnostics() const;
-    uint64_t             getCapabilities();
+    HintSession* newSession(MXS_SESSION* pSession, SERVICE* pService);
+    json_t* diagnostics() const;
+    uint64_t getCapabilities();
 };
 
 enum TOKEN_VALUE
@@ -74,24 +71,23 @@ public:
     HINT* parse(InputIter begin, InputIter end);
 
 private:
-
     InputIter m_it;
     InputIter m_end;
     InputIter m_tok_begin;
     InputIter m_tok_end;
 
-    std::vector<std::unique_ptr<HINT>>                     m_stack;
+    std::vector<std::unique_ptr<HINT>> m_stack;
     std::unordered_map<std::string, std::unique_ptr<HINT>> m_named_hints;
 
     TOKEN_VALUE next_token();
-    HINT*       process_definition();
-    HINT*       parse_one(InputIter begin, InputIter end);
+    HINT* process_definition();
+    HINT* parse_one(InputIter begin, InputIter end);
 };
 
 class HintSession : public mxs::FilterSession
 {
 public:
-    HintSession(const HintSession&) = delete;
+    HintSession(const HintSession&)            = delete;
     HintSession& operator=(const HintSession&) = delete;
 
     HintSession(MXS_SESSION* session, SERVICE* service);

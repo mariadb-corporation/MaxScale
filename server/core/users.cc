@@ -37,15 +37,14 @@ constexpr const char* ADMIN_SALT = "$6$MXS";
 constexpr const char* OLD_ADMIN_SALT = "$1$MXS";
 
 using Guard = std::lock_guard<std::mutex>;
-}
+}  // namespace
 
 namespace maxscale
 {
 
 Users::Users(const Users& rhs)
     : m_data(rhs.copy_contents())
-{
-}
+{}
 
 Users& Users::operator=(const Users& rhs)
 {
@@ -57,15 +56,14 @@ Users& Users::operator=(const Users& rhs)
 }
 
 Users::Users(Users&& rhs) noexcept
-    : m_data(std::move(rhs.m_data))     // rhs should be a temporary, and no other thread can access it. No
-                                        // lock.
-{
-}
+    : m_data(std::move(rhs.m_data))  // rhs should be a temporary, and no other thread can access it. No
+                                     // lock.
+{}
 
 Users& Users::operator=(Users&& rhs) noexcept
 {
     Guard guard(m_lock);
-    m_data = std::move(rhs.m_data);     // same as above
+    m_data = std::move(rhs.m_data);  // same as above
     return *this;
 }
 
@@ -92,7 +90,7 @@ bool Users::remove(const std::string& user)
 bool Users::get(const std::string& user, UserInfo* output) const
 {
     Guard guard(m_lock);
-    auto it = m_data.find(user);
+    auto it   = m_data.find(user);
     bool rval = false;
 
     if (it != m_data.end())
@@ -116,7 +114,7 @@ bool Users::authenticate(const std::string& user, const std::string& password)
     {
         // The second character tell us which hashing function to use
         auto crypted = info.password[1] == ADMIN_SALT[1] ? hash(password) : old_hash(password);
-        rval = info.password == crypted;
+        rval         = info.password == crypted;
     }
 
     return rval;
@@ -127,11 +125,11 @@ int Users::admin_count() const
     return std::count_if(m_data.begin(), m_data.end(), is_admin);
 }
 
-bool
-Users::check_permissions(const std::string& user, const std::string& password, user_account_type perm) const
+bool Users::check_permissions(
+    const std::string& user, const std::string& password, user_account_type perm) const
 {
     Guard guard(m_lock);
-    auto it = m_data.find(user);
+    auto it   = m_data.find(user);
     bool rval = false;
 
     if (it != m_data.end() && it->second.permissions == perm)
@@ -145,12 +143,12 @@ Users::check_permissions(const std::string& user, const std::string& password, u
 bool Users::set_permissions(const std::string& user, user_account_type perm)
 {
     Guard guard(m_lock);
-    auto it = m_data.find(user);
+    auto it   = m_data.find(user);
     bool rval = false;
 
     if (it != m_data.end())
     {
-        rval = true;
+        rval                   = true;
         it->second.permissions = perm;
     }
 
@@ -221,18 +219,14 @@ void Users::load_json(json_t* json)
 
     json_array_foreach(json, i, value)
     {
-        json_t* name = json_object_get(value, CN_NAME);
-        json_t* type = json_object_get(value, CN_ACCOUNT);
+        json_t* name     = json_object_get(value, CN_NAME);
+        json_t* type     = json_object_get(value, CN_ACCOUNT);
         json_t* password = json_object_get(value, CN_PASSWORD);
 
-        if (name && json_is_string(name)
-            && type && json_is_string(type)
-            && password && json_is_string(password)
-            && json_to_account_type(type) != USER_ACCOUNT_UNKNOWN)
+        if (name && json_is_string(name) && type && json_is_string(type) && password
+            && json_is_string(password) && json_to_account_type(type) != USER_ACCOUNT_UNKNOWN)
         {
-            add_hashed(json_string_value(name),
-                       json_string_value(password),
-                       json_to_account_type(type));
+            add_hashed(json_string_value(name), json_string_value(password), json_to_account_type(type));
         }
         else
         {
@@ -270,7 +264,7 @@ std::string Users::old_hash(const std::string& password)
 {
     return mxs::crypt(password, OLD_ADMIN_SALT);
 }
-}
+}  // namespace maxscale
 
 using mxs::Users;
 

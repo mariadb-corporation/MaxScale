@@ -26,9 +26,8 @@
  * @param field_num Field index in the schema
  * @return JSON object or NULL if an error occurred
  */
-static json_t* read_and_pack_value(MAXAVRO_FILE* file,
-                                   MAXAVRO_SCHEMA_FIELD* field,
-                                   enum maxavro_value_type type)
+static json_t* read_and_pack_value(
+    MAXAVRO_FILE* file, MAXAVRO_SCHEMA_FIELD* field, enum maxavro_value_type type)
 {
     json_t* value = NULL;
     switch (type)
@@ -44,81 +43,81 @@ static json_t* read_and_pack_value(MAXAVRO_FILE* file,
 
     case MAXAVRO_TYPE_INT:
     case MAXAVRO_TYPE_LONG:
+    {
+        uint64_t val = 0;
+        if (maxavro_read_integer(file, &val))
         {
-            uint64_t val = 0;
-            if (maxavro_read_integer(file, &val))
-            {
-                json_int_t jsonint = val;
-                value = json_pack("I", jsonint);
-            }
+            json_int_t jsonint = val;
+            value              = json_pack("I", jsonint);
         }
-        break;
+    }
+    break;
 
     case MAXAVRO_TYPE_ENUM:
+    {
+        uint64_t val = 0;
+        maxavro_read_integer(file, &val);
+
+        json_t* arr = (json_t*) field->extra;
+        mxb_assert(arr);
+        mxb_assert(json_is_array(arr));
+
+        if (json_array_size(arr) >= val)
         {
-            uint64_t val = 0;
-            maxavro_read_integer(file, &val);
-
-            json_t* arr = (json_t*)field->extra;
-            mxb_assert(arr);
-            mxb_assert(json_is_array(arr));
-
-            if (json_array_size(arr) >= val)
-            {
-                json_t* symbol = json_array_get(arr, val);
-                mxb_assert(json_is_string(symbol));
-                value = json_pack("s", json_string_value(symbol));
-            }
+            json_t* symbol = json_array_get(arr, val);
+            mxb_assert(json_is_string(symbol));
+            value = json_pack("s", json_string_value(symbol));
         }
-        break;
+    }
+    break;
 
     case MAXAVRO_TYPE_FLOAT:
+    {
+        float f = 0;
+        if (maxavro_read_float(file, &f))
         {
-            float f = 0;
-            if (maxavro_read_float(file, &f))
-            {
-                double d = f;
-                value = json_pack("f", d);
-            }
+            double d = f;
+            value    = json_pack("f", d);
         }
+    }
 
-        break;
+    break;
 
     case MAXAVRO_TYPE_DOUBLE:
+    {
+        double d = 0;
+        if (maxavro_read_double(file, &d))
         {
-            double d = 0;
-            if (maxavro_read_double(file, &d))
-            {
-                value = json_pack("f", d);
-            }
+            value = json_pack("f", d);
         }
-        break;
+    }
+    break;
 
     case MAXAVRO_TYPE_BYTES:
     case MAXAVRO_TYPE_STRING:
+    {
+        size_t len;
+        char* str = maxavro_read_string(file, &len);
+        if (str)
         {
-            size_t len;
-            char* str = maxavro_read_string(file, &len);
-            if (str)
-            {
-                value = json_stringn(str, len);
-                MXS_FREE(str);
-            }
+            value = json_stringn(str, len);
+            MXS_FREE(str);
         }
-        break;
+    }
+    break;
 
     case MAXAVRO_TYPE_UNION:
-        {
-            json_t* arr = (json_t*)field->extra;
-            uint64_t val = 0;
+    {
+        json_t* arr  = (json_t*) field->extra;
+        uint64_t val = 0;
 
-            if (maxavro_read_integer(file, &val) && val < json_array_size(arr))
-            {
-                json_t* union_type = json_object_get(json_array_get(arr, val), "type");
-                value = read_and_pack_value(file, field, string_to_type(json_string_value(union_type)));
-            }
+        if (maxavro_read_integer(file, &val) && val < json_array_size(arr))
+        {
+            json_t* union_type = json_object_get(json_array_get(arr, val), "type");
+            value = read_and_pack_value(file, field, string_to_type(json_string_value(union_type)));
         }
-        break;
+    }
+    break;
 
     case MAXAVRO_TYPE_NULL:
         value = json_null();
@@ -138,26 +137,26 @@ static void skip_value(MAXAVRO_FILE* file, enum maxavro_value_type type)
     case MAXAVRO_TYPE_INT:
     case MAXAVRO_TYPE_LONG:
     case MAXAVRO_TYPE_ENUM:
-        {
-            uint64_t val = 0;
-            maxavro_read_integer(file, &val);
-        }
-        break;
+    {
+        uint64_t val = 0;
+        maxavro_read_integer(file, &val);
+    }
+    break;
 
     case MAXAVRO_TYPE_FLOAT:
     case MAXAVRO_TYPE_DOUBLE:
-        {
-            double d = 0;
-            maxavro_read_double(file, &d);
-        }
-        break;
+    {
+        double d = 0;
+        maxavro_read_double(file, &d);
+    }
+    break;
 
     case MAXAVRO_TYPE_BYTES:
     case MAXAVRO_TYPE_STRING:
-        {
-            maxavro_skip_string(file);
-        }
-        break;
+    {
+        maxavro_skip_string(file);
+    }
+    break;
 
     default:
         MXS_ERROR("Unimplemented type: %d - %s", type, type_to_string(type));
@@ -189,9 +188,8 @@ json_t* maxavro_record_read_json(MAXAVRO_FILE* file)
         {
             for (size_t i = 0; i < file->schema->num_fields; i++)
             {
-                json_t* value = read_and_pack_value(file,
-                                                    &file->schema->fields[i],
-                                                    file->schema->fields[i].type);
+                json_t* value
+                    = read_and_pack_value(file, &file->schema->fields[i], file->schema->fields[i].type);
                 if (value)
                 {
                     json_object_set_new(object, file->schema->fields[i].name, value);
@@ -201,10 +199,10 @@ json_t* maxavro_record_read_json(MAXAVRO_FILE* file)
                     long pos = ftell(file->file);
                     MXS_ERROR("Failed to read field value '%s', type '%s' at "
                               "file offset %ld, record number %lu.",
-                              file->schema->fields[i].name,
-                              type_to_string(file->schema->fields[i].type),
-                              pos,
-                              file->records_read);
+                        file->schema->fields[i].name,
+                        type_to_string(file->schema->fields[i].type),
+                        pos,
+                        file->records_read);
                     json_decref(object);
                     return NULL;
                 }
@@ -336,7 +334,7 @@ GWBUF* maxavro_record_read_binary(MAXAVRO_FILE* file)
         {
             fseek(file->file, file->block_start_pos, SEEK_SET);
 
-            if (fread(GWBUF_DATA(rval), 1, data_size, file->file) == (size_t)data_size)
+            if (fread(GWBUF_DATA(rval), 1, data_size, file->file) == (size_t) data_size)
             {
                 memcpy(((uint8_t*) GWBUF_DATA(rval)) + data_size, file->sync, sizeof(file->sync));
                 maxavro_next_block(file);
@@ -345,10 +343,7 @@ GWBUF* maxavro_record_read_binary(MAXAVRO_FILE* file)
             {
                 if (ferror(file->file))
                 {
-                    MXS_ERROR("Failed to read %ld bytes: %d, %s",
-                              data_size,
-                              errno,
-                              mxs_strerror(errno));
+                    MXS_ERROR("Failed to read %ld bytes: %d, %s", data_size, errno, mxs_strerror(errno));
                     file->last_error = MAXAVRO_ERR_IO;
                 }
                 gwbuf_free(rval);
@@ -363,8 +358,8 @@ GWBUF* maxavro_record_read_binary(MAXAVRO_FILE* file)
     else
     {
         MXS_ERROR("Attempting to read from a failed Avro file '%s', error is: %s",
-                  file->filename,
-                  maxavro_get_error_string(file));
+            file->filename,
+            maxavro_get_error_string(file));
     }
     return rval;
 }

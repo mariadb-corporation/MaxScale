@@ -33,18 +33,18 @@ enum test_target_t
 
 GWBUF* create_gwbuf(const char* zStmt)
 {
-    size_t len = strlen(zStmt);
+    size_t len         = strlen(zStmt);
     size_t payload_len = len + 1;
-    size_t gwbuf_len = MYSQL_HEADER_LEN + payload_len;
+    size_t gwbuf_len   = MYSQL_HEADER_LEN + payload_len;
 
     GWBUF* pBuf = gwbuf_alloc(gwbuf_len);
 
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf))) = payload_len;
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 1)) = (payload_len >> 8);
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 2)) = (payload_len >> 16);
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 3)) = 0x00;
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 4)) = 0x03;
-    memcpy((char*)GWBUF_DATA(pBuf) + 5, zStmt, len);
+    *((unsigned char*) ((char*) GWBUF_DATA(pBuf)))     = payload_len;
+    *((unsigned char*) ((char*) GWBUF_DATA(pBuf) + 1)) = (payload_len >> 8);
+    *((unsigned char*) ((char*) GWBUF_DATA(pBuf) + 2)) = (payload_len >> 16);
+    *((unsigned char*) ((char*) GWBUF_DATA(pBuf) + 3)) = 0x00;
+    *((unsigned char*) ((char*) GWBUF_DATA(pBuf) + 4)) = 0x03;
+    memcpy((char*) GWBUF_DATA(pBuf) + 5, zStmt, len);
 
     return pBuf;
 }
@@ -58,7 +58,7 @@ uint32_t get_parser_trx_type_mask(GWBUF* pBuf)
 {
     return qc_get_trx_type_mask_using(pBuf, QC_TRX_PARSE_USING_PARSER);
 }
-}
+}  // namespace
 
 namespace
 {
@@ -66,78 +66,44 @@ namespace
 struct test_case
 {
     const char* zStmt;
-    uint32_t    type_mask;
-} test_cases[] =
-{
+    uint32_t type_mask;
+} test_cases[] = {
     // Keep these all uppercase, lowercase are tested programmatically.
-    {"BEGIN",
-     QUERY_TYPE_BEGIN_TRX},
-    {"BEGIN WORK",
-     QUERY_TYPE_BEGIN_TRX},
+    {"BEGIN", QUERY_TYPE_BEGIN_TRX},
+    {"BEGIN WORK", QUERY_TYPE_BEGIN_TRX},
 
-    {"COMMIT",
-     QUERY_TYPE_COMMIT},
-    {"COMMIT WORK",
-     QUERY_TYPE_COMMIT},
+    {"COMMIT", QUERY_TYPE_COMMIT},
+    {"COMMIT WORK", QUERY_TYPE_COMMIT},
 
-    {"ROLLBACK",
-     QUERY_TYPE_ROLLBACK},
-    {"ROLLBACK WORK",
-     QUERY_TYPE_ROLLBACK},
+    {"ROLLBACK", QUERY_TYPE_ROLLBACK},
+    {"ROLLBACK WORK", QUERY_TYPE_ROLLBACK},
 
-    {"START TRANSACTION",
-     QUERY_TYPE_BEGIN_TRX},
+    {"START TRANSACTION", QUERY_TYPE_BEGIN_TRX},
 
-    {"START TRANSACTION READ ONLY",
-     QUERY_TYPE_BEGIN_TRX
-     | QUERY_TYPE_READ},
-    {"START TRANSACTION READ WRITE",
-     QUERY_TYPE_BEGIN_TRX
-     | QUERY_TYPE_WRITE},
+    {"START TRANSACTION READ ONLY", QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_READ},
+    {"START TRANSACTION READ WRITE", QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_WRITE},
 
-    {"START TRANSACTION WITH CONSISTENT SNAPSHOT",
-     QUERY_TYPE_BEGIN_TRX},
+    {"START TRANSACTION WITH CONSISTENT SNAPSHOT", QUERY_TYPE_BEGIN_TRX},
 
-    {"START TRANSACTION WITH CONSISTENT SNAPSHOT, READ ONLY",
-     QUERY_TYPE_BEGIN_TRX
-     | QUERY_TYPE_READ},
+    {"START TRANSACTION WITH CONSISTENT SNAPSHOT, READ ONLY", QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_READ},
 
-    {"SET AUTOCOMMIT=true",
-     QUERY_TYPE_COMMIT
-     | QUERY_TYPE_ENABLE_AUTOCOMMIT},
+    {"SET AUTOCOMMIT=true", QUERY_TYPE_COMMIT | QUERY_TYPE_ENABLE_AUTOCOMMIT},
 
-    {"SET AUTOCOMMIT=1",
-     QUERY_TYPE_COMMIT
-     | QUERY_TYPE_ENABLE_AUTOCOMMIT},
+    {"SET AUTOCOMMIT=1", QUERY_TYPE_COMMIT | QUERY_TYPE_ENABLE_AUTOCOMMIT},
 
-    {"SET AUTOCOMMIT=false",
-     QUERY_TYPE_BEGIN_TRX
-     | QUERY_TYPE_DISABLE_AUTOCOMMIT},
+    {"SET AUTOCOMMIT=false", QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_DISABLE_AUTOCOMMIT},
 
-    {"SET AUTOCOMMIT=0",
-     QUERY_TYPE_BEGIN_TRX
-     | QUERY_TYPE_DISABLE_AUTOCOMMIT},
-    {"SET @@AUTOCOMMIT=0",
-     QUERY_TYPE_BEGIN_TRX
-     | QUERY_TYPE_DISABLE_AUTOCOMMIT},
-    {"SET GLOBAL AUTOCOMMIT=0",
-     QUERY_TYPE_BEGIN_TRX
-     | QUERY_TYPE_DISABLE_AUTOCOMMIT},
-    {"SET SESSION AUTOCOMMIT=0",
-     QUERY_TYPE_BEGIN_TRX
-     | QUERY_TYPE_DISABLE_AUTOCOMMIT},
-    {"SET @@SESSION . AUTOCOMMIT=0",
-     QUERY_TYPE_BEGIN_TRX
-     | QUERY_TYPE_DISABLE_AUTOCOMMIT},
-    {"SET @@GLOBAL . AUTOCOMMIT=0",
-     QUERY_TYPE_BEGIN_TRX
-     | QUERY_TYPE_DISABLE_AUTOCOMMIT},
+    {"SET AUTOCOMMIT=0", QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_DISABLE_AUTOCOMMIT},
+    {"SET @@AUTOCOMMIT=0", QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_DISABLE_AUTOCOMMIT},
+    {"SET GLOBAL AUTOCOMMIT=0", QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_DISABLE_AUTOCOMMIT},
+    {"SET SESSION AUTOCOMMIT=0", QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_DISABLE_AUTOCOMMIT},
+    {"SET @@SESSION . AUTOCOMMIT=0", QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_DISABLE_AUTOCOMMIT},
+    {"SET @@GLOBAL . AUTOCOMMIT=0", QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_DISABLE_AUTOCOMMIT},
 };
 
 const size_t N_TEST_CASES = sizeof(test_cases) / sizeof(test_cases[0]);
 
-
-bool test(uint32_t (* getter)(GWBUF*), const char* zStmt, uint32_t expected_type_mask)
+bool test(uint32_t (*getter)(GWBUF*), const char* zStmt, uint32_t expected_type_mask)
 {
     int rc = true;
 
@@ -157,20 +123,11 @@ bool test(uint32_t (* getter)(GWBUF*), const char* zStmt, uint32_t expected_type
     return rc;
 }
 
-
-const char* prefixes[] =
-{
-    " ",
-    "  ",
-    "\n",
-    " \n",
-    "\n ",
-    "-- comment\n"
-};
+const char* prefixes[] = {" ", "  ", "\n", " \n", "\n ", "-- comment\n"};
 
 const int N_PREFIXES = sizeof(prefixes) / sizeof(prefixes[0]);
 
-bool test_with_prefixes(uint32_t (* getter)(GWBUF*), const string& base, uint32_t type_mask)
+bool test_with_prefixes(uint32_t (*getter)(GWBUF*), const string& base, uint32_t type_mask)
 {
     bool rc = true;
 
@@ -187,9 +144,7 @@ bool test_with_prefixes(uint32_t (* getter)(GWBUF*), const string& base, uint32_
     return rc;
 }
 
-
-const char* suffixes[] =
-{
+const char* suffixes[] = {
     " ",
     "  ",
     "\n",
@@ -209,7 +164,7 @@ const char* suffixes[] =
 
 const int N_SUFFIXES = sizeof(suffixes) / sizeof(suffixes[0]);
 
-bool test_with_suffixes(uint32_t (* getter)(GWBUF*), const string& base, uint32_t type_mask)
+bool test_with_suffixes(uint32_t (*getter)(GWBUF*), const string& base, uint32_t type_mask)
 {
     bool rc = true;
 
@@ -226,25 +181,15 @@ bool test_with_suffixes(uint32_t (* getter)(GWBUF*), const string& base, uint32_
     return rc;
 }
 
-
-const char* whitespace[] =
-{
-    "  ",
-    "\n",
-    "/**/",
-    "/***/",
-    "/****/",
-    "/* / * */",
-    "-- comment\n"
-};
+const char* whitespace[] = {"  ", "\n", "/**/", "/***/", "/****/", "/* / * */", "-- comment\n"};
 
 const int N_WHITESPACE = sizeof(whitespace) / sizeof(whitespace[0]);
 
-bool test_with_whitespace(uint32_t (* getter)(GWBUF*), const string& base, uint32_t type_mask)
+bool test_with_whitespace(uint32_t (*getter)(GWBUF*), const string& base, uint32_t type_mask)
 {
     bool rc = true;
 
-    string::const_iterator i = base.begin();
+    string::const_iterator i   = base.begin();
     string::const_iterator end = base.end();
 
     string head;
@@ -274,9 +219,7 @@ bool test_with_whitespace(uint32_t (* getter)(GWBUF*), const string& base, uint3
     return rc;
 }
 
-
-const char* commas[] =
-{
+const char* commas[] = {
     " ,",
     "  ,",
     " , ",
@@ -285,11 +228,11 @@ const char* commas[] =
 
 const int N_COMMAS = sizeof(commas) / sizeof(commas[0]);
 
-bool test_with_commas(uint32_t (* getter)(GWBUF*), const string& base, uint32_t type_mask)
+bool test_with_commas(uint32_t (*getter)(GWBUF*), const string& base, uint32_t type_mask)
 {
     bool rc = true;
 
-    string::const_iterator i = base.begin();
+    string::const_iterator i   = base.begin();
     string::const_iterator end = base.end();
 
     string head;
@@ -319,13 +262,12 @@ bool test_with_commas(uint32_t (* getter)(GWBUF*), const string& base, uint32_t 
     return rc;
 }
 
-
-bool test(uint32_t (* getter)(GWBUF*), bool dont_bail_out)
+bool test(uint32_t (*getter)(GWBUF*), bool dont_bail_out)
 {
     bool rc = true;
 
     test_case* pTest = test_cases;
-    test_case* pEnd = pTest + N_TEST_CASES;
+    test_case* pEnd  = pTest + N_TEST_CASES;
 
     while ((pTest < pEnd) && (dont_bail_out || rc))
     {
@@ -386,29 +328,28 @@ bool test(uint32_t (* getter)(GWBUF*), bool dont_bail_out)
 
     return rc;
 }
-}
+}  // namespace
 
 namespace
 {
 
-char USAGE[] =
-    "usage: test_trxtracking [-p] [-q] [-r] [-d]\n"
-    "\n"
-    "-p  : Test using custom parser\n"
-    "-q  : Test using query classifier\n"
-    "-r  : Test using regex matching\n"
-    "-d  : Don't bail out at first error\n"
-    "\n"
-    "If neither -p, -q or -r has been specified, then all will be tested.\n";
+char USAGE[] = "usage: test_trxtracking [-p] [-q] [-r] [-d]\n"
+               "\n"
+               "-p  : Test using custom parser\n"
+               "-q  : Test using query classifier\n"
+               "-r  : Test using regex matching\n"
+               "-d  : Don't bail out at first error\n"
+               "\n"
+               "If neither -p, -q or -r has been specified, then all will be tested.\n";
 }
 
 int main(int argc, char* argv[])
 {
     int rc = EXIT_SUCCESS;
 
-    bool test_all = true;
+    bool test_all        = true;
     uint32_t test_target = 0;
-    bool dont_bail_out = false;
+    bool dont_bail_out   = false;
 
     int c;
     while ((c = getopt(argc, argv, "dpq")) != -1)
@@ -421,7 +362,7 @@ int main(int argc, char* argv[])
             break;
 
         case 'q':
-            test_all = false;
+            test_all    = false;
             test_target = TEST_QC;
             break;
 

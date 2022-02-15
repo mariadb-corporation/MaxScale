@@ -40,7 +40,7 @@ string mxb::xml::get_qualified_name(const xmlNode& node)
 
     while (pParent && pParent->type != XML_DOCUMENT_NODE)
     {
-        s = string(reinterpret_cast<const char*>(pParent->name)) + "/" + s;
+        s       = string(reinterpret_cast<const char*>(pParent->name)) + "/" + s;
         pParent = pParent->parent;
     }
 
@@ -56,9 +56,8 @@ vector<xmlNode*> mxb::xml::find_descendants_by_xpath(xmlNode& ancestor, const ch
 
     string path(zXpath);
     path = "./" + path;
-    xmlXPathObject* pXpath_object = xmlXPathNodeEval(&ancestor,
-                                                     reinterpret_cast<const xmlChar*>(path.c_str()),
-                                                     pXpath_context);
+    xmlXPathObject* pXpath_object
+        = xmlXPathNodeEval(&ancestor, reinterpret_cast<const xmlChar*>(path.c_str()), pXpath_context);
 
 
     xmlNodeSet* pNodes = pXpath_object->nodesetval;
@@ -86,7 +85,7 @@ vector<xmlNode*> mxb::xml::find_children_by_prefix(xmlNode& parent, const char* 
 {
     vector<xmlNode*> children;
 
-    int n = strlen(zPrefix);
+    int n           = strlen(zPrefix);
     xmlNode* pChild = parent.children;
 
     while (pChild)
@@ -149,7 +148,7 @@ void xml_insert_leaf(xmlNode& parent, const char* zName, const char* zValue, mxb
 {
     mxb_assert(strchr(zName, '/') == nullptr);
 
-    xmlNode* pChild = xmlNewNode(NULL, reinterpret_cast<const xmlChar*>(zName));
+    xmlNode* pChild   = xmlNewNode(NULL, reinterpret_cast<const xmlChar*>(zName));
     xmlNode* pContent = xmlNewText(reinterpret_cast<const xmlChar*>(zValue));
     xmlAddChild(pChild, pContent);
 
@@ -164,8 +163,7 @@ void xml_insert_leaf(xmlNode& parent, const char* zName, const char* zValue, mxb
     else
     {
         xmlAddChild(&parent, pChild);
-        if (pChild->prev
-            && pChild->prev->type == XML_TEXT_NODE
+        if (pChild->prev && pChild->prev->type == XML_TEXT_NODE
             && strcmp(reinterpret_cast<char*>(xmlNodeGetContent(pChild->prev)), "\n") == 0)
         {
             xmlNodeSetContent(pChild->prev, reinterpret_cast<const xmlChar*>("\n\t"));
@@ -181,7 +179,7 @@ void xml_insert_leaf(xmlNode& parent, const char* zName, const char* zValue, mxb
     }
 }
 
-}
+}  // namespace
 
 bool mxb::xml::insert(xmlNode& ancestor, const char* zPath, const char* zValue, XmlLocation location)
 {
@@ -226,7 +224,7 @@ enum class UpdateWhen
 
 int xml_update(xmlNodeSet* pNodes, const char* zNew_value, const char* zIf_value, UpdateWhen update_when)
 {
-    int n = 0;
+    int n      = 0;
     int nNodes = pNodes ? pNodes->nodeNr : 0;
 
     // From the XML sample.
@@ -242,7 +240,7 @@ int xml_update(xmlNodeSet* pNodes, const char* zNew_value, const char* zIf_value
     for (int i = nNodes - 1; i >= 0; --i)
     {
         const char* zValue = nullptr;
-        auto* pNode = pNodes->nodeTab[i];
+        auto* pNode        = pNodes->nodeTab[i];
 
         if (zIf_value)
         {
@@ -294,20 +292,19 @@ int xml_update(xmlNodeSet* pNodes, const char* zNew_value, const char* zIf_value
 }
 
 int xml_update(xmlNode& node,
-               xmlXPathContext& xpath_context,
-               const char* zXpath,
-               const char* zNew_value,
-               const char* zIf_value,
-               UpdateWhen update_when)
+    xmlXPathContext& xpath_context,
+    const char* zXpath,
+    const char* zNew_value,
+    const char* zIf_value,
+    UpdateWhen update_when)
 {
     int n = -1;
 
     string path(zXpath);
     path = "./" + path;
 
-    xmlXPathObject* pXpath_object = xmlXPathNodeEval(&node,
-                                                     reinterpret_cast<const xmlChar*>(path.c_str()),
-                                                     &xpath_context);
+    xmlXPathObject* pXpath_object
+        = xmlXPathNodeEval(&node, reinterpret_cast<const xmlChar*>(path.c_str()), &xpath_context);
     mxb_assert(pXpath_object);
 
     if (pXpath_object)
@@ -319,11 +316,11 @@ int xml_update(xmlNode& node,
     return n;
 }
 
-}
+}  // namespace
 
 int mxb::xml::update_if(xmlNode& node, const char* zXpath, const char* zNew_value, const char* zIf_value)
 {
-    int n = -1;
+    int n                           = -1;
     xmlXPathContext* pXpath_context = xmlXPathNewContext(node.doc);
     mxb_assert(pXpath_context);
 
@@ -390,15 +387,14 @@ int xml_remove(xmlNodeSet* pNodes)
     for (int i = nNodes - 1; i >= 0; --i)
     {
         const char* zValue = nullptr;
-        auto* pNode = pNodes->nodeTab[i];
+        auto* pNode        = pNodes->nodeTab[i];
 
         if (pNode->type != XML_NAMESPACE_DECL)
         {
             pNodes->nodeTab[i] = NULL;
         }
 
-        if (pNode->prev
-            && pNode->prev->type == XML_TEXT_NODE
+        if (pNode->prev && pNode->prev->type == XML_TEXT_NODE
             && strcmp(reinterpret_cast<char*>(xmlNodeGetContent(pNode->prev)), "\n\t") == 0)
         {
             auto pPrev = pNode->prev;
@@ -419,9 +415,8 @@ int xml_remove(xmlNode& node, xmlXPathContext& xpath_context, const char* zXpath
 
     string path(zXpath);
     path = "./" + path;
-    xmlXPathObject* pXpath_object = xmlXPathNodeEval(&node,
-                                                     reinterpret_cast<const xmlChar*>(path.c_str()),
-                                                     &xpath_context);
+    xmlXPathObject* pXpath_object
+        = xmlXPathNodeEval(&node, reinterpret_cast<const xmlChar*>(path.c_str()), &xpath_context);
     mxb_assert(pXpath_object);
 
     if (pXpath_object)
@@ -432,11 +427,11 @@ int xml_remove(xmlNode& node, xmlXPathContext& xpath_context, const char* zXpath
 
     return n;
 }
-}
+}  // namespace
 
 int mxb::xml::remove(xmlNode& node, const char* zXpath)
 {
-    int n = -1;
+    int n                           = -1;
     xmlXPathContext* pXpath_context = xmlXPathNewContext(node.doc);
     mxb_assert(pXpath_context);
 
@@ -452,9 +447,9 @@ int mxb::xml::remove(xmlNode& node, const char* zXpath)
 string mxb::xml::dump(const xmlDoc& doc)
 {
     xmlBuffer* pBuffer = xmlBufferCreate();
-    xmlDoc* pDoc = const_cast<xmlDoc*>(&doc);
+    xmlDoc* pDoc       = const_cast<xmlDoc*>(&doc);
     xmlNodeDump(pBuffer, pDoc, xmlDocGetRootElement(pDoc), 0, 0);
-    xmlChar* pXml = xmlBufferDetach(pBuffer);
+    xmlChar* pXml    = xmlBufferDetach(pBuffer);
     const char* zXml = reinterpret_cast<const char*>(pXml);
 
     string xml(zXml);

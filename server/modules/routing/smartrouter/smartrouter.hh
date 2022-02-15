@@ -43,41 +43,32 @@ public:
     public:
         Config(const std::string& name, SmartRouter* router);
 
-        Config(const Config&) = delete;
+        Config(const Config&)            = delete;
         Config& operator=(const Config&) = delete;
 
         static void populate(MXS_MODULE& module);
 
-        mxs::Target* master() const
-        {
-            return m_master.get();
-        }
+        mxs::Target* master() const { return m_master.get(); }
 
-        bool persist_performance_data() const
-        {
-            return m_persist_performance_data.get();
-        }
+        bool persist_performance_data() const { return m_persist_performance_data.get(); }
 
     private:
         config::Target m_master;
-        config::Bool   m_persist_performance_data;
-        SmartRouter*   m_router;
+        config::Bool m_persist_performance_data;
+        SmartRouter* m_router;
     };
 
     static SmartRouter* create(SERVICE* pService, mxs::ConfigParameters* pParams);
 
     SmartRouterSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
 
-    json_t*  diagnostics() const;
+    json_t* diagnostics() const;
     uint64_t getCapabilities();
-    bool     configure(mxs::ConfigParameters* pParams);
+    bool configure(mxs::ConfigParameters* pParams);
 
     SERVICE* service() const;
 
-    const Config& config() const
-    {
-        return m_config;
-    }
+    const Config& config() const { return m_config; }
 
     /** Find a PerformanceInfo, if not found returns a default initialized PerformanceInfo.
      */
@@ -93,5 +84,5 @@ private:
     Config m_config;
 
     PerformanceInfoUpdater m_updater;
-    std::future<void>      m_updater_future;
+    std::future<void> m_updater_future;
 };

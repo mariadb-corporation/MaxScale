@@ -29,13 +29,15 @@ class FilterModule : public SpecificModule<FilterModule, MXS_FILTER_OBJECT>
     FilterModule& operator=(const FilterModule&);
 
 public:
-    static const char* zName;   /*< The name describing the module type. */
+    static const char* zName; /*< The name describing the module type. */
 
     class Session;
+
     class Instance
     {
         Instance(const Instance&);
         Instance& operator=(const Instance&);
+
     public:
         ~Instance();
 
@@ -46,8 +48,8 @@ public:
          *
          * @return A new filter session or NULL if the creation failed.
          */
-        std::auto_ptr<Session> newSession(MXS_SESSION* pSession, SERVICE* pService,
-                                          mxs::Downstream* pDown, mxs::Upstream* pUp);
+        std::auto_ptr<Session> newSession(
+            MXS_SESSION* pSession, SERVICE* pService, mxs::Downstream* pDown, mxs::Upstream* pUp);
 
     private:
         friend class FilterModule;
@@ -74,7 +76,7 @@ public:
 
     private:
         FilterModule& m_module;
-        MXS_FILTER*   m_pInstance;
+        MXS_FILTER* m_pInstance;
     };
 
     class Session
@@ -88,10 +90,7 @@ public:
         /**
          * The following member functions correspond to the MaxScale filter API.
          */
-        int routeQuery(GWBUF* pStatement)
-        {
-            return m_instance.routeQuery(m_pFilter_session, pStatement);
-        }
+        int routeQuery(GWBUF* pStatement) { return m_instance.routeQuery(m_pFilter_session, pStatement); }
 
         int clientReply(GWBUF* pBuffer, const mxs::Reply& reply)
         {
@@ -104,7 +103,7 @@ public:
         Session(Instance* pInstance, MXS_FILTER_SESSION* pFilter_session);
 
     private:
-        Instance&           m_instance;
+        Instance& m_instance;
         MXS_FILTER_SESSION* m_pFilter_session;
     };
 
@@ -122,16 +121,13 @@ public:
 private:
     friend class Instance;
 
-    void destroyInstance(MXS_FILTER* pInstance)
-    {
-        m_pApi->destroyInstance(pInstance);
-    }
+    void destroyInstance(MXS_FILTER* pInstance) { m_pApi->destroyInstance(pInstance); }
 
     MXS_FILTER_SESSION* newSession(MXS_FILTER* pInstance,
-                                   MXS_SESSION* pSession,
-                                   SERVICE* pService,
-                                   mxs::Downstream* pDown,
-                                   mxs::Upstream* pUp)
+        MXS_SESSION* pSession,
+        SERVICE* pService,
+        mxs::Downstream* pDown,
+        mxs::Upstream* pUp)
     {
         return m_pApi->newSession(pInstance, pSession, pService, pDown, pUp);
     }
@@ -147,9 +143,9 @@ private:
     }
 
     int clientReply(MXS_FILTER* pInstance,
-                    MXS_FILTER_SESSION* pFilter_session,
-                    GWBUF* pStatement,
-                    const mxs::Reply& reply)
+        MXS_FILTER_SESSION* pFilter_session,
+        GWBUF* pStatement,
+        const mxs::Reply& reply)
     {
         mxs::ReplyRoute route;
         return m_pApi->clientReply(pInstance, pFilter_session, pStatement, route, reply);
@@ -161,7 +157,6 @@ private:
 
     FilterModule(const MXS_MODULE* pModule)
         : SpecificModule<FilterModule, MXS_FILTER_OBJECT>(pModule)
-    {
-    }
+    {}
 };
-}
+}  // namespace maxscale

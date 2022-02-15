@@ -26,16 +26,15 @@ struct UserTemplate
         : name(name)
         , type(mode)
         , rulenames(rules)
-    {
-    }
+    {}
 
-    std::string name;       /** Name of the user */
-    match_type  type;       /** Matching type */
-    ValueList   rulenames;  /** Names of the rules */
+    std::string name;    /** Name of the user */
+    match_type type;     /** Matching type */
+    ValueList rulenames; /** Names of the rules */
 };
 
 typedef std::shared_ptr<UserTemplate> SUserTemplate;
-typedef std::list<SUserTemplate>      TemplateList;
+typedef std::list<SUserTemplate> TemplateList;
 
 /**
  * A user definition
@@ -77,7 +76,6 @@ public:
     bool match(Dbfw* instance, DbfwSession* session, GWBUF* buffer, char** rulename);
 
 private:
-
     enum match_mode
     {
         ALL,
@@ -96,16 +94,9 @@ private:
     /**
      * Functions for matching rules
      */
-    bool match_any(Dbfw* my_instance,
-                   DbfwSession* my_session,
-                   GWBUF* queue,
-                   char** rulename);
-    bool do_match(Dbfw* my_instance,
-                  DbfwSession* my_session,
-                  GWBUF* queue,
-                  match_mode mode,
-                  char** rulename);
+    bool match_any(Dbfw* my_instance, DbfwSession* my_session, GWBUF* queue, char** rulename);
+    bool do_match(Dbfw* my_instance, DbfwSession* my_session, GWBUF* queue, match_mode mode, char** rulename);
 };
 
-typedef std::shared_ptr<User>                  SUser;
+typedef std::shared_ptr<User> SUser;
 typedef std::unordered_map<std::string, SUser> UserMap;

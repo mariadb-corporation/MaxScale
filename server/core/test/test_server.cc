@@ -12,10 +12,10 @@
  */
 
 // To ensure that ss_info_assert asserts also when builing in non-debug mode.
-#if !defined (SS_DEBUG)
+#if !defined(SS_DEBUG)
 #define SS_DEBUG
 #endif
-#if defined (NDEBUG)
+#if defined(NDEBUG)
 #undef NDEBUG
 #endif
 #include <stdio.h>
@@ -49,9 +49,9 @@ static int test1()
 
     fprintf(stderr, "\t..done\nTesting Unique Name for Server.");
     mxb_assert_message(NULL == ServerManager::find_by_unique_name("non-existent"),
-                       "Should not find non-existent unique name.");
-    mxb_assert_message(server == ServerManager::find_by_unique_name("uniquename"),
-                       "Should find by unique name.");
+        "Should not find non-existent unique name.");
+    mxb_assert_message(
+        server == ServerManager::find_by_unique_name("uniquename"), "Should find by unique name.");
     fprintf(stderr, "\t..done\nTesting Status Setting for Server.");
     status = server->status_string();
     mxb_assert_message(status == "Down", "Status of Server should be Running by default.");
@@ -60,15 +60,24 @@ static int test1()
     mxb_assert_message(status == "Master, Running", "Should find correct status.");
     server->clear_status(SERVER_MASTER);
     status = server->status_string();
-    mxb_assert_message(status == "Running",
-                       "Status of Server should be Running after master status cleared.");
+    mxb_assert_message(
+        status == "Running", "Status of Server should be Running after master status cleared.");
     fprintf(stderr, "\t..done\nFreeing Server.");
     ServerManager::server_free(server);
     fprintf(stderr, "\t..done\n");
     return 0;
 }
 
-#define TEST(A, B) do {if (!(A)) {printf(B "\n"); return false;}} while (false)
+#define TEST(A, B)          \
+    do                      \
+    {                       \
+        if (!(A))           \
+        {                   \
+            printf(B "\n"); \
+            return false;   \
+        }                   \
+    }                       \
+    while (false)
 
 bool test_load_config(const char* input, Server* server)
 {
@@ -80,14 +89,14 @@ bool test_load_config(const char* input, Server* server)
 
         if (config_load_single_file(input, &dcontext, &ccontext))
         {
-            CONFIG_CONTEXT* obj = ccontext.m_next;
+            CONFIG_CONTEXT* obj          = ccontext.m_next;
             mxs::ConfigParameters* param = &obj->m_parameters;
 
             TEST(strcmp(obj->name(), server->name()) == 0, "Server names differ");
             TEST(param->get_string("address") == server->address(), "Server addresses differ");
             TEST(param->get_integer("port") == server->port(), "Server ports differ");
             TEST(ServerManager::create_server(obj->name(), obj->m_parameters),
-                 "Failed to create server from loaded config");
+                "Failed to create server from loaded config");
             duplicate_context_finish(&dcontext);
             config_context_free(obj);
         }
@@ -98,8 +107,8 @@ bool test_load_config(const char* input, Server* server)
 
 bool test_serialize()
 {
-    char name[] = "serialized-server";
-    char config_name[] = "serialized-server.cnf";
+    char name[]            = "serialized-server";
+    char config_name[]     = "serialized-server.cnf";
     char old_config_name[] = "serialized-server.cnf.old";
     mxs::set_config_persistdir("./");
     Server* server = ServerManager::create_server(name, params);

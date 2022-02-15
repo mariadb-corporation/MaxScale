@@ -34,15 +34,13 @@ unsigned int millisleep(unsigned int milliseconds)
 
     return rem.tv_sec * 1000 + rem.tv_nsec / 1000000;
 }
-}
+}  // namespace
 
 //
 // class TesterStorage::HitTask
 //
 
-TesterStorage::HitTask::HitTask(ostream* pOut,
-                                Storage* pStorage,
-                                const CacheItems* pCache_items)
+TesterStorage::HitTask::HitTask(ostream* pOut, Storage* pStorage, const CacheItems* pCache_items)
     : Tester::Task(pOut)
     , m_storage(*pStorage)
     , m_cache_items(*pCache_items)
@@ -51,7 +49,7 @@ TesterStorage::HitTask::HitTask(ostream* pOut,
     , m_dels(0)
     , m_misses(0)
 {
-    MXB_AT_DEBUG(bool rv=) m_storage.create_token(&m_sToken);
+    MXB_AT_DEBUG(bool rv =) m_storage.create_token(&m_sToken);
     mxb_assert(rv);
     mxb_assert(m_cache_items.size() > 0);
 }
@@ -77,70 +75,67 @@ int TesterStorage::HitTask::run()
         switch (action)
         {
         case STORAGE_PUT:
+        {
+            std::vector<std::string> invalidation_words;
+            cache_result_t result = m_storage.put_value(
+                m_sToken.get(), cache_item.first, invalidation_words, cache_item.second);
+            if (CACHE_RESULT_IS_OK(result))
             {
-                std::vector<std::string> invalidation_words;
-                cache_result_t result = m_storage.put_value(m_sToken.get(),
-                                                            cache_item.first,
-                                                            invalidation_words,
-                                                            cache_item.second);
-                if (CACHE_RESULT_IS_OK(result))
-                {
-                    ++m_puts;
-                }
-                else
-                {
-                    mxb_assert(!true);
-                    rv = EXIT_FAILURE;
-                }
+                ++m_puts;
             }
-            break;
+            else
+            {
+                mxb_assert(!true);
+                rv = EXIT_FAILURE;
+            }
+        }
+        break;
 
         case STORAGE_GET:
+        {
+            GWBUF* pQuery;
+            cache_result_t result = m_storage.get_value(m_sToken.get(), cache_item.first, 0, &pQuery);
+
+            if (CACHE_RESULT_IS_OK(result))
             {
-                GWBUF* pQuery;
-                cache_result_t result = m_storage.get_value(m_sToken.get(), cache_item.first, 0, &pQuery);
+                mxb_assert(GWBUF_LENGTH(pQuery) == GWBUF_LENGTH(cache_item.second));
+                mxb_assert(
+                    memcmp(GWBUF_DATA(pQuery), GWBUF_DATA(cache_item.second), GWBUF_LENGTH(pQuery)) == 0);
 
-                if (CACHE_RESULT_IS_OK(result))
-                {
-                    mxb_assert(GWBUF_LENGTH(pQuery) == GWBUF_LENGTH(cache_item.second));
-                    mxb_assert(memcmp(GWBUF_DATA(pQuery),
-                                      GWBUF_DATA(cache_item.second),
-                                      GWBUF_LENGTH(pQuery)) == 0);
-
-                    gwbuf_free(pQuery);
-                    ++m_gets;
-                }
-                else if (CACHE_RESULT_IS_NOT_FOUND(result))
-                {
-                    ++m_misses;
-                }
-                else
-                {
-                    mxb_assert(!true);
-                    rv = EXIT_FAILURE;
-                }
+                gwbuf_free(pQuery);
+                ++m_gets;
             }
-            break;
+            else if (CACHE_RESULT_IS_NOT_FOUND(result))
+            {
+                ++m_misses;
+            }
+            else
+            {
+                mxb_assert(!true);
+                rv = EXIT_FAILURE;
+            }
+        }
+        break;
 
         case STORAGE_DEL:
-            {
-                cache_result_t result = m_storage.del_value(m_sToken.get(), cache_item.first);
+        {
+            cache_result_t result = m_storage.del_value(m_sToken.get(), cache_item.first);
 
-                if (CACHE_RESULT_IS_OK(result))
-                {
-                    ++m_dels;
-                }
-                else if (CACHE_RESULT_IS_NOT_FOUND(result))
-                {
-                    ++m_misses;
-                }
-                else
-                {
-                    mxb_assert(!true);
-                    rv = EXIT_FAILURE;
-                }
+            if (CACHE_RESULT_IS_OK(result))
+            {
+                ++m_dels;
             }
-            break;
+            else if (CACHE_RESULT_IS_NOT_FOUND(result))
+            {
+                ++m_misses;
+            }
+            else
+            {
+                mxb_assert(!true);
+                rv = EXIT_FAILURE;
+            }
+        }
+        break;
 
         default:
             mxb_assert(!true);
@@ -150,8 +145,7 @@ int TesterStorage::HitTask::run()
     }
 
     stringstream ss;
-    ss << "HitTask ending: "
-       << m_gets << ", " << m_puts << ", " << m_dels << ", " << m_misses << "\n";
+    ss << "HitTask ending: " << m_gets << ", " << m_puts << ", " << m_dels << ", " << m_misses << "\n";
 
     out() << ss.str() << flush;
 
@@ -165,8 +159,7 @@ int TesterStorage::HitTask::run()
 TesterStorage::TesterStorage(std::ostream* pOut, StorageFactory* pFactory)
     : Tester(pOut)
     , m_factory(*pFactory)
-{
-}
+{}
 
 int TesterStorage::run(size_t n_threads, size_t n_seconds, size_t n_max_items, std::istream& in)
 {
@@ -182,11 +175,8 @@ int TesterStorage::run(size_t n_threads, size_t n_seconds, size_t n_max_items, s
     return rv;
 }
 
-int TesterStorage::run(size_t n_threads,
-                       size_t n_seconds,
-                       size_t n_items,
-                       size_t n_min_size,
-                       size_t n_max_size)
+int TesterStorage::run(
+    size_t n_threads, size_t n_seconds, size_t n_items, size_t n_min_size, size_t n_max_size)
 {
     int rv = EXIT_SUCCESS;
 
@@ -196,8 +186,9 @@ int TesterStorage::run(size_t n_threads,
 
     while ((rv == EXIT_SUCCESS) && (i < n_items))
     {
-        size_t size = n_min_size + static_cast<size_t>((static_cast<double>(random()) / RAND_MAX)
-                                                       * (n_max_size - n_min_size));
+        size_t size
+            = n_min_size
+            + static_cast<size_t>((static_cast<double>(random()) / RAND_MAX) * (n_max_size - n_min_size));
         mxb_assert(size >= n_min_size);
         mxb_assert(size <= n_max_size);
 
@@ -232,10 +223,8 @@ int TesterStorage::run(size_t n_threads,
     return rv;
 }
 
-int TesterStorage::execute_tasks(size_t n_threads,
-                                 size_t n_seconds,
-                                 const CacheItems& cache_items,
-                                 Storage& storage)
+int TesterStorage::execute_tasks(
+    size_t n_threads, size_t n_seconds, const CacheItems& cache_items, Storage& storage)
 {
     int rv = EXIT_FAILURE;
 
@@ -245,10 +234,8 @@ int TesterStorage::execute_tasks(size_t n_threads,
     return rv;
 }
 
-int TesterStorage::execute_hit_task(size_t n_threads,
-                                    size_t n_seconds,
-                                    const CacheItems& cache_items,
-                                    Storage& storage)
+int TesterStorage::execute_hit_task(
+    size_t n_threads, size_t n_seconds, const CacheItems& cache_items, Storage& storage)
 {
     int rv = EXIT_FAILURE;
 
@@ -301,12 +288,12 @@ int TesterStorage::test_ttl(const CacheItems& cache_items)
     out() << "ST" << endl;
 
     config.thread_model = CACHE_THREAD_MODEL_ST;
-    config.hard_ttl = 6000;
-    config.soft_ttl = 3000;
+    config.hard_ttl     = 6000;
+    config.soft_ttl     = 3000;
 
     Storage* pStorage;
 
-    int rv1 = EXIT_FAILURE;
+    int rv1  = EXIT_FAILURE;
     pStorage = get_storage(config);
 
     if (pStorage)
@@ -318,10 +305,10 @@ int TesterStorage::test_ttl(const CacheItems& cache_items)
     out() << "MT" << endl;
 
     config.thread_model = CACHE_THREAD_MODEL_MT;
-    config.hard_ttl = 6000;
-    config.soft_ttl = 3000;
+    config.hard_ttl     = 6000;
+    config.soft_ttl     = 3000;
 
-    int rv2 = EXIT_FAILURE;
+    int rv2  = EXIT_FAILURE;
     pStorage = get_storage(config);
 
     if (pStorage)
@@ -340,7 +327,7 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
     out() << "Testing ttl." << endl;
 
     shared_ptr<Storage::Token> sToken;
-    MXB_AT_DEBUG(bool created=) storage.create_token(&sToken);
+    MXB_AT_DEBUG(bool created =) storage.create_token(&sToken);
     mxb_assert(created);
 
     Storage::Config config;
@@ -348,7 +335,7 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
 
     uint32_t hard_ttl = config.hard_ttl;
     uint32_t soft_ttl = config.soft_ttl;
-    uint32_t diff = hard_ttl - soft_ttl;
+    uint32_t diff     = hard_ttl - soft_ttl;
 
     if (diff != 0)
     {
@@ -362,10 +349,8 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
         const CacheItems::value_type& cache_item = cache_items[0];
 
         std::vector<std::string> invalidation_words;
-        cache_result_t result = storage.put_value(sToken.get(),
-                                                  cache_item.first,
-                                                  invalidation_words,
-                                                  cache_item.second);
+        cache_result_t result
+            = storage.put_value(sToken.get(), cache_item.first, invalidation_words, cache_item.second);
 
         if (!CACHE_RESULT_IS_OK(result))
         {
@@ -392,7 +377,7 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
 
             gwbuf_free(pValue);
 
-            millisleep(2000);   // Expected to get us passed the soft ttl.
+            millisleep(2000);  // Expected to get us passed the soft ttl.
             slept += 2000;
 
             pValue = NULL;
@@ -418,7 +403,7 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
 
             gwbuf_free(pValue);
 
-            millisleep(hard_ttl - slept + 1000);    // Expected to get us passed the hard ttl.
+            millisleep(hard_ttl - slept + 1000);  // Expected to get us passed the hard ttl.
             slept += hard_ttl - slept + 1000;
 
             pValue = NULL;

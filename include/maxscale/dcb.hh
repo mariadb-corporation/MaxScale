@@ -41,7 +41,7 @@ namespace maxscale
 class ClientConnection;
 class BackendConnection;
 class SSLContext;
-}
+}  // namespace maxscale
 
 /**
  * Descriptor Control Block
@@ -75,41 +75,38 @@ public:
         virtual void destroy(DCB* dcb) = 0;
 
     protected:
-        static void call_destroy(DCB* dcb)
-        {
-            dcb->destroy();
-        }
+        static void call_destroy(DCB* dcb) { dcb->destroy(); }
     };
 
     struct Stats
     {
-        int n_reads = 0;        /*< Number of reads on this descriptor */
-        int n_writes = 0;       /*< Number of writes on this descriptor */
-        int n_accepts = 0;      /*< Number of accepts on this descriptor */
-        int n_buffered = 0;     /*< Number of buffered writes */
-        int n_high_water = 0;   /*< Number of crosses of high water mark */
-        int n_low_water = 0;    /*< Number of crosses of low water mark */
+        int n_reads      = 0; /*< Number of reads on this descriptor */
+        int n_writes     = 0; /*< Number of writes on this descriptor */
+        int n_accepts    = 0; /*< Number of accepts on this descriptor */
+        int n_buffered   = 0; /*< Number of buffered writes */
+        int n_high_water = 0; /*< Number of crosses of high water mark */
+        int n_low_water  = 0; /*< Number of crosses of low water mark */
     };
 
     enum class Role
     {
-        CLIENT,         /*< Serves dedicated client */
-        BACKEND,        /*< Serves back end connection */
+        CLIENT,  /*< Serves dedicated client */
+        BACKEND, /*< Serves back end connection */
     };
 
     enum class State
     {
-        CREATED,        /*< Created but not added to the poll instance */
-        POLLING,        /*< Added to the poll instance */
-        DISCONNECTED,   /*< Socket closed */
-        NOPOLLING       /*< Removed from the poll instance */
+        CREATED,      /*< Created but not added to the poll instance */
+        POLLING,      /*< Added to the poll instance */
+        DISCONNECTED, /*< Socket closed */
+        NOPOLLING     /*< Removed from the poll instance */
     };
 
     enum class Reason
     {
-        DRAINED,        /*< The write delay queue has drained */
-        HIGH_WATER,     /*< Cross high water mark */
-        LOW_WATER       /*< Cross low water mark */
+        DRAINED,    /*< The write delay queue has drained */
+        HIGH_WATER, /*< Cross high water mark */
+        LOW_WATER   /*< Cross low water mark */
     };
 
     enum class SSLState
@@ -132,10 +129,7 @@ public:
     /**
      * @return The unique identifier of the DCB.
      */
-    uint64_t uid() const
-    {
-        return m_uid;
-    }
+    uint64_t uid() const { return m_uid; }
 
     /**
      * File descriptor of DCB.
@@ -146,68 +140,44 @@ public:
      *
      * @return The file descriptor.
      */
-    int fd() const
-    {
-        return m_fd;
-    }
+    int fd() const { return m_fd; }
 
     /**
      * @return The remote host of the DCB.
      */
-    const std::string& remote() const
-    {
-        return m_remote;
-    }
+    const std::string& remote() const { return m_remote; }
 
     /**
      * @return The host of the client that created this DCB.
      */
-    const std::string& client_remote() const
-    {
-        return m_client_remote;
-    }
+    const std::string& client_remote() const { return m_client_remote; }
 
     /**
      * @return The role of the DCB.
      */
-    Role role() const
-    {
-        return m_role;
-    }
+    Role role() const { return m_role; }
 
     /**
      * @return The session of the DCB.
      */
-    MXS_SESSION* session() const
-    {
-        return m_session;
-    }
+    MXS_SESSION* session() const { return m_session; }
 
     /**
      * @return The event handler of the DCB.
      */
-    Handler* handler() const
-    {
-        return m_handler;
-    }
+    Handler* handler() const { return m_handler; }
 
     /**
      * Set the handler of the DCB.
      *
      * @param handler  The new handler of the DCB.
      */
-    void set_handler(Handler* handler)
-    {
-        m_handler = handler;
-    }
+    void set_handler(Handler* handler) { m_handler = handler; }
 
     /**
      * @return The state of the DCB.
      */
-    State state() const
-    {
-        return m_state;
-    }
+    State state() const { return m_state; }
 
     /**
      * @return The protocol of the DCB.
@@ -225,18 +195,12 @@ public:
     /**
      * @return DCB statistics.
      */
-    const Stats& stats() const
-    {
-        return m_stats;
-    }
+    const Stats& stats() const { return m_stats; }
 
     /**
      * @return True, if SSL has been enabled, false otherwise.
      */
-    bool ssl_enabled() const
-    {
-        return m_encryption.handle != nullptr;
-    }
+    bool ssl_enabled() const { return m_encryption.handle != nullptr; }
 
     /**
      * Get current TLS cipher
@@ -251,15 +215,9 @@ public:
     /**
      * @return The current SSL state.
      */
-    SSLState ssl_state() const
-    {
-        return m_encryption.state;
-    }
+    SSLState ssl_state() const { return m_encryption.state; }
 
-    void set_ssl_state(SSLState ssl_state)
-    {
-        m_encryption.state = ssl_state;
-    }
+    void set_ssl_state(SSLState ssl_state) { m_encryption.state = ssl_state; }
 
     /**
      * Perform SSL handshake.
@@ -304,8 +262,8 @@ public:
      */
     enum class Drain
     {
-        YES,    // Drain the writeq.
-        NO      // Do not drain the writeq.
+        YES,  // Drain the writeq.
+        NO    // Do not drain the writeq.
     };
 
     /**
@@ -333,10 +291,7 @@ public:
     /**
      * @return The current length of the writeq.
      */
-    uint64_t writeq_len() const
-    {
-        return m_writeqlen;
-    }
+    uint64_t writeq_len() const { return m_writeqlen; }
 
     int32_t protocol_write(GWBUF* pData);
 
@@ -376,7 +331,7 @@ public:
      *         be returned if the callback could not be added or if the callback
      *         has been added already.
      */
-    bool add_callback(Reason reason, int (* cb)(DCB*, Reason, void*), void* user_data);
+    bool add_callback(Reason reason, int (*cb)(DCB*, Reason, void*), void* user_data);
 
     /**
      * Remove a callback from the DCB.
@@ -388,17 +343,14 @@ public:
      * @return True, if the callback could be removed, false if the callback
      *         was not amongst the added ones.
      */
-    bool remove_callback(Reason reason, int (* cb)(DCB*, Reason, void*), void* user_data);
+    bool remove_callback(Reason reason, int (*cb)(DCB*, Reason, void*), void* user_data);
 
     /**
      * Remove all callbacks
      */
     void remove_callbacks();
 
-    inline GWBUF* writeq()
-    {
-        return m_writeq;
-    }
+    inline GWBUF* writeq() { return m_writeq; }
 
     /**
      * @brief Returns the read queue of the DCB.
@@ -407,10 +359,7 @@ public:
      *
      * @return A buffer of NULL if there is no read queue.
      */
-    inline GWBUF* readq()
-    {
-        return m_readq;
-    }
+    inline GWBUF* readq() { return m_readq; }
 
     /**
      * @brief Append a buffer the DCB's readqueue
@@ -420,20 +369,14 @@ public:
      *
      * @param buffer The buffer to append.
      */
-    void readq_append(GWBUF* buffer)
-    {
-        m_readq = gwbuf_append(m_readq, buffer);
-    }
+    void readq_append(GWBUF* buffer) { m_readq = gwbuf_append(m_readq, buffer); }
 
     /**
      * @brief Prepend a buffer the DCB's readqueue
      *
      * @param buffer The buffer to prepend
      */
-    void readq_prepend(GWBUF* buffer)
-    {
-        m_readq = m_readq ? gwbuf_append(buffer, m_readq) : buffer;
-    }
+    void readq_prepend(GWBUF* buffer) { m_readq = m_readq ? gwbuf_append(buffer, m_readq) : buffer; }
 
     /**
      * @brief Returns the read queue of the DCB and sets the read queue to NULL.
@@ -445,7 +388,7 @@ public:
     GWBUF* readq_release()
     {
         GWBUF* readq = m_readq;
-        m_readq = NULL;
+        m_readq      = NULL;
         return readq;
     }
 
@@ -472,30 +415,15 @@ public:
         m_readq = buffer;
     }
 
-    int64_t last_read() const
-    {
-        return m_last_read;
-    }
+    int64_t last_read() const { return m_last_read; }
 
-    int64_t last_write() const
-    {
-        return m_last_write;
-    }
+    int64_t last_write() const { return m_last_write; }
 
-    bool is_closed() const
-    {
-        return m_nClose != 0;
-    }
+    bool is_closed() const { return m_nClose != 0; }
 
-    bool hanged_up() const
-    {
-        return m_hanged_up;
-    }
+    bool hanged_up() const { return m_hanged_up; }
 
-    bool is_polling() const
-    {
-        return m_state == State::POLLING;
-    }
+    bool is_polling() const { return m_state == State::POLLING; }
 
     /**
      * Will cause an EPOLL[R]HUP event to be delivered when the current
@@ -532,21 +460,15 @@ public:
 
     struct CALLBACK
     {
-        Reason           reason;    /*< The reason for the callback */
-        int              (* cb)(DCB* dcb, Reason reason, void* userdata);
-        void*            userdata;  /*< User data to be sent in the callback */
-        struct CALLBACK* next;      /*< Next callback for this DCB */
+        Reason reason; /*< The reason for the callback */
+        int (*cb)(DCB* dcb, Reason reason, void* userdata);
+        void* userdata;        /*< User data to be sent in the callback */
+        struct CALLBACK* next; /*< Next callback for this DCB */
     };
 
-    static void destroy(DCB* dcb)
-    {
-        dcb->destroy();
-    }
+    static void destroy(DCB* dcb) { dcb->destroy(); }
 
-    bool is_fake_event() const
-    {
-        return m_is_fake_event;
-    }
+    bool is_fake_event() const { return m_is_fake_event; }
 
     /**
      * Sets the owner of the DCB.
@@ -639,60 +561,61 @@ protected:
 
     struct Encryption
     {
-        SSL*     handle = nullptr;                      /**< SSL handle for connection */
-        SSLState state = SSLState::HANDSHAKE_UNKNOWN;   /**< Current state of SSL if in use */
-        bool     read_want_read = false;
-        bool     read_want_write = false;
-        bool     write_want_read = false;
-        bool     write_want_write = false;
-        bool     verify_host = false;
+        SSL* handle           = nullptr;                     /**< SSL handle for connection */
+        SSLState state        = SSLState::HANDSHAKE_UNKNOWN; /**< Current state of SSL if in use */
+        bool read_want_read   = false;
+        bool read_want_write  = false;
+        bool write_want_read  = false;
+        bool write_want_write = false;
+        bool verify_host      = false;
     };
 
-    const uint64_t    m_uid;                        /**< Unique identifier for this DCB */
-    int               m_fd;                         /**< The descriptor */
-    const std::string m_remote;                     /**< The remote host */
-    const std::string m_client_remote;              /**< The host of the client that created this connection
+    const uint64_t m_uid;                     /**< Unique identifier for this DCB */
+    int m_fd;                                 /**< The descriptor */
+    const std::string m_remote;               /**< The remote host */
+    const std::string m_client_remote;        /**< The host of the client that created this connection
                                                      * */
-    const Role        m_role;                       /**< The role of the DCB */
-    MXS_SESSION*      m_session;                    /**< The owning session */
-    Handler*          m_handler;                    /**< The event handler of the DCB */
-    Manager*          m_manager;                    /**< The DCB manager to use */
-    int64_t           m_last_read;                  /**< Last time the DCB received data */
-    int64_t           m_last_write;                 /**< Last time the DCB sent data */
-    const uint64_t    m_high_water;                 /**< High water mark of write queue */
-    const uint64_t    m_low_water;                  /**< Low water mark of write queue */
-    State             m_state = State::CREATED;     /**< Current state */
-    Encryption        m_encryption;                 /**< Encryption state */
-    Stats             m_stats;                      /**< DCB related statistics */
-    CALLBACK*         m_callbacks = nullptr;        /**< The list of callbacks for the DCB */
-    bool              m_high_water_reached = false; /**< High water mark reached, to determine whether we need
+    const Role m_role;                        /**< The role of the DCB */
+    MXS_SESSION* m_session;                   /**< The owning session */
+    Handler* m_handler;                       /**< The event handler of the DCB */
+    Manager* m_manager;                       /**< The DCB manager to use */
+    int64_t m_last_read;                      /**< Last time the DCB received data */
+    int64_t m_last_write;                     /**< Last time the DCB sent data */
+    const uint64_t m_high_water;              /**< High water mark of write queue */
+    const uint64_t m_low_water;               /**< Low water mark of write queue */
+    State m_state = State::CREATED;           /**< Current state */
+    Encryption m_encryption;                  /**< Encryption state */
+    Stats m_stats;                            /**< DCB related statistics */
+    CALLBACK* m_callbacks          = nullptr; /**< The list of callbacks for the DCB */
+    bool m_high_water_reached      = false;   /**< High water mark reached, to determine whether we need
                                                      * to release throttle */
-    uint64_t m_writeqlen = 0;                       /**< Bytes in writeq */
-    GWBUF*   m_writeq = nullptr;                    /**< Write Data Queue */
-    GWBUF*   m_readq = nullptr;                     /**< Read queue for incomplete reads */
-    uint32_t m_triggered_event = 0;                 /**< Triggered event to be delivered to handler */
-    uint32_t m_triggered_event_old = 0;             /**< Triggered event before disabling events */
-    uint32_t m_nClose = 0;                          /**< How many times dcb_close has been called. */
-    bool     m_hanged_up = false;                   /**< Has thethis can be called only once */
-    bool     m_is_fake_event = false;
-    bool     m_silence_errors = false;
+    uint64_t m_writeqlen           = 0;       /**< Bytes in writeq */
+    GWBUF* m_writeq                = nullptr; /**< Write Data Queue */
+    GWBUF* m_readq                 = nullptr; /**< Read queue for incomplete reads */
+    uint32_t m_triggered_event     = 0;       /**< Triggered event to be delivered to handler */
+    uint32_t m_triggered_event_old = 0;       /**< Triggered event before disabling events */
+    uint32_t m_nClose              = 0;       /**< How many times dcb_close has been called. */
+    bool m_hanged_up               = false;   /**< Has thethis can be called only once */
+    bool m_is_fake_event           = false;
+    bool m_silence_errors          = false;
+
 private:
     friend class Manager;
 
     GWBUF* basic_read(int bytesavailable, int maxbytes, int nreadtotal, int* nsingleread);
 
-    int    read_SSL(GWBUF** head);
+    int read_SSL(GWBUF** head);
     GWBUF* basic_read_SSL(int* nsingleread);
 
     int socket_write_SSL(GWBUF* writeq, bool* stop_writing);
     int socket_write(GWBUF* writeq, bool* stop_writing);
 
-    void        destroy();
+    void destroy();
     static void free(DCB* dcb);
 
     static uint32_t poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
     static uint32_t event_handler(DCB* dcb, uint32_t events);
-    uint32_t        process_events(uint32_t events);
+    uint32_t process_events(uint32_t events);
 
     class FakeEventTask;
     friend class FakeEventTask;
@@ -707,18 +630,14 @@ class ClientDCB : public DCB
 public:
     ~ClientDCB() override;
 
-    static ClientDCB*
-    create(int fd,
-           const std::string& remote,
-           const sockaddr_storage& ip,
-           MXS_SESSION* session,
-           std::unique_ptr<mxs::ClientConnection> protocol,
-           DCB::Manager* manager = nullptr);
+    static ClientDCB* create(int fd,
+        const std::string& remote,
+        const sockaddr_storage& ip,
+        MXS_SESSION* session,
+        std::unique_ptr<mxs::ClientConnection> protocol,
+        DCB::Manager* manager = nullptr);
 
-    const sockaddr_storage& ip() const
-    {
-        return m_ip;
-    }
+    const sockaddr_storage& ip() const { return m_ip; }
 
     /**
      * @brief Return the port number this DCB is connected to
@@ -743,32 +662,33 @@ public:
 protected:
     // Only for InternalDCB.
     ClientDCB(int fd,
-              const std::string& remote,
-              const sockaddr_storage& ip,
-              DCB::Role role,
-              MXS_SESSION* session,
-              std::unique_ptr<mxs::ClientConnection> protocol,
-              Manager* manager);
+        const std::string& remote,
+        const sockaddr_storage& ip,
+        DCB::Role role,
+        MXS_SESSION* session,
+        std::unique_ptr<mxs::ClientConnection> protocol,
+        Manager* manager);
 
     // Only for Mock DCB.
     ClientDCB(int fd, const std::string& remote, DCB::Role role, MXS_SESSION* session);
 
 private:
     ClientDCB(int fd,
-              const std::string& remote,
-              const sockaddr_storage& ip,
-              MXS_SESSION* session,
-              std::unique_ptr<mxs::ClientConnection> protocol,
-              DCB::Manager* manager);
+        const std::string& remote,
+        const sockaddr_storage& ip,
+        MXS_SESSION* session,
+        std::unique_ptr<mxs::ClientConnection> protocol,
+        DCB::Manager* manager);
 
     bool release_from(MXS_SESSION* session) override;
     bool prepare_for_destruction() override;
 
-    sockaddr_storage                       m_ip;                /**< remote IPv4/IPv6 address */
-    std::unique_ptr<mxs::ClientConnection> m_protocol;          /**< The protocol session */
+    sockaddr_storage m_ip;                             /**< remote IPv4/IPv6 address */
+    std::unique_ptr<mxs::ClientConnection> m_protocol; /**< The protocol session */
 };
 
 class Session;
+
 class BackendDCB : public DCB
 {
 public:
@@ -806,12 +726,9 @@ public:
      * @param server  BackendDCBs connected to this server should be closed.
      */
     static void hangup(const SERVER* server);
-    void        shutdown() override;
+    void shutdown() override;
 
-    SERVER* server() const
-    {
-        return m_server;
-    }
+    SERVER* server() const { return m_server; }
 
     /**
      * Initate an SSL handshake with a server.
@@ -825,15 +742,14 @@ public:
     void set_connection(std::unique_ptr<mxs::BackendConnection> conn);
 
 private:
-    BackendDCB(SERVER* server, int fd, MXS_SESSION* session,
-               DCB::Manager* manager);
+    BackendDCB(SERVER* server, int fd, MXS_SESSION* session, DCB::Manager* manager);
 
     bool release_from(MXS_SESSION* session) override;
     bool prepare_for_destruction() override;
 
     static void hangup_cb(MXB_WORKER* worker, const SERVER* server);
 
-    SERVER* const                           m_server;   /**< The associated backend server */
+    SERVER* const m_server;                             /**< The associated backend server */
     std::unique_ptr<mxs::BackendConnection> m_protocol; /**< The protocol session */
 };
 
@@ -842,7 +758,7 @@ namespace maxscale
 
 const char* to_string(DCB::Role role);
 const char* to_string(DCB::State state);
-}
+}  // namespace maxscale
 
 /**
  * Debug printing all DCBs from within a debugger.
@@ -880,7 +796,7 @@ uint64_t dcb_get_session_id(DCB* dcb);
  * @param data User provided data passed as the second parameter to @c func
  * @return True if all DCBs were iterated, false if the callback returned false
  */
-bool dcb_foreach(bool (* func)(DCB* dcb, void* data), void* data);
+bool dcb_foreach(bool (*func)(DCB* dcb, void* data), void* data);
 
 /**
  * @brief Call a function for each connected DCB on the current worker
@@ -891,7 +807,7 @@ bool dcb_foreach(bool (* func)(DCB* dcb, void* data), void* data);
  *
  * @param data User provided data passed as the second parameter to @c func
  */
-void dcb_foreach_local(bool (* func)(DCB* dcb, void* data), void* data);
+void dcb_foreach_local(bool (*func)(DCB* dcb, void* data), void* data);
 
 /**
  * @brief Return the DCB currently being handled by the calling thread.

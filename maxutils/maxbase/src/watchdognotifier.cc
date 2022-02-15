@@ -27,7 +27,7 @@ static struct ThisUnit
 {
     maxbase::WatchdogNotifier* pNotifier = nullptr;
 } this_unit;
-}
+}  // namespace
 
 namespace maxbase
 {
@@ -41,7 +41,7 @@ namespace maxbase
  */
 class WatchdogNotifier::Dependent::Ticker
 {
-    Ticker(const Ticker&) = delete;
+    Ticker(const Ticker&)            = delete;
     Ticker& operator=(const Ticker&) = delete;
 
 public:
@@ -73,7 +73,7 @@ public:
 
     void stop()
     {
-        MXB_AT_DEBUG(int clients = ) m_nClients.fetch_sub(1, std::memory_order_relaxed);
+        MXB_AT_DEBUG(int clients =) m_nClients.fetch_sub(1, std::memory_order_relaxed);
         mxb_assert(clients > 0);
     }
 
@@ -98,11 +98,11 @@ private:
 
     using Guard = std::unique_lock<std::mutex>;
 
-    Dependent&             m_owner;
-    std::atomic<int>       m_nClients;
-    std::atomic<bool>      m_terminate;
-    std::thread            m_thread;
-    std::mutex             m_lock;
+    Dependent& m_owner;
+    std::atomic<int> m_nClients;
+    std::atomic<bool> m_terminate;
+    std::thread m_thread;
+    std::mutex m_lock;
     mxb::ConditionVariable m_cond;
 };
 
@@ -142,8 +142,8 @@ void WatchdogNotifier::Dependent::stop_watchdog_workaround()
 }
 
 WatchdogNotifier::WatchdogNotifier(uint64_t usecs)
-// The internal timeout is 1/2 of the systemd configured interval. Note that
-// the argument is in usecs, but the interval is stored in secs.
+    // The internal timeout is 1/2 of the systemd configured interval. Note that
+    // the argument is in usecs, but the interval is stored in secs.
     : m_interval(usecs / 2000000)
 {
     mxb_assert(this_unit.pNotifier == nullptr);
@@ -151,8 +151,7 @@ WatchdogNotifier::WatchdogNotifier(uint64_t usecs)
 
     if (m_interval.count() != 0)
     {
-        MXB_NOTICE("The systemd watchdog is Enabled. Internal timeout = %s\n",
-                   to_string(m_interval).c_str());
+        MXB_NOTICE("The systemd watchdog is Enabled. Internal timeout = %s\n", to_string(m_interval).c_str());
     }
 }
 
@@ -220,17 +219,15 @@ void WatchdogNotifier::notify_systemd_watchdog()
 {
     unique_lock<mutex> guard(m_dependents_lock);
 
-    bool all_ticking = std::all_of(
-        m_dependents.begin(), m_dependents.end(), [](Dependent* pDependent) {
-            return pDependent->is_ticking();
-        });
+    bool all_ticking = std::all_of(m_dependents.begin(), m_dependents.end(), [](Dependent* pDependent) {
+        return pDependent->is_ticking();
+    });
 
     if (all_ticking)
     {
-        std::for_each(
-            m_dependents.begin(), m_dependents.end(), [](Dependent* pDependent) {
-                pDependent->mark_not_ticking();
-            });
+        std::for_each(m_dependents.begin(), m_dependents.end(), [](Dependent* pDependent) {
+            pDependent->mark_not_ticking();
+        });
     }
 
     guard.unlock();
@@ -243,4 +240,4 @@ void WatchdogNotifier::notify_systemd_watchdog()
 #endif
     }
 }
-}
+}  // namespace maxbase

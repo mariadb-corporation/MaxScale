@@ -23,26 +23,26 @@ struct AuthResult
 {
     enum class Result
     {
-        SUCCESS,                /**< Authentication succeeded */
-        WRONG_USER_PW,          /**< Username or password was wrong */
-        ACCOUNT_INVALID,        /**< pam_acct_mgmt returned error */
-        MISC_ERROR              /**< Miscellaneous error */
+        SUCCESS,         /**< Authentication succeeded */
+        WRONG_USER_PW,   /**< Username or password was wrong */
+        ACCOUNT_INVALID, /**< pam_acct_mgmt returned error */
+        MISC_ERROR       /**< Miscellaneous error */
     };
 
-    Result      type {Result::MISC_ERROR};
+    Result type {Result::MISC_ERROR};
     std::string error;
 };
 
 enum class AuthMode
 {
-    PW,         /**< Password only */
-    PW_2FA      /**< Password + 2FA code */
+    PW,    /**< Password only */
+    PW_2FA /**< Password + 2FA code */
 };
 
 struct UserData
 {
-    std::string username;   /**< Username */
-    std::string remote;     /**< Client remote address */
+    std::string username; /**< Username */
+    std::string remote;   /**< Client remote address */
 };
 
 /**
@@ -72,8 +72,7 @@ struct ExpectedMsgs
  * @param service Which PAM service is the user logging to
  * @return A result struct with the result and an error message.
  */
-AuthResult
-authenticate(const std::string& user, const std::string& password, const std::string& service);
+AuthResult authenticate(const std::string& user, const std::string& password, const std::string& service);
 
 /**
  * Authenticate user into the given PAM service. This function will block until the
@@ -86,9 +85,11 @@ authenticate(const std::string& user, const std::string& password, const std::st
  * @param exp_msgs Password queries expected from PAM api
  * @return A result struct with the result and an error message.
  */
-AuthResult
-authenticate(AuthMode mode, const UserData& user, const PwdData& pwds, const std::string& service,
-             const ExpectedMsgs& exp_msgs);
+AuthResult authenticate(AuthMode mode,
+    const UserData& user,
+    const PwdData& pwds,
+    const std::string& service,
+    const ExpectedMsgs& exp_msgs);
 
 /**
  * Does pam prompt match the expected message? The prompt matches if the prompt begins with the expected
@@ -99,5 +100,5 @@ authenticate(AuthMode mode, const UserData& user, const PwdData& pwds, const std
  * @return True on match
  */
 bool match_prompt(const char* prompt, const std::string& expected_start);
-}
-}
+}  // namespace pam
+}  // namespace maxbase

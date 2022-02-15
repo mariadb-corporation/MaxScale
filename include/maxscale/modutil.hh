@@ -31,7 +31,10 @@
 #define IS_FULL_RESPONSE(buf)  (modutil_count_signal_packets(buf, 0, 0) == 2)
 
 /** Static initialization define for modutil_state */
-#define MODUTIL_STATE_INIT {0}
+#define MODUTIL_STATE_INIT \
+    {                      \
+        0                  \
+    }
 
 /**
  * Check if a GWBUF structure is a MySQL COM_QUERY packet
@@ -48,7 +51,7 @@ inline bool modutil_is_SQL(GWBUF* buf)
         return 0;
     }
     ptr = GWBUF_DATA(buf);
-    return ptr[4] == 0x03;          // COM_QUERY
+    return ptr[4] == 0x03;  // COM_QUERY
 }
 
 /**
@@ -66,7 +69,7 @@ inline bool modutil_is_SQL_prepare(GWBUF* buf)
         return 0;
     }
     ptr = GWBUF_DATA(buf);
-    return ptr[4] == 0x16;          // COM_STMT_PREPARE
+    return ptr[4] == 0x16;  // COM_STMT_PREPARE
 }
 
 /**
@@ -95,13 +98,13 @@ inline bool modutil_extract_SQL(GWBUF* buf, char** sql, int* length)
     {
         return 0;
     }
-    ptr = GWBUF_DATA(buf);
+    ptr     = GWBUF_DATA(buf);
     *length = *ptr++;
     *length += (*ptr++ << 8);
     *length += (*ptr++ << 16);
-    ptr += 2;   // Skip sequence id  and COM_QUERY byte
+    ptr += 2;  // Skip sequence id  and COM_QUERY byte
     *length = *length - 1;
-    *sql = (char*)ptr;
+    *sql    = (char*) ptr;
     return 1;
 }
 
@@ -131,22 +134,23 @@ inline bool modutil_MySQL_Query(GWBUF* buf, char** sql, int* length, int* residu
     {
         return 0;
     }
-    ptr = GWBUF_DATA(buf);
+    ptr       = GWBUF_DATA(buf);
     *residual = *ptr++;
     *residual += (*ptr++ << 8);
     *residual += (*ptr++ << 16);
-    ptr += 2;   // Skip sequence id  and COM_QUERY byte
+    ptr += 2;  // Skip sequence id  and COM_QUERY byte
     *residual = *residual - 1;
-    *length = GWBUF_LENGTH(buf) - 5;
+    *length   = GWBUF_LENGTH(buf) - 5;
     *residual -= *length;
-    *sql = (char*)ptr;
+    *sql = (char*) ptr;
     return 1;
 }
-extern char*  modutil_get_SQL(GWBUF*);
+
+extern char* modutil_get_SQL(GWBUF*);
 extern GWBUF* modutil_replace_SQL(GWBUF*, char*);
-extern char*  modutil_get_query(GWBUF* buf);
-GWBUF*        modutil_get_next_MySQL_packet(GWBUF** p_readbuf);
-GWBUF*        modutil_get_complete_packets(GWBUF** p_readbuf);
+extern char* modutil_get_query(GWBUF* buf);
+GWBUF* modutil_get_next_MySQL_packet(GWBUF** p_readbuf);
+GWBUF* modutil_get_complete_packets(GWBUF** p_readbuf);
 
 /**
  * Calculate the length of MySQL packet and how much is missing from the GWBUF
@@ -171,9 +175,9 @@ inline int modutil_MySQL_query_len(GWBUF* buf, int* nbytes_missing)
         len = 0;
         goto retblock;
     }
-    len = MYSQL_GET_PAYLOAD_LEN((uint8_t*)GWBUF_DATA(buf));
+    len             = MYSQL_GET_PAYLOAD_LEN((uint8_t*) GWBUF_DATA(buf));
     *nbytes_missing = len - 1;
-    buflen = gwbuf_length(buf);
+    buflen          = gwbuf_length(buf);
 
     *nbytes_missing -= buflen - 5;
 
@@ -181,12 +185,12 @@ retblock:
     return len;
 }
 
-int           modutil_count_statements(GWBUF* buffer);
-int           modutil_count_packets(GWBUF* buffer);
+int modutil_count_statements(GWBUF* buffer);
+int modutil_count_packets(GWBUF* buffer);
 
 GWBUF* modutil_create_query(const char* query);
-GWBUF* modutil_create_mysql_err_msg(int packet_number, int affected_rows, int merrno,
-                                    const char* statemsg, const char* msg);
+GWBUF* modutil_create_mysql_err_msg(
+    int packet_number, int affected_rows, int merrno, const char* statemsg, const char* msg);
 GWBUF* modutil_create_ok();
 GWBUF* modutil_create_eof(uint8_t sequence);
 
@@ -247,8 +251,8 @@ GWBUF* modutil_create_ignorable_ping();
 /** Character and token searching functions */
 char* strnchr_esc(char* ptr, char c, int len);
 char* strnchr_esc_mysql(char* ptr, char c, int len);
-bool  is_mysql_statement_end(const char* start, int len);
-bool  is_mysql_sp_end(const char* start, int len);
+bool is_mysql_statement_end(const char* start, int len);
+bool is_mysql_sp_end(const char* start, int len);
 char* modutil_get_canonical(GWBUF* querybuf);
 
 // TODO: Move modutil out of the core
@@ -297,4 +301,4 @@ std::string get_canonical(GWBUF* buffer);
  * @return A buffer with at most `ptk` packets in it
  */
 GWBUF* truncate_packets(GWBUF* b, uint64_t pkt);
-}
+}  // namespace maxscale

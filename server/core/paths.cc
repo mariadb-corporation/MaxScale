@@ -18,26 +18,25 @@
 #include <maxbase/alloc.h>
 #include <maxscale/utils.hh>
 
-
 namespace
 {
 struct
 {
-    std::string configdir = MXS_DEFAULT_CONFIGDIR;
-    std::string config_persistdir = MXS_DEFAULT_CONFIG_PERSISTDIR;
-    std::string module_configdir = MXS_DEFAULT_MODULE_CONFIGDIR;
-    std::string logdir = MXS_DEFAULT_LOGDIR;
-    std::string libdir = MXS_DEFAULT_LIBDIR;
-    std::string sharedir = MXS_DEFAULT_SHAREDIR;
-    std::string cachedir = MXS_DEFAULT_CACHEDIR;
-    std::string datadir = MXS_DEFAULT_DATADIR;
-    std::string processdatadir = MXS_DEFAULT_DATADIR;
-    std::string langdir = MXS_DEFAULT_LANGDIR;
-    std::string piddir = MXS_DEFAULT_PIDDIR;
-    std::string execdir = MXS_DEFAULT_EXECDIR;
+    std::string configdir           = MXS_DEFAULT_CONFIGDIR;
+    std::string config_persistdir   = MXS_DEFAULT_CONFIG_PERSISTDIR;
+    std::string module_configdir    = MXS_DEFAULT_MODULE_CONFIGDIR;
+    std::string logdir              = MXS_DEFAULT_LOGDIR;
+    std::string libdir              = MXS_DEFAULT_LIBDIR;
+    std::string sharedir            = MXS_DEFAULT_SHAREDIR;
+    std::string cachedir            = MXS_DEFAULT_CACHEDIR;
+    std::string datadir             = MXS_DEFAULT_DATADIR;
+    std::string processdatadir      = MXS_DEFAULT_DATADIR;
+    std::string langdir             = MXS_DEFAULT_LANGDIR;
+    std::string piddir              = MXS_DEFAULT_PIDDIR;
+    std::string execdir             = MXS_DEFAULT_EXECDIR;
     std::string connector_plugindir = MXS_DEFAULT_CONNECTOR_PLUGINDIR;
 } this_unit;
-}
+}  // namespace
 
 namespace maxscale
 {
@@ -171,4 +170,4 @@ const char* connector_plugindir()
 {
     return this_unit.connector_plugindir.c_str();
 }
-}
+}  // namespace maxscale

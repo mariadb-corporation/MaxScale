@@ -22,12 +22,12 @@
 
 #define NTHR 10
 
-static int running = 0;
+static int running  = 0;
 static int expected = 0;
 
 void test_add(void* data)
 {
-    int id = (size_t)data;
+    int id = (size_t) data;
 
     while (atomic_load_int32(&running))
     {
@@ -39,7 +39,7 @@ void test_add(void* data)
 
 void test_load_store(void* data)
 {
-    int id = (size_t)data;
+    int id = (size_t) data;
 
     while (atomic_load_int32(&running))
     {
@@ -50,11 +50,11 @@ void test_load_store(void* data)
     }
 }
 
-static void* cas_dest = (void*)1;
+static void* cas_dest = (void*) 1;
 
 void test_cas(void* data)
 {
-    size_t id = (size_t)data - 1;
+    size_t id        = (size_t) data - 1;
     static int loops = 0;
 
     while (atomic_load_int32(&running))
@@ -64,8 +64,8 @@ void test_cas(void* data)
 
         do
         {
-            my_value = (void*)((id + 1) % NTHR);
-            my_expected = (void*)id;
+            my_value    = (void*) ((id + 1) % NTHR);
+            my_expected = (void*) id;
         }
         while (!atomic_cas_ptr(&cas_dest, &my_expected, my_value));
 
@@ -75,7 +75,7 @@ void test_cas(void* data)
     mxb_assert(loops > 0);
 }
 
-int run_test(void (* func)(void*))
+int run_test(void (*func)(void*))
 {
     std::thread threads[NTHR];
 
@@ -84,7 +84,7 @@ int run_test(void (* func)(void*))
 
     for (size_t i = 0; i < NTHR; i++)
     {
-        threads[i] = std::thread(func, (void*)(i + 1));
+        threads[i] = std::thread(func, (void*) (i + 1));
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(2500));

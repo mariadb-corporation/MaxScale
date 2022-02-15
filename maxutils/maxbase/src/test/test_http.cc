@@ -51,19 +51,18 @@ int test_http_get()
 }
 
 int check_results(const vector<string>& urls,
-                  const vector<bool>& expected_successes,
-                  const vector<mxb::http::Result> results)
+    const vector<bool>& expected_successes,
+    const vector<mxb::http::Result> results)
 {
     int rv = EXIT_SUCCESS;
 
     for (size_t i = 0; i < urls.size(); ++i)
     {
-        const auto& url = urls[i];
-        auto& res = results[i];
+        const auto& url       = urls[i];
+        auto& res             = results[i];
         bool expected_success = expected_successes[i];
 
-        cout << url << " responded with: " << res.code
-             << (res.code < 0 ? (", " + res.body) : "") << endl;
+        cout << url << " responded with: " << res.code << (res.code < 0 ? (", " + res.body) : "") << endl;
 
         if (expected_success)
         {
@@ -106,7 +105,7 @@ int test_multi_http_get()
     cout << __func__ << endl;
 
     vector<string> urls = {"http://www.example.com/", "http://www.example.com/", "http://non-existent.xyz"};
-    vector<bool> expected_successes = {true, true, false};
+    vector<bool> expected_successes   = {true, true, false};
     vector<mxb::http::Result> results = mxb::http::get(urls);
 
     int rv = check_results(urls, expected_successes, results);
@@ -122,7 +121,7 @@ int test_async_http_get()
 
     vector<string> urls = {"http://www.example.com/", "http://www.example.com/", "http://non-existent.xyz"};
     vector<bool> expected_successes = {true, true, false};
-    mxb::http::Async http = mxb::http::get_async(urls);
+    mxb::http::Async http           = mxb::http::get_async(urls);
 
     while (http.perform(0) == mxb::http::Async::PENDING)
     {
@@ -168,8 +167,8 @@ int test_http_put(const string& body = string())
 
     mxb::http::Config config;
     config.headers["Content-Type"] = "application/json";
-    config.headers["Accept"] = "*/*";
-    auto res = mxb::http::put("http://postman-echo.com/put", body, config);
+    config.headers["Accept"]       = "*/*";
+    auto res                       = mxb::http::put("http://postman-echo.com/put", body, config);
     cout << "http://postman-echo.com/put responded with: " << res.code << endl;
     if (res.code == 200)
     {
@@ -189,11 +188,8 @@ int test_http_put(const string& body = string())
             }
             else
             {
-                cout << "Sent and returned JSON body not equal; sent = '"
-                     << body.data() << "', received = '"
-                     << res.body
-                     << "'."
-                     << endl;
+                cout << "Sent and returned JSON body not equal; sent = '" << body.data() << "', received = '"
+                     << res.body << "'." << endl;
             }
 
             json_decref(pBody);
@@ -222,14 +218,13 @@ int test_async_http_put(const string& body = string())
 
     int rv = EXIT_FAILURE;
 
-    vector<string> urls = {"http://postman-echo.com/put",
-                           "http://postman-echo.com/put",
-                           "http://postman-echo.com/put"};
+    vector<string> urls
+        = {"http://postman-echo.com/put", "http://postman-echo.com/put", "http://postman-echo.com/put"};
     vector<bool> expected_successes = {true, true, true};
     mxb::http::Config config;
     config.headers["Content-Type"] = "application/json";
-    config.headers["Accept"] = "*/*";
-    mxb::http::Async http = mxb::http::put_async(urls, body, config);
+    config.headers["Accept"]       = "*/*";
+    mxb::http::Async http          = mxb::http::put_async(urls, body, config);
 
     while (http.perform(0) == mxb::http::Async::PENDING)
     {
@@ -258,7 +253,7 @@ int test_async_http_put(const string& body = string())
     return rv == EXIT_FAILURE ? 1 : 0;
 }
 
-}
+}  // namespace
 
 int main()
 {

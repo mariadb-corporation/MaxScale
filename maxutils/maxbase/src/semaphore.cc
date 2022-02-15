@@ -18,15 +18,13 @@ namespace maxbase
 {
 
 // static
-void Semaphore::get_current_timespec(time_t seconds,
-                                     long nseconds,
-                                     timespec* pTs)
+void Semaphore::get_current_timespec(time_t seconds, long nseconds, timespec* pTs)
 {
     mxb_assert(nseconds <= 999999999);
 
     timespec& ts = *pTs;
 
-    MXB_AT_DEBUG(int rc = ) clock_gettime(CLOCK_REALTIME, &ts);
+    MXB_AT_DEBUG(int rc =) clock_gettime(CLOCK_REALTIME, &ts);
     mxb_assert(rc == 0);
 
     ts.tv_sec += seconds;
@@ -41,4 +39,4 @@ void Semaphore::get_current_timespec(time_t seconds,
 
     ts.tv_nsec = nseconds_sum;
 }
-}
+}  // namespace maxbase

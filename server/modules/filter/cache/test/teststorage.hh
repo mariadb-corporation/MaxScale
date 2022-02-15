@@ -34,25 +34,23 @@ public:
 
 protected:
     TestStorage(std::ostream* pOut,
-                size_t threads = DEFAULT_THREADS,
-                size_t seconds = DEFAULT_SECONDS,
-                size_t items = DEFAULT_ITEMS,
-                size_t min_size = DEFAULT_MIN_SIZE,
-                size_t max_size = DEFAULT_MAX_SIZE);
+        size_t threads  = DEFAULT_THREADS,
+        size_t seconds  = DEFAULT_SECONDS,
+        size_t items    = DEFAULT_ITEMS,
+        size_t min_size = DEFAULT_MIN_SIZE,
+        size_t max_size = DEFAULT_MAX_SIZE);
 
     virtual int execute(StorageFactory& factory,
-                        size_t threads,
-                        size_t seconds,
-                        size_t items,
-                        size_t min_size,
-                        size_t max_size) = 0;
+        size_t threads,
+        size_t seconds,
+        size_t items,
+        size_t min_size,
+        size_t max_size)
+        = 0;
 
     virtual void print_usage(const char* zProgram);
 
-    std::ostream& out() const
-    {
-        return m_out;
-    }
+    std::ostream& out() const { return m_out; }
 
 private:
     TestStorage(const TestStorage&);
@@ -60,9 +58,9 @@ private:
 
 private:
     std::ostream& m_out;
-    size_t        m_threads;
-    size_t        m_seconds;
-    size_t        m_items;
-    size_t        m_min_size;
-    size_t        m_max_size;
+    size_t m_threads;
+    size_t m_seconds;
+    size_t m_items;
+    size_t m_min_size;
+    size_t m_max_size;
 };

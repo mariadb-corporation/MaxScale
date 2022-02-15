@@ -24,28 +24,26 @@ using maxbase::string_printf;
 namespace
 {
 // Used for Slave_IO_Running
-const char YES[] = "Yes";
-const char PREPARING[] = "Preparing";
+const char YES[]        = "Yes";
+const char PREPARING[]  = "Preparing";
 const char CONNECTING[] = "Connecting";
-const char NO[] = "No";
-}
+const char NO[]         = "No";
+}  // namespace
 
 SlaveStatus::SlaveStatus(const std::string& owner)
     : settings(owner)
-{
-}
+{}
 
 string SlaveStatus::to_string() const
 {
     // Print all of this on the same line to make things compact. Are the widths reasonable? The format is
     // not quite array-like since usually there is just one row. May be changed later.
     // Form the components of the line.
-    string running_states = string_printf("%s/%s",
-                                          slave_io_to_string(slave_io_running).c_str(),
-                                          slave_sql_running ? "Yes" : "No");
+    string running_states = string_printf(
+        "%s/%s", slave_io_to_string(slave_io_running).c_str(), slave_sql_running ? "Yes" : "No");
 
-    string rval = string_printf(
-        "  Host: %22s, IO/SQL running: %7s, Master ID: %4" PRId64 ", Gtid_IO_Pos: %s, R.Lag: %ld",
+    string rval = string_printf("  Host: %22s, IO/SQL running: %7s, Master ID: %4" PRId64
+                                ", Gtid_IO_Pos: %s, R.Lag: %ld",
         settings.master_endpoint.to_string().c_str(),
         running_states.c_str(),
         master_server_id,
@@ -58,13 +56,15 @@ std::string SlaveStatus::Settings::to_string() const
 {
     if (name.empty())
     {
-        return string_printf("Slave connection from %s to %s",
-                             m_owner.c_str(), master_endpoint.to_string().c_str());
+        return string_printf(
+            "Slave connection from %s to %s", m_owner.c_str(), master_endpoint.to_string().c_str());
     }
     else
     {
         return string_printf("Slave connection '%s' from %s to %s",
-                             name.c_str(), m_owner.c_str(), master_endpoint.to_string().c_str());
+            name.c_str(),
+            m_owner.c_str(),
+            master_endpoint.to_string().c_str());
     }
 }
 
@@ -74,13 +74,13 @@ json_t* SlaveStatus::to_json() const
     json_object_set_new(result, "connection_name", json_string(settings.name.c_str()));
     json_object_set_new(result, "master_host", json_string(settings.master_endpoint.host().c_str()));
     json_object_set_new(result, "master_port", json_integer(settings.master_endpoint.port()));
-    json_object_set_new(result,
-                        "slave_io_running",
-                        json_string(slave_io_to_string(slave_io_running).c_str()));
+    json_object_set_new(
+        result, "slave_io_running", json_string(slave_io_to_string(slave_io_running).c_str()));
     json_object_set_new(result, "slave_sql_running", json_string(slave_sql_running ? "Yes" : "No"));
-    json_object_set_new(result, "seconds_behind_master",
-                        seconds_behind_master == mxs::Target::RLAG_UNDEFINED ? json_null() :
-                        json_integer(seconds_behind_master));
+    json_object_set_new(result,
+        "seconds_behind_master",
+        seconds_behind_master == mxs::Target::RLAG_UNDEFINED ? json_null()
+                                                             : json_integer(seconds_behind_master));
     json_object_set_new(result, "master_server_id", json_integer(master_server_id));
     json_object_set_new(result, "last_io_error", json_string(last_io_error.c_str()));
     json_object_set_new(result, "last_sql_error", json_string(last_sql_error.c_str()));
@@ -92,11 +92,9 @@ bool SlaveStatus::equal(const SlaveStatus& rhs) const
 {
     // Strictly speaking, the following should depend on the 'assume_unique_hostnames',
     // but the situations it would make a difference are so rare they can be ignored.
-    return slave_io_running == rhs.slave_io_running
-           && slave_sql_running == rhs.slave_sql_running
-           && settings.master_endpoint == rhs.settings.master_endpoint
-           && settings.name == rhs.settings.name
-           && master_server_id == rhs.master_server_id;
+    return slave_io_running == rhs.slave_io_running && slave_sql_running == rhs.slave_sql_running
+        && settings.master_endpoint == rhs.settings.master_endpoint && settings.name == rhs.settings.name
+        && master_server_id == rhs.master_server_id;
 }
 
 SlaveStatus::slave_io_running_t SlaveStatus::slave_io_from_string(const std::string& str)
@@ -144,24 +142,24 @@ string SlaveStatus::slave_io_to_string(SlaveStatus::slave_io_running_t slave_io)
 
 bool SlaveStatus::should_be_copied(string* ignore_reason_out) const
 {
-    bool accepted = true;
+    bool accepted  = true;
     auto master_id = master_server_id;
     // The connection is only copied if it is running or at least has been seen running.
     // Also, target should not be this server.
     string ignore_reason;
     if (!slave_sql_running)
     {
-        accepted = false;
+        accepted      = false;
         ignore_reason = "its slave sql thread is not running.";
     }
     else if (!seen_connected)
     {
-        accepted = false;
+        accepted      = false;
         ignore_reason = "it has not been seen connected to master.";
     }
     else if (master_id <= 0)
     {
-        accepted = false;
+        accepted      = false;
         ignore_reason = string_printf("its Master_Server_Id (%" PRIi64 ") is invalid .", master_id);
     }
 
@@ -176,50 +174,45 @@ SlaveStatus::Settings::Settings(const std::string& name, const EndPoint& target,
     : name(name)
     , master_endpoint(target)
     , m_owner(owner)
-{
-}
+{}
 
 SlaveStatus::Settings::Settings(const std::string& name, const SERVER* target)
     : Settings(name, EndPoint(target), "")
-{
-}
+{}
 
 SlaveStatus::Settings::Settings(const std::string& owner)
     : m_owner(owner)
-{
-}
+{}
 
-ServerOperation::ServerOperation(MariaDBServer* target, bool was_is_master,
-                                 const SlaveStatusArray& conns_to_copy,
-                                 const EventNameSet& events_to_enable)
+ServerOperation::ServerOperation(MariaDBServer* target,
+    bool was_is_master,
+    const SlaveStatusArray& conns_to_copy,
+    const EventNameSet& events_to_enable)
     : target(target)
     , to_from_master(was_is_master)
     , conns_to_copy(conns_to_copy)
     , events_to_enable(events_to_enable)
-{
-}
+{}
 
 ServerOperation::ServerOperation(MariaDBServer* target, bool was_is_master)
-    : ServerOperation(target, was_is_master, SlaveStatusArray()    /* empty */, EventNameSet()    /* empty */)
-{
-}
+    : ServerOperation(target, was_is_master, SlaveStatusArray() /* empty */, EventNameSet() /* empty */)
+{}
 
 GeneralOpData::GeneralOpData(json_t** error, maxbase::Duration time_remaining)
     : error_out(error)
     , time_remaining(time_remaining)
-{
-}
+{}
 
 GtidList GtidList::from_string(const string& gtid_string)
 {
     mxb_assert(gtid_string.size());
     GtidList rval;
-    bool error = false;
-    bool have_more = false;
+    bool error      = false;
+    bool have_more  = false;
     const char* str = gtid_string.c_str();
     do
     {
-        char* endptr = NULL;
+        char* endptr     = NULL;
         auto new_triplet = Gtid::from_string(str, &endptr);
         if (new_triplet.m_server_id == SERVER_ID_UNKNOWN)
         {
@@ -232,7 +225,7 @@ GtidList GtidList::from_string(const string& gtid_string)
             if (*endptr == ',')
             {
                 have_more = true;
-                str = endptr + 1;
+                str       = endptr + 1;
             }
             else if (*endptr == '\0')
             {
@@ -301,8 +294,8 @@ uint64_t GtidList::events_ahead(const GtidList& rhs, substraction_mode_t domain_
         auto lhs_triplet = m_triplets[ind_lhs];
         auto rhs_triplet = rhs.m_triplets[ind_rhs];
         // Server id -1 should never be saved in a real gtid variable.
-        mxb_assert(lhs_triplet.m_server_id != SERVER_ID_UNKNOWN
-                   && rhs_triplet.m_server_id != SERVER_ID_UNKNOWN);
+        mxb_assert(
+            lhs_triplet.m_server_id != SERVER_ID_UNKNOWN && rhs_triplet.m_server_id != SERVER_ID_UNKNOWN);
         // Search for matching domain_id:s, advance the smaller one.
         if (lhs_triplet.m_domain < rhs_triplet.m_domain)
         {
@@ -349,14 +342,14 @@ Gtid Gtid::from_string(const char* str, char** endptr)
      *  buggy or network has faults, in which case nothing can be trusted. But without error checking
      *  MaxScale may crash if string is wrong. */
     mxb_assert(endptr);
-    const char* ptr = str;
+    const char* ptr       = str;
     char* strtoull_endptr = NULL;
     // Parse three numbers separated by -
     uint64_t parsed_numbers[3];
     bool error = false;
     for (int i = 0; i < 3 && !error; i++)
     {
-        errno = 0;
+        errno             = 0;
         parsed_numbers[i] = strtoull(ptr, &strtoull_endptr, 10);
         // Check for parse error. Even this is not quite enough because strtoull will silently convert
         // negative values. Yet, strtoull is required for the third value.
@@ -388,7 +381,7 @@ Gtid Gtid::from_string(const char* str, char** endptr)
     if (!error)
     {
         *endptr = strtoull_endptr;
-        return Gtid((uint32_t)parsed_numbers[0], parsed_numbers[1], parsed_numbers[2]);
+        return Gtid((uint32_t) parsed_numbers[0], parsed_numbers[1], parsed_numbers[2]);
     }
     else
     {
@@ -400,15 +393,13 @@ Gtid::Gtid()
     : m_domain(0)
     , m_server_id(SERVER_ID_UNKNOWN)
     , m_sequence(0)
-{
-}
+{}
 
 Gtid::Gtid(uint32_t domain, int64_t server_id, uint64_t sequence)
     : m_domain(domain)
     , m_server_id(server_id)
     , m_sequence(sequence)
-{
-}
+{}
 
 bool Gtid::eq(const Gtid& rhs) const
 {
@@ -430,10 +421,7 @@ Gtid GtidList::get_gtid(uint32_t domain) const
     Gtid rval;
     // Make a dummy triplet for the domain search
     Gtid search_val(domain, -1, 0);
-    auto found = std::lower_bound(m_triplets.begin(),
-                                  m_triplets.end(),
-                                  search_val,
-                                  Gtid::compare_domains);
+    auto found = std::lower_bound(m_triplets.begin(), m_triplets.end(), search_val, Gtid::compare_domains);
     if (found != m_triplets.end() && found->m_domain == domain)
     {
         rval = *found;
@@ -453,18 +441,15 @@ GtidList::DomainList GtidList::domains() const
 
 EndPoint::EndPoint(const std::string& host, int port)
     : m_host(host, port)
-{
-}
+{}
 
 EndPoint::EndPoint(const SERVER* server)
     : EndPoint(server->address(), server->port())
-{
-}
+{}
 
 EndPoint::EndPoint()
     : EndPoint("", PORT_UNKNOWN)
-{
-}
+{}
 
 bool EndPoint::operator==(const EndPoint& rhs) const
 {
@@ -479,7 +464,7 @@ std::string EndPoint::to_string() const
 void ServerLock::set_status(Status new_status, int64_t owner_id)
 {
     m_owner_id = (new_status == Status::UNKNOWN || new_status == Status::FREE) ? CONN_ID_UNKNOWN : owner_id;
-    m_status = new_status;
+    m_status   = new_status;
 }
 
 int64_t ServerLock::owner() const

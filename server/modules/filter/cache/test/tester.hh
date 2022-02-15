@@ -27,11 +27,12 @@ class Tester
 public:
     class Task;
 
-    typedef std::vector<std::string>                 Statements;
+    typedef std::vector<std::string> Statements;
     typedef std::vector<std::pair<CacheKey, GWBUF*>> CacheItems;
-    typedef std::vector<Task*>                       Tasks;
+    typedef std::vector<Task*> Tasks;
 
     class Thread;
+
     class Task
     {
     public:
@@ -52,38 +53,26 @@ public:
          *
          * @return True, if the task should terminate, i.e., return from @c run.
          */
-        bool should_terminate() const
-        {
-            return m_terminate;
-        }
+        bool should_terminate() const { return m_terminate; }
 
         /**
          * Tell the task to terminate.
          */
-        void terminate()
-        {
-            m_terminate = true;
-        }
+        void terminate() { m_terminate = true; }
 
         /**
          * Calls terminate on the provided task. For use in algorithms.
          *
          * @param pTask  The task to terminate.
          */
-        static void terminate_task(Task* pTask)
-        {
-            pTask->terminate();
-        }
+        static void terminate_task(Task* pTask) { pTask->terminate(); }
 
         /**
          * Deletes the provided task. For use in algorithms.
          *
          * @param pTask  The task to delete.
          */
-        static void free(Task* pTask)
-        {
-            delete pTask;
-        }
+        static void free(Task* pTask) { delete pTask; }
 
         /**
          * Predicate for finding out whether a task failed. To be called only
@@ -93,10 +82,7 @@ public:
          *
          * @return True, if the task failed.
          */
-        static bool failed(const Task* pTask)
-        {
-            return pTask->rv() == EXIT_FAILURE;
-        }
+        static bool failed(const Task* pTask) { return pTask->rv() == EXIT_FAILURE; }
 
         /**
          * What the @run function returned. Meaningful only after the task
@@ -104,20 +90,14 @@ public:
          *
          * @return  The value returned by @run.
          */
-        int rv() const
-        {
-            return m_rv;
-        }
+        int rv() const { return m_rv; }
 
         /**
          * The stream to be used for user output.
          *
          * @return  The output stream to be used.
          */
-        std::ostream& out() const
-        {
-            return m_out;
-        }
+        std::ostream& out() const { return m_out; }
 
     protected:
         /**
@@ -130,10 +110,8 @@ public:
 
     private:
         friend class Thread;
-        void set_rv(int rv)
-        {
-            m_rv = rv;
-        }
+
+        void set_rv(int rv) { m_rv = rv; }
 
     private:
         Task(const Task&);
@@ -141,8 +119,8 @@ public:
 
     private:
         std::ostream& m_out;
-        bool          m_terminate;
-        int           m_rv;
+        bool m_terminate;
+        int m_rv;
     };
 
     virtual ~Tester();
@@ -203,9 +181,8 @@ public:
      *
      * @return  Whether the conversion was successful.
      */
-    static bool get_cache_items(const Statements& statements,
-                                const StorageFactory& factory,
-                                CacheItems* pItems);
+    static bool get_cache_items(
+        const Statements& statements, const StorageFactory& factory, CacheItems* pItems);
 
     /**
      * Converts statements from a stream into cache items (i.e. key + GWBUF).
@@ -218,10 +195,8 @@ public:
      * @return  Whether reading and conversion was successful, not whether @n_items
      *          items were returned.
      */
-    static bool get_cache_items(std::istream& in,
-                                size_t n_items,
-                                const StorageFactory& factory,
-                                CacheItems* pItems);
+    static bool get_cache_items(
+        std::istream& in, size_t n_items, const StorageFactory& factory, CacheItems* pItems);
 
     /**
      * Deletes the GWBUFs, and empties the vector.
@@ -235,10 +210,7 @@ public:
         return ((rv1 == EXIT_FAILURE) || (rv2 == EXIT_FAILURE)) ? EXIT_FAILURE : EXIT_SUCCESS;
     }
 
-    static int combine_rvs(int rv1, int rv2, int rv3)
-    {
-        return combine_rvs(rv1, combine_rvs(rv2, rv3));
-    }
+    static int combine_rvs(int rv1, int rv2, int rv3) { return combine_rvs(rv1, combine_rvs(rv2, rv3)); }
 
     static int combine_rvs(int rv1, int rv2, int rv3, int rv4)
     {
@@ -264,10 +236,7 @@ protected:
      *
      * @return A stream.
      */
-    std::ostream& out() const
-    {
-        return m_out;
-    }
+    std::ostream& out() const { return m_out; }
 
     /**
      * Execute a specific number of tasks in as many threads.

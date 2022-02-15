@@ -27,8 +27,10 @@ std::string CacheKey::to_string() const
 {
     stringstream ss;
     ss << "{ ";
-    ss << "user: " << "\"" << this->user << "\", ";
-    ss << "host: " << "\"" << this->host << "\", ";
+    ss << "user: "
+       << "\"" << this->user << "\", ";
+    ss << "host: "
+       << "\"" << this->host << "\", ";
     ss << "data_hash: " << this->data_hash << ",";
     ss << "full_hash: " << this->full_hash;
     ss << " }";
@@ -57,8 +59,7 @@ vector<char> CacheKey::to_vector() const
     return rv;
 }
 
-bool Storage::split_arguments(const std::string& argument_string,
-                              map<std::string, std::string>* pArguments)
+bool Storage::split_arguments(const std::string& argument_string, map<std::string, std::string>* pArguments)
 {
     bool rv = true;
 
@@ -80,8 +81,8 @@ bool Storage::split_arguments(const std::string& argument_string,
             break;
 
         default:
-            MXS_ERROR("The provided argument string '%s' is not of the correct format.",
-                      argument_string.c_str());
+            MXS_ERROR(
+                "The provided argument string '%s' is not of the correct format.", argument_string.c_str());
             rv = false;
         }
     }

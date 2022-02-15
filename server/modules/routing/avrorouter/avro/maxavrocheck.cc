@@ -27,10 +27,10 @@
 #include <maxscale/log.hh>
 #include <maxbase/alloc.h>
 
-static int verbose = 0;
-static uint64_t seekto = 0;
+static int verbose      = 0;
+static uint64_t seekto  = 0;
 static int64_t num_rows = -1;
-static bool dump = false;
+static bool dump        = false;
 
 int check_file(const char* filename)
 {
@@ -94,9 +94,9 @@ int check_file(const char* filename)
         if (verbose && !dump)
         {
             printf("Block %lu: %lu records, %lu bytes\n",
-                   file->blocks_read,
-                   file->records_in_block,
-                   file->buffer_size);
+                file->blocks_read,
+                file->records_in_block,
+                file->buffer_size);
         }
     }
     while (num_rows != 0 && maxavro_next_block(file));
@@ -105,18 +105,18 @@ int check_file(const char* filename)
     {
         printf("Failed to read next data block after data block %lu. "
                "Read %lu records and %lu bytes before failure.\n",
-               file->blocks_read,
-               file->records_read,
-               file->bytes_read);
+            file->blocks_read,
+            file->records_read,
+            file->bytes_read);
         rval = 1;
     }
     else if (!dump)
     {
         printf("%s: %lu blocks, %lu records and %lu bytes\n",
-               filename,
-               file->blocks_read,
-               file->records_read,
-               file->bytes_read);
+            filename,
+            file->blocks_read,
+            file->records_read,
+            file->bytes_read);
     }
 
 
@@ -124,13 +124,11 @@ int check_file(const char* filename)
     return rval;
 }
 
-static struct option long_options[] = {
-    {"verbose", no_argument, 0, 'v'},
-    {"dump",    no_argument, 0, 'd'},
-    {"from",    no_argument, 0, 'f'},
-    {"count",   no_argument, 0, 'c'},
-    {0,         0,           0, 0  }
-};
+static struct option long_options[] = {{"verbose", no_argument, 0, 'v'},
+    {"dump", no_argument, 0, 'd'},
+    {"from", no_argument, 0, 'f'},
+    {"count", no_argument, 0, 'c'},
+    {0, 0, 0, 0}};
 
 static const char* USAGE =
     R"EOF(
@@ -145,7 +143,6 @@ Usage: maxavrocheck [OPTIONS] FILE
 
 int main(int argc, char** argv)
 {
-
     if (argc < 2)
     {
         printf("%s\n", USAGE);

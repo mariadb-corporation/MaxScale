@@ -65,16 +65,16 @@ using ChangeMasterValues = std::map<ChangeMasterType, std::string>;
 struct Handler
 {
     virtual void select(const std::vector<std::string>& values, const std::vector<std::string>& aliases) = 0;
-    virtual void set(const std::string& key, const std::string& value) = 0;
+    virtual void set(const std::string& key, const std::string& value)                                   = 0;
 
-    virtual void change_master_to(const ChangeMasterValues& values) = 0;
-    virtual void start_slave() = 0;
-    virtual void stop_slave() = 0;
-    virtual void reset_slave() = 0;
-    virtual void show_slave_status(bool all) = 0;
-    virtual void show_master_status() = 0;
-    virtual void show_binlogs() = 0;
-    virtual void show_variables(const std::string& like) = 0;
+    virtual void change_master_to(const ChangeMasterValues& values)     = 0;
+    virtual void start_slave()                                          = 0;
+    virtual void stop_slave()                                           = 0;
+    virtual void reset_slave()                                          = 0;
+    virtual void show_slave_status(bool all)                            = 0;
+    virtual void show_master_status()                                   = 0;
+    virtual void show_binlogs()                                         = 0;
+    virtual void show_variables(const std::string& like)                = 0;
     virtual void master_gtid_wait(const std::string& gtid, int timeout) = 0;
 
     virtual void purge_logs(const std::string& up_to) = 0;
@@ -83,5 +83,5 @@ struct Handler
 };
 
 void parse(const std::string& line, Handler* handler);
-}
-}
+}  // namespace parser
+}  // namespace pinloki

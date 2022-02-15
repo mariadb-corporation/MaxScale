@@ -41,18 +41,18 @@
 HINT* hint_dup(const HINT* hint)
 {
     const HINT* ptr1 = hint;
-    HINT* nlhead = NULL, * nltail = NULL, * ptr2;
+    HINT *nlhead = NULL, *nltail = NULL, *ptr2;
 
     while (ptr1)
     {
-        if ((ptr2 = (HINT*)MXS_MALLOC(sizeof(HINT))) == NULL)
+        if ((ptr2 = (HINT*) MXS_MALLOC(sizeof(HINT))) == NULL)
         {
             return nlhead;
         }
         ptr2->type = ptr1->type;
         if (ptr1->data)
         {
-            ptr2->data = MXS_STRDUP_A((const char*)ptr1->data);
+            ptr2->data = MXS_STRDUP_A((const char*) ptr1->data);
         }
         else
         {
@@ -60,7 +60,7 @@ HINT* hint_dup(const HINT* hint)
         }
         if (ptr1->value)
         {
-            ptr2->value = MXS_STRDUP_A((const char*)ptr1->value);
+            ptr2->value = MXS_STRDUP_A((const char*) ptr1->value);
         }
         else
         {
@@ -70,7 +70,7 @@ HINT* hint_dup(const HINT* hint)
         if (nltail)
         {
             nltail->next = ptr2;
-            nltail = ptr2;
+            nltail       = ptr2;
         }
         else
         {
@@ -94,7 +94,7 @@ HINT* hint_create_route(HINT* head, HINT_TYPE type, const char* data)
 {
     HINT* hint;
 
-    if ((hint = (HINT*)MXS_MALLOC(sizeof(HINT))) == NULL)
+    if ((hint = (HINT*) MXS_MALLOC(sizeof(HINT))) == NULL)
     {
         return head;
     }
@@ -111,7 +111,6 @@ HINT* hint_create_route(HINT* head, HINT_TYPE type, const char* data)
     hint->value = NULL;
     return hint;
 }
-
 
 /**
  * Insert a hint list before head.
@@ -149,13 +148,13 @@ HINT* hint_create_parameter(HINT* head, const char* pname, const char* value)
 {
     HINT* hint;
 
-    if ((hint = (HINT*)MXS_MALLOC(sizeof(HINT))) == NULL)
+    if ((hint = (HINT*) MXS_MALLOC(sizeof(HINT))) == NULL)
     {
         return head;
     }
-    hint->next = head;
-    hint->type = HINT_PARAMETER;
-    hint->data = MXS_STRDUP_A(pname);
+    hint->next  = head;
+    hint->type  = HINT_PARAMETER;
+    hint->data  = MXS_STRDUP_A(pname);
     hint->value = MXS_STRDUP_A(value);
     return hint;
 }
@@ -181,8 +180,7 @@ void hint_free(HINT* hint)
     }
 }
 
-bool hint_exists(HINT** p_hint,
-                 HINT_TYPE type)
+bool hint_exists(HINT** p_hint, HINT_TYPE type)
 {
     bool succp = false;
 

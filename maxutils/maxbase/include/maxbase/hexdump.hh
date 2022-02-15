@@ -13,4 +13,4 @@ namespace maxbase
  * @return std::ostream &out
  */
 std::ostream& hexdump(std::ostream& out, const void* pBytes, int len);
-}
+}  // namespace maxbase

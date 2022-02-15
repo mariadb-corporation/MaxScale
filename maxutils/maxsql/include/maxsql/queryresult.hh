@@ -30,7 +30,7 @@ namespace maxsql
 class QueryResult
 {
 public:
-    QueryResult(const QueryResult&) = delete;
+    QueryResult(const QueryResult&)            = delete;
     QueryResult& operator=(const QueryResult&) = delete;
 
     virtual ~QueryResult() = default;
@@ -129,11 +129,11 @@ public:
 
 protected:
     explicit QueryResult(std::vector<std::string>&& col_names);
+
 private:
     class ConversionError
     {
     public:
-
         /**
          * Is error set?
          *
@@ -166,9 +166,9 @@ private:
         std::string to_string() const;
 
     private:
-        bool        m_field_was_null = false;   /**< Was the converted field null? */
-        std::string m_field_value;              /**< The value in the field if it was not null */
-        std::string m_target_type;              /**< The conversion target type */
+        bool m_field_was_null = false; /**< Was the converted field null? */
+        std::string m_field_value;     /**< The value in the field if it was not null */
+        std::string m_target_type;     /**< The conversion target type */
     };
 
     /**
@@ -186,14 +186,15 @@ private:
      */
     virtual bool advance_row() = 0;
 
-    void call_parser(const std::function<bool(const char*)>& parser, int64_t column_ind,
-                     const std::string& target_type) const;
+    void call_parser(const std::function<bool(const char*)>& parser,
+        int64_t column_ind,
+        const std::string& target_type) const;
 
     void set_error(int64_t column_ind, const std::string& target_type) const;
 
-    int64_t m_current_row_ind = -1;     /**< Index of current row */
+    int64_t m_current_row_ind = -1; /**< Index of current row */
 
-    mutable ConversionError                  m_error;       /**< Error information */
+    mutable ConversionError m_error;                        /**< Error information */
     std::unordered_map<std::string, int64_t> m_col_indexes; /**< Map of column name -> index */
 };
-}
+}  // namespace maxsql

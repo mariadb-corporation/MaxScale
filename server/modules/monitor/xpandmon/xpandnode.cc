@@ -14,9 +14,8 @@
 #include "xpandnode.hh"
 #include "xpand.hh"
 
-bool XpandNode::can_be_used_as_hub(const char* zName,
-                                   const mxs::MonitorServer::ConnectionSettings& settings,
-                                   xpand::Softfailed softfailed)
+bool XpandNode::can_be_used_as_hub(
+    const char* zName, const mxs::MonitorServer::ConnectionSettings& settings, xpand::Softfailed softfailed)
 {
     mxb_assert(m_pServer);
     bool rv = xpand::ping_or_connect_to_hub(zName, settings, softfailed, *m_pServer, &m_pCon);

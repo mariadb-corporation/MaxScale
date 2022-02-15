@@ -65,8 +65,8 @@
 /** Type of the stored value */
 enum stored_value_type
 {
-    SVT_SERVER = 1,     // Generic server state information
-    SVT_MASTER = 2,     // The master server name
+    SVT_SERVER = 1,  // Generic server state information
+    SVT_MASTER = 2,  // The master server name
 };
 
 using std::string;
@@ -80,16 +80,16 @@ using std::chrono::duration_cast;
 using std::chrono::seconds;
 using std::chrono::milliseconds;
 
-const char CN_BACKEND_CONNECT_ATTEMPTS[] = "backend_connect_attempts";
-const char CN_BACKEND_CONNECT_TIMEOUT[] = "backend_connect_timeout";
-const char CN_BACKEND_READ_TIMEOUT[] = "backend_read_timeout";
-const char CN_BACKEND_WRITE_TIMEOUT[] = "backend_write_timeout";
+const char CN_BACKEND_CONNECT_ATTEMPTS[]  = "backend_connect_attempts";
+const char CN_BACKEND_CONNECT_TIMEOUT[]   = "backend_connect_timeout";
+const char CN_BACKEND_READ_TIMEOUT[]      = "backend_read_timeout";
+const char CN_BACKEND_WRITE_TIMEOUT[]     = "backend_write_timeout";
 const char CN_DISK_SPACE_CHECK_INTERVAL[] = "disk_space_check_interval";
-const char CN_EVENTS[] = "events";
-const char CN_JOURNAL_MAX_AGE[] = "journal_max_age";
-const char CN_MONITOR_INTERVAL[] = "monitor_interval";
-const char CN_SCRIPT[] = "script";
-const char CN_SCRIPT_TIMEOUT[] = "script_timeout";
+const char CN_EVENTS[]                    = "events";
+const char CN_JOURNAL_MAX_AGE[]           = "journal_max_age";
+const char CN_MONITOR_INTERVAL[]          = "monitor_interval";
+const char CN_SCRIPT[]                    = "script";
+const char CN_SCRIPT_TIMEOUT[]            = "script_timeout";
 
 namespace
 {
@@ -97,7 +97,6 @@ namespace
 class ThisUnit
 {
 public:
-
     /**
      * Mark a monitor as the monitor of the server. A server may only be monitored by one monitor.
      *
@@ -110,16 +109,16 @@ public:
     {
         mxb_assert(Monitor::is_main_worker());
         bool claim_success = false;
-        auto iter = m_server_owners.find(server);
+        auto iter          = m_server_owners.find(server);
         if (iter != m_server_owners.end())
         {
             // Server is already claimed by a monitor.
-            * existing_owner = iter->second;
+            *existing_owner = iter->second;
         }
         else
         {
             m_server_owners[server] = new_owner;
-            claim_success = true;
+            claim_success           = true;
         }
         return claim_success;
     }
@@ -136,7 +135,6 @@ public:
         mxb_assert(iter != m_server_owners.end());
         m_server_owners.erase(iter);
     }
-
 
     string claimed_by(const string& server)
     {
@@ -162,10 +160,9 @@ ThisUnit this_unit;
 const uint64_t server_type_bits = SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED;
 
 /** All server bits */
-const uint64_t all_server_bits = SERVER_RUNNING | SERVER_MAINT | SERVER_MASTER | SERVER_SLAVE
-    | SERVER_JOINED;
+const uint64_t all_server_bits = SERVER_RUNNING | SERVER_MAINT | SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED;
 
-const char journal_name[] = "monitor.dat";
+const char journal_name[]     = "monitor.dat";
 const char journal_template[] = "%s/%s/%s";
 
 /**
@@ -183,11 +180,8 @@ bool rename_tmp_file(Monitor* monitor, const char* src)
     if (rename(src, dest) == -1)
     {
         rval = false;
-        MXS_ERROR("Failed to rename journal file '%s' to '%s': %d, %s",
-                  src,
-                  dest,
-                  errno,
-                  mxs_strerror(errno));
+        MXS_ERROR(
+            "Failed to rename journal file '%s' to '%s': %d, %s", src, dest, errno, mxs_strerror(errno));
     }
 
     return rval;
@@ -202,9 +196,9 @@ bool rename_tmp_file(Monitor* monitor, const char* src)
  */
 FILE* open_tmp_file(Monitor* monitor, char* path)
 {
-    int nbytes = snprintf(path, PATH_MAX, journal_template, mxs::datadir(), monitor->name(), "");
-    int max_bytes = PATH_MAX - (int)sizeof(journal_name);
-    FILE* rval = NULL;
+    int nbytes    = snprintf(path, PATH_MAX, journal_template, mxs::datadir(), monitor->name(), "");
+    int max_bytes = PATH_MAX - (int) sizeof(journal_name);
+    FILE* rval    = NULL;
 
     if (nbytes < max_bytes && mxs_mkdir_all(path, 0744))
     {
@@ -225,8 +219,8 @@ FILE* open_tmp_file(Monitor* monitor, char* path)
     {
         MXS_ERROR("Path is too long: %d characters exceeds the maximum path "
                   "length of %d bytes",
-                  nbytes,
-                  max_bytes);
+            nbytes,
+            max_bytes);
     }
 
     return rval;
@@ -254,29 +248,29 @@ void store_data(Monitor* monitor, MonitorServer* master, uint8_t* data, uint32_t
     /** Store the states of all servers */
     for (MonitorServer* db : monitor->servers())
     {
-        *ptr++ = (char)SVT_SERVER;                                  // Value type
-        memcpy(ptr, db->server->name(), strlen(db->server->name()));// Name of the server
+        *ptr++ = (char) SVT_SERVER;                                   // Value type
+        memcpy(ptr, db->server->name(), strlen(db->server->name()));  // Name of the server
         ptr += strlen(db->server->name());
-        *ptr++ = '\0';      // Null-terminate the string
+        *ptr++ = '\0';  // Null-terminate the string
 
         auto status = db->server->status();
-        static_assert(sizeof(status) == MMB_LEN_SERVER_STATUS,
-                      "Status size should be MMB_LEN_SERVER_STATUS bytes");
+        static_assert(
+            sizeof(status) == MMB_LEN_SERVER_STATUS, "Status size should be MMB_LEN_SERVER_STATUS bytes");
         ptr = maxscale::set_byteN(ptr, status, MMB_LEN_SERVER_STATUS);
     }
 
     /** Store the current root master if we have one */
     if (master)
     {
-        *ptr++ = (char)SVT_MASTER;
+        *ptr++ = (char) SVT_MASTER;
         memcpy(ptr, master->server->name(), strlen(master->server->name()));
         ptr += strlen(master->server->name());
-        *ptr++ = '\0';      // Null-terminate the string
+        *ptr++ = '\0';  // Null-terminate the string
     }
 
     /** Calculate the CRC32 for the complete payload minus the CRC32 bytes */
     uint32_t crc = crc32(0L, NULL, 0);
-    crc = crc32(crc, (uint8_t*)data + MMB_LEN_BYTES, size - MMB_LEN_CRC32);
+    crc          = crc32(crc, (uint8_t*) data + MMB_LEN_BYTES, size - MMB_LEN_CRC32);
     mxb_assert(sizeof(crc) == MMB_LEN_CRC32);
 
     ptr = mxs_set_byte4(ptr, crc);
@@ -309,11 +303,11 @@ const char* process_server(Monitor* monitor, const char* data, const char* end)
     {
         if (strcmp(db->server->name(), data) == 0)
         {
-            const unsigned char* sptr = (unsigned char*)strchr(data, '\0');
+            const unsigned char* sptr = (unsigned char*) strchr(data, '\0');
             mxb_assert(sptr);
             sptr++;
 
-            uint64_t status = maxscale::get_byteN(sptr, MMB_LEN_SERVER_STATUS);
+            uint64_t status     = maxscale::get_byteN(sptr, MMB_LEN_SERVER_STATUS);
             db->mon_prev_status = status;
             db->server->set_status(status);
             db->set_pending_status(status);
@@ -329,8 +323,7 @@ const char* process_server(Monitor* monitor, const char* data, const char* end)
 /**
  * Process a master
  */
-const char* process_master(Monitor* monitor, MonitorServer** master,
-                           const char* data, const char* end)
+const char* process_master(Monitor* monitor, MonitorServer** master, const char* data, const char* end)
 {
     if (master)
     {
@@ -354,17 +347,16 @@ const char* process_master(Monitor* monitor, MonitorServer** master,
  */
 bool check_crc32(const uint8_t* data, uint32_t size, const uint8_t* crc_ptr)
 {
-    uint32_t crc = mxs_get_byte4(crc_ptr);
+    uint32_t crc            = mxs_get_byte4(crc_ptr);
     uint32_t calculated_crc = crc32(0L, NULL, 0);
-    calculated_crc = crc32(calculated_crc, data, size);
+    calculated_crc          = crc32(calculated_crc, data, size);
     return calculated_crc == crc;
 }
 
 /**
  * Process the stored journal data
  */
-bool process_data_file(Monitor* monitor, MonitorServer** master,
-                       const char* data, const char* crc_ptr)
+bool process_data_file(Monitor* monitor, MonitorServer** master, const char* data, const char* crc_ptr)
 {
     const char* ptr = data;
     MXB_AT_DEBUG(const char* prevptr = ptr);
@@ -378,7 +370,7 @@ bool process_data_file(Monitor* monitor, MonitorServer** master,
             return false;
         }
 
-        stored_value_type type = (stored_value_type)ptr[0];
+        stored_value_type type = (stored_value_type) ptr[0];
         ptr += MMB_LEN_VALUE_TYPE;
 
         switch (type)
@@ -404,64 +396,60 @@ bool process_data_file(Monitor* monitor, MonitorServer** master,
 }
 
 bool check_disk_space_exhausted(MonitorServer* pMs,
-                                const std::string& path,
-                                const maxscale::disk::SizesAndName& san,
-                                int32_t max_percentage)
+    const std::string& path,
+    const maxscale::disk::SizesAndName& san,
+    int32_t max_percentage)
 {
     bool disk_space_exhausted = false;
 
-    int32_t used_percentage = ((san.total() - san.available()) / (double)san.total()) * 100;
+    int32_t used_percentage = ((san.total() - san.available()) / (double) san.total()) * 100;
 
     if (used_percentage >= max_percentage)
     {
         MXS_ERROR("Disk space on %s at %s is exhausted; %d%% of the the disk "
                   "mounted on the path %s has been used, and the limit it %d%%.",
-                  pMs->server->name(),
-                  pMs->server->address(),
-                  used_percentage,
-                  path.c_str(),
-                  max_percentage);
+            pMs->server->name(),
+            pMs->server->address(),
+            used_percentage,
+            path.c_str(),
+            max_percentage);
         disk_space_exhausted = true;
     }
 
     return disk_space_exhausted;
 }
 
-const char ERR_CANNOT_MODIFY[] =
-    "The server is monitored, so only the maintenance status can be "
-    "set/cleared manually. Status was not modified.";
-const char WRN_REQUEST_OVERWRITTEN[] =
-    "Previous maintenance/draining request was not yet read by the monitor and was overwritten.";
+const char ERR_CANNOT_MODIFY[] = "The server is monitored, so only the maintenance status can be "
+                                 "set/cleared manually. Status was not modified.";
+const char WRN_REQUEST_OVERWRITTEN[]
+    = "Previous maintenance/draining request was not yet read by the monitor and was overwritten.";
 
 /* Is not really an event as the other values, but is a valid config setting and also the default.
  * Bitmask value matches all events. */
 const MXS_ENUM_VALUE monitor_event_default = {"all", ~0ULL};
 
 // Allowed values for the "events"-setting. Also defines the enum<->string conversion for events.
-const MXS_ENUM_VALUE monitor_event_values[] =
-{
-    monitor_event_default,
-    {"master_down",       MASTER_DOWN_EVENT },
-    {"master_up",         MASTER_UP_EVENT   },
-    {"slave_down",        SLAVE_DOWN_EVENT  },
-    {"slave_up",          SLAVE_UP_EVENT    },
-    {"server_down",       SERVER_DOWN_EVENT },
-    {"server_up",         SERVER_UP_EVENT   },
-    {"synced_down",       SYNCED_DOWN_EVENT },
-    {"synced_up",         SYNCED_UP_EVENT   },
-    {"donor_down",        DONOR_DOWN_EVENT  },
-    {"donor_up",          DONOR_UP_EVENT    },
-    {"lost_master",       LOST_MASTER_EVENT },
-    {"lost_slave",        LOST_SLAVE_EVENT  },
-    {"lost_synced",       LOST_SYNCED_EVENT },
-    {"lost_donor",        LOST_DONOR_EVENT  },
-    {"new_master",        NEW_MASTER_EVENT  },
-    {"new_slave",         NEW_SLAVE_EVENT   },
-    {"new_synced",        NEW_SYNCED_EVENT  },
-    {"new_donor",         NEW_DONOR_EVENT   },
-    {NULL}
-};
-}
+const MXS_ENUM_VALUE monitor_event_values[] = {monitor_event_default,
+    {"master_down", MASTER_DOWN_EVENT},
+    {"master_up", MASTER_UP_EVENT},
+    {"slave_down", SLAVE_DOWN_EVENT},
+    {"slave_up", SLAVE_UP_EVENT},
+    {"server_down", SERVER_DOWN_EVENT},
+    {"server_up", SERVER_UP_EVENT},
+    {"synced_down", SYNCED_DOWN_EVENT},
+    {"synced_up", SYNCED_UP_EVENT},
+    {"donor_down", DONOR_DOWN_EVENT},
+    {"donor_up", DONOR_UP_EVENT},
+    {"lost_master", LOST_MASTER_EVENT},
+    {"lost_slave", LOST_SLAVE_EVENT},
+    {"lost_synced", LOST_SYNCED_EVENT},
+    {"lost_donor", LOST_DONOR_EVENT},
+    {"new_master", NEW_MASTER_EVENT},
+    {"new_slave", NEW_SLAVE_EVENT},
+    {"new_synced", NEW_SYNCED_EVENT},
+    {"new_donor", NEW_DONOR_EVENT},
+    {NULL}};
+}  // namespace
 
 namespace maxscale
 {
@@ -492,17 +480,17 @@ const char* Monitor::name() const
 
 bool Monitor::configure(const mxs::ConfigParameters* params)
 {
-    m_settings.interval = params->get_duration<milliseconds>(CN_MONITOR_INTERVAL).count();
+    m_settings.interval        = params->get_duration<milliseconds>(CN_MONITOR_INTERVAL).count();
     m_settings.journal_max_age = params->get_duration<seconds>(CN_JOURNAL_MAX_AGE).count();
-    m_settings.events = params->get_enum(CN_EVENTS, monitor_event_values);
+    m_settings.events          = params->get_enum(CN_EVENTS, monitor_event_values);
 
     MonitorServer::ConnectionSettings& conn_settings = m_settings.shared.conn_settings;
-    conn_settings.read_timeout = params->get_duration<seconds>(CN_BACKEND_READ_TIMEOUT).count();
-    conn_settings.write_timeout = params->get_duration<seconds>(CN_BACKEND_WRITE_TIMEOUT).count();
-    conn_settings.connect_timeout = params->get_duration<seconds>(CN_BACKEND_CONNECT_TIMEOUT).count();
+    conn_settings.read_timeout     = params->get_duration<seconds>(CN_BACKEND_READ_TIMEOUT).count();
+    conn_settings.write_timeout    = params->get_duration<seconds>(CN_BACKEND_WRITE_TIMEOUT).count();
+    conn_settings.connect_timeout  = params->get_duration<seconds>(CN_BACKEND_CONNECT_TIMEOUT).count();
     conn_settings.connect_attempts = params->get_integer(CN_BACKEND_CONNECT_ATTEMPTS);
-    conn_settings.username = params->get_string(CN_USER);
-    conn_settings.password = params->get_string(CN_PASSWORD);
+    conn_settings.username         = params->get_string(CN_USER);
+    conn_settings.password         = params->get_string(CN_PASSWORD);
 
     // Disk check interval is given in ms, duration is constructed from seconds.
     auto dsc_interval = params->get_duration<milliseconds>(CN_DISK_SPACE_CHECK_INTERVAL).count();
@@ -527,8 +515,7 @@ bool Monitor::configure(const mxs::ConfigParameters* params)
     }
     else
     {
-        MXB_ERROR("Server '%s' configured for monitor '%s' does not exist.",
-                  name_not_found.c_str(), name());
+        MXB_ERROR("Server '%s' configured for monitor '%s' does not exist.", name_not_found.c_str(), name());
         error = true;
     }
 
@@ -539,12 +526,14 @@ bool Monitor::configure(const mxs::ConfigParameters* params)
     if (!set_disk_space_threshold(threshold_string))
     {
         MXS_ERROR("Invalid value for '%s' for monitor %s: %s",
-                  CN_DISK_SPACE_THRESHOLD, name(), threshold_string.c_str());
+            CN_DISK_SPACE_THRESHOLD,
+            name(),
+            threshold_string.c_str());
         error = true;
     }
 
     m_settings.script_timeout = params->get_duration<seconds>(CN_SCRIPT_TIMEOUT).count();
-    m_settings.script = params->get_string(CN_SCRIPT);
+    m_settings.script         = params->get_string(CN_SCRIPT);
     if (m_settings.script.empty())
     {
         // Reset current external cmd if any.
@@ -627,7 +616,8 @@ bool Monitor::add_server(SERVER* server)
     else
     {
         MXS_ERROR("Server '%s' is already monitored by '%s', cannot add it to another monitor.",
-                  server->name(), existing_owner.c_str());
+            server->name(),
+            existing_owner.c_str());
     }
     return success;
 }
@@ -662,14 +652,14 @@ void Monitor::remove_all_servers()
 json_t* Monitor::to_json(const char* host) const
 {
     const char CN_MONITOR_DIAGNOSTICS[] = "monitor_diagnostics";
-    const char CN_TICKS[] = "ticks";
+    const char CN_TICKS[]               = "ticks";
 
     // This function mostly reads settings-type data, which is only written to by the admin thread,
     // The rest is safe to read without mutexes.
     mxb_assert(Monitor::is_main_worker());
     json_t* rval = json_object();
     json_t* attr = json_object();
-    json_t* rel = json_object();
+    json_t* rel  = json_object();
 
     auto my_name = name();
     json_object_set_new(rval, CN_ID, json_string(my_name));
@@ -716,14 +706,11 @@ json_t* Monitor::to_json(const char* host) const
 
 json_t* Monitor::parameters_to_json() const
 {
-    json_t* rval = json_object();
+    json_t* rval          = json_object();
     const MXS_MODULE* mod = get_module(m_module.c_str(), MODULE_MONITOR);
-    auto my_config = parameters();
-    config_add_module_params_json(&my_config,
-                                  {CN_TYPE, CN_MODULE, CN_SERVERS},
-                                  common_monitor_params(),
-                                  mod->parameters,
-                                  rval);
+    auto my_config        = parameters();
+    config_add_module_params_json(
+        &my_config, {CN_TYPE, CN_MODULE, CN_SERVERS}, common_monitor_params(), mod->parameters, rval);
     return rval;
 }
 
@@ -744,10 +731,10 @@ bool Monitor::test_permissions(const string& query)
         {
             MXS_ERROR("[%s] Failed to connect to server '%s' ([%s]:%d) when"
                       " checking monitor user credentials and permissions.",
-                      name(),
-                      mondb->server->name(),
-                      mondb->server->address(),
-                      mondb->server->port());
+                name(),
+                mondb->server->name(),
+                mondb->server->address(),
+                mondb->server->port());
 
             if (result != ConnectResult::ACCESS_DENIED)
             {
@@ -772,18 +759,20 @@ bool Monitor::test_permissions(const string& query)
             }
 
             MXS_ERROR("[%s] Failed to execute query '%s' with user '%s'. MySQL error message: %s",
-                      name(), query.c_str(), conn_settings().username.c_str(),
-                      mysql_error(mondb->con));
+                name(),
+                query.c_str(),
+                conn_settings().username.c_str(),
+                mysql_error(mondb->con));
         }
         else
         {
-            rval = true;
+            rval           = true;
             MYSQL_RES* res = mysql_use_result(mondb->con);
             if (res == NULL)
             {
                 MXS_ERROR("[%s] Result retrieval failed when checking monitor permissions: %s",
-                          name(),
-                          mysql_error(mondb->con));
+                    name(),
+                    mysql_error(mondb->con));
             }
             else
             {
@@ -800,20 +789,20 @@ bool Monitor::test_permissions(const string& query)
 json_t* Monitor::monitored_server_json_attributes(const SERVER* srv) const
 {
     json_t* rval = nullptr;
-    auto comp = [srv](MonitorServer* ms) {
-            return ms->server == srv;
-        };
+    auto comp    = [srv](MonitorServer* ms) {
+        return ms->server == srv;
+    };
 
     auto iter = std::find_if(m_servers.begin(), m_servers.end(), comp);
     if (iter != m_servers.end())
     {
         auto mon_srv = *iter;
-        rval = json_object();
+        rval         = json_object();
         json_object_set_new(rval, "node_id", json_integer(mon_srv->node_id));
         json_object_set_new(rval, "master_id", json_integer(mon_srv->master_id));
 
         const char* event_name = get_event_name(mon_srv->last_event);
-        time_t t = maxscale_started() + MXS_CLOCK_TO_SEC(mon_srv->triggered_at);
+        time_t t               = maxscale_started() + MXS_CLOCK_TO_SEC(mon_srv->triggered_at);
         json_object_set_new(rval, "last_event", json_string(event_name));
         json_object_set_new(rval, "triggered_at", json_string(http_to_date(t).c_str()));
 
@@ -846,7 +835,7 @@ void Monitor::wait_for_status_change()
 void MonitorServer::stash_current_status()
 {
     mon_prev_status = server->status();
-    pending_status = server->status();
+    pending_status  = server->status();
 }
 
 void MonitorServer::set_pending_status(uint64_t bits)
@@ -880,7 +869,7 @@ mxs_monitor_event_t MonitorServer::get_event_type() const
 
     general_event_type event_type = UNSUPPORTED_EVENT;
 
-    uint64_t prev = mon_prev_status & all_server_bits;
+    uint64_t prev    = mon_prev_status & all_server_bits;
     uint64_t present = server->status() & all_server_bits;
 
     if (prev == present)
@@ -914,12 +903,11 @@ mxs_monitor_event_t MonitorServer::get_event_type() const
         {
             /** These are used to detect whether we actually lost something or
              * just transitioned from one state to another */
-            uint64_t prev_bits = prev & (SERVER_MASTER | SERVER_SLAVE);
+            uint64_t prev_bits    = prev & (SERVER_MASTER | SERVER_SLAVE);
             uint64_t present_bits = present & (SERVER_MASTER | SERVER_SLAVE);
 
             /* Was running and still is */
-            if ((!prev_bits || !present_bits || prev_bits == present_bits)
-                && (prev & server_type_bits))
+            if ((!prev_bits || !present_bits || prev_bits == present_bits) && (prev & server_type_bits))
             {
                 /* We used to know what kind of server it was */
                 event_type = LOSS_EVENT;
@@ -937,31 +925,31 @@ mxs_monitor_event_t MonitorServer::get_event_type() const
     switch (event_type)
     {
     case UP_EVENT:
-        rval = (present & SERVER_MASTER) ? MASTER_UP_EVENT :
-            (present & SERVER_SLAVE) ? SLAVE_UP_EVENT :
-            (present & SERVER_JOINED) ? SYNCED_UP_EVENT :
-            SERVER_UP_EVENT;
+        rval = (present & SERVER_MASTER) ? MASTER_UP_EVENT
+             : (present & SERVER_SLAVE)  ? SLAVE_UP_EVENT
+             : (present & SERVER_JOINED) ? SYNCED_UP_EVENT
+                                         : SERVER_UP_EVENT;
         break;
 
     case DOWN_EVENT:
-        rval = (prev & SERVER_MASTER) ? MASTER_DOWN_EVENT :
-            (prev & SERVER_SLAVE) ? SLAVE_DOWN_EVENT :
-            (prev & SERVER_JOINED) ? SYNCED_DOWN_EVENT :
-            SERVER_DOWN_EVENT;
+        rval = (prev & SERVER_MASTER) ? MASTER_DOWN_EVENT
+             : (prev & SERVER_SLAVE)  ? SLAVE_DOWN_EVENT
+             : (prev & SERVER_JOINED) ? SYNCED_DOWN_EVENT
+                                      : SERVER_DOWN_EVENT;
         break;
 
     case LOSS_EVENT:
-        rval = (prev & SERVER_MASTER) ? LOST_MASTER_EVENT :
-            (prev & SERVER_SLAVE) ? LOST_SLAVE_EVENT :
-            (prev & SERVER_JOINED) ? LOST_SYNCED_EVENT :
-            UNDEFINED_EVENT;
+        rval = (prev & SERVER_MASTER) ? LOST_MASTER_EVENT
+             : (prev & SERVER_SLAVE)  ? LOST_SLAVE_EVENT
+             : (prev & SERVER_JOINED) ? LOST_SYNCED_EVENT
+                                      : UNDEFINED_EVENT;
         break;
 
     case NEW_EVENT:
-        rval = (present & SERVER_MASTER) ? NEW_MASTER_EVENT :
-            (present & SERVER_SLAVE) ? NEW_SLAVE_EVENT :
-            (present & SERVER_JOINED) ? NEW_SYNCED_EVENT :
-            UNDEFINED_EVENT;
+        rval = (present & SERVER_MASTER) ? NEW_MASTER_EVENT
+             : (present & SERVER_SLAVE)  ? NEW_SLAVE_EVENT
+             : (present & SERVER_JOINED) ? NEW_SYNCED_EVENT
+                                         : UNDEFINED_EVENT;
         break;
 
     default:
@@ -1010,17 +998,18 @@ string Monitor::gen_serverlist(int status, CredentialsApproach approach)
             }
             else
             {
-                string user = conn_settings().username;
-                string password = conn_settings().password;
+                string user                    = conn_settings().username;
+                string password                = conn_settings().password;
                 string server_specific_monuser = server->monitor_user();
                 if (!server_specific_monuser.empty())
                 {
-                    user = server_specific_monuser;
+                    user     = server_specific_monuser;
                     password = server->monitor_password();
                 }
 
-                rval += separator + mxb::string_printf("%s:%s@[%s]:%d", user.c_str(), password.c_str(),
-                                                       server->address(), server->port());
+                rval += separator
+                      + mxb::string_printf(
+                          "%s:%s@[%s]:%d", user.c_str(), password.c_str(), server->address(), server->port());
             }
             separator = ",";
         }
@@ -1040,7 +1029,6 @@ bool MonitorServer::status_changed()
     /* Previous status is -1 if not yet set */
     if (mon_prev_status != static_cast<uint64_t>(-1))
     {
-
         uint64_t old_status = mon_prev_status & all_server_bits;
         uint64_t new_status = server->status() & all_server_bits;
 
@@ -1049,8 +1037,7 @@ bool MonitorServer::status_changed()
          * the server is either running, stopping or starting and the server is
          * not going into maintenance or coming out of it
          */
-        if (old_status != new_status
-            && ((old_status | new_status) & SERVER_MAINT) == 0
+        if (old_status != new_status && ((old_status | new_status) & SERVER_MAINT) == 0
             && ((old_status | new_status) & SERVER_RUNNING) == SERVER_RUNNING)
         {
             rval = true;
@@ -1066,7 +1053,7 @@ bool MonitorServer::auth_status_changed()
     uint64_t new_status = server->status();
 
     return old_status != static_cast<uint64_t>(-1) && old_status != new_status
-           && (old_status & SERVER_AUTH_ERROR) != (new_status & SERVER_AUTH_ERROR);
+        && (old_status & SERVER_AUTH_ERROR) != (new_status & SERVER_AUTH_ERROR);
 }
 
 /**
@@ -1130,79 +1117,68 @@ int Monitor::launch_command(MonitorServer* ptr)
     // A generator function is ran only if the matching substitution keyword is found.
 
     auto gen_initiator = [ptr] {
-            return mxb::string_printf("[%s]:%d", ptr->server->address(), ptr->server->port());
-        };
+        return mxb::string_printf("[%s]:%d", ptr->server->address(), ptr->server->port());
+    };
 
     auto gen_parent = [this, ptr] {
-            string ss;
-            MonitorServer* parent = find_parent_node(ptr);
-            if (parent)
-            {
-                ss = mxb::string_printf("[%s]:%d", parent->server->address(), parent->server->port());
-            }
-            return ss;
-        };
+        string ss;
+        MonitorServer* parent = find_parent_node(ptr);
+        if (parent)
+        {
+            ss = mxb::string_printf("[%s]:%d", parent->server->address(), parent->server->port());
+        }
+        return ss;
+    };
 
     m_scriptcmd->match_substitute("$INITIATOR", gen_initiator);
     m_scriptcmd->match_substitute("$PARENT", gen_parent);
 
-    m_scriptcmd->match_substitute("$CHILDREN", [this, ptr] {
-                                      return child_nodes(ptr);
-                                  });
+    m_scriptcmd->match_substitute("$CHILDREN", [this, ptr] { return child_nodes(ptr); });
 
-    m_scriptcmd->match_substitute("$EVENT", [ptr] {
-                                      return ptr->get_event_name();
-                                  });
+    m_scriptcmd->match_substitute("$EVENT", [ptr] { return ptr->get_event_name(); });
 
     m_scriptcmd->match_substitute("$CREDENTIALS", [this] {
-                                        // Provides credentials for all servers.
-                                      return gen_serverlist(0, CredentialsApproach::INCLUDE);
-                                  });
+        // Provides credentials for all servers.
+        return gen_serverlist(0, CredentialsApproach::INCLUDE);
+    });
 
-    m_scriptcmd->match_substitute("$NODELIST", [this] {
-                                      return gen_serverlist(SERVER_RUNNING);
-                                  });
+    m_scriptcmd->match_substitute("$NODELIST", [this] { return gen_serverlist(SERVER_RUNNING); });
 
-    m_scriptcmd->match_substitute("$LIST", [this] {
-                                      return gen_serverlist(0);
-                                  });
+    m_scriptcmd->match_substitute("$LIST", [this] { return gen_serverlist(0); });
 
-    m_scriptcmd->match_substitute("$MASTERLIST", [this] {
-                                      return gen_serverlist(SERVER_MASTER);
-                                  });
+    m_scriptcmd->match_substitute("$MASTERLIST", [this] { return gen_serverlist(SERVER_MASTER); });
 
-    m_scriptcmd->match_substitute("$SLAVELIST", [this] {
-                                      return gen_serverlist(SERVER_SLAVE);
-                                  });
+    m_scriptcmd->match_substitute("$SLAVELIST", [this] { return gen_serverlist(SERVER_SLAVE); });
 
-    m_scriptcmd->match_substitute("$SYNCEDLIST", [this] {
-                                      return gen_serverlist(SERVER_JOINED);
-                                  });
+    m_scriptcmd->match_substitute("$SYNCEDLIST", [this] { return gen_serverlist(SERVER_JOINED); });
 
     int rv = m_scriptcmd->externcmd_execute();
     if (rv == 0)
     {
         MXS_NOTICE("Executed monitor script on event '%s'. Script was: '%s'",
-                   ptr->get_event_name(), m_scriptcmd->substituted());
+            ptr->get_event_name(),
+            m_scriptcmd->substituted());
     }
     else if (rv == -1)
     {
         // Internal error
         MXS_ERROR("Failed to execute script on server state change event '%s'. Script was: '%s'",
-                  ptr->get_event_name(), m_scriptcmd->substituted());
+            ptr->get_event_name(),
+            m_scriptcmd->substituted());
     }
     else
     {
         // Script returned a non-zero value
         MXS_ERROR("Script returned %d on event '%s'. Script was: '%s'",
-                  rv, ptr->get_event_name(), m_scriptcmd->substituted());
+            rv,
+            ptr->get_event_name(),
+            m_scriptcmd->substituted());
     }
     return rv;
 }
 
-MonitorServer::ConnectResult
-MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& sett, SERVER& server,
-                                     MYSQL** ppConn, std::string* pError)
+MonitorServer::ConnectResult MonitorServer::ping_or_connect_to_db(
+    const MonitorServer::ConnectionSettings& sett, SERVER& server, MYSQL** ppConn, std::string* pError)
 {
     mxb_assert(ppConn);
     mxb_assert(pError);
@@ -1219,32 +1195,32 @@ MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& se
         }
     }
 
-    string uname = sett.username;
-    string passwd = sett.password;
-    const auto& srv = static_cast<const Server&>(server);           // Clean this up later.
+    string uname    = sett.username;
+    string passwd   = sett.password;
+    const auto& srv = static_cast<const Server&>(server);  // Clean this up later.
 
     string server_specific_monuser = srv.monitor_user();
     if (!server_specific_monuser.empty())
     {
-        uname = server_specific_monuser;
+        uname  = server_specific_monuser;
         passwd = srv.monitor_password();
     }
 
     auto dpwd = mxs::decrypt_password(passwd);
 
     auto connect = [&pConn, &sett, &server, &uname, &dpwd](int port) {
-            if (pConn)
-            {
-                mysql_close(pConn);
-            }
-            pConn = mysql_init(nullptr);
-            mysql_optionsv(pConn, MYSQL_OPT_CONNECT_TIMEOUT, &sett.connect_timeout);
-            mysql_optionsv(pConn, MYSQL_OPT_READ_TIMEOUT, &sett.read_timeout);
-            mysql_optionsv(pConn, MYSQL_OPT_WRITE_TIMEOUT, &sett.write_timeout);
-            mysql_optionsv(pConn, MYSQL_PLUGIN_DIR, mxs::connector_plugindir());
-            mysql_optionsv(pConn, MARIADB_OPT_MULTI_STATEMENTS, nullptr);
-            return mxs_mysql_real_connect(pConn, &server, port, uname.c_str(), dpwd.c_str()) != nullptr;
-        };
+        if (pConn)
+        {
+            mysql_close(pConn);
+        }
+        pConn = mysql_init(nullptr);
+        mysql_optionsv(pConn, MYSQL_OPT_CONNECT_TIMEOUT, &sett.connect_timeout);
+        mysql_optionsv(pConn, MYSQL_OPT_READ_TIMEOUT, &sett.read_timeout);
+        mysql_optionsv(pConn, MYSQL_OPT_WRITE_TIMEOUT, &sett.write_timeout);
+        mysql_optionsv(pConn, MYSQL_PLUGIN_DIR, mxs::connector_plugindir());
+        mysql_optionsv(pConn, MARIADB_OPT_MULTI_STATEMENTS, nullptr);
+        return mxs_mysql_real_connect(pConn, &server, port, uname.c_str(), dpwd.c_str()) != nullptr;
+    };
 
     ConnectResult conn_result = ConnectResult::REFUSED;
     for (int i = 0; i < sett.connect_attempts; i++)
@@ -1264,8 +1240,8 @@ MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& se
                 if (connect(extra_port))
                 {
                     conn_result = ConnectResult::NEWCONN_OK;
-                    MXS_WARNING("Could not connect with normal port to server '%s', using extra_port",
-                                server.name());
+                    MXS_WARNING(
+                        "Could not connect with normal port to server '%s', using extra_port", server.name());
                     break;
                 }
             }
@@ -1276,7 +1252,7 @@ MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& se
             conn_result = ConnectResult::TIMEOUT;
         }
 
-        *pError = mysql_error(pConn);
+        *pError  = mysql_error(pConn);
         auto err = mysql_errno(pConn);
         mysql_close(pConn);
         pConn = nullptr;
@@ -1307,9 +1283,9 @@ MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& se
 ConnectResult MonitorServer::ping_or_connect()
 {
     auto old_type = server->info().type();
-    auto connect = [this] {
-            return ping_or_connect_to_db(m_shared.conn_settings, *server, &con, &m_latest_error);
-        };
+    auto connect  = [this] {
+        return ping_or_connect_to_db(m_shared.conn_settings, *server, &con, &m_latest_error);
+    };
 
     auto res = connect();
     if (res == ConnectResult::NEWCONN_OK)
@@ -1336,8 +1312,7 @@ bool MonitorServer::should_fetch_session_track()
 {
     bool rval = false;
     // Only fetch variables from real servers.
-    return is_database()
-           && (mxb::Clock::now() - m_last_session_track_update) > session_track_update_interval;
+    return is_database() && (mxb::Clock::now() - m_last_session_track_update) > session_track_update_interval;
 }
 
 /**
@@ -1348,7 +1323,8 @@ void MonitorServer::fetch_session_track()
     if (auto r = mxs::execute_query(con, "select @@session_track_system_variables;"))
     {
         MXS_INFO("'session_track_system_variables' loaded from '%s', next update in %ld seconds.",
-                 server->name(), session_track_update_interval.count());
+            server->name(),
+            session_track_update_interval.count());
         m_last_session_track_update = mxb::Clock::now();
 
         if (r->next_row() && r->get_col_count() > 0)
@@ -1388,12 +1364,12 @@ void MonitorServer::log_connect_error(ConnectResult rval)
 {
     mxb_assert(!Monitor::connection_is_ok(rval));
     const char TIMED_OUT[] = "Monitor timed out when connecting to server %s[%s:%d] : '%s'";
-    const char REFUSED[] = "Monitor was unable to connect to server %s[%s:%d] : '%s'";
+    const char REFUSED[]   = "Monitor was unable to connect to server %s[%s:%d] : '%s'";
     MXS_ERROR(rval == ConnectResult::TIMEOUT ? TIMED_OUT : REFUSED,
-              server->name(),
-              server->address(),
-              server->port(),
-              m_latest_error.c_str());
+        server->name(),
+        server->address(),
+        server->port(),
+        m_latest_error.c_str());
 }
 
 void MonitorServer::log_state_change(const std::string& reason)
@@ -1401,9 +1377,14 @@ void MonitorServer::log_state_change(const std::string& reason)
     string prev = Target::status_to_string(mon_prev_status, server->stats().n_current);
     string next = server->status_string();
     MXS_NOTICE("Server changed state: %s[%s:%u]: %s. [%s] -> [%s]%s%s",
-               server->name(), server->address(), server->port(),
-               get_event_name(), prev.c_str(), next.c_str(),
-               reason.empty() ? "" : ": ", reason.c_str());
+        server->name(),
+        server->address(),
+        server->port(),
+        get_event_name(),
+        prev.c_str(),
+        next.c_str(),
+        reason.empty() ? "" : ": ",
+        reason.c_str());
 }
 
 void Monitor::hangup_failed_servers()
@@ -1420,10 +1401,10 @@ void Monitor::hangup_failed_servers()
 void MonitorServer::mon_report_query_error()
 {
     MXS_ERROR("Failed to execute query on server '%s' ([%s]:%d): %s",
-              server->name(),
-              server->address(),
-              server->port(),
-              mysql_error(con));
+        server->name(),
+        server->address(),
+        server->port(),
+        mysql_error(con));
 }
 
 void Monitor::check_maintenance_requests()
@@ -1443,7 +1424,7 @@ void Monitor::check_maintenance_requests()
 void Monitor::detect_handle_state_changes()
 {
     bool master_down = false;
-    bool master_up = false;
+    bool master_up   = false;
 
     for (MonitorServer* ptr : m_servers)
     {
@@ -1458,8 +1439,8 @@ void Monitor::detect_handle_state_changes()
              * or new_master events are triggered within a pre-defined time limit.
              */
             mxs_monitor_event_t event = ptr->get_event_type();
-            ptr->last_event = event;
-            ptr->triggered_at = mxs_clock();
+            ptr->last_event           = event;
+            ptr->triggered_at         = mxs_clock();
             ptr->log_state_change(annotate_state_change(ptr));
 
             if (event == MASTER_DOWN_EVENT)
@@ -1517,8 +1498,8 @@ FILE* Monitor::open_data_file(Monitor* monitor, char* path)
     {
         MXS_ERROR("Path is too long: %d characters exceeds the maximum path "
                   "length of %d bytes",
-                  nbytes,
-                  PATH_MAX);
+            nbytes,
+            PATH_MAX);
     }
 
     return rval;
@@ -1526,7 +1507,7 @@ FILE* Monitor::open_data_file(Monitor* monitor, char* path)
 
 void Monitor::store_server_journal(MonitorServer* master)
 {
-    auto monitor = this;    // TODO: cleanup later
+    auto monitor = this;  // TODO: cleanup later
     /** Calculate how much memory we need to allocate */
     uint32_t size = MMB_LEN_SCHEMA_VERSION + MMB_LEN_CRC32;
 
@@ -1545,7 +1526,7 @@ void Monitor::store_server_journal(MonitorServer* master)
 
     /** 4 bytes for file length, 1 byte for schema version and 4 bytes for CRC32 */
     uint32_t buffer_size = size + MMB_LEN_BYTES;
-    uint8_t* data = (uint8_t*)MXS_MALLOC(buffer_size);
+    uint8_t* data        = (uint8_t*) MXS_MALLOC(buffer_size);
     char path[PATH_MAX + 1];
 
     if (data)
@@ -1578,9 +1559,7 @@ void Monitor::store_server_journal(MonitorServer* master)
                 }
                 else
                 {
-                    MXS_ERROR("Failed to write journal data to disk: %d, %s",
-                              errno,
-                              mxs_strerror(errno));
+                    MXS_ERROR("Failed to write journal data to disk: %d, %s", errno, mxs_strerror(errno));
                 }
                 fclose(file);
             }
@@ -1591,14 +1570,14 @@ void Monitor::store_server_journal(MonitorServer* master)
 
 void Monitor::load_server_journal(MonitorServer** master)
 {
-    auto monitor = this;    // TODO: cleanup later
+    auto monitor = this;  // TODO: cleanup later
     char path[PATH_MAX];
     FILE* file = open_data_file(monitor, path);
 
     if (file)
     {
         uint32_t size = 0;
-        size_t bytes = fread(&size, 1, MMB_LEN_BYTES, file);
+        size_t bytes  = fread(&size, 1, MMB_LEN_BYTES, file);
         mxb_assert(sizeof(size) == MMB_LEN_BYTES);
 
         if (bytes == MMB_LEN_BYTES)
@@ -1609,20 +1588,17 @@ void Monitor::load_server_journal(MonitorServer** master)
              * - `size - 5` bytes of data
              * - Trailing 4 bytes of CRC32
              */
-            char* data = (char*)MXS_MALLOC(size);
+            char* data = (char*) MXS_MALLOC(size);
 
             if (data && (bytes = fread(data, 1, size, file)) == size)
             {
                 if (*data == MMB_SCHEMA_VERSION)
                 {
-                    if (check_crc32((uint8_t*)data,
-                                    size - MMB_LEN_CRC32,
-                                    (uint8_t*)data + size - MMB_LEN_CRC32))
+                    if (check_crc32(
+                            (uint8_t*) data, size - MMB_LEN_CRC32, (uint8_t*) data + size - MMB_LEN_CRC32))
                     {
-                        if (process_data_file(monitor,
-                                              master,
-                                              data + MMB_LEN_SCHEMA_VERSION,
-                                              data + size - MMB_LEN_CRC32))
+                        if (process_data_file(
+                                monitor, master, data + MMB_LEN_SCHEMA_VERSION, data + size - MMB_LEN_CRC32))
                         {
                             MXS_INFO("Loaded server states from journal file: %s", path);
                         }
@@ -1634,7 +1610,7 @@ void Monitor::load_server_journal(MonitorServer** master)
                 }
                 else
                 {
-                    MXS_ERROR("Unknown journal schema version: %d", (int)*data);
+                    MXS_ERROR("Unknown journal schema version: %d", (int) *data);
                 }
             }
             else if (data)
@@ -1647,8 +1623,8 @@ void Monitor::load_server_journal(MonitorServer** master)
                 {
                     MXS_ERROR("Failed to read journal file: Expected %u bytes, "
                               "read %lu bytes.",
-                              size,
-                              bytes);
+                        size,
+                        bytes);
                 }
             }
             MXS_FREE(data);
@@ -1657,16 +1633,14 @@ void Monitor::load_server_journal(MonitorServer** master)
         {
             if (ferror(file))
             {
-                MXS_ERROR("Failed to read journal file length: %d, %s",
-                          errno,
-                          mxs_strerror(errno));
+                MXS_ERROR("Failed to read journal file length: %d, %s", errno, mxs_strerror(errno));
             }
             else
             {
                 MXS_ERROR("Failed to read journal file length: Expected %d bytes, "
                           "read %lu bytes.",
-                          MMB_LEN_BYTES,
-                          bytes);
+                    MMB_LEN_BYTES,
+                    bytes);
             }
         }
 
@@ -1703,7 +1677,9 @@ bool Monitor::journal_is_stale() const
             if (tdiff >= max_age)
             {
                 MXS_NOTICE("Journal file was created %ld seconds ago. Maximum journal "
-                           "age is %ld seconds.", tdiff, max_age);
+                           "age is %ld seconds.",
+                    tdiff,
+                    max_age);
             }
             else
             {
@@ -1775,8 +1751,8 @@ std::vector<MonitorServer*> Monitor::get_monitored_serverlist(const string& key,
     }
     else
     {
-        MXS_ERROR("Serverlist setting '%s' contains invalid server name '%s'.",
-                  key.c_str(), name_error.c_str());
+        MXS_ERROR(
+            "Serverlist setting '%s' contains invalid server name '%s'.", key.c_str(), name_error.c_str());
         *error_out = true;
     }
 
@@ -1808,7 +1784,8 @@ bool Monitor::set_server_status(SERVER* srv, int bit, string* errmsg_out)
     if (!msrv)
     {
         MXS_ERROR("Monitor %s requested to set status of server %s that it does not monitor.",
-                  name(), srv->address());
+            name(),
+            srv->address());
         return false;
     }
 
@@ -1835,7 +1812,7 @@ bool Monitor::set_server_status(SERVER* srv, int bit, string* errmsg_out)
             if (bit & SERVER_MAINT)
             {
                 request = MonitorServer::MAINT_ON;
-                type = DisableType::MAINTENANCE;
+                type    = DisableType::MAINTENANCE;
             }
             else
             {
@@ -1871,7 +1848,8 @@ bool Monitor::clear_server_status(SERVER* srv, int bit, string* errmsg_out)
     if (!msrv)
     {
         MXS_ERROR("Monitor %s requested to clear status of server %s that it does not monitor.",
-                  name(), srv->address());
+            name(),
+            srv->address());
         return false;
     }
 
@@ -1939,7 +1917,7 @@ void Monitor::deactivate()
 bool Monitor::check_disk_space_this_tick()
 {
     bool should_update_disk_space = false;
-    auto check_interval = m_settings.disk_space_check_interval;
+    auto check_interval           = m_settings.disk_space_check_interval;
 
     if ((check_interval.count() > 0) && m_disk_space_checked.split() > check_interval)
     {
@@ -1979,8 +1957,7 @@ MonitorWorker::MonitorWorker(const string& name, const string& module)
     , m_shutdown(0)
     , m_checked(false)
     , m_loop_called(get_time_ms())
-{
-}
+{}
 
 bool MonitorWorker::is_running() const
 {
@@ -2038,7 +2015,7 @@ bool MonitorWorker::start()
     bool started = false;
     if (m_checked)
     {
-        m_loop_called = get_time_ms() - settings().interval;    // Next tick should happen immediately.
+        m_loop_called = get_time_ms() - settings().interval;  // Next tick should happen immediately.
         if (!Worker::start())
         {
             MXS_ERROR("Failed to start worker for monitor '%s'.", name());
@@ -2066,7 +2043,7 @@ int64_t MonitorWorker::get_time_ms()
 {
     timespec t;
 
-    MXB_AT_DEBUG(int rv = ) clock_gettime(CLOCK_MONOTONIC_COARSE, &t);
+    MXB_AT_DEBUG(int rv =) clock_gettime(CLOCK_MONOTONIC_COARSE, &t);
     mxb_assert(rv == 0);
 
     return t.tv_sec * 1000 + (t.tv_nsec / 1000000);
@@ -2075,12 +2052,12 @@ int64_t MonitorWorker::get_time_ms()
 bool MonitorServer::can_update_disk_space_status() const
 {
     return m_ok_to_check_disk_space
-           && (!m_shared.monitor_disk_limits.empty() || server->have_disk_space_limits());
+        && (!m_shared.monitor_disk_limits.empty() || server->have_disk_space_limits());
 }
 
 void MonitorServer::update_disk_space_status()
 {
-    auto pMs = this;    // TODO: Clean
+    auto pMs = this;  // TODO: Clean
     std::map<std::string, disk::SizesAndName> info;
 
     int rv = disk::get_info_by_path(pMs->con, &info);
@@ -2094,13 +2071,13 @@ void MonitorServer::update_disk_space_status()
             dst = m_shared.monitor_disk_limits;
         }
 
-        bool disk_space_exhausted = false;
+        bool disk_space_exhausted   = false;
         int32_t star_max_percentage = -1;
         std::set<std::string> checked_paths;
 
         for (const auto& dst_item : dst)
         {
-            string path = dst_item.first;
+            string path            = dst_item.first;
             int32_t max_percentage = dst_item.second;
 
             if (path == "*")
@@ -2122,9 +2099,9 @@ void MonitorServer::update_disk_space_status()
                 {
                     MXS_WARNING("Disk space threshold specified for %s even though server %s at %s"
                                 "does not have that.",
-                                path.c_str(),
-                                pMs->server->name(),
-                                pMs->server->address());
+                        path.c_str(),
+                        pMs->server->name(),
+                        pMs->server->address());
                 }
             }
         }
@@ -2165,17 +2142,17 @@ void MonitorServer::update_disk_space_status()
             MXS_ERROR("Disk space cannot be checked for %s at %s, because either the "
                       "version (%s) is too old, or the DISKS information schema plugin "
                       "has not been installed. Disk space checking has been disabled.",
-                      pServer->name(),
-                      pServer->address(),
-                      pServer->info().version_string());
+                pServer->name(),
+                pServer->address(),
+                pServer->info().version_string());
         }
         else
         {
             MXS_ERROR("Checking the disk space for %s at %s failed due to: (%d) %s",
-                      pServer->name(),
-                      pServer->address(),
-                      mysql_errno(pMs->con),
-                      mysql_error(pMs->con));
+                pServer->name(),
+                pServer->address(),
+                mysql_errno(pMs->con),
+                mysql_error(pMs->con));
         }
     }
 }
@@ -2208,17 +2185,11 @@ void MonitorWorkerSimple::pre_loop()
     // Add another overridable function for derived classes (e.g. pre_loop_monsimple) if required.
 }
 
-void MonitorWorkerSimple::post_loop()
-{
-}
+void MonitorWorkerSimple::post_loop() {}
 
-void MonitorWorkerSimple::pre_tick()
-{
-}
+void MonitorWorkerSimple::pre_tick() {}
 
-void MonitorWorkerSimple::post_tick()
-{
-}
+void MonitorWorkerSimple::post_tick() {}
 
 void MonitorWorkerSimple::tick()
 {
@@ -2232,7 +2203,7 @@ void MonitorWorkerSimple::tick()
         if (!pMs->server->is_in_maint())
         {
             pMs->mon_prev_status = pMs->server->status();
-            pMs->pending_status = pMs->server->status();
+            pMs->pending_status  = pMs->server->status();
 
             ConnectResult rval = pMs->ping_or_connect();
 
@@ -2288,13 +2259,9 @@ void MonitorWorkerSimple::tick()
     store_server_journal(m_master);
 }
 
-void MonitorWorker::pre_loop()
-{
-}
+void MonitorWorker::pre_loop() {}
 
-void MonitorWorker::post_loop()
-{
-}
+void MonitorWorker::post_loop() {}
 
 void MonitorWorker::process_state_changes()
 {
@@ -2355,8 +2322,8 @@ bool MonitorWorker::call_run_one_tick(Worker::Call::action_t action)
         int64_t ms_to_next_call = settings().interval - (now - m_loop_called);
         // ms_to_next_call will be negative, if the run_one_tick() call took
         // longer than one monitor interval.
-        int64_t delay = ((ms_to_next_call <= 0) || (ms_to_next_call >= base_interval_ms)) ?
-            base_interval_ms : ms_to_next_call;
+        int64_t delay = ((ms_to_next_call <= 0) || (ms_to_next_call >= base_interval_ms)) ? base_interval_ms
+                                                                                          : ms_to_next_call;
 
         delayed_call(delay, &MonitorWorker::call_run_one_tick, this);
     }
@@ -2454,45 +2421,41 @@ void MonitorServer::maybe_fetch_session_track()
         fetch_session_track();
     }
 }
-}
+}  // namespace maxscale
 
 const MXS_MODULE_PARAM* common_monitor_params()
 {
-    static const MXS_MODULE_PARAM config_monitor_params[] =
-    {
-        {CN_TYPE,                      MXS_MODULE_PARAM_STRING,   CN_MONITOR, MXS_MODULE_OPT_REQUIRED  },
-        {CN_MODULE,                    MXS_MODULE_PARAM_STRING,   NULL,       MXS_MODULE_OPT_REQUIRED  },
-        {CN_USER,                      MXS_MODULE_PARAM_STRING,   NULL,       MXS_MODULE_OPT_REQUIRED  },
-        {CN_PASSWORD,                  MXS_MODULE_PARAM_PASSWORD, NULL,       MXS_MODULE_OPT_REQUIRED  },
-        {CN_SERVERS,                   MXS_MODULE_PARAM_SERVERLIST},
-        {CN_MONITOR_INTERVAL,          MXS_MODULE_PARAM_DURATION, "2000ms"},
-        {CN_BACKEND_CONNECT_TIMEOUT,   MXS_MODULE_PARAM_DURATION, "3s",       MXS_MODULE_OPT_DURATION_S},
-        {CN_BACKEND_READ_TIMEOUT,      MXS_MODULE_PARAM_DURATION, "3s",       MXS_MODULE_OPT_DURATION_S},
-        {CN_BACKEND_WRITE_TIMEOUT,     MXS_MODULE_PARAM_DURATION, "3s",       MXS_MODULE_OPT_DURATION_S},
-        {CN_BACKEND_CONNECT_ATTEMPTS,  MXS_MODULE_PARAM_COUNT,    "1"},
-        {CN_JOURNAL_MAX_AGE,           MXS_MODULE_PARAM_DURATION, "28800s",   MXS_MODULE_OPT_DURATION_S},
-        {CN_DISK_SPACE_THRESHOLD,      MXS_MODULE_PARAM_STRING},
-        {CN_DISK_SPACE_CHECK_INTERVAL, MXS_MODULE_PARAM_DURATION, "0ms"},
-        // Cannot be a path type as the script may have parameters
-        {CN_SCRIPT,                    MXS_MODULE_PARAM_STRING},
-        {CN_SCRIPT_TIMEOUT,            MXS_MODULE_PARAM_DURATION, "90s",      MXS_MODULE_OPT_DURATION_S},
-        {
-            CN_EVENTS, MXS_MODULE_PARAM_ENUM, monitor_event_default.name, MXS_MODULE_OPT_NONE,
-            monitor_event_values
-        },
-        {NULL}
-    };
+    static const MXS_MODULE_PARAM config_monitor_params[]
+        = {{CN_TYPE, MXS_MODULE_PARAM_STRING, CN_MONITOR, MXS_MODULE_OPT_REQUIRED},
+            {CN_MODULE, MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED},
+            {CN_USER, MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED},
+            {CN_PASSWORD, MXS_MODULE_PARAM_PASSWORD, NULL, MXS_MODULE_OPT_REQUIRED},
+            {CN_SERVERS, MXS_MODULE_PARAM_SERVERLIST},
+            {CN_MONITOR_INTERVAL, MXS_MODULE_PARAM_DURATION, "2000ms"},
+            {CN_BACKEND_CONNECT_TIMEOUT, MXS_MODULE_PARAM_DURATION, "3s", MXS_MODULE_OPT_DURATION_S},
+            {CN_BACKEND_READ_TIMEOUT, MXS_MODULE_PARAM_DURATION, "3s", MXS_MODULE_OPT_DURATION_S},
+            {CN_BACKEND_WRITE_TIMEOUT, MXS_MODULE_PARAM_DURATION, "3s", MXS_MODULE_OPT_DURATION_S},
+            {CN_BACKEND_CONNECT_ATTEMPTS, MXS_MODULE_PARAM_COUNT, "1"},
+            {CN_JOURNAL_MAX_AGE, MXS_MODULE_PARAM_DURATION, "28800s", MXS_MODULE_OPT_DURATION_S},
+            {CN_DISK_SPACE_THRESHOLD, MXS_MODULE_PARAM_STRING},
+            {CN_DISK_SPACE_CHECK_INTERVAL, MXS_MODULE_PARAM_DURATION, "0ms"},
+            // Cannot be a path type as the script may have parameters
+            {CN_SCRIPT, MXS_MODULE_PARAM_STRING},
+            {CN_SCRIPT_TIMEOUT, MXS_MODULE_PARAM_DURATION, "90s", MXS_MODULE_OPT_DURATION_S},
+            {CN_EVENTS,
+                MXS_MODULE_PARAM_ENUM,
+                monitor_event_default.name,
+                MXS_MODULE_OPT_NONE,
+                monitor_event_values},
+            {NULL}};
     return config_monitor_params;
 }
 
 mxs::Monitor::Test::Test(mxs::Monitor* monitor)
     : m_monitor(monitor)
-{
-}
+{}
 
-mxs::Monitor::Test::~Test()
-{
-}
+mxs::Monitor::Test::~Test() {}
 
 void mxs::Monitor::Test::remove_servers()
 {
@@ -2506,7 +2469,7 @@ void mxs::Monitor::Test::remove_servers()
     m_monitor->remove_all_servers();
     for (auto srv : copy)
     {
-        delete srv;     // MonitorServer dtor doesn't delete the base server.
+        delete srv;  // MonitorServer dtor doesn't delete the base server.
     }
 }
 

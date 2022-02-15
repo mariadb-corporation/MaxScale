@@ -81,4 +81,4 @@ bool get_json_float(json_t* json, const char* ptr, double* out);
  * @return True if value was unpacked
  */
 bool get_json_bool(json_t* json, const char* ptr, bool* out);
-}
+}  // namespace maxscale

@@ -31,64 +31,62 @@ namespace
 struct SETTINGS
 {
     bool stop_at_first_error;
-} settings =
-{
-    true,   // stop_at_first_error
+} settings = {
+    true,  // stop_at_first_error
 };
 
 // See
 // https://github.com/mariadb-corporation/MaxScale/blob/2.2/Documentation/Filters/Cache.md#cache_inside_transactions
 struct TEST_CASE
 {
-    cache_in_trxs_t cit;        /*< How to cache in transactions. */
-    uint32_t        trx_state;  /*< The transaction state. */
-    bool            should_use; /*< Whether the cache should be returned from the cache. */
-} TEST_CASES[] =
-{
+    cache_in_trxs_t cit; /*< How to cache in transactions. */
+    uint32_t trx_state;  /*< The transaction state. */
+    bool should_use;     /*< Whether the cache should be returned from the cache. */
+} TEST_CASES[] = {
     {
         CACHE_IN_TRXS_NEVER,
         SESSION_TRX_INACTIVE,
-        true    // should_use
+        true  // should_use
     },
     {
         CACHE_IN_TRXS_NEVER,
         SESSION_TRX_ACTIVE,
-        false   // should_use
+        false  // should_use
     },
     {
         CACHE_IN_TRXS_NEVER,
         SESSION_TRX_ACTIVE | SESSION_TRX_READ_ONLY,
-        false   // should_use
+        false  // should_use
     },
     {
         CACHE_IN_TRXS_READ_ONLY,
         SESSION_TRX_INACTIVE,
-        true    // should_use
+        true  // should_use
     },
     {
         CACHE_IN_TRXS_READ_ONLY,
         SESSION_TRX_ACTIVE,
-        false   // should_use
+        false  // should_use
     },
     {
         CACHE_IN_TRXS_READ_ONLY,
         SESSION_TRX_ACTIVE | SESSION_TRX_READ_ONLY,
-        true    // should_use
+        true  // should_use
     },
     {
         CACHE_IN_TRXS_ALL,
         SESSION_TRX_INACTIVE,
-        true    // should_use
+        true  // should_use
     },
     {
         CACHE_IN_TRXS_ALL,
         SESSION_TRX_ACTIVE,
-        true    // should_use
+        true  // should_use
     },
     {
         CACHE_IN_TRXS_ALL,
         SESSION_TRX_ACTIVE | SESSION_TRX_READ_ONLY,
-        true    // should_use
+        true  // should_use
     },
 };
 
@@ -118,7 +116,7 @@ ostream& operator<<(ostream& out, cache_in_trxs_t x)
     out << to_string(x);
     return out;
 }
-}
+}  // namespace
 
 namespace
 {
@@ -133,9 +131,9 @@ string create_unique_select()
 }
 
 int test(mock::Session& session,
-         FilterModule::Session& filter_session,
-         mock::RouterSession& router_session,
-         const TEST_CASE& tc)
+    FilterModule::Session& filter_session,
+    mock::RouterSession& router_session,
+    const TEST_CASE& tc)
 {
     int rv = 0;
 
@@ -303,10 +301,8 @@ int test(FilterModule::Instance& filter_instance, const TEST_CASE& tc)
     mock::ResultSetBackend backend;
     mock::RouterSession router_session(&backend, &session);
 
-    auto_ptr<FilterModule::Session> sFilter_session = filter_instance.newSession(&session,
-                                                                                 service,
-                                                                                 router_session.as_downstream(),
-                                                                                 client.as_upstream());
+    auto_ptr<FilterModule::Session> sFilter_session
+        = filter_instance.newSession(&session, service, router_session.as_downstream(), client.as_upstream());
 
     if (sFilter_session.get())
     {
@@ -342,7 +338,7 @@ int test(FilterModule& filter_module, const TEST_CASE& tc)
 
     return rv;
 }
-}
+}  // namespace
 
 namespace
 {
@@ -361,9 +357,7 @@ int run()
         {
             const TEST_CASE& tc = TEST_CASES[i];
 
-            cout << "CIT: " << tc.cit
-                 << ", TRX_STATE: " << tc.trx_state
-                 << ", should use: " << tc.should_use
+            cout << "CIT: " << tc.cit << ", TRX_STATE: " << tc.trx_state << ", should use: " << tc.should_use
                  << endl;
 
             rv += test(*sModule.get(), tc);
@@ -383,15 +377,14 @@ int run()
 
     return rv;
 }
-}
+}  // namespace
 
 namespace
 {
 
-char USAGE[] =
-    "usage: test_dbfwfilter [-d]\n"
-    "\n"
-    "-d    don't stop at first error\n";
+char USAGE[] = "usage: test_dbfwfilter [-d]\n"
+               "\n"
+               "-d    don't stop at first error\n";
 }
 
 int main(int argc, char* argv[])
@@ -415,11 +408,11 @@ int main(int argc, char* argv[])
     if (rv == 0)
     {
         run_unit_test([&]() {
-                          mxs::set_libdir(TEST_DIR "/server/modules/filter/cache/storage/storage_inmemory");
-                          preload_module("cache", "server/modules/filter/cache/", MODULE_FILTER);
+            mxs::set_libdir(TEST_DIR "/server/modules/filter/cache/storage/storage_inmemory");
+            preload_module("cache", "server/modules/filter/cache/", MODULE_FILTER);
 
-                          rv = run();
-                      });
+            rv = run();
+        });
 
         cout << rv << " failures." << endl;
 

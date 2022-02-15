@@ -50,7 +50,7 @@ public:
     std::string gtid_file_path() const;
     std::string requested_gtid_file_path() const;
     std::string master_info_file() const;
-    uint32_t    server_id() const;
+    uint32_t server_id() const;
 
     // Network timeout
     std::chrono::seconds net_timeout() const;
@@ -59,10 +59,11 @@ public:
     void disable_select_master();
 
     // File purging
-    int32_t             expire_log_minimum_files() const;
+    int32_t expire_log_minimum_files() const;
     wall_time::Duration expire_log_duration() const;
     wall_time::Duration purge_startup_delay() const;
     wall_time::Duration purge_poll_timeout() const;
+
 private:
     /** Where the binlog files are stored */
     std::string m_binlog_dir;
@@ -109,8 +110,8 @@ private:
     /** Ask the master for semi-sync replication. Only related to master comm. TODO? */
     bool m_semisync = false;
     /** Hm. */
-    int  m_ssl_cert_verification_depth = 9;
-    bool m_encrypt_binlog = false;
+    int m_ssl_cert_verification_depth = 9;
+    bool m_encrypt_binlog             = false;
     /**
      *  bool m_encrypt_binlog = false;
      *  std::string m_encryption_algorithm;
@@ -128,12 +129,12 @@ private:
     maxbase::Duration m_connect_retry_tmo = 60s;
 
     std::chrono::seconds m_net_timeout;
-    bool                 m_select_master;
-    bool                 m_select_master_disabled {false};
+    bool m_select_master;
+    bool m_select_master_disabled {false};
 
-    int64_t             m_expire_log_minimum_files;
+    int64_t m_expire_log_minimum_files;
     wall_time::Duration m_expire_log_duration;
     wall_time::Duration m_purge_startup_delay;
     wall_time::Duration m_purge_poll_timeout;
 };
-}
+}  // namespace pinloki

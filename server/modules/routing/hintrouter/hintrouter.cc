@@ -19,22 +19,18 @@
 
 #include <maxbase/atomic.hh>
 
-static const MXS_ENUM_VALUE default_action_values[] =
-{
-    {"master", HINT_ROUTE_TO_MASTER      },
-    {"slave",  HINT_ROUTE_TO_SLAVE       },
-    {"named",  HINT_ROUTE_TO_NAMED_SERVER},
-    {"all",    HINT_ROUTE_TO_ALL         },
-    {NULL}      /* Last must be NULL */
+static const MXS_ENUM_VALUE default_action_values[] = {
+    {"master", HINT_ROUTE_TO_MASTER},
+    {"slave", HINT_ROUTE_TO_SLAVE},
+    {"named", HINT_ROUTE_TO_NAMED_SERVER},
+    {"all", HINT_ROUTE_TO_ALL},
+    {NULL} /* Last must be NULL */
 };
 static const char DEFAULT_ACTION[] = "default_action";
 static const char DEFAULT_SERVER[] = "default_server";
-static const char MAX_SLAVES[] = "max_slaves";
+static const char MAX_SLAVES[]     = "max_slaves";
 
-HintRouter::HintRouter(SERVICE* pService,
-                       HINT_TYPE default_action,
-                       string& default_server,
-                       int max_slaves)
+HintRouter::HintRouter(SERVICE* pService, HINT_TYPE default_action, string& default_server, int max_slaves)
     : maxscale::Router<HintRouter, HintRouterSession>(pService)
     , m_routed_to_master(0)
     , m_routed_to_slave(0)
@@ -59,9 +55,9 @@ HintRouter* HintRouter::create(SERVICE* pService, mxs::ConfigParameters* params)
 {
     HR_ENTRY();
 
-    HINT_TYPE default_action = (HINT_TYPE)params->get_enum(DEFAULT_ACTION, default_action_values);
-    string default_server = params->get_string(DEFAULT_SERVER);
-    int max_slaves = params->get_integer(MAX_SLAVES);
+    HINT_TYPE default_action = (HINT_TYPE) params->get_enum(DEFAULT_ACTION, default_action_values);
+    string default_server    = params->get_string(DEFAULT_SERVER);
+    int max_slaves           = params->get_integer(MAX_SLAVES);
     return new HintRouter(pService, default_action, default_server, max_slaves);
 }
 
@@ -89,15 +85,13 @@ HintRouterSession* HintRouter::newSession(MXS_SESSION* pSession, const Endpoints
      * time it was formed. */
     if (slave_refs.size())
     {
-        array_index size = slave_refs.size();
+        array_index size  = slave_refs.size();
         array_index begin = m_total_slave_conns % size;
         array_index limit = begin + size;
 
-        int slave_conns = 0;
+        int slave_conns     = 0;
         array_index current = begin;
-        for (;
-             (slave_conns < m_max_slaves) && current != limit;
-             current++)
+        for (; (slave_conns < m_max_slaves) && current != limit; current++)
         {
             auto slave_ref = slave_refs.at(current % size);
 
@@ -123,11 +117,11 @@ json_t* HintRouter::diagnostics() const
     HR_ENTRY();
 
     json_t* rval = json_object();
-    json_t* arr = json_array();
+    json_t* arr  = json_array();
 
     for (int i = 0; default_action_values[i].name; i++)
     {
-        if (default_action_values[i].enum_value == (uint64_t)m_default_action)
+        if (default_action_values[i].enum_value == (uint64_t) m_default_action)
         {
             json_array_append_new(arr, json_string(default_action_values[i].name));
         }
@@ -145,9 +139,8 @@ json_t* HintRouter::diagnostics() const
     return rval;
 }
 
-bool HintRouter::connect_to_backend(MXS_SESSION* session,
-                                    mxs::Endpoint* sref,
-                                    HintRouterSession::BackendMap* all_backends)
+bool HintRouter::connect_to_backend(
+    MXS_SESSION* session, mxs::Endpoint* sref, HintRouterSession::BackendMap* all_backends)
 {
     bool result = false;
 
@@ -155,7 +148,7 @@ bool HintRouter::connect_to_backend(MXS_SESSION* session,
     {
         HR_DEBUG("Connected.");
         (*all_backends)[sref->target()->name()] = sref;
-        result = true;
+        result                                  = true;
     }
     else
     {
@@ -167,31 +160,24 @@ bool HintRouter::connect_to_backend(MXS_SESSION* session,
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_MODULE module =
-    {
-        MXS_MODULE_API_ROUTER,                              /* Module type */
-        MXS_MODULE_BETA_RELEASE,                            /* Release status */
-        MXS_ROUTER_VERSION,                                 /* Implemented module API version */
-        "A hint router",                                    /* Description */
-        "V1.0.0",                                           /* Module version */
+    static MXS_MODULE module = {MXS_MODULE_API_ROUTER, /* Module type */
+        MXS_MODULE_BETA_RELEASE,                       /* Release status */
+        MXS_ROUTER_VERSION,                            /* Implemented module API version */
+        "A hint router",                               /* Description */
+        "V1.0.0",                                      /* Module version */
         RCAP_TYPE_STMT_INPUT | RCAP_TYPE_RESULTSET_OUTPUT,
         &HintRouter::s_object,
-        NULL,                                               /* Process init, can be null */
-        NULL,                                               /* Process finish, can be null */
-        NULL,                                               /* Thread init */
-        NULL,                                               /* Thread finish */
-        {
-            {
-                DEFAULT_ACTION,
-                MXS_MODULE_PARAM_ENUM,
-                default_action_values[0].name,
-                MXS_MODULE_OPT_NONE,
-                default_action_values
-            },
-            {DEFAULT_SERVER,                              MXS_MODULE_PARAM_SERVER,""  },
-            {MAX_SLAVES,                                  MXS_MODULE_PARAM_INT,  "-1"},
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+        NULL, /* Process init, can be null */
+        NULL, /* Process finish, can be null */
+        NULL, /* Thread init */
+        NULL, /* Thread finish */
+        {{DEFAULT_ACTION,
+             MXS_MODULE_PARAM_ENUM,
+             default_action_values[0].name,
+             MXS_MODULE_OPT_NONE,
+             default_action_values},
+            {DEFAULT_SERVER, MXS_MODULE_PARAM_SERVER, ""},
+            {MAX_SLAVES, MXS_MODULE_PARAM_INT, "-1"},
+            {MXS_END_MODULE_PARAMS}}};
     return &module;
 }

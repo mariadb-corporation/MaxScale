@@ -33,20 +33,18 @@ public:
 
     static const int MAX_ADDRESS_LEN = 1024;
     static const int MAX_MONUSER_LEN = 512;
-    static const int MAX_MONPW_LEN = 512;
+    static const int MAX_MONPW_LEN   = 512;
 
-    class ParamDiskSpaceLimits : public mxs::config::ConcreteParam<ParamDiskSpaceLimits
-                                                                   , DiskSpaceLimits>
+    class ParamDiskSpaceLimits : public mxs::config::ConcreteParam<ParamDiskSpaceLimits, DiskSpaceLimits>
     {
     public:
-        ParamDiskSpaceLimits(mxs::config::Specification* pSpecification,
-                             const char* zName, const char* zDescription);
+        ParamDiskSpaceLimits(
+            mxs::config::Specification* pSpecification, const char* zName, const char* zDescription);
         std::string type() const override;
         std::string to_string(value_type value) const;
-        bool        from_string(const std::string& value, value_type* pValue,
-                                std::string* pMessage = nullptr) const;
+        bool from_string(const std::string& value, value_type* pValue, std::string* pMessage = nullptr) const;
         json_t* to_json(value_type value) const;
-        bool    from_json(const json_t* pJson, value_type* pValue, std::string* pMessage = nullptr) const;
+        bool from_json(const json_t* pJson, value_type* pValue, std::string* pMessage = nullptr) const;
     };
 
     class ParamSSL : public mxs::config::ConcreteParam<ParamSSL, bool>
@@ -55,99 +53,58 @@ public:
         ParamSSL(mxs::config::Specification* pSpecification, const char* zName, const char* zDescription);
         std::string type() const override;
         std::string to_string(value_type value) const;
-        bool        from_string(const std::string& value, value_type* pValue,
-                                std::string* pMessage = nullptr) const;
+        bool from_string(const std::string& value, value_type* pValue, std::string* pMessage = nullptr) const;
         json_t* to_json(value_type value) const;
-        bool    from_json(const json_t* pJson, value_type* pValue, std::string* pMessage = nullptr) const;
+        bool from_json(const json_t* pJson, value_type* pValue, std::string* pMessage = nullptr) const;
     };
 
     Server(const std::string& name, std::unique_ptr<mxs::SSLContext> ssl = {})
         : m_name(name)
         , m_settings(name)
         , m_ssl_provider(std::move(ssl))
-    {
-    }
+    {}
 
     ~Server() = default;
 
-    const char* address() const override
-    {
-        return m_settings.address;
-    }
+    const char* address() const override { return m_settings.address; }
 
-    int port() const override
-    {
-        return m_settings.m_port.get();
-    }
+    int port() const override { return m_settings.m_port.get(); }
 
-    int extra_port() const override
-    {
-        return m_settings.m_extra_port.get();
-    }
+    int extra_port() const override { return m_settings.m_extra_port.get(); }
 
-    long persistpoolmax() const
-    {
-        return m_settings.m_persistpoolmax.get();
-    }
+    long persistpoolmax() const { return m_settings.m_persistpoolmax.get(); }
 
-    void set_persistpoolmax(long persistpoolmax)
-    {
-        m_settings.m_persistpoolmax.set(persistpoolmax);
-    }
+    void set_persistpoolmax(long persistpoolmax) { m_settings.m_persistpoolmax.set(persistpoolmax); }
 
-    long persistmaxtime() const
-    {
-        return m_settings.m_persistmaxtime.get().count();
-    }
+    long persistmaxtime() const { return m_settings.m_persistmaxtime.get().count(); }
 
     void set_persistmaxtime(long persistmaxtime)
     {
         m_settings.m_persistmaxtime.set(std::chrono::seconds(persistmaxtime));
     }
 
-    void set_rank(int64_t rank)
-    {
-        m_settings.m_rank.set(rank);
-    }
+    void set_rank(int64_t rank) { m_settings.m_rank.set(rank); }
 
-    void set_priority(int64_t priority)
-    {
-        m_settings.m_priority.set(priority);
-    }
+    void set_priority(int64_t priority) { m_settings.m_priority.set(priority); }
 
     bool have_disk_space_limits() const override
     {
         return m_settings.m_have_disk_space_limits.load(std::memory_order_relaxed);
     }
 
-    DiskSpaceLimits get_disk_space_limits() const override
-    {
-        return m_settings.m_disk_space_threshold.get();
-    }
+    DiskSpaceLimits get_disk_space_limits() const override { return m_settings.m_disk_space_threshold.get(); }
 
-    bool persistent_conns_enabled() const override
-    {
-        return m_settings.m_persistpoolmax.get() > 0;
-    }
+    bool persistent_conns_enabled() const override { return m_settings.m_persistpoolmax.get() > 0; }
 
     void set_version(uint64_t version_num, const std::string& version_str) override;
 
     const VersionInfo& info() const override;
 
-    const char* name() const override
-    {
-        return m_name.c_str();
-    }
+    const char* name() const override { return m_name.c_str(); }
 
-    int64_t rank() const override
-    {
-        return m_settings.m_rank.get();
-    }
+    int64_t rank() const override { return m_settings.m_rank.get(); }
 
-    int64_t priority() const override
-    {
-        return m_settings.m_priority.get();
-    }
+    int64_t priority() const override { return m_settings.m_priority.get(); }
 
     /**
      * Print server details to a dcb.
@@ -214,10 +171,7 @@ public:
      *
      * @return The output stream
      */
-    std::ostream& persist(std::ostream& os) const
-    {
-        return m_settings.persist(os);
-    }
+    std::ostream& persist(std::ostream& os) const { return m_settings.persist(os); }
 
     /**
      * Update server-specific monitor username. Does not affect existing monitor connections,
@@ -258,15 +212,9 @@ public:
         return no_children;
     }
 
-    uint64_t capabilities() const override
-    {
-        return 0;
-    }
+    uint64_t capabilities() const override { return 0; }
 
-    bool active() const override
-    {
-        return m_active;
-    }
+    bool active() const override { return m_active; }
 
     void deactivate() override
     {
@@ -274,25 +222,13 @@ public:
         m_active = false;
     }
 
-    int64_t replication_lag() const override
-    {
-        return m_rpl_lag;
-    }
+    int64_t replication_lag() const override { return m_rpl_lag; }
 
-    void set_replication_lag(int64_t lag) override
-    {
-        m_rpl_lag = lag;
-    }
+    void set_replication_lag(int64_t lag) override { m_rpl_lag = lag; }
 
-    int64_t ping() const override
-    {
-        return m_ping;
-    }
+    int64_t ping() const override { return m_ping; }
 
-    void set_ping(int64_t ping) override
-    {
-        m_ping = ping;
-    }
+    void set_ping(int64_t ping) override { m_ping = ping; }
 
     bool set_address(const std::string& address) override;
 
@@ -301,26 +237,26 @@ public:
     void set_extra_port(int new_port) override;
 
     uint64_t status() const override;
-    void     set_status(uint64_t bit) override;
-    void     clear_status(uint64_t bit) override;
-    void     assign_status(uint64_t status) override;
+    void set_status(uint64_t bit) override;
+    void clear_status(uint64_t bit) override;
+    void assign_status(uint64_t status) override;
 
     const mxs::SSLProvider& ssl() const override;
-    mxs::SSLProvider&       ssl() override;
+    mxs::SSLProvider& ssl() override;
 
-    void        set_session_track_system_variables(std::string&& value) override;
+    void set_session_track_system_variables(std::string&& value) override;
     std::string get_session_track_system_variables() const override;
 
     uint64_t gtid_pos(uint32_t domain) const override;
-    void     set_gtid_list(const std::vector<std::pair<uint32_t, uint64_t>>& positions) override;
-    void     clear_gtid_list() override;
+    void set_gtid_list(const std::vector<std::pair<uint32_t, uint64_t>>& positions) override;
+    void clear_gtid_list() override;
 
-    uint8_t    charset() const override;
-    void       set_charset(uint8_t charset) override;
-    bool       proxy_protocol() const override;
-    void       set_proxy_protocol(bool proxy_protocol) override;
+    uint8_t charset() const override;
+    void set_charset(uint8_t charset) override;
+    bool proxy_protocol() const override;
+    void set_proxy_protocol(bool proxy_protocol) override;
     PoolStats& pool_stats();
-    bool       is_mxs_service() const override;
+    bool is_mxs_service() const override;
 
 private:
     bool create_server_config(const char* filename) const;
@@ -351,7 +287,7 @@ private:
 
         char address[MAX_ADDRESS_LEN + 1] = {'\0'}; /**< Server hostname/IP-address */
         char monuser[MAX_MONUSER_LEN + 1] = {'\0'}; /**< Monitor username, overrides monitor setting */
-        char monpw[MAX_MONPW_LEN + 1] = {'\0'};     /**< Monitor password, overrides monitor setting */
+        char monpw[MAX_MONPW_LEN + 1]     = {'\0'}; /**< Monitor password, overrides monitor setting */
 
         // Used to track whether disk space limits are enabled. Avoids the lock acquisition on the value.
         std::atomic<bool> m_have_disk_space_limits {false};
@@ -389,30 +325,30 @@ private:
 
         // TLS configuration parameters
         mxs::config::ConcreteType<ParamSSL> m_ssl;
-        mxs::config::Path                   m_ssl_cert;
-        mxs::config::Path                   m_ssl_key;
-        mxs::config::Path                   m_ssl_ca;
+        mxs::config::Path m_ssl_cert;
+        mxs::config::Path m_ssl_key;
+        mxs::config::Path m_ssl_ca;
 
         mxs::config::Enum<mxb::ssl_version::Version> m_ssl_version;
 
-        mxs::config::Count  m_ssl_cert_verify_depth;
-        mxs::config::Bool   m_ssl_verify_peer_certificate;
-        mxs::config::Bool   m_ssl_verify_peer_host;
+        mxs::config::Count m_ssl_cert_verify_depth;
+        mxs::config::Bool m_ssl_verify_peer_certificate;
+        mxs::config::Bool m_ssl_verify_peer_host;
         mxs::config::String m_ssl_cipher;
 
     protected:
         bool post_configure() override;
     };
 
-    const std::string m_name;       /**< Server config name */
-    Settings          m_settings;   /**< Server settings */
-    VersionInfo       m_info;       /**< Server version and type information */
-    uint64_t          m_status {0};
-    bool              m_active {true};
-    int64_t           m_rpl_lag {mxs::Target::RLAG_UNDEFINED};  /**< Replication lag in seconds */
-    int64_t           m_ping {mxs::Target::PING_UNDEFINED};     /**< Ping in microseconds */
-    mxs::SSLProvider  m_ssl_provider;
-    PoolStats         m_pool_stats;
+    const std::string m_name; /**< Server config name */
+    Settings m_settings;      /**< Server settings */
+    VersionInfo m_info;       /**< Server version and type information */
+    uint64_t m_status {0};
+    bool m_active {true};
+    int64_t m_rpl_lag {mxs::Target::RLAG_UNDEFINED}; /**< Replication lag in seconds */
+    int64_t m_ping {mxs::Target::PING_UNDEFINED};    /**< Ping in microseconds */
+    mxs::SSLProvider m_ssl_provider;
+    PoolStats m_pool_stats;
 
     // Character set. Read from backend and sent to client. As no character set has the numeric value of 0, it
     // can be used to detect servers we haven't connected to.
@@ -425,7 +361,7 @@ private:
 
     struct GTID
     {
-        std::atomic<int64_t>  domain {-1};
+        std::atomic<int64_t> domain {-1};
         std::atomic<uint64_t> sequence {0};
     };
 
@@ -462,12 +398,12 @@ public:
 
     int32_t clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
-    bool handleError(mxs::ErrorType type, GWBUF* error, mxs::Endpoint* down,
-                     const mxs::Reply& reply) override;
+    bool handleError(
+        mxs::ErrorType type, GWBUF* error, mxs::Endpoint* down, const mxs::Reply& reply) override;
 
 private:
-    DCB*            m_dcb {nullptr};
+    DCB* m_dcb {nullptr};
     mxs::Component* m_up;
-    MXS_SESSION*    m_session;
-    Server*         m_server;
+    MXS_SESSION* m_session;
+    Server* m_server;
 };

@@ -26,7 +26,7 @@ string INIReader::Get(string section, string name, string default_value)
 
 long INIReader::GetInteger(string section, string name, long default_value)
 {
-    string valstr = Get(section, name, "");
+    string valstr     = Get(section, name, "");
     const char* value = valstr.c_str();
     char* end;
     // This parses "1234" (decimal) and also "0x4D2" (hex)
@@ -61,13 +61,10 @@ string INIReader::MakeKey(string section, string name)
     return key;
 }
 
-int INIReader::ValueHandler(void* user,
-                            const char* section,
-                            const char* name,
-                            const char* value)
+int INIReader::ValueHandler(void* user, const char* section, const char* name, const char* value)
 {
-    INIReader* reader = (INIReader*)user;
-    string key = MakeKey(section, name);
+    INIReader* reader = (INIReader*) user;
+    string key        = MakeKey(section, name);
     if (reader->_values[key].size() > 0)
     {
         reader->_values[key] += "\n";

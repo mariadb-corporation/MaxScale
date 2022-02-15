@@ -28,14 +28,15 @@ Config::Config(mxs::ConfigParameters* conf)
     // TODO: Don't process this in the router
     if (conf->contains(CN_IGNORE_TABLES_REGEX))
     {
-        ignore_regex = conf->get_compiled_regex(CN_IGNORE_TABLES_REGEX, 0, NULL).release();
+        ignore_regex      = conf->get_compiled_regex(CN_IGNORE_TABLES_REGEX, 0, NULL).release();
         ignore_match_data = pcre2_match_data_create_from_pattern(ignore_regex, NULL);
     }
     else if (conf->contains(CN_IGNORE_DATABASES_REGEX))
     {
         MXS_WARNING("Parameter '%s' has been deprecated, use '%s' instead.",
-                    CN_IGNORE_DATABASES_REGEX, CN_IGNORE_TABLES_REGEX);
-        ignore_regex = conf->get_compiled_regex(CN_IGNORE_DATABASES_REGEX, 0, NULL).release();
+            CN_IGNORE_DATABASES_REGEX,
+            CN_IGNORE_TABLES_REGEX);
+        ignore_regex      = conf->get_compiled_regex(CN_IGNORE_DATABASES_REGEX, 0, NULL).release();
         ignore_match_data = pcre2_match_data_create_from_pattern(ignore_regex, NULL);
     }
 
@@ -46,7 +47,8 @@ Config::Config(mxs::ConfigParameters* conf)
         if (!ignored_dbs_str.empty())
         {
             MXS_WARNING("Parameter '%s' has been deprecated, use '%s' instead.",
-                        CN_IGNORE_DATABASES, CN_IGNORE_TABLES);
+                CN_IGNORE_DATABASES,
+                CN_IGNORE_TABLES);
         }
     }
 
@@ -68,4 +70,4 @@ bool SRBackend::is_mapped() const
 {
     return m_mapped;
 }
-}
+}  // namespace schemarouter

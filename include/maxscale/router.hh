@@ -65,7 +65,7 @@ typedef struct mxs_router_object
      *
      * @return New router instance on NULL on error
      */
-    MXS_ROUTER*(*createInstance)(SERVICE * service, mxs::ConfigParameters* params);
+    MXS_ROUTER* (*createInstance)(SERVICE* service, mxs::ConfigParameters* params);
 
     /**
      * Called to create a new user session within the router
@@ -81,8 +81,8 @@ typedef struct mxs_router_object
      *
      * @return New router session or NULL on error
      */
-    MXS_ROUTER_SESSION*(*newSession)(MXS_ROUTER * instance, MXS_SESSION* session, mxs::Upstream* up,
-                                     const Endpoints& endpoints);
+    MXS_ROUTER_SESSION* (*newSession)(
+        MXS_ROUTER* instance, MXS_SESSION* session, mxs::Upstream* up, const Endpoints& endpoints);
 
     /**
      * @brief Called when a session is closed
@@ -92,7 +92,7 @@ typedef struct mxs_router_object
      * @param instance       Router instance
      * @param router_session Router session
      */
-    void (* closeSession)(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session);
+    void (*closeSession)(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session);
 
     /**
      * @brief Called when a session is freed
@@ -102,7 +102,7 @@ typedef struct mxs_router_object
      * @param instance       Router instance
      * @param router_session Router session
      */
-    void (* freeSession)(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session);
+    void (*freeSession)(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session);
 
     /**
      * @brief Called on each query that requires routing
@@ -116,7 +116,7 @@ typedef struct mxs_router_object
      * @return If successful, the function returns 1. If an error occurs
      * and the session should be closed, the function returns 0.
      */
-    int32_t (* routeQuery)(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, GWBUF* queue);
+    int32_t (*routeQuery)(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, GWBUF* queue);
 
     /**
      * @brief Called for diagnostic output
@@ -127,7 +127,7 @@ typedef struct mxs_router_object
      *
      * @see jansson.h
      */
-    json_t*  (*diagnostics)(const MXS_ROUTER * instance);
+    json_t* (*diagnostics)(const MXS_ROUTER* instance);
 
     /**
      * @brief Called for each reply packet
@@ -139,11 +139,11 @@ typedef struct mxs_router_object
      * @param queue          Response from the server
      * @param backend_dcb    The downstream endpoint which responded to the query
      */
-    void (* clientReply)(MXS_ROUTER* instance,
-                         MXS_ROUTER_SESSION* router_session,
-                         GWBUF* queue,
-                         const mxs::ReplyRoute& down,
-                         const mxs::Reply& reply);
+    void (*clientReply)(MXS_ROUTER* instance,
+        MXS_ROUTER_SESSION* router_session,
+        GWBUF* queue,
+        const mxs::ReplyRoute& down,
+        const mxs::Reply& reply);
 
     /**
      * @brief Called when a backend DCB has failed
@@ -161,12 +161,12 @@ typedef struct mxs_router_object
      *
      * @return True for success or false for error
      */
-    bool (* handleError)(MXS_ROUTER* instance,
-                         MXS_ROUTER_SESSION* router_session,
-                         mxs::ErrorType type,
-                         GWBUF* errmsgbuf,
-                         mxs::Endpoint* down,
-                         const mxs::Reply& reply);
+    bool (*handleError)(MXS_ROUTER* instance,
+        MXS_ROUTER_SESSION* router_session,
+        mxs::ErrorType type,
+        GWBUF* errmsgbuf,
+        mxs::Endpoint* down,
+        const mxs::Reply& reply);
 
     /**
      * @brief Called to obtain the capabilities of the router
@@ -175,14 +175,14 @@ typedef struct mxs_router_object
      *
      * @see routing.hh
      */
-    uint64_t (* getCapabilities)(MXS_ROUTER* instance);
+    uint64_t (*getCapabilities)(MXS_ROUTER* instance);
 
     /**
      * @brief Called for destroying a router instance
      *
      * @param instance Router instance
      */
-    void (* destroyInstance)(MXS_ROUTER* instance);
+    void (*destroyInstance)(MXS_ROUTER* instance);
 
     /**
      * @brief Configure router instance at runtime
@@ -203,7 +203,7 @@ typedef struct mxs_router_object
      *         failed. If reconfiguration failed, the state of the router
      *         instance should not be modified.
      */
-    bool (* configureInstance)(MXS_ROUTER* instance, mxs::ConfigParameters* params);
+    bool (*configureInstance)(MXS_ROUTER* instance, mxs::ConfigParameters* params);
 } MXS_ROUTER_OBJECT;
 
 /**
@@ -211,7 +211,10 @@ typedef struct mxs_router_object
  * must update these versions numbers in accordance with the rules in
  * modinfo.h.
  */
-#define MXS_ROUTER_VERSION {4, 0, 0}
+#define MXS_ROUTER_VERSION \
+    {                      \
+        4, 0, 0            \
+    }
 
 /**
  * Specifies capabilities specific for routers. Common capabilities
@@ -224,9 +227,9 @@ typedef struct mxs_router_object
  */
 typedef enum router_capability
 {
-    RCAP_TYPE_NO_USERS_INIT  = 0x00010000,  /**< Prevent the loading of authenticator
+    RCAP_TYPE_NO_USERS_INIT  = 0x00010000, /**< Prevent the loading of authenticator
                                              *  users when the service is started */
-    RCAP_TYPE_RUNTIME_CONFIG = 0x00020000,  /**< Router supports runtime cofiguration */
+    RCAP_TYPE_RUNTIME_CONFIG = 0x00020000, /**< Router supports runtime cofiguration */
 } mxs_router_capability_t;
 
 typedef enum
@@ -315,19 +318,15 @@ public:
     bool handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& reply);
 
     // Sets the upstream component (don't override this in the inherited class)
-    void setUpstream(mxs::Upstream* up)
-    {
-        m_pUp = up;
-    }
+    void setUpstream(mxs::Upstream* up) { m_pUp = up; }
 
 protected:
     RouterSession(MXS_SESSION* pSession);
 
 protected:
-    MXS_SESSION*   m_pSession;  /*< The MXS_SESSION this router session is associated with. */
+    MXS_SESSION* m_pSession; /*< The MXS_SESSION this router session is associated with. */
     mxs::Upstream* m_pUp;
 };
-
 
 /**
  * @class Router router.hh <maxscale/router.hh>
@@ -379,12 +378,8 @@ template<class RouterType, class RouterSessionType>
 class Router : public MXS_ROUTER
 {
 public:
-
     // The default configure entry point, does nothing and always fails
-    bool configure(mxs::ConfigParameters* param)
-    {
-        return false;
-    }
+    bool configure(mxs::ConfigParameters* param) { return false; }
 
     static MXS_ROUTER* createInstance(SERVICE* pService, mxs::ConfigParameters* params)
     {
@@ -395,10 +390,10 @@ public:
         return pRouter;
     }
 
-    static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* pInstance, MXS_SESSION* pSession,
-                                          mxs::Upstream* up, const Endpoints& endpoints)
+    static MXS_ROUTER_SESSION* newSession(
+        MXS_ROUTER* pInstance, MXS_SESSION* pSession, mxs::Upstream* up, const Endpoints& endpoints)
     {
-        RouterType* pRouter = static_cast<RouterType*>(pInstance);
+        RouterType* pRouter                = static_cast<RouterType*>(pInstance);
         RouterSessionType* pRouter_session = nullptr;
 
         MXS_EXCEPTION_GUARD(pRouter_session = pRouter->newSession(pSession, endpoints));
@@ -446,8 +441,11 @@ public:
         return rval;
     }
 
-    static void clientReply(MXS_ROUTER*, MXS_ROUTER_SESSION* pData, GWBUF* pPacket,
-                            const mxs::ReplyRoute& pDown, const mxs::Reply& reply)
+    static void clientReply(MXS_ROUTER*,
+        MXS_ROUTER_SESSION* pData,
+        GWBUF* pPacket,
+        const mxs::ReplyRoute& pDown,
+        const mxs::Reply& reply)
     {
         RouterSessionType* pRouter_session = static_cast<RouterSessionType*>(pData);
 
@@ -455,11 +453,11 @@ public:
     }
 
     static bool handleError(MXS_ROUTER* pInstance,
-                            MXS_ROUTER_SESSION* pData,
-                            mxs::ErrorType type,
-                            GWBUF* pMessage,
-                            mxs::Endpoint* pProblem,
-                            const mxs::Reply& pReply)
+        MXS_ROUTER_SESSION* pData,
+        mxs::ErrorType type,
+        GWBUF* pMessage,
+        mxs::Endpoint* pProblem,
+        const mxs::Reply& pReply)
     {
         RouterSessionType* pRouter_session = static_cast<RouterSessionType*>(pData);
 
@@ -489,7 +487,7 @@ public:
     static bool configure(MXS_ROUTER* pInstance, mxs::ConfigParameters* param)
     {
         RouterType* pRouter = static_cast<RouterType*>(pInstance);
-        bool rval = false;
+        bool rval           = false;
         MXS_EXCEPTION_GUARD(rval = pRouter->configure(param));
         return rval;
     }
@@ -499,16 +497,14 @@ public:
 protected:
     Router(SERVICE* pService)
         : m_pService(pService)
-    {
-    }
+    {}
 
     SERVICE* m_pService;
 };
 
 
 template<class RouterType, class RouterSessionType>
-MXS_ROUTER_OBJECT Router<RouterType, RouterSessionType>::s_object =
-{
+MXS_ROUTER_OBJECT Router<RouterType, RouterSessionType>::s_object = {
     &Router<RouterType, RouterSessionType>::createInstance,
     &Router<RouterType, RouterSessionType>::newSession,
     &Router<RouterType, RouterSessionType>::closeSession,
@@ -521,4 +517,4 @@ MXS_ROUTER_OBJECT Router<RouterType, RouterSessionType>::s_object =
     &Router<RouterType, RouterSessionType>::destroyInstance,
     &Router<RouterType, RouterSessionType>::configure,
 };
-}
+}  // namespace maxscale

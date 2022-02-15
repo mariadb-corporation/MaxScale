@@ -31,7 +31,7 @@ namespace
  */
 std::string next_file_name(const std::string& master, const std::string& prev)
 {
-    using namespace  std;
+    using namespace std;
 
     auto base_name = master.substr(0, master.find_last_of('.'));
 
@@ -39,20 +39,19 @@ std::string next_file_name(const std::string& master, const std::string& prev)
     if (!prev.empty())
     {
         auto num_str = prev.substr(prev.find_last_of(".") + 1);
-        num = 1 + atoi(num_str.c_str());
+        num          = 1 + atoi(num_str.c_str());
     }
 
     return MAKE_STR(base_name << '.' << setfill('0') << setw(6) << num);
 }
-}
+}  // namespace
 
 namespace pinloki
 {
 FileWriter::FileWriter(InventoryWriter* inv, const Writer& writer)
     : m_inventory(*inv)
     , m_writer(writer)
-{
-}
+{}
 
 void FileWriter::begin_txn()
 {
@@ -74,7 +73,7 @@ void FileWriter::commit_txn()
     m_tx_buffer.clear();
 }
 
-void FileWriter::add_event(maxsql::RplEvent& rpl_event)     // FIXME, move into here
+void FileWriter::add_event(maxsql::RplEvent& rpl_event)  // FIXME, move into here
 {
     auto etype = rpl_event.event_type();
 
@@ -105,16 +104,15 @@ void FileWriter::add_event(maxsql::RplEvent& rpl_event)     // FIXME, move into 
             m_rotate.file_name.clear();
         }
 
-        m_ignore_preamble = m_ignore_preamble
-            && (rpl_event.event_type() == GTID_LIST_EVENT
-                || rpl_event.event_type() == FORMAT_DESCRIPTION_EVENT
-                || rpl_event.event_type() == BINLOG_CHECKPOINT_EVENT);
+        m_ignore_preamble
+            = m_ignore_preamble
+           && (rpl_event.event_type() == GTID_LIST_EVENT || rpl_event.event_type() == FORMAT_DESCRIPTION_EVENT
+               || rpl_event.event_type() == BINLOG_CHECKPOINT_EVENT);
 
 
         if (!m_ignore_preamble)
         {
-            rpl_event.set_next_pos(m_current_pos.write_pos + rpl_event.buffer_size()
-                                   + m_tx_buffer.size());
+            rpl_event.set_next_pos(m_current_pos.write_pos + rpl_event.buffer_size() + m_tx_buffer.size());
 
             if (m_in_transaction)
             {
@@ -158,15 +156,15 @@ bool FileWriter::open_for_appending(const maxsql::Rotate& rotate, const maxsql::
     }
 
     // Read the first event which is always a format event
-    long file_pos = pinloki::PINLOKI_MAGIC.size();
+    long file_pos          = pinloki::PINLOKI_MAGIC.size();
     maxsql::RplEvent event = maxsql::RplEvent::read_event(log_file, &file_pos);
 
     if (event == fmt_event)
     {
-        m_ignore_preamble = true;
+        m_ignore_preamble  = true;
         m_current_pos.name = last_file_name;
-        m_current_pos.file.open(m_current_pos.name, std::ios_base::in | std::ios_base::out
-                                | std::ios_base::binary);
+        m_current_pos.file.open(
+            m_current_pos.name, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
         m_current_pos.file.seekp(0, std::ios_base::end);
         m_current_pos.write_pos = m_current_pos.file.tellp();
     }
@@ -177,10 +175,10 @@ bool FileWriter::open_for_appending(const maxsql::Rotate& rotate, const maxsql::
 void FileWriter::perform_rotate(const maxsql::Rotate& rotate)
 {
     auto master_file_name = rotate.file_name;
-    auto last_file_name = last_string(m_inventory.file_names());
+    auto last_file_name   = last_string(m_inventory.file_names());
 
     auto new_file_name = next_file_name(master_file_name, last_file_name);
-    auto file_name = m_inventory.config().path(new_file_name);
+    auto file_name     = m_inventory.config().path(new_file_name);
 
     WritePosition previous_pos {std::move(m_current_pos)};
 
@@ -200,9 +198,8 @@ void FileWriter::perform_rotate(const maxsql::Rotate& rotate)
         if (!previous_pos.file.good())
         {
             MXB_THROW(BinlogWriteError,
-                      "File " << previous_pos.name
-                              << " did not close (flush) properly during rotate: "
-                              << errno << ", " << mxb_strerror(errno));
+                "File " << previous_pos.name << " did not close (flush) properly during rotate: " << errno
+                        << ", " << mxb_strerror(errno));
         }
     }
     else
@@ -235,18 +232,17 @@ void FileWriter::write_stop(const std::string& file_name)
     auto file = std::fstream(file_name, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
     if (!file.good())
     {
-        MXB_THROW(BinlogWriteError,
-                  "Could not open " << file_name << " for  STOP_EVENT addition");
+        MXB_THROW(BinlogWriteError, "Could not open " << file_name << " for  STOP_EVENT addition");
     }
 
     constexpr int HEADER_LEN = 19;
-    const size_t EVENT_LEN = HEADER_LEN + 4;        // header plus crc
+    const size_t EVENT_LEN   = HEADER_LEN + 4;  // header plus crc
 
     file.seekp(0, std::ios_base::end);
     const size_t end_pos = file.tellp();
 
     std::vector<char> data(EVENT_LEN);
-    uint8_t* ptr = (uint8_t*)&data[0];
+    uint8_t* ptr = (uint8_t*) &data[0];
 
     // Zero timestamp
     mariadb::set_byte4(ptr, 0);
@@ -272,7 +268,7 @@ void FileWriter::write_stop(const std::string& file_name)
     ptr += 2;
 
     // Checksum
-    mariadb::set_byte4(ptr, crc32(0, (uint8_t*)data.data(), data.size() - 4));
+    mariadb::set_byte4(ptr, crc32(0, (uint8_t*) data.data(), data.size() - 4));
 
     file.write(data.data(), data.size());
     file.flush();
@@ -285,10 +281,8 @@ void FileWriter::write_stop(const std::string& file_name)
 
 void FileWriter::write_rotate(FileWriter::WritePosition& fn, const std::string& to_file_name)
 {
-    auto vec = maxsql::create_rotate_event(basename(to_file_name.c_str()),
-                                           m_inventory.config().server_id(),
-                                           fn.write_pos,
-                                           mxq::Kind::Real);
+    auto vec = maxsql::create_rotate_event(
+        basename(to_file_name.c_str()), m_inventory.config().server_id(), fn.write_pos, mxq::Kind::Real);
 
     fn.file.seekp(fn.write_pos);
     fn.file.write(vec.data(), vec.size());
@@ -303,12 +297,12 @@ void FileWriter::write_rotate(FileWriter::WritePosition& fn, const std::string& 
 void FileWriter::write_gtid_list(WritePosition& fn)
 {
     constexpr int HEADER_LEN = 19;
-    auto gtid_list = m_writer.get_gtid_io_pos();
-    const auto NUM_GTIDS = gtid_list.gtids().size();
-    const size_t EVENT_LEN = HEADER_LEN + 4 + NUM_GTIDS * (4 + 4 + 8) + 4;
+    auto gtid_list           = m_writer.get_gtid_io_pos();
+    const auto NUM_GTIDS     = gtid_list.gtids().size();
+    const size_t EVENT_LEN   = HEADER_LEN + 4 + NUM_GTIDS * (4 + 4 + 8) + 4;
 
     std::vector<char> data(EVENT_LEN);
-    uint8_t* ptr = (uint8_t*)&data[0];
+    uint8_t* ptr = (uint8_t*) &data[0];
 
     // Zero timestamp
     mariadb::set_byte4(ptr, 0);
@@ -349,7 +343,7 @@ void FileWriter::write_gtid_list(WritePosition& fn)
 
 
     // Checksum
-    mariadb::set_byte4(ptr, crc32(0, (uint8_t*)data.data(), data.size() - 4));
+    mariadb::set_byte4(ptr, crc32(0, (uint8_t*) data.data(), data.size() - 4));
 
     fn.file.write(data.data(), data.size());
     fn.file.flush();
@@ -360,4 +354,4 @@ void FileWriter::write_gtid_list(WritePosition& fn)
         MXB_THROW(BinlogWriteError, "Could not write GTID_EVENT to " << fn.name);
     }
 }
-}
+}  // namespace pinloki

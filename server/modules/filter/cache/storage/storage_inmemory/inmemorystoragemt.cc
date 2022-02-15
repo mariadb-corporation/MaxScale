@@ -16,18 +16,13 @@
 
 using std::unique_ptr;
 
-InMemoryStorageMT::InMemoryStorageMT(const std::string& name,
-                                     const Config& config)
+InMemoryStorageMT::InMemoryStorageMT(const std::string& name, const Config& config)
     : InMemoryStorage(name, config)
-{
-}
+{}
 
-InMemoryStorageMT::~InMemoryStorageMT()
-{
-}
+InMemoryStorageMT::~InMemoryStorageMT() {}
 
-unique_ptr<InMemoryStorageMT> InMemoryStorageMT::create(const std::string& name,
-                                                        const Config& config)
+unique_ptr<InMemoryStorageMT> InMemoryStorageMT::create(const std::string& name, const Config& config)
 {
     return unique_ptr<InMemoryStorageMT>(new InMemoryStorageMT(name, config));
 }
@@ -40,12 +35,12 @@ cache_result_t InMemoryStorageMT::get_info(uint32_t what, json_t** ppInfo) const
 }
 
 cache_result_t InMemoryStorageMT::get_value(Token* pToken,
-                                            const CacheKey& key,
-                                            uint32_t flags,
-                                            uint32_t soft_ttl,
-                                            uint32_t hard_ttl,
-                                            GWBUF** ppResult,
-                                            const std::function<void (cache_result_t, GWBUF*)>&)
+    const CacheKey& key,
+    uint32_t flags,
+    uint32_t soft_ttl,
+    uint32_t hard_ttl,
+    GWBUF** ppResult,
+    const std::function<void(cache_result_t, GWBUF*)>&)
 {
     std::lock_guard<std::mutex> guard(m_lock);
 
@@ -53,28 +48,26 @@ cache_result_t InMemoryStorageMT::get_value(Token* pToken,
 }
 
 cache_result_t InMemoryStorageMT::put_value(Token* pToken,
-                                            const CacheKey& key,
-                                            const std::vector<std::string>& invalidation_words,
-                                            const GWBUF* pValue,
-                                            const std::function<void (cache_result_t)>&)
+    const CacheKey& key,
+    const std::vector<std::string>& invalidation_words,
+    const GWBUF* pValue,
+    const std::function<void(cache_result_t)>&)
 {
     std::lock_guard<std::mutex> guard(m_lock);
 
     return do_put_value(pToken, key, invalidation_words, pValue);
 }
 
-cache_result_t InMemoryStorageMT::del_value(Token* pToken,
-                                            const CacheKey& key,
-                                            const std::function<void (cache_result_t)>&)
+cache_result_t InMemoryStorageMT::del_value(
+    Token* pToken, const CacheKey& key, const std::function<void(cache_result_t)>&)
 {
     std::lock_guard<std::mutex> guard(m_lock);
 
     return do_del_value(pToken, key);
 }
 
-cache_result_t InMemoryStorageMT::invalidate(Token* pToken,
-                                             const std::vector<std::string>& words,
-                                             const std::function<void (cache_result_t)>&)
+cache_result_t InMemoryStorageMT::invalidate(
+    Token* pToken, const std::vector<std::string>& words, const std::function<void(cache_result_t)>&)
 {
     std::lock_guard<std::mutex> guard(m_lock);
 
@@ -87,4 +80,3 @@ cache_result_t InMemoryStorageMT::clear(Token* pToken)
 
     return do_clear(pToken);
 }
-

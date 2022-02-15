@@ -50,9 +50,7 @@ void test_iterative(int limit)
 
     for (int i = 0; i < 10; ++i)
     {
-        tp.execute([i]() {
-                iterative_thread(i);
-            });
+        tp.execute([i]() { iterative_thread(i); });
     }
 
     sem_start.post_n(10);
@@ -66,9 +64,7 @@ void recursive_thread(int i)
 {
     if (i > 1)
     {
-        pTp->execute([i]() {
-                recursive_thread(i - 1);
-            });
+        pTp->execute([i]() { recursive_thread(i - 1); });
     }
 
     stringstream ss;
@@ -86,16 +82,14 @@ void test_recursive(int limit)
     mxb::Semaphore sem;
     pSem_stop = &sem;
 
-    tp.execute([]() {
-            recursive_thread(10);
-        });
+    tp.execute([]() { recursive_thread(10); });
 
     cout << "Waiting.\n" << flush;
     sem.wait_n(10);
     cout << "Waited.\n" << flush;
 }
 
-}
+}  // namespace
 
 int main()
 {

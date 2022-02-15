@@ -51,8 +51,10 @@ using namespace pinloki;
 
 bool writer_mode = true;
 
-void prog_main(const maxsql::GtidList& gtid_list, const std::string& host,
-               const std::string& user, const std::string& pw)
+void prog_main(const maxsql::GtidList& gtid_list,
+    const std::string& host,
+    const std::string& user,
+    const std::string& pw)
 {
     mxb::Worker worker;
     mxq::Connection::ConnectionDetails details = {maxbase::Host::from_string(host), "", user, pw};
@@ -65,19 +67,18 @@ void prog_main(const maxsql::GtidList& gtid_list, const std::string& host,
     }
     else
     {
-        pinloki::Reader reader([](const auto& event) {
-                                   std::cout << event << std::endl;
-                                   return true;
-                               },
-                               [&worker]() -> mxb::Worker& {
-                                   return worker;
-                               },
-                               config(), gtid_list, 30s);
+        pinloki::Reader reader(
+            [](const auto& event) {
+            std::cout << event << std::endl;
+            return true;
+            },
+            [&worker]() -> mxb::Worker& { return worker; },
+            config(),
+            gtid_list,
+            30s);
 
         worker.start();
-        worker.execute([&reader]{
-                           reader.start();
-                       }, mxb::Worker::EXECUTE_QUEUED);
+        worker.execute([&reader] { reader.start(); }, mxb::Worker::EXECUTE_QUEUED);
         worker.join();
     }
 }
@@ -97,21 +98,19 @@ try
     bool help = false;
     std::string mode;
     maxsql::GtidList override_gtid_list;
-    int port = 4000;
+    int port         = 4000;
     std::string host = "127.0.0.1";
     std::string user = "maxskysql";
-    std::string pw = "skysql";
+    std::string pw   = "skysql";
 
-    static struct option long_options[] = {
-        {"help",     no_argument,       nullptr, '?'},
-        {"mode",     required_argument, nullptr, 'm'},
-        {"gtid",     required_argument, nullptr, 'g'},
-        {"port",     required_argument, nullptr, 'P'},
-        {"host",     required_argument, nullptr, 'h'},
-        {"user",     required_argument, nullptr, 'u'},
+    static struct option long_options[] = {{"help", no_argument, nullptr, '?'},
+        {"mode", required_argument, nullptr, 'm'},
+        {"gtid", required_argument, nullptr, 'g'},
+        {"port", required_argument, nullptr, 'P'},
+        {"host", required_argument, nullptr, 'h'},
+        {"user", required_argument, nullptr, 'u'},
         {"password", required_argument, nullptr, 'p'},
-        {nullptr,    0,                 nullptr, 0  }
-    };
+        {nullptr, 0, nullptr, 0}};
 
     while (1)
     {
@@ -130,23 +129,23 @@ try
             break;
 
         case 'm':
-            {
-                std::string mode = optarg;
-                help = !(mode == "writer" || mode == "reader");
-                writer_mode = mode == "writer";
-            }
-            break;
+        {
+            std::string mode = optarg;
+            help             = !(mode == "writer" || mode == "reader");
+            writer_mode      = mode == "writer";
+        }
+        break;
 
         case 'g':
+        {
+            override_gtid_list = maxsql::GtidList::from_string(optarg);
+            if (!override_gtid_list.is_valid())
             {
-                override_gtid_list = maxsql::GtidList::from_string(optarg);
-                if (!override_gtid_list.is_valid())
-                {
-                    help = true;
-                    std::cerr << "The provided gtid override is invalid: " << optarg << '\n';
-                }
+                help = true;
+                std::cerr << "The provided gtid override is invalid: " << optarg << '\n';
             }
-            break;
+        }
+        break;
 
         case 'P':
             port = atoi(optarg);
@@ -173,8 +172,7 @@ try
     {
         std::cout << "-h --help\t" << std::boolalpha << help;
 
-        std::cout << "\n-r --reset\t" << std::boolalpha
-                  << "\n\t\tWhen set, clears all binlog files";
+        std::cout << "\n-r --reset\t" << std::boolalpha << "\n\t\tWhen set, clears all binlog files";
 
         std::cout << "\n-m --mode\tmode='" << (writer_mode ? "writer'" : "reader'")
                   << "\n\t\tOptions are 'writer' and 'reader'";
@@ -193,11 +191,13 @@ try
 
     prog_main(override_gtid_list, host + ":" + std::to_string(port), user, pw);
 }
+
 catch (maxbase::Exception& ex)
 {
     // TODO swap Exception::what() and Exception::error_msg()
     std::cerr << ex.error_msg() << std::endl;
 }
+
 catch (std::exception& ex)
 {
     std::cerr << ex.what() << std::endl;

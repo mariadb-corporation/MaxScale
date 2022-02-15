@@ -61,18 +61,12 @@ struct
     /* Global session id counter. Must be updated atomically. Value 0 is reserved for
      *  dummy/unused sessions.
      */
-    uint64_t                  next_session_id;
-    uint32_t                  retain_last_statements;
+    uint64_t next_session_id;
+    uint32_t retain_last_statements;
     session_dump_statements_t dump_statements;
-    uint32_t                  session_trace;
-} this_unit =
-{
-    1,
-    0,
-    SESSION_DUMP_STATEMENTS_NEVER,
-    0
-};
-}
+    uint32_t session_trace;
+} this_unit = {1, 0, SESSION_DUMP_STATEMENTS_NEVER, 0};
+}  // namespace
 
 // static
 const int Session::N_LOAD;
@@ -83,11 +77,11 @@ MXS_SESSION::MXS_SESSION(const std::string& host, SERVICE* service)
     , m_worker(mxs::RoutingWorker::get_current())
     , m_host(host)
     , client_dcb(nullptr)
-    , stats{time(0)}
+    , stats {time(0)}
     , service(service)
     , refcount(1)
     , qualifies_for_pooling(false)
-    , response{}
+    , response {}
     , close_reason(SESSION_CLOSE_NONE)
     , load_active(false)
     , m_capabilities(service->capabilities())
@@ -97,7 +91,7 @@ MXS_SESSION::MXS_SESSION(const std::string& host, SERVICE* service)
 
 MXS_SESSION::~MXS_SESSION()
 {
-    MXB_AT_DEBUG(bool removed = ) mxs_rworker_deregister_session(this);
+    MXB_AT_DEBUG(bool removed =) mxs_rworker_deregister_session(this);
     mxb_assert(removed);
 }
 
@@ -106,7 +100,7 @@ void MXS_SESSION::kill(GWBUF* error)
     if (!m_killed && (m_state == State::CREATED || m_state == State::STARTED))
     {
         mxb_assert(!client_connection()->dcb()->is_closed());
-        m_killed = true;
+        m_killed     = true;
         close_reason = SESSION_CLOSE_HANDLEERROR_FAILED;
 
         // Call the protocol kill function before changing the session state
@@ -232,7 +226,7 @@ void Session::deliver_response()
     if (filter_instance)
     {
         MXS_FILTER_SESSION* filter_session = response.up.session;
-        GWBUF* buffer = response.buffer;
+        GWBUF* buffer                      = response.buffer;
 
         mxb_assert(filter_session);
         mxb_assert(buffer);
@@ -242,10 +236,10 @@ void Session::deliver_response()
         mxs::Reply reply;
         response.up.clientReply(filter_instance, filter_session, buffer, route, reply);
 
-        response.up.instance = NULL;
-        response.up.session = NULL;
+        response.up.instance    = NULL;
+        response.up.session     = NULL;
         response.up.clientReply = NULL;
-        response.buffer = NULL;
+        response.buffer         = NULL;
 
         // If some filter short-circuits the routing, then there will
         // be no response from a server and we need to ensure that
@@ -321,10 +315,10 @@ const char* session_trx_state_to_string(uint32_t state)
 
 static bool ses_find_id(DCB* dcb, void* data)
 {
-    void** params = (void**)data;
-    MXS_SESSION** ses = (MXS_SESSION**)params[0];
-    uint64_t* id = (uint64_t*)params[1];
-    bool rval = true;
+    void** params     = (void**) data;
+    MXS_SESSION** ses = (MXS_SESSION**) params[0];
+    uint64_t* id      = (uint64_t*) params[1];
+    bool rval         = true;
 
     if (dcb->session()->id() == *id)
     {
@@ -338,7 +332,7 @@ static bool ses_find_id(DCB* dcb, void* data)
 MXS_SESSION* session_get_by_id(uint64_t id)
 {
     MXS_SESSION* session = NULL;
-    void* params[] = {&session, &id};
+    void* params[]       = {&session, &id};
 
     dcb_foreach(ses_find_id, params);
 
@@ -418,7 +412,7 @@ json_t* session_json_data(const Session* session, const char* host, bool rdns)
 
     string result_address;
     auto client_dcb = session->client_connection()->dcb();
-    auto& remote = client_dcb->remote();
+    auto& remote    = client_dcb->remote();
     if (rdns && !mxs::Config::get().skip_name_resolve.get())
     {
         maxbase::reverse_name_lookup(remote, &result_address);
@@ -448,7 +442,7 @@ json_t* session_json_data(const Session* session, const char* host, bool rdns)
     if (client_dcb->state() == DCB::State::POLLING)
     {
         double idle = (mxs_clock() - client_dcb->last_read());
-        idle = idle > 0 ? idle / 10.f : 0;
+        idle        = idle > 0 ? idle / 10.f : 0;
         json_object_set_new(attr, "idle", json_real(idle));
     }
 
@@ -487,20 +481,19 @@ struct SessionListData
         : json(json_array())
         , host(host)
         , rdns(rdns)
-    {
-    }
+    {}
 
-    json_t*     json {nullptr};
+    json_t* json {nullptr};
     const char* host {nullptr};
-    bool        rdns {false};
+    bool rdns {false};
 };
 
 bool seslist_cb(DCB* dcb, void* data)
 {
     if (dcb->role() == DCB::Role::CLIENT)
     {
-        SessionListData* d = (SessionListData*)data;
-        Session* session = static_cast<Session*>(dcb->session());
+        SessionListData* d = (SessionListData*) data;
+        Session* session   = static_cast<Session*>(dcb->session());
         json_array_append_new(d->json, session_json_data(session, d->host, d->rdns));
     }
 
@@ -538,28 +531,24 @@ uint64_t session_get_current_id()
     return session ? session->id() : 0;
 }
 
-bool session_add_variable(MXS_SESSION* session,
-                          const char* name,
-                          session_variable_handler_t handler,
-                          void* context)
+bool session_add_variable(
+    MXS_SESSION* session, const char* name, session_variable_handler_t handler, void* context)
 {
     Session* pSession = static_cast<Session*>(session);
     return pSession->add_variable(name, handler, context);
 }
 
 char* session_set_variable_value(MXS_SESSION* session,
-                                 const char* name_begin,
-                                 const char* name_end,
-                                 const char* value_begin,
-                                 const char* value_end)
+    const char* name_begin,
+    const char* name_end,
+    const char* value_begin,
+    const char* value_end)
 {
     Session* pSession = static_cast<Session*>(session);
     return pSession->set_variable_value(name_begin, name_end, value_begin, value_end);
 }
 
-bool session_remove_variable(MXS_SESSION* session,
-                             const char* name,
-                             void** context)
+bool session_remove_variable(MXS_SESSION* session, const char* name, void** context)
 {
     Session* pSession = static_cast<Session*>(session);
     return pSession->remove_variable(name, context);
@@ -571,12 +560,10 @@ void session_set_response(MXS_SESSION* session, SERVICE* service, const mxs::Ups
     mxb_assert(session && up && buffer);
 
     // Valid state. Only one filter may terminate the execution and exactly once.
-    mxb_assert(!session->response.up.instance
-               && !session->response.up.session
-               && !session->response.buffer);
+    mxb_assert(!session->response.up.instance && !session->response.up.session && !session->response.buffer);
 
-    session->response.up = *up;
-    session->response.buffer = buffer;
+    session->response.up      = *up;
+    session->response.buffer  = buffer;
     session->response.service = service;
 }
 
@@ -664,7 +651,7 @@ void session_dump_log(MXS_SESSION* pSession)
 
 class DelayedRoutingTask
 {
-    DelayedRoutingTask(const DelayedRoutingTask&) = delete;
+    DelayedRoutingTask(const DelayedRoutingTask&)            = delete;
     DelayedRoutingTask& operator=(const DelayedRoutingTask&) = delete;
 
 public:
@@ -672,8 +659,7 @@ public:
         : m_session(session_get_ref(session))
         , m_down(down)
         , m_buffer(buffer)
-    {
-    }
+    {}
 
     ~DelayedRoutingTask()
     {
@@ -696,7 +682,7 @@ public:
             if (mxs::RoutingWorker::get_current() == m_session->worker())
             {
                 GWBUF* buffer = m_buffer;
-                m_buffer = NULL;
+                m_buffer      = NULL;
 
                 if (m_down.routeQuery(m_down.instance, m_down.session, buffer) == 0)
                 {
@@ -711,12 +697,14 @@ public:
 
                 DelayedRoutingTask* task = this;
 
-                m_session->worker()->execute([task]() {
-                                                 if (task->execute() == DISPOSE)
-                                                 {
-                                                     delete task;
-                                                 }
-                                             }, mxb::Worker::EXECUTE_QUEUED);
+                m_session->worker()->execute(
+                    [task]() {
+                    if (task->execute() == DISPOSE)
+                    {
+                        delete task;
+                    }
+                    },
+                    mxb::Worker::EXECUTE_QUEUED);
 
                 action = RETAIN;
             }
@@ -726,9 +714,9 @@ public:
     }
 
 private:
-    MXS_SESSION*    m_session;
+    MXS_SESSION* m_session;
     mxs::Downstream m_down;
-    GWBUF*          m_buffer;
+    GWBUF* m_buffer;
 };
 
 static bool delayed_routing_cb(Worker::Call::action_t action, DelayedRoutingTask* task)
@@ -800,13 +788,12 @@ const char* session_get_close_reason(const MXS_SESSION* session)
     }
 }
 
-Session::Session(std::shared_ptr<ListenerSessionData> listener_data,
-                 const std::string& host)
+Session::Session(std::shared_ptr<ListenerSessionData> listener_data, const std::string& host)
     : MXS_SESSION(host, &listener_data->m_service)
     , m_down(static_cast<Service&>(listener_data->m_service).get_connection(this, this))
     , m_listener_data(std::move(listener_data))
 {
-    if (service->config()->retain_last_statements != -1)        // Explicitly set for the service
+    if (service->config()->retain_last_statements != -1)  // Explicitly set for the service
     {
         m_retain_last_statements = service->config()->retain_last_statements;
     }
@@ -848,12 +835,12 @@ namespace
 
 bool get_cmd_and_stmt(GWBUF* pBuffer, const char** ppCmd, char** ppStmt, int* pLen)
 {
-    *ppCmd = nullptr;
+    *ppCmd  = nullptr;
     *ppStmt = nullptr;
-    *pLen = 0;
+    *pLen   = 0;
 
     bool deallocate = false;
-    int len = gwbuf_length(pBuffer);
+    int len         = gwbuf_length(pBuffer);
 
     if (len > MYSQL_HEADER_LEN)
     {
@@ -882,8 +869,8 @@ bool get_cmd_and_stmt(GWBUF* pBuffer, const char** ppCmd, char** ppStmt, int* pL
             }
             else
             {
-                *ppStmt = modutil_get_SQL(pBuffer);
-                *pLen = strlen(*ppStmt);
+                *ppStmt    = modutil_get_SQL(pBuffer);
+                *pLen      = strlen(*ppStmt);
                 deallocate = true;
             }
         }
@@ -891,7 +878,7 @@ bool get_cmd_and_stmt(GWBUF* pBuffer, const char** ppCmd, char** ppStmt, int* pL
 
     return deallocate;
 }
-}
+}  // namespace
 
 void Session::dump_statements() const
 {
@@ -905,15 +892,16 @@ void Session::dump_statements() const
         {
             MXS_WARNING("Current session is %lu, yet statements are dumped for %lu. "
                         "The session id in the subsequent dumped statements is the wrong one.",
-                        current_id, id());
+                current_id,
+                id());
         }
 
         for (auto i = m_last_queries.rbegin(); i != m_last_queries.rend(); ++i)
         {
             const QueryInfo& info = *i;
-            GWBUF* pBuffer = info.query().get();
-            timespec ts = info.time_completed();
-            struct tm* tm = localtime(&ts.tv_sec);
+            GWBUF* pBuffer        = info.query().get();
+            timespec ts           = info.time_completed();
+            struct tm* tm         = localtime(&ts.tv_sec);
             char timestamp[20];
             strftime(timestamp, 20, "%Y-%m-%d %H:%M:%S", tm);
 
@@ -1007,10 +995,8 @@ bool Session::add_variable(const char* name, session_variable_handler_t handler,
     return added;
 }
 
-char* Session::set_variable_value(const char* name_begin,
-                                  const char* name_end,
-                                  const char* value_begin,
-                                  const char* value_end)
+char* Session::set_variable_value(
+    const char* name_begin, const char* name_end, const char* value_begin, const char* value_end)
 {
     char* rv = NULL;
 
@@ -1029,7 +1015,7 @@ char* Session::set_variable_value(const char* name_begin,
         const char FORMAT[] = "Attempt to set unknown MaxScale user variable %.*s";
 
         int name_length = name_end - name_begin;
-        int len = snprintf(NULL, 0, FORMAT, name_length, name_begin);
+        int len         = snprintf(NULL, 0, FORMAT, name_length, name_begin);
 
         rv = static_cast<char*>(MXS_MALLOC(len + 1));
 
@@ -1117,7 +1103,7 @@ void Session::book_server_response(SERVER* pServer, bool final_response)
         // we simply ignore the result.
         if (m_current_query < static_cast<int>(m_last_queries.size()))
         {
-            auto i = m_last_queries.begin() + m_current_query;
+            auto i          = m_last_queries.begin() + m_current_query;
             QueryInfo& info = *i;
 
             mxb_assert(!info.complete());
@@ -1143,7 +1129,7 @@ void Session::book_last_as_complete()
         // See comment in book_server_response().
         if (m_current_query < static_cast<int>(m_last_queries.size()))
         {
-            auto i = m_last_queries.begin() + m_current_query;
+            auto i          = m_last_queries.begin() + m_current_query;
             QueryInfo& info = *i;
 
             info.book_as_complete();
@@ -1159,7 +1145,7 @@ void Session::reset_server_bookkeeping()
         // See comment in book_server_response().
         if (m_current_query < static_cast<int>(m_last_queries.size()))
         {
-            auto i = m_last_queries.begin() + m_current_query;
+            auto i          = m_last_queries.begin() + m_current_query;
             QueryInfo& info = *i;
             info.reset_server_bookkeeping();
         }
@@ -1170,7 +1156,7 @@ Session::QueryInfo::QueryInfo(const std::shared_ptr<GWBUF>& sQuery)
     : m_sQuery(sQuery)
 {
     clock_gettime(CLOCK_REALTIME_COARSE, &m_received);
-    m_completed.tv_sec = 0;
+    m_completed.tv_sec  = 0;
     m_completed.tv_nsec = 0;
 }
 
@@ -1178,7 +1164,7 @@ namespace
 {
 
 static const char ISO_TEMPLATE[] = "2018-11-05T16:47:49.123";
-static const int ISO_TIME_LEN = sizeof(ISO_TEMPLATE) - 1;
+static const int ISO_TIME_LEN    = sizeof(ISO_TEMPLATE) - 1;
 
 void timespec_to_iso(char* zIso, const timespec& ts)
 {
@@ -1188,10 +1174,10 @@ void timespec_to_iso(char* zIso, const timespec& ts)
     size_t i = strftime(zIso, ISO_TIME_LEN + 1, "%G-%m-%dT%H:%M:%S", &tm);
     mxb_assert(i == 19);
     long int ms = ts.tv_nsec / 1000000;
-    i = sprintf(zIso + i, ".%03ld", ts.tv_nsec / 1000000);
+    i           = sprintf(zIso + i, ".%03ld", ts.tv_nsec / 1000000);
     mxb_assert(i == 4);
 }
-}
+}  // namespace
 
 json_t* Session::QueryInfo::as_json() const
 {
@@ -1235,7 +1221,7 @@ json_t* Session::QueryInfo::as_json() const
         json_t* pResponse = json_object();
 
         // Calculate and report in milliseconds.
-        long int received = m_received.tv_sec * 1000 + m_received.tv_nsec / 1000000;
+        long int received  = m_received.tv_sec * 1000 + m_received.tv_nsec / 1000000;
         long int processed = info.processed.tv_sec * 1000 + info.processed.tv_nsec / 1000000;
         mxb_assert(processed >= received);
 
@@ -1258,8 +1244,8 @@ void Session::QueryInfo::book_server_response(SERVER* pServer, bool final_respon
     mxb_assert(!m_complete);
     // A particular server may be reported only exactly once.
     mxb_assert(find_if(m_server_infos.begin(), m_server_infos.end(), [pServer](const ServerInfo& info) {
-                           return info.pServer == pServer;
-                       }) == m_server_infos.end());
+        return info.pServer == pServer;
+    }) == m_server_infos.end());
 
     timespec now;
     clock_gettime(CLOCK_REALTIME_COARSE, &now);
@@ -1284,9 +1270,9 @@ void Session::QueryInfo::book_as_complete()
 void Session::QueryInfo::reset_server_bookkeeping()
 {
     m_server_infos.clear();
-    m_completed.tv_sec = 0;
+    m_completed.tv_sec  = 0;
     m_completed.tv_nsec = 0;
-    m_complete = false;
+    m_complete          = false;
 }
 
 bool Session::start()
@@ -1295,13 +1281,14 @@ bool Session::start()
 
     if (m_down->connect())
     {
-        rval = true;
+        rval    = true;
         m_state = MXS_SESSION::State::STARTED;
 
         MXS_INFO("Started %s client session [%" PRIu64 "] for '%s' from %s",
-                 service->name(), id(),
-                 !m_user.empty() ? m_user.c_str() : "<no user>",
-                 m_client_conn->dcb()->remote().c_str());
+            service->name(),
+            id(),
+            !m_user.empty() ? m_user.c_str() : "<no user>",
+            m_client_conn->dcb()->remote().c_str());
     }
 
     return rval;
@@ -1409,8 +1396,8 @@ void Session::remove_backend_conn(mxs::BackendConnection* conn)
     m_backends_conns.erase(iter);
 }
 
-BackendDCB*
-Session::create_backend_connection(Server* server, BackendDCB::Manager* manager, mxs::Component* upstream)
+BackendDCB* Session::create_backend_connection(
+    Server* server, BackendDCB::Manager* manager, mxs::Component* upstream)
 {
     std::unique_ptr<BackendConnection> conn;
     auto proto_module = m_listener_data->m_proto_module.get();
@@ -1460,14 +1447,14 @@ void Session::parse_and_set_trx_state(const mxs::Reply& reply)
 {
     // TODO: Remove these in 6 when this code is moved into mariadb_client.cc and
     // the real declaractions become visible.
-    const uint16_t SERVER_STATUS_IN_TRANS = 1;
-    const uint16_t SERVER_STATUS_AUTOCOMMIT = 2;
+    const uint16_t SERVER_STATUS_IN_TRANS          = 1;
+    const uint16_t SERVER_STATUS_AUTOCOMMIT        = 2;
     const uint16_t SERVER_STATUS_IN_TRANS_READONLY = 8192;
 
-    uint16_t status = reply.server_status();
-    bool in_trx = status & (SERVER_STATUS_IN_TRANS | SERVER_STATUS_IN_TRANS_READONLY);
+    uint16_t status    = reply.server_status();
+    bool in_trx        = status & (SERVER_STATUS_IN_TRANS | SERVER_STATUS_IN_TRANS_READONLY);
     bool is_autocommit = status & SERVER_STATUS_AUTOCOMMIT;
-    uint32_t trx_type = SESSION_TRX_INACTIVE;
+    uint32_t trx_type  = SESSION_TRX_INACTIVE;
 
     if (!is_autocommit || in_trx)
     {
@@ -1559,7 +1546,7 @@ void Session::tick(int64_t idle)
 
 void Session::set_ttl(int64_t ttl)
 {
-    m_ttl = ttl;
+    m_ttl       = ttl;
     m_ttl_start = mxs_clock();
 }
 
@@ -1630,7 +1617,7 @@ bool enable_events(const std::vector<DCB*>& dcbs)
 
     return enabled;
 }
-}
+}  // namespace
 
 bool Session::move_to(RoutingWorker* pTo)
 {
@@ -1665,32 +1652,33 @@ bool Session::move_to(RoutingWorker* pTo)
 
     pFrom->session_registry().remove(id());
 
-    m_worker = pTo;     // Set before the move-operation, see DelayedRoutingTask.
+    m_worker = pTo;  // Set before the move-operation, see DelayedRoutingTask.
 
-    bool posted = pTo->execute([this, pFrom, pTo, to_be_enabled]() {
-                                   pTo->session_registry().add(this);
+    bool posted = pTo->execute(
+        [this, pFrom, pTo, to_be_enabled]() {
+        pTo->session_registry().add(this);
 
-                                   m_client_conn->dcb()->set_owner(pTo);
-                                   m_client_conn->dcb()->set_manager(pTo);
+        m_client_conn->dcb()->set_owner(pTo);
+        m_client_conn->dcb()->set_manager(pTo);
 
-                                   for (mxs::BackendConnection* pBackend_conn : m_backends_conns)
-                                   {
-                                       pBackend_conn->dcb()->set_owner(pTo);
-                                       pBackend_conn->dcb()->set_manager(pTo);
-                                   }
+        for (mxs::BackendConnection* pBackend_conn : m_backends_conns)
+        {
+            pBackend_conn->dcb()->set_owner(pTo);
+            pBackend_conn->dcb()->set_manager(pTo);
+        }
 
-                                   if (!enable_events(to_be_enabled))
-                                   {
-                                       kill();
-                                   }
+        if (!enable_events(to_be_enabled))
+        {
+            kill();
+        }
 
-                                   MXS_NOTICE("Moved session from %d to %d.", pFrom->id(), pTo->id());
-                               }, mxb::Worker::EXECUTE_QUEUED);
+        MXS_NOTICE("Moved session from %d to %d.", pFrom->id(), pTo->id());
+        },
+        mxb::Worker::EXECUTE_QUEUED);
 
     if (!posted)
     {
-        MXS_ERROR("Could not move session from worker %d to worker %d.",
-                  pFrom->id(), pTo->id());
+        MXS_ERROR("Could not move session from worker %d to worker %d.", pFrom->id(), pTo->id());
 
         m_worker = pFrom;
 

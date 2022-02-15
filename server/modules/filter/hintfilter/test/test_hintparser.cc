@@ -28,7 +28,7 @@ int errors = 0;
 void test(const std::string& input, std::initializer_list<std::string> expected)
 {
     bool rval = true;
-    auto it = expected.begin();
+    auto it   = expected.begin();
     mxs::Buffer buffer(input.c_str(), input.size());
 
     for (auto output : get_all_comments(buffer.begin(), buffer.end()))
@@ -67,12 +67,11 @@ void test(const std::string& input, std::initializer_list<std::string> expected)
 
     if (it != expected.end())
     {
-        std::cout << "Not enough output, need " << std::distance(it, expected.end())
-                  << " more comments" << std::endl;
+        std::cout << "Not enough output, need " << std::distance(it, expected.end()) << " more comments"
+                  << std::endl;
         errors++;
     }
 }
-
 
 void test_parse(const std::string& input, int expected_type)
 {
@@ -92,8 +91,8 @@ void test_parse(const std::string& input, int expected_type)
     }
     else if (hint && hint->type != expected_type)
     {
-        std::cout << "Expected hint of type " << expected_type << " but got type "
-                  << (int)hint->type << ": " << input << std::endl;
+        std::cout << "Expected hint of type " << expected_type << " but got type " << (int) hint->type << ": "
+                  << input << std::endl;
         errors++;
     }
 
@@ -104,7 +103,7 @@ void count_hints(const std::string& input, int num_expected)
 {
     mxs::Buffer buffer(input.c_str(), input.size());
     HintParser parser;
-    int n = 0;
+    int n      = 0;
     HINT* hint = parser.parse(buffer.begin(), buffer.end());
 
     for (; hint; hint = hint->next)

@@ -16,22 +16,21 @@
 #include <maxscale/customparser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 
-
 class SetSqlModeParser : public maxscale::CustomParser
 {
 public:
     enum sql_mode_t
     {
-        DEFAULT,    // "set sql_mode=DEFAULT"
-        ORACLE,     // "set sql_mode=ORACLE", "set sql_mode='PIPES_AS_CONCAT,ORACLE', autocommit=false", etc.
-        SOMETHING   // "set sql_mode=PIPES_AS_CONCAT"
+        DEFAULT,   // "set sql_mode=DEFAULT"
+        ORACLE,    // "set sql_mode=ORACLE", "set sql_mode='PIPES_AS_CONCAT,ORACLE', autocommit=false", etc.
+        SOMETHING  // "set sql_mode=PIPES_AS_CONCAT"
     };
 
     enum result_t
     {
-        ERROR,          // Some fatal error occurred; mem alloc failed, parsing failed, etc.
-        IS_SET_SQL_MODE,// The COM_QUERY is "set sql_mode=..."
-        NOT_SET_SQL_MODE// The COM_QUERY is NOT "set sql_mode=..."
+        ERROR,            // Some fatal error occurred; mem alloc failed, parsing failed, etc.
+        IS_SET_SQL_MODE,  // The COM_QUERY is "set sql_mode=..."
+        NOT_SET_SQL_MODE  // The COM_QUERY is NOT "set sql_mode=..."
     };
 
     enum
@@ -47,9 +46,7 @@ public:
         TK_SQL_MODE,
     };
 
-    SetSqlModeParser()
-    {
-    }
+    SetSqlModeParser() {}
 
     /**
      * Return whether the statement is a "SET SQL_MODE=" statement and if so,
@@ -95,8 +92,8 @@ public:
             payload_len = MYSQL_GET_PAYLOAD_LEN(header);
         }
 
-        if (payload_len >= 20)      // sizeof(command byte) + strlen("SET sql_mode=ORACLE"), the minimum
-                                    // needed.
+        if (payload_len >= 20)  // sizeof(command byte) + strlen("SET sql_mode=ORACLE"), the minimum
+                                // needed.
         {
             // We need 4 bytes from the payload to deduce whether more investigations are needed.
             uint8_t payload[4];
@@ -231,20 +228,13 @@ public:
 private:
     static bool is_set(const char* pStmt)
     {
-        return (pStmt[0] == 's' || pStmt[0] == 'S')
-               && (pStmt[1] == 'e' || pStmt[1] == 'E')
-               && (pStmt[2] == 't' || pStmt[2] == 'T');
+        return (pStmt[0] == 's' || pStmt[0] == 'S') && (pStmt[1] == 'e' || pStmt[1] == 'E')
+            && (pStmt[2] == 't' || pStmt[2] == 'T');
     }
 
-    static bool is_set(const uint8_t* pStmt)
-    {
-        return is_set(reinterpret_cast<const char*>(pStmt));
-    }
+    static bool is_set(const uint8_t* pStmt) { return is_set(reinterpret_cast<const char*>(pStmt)); }
 
-    static bool is_error(result_t rv)
-    {
-        return rv == ERROR;
-    }
+    static bool is_error(result_t rv) { return rv == ERROR; }
 
     result_t initialize(GWBUF* pBuffer)
     {
@@ -256,7 +246,7 @@ private:
         if (modutil_extract_SQL(pBuffer, &pSql, &m_len))
         {
             m_pSql = pSql;
-            m_pI = m_pSql;
+            m_pI   = m_pSql;
             m_pEnd = m_pI + m_len;
         }
 
@@ -288,7 +278,7 @@ private:
     {
         // Consumes everything until a ',' outside of a commented string, or eol is
         // encountered.
-        bool rv = false;
+        bool rv       = false;
         bool consumed = false;
 
         while ((m_pI < m_pEnd) && (*m_pI != ','))
@@ -298,15 +288,15 @@ private:
             case '\'':
             case '"':
             case '`':
+            {
+                char quote = *m_pI;
+                ++m_pI;
+                while ((m_pI < m_pEnd) && (*m_pI != quote))
                 {
-                    char quote = *m_pI;
                     ++m_pI;
-                    while ((m_pI < m_pEnd) && (*m_pI != quote))
-                    {
-                        ++m_pI;
-                    }
                 }
-                break;
+            }
+            break;
 
             default:
                 ++m_pI;
@@ -316,7 +306,7 @@ private:
 
     result_t parse(sql_mode_t* pSql_mode)
     {
-        result_t rv = NOT_SET_SQL_MODE;
+        result_t rv   = NOT_SET_SQL_MODE;
         token_t token = next_token();
 
         switch (token)
@@ -565,9 +555,7 @@ private:
 
             if (m_pI != m_pEnd)
             {
-                MXS_INFO("Non-space data found after semi-colon: '%.*s'.",
-                         (int)(m_pEnd - m_pI),
-                         m_pI);
+                MXS_INFO("Non-space data found after semi-colon: '%.*s'.", (int) (m_pEnd - m_pI), m_pI);
             }
 
             token = PARSER_EXHAUSTED;
@@ -640,8 +628,7 @@ private:
                 }
                 break;
 
-            default:
-                ;
+            default:;
             }
         }
 

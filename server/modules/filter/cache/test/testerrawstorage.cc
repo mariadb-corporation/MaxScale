@@ -15,11 +15,9 @@
 #include "storage.hh"
 #include "storagefactory.hh"
 
-
 TesterRawStorage::TesterRawStorage(std::ostream* pOut, StorageFactory* pFactory)
     : TesterStorage(pOut, pFactory)
-{
-}
+{}
 
 int TesterRawStorage::execute(size_t n_threads, size_t n_seconds, const CacheItems& cache_items)
 {

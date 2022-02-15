@@ -20,8 +20,7 @@ using namespace maxscale;
 
 TesterLRUStorage::TesterLRUStorage(std::ostream* pOut, StorageFactory* pFactory)
     : TesterStorage(pOut, pFactory)
-{
-}
+{}
 
 int TesterLRUStorage::execute(size_t n_threads, size_t n_seconds, const CacheItems& cache_items)
 {
@@ -66,7 +65,7 @@ int TesterLRUStorage::test_lru(const CacheItems& cache_items, uint64_t size)
         rv = EXIT_SUCCESS;
 
         shared_ptr<Storage::Token> sToken;
-        MXB_AT_DEBUG(int created=) pStorage->create_token(&sToken);
+        MXB_AT_DEBUG(int created =) pStorage->create_token(&sToken);
         mxb_assert(created);
 
         cache_result_t result;
@@ -76,10 +75,8 @@ int TesterLRUStorage::test_lru(const CacheItems& cache_items, uint64_t size)
             const CacheItems::value_type& cache_item = cache_items[i];
             std::vector<std::string> invalidation_words;
 
-            result = pStorage->put_value(sToken.get(),
-                                         cache_item.first,
-                                         invalidation_words,
-                                         cache_item.second);
+            result
+                = pStorage->put_value(sToken.get(), cache_item.first, invalidation_words, cache_item.second);
 
             if (result == CACHE_RESULT_OK)
             {
@@ -152,10 +149,8 @@ int TesterLRUStorage::test_lru(const CacheItems& cache_items, uint64_t size)
     return rv;
 }
 
-int TesterLRUStorage::test_max_count(size_t n_threads,
-                                     size_t n_seconds,
-                                     const CacheItems& cache_items,
-                                     uint64_t size)
+int TesterLRUStorage::test_max_count(
+    size_t n_threads, size_t n_seconds, const CacheItems& cache_items, uint64_t size)
 {
     int rv = EXIT_FAILURE;
 
@@ -191,10 +186,8 @@ int TesterLRUStorage::test_max_count(size_t n_threads,
     return rv;
 }
 
-int TesterLRUStorage::test_max_size(size_t n_threads,
-                                    size_t n_seconds,
-                                    const CacheItems& cache_items,
-                                    uint64_t size)
+int TesterLRUStorage::test_max_size(
+    size_t n_threads, size_t n_seconds, const CacheItems& cache_items, uint64_t size)
 {
     int rv = EXIT_FAILURE;
 
@@ -230,24 +223,22 @@ int TesterLRUStorage::test_max_size(size_t n_threads,
     return rv;
 }
 
-int TesterLRUStorage::test_max_count_and_size(size_t n_threads,
-                                              size_t n_seconds,
-                                              const CacheItems& cache_items,
-                                              uint64_t size)
+int TesterLRUStorage::test_max_count_and_size(
+    size_t n_threads, size_t n_seconds, const CacheItems& cache_items, uint64_t size)
 {
     int rv = EXIT_FAILURE;
 
     Storage* pStorage;
 
     size_t max_count = cache_items.size() / 4;
-    size_t max_size = size / 10;
+    size_t max_size  = size / 10;
 
     out() << "LRU max-count: " << max_count << "\n" << endl;
     out() << "LRU max-size : " << max_size << "\n" << endl;
 
     Storage::Config config(CACHE_THREAD_MODEL_MT);
     config.max_count = max_count;
-    config.max_size = max_size;
+    config.max_size  = max_size;
 
     pStorage = get_storage(config);
 
@@ -257,7 +248,7 @@ int TesterLRUStorage::test_max_count_and_size(size_t n_threads,
 
         MXB_AT_DEBUG(cache_result_t result);
         uint64_t items;
-        MXB_AT_DEBUG(result = ) pStorage->get_items(&items);
+        MXB_AT_DEBUG(result =) pStorage->get_items(&items);
         mxb_assert(result == CACHE_RESULT_OK);
 
         out() << "Max count: " << max_count << ", count: " << items << "." << endl;
@@ -268,7 +259,7 @@ int TesterLRUStorage::test_max_count_and_size(size_t n_threads,
         }
 
         uint64_t size;
-        MXB_AT_DEBUG(result = ) pStorage->get_size(&size);
+        MXB_AT_DEBUG(result =) pStorage->get_size(&size);
         mxb_assert(result == CACHE_RESULT_OK);
 
         out() << "Max size: " << max_size << ", size: " << size << "." << endl;

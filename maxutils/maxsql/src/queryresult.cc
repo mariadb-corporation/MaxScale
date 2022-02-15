@@ -23,10 +23,11 @@ using mxb::string_printf;
 
 namespace
 {
-const string type_integer = "integer";
+const string type_integer  = "integer";
 const string type_uinteger = "unsigned integer";
-const string type_boolean = "boolean";
-}
+const string type_boolean  = "boolean";
+}  // namespace
+
 namespace maxsql
 {
 
@@ -35,7 +36,7 @@ bool QueryResult::next_row()
     if (advance_row())
     {
         m_current_row_ind++;
-        m_error = ConversionError();    // Reset error
+        m_error = ConversionError();  // Reset error
         return true;
     }
     else
@@ -75,19 +76,19 @@ string QueryResult::get_string(const std::string& name) const
 
 int64_t QueryResult::get_int(int64_t column_ind) const
 {
-    int64_t rval = 0;
+    int64_t rval    = 0;
     auto int_parser = [&rval](const char* data_elem) {
-            bool success = false;
-            errno = 0;
-            char* endptr = nullptr;
-            auto parsed = strtoll(data_elem, &endptr, 10);
-            if (errno == 0 && *endptr == '\0')
-            {
-                rval = parsed;
-                success = true;
-            }
-            return success;
-        };
+        bool success = false;
+        errno        = 0;
+        char* endptr = nullptr;
+        auto parsed  = strtoll(data_elem, &endptr, 10);
+        if (errno == 0 && *endptr == '\0')
+        {
+            rval    = parsed;
+            success = true;
+        }
+        return success;
+    };
 
     call_parser(int_parser, column_ind, type_integer);
     return rval;
@@ -105,19 +106,19 @@ int64_t QueryResult::get_int(const std::string& name) const
 
 uint64_t QueryResult::get_uint(int64_t column_ind) const
 {
-    uint64_t rval = 0;
+    uint64_t rval    = 0;
     auto uint_parser = [&rval](const char* data_elem) {
-            bool success = false;
-            errno = 0;
-            char* endptr = nullptr;
-            auto parsed = strtoull(data_elem, &endptr, 10);
-            if (errno == 0 && *endptr == '\0')
-            {
-                rval = parsed;
-                success = true;
-            }
-            return success;
-        };
+        bool success = false;
+        errno        = 0;
+        char* endptr = nullptr;
+        auto parsed  = strtoull(data_elem, &endptr, 10);
+        if (errno == 0 && *endptr == '\0')
+        {
+            rval    = parsed;
+            success = true;
+        }
+        return success;
+    };
 
     call_parser(uint_parser, column_ind, type_uinteger);
     return rval;
@@ -125,21 +126,21 @@ uint64_t QueryResult::get_uint(int64_t column_ind) const
 
 bool QueryResult::get_bool(int64_t column_ind) const
 {
-    bool rval = false;
+    bool rval        = false;
     auto bool_parser = [&rval](const char* data_elem) {
-            bool success = false;
-            char c = *data_elem;
-            if (c == '1' || c == 'Y' || c == 'y')
-            {
-                rval = true;
-                success = true;
-            }
-            else if (c == '0' || c == 'N' || c == 'n')
-            {
-                success = true;
-            }
-            return success;
-        };
+        bool success = false;
+        char c       = *data_elem;
+        if (c == '1' || c == 'Y' || c == 'y')
+        {
+            rval    = true;
+            success = true;
+        }
+        else if (c == '0' || c == 'N' || c == 'n')
+        {
+            success = true;
+        }
+        return success;
+    };
 
     call_parser(bool_parser, column_ind, type_boolean);
     return rval;
@@ -155,8 +156,8 @@ bool QueryResult::get_bool(const std::string& name) const
     return 0;
 }
 
-void QueryResult::call_parser(const std::function<bool(const char*)>& parser, int64_t column_ind,
-                              const std::string& target_type) const
+void QueryResult::call_parser(
+    const std::function<bool(const char*)>& parser, int64_t column_ind, const std::string& target_type) const
 {
     mxb_assert(column_ind < get_col_count() && column_ind >= 0);
     auto data_elem = row_elem(column_ind);
@@ -237,7 +238,7 @@ void QueryResult::ConversionError::set_null_value_error(const string& target_typ
     if (m_target_type.empty())
     {
         m_field_was_null = true;
-        m_target_type = target_type;
+        m_target_type    = target_type;
     }
 }
 
@@ -263,4 +264,4 @@ bool QueryResult::ConversionError::error() const
 {
     return !m_target_type.empty();
 }
-}
+}  // namespace maxsql

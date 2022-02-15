@@ -26,14 +26,11 @@ namespace
 {
 struct THIS_UNIT
 {
-    bool log_statements;    // Should all statements sent to server be logged?
+    bool log_statements;  // Should all statements sent to server be logged?
 };
 
-static THIS_UNIT this_unit =
-{
-    false
-};
-}
+static THIS_UNIT this_unit = {false};
+}  // namespace
 
 namespace maxsql
 {
@@ -41,11 +38,12 @@ namespace maxsql
 int mysql_query_ex(MYSQL* conn, const std::string& query, int query_retries, time_t query_retry_timeout)
 {
     const char* query_cstr = query.c_str();
-    time_t start = time(NULL);
-    int rc = mysql_query(conn, query_cstr);
+    time_t start           = time(NULL);
+    int rc                 = mysql_query(conn, query_cstr);
 
     for (int n = 0; rc != 0 && n < query_retries && mysql_is_net_error(mysql_errno(conn))
-         && time(NULL) - start < query_retry_timeout; n++)
+                    && time(NULL) - start < query_retry_timeout;
+         n++)
     {
         if (n > 0)
         {
@@ -60,10 +58,10 @@ int mysql_query_ex(MYSQL* conn, const std::string& query, int query_retries, tim
 
     if (this_unit.log_statements)
     {
-        const char* host = "0.0.0.0";
+        const char* host  = "0.0.0.0";
         unsigned int port = 0;
-        MXB_AT_DEBUG(int rc1 = ) mariadb_get_info(conn, MARIADB_CONNECTION_HOST, &host);
-        MXB_AT_DEBUG(int rc2 = ) mariadb_get_info(conn, MARIADB_CONNECTION_PORT, &port);
+        MXB_AT_DEBUG(int rc1 =) mariadb_get_info(conn, MARIADB_CONNECTION_HOST, &host);
+        MXB_AT_DEBUG(int rc2 =) mariadb_get_info(conn, MARIADB_CONNECTION_PORT, &port);
         mxb_assert(!rc1 && !rc2);
         MXB_NOTICE("SQL([%s]:%u): %d, \"%s\"", host, port, rc, query_cstr);
     }
@@ -152,7 +150,7 @@ uint64_t leint_value(const uint8_t* c)
     {
         memcpy(&sz, c + 1, 8);
     }
-    else if (*c != 0xfb) // 0xfb is NULL -> return 0
+    else if (*c != 0xfb)  // 0xfb is NULL -> return 0
     {
         mxb_assert(*c == 0xff);
         MXB_ERROR("Unexpected length encoding '%x' encountered when reading length-encoded integer.", *c);
@@ -185,7 +183,7 @@ uint64_t leint_consume(uint8_t** c)
 char* lestr_consume_dup(uint8_t** c)
 {
     uint64_t slen = leint_consume(c);
-    char* str = (char*)MXS_MALLOC((slen + 1) * sizeof(char));
+    char* str     = (char*) MXS_MALLOC((slen + 1) * sizeof(char));
 
     if (str)
     {
@@ -209,9 +207,9 @@ char* lestr_consume_dup(uint8_t** c)
 char* lestr_consume(uint8_t** c, size_t* size)
 {
     uint64_t slen = leint_consume(c);
-    *size = slen;
-    char* start = (char*) *c;
+    *size         = slen;
+    char* start   = (char*) *c;
     *c += slen;
     return start;
 }
-}
+}  // namespace maxsql

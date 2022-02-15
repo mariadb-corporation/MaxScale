@@ -32,19 +32,19 @@ public:
     ~TeeSession();
     static TeeSession* create(Tee* my_instance, MXS_SESSION* session, SERVICE* service);
 
-    void    close();
-    int     routeQuery(GWBUF* pPacket);
+    void close();
+    int routeQuery(GWBUF* pPacket);
     json_t* diagnostics() const;
 
 private:
     TeeSession(MXS_SESSION* session,
-               SERVICE* service,
-               LocalClient* client,
-               const mxb::Regex& match,
-               const mxb::Regex& exclude);
+        SERVICE* service,
+        LocalClient* client,
+        const mxb::Regex& match,
+        const mxb::Regex& exclude);
     bool query_matches(GWBUF* buffer);
 
-    LocalClient*      m_client; /**< The client connection to the local service */
+    LocalClient* m_client; /**< The client connection to the local service */
     const mxb::Regex& m_match;
     const mxb::Regex& m_exclude;
 };

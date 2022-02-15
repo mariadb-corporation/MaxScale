@@ -49,9 +49,7 @@ SessionCommand::SessionCommand(GWBUF* buffer, uint64_t id)
     }
 }
 
-SessionCommand::~SessionCommand()
-{
-}
+SessionCommand::~SessionCommand() {}
 
 bool SessionCommand::eq(const SessionCommand& rhs) const
 {
@@ -69,4 +67,4 @@ void SessionCommand::mark_as_duplicate(const SessionCommand& rhs)
     // The commands now share the mxs::Buffer that contains the actual command
     m_buffer = rhs.m_buffer;
 }
-}
+}  // namespace maxscale

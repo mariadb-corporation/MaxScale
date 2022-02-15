@@ -49,7 +49,7 @@ struct users;
 #define SERVICE_PARAM_UNINIT -1
 
 /* Refresh rate limits for load users from database */
-#define USERS_REFRESH_TIME_DEFAULT 30   /* Allowed time interval (in seconds) after last update*/
+#define USERS_REFRESH_TIME_DEFAULT 30 /* Allowed time interval (in seconds) after last update*/
 
 /** Default timeout values used by the connections which fetch user authentication data */
 #define DEFAULT_AUTH_CONNECT_TIMEOUT 10
@@ -58,9 +58,9 @@ struct users;
 
 enum service_version_which_t
 {
-    SERVICE_VERSION_ANY,    /*< Any version of the servers of a service. */
-    SERVICE_VERSION_MIN,    /*< The minimum version. */
-    SERVICE_VERSION_MAX,    /*< The maximum version. */
+    SERVICE_VERSION_ANY, /*< Any version of the servers of a service. */
+    SERVICE_VERSION_MIN, /*< The minimum version. */
+    SERVICE_VERSION_MAX, /*< The maximum version. */
 };
 
 /**
@@ -73,32 +73,31 @@ enum service_version_which_t
 class SERVICE : public mxs::Target
 {
 public:
-
     enum class State
     {
-        ALLOC,      /**< The service has been allocated */
-        STARTED,    /**< The service has been started */
-        FAILED,     /**< The service failed to start */
-        STOPPED,    /**< The service has been stopped */
+        ALLOC,   /**< The service has been allocated */
+        STARTED, /**< The service has been started */
+        FAILED,  /**< The service failed to start */
+        STOPPED, /**< The service has been stopped */
     };
 
     struct Config
     {
         Config(mxs::ConfigParameters* params);
 
-        std::string user;                           /**< Username */
-        std::string password;                       /**< Password */
-        std::string version_string;                 /**< Version string sent to clients */
-        int         max_connections;                /**< Maximum client connections */
-        bool        enable_root;                    /**< Allow root user  access */
-        bool        users_from_all;                 /**< Load users from all servers */
-        bool        log_auth_warnings;              /**< Log authentication failures and warnings */
-        bool        session_track_trx_state;        /**< Get transaction state via session track mechanism */
-        int64_t     conn_idle_timeout;              /**< Session timeout in seconds */
-        int64_t     net_write_timeout;              /**< Write timeout in seconds */
-        int32_t     retain_last_statements;         /**< How many statements to retain per session,
+        std::string user;               /**< Username */
+        std::string password;           /**< Password */
+        std::string version_string;     /**< Version string sent to clients */
+        int max_connections;            /**< Maximum client connections */
+        bool enable_root;               /**< Allow root user  access */
+        bool users_from_all;            /**< Load users from all servers */
+        bool log_auth_warnings;         /**< Log authentication failures and warnings */
+        bool session_track_trx_state;   /**< Get transaction state via session track mechanism */
+        int64_t conn_idle_timeout;      /**< Session timeout in seconds */
+        int64_t net_write_timeout;      /**< Write timeout in seconds */
+        int32_t retain_last_statements; /**< How many statements to retain per session,
                                                      * -1 if not explicitly specified. */
-        int64_t connection_keepalive;               /**< How often to ping idle sessions */
+        int64_t connection_keepalive;   /**< How often to ping idle sessions */
 
         /**
          * Remove the '\' characters from database names when querying them from the server. This
@@ -108,25 +107,19 @@ public:
          * the database, but it must still understand the escaped version of the grant. */
         bool strip_db_esc {true};
 
-        int64_t rank;   /*< The ranking of this service */
+        int64_t rank; /*< The ranking of this service */
     };
 
-    State              state {State::ALLOC};        /**< The service state */
-    mxs_router_object* router {nullptr};            /**< The router we are using */
-    mxs_router*        router_instance {nullptr};   /**< The router instance for this service */
-    time_t             started {0};                 /**< The time when the service was started */
+    State state {State::ALLOC};            /**< The service state */
+    mxs_router_object* router {nullptr};   /**< The router we are using */
+    mxs_router* router_instance {nullptr}; /**< The router instance for this service */
+    time_t started {0};                    /**< The time when the service was started */
 
-    const char* name() const override
-    {
-        return m_name.c_str();
-    }
+    const char* name() const override { return m_name.c_str(); }
 
     virtual const mxs::ConfigParameters& params() const = 0;
 
-    const char* router_name() const
-    {
-        return m_router_name.c_str();
-    }
+    const char* router_name() const { return m_router_name.c_str(); }
 
     /**
      * Get service configuration
@@ -228,20 +221,18 @@ public:
     uint8_t charset() const;
 
 protected:
-    SERVICE(const std::string& name,
-            const std::string& router_name)
+    SERVICE(const std::string& name, const std::string& router_name)
         : started(time(nullptr))
         , m_name(name)
         , m_router_name(router_name)
-    {
-    }
+    {}
 
-    uint64_t m_capabilities {0};    /**< The capabilities of the service,
+    uint64_t m_capabilities {0}; /**< The capabilities of the service,
                                      * @see enum routing_capability */
 private:
     const std::string m_name;
     const std::string m_router_name;
-    std::string       m_custom_version_suffix;
+    std::string m_custom_version_suffix;
 };
 
 typedef enum count_spec_t

@@ -28,7 +28,6 @@
 class ResultSet
 {
 public:
-
     /**
      * Create a new result set
      *
@@ -64,7 +63,7 @@ public:
     mxs::Buffer as_buffer() const;
 
 private:
-    std::vector<std::string>              m_columns;
+    std::vector<std::string> m_columns;
     std::vector<std::vector<std::string>> m_rows;
 
     ResultSet(const std::vector<std::string>& names);

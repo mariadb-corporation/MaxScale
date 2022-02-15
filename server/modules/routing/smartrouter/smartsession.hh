@@ -31,22 +31,29 @@ class SmartRouter;
  *  be marked "is_critical" meaning non-crititcal non-masters, could be allowed to fail.
  */
 
-class SmartRouterSession : public mxs::RouterSession, private mxs::QueryClassifier::Handler
+class SmartRouterSession : public mxs::RouterSession,
+                           private mxs::QueryClassifier::Handler
 {
 public:
-    static SmartRouterSession* create(SmartRouter* pRouter, MXS_SESSION* pSession,
-                                      const std::vector<mxs::Endpoint*>& pEndpoints);
+    static SmartRouterSession* create(
+        SmartRouter* pRouter, MXS_SESSION* pSession, const std::vector<mxs::Endpoint*>& pEndpoints);
 
     virtual ~SmartRouterSession();
-    SmartRouterSession(const SmartRouterSession&) = delete;
+    SmartRouterSession(const SmartRouterSession&)            = delete;
     SmartRouterSession& operator=(const SmartRouterSession&) = delete;
 
-    int  routeQuery(GWBUF* pBuf);
+    int routeQuery(GWBUF* pBuf);
     void clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
     bool handleError(mxs::ErrorType type, GWBUF* pPacket, mxs::Endpoint* pProblem, const mxs::Reply& pReply);
 
 private:
-    enum class Mode {Idle, Query, MeasureQuery, CollectResults};
+    enum class Mode
+    {
+        Idle,
+        Query,
+        MeasureQuery,
+        CollectResults
+    };
 
     /** struct Cluster represents a cluster of mariadb servers as a Maxscale internal Server.
      *  TODO In the next iteration a directly callable "Thing" should be implemented (Router, Backend
@@ -62,8 +69,8 @@ private:
         }
 
         mxs::Endpoint* pBackend;
-        bool           is_master;
-        bool           is_replying_to_client {false};
+        bool is_master;
+        bool is_replying_to_client {false};
 
         maxsql::PacketTracker tracker;
     };
@@ -82,7 +89,7 @@ private:
 
     bool expecting_request_packets() const;
     bool expecting_response_packets() const;
-    bool all_clusters_are_idle() const;     // no clusters expect packets
+    bool all_clusters_are_idle() const;  // no clusters expect packets
 
     // QueryClassifier::Handler overrides, not used.
     bool lock_to_master() override;
@@ -91,15 +98,17 @@ private:
 
     SmartRouter& m_router;
 
-    Mode   m_mode = Mode::Idle;
+    Mode m_mode              = Mode::Idle;
     GWBUF* m_pDelayed_packet = nullptr;
 
-    Clusters             m_clusters;
+    Clusters m_clusters;
     mxs::QueryClassifier m_qc;
+
     struct Measurement
     {
         maxbase::TimePoint start;
-        std::string        canonical;
+        std::string canonical;
     };
+
     Measurement m_measurement;
 };

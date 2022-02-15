@@ -17,5 +17,5 @@
  * As this file may be included before defining MXS_MODULE_NAME, ccdefs.hh should
  * not be included here.
  */
-#define MXS_MARIADB_PROTOCOL_NAME "mariadbclient"
+#define MXS_MARIADB_PROTOCOL_NAME          "mariadbclient"
 #define MXS_MARIADBAUTH_AUTHENTICATOR_NAME "MariaDBAuth"

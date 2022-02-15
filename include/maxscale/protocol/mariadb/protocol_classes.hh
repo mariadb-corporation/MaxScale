@@ -28,9 +28,9 @@ struct UserSearchSettings
     // only changes how database names are handled.
     enum class DBNameCmpMode
     {
-        CASE_SENSITIVE, // Db-name given by client is compared as-is to stored values.
-        LOWER_CASE,     // Db-name given by client converted to lowercase. Stored values assumed lowercase.
-        CASE_INSENSITIVE// DB-names are compared case-insensitive.
+        CASE_SENSITIVE,   // Db-name given by client is compared as-is to stored values.
+        LOWER_CASE,       // Db-name given by client converted to lowercase. Stored values assumed lowercase.
+        CASE_INSENSITIVE  // DB-names are compared case-insensitive.
     };
 
     struct Listener
@@ -51,7 +51,7 @@ struct UserSearchSettings
     };
 
     Listener listener;
-    Service  service;
+    Service service;
 };
 
 /**
@@ -59,13 +59,13 @@ struct UserSearchSettings
  */
 struct AuthSwitchReqContents
 {
-    bool        success {false};/**< Was parsing successful */
-    std::string plugin_name;    /**< Plugin name */
-    ByteVec     plugin_data;    /**< Data for plugin */
+    bool success {false};    /**< Was parsing successful */
+    std::string plugin_name; /**< Plugin name */
+    ByteVec plugin_data;     /**< Data for plugin */
 };
 
 AuthSwitchReqContents parse_auth_switch_request(const mxs::Buffer& input);
-}
+}  // namespace mariadb
 
 /*
  * Data shared with authenticators
@@ -90,29 +90,29 @@ public:
     class ClientInfo
     {
     public:
-        uint32_t m_client_capabilities {0};     /*< Basic client capabilities */
-        uint32_t m_extra_capabilities {0};      /*< MariaDB 10.2 capabilities */
+        uint32_t m_client_capabilities {0}; /*< Basic client capabilities */
+        uint32_t m_extra_capabilities {0};  /*< MariaDB 10.2 capabilities */
 
         /** Connection character set. Usually just one byte is needed. COM_CHANGE_USER sends two. */
         uint16_t m_charset {0};
     };
 
-    bool     ssl_capable() const;
+    bool ssl_capable() const;
     uint32_t client_capabilities() const;
     uint32_t extra_capabilitites() const;
 
-    uint8_t scramble[MYSQL_SCRAMBLE_LEN] {0};   /*< Created server scramble */
+    uint8_t scramble[MYSQL_SCRAMBLE_LEN] {0}; /*< Created server scramble */
 
-    std::string user;                               /*< username       */
-    std::string remote;                             /*< client ip      */
-    std::string db;                                 /*< database       */
-    std::string plugin;                             /*< authentication plugin requested by client */
-    uint8_t     next_sequence {0};                  /*< Next packet sequence */
+    std::string user;          /*< username       */
+    std::string remote;        /*< client ip      */
+    std::string db;            /*< database       */
+    std::string plugin;        /*< authentication plugin requested by client */
+    uint8_t next_sequence {0}; /*< Next packet sequence */
 
     // Raw connection attribute data, copied to all backend connections
     std::vector<uint8_t> connect_attrs;
 
-    ClientInfo client_info;     /**< Client capabilities from handshake response packet */
+    ClientInfo client_info; /**< Client capabilities from handshake response packet */
 
     /**
      * Authentication token storage. Used by different authenticators in different ways. So far, only

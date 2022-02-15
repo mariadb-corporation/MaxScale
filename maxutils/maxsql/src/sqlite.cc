@@ -40,20 +40,20 @@ std::unique_ptr<SQLite> SQLite::create(const string& filename, int flags, string
 bool SQLite::open(const std::string& filename, int flags)
 {
     const char open_fail[] = "Failed to open SQLite3 handle for file '%s': '%s'";
-    const char open_oom[] = "Failed to allocate memory for SQLite3 handle for file '%s'.";
+    const char open_oom[]  = "Failed to allocate memory for SQLite3 handle for file '%s'.";
 
-    sqlite3_close(m_dbhandle);   // Close any existing handle.
+    sqlite3_close(m_dbhandle);  // Close any existing handle.
     m_dbhandle = nullptr;
     m_errormsg.clear();
 
-    sqlite3* new_handle = nullptr;
+    sqlite3* new_handle   = nullptr;
     const char* zFilename = filename.c_str();
     string error_msg;
     bool success = false;
     if (sqlite3_open_v2(zFilename, &new_handle, flags, NULL) == SQLITE_OK)
     {
         m_dbhandle = new_handle;
-        success = true;
+        success    = true;
     }
     // Even if the open failed, the handle may exist and an error message can be read.
     else if (new_handle)
@@ -87,7 +87,7 @@ bool SQLite::exec(const std::string& sql)
 
 bool SQLite::exec_impl(const std::string& sql, CallbackVoid cb, void* cb_data)
 {
-    char* err = nullptr;
+    char* err    = nullptr;
     bool success = (sqlite3_exec(m_dbhandle, sql.c_str(), cb, cb_data, &err) == SQLITE_OK);
     if (success)
     {
@@ -113,8 +113,7 @@ const char* SQLite::error() const
 
 SQLiteStmt::SQLiteStmt(sqlite3_stmt* stmt)
     : m_stmt(stmt)
-{
-}
+{}
 
 SQLiteStmt::~SQLiteStmt()
 {
@@ -123,18 +122,17 @@ SQLiteStmt::~SQLiteStmt()
 
 bool SQLiteStmt::step()
 {
-    int ret = sqlite3_step(m_stmt);
+    int ret    = sqlite3_step(m_stmt);
     m_errornum = ret;
     return ret == SQLITE_ROW;
 }
 
 bool SQLiteStmt::step_execute()
 {
-    int ret = sqlite3_step(m_stmt);
+    int ret    = sqlite3_step(m_stmt);
     m_errornum = ret;
     return ret == SQLITE_DONE;
 }
-
 
 bool SQLiteStmt::reset()
 {
@@ -176,14 +174,14 @@ std::vector<std::string> SQLiteStmt::column_names() const
 int SQLiteStmt::bind_parameter_index(const std::string& name)
 {
     // Parameter names must start with ":" or "@". Add ":" if none found.
-    int rval = 0; // Valid indexes start at 1.
+    int rval = 0;  // Valid indexes start at 1.
     if (!name.empty())
     {
         auto front = name.front();
         if (front != ':' && front != '@')
         {
             string fixedname = ":" + name;
-            rval = sqlite3_bind_parameter_index(m_stmt, fixedname.c_str());
+            rval             = sqlite3_bind_parameter_index(m_stmt, fixedname.c_str());
         }
         else
         {
@@ -195,21 +193,21 @@ int SQLiteStmt::bind_parameter_index(const std::string& name)
 
 bool SQLiteStmt::bind_string(int ind, const string& value)
 {
-    int ret = sqlite3_bind_text(m_stmt, ind, value.c_str(), value.size(), nullptr);
+    int ret    = sqlite3_bind_text(m_stmt, ind, value.c_str(), value.size(), nullptr);
     m_errornum = ret;
     return ret == SQLITE_OK;
 }
 
 bool SQLiteStmt::bind_int(int ind, int value)
 {
-    int ret = sqlite3_bind_int(m_stmt, ind, value);
+    int ret    = sqlite3_bind_int(m_stmt, ind, value);
     m_errornum = ret;
     return ret == SQLITE_OK;
 }
 
 bool SQLiteStmt::bind_bool(int ind, bool value)
 {
-    int ret = sqlite3_bind_int(m_stmt, ind, value ? 1 : 0);
+    int ret    = sqlite3_bind_int(m_stmt, ind, value ? 1 : 0);
     m_errornum = ret;
     return ret == SQLITE_OK;
 }
@@ -230,7 +228,7 @@ std::unique_ptr<mxq::QueryResult> SQLite::query(const std::string& query)
         {
             if (stmt->column_count() > 0)
             {
-                rval.reset(new(std::nothrow) mxq::SQLiteQueryResult(*stmt));
+                rval.reset(new (std::nothrow) mxq::SQLiteQueryResult(*stmt));
             }
             else
             {
@@ -252,8 +250,8 @@ std::unique_ptr<SQLiteStmt> SQLite::prepare(const std::string& query)
 {
     std::unique_ptr<SQLiteStmt> rval;
     sqlite3_stmt* new_stmt = nullptr;
-    const char* tail = nullptr;
-    const char* queryz = query.c_str();
+    const char* tail       = nullptr;
+    const char* queryz     = query.c_str();
 
     int ret = sqlite3_prepare_v2(m_dbhandle, queryz, query.length() + 1, &new_stmt, &tail);
     if (ret == SQLITE_OK)
@@ -261,7 +259,7 @@ std::unique_ptr<SQLiteStmt> SQLite::prepare(const std::string& query)
         // Compilation succeeded.
         if (!*tail)
         {
-            rval.reset(new(std::nothrow) SQLiteStmt(new_stmt));
+            rval.reset(new (std::nothrow) SQLiteStmt(new_stmt));
             new_stmt = nullptr;
             m_errormsg.clear();
             m_errornum = 0;
@@ -269,15 +267,16 @@ std::unique_ptr<SQLiteStmt> SQLite::prepare(const std::string& query)
         else
         {
             m_errormsg = mxb::string_printf("Query '%s' contained multiple statements. Only singular "
-                                            "statements are supported.", queryz);
+                                            "statements are supported.",
+                queryz);
             m_errornum = USER_ERROR;
             sqlite3_finalize(new_stmt);
         }
     }
     else
     {
-        m_errormsg = mxb::string_printf("Could not prepare query '%s': %s",
-                                        queryz, sqlite3_errmsg(m_dbhandle));
+        m_errormsg
+            = mxb::string_printf("Could not prepare query '%s': %s", queryz, sqlite3_errmsg(m_dbhandle));
         m_errornum = ret;
     }
 
@@ -288,8 +287,8 @@ SQLiteQueryResult::SQLiteQueryResult(SQLiteStmt& stmt)
     : QueryResult(stmt.column_names())
 {
     m_column_names = stmt.column_names();
-    int cols = stmt.column_count();
-    mxb_assert(m_column_names.size() == (size_t)cols);
+    int cols       = stmt.column_count();
+    mxb_assert(m_column_names.size() == (size_t) cols);
     m_cols = cols;
 
     while (stmt.step())
@@ -327,4 +326,4 @@ const char* SQLiteQueryResult::row_elem(int64_t column_ind) const
     return m_data_array[coord].c_str();
 }
 
-}
+}  // namespace maxsql

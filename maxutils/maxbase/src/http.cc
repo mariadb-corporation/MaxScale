@@ -36,10 +36,7 @@ namespace
 static struct THIS_UNIT
 {
     int nInits;
-} this_unit =
-{
-    0
-};
+} this_unit = {0};
 
 using namespace mxb;
 using namespace mxb::http;
@@ -76,11 +73,10 @@ struct ReadCallbackData
 public:
     ReadCallbackData(const std::string* pBody)
         : body(*pBody)
-    {
-    }
+    {}
 
     const std::string& body;
-    size_t             pos = 0;
+    size_t pos = 0;
 };
 
 // https://curl.haxx.se/libcurl/c/CURLOPT_READFUNCTION.html
@@ -134,7 +130,7 @@ size_t header_callback(char* ptr, size_t size, size_t nmemb, void* userdata)
         map<string, string>* pHeaders = static_cast<std::map<string, string>*>(userdata);
 
         char* end = ptr + len;
-        char* i = std::find(ptr, end, ':');
+        char* i   = std::find(ptr, end, ':');
 
         if (i != end)
         {
@@ -157,13 +153,14 @@ enum class CurlOp
 };
 
 CURL* get_easy_curl(CurlOp op,
-                    const std::string& url,
-                    const std::string& user, const std::string& password,
-                    const Config& config,
-                    Response* pRes,
-                    char* pErrbuf,
-                    curl_slist* pHeaders,
-                    ReadCallbackData* pRcd)
+    const std::string& url,
+    const std::string& user,
+    const std::string& password,
+    const Config& config,
+    Response* pRes,
+    char* pErrbuf,
+    curl_slist* pHeaders,
+    ReadCallbackData* pRcd)
 {
     CURL* pCurl = curl_easy_init();
     mxb_assert(pCurl);
@@ -179,17 +176,17 @@ CURL* get_easy_curl(CurlOp op,
 
         if (!config.ssl_verifypeer)
         {
-            checked_curl_setopt(pCurl, CURLOPT_SSL_VERIFYPEER, (long)0);
+            checked_curl_setopt(pCurl, CURLOPT_SSL_VERIFYPEER, (long) 0);
         }
 
         if (!config.ssl_verifyhost)
         {
-            checked_curl_setopt(pCurl, CURLOPT_SSL_VERIFYHOST, (long)0);
+            checked_curl_setopt(pCurl, CURLOPT_SSL_VERIFYHOST, (long) 0);
         }
 
         checked_curl_setopt(pCurl, CURLOPT_NOSIGNAL, 1);
-        checked_curl_setopt(pCurl, CURLOPT_CONNECTTIMEOUT, config.connect_timeout.count());// Conn. phase
-        checked_curl_setopt(pCurl, CURLOPT_TIMEOUT, config.timeout.count());               // Data trs phase
+        checked_curl_setopt(pCurl, CURLOPT_CONNECTTIMEOUT, config.connect_timeout.count());  // Conn. phase
+        checked_curl_setopt(pCurl, CURLOPT_TIMEOUT, config.timeout.count());                 // Data trs phase
         checked_curl_setopt(pCurl, CURLOPT_ERRORBUFFER, pErrbuf);
         checked_curl_setopt(pCurl, CURLOPT_WRITEFUNCTION, write_callback);
         checked_curl_setopt(pCurl, CURLOPT_WRITEDATA, &pRes->body);
@@ -207,7 +204,7 @@ CURL* get_easy_curl(CurlOp op,
             checked_curl_setopt(pCurl, CURLOPT_UPLOAD, 1L);
             checked_curl_setopt(pCurl, CURLOPT_READFUNCTION, read_callback);
             checked_curl_setopt(pCurl, CURLOPT_READDATA, pRcd);
-            checked_curl_setopt(pCurl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)pRcd->body.size());
+            checked_curl_setopt(pCurl, CURLOPT_INFILESIZE_LARGE, (curl_off_t) pRcd->body.size());
         }
 
         if (!user.empty() && !password.empty())
@@ -239,7 +236,7 @@ curl_slist* create_headers(const std::map<std::string, std::string>& headers)
     for (const auto& kv : headers)
     {
         string header = kv.first + ":" + kv.second;
-        pHeaders = curl_slist_append(pHeaders, header.c_str());
+        pHeaders      = curl_slist_append(pHeaders, header.c_str());
     }
 
     return pHeaders;
@@ -249,15 +246,13 @@ using Errbuf = array<char, CURL_ERROR_SIZE + 1>;
 
 struct Context
 {
-    Context(Response* pResponse,
-            Errbuf* pErrbuf)
+    Context(Response* pResponse, Errbuf* pErrbuf)
         : pResponse(pResponse)
         , pErrbuf(pErrbuf)
-    {
-    }
+    {}
 
     mxb::http::Response* pResponse;
-    Errbuf*              pErrbuf;
+    Errbuf* pErrbuf;
 };
 
 class ReadyImp : public Async::Imp
@@ -265,38 +260,22 @@ class ReadyImp : public Async::Imp
 public:
     ReadyImp(Async::status_t status = Async::READY)
         : m_status(status)
-    {
-    }
+    {}
 
-    Async::status_t status() const
-    {
-        return m_status;
-    }
+    Async::status_t status() const { return m_status; }
 
-    Async::status_t perform(long timeout_ms)
-    {
-        return m_status;
-    }
+    Async::status_t perform(long timeout_ms) { return m_status; }
 
-    long wait_no_more_than() const
-    {
-        return 0;
-    }
+    long wait_no_more_than() const { return 0; }
 
-    const vector<Response>& responses() const
-    {
-        return m_responses;
-    }
+    const vector<Response>& responses() const { return m_responses; }
 
-    const vector<string>& urls() const
-    {
-        return m_urls;
-    }
+    const vector<string>& urls() const { return m_urls; }
 
 private:
-    Async::status_t  m_status;
+    Async::status_t m_status;
     vector<Response> m_responses;
-    vector<string>   m_urls;
+    vector<string> m_urls;
 };
 
 class HttpImp : public Async::Imp
@@ -322,7 +301,7 @@ public:
         for (auto& item : m_curls)
         {
             CURL* pCurl = item.first;
-            MXB_AT_DEBUG(CURLMcode rv = ) curl_multi_remove_handle(m_pCurlm, pCurl);
+            MXB_AT_DEBUG(CURLMcode rv =) curl_multi_remove_handle(m_pCurlm, pCurl);
             mxb_assert(rv == CURLM_OK);
             curl_easy_cleanup(pCurl);
         }
@@ -337,15 +316,16 @@ public:
     }
 
     bool initialize(CurlOp op,
-                    const std::vector<std::string>& urls,
-                    const std::string& body,
-                    const std::string& user, const std::string& password,
-                    const Config& config)
+        const std::vector<std::string>& urls,
+        const std::string& body,
+        const std::string& user,
+        const std::string& password,
+        const Config& config)
     {
         mxb_assert(m_status == Async::ERROR);
 
-        m_urls = urls;
-        m_body = body;
+        m_urls     = urls;
+        m_body     = body;
         m_pHeaders = create_headers(config.headers);
 
         m_responses.reserve(urls.size());
@@ -367,10 +347,15 @@ public:
                 m_rcds.emplace_back(&m_body);
             }
 
-            CURL* pCurl = get_easy_curl(op, urls[i], user, password, config,
-                                        &m_responses[i], m_errbufs[i].data(),
-                                        m_pHeaders,
-                                        m_body.empty() ? nullptr : &m_rcds[i]);
+            CURL* pCurl = get_easy_curl(op,
+                urls[i],
+                user,
+                password,
+                config,
+                &m_responses[i],
+                m_errbufs[i].data(),
+                m_pHeaders,
+                m_body.empty() ? nullptr : &m_rcds[i]);
 
             if (!pCurl || (curl_multi_add_handle(m_pCurlm, pCurl) != CURLM_OK))
             {
@@ -396,7 +381,7 @@ public:
             {
                 if (m_still_running == 0)
                 {
-                    m_status = Async::READY;
+                    m_status            = Async::READY;
                     m_wait_no_more_than = 0;
 
                     collect_response();
@@ -417,10 +402,7 @@ public:
         return m_status != Async::ERROR;
     }
 
-    Async::status_t status() const override
-    {
-        return m_status;
-    }
+    Async::status_t status() const override { return m_status; }
 
     Async::status_t perform(long timeout_ms) override
     {
@@ -431,81 +413,72 @@ public:
             break;
 
         case Async::PENDING:
+        {
+            fd_set fdread;
+            fd_set fdwrite;
+            fd_set fdexcep;
+
+            FD_ZERO(&fdread);
+            FD_ZERO(&fdwrite);
+            FD_ZERO(&fdexcep);
+
+            int maxfd;
+            CURLMcode rv_curl = curl_multi_fdset(m_pCurlm, &fdread, &fdwrite, &fdexcep, &maxfd);
+
+            if (rv_curl == CURLM_OK)
             {
-                fd_set fdread;
-                fd_set fdwrite;
-                fd_set fdexcep;
-
-                FD_ZERO(&fdread);
-                FD_ZERO(&fdwrite);
-                FD_ZERO(&fdexcep);
-
-                int maxfd;
-                CURLMcode rv_curl = curl_multi_fdset(m_pCurlm, &fdread, &fdwrite, &fdexcep, &maxfd);
-
-                if (rv_curl == CURLM_OK)
+                int rv = 0;
+                if (maxfd != -1)
                 {
-                    int rv = 0;
-                    if (maxfd != -1)
-                    {
-                        struct timeval timeout = { timeout_ms / 1000, (timeout_ms % 1000) * 1000 };
-                        rv = select(maxfd + 1, &fdread, &fdwrite, &fdexcep, &timeout);
-                    }
+                    struct timeval timeout = {timeout_ms / 1000, (timeout_ms % 1000) * 1000};
+                    rv                     = select(maxfd + 1, &fdread, &fdwrite, &fdexcep, &timeout);
+                }
 
-                    switch (rv)
-                    {
-                    case -1:
-                        mxb_assert(!true);
-                        MXB_ERROR("select() failed: %s", mxb_strerror(errno));
-                        m_status = Async::ERROR;
-                        break;
+                switch (rv)
+                {
+                case -1:
+                    mxb_assert(!true);
+                    MXB_ERROR("select() failed: %s", mxb_strerror(errno));
+                    m_status = Async::ERROR;
+                    break;
 
-                    case 0:
-                    default:
-                        rv_curl = curl_multi_perform(m_pCurlm, &m_still_running);
-                        if (rv_curl == CURLM_OK)
+                case 0:
+                default:
+                    rv_curl = curl_multi_perform(m_pCurlm, &m_still_running);
+                    if (rv_curl == CURLM_OK)
+                    {
+                        if (m_still_running == 0)
                         {
-                            if (m_still_running == 0)
-                            {
-                                m_status = Async::READY;
-                            }
-                            else
-                            {
-                                update_timeout();
-                            }
+                            m_status = Async::READY;
                         }
                         else
                         {
-                            MXB_ERROR("curl_multi_perform() failed: %s", curl_multi_strerror(rv_curl));
-                            m_status = Async::ERROR;
+                            update_timeout();
                         }
                     }
-                }
-
-                if (m_status == Async::READY)
-                {
-                    collect_response();
+                    else
+                    {
+                        MXB_ERROR("curl_multi_perform() failed: %s", curl_multi_strerror(rv_curl));
+                        m_status = Async::ERROR;
+                    }
                 }
             }
+
+            if (m_status == Async::READY)
+            {
+                collect_response();
+            }
+        }
         }
 
         return m_status;
     }
 
-    long wait_no_more_than() const
-    {
-        return m_wait_no_more_than;
-    }
+    long wait_no_more_than() const { return m_wait_no_more_than; }
 
-    const vector<Response>& responses() const
-    {
-        return m_responses;
-    }
+    const vector<Response>& responses() const { return m_responses; }
 
-    const vector<string>& urls() const
-    {
-        return m_urls;
-    }
+    const vector<string>& urls() const { return m_urls; }
 
 private:
     void update_timeout()
@@ -530,12 +503,12 @@ private:
             if (pMsg && (pMsg->msg == CURLMSG_DONE))
             {
                 CURL* pCurl = pMsg->easy_handle;
-                auto it = m_curls.find(pCurl);
+                auto it     = m_curls.find(pCurl);
                 mxb_assert(it != m_curls.end());
 
-                auto& context = it->second;
+                auto& context       = it->second;
                 Response* pResponse = context.pResponse;
-                Errbuf* pErrbuf = context.pErrbuf;
+                Errbuf* pErrbuf     = context.pErrbuf;
 
                 if (pMsg->data.result == CURLE_OK)
                 {
@@ -558,20 +531,19 @@ private:
     }
 
 private:
-    CURLM*                                   m_pCurlm { nullptr };
-    Async::status_t                          m_status;
-    vector<Response>                         m_responses;
+    CURLM* m_pCurlm {nullptr};
+    Async::status_t m_status;
+    vector<Response> m_responses;
     vector<array<char, CURL_ERROR_SIZE + 1>> m_errbufs;
-    unordered_map<CURL*, Context>            m_curls;
-    int                                      m_still_running;
-    long                                     m_wait_no_more_than;
-    vector<string>                           m_urls;
-    string                                   m_body;
-    curl_slist*                              m_pHeaders { nullptr };
-    vector<ReadCallbackData>                 m_rcds;
+    unordered_map<CURL*, Context> m_curls;
+    int m_still_running;
+    long m_wait_no_more_than;
+    vector<string> m_urls;
+    string m_body;
+    curl_slist* m_pHeaders {nullptr};
+    vector<ReadCallbackData> m_rcds;
 };
-}
-
+}  // namespace
 
 namespace maxbase
 {
@@ -657,14 +629,11 @@ const char* Response::to_string(int code)
     }
 }
 
-Async::Imp::~Imp()
-{
-}
+Async::Imp::~Imp() {}
 
 Async::Async()
     : m_sImp(std::make_shared<ReadyImp>())
-{
-}
+{}
 
 void Async::reset()
 {
@@ -675,10 +644,11 @@ namespace
 {
 
 Async create_async(CurlOp op,
-                   const std::vector<std::string>& urls,
-                   const std::string& body,
-                   const std::string& user, const std::string& password,
-                   const Config& config)
+    const std::vector<std::string>& urls,
+    const std::string& body,
+    const std::string& user,
+    const std::string& password,
+    const Config& config)
 {
     shared_ptr<Async::Imp> sImp;
 
@@ -702,19 +672,21 @@ Async create_async(CurlOp op,
     return Async(sImp);
 }
 
-}
+}  // namespace
 
 Async get_async(const std::vector<std::string>& urls,
-                const std::string& user, const std::string& password,
-                const Config& config)
+    const std::string& user,
+    const std::string& password,
+    const Config& config)
 {
     return create_async(CurlOp::GET, urls, string(), user, password, config);
 }
 
 Async put_async(const std::vector<std::string>& urls,
-                const std::string& body,
-                const std::string& user, const std::string& password,
-                const Config& config)
+    const std::string& body,
+    const std::string& user,
+    const std::string& password,
+    const Config& config)
 {
     return create_async(CurlOp::PUT, urls, body, user, password, config);
 }
@@ -723,15 +695,15 @@ namespace
 {
 
 Response execute(CurlOp op,
-                 const std::string& url,
-                 const std::string& body,
-                 const std::string& user,
-                 const std::string& password,
-                 const Config& config)
+    const std::string& url,
+    const std::string& body,
+    const std::string& user,
+    const std::string& password,
+    const Config& config)
 {
     Response res;
     char errbuf[CURL_ERROR_SIZE + 1] = "";
-    curl_slist* pHeaders = create_headers(config.headers);
+    curl_slist* pHeaders             = create_headers(config.headers);
     ReadCallbackData rcd(&body);
     CURL* pCurl = get_easy_curl(op, url, user, password, config, &res, errbuf, pHeaders, &rcd);
     mxb_assert(pCurl);
@@ -741,12 +713,12 @@ Response execute(CurlOp op,
     switch (code)
     {
     case CURLE_OK:
-        {
-            long code = 0;      // needs to be a long
-            curl_easy_getinfo(pCurl, CURLINFO_RESPONSE_CODE, &code);
-            res.code = code;
-        }
-        break;
+    {
+        long code = 0;  // needs to be a long
+        curl_easy_getinfo(pCurl, CURLINFO_RESPONSE_CODE, &code);
+        res.code = code;
+    }
+    break;
 
     default:
         res.code = translate_curl_code(code);
@@ -760,14 +732,15 @@ Response execute(CurlOp op,
 }
 
 vector<Response> execute(CurlOp op,
-                         const std::vector<std::string>& urls,
-                         const std::string& body,
-                         const std::string& user, const std::string& password,
-                         const Config& config)
+    const std::vector<std::string>& urls,
+    const std::string& body,
+    const std::string& user,
+    const std::string& password,
+    const Config& config)
 {
     Async http = create_async(op, urls, body, user, password, config);
 
-    long timeout_ms = (config.connect_timeout.count() + config.timeout.count()) * 1000;
+    long timeout_ms  = (config.connect_timeout.count() + config.timeout.count()) * 1000;
     long max_wait_ms = timeout_ms / 10;
 
     long wait_ms = 10;
@@ -791,36 +764,36 @@ vector<Response> execute(CurlOp op,
     return responses;
 }
 
-}
+}  // namespace
 
-Response get(const std::string& url,
-             const std::string& user,
-             const std::string& password,
-             const Config& config)
+Response get(
+    const std::string& url, const std::string& user, const std::string& password, const Config& config)
 {
     return execute(CurlOp::GET, url, std::string(), user, password, config);
 }
 
 vector<Response> get(const std::vector<std::string>& urls,
-                     const std::string& user, const std::string& password,
-                     const Config& config)
+    const std::string& user,
+    const std::string& password,
+    const Config& config)
 {
     return execute(CurlOp::GET, urls, std::string(), user, password, config);
 }
 
 Response put(const std::string& url,
-             const std::string& body,
-             const std::string& user,
-             const std::string& password,
-             const Config& config)
+    const std::string& body,
+    const std::string& user,
+    const std::string& password,
+    const Config& config)
 {
     return execute(CurlOp::PUT, url, body, user, password, config);
 }
 
 vector<Response> put(const std::vector<std::string>& urls,
-                     const std::string& body,
-                     const std::string& user, const std::string& password,
-                     const Config& config)
+    const std::string& body,
+    const std::string& user,
+    const std::string& password,
+    const Config& config)
 {
     return execute(CurlOp::PUT, urls, body, user, password, config);
 }
@@ -842,5 +815,5 @@ const char* to_string(Async::status_t status)
     mxb_assert(!true);
     return "Unknown";
 }
-}
-}
+}  // namespace http
+}  // namespace maxbase

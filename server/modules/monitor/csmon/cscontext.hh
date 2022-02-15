@@ -26,30 +26,15 @@ public:
 
     bool configure(const mxs::ConfigParameters& params);
 
-    int revision() const
-    {
-        return m_revision;
-    }
+    int revision() const { return m_revision; }
 
-    const std::string& manager() const
-    {
-        return m_manager;
-    }
+    const std::string& manager() const { return m_manager; }
 
-    void set_manager(const std::string& manager)
-    {
-        m_manager = manager;
-    }
+    void set_manager(const std::string& manager) { m_manager = manager; }
 
-    const CsConfig& config() const
-    {
-        return m_config;
-    }
+    const CsConfig& config() const { return m_config; }
 
-    const mxb::http::Config& http_config() const
-    {
-        return m_http_config;
-    }
+    const mxb::http::Config& http_config() const { return m_http_config; }
 
     mxb::http::Config http_config(const std::chrono::seconds& timeout) const
     {
@@ -62,20 +47,14 @@ public:
         return http_config;
     }
 
-    int current_trx_id() const
-    {
-        return m_next_trx_id;
-    }
+    int current_trx_id() const { return m_next_trx_id; }
 
-    int next_trx_id()
-    {
-        return ++m_next_trx_id;
-    }
+    int next_trx_id() { return ++m_next_trx_id; }
 
 private:
-    CsConfig          m_config;
+    CsConfig m_config;
     mxb::http::Config m_http_config;
-    std::string       m_manager;
-    int               m_revision { 1 };
-    int               m_next_trx_id { 0 };
+    std::string m_manager;
+    int m_revision {1};
+    int m_next_trx_id {0};
 };

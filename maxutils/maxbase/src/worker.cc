@@ -39,7 +39,7 @@ namespace
 
 using maxbase::Worker;
 
-const int MXB_WORKER_MSG_TASK = -1;
+const int MXB_WORKER_MSG_TASK            = -1;
 const int MXB_WORKER_MSG_DISPOSABLE_TASK = -2;
 
 /**
@@ -47,30 +47,26 @@ const int MXB_WORKER_MSG_DISPOSABLE_TASK = -2;
  */
 struct this_unit
 {
-    bool initialized;   // Whether the initialization has been performed.
-} this_unit =
-{
-    false,      // initialized
+    bool initialized;  // Whether the initialization has been performed.
+} this_unit = {
+    false,  // initialized
 };
 
 thread_local struct this_thread
 {
-    Worker* pCurrent_worker;    // The current worker
-} this_thread =
-{
-    nullptr
-};
+    Worker* pCurrent_worker;  // The current worker
+} this_thread = {nullptr};
 
 /**
  * Structure used for sending cross-thread messages.
  */
 typedef struct worker_message
 {
-    uint32_t id;    /*< Message id. */
-    intptr_t arg1;  /*< Message specific first argument. */
-    intptr_t arg2;  /*< Message specific second argument. */
+    uint32_t id;   /*< Message id. */
+    intptr_t arg1; /*< Message specific first argument. */
+    intptr_t arg2; /*< Message specific second argument. */
 } WORKER_MESSAGE;
-}
+}  // namespace
 
 namespace maxbase
 {
@@ -79,11 +75,10 @@ WorkerLoad::WorkerLoad()
     : m_start_time(0)
     , m_wait_start(0)
     , m_wait_time(0)
-    , m_load_1_hour(60)                     // 60 minutes in an hour
-    , m_load_1_minute(60, &m_load_1_hour)   // 60 seconds in a minute
+    , m_load_1_hour(60)                    // 60 minutes in an hour
+    , m_load_1_minute(60, &m_load_1_hour)  // 60 seconds in a minute
     , m_load_1_second(&m_load_1_minute)
-{
-}
+{}
 
 void WorkerLoad::about_to_work(uint64_t now)
 {
@@ -93,10 +88,10 @@ void WorkerLoad::about_to_work(uint64_t now)
 
     if (duration > ONE_SECOND)
     {
-        int load_percentage = 100 * ((duration - m_wait_time) / (double)duration);
+        int load_percentage = 100 * ((duration - m_wait_time) / (double) duration);
 
         m_start_time = now;
-        m_wait_time = 0;
+        m_wait_time  = 0;
 
         m_load_1_second.add_value(load_percentage);
     }
@@ -110,7 +105,7 @@ uint64_t WorkerLoad::get_time_ms()
     int rv = clock_gettime(CLOCK_MONOTONIC_COARSE, &t);
     if (rv != 0)
     {
-        mxb_assert(errno == EINVAL);    // CLOCK_MONOTONIC_COARSE not supported.
+        mxb_assert(errno == EINVAL);  // CLOCK_MONOTONIC_COARSE not supported.
         rv = clock_gettime(CLOCK_MONOTONIC, &t);
         mxb_assert(rv == 0);
     }
@@ -141,7 +136,7 @@ int create_timerfd()
                     if (fcntl(fd, F_SETFL, flags) == -1)
                     {
                         MXB_ALERT("Could not make timer fd non-blocking, system will not work: %s",
-                                  mxb_strerror(errno));
+                            mxb_strerror(errno));
                         close(fd);
                         fd = -1;
                         mxb_assert(!true);
@@ -149,8 +144,7 @@ int create_timerfd()
                 }
                 else
                 {
-                    MXB_ALERT("Could not get timer fd flags, system will not work: %s",
-                              mxb_strerror(errno));
+                    MXB_ALERT("Could not get timer fd flags, system will not work: %s", mxb_strerror(errno));
                     close(fd);
                     fd = -1;
                     mxb_assert(!true);
@@ -160,28 +154,28 @@ int create_timerfd()
             {
                 MXB_ALERT("Could not create timer file descriptor even with no flags, system "
                           "will not work: %s",
-                          mxb_strerror(errno));
+                    mxb_strerror(errno));
                 mxb_assert(!true);
             }
         }
         else
         {
-            MXB_ALERT("Could not create timer file descriptor, system will not work: %s",
-                      mxb_strerror(errno));
+            MXB_ALERT(
+                "Could not create timer file descriptor, system will not work: %s", mxb_strerror(errno));
             mxb_assert(!true);
         }
     }
 
     return fd;
 }
-}
+}  // namespace
 
 WorkerTimer::WorkerTimer(Worker* pWorker)
     : m_fd(create_timerfd())
     , m_pWorker(pWorker)
 {
     MXB_POLL_DATA::handler = handler;
-    MXB_POLL_DATA::owner = m_pWorker;
+    MXB_POLL_DATA::owner   = m_pWorker;
 
     if (m_fd != -1)
     {
@@ -214,16 +208,16 @@ void WorkerTimer::start(int32_t interval)
 
     // TODO: Add possibility to set initial delay and interval.
     time_t initial_sec = interval / 1000;
-    long initial_nsec = (interval - initial_sec * 1000) * 1000000;
+    long initial_nsec  = (interval - initial_sec * 1000) * 1000000;
 
     time_t interval_sec = (interval / 1000);
-    long interval_nsec = (interval - interval_sec * 1000) * 1000000;
+    long interval_nsec  = (interval - interval_sec * 1000) * 1000000;
 
     struct itimerspec time;
 
-    time.it_value.tv_sec = initial_sec;
-    time.it_value.tv_nsec = initial_nsec;
-    time.it_interval.tv_sec = interval_sec;
+    time.it_value.tv_sec     = initial_sec;
+    time.it_value.tv_nsec    = initial_nsec;
+    time.it_interval.tv_sec  = interval_sec;
     time.it_interval.tv_nsec = interval_nsec;
 
     if (timerfd_settime(m_fd, 0, &time, NULL) != 0)
@@ -246,8 +240,7 @@ uint32_t WorkerTimer::handle(Worker* pWorker, uint32_t events)
     // Read all events
     uint64_t expirations;
     while (read(m_fd, &expirations, sizeof(expirations)) == 0)
-    {
-    }
+    {}
 
     tick();
 
@@ -271,14 +264,14 @@ int create_epoll_instance()
 
     if (fd == -1)
     {
-        MXB_ALERT("Could not create epoll-instance for worker, system will not work: %s",
-                  mxb_strerror(errno));
+        MXB_ALERT(
+            "Could not create epoll-instance for worker, system will not work: %s", mxb_strerror(errno));
         mxb_assert(!true);
     }
 
     return fd;
 }
-}
+}  // namespace
 
 Worker::Worker(int max_events)
     : m_epoll_fd(create_epoll_instance())
@@ -291,7 +284,7 @@ Worker::Worker(int max_events)
     , m_nCurrent_descriptors(0)
     , m_nTotal_descriptors(0)
     , m_pTimer(new PrivateTimer(this, this, &Worker::tick))
-    , m_next_delayed_call_id{1}
+    , m_next_delayed_call_id {1}
 {
     mxb_assert(max_events > 0);
 
@@ -351,7 +344,7 @@ void Worker::finish()
 void Worker::get_descriptor_counts(uint32_t* pnCurrent, uint64_t* pnTotal)
 {
     *pnCurrent = atomic_load_uint32(&m_nCurrent_descriptors);
-    *pnTotal = atomic_load_uint64(&m_nTotal_descriptors);
+    *pnTotal   = atomic_load_uint64(&m_nTotal_descriptors);
 }
 
 Worker::RandomEngine& Worker::random_engine()
@@ -361,15 +354,15 @@ Worker::RandomEngine& Worker::random_engine()
 
 void Worker::gen_random_bytes(uint8_t* pOutput, size_t nBytes)
 {
-    auto pWorker = mxb::Worker::get_current();      // Must be in a worker thread.
-    auto& rand_eng = pWorker->m_random_engine;
+    auto pWorker         = mxb::Worker::get_current();  // Must be in a worker thread.
+    auto& rand_eng       = pWorker->m_random_engine;
     size_t bytes_written = 0;
     while (bytes_written < nBytes)
     {
-        auto random_num = rand_eng.rand();
+        auto random_num      = rand_eng.rand();
         auto random_num_size = sizeof(random_num);
-        auto bytes_left = nBytes - bytes_written;
-        auto writable = std::min(bytes_left, random_num_size);
+        auto bytes_left      = nBytes - bytes_written;
+        auto writable        = std::min(bytes_left, random_num_size);
         memcpy(pOutput + bytes_written, &random_num, writable);
         bytes_written += writable;
     }
@@ -381,7 +374,7 @@ bool Worker::add_fd(int fd, uint32_t events, MXB_POLL_DATA* pData)
 
     struct epoll_event ev;
 
-    ev.events = events;
+    ev.events   = events;
     ev.data.ptr = pData;
 
     pData->owner = this;
@@ -429,8 +422,7 @@ bool Worker::execute(Task* pTask, mxb::Semaphore* pSem, enum execute_mode_t mode
     // No logging here, function must be signal safe.
     bool rval = true;
 
-    if ((mode == Worker::EXECUTE_DIRECT)
-        || (mode == Worker::EXECUTE_AUTO && Worker::get_current() == this))
+    if ((mode == Worker::EXECUTE_DIRECT) || (mode == Worker::EXECUTE_AUTO && Worker::get_current() == this))
     {
         pTask->execute(*this);
 
@@ -463,8 +455,7 @@ bool Worker::post_disposable(DisposableTask* pTask, enum execute_mode_t mode)
 
     pTask->inc_ref();
 
-    if ((mode == Worker::EXECUTE_DIRECT)
-        || (mode == Worker::EXECUTE_AUTO && Worker::get_current() == this))
+    if ((mode == Worker::EXECUTE_DIRECT) || (mode == Worker::EXECUTE_AUTO && Worker::get_current() == this))
     {
         pTask->execute(*this);
         pTask->dec_ref();
@@ -484,20 +475,17 @@ bool Worker::post_disposable(DisposableTask* pTask, enum execute_mode_t mode)
     return posted;
 }
 
-bool Worker::execute(function<void ()> func, mxb::Semaphore* pSem, execute_mode_t mode)
+bool Worker::execute(function<void()> func, mxb::Semaphore* pSem, execute_mode_t mode)
 {
-
     class CustomTask : public Task
     {
     public:
-
-        CustomTask(function<void ()> func)
+        CustomTask(function<void()> func)
             : m_func(func)
-        {
-        }
+        {}
 
     private:
-        function<void ()> m_func;
+        function<void()> m_func;
 
         void execute(maxbase::Worker& worker)
         {
@@ -508,8 +496,8 @@ bool Worker::execute(function<void ()> func, mxb::Semaphore* pSem, execute_mode_
         }
     };
 
-    bool rval = false;
-    CustomTask* task = new(std::nothrow) CustomTask(func);
+    bool rval        = false;
+    CustomTask* task = new (std::nothrow) CustomTask(func);
 
     if (task)
     {
@@ -529,7 +517,7 @@ bool Worker::call(Task& task, execute_mode_t mode)
     return execute(&task, &sem, mode) && sem.wait();
 }
 
-bool Worker::call(function<void ()> func, execute_mode_t mode)
+bool Worker::call(function<void()> func, execute_mode_t mode)
 {
     mxb::Semaphore sem;
     return execute(func, &sem, mode) && sem.wait();
@@ -588,8 +576,8 @@ bool Worker::start()
     mxb_assert(m_thread.get_id() == std::thread::id());
     mxb::Semaphore sem;
 
-    m_started = true;
-    m_should_shutdown = false;
+    m_started            = true;
+    m_should_shutdown    = false;
     m_shutdown_initiated = false;
 
     try
@@ -641,44 +629,44 @@ void Worker::shutdown()
  */
 void Worker::handle_message(MessageQueue& queue, const MessageQueue::Message& msg)
 {
-    switch ((int)msg.id())
+    switch ((int) msg.id())
     {
     case MXB_WORKER_MSG_SHUTDOWN:
-        {
-            MXB_INFO("Worker %p received shutdown message.", this);
-            m_should_shutdown = true;
-        }
-        break;
+    {
+        MXB_INFO("Worker %p received shutdown message.", this);
+        m_should_shutdown = true;
+    }
+    break;
 
     case MXB_WORKER_MSG_CALL:
-        {
-            void (* f)(MXB_WORKER*, void*) = (void (*)(MXB_WORKER*, void*))msg.arg1();
+    {
+        void (*f)(MXB_WORKER*, void*) = (void (*)(MXB_WORKER*, void*)) msg.arg1();
 
-            f(this, (void*)msg.arg2());
-        }
-        break;
+        f(this, (void*) msg.arg2());
+    }
+    break;
 
     case MXB_WORKER_MSG_TASK:
+    {
+        Task* pTask          = reinterpret_cast<Task*>(msg.arg1());
+        mxb::Semaphore* pSem = reinterpret_cast<mxb::Semaphore*>(msg.arg2());
+
+        pTask->execute(*this);
+
+        if (pSem)
         {
-            Task* pTask = reinterpret_cast<Task*>(msg.arg1());
-            mxb::Semaphore* pSem = reinterpret_cast<mxb::Semaphore*>(msg.arg2());
-
-            pTask->execute(*this);
-
-            if (pSem)
-            {
-                pSem->post();
-            }
+            pSem->post();
         }
-        break;
+    }
+    break;
 
     case MXB_WORKER_MSG_DISPOSABLE_TASK:
-        {
-            DisposableTask* pTask = reinterpret_cast<DisposableTask*>(msg.arg1());
-            pTask->execute(*this);
-            pTask->dec_ref();
-        }
-        break;
+    {
+        DisposableTask* pTask = reinterpret_cast<DisposableTask*>(msg.arg1());
+        pTask->execute(*this);
+        pTask->dec_ref();
+    }
+    break;
 
     default:
         MXB_ERROR("Worker received unknown message %d.", msg.id());
@@ -701,18 +689,14 @@ bool Worker::pre_run()
     return true;
 }
 
-void Worker::post_run()
-{
-}
+void Worker::post_run() {}
 
 void Worker::call_epoll_tick()
 {
     epoll_tick();
 }
 
-void Worker::epoll_tick()
-{
-}
+void Worker::epoll_tick() {}
 
 // static
 void Worker::resolve_poll_error(int fd, int errornum, int op)
@@ -729,7 +713,7 @@ void Worker::resolve_poll_error(int fd, int errornum, int op)
         {
             MXB_ERROR("The limit imposed by /proc/sys/fs/epoll/max_user_watches was "
                       "reached when trying to add file descriptor %d to an epoll instance.",
-                      fd);
+                fd);
             return;
         }
     }
@@ -774,12 +758,12 @@ long time_in_100ms_ticks()
 {
     using TenthSecondDuration = std::chrono::duration<long, std::ratio<1, 10>>;
 
-    auto dur = maxbase::Clock::now().time_since_epoch();
+    auto dur   = maxbase::Clock::now().time_since_epoch();
     auto tenth = std::chrono::duration_cast<TenthSecondDuration>(dur);
 
     return tenth.count();
 }
-}
+}  // namespace
 
 /**
  * The main polling loop
@@ -790,7 +774,7 @@ void Worker::poll_waitevents()
 
     m_load.reset();
 
-    int64_t nFds_total = 0;
+    int64_t nFds_total       = 0;
     int64_t nPolls_effective = 0;
 
     while (!should_shutdown())
@@ -802,7 +786,7 @@ void Worker::poll_waitevents()
         atomic::add(&m_statistics.n_polls, 1, atomic::RELAXED);
 
         uint64_t now = Load::get_time_ms();
-        int timeout = Load::GRANULARITY - (now - m_load.start_time());
+        int timeout  = Load::GRANULARITY - (now - m_load.start_time());
 
         if (timeout < 0)
         {
@@ -818,12 +802,12 @@ void Worker::poll_waitevents()
         if (nfds == -1 && errno != EINTR)
         {
             int eno = errno;
-            errno = 0;
+            errno   = 0;
             MXB_ERROR("%lu [poll_waitevents] epoll_wait returned "
                       "%d, errno %d",
-                      pthread_self(),
-                      nfds,
-                      eno);
+                pthread_self(),
+                nfds,
+                eno);
         }
 
         if (nfds > 0)
@@ -834,7 +818,7 @@ void Worker::poll_waitevents()
             if (nFds_total <= 0)
             {
                 // Wrapped, so we reset the situation.
-                nFds_total = nfds;
+                nFds_total       = nfds;
                 nPolls_effective = 1;
             }
 
@@ -852,14 +836,14 @@ void Worker::poll_waitevents()
             m_statistics.n_fds[(nfds < STATISTICS::MAXNFDS ? (nfds - 1) : STATISTICS::MAXNFDS - 1)]++;
         }
 
-        m_epoll_tick_now = maxbase::Clock::now(mxb::NowType::RealTime);
+        m_epoll_tick_now     = maxbase::Clock::now(mxb::NowType::RealTime);
         uint64_t cycle_start = time_in_100ms_ticks();
 
         for (int i = 0; i < nfds; i++)
         {
             /** Calculate event queue statistics */
             int64_t started = time_in_100ms_ticks();
-            int64_t qtime = started - cycle_start;
+            int64_t qtime   = started - cycle_start;
 
             if (qtime > STATISTICS::N_QUEUE_TIMES)
             {
@@ -872,7 +856,7 @@ void Worker::poll_waitevents()
 
             m_statistics.maxqtime = std::max(m_statistics.maxqtime, qtime);
 
-            MXB_POLL_DATA* data = (MXB_POLL_DATA*)events[i].data.ptr;
+            MXB_POLL_DATA* data = (MXB_POLL_DATA*) events[i].data.ptr;
 
             uint32_t actions = data->handler(data, this, events[i].events);
 
@@ -917,7 +901,7 @@ void Worker::poll_waitevents()
         }
 
         call_epoll_tick();
-    }   /*< while(1) */
+    } /*< while(1) */
 }
 
 void Worker::tick()
@@ -1003,7 +987,7 @@ void Worker::adjust_timer()
     {
         DelayedCall* pCall = m_sorted_calls.begin()->second;
 
-        uint64_t now = WorkerLoad::get_time_ms();
+        uint64_t now  = WorkerLoad::get_time_ms();
         int64_t delay = pCall->at() - now;
 
         if (delay <= 0)
@@ -1056,16 +1040,16 @@ bool Worker::cancel_delayed_call(uint32_t id)
     else
     {
         mxb_assert_message(!true,
-                           "Attempt to remove delayed call using non-existent id %u. "
-                           "Calling hktask_remove() from the task function? Simply "
-                           "return false instead.", id);
+            "Attempt to remove delayed call using non-existent id %u. "
+            "Calling hktask_remove() from the task function? Simply "
+            "return false instead.",
+            id);
         MXB_WARNING("Attempt to remove a delayed call, associated with non-existing id.");
     }
 
     return found;
 }
-}
-
+}  // namespace maxbase
 
 MXB_WORKER* mxb_worker_get_current()
 {

@@ -25,16 +25,11 @@ CatSession::CatSession(MXS_SESSION* session, Cat* router, mxs::SRWBackends backe
     , m_completed(0)
     , m_packet_num(0)
     , m_query(NULL)
-{
-}
+{}
 
-CatSession::~CatSession()
-{
-}
+CatSession::~CatSession() {}
 
-void CatSession::close()
-{
-}
+void CatSession::close() {}
 
 bool CatSession::next_backend()
 {
@@ -51,10 +46,10 @@ int32_t CatSession::routeQuery(GWBUF* pPacket)
 {
     int32_t rval = 0;
 
-    m_completed = 0;
+    m_completed  = 0;
     m_packet_num = 0;
-    m_query = pPacket;
-    m_current = m_backends.begin();
+    m_query      = pPacket;
+    m_current    = m_backends.begin();
 
     if (next_backend())
     {
@@ -93,8 +88,7 @@ void CatSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const 
     {
         send = reply.state() != mxs::ReplyState::DONE;
     }
-    else if (reply.state() == mxs::ReplyState::RSET_ROWS
-             && mxs_mysql_get_command(pPacket) != MYSQL_REPLY_EOF)
+    else if (reply.state() == mxs::ReplyState::RSET_ROWS && mxs_mysql_get_command(pPacket) != MYSQL_REPLY_EOF)
     {
         send = true;
     }
@@ -112,10 +106,8 @@ void CatSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const 
     }
 }
 
-bool CatSession::handleError(mxs::ErrorType type,
-                             GWBUF* pMessage,
-                             mxs::Endpoint* pProblem,
-                             const mxs::Reply& pReply)
+bool CatSession::handleError(
+    mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& pReply)
 {
     /**
      * The simples thing to do here is to close the connection. Anything else

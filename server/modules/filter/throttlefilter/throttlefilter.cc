@@ -21,37 +21,32 @@
 
 namespace
 {
-const char* const MAX_QPS_CFG = "max_qps";
-const char* const SAMPLING_DURATION_CFG = "sampling_duration";
-const char* const THROTTLE_DURATION_CFG = "throttling_duration";
+const char* const MAX_QPS_CFG             = "max_qps";
+const char* const SAMPLING_DURATION_CFG   = "sampling_duration";
+const char* const THROTTLE_DURATION_CFG   = "throttling_duration";
 const char* const CONTINUOUS_DURATION_CFG = "continuous_duration";
-}
+}  // namespace
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     auto description = "Prevents high frequency querying from monopolizing the system";
 
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_FILTER,
+    static MXS_MODULE info = {MXS_MODULE_API_FILTER,
         MXS_MODULE_IN_DEVELOPMENT,
         MXS_FILTER_VERSION,
         description,
         "V1.0.0",
         RCAP_TYPE_STMT_INPUT,
         &throttle::ThrottleFilter::s_object,
-        NULL,                               /* Process init. */
-        NULL,                               /* Process finish. */
-        NULL,                               /* Thread init. */
-        NULL,                               /* Thread finish. */
-        {
-            {MAX_QPS_CFG,                   MXS_MODULE_PARAM_INT,       nullptr, MXS_MODULE_OPT_REQUIRED},
-            {SAMPLING_DURATION_CFG,         MXS_MODULE_PARAM_DURATION,  "250ms"},
-            {THROTTLE_DURATION_CFG,         MXS_MODULE_PARAM_DURATION,  nullptr, MXS_MODULE_OPT_REQUIRED},
-            {CONTINUOUS_DURATION_CFG,       MXS_MODULE_PARAM_DURATION,  "2000ms"},
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
+        {{MAX_QPS_CFG, MXS_MODULE_PARAM_INT, nullptr, MXS_MODULE_OPT_REQUIRED},
+            {SAMPLING_DURATION_CFG, MXS_MODULE_PARAM_DURATION, "250ms"},
+            {THROTTLE_DURATION_CFG, MXS_MODULE_PARAM_DURATION, nullptr, MXS_MODULE_OPT_REQUIRED},
+            {CONTINUOUS_DURATION_CFG, MXS_MODULE_PARAM_DURATION, "2000ms"},
+            {MXS_END_MODULE_PARAMS}}};
 
     return &info;
 }
@@ -61,19 +56,15 @@ namespace throttle
 
 ThrottleFilter::ThrottleFilter(const ThrottleConfig& config)
     : m_config(config)
-{
-}
+{}
 
 ThrottleFilter* ThrottleFilter::create(const char* zName, mxs::ConfigParameters* pParams)
 {
-    int max_qps = pParams->get_integer(MAX_QPS_CFG);
-    int sample_msecs =
-        pParams->get_duration<std::chrono::milliseconds>(SAMPLING_DURATION_CFG).count();
-    int throttle_msecs =
-        pParams->get_duration<std::chrono::milliseconds>(THROTTLE_DURATION_CFG).count();
-    int cont_msecs =
-        pParams->get_duration<std::chrono::milliseconds>(CONTINUOUS_DURATION_CFG).count();
-    bool config_ok = true;
+    int max_qps        = pParams->get_integer(MAX_QPS_CFG);
+    int sample_msecs   = pParams->get_duration<std::chrono::milliseconds>(SAMPLING_DURATION_CFG).count();
+    int throttle_msecs = pParams->get_duration<std::chrono::milliseconds>(THROTTLE_DURATION_CFG).count();
+    int cont_msecs     = pParams->get_duration<std::chrono::milliseconds>(CONTINUOUS_DURATION_CFG).count();
+    bool config_ok     = true;
 
     if (max_qps < 2)
     {
@@ -107,8 +98,7 @@ ThrottleFilter* ThrottleFilter::create(const char* zName, mxs::ConfigParameters*
         maxbase::Duration throttling_duration {std::chrono::milliseconds(throttle_msecs)};
         maxbase::Duration continuous_duration {std::chrono::milliseconds(cont_msecs)};
 
-        ThrottleConfig config = {max_qps,             sampling_duration,
-                                 throttling_duration, continuous_duration};
+        ThrottleConfig config = {max_qps, sampling_duration, throttling_duration, continuous_duration};
 
         filter = new ThrottleFilter(config);
     }
@@ -135,4 +125,4 @@ const ThrottleConfig& ThrottleFilter::config() const
 {
     return m_config;
 }
-}   // throttle
+}  // namespace throttle

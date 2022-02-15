@@ -18,9 +18,7 @@
 #include <maxbase/pretty_print.hh>
 #include <maxscale/protocol/mariadb/client_connection.hh>
 
-SmartRouterSession::SmartRouterSession(SmartRouter* pRouter,
-                                       MXS_SESSION* pSession,
-                                       Clusters clusters)
+SmartRouterSession::SmartRouterSession(SmartRouter* pRouter, MXS_SESSION* pSession, Clusters clusters)
     : mxs::RouterSession(pSession)
     , m_router(*pRouter)
     , m_clusters(std::move(clusters))
@@ -32,20 +30,18 @@ SmartRouterSession::SmartRouterSession(SmartRouter* pRouter,
     }
 }
 
-SmartRouterSession::~SmartRouterSession()
-{
-}
+SmartRouterSession::~SmartRouterSession() {}
 
 // static
-SmartRouterSession* SmartRouterSession::create(SmartRouter* pRouter, MXS_SESSION* pSession,
-                                               const std::vector<mxs::Endpoint*>& pEndpoints)
+SmartRouterSession* SmartRouterSession::create(
+    SmartRouter* pRouter, MXS_SESSION* pSession, const std::vector<mxs::Endpoint*>& pEndpoints)
 {
     Clusters clusters;
 
     mxs::Target* pMaster = pRouter->config().master();
 
     int master_pos = -1;
-    int i = 0;
+    int i          = 0;
 
     for (auto e : pEndpoints)
     {
@@ -56,7 +52,7 @@ SmartRouterSession* SmartRouterSession::create(SmartRouter* pRouter, MXS_SESSION
             if (e->target() == pMaster)
             {
                 master_pos = i;
-                is_master = true;
+                is_master  = true;
             }
 
             clusters.push_back({e, is_master});
@@ -69,7 +65,7 @@ SmartRouterSession* SmartRouterSession::create(SmartRouter* pRouter, MXS_SESSION
     if (master_pos != -1)
     {
         if (master_pos > 0)
-        {   // put the master first. There must be exactly one master cluster.
+        {  // put the master first. There must be exactly one master cluster.
             std::swap(clusters[0], clusters[master_pos]);
         }
 
@@ -78,7 +74,7 @@ SmartRouterSession* SmartRouterSession::create(SmartRouter* pRouter, MXS_SESSION
     else
     {
         MXS_ERROR("No master found for %s, smartrouter session cannot be created.",
-                  pRouter->config().name().c_str());
+            pRouter->config().name().c_str());
     }
 
     return pSess;
@@ -106,7 +102,7 @@ int SmartRouterSession::routeQuery(GWBUF* pBuf)
     }
     else
     {
-        auto route_info = m_qc.update_route_info(mxs::QueryClassifier::CURRENT_TARGET_UNDEFINED, pBuf);
+        auto route_info       = m_qc.update_route_info(mxs::QueryClassifier::CURRENT_TARGET_UNDEFINED, pBuf);
         std::string canonical = maxscale::get_canonical(pBuf);
 
         m_measurement = {maxbase::Clock::now(maxbase::NowType::EPollTick), canonical};
@@ -127,8 +123,8 @@ int SmartRouterSession::routeQuery(GWBUF* pBuf)
 
             if (perf.is_valid())
             {
-                MXS_SDEBUG("Smart route to " << perf.target()->name()
-                                             << ", canonical = " << show_some(canonical));
+                MXS_SDEBUG(
+                    "Smart route to " << perf.target()->name() << ", canonical = " << show_some(canonical));
                 ret = write_to_target(perf.target(), pBuf);
             }
             else if (modutil_is_SQL(pBuf))
@@ -159,19 +155,16 @@ void SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down
     cluster.tracker.update_response(pPacket);
 
     // these flags can all be true at the same time
-    bool first_response_packet = (m_mode == Mode::Query || m_mode == Mode::MeasureQuery);
+    bool first_response_packet        = (m_mode == Mode::Query || m_mode == Mode::MeasureQuery);
     bool last_packet_for_this_cluster = !cluster.tracker.expecting_response_packets();
-    bool very_last_response_packet = !expecting_response_packets();     // last from all clusters
+    bool very_last_response_packet    = !expecting_response_packets();  // last from all clusters
 
-    MXS_SDEBUG("Reply from " << std::boolalpha
-                             << cluster.pBackend->target()->name()
-                             << " is_master=" << cluster.is_master
-                             << " first_packet=" << first_response_packet
-                             << " last_packet=" << last_packet_for_this_cluster
-                             << " very_last_packet=" << very_last_response_packet
-                             << " delayed_response=" << (m_pDelayed_packet != nullptr)
-                             << " tracker_state: " << tracker_state_before << " => "
-                             << cluster.tracker.state());
+    MXS_SDEBUG(
+        "Reply from " << std::boolalpha << cluster.pBackend->target()->name()
+                      << " is_master=" << cluster.is_master << " first_packet=" << first_response_packet
+                      << " last_packet=" << last_packet_for_this_cluster << " very_last_packet="
+                      << very_last_response_packet << " delayed_response=" << (m_pDelayed_packet != nullptr)
+                      << " tracker_state: " << tracker_state_before << " => " << cluster.tracker.state());
 
     // marker1: If a connection is lost down the pipeline, we first get an ErrorPacket, then a call to
     // handleError(). If we only rely on the handleError() the client receiving the ErrorPacket
@@ -183,10 +176,10 @@ void SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down
         auto err_code = mxs_mysql_get_mysql_errno(pPacket);
         switch (err_code)
         {
-        case ER_CONNECTION_KILLED:      // there might be more error codes needing to be caught here
+        case ER_CONNECTION_KILLED:  // there might be more error codes needing to be caught here
             MXS_SERROR("clientReply(): Lost connection to " << cluster.pBackend->target()->name()
-                                                            << " Error code=" << err_code
-                                                            << ' ' << mxs::extract_error(pPacket));
+                                                            << " Error code=" << err_code << ' '
+                                                            << mxs::extract_error(pPacket));
             m_pSession->kill();
             return;
         }
@@ -194,9 +187,8 @@ void SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down
 
     if (cluster.tracker.state() == maxsql::PacketTracker::State::Error)
     {
-        MXS_SERROR("ProtocolTracker from state " << tracker_state_before
-                                                 << " to state " << cluster.tracker.state()
-                                                 << ". Disconnect.");
+        MXS_SERROR("ProtocolTracker from state " << tracker_state_before << " to state "
+                                                 << cluster.tracker.state() << ". Disconnect.");
         m_pSession->kill();
         return;
     }
@@ -206,11 +198,10 @@ void SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down
     if (first_response_packet)
     {
         maxbase::Duration query_dur = maxbase::Clock::now(maxbase::NowType::EPollTick) - m_measurement.start;
-        MXS_SDEBUG("Target " << cluster.pBackend->target()->name()
-                             << " will be responding to the client."
+        MXS_SDEBUG("Target " << cluster.pBackend->target()->name() << " will be responding to the client."
                              << " First packet received in time " << query_dur);
         cluster.is_replying_to_client = true;
-        will_reply = true;      // tentatively, the packet might have to be delayed
+        will_reply                    = true;  // tentatively, the packet might have to be delayed
 
         if (m_mode == Mode::MeasureQuery)
         {
@@ -226,14 +217,14 @@ void SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down
     if (very_last_response_packet)
     {
         will_reply = true;
-        m_mode = Mode::Idle;
+        m_mode     = Mode::Idle;
         mxb_assert(cluster.is_replying_to_client || m_pDelayed_packet);
         if (m_pDelayed_packet)
         {
-            MXS_SDEBUG("Picking up delayed packet, discarding response from "
-                       << cluster.pBackend->target()->name());
+            MXS_SDEBUG(
+                "Picking up delayed packet, discarding response from " << cluster.pBackend->target()->name());
             gwbuf_free(pPacket);
-            pPacket = m_pDelayed_packet;
+            pPacket           = m_pDelayed_packet;
             m_pDelayed_packet = nullptr;
         }
     }
@@ -246,7 +237,7 @@ void SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down
             MXS_SDEBUG("Delaying last packet");
             mxb_assert(!m_pDelayed_packet);
             m_pDelayed_packet = pPacket;
-            will_reply = false;
+            will_reply        = false;
         }
         else
         {
@@ -268,26 +259,23 @@ void SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down
 
 bool SmartRouterSession::expecting_request_packets() const
 {
-    return std::any_of(begin(m_clusters), end(m_clusters),
-                       [](const Cluster& cluster) {
-                           return cluster.tracker.expecting_request_packets();
-                       });
+    return std::any_of(begin(m_clusters), end(m_clusters), [](const Cluster& cluster) {
+        return cluster.tracker.expecting_request_packets();
+    });
 }
 
 bool SmartRouterSession::expecting_response_packets() const
 {
-    return std::any_of(begin(m_clusters), end(m_clusters),
-                       [](const Cluster& cluster) {
-                           return cluster.tracker.expecting_response_packets();
-                       });
+    return std::any_of(begin(m_clusters), end(m_clusters), [](const Cluster& cluster) {
+        return cluster.tracker.expecting_response_packets();
+    });
 }
 
 bool SmartRouterSession::all_clusters_are_idle() const
 {
-    return std::all_of(begin(m_clusters), end(m_clusters),
-                       [](const Cluster& cluster) {
-                           return !cluster.tracker.expecting_more_packets();
-                       });
+    return std::all_of(begin(m_clusters), end(m_clusters), [](const Cluster& cluster) {
+        return !cluster.tracker.expecting_more_packets();
+    });
 }
 
 bool SmartRouterSession::write_to_master(GWBUF* pBuf)
@@ -295,7 +283,7 @@ bool SmartRouterSession::write_to_master(GWBUF* pBuf)
     mxb_assert(!m_clusters.empty());
     auto& cluster = m_clusters[0];
     mxb_assert(cluster.is_master);
-    cluster.tracker = maxsql::PacketTracker(pBuf);
+    cluster.tracker               = maxsql::PacketTracker(pBuf);
     cluster.is_replying_to_client = false;
 
     if (cluster.tracker.expecting_response_packets())
@@ -309,10 +297,10 @@ bool SmartRouterSession::write_to_master(GWBUF* pBuf)
 bool SmartRouterSession::write_to_target(mxs::Target* target, GWBUF* pBuf)
 {
     auto it = std::find_if(begin(m_clusters), end(m_clusters), [target](const Cluster& cluster) {
-                               return cluster.pBackend->target() == target;
-                           });
+        return cluster.pBackend->target() == target;
+    });
     mxb_assert(it != end(m_clusters));
-    auto& cluster = *it;
+    auto& cluster   = *it;
     cluster.tracker = maxsql::PacketTracker(pBuf);
     if (cluster.tracker.expecting_response_packets())
     {
@@ -330,7 +318,7 @@ bool SmartRouterSession::write_to_all(GWBUF* pBuf, Mode mode)
 
     for (auto& a : m_clusters)
     {
-        a.tracker = maxsql::PacketTracker(pBuf);
+        a.tracker               = maxsql::PacketTracker(pBuf);
         a.is_replying_to_client = false;
 
         if (!a.pBackend->routeQuery(gwbuf_clone(pBuf)))
@@ -378,15 +366,12 @@ void SmartRouterSession::kill_all_others(const Cluster& cluster)
     protocol->mxs_mysql_execute_kill(m_pSession->id(), KT_QUERY);
 }
 
-bool SmartRouterSession::handleError(mxs::ErrorType type,
-                                     GWBUF* pPacket,
-                                     mxs::Endpoint* pProblem,
-                                     const mxs::Reply& pReply)
+bool SmartRouterSession::handleError(
+    mxs::ErrorType type, GWBUF* pPacket, mxs::Endpoint* pProblem, const mxs::Reply& pReply)
 {
     auto err_code = mxs_mysql_get_mysql_errno(pPacket);
-    MXS_SERROR("handleError(): Lost connection to "
-               << pProblem->target()->name() << " Error code=" << err_code << " "
-               << mxs::extract_error(pPacket));
+    MXS_SERROR("handleError(): Lost connection to " << pProblem->target()->name() << " Error code="
+                                                    << err_code << " " << mxs::extract_error(pPacket));
 
     m_pSession->kill(gwbuf_clone(pPacket));
     return false;

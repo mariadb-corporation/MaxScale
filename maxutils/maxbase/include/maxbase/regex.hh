@@ -14,7 +14,7 @@
 
 #include <maxbase/ccdefs.hh>
 
-#if defined (PCRE2_CODE_UNIT_WIDTH)
+#if defined(PCRE2_CODE_UNIT_WIDTH)
 #error PCRE2_CODE_UNIT_WIDTH already defined. Do not define, and include <maxscale/pcre2.h>.
 #else
 #define PCRE2_CODE_UNIT_WIDTH 8
@@ -31,7 +31,6 @@ namespace maxbase
 class Regex
 {
 public:
-
     /**
      * Constructs a regular expression
      *
@@ -108,6 +107,6 @@ private:
  * @return The replaced string or the original string if no replacement was made. Returns an empty string when
  * any PCRE2 error is encountered.
  */
-std::string pcre2_substitute(pcre2_code* re, const std::string& subject,
-                             const std::string& replace, std::string* error);
-}
+std::string pcre2_substitute(
+    pcre2_code* re, const std::string& subject, const std::string& replace, std::string* error);
+}  // namespace maxbase

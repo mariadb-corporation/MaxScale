@@ -31,8 +31,12 @@ class RCR;
 class RCRSession : public mxs::RouterSession
 {
 public:
-    RCRSession(RCR* inst, MXS_SESSION* session, mxs::Endpoint* backend,
-               const Endpoints& endpoints, uint32_t bitmask, uint32_t bitvalue);
+    RCRSession(RCR* inst,
+        MXS_SESSION* session,
+        mxs::Endpoint* backend,
+        const Endpoints& endpoints,
+        uint32_t bitmask,
+        uint32_t bitvalue);
     ~RCRSession();
 
     /**
@@ -53,16 +57,16 @@ public:
     }
 
 private:
-    RCR*           m_instance;  /**< Router instance */
-    uint32_t       m_bitmask;   /**< Bitmask to apply to server->status */
-    uint32_t       m_bitvalue;  /**< Session specific required value of server->status */
+    RCR* m_instance;     /**< Router instance */
+    uint32_t m_bitmask;  /**< Bitmask to apply to server->status */
+    uint32_t m_bitvalue; /**< Session specific required value of server->status */
     mxs::Endpoint* m_backend;
-    Endpoints      m_endpoints;
+    Endpoints m_endpoints;
 
     maxscale::SessionStats& m_session_stats;
-    maxbase::StopWatch      m_session_timer;
-    maxbase::IntervalTimer  m_query_timer;
-    int64_t                 m_session_queries = 0;
+    maxbase::StopWatch m_session_timer;
+    maxbase::IntervalTimer m_query_timer;
+    int64_t m_session_queries = 0;
 
     bool connection_is_valid() const;
 };
@@ -132,7 +136,7 @@ public:
 private:
     RCR(SERVICE* service);
 
-    uint64_t m_bitmask_and_bitvalue = 0;    /**< Lower 32-bits for bitmask and upper for bitvalue */
+    uint64_t m_bitmask_and_bitvalue = 0; /**< Lower 32-bits for bitmask and upper for bitvalue */
 
     mxs::WorkerGlobal<maxscale::TargetSessionStats> m_target_stats;
 };

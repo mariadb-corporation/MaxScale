@@ -80,4 +80,4 @@ private:
 private:
     int32_t m_count;
 };
-}
+}  // namespace maxbase

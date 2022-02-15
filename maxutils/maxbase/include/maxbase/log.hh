@@ -44,7 +44,7 @@ namespace maxbase
  */
 class Log
 {
-    Log(const Log&) = delete;
+    Log(const Log&)            = delete;
     Log& operator=(const Log&) = delete;
 
 public:
@@ -63,13 +63,9 @@ public:
 
     Log(mxb_log_target_t target = MXB_LOG_TARGET_FS)
         : Log(nullptr, ".", nullptr, target, nullptr, nullptr)
-    {
-    }
+    {}
 
-    ~Log()
-    {
-        mxb_log_finish();
-    }
+    ~Log() { mxb_log_finish(); }
 };
 
 // RAII class for setting and clearing the "scope" of the log messages. Adds the given object name to log
@@ -77,7 +73,7 @@ public:
 class LogScope
 {
 public:
-    LogScope(const LogScope&) = delete;
+    LogScope(const LogScope&)            = delete;
     LogScope& operator=(const LogScope&) = delete;
 
     explicit LogScope(const char* name)
@@ -87,18 +83,12 @@ public:
         s_current_scope = this;
     }
 
-    ~LogScope()
-    {
-        s_current_scope = m_prev_scope;
-    }
+    ~LogScope() { s_current_scope = m_prev_scope; }
 
-    static const char* current_scope()
-    {
-        return s_current_scope ? s_current_scope->m_name : nullptr;
-    }
+    static const char* current_scope() { return s_current_scope ? s_current_scope->m_name : nullptr; }
 
 private:
-    LogScope*   m_prev_scope;
+    LogScope* m_prev_scope;
     const char* m_name;
 
     static thread_local LogScope* s_current_scope;
@@ -109,7 +99,7 @@ private:
 class LogRedirect
 {
 public:
-    LogRedirect(const LogRedirect&) = delete;
+    LogRedirect(const LogRedirect&)            = delete;
     LogRedirect& operator=(const LogRedirect&) = delete;
 
     /**
@@ -131,18 +121,20 @@ private:
     static thread_local Func s_redirect;
 };
 
-#define MXB_STREAM_LOG_HELPER(CMXBLOGLEVEL__, mxb_msg_str__) \
-    do { \
-        if (!mxb_log_is_priority_enabled(CMXBLOGLEVEL__)) \
-        { \
-            break; \
-        } \
-        thread_local std::ostringstream os; \
-        os.str(std::string()); \
-        os << mxb_msg_str__; \
-        mxb_log_message(CMXBLOGLEVEL__, MXB_MODULE_NAME, __FILE__, __LINE__, \
-                        __func__, "%s", os.str().c_str()); \
-    } while (false)
+#define MXB_STREAM_LOG_HELPER(CMXBLOGLEVEL__, mxb_msg_str__)                                        \
+    do                                                                                              \
+    {                                                                                               \
+        if (!mxb_log_is_priority_enabled(CMXBLOGLEVEL__))                                           \
+        {                                                                                           \
+            break;                                                                                  \
+        }                                                                                           \
+        thread_local std::ostringstream os;                                                         \
+        os.str(std::string());                                                                      \
+        os << mxb_msg_str__;                                                                        \
+        mxb_log_message(                                                                            \
+            CMXBLOGLEVEL__, MXB_MODULE_NAME, __FILE__, __LINE__, __func__, "%s", os.str().c_str()); \
+    }                                                                                               \
+    while (false)
 
 #define MXB_SALERT(mxb_msg_str__)   MXB_STREAM_LOG_HELPER(LOG_ALERT, mxb_msg_str__)
 #define MXB_SERROR(mxb_msg_str__)   MXB_STREAM_LOG_HELPER(LOG_ERR, mxb_msg_str__)
@@ -150,9 +142,9 @@ private:
 #define MXB_SNOTICE(mxb_msg_str__)  MXB_STREAM_LOG_HELPER(LOG_NOTICE, mxb_msg_str__)
 #define MXB_SINFO(mxb_msg_str__)    MXB_STREAM_LOG_HELPER(LOG_INFO, mxb_msg_str__)
 
-#if defined (SS_DEBUG)
+#if defined(SS_DEBUG)
 #define MXB_SDEBUG(mxb_msg_str__) MXB_STREAM_LOG_HELPER(LOG_DEBUG, mxb_msg_str__)
 #else
 #define MXB_SDEBUG(mxb_msg_str__)
 #endif
-}
+}  // namespace maxbase

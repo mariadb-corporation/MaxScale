@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#if !defined (MXS_MODULE_NAME)
+#if !defined(MXS_MODULE_NAME)
 #define MXS_MODULE_NAME "dbfwfilter"
 #endif
 #include <maxscale/ccdefs.hh>
@@ -31,7 +31,7 @@ enum fw_actions
 class DbfwConfig : public mxs::config::Configuration
 {
 public:
-    DbfwConfig(const DbfwConfig&) = delete;
+    DbfwConfig(const DbfwConfig&)            = delete;
     DbfwConfig& operator=(const DbfwConfig&) = delete;
 
     DbfwConfig(const std::string& name);
@@ -41,10 +41,10 @@ public:
     static void populate(MXS_MODULE& module);
 
     std::string rules;
-    bool        log_match;
-    bool        log_no_match;
-    bool        treat_string_as_field;
-    bool        treat_string_arg_as_field;
-    bool        strict;
-    fw_actions  action;
+    bool log_match;
+    bool log_no_match;
+    bool treat_string_as_field;
+    bool treat_string_arg_as_field;
+    bool strict;
+    fw_actions action;
 };

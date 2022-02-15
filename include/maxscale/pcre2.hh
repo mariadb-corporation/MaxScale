@@ -32,24 +32,15 @@ typedef enum
     MXS_PCRE2_ERROR
 } mxs_pcre2_result_t;
 
-mxs_pcre2_result_t mxs_pcre2_substitute(pcre2_code* re,
-                                        const char* subject,
-                                        const char* replace,
-                                        char** dest,
-                                        size_t* size);
-mxs_pcre2_result_t mxs_pcre2_simple_match(const char* pattern,
-                                          const char* subject,
-                                          int options,
-                                          int* error);
+mxs_pcre2_result_t mxs_pcre2_substitute(
+    pcre2_code* re, const char* subject, const char* replace, char** dest, size_t* size);
+mxs_pcre2_result_t mxs_pcre2_simple_match(const char* pattern, const char* subject, int options, int* error);
 /**
  * Print an error message explaining an error code. Best used through the macro
  * MXS_PCRE2_PRINT_ERROR
  */
-void mxs_pcre2_print_error(int errorcode,
-                           const char* module_name,
-                           const char* filename,
-                           int line_num,
-                           const char* func_name);
+void mxs_pcre2_print_error(
+    int errorcode, const char* module_name, const char* filename, int line_num, const char* func_name);
 
 /**
  * Check that @c subject is valid. A valid subject matches @c re_match yet does
@@ -70,11 +61,11 @@ void mxs_pcre2_print_error(int errorcode,
  * an error occurred.
  */
 bool mxs_pcre2_check_match_exclude(pcre2_code* re_match,
-                                   pcre2_code* re_exclude,
-                                   pcre2_match_data* md,
-                                   const char* subject,
-                                   int length,
-                                   const char* calling_module);
+    pcre2_code* re_exclude,
+    pcre2_match_data* md,
+    const char* subject,
+    int length,
+    const char* calling_module);
 
 namespace maxscale
 {
@@ -95,10 +86,7 @@ struct CloserTraits<pcre2_code*>
         }
     }
 
-    static void reset(pcre2_code*& pCode)
-    {
-        pCode = NULL;
-    }
+    static void reset(pcre2_code*& pCode) { pCode = NULL; }
 };
 
 /**
@@ -117,12 +105,9 @@ struct CloserTraits<pcre2_match_data*>
         }
     }
 
-    static void reset(pcre2_match_data*& pData)
-    {
-        pData = NULL;
-    }
+    static void reset(pcre2_match_data*& pData) { pData = NULL; }
 };
-}
+}  // namespace maxscale
 
 namespace std
 {
@@ -139,4 +124,4 @@ public:
         }
     }
 };
-}
+}  // namespace std

@@ -63,12 +63,10 @@ public:
      *
      * @return True if connection can be moved
      */
-    virtual bool is_movable() const
-    {
-        return true;
-    }
+    virtual bool is_movable() const { return true; }
 };
-}
+}  // namespace maxscale
+
 /**
  * Protocol module API
  */
@@ -79,7 +77,7 @@ struct MXS_PROTOCOL_API
      *
      * @return New protocol module instance
      */
-    mxs::ProtocolModule* (* create_protocol_module)();
+    mxs::ProtocolModule* (*create_protocol_module)();
 };
 
 /**
@@ -87,4 +85,7 @@ struct MXS_PROTOCOL_API
  * the MXS_PROTOCOL structure is changed. See the rules defined in modinfo.h
  * that define how these numbers should change.
  */
-#define MXS_PROTOCOL_VERSION {3, 2, 0}
+#define MXS_PROTOCOL_VERSION \
+    {                        \
+        3, 2, 0              \
+    }

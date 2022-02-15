@@ -33,7 +33,7 @@
 uint64_t maxavro_encode_integer(uint8_t* buffer, uint64_t val)
 {
     uint64_t encval = encode_long(val);
-    uint8_t nbytes = 0;
+    uint8_t nbytes  = 0;
 
     while (more_bytes(encval))
     {
@@ -51,7 +51,6 @@ bool maxavro_write_integer(FILE* file, uint64_t val)
     uint8_t nbytes = maxavro_encode_integer(buffer, val);
     return fwrite(buffer, 1, nbytes, file) == nbytes;
 }
-
 
 /**
  * @brief Encode a string in Avro format
@@ -110,7 +109,7 @@ bool maxavro_write_double(FILE* file, double val)
 
 MAXAVRO_MAP* avro_map_start()
 {
-    return (MAXAVRO_MAP*)calloc(1, sizeof(MAXAVRO_MAP));
+    return (MAXAVRO_MAP*) calloc(1, sizeof(MAXAVRO_MAP));
 }
 
 uint64_t avro_map_encode(uint8_t* dest, MAXAVRO_MAP* map)

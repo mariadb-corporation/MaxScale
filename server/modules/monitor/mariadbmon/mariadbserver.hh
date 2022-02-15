@@ -34,25 +34,25 @@ struct NodeData
 {
     // Default values for index parameters
     static const int INDEX_NOT_VISITED = 0;
-    static const int INDEX_FIRST = 1;
+    static const int INDEX_FIRST       = 1;
     // Default values for the cycle
-    static const int CYCLE_NONE = 0;
+    static const int CYCLE_NONE  = 0;
     static const int CYCLE_FIRST = 1;
     // Default value for reach
     static const int REACH_UNKNOWN = -1;
 
     // Bookkeeping for graph searches. May be overwritten by multiple algorithms.
-    int  index;         /* Marks the order in which this node was visited. */
-    int  lowest_index;  /* The lowest index node this node has in its subtree. */
-    bool in_stack;      /* Is this node currently is the search stack. */
+    int index;        /* Marks the order in which this node was visited. */
+    int lowest_index; /* The lowest index node this node has in its subtree. */
+    bool in_stack;    /* Is this node currently is the search stack. */
 
     // Results from algorithm runs. Should only be overwritten when server data has been queried.
-    int         cycle;                      /* Which cycle is this node part of, if any. */
-    int         reach;                      /* How many servers replicate from this server or its children. */
-    ServerArray parents;                    /* Which nodes is this node replicating from. External masters
+    int cycle;                             /* Which cycle is this node part of, if any. */
+    int reach;                             /* How many servers replicate from this server or its children. */
+    ServerArray parents;                   /* Which nodes is this node replicating from. External masters
                                              * excluded. */
-    ServerArray          children;          /* Which nodes are replicating from this node. */
-    std::vector<int64_t> external_masters;  /* Server id:s of external masters. */
+    ServerArray children;                  /* Which nodes are replicating from this node. */
+    std::vector<int64_t> external_masters; /* Server id:s of external masters. */
 
     NodeData();
 
@@ -76,18 +76,19 @@ class MariaDBServer : public mxs::MonitorServer
 public:
     class SharedSettings;
 
-    MariaDBServer(SERVER* server, int config_index,
-                  const MonitorServer::SharedSettings& base_settings,
-                  const MariaDBServer::SharedSettings& settings);
+    MariaDBServer(SERVER* server,
+        int config_index,
+        const MonitorServer::SharedSettings& base_settings,
+        const MariaDBServer::SharedSettings& settings);
 
     class EventInfo
     {
     public:
-        std::string name;       /**< Event name in <database.name> form */
-        std::string definer;    /**< Definer of the event */
-        std::string status;     /**< Status of the event */
-        std::string charset;    /**< character_set_client-field */
-        std::string collation;  /**< collation_connection-field */
+        std::string name;      /**< Event name in <database.name> form */
+        std::string definer;   /**< Definer of the event */
+        std::string status;    /**< Status of the event */
+        std::string charset;   /**< character_set_client-field */
+        std::string collation; /**< collation_connection-field */
     };
 
     enum class BinlogMode
@@ -100,19 +101,19 @@ public:
     class Capabilities
     {
     public:
-        bool basic_support {false};         // Is the server version supported by the monitor at all?
-        bool gtid {false};                  // Supports MariaDB gtid? Required for failover etc.
-        bool slave_status_all {false};      // Supports "show all slaves status"?
-        bool max_statement_time {false};    // Supports max_statement_time?
-        bool events {false};                // Supports event handling?
+        bool basic_support {false};       // Is the server version supported by the monitor at all?
+        bool gtid {false};                // Supports MariaDB gtid? Required for failover etc.
+        bool slave_status_all {false};    // Supports "show all slaves status"?
+        bool max_statement_time {false};  // Supports max_statement_time?
+        bool events {false};              // Supports event handling?
     };
 
     // This class groups some miscellaneous replication related settings together.
     class ReplicationSettings
     {
     public:
-        bool gtid_strict_mode = false;  /* Enable additional checks for replication */
-        bool log_bin = false;           /* Is binary logging enabled? */
+        bool gtid_strict_mode  = false; /* Enable additional checks for replication */
+        bool log_bin           = false; /* Is binary logging enabled? */
         bool log_slave_updates = false; /* Does the slave write replicated events to binlog? */
     };
 
@@ -122,13 +123,13 @@ public:
     {
     public:
         // Required by cluster operations
-        std::string replication_user;           /**< Username for CHANGE MASTER TO-commands */
-        std::string replication_password;       /**< Password for CHANGE MASTER TO-commands */
-        bool        replication_ssl {false};    /**< Set MASTER_SSL = 1 in CHANGE MASTER TO-commands */
+        std::string replication_user;     /**< Username for CHANGE MASTER TO-commands */
+        std::string replication_password; /**< Password for CHANGE MASTER TO-commands */
+        bool replication_ssl {false};     /**< Set MASTER_SSL = 1 in CHANGE MASTER TO-commands */
 
-        std::string promotion_sql_file;     /**< File with sql commands which are ran to a server being
+        std::string promotion_sql_file; /**< File with sql commands which are ran to a server being
                                              *  promoted. */
-        std::string demotion_sql_file;      /**< File with sql commands which are ran to a server being
+        std::string demotion_sql_file;  /**< File with sql commands which are ran to a server being
                                              *  demoted. */
 
         /* Should failover/switchover enable/disable any scheduled events on the servers during
@@ -142,19 +143,19 @@ public:
     /* What position this server has in the monitor config? Used for tiebreaking between servers. */
     int m_config_index = 0;
 
-    Capabilities m_capabilities;                    /* Server capabilities */
+    Capabilities m_capabilities; /* Server capabilities */
 
-    int64_t m_server_id = SERVER_ID_UNKNOWN;        /* Value of @@server_id. Valid values are
+    int64_t m_server_id      = SERVER_ID_UNKNOWN;   /* Value of @@server_id. Valid values are
                                                      * 32bit unsigned. */
     int64_t m_gtid_domain_id = GTID_DOMAIN_UNKNOWN; /* The value of gtid_domain_id, the domain which is used
                                                      * for new non-replicated events. */
 
-    bool             m_read_only = false;   /* Value of @@read_only */
-    GtidList         m_gtid_current_pos;    /* Gtid of latest event. */
-    GtidList         m_gtid_binlog_pos;     /* Gtid of latest event written to binlog. */
-    SlaveStatusArray m_slave_status;        /* Data returned from SHOW (ALL) SLAVE(S) STATUS */
-    SlaveStatusArray m_old_slave_status;    /* Data from the previous loop */
-    NodeData         m_node;                /* Replication topology data */
+    bool m_read_only = false;            /* Value of @@read_only */
+    GtidList m_gtid_current_pos;         /* Gtid of latest event. */
+    GtidList m_gtid_binlog_pos;          /* Gtid of latest event written to binlog. */
+    SlaveStatusArray m_slave_status;     /* Data returned from SHOW (ALL) SLAVE(S) STATUS */
+    SlaveStatusArray m_old_slave_status; /* Data from the previous loop */
+    NodeData m_node;                     /* Replication topology data */
 
     /* Replication lag of the server. Used during calculation so that the actual SERVER struct is
      * only written to once. */
@@ -168,7 +169,7 @@ public:
      * 'update_replication_settings' before use. */
     ReplicationSettings m_rpl_settings;
 
-    EventNameSet m_enabled_events;              /* Enabled scheduled events */
+    EventNameSet m_enabled_events; /* Enabled scheduled events */
 
     /**
      * Print server information to a json object.
@@ -214,8 +215,8 @@ public:
      * @param errno_out Error code output. Can be null.
      * @return Pointer to query results, or an empty pointer on failure
      */
-    std::unique_ptr<mxq::QueryResult> execute_query(const std::string& query, std::string* errmsg_out = NULL,
-                                                    unsigned int* errno_out = NULL);
+    std::unique_ptr<mxq::QueryResult> execute_query(
+        const std::string& query, std::string* errmsg_out = NULL, unsigned int* errno_out = NULL);
 
     /**
      * execute_cmd_ex with query retry ON.
@@ -225,8 +226,8 @@ public:
     /**
      * execute_cmd_ex with query retry OFF.
      */
-    bool execute_cmd_no_retry(const std::string& cmd,
-                              std::string* errmsg_out = NULL, unsigned int* errno_out = NULL);
+    bool execute_cmd_no_retry(
+        const std::string& cmd, std::string* errmsg_out = NULL, unsigned int* errno_out = NULL);
 
     /**
      * Update server slave connection information.
@@ -389,8 +390,10 @@ public:
      * @param op Cluster operation descriptor
      * @return True if successful
      */
-    bool promote(GeneralOpData& op, ServerOperation& promotion, OperationType type,
-                 const MariaDBServer* demotion_target);
+    bool promote(GeneralOpData& op,
+        ServerOperation& promotion,
+        OperationType type,
+        const MariaDBServer* demotion_target);
 
     /**
      * Demote this server. Removes all slave connections. If server was master, sets read_only.
@@ -410,8 +413,8 @@ public:
      * @param new_master The new master for the redirected connection
      * @return True on success
      */
-    bool redirect_existing_slave_conn(GeneralOpData& op, const SlaveStatus::Settings& conn_settings,
-                                      const MariaDBServer* new_master);
+    bool redirect_existing_slave_conn(
+        GeneralOpData& op, const SlaveStatus::Settings& conn_settings, const MariaDBServer* new_master);
 
     /**
      * Copy slave connections to this server. This is usually needed during switchover promotion and on
@@ -426,8 +429,8 @@ public:
      * @params replacement Which server should rep
      * @return True on success
      */
-    bool copy_slave_conns(GeneralOpData& op, const SlaveStatusArray& conns_to_copy,
-                          const MariaDBServer* replacement);
+    bool copy_slave_conns(
+        GeneralOpData& op, const SlaveStatusArray& conns_to_copy, const MariaDBServer* replacement);
 
     /**
      * Create a new slave connection on the server and start it.
@@ -563,7 +566,7 @@ public:
         MASTER,
     };
     bool release_lock(LockType lock_type);
-    int  release_all_locks();
+    int release_all_locks();
     bool get_lock(LockType lock_type);
     bool lock_owned(LockType lock_type);
 
@@ -576,8 +579,8 @@ public:
     SERVER::VersionInfo::Type server_type() const;
 
 private:
-    using EventManipulator = std::function<void (const EventInfo& event, json_t** error_out)>;
-    using EventStatusMapper = std::function<std::string (const EventInfo& event)>;
+    using EventManipulator  = std::function<void(const EventInfo& event, json_t** error_out)>;
+    using EventStatusMapper = std::function<std::string(const EventInfo& event)>;
 
     enum class StopMode
     {
@@ -602,29 +605,31 @@ private:
      * only read the values. */
     mutable std::mutex m_arraylock;
 
-    const SharedSettings& m_settings;       /* Settings required for various operations */
+    const SharedSettings& m_settings; /* Settings required for various operations */
 
-    ServerLock m_serverlock;        /* Server lock status */
-    ServerLock m_masterlock;        /* Master lock status */
+    ServerLock m_serverlock; /* Server lock status */
+    ServerLock m_masterlock; /* Master lock status */
 
-    bool m_print_update_errormsg {true};    /* Should an update error be printed? */
+    bool m_print_update_errormsg {true}; /* Should an update error be printed? */
 
-    bool               update_slave_status(std::string* errmsg_out = NULL);
-    bool               sstatus_array_topology_equal(const SlaveStatusArray& new_slave_status);
+    bool update_slave_status(std::string* errmsg_out = NULL);
+    bool sstatus_array_topology_equal(const SlaveStatusArray& new_slave_status);
     const SlaveStatus* sstatus_find_previous_row(const SlaveStatus& new_row, size_t guess);
 
-    bool stop_slave_conn(const std::string& conn_name, StopMode mode, maxbase::Duration time_limit,
-                         json_t** error_out);
+    bool stop_slave_conn(
+        const std::string& conn_name, StopMode mode, maxbase::Duration time_limit, json_t** error_out);
 
     bool remove_slave_conns(GeneralOpData& op, const SlaveStatusArray& conns_to_remove);
-    bool execute_cmd_ex(const std::string& cmd, QueryRetryMode mode,
-                        std::string* errmsg_out = NULL, unsigned int* errno_out = NULL);
+    bool execute_cmd_ex(const std::string& cmd,
+        QueryRetryMode mode,
+        std::string* errmsg_out = NULL,
+        unsigned int* errno_out = NULL);
 
-    bool execute_cmd_time_limit(const std::string& cmd, maxbase::Duration time_limit,
-                                std::string* errmsg_out);
+    bool execute_cmd_time_limit(
+        const std::string& cmd, maxbase::Duration time_limit, std::string* errmsg_out);
 
-    bool        set_read_only(ReadOnlySetting value, maxbase::Duration time_limit, json_t** error_out);
-    bool        merge_slave_conns(GeneralOpData& op, const SlaveStatusArray& conns_to_merge);
+    bool set_read_only(ReadOnlySetting value, maxbase::Duration time_limit, json_t** error_out);
+    bool merge_slave_conns(GeneralOpData& op, const SlaveStatusArray& conns_to_merge);
     std::string generate_change_master_cmd(const SlaveStatus::Settings& conn_settings);
 
     bool update_enabled_events();
@@ -635,5 +640,5 @@ private:
     bool alter_event(const EventInfo& event, const std::string& target_status, json_t** error_out);
 
     int64_t conn_id() const;
-    void    clear_locks_info();
+    void clear_locks_info();
 };

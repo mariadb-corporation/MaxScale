@@ -23,14 +23,14 @@ namespace maxbase
 
 class Semaphore
 {
-    Semaphore(const Semaphore&) = delete;
+    Semaphore(const Semaphore&)            = delete;
     Semaphore& operator=(const Semaphore&) = delete;
 
 public:
     enum signal_approach_t
     {
-        HONOUR_SIGNALS,     /* Honour signals and return when interrupted. */
-        IGNORE_SIGNALS      /* Ignore signals and re-issue the comment when signals occur. */
+        HONOUR_SIGNALS, /* Honour signals and return when interrupted. */
+        IGNORE_SIGNALS  /* Ignore signals and re-issue the comment when signals occur. */
     };
 
     /**
@@ -48,7 +48,7 @@ public:
             initial_count = SEM_VALUE_MAX;
         }
 
-        MXB_AT_DEBUG(int rc = ) sem_init(&m_sem, 0, initial_count);
+        MXB_AT_DEBUG(int rc =) sem_init(&m_sem, 0, initial_count);
         mxb_assert(rc == 0);
     }
 
@@ -66,7 +66,7 @@ public:
         mxb_assert(rc == 0);
         mxb_assert(count == 0);
 #endif
-        MXB_AT_DEBUG(rc = ) sem_destroy(&m_sem);
+        MXB_AT_DEBUG(rc =) sem_destroy(&m_sem);
         mxb_assert(rc == 0);
     }
 
@@ -165,10 +165,9 @@ public:
      * @attention The function can return a different number than `n_wait` only
      *            if `signal_approach` is `HONOUR_SIGNALS`.
      */
-    size_t wait_n(size_t n_wait,
-                  signal_approach_t signal_approach = IGNORE_SIGNALS) const
+    size_t wait_n(size_t n_wait, signal_approach_t signal_approach = IGNORE_SIGNALS) const
     {
-        bool waited = true;
+        bool waited     = true;
         size_t n_waited = 0;
 
         while (waited && n_wait--)
@@ -210,9 +209,8 @@ public:
         }
         while ((rc != 0) && ((errno == EINTR) && (signal_approach == IGNORE_SIGNALS)));
 
-        mxb_assert((rc == 0)
-                   || (errno == EAGAIN)
-                   || ((errno == EINTR) && (signal_approach == HONOUR_SIGNALS)));
+        mxb_assert(
+            (rc == 0) || (errno == EAGAIN) || ((errno == EINTR) && (signal_approach == HONOUR_SIGNALS)));
 
         return rc == 0;
     }
@@ -234,8 +232,7 @@ public:
      *            interrupted. In the former case the value will be `ETIMEDOUT`
      *            and in the latter `EINTR.
      */
-    bool timedwait(struct timespec& ts,
-                   signal_approach_t signal_approach = IGNORE_SIGNALS) const
+    bool timedwait(struct timespec& ts, signal_approach_t signal_approach = IGNORE_SIGNALS) const
     {
         errno = 0;
 
@@ -246,9 +243,8 @@ public:
         }
         while ((rc != 0) && ((errno == EINTR) && (signal_approach == IGNORE_SIGNALS)));
 
-        mxb_assert((rc == 0)
-                   || (errno == ETIMEDOUT)
-                   || ((errno == EINTR) && (signal_approach == HONOUR_SIGNALS)));
+        mxb_assert(
+            (rc == 0) || (errno == ETIMEDOUT) || ((errno == EINTR) && (signal_approach == HONOUR_SIGNALS)));
 
         return rc == 0;
     }
@@ -274,11 +270,10 @@ public:
      *            interrupted. In the former case the value will be `ETIMEDOUT`
      *            and in the latter `EINTR.
      */
-    size_t timedwait_n(size_t n_wait,
-                       struct timespec& ts,
-                       signal_approach_t signal_approach = IGNORE_SIGNALS) const
+    size_t timedwait_n(
+        size_t n_wait, struct timespec& ts, signal_approach_t signal_approach = IGNORE_SIGNALS) const
     {
-        bool waited = true;
+        bool waited     = true;
         size_t n_waited = 0;
 
         while (waited && n_wait--)
@@ -313,9 +308,7 @@ public:
      *            interrupted. In the former case the value will be `ETIMEDOUT`
      *            and in the latter `EINTR.
      */
-    bool timedwait(time_t seconds,
-                   long nseconds,
-                   signal_approach_t signal_approach = IGNORE_SIGNALS) const
+    bool timedwait(time_t seconds, long nseconds, signal_approach_t signal_approach = IGNORE_SIGNALS) const
     {
         timespec ts;
         get_current_timespec(seconds, nseconds, &ts);
@@ -344,9 +337,9 @@ public:
      *            and in the latter `EINTR.
      */
     size_t timedwait_n(size_t n_wait,
-                       time_t seconds,
-                       long nseconds,
-                       signal_approach_t signal_approach = IGNORE_SIGNALS) const
+        time_t seconds,
+        long nseconds,
+        signal_approach_t signal_approach = IGNORE_SIGNALS) const
     {
         timespec ts;
         get_current_timespec(seconds, nseconds, &ts);
@@ -370,8 +363,7 @@ public:
      *            interrupted. In the former case the value will be `ETIMEDOUT`
      *            and in the latter `EINTR.
      */
-    bool timedwait(time_t seconds,
-                   signal_approach_t signal_approach = IGNORE_SIGNALS) const
+    bool timedwait(time_t seconds, signal_approach_t signal_approach = IGNORE_SIGNALS) const
     {
         return timedwait(seconds, 0, signal_approach);
     }
@@ -396,9 +388,7 @@ public:
      *            interrupted. In the former case the value will be `ETIMEDOUT`
      *            and in the latter `EINTR.
      */
-    bool timedwait_n(size_t n_wait,
-                     time_t seconds,
-                     signal_approach_t signal_approach = IGNORE_SIGNALS) const
+    bool timedwait_n(size_t n_wait, time_t seconds, signal_approach_t signal_approach = IGNORE_SIGNALS) const
     {
         return timedwait_n(n_wait, seconds, 0, signal_approach);
     }
@@ -409,4 +399,4 @@ private:
 private:
     mutable sem_t m_sem;
 };
-}
+}  // namespace maxbase

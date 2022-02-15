@@ -27,13 +27,13 @@ MXS_BEGIN_DECLS
  */
 typedef struct telnetd
 {
-    int   state;                /**< The connection state */
-    char* username;             /**< The login name of the user */
+    int state;      /**< The connection state */
+    char* username; /**< The login name of the user */
 } TELNETD;
 
-#define TELNETD_STATE_LOGIN  1  /**< Issued login prompt */
-#define TELNETD_STATE_PASSWD 2  /**< Issued password prompt */
-#define TELNETD_STATE_DATA   3  /**< User logged in */
+#define TELNETD_STATE_LOGIN  1 /**< Issued login prompt */
+#define TELNETD_STATE_PASSWD 2 /**< Issued password prompt */
+#define TELNETD_STATE_DATA   3 /**< User logged in */
 
 #define TELNET_SE                240
 #define TELNET_NOP               241

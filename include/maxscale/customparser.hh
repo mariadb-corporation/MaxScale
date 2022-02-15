@@ -50,8 +50,7 @@ public:
         , m_len(0)
         , m_pI(NULL)
         , m_pEnd(NULL)
-    {
-    }
+    {}
 
 protected:
     /**
@@ -63,10 +62,10 @@ protected:
     {
 #ifdef MXS_CP_LOG_UNEXPECTED_AND_EXHAUSTED
         MXS_NOTICE("Custom parser: In statement '%.*s', unexpected token at '%.*s'.",
-                   (int)m_len,
-                   m_pSql,
-                   (int)(m_pEnd - m_pI),
-                   m_pI);
+            (int) m_len,
+            m_pSql,
+            (int) (m_pEnd - m_pI),
+            m_pI);
 #endif
     }
 
@@ -79,7 +78,7 @@ protected:
     void log_exhausted()
     {
 #ifdef MXS_CP_LOG_UNEXPECTED_AND_EXHAUSTED
-        MXS_NOTICE("Custom parser: More tokens expected in statement '%.*s'.", (int)m_len, m_pSql);
+        MXS_NOTICE("Custom parser: More tokens expected in statement '%.*s'.", (int) m_len, m_pSql);
 #endif
     }
 
@@ -122,8 +121,7 @@ protected:
 
         char lc = uc + ('a' - 'A');
 
-        return ((m_pI + offset) < m_pEnd)
-               && ((*(m_pI + offset) == uc) || (*(m_pI + offset) == lc));
+        return ((m_pI + offset) < m_pEnd) && ((*(m_pI + offset) == uc) || (*(m_pI + offset) == lc));
     }
 
     /**
@@ -201,7 +199,7 @@ protected:
      */
     token_t expect_token(const char* zWord, int len, token_t token)
     {
-        const char* pI = m_pI;
+        const char* pI   = m_pI;
         const char* pEnd = zWord + len;
 
         while ((pI < m_pEnd) && (zWord < pEnd) && (toupper(*pI) == *zWord))
@@ -212,8 +210,8 @@ protected:
 
         if (zWord == pEnd)
         {
-            if ((pI == m_pEnd) || (!isalpha(*pI)))      // Handwritten isalpha not faster than library
-                                                        // version.
+            if ((pI == m_pEnd) || (!isalpha(*pI)))  // Handwritten isalpha not faster than library
+                                                    // version.
             {
                 m_pI = pI;
             }
@@ -232,8 +230,8 @@ protected:
 
 protected:
     const char* m_pSql;
-    int         m_len;
+    int m_len;
     const char* m_pI;
     const char* m_pEnd;
 };
-}
+}  // namespace maxscale

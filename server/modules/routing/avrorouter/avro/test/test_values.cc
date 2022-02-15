@@ -18,7 +18,7 @@
 #include <stdbool.h>
 #include <errno.h>
 
-const char* testfile = "test.db";
+const char* testfile   = "test.db";
 const char* testschema = "";
 
 void write_file()

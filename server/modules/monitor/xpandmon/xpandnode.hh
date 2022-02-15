@@ -26,7 +26,7 @@ public:
     class Persister
     {
     public:
-        virtual void persist(const XpandNode& node) = 0;
+        virtual void persist(const XpandNode& node)   = 0;
         virtual void unpersist(const XpandNode& node) = 0;
     };
 
@@ -43,12 +43,12 @@ public:
     };
 
     XpandNode(Persister* pPersister,
-              const XpandMembership& membership,
-              const std::string& ip,
-              int mysql_port,
-              int health_port,
-              int health_check_threshold,
-              SERVER* pServer)
+        const XpandMembership& membership,
+        const std::string& ip,
+        int mysql_port,
+        int health_port,
+        int health_check_threshold,
+        SERVER* pServer)
         : m_persister(*pPersister)
         , m_id(membership.id())
         , m_status(membership.status())
@@ -74,45 +74,21 @@ public:
         }
     }
 
-    int id() const
-    {
-        return m_id;
-    }
+    int id() const { return m_id; }
 
-    xpand::Status status() const
-    {
-        return m_status;
-    }
+    xpand::Status status() const { return m_status; }
 
-    xpand::SubState substate() const
-    {
-        return m_substate;
-    }
+    xpand::SubState substate() const { return m_substate; }
 
-    int instance() const
-    {
-        return m_instance;
-    }
+    int instance() const { return m_instance; }
 
-    const std::string& ip() const
-    {
-        return m_ip;
-    }
+    const std::string& ip() const { return m_ip; }
 
-    int mysql_port() const
-    {
-        return m_mysql_port;
-    }
+    int mysql_port() const { return m_mysql_port; }
 
-    int health_port() const
-    {
-        return m_health_port;
-    }
+    int health_port() const { return m_health_port; }
 
-    bool is_running() const
-    {
-        return m_nRunning > 0;
-    }
+    bool is_running() const { return m_nRunning > 0; }
 
     void set_running(bool running, approach_t approach = APPROACH_DEFAULT)
     {
@@ -148,16 +124,16 @@ public:
         }
     }
 
-    void update(const std::string& ip,
-                int mysql_port,
-                int health_port)
+    void update(const std::string& ip, int mysql_port, int health_port)
     {
         bool changed = false;
 
         if (ip != m_ip)
         {
             MXS_WARNING("Address of node '%d' has changed from '%s' to '%s', updating.",
-                        m_id, m_ip.c_str(), ip.c_str());
+                m_id,
+                m_ip.c_str(),
+                ip.c_str());
 
             m_ip = ip;
             m_pServer->set_address(m_ip);
@@ -167,7 +143,9 @@ public:
         if (mysql_port != m_mysql_port)
         {
             MXS_WARNING("MariaDB port of node '%d' has changed from '%d' to '%d', updating.",
-                        m_id, m_mysql_port, mysql_port);
+                m_id,
+                m_mysql_port,
+                mysql_port);
 
             m_mysql_port = mysql_port;
             m_pServer->set_port(m_mysql_port);
@@ -177,10 +155,12 @@ public:
         if (health_port != m_health_port)
         {
             MXS_WARNING("Healtch check port of node '%d' has changed from '%d' to '%d', updating.",
-                        m_id, m_health_port, health_port);
+                m_id,
+                m_health_port,
+                health_port);
 
             m_health_port = health_port;
-            changed = true;
+            changed       = true;
         }
 
         if (changed)
@@ -191,7 +171,7 @@ public:
 
     void update(xpand::Status status, xpand::SubState substate, int instance)
     {
-        m_status = status;
+        m_status   = status;
         m_substate = substate;
         m_instance = instance;
     }
@@ -203,23 +183,17 @@ public:
     }
 
     bool can_be_used_as_hub(const char* zName,
-                            const mxs::MonitorServer::ConnectionSettings& settings,
-                            xpand::Softfailed softfailed);
+        const mxs::MonitorServer::ConnectionSettings& settings,
+        xpand::Softfailed softfailed);
 
-    SERVER* server() const
-    {
-        return m_pServer;
-    }
+    SERVER* server() const { return m_pServer; }
 
-    MYSQL* connection() const
-    {
-        return m_pCon;
-    }
+    MYSQL* connection() const { return m_pCon; }
 
     MYSQL* release_connection()
     {
         MYSQL* pCon = m_pCon;
-        m_pCon = nullptr;
+        m_pCon      = nullptr;
         return pCon;
     }
 
@@ -230,24 +204,21 @@ public:
         return ss.str();
     }
 
-    void print(std::ostream& o) const
-    {
-        o << to_string();
-    }
+    void print(std::ostream& o) const { o << to_string(); }
 
 private:
-    Persister&      m_persister;
-    int             m_id;
-    xpand::Status   m_status;
+    Persister& m_persister;
+    int m_id;
+    xpand::Status m_status;
     xpand::SubState m_substate;
-    int             m_instance;
-    std::string     m_ip;
-    int             m_mysql_port {DEFAULT_MYSQL_PORT};
-    int             m_health_port {DEFAULT_HEALTH_PORT};
-    int             m_health_check_threshold {DEFAULT_HEALTH_CHECK_THRESHOLD};
-    int             m_nRunning {0};
-    SERVER*         m_pServer {nullptr};
-    MYSQL*          m_pCon {nullptr};
+    int m_instance;
+    std::string m_ip;
+    int m_mysql_port {DEFAULT_MYSQL_PORT};
+    int m_health_port {DEFAULT_HEALTH_PORT};
+    int m_health_check_threshold {DEFAULT_HEALTH_CHECK_THRESHOLD};
+    int m_nRunning {0};
+    SERVER* m_pServer {nullptr};
+    MYSQL* m_pCon {nullptr};
 };
 
 inline std::ostream& operator<<(std::ostream& out, const XpandNode& x)

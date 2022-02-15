@@ -23,34 +23,19 @@ namespace maxbase
 class shared_mutex
 {
 public:
-    shared_mutex(const shared_mutex&) = delete;
+    shared_mutex(const shared_mutex&)            = delete;
     shared_mutex& operator=(const shared_mutex&) = delete;
-    shared_mutex() = default;
+    shared_mutex()                               = default;
 
-    ~shared_mutex()
-    {
-        pthread_rwlock_destroy(&m_lock);
-    }
+    ~shared_mutex() { pthread_rwlock_destroy(&m_lock); }
 
-    void lock()
-    {
-        pthread_rwlock_wrlock(&m_lock);
-    }
+    void lock() { pthread_rwlock_wrlock(&m_lock); }
 
-    void unlock()
-    {
-        pthread_rwlock_unlock(&m_lock);
-    }
+    void unlock() { pthread_rwlock_unlock(&m_lock); }
 
-    void lock_shared()
-    {
-        pthread_rwlock_rdlock(&m_lock);
-    }
+    void lock_shared() { pthread_rwlock_rdlock(&m_lock); }
 
-    void unlock_shared()
-    {
-        pthread_rwlock_unlock(&m_lock);
-    }
+    void unlock_shared() { pthread_rwlock_unlock(&m_lock); }
 
 private:
     pthread_rwlock_t m_lock = PTHREAD_RWLOCK_INITIALIZER;
@@ -61,7 +46,7 @@ template<class T>
 class shared_lock
 {
 public:
-    shared_lock(const shared_lock&) = delete;
+    shared_lock(const shared_lock&)            = delete;
     shared_lock& operator=(const shared_lock&) = delete;
 
     shared_lock(T& t)
@@ -70,12 +55,9 @@ public:
         m_t.lock_shared();
     }
 
-    ~shared_lock()
-    {
-        m_t.unlock_shared();
-    }
+    ~shared_lock() { m_t.unlock_shared(); }
 
 private:
     T& m_t;
 };
-}
+}  // namespace maxbase

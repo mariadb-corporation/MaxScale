@@ -34,8 +34,7 @@ Gtid::Gtid(st_mariadb_gtid* mgtid)
     , m_server_id(mgtid->server_id)
     , m_sequence_nr(mgtid->sequence_nr)
     , m_is_valid(true)
-{
-}
+{}
 
 std::string Gtid::to_string() const
 {
@@ -53,9 +52,9 @@ Gtid Gtid::from_string(const std::string& gtid_str)
 
     const auto gtid_parser = x3::uint32 >> '-' >> x3::uint32 >> '-' >> x3::uint64;
 
-    std::tuple<uint32_t, uint32_t, uint64_t> result;    // intermediary to avoid boost-fusionizing Gtid.
+    std::tuple<uint32_t, uint32_t, uint64_t> result;  // intermediary to avoid boost-fusionizing Gtid.
 
-    auto first = begin(gtid_str);
+    auto first   = begin(gtid_str);
     auto success = parse(first, end(gtid_str), gtid_parser, result);
 
     if (success && first == end(gtid_str))
@@ -91,9 +90,7 @@ GtidList::GtidList(const std::vector<Gtid>&& gtids)
     : m_gtids(std::move(gtids))
 {
     sort();
-    m_is_valid = std::all_of(begin(m_gtids), end(m_gtids), [](const Gtid& gtid) {
-                                 return gtid.is_valid();
-                             });
+    m_is_valid = std::all_of(begin(m_gtids), end(m_gtids), [](const Gtid& gtid) { return gtid.is_valid(); });
 }
 
 void GtidList::clear()
@@ -105,8 +102,8 @@ void GtidList::clear()
 void GtidList::replace(const Gtid& gtid)
 {
     auto ite = std::find_if(begin(m_gtids), end(m_gtids), [&gtid](const Gtid& rhs) {
-                                return gtid.domain_id() == rhs.domain_id();
-                            });
+        return gtid.domain_id() == rhs.domain_id();
+    });
 
     if (ite != end(m_gtids) && ite->domain_id() == gtid.domain_id())
     {
@@ -118,9 +115,7 @@ void GtidList::replace(const Gtid& gtid)
         sort();
     }
 
-    m_is_valid = std::all_of(begin(m_gtids), end(m_gtids), [](const Gtid& gtid) {
-                                 return gtid.is_valid();
-                             });
+    m_is_valid = std::all_of(begin(m_gtids), end(m_gtids), [](const Gtid& gtid) { return gtid.is_valid(); });
 }
 
 std::string GtidList::to_string() const
@@ -144,8 +139,8 @@ GtidList GtidList::from_string(const std::string& str)
 void GtidList::sort()
 {
     std::sort(begin(m_gtids), end(m_gtids), [](const Gtid& lhs, const Gtid& rhs) {
-                  return lhs.domain_id() < rhs.domain_id();
-              });
+        return lhs.domain_id() < rhs.domain_id();
+    });
 }
 
 bool GtidList::is_included(const GtidList& other) const
@@ -153,9 +148,7 @@ bool GtidList::is_included(const GtidList& other) const
     for (const auto& gtid : other.gtids())
     {
         auto it = std::find_if(
-            m_gtids.begin(), m_gtids.end(), [&](const Gtid& g) {
-                return g.domain_id() == gtid.domain_id();
-            });
+            m_gtids.begin(), m_gtids.end(), [&](const Gtid& g) { return g.domain_id() == gtid.domain_id(); });
 
         if (it == m_gtids.end() || it->sequence_nr() < gtid.sequence_nr())
         {
@@ -171,4 +164,4 @@ std::ostream& operator<<(std::ostream& os, const GtidList& lst)
     os << lst.to_string();
     return os;
 }
-}
+}  // namespace maxsql

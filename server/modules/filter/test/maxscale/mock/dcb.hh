@@ -45,9 +45,7 @@ public:
      * @param zHost     The host of the connection.
      * @param pHandler  Optional handler.
      */
-    Dcb(MXS_SESSION* pSession,
-        const char* zHost,
-        Handler* pHandler = NULL);
+    Dcb(MXS_SESSION* pSession, const char* zHost, Handler* pHandler = NULL);
     ~Dcb();
 
     /**
@@ -72,18 +70,14 @@ private:
     public:
         Protocol(Dcb::Handler* pHandler)
             : m_pHandler(pHandler)
-        {
-        }
+        {}
 
-        Dcb::Handler* handler() const
-        {
-            return m_pHandler;
-        }
+        Dcb::Handler* handler() const { return m_pHandler; }
 
         Dcb::Handler* set_handler(Dcb::Handler* pHandler)
         {
             Dcb::Handler* p = m_pHandler;
-            m_pHandler = pHandler;
+            m_pHandler      = pHandler;
             return p;
         }
 
@@ -93,66 +87,36 @@ private:
             return false;
         }
 
-        void finish_connection() override
-        {
-            mxb_assert(!true);
-        }
+        void finish_connection() override { mxb_assert(!true); }
 
-        void ready_for_reading(DCB*) override
-        {
-            mxb_assert(!true);
-        }
+        void ready_for_reading(DCB*) override { mxb_assert(!true); }
 
-        void write_ready(DCB*) override
-        {
-            mxb_assert(!true);
-        }
+        void write_ready(DCB*) override { mxb_assert(!true); }
 
-        void error(DCB*) override
-        {
-            mxb_assert(!true);
-        }
+        void error(DCB*) override { mxb_assert(!true); }
 
-        void hangup(DCB*) override
-        {
-            mxb_assert(!true);
-        }
+        void hangup(DCB*) override { mxb_assert(!true); }
 
         int32_t write(GWBUF* buffer) override;
 
-        json_t* diagnostics() const override
-        {
-            return nullptr;
-        }
+        json_t* diagnostics() const override { return nullptr; }
 
-        void set_dcb(DCB* dcb) override
-        {
-            m_dcb = static_cast<Dcb*>(dcb);
-        }
+        void set_dcb(DCB* dcb) override { m_dcb = static_cast<Dcb*>(dcb); }
 
-        ClientDCB* dcb() override
-        {
-            return m_dcb;
-        }
+        ClientDCB* dcb() override { return m_dcb; }
 
-        const ClientDCB* dcb() const override
-        {
-            return m_dcb;
-        }
+        const ClientDCB* dcb() const override { return m_dcb; }
 
     private:
         Dcb::Handler* m_pHandler;
-        Dcb*          m_dcb {nullptr};
+        Dcb* m_dcb {nullptr};
     };
 
 public:
-    Protocol* protocol() const override
-    {
-        return &m_protocol;
-    }
+    Protocol* protocol() const override { return &m_protocol; }
 
 private:
     mutable Protocol m_protocol;
 };
-}
-}
+}  // namespace mock
+}  // namespace maxscale

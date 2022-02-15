@@ -18,7 +18,7 @@
 class SessionCache
 {
 public:
-    SessionCache(const SessionCache&) = delete;
+    SessionCache(const SessionCache&)            = delete;
     SessionCache& operator=(const SessionCache&) = delete;
 
     /**
@@ -34,10 +34,7 @@ public:
     /**
      * @see Cache::config
      */
-    const CacheConfig& config() const
-    {
-        return m_cache.config();
-    }
+    const CacheConfig& config() const { return m_cache.config(); }
 
     /**
      * @see Cache::should_store
@@ -67,10 +64,10 @@ public:
      * @see Cache::get_key
      */
     cache_result_t get_key(const std::string& user,
-                           const std::string& host,
-                           const char* zDefault_db,
-                           const GWBUF* pQuery,
-                           CacheKey* pKey) const
+        const std::string& host,
+        const char* zDefault_db,
+        const GWBUF* pQuery,
+        CacheKey* pKey) const
     {
         return m_cache.get_key(user, host, zDefault_db, pQuery, pKey);
     }
@@ -79,11 +76,11 @@ public:
      * @See Cache::get_value
      */
     cache_result_t get_value(const CacheKey& key,
-                             uint32_t flags,
-                             uint32_t soft_ttl,
-                             uint32_t hard_ttl,
-                             GWBUF** ppValue,
-                             const std::function<void (cache_result_t, GWBUF*)>& cb) const
+        uint32_t flags,
+        uint32_t soft_ttl,
+        uint32_t hard_ttl,
+        GWBUF** ppValue,
+        const std::function<void(cache_result_t, GWBUF*)>& cb) const
     {
         return m_cache.get_value(token(), key, flags, soft_ttl, hard_ttl, ppValue, cb);
     }
@@ -92,9 +89,9 @@ public:
      * @see Cache::put_value
      */
     cache_result_t put_value(const CacheKey& key,
-                             const std::vector<std::string>& invalidation_words,
-                             const GWBUF* pValue,
-                             const std::function<void (cache_result_t)>& cb)
+        const std::vector<std::string>& invalidation_words,
+        const GWBUF* pValue,
+        const std::function<void(cache_result_t)>& cb)
     {
         return m_cache.put_value(token(), key, invalidation_words, pValue, cb);
     }
@@ -102,8 +99,7 @@ public:
     /**
      * @see Cache::del_value
      */
-    cache_result_t del_value(const CacheKey& key,
-                             const std::function<void (cache_result_t)>& cb)
+    cache_result_t del_value(const CacheKey& key, const std::function<void(cache_result_t)>& cb)
     {
         return m_cache.del_value(token(), key, cb);
     }
@@ -111,8 +107,8 @@ public:
     /**
      * @see Cache::invalidate
      */
-    cache_result_t invalidate(const std::vector<std::string>& words,
-                              const std::function<void (cache_result_t)>& cb)
+    cache_result_t invalidate(
+        const std::vector<std::string>& words, const std::function<void(cache_result_t)>& cb)
     {
         return m_cache.invalidate(token(), words, cb);
     }
@@ -120,26 +116,18 @@ public:
     /**
      * @see Cache::clear
      */
-    cache_result_t clear()
-    {
-        return m_cache.clear(token());
-    }
+    cache_result_t clear() { return m_cache.clear(token()); }
 
 protected:
-    SessionCache(Cache* pCache,
-                 std::shared_ptr<Cache::Token> sToken)
+    SessionCache(Cache* pCache, std::shared_ptr<Cache::Token> sToken)
         : m_cache(*pCache)
         , m_sToken(std::move(sToken))
-    {
-    }
+    {}
 
 private:
-    Cache::Token* token() const
-    {
-        return m_sToken.get();
-    }
+    Cache::Token* token() const { return m_sToken.get(); }
 
 private:
-    Cache&                        m_cache;
+    Cache& m_cache;
     std::shared_ptr<Cache::Token> m_sToken;
 };

@@ -66,7 +66,7 @@ int main()
     else
     {
         mxb::pam::UserData user = {username, ""};
-        mxb::pam::PwdData pwds = {password, twofa_pw};
+        mxb::pam::PwdData pwds  = {password, twofa_pw};
         res = mxb::pam::authenticate(mxb::pam::AuthMode::PW_2FA, user, pwds, service, {"", ""});
     }
 
@@ -77,8 +77,9 @@ int main()
     }
     else if (res.error.empty())
     {
-        string failtype = (res.type == PamResult::WRONG_USER_PW) ? "wrong username/password" :
-            (res.type == PamResult::ACCOUNT_INVALID) ? "account error" : "unknown error";
+        string failtype = (res.type == PamResult::WRONG_USER_PW)   ? "wrong username/password"
+                        : (res.type == PamResult::ACCOUNT_INVALID) ? "account error"
+                                                                   : "unknown error";
         cout << "Authentication failed: " << failtype << ".\n";
     }
     else

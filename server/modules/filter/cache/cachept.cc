@@ -26,7 +26,7 @@ using std::string;
 namespace
 {
 
-int u_current_thread_id = 0;
+int u_current_thread_id      = 0;
 thread_local int u_thread_id = -1;
 
 /**
@@ -44,22 +44,20 @@ inline int thread_index()
 
     return u_thread_id;
 }
-}
+}  // namespace
 
 CachePT::CachePT(const std::string& name,
-                 const CacheConfig* pConfig,
-                 const std::vector<SCacheRules>& rules,
-                 SStorageFactory sFactory,
-                 const Caches& caches)
+    const CacheConfig* pConfig,
+    const std::vector<SCacheRules>& rules,
+    SStorageFactory sFactory,
+    const Caches& caches)
     : Cache(name, pConfig, rules, sFactory)
     , m_caches(caches)
 {
     MXS_NOTICE("Created cache per thread.");
 }
 
-CachePT::~CachePT()
-{
-}
+CachePT::~CachePT() {}
 
 // static
 CachePT* CachePT::create(const std::string& name, const CacheConfig* pConfig)
@@ -111,12 +109,12 @@ json_t* CachePT::get_info(uint32_t what) const
     {
         if (what & (INFO_PENDING | INFO_STORAGE))
         {
-            what &= ~INFO_RULES;    // The rules are the same, we don't want them duplicated.
+            what &= ~INFO_RULES;  // The rules are the same, we don't want them duplicated.
 
             for (size_t i = 0; i < m_caches.size(); ++i)
             {
-                char key[20];   // Surely enough.
-                sprintf(key, "thread-%u", (unsigned int)i + 1);
+                char key[20];  // Surely enough.
+                sprintf(key, "thread-%u", (unsigned int) i + 1);
 
                 SCache sCache = m_caches[i];
 
@@ -134,44 +132,42 @@ json_t* CachePT::get_info(uint32_t what) const
 }
 
 cache_result_t CachePT::get_key(const std::string& user,
-                                const std::string& host,
-                                const char* zDefault_db,
-                                const GWBUF* pQuery,
-                                CacheKey* pKey) const
+    const std::string& host,
+    const char* zDefault_db,
+    const GWBUF* pQuery,
+    CacheKey* pKey) const
 {
     return thread_cache().get_key(user, host, zDefault_db, pQuery, pKey);
 }
 
 cache_result_t CachePT::get_value(Token* pToken,
-                                  const CacheKey& key,
-                                  uint32_t flags,
-                                  uint32_t soft_ttl,
-                                  uint32_t hard_ttl,
-                                  GWBUF** ppValue,
-                                  const std::function<void (cache_result_t, GWBUF*)>& cb) const
+    const CacheKey& key,
+    uint32_t flags,
+    uint32_t soft_ttl,
+    uint32_t hard_ttl,
+    GWBUF** ppValue,
+    const std::function<void(cache_result_t, GWBUF*)>& cb) const
 {
     return thread_cache().get_value(pToken, key, flags, soft_ttl, hard_ttl, ppValue, cb);
 }
 
 cache_result_t CachePT::put_value(Token* pToken,
-                                  const CacheKey& key,
-                                  const std::vector<std::string>& invalidation_words,
-                                  const GWBUF* pValue,
-                                  const std::function<void (cache_result_t)>& cb)
+    const CacheKey& key,
+    const std::vector<std::string>& invalidation_words,
+    const GWBUF* pValue,
+    const std::function<void(cache_result_t)>& cb)
 {
     return thread_cache().put_value(pToken, key, invalidation_words, pValue, cb);
 }
 
-cache_result_t CachePT::del_value(Token* pToken,
-                                  const CacheKey& key,
-                                  const std::function<void (cache_result_t)>& cb)
+cache_result_t CachePT::del_value(
+    Token* pToken, const CacheKey& key, const std::function<void(cache_result_t)>& cb)
 {
     return thread_cache().del_value(pToken, key, cb);
 }
 
-cache_result_t CachePT::invalidate(Token* pToken,
-                                   const std::vector<std::string>& words,
-                                   const std::function<void (cache_result_t)>& cb)
+cache_result_t CachePT::invalidate(
+    Token* pToken, const std::vector<std::string>& words, const std::function<void(cache_result_t)>& cb)
 {
     return thread_cache().invalidate(pToken, words, cb);
 }
@@ -183,9 +179,9 @@ cache_result_t CachePT::clear(Token* pToken)
 
 // static
 CachePT* CachePT::create(const std::string& name,
-                         const CacheConfig* pConfig,
-                         const std::vector<SCacheRules>& rules,
-                         SStorageFactory sFactory)
+    const CacheConfig* pConfig,
+    const std::vector<SCacheRules>& rules,
+    SStorageFactory sFactory)
 {
     CachePT* pCache = NULL;
 
@@ -196,11 +192,11 @@ CachePT* CachePT::create(const std::string& name,
         Caches caches;
 
         bool error = false;
-        int i = 0;
+        int i      = 0;
 
         while (!error && (i < n_threads))
         {
-            char suffix[12];    // Enough for 99999 threads
+            char suffix[12];  // Enough for 99999 threads
             sprintf(suffix, "%d", i);
 
             string namest(name + "-" + suffix);
@@ -229,8 +225,7 @@ CachePT* CachePT::create(const std::string& name,
         }
     }
     catch (const std::exception&)
-    {
-    }
+    {}
 
     return pCache;
 }
@@ -238,6 +233,6 @@ CachePT* CachePT::create(const std::string& name,
 Cache& CachePT::thread_cache()
 {
     int i = thread_index();
-    mxb_assert(i < (int)m_caches.size());
+    mxb_assert(i < (int) m_caches.size());
     return *m_caches[i].get();
 }

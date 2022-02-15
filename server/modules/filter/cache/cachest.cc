@@ -19,18 +19,16 @@
 using std::shared_ptr;
 
 CacheST::CacheST(const std::string& name,
-                 const CacheConfig* pConfig,
-                 const std::vector<SCacheRules>& rules,
-                 SStorageFactory sFactory,
-                 Storage* pStorage)
+    const CacheConfig* pConfig,
+    const std::vector<SCacheRules>& rules,
+    SStorageFactory sFactory,
+    Storage* pStorage)
     : CacheSimple(name, pConfig, rules, sFactory, pStorage)
 {
     MXS_NOTICE("Created single threaded cache.");
 }
 
-CacheST::~CacheST()
-{
-}
+CacheST::~CacheST() {}
 
 CacheST* CacheST::create(const std::string& name, const CacheConfig* pConfig)
 {
@@ -53,9 +51,9 @@ CacheST* CacheST::create(const std::string& name, const CacheConfig* pConfig)
 
 // static
 CacheST* CacheST::create(const std::string& name,
-                         const std::vector<SCacheRules>& rules,
-                         SStorageFactory sFactory,
-                         const CacheConfig* pConfig)
+    const std::vector<SCacheRules>& rules,
+    SStorageFactory sFactory,
+    const CacheConfig* pConfig)
 {
     mxb_assert(sFactory.get());
     mxb_assert(pConfig);
@@ -80,19 +78,19 @@ void CacheST::refreshed(const CacheKey& key, const CacheFilterSession* pSession)
 
 // static
 CacheST* CacheST::create(const std::string& name,
-                         const CacheConfig* pConfig,
-                         const std::vector<SCacheRules>& rules,
-                         SStorageFactory sFactory)
+    const CacheConfig* pConfig,
+    const std::vector<SCacheRules>& rules,
+    SStorageFactory sFactory)
 {
     CacheST* pCache = NULL;
 
     Storage::Config storage_config(CACHE_THREAD_MODEL_ST,
-                                   pConfig->hard_ttl.count(),
-                                   pConfig->soft_ttl.count(),
-                                   pConfig->max_count,
-                                   pConfig->max_size,
-                                   pConfig->invalidate,
-                                   pConfig->timeout);
+        pConfig->hard_ttl.count(),
+        pConfig->soft_ttl.count(),
+        pConfig->max_count,
+        pConfig->max_size,
+        pConfig->invalidate,
+        pConfig->timeout);
 
     const auto& storage_arguments = pConfig->storage_options;
 
@@ -100,11 +98,7 @@ CacheST* CacheST::create(const std::string& name,
 
     if (pStorage)
     {
-        MXS_EXCEPTION_GUARD(pCache = new CacheST(name,
-                                                 pConfig,
-                                                 rules,
-                                                 sFactory,
-                                                 pStorage));
+        MXS_EXCEPTION_GUARD(pCache = new CacheST(name, pConfig, rules, sFactory, pStorage));
 
         if (!pCache)
         {

@@ -30,23 +30,23 @@ MySQLProtocolModule* MySQLProtocolModule::create()
     return new MySQLProtocolModule();
 }
 
-std::unique_ptr<mxs::ClientConnection>
-MySQLProtocolModule::create_client_protocol(MXS_SESSION* session, mxs::Component* component)
+std::unique_ptr<mxs::ClientConnection> MySQLProtocolModule::create_client_protocol(
+    MXS_SESSION* session, mxs::Component* component)
 {
     std::unique_ptr<mxs::ClientConnection> new_client_proto;
-    std::unique_ptr<MYSQL_session> mdb_session(new(std::nothrow) MYSQL_session());
+    std::unique_ptr<MYSQL_session> mdb_session(new (std::nothrow) MYSQL_session());
     if (mdb_session)
     {
-        auto& search_sett = mdb_session->user_search_settings;
-        search_sett.listener = m_user_search_settings;
-        const auto& service_config = *session->service->config();
+        auto& search_sett                   = mdb_session->user_search_settings;
+        search_sett.listener                = m_user_search_settings;
+        const auto& service_config          = *session->service->config();
         search_sett.service.allow_root_user = service_config.enable_root;
 
         mdb_session->remote = session->client_remote();
         session->set_protocol_data(std::move(mdb_session));
 
         new_client_proto = std::unique_ptr<mxs::ClientConnection>(
-            new(std::nothrow) MariaDBClientConnection(session, component));
+            new (std::nothrow) MariaDBClientConnection(session, component));
     }
     return new_client_proto;
 }
@@ -58,8 +58,8 @@ std::string MySQLProtocolModule::auth_default() const
 
 GWBUF* MySQLProtocolModule::reject(const std::string& host)
 {
-    std::string message = "Host '" + host
-        + "' is temporarily blocked due to too many authentication failures.";
+    std::string message
+        = "Host '" + host + "' is temporarily blocked due to too many authentication failures.";
     return modutil_create_mysql_err_msg(0, 0, 1129, "HY000", message.c_str());
 }
 
@@ -73,8 +73,8 @@ std::unique_ptr<mxs::UserAccountManager> MySQLProtocolModule::create_user_data_m
     return std::unique_ptr<mxs::UserAccountManager>(new MariaDBUserManager());
 }
 
-std::unique_ptr<mxs::BackendConnection>
-MySQLProtocolModule::create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component)
+std::unique_ptr<mxs::BackendConnection> MySQLProtocolModule::create_backend_protocol(
+    MXS_SESSION* session, SERVER* server, mxs::Component* component)
 {
     return MariaDBBackendConnection::create(session, component, *server);
 }
@@ -82,7 +82,7 @@ MySQLProtocolModule::create_backend_protocol(MXS_SESSION* session, SERVER* serve
 uint64_t MySQLProtocolModule::capabilities() const
 {
     return mxs::ProtocolModule::CAP_BACKEND | mxs::ProtocolModule::CAP_AUTHDATA
-           | mxs::ProtocolModule::CAP_AUTH_MODULES;
+         | mxs::ProtocolModule::CAP_AUTH_MODULES;
 }
 
 bool MySQLProtocolModule::read_authentication_options(mxs::ConfigParameters* params)
@@ -92,11 +92,11 @@ bool MySQLProtocolModule::read_authentication_options(mxs::ConfigParameters* par
     {
         // Read any values recognized by the protocol itself and remove them. The leftovers are given to
         // authenticators.
-        const string opt_cachedir = "cache_dir";
-        const string opt_inject = "inject_service_user";
-        const string opt_skip_auth = "skip_authentication";
-        const string opt_match_host = "match_host";
-        const string opt_lower_case = "lower_case_table_names";
+        const string opt_cachedir      = "cache_dir";
+        const string opt_inject        = "inject_service_user";
+        const string opt_skip_auth     = "skip_authentication";
+        const string opt_match_host    = "match_host";
+        const string opt_lower_case    = "lower_case_table_names";
         const char option_is_ignored[] = "Authenticator option '%s' is no longer supported and "
                                          "its value is ignored.";
 
@@ -125,7 +125,7 @@ bool MySQLProtocolModule::read_authentication_options(mxs::ConfigParameters* par
         {
             // To match the server, the allowed values should be 0, 1 or 2. For backwards compatibility,
             // "true" and "false" should also apply, with "true" mapping to 1 and "false" to 0.
-            long lower_case_mode = -1;
+            long lower_case_mode     = -1;
             auto lower_case_mode_str = params->get_string(opt_lower_case);
             if (lower_case_mode_str == "true")
             {
@@ -157,7 +157,8 @@ bool MySQLProtocolModule::read_authentication_options(mxs::ConfigParameters* par
             default:
                 error = true;
                 MXB_ERROR("Invalid authenticator option value for '%s': '%s'. Expected 0, 1, or 2.",
-                          opt_lower_case.c_str(), lower_case_mode_str.c_str());
+                    opt_lower_case.c_str(),
+                    lower_case_mode_str.c_str());
             }
             params->remove(opt_lower_case);
         }
@@ -165,12 +166,12 @@ bool MySQLProtocolModule::read_authentication_options(mxs::ConfigParameters* par
     return !error;
 }
 
-mxs::ProtocolModule::AuthenticatorList
-MySQLProtocolModule::create_authenticators(const mxs::ConfigParameters& params)
+mxs::ProtocolModule::AuthenticatorList MySQLProtocolModule::create_authenticators(
+    const mxs::ConfigParameters& params)
 {
     // If no authenticator is set, the default authenticator will be loaded.
     auto auth_names = params.get_string(CN_AUTHENTICATOR);
-    auto auth_opts = params.get_string(CN_AUTHENTICATOR_OPTIONS);
+    auto auth_opts  = params.get_string(CN_AUTHENTICATOR_OPTIONS);
 
     if (auth_names.empty())
     {
@@ -182,12 +183,12 @@ MySQLProtocolModule::create_authenticators(const mxs::ConfigParameters& params)
     // Parse all options. Then read in authentication settings which affect the entire listener.
     if (!parse_auth_options(auth_opts, &auth_config) || !read_authentication_options(&auth_config))
     {
-        return {};      // error
+        return {};  // error
     }
 
     AuthenticatorList authenticators;
     auto auth_names_list = mxb::strtok(auth_names, ",");
-    bool error = false;
+    bool error           = false;
 
     for (auto iter = auth_names_list.begin(); iter != auth_names_list.end() && !error; ++iter)
     {
@@ -196,7 +197,7 @@ MySQLProtocolModule::create_authenticators(const mxs::ConfigParameters& params)
         if (!auth_name.empty())
         {
             const char* auth_namez = auth_name.c_str();
-            auto new_auth_module = mxs::authenticator_init(auth_name, &auth_config);
+            auto new_auth_module   = mxs::authenticator_init(auth_name, &auth_config);
             if (new_auth_module)
             {
                 // Check that the authenticator supports the protocol. Use case-insensitive comparison.
@@ -211,7 +212,9 @@ MySQLProtocolModule::create_authenticators(const mxs::ConfigParameters& params)
                     // not the effective name.
                     MXB_ERROR("Authenticator module '%s' expects to be paired with protocol '%s', "
                               "not with '%s'.",
-                              auth_namez, supported_protocol.c_str(), MXS_MODULE_NAME);
+                        auth_namez,
+                        supported_protocol.c_str(),
+                        MXS_MODULE_NAME);
                     error = true;
                 }
             }
@@ -225,7 +228,8 @@ MySQLProtocolModule::create_authenticators(const mxs::ConfigParameters& params)
         {
             MXB_ERROR("'%s' is an invalid value for '%s'. The value should be a comma-separated "
                       "list of authenticators or a single authenticator.",
-                      auth_names.c_str(), CN_AUTHENTICATOR);
+                auth_names.c_str(),
+                CN_AUTHENTICATOR);
             error = true;
         }
     }
@@ -270,7 +274,7 @@ MySQLProtocolModule::create_authenticators(const mxs::ConfigParameters& params)
  */
 bool MySQLProtocolModule::parse_auth_options(const std::string& opts, mxs::ConfigParameters* params_out)
 {
-    bool error = false;
+    bool error    = false;
     auto opt_list = mxb::strtok(opts, ",");
 
     for (const auto& opt : opt_list)
@@ -301,9 +305,7 @@ bool MySQLProtocolModule::parse_auth_options(const std::string& opts, mxs::Confi
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_PROTOCOL,
+    static MXS_MODULE info = {MXS_MODULE_API_PROTOCOL,
         MXS_MODULE_GA,
         MXS_PROTOCOL_VERSION,
         "The client to MaxScale MySQL protocol implementation",
@@ -314,10 +316,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         nullptr,
         nullptr,
         nullptr,
-        {
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+        {{MXS_END_MODULE_PARAMS}}};
 
     return &info;
 }

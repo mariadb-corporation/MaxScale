@@ -19,21 +19,17 @@ namespace
 class FunctionTask : public mxb::Worker::DisposableTask
 {
 public:
-    FunctionTask(std::function<void ()> cb)
+    FunctionTask(std::function<void()> cb)
         : m_cb(cb)
-    {
-    }
+    {}
 
-    void execute(mxb::Worker& worker)
-    {
-        m_cb();
-    }
+    void execute(mxb::Worker& worker) { m_cb(); }
 
 protected:
-    std::function<void ()> m_cb;
+    std::function<void()> m_cb;
 };
 
-}
+}  // namespace
 
 namespace maxscale
 {
@@ -48,4 +44,4 @@ void worker_local_delete_data(uint64_t key)
     mxs::RoutingWorker::broadcast(std::move(task));
 }
 
-}
+}  // namespace maxscale

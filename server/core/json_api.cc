@@ -29,8 +29,8 @@ using namespace std::literals::string_literals;
 namespace
 {
 
-const char CN_META[] = "meta";
-const char CN_SELF[] = "self";
+const char CN_META[]    = "meta";
+const char CN_SELF[]    = "self";
 const char CN_RELATED[] = "related";
 
 const char DETAIL[] = "detail";
@@ -56,14 +56,12 @@ bool listener_validator(const char* str)
     return listener_find(str).get();
 }
 
-std::unordered_map<std::string, std::function<bool(const char*)>> valid_relationships =
-{
-    {"servers",   target_validator  },
-    {"services",  target_validator  },
-    {"monitors",  monitor_validator },
-    {"filters",   filter_validator  },
-    {"listeners", listener_validator}
-};
+std::unordered_map<std::string, std::function<bool(const char*)>> valid_relationships
+    = {{"servers", target_validator},
+        {"services", target_validator},
+        {"monitors", monitor_validator},
+        {"filters", filter_validator},
+        {"listeners", listener_validator}};
 
 std::string validate_relationships(json_t* json)
 {
@@ -80,7 +78,7 @@ std::string validate_relationships(json_t* json)
         json_object_foreach(rel, key, j)
         {
             std::string path = MXS_JSON_PTR_RELATIONSHIPS + "/"s + key;
-            json_t* arr = json_object_get(j, "data");
+            json_t* arr      = json_object_get(j, "data");
 
             if (!json_is_object(j))
             {
@@ -130,12 +128,12 @@ std::string validate_relationships(json_t* json)
 
     return "";
 }
-}
+}  // namespace
 
 static json_t* self_link(const std::string& host, const std::string& self, const std::string& related = "")
 {
     json_t* self_link = json_object();
-    string links = host + self;
+    string links      = host + self;
     json_object_set_new(self_link, CN_SELF, json_string(links.c_str()));
 
     if (!related.empty())
@@ -301,7 +299,7 @@ json_t* mxs_json_error(const std::vector<std::string>& errors)
     if (!errors.empty())
     {
         auto it = errors.begin();
-        rval = json_error(it->c_str());
+        rval    = json_error(it->c_str());
 
         for (it = std::next(it); it != errors.end(); ++it)
         {
@@ -396,7 +394,7 @@ json_t* json_error_insert_new(json_t* obj, json_t* err, Location location)
 
     return obj;
 }
-}
+}  // namespace
 
 json_t* mxs_json_error_push_back(json_t* obj, json_t* err)
 {

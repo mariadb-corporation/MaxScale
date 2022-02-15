@@ -24,24 +24,26 @@
 #include <maxscale/json_api.hh>
 
 /** Utility macros for printing both MXS_ERROR and json error */
-#define PRINT_MXS_JSON_ERROR(err_out, format, ...) \
-    do { \
-        MXS_ERROR(format, ##__VA_ARGS__); \
-        if (err_out) \
-        { \
+#define PRINT_MXS_JSON_ERROR(err_out, format, ...)                             \
+    do                                                                         \
+    {                                                                          \
+        MXS_ERROR(format, ##__VA_ARGS__);                                      \
+        if (err_out)                                                           \
+        {                                                                      \
             *err_out = mxs_json_error_append(*err_out, format, ##__VA_ARGS__); \
-        } \
-    } while (false)
+        }                                                                      \
+    }                                                                          \
+    while (false)
 
-#define PRINT_ERROR_IF(log_mode, err_out, format, ...) \
-    if (log_mode == Log::ON) \
-    { \
+#define PRINT_ERROR_IF(log_mode, err_out, format, ...)        \
+    if (log_mode == Log::ON)                                  \
+    {                                                         \
         PRINT_MXS_JSON_ERROR(err_out, format, ##__VA_ARGS__); \
-    } \
+    }
 
 extern const int64_t SERVER_ID_UNKNOWN;
 extern const int64_t GTID_DOMAIN_UNKNOWN;
-constexpr int64_t CONN_ID_UNKNOWN = -1;     /** Default connection id */
+constexpr int64_t CONN_ID_UNKNOWN = -1; /** Default connection id */
 extern const int PORT_UNKNOWN;
 extern const char* const CN_HANDLE_EVENTS;
 extern const char* SERVER_LOCK_NAME;
@@ -51,9 +53,10 @@ extern const char* MASTER_LOCK_NAME;
 class DelimitedPrinter
 {
 private:
-    DelimitedPrinter(const DelimitedPrinter&) = delete;
+    DelimitedPrinter(const DelimitedPrinter&)            = delete;
     DelimitedPrinter& operator=(const DelimitedPrinter&) = delete;
-    DelimitedPrinter() = delete;
+    DelimitedPrinter()                                   = delete;
+
 public:
     DelimitedPrinter(const std::string& separator);
 
@@ -76,6 +79,6 @@ public:
 
 private:
     const std::string m_separator;
-    std::string       m_current_separator;
-    std::string       m_message;
+    std::string m_current_separator;
+    std::string m_message;
 };

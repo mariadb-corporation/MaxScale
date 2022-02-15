@@ -30,6 +30,7 @@
 #include <maxscale/modinfo.hh>
 
 class DCB;
+
 namespace maxscale
 {
 class ConfigParameters;
@@ -57,9 +58,9 @@ struct SSLConfig : public mxb::SSLConfig
     // Convert to human readable string representation
     std::string to_string() const;
 
-    std::string crl;                /** SSL certificate revocation list*/
-    int         verify_depth = 9;   /**< SSL certificate verification depth */
-    std::string cipher;             /**< Selected TLS cipher */
+    std::string crl;      /** SSL certificate revocation list*/
+    int verify_depth = 9; /**< SSL certificate verification depth */
+    std::string cipher;   /**< Selected TLS cipher */
 };
 
 /**
@@ -73,7 +74,7 @@ public:
     SSLContext& operator=(SSLContext&& rhs) noexcept;
 
     SSLContext& operator=(SSLContext&) = delete;
-    SSLContext(SSLContext&) = delete;
+    SSLContext(SSLContext&)            = delete;
     ~SSLContext();
 
     /**
@@ -88,21 +89,12 @@ public:
     /**
      * Opens a new OpenSSL session for this configuration context
      */
-    SSL* open() const
-    {
-        return SSL_new(m_ctx);
-    }
+    SSL* open() const { return SSL_new(m_ctx); }
 
     // SSL configuration
-    const SSLConfig& config() const
-    {
-        return m_cfg;
-    }
+    const SSLConfig& config() const { return m_cfg; }
 
-    bool valid() const
-    {
-        return m_ctx;
-    }
+    bool valid() const { return m_ctx; }
 
     /**
      * Configure the SSLContext. Empty configuration is accepted.
@@ -119,8 +111,8 @@ private:
     void reset();
     bool init();
 
-    SSL_CTX*    m_ctx {nullptr};
-    SSL_METHOD* m_method {nullptr};         /**<  SSLv3 or TLS1.0/1.1/1.2 methods
+    SSL_CTX* m_ctx {nullptr};
+    SSL_METHOD* m_method {nullptr}; /**<  SSLv3 or TLS1.0/1.1/1.2 methods
                                              * see: https://www.openssl.org/docs/ssl/SSL_CTX_new.html */
     SSLConfig m_cfg;
 };
@@ -130,15 +122,12 @@ class SSLProvider
 {
 public:
     SSLProvider& operator=(SSLProvider&) = delete;
-    SSLProvider(SSLProvider&) = delete;
+    SSLProvider(SSLProvider&)            = delete;
 
     SSLProvider(std::unique_ptr<mxs::SSLContext> context);
 
     // Return true if SSL is enabled
-    bool enabled() const
-    {
-        return m_context.get();
-    }
+    bool enabled() const { return m_context.get(); }
 
     // Current configuration, or null if none is set.
     const mxs::SSLConfig* config() const;
@@ -150,6 +139,6 @@ public:
     void set_context(std::unique_ptr<mxs::SSLContext> ssl);
 
 private:
-    std::unique_ptr<mxs::SSLContext> m_context;     /**< SSL context */
+    std::unique_ptr<mxs::SSLContext> m_context; /**< SSL context */
 };
-}
+}  // namespace maxscale

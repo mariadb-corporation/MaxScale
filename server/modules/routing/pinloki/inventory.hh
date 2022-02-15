@@ -23,7 +23,6 @@
 
 #include "config.hh"
 
-
 namespace pinloki
 {
 DEFINE_EXCEPTION(BinlogWriteError);
@@ -35,7 +34,7 @@ class InventoryWriter
 {
 public:
     InventoryWriter(const Config& config);
-    InventoryWriter(const InventoryWriter&) = delete;
+    InventoryWriter(const InventoryWriter&)            = delete;
     InventoryWriter& operator=(const InventoryWriter&) = delete;
 
     /**
@@ -57,12 +56,12 @@ public:
     std::vector<std::string> file_names() const;
 
     /** The replication state */
-    void             save_rpl_state(const maxsql::GtidList& gtids);
+    void save_rpl_state(const maxsql::GtidList& gtids);
     maxsql::GtidList rpl_state() const;
 
     /** Requested replication state (set global gtid_slave_pos='a-b-c') */
-    void             save_requested_rpl_state(const maxsql::GtidList& gtids);
-    void             clear_requested_rpl_state() const;
+    void save_requested_rpl_state(const maxsql::GtidList& gtids);
+    void clear_requested_rpl_state() const;
     maxsql::GtidList requested_rpl_state() const;
 
     /** Set by the writer **/
@@ -77,10 +76,7 @@ public:
     /** Is the writer connected */
     bool is_writer_connected() const;
 
-    const Config& config() const
-    {
-        return m_config;
-    }
+    const Config& config() const { return m_config; }
 
 private:
     // Read or re-read the file
@@ -92,10 +88,10 @@ private:
     // The configuration used to create this inventory
     const Config& m_config;
 
-    mutable std::mutex               m_mutex;
+    mutable std::mutex m_mutex;
     mutable std::vector<std::string> m_file_names;
-    std::atomic<int64_t>             m_master_id {0};
-    std::atomic<bool>                m_is_writer_connected {false};
+    std::atomic<int64_t> m_master_id {0};
+    std::atomic<bool> m_is_writer_connected {false};
 };
 
 /**
@@ -107,16 +103,13 @@ class InventoryReader
 public:
     InventoryReader(const Config& config);
     const std::vector<std::string>& file_names() const;
-    maxsql::GtidList                rpl_state() const;
+    maxsql::GtidList rpl_state() const;
 
-    const Config& config() const
-    {
-        return m_config;
-    }
+    const Config& config() const { return m_config; }
 
 private:
     // The configuration used to create this inventory
-    const Config&                    m_config;
+    const Config& m_config;
     mutable std::vector<std::string> m_file_names;
 };
 
@@ -126,4 +119,4 @@ std::string next_string(const std::vector<std::string>& strs, const std::string&
 std::string first_string(const std::vector<std::string>& strs);
 // Return the last string in vector or an empty string if the vector is empty
 std::string last_string(const std::vector<std::string>& strs);
-}
+}  // namespace pinloki

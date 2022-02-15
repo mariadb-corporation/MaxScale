@@ -77,53 +77,52 @@ using std::chrono::seconds;
 
 namespace
 {
-constexpr char CN_ADMIN_AUTH[] = "admin_auth";
-constexpr char CN_ADMIN_ENABLED[] = "admin_enabled";
-constexpr char CN_ADMIN_GUI[] = "admin_gui";
-constexpr char CN_ADMIN_SECURE_GUI[] = "admin_secure_gui";
-constexpr char CN_ADMIN_HOST[] = "admin_host";
-constexpr char CN_ADMIN_PAM_READONLY_SERVICE[] = "admin_pam_readonly_service";
+constexpr char CN_ADMIN_AUTH[]                  = "admin_auth";
+constexpr char CN_ADMIN_ENABLED[]               = "admin_enabled";
+constexpr char CN_ADMIN_GUI[]                   = "admin_gui";
+constexpr char CN_ADMIN_SECURE_GUI[]            = "admin_secure_gui";
+constexpr char CN_ADMIN_HOST[]                  = "admin_host";
+constexpr char CN_ADMIN_PAM_READONLY_SERVICE[]  = "admin_pam_readonly_service";
 constexpr char CN_ADMIN_PAM_READWRITE_SERVICE[] = "admin_pam_readwrite_service";
-constexpr char CN_ADMIN_PORT[] = "admin_port";
-constexpr char CN_ADMIN_SSL_CA_CERT[] = "admin_ssl_ca_cert";
-constexpr char CN_ADMIN_SSL_CERT[] = "admin_ssl_cert";
-constexpr char CN_ADMIN_SSL_KEY[] = "admin_ssl_key";
-constexpr char CN_ADMIN_SSL_VERSION[] = "admin_ssl_version";
-constexpr char CN_AUTO[] = "auto";
-constexpr char CN_DEBUG[] = "debug";
-constexpr char CN_DUMP_LAST_STATEMENTS[] = "dump_last_statements";
-constexpr char CN_GATEWAY[] = "gateway";
-constexpr char CN_LOAD_PERSISTED_CONFIGS[] = "load_persisted_configs";
-constexpr char CN_LOCAL_ADDRESS[] = "local_address";
-constexpr char CN_LOG_DEBUG[] = "log_debug";
-constexpr char CN_LOG_INFO[] = "log_info";
-constexpr char CN_LOG_NOTICE[] = "log_notice";
-constexpr char CN_LOG_THROTTLING[] = "log_throttling";
-constexpr char CN_LOG_WARNING[] = "log_warning";
-constexpr char CN_LOG_WARN_SUPER_USER[] = "log_warn_super_user";
+constexpr char CN_ADMIN_PORT[]                  = "admin_port";
+constexpr char CN_ADMIN_SSL_CA_CERT[]           = "admin_ssl_ca_cert";
+constexpr char CN_ADMIN_SSL_CERT[]              = "admin_ssl_cert";
+constexpr char CN_ADMIN_SSL_KEY[]               = "admin_ssl_key";
+constexpr char CN_ADMIN_SSL_VERSION[]           = "admin_ssl_version";
+constexpr char CN_AUTO[]                        = "auto";
+constexpr char CN_DEBUG[]                       = "debug";
+constexpr char CN_DUMP_LAST_STATEMENTS[]        = "dump_last_statements";
+constexpr char CN_GATEWAY[]                     = "gateway";
+constexpr char CN_LOAD_PERSISTED_CONFIGS[]      = "load_persisted_configs";
+constexpr char CN_LOCAL_ADDRESS[]               = "local_address";
+constexpr char CN_LOG_DEBUG[]                   = "log_debug";
+constexpr char CN_LOG_INFO[]                    = "log_info";
+constexpr char CN_LOG_NOTICE[]                  = "log_notice";
+constexpr char CN_LOG_THROTTLING[]              = "log_throttling";
+constexpr char CN_LOG_WARNING[]                 = "log_warning";
+constexpr char CN_LOG_WARN_SUPER_USER[]         = "log_warn_super_user";
 constexpr char CN_MAX_AUTH_ERRORS_UNTIL_BLOCK[] = "max_auth_errors_until_block";
-constexpr char CN_MS_TIMESTAMP[] = "ms_timestamp";
-constexpr char CN_PASSIVE[] = "passive";
-constexpr char CN_QUERY_CLASSIFIER_ARGS[] = "query_classifier_args";
-constexpr char CN_QUERY_RETRIES[] = "query_retries";
-constexpr char CN_QUERY_RETRY_TIMEOUT[] = "query_retry_timeout";
-constexpr char CN_REBALANCE_PERIOD[] = "rebalance_period";
-constexpr char CN_REBALANCE_WINDOW[] = "rebalance_window";
-constexpr char CN_SKIP_NAME_RESOLVE[] = "skip_name_resolve";
-constexpr char CN_SKIP_PERMISSION_CHECKS[] = "skip_permission_checks";
-constexpr char CN_USERS_REFRESH_INTERVAL[] = "users_refresh_interval";
-constexpr char CN_USERS_REFRESH_TIME[] = "users_refresh_time";
-constexpr char CN_WRITEQ_HIGH_WATER[] = "writeq_high_water";
-constexpr char CN_WRITEQ_LOW_WATER[] = "writeq_low_water";
-constexpr char CN_SERVER[] = "server";
-constexpr char CN_THREAD_STACK_SIZE[] = "thread_stack_size";
-}
+constexpr char CN_MS_TIMESTAMP[]                = "ms_timestamp";
+constexpr char CN_PASSIVE[]                     = "passive";
+constexpr char CN_QUERY_CLASSIFIER_ARGS[]       = "query_classifier_args";
+constexpr char CN_QUERY_RETRIES[]               = "query_retries";
+constexpr char CN_QUERY_RETRY_TIMEOUT[]         = "query_retry_timeout";
+constexpr char CN_REBALANCE_PERIOD[]            = "rebalance_period";
+constexpr char CN_REBALANCE_WINDOW[]            = "rebalance_window";
+constexpr char CN_SKIP_NAME_RESOLVE[]           = "skip_name_resolve";
+constexpr char CN_SKIP_PERMISSION_CHECKS[]      = "skip_permission_checks";
+constexpr char CN_USERS_REFRESH_INTERVAL[]      = "users_refresh_interval";
+constexpr char CN_USERS_REFRESH_TIME[]          = "users_refresh_time";
+constexpr char CN_WRITEQ_HIGH_WATER[]           = "writeq_high_water";
+constexpr char CN_WRITEQ_LOW_WATER[]            = "writeq_low_water";
+constexpr char CN_SERVER[]                      = "server";
+constexpr char CN_THREAD_STACK_SIZE[]           = "thread_stack_size";
+}  // namespace
 
 namespace maxscale
 {
 
-bool Config::Specification::validate(const ConfigParameters& params,
-                                     ConfigParameters* pUnrecognized) const
+bool Config::Specification::validate(const ConfigParameters& params, ConfigParameters* pUnrecognized) const
 {
     ConfigParameters unrecognized;
 
@@ -135,7 +134,7 @@ bool Config::Specification::validate(const ConfigParameters& params,
         {
             bool found = false;
 
-            const auto& name = kv.first;
+            const auto& name  = kv.first;
             const auto& value = kv.second;
 
             if (maxscale::event::validate(name, value) == maxscale::event::ACCEPTED)
@@ -171,381 +170,292 @@ bool Config::Specification::validate(const ConfigParameters& params,
 
 Config::Specification Config::s_specification("maxscale", config::Specification::GLOBAL);
 
-config::ParamBool Config::s_log_debug(
-    &Config::s_specification,
+config::ParamBool Config::s_log_debug(&Config::s_specification,
     CN_LOG_DEBUG,
     "Specifies whether debug messages should be logged (meaningful only with debug builds).",
     false,
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamBool Config::s_log_info(
-    &Config::s_specification,
+config::ParamBool Config::s_log_info(&Config::s_specification,
     CN_LOG_INFO,
     "Specifies whether info messages should be logged.",
     false,
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamBool Config::s_log_notice(
-    &Config::s_specification,
+config::ParamBool Config::s_log_notice(&Config::s_specification,
     CN_LOG_NOTICE,
     "Specifies whether notice messages should be logged.",
     true,
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamBool Config::s_log_warning(
-    &Config::s_specification,
+config::ParamBool Config::s_log_warning(&Config::s_specification,
     CN_LOG_WARNING,
     "Specifies whether warning messages should be logged.",
     true,
     config::Param::Modifiable::AT_RUNTIME);
 
-Config::ParamLogThrottling Config::s_log_throttling(
-    &Config::s_specification,
+Config::ParamLogThrottling Config::s_log_throttling(&Config::s_specification,
     CN_LOG_THROTTLING,
-    "Limit the amount of identical log messages than can be logged during a certain time period."
-    );
+    "Limit the amount of identical log messages than can be logged during a certain time period.");
 
-config::ParamEnum<session_dump_statements_t> Config::s_dump_statements(
-    &Config::s_specification,
+config::ParamEnum<session_dump_statements_t> Config::s_dump_statements(&Config::s_specification,
     CN_DUMP_LAST_STATEMENTS,
     "In what circumstances should the last statements that a client sent be dumped.",
-    {
-        {SESSION_DUMP_STATEMENTS_ON_CLOSE, "on_close"},
+    {{SESSION_DUMP_STATEMENTS_ON_CLOSE, "on_close"},
         {SESSION_DUMP_STATEMENTS_ON_ERROR, "on_error"},
-        {SESSION_DUMP_STATEMENTS_NEVER, "never"}
-    },
+        {SESSION_DUMP_STATEMENTS_NEVER, "never"}},
     SESSION_DUMP_STATEMENTS_NEVER,
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamCount Config::s_session_trace(
-    &Config::s_specification,
+config::ParamCount Config::s_session_trace(&Config::s_specification,
     CN_SESSION_TRACE,
     "How many log entries are stored in the session specific trace log.",
-    0,                                                          // default
-    0,                                                          // min
-    std::numeric_limits<config::ParamCount::value_type>::max(), // max
+    0,                                                           // default
+    0,                                                           // min
+    std::numeric_limits<config::ParamCount::value_type>::max(),  // max
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamBool Config::s_ms_timestamp(
-    &Config::s_specification,
+config::ParamBool Config::s_ms_timestamp(&Config::s_specification,
     CN_MS_TIMESTAMP,
     "Enable or disable high precision timestamps.",
     false,
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamCount Config::s_retain_last_statements(
-    &Config::s_specification,
+config::ParamCount Config::s_retain_last_statements(&Config::s_specification,
     CN_RETAIN_LAST_STATEMENTS,
     "How many statements should be retained for each session for debugging purposes.",
-    0,                                                              // default
-    0,                                                              // min
-    std::numeric_limits<config::ParamInteger::value_type>::max(),   // max
+    0,                                                             // default
+    0,                                                             // min
+    std::numeric_limits<config::ParamInteger::value_type>::max(),  // max
     config::Param::Modifiable::AT_RUNTIME);
 
 config::ParamBool Config::s_syslog(
-    &Config::s_specification,
-    CN_SYSLOG,
-    "Log to syslog.",
-    true,
-    config::Param::Modifiable::AT_RUNTIME);
+    &Config::s_specification, CN_SYSLOG, "Log to syslog.", true, config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamBool Config::s_maxlog(
-    &Config::s_specification,
+config::ParamBool Config::s_maxlog(&Config::s_specification,
     CN_MAXLOG,
     "Log to MaxScale's own log.",
     true,
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamSeconds Config::s_auth_conn_timeout(
-    &Config::s_specification,
+config::ParamSeconds Config::s_auth_conn_timeout(&Config::s_specification,
     CN_AUTH_CONNECT_TIMEOUT,
     "Connection timeout for fetching user accounts.",
     mxs::config::INTERPRET_AS_SECONDS,
     std::chrono::seconds(DEFAULT_AUTH_CONNECT_TIMEOUT),
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamSeconds Config::s_auth_read_timeout(
-    &Config::s_specification,
+config::ParamSeconds Config::s_auth_read_timeout(&Config::s_specification,
     CN_AUTH_READ_TIMEOUT,
     "Read timeout for fetching user accounts (deprecated).",
     mxs::config::INTERPRET_AS_SECONDS,
     std::chrono::seconds(DEFAULT_AUTH_READ_TIMEOUT),
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamSeconds Config::s_auth_write_timeout(
-    &Config::s_specification,
+config::ParamSeconds Config::s_auth_write_timeout(&Config::s_specification,
     CN_AUTH_WRITE_TIMEOUT,
     "Write timeout for for fetching user accounts (deprecated).",
     mxs::config::INTERPRET_AS_SECONDS,
     std::chrono::seconds(DEFAULT_AUTH_WRITE_TIMEOUT),
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamBool Config::s_skip_permission_checks(
-    &Config::s_specification,
+config::ParamBool Config::s_skip_permission_checks(&Config::s_specification,
     CN_SKIP_PERMISSION_CHECKS,
     "Skip service and monitor permission checks.",
     false,
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamBool Config::s_passive(
-    &Config::s_specification,
+config::ParamBool Config::s_passive(&Config::s_specification,
     CN_PASSIVE,
     "True if MaxScale is in passive mode.",
     false,
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamSize Config::s_qc_cache_max_size(
-    &Config::s_specification,
+config::ParamSize Config::s_qc_cache_max_size(&Config::s_specification,
     CN_QUERY_CLASSIFIER_CACHE_SIZE,
     "Maximum amount of memory used by query classifier cache.",
     0,
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamBool Config::s_admin_log_auth_failures(
-    &Config::s_specification,
+config::ParamBool Config::s_admin_log_auth_failures(&Config::s_specification,
     CN_ADMIN_LOG_AUTH_FAILURES,
     "Log admin interface authentication failures.",
     true,
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamInteger Config::s_query_retries(
-    &Config::s_specification,
+config::ParamInteger Config::s_query_retries(&Config::s_specification,
     CN_QUERY_RETRIES,
     "Number of times an interrupted query is retried.",
     DEFAULT_QUERY_RETRIES,
     0,
     std::numeric_limits<config::ParamInteger::value_type>::max());
 
-config::ParamSeconds Config::s_query_retry_timeout(
-    &Config::s_specification,
+config::ParamSeconds Config::s_query_retry_timeout(&Config::s_specification,
     CN_QUERY_RETRY_TIMEOUT,
     "The total timeout in seconds for any retried queries.",
     mxs::config::INTERPRET_AS_SECONDS,
     std::chrono::seconds(DEFAULT_QUERY_RETRY_TIMEOUT),
     config::Param::Modifiable::AT_RUNTIME);
 
-Config::ParamUsersRefreshTime Config::s_users_refresh_time(
-    &Config::s_specification,
+Config::ParamUsersRefreshTime Config::s_users_refresh_time(&Config::s_specification,
     CN_USERS_REFRESH_TIME,
     "How often the users can be refreshed.",
     mxs::config::INTERPRET_AS_SECONDS,
     std::chrono::seconds(USERS_REFRESH_TIME_DEFAULT),
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamSeconds Config::s_users_refresh_interval(
-    &Config::s_specification,
+config::ParamSeconds Config::s_users_refresh_interval(&Config::s_specification,
     CN_USERS_REFRESH_INTERVAL,
     "How often the users will be refreshed.",
     mxs::config::INTERPRET_AS_SECONDS,
     std::chrono::seconds(0),
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamSize Config::s_writeq_high_water(
-    &Config::s_specification,
+config::ParamSize Config::s_writeq_high_water(&Config::s_specification,
     CN_WRITEQ_HIGH_WATER,
     "High water mark of dcb write queue.",
     16777216,
-    0, std::numeric_limits<config::ParamInteger::value_type>::max(),
+    0,
+    std::numeric_limits<config::ParamInteger::value_type>::max(),
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamSize Config::s_writeq_low_water(
-    &Config::s_specification,
+config::ParamSize Config::s_writeq_low_water(&Config::s_specification,
     CN_WRITEQ_LOW_WATER,
     "Low water mark of dcb write queue.",
     8192,
-    0, std::numeric_limits<config::ParamInteger::value_type>::max(),
+    0,
+    std::numeric_limits<config::ParamInteger::value_type>::max(),
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamInteger Config::s_max_auth_errors_until_block(
-    &Config::s_specification,
+config::ParamInteger Config::s_max_auth_errors_until_block(&Config::s_specification,
     CN_MAX_AUTH_ERRORS_UNTIL_BLOCK,
     "The maximum number of authentication failures that are tolerated "
     "before a host is temporarily blocked.",
     DEFAULT_MAX_AUTH_ERRORS_UNTIL_BLOCK,
-    0, std::numeric_limits<config::ParamInteger::value_type>::max(),    // min, max
+    0,
+    std::numeric_limits<config::ParamInteger::value_type>::max(),  // min, max
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamInteger Config::s_rebalance_threshold(
-    &Config::s_specification,
+config::ParamInteger Config::s_rebalance_threshold(&Config::s_specification,
     CN_REBALANCE_THRESHOLD,
     "If the difference in load between the thread with the maximum load and the thread "
     "with the minimum load is larger than the value of this parameter, then work will "
     "be moved from the former to the latter.",
-    20,     // default
-    5, 100, // min, max
+    20,  // default
+    5,
+    100,  // min, max
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamDuration<std::chrono::milliseconds> Config::s_rebalance_period(
-    &Config::s_specification,
+config::ParamDuration<std::chrono::milliseconds> Config::s_rebalance_period(&Config::s_specification,
     CN_REBALANCE_PERIOD,
     "How often should the load of the worker threads be checked and rebalancing be made.",
     mxs::config::NO_INTERPRETATION,
     std::chrono::milliseconds(0),
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamCount Config::s_rebalance_window(
-    &Config::s_specification,
+config::ParamCount Config::s_rebalance_window(&Config::s_specification,
     CN_REBALANCE_WINDOW,
     "The load of how many seconds should be taken into account when rebalancing.",
-    10,     // default
-    1, 60,  // min, max
+    10,  // default
+    1,
+    60,  // min, max
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamBool Config::s_skip_name_resolve(
-    &Config::s_specification,
+config::ParamBool Config::s_skip_name_resolve(&Config::s_specification,
     CN_SKIP_NAME_RESOLVE,
     "Do not resolve client IP addresses to hostnames during authentication",
     false);
 
-Config::ParamThreadsCount Config::s_n_threads(
-    &Config::s_specification,
+Config::ParamThreadsCount Config::s_n_threads(&Config::s_specification,
     CN_THREADS,
     "This parameter specifies how many threads will be used for handling the routing.",
-    DEFAULT_NTHREADS,   // TODO: Why not get_processor_count()?
+    DEFAULT_NTHREADS,  // TODO: Why not get_processor_count()?
     1,
     std::numeric_limits<Config::ParamThreadsCount::value_type>::max());
 
 config::ParamString Config::s_qc_name(
-    &Config::s_specification,
-    CN_QUERY_CLASSIFIER,
-    "The name of the query classifier to load.",
-    "qc_sqlite");
+    &Config::s_specification, CN_QUERY_CLASSIFIER, "The name of the query classifier to load.", "qc_sqlite");
 
 config::ParamString Config::s_qc_args(
-    &Config::s_specification,
-    CN_QUERY_CLASSIFIER_ARGS,
-    "Arguments for the query classifier.",
-    "");
+    &Config::s_specification, CN_QUERY_CLASSIFIER_ARGS, "Arguments for the query classifier.", "");
 
-config::ParamEnum<qc_sql_mode_t> Config::s_qc_sql_mode(
-    &Config::s_specification,
+config::ParamEnum<qc_sql_mode_t> Config::s_qc_sql_mode(&Config::s_specification,
     CN_SQL_MODE,
     "The query classifier sql mode.",
-    {
-        {QC_SQL_MODE_DEFAULT, "default"},
-        {QC_SQL_MODE_ORACLE, "oracle"}
-    },
+    {{QC_SQL_MODE_DEFAULT, "default"}, {QC_SQL_MODE_ORACLE, "oracle"}},
     QC_SQL_MODE_DEFAULT);
 
 config::ParamString Config::s_admin_host(
-    &Config::s_specification,
-    CN_ADMIN_HOST,
-    "Admin interface host.",
-    DEFAULT_ADMIN_HOST);
+    &Config::s_specification, CN_ADMIN_HOST, "Admin interface host.", DEFAULT_ADMIN_HOST);
 
 config::ParamInteger Config::s_admin_port(
-    &Config::s_specification,
-    CN_ADMIN_PORT,
-    "Admin interface port.",
-    DEFAULT_ADMIN_HTTP_PORT);
+    &Config::s_specification, CN_ADMIN_PORT, "Admin interface port.", DEFAULT_ADMIN_HTTP_PORT);
 
 config::ParamBool Config::s_admin_auth(
-    &Config::s_specification,
-    CN_ADMIN_AUTH,
-    "Admin interface authentication.",
-    true);
+    &Config::s_specification, CN_ADMIN_AUTH, "Admin interface authentication.", true);
 
 config::ParamBool Config::s_admin_enabled(
-    &Config::s_specification,
-    CN_ADMIN_ENABLED,
-    "Admin interface is enabled.",
-    true);
+    &Config::s_specification, CN_ADMIN_ENABLED, "Admin interface is enabled.", true);
 
 config::ParamString Config::s_admin_pam_rw_service(
-    &Config::s_specification,
-    CN_ADMIN_PAM_READWRITE_SERVICE,
-    "PAM service for read-write users.",
-    "");
+    &Config::s_specification, CN_ADMIN_PAM_READWRITE_SERVICE, "PAM service for read-write users.", "");
 
 config::ParamString Config::s_admin_pam_ro_service(
-    &Config::s_specification,
-    CN_ADMIN_PAM_READONLY_SERVICE,
-    "PAM service for read-only users.",
-    "");
+    &Config::s_specification, CN_ADMIN_PAM_READONLY_SERVICE, "PAM service for read-only users.", "");
 
-config::ParamString Config::s_admin_ssl_key(
-    &Config::s_specification,
-    CN_ADMIN_SSL_KEY,
-    "Admin SSL key",
-    "");
+config::ParamString Config::s_admin_ssl_key(&Config::s_specification, CN_ADMIN_SSL_KEY, "Admin SSL key", "");
 
-config::ParamEnum<mxb::ssl_version::Version> Config::s_admin_ssl_version(
-    &Config::s_specification,
+config::ParamEnum<mxb::ssl_version::Version> Config::s_admin_ssl_version(&Config::s_specification,
     CN_ADMIN_SSL_VERSION,
     "Minimum required TLS protocol version for the REST API",
-    {
-        {mxb::ssl_version::SSL_TLS_MAX, "MAX"},
+    {{mxb::ssl_version::SSL_TLS_MAX, "MAX"},
         {mxb::ssl_version::TLS10, "TLSv10"},
         {mxb::ssl_version::TLS11, "TLSv11"},
         {mxb::ssl_version::TLS12, "TLSv12"},
-        {mxb::ssl_version::TLS13, "TLSv13"}
-    }, mxb::ssl_version::SSL_TLS_MAX);
+        {mxb::ssl_version::TLS13, "TLSv13"}},
+    mxb::ssl_version::SSL_TLS_MAX);
 
 config::ParamString Config::s_admin_ssl_cert(
-    &Config::s_specification,
-    CN_ADMIN_SSL_CERT,
-    "Admin SSL cert",
-    "");
+    &Config::s_specification, CN_ADMIN_SSL_CERT, "Admin SSL cert", "");
 
 config::ParamString Config::s_admin_ssl_ca_cert(
-    &Config::s_specification,
-    CN_ADMIN_SSL_CA_CERT,
-    "Admin SSL CA cert",
-    "");
+    &Config::s_specification, CN_ADMIN_SSL_CA_CERT, "Admin SSL CA cert", "");
 
 config::ParamString Config::s_local_address(
-    &Config::s_specification,
-    CN_LOCAL_ADDRESS,
-    "Local address to use when connecting.",
-    "");
+    &Config::s_specification, CN_LOCAL_ADDRESS, "Local address to use when connecting.", "");
 
-config::ParamBool Config::s_load_persisted_configs(
-    &Config::s_specification,
+config::ParamBool Config::s_load_persisted_configs(&Config::s_specification,
     CN_LOAD_PERSISTED_CONFIGS,
     "Specifies whether persisted configuration files should be loaded on startup.",
     true);
 
-config::ParamBool Config::s_log_warn_super_user(
-    &Config::s_specification,
+config::ParamBool Config::s_log_warn_super_user(&Config::s_specification,
     CN_LOG_WARN_SUPER_USER,
     "Log a warning when a user with super privilege logs in.",
     false);
 
-config::ParamBool Config::s_gui(
-    &Config::s_specification,
-    CN_ADMIN_GUI,
-    "Enable admin GUI.",
-    true);
+config::ParamBool Config::s_gui(&Config::s_specification, CN_ADMIN_GUI, "Enable admin GUI.", true);
 
 config::ParamBool Config::s_secure_gui(
-    &Config::s_specification,
-    CN_ADMIN_SECURE_GUI,
-    "Only serve GUI over HTTPS.",
-    true);
+    &Config::s_specification, CN_ADMIN_SECURE_GUI, "Only serve GUI over HTTPS.", true);
 
-config::ParamString Config::s_debug(
-    &Config::s_specification,
-    CN_DEBUG,
-    "Debug options",
-    "");
-}
+config::ParamString Config::s_debug(&Config::s_specification, CN_DEBUG, "Debug options", "");
+}  // namespace maxscale
 
 namespace
 {
 
 struct ThisUnit
 {
-    const char*    config_file = nullptr;
-    bool           is_persisted_config = false; /**< True if a persisted configuration file is being parsed */
+    const char* config_file  = nullptr;
+    bool is_persisted_config = false; /**< True if a persisted configuration file is being parsed */
     CONFIG_CONTEXT config_context;
-    bool           is_root_config_file = true;  /**< The first one will be. */
+    bool is_root_config_file = true; /**< The first one will be. */
 } this_unit;
-}
+}  // namespace
 
-static bool get_milliseconds(const char* zName,
-                             const char* zValue,
-                             const char* zDisplay_value,
-                             time_t* pMilliseconds);
+static bool get_milliseconds(
+    const char* zName, const char* zValue, const char* zDisplay_value, time_t* pMilliseconds);
 
 static int get_ifaddr(unsigned char* output);
 static int get_release_string(char* release);
@@ -571,77 +481,77 @@ string Config::ThreadsCount::to_string() const
 
 Config::Config()
     : config::Configuration(CN_MAXSCALE, &s_specification)
-    , log_debug(this, &s_log_debug, [](bool enable) {
+    , log_debug(
+          this,
+          &s_log_debug,
+          [](bool enable) {
 #ifndef SS_DEBUG
-                    MXS_WARNING("The 'log_debug' option has no effect in release mode.");
+    MXS_WARNING("The 'log_debug' option has no effect in release mode.");
 #endif
-                    mxs_log_set_priority_enabled(LOG_DEBUG, enable);
-                }),
-    log_info(this, &s_log_info, [](bool enable) {
-                 mxs_log_set_priority_enabled(LOG_INFO, enable);
-             }),
-    log_notice(this, &s_log_notice, [](bool enable) {
-                   mxs_log_set_priority_enabled(LOG_NOTICE, enable);
-               }),
-    log_warning(this, &s_log_warning, [](bool enable) {
-                    mxs_log_set_priority_enabled(LOG_WARNING, enable);
-                }),
-    log_throttling(this, &s_log_throttling, [](MXS_LOG_THROTTLING throttling) {
-                       mxs_log_set_throttling(&throttling);
-                   }),
-    dump_statements(this, &s_dump_statements, [](session_dump_statements_t when) {
-                        session_set_dump_statements(when);
-                    }),
-    session_trace(this, &s_session_trace, [](int32_t count) {
-                      session_set_session_trace(count);
-                      mxb_log_set_session_trace(count > 0 ? true : false);
-                  }),
-    ms_timestamp(this, &s_ms_timestamp, [](bool enable) {
-                     mxs_log_set_highprecision_enabled(enable);
-                 }),
-    retain_last_statements(this, &s_retain_last_statements, [](int32_t count) {
-                               session_set_retain_last_statements(count);
-                           }),
-    syslog(this, &s_syslog, [](bool enable) {
-               mxs_log_set_syslog_enabled(enable);
-           }),
-    maxlog(this, &s_maxlog, [](bool enable) {
-               mxs_log_set_maxlog_enabled(enable);
-           }),
-    auth_conn_timeout(this, &s_auth_conn_timeout),
-    auth_read_timeout(this, &s_auth_read_timeout),
-    auth_write_timeout(this, &s_auth_write_timeout),
-    skip_permission_checks(this, &s_skip_permission_checks),
-    passive(this, &s_passive, [](bool value) {
-                if (Config::get().passive.get() && !value)
-                {
-                    // If we were passive, but no longer are, we register the time.
-                    Config::get().promoted_at = mxs_clock();
-                }
-            }),
-    qc_cache_max_size(this, &s_qc_cache_max_size, [](int64_t size) {
-                          Config::get().qc_cache_properties.max_size = size;
-                          qc_set_cache_properties(&Config::get().qc_cache_properties);
-                      }),
-    admin_log_auth_failures(this, &s_admin_log_auth_failures),
-    query_retries(this, &s_query_retries),
-    query_retry_timeout(this, &s_query_retry_timeout),
-    users_refresh_time(this, &s_users_refresh_time),
-    users_refresh_interval(this, &s_users_refresh_interval),
-    writeq_high_water(this, &s_writeq_high_water),
-    writeq_low_water(this, &s_writeq_low_water),
-    max_auth_errors_until_block(this, &s_max_auth_errors_until_block),
-    rebalance_threshold(this, &s_rebalance_threshold),
-    rebalance_period(this, &s_rebalance_period, [](const std::chrono::milliseconds&) {
-                         mxb_assert(MainWorker::get());
-                         MainWorker::get()->update_rebalancing();
-                     }),
-    rebalance_window(this, &s_rebalance_window),
-    skip_name_resolve(this, &s_skip_name_resolve),
-    config_check(false),
-    log_target(MXB_LOG_TARGET_DEFAULT),
-    substitute_variables(false),
-    promoted_at(0)
+    mxs_log_set_priority_enabled(LOG_DEBUG, enable);
+          })
+, log_info(this, &s_log_info, [](bool enable) { mxs_log_set_priority_enabled(LOG_INFO, enable); })
+, log_notice(this, &s_log_notice, [](bool enable) { mxs_log_set_priority_enabled(LOG_NOTICE, enable); })
+, log_warning(this, &s_log_warning, [](bool enable) { mxs_log_set_priority_enabled(LOG_WARNING, enable); })
+, log_throttling(
+      this, &s_log_throttling, [](MXS_LOG_THROTTLING throttling) { mxs_log_set_throttling(&throttling); })
+, dump_statements(
+      this, &s_dump_statements, [](session_dump_statements_t when) { session_set_dump_statements(when); })
+, session_trace(
+      this,
+      &s_session_trace,
+      [](int32_t count) {
+    session_set_session_trace(count);
+    mxb_log_set_session_trace(count > 0 ? true : false);
+      })
+, ms_timestamp(this, &s_ms_timestamp, [](bool enable) { mxs_log_set_highprecision_enabled(enable); })
+, retain_last_statements(
+      this, &s_retain_last_statements, [](int32_t count) { session_set_retain_last_statements(count); })
+, syslog(this, &s_syslog, [](bool enable) { mxs_log_set_syslog_enabled(enable); })
+, maxlog(this, &s_maxlog, [](bool enable) { mxs_log_set_maxlog_enabled(enable); })
+, auth_conn_timeout(this, &s_auth_conn_timeout)
+, auth_read_timeout(this, &s_auth_read_timeout)
+, auth_write_timeout(this, &s_auth_write_timeout)
+, skip_permission_checks(this, &s_skip_permission_checks)
+, passive(
+      this,
+      &s_passive,
+      [](bool value) {
+    if (Config::get().passive.get() && !value)
+    {
+        // If we were passive, but no longer are, we register the time.
+        Config::get().promoted_at = mxs_clock();
+    }
+      })
+, qc_cache_max_size(
+      this,
+      &s_qc_cache_max_size,
+      [](int64_t size) {
+    Config::get().qc_cache_properties.max_size = size;
+    qc_set_cache_properties(&Config::get().qc_cache_properties);
+      })
+, admin_log_auth_failures(this, &s_admin_log_auth_failures)
+, query_retries(this, &s_query_retries)
+, query_retry_timeout(this, &s_query_retry_timeout)
+, users_refresh_time(this, &s_users_refresh_time)
+, users_refresh_interval(this, &s_users_refresh_interval)
+, writeq_high_water(this, &s_writeq_high_water)
+, writeq_low_water(this, &s_writeq_low_water)
+, max_auth_errors_until_block(this, &s_max_auth_errors_until_block)
+, rebalance_threshold(this, &s_rebalance_threshold)
+, rebalance_period(
+      this,
+      &s_rebalance_period,
+      [](const std::chrono::milliseconds&) {
+    mxb_assert(MainWorker::get());
+    MainWorker::get()->update_rebalancing();
+      })
+, rebalance_window(this, &s_rebalance_window)
+, skip_name_resolve(this, &s_skip_name_resolve)
+, config_check(false)
+, log_target(MXB_LOG_TARGET_DEFAULT)
+, substitute_variables(false)
+, promoted_at(0)
 {
     add_native<ParamThreadsCount, ThreadsCount>(&n_threads, &s_n_threads);
     add_native(&qc_name, &s_qc_name);
@@ -721,7 +631,7 @@ bool Config::configure(const mxs::ConfigParameters& params, mxs::ConfigParameter
         {
             bool found = false;
 
-            const auto& name = kv.first;
+            const auto& name  = kv.first;
             const auto& value = kv.second;
 
             if (maxscale::event::validate(name, value) == maxscale::event::ACCEPTED)
@@ -759,7 +669,7 @@ bool Config::configure(const mxs::ConfigParameters& params, mxs::ConfigParameter
                 this->qc_cache_properties.max_size = 0;
                 MXS_WARNING("Failed to automatically detect available system memory: disabling the query "
                             "classifier cache. To enable it, add '%s' to the configuration file.",
-                            CN_QUERY_CLASSIFIER_CACHE_SIZE);
+                    CN_QUERY_CLASSIFIER_CACHE_SIZE);
             }
             else if (this->qc_cache_properties.max_size == 0)
             {
@@ -768,7 +678,7 @@ bool Config::configure(const mxs::ConfigParameters& params, mxs::ConfigParameter
             else
             {
                 MXS_NOTICE("Using up to %s of memory for query classifier cache",
-                           mxb::pretty_size(this->qc_cache_properties.max_size).c_str());
+                    mxb::pretty_size(this->qc_cache_properties.max_size).c_str());
             }
         }
     }
@@ -795,9 +705,8 @@ bool Config::post_configure()
     return rv;
 }
 
-bool Config::ParamUsersRefreshTime::from_string(const std::string& value_as_string,
-                                                value_type* pValue,
-                                                std::string* pMessage) const
+bool Config::ParamUsersRefreshTime::from_string(
+    const std::string& value_as_string, value_type* pValue, std::string* pMessage) const
 {
     bool rv = true;
 
@@ -808,7 +717,7 @@ bool Config::ParamUsersRefreshTime::from_string(const std::string& value_as_stri
     {
         MXS_NOTICE("The value of '%s' is less than 0, users will be updated "
                    "as fast as the user account manager can.",
-                   CN_USERS_REFRESH_TIME);
+            CN_USERS_REFRESH_TIME);
         // Strictly speaking they will be refreshed once every 68 years,
         // but I just don't beleave the uptime will be that long.
         *pValue = value_type(INT32_MAX);
@@ -833,24 +742,23 @@ std::string Config::ParamLogThrottling::to_string(const value_type& value) const
     return ss.str();
 }
 
-bool Config::ParamLogThrottling::from_string(const std::string& value_as_string,
-                                             value_type* pValue,
-                                             std::string* pMessage) const
+bool Config::ParamLogThrottling::from_string(
+    const std::string& value_as_string, value_type* pValue, std::string* pMessage) const
 {
     bool rv = false;
 
     if (value_as_string.empty())
     {
         *pValue = MXS_LOG_THROTTLING {0, 0, 0};
-        rv = true;
+        rv      = true;
     }
     else
     {
         char v[value_as_string.size() + 1];
         strcpy(v, value_as_string.c_str());
 
-        char* count = v;
-        char* window_ms = NULL;
+        char* count       = v;
+        char* window_ms   = NULL;
         char* suppress_ms = NULL;
 
         window_ms = strchr(count, ',');
@@ -873,7 +781,8 @@ bool Config::ParamLogThrottling::from_string(const std::string& value_as_string,
                       "The format of the value for `log_throttling` is 'X, Y, Z', where "
                       "X is the maximum number of times a particular error can be logged "
                       "in the time window of Y milliseconds, before the logging is suppressed "
-                      "for Z milliseconds.", value_as_string.c_str());
+                      "for Z milliseconds.",
+                value_as_string.c_str());
         }
         else
         {
@@ -881,23 +790,23 @@ bool Config::ParamLogThrottling::from_string(const std::string& value_as_string,
             time_t w;
             time_t s;
 
-            if (c >= 0
-                && get_milliseconds(name().c_str(), window_ms, value_as_string.c_str(), &w)
+            if (c >= 0 && get_milliseconds(name().c_str(), window_ms, value_as_string.c_str(), &w)
                 && get_milliseconds(name().c_str(), suppress_ms, value_as_string.c_str(), &s))
             {
                 MXS_LOG_THROTTLING throttling;
-                throttling.count = c;
-                throttling.window_ms = w;
+                throttling.count       = c;
+                throttling.window_ms   = w;
                 throttling.suppress_ms = s;
 
                 *pValue = throttling;
-                rv = true;
+                rv      = true;
             }
             else
             {
                 MXS_ERROR("Invalid value for the `log_throttling` configuration entry: '%s'. "
                           "The configuration entry `log_throttling` requires as value one zero or "
-                          "positive integer and two durations.", value_as_string.c_str());
+                          "positive integer and two durations.",
+                    value_as_string.c_str());
             }
         }
     }
@@ -914,34 +823,33 @@ json_t* Config::ParamLogThrottling::to_json(const value_type& value) const
     return pJson;
 }
 
-bool Config::ParamLogThrottling::from_json(const json_t* pJson,
-                                           value_type* pValue,
-                                           std::string* pMessage) const
+bool Config::ParamLogThrottling::from_json(
+    const json_t* pJson, value_type* pValue, std::string* pMessage) const
 {
     bool rv = false;
 
     if (json_is_object(pJson))
     {
-        json_t* pCount = json_object_get(pJson, "count");
-        json_t* pWindow = json_object_get(pJson, "window");
+        json_t* pCount    = json_object_get(pJson, "count");
+        json_t* pWindow   = json_object_get(pJson, "window");
         json_t* pSuppress = json_object_get(pJson, "suppress");
 
-        if (pCount && json_is_integer(pCount)
-            && pWindow && (json_is_integer(pWindow) || json_is_string(pWindow))
-            && pSuppress && (json_is_integer(pSuppress) || json_is_string(pSuppress)))
+        if (pCount && json_is_integer(pCount) && pWindow
+            && (json_is_integer(pWindow) || json_is_string(pWindow)) && pSuppress
+            && (json_is_integer(pSuppress) || json_is_string(pSuppress)))
         {
             time_t w;
             time_t s;
 
-            rv = true;
+            rv            = true;
             pValue->count = json_integer_value(pCount);
 
             if (json_is_integer(pWindow))
             {
                 pValue->window_ms = json_integer_value(pWindow);
             }
-            else if (get_milliseconds(name().c_str(), json_string_value(pWindow), json_string_value(pWindow),
-                                      &w))
+            else if (get_milliseconds(
+                         name().c_str(), json_string_value(pWindow), json_string_value(pWindow), &w))
             {
                 pValue->window_ms = w;
             }
@@ -954,8 +862,8 @@ bool Config::ParamLogThrottling::from_json(const json_t* pJson,
             {
                 pValue->suppress_ms = json_integer_value(pSuppress);
             }
-            else if (get_milliseconds(name().c_str(), json_string_value(pSuppress),
-                                      json_string_value(pSuppress), &s))
+            else if (get_milliseconds(
+                         name().c_str(), json_string_value(pSuppress), json_string_value(pSuppress), &s))
             {
                 pValue->suppress_ms = s;
             }
@@ -966,10 +874,9 @@ bool Config::ParamLogThrottling::from_json(const json_t* pJson,
         }
         else if (pMessage)
         {
-            *pMessage =
-                "Expected an object like '{ count = <integer>, window = <integer>, "
-                "suppress = <integer> }' but one or more of the keys were missing and/or "
-                "one or more of the values were not an integer.";
+            *pMessage = "Expected an object like '{ count = <integer>, window = <integer>, "
+                        "suppress = <integer> }' but one or more of the keys were missing and/or "
+                        "one or more of the values were not an integer.";
         }
     }
     else
@@ -982,9 +889,8 @@ bool Config::ParamLogThrottling::from_json(const json_t* pJson,
     return rv;
 }
 
-bool Config::ParamThreadsCount::from_string(const std::string& value_as_string,
-                                            value_type* pValue,
-                                            std::string* pMessage) const
+bool Config::ParamThreadsCount::from_string(
+    const std::string& value_as_string, value_type* pValue, std::string* pMessage) const
 {
     bool rv = true;
 
@@ -1004,8 +910,8 @@ bool Config::ParamThreadsCount::from_string(const std::string& value_as_string,
             {
                 MXS_WARNING("Number of threads set to %d, which is greater than "
                             "the number of processors available: %d",
-                            (int)value,
-                            processor_count);
+                    (int) value,
+                    processor_count);
             }
 
             // TODO: Update documentation once this limitation is removed
@@ -1014,8 +920,8 @@ bool Config::ParamThreadsCount::from_string(const std::string& value_as_string,
                 MXS_WARNING("Number of threads set to %d, which is greater than the "
                             "hard maximum of %d. Number of threads adjusted down "
                             "accordingly.",
-                            (int)value,
-                            MXS_MAX_ROUTING_THREADS);
+                    (int) value,
+                    MXS_MAX_ROUTING_THREADS);
                 value = MXS_MAX_ROUTING_THREADS;
             }
 
@@ -1025,12 +931,12 @@ bool Config::ParamThreadsCount::from_string(const std::string& value_as_string,
 
     return rv;
 }
-}
+}  // namespace maxscale
 
 static bool process_config_context(CONFIG_CONTEXT*);
 static bool process_config_update(CONFIG_CONTEXT*);
 static bool check_config_objects(CONFIG_CONTEXT* context);
-static int  maxscale_getline(char** dest, int* size, FILE* file);
+static int maxscale_getline(char** dest, int* size, FILE* file);
 static bool check_first_last_char(const char* string, char expected);
 static void remove_first_last_char(char* value);
 static bool test_regex_string_validity(const char* regex_string, const char* key);
@@ -1038,45 +944,31 @@ static bool duration_is_valid(const char* zValue, mxs::config::DurationUnit* pUn
 static bool get_seconds(const char* zName, const char* zValue, seconds* pSeconds);
 static bool get_seconds(const char* zName, const char* zValue, time_t* pSeconds);
 static bool get_milliseconds(const char* zName,
-                             const char* zValue,
-                             const char* zDisplay_value,
-                             std::chrono::milliseconds* pMilliseconds);
+    const char* zValue,
+    const char* zDisplay_value,
+    std::chrono::milliseconds* pMilliseconds);
 static void log_duration_suffix_warning(const char* zName, const char* zValue);
 
-bool        config_has_duplicate_sections(const char* config, DUPLICATE_CONTEXT* context);
-int         create_new_service(CONFIG_CONTEXT* obj);
-int         create_new_server(CONFIG_CONTEXT* obj);
-int         create_new_monitor(CONFIG_CONTEXT* obj, std::set<std::string>& monitored_servers);
-int         create_new_listener(CONFIG_CONTEXT* obj);
-int         create_new_filter(CONFIG_CONTEXT* obj);
-void        config_fix_param(const MXS_MODULE_PARAM* params, const string& name, string* value);
-std::string closest_matching_parameter(const std::string& str,
-                                       const MXS_MODULE_PARAM* base,
-                                       const MXS_MODULE_PARAM* mod);
+bool config_has_duplicate_sections(const char* config, DUPLICATE_CONTEXT* context);
+int create_new_service(CONFIG_CONTEXT* obj);
+int create_new_server(CONFIG_CONTEXT* obj);
+int create_new_monitor(CONFIG_CONTEXT* obj, std::set<std::string>& monitored_servers);
+int create_new_listener(CONFIG_CONTEXT* obj);
+int create_new_filter(CONFIG_CONTEXT* obj);
+void config_fix_param(const MXS_MODULE_PARAM* params, const string& name, string* value);
+std::string closest_matching_parameter(
+    const std::string& str, const MXS_MODULE_PARAM* base, const MXS_MODULE_PARAM* mod);
 
-const MXS_MODULE_PARAM config_filter_params[] =
-{
-    {
-        CN_TYPE, MXS_MODULE_PARAM_STRING,
-        CN_FILTER,
-        MXS_MODULE_OPT_REQUIRED
-    },
-    {
-        CN_MODULE,
-        MXS_MODULE_PARAM_STRING,
-        NULL,
-        MXS_MODULE_OPT_REQUIRED
-    },
-    {NULL}
-};
+const MXS_MODULE_PARAM config_filter_params[]
+    = {{CN_TYPE, MXS_MODULE_PARAM_STRING, CN_FILTER, MXS_MODULE_OPT_REQUIRED},
+        {CN_MODULE, MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED},
+        {NULL}};
 
 /*
  * This is currently only used in config_load_global() to verify that
  * all global configuration item names are valid.
  */
-const char* config_pre_parse_global_params[] =
-{
-    CN_LOGDIR,
+const char* config_pre_parse_global_params[] = {CN_LOGDIR,
     CN_LIBDIR,
     CN_SHAREDIR,
     CN_PIDDIR,
@@ -1091,14 +983,9 @@ const char* config_pre_parse_global_params[] =
     CN_MAXLOG,
     CN_LOG_AUGMENTATION,
     CN_SUBSTITUTE_VARIABLES,
-    NULL
-};
+    NULL};
 
-const char* deprecated_server_params[] =
-{
-    CN_AUTHENTICATOR_OPTIONS,
-    NULL
-};
+const char* deprecated_server_params[] = {CN_AUTHENTICATOR_OPTIONS, NULL};
 
 void config_finish()
 {
@@ -1109,23 +996,19 @@ bool duplicate_context_init(DUPLICATE_CONTEXT* context)
 {
     bool rv = false;
 
-    std::set<std::string>* sections = new(std::nothrow) std::set<std::string>;
+    std::set<std::string>* sections = new (std::nothrow) std::set<std::string>;
     int errcode;
     PCRE2_SIZE erroffset;
-    pcre2_code* re = pcre2_compile((PCRE2_SPTR) "^\\s*\\[(.+)\\]\\s*$",
-                                   PCRE2_ZERO_TERMINATED,
-                                   0,
-                                   &errcode,
-                                   &erroffset,
-                                   NULL);
+    pcre2_code* re = pcre2_compile(
+        (PCRE2_SPTR) "^\\s*\\[(.+)\\]\\s*$", PCRE2_ZERO_TERMINATED, 0, &errcode, &erroffset, NULL);
     pcre2_match_data* mdata = NULL;
 
     if (sections && re && (mdata = pcre2_match_data_create_from_pattern(re, NULL)))
     {
         context->sections = sections;
-        context->re = re;
-        context->mdata = mdata;
-        rv = true;
+        context->re       = re;
+        context->mdata    = mdata;
+        rv                = true;
     }
     else
     {
@@ -1143,11 +1026,10 @@ void duplicate_context_finish(DUPLICATE_CONTEXT* context)
     pcre2_code_free(context->re);
     delete context->sections;
 
-    context->mdata = NULL;
-    context->re = NULL;
+    context->mdata    = NULL;
+    context->re       = NULL;
     context->sections = NULL;
 }
-
 
 /**
  * Remove extra commas and whitespace from a string. This string is interpreted
@@ -1158,7 +1040,7 @@ void duplicate_context_finish(DUPLICATE_CONTEXT* context)
 char* config_clean_string_list(const char* str)
 {
     size_t destsize = strlen(str) + 1;
-    char* dest = (char*)MXS_MALLOC(destsize);
+    char* dest      = (char*) MXS_MALLOC(destsize);
 
     if (dest)
     {
@@ -1168,48 +1050,50 @@ char* config_clean_string_list(const char* str)
         size_t err_offset;
 
         if ((re = pcre2_compile((PCRE2_SPTR) "[[:space:],]*([^,]*[^[:space:],])[[:space:],]*",
-                                PCRE2_ZERO_TERMINATED,
-                                0,
-                                &re_err,
-                                &err_offset,
-                                NULL)) == NULL
+                 PCRE2_ZERO_TERMINATED,
+                 0,
+                 &re_err,
+                 &err_offset,
+                 NULL))
+                == NULL
             || (data = pcre2_match_data_create_from_pattern(re, NULL)) == NULL)
         {
             PCRE2_UCHAR errbuf[MXS_STRERROR_BUFLEN];
             pcre2_get_error_message(re_err, errbuf, sizeof(errbuf));
             MXS_ERROR("[%s] Regular expression compilation failed at %d: %s",
-                      __FUNCTION__,
-                      (int)err_offset,
-                      errbuf);
+                __FUNCTION__,
+                (int) err_offset,
+                errbuf);
             pcre2_code_free(re);
             MXS_FREE(dest);
             return NULL;
         }
 
         const char* replace = "$1,";
-        int rval = 0;
+        int rval            = 0;
         size_t destsize_tmp = destsize;
         while ((rval = pcre2_substitute(re,
-                                        (PCRE2_SPTR) str,
-                                        PCRE2_ZERO_TERMINATED,
-                                        0,
-                                        PCRE2_SUBSTITUTE_GLOBAL,
-                                        data,
-                                        NULL,
-                                        (PCRE2_SPTR) replace,
-                                        PCRE2_ZERO_TERMINATED,
-                                        (PCRE2_UCHAR*) dest,
-                                        &destsize_tmp)) == PCRE2_ERROR_NOMEMORY)
+                    (PCRE2_SPTR) str,
+                    PCRE2_ZERO_TERMINATED,
+                    0,
+                    PCRE2_SUBSTITUTE_GLOBAL,
+                    data,
+                    NULL,
+                    (PCRE2_SPTR) replace,
+                    PCRE2_ZERO_TERMINATED,
+                    (PCRE2_UCHAR*) dest,
+                    &destsize_tmp))
+               == PCRE2_ERROR_NOMEMORY)
         {
             destsize_tmp = 2 * destsize;
-            char* tmp = (char*)MXS_REALLOC(dest, destsize_tmp);
+            char* tmp    = (char*) MXS_REALLOC(dest, destsize_tmp);
             if (tmp == NULL)
             {
                 MXS_FREE(dest);
                 dest = NULL;
                 break;
             }
-            dest = tmp;
+            dest     = tmp;
             destsize = destsize_tmp;
         }
 
@@ -1230,8 +1114,7 @@ CONFIG_CONTEXT::CONFIG_CONTEXT(const string& section)
     : m_name(section)
     , m_was_persisted(this_unit.is_persisted_config)
     , m_next(nullptr)
-{
-}
+{}
 
 CONFIG_CONTEXT* config_context_create(const char* section)
 {
@@ -1292,8 +1175,8 @@ static int ini_global_handler(void* userdata, const char* section, const char* n
  */
 static int ini_handler(void* userdata, const char* section, const char* name, const char* value)
 {
-    CONFIG_CONTEXT* cntxt = (CONFIG_CONTEXT*)userdata;
-    CONFIG_CONTEXT* ptr = cntxt;
+    CONFIG_CONTEXT* cntxt = (CONFIG_CONTEXT*) userdata;
+    CONFIG_CONTEXT* ptr   = cntxt;
 
     const std::set<std::string> legacy_parameters {"passwd"};
 
@@ -1333,9 +1216,9 @@ static int ini_handler(void* userdata, const char* section, const char* name, co
             {
                 MXS_ERROR("The environment variable %s, used as value for parameter %s "
                           "in section %s, does not exist.",
-                          value + 1,
-                          name,
-                          section);
+                    value + 1,
+                    name,
+                    section);
                 return 0;
             }
 
@@ -1383,7 +1266,7 @@ static int ini_handler(void* userdata, const char* section, const char* name, co
             return 0;
         }
 
-        ptr->m_next = cntxt->m_next;
+        ptr->m_next   = cntxt->m_next;
         cntxt->m_next = ptr;
     }
 
@@ -1392,7 +1275,8 @@ static int ini_handler(void* userdata, const char* section, const char* name, co
         MXS_WARNING("Found static and runtime configurations for [%s], ignoring static "
                     "configuration. Move the runtime changes into the static configuration "
                     "file and remove the generated file in '%s' to remove this warning.",
-                    ptr->name(), mxs::config_persistdir());
+            ptr->name(),
+            mxs::config_persistdir());
         ptr->m_was_persisted = true;
         ptr->m_parameters.clear();
     }
@@ -1438,32 +1322,30 @@ static void log_config_error(const char* file, int rval)
     if (rval > 0)
     {
         snprintf(errorbuffer,
-                 sizeof(errorbuffer),
-                 "Failed to parse configuration file %s. Error on line %d.",
-                 file,
-                 rval);
+            sizeof(errorbuffer),
+            "Failed to parse configuration file %s. Error on line %d.",
+            file,
+            rval);
     }
     else if (rval == -1)
     {
         snprintf(errorbuffer,
-                 sizeof(errorbuffer),
-                 "Failed to parse configuration file %s. Could not open file.",
-                 file);
+            sizeof(errorbuffer),
+            "Failed to parse configuration file %s. Could not open file.",
+            file);
     }
     else
     {
         snprintf(errorbuffer,
-                 sizeof(errorbuffer),
-                 "Failed to parse configuration file %s. Memory allocation failed.",
-                 file);
+            sizeof(errorbuffer),
+            "Failed to parse configuration file %s. Memory allocation failed.",
+            file);
     }
 
     MXS_ERROR("%s", errorbuffer);
 }
 
-bool config_load_single_file(const char* file,
-                             DUPLICATE_CONTEXT* dcontext,
-                             CONFIG_CONTEXT* ccontext)
+bool config_load_single_file(const char* file, DUPLICATE_CONTEXT* dcontext, CONFIG_CONTEXT* ccontext)
 {
     int rval = -1;
 
@@ -1499,7 +1381,7 @@ int config_cb(const char* fpath, const struct stat* sb, int typeflag, struct FTW
 {
     int rval = 0;
 
-    if (typeflag == FTW_SL)     // A symbolic link; let's see what it points to.
+    if (typeflag == FTW_SL)  // A symbolic link; let's see what it points to.
     {
         struct stat sb;
 
@@ -1518,7 +1400,7 @@ int config_cb(const char* fpath, const struct stat* sb, int typeflag, struct FTW
                 // Points to a directory; we'll ignore that.
                 MXS_WARNING("Symbolic link %s in configuration directory points to a "
                             "directory; it will be ignored.",
-                            fpath);
+                    fpath);
                 break;
 
             default:
@@ -1530,7 +1412,7 @@ int config_cb(const char* fpath, const struct stat* sb, int typeflag, struct FTW
         {
             MXS_WARNING("Could not get information about the symbolic link %s; "
                         "it will be ignored.",
-                        fpath);
+                fpath);
         }
     }
 
@@ -1543,20 +1425,20 @@ int config_cb(const char* fpath, const struct stat* sb, int typeflag, struct FTW
         }
     }
 
-    if (typeflag == FTW_F)      // We are only interested in files,
+    if (typeflag == FTW_F)  // We are only interested in files,
     {
         const char* filename = fpath + ftwbuf->base;
-        const char* dot = strrchr(filename, '.');
+        const char* dot      = strrchr(filename, '.');
 
         if (hidden_dirs.count(std::string(fpath, fpath + ftwbuf->base - 1)))
         {
             MXS_INFO("Ignoring file inside hidden directory: %s", fpath);
         }
-        else if (dot && *filename != '.')   // that have a suffix and are not hidden,
+        else if (dot && *filename != '.')  // that have a suffix and are not hidden,
         {
             const char* suffix = dot + 1;
 
-            if (strcmp(suffix, "cnf") == 0)     // that is ".cnf".
+            if (strcmp(suffix, "cnf") == 0)  // that is ".cnf".
             {
                 mxb_assert(current_dcontext);
                 mxb_assert(current_ccontext);
@@ -1599,11 +1481,11 @@ static bool config_load_dir(const char* dir, DUPLICATE_CONTEXT* dcontext, CONFIG
     static std::mutex lock;
     std::lock_guard<std::mutex> guard(lock);
 
-    int nopenfd = 5;    // Maximum concurrently opened directory descriptors
+    int nopenfd = 5;  // Maximum concurrently opened directory descriptors
 
     current_dcontext = dcontext;
     current_ccontext = ccontext;
-    int rv = nftw(dir, config_cb, nopenfd, FTW_PHYS);
+    int rv           = nftw(dir, config_cb, nopenfd, FTW_PHYS);
     current_ccontext = NULL;
     current_dcontext = NULL;
     hidden_dirs.clear();
@@ -1631,9 +1513,7 @@ static bool is_directory(const char* dir)
         }
         else
         {
-            MXS_WARNING("Could not access %s, not reading: %s",
-                        dir,
-                        mxs_strerror(errno));
+            MXS_WARNING("Could not access %s, not reading: %s", dir, mxs_strerror(errno));
         }
     }
     else
@@ -1726,8 +1606,7 @@ bool export_config_file(const char* filename)
 
         if (write(fd, payload.c_str(), payload.size()) == -1)
         {
-            MXS_ERROR("Failed to write to file '%s': %d, %s",
-                      filename, errno, mxs_strerror(errno));
+            MXS_ERROR("Failed to write to file '%s': %d, %s", filename, errno, mxs_strerror(errno));
             rval = false;
         }
 
@@ -1735,8 +1614,8 @@ bool export_config_file(const char* filename)
     }
     else
     {
-        MXS_ERROR("Failed to open configuration export file '%s': %d, %s",
-                  filename, errno, mxs_strerror(errno));
+        MXS_ERROR(
+            "Failed to open configuration export file '%s': %d, %s", filename, errno, mxs_strerror(errno));
         rval = false;
     }
 
@@ -1755,7 +1634,7 @@ bool export_config_file(const char* filename)
  *
  * @return True on success, false on fatal error
  */
-static bool config_load_and_process(const char* filename, bool (* process_config)(CONFIG_CONTEXT*))
+static bool config_load_and_process(const char* filename, bool (*process_config)(CONFIG_CONTEXT*))
 {
     bool rval = false;
     DUPLICATE_CONTEXT dcontext;
@@ -1766,7 +1645,7 @@ static bool config_load_and_process(const char* filename, bool (* process_config
         if (config_load_single_file(filename, &dcontext, &this_unit.config_context))
         {
             this_unit.is_root_config_file = false;
-            const char DIR_SUFFIX[] = ".d";
+            const char DIR_SUFFIX[]       = ".d";
 
             char dir[strlen(filename) + sizeof(DIR_SUFFIX)];
             strcpy(dir, filename);
@@ -1781,8 +1660,8 @@ static bool config_load_and_process(const char* filename, bool (* process_config
 
             const char* persist_cnf = mxs::config_persistdir();
 
-            if (mxs::Config::get().load_persisted_configs
-                && is_directory(persist_cnf) && contains_cnf_files(persist_cnf))
+            if (mxs::Config::get().load_persisted_configs && is_directory(persist_cnf)
+                && contains_cnf_files(persist_cnf))
             {
                 /**
                  * Set the global flag that we are processing a persisted configuration.
@@ -1792,12 +1671,13 @@ static bool config_load_and_process(const char* filename, bool (* process_config
                  * TODO: Figure out a cleaner way to do this
                  */
                 this_unit.is_persisted_config = true;
-                have_persisted_configs = true;
+                have_persisted_configs        = true;
 
                 MXS_NOTICE("Runtime configuration changes have been done to MaxScale. Loading persisted "
                            "configuration files and applying them on top of the main configuration file. "
                            "These changes can override the values of the main configuration file: "
-                           "To revert them, remove all the files in '%s'.", persist_cnf);
+                           "To revert them, remove all the files in '%s'.",
+                    persist_cnf);
                 DUPLICATE_CONTEXT p_dcontext;
                 /**
                  * We need to initialize a second duplicate context for the
@@ -1829,7 +1709,8 @@ static bool config_load_and_process(const char* filename, bool (* process_config
                         MXS_WARNING("Persisted configuration files generated by runtime configuration "
                                     "changes were found at '%s' and at least one configuration error was "
                                     "encountered. If the errors relate to any of the persisted configuration "
-                                    "files, remove the offending files and restart MaxScale.", persist_cnf);
+                                    "files, remove the offending files and restart MaxScale.",
+                            persist_cnf);
                     }
                 }
             }
@@ -1877,7 +1758,7 @@ bool config_load(const char* filename)
     mxb_assert(!this_unit.config_file);
 
     this_unit.config_file = filename;
-    bool rval = config_load_and_process(filename, process_config_context);
+    bool rval             = config_load_and_process(filename, process_config_context);
 
     return rval;
 }
@@ -1936,19 +1817,18 @@ std::pair<const MXS_MODULE_PARAM*, const MXS_MODULE*> get_module_details(const C
     return {nullptr, nullptr};
 }
 
-CONFIG_CONTEXT* name_to_object(const std::vector<CONFIG_CONTEXT*>& objects,
-                               const CONFIG_CONTEXT* obj,
-                               std::string name)
+CONFIG_CONTEXT* name_to_object(
+    const std::vector<CONFIG_CONTEXT*>& objects, const CONFIG_CONTEXT* obj, std::string name)
 {
     CONFIG_CONTEXT* rval = nullptr;
 
     fix_object_name(name);
 
     auto equal_name = [&](CONFIG_CONTEXT* c) {
-            std::string s = c->m_name;
-            fix_object_name(s);
-            return s == name;
-        };
+        std::string s = c->m_name;
+        fix_object_name(s);
+        return s == name;
+    };
 
     auto it = std::find_if(objects.begin(), objects.end(), equal_name);
 
@@ -1956,8 +1836,8 @@ CONFIG_CONTEXT* name_to_object(const std::vector<CONFIG_CONTEXT*>& objects,
     {
         MXS_ERROR("Could not find object '%s' that '%s' depends on. "
                   "Check that the configuration object exists.",
-                  name.c_str(),
-                  obj->name());
+            name.c_str(),
+            obj->name());
     }
     else
     {
@@ -1967,8 +1847,8 @@ CONFIG_CONTEXT* name_to_object(const std::vector<CONFIG_CONTEXT*>& objects,
     return rval;
 }
 
-std::unordered_set<CONFIG_CONTEXT*> get_dependencies(const std::vector<CONFIG_CONTEXT*>& objects,
-                                                     const CONFIG_CONTEXT* obj)
+std::unordered_set<CONFIG_CONTEXT*> get_dependencies(
+    const std::vector<CONFIG_CONTEXT*>& objects, const CONFIG_CONTEXT* obj)
 {
     std::unordered_set<CONFIG_CONTEXT*> rval;
     std::string type = obj->m_parameters.get_string(CN_TYPE);
@@ -1991,8 +1871,7 @@ std::unordered_set<CONFIG_CONTEXT*> get_dependencies(const std::vector<CONFIG_CO
         {
             if (obj->m_parameters.contains(p[i].name))
             {
-                if (p[i].type == MXS_MODULE_PARAM_SERVICE
-                    || p[i].type == MXS_MODULE_PARAM_SERVER
+                if (p[i].type == MXS_MODULE_PARAM_SERVICE || p[i].type == MXS_MODULE_PARAM_SERVER
                     || p[i].type == MXS_MODULE_PARAM_TARGET)
                 {
                     std::string v = obj->m_parameters.get_string(p[i].name);
@@ -2043,9 +1922,9 @@ struct Node
 {
     static const int NOT_VISITED = 0;
 
-    T    value;
-    int  index;
-    int  lowlink;
+    T value;
+    int index;
+    int lowlink;
     bool on_stack;
 
     Node(T value)
@@ -2053,8 +1932,7 @@ struct Node
         , index(NOT_VISITED)
         , lowlink(NOT_VISITED)
         , on_stack(false)
-    {
-    }
+    {}
 };
 
 template<class T>
@@ -2082,8 +1960,8 @@ Groups<T> get_graph_cycles(Container<T> graph)
     std::vector<Node<T>> nodes;
 
     auto find_node = [&](T target, const Node<T>& n) {
-            return n.value == target;
-        };
+        return n.value == target;
+    };
 
     // Iterate over all values and place unique values in the vector.
     for (auto&& a : graph)
@@ -2108,64 +1986,64 @@ Groups<T> get_graph_cycles(Container<T> graph)
     Groups<T> groups;
 
     std::function<void(Node<T>*)> visit_node = [&](Node<T>* n) {
-            static int s_index = 1;
-            n->index = s_index++;
-            n->lowlink = n->index;
-            stack.push_back(n);
-            n->on_stack = true;
-            auto range = node_graph.equal_range(n);
+        static int s_index = 1;
+        n->index           = s_index++;
+        n->lowlink         = n->index;
+        stack.push_back(n);
+        n->on_stack = true;
+        auto range  = node_graph.equal_range(n);
 
-            for (auto it = range.first; it != range.second; it++)
+        for (auto it = range.first; it != range.second; it++)
+        {
+            Node<T>* s = it->second;
+
+            if (s->index == Node<T>::NOT_VISITED)
             {
-                Node<T>* s = it->second;
-
-                if (s->index == Node<T>::NOT_VISITED)
-                {
-                    visit_node(s);
-                    n->lowlink = std::min(n->lowlink, s->lowlink);
-                }
-                else if (n == s)
-                {
-                    // This isn't strictly according to the algorithm but this is a convenient spot where we
-                    // can easily spot cycles of size one. Adding an extra group with the two nodes in it
-                    // causes it to be reported correctly.
-                    groups.push_back({n->value, s->value});
-                }
-                else if (s->on_stack)
-                {
-                    n->lowlink = std::min(n->lowlink, s->index);
-                }
+                visit_node(s);
+                n->lowlink = std::min(n->lowlink, s->lowlink);
             }
-
-            if (n->index == n->lowlink)
+            else if (n == s)
             {
-                // Start a new group
-                groups.emplace_back();
-
-                Node<T>* c;
-
-                do
-                {
-                    c = stack.back();
-                    stack.pop_back();
-                    c->on_stack = false;
-                    groups.back().push_back(c->value);
-                }
-                while (c != n);
+                // This isn't strictly according to the algorithm but this is a convenient spot where we
+                // can easily spot cycles of size one. Adding an extra group with the two nodes in it
+                // causes it to be reported correctly.
+                groups.push_back({n->value, s->value});
             }
-        };
+            else if (s->on_stack)
+            {
+                n->lowlink = std::min(n->lowlink, s->index);
+            }
+        }
+
+        if (n->index == n->lowlink)
+        {
+            // Start a new group
+            groups.emplace_back();
+
+            Node<T>* c;
+
+            do
+            {
+                c = stack.back();
+                stack.pop_back();
+                c->on_stack = false;
+                groups.back().push_back(c->value);
+            }
+            while (c != n);
+        }
+    };
 
     for (auto n = nodes.begin(); n != nodes.end(); n++)
     {
         if (n->index == Node<T>::NOT_VISITED)
         {
-            visit_node((Node<T>*) & (*n));
+            visit_node((Node<T>*) &(*n));
         }
     }
 
     return groups;
 }
-}
+}  // namespace
 
 /**
  * Resolve dependencies in the configuration and validate them
@@ -2203,14 +2081,14 @@ bool resolve_dependencies(std::vector<CONFIG_CONTEXT*>& objects)
             if (group.size() > 1)
             {
                 auto join = [](std::string total, CONFIG_CONTEXT* c) {
-                        return total + " -> " + c->m_name;
-                    };
+                    return total + " -> " + c->m_name;
+                };
 
-                std::string first = group[0]->m_name;
+                std::string first     = group[0]->m_name;
                 std::string str_group = std::accumulate(std::next(group.begin()), group.end(), first, join);
                 str_group += " -> " + first;
-                MXS_ERROR("A circular dependency chain was found in the configuration: %s",
-                          str_group.c_str());
+                MXS_ERROR(
+                    "A circular dependency chain was found in the configuration: %s", str_group.c_str());
                 errors++;
             }
             else
@@ -2226,7 +2104,7 @@ bool resolve_dependencies(std::vector<CONFIG_CONTEXT*>& objects)
 
         // The end result should contain the same set of nodes we started with
         mxb_assert(std::set<CONFIG_CONTEXT*>(result.begin(), result.end())
-                   == std::set<CONFIG_CONTEXT*>(objects.begin(), objects.end())
+                       == std::set<CONFIG_CONTEXT*>(objects.begin(), objects.end())
                    || errors > 0);
 
         objects = std::move(result);
@@ -2322,8 +2200,8 @@ static bool process_config_context(CONFIG_CONTEXT* context)
     {
         MXS_ERROR("%d errors were encountered while processing the configuration "
                   "file '%s'.",
-                  error_count,
-                  this_unit.config_file);
+            error_count,
+            this_unit.config_file);
     }
 
     return error_count == 0;
@@ -2338,19 +2216,18 @@ bool mxs::ConfigParameters::get_bool(const std::string& key) const
 uint64_t mxs::ConfigParameters::get_size(const std::string& key) const
 {
     string param_value = get_string(key);
-    uint64_t intval = 0;
-    MXB_AT_DEBUG(bool rval = ) get_suffixed_size(param_value.c_str(), &intval);
+    uint64_t intval    = 0;
+    MXB_AT_DEBUG(bool rval =) get_suffixed_size(param_value.c_str(), &intval);
     mxb_assert(rval);
     return intval;
 }
 
-milliseconds mxs::ConfigParameters::get_duration_in_ms(const std::string& key,
-                                                       mxs::config::DurationInterpretation interpretation)
-const
+milliseconds mxs::ConfigParameters::get_duration_in_ms(
+    const std::string& key, mxs::config::DurationInterpretation interpretation) const
 {
     string value = get_string(key);
     milliseconds duration {0};
-    MXB_AT_DEBUG(bool rval = ) get_suffixed_duration(value.c_str(), interpretation, &duration);
+    MXB_AT_DEBUG(bool rval =) get_suffixed_duration(value.c_str(), interpretation, &duration);
     // When this function is called, the validity of the value should have been checked.
     mxb_assert_message(rval, "Invalid value for '%s': %s", key.c_str(), value.c_str());
     return duration;
@@ -2398,8 +2275,8 @@ bool mxs::ConfigParameters::contains(const string& key) const
 
 std::vector<SERVER*> mxs::ConfigParameters::get_server_list(const string& key, string* name_error_out) const
 {
-    auto names_list = get_string(key);
-    auto server_names = config_break_list_string(names_list);
+    auto names_list                 = get_string(key);
+    auto server_names               = config_break_list_string(names_list);
     std::vector<SERVER*> server_arr = SERVER::server_find_by_unique_names(server_names);
     for (size_t i = 0; i < server_arr.size(); i++)
     {
@@ -2438,7 +2315,7 @@ std::vector<mxs::Target*> mxs::ConfigParameters::get_target_list(const string& k
 char* mxs::ConfigParameters::get_c_str_copy(const string& key) const
 {
     string value = get_string(key);
-    char* rval = NULL;
+    char* rval   = NULL;
     if (!value.empty())
     {
         rval = MXS_STRDUP_A(value.c_str());
@@ -2446,8 +2323,8 @@ char* mxs::ConfigParameters::get_c_str_copy(const string& key) const
     return rval;
 }
 
-std::unique_ptr<pcre2_code> mxs::ConfigParameters::get_compiled_regex(const string& key, uint32_t options,
-                                                                      uint32_t* output_ovec_size) const
+std::unique_ptr<pcre2_code> mxs::ConfigParameters::get_compiled_regex(
+    const string& key, uint32_t options, uint32_t* output_ovec_size) const
 {
     auto regex_string = get_string(key);
     std::unique_ptr<pcre2_code> code;
@@ -2463,14 +2340,11 @@ std::unique_ptr<pcre2_code> mxs::ConfigParameters::get_compiled_regex(const stri
 }
 
 std::vector<std::unique_ptr<pcre2_code>> mxs::ConfigParameters::get_compiled_regexes(
-    const std::vector<string>& keys,
-    uint32_t options,
-    uint32_t* ovec_size_out,
-    bool* compile_error_out)
+    const std::vector<string>& keys, uint32_t options, uint32_t* ovec_size_out, bool* compile_error_out)
 {
     std::vector<std::unique_ptr<pcre2_code>> rval;
-    bool compile_error = false;
-    uint32_t max_ovec_size = 0;
+    bool compile_error      = false;
+    uint32_t max_ovec_size  = 0;
     uint32_t ovec_size_temp = 0;
     for (auto& key : keys)
     {
@@ -2578,8 +2452,8 @@ bool config_add_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
 bool config_append_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
 {
     mxb_assert(obj->m_parameters.contains(key));
-    auto old_val = obj->m_parameters.get_string(key);
-    string new_val = old_val + "," + value;
+    auto old_val    = obj->m_parameters.get_string(key);
+    string new_val  = old_val + "," + value;
     char* new_val_z = config_clean_string_list(new_val.c_str());
 
     bool rval = false;
@@ -2605,8 +2479,8 @@ void mxs::ConfigParameters::set_multiple(const mxs::ConfigParameters& source)
     }
 }
 
-void mxs::ConfigParameters::set_from_list(std::vector<std::pair<std::string, std::string>> list,
-                                          const MXS_MODULE_PARAM* module_params)
+void mxs::ConfigParameters::set_from_list(
+    std::vector<std::pair<std::string, std::string>> list, const MXS_MODULE_PARAM* module_params)
 {
     // Add custom values.
     for (const auto& a : list)
@@ -2717,21 +2591,14 @@ bool config_can_modify_at_runtime(const char* name)
             return true;
         }
     }
-    std::unordered_set<std::string> static_params
-    {
-        CN_LOG_THROTTLING,
-        "sql_mode",
-        CN_QUERY_CLASSIFIER_ARGS,
-        CN_QUERY_CLASSIFIER,
-        CN_THREADS
-    };
+    std::unordered_set<std::string> static_params {
+        CN_LOG_THROTTLING, "sql_mode", CN_QUERY_CLASSIFIER_ARGS, CN_QUERY_CLASSIFIER, CN_THREADS};
 
     return static_params.count(name);
 }
 
-bool missing_required_parameters(const MXS_MODULE_PARAM* mod_params,
-                                 const mxs::ConfigParameters& params,
-                                 const char* name)
+bool missing_required_parameters(
+    const MXS_MODULE_PARAM* mod_params, const mxs::ConfigParameters& params, const char* name)
 {
     bool rval = false;
 
@@ -2741,9 +2608,7 @@ bool missing_required_parameters(const MXS_MODULE_PARAM* mod_params,
         {
             if ((mod_params[i].options & MXS_MODULE_OPT_REQUIRED) && !params.contains(mod_params[i].name))
             {
-                MXS_ERROR("Mandatory parameter '%s' is not defined for '%s'.",
-                          mod_params[i].name,
-                          name);
+                MXS_ERROR("Mandatory parameter '%s' is not defined for '%s'.", mod_params[i].name, name);
                 rval = true;
             }
         }
@@ -2776,7 +2641,7 @@ static void process_path_parameter(std::string* param)
     if (param->empty() || (*param)[0] != '/')
     {
         const char* mod_dir = mxs::module_configdir();
-        size_t size = param->length() + strlen(mod_dir) + 3;
+        size_t size         = param->length() + strlen(mod_dir) + 3;
         char new_value[size];
 
         sprintf(new_value, "/%s/%s", mod_dir, param->c_str());
@@ -2796,8 +2661,8 @@ static bool param_is_deprecated(const MXS_MODULE_PARAM* params, const char* name
             {
                 MXS_WARNING("Parameter '%s' for module '%s' is deprecated and "
                             "will be ignored.",
-                            name,
-                            modname);
+                    name,
+                    modname);
                 rval = true;
             }
             break;
@@ -2825,7 +2690,6 @@ static bool param_in_set(const MXS_MODULE_PARAM* params, const char* name)
 
 const char* param_type_to_str(const MXS_MODULE_PARAM* params, const char* name)
 {
-
     for (int i = 0; params[i].name; i++)
     {
         if (strcmp(params[i].name, name) == 0)
@@ -2881,10 +2745,8 @@ const char* param_type_to_str(const MXS_MODULE_PARAM* params, const char* name)
                 return "a duration";
             }
 
-            mxb_assert_message(!true,
-                               "Unknown parameter type: dec %d hex %x",
-                               params[i].type,
-                               params[i].type);
+            mxb_assert_message(
+                !true, "Unknown parameter type: dec %d hex %x", params[i].type, params[i].type);
             return "<unknown parameter type>";
         }
     }
@@ -2936,10 +2798,10 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
         }
 
         const MXS_MODULE_PARAM* param_set = nullptr;
-        const MXS_MODULE* mod = nullptr;
-        std::tie(param_set, mod) = get_module_details(obj);
+        const MXS_MODULE* mod             = nullptr;
+        std::tie(param_set, mod)          = get_module_details(obj);
 
-        if (!mod)       // Error is logged in load_module
+        if (!mod)  // Error is logged in load_module
         {
             rval = false;
             continue;
@@ -2964,8 +2826,10 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
             else
             {
                 MXS_ERROR("Unknown parameter '%s' for object '%s' of type '%s'. %s",
-                          param_namez, obj->name(), type.c_str(),
-                          closest_matching_parameter(param_namez, param_set, mod->parameters).c_str());
+                    param_namez,
+                    obj->name(),
+                    type.c_str(),
+                    closest_matching_parameter(param_namez, param_set, mod->parameters).c_str());
                 rval = false;
                 continue;
             }
@@ -2978,7 +2842,7 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
                 {
                     process_path_parameter(&temp);
                 }
-                else    // Fix old-style object names
+                else  // Fix old-style object names
                 {
                     config_fix_param(fix_params, param_namez, &temp);
                 }
@@ -2993,9 +2857,11 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
             {
                 MXS_ERROR("Invalid value '%s' for parameter '%s' for object '%s' "
                           "of type '%s' (was expecting %s)",
-                          param_value.c_str(), param_namez, obj->name(),
-                          type.c_str(),
-                          param_type_to_str(fix_params, param_namez));
+                    param_value.c_str(),
+                    param_namez,
+                    obj->name(),
+                    type.c_str(),
+                    param_type_to_str(fix_params, param_namez));
                 rval = false;
             }
         }
@@ -3017,13 +2883,13 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
 
 int config_truth_value(const char* str)
 {
-    if (strcasecmp(str, "true") == 0 || strcasecmp(str, "on") == 0
-        || strcasecmp(str, "yes") == 0 || strcasecmp(str, "1") == 0)
+    if (strcasecmp(str, "true") == 0 || strcasecmp(str, "on") == 0 || strcasecmp(str, "yes") == 0
+        || strcasecmp(str, "1") == 0)
     {
         return 1;
     }
-    if (strcasecmp(str, "false") == 0 || strcasecmp(str, "off") == 0
-        || strcasecmp(str, "no") == 0 || strcasecmp(str, "0") == 0)
+    if (strcasecmp(str, "false") == 0 || strcasecmp(str, "off") == 0 || strcasecmp(str, "no") == 0
+        || strcasecmp(str, "0") == 0)
     {
         return 0;
     }
@@ -3062,7 +2928,7 @@ static int get_ifaddr(unsigned char* output)
         return 0;
     }
 
-    it = ifc.ifc_req;
+    it  = ifc.ifc_req;
     end = it + (ifc.ifc_len / sizeof(struct ifreq));
 
     for (; it != end; ++it)
@@ -3107,11 +2973,7 @@ static int get_ifaddr(unsigned char* output)
  */
 static int get_release_string(char* release)
 {
-    const char* masks[] =
-    {
-        "/etc/*-version", "/etc/*-release",
-        "/etc/*_version", "/etc/*_release"
-    };
+    const char* masks[] = {"/etc/*-version", "/etc/*-release", "/etc/*_version", "/etc/*_release"};
 
     bool have_distribution;
     char distribution[RELEASE_STR_LENGTH] = "";
@@ -3123,7 +2985,7 @@ static int get_release_string(char* release)
     if ((fd = open("/etc/lsb-release", O_RDONLY)) != -1)
     {
         /* LSB-compliant distribution! */
-        size_t len = read(fd, (char*)distribution, sizeof(distribution) - 1);
+        size_t len = read(fd, (char*) distribution, sizeof(distribution) - 1);
         close(fd);
 
         if (len != (size_t) -1)
@@ -3135,12 +2997,12 @@ static int get_release_string(char* release)
             if (found)
             {
                 have_distribution = true;
-                char* end = strstr(found, "\n");
+                char* end         = strstr(found, "\n");
                 if (end == NULL)
                 {
                     end = distribution + len;
                 }
-                found += 20;    // strlen("DISTRIB_DESCRIPTION=")
+                found += 20;  // strlen("DISTRIB_DESCRIPTION=")
 
                 if (*found == '"' && end[-1] == '"')
                 {
@@ -3168,8 +3030,8 @@ static int get_release_string(char* release)
         if (glob(masks[i], GLOB_NOSORT, NULL, &found) == 0)
         {
             int fd;
-            size_t k = 0;
-            int skipindex = 0;
+            size_t k       = 0;
+            int skipindex  = 0;
             int startindex = 0;
 
             for (k = 0; k < found.gl_pathc; k++)
@@ -3197,14 +3059,14 @@ static int get_release_string(char* release)
                 *new_to++ = ' ';
 
                 size_t to_len = distribution + sizeof(distribution) - 1 - new_to;
-                size_t len = read(fd, (char*)new_to, to_len);
+                size_t len    = read(fd, (char*) new_to, to_len);
 
                 close(fd);
 
                 if (len != (size_t) -1)
                 {
                     new_to[len] = 0;
-                    char* end = strstr(new_to, "\n");
+                    char* end   = strstr(new_to, "\n");
                     if (end)
                     {
                         *end = 0;
@@ -3242,8 +3104,8 @@ bool config_has_duplicate_sections(const char* filename, DUPLICATE_CONTEXT* cont
 {
     bool rval = false;
 
-    int size = 1024;
-    char* buffer = (char*)MXS_MALLOC(size * sizeof(char));
+    int size     = 1024;
+    char* buffer = (char*) MXS_MALLOC(size * sizeof(char));
 
     if (buffer)
     {
@@ -3253,13 +3115,9 @@ bool config_has_duplicate_sections(const char* filename, DUPLICATE_CONTEXT* cont
         {
             while (maxscale_getline(&buffer, &size, file) > 0)
             {
-                if (pcre2_match(context->re,
-                                (PCRE2_SPTR) buffer,
-                                PCRE2_ZERO_TERMINATED,
-                                0,
-                                0,
-                                context->mdata,
-                                NULL) > 0)
+                if (pcre2_match(
+                        context->re, (PCRE2_SPTR) buffer, PCRE2_ZERO_TERMINATED, 0, 0, context->mdata, NULL)
+                    > 0)
                 {
                     /**
                      * Neither of the PCRE2 calls will fail since we know the pattern
@@ -3267,7 +3125,7 @@ bool config_has_duplicate_sections(const char* filename, DUPLICATE_CONTEXT* cont
                      */
                     PCRE2_SIZE len;
                     pcre2_substring_length_bynumber(context->mdata, 1, &len);
-                    len += 1;   /** one for the null terminator */
+                    len += 1; /** one for the null terminator */
                     PCRE2_UCHAR section[len];
                     pcre2_substring_copy_bynumber(context->mdata, 1, section, &len);
 
@@ -3298,7 +3156,6 @@ bool config_has_duplicate_sections(const char* filename, DUPLICATE_CONTEXT* cont
     return rval;
 }
 
-
 /**
  * Read from a FILE pointer until a newline character or the end of the file is found.
  * The provided buffer will be reallocated if it is too small to store the whole
@@ -3317,7 +3174,7 @@ bool config_has_duplicate_sections(const char* filename, DUPLICATE_CONTEXT* cont
 int maxscale_getline(char** dest, int* size, FILE* file)
 {
     char* destptr = *dest;
-    int offset = 0;
+    int offset    = 0;
 
     if (feof(file) || ferror(file))
     {
@@ -3328,7 +3185,7 @@ int maxscale_getline(char** dest, int* size, FILE* file)
     {
         if (*size <= offset)
         {
-            char* tmp = (char*)MXS_REALLOC(destptr, *size * 2);
+            char* tmp = (char*) MXS_REALLOC(destptr, *size * 2);
             if (tmp)
             {
                 destptr = tmp;
@@ -3337,7 +3194,7 @@ int maxscale_getline(char** dest, int* size, FILE* file)
             else
             {
                 destptr[offset - 1] = '\0';
-                *dest = destptr;
+                *dest               = destptr;
                 return -1;
             }
         }
@@ -3369,7 +3226,7 @@ void config_add_defaults(mxs::ConfigParameters* dest, const MXS_MODULE_PARAM* pa
         {
             if (params[i].default_value && !dest->contains(params[i].name))
             {
-                std::string key = params[i].name;
+                std::string key   = params[i].name;
                 std::string value = params[i].default_value;
                 config_fix_param(params, key, &value);
                 dest->set(key, value);
@@ -3392,8 +3249,8 @@ inline int64_t duration_to_int(const string& value)
  * @param param_info Type information for the parameter
  * @return Json integer, boolean or string
  */
-static
-json_t* param_value_to_json(const MXS_MODULE_PARAM* param_info, const string& name, const string& value)
+static json_t* param_value_to_json(
+    const MXS_MODULE_PARAM* param_info, const string& name, const string& value)
 {
     mxb_assert(name == param_info->name);
     json_t* rval = NULL;
@@ -3406,9 +3263,9 @@ json_t* param_value_to_json(const MXS_MODULE_PARAM* param_info, const string& na
         break;
 
     case MXS_MODULE_PARAM_DURATION:
-        rval = json_integer((param_info->options & MXS_MODULE_OPT_DURATION_S) ?
-                            duration_to_int<seconds>(value) :
-                            duration_to_int<milliseconds>(value));
+        rval = json_integer((param_info->options & MXS_MODULE_OPT_DURATION_S)
+                                ? duration_to_int<seconds>(value)
+                                : duration_to_int<milliseconds>(value));
         break;
 
 
@@ -3429,10 +3286,10 @@ json_t* param_value_to_json(const MXS_MODULE_PARAM* param_info, const string& na
 }
 
 void config_add_module_params_json(const mxs::ConfigParameters* parameters,
-                                   const std::unordered_set<std::string>& ignored_params,
-                                   const MXS_MODULE_PARAM* basic_params,
-                                   const MXS_MODULE_PARAM* module_params,
-                                   json_t* output)
+    const std::unordered_set<std::string>& ignored_params,
+    const MXS_MODULE_PARAM* basic_params,
+    const MXS_MODULE_PARAM* module_params,
+    json_t* output)
 {
     for (const auto* param_info : {basic_params, module_params})
     {
@@ -3446,8 +3303,9 @@ void config_add_module_params_json(const mxs::ConfigParameters* parameters,
                     if (parameters->contains(param_name))
                     {
                         const string value = parameters->get_string(param_name);
-                        json_object_set_new(output, param_name.c_str(),
-                                            param_value_to_json(&param_info[i], param_name, value));
+                        json_object_set_new(output,
+                            param_name.c_str(),
+                            param_value_to_json(&param_info[i], param_name, value));
                     }
                     else
                     {
@@ -3474,7 +3332,9 @@ void log_exclusive_param_error(CONFIG_CONTEXT* obj)
     }
 
     MXS_ERROR("Service '%s' is configured with mutually exclusive parameters (%s). "
-              "Only one of them is allowed.", obj->name(), mxb::join(types, ", ").c_str());
+              "Only one of them is allowed.",
+        obj->name(),
+        mxb::join(types, ", ").c_str());
 }
 
 /**
@@ -3497,25 +3357,25 @@ int create_new_service(CONFIG_CONTEXT* obj)
         return 1;
     }
 
-    string user = obj->m_parameters.get_string(CN_USER);
-    string auth = obj->m_parameters.get_string(CN_PASSWORD);
+    string user              = obj->m_parameters.get_string(CN_USER);
+    string auth              = obj->m_parameters.get_string(CN_PASSWORD);
     const MXS_MODULE* module = get_module(router.c_str(), MODULE_ROUTER);
     mxb_assert(module);
 
     if (user.empty() || auth.empty())
     {
         MXS_ERROR("Service '%s' is missing %s%s%s.",
-                  obj->name(),
-                  !user.empty() ? "" : "the 'user' parameter",
-                  user.empty() && auth.empty() ? " and " : "",
-                  !auth.empty() ? "" : "the 'password' parameter");
+            obj->name(),
+            !user.empty() ? "" : "the 'user' parameter",
+            user.empty() && auth.empty() ? " and " : "",
+            !auth.empty() ? "" : "the 'password' parameter");
         return 1;
     }
 
     config_add_defaults(&obj->m_parameters, common_service_params());
     config_add_defaults(&obj->m_parameters, module->parameters);
 
-    int error_count = 0;
+    int error_count  = 0;
     Service* service = Service::create(obj->name(), router.c_str(), &obj->m_parameters);
 
     if (service)
@@ -3531,7 +3391,8 @@ int create_new_service(CONFIG_CONTEXT* obj)
                 else
                 {
                     MXS_ERROR("Unable to find server '%s' that is configured as part of service '%s'.",
-                              a.c_str(), obj->name());
+                        a.c_str(),
+                        obj->name());
                     error_count++;
                 }
             }
@@ -3551,7 +3412,8 @@ int create_new_service(CONFIG_CONTEXT* obj)
                 else
                 {
                     MXS_ERROR("Unable to find target '%s' that is configured as part of service '%s'.",
-                              a.c_str(), obj->name());
+                        a.c_str(),
+                        obj->name());
                     error_count++;
                 }
             }
@@ -3579,7 +3441,9 @@ int create_new_service(CONFIG_CONTEXT* obj)
             else
             {
                 MXS_ERROR("Unable to find monitor '%s' that defines the cluster used by "
-                          "service '%s'.", cluster.c_str(), obj->name());
+                          "service '%s'.",
+                    cluster.c_str(),
+                    obj->name());
                 error_count++;
             }
         }
@@ -3621,7 +3485,7 @@ int create_new_monitor(CONFIG_CONTEXT* obj, std::set<std::string>& monitored_ser
 {
     auto module = obj->m_parameters.get_string(CN_MODULE);
     mxb_assert(!module.empty());
-    int rval = 1;
+    int rval         = 1;
     Monitor* monitor = MonitorManager::create_monitor(obj->name(), module, &obj->m_parameters);
     if (monitor)
     {
@@ -3679,8 +3543,7 @@ int create_new_filter(CONFIG_CONTEXT* obj)
 
         if (!filter_alloc(obj->name(), module, &obj->m_parameters))
         {
-            MXS_ERROR("Failed to create filter '%s'. Memory allocation failed.",
-                      obj->name());
+            MXS_ERROR("Failed to create filter '%s'. Memory allocation failed.", obj->name());
             error_count++;
         }
     }
@@ -3695,9 +3558,7 @@ int create_new_filter(CONFIG_CONTEXT* obj)
 
 bool config_is_ssl_parameter(const char* key)
 {
-    const char* ssl_params[] =
-    {
-        CN_SSL_CERT,
+    const char* ssl_params[] = {CN_SSL_CERT,
         CN_SSL_CA_CERT,
         CN_SSL,
         CN_SSL_KEY,
@@ -3706,8 +3567,7 @@ bool config_is_ssl_parameter(const char* key)
         CN_SSL_VERIFY_PEER_CERTIFICATE,
         CN_SSL_VERIFY_PEER_HOST,
         CN_SSL_CIPHER,
-        NULL
-    };
+        NULL};
 
     for (int i = 0; ssl_params[i]; i++)
     {
@@ -3725,10 +3585,9 @@ bool config_is_ssl_parameter(const char* key)
 {
     bool valid = false;
 
-    if (params->options & (MXS_MODULE_OPT_PATH_W_OK
-                           | MXS_MODULE_OPT_PATH_R_OK
-                           | MXS_MODULE_OPT_PATH_X_OK
-                           | MXS_MODULE_OPT_PATH_F_OK))
+    if (params->options
+        & (MXS_MODULE_OPT_PATH_W_OK | MXS_MODULE_OPT_PATH_R_OK | MXS_MODULE_OPT_PATH_X_OK
+            | MXS_MODULE_OPT_PATH_F_OK))
     {
         char buf[strlen(mxs::module_configdir()) + strlen(value) + 3];
 
@@ -3777,11 +3636,8 @@ bool config_is_ssl_parameter(const char* key)
                  * right or the module doesn't want the directory to be created
                  * if it doesn't exist.
                  */
-                MXS_ERROR("Bad path parameter '%s' (absolute path '%s'): %d, %s",
-                          value,
-                          buf,
-                          er,
-                          mxs_strerror(er));
+                MXS_ERROR(
+                    "Bad path parameter '%s' (absolute path '%s'): %d, %s", value, buf, er, mxs_strerror(er));
             }
             else if (mxs_mkdir_all(buf, mask))
             {
@@ -3792,10 +3648,10 @@ bool config_is_ssl_parameter(const char* key)
             {
                 /** Failed to create the directory, errno is set in `mxs_mkdir_all` */
                 MXS_ERROR("Can't create path '%s' (absolute path '%s'): %d, %s",
-                          value,
-                          buf,
-                          errno,
-                          mxs_strerror(errno));
+                    value,
+                    buf,
+                    errno,
+                    mxs_strerror(errno));
             }
         }
     }
@@ -3808,8 +3664,7 @@ bool config_is_ssl_parameter(const char* key)
     return valid;
 }
 
-static bool config_contains_type(const CONFIG_CONTEXT* ctx, const char* name,
-                                 std::set<std::string> types)
+static bool config_contains_type(const CONFIG_CONTEXT* ctx, const char* name, std::set<std::string> types)
 {
     while (ctx)
     {
@@ -3828,7 +3683,7 @@ void fix_serverlist(char* value)
 {
     string dest;
     char* end;
-    char* start = strtok_r(value, ",", &end);
+    char* start     = strtok_r(value, ",", &end);
     const char* sep = "";
 
     while (start)
@@ -3836,7 +3691,7 @@ void fix_serverlist(char* value)
         fix_object_name(start);
         dest += sep;
         dest += start;
-        sep = ",";
+        sep   = ",";
         start = strtok_r(NULL, ",", &end);
     }
 
@@ -3893,10 +3748,8 @@ void config_fix_param(const MXS_MODULE_PARAM* params, const string& name, string
     value->assign(temp_value);
 }
 
-bool config_param_is_valid(const MXS_MODULE_PARAM* params,
-                           const char* key,
-                           const char* value,
-                           const CONFIG_CONTEXT* context)
+bool config_param_is_valid(
+    const MXS_MODULE_PARAM* params, const char* key, const char* value, const CONFIG_CONTEXT* context)
 {
     bool valid = false;
     char fixed_value[strlen(value) + 1];
@@ -3919,77 +3772,45 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
                 break;
 
             case MXS_MODULE_PARAM_INT:
+            {
+                errno      = 0;
+                long int v = strtol(value, &endptr, 10);
+                (void) v;  // error: ignoring return value of 'strtol'
+                if ((errno == 0) && (endptr != value) && (*endptr == '\0'))
                 {
-                    errno = 0;
-                    long int v = strtol(value, &endptr, 10);
-                    (void)v;    // error: ignoring return value of 'strtol'
-                    if ((errno == 0) && (endptr != value) && (*endptr == '\0'))
-                    {
-                        valid = true;
-                    }
+                    valid = true;
                 }
-                break;
+            }
+            break;
 
             case MXS_MODULE_PARAM_SIZE:
+            {
+                errno           = 0;
+                long long int v = strtoll(value, &endptr, 10);
+                (void) v;  // error: ignoring return value of 'strtoll'
+                if (errno == 0)
                 {
-                    errno = 0;
-                    long long int v = strtoll(value, &endptr, 10);
-                    (void)v;    // error: ignoring return value of 'strtoll'
-                    if (errno == 0)
+                    if (endptr != value)
                     {
-                        if (endptr != value)
+                        switch (*endptr)
                         {
-                            switch (*endptr)
+                        case 'T':
+                        case 't':
+                        case 'G':
+                        case 'g':
+                        case 'M':
+                        case 'm':
+                        case 'K':
+                        case 'k':
+                            if (*(endptr + 1) == '\0'
+                                || ((*(endptr + 1) == 'i' || *(endptr + 1) == 'I') && *(endptr + 2) == '\0'))
                             {
-                            case 'T':
-                            case 't':
-                            case 'G':
-                            case 'g':
-                            case 'M':
-                            case 'm':
-                            case 'K':
-                            case 'k':
-                                if (*(endptr + 1) == '\0'
-                                    || ((*(endptr + 1) == 'i' || *(endptr + 1) == 'I')
-                                        && *(endptr + 2) == '\0'))
-                                {
-                                    valid = true;
-                                }
-                                break;
-
-                            case '\0':
                                 valid = true;
-                                break;
-
-                            default:
-                                break;
-                            }
-                        }
-                    }
-                }
-                break;
-
-            case MXS_MODULE_PARAM_DURATION:
-                {
-                    mxs::config::DurationUnit unit;
-
-                    if (duration_is_valid(value, &unit))
-                    {
-                        valid = true;
-
-                        switch (unit)
-                        {
-                        case mxs::config::DURATION_IN_MILLISECONDS:
-                            if (params[i].options & MXS_MODULE_OPT_DURATION_S)
-                            {
-                                MXS_ERROR("Currently the granularity of '%s' is seconds. The value "
-                                          "cannot be specified in milliseconds.", params[i].name);
-                                valid = false;
                             }
                             break;
 
-                        case mxs::config::DURATION_IN_DEFAULT:
-                            log_duration_suffix_warning(key, value);
+                        case '\0':
+                            valid = true;
                             break;
 
                         default:
@@ -3997,7 +3818,39 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
                         }
                     }
                 }
-                break;
+            }
+            break;
+
+            case MXS_MODULE_PARAM_DURATION:
+            {
+                mxs::config::DurationUnit unit;
+
+                if (duration_is_valid(value, &unit))
+                {
+                    valid = true;
+
+                    switch (unit)
+                    {
+                    case mxs::config::DURATION_IN_MILLISECONDS:
+                        if (params[i].options & MXS_MODULE_OPT_DURATION_S)
+                        {
+                            MXS_ERROR("Currently the granularity of '%s' is seconds. The value "
+                                      "cannot be specified in milliseconds.",
+                                params[i].name);
+                            valid = false;
+                        }
+                        break;
+
+                    case mxs::config::DURATION_IN_DEFAULT:
+                        log_duration_suffix_warning(key, value);
+                        break;
+
+                    default:
+                        break;
+                    }
+                }
+            }
+            break;
 
             case MXS_MODULE_PARAM_BOOL:
                 if (config_truth_value(value) != -1)
@@ -4018,9 +3871,8 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
                     if (!check_first_last_char(value, '"'))
                     {
                         // Change warning to valid=false once quotes are no longer optional
-                        MXS_WARNING("Missing quotes (\") around a quoted string is deprecated: '%s=%s'.",
-                                    key,
-                                    value);
+                        MXS_WARNING(
+                            "Missing quotes (\") around a quoted string is deprecated: '%s=%s'.", key, value);
                     }
                 }
                 break;
@@ -4093,38 +3945,38 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
                 break;
 
             case MXS_MODULE_PARAM_SERVERLIST:
-                {
-                    auto names = config_break_list_string(value);
-                    valid = !names.empty();
+            {
+                auto names = config_break_list_string(value);
+                valid      = !names.empty();
 
-                    for (const auto& elem : names)
+                for (const auto& elem : names)
+                {
+                    if ((context && !config_contains_type(context, elem.c_str(), {CN_SERVER}))
+                        || (!context && !ServerManager::find_by_unique_name(elem)))
                     {
-                        if ((context && !config_contains_type(context, elem.c_str(), {CN_SERVER}))
-                            || (!context && !ServerManager::find_by_unique_name(elem)))
-                        {
-                            valid = false;
-                            break;
-                        }
+                        valid = false;
+                        break;
                     }
                 }
-                break;
+            }
+            break;
 
             case MXS_MODULE_PARAM_TARGETLIST:
-                {
-                    auto names = config_break_list_string(value);
-                    valid = !names.empty();
+            {
+                auto names = config_break_list_string(value);
+                valid      = !names.empty();
 
-                    for (const auto& elem : names)
+                for (const auto& elem : names)
+                {
+                    if ((context && !config_contains_type(context, elem.c_str(), {CN_SERVER, CN_SERVICE}))
+                        || (!context && !mxs::Target::find(elem)))
                     {
-                        if ((context && !config_contains_type(context, elem.c_str(), {CN_SERVER, CN_SERVICE}))
-                            || (!context && !mxs::Target::find(elem)))
-                        {
-                            valid = false;
-                            break;
-                        }
+                        valid = false;
+                        break;
                     }
                 }
-                break;
+            }
+            break;
 
             case MXS_MODULE_PARAM_PATH:
                 valid = check_path_parameter(&params[i], value);
@@ -4172,8 +4024,8 @@ json_t* config_maxscale_to_json(const char* host)
     // This will dump all parameters defined using the new configuration mechanism.
     cnf.fill(param);
 
-    json_t* attr = json_object();
-    time_t started = maxscale_started();
+    json_t* attr     = json_object();
+    time_t started   = maxscale_started();
     time_t activated = started + MXS_CLOCK_TO_SEC(cnf.promoted_at);
     json_object_set_new(attr, CN_PARAMETERS, param);
     json_object_set_new(attr, "version", json_string(MAXSCALE_VERSION));
@@ -4219,27 +4071,20 @@ static bool check_first_last_char(const char* string, char expected)
  */
 static void remove_first_last_char(char* value)
 {
-    size_t len = strlen(value);
+    size_t len     = strlen(value);
     value[len - 1] = '\0';
     memmove(value, value + 1, len - 1);
 }
 
-pcre2_code* compile_regex_string(const char* regex_string,
-                                 bool jit_enabled,
-                                 uint32_t options,
-                                 uint32_t* output_ovector_size)
+pcre2_code* compile_regex_string(
+    const char* regex_string, bool jit_enabled, uint32_t options, uint32_t* output_ovector_size)
 {
-    bool success = true;
-    int errorcode = -1;
+    bool success            = true;
+    int errorcode           = -1;
     PCRE2_SIZE error_offset = -1;
-    uint32_t capcount = 0;
-    pcre2_code* machine =
-        pcre2_compile((PCRE2_SPTR) regex_string,
-                      PCRE2_ZERO_TERMINATED,
-                      options,
-                      &errorcode,
-                      &error_offset,
-                      NULL);
+    uint32_t capcount       = 0;
+    pcre2_code* machine     = pcre2_compile(
+        (PCRE2_SPTR) regex_string, PCRE2_ZERO_TERMINATED, options, &errorcode, &error_offset, NULL);
     if (machine)
     {
         if (jit_enabled)
@@ -4249,7 +4094,7 @@ pcre2_code* compile_regex_string(const char* regex_string,
             {
                 MXS_WARNING("PCRE2 JIT compilation of pattern '%s' failed, "
                             "falling back to normal compilation.",
-                            regex_string);
+                    regex_string);
             }
         }
         /* Check what is the required match_data size for this pattern. */
@@ -4262,9 +4107,7 @@ pcre2_code* compile_regex_string(const char* regex_string,
     }
     else
     {
-        MXS_ERROR("Invalid PCRE2 regular expression '%s' (position '%zu').",
-                  regex_string,
-                  error_offset);
+        MXS_ERROR("Invalid PCRE2 regular expression '%s' (position '%zu').", regex_string, error_offset);
         MXS_PCRE2_PRINT_ERROR(errorcode);
         success = false;
     }
@@ -4300,9 +4143,8 @@ static bool test_regex_string_validity(const char* regex_string, const char* key
     if (!check_first_last_char(regex_string, '/'))
     {
         // return false; // Uncomment this line once '/ .. /' is no longer optional
-        MXS_WARNING("Missing slashes (/) around a regular expression is deprecated: '%s=%s'.",
-                    key,
-                    regex_string);
+        MXS_WARNING(
+            "Missing slashes (/) around a regular expression is deprecated: '%s=%s'.", key, regex_string);
     }
     else
     {
@@ -4310,7 +4152,7 @@ static bool test_regex_string_validity(const char* regex_string, const char* key
     }
 
     pcre2_code* code = compile_regex_string(regex_copy, false, 0, NULL);
-    bool rval = (code != NULL);
+    bool rval        = (code != NULL);
     pcre2_code_free(code);
     return rval;
 }
@@ -4408,9 +4250,9 @@ bool get_suffixed_size(const char* value, uint64_t* dest)
 }
 
 bool get_suffixed_duration(const char* zValue,
-                           mxs::config::DurationInterpretation interpretation,
-                           milliseconds* pDuration,
-                           mxs::config::DurationUnit* pUnit)
+    mxs::config::DurationInterpretation interpretation,
+    milliseconds* pDuration,
+    mxs::config::DurationUnit* pUnit)
 {
     if (!isdigit(*zValue))
     {
@@ -4429,7 +4271,7 @@ bool get_suffixed_duration(const char* zValue,
     {
     case 'H':
     case 'h':
-        unit = mxs::config::DURATION_IN_HOURS;
+        unit     = mxs::config::DURATION_IN_HOURS;
         duration = std::chrono::duration_cast<milliseconds>(std::chrono::hours(value));
         ++zEnd;
         break;
@@ -4438,13 +4280,13 @@ bool get_suffixed_duration(const char* zValue,
     case 'm':
         if (*(zEnd + 1) == 's' || *(zEnd + 1) == 'S')
         {
-            unit = mxs::config::DURATION_IN_MILLISECONDS;
+            unit     = mxs::config::DURATION_IN_MILLISECONDS;
             duration = milliseconds(value);
             ++zEnd;
         }
         else
         {
-            unit = mxs::config::DURATION_IN_MINUTES;
+            unit     = mxs::config::DURATION_IN_MINUTES;
             duration = std::chrono::duration_cast<milliseconds>(std::chrono::minutes(value));
 
             if ((*(zEnd + 1) == 'i' || *(zEnd + 1) == 'I') && (*(zEnd + 2) == 'n' || *(zEnd + 2) == 'N'))
@@ -4457,7 +4299,7 @@ bool get_suffixed_duration(const char* zValue,
 
     case 'S':
     case 's':
-        unit = mxs::config::DURATION_IN_SECONDS;
+        unit     = mxs::config::DURATION_IN_SECONDS;
         duration = std::chrono::duration_cast<milliseconds>(seconds(value));
         ++zEnd;
         break;
@@ -4540,7 +4382,9 @@ static void log_duration_suffix_warning(const char* zName, const char* zValue)
     MXS_INFO("Specifying durations without a suffix denoting the unit "
              "is strongly discouraged as it will be deprecated in the "
              "future: %s=%s. Use the suffixes 'h' (hour), 'm' (minute), "
-             "'s' (second) or 'ms' (milliseconds).", zName, zValue);
+             "'s' (second) or 'ms' (milliseconds).",
+        zName,
+        zValue);
 }
 
 static bool get_seconds(const char* zName, const char* zValue, seconds* pSeconds)
@@ -4555,7 +4399,8 @@ static bool get_seconds(const char* zName, const char* zValue, seconds* pSeconds
         {
         case mxs::config::DURATION_IN_MILLISECONDS:
             MXS_ERROR("Currently the granularity of `%s` is seconds. The value cannot "
-                      "be specified in milliseconds.", zName);
+                      "be specified in milliseconds.",
+                zName);
             valid = false;
             break;
 
@@ -4564,7 +4409,7 @@ static bool get_seconds(const char* zName, const char* zValue, seconds* pSeconds
 
         default:
             *pSeconds = seconds;
-            valid = true;
+            valid     = true;
         }
     }
     else
@@ -4589,10 +4434,8 @@ static bool get_seconds(const char* zName, const char* zValue, time_t* pSeconds)
     return valid;
 }
 
-static bool get_milliseconds(const char* zName,
-                             const char* zValue,
-                             const char* zDisplay_value,
-                             milliseconds* pMilliseconds)
+static bool get_milliseconds(
+    const char* zName, const char* zValue, const char* zDisplay_value, milliseconds* pMilliseconds)
 {
     bool valid = false;
 
@@ -4611,7 +4454,7 @@ static bool get_milliseconds(const char* zName,
         }
 
         *pMilliseconds = milliseconds;
-        valid = true;
+        valid          = true;
     }
     else
     {
@@ -4621,10 +4464,8 @@ static bool get_milliseconds(const char* zName,
     return valid;
 }
 
-static bool get_milliseconds(const char* zName,
-                             const char* zValue,
-                             const char* zDisplay_value,
-                             time_t* pMilliseconds)
+static bool get_milliseconds(
+    const char* zName, const char* zValue, const char* zDisplay_value, time_t* pMilliseconds)
 {
     milliseconds milliseconds;
 
@@ -4638,8 +4479,8 @@ static bool get_milliseconds(const char* zName,
     return valid;
 }
 
-bool config_parse_disk_space_threshold(DiskSpaceLimits* pDisk_space_threshold,
-                                       const char* zDisk_space_threshold)
+bool config_parse_disk_space_threshold(
+    DiskSpaceLimits* pDisk_space_threshold, const char* zDisk_space_threshold)
 {
     mxb_assert(pDisk_space_threshold);
     mxb_assert(zDisk_space_threshold);
@@ -4656,7 +4497,7 @@ bool config_parse_disk_space_threshold(DiskSpaceLimits* pDisk_space_threshold,
 
     while (success && !s.empty())
     {
-        size_t i = s.find_first_of(',');
+        size_t i     = s.find_first_of(',');
         string entry = s.substr(0, i);
 
         s.erase(0, i != string::npos ? i + 1 : i);
@@ -4682,26 +4523,25 @@ bool config_parse_disk_space_threshold(DiskSpaceLimits* pDisk_space_threshold,
                 }
                 else
                 {
-                    MXS_ERROR("The value following the ':' must be a percentage: %s",
-                              entry.c_str());
+                    MXS_ERROR("The value following the ':' must be a percentage: %s", entry.c_str());
                     success = false;
                 }
             }
             else
             {
                 MXS_ERROR("The %s parameter '%s' contains an invalid entry: '%s'",
-                          CN_DISK_SPACE_THRESHOLD,
-                          zDisk_space_threshold,
-                          entry.c_str());
+                    CN_DISK_SPACE_THRESHOLD,
+                    zDisk_space_threshold,
+                    entry.c_str());
                 success = false;
             }
         }
         else
         {
             MXS_ERROR("The %s parameter '%s' contains an invalid entry: '%s'",
-                      CN_DISK_SPACE_THRESHOLD,
-                      zDisk_space_threshold,
-                      entry.c_str());
+                CN_DISK_SPACE_THRESHOLD,
+                zDisk_space_threshold,
+                entry.c_str());
             success = false;
         }
     }
@@ -4714,9 +4554,10 @@ bool config_parse_disk_space_threshold(DiskSpaceLimits* pDisk_space_threshold,
     return success;
 }
 
-std::string generate_config_string(const std::string& instance_name, const mxs::ConfigParameters& parameters,
-                                   const MXS_MODULE_PARAM* common_param_defs,
-                                   const MXS_MODULE_PARAM* module_param_defs)
+std::string generate_config_string(const std::string& instance_name,
+    const mxs::ConfigParameters& parameters,
+    const MXS_MODULE_PARAM* common_param_defs,
+    const MXS_MODULE_PARAM* module_param_defs)
 {
     string output = "[" + instance_name + "]\n";
     // Common params and module params are null-terminated arrays. Loop over both and print parameter
@@ -4780,7 +4621,7 @@ int string_distance(const std::string& a, const std::string& b)
             if (i > 1 && j > 1 && a[i - 1] == b[j - 2] && a[i - 2] == b[j - 1])
             {
                 // Transpose the characters
-                d[i][j] = std::min({d[i][j], (char)(d[i - 2][j - 2] + cost)});
+                d[i][j] = std::min({d[i][j], (char) (d[i - 2][j - 2] + cost)});
             }
         }
     }
@@ -4798,12 +4639,11 @@ int string_distance(const std::string& a, const std::string& b)
  * @return A suggestion with the parameter name closest to @c str or an empty string if
  *         the string is not close enough to any of the parameters.
  */
-std::string closest_matching_parameter(const std::string& str,
-                                       const MXS_MODULE_PARAM* base,
-                                       const MXS_MODULE_PARAM* mod)
+std::string closest_matching_parameter(
+    const std::string& str, const MXS_MODULE_PARAM* base, const MXS_MODULE_PARAM* mod)
 {
     std::string name;
-    int lowest = 99999;     // Nobody can come up with a parameter name this long
+    int lowest = 99999;  // Nobody can come up with a parameter name this long
 
     for (auto params : {base, mod})
     {
@@ -4813,7 +4653,7 @@ std::string closest_matching_parameter(const std::string& str,
 
             if (dist < lowest)
             {
-                name = params[i].name;
+                name   = params[i].name;
                 lowest = dist;
             }
         }
@@ -4881,8 +4721,11 @@ int64_t config_enum_to_value(const std::string& value, const MXS_ENUM_VALUE* val
     return MXS_UNKNOWN_ENUM_VALUE;
 }
 
-bool validate_param(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* module,
-                    const string& key, const string& value, string* error_out)
+bool validate_param(const MXS_MODULE_PARAM* basic,
+    const MXS_MODULE_PARAM* module,
+    const string& key,
+    const string& value,
+    string* error_out)
 {
     bool success = false;
     string error_msg;
@@ -4921,11 +4764,11 @@ bool param_is_known(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* modul
     return names.count(key);
 }
 
-bool param_is_valid(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* module,
-                    const char* key, const char* value)
+bool param_is_valid(
+    const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* module, const char* key, const char* value)
 {
     return config_param_is_valid(basic, key, value, NULL)
-           || (module && config_param_is_valid(module, key, value, NULL));
+        || (module && config_param_is_valid(module, key, value, NULL));
 }
 
 bool config_set_rebalance_threshold(const char* value)

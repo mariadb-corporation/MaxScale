@@ -29,12 +29,12 @@
 // static
 HintInstance* HintInstance::create(const char* zName, mxs::ConfigParameters* ppParams)
 {
-    return new(std::nothrow) HintInstance;
+    return new (std::nothrow) HintInstance;
 }
 
 HintSession* HintInstance::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {
-    return new(std::nothrow) HintSession(pSession, pService);
+    return new (std::nothrow) HintSession(pSession, pService);
 }
 
 json_t* HintInstance::diagnostics() const
@@ -49,8 +49,7 @@ uint64_t HintInstance::getCapabilities()
 
 HintSession::HintSession(MXS_SESSION* session, SERVICE* service)
     : mxs::FilterSession(session, service)
-{
-}
+{}
 
 /**
  * The routeQuery entry point. This is passed the query buffer
@@ -74,7 +73,6 @@ int HintSession::routeQuery(GWBUF* queue)
 
 extern "C"
 {
-
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -85,23 +83,18 @@ extern "C"
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_FILTER,
+    static MXS_MODULE info = {MXS_MODULE_API_FILTER,
         MXS_MODULE_ALPHA_RELEASE,
         MXS_FILTER_VERSION,
         "A hint parsing filter",
         "V1.0.0",
         RCAP_TYPE_CONTIGUOUS_INPUT,
         &HintInstance::s_object,
-        NULL,       /* Process init. */
-        NULL,       /* Process finish. */
-        NULL,       /* Thread init. */
-        NULL,       /* Thread finish. */
-        {
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
+        {{MXS_END_MODULE_PARAMS}}};
 
     return &info;
 }

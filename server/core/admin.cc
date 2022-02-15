@@ -47,8 +47,8 @@ namespace
 {
 
 static char shutting_down_response[] = "{\"errors\": [ { \"detail\": \"MaxScale is shutting down\" } ] }";
-static char auth_failure_response[] = "{\"errors\": [ { \"detail\": \"Access denied\" } ] }";
-static char no_https_response[] = "{\"errors\": [ { \"detail\": \"Connection is not encrypted\" } ] }";
+static char auth_failure_response[]  = "{\"errors\": [ { \"detail\": \"Access denied\" } ] }";
+static char no_https_response[]      = "{\"errors\": [ { \"detail\": \"Connection is not encrypted\" } ] }";
 static char not_admin_response[] = "{\"errors\": [ { \"detail\": \"Administrative access required\" } ] }";
 
 // The page served when the GUI is accessed without HTTPS
@@ -79,42 +79,36 @@ const char* gui_not_secure_page =
 )EOF";
 
 const std::string TOKEN_BODY = "token_body";
-const std::string TOKEN_SIG = "token_sig";
+const std::string TOKEN_SIG  = "token_sig";
 
 static struct ThisUnit
 {
     struct MHD_Daemon* daemon = nullptr;
-    std::string        ssl_key;
-    std::string        ssl_version;
-    std::string        ssl_cert;
-    std::string        ssl_ca;
-    bool               using_ssl = false;
-    bool               log_daemon_errors = true;
-    bool               cors = false;
-    std::string        sign_key;
-    std::atomic<bool>  running {true};
+    std::string ssl_key;
+    std::string ssl_version;
+    std::string ssl_cert;
+    std::string ssl_ca;
+    bool using_ssl         = false;
+    bool log_daemon_errors = true;
+    bool cors              = false;
+    std::string sign_key;
+    std::atomic<bool> running {true};
 
     std::unordered_map<std::string, std::string> files;
 } this_unit;
 
-int header_cb(void* cls,
-              enum MHD_ValueKind kind,
-              const char* key,
-              const char* value)
+int header_cb(void* cls, enum MHD_ValueKind kind, const char* key, const char* value)
 {
-    Client::Headers* res = (Client::Headers*)cls;
-    std::string k = key;
+    Client::Headers* res = (Client::Headers*) cls;
+    std::string k        = key;
     std::transform(k.begin(), k.end(), k.begin(), ::tolower);
     res->emplace(k, value);
     return MHD_YES;
 }
 
-int cookie_cb(void* cls,
-              enum MHD_ValueKind kind,
-              const char* key,
-              const char* value)
+int cookie_cb(void* cls, enum MHD_ValueKind kind, const char* key, const char* value)
 {
-    std::pair<std::string, std::string>* res = (std::pair<std::string, std::string>*)cls;
+    std::pair<std::string, std::string>* res = (std::pair<std::string, std::string>*) cls;
 
     if (key == TOKEN_BODY)
     {
@@ -144,23 +138,23 @@ std::string get_cookie_token(MHD_Connection* connection)
 
 static bool modifies_data(const string& method)
 {
-    return method == MHD_HTTP_METHOD_POST || method == MHD_HTTP_METHOD_PUT
-           || method == MHD_HTTP_METHOD_DELETE || method == MHD_HTTP_METHOD_PATCH;
+    return method == MHD_HTTP_METHOD_POST || method == MHD_HTTP_METHOD_PUT || method == MHD_HTTP_METHOD_DELETE
+        || method == MHD_HTTP_METHOD_PATCH;
 }
 
 int handle_client(void* cls,
-                  MHD_Connection* connection,
-                  const char* url,
-                  const char* method,
-                  const char* version,
-                  const char* upload_data,
-                  size_t* upload_data_size,
-                  void** con_cls)
+    MHD_Connection* connection,
+    const char* url,
+    const char* method,
+    const char* version,
+    const char* upload_data,
+    size_t* upload_data_size,
+    void** con_cls)
 
 {
     if (*con_cls == NULL)
     {
-        if ((*con_cls = new(std::nothrow) Client(connection)) == NULL)
+        if ((*con_cls = new (std::nothrow) Client(connection)) == NULL)
         {
             return MHD_NO;
         }
@@ -172,11 +166,11 @@ int handle_client(void* cls,
 
 static bool host_to_sockaddr(const char* host, uint16_t port, struct sockaddr_storage* addr)
 {
-    struct addrinfo* ai = NULL, hint = {};
+    struct addrinfo *ai = NULL, hint = {};
     int rc;
     hint.ai_socktype = SOCK_STREAM;
-    hint.ai_family = AF_UNSPEC;
-    hint.ai_flags = AI_ALL;
+    hint.ai_family   = AF_UNSPEC;
+    hint.ai_flags    = AI_ALL;
 
     if ((rc = getaddrinfo(host, NULL, &hint, &ai)) != 0)
     {
@@ -191,13 +185,13 @@ static bool host_to_sockaddr(const char* host, uint16_t port, struct sockaddr_st
 
         if (addr->ss_family == AF_INET)
         {
-            struct sockaddr_in* ip = (struct sockaddr_in*)addr;
-            (*ip).sin_port = htons(port);
+            struct sockaddr_in* ip = (struct sockaddr_in*) addr;
+            (*ip).sin_port         = htons(port);
         }
         else if (addr->ss_family == AF_INET6)
         {
-            struct sockaddr_in6* ip = (struct sockaddr_in6*)addr;
-            (*ip).sin6_port = htons(port);
+            struct sockaddr_in6* ip = (struct sockaddr_in6*) addr;
+            (*ip).sin6_port         = htons(port);
         }
     }
 
@@ -259,11 +253,10 @@ std::string get_filename(const HttpRequest& request)
         path += request.uri_segment(0, request.uri_part_count());
     }
 
-    char pathbuf[PATH_MAX + 1] = "";
+    char pathbuf[PATH_MAX + 1]  = "";
     char sharebuf[PATH_MAX + 1] = "";
 
-    if (realpath(path.c_str(), pathbuf) && access(pathbuf, R_OK) == 0
-        && realpath(sharedir.c_str(), sharebuf)
+    if (realpath(path.c_str(), pathbuf) && access(pathbuf, R_OK) == 0 && realpath(sharedir.c_str(), sharebuf)
         && strncmp(pathbuf, sharebuf, strlen(sharebuf)) == 0)
     {
         // A valid file that's stored in the GUI directory
@@ -308,16 +301,16 @@ static const char* get_ssl_version(const mxb::ssl_version::Version ssl_version)
 
 static bool load_ssl_certificates()
 {
-    bool rval = true;
+    bool rval          = true;
     const auto& config = mxs::Config::get();
-    const auto& key = config.admin_ssl_key;
-    const auto& cert = config.admin_ssl_cert;
-    const auto& ca = config.admin_ssl_ca_cert;
+    const auto& key    = config.admin_ssl_key;
+    const auto& cert   = config.admin_ssl_cert;
+    const auto& ca     = config.admin_ssl_ca_cert;
 
     if (!key.empty() && !cert.empty())
     {
-        this_unit.ssl_key = load_file(key.c_str());
-        this_unit.ssl_cert = load_file(cert.c_str());
+        this_unit.ssl_key     = load_file(key.c_str());
+        this_unit.ssl_cert    = load_file(cert.c_str());
         this_unit.ssl_version = get_ssl_version(config.admin_ssl_version);
 
         if (!ca.empty())
@@ -347,10 +340,7 @@ void admin_log_error(void* arg, const char* fmt, va_list ap)
     }
 }
 
-void close_client(void* cls,
-                  MHD_Connection* connection,
-                  void** con_cls,
-                  enum MHD_RequestTerminationCode toe)
+void close_client(void* cls, MHD_Connection* connection, void** con_cls, enum MHD_RequestTerminationCode toe)
 {
     Client* client = static_cast<Client*>(*con_cls);
     delete client;
@@ -366,7 +356,9 @@ bool authorize_user(const char* user, const char* method, const char* url)
         {
             MXS_WARNING("Authorization failed for '%s', request requires "
                         "administrative privileges. Request: %s %s",
-                        user, method, url);
+                user,
+                method,
+                url);
         }
         rval = false;
     }
@@ -378,13 +370,13 @@ void init_jwt_sign_key()
 {
     // Initialize JWT signing key
     std::random_device gen;
-    constexpr auto KEY_BITS = 512;
+    constexpr auto KEY_BITS   = 512;
     constexpr auto VALUE_SIZE = sizeof(decltype(gen()));
     constexpr auto NUM_VALUES = KEY_BITS / VALUE_SIZE;
     std::vector<decltype(gen())> key;
     key.reserve(NUM_VALUES);
     std::generate_n(std::back_inserter(key), NUM_VALUES, std::ref(gen));
-    this_unit.sign_key.assign((const char*)key.data(), key.size() * VALUE_SIZE);
+    this_unit.sign_key.assign((const char*) key.data(), key.size() * VALUE_SIZE);
     mxb_assert(this_unit.sign_key.size() == KEY_BITS);
 }
 
@@ -397,47 +389,46 @@ void add_extra_headers(MHD_Response* response)
 
 void add_content_type_header(MHD_Response* response, const std::string& path)
 {
-    static const std::unordered_map<std::string, std::string> content_types =
-    {
-        {".bmp",    "image/bmp"            },
-        {".bz",     "application/x-bzip"   },
-        {".bz2",    "application/x-bzip2"  },
-        {".css",    "text/css"             },
-        {".csv",    "text/csv"             },
-        {".epub",   "application/epub+zip" },
-        {".gz",     "application/gzip"     },
-        {".gif",    "image/gif"            },
-        {".htm",    "text/html"            },
-        {".html",   "text/html"            },
-        {".jpeg",   "image/jpeg"           },
-        {".jpg",    "image/jpeg"           },
-        {".js",     "text/javascript"      },
-        {".json",   "application/json"     },
-        {".jsonld", "application/ld+json"  },
-        {".mjs",    "text/javascript"      },
-        {".mp3",    "audio/mpeg"           },
-        {".mpeg",   "video/mpeg"           },
-        {".otf",    "font/otf"             },
-        {".png",    "image/png"            },
-        {".pdf",    "application/pdf"      },
-        {".php",    "application/php"      },
-        {".rar",    "application/vnd.rar"  },
-        {".rtf",    "application/rtf"      },
-        {".svg",    "image/svg+xml"        },
-        {".tar",    "application/x-tar"    },
-        {".tif",    "image/tiff"           },
-        {".tiff",   "image/tiff"           },
-        {".ts",     "video/mp2t"           },
-        {".ttf",    "font/ttf"             },
-        {".txt",    "text/plain"           },
-        {".wav",    "audio/wav"            },
-        {".weba",   "audio/webm"           },
-        {".webm",   "video/webm"           },
-        {".webp",   "image/webp"           },
-        {".woff",   "font/woff"            },
-        {".woff2",  "font/woff2"           },
-        {".xhtml",  "application/xhtml+xml"},
-        {".xml",    "application/xml"      },
+    static const std::unordered_map<std::string, std::string> content_types = {
+        {".bmp", "image/bmp"},
+        {".bz", "application/x-bzip"},
+        {".bz2", "application/x-bzip2"},
+        {".css", "text/css"},
+        {".csv", "text/csv"},
+        {".epub", "application/epub+zip"},
+        {".gz", "application/gzip"},
+        {".gif", "image/gif"},
+        {".htm", "text/html"},
+        {".html", "text/html"},
+        {".jpeg", "image/jpeg"},
+        {".jpg", "image/jpeg"},
+        {".js", "text/javascript"},
+        {".json", "application/json"},
+        {".jsonld", "application/ld+json"},
+        {".mjs", "text/javascript"},
+        {".mp3", "audio/mpeg"},
+        {".mpeg", "video/mpeg"},
+        {".otf", "font/otf"},
+        {".png", "image/png"},
+        {".pdf", "application/pdf"},
+        {".php", "application/php"},
+        {".rar", "application/vnd.rar"},
+        {".rtf", "application/rtf"},
+        {".svg", "image/svg+xml"},
+        {".tar", "application/x-tar"},
+        {".tif", "image/tiff"},
+        {".tiff", "image/tiff"},
+        {".ts", "video/mp2t"},
+        {".ttf", "font/ttf"},
+        {".txt", "text/plain"},
+        {".wav", "audio/wav"},
+        {".weba", "audio/webm"},
+        {".webm", "video/webm"},
+        {".webp", "image/webp"},
+        {".woff", "font/woff"},
+        {".woff2", "font/woff2"},
+        {".xhtml", "application/xhtml+xml"},
+        {".xml", "application/xml"},
     };
 
     auto pos = path.find_last_of('.');
@@ -445,7 +436,7 @@ void add_content_type_header(MHD_Response* response, const std::string& path)
 
     if (pos != std::string::npos)
     {
-        suffix = path.substr(pos);
+        suffix  = path.substr(pos);
         auto it = content_types.find(suffix);
 
         if (it != content_types.end())
@@ -471,14 +462,13 @@ bool is_auth_endpoint(const HttpRequest& request)
 {
     return request.uri_part_count() == 1 && request.uri_segment(0, 1) == "auth";
 }
-}
+}  // namespace
 
 Client::Client(MHD_Connection* connection)
     : m_connection(connection)
     , m_state(INIT)
     , m_headers(get_headers(connection))
-{
-}
+{}
 
 std::string Client::get_header(const std::string& key) const
 {
@@ -495,10 +485,8 @@ size_t Client::request_data_length() const
 
 void Client::send_shutting_down_error() const
 {
-    MHD_Response* resp =
-        MHD_create_response_from_buffer(sizeof(shutting_down_response) - 1,
-                                        shutting_down_response,
-                                        MHD_RESPMEM_PERSISTENT);
+    MHD_Response* resp = MHD_create_response_from_buffer(
+        sizeof(shutting_down_response) - 1, shutting_down_response, MHD_RESPMEM_PERSISTENT);
 
     MHD_queue_response(m_connection, MHD_HTTP_SERVICE_UNAVAILABLE, resp);
     MHD_destroy_response(resp);
@@ -506,10 +494,8 @@ void Client::send_shutting_down_error() const
 
 void Client::send_basic_auth_error() const
 {
-    MHD_Response* resp =
-        MHD_create_response_from_buffer(sizeof(auth_failure_response) - 1,
-                                        auth_failure_response,
-                                        MHD_RESPMEM_PERSISTENT);
+    MHD_Response* resp = MHD_create_response_from_buffer(
+        sizeof(auth_failure_response) - 1, auth_failure_response, MHD_RESPMEM_PERSISTENT);
 
     MHD_queue_basic_auth_fail_response(m_connection, "maxscale", resp);
     MHD_destroy_response(resp);
@@ -517,10 +503,8 @@ void Client::send_basic_auth_error() const
 
 void Client::send_token_auth_error() const
 {
-    MHD_Response* response =
-        MHD_create_response_from_buffer(sizeof(auth_failure_response) - 1,
-                                        auth_failure_response,
-                                        MHD_RESPMEM_PERSISTENT);
+    MHD_Response* response = MHD_create_response_from_buffer(
+        sizeof(auth_failure_response) - 1, auth_failure_response, MHD_RESPMEM_PERSISTENT);
 
     MHD_queue_response(m_connection, MHD_HTTP_UNAUTHORIZED, response);
     MHD_destroy_response(response);
@@ -528,10 +512,8 @@ void Client::send_token_auth_error() const
 
 void Client::send_write_access_error() const
 {
-    MHD_Response* response =
-        MHD_create_response_from_buffer(sizeof(not_admin_response) - 1,
-                                        not_admin_response,
-                                        MHD_RESPMEM_PERSISTENT);
+    MHD_Response* response = MHD_create_response_from_buffer(
+        sizeof(not_admin_response) - 1, not_admin_response, MHD_RESPMEM_PERSISTENT);
 
     MHD_queue_response(m_connection, MHD_HTTP_FORBIDDEN, response);
     MHD_destroy_response(response);
@@ -539,10 +521,8 @@ void Client::send_write_access_error() const
 
 void Client::send_no_https_error() const
 {
-    MHD_Response* response =
-        MHD_create_response_from_buffer(sizeof(no_https_response) - 1,
-                                        no_https_response,
-                                        MHD_RESPMEM_PERSISTENT);
+    MHD_Response* response = MHD_create_response_from_buffer(
+        sizeof(no_https_response) - 1, no_https_response, MHD_RESPMEM_PERSISTENT);
 
     MHD_queue_response(m_connection, MHD_HTTP_UNAUTHORIZED, response);
     MHD_destroy_response(response);
@@ -554,7 +534,7 @@ void Client::add_cors_headers(MHD_Response* response) const
     MHD_add_response_header(response, "Vary", "Origin");
 
     auto request_headers = get_header("Access-Control-Request-Headers");
-    auto request_method = get_header("Access-Control-Request-Method");
+    auto request_method  = get_header("Access-Control-Request-Method");
 
     if (!request_headers.empty())
     {
@@ -573,8 +553,7 @@ bool Client::send_cors_preflight_request(const std::string& verb)
 
     if (verb == MHD_HTTP_METHOD_OPTIONS && !get_header("Origin").empty())
     {
-        MHD_Response* response =
-            MHD_create_response_from_buffer(0, (void*)"", MHD_RESPMEM_PERSISTENT);
+        MHD_Response* response = MHD_create_response_from_buffer(0, (void*) "", MHD_RESPMEM_PERSISTENT);
 
         add_cors_headers(response);
 
@@ -605,10 +584,8 @@ bool Client::serve_file(const std::string& url) const
         {
             rval = true;
 
-            MHD_Response* response =
-                MHD_create_response_from_buffer(data.size(),
-                                                (void*)data.c_str(),
-                                                MHD_RESPMEM_MUST_COPY);
+            MHD_Response* response
+                = MHD_create_response_from_buffer(data.size(), (void*) data.c_str(), MHD_RESPMEM_MUST_COPY);
 
             if (this_unit.cors && !get_header("Origin").empty())
             {
@@ -634,8 +611,8 @@ bool Client::serve_file(const std::string& url) const
     return rval;
 }
 
-int Client::handle(const std::string& url, const std::string& method,
-                   const char* upload_data, size_t* upload_data_size)
+int Client::handle(
+    const std::string& url, const std::string& method, const char* upload_data, size_t* upload_data_size)
 {
     if (!this_unit.running.load(std::memory_order_relaxed))
     {
@@ -652,7 +629,7 @@ int Client::handle(const std::string& url, const std::string& method,
     }
 
     Client::state state = get_state();
-    int rval = MHD_NO;
+    int rval            = MHD_NO;
 
     if (state != Client::CLOSED)
     {
@@ -712,14 +689,11 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
 
     json_error_t err = {};
 
-    if (m_data.length()
-        && (json = json_loadb(m_data.c_str(), m_data.size(), 0, &err)) == NULL)
+    if (m_data.length() && (json = json_loadb(m_data.c_str(), m_data.size(), 0, &err)) == NULL)
     {
-        string msg = string("{\"errors\": [ { \"detail\": \"Invalid JSON in request: ")
-            + err.text + "\" } ] }";
-        MHD_Response* response = MHD_create_response_from_buffer(msg.size(),
-                                                                 &msg[0],
-                                                                 MHD_RESPMEM_MUST_COPY);
+        string msg
+            = string("{\"errors\": [ { \"detail\": \"Invalid JSON in request: ") + err.text + "\" } ] }";
+        MHD_Response* response = MHD_create_response_from_buffer(msg.size(), &msg[0], MHD_RESPMEM_MUST_COPY);
         MHD_queue_response(m_connection, MHD_HTTP_BAD_REQUEST, response);
         MHD_destroy_response(response);
         return MHD_YES;
@@ -743,7 +717,7 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
 
     if (json_t* js = reply.get_response())
     {
-        int flags = JSON_SORT_KEYS;
+        int flags     = JSON_SORT_KEYS;
         string pretty = request.get_option("pretty");
 
         if (pretty == "true" || pretty.length() == 0)
@@ -754,10 +728,8 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
         data = mxs::json_dump(js, flags);
     }
 
-    MHD_Response* response =
-        MHD_create_response_from_buffer(data.size(),
-                                        (void*)data.c_str(),
-                                        MHD_RESPMEM_MUST_COPY);
+    MHD_Response* response
+        = MHD_create_response_from_buffer(data.size(), (void*) data.c_str(), MHD_RESPMEM_MUST_COPY);
 
     for (const auto& a : reply.get_headers())
     {
@@ -790,7 +762,7 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
 HttpResponse Client::generate_token(const HttpRequest& request)
 {
     int token_age = 28800;
-    auto max_age = request.get_option("max-age");
+    auto max_age  = request.get_option("max-age");
 
     if (!max_age.empty())
     {
@@ -803,13 +775,13 @@ HttpResponse Client::generate_token(const HttpRequest& request)
         }
     }
 
-    auto now = std::chrono::system_clock::now();
+    auto now   = std::chrono::system_clock::now();
     auto token = jwt::create()
-        .set_issuer("maxscale")
-        .set_audience(m_user)
-        .set_issued_at(now)
-        .set_expires_at(now + std::chrono::seconds {token_age})
-        .sign(jwt::algorithm::hs256 {this_unit.sign_key});
+                     .set_issuer("maxscale")
+                     .set_audience(m_user)
+                     .set_issued_at(now)
+                     .set_expires_at(now + std::chrono::seconds {token_age})
+                     .sign(jwt::algorithm::hs256 {this_unit.sign_key});
 
     if (request.get_option("persist") == "yes")
     {
@@ -852,16 +824,15 @@ bool Client::auth_with_token(const std::string& token)
     {
         auto d = jwt::decode(token);
         jwt::verify()
-        .allow_algorithm(jwt::algorithm::hs256 {this_unit.sign_key})
-        .with_issuer("maxscale")
-        .verify(d);
+            .allow_algorithm(jwt::algorithm::hs256 {this_unit.sign_key})
+            .with_issuer("maxscale")
+            .verify(d);
 
         m_user = *d.get_audience().begin();
-        rval = true;
+        rval   = true;
     }
     catch (const std::exception& e)
-    {
-    }
+    {}
 
     return rval;
 }
@@ -880,7 +851,7 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
         {
             // Not the /auth endpoint, use the cookie or Bearer token
             auto cookie_token = get_cookie_token(m_connection);
-            auto token = get_header(MHD_HTTP_HEADER_AUTHORIZATION);
+            auto token        = get_header(MHD_HTTP_HEADER_AUTHORIZATION);
 
             if (!cookie_token.empty())
             {
@@ -923,8 +894,8 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
 
         if (!done)
         {
-            rval = false;
-            char* pw = NULL;
+            rval       = false;
+            char* pw   = NULL;
             char* user = MHD_basic_auth_get_username_password(connection, &pw);
 
             if (!user || !pw || !admin_verify_inet_user(user, pw))
@@ -932,21 +903,22 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
                 if (mxs::Config::get().admin_log_auth_failures.get())
                 {
                     MXS_WARNING("Authentication failed for '%s', %s. Request: %s %s",
-                                user ? user : "",
-                                pw ? "using password" : "no password",
-                                method, url);
+                        user ? user : "",
+                        pw ? "using password" : "no password",
+                        method,
+                        url);
                 }
             }
             else if (authorize_user(user, method, url))
             {
                 MXS_INFO("Accept authentication from '%s', %s. Request: %s",
-                         user ? user : "",
-                         pw ? "using password" : "no password",
-                         url);
+                    user ? user : "",
+                    pw ? "using password" : "no password",
+                    url);
 
                 // Store the username for later in case we are generating a token
                 m_user = user ? user : "";
-                rval = true;
+                rval   = true;
             }
             MXS_FREE(user);
             MXS_FREE(pw);
@@ -999,23 +971,35 @@ bool mxs_admin_init()
         {
             MXS_WARNING("The MaxScale GUI is enabled but encryption for the REST API is not enabled, "
                         "the GUI will not be enabled. Configure `admin_ssl_key` and `admin_ssl_cert` "
-                        "to enable HTTPS or add `admin_secure_gui=false` to allow use of the GUI without encryption.");
+                        "to enable HTTPS or add `admin_secure_gui=false` to allow use of the GUI without "
+                        "encryption.");
         }
 
         // The port argument is only used for error reporting. The actual address and port that the daemon
         // binds to is in the `struct sockaddr`.
-        this_unit.daemon = MHD_start_daemon(options, config.admin_port,
-                                            NULL, NULL, handle_client, NULL,
-                                            MHD_OPTION_EXTERNAL_LOGGER, admin_log_error, NULL,
-                                            MHD_OPTION_NOTIFY_COMPLETED, close_client, NULL,
-                                            MHD_OPTION_SOCK_ADDR, &addr,
-                                            !this_unit.using_ssl ? MHD_OPTION_END :
-                                            MHD_OPTION_HTTPS_MEM_KEY, this_unit.ssl_key.c_str(),
-                                            MHD_OPTION_HTTPS_MEM_CERT, this_unit.ssl_cert.c_str(),
-                                            MHD_OPTION_HTTPS_PRIORITIES, this_unit.ssl_version.c_str(),
-                                            this_unit.ssl_ca.empty() ? MHD_OPTION_END :
-                                            MHD_OPTION_HTTPS_MEM_TRUST, this_unit.ssl_ca.c_str(),
-                                            MHD_OPTION_END);
+        this_unit.daemon = MHD_start_daemon(options,
+            config.admin_port,
+            NULL,
+            NULL,
+            handle_client,
+            NULL,
+            MHD_OPTION_EXTERNAL_LOGGER,
+            admin_log_error,
+            NULL,
+            MHD_OPTION_NOTIFY_COMPLETED,
+            close_client,
+            NULL,
+            MHD_OPTION_SOCK_ADDR,
+            &addr,
+            !this_unit.using_ssl ? MHD_OPTION_END : MHD_OPTION_HTTPS_MEM_KEY,
+            this_unit.ssl_key.c_str(),
+            MHD_OPTION_HTTPS_MEM_CERT,
+            this_unit.ssl_cert.c_str(),
+            MHD_OPTION_HTTPS_PRIORITIES,
+            this_unit.ssl_version.c_str(),
+            this_unit.ssl_ca.empty() ? MHD_OPTION_END : MHD_OPTION_HTTPS_MEM_TRUST,
+            this_unit.ssl_ca.c_str(),
+            MHD_OPTION_END);
     }
 
     // Silence all other errors to prevent malformed requests from flooding the log

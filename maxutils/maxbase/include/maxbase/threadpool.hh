@@ -31,7 +31,7 @@ public:
     class Thread
     {
     public:
-        Thread(const Thread&) = delete;
+        Thread(const Thread&)            = delete;
         Thread& operator=(const Thread&) = delete;
 
         /**
@@ -72,12 +72,12 @@ public:
         void main();
 
     private:
-        std::thread             m_thread;
-        std::queue<Task>        m_tasks;
-        std::mutex              m_tasks_mx;
+        std::thread m_thread;
+        std::queue<Task> m_tasks;
+        std::mutex m_tasks_mx;
         std::condition_variable m_tasks_cv;
-        bool                    m_stop { false };
-        bool                    m_abandon_tasks { false };
+        bool m_stop {false};
+        bool m_abandon_tasks {false};
     };
 
     static constexpr int UNLIMITED = std::numeric_limits<int>::max();
@@ -100,10 +100,7 @@ public:
      *
      * @return The maximum number of thread as specified at construction time.
      */
-    int max_num_of_threads() const
-    {
-        return m_nMax_threads;
-    }
+    int max_num_of_threads() const { return m_nMax_threads; }
 
     /**
      * The current number of threads.
@@ -144,14 +141,14 @@ public:
     void stop(bool abandon_tasks = false);
 
 private:
-    bool                     m_stop { false };
-    int                      m_nThreads { 0 };
-    std::stack<Thread*>      m_idle_threads;
-    mutable std::mutex       m_idle_threads_mx;
-    std::condition_variable  m_idle_threads_cv;
-    std::queue<Task>         m_tasks;
-    std::mutex               m_tasks_mx;
-    const int                m_nMax_threads;
+    bool m_stop {false};
+    int m_nThreads {0};
+    std::stack<Thread*> m_idle_threads;
+    mutable std::mutex m_idle_threads_mx;
+    std::condition_variable m_idle_threads_cv;
+    std::queue<Task> m_tasks;
+    std::mutex m_tasks_mx;
+    const int m_nMax_threads;
 };
 
-}
+}  // namespace maxbase

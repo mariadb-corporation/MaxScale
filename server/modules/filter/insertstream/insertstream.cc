@@ -35,8 +35,8 @@ static uint64_t CAPS = RCAP_TYPE_TRANSACTION_TRACKING;
 /**
  * This the SQL command that starts the streaming
  */
-static const char load_data_template[] =
-    "LOAD DATA LOCAL INFILE 'maxscale.data' INTO TABLE %s FIELDS TERMINATED BY ',' LINES TERMINATED BY '\\n'";
+static const char load_data_template[] = "LOAD DATA LOCAL INFILE 'maxscale.data' INTO TABLE %s FIELDS "
+                                         "TERMINATED BY ',' LINES TERMINATED BY '\\n'";
 
 /**
  * Extract inserted values
@@ -53,7 +53,7 @@ char* get_value(char* data, uint32_t datalen, char** dest, uint32_t* destlen)
         if (value_end)
         {
             *destlen = value_end - value_start;
-            *dest = value_start;
+            *dest    = value_start;
             return value_end;
         }
     }
@@ -72,14 +72,14 @@ char* get_value(char* data, uint32_t datalen, char** dest, uint32_t* destlen)
 GWBUF* convert_to_stream(GWBUF* buffer, uint8_t packet_num)
 {
     /** Remove the INSERT INTO ... from the buffer */
-    char* dataptr = (char*)GWBUF_DATA(buffer);
-    char* modptr = strnchr_esc_mysql(dataptr + MYSQL_HEADER_LEN + 1, '(', GWBUF_LENGTH(buffer));
+    char* dataptr = (char*) GWBUF_DATA(buffer);
+    char* modptr  = strnchr_esc_mysql(dataptr + MYSQL_HEADER_LEN + 1, '(', GWBUF_LENGTH(buffer));
 
     /** Leave some space for the header so we don't have to allocate a new one */
-    buffer = gwbuf_consume(buffer, (modptr - dataptr) - MYSQL_HEADER_LEN);
-    char* header_start = (char*)GWBUF_DATA(buffer);
+    buffer             = gwbuf_consume(buffer, (modptr - dataptr) - MYSQL_HEADER_LEN);
+    char* header_start = (char*) GWBUF_DATA(buffer);
     char* store_end = dataptr = header_start + MYSQL_HEADER_LEN;
-    char* end = static_cast<char*>(buffer->end);
+    char* end                 = static_cast<char*>(buffer->end);
     char* value;
     uint32_t valuesize;
 
@@ -94,13 +94,13 @@ GWBUF* convert_to_stream(GWBUF* buffer, uint8_t packet_num)
         *store_end++ = '\n';
     }
 
-    gwbuf_rtrim(buffer, (char*)buffer->end - store_end);
+    gwbuf_rtrim(buffer, (char*) buffer->end - store_end);
     uint32_t len = gwbuf_length(buffer) - MYSQL_HEADER_LEN;
 
     *header_start++ = len;
     *header_start++ = len >> 8;
     *header_start++ = len >> 16;
-    *header_start = packet_num;
+    *header_start   = packet_num;
 
     return buffer;
 }
@@ -114,21 +114,21 @@ GWBUF* convert_to_stream(GWBUF* buffer, uint8_t packet_num)
  */
 bool only_implicit_values(GWBUF* buffer)
 {
-    bool rval = false;
-    char* data = (char*)GWBUF_DATA(buffer);
-    char* ptr = strnchr_esc_mysql(data + MYSQL_HEADER_LEN + 1, '(', GWBUF_LENGTH(buffer));
+    bool rval  = false;
+    char* data = (char*) GWBUF_DATA(buffer);
+    char* ptr  = strnchr_esc_mysql(data + MYSQL_HEADER_LEN + 1, '(', GWBUF_LENGTH(buffer));
 
     if (ptr && (ptr = strnchr_esc_mysql(ptr, ')', GWBUF_LENGTH(buffer) - (ptr - data))))
     {
         /** Skip the closing parenthesis and any whitespace */
         ptr++;
 
-        while (ptr < (char*)buffer->end && isspace(*ptr))
+        while (ptr < (char*) buffer->end && isspace(*ptr))
         {
             ptr++;
         }
 
-        if (ptr >= (char*)buffer->end || !isalnum(*ptr))
+        if (ptr >= (char*) buffer->end || !isalnum(*ptr))
         {
             /**
              * The first pair of parentheses was followed by a non-alphanumeric
@@ -157,8 +157,7 @@ bool extract_insert_target(GWBUF* buffer, std::string* target)
 {
     bool rval = false;
 
-    if (MYSQL_GET_COMMAND(GWBUF_DATA(buffer)) == MXS_COM_QUERY
-        && qc_get_operation(buffer) == QUERY_OP_INSERT
+    if (MYSQL_GET_COMMAND(GWBUF_DATA(buffer)) == MXS_COM_QUERY && qc_get_operation(buffer) == QUERY_OP_INSERT
         && only_implicit_values(buffer))
     {
         auto tables = qc_get_table_names(buffer, true);
@@ -167,7 +166,7 @@ bool extract_insert_target(GWBUF* buffer, std::string* target)
         {
             /** Only one table in an insert */
             *target = tables[0];
-            rval = true;
+            rval    = true;
         }
     }
 
@@ -191,21 +190,19 @@ GWBUF* create_load_data_command(const char* target)
     if (rval)
     {
         uint8_t* ptr = GWBUF_DATA(rval);
-        *ptr++ = payload;
-        *ptr++ = payload >> 8;
-        *ptr++ = payload >> 16;
-        *ptr++ = 0;
-        *ptr++ = 0x03;
+        *ptr++       = payload;
+        *ptr++       = payload >> 8;
+        *ptr++       = payload >> 16;
+        *ptr++       = 0;
+        *ptr++       = 0x03;
         memcpy(ptr, str, payload - 1);
     }
 
     return rval;
 }
-}
+}  // namespace
 
-InsertStream::InsertStream()
-{
-}
+InsertStream::InsertStream() {}
 
 InsertStream* InsertStream::create(const char* name, mxs::ConfigParameters* params)
 {
@@ -232,19 +229,16 @@ uint64_t InsertStream::getCapabilities()
 InsertStreamSession::InsertStreamSession(MXS_SESSION* pSession, SERVICE* pService, InsertStream* filter)
     : mxs::FilterSession(pSession, pService)
     , m_filter(filter)
-{
-}
+{}
 
-void InsertStreamSession::close()
-{
-}
+void InsertStreamSession::close() {}
 
 int32_t InsertStreamSession::routeQuery(GWBUF* queue)
 {
     std::string target;
-    bool send_ok = false;
+    bool send_ok    = false;
     bool send_error = false;
-    int rc = 0;
+    int rc          = 0;
     mxb_assert(gwbuf_is_contiguous(queue));
 
     if (m_pSession->is_trx_active() && extract_insert_target(queue, &target))
@@ -255,14 +249,14 @@ int32_t InsertStreamSession::routeQuery(GWBUF* queue)
             /** We're opening a new stream */
             m_target = target;
             m_queue.reset(queue);
-            m_state = DS_REQUEST_SENT;
+            m_state      = DS_REQUEST_SENT;
             m_packet_num = 0;
-            queue = create_load_data_command(target.c_str());
+            queue        = create_load_data_command(target.c_str());
             break;
 
         case DS_REQUEST_ACCEPTED:
             m_state = DS_STREAM_OPEN;
-        /** Fallthrough */
+            /** Fallthrough */
 
         case DS_STREAM_OPEN:
             if (target == m_target)
@@ -272,8 +266,8 @@ int32_t InsertStreamSession::routeQuery(GWBUF* queue)
                  * a data stream
                  */
                 uint8_t packet_num = ++m_packet_num;
-                send_ok = true;
-                queue = convert_to_stream(queue, packet_num);
+                send_ok            = true;
+                queue              = convert_to_stream(queue, packet_num);
             }
             else
             {
@@ -304,7 +298,7 @@ int32_t InsertStreamSession::routeQuery(GWBUF* queue)
         {
         case DS_STREAM_OPEN:
             /** Stream is open, we need to close it */
-            m_state = DS_CLOSING_STREAM;
+            m_state    = DS_CLOSING_STREAM;
             send_empty = true;
             packet_num = ++m_packet_num;
             m_queue.reset(queue);
@@ -323,7 +317,7 @@ int32_t InsertStreamSession::routeQuery(GWBUF* queue)
         if (send_empty)
         {
             char empty_packet[] = {0, 0, 0, static_cast<char>(packet_num)};
-            queue = gwbuf_alloc_and_load(sizeof(empty_packet), &empty_packet[0]);
+            queue               = gwbuf_alloc_and_load(sizeof(empty_packet), &empty_packet[0]);
         }
     }
 
@@ -377,9 +371,9 @@ int32_t InsertStreamSession::clientReply(GWBUF* buffer, const mxs::ReplyRoute& d
         }
 
         mxs::Downstream down;
-        down.instance = m_filter;
+        down.instance   = m_filter;
         down.routeQuery = InsertStream::apiRouteQuery;
-        down.session = this;
+        down.session    = this;
 
         session_delay_routing(m_pSession, down, queue, 0);
     }
@@ -393,10 +387,7 @@ int32_t InsertStreamSession::clientReply(GWBUF* buffer, const mxs::ReplyRoute& d
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_FILTER,
+    static MXS_MODULE info = {MXS_MODULE_API_FILTER,
         MXS_MODULE_EXPERIMENTAL,
         MXS_FILTER_VERSION,
         "Data streaming filter",
@@ -407,12 +398,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,
         NULL,
         NULL,
-        {
-            {"source",          MXS_MODULE_PARAM_STRING },
-            {"user",            MXS_MODULE_PARAM_STRING },
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+        {{"source", MXS_MODULE_PARAM_STRING}, {"user", MXS_MODULE_PARAM_STRING}, {MXS_END_MODULE_PARAMS}}};
 
     return &info;
 }

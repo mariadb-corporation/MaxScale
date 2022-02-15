@@ -17,14 +17,13 @@
 #include "storagefactory.hh"
 
 CacheSimple::CacheSimple(const std::string& name,
-                         const CacheConfig* pConfig,
-                         const std::vector<SCacheRules>& rules,
-                         SStorageFactory sFactory,
-                         Storage* pStorage)
+    const CacheConfig* pConfig,
+    const std::vector<SCacheRules>& rules,
+    SStorageFactory sFactory,
+    Storage* pStorage)
     : Cache(name, pConfig, rules, sFactory)
     , m_pStorage(pStorage)
-{
-}
+{}
 
 CacheSimple::~CacheSimple()
 {
@@ -42,35 +41,33 @@ void CacheSimple::get_limits(Storage::Limits* pLimits) const
 }
 
 cache_result_t CacheSimple::get_value(Token* pToken,
-                                      const CacheKey& key,
-                                      uint32_t flags,
-                                      uint32_t soft_ttl,
-                                      uint32_t hard_ttl,
-                                      GWBUF** ppValue,
-                                      const std::function<void (cache_result_t, GWBUF*)>& cb) const
+    const CacheKey& key,
+    uint32_t flags,
+    uint32_t soft_ttl,
+    uint32_t hard_ttl,
+    GWBUF** ppValue,
+    const std::function<void(cache_result_t, GWBUF*)>& cb) const
 {
     return m_pStorage->get_value(pToken, key, flags, soft_ttl, hard_ttl, ppValue, cb);
 }
 
 cache_result_t CacheSimple::put_value(Token* pToken,
-                                      const CacheKey& key,
-                                      const std::vector<std::string>& invalidation_words,
-                                      const GWBUF* pValue,
-                                      const std::function<void (cache_result_t)>& cb)
+    const CacheKey& key,
+    const std::vector<std::string>& invalidation_words,
+    const GWBUF* pValue,
+    const std::function<void(cache_result_t)>& cb)
 {
     return m_pStorage->put_value(pToken, key, invalidation_words, pValue, cb);
 }
 
-cache_result_t CacheSimple::del_value(Token* pToken,
-                                      const CacheKey& key,
-                                      const std::function<void (cache_result_t)>& cb)
+cache_result_t CacheSimple::del_value(
+    Token* pToken, const CacheKey& key, const std::function<void(cache_result_t)>& cb)
 {
     return m_pStorage->del_value(pToken, key, cb);
 }
 
-cache_result_t CacheSimple::invalidate(Token* pToken,
-                                       const std::vector<std::string>& words,
-                                       const std::function<void (cache_result_t)>& cb)
+cache_result_t CacheSimple::invalidate(
+    Token* pToken, const std::vector<std::string>& words, const std::function<void(cache_result_t)>& cb)
 {
     return m_pStorage->invalidate(pToken, words, cb);
 }
@@ -108,7 +105,7 @@ json_t* CacheSimple::do_get_info(uint32_t what) const
 // protected
 bool CacheSimple::do_must_refresh(const CacheKey& key, const CacheFilterSession* pSession)
 {
-    bool rv = false;
+    bool rv             = false;
     Pending::iterator i = m_pending.find(key);
 
     if (i == m_pending.end())

@@ -24,20 +24,20 @@
 namespace pinloki
 {
 
-class PinlokiSession : public mxs::RouterSession, public pinloki::parser::Handler
+class PinlokiSession : public mxs::RouterSession,
+                       public pinloki::parser::Handler
 {
 public:
-    PinlokiSession(const PinlokiSession&) = delete;
+    PinlokiSession(const PinlokiSession&)            = delete;
     PinlokiSession& operator=(const PinlokiSession&) = delete;
 
     PinlokiSession(MXS_SESSION* pSession, Pinloki* router);
     virtual ~PinlokiSession() = default;
 
-    void    close();
+    void close();
     int32_t routeQuery(GWBUF* pPacket);
-    void    clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
-    bool    handleError(mxs::ErrorType type, GWBUF* pMessage,
-                        mxs::Endpoint* pProblem, const mxs::Reply& pReply);
+    void clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& pReply);
 
     // pinloki::parser::Handler API
     void select(const std::vector<std::string>& values, const std::vector<std::string>& aliases) override;
@@ -55,12 +55,12 @@ public:
     void error(const std::string& err) override;
 
 private:
-    uint8_t                 m_seq = 1;  // Packet sequence number, incremented for each sent packet
-    Pinloki*                m_router;
-    mxq::GtidList           m_gtid_list;
+    uint8_t m_seq = 1;  // Packet sequence number, incremented for each sent packet
+    Pinloki* m_router;
+    mxq::GtidList m_gtid_list;
     std::unique_ptr<Reader> m_reader;
-    int64_t                 m_heartbeat_period = 0;
-    uint32_t                m_mgw_dcid = 0; // MASTER_GTID_WAIT delayed call
+    int64_t m_heartbeat_period = 0;
+    uint32_t m_mgw_dcid        = 0;  // MASTER_GTID_WAIT delayed call
 
     // Prefix the packet in make_buffer(). Essentially this is just to add
     // an OK = '\0' as the first byte of the payload of the first packet.
@@ -79,4 +79,4 @@ private:
     static int high_water_mark_reached(DCB* dcb, DCB::Reason reason, void* userdata);
     static int low_water_mark_reached(DCB* dcb, DCB::Reason reason, void* userdata);
 };
-}
+}  // namespace pinloki

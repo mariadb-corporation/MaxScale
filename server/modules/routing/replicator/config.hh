@@ -23,20 +23,20 @@ namespace cdc
 
 struct Server
 {
-    std::string host;       // Address to connect to
-    int         port;       // Port where the server is listening
-    std::string user;       // Username used for the connection
-    std::string password;   // Password for the user
+    std::string host;      // Address to connect to
+    int port;              // Port where the server is listening
+    std::string user;      // Username used for the connection
+    std::string password;  // Password for the user
 };
 
 struct Config
 {
-    int         server_id = 1234;   // Server ID used in registration
-    std::string gtid;               // Starting GTID
-    SERVICE*    service;
+    int server_id = 1234;  // Server ID used in registration
+    std::string gtid;      // Starting GTID
+    SERVICE* service;
     std::string statedir = ".";
-    pcre2_code* match = nullptr;
-    pcre2_code* exclude = nullptr;
-    int         timeout = 10;
+    pcre2_code* match    = nullptr;
+    pcre2_code* exclude  = nullptr;
+    int timeout          = 10;
 };
-}
+}  // namespace cdc

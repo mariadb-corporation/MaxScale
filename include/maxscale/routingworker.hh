@@ -98,7 +98,7 @@ size_t mxs_rworker_broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t ar
  * @return The number of messages posted; if less that ne number of workers
  *         then some postings failed.
  */
-size_t mxs_rworker_broadcast(void (* cb)(void* data), void* data);
+size_t mxs_rworker_broadcast(void (*cb)(void* data), void* data);
 
 /**
  * Add a session to the current routing worker's session container. Currently
@@ -132,11 +132,11 @@ MXS_END_DECLS
 namespace maxscale
 {
 
-class RoutingWorker : public mxb::WatchedWorker
-                    , public BackendDCB::Manager
-                    , private MXB_POLL_DATA
+class RoutingWorker : public mxb::WatchedWorker,
+                      public BackendDCB::Manager,
+                      private MXB_POLL_DATA
 {
-    RoutingWorker(const RoutingWorker&) = delete;
+    RoutingWorker(const RoutingWorker&)            = delete;
     RoutingWorker& operator=(const RoutingWorker&) = delete;
 
 public:
@@ -146,9 +146,9 @@ public:
     };
 
     typedef mxs::Registry<MXS_SESSION> SessionsById;
-    typedef std::vector<DCB*>          Zombies;
+    typedef std::vector<DCB*> Zombies;
 
-    typedef std::vector<void*>           LocalData;
+    typedef std::vector<void*> LocalData;
     typedef std::vector<void (*)(void*)> DataDeleters;
 
     /**
@@ -206,10 +206,7 @@ public:
      *
      * @return The id of the routing worker.
      */
-    int id() const override
-    {
-        return m_id;
-    }
+    int id() const override { return m_id; }
 
     /**
      * Return a reference to the session registry of this worker.
@@ -320,9 +317,9 @@ public:
      *
      * @return How many workers the task was posted to.
      */
-    static size_t broadcast(std::function<void ()> func, mxb::Semaphore* pSem, execute_mode_t mode);
+    static size_t broadcast(std::function<void()> func, mxb::Semaphore* pSem, execute_mode_t mode);
 
-    static size_t broadcast(std::function<void ()> func, enum execute_mode_t mode)
+    static size_t broadcast(std::function<void()> func, enum execute_mode_t mode)
     {
         return broadcast(func, NULL, mode);
     }
@@ -457,6 +454,7 @@ public:
     static std::unique_ptr<json_t> get_qc_stats_as_json(const char* zHost, int id);
 
     using DCBs = std::unordered_set<DCB*>;
+
     /**
      * Access all DCBs of the routing worker.
      *
@@ -481,7 +479,7 @@ public:
     };
 
     void evict_dcbs(Evict evict);
-    int  evict_dcbs(const SERVER* server, Evict evict);
+    int evict_dcbs(const SERVER* server, Evict evict);
 
     /**
      * Register a function to be called every epoll_tick.
@@ -491,15 +489,9 @@ public:
     /**
      * @return The indexed storage of this worker.
      */
-    IndexedStorage& storage()
-    {
-        return m_storage;
-    }
+    IndexedStorage& storage() { return m_storage; }
 
-    const IndexedStorage& storage() const
-    {
-        return m_storage;
-    }
+    const IndexedStorage& storage() const { return m_storage; }
 
     static void collect_worker_load(size_t count);
 
@@ -528,32 +520,33 @@ private:
     bool try_shutdown(Call::action_t action);
 
 private:
-    const int      m_id;              /*< The id of the worker. */
-    SessionsById   m_sessions;        /*< A mapping of session_id->MXS_SESSION. The map
+    const int m_id;           /*< The id of the worker. */
+    SessionsById m_sessions;  /*< A mapping of session_id->MXS_SESSION. The map
                                        *  should contain sessions exclusive to this
                                        *  worker and not e.g. listener sessions. For now,
                                        *  it's up to the protocol to decide whether a new
                                        *  session is added to the map. */
-    Zombies        m_zombies;         /*< DCBs to be deleted. */
-    IndexedStorage m_storage;         /*< The storage of this worker. */
-    DCBs           m_dcbs;            /*< DCBs managed by this worker. */
+    Zombies m_zombies;        /*< DCBs to be deleted. */
+    IndexedStorage m_storage; /*< The storage of this worker. */
+    DCBs m_dcbs;              /*< DCBs managed by this worker. */
+
     struct
     {
-        RoutingWorker* pTo { nullptr }; /*< Worker to offload work to. */
-        bool           perform = false;
-        int            nSessions = 0;
+        RoutingWorker* pTo {nullptr}; /*< Worker to offload work to. */
+        bool perform  = false;
+        int nSessions = 0;
 
         void set(RoutingWorker* pTo, int nSessions)
         {
-            this->pTo = pTo;
+            this->pTo       = pTo;
             this->nSessions = nSessions;
-            this->perform = true;
+            this->perform   = true;
         }
 
         void reset()
         {
-            pTo = nullptr;
-            perform = false;
+            pTo       = nullptr;
+            perform   = false;
             nSessions = 0;
         }
     } m_rebalance;
@@ -572,7 +565,7 @@ private:
     void rebalance();
 
     static uint32_t epoll_instance_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
-    uint32_t        handle_epoll_events(uint32_t events);
+    uint32_t handle_epoll_events(uint32_t events);
 
     class PersistentEntry
     {
@@ -580,40 +573,31 @@ private:
         PersistentEntry(BackendDCB* pDcb);
         ~PersistentEntry();
 
-        PersistentEntry(const PersistentEntry&) = delete;
+        PersistentEntry(const PersistentEntry&)            = delete;
         PersistentEntry& operator=(const PersistentEntry&) = delete;
 
-        bool hanged_up() const
-        {
-            return m_pDcb->hanged_up();
-        }
+        bool hanged_up() const { return m_pDcb->hanged_up(); }
 
-        time_t created() const
-        {
-            return m_created;
-        }
+        time_t created() const { return m_created; }
 
-        BackendDCB* dcb() const
-        {
-            return m_pDcb;
-        }
+        BackendDCB* dcb() const { return m_pDcb; }
 
         BackendDCB* release_dcb()
         {
             BackendDCB* pDcb = m_pDcb;
-            m_pDcb = nullptr;
+            m_pDcb           = nullptr;
             return pDcb;
         }
 
     private:
-        time_t      m_created;  /*< Time when entry was created. */
+        time_t m_created; /*< Time when entry was created. */
         BackendDCB* m_pDcb;
     };
 
     class DCBHandler : public DCB::Handler
     {
     public:
-        DCBHandler(const DCBHandler&) = delete;
+        DCBHandler(const DCBHandler&)            = delete;
         DCBHandler& operator=(const DCBHandler&) = delete;
 
         DCBHandler(RoutingWorker* pOwner);
@@ -629,18 +613,18 @@ private:
 
     friend class PoolHandler;
 
-    using PersistentEntries = std::list<PersistentEntry>;
+    using PersistentEntries         = std::list<PersistentEntry>;
     using PersistentEntriesByServer = std::map<SERVER*, PersistentEntries>;
 
     PersistentEntriesByServer m_persistent_entries_by_server;
-    bool                      m_evicting = false;
-    DCBHandler                m_pool_handler;
-    long                      m_next_timeout_check = 0;
+    bool m_evicting = false;
+    DCBHandler m_pool_handler;
+    long m_next_timeout_check = 0;
 
     std::vector<std::function<void()>> m_epoll_tick_funcs;
 };
 
-}
+}  // namespace maxscale
 
 /**
  * @brief Convert a routing worker to JSON format

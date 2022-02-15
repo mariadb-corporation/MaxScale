@@ -20,7 +20,7 @@ IndexedStorage::~IndexedStorage()
 {
     for (uint64_t key = 0; key < m_local_data.size(); ++key)
     {
-        auto* pData = m_local_data[key];
+        auto* pData  = m_local_data[key];
         auto deleter = m_data_deleters[key];
 
         if (pData && deleter)
@@ -30,4 +30,4 @@ IndexedStorage::~IndexedStorage()
     }
 }
 
-}
+}  // namespace maxscale

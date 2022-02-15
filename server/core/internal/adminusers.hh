@@ -21,13 +21,13 @@
 
 extern const char* ADMIN_SUCCESS;
 
-void        rest_users_init();
+void rest_users_init();
 const char* admin_add_inet_user(const char* uname, const char* password, mxs::user_account_type type);
 const char* admin_alter_inet_user(const char* uname, const char* password);
 const char* admin_remove_inet_user(const char* uname);
-bool        admin_inet_user_exists(const char* uname);
-bool        admin_verify_inet_user(const char* uname, const char* password);
-bool        admin_user_is_inet_admin(const char* username, const char* password);
+bool admin_inet_user_exists(const char* uname);
+bool admin_verify_inet_user(const char* uname, const char* password);
+bool admin_user_is_inet_admin(const char* username, const char* password);
 
 /**
  * @brief Convert all admin users to JSON
@@ -58,5 +58,6 @@ json_t* admin_user_to_json(const char* host, const char* user);
  * either read-only or readwrite service succeeds. If ADMIN, only the readwrite service is attempted.
  * @return True if user & password logged in successfully
  */
-bool admin_user_is_pam_account(const std::string& username, const std::string& password,
-                               mxs::user_account_type min_acc_type = mxs::USER_ACCOUNT_BASIC);
+bool admin_user_is_pam_account(const std::string& username,
+    const std::string& password,
+    mxs::user_account_type min_acc_type = mxs::USER_ACCOUNT_BASIC);

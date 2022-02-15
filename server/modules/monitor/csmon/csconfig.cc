@@ -24,9 +24,9 @@ namespace
 
 string get_random_string(int length)
 {
-    mt19937 generator { random_device{}() };
+    mt19937 generator {random_device {}()};
 
-    uniform_int_distribution<int> distribution{'a', 'z'};
+    uniform_int_distribution<int> distribution {'a', 'z'};
 
     string s(length, '\0');
     for (auto& c : s)
@@ -36,7 +36,7 @@ string get_random_string(int length)
 
     return s;
 }
-}
+}  // namespace
 
 namespace csmon
 {
@@ -45,58 +45,45 @@ const char ZAPI_KEY_FILE_NAME[] = "api_key.txt";
 
 using seconds = chrono::seconds;
 
-const config::ParamCount::value_type   DEFAULT_ADMIN_PORT      = 8640;
-const config::ParamString::value_type  DEFAULT_ADMIN_BASE_PATH = "/cmapi/0.4.0";
-const config::ParamString::value_type  DEFAULT_API_KEY         = "";
-const config::ParamString::value_type  DEFAULT_LOCAL_ADDRESS   = "";
-const config::ParamServer::value_type  DEFAULT_PRIMARY         = nullptr;
+const config::ParamCount::value_type DEFAULT_ADMIN_PORT       = 8640;
+const config::ParamString::value_type DEFAULT_ADMIN_BASE_PATH = "/cmapi/0.4.0";
+const config::ParamString::value_type DEFAULT_API_KEY         = "";
+const config::ParamString::value_type DEFAULT_LOCAL_ADDRESS   = "";
+const config::ParamServer::value_type DEFAULT_PRIMARY         = nullptr;
 
 config::Specification specification(MXS_MODULE_NAME, config::Specification::MONITOR);
 
-config::ParamEnum<cs::Version> version(
-    &specification,
+config::ParamEnum<cs::Version> version(&specification,
     "version",
     "The version of the Columnstore cluster that is monitored. Default is '1.5'.",
-    {
-        { cs::CS_10, cs::ZCS_10 },
-        { cs::CS_12, cs::ZCS_12 },
-        { cs::CS_15, cs::ZCS_15 }
-    });
+    {{cs::CS_10, cs::ZCS_10}, {cs::CS_12, cs::ZCS_12}, {cs::CS_15, cs::ZCS_15}});
 
-config::ParamServer primary(
-    &specification,
+config::ParamServer primary(&specification,
     "primary",
     "For pre-1.2 Columnstore servers, specifies which server is chosen as the master.",
     config::Param::OPTIONAL);
 
 config::ParamCount admin_port(
-    &specification,
-    "admin_port",
-    "Port of the Columnstore administrative daemon.",
-    DEFAULT_ADMIN_PORT);
+    &specification, "admin_port", "Port of the Columnstore administrative daemon.", DEFAULT_ADMIN_PORT);
 
-config::ParamString admin_base_path(
-    &specification,
+config::ParamString admin_base_path(&specification,
     "admin_base_path",
     "The base path to be used when accessing the Columnstore administrative daemon. "
     "If, for instance, a daemon URL is https://localhost:8640/cmapi/0.3.0/node/start "
     "then the admin_base_path is \"/cmapi/0.3.0\".",
     DEFAULT_ADMIN_BASE_PATH);
 
-config::ParamString api_key(
-    &specification,
+config::ParamString api_key(&specification,
     "api_key",
     "The API key to be used in the communication with the Columnstora admin daemon.",
     DEFAULT_API_KEY);
 
-config::ParamString local_address(
-    &specification,
+config::ParamString local_address(&specification,
     "local_address",
     "Local address to provide as IP of MaxScale to Columnstore cluster. Need not be "
     "specified if global 'local_address' has been set.",
     DEFAULT_LOCAL_ADDRESS);
-}
-
+}  // namespace csmon
 
 CsConfig::CsConfig(const string& name)
     : mxs::config::Configuration(name, &csmon::specification)
@@ -122,23 +109,25 @@ void complain_invalid(cs::Version version, const string& param)
 {
     MXS_ERROR("When csmon is configured for Columnstore %s, "
               "the parameter '%s' is invalid.",
-              cs::to_string(version), param.c_str());
+        cs::to_string(version),
+        param.c_str());
 }
 
 void complain_mandatory(cs::Version version, const string& param)
 {
     MXS_ERROR("When csmon is configured for Columnstore %s, "
               "the parameter '%s' is mandatory.",
-              cs::to_string(version), param.c_str());
+        cs::to_string(version),
+        param.c_str());
 }
 
-}
+}  // namespace
 
 bool CsConfig::post_configure()
 {
     bool rv = true;
 
-    string path { mxs::datadir() };
+    string path {mxs::datadir()};
     path += "/";
     path += name();
 
@@ -213,13 +202,13 @@ bool write_api_key(const string& path, const string& key)
     }
     else
     {
-        MXS_ERROR("Could not open '%s' for writing, the Columnstore api key can not be stored.",
-                  path.c_str());
+        MXS_ERROR(
+            "Could not open '%s' for writing, the Columnstore api key can not be stored.", path.c_str());
     }
 
     return rv;
 }
-}
+}  // namespace
 
 bool CsConfig::check_api_key(const string& dir)
 {
@@ -241,7 +230,7 @@ bool CsConfig::check_api_key(const string& dir)
 
                 string new_key = get_random_string(16);
 
-                new_key = "maxscale-" + new_key;
+                new_key       = "maxscale-" + new_key;
                 this->api_key = new_key;
             }
             else
@@ -295,8 +284,7 @@ bool CsConfig::check_mandatory()
             }
             else
             {
-                MXS_ERROR("'local_address' has been specified neither for %s, nor globally.",
-                          name().c_str());
+                MXS_ERROR("'local_address' has been specified neither for %s, nor globally.", name().c_str());
                 rv = false;
             }
         }

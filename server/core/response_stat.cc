@@ -18,23 +18,20 @@
 
 namespace maxscale
 {
-ResponseStat::ResponseStat(Target* target, int num_filter_samples,
-                           maxbase::Duration sync_duration)
+ResponseStat::ResponseStat(Target* target, int num_filter_samples, maxbase::Duration sync_duration)
     : m_target(target)
     , m_num_filter_samples {num_filter_samples}
-    , m_sync_duration{sync_duration}
-    , m_sample_count{0}
+    , m_sync_duration {sync_duration}
+    , m_sample_count {0}
     , m_samples(num_filter_samples)
-    , m_last_start{maxbase::TimePoint()}
-    , m_next_sync{maxbase::Clock::now(maxbase::NowType::EPollTick) + sync_duration}
-{
-}
+    , m_last_start {maxbase::TimePoint()}
+    , m_next_sync {maxbase::Clock::now(maxbase::NowType::EPollTick) + sync_duration}
+{}
 
 ResponseStat::~ResponseStat()
 {
     sync(true);
 }
-
 
 void ResponseStat::query_started()
 {
@@ -95,7 +92,7 @@ bool ResponseStat::is_valid() const
 
 bool ResponseStat::sync_time_reached()
 {
-    auto now = maxbase::Clock::now(maxbase::NowType::EPollTick);
+    auto now     = maxbase::Clock::now(maxbase::NowType::EPollTick);
     bool reached = m_next_sync < now;
 
     if (reached)
@@ -111,4 +108,4 @@ void ResponseStat::reset()
     m_average.reset();
     m_next_sync = maxbase::Clock::now(maxbase::NowType::EPollTick) + m_sync_duration;
 }
-}
+}  // namespace maxscale

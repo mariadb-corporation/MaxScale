@@ -20,8 +20,8 @@ namespace maxsql
 {
 struct Rotate
 {
-    bool        is_fake;
-    bool        is_artifical;
+    bool is_fake;
+    bool is_artifical;
     std::string file_name;
 };
 
@@ -31,10 +31,10 @@ struct GtidEvent
         : gtid(gtid)
         , flags(flags)
         , commit_id(commit_id)
-    {
-    }
-    Gtid     gtid;
-    uint8_t  flags;
+    {}
+
+    Gtid gtid;
+    uint8_t flags;
     uint64_t commit_id = 0;
 };
 
@@ -42,8 +42,7 @@ struct GtidListEvent
 {
     GtidListEvent(const std::vector<Gtid>&& gl)
         : gtid_list(std::move(gl))
-    {
-    }
+    {}
 
     GtidList gtid_list;
 };
@@ -51,7 +50,7 @@ struct GtidListEvent
 class RplEvent
 {
 public:
-    RplEvent() = default;   // => is_empty() == true
+    RplEvent() = default;  // => is_empty() == true
 
     /**
      * @brief RplEvent from a MariaRplEvent
@@ -68,7 +67,7 @@ public:
     RplEvent(RplEvent&& rhs);
     RplEvent& operator=(RplEvent&& rhs);
 
-    bool     is_empty() const;
+    bool is_empty() const;
     explicit operator bool() const;
 
     /**
@@ -96,16 +95,16 @@ public:
 
     /* Functions that are valid after the header has been read. */
     const char* pBuffer() const;
-    size_t      buffer_size() const;
+    size_t buffer_size() const;
     const char* pHeader() const;
     const char* pEnd() const;
 
     mariadb_rpl_event event_type() const;
-    unsigned int      timestamp() const;
-    unsigned int      server_id() const;
-    unsigned int      event_length() const;
-    uint32_t          next_event_pos() const;
-    unsigned short    flags() const;
+    unsigned int timestamp() const;
+    unsigned int server_id() const;
+    unsigned int event_length() const;
+    uint32_t next_event_pos() const;
+    unsigned short flags() const;
 
     /**
      * @brief read_body  - completes the event when only yhe header was read.
@@ -121,16 +120,16 @@ public:
     bool read_body(std::istream& file, long* file_pos);
 
     /** Functions that are valid after the body has been read */
-    const char*  pBody() const;
+    const char* pBody() const;
     unsigned int checksum() const;
 
-    Rotate        rotate() const;
-    GtidEvent     gtid_event() const;
+    Rotate rotate() const;
+    GtidEvent gtid_event() const;
     GtidListEvent gtid_list() const;
-    bool          is_commit() const;
+    bool is_commit() const;
 
     /** For the writer */
-    void       set_next_pos(uint32_t next_pos);
+    void set_next_pos(uint32_t next_pos);
     static int get_event_length(const std::vector<char>& header);
 
 private:
@@ -138,42 +137,49 @@ private:
     // Note that the event will not be is_empty() after this call.
     RplEvent(size_t sz);
 
-    void        init(bool with_body = true);
-    void        recalculate_crc();
+    void init(bool with_body = true);
+    void recalculate_crc();
     std::string query_event_sql() const;
 
     // Underlying is either MariaRplEvent or raw data (or neither)
-    MariaRplEvent     m_maria_rpl;
+    MariaRplEvent m_maria_rpl;
     std::vector<char> m_raw;
 
     mariadb_rpl_event m_event_type;
-    unsigned int      m_timestamp;
-    unsigned int      m_server_id;
-    unsigned int      m_event_length;
-    uint32_t          m_next_event_pos;
-    unsigned short    m_flags;
-    unsigned int      m_checksum;
+    unsigned int m_timestamp;
+    unsigned int m_server_id;
+    unsigned int m_event_length;
+    uint32_t m_next_event_pos;
+    unsigned short m_flags;
+    unsigned int m_checksum;
 };
 
 inline bool operator==(const RplEvent& lhs, const RplEvent& rhs)
 {
     return lhs.buffer_size() == rhs.buffer_size()
-           && std::memcmp(lhs.pBuffer(), rhs.pBuffer(), lhs.buffer_size()) == 0;
+        && std::memcmp(lhs.pBuffer(), rhs.pBuffer(), lhs.buffer_size()) == 0;
 }
 
-enum class Kind {Real, Artificial};
+enum class Kind
+{
+    Real,
+    Artificial
+};
 
-std::vector<char> create_rotate_event(const std::string& file_name,
-                                      uint32_t server_id,
-                                      uint32_t pos,
-                                      Kind kind);
+std::vector<char> create_rotate_event(
+    const std::string& file_name, uint32_t server_id, uint32_t pos, Kind kind);
 
-std::vector<char> create_binlog_checkpoint(const std::string& file_name, uint32_t server_id,
-                                           uint32_t curr_pos);
+std::vector<char> create_binlog_checkpoint(
+    const std::string& file_name, uint32_t server_id, uint32_t curr_pos);
 
-enum class Verbosity {Name, Some, All};
-std::string   dump_rpl_msg(const RplEvent& rpl_event, Verbosity v);
-std::ostream& operator<<(std::ostream& os, const RplEvent& rpl_msg);        // Verbosity::All
+enum class Verbosity
+{
+    Name,
+    Some,
+    All
+};
+std::string dump_rpl_msg(const RplEvent& rpl_event, Verbosity v);
+std::ostream& operator<<(std::ostream& os, const RplEvent& rpl_msg);  // Verbosity::All
 
 inline RplEvent::operator bool() const
 {
@@ -214,6 +220,6 @@ inline unsigned int RplEvent::checksum() const
 {
     return m_checksum;
 }
-}
+}  // namespace maxsql
 
 std::string to_string(mariadb_rpl_event ev);

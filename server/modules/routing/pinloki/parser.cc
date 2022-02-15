@@ -35,9 +35,7 @@ using CMT = pinloki::ChangeMasterType;
 namespace
 {
 
-constexpr std::array<const char*, int(CMT::END)> master_type_strs
-{
-    "MASTER_HOST",
+constexpr std::array<const char*, int(CMT::END)> master_type_strs {"MASTER_HOST",
     "MASTER_PORT",
     "MASTER_USER",
     "MASTER_PASSWORD",
@@ -61,11 +59,10 @@ constexpr std::array<const char*, int(CMT::END)> master_type_strs
     "MASTER_DELAY",
     "IGNORE_SERVER_IDS",
     "DO_DOMAIN_IDS",
-    "IGNORE_DOMAIN_IDS"
-};
+    "IGNORE_DOMAIN_IDS"};
 
 static_assert(master_type_strs.size() == size_t(CMT::END), "check master_type_strs");
-}
+}  // namespace
 
 namespace pinloki
 {
@@ -80,7 +77,7 @@ std::string to_string(CMT type)
 
     return master_type_strs[index];
 }
-}
+}  // namespace pinloki
 
 namespace
 {
@@ -154,21 +151,21 @@ using Field = x3::variant<std::string, int, double>;
 
 struct SelectField
 {
-    Field orig_name;    // The original name of the field
-    Field alias_name;   // The user-defined alias for the field
+    Field orig_name;   // The original name of the field
+    Field alias_name;  // The user-defined alias for the field
 };
 
 // A key-value with variant values
 struct Variable
 {
     std::string key;
-    Field       value;
+    Field value;
 };
 
 // A key-value with a limited set of accepted keys
 struct ChangeMasterVariable
 {
-    CMT   key;
+    CMT key;
     Field value;
 };
 
@@ -186,7 +183,7 @@ struct Set
 
 struct ChangeMaster
 {
-    std::string                       connection_name;
+    std::string connection_name;
     std::vector<ChangeMasterVariable> values;
 };
 
@@ -203,7 +200,7 @@ struct PurgeLogs
 struct MasterGtidWait
 {
     std::string gtid;
-    int         timeout = 0;
+    int timeout = 0;
 };
 
 using Show = x3::variant<ShowType, ShowVariables>;
@@ -215,8 +212,8 @@ using Command = x3::variant<nullptr_t, Select, Set, ChangeMaster, Slave, PurgeLo
 struct error_handler
 {
     template<typename Iterator, typename Exception, typename Context>
-    x3::error_handler_result on_error(Iterator& first, Iterator const& last,
-                                      Exception const& x, Context const& context)
+    x3::error_handler_result on_error(
+        Iterator& first, Iterator const& last, Exception const& x, Context const& context)
     {
         auto& error_handler = x3::get<x3::error_handler_tag>(context).get();
         std::string message;
@@ -235,7 +232,6 @@ struct error_handler
     }
 };
 
-
 /**
  * Declare a rule with an attribute
  *
@@ -244,7 +240,8 @@ struct error_handler
  * @param attr_type Rule attribute (i.e. return value)
  */
 #define DECLARE_ATTR_RULE(id, desc, attr_type) \
-    struct id : public error_handler {}; \
+    struct id : public error_handler           \
+    {};                                        \
     const x3::rule<struct id, attr_type> id = desc
 
 /**
@@ -255,8 +252,9 @@ struct error_handler
  * @param id        Rule ID, declared as a variable
  * @param desc      Rule type description
  */
-#define DECLARE_RULE(id, desc) \
-    struct id : public error_handler {}; \
+#define DECLARE_RULE(id, desc)       \
+    struct id : public error_handler \
+    {};                              \
     const x3::rule<struct id> id = desc
 
 DECLARE_RULE(eq, "=");
@@ -294,17 +292,17 @@ DECLARE_ATTR_RULE(grammar, "grammar", Command);
 //
 
 // Basic types
-const auto eq_def = x3::omit['='];
+const auto eq_def  = x3::omit['='];
 const auto str_def = x3::lexeme[+(x3::ascii::alnum | x3::char_("_@."))];
-const auto func_def = str
-    > x3::lit("(") > x3::omit[*(x3::ascii::char_ - ')')] > x3::lit(")")
-    > x3::attr(std::string("()"));      // Must be std::string, otherwise the null character is included
+const auto func_def
+    = str > x3::lit("(") > x3::omit[*(x3::ascii::char_ - ')')] > x3::lit(")")
+    > x3::attr(std::string("()"));  // Must be std::string, otherwise the null character is included
 const auto sq_str_def = x3::lexeme[x3::lit('\'') > *(x3::char_ - '\'') > x3::lit('\'')];
 const auto dq_str_def = x3::lexeme[x3::lit('"') > *(x3::char_ - '"') > x3::lit('"')];
-const auto q_str_def = sq_str | dq_str;
+const auto q_str_def  = sq_str | dq_str;
 
 // Generic fields and key-values
-const auto field_def = sq_str | dq_str | x3::double_ | x3::int_ | func | str;
+const auto field_def    = sq_str | dq_str | x3::double_ | x3::int_ | func | str;
 const auto variable_def = str > eq > field;
 
 // Field definition for SELECT statements
@@ -316,75 +314,85 @@ const auto select_field_def = field >> -x3::omit[x3::lit("AS")] >> -field;
 // without modifications to the SELECT grammar.
 //
 // TODO: Evaluate whether adding it to the SELECT grammar is worth it.
-const auto master_gtid_wait_def = x3::lit("SELECT") > x3::lit("MASTER_GTID_WAIT")
-    > x3::lit("(")
-    > q_str > -(x3::lit(",") > x3::int_)
-    > x3::lit(")");
+const auto master_gtid_wait_def = x3::lit("SELECT") > x3::lit("MASTER_GTID_WAIT") > x3::lit("(") > q_str
+                                > -(x3::lit(",") > x3::int_) > x3::lit(")");
 
 // SET and SELECT commands
 const auto select_def = x3::lit("SELECT") > select_field % ',' > -x3::omit[x3::lit("LIMIT") > x3::int_ % ','];
 
-const auto set_names_def = x3::string("NAMES") > (str | q_str);
+const auto set_names_def         = x3::string("NAMES") > (str | q_str);
 const auto global_or_session_def = -x3::omit[x3::lit("GLOBAL") | x3::lit("SESSION") | x3::lit("@@global.")];
-const auto set_def = x3::lit("SET") > global_or_session > (set_names | (variable % ','));
+const auto set_def               = x3::lit("SET") > global_or_session > (set_names | (variable % ','));
 
 // CHANGE MASTER TO, only accepts a limited set of keys
 const auto change_master_variable_def = change_master_sym > eq > field;
-const auto change_master_def = x3::lit("CHANGE") > x3::lit("MASTER") > -q_str > x3::lit("TO")
-    > (change_master_variable % ',');
+const auto change_master_def
+    = x3::lit("CHANGE") > x3::lit("MASTER") > -q_str > x3::lit("TO") > (change_master_variable % ',');
 
 // START SLAVE et al. The connection_name, if any, is ignored.
 const auto slave_def = slave_sym > "SLAVE" > x3::omit[-q_str];
 
 // PURGE {BINARY | MASTER} LOGS TO '<binlog name>'
-const auto purge_logs_def = x3::lit("PURGE") > (x3::lit("BINARY") | x3::lit("MASTER")) > x3::lit("LOGS")
-    > x3::lit("TO") > q_str;
+const auto purge_logs_def
+    = x3::lit("PURGE") > (x3::lit("BINARY") | x3::lit("MASTER")) > x3::lit("LOGS") > x3::lit("TO") > q_str;
 
 // SHOW commands
 const auto show_master_def = x3::lit("MASTER") > x3::lit("STATUS") > x3::attr(ShowType::MASTER_STATUS);
-const auto show_slave_def = x3::lit("SLAVE") > x3::lit("STATUS") > x3::attr(ShowType::SLAVE_STATUS);
-const auto show_all_slaves_def = x3::lit("ALL") > x3::lit("SLAVES")
-    > x3::lit("STATUS") > x3::attr(ShowType::ALL_SLAVES_STATUS);
-const auto show_binlogs_def = x3::lit("BINARY") > x3::lit("LOGS") > x3::attr(ShowType::BINLOGS);
+const auto show_slave_def  = x3::lit("SLAVE") > x3::lit("STATUS") > x3::attr(ShowType::SLAVE_STATUS);
+const auto show_all_slaves_def
+    = x3::lit("ALL") > x3::lit("SLAVES") > x3::lit("STATUS") > x3::attr(ShowType::ALL_SLAVES_STATUS);
+const auto show_binlogs_def   = x3::lit("BINARY") > x3::lit("LOGS") > x3::attr(ShowType::BINLOGS);
 const auto show_variables_def = x3::lit("VARIABLES") > x3::lit("LIKE") > q_str;
-const auto show_options_def = (show_master | show_slave | show_all_slaves
-                               | show_binlogs | show_variables);
-const auto show_def = x3::lit("SHOW") > show_options;
-const auto end_of_input_def = x3::eoi | x3::lit(";");
+const auto show_options_def   = (show_master | show_slave | show_all_slaves | show_binlogs | show_variables);
+const auto show_def           = x3::lit("SHOW") > show_options;
+const auto end_of_input_def   = x3::eoi | x3::lit(";");
 
-const auto command_def =
-    master_gtid_wait
-    | select
-    | set
-    | change_master
-    | slave
-    | show
-    | purge_logs;
+const auto command_def = master_gtid_wait | select | set | change_master | slave | show | purge_logs;
 
 // SET STATEMENT ... Parsed, but not used (not implemented)
-const auto set_statement_def = x3::lit("SET") > x3::lit("STATEMENT")
-    > x3::omit[variable % ','] > x3::lit("FOR") > command;
+const auto set_statement_def
+    = x3::lit("SET") > x3::lit("STATEMENT") > x3::omit[variable % ','] > x3::lit("FOR") > command;
 
 // The complete grammar, case insensitive
-const auto grammar_def = x3::no_case[
-    command
-    | set_statement] > end_of_input;
+const auto grammar_def = x3::no_case[command | set_statement] > end_of_input;
 
 // Boost magic that combines the rule declarations and definitions (definitions _must_ end in a _def suffix)
-BOOST_SPIRIT_DEFINE(str, sq_str, dq_str, field, select_field, variable, select, set, eq, q_str,
-                    show_master, show_slave, show_all_slaves, show_binlogs, show_variables, show, set_names,
-                    global_or_session, show_options, func, master_gtid_wait,
-                    change_master_variable, change_master, slave, purge_logs, end_of_input,
-                    command, set_statement, grammar);
-
+BOOST_SPIRIT_DEFINE(str,
+    sq_str,
+    dq_str,
+    field,
+    select_field,
+    variable,
+    select,
+    set,
+    eq,
+    q_str,
+    show_master,
+    show_slave,
+    show_all_slaves,
+    show_binlogs,
+    show_variables,
+    show,
+    set_names,
+    global_or_session,
+    show_options,
+    func,
+    master_gtid_wait,
+    change_master_variable,
+    change_master,
+    slave,
+    purge_logs,
+    end_of_input,
+    command,
+    set_statement,
+    grammar);
 
 // The visitor class that does the final processing of the result
 struct ResultVisitor : public boost::static_visitor<>
 {
     ResultVisitor(pinloki::parser::Handler* handler)
         : m_handler(handler)
-    {
-    }
+    {}
 
     void operator()(Select& s)
     {
@@ -405,10 +413,7 @@ struct ResultVisitor : public boost::static_visitor<>
         m_handler->select(names, aliases);
     }
 
-    void operator()(Variable& a)
-    {
-        m_handler->set(a.key, get<std::string>(a.value));
-    }
+    void operator()(Variable& a) { m_handler->set(a.key, get<std::string>(a.value)); }
 
     void operator()(std::vector<Variable>& s)
     {
@@ -418,10 +423,7 @@ struct ResultVisitor : public boost::static_visitor<>
         }
     }
 
-    void operator()(Set& s)
-    {
-        boost::apply_visitor(*this, s.values);
-    }
+    void operator()(Set& s) { boost::apply_visitor(*this, s.values); }
 
     void operator()(ChangeMaster& s)
     {
@@ -459,10 +461,7 @@ struct ResultVisitor : public boost::static_visitor<>
         }
     }
 
-    void operator()(PurgeLogs& s)
-    {
-        m_handler->purge_logs(s.up_to);
-    }
+    void operator()(PurgeLogs& s) { m_handler->purge_logs(s.up_to); }
 
     void operator()(ShowType& s)
     {
@@ -486,10 +485,7 @@ struct ResultVisitor : public boost::static_visitor<>
         }
     }
 
-    void operator()(ShowVariables& s)
-    {
-        m_handler->show_variables(s.like);
-    }
+    void operator()(ShowVariables& s) { m_handler->show_variables(s.like); }
 
     void operator()(Show& s)
     {
@@ -498,18 +494,11 @@ struct ResultVisitor : public boost::static_visitor<>
         boost::apply_visitor(*this, s);
     }
 
-    void operator()(MasterGtidWait& s)
-    {
-        m_handler->master_gtid_wait(s.gtid, s.timeout);
-    }
+    void operator()(MasterGtidWait& s) { m_handler->master_gtid_wait(s.gtid, s.timeout); }
 
-    void operator()(nullptr_t&)
-    {
-        assert(!true);
-    }
+    void operator()(nullptr_t&) { assert(!true); }
 
 private:
-
     // This is needed to convert variant types
     template<class T>
     struct ToTypeVisitor : public boost::static_visitor<>
@@ -534,7 +523,7 @@ private:
 
     pinloki::parser::Handler* m_handler;
 };
-}
+}  // namespace
 
 // Boost magic that automatically maps parse results to member variables. Needs to be done outside of the
 // anonymous namespace (for some reason).
@@ -555,14 +544,14 @@ namespace parser
 void parse(const std::string& line, Handler* handler)
 {
     auto start = line.begin();
-    auto end = line.end();
+    auto end   = line.end();
     Command cmd;
     bool rv = false;
     std::ostringstream err;
 
     // The x3::with applies the error handler to the grammar, required to enable error printing
     auto err_handler = x3::error_handler<decltype(start)>(start, end, err);
-    auto parser = x3::with<x3::error_handler_tag>(std::ref(err_handler))[grammar];
+    auto parser      = x3::with<x3::error_handler_tag>(std::ref(err_handler))[grammar];
 
     try
     {
@@ -583,5 +572,5 @@ void parse(const std::string& line, Handler* handler)
         handler->error(err.str());
     }
 }
-}
-}
+}  // namespace parser
+}  // namespace pinloki

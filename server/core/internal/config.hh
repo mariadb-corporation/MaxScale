@@ -26,12 +26,12 @@
 #include <maxscale/cn_strings.hh>
 #include <maxscale/ssl.hh>
 
-#define DEFAULT_NTHREADS                    1       /**< Default number of polling threads */
-#define DEFAULT_QUERY_RETRIES               1       /**< Number of retries for interrupted queries */
-#define DEFAULT_QUERY_RETRY_TIMEOUT         5       /**< Timeout for query retries */
-#define MIN_WRITEQ_HIGH_WATER               4096UL  /**< Min high water mark of dcb write queue */
-#define MIN_WRITEQ_LOW_WATER                512UL   /**< Min low water mark of dcb write queue */
-#define DEFAULT_MAX_AUTH_ERRORS_UNTIL_BLOCK 10      /**< Max allowed authentication failures */
+#define DEFAULT_NTHREADS                    1      /**< Default number of polling threads */
+#define DEFAULT_QUERY_RETRIES               1      /**< Number of retries for interrupted queries */
+#define DEFAULT_QUERY_RETRY_TIMEOUT         5      /**< Timeout for query retries */
+#define MIN_WRITEQ_HIGH_WATER               4096UL /**< Min high water mark of dcb write queue */
+#define MIN_WRITEQ_LOW_WATER                512UL  /**< Min low water mark of dcb write queue */
+#define DEFAULT_MAX_AUTH_ERRORS_UNTIL_BLOCK 10     /**< Max allowed authentication failures */
 
 /**
  * Maximum length for configuration parameter value.
@@ -62,8 +62,8 @@ void config_finish();
 void config_add_defaults(mxs::ConfigParameters* dest, const MXS_MODULE_PARAM* params);
 
 char* config_clean_string_list(const char* str);
-bool  config_load(const char*);
-bool  config_load_global(const char* filename);
+bool config_load(const char*);
+bool config_load_global(const char* filename);
 
 /**
  * @brief Creates an empty configuration context
@@ -127,10 +127,10 @@ void config_remove_param(CONFIG_CONTEXT* obj, const char* name);
  * @param output Output JSON object where the parameters are added
  */
 void config_add_module_params_json(const mxs::ConfigParameters* parameters,
-                                   const std::unordered_set<std::string>& ignored_params,
-                                   const MXS_MODULE_PARAM* basic_params,
-                                   const MXS_MODULE_PARAM* module_params,
-                                   json_t* output);
+    const std::unordered_set<std::string>& ignored_params,
+    const MXS_MODULE_PARAM* basic_params,
+    const MXS_MODULE_PARAM* module_params,
+    json_t* output);
 
 /**
  * @brief Convert object names to correct format
@@ -163,9 +163,10 @@ bool export_config_file(const char* filename);
  * @param common_param_defs Common module parameter definitions. These are printed first.
  * @param module_param_defs Module-specific parameter definitions.
  */
-std::string generate_config_string(const std::string& instance_name, const mxs::ConfigParameters& parameters,
-                                   const MXS_MODULE_PARAM* common_param_defs,
-                                   const MXS_MODULE_PARAM* module_param_defs);
+std::string generate_config_string(const std::string& instance_name,
+    const mxs::ConfigParameters& parameters,
+    const MXS_MODULE_PARAM* common_param_defs,
+    const MXS_MODULE_PARAM* module_param_defs);
 
 /**
  * Check whether a parameter can be modified at runtime
@@ -189,13 +190,16 @@ constexpr int64_t MXS_UNKNOWN_ENUM_VALUE {-1};
  */
 int64_t config_enum_to_value(const std::string& key, const MXS_ENUM_VALUE* values);
 
-bool validate_param(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* module,
-                    const std::string& key, const std::string& value, std::string* error_out);
+bool validate_param(const MXS_MODULE_PARAM* basic,
+    const MXS_MODULE_PARAM* module,
+    const std::string& key,
+    const std::string& value,
+    std::string* error_out);
 
 bool param_is_known(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* module, const char* key);
 
-bool param_is_valid(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* module,
-                    const char* key, const char* value);
+bool param_is_valid(
+    const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* module, const char* key, const char* value);
 
 /**
  * Set value for 'rebalance_threshold'
@@ -214,15 +218,14 @@ bool config_set_rebalance_threshold(const char* value);
  * @param params List of parameters for the object
  * @return True if at least one of the required parameters is missing
  */
-bool missing_required_parameters(const MXS_MODULE_PARAM* mod_params,
-                                 const mxs::ConfigParameters& params,
-                                 const char* name);
+bool missing_required_parameters(
+    const MXS_MODULE_PARAM* mod_params, const mxs::ConfigParameters& params, const char* name);
 
 typedef struct duplicate_context
 {
     std::set<std::string>* sections;
-    pcre2_code*            re;
-    pcre2_match_data*      mdata;
+    pcre2_code* re;
+    pcre2_match_data* mdata;
 } DUPLICATE_CONTEXT;
 
 /**
@@ -250,9 +253,7 @@ void duplicate_context_finish(DUPLICATE_CONTEXT* context);
  *
  * @return True if the file could be parsed, false otherwise.
  */
-bool config_load_single_file(const char* file,
-                             DUPLICATE_CONTEXT* dcontext,
-                             CONFIG_CONTEXT* ccontext);
+bool config_load_single_file(const char* file, DUPLICATE_CONTEXT* dcontext, CONFIG_CONTEXT* ccontext);
 
 /**
  * Turn parameters into json.

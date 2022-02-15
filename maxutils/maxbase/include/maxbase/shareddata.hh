@@ -30,7 +30,7 @@ namespace maxbase
 constexpr int CachelineAlignment = 64;
 
 template<typename T>
-struct alignas (CachelineAlignment) CachelineAtomic : public std::atomic<T>
+struct alignas(CachelineAlignment) CachelineAtomic : public std::atomic<T>
 {
     using std::atomic<T>::atomic;
 };
@@ -100,10 +100,10 @@ struct alignas (CachelineAlignment) CachelineAtomic : public std::atomic<T>
  *
  */
 template<typename Data, typename Update>
-class alignas (CachelineAlignment) SharedData
+class alignas(CachelineAlignment) SharedData
 {
 public:
-    using DataType = Data;
+    using DataType   = Data;
     using UpdateType = Update;
 
     /**
@@ -114,11 +114,11 @@ public:
      *                    This number should by high enough that send_update() never blocks, or, does not
      *                    block under sensible load conditions.
      */
-    SharedData(Data * pData,
-               int max_updates,
-               std::condition_variable* updater_wakeup,
-               bool* pData_rdy,
-               std::atomic<int64_t>* timestamp_generator);
+    SharedData(Data* pData,
+        int max_updates,
+        std::condition_variable* updater_wakeup,
+        bool* pData_rdy,
+        std::atomic<int64_t>* timestamp_generator);
 
     /**
      * @brief A reader/worker thread should call this each loop to get a ptr to a fresh copy of DataType.
@@ -146,11 +146,12 @@ public:
     struct InternalUpdate
     {
         UpdateType update;
-        int64_t    tstamp;
+        int64_t tstamp;
     };
 
     // For GCUpdater, so it can move SharedData into a vector (in initialization)
-    SharedData(SharedData && rhs);
+    SharedData(SharedData&& rhs);
+
 private:
     // GCUpdater is a friend. All private functions are for GCUpdater, and nothing else, to call.
     template<typename Me>
@@ -164,17 +165,17 @@ private:
 
     std::pair<const Data*, const Data*> get_ptrs() const;
 
-    std::atomic<const Data*>    m_pCurrent;
-    std::atomic<const Data*>    m_pNew;
+    std::atomic<const Data*> m_pCurrent;
+    std::atomic<const Data*> m_pNew;
     std::vector<InternalUpdate> m_queue;
-    size_t                      m_queue_max;
+    size_t m_queue_max;
 
-    std::mutex               m_mutex;
+    std::mutex m_mutex;
     std::condition_variable* m_pUpdater_wakeup;
-    bool*                    m_pData_rdy;
+    bool* m_pData_rdy;
 
     std::condition_variable m_worker_wakeup;
-    bool                    m_data_swapped_out = false;
+    bool m_data_swapped_out = false;
 
     std::atomic<int64_t>* m_pTimestamp_generator;
 };
@@ -196,7 +197,7 @@ class SharedDataPtr
 {
 public:
     using SharedDataType = SD;
-    using DataType = typename SharedDataType::DataType;
+    using DataType       = typename SharedDataType::DataType;
 
     /**
      * @brief Constructor
@@ -207,7 +208,7 @@ public:
      *                    stable_read = false is almost always the correct solution
      */
     SharedDataPtr(SharedDataType* shared_data, bool stable_read = false);
-    SharedDataPtr(SharedDataPtr&& rhs) = default;
+    SharedDataPtr(SharedDataPtr&& rhs)            = default;
     SharedDataPtr& operator=(SharedDataPtr&& rhs) = default;
 
     // Ptr to DataType
@@ -217,10 +218,11 @@ public:
     const DataType* get();
 
     ~SharedDataPtr();
+
 private:
     SharedDataType* m_shared_data;
-    DataType*       m_pCurrentData;
-    const bool      m_stable_read;
+    DataType* m_pCurrentData;
+    const bool m_stable_read;
 };
 
 // Convenience maker of SharedDataPtr
@@ -230,20 +232,19 @@ SharedDataPtr<SD> make_shared_data_ptr(SD* sd, bool stable_read = false)
     return SharedDataPtr<SD>(sd, stable_read);
 }
 
-
 /// IMPLEMENTATION
 ///
 
 extern CachelineAtomic<int64_t> num_shareddata_updater_blocks;
-extern CachelineAtomic<int64_t> num_shareddata_worker_blocks;   // <-- Rapid growth means something is wrong
-extern CachelineAtomic<int64_t> num_gcupdater_cap_waits;        // <-- Rapid growth means something is wrong
+extern CachelineAtomic<int64_t> num_shareddata_worker_blocks;  // <-- Rapid growth means something is wrong
+extern CachelineAtomic<int64_t> num_gcupdater_cap_waits;       // <-- Rapid growth means something is wrong
 
 template<typename Data, typename Update>
 SharedData<Data, Update>::SharedData(Data* pData,
-                                     int max_updates,
-                                     std::condition_variable* updater_wakeup,
-                                     bool* pData_rdy,
-                                     std::atomic<int64_t>* timestamp_generator)
+    int max_updates,
+    std::condition_variable* updater_wakeup,
+    bool* pData_rdy,
+    std::atomic<int64_t>* timestamp_generator)
     : m_queue_max(max_updates)
     , m_pUpdater_wakeup(updater_wakeup)
     , m_pData_rdy(pData_rdy)
@@ -263,8 +264,7 @@ SharedData<Data, Update>::SharedData(SharedData&& rhs)
     , m_pUpdater_wakeup(rhs.m_pUpdater_wakeup)
     , m_pData_rdy(rhs.m_pData_rdy)
     , m_pTimestamp_generator(rhs.m_pTimestamp_generator)
-{
-}
+{}
 
 template<typename Data, typename Update>
 void SharedData<Data, Update>::set_new_data(const Data* pData)
@@ -291,9 +291,9 @@ bool SharedData<Data, Update>::wait_for_updates(maxbase::Duration timeout)
     if (m_queue.empty())
     {
         *m_pData_rdy = false;
-        auto pred = [this]() {
-                return *m_pData_rdy;
-            };
+        auto pred    = [this]() {
+            return *m_pData_rdy;
+        };
 
         if (timeout.count() != 0)
         {
@@ -365,9 +365,7 @@ void SharedData<Data, Update>::send_update(const Update& update)
         {
             num_shareddata_worker_blocks.fetch_add(1, std::memory_order_relaxed);
             m_data_swapped_out = false;
-            m_worker_wakeup.wait(guard, [this]() {
-                                     return m_data_swapped_out;
-                                 });
+            m_worker_wakeup.wait(guard, [this]() { return m_data_swapped_out; });
         }
     }
 }
@@ -391,14 +389,12 @@ void SharedData<Data, Update>::shutdown()
     m_pUpdater_wakeup->notify_one();
 }
 
-
 template<typename SD>
 SharedDataPtr<SD>::SharedDataPtr(SD* shared_data, bool stable_read)
-    : m_shared_data{shared_data}
+    : m_shared_data {shared_data}
     , m_pCurrentData(const_cast<typename SD::DataType*>(shared_data->reader_ready()))
     , m_stable_read(stable_read)
-{
-}
+{}
 
 template<typename SD>
 const typename SD::DataType* SharedDataPtr<SD>::operator->()
@@ -421,4 +417,4 @@ SharedDataPtr<SD>::~SharedDataPtr()
 {
     m_shared_data->reader_ready();
 }
-}
+}  // namespace maxbase

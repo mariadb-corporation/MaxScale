@@ -50,7 +50,7 @@ static bool is_integer(const std::string& str)
 
 static json_t* mxs_json_pointer_internal(json_t* json, std::string str)
 {
-    json_t* rval = NULL;
+    json_t* rval     = NULL;
     std::string comp = grab_next_component(&str);
 
     if (comp.length() == 0)
@@ -102,7 +102,7 @@ namespace maxscale
 
 bool get_json_string(json_t* json, const char* ptr, std::string* out)
 {
-    auto val = mxs_json_pointer(json, ptr);
+    auto val  = mxs_json_pointer(json, ptr);
     bool rval = false;
 
     if (json_is_string(val))
@@ -116,7 +116,7 @@ bool get_json_string(json_t* json, const char* ptr, std::string* out)
 
 bool get_json_int(json_t* json, const char* ptr, int64_t* out)
 {
-    auto val = mxs_json_pointer(json, ptr);
+    auto val  = mxs_json_pointer(json, ptr);
     bool rval = false;
 
     if (json_is_integer(val))
@@ -130,7 +130,7 @@ bool get_json_int(json_t* json, const char* ptr, int64_t* out)
 
 bool get_json_float(json_t* json, const char* ptr, double* out)
 {
-    auto val = mxs_json_pointer(json, ptr);
+    auto val  = mxs_json_pointer(json, ptr);
     bool rval = false;
 
     if (json_is_real(val))
@@ -144,7 +144,7 @@ bool get_json_float(json_t* json, const char* ptr, double* out)
 
 bool get_json_bool(json_t* json, const char* ptr, bool* out)
 {
-    auto val = mxs_json_pointer(json, ptr);
+    auto val  = mxs_json_pointer(json, ptr);
     bool rval = false;
 
     if (json_is_boolean(val))
@@ -155,4 +155,4 @@ bool get_json_bool(json_t* json, const char* ptr, bool* out)
 
     return rval;
 }
-}
+}  // namespace maxscale

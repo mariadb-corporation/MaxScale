@@ -22,7 +22,7 @@ long mxb::xml::get_content_as<long>(const xmlChar* pContent)
 {
     const char* zContent = reinterpret_cast<const char*>(pContent);
     char* zEnd;
-    errno = 0;
+    errno  = 0;
     long l = strtol(zContent, &zEnd, 10);
 
     bool valid = (errno == 0 && zEnd != zContent && *zEnd == 0);
@@ -37,8 +37,7 @@ long mxb::xml::get_content_as<long>(const xmlChar* pContent)
     return l;
 }
 
-xmlNode& mxb::xml::get_descendant(xmlNode& ancestor,
-                                  const char* zPath)
+xmlNode& mxb::xml::get_descendant(xmlNode& ancestor, const char* zPath)
 {
     xmlNode* pDescendant = find_descendant(ancestor, zPath);
 
@@ -89,33 +88,30 @@ namespace
 {
 
 bool xml_equal(const string& path,
-               xmlNode& lhs, xmlXPathContext& lContext,
-               xmlNode& rhs, xmlXPathContext& rContext,
-               std::ostream* pErr);
+    xmlNode& lhs,
+    xmlXPathContext& lContext,
+    xmlNode& rhs,
+    xmlXPathContext& rContext,
+    std::ostream* pErr);
 
 bool xml_equal_children(const string& path,
-                        xmlNode& lhs, xmlXPathContext& lContext,
-                        xmlNode& rhs, xmlXPathContext& rContext,
-                        std::ostream* pErr)
+    xmlNode& lhs,
+    xmlXPathContext& lContext,
+    xmlNode& rhs,
+    xmlXPathContext& rContext,
+    std::ostream* pErr)
 {
     bool rv = true;
-    mxb_assert(strcmp(reinterpret_cast<const char*>(lhs.name),
-                      reinterpret_cast<const char*>(rhs.name)) == 0);
+    mxb_assert(strcmp(reinterpret_cast<const char*>(lhs.name), reinterpret_cast<const char*>(rhs.name)) == 0);
 
     xmlNode* pL_child = lhs.children;
 
-    if (pL_child
-        && pL_child->type == XML_TEXT_NODE
-        && !pL_child->next
-        && !pL_child->children)
+    if (pL_child && pL_child->type == XML_TEXT_NODE && !pL_child->next && !pL_child->children)
     {
         // Only one child that is text without children.
         xmlNode* pR_child = rhs.children;
 
-        if (pR_child
-            && pR_child->type == XML_TEXT_NODE
-            && !pR_child->next
-            && !pR_child->children)
+        if (pR_child && pR_child->type == XML_TEXT_NODE && !pR_child->next && !pR_child->children)
         {
             // Also only one child that is text without children.
             auto* pL_content = xmlNodeGetContent(&lhs);
@@ -175,12 +171,12 @@ bool xml_equal_children(const string& path,
                 mxb_assert(pL_child->name);
 
                 string name(reinterpret_cast<const char*>(pL_child->name));
-                string full_name = path + "/" + name;
-                string xpath = "./" + name;
+                string full_name      = path + "/" + name;
+                string xpath          = "./" + name;
                 const xmlChar* pXpath = reinterpret_cast<const xmlChar*>(xpath.c_str());
 
                 xmlXPathObject* pXpath_object = xmlXPathNodeEval(&rhs, pXpath, &rContext);
-                xmlNodeSet* pNodes = pXpath_object->nodesetval;
+                xmlNodeSet* pNodes            = pXpath_object->nodesetval;
                 mxb_assert(pNodes->nodeNr <= 1);
 
                 if (pNodes->nodeNr == 0)
@@ -212,12 +208,13 @@ bool xml_equal_children(const string& path,
 }
 
 bool xml_equal(const string& path,
-               xmlNode& lhs, xmlXPathContext& lContext,
-               xmlNode& rhs, xmlXPathContext& rContext,
-               std::ostream* pErr)
+    xmlNode& lhs,
+    xmlXPathContext& lContext,
+    xmlNode& rhs,
+    xmlXPathContext& rContext,
+    std::ostream* pErr)
 {
-    mxb_assert(strcmp(reinterpret_cast<const char*>(lhs.name),
-                      reinterpret_cast<const char*>(rhs.name)) == 0);
+    mxb_assert(strcmp(reinterpret_cast<const char*>(lhs.name), reinterpret_cast<const char*>(rhs.name)) == 0);
 
     bool rv = xml_equal_children(path, lhs, lContext, rhs, rContext, pErr);
 
@@ -229,13 +226,13 @@ bool xml_equal(const string& path,
     return rv;
 }
 
-}
+}  // namespace
 
 bool mxb::xml::equal(const xmlNode& lhs, const xmlNode& rhs, std::ostream* pErr)
 {
     bool rv = false;
 
-    const char* zLeft_name = reinterpret_cast<const char*>(lhs.name);
+    const char* zLeft_name  = reinterpret_cast<const char*>(lhs.name);
     const char* zRight_name = reinterpret_cast<const char*>(rhs.name);
 
     if (strcmp(zLeft_name, zRight_name) == 0)
@@ -244,10 +241,8 @@ bool mxb::xml::equal(const xmlNode& lhs, const xmlNode& rhs, std::ostream* pErr)
         xmlXPathContext* pR_context = xmlXPathNewContext(rhs.doc);
         mxb_assert(pL_context && pR_context);
 
-        rv = xml_equal(zLeft_name,
-                       const_cast<xmlNode&>(lhs), *pL_context,
-                       const_cast<xmlNode&>(rhs), *pR_context,
-                       pErr);
+        rv = xml_equal(
+            zLeft_name, const_cast<xmlNode&>(lhs), *pL_context, const_cast<xmlNode&>(rhs), *pR_context, pErr);
 
         xmlXPathFreeContext(pR_context);
         xmlXPathFreeContext(pL_context);

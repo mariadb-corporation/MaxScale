@@ -36,8 +36,7 @@ using UserEntry = mariadb::UserEntry;
 
 uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN] = "";
 
-GWBUF* mysql_create_com_quit(GWBUF* bufparam,
-                             int packet_number)
+GWBUF* mysql_create_com_quit(GWBUF* bufparam, int packet_number)
 {
     uint8_t* data;
     GWBUF* buf;
@@ -63,7 +62,7 @@ GWBUF* mysql_create_com_quit(GWBUF* bufparam,
     *data++ = 0x0;
     *data++ = 0x0;
     *data++ = packet_number;
-    *data = 0x1;
+    *data   = 0x1;
 
     return buf;
 }
@@ -81,14 +80,11 @@ GWBUF* mysql_create_custom_error(int packet_number, int affected_rows, uint16_t 
     memcpy(mysql_statemsg + 1, mysql_state, 5);
 
 
-    uint32_t mysql_payload_size =
-        sizeof(field_count)
-        + sizeof(mysql_err)
-        + sizeof(mysql_statemsg)
-        + strlen(errmsg);
+    uint32_t mysql_payload_size
+        = sizeof(field_count) + sizeof(mysql_err) + sizeof(mysql_statemsg) + strlen(errmsg);
 
     /** allocate memory for packet header + payload */
-    GWBUF* errbuf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size);
+    GWBUF* errbuf   = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size);
     uint8_t* outbuf = GWBUF_DATA(errbuf);
 
     /** write packet header and packet number */
@@ -169,30 +165,26 @@ void encode_leint(uint8_t* ptr, size_t prefix_size, size_t value)
 
 GWBUF* mxs_mysql_create_ok(int sequence, uint8_t affected_rows, const char* message)
 {
-    uint8_t* outbuf = NULL;
+    uint8_t* outbuf             = NULL;
     uint32_t mysql_payload_size = 0;
     uint8_t mysql_packet_header[4];
     uint8_t* mysql_payload = NULL;
-    uint8_t field_count = 0;
-    uint8_t insert_id = 0;
+    uint8_t field_count    = 0;
+    uint8_t insert_id      = 0;
     uint8_t mysql_server_status[2];
     uint8_t mysql_warning_counter[2];
     GWBUF* buf;
 
 
-    mysql_payload_size =
-        sizeof(field_count)
-        + sizeof(affected_rows)
-        + sizeof(insert_id)
-        + sizeof(mysql_server_status)
-        + sizeof(mysql_warning_counter);
+    mysql_payload_size = sizeof(field_count) + sizeof(affected_rows) + sizeof(insert_id)
+                       + sizeof(mysql_server_status) + sizeof(mysql_warning_counter);
 
-    size_t msglen = 0;
+    size_t msglen      = 0;
     size_t prefix_size = 0;
 
     if (message)
     {
-        msglen = strlen(message);
+        msglen      = strlen(message);
         prefix_size = leint_prefix_bytes(msglen);
         mysql_payload_size += msglen + prefix_size;
     }
@@ -213,8 +205,8 @@ GWBUF* mxs_mysql_create_ok(int sequence, uint8_t affected_rows, const char* mess
 
     mysql_payload = outbuf + sizeof(mysql_packet_header);
 
-    mysql_server_status[0] = 2;
-    mysql_server_status[1] = 0;
+    mysql_server_status[0]   = 2;
+    mysql_server_status[1]   = 0;
     mysql_warning_counter[0] = 0;
     mysql_warning_counter[1] = 0;
 
@@ -262,8 +254,12 @@ GWBUF* mxs_mysql_create_ok(int sequence, uint8_t affected_rows, const char* mess
  *
  * @return The length of the response packet
  */
-int response_length(bool with_ssl, bool ssl_established, const char* user,
-                    const uint8_t* passwd, const char* dbname, const char* auth_module)
+int response_length(bool with_ssl,
+    bool ssl_established,
+    const char* user,
+    const uint8_t* passwd,
+    const char* dbname,
+    const char* auth_module)
 {
     long bytes;
 
@@ -309,8 +305,8 @@ int response_length(bool with_ssl, bool ssl_established, const char* user,
 
 void mxs_mysql_calculate_hash(const uint8_t* scramble, const uint8_t* passwd, uint8_t* output)
 {
-    uint8_t hash1[GW_MYSQL_SCRAMBLE_SIZE] = "";
-    uint8_t hash2[GW_MYSQL_SCRAMBLE_SIZE] = "";
+    uint8_t hash1[GW_MYSQL_SCRAMBLE_SIZE]   = "";
+    uint8_t hash2[GW_MYSQL_SCRAMBLE_SIZE]   = "";
     uint8_t new_sha[GW_MYSQL_SCRAMBLE_SIZE] = "";
 
     // hash1 is the function input, SHA1(real_password)
@@ -343,14 +339,14 @@ uint8_t* load_hashed_password(const uint8_t* scramble, uint8_t* payload, const u
 
 bool mxs_mysql_is_ok_packet(GWBUF* buffer)
 {
-    uint8_t cmd = 0xff;     // Default should differ from the OK packet
+    uint8_t cmd = 0xff;  // Default should differ from the OK packet
     gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &cmd);
     return cmd == MYSQL_REPLY_OK;
 }
 
 bool mxs_mysql_is_err_packet(GWBUF* buffer)
 {
-    uint8_t cmd = 0x00;     // Default should differ from the ERR packet
+    uint8_t cmd = 0x00;  // Default should differ from the ERR packet
     gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &cmd);
     return cmd == MYSQL_REPLY_ERR;
 }
@@ -372,7 +368,7 @@ uint16_t mxs_mysql_get_mysql_errno(GWBUF* buffer)
 
 bool mxs_mysql_is_local_infile(GWBUF* buffer)
 {
-    uint8_t cmd = 0xff;     // Default should differ from the OK packet
+    uint8_t cmd = 0xff;  // Default should differ from the OK packet
     gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &cmd);
     return cmd == MYSQL_REPLY_LOCAL_INFILE;
 }
@@ -382,8 +378,7 @@ bool mxs_mysql_is_prep_stmt_ok(GWBUF* buffer)
     bool rval = false;
     uint8_t cmd;
 
-    if (gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &cmd)
-        && cmd == MYSQL_REPLY_OK)
+    if (gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &cmd) && cmd == MYSQL_REPLY_OK)
     {
         rval = true;
     }
@@ -393,12 +388,9 @@ bool mxs_mysql_is_prep_stmt_ok(GWBUF* buffer)
 
 bool mxs_mysql_is_ps_command(uint8_t cmd)
 {
-    return cmd == MXS_COM_STMT_EXECUTE
-           || cmd == MXS_COM_STMT_BULK_EXECUTE
-           || cmd == MXS_COM_STMT_SEND_LONG_DATA
-           || cmd == MXS_COM_STMT_CLOSE
-           || cmd == MXS_COM_STMT_FETCH
-           || cmd == MXS_COM_STMT_RESET;
+    return cmd == MXS_COM_STMT_EXECUTE || cmd == MXS_COM_STMT_BULK_EXECUTE
+        || cmd == MXS_COM_STMT_SEND_LONG_DATA || cmd == MXS_COM_STMT_CLOSE || cmd == MXS_COM_STMT_FETCH
+        || cmd == MXS_COM_STMT_RESET;
 }
 
 bool mxs_mysql_extract_ps_response(GWBUF* buffer, MXS_PS_RESPONSE* out)
@@ -414,11 +406,11 @@ bool mxs_mysql_extract_ps_response(GWBUF* buffer, MXS_PS_RESPONSE* out)
         && gwbuf_copy_data(buffer, MYSQL_PS_PARAMS_OFFSET, sizeof(params), params) == sizeof(params)
         && gwbuf_copy_data(buffer, MYSQL_PS_WARN_OFFSET, sizeof(warnings), warnings) == sizeof(warnings))
     {
-        out->id = mariadb::get_byte4(id);
-        out->columns = mariadb::get_byte2(cols);
+        out->id         = mariadb::get_byte4(id);
+        out->columns    = mariadb::get_byte2(cols);
         out->parameters = mariadb::get_byte2(params);
-        out->warnings = mariadb::get_byte2(warnings);
-        rval = true;
+        out->warnings   = mariadb::get_byte2(warnings);
+        rval            = true;
     }
 
     return rval;
@@ -439,9 +431,7 @@ uint32_t mxs_mysql_extract_ps_id(GWBUF* buffer)
 
 bool mxs_mysql_command_will_respond(uint8_t cmd)
 {
-    return cmd != MXS_COM_STMT_SEND_LONG_DATA
-           && cmd != MXS_COM_QUIT
-           && cmd != MXS_COM_STMT_CLOSE;
+    return cmd != MXS_COM_STMT_SEND_LONG_DATA && cmd != MXS_COM_QUIT && cmd != MXS_COM_STMT_CLOSE;
 }
 
 static inline bool complete_ps_response(GWBUF* buffer)
@@ -521,21 +511,21 @@ uint64_t mariadb::AuthenticatorModule::capabilities() const
 bool UserEntry::operator==(const UserEntry& rhs) const
 {
     return username == rhs.username && host_pattern == rhs.host_pattern && plugin == rhs.plugin
-           && password == rhs.password && auth_string == rhs.auth_string && ssl == rhs.ssl
-           && global_db_priv == rhs.global_db_priv && proxy_priv == rhs.proxy_priv && is_role == rhs.is_role
-           && default_role == rhs.default_role;
+        && password == rhs.password && auth_string == rhs.auth_string && ssl == rhs.ssl
+        && global_db_priv == rhs.global_db_priv && proxy_priv == rhs.proxy_priv && is_role == rhs.is_role
+        && default_role == rhs.default_role;
 }
 
 bool UserEntry::host_pattern_is_more_specific(const UserEntry& lhs, const UserEntry& rhs)
 {
     // Order entries according to https://mariadb.com/kb/en/library/create-user/
-    const string& lhost = lhs.host_pattern;
-    const string& rhost = rhs.host_pattern;
+    const string& lhost    = lhs.host_pattern;
+    const string& rhost    = rhs.host_pattern;
     const char wildcards[] = "%_";
-    auto lwc_pos = lhost.find_first_of(wildcards);
-    auto rwc_pos = rhost.find_first_of(wildcards);
-    bool lwc = (lwc_pos != string::npos);
-    bool rwc = (rwc_pos != string::npos);
+    auto lwc_pos           = lhost.find_first_of(wildcards);
+    auto rwc_pos           = rhost.find_first_of(wildcards);
+    bool lwc               = (lwc_pos != string::npos);
+    bool rwc               = (rwc_pos != string::npos);
 
     bool rval;
     // The host without wc:s sorts earlier than the one with them,
@@ -569,8 +559,8 @@ bool read_protocol_packet(DCB* dcb, mxs::Buffer* output)
     // TODO: add optimization where the dcb readq is checked first, as it may contain a complete protocol
     // packet.
     const int MAX_PACKET_SIZE = MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN;
-    GWBUF* read_buffer = nullptr;
-    int buffer_len = dcb->read(&read_buffer, MAX_PACKET_SIZE);
+    GWBUF* read_buffer        = nullptr;
+    int buffer_len            = dcb->read(&read_buffer, MAX_PACKET_SIZE);
     if (buffer_len < 0)
     {
         return false;
@@ -636,8 +626,8 @@ namespace mariadb
 void set_byte2(uint8_t* buffer, uint16_t val)
 {
     uint16_t le16 = htole16(val);
-    auto ple16 = reinterpret_cast<uint16_t*>(buffer);
-    *ple16 = le16;
+    auto ple16    = reinterpret_cast<uint16_t*>(buffer);
+    *ple16        = le16;
 }
 
 void set_byte3(uint8_t* buffer, uint32_t val)
@@ -649,27 +639,27 @@ void set_byte3(uint8_t* buffer, uint32_t val)
 void set_byte4(uint8_t* buffer, uint32_t val)
 {
     uint32_t le32 = htole32(val);
-    auto ple32 = reinterpret_cast<uint32_t*>(buffer);
-    *ple32 = le32;
+    auto ple32    = reinterpret_cast<uint32_t*>(buffer);
+    *ple32        = le32;
 }
 
 void set_byte8(uint8_t* buffer, uint64_t val)
 {
     uint64_t le64 = htole64(val);
-    auto ple64 = reinterpret_cast<uint64_t*>(buffer);
-    *ple64 = le64;
+    auto ple64    = reinterpret_cast<uint64_t*>(buffer);
+    *ple64        = le64;
 }
 
 uint16_t get_byte2(const uint8_t* buffer)
 {
     uint16_t le16 = *(reinterpret_cast<const uint16_t*>(buffer));
-    auto host16 = le16toh(le16);
+    auto host16   = le16toh(le16);
     return host16;
 }
 
 uint32_t get_byte3(const uint8_t* buffer)
 {
-    uint32_t low = get_byte2(buffer);
+    uint32_t low  = get_byte2(buffer);
     uint32_t high = buffer[2];
     return low | (high << 16);
 }
@@ -677,21 +667,20 @@ uint32_t get_byte3(const uint8_t* buffer)
 uint32_t get_byte4(const uint8_t* buffer)
 {
     uint32_t le32 = *(reinterpret_cast<const uint32_t*>(buffer));
-    auto host32 = le32toh(le32);
+    auto host32   = le32toh(le32);
     return host32;
 }
 
 uint64_t get_byte8(const uint8_t* buffer)
 {
     uint64_t le64 = *(reinterpret_cast<const uint64_t*>(buffer));
-    auto host64 = le64toh(le64);
+    auto host64   = le64toh(le64);
     return host64;
 }
 
 BackendAuthData::BackendAuthData(const char* srv_name)
     : servername(srv_name)
-{
-}
+{}
 
 AuthSwitchReqContents parse_auth_switch_request(const mxs::Buffer& input)
 {
@@ -702,4 +691,4 @@ AuthSwitchReqContents parse_auth_switch_request(const mxs::Buffer& input)
     gwbuf_copy_data(input.get(), MYSQL_HEADER_LEN, datalen, data.data());
     return packet_parser::parse_auth_switch_request(data);
 }
-}
+}  // namespace mariadb

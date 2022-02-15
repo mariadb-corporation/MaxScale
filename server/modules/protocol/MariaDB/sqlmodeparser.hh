@@ -16,15 +16,14 @@
 #include <maxscale/customparser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 
-
 class SqlModeParser : public maxscale::CustomParser
 {
 public:
     enum sql_mode_t
     {
-        DEFAULT,    // "set sql_mode=DEFAULT"
-        ORACLE,     // "set sql_mode=ORACLE", "set sql_mode='PIPES_AS_CONCAT,ORACLE', autocommit=false", etc.
-        SOMETHING   // "set sql_mode=PIPES_AS_CONCAT"
+        DEFAULT,   // "set sql_mode=DEFAULT"
+        ORACLE,    // "set sql_mode=ORACLE", "set sql_mode='PIPES_AS_CONCAT,ORACLE', autocommit=false", etc.
+        SOMETHING  // "set sql_mode=PIPES_AS_CONCAT"
     };
 
     enum
@@ -34,9 +33,7 @@ public:
         TK_ORACLE,
     };
 
-    SqlModeParser()
-    {
-    }
+    SqlModeParser() {}
 
     /**
      * Given the trimmed value from the right of a "SET SQL_MODE=..." statement
@@ -54,7 +51,7 @@ public:
         sql_mode_t sql_mode = SOMETHING;
 
         m_pSql = pBegin;
-        m_pI = m_pSql;
+        m_pI   = m_pSql;
         m_pEnd = pEnd;
 
         return parse();
@@ -131,8 +128,7 @@ private:
             break;
 
         case PARSER_UNKNOWN_TOKEN:
-        default:
-            ;
+        default:;
         }
 
         return rv;
@@ -217,9 +213,7 @@ private:
 
             if (m_pI != m_pEnd)
             {
-                MXS_WARNING("Non-space data found after semi-colon: '%.*s'.",
-                            (int)(m_pEnd - m_pI),
-                            m_pI);
+                MXS_WARNING("Non-space data found after semi-colon: '%.*s'.", (int) (m_pEnd - m_pI), m_pI);
             }
 
             token = PARSER_EXHAUSTED;
@@ -246,8 +240,7 @@ private:
                 token = expect_token(MXS_CP_EXPECT_TOKEN("ORACLE"), TK_ORACLE);
                 break;
 
-            default:
-                ;
+            default:;
             }
         }
 

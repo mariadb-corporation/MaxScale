@@ -26,7 +26,7 @@ static inline std::string http_get_date()
 {
     time_t now = time(NULL);
     struct tm tm;
-    char buf[200];      // Enough to store all dates
+    char buf[200];  // Enough to store all dates
 
     gmtime_r(&now, &tm);
     strftime(buf, sizeof(buf), "%a, %d %b %y %T GMT", &tm);
@@ -44,7 +44,7 @@ static inline std::string http_get_date()
 static inline std::string http_to_date(time_t t)
 {
     struct tm tm;
-    char buf[200];      // Enough to store all dates
+    char buf[200];  // Enough to store all dates
 
     gmtime_r(&t, &tm);
     strftime(buf, sizeof(buf), "%a, %d %b %Y %T GMT", &tm);
@@ -70,15 +70,15 @@ static inline time_t http_from_date(const std::string& str)
     /** Then convert it to local time by calculating the difference between
      * the local time and the GMT time */
     struct tm local_tm = {};
-    struct tm gmt_tm = {};
-    time_t epoch = 0;
+    struct tm gmt_tm   = {};
+    time_t epoch       = 0;
 
     /** Call tzset() for the sake of portability */
     tzset();
     gmtime_r(&epoch, &gmt_tm);
     localtime_r(&epoch, &local_tm);
 
-    time_t gmt_t = mktime(&gmt_tm);
+    time_t gmt_t   = mktime(&gmt_tm);
     time_t local_t = mktime(&local_tm);
 
     /** The value of `(gmt_t - local_t)` will be the number of seconds west

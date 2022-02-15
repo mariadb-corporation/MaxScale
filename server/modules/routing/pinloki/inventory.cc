@@ -75,7 +75,7 @@ void save_gtid(const maxsql::GtidList& gtids, const std::string& filename)
         if (rename(tmp.c_str(), filename.c_str()) != 0)
         {
             MXB_THROW(BinlogWriteError,
-                      "Could not rename to " << filename << ": " << errno << ", " << mxb_strerror(errno));
+                "Could not rename to " << filename << ": " << errno << ", " << mxb_strerror(errno));
         }
     }
     else
@@ -83,13 +83,12 @@ void save_gtid(const maxsql::GtidList& gtids, const std::string& filename)
         MXB_THROW(BinlogWriteError, "Could not open " << tmp << ": " << errno << ", " << mxb_strerror(errno));
     }
 }
-}
+}  // namespace
 
 InventoryWriter::InventoryWriter(const Config& config)
     : m_config(config)
     , m_file_names(read_inventory_file(config))
-{
-}
+{}
 
 void InventoryWriter::push_back(const std::string& file_name)
 {
@@ -218,8 +217,7 @@ std::string last_string(const std::vector<std::string>& strs)
 
 InventoryReader::InventoryReader(const Config& config)
     : m_config(config)
-{
-}
+{}
 
 const std::vector<std::string>& InventoryReader::file_names() const
 {
@@ -232,4 +230,4 @@ maxsql::GtidList InventoryReader::rpl_state() const
 {
     return read_rpl_state(m_config);
 }
-}
+}  // namespace pinloki

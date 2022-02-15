@@ -54,10 +54,7 @@ public:
      *
      * @return True if the client is still open and queries can be queued to it
      */
-    bool is_open() const
-    {
-        return m_down->is_open();
-    }
+    bool is_open() const { return m_down->is_open(); }
 
     /**
      * Queue a new query for execution
@@ -75,8 +72,8 @@ public:
 
     int32_t clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
-    bool handleError(mxs::ErrorType type, GWBUF* error, mxs::Endpoint* down,
-                     const mxs::Reply& reply) override;
+    bool handleError(
+        mxs::ErrorType type, GWBUF* error, mxs::Endpoint* down, const mxs::Reply& reply) override;
 
 private:
     LocalClient() = default;

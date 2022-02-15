@@ -37,7 +37,7 @@ MirrorSession* Mirror::newSession(MXS_SESSION* pSession, const Endpoints& endpoi
         return nullptr;
     }
 
-    auto backends = MyBackend::from_endpoints(endpoints);
+    auto backends  = MyBackend::from_endpoints(endpoints);
     bool connected = false;
 
     for (const auto& a : backends)
@@ -65,8 +65,8 @@ uint64_t Mirror::getCapabilities()
 
 bool Mirror::configure(mxs::ConfigParameters* params)
 {
-    bool rval = false;
-    auto main_tgt = params->get_target("main");
+    bool rval            = false;
+    auto main_tgt        = params->get_target("main");
     const auto& children = m_pService->get_children();
 
     std::lock_guard<mxb::shared_mutex> guard(m_rw_lock);
@@ -74,8 +74,8 @@ bool Mirror::configure(mxs::ConfigParameters* params)
     if (auto exporter = build_exporter(params))
     {
         m_exporter = std::move(exporter);
-        m_main = main_tgt;
-        rval = true;
+        m_main     = main_tgt;
+        rval       = true;
     }
 
     return rval;
@@ -95,9 +95,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     const char* desc = "Mirrors SQL statements to multiple targets";
 
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_ROUTER,
+    static MXS_MODULE info = {MXS_MODULE_API_ROUTER,
         MXS_MODULE_ALPHA_RELEASE,
         MXS_ROUTER_VERSION,
         desc,
@@ -108,35 +106,16 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,
         NULL,
         NULL,
-        {
-            {
-                "main",
-                MXS_MODULE_PARAM_TARGET,
-                nullptr,
-                MXS_MODULE_OPT_REQUIRED
-            },
-            {
-                CN_EXPORTER,
+        {{"main", MXS_MODULE_PARAM_TARGET, nullptr, MXS_MODULE_OPT_REQUIRED},
+            {CN_EXPORTER,
                 MXS_MODULE_PARAM_ENUM,
                 nullptr,
                 MXS_MODULE_OPT_REQUIRED | MXS_MODULE_OPT_ENUM_UNIQUE,
-                exporter_type_values
-            },
-            {
-                CN_FILE,
-                MXS_MODULE_PARAM_STRING
-            },
-            {
-                CN_KAFKA_BROKER,
-                MXS_MODULE_PARAM_STRING
-            },
-            {
-                CN_KAFKA_TOPIC,
-                MXS_MODULE_PARAM_STRING
-            },
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+                exporter_type_values},
+            {CN_FILE, MXS_MODULE_PARAM_STRING},
+            {CN_KAFKA_BROKER, MXS_MODULE_PARAM_STRING},
+            {CN_KAFKA_TOPIC, MXS_MODULE_PARAM_STRING},
+            {MXS_END_MODULE_PARAMS}}};
 
     return &info;
 }

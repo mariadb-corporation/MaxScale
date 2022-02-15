@@ -24,8 +24,8 @@ void report_error(OM_uint32 major, OM_uint32 minor)
 {
     OM_uint32 status_maj = major;
     OM_uint32 status_min = minor;
-    OM_uint32 res = 0;
-    gss_buffer_desc buf = {0, 0};
+    OM_uint32 res        = 0;
+    gss_buffer_desc buf  = {0, 0};
 
     major = gss_display_status(&minor, status_maj, GSS_C_GSS_CODE, NULL, &res, &buf);
 

@@ -58,9 +58,10 @@ public:
     void reset();
 
     CumulativeAverage& operator+=(const CumulativeAverage& rhs);
+
 private:
-    double m_ave = 0;
-    long   m_num_samples = 0;
+    double m_ave       = 0;
+    long m_num_samples = 0;
 };
 
 CumulativeAverage operator+(const CumulativeAverage& rhs, const CumulativeAverage& lhs);
@@ -72,7 +73,6 @@ CumulativeAverage operator+(const CumulativeAverage& rhs, const CumulativeAverag
 class EMAverage
 {
 public:
-
     /**
      * Construct a new EMAverage
      *
@@ -149,9 +149,9 @@ public:
 private:
     const double m_min_alpha;
     const double m_max_alpha;
-    long         m_sample_max;
-    long         m_num_samples = 0;
-    double       m_ave = 0;
+    long m_sample_max;
+    long m_num_samples = 0;
+    double m_ave       = 0;
 };
 
 /**
@@ -162,7 +162,7 @@ private:
  */
 class Average
 {
-    Average(const Average&) = delete;
+    Average(const Average&)            = delete;
     Average& operator=(const Average&) = delete;
 
 public:
@@ -174,8 +174,7 @@ public:
     Average(Average* pDependant = NULL)
         : m_pDependant(pDependant)
         , m_value(0)
-    {
-    }
+    {}
 
     virtual ~Average();
 
@@ -209,20 +208,14 @@ public:
      *
      * @return The value represented by the Average.
      */
-    uint8_t value() const
-    {
-        return mxb::atomic::load(&m_value, mxb::atomic::RELAXED);
-    }
+    uint8_t value() const { return mxb::atomic::load(&m_value, mxb::atomic::RELAXED); }
 
 protected:
-    Average* m_pDependant;  /*< The optional dependant Average. */
-    uint32_t m_value;       /*< The current average value. */
+    Average* m_pDependant; /*< The optional dependant Average. */
+    uint32_t m_value;      /*< The current average value. */
 
 protected:
-    void set_value(uint32_t value)
-    {
-        mxb::atomic::store(&m_value, value, mxb::atomic::RELAXED);
-    }
+    void set_value(uint32_t value) { mxb::atomic::store(&m_value, value, mxb::atomic::RELAXED); }
 };
 
 /**
@@ -233,8 +226,7 @@ class Average1 : public Average
 public:
     Average1(Average* pDependant = NULL)
         : Average(pDependant)
-    {
-    }
+    {}
 
     bool add_value(uint8_t value);
     void update_value(uint8_t value);
@@ -253,10 +245,7 @@ public:
     bool add_value(uint8_t value);
     void update_value(uint8_t value);
 
-    size_t size() const
-    {
-        return m_buffer.size();
-    }
+    size_t size() const { return m_buffer.size(); }
 
     /**
      * Resize the array of values. If made smaller than originally was,
@@ -271,11 +260,11 @@ private:
     Data::iterator next(Data::iterator p);
 
 private:
-    Data           m_buffer;  /*< Buffer containing values from which the average is calculated. */
-    Data::iterator m_begin;   /*< Points to the beginning of the buffer. */
-    Data::iterator m_end;     /*< Points to one past the end of the buffer. */
-    Data::iterator m_i;       /*< Current position in the buffer. */
-    uint32_t       m_sum;     /*< Sum of all values in the buffer. */
-    size_t         m_nValues; /*< How many values the buffer contains. */
+    Data m_buffer;          /*< Buffer containing values from which the average is calculated. */
+    Data::iterator m_begin; /*< Points to the beginning of the buffer. */
+    Data::iterator m_end;   /*< Points to one past the end of the buffer. */
+    Data::iterator m_i;     /*< Current position in the buffer. */
+    uint32_t m_sum;         /*< Sum of all values in the buffer. */
+    size_t m_nValues;       /*< How many values the buffer contains. */
 };
-}
+}  // namespace maxbase

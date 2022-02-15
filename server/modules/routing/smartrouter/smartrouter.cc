@@ -26,19 +26,17 @@ namespace smartrouter
 
 config::Specification specification(MXS_MODULE_NAME, config::Specification::ROUTER);
 
-config::ParamTarget
-    master(&specification,
-           "master",
-           "The server/cluster to be treated as master, that is, the one where updates are sent.");
+config::ParamTarget master(&specification,
+    "master",
+    "The server/cluster to be treated as master, that is, the one where updates are sent.");
 
-config::ParamBool
-    persist_performance_data(&specification,
-                             "persist_performance_data",
-                             "Persist performance data so that the smartrouter can use information "
-                             "collected during earlier runs.",
-                             true);     // Default value
-}
-}
+config::ParamBool persist_performance_data(&specification,
+    "persist_performance_data",
+    "Persist performance data so that the smartrouter can use information "
+    "collected during earlier runs.",
+    true);  // Default value
+}  // namespace smartrouter
+}  // namespace
 
 /**
  * The module entry point.
@@ -47,23 +45,18 @@ config::ParamBool
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_ROUTER,
+    static MXS_MODULE info = {MXS_MODULE_API_ROUTER,
         MXS_MODULE_GA,
         MXS_ROUTER_VERSION,
         "Provides routing for the Smart Query feature",
         "V1.0.0",
         RCAP_TYPE_TRANSACTION_TRACKING | RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_CONTIGUOUS_OUTPUT,
         &SmartRouter::s_object,
-        nullptr,    /* Process init. */
-        nullptr,    /* Process finish. */
-        nullptr,    /* Thread init. */
-        nullptr,    /* Thread finish. */
-        {
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+        nullptr, /* Process init. */
+        nullptr, /* Process finish. */
+        nullptr, /* Thread init. */
+        nullptr, /* Thread finish. */
+        {{MXS_END_MODULE_PARAMS}}};
 
     SmartRouter::Config::populate(info);
 
@@ -75,8 +68,7 @@ SmartRouter::Config::Config(const std::string& name, SmartRouter* router)
     , m_master(this, &smartrouter::master)
     , m_persist_performance_data(this, &smartrouter::persist_performance_data)
     , m_router(router)
-{
-}
+{}
 
 void SmartRouter::Config::populate(MXS_MODULE& module)
 {
@@ -110,13 +102,12 @@ SmartRouter::SmartRouter(SERVICE* service)
     for (size_t id = 0; id != shared_ptrs.size(); ++id)
     {
         RoutingWorker* pRworker = RoutingWorker::get(id);
-        auto pShared = shared_ptrs[id];
-        pRworker->execute([pRworker, pShared]() {
-                              pRworker->register_epoll_tick_func(std::bind(&SharedPerformanceInfo::
-                                                                           reader_ready,
-                                                                           pShared));
-                          },
-                          Worker::EXECUTE_AUTO);
+        auto pShared            = shared_ptrs[id];
+        pRworker->execute(
+            [pRworker, pShared]() {
+            pRworker->register_epoll_tick_func(std::bind(&SharedPerformanceInfo::reader_ready, pShared));
+            },
+            Worker::EXECUTE_AUTO);
     }
 
     m_updater_future = std::async(std::launch::async, &PerformanceInfoUpdater::run, &m_updater);
@@ -136,7 +127,7 @@ SmartRouterSession* SmartRouter::newSession(MXS_SESSION* pSession, const Endpoin
 // static
 SmartRouter* SmartRouter::create(SERVICE* pService, mxs::ConfigParameters* pParams)
 {
-    SmartRouter* pRouter = new(std::nothrow) SmartRouter(pService);
+    SmartRouter* pRouter = new (std::nothrow) SmartRouter(pService);
 
     if (pRouter && !pRouter->configure(pParams))
     {
@@ -167,13 +158,8 @@ uint64_t SmartRouter::getCapabilities()
 //      have different performance advantages (InnoDb is always very fast for small tables).
 //
 // TODO make configurable, maybe.
-static std::array<maxbase::Duration, 4> eviction_schedules =
-{
-    std::chrono::minutes(2),
-    std::chrono::minutes(5),
-    std::chrono::minutes(10),
-    std::chrono::minutes(20)
-};
+static std::array<maxbase::Duration, 4> eviction_schedules
+    = {std::chrono::minutes(2), std::chrono::minutes(5), std::chrono::minutes(10), std::chrono::minutes(20)};
 
 // TODO need to add the default db to the key (or hash)
 
@@ -182,10 +168,10 @@ PerformanceInfo SmartRouter::perf_find(const std::string& canonical)
     using namespace maxbase;
 
     auto pShared_data = m_updater.get_shared_data_by_order(mxs_rworker_get_current_id());
-    auto sShared_ptr = make_shared_data_ptr(pShared_data);
+    auto sShared_ptr  = make_shared_data_ptr(pShared_data);
 
     auto pContainer = sShared_ptr.get();
-    auto perf_it = pContainer->find(canonical);
+    auto perf_it    = pContainer->find(canonical);
 
     PerformanceInfo ret;
 
@@ -201,11 +187,10 @@ PerformanceInfo SmartRouter::perf_find(const std::string& canonical)
             // The return value is the default constructed ret.
             updt_entry.set_updating(true);
 
-            MXS_SINFO("Trigger re-measure, schedule "
-                      << eviction_schedules[updt_entry.eviction_schedule()]
-                      << ", perf: " << updt_entry.target()->name()
-                      << ", " << updt_entry.duration() << ", "
-                      << show_some(canonical));
+            MXS_SINFO("Trigger re-measure, schedule " << eviction_schedules[updt_entry.eviction_schedule()]
+                                                      << ", perf: " << updt_entry.target()->name() << ", "
+                                                      << updt_entry.duration() << ", "
+                                                      << show_some(canonical));
 
             pShared_data->send_update({canonical, updt_entry});
         }
@@ -223,17 +208,16 @@ void SmartRouter::perf_update(const std::string& canonical, PerformanceInfo perf
     using namespace maxbase;
 
     auto pShared_data = m_updater.get_shared_data_by_order(mxs_rworker_get_current_id());
-    auto sShared_ptr = make_shared_data_ptr(pShared_data);
+    auto sShared_ptr  = make_shared_data_ptr(pShared_data);
 
     auto pContainer = sShared_ptr.get();
-    auto perf_it = pContainer->find(canonical);
+    auto perf_it    = pContainer->find(canonical);
 
     if (perf_it != end(*pContainer))
     {
-        MXS_SINFO("Update perf: from "
-                  << perf_it->second.target()->name() << ", " << perf_it->second.duration()
-                  << " to " << perf.target()->name() << ", " << perf.duration()
-                  << ", " << show_some(canonical));
+        MXS_SINFO("Update perf: from " << perf_it->second.target()->name() << ", "
+                                       << perf_it->second.duration() << " to " << perf.target()->name()
+                                       << ", " << perf.duration() << ", " << show_some(canonical));
 
         size_t schedule = perf_it->second.eviction_schedule();
         perf.set_eviction_schedule(std::min(++schedule, eviction_schedules.size() - 1));
@@ -243,7 +227,7 @@ void SmartRouter::perf_update(const std::string& canonical, PerformanceInfo perf
     else
     {
         pShared_data->send_update({canonical, perf});
-        MXS_SDEBUG("Sent new perf: " << perf.target()->name() << ", " << perf.duration()
-                                     << ", " << show_some(canonical));
+        MXS_SDEBUG("Sent new perf: " << perf.target()->name() << ", " << perf.duration() << ", "
+                                     << show_some(canonical));
     }
 }

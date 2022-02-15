@@ -26,36 +26,40 @@ using namespace std::literals::chrono_literals;
 
 cfg::Specification s_spec("pinloki", cfg::Specification::ROUTER);
 
-cfg::ParamPath s_datadir(
-    &s_spec, "datadir", "Directory where binlog files are stored",
+cfg::ParamPath s_datadir(&s_spec,
+    "datadir",
+    "Directory where binlog files are stored",
     cfg::ParamPath::C | cfg::ParamPath::W | cfg::ParamPath::R | cfg::ParamPath::X,
     mxs::datadir() + std::string("/binlogs/"));
 
-cfg::ParamCount s_server_id(
-    &s_spec, "server_id", "Server ID sent to both slaves and the master", 1234);
+cfg::ParamCount s_server_id(&s_spec, "server_id", "Server ID sent to both slaves and the master", 1234);
 
-cfg::ParamSeconds s_net_timeout(
-    &s_spec, "net_timeout", "Network timeout", cfg::INTERPRET_AS_SECONDS, 10s);
+cfg::ParamSeconds s_net_timeout(&s_spec, "net_timeout", "Network timeout", cfg::INTERPRET_AS_SECONDS, 10s);
 
-cfg::ParamBool s_select_master(
-    &s_spec, "select_master", "Automatically select the master server", false);
+cfg::ParamBool s_select_master(&s_spec, "select_master", "Automatically select the master server", false);
 
 cfg::ParamCount s_expire_log_minimum_files(
     &s_spec, "expire_log_minimum_files", "Minimum number of files the automatic log purge keeps", 2);
 
-cfg::ParamDuration<wall_time::Duration> s_expire_log_duration(
-    &s_spec, "expire_log_duration", "Duration after which unmodified log files are purged",
-    cfg::NO_INTERPRETATION, 0s);
+cfg::ParamDuration<wall_time::Duration> s_expire_log_duration(&s_spec,
+    "expire_log_duration",
+    "Duration after which unmodified log files are purged",
+    cfg::NO_INTERPRETATION,
+    0s);
 
 /* Undocumented config items (for test purposes) */
-cfg::ParamDuration<wall_time::Duration> s_purge_startup_delay(
-    &s_spec, "purge_startup_delay", "Purge waits this long after a MaxScale startup",
-    cfg::NO_INTERPRETATION, 2min);
+cfg::ParamDuration<wall_time::Duration> s_purge_startup_delay(&s_spec,
+    "purge_startup_delay",
+    "Purge waits this long after a MaxScale startup",
+    cfg::NO_INTERPRETATION,
+    2min);
 
-cfg::ParamDuration<wall_time::Duration> s_purge_poll_timeout(
-    &s_spec, "purge_poll_timeout", "Purge timeout/poll when expire_log_minimum_files files exist",
-    cfg::NO_INTERPRETATION, 2min);
-}
+cfg::ParamDuration<wall_time::Duration> s_purge_poll_timeout(&s_spec,
+    "purge_poll_timeout",
+    "Purge timeout/poll when expire_log_minimum_files files exist",
+    cfg::NO_INTERPRETATION,
+    2min);
+}  // namespace
 
 namespace pinloki
 {
@@ -136,7 +140,6 @@ wall_time::Duration Config::purge_startup_delay() const
     return m_purge_startup_delay;
 }
 
-
 wall_time::Duration Config::purge_poll_timeout() const
 {
     return m_purge_poll_timeout;
@@ -165,4 +168,4 @@ Config::Config(const std::string& name)
     add_native(&m_purge_startup_delay, &s_purge_startup_delay);
     add_native(&m_purge_poll_timeout, &s_purge_poll_timeout);
 }
-}
+}  // namespace pinloki

@@ -24,10 +24,10 @@ using std::string;
 namespace
 {
 const string opt_cleartext_plugin = "pam_use_cleartext_plugin";
-const string opt_pam_mode = "pam_mode";
-const string pam_mode_pw = "password";
-const string pam_mode_pw_2fa = "password_2FA";
-}
+const string opt_pam_mode         = "pam_mode";
+const string pam_mode_pw          = "password";
+const string pam_mode_pw_2fa      = "password_2FA";
+}  // namespace
 
 /**
  * Create an instance.
@@ -59,8 +59,10 @@ PamAuthenticatorModule* PamAuthenticatorModule::create(mxs::ConfigParameters* op
         else if (user_pam_mode != pam_mode_pw)
         {
             MXB_ERROR("Invalid value '%s' for authenticator option '%s'. Valid values are '%s' and '%s'.",
-                      user_pam_mode.c_str(), opt_pam_mode.c_str(),
-                      pam_mode_pw.c_str(), pam_mode_pw_2fa.c_str());
+                user_pam_mode.c_str(),
+                opt_pam_mode.c_str(),
+                pam_mode_pw.c_str(),
+                pam_mode_pw_2fa.c_str());
             error = true;
         }
     }
@@ -85,13 +87,13 @@ std::string PamAuthenticatorModule::supported_protocol() const
 
 mariadb::SClientAuth PamAuthenticatorModule::create_client_authenticator()
 {
-    return mariadb::SClientAuth(new(std::nothrow) PamClientAuthenticator(m_cleartext_plugin, m_mode));
+    return mariadb::SClientAuth(new (std::nothrow) PamClientAuthenticator(m_cleartext_plugin, m_mode));
 }
 
-mariadb::SBackendAuth
-PamAuthenticatorModule::create_backend_authenticator(mariadb::BackendAuthData& auth_data)
+mariadb::SBackendAuth PamAuthenticatorModule::create_backend_authenticator(
+    mariadb::BackendAuthData& auth_data)
 {
-    return mariadb::SBackendAuth(new(std::nothrow) PamBackendAuthenticator(auth_data, m_mode));
+    return mariadb::SBackendAuth(new (std::nothrow) PamBackendAuthenticator(auth_data, m_mode));
 }
 
 std::string PamAuthenticatorModule::name() const
@@ -108,8 +110,7 @@ const std::unordered_set<std::string>& PamAuthenticatorModule::supported_plugins
 PamAuthenticatorModule::PamAuthenticatorModule(bool cleartext_plugin, AuthMode auth_mode)
     : m_cleartext_plugin(cleartext_plugin)
     , m_mode(auth_mode)
-{
-}
+{}
 
 extern "C"
 {
@@ -118,23 +119,18 @@ extern "C"
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_AUTHENTICATOR,
+    static MXS_MODULE info = {MXS_MODULE_API_AUTHENTICATOR,
         MXS_MODULE_GA,
         MXS_AUTHENTICATOR_VERSION,
         "PAM authenticator",
         "V1.0.0",
         MXS_NO_MODULE_CAPABILITIES,
         &mxs::AuthenticatorApiGenerator<PamAuthenticatorModule>::s_api,
-        NULL,           /* Process init. */
-        NULL,           /* Process finish. */
-        NULL,           /* Thread init. */
-        NULL,           /* Thread finish. */
-        {
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
+        {{MXS_END_MODULE_PARAMS}}};
 
     return &info;
 }

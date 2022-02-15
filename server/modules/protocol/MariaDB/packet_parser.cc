@@ -27,9 +27,10 @@ void pop_front(packet_parser::ByteVec& data, int len)
 
 struct StringParseRes
 {
-    bool        success {false};
+    bool success {false};
     std::string result_str;
 };
+
 StringParseRes read_stringz_if_cap(packet_parser::ByteVec& data, uint32_t client_caps, uint32_t req_caps)
 {
     StringParseRes rval;
@@ -37,8 +38,8 @@ StringParseRes read_stringz_if_cap(packet_parser::ByteVec& data, uint32_t client
     {
         if (!data.empty())
         {
-            rval.result_str = (const char*)data.data();
-            pop_front(data, rval.result_str.size() + 1);    // Should be null-terminated.
+            rval.result_str = (const char*) data.data();
+            pop_front(data, rval.result_str.size() + 1);  // Should be null-terminated.
             rval.success = true;
         }
     }
@@ -48,7 +49,8 @@ StringParseRes read_stringz_if_cap(packet_parser::ByteVec& data, uint32_t client
     }
     return rval;
 }
-}
+}  // namespace
+
 namespace packet_parser
 {
 
@@ -97,7 +99,7 @@ ClientResponseResult parse_client_response(ByteVec& data, uint32_t client_caps)
 {
     ClientResponseResult rval;
     // A null-terminated username should be first. Cannot overrun since caller added 0 to end of buffer.
-    rval.username = (const char*)data.data();
+    rval.username = (const char*) data.data();
     pop_front(data, rval.username.size() + 1);
 
     // Next is authentication response. The length is encoded in different forms depending on
@@ -106,7 +108,7 @@ ClientResponseResult parse_client_response(ByteVec& data, uint32_t client_caps)
     if (rval.token_res.success)
     {
         // The following fields are optional.
-        auto db_res = read_stringz_if_cap(data, client_caps, GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB);
+        auto db_res     = read_stringz_if_cap(data, client_caps, GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB);
         auto plugin_res = read_stringz_if_cap(data, client_caps, GW_MYSQL_CAPABILITIES_PLUGIN_AUTH);
 
         /* Older connectors may send an invalid HandShakeResponse when connecting without a database name.
@@ -121,8 +123,8 @@ ClientResponseResult parse_client_response(ByteVec& data, uint32_t client_caps)
          * wrong with the packet, discard the attributes. */
         if (db_res.success && plugin_res.success)
         {
-            rval.db = std::move(db_res.result_str);
-            rval.plugin = mxb::tolower(plugin_res.result_str);
+            rval.db      = std::move(db_res.result_str);
+            rval.plugin  = mxb::tolower(plugin_res.result_str);
             rval.success = true;
 
             rval.attr_res = parse_attributes(data, client_caps);
@@ -140,11 +142,11 @@ AuthParseResult parse_auth_token(ByteVec& data, uint32_t client_caps, AuthPacket
     }
 
     // The length is encoded in different forms depending on capabilities and packet type.
-    const uint8_t* ptr = data.data();
-    bool error = false;
-    uint64_t len_remaining = data.size();
+    const uint8_t* ptr            = data.data();
+    bool error                    = false;
+    uint64_t len_remaining        = data.size();
     uint64_t auth_token_len_bytes = 0;  // In how many bytes the auth token length is encoded in.
-    uint64_t auth_token_len = 0;        // The actual auth token length.
+    uint64_t auth_token_len       = 0;  // The actual auth token length.
 
     // com_change_user does not support the length-encoded token.
     if (packet_type == AuthPacketType::HANDSHAKE_RESPONSE
@@ -165,13 +167,13 @@ AuthParseResult parse_auth_token(ByteVec& data, uint32_t client_caps, AuthPacket
     {
         // First token length 1 byte, then token data.
         auth_token_len_bytes = 1;
-        auth_token_len = *ptr;
+        auth_token_len       = *ptr;
     }
     else
     {
         // unsupported client version
         rval.old_protocol = true;
-        error = true;
+        error             = true;
     }
 
     if (!error)
@@ -210,7 +212,7 @@ AttrParseResult parse_attributes(ByteVec& data, uint32_t client_caps)
             auto leint_len = mxq::leint_bytes(ptr);
             if (leint_len <= len_remaining)
             {
-                auto attr_len = mxq::leint_value(ptr);
+                auto attr_len       = mxq::leint_value(ptr);
                 auto total_attr_len = leint_len + attr_len;
                 if (total_attr_len <= len_remaining)
                 {
@@ -237,14 +239,14 @@ ChangeUserParseResult parse_change_user_packet(ByteVec& data, uint32_t client_ca
     ptr++;
 
     // null-terminated username. Again, cannot overflow.
-    rval.username = (const char*)ptr;
+    rval.username = (const char*) ptr;
     ptr += rval.username.length() + 1;
     pop_front(data, ptr - data.data());
 
     rval.token_res = parse_auth_token(data, client_caps, AuthPacketType::COM_CHANGE_USER);
     if (rval.token_res.success)
     {
-        auto db_res = read_stringz_if_cap(data, client_caps, 0); // Is always present.
+        auto db_res = read_stringz_if_cap(data, client_caps, 0);  // Is always present.
         if (db_res.success)
         {
             rval.db = std::move(db_res.result_str);
@@ -286,12 +288,12 @@ mariadb::AuthSwitchReqContents parse_auth_switch_request(ByteVec& data)
         {
             ptr++;
             // Next, null-terminated plugin name. Check for invalid string.
-            size_t len_remaining = end - ptr;
-            size_t plugin_name_len = strnlen((const char*)ptr, len_remaining);
+            size_t len_remaining   = end - ptr;
+            size_t plugin_name_len = strnlen((const char*) ptr, len_remaining);
             // The length should be smaller than total length.
             if (plugin_name_len > 0 && plugin_name_len < len_remaining)
             {
-                rval.plugin_name = (const char*)ptr;
+                rval.plugin_name = (const char*) ptr;
                 ptr += rval.plugin_name.length() + 1;
 
                 // Next, plugin data until the end.
@@ -308,4 +310,4 @@ mariadb::AuthSwitchReqContents parse_auth_switch_request(ByteVec& data)
     }
     return rval;
 }
-}
+}  // namespace packet_parser

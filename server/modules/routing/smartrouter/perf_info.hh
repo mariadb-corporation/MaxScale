@@ -25,12 +25,12 @@
 class PerformanceInfo
 {
 public:
-    PerformanceInfo() = default;    // creates an instance where is_valid()==false;
+    PerformanceInfo() = default;  // creates an instance where is_valid()==false;
     PerformanceInfo(mxs::Target* t, maxbase::Duration d);
 
     bool is_valid() const;
 
-    mxs::Target*      target() const;
+    mxs::Target* target() const;
     maxbase::Duration duration() const;
 
     /** When was this PerformanceInfo created.
@@ -42,18 +42,19 @@ public:
     maxbase::Duration age() const;
 
     /** Managed and used only by class SmartRouter. */
-    void   set_eviction_schedule(size_t es);
+    void set_eviction_schedule(size_t es);
     size_t eviction_schedule() const;
 
     /** Managed and used only by class SmartRouter. */
     void set_updating(bool val);
     bool is_updating() const;
+
 private:
-    mxs::Target*      m_target {nullptr};
+    mxs::Target* m_target {nullptr};
     maxbase::Duration m_duration;
 
-    int  m_eviction_schedule = 0;
-    bool m_updating = false;
+    int m_eviction_schedule = 0;
+    bool m_updating         = false;
 
     maxbase::TimePoint m_creation_time = maxbase::Clock::now(maxbase::NowType::EPollTick);
 };
@@ -61,13 +62,13 @@ private:
 // Update to the SharedData. Container updates are currently always InsertUpdate.
 struct PerformanceInfoUpdate
 {
-    std::string     key;
+    std::string key;
     PerformanceInfo value;
 };
 
 // The container and SharedData types of PerformanceInfo.
 using PerformanceInfoContainer = std::unordered_map<std::string, PerformanceInfo>;
-using SharedPerformanceInfo = maxbase::SharedData<PerformanceInfoContainer, PerformanceInfoUpdate>;
+using SharedPerformanceInfo    = maxbase::SharedData<PerformanceInfoContainer, PerformanceInfoUpdate>;
 
 // For logging. Shortens str to nchars and adds "..." TODO move somewhere more appropriate
 std::string show_some(const std::string& str, int nchars = 70);
@@ -76,8 +77,7 @@ std::string show_some(const std::string& str, int nchars = 70);
 inline PerformanceInfo::PerformanceInfo(mxs::Target* t, maxbase::Duration d)
     : m_target(t)
     , m_duration(d)
-{
-}
+{}
 
 inline bool PerformanceInfo::is_valid() const
 {

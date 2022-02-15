@@ -28,17 +28,17 @@ public:
     explicit MariaDBAuthenticatorModule(bool log_pw_mismatch);
     ~MariaDBAuthenticatorModule() override = default;
 
-    mariadb::SClientAuth  create_client_authenticator() override;
+    mariadb::SClientAuth create_client_authenticator() override;
     mariadb::SBackendAuth create_backend_authenticator(mariadb::BackendAuthData& auth_data) override;
 
-    uint64_t    capabilities() const override;
+    uint64_t capabilities() const override;
     std::string supported_protocol() const override;
     std::string name() const override;
 
     const std::unordered_set<std::string>& supported_plugins() const override;
 
 private:
-    bool m_log_pw_mismatch {false};     /**< Print pw hash when authentication fails */
+    bool m_log_pw_mismatch {false}; /**< Print pw hash when authentication fails */
 };
 
 class MariaDBClientAuthenticator : public mariadb::ClientAuthenticator
@@ -61,7 +61,7 @@ private:
     AuthRes check_password(MYSQL_session* session, const std::string& stored_pw_hash2);
 
     State m_state {State::INIT};
-    bool  m_log_pw_mismatch {false};/**< Print pw hash when authentication fails */
+    bool m_log_pw_mismatch {false}; /**< Print pw hash when authentication fails */
 };
 
 /** Structure representing the authentication state */
@@ -79,12 +79,12 @@ private:
     /** Authentication states */
     enum class State
     {
-        EXPECT_AUTHSWITCH,      /**< Waiting for authentication switch packet */
-        PW_SENT,                /**< Hashed password has been sent to backend */
-        ERROR                   /**< Authentication failed */
+        EXPECT_AUTHSWITCH, /**< Waiting for authentication switch packet */
+        PW_SENT,           /**< Hashed password has been sent to backend */
+        ERROR              /**< Authentication failed */
     };
 
     mariadb::BackendAuthData& m_shared_data;
 
-    State m_state {State::EXPECT_AUTHSWITCH};   /**< Authentication state */
+    State m_state {State::EXPECT_AUTHSWITCH}; /**< Authentication state */
 };

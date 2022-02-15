@@ -31,8 +31,7 @@ Rule::Rule(std::string name, std::string type)
     , active(NULL)
     , m_name(name)
     , m_type(type)
-{
-}
+{}
 
 Rule::~Rule()
 {
@@ -62,8 +61,7 @@ bool Rule::matches_query_type(GWBUF* buffer) const
             qc_query_op_t optype = qc_get_operation(buffer);
 
             rval = (on_queries & qc_op_to_fw_op(optype))
-                || (MYSQL_IS_COM_INIT_DB(GWBUF_DATA(buffer))
-                    && (on_queries & FW_OP_CHANGE_DB));
+                || (MYSQL_IS_COM_INIT_DB(GWBUF_DATA(buffer)) && (on_queries & FW_OP_CHANGE_DB));
         }
     }
 
@@ -130,7 +128,7 @@ bool RegexRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg) c
 
     if (query_is_sql(buffer))
     {
-        pcre2_code* re = m_re.get();
+        pcre2_code* re          = m_re.get();
         pcre2_match_data* mdata = pcre2_match_data_create_from_pattern(re, NULL);
         MXS_ABORT_IF_NULL(mdata);
 
@@ -138,7 +136,7 @@ bool RegexRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg) c
         int len;
         modutil_extract_SQL(buffer, &sql, &len);
 
-        if (pcre2_match(re, (PCRE2_SPTR)sql, (size_t)len, 0, 0, mdata, NULL) > 0)
+        if (pcre2_match(re, (PCRE2_SPTR) sql, (size_t) len, 0, 0, mdata, NULL) > 0)
         {
             MXS_NOTICE("rule '%s': regex matched on query", name().c_str());
             if (session->get_action() == FW_ACTION_BLOCK)
@@ -172,9 +170,7 @@ bool ColumnsRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg)
 
             if (it != m_values.end())
             {
-                MXS_NOTICE("rule '%s': query targets specified column: %s",
-                           name().c_str(),
-                           tok.c_str());
+                MXS_NOTICE("rule '%s': query targets specified column: %s", name().c_str(), tok.c_str());
                 if (session->get_action() == FW_ACTION_BLOCK)
                 {
                     *msg = create_error("Permission denied to column '%s'.", tok.c_str());
@@ -187,7 +183,6 @@ bool ColumnsRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg)
 
     return rval;
 }
-
 
 bool FunctionRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const
 {
@@ -205,12 +200,9 @@ bool FunctionRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg
             std::transform(tok.begin(), tok.end(), tok.begin(), ::tolower);
             ValueList::const_iterator it = std::find(m_values.begin(), m_values.end(), tok);
 
-            if ((!m_inverted && (it != m_values.end()))
-                || (m_inverted && (it == m_values.end())))
+            if ((!m_inverted && (it != m_values.end())) || (m_inverted && (it == m_values.end())))
             {
-                MXS_NOTICE("rule '%s': query matches function: %s",
-                           name().c_str(),
-                           tok.c_str());
+                MXS_NOTICE("rule '%s': query matches function: %s", name().c_str(), tok.c_str());
                 if (session->get_action() == FW_ACTION_BLOCK)
                 {
                     *msg = create_error("Permission denied to function '%s'.", tok.c_str());
@@ -243,8 +235,8 @@ bool FunctionUsageRule::matches_query(DbfwSession* session, GWBUF* buffer, char*
                 if (it != m_values.end())
                 {
                     MXS_NOTICE("rule '%s': query uses a function with specified column: %s",
-                               name().c_str(),
-                               tok.c_str());
+                        name().c_str(),
+                        tok.c_str());
                     if (session->get_action() == FW_ACTION_BLOCK)
                     {
                         *msg = create_error("Permission denied to column '%s' with function.", tok.c_str());
@@ -271,12 +263,9 @@ bool ColumnFunctionRule::matches_query(DbfwSession* session, GWBUF* buffer, char
             std::string func = infos[i].name;
             std::transform(func.begin(), func.end(), func.begin(), ::tolower);
 
-            ValueList::const_iterator func_it = std::find(m_values.begin(),
-                                                          m_values.end(),
-                                                          func);
+            ValueList::const_iterator func_it = std::find(m_values.begin(), m_values.end(), func);
 
-            if ((!m_inverted && (func_it != m_values.end()))
-                || (m_inverted && (func_it == m_values.end())))
+            if ((!m_inverted && (func_it != m_values.end())) || (m_inverted && (func_it == m_values.end())))
             {
                 /** The function matches, now check if the column matches */
 
@@ -284,21 +273,19 @@ bool ColumnFunctionRule::matches_query(DbfwSession* session, GWBUF* buffer, char
                 {
                     std::string col = infos[i].fields[j].column;
                     std::transform(col.begin(), col.end(), col.begin(), ::tolower);
-                    ValueList::const_iterator col_it = std::find(m_columns.begin(),
-                                                                 m_columns.end(),
-                                                                 col);
+                    ValueList::const_iterator col_it = std::find(m_columns.begin(), m_columns.end(), col);
 
                     if (col_it != m_columns.end())
                     {
                         MXS_NOTICE("rule '%s': query uses function '%s' with specified column: %s",
-                                   name().c_str(),
-                                   col.c_str(),
-                                   func.c_str());
+                            name().c_str(),
+                            col.c_str(),
+                            func.c_str());
                         if (session->get_action() == FW_ACTION_BLOCK)
                         {
                             *msg = create_error("Permission denied to column '%s' with function '%s'.",
-                                                col.c_str(),
-                                                func.c_str());
+                                col.c_str(),
+                                func.c_str());
                         }
                         return true;
                     }
@@ -313,25 +300,23 @@ bool ColumnFunctionRule::matches_query(DbfwSession* session, GWBUF* buffer, char
 bool LimitQueriesRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const
 {
     QuerySpeed* queryspeed = session->query_speed();
-    time_t time_now = time(NULL);
-    bool matches = false;
+    time_t time_now        = time(NULL);
+    bool matches           = false;
 
     if (queryspeed->active)
     {
         if (difftime(time_now, queryspeed->triggered) < m_holdoff)
         {
             double blocked_for = m_holdoff - difftime(time_now, queryspeed->triggered);
-            *msg = create_error("Queries denied for %f seconds", blocked_for);
-            matches = true;
+            *msg               = create_error("Queries denied for %f seconds", blocked_for);
+            matches            = true;
 
-            MXS_INFO("rule '%s': user denied for %f seconds",
-                     name().c_str(),
-                     blocked_for);
+            MXS_INFO("rule '%s': user denied for %f seconds", name().c_str(), blocked_for);
         }
         else
         {
             queryspeed->active = false;
-            queryspeed->count = 0;
+            queryspeed->count  = 0;
         }
     }
     else
@@ -340,22 +325,22 @@ bool LimitQueriesRule::matches_query(DbfwSession* session, GWBUF* buffer, char**
         {
             MXS_INFO("rule '%s': query limit triggered (%d queries in %d seconds), "
                      "denying queries from user for %d seconds.",
-                     name().c_str(),
-                     m_max,
-                     m_timeperiod,
-                     m_holdoff);
+                name().c_str(),
+                m_max,
+                m_timeperiod,
+                m_holdoff);
 
             queryspeed->triggered = time_now;
-            queryspeed->active = true;
-            matches = true;
+            queryspeed->active    = true;
+            matches               = true;
 
             double blocked_for = m_holdoff - difftime(time_now, queryspeed->triggered);
-            *msg = create_error("Queries denied for %f seconds", blocked_for);
+            *msg               = create_error("Queries denied for %f seconds", blocked_for);
         }
         else if (queryspeed->count == 0)
         {
             queryspeed->first_query = time_now;
-            queryspeed->count = 1;
+            queryspeed->count       = 1;
         }
         else if (difftime(time_now, queryspeed->first_query) < m_timeperiod)
         {

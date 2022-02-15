@@ -36,60 +36,51 @@ public:
         , m_file(file)
         , m_line(line)
         , m_type(type)
-    {
-    }
+    {}
 
-    std::string file() const
-    {
-        return m_file;
-    }
-    int line() const
-    {
-        return m_line;
-    }
-    int code() const
-    {
-        return m_code;
-    }
-    std::string type() const
-    {
-        return m_type;
-    }
+    std::string file() const { return m_file; }
+
+    int line() const { return m_line; }
+
+    int code() const { return m_code; }
+
+    std::string type() const { return m_type; }
+
     std::string error_msg() const
     {
         return MAKE_STR(file() << ':' << line() << ' ' << m_type << ": " << what());
     }
 
 private:
-    int         m_code;
+    int m_code;
     std::string m_file;
-    int         m_line;
+    int m_line;
     std::string m_type;
 };
-}
+}  // namespace maxbase
 
-#define DEFINE_EXCEPTION(Type) \
-    struct Type : public maxbase::Exception \
-    { \
+#define DEFINE_EXCEPTION(Type)               \
+    struct Type : public maxbase::Exception  \
+    {                                        \
         using maxbase::Exception::Exception; \
     }
 
 #define DEFINE_SUB_EXCEPTION(Super, Sub) \
-    struct Sub : Super \
-    { \
-        using Super::Super; \
+    struct Sub : Super                   \
+    {                                    \
+        using Super::Super;              \
     }
 
-#define MXB_THROW(Type, msg_str) \
-    { \
-        std::ostringstream os; \
-        os << msg_str; \
+#define MXB_THROW(Type, msg_str)                             \
+    {                                                        \
+        std::ostringstream os;                               \
+        os << msg_str;                                       \
         throw Type(os.str(), -1, __FILE__, __LINE__, #Type); \
     }
 
-#define MXB_THROWCode(Type, code, msg_str) \
-    { \
-        std::ostringstream os; \
-        os << msg_str; \
+#define MXB_THROWCode(Type, code, msg_str)                     \
+    {                                                          \
+        std::ostringstream os;                                 \
+        os << msg_str;                                         \
         throw Type(os.str(), code, __FILE__, __LINE__, #Type); \
     }

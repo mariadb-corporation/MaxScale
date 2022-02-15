@@ -26,8 +26,8 @@ namespace maxbase
  *  use Clock declared further down (specifically, use Clock::now()).
  */
 using SteadyClock = std::chrono::steady_clock;
-using Duration = SteadyClock::duration;
-using TimePoint = SteadyClock::time_point;
+using Duration    = SteadyClock::duration;
+using TimePoint   = SteadyClock::time_point;
 
 inline Duration from_secs(double secs)
 {
@@ -72,7 +72,11 @@ inline typename Clock::time_point timespec_to_time_point(timespec ts)
  *  RealTime  - Use real-time, but remember this goes to the kernel.
  *              The thread does not need to be a Worker thread.
  */
-enum class NowType {EPollTick, RealTime};
+enum class NowType
+{
+    EPollTick,
+    RealTime
+};
 
 /**
  *   @class Clock
@@ -121,6 +125,7 @@ public:
 
     /** Return split time and restart stopwatch. */
     Duration restart();
+
 private:
     TimePoint m_start;
     TimePoint m_lap;
@@ -159,13 +164,11 @@ public:
     /** The duration of tick(s). Calling my_timer.tick_duration(my_timer.alarm()) can be handy when
      *  a duration, rather than ticks is needed.
      */
-    Duration tick_duration(int64_t ticks = 1) const
-    {
-        return m_dur * ticks;
-    }
+    Duration tick_duration(int64_t ticks = 1) const { return m_dur * ticks; }
+
 private:
-    const Duration  m_dur;
-    const TimePoint m_start = Clock::now();
+    const Duration m_dur;
+    const TimePoint m_start            = Clock::now();
     mutable int64_t m_last_alarm_ticks = 0;
 };
 
@@ -198,9 +201,10 @@ public:
 
     /** Total duration of intervals (thus far). */
     Duration total() const;
+
 private:
     TimePoint m_last_start;
-    Duration  m_total;
+    Duration m_total;
 };
 
 /** Returns the duration as a double and string adjusted to a suffix like ms for milliseconds.
@@ -221,13 +225,13 @@ std::string to_string(TimePoint tp, const std::string& fmt = "%F %T");
 
 /** Stream to std::ostream using to_string(tp) */
 std::ostream& operator<<(std::ostream& os, TimePoint tp);
-}
+}  // namespace maxbase
 
 namespace wall_time
 {
 
-using Clock = std::chrono::system_clock;
-using Duration = Clock::duration;
+using Clock     = std::chrono::system_clock;
+using Duration  = Clock::duration;
 using TimePoint = Clock::time_point;
 
 /** system_clock::timepoint to string, formatted using strftime formats */
@@ -235,4 +239,4 @@ std::string to_string(TimePoint tp, const std::string& fmt = "%F %T");
 
 /** Stream to std::ostream using to_string(tp) */
 std::ostream& operator<<(std::ostream& os, TimePoint tp);
-}
+}  // namespace wall_time

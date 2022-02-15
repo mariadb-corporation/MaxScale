@@ -31,12 +31,10 @@ struct cli_session;
  */
 typedef struct cli_instance
 {
-    pthread_mutex_t lock;   /*< The instance spinlock */
-    SERVICE*        service;/*< The debug cli service */
-    struct cli_session
-    * sessions;     /*< Linked list of sessions within this instance */
-    struct cli_instance
-    * next;         /*< The next pointer for the list of instances */
+    pthread_mutex_t lock;         /*< The instance spinlock */
+    SERVICE* service;             /*< The debug cli service */
+    struct cli_session* sessions; /*< Linked list of sessions within this instance */
+    struct cli_instance* next;    /*< The next pointer for the list of instances */
 } CLI_INSTANCE;
 
 /**
@@ -47,10 +45,9 @@ typedef struct cli_instance
 
 typedef struct cli_session
 {
-    char         cmdbuf[CMDBUFLEN]; /*< The command buffer used to build up user commands */
-    MXS_SESSION* session;           /*< The gateway session */
-    struct cli_session
-    * next;             /*< The next pointer for the list of sessions */
+    char cmdbuf[CMDBUFLEN];   /*< The command buffer used to build up user commands */
+    MXS_SESSION* session;     /*< The gateway session */
+    struct cli_session* next; /*< The next pointer for the list of sessions */
 } CLI_SESSION;
 
 MXS_END_DECLS

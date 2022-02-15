@@ -31,8 +31,10 @@ ResultSet::ResultSet(st_mysql* conn)
     {
         if (!(m_result = mysql_use_result(conn)))
         {
-            MXB_THROWCode(DatabaseError, mysql_errno(conn),
-                          "Failed to get result set. " << " : mysql_error " << mysql_error(conn));
+            MXB_THROWCode(DatabaseError,
+                mysql_errno(conn),
+                "Failed to get result set. "
+                    << " : mysql_error " << mysql_error(conn));
         }
 
         st_mysql_field* fields = mysql_fetch_fields(m_result);
@@ -76,13 +78,12 @@ ResultSet::Iterator ResultSet::end()
 ResultSet::Iterator::Iterator()
     : m_current_row(0)
     , m_row_nr(-1)
-{
-}
+{}
 
 ResultSet::Iterator::Iterator(st_mysql_res* res)
-    : m_result{res}
+    : m_result {res}
     , m_current_row(m_result ? mysql_num_fields(m_result) : 0)
-    , m_row_nr{m_result ? 0 : -1}
+    , m_row_nr {m_result ? 0 : -1}
 {
     if (m_row_nr != -1)
     {
@@ -95,7 +96,7 @@ void ResultSet::Iterator::_read_one()
     auto db_row = mysql_fetch_row(m_result);
     if (!db_row)
     {
-        m_row_nr = -1;      // end Iterator
+        m_row_nr = -1;  // end Iterator
     }
     else
     {
@@ -151,4 +152,4 @@ const ResultSet::Row* ResultSet::Iterator::operator->() const
 {
     return &m_current_row;
 }
-}
+}  // namespace maxsql

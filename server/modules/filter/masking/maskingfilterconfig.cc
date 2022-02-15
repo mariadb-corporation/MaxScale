@@ -24,75 +24,60 @@ namespace config = mxs::config;
 
 config::Specification specification(MXS_MODULE_NAME, config::Specification::FILTER);
 
-config::ParamEnum<MaskingFilterConfig::large_payload_t> large_payload(
-    &specification,
+config::ParamEnum<MaskingFilterConfig::large_payload_t> large_payload(&specification,
     "large_payload",
     "How large, i.e. larger than 16MB, payloads should be handled.",
-    {
-        { MaskingFilterConfig::LARGE_IGNORE, "ignore" },
-        { MaskingFilterConfig::LARGE_ABORT,  "abort" }
-    },
+    {{MaskingFilterConfig::LARGE_IGNORE, "ignore"}, {MaskingFilterConfig::LARGE_ABORT, "abort"}},
     MaskingFilterConfig::LARGE_ABORT);
 
-config::ParamPath rules(
-    &specification,
+config::ParamPath rules(&specification,
     "rules",
     "Specifies the path of the file where the masking rules are stored.",
     MXS_MODULE_OPT_PATH_R_OK);
 
-config::ParamEnum<MaskingFilterConfig::warn_type_mismatch_t> warn_type_mismatch(
-    &specification,
+config::ParamEnum<MaskingFilterConfig::warn_type_mismatch_t> warn_type_mismatch(&specification,
     "warn_type_mismatch",
     "Log warning if rule matches a column that is not of expected type.",
-    {
-        { MaskingFilterConfig::WARN_NEVER, "never" },
-        { MaskingFilterConfig::WARN_ALWAYS, "always" }
-    },
+    {{MaskingFilterConfig::WARN_NEVER, "never"}, {MaskingFilterConfig::WARN_ALWAYS, "always"}},
     MaskingFilterConfig::WARN_NEVER);
 
-config::ParamBool prevent_function_usage(
-    &specification,
+config::ParamBool prevent_function_usage(&specification,
     "prevent_function_usage",
     "If true, then statements containing functions referring to masked "
     "columns will be blocked.",
     true);
 
-config::ParamBool check_user_variables(
-    &specification,
+config::ParamBool check_user_variables(&specification,
     "check_user_variables",
     "If true, then SET statemens that are defined using SELECT referring to "
     "masked columns will be blocked.",
     true);
 
-config::ParamBool check_unions(
-    &specification,
+config::ParamBool check_unions(&specification,
     "check_unions",
     "If true, then if the second SELECT in a UNION refers to a masked colums "
     "the statement will be blocked.",
     true);
 
-config::ParamBool check_subqueries(
-    &specification,
+config::ParamBool check_subqueries(&specification,
     "check_subqueries",
     "If true, then if a subquery refers to masked columns the statement will be blocked.",
     true);
 
-config::ParamBool require_fully_parsed(
-    &specification,
+config::ParamBool require_fully_parsed(&specification,
     "require_fully_parsed",
     "If true, then statements that cannot be fully parsed will be blocked.",
     true);
 
-config::ParamBool treat_string_arg_as_field(
-    &specification,
+config::ParamBool treat_string_arg_as_field(&specification,
     "treat_string_arg_as_field",
     "If true, then strings given as arguments to function will be handles "
     "as if they were names.",
     true);
 
-}
+}  // namespace masking
 
-}
+}  // namespace
 
 MaskingFilterConfig::MaskingFilterConfig(const char* zName)
     : mxs::config::Configuration(zName, &masking::specification)

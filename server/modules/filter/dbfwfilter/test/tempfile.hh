@@ -43,10 +43,7 @@ public:
      *
      * @return The name of the file.
      */
-    std::string name() const
-    {
-        return m_name;
-    }
+    std::string name() const { return m_name; }
 
     /**
      * Write data to the file.
@@ -64,6 +61,6 @@ public:
     void write(const char* zData);
 
 private:
-    int         m_fd;
+    int m_fd;
     std::string m_name;
 };

@@ -49,15 +49,15 @@ Duration StopWatch::split() const
 
 Duration StopWatch::lap()
 {
-    auto now = Clock::now();
+    auto now     = Clock::now();
     Duration lap = now - m_lap;
-    m_lap = now;
+    m_lap        = now;
     return lap;
 }
 
 Duration StopWatch::restart()
 {
-    TimePoint now = Clock::now();
+    TimePoint now  = Clock::now();
     Duration split = now - m_start;
     m_start = m_lap = now;
     return split;
@@ -65,13 +65,12 @@ Duration StopWatch::restart()
 
 Timer::Timer(Duration tick_duration)
     : m_dur(tick_duration)
-{
-}
+{}
 
 int64_t Timer::alarm() const
 {
     auto total_ticks = (Clock::now() - m_start) / m_dur;
-    int64_t ticks = total_ticks - m_last_alarm_ticks;
+    int64_t ticks    = total_ticks - m_last_alarm_ticks;
     m_last_alarm_ticks += ticks;
 
     return ticks;
@@ -79,9 +78,9 @@ int64_t Timer::alarm() const
 
 int64_t Timer::wait_alarm() const
 {
-    auto now = Clock::now();
+    auto now         = Clock::now();
     auto total_ticks = (now - m_start) / m_dur;
-    int64_t ticks = total_ticks - m_last_alarm_ticks;
+    int64_t ticks    = total_ticks - m_last_alarm_ticks;
 
     if (!ticks)
     {
@@ -101,9 +100,9 @@ int64_t Timer::wait_alarm() const
 
 Duration Timer::until_alarm() const
 {
-    auto now = Clock::now();
+    auto now         = Clock::now();
     auto total_ticks = (now - m_start) / m_dur;
-    int64_t ticks = total_ticks - m_last_alarm_ticks;
+    int64_t ticks    = total_ticks - m_last_alarm_ticks;
 
     Duration ret;
 
@@ -119,11 +118,9 @@ Duration Timer::until_alarm() const
     return ret;
 }
 
-
 IntervalTimer::IntervalTimer()
     : m_total(0)
-{
-}
+{}
 
 void IntervalTimer::start_interval()
 {
@@ -147,29 +144,33 @@ Duration IntervalTimer::total() const
 {
     return m_total;
 }
-}   // maxbase
+}  // namespace maxbase
 
 /********** OUTPUT ***********/
 namespace
 {
 using namespace maxbase;
+
 struct TimeConvert
 {
-    double      div;        // divide the value of the previous unit by this
-    std::string suffix;     // milliseconds, hours etc.
-    double      max_visual; // threashold to switch to the next unit
-};
-// Will never get to centuries because the duration is a long carrying nanoseconds
-TimeConvert convert[]
-{
-    {1, "ns", 1000}, {1000, "us", 1000}, {1000, "ms", 1000},
-    {1000, "s", 60}, {60, "min", 60}, {60, "hours", 24},
-    {24, "days", 365.25}, {365.25, "years", 10000},
-    {100, "centuries", std::numeric_limits<double>::max()}
+    double div;          // divide the value of the previous unit by this
+    std::string suffix;  // milliseconds, hours etc.
+    double max_visual;   // threashold to switch to the next unit
 };
 
+// Will never get to centuries because the duration is a long carrying nanoseconds
+TimeConvert convert[] {{1, "ns", 1000},
+    {1000, "us", 1000},
+    {1000, "ms", 1000},
+    {1000, "s", 60},
+    {60, "min", 60},
+    {60, "hours", 24},
+    {24, "days", 365.25},
+    {365.25, "years", 10000},
+    {100, "centuries", std::numeric_limits<double>::max()}};
+
 int convert_size = sizeof(convert) / sizeof(convert[0]);
-}
+}  // namespace
 
 namespace maxbase
 {
@@ -177,15 +178,14 @@ namespace maxbase
 std::pair<double, std::string> dur_to_human_readable(Duration dur)
 {
     using namespace std::chrono;
-    double time = duration_cast<nanoseconds>(dur).count();
+    double time   = duration_cast<nanoseconds>(dur).count();
     bool negative = (time < 0) ? time = -time, true : false;
 
     for (int i = 0; i <= convert_size; ++i)
     {
         if (i == convert_size)
         {
-            return std::make_pair(negative ? -time : time,
-                                  convert[convert_size - 1].suffix);
+            return std::make_pair(negative ? -time : time, convert[convert_size - 1].suffix);
         }
 
         time /= convert[i].div;
@@ -196,7 +196,7 @@ std::pair<double, std::string> dur_to_human_readable(Duration dur)
         }
     }
 
-    abort();    // should never get here
+    abort();  // should never get here
 }
 
 std::string to_string(Duration dur, const std::string& sep)
@@ -216,7 +216,6 @@ std::ostream& operator<<(std::ostream& os, Duration dur)
     return os;
 }
 
-
 std::string to_string(TimePoint tp, const std::string& fmt)
 {
     auto in_wall_time = wall_time::Clock::now() + (tp - Clock::now());
@@ -232,8 +231,7 @@ std::ostream& operator<<(std::ostream& os, TimePoint tp)
 
 void test_stopwatch_output(std::ostream& os)
 {
-    long long dur[] =
-    {
+    long long dur[] = {
         400,                                // 400ns
         5 * 1000,                           // 5us
         500 * 1000,                         // 500us
@@ -255,7 +253,7 @@ void test_stopwatch_output(std::ostream& os)
         os << Duration(dur[i]) << std::endl;
     }
 }
-}
+}  // namespace maxbase
 
 namespace wall_time
 {
@@ -276,4 +274,4 @@ std::ostream& operator<<(std::ostream& os, TimePoint tp)
     os << to_string(tp);
     return os;
 }
-}
+}  // namespace wall_time

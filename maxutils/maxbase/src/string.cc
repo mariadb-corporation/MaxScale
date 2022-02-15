@@ -21,7 +21,7 @@ using std::string;
 namespace
 {
 
-thread_local char errbuf[512];      // Enough for all errors
+thread_local char errbuf[512];  // Enough for all errors
 }
 
 const char* mxb_strerror(int error)
@@ -99,8 +99,7 @@ bool get_int(const char* s, int base, int* value)
 
     if (rv)
     {
-        if (l >= std::numeric_limits<int>::min()
-            && l <= std::numeric_limits<int>::max())
+        if (l >= std::numeric_limits<int>::min() && l <= std::numeric_limits<int>::max())
         {
             if (value)
             {
@@ -117,7 +116,9 @@ bool get_int(const char* s, int base, int* value)
 }
 
 std::string create_list_string(const std::vector<string>& elements,
-                               const string& delim, const string& last_delim, const std::string& quote)
+    const string& delim,
+    const string& last_delim,
+    const std::string& quote)
 {
     auto n_elems = elements.size();
     if (n_elems == 0)
@@ -134,19 +135,19 @@ std::string create_list_string(const std::vector<string>& elements,
     // Need at least one delimiter. Estimate the size of the resulting string to minimize reallocations.
     // Need not be exact.
     auto item_len = std::max(elements[0].length(), elements[1].length())
-        + std::max(delim.length(), real_last_delim.length()) + 2 * quote.length();
+                  + std::max(delim.length(), real_last_delim.length()) + 2 * quote.length();
     auto total_len = item_len * n_elems;
     string rval;
     rval.reserve(total_len);
 
     auto add_elem = [&rval, &quote](const string& elem, const string& delim) {
-            rval += delim;
-            rval += quote;
-            rval += elem;
-            rval += quote;
-        };
+        rval += delim;
+        rval += quote;
+        rval += elem;
+        rval += quote;
+    };
 
-    add_elem(elements[0], "");      // first element has no delimiter.
+    add_elem(elements[0], "");  // first element has no delimiter.
     for (size_t i = 1; i < n_elems - 1; i++)
     {
         add_elem(elements[i], delim);
@@ -179,4 +180,4 @@ void strip_escape_chars(string& val)
         }
     }
 }
-}
+}  // namespace maxbase

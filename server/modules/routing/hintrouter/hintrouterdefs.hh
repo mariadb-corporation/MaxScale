@@ -16,7 +16,7 @@
 
 #include <maxscale/dcb.hh>
 
-#if defined (SS_DEBUG)
+#if defined(SS_DEBUG)
 #define DEBUG_HINTROUTER
 #undef DEBUG_HINTROUTER
 #else

@@ -22,8 +22,7 @@ struct AvroTable
         : avro_file(file)
         , avro_writer_iface(iface)
         , avro_schema(schema)
-    {
-    }
+    {}
 
     ~AvroTable()
     {
@@ -33,12 +32,12 @@ struct AvroTable
         avro_schema_decref(avro_schema);
     }
 
-    avro_file_writer_t  avro_file;          /*< Current Avro data file */
-    avro_value_iface_t* avro_writer_iface;  /*< Avro C API writer interface */
-    avro_schema_t       avro_schema;        /*< Native Avro schema of the table */
+    avro_file_writer_t avro_file;          /*< Current Avro data file */
+    avro_value_iface_t* avro_writer_iface; /*< Avro C API writer interface */
+    avro_schema_t avro_schema;             /*< Native Avro schema of the table */
 };
 
-typedef std::shared_ptr<AvroTable>                  SAvroTable;
+typedef std::shared_ptr<AvroTable> SAvroTable;
 typedef std::unordered_map<std::string, SAvroTable> AvroTables;
 
 // Converts replicated events into CDC events
@@ -50,8 +49,8 @@ public:
     bool open_table(const Table& create) final;
     bool prepare_table(const Table& create) final;
     void flush_tables() final;
-    void prepare_row(const Table& create, const gtid_pos_t& gtid,
-                     const REP_HEADER& hdr, RowEvent event_type) final;
+    void prepare_row(
+        const Table& create, const gtid_pos_t& gtid, const REP_HEADER& hdr, RowEvent event_type) final;
     bool commit(const Table& create, const gtid_pos_t& gtid) final;
     void column_int(const Table& create, int i, int32_t value) final;
     void column_long(const Table& create, int i, int64_t value) final;
@@ -64,14 +63,14 @@ public:
 private:
     avro_value_iface_t* m_writer_iface;
     avro_file_writer_t* m_avro_file;
-    avro_value_t        m_record;
-    avro_value_t        m_union_value;
-    avro_value_t        m_field;
-    std::string         m_avrodir;
-    AvroTables          m_open_tables;
-    uint64_t            m_block_size;
+    avro_value_t m_record;
+    avro_value_t m_union_value;
+    avro_value_t m_field;
+    std::string m_avrodir;
+    AvroTables m_open_tables;
+    uint64_t m_block_size;
     mxs_avro_codec_type m_codec;
-    SERVICE*            m_service;
+    SERVICE* m_service;
 
     void set_active(const Table& create, int i);
 };

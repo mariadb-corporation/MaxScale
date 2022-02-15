@@ -22,7 +22,7 @@
 class GRMon : public maxscale::MonitorWorkerSimple
 {
 public:
-    GRMon(const GRMon&) = delete;
+    GRMon(const GRMon&)            = delete;
     GRMon& operator&(const GRMon&) = delete;
 
     ~GRMon();

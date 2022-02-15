@@ -26,12 +26,14 @@
  * - Global constants applicable across the line can be defined here.
  */
 
-#ifdef  __cplusplus
-# define MXB_BEGIN_DECLS extern "C" {
-# define MXB_END_DECLS   }
+#ifdef __cplusplus
+#define MXB_BEGIN_DECLS \
+    extern "C"          \
+    {
+#define MXB_END_DECLS }
 #else
-# define MXB_BEGIN_DECLS
-# define MXB_END_DECLS
+#define MXB_BEGIN_DECLS
+#define MXB_END_DECLS
 #endif
 
 #undef _GNU_SOURCE
@@ -45,7 +47,7 @@
  * in Centos 6
  */
 #ifndef __STDC_FORMAT_MACROS
-# define __STDC_FORMAT_MACROS
+#define __STDC_FORMAT_MACROS
 #endif
 
 /**
@@ -61,7 +63,7 @@
  * The function attributes are compiler specific.
  */
 #ifdef __GNUC__
-#define mxb_attribute(a) __attribute__ (a)
+#define mxb_attribute(a) __attribute__(a)
 #else
 #define mxb_attribute(a)
 #endif

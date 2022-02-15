@@ -32,9 +32,7 @@ MirrorSession::MirrorSession(MXS_SESSION* session, Mirror* router, SMyBackends b
     }
 }
 
-MirrorSession::~MirrorSession()
-{
-}
+MirrorSession::~MirrorSession() {}
 
 void MirrorSession::close()
 {
@@ -58,7 +56,7 @@ int32_t MirrorSession::routeQuery(GWBUF* pPacket)
     }
     else
     {
-        m_query = mxs::extract_sql(pPacket);
+        m_query   = mxs::extract_sql(pPacket);
         m_command = GWBUF_DATA(pPacket)[4];
 
         for (const auto& a : m_backends)
@@ -127,14 +125,15 @@ void MirrorSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, con
         backend->ack_write();
         --m_responses;
 
-        MXS_INFO("Reply from '%s' complete%s.", backend->name(), backend == m_main ?
-                 ", delaying routing of last chunk until all replies have been received" : "");
+        MXS_INFO("Reply from '%s' complete%s.",
+            backend->name(),
+            backend == m_main ? ", delaying routing of last chunk until all replies have been received" : "");
 
         if (backend == m_main)
         {
             m_last_chunk.reset(pPacket);
             m_last_route = down;
-            pPacket = nullptr;
+            pPacket      = nullptr;
         }
 
         if (m_responses == 0)
@@ -161,10 +160,8 @@ void MirrorSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, con
     }
 }
 
-bool MirrorSession::handleError(mxs::ErrorType type,
-                                GWBUF* pMessage,
-                                mxs::Endpoint* pProblem,
-                                const mxs::Reply& pReply)
+bool MirrorSession::handleError(
+    mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& pReply)
 {
     Backend* backend = static_cast<Backend*>(pProblem->get_userdata());
 
@@ -198,8 +195,8 @@ void MirrorSession::generate_report()
     {
         if (a->in_use())
         {
-            const char* type = a->reply().error() ?
-                "error" : (a->reply().is_resultset() ? "resultset" : "ok");
+            const char* type
+                = a->reply().error() ? "error" : (a->reply().is_resultset() ? "resultset" : "ok");
 
             json_t* o = json_object();
             json_object_set_new(o, "target", json_string(a->name()));

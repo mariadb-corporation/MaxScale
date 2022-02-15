@@ -55,7 +55,7 @@ namespace pinloki
 constexpr int HEADER_LEN = 19;
 
 FileReader::FileReader(const maxsql::GtidList& gtid_list, const InventoryReader* inv)
-    : m_inotify_fd{inotify_init1(IN_NONBLOCK)}
+    : m_inotify_fd {inotify_init1(IN_NONBLOCK)}
     , m_inventory(*inv)
 {
     if (m_inotify_fd == -1)
@@ -73,8 +73,7 @@ FileReader::FileReader(const maxsql::GtidList& gtid_list, const InventoryReader*
 
         if (gtid_pos.file_name.empty())
         {
-            MXB_THROW(GtidNotFoundError,
-                      "Could not find '" << gtid_pos.gtid << "' in any of the binlogs");
+            MXB_THROW(GtidNotFoundError, "Could not find '" << gtid_pos.gtid << "' in any of the binlogs");
         }
 
         open(gtid_pos.file_name);
@@ -82,7 +81,7 @@ FileReader::FileReader(const maxsql::GtidList& gtid_list, const InventoryReader*
         // Generate initial rotate and read format description, gtid list and any
         // binlog checkpoints from the file before jumping to the gtid.
         m_generate_rotate_to = gtid_pos.file_name;
-        m_read_pos.next_pos = PINLOKI_MAGIC.size();
+        m_read_pos.next_pos  = PINLOKI_MAGIC.size();
 
         // Once the preamble is done, jump to this file position. If the position is
         // at the beginning of the file, this does the same as the 'else' below.
@@ -97,7 +96,7 @@ FileReader::FileReader(const maxsql::GtidList& gtid_list, const InventoryReader*
         open(first);
         // Preamble just means send the initial rotate and then the whole file
         m_generate_rotate_to = first;
-        m_read_pos.next_pos = PINLOKI_MAGIC.size();
+        m_read_pos.next_pos  = PINLOKI_MAGIC.size();
     }
 }
 
@@ -113,7 +112,7 @@ void FileReader::open(const std::string& file_name)
     if (!m_read_pos.file.good())
     {
         MXB_THROW(BinlogReadError,
-                  "Could not open " << file_name << " for reading: " << errno << ", " << mxb_strerror(errno));
+            "Could not open " << file_name << " for reading: " << errno << ", " << mxb_strerror(errno));
     }
 
     // Close the previous file after the new one has been opened.
@@ -123,10 +122,10 @@ void FileReader::open(const std::string& file_name)
         previous_pos.file.close();
     }
 
-    m_read_pos.next_pos = PINLOKI_MAGIC.size();     // TODO should check that it really is PINLOKI_MAGIC
-    m_read_pos.name = file_name;
+    m_read_pos.next_pos = PINLOKI_MAGIC.size();  // TODO should check that it really is PINLOKI_MAGIC
+    m_read_pos.name     = file_name;
 
-    set_inotify_fd();   // Always set inotify. Avoids all race conditions, extra notifications are fine.
+    set_inotify_fd();  // Always set inotify. Avoids all race conditions, extra notifications are fine.
 }
 
 void FileReader::fd_notify(uint32_t events)
@@ -200,23 +199,22 @@ maxsql::RplEvent FileReader::fetch_event()
             // Is this domain being streamed yet?
             if (m_active_domains.count(gtid_event.gtid.domain_id()) != 0)
             {
-                m_skip_gtid = false;    // yes, we are already streaming this domain
+                m_skip_gtid = false;  // yes, we are already streaming this domain
             }
             else
             {
-                auto ite = std::find_if(begin(m_catchup), end(m_catchup),
-                                        [&](const GtidPosition& gp) {
-                                            return gtid_event.gtid.domain_id() == gp.gtid.domain_id();
-                                        });
+                auto ite = std::find_if(begin(m_catchup), end(m_catchup), [&](const GtidPosition& gp) {
+                    return gtid_event.gtid.domain_id() == gp.gtid.domain_id();
+                });
 
                 if (ite == end(m_catchup))
-                {   // This domain was not in the client's initial state. It could be a new
+                {  // This domain was not in the client's initial state. It could be a new
                     // domain or could be a mistake. Start streaming it.
                     m_active_domains.insert(gtid_event.gtid.domain_id());
                     m_skip_gtid = false;
                 }
                 else if (gtid_event.gtid.sequence_nr() > ite->gtid.sequence_nr())
-                {   // The replica had a start gtid for this domain. The start gtid
+                {  // The replica had a start gtid for this domain. The start gtid
                     // is the one it already has, so starting stream from the next
                     // gtid in this domain.
                     m_active_domains.insert(gtid_event.gtid.domain_id());
@@ -224,7 +222,7 @@ maxsql::RplEvent FileReader::fetch_event()
                     m_skip_gtid = false;
                 }
                 else
-                {   // This gtid is before the replicas start gtid for this domain
+                {  // This gtid is before the replicas start gtid for this domain
                     m_skip_gtid = true;
                 }
             }
@@ -234,7 +232,7 @@ maxsql::RplEvent FileReader::fetch_event()
             m_skip_gtid = false;
         }
     }
-    while(m_skip_gtid);
+    while (m_skip_gtid);
 
     return event;
 }
@@ -247,8 +245,9 @@ maxsql::RplEvent FileReader::fetch_event_internal()
         m_generate_rotate_to.clear();
         // Next position is the current next_pos value (weird)
         auto vec = mxq::create_rotate_event(basename(tmp.c_str()),
-                                            m_inventory.config().server_id(),
-                                            m_read_pos.next_pos, mxq::Kind::Artificial);
+            m_inventory.config().server_id(),
+            m_read_pos.next_pos,
+            mxq::Kind::Artificial);
 
         return mxq::RplEvent(std::move(vec));
     }
@@ -264,8 +263,7 @@ maxsql::RplEvent FileReader::fetch_event_internal()
 
     if (m_generating_preamble)
     {
-        if (rpl.event_type() != GTID_LIST_EVENT
-            && rpl.event_type() != FORMAT_DESCRIPTION_EVENT
+        if (rpl.event_type() != GTID_LIST_EVENT && rpl.event_type() != FORMAT_DESCRIPTION_EVENT
             && rpl.event_type() != BINLOG_CHECKPOINT_EVENT)
         {
             m_generating_preamble = false;
@@ -295,16 +293,17 @@ maxsql::RplEvent FileReader::fetch_event_internal()
         m_generate_rotate_to = next_string(m_inventory.file_names(), m_read_pos.name);
         if (!m_generate_rotate_to.empty())
         {
-            MXB_SINFO("STOP_EVENT in file " << m_read_pos.name
-                                            << ".  The next event will be a generated, artificial ROTATE_EVENT to "
-                                            << m_generate_rotate_to);
+            MXB_SINFO("STOP_EVENT in file "
+                      << m_read_pos.name
+                      << ".  The next event will be a generated, artificial ROTATE_EVENT to "
+                      << m_generate_rotate_to);
             open(m_generate_rotate_to);
         }
         else
         {
             MXB_THROW(BinlogReadError,
-                      "Sequence error,  binlog file " << m_read_pos.name << " has a STOP_EVENT"
-                                                      << " but the Inventory has no successor for it");
+                "Sequence error,  binlog file " << m_read_pos.name << " has a STOP_EVENT"
+                                                << " but the Inventory has no successor for it");
         }
     }
     else
@@ -341,7 +340,7 @@ mxq::RplEvent FileReader::create_heartbeat_event() const
     mxb_assert(pos != std::string::npos);
     auto filename = m_read_pos.name.substr(pos + 1);
     std::vector<char> data(HEADER_LEN + filename.size() + 4);
-    uint8_t* ptr = (uint8_t*)&data[0];
+    uint8_t* ptr = (uint8_t*) &data[0];
 
     // Timestamp, always zero
     mariadb::set_byte4(ptr, 0);
@@ -371,8 +370,8 @@ mxq::RplEvent FileReader::create_heartbeat_event() const
     ptr += filename.size();
 
     // Checksum of the whole event
-    mariadb::set_byte4(ptr, crc32(0, (uint8_t*)data.data(), data.size() - 4));
+    mariadb::set_byte4(ptr, crc32(0, (uint8_t*) data.data(), data.size() - 4));
 
     return mxq::RplEvent(std::move(data));
 }
-}
+}  // namespace pinloki

@@ -27,17 +27,16 @@ using namespace maxscale;
 const char CN_UNKNOWN[] = "Unknown";
 
 const char CN_FACILITY[] = "facility";
-const char CN_LEVEL[] = "level";
+const char CN_LEVEL[]    = "level";
 
 const char CN_AUTHENTICATION_FAILURE[] = "authentication_failure";
 
 const char EVENT_PREFIX[] = "event.";
 
-
 struct NAME_AND_VALUE
 {
     const char* zName;
-    int32_t     value;
+    int32_t value;
 };
 
 int name_and_value_compare(const void* pLeft, const void* pRight)
@@ -48,10 +47,8 @@ int name_and_value_compare(const void* pLeft, const void* pRight)
     return strcmp(pL->zName, pR->zName);
 }
 
-
 // Keep these in alphabetical order.
-const NAME_AND_VALUE levels[] =
-{
+const NAME_AND_VALUE levels[] = {
     {
         "LOG_ALERT",
         LOG_ALERT,
@@ -90,111 +87,44 @@ const int N_LEVELS = sizeof(levels) / sizeof(levels[0]);
 
 
 // Keep these in alphabetical order.
-const NAME_AND_VALUE facilities[] =
-{
-    {
-        "LOG_AUTH",
-        LOG_AUTH
-    },
-    {
-        "LOG_AUTHPRIV",
-        LOG_AUTHPRIV
-    },
-    {
-        "LOG_CRON",
-        LOG_CRON
-    },
-    {
-        "LOG_DAEMON",
-        LOG_DAEMON
-    },
-    {
-        "LOG_FTP",
-        LOG_FTP
-    },
-    {
-        "LOG_KERN",
-        LOG_KERN
-    },
-    {
-        "LOG_LOCAL0",
-        LOG_LOCAL0
-    },
-    {
-        "LOG_LOCAL1",
-        LOG_LOCAL1
-    },
-    {
-        "LOG_LOCAL2",
-        LOG_LOCAL2
-    },
-    {
-        "LOG_LOCAL3",
-        LOG_LOCAL3
-    },
-    {
-        "LOG_LOCAL4",
-        LOG_LOCAL4
-    },
-    {
-        "LOG_LOCAL5",
-        LOG_LOCAL5
-    },
-    {
-        "LOG_LOCAL6",
-        LOG_LOCAL6
-    },
-    {
-        "LOG_LOCAL7",
-        LOG_LOCAL0
-    },
-    {
-        "LOG_LPR",
-        LOG_LPR
-    },
-    {
-        "LOG_MAIL",
-        LOG_MAIL
-    },
-    {
-        "LOG_NEWS",
-        LOG_NEWS
-    },
-    {
-        "LOG_SYSLOG",
-        LOG_SYSLOG
-    },
-    {
-        "LOG_USER",
-        LOG_USER
-    },
-    {
-        "LOG_UUCP",
-        LOG_UUCP
-    },
+const NAME_AND_VALUE facilities[] = {
+    {"LOG_AUTH", LOG_AUTH},
+    {"LOG_AUTHPRIV", LOG_AUTHPRIV},
+    {"LOG_CRON", LOG_CRON},
+    {"LOG_DAEMON", LOG_DAEMON},
+    {"LOG_FTP", LOG_FTP},
+    {"LOG_KERN", LOG_KERN},
+    {"LOG_LOCAL0", LOG_LOCAL0},
+    {"LOG_LOCAL1", LOG_LOCAL1},
+    {"LOG_LOCAL2", LOG_LOCAL2},
+    {"LOG_LOCAL3", LOG_LOCAL3},
+    {"LOG_LOCAL4", LOG_LOCAL4},
+    {"LOG_LOCAL5", LOG_LOCAL5},
+    {"LOG_LOCAL6", LOG_LOCAL6},
+    {"LOG_LOCAL7", LOG_LOCAL0},
+    {"LOG_LPR", LOG_LPR},
+    {"LOG_MAIL", LOG_MAIL},
+    {"LOG_NEWS", LOG_NEWS},
+    {"LOG_SYSLOG", LOG_SYSLOG},
+    {"LOG_USER", LOG_USER},
+    {"LOG_UUCP", LOG_UUCP},
 };
 
 const int N_FACILITIES = sizeof(facilities) / sizeof(facilities[0]);
-
 
 struct EVENT
 {
     const char* zName;
     event::id_t id;
-    int32_t     facility;
-    int32_t     level;
+    int32_t facility;
+    int32_t level;
 };
 
 // Keep these in alphabetical order.
-EVENT events[] =
-{
-    {
-        CN_AUTHENTICATION_FAILURE,
-        event::AUTHENTICATION_FAILURE,
-        event::DEFAULT_FACILITY,
-        event::DEFAULT_LEVEL
-    }
-};
+EVENT events[] = {{CN_AUTHENTICATION_FAILURE,
+    event::AUTHENTICATION_FAILURE,
+    event::DEFAULT_FACILITY,
+    event::DEFAULT_LEVEL}};
 
 const int N_EVENTS = sizeof(events) / sizeof(events[0]);
 
@@ -206,18 +136,12 @@ int event_compare(const void* pLeft, const void* pRight)
     return strcmp(pL->zName, pR->zName);
 }
 
-
 struct
 {
-    EVENT*                events;
+    EVENT* events;
     const NAME_AND_VALUE* levels;
     const NAME_AND_VALUE* facilities;
-} this_unit =
-{
-    events,
-    levels,
-    facilities
-};
+} this_unit = {events, levels, facilities};
 
 event::result_t validate_facility(event::id_t id, const char* zValue)
 {
@@ -290,9 +214,9 @@ event::result_t configure_level(event::id_t id, const char* zValue)
 }
 
 event::result_t action(const char* zName,
-                       const char* zValue,
-                       event::result_t (*facility_action)(event::id_t id, const char* zValue),
-                       event::result_t (*level_action)(event::id_t id, const char* zValue))
+    const char* zValue,
+    event::result_t (*facility_action)(event::id_t id, const char* zValue),
+    event::result_t (*level_action)(event::id_t id, const char* zValue))
 {
     event::result_t rv = event::IGNORED;
 
@@ -300,13 +224,13 @@ event::result_t action(const char* zName,
     {
         rv = event::INVALID;
 
-        string name(zName + sizeof(EVENT_PREFIX) - 1);      // Character following '.'
+        string name(zName + sizeof(EVENT_PREFIX) - 1);  // Character following '.'
 
         auto i = name.find_first_of('.');
 
         if (i != string::npos)
         {
-            string event = name.substr(0, i);
+            string event    = name.substr(0, i);
             string property = name.substr(i + 1);
 
             event::id_t id;
@@ -341,7 +265,7 @@ event::result_t action(const char* zName,
     return rv;
 }
 
-}
+}  // namespace
 
 namespace maxscale
 {
@@ -349,13 +273,9 @@ namespace maxscale
 const char* log_level_to_string(int32_t level)
 {
     auto begin = this_unit.levels;
-    auto end = begin + N_LEVELS;
+    auto end   = begin + N_LEVELS;
 
-    auto i = find_if(begin,
-                     end,
-                     [level](const NAME_AND_VALUE& item) -> bool {
-                         return item.value == level;
-                     });
+    auto i = find_if(begin, end, [level](const NAME_AND_VALUE& item) -> bool { return item.value == level; });
 
     return i == end ? CN_UNKNOWN : i->zName;
 }
@@ -363,11 +283,7 @@ const char* log_level_to_string(int32_t level)
 bool log_level_from_string(int32_t* pLevel, const char* zValue)
 {
     NAME_AND_VALUE key = {zValue};
-    void* pResult = bsearch(&key,
-                            this_unit.levels,
-                            N_LEVELS,
-                            sizeof(NAME_AND_VALUE),
-                            name_and_value_compare);
+    void* pResult = bsearch(&key, this_unit.levels, N_LEVELS, sizeof(NAME_AND_VALUE), name_and_value_compare);
 
     if (pResult)
     {
@@ -382,13 +298,10 @@ bool log_level_from_string(int32_t* pLevel, const char* zValue)
 const char* log_facility_to_string(int32_t facility)
 {
     auto begin = this_unit.facilities;
-    auto end = begin + N_FACILITIES;
+    auto end   = begin + N_FACILITIES;
 
-    auto i = find_if(begin,
-                     end,
-                     [facility](const NAME_AND_VALUE& item) -> bool {
-                         return item.value == facility;
-                     });
+    auto i = find_if(
+        begin, end, [facility](const NAME_AND_VALUE& item) -> bool { return item.value == facility; });
 
     return i == end ? CN_UNKNOWN : i->zName;
 }
@@ -396,11 +309,8 @@ const char* log_facility_to_string(int32_t facility)
 bool log_facility_from_string(int32_t* pFacility, const char* zValue)
 {
     NAME_AND_VALUE key = {zValue};
-    void* pResult = bsearch(&key,
-                            this_unit.facilities,
-                            N_FACILITIES,
-                            sizeof(NAME_AND_VALUE),
-                            name_and_value_compare);
+    void* pResult
+        = bsearch(&key, this_unit.facilities, N_FACILITIES, sizeof(NAME_AND_VALUE), name_and_value_compare);
 
     if (pResult)
     {
@@ -412,32 +322,23 @@ bool log_facility_from_string(int32_t* pFacility, const char* zValue)
     return pResult != nullptr;
 }
 
-
 namespace event
 {
 
 const char* to_string(id_t id)
 {
     auto begin = this_unit.events;
-    auto end = begin + N_EVENTS;
+    auto end   = begin + N_EVENTS;
 
-    auto i = find_if(begin,
-                     end,
-                     [id](const EVENT& item) -> bool {
-                         return item.id == id;
-                     });
+    auto i = find_if(begin, end, [id](const EVENT& item) -> bool { return item.id == id; });
 
     return i == end ? CN_UNKNOWN : i->zName;
 }
 
 bool from_string(id_t* pId, const char* zValue)
 {
-    EVENT key = {zValue};
-    void* pResult = bsearch(&key,
-                            this_unit.events,
-                            N_EVENTS,
-                            sizeof(EVENT),
-                            event_compare);
+    EVENT key     = {zValue};
+    void* pResult = bsearch(&key, this_unit.events, N_EVENTS, sizeof(EVENT), event_compare);
 
     if (pResult)
     {
@@ -503,12 +404,12 @@ result_t configure(const char* zName, const char* zValue)
 }
 
 void log(id_t event_id,
-         const char* modname,
-         const char* file,
-         int line,
-         const char* function,
-         const char* format,
-         ...)
+    const char* modname,
+    const char* file,
+    int line,
+    const char* function,
+    const char* format,
+    ...)
 {
     va_list valist;
 
@@ -535,5 +436,5 @@ void log(id_t event_id,
 
     mxs_log_message(priority, modname, file, line, function, "%s", message);
 }
-}   // event
-}   // maxscale
+}  // namespace event
+}  // namespace maxscale

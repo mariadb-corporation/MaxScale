@@ -38,9 +38,10 @@ namespace
 
 struct ThisUnit
 {
-    ByteVec key;    /**< Password decryption key, assigned at startup */
-    ByteVec iv;     /**< Decryption init vector, assigned at startup. Only used with old-format keys */
+    ByteVec key; /**< Password decryption key, assigned at startup */
+    ByteVec iv;  /**< Decryption init vector, assigned at startup. Only used with old-format keys */
 };
+
 ThisUnit this_unit;
 
 enum class ProcessingMode
@@ -50,15 +51,15 @@ enum class ProcessingMode
     DECRYPT_IGNORE_ERRORS
 };
 
-const char field_desc[] = "description";
+const char field_desc[]    = "description";
 const char field_version[] = "maxscale_version";
-const char field_cipher[] = "encryption_cipher";
-const char field_key[] = "encryption_key";
-const char desc[] = "MaxScale encryption/decryption key";
+const char field_cipher[]  = "encryption_cipher";
+const char field_key[]     = "encryption_key";
+const char desc[]          = "MaxScale encryption/decryption key";
 
 #define SECRETS_CIPHER EVP_aes_256_cbc
-#define STRINGIFY(X)  #X
-#define STRINGIFY2(X) STRINGIFY(X)
+#define STRINGIFY(X)   #X
+#define STRINGIFY2(X)  STRINGIFY(X)
 const char CIPHER_NAME[] = STRINGIFY2(SECRETS_CIPHER);
 
 void print_openSSL_errors(const char* operation);
@@ -74,13 +75,18 @@ void print_openSSL_errors(const char* operation);
  * @param output_len Produced output length is written here
  * @return True on success
  */
-bool encrypt_or_decrypt(const uint8_t* key, const uint8_t* iv, ProcessingMode mode,
-                        const uint8_t* input, int input_len, uint8_t* output, int* output_len)
+bool encrypt_or_decrypt(const uint8_t* key,
+    const uint8_t* iv,
+    ProcessingMode mode,
+    const uint8_t* input,
+    int input_len,
+    uint8_t* output,
+    int* output_len)
 {
-    auto ctx = EVP_CIPHER_CTX_new();
-    int enc = (mode == ProcessingMode::ENCRYPT) ? AES_ENCRYPT : AES_DECRYPT;
+    auto ctx           = EVP_CIPHER_CTX_new();
+    int enc            = (mode == ProcessingMode::ENCRYPT) ? AES_ENCRYPT : AES_DECRYPT;
     bool ignore_errors = (mode == ProcessingMode::DECRYPT_IGNORE_ERRORS);
-    bool ok = false;
+    bool ok            = false;
 
     if (EVP_CipherInit_ex(ctx, secrets_cipher(), nullptr, key, iv, enc) == 1 || ignore_errors)
     {
@@ -92,7 +98,7 @@ bool encrypt_or_decrypt(const uint8_t* key, const uint8_t* iv, ProcessingMode mo
             {
                 total_output_len += output_written;
                 *output_len = total_output_len;
-                ok = true;
+                ok          = true;
             }
         }
     }
@@ -100,8 +106,8 @@ bool encrypt_or_decrypt(const uint8_t* key, const uint8_t* iv, ProcessingMode mo
     EVP_CIPHER_CTX_free(ctx);
     if (!ok)
     {
-        const char* operation = (mode == ProcessingMode::ENCRYPT) ? "when encrypting password" :
-            "when decrypting password";
+        const char* operation
+            = (mode == ProcessingMode::ENCRYPT) ? "when encrypting password" : "when decrypting password";
         print_openSSL_errors(operation);
     }
     return ok;
@@ -111,11 +117,11 @@ void print_openSSL_errors(const char* operation)
 {
     // It's unclear how thread(unsafe) OpenSSL error functions are. Minimize such possibilities by
     // using a local buffer.
-    constexpr size_t bufsize = 256;     // Should be enough according to some googling.
+    constexpr size_t bufsize = 256;  // Should be enough according to some googling.
     char buf[bufsize];
     buf[0] = '\0';
 
-    auto errornum = ERR_get_error();
+    auto errornum  = ERR_get_error();
     auto errornum2 = ERR_get_error();
     ERR_error_string_n(errornum, buf, bufsize);
 
@@ -137,7 +143,7 @@ void print_openSSL_errors(const char* operation)
         }
     }
 }
-}
+}  // namespace
 
 const EVP_CIPHER* secrets_cipher()
 {
@@ -167,15 +173,19 @@ ReadKeyResult secrets_readkeys(const string& filepath)
     ReadKeyResult rval;
     auto filepathc = filepath.c_str();
 
-    const int binary_key_len = secrets_keylen();
-    const int binary_iv_len = secrets_ivlen();
+    const int binary_key_len   = secrets_keylen();
+    const int binary_iv_len    = secrets_ivlen();
     const int binary_total_len = binary_key_len + binary_iv_len;
 
     // Before opening the file, check its size and permissions.
-    struct stat filestats { 0 };
+    struct stat filestats
+    {
+        0
+    };
+
     bool stat_error = false;
     bool old_format = false;
-    errno = 0;
+    errno           = 0;
     if (stat(filepathc, &filestats) == 0)
     {
         auto filesize = filestats.st_size;
@@ -183,7 +193,8 @@ ReadKeyResult secrets_readkeys(const string& filepath)
         {
             old_format = true;
             MXB_WARNING("File format of '%s' is deprecated. Please generate a new encryption key ('maxkeys') "
-                        "and re-encrypt passwords ('maxpasswd').", filepathc);
+                        "and re-encrypt passwords ('maxpasswd').",
+                filepathc);
         }
 
         auto filemode = filestats.st_mode;
@@ -195,7 +206,8 @@ ReadKeyResult secrets_readkeys(const string& filepath)
         else if ((filemode & (S_IRWXU | S_IRWXG | S_IRWXO)) != S_IRUSR)
         {
             MXS_ERROR("Secrets file '%s' permissions are wrong. The only permission on the file should be "
-                      "owner:read.", filepathc);
+                      "owner:read.",
+                filepathc);
             stat_error = true;
         }
     }
@@ -207,8 +219,8 @@ ReadKeyResult secrets_readkeys(const string& filepath)
     }
     else
     {
-        MXS_ERROR("stat() for secrets file '%s' failed. Error %d, %s.",
-                  filepathc, errno, mxs_strerror(errno));
+        MXS_ERROR(
+            "stat() for secrets file '%s' failed. Error %d, %s.", filepathc, errno, mxs_strerror(errno));
         stat_error = true;
     }
 
@@ -236,13 +248,17 @@ ReadKeyResult secrets_readkeys(const string& filepath)
             else
             {
                 MXS_ERROR("Read from secrets file %s failed. Read %li, expected %i bytes. Error %d, %s.",
-                          filepathc, file.gcount(), binary_total_len, errno, mxs_strerror(errno));
+                    filepathc,
+                    file.gcount(),
+                    binary_total_len,
+                    errno,
+                    mxs_strerror(errno));
             }
         }
         else
         {
-            MXS_ERROR("Could not open secrets file '%s'. Error %d, %s.",
-                      filepathc, errno, mxs_strerror(errno));
+            MXS_ERROR(
+                "Could not open secrets file '%s'. Error %d, %s.", filepathc, errno, mxs_strerror(errno));
         }
     }
     else
@@ -253,11 +269,11 @@ ReadKeyResult secrets_readkeys(const string& filepath)
         if (obj)
         {
             const char* enc_cipher = json_string_value(json_object_get(obj, field_cipher));
-            const char* enc_key = json_string_value(json_object_get(obj, field_key));
-            bool cipher_ok = enc_cipher && (strcmp(enc_cipher, CIPHER_NAME) == 0);
+            const char* enc_key    = json_string_value(json_object_get(obj, field_key));
+            bool cipher_ok         = enc_cipher && (strcmp(enc_cipher, CIPHER_NAME) == 0);
             if (cipher_ok && enc_key)
             {
-                int read_hex_key_len = strlen(enc_key);
+                int read_hex_key_len     = strlen(enc_key);
                 int expected_hex_key_len = 2 * binary_key_len;
                 if (read_hex_key_len == expected_hex_key_len)
                 {
@@ -268,14 +284,20 @@ ReadKeyResult secrets_readkeys(const string& filepath)
                 else
                 {
                     MXB_ERROR("Wrong encryption key length in secrets file '%s': found %i, expected %i.",
-                              filepathc, read_hex_key_len, expected_hex_key_len);
+                        filepathc,
+                        read_hex_key_len,
+                        expected_hex_key_len);
                 }
             }
             else
             {
                 MXB_ERROR("Secrets file '%s' does not contain expected string fields '%s' and '%s', "
                           "or '%s' is not '%s'.",
-                          filepathc, field_cipher, field_key, field_cipher, CIPHER_NAME);
+                    filepathc,
+                    field_cipher,
+                    field_key,
+                    field_cipher,
+                    CIPHER_NAME);
             }
             json_decref(obj);
         }
@@ -314,7 +336,7 @@ string decrypt_password(const string& input)
     }
     return rval;
 }
-}
+}  // namespace maxscale
 
 /**
  * Decrypt passwords encrypted with an old (pre 2.5) .secrets-file. The decryption also depends on whether
@@ -330,14 +352,19 @@ string decrypt_password_old(const ByteVec& key, const ByteVec& iv, const std::st
     string rval;
     // Convert to binary.
     size_t hex_len = input.length();
-    auto bin_len = hex_len / 2;
+    auto bin_len   = hex_len / 2;
     unsigned char encrypted_bin[bin_len];
     mxs::hex2bin(input.c_str(), hex_len, encrypted_bin);
 
-    unsigned char plain[bin_len];   // Decryption output cannot be longer than input data.
+    unsigned char plain[bin_len];  // Decryption output cannot be longer than input data.
     int decrypted_len = 0;
-    if (encrypt_or_decrypt(key.data(), iv.data(), ProcessingMode::DECRYPT_IGNORE_ERRORS, encrypted_bin,
-                           bin_len, plain, &decrypted_len))
+    if (encrypt_or_decrypt(key.data(),
+            iv.data(),
+            ProcessingMode::DECRYPT_IGNORE_ERRORS,
+            encrypted_bin,
+            bin_len,
+            plain,
+            &decrypted_len))
     {
         if (decrypted_len > 0)
         {
@@ -365,7 +392,7 @@ string decrypt_password(const ByteVec& key, const std::string& input)
     string rval;
 
     // Extract IV.
-    auto ptr = input.data();
+    auto ptr       = input.data();
     int iv_bin_len = secrets_ivlen();
     int iv_hex_len = 2 * iv_bin_len;
     uint8_t iv_bin[iv_bin_len];
@@ -378,10 +405,15 @@ string decrypt_password(const ByteVec& key, const std::string& input)
         unsigned char encrypted_bin[encrypted_bin_len];
         mxs::hex2bin(ptr + iv_hex_len, encrypted_hex_len, encrypted_bin);
 
-        uint8_t decrypted[encrypted_bin_len];   // Decryption output cannot be longer than input data.
+        uint8_t decrypted[encrypted_bin_len];  // Decryption output cannot be longer than input data.
         int decrypted_len = 0;
-        if (encrypt_or_decrypt(key.data(), iv_bin, ProcessingMode::DECRYPT, encrypted_bin, encrypted_bin_len,
-                               decrypted, &decrypted_len))
+        if (encrypt_or_decrypt(key.data(),
+                iv_bin,
+                ProcessingMode::DECRYPT,
+                encrypted_bin,
+                encrypted_bin_len,
+                decrypted,
+                &decrypted_len))
         {
             // Decrypted data should be text.
             auto output_data = reinterpret_cast<const char*>(decrypted);
@@ -407,10 +439,15 @@ string encrypt_password_old(const ByteVec& key, const ByteVec& iv, const string&
     unsigned char encrypted_bin[input_len + AES_BLOCK_SIZE];
 
     // Although input is text, interpret as binary.
-    auto input_data = reinterpret_cast<const uint8_t*>(input.c_str());
+    auto input_data   = reinterpret_cast<const uint8_t*>(input.c_str());
     int encrypted_len = 0;
-    if (encrypt_or_decrypt(key.data(), iv.data(), ProcessingMode::ENCRYPT,
-                           input_data, input_len, encrypted_bin, &encrypted_len))
+    if (encrypt_or_decrypt(key.data(),
+            iv.data(),
+            ProcessingMode::ENCRYPT,
+            input_data,
+            input_len,
+            encrypted_bin,
+            &encrypted_len))
     {
         int hex_len = 2 * encrypted_len;
         char hex_output[hex_len + 1];
@@ -437,15 +474,20 @@ string encrypt_password(const ByteVec& key, const string& input)
     unsigned char encrypted_bin[input_len + EVP_CIPHER_block_size(secrets_cipher())];
 
     // Although input is text, interpret as binary.
-    auto input_data = reinterpret_cast<const uint8_t*>(input.c_str());
+    auto input_data   = reinterpret_cast<const uint8_t*>(input.c_str());
     int encrypted_len = 0;
-    if (encrypt_or_decrypt(key.data(), iv_bin, ProcessingMode::ENCRYPT,
-                           input_data, input_len, encrypted_bin, &encrypted_len))
+    if (encrypt_or_decrypt(key.data(),
+            iv_bin,
+            ProcessingMode::ENCRYPT,
+            input_data,
+            input_len,
+            encrypted_bin,
+            &encrypted_len))
     {
         // Form one string with IV in front.
-        int iv_hex_len = 2 * ivlen;
+        int iv_hex_len        = 2 * ivlen;
         int encrypted_hex_len = 2 * encrypted_len;
-        int total_hex_len = iv_hex_len + encrypted_hex_len;
+        int total_hex_len     = iv_hex_len + encrypted_hex_len;
         char hex_output[total_hex_len + 1];
         mxs::bin2hex(iv_bin, ivlen, hex_output);
         mxs::bin2hex(encrypted_bin, encrypted_len, hex_output + iv_hex_len);
@@ -467,12 +509,13 @@ bool load_encryption_keys()
         {
             MXB_NOTICE("Using encrypted passwords. Encryption key read from '%s'.", path.c_str());
             this_unit.key = move(ret.key);
-            this_unit.iv = move(ret.iv);
+            this_unit.iv  = move(ret.iv);
         }
         else
         {
             MXB_NOTICE("Password encryption key file '%s' not found, using configured passwords as "
-                       "plaintext.", path.c_str());
+                       "plaintext.",
+                path.c_str());
         }
     }
     return ret.ok;
@@ -499,16 +542,15 @@ bool secrets_write_keys(const ByteVec& key, const string& filepath, const string
     json_object_set_new(obj, field_key, json_string(key_hex));
 
     auto filepathc = filepath.c_str();
-    bool write_ok = false;
-    errno = 0;
+    bool write_ok  = false;
+    errno          = 0;
     if (json_dump_file(obj, filepathc, JSON_INDENT(4)) == 0)
     {
         write_ok = true;
     }
     else
     {
-        printf("Write to secrets file '%s' failed. Error %d, %s.\n",
-               filepathc, errno, mxs_strerror(errno));
+        printf("Write to secrets file '%s' failed. Error %d, %s.\n", filepathc, errno, mxs_strerror(errno));
     }
     json_decref(obj);
 
@@ -520,7 +562,7 @@ bool secrets_write_keys(const ByteVec& key, const string& filepath, const string
         if (chmod(filepathc, S_IRUSR) == 0)
         {
             printf("Permissions of '%s' set to owner:read.\n", filepathc);
-            auto ownerz = owner.c_str();
+            auto ownerz   = owner.c_str();
             auto userinfo = getpwnam(ownerz);
             if (userinfo)
             {
@@ -532,19 +574,27 @@ bool secrets_write_keys(const ByteVec& key, const string& filepath, const string
                 else
                 {
                     printf("Failed to give '%s' ownership of '%s': %d, %s.\n",
-                           ownerz, filepathc, errno, mxb_strerror(errno));
+                        ownerz,
+                        filepathc,
+                        errno,
+                        mxb_strerror(errno));
                 }
             }
             else
             {
                 printf("Could not find user '%s' when attempting to change ownership of '%s': %d, %s.\n",
-                       ownerz, filepathc, errno, mxb_strerror(errno));
+                    ownerz,
+                    filepathc,
+                    errno,
+                    mxb_strerror(errno));
             }
         }
         else
         {
             printf("Failed to change the permissions of the secrets file '%s'. Error %d, %s.\n",
-                   filepathc, errno, mxs_strerror(errno));
+                filepathc,
+                errno,
+                mxs_strerror(errno));
         }
     }
     return rval;

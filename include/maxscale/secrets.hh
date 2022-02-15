@@ -28,4 +28,4 @@ namespace maxscale
  * @return The decrypted password.
  */
 std::string decrypt_password(const std::string& input);
-}
+}  // namespace maxscale

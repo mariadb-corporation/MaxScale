@@ -41,9 +41,8 @@ GWBUF* create_error_response(const char* zMessage)
 
 GWBUF* create_parse_error_response()
 {
-    const char* zMessage =
-        "The statement could not be fully parsed and will hence be "
-        "rejected (masking filter).";
+    const char* zMessage = "The statement could not be fully parsed and will hence be "
+                           "rejected (masking filter).";
 
     return create_error_response(zMessage);
 }
@@ -52,7 +51,7 @@ GWBUF* create_parse_error_response()
 class EnableOption
 {
 public:
-    EnableOption(const EnableOption&) = delete;
+    EnableOption(const EnableOption&)            = delete;
     EnableOption& operator=(const EnableOption&) = delete;
 
     EnableOption(uint32_t option)
@@ -67,7 +66,7 @@ public:
             if (!(m_options & m_option))
             {
                 uint32_t options = (m_options | m_option);
-                MXB_AT_DEBUG(bool rv = ) qc_set_options(options);
+                MXB_AT_DEBUG(bool rv =) qc_set_options(options);
                 mxb_assert(rv);
                 m_disable = true;
             }
@@ -78,7 +77,7 @@ public:
     {
         if (m_disable)
         {
-            MXB_AT_DEBUG(bool rv = ) qc_set_options(m_options);
+            MXB_AT_DEBUG(bool rv =) qc_set_options(m_options);
             mxb_assert(rv);
         }
     }
@@ -86,27 +85,22 @@ public:
 private:
     uint32_t m_option;
     uint32_t m_options;
-    bool     m_disable;
+    bool m_disable;
 };
-}
+}  // namespace
 
-MaskingFilterSession::MaskingFilterSession(MXS_SESSION* pSession,
-                                           SERVICE* pService,
-                                           const MaskingFilter* pFilter)
+MaskingFilterSession::MaskingFilterSession(
+    MXS_SESSION* pSession, SERVICE* pService, const MaskingFilter* pFilter)
     : maxscale::FilterSession(pSession, pService)
     , m_filter(*pFilter)
     , m_state(IGNORING_RESPONSE)
-{
-}
+{}
 
-MaskingFilterSession::~MaskingFilterSession()
-{
-}
+MaskingFilterSession::~MaskingFilterSession() {}
 
 // static
-MaskingFilterSession* MaskingFilterSession::create(MXS_SESSION* pSession,
-                                                   SERVICE* pService,
-                                                   const MaskingFilter* pFilter)
+MaskingFilterSession* MaskingFilterSession::create(
+    MXS_SESSION* pSession, SERVICE* pService, const MaskingFilter* pFilter)
 {
     return new MaskingFilterSession(pSession, pService, pFilter);
 }
@@ -202,8 +196,7 @@ bool MaskingFilterSession::check_textual_query(GWBUF* pPacket)
                 // If pP is NULL, it indicates that we have a "prepare ps from @a". It must
                 // be rejected as we currently have no means for checking what columns are
                 // referred to.
-                const char* zMessage =
-                    "A statement prepared from a variable is rejected (masking filter).";
+                const char* zMessage = "A statement prepared from a variable is rejected (masking filter).";
 
                 set_response(create_error_response(zMessage));
             }
@@ -374,32 +367,32 @@ void MaskingFilterSession::handle_response(GWBUF* pPacket)
     switch (response.type())
     {
     case ComResponse::OK_PACKET:
+    {
+        ComOK ok(response);
+
+        if (ok.status() & SERVER_MORE_RESULTS_EXIST)
         {
-            ComOK ok(response);
-
-            if (ok.status() & SERVER_MORE_RESULTS_EXIST)
-            {
-                m_res.reset_multi();
-                m_state = EXPECTING_RESPONSE;
-            }
-            else
-            {
-                m_state = EXPECTING_NOTHING;
-            }
+            m_res.reset_multi();
+            m_state = EXPECTING_RESPONSE;
         }
-        break;
+        else
+        {
+            m_state = EXPECTING_NOTHING;
+        }
+    }
+    break;
 
-    case ComResponse::LOCAL_INFILE_PACKET:      // GET_MORE_CLIENT_DATA/SEND_MORE_CLIENT_DATA
+    case ComResponse::LOCAL_INFILE_PACKET:  // GET_MORE_CLIENT_DATA/SEND_MORE_CLIENT_DATA
         m_state = EXPECTING_NOTHING;
         break;
 
     default:
-        {
-            ComQueryResponse query_response(response);
+    {
+        ComQueryResponse query_response(response);
 
-            m_res.set_total_fields(query_response.nFields());
-            m_state = EXPECTING_FIELD;
-        }
+        m_res.set_total_fields(query_response.nFields());
+        m_state = EXPECTING_FIELD;
+    }
     }
 }
 
@@ -407,7 +400,7 @@ void MaskingFilterSession::handle_field(GWBUF* pPacket)
 {
     ComQueryResponse::ColumnDef column_def(pPacket);
 
-    if (column_def.payload_len() >= ComPacket::MAX_PAYLOAD_LEN)     // Not particularly likely...
+    if (column_def.payload_len() >= ComPacket::MAX_PAYLOAD_LEN)  // Not particularly likely...
     {
         handle_large_payload();
     }
@@ -471,9 +464,9 @@ void warn_of_type_mismatch(const MaskingRules::Rule& rule)
 {
     MXS_WARNING("The rule targeting \"%s\" matches a column "
                 "that is not of string type.",
-                rule.match().c_str());
+        rule.match().c_str());
 }
-}
+}  // namespace
 
 void MaskingFilterSession::handle_row(GWBUF* pPacket)
 {
@@ -531,60 +524,60 @@ void MaskingFilterSession::mask_values(ComPacket& response)
     switch (m_res.command())
     {
     case MXS_COM_QUERY:
+    {
+        ComQueryResponse::TextResultsetRow row(response, m_res.types());
+
+        ComQueryResponse::TextResultsetRow::iterator i = row.begin();
+        while (i != row.end())
         {
-            ComQueryResponse::TextResultsetRow row(response, m_res.types());
+            const MaskingRules::Rule* pRule = m_res.get_rule();
 
-            ComQueryResponse::TextResultsetRow::iterator i = row.begin();
-            while (i != row.end())
+            if (pRule)
             {
-                const MaskingRules::Rule* pRule = m_res.get_rule();
+                ComQueryResponse::TextResultsetRow::Value value = *i;
 
-                if (pRule)
+                if (value.is_string())
                 {
-                    ComQueryResponse::TextResultsetRow::Value value = *i;
-
-                    if (value.is_string())
-                    {
-                        LEncString s = value.as_string();
-                        pRule->rewrite(s);
-                    }
-                    else if (m_filter.config().warn_type_mismatch() == Config::WARN_ALWAYS)
-                    {
-                        warn_of_type_mismatch(*pRule);
-                    }
+                    LEncString s = value.as_string();
+                    pRule->rewrite(s);
                 }
-                ++i;
+                else if (m_filter.config().warn_type_mismatch() == Config::WARN_ALWAYS)
+                {
+                    warn_of_type_mismatch(*pRule);
+                }
             }
+            ++i;
         }
-        break;
+    }
+    break;
 
     case MXS_COM_STMT_EXECUTE:
+    {
+        ComQueryResponse::BinaryResultsetRow row(response, m_res.types());
+
+        ComQueryResponse::BinaryResultsetRow::iterator i = row.begin();
+        while (i != row.end())
         {
-            ComQueryResponse::BinaryResultsetRow row(response, m_res.types());
+            const MaskingRules::Rule* pRule = m_res.get_rule();
 
-            ComQueryResponse::BinaryResultsetRow::iterator i = row.begin();
-            while (i != row.end())
+            if (pRule)
             {
-                const MaskingRules::Rule* pRule = m_res.get_rule();
+                ComQueryResponse::BinaryResultsetRow::Value value = *i;
 
-                if (pRule)
+                if (value.is_string())
                 {
-                    ComQueryResponse::BinaryResultsetRow::Value value = *i;
-
-                    if (value.is_string())
-                    {
-                        LEncString s = value.as_string();
-                        pRule->rewrite(s);
-                    }
-                    else if (m_filter.config().warn_type_mismatch() == Config::WARN_ALWAYS)
-                    {
-                        warn_of_type_mismatch(*pRule);
-                    }
+                    LEncString s = value.as_string();
+                    pRule->rewrite(s);
                 }
-                ++i;
+                else if (m_filter.config().warn_type_mismatch() == Config::WARN_ALWAYS)
+                {
+                    warn_of_type_mismatch(*pRule);
+                }
             }
+            ++i;
         }
-        break;
+    }
+    break;
 
     default:
         MXS_ERROR("Unexpected request: %d", m_res.command());
@@ -599,19 +592,19 @@ bool MaskingFilterSession::is_function_used(GWBUF* pPacket, const char* zUser, c
     SMaskingRules sRules = m_filter.rules();
 
     auto pred1 = [&sRules, zUser, zHost](const QC_FIELD_INFO& field_info) {
-            const MaskingRules::Rule* pRule = sRules->get_rule_for(field_info, zUser, zHost);
+        const MaskingRules::Rule* pRule = sRules->get_rule_for(field_info, zUser, zHost);
 
-            return pRule ? true : false;
-        };
+        return pRule ? true : false;
+    };
 
     auto pred2 = [&sRules, zUser, zHost, &pred1](const QC_FUNCTION_INFO& function_info) {
-            const QC_FIELD_INFO* begin = function_info.fields;
-            const QC_FIELD_INFO* end = begin + function_info.n_fields;
+        const QC_FIELD_INFO* begin = function_info.fields;
+        const QC_FIELD_INFO* end   = begin + function_info.n_fields;
 
-            auto i = std::find_if(begin, end, pred1);
+        auto i = std::find_if(begin, end, pred1);
 
-            return i != end;
-        };
+        return i != end;
+    };
 
     const QC_FUNCTION_INFO* pInfos;
     size_t nInfos;
@@ -619,7 +612,7 @@ bool MaskingFilterSession::is_function_used(GWBUF* pPacket, const char* zUser, c
     qc_get_function_info(pPacket, &pInfos, &nInfos);
 
     const QC_FUNCTION_INFO* begin = pInfos;
-    const QC_FUNCTION_INFO* end = begin + nInfos;
+    const QC_FUNCTION_INFO* end   = begin + nInfos;
 
     auto i = std::find_if(begin, end, pred2);
 
@@ -646,20 +639,20 @@ bool MaskingFilterSession::is_variable_defined(GWBUF* pPacket, const char* zUser
     SMaskingRules sRules = m_filter.rules();
 
     auto pred = [&sRules, zUser, zHost](const QC_FIELD_INFO& field_info) {
-            bool rv = false;
+        bool rv = false;
 
-            if (strcmp(field_info.column, "*") == 0)
-            {
-                // If "*" is used, then we must block if there is any rule for the current user.
-                rv = sRules->has_rule_for(zUser, zHost);
-            }
-            else
-            {
-                rv = sRules->get_rule_for(field_info, zUser, zHost) ? true : false;
-            }
+        if (strcmp(field_info.column, "*") == 0)
+        {
+            // If "*" is used, then we must block if there is any rule for the current user.
+            rv = sRules->has_rule_for(zUser, zHost);
+        }
+        else
+        {
+            rv = sRules->get_rule_for(field_info, zUser, zHost) ? true : false;
+        }
 
-            return rv;
-        };
+        return rv;
+    };
 
     const QC_FIELD_INFO* pInfos;
     size_t nInfos;
@@ -667,7 +660,7 @@ bool MaskingFilterSession::is_variable_defined(GWBUF* pPacket, const char* zUser
     qc_get_field_info(pPacket, &pInfos, &nInfos);
 
     const QC_FIELD_INFO* begin = pInfos;
-    const QC_FIELD_INFO* end = begin + nInfos;
+    const QC_FIELD_INFO* end   = begin + nInfos;
 
     auto i = std::find_if(begin, end, pred);
 
@@ -720,23 +713,23 @@ bool MaskingFilterSession::is_union_or_subquery_used(GWBUF* pPacket, const char*
     }
 
     auto pred = [&sRules, mask, zUser, zHost](const QC_FIELD_INFO& field_info) {
-            bool rv = false;
+        bool rv = false;
 
-            if (field_info.context & mask)
+        if (field_info.context & mask)
+        {
+            if (strcmp(field_info.column, "*") == 0)
             {
-                if (strcmp(field_info.column, "*") == 0)
-                {
-                    // If "*" is used, then we must block if there is any rule for the current user.
-                    rv = sRules->has_rule_for(zUser, zHost);
-                }
-                else
-                {
-                    rv = sRules->get_rule_for(field_info, zUser, zHost) ? true : false;
-                }
+                // If "*" is used, then we must block if there is any rule for the current user.
+                rv = sRules->has_rule_for(zUser, zHost);
             }
+            else
+            {
+                rv = sRules->get_rule_for(field_info, zUser, zHost) ? true : false;
+            }
+        }
 
-            return rv;
-        };
+        return rv;
+    };
 
     const QC_FIELD_INFO* pInfos;
     size_t nInfos;
@@ -744,7 +737,7 @@ bool MaskingFilterSession::is_union_or_subquery_used(GWBUF* pPacket, const char*
     qc_get_field_info(pPacket, &pInfos, &nInfos);
 
     const QC_FIELD_INFO* begin = pInfos;
-    const QC_FIELD_INFO* end = begin + nInfos;
+    const QC_FIELD_INFO* end   = begin + nInfos;
 
     auto i = std::find_if(begin, end, pred);
 
@@ -771,13 +764,13 @@ bool MaskingFilterSession::is_union_or_subquery_used(GWBUF* pPacket, const char*
         {
             if (strcmp(zColumn, "*") == 0)
             {
-                ss << "'*' is used in a subquery and there are masking rules for '"
-                   << zUser << "'@'" << zHost << "', access is denied.";
+                ss << "'*' is used in a subquery and there are masking rules for '" << zUser << "'@'" << zHost
+                   << "', access is denied.";
             }
             else
             {
-                ss << "The field " << zColumn << " that should be masked for '"
-                   << zUser << "'@'" << zHost << "' is used in a subquery, access is denied.";
+                ss << "The field " << zColumn << " that should be masked for '" << zUser << "'@'" << zHost
+                   << "' is used in a subquery, access is denied.";
             }
         }
         else

@@ -23,7 +23,7 @@ namespace maxscale
 
 mxs::ConfigParameters* Module::create_default_parameters() const
 {
-    mxs::ConfigParameters* rval = new mxs::ConfigParameters;
+    mxs::ConfigParameters* rval              = new mxs::ConfigParameters;
     const MXS_MODULE_PARAM* param_definition = m_module.parameters;
     while (param_definition->name)
     {
@@ -58,7 +58,7 @@ bool Module::process_init()
     bool initialized = false;
 
     MXS_MODULE_ITERATOR i = mxs_module_iterator_get(NULL);
-    MXS_MODULE* module = NULL;
+    MXS_MODULE* module    = NULL;
 
     while ((module = mxs_module_iterator_get_next(&i)) != NULL)
     {
@@ -79,7 +79,7 @@ bool Module::process_init()
         // that module. We now need to call finish on all modules that were
         // successfully initialized.
         MXS_MODULE* failed_module = module;
-        i = mxs_module_iterator_get(NULL);
+        i                         = mxs_module_iterator_get(NULL);
 
         while ((module = mxs_module_iterator_get_next(&i)) != failed_module)
         {
@@ -101,7 +101,7 @@ bool Module::process_init()
 void Module::process_finish()
 {
     MXS_MODULE_ITERATOR i = mxs_module_iterator_get(NULL);
-    MXS_MODULE* module = NULL;
+    MXS_MODULE* module    = NULL;
 
     while ((module = mxs_module_iterator_get_next(&i)) != NULL)
     {
@@ -118,7 +118,7 @@ bool Module::thread_init()
     bool initialized = false;
 
     MXS_MODULE_ITERATOR i = mxs_module_iterator_get(NULL);
-    MXS_MODULE* module = NULL;
+    MXS_MODULE* module    = NULL;
 
     while ((module = mxs_module_iterator_get_next(&i)) != NULL)
     {
@@ -139,7 +139,7 @@ bool Module::thread_init()
         // that module. We now need to call finish on all modules that were
         // successfully initialized.
         MXS_MODULE* failed_module = module;
-        i = mxs_module_iterator_get(NULL);
+        i                         = mxs_module_iterator_get(NULL);
 
         while ((module = mxs_module_iterator_get_next(&i)) != failed_module)
         {
@@ -161,7 +161,7 @@ bool Module::thread_init()
 void Module::thread_finish()
 {
     MXS_MODULE_ITERATOR i = mxs_module_iterator_get(NULL);
-    MXS_MODULE* module = NULL;
+    MXS_MODULE* module    = NULL;
 
     while ((module = mxs_module_iterator_get_next(&i)) != NULL)
     {
@@ -171,4 +171,4 @@ void Module::thread_finish()
         }
     }
 }
-}
+}  // namespace maxscale

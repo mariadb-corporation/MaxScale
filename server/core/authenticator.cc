@@ -24,11 +24,11 @@ namespace maxscale
  * @param options Authenticator options
  * @return Authenticator instance or NULL on error
  */
-std::unique_ptr<AuthenticatorModule>
-authenticator_init(const std::string& authenticator, mxs::ConfigParameters* options)
+std::unique_ptr<AuthenticatorModule> authenticator_init(
+    const std::string& authenticator, mxs::ConfigParameters* options)
 {
     std::unique_ptr<AuthenticatorModule> rval;
-    auto func = (mxs::AUTHENTICATOR_API*)load_module(authenticator.c_str(), MODULE_AUTHENTICATOR);
+    auto func = (mxs::AUTHENTICATOR_API*) load_module(authenticator.c_str(), MODULE_AUTHENTICATOR);
     if (func)
     {
         rval.reset(func->create(options));
@@ -36,4 +36,4 @@ authenticator_init(const std::string& authenticator, mxs::ConfigParameters* opti
     return rval;
 }
 
-}
+}  // namespace maxscale

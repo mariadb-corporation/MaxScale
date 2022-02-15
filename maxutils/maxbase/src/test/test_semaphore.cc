@@ -11,10 +11,10 @@
  * Public License.
  */
 
-#if !defined (SS_DEBUG)
+#if !defined(SS_DEBUG)
 #define SS_DEBUG
 #endif
-#if defined (NDEBUG)
+#if defined(NDEBUG)
 #undef NDEBUG
 #endif
 
@@ -80,19 +80,19 @@ void test_simple()
     time_t diff;
 
     cout << "Waiting 3 seconds for semaphore with a count of 0..." << endl;
-    started = time(NULL);
-    rv = sem3.timedwait(4);
+    started  = time(NULL);
+    rv       = sem3.timedwait(4);
     finished = time(NULL);
-    diff = finished - started;
+    diff     = finished - started;
     mxb_assert(!rv);
     mxb_assert((diff >= 2) && (diff <= 4));
     cout << "Waited." << endl;
 
     cout << "Waiting 1 second for semaphore with a count of 0..." << endl;
-    started = time(NULL);
-    rv = sem3.timedwait(0, 999999999);
+    started  = time(NULL);
+    rv       = sem3.timedwait(0, 999999999);
     finished = time(NULL);
-    diff = finished - started;
+    diff     = finished - started;
     mxb_assert(!rv);
     mxb_assert((diff >= 0) && (diff <= 2));
     cout << "Waited." << endl;
@@ -147,9 +147,7 @@ void send_signal()
     cout << "Sent signal" << endl;
 }
 
-void sighandler(int s)
-{
-}
+void sighandler(int s) {}
 
 void test_signal()
 {
@@ -181,7 +179,7 @@ void test_signal()
 
     thread.join();
 }
-}
+}  // namespace
 
 int main(int argc, char* argv[])
 {

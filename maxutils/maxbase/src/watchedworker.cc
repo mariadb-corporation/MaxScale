@@ -17,12 +17,9 @@ namespace maxbase
 
 WatchedWorker::WatchedWorker(WatchdogNotifier* pNotifier)
     : WatchdogNotifier::Dependent(pNotifier)
-{
-}
+{}
 
-WatchedWorker::~WatchedWorker()
-{
-}
+WatchedWorker::~WatchedWorker() {}
 
 void WatchedWorker::call_epoll_tick()
 {
@@ -30,4 +27,4 @@ void WatchedWorker::call_epoll_tick()
 
     epoll_tick();
 }
-}
+}  // namespace maxbase

@@ -51,12 +51,12 @@
 #include <maxscale/secrets.hh>
 #include <maxscale/session.hh>
 
-#if !defined (PATH_MAX)
-# if defined (__USE_POSIX)
-#   define PATH_MAX _POSIX_PATH_MAX
-# else
-#   define PATH_MAX 256
-# endif
+#if !defined(PATH_MAX)
+#if defined(__USE_POSIX)
+#define PATH_MAX _POSIX_PATH_MAX
+#else
+#define PATH_MAX 256
+#endif
 #endif
 
 #define MAX_ERROR_MSG PATH_MAX
@@ -76,23 +76,23 @@ const char hex_lower[] = "0123456789abcdef";
 HexLookupTable init_hex_lookup_table() noexcept
 {
     auto char_val = [](char c) -> uint8_t {
-            if (c >= '0' && c <= '9')
-            {
-                return c - '0';
-            }
-            else if (c >= 'A' && c <= 'F')
-            {
-                return c - 'A' + 10;
-            }
-            else if (c >= 'a' && c <= 'f')
-            {
-                return c - 'a' + 10;
-            }
-            else
-            {
-                return '\177';
-            }
-        };
+        if (c >= '0' && c <= '9')
+        {
+            return c - '0';
+        }
+        else if (c >= 'A' && c <= 'F')
+        {
+            return c - 'A' + 10;
+        }
+        else if (c >= 'a' && c <= 'f')
+        {
+            return c - 'a' + 10;
+        }
+        else
+        {
+            return '\177';
+        }
+    };
 
     HexLookupTable rval;
     for (size_t i = 0; i < rval.size(); i++)
@@ -101,7 +101,8 @@ HexLookupTable init_hex_lookup_table() noexcept
     }
     return rval;
 }
-}
+}  // namespace
+
 /**
  * Check if the provided pathname is POSIX-compliant. The valid characters
  * are [a-z A-Z 0-9._-].
@@ -135,19 +136,13 @@ int setnonblocking(int fd)
 
     if ((fl = fcntl(fd, F_GETFL, 0)) == -1)
     {
-        MXS_ERROR("Can't GET fcntl for %i, errno = %d, %s.",
-                  fd,
-                  errno,
-                  mxs_strerror(errno));
+        MXS_ERROR("Can't GET fcntl for %i, errno = %d, %s.", fd, errno, mxs_strerror(errno));
         return 1;
     }
 
     if (fcntl(fd, F_SETFL, fl | O_NONBLOCK) == -1)
     {
-        MXS_ERROR("Can't SET fcntl for %i, errno = %d, %s",
-                  fd,
-                  errno,
-                  mxs_strerror(errno));
+        MXS_ERROR("Can't SET fcntl for %i, errno = %d, %s", fd, errno, mxs_strerror(errno));
         return 1;
     }
     return 0;
@@ -159,19 +154,13 @@ int setblocking(int fd)
 
     if ((fl = fcntl(fd, F_GETFL, 0)) == -1)
     {
-        MXS_ERROR("Can't GET fcntl for %i, errno = %d, %s.",
-                  fd,
-                  errno,
-                  mxs_strerror(errno));
+        MXS_ERROR("Can't GET fcntl for %i, errno = %d, %s.", fd, errno, mxs_strerror(errno));
         return 1;
     }
 
     if (fcntl(fd, F_SETFL, fl & ~O_NONBLOCK) == -1)
     {
-        MXS_ERROR("Can't SET fcntl for %i, errno = %d, %s",
-                  fd,
-                  errno,
-                  mxs_strerror(errno));
+        MXS_ERROR("Can't SET fcntl for %i, errno = %d, %s", fd, errno, mxs_strerror(errno));
         return 1;
     }
     return 0;
@@ -180,8 +169,7 @@ int setblocking(int fd)
 char* gw_strend(const char* s)
 {
     while (*s++)
-    {
-    }
+    {}
     return (char*) (s - 1);
 }
 
@@ -190,7 +178,7 @@ char* gw_strend(const char* s)
 *****************************************/
 static char gw_randomchar()
 {
-    return (char)((mxs_random() % 78) + 30);
+    return (char) ((mxs_random() % 78) + 30);
 }
 
 /*****************************************
@@ -240,7 +228,6 @@ void gw_sha1_2_str(const uint8_t* in, int in_len, const uint8_t* in2, int in2_le
     memcpy(out, hash, SHA_DIGEST_LENGTH);
 }
 
-
 /**
  * node Gets errno corresponding to latest socket error
  *
@@ -254,7 +241,7 @@ void gw_sha1_2_str(const uint8_t* in, int in_len, const uint8_t* in2, int in2_le
  */
 int gw_getsockerrno(int fd)
 {
-    int eno = 0;
+    int eno        = 0;
     socklen_t elen = sizeof(eno);
 
     if (fd <= 0)
@@ -262,7 +249,7 @@ int gw_getsockerrno(int fd)
         goto return_eno;
     }
 
-    if (getsockopt(fd, SOL_SOCKET, SO_ERROR, (void*)&eno, &elen) != 0)
+    if (getsockopt(fd, SOL_SOCKET, SO_ERROR, (void*) &eno, &elen) != 0)
     {
         eno = 0;
     }
@@ -282,7 +269,7 @@ std::string create_hex_sha1_sha1_passwd(const char* passwd)
     char hexpasswd[hexsize];
 
     /* hash1 is SHA1(real_password) */
-    gw_sha1_str((uint8_t*)passwd, strlen(passwd), hash1);
+    gw_sha1_str((uint8_t*) passwd, strlen(passwd), hash1);
     /* hash2 is the SHA1(input data), where input_data = SHA1(real_password) */
     gw_sha1_str(hash1, SHA_DIGEST_LENGTH, hash2);
     /* dbpass is the HEX form of SHA1(SHA1(real_password)) */
@@ -304,9 +291,9 @@ bool hex2bin(const char* in, unsigned int in_len, uint8_t* out)
     {
         // One byte is formed from two hex chars, with the first char forming the high bits.
         uint8_t high_half = hex_lookup_table[*in++];
-        uint8_t low_half = hex_lookup_table[*in++];
-        uint8_t total = (high_half << 4) | low_half;
-        *out++ = total;
+        uint8_t low_half  = hex_lookup_table[*in++];
+        uint8_t total     = (high_half << 4) | low_half;
+        *out++            = total;
     }
     return true;
 }
@@ -321,8 +308,8 @@ char* bin2hex(const uint8_t* in, unsigned int len, char* out)
 
     for (; in != in_end; ++in)
     {
-        *out++ = hex_upper[((uint8_t) * in) >> 4];
-        *out++ = hex_upper[((uint8_t) * in) & 0x0F];
+        *out++ = hex_upper[((uint8_t) *in) >> 4];
+        *out++ = hex_upper[((uint8_t) *in) & 0x0F];
     }
     *out = '\0';
 
@@ -337,7 +324,7 @@ void bin_bin_xor(const uint8_t* input1, const uint8_t* input2, unsigned int inpu
         *output++ = *input1++ ^ *input2++;
     }
 }
-}
+}  // namespace maxscale
 
 std::string clean_up_pathname(std::string path)
 {
@@ -387,16 +374,15 @@ static bool mkdir_all_internal(char* path, mode_t mask, bool log_errors)
                     }
                     else if (log_errors)
                     {
-                        MXS_ERROR("Failed to create directory '%s': %d, %s",
-                                  path, errno, mxs_strerror(errno));
+                        MXS_ERROR(
+                            "Failed to create directory '%s': %d, %s", path, errno, mxs_strerror(errno));
                     }
                 }
             }
         }
         else if (log_errors)
         {
-            MXS_ERROR("Failed to create directory '%s': %d, %s",
-                      path, errno, mxs_strerror(errno));
+            MXS_ERROR("Failed to create directory '%s': %d, %s", path, errno, mxs_strerror(errno));
         }
     }
     else
@@ -417,7 +403,7 @@ bool mxs_mkdir_all(const char* path, int mask, bool log_errors)
         local_path[sizeof(local_path) - 2] = '\0';
     }
 
-    return mkdir_all_internal(local_path, (mode_t)mask, log_errors);
+    return mkdir_all_internal(local_path, (mode_t) mask, log_errors);
 }
 
 /**
@@ -445,7 +431,7 @@ void replace_whitespace(char* str)
 char* squeeze_whitespace(char* str)
 {
     char* store = str;
-    char* ptr = str;
+    char* ptr   = str;
 
     /** Remove leading whitespace */
     while (isspace(*ptr) && *ptr != '\0')
@@ -531,32 +517,30 @@ static void set_port(struct sockaddr_storage* addr, uint16_t port)
 {
     if (addr->ss_family == AF_INET)
     {
-        struct sockaddr_in* ip = (struct sockaddr_in*)addr;
-        ip->sin_port = htons(port);
+        struct sockaddr_in* ip = (struct sockaddr_in*) addr;
+        ip->sin_port           = htons(port);
     }
     else if (addr->ss_family == AF_INET6)
     {
-        struct sockaddr_in6* ip = (struct sockaddr_in6*)addr;
-        ip->sin6_port = htons(port);
+        struct sockaddr_in6* ip = (struct sockaddr_in6*) addr;
+        ip->sin6_port           = htons(port);
     }
     else
     {
-        MXS_ERROR("Unknown address family: %d", (int)addr->ss_family);
+        MXS_ERROR("Unknown address family: %d", (int) addr->ss_family);
         mxb_assert(false);
     }
 }
 
-int open_network_socket(enum mxs_socket_type type,
-                        struct sockaddr_storage* addr,
-                        const char* host,
-                        uint16_t port)
+int open_network_socket(
+    enum mxs_socket_type type, struct sockaddr_storage* addr, const char* host, uint16_t port)
 {
     mxb_assert(type == MXS_SOCKET_NETWORK || type == MXS_SOCKET_LISTENER);
-    struct addrinfo* ai = NULL, hint = {};
+    struct addrinfo *ai = NULL, hint = {};
     int so = 0, rc = 0;
     hint.ai_socktype = SOCK_STREAM;
-    hint.ai_family = AF_UNSPEC;
-    hint.ai_flags = AI_ALL;
+    hint.ai_family   = AF_UNSPEC;
+    hint.ai_flags    = AI_ALL;
 
     if ((rc = getaddrinfo(host, NULL, &hint, &ai)) != 0)
     {
@@ -582,13 +566,9 @@ int open_network_socket(enum mxs_socket_type type,
                 close(so);
                 so = -1;
             }
-            else if (type == MXS_SOCKET_LISTENER && bind(so, (struct sockaddr*)addr, sizeof(*addr)) < 0)
+            else if (type == MXS_SOCKET_LISTENER && bind(so, (struct sockaddr*) addr, sizeof(*addr)) < 0)
             {
-                MXS_ERROR("Failed to bind on '%s:%u': %d, %s",
-                          host,
-                          port,
-                          errno,
-                          mxs_strerror(errno));
+                MXS_ERROR("Failed to bind on '%s:%u': %d, %s", host, port, errno, mxs_strerror(errno));
                 close(so);
                 so = -1;
             }
@@ -615,7 +595,7 @@ int open_network_socket(enum mxs_socket_type type,
                         int one = 1;
                         setsockopt(so, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
 
-                        if (bind(so, (struct sockaddr*)&local_address, sizeof(local_address)) == 0)
+                        if (bind(so, (struct sockaddr*) &local_address, sizeof(local_address)) == 0)
                         {
                             MXS_INFO("Bound connecting socket to \"%s\".", la.c_str());
                         }
@@ -623,16 +603,16 @@ int open_network_socket(enum mxs_socket_type type,
                         {
                             MXS_ERROR("Could not bind connecting socket to local address \"%s\", "
                                       "connecting to server using default local address: %s",
-                                      la.c_str(),
-                                      mxs_strerror(errno));
+                                la.c_str(),
+                                mxs_strerror(errno));
                         }
                     }
                     else
                     {
                         MXS_ERROR("Could not get address information for local address \"%s\", "
                                   "connecting to server using default local address: %s",
-                                  la.c_str(),
-                                  mxs_strerror(errno));
+                            la.c_str(),
+                            mxs_strerror(errno));
                     }
                 }
             }
@@ -665,8 +645,8 @@ int open_unix_socket(enum mxs_socket_type type, struct sockaddr_un* addr, const 
     {
         MXS_ERROR("The path %s specified for the UNIX domain socket is too long. "
                   "The maximum length is %lu.",
-                  path,
-                  sizeof(addr->sun_path) - 1);
+            path,
+            sizeof(addr->sun_path) - 1);
     }
     else if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
     {
@@ -678,12 +658,9 @@ int open_unix_socket(enum mxs_socket_type type, struct sockaddr_un* addr, const 
         strcpy(addr->sun_path, path);
 
         /* Bind the socket to the Unix domain socket */
-        if (type == MXS_SOCKET_LISTENER && bind(fd, (struct sockaddr*)addr, sizeof(*addr)) < 0)
+        if (type == MXS_SOCKET_LISTENER && bind(fd, (struct sockaddr*) addr, sizeof(*addr)) < 0)
         {
-            MXS_ERROR("Failed to bind to UNIX Domain socket '%s': %d, %s",
-                      path,
-                      errno,
-                      mxs_strerror(errno));
+            MXS_ERROR("Failed to bind to UNIX Domain socket '%s': %d, %s", path, errno, mxs_strerror(errno));
             close(fd);
             fd = -1;
         }
@@ -700,13 +677,13 @@ long get_processor_count()
 
 int64_t get_total_memory()
 {
-    int64_t pagesize = 0;
+    int64_t pagesize  = 0;
     int64_t num_pages = 0;
 #if defined _SC_PAGESIZE && defined _SC_PHYS_PAGES
     if ((pagesize = sysconf(_SC_PAGESIZE)) <= 0 || (num_pages = sysconf(_SC_PHYS_PAGES)) <= 0)
     {
         MXS_WARNING("Unable to establish total system memory");
-        pagesize = 0;
+        pagesize  = 0;
         num_pages = 0;
     }
 #else
@@ -744,20 +721,20 @@ std::string to_hex(uint8_t value)
 uint64_t get_byteN(const uint8_t* ptr, int bytes)
 {
     uint64_t rval = 0;
-    mxb_assert(bytes >= 0 && bytes <= (int)sizeof(rval));
+    mxb_assert(bytes >= 0 && bytes <= (int) sizeof(rval));
     for (int i = 0; i < bytes; i++)
     {
-        rval += (uint64_t)ptr[i] << (i * 8);
+        rval += (uint64_t) ptr[i] << (i * 8);
     }
     return rval;
 }
 
 uint8_t* set_byteN(uint8_t* ptr, uint64_t value, int bytes)
 {
-    mxb_assert(bytes >= 0 && bytes <= (int)sizeof(value));
+    mxb_assert(bytes >= 0 && bytes <= (int) sizeof(value));
     for (int i = 0; i < bytes; i++)
     {
-        ptr[i] = (uint8_t)(value >> (i * 8));
+        ptr[i] = (uint8_t) (value >> (i * 8));
     }
     return ptr + bytes;
 }
@@ -791,10 +768,10 @@ namespace
 // SO_REUSEPORT was added in Linux 3.9. Even if SO_REUSEPORT is defined it doesn't mean the kernel supports it
 // which is why we have to check the kernel version.
 static const bool kernel_supports_so_reuseport = get_kernel_version() >= 30900;
-}
+}  // namespace
 
 bool have_so_reuseport()
 {
     return kernel_supports_so_reuseport;
 }
-}
+}  // namespace maxscale

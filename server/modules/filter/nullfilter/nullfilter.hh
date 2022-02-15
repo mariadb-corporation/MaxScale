@@ -19,7 +19,7 @@
 class NullFilter : public maxscale::Filter<NullFilter, NullFilterSession>
 {
 public:
-    NullFilter(const NullFilter&) = delete;
+    NullFilter(const NullFilter&)            = delete;
     NullFilter& operator=(const NullFilter&) = delete;
 
     class Config : public mxs::config::Configuration

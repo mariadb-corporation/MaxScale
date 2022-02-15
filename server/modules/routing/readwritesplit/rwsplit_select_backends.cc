@@ -56,7 +56,7 @@ bool rpl_lag_is_ok(mxs::RWBackend* backend, int max_rlag)
 {
     auto rlag = backend->target()->replication_lag();
     return max_rlag == mxs::Target::RLAG_UNDEFINED
-           || (rlag != mxs::Target::RLAG_UNDEFINED && rlag < max_rlag);
+        || (rlag != mxs::Target::RLAG_UNDEFINED && rlag < max_rlag);
 }
 
 bool gtid_pos_is_ok(mxs::RWBackend* backend, RWSplit::gtid gtid_pos)
@@ -89,14 +89,14 @@ RWBackend* best_score(PRWBackends& sBackends, std::function<double(mxs::Endpoint
 
         if (min > score)
         {
-            min = score;
+            min  = score;
             best = b;
         }
         else if (min == score && best)
         {
             // In the case of a tie, use the least recently used backend
-            auto now = maxbase::Clock::now(maxbase::NowType::EPollTick);
-            auto left = duration_cast<microseconds>(now - best->last_write()).count();
+            auto now   = maxbase::Clock::now(maxbase::NowType::EPollTick);
+            auto left  = duration_cast<microseconds>(now - best->last_write()).count();
             auto right = duration_cast<microseconds>(now - b->last_write()).count();
 
             if (left < right)
@@ -115,8 +115,8 @@ RWBackend* best_score(PRWBackends& sBackends, std::function<double(mxs::Endpoint
 RWBackend* backend_cmp_global_conn(PRWBackends& sBackends)
 {
     static auto server_score = [](mxs::Endpoint* e) {
-            return e->target()->stats().n_current;
-        };
+        return e->target()->stats().n_current;
+    };
 
     return best_score(sBackends, server_score);
 }
@@ -125,8 +125,8 @@ RWBackend* backend_cmp_global_conn(PRWBackends& sBackends)
 RWBackend* backend_cmp_behind_master(PRWBackends& sBackends)
 {
     static auto server_score = [](mxs::Endpoint* e) {
-            return e->target()->replication_lag();
-        };
+        return e->target()->replication_lag();
+    };
 
     return best_score(sBackends, server_score);
 }
@@ -135,8 +135,8 @@ RWBackend* backend_cmp_behind_master(PRWBackends& sBackends)
 RWBackend* backend_cmp_current_load(PRWBackends& sBackends)
 {
     static auto server_score = [](mxs::Endpoint* e) {
-            return e->target()->stats().n_current_ops;
-        };
+        return e->target()->stats().n_current_ops;
+    };
 
     return best_score(sBackends, server_score);
 }
@@ -172,7 +172,7 @@ RWBackend* backend_cmp_response_time(PRWBackends& pBackends)
     }
 
     // Pick the server that would finish first
-    auto it = std::min_element(estimated_time, estimated_time + SZ);
+    auto it      = std::min_element(estimated_time, estimated_time + SZ);
     size_t index = it - estimated_time;
 
     mxb_assert(index < pBackends.size());
@@ -183,28 +183,28 @@ RWBackend* backend_cmp_response_time(PRWBackends& pBackends)
 int get_backend_priority(RWBackend* backend, bool masters_accepts_reads)
 {
     int priority;
-    bool is_busy = backend->in_use() && backend->has_session_commands();
+    bool is_busy    = backend->in_use() && backend->has_session_commands();
     bool acts_slave = backend->is_slave() || (backend->is_master() && masters_accepts_reads);
 
     if (acts_slave)
     {
         if (!is_busy)
         {
-            priority = 0;   // highest priority, idle servers
+            priority = 0;  // highest priority, idle servers
         }
         else
         {
-            priority = 2;   // lowest priority, busy servers
+            priority = 2;  // lowest priority, busy servers
         }
     }
     else
     {
-        priority = 1;   // idle masters with masters_accept_reads==false
+        priority = 1;  // idle masters with masters_accept_reads==false
     }
 
     return priority;
 }
-}
+}  // namespace
 
 // static
 BackendSelectFunction RWSConfig::get_backend_select_function(select_criteria_t sc)
@@ -231,7 +231,7 @@ BackendSelectFunction RWSConfig::get_backend_select_function(select_criteria_t s
 
 std::pair<int, int> get_slave_counts(PRWBackends& backends, RWBackend* master)
 {
-    int slaves_found = 0;
+    int slaves_found     = 0;
     int slaves_connected = 0;
 
     /** Calculate how many connections we already have */
@@ -264,19 +264,19 @@ int64_t RWSplitSession::get_current_rank()
     else
     {
         auto compare = [](RWBackend* a, RWBackend* b) {
-                if (a->in_use() != b->in_use())
-                {
-                    return a->in_use();
-                }
-                else if (a->can_connect() != b->can_connect())
-                {
-                    return a->can_connect();
-                }
-                else
-                {
-                    return a->target()->rank() < b->target()->rank();
-                }
-            };
+            if (a->in_use() != b->in_use())
+            {
+                return a->in_use();
+            }
+            else if (a->can_connect() != b->can_connect())
+            {
+                return a->can_connect();
+            }
+            else
+            {
+                return a->target()->rank() < b->target()->rank();
+            }
+        };
         auto it = std::min_element(m_raw_backends.begin(), m_raw_backends.end(), compare);
 
         if (it != m_raw_backends.end())
@@ -302,18 +302,18 @@ RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
     for (auto& backend : m_raw_backends)
     {
         // We can take the current master back into use even for reads
-        bool my_master = backend == m_current_master;
+        bool my_master         = backend == m_current_master;
         bool can_take_into_use = !backend->in_use() && can_recover_servers() && backend->can_connect();
-        bool master_or_slave = backend->is_master() || backend->is_slave();
+        bool master_or_slave   = backend->is_master() || backend->is_slave();
 
         // The server is usable if it's already in use or it can be taken into use and we need either more
         // slaves or a master.
         bool is_usable = backend->in_use() || (can_take_into_use && (need_slaves || my_master));
-        bool rlag_ok = rpl_lag_is_ok(backend, max_rlag);
-        int priority = get_backend_priority(backend, m_config.master_accept_reads);
-        auto rank = backend->target()->rank();
-        bool gtid_is_ok = m_config.causal_reads != CausalReads::FAST
-            || my_master || gtid_pos_is_ok(backend, m_gtid_pos);
+        bool rlag_ok   = rpl_lag_is_ok(backend, max_rlag);
+        int priority   = get_backend_priority(backend, m_config.master_accept_reads);
+        auto rank      = backend->target()->rank();
+        bool gtid_is_ok
+            = m_config.causal_reads != CausalReads::FAST || my_master || gtid_pos_is_ok(backend, m_gtid_pos);
 
         if (master_or_slave && is_usable && rlag_ok && rank == current_rank && gtid_is_ok)
         {
@@ -359,31 +359,36 @@ static void log_server_connections(select_criteria_t criteria, const PRWBackends
         case LEAST_GLOBAL_CONNECTIONS:
         case LEAST_ROUTER_CONNECTIONS:
             MXS_INFO("MaxScale connections : %d in \t%s %s",
-                     b->target()->stats().n_current,
-                     b->name(), b->target()->status_string().c_str());
+                b->target()->stats().n_current,
+                b->name(),
+                b->target()->status_string().c_str());
             break;
 
         case LEAST_CURRENT_OPERATIONS:
             MXS_INFO("current operations : %d in \t%s %s",
-                     b->target()->stats().n_current_ops,
-                     b->name(), b->target()->status_string().c_str());
+                b->target()->stats().n_current_ops,
+                b->name(),
+                b->target()->status_string().c_str());
             break;
 
         case LEAST_BEHIND_MASTER:
             MXS_INFO("replication lag : %ld in \t%s %s",
-                     b->target()->replication_lag(),
-                     b->name(), b->target()->status_string().c_str());
+                b->target()->replication_lag(),
+                b->name(),
+                b->target()->status_string().c_str());
             break;
 
         case ADAPTIVE_ROUTING:
-            {
-                maxbase::Duration response_ave(mxb::from_secs(b->target()->response_time_average()));
-                std::ostringstream os;
-                os << response_ave;
-                MXS_INFO("adaptive avg. select time: %s from \t%s %s",
-                         os.str().c_str(), b->name(), b->target()->status_string().c_str());
-            }
-            break;
+        {
+            maxbase::Duration response_ave(mxb::from_secs(b->target()->response_time_average()));
+            std::ostringstream os;
+            os << response_ave;
+            MXS_INFO("adaptive avg. select time: %s from \t%s %s",
+                os.str().c_str(),
+                b->name(),
+                b->target()->status_string().c_str());
+        }
+        break;
 
         default:
             mxb_assert(!true);
@@ -394,8 +399,7 @@ static void log_server_connections(select_criteria_t criteria, const PRWBackends
 
 RWBackend* RWSplitSession::get_root_master()
 {
-    if (m_current_master && m_current_master->in_use()
-        && can_continue_using_master(m_current_master))
+    if (m_current_master && m_current_master->in_use() && can_continue_using_master(m_current_master))
     {
         return m_current_master;
     }
@@ -434,7 +438,7 @@ bool RWSplitSession::open_connections()
 {
     if (m_config.lazy_connect)
     {
-        return true;    // No need to create connections
+        return true;  // No need to create connections
     }
 
     RWBackend* master = get_root_master();
@@ -467,7 +471,7 @@ bool RWSplitSession::open_connections()
         }
     }
 
-    int n_slaves = get_slave_counts(m_raw_backends, master).second;
+    int n_slaves    = get_slave_counts(m_raw_backends, master).second;
     int max_nslaves = std::min(m_router->max_slave_count(), m_router->config().slave_connections);
     mxb_assert(n_slaves <= max_nslaves || max_nslaves == 0);
     auto current_rank = get_current_rank();
@@ -476,8 +480,7 @@ bool RWSplitSession::open_connections()
     for (auto& backend : m_raw_backends)
     {
         if (!backend->in_use() && backend->can_connect() && valid_for_slave(backend, master)
-            && backend->target()->rank() == current_rank
-            && rpl_lag_is_ok(backend, get_max_replication_lag()))
+            && backend->target()->rank() == current_rank && rpl_lag_is_ok(backend, get_max_replication_lag()))
         {
             candidates.push_back(backend);
         }
@@ -485,9 +488,8 @@ bool RWSplitSession::open_connections()
 
     auto func = backend_cmp_global_conn;
 
-    for (auto candidate = func(candidates);
-         n_slaves < max_nslaves && !candidates.empty() && candidate;
-         candidate = func(candidates))
+    for (auto candidate = func(candidates); n_slaves < max_nslaves && !candidates.empty() && candidate;
+         candidate      = func(candidates))
     {
         if (prepare_connection(candidate))
         {

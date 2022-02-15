@@ -19,8 +19,8 @@
 class PamBackendAuthenticator : public mariadb::BackendAuthenticator
 {
 public:
-    using AuthMode = mxb::pam::AuthMode;
-    PamBackendAuthenticator(const PamBackendAuthenticator& orig) = delete;
+    using AuthMode                                                     = mxb::pam::AuthMode;
+    PamBackendAuthenticator(const PamBackendAuthenticator& orig)       = delete;
     PamBackendAuthenticator& operator=(const PamBackendAuthenticator&) = delete;
     PamBackendAuthenticator(mariadb::BackendAuthData& shared_data, AuthMode mode);
 
@@ -34,7 +34,7 @@ private:
         TWO_FA
     };
 
-    PromptType  parse_password_prompt(mariadb::ByteVec& data);
+    PromptType parse_password_prompt(mariadb::ByteVec& data);
     mxs::Buffer generate_pw_packet(PromptType pw_type) const;
 
     enum class State
@@ -45,10 +45,10 @@ private:
         ERROR,
     };
 
-    const mariadb::BackendAuthData& m_shared_data;  /**< Data shared with backend connection */
-    const std::string               m_clienthost;   /**< Client 'name'@'host', for logging. */
-    const AuthMode                  m_mode {AuthMode::PW};
+    const mariadb::BackendAuthData& m_shared_data; /**< Data shared with backend connection */
+    const std::string m_clienthost;                /**< Client 'name'@'host', for logging. */
+    const AuthMode m_mode {AuthMode::PW};
 
-    State   m_state {State::EXPECT_AUTHSWITCH}; /**< Authentication state */
-    uint8_t m_sequence {0};                     /**< The next packet sequence number */
+    State m_state {State::EXPECT_AUTHSWITCH}; /**< Authentication state */
+    uint8_t m_sequence {0};                   /**< The next packet sequence number */
 };

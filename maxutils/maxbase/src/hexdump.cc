@@ -18,11 +18,11 @@ std::ostream& hexdump(std::ostream& out, const void* pBytes, int len)
 {
     using namespace std;
 
-    const int BYTES_PER_ROW = 16;
-    const size_t NUMERIC_CHAR_WIDTH = 10 + BYTES_PER_ROW * 3 + 2;   // nchars up to the first pipe symbol
+    const int BYTES_PER_ROW         = 16;
+    const size_t NUMERIC_CHAR_WIDTH = 10 + BYTES_PER_ROW * 3 + 2;  // nchars up to the first pipe symbol
 
     const uint8_t* const pBegin = (uint8_t*) pBytes;
-    const uint8_t* const pEnd = pBegin + len;
+    const uint8_t* const pEnd   = pBegin + len;
 
     bool already_said_same = false;
     const uint8_t* pPrev;
@@ -82,4 +82,4 @@ std::ostream& hexdump(std::ostream& out, const void* pBytes, int len)
 
     return out;
 }
-}
+}  // namespace maxbase

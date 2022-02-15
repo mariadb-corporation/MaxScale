@@ -68,7 +68,7 @@ bool is_core_param(Specification::Kind kind, const std::string& param)
 
     return rv;
 }
-}
+}  // namespace
 
 namespace maxscale
 {
@@ -82,12 +82,9 @@ namespace config
 Specification::Specification(const char* zModule, Kind kind)
     : m_module(zModule)
     , m_kind(kind)
-{
-}
+{}
 
-Specification::~Specification()
-{
-}
+Specification::~Specification() {}
 
 const string& Specification::module() const
 {
@@ -122,7 +119,8 @@ bool Specification::mandatory_params_defined(const std::set<std::string>& provid
         if (pParam->is_mandatory() && (provided.find(pParam->name()) == provided.end()))
         {
             MXS_ERROR("%s: The mandatory parameter '%s' is not provided.",
-                      m_module.c_str(), pParam->name().c_str());
+                m_module.c_str(),
+                pParam->name().c_str());
             valid = false;
         }
     }
@@ -130,8 +128,7 @@ bool Specification::mandatory_params_defined(const std::set<std::string>& provid
     return valid;
 }
 
-bool Specification::validate(const mxs::ConfigParameters& params,
-                             mxs::ConfigParameters* pUnrecognized) const
+bool Specification::validate(const mxs::ConfigParameters& params, mxs::ConfigParameters* pUnrecognized) const
 {
     bool valid = true;
 
@@ -139,7 +136,7 @@ bool Specification::validate(const mxs::ConfigParameters& params,
 
     for (const auto& param : params)
     {
-        const auto& name = param.first;
+        const auto& name  = param.first;
         const auto& value = param.second;
 
         const Param* pParam = find_param(name.c_str());
@@ -152,7 +149,7 @@ bool Specification::validate(const mxs::ConfigParameters& params,
             if (!pParam->validate(value.c_str(), &message))
             {
                 param_valid = false;
-                valid = false;
+                valid       = false;
             }
 
             if (!message.empty())
@@ -216,7 +213,7 @@ bool Specification::validate(json_t* pJson, std::set<std::string>* pUnrecognized
             if (!pParam->validate(pValue, &message))
             {
                 param_valid = false;
-                valid = false;
+                valid       = false;
             }
 
             if (!message.empty())
@@ -306,11 +303,11 @@ json_t* Specification::to_json() const
  * class Param
  */
 Param::Param(Specification* pSpecification,
-             const char* zName,
-             const char* zDescription,
-             Modifiable modifiable,
-             Kind kind,
-             mxs_module_param_type legacy_type)
+    const char* zName,
+    const char* zDescription,
+    Modifiable modifiable,
+    Kind kind,
+    mxs_module_param_type legacy_type)
     : m_specification(*pSpecification)
     , m_name(zName)
     , m_description(zDescription)
@@ -406,7 +403,7 @@ void Param::populate(MXS_MODULE_PARAM& param) const
 
 json_t* Param::to_json() const
 {
-    const char CN_MANDATORY[] = "mandatory";
+    const char CN_MANDATORY[]  = "mandatory";
     const char CN_MODIFIABLE[] = "modifiable";
 
     json_t* pJson = json_object();
@@ -426,8 +423,7 @@ json_t* Param::to_json() const
 Configuration::Configuration(const std::string& name, const config::Specification* pSpecification)
     : m_name(name)
     , m_pSpecification(pSpecification)
-{
-}
+{}
 
 Configuration::Configuration(Configuration&& rhs)
     : m_name(std::move(rhs.m_name))
@@ -442,7 +438,6 @@ Configuration::Configuration(Configuration&& rhs)
         pType->m_pConfiguration = this;
     }
 }
-
 
 Configuration& Configuration::operator=(Configuration&& rhs)
 {
@@ -474,8 +469,7 @@ const config::Specification& Configuration::specification() const
     return *m_pSpecification;
 }
 
-bool Configuration::configure(const mxs::ConfigParameters& params,
-                              mxs::ConfigParameters* pUnrecognized)
+bool Configuration::configure(const mxs::ConfigParameters& params, mxs::ConfigParameters* pUnrecognized)
 {
     mxb_assert(m_pSpecification->validate(params));
     mxb_assert(m_pSpecification->size() == size());
@@ -508,7 +502,8 @@ bool Configuration::configure(const mxs::ConfigParameters& params,
             else
             {
                 MXS_ERROR("%s: The parameter '%s' is unrecognized.",
-                          m_pSpecification->module().c_str(), name.c_str());
+                    m_pSpecification->module().c_str(),
+                    name.c_str());
                 configured = false;
             }
         }
@@ -551,8 +546,7 @@ bool Configuration::configure(json_t* json, std::set<std::string>* pUnrecognized
             }
             else
             {
-                MXS_ERROR("%s: The parameter '%s' is unrecognized.",
-                          m_pSpecification->module().c_str(), key);
+                MXS_ERROR("%s: The parameter '%s' is unrecognized.", m_pSpecification->module().c_str(), key);
                 configured = false;
             }
         }
@@ -585,7 +579,7 @@ ostream& Configuration::persist(ostream& out) const
     for (const auto& entry : m_values)
     {
         Type* pValue = entry.second;
-        auto str = pValue->persist();
+        auto str     = pValue->persist();
 
         if (!str.empty())
         {
@@ -673,9 +667,9 @@ Type& Type::operator=(Type&& rhs)
 {
     if (this != &rhs)
     {
-        m_pConfiguration = rhs.m_pConfiguration;
-        m_pParam = rhs.m_pParam;
-        m_name = std::move(rhs.m_name);
+        m_pConfiguration     = rhs.m_pConfiguration;
+        m_pParam             = rhs.m_pParam;
+        m_name               = std::move(rhs.m_name);
         rhs.m_pConfiguration = nullptr;
 
         m_pConfiguration->remove(&rhs, m_name);
@@ -759,7 +753,7 @@ bool ParamBool::from_json(const json_t* pJson, value_type* pValue, string* pMess
     if (json_is_boolean(pJson))
     {
         *pValue = json_boolean_value(pJson) ? true : false;
-        rv = true;
+        rv      = true;
     }
     else if (pMessage)
     {
@@ -779,13 +773,12 @@ std::string ParamNumber::to_string(value_type value) const
     return std::to_string(value);
 }
 
-bool ParamNumber::from_string(const std::string& value_as_string,
-                              value_type* pValue,
-                              std::string* pMessage) const
+bool ParamNumber::from_string(
+    const std::string& value_as_string, value_type* pValue, std::string* pMessage) const
 {
     const char* zValue = value_as_string.c_str();
     char* zEnd;
-    errno = 0;
+    errno  = 0;
     long l = strtol(zValue, &zEnd, 10);
 
     bool rv = errno == 0 && zEnd != zValue && *zEnd == 0;
@@ -810,8 +803,7 @@ json_t* ParamNumber::to_json(value_type value) const
     return json_integer(value);
 }
 
-bool ParamNumber::from_json(const json_t* pJson, value_type* pValue,
-                            std::string* pMessage) const
+bool ParamNumber::from_json(const json_t* pJson, value_type* pValue, std::string* pMessage) const
 {
     bool rv = false;
 
@@ -831,9 +823,7 @@ bool ParamNumber::from_json(const json_t* pJson, value_type* pValue,
     return rv;
 }
 
-bool ParamNumber::from_value(value_type value,
-                             value_type* pValue,
-                             std::string* pMessage) const
+bool ParamNumber::from_value(value_type value, value_type* pValue, std::string* pMessage) const
 {
     bool rv = value >= m_min_value && value <= m_max_value;
 
@@ -890,9 +880,8 @@ std::string ParamHost::to_string(const value_type& value) const
     return value.org_input();
 }
 
-bool ParamHost::from_string(const std::string& value_as_string,
-                            value_type* pValue,
-                            std::string* pMessage) const
+bool ParamHost::from_string(
+    const std::string& value_as_string, value_type* pValue, std::string* pMessage) const
 {
     mxb::Host host = mxb::Host::from_string(value_as_string);
 
@@ -916,9 +905,7 @@ json_t* ParamHost::to_json(const value_type& value) const
     return str.empty() ? json_null() : json_string(str.c_str());
 }
 
-bool ParamHost::from_json(const json_t* pJson,
-                          value_type* pValue,
-                          std::string* pMessage) const
+bool ParamHost::from_json(const json_t* pJson, value_type* pValue, std::string* pMessage) const
 {
     bool rv = false;
 
@@ -951,9 +938,8 @@ std::string ParamPath::to_string(const value_type& value) const
     return value;
 }
 
-bool ParamPath::from_string(const std::string& value_as_string,
-                            value_type* pValue,
-                            std::string* pMessage) const
+bool ParamPath::from_string(
+    const std::string& value_as_string, value_type* pValue, std::string* pMessage) const
 {
     bool valid = is_valid(value_as_string.c_str());
 
@@ -976,8 +962,7 @@ json_t* ParamPath::to_json(const value_type& value) const
     return value.empty() ? json_null() : json_string(value.c_str());
 }
 
-bool ParamPath::from_json(const json_t* pJson, value_type* pValue,
-                          std::string* pMessage) const
+bool ParamPath::from_json(const json_t* pJson, value_type* pValue, std::string* pMessage) const
 {
     bool rv = false;
 
@@ -1028,17 +1013,15 @@ std::string ParamRegex::to_string(const value_type& type) const
 namespace
 {
 
-bool regex_from_string(const std::string& value_as_string,
-                       uint32_t options,
-                       RegexValue* pValue,
-                       std::string* pMessage = nullptr)
+bool regex_from_string(
+    const std::string& value_as_string, uint32_t options, RegexValue* pValue, std::string* pMessage = nullptr)
 {
     bool rv = false;
 
     if (value_as_string.empty())
     {
         *pValue = RegexValue();
-        rv = true;
+        rv      = true;
     }
     else
     {
@@ -1063,25 +1046,24 @@ bool regex_from_string(const std::string& value_as_string,
         pcre2_config(PCRE2_CONFIG_JIT, &jit_available);
 
         uint32_t ovec_size;
-        std::unique_ptr<pcre2_code> sCode(compile_regex_string(text.c_str(),
-                                                               jit_available, options, &ovec_size));
+        std::unique_ptr<pcre2_code> sCode(
+            compile_regex_string(text.c_str(), jit_available, options, &ovec_size));
 
         if (sCode)
         {
             RegexValue value(value_as_string, std::move(sCode), ovec_size, options);
 
             *pValue = value;
-            rv = true;
+            rv      = true;
         }
     }
 
     return rv;
 }
-}
+}  // namespace
 
-bool ParamRegex::from_string(const std::string& value_as_string,
-                             value_type* pValue,
-                             std::string* pMessage) const
+bool ParamRegex::from_string(
+    const std::string& value_as_string, value_type* pValue, std::string* pMessage) const
 {
     return regex_from_string(value_as_string, m_options, pValue, pMessage);
 }
@@ -1091,9 +1073,7 @@ json_t* ParamRegex::to_json(const value_type& value) const
     return value.sCode.get() ? json_string(value.text.c_str()) : json_null();
 }
 
-bool ParamRegex::from_json(const json_t* pJson,
-                           value_type* pValue,
-                           std::string* pMessage) const
+bool ParamRegex::from_json(const json_t* pJson, value_type* pValue, std::string* pMessage) const
 {
     bool rv = false;
 
@@ -1117,7 +1097,7 @@ RegexValue ParamRegex::create_default(const char* zRegex)
 {
     RegexValue value;
 
-    MXB_AT_DEBUG(bool rv = ) regex_from_string(zRegex, 0, &value);
+    MXB_AT_DEBUG(bool rv =) regex_from_string(zRegex, 0, &value);
     mxb_assert(rv);
 
     return value;
@@ -1125,7 +1105,7 @@ RegexValue ParamRegex::create_default(const char* zRegex)
 
 RegexValue::RegexValue(const std::string& text, uint32_t options)
 {
-    MXB_AT_DEBUG(bool rv = ) regex_from_string(text.c_str(), options, this);
+    MXB_AT_DEBUG(bool rv =) regex_from_string(text.c_str(), options, this);
     mxb_assert(rv);
 }
 
@@ -1142,16 +1122,15 @@ std::string ParamServer::to_string(value_type value) const
     return value ? value->name() : "";
 }
 
-bool ParamServer::from_string(const std::string& value_as_string,
-                              value_type* pValue,
-                              std::string* pMessage) const
+bool ParamServer::from_string(
+    const std::string& value_as_string, value_type* pValue, std::string* pMessage) const
 {
     bool rv = false;
 
     if (value_as_string.empty())
     {
         *pValue = nullptr;
-        rv = true;
+        rv      = true;
     }
     else
     {
@@ -1176,8 +1155,7 @@ json_t* ParamServer::to_json(value_type value) const
     return value ? json_string(value->name()) : json_null();
 }
 
-bool ParamServer::from_json(const json_t* pJson, value_type* pValue,
-                            std::string* pMessage) const
+bool ParamServer::from_json(const json_t* pJson, value_type* pValue, std::string* pMessage) const
 {
     bool rv = false;
 
@@ -1199,8 +1177,8 @@ bool ParamServer::from_json(const json_t* pJson, value_type* pValue,
 
 void ParamServer::populate(MXS_MODULE_PARAM& param) const
 {
-    param.type = m_legacy_type;
-    param.name = MXS_STRDUP_A(name().c_str());
+    param.type          = m_legacy_type;
+    param.name          = MXS_STRDUP_A(name().c_str());
     param.default_value = nullptr;
 
     if (is_mandatory())
@@ -1222,9 +1200,8 @@ std::string ParamTarget::to_string(value_type value) const
     return value ? value->name() : "";
 }
 
-bool ParamTarget::from_string(const std::string& value_as_string,
-                              value_type* pValue,
-                              std::string* pMessage) const
+bool ParamTarget::from_string(
+    const std::string& value_as_string, value_type* pValue, std::string* pMessage) const
 {
     *pValue = SERVER::find_by_unique_name(value_as_string);
 
@@ -1247,8 +1224,7 @@ json_t* ParamTarget::to_json(value_type value) const
     return value ? json_string(value->name()) : json_null();
 }
 
-bool ParamTarget::from_json(const json_t* pJson, value_type* pValue,
-                            std::string* pMessage) const
+bool ParamTarget::from_json(const json_t* pJson, value_type* pValue, std::string* pMessage) const
 {
     bool rv = false;
 
@@ -1282,9 +1258,8 @@ std::string ParamSize::to_string(value_type value) const
     return std::to_string(value);
 }
 
-bool ParamSize::from_string(const std::string& value_as_string,
-                            value_type* pValue,
-                            std::string* pMessage) const
+bool ParamSize::from_string(
+    const std::string& value_as_string, value_type* pValue, std::string* pMessage) const
 {
     uint64_t value;
     bool valid = get_suffixed_size(value_as_string.c_str(), &value);
@@ -1307,9 +1282,7 @@ json_t* ParamSize::to_json(value_type value) const
     return json_integer(value);
 }
 
-bool ParamSize::from_json(const json_t* pJson,
-                          value_type* pValue,
-                          std::string* pMessage) const
+bool ParamSize::from_json(const json_t* pJson, value_type* pValue, std::string* pMessage) const
 {
     bool rv = false;
 
@@ -1358,9 +1331,8 @@ std::string ParamString::to_string(value_type value) const
     return rval;
 }
 
-bool ParamString::from_string(const std::string& value_as_string,
-                              value_type* pValue,
-                              std::string* pMessage) const
+bool ParamString::from_string(
+    const std::string& value_as_string, value_type* pValue, std::string* pMessage) const
 {
     bool valid = true;
 
@@ -1369,7 +1341,7 @@ bool ParamString::from_string(const std::string& value_as_string,
 
     if (b != '"' && b != '\'')
     {
-        static const char zDesired[] = "The string value should be enclosed in quotes: ";
+        static const char zDesired[]  = "The string value should be enclosed in quotes: ";
         static const char zRequired[] = "The string value must be enclosed in quotes: ";
 
         const char* zMessage = nullptr;
@@ -1378,7 +1350,7 @@ bool ParamString::from_string(const std::string& value_as_string,
         {
         case REQUIRED:
             zMessage = zRequired;
-            valid = false;
+            valid    = false;
             break;
 
         case DESIRED:
@@ -1429,16 +1401,14 @@ json_t* ParamString::to_json(value_type value) const
     return value.empty() ? json_null() : json_string(value.c_str());
 }
 
-bool ParamString::from_json(const json_t* pJson,
-                            value_type* pValue,
-                            std::string* pMessage) const
+bool ParamString::from_json(const json_t* pJson, value_type* pValue, std::string* pMessage) const
 {
     bool rv = false;
 
     if (json_is_string(pJson))
     {
         *pValue = json_string_value(pJson);
-        rv = true;
+        rv      = true;
     }
     else
     {
@@ -1449,5 +1419,5 @@ bool ParamString::from_json(const json_t* pJson,
 
     return rv;
 }
-}
-}
+}  // namespace config
+}  // namespace maxscale

@@ -90,20 +90,14 @@ public:
      *
      * @return The cookies that have been set
      */
-    const std::vector<std::string>& cookies() const
-    {
-        return m_cookies;
-    }
+    const std::vector<std::string>& cookies() const { return m_cookies; }
 
     /**
      * Add a cookie to the response
      *
      * @param cookie Cookie to add, the value in `Set-Cookie: <value>`
      */
-    void add_cookie(const std::string& cookie)
-    {
-        m_cookies.push_back(cookie);
-    }
+    void add_cookie(const std::string& cookie) { m_cookies.push_back(cookie); }
 
     /**
      * Removes fields from the response
@@ -124,13 +118,13 @@ public:
     void remove_rows(const std::string& json_ptr, json_t* value);
 
 private:
-    json_t* m_body;     /**< Message body */
-    int     m_code;     /**< The HTTP code for the response */
-    Headers m_headers;  /**< Extra headers */
+    json_t* m_body;    /**< Message body */
+    int m_code;        /**< The HTTP code for the response */
+    Headers m_headers; /**< Extra headers */
 
     std::vector<std::string> m_cookies;
 
-    void remove_fields_from_resource(json_t* obj, const std::string& type,
-                                     const std::unordered_set<std::string>& fields);
+    void remove_fields_from_resource(
+        json_t* obj, const std::string& type, const std::unordered_set<std::string>& fields);
     void remove_fields_from_object(json_t* obj, std::vector<std::string>&& field);
 };

@@ -23,14 +23,10 @@ public:
         return StorageType::initialize(pKind, pCapabilities);
     }
 
-    void finalize() override final
-    {
-        StorageType::finalize();
-    }
+    void finalize() override final { StorageType::finalize(); }
 
-    Storage* create_storage(const char* zName,
-                            const Storage::Config& config,
-                            const std::string& arguments) override final
+    Storage* create_storage(
+        const char* zName, const Storage::Config& config, const std::string& arguments) override final
     {
         mxb_assert(zName);
 

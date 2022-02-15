@@ -36,32 +36,29 @@ namespace maxsql
 // raw_data_size() match the binlog online documentation.
 constexpr int RPL_HEADER_LEN = 19;
 constexpr int RPL_SEQ_NR_LEN = 8;
-constexpr int RPL_CRC_LEN = 4;
+constexpr int RPL_CRC_LEN    = 4;
 
 /** Encapsulate a mariadb_rpl event */
 class MariaRplEvent
 {
 public:
-    MariaRplEvent() = default;      // => is_empty() == true
+    MariaRplEvent() = default;  // => is_empty() == true
     MariaRplEvent(st_mariadb_rpl_event* pEvent, st_mariadb_rpl* handle);
     MariaRplEvent(MariaRplEvent&& rhs);
     MariaRplEvent& operator=(MariaRplEvent&& rhs);
 
-    bool is_empty() const
-    {
-        return m_pRpl_handle == nullptr;
-    }
+    bool is_empty() const { return m_pRpl_handle == nullptr; }
+
     const st_mariadb_rpl_event& event() const;
-    const char*                 raw_data() const;
-    size_t                      raw_data_size() const;
-    const st_mariadb_rpl& rpl_hndl() const
-    {
-        return *m_pRpl_handle;
-    }
+    const char* raw_data() const;
+    size_t raw_data_size() const;
+
+    const st_mariadb_rpl& rpl_hndl() const { return *m_pRpl_handle; }
 
     ~MariaRplEvent();
+
 private:
     st_mariadb_rpl_event* m_pEvent = nullptr;
-    st_mariadb_rpl*       m_pRpl_handle = nullptr;
+    st_mariadb_rpl* m_pRpl_handle  = nullptr;
 };
-}
+}  // namespace maxsql

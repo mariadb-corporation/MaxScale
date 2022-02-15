@@ -15,8 +15,7 @@
 
 CsContext::CsContext(const std::string& name)
     : m_config(name)
-{
-}
+{}
 
 bool CsContext::configure(const mxs::ConfigParameters& params)
 {
@@ -24,7 +23,7 @@ bool CsContext::configure(const mxs::ConfigParameters& params)
 
     if (rv)
     {
-        m_http_config.headers["X-API-KEY"] = m_config.api_key;
+        m_http_config.headers["X-API-KEY"]    = m_config.api_key;
         m_http_config.headers["Content-Type"] = "application/json";
 
         // The CS daemon uses a self-signed certificate.

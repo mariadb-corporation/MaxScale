@@ -24,12 +24,12 @@
 class SQL
 {
 public:
-    SQL(const SQL&) = delete;
+    SQL(const SQL&)            = delete;
     SQL& operator=(const SQL&) = delete;
 
-    using Row = std::vector<std::string>;
+    using Row    = std::vector<std::string>;
     using Result = std::vector<Row>;
-    using Event = std::unique_ptr<MARIADB_RPL_EVENT, std::function<decltype(mariadb_free_rpl_event)>>;
+    using Event  = std::unique_ptr<MARIADB_RPL_EVENT, std::function<decltype(mariadb_free_rpl_event)>>;
 
     /**
      * Create a new connection from a list of servers
@@ -43,9 +43,8 @@ public:
      * @return The error message and a unique_ptr. If an error occurred, the error string contains the
      *         error description and the unique_ptr is empty.
      */
-    static std::pair<std::string, std::unique_ptr<SQL>> connect(const std::vector<cdc::Server>& servers,
-                                                                int connect_timeout = 30,
-                                                                int read_timeout = 60);
+    static std::pair<std::string, std::unique_ptr<SQL>> connect(
+        const std::vector<cdc::Server>& servers, int connect_timeout = 30, int read_timeout = 60);
 
     ~SQL();
 
@@ -64,30 +63,21 @@ public:
      *
      * @return The latest error
      */
-    std::string error() const
-    {
-        return mysql_error(m_mysql);
-    }
+    std::string error() const { return mysql_error(m_mysql); }
 
     /**
      * Return latest error number
      *
      * @return The latest number
      */
-    int errnum() const
-    {
-        return mysql_errno(m_mysql);
-    }
+    int errnum() const { return mysql_errno(m_mysql); }
 
     /**
      * Return the server where the connection was created
      *
      * @return The server where the connection was created
      */
-    const cdc::Server& server() const
-    {
-        return m_server;
-    }
+    const cdc::Server& server() const { return m_server; }
 
     /**
      * Start replicating data from the server
@@ -103,28 +93,21 @@ public:
      *
      * @return The next replicated event or null on error
      */
-    Event fetch_event()
-    {
-        return Event {mariadb_rpl_fetch(m_rpl, nullptr), mariadb_free_rpl_event};
-    }
+    Event fetch_event() { return Event {mariadb_rpl_fetch(m_rpl, nullptr), mariadb_free_rpl_event}; }
 
     /**
      * Pointer to the raw event data
      */
-    uint8_t* event_data() const
-    {
-        return m_rpl->buffer;
-    }
-
+    uint8_t* event_data() const { return m_rpl->buffer; }
 
     Result result(const std::string& sql);
 
 private:
     SQL(MYSQL* mysql, const cdc::Server& server);
 
-    MYSQL*       m_mysql {nullptr};     // Database handle
-    MARIADB_RPL* m_rpl {nullptr};       // Replication handle
-    cdc::Server  m_server;              // The server where the connection was made
+    MYSQL* m_mysql {nullptr};      // Database handle
+    MARIADB_RPL* m_rpl {nullptr};  // Replication handle
+    cdc::Server m_server;          // The server where the connection was made
 };
 
 // String conversion helper

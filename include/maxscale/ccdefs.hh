@@ -18,7 +18,7 @@
  * This file is to be included first by all C++ headers.
  */
 
-#if !defined (__cplusplus)
+#if !defined(__cplusplus)
 #error This file is only to be included by C++ code.
 #endif
 
@@ -34,8 +34,7 @@
  * specializations.
  */
 namespace maxscale
-{
-}
+{}
 
 /**
  * Shorthand for the @c maxscale namespace.
@@ -57,12 +56,33 @@ namespace mxs = maxscale;
  *   }
  * @endcode
  */
-#if defined (SS_DEBUG)
-#define MXS_EXCEPTION_GUARD(statement) do {statement;} while (false);
-#else
+#if defined(SS_DEBUG)
 #define MXS_EXCEPTION_GUARD(statement) \
-    do {try {statement;} \
-        catch (const std::bad_alloc&) {MXS_OOM();} \
-        catch (const std::exception& x) {MXS_ERROR("Caught standard exception: %s", x.what());} \
-        catch (...) {MXS_ERROR("Caught unknown exception.");}} while (false)
+    do                                 \
+    {                                  \
+        statement;                     \
+    }                                  \
+    while (false);
+#else
+#define MXS_EXCEPTION_GUARD(statement)                            \
+    do                                                            \
+    {                                                             \
+        try                                                       \
+        {                                                         \
+            statement;                                            \
+        }                                                         \
+        catch (const std::bad_alloc&)                             \
+        {                                                         \
+            MXS_OOM();                                            \
+        }                                                         \
+        catch (const std::exception& x)                           \
+        {                                                         \
+            MXS_ERROR("Caught standard exception: %s", x.what()); \
+        }                                                         \
+        catch (...)                                               \
+        {                                                         \
+            MXS_ERROR("Caught unknown exception.");               \
+        }                                                         \
+    }                                                             \
+    while (false)
 #endif

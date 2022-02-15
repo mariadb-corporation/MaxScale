@@ -74,8 +74,8 @@ int AvroSession::routeQuery(GWBUF* queue)
 
             m_state = AVRO_CLIENT_REGISTERED;
             MXS_INFO("%s: Client [%s] has completed REGISTRATION action",
-                     m_session->service->name(),
-                     m_session->client_remote().c_str());
+                m_session->service->name(),
+                m_session->client_remote().c_str());
         }
         break;
 
@@ -93,7 +93,7 @@ int AvroSession::routeQuery(GWBUF* queue)
 
     default:
         m_state = AVRO_CLIENT_ERRORED;
-        rval = 0;
+        rval    = 0;
         break;
     }
 
@@ -111,11 +111,11 @@ int AvroSession::routeQuery(GWBUF* queue)
  */
 int AvroSession::do_registration(GWBUF* data)
 {
-    const char reg_uuid[] = "REGISTER UUID=";
+    const char reg_uuid[]  = "REGISTER UUID=";
     const int reg_uuid_len = strlen(reg_uuid);
-    int data_len = GWBUF_LENGTH(data) - reg_uuid_len;
-    char* request = (char*)GWBUF_DATA(data);
-    int ret = 0;
+    int data_len           = GWBUF_LENGTH(data) - reg_uuid_len;
+    char* request          = (char*) GWBUF_DATA(data);
+    int ret                = 0;
 
     if (strstr(request, reg_uuid) != NULL)
     {
@@ -156,14 +156,14 @@ int AvroSession::do_registration(GWBUF* data)
             {
                 if (memcmp(tmp_ptr + 5, "AVRO", 4) == 0)
                 {
-                    ret = 1;
-                    m_state = AVRO_CLIENT_REGISTERED;
+                    ret      = 1;
+                    m_state  = AVRO_CLIENT_REGISTERED;
                     m_format = AVRO_FORMAT_AVRO;
                 }
                 else if (memcmp(tmp_ptr + 5, "JSON", 4) == 0)
                 {
-                    ret = 1;
-                    m_state = AVRO_CLIENT_REGISTERED;
+                    ret      = 1;
+                    m_state  = AVRO_CLIENT_REGISTERED;
                     m_format = AVRO_FORMAT_JSON;
                 }
                 else
@@ -193,7 +193,7 @@ int AvroSession::do_registration(GWBUF* data)
 void extract_gtid_request(gtid_pos_t* gtid, const char* start, int len)
 {
     const char* ptr = start;
-    int read = 0;
+    int read        = 0;
 
     while (ptr < start + len)
     {
@@ -246,11 +246,11 @@ bool file_in_dir(const char* dir, const char* file)
 void AvroSession::queue_client_callback()
 {
     auto callback = [this]() {
-            if (m_state == AVRO_CLIENT_REQUEST_DATA)
-            {
-                client_callback();
-            }
-        };
+        if (m_state == AVRO_CLIENT_REQUEST_DATA)
+        {
+            client_callback();
+        }
+    };
 
     mxs::RoutingWorker::get_current()->execute(callback, mxs::RoutingWorker::EXECUTE_QUEUED);
 }
@@ -274,7 +274,7 @@ std::pair<std::string, std::string> get_avrofile_and_gtid(std::string file)
     {
         // Client requests a specific GTID
         filename = file.substr(0, pos);
-        gtid = file.substr(pos + 1);
+        gtid     = file.substr(pos + 1);
     }
     else
     {
@@ -282,13 +282,11 @@ std::pair<std::string, std::string> get_avrofile_and_gtid(std::string file)
     }
 
     auto first_dot = filename.find_first_of('.');
-    auto last_dot = filename.find_last_of('.');
+    auto last_dot  = filename.find_last_of('.');
 
     if (!file.empty())
     {
-        if (first_dot != std::string::npos
-            && last_dot != std::string::npos
-            && first_dot != last_dot)
+        if (first_dot != std::string::npos && last_dot != std::string::npos && first_dot != last_dot)
         {
             // Exact file version specified e.g. test.t1.000002
             filename += ".avro";
@@ -311,18 +309,18 @@ std::pair<std::string, std::string> get_avrofile_and_gtid(std::string file)
  */
 void AvroSession::process_command(GWBUF* queue)
 {
-    const char req_data[] = "REQUEST-DATA";
+    const char req_data[]     = "REQUEST-DATA";
     const size_t req_data_len = sizeof(req_data) - 1;
-    size_t buflen = gwbuf_length(queue);
+    size_t buflen             = gwbuf_length(queue);
     uint8_t data[buflen + 1];
     gwbuf_copy_data(queue, 0, buflen, data);
-    data[buflen] = '\0';
-    char* command_ptr = strstr((char*)data, req_data);
+    data[buflen]      = '\0';
+    char* command_ptr = strstr((char*) data, req_data);
 
     if (command_ptr != NULL)
     {
         char* file_ptr = command_ptr + req_data_len;
-        int data_len = GWBUF_LENGTH(queue) - req_data_len;
+        int data_len   = GWBUF_LENGTH(queue) - req_data_len;
 
         if (data_len > 1)
         {
@@ -359,7 +357,7 @@ void AvroSession::process_command(GWBUF* queue)
     else
     {
         const char err[] = "ERR: Unknown command\n";
-        GWBUF* reply = gwbuf_alloc_and_load(sizeof(err), err);
+        GWBUF* reply     = gwbuf_alloc_and_load(sizeof(err), err);
         m_client->write(reply);
     }
 }
@@ -369,14 +367,14 @@ int AvroSession::send_row(json_t* row)
     char* json = json_dumps(row, JSON_PRESERVE_ORDER);
     size_t len = strlen(json);
     GWBUF* buf = gwbuf_alloc(len + 1);
-    int rc = 0;
+    int rc     = 0;
 
     if (json && buf)
     {
         uint8_t* data = GWBUF_DATA(buf);
         memcpy(data, json, len);
         data[len] = '\n';
-        rc = m_client->write(buf);
+        rc        = m_client->write(buf);
     }
     else
     {
@@ -389,14 +387,14 @@ int AvroSession::send_row(json_t* row)
 
 int AvroSession::high_water_mark_reached(DCB* dcb, DCB::Reason reason, void* userdata)
 {
-    AvroSession* session = static_cast<AvroSession*>(userdata);
+    AvroSession* session      = static_cast<AvroSession*>(userdata);
     session->m_in_high_waters = true;
     return 0;
 }
 
 int AvroSession::low_water_mark_reached(DCB* dcb, DCB::Reason reason, void* userdata)
 {
-    AvroSession* session = static_cast<AvroSession*>(userdata);
+    AvroSession* session      = static_cast<AvroSession*>(userdata);
     session->m_in_high_waters = false;
     session->queue_client_callback();
     return 0;
@@ -433,9 +431,7 @@ bool AvroSession::stream_json()
         int rc = 1;
 
         auto begin_ptr = m_file_handle->buffer_ptr;
-        while (rc > 0
-               && bytes < AVRO_DATA_BURST_SIZE
-               && (row = maxavro_record_read_json(m_file_handle)))
+        while (rc > 0 && bytes < AVRO_DATA_BURST_SIZE && (row = maxavro_record_read_json(m_file_handle)))
         {
             rc = send_row(row);
             set_current_gtid(row);
@@ -460,7 +456,7 @@ bool AvroSession::stream_binary()
 {
     GWBUF* buffer;
     uint64_t bytes = 0;
-    int rc = 1;
+    int rc         = 1;
 
     while (rc > 0 && bytes < AVRO_DATA_BURST_SIZE)
     {
@@ -484,7 +480,7 @@ static int sqlite_cb(void* data, int rows, char** values, char** names)
     {
         if (values[i])
         {
-            *((long*)data) = strtol(values[i], NULL, 10);
+            *((long*) data) = strtol(values[i], NULL, 10);
             return 0;
         }
     }
@@ -520,11 +516,11 @@ bool AvroSession::seek_to_gtid()
                     if (value == m_gtid.domain)
                     {
                         MXS_INFO("Found GTID %lu-%lu-%lu for %s@%s",
-                                 m_gtid.domain,
-                                 m_gtid.server_id,
-                                 m_gtid.seq,
-                                 m_session->user().c_str(),
-                                 m_session->client_remote().c_str());
+                            m_gtid.domain,
+                            m_gtid.server_id,
+                            m_gtid.seq,
+                            m_session->user().c_str(),
+                            m_session->client_remote().c_str());
                         seeking = false;
                     }
                 }
@@ -556,7 +552,7 @@ bool AvroSession::stream_data()
 
     if (!m_avro_binfile.empty())
     {
-        bool ok = true;
+        bool ok              = true;
         std::string filename = m_router->avrodir + '/' + m_avro_binfile;
 
         if (!m_file_handle && !(m_file_handle = maxavro_file_open(filename.c_str())))
@@ -628,10 +624,7 @@ GWBUF* read_avro_json_schema(std::string avrofile, std::string dir)
     }
     else
     {
-        MXS_ERROR("Failed to open file '%s': %d, %s",
-                  schemafile.c_str(),
-                  errno,
-                  mxs_strerror(errno));
+        MXS_ERROR("Failed to open file '%s': %d, %s", schemafile.c_str(), errno, mxs_strerror(errno));
     }
 
     return rval;
@@ -639,9 +632,9 @@ GWBUF* read_avro_json_schema(std::string avrofile, std::string dir)
 
 GWBUF* read_avro_binary_schema(std::string avrofile, std::string dir)
 {
-    GWBUF* rval = NULL;
+    GWBUF* rval          = NULL;
     std::string filename = dir + '/' + avrofile;
-    MAXAVRO_FILE* file = maxavro_file_open(filename.c_str());
+    MAXAVRO_FILE* file   = maxavro_file_open(filename.c_str());
 
     if (file)
     {
@@ -665,7 +658,7 @@ void AvroSession::rotate_avro_file(std::string fullname)
 {
     auto pos = fullname.find_last_of('/');
     mxb_assert(pos != std::string::npos);
-    m_avro_binfile = fullname.substr(pos + 1);
+    m_avro_binfile  = fullname.substr(pos + 1);
     m_last_sent_pos = 0;
 
     maxavro_file_close(m_file_handle);
@@ -677,9 +670,9 @@ void AvroSession::rotate_avro_file(std::string fullname)
     else
     {
         MXS_INFO("Rotated '%s'@'%s' to file: %s",
-                 m_session->user().c_str(),
-                 m_session->client_remote().c_str(),
-                 fullname.c_str());
+            m_session->user().c_str(),
+            m_session->client_remote().c_str(),
+            fullname.c_str());
     }
 }
 
@@ -693,25 +686,20 @@ void AvroSession::rotate_avro_file(std::string fullname)
 static std::string get_next_filename(std::string file, std::string dir)
 {
     // Find the last and second to last dot
-    auto last = file.find_last_of('.');
-    auto part = file.substr(0, last);
+    auto last        = file.find_last_of('.');
+    auto part        = file.substr(0, last);
     auto almost_last = part.find_last_of('.');
     mxb_assert(last != std::string::npos && almost_last != std::string::npos);
 
     // Extract the number between the dots
     std::string number_part = part.substr(almost_last + 1, std::string::npos);
-    int filenum = strtol(number_part.c_str(), NULL, 10);
+    int filenum             = strtol(number_part.c_str(), NULL, 10);
 
     std::string file_part = file.substr(0, almost_last);
 
     // Print it out the new filename with the file number incremented by one
     char outbuf[PATH_MAX + 1];
-    snprintf(outbuf,
-             sizeof(outbuf),
-             "%s/%s.%06d.avro",
-             dir.c_str(),
-             file_part.c_str(),
-             filenum + 1);
+    snprintf(outbuf, sizeof(outbuf), "%s/%s.%06d.avro", dir.c_str(), file_part.c_str(), filenum + 1);
 
     return std::string(outbuf);
 }
@@ -778,22 +766,23 @@ void AvroSession::notify_all_clients(SERVICE* service)
 {
     mxs::RoutingWorker::broadcast(
         [service]() {
-            for (auto a : client_sessions)
-            {
-                MXS_INFO("%p", a);
+        for (auto a : client_sessions)
+        {
+            MXS_INFO("%p", a);
 
-                if (a->m_router->service == service)
-                {
-                    a->queue_client_callback();
-                }
+            if (a->m_router->service == service)
+            {
+                a->queue_client_callback();
             }
-        }, mxs::RoutingWorker::EXECUTE_AUTO);
+        }
+        },
+        mxs::RoutingWorker::EXECUTE_AUTO);
 }
 
 // static
 AvroSession* AvroSession::create(Avro* inst, MXS_SESSION* session)
 {
-    return new(std::nothrow) AvroSession(inst, session);
+    return new (std::nothrow) AvroSession(inst, session);
 }
 
 AvroSession::AvroSession(Avro* instance, MXS_SESSION* session)

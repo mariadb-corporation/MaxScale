@@ -28,12 +28,9 @@ namespace std
 template<>
 struct default_delete<json_t>
 {
-    void operator()(json_t* pJson)
-    {
-        json_decref(pJson);
-    }
+    void operator()(json_t* pJson) { json_decref(pJson); }
 };
-}
+}  // namespace std
 
 namespace maxscale
 {
@@ -143,4 +140,4 @@ static inline const char* json_type_to_string(const json_t* json)
     return "unknown";
 }
 
-}
+}  // namespace maxscale

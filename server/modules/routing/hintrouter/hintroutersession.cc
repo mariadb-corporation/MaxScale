@@ -31,13 +31,12 @@ class Writer : std::unary_function<HintRouterSession::MapElement, bool>
 public:
     Writer(GWBUF* pPacket)
         : m_pPacket(pPacket)
-    {
-    }
+    {}
 
     bool operator()(HintRouterSession::MapElement& elem)
     {
-        bool rv = false;
-        auto endpoint = elem.second;
+        bool rv        = false;
+        auto endpoint  = elem.second;
         GWBUF* pPacket = gwbuf_clone(m_pPacket);
 
         if (pPacket)
@@ -51,11 +50,9 @@ public:
 private:
     GWBUF* m_pPacket;
 };
-}
+}  // namespace
 
-HintRouterSession::HintRouterSession(MXS_SESSION* pSession,
-                                     HintRouter* pRouter,
-                                     const BackendMap& backends)
+HintRouterSession::HintRouterSession(MXS_SESSION* pSession, HintRouter* pRouter, const BackendMap& backends)
     : maxscale::RouterSession(pSession)
     , m_router(pRouter)
     , m_backends(backends)
@@ -67,12 +64,10 @@ HintRouterSession::HintRouterSession(MXS_SESSION* pSession,
     update_connections();
 }
 
-
 HintRouterSession::~HintRouterSession()
 {
     HR_ENTRY();
 }
-
 
 void HintRouterSession::close()
 {
@@ -128,7 +123,6 @@ int32_t HintRouterSession::routeQuery(GWBUF* pPacket)
     return success;
 }
 
-
 void HintRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     HR_ENTRY();
@@ -150,10 +144,8 @@ void HintRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down,
     }
 }
 
-bool HintRouterSession::handleError(mxs::ErrorType type,
-                                    GWBUF* pMessage,
-                                    mxs::Endpoint* pProblem,
-                                    const mxs::Reply& pReply)
+bool HintRouterSession::handleError(
+    mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& pReply)
 {
     HR_ENTRY();
     return false;
@@ -165,102 +157,99 @@ bool HintRouterSession::route_by_hint(GWBUF* pPacket, HINT* hint, bool print_err
     switch (hint->type)
     {
     case HINT_ROUTE_TO_MASTER:
+    {
+        bool master_ok = false;
+        // The master server should be already known, but may have changed
+        if (m_master && m_master->target()->is_master())
         {
-            bool master_ok = false;
-            // The master server should be already known, but may have changed
-            if (m_master && m_master->target()->is_master())
+            master_ok = true;
+        }
+        else
+        {
+            update_connections();
+            if (m_master)
             {
                 master_ok = true;
             }
+        }
+
+        if (master_ok)
+        {
+            HR_DEBUG("Writing packet to master: '%s'.", m_master->target()->name());
+            success = m_master->routeQuery(pPacket);
+            if (success)
+            {
+                m_router->m_routed_to_master++;
+            }
             else
             {
-                update_connections();
-                if (m_master)
-                {
-                    master_ok = true;
-                }
-            }
-
-            if (master_ok)
-            {
-                HR_DEBUG("Writing packet to master: '%s'.", m_master->target()->name());
-                success = m_master->routeQuery(pPacket);
-                if (success)
-                {
-                    m_router->m_routed_to_master++;
-                }
-                else
-                {
-                    HR_DEBUG("Write to master failed.");
-                }
-            }
-            else if (print_errors)
-            {
-                MXS_ERROR("Hint suggests routing to master when no master connected.");
+                HR_DEBUG("Write to master failed.");
             }
         }
-        break;
+        else if (print_errors)
+        {
+            MXS_ERROR("Hint suggests routing to master when no master connected.");
+        }
+    }
+    break;
 
     case HINT_ROUTE_TO_SLAVE:
         success = route_to_slave(pPacket, print_errors);
         break;
 
     case HINT_ROUTE_TO_NAMED_SERVER:
+    {
+        string backend_name((hint->data) ? (const char*) (hint->data) : "");
+        BackendMap::const_iterator iter = m_backends.find(backend_name);
+        if (iter != m_backends.end())
         {
-            string backend_name((hint->data) ? (const char*)(hint->data) : "");
-            BackendMap::const_iterator iter = m_backends.find(backend_name);
-            if (iter != m_backends.end())
-            {
-                HR_DEBUG("Writing packet to %s.", iter->second.server()->name());
-                success = iter->second->routeQuery(pPacket);
-                if (success)
-                {
-                    m_router->m_routed_to_named++;
-                }
-                else
-                {
-                    HR_DEBUG("Write failed.");
-                }
-            }
-            else if (print_errors)
-            {
-                /* This shouldn't be possible with current setup as server names are
-                 * checked on startup. With a different filter and the 'print_errors'
-                 * on for the first call this is possible. */
-                MXS_ERROR("Hint suggests routing to backend '%s' when no such backend connected.",
-                          backend_name.c_str());
-            }
-        }
-        break;
-
-    case HINT_ROUTE_TO_ALL:
-        {
-            HR_DEBUG("Writing packet to %lu backends.", m_backends.size());
-            BackendMap::size_type n_writes =
-                std::count_if(m_backends.begin(), m_backends.end(), Writer(pPacket));
-            if (n_writes != 0)
-            {
-                m_surplus_replies = n_writes - 1;
-            }
-            BackendMap::size_type size = m_backends.size();
-            success = (n_writes == size);
+            HR_DEBUG("Writing packet to %s.", iter->second.server()->name());
+            success = iter->second->routeQuery(pPacket);
             if (success)
             {
-                gwbuf_free(pPacket);
-                m_router->m_routed_to_all++;
+                m_router->m_routed_to_named++;
             }
             else
             {
-                HR_DEBUG("Write to all failed.");
-                if (print_errors)
-                {
-                    MXS_ERROR("Write failed for '%lu' out of '%lu' backends.",
-                              (size - n_writes),
-                              size);
-                }
+                HR_DEBUG("Write failed.");
             }
         }
-        break;
+        else if (print_errors)
+        {
+            /* This shouldn't be possible with current setup as server names are
+                 * checked on startup. With a different filter and the 'print_errors'
+                 * on for the first call this is possible. */
+            MXS_ERROR("Hint suggests routing to backend '%s' when no such backend connected.",
+                backend_name.c_str());
+        }
+    }
+    break;
+
+    case HINT_ROUTE_TO_ALL:
+    {
+        HR_DEBUG("Writing packet to %lu backends.", m_backends.size());
+        BackendMap::size_type n_writes = std::count_if(m_backends.begin(), m_backends.end(), Writer(pPacket));
+        if (n_writes != 0)
+        {
+            m_surplus_replies = n_writes - 1;
+        }
+        BackendMap::size_type size = m_backends.size();
+        success                    = (n_writes == size);
+        if (success)
+        {
+            gwbuf_free(pPacket);
+            m_router->m_routed_to_all++;
+        }
+        else
+        {
+            HR_DEBUG("Write to all failed.");
+            if (print_errors)
+            {
+                MXS_ERROR("Write failed for '%lu' out of '%lu' backends.", (size - n_writes), size);
+            }
+        }
+    }
+    break;
 
     default:
         MXS_ERROR("Unsupported hint type '%d'", hint->type);
@@ -352,8 +341,7 @@ void HintRouterSession::update_connections()
     m_master = nullptr;
     m_slaves.clear();
 
-    for (BackendMap::const_iterator iter = m_backends.begin();
-         iter != m_backends.end(); iter++)
+    for (BackendMap::const_iterator iter = m_backends.begin(); iter != m_backends.end(); iter++)
     {
         auto server = iter->second->target();
         if (server->is_master())

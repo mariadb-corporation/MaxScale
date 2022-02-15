@@ -20,27 +20,22 @@
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     static const char desc[] = "A binlog event filter for slave servers";
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_FILTER,
-        MXS_MODULE_IN_DEVELOPMENT,
-        MXS_FILTER_VERSION,
-        desc,
-        "V1.0.0",
-        RCAP_TYPE_STMT_OUTPUT,
-        &BinlogFilter::s_object,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        {
-            {"match",             MXS_MODULE_PARAM_REGEX  },
-            {"exclude",           MXS_MODULE_PARAM_REGEX  },
-            {REWRITE_SRC,         MXS_MODULE_PARAM_REGEX  },
-            {REWRITE_DEST,        MXS_MODULE_PARAM_STRING },
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+    static MXS_MODULE info   = {MXS_MODULE_API_FILTER,
+          MXS_MODULE_IN_DEVELOPMENT,
+          MXS_FILTER_VERSION,
+          desc,
+          "V1.0.0",
+          RCAP_TYPE_STMT_OUTPUT,
+          &BinlogFilter::s_object,
+          NULL,
+          NULL,
+          NULL,
+          NULL,
+          {{"match", MXS_MODULE_PARAM_REGEX},
+              {"exclude", MXS_MODULE_PARAM_REGEX},
+              {REWRITE_SRC, MXS_MODULE_PARAM_REGEX},
+              {REWRITE_DEST, MXS_MODULE_PARAM_STRING},
+              {MXS_END_MODULE_PARAMS}}};
 
     return &info;
 }
@@ -48,21 +43,17 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 // BinlogFilter constructor
 BinlogFilter::BinlogFilter(const mxs::ConfigParameters* pParams)
     : m_config(pParams)
-{
-}
+{}
 
 // BinlogFilter destructor
-BinlogFilter::~BinlogFilter()
-{
-}
+BinlogFilter::~BinlogFilter() {}
 
 // static: filter create routine
-BinlogFilter* BinlogFilter::create(const char* zName,
-                                   mxs::ConfigParameters* pParams)
+BinlogFilter* BinlogFilter::create(const char* zName, mxs::ConfigParameters* pParams)
 {
     BinlogFilter* rval = nullptr;
-    auto src = pParams->get_string(REWRITE_SRC);
-    auto dest = pParams->get_string(REWRITE_DEST);
+    auto src           = pParams->get_string(REWRITE_SRC);
+    auto dest          = pParams->get_string(REWRITE_DEST);
 
     if (src.empty() != dest.empty())
     {

@@ -30,7 +30,7 @@ using namespace std::literals::string_literals;
 namespace
 {
 
-static bool warn_bit = false;           /**< Remove when support for BIT is added */
+static bool warn_bit = false; /**< Remove when support for BIT is added */
 
 uint64_t unpack_bytes(uint8_t* ptr, size_t bytes)
 {
@@ -43,43 +43,38 @@ uint64_t unpack_bytes(uint8_t* ptr, size_t bytes)
         break;
 
     case 2:
-        val = ptr[1] | ((uint64_t)(ptr[0]) << 8);
+        val = ptr[1] | ((uint64_t) (ptr[0]) << 8);
         break;
 
     case 3:
-        val = (uint64_t)ptr[2] | ((uint64_t)ptr[1] << 8)
-            | ((uint64_t)ptr[0] << 16);
+        val = (uint64_t) ptr[2] | ((uint64_t) ptr[1] << 8) | ((uint64_t) ptr[0] << 16);
         break;
 
     case 4:
-        val = (uint64_t)ptr[3] | ((uint64_t)ptr[2] << 8)
-            | ((uint64_t)ptr[1] << 16) | ((uint64_t)ptr[0] << 24);
+        val = (uint64_t) ptr[3] | ((uint64_t) ptr[2] << 8) | ((uint64_t) ptr[1] << 16)
+            | ((uint64_t) ptr[0] << 24);
         break;
 
     case 5:
-        val = (uint64_t)ptr[4] | ((uint64_t)ptr[3] << 8)
-            | ((uint64_t)ptr[2] << 16) | ((uint64_t)ptr[1] << 24)
-            | ((uint64_t)ptr[0] << 32);
+        val = (uint64_t) ptr[4] | ((uint64_t) ptr[3] << 8) | ((uint64_t) ptr[2] << 16)
+            | ((uint64_t) ptr[1] << 24) | ((uint64_t) ptr[0] << 32);
         break;
 
     case 6:
-        val = (uint64_t)ptr[5] | ((uint64_t)ptr[4] << 8)
-            | ((uint64_t)ptr[3] << 16) | ((uint64_t)ptr[2] << 24)
-            | ((uint64_t)ptr[1] << 32) | ((uint64_t)ptr[0] << 40);
+        val = (uint64_t) ptr[5] | ((uint64_t) ptr[4] << 8) | ((uint64_t) ptr[3] << 16)
+            | ((uint64_t) ptr[2] << 24) | ((uint64_t) ptr[1] << 32) | ((uint64_t) ptr[0] << 40);
         break;
 
     case 7:
-        val = (uint64_t)ptr[6] | ((uint64_t)ptr[5] << 8)
-            | ((uint64_t)ptr[4] << 16) | ((uint64_t)ptr[3] << 24)
-            | ((uint64_t)ptr[2] << 32) | ((uint64_t)ptr[1] << 40)
-            | ((uint64_t)ptr[0] << 48);
+        val = (uint64_t) ptr[6] | ((uint64_t) ptr[5] << 8) | ((uint64_t) ptr[4] << 16)
+            | ((uint64_t) ptr[3] << 24) | ((uint64_t) ptr[2] << 32) | ((uint64_t) ptr[1] << 40)
+            | ((uint64_t) ptr[0] << 48);
         break;
 
     case 8:
-        val = (uint64_t)ptr[7] | ((uint64_t)ptr[6] << 8)
-            | ((uint64_t)ptr[5] << 16) | ((uint64_t)ptr[4] << 24)
-            | ((uint64_t)ptr[3] << 32) | ((uint64_t)ptr[2] << 40)
-            | ((uint64_t)ptr[1] << 48) | ((uint64_t)ptr[0] << 56);
+        val = (uint64_t) ptr[7] | ((uint64_t) ptr[6] << 8) | ((uint64_t) ptr[5] << 16)
+            | ((uint64_t) ptr[4] << 24) | ((uint64_t) ptr[3] << 32) | ((uint64_t) ptr[2] << 40)
+            | ((uint64_t) ptr[1] << 48) | ((uint64_t) ptr[0] << 56);
         break;
 
     default:
@@ -313,25 +308,13 @@ void unpack_year(uint8_t* ptr, struct tm* dest)
 }
 
 /** Base-10 logarithm values */
-int64_t log_10_values[] =
-{
-    1,
-    10,
-    100,
-    1000,
-    10000,
-    100000,
-    1000000,
-    10000000,
-    100000000
-};
+int64_t log_10_values[] = {1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000};
 
 /**
  * If the TABLE_COL_TYPE_DATETIME type field is declared as a datetime with
  * extra precision, the packed length is shorter than 8 bytes.
  */
-size_t datetime_sizes[] =
-{
+size_t datetime_sizes[] = {
     5,  // DATETIME(0)
     6,  // DATETIME(1)
     6,  // DATETIME(2)
@@ -366,7 +349,7 @@ void unpack_datetime(uint8_t* ptr, int length, struct tm* dest)
     uint64_t val = 0;
     uint32_t second, minute, hour, day, month, year;
 
-    val = gw_mysql_get_byte8(ptr);
+    val    = gw_mysql_get_byte8(ptr);
     second = val - ((val / 100) * 100);
     val /= 100;
     minute = val - ((val / 100) * 100);
@@ -381,11 +364,11 @@ void unpack_datetime(uint8_t* ptr, int length, struct tm* dest)
 
     memset(dest, 0, sizeof(struct tm));
     dest->tm_year = year - 1900;
-    dest->tm_mon = month - 1;
+    dest->tm_mon  = month - 1;
     dest->tm_mday = day;
     dest->tm_hour = hour;
-    dest->tm_min = minute;
-    dest->tm_sec = second;
+    dest->tm_min  = minute;
+    dest->tm_sec  = second;
 }
 
 /**
@@ -396,10 +379,10 @@ void unpack_datetime(uint8_t* ptr, int length, struct tm* dest)
 uint64_t unpack5(uint8_t* data)
 {
     uint64_t rval = data[4];
-    rval += ((uint64_t)data[3]) << 8;
-    rval += ((uint64_t)data[2]) << 16;
-    rval += ((uint64_t)data[1]) << 24;
-    rval += ((uint64_t)data[0]) << 32;
+    rval += ((uint64_t) data[3]) << 8;
+    rval += ((uint64_t) data[2]) << 16;
+    rval += ((uint64_t) data[1]) << 24;
+    rval += ((uint64_t) data[0]) << 32;
     return rval;
 }
 
@@ -421,17 +404,17 @@ void unpack_datetime2(uint8_t* ptr, uint8_t decimals, char* buf, size_t buflen)
         unpacked = -unpacked;
     }
 
-    uint64_t date = unpacked >> 17;
+    uint64_t date      = unpacked >> 17;
     uint64_t yearmonth = date >> 5;
-    uint64_t time = unpacked % (1 << 17);
+    uint64_t time      = unpacked % (1 << 17);
 
     struct tm tm;
     memset(&tm, 0, sizeof(tm));
-    tm.tm_sec = time % (1 << 6);
-    tm.tm_min = (time >> 6) % (1 << 6);
+    tm.tm_sec  = time % (1 << 6);
+    tm.tm_min  = (time >> 6) % (1 << 6);
     tm.tm_hour = time >> 12;
     tm.tm_mday = date % (1 << 5);
-    tm.tm_mon = (yearmonth % 13) - 1;
+    tm.tm_mon  = (yearmonth % 13) - 1;
 
     /** struct tm stores the year as: Year - 1900 */
     tm.tm_year = (yearmonth / 13) - 1900;
@@ -441,9 +424,9 @@ void unpack_datetime2(uint8_t* ptr, uint8_t decimals, char* buf, size_t buflen)
 
     if (decimals)
     {
-        int bytes = (decimals + 1) / 2;
+        int bytes   = (decimals + 1) / 2;
         int64_t raw = unpack(ptr + 5, bytes);
-        int us = raw * log_10_values[6 - decimals];
+        int us      = raw * log_10_values[6 - decimals];
         snprintf(buf, buflen, "%s.%06d", tmp, us);
     }
     else
@@ -458,8 +441,8 @@ void unpack_datetime2(uint8_t* ptr, uint8_t decimals, char* buf, size_t buflen)
 bool is_zero_date(struct tm* tm)
 {
     // Detects 1970-01-01 00:00:00
-    return tm->tm_sec == 0 && tm->tm_min == 0 && tm->tm_hour == 0
-           && tm->tm_mday == 1 && tm->tm_mon == 0 && tm->tm_year == 70;
+    return tm->tm_sec == 0 && tm->tm_min == 0 && tm->tm_hour == 0 && tm->tm_mday == 1 && tm->tm_mon == 0
+        && tm->tm_year == 70;
 }
 
 /**
@@ -495,9 +478,9 @@ void unpack_timestamp(uint8_t* ptr, uint8_t decimals, char* buf, size_t buflen)
 
     if (decimals)
     {
-        int bytes = (decimals + 1) / 2;
+        int bytes   = (decimals + 1) / 2;
         int64_t raw = unpack(ptr + 4, bytes);
-        int us = raw * log_10_values[6 - decimals];
+        int us      = raw * log_10_values[6 - decimals];
         char tmp[80];
         snprintf(tmp, sizeof(tmp), ".%06d", us);
         strcat(buf, tmp);
@@ -516,7 +499,7 @@ void unpack_timestamp(uint8_t* ptr, uint8_t decimals, char* buf, size_t buflen)
  */
 void unpack_time(uint8_t* ptr, struct tm* dest)
 {
-    uint64_t val = unpack3(ptr);
+    uint64_t val    = unpack3(ptr);
     uint32_t second = val - ((val / 100) * 100);
     val /= 100;
     uint32_t minute = val - ((val / 100) * 100);
@@ -525,8 +508,8 @@ void unpack_time(uint8_t* ptr, struct tm* dest)
 
     memset(dest, 0, sizeof(struct tm));
     dest->tm_hour = hour;
-    dest->tm_min = minute;
-    dest->tm_sec = second;
+    dest->tm_min  = minute;
+    dest->tm_sec  = second;
 }
 
 /**
@@ -552,16 +535,16 @@ void unpack_time2(uint8_t* ptr, uint8_t decimals, char* buf, size_t buflen)
     struct tm tm;
     memset(&tm, 0, sizeof(tm));
     tm.tm_hour = (val >> 12) % (1 << 10);
-    tm.tm_min = (val >> 6) % (1 << 6);
-    tm.tm_sec = val % (1 << 6);
+    tm.tm_min  = (val >> 6) % (1 << 6);
+    tm.tm_sec  = val % (1 << 6);
 
     strftime(buf, buflen, "%H:%M:%S", &tm);
 
     if (decimals)
     {
-        int bytes = (decimals + 1) / 2;
+        int bytes   = (decimals + 1) / 2;
         int64_t raw = unpack(ptr + 3, bytes);
-        int us = raw * log_10_values[6 - decimals];
+        int us      = raw * log_10_values[6 - decimals];
         char tmp[80];
         snprintf(tmp, sizeof(tmp), ".%06d", us);
         strcat(buf, tmp);
@@ -578,7 +561,7 @@ void unpack_date(uint8_t* ptr, struct tm* dest)
     uint64_t val = ptr[0] + (ptr[1] << 8) + (ptr[2] << 16);
     memset(dest, 0, sizeof(struct tm));
     dest->tm_mday = val & 31;
-    dest->tm_mon = ((val >> 5) & 15) - 1;
+    dest->tm_mon  = ((val >> 5) & 15) - 1;
     dest->tm_year = (val >> 9) - 1900;
 }
 
@@ -612,11 +595,11 @@ size_t unpack_enum(uint8_t* ptr, const uint8_t* metadata, uint8_t* dest)
  * @return Length of the processed field in bytes
  */
 size_t unpack_bit(uint8_t* ptr,
-                  uint8_t* null_mask,
-                  uint32_t col_count,
-                  uint32_t curr_col_index,
-                  uint8_t* metadata,
-                  uint64_t* dest)
+    uint8_t* null_mask,
+    uint32_t col_count,
+    uint32_t curr_col_index,
+    uint8_t* metadata,
+    uint64_t* dest)
 {
     if (metadata[1])
     {
@@ -680,8 +663,8 @@ size_t temporal_field_size(uint8_t type, const uint8_t* decimals, int length)
  *
  * @return Number of bytes consumed
  */
-size_t unpack_temporal_value(uint8_t type, uint8_t* ptr, const uint8_t* metadata,
-                             int length, char* buf, size_t buflen)
+size_t unpack_temporal_value(
+    uint8_t type, uint8_t* ptr, const uint8_t* metadata, int length, char* buf, size_t buflen)
 {
     struct tm tm;
 
@@ -780,17 +763,17 @@ size_t unpack_numeric_field(uint8_t* src, uint8_t type, const uint8_t* metadata,
 size_t unpack_decimal_field(uint8_t* ptr, const uint8_t* metadata, double* val_float)
 {
     const int dec_dig = 9;
-    int precision = metadata[0];
-    int decimals = metadata[1];
-    int dig_bytes[] = {0, 1, 1, 2, 2, 3, 3, 4, 4, 4};
-    int ipart = precision - decimals;
-    int ipart1 = ipart / dec_dig;
-    int fpart1 = decimals / dec_dig;
-    int ipart2 = ipart - ipart1 * dec_dig;
-    int fpart2 = decimals - fpart1 * dec_dig;
-    int ibytes = ipart1 * 4 + dig_bytes[ipart2];
-    int fbytes = fpart1 * 4 + dig_bytes[fpart2];
-    int field_size = ibytes + fbytes;
+    int precision     = metadata[0];
+    int decimals      = metadata[1];
+    int dig_bytes[]   = {0, 1, 1, 2, 2, 3, 3, 4, 4, 4};
+    int ipart         = precision - decimals;
+    int ipart1        = ipart / dec_dig;
+    int fpart1        = decimals / dec_dig;
+    int ipart2        = ipart - ipart1 * dec_dig;
+    int fpart2        = decimals - fpart1 * dec_dig;
+    int ibytes        = ipart1 * 4 + dig_bytes[ipart2];
+    int fbytes        = fpart1 * 4 + dig_bytes[fpart2];
+    int field_size    = ibytes + fbytes;
 
     /** Remove the sign bit and store it locally */
     bool negative = (ptr[0] & 0x80) == 0;
@@ -819,7 +802,7 @@ size_t unpack_decimal_field(uint8_t* ptr, const uint8_t* metadata, double* val_f
         mxb_assert(ibytes == 8);
     }
 
-    val_i = unpack_bytes(ptr, ibytes);
+    val_i         = unpack_bytes(ptr, ibytes);
     int64_t val_f = fbytes ? unpack_bytes(ptr + ibytes, fbytes) : 0;
 
     if (negative)
@@ -828,7 +811,7 @@ size_t unpack_decimal_field(uint8_t* ptr, const uint8_t* metadata, double* val_f
         val_f = -val_f;
     }
 
-    *val_float = (double)val_i + ((double)val_f / (pow(10.0, decimals)));
+    *val_float = (double) val_i + ((double) val_f / (pow(10.0, decimals)));
 
     return field_size;
 }
@@ -842,7 +825,6 @@ RowEvent get_event_type(uint8_t event)
 {
     switch (event)
     {
-
     case WRITE_ROWS_EVENTv0:
     case WRITE_ROWS_EVENTv1:
     case WRITE_ROWS_EVENTv2:
@@ -875,11 +857,10 @@ RowEvent get_event_type(uint8_t event)
  * @param metadata Field metadata
  * @param value    Pointer to the start of the in-memory representation of the data
  */
-void set_numeric_field_value(SRowEventHandler& conv, const Table& create, int idx,
-                             const uint8_t* metadata, uint8_t* value)
+void set_numeric_field_value(
+    SRowEventHandler& conv, const Table& create, int idx, const uint8_t* metadata, uint8_t* value)
 {
-
-    uint8_t type = create.column_types[idx];
+    uint8_t type     = create.column_types[idx];
     bool is_unsigned = create.columns[idx].is_unsigned;
 
     switch (type)
@@ -925,7 +906,7 @@ void set_numeric_field_value(SRowEventHandler& conv, const Table& create, int id
                 x = -((0xffffff & (~x)) + 1);
             }
 
-            conv->column_int(create, idx, (int64_t)x);
+            conv->column_int(create, idx, (int64_t) x);
         }
         break;
 
@@ -947,20 +928,20 @@ void set_numeric_field_value(SRowEventHandler& conv, const Table& create, int id
         break;
 
     case TABLE_COL_TYPE_FLOAT:
-        {
-            float f = 0;
-            memcpy(&f, value, 4);
-            conv->column_float(create, idx, f);
-            break;
-        }
+    {
+        float f = 0;
+        memcpy(&f, value, 4);
+        conv->column_float(create, idx, f);
+        break;
+    }
 
     case TABLE_COL_TYPE_DOUBLE:
-        {
-            double d = 0;
-            memcpy(&d, value, 8);
-            conv->column_double(create, idx, d);
-            break;
-        }
+    {
+        double d = 0;
+        memcpy(&d, value, 8);
+        conv->column_double(create, idx, d);
+        break;
+    }
 
     default:
         break;
@@ -1020,18 +1001,19 @@ int get_metadata_len(uint8_t type)
 }
 
 // Make sure that both `i` and `trace` are defined before using this macro
-#define check_overflow(t) \
-    do \
-    { \
-        if (!(t)) \
-        { \
-            for (long x = 0; x < i; x++) \
-            { \
+#define check_overflow(t)                  \
+    do                                     \
+    {                                      \
+        if (!(t))                          \
+        {                                  \
+            for (long x = 0; x < i; x++)   \
+            {                              \
                 MXS_ALERT("%s", trace[x]); \
-            } \
-            raise(SIGABRT); \
-        } \
-    } while (false)
+            }                              \
+            raise(SIGABRT);                \
+        }                                  \
+    }                                      \
+    while (false)
 
 // Debug function for checking whether a row event consists of only NULL values
 bool all_fields_null(uint8_t* null_bitmap, int ncolumns)
@@ -1061,7 +1043,7 @@ bool all_fields_null(uint8_t* null_bitmap, int ncolumns)
 void read_table_info(uint8_t* ptr, uint8_t post_header_len, uint64_t* tbl_id, char* dest, size_t len)
 {
     uint64_t table_id = 0;
-    size_t id_size = post_header_len == 6 ? 4 : 6;
+    size_t id_size    = post_header_len == 6 ? 4 : 6;
     memcpy(&table_id, ptr, id_size);
     ptr += id_size;
 
@@ -1089,10 +1071,9 @@ void read_table_info(uint8_t* ptr, uint8_t post_header_len, uint64_t* tbl_id, ch
 void normalize_sql_string(std::string& str)
 {
     // remove mysql comments
-    const char* remove_comments_pattern =
-        "(?:`[^`]*`\\K)|"
-        "(\\/[*](?!(M?!)).*?[*]\\/)|"
-        "((?:#.*|--[[:space:]].*)(\\n|\\r\\n|$))";
+    const char* remove_comments_pattern = "(?:`[^`]*`\\K)|"
+                                          "(\\/[*](?!(M?!)).*?[*]\\/)|"
+                                          "((?:#.*|--[[:space:]].*)(\\n|\\r\\n|$))";
 
     str = mxb::Regex(remove_comments_pattern, PCRE2_SUBSTITUTE_GLOBAL).replace(str, "");
 
@@ -1131,9 +1112,8 @@ void normalize_sql_string(std::string& str)
  */
 bool not_generated_field(const char* name)
 {
-    return strcmp(name, avro_domain) && strcmp(name, avro_server_id)
-           && strcmp(name, avro_sequence) && strcmp(name, avro_event_number)
-           && strcmp(name, avro_event_type) && strcmp(name, avro_timestamp);
+    return strcmp(name, avro_domain) && strcmp(name, avro_server_id) && strcmp(name, avro_sequence)
+        && strcmp(name, avro_event_number) && strcmp(name, avro_event_type) && strcmp(name, avro_timestamp);
 }
 
 /**
@@ -1157,7 +1137,6 @@ bool json_extract_field_names(const char* filename, std::vector<Column>& columns
 
     if ((obj = json_load_file(filename, 0, &err)) && (arr = json_object_get(obj, "fields")))
     {
-
         if (auto g = json_object_get(obj, "gtid"))
         {
             if (json_is_string(g))
@@ -1169,7 +1148,7 @@ bool json_extract_field_names(const char* filename, std::vector<Column>& columns
         if (json_is_array(arr))
         {
             int array_size = json_array_size(arr);
-            rval = true;
+            rval           = true;
 
             for (int i = 0; i < array_size; i++)
             {
@@ -1195,7 +1174,8 @@ bool json_extract_field_names(const char* filename, std::vector<Column>& columns
                             }
                             else
                             {
-                                MXS_WARNING("No \"real_type\" value defined. Treating as unknown type field.");
+                                MXS_WARNING(
+                                    "No \"real_type\" value defined. Treating as unknown type field.");
                             }
 
                             if ((value = json_object_get(val, "length")) && json_is_integer(value))
@@ -1217,7 +1197,7 @@ bool json_extract_field_names(const char* filename, std::vector<Column>& columns
                     {
                         MXS_ERROR("JSON value for \"name\" was not a string in "
                                   "file '%s'.",
-                                  filename);
+                            filename);
                         rval = false;
                     }
                 }
@@ -1225,7 +1205,7 @@ bool json_extract_field_names(const char* filename, std::vector<Column>& columns
                 {
                     MXS_ERROR("JSON value for \"fields\" was not an array of objects in "
                               "file '%s'.",
-                              filename);
+                        filename);
                     rval = false;
                 }
             }
@@ -1239,8 +1219,8 @@ bool json_extract_field_names(const char* filename, std::vector<Column>& columns
     else
     {
         MXS_ERROR("Failed to load JSON from file '%s': %s",
-                  filename,
-                  obj && !arr ? "No 'fields' value in object." : err.text);
+            filename,
+            obj && !arr ? "No 'fields' value in object." : err.text);
     }
 
     return rval;
@@ -1259,26 +1239,24 @@ bool json_extract_field_names(const char* filename, std::vector<Column>& columns
 static const char* column_type_to_avro_type(const std::string& type)
 {
     std::string str;
-    std::transform(type.begin(), type.end(), std::back_inserter(str), [](auto ch) {
-                       return tolower(ch);
-                   });
+    std::transform(type.begin(), type.end(), std::back_inserter(str), [](auto ch) { return tolower(ch); });
 
     const std::unordered_set<std::string> int_types = {
-        "tinyint", "boolean", "smallint", "mediumint", "int", "integer",
+        "tinyint",
+        "boolean",
+        "smallint",
+        "mediumint",
+        "int",
+        "integer",
     };
 
-    const std::unordered_set<std::string> long_types = {
-        "bigint", "serial"
-    };
+    const std::unordered_set<std::string> long_types = {"bigint", "serial"};
 
-    const std::unordered_set<std::string> double_types = {
-        "double", "decimal", "numeric", "fixed", "dec", "real"
-    };
+    const std::unordered_set<std::string> double_types
+        = {"double", "decimal", "numeric", "fixed", "dec", "real"};
 
-    const std::unordered_set<std::string> bytes_types = {
-        "tinyblob", "blob", "mediumblob", "longblob",
-        "tinytext", "text", "mediumtext", "longtext"
-    };
+    const std::unordered_set<std::string> bytes_types
+        = {"tinyblob", "blob", "mediumblob", "longblob", "tinytext", "text", "mediumtext", "longtext"};
 
     if (int_types.count(str))
     {
@@ -1317,13 +1295,13 @@ STable load_table_from_schema(const char* file, const char* db, const char* tabl
 
     return rval;
 }
-}
+}  // namespace
 
 void gtid_pos_t::extract(const REP_HEADER& hdr, uint8_t* ptr)
 {
-    domain = gw_mysql_get_byte4(ptr + 8);
+    domain    = gw_mysql_get_byte4(ptr + 8);
     server_id = hdr.serverid;
-    seq = gw_mysql_get_byte8(ptr);
+    seq       = gw_mysql_get_byte8(ptr);
     event_num = 0;
     timestamp = hdr.timestamp;
 }
@@ -1333,18 +1311,18 @@ bool gtid_pos_t::parse(const char* str)
     bool rval = false;
     char buf[strlen(str) + 1];
     strcpy(buf, str);
-    char* saved, * dom = strtok_r(buf, ":-\n", &saved);
-    char* serv_id = strtok_r(NULL, ":-\n", &saved);
+    char *saved, *dom = strtok_r(buf, ":-\n", &saved);
+    char* serv_id  = strtok_r(NULL, ":-\n", &saved);
     char* sequence = strtok_r(NULL, ":-\n", &saved);
-    char* subseq = strtok_r(NULL, ":-\n", &saved);
+    char* subseq   = strtok_r(NULL, ":-\n", &saved);
 
     if (dom && serv_id && sequence)
     {
-        domain = strtol(dom, NULL, 10);
+        domain    = strtol(dom, NULL, 10);
         server_id = strtol(serv_id, NULL, 10);
-        seq = strtol(sequence, NULL, 10);
+        seq       = strtol(sequence, NULL, 10);
         event_num = subseq ? strtol(subseq, NULL, 10) : 0;
-        rval = true;
+        rval      = true;
     }
 
     return rval;
@@ -1385,7 +1363,7 @@ bool gtid_pos_t::is_equal(const gtid_pos_t& rhs)
 uint64_t Table::map_table(uint8_t* ptr, uint8_t hdr_len)
 {
     uint64_t table_id = 0;
-    size_t id_size = hdr_len == 6 ? 4 : 6;
+    size_t id_size    = hdr_len == 6 ? 4 : 6;
     memcpy(&table_id, ptr, id_size);
     ptr += id_size;
 
@@ -1415,7 +1393,7 @@ uint64_t Table::map_table(uint8_t* ptr, uint8_t hdr_len)
     ptr += column_count;
 
     size_t metadata_size = 0;
-    uint8_t* metadata = (uint8_t*) mxq::lestr_consume(&ptr, &metadata_size);
+    uint8_t* metadata    = (uint8_t*) mxq::lestr_consume(&ptr, &metadata_size);
     column_metadata.assign(metadata, metadata + metadata_size);
 
     size_t nullmap_size = (column_count + 7) / 8;
@@ -1437,17 +1415,17 @@ STable Table::deserialize(const char* path)
 
         if (const char* tablestart = strchr(dbstart, '.'))
         {
-            snprintf(db, sizeof(db), "%.*s", (int)(tablestart - dbstart), dbstart);
+            snprintf(db, sizeof(db), "%.*s", (int) (tablestart - dbstart), dbstart);
             tablestart++;
 
             if (const char* versionstart = strchr(tablestart, '.'))
             {
-                snprintf(table, sizeof(table), "%.*s", (int)(versionstart - tablestart), tablestart);
+                snprintf(table, sizeof(table), "%.*s", (int) (versionstart - tablestart), tablestart);
                 versionstart++;
 
                 const char* suffix = strchr(versionstart, '.');
-                char* versionend = NULL;
-                version = strtol(versionstart, &versionend, 10);
+                char* versionend   = NULL;
+                version            = strtol(versionstart, &versionend, 10);
 
                 if (versionend == suffix)
                 {
@@ -1478,89 +1456,49 @@ json_t* Table::to_json() const
     json_object_set_new(schema, "gtid", json_string(gtid.to_string().c_str()));
 
     json_t* array = json_array();
-    json_array_append_new(array,
-                          json_pack_ex(&err,
-                                       0,
-                                       "{s:s, s:s}",
-                                       "name",
-                                       avro_domain,
-                                       "type",
-                                       "int"));
-    json_array_append_new(array,
-                          json_pack_ex(&err,
-                                       0,
-                                       "{s:s, s:s}",
-                                       "name",
-                                       avro_server_id,
-                                       "type",
-                                       "int"));
-    json_array_append_new(array,
-                          json_pack_ex(&err,
-                                       0,
-                                       "{s:s, s:s}",
-                                       "name",
-                                       avro_sequence,
-                                       "type",
-                                       "int"));
-    json_array_append_new(array,
-                          json_pack_ex(&err,
-                                       0,
-                                       "{s:s, s:s}",
-                                       "name",
-                                       avro_event_number,
-                                       "type",
-                                       "int"));
-    json_array_append_new(array,
-                          json_pack_ex(&err,
-                                       0,
-                                       "{s:s, s:s}",
-                                       "name",
-                                       avro_timestamp,
-                                       "type",
-                                       "int"));
+    json_array_append_new(array, json_pack_ex(&err, 0, "{s:s, s:s}", "name", avro_domain, "type", "int"));
+    json_array_append_new(array, json_pack_ex(&err, 0, "{s:s, s:s}", "name", avro_server_id, "type", "int"));
+    json_array_append_new(array, json_pack_ex(&err, 0, "{s:s, s:s}", "name", avro_sequence, "type", "int"));
+    json_array_append_new(
+        array, json_pack_ex(&err, 0, "{s:s, s:s}", "name", avro_event_number, "type", "int"));
+    json_array_append_new(array, json_pack_ex(&err, 0, "{s:s, s:s}", "name", avro_timestamp, "type", "int"));
 
     /** Enums and other complex types are defined with complete JSON objects
      * instead of string values */
     json_t* event_types = json_pack_ex(&err,
-                                       0,
-                                       "{s:s, s:s, s:[s,s,s,s]}",
-                                       "type",
-                                       "enum",
-                                       "name",
-                                       "EVENT_TYPES",
-                                       "symbols",
-                                       "insert",
-                                       "update_before",
-                                       "update_after",
-                                       "delete");
+        0,
+        "{s:s, s:s, s:[s,s,s,s]}",
+        "type",
+        "enum",
+        "name",
+        "EVENT_TYPES",
+        "symbols",
+        "insert",
+        "update_before",
+        "update_after",
+        "delete");
 
     // Ownership of `event_types` is stolen when using the `o` format
-    json_array_append_new(array,
-                          json_pack_ex(&err,
-                                       0,
-                                       "{s:s, s:o}",
-                                       "name",
-                                       avro_event_type,
-                                       "type",
-                                       event_types));
+    json_array_append_new(
+        array, json_pack_ex(&err, 0, "{s:s, s:o}", "name", avro_event_type, "type", event_types));
 
     for (uint64_t i = 0; i < columns.size(); i++)
     {
         json_array_append_new(array,
-                              json_pack_ex(&err,
-                                           0,
-                                           "{s:s, s:[s, s], s:s, s:i, s:b}",
-                                           "name",
-                                           columns[i].name.c_str(),
-                                           "type",
-                                           "null",
-                                           column_type_to_avro_type(columns[i].type),
-                                           "real_type",
-                                           columns[i].type.c_str(),
-                                           "length",
-                                           columns[i].length,
-                                           "unsigned",
-                                           columns[i].is_unsigned));
+            json_pack_ex(&err,
+                0,
+                "{s:s, s:[s, s], s:s, s:i, s:b}",
+                "name",
+                columns[i].name.c_str(),
+                "type",
+                "null",
+                column_type_to_avro_type(columns[i].type),
+                "real_type",
+                columns[i].type.c_str(),
+                "length",
+                columns[i].length,
+                "unsigned",
+                columns[i].is_unsigned));
     }
 
     json_object_set_new(schema, "fields", array);
@@ -1570,8 +1508,8 @@ json_t* Table::to_json() const
 void Table::serialize(const char* path) const
 {
     char filepath[PATH_MAX];
-    snprintf(filepath, sizeof(filepath), "%s/%s.%s.%06d.avsc", path, database.c_str(),
-             table.c_str(), version);
+    snprintf(
+        filepath, sizeof(filepath), "%s/%s.%s.%06d.avsc", path, database.c_str(), table.c_str(), version);
 
     if (access(filepath, F_OK) != 0)
     {
@@ -1588,11 +1526,7 @@ void Table::serialize(const char* path) const
     }
 }
 
-Rpl::Rpl(SERVICE* service,
-         SRowEventHandler handler,
-         pcre2_code* match,
-         pcre2_code* exclude,
-         gtid_pos_t gtid)
+Rpl::Rpl(SERVICE* service, SRowEventHandler handler, pcre2_code* match, pcre2_code* exclude, gtid_pos_t gtid)
     : m_handler(std::move(handler))
     , m_service(service)
     , m_binlog_checksum(0)
@@ -1602,8 +1536,7 @@ Rpl::Rpl(SERVICE* service,
     , m_exclude(exclude)
     , m_md_match(m_match ? pcre2_match_data_create_from_pattern(m_match, NULL) : nullptr)
     , m_md_exclude(m_exclude ? pcre2_match_data_create_from_pattern(m_exclude, NULL) : nullptr)
-{
-}
+{}
 
 void Rpl::flush()
 {
@@ -1614,21 +1547,14 @@ bool Rpl::table_matches(const std::string& ident)
 {
     bool rval = false;
 
-    if (!m_match || pcre2_match(m_match,
-                                (PCRE2_SPTR)ident.c_str(),
-                                PCRE2_ZERO_TERMINATED,
-                                0,
-                                0,
-                                m_md_match,
-                                NULL) > 0)
+    if (!m_match
+        || pcre2_match(m_match, (PCRE2_SPTR) ident.c_str(), PCRE2_ZERO_TERMINATED, 0, 0, m_md_match, NULL)
+               > 0)
     {
-        if (!m_exclude || pcre2_match(m_exclude,
-                                      (PCRE2_SPTR)ident.c_str(),
-                                      PCRE2_ZERO_TERMINATED,
-                                      0,
-                                      0,
-                                      m_md_exclude,
-                                      NULL) == PCRE2_ERROR_NOMATCH)
+        if (!m_exclude
+            || pcre2_match(
+                   m_exclude, (PCRE2_SPTR) ident.c_str(), PCRE2_ZERO_TERMINATED, 0, 0, m_md_exclude, NULL)
+                   == PCRE2_ERROR_NOMATCH)
         {
             rval = true;
         }
@@ -1648,16 +1574,14 @@ bool Rpl::table_matches(const std::string& ident)
  * this row event. Currently this should be a bitfield which has all bits set.
  * @return Pointer to the first byte after the current row event
  */
-uint8_t* Rpl::process_row_event_data(const Table& create,
-                                     uint8_t* ptr,
-                                     uint8_t* columns_present,
-                                     uint8_t* end)
+uint8_t* Rpl::process_row_event_data(
+    const Table& create, uint8_t* ptr, uint8_t* columns_present, uint8_t* end)
 {
-    SRowEventHandler& conv = m_handler;
-    int npresent = 0;
-    long ncolumns = create.columns.size();
+    SRowEventHandler& conv  = m_handler;
+    int npresent            = 0;
+    long ncolumns           = create.columns.size();
     const uint8_t* metadata = &create.column_metadata[0];
-    size_t metadata_offset = 0;
+    size_t metadata_offset  = 0;
 
     /** BIT type values use the extra bits in the row event header */
     int extra_bits = (((ncolumns + 7) / 8) * 8) - ncolumns;
@@ -1710,8 +1634,8 @@ uint8_t* Rpl::process_row_event_data(const Table& create,
                      * one or two bytes for string length.
                      */
 
-                    uint16_t meta = metadata[metadata_offset + 1] + (metadata[metadata_offset] << 8);
-                    int bytes = 0;
+                    uint16_t meta         = metadata[metadata_offset + 1] + (metadata[metadata_offset] << 8);
+                    int bytes             = 0;
                     uint16_t extra_length = (((meta >> 4) & 0x300) ^ 0x300);
                     uint16_t field_length = (meta & 0xff) + extra_length;
 
@@ -1736,9 +1660,9 @@ uint8_t* Rpl::process_row_event_data(const Table& create,
             }
             else if (column_is_bit(create.column_types[i]))
             {
-                uint8_t len = metadata[metadata_offset + 1];
+                uint8_t len     = metadata[metadata_offset + 1];
                 uint8_t bit_len = metadata[metadata_offset] > 0 ? 1 : 0;
-                size_t bytes = len + bit_len;
+                size_t bytes    = len + bit_len;
 
                 // TODO: extract the bytes
                 if (!warn_bit)
@@ -1785,7 +1709,7 @@ uint8_t* Rpl::process_row_event_data(const Table& create,
             else if (column_is_blob(create.column_types[i]))
             {
                 uint8_t bytes = metadata[metadata_offset];
-                uint64_t len = 0;
+                uint64_t len  = 0;
                 memcpy(&len, ptr, bytes);
                 ptr += bytes;
                 sprintf(trace[i], "[%ld] BLOB: field: %d bytes, data: %lu bytes", i, bytes, len);
@@ -1804,10 +1728,12 @@ uint8_t* Rpl::process_row_event_data(const Table& create,
             else if (column_is_temporal(create.column_types[i]))
             {
                 char buf[120];
-                ptr += unpack_temporal_value(create.column_types[i], ptr,
-                                             &metadata[metadata_offset],
-                                             create.columns[i].length,
-                                             buf, sizeof(buf));
+                ptr += unpack_temporal_value(create.column_types[i],
+                    ptr,
+                    &metadata[metadata_offset],
+                    create.columns[i].length,
+                    buf,
+                    sizeof(buf));
                 conv->column_string(create, i, buf);
                 sprintf(trace[i], "[%ld] %s: %s", i, column_type_to_string(create.column_types[i]), buf);
                 check_overflow(ptr <= end);
@@ -1880,15 +1806,16 @@ bool Rpl::handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr)
         }
         else
         {
-            MXS_ERROR("Failed to fetch CREATE for '%s': %s", table_ident,
-                      res.first.empty() ? res.second->error().c_str() : res.first.c_str());
+            MXS_ERROR("Failed to fetch CREATE for '%s': %s",
+                table_ident,
+                res.first.empty() ? res.second->error().c_str() : res.first.c_str());
         }
     }
 
     if (create != m_created_tables.end())
     {
         mxb_assert(create->second->columns.size() > 0);
-        auto id = create->second->map_table(ptr, ev_len);
+        auto id           = create->second->map_table(ptr, ev_len);
         m_active_maps[id] = create->second;
         MXS_DEBUG("Table %s mapped to %lu", create->second->id().c_str(), id);
 
@@ -1903,7 +1830,7 @@ bool Rpl::handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr)
         MXS_WARNING("Table map event for table '%s' read before the DDL statement "
                     "for that table  was read. Data will not be processed for this "
                     "table until a DDL statement for it is read.",
-                    table_ident);
+            table_ident);
     }
 
     return rval;
@@ -1922,10 +1849,10 @@ bool Rpl::handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr)
  */
 bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
 {
-    bool rval = false;
-    uint8_t* end = ptr + hdr->event_size - BINLOG_EVENT_HDR_LEN;
+    bool rval             = false;
+    uint8_t* end          = ptr + hdr->event_size - BINLOG_EVENT_HDR_LEN;
     uint8_t table_id_size = m_event_type_hdr_lens[hdr->event_type] == 6 ? 4 : 6;
-    uint64_t table_id = 0;
+    uint64_t table_id     = 0;
 
     /** The first value is the ID where the table was mapped. This should be
      * the same as the ID in the table map even which was processed before this
@@ -1971,8 +1898,7 @@ bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
      * used to calculate a "delta" of sorts if necessary. Currently we store
      * both the before and the after images. */
     uint8_t col_update[coldata_size];
-    if (hdr->event_type == UPDATE_ROWS_EVENTv1
-        || hdr->event_type == UPDATE_ROWS_EVENTv2)
+    if (hdr->event_type == UPDATE_ROWS_EVENTv1 || hdr->event_type == UPDATE_ROWS_EVENTv2)
     {
         memcpy(&col_update, ptr, coldata_size);
         ptr += coldata_size;
@@ -1997,7 +1923,8 @@ bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
         {
             MXS_ERROR("Row event and table map event have different column "
                       "counts for table %s, only full row image is currently "
-                      "supported.", create.id().c_str());
+                      "supported.",
+                create.id().c_str());
         }
         else if (m_handler->prepare_table(create))
         {
@@ -2037,13 +1964,15 @@ bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
         else
         {
             MXS_ERROR("Avro file handle was not found for table %s. See earlier"
-                      " errors for more details.", create.id().c_str());
+                      " errors for more details.",
+                create.id().c_str());
         }
     }
     else
     {
         MXS_INFO("Row event for unknown table mapped to ID %lu. Data will not "
-                 "be processed.", table_id);
+                 "be processed.",
+            table_id);
     }
 
     return rval;
@@ -2058,9 +1987,9 @@ bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
  */
 void Rpl::save_and_replace_table_create(const STable& created)
 {
-    std::string table_ident = created->id();
-    created->version = ++m_versions[table_ident];
-    created->is_open = false;
+    std::string table_ident       = created->id();
+    created->version              = ++m_versions[table_ident];
+    created->is_open              = false;
     m_created_tables[table_ident] = created;
     m_handler->create_table(*created);
     mxb_assert(created->columns.size() > 0);
@@ -2084,13 +2013,13 @@ void Rpl::rename_table_create(const STable& created, const std::string& old_id)
  */
 void Rpl::handle_query_event(REP_HEADER* hdr, uint8_t* ptr)
 {
-    constexpr int DBNM_OFF = 8;                 // Database name offset
-    constexpr int VBLK_OFF = 4 + 4 + 1 + 2;     // Varblock offset
-    constexpr int PHDR_OFF = 4 + 4 + 1 + 2 + 2; // Post-header offset
+    constexpr int DBNM_OFF = 8;                  // Database name offset
+    constexpr int VBLK_OFF = 4 + 4 + 1 + 2;      // Varblock offset
+    constexpr int PHDR_OFF = 4 + 4 + 1 + 2 + 2;  // Post-header offset
 
-    int dblen = ptr[DBNM_OFF];
+    int dblen   = ptr[DBNM_OFF];
     int vblklen = gw_mysql_get_byte2(ptr + VBLK_OFF);
-    int len = hdr->event_size - BINLOG_EVENT_HDR_LEN - (PHDR_OFF + vblklen + 1 + dblen);
+    int len     = hdr->event_size - BINLOG_EVENT_HDR_LEN - (PHDR_OFF + vblklen + 1 + dblen);
     std::string sql((char*) ptr + PHDR_OFF + vblklen + 1 + dblen, len);
     std::string db((char*) ptr + PHDR_OFF + vblklen, dblen);
 
@@ -2130,12 +2059,12 @@ void Rpl::handle_event(REP_HEADER hdr, uint8_t* ptr)
     if (hdr.event_type == FORMAT_DESCRIPTION_EVENT)
     {
         const int BLRM_FDE_EVENT_TYPES_OFFSET = 2 + 50 + 4 + 1;
-        const int FDE_EXTRA_BYTES = 5;
-        int event_header_length = ptr[BLRM_FDE_EVENT_TYPES_OFFSET - 1];
+        const int FDE_EXTRA_BYTES             = 5;
+        int event_header_length               = ptr[BLRM_FDE_EVENT_TYPES_OFFSET - 1];
         int n_events = hdr.event_size - event_header_length - BLRM_FDE_EVENT_TYPES_OFFSET - FDE_EXTRA_BYTES;
         uint8_t* checksum = ptr + hdr.event_size - event_header_length - FDE_EXTRA_BYTES;
         m_event_type_hdr_lens.assign(ptr, ptr + n_events);
-        m_event_types = n_events;
+        m_event_types     = n_events;
         m_binlog_checksum = checksum[0];
     }
     else if (hdr.event_type == TABLE_MAP_EVENT)
@@ -2181,7 +2110,7 @@ static std::string avro_sanitizer(const char* s, int l)
 void Rpl::parse_sql(const std::string& sql, const std::string& db)
 {
     MXS_INFO("%s", sql.c_str());
-    parser.db = db;
+    parser.db     = db;
     parser.tokens = tok::Tokenizer::tokenize(sql.c_str(), avro_sanitizer);
 
     try
@@ -2237,8 +2166,8 @@ tok::Tokenizer::Token Rpl::assume(tok::Type t)
 {
     if (next() != t)
     {
-        throw ParsingError("Expected " + tok::Tokenizer::Token::to_string(t)
-                           + ", got " + parser.tokens.front().to_string());
+        throw ParsingError(
+            "Expected " + tok::Tokenizer::Token::to_string(t) + ", got " + parser.tokens.front().to_string());
     }
 
     return chomp();
@@ -2247,7 +2176,7 @@ tok::Tokenizer::Token Rpl::assume(tok::Type t)
 bool Rpl::expect(const std::vector<tok::Type>& types)
 {
     bool rval = true;
-    auto it = parser.tokens.begin();
+    auto it   = parser.tokens.begin();
 
     for (auto t : types)
     {
@@ -2316,8 +2245,8 @@ void Rpl::table_identifier()
     }
     else
     {
-        throw ParsingError("Syntax error, have " + parser.tokens.front().to_string()
-                           + " expected identifier");
+        throw ParsingError(
+            "Syntax error, have " + parser.tokens.front().to_string() + " expected identifier");
     }
 }
 
@@ -2368,10 +2297,10 @@ void Rpl::create_table()
             chomp();
         }
 
-        auto new_db = parser.db;
+        auto new_db    = parser.db;
         auto new_table = parser.table;
         table_identifier();
-        auto old_db = parser.db;
+        auto old_db    = parser.db;
         auto old_table = parser.table;
 
         do_create_table_like(old_db, old_table, new_db, new_table);
@@ -2401,7 +2330,7 @@ void Rpl::alter_table()
         throw ParsingError("Table not found: " + parser.db + '.' + parser.table);
     }
 
-    auto create = it->second;
+    auto create  = it->second;
     bool updated = false;
 
     while (next() != tok::EXHAUSTED)
@@ -2449,19 +2378,19 @@ void Rpl::alter_table()
             break;
 
         case tok::RENAME:
-            {
-                auto old_db = parser.db;
-                auto old_table = parser.table;
-                discard({tok::TO});
+        {
+            auto old_db    = parser.db;
+            auto old_table = parser.table;
+            discard({tok::TO});
 
-                table_identifier();
-                auto new_db = parser.db;
-                auto new_table = parser.table;
-                discard({tok::COMMA});
+            table_identifier();
+            auto new_db    = parser.db;
+            auto new_table = parser.table;
+            discard({tok::COMMA});
 
-                do_table_rename(old_db, old_table, old_db, new_table);
-            }
-            break;
+            do_table_rename(old_db, old_table, old_db, new_table);
+        }
+        break;
 
         default:
             break;
@@ -2523,13 +2452,13 @@ void Rpl::rename_table()
     do
     {
         table_identifier();
-        auto old_db = parser.db;
+        auto old_db    = parser.db;
         auto old_table = parser.table;
 
         assume(tok::TO);
 
         table_identifier();
-        auto new_db = parser.db;
+        auto new_db    = parser.db;
         auto new_table = parser.table;
 
         do_table_rename(old_db, old_table, new_db, new_table);
@@ -2553,8 +2482,10 @@ void Rpl::do_create_table()
     save_and_replace_table_create(tbl);
 }
 
-void Rpl::do_create_table_like(const std::string& old_db, const std::string& old_table,
-                               const std::string& new_db, const std::string& new_table)
+void Rpl::do_create_table_like(const std::string& old_db,
+    const std::string& old_table,
+    const std::string& new_db,
+    const std::string& new_table)
 {
     auto it = m_created_tables.find(old_db + '.' + old_table);
 
@@ -2570,17 +2501,19 @@ void Rpl::do_create_table_like(const std::string& old_db, const std::string& old
     }
 }
 
-void Rpl::do_table_rename(const std::string& old_db, const std::string& old_table,
-                          const std::string& new_db, const std::string& new_table)
+void Rpl::do_table_rename(const std::string& old_db,
+    const std::string& old_table,
+    const std::string& new_db,
+    const std::string& new_table)
 {
     auto from = old_db + '.' + old_table;
-    auto to = new_db + '.' + new_table;
-    auto it = m_created_tables.find(from);
+    auto to   = new_db + '.' + new_table;
+    auto it   = m_created_tables.find(from);
 
     if (it != m_created_tables.end())
     {
         it->second->database = new_db;
-        it->second->table = new_table;
+        it->second->table    = new_table;
         rename_table_create(it->second, from);
     }
 }
@@ -2595,14 +2528,11 @@ void Rpl::do_add_column(const STable& create, Column c)
     }
     else if (!c.after.empty())
     {
-        auto it = std::find_if(cols.begin(), cols.end(), [&](const auto& a) {
-                                   return a.name == c.after;
-                               });
+        auto it = std::find_if(cols.begin(), cols.end(), [&](const auto& a) { return a.name == c.after; });
 
         if (it == cols.end())
         {
-            throw ParsingError("Could not find field '" + c.after
-                               + "' for ALTER TABLE ADD COLUMN ... AFTER");
+            throw ParsingError("Could not find field '" + c.after + "' for ALTER TABLE ADD COLUMN ... AFTER");
         }
 
         cols.insert(++it, c);
@@ -2617,13 +2547,10 @@ void Rpl::do_drop_column(const STable& create, const std::string& name)
 {
     auto& cols = create->columns;
 
-    auto it = std::find_if(cols.begin(), cols.end(), [&name](const auto& f) {
-                               return f.name == name;
-                           });
+    auto it = std::find_if(cols.begin(), cols.end(), [&name](const auto& f) { return f.name == name; });
     if (it == cols.end())
     {
-        throw ParsingError("Could not find field '" + name
-                           + "' for table " + parser.db + '.' + parser.table);
+        throw ParsingError("Could not find field '" + name + "' for table " + parser.db + '.' + parser.table);
     }
 
     cols.erase(it);
@@ -2641,9 +2568,7 @@ void Rpl::do_change_column(const STable& create, const std::string& old_name)
     else
     {
         auto& cols = create->columns;
-        auto it = std::find_if(cols.begin(), cols.end(), [&](const auto& a) {
-                                   return a.name == old_name;
-                               });
+        auto it = std::find_if(cols.begin(), cols.end(), [&](const auto& a) { return a.name == old_name; });
 
         if (it != cols.end())
         {
@@ -2674,7 +2599,7 @@ void Rpl::load_metadata(const std::string& datadir)
             {
                 if (m_versions[create->id()] < create->version)
                 {
-                    m_versions[create->id()] = create->version;
+                    m_versions[create->id()]       = create->version;
                     m_created_tables[create->id()] = create;
                 }
             }

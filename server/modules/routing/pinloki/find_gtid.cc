@@ -42,13 +42,11 @@ inline bool operator<(const GtidPosition& lhs, const GtidPosition& rhs)
     return lhs_num < rhs_num || (lhs_num == rhs_num && lhs.file_pos < rhs.file_pos);
 }
 
-bool search_file(const std::string& file_name,
-                 const maxsql::Gtid& gtid,
-                 GtidPosition* pos,
-                 bool search_in_file);
+bool search_file(
+    const std::string& file_name, const maxsql::Gtid& gtid, GtidPosition* pos, bool search_in_file);
 
-std::vector<GtidPosition> find_gtid_position(const std::vector<maxsql::Gtid>& gtids,
-                                             const InventoryReader& inv)
+std::vector<GtidPosition> find_gtid_position(
+    const std::vector<maxsql::Gtid>& gtids, const InventoryReader& inv)
 {
     mxb::WatchdogNotifier::Workaround workaround(mxs::RoutingWorker::get_current());
 
@@ -65,7 +63,7 @@ std::vector<GtidPosition> find_gtid_position(const std::vector<maxsql::Gtid>& gt
     for (const auto& gtid : gtids)
     {
         GtidPosition pos {gtid};
-        auto last_one = rend(file_names) - 1;   // which is the first, oldest file
+        auto last_one = rend(file_names) - 1;  // which is the first, oldest file
         for (auto ite = rbegin(file_names); ite != rend(file_names); ++ite)
         {
             if (search_file(*ite, gtid, &pos, ite == last_one))
@@ -115,8 +113,7 @@ long search_gtid_in_file(std::ifstream& file, long file_pos, const maxsql::Gtid&
             }
 
             maxsql::GtidEvent event = rpl.gtid_event();
-            if (event.gtid.domain_id() == gtid.domain_id()
-                && event.gtid.sequence_nr() == gtid.sequence_nr())
+            if (event.gtid.domain_id() == gtid.domain_id() && event.gtid.sequence_nr() == gtid.sequence_nr())
             {
                 found_pos = this_pos;
             }
@@ -126,10 +123,8 @@ long search_gtid_in_file(std::ifstream& file, long file_pos, const maxsql::Gtid&
     return found_pos;
 }
 
-bool search_file(const std::string& file_name,
-                 const maxsql::Gtid& gtid,
-                 GtidPosition* ret_pos,
-                 bool first_file)
+bool search_file(
+    const std::string& file_name, const maxsql::Gtid& gtid, GtidPosition* ret_pos, bool first_file)
 {
     std::ifstream file {file_name, std::ios_base::in | std::ios_base::binary};
 
@@ -139,9 +134,15 @@ bool search_file(const std::string& file_name,
         return false;
     }
 
-    enum GtidListResult {NotFound, GtidInThisFile, GtidInPriorFile};
+    enum GtidListResult
+    {
+        NotFound,
+        GtidInThisFile,
+        GtidInPriorFile
+    };
+
     GtidListResult result = NotFound;
-    long file_pos = PINLOKI_MAGIC.size();
+    long file_pos         = PINLOKI_MAGIC.size();
 
     while (result == NotFound)
     {
@@ -167,14 +168,14 @@ bool search_file(const std::string& file_name,
             maxsql::GtidListEvent event = rpl.gtid_list();
 
             uint32_t highest_seq = 0;
-            bool domain_in_list = false;
+            bool domain_in_list  = false;
 
             for (const auto& tid : event.gtid_list.gtids())
             {
                 if (tid.domain_id() == gtid.domain_id())
                 {
                     domain_in_list = true;
-                    highest_seq = std::max(highest_seq, tid.sequence_nr());
+                    highest_seq    = std::max(highest_seq, tid.sequence_nr());
                 }
             }
 
@@ -207,9 +208,9 @@ bool search_file(const std::string& file_name,
         file_pos = search_gtid_in_file(file, file_pos, gtid);
         if (file_pos)
         {
-            success = true;
+            success            = true;
             ret_pos->file_name = file_name;
-            ret_pos->file_pos = file_pos;
+            ret_pos->file_pos  = file_pos;
         }
     }
     else if (result == GtidInPriorFile)
@@ -217,11 +218,11 @@ bool search_file(const std::string& file_name,
         // The gtid is in a prior log file, and the caller already has it.
         // file_pos points one past the gtid list, but to be sure the whole file
         // is always sent, let the reader handle positioning.
-        success = true;
+        success            = true;
         ret_pos->file_name = file_name;
-        ret_pos->file_pos = PINLOKI_MAGIC.size();
+        ret_pos->file_pos  = PINLOKI_MAGIC.size();
     }
 
     return success;
 }
-}
+}  // namespace pinloki

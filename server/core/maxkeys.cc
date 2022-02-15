@@ -27,12 +27,8 @@
 using std::string;
 using ByteVec = std::vector<uint8_t>;
 
-struct option options[] =
-{
-    {"help",  no_argument,       nullptr, 'h'},
-    {"user",  required_argument, nullptr, 'u'},
-    {nullptr, 0,                 nullptr, 0  }
-};
+struct option options[] = {
+    {"help", no_argument, nullptr, 'h'}, {"user", required_argument, nullptr, 'u'}, {nullptr, 0, nullptr, 0}};
 
 const string default_user = "maxscale";
 
@@ -64,7 +60,7 @@ int main(int argc, char** argv)
 {
     mxb::Log log(MXB_LOG_TARGET_STDOUT);
     const string default_directory = mxs::datadir();
-    string username = default_user;
+    string username                = default_user;
 
     int c;
     while ((c = getopt_long(argc, argv, "hu:", options, nullptr)) != -1)
@@ -93,22 +89,24 @@ int main(int argc, char** argv)
     filepath.append("/").append(SECRETS_FILENAME);
 
     // Check that the file doesn't exist.
-    errno = 0;
+    errno          = 0;
     auto filepathc = filepath.c_str();
     if (access(filepathc, F_OK) == 0)
     {
         printf("Secrets file '%s' already exists. Delete it before generating a new encryption key.\n",
-               filepathc);
+            filepathc);
         return EXIT_FAILURE;
     }
     else if (errno != ENOENT)
     {
         printf("stat() for secrets file '%s' failed unexpectedly. Error %i, %s.\n",
-               filepathc, errno, mxb_strerror(errno));
+            filepathc,
+            errno,
+            mxb_strerror(errno));
         return EXIT_FAILURE;
     }
 
-    int rval = EXIT_FAILURE;
+    int rval     = EXIT_FAILURE;
     auto new_key = generate_encryption_key();
     if (!new_key.empty() && secrets_write_keys(new_key, filepath, username))
     {

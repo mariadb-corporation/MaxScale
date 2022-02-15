@@ -28,7 +28,7 @@
 #include "filter.hh"
 #include "session.hh"
 
-typedef HttpResponse (* ResourceCallback)(const HttpRequest& request);
+typedef HttpResponse (*ResourceCallback)(const HttpRequest& request);
 
 class Resource
 {
@@ -39,12 +39,12 @@ public:
         REQUIRE_BODY = (1 << 0)
     };
 
-    template<class ... Args>
+    template<class... Args>
     Resource(ResourceCallback cb, Args... args)
         : m_cb(cb)
         , m_is_glob(false)
         , m_constraints(NONE)
-        , m_path({args ...})
+        , m_path({args...})
     {
         m_is_glob = std::find(m_path.begin(), m_path.end(), "?") != m_path.end();
     }
@@ -82,13 +82,12 @@ public:
     bool requires_body() const;
 
 private:
-
     bool matching_variable_path(const std::string& path, const std::string& target) const;
 
-    ResourceCallback         m_cb;          /**< Resource handler callback */
-    bool                     m_is_glob;     /**< Does this path glob? */
-    uint32_t                 m_constraints; /**< Resource constraints */
-    std::vector<std::string> m_path;        /**< Path components */
+    ResourceCallback m_cb;           /**< Resource handler callback */
+    bool m_is_glob;                  /**< Does this path glob? */
+    uint32_t m_constraints;          /**< Resource constraints */
+    std::vector<std::string> m_path; /**< Path components */
 };
 
 /**

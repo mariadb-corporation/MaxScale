@@ -22,7 +22,7 @@
 class AuroraMonitor : public maxscale::MonitorWorkerSimple
 {
 public:
-    AuroraMonitor(const AuroraMonitor&) = delete;
+    AuroraMonitor(const AuroraMonitor&)            = delete;
     AuroraMonitor& operator=(const AuroraMonitor&) = delete;
 
     ~AuroraMonitor();

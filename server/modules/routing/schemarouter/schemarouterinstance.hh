@@ -37,9 +37,9 @@ public:
     ~SchemaRouter();
     static SchemaRouter* create(SERVICE* pService, mxs::ConfigParameters* params);
     SchemaRouterSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
-    json_t*              diagnostics() const;
-    uint64_t             getCapabilities();
-    bool                 configure(mxs::ConfigParameters* param);
+    json_t* diagnostics() const;
+    uint64_t getCapabilities();
+    bool configure(mxs::ConfigParameters* param);
 
 private:
     friend class SchemaRouterSession;
@@ -48,10 +48,10 @@ private:
     SchemaRouter(SERVICE* service, SConfig config);
 
     /** Member variables */
-    SConfig      m_config;          /*< expanded config info from SERVICE */
-    ShardManager m_shard_manager;   /*< Shard maps hashed by user name */
-    SERVICE*     m_service;         /*< Pointer to service */
-    std::mutex   m_lock;            /*< Lock for the instance data */
-    Stats        m_stats;           /*< Statistics for this router */
+    SConfig m_config;             /*< expanded config info from SERVICE */
+    ShardManager m_shard_manager; /*< Shard maps hashed by user name */
+    SERVICE* m_service;           /*< Pointer to service */
+    std::mutex m_lock;            /*< Lock for the instance data */
+    Stats m_stats;                /*< Statistics for this router */
 };
-}
+}  // namespace schemarouter

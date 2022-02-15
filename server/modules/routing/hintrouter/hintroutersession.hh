@@ -28,14 +28,12 @@ class HintRouter;
 class HintRouterSession : public maxscale::RouterSession
 {
 public:
-    using BackendMap = std::unordered_map<string, mxs::Endpoint*>;      // All backends, indexed by name
+    using BackendMap   = std::unordered_map<string, mxs::Endpoint*>;  // All backends, indexed by name
     using BackendArray = std::vector<mxs::Endpoint*>;
-    using MapElement = BackendMap::value_type;
-    using size_type = BackendArray::size_type;
+    using MapElement   = BackendMap::value_type;
+    using size_type    = BackendArray::size_type;
 
-    HintRouterSession(MXS_SESSION* pSession,
-                      HintRouter* pRouter,
-                      const BackendMap& backends);
+    HintRouterSession(MXS_SESSION* pSession, HintRouter* pRouter, const BackendMap& backends);
 
     ~HintRouterSession();
 
@@ -48,17 +46,17 @@ public:
     bool handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& pReply);
 
 private:
-    HintRouterSession(const HintRouterSession&);            // denied
-    HintRouterSession& operator=(const HintRouterSession&); // denied
+    HintRouterSession(const HintRouterSession&);             // denied
+    HintRouterSession& operator=(const HintRouterSession&);  // denied
 private:
     bool route_by_hint(GWBUF* pPacket, HINT* current_hint, bool ignore_errors);
     bool route_to_slave(GWBUF* pPacket, bool print_errors);
     void update_connections();
 
-    HintRouter*    m_router;
-    BackendMap     m_backends;          // all connections
-    mxs::Endpoint* m_master;            // connection to master
-    BackendArray   m_slaves;            // connections to slaves
-    size_type      m_n_routed_to_slave; // packets routed to a single slave, used for rr
-    size_type      m_surplus_replies;   // how many replies should be ignored
+    HintRouter* m_router;
+    BackendMap m_backends;          // all connections
+    mxs::Endpoint* m_master;        // connection to master
+    BackendArray m_slaves;          // connections to slaves
+    size_type m_n_routed_to_slave;  // packets routed to a single slave, used for rr
+    size_type m_surplus_replies;    // how many replies should be ignored
 };

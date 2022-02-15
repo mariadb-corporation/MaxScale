@@ -42,8 +42,7 @@ class Exception : public std::runtime_error
  *
  * @throws @c Exception if path does not refer to an element.
  */
-xmlNode& get_descendant(xmlNode& ancestor,
-                        const char* zPath);
+xmlNode& get_descendant(xmlNode& ancestor, const char* zPath);
 
 /**
  * Find descendant node corresponding to particular xpath.
@@ -100,10 +99,7 @@ T get_content_as(xmlNode& node)
 {
     struct Deleter
     {
-        void operator()(xmlChar* pContent)
-        {
-            MXS_FREE(pContent);
-        }
+        void operator()(xmlChar* pContent) { MXS_FREE(pContent); }
     };
 
     std::unique_ptr<xmlChar, Deleter> sContent(xmlNodeGetContent(&node));
@@ -191,5 +187,5 @@ bool equal(const xmlNode& lhs, const xmlNode& rhs, std::ostream* pErr = nullptr)
  */
 bool equal(const xmlDoc& lhs, const xmlDoc& rhs, std::ostream* pErr = nullptr);
 
-}
-}
+}  // namespace xml
+}  // namespace maxbase

@@ -120,5 +120,5 @@ bool add_limited(T* ptr, T value, T limit)
 
     return true;
 }
-}
-}
+}  // namespace atomic
+}  // namespace maxbase

@@ -29,8 +29,8 @@ namespace mock
  * An instance of Client represents a client. It can be used as the
  * upstream filter of another filter.
  */
-class Client : public MXS_FILTER_SESSION
-             , public Dcb::Handler
+class Client : public MXS_FILTER_SESSION,
+               public Dcb::Handler
 {
     Client(const Client&);
     Client& operator=(const Client&);
@@ -51,8 +51,8 @@ public:
          *
          * @return 1 if processing should continue, 0 otherwise.
          */
-        virtual int32_t backend_reply(GWBUF* pResponse, const mxs::ReplyRoute& down,
-                                      const mxs::Reply& reply) = 0;
+        virtual int32_t backend_reply(GWBUF* pResponse, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+            = 0;
 
         /**
          * Called when a response is sent directly by a filter.
@@ -76,9 +76,7 @@ public:
      * @param zHost     The host of the client.
      * @param pHandler  Optional response handler.
      */
-    Client(const char* zUser,
-           const char* zHost,
-           Handler* pHandler = NULL);
+    Client(const char* zUser, const char* zHost, Handler* pHandler = NULL);
     ~Client();
 
     /**
@@ -119,8 +117,8 @@ public:
      */
     mxs::Upstream* as_upstream()
     {
-        m_upstream.instance = &m_instance;
-        m_upstream.session = this;
+        m_upstream.instance    = &m_instance;
+        m_upstream.session     = this;
         m_upstream.clientReply = &Client::clientReply;
         return &m_upstream;
     }
@@ -129,21 +127,21 @@ private:
     int32_t clientReply(GWBUF* pResponse, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
     static int32_t clientReply(MXS_FILTER* pInstance,
-                               MXS_FILTER_SESSION* pSession,
-                               GWBUF* pResponse,
-                               const mxs::ReplyRoute& down,
-                               const mxs::Reply& reply);
+        MXS_FILTER_SESSION* pSession,
+        GWBUF* pResponse,
+        const mxs::ReplyRoute& down,
+        const mxs::Reply& reply);
 
     // Dcb::Handler
     int32_t write(GWBUF* pBuffer);
 
 private:
-    MXS_FILTER    m_instance;
-    std::string   m_user;
-    std::string   m_host;
-    Handler*      m_pHandler;
-    size_t        m_n_responses;
+    MXS_FILTER m_instance;
+    std::string m_user;
+    std::string m_host;
+    Handler* m_pHandler;
+    size_t m_n_responses;
     mxs::Upstream m_upstream;
 };
-}
-}
+}  // namespace mock
+}  // namespace maxscale

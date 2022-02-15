@@ -18,12 +18,12 @@
 #include <maxscale/config2.hh>
 
 /* Module types */
-#define MODULE_PROTOCOL         "Protocol"          /**< A protocol module type */
-#define MODULE_AUTHENTICATOR    "Authenticator"     /**< An authenticator module type */
-#define MODULE_ROUTER           "Router"            /**< A router module type */
-#define MODULE_MONITOR          "Monitor"           /**< A database monitor module type */
-#define MODULE_FILTER           "Filter"            /**< A filter module type */
-#define MODULE_QUERY_CLASSIFIER "QueryClassifier"   /**< A query classifier module type */
+#define MODULE_PROTOCOL         "Protocol"        /**< A protocol module type */
+#define MODULE_AUTHENTICATOR    "Authenticator"   /**< An authenticator module type */
+#define MODULE_ROUTER           "Router"          /**< A router module type */
+#define MODULE_MONITOR          "Monitor"         /**< A database monitor module type */
+#define MODULE_FILTER           "Filter"          /**< A filter module type */
+#define MODULE_QUERY_CLASSIFIER "QueryClassifier" /**< A query classifier module type */
 
 /**
  * Calls thread_init on all loaded modules.
@@ -97,7 +97,7 @@ void dprintAllModules(DCB*);
 typedef struct mxs_module_iterator
 {
     const char* type;
-    void*       position;
+    void* position;
 } MXS_MODULE_ITERATOR;
 
 /**

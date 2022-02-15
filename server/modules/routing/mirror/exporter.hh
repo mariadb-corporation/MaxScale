@@ -17,10 +17,10 @@
 #include <maxscale/log.hh>
 #include <maxscale/jansson.hh>
 
-constexpr const char CN_EXPORTER[] = "exporter";
-constexpr const char CN_FILE[] = "file";
+constexpr const char CN_EXPORTER[]     = "exporter";
+constexpr const char CN_FILE[]         = "file";
 constexpr const char CN_KAFKA_BROKER[] = "kafka_broker";
-constexpr const char CN_KAFKA_TOPIC[] = "kafka_topic";
+constexpr const char CN_KAFKA_TOPIC[]  = "kafka_topic";
 
 struct Exporter
 {
@@ -41,12 +41,9 @@ struct Exporter
     virtual void ship(json_t* obj) = 0;
 };
 
-static const MXS_ENUM_VALUE exporter_type_values[] =
-{
-    {"log",   (uint64_t)Exporter::Type::LOG  },
-    {"file",  (uint64_t)Exporter::Type::FILE },
-    {"kafka", (uint64_t)Exporter::Type::KAFKA},
-    {NULL}
-};
+static const MXS_ENUM_VALUE exporter_type_values[] = {{"log", (uint64_t) Exporter::Type::LOG},
+    {"file", (uint64_t) Exporter::Type::FILE},
+    {"kafka", (uint64_t) Exporter::Type::KAFKA},
+    {NULL}};
 
 std::unique_ptr<Exporter> build_exporter(mxs::ConfigParameters* params);

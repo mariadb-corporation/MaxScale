@@ -21,7 +21,6 @@
 #include "cachefiltersession.hh"
 #include "cacheconfig.hh"
 
-
 class CacheFilter : public maxscale::Filter<CacheFilter, CacheFilterSession>
 {
 public:
@@ -36,6 +35,7 @@ public:
         mxb_assert(m_sCache.get());
         return *m_sCache.get();
     }
+
     const Cache& cache() const
     {
         mxb_assert(m_sCache.get());
@@ -56,5 +56,5 @@ private:
 
 private:
     std::unique_ptr<CacheConfig> m_sConfig;
-    std::unique_ptr<Cache>       m_sCache;
+    std::unique_ptr<Cache> m_sCache;
 };

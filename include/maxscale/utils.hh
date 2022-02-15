@@ -119,16 +119,12 @@ public:
      */
     Closer(T resource)
         : m_resource(resource)
-    {
-    }
+    {}
 
     /**
      * Destroys the closer and releases the resource.
      */
-    ~Closer()
-    {
-        CloserTraits<T>::close_if(m_resource);
-    }
+    ~Closer() { CloserTraits<T>::close_if(m_resource); }
 
     /**
      * Returns the original resource. Note that the ownership of the
@@ -136,10 +132,7 @@ public:
      *
      * @return The resource that was provided in the constructor.
      */
-    T get() const
-    {
-        return m_resource;
-    }
+    T get() const { return m_resource; }
 
     /**
      * Resets the closer, that is, releases the resource.
@@ -198,10 +191,7 @@ struct CloserTraits<FILE*>
         }
     }
 
-    static void reset(FILE*& pFile)
-    {
-        pFile = NULL;
-    }
+    static void reset(FILE*& pFile) { pFile = NULL; }
 };
 
 /* Helper type for Registry. Must be specialized for each EntryType. The types
@@ -209,20 +199,18 @@ struct CloserTraits<FILE*>
 template<typename EntryType>
 struct RegistryTraits
 {
-    typedef int        id_type;
+    typedef int id_type;
     typedef EntryType* entry_type;
 
     static id_type get_id(entry_type entry)
     {
         static_assert(sizeof(EntryType) != sizeof(EntryType),
-                      "get_id() and the"
-                      " surrounding struct must be specialized for every EntryType!");
+            "get_id() and the"
+            " surrounding struct must be specialized for every EntryType!");
         return 0;
     }
-    static entry_type null_entry()
-    {
-        return NULL;
-    }
+
+    static entry_type null_entry() { return NULL; }
 };
 
 /**
@@ -237,15 +225,15 @@ class Registry
 {
     Registry(const Registry&);
     Registry& operator=(const Registry&);
-public:
-    typedef typename RegistryTraits<EntryType>::id_type      id_type;
-    typedef typename RegistryTraits<EntryType>::entry_type   entry_type;
-    typedef typename std::unordered_map<id_type, entry_type> ContainerType;
-    typedef typename ContainerType::const_iterator           const_iterator;
 
-    Registry()
-    {
-    }
+public:
+    typedef typename RegistryTraits<EntryType>::id_type id_type;
+    typedef typename RegistryTraits<EntryType>::entry_type entry_type;
+    typedef typename std::unordered_map<id_type, entry_type> ContainerType;
+    typedef typename ContainerType::const_iterator const_iterator;
+
+    Registry() {}
+
     /**
      * Find an entry in the registry.
      *
@@ -254,7 +242,7 @@ public:
      */
     entry_type lookup(id_type id) const
     {
-        entry_type rval = RegistryTraits<EntryType>::null_entry();
+        entry_type rval                             = RegistryTraits<EntryType>::null_entry();
         typename ContainerType::const_iterator iter = m_registry.find(id);
         if (iter != m_registry.end())
         {
@@ -292,25 +280,13 @@ public:
         return rval;
     }
 
-    const_iterator begin() const
-    {
-        return m_registry.begin();
-    }
+    const_iterator begin() const { return m_registry.begin(); }
 
-    const_iterator end() const
-    {
-        return m_registry.end();
-    }
+    const_iterator end() const { return m_registry.end(); }
 
-    bool empty() const
-    {
-        return m_registry.empty();
-    }
+    bool empty() const { return m_registry.empty(); }
 
-    auto size() const
-    {
-        return m_registry.size();
-    }
+    auto size() const { return m_registry.size(); }
 
 private:
     ContainerType m_registry;
@@ -330,12 +306,10 @@ class EqualPointees : public std::unary_function<T, bool>
 public:
     EqualPointees(const T& lhs)
         : m_ppLhs(&lhs)
-    {
-    }
-    bool operator()(const T& pRhs)
-    {
-        return **m_ppLhs == *pRhs;
-    }
+    {}
+
+    bool operator()(const T& pRhs) { return **m_ppLhs == *pRhs; }
+
 private:
     const T* m_ppLhs;
 };
@@ -357,8 +331,7 @@ std::string to_hex(uint8_t value);
 
 template<typename T, typename V>
 struct hex_iterator
-{
-};
+{};
 
 template<typename T>
 struct hex_iterator<T, uint8_t>
@@ -394,10 +367,7 @@ std::string to_hex(Iter begin, Iter end)
 class Checksum
 {
 public:
-
-    virtual ~Checksum()
-    {
-    }
+    virtual ~Checksum() {}
 
     /**
      * Update the checksum calculation
@@ -465,38 +435,22 @@ public:
     SHA1Checksum()
     {
         SHA1_Init(&m_ctx);
-        m_sum.fill(0);      // CentOS 6 doesn't like aggregate initialization...
+        m_sum.fill(0);  // CentOS 6 doesn't like aggregate initialization...
     }
 
-    void update(uint8_t* ptr, size_t len)
-    {
-        SHA1_Update(&m_ctx, ptr, len);
-    }
+    void update(uint8_t* ptr, size_t len) { SHA1_Update(&m_ctx, ptr, len); }
 
-    void finalize()
-    {
-        SHA1_Final(&m_sum.front(), &m_ctx);
-    }
+    void finalize() { SHA1_Final(&m_sum.front(), &m_ctx); }
 
-    void reset()
-    {
-        SHA1_Init(&m_ctx);
-    }
+    void reset() { SHA1_Init(&m_ctx); }
 
-    std::string hex() const
-    {
-        return mxs::to_hex(m_sum.begin(), m_sum.end());
-    }
+    std::string hex() const { return mxs::to_hex(m_sum.begin(), m_sum.end()); }
 
-    bool eq(const SHA1Checksum& rhs) const
-    {
-        return m_sum == rhs.m_sum;
-    }
+    bool eq(const SHA1Checksum& rhs) const { return m_sum == rhs.m_sum; }
 
 private:
-
-    SHA_CTX m_ctx;  /**< SHA1 context */
-    Sum     m_sum;  /**< Final checksum */
+    SHA_CTX m_ctx; /**< SHA1 context */
+    Sum m_sum;     /**< Final checksum */
 };
 
 static inline bool operator==(const SHA1Checksum& lhs, const SHA1Checksum& rhs)
@@ -518,15 +472,9 @@ public:
     using Checksum::update;
     using Checksum::finalize;
 
-    CRC32Checksum()
-    {
-        m_ctx = crc32(0L, NULL, 0);
-    }
+    CRC32Checksum() { m_ctx = crc32(0L, NULL, 0); }
 
-    void update(uint8_t* ptr, size_t len)
-    {
-        m_ctx = crc32(m_ctx, ptr, len);
-    }
+    void update(uint8_t* ptr, size_t len) { m_ctx = crc32(m_ctx, ptr, len); }
 
     void finalize()
     {
@@ -534,27 +482,20 @@ public:
         reset();
     }
 
-    void reset()
-    {
-        m_ctx = crc32(0L, NULL, 0);
-    }
+    void reset() { m_ctx = crc32(0L, NULL, 0); }
 
     std::string hex() const
     {
         const uint8_t* start = reinterpret_cast<const uint8_t*>(&m_sum);
-        const uint8_t* end = start + sizeof(m_sum);
+        const uint8_t* end   = start + sizeof(m_sum);
         return mxs::to_hex(start, end);
     }
 
-    bool eq(const CRC32Checksum& rhs) const
-    {
-        return m_sum == rhs.m_sum;
-    }
+    bool eq(const CRC32Checksum& rhs) const { return m_sum == rhs.m_sum; }
 
 private:
-
-    uint32_t m_ctx;     /**< Ongoing checksum value */
-    uint32_t m_sum;     /**< Final checksum */
+    uint32_t m_ctx; /**< Ongoing checksum value */
+    uint32_t m_sum; /**< Final checksum */
 };
 
 static inline bool operator==(const CRC32Checksum& lhs, const CRC32Checksum& rhs)
@@ -659,7 +600,7 @@ char* bin2hex(const uint8_t* in, unsigned int len, char* out);
  * @param output Output buffer
  */
 void bin_bin_xor(const uint8_t* input1, const uint8_t* input2, unsigned int input_len, uint8_t* output);
-}
+}  // namespace maxscale
 
 /**
  * Remove duplicate and trailing forward slashes from a path.

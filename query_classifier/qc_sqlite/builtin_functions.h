@@ -16,17 +16,15 @@
 #include <stdint.h>
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 void init_builtin_functions();
 void finish_builtin_functions();
 
-bool is_builtin_readonly_function(const char* zToken,
-                                  uint32_t major,
-                                  uint32_t minor,
-                                  uint32_t patch,
-                                  bool check_oracle);
+bool is_builtin_readonly_function(
+    const char* zToken, uint32_t major, uint32_t minor, uint32_t patch, bool check_oracle);
 
 #ifdef __cplusplus
 }

@@ -111,7 +111,7 @@ std::pair<InputIter, InputIter> get_comment(InputIter it, InputIter end)
                 while (it != end)
                 {
                     auto comment_end = skip_until(it, end, '*');
-                    it = comment_end;
+                    it               = comment_end;
 
                     if (it != end && ++it != end && *it == '/')
                     {
@@ -159,8 +159,7 @@ std::vector<std::pair<InputIter, InputIter>> get_all_comments(InputIter start, I
     return rval;
 }
 
-static const std::unordered_map<std::string, TOKEN_VALUE> tokens
-{
+static const std::unordered_map<std::string, TOKEN_VALUE> tokens {
     {"begin", TOK_START},
     {"end", TOK_STOP},
     {"last", TOK_LAST},
@@ -191,7 +190,7 @@ TOKEN_VALUE HintParser::next_token()
     }
 
     TOKEN_VALUE type = TOK_END;
-    m_tok_begin = m_it;
+    m_tok_begin      = m_it;
 
     if (m_it != m_end)
     {
@@ -238,7 +237,7 @@ TOKEN_VALUE HintParser::next_token()
 HINT* HintParser::process_definition()
 {
     HINT* rval = nullptr;
-    auto t = next_token();
+    auto t     = next_token();
 
     if (t == TOK_ROUTE)
     {
@@ -271,7 +270,7 @@ HINT* HintParser::process_definition()
     else if (t == TOK_STRING)
     {
         std::string key(m_tok_begin, m_tok_end);
-        auto eq = next_token();
+        auto eq  = next_token();
         auto val = next_token();
 
         if (eq == TOK_EQUAL && val == TOK_STRING)
@@ -293,15 +292,15 @@ HINT* HintParser::process_definition()
 
 HINT* HintParser::parse_one(InputIter it, InputIter end)
 {
-    m_it = it;
-    m_end = end;
+    m_it       = it;
+    m_end      = end;
     HINT* rval = nullptr;
 
     if (next_token() == TOK_MAXSCALE)
     {
         // Peek at the next token
         auto prev_it = m_it;
-        auto t = next_token();
+        auto t       = next_token();
 
         if (t == TOK_START)
         {

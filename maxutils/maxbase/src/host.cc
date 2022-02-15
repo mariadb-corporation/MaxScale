@@ -21,15 +21,13 @@
 #include <maxbase/format.hh>
 #include <maxbase/string.hh>
 
-
 // Simple but not exhaustive address validation functions.
 // An ipv4 address "x.x.x.x" cannot be a hostname (where x is a number), but pretty
 // much anything else can. Call is_valid_hostname() last.
 bool mxb::Host::is_valid_ipv4(const std::string& ip)
 {
     bool ret = ip.find_first_not_of("0123456789.") == std::string::npos
-        && (ip.length() <= 15 && ip.length() >= 7)
-        && std::count(begin(ip), end(ip), '.') == 3;
+            && (ip.length() <= 15 && ip.length() >= 7) && std::count(begin(ip), end(ip), '.') == 3;
 
     return ret;
 }
@@ -37,13 +35,12 @@ bool mxb::Host::is_valid_ipv4(const std::string& ip)
 bool mxb::Host::is_valid_ipv6(const std::string& ip)
 {
     auto invalid_char = [](char ch) {
-            bool valid = std::isxdigit(ch) || ch == ':' || ch == '.';
-            return !valid;
-        };
+        bool valid = std::isxdigit(ch) || ch == ':' || ch == '.';
+        return !valid;
+    };
 
-    bool ret = std::count(begin(ip), end(ip), ':') >= 2
-        && std::none_of(begin(ip), end(ip), invalid_char)
-        && (ip.length() <= 45 && ip.length() >= 2);
+    bool ret = std::count(begin(ip), end(ip), ':') >= 2 && std::none_of(begin(ip), end(ip), invalid_char)
+            && (ip.length() <= 45 && ip.length() >= 2);
 
     return ret;
 }
@@ -54,15 +51,12 @@ namespace
 bool is_valid_hostname(const std::string& hn)
 {
     auto invalid_char = [](char ch) {
-            bool valid = std::isalnum(ch) || ch == '_' || ch == '.' || ch == '-';
-            return !valid;
-        };
+        bool valid = std::isalnum(ch) || ch == '_' || ch == '.' || ch == '-';
+        return !valid;
+    };
 
-    bool ret = std::none_of(begin(hn), end(hn), invalid_char)
-        && hn.front() != '_'
-        && hn.front() != '-'
-        && (hn.length() <= 253 && hn.length() > 0)
-        && hn.find("--") == std::string::npos;
+    bool ret = std::none_of(begin(hn), end(hn), invalid_char) && hn.front() != '_' && hn.front() != '-'
+            && (hn.length() <= 253 && hn.length() > 0) && hn.find("--") == std::string::npos;
 
     return ret;
 }
@@ -71,8 +65,8 @@ bool is_valid_socket(const std::string& addr)
 {
     // Can't check the file system, the socket may not have been created yet.
     // Just not bothering to check much, file names can be almost anything and errors are easy to spot.
-    bool ret = addr.front() == '/'
-        && addr.back() != '/';      // avoids the confusing error: Address already in use
+    bool ret
+        = addr.front() == '/' && addr.back() != '/';  // avoids the confusing error: Address already in use
 
     return ret;
 }
@@ -84,7 +78,7 @@ bool is_valid_port(int port)
 
 // Make sure the order here is the same as in Host::Type.
 static std::vector<std::string> host_type_names = {"Invalid", "UnixDomainSocket", "HostName", "IPV4", "IPV6"};
-}
+}  // namespace
 
 namespace maxbase
 {
@@ -137,7 +131,7 @@ Host Host::from_string(const std::string& in, int default_port)
     auto ite = input.begin();
 
     if (*ite == '[')
-    {   // expecting [address]:port, where :port is optional
+    {  // expecting [address]:port, where :port is optional
         auto last = std::find(begin(input), end(input), ']');
         std::copy(++ite, last, std::back_inserter(address_part));
         if (last != end(input))
@@ -156,7 +150,7 @@ Host Host::from_string(const std::string& in, int default_port)
         if (is_valid_ipv6(input))
         {
             address_part = input;
-            ite = end(input);
+            ite          = end(input);
         }
         else
         {
@@ -173,22 +167,20 @@ Host Host::from_string(const std::string& in, int default_port)
     }
 
     int port = default_port;
-    if (ite == end(input))      // if all input consumed
+    if (ite == end(input))  // if all input consumed
     {
         if (!port_part.empty())
         {
-            bool all_digits = std::all_of(begin(port_part), end(port_part),
-                                          [](char ch) {
-                                              return std::isdigit(ch);
-                                          });
+            bool all_digits
+                = std::all_of(begin(port_part), end(port_part), [](char ch) { return std::isdigit(ch); });
             port = all_digits ? std::atoi(port_part.c_str()) : InvalidPort;
         }
     }
 
     Host ret;
     ret.m_org_input = in;
-    ret.m_address = address_part;
-    ret.m_port = port;
+    ret.m_address   = address_part;
+    ret.m_port      = port;
     ret.set_type();
 
     return ret;
@@ -197,8 +189,8 @@ Host Host::from_string(const std::string& in, int default_port)
 Host::Host(const std::string& addr, int port)
 {
     m_org_input = addr;
-    m_address = addr;
-    m_port = port;
+    m_address   = addr;
+    m_port      = port;
 
     if (!m_address.empty() && m_address.front() != '[')
     {
@@ -211,8 +203,8 @@ std::ostream& operator<<(std::ostream& os, const Host& host)
     switch (host.type())
     {
     case Host::Type::Invalid:
-        os << "INVALID input: '" << host.org_input() << "' parsed to "
-           << host.address() << ":" << host.port();
+        os << "INVALID input: '" << host.org_input() << "' parsed to " << host.address() << ":"
+           << host.port();
         break;
 
     case Host::Type::UnixDomainSocket:
@@ -239,22 +231,21 @@ std::istream& operator>>(std::istream& is, Host& host)
     return is;
 }
 
-bool name_lookup(const std::string& host,
-                 std::unordered_set<std::string>* addresses_out,
-                 std::string* error_out)
+bool name_lookup(
+    const std::string& host, std::unordered_set<std::string>* addresses_out, std::string* error_out)
 {
     addrinfo hints;
     memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;    /* Return any address type */
-    hints.ai_socktype = SOCK_DGRAM; /* Datagram socket */
-    hints.ai_flags = 0;             /* Mapped IPv4 */
-    hints.ai_protocol = 0;          /* Any protocol */
+    hints.ai_family    = AF_UNSPEC;  /* Return any address type */
+    hints.ai_socktype  = SOCK_DGRAM; /* Datagram socket */
+    hints.ai_flags     = 0;          /* Mapped IPv4 */
+    hints.ai_protocol  = 0;          /* Any protocol */
     hints.ai_canonname = nullptr;
-    hints.ai_addr = nullptr;
-    hints.ai_next = nullptr;
+    hints.ai_addr      = nullptr;
+    hints.ai_next      = nullptr;
 
     addrinfo* results = nullptr;
-    bool success = false;
+    bool success      = false;
     std::string error_msg;
 
     int rv_addrinfo = getaddrinfo(host.c_str(), nullptr, &hints, &results);
@@ -264,24 +255,24 @@ bool name_lookup(const std::string& host,
         for (auto iter = results; iter; iter = iter->ai_next)
         {
             int address_family = iter->ai_family;
-            void* addr = nullptr;
-            char buf[INET6_ADDRSTRLEN];     // Enough for both address types
+            void* addr         = nullptr;
+            char buf[INET6_ADDRSTRLEN];  // Enough for both address types
             if (iter->ai_family == AF_INET)
             {
-                auto sa_in = (sockaddr_in*)(iter->ai_addr);
-                addr = &sa_in->sin_addr;
+                auto sa_in = (sockaddr_in*) (iter->ai_addr);
+                addr       = &sa_in->sin_addr;
             }
             else if (iter->ai_family == AF_INET6)
             {
-                auto sa_in = (sockaddr_in6*)(iter->ai_addr);
-                addr = &sa_in->sin6_addr;
+                auto sa_in = (sockaddr_in6*) (iter->ai_addr);
+                addr       = &sa_in->sin6_addr;
             }
 
             inet_ntop(address_family, addr, buf, sizeof(buf));
             if (buf[0])
             {
                 addresses_out->insert(buf);
-                success = true;     // One successful lookup is enough.
+                success = true;  // One successful lookup is enough.
             }
         }
         freeaddrinfo(results);
@@ -312,17 +303,17 @@ bool reverse_name_lookup(const std::string& ip, std::string* output)
         if (inet_pton(family, ip.c_str(), &sa_in->sin_addr) == 1)
         {
             sa_in->sin_family = family;
-            slen = sizeof(sockaddr_in);
+            slen              = sizeof(sockaddr_in);
         }
     }
     else if (Host::is_valid_ipv6(ip))
     {
-        int family = AF_INET6;
+        int family  = AF_INET6;
         auto sa_in6 = reinterpret_cast<sockaddr_in6*>(&socket_address);
         if (inet_pton(family, ip.c_str(), &sa_in6->sin6_addr) == 1)
         {
             sa_in6->sin6_family = family;
-            slen = sizeof(sockaddr_in6);
+            slen                = sizeof(sockaddr_in6);
         }
     }
 
@@ -344,4 +335,4 @@ bool reverse_name_lookup(const std::string& ip, std::string* output)
     }
     return success;
 }
-}
+}  // namespace maxbase

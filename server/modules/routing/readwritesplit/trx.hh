@@ -31,18 +31,11 @@ public:
     Trx()
         : m_size(0)
         , m_target(nullptr)
-    {
-    }
+    {}
 
-    mxs::RWBackend* target() const
-    {
-        return m_target;
-    }
+    mxs::RWBackend* target() const { return m_target; }
 
-    void set_target(mxs::RWBackend* tgt)
-    {
-        m_target = tgt;
-    }
+    void set_target(mxs::RWBackend* tgt) { m_target = tgt; }
 
     /**
      * Add a statement to the transaction
@@ -71,10 +64,7 @@ public:
      *
      * @param buf Result to add
      */
-    void add_result(GWBUF* buf)
-    {
-        m_checksum.update(buf);
-    }
+    void add_result(GWBUF* buf) { m_checksum.update(buf); }
 
     /**
      * Releases the oldest statement in this transaction
@@ -99,10 +89,7 @@ public:
      * or by a failure of the current server where the transaction was being
      * executed.
      */
-    void finalize()
-    {
-        m_checksum.finalize();
-    }
+    void finalize() { m_checksum.finalize(); }
 
     /**
      * Check if transaction has statements
@@ -113,30 +100,21 @@ public:
      *       that is being replayed has ended. The empty() method can be used
      *       to check whether statements were added to the transaction.
      */
-    bool have_stmts() const
-    {
-        return !m_log.empty();
-    }
+    bool have_stmts() const { return !m_log.empty(); }
 
     /**
      * Check whether the transaction is empty
      *
      * @return True if no statements have been added to the transaction
      */
-    bool empty() const
-    {
-        return m_size == 0;
-    }
+    bool empty() const { return m_size == 0; }
 
     /**
      * Get transaction size in bytes
      *
      * @return Size of the transaction in bytes
      */
-    size_t size() const
-    {
-        return m_size;
-    }
+    size_t size() const { return m_size; }
 
     /**
      * Close the transaction
@@ -147,7 +125,7 @@ public:
     {
         m_checksum.reset();
         m_log.clear();
-        m_size = 0;
+        m_size   = 0;
         m_target = nullptr;
     }
 
@@ -158,14 +136,11 @@ public:
      *
      * @return The checksum of the transaction
      */
-    const mxs::SHA1Checksum& checksum() const
-    {
-        return m_checksum;
-    }
+    const mxs::SHA1Checksum& checksum() const { return m_checksum; }
 
 private:
-    mxs::SHA1Checksum m_checksum;   /**< Checksum of the transaction */
-    TrxLog            m_log;        /**< The transaction contents */
-    size_t            m_size;       /**< Transaction size in bytes */
-    mxs::RWBackend*   m_target;     /**< The target on which the transaction is done */
+    mxs::SHA1Checksum m_checksum; /**< Checksum of the transaction */
+    TrxLog m_log;                 /**< The transaction contents */
+    size_t m_size;                /**< Transaction size in bytes */
+    mxs::RWBackend* m_target;     /**< The target on which the transaction is done */
 };

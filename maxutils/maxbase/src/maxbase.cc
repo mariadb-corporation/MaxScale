@@ -21,8 +21,8 @@ namespace maxbase
 
 class Initer
 {
-    Initer() = delete;
-    Initer(const Initer&) = delete;
+    Initer()                         = delete;
+    Initer(const Initer&)            = delete;
     Initer& operator=(const Initer&) = delete;
 
 public:
@@ -65,23 +65,25 @@ public:
     }
 
 private:
-    typedef bool (* init_function_t)();
-    typedef void (* finish_function_t)();
+    typedef bool (*init_function_t)();
+    typedef void (*finish_function_t)();
 
     struct component_t
     {
-        init_function_t   init;
+        init_function_t init;
         finish_function_t finish;
     };
 
     static component_t s_components[];
-    static int         s_nComponents;
+    static int s_nComponents;
 };
 
-#define MAXBASE_COMPONENT(X) {&X::init, &X::finish}
+#define MAXBASE_COMPONENT(X) \
+    {                        \
+        &X::init, &X::finish \
+    }
 
-Initer::component_t Initer::s_components[] =
-{
+Initer::component_t Initer::s_components[] = {
     MAXBASE_COMPONENT(MessageQueue),
     MAXBASE_COMPONENT(Worker),
 };
@@ -89,11 +91,11 @@ Initer::component_t Initer::s_components[] =
 int Initer::s_nComponents = sizeof(Initer::s_components) / sizeof(Initer::s_components[0]);
 
 MaxBase::MaxBase(const char* zIdent,
-                 const char* zLogdir,
-                 const char* zFilename,
-                 mxb_log_target_t target,
-                 mxb_log_context_provider_t context_provider,
-                 mxb_in_memory_log_t in_memory_log)
+    const char* zLogdir,
+    const char* zFilename,
+    mxb_log_target_t target,
+    mxb_log_context_provider_t context_provider,
+    mxb_in_memory_log_t in_memory_log)
     : m_log_inited(false)
 {
     const char* zMessage = nullptr;
@@ -104,9 +106,8 @@ MaxBase::MaxBase(const char* zIdent,
 
         if (!m_log_inited)
         {
-            zMessage =
-                "The initialization of the MaxScale base library succeeded, but the "
-                "initialization of the MaxScale log failed.";
+            zMessage = "The initialization of the MaxScale base library succeeded, but the "
+                       "initialization of the MaxScale log failed.";
         }
     }
     else
@@ -122,8 +123,8 @@ MaxBase::MaxBase(const char* zIdent,
 
 bool init()
 {
-    bool rv = false;
-    bool log_exists = mxb_log_inited();
+    bool rv                 = false;
+    bool log_exists         = mxb_log_inited();
     bool log_inited_locally = false;
 
     if (!log_exists)
@@ -161,7 +162,7 @@ void finish()
 {
     Initer::finish();
 }
-}
+}  // namespace maxbase
 
 bool maxbase_init()
 {

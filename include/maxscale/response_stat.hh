@@ -39,17 +39,17 @@ public:
 private:
     void sync(bool last_call);
     bool is_valid() const;
-    bool sync_time_reached();   // is it time to apply the average to the server?
+    bool sync_time_reached();  // is it time to apply the average to the server?
     void reset();
 
-    Target*                        m_target;
-    const int                      m_num_filter_samples;
-    const maxbase::Duration        m_sync_duration;
-    long                           m_sample_count;
-    std::vector<maxbase::Duration> m_samples;   // N sampels from which median is used
-    maxbase::CumulativeAverage     m_average;
-    maxbase::TimePoint             m_last_start;
-    maxbase::TimePoint             m_next_sync;
-    bool                           m_synced {true};
+    Target* m_target;
+    const int m_num_filter_samples;
+    const maxbase::Duration m_sync_duration;
+    long m_sample_count;
+    std::vector<maxbase::Duration> m_samples;  // N sampels from which median is used
+    maxbase::CumulativeAverage m_average;
+    maxbase::TimePoint m_last_start;
+    maxbase::TimePoint m_next_sync;
+    bool m_synced {true};
 };
-}
+}  // namespace maxscale

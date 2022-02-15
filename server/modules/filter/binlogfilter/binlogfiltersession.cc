@@ -64,19 +64,16 @@
  * @param pSession    The calling routing/filter session
  * @param pFilter     Pointer to filter configuration
  */
-BinlogFilterSession::BinlogFilterSession(MXS_SESSION* pSession, SERVICE* pService,
-                                         const BinlogFilter* pFilter)
+BinlogFilterSession::BinlogFilterSession(
+    MXS_SESSION* pSession, SERVICE* pService, const BinlogFilter* pFilter)
     : mxs::FilterSession(pSession, pService)
     , m_filter(*pFilter)
-{
-}
+{}
 
 /**
  * BinlogFilterSession destructor
  */
-BinlogFilterSession::~BinlogFilterSession()
-{
-}
+BinlogFilterSession::~BinlogFilterSession() {}
 
 // static
 /**
@@ -86,16 +83,16 @@ BinlogFilterSession::~BinlogFilterSession()
  * @param pFilter     Pointer to filter configuration
  * @return            The new allocated session
  */
-BinlogFilterSession* BinlogFilterSession::create(MXS_SESSION* pSession, SERVICE* pService,
-                                                 const BinlogFilter* pFilter)
+BinlogFilterSession* BinlogFilterSession::create(
+    MXS_SESSION* pSession, SERVICE* pService, const BinlogFilter* pFilter)
 {
     return new BinlogFilterSession(pSession, pService, pFilter);
 }
 
 static bool is_matching_query(GWBUF* buffer, const char* target)
 {
-    char query[1024];       // Large enough for most practical cases
-    size_t bytes = gwbuf_copy_data(buffer, MYSQL_HEADER_LEN + 1, sizeof(query) - 1, (uint8_t*)query);
+    char query[1024];  // Large enough for most practical cases
+    size_t bytes = gwbuf_copy_data(buffer, MYSQL_HEADER_LEN + 1, sizeof(query) - 1, (uint8_t*) query);
     query[bytes] = '\0';
     return strcasestr(query, target);
 }
@@ -144,20 +141,22 @@ int BinlogFilterSession::routeQuery(GWBUF* pPacket)
         {
             gwbuf_free(pPacket);
             std::ostringstream ss;
-            ss << "GTID replication is required when '"
-               << REWRITE_SRC << "' and '" << REWRITE_DEST << "' are used";
+            ss << "GTID replication is required when '" << REWRITE_SRC << "' and '" << REWRITE_DEST
+               << "' are used";
             mxs::ReplyRoute rr;
             mxs::Reply reply;
             mxs::FilterSession::clientReply(
-                modutil_create_mysql_err_msg(1, 0, ER_MASTER_FATAL_ERROR_READING_BINLOG, "HY000",
-                                             ss.str().c_str()), rr, reply);
+                modutil_create_mysql_err_msg(
+                    1, 0, ER_MASTER_FATAL_ERROR_READING_BINLOG, "HY000", ss.str().c_str()),
+                rr,
+                reply);
             return 0;
         }
         break;
 
     case MXS_COM_QUERY:
         // Connected client is using SQL mode
-        m_state = COMMAND_MODE;
+        m_state            = COMMAND_MODE;
         m_reading_checksum = is_master_binlog_checksum(pPacket);
         gwbuf_set_type(pPacket, GWBUF_TYPE_COLLECT_RESULT);
 
@@ -182,12 +181,11 @@ int BinlogFilterSession::routeQuery(GWBUF* pPacket)
  * @param event    The replication event
  * @param hdr      Pointer to repliction header to fill
  */
-static void extract_header(register const uint8_t* event,
-                           register REP_HEADER* hdr)
+static void extract_header(register const uint8_t* event, register REP_HEADER* hdr)
 {
-    hdr->seqno = event[3];
+    hdr->seqno       = event[3];
     hdr->payload_len = gw_mysql_get_byte3(event);
-    hdr->ok = event[MYSQL_HEADER_LEN];
+    hdr->ok          = event[MYSQL_HEADER_LEN];
     if (hdr->ok != 0)
     {
         // Don't parse data in case of Error in Replication Stream
@@ -196,13 +194,13 @@ static void extract_header(register const uint8_t* event,
 
     // event points to Event Header (19 bytes)
     event += MYSQL_HEADER_LEN + 1;
-    hdr->timestamp = gw_mysql_get_byte4(event);
+    hdr->timestamp  = gw_mysql_get_byte4(event);
     hdr->event_type = event[4];
     // TODO: add offsets in order to facilitate reading
-    hdr->serverid = gw_mysql_get_byte4(event + 4 + 1);
+    hdr->serverid   = gw_mysql_get_byte4(event + 4 + 1);
     hdr->event_size = gw_mysql_get_byte4(event + 4 + 1 + 4);
-    hdr->next_pos = gw_mysql_get_byte4(event + 4 + 1 + 4 + 4);
-    hdr->flags = gw_mysql_get_byte2(event + 4 + 1 + 4 + 4 + 4);
+    hdr->next_pos   = gw_mysql_get_byte4(event + 4 + 1 + 4 + 4);
+    hdr->flags      = gw_mysql_get_byte2(event + 4 + 1 + 4 + 4 + 4);
 }
 
 /**
@@ -214,7 +212,7 @@ static void extract_header(register const uint8_t* event,
 int BinlogFilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     uint8_t* event = GWBUF_DATA(pPacket);
-    uint32_t len = MYSQL_GET_PAYLOAD_LEN(event);
+    uint32_t len   = MYSQL_GET_PAYLOAD_LEN(event);
     REP_HEADER hdr;
 
     switch (m_state)
@@ -274,9 +272,7 @@ int BinlogFilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down
 /**
  * Close filter session
  */
-void BinlogFilterSession::close()
-{
-}
+void BinlogFilterSession::close() {}
 
 /**
  * Check whether events in a transaction can be skipped.
@@ -293,15 +289,15 @@ bool BinlogFilterSession::checkEvent(GWBUF** buffer, const REP_HEADER& hdr)
 {
     mxb_assert(!m_is_large);
 
-    uint8_t* event = GWBUF_DATA(*buffer);
-    uint8_t* body = event + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN;
+    uint8_t* event     = GWBUF_DATA(*buffer);
+    uint8_t* body      = event + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN;
     uint32_t body_size = hdr.event_size - BINLOG_EVENT_HDR_LEN;
 
     if (hdr.ok != 0)
     {
         // Error in binlog stream: no filter
         m_state = ERRORED;
-        m_skip = false;
+        m_skip  = false;
         MXS_INFO("Slave server %u received error in replication stream", m_serverid);
     }
     else
@@ -312,23 +308,23 @@ bool BinlogFilterSession::checkEvent(GWBUF** buffer, const REP_HEADER& hdr)
         switch (hdr.event_type)
         {
         case HEARTBEAT_EVENT:
-            {
-                // The slave server that receives this event will compare the binlog name and the next
-                // position of the heartbeat event to its own. The binlog name check will pass but the
-                // position check will fail if the slave's relay log is ahead of the master's binlog. Since
-                // the slave only checks if it's ahead of the master, by setting the next event position to a
-                // fake value we bypass this. This is safe as heartbeat events are never written into the
-                // relay log and thus do not affect replication.
-                REP_HEADER hdr_copy = hdr;
-                hdr_copy.next_pos = 0xffffffff;
-                fixEvent(GWBUF_DATA(*buffer) + MYSQL_HEADER_LEN + 1,
-                         gwbuf_length(*buffer) - MYSQL_HEADER_LEN - 1,
-                         hdr_copy);
+        {
+            // The slave server that receives this event will compare the binlog name and the next
+            // position of the heartbeat event to its own. The binlog name check will pass but the
+            // position check will fail if the slave's relay log is ahead of the master's binlog. Since
+            // the slave only checks if it's ahead of the master, by setting the next event position to a
+            // fake value we bypass this. This is safe as heartbeat events are never written into the
+            // relay log and thus do not affect replication.
+            REP_HEADER hdr_copy = hdr;
+            hdr_copy.next_pos   = 0xffffffff;
+            fixEvent(GWBUF_DATA(*buffer) + MYSQL_HEADER_LEN + 1,
+                gwbuf_length(*buffer) - MYSQL_HEADER_LEN - 1,
+                hdr_copy);
 
-                // Set m_skip = false anyway: cannot alter this event
-                m_skip = false;
-            }
-            break;
+            // Set m_skip = false anyway: cannot alter this event
+            m_skip = false;
+        }
+        break;
 
         case MARIADB10_GTID_EVENT:
             // New transaction, reset m_skip anyway
@@ -349,7 +345,7 @@ bool BinlogFilterSession::checkEvent(GWBUF** buffer, const REP_HEADER& hdr)
         case EXECUTE_LOAD_QUERY_EVENT:
             // EXECUTE_LOAD_QUERY_EVENT has an extra 13 bytes of data (file ID, file offset etc.)
             extra_bytes = 4 + 4 + 4 + 1;
-        /** Fallthrough */
+            /** Fallthrough */
 
         case QUERY_EVENT:
             // Handle the SQL statement: DDL, DML, BEGIN, COMMIT
@@ -357,8 +353,8 @@ bool BinlogFilterSession::checkEvent(GWBUF** buffer, const REP_HEADER& hdr)
 
             // checkStatement can reallocate the buffer in case the size changes: use fresh pointers
             fixEvent(GWBUF_DATA(*buffer) + MYSQL_HEADER_LEN + 1,
-                     gwbuf_length(*buffer) - MYSQL_HEADER_LEN - 1,
-                     hdr);
+                gwbuf_length(*buffer) - MYSQL_HEADER_LEN - 1,
+                hdr);
             break;
 
         case XID_EVENT:
@@ -403,11 +399,11 @@ static std::string inline extract_table_info(const uint8_t* ptr)
      */
 
     int db_len_offset = 6 + 2;
-    int db_len = ptr[db_len_offset];
-    int tbl_len = ptr[db_len_offset + 1 + db_len + 1];      // DB is NULL terminated
+    int db_len        = ptr[db_len_offset];
+    int tbl_len       = ptr[db_len_offset + 1 + db_len + 1];  // DB is NULL terminated
 
-    std::string dbname((char*)(ptr + db_len_offset + 1), db_len);
-    std::string tblname((char*)(ptr + db_len_offset + 1 + db_len + 1 + 1), tbl_len);
+    std::string dbname((char*) (ptr + db_len_offset + 1), db_len);
+    std::string tblname((char*) (ptr + db_len_offset + 1 + db_len + 1 + 1), tbl_len);
     return dbname + "." + tblname;
 }
 
@@ -416,12 +412,19 @@ static bool should_skip(const BinlogConfig& config, const std::string& str)
     bool skip = true;
 
     if (!config.match
-        || pcre2_match(config.match, (PCRE2_SPTR)str.c_str(), PCRE2_ZERO_TERMINATED,
-                       0, 0, config.md_match, NULL) >= 0)
+        || pcre2_match(
+               config.match, (PCRE2_SPTR) str.c_str(), PCRE2_ZERO_TERMINATED, 0, 0, config.md_match, NULL)
+               >= 0)
     {
         if (!config.exclude
-            || pcre2_match(config.exclude, (PCRE2_SPTR)str.c_str(), PCRE2_ZERO_TERMINATED, 0, 0,
-                           config.md_exclude, NULL) == PCRE2_ERROR_NOMATCH)
+            || pcre2_match(config.exclude,
+                   (PCRE2_SPTR) str.c_str(),
+                   PCRE2_ZERO_TERMINATED,
+                   0,
+                   0,
+                   config.md_exclude,
+                   NULL)
+                   == PCRE2_ERROR_NOMATCH)
         {
             skip = false;
         }
@@ -432,8 +435,8 @@ static bool should_skip(const BinlogConfig& config, const std::string& str)
 
 static bool should_skip_query(const BinlogConfig& config, const std::string& sql, const std::string& db = "")
 {
-    GWBUF* buf = modutil_create_query(sql.c_str());
-    bool rval = false;
+    GWBUF* buf  = modutil_create_query(sql.c_str());
+    bool rval   = false;
     auto tables = qc_get_table_names(buf, true);
 
     if (qc_get_trx_type_mask(buf) == 0)
@@ -474,7 +477,7 @@ static bool should_skip_query(const BinlogConfig& config, const std::string& sql
 void BinlogFilterSession::skipDatabaseTable(const uint8_t* data)
 {
     std::string table = extract_table_info(data);
-    m_skip = should_skip(m_filter.getConfig(), table);
+    m_skip            = should_skip(m_filter.getConfig(), table);
     MXS_INFO("[%s] TABLE_MAP: %s", m_skip ? "SKIP" : "    ", table.c_str());
 }
 
@@ -487,7 +490,7 @@ void BinlogFilterSession::skipDatabaseTable(const uint8_t* data)
 static void event_set_crc32(uint8_t* event, uint32_t event_size)
 {
     uint32_t chksum = crc32(0L, NULL, 0);
-    chksum = crc32(chksum, event, event_size - 4);
+    chksum          = crc32(chksum, event, event_size - 4);
     gw_mysql_set_byte4(event + event_size - 4, chksum);
 }
 
@@ -524,8 +527,7 @@ void BinlogFilterSession::fixEvent(uint8_t* event, uint32_t event_size, const RE
  */
 void BinlogFilterSession::replaceEvent(GWBUF** ppPacket, const REP_HEADER& hdr)
 {
-
-    uint32_t buf_len = gwbuf_length(*ppPacket);
+    uint32_t buf_len         = gwbuf_length(*ppPacket);
     uint32_t orig_event_type = 0;
 
     // If size < BINLOG_EVENT_HDR_LEN + crc32 add rand_event to buff contiguos
@@ -554,8 +556,7 @@ void BinlogFilterSession::replaceEvent(GWBUF** ppPacket, const REP_HEADER& hdr)
     if (buf_len < (MYSQL_HEADER_LEN + 1 + new_event_size))
     {
         GWBUF* pTmpbuf;
-        pTmpbuf = gwbuf_alloc(MYSQL_HEADER_LEN + 1   \
-                              + (new_event_size - buf_len));
+        pTmpbuf = gwbuf_alloc(MYSQL_HEADER_LEN + 1 + (new_event_size - buf_len));
         // Append new buff to current one
         *ppPacket = gwbuf_append(*ppPacket, pTmpbuf);
         // Make current buff contiguous
@@ -614,8 +615,7 @@ void BinlogFilterSession::replaceEvent(GWBUF** ppPacket, const REP_HEADER& hdr)
     event_header_offset += 4;
 
     // Set LOG_EVENT_SKIP_REPLICATION_F flags [2 bytes]
-    gw_mysql_set_byte2(ptr + event_header_offset,
-                       LOG_EVENT_SKIP_REPLICATION_F);
+    gw_mysql_set_byte2(ptr + event_header_offset, LOG_EVENT_SKIP_REPLICATION_F);
 
     // Point to RAND_EVENT content now
     event_header_offset += 2;
@@ -626,8 +626,7 @@ void BinlogFilterSession::replaceEvent(GWBUF** ppPacket, const REP_HEADER& hdr)
      * event_size is 0 for all packets belonging to a large event
      */
     // Set first seed as the input packet size (4 bytes only)
-    gw_mysql_set_byte4(ptr + event_header_offset,
-                       buf_len - (MYSQL_HEADER_LEN + 1));
+    gw_mysql_set_byte4(ptr + event_header_offset, buf_len - (MYSQL_HEADER_LEN + 1));
     event_header_offset += 4;
     // Set 0 for next 4 bytes of first seed
     gw_mysql_set_byte4(ptr + event_header_offset, 0);
@@ -646,9 +645,8 @@ void BinlogFilterSession::replaceEvent(GWBUF** ppPacket, const REP_HEADER& hdr)
      */
     if (gwbuf_length(*ppPacket) > (new_event_size + 1 + MYSQL_HEADER_LEN))
     {
-        uint32_t remove_bytes = gwbuf_length(*ppPacket)   \
-            - (new_event_size + 1 + MYSQL_HEADER_LEN);
-        *ppPacket = gwbuf_rtrim(*ppPacket, remove_bytes);
+        uint32_t remove_bytes = gwbuf_length(*ppPacket) - (new_event_size + 1 + MYSQL_HEADER_LEN);
+        *ppPacket             = gwbuf_rtrim(*ppPacket, remove_bytes);
     }
 
     // Fix Event Next pos = 0 and set new CRC32
@@ -675,17 +673,17 @@ static char* extract_column(GWBUF* buf, int col)
         return NULL;
     }
 
-    ptr = (uint8_t*)GWBUF_DATA(buf);
+    ptr = (uint8_t*) GWBUF_DATA(buf);
     /* First packet should be the column count */
     len = gw_mysql_get_byte3(ptr);
     ptr += 3;
-    if (*ptr != 1)      // Check sequence number is 1
+    if (*ptr != 1)  // Check sequence number is 1
     {
         return NULL;
     }
     ptr++;
     ncol = *ptr++;
-    if (ncol < col)     // Not that many column in result
+    if (ncol < col)  // Not that many column in result
     {
         return NULL;
     }
@@ -694,12 +692,12 @@ static char* extract_column(GWBUF* buf, int col)
     while (ncol-- > 0)
     {
         len = gw_mysql_get_byte3(ptr);
-        ptr += 4;   // Skip to payload
-        ptr += len; // Skip over payload
+        ptr += 4;    // Skip to payload
+        ptr += len;  // Skip over payload
     }
     // Now we should have an EOF packet
     len = gw_mysql_get_byte3(ptr);
-    ptr += 4;       // Skip to payload
+    ptr += 4;  // Skip to payload
     if (*ptr != 0xfe)
     {
         return NULL;
@@ -727,12 +725,12 @@ static char* extract_column(GWBUF* buf, int col)
         ptr += collen;
     }
     collen = *ptr++;
-    if ((rval = (char*)MXS_MALLOC(collen + 1)) == NULL)
+    if ((rval = (char*) MXS_MALLOC(collen + 1)) == NULL)
     {
         return NULL;
     }
     memcpy(rval, ptr, collen);
-    rval[collen] = 0;       // NULL terminate
+    rval[collen] = 0;  // NULL terminate
 
     return rval;
 }
@@ -838,38 +836,39 @@ void BinlogFilterSession::handleEventData(uint32_t len)
  */
 void BinlogFilterSession::checkStatement(GWBUF** buffer, const REP_HEADER& hdr, int extra_len)
 {
-    uint8_t* event = GWBUF_DATA(*buffer) + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN;
+    uint8_t* event      = GWBUF_DATA(*buffer) + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN;
     uint32_t event_size = hdr.event_size - BINLOG_EVENT_HDR_LEN;
 
-    int db_name_len = event[4 + 4];
+    int db_name_len          = event[4 + 4];
     int var_block_len_offset = 4 + 4 + 1 + 2;
-    int var_block_len = gw_mysql_get_byte2(event + var_block_len_offset);
-    int static_size = 4 + 4 + 1 + 2 + 2 + extra_len;
-    int statement_len = event_size - static_size - var_block_len - db_name_len - 1 - (m_crc ? 4 : 0);
+    int var_block_len        = gw_mysql_get_byte2(event + var_block_len_offset);
+    int static_size          = 4 + 4 + 1 + 2 + 2 + extra_len;
+    int statement_len        = event_size - static_size - var_block_len - db_name_len - 1 - (m_crc ? 4 : 0);
 
-    std::string db((char*)event + static_size + var_block_len, db_name_len);
-    std::string sql((char*)event + static_size + var_block_len + db_name_len + 1, statement_len);
+    std::string db((char*) event + static_size + var_block_len, db_name_len);
+    std::string sql((char*) event + static_size + var_block_len + db_name_len + 1, statement_len);
 
     const auto& config = m_filter.getConfig();
-    m_skip = should_skip_query(config, sql, db);
+    m_skip             = should_skip_query(config, sql, db);
     MXS_INFO("[%s] (%s) %s", m_skip ? "SKIP" : "    ", db.c_str(), sql.c_str());
 
     if (!m_skip && config.rewrite_src)
     {
         std::string err;
-        auto new_db = mxb::pcre2_substitute(config.rewrite_src, db, config.rewrite_dest, &err);
+        auto new_db  = mxb::pcre2_substitute(config.rewrite_src, db, config.rewrite_dest, &err);
         auto new_sql = mxb::pcre2_substitute(config.rewrite_src, sql, config.rewrite_dest, &err);
 
         if ((new_db.empty() && !db.empty()) || (new_sql.empty() && !sql.empty()))
         {
             MXS_ERROR("PCRE2 error on pattern '%s' with replacement '%s': %s",
-                      config.rewrite_src_pattern.c_str(),
-                      config.rewrite_dest.c_str(), err.c_str());
+                config.rewrite_src_pattern.c_str(),
+                config.rewrite_dest.c_str(),
+                err.c_str());
         }
         else if (db != new_db || sql != new_sql)
         {
-            db = new_db;
-            sql = new_sql;
+            db      = new_db;
+            sql     = new_sql;
             int len = sql.length() + db.length() - statement_len - db_name_len;
 
             if (len > 0)
@@ -901,7 +900,7 @@ void BinlogFilterSession::checkStatement(GWBUF** buffer, const REP_HEADER& hdr, 
 
 void BinlogFilterSession::checkAnnotate(const uint8_t* event, const uint32_t event_size)
 {
-    std::string sql((char*)event, event_size - (m_crc ? 4 : 0));
+    std::string sql((char*) event, event_size - (m_crc ? 4 : 0));
     m_skip = should_skip_query(m_filter.getConfig(), sql);
     MXS_INFO("[%s] Annotate: %s", m_skip ? "SKIP" : "    ", sql.c_str());
 }

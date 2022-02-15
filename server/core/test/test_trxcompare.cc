@@ -27,51 +27,48 @@ using namespace std;
 namespace
 {
 
-char USAGE[] =
-    "test_trxcompare [-v] (-s stmt)|[file]"
-    "\n"
-    "-s    test single statement\n"
-    "-v 0, only return code\n"
-    "   1, failed cases (default)\n"
-    "   2, successful transactional cases\n"
-    "   4, successful cases\n"
-    "   7, all cases\n";
+char USAGE[] = "test_trxcompare [-v] (-s stmt)|[file]"
+               "\n"
+               "-s    test single statement\n"
+               "-v 0, only return code\n"
+               "   1, failed cases (default)\n"
+               "   2, successful transactional cases\n"
+               "   4, successful cases\n"
+               "   7, all cases\n";
 
 enum verbosity_t
 {
-    VERBOSITY_NOTHING                  = 0, // 000
-    VERBOSITY_FAILED                   = 1, // 001
-    VERBOSITY_SUCCESSFUL_TRANSACTIONAL = 2, // 010
-    VERBOSITY_SUCCESSFUL               = 4, // 100
-    VERBOSITY_ALL                      = 7, // 111
+    VERBOSITY_NOTHING                  = 0,  // 000
+    VERBOSITY_FAILED                   = 1,  // 001
+    VERBOSITY_SUCCESSFUL_TRANSACTIONAL = 2,  // 010
+    VERBOSITY_SUCCESSFUL               = 4,  // 100
+    VERBOSITY_ALL                      = 7,  // 111
 };
 
 GWBUF* create_gwbuf(const char* zStmt)
 {
-    size_t len = strlen(zStmt);
+    size_t len         = strlen(zStmt);
     size_t payload_len = len + 1;
-    size_t gwbuf_len = MYSQL_HEADER_LEN + payload_len;
+    size_t gwbuf_len   = MYSQL_HEADER_LEN + payload_len;
 
     GWBUF* pBuf = gwbuf_alloc(gwbuf_len);
 
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf))) = payload_len;
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 1)) = (payload_len >> 8);
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 2)) = (payload_len >> 16);
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 3)) = 0x00;
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 4)) = 0x03;
-    memcpy((char*)GWBUF_DATA(pBuf) + 5, zStmt, len);
+    *((unsigned char*) ((char*) GWBUF_DATA(pBuf)))     = payload_len;
+    *((unsigned char*) ((char*) GWBUF_DATA(pBuf) + 1)) = (payload_len >> 8);
+    *((unsigned char*) ((char*) GWBUF_DATA(pBuf) + 2)) = (payload_len >> 16);
+    *((unsigned char*) ((char*) GWBUF_DATA(pBuf) + 3)) = 0x00;
+    *((unsigned char*) ((char*) GWBUF_DATA(pBuf) + 4)) = 0x03;
+    memcpy((char*) GWBUF_DATA(pBuf) + 5, zStmt, len);
 
     return pBuf;
 }
-
 
 class Tester
 {
 public:
     Tester(uint32_t verbosity)
         : m_verbosity(verbosity)
-    {
-    }
+    {}
 
     int run(const char* zStmt)
     {
@@ -79,7 +76,7 @@ public:
 
         GWBUF* pStmt = create_gwbuf(zStmt);
 
-        uint32_t type_mask_qc = qc_get_trx_type_mask_using(pStmt, QC_TRX_PARSE_USING_QC);
+        uint32_t type_mask_qc     = qc_get_trx_type_mask_using(pStmt, QC_TRX_PARSE_USING_QC);
         uint32_t type_mask_parser = qc_get_trx_type_mask_using(pStmt, QC_TRX_PARSE_USING_PARSER);
 
         gwbuf_free(pStmt);
@@ -100,7 +97,7 @@ public:
         {
             if (m_verbosity & VERBOSITY_FAILED)
             {
-                char* zType_mask_qc = qc_typemask_to_string(type_mask_qc);
+                char* zType_mask_qc     = qc_typemask_to_string(type_mask_qc);
                 char* zType_mask_parser = qc_typemask_to_string(type_mask_parser);
 
                 cout << zStmt << "\n"
@@ -143,15 +140,13 @@ private:
 private:
     uint32_t m_verbosity;
 };
-}
-
-
+}  // namespace
 
 int main(int argc, char* argv[])
 {
     int rc = EXIT_SUCCESS;
 
-    int verbosity = VERBOSITY_FAILED;
+    int verbosity          = VERBOSITY_FAILED;
     const char* zStatement = NULL;
 
     int c;

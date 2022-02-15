@@ -22,19 +22,14 @@ namespace mock
 //
 // Client
 //
-Client::Client(const char* zUser,
-               const char* zHost,
-               Handler* pHandler)
+Client::Client(const char* zUser, const char* zHost, Handler* pHandler)
     : m_user(zUser)
     , m_host(zHost)
     , m_pHandler(pHandler)
     , m_n_responses(0)
-{
-}
+{}
 
-Client::~Client()
-{
-}
+Client::~Client() {}
 
 const char* Client::user() const
 {
@@ -54,7 +49,7 @@ size_t Client::n_responses() const
 Client::Handler* Client::set_handler(Handler* pHandler)
 {
     Handler* pH = m_pHandler;
-    m_pHandler = pHandler;
+    m_pHandler  = pHandler;
     return pH;
 }
 
@@ -106,10 +101,10 @@ int32_t Client::write(GWBUF* pResponse)
 
 // static
 int32_t Client::clientReply(MXS_FILTER* pInstance,
-                            MXS_FILTER_SESSION* pSession,
-                            GWBUF* pResponse,
-                            const mxs::ReplyRoute& down,
-                            const mxs::Reply& reply)
+    MXS_FILTER_SESSION* pSession,
+    GWBUF* pResponse,
+    const mxs::ReplyRoute& down,
+    const mxs::Reply& reply)
 {
     Client* pClient = reinterpret_cast<Client*>(pSession);
     mxb_assert(pInstance == &pClient->m_instance);
@@ -121,12 +116,8 @@ int32_t Client::clientReply(MXS_FILTER* pInstance,
 // Client::Handler
 //
 
-Client::Handler::~Handler()
-{
-}
+Client::Handler::~Handler() {}
 
-void Client::Handler::reset()
-{
-}
-}
-}
+void Client::Handler::reset() {}
+}  // namespace mock
+}  // namespace maxscale

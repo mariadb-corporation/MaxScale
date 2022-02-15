@@ -19,18 +19,14 @@ namespace maxscale
 namespace mock
 {
 
-Dcb::Dcb(MXS_SESSION* pSession,
-         const char* zHost,
-         Handler* pHandler)
+Dcb::Dcb(MXS_SESSION* pSession, const char* zHost, Handler* pHandler)
     : ClientDCB(DCB::FD_CLOSED, zHost, DCB::Role::CLIENT, pSession)
     , m_protocol(pHandler)
 {
     m_protocol.set_dcb(this);
 }
 
-Dcb::~Dcb()
-{
-}
+Dcb::~Dcb() {}
 
 Dcb::Handler* Dcb::handler() const
 {
@@ -57,5 +53,5 @@ int32_t Dcb::Protocol::write(GWBUF* pData)
 
     return rv;
 }
-}
-}
+}  // namespace mock
+}  // namespace maxscale

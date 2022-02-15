@@ -33,24 +33,24 @@ timespec timespec_subtract(const timespec& later, const timespec& earlier)
 
     if (later.tv_nsec >= earlier.tv_nsec)
     {
-        result.tv_sec = later.tv_sec - earlier.tv_sec;
+        result.tv_sec  = later.tv_sec - earlier.tv_sec;
         result.tv_nsec = later.tv_nsec - earlier.tv_nsec;
     }
     else
     {
-        result.tv_sec = later.tv_sec - earlier.tv_sec - 1;
+        result.tv_sec  = later.tv_sec - earlier.tv_sec - 1;
         result.tv_nsec = 1000000000 + later.tv_nsec - earlier.tv_nsec;
     }
 
     return result;
 }
-}
+}  // namespace
 
 int main(int argc, char* argv[])
 {
     int rc = EXIT_SUCCESS;
 
-    int nCount = 0;
+    int nCount             = 0;
     const char* zStatement = NULL;
 
     int c;

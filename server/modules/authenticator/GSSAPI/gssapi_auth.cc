@@ -47,7 +47,7 @@ GSSAPIAuthenticatorModule* GSSAPIAuthenticatorModule::create(mxs::ConfigParamete
     /** This is mainly for testing purposes */
     const char default_princ_name[] = "mariadb/localhost.localdomain";
 
-    auto instance = new(std::nothrow) GSSAPIAuthenticatorModule();
+    auto instance = new (std::nothrow) GSSAPIAuthenticatorModule();
     if (instance)
     {
         const std::string princ_option = "principal_name";
@@ -67,14 +67,13 @@ GSSAPIAuthenticatorModule* GSSAPIAuthenticatorModule::create(mxs::ConfigParamete
 
 mariadb::SClientAuth GSSAPIAuthenticatorModule::create_client_authenticator()
 {
-    auto new_ses = new(std::nothrow) GSSAPIClientAuthenticator(this);
+    auto new_ses = new (std::nothrow) GSSAPIClientAuthenticator(this);
     return mariadb::SClientAuth(new_ses);
 }
 
 GSSAPIClientAuthenticator::GSSAPIClientAuthenticator(GSSAPIAuthenticatorModule* module)
     : ClientAuthenticatorT(module)
-{
-}
+{}
 
 GSSAPIClientAuthenticator::~GSSAPIClientAuthenticator()
 {
@@ -100,19 +99,19 @@ GWBUF* GSSAPIClientAuthenticator::create_auth_change_packet()
     const char auth_plugin_name[] = "auth_gssapi_client";
 
     size_t principal_name_len = m_module.principal_name.length();
-    size_t plen = sizeof(auth_plugin_name) + 1 + principal_name_len;
-    GWBUF* buffer = gwbuf_alloc(plen + MYSQL_HEADER_LEN);
+    size_t plen               = sizeof(auth_plugin_name) + 1 + principal_name_len;
+    GWBUF* buffer             = gwbuf_alloc(plen + MYSQL_HEADER_LEN);
 
     if (buffer)
     {
-        uint8_t* data = (uint8_t*)GWBUF_DATA(buffer);
+        uint8_t* data = (uint8_t*) GWBUF_DATA(buffer);
         gw_mysql_set_byte3(data, plen);
         data += 3;
-        *data++ = ++m_sequence;                                     // Second packet
-        *data++ = 0xfe;                                             // AuthSwitchRequest command
-        memcpy(data, auth_plugin_name, sizeof(auth_plugin_name));   // Plugin name
+        *data++ = ++m_sequence;                                    // Second packet
+        *data++ = 0xfe;                                            // AuthSwitchRequest command
+        memcpy(data, auth_plugin_name, sizeof(auth_plugin_name));  // Plugin name
         data += sizeof(auth_plugin_name);
-        memcpy(data, m_module.principal_name.c_str(), principal_name_len);      // Plugin data
+        memcpy(data, m_module.principal_name.c_str(), principal_name_len);  // Plugin data
     }
 
     return buffer;
@@ -159,33 +158,33 @@ void GSSAPIClientAuthenticator::copy_client_information(GWBUF* buffer)
  * @param read_buffer Buffer containing the client's response
  * @return True if authentication can continue, false if not
  */
-mariadb::ClientAuthenticator::ExchRes
-GSSAPIClientAuthenticator::exchange(GWBUF* read_buffer, MYSQL_session* session, mxs::Buffer* output)
+mariadb::ClientAuthenticator::ExchRes GSSAPIClientAuthenticator::exchange(
+    GWBUF* read_buffer, MYSQL_session* session, mxs::Buffer* output)
 {
     auto rval = ExchRes::FAIL;
 
     switch (state)
     {
     case GSSAPI_AUTH_INIT:
-        {
-            /** We need to send the authentication switch packet to change the
+    {
+        /** We need to send the authentication switch packet to change the
              * authentication to something other than the 'mysql_native_password'
              * method */
-            GWBUF* buffer = create_auth_change_packet();
-            if (buffer)
-            {
-                output->reset(buffer);
-                state = GSSAPI_AUTH_DATA_SENT;
-                rval = ExchRes::INCOMPLETE;
-            }
-            break;
+        GWBUF* buffer = create_auth_change_packet();
+        if (buffer)
+        {
+            output->reset(buffer);
+            state = GSSAPI_AUTH_DATA_SENT;
+            rval  = ExchRes::INCOMPLETE;
         }
+        break;
+    }
 
     case GSSAPI_AUTH_DATA_SENT:
         if (store_client_token(session, read_buffer))
         {
             state = GSSAPI_AUTH_TOKEN_READY;
-            rval = ExchRes::READY;
+            rval  = ExchRes::READY;
         }
         break;
 
@@ -214,8 +213,8 @@ bool GSSAPIClientAuthenticator::validate_gssapi_token(uint8_t* token, size_t len
     gss_buffer_desc server_buf = {0, 0};
     gss_cred_id_t credentials;
 
-    const char* pr = m_module.principal_name.c_str();
-    server_buf.value = (void*)pr;
+    const char* pr    = m_module.principal_name.c_str();
+    server_buf.value  = (void*) pr;
     server_buf.length = strlen(pr) + 1;
 
     major = gss_import_name(&minor, &server_buf, GSS_C_NT_USER_NAME, &server_name);
@@ -226,14 +225,8 @@ bool GSSAPIClientAuthenticator::validate_gssapi_token(uint8_t* token, size_t len
         return false;
     }
 
-    major = gss_acquire_cred(&minor,
-                             server_name,
-                             GSS_C_INDEFINITE,
-                             GSS_C_NO_OID_SET,
-                             GSS_C_ACCEPT,
-                             &credentials,
-                             NULL,
-                             NULL);
+    major = gss_acquire_cred(
+        &minor, server_name, GSS_C_INDEFINITE, GSS_C_NO_OID_SET, GSS_C_ACCEPT, &credentials, NULL, NULL);
     if (GSS_ERROR(major))
     {
         report_error(major, minor);
@@ -242,28 +235,27 @@ bool GSSAPIClientAuthenticator::validate_gssapi_token(uint8_t* token, size_t len
 
     do
     {
-
-        gss_ctx_id_t handle = NULL;
-        gss_buffer_desc in = {0, 0};
-        gss_buffer_desc out = {0, 0};
+        gss_ctx_id_t handle         = NULL;
+        gss_buffer_desc in          = {0, 0};
+        gss_buffer_desc out         = {0, 0};
         gss_buffer_desc client_name = {0, 0};
         gss_OID_desc* oid;
         gss_name_t client;
 
-        in.value = token;
+        in.value  = token;
         in.length = len;
 
         major = gss_accept_sec_context(&minor,
-                                       &handle,
-                                       GSS_C_NO_CREDENTIAL,
-                                       &in,
-                                       GSS_C_NO_CHANNEL_BINDINGS,
-                                       &client,
-                                       &oid,
-                                       &out,
-                                       0,
-                                       0,
-                                       NULL);
+            &handle,
+            GSS_C_NO_CREDENTIAL,
+            &in,
+            GSS_C_NO_CHANNEL_BINDINGS,
+            &client,
+            &oid,
+            &out,
+            0,
+            0,
+            NULL);
         if (GSS_ERROR(major))
         {
             report_error(major, minor);
@@ -285,9 +277,9 @@ bool GSSAPIClientAuthenticator::validate_gssapi_token(uint8_t* token, size_t len
             return false;
         }
 
-        memcpy(princ_name, (const char*)client_name.value, client_name.length);
+        memcpy(princ_name, (const char*) client_name.value, client_name.length);
         princ_name[client_name.length] = '\0';
-        *output = princ_name;
+        *output                        = princ_name;
     }
     while (major & GSS_S_CONTINUE_NEEDED);
 
@@ -301,8 +293,8 @@ bool GSSAPIClientAuthenticator::validate_gssapi_token(uint8_t* token, size_t len
  * @param princ Client principal name
  * @return True if the user has access to the database
  */
-bool GSSAPIClientAuthenticator::validate_user(MYSQL_session* session, const char* princ,
-                                              const mariadb::UserEntry* entry)
+bool GSSAPIClientAuthenticator::validate_user(
+    MYSQL_session* session, const char* princ, const mariadb::UserEntry* entry)
 {
     mxb_assert(princ);
     std::string princ_user = princ;
@@ -339,10 +331,10 @@ AuthRes GSSAPIClientAuthenticator::authenticate(const mariadb::UserEntry* entry,
     return rval;
 }
 
-mariadb::SBackendAuth
-GSSAPIAuthenticatorModule::create_backend_authenticator(mariadb::BackendAuthData& auth_data)
+mariadb::SBackendAuth GSSAPIAuthenticatorModule::create_backend_authenticator(
+    mariadb::BackendAuthData& auth_data)
 {
-    return mariadb::SBackendAuth(new(std::nothrow) GSSAPIBackendAuthenticator(auth_data));
+    return mariadb::SBackendAuth(new (std::nothrow) GSSAPIBackendAuthenticator(auth_data));
 }
 
 std::string GSSAPIAuthenticatorModule::name() const
@@ -363,23 +355,18 @@ extern "C"
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_AUTHENTICATOR,
+    static MXS_MODULE info = {MXS_MODULE_API_AUTHENTICATOR,
         MXS_MODULE_GA,
         MXS_AUTHENTICATOR_VERSION,
         "GSSAPI authenticator",
         "V1.0.0",
         MXS_NO_MODULE_CAPABILITIES,
         &mxs::AuthenticatorApiGenerator<GSSAPIAuthenticatorModule>::s_api,
-        NULL,       /* Process init. */
-        NULL,       /* Process finish. */
-        NULL,       /* Thread init. */
-        NULL,       /* Thread finish. */
-        {
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
+        {{MXS_END_MODULE_PARAMS}}};
 
     return &info;
 }

@@ -18,7 +18,7 @@
 
 namespace packet_parser
 {
-using ByteVec = std::vector<uint8_t>;
+using ByteVec    = std::vector<uint8_t>;
 using ClientInfo = MYSQL_session::ClientInfo;
 
 /** Authentication token parsing depends on packet type. */
@@ -30,16 +30,16 @@ enum class AuthPacketType
 
 struct AuthParseResult
 {
-    bool    success {false};        /**< Was parsing successful */
-    ByteVec auth_token;             /**< authentication token */
-    bool    old_protocol {false};   /**< Is client using too old protocol version? */
+    bool success {false};      /**< Was parsing successful */
+    ByteVec auth_token;        /**< authentication token */
+    bool old_protocol {false}; /**< Is client using too old protocol version? */
 
     AuthParseResult() = default;
 };
 
 struct AttrParseResult
 {
-    bool    success {false};
+    bool success {false};
     ByteVec attr_data;
 
     AttrParseResult() = default;
@@ -66,7 +66,7 @@ struct ChangeUserParseResult
     std::string username;
     std::string db;
     std::string plugin;
-    uint16_t    charset {0};
+    uint16_t charset {0};
 
     AuthParseResult token_res;
     AttrParseResult attr_res;
@@ -129,4 +129,4 @@ ChangeUserParseResult parse_change_user_packet(ByteVec& data, uint32_t client_ca
  * @return Result object
  */
 mariadb::AuthSwitchReqContents parse_auth_switch_request(ByteVec& data);
-}
+}  // namespace packet_parser

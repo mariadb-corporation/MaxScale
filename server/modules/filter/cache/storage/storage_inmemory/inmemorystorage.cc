@@ -23,7 +23,6 @@
 using std::unique_ptr;
 using std::string;
 
-
 namespace
 {
 
@@ -36,41 +35,34 @@ const size_t INMEMORY_KEY_LENGTH = 2 * SHA512_DIGEST_LENGTH;
 struct
 {
     Storage::Limits default_limits;
-} this_unit =
-{
-    Storage::Limits(std::numeric_limits<uint32_t>::max()) // max_value_size
+} this_unit = {
+    Storage::Limits(std::numeric_limits<uint32_t>::max())  // max_value_size
 };
 
-}
+}  // namespace
 
 InMemoryStorage::InMemoryStorage(const string& name, const Config& config)
     : m_name(name)
     , m_config(config)
-{
-}
+{}
 
-InMemoryStorage::~InMemoryStorage()
-{
-}
+InMemoryStorage::~InMemoryStorage() {}
 
 //static
 bool InMemoryStorage::initialize(cache_storage_kind_t* pKind, uint32_t* pCapabilities)
 {
-    *pKind = CACHE_STORAGE_PRIVATE;
+    *pKind         = CACHE_STORAGE_PRIVATE;
     *pCapabilities = (CACHE_STORAGE_CAP_ST | CACHE_STORAGE_CAP_MT);
 
     return true;
 }
 
 //static
-void InMemoryStorage::finalize()
-{
-}
+void InMemoryStorage::finalize() {}
 
 //static
-InMemoryStorage* InMemoryStorage::create(const char* zName,
-                                         const Config& config,
-                                         const std::string& arguments)
+InMemoryStorage* InMemoryStorage::create(
+    const char* zName, const Config& config, const std::string& arguments)
 {
     mxb_assert(zName);
 
@@ -78,20 +70,21 @@ InMemoryStorage* InMemoryStorage::create(const char* zName,
     {
         MXS_WARNING("A maximum item count of %u specified, although 'storage_inmemory' "
                     "does not enforce such a limit.",
-                    (unsigned int)config.max_count);
+            (unsigned int) config.max_count);
     }
 
     if (config.max_size != 0)
     {
         MXS_WARNING("A maximum size of %lu specified, although 'storage_inmemory' "
                     "does not enforce such a limit.",
-                    (unsigned long)config.max_size);
+            (unsigned long) config.max_size);
     }
 
     if (!arguments.empty())
     {
         MXS_WARNING("Arguments '%s' provided, although 'storage_inmemory' does not "
-                    "accept any arguments.", arguments.c_str());
+                    "accept any arguments.",
+            arguments.c_str());
     }
 
     unique_ptr<InMemoryStorage> sStorage;
@@ -104,8 +97,7 @@ InMemoryStorage* InMemoryStorage::create(const char* zName,
 
     default:
         mxb_assert(!true);
-        MXS_ERROR("Unknown thread model %d, creating multi-thread aware storage.",
-                  (int)config.thread_model);
+        MXS_ERROR("Unknown thread model %d, creating multi-thread aware storage.", (int) config.thread_model);
 
     case CACHE_THREAD_MODEL_MT:
         sStorage = InMemoryStorageMT::create(zName, config);
@@ -166,11 +158,11 @@ cache_result_t InMemoryStorage::do_get_info(uint32_t what, json_t** ppInfo) cons
 }
 
 cache_result_t InMemoryStorage::do_get_value(Token* pToken,
-                                             const CacheKey& key,
-                                             uint32_t flags,
-                                             uint32_t soft_ttl,
-                                             uint32_t hard_ttl,
-                                             GWBUF** ppResult)
+    const CacheKey& key,
+    uint32_t flags,
+    uint32_t soft_ttl,
+    uint32_t hard_ttl,
+    GWBUF** ppResult)
 {
     mxb_assert(!pToken);
 
@@ -247,9 +239,9 @@ cache_result_t InMemoryStorage::do_get_value(Token* pToken,
 }
 
 cache_result_t InMemoryStorage::do_put_value(Token* pToken,
-                                             const CacheKey& key,
-                                             const std::vector<std::string>& invalidation_words,
-                                             const GWBUF* pValue)
+    const CacheKey& key,
+    const std::vector<std::string>& invalidation_words,
+    const GWBUF* pValue)
 {
     mxb_assert(!pToken);
     mxb_assert(gwbuf_is_contiguous(pValue));
@@ -337,7 +329,7 @@ cache_result_t InMemoryStorage::do_clear(Token* pToken)
 {
     mxb_assert(!pToken);
     m_stats.deletes += m_entries.size();
-    m_stats.size = 0;
+    m_stats.size  = 0;
     m_stats.items = 0;
 
     m_entries.clear();

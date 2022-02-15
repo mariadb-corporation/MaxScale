@@ -56,7 +56,7 @@ ostream& operator<<(ostream& out, const MXS_LOG_THROTTLING& t)
     out << "{" << t.count << ", " << t.window_ms << ", " << t.suppress_ms << "}";
     return out;
 }
-}
+}  // namespace
 
 bool check_messages(istream& in, size_t n_expected)
 {
@@ -87,8 +87,8 @@ void log_messages(uint32_t id, size_t n_generate, int priority)
 struct THREAD_ARG
 {
     uint32_t id;
-    size_t   n_generate;
-    int      priority;
+    size_t n_generate;
+    int priority;
 };
 
 void* thread_main(void* pv)
@@ -107,7 +107,7 @@ bool run(const MXS_LOG_THROTTLING& throttling, int priority, size_t n_generate, 
 {
     cout << "Logging " << n_generate << " messages with throttling as " << throttling << "," << endl;
 
-    mxs_log_set_throttling(&throttling);    // Causes message to be logged.
+    mxs_log_set_throttling(&throttling);  // Causes message to be logged.
 
     ifstream in(logfile.c_str());
     in.seekg(0, ios_base::end);
@@ -119,9 +119,9 @@ bool run(const MXS_LOG_THROTTLING& throttling, int priority, size_t n_generate, 
     for (size_t i = 0; i < N_THREADS; ++i)
     {
         THREAD_ARG* parg = &args[i];
-        parg->id = i;
+        parg->id         = i;
         parg->n_generate = n_generate;
-        parg->priority = priority;
+        parg->priority   = priority;
 
         int rc = pthread_create(&tids[i], 0, thread_main, parg);
         ensure(rc == 0);
@@ -165,7 +165,7 @@ int main(int argc, char* argv[])
 
 
     char tmpbuf[] = "/tmp/maxscale_test_logthrottling_XXXXXX";
-    char* logdir = mkdtemp(tmpbuf);
+    char* logdir  = mkdtemp(tmpbuf);
     ensure(logdir);
     logfile.assign(string(logdir) + '/' + LOGNAME);
 
@@ -173,8 +173,8 @@ int main(int argc, char* argv[])
     {
         MXS_LOG_THROTTLING t;
 
-        t.count = 0;
-        t.window_ms = 0;
+        t.count       = 0;
+        t.window_ms   = 0;
         t.suppress_ms = 0;
 
         // No throttling, so we should get messages from all threads.
@@ -183,8 +183,8 @@ int main(int argc, char* argv[])
             rc = EXIT_FAILURE;
         }
 
-        t.count = 10;
-        t.window_ms = 2000;
+        t.count       = 10;
+        t.window_ms   = 2000;
         t.suppress_ms = 5000;
 
         // 100 messages * N_THREADS, but due to the throttling we should get only 10 messages.
@@ -217,8 +217,8 @@ int main(int argc, char* argv[])
         cout << "Sleeping 6 seconds." << endl;
         sleep(6);
 
-        t.count = 20;
-        t.window_ms = 1000;
+        t.count       = 20;
+        t.window_ms   = 1000;
         t.suppress_ms = 5000;
 
         // 100 messages * N_THREADS, and since we slept longer than the suppression window,
@@ -228,8 +228,8 @@ int main(int argc, char* argv[])
             rc = EXIT_FAILURE;
         }
 
-        t.count = 10;
-        t.window_ms = 1000;
+        t.count       = 10;
+        t.window_ms   = 1000;
         t.suppress_ms = 5000;
 
         // 20 messages * N_THREADS, and since we are logging NOTICE messages, we should

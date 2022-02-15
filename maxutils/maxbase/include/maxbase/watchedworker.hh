@@ -43,4 +43,4 @@ private:
     void call_epoll_tick() override final;
 };
 
-}
+}  // namespace maxbase

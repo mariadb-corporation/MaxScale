@@ -28,7 +28,7 @@
  * @param caller The name of the function calling this function.
  * @return A pointer to the allocated memory.
  */
-void* mxb_malloc(size_t size    /*, const char *caller*/)
+void* mxb_malloc(size_t size /*, const char *caller*/)
 {
     void* ptr = malloc(size);
     if (!ptr)
@@ -52,7 +52,7 @@ void* mxb_malloc(size_t size    /*, const char *caller*/)
  * @param caller The name of the function calling this function.
  * @return A pointer to the allocated memory.
  */
-void* mxb_calloc(size_t nmemb, size_t size    /*, const char *caller*/)
+void* mxb_calloc(size_t nmemb, size_t size /*, const char *caller*/)
 {
     void* ptr = calloc(nmemb, size);
     if (!ptr)
@@ -78,7 +78,7 @@ void* mxb_calloc(size_t nmemb, size_t size    /*, const char *caller*/)
  * @param caller The name of the function calling this function.
  * @return A pointer to the allocated memory.
  */
-void* mxb_realloc(void* ptr, size_t size    /*, const char *caller*/)
+void* mxb_realloc(void* ptr, size_t size /*, const char *caller*/)
 {
     ptr = realloc(ptr, size);
     if (!ptr)
@@ -100,7 +100,7 @@ void* mxb_realloc(void* ptr, size_t size    /*, const char *caller*/)
  * @param caller The name of the function calling this function.
  * @return A copy of the string.
  */
-char* mxb_strdup(const char* s1    /*, const char *caller*/)
+char* mxb_strdup(const char* s1 /*, const char *caller*/)
 {
     char* s2 = strdup(s1);
     if (!s2)
@@ -123,7 +123,7 @@ char* mxb_strdup(const char* s1    /*, const char *caller*/)
  * @param caller The name of the function calling this function.
  * @return A copy of the string.
  */
-char* mxb_strndup(const char* s1, size_t n    /*, const char *caller*/)
+char* mxb_strndup(const char* s1, size_t n /*, const char *caller*/)
 {
     char* s2 = strndup(s1, n);
     if (!s2)
@@ -146,7 +146,7 @@ char* mxb_strndup(const char* s1, size_t n    /*, const char *caller*/)
  * @param ptr Pointer to the memory to be freed.
  * @param caller The name of the function calling this function.
  */
-void mxb_free(void* ptr    /*, const char *caller*/)
+void mxb_free(void* ptr /*, const char *caller*/)
 {
     free(ptr);
 }
@@ -167,9 +167,9 @@ void mxb_free(void* ptr    /*, const char *caller*/)
  * @param caller The name of the function calling this function.
  * @return A copy of the string.
  */
-char* mxb_strdup_a(const char* s1    /*, const char *caller*/)
+char* mxb_strdup_a(const char* s1 /*, const char *caller*/)
 {
-    char* s2 = mxb_strdup(s1    /*, caller*/);
+    char* s2 = mxb_strdup(s1 /*, caller*/);
     if (!s2)
     {
         abort();
@@ -194,9 +194,9 @@ char* mxb_strdup_a(const char* s1    /*, const char *caller*/)
  * @param caller The name of the function calling this function.
  * @return A copy of the string.
  */
-char* mxb_strndup_a(const char* s1, size_t n    /*, const char *caller*/)
+char* mxb_strndup_a(const char* s1, size_t n /*, const char *caller*/)
 {
-    char* s2 = mxb_strndup(s1, n    /*, caller*/);
+    char* s2 = mxb_strndup(s1, n /*, caller*/);
     if (!s2)
     {
         abort();

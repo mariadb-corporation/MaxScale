@@ -57,8 +57,8 @@ public:
      */
     mxs::Downstream* as_downstream()
     {
-        m_downstream.instance = reinterpret_cast<MXS_FILTER*>(&m_instance);
-        m_downstream.session = reinterpret_cast<MXS_FILTER_SESSION*>(this);
+        m_downstream.instance   = reinterpret_cast<MXS_FILTER*>(&m_instance);
+        m_downstream.session    = reinterpret_cast<MXS_FILTER_SESSION*>(this);
         m_downstream.routeQuery = &RouterSession::routeQuery;
         return &m_downstream;
     }
@@ -98,10 +98,7 @@ public:
      */
     void discard_all_responses();
 
-    MXS_SESSION* session() const
-    {
-        return static_cast<MXS_SESSION*>(m_pSession);
-    }
+    MXS_SESSION* session() const { return static_cast<MXS_SESSION*>(m_pSession); }
 
     // Sets the upstream filter session
     void set_upstream(FilterModule::Session* pFilter_session);
@@ -112,12 +109,12 @@ private:
     static int32_t routeQuery(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pRouter_session, GWBUF* pStatement);
 
 private:
-    MXS_ROUTER             m_instance;
-    Backend*               m_pBackend;
+    MXS_ROUTER m_instance;
+    Backend* m_pBackend;
     FilterModule::Session* m_pUpstream_filter_session;
-    mxs::Downstream        m_downstream;
+    mxs::Downstream m_downstream;
 
     maxscale::mock::Session* m_pSession;
 };
-}
-}
+}  // namespace mock
+}  // namespace maxscale

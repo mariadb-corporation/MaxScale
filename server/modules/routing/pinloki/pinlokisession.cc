@@ -14,7 +14,7 @@
 #include "pinlokisession.hh"
 
 #include <maxscale/modutil.hh>
-#include <maxscale//protocol/mariadb/resultset.hh>
+#include <maxscale/protocol/mariadb/resultset.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxbase/string.hh>
 
@@ -27,29 +27,28 @@ namespace
 
 // Some common constants usually queried by various client libraries and monitoring solutions. The values were
 // extracted from MariaDB 10.5.10 with minor modifications, namely @@license and @@sql_mode.
-const std::map<std::string, std::string> constant_variables =
-{
-    {"@@session.auto_increment_increment", "1"                 },
-    {"@@character_set_client",             "utf8"              },
-    {"@@character_set_connection",         "utf8"              },
-    {"@@character_set_results",            "utf8"              },
-    {"@@character_set_server",             "utf8mb4"           },
-    {"@@collation_server",                 "utf8mb4_general_ci"},
-    {"@@collation_connection",             "utf8_general_ci"   },
-    {"@@init_connect",                     ""                  },
-    {"@@interactive_timeout",              "28800"             },
-    {"@@license",                          "BSL"               },
-    {"@@lower_case_table_names",           "0"                 },
-    {"@@max_allowed_packet",               "16777216"          },
-    {"@@net_write_timeout",                "60"                },
-    {"@@performance_schema",               "0"                 },
-    {"@@query_cache_size",                 "1048576"           },
-    {"@@query_cache_type",                 "OFF"               },
-    {"@@sql_mode",                         ""                  },
-    {"@@system_time_zone",                 "UTC"               },
-    {"@@time_zone",                        "SYSTEM"            },
-    {"@@tx_isolation",                     "REPEATABLE-READ"   },
-    {"@@wait_timeout",                     "28800"             },
+const std::map<std::string, std::string> constant_variables = {
+    {"@@session.auto_increment_increment", "1"},
+    {"@@character_set_client", "utf8"},
+    {"@@character_set_connection", "utf8"},
+    {"@@character_set_results", "utf8"},
+    {"@@character_set_server", "utf8mb4"},
+    {"@@collation_server", "utf8mb4_general_ci"},
+    {"@@collation_connection", "utf8_general_ci"},
+    {"@@init_connect", ""},
+    {"@@interactive_timeout", "28800"},
+    {"@@license", "BSL"},
+    {"@@lower_case_table_names", "0"},
+    {"@@max_allowed_packet", "16777216"},
+    {"@@net_write_timeout", "60"},
+    {"@@performance_schema", "0"},
+    {"@@query_cache_size", "1048576"},
+    {"@@query_cache_type", "OFF"},
+    {"@@sql_mode", ""},
+    {"@@system_time_zone", "UTC"},
+    {"@@time_zone", "SYSTEM"},
+    {"@@tx_isolation", "REPEATABLE-READ"},
+    {"@@wait_timeout", "28800"},
 };
 
 GWBUF* create_resultset(const std::vector<std::string>& columns, const std::vector<std::string>& row)
@@ -66,25 +65,27 @@ GWBUF* create_resultset(const std::vector<std::string>& columns, const std::vect
 
 GWBUF* create_slave_running_error()
 {
-    return modutil_create_mysql_err_msg(
-        1, 0, 1198, "HY000",
+    return modutil_create_mysql_err_msg(1,
+        0,
+        1198,
+        "HY000",
         "This operation cannot be performed as you have a running slave; run STOP SLAVE first");
 }
 
 GWBUF* create_select_master_error()
 {
-    return modutil_create_mysql_err_msg(
-        1, 0, 1198, "HY000",
+    return modutil_create_mysql_err_msg(1,
+        0,
+        1198,
+        "HY000",
         "Manual master configuration is not possible when `select_master=true` is used.");
 }
 
 GWBUF* create_change_master_error(const std::string& err)
 {
-    return modutil_create_mysql_err_msg(
-        1, 0, 1198, "HY000",
-        err.c_str());
+    return modutil_create_mysql_err_msg(1, 0, 1198, "HY000", err.c_str());
 }
-}
+}  // namespace
 
 namespace pinloki
 {
@@ -106,7 +107,7 @@ void PinlokiSession::close()
 
 int32_t PinlokiSession::routeQuery(GWBUF* pPacket)
 {
-    int rval = 0;
+    int rval        = 0;
     GWBUF* response = nullptr;
     mxs::Buffer buf(pPacket);
     auto cmd = mxs_mysql_get_command(buf.get());
@@ -125,15 +126,17 @@ int32_t PinlokiSession::routeQuery(GWBUF* pPacket)
         try
         {
             pinloki::SendCallback send_cb = [this](const mxq::RplEvent& event) {
-                    return send_event(event);
-                };
+                return send_event(event);
+            };
             pinloki::WorkerCallback worker_cb = [this]() -> mxb::Worker& {
-                    return *m_pSession->worker();
-                };
+                return *m_pSession->worker();
+            };
 
-            m_reader = std::make_unique<Reader>(
-                send_cb, worker_cb, m_router->inventory()->config(),
-                m_gtid_list, std::chrono::seconds(m_heartbeat_period));
+            m_reader = std::make_unique<Reader>(send_cb,
+                worker_cb,
+                m_router->inventory()->config(),
+                m_gtid_list,
+                std::chrono::seconds(m_heartbeat_period));
             m_reader->start();
             rval = 1;
         }
@@ -149,13 +152,13 @@ int32_t PinlokiSession::routeQuery(GWBUF* pPacket)
         break;
 
     case MXS_COM_QUERY:
-        {
-            auto sql = mxs::extract_sql(buf.get());
-            MXS_DEBUG("COM_QUERY: %s", sql.c_str());
-            parser::parse(sql, this);
-            rval = 1;
-        }
-        break;
+    {
+        auto sql = mxs::extract_sql(buf.get());
+        MXS_DEBUG("COM_QUERY: %s", sql.c_str());
+        parser::parse(sql, this);
+        rval = 1;
+    }
+    break;
 
     case COM_QUIT:
         rval = 1;
@@ -185,8 +188,8 @@ void PinlokiSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, co
     mxb_assert_message(!true, "This should not happen");
 }
 
-bool PinlokiSession::handleError(mxs::ErrorType type, GWBUF* pMessage,
-                                 mxs::Endpoint* pProblem, const mxs::Reply& pReply)
+bool PinlokiSession::handleError(
+    mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& pReply)
 {
     mxb_assert_message(!true, "This should not happen");
     return false;
@@ -210,8 +213,8 @@ mxs::Buffer PinlokiSession::make_buffer(Prefix prefix, const uint8_t* ptr, size_
 void PinlokiSession::send_event(const maxsql::RplEvent& event)
 {
     const uint8_t* ptr = reinterpret_cast<const uint8_t*>(event.pBuffer());
-    long size = event.buffer_size();
-    Prefix prefix = PREFIX_OK;
+    long size          = event.buffer_size();
+    Prefix prefix      = PREFIX_OK;
 
     while (size > 0)
     {
@@ -249,8 +252,8 @@ int PinlokiSession::low_water_mark_reached(DCB* dcb, DCB::Reason reason, void* u
     pSession->m_reader->set_in_high_water(false);
 
     auto callback = [pSession]() {
-            pSession->m_reader->send_events();
-        };
+        pSession->m_reader->send_events();
+    };
 
     pSession->m_pSession->worker()->execute(callback, mxs::RoutingWorker::EXECUTE_QUEUED);
 
@@ -259,28 +262,16 @@ int PinlokiSession::low_water_mark_reached(DCB* dcb, DCB::Reason reason, void* u
 
 void PinlokiSession::select(const std::vector<std::string>& fields, const std::vector<std::string>& aliases)
 {
-    static const std::set<std::string> gtid_pos_sel_var =
-    {
-        "@@gtid_slave_pos",
+    static const std::set<std::string> gtid_pos_sel_var = {"@@gtid_slave_pos",
         "@@global.gtid_slave_pos",
         "@@gtid_current_pos",
         "@@global.gtid_current_pos",
         "@@gtid_binlog_pos",
-        "@@global.gtid_binlog_pos"
-    };
+        "@@global.gtid_binlog_pos"};
 
-    static const std::set<std::string> version_vars =
-    {
-        "version()",
-        "@@version",
-        "@@global.version"
-    };
+    static const std::set<std::string> version_vars = {"version()", "@@version", "@@global.version"};
 
-    static const std::set<std::string> server_id_vars =
-    {
-        "@@server_id",
-        "@@global.server_id"
-    };
+    static const std::set<std::string> server_id_vars = {"@@server_id", "@@global.server_id"};
 
     auto values = fields;
 
@@ -297,11 +288,11 @@ void PinlokiSession::select(const std::vector<std::string>& fields, const std::v
         }
         else if (val == "@@version_comment")
         {
-            a = "pinloki";      // Helps detect when something is replicating from pinloki.
+            a = "pinloki";  // Helps detect when something is replicating from pinloki.
         }
         else if (val == "@@read_only")
         {
-            a = "1";    // Always in read-only mode
+            a = "1";  // Always in read-only mode
         }
         else if (val == "@@global.gtid_domain_id")
         {
@@ -355,13 +346,13 @@ void PinlokiSession::set(const std::string& key, const std::string& value)
         else
         {
             m_gtid_list = std::move(gtid_list);
-            buf = modutil_create_ok();
+            buf         = modutil_create_ok();
         }
     }
     else if (key == "@master_heartbeat_period")
     {
         m_heartbeat_period = strtol(value.c_str(), nullptr, 10) / 1000000000;
-        buf = modutil_create_ok();
+        buf                = modutil_create_ok();
     }
     else if (key == "gtid_slave_pos")
     {
@@ -369,13 +360,14 @@ void PinlokiSession::set(const std::string& key, const std::string& value)
 
         if (!gtid_list.is_valid())
         {
-            buf = modutil_create_mysql_err_msg(1, 0, 1941, "HY000",
-                                               "Could not parse GTID");
+            buf = modutil_create_mysql_err_msg(1, 0, 1941, "HY000", "Could not parse GTID");
         }
         else if (m_router->is_slave_running())
         {
-            buf = modutil_create_mysql_err_msg(
-                1, 0, 1198, "HY000",
+            buf = modutil_create_mysql_err_msg(1,
+                0,
+                1198,
+                "HY000",
                 "This operation cannot be performed as you have a running slave;"
                 " run STOP SLAVE first");
         }
@@ -431,9 +423,7 @@ void PinlokiSession::start_slave()
     else
     {
         // Slave not configured
-        buf = modutil_create_mysql_err_msg(
-            1, 0, 1200, "HY000",
-            err_str.c_str());
+        buf = modutil_create_mysql_err_msg(1, 0, 1200, "HY000", err_str.c_str());
     }
 
     send(buf);
@@ -478,7 +468,7 @@ void PinlokiSession::show_slave_status(bool all)
 void PinlokiSession::show_master_status()
 {
     auto files = m_router->inventory()->file_names();
-    auto rset = ResultSet::create({"File", "Position", "Binlog_Do_DB", "Binlog_Ignore_DB"});
+    auto rset  = ResultSet::create({"File", "Position", "Binlog_Do_DB", "Binlog_Ignore_DB"});
 
     if (!files.empty())
     {
@@ -504,9 +494,8 @@ void PinlokiSession::show_binlogs()
 
 void PinlokiSession::show_variables(const std::string& like)
 {
-    static const std::set<std::string> gtid_pos_var = {
-        "gtid_slave_pos", "gtid_current_pos", "gtid_binlog_pos"
-    };
+    static const std::set<std::string> gtid_pos_var
+        = {"gtid_slave_pos", "gtid_current_pos", "gtid_binlog_pos"};
 
     std::vector<std::string> values;
 
@@ -529,31 +518,31 @@ void PinlokiSession::master_gtid_wait(const std::string& gtid, int timeout)
     mxb_assert(m_mgw_dcid == 0);
     auto header = "master_gtid_wait('" + gtid + "', " + std::to_string(timeout) + ")";
     auto target = mxq::GtidList::from_string(gtid);
-    auto start = steady_clock::now();
+    auto start  = steady_clock::now();
 
     auto cb = [this, start, target, timeout, header](auto action) {
-            bool again = false;
+        bool again = false;
 
-            if (action == mxb::Worker::Call::EXECUTE)
+        if (action == mxb::Worker::Call::EXECUTE)
+        {
+            if (m_router->gtid_io_pos().is_included(target))
             {
-                if (m_router->gtid_io_pos().is_included(target))
-                {
-                    send(create_resultset({header}, {"0"}));
-                    m_mgw_dcid = 0;
-                }
-                else if (duration_cast<seconds>(steady_clock::now() - start).count() > timeout)
-                {
-                    send(create_resultset({header}, {"-1"}));
-                    m_mgw_dcid = 0;
-                }
-                else
-                {
-                    again = true;
-                }
+                send(create_resultset({header}, {"0"}));
+                m_mgw_dcid = 0;
             }
+            else if (duration_cast<seconds>(steady_clock::now() - start).count() > timeout)
+            {
+                send(create_resultset({header}, {"-1"}));
+                m_mgw_dcid = 0;
+            }
+            else
+            {
+                again = true;
+            }
+        }
 
-            return again;
-        };
+        return again;
+    };
 
     if (target.is_valid())
     {
@@ -582,10 +571,8 @@ void PinlokiSession::purge_logs(const std::string& up_to)
         break;
 
     case PurgeResult::UpToFileNotFound:
-        auto buf = modutil_create_mysql_err_msg(1, 0, 1373, "HY000",
-                                                MAKE_STR("Target log "
-                                                         << up_to
-                                                         << " not found in binlog index").c_str());
+        auto buf = modutil_create_mysql_err_msg(
+            1, 0, 1373, "HY000", MAKE_STR("Target log " << up_to << " not found in binlog index").c_str());
         send(buf);
     }
 }
@@ -594,4 +581,4 @@ void PinlokiSession::error(const std::string& err)
 {
     send(modutil_create_mysql_err_msg(1, 0, 1064, "42000", err.c_str()));
 }
-}
+}  // namespace pinloki

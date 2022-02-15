@@ -34,7 +34,7 @@
 int mxb_log_enabled_priorities = (1 << LOG_ERR) | (1 << LOG_NOTICE) | (1 << LOG_WARNING);
 
 // Number of chars needed to represent a number.
-#define CALCLEN(i) ((size_t)(floor(log10(abs((int64_t)i))) + 1))
+#define CALCLEN(i) ((size_t) (floor(log10(abs((int64_t) i))) + 1))
 #define UINTLEN(i) (i < 10 ? 1 : (i < 100 ? 2 : (i < 1000 ? 3 : CALCLEN(i))))
 
 namespace
@@ -64,26 +64,26 @@ std::string get_timestamp(void)
     struct tm tm;
     localtime_r(&t, &tm);
     static const char timestamp_formatstr[] = "%04d-%02d-%02d %02d:%02d:%02d   ";
-    static int required = snprintf(NULL,
-                                   0,
-                                   timestamp_formatstr,
-                                   tm.tm_year + 1900,
-                                   tm.tm_mon + 1,
-                                   tm.tm_mday,
-                                   tm.tm_hour,
-                                   tm.tm_min,
-                                   tm.tm_sec);
+    static int required                     = snprintf(NULL,
+        0,
+        timestamp_formatstr,
+        tm.tm_year + 1900,
+        tm.tm_mon + 1,
+        tm.tm_mday,
+        tm.tm_hour,
+        tm.tm_min,
+        tm.tm_sec);
     char buf[required + 1];
 
     snprintf(buf,
-             sizeof(buf),
-             timestamp_formatstr,
-             tm.tm_year + 1900,
-             tm.tm_mon + 1,
-             tm.tm_mday,
-             tm.tm_hour,
-             tm.tm_min,
-             tm.tm_sec);
+        sizeof(buf),
+        timestamp_formatstr,
+        tm.tm_year + 1900,
+        tm.tm_mon + 1,
+        tm.tm_mday,
+        tm.tm_hour,
+        tm.tm_min,
+        tm.tm_sec);
 
     return buf;
 }
@@ -98,47 +98,47 @@ std::string get_timestamp_hp(void)
     int usec = tv.tv_usec / 1000;
 
     static const char timestamp_formatstr_hp[] = "%04d-%02d-%02d %02d:%02d:%02d.%03d   ";
-    static int required = snprintf(NULL,
-                                   0,
-                                   timestamp_formatstr_hp,
-                                   tm.tm_year + 1900,
-                                   tm.tm_mon + 1,
-                                   tm.tm_mday,
-                                   tm.tm_hour,
-                                   tm.tm_min,
-                                   tm.tm_sec,
-                                   usec);
+    static int required                        = snprintf(NULL,
+        0,
+        timestamp_formatstr_hp,
+        tm.tm_year + 1900,
+        tm.tm_mon + 1,
+        tm.tm_mday,
+        tm.tm_hour,
+        tm.tm_min,
+        tm.tm_sec,
+        usec);
 
     char buf[required + 1];
 
     snprintf(buf,
-             sizeof(buf),
-             timestamp_formatstr_hp,
-             tm.tm_year + 1900,
-             tm.tm_mon + 1,
-             tm.tm_mday,
-             tm.tm_hour,
-             tm.tm_min,
-             tm.tm_sec,
-             usec);
+        sizeof(buf),
+        timestamp_formatstr_hp,
+        tm.tm_year + 1900,
+        tm.tm_mon + 1,
+        tm.tm_mday,
+        tm.tm_hour,
+        tm.tm_min,
+        tm.tm_sec,
+        usec);
 
     return buf;
 }
 
 struct LOG_PREFIX
 {
-    const char* text;   // The prefix, e.g. "error: "
-    int         len;    // The length of the prefix without the trailing NULL.
+    const char* text;  // The prefix, e.g. "error: "
+    int len;           // The length of the prefix without the trailing NULL.
 };
 
-const char PREFIX_EMERG[] = "emerg  : ";
-const char PREFIX_ALERT[] = "alert  : ";
-const char PREFIX_CRIT[] = "crit   : ";
-const char PREFIX_ERROR[] = "error  : ";
+const char PREFIX_EMERG[]   = "emerg  : ";
+const char PREFIX_ALERT[]   = "alert  : ";
+const char PREFIX_CRIT[]    = "crit   : ";
+const char PREFIX_ERROR[]   = "error  : ";
 const char PREFIX_WARNING[] = "warning: ";
-const char PREFIX_NOTICE[] = "notice : ";
-const char PREFIX_INFO[] = "info   : ";
-const char PREFIX_DEBUG[] = "debug  : ";
+const char PREFIX_NOTICE[]  = "notice : ";
+const char PREFIX_INFO[]    = "info   : ";
+const char PREFIX_DEBUG[]   = "debug  : ";
 
 LOG_PREFIX level_to_prefix(int level)
 {
@@ -150,68 +150,68 @@ LOG_PREFIX level_to_prefix(int level)
     {
     case LOG_EMERG:
         prefix.text = PREFIX_EMERG;
-        prefix.len = sizeof(PREFIX_EMERG);
+        prefix.len  = sizeof(PREFIX_EMERG);
         break;
 
     case LOG_ALERT:
         prefix.text = PREFIX_ALERT;
-        prefix.len = sizeof(PREFIX_ALERT);
+        prefix.len  = sizeof(PREFIX_ALERT);
         break;
 
     case LOG_CRIT:
         prefix.text = PREFIX_CRIT;
-        prefix.len = sizeof(PREFIX_CRIT);
+        prefix.len  = sizeof(PREFIX_CRIT);
         break;
 
     case LOG_ERR:
         prefix.text = PREFIX_ERROR;
-        prefix.len = sizeof(PREFIX_ERROR);
+        prefix.len  = sizeof(PREFIX_ERROR);
         break;
 
     case LOG_WARNING:
         prefix.text = PREFIX_WARNING;
-        prefix.len = sizeof(PREFIX_WARNING);
+        prefix.len  = sizeof(PREFIX_WARNING);
         break;
 
     case LOG_NOTICE:
         prefix.text = PREFIX_NOTICE;
-        prefix.len = sizeof(PREFIX_NOTICE);
+        prefix.len  = sizeof(PREFIX_NOTICE);
         break;
 
     case LOG_INFO:
         prefix.text = PREFIX_INFO;
-        prefix.len = sizeof(PREFIX_INFO);
+        prefix.len  = sizeof(PREFIX_INFO);
         break;
 
     case LOG_DEBUG:
         prefix.text = PREFIX_DEBUG;
-        prefix.len = sizeof(PREFIX_DEBUG);
+        prefix.len  = sizeof(PREFIX_DEBUG);
         break;
 
     default:
         assert(!true);
         prefix.text = PREFIX_ERROR;
-        prefix.len = sizeof(PREFIX_ERROR);
+        prefix.len  = sizeof(PREFIX_ERROR);
         break;
     }
 
-    --prefix.len;   // Remove trailing NULL.
+    --prefix.len;  // Remove trailing NULL.
 
     return prefix;
 }
 
 enum message_suppression_t
 {
-    MESSAGE_NOT_SUPPRESSED,     // Message is not suppressed.
-    MESSAGE_SUPPRESSED,         // Message is suppressed for the first time (for this round)
-    MESSAGE_STILL_SUPPRESSED    // Message is still suppressed (for this round)
+    MESSAGE_NOT_SUPPRESSED,   // Message is not suppressed.
+    MESSAGE_SUPPRESSED,       // Message is suppressed for the first time (for this round)
+    MESSAGE_STILL_SUPPRESSED  // Message is still suppressed (for this round)
 };
 
 class MessageRegistryKey
 {
 public:
     const char* filename;
-    const int   linenumber;
+    const int linenumber;
 
     /**
      * @brief Constructs a message stats key
@@ -223,13 +223,12 @@ public:
     MessageRegistryKey(const char* filename, int linenumber)
         : filename(filename)
         , linenumber(linenumber)
-    {
-    }
+    {}
 
     bool eq(const MessageRegistryKey& other) const
     {
-        return filename == other.filename   // Yes, we compare the pointer values and not the strings.
-               && linenumber == other.linenumber;
+        return filename == other.filename  // Yes, we compare the pointer values and not the strings.
+            && linenumber == other.linenumber;
     }
 
     size_t hash() const
@@ -238,8 +237,8 @@ public:
          * This is an implementation of the Jenkin's one-at-a-time hash function.
          * https://en.wikipedia.org/wiki/Jenkins_hash_function
          */
-        uint64_t key1 = (uint64_t)filename;
-        uint16_t key2 = (uint16_t)linenumber;   // The first 48 bits are likely to be 0.
+        uint64_t key1 = (uint64_t) filename;
+        uint16_t key2 = (uint16_t) linenumber;  // The first 48 bits are likely to be 0.
 
         uint32_t hash_value = 0;
         size_t i;
@@ -272,8 +271,7 @@ public:
         : m_first_ms(time_monotonic_ms())
         , m_last_ms(0)
         , m_count(0)
-    {
-    }
+    {}
 
     message_suppression_t update_suppression(const MXB_LOG_THROTTLING& t)
     {
@@ -314,7 +312,7 @@ public:
                 // flooding will stop anyway.
 
                 m_first_ms = now_ms;
-                m_count = 1;
+                m_count    = 1;
             }
         }
         else
@@ -329,7 +327,7 @@ public:
             {
                 // We have exited the suppression window, reset the situation.
                 m_first_ms = now_ms;
-                m_count = 1;
+                m_count    = 1;
             }
         }
 
@@ -340,11 +338,11 @@ public:
 
 private:
     std::mutex m_lock;
-    uint64_t   m_first_ms;  /** The time when the error was logged the first time in this window. */
-    uint64_t   m_last_ms;   /** The time when the error was logged the last time. */
-    size_t     m_count;     /** How many times the error has been reported within this window. */
+    uint64_t m_first_ms; /** The time when the error was logged the first time in this window. */
+    uint64_t m_last_ms;  /** The time when the error was logged the last time. */
+    size_t m_count;      /** How many times the error has been reported within this window. */
 };
-}
+}  // namespace
 
 namespace std
 {
@@ -353,18 +351,15 @@ template<>
 struct hash<MessageRegistryKey>
 {
     typedef MessageRegistryKey Key;
-    typedef size_t             result_type;
+    typedef size_t result_type;
 
-    size_t operator()(const MessageRegistryKey& key) const
-    {
-        return key.hash();
-    }
+    size_t operator()(const MessageRegistryKey& key) const { return key.hash(); }
 };
 
 template<>
 struct equal_to<MessageRegistryKey>
 {
-    typedef bool               result_type;
+    typedef bool result_type;
     typedef MessageRegistryKey first_argument_type;
     typedef MessageRegistryKey second_argument_type;
 
@@ -373,7 +368,7 @@ struct equal_to<MessageRegistryKey>
         return lhs.eq(rhs);
     }
 };
-}
+}  // namespace std
 
 namespace
 {
@@ -382,40 +377,37 @@ class MessageRegistry;
 
 struct this_unit
 {
-    int                              augmentation;      // Can change during the lifetime of log_manager.
-    bool                             do_highprecision;  // Can change during the lifetime of log_manager.
-    bool                             do_syslog;         // Can change during the lifetime of log_manager.
-    bool                             do_maxlog;         // Can change during the lifetime of log_manager.
-    bool                             redirect_stdout;
-    bool                             session_trace;
-    MXB_LOG_THROTTLING               throttling;        // Can change during the lifetime of log_manager.
-    std::unique_ptr<mxb::Logger>     sLogger;
+    int augmentation;       // Can change during the lifetime of log_manager.
+    bool do_highprecision;  // Can change during the lifetime of log_manager.
+    bool do_syslog;         // Can change during the lifetime of log_manager.
+    bool do_maxlog;         // Can change during the lifetime of log_manager.
+    bool redirect_stdout;
+    bool session_trace;
+    MXB_LOG_THROTTLING throttling;  // Can change during the lifetime of log_manager.
+    std::unique_ptr<mxb::Logger> sLogger;
     std::unique_ptr<MessageRegistry> sMessage_registry;
-    size_t                           (* context_provider)(char* buffer, size_t len);
-    void                             (* in_memory_log)(const char* buffer, size_t len);
-} this_unit =
-{
-    DEFAULT_LOG_AUGMENTATION,   // augmentation
-    false,                      // do_highprecision
-    true,                       // do_syslog
-    true,                       // do_maxlog
-    false,                      // redirect_stdout
-    false,                      // session_trace
-    DEFAULT_LOG_THROTTLING,     // throttling
+    size_t (*context_provider)(char* buffer, size_t len);
+    void (*in_memory_log)(const char* buffer, size_t len);
+} this_unit = {
+    DEFAULT_LOG_AUGMENTATION,  // augmentation
+    false,                     // do_highprecision
+    true,                      // do_syslog
+    true,                      // do_maxlog
+    false,                     // redirect_stdout
+    false,                     // session_trace
+    DEFAULT_LOG_THROTTLING,    // throttling
 };
 
 class MessageRegistry
 {
 public:
-    typedef MessageRegistryKey   Key;
+    typedef MessageRegistryKey Key;
     typedef MessageRegistryStats Stats;
 
-    MessageRegistry(const MessageRegistry&) = delete;
+    MessageRegistry(const MessageRegistry&)            = delete;
     MessageRegistry& operator=(const MessageRegistry&) = delete;
 
-    MessageRegistry()
-    {
-    }
+    MessageRegistry() {}
 
     Stats& get_stats(const Key& key)
     {
@@ -444,17 +436,17 @@ public:
     }
 
 private:
-    std::mutex                     m_lock;
+    std::mutex m_lock;
     std::unordered_map<Key, Stats> m_registry;
 };
-}
+}  // namespace
 
 bool mxb_log_init(const char* ident,
-                  const char* logdir,
-                  const char* filename,
-                  mxb_log_target_t target,
-                  mxb_log_context_provider_t context_provider,
-                  mxb_in_memory_log_t in_memory_log)
+    const char* logdir,
+    const char* filename,
+    mxb_log_target_t target,
+    mxb_log_context_provider_t context_provider,
+    mxb_in_memory_log_t in_memory_log)
 {
     assert(!this_unit.sLogger && !this_unit.sMessage_registry);
 
@@ -487,7 +479,7 @@ bool mxb_log_init(const char* ident,
         filepath = std::string(logdir) + "/" + suffix;
     }
 
-    this_unit.sMessage_registry.reset(new(std::nothrow) MessageRegistry);
+    this_unit.sMessage_registry.reset(new (std::nothrow) MessageRegistry);
 
     switch (target)
     {
@@ -498,7 +490,7 @@ bool mxb_log_init(const char* ident,
         if (this_unit.sLogger && this_unit.redirect_stdout)
         {
             // Redirect stdout and stderr to the log file
-            FILE* unused __attribute__ ((unused));
+            FILE* unused __attribute__((unused));
             unused = freopen(this_unit.sLogger->filename(), "a", stdout);
             unused = freopen(this_unit.sLogger->filename(), "a", stderr);
         }
@@ -516,7 +508,7 @@ bool mxb_log_init(const char* ident,
     if (this_unit.sLogger && this_unit.sMessage_registry)
     {
         this_unit.context_provider = context_provider;
-        this_unit.in_memory_log = in_memory_log;
+        this_unit.in_memory_log    = in_memory_log;
 
         openlog(ident, LOG_PID | LOG_ODELAY, LOG_USER);
     }
@@ -587,8 +579,7 @@ void mxb_log_set_throttling(const MXB_LOG_THROTTLING* throttling)
     // is used right when its values are modified.
     this_unit.throttling = *throttling;
 
-    if ((this_unit.throttling.count == 0)
-        || (this_unit.throttling.window_ms == 0)
+    if ((this_unit.throttling.count == 0) || (this_unit.throttling.window_ms == 0)
         || (this_unit.throttling.suppress_ms == 0))
     {
         MXB_NOTICE("Log throttling has been disabled.");
@@ -597,9 +588,9 @@ void mxb_log_set_throttling(const MXB_LOG_THROTTLING* throttling)
     {
         MXB_NOTICE("A message that is logged %lu times in %lu milliseconds, "
                    "will be suppressed for %lu milliseconds.",
-                   this_unit.throttling.count,
-                   this_unit.throttling.window_ms,
-                   this_unit.throttling.suppress_ms);
+            this_unit.throttling.count,
+            this_unit.throttling.window_ms,
+            this_unit.throttling.suppress_ms);
     }
 }
 
@@ -633,7 +624,7 @@ bool mxb_log_rotate()
     if (this_unit.redirect_stdout && rval)
     {
         // Redirect stdout and stderr to the log file
-        FILE* unused __attribute__ ((unused));
+        FILE* unused __attribute__((unused));
         unused = freopen(this_unit.sLogger->filename(), "a", stdout);
         unused = freopen(this_unit.sLogger->filename(), "a", stderr);
     }
@@ -687,7 +678,7 @@ static const char* level_to_string(int level)
 
 bool mxb_log_set_priority_enabled(int level, bool enable)
 {
-    bool rv = false;
+    bool rv          = false;
     const char* text = (enable ? "enable" : "disable");
 
     if ((level & ~LOG_PRIMASK) == 0)
@@ -715,12 +706,12 @@ bool mxb_log_set_priority_enabled(int level, bool enable)
 }
 
 int mxb_log_message(int priority,
-                    const char* modname,
-                    const char* file,
-                    int line,
-                    const char* function,
-                    const char* format,
-                    ...)
+    const char* modname,
+    const char* file,
+    int line,
+    const char* function,
+    const char* format,
+    ...)
 {
     int err = 0;
 
@@ -729,7 +720,7 @@ int mxb_log_message(int priority,
 
     int level = priority & LOG_PRIMASK;
 
-    if ((priority & ~(LOG_PRIMASK | LOG_FACMASK)) == 0)     // Check that the priority is ok,
+    if ((priority & ~(LOG_PRIMASK | LOG_FACMASK)) == 0)  // Check that the priority is ok,
     {
         message_suppression_t status = MESSAGE_NOT_SUPPRESSED;
 
@@ -747,7 +738,7 @@ int mxb_log_message(int priority,
         {
             va_list valist;
 
-            char context[32];   // The documentation will guarantee a buffer of at least 32 bytes.
+            char context[32];  // The documentation will guarantee a buffer of at least 32 bytes.
             int context_len = 0;
 
             if (this_unit.context_provider)
@@ -756,25 +747,25 @@ int mxb_log_message(int priority,
 
                 if (context_len != 0)
                 {
-                    context_len += 3;   // The added "() "
+                    context_len += 3;  // The added "() "
                 }
             }
 
-            int modname_len = modname ? strlen(modname) + 3 : 0;    // +3 due to "[...] "
+            int modname_len = modname ? strlen(modname) + 3 : 0;  // +3 due to "[...] "
 
             // If we know the actual object name, add that also
-            auto scope = mxb::LogScope::current_scope();
-            int scope_len = scope ? strlen(scope) + 3 : 0;      // +3 due to "(...) "
+            auto scope    = mxb::LogScope::current_scope();
+            int scope_len = scope ? strlen(scope) + 3 : 0;  // +3 due to "(...) "
 
-            static const char SUPPRESSION[] =
-                " (subsequent similar messages suppressed for %lu milliseconds)";
+            static const char SUPPRESSION[]
+                = " (subsequent similar messages suppressed for %lu milliseconds)";
             int suppression_len = 0;
-            size_t suppress_ms = this_unit.throttling.suppress_ms;
+            size_t suppress_ms  = this_unit.throttling.suppress_ms;
 
             if (status == MESSAGE_SUPPRESSED)
             {
-                suppression_len += sizeof(SUPPRESSION) - 1; // Remove trailing NULL
-                suppression_len -= 3;                       // Remove the %lu
+                suppression_len += sizeof(SUPPRESSION) - 1;  // Remove trailing NULL
+                suppression_len -= 3;                        // Remove the %lu
                 suppression_len += UINTLEN(suppress_ms);
             }
 
@@ -792,14 +783,14 @@ int mxb_log_message(int priority,
                 static const char FORMAT_FUNCTION[] = "(%s): ";
 
                 // Other thread might change this_unit.augmentation.
-                int augmentation = this_unit.augmentation;
+                int augmentation     = this_unit.augmentation;
                 int augmentation_len = 0;
 
                 switch (augmentation)
                 {
                 case MXB_LOG_AUGMENT_WITH_FUNCTION:
-                    augmentation_len = sizeof(FORMAT_FUNCTION) - 1; // Remove trailing 0
-                    augmentation_len -= 2;                          // Remove the %s
+                    augmentation_len = sizeof(FORMAT_FUNCTION) - 1;  // Remove trailing 0
+                    augmentation_len -= 2;                           // Remove the %s
                     augmentation_len += strlen(function);
                     break;
 
@@ -821,19 +812,20 @@ int mxb_log_message(int priority,
                     message_len -= (buffer_len - MAX_LOGSTRLEN);
                     buffer_len = MAX_LOGSTRLEN;
 
-                    assert(prefix.len + context_len + modname_len + scope_len
-                           + augmentation_len + message_len + suppression_len == buffer_len);
+                    assert(prefix.len + context_len + modname_len + scope_len + augmentation_len + message_len
+                               + suppression_len
+                           == buffer_len);
                 }
 
                 char buffer[buffer_len + 1];
 
-                char* prefix_text = buffer;
-                char* context_text = prefix_text + prefix.len;
-                char* modname_text = context_text + context_len;
-                char* scope_text = modname_text + modname_len;
+                char* prefix_text       = buffer;
+                char* context_text      = prefix_text + prefix.len;
+                char* modname_text      = context_text + context_len;
+                char* scope_text        = modname_text + modname_len;
                 char* augmentation_text = scope_text + scope_len;
-                char* message_text = augmentation_text + augmentation_len;
-                char* suppression_text = message_text + message_len;
+                char* message_text      = augmentation_text + augmentation_len;
+                char* suppression_text  = message_text + message_len;
 
                 strcpy(prefix_text, prefix.text);
 
@@ -872,7 +864,7 @@ int mxb_log_message(int priority,
                         assert(!true);
                     }
 
-                    (void)len;
+                    (void) len;
                     assert(len == augmentation_len);
                 }
 
@@ -965,4 +957,4 @@ LogRedirect::Func LogRedirect::current_redirect()
 {
     return s_redirect;
 }
-}
+}  // namespace maxbase

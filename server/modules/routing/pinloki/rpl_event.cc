@@ -31,14 +31,14 @@ std::string get_rotate_name(const char* ptr, size_t len)
     // 19 byte header and 8 bytes of constant data
     // see: https://mariadb.com/kb/en/rotate_event/
     const size_t NAME_OFFSET = 19 + 8;
-    auto given = std::string(ptr + NAME_OFFSET, len - NAME_OFFSET);
+    auto given               = std::string(ptr + NAME_OFFSET, len - NAME_OFFSET);
 
     // This is a very uncomfortable hack around the lack of checksum information we have at this point.
     // Deducing whether checksums are enabled by calculating it and comparing it to the stored checksum works
     // in most cases but we can't be sure whether there are edge cases where the valid checksum of the start
     // of the event results in a checksum that matches the last four bytes of it.
-    uint32_t orig_checksum = *(const uint32_t*)(ptr + len - 4);
-    uint32_t checksum = crc32(0, (const uint8_t*)ptr, len - 4);
+    uint32_t orig_checksum = *(const uint32_t*) (ptr + len - 4);
+    uint32_t checksum      = crc32(0, (const uint8_t*) ptr, len - 4);
 
     if (orig_checksum == checksum)
     {
@@ -47,8 +47,7 @@ std::string get_rotate_name(const char* ptr, size_t len)
 
     return given;
 }
-}
-
+}  // namespace
 
 namespace maxsql
 {
@@ -78,8 +77,7 @@ RplEvent::RplEvent(std::vector<char>&& raw)
 
 RplEvent::RplEvent(size_t sz)
     : m_raw(sz)
-{
-}
+{}
 
 RplEvent::RplEvent(RplEvent&& rhs)
     : m_maria_rpl(std::move(rhs.m_maria_rpl))
@@ -94,7 +92,7 @@ RplEvent::RplEvent(RplEvent&& rhs)
 RplEvent& RplEvent::operator=(RplEvent&& rhs)
 {
     m_maria_rpl = std::move(rhs.m_maria_rpl);
-    m_raw = std::move(rhs.m_raw);
+    m_raw       = std::move(rhs.m_raw);
 
     if (!is_empty())
     {
@@ -151,7 +149,7 @@ void RplEvent::init(bool with_body)
 
     if (with_body)
     {
-        auto pCrc = reinterpret_cast<const uint8_t*>(pEnd() - 4);
+        auto pCrc  = reinterpret_cast<const uint8_t*>(pEnd() - 4);
         m_checksum = mariadb::get_byte4(pCrc);
     }
 }
@@ -169,16 +167,16 @@ void RplEvent::set_next_pos(uint32_t next_pos)
 void RplEvent::recalculate_crc()
 {
     auto crc_pos = (uint8_t*) pEnd() - 4;
-    m_checksum = crc32(0, (uint8_t*) pBuffer(), buffer_size() - 4);
+    m_checksum   = crc32(0, (uint8_t*) pBuffer(), buffer_size() - 4);
     mariadb::set_byte4(crc_pos, m_checksum);
 }
 
 Rotate RplEvent::rotate() const
 {
     Rotate rot;
-    rot.is_fake = m_timestamp == 0;
+    rot.is_fake      = m_timestamp == 0;
     rot.is_artifical = m_flags & LOG_EVENT_ARTIFICIAL_F;
-    rot.file_name = get_rotate_name(pBuffer(), buffer_size());
+    rot.file_name    = get_rotate_name(pBuffer(), buffer_size());
 
     return rot;
 }
@@ -210,18 +208,18 @@ std::string RplEvent::query_event_sql() const
 
     if (event_type() == QUERY_EVENT)
     {
-        constexpr int DBNM_OFF = 4 + 4;                     // Database name offset
-        constexpr int VBLK_OFF = 4 + 4 + 1 + 2;             // Varblock offset
-        constexpr int FIXED_DATA_LEN = 4 + 4 + 1 + 2 + 2;   // Fixed data length of query event
-        constexpr int CRC_LEN = 4;
+        constexpr int DBNM_OFF       = 4 + 4;              // Database name offset
+        constexpr int VBLK_OFF       = 4 + 4 + 1 + 2;      // Varblock offset
+        constexpr int FIXED_DATA_LEN = 4 + 4 + 1 + 2 + 2;  // Fixed data length of query event
+        constexpr int CRC_LEN        = 4;
 
         const uint8_t* ptr = (const uint8_t*) pBody();
-        int dblen = ptr[DBNM_OFF];
-        int vblklen = mariadb::get_byte2(ptr + VBLK_OFF);
+        int dblen          = ptr[DBNM_OFF];
+        int vblklen        = mariadb::get_byte2(ptr + VBLK_OFF);
 
         size_t data_len = pEnd() - pBody();
         size_t sql_offs = FIXED_DATA_LEN + vblklen + 1 + dblen;
-        int sql_len = data_len - sql_offs - CRC_LEN;
+        int sql_len     = data_len - sql_offs - CRC_LEN;
         sql.assign((const char*) ptr + sql_offs, sql_len);
     }
 
@@ -306,25 +304,25 @@ std::string dump_rpl_msg(const RplEvent& rpl_event, Verbosity v)
     switch (rpl_event.event_type())
     {
     case ROTATE_EVENT:
-        {
-            auto event = rpl_event.rotate();
-            oss << event << '\n';
-        }
-        break;
+    {
+        auto event = rpl_event.rotate();
+        oss << event << '\n';
+    }
+    break;
 
     case GTID_EVENT:
-        {
-            auto event = rpl_event.gtid_event();
-            oss << event << '\n';
-        }
-        break;
+    {
+        auto event = rpl_event.gtid_event();
+        oss << event << '\n';
+    }
+    break;
 
     case GTID_LIST_EVENT:
-        {
-            auto event = rpl_event.gtid_list();
-            oss << event << '\n';
-        }
-        break;
+    {
+        auto event = rpl_event.gtid_list();
+        oss << event << '\n';
+    }
+    break;
 
     case FORMAT_DESCRIPTION_EVENT:
         break;
@@ -356,7 +354,7 @@ RplEvent RplEvent::read_header_only(std::istream& file, long* file_pos)
     file.read(rpl.m_raw.data(), RPL_HEADER_LEN);
 
     if (file.eof())
-    {   // trying to read passed end of file
+    {  // trying to read passed end of file
         return maxsql::RplEvent();
     }
     else if (!file.good())
@@ -382,7 +380,7 @@ bool RplEvent::read_body(std::istream& file, long* file_pos)
     file.read(m_raw.data() + RPL_HEADER_LEN, event_length - RPL_HEADER_LEN);
 
     if (file.eof())
-    {   // trying to read passed end of file
+    {  // trying to read passed end of file
         m_raw.clear();
         return false;
     }
@@ -393,7 +391,7 @@ bool RplEvent::read_body(std::istream& file, long* file_pos)
         return false;
     }
 
-    auto pCrc = reinterpret_cast<const uint8_t*>(pEnd() - 4);
+    auto pCrc  = reinterpret_cast<const uint8_t*>(pEnd() - 4);
     m_checksum = mariadb::get_byte4(pCrc);
 
     if (*file_pos == next_event_pos())
@@ -415,13 +413,11 @@ std::ostream& operator<<(std::ostream& os, const RplEvent& rpl_msg)
     return os;
 }
 
-std::vector<char> create_rotate_event(const std::string& file_name,
-                                      uint32_t server_id,
-                                      uint32_t pos,
-                                      Kind kind)
+std::vector<char> create_rotate_event(
+    const std::string& file_name, uint32_t server_id, uint32_t pos, Kind kind)
 {
     std::vector<char> data(RPL_HEADER_LEN + file_name.size() + 12);
-    uint8_t* ptr = (uint8_t*)&data[0];
+    uint8_t* ptr = (uint8_t*) &data[0];
 
     // Timestamp, hm.
     mariadb::set_byte4(ptr, 0);
@@ -455,16 +451,16 @@ std::vector<char> create_rotate_event(const std::string& file_name,
     ptr += file_name.size();
 
     // Checksum of the whole event
-    mariadb::set_byte4(ptr, crc32(0, (uint8_t*)data.data(), data.size() - 4));
+    mariadb::set_byte4(ptr, crc32(0, (uint8_t*) data.data(), data.size() - 4));
 
     return data;
 }
 
-std::vector<char> create_binlog_checkpoint(const std::string& file_name, uint32_t server_id,
-                                           uint32_t next_pos)
+std::vector<char> create_binlog_checkpoint(
+    const std::string& file_name, uint32_t server_id, uint32_t next_pos)
 {
     std::vector<char> data(RPL_HEADER_LEN + 4 + file_name.size() + 4);
-    uint8_t* ptr = (uint8_t*)&data[0];
+    uint8_t* ptr = (uint8_t*) &data[0];
 
     // Timestamp, hm.
     mariadb::set_byte4(ptr, -1);
@@ -500,11 +496,11 @@ std::vector<char> create_binlog_checkpoint(const std::string& file_name, uint32_
     ptr += file_name.size();
 
     // Checksum of the whole event
-    mariadb::set_byte4(ptr, crc32(0, (uint8_t*)data.data(), data.size() - 4));
+    mariadb::set_byte4(ptr, crc32(0, (uint8_t*) data.data(), data.size() - 4));
 
     return data;
 }
-}
+}  // namespace maxsql
 
 std::string to_string(mariadb_rpl_event ev)
 {

@@ -33,7 +33,7 @@ class FileWriter;
 
 struct Error
 {
-    int         code {0};
+    int code {0};
     std::string str {};
 };
 
@@ -46,23 +46,23 @@ public:
 
     // These are thread safe on their own, but can be inconsistent as a group.
     mxq::GtidList get_gtid_io_pos() const;
-    Error         get_err() const;
+    Error get_err() const;
 
     void set_connection_details(const mxq::Connection::ConnectionDetails& details);
 
 private:
-    InventoryWriter&  m_inventory;
-    bool              m_is_bootstrap = false;
-    bool              m_commit_on_query = false;
-    maxsql::GtidList  m_current_gtid_list;
+    InventoryWriter& m_inventory;
+    bool m_is_bootstrap    = false;
+    bool m_commit_on_query = false;
+    maxsql::GtidList m_current_gtid_list;
     std::atomic<bool> m_running {true};
-    std::thread       m_thread;
-    maxbase::Timer    m_timer {10s};
-    Error             m_error;
+    std::thread m_thread;
+    maxbase::Timer m_timer {10s};
+    Error m_error;
 
     mxq::Connection::ConnectionDetails m_details;
 
-    mutable std::mutex              m_lock;
+    mutable std::mutex m_lock;
     mutable std::condition_variable m_cond;
 
     void save_gtid_list(FileWriter& writer);
@@ -72,4 +72,4 @@ private:
 
     mxq::Connection::ConnectionDetails get_connection_details();
 };
-}
+}  // namespace pinloki

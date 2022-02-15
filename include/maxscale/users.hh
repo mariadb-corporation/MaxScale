@@ -29,23 +29,22 @@ namespace maxscale
 enum user_account_type
 {
     USER_ACCOUNT_UNKNOWN,
-    USER_ACCOUNT_BASIC,     /**< Allows read-only access */
-    USER_ACCOUNT_ADMIN      /**< Allows complete access */
+    USER_ACCOUNT_BASIC, /**< Allows read-only access */
+    USER_ACCOUNT_ADMIN  /**< Allows complete access */
 };
 
 struct UserInfo
 {
     UserInfo() = default;
+
     UserInfo(std::string pw, user_account_type perm)
         : password(pw)
         , permissions(perm)
-    {
-    }
+    {}
 
-    std::string       password;
+    std::string password;
     user_account_type permissions {USER_ACCOUNT_BASIC};
 };
-
 
 class Users
 {
@@ -63,12 +62,12 @@ public:
     bool remove(const std::string& user);
     bool get(const std::string& user, UserInfo* output = NULL) const;
     bool authenticate(const std::string& user, const std::string& password);
-    int  admin_count() const;
-    bool check_permissions(const std::string& user, const std::string& password,
-                           user_account_type perm) const;
-    bool    set_permissions(const std::string& user, user_account_type perm);
+    int admin_count() const;
+    bool check_permissions(
+        const std::string& user, const std::string& password, user_account_type perm) const;
+    bool set_permissions(const std::string& user, user_account_type perm);
     json_t* diagnostics() const;
-    bool    empty() const;
+    bool empty() const;
     json_t* to_json() const;
 
     /**
@@ -81,14 +80,14 @@ public:
 private:
     static bool is_admin(const UserMap::value_type& value);
 
-    bool        add_hashed(const std::string& user, const std::string& password, user_account_type perm);
+    bool add_hashed(const std::string& user, const std::string& password, user_account_type perm);
     std::string hash(const std::string& password);
     std::string old_hash(const std::string& password);
 
     mutable std::mutex m_lock;
-    UserMap            m_data;
+    UserMap m_data;
 };
-}
+}  // namespace maxscale
 
 /**
  * Change password for a user

@@ -26,7 +26,7 @@ bool handle_softfail(const MODULECMD_ARG* args, json_t** error_out)
     mxb_assert(MODULECMD_GET_TYPE(&args->argv[1].type) == MODULECMD_ARG_SERVER);
 
     XpandMonitor* pMon = static_cast<XpandMonitor*>(args->argv[0].value.monitor);
-    SERVER* pServer = args->argv[1].value.server;
+    SERVER* pServer    = args->argv[1].value.server;
 
     return pMon->softfail(pServer, error_out);
 }
@@ -38,11 +38,11 @@ bool handle_unsoftfail(const MODULECMD_ARG* args, json_t** error_out)
     mxb_assert(MODULECMD_GET_TYPE(&args->argv[1].type) == MODULECMD_ARG_SERVER);
 
     XpandMonitor* pMon = static_cast<XpandMonitor*>(args->argv[0].value.monitor);
-    SERVER* pServer = args->argv[1].value.server;
+    SERVER* pServer    = args->argv[1].value.server;
 
     return pMon->unsoftfail(pServer, error_out);
 }
-}
+}  // namespace
 
 /**
  * The module entry point routine. It is this routine that
@@ -54,38 +54,31 @@ bool handle_unsoftfail(const MODULECMD_ARG* args, json_t** error_out)
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static modulecmd_arg_type_t softfail_argv[] =
-    {
-        {
-            MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
-            "Monitor name (from configuration file)"
-        },
-        {
-            MODULECMD_ARG_SERVER, "Node to be softfailed."
-        }
-    };
+    static modulecmd_arg_type_t softfail_argv[] = {
+        {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Monitor name (from configuration file)"},
+        {MODULECMD_ARG_SERVER, "Node to be softfailed."}};
 
-    modulecmd_register_command(MXS_MODULE_NAME, "softfail", MODULECMD_TYPE_ACTIVE,
-                               handle_softfail, MXS_ARRAY_NELEMS(softfail_argv), softfail_argv,
-                               "Perform softfail of node");
+    modulecmd_register_command(MXS_MODULE_NAME,
+        "softfail",
+        MODULECMD_TYPE_ACTIVE,
+        handle_softfail,
+        MXS_ARRAY_NELEMS(softfail_argv),
+        softfail_argv,
+        "Perform softfail of node");
 
-    static modulecmd_arg_type_t unsoftfail_argv[] =
-    {
-        {
-            MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
-            "Monitor name (from configuration file)"
-        },
-        {
-            MODULECMD_ARG_SERVER, "Node to be unsoftfailed."
-        }
-    };
+    static modulecmd_arg_type_t unsoftfail_argv[] = {
+        {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Monitor name (from configuration file)"},
+        {MODULECMD_ARG_SERVER, "Node to be unsoftfailed."}};
 
-    modulecmd_register_command(MXS_MODULE_NAME, "unsoftfail", MODULECMD_TYPE_ACTIVE,
-                               handle_unsoftfail, MXS_ARRAY_NELEMS(unsoftfail_argv), unsoftfail_argv,
-                               "Perform unsoftfail of node");
+    modulecmd_register_command(MXS_MODULE_NAME,
+        "unsoftfail",
+        MODULECMD_TYPE_ACTIVE,
+        handle_unsoftfail,
+        MXS_ARRAY_NELEMS(unsoftfail_argv),
+        unsoftfail_argv,
+        "Perform unsoftfail of node");
 
-    static MXS_MODULE info =
-    {
+    static MXS_MODULE info = {
         MXS_MODULE_API_MONITOR,
         MXS_MODULE_GA,
         MXS_MONITOR_VERSION,
@@ -93,10 +86,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "V1.0.0",
         MXS_NO_MODULE_CAPABILITIES,
         &maxscale::MonitorApi<XpandMonitor>::s_api,
-        NULL,                                       /* Process init. */
-        NULL,                                       /* Process finish. */
-        NULL,                                       /* Thread init. */
-        NULL,                                       /* Thread finish. */
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
     };
 
     XpandMonitor::Config::populate(info);

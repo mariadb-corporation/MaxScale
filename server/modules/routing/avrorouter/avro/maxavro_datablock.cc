@@ -41,9 +41,9 @@ MAXAVRO_DATABLOCK* maxavro_datablock_allocate(MAXAVRO_FILE* file, size_t buffers
     if (datablock && (datablock->buffer = malloc(buffersize)))
     {
         datablock->buffersize = buffersize;
-        datablock->avrofile = file;
-        datablock->datasize = 0;
-        datablock->records = 0;
+        datablock->avrofile   = file;
+        datablock->datasize   = 0;
+        datablock->records    = 0;
     }
 
     return datablock;
@@ -60,14 +60,13 @@ void maxavro_datablock_free(MAXAVRO_DATABLOCK* block)
 
 bool maxavro_datablock_finalize(MAXAVRO_DATABLOCK* block)
 {
-    bool rval = true;
+    bool rval  = true;
     FILE* file = block->avrofile->file;
 
     /** Store the current position so we can truncate the file if a write fails */
     long pos = ftell(file);
 
-    if (!maxavro_write_integer(file, block->records)
-        || !maxavro_write_integer(file, block->datasize)
+    if (!maxavro_write_integer(file, block->records) || !maxavro_write_integer(file, block->datasize)
         || fwrite(block->buffer, 1, block->datasize, file) != block->datasize
         || fwrite(block->avrofile->sync, 1, SYNC_MARKER_SIZE, file) != SYNC_MARKER_SIZE)
     {
@@ -81,7 +80,7 @@ bool maxavro_datablock_finalize(MAXAVRO_DATABLOCK* block)
         /** The current block is successfully written, reset datablock for
          * a new write. */
         block->buffersize = 0;
-        block->records = 0;
+        block->records    = 0;
     }
     return rval;
 }

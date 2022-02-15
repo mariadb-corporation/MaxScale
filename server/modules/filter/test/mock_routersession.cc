@@ -27,9 +27,7 @@ RouterSession::RouterSession(Backend* pBackend, maxscale::mock::Session* session
     memset(&m_instance, 0, sizeof(m_instance));
 }
 
-RouterSession::~RouterSession()
-{
-}
+RouterSession::~RouterSession() {}
 
 void RouterSession::set_upstream(FilterModule::Session* pFilter_session)
 {
@@ -70,13 +68,12 @@ int32_t RouterSession::clientReply(GWBUF* pResponse, const mxs::Reply& reply)
 }
 
 // static
-int32_t RouterSession::routeQuery(MXS_FILTER* pInstance,
-                                  MXS_FILTER_SESSION* pRouter_session,
-                                  GWBUF* pStatement)
+int32_t RouterSession::routeQuery(
+    MXS_FILTER* pInstance, MXS_FILTER_SESSION* pRouter_session, GWBUF* pStatement)
 {
     RouterSession* pThis = reinterpret_cast<RouterSession*>(pRouter_session);
 
     return pThis->routeQuery(reinterpret_cast<MXS_ROUTER*>(pInstance), pStatement);
 }
-}
-}
+}  // namespace mock
+}  // namespace maxscale

@@ -41,7 +41,7 @@ enum Version
 const char* to_string(Version version);
 
 Version from_string(const char* str);
-}
+}  // namespace ssl_version
 
 // SSL configuration
 struct SSLConfig
@@ -50,13 +50,13 @@ struct SSLConfig
     SSLConfig(const std::string& key, const std::string& cert, const std::string& ca);
     bool empty() const;
 
-    std::string key;    /**< SSL private key */
-    std::string cert;   /**< SSL certificate */
-    std::string ca;     /**< SSL CA certificate */
+    std::string key;  /**< SSL private key */
+    std::string cert; /**< SSL certificate */
+    std::string ca;   /**< SSL CA certificate */
 
-    ssl_version::Version version {ssl_version::SSL_TLS_MAX};    /**< Which TLS version to use */
+    ssl_version::Version version {ssl_version::SSL_TLS_MAX}; /**< Which TLS version to use */
 
-    bool verify_peer {false};   /**< Enable peer certificate verification */
-    bool verify_host {false};   /**< Enable peer host verification */
+    bool verify_peer {false}; /**< Enable peer certificate verification */
+    bool verify_host {false}; /**< Enable peer host verification */
 };
-}
+}  // namespace maxbase

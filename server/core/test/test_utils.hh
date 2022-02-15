@@ -41,7 +41,7 @@
 void preload_module(const char* name, const char* path, const char* type)
 {
     std::string old_libdir = mxs::libdir();
-    std::string fullpath = TEST_DIR;
+    std::string fullpath   = TEST_DIR;
     fullpath += "/";
     fullpath += path;
     mxs::set_libdir(fullpath.c_str());
@@ -49,40 +49,37 @@ void preload_module(const char* name, const char* path, const char* type)
     mxs::set_libdir(old_libdir.c_str());
 }
 
-static int set_signal(int sig, void (* handler)(int));
+static int set_signal(int sig, void (*handler)(int));
 
 static void sigfatal_handler(int i)
 {
     set_signal(i, SIG_DFL);
-    mxb::dump_stacktrace(
-        [](const char* symbol, const char* cmd) {
-            MXS_ALERT("  %s: %s", symbol, cmd);
-        });
+    mxb::dump_stacktrace([](const char* symbol, const char* cmd) { MXS_ALERT("  %s: %s", symbol, cmd); });
     raise(i);
 }
 
-static int set_signal(int sig, void (* handler)(int))
+static int set_signal(int sig, void (*handler)(int))
 {
     int rc = 0;
 
     struct sigaction sigact = {};
-    sigact.sa_handler = handler;
+    sigact.sa_handler       = handler;
 
     int err;
 
     do
     {
         errno = 0;
-        err = sigaction(sig, &sigact, NULL);
+        err   = sigaction(sig, &sigact, NULL);
     }
     while (errno == EINTR);
 
     if (err < 0)
     {
         MXS_ERROR("Failed call sigaction() in %s due to %d, %s.",
-                  program_invocation_short_name,
-                  errno,
-                  mxs_strerror(errno));
+            program_invocation_short_name,
+            errno,
+            mxs_strerror(errno));
         rc = 1;
     }
 
@@ -97,7 +94,7 @@ static maxbase::WatchdogNotifier* watchdog_notifier = nullptr;
  * This initializes all libraries required to run unit tests. If worker related functionality is required, use
  *`run_unit_test` instead.
  */
-void init_test_env(char* __attribute((unused))path = nullptr, uint32_t init_type = QC_INIT_BOTH)
+void init_test_env(char* __attribute((unused)) path = nullptr, uint32_t init_type = QC_INIT_BOTH)
 {
     set_signal(SIGSEGV, sigfatal_handler);
     set_signal(SIGABRT, sigfatal_handler);
@@ -138,7 +135,7 @@ void init_test_env(char* __attribute((unused))path = nullptr, uint32_t init_type
  * This function should be used if any of the core objects (sessions, services etc.) are needed. If only
  * library functions are tested, `init_test_env` is sufficient.
  */
-void run_unit_test(std::function<void ()> func)
+void run_unit_test(std::function<void()> func)
 {
     init_test_env();
     mxs::RoutingWorker::start_workers();

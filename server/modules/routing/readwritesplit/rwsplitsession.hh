@@ -56,10 +56,10 @@ typedef std::unordered_map<uint32_t, ExecInfo> ExecMap;
 /**
  * The client session of a RWSplit instance
  */
-class RWSplitSession final : public mxs::RouterSession
-                           , private mxs::QueryClassifier::Handler
+class RWSplitSession final : public mxs::RouterSession,
+                             private mxs::QueryClassifier::Handler
 {
-    RWSplitSession(const RWSplitSession&) = delete;
+    RWSplitSession(const RWSplitSession&)            = delete;
     RWSplitSession& operator=(const RWSplitSession&) = delete;
 
 public:
@@ -125,10 +125,7 @@ public:
 
     bool handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& pReply);
 
-    mxs::QueryClassifier& qc()
-    {
-        return m_qc;
-    }
+    mxs::QueryClassifier& qc() { return m_qc; }
 
 private:
     RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::SRWBackends backends);
@@ -153,7 +150,7 @@ private:
     void close_stale_connections();
     void execute_queued_commands(mxs::RWBackend* backend, bool processed_sescmd);
 
-    int64_t         get_current_rank();
+    int64_t get_current_rank();
     mxs::RWBackend* get_hinted_backend(const char* name);
     mxs::RWBackend* get_slave_backend(int max_rlag);
     mxs::RWBackend* get_master_backend();
@@ -164,17 +161,17 @@ private:
     // The main target selection function
     mxs::RWBackend* get_target(GWBUF* querybuf, route_target_t route_target);
 
-    bool            handle_target_is_all(mxs::Buffer&& buffer);
+    bool handle_target_is_all(mxs::Buffer&& buffer);
     mxs::RWBackend* handle_hinted_target(GWBUF* querybuf, route_target_t route_target);
     mxs::RWBackend* handle_slave_is_target(uint8_t cmd, uint32_t stmt_id);
     mxs::RWBackend* handle_master_is_target();
-    bool            handle_got_target(mxs::Buffer&& buffer, mxs::RWBackend* target, bool store);
-    bool            handle_routing_failure(mxs::Buffer&& buffer, route_target_t route_target);
-    bool            prepare_target(mxs::RWBackend* target, route_target_t route_target);
-    bool            prepare_connection(mxs::RWBackend* target);
-    bool            create_one_connection_for_sescmd();
-    void            retry_query(GWBUF* querybuf, int delay = 1);
-    void            process_stmt_execute(mxs::Buffer* buffer, uint32_t id, mxs::RWBackend* target);
+    bool handle_got_target(mxs::Buffer&& buffer, mxs::RWBackend* target, bool store);
+    bool handle_routing_failure(mxs::Buffer&& buffer, route_target_t route_target);
+    bool prepare_target(mxs::RWBackend* target, route_target_t route_target);
+    bool prepare_connection(mxs::RWBackend* target);
+    bool create_one_connection_for_sescmd();
+    void retry_query(GWBUF* querybuf, int delay = 1);
+    void process_stmt_execute(mxs::Buffer* buffer, uint32_t id, mxs::RWBackend* target);
 
     // Transaction state helpers
     bool trx_is_starting() const;
@@ -188,24 +185,22 @@ private:
     void replace_master(mxs::RWBackend* target);
     bool should_migrate_trx(mxs::RWBackend* target);
     bool start_trx_migration(mxs::RWBackend* target, GWBUF* querybuf);
-    void log_master_routing_failure(bool found,
-                                    mxs::RWBackend* old_master,
-                                    mxs::RWBackend* curr_master);
+    void log_master_routing_failure(bool found, mxs::RWBackend* old_master, mxs::RWBackend* curr_master);
 
     void send_readonly_error();
     bool query_not_supported(GWBUF* querybuf);
 
     GWBUF* handle_causal_read_reply(GWBUF* writebuf, const mxs::Reply& reply, mxs::RWBackend* backend);
-    bool   finish_causal_read();
+    bool finish_causal_read();
     GWBUF* add_prefix_wait_gtid(uint64_t version, GWBUF* origin);
-    void   correct_packet_sequence(GWBUF* buffer);
+    void correct_packet_sequence(GWBUF* buffer);
     GWBUF* discard_master_wait_gtid_result(GWBUF* buffer);
 
     int get_max_replication_lag();
 
     bool retry_master_query(mxs::RWBackend* backend);
-    bool handle_error_new_connection(mxs::RWBackend* backend, GWBUF* errmsg,
-                                     mxs::RWBackend::close_type failure_type);
+    bool handle_error_new_connection(
+        mxs::RWBackend* backend, GWBUF* errmsg, mxs::RWBackend::close_type failure_type);
     void manage_transactions(mxs::RWBackend* backend, GWBUF* writebuf, const mxs::Reply& reply);
     void finish_transaction(mxs::RWBackend* backend);
 
@@ -256,12 +251,11 @@ private:
             : statement(stmt)
             , result(res)
             , reply(rep)
-        {
-        }
+        {}
 
         mxs::Buffer statement;
         mxs::Buffer result;
-        mxs::Reply  reply;
+        mxs::Reply reply;
     };
 
     inline bool can_retry_query() const
@@ -272,9 +266,7 @@ private:
          *
          * @see handle_trx_replay
          */
-        return m_config.delayed_retry
-               && m_retry_duration < m_config.delayed_retry_timeout
-               && !trx_is_open();
+        return m_config.delayed_retry && m_retry_duration < m_config.delayed_retry_timeout && !trx_is_open();
     }
 
     // Whether a transaction replay can remain active
@@ -283,28 +275,21 @@ private:
         return m_is_replay_active && m_retry_duration < m_config.delayed_retry_timeout;
     }
 
-    inline bool can_recover_servers() const
-    {
-        return !m_config.disable_sescmd_history || m_recv_sescmd == 0;
-    }
+    inline bool can_recover_servers() const { return !m_config.disable_sescmd_history || m_recv_sescmd == 0; }
 
-    inline bool can_recover_master() const
-    {
-        return m_config.master_reconnection && can_recover_servers();
-    }
+    inline bool can_recover_master() const { return m_config.master_reconnection && can_recover_servers(); }
 
     inline bool have_open_connections() const
     {
-        return std::any_of(m_raw_backends.begin(), m_raw_backends.end(), [](mxs::RWBackend* b) {
-                               return b->in_use();
-                           });
+        return std::any_of(
+            m_raw_backends.begin(), m_raw_backends.end(), [](mxs::RWBackend* b) { return b->in_use(); });
     }
 
     inline bool is_last_backend(mxs::RWBackend* backend)
     {
         return std::none_of(m_raw_backends.begin(), m_raw_backends.end(), [&](mxs::RWBackend* b) {
-                                return b->in_use() && b != backend;
-                            });
+            return b->in_use() && b != backend;
+        });
     }
 
     std::string get_verbose_status()
@@ -334,9 +319,8 @@ private:
 
     inline bool can_route_queries() const
     {
-        return m_expected_responses == 0
-               || m_qc.load_data_state() == mxs::QueryClassifier::LOAD_DATA_ACTIVE
-               || m_qc.large_query();
+        return m_expected_responses == 0 || m_qc.load_data_state() == mxs::QueryClassifier::LOAD_DATA_ACTIVE
+            || m_qc.large_query();
     }
 
     inline mxs::QueryClassifier::current_target_t get_current_target() const
@@ -363,11 +347,10 @@ private:
     {
         if (trx_is_ending())
         {
-            mxb::atomic::add(m_qc.is_trx_still_read_only() ?
-                             &m_router->stats().n_ro_trx :
-                             &m_router->stats().n_rw_trx,
-                             1,
-                             mxb::atomic::RELAXED);
+            mxb::atomic::add(
+                m_qc.is_trx_still_read_only() ? &m_router->stats().n_ro_trx : &m_router->stats().n_rw_trx,
+                1,
+                mxb::atomic::RELAXED);
         }
     }
 
@@ -383,51 +366,51 @@ private:
         return gw_mysql_get_byte4(ptr);
     }
 
-    mxs::SRWBackends m_backends;                /**< Mem. management, not for use outside RWSplitSession */
-    mxs::PRWBackends m_raw_backends;            /**< Backend pointers for use in interfaces . */
-    mxs::RWBackend*  m_current_master;          /**< Current master server */
-    mxs::RWBackend*  m_target_node;             /**< The currently locked target node */
-    mxs::RWBackend*  m_prev_target;             /**< The previous target where a query was sent */
-    RWSConfig        m_config;                  /**< Configuration for this session */
-    MXS_SESSION*     m_session;                 /**< The client session */
-    uint64_t         m_sescmd_count;            /**< Number of executed session commands (starts from 1) */
-    int              m_expected_responses;      /**< Number of expected responses to the current query */
-    bool             m_locked_to_master {false};/**< Whether session is permanently locked to the master */
+    mxs::SRWBackends m_backends;      /**< Mem. management, not for use outside RWSplitSession */
+    mxs::PRWBackends m_raw_backends;  /**< Backend pointers for use in interfaces . */
+    mxs::RWBackend* m_current_master; /**< Current master server */
+    mxs::RWBackend* m_target_node;    /**< The currently locked target node */
+    mxs::RWBackend* m_prev_target;    /**< The previous target where a query was sent */
+    RWSConfig m_config;               /**< Configuration for this session */
+    MXS_SESSION* m_session;           /**< The client session */
+    uint64_t m_sescmd_count;          /**< Number of executed session commands (starts from 1) */
+    int m_expected_responses;         /**< Number of expected responses to the current query */
+    bool m_locked_to_master {false};  /**< Whether session is permanently locked to the master */
 
-    maxbase::TimePoint m_last_keepalive_check;      /**< When the last ping was done */
+    maxbase::TimePoint m_last_keepalive_check; /**< When the last ping was done */
 
-    std::deque<mxs::Buffer> m_query_queue;      /**< Queued commands waiting to be executed */
-    RWSplit*                m_router;           /**< The router instance */
-    mxs::SessionCommandList m_sescmd_list;      /**< List of executed session commands */
-    ResponseMap             m_sescmd_responses; /**< Response to each session command */
-    mxs::RWBackend*         m_sescmd_replier {nullptr};
-    SlaveResponseList       m_slave_responses;  /**< Slaves that replied before the master */
-    uint64_t                m_sent_sescmd;      /**< ID of the last sent session command*/
-    uint64_t                m_recv_sescmd;      /**< ID of the most recently completed session
+    std::deque<mxs::Buffer> m_query_queue; /**< Queued commands waiting to be executed */
+    RWSplit* m_router;                     /**< The router instance */
+    mxs::SessionCommandList m_sescmd_list; /**< List of executed session commands */
+    ResponseMap m_sescmd_responses;        /**< Response to each session command */
+    mxs::RWBackend* m_sescmd_replier {nullptr};
+    SlaveResponseList m_slave_responses; /**< Slaves that replied before the master */
+    uint64_t m_sent_sescmd;              /**< ID of the last sent session command*/
+    uint64_t m_recv_sescmd;              /**< ID of the most recently completed session
                                                  * command */
     uint64_t m_sescmd_prune_pos {0};
 
-    ExecMap m_exec_map;     // Information map of COM_STMT_EXECUTE execution
+    ExecMap m_exec_map;  // Information map of COM_STMT_EXECUTE execution
 
-    RWSplit::gtid        m_gtid_pos {0, 0, 0};  /**< Gtid position for causal read */
-    wait_gtid_state      m_wait_gtid;           /**< State of MASTER_GTID_WAIT reply */
-    uint32_t             m_next_seq;            /**< Next packet's sequence number */
-    mxs::QueryClassifier m_qc;                  /**< The query classifier. */
-    uint64_t             m_retry_duration;      /**< Total time spent retrying queries */
-    mxs::Buffer          m_current_query;       /**< Current query being executed */
-    Trx                  m_trx;                 /**< Current transaction */
-    bool                 m_is_replay_active;    /**< Whether we are actively replaying a
+    RWSplit::gtid m_gtid_pos {0, 0, 0}; /**< Gtid position for causal read */
+    wait_gtid_state m_wait_gtid;        /**< State of MASTER_GTID_WAIT reply */
+    uint32_t m_next_seq;                /**< Next packet's sequence number */
+    mxs::QueryClassifier m_qc;          /**< The query classifier. */
+    uint64_t m_retry_duration;          /**< Total time spent retrying queries */
+    mxs::Buffer m_current_query;        /**< Current query being executed */
+    Trx m_trx;                          /**< Current transaction */
+    bool m_is_replay_active;            /**< Whether we are actively replaying a
                                                  * transaction */
-    bool        m_can_replay_trx;               /**< Whether the transaction can be replayed */
-    Trx         m_replayed_trx;                 /**< The transaction we are replaying */
-    mxs::Buffer m_interrupted_query;            /**< Query that was interrupted mid-transaction. */
-    Trx         m_orig_trx;                     /**< The backup of the transaction we're replaying */
-    mxs::Buffer m_orig_stmt;                    /**< The backup of the statement that was interrupted */
-    int64_t     m_num_trx_replays = 0;          /**< How many times trx replay has been attempted */
+    bool m_can_replay_trx;              /**< Whether the transaction can be replayed */
+    Trx m_replayed_trx;                 /**< The transaction we are replaying */
+    mxs::Buffer m_interrupted_query;    /**< Query that was interrupted mid-transaction. */
+    Trx m_orig_trx;                     /**< The backup of the transaction we're replaying */
+    mxs::Buffer m_orig_stmt;            /**< The backup of the statement that was interrupted */
+    int64_t m_num_trx_replays = 0;      /**< How many times trx replay has been attempted */
 
-    otrx_state m_otrx_state = OTRX_INACTIVE;    /**< Optimistic trx state*/
+    otrx_state m_otrx_state = OTRX_INACTIVE; /**< Optimistic trx state*/
 
-    TargetSessionStats& m_server_stats;     /**< The server stats local to this thread, cached in the
+    TargetSessionStats& m_server_stats; /**< The server stats local to this thread, cached in the
                                              * session object. This avoids the lookup involved in getting
                                              * the worker-local value from the worker's container. */
 };

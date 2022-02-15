@@ -34,8 +34,8 @@ using Config = CsMonitorServer::Config;
 using Result = CsMonitorServer::Result;
 using Status = CsMonitorServer::Status;
 
-using Configs = CsMonitorServer::Configs;
-using Results = CsMonitorServer::Results;
+using Configs  = CsMonitorServer::Configs;
+using Results  = CsMonitorServer::Results;
 using Statuses = CsMonitorServer::Statuses;
 
 namespace
@@ -94,21 +94,21 @@ static std::string do_query(MonitorServer* srv, const char* query)
 // Returns a numeric version similar to mysql_get_server_version
 int get_full_version(MonitorServer* srv)
 {
-    int rval = -1;
+    int rval           = -1;
     std::string prefix = "Columnstore ";
     std::string result = do_query(srv, "SELECT @@version_comment");
-    auto pos = result.find(prefix);
+    auto pos           = result.find(prefix);
 
     auto to_version = [](std::string str) {
-            std::istringstream os(str);
-            int major = 0, minor = 0, patch = 0;
-            char dot;
-            os >> major;
-            os >> dot;
-            os >> minor;
-            os >> dot;
-            os >> patch;
-            return major * 10000 + minor * 100 + patch;
+        std::istringstream os(str);
+        int major = 0, minor = 0, patch = 0;
+        char dot;
+        os >> major;
+        os >> dot;
+        os >> minor;
+        os >> dot;
+        os >> patch;
+        return major * 10000 + minor * 100 + patch;
     };
 
     if (pos != std::string::npos)
@@ -117,8 +117,9 @@ int get_full_version(MonitorServer* srv)
     }
     else
     {
-        auto cs_version = do_query(srv, "SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS "
-                                   "WHERE VARIABLE_NAME = 'Columnstore_version'");
+        auto cs_version = do_query(srv,
+            "SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS "
+            "WHERE VARIABLE_NAME = 'Columnstore_version'");
 
         if (!cs_version.empty())
         {
@@ -151,14 +152,16 @@ bool get_minor_version(const vector<CsMonitorServer*>& servers, cs::Version* pMi
                 if (minor_version == cs::CS_UNKNOWN)
                 {
                     minor_version = pServer->minor_version();
-                    pCurrent = pServer;
+                    pCurrent      = pServer;
                 }
                 else if (pServer->minor_version() != minor_version)
                 {
                     MXS_ERROR("Minor version %s of '%s' is at least different than minor version %s "
                               "of '%s'.",
-                              cs::to_string(pServer->minor_version()), pServer->name(),
-                              cs::to_string(pCurrent->minor_version()), pCurrent->name());
+                        cs::to_string(pServer->minor_version()),
+                        pServer->name(),
+                        cs::to_string(pCurrent->minor_version()),
+                        pCurrent->name());
                     rv = false;
                 }
             }
@@ -180,15 +183,15 @@ bool get_minor_version(const vector<CsMonitorServer*>& servers, cs::Version* pMi
 vector<http::Response>::const_iterator find_first_failed(const vector<http::Response>& responses)
 {
     return std::find_if(responses.begin(), responses.end(), [](const http::Response& response) -> bool {
-            return response.code != 200;
-        });
+        return response.code != 200;
+    });
 }
 
 vector<http::Response>::iterator find_first_failed(vector<http::Response>& responses)
 {
     return std::find_if(responses.begin(), responses.end(), [](const http::Response& response) -> bool {
-            return response.code != 200;
-        });
+        return response.code != 200;
+    });
 }
 
 json_t* result_to_json(const CsMonitorServer& server, const CsMonitorServer::Result& result)
@@ -222,13 +225,11 @@ json_t* result_to_json(const CsMonitorServer& server, const CsMonitorServer::Sta
 }
 
 template<class T>
-size_t results_to_json(const vector<CsMonitorServer*>& servers,
-                       const vector<T>& results,
-                       json_t** ppArray)
+size_t results_to_json(const vector<CsMonitorServer*>& servers, const vector<T>& results, json_t** ppArray)
 {
-    auto it = servers.begin();
+    auto it  = servers.begin();
     auto end = servers.end();
-    auto jt = results.begin();
+    auto jt  = results.begin();
 
     size_t n = 0;
 
@@ -236,7 +237,7 @@ size_t results_to_json(const vector<CsMonitorServer*>& servers,
 
     while (it != end)
     {
-        auto* pServer = *it;
+        auto* pServer      = *it;
         const auto& result = *jt;
 
         if (result.ok())
@@ -265,18 +266,14 @@ size_t results_to_json(const vector<CsMonitorServer*>& servers,
     return n;
 }
 
-}
-
+}  // namespace
 
 CsMonitor::CsMonitor(const std::string& name, const std::string& module)
     : MonitorWorkerSimple(name, module)
     , m_context(name)
-{
-}
+{}
 
-CsMonitor::~CsMonitor()
-{
-}
+CsMonitor::~CsMonitor() {}
 
 // static
 CsMonitor* CsMonitor::create(const std::string& name, const std::string& module)
@@ -287,23 +284,21 @@ CsMonitor* CsMonitor::create(const std::string& name, const std::string& module)
 namespace
 {
 
-bool check_15_server_states(const char* zName,
-                            const vector<CsMonitorServer*>& servers,
-                            CsContext& context)
+bool check_15_server_states(const char* zName, const vector<CsMonitorServer*>& servers, CsContext& context)
 {
     bool rv = true;
 
     auto configs = CsMonitorServer::fetch_configs(servers, context);
 
-    auto it = servers.begin();
+    auto it  = servers.begin();
     auto end = servers.end();
-    auto jt = configs.begin();
+    auto jt  = configs.begin();
 
     int nSingle_nodes = 0;
 
     while (it != end)
     {
-        auto* pServer = *it;
+        auto* pServer      = *it;
         const auto& config = *jt;
 
         if (config.ok())
@@ -318,7 +313,8 @@ bool check_15_server_states(const char* zName,
                     if (servers.size() > 1)
                     {
                         MXS_WARNING("Server '%s' configured as a single node, even though multiple "
-                                    "servers has been specified.", pServer->name());
+                                    "servers has been specified.",
+                            pServer->name());
                     }
                     ++nSingle_nodes;
                 }
@@ -340,7 +336,9 @@ bool check_15_server_states(const char* zName,
         else
         {
             MXS_ERROR("Could not fetch config from '%s': (%d) %s",
-                      pServer->name(), config.response.code, config.response.body.c_str());
+                pServer->name(),
+                config.response.code,
+                config.response.body.c_str());
         }
 
         ++it;
@@ -352,13 +350,14 @@ bool check_15_server_states(const char* zName,
         MXS_WARNING("Out of %d servers in total, %d are configured as single-nodes. "
                     "You are likely to see multiple servers marked as being master, "
                     "which is not likely to work as intended.",
-                    (int)servers.size(), nSingle_nodes);
+            (int) servers.size(),
+            nSingle_nodes);
     }
 
     return rv;
 }
 
-}
+}  // namespace
 
 bool CsMonitor::has_sufficient_permissions()
 {
@@ -389,10 +388,10 @@ bool CsMonitor::has_sufficient_permissions()
                 MXS_ERROR("%s: The monitor is configured for Columnstore %s, but the cluster "
                           "is Columnstore %s. You need specify 'version=%s' in the configuration "
                           "file.",
-                          name(),
-                          cs::to_string(m_context.config().version),
-                          cs::to_string(version),
-                          cs::to_string(version));
+                    name(),
+                    cs::to_string(m_context.config().version),
+                    cs::to_string(version),
+                    cs::to_string(version));
                 rv = false;
             }
         }
@@ -428,7 +427,7 @@ void CsMonitor::update_server_status(MonitorServer* pS)
             if (pServer->minor_version() != m_context.config().version)
             {
                 MXS_ERROR("Version of '%s' is different from the cluster version; server will be ignored.",
-                          pServer->name());
+                    pServer->name());
             }
         }
     }
@@ -517,7 +516,9 @@ int CsMonitor::get_15_server_status(CsMonitorServer* pServer)
     else
     {
         MXS_ERROR("Could not fetch status using REST-API from '%s': (%d) %s",
-                  pServer->name(), status.response.code, status.response.body.c_str());
+            pServer->name(),
+            status.response.code,
+            status.response.body.c_str());
     }
 
     return status_mask;
@@ -541,8 +542,9 @@ namespace
 void reject_not_running(json_t** ppOutput, const char* zCmd)
 {
     LOG_APPEND_JSON_ERROR(ppOutput,
-                          "The Columnstore monitor is not running, cannot "
-                          "execute the command '%s'.", zCmd);
+        "The Columnstore monitor is not running, cannot "
+        "execute the command '%s'.",
+        zCmd);
 }
 
 void reject_call_failed(json_t** ppOutput, const char* zCmd)
@@ -553,19 +555,18 @@ void reject_call_failed(json_t** ppOutput, const char* zCmd)
 void reject_command_pending(json_t** ppOutput, const char* zPending)
 {
     LOG_APPEND_JSON_ERROR(ppOutput,
-                          "The command '%s' is running; another command cannot "
-                          "be started until that has finished. Cancel or wait.", zPending);
+        "The command '%s' is running; another command cannot "
+        "be started until that has finished. Cancel or wait.",
+        zPending);
 }
 
-}
+}  // namespace
 
-bool CsMonitor::command_add_node(json_t** ppOutput,
-                                 const string& host,
-                                 const std::chrono::seconds& timeout)
+bool CsMonitor::command_add_node(json_t** ppOutput, const string& host, const std::chrono::seconds& timeout)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, host, timeout, ppOutput] () {
+    auto cmd = [this, &sem, host, timeout, ppOutput]() {
         if (ready_to_run(ppOutput))
         {
             cs_add_node(ppOutput, &sem, host, timeout);
@@ -583,7 +584,7 @@ bool CsMonitor::command_config_get(json_t** ppOutput, CsMonitorServer* pServer)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, pServer, ppOutput] () {
+    auto cmd = [this, &sem, pServer, ppOutput]() {
         if (ready_to_run(ppOutput))
         {
             cs_config_get(ppOutput, &sem, pServer);
@@ -606,7 +607,7 @@ bool CsMonitor::command_mode_set(json_t** ppOutput, const char* zMode, const std
     {
         mxb::Semaphore sem;
 
-        auto cmd = [this, ppOutput, &sem, mode, timeout] () {
+        auto cmd = [this, ppOutput, &sem, mode, timeout]() {
             if (ready_to_run(ppOutput))
             {
                 cs_mode_set(ppOutput, &sem, mode, timeout);
@@ -627,13 +628,12 @@ bool CsMonitor::command_mode_set(json_t** ppOutput, const char* zMode, const std
     return rv;
 }
 
-bool CsMonitor::command_remove_node(json_t** ppOutput,
-                                    const string& host,
-                                    const std::chrono::seconds& timeout)
+bool CsMonitor::command_remove_node(
+    json_t** ppOutput, const string& host, const std::chrono::seconds& timeout)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, ppOutput, host, timeout] () {
+    auto cmd = [this, &sem, ppOutput, host, timeout]() {
         if (ready_to_run(ppOutput))
         {
             cs_remove_node(ppOutput, &sem, host, timeout);
@@ -651,7 +651,7 @@ bool CsMonitor::command_shutdown(json_t** ppOutput, const std::chrono::seconds& 
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, timeout, ppOutput] () {
+    auto cmd = [this, &sem, timeout, ppOutput]() {
         if (ready_to_run(ppOutput))
         {
             cs_shutdown(ppOutput, &sem, timeout);
@@ -669,7 +669,7 @@ bool CsMonitor::command_start(json_t** ppOutput, const std::chrono::seconds& tim
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, timeout, ppOutput] () {
+    auto cmd = [this, &sem, timeout, ppOutput]() {
         if (ready_to_run(ppOutput))
         {
             cs_start(ppOutput, &sem, timeout);
@@ -687,7 +687,7 @@ bool CsMonitor::command_status(json_t** ppOutput, CsMonitorServer* pServer)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, pServer, ppOutput] () {
+    auto cmd = [this, &sem, pServer, ppOutput]() {
         if (ready_to_run(ppOutput))
         {
             cs_status(ppOutput, &sem, pServer);
@@ -702,13 +702,12 @@ bool CsMonitor::command_status(json_t** ppOutput, CsMonitorServer* pServer)
 }
 
 #if defined(CSMON_EXPOSE_TRANSACTIONS)
-bool CsMonitor::command_begin(json_t** ppOutput,
-                              const std::chrono::seconds& timeout,
-                              CsMonitorServer* pServer)
+bool CsMonitor::command_begin(
+    json_t** ppOutput, const std::chrono::seconds& timeout, CsMonitorServer* pServer)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, timeout, ppOutput, pServer] () {
+    auto cmd = [this, &sem, timeout, ppOutput, pServer]() {
         if (ready_to_run(ppOutput))
         {
             cs_begin(ppOutput, &sem, timeout, pServer);
@@ -722,13 +721,12 @@ bool CsMonitor::command_begin(json_t** ppOutput,
     return command(ppOutput, sem, "begin", cmd);
 }
 
-bool CsMonitor::command_commit(json_t** ppOutput,
-                               const std::chrono::seconds& timeout,
-                               CsMonitorServer* pServer)
+bool CsMonitor::command_commit(
+    json_t** ppOutput, const std::chrono::seconds& timeout, CsMonitorServer* pServer)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, timeout, ppOutput, pServer] () {
+    auto cmd = [this, &sem, timeout, ppOutput, pServer]() {
         if (ready_to_run(ppOutput))
         {
             cs_commit(ppOutput, &sem, timeout, pServer);
@@ -746,7 +744,7 @@ bool CsMonitor::command_rollback(json_t** ppOutput, CsMonitorServer* pServer)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, ppOutput, pServer] () {
+    auto cmd = [this, &sem, ppOutput, pServer]() {
         if (ready_to_run(ppOutput))
         {
             cs_rollback(ppOutput, &sem, pServer);
@@ -786,9 +784,8 @@ bool CsMonitor::is_valid_json(json_t** ppOutput, const char* zJson, size_t len)
     }
     else
     {
-        *ppOutput = mxs_json_error_append(nullptr, "Provided string '%s' is not valid JSON: %s",
-                                          zJson, error.text);
-
+        *ppOutput
+            = mxs_json_error_append(nullptr, "Provided string '%s' is not valid JSON: %s", zJson, error.text);
     }
 
     return rv;
@@ -818,16 +815,14 @@ bool CsMonitor::command(json_t** ppOutput, mxb::Semaphore& sem, const char* zCmd
     return rv;
 }
 
-void CsMonitor::cs_add_node(json_t** ppOutput,
-                            mxb::Semaphore* pSem,
-                            const string& host,
-                            const std::chrono::seconds& timeout)
+void CsMonitor::cs_add_node(
+    json_t** ppOutput, mxb::Semaphore* pSem, const string& host, const std::chrono::seconds& timeout)
 {
     json_t* pOutput = json_object();
-    bool success = false;
+    bool success    = false;
     ostringstream message;
 
-    Result result = CsMonitorServer::add_node(servers(), host, timeout, m_context);
+    Result result   = CsMonitorServer::add_node(servers(), host, timeout, m_context);
     json_t* pResult = nullptr;
 
     if (result.ok())
@@ -857,7 +852,7 @@ void CsMonitor::cs_add_node(json_t** ppOutput,
 void CsMonitor::cs_config_get(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
 {
     json_t* pOutput = json_object();
-    bool success = false;
+    bool success    = false;
     ostringstream message;
 
     Result result;
@@ -897,11 +892,11 @@ void CsMonitor::cs_config_get(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitor
     pSem->post();
 }
 
-void CsMonitor::cs_mode_set(json_t** ppOutput, mxb::Semaphore* pSem, cs::ClusterMode mode,
-                            const std::chrono::seconds& timeout)
+void CsMonitor::cs_mode_set(
+    json_t** ppOutput, mxb::Semaphore* pSem, cs::ClusterMode mode, const std::chrono::seconds& timeout)
 {
     json_t* pOutput = json_object();
-    bool success = false;
+    bool success    = false;
     ostringstream message;
 
     const ServerVector& sv = servers();
@@ -925,15 +920,14 @@ void CsMonitor::cs_mode_set(json_t** ppOutput, mxb::Semaphore* pSem, cs::Cluster
     pSem->post();
 }
 
-void CsMonitor::cs_remove_node(json_t** ppOutput,
-                               mxb::Semaphore* pSem, const string& host,
-                               const std::chrono::seconds& timeout)
+void CsMonitor::cs_remove_node(
+    json_t** ppOutput, mxb::Semaphore* pSem, const string& host, const std::chrono::seconds& timeout)
 {
     json_t* pOutput = json_object();
-    bool success = false;
+    bool success    = false;
     ostringstream message;
 
-    Result result = CsMonitorServer::remove_node(servers(), host, timeout, m_context);
+    Result result   = CsMonitorServer::remove_node(servers(), host, timeout, m_context);
     json_t* pResult = nullptr;
 
     if (result.ok())
@@ -960,17 +954,15 @@ void CsMonitor::cs_remove_node(json_t** ppOutput,
     pSem->post();
 }
 
-void CsMonitor::cs_shutdown(json_t** ppOutput,
-                            mxb::Semaphore* pSem,
-                            const std::chrono::seconds& timeout)
+void CsMonitor::cs_shutdown(json_t** ppOutput, mxb::Semaphore* pSem, const std::chrono::seconds& timeout)
 {
     json_t* pOutput = json_object();
-    bool success = false;
+    bool success    = false;
     ostringstream message;
 
     const ServerVector& sv = servers();
 
-    Result result = CsMonitorServer::shutdown(sv, timeout, m_context);
+    Result result   = CsMonitorServer::shutdown(sv, timeout, m_context);
     json_t* pResult = nullptr;
 
     if (result.ok())
@@ -1000,12 +992,12 @@ void CsMonitor::cs_shutdown(json_t** ppOutput,
 void CsMonitor::cs_start(json_t** ppOutput, mxb::Semaphore* pSem, const std::chrono::seconds& timeout)
 {
     json_t* pOutput = json_object();
-    bool success = false;
+    bool success    = false;
     ostringstream message;
 
     const ServerVector& sv = servers();
 
-    Result result = CsMonitorServer::start(sv, timeout, m_context);
+    Result result   = CsMonitorServer::start(sv, timeout, m_context);
     json_t* pResult = nullptr;
 
     if (result.ok())
@@ -1035,7 +1027,7 @@ void CsMonitor::cs_start(json_t** ppOutput, mxb::Semaphore* pSem, const std::chr
 void CsMonitor::cs_status(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
 {
     json_t* pOutput = json_object();
-    bool success = false;
+    bool success    = false;
     ostringstream message;
 
     Result result;
@@ -1076,13 +1068,11 @@ void CsMonitor::cs_status(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServ
 }
 
 #if defined(CSMON_EXPOSE_TRANSACTIONS)
-void CsMonitor::cs_begin(json_t** ppOutput,
-                         mxb::Semaphore* pSem,
-                         const std::chrono::seconds& timeout,
-                         CsMonitorServer* pServer)
+void CsMonitor::cs_begin(
+    json_t** ppOutput, mxb::Semaphore* pSem, const std::chrono::seconds& timeout, CsMonitorServer* pServer)
 {
     json_t* pOutput = json_object();
-    bool success = false;
+    bool success    = false;
     ostringstream message;
 
     ServerVector sv;
@@ -1099,7 +1089,7 @@ void CsMonitor::cs_begin(json_t** ppOutput,
     Results results = CsMonitorServer::begin(sv, timeout, m_context);
 
     json_t* pServers = nullptr;
-    size_t n = results_to_json(sv, results, &pServers);
+    size_t n         = results_to_json(sv, results, &pServers);
 
     if (n == sv.size())
     {
@@ -1120,13 +1110,11 @@ void CsMonitor::cs_begin(json_t** ppOutput,
     pSem->post();
 }
 
-void CsMonitor::cs_commit(json_t** ppOutput,
-                          mxb::Semaphore* pSem,
-                          const std::chrono::seconds& timeout,
-                          CsMonitorServer* pServer)
+void CsMonitor::cs_commit(
+    json_t** ppOutput, mxb::Semaphore* pSem, const std::chrono::seconds& timeout, CsMonitorServer* pServer)
 {
     json_t* pOutput = json_object();
-    bool success = false;
+    bool success    = false;
     ostringstream message;
 
     ServerVector sv;
@@ -1143,7 +1131,7 @@ void CsMonitor::cs_commit(json_t** ppOutput,
     Results results = CsMonitorServer::commit(sv, timeout, m_context);
 
     json_t* pServers = nullptr;
-    size_t n = results_to_json(sv, results, &pServers);
+    size_t n         = results_to_json(sv, results, &pServers);
 
     if (n == sv.size())
     {
@@ -1167,7 +1155,7 @@ void CsMonitor::cs_commit(json_t** ppOutput,
 void CsMonitor::cs_rollback(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
 {
     json_t* pOutput = json_object();
-    bool success = false;
+    bool success    = false;
     ostringstream message;
 
     ServerVector sv;
@@ -1184,7 +1172,7 @@ void CsMonitor::cs_rollback(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorSe
     Results results = CsMonitorServer::rollback(sv, m_context);
 
     json_t* pServers = nullptr;
-    size_t n = results_to_json(sv, results, &pServers);
+    size_t n         = results_to_json(sv, results, &pServers);
 
     if (n == sv.size())
     {
@@ -1206,8 +1194,7 @@ void CsMonitor::cs_rollback(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorSe
 }
 #endif
 
-CsMonitorServer* CsMonitor::create_server(SERVER* pServer,
-                                          const mxs::MonitorServer::SharedSettings& shared)
+CsMonitorServer* CsMonitor::create_server(SERVER* pServer, const mxs::MonitorServer::SharedSettings& shared)
 {
     return new CsMonitorServer(pServer, shared, &m_context);
 }

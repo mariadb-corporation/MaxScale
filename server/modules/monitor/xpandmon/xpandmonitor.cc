@@ -26,14 +26,16 @@ namespace http = mxb::http;
 using namespace std;
 using maxscale::MonitorServer;
 
-#define LOG_JSON_ERROR(ppJson, format, ...)                             \
-    do {                                                                \
-        MXS_ERROR(format, ##__VA_ARGS__);                               \
-        if (ppJson)                                                     \
-        {                                                               \
+#define LOG_JSON_ERROR(ppJson, format, ...)                                  \
+    do                                                                       \
+    {                                                                        \
+        MXS_ERROR(format, ##__VA_ARGS__);                                    \
+        if (ppJson)                                                          \
+        {                                                                    \
             *ppJson = mxs_json_error_append(*ppJson, format, ##__VA_ARGS__); \
-        }                                                               \
-    } while (false)
+        }                                                                    \
+    }                                                                        \
+    while (false)
 
 namespace
 {
@@ -43,74 +45,64 @@ namespace xpandmon
 
 config::Specification specification(MXS_MODULE_NAME, config::Specification::MONITOR);
 
-config::ParamDuration<std::chrono::milliseconds>
-cluster_monitor_interval(&specification,
-                         "cluster_monitor_interval",
-                         "How frequently the Xpand monitor should perform a cluster check.",
-                         mxs::config::INTERPRET_AS_MILLISECONDS,
-                         std::chrono::milliseconds(DEFAULT_CLUSTER_MONITOR_INTERVAL));
+config::ParamDuration<std::chrono::milliseconds> cluster_monitor_interval(&specification,
+    "cluster_monitor_interval",
+    "How frequently the Xpand monitor should perform a cluster check.",
+    mxs::config::INTERPRET_AS_MILLISECONDS,
+    std::chrono::milliseconds(DEFAULT_CLUSTER_MONITOR_INTERVAL));
 
-config::ParamCount
-    health_check_threshold(&specification,
-                           "health_check_threshold",
-                           "How many failed health port pings before node is assumed to be down.",
-                           DEFAULT_HEALTH_CHECK_THRESHOLD,
-                           1, std::numeric_limits<uint32_t>::max());    // min, max
+config::ParamCount health_check_threshold(&specification,
+    "health_check_threshold",
+    "How many failed health port pings before node is assumed to be down.",
+    DEFAULT_HEALTH_CHECK_THRESHOLD,
+    1,
+    std::numeric_limits<uint32_t>::max());  // min, max
 
-config::ParamBool
-    dynamic_node_detection(&specification,
-                           "dynamic_node_detection",
-                           "Should cluster configuration be figured out at runtime.",
-                           DEFAULT_DYNAMIC_NODE_DETECTION);
+config::ParamBool dynamic_node_detection(&specification,
+    "dynamic_node_detection",
+    "Should cluster configuration be figured out at runtime.",
+    DEFAULT_DYNAMIC_NODE_DETECTION);
 
-config::ParamInteger
-    health_check_port(&specification,
-                      "health_check_port",
-                      "Port number for Xpand health check.",
-                      DEFAULT_HEALTH_CHECK_PORT,
-                      0, std::numeric_limits<uint16_t>::max());     // min, max
-}
+config::ParamInteger health_check_port(&specification,
+    "health_check_port",
+    "Port number for Xpand health check.",
+    DEFAULT_HEALTH_CHECK_PORT,
+    0,
+    std::numeric_limits<uint16_t>::max());  // min, max
+}  // namespace xpandmon
 
-const int DEFAULT_MYSQL_PORT = 3306;
+const int DEFAULT_MYSQL_PORT  = 3306;
 const int DEFAULT_HEALTH_PORT = 3581;
 
 // Change this, if the schema is changed.
 const int SCHEMA_VERSION = 1;
 
-static const char SQL_BN_CREATE[] =
-    "CREATE TABLE IF NOT EXISTS bootstrap_nodes "
-    "(ip CARCHAR(255), mysql_port INT)";
+static const char SQL_BN_CREATE[] = "CREATE TABLE IF NOT EXISTS bootstrap_nodes "
+                                    "(ip CARCHAR(255), mysql_port INT)";
 
-static const char SQL_BN_INSERT_FORMAT[] =
-    "INSERT INTO bootstrap_nodes (ip, mysql_port) "
-    "VALUES %s";
+static const char SQL_BN_INSERT_FORMAT[] = "INSERT INTO bootstrap_nodes (ip, mysql_port) "
+                                           "VALUES %s";
 
-static const char SQL_BN_DELETE[] =
-    "DELETE FROM bootstrap_nodes";
+static const char SQL_BN_DELETE[] = "DELETE FROM bootstrap_nodes";
 
-static const char SQL_BN_SELECT[] =
-    "SELECT ip, mysql_port FROM bootstrap_nodes";
+static const char SQL_BN_SELECT[] = "SELECT ip, mysql_port FROM bootstrap_nodes";
 
 
-static const char SQL_DN_CREATE[] =
-    "CREATE TABLE IF NOT EXISTS dynamic_nodes "
-    "(id INT PRIMARY KEY, ip VARCHAR(255), mysql_port INT, health_port INT)";
+static const char SQL_DN_CREATE[] = "CREATE TABLE IF NOT EXISTS dynamic_nodes "
+                                    "(id INT PRIMARY KEY, ip VARCHAR(255), mysql_port INT, health_port INT)";
 
-static const char SQL_DN_UPSERT_FORMAT[] =
-    "INSERT OR REPLACE INTO dynamic_nodes (id, ip, mysql_port, health_port) "
-    "VALUES (%d, '%s', %d, %d)";
+static const char SQL_DN_UPSERT_FORMAT[]
+    = "INSERT OR REPLACE INTO dynamic_nodes (id, ip, mysql_port, health_port) "
+      "VALUES (%d, '%s', %d, %d)";
 
-static const char SQL_DN_DELETE_FORMAT[] =
-    "DELETE FROM dynamic_nodes WHERE id = %d";
+static const char SQL_DN_DELETE_FORMAT[] = "DELETE FROM dynamic_nodes WHERE id = %d";
 
-static const char SQL_DN_DELETE[] =
-    "DELETE FROM dynamic_nodes";
+static const char SQL_DN_DELETE[] = "DELETE FROM dynamic_nodes";
 
-static const char SQL_DN_SELECT[] =
-    "SELECT ip, mysql_port FROM dynamic_nodes";
+static const char SQL_DN_SELECT[] = "SELECT ip, mysql_port FROM dynamic_nodes";
 
 
-using HostPortPair = std::pair<std::string, int>;
+using HostPortPair  = std::pair<std::string, int>;
 using HostPortPairs = std::vector<HostPortPair>;
 
 // sqlite3 callback.
@@ -127,7 +119,7 @@ int select_cb(void* pData, int nColumns, char** ppColumn, char** ppNames)
 
     return 0;
 }
-}
+}  // namespace
 
 namespace
 {
@@ -135,7 +127,7 @@ namespace
 bool create_schema(sqlite3* pDb)
 {
     char* pError = nullptr;
-    int rv = sqlite3_exec(pDb, SQL_BN_CREATE, nullptr, nullptr, &pError);
+    int rv       = sqlite3_exec(pDb, SQL_BN_CREATE, nullptr, nullptr, &pError);
 
     if (rv == SQLITE_OK)
     {
@@ -153,8 +145,8 @@ bool create_schema(sqlite3* pDb)
 sqlite3* open_or_create_db(const std::string& path)
 {
     sqlite3* pDb = nullptr;
-    int flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_CREATE;
-    int rv = sqlite3_open_v2(path.c_str(), &pDb, flags, nullptr);
+    int flags    = SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_CREATE;
+    int rv       = sqlite3_open_v2(path.c_str(), &pDb, flags, nullptr);
 
     if (rv == SQLITE_OK)
     {
@@ -169,7 +161,8 @@ sqlite3* open_or_create_db(const std::string& path)
             if (unlink(path.c_str()) != 0)
             {
                 MXS_ERROR("Failed to delete database %s that could not be properly "
-                          "initialized. It should be deleted manually.", path.c_str());
+                          "initialized. It should be deleted manually.",
+                    path.c_str());
                 sqlite3_close_v2(pDb);
                 pDb = nullptr;
             }
@@ -181,8 +174,8 @@ sqlite3* open_or_create_db(const std::string& path)
         {
             // Memory allocation failure is explained by the caller. Don't close the handle, as the
             // caller will still use it even if open failed!!
-            MXS_ERROR("Opening/creating the sqlite3 database %s failed: %s",
-                      path.c_str(), sqlite3_errmsg(pDb));
+            MXS_ERROR(
+                "Opening/creating the sqlite3 database %s failed: %s", path.c_str(), sqlite3_errmsg(pDb));
         }
         MXS_ERROR("Could not open sqlite3 database for storing information "
                   "about dynamically detected Xpand nodes. The Xpand "
@@ -199,7 +192,7 @@ void run_in_mainworker(const function<void(void)>& func)
     // Using the semaphore-version of 'execute' to wait until completion causes deadlock. Reason unclear.
     mw->execute(func, mxb::Worker::EXECUTE_AUTO);
 }
-}
+}  // namespace
 
 XpandMonitor::Config::Config(const std::string& name)
     : config::Configuration(name, &xpandmon::specification)
@@ -207,8 +200,7 @@ XpandMonitor::Config::Config(const std::string& name)
     , m_health_check_threshold(this, &xpandmon::health_check_threshold)
     , m_dynamic_node_detection(this, &xpandmon::dynamic_node_detection)
     , m_health_check_port(this, &xpandmon::health_check_port)
-{
-}
+{}
 
 // static
 void XpandMonitor::Config::populate(MXS_MODULE& module)
@@ -220,8 +212,7 @@ XpandMonitor::XpandMonitor(const string& name, const string& module, sqlite3* pD
     : MonitorWorker(name, module)
     , m_config(name)
     , m_pDb(pDb)
-{
-}
+{}
 
 XpandMonitor::~XpandMonitor()
 {
@@ -241,7 +232,7 @@ XpandMonitor* XpandMonitor::create(const string& name, const string& module)
         MXS_ERROR("Could not create the directory %s, MaxScale will not be "
                   "able to create database for persisting connection "
                   "information of dynamically detected Xpand nodes.",
-                  path.c_str());
+            path.c_str());
     }
 
     path += "/xpand_nodes-v";
@@ -289,7 +280,7 @@ bool XpandMonitor::configure(const mxs::ConfigParameters* pParams)
     m_nodes_by_id.clear();
 
     // Since they were validated above, failure should not be an option now.
-    MXB_AT_DEBUG(bool configured = ) m_config.configure(*pParams);
+    MXB_AT_DEBUG(bool configured =) m_config.configure(*pParams);
     mxb_assert(configured);
 
     return true;
@@ -310,17 +301,15 @@ bool XpandMonitor::softfail(SERVER* pServer, json_t** ppError)
 
     if (is_running())
     {
-        call([this, pServer, ppError, &rv]() {
-                rv = perform_softfail(pServer, ppError);
-            },
-            EXECUTE_QUEUED);
+        call([this, pServer, ppError, &rv]() { rv = perform_softfail(pServer, ppError); }, EXECUTE_QUEUED);
     }
     else
     {
         LOG_JSON_ERROR(ppError,
-                       "%s: The monitor is not running and hence "
-                       "SOFTFAIL cannot be performed for %s.",
-                       name(), pServer->address());
+            "%s: The monitor is not running and hence "
+            "SOFTFAIL cannot be performed for %s.",
+            name(),
+            pServer->address());
     }
 
     return true;
@@ -332,17 +321,15 @@ bool XpandMonitor::unsoftfail(SERVER* pServer, json_t** ppError)
 
     if (is_running())
     {
-        call([this, pServer, ppError, &rv]() {
-                rv = perform_unsoftfail(pServer, ppError);
-            },
-            EXECUTE_QUEUED);
+        call([this, pServer, ppError, &rv]() { rv = perform_unsoftfail(pServer, ppError); }, EXECUTE_QUEUED);
     }
     else
     {
         LOG_JSON_ERROR(ppError,
-                       "%s: The monitor is not running and hence "
-                       "UNSOFTFAIL cannot be performed for %s.",
-                       name(), pServer->address());
+            "%s: The monitor is not running and hence "
+            "UNSOFTFAIL cannot be performed for %s.",
+            name(),
+            pServer->address());
     }
 
     return true;
@@ -403,7 +390,7 @@ void XpandMonitor::post_loop()
         mysql_close(m_pHub_con);
     }
 
-    m_pHub_con = nullptr;
+    m_pHub_con    = nullptr;
     m_pHub_server = nullptr;
 }
 
@@ -464,12 +451,15 @@ void XpandMonitor::choose_hub(xpand::Softfailed softfailed)
     if (m_pHub_con)
     {
         MXS_NOTICE("%s: Monitoring Xpand cluster state using node %s:%d.",
-                   name(), m_pHub_server->address(), m_pHub_server->port());
+            name(),
+            m_pHub_server->address(),
+            m_pHub_server->port());
     }
     else
     {
         MXS_ERROR("%s: Could not connect to any server or no server that could "
-                  "be connected to was part of the quorum.", name());
+                  "be connected to was part of the quorum.",
+            name());
     }
 }
 
@@ -481,7 +471,7 @@ bool XpandMonitor::choose_dynamic_hub(xpand::Softfailed softfailed, std::set<str
 
         if (node.can_be_used_as_hub(name(), conn_settings(), softfailed))
         {
-            m_pHub_con = node.release_connection();
+            m_pHub_con    = node.release_connection();
             m_pHub_server = node.server();
         }
 
@@ -504,7 +494,7 @@ bool XpandMonitor::choose_bootstrap_hub(xpand::Softfailed softfailed, std::set<s
         {
             if (xpand::ping_or_connect_to_hub(name(), conn_settings(), softfailed, *pMs))
             {
-                m_pHub_con = pMs->con;
+                m_pHub_con    = pMs->con;
                 m_pHub_server = pMs->server;
             }
             else if (pMs->con)
@@ -533,12 +523,12 @@ bool XpandMonitor::refresh_using_persisted_nodes(std::set<string>& ips_checked)
 
     HostPortPairs nodes;
     char* pError = nullptr;
-    int rv = sqlite3_exec(m_pDb, SQL_DN_SELECT, select_cb, &nodes, &pError);
+    int rv       = sqlite3_exec(m_pDb, SQL_DN_SELECT, select_cb, &nodes, &pError);
 
     if (rv == SQLITE_OK)
     {
-        const std::string& username = conn_settings().username;
-        const std::string& password = conn_settings().password;
+        const std::string& username    = conn_settings().username;
+        const std::string& password    = conn_settings().password;
         const std::string dec_password = mxs::decrypt_password(password);
 
         auto it = nodes.begin();
@@ -558,10 +548,14 @@ bool XpandMonitor::refresh_using_persisted_nodes(std::set<string>& ips_checked)
 
                 MYSQL* pHub_con = mysql_init(NULL);
 
-                if (mysql_real_connect(pHub_con, host.c_str(),
-                                       username.c_str(), dec_password.c_str(),
-                                       nullptr,
-                                       port, nullptr, 0))
+                if (mysql_real_connect(pHub_con,
+                        host.c_str(),
+                        username.c_str(),
+                        dec_password.c_str(),
+                        nullptr,
+                        port,
+                        nullptr,
+                        0))
                 {
                     if (xpand::is_part_of_the_quorum(name(), pHub_con))
                     {
@@ -612,10 +606,9 @@ bool XpandMonitor::refresh_nodes(MYSQL* pHub_con)
 
     if (refreshed)
     {
-        const char ZQUERY[] =
-            "SELECT ni.nodeid, ni.iface_ip, ni.mysql_port, ni.healthmon_port, sn.nodeid "
-            "FROM system.nodeinfo AS ni "
-            "LEFT JOIN system.softfailed_nodes AS sn ON ni.nodeid = sn.nodeid";
+        const char ZQUERY[] = "SELECT ni.nodeid, ni.iface_ip, ni.mysql_port, ni.healthmon_port, sn.nodeid "
+                              "FROM system.nodeinfo AS ni "
+                              "LEFT JOIN system.softfailed_nodes AS sn ON ni.nodeid = sn.nodeid";
 
         if (mysql_query(pHub_con, ZQUERY) == 0)
         {
@@ -637,9 +630,9 @@ bool XpandMonitor::refresh_nodes(MYSQL* pHub_con)
                 {
                     if (row[0] && row[1])
                     {
-                        int id = atoi(row[0]);
-                        string ip = row[1];
-                        int mysql_port = row[2] ? atoi(row[2]) : DEFAULT_MYSQL_PORT;
+                        int id          = atoi(row[0]);
+                        string ip       = row[1];
+                        int mysql_port  = row[2] ? atoi(row[2]) : DEFAULT_MYSQL_PORT;
                         int health_port = row[3] ? atoi(row[3]) : DEFAULT_HEALTH_PORT;
                         bool softfailed = row[4] ? true : false;
 
@@ -665,7 +658,9 @@ bool XpandMonitor::refresh_nodes(MYSQL* pHub_con)
                             {
                                 MXS_NOTICE("%s: Node %d (%s) has been SOFTFAILed. "
                                            "Turning ON 'Being Drained'.",
-                                           name(), node.id(), node.server()->address());
+                                    name(),
+                                    node.id(),
+                                    node.server()->address());
 
                                 node.server()->set_status(SERVER_DRAINING);
                             }
@@ -673,7 +668,9 @@ bool XpandMonitor::refresh_nodes(MYSQL* pHub_con)
                             {
                                 MXS_NOTICE("%s: Node %d (%s) is no longer being SOFTFAILed. "
                                            "Turning OFF 'Being Drained'.",
-                                           name(), node.id(), node.server()->address());
+                                    name(),
+                                    node.id(),
+                                    node.server()->address());
 
                                 node.server()->clear_status(SERVER_DRAINING);
                             }
@@ -702,13 +699,19 @@ bool XpandMonitor::refresh_nodes(MYSQL* pHub_con)
                                     {
                                         MXS_ERROR("%s: Created server %s (at %s:%d) could not be "
                                                   "looked up using its name.",
-                                                  name(), server_name.c_str(), ip.c_str(), mysql_port);
+                                            name(),
+                                            server_name.c_str(),
+                                            ip.c_str(),
+                                            mysql_port);
                                     }
                                 }
                                 else
                                 {
                                     MXS_ERROR("%s: Could not create server %s at %s:%d.",
-                                              name(), server_name.c_str(), ip.c_str(), mysql_port);
+                                        name(),
+                                        server_name.c_str(),
+                                        ip.c_str(),
+                                        mysql_port);
                                 }
                             }
 
@@ -720,16 +723,19 @@ bool XpandMonitor::refresh_nodes(MYSQL* pHub_con)
                                 }
 
                                 const XpandMembership& membership = mit->second;
-                                int health_check_threshold = m_config.health_check_threshold();
+                                int health_check_threshold        = m_config.health_check_threshold();
 
-                                XpandNode node(this, membership, ip, mysql_port, health_port,
-                                               health_check_threshold, pServer);
+                                XpandNode node(this,
+                                    membership,
+                                    ip,
+                                    mysql_port,
+                                    health_port,
+                                    health_check_threshold,
+                                    pServer);
 
                                 m_nodes_by_id.insert(make_pair(id, node));
 
-                                run_in_mainworker([this, pServer]() {
-                                                          add_server(pServer);
-                                                      });
+                                run_in_mainworker([this, pServer]() { add_server(pServer); });
                             }
 
                             memberships.erase(mit);
@@ -739,13 +745,16 @@ bool XpandMonitor::refresh_nodes(MYSQL* pHub_con)
                             // Node found in system.node_info but not in system.membership
                             MXS_ERROR("%s: Node %d at %s:%d,%d found in system.node_info "
                                       "but not in system.membership.",
-                                      name(), id, ip.c_str(), mysql_port, health_port);
+                                name(),
+                                id,
+                                ip.c_str(),
+                                mysql_port,
+                                health_port);
                         }
                     }
                     else
                     {
-                        MXS_WARNING("%s: Either nodeid and/or iface_ip is missing, ignoring node.",
-                                    name());
+                        MXS_WARNING("%s: Either nodeid and/or iface_ip is missing, ignoring node.", name());
                     }
                 }
 
@@ -766,14 +775,17 @@ bool XpandMonitor::refresh_nodes(MYSQL* pHub_con)
             }
             else
             {
-                MXS_WARNING("%s: No result returned for '%s' on %s.",
-                            name(), ZQUERY, mysql_get_host_info(pHub_con));
+                MXS_WARNING(
+                    "%s: No result returned for '%s' on %s.", name(), ZQUERY, mysql_get_host_info(pHub_con));
             }
         }
         else
         {
             MXS_ERROR("%s: Could not execute '%s' on %s: %s",
-                      name(), ZQUERY, mysql_get_host_info(pHub_con), mysql_error(pHub_con));
+                name(),
+                ZQUERY,
+                mysql_get_host_info(pHub_con),
+                mysql_error(pHub_con));
         }
 
         // Since we are here, the call above to check_cluster_membership() succeeded. As that
@@ -789,7 +801,7 @@ void XpandMonitor::check_bootstrap_servers()
 {
     HostPortPairs nodes;
     char* pError = nullptr;
-    int rv = sqlite3_exec(m_pDb, SQL_BN_SELECT, select_cb, &nodes, &pError);
+    int rv       = sqlite3_exec(m_pDb, SQL_BN_SELECT, select_cb, &nodes, &pError);
 
     if (rv == SQLITE_OK)
     {
@@ -821,8 +833,8 @@ void XpandMonitor::check_bootstrap_servers()
             MXS_NOTICE("Current bootstrap servers (%s) are different than the ones "
                        "used on the previous run (%s), NOT using persistent connection "
                        "information.",
-                       mxb::join(current_bootstrap_servers, ", ").c_str(),
-                       mxb::join(prev_bootstrap_servers, ", ").c_str());
+                mxb::join(current_bootstrap_servers, ", ").c_str(),
+                mxb::join(prev_bootstrap_servers, ", ").c_str());
 
             if (remove_persisted_information())
             {
@@ -884,12 +896,12 @@ void XpandMonitor::persist_bootstrap_servers()
         sprintf(insert, SQL_BN_INSERT_FORMAT, values.c_str());
 
         char* pError = nullptr;
-        int rv = sqlite3_exec(m_pDb, insert, nullptr, nullptr, &pError);
+        int rv       = sqlite3_exec(m_pDb, insert, nullptr, nullptr, &pError);
 
         if (rv != SQLITE_OK)
         {
             MXS_ERROR("Could not persist information about current bootstrap nodes: %s",
-                      pError ? pError : "Unknown error");
+                pError ? pError : "Unknown error");
         }
     }
 }
@@ -924,8 +936,7 @@ void XpandMonitor::check_hub(xpand::Softfailed softfailed)
     }
 }
 
-bool XpandMonitor::check_cluster_membership(MYSQL* pHub_con,
-                                            std::map<int, XpandMembership>* pMemberships)
+bool XpandMonitor::check_cluster_membership(MYSQL* pHub_con, std::map<int, XpandMembership>* pMemberships)
 {
     mxb_assert(pHub_con);
     mxb_assert(pMemberships);
@@ -954,9 +965,9 @@ bool XpandMonitor::check_cluster_membership(MYSQL* pHub_con,
             {
                 if (row[0])
                 {
-                    int nid = atoi(row[0]);
-                    string status = row[1] ? row[1] : "unknown";
-                    int instance = row[2] ? atoi(row[2]) : -1;
+                    int nid         = atoi(row[0]);
+                    string status   = row[1] ? row[1] : "unknown";
+                    int instance    = row[2] ? atoi(row[2]) : -1;
                     string substate = row[3] ? row[3] : "unknown";
 
                     auto it = m_nodes_by_id.find(nid);
@@ -966,25 +977,24 @@ bool XpandMonitor::check_cluster_membership(MYSQL* pHub_con,
                         XpandNode& node = it->second;
 
                         node.update(xpand::status_from_string(status),
-                                    xpand::substate_from_string(substate),
-                                    instance);
+                            xpand::substate_from_string(substate),
+                            instance);
 
                         nids.erase(node.id());
                     }
                     else
                     {
                         XpandMembership membership(nid,
-                                                   xpand::status_from_string(status),
-                                                   xpand::substate_from_string(substate),
-                                                   instance);
+                            xpand::status_from_string(status),
+                            xpand::substate_from_string(substate),
+                            instance);
 
                         pMemberships->insert(make_pair(nid, membership));
                     }
                 }
                 else
                 {
-                    MXS_WARNING("%s: No node id returned in row for '%s'.",
-                                name(), ZQUERY);
+                    MXS_WARNING("%s: No node id returned in row for '%s'.", name(), ZQUERY);
                 }
             }
 
@@ -1011,7 +1021,10 @@ bool XpandMonitor::check_cluster_membership(MYSQL* pHub_con,
     else
     {
         MXS_ERROR("%s: Could not execute '%s' on %s: %s",
-                  name(), ZQUERY, mysql_get_host_info(pHub_con), mysql_error(pHub_con));
+            name(),
+            ZQUERY,
+            mysql_get_host_info(pHub_con),
+            mysql_error(pHub_con));
     }
 
     return rv;
@@ -1025,14 +1038,14 @@ void XpandMonitor::populate_from_bootstrap_servers()
     {
         SERVER* pServer = ms->server;
 
-        xpand::Status status = xpand::Status::UNKNOWN;
+        xpand::Status status     = xpand::Status::UNKNOWN;
         xpand::SubState substate = xpand::SubState::UNKNOWN;
-        int instance = 1;
+        int instance             = 1;
         XpandMembership membership(id, status, substate, instance);
 
-        std::string ip = pServer->address();
-        int mysql_port = pServer->port();
-        int health_port = m_config.health_check_port();
+        std::string ip             = pServer->address();
+        int mysql_port             = pServer->port();
+        int health_port            = m_config.health_check_port();
         int health_check_threshold = m_config.health_check_threshold();
 
         XpandNode node(this, membership, ip, mysql_port, health_port, health_check_threshold, pServer);
@@ -1042,9 +1055,7 @@ void XpandMonitor::populate_from_bootstrap_servers()
 
         // New server, so it needs to be added to all services that
         // use this monitor for defining its cluster of servers.
-        run_in_mainworker([this, pServer]() {
-                              add_server(pServer);
-                          });
+        run_in_mainworker([this, pServer]() { add_server(pServer); });
     }
 
     update_http_urls();
@@ -1075,11 +1086,12 @@ void XpandMonitor::update_server_statuses()
     {
         pMs->stash_current_status();
 
-        auto it = find_if(m_nodes_by_id.begin(), m_nodes_by_id.end(),
-                          [pMs](const std::pair<int, XpandNode>& element) -> bool {
-                              const XpandNode& info = element.second;
-                              return pMs->server->address() == info.ip();
-                          });
+        auto it = find_if(m_nodes_by_id.begin(),
+            m_nodes_by_id.end(),
+            [pMs](const std::pair<int, XpandNode>& element) -> bool {
+                const XpandNode& info = element.second;
+                return pMs->server->address() == info.ip();
+            });
 
         if (it != m_nodes_by_id.end())
         {
@@ -1152,39 +1164,39 @@ bool XpandMonitor::check_http(Call::action_t action)
             break;
 
         case http::Async::READY:
+        {
+            mxb_assert(m_health_urls == m_http.urls());
+            // There are as many responses as there are nodes,
+            // and the responses are in node order.
+            const vector<http::Response>& responses = m_http.responses();
+            mxb_assert(responses.size() == m_nodes_by_id.size());
+
+            auto it = m_nodes_by_id.begin();
+
+            for (const auto& response : responses)
             {
-                mxb_assert(m_health_urls == m_http.urls());
-                // There are as many responses as there are nodes,
-                // and the responses are in node order.
-                const vector<http::Response>& responses = m_http.responses();
-                mxb_assert(responses.size() == m_nodes_by_id.size());
+                bool running = (response.code == 200);  // HTTP OK
 
-                auto it = m_nodes_by_id.begin();
+                XpandNode& node = it->second;
 
-                for (const auto& response : responses)
+                node.set_running(running);
+
+                if (!running)
                 {
-                    bool running = (response.code == 200);      // HTTP OK
-
-                    XpandNode& node = it->second;
-
-                    node.set_running(running);
-
-                    if (!running)
+                    // We have to explicitly check whether the node is to be
+                    // considered down, as the value of `health_check_threshold`
+                    // defines how quickly a node should be considered down.
+                    if (!node.is_running())
                     {
-                        // We have to explicitly check whether the node is to be
-                        // considered down, as the value of `health_check_threshold`
-                        // defines how quickly a node should be considered down.
-                        if (!node.is_running())
-                        {
-                            // Ok, the node is down. Trigger a cluster check at next tick.
-                            trigger_cluster_check();
-                        }
+                        // Ok, the node is down. Trigger a cluster check at next tick.
+                        trigger_cluster_check();
                     }
-
-                    ++it;
                 }
+
+                ++it;
             }
-            break;
+        }
+        break;
 
         case http::Async::ERROR:
             MXS_ERROR("%s: Health check waiting ended with general error.", name());
@@ -1200,7 +1212,7 @@ void XpandMonitor::update_http_urls()
     for (const auto& kv : m_nodes_by_id)
     {
         const XpandNode& node = kv.second;
-        string url = "http://" + node.ip() + ":" + std::to_string(node.health_port());
+        string url            = "http://" + node.ip() + ":" + std::to_string(node.health_port());
 
         health_urls.push_back(url);
     }
@@ -1235,13 +1247,11 @@ bool XpandMonitor::perform_unsoftfail(SERVER* pServer, json_t** ppError)
     return perform_operation(Operation::UNSOFTFAIL, pServer, ppError);
 }
 
-bool XpandMonitor::perform_operation(Operation operation,
-                                     SERVER* pServer,
-                                     json_t** ppError)
+bool XpandMonitor::perform_operation(Operation operation, SERVER* pServer, json_t** ppError)
 {
     bool performed = false;
 
-    const char ZSOFTFAIL[] = "SOFTFAIL";
+    const char ZSOFTFAIL[]   = "SOFTFAIL";
     const char ZUNSOFTFAIL[] = "UNSOFTFAIL";
 
     const char* zOperation = (operation == Operation::SOFTFAIL) ? ZSOFTFAIL : ZUNSOFTFAIL;
@@ -1253,10 +1263,10 @@ bool XpandMonitor::perform_operation(Operation operation,
 
     if (m_pHub_con)
     {
-        auto it = find_if(m_nodes_by_id.begin(), m_nodes_by_id.end(),
-                          [pServer](const std::pair<int, XpandNode>& element) {
-                              return element.second.server() == pServer;
-                          });
+        auto it = find_if(
+            m_nodes_by_id.begin(), m_nodes_by_id.end(), [pServer](const std::pair<int, XpandNode>& element) {
+                return element.second.server() == pServer;
+            });
 
         if (it != m_nodes_by_id.end())
         {
@@ -1272,45 +1282,45 @@ bool XpandMonitor::perform_operation(Operation operation,
 
             if (mysql_query(m_pHub_con, zQuery) == 0)
             {
-                MXS_NOTICE("%s: %s performed on node %d (%s).",
-                           name(), zOperation, id, pServer->address());
+                MXS_NOTICE("%s: %s performed on node %d (%s).", name(), zOperation, id, pServer->address());
 
                 if (operation == Operation::SOFTFAIL)
                 {
-                    MXS_NOTICE("%s: Turning on 'Being Drained' on server %s.",
-                               name(), pServer->address());
+                    MXS_NOTICE("%s: Turning on 'Being Drained' on server %s.", name(), pServer->address());
                     pServer->set_status(SERVER_DRAINING);
                 }
                 else
                 {
                     mxb_assert(operation == Operation::UNSOFTFAIL);
 
-                    MXS_NOTICE("%s: Turning off 'Being Drained' on server %s.",
-                               name(), pServer->address());
+                    MXS_NOTICE("%s: Turning off 'Being Drained' on server %s.", name(), pServer->address());
                     pServer->clear_status(SERVER_DRAINING);
                 }
             }
             else
             {
-                LOG_JSON_ERROR(ppError,
-                               "%s: The execution of '%s' failed: %s",
-                               name(), zQuery, mysql_error(m_pHub_con));
+                LOG_JSON_ERROR(
+                    ppError, "%s: The execution of '%s' failed: %s", name(), zQuery, mysql_error(m_pHub_con));
             }
         }
         else
         {
             LOG_JSON_ERROR(ppError,
-                           "%s: The server %s is not being monitored, "
-                           "cannot perform %s.",
-                           name(), pServer->address(), zOperation);
+                "%s: The server %s is not being monitored, "
+                "cannot perform %s.",
+                name(),
+                pServer->address(),
+                zOperation);
         }
     }
     else
     {
         LOG_JSON_ERROR(ppError,
-                       "%s: Could not could not connect to any Xpand node, "
-                       "cannot perform %s of %s.",
-                       name(), zOperation, pServer->address());
+            "%s: Could not could not connect to any Xpand node, "
+            "cannot perform %s of %s.",
+            name(),
+            zOperation,
+            pServer->address());
     }
 
     return performed;
@@ -1325,9 +1335,9 @@ void XpandMonitor::persist(const XpandNode& node)
 
     char sql_upsert[sizeof(SQL_DN_UPSERT_FORMAT) + 10 + node.ip().length() + 10 + 10];
 
-    int id = node.id();
+    int id          = node.id();
     const char* zIp = node.ip().c_str();
-    int mysql_port = node.mysql_port();
+    int mysql_port  = node.mysql_port();
     int health_port = node.health_port();
 
     sprintf(sql_upsert, SQL_DN_UPSERT_FORMAT, id, zIp, mysql_port, health_port);
@@ -1335,13 +1345,16 @@ void XpandMonitor::persist(const XpandNode& node)
     char* pError = nullptr;
     if (sqlite3_exec(m_pDb, sql_upsert, nullptr, nullptr, &pError) == SQLITE_OK)
     {
-        MXS_INFO("Updated Xpand node in bookkeeping: %d, '%s', %d, %d.",
-                 id, zIp, mysql_port, health_port);
+        MXS_INFO("Updated Xpand node in bookkeeping: %d, '%s', %d, %d.", id, zIp, mysql_port, health_port);
     }
     else
     {
         MXS_ERROR("Could not update Ćlustrix node (%d, '%s', %d, %d) in bookkeeping: %s",
-                  id, zIp, mysql_port, health_port, pError ? pError : "Unknown error");
+            id,
+            zIp,
+            mysql_port,
+            health_port,
+            pError ? pError : "Unknown error");
     }
 }
 
@@ -1365,7 +1378,7 @@ void XpandMonitor::unpersist(const XpandNode& node)
     }
     else
     {
-        MXS_ERROR("Could not delete Ćlustrix node %d from bookkeeping: %s",
-                  id, pError ? pError : "Unknown error");
+        MXS_ERROR(
+            "Could not delete Ćlustrix node %d from bookkeeping: %s", id, pError ? pError : "Unknown error");
     }
 }

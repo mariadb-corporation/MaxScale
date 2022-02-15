@@ -46,15 +46,15 @@ using mxs::USER_ACCOUNT_ADMIN;
  */
 bool cdc_add_new_user(const MODULECMD_ARG* args, json_t** output)
 {
-    const char* user = args->argv[1].value.string;
-    size_t userlen = strlen(user);
+    const char* user     = args->argv[1].value.string;
+    size_t userlen       = strlen(user);
     const char* password = args->argv[2].value.string;
     uint8_t phase1[SHA_DIGEST_LENGTH];
     uint8_t phase2[SHA_DIGEST_LENGTH];
-    SHA1((uint8_t*)password, strlen(password), phase1);
+    SHA1((uint8_t*) password, strlen(password), phase1);
     SHA1(phase1, sizeof(phase1), phase2);
 
-    size_t data_size = userlen + 2 + SHA_DIGEST_LENGTH * 2;     // Extra for the : and newline
+    size_t data_size = userlen + 2 + SHA_DIGEST_LENGTH * 2;  // Extra for the : and newline
     char final_data[data_size];
     strcpy(final_data, user);
     strcat(final_data, ":");
@@ -98,7 +98,7 @@ bool cdc_add_new_user(const MODULECMD_ARG* args, json_t** output)
     {
         modulecmd_set_error("Failed to create directory '%s'. Read the MaxScale "
                             "log for more details.",
-                            path);
+            path);
     }
 
     return rval;
@@ -107,7 +107,7 @@ bool cdc_add_new_user(const MODULECMD_ARG* args, json_t** output)
 int CDCAuthenticatorModule::cdc_auth_check(char* username, uint8_t* auth_data)
 {
     /* compute SHA1 of auth_data */
-    uint8_t sha1_step1[SHA_DIGEST_LENGTH] = "";
+    uint8_t sha1_step1[SHA_DIGEST_LENGTH]     = "";
     char hex_step1[2 * SHA_DIGEST_LENGTH + 1] = "";
 
     gw_sha1_str(auth_data, SHA_DIGEST_LENGTH, sha1_step1);
@@ -151,17 +151,17 @@ int CDCClientAuthenticator::authenticate(DCB* generic_dcb)
         {
             dcb->session()->set_user(m_user);
             MXS_INFO("%s: Client [%s] authenticated with user [%s]",
-                     dcb->service()->name(),
-                     dcb->remote().c_str(),
-                     m_user);
+                dcb->service()->name(),
+                dcb->remote().c_str(),
+                m_user);
         }
         else if (dcb->service()->config()->log_auth_warnings)
         {
             MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
-                          "%s: login attempt for user '%s' from [%s], authentication failed.",
-                          dcb->service()->name(),
-                          m_user,
-                          dcb->remote().c_str());
+                "%s: login attempt for user '%s' from [%s], authentication failed.",
+                dcb->service()->name(),
+                m_user,
+                dcb->remote().c_str());
         }
     }
 
@@ -209,21 +209,21 @@ bool CDCClientAuthenticator::set_client_data(uint8_t* client_auth_packet, int cl
         client_auth_packet_size--;
     }
 
-    bool rval = false;
+    bool rval        = false;
     int decoded_size = client_auth_packet_size / 2;
-    char decoded_buffer[decoded_size + 1];      // Extra for terminating null
+    char decoded_buffer[decoded_size + 1];  // Extra for terminating null
 
     /* decode input data */
     if (client_auth_packet_size <= CDC_USER_MAXLEN)
     {
-        mxs::hex2bin((const char*)client_auth_packet, client_auth_packet_size, (uint8_t*)decoded_buffer);
+        mxs::hex2bin((const char*) client_auth_packet, client_auth_packet_size, (uint8_t*) decoded_buffer);
         decoded_buffer[decoded_size] = '\0';
-        char* tmp_ptr = strchr(decoded_buffer, ':');
+        char* tmp_ptr                = strchr(decoded_buffer, ':');
 
         if (tmp_ptr)
         {
             size_t user_len = tmp_ptr - decoded_buffer;
-            *tmp_ptr++ = '\0';
+            *tmp_ptr++      = '\0';
             size_t auth_len = decoded_size - (tmp_ptr - decoded_buffer);
 
             if (user_len <= CDC_USER_MAXLEN && auth_len == SHA_DIGEST_LENGTH)
@@ -243,7 +243,7 @@ bool CDCClientAuthenticator::set_client_data(uint8_t* client_auth_packet, int cl
     {
         MXS_ERROR("Authentication failed, client authentication packet length "
                   "exceeds the maximum allowed length of %d bytes.",
-                  CDC_USER_MAXLEN);
+            CDC_USER_MAXLEN);
     }
 
     return rval;
@@ -258,11 +258,11 @@ bool CDCClientAuthenticator::set_client_data(uint8_t* client_auth_packet, int cl
  */
 int CDCAuthenticatorModule::set_service_user(SERVICE* service)
 {
-    const char* service_user = NULL;
+    const char* service_user   = NULL;
     const char* service_passwd = NULL;
     serviceGetUser(service, &service_user, &service_passwd);
 
-    auto dpwd = mxs::decrypt_password(service_passwd);
+    auto dpwd             = mxs::decrypt_password(service_passwd);
     std::string newpasswd = mxs::create_hex_sha1_sha1_passwd(dpwd.c_str());
     if (newpasswd.empty())
     {
@@ -307,8 +307,8 @@ mxs::Users CDCAuthenticatorModule::read_users(char* usersfile)
 
             if ((tmp_ptr = strchr(read_buffer, ':')) != NULL)
             {
-                *tmp_ptr++ = '\0';
-                avro_user = read_buffer;
+                *tmp_ptr++  = '\0';
+                avro_user   = read_buffer;
                 user_passwd = tmp_ptr;
                 if ((tmp_ptr = strchr(user_passwd, '\n')) != NULL)
                 {
@@ -334,8 +334,7 @@ mxs::Users CDCAuthenticatorModule::read_users(char* usersfile)
 bool CDCAuthenticatorModule::load_users(SERVICE* service)
 {
     char path[PATH_MAX + 1];
-    snprintf(path, PATH_MAX, "%s/%s/%s",
-             mxs::datadir(), service->name(), CDC_USERS_FILENAME);
+    snprintf(path, PATH_MAX, "%s/%s/%s", mxs::datadir(), service->name(), CDC_USERS_FILENAME);
 
     auto new_users = read_users(path);
     if (!new_users.empty())

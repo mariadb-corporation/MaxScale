@@ -12,10 +12,10 @@
  */
 
 // To ensure that ss_info_assert asserts also when builing in non-debug mode.
-#if !defined (SS_DEBUG)
+#if !defined(SS_DEBUG)
 #define SS_DEBUG
 #endif
-#if defined (NDEBUG)
+#if defined(NDEBUG)
 #undef NDEBUG
 #endif
 #include <stdio.h>
@@ -53,8 +53,7 @@ static void test1()
     parameters.set(CN_NET_WRITE_TIMEOUT, "10s");
     parameters.set(CN_CONNECTION_KEEPALIVE, "100s");
     /* Service tests */
-    fprintf(stderr,
-            "testservice : creating service called MyService with router nonexistent");
+    fprintf(stderr, "testservice : creating service called MyService with router nonexistent");
     service = Service::create("MyService", "non-existent", &parameters);
     mxb_assert_message(NULL == service, "New service with invalid router should be null");
     mxb_assert_message(0 == service_isvalid(service), "Service must not be valid after incorrect creation");
@@ -72,10 +71,10 @@ static void test1()
     listener_params.set(CN_PROTOCOL, "mariadbclient");
     listener_params.set(CN_SERVICE, service->name());
 
-    mxb_assert_message(Listener::create("TestProtocol", "mariadbclient", listener_params),
-                       "Add Protocol should succeed");
+    mxb_assert_message(
+        Listener::create("TestProtocol", "mariadbclient", listener_params), "Add Protocol should succeed");
     mxb_assert_message(service_find_listener(service, "", "localhost", 9876),
-                       "Service should have new protocol as requested");
+        "Service should have new protocol as requested");
 }
 
 int main(int argc, char** argv)

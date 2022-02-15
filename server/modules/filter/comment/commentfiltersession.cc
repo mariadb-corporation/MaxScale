@@ -22,38 +22,31 @@
 
 using namespace std;
 
-CommentFilterSession::CommentFilterSession(MXS_SESSION* pSession,
-                                           SERVICE* pService,
-                                           const CommentFilter* pFilter)
+CommentFilterSession::CommentFilterSession(
+    MXS_SESSION* pSession, SERVICE* pService, const CommentFilter* pFilter)
     : maxscale::FilterSession(pSession, pService)
     , m_filter(*pFilter)
-{
-}
+{}
 
-CommentFilterSession::~CommentFilterSession()
-{
-}
+CommentFilterSession::~CommentFilterSession() {}
 
 // static
-CommentFilterSession* CommentFilterSession::create(MXS_SESSION* pSession,
-                                                   SERVICE* pService,
-                                                   const CommentFilter* pFilter)
+CommentFilterSession* CommentFilterSession::create(
+    MXS_SESSION* pSession, SERVICE* pService, const CommentFilter* pFilter)
 {
     return new CommentFilterSession(pSession, pService, pFilter);
 }
 
-void CommentFilterSession::close()
-{
-}
+void CommentFilterSession::close() {}
 
 int CommentFilterSession::routeQuery(GWBUF* pPacket)
 {
     if (modutil_is_SQL(pPacket))
     {
-        string sql = mxs::extract_sql(pPacket);
+        string sql     = mxs::extract_sql(pPacket);
         string comment = parseComment(m_filter.config().inject);
-        string newsql = string("/* ").append(comment).append(" */").append(sql);
-        pPacket = modutil_replace_SQL(pPacket, (char*)newsql.c_str());
+        string newsql  = string("/* ").append(comment).append(" */").append(sql);
+        pPacket        = modutil_replace_SQL(pPacket, (char*) newsql.c_str());
         // maxscale expects contiguous memory to arrive from client so we must make the buffer contiguous
         // after using modutil_replace_SQL.
         GWBUF* pModified_packet = gwbuf_make_contiguous(pPacket);
@@ -75,10 +68,11 @@ int CommentFilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& dow
 {
     return mxs::FilterSession::clientReply(pPacket, down, reply);
 }
+
 // TODO this probably should be refactored in some way in case we add more variables
 string CommentFilterSession::parseComment(string comment)
 {
-    string ip = m_pSession->client_remote();
+    string ip            = m_pSession->client_remote();
     string parsedComment = std::regex_replace(comment, std::regex("\\$IP"), ip);
     return parsedComment;
 }

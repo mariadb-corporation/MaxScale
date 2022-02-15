@@ -20,4 +20,4 @@ CachelineAtomic<int64_t> num_shareddata_updater_blocks {0};
 CachelineAtomic<int64_t> num_shareddata_worker_blocks {0};
 // this one rightfully belongs in gcupdater.hh/cc, but there is no cc
 CachelineAtomic<int64_t> num_gcupdater_cap_waits {0};
-}
+}  // namespace maxbase

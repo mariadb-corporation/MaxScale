@@ -42,7 +42,6 @@
 
 extern "C"
 {
-
 #include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
@@ -60,27 +59,26 @@ extern "C"
 /*
  * The filter entry points
  */
-static MXS_FILTER*         createInstance(const char* name, mxs::ConfigParameters*);
+static MXS_FILTER* createInstance(const char* name, mxs::ConfigParameters*);
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
-                                      MXS_SESSION* session,
-                                      SERVICE* service,
-                                      mxs::Downstream* downstream,
-                                      mxs::Upstream* upstream);
-static void    closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
-static void    freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
+    MXS_SESSION* session,
+    SERVICE* service,
+    mxs::Downstream* downstream,
+    mxs::Upstream* upstream);
+static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
+static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
 static int32_t routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue);
 static int32_t clientReply(MXS_FILTER* instance,
-                           MXS_FILTER_SESSION* fsession,
-                           GWBUF* queue,
-                           const mxs::ReplyRoute& down,
-                           const mxs::Reply& reply);
-static void     diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
-static json_t*  diagnostics(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
+    MXS_FILTER_SESSION* fsession,
+    GWBUF* queue,
+    const mxs::ReplyRoute& down,
+    const mxs::Reply& reply);
+static void diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
+static json_t* diagnostics(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
 
 extern "C"
 {
-
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -91,8 +89,7 @@ extern "C"
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_FILTER_OBJECT MyObject =
-    {
+    static MXS_FILTER_OBJECT MyObject = {
         createInstance,
         newSession,
         closeSession,
@@ -101,28 +98,23 @@ MXS_MODULE* MXS_CREATE_MODULE()
         clientReply,
         diagnostics,
         getCapabilities,
-        NULL,       // No destroyInstance
+        NULL,  // No destroyInstance
     };
 
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_FILTER,
+    static MXS_MODULE info = {MXS_MODULE_API_FILTER,
         MXS_MODULE_EXPERIMENTAL,
         MXS_FILTER_VERSION,
         "Lua Filter",
         "V1.0.0",
         RCAP_TYPE_CONTIGUOUS_INPUT,
         &MyObject,
-        NULL,                       /* Process init. */
-        NULL,                       /* Process finish. */
-        NULL,                       /* Thread init. */
-        NULL,                       /* Thread finish. */
-        {
-            {"global_script",      MXS_MODULE_PARAM_PATH,  NULL, MXS_MODULE_OPT_PATH_R_OK},
-            {"session_script",     MXS_MODULE_PARAM_PATH,  NULL, MXS_MODULE_OPT_PATH_R_OK},
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
+        {{"global_script", MXS_MODULE_PARAM_PATH, NULL, MXS_MODULE_OPT_PATH_R_OK},
+            {"session_script", MXS_MODULE_PARAM_PATH, NULL, MXS_MODULE_OPT_PATH_R_OK},
+            {MXS_END_MODULE_PARAMS}}};
 
     // Some luarocks libraries (e.g. lpeg) do not dynamically link to the lua libraries and expect the symbols
     // to be globally available. The correct way to solve this would be to rebuild the luarocks library and
@@ -138,14 +130,15 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_WARNING("Failed to load the core Lua library: %s. Some external Lua libraries might not work "
                     "as a result of this. The core Lua library can be manually loaded by using "
-                    "LD_PRELOAD and pointing it at the correct 'liblua.so' library.", dlerror());
+                    "LD_PRELOAD and pointing it at the correct 'liblua.so' library.",
+            dlerror());
     }
 
     return &info;
 }
 }
 
-static int id_pool = 0;
+static int id_pool                 = 0;
 static GWBUF* current_global_query = NULL;
 
 /**
@@ -161,13 +154,13 @@ static int id_gen(lua_State* state)
 
 static int lua_qc_get_type_mask(lua_State* state)
 {
-    int ibuf = lua_upvalueindex(1);
-    GWBUF* buf = *((GWBUF**)lua_touserdata(state, ibuf));
+    int ibuf   = lua_upvalueindex(1);
+    GWBUF* buf = *((GWBUF**) lua_touserdata(state, ibuf));
 
     if (buf)
     {
         uint32_t type = qc_get_type_mask(buf);
-        char* mask = qc_typemask_to_string(type);
+        char* mask    = qc_typemask_to_string(type);
         lua_pushstring(state, mask);
         MXS_FREE(mask);
     }
@@ -181,12 +174,12 @@ static int lua_qc_get_type_mask(lua_State* state)
 
 static int lua_qc_get_operation(lua_State* state)
 {
-    int ibuf = lua_upvalueindex(1);
-    GWBUF* buf = *((GWBUF**)lua_touserdata(state, ibuf));
+    int ibuf   = lua_upvalueindex(1);
+    GWBUF* buf = *((GWBUF**) lua_touserdata(state, ibuf));
 
     if (buf)
     {
-        qc_query_op_t op = qc_get_operation(buf);
+        qc_query_op_t op     = qc_get_operation(buf);
         const char* opstring = qc_op_to_string(op);
         lua_pushstring(state, opstring);
     }
@@ -200,8 +193,8 @@ static int lua_qc_get_operation(lua_State* state)
 
 static int lua_get_canonical(lua_State* state)
 {
-    int ibuf = lua_upvalueindex(1);
-    GWBUF* buf = *((GWBUF**)lua_touserdata(state, ibuf));
+    int ibuf   = lua_upvalueindex(1);
+    GWBUF* buf = *((GWBUF**) lua_touserdata(state, ibuf));
 
     if (buf)
     {
@@ -223,8 +216,8 @@ static int lua_get_canonical(lua_State* state)
 typedef struct
 {
     lua_State* global_lua_state;
-    char*      global_script;
-    char*      session_script;
+    char* global_script;
+    char* session_script;
     std::mutex lock;
 } LUA_INSTANCE;
 
@@ -233,12 +226,12 @@ typedef struct
  */
 typedef struct
 {
-    MXS_SESSION*     session;
-    lua_State*       lua_state;
-    GWBUF*           current_query;
-    SERVICE*         service;
+    MXS_SESSION* session;
+    lua_State* lua_state;
+    GWBUF* current_query;
+    SERVICE* service;
     mxs::Downstream* down;
-    mxs::Upstream*   up;
+    mxs::Upstream* up;
 } LUA_SESSION;
 
 void expose_functions(lua_State* state, GWBUF** active_buffer)
@@ -272,15 +265,15 @@ void expose_functions(lua_State* state, GWBUF** active_buffer)
  */
 static MXS_FILTER* createInstance(const char* name, mxs::ConfigParameters* params)
 {
-    LUA_INSTANCE* my_instance = new(std::nothrow) LUA_INSTANCE;
+    LUA_INSTANCE* my_instance = new (std::nothrow) LUA_INSTANCE;
 
     if (my_instance == NULL)
     {
         return NULL;
     }
 
-    my_instance->global_script = params->get_c_str_copy("global_script");
-    my_instance->session_script = params->get_c_str_copy("session_script");
+    my_instance->global_script    = params->get_c_str_copy("global_script");
+    my_instance->session_script   = params->get_c_str_copy("session_script");
     my_instance->global_lua_state = nullptr;
 
     if (my_instance->global_script)
@@ -292,8 +285,8 @@ static MXS_FILTER* createInstance(const char* name, mxs::ConfigParameters* param
             if (luaL_dofile(my_instance->global_lua_state, my_instance->global_script))
             {
                 MXS_ERROR("Failed to execute global script at '%s':%s.",
-                          my_instance->global_script,
-                          lua_tostring(my_instance->global_lua_state, -1));
+                    my_instance->global_script,
+                    lua_tostring(my_instance->global_lua_state, -1));
                 MXS_FREE(my_instance->global_script);
                 MXS_FREE(my_instance->session_script);
                 MXS_FREE(my_instance);
@@ -307,8 +300,8 @@ static MXS_FILTER* createInstance(const char* name, mxs::ConfigParameters* param
                 {
                     MXS_WARNING("Failed to get global variable 'createInstance':  %s."
                                 " The createInstance entry point will not be called for the global script.",
-                                lua_tostring(my_instance->global_lua_state, -1));
-                    lua_pop(my_instance->global_lua_state, -1);     // Pop the error off the stack
+                        lua_tostring(my_instance->global_lua_state, -1));
+                    lua_pop(my_instance->global_lua_state, -1);  // Pop the error off the stack
                 }
 
                 expose_functions(my_instance->global_lua_state, &current_global_query);
@@ -342,10 +335,10 @@ static MXS_FILTER* createInstance(const char* name, mxs::ConfigParameters* param
  * @return Session specific data for this session
  */
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
-                                      MXS_SESSION* session,
-                                      SERVICE* service,
-                                      mxs::Downstream* downstream,
-                                      mxs::Upstream* upstream)
+    MXS_SESSION* session,
+    SERVICE* service,
+    mxs::Downstream* downstream,
+    mxs::Upstream* upstream)
 {
     LUA_SESSION* my_session;
     LUA_INSTANCE* my_instance = (LUA_INSTANCE*) instance;
@@ -356,8 +349,8 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
     }
 
     my_session->service = service;
-    my_session->down = downstream;
-    my_session->up = upstream;
+    my_session->down    = downstream;
+    my_session->up      = upstream;
     my_session->session = session;
 
     if (my_instance->session_script)
@@ -368,8 +361,8 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
         if (luaL_dofile(my_session->lua_state, my_instance->session_script))
         {
             MXS_ERROR("Failed to execute session script at '%s': %s.",
-                      my_instance->session_script,
-                      lua_tostring(my_session->lua_state, -1));
+                my_instance->session_script,
+                lua_tostring(my_session->lua_state, -1));
             lua_close(my_session->lua_state);
             MXS_FREE(my_session);
             my_session = NULL;
@@ -387,8 +380,8 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
             {
                 MXS_WARNING("Failed to get global variable 'newSession': '%s'."
                             " The newSession entry point will not be called.",
-                            lua_tostring(my_session->lua_state, -1));
-                lua_pop(my_session->lua_state, -1);     // Pop the error off the stack
+                    lua_tostring(my_session->lua_state, -1));
+                lua_pop(my_session->lua_state, -1);  // Pop the error off the stack
             }
         }
     }
@@ -405,12 +398,12 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
         {
             MXS_WARNING("Failed to get global variable 'newSession': '%s'."
                         " The newSession entry point will not be called for the global script.",
-                        lua_tostring(my_instance->global_lua_state, -1));
-            lua_pop(my_instance->global_lua_state, -1);     // Pop the error off the stack
+                lua_tostring(my_instance->global_lua_state, -1));
+            lua_pop(my_instance->global_lua_state, -1);  // Pop the error off the stack
         }
     }
 
-    return (MXS_FILTER_SESSION*)my_session;
+    return (MXS_FILTER_SESSION*) my_session;
 }
 
 /**
@@ -423,7 +416,7 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
  */
 static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
 {
-    LUA_SESSION* my_session = (LUA_SESSION*) session;
+    LUA_SESSION* my_session   = (LUA_SESSION*) session;
     LUA_INSTANCE* my_instance = (LUA_INSTANCE*) instance;
 
 
@@ -435,7 +428,7 @@ static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
         {
             MXS_WARNING("Failed to get global variable 'closeSession': '%s'."
                         " The closeSession entry point will not be called.",
-                        lua_tostring(my_session->lua_state, -1));
+                lua_tostring(my_session->lua_state, -1));
             lua_pop(my_session->lua_state, -1);
         }
     }
@@ -450,7 +443,7 @@ static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
         {
             MXS_WARNING("Failed to get global variable 'closeSession': '%s'."
                         " The closeSession entry point will not be called for the global script.",
-                        lua_tostring(my_instance->global_lua_state, -1));
+                lua_tostring(my_instance->global_lua_state, -1));
             lua_pop(my_instance->global_lua_state, -1);
         }
     }
@@ -484,12 +477,12 @@ static void freeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session)
  * @return 1 on success
  */
 static int32_t clientReply(MXS_FILTER* instance,
-                           MXS_FILTER_SESSION* session,
-                           GWBUF* queue,
-                           const mxs::ReplyRoute& down,
-                           const mxs::Reply& reply)
+    MXS_FILTER_SESSION* session,
+    GWBUF* queue,
+    const mxs::ReplyRoute& down,
+    const mxs::Reply& reply)
 {
-    LUA_SESSION* my_session = (LUA_SESSION*) session;
+    LUA_SESSION* my_session   = (LUA_SESSION*) session;
     LUA_INSTANCE* my_instance = (LUA_INSTANCE*) instance;
 
     if (my_session->lua_state)
@@ -498,8 +491,8 @@ static int32_t clientReply(MXS_FILTER* instance,
 
         if (lua_pcall(my_session->lua_state, 0, 0, 0))
         {
-            MXS_ERROR("Session scope call to 'clientReply' failed: '%s'.",
-                      lua_tostring(my_session->lua_state, -1));
+            MXS_ERROR(
+                "Session scope call to 'clientReply' failed: '%s'.", lua_tostring(my_session->lua_state, -1));
             lua_pop(my_session->lua_state, -1);
         }
     }
@@ -512,15 +505,13 @@ static int32_t clientReply(MXS_FILTER* instance,
 
         if (lua_pcall(my_instance->global_lua_state, 0, 0, 0))
         {
-            MXS_ERROR("Global scope call to 'clientReply' failed: '%s'.",
-                      lua_tostring(my_session->lua_state, -1));
+            MXS_ERROR(
+                "Global scope call to 'clientReply' failed: '%s'.", lua_tostring(my_session->lua_state, -1));
             lua_pop(my_instance->global_lua_state, -1);
         }
     }
 
-    return my_session->up->clientReply(my_session->up->instance,
-                                       my_session->up->session,
-                                       queue, down, reply);
+    return my_session->up->clientReply(my_session->up->instance, my_session->up->session, queue, down, reply);
 }
 
 /**
@@ -543,12 +534,12 @@ static int32_t clientReply(MXS_FILTER* instance,
  */
 static int32_t routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* queue)
 {
-    LUA_SESSION* my_session = (LUA_SESSION*) session;
+    LUA_SESSION* my_session   = (LUA_SESSION*) session;
     LUA_INSTANCE* my_instance = (LUA_INSTANCE*) instance;
-    char* fullquery = NULL;
-    bool route = true;
-    GWBUF* forward = queue;
-    int rc = 0;
+    char* fullquery           = NULL;
+    bool route                = true;
+    GWBUF* forward            = queue;
+    int rc                    = 0;
 
     if (modutil_is_SQL(queue) || modutil_is_SQL_prepare(queue))
     {
@@ -566,7 +557,7 @@ static int32_t routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWB
             if (lua_pcall(my_session->lua_state, 1, 1, 0))
             {
                 MXS_ERROR("Session scope call to 'routeQuery' failed: '%s'.",
-                          lua_tostring(my_session->lua_state, -1));
+                    lua_tostring(my_session->lua_state, -1));
                 lua_pop(my_session->lua_state, -1);
             }
             else if (lua_gettop(my_session->lua_state))
@@ -596,7 +587,7 @@ static int32_t routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWB
             if (lua_pcall(my_instance->global_lua_state, 1, 1, 0))
             {
                 MXS_ERROR("Global scope call to 'routeQuery' failed: '%s'.",
-                          lua_tostring(my_instance->global_lua_state, -1));
+                    lua_tostring(my_instance->global_lua_state, -1));
                 lua_pop(my_instance->global_lua_state, -1);
             }
             else if (lua_gettop(my_instance->global_lua_state))
@@ -622,15 +613,12 @@ static int32_t routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWB
     {
         gwbuf_free(queue);
         GWBUF* err = modutil_create_mysql_err_msg(1, 0, 1045, "28000", "Access denied.");
-        session_set_response(my_session->session, my_session->service,
-                             my_session->up, err);
+        session_set_response(my_session->session, my_session->service, my_session->up, err);
         rc = 1;
     }
     else
     {
-        rc = my_session->down->routeQuery(my_session->down->instance,
-                                          my_session->down->session,
-                                          forward);
+        rc = my_session->down->routeQuery(my_session->down->instance, my_session->down->session, forward);
     }
 
     return rc;
@@ -647,8 +635,8 @@ static int32_t routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWB
  */
 static json_t* diagnostics(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession)
 {
-    LUA_INSTANCE* my_instance = (LUA_INSTANCE*)instance;
-    json_t* rval = json_object();
+    LUA_INSTANCE* my_instance = (LUA_INSTANCE*) instance;
+    json_t* rval              = json_object();
 
     if (my_instance)
     {
@@ -663,9 +651,8 @@ static json_t* diagnostics(const MXS_FILTER* instance, const MXS_FILTER_SESSION*
                 lua_gettop(my_instance->global_lua_state);
                 if (lua_isstring(my_instance->global_lua_state, -1))
                 {
-                    json_object_set_new(rval,
-                                        "script_output",
-                                        json_string(lua_tostring(my_instance->global_lua_state, -1)));
+                    json_object_set_new(
+                        rval, "script_output", json_string(lua_tostring(my_instance->global_lua_state, -1)));
                 }
             }
             else

@@ -33,26 +33,26 @@ class ClientAuthenticator;
 class BackendAuthenticator;
 struct BackendAuthData;
 
-using SClientAuth = std::unique_ptr<ClientAuthenticator>;
+using SClientAuth  = std::unique_ptr<ClientAuthenticator>;
 using SBackendAuth = std::unique_ptr<BackendAuthenticator>;
 
 struct UserEntry
 {
-    std::string username;       /**< Username */
-    std::string host_pattern;   /**< Hostname or IP, may have wildcards */
-    std::string plugin;         /**< Auth plugin to use */
-    std::string password;       /**< Auth data used by native auth plugin */
-    std::string auth_string;    /**< Auth data used by other plugins */
+    std::string username;     /**< Username */
+    std::string host_pattern; /**< Hostname or IP, may have wildcards */
+    std::string plugin;       /**< Auth plugin to use */
+    std::string password;     /**< Auth data used by native auth plugin */
+    std::string auth_string;  /**< Auth data used by other plugins */
 
-    bool ssl {false};           /**< Should the user connect with ssl? */
-    bool super_priv {false};    /**< Does the user have superuser privilege? */
-    bool global_db_priv {false};/**< Does the user have access to all databases? */
-    bool proxy_priv {false};    /**< Does the user have proxy grants? */
+    bool ssl {false};            /**< Should the user connect with ssl? */
+    bool super_priv {false};     /**< Does the user have superuser privilege? */
+    bool global_db_priv {false}; /**< Does the user have access to all databases? */
+    bool proxy_priv {false};     /**< Does the user have proxy grants? */
 
-    bool        is_role {false};/**< Is the user a role? */
-    std::string default_role;   /**< Default role if any */
+    bool is_role {false};     /**< Is the user a role? */
+    std::string default_role; /**< Default role if any */
 
-    bool        operator==(const UserEntry& rhs) const;
+    bool operator==(const UserEntry& rhs) const;
     static bool host_pattern_is_more_specific(const UserEntry& lhs, const UserEntry& rhs);
 };
 
@@ -71,7 +71,7 @@ enum class UserEntryType
 struct UserEntryResult
 {
     mariadb::UserEntry entry;
-    UserEntryType      type {UserEntryType::USER_NOT_FOUND};
+    UserEntryType type {UserEntryType::USER_NOT_FOUND};
 };
 
 /**
@@ -81,15 +81,15 @@ struct UserEntryResult
 class AuthenticatorModule : public mxs::AuthenticatorModule
 {
 public:
-    AuthenticatorModule(const AuthenticatorModule&) = delete;
+    AuthenticatorModule(const AuthenticatorModule&)            = delete;
     AuthenticatorModule& operator=(const AuthenticatorModule&) = delete;
 
     enum Capabilities
     {
-        CAP_ANON_USER = (1 << 0),   /**< Does the module allow anonymous users? */
+        CAP_ANON_USER = (1 << 0), /**< Does the module allow anonymous users? */
     };
 
-    AuthenticatorModule() = default;
+    AuthenticatorModule()          = default;
     virtual ~AuthenticatorModule() = default;
 
     /**
@@ -134,9 +134,9 @@ public:
 
     enum class ExchRes
     {
-        FAIL,           /**< Packet processing failed */
-        INCOMPLETE,     /**< Should be called again after client responds to output */
-        READY           /**< Exchange with client complete, should continue to password check */
+        FAIL,       /**< Packet processing failed */
+        INCOMPLETE, /**< Should be called again after client responds to output */
+        READY       /**< Exchange with client complete, should continue to password check */
     };
 
     // Return values for authenticate()-function
@@ -144,19 +144,19 @@ public:
     {
         enum class Status
         {
-            FAIL,           /**< Authentication failed */
-            FAIL_WRONG_PW,  /**< Client provided wrong password */
-            SUCCESS,        /**< Authentication was successful */
+            FAIL,          /**< Authentication failed */
+            FAIL_WRONG_PW, /**< Client provided wrong password */
+            SUCCESS,       /**< Authentication was successful */
         };
 
-        Status      status {Status::FAIL};
+        Status status {Status::FAIL};
         std::string msg;
     };
 
-    ClientAuthenticator(const ClientAuthenticator&) = delete;
+    ClientAuthenticator(const ClientAuthenticator&)            = delete;
     ClientAuthenticator& operator=(const ClientAuthenticator&) = delete;
 
-    ClientAuthenticator() = default;
+    ClientAuthenticator()          = default;
     virtual ~ClientAuthenticator() = default;
 
     /**
@@ -191,8 +191,7 @@ public:
      */
     ClientAuthenticatorT(AuthModule* module)
         : m_module(*module)
-    {
-    }
+    {}
 
 protected:
     AuthModule& m_module;
@@ -205,10 +204,10 @@ struct BackendAuthData
 {
     BackendAuthData(const char* srv_name);
 
-    const char* const    servername;    /**< Server name, used for logging */
-    const MYSQL_session* client_data;   /**< Protocol-session data */
+    const char* const servername;     /**< Server name, used for logging */
+    const MYSQL_session* client_data; /**< Protocol-session data */
 
-    uint8_t scramble[MYSQL_SCRAMBLE_LEN] {0};   /**< Server scramble, received from backend */
+    uint8_t scramble[MYSQL_SCRAMBLE_LEN] {0}; /**< Server scramble, received from backend */
 };
 
 /**
@@ -220,14 +219,14 @@ public:
     // Return values for authenticate-functions. TODO: change to bool if no more values needed
     enum class AuthRes
     {
-        SUCCESS,    /**< Authentication was successful */
-        FAIL,       /**< Authentication failed */
+        SUCCESS, /**< Authentication was successful */
+        FAIL,    /**< Authentication failed */
     };
 
-    BackendAuthenticator(const BackendAuthenticator&) = delete;
+    BackendAuthenticator(const BackendAuthenticator&)            = delete;
     BackendAuthenticator& operator=(const BackendAuthenticator&) = delete;
 
-    BackendAuthenticator() = default;
+    BackendAuthenticator()          = default;
     virtual ~BackendAuthenticator() = default;
 
     /**
@@ -242,9 +241,9 @@ public:
 
 protected:
     // Common error message formats, used in several authenticators.
-    static constexpr const char* WRONG_PLUGIN_REQ =
-        "'%s' asked for authentication plugin '%s' when authenticating '%s'. Only '%s' is supported.";
-    static constexpr const char* MALFORMED_AUTH_SWITCH =
-        "Received malformed AuthSwitchRequest-packet from '%s'.";
+    static constexpr const char* WRONG_PLUGIN_REQ
+        = "'%s' asked for authentication plugin '%s' when authenticating '%s'. Only '%s' is supported.";
+    static constexpr const char* MALFORMED_AUTH_SWITCH
+        = "Received malformed AuthSwitchRequest-packet from '%s'.";
 };
-}
+}  // namespace mariadb

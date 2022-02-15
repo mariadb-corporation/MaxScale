@@ -37,16 +37,16 @@ public:
     static GSSAPIAuthenticatorModule* create(mxs::ConfigParameters* options);
     ~GSSAPIAuthenticatorModule() override = default;
 
-    mariadb::SClientAuth  create_client_authenticator() override;
+    mariadb::SClientAuth create_client_authenticator() override;
     mariadb::SBackendAuth create_backend_authenticator(mariadb::BackendAuthData& auth_data) override;
 
-    uint64_t    capabilities() const override;
+    uint64_t capabilities() const override;
     std::string supported_protocol() const override;
     std::string name() const override;
 
     const std::unordered_set<std::string>& supported_plugins() const override;
 
-    std::string principal_name;     /**< Service principal name given to the client */
+    std::string principal_name; /**< Service principal name given to the client */
 };
 
 class GSSAPIClientAuthenticator : public mariadb::ClientAuthenticatorT<GSSAPIAuthenticatorModule>
@@ -58,18 +58,17 @@ public:
     ExchRes exchange(GWBUF* buffer, MYSQL_session* session, mxs::Buffer* output) override;
     AuthRes authenticate(const mariadb::UserEntry* entry, MYSQL_session* session) override;
 
-    uint8_t m_sequence {0};                 /**< The next packet sequence number */
+    uint8_t m_sequence {0}; /**< The next packet sequence number */
 
 private:
     void copy_client_information(GWBUF* buffer);
     bool store_client_token(MYSQL_session* session, GWBUF* buffer);
     bool validate_gssapi_token(uint8_t* token, size_t len, char** output);
-    bool validate_user(MYSQL_session* session, const char* princ,
-                       const mariadb::UserEntry* entry);
+    bool validate_user(MYSQL_session* session, const char* princ, const mariadb::UserEntry* entry);
     GWBUF* create_auth_change_packet();
 
-    gssapi_auth_state state {GSSAPI_AUTH_INIT};     /**< Authentication state*/
-    uint8_t*          principal_name {nullptr};     /**< Principal name */
+    gssapi_auth_state state {GSSAPI_AUTH_INIT}; /**< Authentication state*/
+    uint8_t* principal_name {nullptr};          /**< Principal name */
 };
 
 class GSSAPIBackendAuthenticator : public mariadb::BackendAuthenticator
@@ -88,8 +87,8 @@ private:
         ERROR
     };
 
-    State   m_state {State::EXPECT_AUTHSWITCH};     /**< Authentication state*/
-    uint8_t m_sequence {0};                         /**< The next packet sequence number */
+    State m_state {State::EXPECT_AUTHSWITCH}; /**< Authentication state*/
+    uint8_t m_sequence {0};                   /**< The next packet sequence number */
 
-    const mariadb::BackendAuthData& m_shared_data;      /**< Data shared with backend connection */
+    const mariadb::BackendAuthData& m_shared_data; /**< Data shared with backend connection */
 };

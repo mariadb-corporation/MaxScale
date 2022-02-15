@@ -31,10 +31,17 @@ std::istream& operator>>(std::istream&, Host& host);
 class Host
 {
 public:
-    enum class Type {Invalid, UnixDomainSocket, HostName, IPV4, IPV6};      // to_string() provided
+    enum class Type
+    {
+        Invalid,
+        UnixDomainSocket,
+        HostName,
+        IPV4,
+        IPV6
+    };  // to_string() provided
     static constexpr int InvalidPort = -1;
 
-    Host() = default;   // type() returns Type::Invalid
+    Host() = default;  // type() returns Type::Invalid
 
     /**
      * @brief from_string
@@ -59,21 +66,22 @@ public:
      */
     Host(const std::string& addr, int port);
 
-    Type               type() const;
-    bool               is_valid() const;
+    Type type() const;
+    bool is_valid() const;
     const std::string& address() const;
-    int                port() const;
+    int port() const;
 
-    const std::string& org_input() const;       // for better error messages
+    const std::string& org_input() const;  // for better error messages
 
     static bool is_valid_ipv4(const std::string& ip);
     static bool is_valid_ipv6(const std::string& ip);
+
 private:
-    void set_type();        // set m_type based on m_address and m_port
+    void set_type();  // set m_type based on m_address and m_port
 
     std::string m_address;
-    int         m_port;
-    Type        m_type = Type::Invalid;
+    int m_port;
+    Type m_type = Type::Invalid;
     std::string m_org_input;
 };
 
@@ -108,7 +116,7 @@ inline const std::string& Host::org_input() const
 inline bool operator==(const Host& l, const Host& r)
 {
     bool port_ok = (l.port() == r.port())
-        || (l.type() == Host::Type::UnixDomainSocket && r.type() == Host::Type::UnixDomainSocket);
+                || (l.type() == Host::Type::UnixDomainSocket && r.type() == Host::Type::UnixDomainSocket);
 
     return port_ok && l.address() == r.address() && l.type() == r.type();
 }
@@ -126,8 +134,9 @@ inline bool operator!=(const Host& l, const Host& r)
  * @param error_out Error output
  * @return True if successful
  */
-bool name_lookup(const std::string& host, std::unordered_set<std::string>* addresses_out,
-                 std::string* error_out = nullptr);
+bool name_lookup(const std::string& host,
+    std::unordered_set<std::string>* addresses_out,
+    std::string* error_out = nullptr);
 
 /**
  * Perform reverse DNS on an IP address. This may involve network communication so can be slow.
@@ -137,4 +146,4 @@ bool name_lookup(const std::string& host, std::unordered_set<std::string>* addre
  * @return True on success
  */
 bool reverse_name_lookup(const std::string& ip, std::string* output);
-}
+}  // namespace maxbase

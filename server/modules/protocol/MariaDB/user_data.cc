@@ -31,11 +31,11 @@
 using std::string;
 using std::vector;
 using mxq::MariaDB;
-using MutexLock = std::unique_lock<std::mutex>;
-using Guard = std::lock_guard<std::mutex>;
-using UserEntry = mariadb::UserEntry;
+using MutexLock     = std::unique_lock<std::mutex>;
+using Guard         = std::lock_guard<std::mutex>;
+using UserEntry     = mariadb::UserEntry;
 using UserEntryType = mariadb::UserEntryType;
-using SUserEntry = std::unique_ptr<UserEntry>;
+using SUserEntry    = std::unique_ptr<UserEntry>;
 using mariadb::UserSearchSettings;
 using mariadb::UserEntryResult;
 using ServerType = SERVER::VersionInfo::Type;
@@ -46,11 +46,11 @@ namespace
 constexpr auto acquire = std::memory_order_acquire;
 constexpr auto release = std::memory_order_release;
 constexpr auto relaxed = std::memory_order_relaxed;
-constexpr auto npos = string::npos;
+constexpr auto npos    = string::npos;
 
-const int ipv4min_len = 7;      // 1.1.1.1
+const int ipv4min_len           = 7;  // 1.1.1.1
 const string mysql_default_auth = "mysql_native_password";
-const string info_schema = "information_schema";    // Any user can access this even without a grant.
+const string info_schema        = "information_schema";  // Any user can access this even without a grant.
 
 /** How many times users can be successfully loaded before throttling kicks in. */
 const int throttling_start_loads = 5;
@@ -65,47 +65,43 @@ const string users_query = "SELECT * FROM mysql.user;";
 // Select users/roles with general db-level privs, the db:s may contain wildcards.
 const string db_wc_grants_query = "SELECT DISTINCT user, host, db FROM mysql.db;";
 
-const string db_grants_query_old =
-    "SELECT DISTINCT * FROM ("
-    // Select table level privs counting as db-level privs
-    "(SELECT a.user, a.host, a.db FROM mysql.tables_priv AS a) UNION "
-    // and combine with column-level privs as db-level privs
-    "(SELECT a.user, a.host, a.db FROM mysql.columns_priv AS a) ) AS c;";
+const string db_grants_query_old = "SELECT DISTINCT * FROM ("
+                                   // Select table level privs counting as db-level privs
+                                   "(SELECT a.user, a.host, a.db FROM mysql.tables_priv AS a) UNION "
+                                   // and combine with column-level privs as db-level privs
+                                   "(SELECT a.user, a.host, a.db FROM mysql.columns_priv AS a) ) AS c;";
 
 // The query above does not check the procs_priv-table. To avoid requiring new privileges in existing
 // installations, keep the existing query as an alternative. The old query can be removed in 2.6.
-const string db_grants_query =
-    "SELECT DISTINCT * FROM ("
-    // Select table level privs counting as db-level privs
-    "(SELECT a.user, a.host, a.db FROM mysql.tables_priv AS a) UNION "
-    // and combine with column-level privs as db-level privs
-    "(SELECT a.user, a.host, a.db FROM mysql.columns_priv AS a) UNION "
-    // and combine with procedure-level privs as db-level privs.
-    "(SELECT a.user, a.host, a.db FROM mysql.procs_priv AS a) ) AS c;";
+const string db_grants_query = "SELECT DISTINCT * FROM ("
+                               // Select table level privs counting as db-level privs
+                               "(SELECT a.user, a.host, a.db FROM mysql.tables_priv AS a) UNION "
+                               // and combine with column-level privs as db-level privs
+                               "(SELECT a.user, a.host, a.db FROM mysql.columns_priv AS a) UNION "
+                               // and combine with procedure-level privs as db-level privs.
+                               "(SELECT a.user, a.host, a.db FROM mysql.procs_priv AS a) ) AS c;";
 
-const string proxies_query = "SELECT DISTINCT a.user, a.host FROM mysql.proxies_priv AS a "
-                             "WHERE a.proxied_host <> '' AND a.proxied_user <> '';";
-const string db_names_query = "SHOW DATABASES;";
-const string roles_query = "SELECT a.user, a.host, a.role FROM mysql.roles_mapping AS a;";
-const string my_grants_query = "SHOW GRANTS;";
+const string proxies_query      = "SELECT DISTINCT a.user, a.host FROM mysql.proxies_priv AS a "
+                                  "WHERE a.proxied_host <> '' AND a.proxied_user <> '';";
+const string db_names_query     = "SHOW DATABASES;";
+const string roles_query        = "SELECT a.user, a.host, a.role FROM mysql.roles_mapping AS a;";
+const string my_grants_query    = "SHOW GRANTS;";
 const string current_user_query = "SELECT current_user();";
-}
+}  // namespace mariadb_queries
 
 namespace xpand_queries
 {
-const string users_query = "SELECT * FROM system.users;";
+const string users_query     = "SELECT * FROM system.users;";
 const string db_grants_query = "SELECT u.username, u.host, a.dbname, a.privileges FROM system.user_acl AS a "
                                "LEFT JOIN system.users AS u ON (u.user = a.role);";
-}
-}
+}  // namespace xpand_queries
+}  // namespace
 
 void MariaDBUserManager::start()
 {
     mxb_assert(!m_updater_thread.joinable());
     m_keep_running.store(true, release);
-    m_updater_thread = std::thread([this] {
-                                       updater_thread_function();
-                                   });
+    m_updater_thread = std::thread([this] { updater_thread_function(); });
     m_thread_started.wait();
 }
 
@@ -168,17 +164,17 @@ void MariaDBUserManager::updater_thread_function()
     // doesn't wait.
     const std::chrono::hours default_max_interval(24);
 
-    bool first_iteration = true;
-    bool throttling = false;
+    bool first_iteration  = true;
+    bool throttling       = false;
     TimePoint last_update = Clock::now();
 
     auto should_stop_running = [this]() {
-            return !m_keep_running.load(acquire);
-        };
+        return !m_keep_running.load(acquire);
+    };
 
     auto should_stop_waiting = [this]() {
-            return !m_keep_running.load(acquire) || m_update_users_requested.load(acquire);
-        };
+        return !m_keep_running.load(acquire) || m_update_users_requested.load(acquire);
+    };
 
     while (m_keep_running.load(acquire))
     {
@@ -192,7 +188,7 @@ void MariaDBUserManager::updater_thread_function()
          *  4) users_refresh_interval, the maximum time between refreshes. Users should be refreshed
          *  automatically if this time elapses.
          */
-        mxs::Config& glob_config = mxs::Config::get();
+        mxs::Config& glob_config  = mxs::Config::get();
         auto max_refresh_interval = glob_config.users_refresh_interval.get();
         auto min_refresh_interval = glob_config.users_refresh_time.get();
 
@@ -201,8 +197,8 @@ void MariaDBUserManager::updater_thread_function()
         TimePoint next_possible_update = last_update;
         if (throttling)
         {
-            next_possible_update += (min_refresh_interval.count() > 0) ?
-                min_refresh_interval : default_min_interval;
+            next_possible_update
+                += (min_refresh_interval.count() > 0) ? min_refresh_interval : default_min_interval;
         }
 
         // Calculate the time for the next scheduled update.
@@ -219,8 +215,8 @@ void MariaDBUserManager::updater_thread_function()
         }
         else
         {
-            next_scheduled_update += (max_refresh_interval.count() > 0) ?
-                max_refresh_interval : default_max_interval;
+            next_scheduled_update
+                += (max_refresh_interval.count() > 0) ? max_refresh_interval : default_max_interval;
         }
 
         MutexLock lock(m_notifier_lock);
@@ -285,20 +281,20 @@ bool MariaDBUserManager::update_users()
 
     // Copy all arraylike settings under a lock.
     MutexLock lock(m_settings_lock);
-    sett.user = m_username;
+    sett.user     = m_username;
     sett.password = m_password;
-    backends = m_backends;
+    backends      = m_backends;
     lock.unlock();
 
-    sett.password = mxs::decrypt_password(sett.password);
-    sett.multiquery = true;
+    sett.password       = mxs::decrypt_password(sett.password);
+    sett.multiquery     = true;
     sett.clear_sql_mode = true;
-    sett.charset = "utf8mb4";
-    sett.plugin_dir = mxs::connector_plugindir();
+    sett.charset        = "utf8mb4";
+    sett.plugin_dir     = mxs::connector_plugindir();
 
     mxs::Config& glob_config = mxs::Config::get();
-    sett.timeout = glob_config.auth_conn_timeout.get().count();
-    auto& local_address = glob_config.local_address;
+    sett.timeout             = glob_config.auth_conn_timeout.get().count();
+    auto& local_address      = glob_config.local_address;
     if (!local_address.empty())
     {
         sett.local_address = local_address;
@@ -307,8 +303,8 @@ bool MariaDBUserManager::update_users()
 
     // Filter out unusable backends.
     auto is_unusable = [](const SERVER* srv) {
-            return !srv->active() || !srv->is_usable();
-        };
+        return !srv->active() || !srv->is_usable();
+    };
     auto erase_iter = std::remove_if(backends.begin(), backends.end(), is_unusable);
     backends.erase(erase_iter, backends.end());
     if (backends.empty() && m_warn_no_servers.load(relaxed))
@@ -318,9 +314,9 @@ bool MariaDBUserManager::update_users()
 
     // Order backends so that the master is checked first.
     auto compare = [](const SERVER* lhs, const SERVER* rhs) {
-            return (lhs->is_master() && !rhs->is_master())
-                   || (lhs->is_slave() && (!rhs->is_master() && !rhs->is_slave()));
-        };
+        return (lhs->is_master() && !rhs->is_master())
+            || (lhs->is_slave() && (!rhs->is_master() && !rhs->is_slave()));
+    };
     std::sort(backends.begin(), backends.end(), compare);
 
     bool got_data = false;
@@ -399,8 +395,10 @@ bool MariaDBUserManager::update_users()
     {
         // Got some data. Update the master database if the contents differ. Usually they don't.
         string datasource = mxb::create_list_string(source_servernames, ", ", " and ", "'");
-        string msg = mxb::string_printf("Read %lu user@host entries from %s for service '%s'.",
-                                        temp_userdata.n_entries(), datasource.c_str(), m_service->name());
+        string msg        = mxb::string_printf("Read %lu user@host entries from %s for service '%s'.",
+            temp_userdata.n_entries(),
+            datasource.c_str(),
+            m_service->name());
 
         // The comparison is not trivially cheap if there are many user entries,
         // but it avoids unnecessary user cache updates which would involve copying all
@@ -423,29 +421,31 @@ bool MariaDBUserManager::update_users()
     return got_data;
 }
 
-MariaDBUserManager::LoadResult
-MariaDBUserManager::load_users_mariadb(mxq::MariaDB& con, SERVER* srv, UserDatabase* output)
+MariaDBUserManager::LoadResult MariaDBUserManager::load_users_mariadb(
+    mxq::MariaDB& con, SERVER* srv, UserDatabase* output)
 {
     using std::move;
 
     // Roles were added in server 10.0.5, default roles in server 10.1.1. Strictly speaking, reading the
     // roles_mapping table for 10.0.5 is not required as they won't be used. Read anyway in case
     // diagnostics prints it.
-    auto& info = srv->info();
+    auto& info        = srv->info();
     bool role_support = (info.version_num().total >= 100005);
 
     // Run the queries as one multiquery.
     vector<string> multiquery;
     multiquery.reserve(6);
-    multiquery = {mariadb_queries::users_query,     mariadb_queries::db_wc_grants_query,
-                  mariadb_queries::db_grants_query, mariadb_queries::proxies_query,
-                  mariadb_queries::db_names_query};
+    multiquery = {mariadb_queries::users_query,
+        mariadb_queries::db_wc_grants_query,
+        mariadb_queries::db_grants_query,
+        mariadb_queries::proxies_query,
+        mariadb_queries::db_names_query};
     if (role_support)
     {
         multiquery.push_back(mariadb_queries::roles_query);
     }
 
-    auto rval = LoadResult::QUERY_FAILED;
+    auto rval          = LoadResult::QUERY_FAILED;
     auto multiq_result = con.multiquery(multiquery);
     if (multiq_result.empty())
     {
@@ -465,12 +465,12 @@ MariaDBUserManager::load_users_mariadb(mxq::MariaDB& con, SERVER* srv, UserDatab
 
     if (!multiq_result.empty())
     {
-        QResult users_res = move(multiq_result[0]);
+        QResult users_res        = move(multiq_result[0]);
         QResult db_wc_grants_res = move(multiq_result[1]);
-        QResult db_grants_res = move(multiq_result[2]);
-        QResult proxies_res = move(multiq_result[3]);
-        QResult dbs_res = move(multiq_result[4]);
-        QResult roles_res = role_support ? move(multiq_result[5]) : nullptr;
+        QResult db_grants_res    = move(multiq_result[2]);
+        QResult proxies_res      = move(multiq_result[3]);
+        QResult dbs_res          = move(multiq_result[4]);
+        QResult roles_res        = role_support ? move(multiq_result[5]) : nullptr;
 
         rval = LoadResult::INVALID_DATA;
         if (read_users_mariadb(move(users_res), info, output))
@@ -484,19 +484,19 @@ MariaDBUserManager::load_users_mariadb(mxq::MariaDB& con, SERVER* srv, UserDatab
     return rval;
 }
 
-MariaDBUserManager::LoadResult
-MariaDBUserManager::load_users_xpand(mxq::MariaDB& con, SERVER* srv, UserDatabase* output)
+MariaDBUserManager::LoadResult MariaDBUserManager::load_users_xpand(
+    mxq::MariaDB& con, SERVER* srv, UserDatabase* output)
 {
     using std::move;
-    vector<string> multiquery = {xpand_queries::users_query, xpand_queries::db_grants_query,
-                                 mariadb_queries::db_names_query};
-    auto rval = LoadResult::QUERY_FAILED;
+    vector<string> multiquery
+        = {xpand_queries::users_query, xpand_queries::db_grants_query, mariadb_queries::db_names_query};
+    auto rval          = LoadResult::QUERY_FAILED;
     auto multiq_result = con.multiquery(multiquery);
     if (multiq_result.size() == multiquery.size())
     {
         QResult users_res = move(multiq_result[0]);
-        QResult acl_res = move(multiq_result[1]);
-        QResult dbs_res = move(multiq_result[2]);
+        QResult acl_res   = move(multiq_result[1]);
+        QResult dbs_res   = move(multiq_result[2]);
 
         rval = LoadResult::INVALID_DATA;
         if (read_users_xpand(move(users_res), output))
@@ -517,13 +517,13 @@ MariaDBUserManager::load_users_xpand(mxq::MariaDB& con, SERVER* srv, UserDatabas
  * @param output Results storage object
  * @return True on success
  */
-bool MariaDBUserManager::read_users_mariadb(QResult users, const SERVER::VersionInfo& srv_info,
-                                            UserDatabase* output)
+bool MariaDBUserManager::read_users_mariadb(
+    QResult users, const SERVER::VersionInfo& srv_info, UserDatabase* output)
 {
     auto get_bool_enum = [&users](int64_t col_ind) {
-            string val = users->get_string(col_ind);
-            return val == "Y" || val == "y";
-        };
+        string val = users->get_string(col_ind);
+        return val == "Y" || val == "y";
+    };
 
     // MySQL-server 5.7 and later do not have a "Password"-column. The pw is in the
     // "authentication_string"-column.
@@ -532,24 +532,24 @@ bool MariaDBUserManager::read_users_mariadb(QResult users, const SERVER::Version
     // Get column indexes for the interesting fields. Depending on backend version, they may not all
     // exist. Some of the field name start with a capital and some don't. Should the index search be
     // ignorecase?
-    auto ind_user = users->get_col_index("User");
-    auto ind_host = users->get_col_index("Host");
-    auto ind_sel_priv = users->get_col_index("Select_priv");
-    auto ind_ins_priv = users->get_col_index("Insert_priv");
-    auto ind_upd_priv = users->get_col_index("Update_priv");
-    auto ind_del_priv = users->get_col_index("Delete_priv");
+    auto ind_user       = users->get_col_index("User");
+    auto ind_host       = users->get_col_index("Host");
+    auto ind_sel_priv   = users->get_col_index("Select_priv");
+    auto ind_ins_priv   = users->get_col_index("Insert_priv");
+    auto ind_upd_priv   = users->get_col_index("Update_priv");
+    auto ind_del_priv   = users->get_col_index("Delete_priv");
     auto ind_super_priv = users->get_col_index("Super_priv");
-    auto ind_ssl = users->get_col_index("ssl_type");
-    auto ind_plugin = users->get_col_index("plugin");
-    auto ind_pw = users->get_col_index("Password");
-    auto ind_auth_str = users->get_col_index("authentication_string");
-    auto ind_is_role = users->get_col_index("is_role");
-    auto ind_def_role = users->get_col_index("default_role");
+    auto ind_ssl        = users->get_col_index("ssl_type");
+    auto ind_plugin     = users->get_col_index("plugin");
+    auto ind_pw         = users->get_col_index("Password");
+    auto ind_auth_str   = users->get_col_index("authentication_string");
+    auto ind_is_role    = users->get_col_index("is_role");
+    auto ind_def_role   = users->get_col_index("default_role");
 
-    bool has_required_fields = (ind_user >= 0) && (ind_host >= 0)
-        && (ind_sel_priv >= 0) && (ind_ins_priv >= 0) && (ind_upd_priv >= 0) && (ind_del_priv >= 0)
-        && (ind_super_priv >= 0) && (ind_ssl >= 0) && (ind_plugin >= 0) && (!have_pw_column || ind_pw >= 0)
-        && (ind_auth_str >= 0);
+    bool has_required_fields = (ind_user >= 0) && (ind_host >= 0) && (ind_sel_priv >= 0)
+                            && (ind_ins_priv >= 0) && (ind_upd_priv >= 0) && (ind_del_priv >= 0)
+                            && (ind_super_priv >= 0) && (ind_ssl >= 0) && (ind_plugin >= 0)
+                            && (!have_pw_column || ind_pw >= 0) && (ind_auth_str >= 0);
 
     if (has_required_fields)
     {
@@ -558,20 +558,20 @@ bool MariaDBUserManager::read_users_mariadb(QResult users, const SERVER::Version
             auto username = users->get_string(ind_user);
 
             UserEntry new_entry;
-            new_entry.username = username;
+            new_entry.username     = username;
             new_entry.host_pattern = users->get_string(ind_host);
 
             // Treat the user as having global privileges if any of the following global privileges
             // exists.
             new_entry.global_db_priv = get_bool_enum(ind_sel_priv) || get_bool_enum(ind_ins_priv)
-                || get_bool_enum(ind_upd_priv) || get_bool_enum(ind_del_priv);
+                                    || get_bool_enum(ind_upd_priv) || get_bool_enum(ind_del_priv);
 
             new_entry.super_priv = get_bool_enum(ind_super_priv);
 
             // Require SSL if the entry is not empty.
             new_entry.ssl = !users->get_string(ind_ssl).empty();
 
-            new_entry.plugin = mxb::tolower(users->get_string(ind_plugin));
+            new_entry.plugin   = mxb::tolower(users->get_string(ind_plugin));
             new_entry.password = have_pw_column ? users->get_string(ind_pw) : users->get_string(ind_auth_str);
 
             // Hex-form passwords have a '*' at the beginning, remove it.
@@ -598,36 +598,36 @@ bool MariaDBUserManager::read_users_mariadb(QResult users, const SERVER::Version
     return has_required_fields;
 }
 
-void MariaDBUserManager::read_dbs_and_roles_mariadb(QResult db_wc_grants, QResult db_grants, QResult roles,
-                                                    UserDatabase* output)
+void MariaDBUserManager::read_dbs_and_roles_mariadb(
+    QResult db_wc_grants, QResult db_grants, QResult roles, UserDatabase* output)
 {
     using StringSetMap = UserDatabase::StringSetMap;
 
     auto map_builder = [this](const string& grant_col_name, QResult source, bool strip_escape) {
-            StringSetMap result;
-            auto ind_user = source->get_col_index("user");
-            auto ind_host = source->get_col_index("host");
-            auto ind_grant = source->get_col_index(grant_col_name);
-            bool valid_data = (ind_user >= 0 && ind_host >= 0 && ind_grant >= 0);
-            if (valid_data)
+        StringSetMap result;
+        auto ind_user   = source->get_col_index("user");
+        auto ind_host   = source->get_col_index("host");
+        auto ind_grant  = source->get_col_index(grant_col_name);
+        bool valid_data = (ind_user >= 0 && ind_host >= 0 && ind_grant >= 0);
+        if (valid_data)
+        {
+            while (source->next_row())
             {
-                while (source->next_row())
+                string grant = source->get_string(ind_grant);
+                if (strip_escape)
                 {
-                    string grant = source->get_string(ind_grant);
-                    if (strip_escape)
-                    {
-                        mxb::strip_escape_chars(grant);
-                    }
-                    string key = UserDatabase::form_db_mapping_key(source->get_string(ind_user),
-                                                                   source->get_string(ind_host));
-                    result[key].insert(grant);
+                    mxb::strip_escape_chars(grant);
                 }
+                string key = UserDatabase::form_db_mapping_key(
+                    source->get_string(ind_user), source->get_string(ind_host));
+                result[key].insert(grant);
             }
-            return result;
-        };
+        }
+        return result;
+    };
 
     StringSetMap db_wc_grants_map = map_builder("db", std::move(db_wc_grants), false);
-    StringSetMap db_grants_map = map_builder("db", std::move(db_grants), m_strip_db_esc.load(relaxed));
+    StringSetMap db_grants_map    = map_builder("db", std::move(db_grants), m_strip_db_esc.load(relaxed));
     output->add_db_grants(move(db_wc_grants_map), move(db_grants_map));
 
     if (roles)
@@ -648,8 +648,8 @@ void MariaDBUserManager::read_proxy_grants(MariaDBUserManager::QResult proxies, 
         {
             while (proxies->next_row())
             {
-                auto entry = output->find_mutable_entry_equal(proxies->get_string(ind_user),
-                                                              proxies->get_string(ind_host));
+                auto entry = output->find_mutable_entry_equal(
+                    proxies->get_string(ind_user), proxies->get_string(ind_host));
                 if (entry)
                 {
                     entry->proxy_priv = true;
@@ -682,10 +682,10 @@ bool MariaDBUserManager::read_users_xpand(QResult users, UserDatabase* output)
 
     // First, go through the system.users-table and add users. An empty password is overwritten by a
     // non-empty password, but not the other way around.
-    auto ind_user = users->get_col_index("username");
-    auto ind_host = users->get_col_index("host");
-    auto ind_pw = users->get_col_index("password");
-    auto ind_plugin = users->get_col_index("plugin");
+    auto ind_user            = users->get_col_index("username");
+    auto ind_host            = users->get_col_index("host");
+    auto ind_pw              = users->get_col_index("password");
+    auto ind_plugin          = users->get_col_index("plugin");
     bool has_required_fields = (ind_user >= 0) && (ind_host >= 0) && (ind_pw >= 0) && (ind_plugin >= 0);
 
     if (has_required_fields)
@@ -693,8 +693,8 @@ bool MariaDBUserManager::read_users_xpand(QResult users, UserDatabase* output)
         while (users->next_row())
         {
             auto username = users->get_string(ind_user);
-            auto host = users->get_string(ind_host);
-            auto pw = users->get_string(ind_pw);
+            auto host     = users->get_string(ind_host);
+            auto pw       = users->get_string(ind_pw);
 
             // Hex-form passwords may have a '*' at the beginning, remove it.
             if (!pw.empty() && pw[0] == '*')
@@ -715,11 +715,11 @@ bool MariaDBUserManager::read_users_xpand(QResult users, UserDatabase* output)
             {
                 // New entry, insert it.
                 UserEntry new_entry;
-                new_entry.username = username;
-                new_entry.host_pattern = host;
-                new_entry.password = pw;
-                new_entry.plugin = users->get_string(ind_plugin);
-                new_entry.global_db_priv = true;    // TODO: Fix later!
+                new_entry.username       = username;
+                new_entry.host_pattern   = host;
+                new_entry.password       = pw;
+                new_entry.plugin         = users->get_string(ind_plugin);
+                new_entry.global_db_priv = true;  // TODO: Fix later!
                 output->add_entry(username, std::move(new_entry));
             }
         }
@@ -730,12 +730,12 @@ bool MariaDBUserManager::read_users_xpand(QResult users, UserDatabase* output)
 
 void MariaDBUserManager::read_db_privs_xpand(QResult acl, UserDatabase* output)
 {
-    auto ind_user = acl->get_col_index("username");
-    auto ind_host = acl->get_col_index("host");
-    auto ind_dbname = acl->get_col_index("dbname");
-    auto ind_privs = acl->get_col_index("privileges");
+    auto ind_user             = acl->get_col_index("username");
+    auto ind_host             = acl->get_col_index("host");
+    auto ind_dbname           = acl->get_col_index("dbname");
+    auto ind_privs            = acl->get_col_index("privileges");
     bool have_required_fields = (ind_user >= 0) && (ind_host >= 0) && (ind_dbname >= 0) && (ind_privs >= 0);
-    bool strip_db_esc = m_strip_db_esc.load(relaxed);
+    bool strip_db_esc         = m_strip_db_esc.load(relaxed);
 
     if (have_required_fields)
     {
@@ -744,10 +744,10 @@ void MariaDBUserManager::read_db_privs_xpand(QResult acl, UserDatabase* output)
         {
             // Have two types of rows: global rows and db/table/column-specific rows. Global rows affect
             // the main user entry, others add to the database grants set.
-            auto user = acl->get_string(ind_user);
-            auto host = acl->get_string(ind_host);
+            auto user   = acl->get_string(ind_user);
+            auto host   = acl->get_string(ind_host);
             auto dbname = acl->get_string(ind_dbname);
-            auto privs = acl->get_uint(ind_privs);
+            auto privs  = acl->get_uint(ind_privs);
 
             if (dbname.empty())
             {
@@ -755,9 +755,9 @@ void MariaDBUserManager::read_db_privs_xpand(QResult acl, UserDatabase* output)
                 auto existing_entry = output->find_mutable_entry_equal(user, host);
                 if (existing_entry)
                 {
-                    const uint64_t sel_priv = 1u << 20u;        // 1048576
-                    const uint64_t insert_priv = 1u << 13u;     // 8192
-                    const uint64_t update_priv = 1u << 25u;     // 33554432
+                    const uint64_t sel_priv    = 1u << 20u;  // 1048576
+                    const uint64_t insert_priv = 1u << 13u;  // 8192
+                    const uint64_t update_priv = 1u << 25u;  // 33554432
                     if (privs & (sel_priv | insert_priv | update_priv))
                     {
                         existing_entry->global_db_priv = true;
@@ -779,7 +779,7 @@ void MariaDBUserManager::read_db_privs_xpand(QResult acl, UserDatabase* output)
 
 std::unique_ptr<mxs::UserAccountCache> MariaDBUserManager::create_user_account_cache()
 {
-    auto cache = new(std::nothrow) MariaDBUserCache(*this);
+    auto cache = new (std::nothrow) MariaDBUserCache(*this);
     return std::unique_ptr<mxs::UserAccountCache>(cache);
 }
 
@@ -792,10 +792,10 @@ void MariaDBUserManager::get_user_database(UserDatabase* userdb_out, int* versio
         // TODO: think if read-write-lock would be good here, since many threads are likely doing this
         // at the same time.
         Guard guard(m_userdb_lock);
-        db = m_userdb;
+        db      = m_userdb;
         version = m_userdb_version.load(relaxed);
     }
-    *userdb_out = std::move(db);
+    *userdb_out  = std::move(db);
     *version_out = version;
 }
 
@@ -835,19 +835,19 @@ SERVICE* MariaDBUserManager::service() const
  * @param type Server type
  * @param servername Servername, for logging
  */
-void MariaDBUserManager::check_show_dbs_priv(mxq::MariaDB& con, const UserDatabase& userdata,
-                                             SERVER::VersionInfo::Type type, const char* servername)
+void MariaDBUserManager::check_show_dbs_priv(
+    mxq::MariaDB& con, const UserDatabase& userdata, SERVER::VersionInfo::Type type, const char* servername)
 {
     const char invalid_data_fmt[] = "Received invalid data from '%s' to query '%s'.";
-    vector<string> queries = {mariadb_queries::my_grants_query, mariadb_queries::current_user_query};
-    auto results = con.multiquery(queries);
+    vector<string> queries        = {mariadb_queries::my_grants_query, mariadb_queries::current_user_query};
+    auto results                  = con.multiquery(queries);
     if (results.size() != 2)
     {
         MXB_ERROR("Failed to query server '%s' for current user grants. %s", servername, con.error());
     }
     else
     {
-        bool grant_found = false;
+        bool grant_found  = false;
         bool invalid_data = false;
         {
             auto& res = results[0];
@@ -876,21 +876,21 @@ void MariaDBUserManager::check_show_dbs_priv(mxq::MariaDB& con, const UserDataba
             if (res->get_col_count() == 1 && res->next_row())
             {
                 string userhost = res->get_string(0);
-                auto pos = userhost.find('@');
+                auto pos        = userhost.find('@');
                 if (pos != string::npos && pos < userhost.length() - 1)
                 {
-                    string username = userhost.substr(0, pos);
+                    string username    = userhost.substr(0, pos);
                     string hostpattern = userhost.substr(pos + 1);
                     if (type == SERVER::VersionInfo::Type::XPAND)
                     {
                         // The username and host pattern may be quoted on Xpand.
-                        auto remove_quotes = [](string& str){
-                                if (str.length() >= 2 && str[0] == '\'' && str.back() == '\'')
-                                {
-                                    str.pop_back();
-                                    str.erase(0, 1);
-                                }
-                            };
+                        auto remove_quotes = [](string& str) {
+                            if (str.length() >= 2 && str[0] == '\'' && str.back() == '\'')
+                            {
+                                str.pop_back();
+                                str.erase(0, 1);
+                            }
+                        };
                         remove_quotes(username);
                         remove_quotes(hostpattern);
                     }
@@ -911,7 +911,7 @@ void MariaDBUserManager::check_show_dbs_priv(mxq::MariaDB& con, const UserDataba
 
         if (grant_found)
         {
-            m_check_showdb_priv = false;    // Assume that the privilege is never lost.
+            m_check_showdb_priv = false;  // Assume that the privilege is never lost.
         }
         else if (!invalid_data)
         {
@@ -941,8 +941,8 @@ void UserDatabase::add_entry(const std::string& username, UserEntry&& entry)
     auto& entrylist = m_users[username];
     // Find the correct spot to insert. If the hostname pattern already exists, do nothing. Copies should
     // only exist when summing users from all servers or when processing Xpand users.
-    auto low_bound = std::lower_bound(entrylist.begin(), entrylist.end(), entry,
-                                      UserEntry::host_pattern_is_more_specific);
+    auto low_bound = std::lower_bound(
+        entrylist.begin(), entrylist.end(), entry, UserEntry::host_pattern_is_more_specific);
     // lower_bound is the first valid (not "smaller") position to insert. It can be equal to the new element.
     if (low_bound == entrylist.end() || low_bound->host_pattern != entry.host_pattern)
     {
@@ -965,17 +965,17 @@ const mariadb::UserEntry* UserDatabase::find_entry(const std::string& username) 
     return find_entry(username, "", HostPatternMode::SKIP);
 }
 
-const mariadb::UserEntry*
-UserDatabase::find_entry_equal(const string& username, const string& host_pattern) const
+const mariadb::UserEntry* UserDatabase::find_entry_equal(
+    const string& username, const string& host_pattern) const
 {
     return find_entry(username, host_pattern, HostPatternMode::EQUAL);
 }
 
-const UserEntry* UserDatabase::find_entry(const std::string& username, const std::string& host,
-                                          HostPatternMode mode) const
+const UserEntry* UserDatabase::find_entry(
+    const std::string& username, const std::string& host, HostPatternMode mode) const
 {
     const UserEntry* rval = nullptr;
-    auto iter = m_users.find(username);
+    auto iter             = m_users.find(username);
     if (iter != m_users.end())
     {
         auto& entrylist = iter->second;
@@ -1016,14 +1016,14 @@ const UserEntry* UserDatabase::find_entry(const std::string& username, const std
 mariadb::UserEntry* UserDatabase::find_mutable_entry_equal(const string& username, const string& host_pattern)
 {
     mariadb::UserEntry* rval = nullptr;
-    auto iter = m_users.find(username);
+    auto iter                = m_users.find(username);
     if (iter != m_users.end())
     {
         EntryList& entries = iter->second;
         UserEntry needle;
         needle.host_pattern = host_pattern;
-        auto low_bound = std::lower_bound(entries.begin(), entries.end(), needle,
-                                          UserEntry::host_pattern_is_more_specific);
+        auto low_bound      = std::lower_bound(
+            entries.begin(), entries.end(), needle, UserEntry::host_pattern_is_more_specific);
         if (low_bound != entries.end() && low_bound->host_pattern == needle.host_pattern)
         {
             rval = &(*low_bound);
@@ -1076,7 +1076,7 @@ void UserDatabase::update_mapping(StringSetMap& target, StringSetMap&& source)
             {
                 // Sum the string sets.
                 StringSet& existing_elems = target[userhost];
-                StringSet& new_elems = source_elem.second;
+                StringSet& new_elems      = source_elem.second;
                 for (auto& elem : new_elems)
                 {
                     existing_elems.insert(elem);
@@ -1097,35 +1097,35 @@ void UserDatabase::add_role_mapping(StringSetMap&& role_mapping)
     update_mapping(m_roles_mapping, move(role_mapping));
 }
 
-bool UserDatabase::check_database_access(const UserEntry& entry, const std::string& db,
-                                         bool case_sensitive_db) const
+bool UserDatabase::check_database_access(
+    const UserEntry& entry, const std::string& db, bool case_sensitive_db) const
 {
-    auto& user = entry.username;
-    auto& host = entry.host_pattern;
+    auto& user     = entry.username;
+    auto& host     = entry.host_pattern;
     auto& def_role = entry.default_role;
 
     // Accept the user if the entry has a direct global privilege,
     return entry.global_db_priv
-            // or the user has a privilege to the database, or a table or column in the database,
-           || (user_can_access_db(user, host, db, case_sensitive_db))
-            // or the user can access db through its default role.
-           || (!def_role.empty() && user_can_access_role(user, host, def_role)
-               && role_can_access_db(def_role, db, case_sensitive_db));
+        // or the user has a privilege to the database, or a table or column in the database,
+        || (user_can_access_db(user, host, db, case_sensitive_db))
+        // or the user can access db through its default role.
+        || (!def_role.empty() && user_can_access_role(user, host, def_role)
+            && role_can_access_db(def_role, db, case_sensitive_db));
 }
 
-bool UserDatabase::user_can_access_db(const string& user, const string& host_pattern, const string& target_db,
-                                      bool case_sensitive_db) const
+bool UserDatabase::user_can_access_db(
+    const string& user, const string& host_pattern, const string& target_db, bool case_sensitive_db) const
 {
-    string key = form_db_mapping_key(user, host_pattern);
+    string key       = form_db_mapping_key(user, host_pattern);
     bool grant_found = false;
 
     auto like = [case_sensitive_db](const string& pattern, const string& subject) {
-            char esc = '\\';
-            auto pat = pattern.c_str();
-            auto subj = subject.c_str();
-            int ret = case_sensitive_db ? sql_strlike_case(pat, subj, esc) : sql_strlike(pat, subj, esc);
-            return ret == 0;
-        };
+        char esc  = '\\';
+        auto pat  = pattern.c_str();
+        auto subj = subject.c_str();
+        int ret   = case_sensitive_db ? sql_strlike_case(pat, subj, esc) : sql_strlike(pat, subj, esc);
+        return ret == 0;
+    };
 
     // Need to check two database grant maps, one may have wildcard grants.
     auto wc_mapping_iter = m_database_wc_grants.find(key);
@@ -1161,7 +1161,7 @@ bool UserDatabase::user_can_access_db(const string& user, const string& host_pat
             const StringSet& allowed_dbs = mapping_iter->second;
             if (allowed_dbs.count(target_db))
             {
-                grant_found = true;     // found exact match.
+                grant_found = true;  // found exact match.
             }
             else if (!case_sensitive_db)
             {
@@ -1180,11 +1180,11 @@ bool UserDatabase::user_can_access_db(const string& user, const string& host_pat
     return grant_found;
 }
 
-bool UserDatabase::user_can_access_role(const std::string& user, const std::string& host_pattern,
-                                        const std::string& target_role) const
+bool UserDatabase::user_can_access_role(
+    const std::string& user, const std::string& host_pattern, const std::string& target_role) const
 {
     string key = user + "@" + host_pattern;
-    auto iter = m_roles_mapping.find(key);
+    auto iter  = m_roles_mapping.find(key);
     if (iter != m_roles_mapping.end())
     {
         return iter->second.count(target_role) > 0;
@@ -1195,42 +1195,42 @@ bool UserDatabase::user_can_access_role(const std::string& user, const std::stri
 bool UserDatabase::role_can_access_db(const string& role, const string& db, bool case_sensitive_db) const
 {
     auto role_has_global_priv = [this](const string& role) {
-            bool rval = false;
-            auto iter = m_users.find(role);
-            if (iter != m_users.end())
+        bool rval = false;
+        auto iter = m_users.find(role);
+        if (iter != m_users.end())
+        {
+            auto& entrylist = iter->second;
+            // Because roles have an empty host-pattern, they must be first in the list.
+            if (!entrylist.empty())
             {
-                auto& entrylist = iter->second;
-                // Because roles have an empty host-pattern, they must be first in the list.
-                if (!entrylist.empty())
+                auto& entry = entrylist.front();
+                if (entry.is_role && entry.global_db_priv)
                 {
-                    auto& entry = entrylist.front();
-                    if (entry.is_role && entry.global_db_priv)
-                    {
-                        rval = true;
-                    }
+                    rval = true;
                 }
             }
-            return rval;
-        };
+        }
+        return rval;
+    };
 
     auto find_linked_roles = [this](const string& role) {
-            std::vector<string> rval;
-            string key = role + "@";
-            auto iter = m_roles_mapping.find(key);
-            if (iter != m_roles_mapping.end())
+        std::vector<string> rval;
+        string key = role + "@";
+        auto iter  = m_roles_mapping.find(key);
+        if (iter != m_roles_mapping.end())
+        {
+            auto& roles_set = iter->second;
+            for (auto& linked_role : roles_set)
             {
-                auto& roles_set = iter->second;
-                for (auto& linked_role : roles_set)
-                {
-                    rval.push_back(linked_role);
-                }
+                rval.push_back(linked_role);
             }
-            return rval;
-        };
+        }
+        return rval;
+    };
 
     // Roles are tricky since one role may have access to other roles and so on.
-    StringSet open_set;     // roles which still need to be expanded.
-    StringSet closed_set;   // roles which have been checked already.
+    StringSet open_set;    // roles which still need to be expanded.
+    StringSet closed_set;  // roles which have been checked already.
 
     open_set.insert(role);
     bool privilege_found = false;
@@ -1272,8 +1272,7 @@ bool UserDatabase::role_can_access_db(const string& role, const string& db, bool
  * @param entry User account entry. Host pattern may contain wildcards % and _.
  * @return True on match
  */
-bool
-UserDatabase::address_matches_host_pattern(const std::string& addr, const UserEntry& entry) const
+bool UserDatabase::address_matches_host_pattern(const std::string& addr, const UserEntry& entry) const
 {
     // First, check the input address type. This affects how the comparison to the host pattern works.
     auto addrtype = parse_address_type(addr);
@@ -1282,8 +1281,8 @@ UserDatabase::address_matches_host_pattern(const std::string& addr, const UserEn
     {
         // TODO: entry.username is not always the user trying to log in, as in some cases an anonymous
         // entry may be attempted. In any case, this error message should not happen.
-        MXB_ERROR("Address '%s' of incoming user '%s' is not supported.",
-                  addr.c_str(), entry.username.c_str());
+        MXB_ERROR(
+            "Address '%s' of incoming user '%s' is not supported.", addr.c_str(), entry.username.c_str());
         return false;
     }
 
@@ -1293,13 +1292,15 @@ UserDatabase::address_matches_host_pattern(const std::string& addr, const UserEn
     if (patterntype == PatternType::UNKNOWN)
     {
         MXB_ERROR("Host pattern '%s' of user account '%s'@'%s' is not supported.",
-                  host_pattern.c_str(), entry.username.c_str(), host_pattern.c_str());
+            host_pattern.c_str(),
+            entry.username.c_str(),
+            host_pattern.c_str());
         return false;
     }
 
     auto like = [](const string& pattern, const string& str) {
-            return sql_strlike(pattern.c_str(), str.c_str(), '\\') == 0;
-        };
+        return sql_strlike(pattern.c_str(), str.c_str(), '\\') == 0;
+    };
 
     bool matched = false;
     if (patterntype == PatternType::ADDRESS)
@@ -1336,17 +1337,17 @@ UserDatabase::address_matches_host_pattern(const std::string& addr, const UserEn
             // client_ip & mask == base_ip. To test this, all three parts need to be converted
             // to numbers.
             auto ip_to_integer = [](const string& ip) {
-                    sockaddr_in sa {};
-                    inet_pton(AF_INET, ip.c_str(), &(sa.sin_addr));
-                    return (uint32_t)sa.sin_addr.s_addr;
-                };
+                sockaddr_in sa {};
+                inet_pton(AF_INET, ip.c_str(), &(sa.sin_addr));
+                return (uint32_t) sa.sin_addr.s_addr;
+            };
 
-            auto div_loc = host_pattern.find('/');
+            auto div_loc       = host_pattern.find('/');
             string base_ip_str = host_pattern.substr(0, div_loc);
             string netmask_str = host_pattern.substr(div_loc + 1);
-            auto address = ip_to_integer(effective_addr);
-            auto base_ip = ip_to_integer(base_ip_str);
-            auto mask = ip_to_integer(netmask_str);
+            auto address       = ip_to_integer(effective_addr);
+            auto base_ip       = ip_to_integer(base_ip_str);
+            auto mask          = ip_to_integer(netmask_str);
             if ((address & mask) == base_ip)
             {
                 matched = true;
@@ -1367,8 +1368,7 @@ UserDatabase::address_matches_host_pattern(const std::string& addr, const UserEn
         {
             // Need a reverse lookup on the client address. This is slow. TODO: use a separate thread/cache
             string resolved_addr;
-            if (!mxs::Config::get().skip_name_resolve.get()
-                && mxb::reverse_name_lookup(addr, &resolved_addr))
+            if (!mxs::Config::get().skip_name_resolve.get() && mxb::reverse_name_lookup(addr, &resolved_addr))
             {
                 if (like(host_pattern, resolved_addr))
                 {
@@ -1398,7 +1398,7 @@ UserDatabase::AddrType UserDatabase::parse_address_type(const std::string& addr)
     {
         // The address could be IPv4 mapped to IPv6.
         const string mapping_prefix = ":ffff:";
-        auto prefix_loc = addr.find(mapping_prefix);
+        auto prefix_loc             = addr.find(mapping_prefix);
         if (prefix_loc != npos)
         {
             auto ipv4part_loc = prefix_loc + mapping_prefix.length();
@@ -1431,8 +1431,8 @@ UserDatabase::PatternType UserDatabase::parse_pattern_type(const std::string& ho
     // is not a hostname, we can skip the expensive reverse name lookup.
 
     auto is_wc = [](char c) {
-            return c == '%' || c == '_';
-        };
+        return c == '%' || c == '_';
+    };
 
     auto patterntype = PatternType::UNKNOWN;
     // First, check some common special cases.
@@ -1467,36 +1467,36 @@ UserDatabase::PatternType UserDatabase::parse_pattern_type(const std::string& ho
     if (patterntype == PatternType::UNKNOWN)
     {
         // Pattern is a hostname, or an address with wildcards. Go through it and take an educated guess.
-        bool maybe_address = true;
+        bool maybe_address  = true;
         bool maybe_hostname = true;
-        const char esc = '\\';      // '\' is an escape char to allow e.g. my_host.com to match properly.
-        bool escaped = false;
+        const char esc      = '\\';  // '\' is an escape char to allow e.g. my_host.com to match properly.
+        bool escaped        = false;
 
         auto classify_char = [is_wc, &maybe_address, &maybe_hostname](char c) {
-                auto is_ipchar = [](char c) {
-                        return std::isxdigit(c) || c == ':' || c == '.';
-                    };
-
-                auto is_hostnamechar = [](char c) {
-                        return std::isalnum(c) || c == '_' || c == '.' || c == '-';
-                    };
-
-                if (is_wc(c))
-                {
-                    // Can be address or hostname.
-                }
-                else
-                {
-                    if (!is_ipchar(c))
-                    {
-                        maybe_address = false;
-                    }
-                    if (!is_hostnamechar(c))
-                    {
-                        maybe_hostname = false;
-                    }
-                }
+            auto is_ipchar = [](char c) {
+                return std::isxdigit(c) || c == ':' || c == '.';
             };
+
+            auto is_hostnamechar = [](char c) {
+                return std::isalnum(c) || c == '_' || c == '.' || c == '-';
+            };
+
+            if (is_wc(c))
+            {
+                // Can be address or hostname.
+            }
+            else
+            {
+                if (!is_ipchar(c))
+                {
+                    maybe_address = false;
+                }
+                if (!is_hostnamechar(c))
+                {
+                    maybe_hostname = false;
+                }
+            }
+        };
 
         for (auto c : host_pattern)
         {
@@ -1505,7 +1505,7 @@ UserDatabase::PatternType UserDatabase::parse_pattern_type(const std::string& ho
                 // % is not a valid escaped character.
                 if (c == '%')
                 {
-                    maybe_address = false;
+                    maybe_address  = false;
                     maybe_hostname = false;
                 }
                 else
@@ -1545,10 +1545,8 @@ UserDatabase::PatternType UserDatabase::parse_pattern_type(const std::string& ho
 
 bool UserDatabase::equal_contents(const UserDatabase& rhs) const
 {
-    return m_users == rhs.m_users
-           && m_database_grants == rhs.m_database_grants
-           && m_roles_mapping == rhs.m_roles_mapping
-           && m_database_names == rhs.m_database_names;
+    return m_users == rhs.m_users && m_database_grants == rhs.m_database_grants
+        && m_roles_mapping == rhs.m_roles_mapping && m_database_names == rhs.m_database_names;
 }
 
 json_t* UserDatabase::users_to_json() const
@@ -1559,11 +1557,22 @@ json_t* UserDatabase::users_to_json() const
         for (auto& elem : elem_outer.second)
         {
             auto entry = json_pack("{s:s, s:s, s:s, s:b, s:b, s:b, s:b, s:s}",
-                                   "user", elem.username.c_str(), "host", elem.host_pattern.c_str(),
-                                   "plugin", elem.plugin.c_str(), "ssl", elem.ssl,
-                                   "super_priv", elem.super_priv, "global_priv", elem.global_db_priv,
-                                   "proxy_priv", elem.proxy_priv,
-                                   "default_role", elem.default_role.cend());
+                "user",
+                elem.username.c_str(),
+                "host",
+                elem.host_pattern.c_str(),
+                "plugin",
+                elem.plugin.c_str(),
+                "ssl",
+                elem.ssl,
+                "super_priv",
+                elem.super_priv,
+                "global_priv",
+                elem.global_db_priv,
+                "proxy_priv",
+                elem.proxy_priv,
+                "default_role",
+                elem.default_role.cend());
             json_array_append_new(rval, entry);
         }
     }
@@ -1585,7 +1594,7 @@ bool UserDatabase::check_database_exists(const std::string& db, bool case_sensit
     bool rval = false;
     if (m_database_names.count(db))
     {
-        rval = true;    // True for either mode.
+        rval = true;  // True for either mode.
     }
     else if (!case_sensitive_db)
     {
@@ -1604,18 +1613,16 @@ bool UserDatabase::check_database_exists(const std::string& db, bool case_sensit
 
 MariaDBUserCache::MariaDBUserCache(const MariaDBUserManager& master)
     : m_master(master)
-{
-}
+{}
 
-UserEntryResult
-MariaDBUserCache::find_user(const string& user, const string& host, const string& requested_db,
-                            const UserSearchSettings& sett) const
+UserEntryResult MariaDBUserCache::find_user(
+    const string& user, const string& host, const string& requested_db, const UserSearchSettings& sett) const
 {
-    auto userz = user.c_str();
-    auto hostz = host.c_str();
+    auto userz         = user.c_str();
+    auto hostz         = host.c_str();
     auto requested_dbz = requested_db.c_str();
 
-    string eff_requested_db;    // Use the requested_db as given by user only for log messages.
+    string eff_requested_db;  // Use the requested_db as given by user only for log messages.
     bool case_sensitive_db = true;
     switch (sett.listener.db_name_cmp_mode)
     {
@@ -1628,7 +1635,7 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
         break;
 
     case UserDatabase::DBNameCmpMode::CASE_INSENSITIVE:
-        eff_requested_db = requested_db;
+        eff_requested_db  = requested_db;
         case_sensitive_db = false;
         break;
     }
@@ -1643,8 +1650,8 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
     // TODO: the user may be empty, is it ok to match normally in that case?
 
     // First try to find a normal user entry. If host pattern matching is disabled, match only username.
-    const UserEntry* found = sett.listener.match_host_pattern ? m_userdb.find_entry(user, host) :
-        m_userdb.find_entry(user);
+    const UserEntry* found
+        = sett.listener.match_host_pattern ? m_userdb.find_entry(user, host) : m_userdb.find_entry(user);
     if (found)
     {
         res.entry = *found;
@@ -1654,11 +1661,14 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
         {
             if (!m_userdb.check_database_exists(eff_requested_db, case_sensitive_db))
             {
-                db_ok = false;
+                db_ok    = false;
                 res.type = UserEntryType::BAD_DB;
                 MXB_INFO(bad_db_fmt,
-                         found->username.c_str(), found->host_pattern.c_str(), userz, hostz,
-                         requested_dbz);
+                    found->username.c_str(),
+                    found->host_pattern.c_str(),
+                    userz,
+                    hostz,
+                    requested_dbz);
             }
             else if (eff_requested_db == info_schema
                      || (!case_sensitive_db
@@ -1668,12 +1678,15 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
             }
             else if (!m_userdb.check_database_access(*found, eff_requested_db, case_sensitive_db))
             {
-                db_ok = false;
+                db_ok    = false;
                 res.type = UserEntryType::DB_ACCESS_DENIED;
                 MXB_INFO("Found matching user entry '%s'@'%s' for client '%s'@'%s' but user does not have "
                          "access to database '%s'.",
-                         found->username.c_str(), found->host_pattern.c_str(), userz, hostz,
-                         requested_dbz);
+                    found->username.c_str(),
+                    found->host_pattern.c_str(),
+                    userz,
+                    hostz,
+                    requested_dbz);
             }
         }
 
@@ -1681,7 +1694,10 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
         {
             res.type = UserEntryType::USER_ACCOUNT_OK;
             MXB_INFO("Found matching user '%s'@'%s' for client '%s'@'%s' with sufficient privileges.",
-                     found->username.c_str(), found->host_pattern.c_str(), userz, hostz);
+                found->username.c_str(),
+                found->host_pattern.c_str(),
+                userz,
+                hostz);
         }
     }
     else if (sett.listener.allow_anon_user)
@@ -1689,8 +1705,8 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
         // Try find an anonymous entry. Such an entry has empty username and matches any client username.
         // If host pattern matching is disabled, any user from any host can log in if an anonymous
         // entry exists.
-        auto anon_found = sett.listener.match_host_pattern ? m_userdb.find_entry("", host) :
-            m_userdb.find_entry("");
+        auto anon_found
+            = sett.listener.match_host_pattern ? m_userdb.find_entry("", host) : m_userdb.find_entry("");
         if (anon_found)
         {
             res.entry = *anon_found;
@@ -1701,21 +1717,28 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
             {
                 res.type = UserEntryType::BAD_DB;
                 MXB_INFO(bad_db_fmt,
-                         anon_found->username.c_str(), anon_found->host_pattern.c_str(), userz, hostz,
-                         requested_dbz);
+                    anon_found->username.c_str(),
+                    anon_found->host_pattern.c_str(),
+                    userz,
+                    hostz,
+                    requested_dbz);
             }
             else if (!anon_found->proxy_priv)
             {
                 res.type = UserEntryType::ANON_PROXY_ACCESS_DENIED;
                 MXB_INFO("Found matching anonymous user ''@'%s' for client '%s'@'%s' but user does not have "
                          "proxy privileges.",
-                         anon_found->host_pattern.c_str(), userz, hostz);
+                    anon_found->host_pattern.c_str(),
+                    userz,
+                    hostz);
             }
             else
             {
                 res.type = UserEntryType::USER_ACCOUNT_OK;
                 MXB_INFO("Found matching anonymous user ''@'%s' for client '%s'@'%s' with proxy grant.",
-                         anon_found->host_pattern.c_str(), userz, hostz);
+                    anon_found->host_pattern.c_str(),
+                    userz,
+                    hostz);
             }
         }
     }
@@ -1767,7 +1790,7 @@ void MariaDBUserCache::generate_dummy_entry(const std::string& user, mariadb::Us
     // TODO: To match server behavior, this function should look at all the users, and select a plugin
     // based on the distribution of plugins used. The selection would need to be deterministic.
     // Worry about this later, the current version is ok in the usual case of mostly mysql_native_password.
-    output->username = user;
+    output->username     = user;
     output->host_pattern = "%";
-    output->plugin = mysql_default_auth;
+    output->plugin       = mysql_default_auth;
 }

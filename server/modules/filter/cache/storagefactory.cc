@@ -22,15 +22,14 @@
 #include "lrustoragest.hh"
 #include "lrustoragemt.hh"
 
-
 namespace
 {
 
 bool open_storage_module(const char* zName,
-                         void** pHandle,
-                         StorageModule** ppModule,
-                         cache_storage_kind_t* pKind,
-                         uint32_t* pCapabilities)
+    void** pHandle,
+    StorageModule** ppModule,
+    cache_storage_kind_t* pKind,
+    uint32_t* pCapabilities)
 {
     bool rv = false;
 
@@ -45,13 +44,13 @@ bool open_storage_module(const char* zName,
 
         if (f)
         {
-            StorageModule* pModule = ((CacheGetStorageModuleFN)f)();
+            StorageModule* pModule = ((CacheGetStorageModuleFN) f)();
 
             if (pModule)
             {
                 if (pModule->initialize(pKind, pCapabilities))
                 {
-                    *pHandle = handle;
+                    *pHandle  = handle;
                     *ppModule = pModule;
 
                     rv = true;
@@ -60,23 +59,21 @@ bool open_storage_module(const char* zName,
                 {
                     MXS_ERROR("Initialization of %s failed.", path);
 
-                    (void)dlclose(handle);
+                    (void) dlclose(handle);
                 }
             }
             else
             {
                 MXS_ERROR("Could not obtain API object from %s.", zName);
 
-                (void)dlclose(handle);
+                (void) dlclose(handle);
             }
         }
         else
         {
             const char* s = dlerror();
-            MXS_ERROR("Could not look up symbol %s from %s: %s",
-                      zName,
-                      CACHE_STORAGE_ENTRY_POINT,
-                      s ? s : "");
+            MXS_ERROR(
+                "Could not look up symbol %s from %s: %s", zName, CACHE_STORAGE_ENTRY_POINT, s ? s : "");
         }
     }
     else
@@ -88,7 +85,6 @@ bool open_storage_module(const char* zName,
     return rv;
 }
 
-
 void close_cache_storage(void* handle, StorageModule* pModule)
 {
     pModule->finalize();
@@ -99,12 +95,10 @@ void close_cache_storage(void* handle, StorageModule* pModule)
         MXS_ERROR("Could not close module %s: ", s ? s : "");
     }
 }
-}
+}  // namespace
 
-StorageFactory::StorageFactory(void* handle,
-                               StorageModule* pModule,
-                               cache_storage_kind_t kind,
-                               uint32_t capabilities)
+StorageFactory::StorageFactory(
+    void* handle, StorageModule* pModule, cache_storage_kind_t kind, uint32_t capabilities)
     : m_handle(handle)
     , m_pModule(pModule)
     , m_kind(kind)
@@ -122,7 +116,7 @@ StorageFactory::StorageFactory(void* handle,
 StorageFactory::~StorageFactory()
 {
     close_cache_storage(m_handle, m_pModule);
-    m_handle = 0;
+    m_handle  = 0;
     m_pModule = 0;
 }
 
@@ -149,9 +143,8 @@ StorageFactory* StorageFactory::open(const char* zName)
     return pFactory;
 }
 
-Storage* StorageFactory::create_storage(const char* zName,
-                                        const Storage::Config& config,
-                                        const std::string& arguments)
+Storage* StorageFactory::create_storage(
+    const char* zName, const Storage::Config& config, const std::string& arguments)
 {
     mxb_assert(m_handle);
     mxb_assert(m_pModule);
@@ -169,9 +162,8 @@ Storage* StorageFactory::create_storage(const char* zName,
     return nullptr;
 }
 
-Storage* StorageFactory::create_raw_storage(const char* zName,
-                                            const Storage::Config& config,
-                                            const std::string& arguments)
+Storage* StorageFactory::create_raw_storage(
+    const char* zName, const Storage::Config& config, const std::string& arguments)
 {
     mxb_assert(m_handle);
     mxb_assert(m_pModule);
@@ -179,9 +171,8 @@ Storage* StorageFactory::create_raw_storage(const char* zName,
     return m_pModule->create_storage(zName, config, arguments);
 }
 
-Storage* StorageFactory::create_private_storage(const char* zName,
-                                                const Storage::Config& config,
-                                                const std::string& arguments)
+Storage* StorageFactory::create_private_storage(
+    const char* zName, const Storage::Config& config, const std::string& arguments)
 {
     mxb_assert(m_handle);
     mxb_assert(m_pModule);
@@ -198,8 +189,8 @@ Storage* StorageFactory::create_private_storage(const char* zName,
         // locking according to the threading model, the storage itself may be
         // single threaded. No point in locking twice.
         storage_config.thread_model = CACHE_THREAD_MODEL_ST;
-        storage_config.max_count = 0;
-        storage_config.max_size = 0;
+        storage_config.max_count    = 0;
+        storage_config.max_size     = 0;
     }
 
     if (!cache_storage_has_cap(m_storage_caps, CACHE_STORAGE_CAP_INVALIDATION))
@@ -214,7 +205,7 @@ Storage* StorageFactory::create_private_storage(const char* zName,
             // a storage that handles both eviction and invalidation. So no need
             // to request eviction from the raw storage.
             storage_config.max_count = 0;
-            storage_config.max_size = 0;
+            storage_config.max_size  = 0;
         }
     }
 
@@ -260,9 +251,8 @@ Storage* StorageFactory::create_private_storage(const char* zName,
     return pStorage;
 }
 
-Storage* StorageFactory::create_shared_storage(const char* zName,
-                                               const Storage::Config& config,
-                                               const std::string& arguments)
+Storage* StorageFactory::create_shared_storage(
+    const char* zName, const Storage::Config& config, const std::string& arguments)
 {
     mxb_assert(m_handle);
     mxb_assert(m_pModule);
@@ -273,27 +263,26 @@ Storage* StorageFactory::create_shared_storage(const char* zName,
     {
         MXS_ERROR("Invalidation is requested, but not natively supported by the "
                   "storage %s. As the storage is shared the invalidation cannot be "
-                  "provided by the cache filter itself.", zName);
+                  "provided by the cache filter itself.",
+            zName);
         return nullptr;
     }
 
     Storage::Config storage_config(config);
 
-    if (storage_config.max_count != 0
-        && !cache_storage_has_cap(m_storage_caps, CACHE_STORAGE_CAP_MAX_COUNT))
+    if (storage_config.max_count != 0 && !cache_storage_has_cap(m_storage_caps, CACHE_STORAGE_CAP_MAX_COUNT))
     {
         MXS_WARNING("The storage %s is shared and the maximum number of items cannot "
                     "be specified locally; the 'max_count' setting is ignored.",
-                    zName);
+            zName);
         storage_config.max_count = 0;
     }
 
-    if (storage_config.max_size != 0
-        && !cache_storage_has_cap(m_storage_caps, CACHE_STORAGE_CAP_MAX_SIZE))
+    if (storage_config.max_size != 0 && !cache_storage_has_cap(m_storage_caps, CACHE_STORAGE_CAP_MAX_SIZE))
     {
         MXS_WARNING("The storage %s is shared and the maximum size of the cache "
                     "cannot be specified locally; the 'max_size' setting is ignored.",
-                    zName);
+            zName);
         storage_config.max_size = 0;
     }
 

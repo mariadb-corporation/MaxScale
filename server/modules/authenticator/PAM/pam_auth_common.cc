@@ -16,10 +16,10 @@
  */
 #include "pam_auth_common.hh"
 
-const std::string DIALOG = "dialog";
-const int DIALOG_SIZE = DIALOG.length() + 1;
-const std::string CLEAR_PW = "mysql_clear_password";
-const int CLEAR_PW_SIZE = CLEAR_PW.length() + 1;
-const std::string EXP_PW_QUERY = "Password";
+const std::string DIALOG         = "dialog";
+const int DIALOG_SIZE            = DIALOG.length() + 1;
+const std::string CLEAR_PW       = "mysql_clear_password";
+const int CLEAR_PW_SIZE          = CLEAR_PW.length() + 1;
+const std::string EXP_PW_QUERY   = "Password";
 const std::string PASSWORD_QUERY = "Password: ";
-const std::string TWO_FA_QUERY = "Verification code: ";
+const std::string TWO_FA_QUERY   = "Verification code: ";

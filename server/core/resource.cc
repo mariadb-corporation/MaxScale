@@ -51,7 +51,7 @@ using namespace std::literals::string_literals;
 namespace
 {
 const char CN_FORCE[] = "force";
-const char CN_YES[] = "yes";
+const char CN_YES[]   = "yes";
 
 enum class ObjectType
 {
@@ -66,7 +66,7 @@ enum class ObjectType
 HttpResponse get_relationship(const HttpRequest& request, ObjectType type, const std::string& relationship)
 {
     json_t* json = nullptr;
-    auto name = request.uri_part(1);
+    auto name    = request.uri_part(1);
 
     switch (type)
     {
@@ -97,12 +97,12 @@ HttpResponse get_relationship(const HttpRequest& request, ObjectType type, const
     }
 
     std::string final_path = MXS_JSON_PTR_RELATIONSHIPS + "/"s + relationship;
-    auto rel = json_incref(mxs_json_pointer(json, final_path.c_str()));
+    auto rel               = json_incref(mxs_json_pointer(json, final_path.c_str()));
     json_decref(json);
 
     return HttpResponse(rel ? MHD_HTTP_OK : MHD_HTTP_NOT_FOUND, rel);
 }
-}
+}  // namespace
 
 bool Resource::match(const HttpRequest& request) const
 {
@@ -110,13 +110,12 @@ bool Resource::match(const HttpRequest& request) const
 
     if (request.uri_part_count() == m_path.size() || m_is_glob)
     {
-        rval = true;
+        rval         = true;
         size_t parts = MXS_MIN(request.uri_part_count(), m_path.size());
 
         for (size_t i = 0; i < parts; i++)
         {
-            if (m_path[i] != request.uri_part(i)
-                && !matching_variable_path(m_path[i], request.uri_part(i)))
+            if (m_path[i] != request.uri_part(i) && !matching_variable_path(m_path[i], request.uri_part(i)))
             {
                 rval = false;
                 break;
@@ -160,9 +159,9 @@ bool Resource::matching_variable_path(const string& path, const string& target) 
             || (path == ":server" && ServerManager::find_by_unique_name(target))
             || (path == ":filter" && filter_find(target.c_str()))
             || (path == ":monitor" && MonitorManager::find_monitor(target.c_str()))
-            || (path == ":module" && (get_module(target.c_str(), NULL)
-                                      || target == mxs::Config::get().specification().module()
-                                      || target == Server::specification().module()))
+            || (path == ":module"
+                && (get_module(target.c_str(), NULL) || target == mxs::Config::get().specification().module()
+                    || target == Server::specification().module()))
             || (path == ":inetuser" && admin_inet_user_exists(target.c_str()))
             || (path == ":listener" && listener_find(target.c_str())))
         {
@@ -170,7 +169,7 @@ bool Resource::matching_variable_path(const string& path, const string& target) 
         }
         else if (path == ":session")
         {
-            size_t id = atoi(target.c_str());
+            size_t id        = atoi(target.c_str());
             MXS_SESSION* ses = session_get_by_id(id);
 
             if (ses)
@@ -217,11 +216,10 @@ bool option_rdns_is_on(const HttpRequest& request)
     return request.get_option("rdns") == "true";
 }
 
-
 static bool drop_path_part(std::string& path)
 {
     size_t pos = path.find_last_of('/');
-    bool rval = false;
+    bool rval  = false;
 
     if (pos != std::string::npos)
     {
@@ -238,11 +236,9 @@ static bool drop_path_part(std::string& path)
 class ResourceWatcher
 {
 public:
-
     ResourceWatcher()
         : m_init(time(NULL))
-    {
-    }
+    {}
 
     void modify(const std::string& orig_path)
     {
@@ -269,7 +265,7 @@ public:
     }
 
 private:
-    time_t              m_init;
+    time_t m_init;
     map<string, time_t> m_last_modified;
 };
 
@@ -550,7 +546,6 @@ HttpResponse cb_delete_monitor(const HttpRequest& request)
 
 HttpResponse cb_delete_service_listener(const HttpRequest& request)
 {
-
     Service* service = Service::find(request.uri_part(1).c_str());
     mxb_assert(service);
     std::string listener = request.uri_part(3);
@@ -601,6 +596,7 @@ HttpResponse cb_delete_filter(const HttpRequest& request)
 
     return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
+
 HttpResponse cb_all_servers(const HttpRequest& request)
 {
     return HttpResponse(MHD_HTTP_OK, ServerManager::server_list_to_json(request.host()));
@@ -633,7 +629,7 @@ HttpResponse cb_get_all_service_listeners(const HttpRequest& request)
 
 HttpResponse cb_get_service_listener(const HttpRequest& request)
 {
-    Service* service = Service::find(request.uri_part(1).c_str());
+    Service* service     = Service::find(request.uri_part(1).c_str());
     std::string listener = request.uri_part(3);
     mxb_assert(service);
 
@@ -688,12 +684,12 @@ HttpResponse cb_all_sessions(const HttpRequest& request)
 
 HttpResponse cb_get_session(const HttpRequest& request)
 {
-    int id = atoi(request.uri_part(1).c_str());
+    int id               = atoi(request.uri_part(1).c_str());
     MXS_SESSION* session = session_get_by_id(id);
 
     if (session)
     {
-        bool rdns = option_rdns_is_on(request);
+        bool rdns    = option_rdns_is_on(request);
         json_t* json = session_to_json(session, request.host(), rdns);
         session_put_ref(session);
         return HttpResponse(MHD_HTTP_OK, json);
@@ -795,18 +791,16 @@ HttpResponse cb_flush(const HttpRequest& request)
 HttpResponse cb_thread_rebalance(const HttpRequest& request)
 {
     string thread = request.uri_part(2);
-    mxb_assert(!thread.empty());    // Should have been checked already.
+    mxb_assert(!thread.empty());  // Should have been checked already.
 
     long wid;
-    MXB_AT_DEBUG(bool rv = ) mxb::get_long(thread, &wid);
+    MXB_AT_DEBUG(bool rv =) mxb::get_long(thread, &wid);
     mxb_assert(rv);
 
     mxs::RoutingWorker* worker = mxs::RoutingWorker::get(wid);
     mxb_assert(worker);
 
-    if (runtime_thread_rebalance(*worker,
-                                 request.get_option("sessions"),
-                                 request.get_option("recipient")))
+    if (runtime_thread_rebalance(*worker, request.get_option("sessions"), request.get_option("recipient")))
     {
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
@@ -900,7 +894,7 @@ HttpResponse cb_module(const HttpRequest& request)
     else
     {
         const MXS_MODULE* module = get_module(request.last_uri_part().c_str(), NULL);
-        json = module_to_json(module, request.host());
+        json                     = module_to_json(module, request.host());
     }
 
     return HttpResponse(MHD_HTTP_OK, json);
@@ -918,8 +912,8 @@ HttpResponse cb_all_inet_users(const HttpRequest& request)
 
 HttpResponse cb_all_unix_users(const HttpRequest& request)
 {
-    return HttpResponse(MHD_HTTP_OK,
-                        mxs_json_resource(request.host(), MXS_JSON_API_USERS "unix", json_array()));
+    return HttpResponse(
+        MHD_HTTP_OK, mxs_json_resource(request.host(), MXS_JSON_API_USERS "unix", json_array()));
 }
 
 HttpResponse cb_inet_user(const HttpRequest& request)
@@ -975,7 +969,7 @@ HttpResponse cb_delete_user(const HttpRequest& request)
 HttpResponse cb_set_server(const HttpRequest& request)
 {
     SERVER* server = ServerManager::find_by_unique_name(request.uri_part(1));
-    int opt = Server::status_from_string(request.get_option(CN_STATE).c_str());
+    int opt        = Server::status_from_string(request.get_option(CN_STATE).c_str());
 
     if (opt)
     {
@@ -995,14 +989,14 @@ HttpResponse cb_set_server(const HttpRequest& request)
         }
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN,
-                        mxs_json_error("Invalid or missing value for the `%s` parameter", CN_STATE));
+    return HttpResponse(
+        MHD_HTTP_FORBIDDEN, mxs_json_error("Invalid or missing value for the `%s` parameter", CN_STATE));
 }
 
 HttpResponse cb_clear_server(const HttpRequest& request)
 {
     SERVER* server = ServerManager::find_by_unique_name(request.uri_part(1));
-    int opt = Server::status_from_string(request.get_option(CN_STATE).c_str());
+    int opt        = Server::status_from_string(request.get_option(CN_STATE).c_str());
 
     if (opt)
     {
@@ -1017,8 +1011,8 @@ HttpResponse cb_clear_server(const HttpRequest& request)
         }
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN,
-                        mxs_json_error("Invalid or missing value for the `%s` parameter", CN_STATE));
+    return HttpResponse(
+        MHD_HTTP_FORBIDDEN, mxs_json_error("Invalid or missing value for the `%s` parameter", CN_STATE));
 }
 
 HttpResponse cb_modulecmd(const HttpRequest& request)
@@ -1027,7 +1021,7 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
 
     // TODO: If the core ever has module commands, they need to be handled here.
     std::string identifier = request.uri_segment(3, request.uri_part_count());
-    std::string verb = request.get_verb();
+    std::string verb       = request.get_verb();
 
     const MODULECMD* cmd = modulecmd_find_command(module.c_str(), identifier.c_str());
 
@@ -1036,13 +1030,13 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
         if ((!MODULECMD_MODIFIES_DATA(cmd) && verb == MHD_HTTP_METHOD_GET)
             || (MODULECMD_MODIFIES_DATA(cmd) && verb == MHD_HTTP_METHOD_POST))
         {
-            int n_opts = (int)request.get_option_count();
+            int n_opts = (int) request.get_option_count();
             char* opts[n_opts];
             request.copy_options(opts);
 
-            MODULECMD_ARG* args = modulecmd_arg_parse(cmd, n_opts, (const void**)opts);
-            bool rval = false;
-            json_t* output = NULL;
+            MODULECMD_ARG* args = modulecmd_arg_parse(cmd, n_opts, (const void**) opts);
+            bool rval           = false;
+            json_t* output      = NULL;
 
             if (args)
             {
@@ -1066,7 +1060,7 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
                  *
                  * If the output is an JSON API error, we don't do anything to it
                  */
-                std::string self = "/";     // The uri_segment doesn't have the leading slash
+                std::string self = "/";  // The uri_segment doesn't have the leading slash
                 self += request.uri_segment(0, request.uri_part_count());
                 output = mxs_json_metadata(request.host(), self.c_str(), output);
             }
@@ -1077,7 +1071,7 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
             }
             else
             {
-                rc = MHD_HTTP_FORBIDDEN;
+                rc          = MHD_HTTP_FORBIDDEN;
                 json_t* err = modulecmd_get_json_error();
 
                 if (err)
@@ -1113,6 +1107,7 @@ class RootResource
 {
     RootResource(const RootResource&);
     RootResource& operator=(const RootResource&);
+
 public:
     using ResourceList = std::vector<Resource>;
 
@@ -1155,28 +1150,28 @@ public:
         m_get.emplace_back(cb_get_session, "sessions", ":session");
 
         /** Get resource relationships directly */
-        m_get.emplace_back(cb_get_server_service_relationship,
-                           "servers", ":server", "relationships", "services");
-        m_get.emplace_back(cb_get_server_monitor_relationship,
-                           "servers", ":server", "relationships", "monitors");
-        m_get.emplace_back(cb_get_monitor_server_relationship,
-                           "monitors", ":monitor", "relationships", "servers");
-        m_get.emplace_back(cb_get_monitor_service_relationship,
-                           "monitors", ":monitor", "relationships", "services");
-        m_get.emplace_back(cb_get_service_server_relationship,
-                           "services", ":service", "relationships", "servers");
-        m_get.emplace_back(cb_get_service_service_relationship,
-                           "services", ":service", "relationships", "services");
-        m_get.emplace_back(cb_get_service_filter_relationship,
-                           "services", ":service", "relationships", "filters");
-        m_get.emplace_back(cb_get_service_monitor_relationship,
-                           "services", ":service", "relationships", "monitors");
-        m_get.emplace_back(cb_get_service_listener_relationship,
-                           "services", ":service", "relationships", "listeners");
-        m_get.emplace_back(cb_get_filter_service_relationship,
-                           "filters", ":filter", "relationships", "services");
-        m_get.emplace_back(cb_get_listener_service_relationship,
-                           "listeners", ":listener", "relationships", "services");
+        m_get.emplace_back(
+            cb_get_server_service_relationship, "servers", ":server", "relationships", "services");
+        m_get.emplace_back(
+            cb_get_server_monitor_relationship, "servers", ":server", "relationships", "monitors");
+        m_get.emplace_back(
+            cb_get_monitor_server_relationship, "monitors", ":monitor", "relationships", "servers");
+        m_get.emplace_back(
+            cb_get_monitor_service_relationship, "monitors", ":monitor", "relationships", "services");
+        m_get.emplace_back(
+            cb_get_service_server_relationship, "services", ":service", "relationships", "servers");
+        m_get.emplace_back(
+            cb_get_service_service_relationship, "services", ":service", "relationships", "services");
+        m_get.emplace_back(
+            cb_get_service_filter_relationship, "services", ":service", "relationships", "filters");
+        m_get.emplace_back(
+            cb_get_service_monitor_relationship, "services", ":service", "relationships", "monitors");
+        m_get.emplace_back(
+            cb_get_service_listener_relationship, "services", ":service", "relationships", "listeners");
+        m_get.emplace_back(
+            cb_get_filter_service_relationship, "filters", ":filter", "relationships", "services");
+        m_get.emplace_back(
+            cb_get_listener_service_relationship, "listeners", ":listener", "relationships", "services");
 
         m_get.emplace_back(cb_maxscale, "maxscale");
         m_get.emplace_back(cb_qc, "maxscale", "query_classifier");
@@ -1194,7 +1189,7 @@ public:
 
         m_get.emplace_back(cb_all_users, "users");
         m_get.emplace_back(cb_all_inet_users, "users", "inet");
-        m_get.emplace_back(cb_all_unix_users, "users", "unix");     // For backward compatibility.
+        m_get.emplace_back(cb_all_unix_users, "users", "unix");  // For backward compatibility.
         m_get.emplace_back(cb_inet_user, "users", "inet", ":inetuser");
 
         /** Debug utility endpoints */
@@ -1208,7 +1203,7 @@ public:
         m_post.emplace_back(cb_create_service_listener, "services", ":service", "listeners");
         m_post.emplace_back(cb_create_listener, "listeners");
         m_post.emplace_back(cb_create_user, "users", "inet");
-        m_post.emplace_back(cb_create_user, "users", "unix");       // For backward compatibility.
+        m_post.emplace_back(cb_create_user, "users", "unix");  // For backward compatibility.
 
         /** All of the above require a request body */
         for (auto& r : m_post)
@@ -1237,22 +1232,22 @@ public:
         m_patch.emplace_back(cb_alter_user, "users", "inet", ":inetuser");
 
         /** Update resource relationships directly */
-        m_patch.emplace_back(cb_alter_server_service_relationship,
-                             "servers", ":server", "relationships", "services");
-        m_patch.emplace_back(cb_alter_server_monitor_relationship,
-                             "servers", ":server", "relationships", "monitors");
-        m_patch.emplace_back(cb_alter_monitor_server_relationship,
-                             "monitors", ":monitor", "relationships", "servers");
-        m_patch.emplace_back(cb_alter_monitor_service_relationship,
-                             "monitors", ":monitor", "relationships", "services");
-        m_patch.emplace_back(cb_alter_service_server_relationship,
-                             "services", ":service", "relationships", "servers");
-        m_patch.emplace_back(cb_alter_service_service_relationship,
-                             "services", ":service", "relationships", "services");
-        m_patch.emplace_back(cb_alter_service_filter_relationship,
-                             "services", ":service", "relationships", "filters");
-        m_patch.emplace_back(cb_alter_service_monitor_relationship,
-                             "services", ":service", "relationships", "monitors");
+        m_patch.emplace_back(
+            cb_alter_server_service_relationship, "servers", ":server", "relationships", "services");
+        m_patch.emplace_back(
+            cb_alter_server_monitor_relationship, "servers", ":server", "relationships", "monitors");
+        m_patch.emplace_back(
+            cb_alter_monitor_server_relationship, "monitors", ":monitor", "relationships", "servers");
+        m_patch.emplace_back(
+            cb_alter_monitor_service_relationship, "monitors", ":monitor", "relationships", "services");
+        m_patch.emplace_back(
+            cb_alter_service_server_relationship, "services", ":service", "relationships", "servers");
+        m_patch.emplace_back(
+            cb_alter_service_service_relationship, "services", ":service", "relationships", "services");
+        m_patch.emplace_back(
+            cb_alter_service_filter_relationship, "services", ":service", "relationships", "filters");
+        m_patch.emplace_back(
+            cb_alter_service_monitor_relationship, "services", ":service", "relationships", "monitors");
 
         /** All patch resources require a request body */
         for (auto& r : m_patch)
@@ -1282,9 +1277,7 @@ public:
         m_delete.emplace_back(cb_delete_user, "users", "inet", ":inetuser");
     }
 
-    ~RootResource()
-    {
-    }
+    ~RootResource() {}
 
     ResourceList::const_iterator find_resource(const ResourceList& list, const HttpRequest& request) const
     {
@@ -1385,40 +1378,36 @@ public:
     }
 
 private:
-
-    ResourceList m_get;     /**< GET request handlers */
-    ResourceList m_put;     /**< PUT request handlers */
-    ResourceList m_post;    /**< POST request handlers */
-    ResourceList m_delete;  /**< DELETE request handlers */
-    ResourceList m_patch;   /**< PATCH request handlers */
+    ResourceList m_get;    /**< GET request handlers */
+    ResourceList m_put;    /**< PUT request handlers */
+    ResourceList m_post;   /**< POST request handlers */
+    ResourceList m_delete; /**< DELETE request handlers */
+    ResourceList m_patch;  /**< PATCH request handlers */
 };
 
-static RootResource resources;      /**< Core resource set */
-static ResourceWatcher watcher;     /**< Modification watcher */
+static RootResource resources;  /**< Core resource set */
+static ResourceWatcher watcher; /**< Modification watcher */
 
 static bool request_modifies_data(const string& verb)
 {
-    return verb == MHD_HTTP_METHOD_POST
-           || verb == MHD_HTTP_METHOD_PUT
-           || verb == MHD_HTTP_METHOD_DELETE
-           || verb == MHD_HTTP_METHOD_PATCH;
+    return verb == MHD_HTTP_METHOD_POST || verb == MHD_HTTP_METHOD_PUT || verb == MHD_HTTP_METHOD_DELETE
+        || verb == MHD_HTTP_METHOD_PATCH;
 }
 
 static bool request_reads_data(const string& verb)
 {
-    return verb == MHD_HTTP_METHOD_GET
-           || verb == MHD_HTTP_METHOD_HEAD;
+    return verb == MHD_HTTP_METHOD_GET || verb == MHD_HTTP_METHOD_HEAD;
 }
 
-static bool request_precondition_met(const HttpRequest& request, HttpResponse& response,
-                                     const std::string& cksum)
+static bool request_precondition_met(
+    const HttpRequest& request, HttpResponse& response, const std::string& cksum)
 {
-    bool rval = false;
-    const string& uri = request.get_uri();
-    auto if_modified_since = request.get_header(MHD_HTTP_HEADER_IF_MODIFIED_SINCE);
+    bool rval                = false;
+    const string& uri        = request.get_uri();
+    auto if_modified_since   = request.get_header(MHD_HTTP_HEADER_IF_MODIFIED_SINCE);
     auto if_unmodified_since = request.get_header(MHD_HTTP_HEADER_IF_UNMODIFIED_SINCE);
-    auto if_match = request.get_header(MHD_HTTP_HEADER_IF_MATCH);
-    auto if_none_match = request.get_header(MHD_HTTP_HEADER_IF_NONE_MATCH);
+    auto if_match            = request.get_header(MHD_HTTP_HEADER_IF_MATCH);
+    auto if_none_match       = request.get_header(MHD_HTTP_HEADER_IF_NONE_MATCH);
 
     if ((!if_unmodified_since.empty() && watcher.last_modified(uri) > http_from_date(if_unmodified_since))
         || (!if_match.empty() && cksum != if_match))
@@ -1446,11 +1435,11 @@ static void remove_unwanted_fields(const HttpRequest& request, HttpResponse& res
     for (const auto& a : request.get_options())
     {
         const char FIELDS[] = "fields[";
-        auto s = a.first.substr(0, sizeof(FIELDS) - 1);
+        auto s              = a.first.substr(0, sizeof(FIELDS) - 1);
 
         if (s == FIELDS && a.first.back() == ']')
         {
-            auto type = a.first.substr(s.size(), a.first.size() - s.size() - 1);
+            auto type   = a.first.substr(s.size(), a.first.size() - s.size() - 1);
             auto fields = mxb::strtok(a.second, ",");
 
             if (!fields.empty())
@@ -1471,7 +1460,7 @@ static void remove_unwanted_rows(const HttpRequest& request, HttpResponse& respo
         if (pos != std::string::npos)
         {
             auto json_ptr = filter.substr(0, pos);
-            auto value = filter.substr(pos + 1);
+            auto value    = filter.substr(pos + 1);
             json_error_t err;
 
             if (json_t* js = json_loads(value.c_str(), JSON_DECODE_ANY, &err))
@@ -1486,27 +1475,24 @@ static void remove_unwanted_rows(const HttpRequest& request, HttpResponse& respo
 static HttpResponse handle_request(const HttpRequest& request)
 {
     // Redirect log output into the runtime error message buffer
-    mxb::LogRedirect redirect(
-        [](auto level, const auto& msg) {
-            if (level < LOG_WARNING)    // Lower is more severe
-            {
-                config_runtime_add_error(msg);
-                return true;
-            }
+    mxb::LogRedirect redirect([](auto level, const auto& msg) {
+        if (level < LOG_WARNING)  // Lower is more severe
+        {
+            config_runtime_add_error(msg);
+            return true;
+        }
 
-            return false;
-        });
+        return false;
+    });
 
-    MXS_DEBUG("%s %s %s",
-              request.get_verb().c_str(),
-              request.get_uri().c_str(),
-              request.get_json_str().c_str());
+    MXS_DEBUG(
+        "%s %s %s", request.get_verb().c_str(), request.get_uri().c_str(), request.get_json_str().c_str());
 
     HttpResponse rval = resources.process_request(request);
 
     // Calculate the checksum from the generated JSON
-    auto str = mxs::json_dump(rval.get_response());
-    auto cksum = '"' + mxs::checksum<mxs::SHA1Checksum>((uint8_t*)str.c_str(), str.size()) + '"';
+    auto str   = mxs::json_dump(rval.get_response());
+    auto cksum = '"' + mxs::checksum<mxs::SHA1Checksum>((uint8_t*) str.c_str(), str.size()) + '"';
 
     if (request_precondition_met(request, rval, cksum))
     {
@@ -1537,17 +1523,19 @@ static HttpResponse handle_request(const HttpRequest& request)
 
     return rval;
 }
-}
+}  // namespace
 
 HttpResponse resource_handle_request(const HttpRequest& request)
 {
     mxb::WatchedWorker* worker = mxs::MainWorker::get();
     HttpResponse response;
 
-    if (!worker->call([&request, &response, worker]() {
-                          mxb::WatchdogNotifier::Workaround workaround(worker);
-                          response = handle_request(request);
-                      }, mxb::Worker::EXECUTE_AUTO))
+    if (!worker->call(
+            [&request, &response, worker]() {
+        mxb::WatchdogNotifier::Workaround workaround(worker);
+        response = handle_request(request);
+            },
+            mxb::Worker::EXECUTE_AUTO))
     {
         response = HttpResponse(MHD_HTTP_SERVICE_UNAVAILABLE);
     }

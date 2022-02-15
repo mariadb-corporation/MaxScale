@@ -24,12 +24,12 @@ using namespace std;
 namespace
 {
 
-const char* ZOPTIONS="t:r:c:h:P:u:p:";
+const char* ZOPTIONS = "t:r:c:h:P:u:p:";
 
-const int DEFAULT_THREADS = 10;
-const int DEFAULT_ROWS = 100;
+const int DEFAULT_THREADS    = 10;
+const int DEFAULT_ROWS       = 100;
 const int DEFAULT_PERCENTAGE = 20;
-const int DEFAULT_PORT = 4006;
+const int DEFAULT_PORT       = 4006;
 
 void usage(ostream& out, const char* zProgram)
 {
@@ -42,13 +42,9 @@ void usage(ostream& out, const char* zProgram)
         << "  -P port: MaxScale port (default 4006)\n"
         << "  -u user: User to connect with\n"
         << "  -p pwd : Password to use\n\n"
-        << "Default: " << zProgram
-        << " -t " << DEFAULT_THREADS
-        << " -r " << DEFAULT_ROWS
-        << " -c " << DEFAULT_PERCENTAGE
-        << " -h 127.0.0.1 "
-        << " -P " << DEFAULT_PORT
-        << endl;
+        << "Default: " << zProgram << " -t " << DEFAULT_THREADS << " -r " << DEFAULT_ROWS << " -c "
+        << DEFAULT_PERCENTAGE << " -h 127.0.0.1 "
+        << " -P " << DEFAULT_PORT << endl;
 }
 
 class MDB
@@ -59,39 +55,36 @@ public:
     public:
         explicit Exception(const char* zWhat)
             : std::runtime_error(zWhat)
-        {
-        }
+        {}
 
         explicit Exception(const std::string& what)
             : std::runtime_error(what.c_str())
-        {
-        }
+        {}
     };
 
     struct Config
     {
         Config(const std::string& host,
-               int port,
-               const std::string& user,
-               const std::string& password,
-               const std::string& db)
+            int port,
+            const std::string& user,
+            const std::string& password,
+            const std::string& db)
             : host(host)
             , port(port)
             , user(user)
             , password(password)
             , db(db)
-        {
-        }
+        {}
 
         std::string host;
-        int         port;
+        int port;
         std::string user;
         std::string password;
         std::string db;
     };
 
-    MDB(const MDB&) = delete;
-    MDB& operator = (const MDB&) = delete;
+    MDB(const MDB&)            = delete;
+    MDB& operator=(const MDB&) = delete;
 
     MDB(const std::string& host,
         int port,
@@ -99,8 +92,7 @@ public:
         const std::string& password,
         const std::string& db = "")
         : MDB(Config(host, port, user, password, db))
-    {
-    }
+    {}
 
     MDB(const Config& config)
         : m_config(config)
@@ -108,15 +100,9 @@ public:
         mysql_init(&m_mysql);
     }
 
-    const Config& config() const
-    {
-        return m_config;
-    }
+    const Config& config() const { return m_config; }
 
-    ~MDB()
-    {
-        mysql_close(&m_mysql);
-    }
+    ~MDB() { mysql_close(&m_mysql); }
 
     bool try_connect()
     {
@@ -125,19 +111,16 @@ public:
         mysql_close(&m_mysql);
         mysql_init(&m_mysql);
 
-        const char* zHost = m_config.host.c_str();
-        int port = m_config.port;
-        const char* zUser = m_config.user.c_str();
+        const char* zHost     = m_config.host.c_str();
+        int port              = m_config.port;
+        const char* zUser     = m_config.user.c_str();
         const char* zPassword = !m_config.password.empty() ? m_config.password.c_str() : nullptr;
-        const char* zDb = !m_config.db.empty() ? m_config.db.c_str() : nullptr;
+        const char* zDb       = !m_config.db.empty() ? m_config.db.c_str() : nullptr;
 
         return mysql_real_connect(&m_mysql, zHost, zUser, zPassword, zDb, port, nullptr, 0) != nullptr;
     }
 
-    bool try_query(const std::string& stmt)
-    {
-        return mysql_query(&m_mysql, stmt.c_str()) == 0;
-    }
+    bool try_query(const std::string& stmt) { return mysql_query(&m_mysql, stmt.c_str()) == 0; }
 
     void query(const std::string& stmt)
     {
@@ -155,7 +138,7 @@ public:
         }
     }
 
-    using Row = std::vector<std::string>;
+    using Row  = std::vector<std::string>;
     using Rows = std::vector<Row>;
 
     Rows result() const
@@ -165,7 +148,7 @@ public:
 
         if (pRes)
         {
-            int nFields = mysql_num_fields(pRes);
+            int nFields    = mysql_num_fields(pRes);
             MYSQL_ROW pRow = mysql_fetch_row(pRes);
 
             while (pRow)
@@ -186,30 +169,18 @@ public:
         return rows;
     }
 
-    std::string last_error() const
-    {
-        return mysql_error(&m_mysql);
-    }
+    std::string last_error() const { return mysql_error(&m_mysql); }
 
 private:
-    void raise(const char* zWhat)
-    {
-        throw Exception(zWhat);
-    }
+    void raise(const char* zWhat) { throw Exception(zWhat); }
 
-    void raise(const std::string& what)
-    {
-        raise(what.c_str());
-    }
+    void raise(const std::string& what) { raise(what.c_str()); }
 
-    void raise()
-    {
-        raise(last_error());
-    }
+    void raise() { raise(last_error()); }
 
 private:
     mutable MYSQL m_mysql;
-    Config        m_config;
+    Config m_config;
 };
 
 void finish_db(MDB& mdb)
@@ -238,7 +209,7 @@ void setup_db(MDB& mdb, int nRows)
 
 void thread_run(int tid, MDB& mdb, int rows, int percentage)
 {
-    int cutoff = percentage * ((double)RAND_MAX - 1) / 100;
+    int cutoff = percentage * ((double) RAND_MAX - 1) / 100;
 
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -315,16 +286,16 @@ void run(MDB& mdb, int nThreads, int nRows, int nPercentage)
     }
 }
 
-}
+}  // namespace
 
 int main(int argc, char* argv[])
 {
-    int nThreads = 10;
-    int nRows = 100;
-    int nPercentage = DEFAULT_PERCENTAGE;
-    const char* zHost = "127.0.0.1";
-    int port = 4006;
-    const char* zUser = nullptr;
+    int nThreads          = 10;
+    int nRows             = 100;
+    int nPercentage       = DEFAULT_PERCENTAGE;
+    const char* zHost     = "127.0.0.1";
+    int port              = 4006;
+    const char* zUser     = nullptr;
     const char* zPassword = "";
 
     int opt;
@@ -372,11 +343,7 @@ int main(int argc, char* argv[])
         };
     }
 
-    if (nThreads <= 0
-        || nRows <= 1
-        || (nPercentage < 0 || nPercentage > 100)
-        || port <= 0
-        || !zUser)
+    if (nThreads <= 0 || nRows <= 1 || (nPercentage < 0 || nPercentage > 100) || port <= 0 || !zUser)
     {
         usage(cerr, argv[0]);
         exit(EXIT_FAILURE);

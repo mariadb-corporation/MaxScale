@@ -33,20 +33,20 @@ public:
 
 private:
     CacheMT(const std::string& name,
-            const CacheConfig* pConfig,
-            const std::vector<SCacheRules>& rules,
-            SStorageFactory sFactory,
-            Storage* pStorage);
+        const CacheConfig* pConfig,
+        const std::vector<SCacheRules>& rules,
+        SStorageFactory sFactory,
+        Storage* pStorage);
 
     static CacheMT* create(const std::string& name,
-                           const CacheConfig* pConfig,
-                           const std::vector<SCacheRules>& rules,
-                           SStorageFactory sFactory);
+        const CacheConfig* pConfig,
+        const std::vector<SCacheRules>& rules,
+        SStorageFactory sFactory);
 
 private:
     CacheMT(const CacheMT&);
     CacheMT& operator=(const CacheMT&);
 
 private:
-    mutable std::mutex m_lock_pending;      // Lock used for protecting 'pending'.
+    mutable std::mutex m_lock_pending;  // Lock used for protecting 'pending'.
 };

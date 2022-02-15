@@ -18,7 +18,7 @@
 #include <maxscale/pcre2.hh>
 #include "binlogfiltersession.hh"
 
-static constexpr const char REWRITE_SRC[] = "rewrite_src";
+static constexpr const char REWRITE_SRC[]  = "rewrite_src";
 static constexpr const char REWRITE_DEST[] = "rewrite_dest";
 
 // Binlog Filter configuration
@@ -32,8 +32,7 @@ struct BinlogConfig
         , rewrite_src(pParams->get_compiled_regex(REWRITE_SRC, 0, nullptr).release())
         , rewrite_src_pattern(pParams->get_string(REWRITE_SRC))
         , rewrite_dest(pParams->get_string(REWRITE_DEST))
-    {
-    }
+    {}
 
     ~BinlogConfig()
     {
@@ -44,13 +43,13 @@ struct BinlogConfig
         pcre2_code_free(rewrite_src);
     }
 
-    pcre2_code*       match;
+    pcre2_code* match;
     pcre2_match_data* md_match;
-    pcre2_code*       exclude;
+    pcre2_code* exclude;
     pcre2_match_data* md_exclude;
-    pcre2_code*       rewrite_src;
-    std::string       rewrite_src_pattern;
-    std::string       rewrite_dest;
+    pcre2_code* rewrite_src;
+    std::string rewrite_src_pattern;
+    std::string rewrite_dest;
 };
 
 class BinlogFilter : public maxscale::Filter<BinlogFilter, BinlogFilterSession>
@@ -63,8 +62,7 @@ public:
     ~BinlogFilter();
 
     // Creates a new filter instance
-    static BinlogFilter* create(const char* zName,
-                                mxs::ConfigParameters* ppParams);
+    static BinlogFilter* create(const char* zName, mxs::ConfigParameters* ppParams);
 
     // Creates a new session for this filter
     BinlogFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService);
@@ -76,10 +74,7 @@ public:
     uint64_t getCapabilities();
 
     // Return reference to filter config
-    const BinlogConfig& getConfig() const
-    {
-        return m_config;
-    }
+    const BinlogConfig& getConfig() const { return m_config; }
 
 private:
     // Constructor: used in the create function

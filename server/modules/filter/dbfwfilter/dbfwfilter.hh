@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#if !defined (MXS_MODULE_NAME)
+#if !defined(MXS_MODULE_NAME)
 #define MXS_MODULE_NAME "dbfwfilter"
 #endif
 #include <maxscale/ccdefs.hh>
@@ -122,9 +122,9 @@ static inline fw_op_t qc_op_to_fw_op(qc_query_op_t op)
  */
 typedef struct timerange_t
 {
-    struct timerange_t* next;   /*< Next node in the list */
-    struct tm           start;  /*< Start of the time range */
-    struct tm           end;    /*< End of the time range */
+    struct timerange_t* next; /*< Next node in the list */
+    struct tm start;          /*< Start of the time range */
+    struct tm end;            /*< End of the time range */
 } TIMERANGE;
 
 /**
@@ -137,13 +137,12 @@ struct QuerySpeed
         , triggered(0)
         , count(0)
         , active(false)
-    {
-    }
+    {}
 
     time_t first_query; /*< Time when the first query occurred */
     time_t triggered;   /*< Time when the limit was exceeded */
-    int    count;       /*< Number of queries done */
-    bool   active;      /*< If the rule has been triggered */
+    int count;          /*< Number of queries done */
+    bool active;        /*< If the rule has been triggered */
 };
 
 class Dbfw;
@@ -162,23 +161,23 @@ public:
     DbfwSession(Dbfw* instance, MXS_SESSION* session, SERVICE* service);
     ~DbfwSession();
 
-    void        set_error(const char* error);
+    void set_error(const char* error);
     std::string get_error() const;
-    void        clear_error();
-    int         send_error();
+    void clear_error();
+    int send_error();
 
     std::string user() const;
     std::string remote() const;
 
-    int         routeQuery(GWBUF* query);
-    QuerySpeed* query_speed();      // TODO: Remove this, it exposes internals to a Rule
-    fw_actions  get_action() const;
+    int routeQuery(GWBUF* query);
+    QuerySpeed* query_speed();  // TODO: Remove this, it exposes internals to a Rule
+    fw_actions get_action() const;
 
 private:
-    Dbfw*        m_instance;    /*< Router instance */
-    MXS_SESSION* m_session;     /*< Client session structure */
-    std::string  m_error;       /*< Rule specific error message */
-    QuerySpeed   m_qs;          /*< How fast the user has executed queries */
+    Dbfw* m_instance;       /*< Router instance */
+    MXS_SESSION* m_session; /*< Client session structure */
+    std::string m_error;    /*< Rule specific error message */
+    QuerySpeed m_qs;        /*< How fast the user has executed queries */
 };
 
 /**
@@ -222,30 +221,21 @@ public:
      *
      * @return True, if they should, false otherwise.
      */
-    bool treat_string_as_field() const
-    {
-        return m_config.treat_string_as_field;
-    }
+    bool treat_string_as_field() const { return m_config.treat_string_as_field; }
 
     /**
      * Should string args be treated as fields?
      *
      * @return True, if they should, false otherwise.
      */
-    bool treat_string_arg_as_field() const
-    {
-        return m_config.treat_string_arg_as_field;
-    }
+    bool treat_string_arg_as_field() const { return m_config.treat_string_arg_as_field; }
 
     /**
      * Whether unsupported SQL is an error
      *
      * @return True if unsupported SQL is an error
      */
-    bool strict() const
-    {
-        return m_config.strict;
-    }
+    bool strict() const { return m_config.strict; }
 
     /**
      * Get logging option bitmask
@@ -281,16 +271,13 @@ public:
     /** Diagnostic routine */
     json_t* diagnostics() const;
 
-    uint64_t getCapabilities() const
-    {
-        return RCAP_TYPE_NONE;
-    }
+    uint64_t getCapabilities() const { return RCAP_TYPE_NONE; }
 
 private:
-    DbfwConfig         m_config;
-    int                m_log_match = 0; /*< Log matching and/or non-matching queries */
-    mutable std::mutex m_lock;          /*< Instance spinlock */
-    int                m_version;       /*< Latest rule file version, incremented on reload */
+    DbfwConfig m_config;
+    int m_log_match = 0;       /*< Log matching and/or non-matching queries */
+    mutable std::mutex m_lock; /*< Instance spinlock */
+    int m_version;             /*< Latest rule file version, incremented on reload */
 
     Dbfw(DbfwConfig&& config);
     bool do_reload_rules(std::string filename);
@@ -304,14 +291,10 @@ class Rule;
 typedef std::shared_ptr<Rule> SRule;
 
 /** Helper function for strdup'ing in printf style */
-char* create_error(const char* format, ...) __attribute__ ((nonnull));
+char* create_error(const char* format, ...) __attribute__((nonnull));
 
 /**
  * Check if a rule matches
  */
-bool rule_matches(Dbfw* my_instance,
-                  DbfwSession* my_session,
-                  GWBUF* queue,
-                  SRule rule,
-                  char* query);
+bool rule_matches(Dbfw* my_instance, DbfwSession* my_session, GWBUF* queue, SRule rule, char* query);
 bool rule_is_active(SRule rule);

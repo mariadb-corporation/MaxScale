@@ -22,11 +22,11 @@ namespace
 {
 
 const char CN_DYNAMIC[] = "dynamic";
-const char CN_NORMAL[] = "normal";
-const char CN_QUORUM[] = "quorum";
-const char CN_STATIC[] = "static";
+const char CN_NORMAL[]  = "normal";
+const char CN_QUORUM[]  = "quorum";
+const char CN_STATIC[]  = "static";
 const char CN_UNKNOWN[] = "unknown";
-}
+}  // namespace
 
 std::string xpand::to_string(xpand::Status status)
 {
@@ -126,39 +126,45 @@ bool xpand::is_part_of_the_quorum(const char* zName, MYSQL* pCon)
                 case xpand::Status::STATIC:
                     MXS_NOTICE("%s: Node %s is not part of the quorum (static), switching to "
                                "other node for monitoring.",
-                               zName, mysql_get_host_info(pCon));
+                        zName,
+                        mysql_get_host_info(pCon));
                     break;
 
                 case xpand::Status::DYNAMIC:
                     MXS_NOTICE("%s: Node %s is not part of the quorum (dynamic), switching to "
                                "other node for monitoring.",
-                               zName, mysql_get_host_info(pCon));
+                        zName,
+                        mysql_get_host_info(pCon));
                     break;
 
                 case xpand::Status::UNKNOWN:
                     MXS_WARNING("%s: Do not know how to interpret '%s'. Assuming node %s "
                                 "is not part of the quorum.",
-                                zName, row[0], mysql_get_host_info(pCon));
+                        zName,
+                        row[0],
+                        mysql_get_host_info(pCon));
                 }
             }
             else
             {
-                MXS_WARNING("%s: No status returned for '%s' on %s.",
-                            zName, ZQUERY, mysql_get_host_info(pCon));
+                MXS_WARNING(
+                    "%s: No status returned for '%s' on %s.", zName, ZQUERY, mysql_get_host_info(pCon));
             }
 
             mysql_free_result(pResult);
         }
         else
         {
-            MXS_WARNING("%s: No result returned for '%s' on %s.",
-                        zName, ZQUERY, mysql_get_host_info(pCon));
+            MXS_WARNING("%s: No result returned for '%s' on %s.", zName, ZQUERY, mysql_get_host_info(pCon));
         }
     }
     else
     {
         MXS_ERROR("%s: Could not execute '%s' on %s: %s",
-                  zName, ZQUERY, mysql_get_host_info(pCon), mysql_error(pCon));
+            zName,
+            ZQUERY,
+            mysql_get_host_info(pCon),
+            mysql_error(pCon));
     }
 
     return rv;
@@ -189,24 +195,26 @@ bool xpand::is_being_softfailed(const char* zName, MYSQL* pCon)
         }
         else
         {
-            MXS_WARNING("%s: No result returned for '%s' on %s.",
-                        zName, ZQUERY, mysql_get_host_info(pCon));
+            MXS_WARNING("%s: No result returned for '%s' on %s.", zName, ZQUERY, mysql_get_host_info(pCon));
         }
     }
     else
     {
         MXS_ERROR("%s: Could not execute '%s' on %s: %s",
-                  zName, ZQUERY, mysql_get_host_info(pCon), mysql_error(pCon));
+            zName,
+            ZQUERY,
+            mysql_get_host_info(pCon),
+            mysql_error(pCon));
     }
 
     return rv;
 }
 
 bool xpand::ping_or_connect_to_hub(const char* zName,
-                                   const MonitorServer::ConnectionSettings& settings,
-                                   Softfailed softfailed,
-                                   SERVER& server,
-                                   MYSQL** ppCon)
+    const MonitorServer::ConnectionSettings& settings,
+    Softfailed softfailed,
+    SERVER& server,
+    MYSQL** ppCon)
 {
     bool connected = false;
     std::string err;
@@ -220,7 +228,8 @@ bool xpand::ping_or_connect_to_hub(const char* zName,
             {
                 MXS_NOTICE("%s: The Xpand node %s used as hub is part of the quorum, "
                            "but it is being softfailed. Switching to another node.",
-                           zName, server.address());
+                    zName,
+                    server.address());
             }
             else
             {
@@ -231,7 +240,10 @@ bool xpand::ping_or_connect_to_hub(const char* zName,
     else
     {
         MXS_ERROR("%s: Could either not ping or create connection to %s:%d: %s",
-                  zName, server.address(), server.port(), err.c_str());
+            zName,
+            server.address(),
+            server.port(),
+            err.c_str());
     }
 
     return connected;

@@ -36,17 +36,17 @@ namespace
 static const char MASKING_DEFAULT_FILL[] = "X";
 
 static const char KEY_APPLIES_TO[] = "applies_to";
-static const char KEY_COLUMN[] = "column";
-static const char KEY_DATABASE[] = "database";
-static const char KEY_EXEMPTED[] = "exempted";
-static const char KEY_FILL[] = "fill";
-static const char KEY_REPLACE[] = "replace";
-static const char KEY_RULES[] = "rules";
-static const char KEY_TABLE[] = "table";
-static const char KEY_VALUE[] = "value";
-static const char KEY_WITH[] = "with";
-static const char KEY_OBFUSCATE[] = "obfuscate";
-static const char KEY_MATCH[] = "match";
+static const char KEY_COLUMN[]     = "column";
+static const char KEY_DATABASE[]   = "database";
+static const char KEY_EXEMPTED[]   = "exempted";
+static const char KEY_FILL[]       = "fill";
+static const char KEY_REPLACE[]    = "replace";
+static const char KEY_RULES[]      = "rules";
+static const char KEY_TABLE[]      = "table";
+static const char KEY_VALUE[]      = "value";
+static const char KEY_WITH[]       = "with";
+static const char KEY_OBFUSCATE[]  = "obfuscate";
+static const char KEY_MATCH[]      = "match";
 
 /**
  * @class AccountVerbatim
@@ -57,40 +57,30 @@ static const char KEY_MATCH[] = "match";
 class AccountVerbatim : public MaskingRules::Rule::Account
 {
 public:
-    ~AccountVerbatim()
-    {
-    }
+    ~AccountVerbatim() {}
 
     static shared_ptr<MaskingRules::Rule::Account> create(const string& user, const string& host)
     {
         return shared_ptr<MaskingRules::Rule::Account>(new AccountVerbatim(user, host));
     }
 
-    string user() const
-    {
-        return m_user;
-    }
+    string user() const { return m_user; }
 
-    string host() const
-    {
-        return m_host;
-    }
+    string host() const { return m_host; }
 
     bool matches(const char* zUser, const char* zHost) const
     {
         mxb_assert(zUser);
         mxb_assert(zHost);
 
-        return (m_user.empty() || (m_user == zUser))
-               && (m_host.empty() || (m_host == zHost));
+        return (m_user.empty() || (m_user == zUser)) && (m_host.empty() || (m_host == zHost));
     }
 
 private:
     AccountVerbatim(const string& user, const string& host)
         : m_user(user)
         , m_host(host)
-    {
-    }
+    {}
 
     AccountVerbatim(const AccountVerbatim&);
     AccountVerbatim& operator=(const AccountVerbatim&);
@@ -99,7 +89,6 @@ private:
     string m_user;
     string m_host;
 };
-
 
 /**
  * @class AccountRegexp
@@ -111,10 +100,7 @@ private:
 class AccountRegexp : public MaskingRules::Rule::Account
 {
 public:
-    ~AccountRegexp()
-    {
-        pcre2_code_free(m_pCode);
-    }
+    ~AccountRegexp() { pcre2_code_free(m_pCode); }
 
     static shared_ptr<MaskingRules::Rule::Account> create(const string& user, const string& host)
     {
@@ -122,12 +108,8 @@ public:
 
         int errcode;
         PCRE2_SIZE erroffset;
-        pcre2_code* pCode = pcre2_compile((PCRE2_SPTR)host.c_str(),
-                                          PCRE2_ZERO_TERMINATED,
-                                          0,
-                                          &errcode,
-                                          &erroffset,
-                                          NULL);
+        pcre2_code* pCode
+            = pcre2_compile((PCRE2_SPTR) host.c_str(), PCRE2_ZERO_TERMINATED, 0, &errcode, &erroffset, NULL);
 
         if (pCode)
         {
@@ -142,24 +124,16 @@ public:
         {
             PCRE2_UCHAR errbuf[512];
             pcre2_get_error_message(errcode, errbuf, sizeof(errbuf));
-            MXS_ERROR("Regex compilation failed at %d for regex '%s': %s",
-                      (int)erroffset,
-                      host.c_str(),
-                      errbuf);
+            MXS_ERROR(
+                "Regex compilation failed at %d for regex '%s': %s", (int) erroffset, host.c_str(), errbuf);
         }
 
         return sAccount;
     }
 
-    string user() const
-    {
-        return m_user;
-    }
+    string user() const { return m_user; }
 
-    string host() const
-    {
-        return m_host;
-    }
+    string host() const { return m_host; }
 
     bool matches(const char* zUser, const char* zHost) const
     {
@@ -177,7 +151,7 @@ public:
             {
                 Closer<pcre2_match_data*> data(pData);
 
-                rv = (pcre2_match(m_pCode, (PCRE2_SPTR)zHost, 0, 0, 0, pData, NULL) >= 0);
+                rv = (pcre2_match(m_pCode, (PCRE2_SPTR) zHost, 0, 0, 0, pData, NULL) >= 0);
             }
         }
 
@@ -185,21 +159,18 @@ public:
     }
 
 private:
-    AccountRegexp(const string& user,
-                  const string& host,
-                  pcre2_code* pCode)
+    AccountRegexp(const string& user, const string& host, pcre2_code* pCode)
         : m_user(user)
         , m_host(host)
         , m_pCode(pCode)
-    {
-    }
+    {}
 
     AccountRegexp(const AccountRegexp&);
     AccountRegexp& operator=(const AccountRegexp&);
 
 private:
-    string      m_user;
-    string      m_host;
+    string m_user;
+    string m_host;
     pcre2_code* m_pCode;
 };
 
@@ -219,19 +190,19 @@ shared_ptr<MaskingRules::Rule::Account> create_account(const char* zAccount)
     char account[len + 1];
     strcpy(account, zAccount);
 
-    char* zAt = strchr(account, '@');
+    char* zAt   = strchr(account, '@');
     char* zUser = account;
     char* zHost = NULL;
 
     if (zAt)
     {
-        *zAt = 0;
+        *zAt  = 0;
         zHost = zAt + 1;
     }
 
     if (mxs_mysql_trim_quotes(zUser))
     {
-        char pcre_host[2 * len + 1];    // Surely enough
+        char pcre_host[2 * len + 1];  // Surely enough
 
         mxs_mysql_name_kind_t rv = MXS_MYSQL_NAME_WITHOUT_WILDCARD;
 
@@ -286,9 +257,8 @@ shared_ptr<MaskingRules::Rule::Account> create_account(const char* zAccount)
  *
  * @return True, if all account names could be converted, false otherwise.
  */
-bool get_accounts(const char* zName,
-                  json_t* pStrings,
-                  vector<shared_ptr<MaskingRules::Rule::Account>>& accounts)
+bool get_accounts(
+    const char* zName, json_t* pStrings, vector<shared_ptr<MaskingRules::Rule::Account>>& accounts)
 {
     mxb_assert(json_is_array(pStrings));
 
@@ -353,14 +323,12 @@ bool create_rules_from_array(json_t* pRules, vector<shared_ptr<MaskingRules::Rul
         {
             auto_ptr<MaskingRules::Rule> sRule;
             json_t* pObfuscate = json_object_get(pRule, KEY_OBFUSCATE);
-            json_t* pReplace = json_object_get(pRule, KEY_REPLACE);
+            json_t* pReplace   = json_object_get(pRule, KEY_REPLACE);
 
             // Check whether we have KEY_OBFUSCATE or KEY_REPLACE
             if (!pReplace && !pObfuscate)
             {
-                MXS_ERROR("A masking rule does not contain a '%s' or '%s' key.",
-                          KEY_OBFUSCATE,
-                          KEY_REPLACE);
+                MXS_ERROR("A masking rule does not contain a '%s' or '%s' key.", KEY_OBFUSCATE, KEY_REPLACE);
                 parsed = false;
                 continue;
             }
@@ -374,9 +342,8 @@ bool create_rules_from_array(json_t* pRules, vector<shared_ptr<MaskingRules::Rul
             {
                 json_t* pMatch = json_object_get(pReplace, KEY_MATCH);
                 // Match takes the precedence
-                sRule = pMatch ?
-                    MaskingRules::MatchRule::create_from(pRule) :
-                    MaskingRules::ReplaceRule::create_from(pRule);
+                sRule = pMatch ? MaskingRules::MatchRule::create_from(pRule)
+                               : MaskingRules::ReplaceRule::create_from(pRule);
             }
 
             if (sRule.get())
@@ -408,10 +375,9 @@ bool create_rules_from_array(json_t* pRules, vector<shared_ptr<MaskingRules::Rul
  *
  * @return True, if all rules could be created.
  */
-bool create_rules_from_root(json_t* pRoot,
-                            vector<shared_ptr<MaskingRules::Rule>>& rules)
+bool create_rules_from_root(json_t* pRoot, vector<shared_ptr<MaskingRules::Rule>>& rules)
 {
-    bool parsed = false;
+    bool parsed    = false;
     json_t* pRules = json_object_get(pRoot, KEY_RULES);
 
     if (pRules)
@@ -424,7 +390,7 @@ bool create_rules_from_root(json_t* pRoot,
         {
             MXS_ERROR("The masking rules object contains a `%s` key, "
                       "but it is not an array.",
-                      KEY_RULES);
+                KEY_RULES);
         }
     }
 
@@ -441,85 +407,71 @@ inline bool is_same_name(const std::string& lhs, const LEncString& rhs)
     return rhs.case_eq(lhs);
 }
 
-}
+}  // namespace
 
 //
 // MaskingRules::Rule::Account
 //
 
-MaskingRules::Rule::Account::Account()
-{
-}
+MaskingRules::Rule::Account::Account() {}
 
-MaskingRules::Rule::Account::~Account()
-{
-}
+MaskingRules::Rule::Account::~Account() {}
 
 //
 // MaskingRules::Rule
 //
 
 MaskingRules::Rule::Rule(const std::string& column,
-                         const std::string& table,
-                         const std::string& database,
-                         const std::vector<SAccount>& applies_to,
-                         const std::vector<SAccount>& exempted)
+    const std::string& table,
+    const std::string& database,
+    const std::vector<SAccount>& applies_to,
+    const std::vector<SAccount>& exempted)
     : m_column(column)
     , m_table(table)
     , m_database(database)
     , m_applies_to(applies_to)
     , m_exempted(exempted)
-{
-}
+{}
 
 MaskingRules::ReplaceRule::ReplaceRule(const std::string& column,
-                                       const std::string& table,
-                                       const std::string& database,
-                                       const std::vector<SAccount>& applies_to,
-                                       const std::vector<SAccount>& exempted,
-                                       const std::string& value,
-                                       const std::string& fill)
+    const std::string& table,
+    const std::string& database,
+    const std::vector<SAccount>& applies_to,
+    const std::vector<SAccount>& exempted,
+    const std::string& value,
+    const std::string& fill)
     : MaskingRules::Rule::Rule(column, table, database, applies_to, exempted)
     , m_value(value)
     , m_fill(fill)
-{
-}
+{}
 
 MaskingRules::ObfuscateRule::ObfuscateRule(const std::string& column,
-                                           const std::string& table,
-                                           const std::string& database,
-                                           const std::vector<SAccount>& applies_to,
-                                           const std::vector<SAccount>& exempted)
+    const std::string& table,
+    const std::string& database,
+    const std::vector<SAccount>& applies_to,
+    const std::vector<SAccount>& exempted)
     : MaskingRules::Rule::Rule(column, table, database, applies_to, exempted)
-{
-}
+{}
 
 MaskingRules::MatchRule::MatchRule(const std::string& column,
-                                   const std::string& table,
-                                   const std::string& database,
-                                   const std::vector<SAccount>& applies_to,
-                                   const std::vector<SAccount>& exempted,
-                                   pcre2_code* regexp,
-                                   const std::string& value,
-                                   const std::string& fill)
+    const std::string& table,
+    const std::string& database,
+    const std::vector<SAccount>& applies_to,
+    const std::vector<SAccount>& exempted,
+    pcre2_code* regexp,
+    const std::string& value,
+    const std::string& fill)
     : MaskingRules::Rule::Rule(column, table, database, applies_to, exempted)
     , m_regexp(regexp)
     , m_value(value)
     , m_fill(fill)
-{
-}
+{}
 
-MaskingRules::Rule::~Rule()
-{
-}
+MaskingRules::Rule::~Rule() {}
 
-MaskingRules::ReplaceRule::~ReplaceRule()
-{
-}
+MaskingRules::ReplaceRule::~ReplaceRule() {}
 
-MaskingRules::ObfuscateRule::~ObfuscateRule()
-{
-}
+MaskingRules::ObfuscateRule::~ObfuscateRule() {}
 
 MaskingRules::MatchRule::~MatchRule()
 {
@@ -551,29 +503,27 @@ static bool validate_user_rules(json_t* pApplies_to, json_t* pExempted)
     {
         MXS_ERROR("A masking rule contains a '%s' key, "
                   "but the value is not an array.",
-                  err);
+            err);
         return false;
     }
 
     return true;
 }
 
-static json_t* rule_get_object(json_t* pRule,
-                               const char* rule_type)
+static json_t* rule_get_object(json_t* pRule, const char* rule_type)
 {
     json_t* pObj = NULL;
     // Check 'rule_type' object
     if (!pRule || !(pObj = json_object_get(pRule, rule_type)))
     {
-        MXS_ERROR("A masking rule does not contain the '%s' key.",
-                  rule_type);
+        MXS_ERROR("A masking rule does not contain the '%s' key.", rule_type);
         return NULL;
     }
     if (!json_is_object(pObj))
     {
         MXS_ERROR("A masking rule contains a '%s' key, "
                   "but the value is not a valid Json object.",
-                  rule_type);
+            rule_type);
         return NULL;
     }
     return pObj;
@@ -589,15 +539,11 @@ static json_t* rule_get_object(json_t* pRule,
  *
  * @return           true on success, false otherwise
  */
-static bool rule_check_database_options(json_t* pColumn,
-                                        json_t* pTable,
-                                        json_t* pDatabase,
-                                        const char* rule_type)
+static bool rule_check_database_options(
+    json_t* pColumn, json_t* pTable, json_t* pDatabase, const char* rule_type)
 {
-
     // Only column is mandatory; both table and database are optional.
-    if ((pColumn && json_is_string(pColumn))
-        && (!pTable || json_is_string(pTable))
+    if ((pColumn && json_is_string(pColumn)) && (!pTable || json_is_string(pTable))
         && (!pDatabase || json_is_string(pDatabase)))
     {
         return true;
@@ -608,16 +554,16 @@ static bool rule_check_database_options(json_t* pColumn,
         {
             MXS_ERROR("A masking rule '%s' does not have "
                       "the mandatory '%s' key or it's not a valid Json string.",
-                      rule_type,
-                      KEY_COLUMN);
+                rule_type,
+                KEY_COLUMN);
         }
         else
         {
             MXS_ERROR("In a masking rule '%s', the keys "
                       "'%s' and/or '%s' are not valid Json strings.",
-                      rule_type,
-                      KEY_TABLE,
-                      KEY_DATABASE);
+                rule_type,
+                KEY_TABLE,
+                KEY_DATABASE);
         }
         return false;
     }
@@ -646,8 +592,8 @@ static json_t* rule_get_fill(json_t* pDoc)
         {
             MXS_ERROR("json_string() error, cannot produce"
                       " a valid '%s' object for rule '%s'.",
-                      KEY_FILL,
-                      KEY_REPLACE);
+                KEY_FILL,
+                KEY_REPLACE);
         }
     }
 
@@ -666,11 +612,11 @@ static json_t* rule_get_fill(json_t* pDoc)
  * @return              True on success, false on errors.
  */
 static bool rule_run_common_checks(json_t* pRule,
-                                   vector<shared_ptr<MaskingRules::Rule::Account>>* applies_to,
-                                   vector<shared_ptr<MaskingRules::Rule::Account>>* exempted)
+    vector<shared_ptr<MaskingRules::Rule::Account>>* applies_to,
+    vector<shared_ptr<MaskingRules::Rule::Account>>* exempted)
 {
     json_t* pApplies_to = json_object_get(pRule, KEY_APPLIES_TO);
-    json_t* pExempted = json_object_get(pRule, KEY_EXEMPTED);
+    json_t* pExempted   = json_object_get(pRule, KEY_EXEMPTED);
 
     // Check for pApplies_to and pExempted
     if (!validate_user_rules(pApplies_to, pExempted))
@@ -699,22 +645,16 @@ static bool rule_run_common_checks(json_t* pRule,
  *
  * @return              True on success, false on errors.
  */
-static bool rule_get_common_values(json_t* pRule,
-                                   std::string* column,
-                                   std::string* table,
-                                   std::string* database,
-                                   const char* rule_type)
+static bool rule_get_common_values(
+    json_t* pRule, std::string* column, std::string* table, std::string* database, const char* rule_type)
 {
     // Get database, table && column
     json_t* pDatabase = json_object_get(pRule, KEY_DATABASE);
-    json_t* pTable = json_object_get(pRule, KEY_TABLE);
-    json_t* pColumn = json_object_get(pRule, KEY_COLUMN);
+    json_t* pTable    = json_object_get(pRule, KEY_TABLE);
+    json_t* pColumn   = json_object_get(pRule, KEY_COLUMN);
 
     // Check column/table/dataase
-    if (!rule_check_database_options(pColumn,
-                                     pTable,
-                                     pDatabase,
-                                     rule_type))
+    if (!rule_check_database_options(pColumn, pTable, pDatabase, rule_type))
     {
         return false;
     }
@@ -751,27 +691,23 @@ static bool rule_get_common_values(json_t* pRule,
  * @return              True on success, false on errors
  */
 bool rule_get_values(json_t* pRule,
-                     vector<shared_ptr<MaskingRules::Rule::Account>>* applies_to,
-                     vector<shared_ptr<MaskingRules::Rule::Account>>* exempted,
-                     std::string* column,
-                     std::string* table,
-                     std::string* database,
-                     const char* rule_type)
+    vector<shared_ptr<MaskingRules::Rule::Account>>* applies_to,
+    vector<shared_ptr<MaskingRules::Rule::Account>>* exempted,
+    std::string* column,
+    std::string* table,
+    std::string* database,
+    const char* rule_type)
 {
     json_t* pKeyObj;
     // Get Key object based on 'rule_type' param
     if ((pKeyObj = rule_get_object(pRule,
-                                   rule_type))
-        &&      // Run checks on user access
+             rule_type))
+        &&  // Run checks on user access
         rule_run_common_checks(pRule,
-                               applies_to,
-                               exempted)
-        &&      // Extract values from the rule
-        rule_get_common_values(pKeyObj,
-                               column,
-                               table,
-                               database,
-                               rule_type))
+            applies_to,
+            exempted)
+        &&  // Extract values from the rule
+        rule_get_common_values(pKeyObj, column, table, database, rule_type))
     {
         return true;
     }
@@ -789,18 +725,13 @@ bool rule_get_values(json_t* pRule,
  *
  * @return            True on success, false on errors
  */
-bool rule_get_match_value_fill(json_t* pRule,
-                               std::string* pMatch,
-                               std::string* pValue,
-                               std::string* pFill)
+bool rule_get_match_value_fill(json_t* pRule, std::string* pMatch, std::string* pValue, std::string* pFill)
 {
     // Get the 'with' key from the rule
     json_t* pWith = json_object_get(pRule, KEY_WITH);
     if (!pWith || !json_is_object(pWith))
     {
-        MXS_ERROR("A masking '%s' rule doesn't have a valid '%s' key",
-                  KEY_REPLACE,
-                  KEY_WITH);
+        MXS_ERROR("A masking '%s' rule doesn't have a valid '%s' key", KEY_REPLACE, KEY_WITH);
         return false;
     }
 
@@ -820,16 +751,15 @@ bool rule_get_match_value_fill(json_t* pRule,
 
     // Check values: 'match' and 'fill' are mandatory (if not provided, there will be
     // a default 'fill'), while 'value' is optional, but if provided it must be a string.
-    if ((!pTheFill || !json_is_string(pTheFill))
-        || (pTheValue && !json_is_string(pTheValue))
+    if ((!pTheFill || !json_is_string(pTheFill)) || (pTheValue && !json_is_string(pTheValue))
         || ((!pTheMatch || !json_is_string(pTheMatch))))
     {
         MXS_ERROR("A masking '%s' rule has '%s', '%s' and/or '%s' "
                   "invalid Json strings.",
-                  KEY_REPLACE,
-                  KEY_MATCH,
-                  KEY_VALUE,
-                  KEY_FILL);
+            KEY_REPLACE,
+            KEY_MATCH,
+            KEY_VALUE,
+            KEY_FILL);
         return false;
     }
     else
@@ -856,17 +786,13 @@ bool rule_get_match_value_fill(json_t* pRule,
  *
  * @return            True on success, false on errors
  */
-bool rule_get_value_fill(json_t* pRule,
-                         std::string* pValue,
-                         std::string* pFill)
+bool rule_get_value_fill(json_t* pRule, std::string* pValue, std::string* pFill)
 {
     // Get the 'with' key from the rule
     json_t* pWith = json_object_get(pRule, KEY_WITH);
     if (!pWith || !json_is_object(pWith))
     {
-        MXS_ERROR("A masking '%s' rule doesn't have a valid '%s' key.",
-                  KEY_REPLACE,
-                  KEY_WITH);
+        MXS_ERROR("A masking '%s' rule doesn't have a valid '%s' key.", KEY_REPLACE, KEY_WITH);
         return false;
     }
 
@@ -877,14 +803,13 @@ bool rule_get_value_fill(json_t* pRule,
     json_t* pTheValue = json_object_get(pWith, KEY_VALUE);
 
     // Check Json strings
-    if ((pTheFill && !json_is_string(pTheFill))
-        || (pTheValue && !json_is_string(pTheValue)))
+    if ((pTheFill && !json_is_string(pTheFill)) || (pTheValue && !json_is_string(pTheValue)))
     {
         MXS_ERROR("A masking '%s' rule has '%s' and/or '%s' "
                   "invalid Json strings.",
-                  KEY_REPLACE,
-                  KEY_VALUE,
-                  KEY_FILL);
+            KEY_REPLACE,
+            KEY_VALUE,
+            KEY_FILL);
         return false;
     }
 
@@ -913,23 +838,12 @@ auto_ptr<MaskingRules::Rule> MaskingRules::ReplaceRule::create_from(json_t* pRul
     auto_ptr<MaskingRules::Rule> sRule;
 
     // Check rule, extract base values
-    if (rule_get_values(pRule,
-                        &applies_to,
-                        &exempted,
-                        &column,
-                        &table,
-                        &database,
-                        KEY_REPLACE)
-        && rule_get_value_fill(pRule, &value, &fill))   // get value/fill
+    if (rule_get_values(pRule, &applies_to, &exempted, &column, &table, &database, KEY_REPLACE)
+        && rule_get_value_fill(pRule, &value, &fill))  // get value/fill
     {
         // Apply value/fill: instantiate the ReplaceRule class
-        sRule = auto_ptr<MaskingRules::ReplaceRule>(new MaskingRules::ReplaceRule(column,
-                                                                                  table,
-                                                                                  database,
-                                                                                  applies_to,
-                                                                                  exempted,
-                                                                                  value,
-                                                                                  fill));
+        sRule = auto_ptr<MaskingRules::ReplaceRule>(
+            new MaskingRules::ReplaceRule(column, table, database, applies_to, exempted, value, fill));
     }
 
     return sRule;
@@ -946,19 +860,10 @@ auto_ptr<MaskingRules::Rule> MaskingRules::ObfuscateRule::create_from(json_t* pR
     auto_ptr<MaskingRules::Rule> sRule;
 
     // Check rule, extract base values
-    if (rule_get_values(pRule,
-                        &applies_to,
-                        &exempted,
-                        &column,
-                        &table,
-                        &database,
-                        KEY_OBFUSCATE))
+    if (rule_get_values(pRule, &applies_to, &exempted, &column, &table, &database, KEY_OBFUSCATE))
     {
-        sRule = auto_ptr<MaskingRules::Rule>(new MaskingRules::ObfuscateRule(column,
-                                                                             table,
-                                                                             database,
-                                                                             applies_to,
-                                                                             exempted));
+        sRule = auto_ptr<MaskingRules::Rule>(
+            new MaskingRules::ObfuscateRule(column, table, database, applies_to, exempted));
     }
 
     return sRule;
@@ -976,20 +881,13 @@ static pcre2_code* rule_compile_pcre2_match(const char* match_string)
     int errcode;
     PCRE2_SIZE erroffset;
     // Compile regexp
-    pcre2_code* pCode = pcre2_compile((PCRE2_SPTR)match_string,
-                                      PCRE2_ZERO_TERMINATED,
-                                      0,
-                                      &errcode,
-                                      &erroffset,
-                                      NULL);
+    pcre2_code* pCode
+        = pcre2_compile((PCRE2_SPTR) match_string, PCRE2_ZERO_TERMINATED, 0, &errcode, &erroffset, NULL);
     if (!pCode)
     {
         PCRE2_UCHAR errbuf[512];
         pcre2_get_error_message(errcode, errbuf, sizeof(errbuf));
-        MXS_ERROR("Regex compilation failed at %d for regex '%s': %s",
-                  (int)erroffset,
-                  match_string,
-                  errbuf);
+        MXS_ERROR("Regex compilation failed at %d for regex '%s': %s", (int) erroffset, match_string, errbuf);
         return NULL;
     }
 
@@ -1009,18 +907,17 @@ auto_ptr<MaskingRules::Rule> MaskingRules::MatchRule::create_from(json_t* pRule)
     // Check rule, extract base values
     // Note: the match rule has same rule_type of "replace"
     if (rule_get_values(pRule,
-                        &applies_to,
-                        &exempted,
-                        &column,
-                        &table,
-                        &database,
-                        KEY_REPLACE)
-        && rule_get_match_value_fill(pRule,     // get match/value/fill
-                                     &match,
-                                     &value,
-                                     &fill))
+            &applies_to,
+            &exempted,
+            &column,
+            &table,
+            &database,
+            KEY_REPLACE)
+        && rule_get_match_value_fill(pRule,  // get match/value/fill
+            &match,
+            &value,
+            &fill))
     {
-
         if (!match.empty() && !fill.empty())
         {
             // Compile the regexp
@@ -1030,14 +927,8 @@ auto_ptr<MaskingRules::Rule> MaskingRules::MatchRule::create_from(json_t* pRule)
             {
                 Closer<pcre2_code*> code(pCode);
                 // Instantiate the MatchRule class
-                sRule = auto_ptr<MaskingRules::MatchRule>(new MaskingRules::MatchRule(column,
-                                                                                      table,
-                                                                                      database,
-                                                                                      applies_to,
-                                                                                      exempted,
-                                                                                      pCode,
-                                                                                      value,
-                                                                                      fill));
+                sRule = auto_ptr<MaskingRules::MatchRule>(new MaskingRules::MatchRule(
+                    column, table, database, applies_to, exempted, pCode, value, fill));
 
                 // Ownership of pCode has been moved to the MatchRule object.
                 code.release();
@@ -1061,11 +952,10 @@ string MaskingRules::Rule::match() const
     return s;
 }
 
-bool MaskingRules::Rule::matches(const ComQueryResponse::ColumnDef& column_def,
-                                 const char* zUser,
-                                 const char* zHost) const
+bool MaskingRules::Rule::matches(
+    const ComQueryResponse::ColumnDef& column_def, const char* zUser, const char* zHost) const
 {
-    const LEncString& table = column_def.org_table();
+    const LEncString& table    = column_def.org_table();
     const LEncString& database = column_def.schema();
 
     // If the resultset does not contain table and database names, as will
@@ -1073,10 +963,9 @@ bool MaskingRules::Rule::matches(const ComQueryResponse::ColumnDef& column_def,
     // we consider it a match if a table or database have been provided.
     // Otherwise it would be easy to bypass a table/database rule.
 
-    bool match =
-        is_same_name(m_column, column_def.org_name())
-        && (m_table.empty() || table.empty() || is_same_name(m_table, table))
-        && (m_database.empty() || database.empty() || is_same_name(m_database, database));
+    bool match = is_same_name(m_column, column_def.org_name())
+              && (m_table.empty() || table.empty() || is_same_name(m_table, table))
+              && (m_database.empty() || database.empty() || is_same_name(m_database, database));
 
     if (match)
     {
@@ -1089,12 +978,10 @@ bool MaskingRules::Rule::matches(const ComQueryResponse::ColumnDef& column_def,
     return match;
 }
 
-bool MaskingRules::Rule::matches(const QC_FIELD_INFO& field,
-                                 const char* zUser,
-                                 const char* zHost) const
+bool MaskingRules::Rule::matches(const QC_FIELD_INFO& field, const char* zUser, const char* zHost) const
 {
-    const char* zColumn = field.column;
-    const char* zTable = field.table;
+    const char* zColumn   = field.column;
+    const char* zTable    = field.table;
     const char* zDatabase = field.database;
 
     mxb_assert(zColumn);
@@ -1104,10 +991,9 @@ bool MaskingRules::Rule::matches(const QC_FIELD_INFO& field,
     // we consider it a match if a table or database have been provided.
     // Otherwise it would be easy to bypass a table/database rule.
 
-    bool match =
-        is_same_name(m_column, zColumn)
-        && (m_table.empty() || !zTable || is_same_name(m_table, zTable))
-        && (m_database.empty() || !zDatabase || is_same_name(m_database, zDatabase));
+    bool match = is_same_name(m_column, zColumn)
+              && (m_table.empty() || !zTable || is_same_name(m_table, zTable))
+              && (m_database.empty() || !zDatabase || is_same_name(m_database, zDatabase));
 
     if (match)
     {
@@ -1129,8 +1015,7 @@ public:
     AccountMatcher(const char* zUser, const char* zHost)
         : m_zUser(zUser)
         , m_zHost(zHost)
-    {
-    }
+    {}
 
     bool operator()(const MaskingRules::Rule::SAccount& sAccount)
     {
@@ -1141,10 +1026,9 @@ private:
     const char* m_zUser;
     const char* m_zHost;
 };
-}
+}  // namespace
 
-bool MaskingRules::Rule::matches_account(const char* zUser,
-                                         const char* zHost) const
+bool MaskingRules::Rule::matches_account(const char* zUser, const char* zHost) const
 {
     bool match = true;
 
@@ -1152,9 +1036,7 @@ bool MaskingRules::Rule::matches_account(const char* zUser,
 
     if (m_applies_to.size() != 0)
     {
-        vector<SAccount>::const_iterator i = std::find_if(m_applies_to.begin(),
-                                                          m_applies_to.end(),
-                                                          matcher);
+        vector<SAccount>::const_iterator i = std::find_if(m_applies_to.begin(), m_applies_to.end(), matcher);
 
         match = (i != m_applies_to.end());
     }
@@ -1164,9 +1046,7 @@ bool MaskingRules::Rule::matches_account(const char* zUser,
         // If it is still a match, we need to check whether the user/host is
         // exempted.
 
-        vector<SAccount>::const_iterator i = std::find_if(m_exempted.begin(),
-                                                          m_exempted.end(),
-                                                          matcher);
+        vector<SAccount>::const_iterator i = std::find_if(m_exempted.begin(), m_exempted.end(), matcher);
 
         match = (i == m_exempted.end());
     }
@@ -1183,10 +1063,7 @@ bool MaskingRules::Rule::matches_account(const char* zUser,
  * @param o_last     The iterator pointing to last buffer byte
  */
 template<class FillIter, class OutIter>
-inline void fill_buffer(FillIter f_first,
-                        FillIter f_last,
-                        OutIter o_first,
-                        OutIter o_last)
+inline void fill_buffer(FillIter f_first, FillIter f_last, OutIter o_first, OutIter o_last)
 {
     FillIter pFill = f_first;
     while (o_first != o_last)
@@ -1201,8 +1078,8 @@ inline void fill_buffer(FillIter f_first,
 
 void MaskingRules::MatchRule::rewrite(LEncString& s) const
 {
-    int rv = 0;
-    uint32_t n_matches = 0;
+    int rv              = 0;
+    uint32_t n_matches  = 0;
     PCRE2_SIZE* ovector = NULL;
     // Create the match data object from m_regexp class member
     pcre2_match_data* pData = pcre2_match_data_create_from_pattern(m_regexp, NULL);
@@ -1220,12 +1097,13 @@ void MaskingRules::MatchRule::rewrite(LEncString& s) const
         // Match all the compiled pattern
         while ((startoffset < total_len)
                && (rv = pcre2_match(m_regexp,
-                                    (PCRE2_SPTR)s.to_string().c_str(),
-                                    PCRE2_ZERO_TERMINATED,
-                                    startoffset,
-                                    0,
-                                    pData,
-                                    NULL)) >= 0)
+                       (PCRE2_SPTR) s.to_string().c_str(),
+                       PCRE2_ZERO_TERMINATED,
+                       startoffset,
+                       0,
+                       pData,
+                       NULL))
+                      >= 0)
         {
             // Get offset array value pairs of substrings: $0=0,1 ; $1=2,3
             PCRE2_SIZE* ovector = pcre2_get_ovector_pointer(pData);
@@ -1270,14 +1148,14 @@ void MaskingRules::MatchRule::rewrite(LEncString& s) const
 
 void MaskingRules::ObfuscateRule::rewrite(LEncString& s) const
 {
-    size_t i_len = s.length();
+    size_t i_len           = s.length();
     LEncString::iterator i = s.begin();
-    size_t c = *i + i_len;
+    size_t c               = *i + i_len;
 
     for (LEncString::iterator i = s.begin(); i != s.end(); i++)
     {
         // ASCII 32 is first printable char
-        unsigned char d = abs((char)(*i ^ c)) + 32;
+        unsigned char d = abs((char) (*i ^ c)) + 32;
         c += d << 3;
         // ASCII 126 is last printable char
         *i = d <= 126 ? d : 126;
@@ -1310,10 +1188,10 @@ void MaskingRules::ReplaceRule::rewrite(LEncString& s) const
         {
             MXS_ERROR("Length of returned value \"%s\" is %u, while length of "
                       "replacement value \"%s\" is %u, and no 'fill' value specified.",
-                      s.to_string().c_str(),
-                      (unsigned)s.length(),
-                      m_value.c_str(),
-                      (unsigned)m_value.length());
+                s.to_string().c_str(),
+                (unsigned) s.length(),
+                m_value.c_str(),
+                (unsigned) m_value.length());
         }
     }
 }
@@ -1356,18 +1234,13 @@ auto_ptr<MaskingRules> MaskingRules::load(const char* zPath)
         }
         else
         {
-            MXS_ERROR("Loading rules file failed: (%s:%d:%d): %s",
-                      zPath,
-                      error.line,
-                      error.column,
-                      error.text);
+            MXS_ERROR(
+                "Loading rules file failed: (%s:%d:%d): %s", zPath, error.line, error.column, error.text);
         }
     }
     else
     {
-        MXS_ERROR("Could not open rules file %s for reading: %s",
-                  zPath,
-                  mxs_strerror(errno));
+        MXS_ERROR("Could not open rules file %s for reading: %s", zPath, mxs_strerror(errno));
     }
 
     return sRules;
@@ -1389,10 +1262,7 @@ auto_ptr<MaskingRules> MaskingRules::parse(const char* zJson)
     }
     else
     {
-        MXS_ERROR("Parsing rules failed: (%d:%d): %s",
-                  error.line,
-                  error.column,
-                  error.text);
+        MXS_ERROR("Parsing rules failed: (%d:%d): %s", error.line, error.column, error.text);
     }
 
     return sRules;
@@ -1420,30 +1290,23 @@ template<class T>
 class RuleMatcher : std::unary_function<MaskingRules::SRule, bool>
 {
 public:
-    RuleMatcher(const T& field,
-                const char* zUser,
-                const char* zHost)
+    RuleMatcher(const T& field, const char* zUser, const char* zHost)
         : m_field(field)
         , m_zUser(zUser)
         , m_zHost(zHost)
-    {
-    }
+    {}
 
-    bool operator()(const MaskingRules::SRule& sRule)
-    {
-        return sRule->matches(m_field, m_zUser, m_zHost);
-    }
+    bool operator()(const MaskingRules::SRule& sRule) { return sRule->matches(m_field, m_zUser, m_zHost); }
 
 private:
-    const T&    m_field;
+    const T& m_field;
     const char* m_zUser;
     const char* m_zHost;
 };
-}
+}  // namespace
 
-const MaskingRules::Rule* MaskingRules::get_rule_for(const ComQueryResponse::ColumnDef& column_def,
-                                                     const char* zUser,
-                                                     const char* zHost) const
+const MaskingRules::Rule* MaskingRules::get_rule_for(
+    const ComQueryResponse::ColumnDef& column_def, const char* zUser, const char* zHost) const
 {
     const Rule* pRule = NULL;
 
@@ -1460,9 +1323,8 @@ const MaskingRules::Rule* MaskingRules::get_rule_for(const ComQueryResponse::Col
     return pRule;
 }
 
-const MaskingRules::Rule* MaskingRules::get_rule_for(const QC_FIELD_INFO& field_info,
-                                                     const char* zUser,
-                                                     const char* zHost) const
+const MaskingRules::Rule* MaskingRules::get_rule_for(
+    const QC_FIELD_INFO& field_info, const char* zUser, const char* zHost) const
 {
     const Rule* pRule = NULL;
 
@@ -1482,8 +1344,8 @@ const MaskingRules::Rule* MaskingRules::get_rule_for(const QC_FIELD_INFO& field_
 bool MaskingRules::has_rule_for(const char* zUser, const char* zHost) const
 {
     auto i = std::find_if(m_rules.begin(), m_rules.end(), [zUser, zHost](SRule sRule) {
-                              return sRule->matches_account(zUser, zHost);
-                          });
+        return sRule->matches_account(zUser, zHost);
+    });
 
     return i != m_rules.end();
 }

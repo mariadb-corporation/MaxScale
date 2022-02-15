@@ -36,18 +36,17 @@ inline bool cache_max_resultset_size_exceeded(const CacheConfig& config, int64_t
 {
     return config.max_resultset_size == 0 ? false : size > config.max_resultset_size;
 }
-}
+}  // namespace
 
 namespace
 {
 
 const char SV_MAXSCALE_CACHE_POPULATE[] = "@maxscale.cache.populate";
-const char SV_MAXSCALE_CACHE_USE[] = "@maxscale.cache.use";
+const char SV_MAXSCALE_CACHE_USE[]      = "@maxscale.cache.use";
 const char SV_MAXSCALE_CACHE_SOFT_TTL[] = "@maxscale.cache.soft_ttl";
 const char SV_MAXSCALE_CACHE_HARD_TTL[] = "@maxscale.cache.hard_ttl";
 
-const char* NON_CACHEABLE_FUNCTIONS[] =
-{
+const char* NON_CACHEABLE_FUNCTIONS[] = {
     "benchmark",
     "connection_id",
     "convert_tz",
@@ -79,8 +78,7 @@ const char* NON_CACHEABLE_FUNCTIONS[] =
     "uuid_short",
 };
 
-const char* NON_CACHEABLE_VARIABLES[] =
-{
+const char* NON_CACHEABLE_VARIABLES[] = {
     "current_date",
     "current_timestamp",
     "localtime",
@@ -92,7 +90,7 @@ const size_t N_NON_CACHEABLE_VARIABLES = sizeof(NON_CACHEABLE_VARIABLES) / sizeo
 
 int compare_name(const void* pLeft, const void* pRight)
 {
-    return strcasecmp((const char*)pLeft, *(const char**)pRight);
+    return strcasecmp((const char*) pLeft, *(const char**) pRight);
 }
 
 inline bool uses_name(const char* zName, const char** pzNames, size_t nNames)
@@ -141,7 +139,7 @@ bool uses_non_cacheable_variable(GWBUF* pPacket)
 
     return rv;
 }
-}
+}  // namespace
 
 namespace
 {
@@ -149,7 +147,7 @@ namespace
 enum class StatementType
 {
     SELECT,
-    DUPSERT,    // DELETE, UPDATE, INSERT
+    DUPSERT,  // DELETE, UPDATE, INSERT
     UNKNOWN
 };
 
@@ -160,7 +158,7 @@ StatementType get_statement_type(GWBUF* pStmt)
     char* pSql;
     int len;
 
-    MXB_AT_DEBUG(int rc = ) modutil_extract_SQL(pStmt, &pSql, &len);
+    MXB_AT_DEBUG(int rc =) modutil_extract_SQL(pStmt, &pSql, &len);
     mxb_assert(rc == 1);
 
     char* pSql_end = pSql + len;
@@ -172,7 +170,7 @@ StatementType get_statement_type(GWBUF* pStmt)
     static const char SELECT[] = "SELECT";
     static const char UPDATE[] = "UPDATE";
 
-    const char* pKey = nullptr;
+    const char* pKey     = nullptr;
     const char* pKey_end = nullptr;
 
     if (pSql_end > pSql)
@@ -181,29 +179,29 @@ StatementType get_statement_type(GWBUF* pStmt)
         {
         case 'D':
         case 'd':
-            type = StatementType::DUPSERT;
-            pKey = DELETE;
+            type     = StatementType::DUPSERT;
+            pKey     = DELETE;
             pKey_end = pKey + sizeof(DELETE) - 1;
             break;
 
         case 'I':
         case 'i':
-            type = StatementType::DUPSERT;
-            pKey = INSERT;
+            type     = StatementType::DUPSERT;
+            pKey     = INSERT;
             pKey_end = pKey + sizeof(INSERT) - 1;
             break;
 
         case 'S':
         case 's':
-            type = StatementType::SELECT;
-            pKey = SELECT;
+            type     = StatementType::SELECT;
+            pKey     = SELECT;
             pKey_end = pKey + sizeof(SELECT) - 1;
             break;
 
         case 'U':
         case 'u':
-            type = StatementType::DUPSERT;
-            pKey = UPDATE;
+            type     = StatementType::DUPSERT;
+            pKey     = UPDATE;
             pKey_end = pKey + sizeof(UPDATE) - 1;
             break;
 
@@ -237,12 +235,10 @@ StatementType get_statement_type(GWBUF* pStmt)
 
     return type;
 }
-}
+}  // namespace
 
-CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
-                                       SERVICE* pService,
-                                       std::unique_ptr<SessionCache> sCache,
-                                       char* zDefaultDb)
+CacheFilterSession::CacheFilterSession(
+    MXS_SESSION* pSession, SERVICE* pService, std::unique_ptr<SessionCache> sCache, char* zDefaultDb)
     : maxscale::FilterSession(pSession, pService)
     , m_sThis(this)
     , m_state(CACHE_EXPECTING_NOTHING)
@@ -268,48 +264,39 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
 
     reset_response_state();
 
-    if (!session_add_variable(pSession,
-                              SV_MAXSCALE_CACHE_POPULATE,
-                              &CacheFilterSession::set_cache_populate,
-                              this))
+    if (!session_add_variable(
+            pSession, SV_MAXSCALE_CACHE_POPULATE, &CacheFilterSession::set_cache_populate, this))
     {
         mxb_assert(!true);
         MXS_ERROR("Could not add MaxScale user variable '%s', dynamically "
                   "enabling/disabling the populating of the cache is not possible.",
-                  SV_MAXSCALE_CACHE_POPULATE);
+            SV_MAXSCALE_CACHE_POPULATE);
     }
 
-    if (!session_add_variable(pSession,
-                              SV_MAXSCALE_CACHE_USE,
-                              &CacheFilterSession::set_cache_use,
-                              this))
+    if (!session_add_variable(pSession, SV_MAXSCALE_CACHE_USE, &CacheFilterSession::set_cache_use, this))
     {
         mxb_assert(!true);
         MXS_ERROR("Could not add MaxScale user variable '%s', dynamically "
                   "enabling/disabling the using of the cache not possible.",
-                  SV_MAXSCALE_CACHE_USE);
+            SV_MAXSCALE_CACHE_USE);
     }
 
-    if (!session_add_variable(pSession,
-                              SV_MAXSCALE_CACHE_SOFT_TTL,
-                              &CacheFilterSession::set_cache_soft_ttl,
-                              this))
+    if (!session_add_variable(
+            pSession, SV_MAXSCALE_CACHE_SOFT_TTL, &CacheFilterSession::set_cache_soft_ttl, this))
     {
         mxb_assert(!true);
         MXS_ERROR("Could not add MaxScale user variable '%s', dynamically "
                   "setting the soft TTL not possible.",
-                  SV_MAXSCALE_CACHE_SOFT_TTL);
+            SV_MAXSCALE_CACHE_SOFT_TTL);
     }
 
-    if (!session_add_variable(pSession,
-                              SV_MAXSCALE_CACHE_HARD_TTL,
-                              &CacheFilterSession::set_cache_hard_ttl,
-                              this))
+    if (!session_add_variable(
+            pSession, SV_MAXSCALE_CACHE_HARD_TTL, &CacheFilterSession::set_cache_hard_ttl, this))
     {
         mxb_assert(!true);
         MXS_ERROR("Could not add MaxScale user variable '%s', dynamically "
                   "setting the hard TTL not possible.",
-                  SV_MAXSCALE_CACHE_HARD_TTL);
+            SV_MAXSCALE_CACHE_HARD_TTL);
     }
 }
 
@@ -327,24 +314,23 @@ CacheFilterSession::~CacheFilterSession()
 
 std::shared_ptr<CacheFilterSession> CacheFilterSession::release()
 {
-    mxb_assert(m_sThis.get());      // This function can be called once.
+    mxb_assert(m_sThis.get());  // This function can be called once.
 
     std::shared_ptr<CacheFilterSession> sThis {m_sThis};
 
-    m_sThis.reset();    // No, effect as sThis has a reference.
+    m_sThis.reset();  // No, effect as sThis has a reference.
 
     // When sThis in the caller goes out of scope, this will be deleted.
     return sThis;
 }
 
 // static
-CacheFilterSession* CacheFilterSession::create(std::unique_ptr<SessionCache> sCache,
-                                               MXS_SESSION* pSession,
-                                               SERVICE* pService)
+CacheFilterSession* CacheFilterSession::create(
+    std::unique_ptr<SessionCache> sCache, MXS_SESSION* pSession, SERVICE* pService)
 {
     CacheFilterSession* pCacheFilterSession = NULL;
-    auto db = pSession->database();
-    char* zDefaultDb = NULL;
+    auto db                                 = pSession->database();
+    char* zDefaultDb                        = NULL;
 
     if (!db.empty())
     {
@@ -353,10 +339,8 @@ CacheFilterSession* CacheFilterSession::create(std::unique_ptr<SessionCache> sCa
 
     if (db.empty() || zDefaultDb)
     {
-        pCacheFilterSession = new(std::nothrow) CacheFilterSession(pSession,
-                                                                   pService,
-                                                                   std::move(sCache),
-                                                                   zDefaultDb);
+        pCacheFilterSession
+            = new (std::nothrow) CacheFilterSession(pSession, pService, std::move(sCache), zDefaultDb);
 
         if (!pCacheFilterSession)
         {
@@ -367,9 +351,7 @@ CacheFilterSession* CacheFilterSession::create(std::unique_ptr<SessionCache> sCa
     return pCacheFilterSession;
 }
 
-void CacheFilterSession::close()
-{
-}
+void CacheFilterSession::close() {}
 
 int CacheFilterSession::routeQuery(GWBUF* pPacket)
 {
@@ -408,31 +390,31 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
 
     int rv = 1;
 
-    switch ((int)MYSQL_GET_COMMAND(pData))
+    switch ((int) MYSQL_GET_COMMAND(pData))
     {
     case MXS_COM_INIT_DB:
-        {
-            mxb_assert(!m_zUseDb);
-            size_t len = MYSQL_GET_PAYLOAD_LEN(pData) - 1;      // Remove the command byte.
-            m_zUseDb = (char*)MXS_MALLOC(len + 1);
+    {
+        mxb_assert(!m_zUseDb);
+        size_t len = MYSQL_GET_PAYLOAD_LEN(pData) - 1;  // Remove the command byte.
+        m_zUseDb   = (char*) MXS_MALLOC(len + 1);
 
-            if (m_zUseDb)
-            {
-                memcpy(m_zUseDb, (char*)(pData + MYSQL_HEADER_LEN + 1), len);
-                m_zUseDb[len] = 0;
-                m_state = CACHE_EXPECTING_USE_RESPONSE;
-            }
-            else
-            {
-                // Memory allocation failed. We need to remove the default database to
-                // prevent incorrect cache entries, since we won't know what the
-                // default db is. But we only need to do that if "USE <db>" really
-                // succeeds. The right thing will happen by itself in
-                // handle_expecting_use_response(); if OK is returned, default_db will
-                // become NULL, if ERR, default_db will not be changed.
-            }
+        if (m_zUseDb)
+        {
+            memcpy(m_zUseDb, (char*) (pData + MYSQL_HEADER_LEN + 1), len);
+            m_zUseDb[len] = 0;
+            m_state       = CACHE_EXPECTING_USE_RESPONSE;
         }
-        break;
+        else
+        {
+            // Memory allocation failed. We need to remove the default database to
+            // prevent incorrect cache entries, since we won't know what the
+            // default db is. But we only need to do that if "USE <db>" really
+            // succeeds. The right thing will happen by itself in
+            // handle_expecting_use_response(); if OK is returned, default_db will
+            // become NULL, if ERR, default_db will not be changed.
+        }
+    }
+    break;
 
     case MXS_COM_STMT_PREPARE:
         if (log_decisions())
@@ -464,9 +446,8 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
     return rv;
 }
 
-int CacheFilterSession::client_reply_post_process(GWBUF* pData,
-                                                  const mxs::ReplyRoute& down,
-                                                  const mxs::Reply& reply)
+int CacheFilterSession::client_reply_post_process(
+    GWBUF* pData, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     switch (m_state)
     {
@@ -502,7 +483,7 @@ void CacheFilterSession::clear_cache()
     {
         MXS_ERROR("Could not clear the cache, which is now in "
                   "inconsistent state. Caching will now be disabled.");
-        m_use = false;
+        m_use      = false;
         m_populate = false;
     }
 }
@@ -563,24 +544,23 @@ int CacheFilterSession::clientReply(GWBUF* pData, const mxs::ReplyRoute& down, c
 
                     std::weak_ptr<CacheFilterSession> sWeak {m_sThis};
 
-                    cache_result_t result =
-                        m_sCache->invalidate(invalidation_words,
-                                             [sWeak, pData, down, reply](cache_result_t result) {
-                                                 std::shared_ptr<CacheFilterSession> sThis = sWeak.lock();
+                    cache_result_t result = m_sCache->invalidate(invalidation_words,
+                        [sWeak, pData, down, reply](cache_result_t result) {
+                        std::shared_ptr<CacheFilterSession> sThis = sWeak.lock();
 
-                                                 if (sThis)
-                                                 {
-                                                     sThis->invalidate_handler(result);
+                        if (sThis)
+                        {
+                            sThis->invalidate_handler(result);
 
-                                                     sThis->client_reply_post_process(pData, down, reply);
-                                                 }
-                                                 else
-                                                 {
-                                                    // Ok, so the session was terminated before
-                                                    // we got a reply.
-                                                     gwbuf_free(pData);
-                                                 }
-                                             });
+                            sThis->client_reply_post_process(pData, down, reply);
+                        }
+                        else
+                        {
+                            // Ok, so the session was terminated before
+                            // we got a reply.
+                            gwbuf_free(pData);
+                        }
+                    });
 
                     if (CACHE_RESULT_IS_PENDING(result))
                     {
@@ -603,7 +583,7 @@ int CacheFilterSession::clientReply(GWBUF* pData, const mxs::ReplyRoute& down, c
             // only after the callback is called.
             m_tables.clear();
             m_invalidate_now = false;
-            m_clear_cache = false;
+            m_clear_cache    = false;
         }
     }
 
@@ -668,7 +648,7 @@ void CacheFilterSession::handle_expecting_use_response(const mxs::Reply& reply)
         // entries in the cache.
         MXS_FREE(m_zDefaultDb);
         m_zDefaultDb = m_zUseDb;
-        m_zUseDb = NULL;
+        m_zUseDb     = NULL;
     }
 
     prepare_response();
@@ -688,7 +668,7 @@ void CacheFilterSession::handle_storing_response(const mxs::ReplyRoute& down, co
         if (log_decisions())
         {
             MXS_NOTICE("Current resultset size exceeds maximum allowed size %s. Not caching.",
-                       mxb::pretty_size(m_sCache->config().max_resultset_size).c_str());
+                mxb::pretty_size(m_sCache->config().max_resultset_size).c_str());
         }
 
         prepare_response();
@@ -708,8 +688,9 @@ void CacheFilterSession::handle_storing_response(const mxs::ReplyRoute& down, co
     {
         if (log_decisions())
         {
-            MXS_NOTICE("Result collected, rows: %lu, size: %s", reply.rows_read(),
-                       mxb::pretty_size(reply.size()).c_str());
+            MXS_NOTICE("Result collected, rows: %lu, size: %s",
+                reply.rows_read(),
+                mxb::pretty_size(reply.size()).c_str());
         }
 
         store_and_prepare_response(down, reply);
@@ -738,7 +719,7 @@ void CacheFilterSession::prepare_response()
     mxb_assert(m_res);
     mxb_assert(!m_next_response);
     m_next_response = m_res;
-    m_res = NULL;
+    m_res           = NULL;
 }
 
 /**
@@ -747,8 +728,8 @@ void CacheFilterSession::prepare_response()
 int CacheFilterSession::flush_response(const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     GWBUF* next_response = m_next_response;
-    m_next_response = nullptr;
-    int rv = 1;
+    m_next_response      = nullptr;
+    int rv               = 1;
 
     if (next_response)
     {
@@ -789,20 +770,20 @@ void CacheFilterSession::store_and_prepare_response(const mxs::ReplyRoute& down,
 
     std::weak_ptr<CacheFilterSession> sWeak {m_sThis};
 
-    cache_result_t result = m_sCache->put_value(m_key, invalidation_words, m_res,
-                                                [sWeak, down, reply](cache_result_t result) {
-                                                    auto sThis = sWeak.lock();
+    cache_result_t result
+        = m_sCache->put_value(m_key, invalidation_words, m_res, [sWeak, down, reply](cache_result_t result) {
+              auto sThis = sWeak.lock();
 
-                                                    // If we do not have an sThis, then the session
-                                                    // has been terminated.
-                                                    if (sThis)
-                                                    {
-                                                        if (sThis->put_value_handler(result, down, reply))
-                                                        {
-                                                            sThis->flush_response(down, reply);
-                                                        }
-                                                    }
-                                                });
+              // If we do not have an sThis, then the session
+              // has been terminated.
+              if (sThis)
+              {
+                  if (sThis->put_value_handler(result, down, reply))
+                  {
+                      sThis->flush_response(down, reply);
+                  }
+              }
+          });
 
     if (!CACHE_RESULT_IS_PENDING(result))
     {
@@ -834,11 +815,11 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
 
     if (m_use || m_populate)
     {
-        uint32_t type_mask = qc_get_trx_type_mask(pPacket);     // Note, only trx-related type mask
+        uint32_t type_mask = qc_get_trx_type_mask(pPacket);  // Note, only trx-related type mask
 
-        const char* zPrimary_reason = NULL;
+        const char* zPrimary_reason   = NULL;
         const char* zSecondary_reason = "";
-        const CacheConfig& config = m_sCache->config();
+        const CacheConfig& config     = m_sCache->config();
 
         if (qc_query_is_type(type_mask, QUERY_TYPE_BEGIN_TRX))
         {
@@ -899,9 +880,8 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
 
                 if (log_decisions())
                 {
-                    zPrimary_reason =
-                        "populating but not using cache inside transaction that is not "
-                        "explicitly read-only, but that has used only SELECTs sofar";
+                    zPrimary_reason = "populating but not using cache inside transaction that is not "
+                                      "explicitly read-only, but that has used only SELECTs sofar";
                 }
                 action = CACHE_POPULATE;
             }
@@ -933,22 +913,22 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
 
                         if (qc_query_is_type(type_mask, QUERY_TYPE_USERVAR_READ))
                         {
-                            action = CACHE_IGNORE;
+                            action          = CACHE_IGNORE;
                             zPrimary_reason = "user variables are read";
                         }
                         else if (qc_query_is_type(type_mask, QUERY_TYPE_SYSVAR_READ))
                         {
-                            action = CACHE_IGNORE;
+                            action          = CACHE_IGNORE;
                             zPrimary_reason = "system variables are read";
                         }
                         else if (uses_non_cacheable_function(pPacket))
                         {
-                            action = CACHE_IGNORE;
+                            action          = CACHE_IGNORE;
                             zPrimary_reason = "uses non-cacheable function";
                         }
                         else if (uses_non_cacheable_variable(pPacket))
                         {
-                            action = CACHE_IGNORE;
+                            action          = CACHE_IGNORE;
                             zPrimary_reason = "uses non-cacheable variable";
                         }
                     }
@@ -975,16 +955,14 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
 
                             if (m_sCache->config().clear_cache_on_parse_errors)
                             {
-                                zSuffix =
-                                    "The option clear_cache_on_parse_errors is true, "
-                                    "the cache will be cleared.";
+                                zSuffix       = "The option clear_cache_on_parse_errors is true, "
+                                                "the cache will be cleared.";
                                 m_clear_cache = true;
                             }
                             else
                             {
-                                zSuffix =
-                                    "The option clear_cache_on_parse_errors is false, "
-                                    "no invalidation will take place.";
+                                zSuffix       = "The option clear_cache_on_parse_errors is false, "
+                                                "no invalidation will take place.";
                                 m_clear_cache = false;
                             }
 
@@ -1003,7 +981,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
                     // are not explicitly read-only.
                     m_is_read_only = false;
 
-                    action = CACHE_IGNORE;
+                    action          = CACHE_IGNORE;
                     zPrimary_reason = "statement is not SELECT";
                 }
             }
@@ -1013,12 +991,12 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
         {
             if (!m_use)
             {
-                action = CACHE_POPULATE;
+                action            = CACHE_POPULATE;
                 zSecondary_reason = ", but usage disabled";
             }
             else if (!m_populate)
             {
-                action = CACHE_USE;
+                action            = CACHE_USE;
                 zSecondary_reason = ", but populating disabled";
             }
         }
@@ -1026,7 +1004,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
         {
             if (!m_use)
             {
-                action = CACHE_IGNORE;
+                action            = CACHE_IGNORE;
                 zSecondary_reason = ", but usage disabled";
             }
         }
@@ -1034,7 +1012,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
         {
             if (!m_populate)
             {
-                action = CACHE_IGNORE;
+                action            = CACHE_IGNORE;
                 zSecondary_reason = ", but populating disabled";
             }
         }
@@ -1057,7 +1035,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
             else
             {
                 zFormat = "%s, \"%.*s...\", %s%s.";
-                length = max_length - 3;    // strlen("...");
+                length  = max_length - 3;  // strlen("...");
             }
 
             const char* zDecision = (action == CACHE_IGNORE) ? "IGNORE" : "CONSULT";
@@ -1081,7 +1059,7 @@ void CacheFilterSession::update_table_names(GWBUF* pPacket)
 {
     mxb_assert(m_tables.empty());
 
-    const bool fullnames = true;
+    const bool fullnames            = true;
     std::vector<std::string> tables = qc_get_table_names(pPacket, fullnames);
 
     for (auto& table : tables)
@@ -1116,11 +1094,11 @@ void CacheFilterSession::update_table_names(GWBUF* pPacket)
  */
 CacheFilterSession::routing_action_t CacheFilterSession::route_COM_QUERY(GWBUF* pPacket)
 {
-    MXB_AT_DEBUG(uint8_t * pData = static_cast<uint8_t*>(GWBUF_DATA(pPacket)));
-    mxb_assert((int)MYSQL_GET_COMMAND(pData) == MXS_COM_QUERY);
+    MXB_AT_DEBUG(uint8_t* pData = static_cast<uint8_t*>(GWBUF_DATA(pPacket)));
+    mxb_assert((int) MYSQL_GET_COMMAND(pData) == MXS_COM_QUERY);
 
     routing_action_t routing_action = ROUTING_CONTINUE;
-    cache_action_t cache_action = get_cache_action(pPacket);
+    cache_action_t cache_action     = get_cache_action(pPacket);
 
     if (cache_action != CACHE_IGNORE)
     {
@@ -1154,7 +1132,6 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_COM_QUERY(GWBUF* 
     return routing_action;
 }
 
-
 /**
  * Routes a SELECT packet.
  *
@@ -1166,9 +1143,8 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_COM_QUERY(GWBUF* 
  *         (as the data is obtained from the cache) or
  *         ROUTING_CONTINUE if the normal processing should continue.
  */
-CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_action_t cache_action,
-                                                                      const CacheRules& rules,
-                                                                      GWBUF* pPacket)
+CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(
+    cache_action_t cache_action, const CacheRules& rules, GWBUF* pPacket)
 {
     routing_action_t routing_action = ROUTING_CONTINUE;
 
@@ -1177,36 +1153,36 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
         std::weak_ptr<CacheFilterSession> sWeak {m_sThis};
 
         auto cb = [sWeak, pPacket](cache_result_t result, GWBUF* pResponse) {
-                std::shared_ptr<CacheFilterSession> sThis = sWeak.lock();
+            std::shared_ptr<CacheFilterSession> sThis = sWeak.lock();
 
-                if (sThis)
+            if (sThis)
+            {
+                auto routing_action = sThis->get_value_handler(pPacket, result, pResponse);
+
+                if (routing_action == ROUTING_CONTINUE)
                 {
-                    auto routing_action = sThis->get_value_handler(pPacket, result, pResponse);
-
-                    if (routing_action == ROUTING_CONTINUE)
-                    {
-                        sThis->continue_routing(pPacket);
-                    }
-                    else
-                    {
-                        mxb_assert(pResponse);
-                        // State is ROUTING_ABORT, which implies that pResponse contains the
-                        // needed response. All we need to do is to send it to the client.
-
-                        mxs::ReplyRoute down;
-                        mxs::Reply reply;
-
-                        sThis->m_up.clientReply(pResponse, down, reply);
-                        sThis->ready_for_another_call();
-                    }
+                    sThis->continue_routing(pPacket);
                 }
                 else
                 {
-                    // Ok, so the session was terminated before we got a reply.
-                    gwbuf_free(pPacket);
-                    gwbuf_free(pResponse);
+                    mxb_assert(pResponse);
+                    // State is ROUTING_ABORT, which implies that pResponse contains the
+                    // needed response. All we need to do is to send it to the client.
+
+                    mxs::ReplyRoute down;
+                    mxs::Reply reply;
+
+                    sThis->m_up.clientReply(pResponse, down, reply);
+                    sThis->ready_for_another_call();
                 }
-            };
+            }
+            else
+            {
+                // Ok, so the session was terminated before we got a reply.
+                gwbuf_free(pPacket);
+                gwbuf_free(pResponse);
+            }
+        };
 
         uint32_t flags = CACHE_FLAGS_INCLUDE_STALE;
         GWBUF* pResponse;
@@ -1262,26 +1238,24 @@ bool get_truth_value(const char* begin, const char* end, bool* pValue)
 {
     bool rv = false;
 
-    static const char ZTRUE[] = "true";
+    static const char ZTRUE[]  = "true";
     static const char ZFALSE[] = "false";
 
-    static const size_t nTrue = sizeof(ZTRUE) - 1;
+    static const size_t nTrue  = sizeof(ZTRUE) - 1;
     static const size_t nFalse = sizeof(ZFALSE) - 1;
 
     size_t len = (end - begin);
 
-    if (((len == nTrue) && (strncasecmp(begin, ZTRUE, nTrue) == 0))
-        || ((len == 1) && (*begin == '1')))
+    if (((len == nTrue) && (strncasecmp(begin, ZTRUE, nTrue) == 0)) || ((len == 1) && (*begin == '1')))
     {
         *pValue = true;
-        rv = true;
+        rv      = true;
     }
     else if (((len == nFalse) && (strncasecmp(begin, ZFALSE, nFalse) == 0))
              || ((len == 1) && (*begin == '0')))
     {
-
         *pValue = false;
-        rv = true;
+        rv      = true;
     }
 
     return rv;
@@ -1306,7 +1280,7 @@ bool get_uint32_value(const char* begin, const char* end, uint32_t* pValue)
         if (l >= 0)
         {
             *pValue = l;
-            rv = true;
+            rv      = true;
         }
     }
 
@@ -1316,7 +1290,7 @@ bool get_uint32_value(const char* begin, const char* end, uint32_t* pValue)
 char* create_bool_error_message(const char* zName, const char* pValue_begin, const char* pValue_end)
 {
     static const char FORMAT[] = "The variable %s can only have the values true/false/1/0";
-    int n = snprintf(NULL, 0, FORMAT, zName) + 1;
+    int n                      = snprintf(NULL, 0, FORMAT, zName) + 1;
 
     char* zMessage = static_cast<char*>(MXS_MALLOC(n));
 
@@ -1326,10 +1300,7 @@ char* create_bool_error_message(const char* zName, const char* pValue_begin, con
     }
 
     int len = pValue_end - pValue_begin;
-    MXS_WARNING("Attempt to set the variable %s to the invalid value \"%.*s\".",
-                zName,
-                len,
-                pValue_begin);
+    MXS_WARNING("Attempt to set the variable %s to the invalid value \"%.*s\".", zName, len, pValue_begin);
 
     return zMessage;
 }
@@ -1337,7 +1308,7 @@ char* create_bool_error_message(const char* zName, const char* pValue_begin, con
 char* create_uint32_error_message(const char* zName, const char* pValue_begin, const char* pValue_end)
 {
     static const char FORMAT[] = "The variable %s can have as value 0 or a positive integer.";
-    int n = snprintf(NULL, 0, FORMAT, zName) + 1;
+    int n                      = snprintf(NULL, 0, FORMAT, zName) + 1;
 
     char* zMessage = static_cast<char*>(MXS_MALLOC(n));
 
@@ -1347,18 +1318,14 @@ char* create_uint32_error_message(const char* zName, const char* pValue_begin, c
     }
 
     int len = pValue_end - pValue_begin;
-    MXS_WARNING("Attempt to set the variable %s to the invalid value \"%.*s\".",
-                zName,
-                len,
-                pValue_begin);
+    MXS_WARNING("Attempt to set the variable %s to the invalid value \"%.*s\".", zName, len, pValue_begin);
 
     return zMessage;
 }
-}
+}  // namespace
 
-char* CacheFilterSession::set_cache_populate(const char* zName,
-                                             const char* pValue_begin,
-                                             const char* pValue_end)
+char* CacheFilterSession::set_cache_populate(
+    const char* zName, const char* pValue_begin, const char* pValue_end)
 {
     mxb_assert(strcmp(SV_MAXSCALE_CACHE_POPULATE, zName) == 0);
 
@@ -1378,9 +1345,7 @@ char* CacheFilterSession::set_cache_populate(const char* zName,
     return zMessage;
 }
 
-char* CacheFilterSession::set_cache_use(const char* zName,
-                                        const char* pValue_begin,
-                                        const char* pValue_end)
+char* CacheFilterSession::set_cache_use(const char* zName, const char* pValue_begin, const char* pValue_end)
 {
     mxb_assert(strcmp(SV_MAXSCALE_CACHE_USE, zName) == 0);
 
@@ -1400,9 +1365,8 @@ char* CacheFilterSession::set_cache_use(const char* zName,
     return zMessage;
 }
 
-char* CacheFilterSession::set_cache_soft_ttl(const char* zName,
-                                             const char* pValue_begin,
-                                             const char* pValue_end)
+char* CacheFilterSession::set_cache_soft_ttl(
+    const char* zName, const char* pValue_begin, const char* pValue_end)
 {
     mxb_assert(strcmp(SV_MAXSCALE_CACHE_SOFT_TTL, zName) == 0);
 
@@ -1424,9 +1388,8 @@ char* CacheFilterSession::set_cache_soft_ttl(const char* zName,
     return zMessage;
 }
 
-char* CacheFilterSession::set_cache_hard_ttl(const char* zName,
-                                             const char* pValue_begin,
-                                             const char* pValue_end)
+char* CacheFilterSession::set_cache_hard_ttl(
+    const char* zName, const char* pValue_begin, const char* pValue_end)
 {
     mxb_assert(strcmp(SV_MAXSCALE_CACHE_HARD_TTL, zName) == 0);
 
@@ -1449,10 +1412,8 @@ char* CacheFilterSession::set_cache_hard_ttl(const char* zName,
 }
 
 // static
-char* CacheFilterSession::set_cache_populate(void* pContext,
-                                             const char* zName,
-                                             const char* pValue_begin,
-                                             const char* pValue_end)
+char* CacheFilterSession::set_cache_populate(
+    void* pContext, const char* zName, const char* pValue_begin, const char* pValue_end)
 {
     CacheFilterSession* pThis = static_cast<CacheFilterSession*>(pContext);
 
@@ -1460,10 +1421,8 @@ char* CacheFilterSession::set_cache_populate(void* pContext,
 }
 
 // static
-char* CacheFilterSession::set_cache_use(void* pContext,
-                                        const char* zName,
-                                        const char* pValue_begin,
-                                        const char* pValue_end)
+char* CacheFilterSession::set_cache_use(
+    void* pContext, const char* zName, const char* pValue_begin, const char* pValue_end)
 {
     CacheFilterSession* pThis = static_cast<CacheFilterSession*>(pContext);
 
@@ -1471,10 +1430,8 @@ char* CacheFilterSession::set_cache_use(void* pContext,
 }
 
 // static
-char* CacheFilterSession::set_cache_soft_ttl(void* pContext,
-                                             const char* zName,
-                                             const char* pValue_begin,
-                                             const char* pValue_end)
+char* CacheFilterSession::set_cache_soft_ttl(
+    void* pContext, const char* zName, const char* pValue_begin, const char* pValue_end)
 {
     CacheFilterSession* pThis = static_cast<CacheFilterSession*>(pContext);
 
@@ -1482,19 +1439,16 @@ char* CacheFilterSession::set_cache_soft_ttl(void* pContext,
 }
 
 // static
-char* CacheFilterSession::set_cache_hard_ttl(void* pContext,
-                                             const char* zName,
-                                             const char* pValue_begin,
-                                             const char* pValue_end)
+char* CacheFilterSession::set_cache_hard_ttl(
+    void* pContext, const char* zName, const char* pValue_begin, const char* pValue_end)
 {
     CacheFilterSession* pThis = static_cast<CacheFilterSession*>(pContext);
 
     return pThis->set_cache_hard_ttl(zName, pValue_begin, pValue_end);
 }
 
-bool CacheFilterSession::put_value_handler(cache_result_t result,
-                                           const mxs::ReplyRoute& down,
-                                           const mxs::Reply& reply)
+bool CacheFilterSession::put_value_handler(
+    cache_result_t result, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     bool rv = true;
 
@@ -1508,18 +1462,17 @@ bool CacheFilterSession::put_value_handler(cache_result_t result,
 
         std::weak_ptr<CacheFilterSession> sWeak {m_sThis};
 
-        result = m_sCache->del_value(m_key,
-                                     [sWeak, down, reply](cache_result_t result) {
-                                         auto sThis = sWeak.lock();
+        result = m_sCache->del_value(m_key, [sWeak, down, reply](cache_result_t result) {
+            auto sThis = sWeak.lock();
 
-                                        // If we do not have an sThis, then the session
-                                        // has been terminated.
-                                         if (sThis)
-                                         {
-                                             sThis->del_value_handler(result);
-                                             sThis->flush_response(down, reply);
-                                         }
-                                     });
+            // If we do not have an sThis, then the session
+            // has been terminated.
+            if (sThis)
+            {
+                sThis->del_value_handler(result);
+                sThis->flush_response(down, reply);
+            }
+        });
 
         if (CACHE_RESULT_IS_PENDING(result))
         {
@@ -1544,9 +1497,8 @@ void CacheFilterSession::del_value_handler(cache_result_t result)
     prepare_response();
 }
 
-CacheFilterSession::routing_action_t CacheFilterSession::get_value_handler(GWBUF* pPacket,
-                                                                           cache_result_t result,
-                                                                           GWBUF* pResponse)
+CacheFilterSession::routing_action_t CacheFilterSession::get_value_handler(
+    GWBUF* pPacket, cache_result_t result, GWBUF* pResponse)
 {
     routing_action_t routing_action = ROUTING_CONTINUE;
 
@@ -1569,7 +1521,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::get_value_handler(GWBUF
                 // As we don't use the response it must be freed.
                 gwbuf_free(pResponse);
 
-                m_refreshing = true;
+                m_refreshing   = true;
                 routing_action = ROUTING_CONTINUE;
             }
             else
@@ -1672,25 +1624,25 @@ void CacheFilterSession::ready_for_another_call()
         Worker* pWorker = Worker::get_current();
 
         m_did = pWorker->delayed_call(0, [this](Worker::Call::action_t action) {
-                m_did = 0;
+            m_did = 0;
 
-                if (action == Worker::Call::EXECUTE)
+            if (action == Worker::Call::EXECUTE)
+            {
+                // We may already be processing, if a packet arrived from the client
+                // and processed, before the delayed call got handled.
+                if (!m_processing)
                 {
-                    // We may already be processing, if a packet arrived from the client
-                    // and processed, before the delayed call got handled.
-                    if (!m_processing)
+                    if (!m_queued_packets.empty())
                     {
-                        if (!m_queued_packets.empty())
-                        {
-                            GWBUF* pPacket = m_queued_packets.front().release();
-                            mxb_assert(pPacket);
-                            m_queued_packets.pop_front();
+                        GWBUF* pPacket = m_queued_packets.front().release();
+                        mxb_assert(pPacket);
+                        m_queued_packets.pop_front();
 
-                            routeQuery(pPacket);
-                        }
+                        routeQuery(pPacket);
                     }
                 }
-                return false;
-            });
+            }
+            return false;
+        });
     }
 }

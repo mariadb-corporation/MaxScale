@@ -24,7 +24,7 @@
 static char* rstrip(char* s)
 {
     char* p = s + strlen(s);
-    while (p > s && isspace((unsigned char)(*--p)))
+    while (p > s && isspace((unsigned char) (*--p)))
     {
         *p = '\0';
     }
@@ -34,11 +34,11 @@ static char* rstrip(char* s)
 /* Return pointer to first non-whitespace char in given string. */
 static char* lskip(const char* s)
 {
-    while (*s && isspace((unsigned char)(*s)))
+    while (*s && isspace((unsigned char) (*s)))
     {
         s++;
     }
-    return (char*)s;
+    return (char*) s;
 }
 
 /* Return pointer to first char c or ';' comment in given string, or pointer to
@@ -49,10 +49,10 @@ static char* find_char_or_comment(const char* s, char c)
     int was_whitespace = 0;
     while (*s && *s != c && !(was_whitespace && *s == ';'))
     {
-        was_whitespace = isspace((unsigned char)(*s));
+        was_whitespace = isspace((unsigned char) (*s));
         s++;
     }
-    return (char*)s;
+    return (char*) s;
 }
 
 /* Version of strncpy that ensures dest (size bytes) is null-terminated. */
@@ -64,12 +64,7 @@ static char* strncpy0(char* dest, const char* src, size_t size)
 }
 
 /* See documentation in header file. */
-int ini_parse_file(FILE* file,
-                   int (* handler)(void*,
-                                   const char*,
-                                   const char*,
-                                   const char*),
-                   void* user)
+int ini_parse_file(FILE* file, int (*handler)(void*, const char*, const char*, const char*), void* user)
 {
     /* Uses a fair bit of stack (use heap instead if you need to) */
 #if INI_USE_STACK
@@ -78,17 +73,17 @@ int ini_parse_file(FILE* file,
     char* line;
 #endif
     char section[MAX_SECTION] = "";
-    char prev_name[MAX_NAME] = "";
+    char prev_name[MAX_NAME]  = "";
 
     char* start;
     char* end;
     char* name;
     char* value;
     int lineno = 0;
-    int error = 0;
+    int error  = 0;
 
 #if !INI_USE_STACK
-    line = (char*)malloc(INI_MAX_LINE);
+    line = (char*) malloc(INI_MAX_LINE);
     if (!line)
     {
         return -2;
@@ -102,9 +97,8 @@ int ini_parse_file(FILE* file,
 
         start = line;
 #if INI_ALLOW_BOM
-        if (lineno == 1 && (unsigned char)start[0] == 0xEF
-            && (unsigned char)start[1] == 0xBB
-            && (unsigned char)start[2] == 0xBF)
+        if (lineno == 1 && (unsigned char) start[0] == 0xEF && (unsigned char) start[1] == 0xBB
+            && (unsigned char) start[2] == 0xBF)
         {
             start += 3;
         }
@@ -152,10 +146,10 @@ int ini_parse_file(FILE* file,
             }
             if (*end == '=' || *end == ':')
             {
-                *end = '\0';
-                name = rstrip(start);
+                *end  = '\0';
+                name  = rstrip(start);
                 value = lskip(end + 1);
-                end = find_char_or_comment(value, '\0');
+                end   = find_char_or_comment(value, '\0');
                 if (*end == ';')
                 {
                     *end = '\0';
@@ -185,9 +179,7 @@ int ini_parse_file(FILE* file,
 }
 
 /* See documentation in header file. */
-int ini_parse(const char* filename,
-              int (* handler)(void*, const char*, const char*, const char*),
-              void* user)
+int ini_parse(const char* filename, int (*handler)(void*, const char*, const char*, const char*), void* user)
 {
     FILE* file;
     int error;

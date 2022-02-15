@@ -25,16 +25,16 @@ public:
 
     static MySQLProtocolModule* create();
 
-    std::unique_ptr<mxs::ClientConnection>
-    create_client_protocol(MXS_SESSION* session, mxs::Component* component) override;
+    std::unique_ptr<mxs::ClientConnection> create_client_protocol(
+        MXS_SESSION* session, mxs::Component* component) override;
 
-    std::unique_ptr<mxs::BackendConnection>
-    create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component) override;
+    std::unique_ptr<mxs::BackendConnection> create_backend_protocol(
+        MXS_SESSION* session, SERVER* server, mxs::Component* component) override;
 
     std::string auth_default() const override;
-    GWBUF*      reject(const std::string& host) override;
+    GWBUF* reject(const std::string& host) override;
 
-    uint64_t    capabilities() const override;
+    uint64_t capabilities() const override;
     std::string name() const override;
 
     std::unique_ptr<mxs::UserAccountManager> create_user_data_manager() override;

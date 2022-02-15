@@ -18,7 +18,7 @@
 class RedisStorage : public Storage
 {
 public:
-    RedisStorage(const RedisStorage&) = delete;
+    RedisStorage(const RedisStorage&)            = delete;
     RedisStorage& operator=(const RedisStorage&) = delete;
 
     static bool initialize(cache_storage_kind_t* pKind, uint32_t* pCapabilities);
@@ -26,9 +26,7 @@ public:
 
     ~RedisStorage();
 
-    static RedisStorage* create(const std::string& name,
-                                const Config& config,
-                                const std::string& arguments);
+    static RedisStorage* create(const std::string& name, const Config& config, const std::string& arguments);
 
     bool create_token(std::shared_ptr<Token>* psToken) override final;
 
@@ -37,23 +35,22 @@ public:
 
     cache_result_t get_info(uint32_t what, json_t** ppInfo) const override final;
     cache_result_t get_value(Token* pToken,
-                             const CacheKey& key,
-                             uint32_t flags,
-                             uint32_t soft_ttl,
-                             uint32_t hard_ttl,
-                             GWBUF** ppResult,
-                             const std::function<void (cache_result_t, GWBUF*)>& cb) override final;
+        const CacheKey& key,
+        uint32_t flags,
+        uint32_t soft_ttl,
+        uint32_t hard_ttl,
+        GWBUF** ppResult,
+        const std::function<void(cache_result_t, GWBUF*)>& cb) override final;
     cache_result_t put_value(Token* pToken,
-                             const CacheKey& key,
-                             const std::vector<std::string>& invalidation_words,
-                             const GWBUF* pValue,
-                             const std::function<void (cache_result_t)>& cb) override final;
-    cache_result_t del_value(Token* pToken,
-                             const CacheKey& key,
-                             const std::function<void (cache_result_t)>& cb) override final;
+        const CacheKey& key,
+        const std::vector<std::string>& invalidation_words,
+        const GWBUF* pValue,
+        const std::function<void(cache_result_t)>& cb) override final;
+    cache_result_t del_value(
+        Token* pToken, const CacheKey& key, const std::function<void(cache_result_t)>& cb) override final;
     cache_result_t invalidate(Token* pToken,
-                              const std::vector<std::string>& words,
-                              const std::function<void (cache_result_t)>& cb) override final;
+        const std::vector<std::string>& words,
+        const std::function<void(cache_result_t)>& cb) override final;
     cache_result_t clear(Token* pToken) override final;
 
     cache_result_t get_head(CacheKey* pKey, GWBUF** ppHead) override final;
@@ -62,15 +59,12 @@ public:
     cache_result_t get_items(uint64_t* pItems) const override final;
 
 private:
-    RedisStorage(const std::string& name,
-                 const Config& config,
-                 const std::string& host,
-                 int port);
+    RedisStorage(const std::string& name, const Config& config, const std::string& host, int port);
 
     const std::string m_name;
-    const Config      m_config;
+    const Config m_config;
     const std::string m_host;
-    const int         m_port;
-    bool              m_invalidate;
-    uint32_t          m_ttl;
+    const int m_port;
+    bool m_invalidate;
+    uint32_t m_ttl;
 };

@@ -17,16 +17,15 @@
 #include <maxscale/customparser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 
-
 class SetParser : public maxscale::CustomParser
 {
 public:
     enum status_t
     {
-        ERROR,          // Some fatal error occurred; mem alloc failed, parsing failed, etc.
-        IS_SET_SQL_MODE,// The COM_QUERY is "set [GLOBAL|SESSION] sql_mode=..."
-        IS_SET_MAXSCALE,// The COM_QUERY is "set @MAXSCALE..."
-        NOT_RELEVANT    // Neither of the above.
+        ERROR,            // Some fatal error occurred; mem alloc failed, parsing failed, etc.
+        IS_SET_SQL_MODE,  // The COM_QUERY is "set [GLOBAL|SESSION] sql_mode=..."
+        IS_SET_MAXSCALE,  // The COM_QUERY is "set @MAXSCALE..."
+        NOT_RELEVANT      // Neither of the above.
     };
 
     enum
@@ -41,38 +40,23 @@ public:
         TK_MAXSCALE_VAR
     };
 
-    SetParser()
-    {
-    }
+    SetParser() {}
 
     class Result
     {
     public:
         typedef std::pair<const char*, const char*> Item;
-        typedef std::vector<Item>                   Items;
+        typedef std::vector<Item> Items;
 
-        Result()
-        {
-        }
+        Result() {}
 
-        const Items& variables() const
-        {
-            return m_variables;
-        }
-        const Items& values() const
-        {
-            return m_values;
-        }
+        const Items& variables() const { return m_variables; }
 
-        void add_variable(const char* begin, const char* end)
-        {
-            m_variables.push_back(Item(begin, end));
-        }
+        const Items& values() const { return m_values; }
 
-        void add_value(const char* begin, const char* end)
-        {
-            m_values.push_back(Item(begin, end));
-        }
+        void add_variable(const char* begin, const char* end) { m_variables.push_back(Item(begin, end)); }
+
+        void add_value(const char* begin, const char* end) { m_values.push_back(Item(begin, end)); }
 
     private:
         std::vector<Item> m_variables;
@@ -233,20 +217,13 @@ public:
 private:
     static bool is_set(const char* pStmt)
     {
-        return (pStmt[0] == 's' || pStmt[0] == 'S')
-               && (pStmt[1] == 'e' || pStmt[1] == 'E')
-               && (pStmt[2] == 't' || pStmt[2] == 'T');
+        return (pStmt[0] == 's' || pStmt[0] == 'S') && (pStmt[1] == 'e' || pStmt[1] == 'E')
+            && (pStmt[2] == 't' || pStmt[2] == 'T');
     }
 
-    static bool is_set(const uint8_t* pStmt)
-    {
-        return is_set(reinterpret_cast<const char*>(pStmt));
-    }
+    static bool is_set(const uint8_t* pStmt) { return is_set(reinterpret_cast<const char*>(pStmt)); }
 
-    static bool is_error(status_t rv)
-    {
-        return rv == ERROR;
-    }
+    static bool is_error(status_t rv) { return rv == ERROR; }
 
     status_t initialize(GWBUF* pBuffer)
     {
@@ -258,7 +235,7 @@ private:
         if (modutil_extract_SQL(pBuffer, &pSql, &m_len))
         {
             m_pSql = pSql;
-            m_pI = m_pSql;
+            m_pI   = m_pSql;
             m_pEnd = m_pI + m_len;
         }
 
@@ -277,8 +254,8 @@ private:
 
             ++m_pI;
 
-            while ((m_pI < m_pEnd)
-                   && (is_alpha(*m_pI) || is_number(*m_pI) || (*m_pI == '.') || (*m_pI == '_')))
+            while (
+                (m_pI < m_pEnd) && (is_alpha(*m_pI) || is_number(*m_pI) || (*m_pI == '.') || (*m_pI == '_')))
             {
                 ++m_pI;
             }
@@ -291,8 +268,8 @@ private:
     {
         // Consumes everything until a ',' outside of a commented string, or eol is
         // encountered.
-        bool rv = false;
-        bool consumed = false;
+        bool rv          = false;
+        bool consumed    = false;
         const char* pEnd = NULL;
 
         while ((m_pI < m_pEnd) && (*m_pI != ',') && (*m_pI != ';'))
@@ -302,15 +279,15 @@ private:
             case '\'':
             case '"':
             case '`':
+            {
+                char quote = *m_pI;
+                ++m_pI;
+                while ((m_pI < m_pEnd) && (*m_pI != quote))
                 {
-                    char quote = *m_pI;
                     ++m_pI;
-                    while ((m_pI < m_pEnd) && (*m_pI != quote))
-                    {
-                        ++m_pI;
-                    }
                 }
-                break;
+            }
+            break;
 
             default:
                 ++m_pI;
@@ -329,7 +306,7 @@ private:
 
     status_t parse(Result* pResult)
     {
-        status_t rv = NOT_RELEVANT;
+        status_t rv   = NOT_RELEVANT;
         token_t token = next_token();
 
         switch (token)
@@ -388,7 +365,37 @@ private:
                 break;
 
             case TK_SQL_MODE:
+            {
+                const char* pVariable_end = m_pI;
+
+                if (next_token() == '=')
                 {
+                    pResult->add_variable(pVariable_begin, pVariable_end);
+
+                    bypass_whitespace();
+
+                    const char* pValue_begin = m_pI;
+                    const char* pValue_end;
+
+                    consume_value(&pValue_end);
+
+                    pResult->add_value(pValue_begin, pValue_end);
+
+                    rv = IS_SET_SQL_MODE;
+                }
+                else
+                {
+                    rv = ERROR;
+                }
+            }
+            break;
+
+            case TK_MAXSCALE_VAR:
+            {
+                if (*m_pI == '.')
+                {
+                    ++m_pI;
+                    consume_id();
                     const char* pVariable_end = m_pI;
 
                     if (next_token() == '=')
@@ -404,49 +411,19 @@ private:
 
                         pResult->add_value(pValue_begin, pValue_end);
 
-                        rv = IS_SET_SQL_MODE;
+                        rv = IS_SET_MAXSCALE;
                     }
                     else
                     {
                         rv = ERROR;
                     }
                 }
-                break;
-
-            case TK_MAXSCALE_VAR:
+                else
                 {
-                    if (*m_pI == '.')
-                    {
-                        ++m_pI;
-                        consume_id();
-                        const char* pVariable_end = m_pI;
-
-                        if (next_token() == '=')
-                        {
-                            pResult->add_variable(pVariable_begin, pVariable_end);
-
-                            bypass_whitespace();
-
-                            const char* pValue_begin = m_pI;
-                            const char* pValue_end;
-
-                            consume_value(&pValue_end);
-
-                            pResult->add_value(pValue_begin, pValue_end);
-
-                            rv = IS_SET_MAXSCALE;
-                        }
-                        else
-                        {
-                            rv = ERROR;
-                        }
-                    }
-                    else
-                    {
-                        rv = ERROR;
-                    }
+                    rv = ERROR;
                 }
-                break;
+            }
+            break;
 
             case PARSER_EXHAUSTED:
                 log_exhausted();
@@ -531,9 +508,7 @@ private:
 
             if (m_pI != m_pEnd)
             {
-                MXS_WARNING("Non-space data found after semi-colon: '%.*s'.",
-                            (int)(m_pEnd - m_pI),
-                            m_pI);
+                MXS_WARNING("Non-space data found after semi-colon: '%.*s'.", (int) (m_pEnd - m_pI), m_pI);
             }
 
             token = PARSER_EXHAUSTED;
@@ -600,8 +575,7 @@ private:
                 }
                 break;
 
-            default:
-                ;
+            default:;
             }
         }
 

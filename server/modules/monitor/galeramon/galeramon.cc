@@ -41,10 +41,10 @@ using maxscale::MonitorServer;
 static bool warn_erange_on_local_index = true;
 
 static MonitorServer* set_cluster_master(MonitorServer*, MonitorServer*, int);
-static void           disableMasterFailback(void*, int);
-static int            compare_node_index(const void*, const void*);
-static int            compare_node_priority(const void*, const void*);
-static bool           using_xtrabackup(MonitorServer* database, const char* server_string);
+static void disableMasterFailback(void*, int);
+static int compare_node_index(const void*, const void*);
+static int compare_node_priority(const void*, const void*);
+static bool using_xtrabackup(MonitorServer* database, const char* server_string);
 
 GaleraMonitor::GaleraMonitor(const std::string& name, const std::string& module)
     : MonitorWorkerSimple(name, module)
@@ -56,12 +56,9 @@ GaleraMonitor::GaleraMonitor(const std::string& name, const std::string& module)
     , m_set_donor_nodes(false)
     , m_log_no_members(false)
     , m_cluster_size(0)
-{
-}
+{}
 
-GaleraMonitor::~GaleraMonitor()
-{
-}
+GaleraMonitor::~GaleraMonitor() {}
 
 // static
 GaleraMonitor* GaleraMonitor::create(const std::string& name, const std::string& module)
@@ -136,13 +133,13 @@ bool GaleraMonitor::configure(const mxs::ConfigParameters* params)
         return false;
     }
 
-    m_disableMasterFailback = params->get_bool("disable_master_failback");
-    m_availableWhenDonor = params->get_bool("available_when_donor");
+    m_disableMasterFailback    = params->get_bool("disable_master_failback");
+    m_availableWhenDonor       = params->get_bool("available_when_donor");
     m_disableMasterRoleSetting = params->get_bool("disable_master_role_setting");
-    m_root_node_as_master = params->get_bool("root_node_as_master");
-    m_use_priority = params->get_bool("use_priority");
-    m_set_donor_nodes = params->get_bool("set_donor_nodes");
-    m_log_no_members = true;
+    m_root_node_as_master      = params->get_bool("root_node_as_master");
+    m_use_priority             = params->get_bool("use_priority");
+    m_set_donor_nodes          = params->get_bool("set_donor_nodes");
+    m_log_no_members           = true;
 
     /* Reset all data in the hashtable */
     m_info.clear();
@@ -157,8 +154,8 @@ bool GaleraMonitor::has_sufficient_permissions()
 
 void get_gtid(MonitorServer* srv, GaleraNode* info)
 {
-    if (mxs_mysql_query(srv->con,
-                        "SELECT @@gtid_current_pos, @@gtid_binlog_pos, @@read_only, @@server_id") == 0)
+    if (mxs_mysql_query(srv->con, "SELECT @@gtid_current_pos, @@gtid_binlog_pos, @@read_only, @@server_id")
+        == 0)
     {
         if (auto result = mysql_store_result(srv->con))
         {
@@ -167,9 +164,9 @@ void get_gtid(MonitorServer* srv, GaleraNode* info)
             if (res.next_row())
             {
                 info->gtid_current_pos = res.get_string(0);
-                info->gtid_binlog_pos = res.get_string(1);
-                info->read_only = res.get_bool(2);
-                info->server_id = res.get_int(3);
+                info->gtid_binlog_pos  = res.get_string(1);
+                info->read_only        = res.get_bool(2);
+                info->server_id        = res.get_int(3);
             }
         }
     }
@@ -199,16 +196,15 @@ void GaleraMonitor::update_server_status(MonitorServer* monitored_server)
     std::string server_string = monitored_server->server->info().version_string();
 
     /* Check if the the Galera FSM shows this node is joined to the cluster */
-    const char* where =
-        " WHERE Variable_name IN"
-        " ('wsrep_cluster_state_uuid',"
-        " 'wsrep_cluster_size',"
-        " 'wsrep_local_index',"
-        " 'wsrep_local_state',"
-        " 'wsrep_desync',"
-        " 'wsrep_ready',"
-        " 'wsrep_sst_donor_rejects_queries',"
-        " 'wsrep_reject_queries')";
+    const char* where = " WHERE Variable_name IN"
+                        " ('wsrep_cluster_state_uuid',"
+                        " 'wsrep_cluster_size',"
+                        " 'wsrep_local_index',"
+                        " 'wsrep_local_state',"
+                        " 'wsrep_desync',"
+                        " 'wsrep_ready',"
+                        " 'wsrep_sst_donor_rejects_queries',"
+                        " 'wsrep_reject_queries')";
 
     GaleraNode info = {};
 
@@ -224,8 +220,8 @@ void GaleraMonitor::update_server_status(MonitorServer* monitored_server)
                 mysql_free_result(result);
                 MXS_ERROR("Unexpected result for \"%s\". "
                           "Expected 2 columns. MySQL Version: %s",
-                          cluster_member.c_str(),
-                          server_string.c_str());
+                    cluster_member.c_str(),
+                    server_string.c_str());
                 return;
             }
             while ((row = mysql_fetch_row(result)))
@@ -245,8 +241,8 @@ void GaleraMonitor::update_server_status(MonitorServer* monitored_server)
                         if (warn_erange_on_local_index)
                         {
                             MXS_WARNING("Invalid 'wsrep_local_index' on server '%s': %s",
-                                        monitored_server->server->name(),
-                                        row[1]);
+                                monitored_server->server->name(),
+                                row[1]);
                             warn_erange_on_local_index = false;
                         }
                         local_index = -1;
@@ -349,12 +345,12 @@ void GaleraMonitor::calculate_cluster()
         clusters[a.second.cluster_uuid]++;
     }
 
-    auto it = std::max_element(
-        clusters.begin(), clusters.end(),
+    auto it = std::max_element(clusters.begin(),
+        clusters.end(),
         [](const typename decltype(clusters)::value_type& a,
-           const typename decltype(clusters)::value_type& b) {
-            return a.second == b.second ? a.first < b.first : a.second < b.second;
-        });
+            const typename decltype(clusters)::value_type& b) {
+        return a.second == b.second ? a.first < b.first : a.second < b.second;
+    });
 
     if (it != clusters.end())
     {
@@ -406,8 +402,7 @@ void GaleraMonitor::post_tick()
             }
             else
             {
-                if (candidate_master
-                    && m_master->node_id != candidate_master->node_id)
+                if (candidate_master && m_master->node_id != candidate_master->node_id)
                 {
                     /* set master role and master stickiness */
                     ptr->clear_pending_status(repl_bits);
@@ -428,9 +423,8 @@ void GaleraMonitor::post_tick()
             ptr->clear_pending_status(repl_bits);
 
             if (std::any_of(m_info.begin(), m_info.end(), [master_id](decltype(m_info)::const_reference r) {
-                                return r.first->pending_status & SERVER_JOINED
-                                && r.second.server_id == master_id;
-                            }))
+                    return r.first->pending_status & SERVER_JOINED && r.second.server_id == master_id;
+                }))
             {
                 ptr->set_pending_status(SERVER_SLAVE);
             }
@@ -479,7 +473,7 @@ static bool using_xtrabackup(MonitorServer* database, const char* server_string)
             MXS_ERROR("Unexpected result for \"SHOW VARIABLES LIKE "
                       "'wsrep_sst_method'\". Expected 2 columns."
                       " MySQL Version: %s",
-                      server_string);
+                server_string);
             return false;
         }
 
@@ -487,9 +481,9 @@ static bool using_xtrabackup(MonitorServer* database, const char* server_string)
 
         while ((row = mysql_fetch_row(result)))
         {
-            if (row[1] && (strcmp(row[1], "xtrabackup") == 0
-                           || strcmp(row[1], "mariabackup") == 0
-                           || strcmp(row[1], "xtrabackup-v2") == 0))
+            if (row[1]
+                && (strcmp(row[1], "xtrabackup") == 0 || strcmp(row[1], "mariabackup") == 0
+                    || strcmp(row[1], "xtrabackup-v2") == 0))
             {
                 rval = true;
             }
@@ -516,14 +510,13 @@ static bool using_xtrabackup(MonitorServer* database, const char* server_string)
 MonitorServer* GaleraMonitor::get_candidate_master()
 {
     MonitorServer* candidate_master = NULL;
-    long min_id = -1;
-    int minval = INT_MAX;
+    long min_id                     = -1;
+    int minval                      = INT_MAX;
 
     /* set min_id to the lowest value of moitor_servers->server->node_id */
     for (auto moitor_servers : servers())
     {
-        if (!moitor_servers->server->is_in_maint()
-            && (moitor_servers->pending_status & SERVER_JOINED))
+        if (!moitor_servers->server->is_in_maint() && (moitor_servers->pending_status & SERVER_JOINED))
         {
             int64_t priority = moitor_servers->server->priority();
 
@@ -532,14 +525,13 @@ MonitorServer* GaleraMonitor::get_candidate_master()
                 /** The priority is valid */
                 if (priority < minval)
                 {
-                    minval = priority;
+                    minval           = priority;
                     candidate_master = moitor_servers;
                 }
             }
             else if (moitor_servers->node_id >= 0)
             {
-                if (m_use_priority && candidate_master
-                    && candidate_master->server->priority() > 0)
+                if (m_use_priority && candidate_master && candidate_master->server->priority() > 0)
                 {
                     // Current candidate has priority but this node doesn't, current candidate is better
                     continue;
@@ -548,15 +540,14 @@ MonitorServer* GaleraMonitor::get_candidate_master()
                 // Server priorities are not in use or no candidate has been found
                 if (min_id < 0 || moitor_servers->node_id < min_id)
                 {
-                    min_id = moitor_servers->node_id;
+                    min_id           = moitor_servers->node_id;
                     candidate_master = moitor_servers;
                 }
             }
         }
     }
 
-    if (!m_use_priority && !m_disableMasterFailback
-        && m_root_node_as_master && min_id > 0)
+    if (!m_use_priority && !m_disableMasterFailback && m_root_node_as_master && min_id > 0)
     {
         /** The monitor couldn't find the node with wsrep_local_index of 0.
          * This means that we can't connect to the root node of the cluster.
@@ -585,9 +576,8 @@ MonitorServer* GaleraMonitor::get_candidate_master()
  * @param   candidate_master The candidate master server accordingly to the selection rule
  * @return  The  master node pointer (could be NULL)
  */
-static MonitorServer* set_cluster_master(MonitorServer* current_master,
-                                         MonitorServer* candidate_master,
-                                         int master_stickiness)
+static MonitorServer* set_cluster_master(
+    MonitorServer* current_master, MonitorServer* candidate_master, int master_stickiness)
 {
     /*
      * if current master is not set or master_stickiness is not enable
@@ -603,8 +593,7 @@ static MonitorServer* set_cluster_master(MonitorServer* current_master,
          * if current_master is still a cluster member use it
          *
          */
-        if ((current_master->pending_status & SERVER_JOINED)
-            && (!current_master->server->is_in_maint()))
+        if ((current_master->pending_status & SERVER_JOINED) && (!current_master->server->is_in_maint()))
         {
             return current_master;
         }
@@ -642,17 +631,15 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
 
     if (is_cluster == 1)
     {
-        return;     // Only one server in the cluster: update_sst_donor_nodes is not performed
+        return;  // Only one server in the cluster: update_sst_donor_nodes is not performed
     }
 
     unsigned int found_slaves = 0;
     MonitorServer* node_list[is_cluster - 1];
     /* Donor list size = DONOR_LIST_SET_VAR + n_hosts * max_host_len + n_hosts + 1 */
 
-    char* donor_list = static_cast<char*>(MXS_CALLOC(1,
-                                                     strlen(DONOR_LIST_SET_VAR)
-                                                     + is_cluster * DONOR_NODE_NAME_MAX_LEN
-                                                     + is_cluster + 1));
+    char* donor_list = static_cast<char*>(
+        MXS_CALLOC(1, strlen(DONOR_LIST_SET_VAR) + is_cluster * DONOR_NODE_NAME_MAX_LEN + is_cluster + 1));
 
     if (donor_list == NULL)
     {
@@ -667,7 +654,7 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
     {
         if ((ptr->pending_status & SERVER_JOINED) && (ptr->pending_status & SERVER_SLAVE))
         {
-            node_list[found_slaves] = (MonitorServer*)ptr;
+            node_list[found_slaves] = (MonitorServer*) ptr;
             found_slaves++;
 
             /* Check the server parameter "priority"
@@ -683,13 +670,13 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
     }
 
     /* Set order type */
-    bool sort_order = (!ignore_priority) && (int)m_use_priority;
+    bool sort_order = (!ignore_priority) && (int) m_use_priority;
 
     /* Sort the array */
     qsort(node_list,
-          found_slaves,
-          sizeof(MonitorServer*),
-          sort_order ? compare_node_priority : compare_node_index);
+        found_slaves,
+        sizeof(MonitorServer*),
+        sort_order ? compare_node_priority : compare_node_index);
 
     /* Select nodename from each server and append it to node_list */
     for (unsigned int k = 0; k < found_slaves; k++)
@@ -758,8 +745,8 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
 
 static int compare_node_index(const void* a, const void* b)
 {
-    const MonitorServer* s_a = *(MonitorServer* const*)a;
-    const MonitorServer* s_b = *(MonitorServer* const*)b;
+    const MonitorServer* s_a = *(MonitorServer* const*) a;
+    const MonitorServer* s_b = *(MonitorServer* const*) b;
 
     // Order is DESC: b - a
     return s_b->node_id - s_a->node_id;
@@ -786,12 +773,12 @@ static int compare_node_index(const void* a, const void* b)
 
 static int compare_node_priority(const void* a, const void* b)
 {
-    const MonitorServer* s_a = *(MonitorServer* const*)a;
-    const MonitorServer* s_b = *(MonitorServer* const*)b;
-    int pri_val_a = s_a->server->priority();
-    int pri_val_b = s_b->server->priority();
-    bool have_a = pri_val_a > 0;
-    bool have_b = pri_val_b > 0;
+    const MonitorServer* s_a = *(MonitorServer* const*) a;
+    const MonitorServer* s_b = *(MonitorServer* const*) b;
+    int pri_val_a            = s_a->server->priority();
+    int pri_val_b            = s_b->server->priority();
+    bool have_a              = pri_val_a > 0;
+    bool have_b              = pri_val_b > 0;
 
     /**
      * Check priority parameter:
@@ -800,21 +787,21 @@ static int compare_node_priority(const void* a, const void* b)
      */
     if (!have_a && have_b)
     {
-        MXS_DEBUG("Server %s has no given priority. It will be at the beginning of the list",
-                  s_a->server->name());
+        MXS_DEBUG(
+            "Server %s has no given priority. It will be at the beginning of the list", s_a->server->name());
         return -(INT_MAX - 1);
     }
     else if (have_a && !have_b)
     {
-        MXS_DEBUG("Server %s has no given priority. It will be at the beginning of the list",
-                  s_b->server->name());
+        MXS_DEBUG(
+            "Server %s has no given priority. It will be at the beginning of the list", s_b->server->name());
         return INT_MAX - 1;
     }
     else if (!have_a && !have_b)
     {
         MXS_DEBUG("Servers %s and %s have no given priority. They be at the beginning of the list",
-                  s_a->server->name(),
-                  s_b->server->name());
+            s_a->server->name(),
+            s_b->server->name());
         return 0;
     }
 
@@ -854,19 +841,17 @@ void GaleraMonitor::set_galera_cluster()
     }
 }
 
-bool GaleraMonitor::can_be_disabled(const MonitorServer& server, DisableType type,
-                                    std::string* errmsg_out) const
+bool GaleraMonitor::can_be_disabled(
+    const MonitorServer& server, DisableType type, std::string* errmsg_out) const
 {
     // If the server is the master, it cannot be drained. It can be set to maintenance, though.
     bool rval = true;
     if (type == DisableType::DRAIN && status_is_master(server.server->status()))
     {
-        rval = false,
-        *errmsg_out = "The server is master, so it cannot be set to draining mode.";
+        rval = false, *errmsg_out = "The server is master, so it cannot be set to draining mode.";
     }
     return rval;
 }
-
 
 /**
  * The module entry point routine. It is this routine that
@@ -878,9 +863,7 @@ bool GaleraMonitor::can_be_disabled(const MonitorServer& server, DisableType typ
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_MONITOR,
+    static MXS_MODULE info = {MXS_MODULE_API_MONITOR,
         MXS_MODULE_GA,
         MXS_MONITOR_VERSION,
         "A Galera cluster monitor",
@@ -891,16 +874,13 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,
         NULL,
         NULL,
-        {
-            {"disable_master_failback",             MXS_MODULE_PARAM_BOOL,  "false"},
-            {"available_when_donor",                MXS_MODULE_PARAM_BOOL,  "false"},
-            {"disable_master_role_setting",         MXS_MODULE_PARAM_BOOL,  "false"},
-            {"root_node_as_master",                 MXS_MODULE_PARAM_BOOL,  "false"},
-            {"use_priority",                        MXS_MODULE_PARAM_BOOL,  "false"},
-            {"set_donor_nodes",                     MXS_MODULE_PARAM_BOOL,  "false"},
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+        {{"disable_master_failback", MXS_MODULE_PARAM_BOOL, "false"},
+            {"available_when_donor", MXS_MODULE_PARAM_BOOL, "false"},
+            {"disable_master_role_setting", MXS_MODULE_PARAM_BOOL, "false"},
+            {"root_node_as_master", MXS_MODULE_PARAM_BOOL, "false"},
+            {"use_priority", MXS_MODULE_PARAM_BOOL, "false"},
+            {"set_donor_nodes", MXS_MODULE_PARAM_BOOL, "false"},
+            {MXS_END_MODULE_PARAMS}}};
 
     return &info;
 }

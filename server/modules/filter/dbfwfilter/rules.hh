@@ -37,7 +37,7 @@ static bool is_dml(GWBUF* buffer)
         return false;
     }
 }
-}
+}  // namespace
 
 /**
  * A structure used to identify individual rules and to store their contents
@@ -55,22 +55,19 @@ public:
     virtual ~Rule();
     virtual bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const;
 
-    virtual bool need_full_parsing(GWBUF* buffer) const
-    {
-        return false;
-    }
+    virtual bool need_full_parsing(GWBUF* buffer) const { return false; }
 
-    bool               matches_query_type(GWBUF* buffer) const;
+    bool matches_query_type(GWBUF* buffer) const;
     const std::string& name() const;
     const std::string& type() const;
 
-    uint32_t   on_queries;      /*< Types of queries to inspect */
-    int        times_matched;   /*< Number of times this rule has been matched */
-    TIMERANGE* active;          /*< List of times when this rule is active */
+    uint32_t on_queries; /*< Types of queries to inspect */
+    int times_matched;   /*< Number of times this rule has been matched */
+    TIMERANGE* active;   /*< List of times when this rule is active */
 
 private:
-    std::string m_name;         /*< Name of the rule */
-    std::string m_type;         /*< Name of the rule */
+    std::string m_name; /*< Name of the rule */
+    std::string m_type; /*< Name of the rule */
 };
 
 /**
@@ -84,17 +81,11 @@ class WildCardRule : public Rule
 public:
     WildCardRule(std::string name)
         : Rule(name, "WILDCARD")
-    {
-    }
+    {}
 
-    ~WildCardRule()
-    {
-    }
+    ~WildCardRule() {}
 
-    bool need_full_parsing(GWBUF* buffer) const
-    {
-        return is_dml(buffer);
-    }
+    bool need_full_parsing(GWBUF* buffer) const { return is_dml(buffer); }
 
     bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const;
 };
@@ -110,17 +101,11 @@ class NoWhereClauseRule : public Rule
 public:
     NoWhereClauseRule(std::string name)
         : Rule(name, "CLAUSE")
-    {
-    }
+    {}
 
-    ~NoWhereClauseRule()
-    {
-    }
+    ~NoWhereClauseRule() {}
 
-    bool need_full_parsing(GWBUF* buffer) const
-    {
-        return is_dml(buffer);
-    }
+    bool need_full_parsing(GWBUF* buffer) const { return is_dml(buffer); }
 
     bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const;
 };
@@ -136,10 +121,7 @@ class ValueListRule : public Rule
     ValueListRule& operator=(const ValueListRule&);
 
 public:
-    bool need_full_parsing(GWBUF* buffer) const
-    {
-        return is_dml(buffer);
-    }
+    bool need_full_parsing(GWBUF* buffer) const { return is_dml(buffer); }
 
 protected:
     ValueListRule(std::string name, std::string type, const ValueList& values)
@@ -163,8 +145,7 @@ class ColumnsRule : public ValueListRule
 public:
     ColumnsRule(std::string name, const ValueList& values)
         : ValueListRule(name, "COLUMN", values)
-    {
-    }
+    {}
 
     bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const;
 };
@@ -181,13 +162,12 @@ public:
     FunctionRule(std::string name, const ValueList& values, bool inverted)
         : ValueListRule(name, inverted ? "NOT_FUNCTION" : "FUNCTION", values)
         , m_inverted(inverted)
-    {
-    }
+    {}
 
     bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const;
 
 private:
-    bool m_inverted;    /*< Should the match be inverted. */
+    bool m_inverted; /*< Should the match be inverted. */
 };
 
 /**
@@ -201,8 +181,7 @@ class FunctionUsageRule : public ValueListRule
 public:
     FunctionUsageRule(std::string name, const ValueList& values)
         : ValueListRule(name, "FUNCTION_USAGE", values)
-    {
-    }
+    {}
 
     bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const;
 };
@@ -220,14 +199,13 @@ public:
         : ValueListRule(name, inverted ? "NOT_COLUMN_FUNCTION" : "COLUMN_FUNCTION", values)
         , m_columns(columns)
         , m_inverted(inverted)
-    {
-    }
+    {}
 
     bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const;
 
 private:
-    ValueList m_columns;    /*< List of columns to match */
-    bool      m_inverted;   /*< Should the match be inverted. */
+    ValueList m_columns; /*< List of columns to match */
+    bool m_inverted;     /*< Should the match be inverted. */
 };
 
 /**
@@ -244,17 +222,11 @@ public:
         , m_max(max)
         , m_timeperiod(timeperiod)
         , m_holdoff(holdoff)
-    {
-    }
+    {}
 
-    ~LimitQueriesRule()
-    {
-    }
+    ~LimitQueriesRule() {}
 
-    bool need_full_parsing(GWBUF* buffer) const
-    {
-        return is_dml(buffer);
-    }
+    bool need_full_parsing(GWBUF* buffer) const { return is_dml(buffer); }
 
     bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const;
 
@@ -276,17 +248,11 @@ public:
     RegexRule(std::string name, pcre2_code* re)
         : Rule(name, "REGEX")
         , m_re(re)
-    {
-    }
+    {}
 
-    ~RegexRule()
-    {
-    }
+    ~RegexRule() {}
 
-    bool need_full_parsing(GWBUF* buffer) const
-    {
-        return false;
-    }
+    bool need_full_parsing(GWBUF* buffer) const { return false; }
 
     bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const;
 
@@ -295,4 +261,4 @@ private:
 };
 
 typedef std::shared_ptr<Rule> SRule;
-typedef std::list<SRule>      RuleList;
+typedef std::list<SRule> RuleList;

@@ -28,24 +28,20 @@
 using namespace std;
 
 Cache::Cache(const std::string& name,
-             const CacheConfig* pConfig,
-             const std::vector<SCacheRules>& rules,
-             SStorageFactory sFactory)
+    const CacheConfig* pConfig,
+    const std::vector<SCacheRules>& rules,
+    SStorageFactory sFactory)
     : m_name(name)
     , m_config(*pConfig)
     , m_rules(rules)
     , m_sFactory(sFactory)
-{
-}
+{}
 
-Cache::~Cache()
-{
-}
+Cache::~Cache() {}
 
 // static
-bool Cache::get_storage_factory(const CacheConfig& config,
-                                std::vector<SCacheRules>* pRules,
-                                StorageFactory** ppFactory)
+bool Cache::get_storage_factory(
+    const CacheConfig& config, std::vector<SCacheRules>* pRules, StorageFactory** ppFactory)
 {
     std::vector<SCacheRules> rules;
     StorageFactory* pFactory = NULL;
@@ -95,20 +91,20 @@ json_t* Cache::show_json() const
 }
 
 cache_result_t Cache::get_key(const std::string& user,
-                              const std::string& host,
-                              const char* zDefault_db,
-                              const GWBUF* pQuery,
-                              CacheKey* pKey) const
+    const std::string& host,
+    const char* zDefault_db,
+    const GWBUF* pQuery,
+    CacheKey* pKey) const
 {
     return get_default_key(user, host, zDefault_db, pQuery, pKey);
 }
 
 // static
 cache_result_t Cache::get_default_key(const std::string& user,
-                                      const std::string& host,
-                                      const char* zDefault_db,
-                                      const GWBUF* pQuery,
-                                      CacheKey* pKey)
+    const std::string& host,
+    const char* zDefault_db,
+    const GWBUF* pQuery,
+    CacheKey* pKey)
 {
     mxb_assert((user.empty() && host.empty()) || (!user.empty() && !host.empty()));
     mxb_assert(gwbuf_is_contiguous(pQuery));
@@ -125,7 +121,7 @@ cache_result_t Cache::get_default_key(const std::string& user,
     if (zDefault_db)
     {
         pData = reinterpret_cast<const uint8_t*>(zDefault_db);
-        crc = lzma_crc64(pData, strlen(zDefault_db), crc);
+        crc   = lzma_crc64(pData, strlen(zDefault_db), crc);
     }
 
     pData = reinterpret_cast<const uint8_t*>(pSql);
@@ -189,8 +185,8 @@ json_t* Cache::do_get_info(uint32_t what) const
                 for (auto i = m_rules.begin(); i < m_rules.end(); ++i)
                 {
                     json_t* pRules = const_cast<json_t*>((*i)->json());
-                    json_array_append(pArray, pRules);      // Increases ref-count of pRules, we ignore
-                                                            // failure.
+                    json_array_append(pArray, pRules);  // Increases ref-count of pRules, we ignore
+                                                        // failure.
                 }
 
                 json_object_set_new(pInfo, "rules", pArray);
@@ -201,7 +197,6 @@ json_t* Cache::do_get_info(uint32_t what) const
     return pInfo;
 }
 
-
 // static
 uint64_t Cache::time_ms()
 {
@@ -210,7 +205,7 @@ uint64_t Cache::time_ms()
     int rv = clock_gettime(CLOCK_MONOTONIC_COARSE, &t);
     if (rv != 0)
     {
-        mxb_assert(errno == EINVAL);    // CLOCK_MONOTONIC_COARSE not supported.
+        mxb_assert(errno == EINVAL);  // CLOCK_MONOTONIC_COARSE not supported.
         rv = clock_gettime(CLOCK_MONOTONIC, &t);
         mxb_assert(rv == 0);
     }

@@ -34,7 +34,7 @@
 #define MYSQL_CLIENT_CAP_SIZE   4
 #define MARIADB_CAP_OFFSET      MYSQL_CHARSET_OFFSET + 20
 
-#define GW_MYSQL_PROTOCOL_VERSION 10    // version is 10
+#define GW_MYSQL_PROTOCOL_VERSION 10  // version is 10
 #define GW_MYSQL_HANDSHAKE_FILLER 0x00
 #define GW_MYSQL_SERVER_LANGUAGE  0x08
 #define GW_MYSQL_MAX_PACKET_LEN   0xffffffL
@@ -81,50 +81,47 @@
 #define MYSQL_REPLY_OK                0x00
 #define MYSQL_REPLY_EOF               0xfe
 #define MYSQL_REPLY_LOCAL_INFILE      0xfb
-#define MYSQL_REPLY_AUTHSWITCHREQUEST 0xfe      /**< Only sent during authentication */
+#define MYSQL_REPLY_AUTHSWITCHREQUEST 0xfe /**< Only sent during authentication */
 
 class DCB;
 class BackendDCB;
 
 /** Protocol packing macros. */
-#define gw_mysql_set_byte2(__buffer, __int) \
-    do { \
-        (__buffer)[0] = (uint8_t)((__int) & 0xFF); \
-        (__buffer)[1] = (uint8_t)(((__int) >> 8) & 0xFF);} while (0)
-#define gw_mysql_set_byte3(__buffer, __int) \
-    do { \
-        (__buffer)[0] = (uint8_t)((__int) & 0xFF); \
-        (__buffer)[1] = (uint8_t)(((__int) >> 8) & 0xFF); \
-        (__buffer)[2] = (uint8_t)(((__int) >> 16) & 0xFF);} while (0)
-#define gw_mysql_set_byte4(__buffer, __int) \
-    do { \
-        (__buffer)[0] = (uint8_t)((__int) & 0xFF); \
-        (__buffer)[1] = (uint8_t)(((__int) >> 8) & 0xFF); \
-        (__buffer)[2] = (uint8_t)(((__int) >> 16) & 0xFF); \
-        (__buffer)[3] = (uint8_t)(((__int) >> 24) & 0xFF);} while (0)
+#define gw_mysql_set_byte2(__buffer, __int)                \
+    do                                                     \
+    {                                                      \
+        (__buffer)[0] = (uint8_t) ((__int) &0xFF);         \
+        (__buffer)[1] = (uint8_t) (((__int) >> 8) & 0xFF); \
+    }                                                      \
+    while (0)
+#define gw_mysql_set_byte3(__buffer, __int)                 \
+    do                                                      \
+    {                                                       \
+        (__buffer)[0] = (uint8_t) ((__int) &0xFF);          \
+        (__buffer)[1] = (uint8_t) (((__int) >> 8) & 0xFF);  \
+        (__buffer)[2] = (uint8_t) (((__int) >> 16) & 0xFF); \
+    }                                                       \
+    while (0)
+#define gw_mysql_set_byte4(__buffer, __int)                 \
+    do                                                      \
+    {                                                       \
+        (__buffer)[0] = (uint8_t) ((__int) &0xFF);          \
+        (__buffer)[1] = (uint8_t) (((__int) >> 8) & 0xFF);  \
+        (__buffer)[2] = (uint8_t) (((__int) >> 16) & 0xFF); \
+        (__buffer)[3] = (uint8_t) (((__int) >> 24) & 0xFF); \
+    }                                                       \
+    while (0)
 
 /** Protocol unpacking macros. */
-#define gw_mysql_get_byte2(__buffer) \
-    (uint16_t)((__buffer)[0]   \
-               | ((__buffer)[1] << 8))
-#define gw_mysql_get_byte3(__buffer) \
-    (uint32_t)((__buffer)[0]   \
-               | ((__buffer)[1] << 8)   \
-               | ((__buffer)[2] << 16))
+#define gw_mysql_get_byte2(__buffer) (uint16_t)((__buffer)[0] | ((__buffer)[1] << 8))
+#define gw_mysql_get_byte3(__buffer) (uint32_t)((__buffer)[0] | ((__buffer)[1] << 8) | ((__buffer)[2] << 16))
 #define gw_mysql_get_byte4(__buffer) \
-    (uint32_t)((__buffer)[0]   \
-               | ((__buffer)[1] << 8)   \
-               | ((__buffer)[2] << 16)   \
-               | ((__buffer)[3] << 24))
-#define gw_mysql_get_byte8(__buffer) \
-    ((uint64_t)(__buffer)[0]   \
-     | ((uint64_t)(__buffer)[1] << 8)   \
-     | ((uint64_t)(__buffer)[2] << 16)   \
-     | ((uint64_t)(__buffer)[3] << 24)   \
-     | ((uint64_t)(__buffer)[4] << 32)   \
-     | ((uint64_t)(__buffer)[5] << 40)   \
-     | ((uint64_t)(__buffer)[6] << 48)   \
-     | ((uint64_t)(__buffer)[7] << 56))
+    (uint32_t)((__buffer)[0] | ((__buffer)[1] << 8) | ((__buffer)[2] << 16) | ((__buffer)[3] << 24))
+#define gw_mysql_get_byte8(__buffer)                                                               \
+    ((uint64_t) (__buffer)[0] | ((uint64_t) (__buffer)[1] << 8) | ((uint64_t) (__buffer)[2] << 16) \
+        | ((uint64_t) (__buffer)[3] << 24) | ((uint64_t) (__buffer)[4] << 32)                      \
+        | ((uint64_t) (__buffer)[5] << 40) | ((uint64_t) (__buffer)[6] << 48)                      \
+        | ((uint64_t) (__buffer)[7] << 56))
 
 namespace mariadb
 {
@@ -134,15 +131,15 @@ namespace mariadb
  * may be required.
  */
 
-void     set_byte2(uint8_t* buffer, uint16_t val);
-void     set_byte3(uint8_t* buffer, uint32_t val);
-void     set_byte4(uint8_t* buffer, uint32_t val);
-void     set_byte8(uint8_t* buffer, uint64_t val);
+void set_byte2(uint8_t* buffer, uint16_t val);
+void set_byte3(uint8_t* buffer, uint32_t val);
+void set_byte4(uint8_t* buffer, uint32_t val);
+void set_byte8(uint8_t* buffer, uint64_t val);
 uint16_t get_byte2(const uint8_t* buffer);
 uint32_t get_byte3(const uint8_t* buffer);
 uint32_t get_byte4(const uint8_t* buffer);
 uint64_t get_byte8(const uint8_t* buffer);
-}
+}  // namespace mariadb
 
 /** MySQL protocol constants */
 enum gw_mysql_capabilities_t
@@ -176,43 +173,24 @@ enum gw_mysql_capabilities_t
     GW_MYSQL_CAPABILITIES_DEPRECATE_EOF          = (1 << 24),
     GW_MYSQL_CAPABILITIES_SSL_VERIFY_SERVER_CERT = (1 << 30),
     GW_MYSQL_CAPABILITIES_REMEMBER_OPTIONS       = (1 << 31),
-    GW_MYSQL_CAPABILITIES_CLIENT                 = (
-        GW_MYSQL_CAPABILITIES_CLIENT_MYSQL
-        | GW_MYSQL_CAPABILITIES_FOUND_ROWS
-        | GW_MYSQL_CAPABILITIES_LONG_FLAG
-        | GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB
-        | GW_MYSQL_CAPABILITIES_LOCAL_FILES
-        | GW_MYSQL_CAPABILITIES_PLUGIN_AUTH
-        | GW_MYSQL_CAPABILITIES_AUTH_LENENC_DATA
-        | GW_MYSQL_CAPABILITIES_CONNECT_ATTRS
-        | GW_MYSQL_CAPABILITIES_TRANSACTIONS
-        | GW_MYSQL_CAPABILITIES_PROTOCOL_41
-        | GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS
-        | GW_MYSQL_CAPABILITIES_MULTI_RESULTS
-        | GW_MYSQL_CAPABILITIES_PS_MULTI_RESULTS
-        | GW_MYSQL_CAPABILITIES_SECURE_CONNECTION
-        | GW_MYSQL_CAPABILITIES_SESSION_TRACK),
-    GW_MYSQL_CAPABILITIES_SERVER = (
-        GW_MYSQL_CAPABILITIES_CLIENT_MYSQL
-        | GW_MYSQL_CAPABILITIES_FOUND_ROWS
-        | GW_MYSQL_CAPABILITIES_LONG_FLAG
-        | GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB
-        | GW_MYSQL_CAPABILITIES_NO_SCHEMA
-        | GW_MYSQL_CAPABILITIES_ODBC
-        | GW_MYSQL_CAPABILITIES_LOCAL_FILES
-        | GW_MYSQL_CAPABILITIES_IGNORE_SPACE
-        | GW_MYSQL_CAPABILITIES_PROTOCOL_41
-        | GW_MYSQL_CAPABILITIES_INTERACTIVE
-        | GW_MYSQL_CAPABILITIES_IGNORE_SIGPIPE
-        | GW_MYSQL_CAPABILITIES_TRANSACTIONS
-        | GW_MYSQL_CAPABILITIES_RESERVED
-        | GW_MYSQL_CAPABILITIES_SECURE_CONNECTION
-        | GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS
-        | GW_MYSQL_CAPABILITIES_MULTI_RESULTS
-        | GW_MYSQL_CAPABILITIES_PS_MULTI_RESULTS
-        | GW_MYSQL_CAPABILITIES_PLUGIN_AUTH
-        | GW_MYSQL_CAPABILITIES_CONNECT_ATTRS
-        | GW_MYSQL_CAPABILITIES_SESSION_TRACK),
+    GW_MYSQL_CAPABILITIES_CLIENT
+    = (GW_MYSQL_CAPABILITIES_CLIENT_MYSQL | GW_MYSQL_CAPABILITIES_FOUND_ROWS | GW_MYSQL_CAPABILITIES_LONG_FLAG
+        | GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB | GW_MYSQL_CAPABILITIES_LOCAL_FILES
+        | GW_MYSQL_CAPABILITIES_PLUGIN_AUTH | GW_MYSQL_CAPABILITIES_AUTH_LENENC_DATA
+        | GW_MYSQL_CAPABILITIES_CONNECT_ATTRS | GW_MYSQL_CAPABILITIES_TRANSACTIONS
+        | GW_MYSQL_CAPABILITIES_PROTOCOL_41 | GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS
+        | GW_MYSQL_CAPABILITIES_MULTI_RESULTS | GW_MYSQL_CAPABILITIES_PS_MULTI_RESULTS
+        | GW_MYSQL_CAPABILITIES_SECURE_CONNECTION | GW_MYSQL_CAPABILITIES_SESSION_TRACK),
+    GW_MYSQL_CAPABILITIES_SERVER
+    = (GW_MYSQL_CAPABILITIES_CLIENT_MYSQL | GW_MYSQL_CAPABILITIES_FOUND_ROWS | GW_MYSQL_CAPABILITIES_LONG_FLAG
+        | GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB | GW_MYSQL_CAPABILITIES_NO_SCHEMA | GW_MYSQL_CAPABILITIES_ODBC
+        | GW_MYSQL_CAPABILITIES_LOCAL_FILES | GW_MYSQL_CAPABILITIES_IGNORE_SPACE
+        | GW_MYSQL_CAPABILITIES_PROTOCOL_41 | GW_MYSQL_CAPABILITIES_INTERACTIVE
+        | GW_MYSQL_CAPABILITIES_IGNORE_SIGPIPE | GW_MYSQL_CAPABILITIES_TRANSACTIONS
+        | GW_MYSQL_CAPABILITIES_RESERVED | GW_MYSQL_CAPABILITIES_SECURE_CONNECTION
+        | GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS | GW_MYSQL_CAPABILITIES_MULTI_RESULTS
+        | GW_MYSQL_CAPABILITIES_PS_MULTI_RESULTS | GW_MYSQL_CAPABILITIES_PLUGIN_AUTH
+        | GW_MYSQL_CAPABILITIES_CONNECT_ATTRS | GW_MYSQL_CAPABILITIES_SESSION_TRACK),
 };
 
 /**
@@ -287,7 +265,7 @@ struct MXS_PS_RESPONSE
 
 static inline mxs_mysql_cmd_t MYSQL_GET_COMMAND(const uint8_t* header)
 {
-    return (mxs_mysql_cmd_t)header[4];
+    return (mxs_mysql_cmd_t) header[4];
 }
 
 static inline uint8_t MYSQL_GET_PACKET_NO(const uint8_t* header)
@@ -313,8 +291,7 @@ static inline bool MYSQL_IS_ERROR_PACKET(const uint8_t* header)
 
 static inline bool MYSQL_IS_COM_QUIT(const uint8_t* header)
 {
-    return MYSQL_GET_COMMAND(header) == MXS_COM_QUIT
-           && MYSQL_GET_PAYLOAD_LEN(header) == 1;
+    return MYSQL_GET_COMMAND(header) == MXS_COM_QUIT && MYSQL_GET_PAYLOAD_LEN(header) == 1;
 }
 
 static inline bool MYSQL_IS_COM_INIT_DB(const uint8_t* header)
@@ -470,8 +447,12 @@ bool mxs_mysql_command_will_respond(uint8_t cmd);
  */
 void mxs_mysql_calculate_hash(const uint8_t* scramble, const uint8_t* passwd, uint8_t* output);
 
-int response_length(bool with_ssl, bool ssl_established, const char* user, const uint8_t* passwd,
-                    const char* dbname, const char* auth_module);
+int response_length(bool with_ssl,
+    bool ssl_established,
+    const char* user,
+    const uint8_t* passwd,
+    const char* dbname,
+    const char* auth_module);
 
 uint8_t* load_hashed_password(const uint8_t* scramble, uint8_t* payload, const uint8_t* passwd);
 

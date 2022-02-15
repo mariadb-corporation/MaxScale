@@ -26,7 +26,7 @@ TempFile::TempFile()
     : m_fd(-1)
     , m_name(NAME_TEMPLATE)
 {
-    m_fd = mkstemp((char*)m_name.c_str());
+    m_fd = mkstemp((char*) m_name.c_str());
     mxb_assert(m_fd != -1);
 }
 
@@ -41,7 +41,7 @@ void TempFile::write(const void* pData, size_t count)
 {
     int rc = ::write(m_fd, pData, count);
     mxb_assert(rc != -1);
-    mxb_assert((size_t)rc == count);
+    mxb_assert((size_t) rc == count);
 }
 
 void TempFile::write(const char* zData)

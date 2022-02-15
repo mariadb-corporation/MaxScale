@@ -29,9 +29,8 @@ public:
 
     ~MaskingFilterSession();
 
-    static MaskingFilterSession* create(MXS_SESSION* pSession,
-                                        SERVICE* pService,
-                                        const MaskingFilter* pFilter);
+    static MaskingFilterSession* create(
+        MXS_SESSION* pSession, SERVICE* pService, const MaskingFilter* pFilter);
 
     int routeQuery(GWBUF* pPacket);
 
@@ -83,16 +82,15 @@ private:
             , m_index(0)
             , m_multi_result(false)
             , m_some_rule_matches(false)
-        {
-        }
+        {}
 
         void reset(uint8_t command, const SMaskingRules& sRules)
         {
             reset_multi();
 
-            m_command = command;
-            m_sRules = sRules;
-            m_multi_result = false;
+            m_command           = command;
+            m_sRules            = sRules;
+            m_multi_result      = false;
             m_some_rule_matches = false;
         }
 
@@ -101,39 +99,21 @@ private:
             m_nTotal_fields = 0;
             m_types.clear();
             m_rules.clear();
-            m_index = 0;
+            m_index        = 0;
             m_multi_result = true;
         }
 
-        uint8_t command() const
-        {
-            return m_command;
-        }
+        uint8_t command() const { return m_command; }
 
-        const SMaskingRules& rules() const
-        {
-            return m_sRules;
-        }
+        const SMaskingRules& rules() const { return m_sRules; }
 
-        bool some_rule_matches() const
-        {
-            return m_some_rule_matches;
-        }
+        bool some_rule_matches() const { return m_some_rule_matches; }
 
-        bool is_multi_result() const
-        {
-            return m_multi_result;
-        }
+        bool is_multi_result() const { return m_multi_result; }
 
-        uint32_t total_fields() const
-        {
-            return m_nTotal_fields;
-        }
+        uint32_t total_fields() const { return m_nTotal_fields; }
 
-        void set_total_fields(uint32_t n)
-        {
-            m_nTotal_fields = n;
-        }
+        void set_total_fields(uint32_t n) { m_nTotal_fields = n; }
 
         bool append_type_and_rule(enum_field_types type, const MaskingRules::Rule* pRule)
         {
@@ -148,10 +128,7 @@ private:
             return m_rules.size() == m_nTotal_fields;
         }
 
-        const std::vector<enum_field_types>& types() const
-        {
-            return m_types;
-        }
+        const std::vector<enum_field_types>& types() const { return m_types; }
 
         const MaskingRules::Rule* get_rule()
         {
@@ -165,17 +142,17 @@ private:
         }
 
     private:
-        uint8_t                                m_command;           /*<! What command. */
-        SMaskingRules                          m_sRules;            /*<! The rules that are used. */
-        uint32_t                               m_nTotal_fields;     /*<! The total number of fields. */
-        std::vector<enum_field_types>          m_types;             /*<! The column types. */
-        std::vector<const MaskingRules::Rule*> m_rules;             /*<! The rules applied for columns. */
-        size_t                                 m_index;             /*<! Index to the current rule.*/
-        bool                                   m_multi_result;      /*<! Are we processing multi-results. */
-        bool                                   m_some_rule_matches; /*<! At least one rule matches. */
+        uint8_t m_command;                              /*<! What command. */
+        SMaskingRules m_sRules;                         /*<! The rules that are used. */
+        uint32_t m_nTotal_fields;                       /*<! The total number of fields. */
+        std::vector<enum_field_types> m_types;          /*<! The column types. */
+        std::vector<const MaskingRules::Rule*> m_rules; /*<! The rules applied for columns. */
+        size_t m_index;                                 /*<! Index to the current rule.*/
+        bool m_multi_result;                            /*<! Are we processing multi-results. */
+        bool m_some_rule_matches;                       /*<! At least one rule matches. */
     };
 
     const MaskingFilter& m_filter;
-    state_t              m_state;
-    ResponseState        m_res;
+    state_t m_state;
+    ResponseState m_res;
 };

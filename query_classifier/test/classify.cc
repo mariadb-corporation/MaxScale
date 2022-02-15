@@ -33,7 +33,7 @@ char* append(char* types, const char* type_name, size_t* lenp)
 
     *lenp += len;
 
-    char* tmp = (char*)realloc(types, *lenp);
+    char* tmp = (char*) realloc(types, *lenp);
 
     if (types)
     {
@@ -53,7 +53,7 @@ char* append(char* types, const char* type_name, size_t* lenp)
 
 char* get_types_as_string(uint32_t types)
 {
-    char* s = NULL;
+    char* s    = NULL;
     size_t len = 0;
 
     if (types & QUERY_TYPE_LOCAL_READ)
@@ -162,7 +162,7 @@ int test(FILE* input, FILE* expected)
     int rc = EXIT_SUCCESS;
 
     int buffsz = getpagesize(), strsz = 0;
-    char buffer[1024], * strbuff = (char*)calloc(buffsz, sizeof(char));
+    char buffer[1024], *strbuff       = (char*) calloc(buffsz, sizeof(char));
 
     int rd;
 
@@ -172,7 +172,7 @@ int test(FILE* input, FILE* expected)
 
         if (strsz + rd >= buffsz)
         {
-            char* tmp = (char*)realloc(strbuff, (buffsz * 2) * sizeof(char));
+            char* tmp = (char*) realloc(strbuff, (buffsz * 2) * sizeof(char));
 
             if (tmp == NULL)
             {
@@ -188,7 +188,7 @@ int test(FILE* input, FILE* expected)
         strsz += rd;
         *(strbuff + strsz) = '\0';
 
-        char* tok, * nlptr;
+        char *tok, *nlptr;
 
         /**Remove newlines*/
         while ((nlptr = strpbrk(strbuff, "\n")) != NULL && (nlptr - strbuff) < strsz)
@@ -201,16 +201,16 @@ int test(FILE* input, FILE* expected)
 
         while (strpbrk(strbuff, ";") != NULL)
         {
-            tok = strpbrk(strbuff, ";");
-            unsigned int qlen = tok - strbuff + 1;
-            unsigned int payload_len = qlen + 1;
-            unsigned int buf_len = payload_len + 4;
-            GWBUF* buff = gwbuf_alloc(buf_len);
-            *((unsigned char*)(GWBUF_DATA(buff))) = payload_len;
-            *((unsigned char*)(GWBUF_DATA(buff) + 1)) = (payload_len >> 8);
-            *((unsigned char*)(GWBUF_DATA(buff) + 2)) = (payload_len >> 16);
-            *((unsigned char*)(GWBUF_DATA(buff) + 3)) = 0x00;
-            *((unsigned char*)(GWBUF_DATA(buff) + 4)) = 0x03;
+            tok                                        = strpbrk(strbuff, ";");
+            unsigned int qlen                          = tok - strbuff + 1;
+            unsigned int payload_len                   = qlen + 1;
+            unsigned int buf_len                       = payload_len + 4;
+            GWBUF* buff                                = gwbuf_alloc(buf_len);
+            *((unsigned char*) (GWBUF_DATA(buff)))     = payload_len;
+            *((unsigned char*) (GWBUF_DATA(buff) + 1)) = (payload_len >> 8);
+            *((unsigned char*) (GWBUF_DATA(buff) + 2)) = (payload_len >> 16);
+            *((unsigned char*) (GWBUF_DATA(buff) + 3)) = 0x00;
+            *((unsigned char*) (GWBUF_DATA(buff) + 4)) = 0x03;
             memcpy(GWBUF_DATA(buff) + 5, strbuff, qlen);
             memmove(strbuff, tok + 1, strsz - qlen);
             strsz -= qlen;
@@ -226,7 +226,7 @@ int test(FILE* input, FILE* expected)
             expbuff[expos] = '\0';
 
             char* qtypestr = get_types_as_string(type);
-            const char* q = (const char*) GWBUF_DATA(buff) + 5;
+            const char* q  = (const char*) GWBUF_DATA(buff) + 5;
 
             printf("Query   : %.*s\n", qlen, q);
             printf("Reported: %s\n", qtypestr);
@@ -297,17 +297,17 @@ int main(int argc, char** argv)
         {
             lib = "qc_mysqlembedded";
             mxs::set_libdir("../qc_mysqlembedded");
-            input_name = argv[1];
+            input_name    = argv[1];
             expected_name = argv[2];
         }
         else
         {
-            lib = argv[1];
-            input_name = argv[2];
+            lib           = argv[1];
+            input_name    = argv[2];
             expected_name = argv[3];
 
             size_t sz = strlen(lib);
-            char buffer[sz + 3 + 1];    // "../" and terminating NULL.
+            char buffer[sz + 3 + 1];  // "../" and terminating NULL.
             sprintf(buffer, "../%s", lib);
 
             mxs::set_libdir(buffer);
@@ -319,8 +319,7 @@ int main(int argc, char** argv)
 
         if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
         {
-            if (qc_setup(NULL, QC_SQL_MODE_DEFAULT, lib, NULL)
-                && qc_process_init(QC_INIT_BOTH)
+            if (qc_setup(NULL, QC_SQL_MODE_DEFAULT, lib, NULL) && qc_process_init(QC_INIT_BOTH)
                 && qc_thread_init(QC_INIT_BOTH))
             {
                 //  Version encoded as MariaDB encodes the version, i.e.:
@@ -335,10 +334,8 @@ int main(int argc, char** argv)
             }
             else
             {
-                fprintf(stderr,
-                        "error: %s: Could not initialize query classifier library %s.\n",
-                        argv[0],
-                        lib);
+                fprintf(
+                    stderr, "error: %s: Could not initialize query classifier library %s.\n", argv[0], lib);
             }
 
             mxs_log_finish();

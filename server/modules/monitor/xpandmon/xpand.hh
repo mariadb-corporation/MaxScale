@@ -28,7 +28,7 @@ enum class Status
     UNKNOWN
 };
 
-Status      status_from_string(const std::string& status);
+Status status_from_string(const std::string& status);
 std::string to_string(Status status);
 
 enum class SubState
@@ -37,7 +37,7 @@ enum class SubState
     UNKNOWN
 };
 
-SubState    substate_from_string(const std::string& substate);
+SubState substate_from_string(const std::string& substate);
 std::string to_string(SubState sub_state);
 
 enum class Softfailed
@@ -97,10 +97,10 @@ bool is_being_softfailed(const char* zName, MYSQL* pCon);
  * @note Upon return @c *ppCon will be non-NULL.
  */
 bool ping_or_connect_to_hub(const char* zName,
-                            const mxs::MonitorServer::ConnectionSettings& settings,
-                            Softfailed softfailed,
-                            SERVER& server,
-                            MYSQL** ppCon);
+    const mxs::MonitorServer::ConnectionSettings& settings,
+    Softfailed softfailed,
+    SERVER& server,
+    MYSQL** ppCon);
 
 /**
  * Ping or create connection to server and check whether it can be used
@@ -114,10 +114,10 @@ bool ping_or_connect_to_hub(const char* zName,
  * @return True, if the server can be used as hub, false otherwise.
  */
 inline bool ping_or_connect_to_hub(const char* zName,
-                                   const mxs::MonitorServer::ConnectionSettings& settings,
-                                   Softfailed softfailed,
-                                   mxs::MonitorServer& ms)
+    const mxs::MonitorServer::ConnectionSettings& settings,
+    Softfailed softfailed,
+    mxs::MonitorServer& ms)
 {
     return ping_or_connect_to_hub(zName, settings, softfailed, *ms.server, &ms.con);
 }
-}
+}  // namespace xpand

@@ -21,12 +21,11 @@
 
 class MaskingRules;
 
-
 class MaskingFilter : public maxscale::Filter<MaskingFilter, MaskingFilterSession>
 {
 public:
     typedef std::shared_ptr<MaskingRules> SMaskingRules;
-    typedef MaskingFilterConfig           Config;
+    typedef MaskingFilterConfig Config;
 
     ~MaskingFilter();
     static MaskingFilter* create(const char* zName, mxs::ConfigParameters* ppParams);
@@ -39,10 +38,8 @@ public:
 
     bool reload();
 
-    const Config& config() const
-    {
-        return m_config;
-    }
+    const Config& config() const { return m_config; }
+
     SMaskingRules rules() const;
 
 private:
@@ -52,6 +49,6 @@ private:
     MaskingFilter& operator=(const MaskingFilter&);
 
 private:
-    Config        m_config;
+    Config m_config;
     SMaskingRules m_sRules;
 };

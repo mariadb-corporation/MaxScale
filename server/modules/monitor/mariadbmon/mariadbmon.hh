@@ -39,8 +39,9 @@ typedef std::map<int, ServerArray> CycleMap;
 class MariaDBMonitor : public maxscale::MonitorWorker
 {
 private:
-    MariaDBMonitor(const MariaDBMonitor&) = delete;
+    MariaDBMonitor(const MariaDBMonitor&)            = delete;
     MariaDBMonitor& operator=(const MariaDBMonitor&) = delete;
+
 public:
     class Test;
     friend class Test;
@@ -156,16 +157,16 @@ public:
     bool fetch_cmd_result(json_t** output);
 
 protected:
-    bool can_be_disabled(const mxs::MonitorServer& server, DisableType type,
-                         std::string* errmsg_out) const override;
+    bool can_be_disabled(
+        const mxs::MonitorServer& server, DisableType type, std::string* errmsg_out) const override;
 
-    void        pre_loop() override;
-    void        tick() override;
-    void        process_state_changes() override;
+    void pre_loop() override;
+    void tick() override;
+    void process_state_changes() override;
     std::string annotate_state_change(mxs::MonitorServer* server) override final;
 
 private:
-    using ServerFunction = std::function<void (MariaDBServer*)>;
+    using ServerFunction = std::function<void(MariaDBServer*)>;
 
     // Some methods need a log on/off setting.
     enum class Log
@@ -198,27 +199,28 @@ private:
     public:
         ServerOperation promotion;
         ServerOperation demotion;
-        GeneralOpData   general;
+        GeneralOpData general;
 
-        SwitchoverParams(const ServerOperation& promotion, const ServerOperation& demotion,
-                         const GeneralOpData& general);
+        SwitchoverParams(
+            const ServerOperation& promotion, const ServerOperation& demotion, const GeneralOpData& general);
     };
 
     class FailoverParams
     {
     public:
-        ServerOperation            promotion;   // Required by MariaDBServer->promote()
+        ServerOperation promotion;  // Required by MariaDBServer->promote()
         const MariaDBServer* const demotion_target;
-        GeneralOpData              general;
+        GeneralOpData general;
 
-        FailoverParams(const ServerOperation& promotion, const MariaDBServer* demotion_target,
-                       const GeneralOpData& general);
+        FailoverParams(const ServerOperation& promotion,
+            const MariaDBServer* demotion_target,
+            const GeneralOpData& general);
     };
 
     // Information about a multimaster group (replication cycle)
     struct CycleInfo
     {
-        int         cycle_id = NodeData::CYCLE_NONE;
+        int cycle_id = NodeData::CYCLE_NONE;
         ServerArray cycle_members;
     };
 
@@ -232,10 +234,11 @@ private:
         {
             void deep_copy_from(const Result& rhs);
 
-            bool    success {false};
+            bool success {false};
             json_t* errors {nullptr};
         };
-        using CmdMethod = std::function<Result (void)>;
+
+        using CmdMethod = std::function<Result(void)>;
         enum class ExecState
         {
             NONE,
@@ -244,15 +247,15 @@ private:
             DONE
         };
 
-        std::mutex lock;    /* Reads and writes should happen while this lock is held. */
+        std::mutex lock; /* Reads and writes should happen while this lock is held. */
 
-        std::atomic<ExecState> exec_state {ExecState::NONE};/* Manual command exec state */
-        std::string            cmd_name;                    /* Name of current command */
-        CmdMethod              method;                      /* Command implementation */
+        std::atomic<ExecState> exec_state {ExecState::NONE}; /* Manual command exec state */
+        std::string cmd_name;                                /* Name of current command */
+        CmdMethod method;                                    /* Command implementation */
 
-        std::condition_variable cmd_complete_notifier;      /* Notified when the command has ran */
+        std::condition_variable cmd_complete_notifier; /* Notified when the command has ran */
 
-        Result cmd_result;      /* Result storage. Should only be read/written under the lock. */
+        Result cmd_result; /* Result storage. Should only be read/written under the lock. */
     };
 
     class DNSResolver
@@ -264,66 +267,67 @@ private:
     private:
         struct MapElement
         {
-            StringSet      addresses;   // A hostname can map to multiple addresses
+            StringSet addresses;  // A hostname can map to multiple addresses
             mxb::TimePoint timestamp;
         };
 
-        std::unordered_map<std::string, MapElement> m_mapping;      // hostname -> address cache
+        std::unordered_map<std::string, MapElement> m_mapping;  // hostname -> address cache
     };
 
-    mxs::MonitorServer*
-    create_server(SERVER* server, const mxs::MonitorServer::SharedSettings& shared) override;
+    mxs::MonitorServer* create_server(
+        SERVER* server, const mxs::MonitorServer::SharedSettings& shared) override;
 
-    const ServerArray& servers() const;     /* Hides base class function. */
+    const ServerArray& servers() const; /* Hides base class function. */
 
-    ManualCommand m_manual_cmd;     /* Communicates manual commands and results */
-    IdToServerMap m_servers_by_id;  /* Map from server id:s to MariaDBServer */
+    ManualCommand m_manual_cmd;    /* Communicates manual commands and results */
+    IdToServerMap m_servers_by_id; /* Map from server id:s to MariaDBServer */
 
     /* The current state of a cluster modifying operation */
     std::atomic<State> m_state {State::IDLE};
 
-    mxb::ThreadPool m_threadpool;   /* Threads used in concurrent operations */
+    mxb::ThreadPool m_threadpool; /* Threads used in concurrent operations */
 
     // Topology related fields
-    MariaDBServer* m_master = NULL;         /* The most "master-like" server in the cluster. Is the only
+    MariaDBServer* m_master         = NULL;  /* The most "master-like" server in the cluster. Is the only
                                              * server which can get the Master status. */
-    MariaDBServer* m_next_master = NULL;    /* When a cluster operation changes the master, the new master is
+    MariaDBServer* m_next_master    = NULL;  /* When a cluster operation changes the master, the new master is
                                              * written here so the next monitor tick picks it up. */
-    bool m_cluster_topology_changed = true; /* Has cluster topology changed since last monitor loop?
+    bool m_cluster_topology_changed = true;  /* Has cluster topology changed since last monitor loop?
                                              * Causes a topology rebuild on the current tick. */
-    bool m_cluster_modified = false;        /* Has a cluster operation been performed this loop? Prevents
+    bool m_cluster_modified         = false; /* Has a cluster operation been performed this loop? Prevents
                                              * other operations during this tick. */
 
-    DNSResolver m_resolver;                 /* DNS-resolver with cache */
+    DNSResolver m_resolver; /* DNS-resolver with cache */
 
     /* Counter for temporary automatic cluster operation disabling. */
     int cluster_operation_disable_timer = 0;
 
-    CycleMap  m_cycles;                     /* Map from cycle number to cycle member servers */
-    CycleInfo m_master_cycle_status;        /* Info about master server cycle from previous round */
+    CycleMap m_cycles;               /* Map from cycle number to cycle member servers */
+    CycleInfo m_master_cycle_status; /* Info about master server cycle from previous round */
 
     // Miscellaneous info
-    int64_t m_master_gtid_domain = GTID_DOMAIN_UNKNOWN;     /* gtid_domain_id most recently seen on
+    int64_t m_master_gtid_domain = GTID_DOMAIN_UNKNOWN; /* gtid_domain_id most recently seen on
                                                              * the master */
 
-    bool m_warn_current_master_invalid {true};  /* Print warning if current master is not valid? */
-    bool m_warn_cannot_find_master {true};      /* Print warning if a master cannot be found? */
-    bool m_warn_master_down {true};             /* Print warning that failover may happen soon? */
-    bool m_warn_failover_precond {true};        /* Print failover preconditions error message? */
-    bool m_warn_switchover_precond {true};      /* Print switchover preconditions error message? */
-    bool m_warn_cannot_rejoin {true};           /* Print warning if auto_rejoin fails because of invalid
+    bool m_warn_current_master_invalid {true}; /* Print warning if current master is not valid? */
+    bool m_warn_cannot_find_master {true};     /* Print warning if a master cannot be found? */
+    bool m_warn_master_down {true};            /* Print warning that failover may happen soon? */
+    bool m_warn_failover_precond {true};       /* Print failover preconditions error message? */
+    bool m_warn_switchover_precond {true};     /* Print switchover preconditions error message? */
+    bool m_warn_cannot_rejoin {true};          /* Print warning if auto_rejoin fails because of invalid
                                                  * gtid:s? */
 
     struct ClusterLocksInfo
     {
         bool time_to_update() const;
 
-        bool           have_lock_majority {false};  /* Is this the primary monitor for the cluster? */
-        mxb::StopWatch last_locking_attempt;        /* Time since last server lock attempt */
+        bool have_lock_majority {false};     /* Is this the primary monitor for the cluster? */
+        mxb::StopWatch last_locking_attempt; /* Time since last server lock attempt */
 
         /* Time until next locking attempt. Initialized to zero to allow an attempt during first loop. */
         mxb::Duration next_lock_attempt_delay {0};
     };
+
     ClusterLocksInfo m_locks_info;
 
     mxb::XorShiftRandom m_random_gen;
@@ -337,12 +341,12 @@ private:
 
         // Replication topology detection settings.
 
-        bool ignore_external_masters {false};   /* Ignore masters outside of the monitor configuration.
+        bool ignore_external_masters {false}; /* Ignore masters outside of the monitor configuration.
                                                  * TODO: requires work */
-        bool assume_unique_hostnames {true};    /* Are server hostnames consistent between MaxScale and
+        bool assume_unique_hostnames {true};  /* Are server hostnames consistent between MaxScale and
                                                  * servers */
 
-        int failcount {1};      /* Number of ticks master must be down before it's considered
+        int failcount {1}; /* Number of ticks master must be down before it's considered
                                  * totally down, allowing failover or master change. */
 
         // Cluster operations activation settings
@@ -365,15 +369,15 @@ private:
         int64_t slave_conds {SCOND_NONE};
 
         // Cluster operations additional settings
-        int  failover_timeout {10};             /* Time limit in seconds for failover */
-        int  switchover_timeout {10};           /* Time limit in seconds for switchover */
-        bool verify_master_failure {true};      /* Is master failure is verified via slaves? */
-        int  master_failure_timeout {10};       /* Master failure verification (via slaves) time in seconds */
+        int failover_timeout {10};         /* Time limit in seconds for failover */
+        int switchover_timeout {10};       /* Time limit in seconds for switchover */
+        bool verify_master_failure {true}; /* Is master failure is verified via slaves? */
+        int master_failure_timeout {10};   /* Master failure verification (via slaves) time in seconds */
 
-        ServerArray excluded_servers;           /* Servers which cannot be autoselected when deciding which
+        ServerArray excluded_servers; /* Servers which cannot be autoselected when deciding which
                                                  * slave to promote during failover switchover. */
 
-        MariaDBServer::SharedSettings shared;   /* Settings required by MariaDBServer objects */
+        MariaDBServer::SharedSettings shared; /* Settings required by MariaDBServer objects */
     };
 
     Settings m_settings;
@@ -386,16 +390,16 @@ private:
     void reset_server_info();
 
     void reset_node_index_info();
-    bool execute_manual_command(ManualCommand::CmdMethod command, const std::string& cmd_name,
-                                json_t** error_out);
-    bool schedule_manual_command(ManualCommand::CmdMethod command, const std::string& cmd_name,
-                                 json_t** error_out);
+    bool execute_manual_command(
+        ManualCommand::CmdMethod command, const std::string& cmd_name, json_t** error_out);
+    bool schedule_manual_command(
+        ManualCommand::CmdMethod command, const std::string& cmd_name, json_t** error_out);
     bool immediate_tick_required() override;
     bool server_locks_in_use() const;
     void execute_task_all_servers(const ServerFunction& task);
     void execute_task_on_servers(const ServerFunction& task, const ServerArray& servers);
 
-    json_t*        to_json() const;
+    json_t* to_json() const;
     static json_t* to_json(State op);
 
     MariaDBServer* get_server(const EndPoint& search_ep);
@@ -415,7 +419,7 @@ private:
     void check_cluster_operations_support();
     bool try_acquire_locks_this_tick();
     void update_cluster_lock_status();
-    int  get_free_locks();
+    int get_free_locks();
     bool is_slave_maxscale() const;
 
     MariaDBServer* find_topology_master_server(RequireRunning req_running, std::string* msg_out = nullptr);
@@ -424,7 +428,7 @@ private:
     // Cluster discovery and status assignment methods, low level
     void tarjan_scc_visit_node(MariaDBServer* node, ServerArray* stack, int* index, int* cycle);
     void calculate_node_reach(MariaDBServer* search_root);
-    int  running_slaves(MariaDBServer* search_root);
+    int running_slaves(MariaDBServer* search_root);
     bool cycle_has_master_server(ServerArray& cycle_servers);
     void update_gtid_domain();
     void check_acquire_masterlock();
@@ -437,15 +441,14 @@ private:
     ManualCommand::Result manual_rejoin(SERVER* rejoin_cand_srv);
     ManualCommand::Result manual_reset_replication(SERVER* master_server);
     ManualCommand::Result manual_release_locks();
-    void                  handle_low_disk_space_master();
-    void                  handle_auto_failover();
-    void                  handle_auto_rejoin();
+    void handle_low_disk_space_master();
+    void handle_auto_failover();
+    void handle_auto_rejoin();
 
-    const MariaDBServer* slave_receiving_events(const MariaDBServer* demotion_target,
-                                                maxbase::Duration* event_age_out,
-                                                maxbase::Duration* delay_out);
-    std::unique_ptr<SwitchoverParams> switchover_prepare(SERVER* new_master, SERVER* current_master,
-                                                         Log log_mode, json_t** error_out);
+    const MariaDBServer* slave_receiving_events(
+        const MariaDBServer* demotion_target, maxbase::Duration* event_age_out, maxbase::Duration* delay_out);
+    std::unique_ptr<SwitchoverParams> switchover_prepare(
+        SERVER* new_master, SERVER* current_master, Log log_mode, json_t** error_out);
     std::unique_ptr<FailoverParams> failover_prepare(Log log_mode, json_t** error_out);
 
     bool switchover_perform(SwitchoverParams& operation);
@@ -458,33 +461,38 @@ private:
     bool lock_status_is_ok() const;
 
     // Methods used by failover/switchover/rejoin
-    MariaDBServer* select_promotion_target(MariaDBServer* demotion_target, OperationType op, Log log_mode,
-                                           int64_t* gtid_domain_out, json_t** error_out);
-    bool is_candidate_better(const MariaDBServer* candidate, const MariaDBServer* current_best,
-                             const MariaDBServer* demotion_target, uint32_t gtid_domain,
-                             std::string* reason_out = NULL);
+    MariaDBServer* select_promotion_target(MariaDBServer* demotion_target,
+        OperationType op,
+        Log log_mode,
+        int64_t* gtid_domain_out,
+        json_t** error_out);
+    bool is_candidate_better(const MariaDBServer* candidate,
+        const MariaDBServer* current_best,
+        const MariaDBServer* demotion_target,
+        uint32_t gtid_domain,
+        std::string* reason_out = NULL);
     bool server_is_excluded(const MariaDBServer* server);
-    bool check_gtid_replication(Log log_mode, const MariaDBServer* demotion_target,
-                                int64_t cluster_gtid_domain, json_t** error_out);
-    int64_t guess_gtid_domain(MariaDBServer* demotion_target, const ServerArray& candidates,
-                              int* id_missing_out) const;
+    bool check_gtid_replication(
+        Log log_mode, const MariaDBServer* demotion_target, int64_t cluster_gtid_domain, json_t** error_out);
+    int64_t guess_gtid_domain(
+        MariaDBServer* demotion_target, const ServerArray& candidates, int* id_missing_out) const;
 
     ServerArray get_redirectables(const MariaDBServer* old_master, const MariaDBServer* ignored_slave);
 
     int redirect_slaves_ex(GeneralOpData& op,
-                           OperationType type,
-                           const MariaDBServer* promotion_target,
-                           const MariaDBServer* demotion_target,
-                           ServerArray* redirected_to_promo,
-                           ServerArray* redirected_to_demo);
+        OperationType type,
+        const MariaDBServer* promotion_target,
+        const MariaDBServer* demotion_target,
+        ServerArray* redirected_to_promo,
+        ServerArray* redirected_to_demo);
 
-    void wait_cluster_stabilization(GeneralOpData& op, const ServerArray& slaves,
-                                    const MariaDBServer* new_master);
+    void wait_cluster_stabilization(
+        GeneralOpData& op, const ServerArray& slaves, const MariaDBServer* new_master);
 
     // Rejoin methods
-    bool     cluster_can_be_joined();
-    bool     get_joinable_servers(ServerArray* output);
-    bool     server_is_rejoin_suspect(MariaDBServer* rejoin_cand, json_t** output);
+    bool cluster_can_be_joined();
+    bool get_joinable_servers(ServerArray* output);
+    bool server_is_rejoin_suspect(MariaDBServer* rejoin_cand, json_t** output);
     uint32_t do_rejoin(const ServerArray& joinable_servers, json_t** output);
 
     bool check_sql_files();

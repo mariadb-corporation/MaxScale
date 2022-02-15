@@ -23,11 +23,16 @@
 namespace maxsql
 {
 
-static const std::array<std::string, 11> state_names = {
-    "FirstPacket",  "Field",         "FieldEof",     "Row",
-    "ComFieldList", "ComStatistics", "ComStmtFetch",
-    "Done",         "ErrorPacket",   "Error"
-};
+static const std::array<std::string, 11> state_names = {"FirstPacket",
+    "Field",
+    "FieldEof",
+    "Row",
+    "ComFieldList",
+    "ComStatistics",
+    "ComStmtFetch",
+    "Done",
+    "ErrorPacket",
+    "Error"};
 
 std::ostream& operator<<(std::ostream& os, PacketTracker::State state)
 {
@@ -38,7 +43,7 @@ std::ostream& operator<<(std::ostream& os, PacketTracker::State state)
 PacketTracker::PacketTracker(GWBUF* pPacket)
 {
     ComRequest request(ComPacket(pPacket, &m_client_com_packet_internal));
-    m_command = request.command();
+    m_command                         = request.command();
     m_expect_more_split_query_packets = request.is_split_leader();
 
     MXS_SDEBUG("PacketTracker Command: " << STRPACKETTYPE(m_command));
@@ -120,13 +125,11 @@ bool PacketTracker::expecting_more_packets() const
     return expecting_response_packets() || expecting_request_packets();
 }
 
-static constexpr std::array<PacketTracker::State, 5> data_states {
-    PacketTracker::State::Field,
+static constexpr std::array<PacketTracker::State, 5> data_states {PacketTracker::State::Field,
     PacketTracker::State::Row,
     PacketTracker::State::ComFieldList,
     PacketTracker::State::ComStatistics,
-    PacketTracker::State::ComStmtFetch
-};
+    PacketTracker::State::ComStmtFetch};
 
 void PacketTracker::update_response(GWBUF* pPacket)
 {
@@ -136,7 +139,7 @@ void PacketTracker::update_response(GWBUF* pPacket)
     ComResponse response(com_packet, expect_data_only);
 
     if (response.is_split_continuation())
-    {   // no state change, just more of the same data
+    {  // no state change, just more of the same data
         MXS_SDEBUG("PacketTracker::update_response IGNORE trailing split packets");
         return;
     }
@@ -191,9 +194,9 @@ PacketTracker::State PacketTracker::first_packet(const ComResponse& response)
 
     if (response.is_data())
     {
-        m_field_count = 0;
+        m_field_count  = 0;
         m_total_fields = ComQueryResponse(response).nFields();
-        new_state = State::Field;
+        new_state      = State::Field;
     }
     else if (response.is_ok())
     {
@@ -333,4 +336,4 @@ PacketTracker::State PacketTracker::expect_no_response_packets(const ComResponse
     MXS_SERROR("PacketTracker unexpected " << response.type() << " in state " << m_state);
     return State::Error;
 }
-}
+}  // namespace maxsql

@@ -108,7 +108,7 @@ enum DurationUnit
     DURATION_IN_MILLISECONDS,
     DURATION_IN_DEFAULT
 };
-}
+}  // namespace config
 
 namespace cfg = config;
 
@@ -212,8 +212,8 @@ public:
      *
      * @return Duration in milliseconds; 0 if the parameter is not found.
      */
-    std::chrono::milliseconds get_duration_in_ms(const std::string& key,
-                                                 mxs::config::DurationInterpretation interpretation) const;
+    std::chrono::milliseconds get_duration_in_ms(
+        const std::string& key, mxs::config::DurationInterpretation interpretation) const;
 
     /**
      * @brief Get a duration in a specific unit.
@@ -288,8 +288,8 @@ public:
      * nothing is written. If NULL, the parameter is ignored.
      * @return Compiled regex code on success. NULL if key was not found or compilation failed.
      */
-    std::unique_ptr<pcre2_code>
-    get_compiled_regex(const std::string& key, uint32_t options, uint32_t* output_ovec_size) const;
+    std::unique_ptr<pcre2_code> get_compiled_regex(
+        const std::string& key, uint32_t options, uint32_t* output_ovec_size) const;
 
     /**
      * Get multiple compiled regular expressions and the maximum ovector size of
@@ -303,9 +303,10 @@ public:
      * @return Array of compiled patterns, one element for each key. If a key is not found or the pattern
      * cannot be compiled, the corresponding element will be null.
      */
-    std::vector<std::unique_ptr<pcre2_code>>
-    get_compiled_regexes(const std::vector<std::string>& keys, uint32_t options,
-                         uint32_t* ovec_size_out, bool* compile_error_out);
+    std::vector<std::unique_ptr<pcre2_code>> get_compiled_regexes(const std::vector<std::string>& keys,
+        uint32_t options,
+        uint32_t* ovec_size_out,
+        bool* compile_error_out);
 
     /**
      * Check if a key exists.
@@ -324,9 +325,7 @@ public:
      */
     bool contains_any(const std::initializer_list<std::string>& keys) const
     {
-        return std::any_of(keys.begin(), keys.end(), [this](const std::string& a) {
-                               return contains(a);
-                           });
+        return std::any_of(keys.begin(), keys.end(), [this](const std::string& a) { return contains(a); });
     }
 
     /**
@@ -338,9 +337,7 @@ public:
      */
     bool contains_all(const std::initializer_list<std::string>& keys) const
     {
-        return std::all_of(keys.begin(), keys.end(), [this](const std::string& a) {
-                               return contains(a);
-                           });
+        return std::all_of(keys.begin(), keys.end(), [this](const std::string& a) { return contains(a); });
     }
 
     /**
@@ -360,8 +357,8 @@ public:
      */
     void set_multiple(const mxs::ConfigParameters& source);
 
-    void set_from_list(std::vector<std::pair<std::string, std::string>> list,
-                       const MXS_MODULE_PARAM* module_params = NULL);
+    void set_from_list(
+        std::vector<std::pair<std::string, std::string>> list, const MXS_MODULE_PARAM* module_params = NULL);
 
     /**
      * Remove a key-value pair from the container.
@@ -381,21 +378,20 @@ private:
 };
 
 template<>
-inline std::chrono::milliseconds
-mxs::ConfigParameters::get_duration<std::chrono::milliseconds>(const std::string& key) const
+inline std::chrono::milliseconds mxs::ConfigParameters::get_duration<std::chrono::milliseconds>(
+    const std::string& key) const
 {
     return get_duration_in_ms(key, mxs::config::INTERPRET_AS_MILLISECONDS);
 }
 
 template<>
-inline std::chrono::seconds
-mxs::ConfigParameters::get_duration<std::chrono::seconds>(const std::string& key) const
+inline std::chrono::seconds mxs::ConfigParameters::get_duration<std::chrono::seconds>(
+    const std::string& key) const
 {
     std::chrono::milliseconds ms = get_duration_in_ms(key, mxs::config::INTERPRET_AS_SECONDS);
     return std::chrono::duration_cast<std::chrono::seconds>(ms);
 }
-}
-
+}  // namespace maxscale
 
 /**
  * The config context structure, used to build the configuration
@@ -406,15 +402,12 @@ class CONFIG_CONTEXT
 public:
     CONFIG_CONTEXT(const std::string& section = "");
 
-    std::string           m_name;           /**< The name of the object being configured */
-    mxs::ConfigParameters m_parameters;     /**< The list of parameter values */
-    bool                  m_was_persisted;  /**< True if this object was persisted */
-    CONFIG_CONTEXT*       m_next;           /**< Next pointer in the linked list */
+    std::string m_name;                 /**< The name of the object being configured */
+    mxs::ConfigParameters m_parameters; /**< The list of parameter values */
+    bool m_was_persisted;               /**< True if this object was persisted */
+    CONFIG_CONTEXT* m_next;             /**< Next pointer in the linked list */
 
-    const char* name() const
-    {
-        return m_name.c_str();
-    }
+    const char* name() const { return m_name.c_str(); }
 };
 
 /**
@@ -439,10 +432,8 @@ bool config_is_ssl_parameter(const char* key);
  *
  * @return True if the configuration parameter is valid
  */
-bool config_param_is_valid(const MXS_MODULE_PARAM* params,
-                           const char* key,
-                           const char* value,
-                           const CONFIG_CONTEXT* context);
+bool config_param_is_valid(
+    const MXS_MODULE_PARAM* params, const char* key, const char* value, const CONFIG_CONTEXT* context);
 
 /**
  * Break a comma-separated list into a string array. Removes whitespace from list items.
@@ -464,6 +455,7 @@ std::vector<std::string> config_break_list_string(const std::string& list_string
  * a valid truth value
  */
 int config_truth_value(const char* value);
+
 inline int config_truth_value(const std::string& value)
 {
     return config_truth_value(value.c_str());
@@ -533,8 +525,7 @@ bool config_set_writeq_low_water(uint32_t size);
  * @return True, if @ config_value was valid, false otherwise.
  *
  */
-bool config_parse_disk_space_threshold(DiskSpaceLimits* disk_space_threshold,
-                                       const char* config_value);
+bool config_parse_disk_space_threshold(DiskSpaceLimits* disk_space_threshold, const char* config_value);
 
 /**
  * @brief Check whether section/object name is valid.
@@ -570,9 +561,9 @@ bool check_path_parameter(const MXS_MODULE_PARAM* params, const char* value);
  *         @c pDuration will not be modified.
  */
 bool get_suffixed_duration(const char* zValue,
-                           mxs::config::DurationInterpretation interpretation,
-                           std::chrono::milliseconds* pDuration,
-                           mxs::config::DurationUnit* pUnit = nullptr);
+    mxs::config::DurationInterpretation interpretation,
+    std::chrono::milliseconds* pDuration,
+    mxs::config::DurationUnit* pUnit = nullptr);
 
 /**
  * Converts a string into milliseconds, intepreting in a case-insensitive manner
@@ -589,9 +580,8 @@ bool get_suffixed_duration(const char* zValue,
  * @return True on success, false on invalid input in which case @c pUnit and
  *         @c pDuration will not be modified.
  */
-inline bool get_suffixed_duration(const char* zValue,
-                                  std::chrono::milliseconds* pDuration,
-                                  mxs::config::DurationUnit* pUnit = nullptr)
+inline bool get_suffixed_duration(
+    const char* zValue, std::chrono::milliseconds* pDuration, mxs::config::DurationUnit* pUnit = nullptr)
 {
     return get_suffixed_duration(zValue, mxs::config::INTERPRET_AS_MILLISECONDS, pDuration, pUnit);
 }
@@ -611,9 +601,8 @@ inline bool get_suffixed_duration(const char* zValue,
  * @return True on success, false on invalid input in which case @c pUnit and
  *         @c pDuration will not be modified.
  */
-inline bool get_suffixed_duration(const char* zValue,
-                                  std::chrono::seconds* pDuration,
-                                  mxs::config::DurationUnit* pUnit = nullptr)
+inline bool get_suffixed_duration(
+    const char* zValue, std::chrono::seconds* pDuration, mxs::config::DurationUnit* pUnit = nullptr)
 {
     std::chrono::milliseconds ms;
 
@@ -657,7 +646,5 @@ inline bool get_suffixed_size(const std::string& value, uint64_t* dest)
  * nothing is written. If NULL, the parameter is ignored.
  * @return Compiled regex code on success, NULL otherwise
  */
-pcre2_code* compile_regex_string(const char* regex_string,
-                                 bool jit_enabled,
-                                 uint32_t options,
-                                 uint32_t* output_ovector_size);
+pcre2_code* compile_regex_string(
+    const char* regex_string, bool jit_enabled, uint32_t options, uint32_t* output_ovector_size);

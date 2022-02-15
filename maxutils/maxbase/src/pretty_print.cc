@@ -73,12 +73,12 @@ std::pair<double, const char*> pretty_number_split(double value, NumberType size
     int sign = 1;
     if (std::signbit(value))
     {
-        sign = -1;
+        sign  = -1;
         value = -value;
     }
 
-    std::pair<double, const char*> res = (size_type == NumberType::Byte) ?
-        pretty_number_split_binary(value) : pretty_number_split_decimal(value);
+    std::pair<double, const char*> res = (size_type == NumberType::Byte) ? pretty_number_split_binary(value)
+                                                                         : pretty_number_split_decimal(value);
 
     res.first *= sign;
     return res;
@@ -119,4 +119,4 @@ std::string pretty_number(double num, const char* separator, const char* suffix)
     auto pretty = make_it_pretty(num, separator, NumberType::Regular);
     return pretty + suffix;
 }
-}
+}  // namespace maxbase

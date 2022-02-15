@@ -24,11 +24,12 @@
 
 namespace config = maxscale::config;
 
-class XpandMonitor : public maxscale::MonitorWorker
-                   , private XpandNode::Persister
+class XpandMonitor : public maxscale::MonitorWorker,
+                     private XpandNode::Persister
 {
-    XpandMonitor(const XpandMonitor&) = delete;
+    XpandMonitor(const XpandMonitor&)            = delete;
     XpandMonitor& operator=(const XpandMonitor&) = delete;
+
 public:
     class Config : public config::Configuration
     {
@@ -37,31 +38,19 @@ public:
 
         static void populate(MXS_MODULE& module);
 
-        long cluster_monitor_interval() const
-        {
-            return m_cluster_monitor_interval.get().count();
-        }
+        long cluster_monitor_interval() const { return m_cluster_monitor_interval.get().count(); }
 
-        long health_check_threshold() const
-        {
-            return m_health_check_threshold.get();
-        }
+        long health_check_threshold() const { return m_health_check_threshold.get(); }
 
-        bool dynamic_node_detection() const
-        {
-            return m_dynamic_node_detection.get();
-        }
+        bool dynamic_node_detection() const { return m_dynamic_node_detection.get(); }
 
-        int health_check_port() const
-        {
-            return m_health_check_port.get();
-        }
+        int health_check_port() const { return m_health_check_port.get(); }
 
     private:
         config::Duration<std::chrono::milliseconds> m_cluster_monitor_interval;
-        config::Count                               m_health_check_threshold;
-        config::Bool                                m_dynamic_node_detection;
-        config::Integer                             m_health_check_port;
+        config::Count m_health_check_threshold;
+        config::Bool m_dynamic_node_detection;
+        config::Integer m_health_check_port;
     };
 
     ~XpandMonitor();
@@ -84,9 +73,7 @@ protected:
     void server_removed(SERVER* pServer) override;
 
 private:
-    XpandMonitor(const std::string& name,
-                 const std::string& module,
-                 sqlite3* pDb);
+    XpandMonitor(const std::string& name, const std::string& module, sqlite3* pDb);
 
     void pre_loop() override;
     void post_loop() override;
@@ -107,8 +94,7 @@ private:
 
     bool refresh_nodes();
     bool refresh_nodes(MYSQL* pHub_con);
-    bool check_cluster_membership(MYSQL* pHub_con,
-                                  std::map<int, XpandMembership>* pMemberships);
+    bool check_cluster_membership(MYSQL* pHub_con, std::map<int, XpandMembership>* pMemberships);
 
     void populate_from_bootstrap_servers();
 
@@ -130,44 +116,32 @@ private:
         UNSOFTFAIL,
     };
 
-    bool perform_operation(Operation operation,
-                           SERVER* pServer,
-                           json_t** ppError);
-
+    bool perform_operation(Operation operation, SERVER* pServer, json_t** ppError);
 
     bool should_check_cluster() const
     {
         return now() - m_last_cluster_check > m_config.cluster_monitor_interval();
     }
 
-    void trigger_cluster_check()
-    {
-        m_last_cluster_check = 0;
-    }
+    void trigger_cluster_check() { m_last_cluster_check = 0; }
 
-    void cluster_checked()
-    {
-        m_last_cluster_check = now();
-    }
+    void cluster_checked() { m_last_cluster_check = now(); }
 
-    static long now()
-    {
-        return mxb::WorkerLoad::get_time_ms();
-    }
+    static long now() { return mxb::WorkerLoad::get_time_ms(); }
 
     // XpandNode::Persister
     void persist(const XpandNode& node);
     void unpersist(const XpandNode& node);
 
 private:
-    Config                   m_config;
+    Config m_config;
     std::map<int, XpandNode> m_nodes_by_id;
     std::vector<std::string> m_health_urls;
-    mxb::http::Async         m_http;
-    uint32_t                 m_delayed_http_check_id {0};
-    long                     m_last_cluster_check {0};
-    SERVER*                  m_pHub_server {nullptr};
-    MYSQL*                   m_pHub_con {nullptr};
-    sqlite3*                 m_pDb {nullptr};
-    std::vector<SERVER*>     m_cluster_servers;
+    mxb::http::Async m_http;
+    uint32_t m_delayed_http_check_id {0};
+    long m_last_cluster_check {0};
+    SERVER* m_pHub_server {nullptr};
+    MYSQL* m_pHub_con {nullptr};
+    sqlite3* m_pDb {nullptr};
+    std::vector<SERVER*> m_cluster_servers;
 };

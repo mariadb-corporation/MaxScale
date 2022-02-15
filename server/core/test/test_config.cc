@@ -21,32 +21,32 @@
 
 using namespace std;
 
-#define TEST(a) do {if (!(a)) {printf("Error: `" #a "` was not true\n"); return 1;}} while (false)
+#define TEST(a)                                       \
+    do                                                \
+    {                                                 \
+        if (!(a))                                     \
+        {                                             \
+            printf("Error: `" #a "` was not true\n"); \
+            return 1;                                 \
+        }                                             \
+    }                                                 \
+    while (false)
 
 int test_validity()
 {
-    MXS_ENUM_VALUE enum_values[] =
-    {
-        {"a", (1 << 0)},
-        {"b", (1 << 1)},
-        {"c", (1 << 2)},
-        {NULL}
-    };
+    MXS_ENUM_VALUE enum_values[] = {{"a", (1 << 0)}, {"b", (1 << 1)}, {"c", (1 << 2)}, {NULL}};
 
-    MXS_MODULE_PARAM params[] =
-    {
-        {"p1",  MXS_MODULE_PARAM_INT,      "-123"                   },
-        {"p2",  MXS_MODULE_PARAM_COUNT,    "123"                    },
-        {"p3",  MXS_MODULE_PARAM_BOOL,     "true"                   },
-        {"p4",  MXS_MODULE_PARAM_STRING,   "default"                },
-        {"p5",  MXS_MODULE_PARAM_ENUM,     "a", MXS_MODULE_OPT_NONE, enum_values},
-        {"p6",  MXS_MODULE_PARAM_PATH,     "/tmp", MXS_MODULE_OPT_PATH_F_OK},
-        {"p7",  MXS_MODULE_PARAM_SERVICE,  "my-service"             },
-        {"p8",  MXS_MODULE_PARAM_ENUM,     "a", MXS_MODULE_OPT_ENUM_UNIQUE, enum_values},
-        {"p9",  MXS_MODULE_PARAM_DURATION, "4711s"                  },
+    MXS_MODULE_PARAM params[] = {{"p1", MXS_MODULE_PARAM_INT, "-123"},
+        {"p2", MXS_MODULE_PARAM_COUNT, "123"},
+        {"p3", MXS_MODULE_PARAM_BOOL, "true"},
+        {"p4", MXS_MODULE_PARAM_STRING, "default"},
+        {"p5", MXS_MODULE_PARAM_ENUM, "a", MXS_MODULE_OPT_NONE, enum_values},
+        {"p6", MXS_MODULE_PARAM_PATH, "/tmp", MXS_MODULE_OPT_PATH_F_OK},
+        {"p7", MXS_MODULE_PARAM_SERVICE, "my-service"},
+        {"p8", MXS_MODULE_PARAM_ENUM, "a", MXS_MODULE_OPT_ENUM_UNIQUE, enum_values},
+        {"p9", MXS_MODULE_PARAM_DURATION, "4711s"},
         {"p10", MXS_MODULE_PARAM_DURATION, "4711s", MXS_MODULE_OPT_DURATION_S},
-        {MXS_END_MODULE_PARAMS}
-    };
+        {MXS_END_MODULE_PARAMS}};
 
     CONFIG_CONTEXT ctx;
 
@@ -54,16 +54,16 @@ int test_validity()
     TEST(config_param_is_valid(params, "p1", "1", &ctx));
     TEST(config_param_is_valid(params, "p1", "-1", &ctx));
     TEST(config_param_is_valid(params, "p1", "0", &ctx));
-    TEST(!config_param_is_valid(params, "p1", "should not be OK", &ctx));   // String value for int, should
-                                                                            // fail
+    TEST(!config_param_is_valid(params, "p1", "should not be OK", &ctx));  // String value for int, should
+                                                                           // fail
 
     /** Count parameter */
     TEST(config_param_is_valid(params, "p2", "1", &ctx));
     TEST(config_param_is_valid(params, "p2", "0", &ctx));
-    TEST(!config_param_is_valid(params, "p2", "should not be OK", &ctx));   // String value for count, should
-                                                                            // fail
-    TEST(!config_param_is_valid(params, "p2", "-1", &ctx));                 // Negative values for count
-                                                                            // should fail
+    TEST(!config_param_is_valid(params, "p2", "should not be OK", &ctx));  // String value for count, should
+                                                                           // fail
+    TEST(!config_param_is_valid(params, "p2", "-1", &ctx));                // Negative values for count
+                                                                           // should fail
 
     /** Boolean parameter */
     TEST(config_param_is_valid(params, "p3", "1", &ctx));
@@ -79,7 +79,7 @@ int test_validity()
 
     /** String parameter */
     TEST(config_param_is_valid(params, "p4", "should be OK", &ctx));
-    TEST(config_param_is_valid(params, "p4", "", &ctx));    // Empty strings are also OK
+    TEST(config_param_is_valid(params, "p4", "", &ctx));  // Empty strings are also OK
 
     /** Enum parameter */
     TEST(config_param_is_valid(params, "p5", "a", &ctx));
@@ -135,32 +135,23 @@ int test_validity()
 
 int test_add_parameter()
 {
-    MXS_ENUM_VALUE enum_values[] =
-    {
-        {"a", (1 << 0)},
-        {"b", (1 << 1)},
-        {"c", (1 << 2)},
-        {NULL}
-    };
+    MXS_ENUM_VALUE enum_values[] = {{"a", (1 << 0)}, {"b", (1 << 1)}, {"c", (1 << 2)}, {NULL}};
 
-    MXS_MODULE_PARAM params[] =
-    {
-        {"p1", MXS_MODULE_PARAM_INT,     "-123"                  },
-        {"p2", MXS_MODULE_PARAM_COUNT,   "123"                   },
-        {"p3", MXS_MODULE_PARAM_BOOL,    "true"                  },
-        {"p4", MXS_MODULE_PARAM_STRING,  "default"               },
-        {"p5", MXS_MODULE_PARAM_ENUM,    "a", MXS_MODULE_OPT_NONE, enum_values},
-        {"p6", MXS_MODULE_PARAM_PATH,    "/tmp", MXS_MODULE_OPT_PATH_F_OK},
-        {"p7", MXS_MODULE_PARAM_SERVICE, "my-service"            },
-        {MXS_END_MODULE_PARAMS}
-    };
+    MXS_MODULE_PARAM params[] = {{"p1", MXS_MODULE_PARAM_INT, "-123"},
+        {"p2", MXS_MODULE_PARAM_COUNT, "123"},
+        {"p3", MXS_MODULE_PARAM_BOOL, "true"},
+        {"p4", MXS_MODULE_PARAM_STRING, "default"},
+        {"p5", MXS_MODULE_PARAM_ENUM, "a", MXS_MODULE_OPT_NONE, enum_values},
+        {"p6", MXS_MODULE_PARAM_PATH, "/tmp", MXS_MODULE_OPT_PATH_F_OK},
+        {"p7", MXS_MODULE_PARAM_SERVICE, "my-service"},
+        {MXS_END_MODULE_PARAMS}};
 
 
     CONFIG_CONTEXT svc1("my-service");
     CONFIG_CONTEXT svc2("some-service");
     CONFIG_CONTEXT ctx;
     svc2.m_next = &svc1;
-    ctx.m_next = &svc2;
+    ctx.m_next  = &svc2;
     config_add_param(&svc1, "type", "service");
     config_add_param(&svc2, "type", "service");
 
@@ -201,13 +192,10 @@ int test_add_parameter()
 
 int test_required_parameters()
 {
-    MXS_MODULE_PARAM params[] =
-    {
-        {"p1", MXS_MODULE_PARAM_INT,   "-123", MXS_MODULE_OPT_REQUIRED},
-        {"p2", MXS_MODULE_PARAM_COUNT, "123",  MXS_MODULE_OPT_REQUIRED},
-        {"p3", MXS_MODULE_PARAM_BOOL,  "true", MXS_MODULE_OPT_REQUIRED},
-        {MXS_END_MODULE_PARAMS}
-    };
+    MXS_MODULE_PARAM params[] = {{"p1", MXS_MODULE_PARAM_INT, "-123", MXS_MODULE_OPT_REQUIRED},
+        {"p2", MXS_MODULE_PARAM_COUNT, "123", MXS_MODULE_OPT_REQUIRED},
+        {"p3", MXS_MODULE_PARAM_BOOL, "true", MXS_MODULE_OPT_REQUIRED},
+        {MXS_END_MODULE_PARAMS}};
 
     CONFIG_CONTEXT ctx;
 
@@ -230,19 +218,17 @@ namespace
 struct DISK_SPACE_THRESHOLD_RESULT
 {
     const char* zPath;
-    int32_t     size;
+    int32_t size;
 };
 
 struct DISK_SPACE_THRESHOLD_TEST
 {
-    const char*                 zValue;
-    bool                        valid;
+    const char* zValue;
+    bool valid;
     DISK_SPACE_THRESHOLD_RESULT results[5];
 };
 
-int dst_report(const DISK_SPACE_THRESHOLD_TEST& test,
-               bool parsed,
-               DiskSpaceLimits& result)
+int dst_report(const DISK_SPACE_THRESHOLD_TEST& test, bool parsed, DiskSpaceLimits& result)
 {
     int nErrors = 0;
 
@@ -311,53 +297,28 @@ int dst_report(const DISK_SPACE_THRESHOLD_TEST& test,
 
     return nErrors;
 }
-}
+}  // namespace
 
 int test_disk_space_threshold()
 {
     int nErrors = 0;
 
-    static const DISK_SPACE_THRESHOLD_TEST tests[] =
-    {
-        {
-            "/data:80", true,
-            {
-                {"/data",  80}
-            }
-        },
-        {
-            "/data1", false
-        },
-        {
-            ":50", false
-        },
-        {
-            "/data1:", false
-        },
-        {
-            "/data1:abc", false
-        },
-        {
-            "/data1:120", false
-        },
-        {
-            "/data1:-50", false
-        },
-        {
-            "/data1,/data2:50", false
-        },
-        {
-            "/data1:50,/data2", false
-        },
-        {
-            " /data1 : 40, /data2 :50, /data3: 70 ", true,
+    static const DISK_SPACE_THRESHOLD_TEST tests[] = {{"/data:80", true, {{"/data", 80}}},
+        {"/data1", false},
+        {":50", false},
+        {"/data1:", false},
+        {"/data1:abc", false},
+        {"/data1:120", false},
+        {"/data1:-50", false},
+        {"/data1,/data2:50", false},
+        {"/data1:50,/data2", false},
+        {" /data1 : 40, /data2 :50, /data3: 70 ",
+            true,
             {
                 {"/data1", 40},
                 {"/data2", 50},
                 {"/data3", 70},
-            }
-        }
-    };
+            }}};
 
     const int nTests = sizeof(tests) / sizeof(tests[0]);
 

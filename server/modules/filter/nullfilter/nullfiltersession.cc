@@ -17,16 +17,13 @@
 NullFilterSession::NullFilterSession(MXS_SESSION* pSession, SERVICE* pService, const NullFilter* pFilter)
     : maxscale::FilterSession(pSession, pService)
     , m_filter(*pFilter)
-{
-}
+{}
 
-NullFilterSession::~NullFilterSession()
-{
-}
+NullFilterSession::~NullFilterSession() {}
 
 // static
-NullFilterSession* NullFilterSession::create(MXS_SESSION* pSession, SERVICE* pService,
-                                             const NullFilter* pFilter)
+NullFilterSession* NullFilterSession::create(
+    MXS_SESSION* pSession, SERVICE* pService, const NullFilter* pFilter)
 {
     return new NullFilterSession(pSession, pService, pFilter);
 }

@@ -20,12 +20,9 @@
 int User;
 char Prev_section[50];
 
-int dumper(void* user,
-           const char* section,
-           const char* name,
-           const char* value)
+int dumper(void* user, const char* section, const char* name, const char* value)
 {
-    User = (int)user;
+    User = (int) user;
     if (strcmp(section, Prev_section))
     {
         printf("... [%s]\n", section);
@@ -43,7 +40,7 @@ void parse(const char* fname)
     int e;
 
     *Prev_section = '\0';
-    e = ini_parse(fname, dumper, (void*)u);
+    e             = ini_parse(fname, dumper, (void*) u);
     printf("%s: e=%d user=%d\n", fname, e, User);
     u++;
 }

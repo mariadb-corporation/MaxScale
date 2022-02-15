@@ -33,7 +33,6 @@ namespace
 class ThisUnit
 {
 public:
-
     /**
      * Call a function on every server in the global server list.
      *
@@ -70,7 +69,10 @@ public:
             else
             {
                 MXS_ERROR("Cannot create server '%s' at '[%s]:%d', server '%s' exists there already.",
-                          server->name(), other->address(), other->port(), other->name());
+                    server->name(),
+                    other->address(),
+                    other->port(),
+                    other->name());
             }
         }
 
@@ -97,19 +99,16 @@ public:
         m_all_servers.clear();
     }
 
-    void set_allow_duplicates(bool value)
-    {
-        m_allow_duplicates = value;
-    }
+    void set_allow_duplicates(bool value) { m_allow_duplicates = value; }
 
 private:
-    std::mutex           m_all_servers_lock;/**< Protects access to array */
-    std::vector<Server*> m_all_servers;     /**< Global list of servers, in configuration file order */
-    bool                 m_allow_duplicates = false;
+    std::mutex m_all_servers_lock;      /**< Protects access to array */
+    std::vector<Server*> m_all_servers; /**< Global list of servers, in configuration file order */
+    bool m_allow_duplicates = false;
 };
 
 ThisUnit this_unit;
-}
+}  // namespace
 
 Server* ServerManager::create_server(const char* name, const mxs::ConfigParameters& params)
 {
@@ -128,13 +127,12 @@ void ServerManager::server_free(Server* server)
     mxb_assert(server);
     this_unit.erase(server);
 
-    mxs::RoutingWorker::execute_concurrently(
-        [server]() {
-            mxs::RoutingWorker* worker = mxs::RoutingWorker::get_current();
-            mxb_assert(worker);
+    mxs::RoutingWorker::execute_concurrently([server]() {
+        mxs::RoutingWorker* worker = mxs::RoutingWorker::get_current();
+        mxb_assert(worker);
 
-            worker->evict_dcbs(server, mxs::RoutingWorker::Evict::ALL);
-        });
+        worker->evict_dcbs(server, mxs::RoutingWorker::Evict::ALL);
+    });
 
     delete server;
 }
@@ -147,46 +145,41 @@ void ServerManager::destroy_all()
 Server* ServerManager::find_by_unique_name(const string& name)
 {
     Server* rval = nullptr;
-    this_unit.foreach_server(
-        [&rval, name](Server* server) {
-            if (server->active() && server->name() == name)
-            {
-                rval = server;
-                return false;
-            }
-            return true;
+    this_unit.foreach_server([&rval, name](Server* server) {
+        if (server->active() && server->name() == name)
+        {
+            rval = server;
+            return false;
         }
-        );
+        return true;
+    });
     return rval;
 }
 
 Server* ServerManager::find_by_address(const string& address, uint16_t port)
 {
     Server* rval = nullptr;
-    this_unit.foreach_server(
-        [&rval, address, port](Server* server) {
-            if (server->active() && server->address() == address && server->port() == port)
-            {
-                rval = server;
-                return false;
-            }
-            return true;
+    this_unit.foreach_server([&rval, address, port](Server* server) {
+        if (server->active() && server->address() == address && server->port() == port)
+        {
+            rval = server;
+            return false;
         }
-        );
+        return true;
+    });
     return rval;
 }
 
 json_t* ServerManager::server_list_to_json(const char* host)
 {
     json_t* data = json_array();
-    this_unit.foreach_server(
-        [data, host](Server* server) {
-            if (server->active())
-            {
-                json_array_append_new(data, server_to_json_data_relations(server, host));
-            }
-            return true;
-        });
+    this_unit.foreach_server([data, host](Server* server) {
+        if (server->active())
+        {
+            json_array_append_new(data, server_to_json_data_relations(server, host));
+        }
+        return true;
+    });
     return mxs_json_resource(host, MXS_JSON_API_SERVERS, data);
 }
 
@@ -205,8 +198,8 @@ void ServerManager::set_allow_duplicates(bool value)
 json_t* ServerManager::server_to_json_data_relations(const Server* server, const char* host)
 {
     // Add monitor and service info to server json representation.
-    json_t* rel = json_object();
-    std::string self = std::string(MXS_JSON_API_SERVERS) + server->name() + "/relationships/";
+    json_t* rel         = json_object();
+    std::string self    = std::string(MXS_JSON_API_SERVERS) + server->name() + "/relationships/";
     json_t* service_rel = service_relations_to_server(server, host, self + "services");
     if (service_rel)
     {
@@ -267,10 +260,8 @@ bool Server::is_mxs_service() const
             rval = true;
         }
     }
-    else if (strcmp(address(), "127.0.0.1") == 0
-             || strcmp(address(), "::1") == 0
-             || strcmp(address(), "localhost") == 0
-             || strcmp(address(), "localhost.localdomain") == 0)
+    else if (strcmp(address(), "127.0.0.1") == 0 || strcmp(address(), "::1") == 0
+             || strcmp(address(), "localhost") == 0 || strcmp(address(), "localhost.localdomain") == 0)
     {
         if (service_port_is_used(port()))
         {

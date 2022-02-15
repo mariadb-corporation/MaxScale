@@ -16,8 +16,7 @@
 SQL::SQL(MYSQL* mysql, const cdc::Server& server)
     : m_mysql(mysql)
     , m_server(server)
-{
-}
+{}
 
 SQL::~SQL()
 {
@@ -25,8 +24,8 @@ SQL::~SQL()
     mysql_close(m_mysql);
 }
 
-std::pair<std::string, std::unique_ptr<SQL>> SQL::connect(const std::vector<cdc::Server>& servers,
-                                                          int connect_timeout, int read_timeout)
+std::pair<std::string, std::unique_ptr<SQL>> SQL::connect(
+    const std::vector<cdc::Server>& servers, int connect_timeout, int read_timeout)
 {
     std::unique_ptr<SQL> rval;
     MYSQL* mysql = nullptr;
@@ -48,8 +47,14 @@ std::pair<std::string, std::unique_ptr<SQL>> SQL::connect(const std::vector<cdc:
         mysql_optionsv(mysql, MYSQL_OPT_CONNECT_TIMEOUT, &connect_timeout);
         mysql_optionsv(mysql, MYSQL_OPT_READ_TIMEOUT, &read_timeout);
 
-        if (!mysql_real_connect(mysql, server.host.c_str(), server.user.c_str(), server.password.c_str(),
-                                nullptr, server.port, nullptr, 0))
+        if (!mysql_real_connect(mysql,
+                server.host.c_str(),
+                server.user.c_str(),
+                server.password.c_str(),
+                nullptr,
+                server.port,
+                nullptr,
+                0))
         {
             error = "Connection creation failed: " + std::string(mysql_error(mysql));
             mysql_close(mysql);

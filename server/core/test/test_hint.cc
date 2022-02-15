@@ -12,10 +12,10 @@
  */
 
 // To ensure that ss_info_assert asserts also when builing in non-debug mode.
-#if !defined (SS_DEBUG)
+#if !defined(SS_DEBUG)
 #define SS_DEBUG
 #endif
-#if defined (NDEBUG)
+#if defined(NDEBUG)
 #undef NDEBUG
 #endif
 #include <stdio.h>
@@ -35,13 +35,12 @@ static int test1()
     HINT* hint;
 
     /* Hint tests */
-    fprintf(stderr,
-            "testhint : Add a parameter hint to a null list");
+    fprintf(stderr, "testhint : Add a parameter hint to a null list");
     char* name = MXS_STRDUP_A("name");
-    hint = hint_create_parameter(NULL, name, "value");
+    hint       = hint_create_parameter(NULL, name, "value");
     MXS_FREE(name);
     mxb_assert_message(NULL != hint, "New hint list should not be null");
-    mxb_assert_message(0 == strcmp("value", (char*)hint->value), "Hint value should be correct");
+    mxb_assert_message(0 == strcmp("value", (char*) hint->value), "Hint value should be correct");
     mxb_assert_message(0 != hint_exists(&hint, HINT_PARAMETER), "Hint of parameter type should exist");
     fprintf(stderr, "\t..done\nFree hints.");
     if (NULL != hint)

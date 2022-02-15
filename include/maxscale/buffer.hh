@@ -41,7 +41,7 @@ enum gwbuf_type_t
     GWBUF_TYPE_TRACK_STATE    = (1 << 6),
 };
 
-enum  gwbuf_info_t
+enum gwbuf_info_t
 {
     GWBUF_INFO_NONE   = 0x0,
     GWBUF_INFO_PARSED = 0x1
@@ -67,10 +67,10 @@ struct buffer_object_t;
  */
 struct SHARED_BUF
 {
-    buffer_object_t* bufobj;    /*< List of objects referred to by GWBUF */
-    int32_t          refcount;  /*< Reference count on the buffer */
-    uint32_t         info;      /*< Info bits */
-    unsigned char    data[1];   /*< Actual memory that was allocated */
+    buffer_object_t* bufobj; /*< List of objects referred to by GWBUF */
+    int32_t refcount;        /*< Reference count on the buffer */
+    uint32_t info;           /*< Info bits */
+    unsigned char data[1];   /*< Actual memory that was allocated */
 };
 
 /**
@@ -83,16 +83,16 @@ struct SHARED_BUF
  */
 struct GWBUF
 {
-    GWBUF*      next;           /*< Next buffer in a linked chain of buffers */
-    GWBUF*      tail;           /*< Last buffer in a linked chain of buffers */
-    void*       start;          /*< Start of the valid data */
-    void*       end;            /*< First byte after the valid data */
-    SHARED_BUF* sbuf;           /*< The shared buffer with the real data */
-    HINT*       hint;           /*< Hint data for this buffer */
-    SERVER*     server;         /*< The target server where the buffer is executed */
-    uint32_t    gwbuf_type;     /*< buffer's data type information */
+    GWBUF* next;         /*< Next buffer in a linked chain of buffers */
+    GWBUF* tail;         /*< Last buffer in a linked chain of buffers */
+    void* start;         /*< Start of the valid data */
+    void* end;           /*< First byte after the valid data */
+    SHARED_BUF* sbuf;    /*< The shared buffer with the real data */
+    HINT* hint;          /*< Hint data for this buffer */
+    SERVER* server;      /*< The target server where the buffer is executed */
+    uint32_t gwbuf_type; /*< buffer's data type information */
 #ifdef SS_DEBUG
-    int owner;      /*< Owner of the thread, only for debugging */
+    int owner; /*< Owner of the thread, only for debugging */
 #endif
 };
 
@@ -165,7 +165,7 @@ inline const uint8_t* GWBUF_DATA(const GWBUF* b)
 /*< Number of bytes in the individual buffer */
 inline size_t gwbuf_link_length(const GWBUF* b)
 {
-    return (size_t)((char*)b->end - (char*)b->start);
+    return (size_t) ((char*) b->end - (char*) b->start);
 }
 
 inline size_t GWBUF_LENGTH(const GWBUF* b)
@@ -183,7 +183,7 @@ inline bool gwbuf_is_contiguous(const GWBUF* b)
 /*< True if all bytes in the buffer have been consumed */
 inline bool gwbuf_link_empty(const GWBUF* b)
 {
-    return (char*)b->start >= (char*)b->end;
+    return (char*) b->start >= (char*) b->end;
 }
 
 inline bool GWBUF_EMPTY(const GWBUF* b)
@@ -194,7 +194,7 @@ inline bool GWBUF_EMPTY(const GWBUF* b)
 /*< Consume a number of bytes in the buffer */
 inline void gwbuf_link_consume(GWBUF* b, unsigned int bytes)
 {
-    b->start = bytes > ((char*)b->end - (char*)b->start) ? b->end : (void*)((char*)b->start + bytes);
+    b->start = bytes > ((char*) b->end - (char*) b->start) ? b->end : (void*) ((char*) b->start + bytes);
 }
 
 inline void GWBUF_CONSUME(GWBUF* b, unsigned int bytes)
@@ -204,7 +204,7 @@ inline void GWBUF_CONSUME(GWBUF* b, unsigned int bytes)
 
 inline void gwbuf_link_rtrim(GWBUF* b, unsigned int bytes)
 {
-    b->end = bytes > ((char*)b->end - (char*)b->start) ? b->start : (void*)((char*)b->end - bytes);
+    b->end = bytes > ((char*) b->end - (char*) b->start) ? b->start : (void*) ((char*) b->end - bytes);
 }
 
 inline void GWBUF_RTRIM(GWBUF* b, unsigned int bytes)
@@ -406,10 +406,7 @@ extern GWBUF* gwbuf_make_contiguous(GWBUF* buf);
  * @param data        Object data
  * @param donefun_fp  Clean-up function to be executed before buffer is freed.
  */
-void gwbuf_add_buffer_object(GWBUF* buf,
-                             bufobj_id_t id,
-                             void* data,
-                             void (* donefun_fp)(void*));
+void gwbuf_add_buffer_object(GWBUF* buf, bufobj_id_t id, void* data, void (*donefun_fp)(void*));
 
 /**
  * Search buffer object which matches with the id.
@@ -420,7 +417,7 @@ void gwbuf_add_buffer_object(GWBUF* buf,
  * @return Searched buffer object or NULL if not found
  */
 void* gwbuf_get_buffer_object_data(GWBUF* buf, bufobj_id_t id);
-#if defined (BUFFER_TRACE)
+#if defined(BUFFER_TRACE)
 extern void dprintAllBuffers(void* pdcb);
 #endif
 
@@ -465,11 +462,11 @@ extern uint8_t* gwbuf_byte_pointer(GWBUF* buffer, size_t offset);
 inline void gwbuf_set_owner(GWBUF* buf, int owner)
 {
     buf->owner = owner;
-    buf = buf->next;
+    buf        = buf->next;
     while (buf)
     {
         buf->owner = owner;
-        buf = buf->next;
+        buf        = buf->next;
     }
 }
 #endif
@@ -480,12 +477,9 @@ namespace std
 template<>
 struct default_delete<GWBUF>
 {
-    void operator()(GWBUF* pBuffer)
-    {
-        gwbuf_free(pBuffer);
-    }
+    void operator()(GWBUF* pBuffer) { gwbuf_free(pBuffer); }
 };
-}
+}  // namespace std
 
 namespace maxscale
 {
@@ -509,12 +503,15 @@ public:
     // pointer_type  : The type of a pointer to an element, either "uint8_t*" or "const uint8_t*".
     // reference_type: The type of a reference to an element, either "uint8_t&" or "const uint8_t&".
     template<class buf_type, class pointer_type, class reference_type>
-    class iterator_base : public std::iterator<
-                            std::forward_iterator_tag   // The type of the iterator
-                            , uint8_t                   // The type of the elems
-                            , std::ptrdiff_t            // Difference between two its
-                            , pointer_type              // The type of pointer to an elem
-                            , reference_type>           // The reference type of an elem
+    class iterator_base : public std::iterator<std::forward_iterator_tag  // The type of the iterator
+                              ,
+                              uint8_t  // The type of the elems
+                              ,
+                              std::ptrdiff_t  // Difference between two its
+                              ,
+                              pointer_type  // The type of pointer to an elem
+                              ,
+                              reference_type>  // The reference type of an elem
     {
     public:
         /**
@@ -526,10 +523,7 @@ public:
          *
          * @return Pointer to pointer to GWBUF.
          */
-        pointer_type* address_of()
-        {
-            return &m_i;
-        }
+        pointer_type* address_of() { return &m_i; }
 
         /**
          * Advance the iterator
@@ -551,12 +545,12 @@ public:
 
                 if (m_pBuffer)
                 {
-                    m_i = GWBUF_DATA(m_pBuffer);
+                    m_i   = GWBUF_DATA(m_pBuffer);
                     m_end = m_i + GWBUF_LENGTH(m_pBuffer);
                 }
                 else
                 {
-                    m_i = NULL;
+                    m_i   = NULL;
                     m_end = NULL;
                 }
             }
@@ -572,8 +566,7 @@ public:
             : m_pBuffer(pBuffer)
             , m_i(m_pBuffer ? GWBUF_DATA(m_pBuffer) : NULL)
             , m_end(m_pBuffer ? (m_i + GWBUF_LENGTH(m_pBuffer)) : NULL)
-        {
-        }
+        {}
 
         void advance()
         {
@@ -587,29 +580,23 @@ public:
 
                 if (m_pBuffer)
                 {
-                    m_i = GWBUF_DATA(m_pBuffer);
+                    m_i   = GWBUF_DATA(m_pBuffer);
                     m_end = m_i + GWBUF_LENGTH(m_pBuffer);
                 }
                 else
                 {
-                    m_i = NULL;
+                    m_i   = NULL;
                     m_end = NULL;
                 }
             }
         }
 
-        bool eq(const iterator_base& rhs) const
-        {
-            return m_i == rhs.m_i;
-        }
+        bool eq(const iterator_base& rhs) const { return m_i == rhs.m_i; }
 
-        bool neq(const iterator_base& rhs) const
-        {
-            return !eq(rhs);
-        }
+        bool neq(const iterator_base& rhs) const { return !eq(rhs); }
 
     protected:
-        buf_type     m_pBuffer;
+        buf_type m_pBuffer;
         pointer_type m_i;
         pointer_type m_end;
     };
@@ -629,8 +616,7 @@ public:
     public:
         explicit iterator(GWBUF* pBuffer = NULL)
             : iterator_base_typedef(pBuffer)
-        {
-        }
+        {}
 
         iterator& operator++()
         {
@@ -645,15 +631,9 @@ public:
             return rv;
         }
 
-        bool operator==(const iterator& rhs) const
-        {
-            return eq(rhs);
-        }
+        bool operator==(const iterator& rhs) const { return eq(rhs); }
 
-        bool operator!=(const iterator& rhs) const
-        {
-            return neq(rhs);
-        }
+        bool operator!=(const iterator& rhs) const { return neq(rhs); }
 
         reference operator*()
         {
@@ -673,13 +653,12 @@ public:
     public:
         explicit const_iterator(const GWBUF* pBuffer = NULL)
             : const_iterator_base_typedef(pBuffer)
-        {
-        }
+        {}
 
         const_iterator(const Buffer::iterator& rhs)
             : const_iterator_base_typedef(rhs.m_pBuffer)
         {
-            m_i = rhs.m_i;
+            m_i   = rhs.m_i;
             m_end = rhs.m_end;
         }
 
@@ -696,15 +675,9 @@ public:
             return rv;
         }
 
-        bool operator==(const const_iterator& rhs) const
-        {
-            return eq(rhs);
-        }
+        bool operator==(const const_iterator& rhs) const { return eq(rhs); }
 
-        bool operator!=(const const_iterator& rhs) const
-        {
-            return neq(rhs);
-        }
+        bool operator!=(const const_iterator& rhs) const { return neq(rhs); }
 
         reference operator*() const
         {
@@ -718,8 +691,7 @@ public:
      */
     Buffer()
         : m_pBuffer(NULL)
-    {
-    }
+    {}
 
     /**
      * Copy constructor.
@@ -918,9 +890,9 @@ public:
      */
     void swap(Buffer& buffer)
     {
-        GWBUF* pBuffer = buffer.m_pBuffer;
+        GWBUF* pBuffer   = buffer.m_pBuffer;
         buffer.m_pBuffer = m_pBuffer;
-        m_pBuffer = pBuffer;
+        m_pBuffer        = pBuffer;
     }
 
     /**
@@ -1100,8 +1072,8 @@ public:
 
         iterator rval;
         const_iterator b = begin();
-        auto offset = std::distance(b, first);
-        auto num_bytes = std::distance(first, last);
+        auto offset      = std::distance(b, first);
+        auto num_bytes   = std::distance(first, last);
         mxb_assert(num_bytes > 0);
 
         auto head = gwbuf_split(&m_pBuffer, offset);
@@ -1123,7 +1095,7 @@ public:
         else
         {
             m_pBuffer = head;
-            rval = end();
+            rval      = end();
         }
 
         return rval;
@@ -1175,7 +1147,7 @@ public:
     GWBUF* release()
     {
         GWBUF* pBuffer = m_pBuffer;
-        m_pBuffer = NULL;
+        m_pBuffer      = NULL;
         return pBuffer;
     }
 
@@ -1274,10 +1246,10 @@ public:
 
 private:
     // To prevent @c Buffer from being created on the heap.
-    void* operator new(size_t);         // standard new
-    void* operator new(size_t, void*);  // placement new
-    void* operator new[](size_t);       // array new
-    void* operator new[](size_t, void*);// placement array new
+    void* operator new(size_t);           // standard new
+    void* operator new(size_t, void*);    // placement new
+    void* operator new[](size_t);         // array new
+    void* operator new[](size_t, void*);  // placement array new
 
 private:
     GWBUF* m_pBuffer;
@@ -1322,4 +1294,4 @@ inline bool operator!=(const Buffer& lhs, const GWBUF& rhs)
 {
     return !lhs.eq(rhs);
 }
-}
+}  // namespace maxscale

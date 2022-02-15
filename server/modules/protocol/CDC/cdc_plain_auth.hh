@@ -22,17 +22,14 @@ class CDCAuthenticatorModule
 public:
     static CDCAuthenticatorModule* create(char** options)
     {
-        return new(std::nothrow) CDCAuthenticatorModule();
+        return new (std::nothrow) CDCAuthenticatorModule();
     }
 
     ~CDCAuthenticatorModule() = default;
 
     bool load_users(SERVICE* service);
 
-    json_t* diagnostics()
-    {
-        return m_userdata.diagnostics();
-    }
+    json_t* diagnostics() { return m_userdata.diagnostics(); }
 
     /**
      * Check user & pw.
@@ -48,7 +45,7 @@ private:
     int set_service_user(SERVICE* service);
     mxs::Users read_users(char* usersfile);
 
-    mxs::Users m_userdata; // lock-protected user-info
+    mxs::Users m_userdata;  // lock-protected user-info
 };
 
 bool cdc_add_new_user(const MODULECMD_ARG* args, json_t** output);

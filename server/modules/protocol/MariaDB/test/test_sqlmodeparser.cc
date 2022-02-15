@@ -27,50 +27,19 @@ typedef SqlModeParser P;
 
 struct TEST_CASE
 {
-    const char*               zValue;
+    const char* zValue;
     SqlModeParser::sql_mode_t sql_mode;
-} test_cases[] =
-{
-    {
-        "DEFAULT",
-        P::DEFAULT
-    },
-    {
-        "ORACLE",
-        P::ORACLE
-    },
-    {
-        "BLAH",
-        P::SOMETHING
-    },
-    {
-        "'BLAH'",
-        P::SOMETHING
-    },
-    {
-        "'ORACLE'",
-        P::ORACLE
-    },
-    {
-        "'BLAH, A, B, ORACLE'",
-        P::ORACLE
-    },
-    {
-        "'BLAH, A, B, XYZ_123'",
-        P::SOMETHING
-    },
-    {
-        "'A,B, ORACLE'",
-        P::ORACLE
-    },
-    {
-        "'A, ORACLE, B'",
-        P::ORACLE
-    },
-    {
-        "'ORACLE,ANSI_QUOTES'",
-        P::ORACLE
-    },
+} test_cases[] = {
+    {"DEFAULT", P::DEFAULT},
+    {"ORACLE", P::ORACLE},
+    {"BLAH", P::SOMETHING},
+    {"'BLAH'", P::SOMETHING},
+    {"'ORACLE'", P::ORACLE},
+    {"'BLAH, A, B, ORACLE'", P::ORACLE},
+    {"'BLAH, A, B, XYZ_123'", P::SOMETHING},
+    {"'A,B, ORACLE'", P::ORACLE},
+    {"'A, ORACLE, B'", P::ORACLE},
+    {"'ORACLE,ANSI_QUOTES'", P::ORACLE},
 };
 
 const int N_TEST_CASES = sizeof(test_cases) / sizeof(test_cases[0]);
@@ -153,8 +122,7 @@ int test()
 
     return rv;
 }
-}
-
+}  // namespace
 
 int main(int argc, char* argv[])
 {

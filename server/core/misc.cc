@@ -30,8 +30,9 @@ struct ThisUnit
 {
     std::atomic<const mxb::Worker*> admin_worker {nullptr};
 };
+
 ThisUnit this_unit;
-}
+}  // namespace
 
 void maxscale_reset_starttime(void)
 {

@@ -22,7 +22,6 @@
 #include <maxscale/session_command.hh>
 #include <maxbase/stopwatch.hh>
 
-
 namespace maxscale
 {
 
@@ -31,8 +30,8 @@ class Backend
 {
     Backend(const Backend&);
     Backend& operator=(const Backend&);
-public:
 
+public:
     /**
      * How is the backend being closed
      */
@@ -146,10 +145,7 @@ public:
      *
      * @return True if the backend has not failed and a connection can be attempted
      */
-    inline bool can_connect() const
-    {
-        return !has_failed() && m_backend->target()->is_connectable();
-    }
+    inline bool can_connect() const { return !has_failed() && m_backend->target()->is_connectable(); }
 
     /**
      * @brief Create a new connection
@@ -204,70 +200,49 @@ public:
      *
      * @return True if backend is in use
      */
-    inline bool in_use() const
-    {
-        return m_state & IN_USE;
-    }
+    inline bool in_use() const { return m_state & IN_USE; }
 
     /**
      * @brief Check if the backend server reference is active
      *
      * @return True if the server reference is active
      */
-    inline bool is_active() const
-    {
-        return m_backend->target()->active();
-    }
+    inline bool is_active() const { return m_backend->target()->active(); }
 
     /**
      * @brief Check if backend is waiting for a result
      *
      * @return True if backend is waiting for a result
      */
-    inline bool is_waiting_result() const
-    {
-        return m_state & WAITING_RESULT;
-    }
+    inline bool is_waiting_result() const { return m_state & WAITING_RESULT; }
 
     /**
      * @brief Check if the backend is closed
      *
      * @return True if the backend is closed
      */
-    inline bool is_closed() const
-    {
-        return m_closed;
-    }
+    inline bool is_closed() const { return m_closed; }
 
     /**
      * @brief Check if the server is a master
      *
      * @return True if server is a master
      */
-    inline bool is_master() const
-    {
-        return m_backend->target()->is_master();
-    }
+    inline bool is_master() const { return m_backend->target()->is_master(); }
 
     /**
      * @brief Check if the server is a slave
      *
      * @return True if the server is a slave
      */
-    inline bool is_slave() const
-    {
-        return m_backend->target()->is_slave();
-    }
+    inline bool is_slave() const { return m_backend->target()->is_slave(); }
 
     /**
      * @brief Check if the server is a relay server
      *
      * @return True if the server is a relay server
      */
-    inline bool is_relay() const
-    {
-        return m_backend->target()->is_relay();
-    }
+    inline bool is_relay() const { return m_backend->target()->is_relay(); }
 
     /**
      * @brief Check if the backend has failed fatally
@@ -278,10 +253,7 @@ public:
      *
      * @return True if a fatal failure has occurred in the backend server
      */
-    inline bool has_failed() const
-    {
-        return m_state & FATAL_FAILURE;
-    }
+    inline bool has_failed() const { return m_state & FATAL_FAILURE; }
 
     /**
      * Is the backend replaying session command history
@@ -289,26 +261,20 @@ public:
      * @return If a list of session commands was provided at connect time, the function returns true as long
      *         as the backend has not completed those session commands.
      */
-    inline bool is_replaying_history() const
-    {
-        return m_history_size > 0;
-    }
+    inline bool is_replaying_history() const { return m_history_size > 0; }
 
     /**
      * @brief Get the object name of this server
      *
      * @return The unique object name of this server
      */
-    inline const char* name() const
-    {
-        return m_backend->target()->name();
-    }
+    inline const char* name() const { return m_backend->target()->name(); }
 
     virtual void select_started();
     virtual void select_finished();
 
-    int64_t                       num_selects() const;
-    const maxbase::StopWatch&     session_timer() const;
+    int64_t num_selects() const;
+    const maxbase::StopWatch& session_timer() const;
     const maxbase::IntervalTimer& select_timer() const;
 
     /**
@@ -332,10 +298,7 @@ public:
      *
      * @return A human-readable reason why the connection was closed
      */
-    const std::string& close_reason() const
-    {
-        return m_close_reason;
-    }
+    const std::string& close_reason() const { return m_close_reason; }
 
 private:
     /**
@@ -343,9 +306,9 @@ private:
      */
     enum backend_state
     {
-        IN_USE         = 0x01,  /**< Backend has been taken into use */
-        WAITING_RESULT = 0x02,  /**< Waiting for a reply */
-        FATAL_FAILURE  = 0x04   /**< Backend references that should be dropped */
+        IN_USE         = 0x01, /**< Backend has been taken into use */
+        WAITING_RESULT = 0x02, /**< Waiting for a reply */
+        FATAL_FAILURE  = 0x04  /**< Backend references that should be dropped */
     };
 
     /**
@@ -365,22 +328,22 @@ private:
     // Stringification function
     static std::string to_string(backend_state state);
 
-    bool               m_closed {false};    /**< True if a connection has been opened and closed */
-    time_t             m_closed_at {0};     /**< Timestamp when the backend was last closed */
-    std::string        m_close_reason;      /**< Why the backend was closed */
-    time_t             m_opened_at {0};     /**< Timestamp when the backend was last opened */
-    mxs::Endpoint*     m_backend {nullptr}; /**< Backend server */
-    mxs::Buffer        m_pending_cmd;       /**< Pending commands */
-    int                m_state {0};         /**< State of the backend */
-    SessionCommandList m_session_commands;  /**< List of session commands that are
+    bool m_closed {false};                 /**< True if a connection has been opened and closed */
+    time_t m_closed_at {0};                /**< Timestamp when the backend was last closed */
+    std::string m_close_reason;            /**< Why the backend was closed */
+    time_t m_opened_at {0};                /**< Timestamp when the backend was last opened */
+    mxs::Endpoint* m_backend {nullptr};    /**< Backend server */
+    mxs::Buffer m_pending_cmd;             /**< Pending commands */
+    int m_state {0};                       /**< State of the backend */
+    SessionCommandList m_session_commands; /**< List of session commands that are
                                              * to be executed on this backend server */
 
-    maxbase::StopWatch     m_session_timer;
+    maxbase::StopWatch m_session_timer;
     maxbase::IntervalTimer m_select_timer;
-    int64_t                m_num_selects {0};
-    int64_t                m_history_size {0};
+    int64_t m_num_selects {0};
+    int64_t m_history_size {0};
 };
 
 typedef std::shared_ptr<Backend> SBackend;
-typedef std::list<SBackend>      BackendList;
-}
+typedef std::list<SBackend> BackendList;
+}  // namespace maxscale

@@ -29,13 +29,11 @@ class intrusive_slist_iterator : public std::iterator<std::input_iterator_tag, T
 public:
     explicit intrusive_slist_iterator(T& t)
         : m_pT(&t)
-    {
-    }
+    {}
 
     explicit intrusive_slist_iterator()
         : m_pT(nullptr)
-    {
-    }
+    {}
 
     intrusive_slist_iterator& operator++()
     {
@@ -51,15 +49,9 @@ public:
         return prev;
     }
 
-    bool operator==(const intrusive_slist_iterator& rhs) const
-    {
-        return m_pT == rhs.m_pT;
-    }
+    bool operator==(const intrusive_slist_iterator& rhs) const { return m_pT == rhs.m_pT; }
 
-    bool operator!=(const intrusive_slist_iterator& rhs) const
-    {
-        return !(m_pT == rhs.m_pT);
-    }
+    bool operator!=(const intrusive_slist_iterator& rhs) const { return !(m_pT == rhs.m_pT); }
 
     T& operator*() const
     {
@@ -70,4 +62,4 @@ public:
 private:
     T* m_pT;
 };
-}
+}  // namespace maxbase

@@ -26,7 +26,7 @@ namespace maxscale
 
 class QueryClassifier
 {
-    QueryClassifier(const QueryClassifier&) = delete;
+    QueryClassifier(const QueryClassifier&)            = delete;
     QueryClassifier& operator=(const QueryClassifier&) = delete;
 
 public:
@@ -34,74 +34,41 @@ public:
     {
     public:
         RouteInfo();
-        RouteInfo(uint32_t target,
-                  uint8_t command,
-                  uint32_t type_mask,
-                  uint32_t stmt_id);
+        RouteInfo(uint32_t target, uint8_t command, uint32_t type_mask, uint32_t stmt_id);
 
         void reset();
 
-        uint32_t target() const
-        {
-            return m_target;
-        }
+        uint32_t target() const { return m_target; }
 
-        uint8_t command() const
-        {
-            return m_command;
-        }
+        uint8_t command() const { return m_command; }
 
-        uint32_t type_mask() const
-        {
-            return m_type_mask;
-        }
+        uint32_t type_mask() const { return m_type_mask; }
 
-        uint32_t stmt_id() const
-        {
-            return m_stmt_id;
-        }
+        uint32_t stmt_id() const { return m_stmt_id; }
 
-        void set_command(uint8_t c)
-        {
-            m_command = c;
-        }
+        void set_command(uint8_t c) { m_command = c; }
 
-        void set_target(uint32_t t)
-        {
-            m_target = t;
-        }
+        void set_target(uint32_t t) { m_target = t; }
 
-        void or_target(uint32_t t)
-        {
-            m_target |= t;
-        }
+        void or_target(uint32_t t) { m_target |= t; }
 
-        void set_type_mask(uint32_t t)
-        {
-            m_type_mask = t;
-        }
+        void set_type_mask(uint32_t t) { m_type_mask = t; }
 
-        void or_type_mask(uint32_t t)
-        {
-            m_type_mask |= t;
-        }
+        void or_type_mask(uint32_t t) { m_type_mask |= t; }
 
-        void set_stmt_id(uint32_t stmt_id)
-        {
-            m_stmt_id = stmt_id;
-        }
+        void set_stmt_id(uint32_t stmt_id) { m_stmt_id = stmt_id; }
 
     private:
-        uint32_t m_target;      /**< Route target type, TARGET_UNDEFINED for unknown */
-        uint8_t  m_command;     /**< The command byte, 0xff for unknown commands */
-        uint32_t m_type_mask;   /**< The query type, QUERY_TYPE_UNKNOWN for unknown types*/
-        uint32_t m_stmt_id;     /**< Prepared statement ID, 0 for unknown */
+        uint32_t m_target;    /**< Route target type, TARGET_UNDEFINED for unknown */
+        uint8_t m_command;    /**< The command byte, 0xff for unknown commands */
+        uint32_t m_type_mask; /**< The query type, QUERY_TYPE_UNKNOWN for unknown types*/
+        uint32_t m_stmt_id;   /**< Prepared statement ID, 0 for unknown */
     };
 
     class Handler
     {
     public:
-        virtual bool lock_to_master() = 0;
+        virtual bool lock_to_master()            = 0;
         virtual bool is_locked_to_master() const = 0;
 
         virtual bool supports_hint(HINT_TYPE hint_type) const = 0;
@@ -121,54 +88,34 @@ public:
         TARGET_LAST_USED    = 0x20
     };
 
-    static bool target_is_master(uint32_t t)
-    {
-        return t & TARGET_MASTER;
-    }
+    static bool target_is_master(uint32_t t) { return t & TARGET_MASTER; }
 
-    static bool target_is_slave(uint32_t t)
-    {
-        return t & TARGET_SLAVE;
-    }
+    static bool target_is_slave(uint32_t t) { return t & TARGET_SLAVE; }
 
-    static bool target_is_named_server(uint32_t t)
-    {
-        return t & TARGET_NAMED_SERVER;
-    }
+    static bool target_is_named_server(uint32_t t) { return t & TARGET_NAMED_SERVER; }
 
-    static bool target_is_all(uint32_t t)
-    {
-        return t & TARGET_ALL;
-    }
+    static bool target_is_all(uint32_t t) { return t & TARGET_ALL; }
 
-    static bool target_is_rlag_max(uint32_t t)
-    {
-        return t & TARGET_RLAG_MAX;
-    }
+    static bool target_is_rlag_max(uint32_t t) { return t & TARGET_RLAG_MAX; }
 
-    static bool target_is_last_used(uint32_t t)
-    {
-        return t & TARGET_LAST_USED;
-    }
+    static bool target_is_last_used(uint32_t t) { return t & TARGET_LAST_USED; }
 
     enum current_target_t
     {
-        CURRENT_TARGET_UNDEFINED,   /**< Current target has not been set. */
-        CURRENT_TARGET_MASTER,      /**< Current target is master */
-        CURRENT_TARGET_SLAVE        /**< Current target is a slave */
+        CURRENT_TARGET_UNDEFINED, /**< Current target has not been set. */
+        CURRENT_TARGET_MASTER,    /**< Current target is master */
+        CURRENT_TARGET_SLAVE      /**< Current target is a slave */
     };
 
     /** States of a LOAD DATA LOCAL INFILE */
     enum load_data_state_t
     {
-        LOAD_DATA_INACTIVE,         /**< Not active */
-        LOAD_DATA_ACTIVE,           /**< Load is active */
-        LOAD_DATA_END               /**< Current query contains an empty packet that ends the load */
+        LOAD_DATA_INACTIVE, /**< Not active */
+        LOAD_DATA_ACTIVE,   /**< Load is active */
+        LOAD_DATA_END       /**< Current query contains an empty packet that ends the load */
     };
 
-    QueryClassifier(Handler* pHandler,
-                    MXS_SESSION* pSession,
-                    mxs_target_t use_sql_variables_in);
+    QueryClassifier(Handler* pHandler, MXS_SESSION* pSession, mxs_target_t use_sql_variables_in);
 
     /**
      * @brief Return the current route info. A call to update_route_info()
@@ -176,10 +123,7 @@ public:
      *
      * @return The current RouteInfo.
      */
-    const RouteInfo& current_route_info() const
-    {
-        return m_route_info;
-    }
+    const RouteInfo& current_route_info() const { return m_route_info; }
 
     void master_replaced()
     {
@@ -188,20 +132,11 @@ public:
         clear_tmp_tables();
     }
 
-    bool large_query() const
-    {
-        return m_large_query;
-    }
+    bool large_query() const { return m_large_query; }
 
-    void set_large_query(bool large_query)
-    {
-        m_large_query = large_query;
-    }
+    void set_large_query(bool large_query) { m_large_query = large_query; }
 
-    load_data_state_t load_data_state() const
-    {
-        return m_load_data_state;
-    }
+    load_data_state_t load_data_state() const { return m_load_data_state; }
 
     void set_load_data_state(load_data_state_t state)
     {
@@ -219,20 +154,14 @@ public:
      *
      * @return True if no statements have been executed that modify data
      */
-    bool is_trx_still_read_only() const
-    {
-        return m_trx_is_read_only;
-    }
+    bool is_trx_still_read_only() const { return m_trx_is_read_only; }
 
     /**
      * Check if current transaction is still a read-only transaction
      *
      * @return True if no statements have been executed that modify data
      */
-    bool is_trx_starting() const
-    {
-        return qc_query_is_type(m_route_info.type_mask(), QUERY_TYPE_BEGIN_TRX);
-    }
+    bool is_trx_starting() const { return qc_query_is_type(m_route_info.type_mask(), QUERY_TYPE_BEGIN_TRX); }
 
     /**
      * Whether the current binary protocol statement is a continuation of a previously executed statement.
@@ -240,10 +169,7 @@ public:
      * All COM_STMT_FETCH are continuations of a previously executed COM_STMT_EXECUTE. A COM_STMT_EXECUTE can
      * be a continuation if it has parameters but it doesn't provide the metadata for them.
      */
-    bool is_ps_continuation() const
-    {
-        return m_ps_continuation;
-    }
+    bool is_ps_continuation() const { return m_ps_continuation; }
 
     /**
      * Get number of parameters for a prepared statement
@@ -294,55 +220,25 @@ public:
     RouteInfo update_route_info(QueryClassifier::current_target_t current_target, GWBUF* pBuffer);
 
 private:
-    bool multi_statements_allowed() const
-    {
-        return m_multi_statements_allowed;
-    }
+    bool multi_statements_allowed() const { return m_multi_statements_allowed; }
 
-    uint64_t load_data_sent() const
-    {
-        return m_load_data_sent;
-    }
+    uint64_t load_data_sent() const { return m_load_data_sent; }
 
-    void append_load_data_sent(GWBUF* pBuffer)
-    {
-        m_load_data_sent += gwbuf_length(pBuffer);
-    }
+    void append_load_data_sent(GWBUF* pBuffer) { m_load_data_sent += gwbuf_length(pBuffer); }
 
-    void reset_load_data_sent()
-    {
-        m_load_data_sent = 0;
-    }
+    void reset_load_data_sent() { m_load_data_sent = 0; }
 
-    bool have_tmp_tables() const
-    {
-        return m_have_tmp_tables;
-    }
+    bool have_tmp_tables() const { return m_have_tmp_tables; }
 
-    void set_have_tmp_tables(bool have_tmp_tables)
-    {
-        m_have_tmp_tables = have_tmp_tables;
-    }
+    void set_have_tmp_tables(bool have_tmp_tables) { m_have_tmp_tables = have_tmp_tables; }
 
-    void add_tmp_table(const std::string& table)
-    {
-        m_tmp_tables.insert(table);
-    }
+    void add_tmp_table(const std::string& table) { m_tmp_tables.insert(table); }
 
-    void remove_tmp_table(const std::string& table)
-    {
-        m_tmp_tables.erase(table);
-    }
+    void remove_tmp_table(const std::string& table) { m_tmp_tables.erase(table); }
 
-    void clear_tmp_tables()
-    {
-        m_tmp_tables.clear();
-    }
+    void clear_tmp_tables() { m_tmp_tables.clear(); }
 
-    bool is_tmp_table(const std::string& table)
-    {
-        return m_tmp_tables.find(table) != m_tmp_tables.end();
-    }
+    bool is_tmp_table(const std::string& table) { return m_tmp_tables.find(table) != m_tmp_tables.end(); }
 
     /**
      * @brief Get the type of a stored prepared statement
@@ -373,13 +269,10 @@ private:
      */
     bool query_type_is_read_only(uint32_t qtype) const;
 
-    void     process_routing_hints(HINT* pHints, uint32_t* target);
+    void process_routing_hints(HINT* pHints, uint32_t* target);
     uint32_t get_route_target(uint8_t command, uint32_t qtype);
 
-    MXS_SESSION* session() const
-    {
-        return m_pSession;
-    }
+    MXS_SESSION* session() const { return m_pSession; }
 
     void log_transaction_status(GWBUF* querybuf, uint32_t qtype);
 
@@ -394,9 +287,9 @@ private:
     bool check_for_multi_stmt(GWBUF* buf, uint8_t packet_type);
 
     current_target_t handle_multi_temp_and_load(QueryClassifier::current_target_t current_target,
-                                                GWBUF* querybuf,
-                                                uint8_t packet_type,
-                                                uint32_t* qtype);
+        GWBUF* querybuf,
+        uint8_t packet_type,
+        uint32_t* qtype);
 
     bool query_continues_ps(uint8_t cmd, uint32_t stmt_id, GWBUF* buffer);
 
@@ -411,22 +304,22 @@ private:
 
 
 private:
-    Handler*          m_pHandler;
-    MXS_SESSION*      m_pSession;
-    mxs_target_t      m_use_sql_variables_in;
-    load_data_state_t m_load_data_state;            /**< The LOAD DATA state */
-    uint64_t          m_load_data_sent;             /**< How much data has been sent */
-    bool              m_have_tmp_tables;
-    TableSet          m_tmp_tables;                 /**< Set of temporary tables */
-    bool              m_large_query;                /**< Set to true when processing payloads >= 2^24 bytes */
-    bool              m_multi_statements_allowed;   /**< Are multi-statements allowed */
-    SPSManager        m_sPs_manager;
-    HandleMap         m_ps_handles;                 /** External ID to internal ID */
-    RouteInfo         m_route_info;
-    bool              m_trx_is_read_only;
-    bool              m_ps_continuation;
+    Handler* m_pHandler;
+    MXS_SESSION* m_pSession;
+    mxs_target_t m_use_sql_variables_in;
+    load_data_state_t m_load_data_state; /**< The LOAD DATA state */
+    uint64_t m_load_data_sent;           /**< How much data has been sent */
+    bool m_have_tmp_tables;
+    TableSet m_tmp_tables;           /**< Set of temporary tables */
+    bool m_large_query;              /**< Set to true when processing payloads >= 2^24 bytes */
+    bool m_multi_statements_allowed; /**< Are multi-statements allowed */
+    SPSManager m_sPs_manager;
+    HandleMap m_ps_handles; /** External ID to internal ID */
+    RouteInfo m_route_info;
+    bool m_trx_is_read_only;
+    bool m_ps_continuation;
 
-    uint32_t m_prev_ps_id = 0;      /**< For direct PS execution, storest latest prepared PS ID.
+    uint32_t m_prev_ps_id = 0; /**< For direct PS execution, storest latest prepared PS ID.
                                      * https://mariadb.com/kb/en/library/com_stmt_execute/#statement-id **/
 };
-}
+}  // namespace maxscale

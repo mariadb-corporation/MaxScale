@@ -24,9 +24,12 @@
 
 MXS_BEGIN_DECLS
 
-#define BINLOG_FNAMELEN   255
-#define BLR_PROTOCOL      "MySQLBackend"
-#define BINLOG_MAGIC      {0xfe, 0x62, 0x69, 0x6e}
+#define BINLOG_FNAMELEN 255
+#define BLR_PROTOCOL    "MySQLBackend"
+#define BINLOG_MAGIC           \
+    {                          \
+        0xfe, 0x62, 0x69, 0x6e \
+    }
 #define BINLOG_MAGIC_SIZE 4
 #define BINLOG_NAMEFMT    "%s.%06d"
 #define BINLOG_NAME_ROOT  "mysql-bin"

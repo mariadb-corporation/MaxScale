@@ -28,16 +28,16 @@ using std::string;
 
 int ExternalCmd::tokenize_args(char* dest[], int dest_size)
 {
-    bool quoted = false;
-    bool read = false;
+    bool quoted  = false;
+    bool read    = false;
     bool escaped = false;
-    char qc = 0;
+    char qc      = 0;
 
     char args[m_subst_command.length() + 1];
     strcpy(args, m_subst_command.c_str());
     char* start = args;
-    char* ptr = start;
-    int i = 0;
+    char* ptr   = start;
+    int i       = 0;
 
     while (*ptr != '\0' && i < dest_size)
     {
@@ -51,35 +51,35 @@ int ExternalCmd::tokenize_args(char* dest[], int dest_size)
             {
                 escaped = true;
             }
-            else if (quoted && !escaped && *ptr == qc)      /** End of quoted string */
+            else if (quoted && !escaped && *ptr == qc) /** End of quoted string */
             {
-                *ptr = '\0';
+                *ptr      = '\0';
                 dest[i++] = MXS_STRDUP(start);
-                read = false;
-                quoted = false;
+                read      = false;
+                quoted    = false;
             }
             else if (!quoted)
             {
                 if (isspace(*ptr))
                 {
                     *ptr = '\0';
-                    if (read)   /** New token */
+                    if (read) /** New token */
                     {
                         dest[i++] = MXS_STRDUP(start);
-                        read = false;
+                        read      = false;
                     }
                 }
                 else if (*ptr == '\"' || *ptr == '\'')
                 {
                     /** New quoted token, strip quotes */
                     quoted = true;
-                    qc = *ptr;
-                    start = ptr + 1;
+                    qc     = *ptr;
+                    start  = ptr + 1;
                 }
                 else if (!read)
                 {
                     start = ptr;
-                    read = true;
+                    read  = true;
                 }
             }
         }
@@ -96,7 +96,7 @@ std::unique_ptr<ExternalCmd> ExternalCmd::create(const string& argstr, int timeo
 {
     bool success = false;
     std::unique_ptr<ExternalCmd> cmd(new ExternalCmd(argstr, timeout));
-    char* argvec[1] {};     // Parse just one argument for testing file existence and permissions.
+    char* argvec[1] {};  // Parse just one argument for testing file existence and permissions.
     if (cmd->tokenize_args(argvec, 1) > 0)
     {
         const char* cmdname = argvec[0];
@@ -133,8 +133,7 @@ ExternalCmd::ExternalCmd(const std::string& script, int timeout)
     : m_orig_command(script)
     , m_subst_command(script)
     , m_timeout(timeout)
-{
-}
+{}
 
 static const char* skip_whitespace(const char* ptr)
 {
@@ -159,38 +158,28 @@ static void log_output(const char* cmd, const std::string& str)
 {
     int err;
 
-    if (mxs_pcre2_simple_match("(?i)^[[:space:]]*alert[[:space:]]*[:]",
-                               str.c_str(),
-                               0,
-                               &err) == MXS_PCRE2_MATCH)
+    if (mxs_pcre2_simple_match("(?i)^[[:space:]]*alert[[:space:]]*[:]", str.c_str(), 0, &err)
+        == MXS_PCRE2_MATCH)
     {
         MXS_ALERT("%s: %s", cmd, skip_prefix(str.c_str()));
     }
-    else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*error[[:space:]]*[:]",
-                                    str.c_str(),
-                                    0,
-                                    &err) == MXS_PCRE2_MATCH)
+    else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*error[[:space:]]*[:]", str.c_str(), 0, &err)
+             == MXS_PCRE2_MATCH)
     {
         MXS_ERROR("%s: %s", cmd, skip_prefix(str.c_str()));
     }
-    else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*warning[[:space:]]*[:]",
-                                    str.c_str(),
-                                    0,
-                                    &err) == MXS_PCRE2_MATCH)
+    else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*warning[[:space:]]*[:]", str.c_str(), 0, &err)
+             == MXS_PCRE2_MATCH)
     {
         MXS_WARNING("%s: %s", cmd, skip_prefix(str.c_str()));
     }
-    else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*notice[[:space:]]*[:]",
-                                    str.c_str(),
-                                    0,
-                                    &err) == MXS_PCRE2_MATCH)
+    else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*notice[[:space:]]*[:]", str.c_str(), 0, &err)
+             == MXS_PCRE2_MATCH)
     {
         MXS_NOTICE("%s: %s", cmd, skip_prefix(str.c_str()));
     }
-    else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*(info|debug)[[:space:]]*[:]",
-                                    str.c_str(),
-                                    0,
-                                    &err) == MXS_PCRE2_MATCH)
+    else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*(info|debug)[[:space:]]*[:]", str.c_str(), 0, &err)
+             == MXS_PCRE2_MATCH)
     {
         MXS_INFO("%s: %s", cmd, skip_prefix(str.c_str()));
     }
@@ -224,8 +213,8 @@ int ExternalCmd::externcmd_execute()
     {
         close(fd[0]);
         close(fd[1]);
-        MXS_ERROR("Failed to execute command '%s', fork failed: [%d] %s",
-                  cmdname, errno, mxs_strerror(errno));
+        MXS_ERROR(
+            "Failed to execute command '%s', fork failed: [%d] %s", cmdname, errno, mxs_strerror(errno));
         rval = -1;
     }
     else if (pid == 0)
@@ -245,8 +234,9 @@ int ExternalCmd::externcmd_execute()
         if (error == EACCES)
         {
             // This is the most likely error, handle separately.
-            fprintf(stderr, "error: Cannot execute file. File cannot be accessed or it is missing "
-                            "execution permission.");
+            fprintf(stderr,
+                "error: Cannot execute file. File cannot be accessed or it is missing "
+                "execution permission.");
         }
         else
         {
@@ -262,9 +252,9 @@ int ExternalCmd::externcmd_execute()
 
         string output;
         bool first_warning = true;
-        bool again = true;
-        uint64_t t = 0;
-        uint64_t t_max = m_timeout * 1000;
+        bool again         = true;
+        uint64_t t         = 0;
+        uint64_t t_max     = m_timeout * 1000;
 
         // Close the write end of the pipe and make the read end non-blocking
         close(fd[1]);
@@ -325,7 +315,7 @@ int ExternalCmd::externcmd_execute()
             }
 
             int n;
-            char buf[4096];     // This seems like enough space
+            char buf[4096];  // This seems like enough space
 
             while ((n = read(fd[0], buf, sizeof(buf))) > 0)
             {

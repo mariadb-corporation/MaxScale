@@ -30,8 +30,8 @@ using maxscale::MonitorServer;
 
 // Maximum sizes for array types
 const int MAX_CYCLE_SIZE = 10;
-const int MAX_CYCLES = 5;
-const int MAX_EDGES = 20;
+const int MAX_CYCLES     = 5;
+const int MAX_EDGES      = 20;
 
 class MariaDBMonitor::Test : public Monitor::Test
 {
@@ -60,17 +60,18 @@ class MariaDBMonitor::Test : public Monitor::Test
 public:
     explicit Test(bool use_hostnames);
     int run_tests();
+
 private:
-    int  m_current_test = 0;
+    int m_current_test   = 0;
     bool m_use_hostnames = true;
 
     MariaDBMonitor* monitor() const;
-    void            init_servers(int count);
-    void            clear_servers();
-    void            add_replication(EdgeArray edges);
-    int             check_result_cycles(CycleArray expected_cycles);
+    void init_servers(int count);
+    void clear_servers();
+    void add_replication(EdgeArray edges);
+    int check_result_cycles(CycleArray expected_cycles);
 
-    string         create_hostname(int id);
+    string create_hostname(int id);
     MariaDBServer* get_server(int id);
 };
 
@@ -94,8 +95,7 @@ int main()
 MariaDBMonitor::Test::Test(bool use_hostnames)
     : Monitor::Test(new MariaDBMonitor("TestMonitor", MXS_MODULE_NAME))
     , m_use_hostnames(use_hostnames)
-{
-}
+{}
 
 MariaDBMonitor* MariaDBMonitor::Test::monitor() const
 {
@@ -132,8 +132,17 @@ int MariaDBMonitor::Test::run_tests()
 
     // Test 4: 10 servers, with a big cycle composed of two smaller ones plus non-cycle servers
     init_servers(10);
-    EdgeArray edges4 =
-    {   {{1, 5}, {2, 1}, {2, 5}, {3, 1}, {3, 4}, {3, 10}, {4, 1}, {5, 6}, {6, 7}, {6, 4}, {7, 8},
+    EdgeArray edges4 = {{{1, 5},
+        {2, 1},
+        {2, 5},
+        {3, 1},
+        {3, 4},
+        {3, 10},
+        {4, 1},
+        {5, 6},
+        {6, 7},
+        {6, 4},
+        {7, 8},
         {8, 6},
         {9, 8}}};
     add_replication(edges4);
@@ -163,11 +172,11 @@ void MariaDBMonitor::Test::init_servers(int count)
         Monitor::Test::add_server(base_server);
     }
 
-    for (int i = 0; i < (int)monitor()->servers().size(); i++)
+    for (int i = 0; i < (int) monitor()->servers().size(); i++)
     {
         auto maria_server = monitor()->servers()[i];
-        auto base_server = maria_server->server;
-        int id = i + 1;
+        auto base_server  = maria_server->server;
+        int id            = i + 1;
         if (m_use_hostnames)
         {
             string hostname = create_hostname(id);
@@ -176,7 +185,7 @@ void MariaDBMonitor::Test::init_servers(int count)
         }
         else
         {
-            maria_server->m_server_id = id;
+            maria_server->m_server_id      = id;
             monitor()->m_servers_by_id[id] = maria_server;
         }
     }
@@ -202,7 +211,7 @@ void MariaDBMonitor::Test::add_replication(EdgeArray edges)
 {
     for (auto i = 0; i < MAX_EDGES; i++)
     {
-        auto slave_id = edges.edges[i].slave_id;
+        auto slave_id  = edges.edges[i].slave_id;
         auto master_id = edges.edges[i].master_id;
         if (slave_id == 0 || master_id == 0)
         {
@@ -211,7 +220,7 @@ void MariaDBMonitor::Test::add_replication(EdgeArray edges)
 
         MariaDBServer* slave = get_server(slave_id);
         SlaveStatus ss(slave->name());
-        ss.slave_io_running = SlaveStatus::SLAVE_IO_YES;
+        ss.slave_io_running  = SlaveStatus::SLAVE_IO_YES;
         ss.slave_sql_running = true;
         if (m_use_hostnames)
         {
@@ -220,7 +229,7 @@ void MariaDBMonitor::Test::add_replication(EdgeArray edges)
         else
         {
             ss.master_server_id = master_id;
-            ss.seen_connected = true;
+            ss.seen_connected   = true;
         }
 
         slave->m_slave_status.push_back(ss);
@@ -239,7 +248,7 @@ void MariaDBMonitor::Test::add_replication(EdgeArray edges)
 int MariaDBMonitor::Test::check_result_cycles(CycleArray expected_cycles)
 {
     string test_name = "Test " + std::to_string(m_current_test) + " ("
-        + (m_use_hostnames ? "hostnames" : "server id:s") + "): ";
+                     + (m_use_hostnames ? "hostnames" : "server id:s") + "): ";
     int errors = 0;
 
     // Copy the servers for later comparison.
@@ -247,7 +256,7 @@ int MariaDBMonitor::Test::check_result_cycles(CycleArray expected_cycles)
     std::set<int> used_cycle_ids;
     for (auto ind_cycles = 0; ind_cycles < MAX_CYCLES; ind_cycles++)
     {
-        int cycle_id = NodeData::CYCLE_NONE;
+        int cycle_id                  = NodeData::CYCLE_NONE;
         CycleMembers cycle_member_ids = expected_cycles.cycles[ind_cycles];
         for (auto ind_servers = 0; ind_servers < MAX_CYCLE_SIZE; ind_servers++)
         {
@@ -269,8 +278,8 @@ int MariaDBMonitor::Test::check_result_cycles(CycleArray expected_cycles)
                 cycle_id = cycle_server->m_node.cycle;
                 if (used_cycle_ids.count(cycle_id) > 0)
                 {
-                    cout << test_name << cycle_server->name() << " is in unexpected cycle "
-                         << cycle_id << ".\n";
+                    cout << test_name << cycle_server->name() << " is in unexpected cycle " << cycle_id
+                         << ".\n";
                     errors++;
                 }
                 else
@@ -303,8 +312,8 @@ int MariaDBMonitor::Test::check_result_cycles(CycleArray expected_cycles)
 
 MariaDBServer* MariaDBMonitor::Test::get_server(int id)
 {
-    auto rval = m_use_hostnames ? monitor()->get_server(EndPoint(create_hostname(id), id)) :
-        monitor()->get_server(id);
+    auto rval = m_use_hostnames ? monitor()->get_server(EndPoint(create_hostname(id), id))
+                                : monitor()->get_server(id);
     mxb_assert(rval);
     return rval;
 }

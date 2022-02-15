@@ -35,37 +35,27 @@ public:
         : m_total(0)
         , m_used(0)
         , m_available(0)
-    {
-    }
+    {}
 
-    Sizes(int64_t total,
-          int64_t used,
-          int64_t available)
+    Sizes(int64_t total, int64_t used, int64_t available)
         : m_total(total)
         , m_used(used)
         , m_available(available)
-    {
-    }
+    {}
 
     /**
      * The total size of a disk.
      *
      * @return The total size of the disk in bytes.
      */
-    int64_t total() const
-    {
-        return m_total;
-    }
+    int64_t total() const { return m_total; }
 
     /**
      * The used amount of space of a disk.
      *
      * @return The size of the used amount of space of the disk in bytes.
      */
-    int64_t used() const
-    {
-        return m_used;
-    }
+    int64_t used() const { return m_used; }
 
     /**
      * The available amount of space to non-root users.
@@ -75,10 +65,7 @@ public:
      *
      * @return The size of the available amount of space of the disk in bytes.
      */
-    int64_t available() const
-    {
-        return m_available;
-    }
+    int64_t available() const { return m_available; }
 
 private:
     int64_t m_total;
@@ -92,26 +79,17 @@ private:
 class SizesAndName : public Sizes
 {
 public:
-    SizesAndName()
-    {
-    }
+    SizesAndName() {}
 
-    SizesAndName(int64_t total,
-                 int64_t used,
-                 int64_t available,
-                 const std::string& name)
+    SizesAndName(int64_t total, int64_t used, int64_t available, const std::string& name)
         : Sizes(total, used, available)
         , m_name(name)
-    {
-    }
+    {}
 
     /**
      * @return The name of the disk. E.g. @c /dev/sda1
      */
-    const std::string& name() const
-    {
-        return m_name;
-    }
+    const std::string& name() const { return m_name; }
 
 private:
     std::string m_name;
@@ -124,14 +102,9 @@ private:
 class SizesAndPaths : public Sizes
 {
 public:
-    SizesAndPaths()
-    {
-    }
+    SizesAndPaths() {}
 
-    SizesAndPaths(int64_t total,
-                  int64_t used,
-                  int64_t available,
-                  const std::string& path)
+    SizesAndPaths(int64_t total, int64_t used, int64_t available, const std::string& path)
         : Sizes(total, used, available)
     {
         m_paths.push_back(path);
@@ -140,23 +113,16 @@ public:
     /**
      * @return The paths that referring to the disk for which the size is reported.
      */
-    const std::vector<std::string>& paths() const
-    {
-        return m_paths;
-    }
+    const std::vector<std::string>& paths() const { return m_paths; }
 
-    void add_path(const std::string path)
-    {
-        m_paths.push_back(path);
-    }
+    void add_path(const std::string path) { m_paths.push_back(path); }
 
 private:
-    int64_t                  m_total;
-    int64_t                  m_used;
-    int64_t                  m_available;
+    int64_t m_total;
+    int64_t m_used;
+    int64_t m_available;
     std::vector<std::string> m_paths;
 };
-
 
 /**
  * @brief Get disk space information of a server.
@@ -191,5 +157,5 @@ int get_info_by_path(MYSQL* pMysql, std::map<std::string, disk::SizesAndName>* p
  *       version is too old or the plugin @c DISKS has not been installed.
  */
 int get_info_by_disk(MYSQL* pMysql, std::map<std::string, disk::SizesAndPaths>* pInfo);
-}
-}
+}  // namespace disk
+}  // namespace maxscale

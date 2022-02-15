@@ -48,7 +48,7 @@ void ThreadPool::Thread::stop(bool abandon_tasks)
     mxb_assert(!m_stop);
 
     std::unique_lock<std::mutex> lock(m_tasks_mx);
-    m_stop = true;
+    m_stop          = true;
     m_abandon_tasks = abandon_tasks;
     lock.unlock();
 
@@ -62,9 +62,7 @@ void ThreadPool::Thread::main()
     while (!terminate)
     {
         std::unique_lock<std::mutex> lock(m_tasks_mx);
-        m_tasks_cv.wait(lock, [this]() {
-                return m_stop || !m_tasks.empty();
-            });
+        m_tasks_cv.wait(lock, [this]() { return m_stop || !m_tasks.empty(); });
 
         if (m_stop && (m_tasks.empty() || m_abandon_tasks))
         {
@@ -84,8 +82,7 @@ void ThreadPool::Thread::main()
 
 ThreadPool::ThreadPool::ThreadPool(int nMax_threads)
     : m_nMax_threads(nMax_threads)
-{
-}
+{}
 
 ThreadPool::~ThreadPool()
 {
@@ -130,38 +127,38 @@ void ThreadPool::execute(const Task& task)
         threads_lock.unlock();
 
         pThread->execute([this, task, pThread]() {
-                bool ready = false;
+            bool ready = false;
 
-                task();
+            task();
 
-                do
+            do
+            {
+                std::unique_lock<std::mutex> threads_lock(m_idle_threads_mx);
+                std::unique_lock<std::mutex> tasks_lock(m_tasks_mx);
+                if (!m_tasks.empty())
                 {
-                    std::unique_lock<std::mutex> threads_lock(m_idle_threads_mx);
-                    std::unique_lock<std::mutex> tasks_lock(m_tasks_mx);
-                    if (!m_tasks.empty())
-                    {
-                        threads_lock.unlock();
+                    threads_lock.unlock();
 
-                        Task t = std::move(m_tasks.front());
-                        m_tasks.pop();
-                        tasks_lock.unlock();
+                    Task t = std::move(m_tasks.front());
+                    m_tasks.pop();
+                    tasks_lock.unlock();
 
-                        t();
-                    }
-                    else
-                    {
-                        tasks_lock.unlock();
-
-                        m_idle_threads.push(pThread);
-                        threads_lock.unlock();
-
-                        ready = true;
-                    }
+                    t();
                 }
-                while (!ready);
+                else
+                {
+                    tasks_lock.unlock();
 
-                m_idle_threads_cv.notify_one();
-            });
+                    m_idle_threads.push(pThread);
+                    threads_lock.unlock();
+
+                    ready = true;
+                }
+            }
+            while (!ready);
+
+            m_idle_threads_cv.notify_one();
+        });
     }
     else
     {
@@ -196,11 +193,9 @@ void ThreadPool::stop(bool abandon_tasks)
 
         if (n != m_nThreads)
         {
-            m_idle_threads_cv.wait(threads_lock, [this] () {
-                    return !m_idle_threads.empty();
-                });
+            m_idle_threads_cv.wait(threads_lock, [this]() { return !m_idle_threads.empty(); });
         }
     }
 }
 
-}
+}  // namespace maxbase

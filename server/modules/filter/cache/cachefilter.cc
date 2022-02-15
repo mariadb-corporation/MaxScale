@@ -30,7 +30,7 @@ using std::string;
 namespace
 {
 
-static char VERSION_STRING[] = "V1.0.0";
+static char VERSION_STRING[]    = "V1.0.0";
 constexpr uint64_t CAPABILITIES = RCAP_TYPE_TRANSACTION_TRACKING | RCAP_TYPE_REQUEST_TRACKING;
 
 /**
@@ -67,54 +67,42 @@ int cache_process_init()
 
     return 0;
 }
-}
+}  // namespace
 
 //
 // Global symbols of the Module
 //
 
 // Enumeration values for `cached_data`
-static const MXS_ENUM_VALUE parameter_cached_data_values[] =
-{
-    {"shared",          CACHE_THREAD_MODEL_MT},
-    {"thread_specific", CACHE_THREAD_MODEL_ST},
-    {NULL}
-};
+static const MXS_ENUM_VALUE parameter_cached_data_values[]
+    = {{"shared", CACHE_THREAD_MODEL_MT}, {"thread_specific", CACHE_THREAD_MODEL_ST}, {NULL}};
 
 // Enumeration values for `selects`
-static const MXS_ENUM_VALUE parameter_selects_values[] =
-{
-    {"assume_cacheable", CACHE_SELECTS_ASSUME_CACHEABLE},
-    {"verify_cacheable", CACHE_SELECTS_VERIFY_CACHEABLE},
-    {NULL}
-};
+static const MXS_ENUM_VALUE parameter_selects_values[]
+    = {{"assume_cacheable", CACHE_SELECTS_ASSUME_CACHEABLE},
+        {"verify_cacheable", CACHE_SELECTS_VERIFY_CACHEABLE},
+        {NULL}};
 
 // Enumeration values for `cache_in_transaction`
-static const MXS_ENUM_VALUE parameter_cache_in_trxs_values[] =
-{
-    {"never",                  CACHE_IN_TRXS_NEVER    },
+static const MXS_ENUM_VALUE parameter_cache_in_trxs_values[] = {{"never", CACHE_IN_TRXS_NEVER},
     {"read_only_transactions", CACHE_IN_TRXS_READ_ONLY},
-    {"all_transactions",       CACHE_IN_TRXS_ALL      },
-    {NULL}
-};
+    {"all_transactions", CACHE_IN_TRXS_ALL},
+    {NULL}};
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static modulecmd_arg_type_t show_argv[] =
-    {
-        {MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Cache name"}
-    };
+    static modulecmd_arg_type_t show_argv[]
+        = {{MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Cache name"}};
 
     modulecmd_register_command(MXS_MODULE_NAME,
-                               "show",
-                               MODULECMD_TYPE_PASSIVE,
-                               cache_command_show,
-                               MXS_ARRAY_NELEMS(show_argv),
-                               show_argv,
-                               "Show cache filter statistics");
+        "show",
+        MODULECMD_TYPE_PASSIVE,
+        cache_command_show,
+        MXS_ARRAY_NELEMS(show_argv),
+        show_argv,
+        "Show cache filter statistics");
 
-    static MXS_MODULE info =
-    {
+    static MXS_MODULE info = {
         MXS_MODULE_API_FILTER,
         MXS_MODULE_GA,
         MXS_FILTER_VERSION,
@@ -146,19 +134,16 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 CacheFilter::CacheFilter(std::unique_ptr<CacheConfig> sConfig, std::unique_ptr<Cache> sCache)
     : m_sConfig(std::move(sConfig))
     , m_sCache(std::move(sCache))
-{
-}
+{}
 
-CacheFilter::~CacheFilter()
-{
-}
+CacheFilter::~CacheFilter() {}
 
 // static
 CacheFilter* CacheFilter::create(const char* zName, mxs::ConfigParameters* pParams)
 {
     CacheFilter* pFilter = nullptr;
 
-    std::unique_ptr<CacheConfig> sConfig(new(std::nothrow) CacheConfig(zName));
+    std::unique_ptr<CacheConfig> sConfig(new (std::nothrow) CacheConfig(zName));
 
     if (sConfig && sConfig->configure(*pParams))
     {
@@ -197,11 +182,12 @@ CacheFilter* CacheFilter::create(const char* zName, mxs::ConfigParameters* pPara
                 MXS_WARNING("The used cache storage limits the maximum size of a value to "
                             "%u bytes, but either no value has been specified for "
                             "max_resultset_size or the value is larger. Setting "
-                            "max_resultset_size to the maximum size.", limits.max_value_size);
+                            "max_resultset_size to the maximum size.",
+                    limits.max_value_size);
                 sConfig->max_resultset_size = limits.max_value_size;
             }
 
-            pFilter = new(std::nothrow) CacheFilter(std::move(sConfig), unique_ptr<Cache>(pCache));
+            pFilter = new (std::nothrow) CacheFilter(std::move(sConfig), unique_ptr<Cache>(pCache));
         }
     }
 

@@ -35,9 +35,8 @@ namespace
 struct CONFIG
 {
     bool stop_at_first_error;
-} cfg =
-{
-    true,   // stop_at_first_error
+} cfg = {
+    true,  // stop_at_first_error
 };
 
 enum fw_action_t
@@ -61,419 +60,170 @@ const size_t N_MAX_CASES = 20;
 
 struct FW_TEST
 {
-    const char*  zRules;            /* The firewall rules. */
-    fw_action_t  action;            /* The firewall action. */
-    FW_TEST_CASE cases[N_MAX_CASES];/* The test cases to execute using the above settings. */
+    const char* zRules;              /* The firewall rules. */
+    fw_action_t action;              /* The firewall action. */
+    FW_TEST_CASE cases[N_MAX_CASES]; /* The test cases to execute using the above settings. */
 };
 
-FW_TEST FIREWALL_TESTS[] =
-{
+FW_TEST FIREWALL_TESTS[] = {
     //
     // wildcard
     //
-    {
-        "rule wildcard_used match wildcard\n"
-        "users %@127.0.0.1 match any rules wildcard_used\n",
+    {"rule wildcard_used match wildcard\n"
+     "users %@127.0.0.1 match any rules wildcard_used\n",
         FW_ACTION_BLOCK,
-        {
-            {
-                "SELECT * FROM t",
-                FW_ACTION_BLOCK
-            },
-            {
-                "SELECT * FROM t",
-                FW_ACTION_ALLOW,
-                DEFAULT_USER,
-                "allowed_host"
-            },
-            {
-                "SELECT a FROM t",
-                FW_ACTION_ALLOW
-            }
-        }
-    },
-    {
-        "rule wildcard_used match wildcard\n"
-        "users %@127.0.0.1 match any rules wildcard_used\n",
+        {{"SELECT * FROM t", FW_ACTION_BLOCK},
+            {"SELECT * FROM t", FW_ACTION_ALLOW, DEFAULT_USER, "allowed_host"},
+            {"SELECT a FROM t", FW_ACTION_ALLOW}}},
+    {"rule wildcard_used match wildcard\n"
+     "users %@127.0.0.1 match any rules wildcard_used\n",
         FW_ACTION_ALLOW,
-        {
-            {
-                "SELECT * FROM t",
-                FW_ACTION_ALLOW
-            },
-            {
-                "SELECT * FROM t",
-                FW_ACTION_BLOCK,
-                DEFAULT_USER,
-                "allowed_host"
-            },
-            {
-                "SELECT a FROM t",
-                FW_ACTION_BLOCK
-            }
-        }
-    },
+        {{"SELECT * FROM t", FW_ACTION_ALLOW},
+            {"SELECT * FROM t", FW_ACTION_BLOCK, DEFAULT_USER, "allowed_host"},
+            {"SELECT a FROM t", FW_ACTION_BLOCK}}},
     //
     // columns
     //
-    {
-        "rule specific_column match columns a\n"
-        "users bob@% match any rules specific_column\n",
+    {"rule specific_column match columns a\n"
+     "users bob@% match any rules specific_column\n",
         FW_ACTION_BLOCK,
-        {
-            {
-                "SELECT a FROM t",
-                FW_ACTION_BLOCK
-            },
-            {
-                "SELECT a, b FROM t",
-                FW_ACTION_BLOCK
-            },
-            {
-                "SELECT b, a FROM t",
-                FW_ACTION_BLOCK
-            },
-            {
-                "SELECT length(a) FROM t",
-                FW_ACTION_BLOCK
-            },
-            {
-                "SELECT b FROM t",
-                FW_ACTION_ALLOW
-            },
-            {
-                "SELECT a FROM t",
-                FW_ACTION_ALLOW,
-                "alice"
-            }
-        }
-    },
+        {{"SELECT a FROM t", FW_ACTION_BLOCK},
+            {"SELECT a, b FROM t", FW_ACTION_BLOCK},
+            {"SELECT b, a FROM t", FW_ACTION_BLOCK},
+            {"SELECT length(a) FROM t", FW_ACTION_BLOCK},
+            {"SELECT b FROM t", FW_ACTION_ALLOW},
+            {"SELECT a FROM t", FW_ACTION_ALLOW, "alice"}}},
     //
     // function
     //
-    {
-        "rule specific_function match function sum count\n"
-        "users %@% match any rules specific_function\n",
+    {"rule specific_function match function sum count\n"
+     "users %@% match any rules specific_function\n",
         FW_ACTION_BLOCK,
-        {
-            {
-                "SELECT a FROM t",
-                FW_ACTION_ALLOW
-            },
-            {
-                "SELECT sum(a) FROM t",
-                FW_ACTION_BLOCK
-            },
-            {
-                "SELECT length(a) FROM t",
-                FW_ACTION_ALLOW
-            },
-            {
-                "SELECT length(a), count(b) FROM t",
-                FW_ACTION_BLOCK
-            }
-        }
-    },
-    {
-        "rule specific_function match function sum count\n"
-        "users %@% match any rules specific_function\n",
+        {{"SELECT a FROM t", FW_ACTION_ALLOW},
+            {"SELECT sum(a) FROM t", FW_ACTION_BLOCK},
+            {"SELECT length(a) FROM t", FW_ACTION_ALLOW},
+            {"SELECT length(a), count(b) FROM t", FW_ACTION_BLOCK}}},
+    {"rule specific_function match function sum count\n"
+     "users %@% match any rules specific_function\n",
         FW_ACTION_ALLOW,
-        {
-            {
-                "SELECT a FROM t",
-                FW_ACTION_BLOCK
-            },
-            {
-                "SELECT sum(a) FROM t",
-                FW_ACTION_ALLOW
-            },
-            {
-                "SELECT length(a) FROM t",
-                FW_ACTION_BLOCK
-            },
-            {
-                "SELECT length(a), count(b) FROM t",
-                FW_ACTION_ALLOW
-            }
-        }
-    },
+        {{"SELECT a FROM t", FW_ACTION_BLOCK},
+            {"SELECT sum(a) FROM t", FW_ACTION_ALLOW},
+            {"SELECT length(a) FROM t", FW_ACTION_BLOCK},
+            {"SELECT length(a), count(b) FROM t", FW_ACTION_ALLOW}}},
     //
     // not_function
     //
-    {
-        "rule other_functions_than match not_function length <\n"
-        "users bob@% match any rules other_functions_than\n",
+    {"rule other_functions_than match not_function length <\n"
+     "users bob@% match any rules other_functions_than\n",
         FW_ACTION_BLOCK,
         {
-            {
-                "SELECT a FROM t",
-                FW_ACTION_ALLOW
-            },
-            {
-                "SELECT length(a) FROM t",
-                FW_ACTION_ALLOW
-            },
-            {
-                "SELECT a FROM t WHERE a < b",
-                FW_ACTION_ALLOW
-            },
-            {
-                "SELECT concat(a) FROM t",
-                FW_ACTION_BLOCK
-            },
-            {
-                "SELECT * FROM t WHERE a > b",
-                FW_ACTION_BLOCK
-            },
-        }
-    },
-    {
-        "rule other_functions_than match not_function length <\n"
-        "users bob@% match any rules other_functions_than\n",
+            {"SELECT a FROM t", FW_ACTION_ALLOW},
+            {"SELECT length(a) FROM t", FW_ACTION_ALLOW},
+            {"SELECT a FROM t WHERE a < b", FW_ACTION_ALLOW},
+            {"SELECT concat(a) FROM t", FW_ACTION_BLOCK},
+            {"SELECT * FROM t WHERE a > b", FW_ACTION_BLOCK},
+        }},
+    {"rule other_functions_than match not_function length <\n"
+     "users bob@% match any rules other_functions_than\n",
         FW_ACTION_ALLOW,
         {
-            {
-                "SELECT a FROM t",
-                FW_ACTION_BLOCK
-            },
-            {
-                "SELECT length(a) FROM t",
-                FW_ACTION_BLOCK
-            },
-            {
-                "SELECT a FROM t WHERE a < b",
-                FW_ACTION_BLOCK
-            },
-            {
-                "SELECT concat(a) FROM t",
-                FW_ACTION_ALLOW
-            },
-            {
-                "SELECT * FROM t WHERE a > b",
-                FW_ACTION_ALLOW
-            },
-        }
-    },
+            {"SELECT a FROM t", FW_ACTION_BLOCK},
+            {"SELECT length(a) FROM t", FW_ACTION_BLOCK},
+            {"SELECT a FROM t WHERE a < b", FW_ACTION_BLOCK},
+            {"SELECT concat(a) FROM t", FW_ACTION_ALLOW},
+            {"SELECT * FROM t WHERE a > b", FW_ACTION_ALLOW},
+        }},
     //
     // uses_function
     //
-    {
-        "rule specific_column_used_with_function match uses_function a b\n"
-        "users bob@% match any rules specific_column_used_with_function\n",
+    {"rule specific_column_used_with_function match uses_function a b\n"
+     "users bob@% match any rules specific_column_used_with_function\n",
         FW_ACTION_BLOCK,
         {
-            {
-                "SELECT a FROM t",
-                FW_ACTION_ALLOW
-            },
-            {
-                "SELECT a b FROM t",
-                FW_ACTION_ALLOW
-            },
-            {
-                "SELECT length(a) FROM t",
-                FW_ACTION_BLOCK
-            },
-            {
-                "SELECT length(b) FROM t",
-                FW_ACTION_BLOCK
-            },
-            {
-                "SELECT length(c) FROM t",
-                FW_ACTION_ALLOW
-            },
-        }
-    },
-    {
-        "rule specific_column_used_with_function match uses_function a b\n"
-        "users bob@% match any rules specific_column_used_with_function\n",
+            {"SELECT a FROM t", FW_ACTION_ALLOW},
+            {"SELECT a b FROM t", FW_ACTION_ALLOW},
+            {"SELECT length(a) FROM t", FW_ACTION_BLOCK},
+            {"SELECT length(b) FROM t", FW_ACTION_BLOCK},
+            {"SELECT length(c) FROM t", FW_ACTION_ALLOW},
+        }},
+    {"rule specific_column_used_with_function match uses_function a b\n"
+     "users bob@% match any rules specific_column_used_with_function\n",
         FW_ACTION_ALLOW,
         {
-            {
-                "SELECT a FROM t",
-                FW_ACTION_BLOCK
-            },
-            {
-                "SELECT a b FROM t",
-                FW_ACTION_BLOCK
-            },
-            {
-                "SELECT length(a) FROM t",
-                FW_ACTION_ALLOW
-            },
-            {
-                "SELECT length(b) FROM t",
-                FW_ACTION_ALLOW
-            },
-            {
-                "SELECT length(c) FROM t",
-                FW_ACTION_BLOCK
-            },
-        }
-    },
+            {"SELECT a FROM t", FW_ACTION_BLOCK},
+            {"SELECT a b FROM t", FW_ACTION_BLOCK},
+            {"SELECT length(a) FROM t", FW_ACTION_ALLOW},
+            {"SELECT length(b) FROM t", FW_ACTION_ALLOW},
+            {"SELECT length(c) FROM t", FW_ACTION_BLOCK},
+        }},
     //
     // function and columns
     //
-    {
-        "rule specific_columns_used_with_function match function concat columns a b\n"
-        "users bob@% match any rules specific_columns_used_with_function\n",
+    {"rule specific_columns_used_with_function match function concat columns a b\n"
+     "users bob@% match any rules specific_columns_used_with_function\n",
         FW_ACTION_BLOCK,
         {
-            {
-                "SELECT a FROM t",
-                FW_ACTION_ALLOW
-            },
-            {
-                "SELECT length(a) FROM t",
-                FW_ACTION_ALLOW
-            },
-            {
-                "SELECT concat(a) FROM t",
-                FW_ACTION_BLOCK
-            },
-            {
-                "SELECT concat(c) FROM t",
-                FW_ACTION_ALLOW
-            },
-            {
-                "SELECT a, concat(b) FROM t",
-                FW_ACTION_BLOCK
-            },
-        }
-    },
-    {
-        "rule specific_columns_used_with_function match function concat columns a b\n"
-        "users bob@% match any rules specific_columns_used_with_function\n",
+            {"SELECT a FROM t", FW_ACTION_ALLOW},
+            {"SELECT length(a) FROM t", FW_ACTION_ALLOW},
+            {"SELECT concat(a) FROM t", FW_ACTION_BLOCK},
+            {"SELECT concat(c) FROM t", FW_ACTION_ALLOW},
+            {"SELECT a, concat(b) FROM t", FW_ACTION_BLOCK},
+        }},
+    {"rule specific_columns_used_with_function match function concat columns a b\n"
+     "users bob@% match any rules specific_columns_used_with_function\n",
         FW_ACTION_ALLOW,
         {
-            {
-                "SELECT a FROM t",
-                FW_ACTION_BLOCK
-            },
-            {
-                "SELECT length(a) FROM t",
-                FW_ACTION_BLOCK
-            },
-            {
-                "SELECT concat(a) FROM t",
-                FW_ACTION_ALLOW
-            },
-            {
-                "SELECT concat(c) FROM t",
-                FW_ACTION_BLOCK
-            },
-            {
-                "SELECT a, concat(b) FROM t",
-                FW_ACTION_ALLOW
-            },
-        }
-    },
+            {"SELECT a FROM t", FW_ACTION_BLOCK},
+            {"SELECT length(a) FROM t", FW_ACTION_BLOCK},
+            {"SELECT concat(a) FROM t", FW_ACTION_ALLOW},
+            {"SELECT concat(c) FROM t", FW_ACTION_BLOCK},
+            {"SELECT a, concat(b) FROM t", FW_ACTION_ALLOW},
+        }},
     //
     // not_function and columns
     //
-    {
-        "rule specific_columns_used_with_other_function match not_function length columns a b\n"
-        "users bob@% match any rules specific_columns_used_with_other_function\n",
+    {"rule specific_columns_used_with_other_function match not_function length columns a b\n"
+     "users bob@% match any rules specific_columns_used_with_other_function\n",
         FW_ACTION_BLOCK,
         {
-            {
-                "SELECT a FROM t",
-                FW_ACTION_ALLOW
-            },
-            {
-                "SELECT length(a) FROM t",
-                FW_ACTION_ALLOW
-            },
-            {
-                "SELECT concat(a) FROM t",
-                FW_ACTION_BLOCK
-            },
-            {
-                "SELECT concat(c) FROM t",
-                FW_ACTION_ALLOW
-            },
-            {
-                "SELECT a, concat(b) FROM t",
-                FW_ACTION_BLOCK
-            },
-        }
-    },
-    {
-        "rule specific_columns_used_with_other_function match not_function length columns a b\n"
-        "users bob@% match any rules specific_columns_used_with_other_function\n",
+            {"SELECT a FROM t", FW_ACTION_ALLOW},
+            {"SELECT length(a) FROM t", FW_ACTION_ALLOW},
+            {"SELECT concat(a) FROM t", FW_ACTION_BLOCK},
+            {"SELECT concat(c) FROM t", FW_ACTION_ALLOW},
+            {"SELECT a, concat(b) FROM t", FW_ACTION_BLOCK},
+        }},
+    {"rule specific_columns_used_with_other_function match not_function length columns a b\n"
+     "users bob@% match any rules specific_columns_used_with_other_function\n",
         FW_ACTION_ALLOW,
         {
-            {
-                "SELECT a FROM t",
-                FW_ACTION_BLOCK
-            },
-            {
-                "SELECT length(a) FROM t",
-                FW_ACTION_BLOCK
-            },
-            {
-                "SELECT concat(a) FROM t",
-                FW_ACTION_ALLOW
-            },
-            {
-                "SELECT concat(c) FROM t",
-                FW_ACTION_BLOCK
-            },
-            {
-                "SELECT a, concat(b) FROM t",
-                FW_ACTION_ALLOW
-            },
-        }
-    },
+            {"SELECT a FROM t", FW_ACTION_BLOCK},
+            {"SELECT length(a) FROM t", FW_ACTION_BLOCK},
+            {"SELECT concat(a) FROM t", FW_ACTION_ALLOW},
+            {"SELECT concat(c) FROM t", FW_ACTION_BLOCK},
+            {"SELECT a, concat(b) FROM t", FW_ACTION_ALLOW},
+        }},
     //
     // regex
     //
-    {
-        "rule regex_match match regex '(?i).*select.*from.*account.*'\n"
-        "users bob@% match any rules regex_match\n",
+    {"rule regex_match match regex '(?i).*select.*from.*account.*'\n"
+     "users bob@% match any rules regex_match\n",
         FW_ACTION_BLOCK,
-        {
-            {
-                "SELECT a FROM t",
-                FW_ACTION_ALLOW
-            },
-            {
-                "select * FROM accounts",
-                FW_ACTION_BLOCK
-            }
-        }
-    },
-    {
-        "rule regex_match match regex '(?i).*select.*from.*account.*'\n"
-        "users bob@% match any rules regex_match\n",
+        {{"SELECT a FROM t", FW_ACTION_ALLOW}, {"select * FROM accounts", FW_ACTION_BLOCK}}},
+    {"rule regex_match match regex '(?i).*select.*from.*account.*'\n"
+     "users bob@% match any rules regex_match\n",
         FW_ACTION_ALLOW,
-        {
-            {
-                "SELECT a FROM t",
-                FW_ACTION_BLOCK
-            },
-            {
-                "select * FROM accounts",
-                FW_ACTION_ALLOW
-            }
-        }
-    },
+        {{"SELECT a FROM t", FW_ACTION_BLOCK}, {"select * FROM accounts", FW_ACTION_ALLOW}}},
     //
     // no_where_clause
     //
-    {
-        "rule rule1 match no_where_clause\n"
-        "users bob@% match any rules rule1\n",
+    {"rule rule1 match no_where_clause\n"
+     "users bob@% match any rules rule1\n",
         FW_ACTION_BLOCK,
-        {
-            {
-                "SELECT a FROM t",
-                FW_ACTION_BLOCK,
-            },
-            {
-                "SELECT a FROM t WHERE b > c",
-                FW_ACTION_ALLOW
-            },
+        {{
+             "SELECT a FROM t",
+             FW_ACTION_BLOCK,
+         },
+            {"SELECT a FROM t WHERE b > c", FW_ACTION_ALLOW},
             {
                 "DELETE FROM t",
                 FW_ACTION_BLOCK,
@@ -481,22 +231,15 @@ FW_TEST FIREWALL_TESTS[] =
             {
                 "DELETE FROM t WHERE a < b",
                 FW_ACTION_ALLOW,
-            }
-        }
-    },
-    {
-        "rule rule1 match no_where_clause\n"
-        "users bob@% match any rules rule1\n",
+            }}},
+    {"rule rule1 match no_where_clause\n"
+     "users bob@% match any rules rule1\n",
         FW_ACTION_ALLOW,
-        {
-            {
-                "SELECT a FROM t",
-                FW_ACTION_ALLOW,
-            },
-            {
-                "SELECT a FROM t WHERE b > c",
-                FW_ACTION_BLOCK
-            },
+        {{
+             "SELECT a FROM t",
+             FW_ACTION_ALLOW,
+         },
+            {"SELECT a FROM t WHERE b > c", FW_ACTION_BLOCK},
             {
                 "DELETE FROM t",
                 FW_ACTION_ALLOW,
@@ -504,176 +247,80 @@ FW_TEST FIREWALL_TESTS[] =
             {
                 "DELETE FROM t WHERE a < b",
                 FW_ACTION_BLOCK,
-            }
-        }
-    },
+            }}},
     //
     // on_queries (some)
     //
-    {
-        "rule rule1 match regex '(?i).*xyz.*' on_queries select|delete|drop\n"
-        "users bob@% match any rules rule1\n",
+    {"rule rule1 match regex '(?i).*xyz.*' on_queries select|delete|drop\n"
+     "users bob@% match any rules rule1\n",
         FW_ACTION_BLOCK,
         {
-            {
-                "SELECT xyz FROM t",
-                FW_ACTION_BLOCK
-            },
-            {
-                "INSERT INTO xyz VALUES (1)",
-                FW_ACTION_ALLOW
-            },
+            {"SELECT xyz FROM t", FW_ACTION_BLOCK},
+            {"INSERT INTO xyz VALUES (1)", FW_ACTION_ALLOW},
             {
                 "UPDATE xyz SET a = 1",
                 FW_ACTION_ALLOW,
             },
-            {
-                "DELETE FROM xyz",
-                FW_ACTION_BLOCK
-            },
-            {
-                "GRANT SELECT ON *.* TO 'xyz'@'localhost'",
-                FW_ACTION_ALLOW
-            },
-            {
-                "REVOKE INSERT ON *.* FROM 'xyz'@'localhost'",
-                FW_ACTION_ALLOW
-            },
-            {
-                "CREATE TABLE xyz (a INT)",
-                FW_ACTION_ALLOW
-            },
-            {
-                "ALTER TABLE xyz ADD (b INT)",
-                FW_ACTION_ALLOW
-            },
-            {
-                "DROP TABLE xyz",
-                FW_ACTION_BLOCK
-            },
-            {
-                "USE xyz",
-                FW_ACTION_ALLOW
-            },
-            {
-                "LOAD DATA INFILE 'data.txt' INTO TABLE db.xyz",
-                FW_ACTION_ALLOW
-            },
-        }
-    },
+            {"DELETE FROM xyz", FW_ACTION_BLOCK},
+            {"GRANT SELECT ON *.* TO 'xyz'@'localhost'", FW_ACTION_ALLOW},
+            {"REVOKE INSERT ON *.* FROM 'xyz'@'localhost'", FW_ACTION_ALLOW},
+            {"CREATE TABLE xyz (a INT)", FW_ACTION_ALLOW},
+            {"ALTER TABLE xyz ADD (b INT)", FW_ACTION_ALLOW},
+            {"DROP TABLE xyz", FW_ACTION_BLOCK},
+            {"USE xyz", FW_ACTION_ALLOW},
+            {"LOAD DATA INFILE 'data.txt' INTO TABLE db.xyz", FW_ACTION_ALLOW},
+        }},
     //
     // any
     //
-    {
-        "rule rule1 match columns a\n"
-        "rule rule2 match columns b\n"
-        "rule rule3 match function length\n"
-        "users bob@% match any rules rule1 rule2 rule3\n",
+    {"rule rule1 match columns a\n"
+     "rule rule2 match columns b\n"
+     "rule rule3 match function length\n"
+     "users bob@% match any rules rule1 rule2 rule3\n",
         FW_ACTION_BLOCK,
         {
-            {
-                "SELECT a FROM t\n",
-                FW_ACTION_BLOCK
-            },
-            {
-                "SELECT b FROM t\n",
-                FW_ACTION_BLOCK
-            },
-            {
-                "SELECT length(c) FROM t\n",
-                FW_ACTION_BLOCK
-            },
-        }
-    },
+            {"SELECT a FROM t\n", FW_ACTION_BLOCK},
+            {"SELECT b FROM t\n", FW_ACTION_BLOCK},
+            {"SELECT length(c) FROM t\n", FW_ACTION_BLOCK},
+        }},
     //
     // all
     //
-    {
-        "rule rule1 match columns a\n"
-        "rule rule2 match columns b\n"
-        "rule rule3 match function length\n"
-        "users bob@% match all rules rule1 rule2 rule3\n",
+    {"rule rule1 match columns a\n"
+     "rule rule2 match columns b\n"
+     "rule rule3 match function length\n"
+     "users bob@% match all rules rule1 rule2 rule3\n",
         FW_ACTION_BLOCK,
         {
-            {
-                "SELECT a FROM t\n",
-                FW_ACTION_ALLOW
-            },
-            {
-                "SELECT b FROM t\n",
-                FW_ACTION_ALLOW
-            },
-            {
-                "SELECT length(c) FROM t\n",
-                FW_ACTION_ALLOW
-            },
-            {
-                "SELECT a, length(c) FROM t\n",
-                FW_ACTION_ALLOW
-            },
-            {
-                "SELECT a, b, length(c) FROM t\n",
-                FW_ACTION_BLOCK
-            },
-        }
-    }
-};
+            {"SELECT a FROM t\n", FW_ACTION_ALLOW},
+            {"SELECT b FROM t\n", FW_ACTION_ALLOW},
+            {"SELECT length(c) FROM t\n", FW_ACTION_ALLOW},
+            {"SELECT a, length(c) FROM t\n", FW_ACTION_ALLOW},
+            {"SELECT a, b, length(c) FROM t\n", FW_ACTION_BLOCK},
+        }}};
 
 const size_t N_FIREWALL_TESTS = sizeof(FIREWALL_TESTS) / sizeof(FIREWALL_TESTS[0]);
 
-FW_TEST ON_QUERIES_TEST =
-{
-    "rule rule1 match regex '.*' on_queries %s\n"
-    "users bob@%% match any rules rule1\n",
+FW_TEST ON_QUERIES_TEST = {"rule rule1 match regex '.*' on_queries %s\n"
+                           "users bob@%% match any rules rule1\n",
     FW_ACTION_BLOCK,
     {
-        {
-            "SELECT a FROM t",
-            FW_ACTION_BLOCK
-        },
-        {
-            "INSERT INTO t VALUES (1)",
-            FW_ACTION_ALLOW
-        },
+        {"SELECT a FROM t", FW_ACTION_BLOCK},
+        {"INSERT INTO t VALUES (1)", FW_ACTION_ALLOW},
         {
             "UPDATE t SET a = 1",
             FW_ACTION_ALLOW,
         },
-        {
-            "DELETE FROM a",
-            FW_ACTION_ALLOW
-        },
-        {
-            "GRANT SELECT ON *.* TO 'skysql'@'localhost'",
-            FW_ACTION_ALLOW
-        },
-        {
-            "REVOKE INSERT ON *.* FROM 'jeffrey'@'localhost'",
-            FW_ACTION_ALLOW
-        },
-        {
-            "CREATE TABLE t (a INT)",
-            FW_ACTION_ALLOW
-        },
-        {
-            "ALTER TABLE t ADD (b INT)",
-            FW_ACTION_ALLOW
-        },
-        {
-            "DROP TABLE t",
-            FW_ACTION_ALLOW
-        },
-        {
-            "USE d",
-            FW_ACTION_ALLOW
-        },
-        {
-            "LOAD DATA INFILE 'data.txt' INTO TABLE db.table",
-            FW_ACTION_ALLOW
-        },
-    }
-};
-}
+        {"DELETE FROM a", FW_ACTION_ALLOW},
+        {"GRANT SELECT ON *.* TO 'skysql'@'localhost'", FW_ACTION_ALLOW},
+        {"REVOKE INSERT ON *.* FROM 'jeffrey'@'localhost'", FW_ACTION_ALLOW},
+        {"CREATE TABLE t (a INT)", FW_ACTION_ALLOW},
+        {"ALTER TABLE t ADD (b INT)", FW_ACTION_ALLOW},
+        {"DROP TABLE t", FW_ACTION_ALLOW},
+        {"USE d", FW_ACTION_ALLOW},
+        {"LOAD DATA INFILE 'data.txt' INTO TABLE db.table", FW_ACTION_ALLOW},
+    }};
+}  // namespace
 
 namespace
 {
@@ -707,9 +354,9 @@ void log_error(const FW_TEST_CASE& c)
 }
 
 int test(mock::Client& client,
-         FilterModule::Session& filter_session,
-         mock::RouterSession& router_session,
-         const FW_TEST_CASE& c)
+    FilterModule::Session& filter_session,
+    mock::RouterSession& router_session,
+    const FW_TEST_CASE& c)
 {
     int rv = 0;
 
@@ -722,7 +369,7 @@ int test(mock::Client& client,
 
     if (c.result == FW_ACTION_ALLOW)
     {
-        if (!router_session.idle())     // Statement reached backend
+        if (!router_session.idle())  // Statement reached backend
         {
             router_session.discard_one_response();
             log_success(c);
@@ -787,10 +434,8 @@ int test(FilterModule::Instance& filter_instance, const FW_TEST& t)
             mock::OkBackend backend;
             mock::RouterSession router_session(&backend, &session);
 
-            auto_ptr<FilterModule::Session> sFilter_session = filter_instance.newSession(&session,
-                                                                                         service,
-                                                                                         router_session.as_downstream(),
-                                                                                         client.as_upstream());
+            auto_ptr<FilterModule::Session> sFilter_session = filter_instance.newSession(
+                &session, service, router_session.as_downstream(), client.as_upstream());
 
             if (sFilter_session.get())
             {
@@ -874,19 +519,17 @@ int test_on_queries(FilterModule& filter_module, fw_action_t action)
 {
     int rv = 0;
 
-    static const char* OPERATIONS[] =
-    {
-        "select", "insert", "update", "delete", "grant", "revoke", "create", "alter", "drop", "use", "load"
-    };
+    static const char* OPERATIONS[] = {
+        "select", "insert", "update", "delete", "grant", "revoke", "create", "alter", "drop", "use", "load"};
     static const size_t N_OPERATIONS = sizeof(OPERATIONS) / sizeof(OPERATIONS[0]);
 
     FW_TEST t = ON_QUERIES_TEST;
 
-    t.action = action;
-    fw_action_t result_match = action;
+    t.action                     = action;
+    fw_action_t result_match     = action;
     fw_action_t result_not_match = (action == FW_ACTION_BLOCK) ? FW_ACTION_ALLOW : FW_ACTION_BLOCK;
 
-    char rules[strlen(t.zRules) + 32];      // Enough
+    char rules[strlen(t.zRules) + 32];  // Enough
     const char* zFormat = t.zRules;
 
     for (size_t i = 0; i < N_OPERATIONS; ++i)
@@ -959,15 +602,14 @@ int run()
 
     return rv;
 }
-}
+}  // namespace
 
 namespace
 {
 
-char USAGE[] =
-    "usage: test_dbfwfilter [-d]\n"
-    "\n"
-    "-d    don't stop at first error\n";
+char USAGE[] = "usage: test_dbfwfilter [-d]\n"
+               "\n"
+               "-d    don't stop at first error\n";
 }
 
 int main(int argc, char* argv[])
@@ -990,11 +632,10 @@ int main(int argc, char* argv[])
 
     if (rv == 0)
     {
-        run_unit_test(
-            [&]() {
-                preload_module("dbfwfilter", "server/modules/filter/dbfwfilter/", MODULE_FILTER);
-                rv = run();
-            });
+        run_unit_test([&]() {
+            preload_module("dbfwfilter", "server/modules/filter/dbfwfilter/", MODULE_FILTER);
+            rv = run();
+        });
 
         cout << rv << " failures." << endl;
 

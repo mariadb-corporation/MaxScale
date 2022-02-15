@@ -26,7 +26,7 @@ namespace cdc
 class Replicator
 {
 public:
-    Replicator(const Replicator&) = delete;
+    Replicator(const Replicator&)            = delete;
     Replicator& operator=(const Replicator&) = delete;
 
     /**
@@ -57,4 +57,4 @@ private:
     // Pointer to the implementation of the abstract interface
     std::unique_ptr<Replicator::Imp> m_imp;
 };
-}
+}  // namespace cdc

@@ -22,13 +22,12 @@ namespace config = mxs::config;
 
 config::Specification specification(MXS_MODULE_NAME, config::Specification::FILTER);
 
-config::ParamString inject(
-    &specification,
+config::ParamString inject(&specification,
     "inject",
     "This string is injected as a comment before the statement. If the string "
     "contains $IP, it will be replaced with the IP of the client.",
     config::ParamString::Quotes::REQUIRED);
-}
+}  // namespace comment
 
 CommentConfig::CommentConfig(const char* zName)
     : mxs::config::Configuration(zName, &comment::specification)

@@ -30,16 +30,13 @@ class Tee : public mxs::Filter<Tee, TeeSession>
 {
     Tee(const Tee&);
     const Tee& operator=(const Tee&);
-public:
 
+public:
     static Tee* create(const char* zName, mxs::ConfigParameters* ppParams);
     TeeSession* newSession(MXS_SESSION* session, SERVICE* service);
-    json_t*     diagnostics() const;
+    json_t* diagnostics() const;
 
-    uint64_t getCapabilities()
-    {
-        return RCAP_TYPE_CONTIGUOUS_INPUT;
-    }
+    uint64_t getCapabilities() { return RCAP_TYPE_CONTIGUOUS_INPUT; }
 
     bool user_matches(const char* user) const
     {
@@ -51,39 +48,24 @@ public:
         return m_source.length() == 0 || strcmp(remote, m_source.c_str()) == 0;
     }
 
-    mxs::Target* get_target() const
-    {
-        return m_target;
-    }
+    mxs::Target* get_target() const { return m_target; }
 
-    const mxb::Regex& get_match() const
-    {
-        return m_match;
-    }
+    const mxb::Regex& get_match() const { return m_match; }
 
-    const mxb::Regex& get_exclude() const
-    {
-        return m_exclude;
-    }
+    const mxb::Regex& get_exclude() const { return m_exclude; }
 
-    void set_enabled(bool value)
-    {
-        m_enabled = value;
-    }
+    void set_enabled(bool value) { m_enabled = value; }
 
-    bool is_enabled() const
-    {
-        return m_enabled;
-    }
+    bool is_enabled() const { return m_enabled; }
 
 private:
     Tee(const char* name, mxs::ConfigParameters* params);
 
-    std::string  m_name;
+    std::string m_name;
     mxs::Target* m_target;
-    std::string  m_user;    /* The user name to filter on */
-    std::string  m_source;  /* The source of the client connection */
-    mxb::Regex   m_match;   /* Compiled match pattern */
-    mxb::Regex   m_exclude; /* Compiled exclude pattern*/
-    bool         m_enabled;
+    std::string m_user;   /* The user name to filter on */
+    std::string m_source; /* The source of the client connection */
+    mxb::Regex m_match;   /* Compiled match pattern */
+    mxb::Regex m_exclude; /* Compiled exclude pattern*/
+    bool m_enabled;
 };

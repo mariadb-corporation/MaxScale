@@ -22,16 +22,16 @@
 GWBUF* create_gwbuf(const char* s, size_t len)
 {
     size_t payload_len = len + 1;
-    size_t gwbuf_len = MYSQL_HEADER_LEN + payload_len;
+    size_t gwbuf_len   = MYSQL_HEADER_LEN + payload_len;
 
     GWBUF* gwbuf = gwbuf_alloc(gwbuf_len);
 
-    *((unsigned char*)((char*)GWBUF_DATA(gwbuf))) = payload_len;
-    *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 1)) = (payload_len >> 8);
-    *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 2)) = (payload_len >> 16);
-    *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 3)) = 0x00;
-    *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 4)) = 0x03;
-    memcpy((char*)GWBUF_DATA(gwbuf) + 5, s, len);
+    *((unsigned char*) ((char*) GWBUF_DATA(gwbuf)))     = payload_len;
+    *((unsigned char*) ((char*) GWBUF_DATA(gwbuf) + 1)) = (payload_len >> 8);
+    *((unsigned char*) ((char*) GWBUF_DATA(gwbuf) + 2)) = (payload_len >> 16);
+    *((unsigned char*) ((char*) GWBUF_DATA(gwbuf) + 3)) = 0x00;
+    *((unsigned char*) ((char*) GWBUF_DATA(gwbuf) + 4)) = 0x03;
+    memcpy((char*) GWBUF_DATA(gwbuf) + 5, s, len);
 
     return gwbuf;
 }
@@ -48,7 +48,7 @@ int main()
     {
         const char s[] = "SELECT @@global.max_allowed_packet";
 
-        GWBUF* stmt = create_gwbuf(s, sizeof(s));   // Include superfluous NULL.
+        GWBUF* stmt = create_gwbuf(s, sizeof(s));  // Include superfluous NULL.
 
         // In 2.0.1 this crashed due to is_submitted_query() in qc_sqlite.c
         // being of the opinion that the statement was not the one to be

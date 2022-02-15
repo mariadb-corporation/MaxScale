@@ -33,7 +33,7 @@
 
 
 using std::chrono::duration_cast;
-using Clock = std::chrono::steady_clock;
+using Clock     = std::chrono::steady_clock;
 using Timepoint = Clock::time_point;
 using std::chrono::milliseconds;
 
@@ -44,22 +44,24 @@ std::vector<cdc::Server> service_to_servers(SERVICE* service)
     std::vector<cdc::Server> servers;
 
     // Since this isn't a worker thread, execute it on one
-    mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN)->call(
-        [&]() {
-            for (auto s : service->reachable_servers())
+    mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN)
+        ->call(
+            [&]() {
+        for (auto s : service->reachable_servers())
+        {
+            if (s->is_master())
             {
-                if (s->is_master())
-                {
-                    // TODO: per-server credentials aren't exposed in the public class
-                    const auto& cfg = *service->config();
-                    servers.push_back({s->address(), s->port(), cfg.user, cfg.password});
-                }
+                // TODO: per-server credentials aren't exposed in the public class
+                const auto& cfg = *service->config();
+                servers.push_back({s->address(), s->port(), cfg.user, cfg.password});
             }
-        }, mxs::RoutingWorker::EXECUTE_AUTO);
+        }
+            },
+            mxs::RoutingWorker::EXECUTE_AUTO);
 
     return servers;
 }
-}
+}  // namespace
 
 namespace cdc
 {
@@ -70,7 +72,7 @@ class Replicator::Imp
 {
 public:
     Imp& operator=(Imp&) = delete;
-    Imp(Imp&) = delete;
+    Imp(Imp&)            = delete;
 
     // Flag used in GTID events to signal statements that perform an implicit commit
     static constexpr int IMPLICIT_COMMIT_FLAG = 0x1;
@@ -96,34 +98,33 @@ private:
     bool load_gtid_state();
     void save_gtid_state() const;
 
-    static GtidList    parse_gtid_list(const std::string& gtid_list_str);
+    static GtidList parse_gtid_list(const std::string& gtid_list_str);
     static std::string gtid_list_to_string(const GtidList& gtid_list);
 
-    Config               m_cnf;                     // The configuration the stream was started with
-    std::unique_ptr<SQL> m_sql;                     // Database connection
-    std::atomic<bool>    m_running {true};          // Whether the stream is running
-    std::atomic<bool>    m_should_stop {false};     // Set to true when doing a controlled shutdown
-    std::atomic<bool>    m_safe_to_stop {false};    // Whether it safe to stop the processing
-    GtidList             m_gtid_position;           // Committed GTID position
-    gtid_pos_t           m_current_gtid;            // GTID of the transaction being processed
-    bool                 m_implicit_commit {false}; // Commit after next query event
-    Rpl                  m_rpl;                     // Class that handles the replicated events
+    Config m_cnf;                              // The configuration the stream was started with
+    std::unique_ptr<SQL> m_sql;                // Database connection
+    std::atomic<bool> m_running {true};        // Whether the stream is running
+    std::atomic<bool> m_should_stop {false};   // Set to true when doing a controlled shutdown
+    std::atomic<bool> m_safe_to_stop {false};  // Whether it safe to stop the processing
+    GtidList m_gtid_position;                  // Committed GTID position
+    gtid_pos_t m_current_gtid;                 // GTID of the transaction being processed
+    bool m_implicit_commit {false};            // Commit after next query event
+    Rpl m_rpl;                                 // Class that handles the replicated events
 
     // NOTE: must be declared last
-    std::thread m_thr;      // Thread that receives the replication events
+    std::thread m_thr;  // Thread that receives the replication events
 };
 
-const std::string Replicator::Imp::STATEFILE_DIR = "./";
-const std::string Replicator::Imp::STATEFILE_NAME = "current_gtid.txt";
+const std::string Replicator::Imp::STATEFILE_DIR        = "./";
+const std::string Replicator::Imp::STATEFILE_NAME       = "current_gtid.txt";
 const std::string Replicator::Imp::STATEFILE_TMP_SUFFIX = ".tmp";
 
 Replicator::Imp::Imp(const Config& cnf, SRowEventHandler handler)
     : m_cnf(cnf)
-    , m_gtid_position(parse_gtid_list(cnf.gtid))    // The config value could contain multiple gtids.
+    , m_gtid_position(parse_gtid_list(cnf.gtid))  // The config value could contain multiple gtids.
     , m_rpl(cnf.service, std::move(handler), cnf.match, cnf.exclude)
     , m_thr(std::thread(&Imp::process_events, this))
-{
-}
+{}
 
 bool Replicator::Imp::ok() const
 {
@@ -133,7 +134,7 @@ bool Replicator::Imp::ok() const
 bool Replicator::Imp::connect()
 {
     cdc::Server old_server = {};
-    auto servers = service_to_servers(m_cnf.service);
+    auto servers           = service_to_servers(m_cnf.service);
 
     if (m_sql)
     {
@@ -170,20 +171,17 @@ bool Replicator::Imp::connect()
     else
     {
         mxb_assert(m_sql);
-        std::string gtid_list_str = gtid_list_to_string(m_gtid_position);
+        std::string gtid_list_str  = gtid_list_to_string(m_gtid_position);
         std::string gtid_start_pos = "SET @slave_connect_state='" + gtid_list_str + "'";
 
         // Queries required to start GTID replication
-        std::vector<std::string> queries =
-        {
-            "SET @master_heartbeat_period=1000000000",
+        std::vector<std::string> queries = {"SET @master_heartbeat_period=1000000000",
             "SET @master_binlog_checksum = @@global.binlog_checksum",
             "SET @mariadb_slave_capability=4",
             gtid_start_pos,
             "SET @slave_gtid_strict_mode=1",
             "SET @slave_gtid_ignore_duplicates=1",
-            "SET NAMES latin1"
-        };
+            "SET NAMES latin1"};
 
         if (!m_sql->query(queries))
         {
@@ -197,8 +195,10 @@ bool Replicator::Imp::connect()
         {
             if (old_server.host != m_sql->server().host || old_server.port != m_sql->server().port)
             {
-                MXB_NOTICE("Started replicating from [%s]:%d at GTID '%s'", m_sql->server().host.c_str(),
-                           m_sql->server().port, gtid_list_str.c_str());
+                MXB_NOTICE("Started replicating from [%s]:%d at GTID '%s'",
+                    m_sql->server().host.c_str(),
+                    m_sql->server().port,
+                    gtid_list_str.c_str());
             }
             rval = true;
 
@@ -287,8 +287,10 @@ void Replicator::Imp::process_events()
                 {
                     MXB_WARNING("Lost connection to server '%s:%d' when processing GTID '%s' while a "
                                 "controlled shutdown was in progress. Attempting to roll back partial "
-                                "transactions.", m_sql->server().host.c_str(), m_sql->server().port,
-                                m_current_gtid.to_string().c_str());
+                                "transactions.",
+                        m_sql->server().host.c_str(),
+                        m_sql->server().port,
+                        m_current_gtid.to_string().c_str());
                     m_running = false;
                 }
             }
@@ -327,7 +329,7 @@ std::string to_gtid_string(const MARIADB_RPL_EVENT& event)
 
 bool Replicator::Imp::load_gtid_state()
 {
-    bool rval = false;
+    bool rval            = false;
     std::string filename = m_cnf.statedir + "/" + STATEFILE_NAME;
     std::ifstream statefile(filename);
     std::string gtid;
@@ -353,7 +355,9 @@ bool Replicator::Imp::load_gtid_state()
         else
         {
             MXB_ERROR("Failed to load current GTID state from file '%s': %d, %s",
-                      filename.c_str(), errno, mxb_strerror(errno));
+                filename.c_str(),
+                errno,
+                mxb_strerror(errno));
         }
     }
 
@@ -368,7 +372,9 @@ void Replicator::Imp::save_gtid_state() const
     if (!statefile)
     {
         MXB_ERROR("Failed to store current GTID state inside '%s': %d, %s",
-                  m_cnf.statedir.c_str(), errno, mxb_strerror(errno));
+            m_cnf.statedir.c_str(),
+            errno,
+            mxb_strerror(errno));
     }
 }
 
@@ -404,8 +410,8 @@ bool Replicator::Imp::process_one_event(SQL::Event& event)
 
     case XID_EVENT:
         commit = true;
-        MXB_INFO("XID for GTID '%s': %lu",
-                 m_current_gtid.to_string().c_str(), event->event.xid.transaction_nr);
+        MXB_INFO(
+            "XID for GTID '%s': %lu", m_current_gtid.to_string().c_str(), event->event.xid.transaction_nr);
 
         if (m_should_stop)
         {
@@ -415,8 +421,7 @@ bool Replicator::Imp::process_one_event(SQL::Event& event)
         break;
 
     case QUERY_EVENT:
-        if (strncasecmp(event->event.query.statement.str, "commit",
-                        event->event.query.statement.length) == 0)
+        if (strncasecmp(event->event.query.statement.str, "commit", event->event.query.statement.length) == 0)
         {
             commit = true;
         }
@@ -426,7 +431,7 @@ bool Replicator::Imp::process_one_event(SQL::Event& event)
         if (m_implicit_commit)
         {
             m_implicit_commit = false;
-            commit = true;
+            commit            = true;
         }
         break;
 
@@ -447,15 +452,15 @@ bool Replicator::Imp::process_one_event(SQL::Event& event)
     uint8_t* ptr = m_sql->event_data() + 20;
 
     MARIADB_RPL_EVENT& ev = *event;
-    hdr.event_size = ev.event_length + (m_rpl.have_checksums() ? 4 : 0);
-    hdr.event_type = ev.event_type;
-    hdr.flags = ev.flags;
-    hdr.next_pos = ev.next_event_pos;
-    hdr.ok = ev.ok;
-    hdr.payload_len = hdr.event_size + 4;
-    hdr.seqno = 0;
-    hdr.serverid = ev.server_id;
-    hdr.timestamp = ev.timestamp;
+    hdr.event_size        = ev.event_length + (m_rpl.have_checksums() ? 4 : 0);
+    hdr.event_type        = ev.event_type;
+    hdr.flags             = ev.flags;
+    hdr.next_pos          = ev.next_event_pos;
+    hdr.ok                = ev.ok;
+    hdr.payload_len       = hdr.event_size + 4;
+    hdr.seqno             = 0;
+    hdr.serverid          = ev.server_id;
+    hdr.timestamp         = ev.timestamp;
 
     m_rpl.handle_event(hdr, ptr);
 
@@ -484,7 +489,7 @@ Replicator::Imp::GtidList Replicator::Imp::parse_gtid_list(const std::string& gt
         auto trimmed = mxb::trimmed_copy(elem);
         if (!trimmed.empty())
         {
-            auto gtid = gtid_pos_t::from_string(trimmed);
+            auto gtid         = gtid_pos_t::from_string(trimmed);
             rval[gtid.domain] = gtid;
         }
     }
@@ -518,12 +523,9 @@ bool Replicator::ok() const
     return m_imp->ok();
 }
 
-Replicator::~Replicator()
-{
-}
+Replicator::~Replicator() {}
 
 Replicator::Replicator(const Config& cnf, SRowEventHandler handler)
     : m_imp(new Imp(cnf, std::move(handler)))
-{
-}
-}
+{}
+}  // namespace cdc

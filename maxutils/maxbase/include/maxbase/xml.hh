@@ -25,12 +25,9 @@ template<>
 class default_delete<xmlDoc>
 {
 public:
-    void operator()(xmlDoc* pDoc)
-    {
-        xmlFreeDoc(pDoc);
-    }
+    void operator()(xmlDoc* pDoc) { xmlFreeDoc(pDoc); }
 };
-}
+}  // namespace std
 
 namespace maxbase
 {
@@ -174,10 +171,8 @@ enum class XmlLocation
  * @return True, if the key/value could be added. A return value of false
  *         means that a path was specified, but the beginning path did not exist.
  */
-bool insert(xmlNode& parent,
-            const char* zKey,
-            const char* zValue,
-            XmlLocation location = XmlLocation::AT_BEGINNING);
+bool insert(
+    xmlNode& parent, const char* zKey, const char* zValue, XmlLocation location = XmlLocation::AT_BEGINNING);
 
 /**
  * Update value of key(s) in XML document.
@@ -234,9 +229,9 @@ inline int update(xmlNode& node, const char* zXpath, const char* zNew_value)
  *         added either.
  */
 bool upsert(xmlNode& ancestor,
-            const char* zPath,
-            const char* zValue,
-            XmlLocation location = XmlLocation::AT_BEGINNING);
+    const char* zPath,
+    const char* zValue,
+    XmlLocation location = XmlLocation::AT_BEGINNING);
 
 /**
  * Remove key(s)
@@ -258,5 +253,5 @@ int remove(xmlNode& node, const char* zXPath);
  */
 std::string dump(const xmlDoc& doc);
 
-}
-}
+}  // namespace xml
+}  // namespace maxbase

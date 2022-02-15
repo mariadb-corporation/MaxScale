@@ -55,7 +55,7 @@ void mysql_set_log_statements(bool enable);
 bool mysql_get_log_statements();
 
 /** Length-encoded integers */
-size_t   leint_bytes(const uint8_t* ptr);
+size_t leint_bytes(const uint8_t* ptr);
 uint64_t leint_value(const uint8_t* c);
 uint64_t leint_consume(uint8_t** c);
 
@@ -63,4 +63,4 @@ uint64_t leint_consume(uint8_t** c);
 char* lestr_consume_dup(uint8_t** c);
 char* lestr_consume(uint8_t** c, size_t* size);
 
-}
+}  // namespace maxsql

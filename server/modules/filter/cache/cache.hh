@@ -39,11 +39,11 @@ class StorageFactory;
 #define CACHE_DEBUG_MIN   CACHE_DEBUG_NONE
 #define CACHE_DEBUG_MAX   (CACHE_DEBUG_RULES | CACHE_DEBUG_USAGE | CACHE_DEBUG_DECISIONS)
 
-#if !defined (UINT32_MAX)
+#if !defined(UINT32_MAX)
 #define UINT32_MAX (4294967295U)
 #endif
 
-#if !defined (UINT64_MAX)
+#if !defined(UINT64_MAX)
 #define UINT64_MAX (18446744073709551615UL)
 #endif
 
@@ -54,23 +54,20 @@ public:
 
     enum what_info_t
     {
-        INFO_RULES   = 0x01,/*< Include information about the rules. */
-        INFO_PENDING = 0x02,/*< Include information about any pending items. */
-        INFO_STORAGE = 0x04,/*< Include information about the storage. */
+        INFO_RULES   = 0x01, /*< Include information about the rules. */
+        INFO_PENDING = 0x02, /*< Include information about any pending items. */
+        INFO_STORAGE = 0x04, /*< Include information about the storage. */
         INFO_ALL     = (INFO_RULES | INFO_PENDING | INFO_STORAGE)
     };
 
-    typedef std::shared_ptr<CacheRules>     SCacheRules;
+    typedef std::shared_ptr<CacheRules> SCacheRules;
     typedef std::shared_ptr<StorageFactory> SStorageFactory;
 
     virtual ~Cache();
 
     json_t* show_json() const;
 
-    const CacheConfig& config() const
-    {
-        return m_config;
-    }
+    const CacheConfig& config() const { return m_config; }
 
     /**
      * Create a token to be used for distinguishing between different
@@ -130,10 +127,10 @@ public:
      * @return CACHE_RESULT_OK if a key could be created.
      */
     virtual cache_result_t get_key(const std::string& user,
-                                   const std::string& host,
-                                   const char* zDefault_db,
-                                   const GWBUF* pQuery,
-                                   CacheKey* pKey) const;
+        const std::string& host,
+        const char* zDefault_db,
+        const GWBUF* pQuery,
+        CacheKey* pKey) const;
 
     /**
      * Returns a key for the statement. Does not take the current config
@@ -148,14 +145,12 @@ public:
      * @return CACHE_RESULT_OK if a key could be created.
      */
     static cache_result_t get_default_key(const std::string& user,
-                                          const std::string& host,
-                                          const char* zDefault_db,
-                                          const GWBUF* pQuery,
-                                          CacheKey* pKey);
+        const std::string& host,
+        const char* zDefault_db,
+        const GWBUF* pQuery,
+        CacheKey* pKey);
 
-    static cache_result_t get_default_key(const char* zDefault_db,
-                                          const GWBUF* pQuery,
-                                          CacheKey* pKey)
+    static cache_result_t get_default_key(const char* zDefault_db, const GWBUF* pQuery, CacheKey* pKey)
     {
         return get_default_key(std::string(), std::string(), zDefault_db, pQuery, pKey);
     }
@@ -163,37 +158,38 @@ public:
     /**
      * See @Storage::get_value
      */
-    virtual
-    cache_result_t get_value(Token* pToken,
-                             const CacheKey& key,
-                             uint32_t flags,
-                             uint32_t soft_ttl,
-                             uint32_t hard_ttl,
-                             GWBUF** ppValue,
-                             const std::function<void (cache_result_t, GWBUF*)>& cb = nullptr) const = 0;
+    virtual cache_result_t get_value(Token* pToken,
+        const CacheKey& key,
+        uint32_t flags,
+        uint32_t soft_ttl,
+        uint32_t hard_ttl,
+        GWBUF** ppValue,
+        const std::function<void(cache_result_t, GWBUF*)>& cb = nullptr) const = 0;
 
     /**
      * See @Storage::put_value
      */
     virtual cache_result_t put_value(Token* pToken,
-                                     const CacheKey& key,
-                                     const std::vector<std::string>& invalidation_words,
-                                     const GWBUF* pValue,
-                                     const std::function<void (cache_result_t)>& cb = nullptr) = 0;
+        const CacheKey& key,
+        const std::vector<std::string>& invalidation_words,
+        const GWBUF* pValue,
+        const std::function<void(cache_result_t)>& cb = nullptr)
+        = 0;
 
     /**
      * See @Storage::del_value
      */
-    virtual cache_result_t del_value(Token* pToken,
-                                     const CacheKey& key,
-                                     const std::function<void (cache_result_t)>& cb = nullptr) = 0;
+    virtual cache_result_t del_value(
+        Token* pToken, const CacheKey& key, const std::function<void(cache_result_t)>& cb = nullptr)
+        = 0;
 
     /**
      * See @Storage::invalidate
      */
     virtual cache_result_t invalidate(Token* pToken,
-                                      const std::vector<std::string>& words,
-                                      const std::function<void (cache_result_t)>& cb = nullptr) = 0;
+        const std::vector<std::string>& words,
+        const std::function<void(cache_result_t)>& cb = nullptr)
+        = 0;
 
     /**
      * See @Storage::clear
@@ -210,13 +206,12 @@ public:
 
 protected:
     Cache(const std::string& name,
-          const CacheConfig* pConfig,
-          const std::vector<SCacheRules>& rules,
-          SStorageFactory sFactory);
+        const CacheConfig* pConfig,
+        const std::vector<SCacheRules>& rules,
+        SStorageFactory sFactory);
 
-    static bool get_storage_factory(const CacheConfig& config,
-                                    std::vector<SCacheRules>* pRules,
-                                    StorageFactory** ppFactory);
+    static bool get_storage_factory(
+        const CacheConfig& config, std::vector<SCacheRules>* pRules, StorageFactory** ppFactory);
 
     json_t* do_get_info(uint32_t what) const;
 
@@ -225,8 +220,8 @@ private:
     Cache& operator=(const Cache&);
 
 protected:
-    const std::string        m_name;    // The name of the instance; the section name in the config.
-    const CacheConfig&       m_config;  // The configuration of the cache instance.
-    std::vector<SCacheRules> m_rules;   // The rules of the cache instance.
-    SStorageFactory          m_sFactory;// The storage factory.
+    const std::string m_name;          // The name of the instance; the section name in the config.
+    const CacheConfig& m_config;       // The configuration of the cache instance.
+    std::vector<SCacheRules> m_rules;  // The rules of the cache instance.
+    SStorageFactory m_sFactory;        // The storage factory.
 };

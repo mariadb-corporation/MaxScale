@@ -167,10 +167,10 @@ public:
      * @param order_updates when true, process updates in order of creation
      */
     GCUpdater(typename SD::DataType* initial_copy,
-              int num_clients,
-              int queue_max,
-              int cap_copies,
-              bool order_updates);
+        int num_clients,
+        int queue_max,
+        int cap_copies,
+        bool order_updates);
 
 
     void run();
@@ -188,44 +188,43 @@ public:
     typename SharedDataType::DataType* get_pLatest();
 
 private:
-    int  gc();
+    int gc();
     void read_clients(std::vector<int> clients);
 
     std::vector<const typename SD::DataType*> get_in_use_ptrs();
 
-    std::atomic<bool>                  m_running;
+    std::atomic<bool> m_running;
     typename SharedDataType::DataType* m_pLatest_data;
 
-    int    m_num_clients;
-    size_t m_queue_max;     // of a SharedData instance
-    int    m_cap_copies;
-    bool   m_order_updates;
+    int m_num_clients;
+    size_t m_queue_max;  // of a SharedData instance
+    int m_cap_copies;
+    bool m_order_updates;
 
-    std::vector<SharedDataType>                           m_shared_data;
+    std::vector<SharedDataType> m_shared_data;
     std::vector<const typename SharedDataType::DataType*> m_all_ptrs;
-    std::vector<typename SharedDataType::InternalUpdate>  m_local_queue;
-    std::vector<typename SharedDataType::InternalUpdate>  m_leftover_queue;
+    std::vector<typename SharedDataType::InternalUpdate> m_local_queue;
+    std::vector<typename SharedDataType::InternalUpdate> m_leftover_queue;
 
     std::condition_variable m_updater_wakeup;
-    bool                    m_data_rdy;
-    std::atomic<int64_t>    m_timestamp_generator;
+    bool m_data_rdy;
+    std::atomic<int64_t> m_timestamp_generator;
 
     virtual typename SharedDataType::DataType* create_new_copy(
-        const typename SharedDataType::DataType* pCurrent) = 0;
+        const typename SharedDataType::DataType* pCurrent)
+        = 0;
 
-    virtual void make_updates(typename SharedDataType::DataType* pData,
-                              std::vector<typename SharedDataType::InternalUpdate>& queue) = 0;
+    virtual void make_updates(
+        typename SharedDataType::DataType* pData, std::vector<typename SharedDataType::InternalUpdate>& queue)
+        = 0;
 };
 
 /// IMPLEMENTATION
 ///
 ///
 template<typename SD>
-GCUpdater<SD>::GCUpdater(typename SD::DataType* initial_copy,
-                         int num_clients,
-                         int queue_max,
-                         int cap_copies,
-                         bool order_updates)
+GCUpdater<SD>::GCUpdater(
+    typename SD::DataType* initial_copy, int num_clients, int queue_max, int cap_copies, bool order_updates)
     : m_running(false)
     , m_pLatest_data(initial_copy)
     , m_num_clients(num_clients)
@@ -238,8 +237,8 @@ GCUpdater<SD>::GCUpdater(typename SD::DataType* initial_copy,
 
     for (int i = 0; i < m_num_clients; ++i)
     {
-        m_shared_data.emplace_back(m_pLatest_data, m_queue_max,
-                                   &m_updater_wakeup, &m_data_rdy, &m_timestamp_generator);
+        m_shared_data.emplace_back(
+            m_pLatest_data, m_queue_max, &m_updater_wakeup, &m_data_rdy, &m_timestamp_generator);
     }
 }
 
@@ -259,7 +258,7 @@ void GCUpdater<SD>::read_clients(std::vector<int> clients)
             clients.pop_back();
         }
         else
-        {   // the client was busy, check others first
+        {  // the client was busy, check others first
             std::rotate(begin(clients), begin(clients) + 1, end(clients));
         }
     }
@@ -283,7 +282,6 @@ std::vector<const typename SD::DataType*> GCUpdater<SD>::get_in_use_ptrs()
     return in_use_ptrs;
 }
 
-
 template<typename SD>
 void GCUpdater<SD>::run()
 {
@@ -293,7 +291,7 @@ void GCUpdater<SD>::run()
     int gc_ptr_count = 0;
 
     std::vector<int> client_indices(m_num_clients);
-    std::iota(begin(client_indices), end(client_indices), 0);       // 0, 1, 2, ...
+    std::iota(begin(client_indices), end(client_indices), 0);  // 0, 1, 2, ...
 
     while (m_running.load(std::memory_order_acquire))
     {
@@ -319,8 +317,7 @@ void GCUpdater<SD>::run()
             if (gc_ptr_count)
             {
                 // wait for updates, or a timeout to check for new garbage (opportunistic gc)
-                while (gc_ptr_count
-                       && !(have_data = m_shared_data[0].wait_for_updates(garbage_wait_tmo)))
+                while (gc_ptr_count && !(have_data = m_shared_data[0].wait_for_updates(garbage_wait_tmo)))
                 {
                     gc_ptr_count = gc();
                 }
@@ -334,15 +331,14 @@ void GCUpdater<SD>::run()
 
         if (m_order_updates && m_local_queue.size() > 1)
         {
-            std::sort(begin(m_local_queue), end(m_local_queue),
-                      [](const typename SharedDataType::InternalUpdate& lhs,
-                         const typename SharedDataType::InternalUpdate& rhs) {
-                          return lhs.tstamp < rhs.tstamp;
-                      });
+            std::sort(begin(m_local_queue),
+                end(m_local_queue),
+                [](const typename SharedDataType::InternalUpdate& lhs,
+                    const typename SharedDataType::InternalUpdate& rhs) { return lhs.tstamp < rhs.tstamp; });
 
             // Find a discontinuity point in input (missing timestamp)
             size_t ind = 1;
-            size_t sz = m_local_queue.size();
+            size_t sz  = m_local_queue.size();
 
             int64_t prev_tstamp = m_local_queue[0].tstamp;
             while (ind != sz && prev_tstamp == m_local_queue[ind].tstamp - 1)
@@ -364,15 +360,13 @@ void GCUpdater<SD>::run()
             }
         }
 
-        while (m_cap_copies > 0
-               && gc_ptr_count >= m_cap_copies
-               && m_running.load(std::memory_order_acquire))
+        while (m_cap_copies > 0 && gc_ptr_count >= m_cap_copies && m_running.load(std::memory_order_acquire))
         {
             // wait for workers to release more data, it should be over very quickly since there
             // can be only one to release with current logic (but that may change in the future).
             num_gcupdater_cap_waits.fetch_add(1, std::memory_order_relaxed);
 
-            auto before = gc_ptr_count;
+            auto before  = gc_ptr_count;
             gc_ptr_count = gc();
             if (before == gc_ptr_count)
             {
@@ -434,9 +428,11 @@ int GCUpdater<SD>::gc()
 
     garbage.reserve(m_all_ptrs.size());
 
-    std::set_difference(begin(m_all_ptrs), end(m_all_ptrs),
-                        begin(in_use_ptrs), end(in_use_ptrs),
-                        std::back_inserter(garbage));
+    std::set_difference(begin(m_all_ptrs),
+        end(m_all_ptrs),
+        begin(in_use_ptrs),
+        end(in_use_ptrs),
+        std::back_inserter(garbage));
 
     m_all_ptrs.swap(in_use_ptrs);
 
@@ -471,4 +467,4 @@ typename SD::DataType* GCUpdater<SD>::get_pLatest()
 {
     return m_pLatest_data;
 }
-}
+}  // namespace maxbase

@@ -18,12 +18,9 @@ using namespace maxscale;
 
 Cat::Cat(SERVICE* pService)
     : Router<Cat, CatSession>(pService)
-{
-}
+{}
 
-Cat::~Cat()
-{
-}
+Cat::~Cat() {}
 
 Cat* Cat::create(SERVICE* pService, mxs::ConfigParameters* params)
 {
@@ -32,7 +29,7 @@ Cat* Cat::create(SERVICE* pService, mxs::ConfigParameters* params)
 
 CatSession* Cat::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
 {
-    auto backends = RWBackend::from_endpoints(endpoints);
+    auto backends  = RWBackend::from_endpoints(endpoints);
     bool connected = false;
 
     for (const auto& a : backends)
@@ -68,23 +65,18 @@ uint64_t Cat::getCapabilities()
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_ROUTER,
+    static MXS_MODULE info = {MXS_MODULE_API_ROUTER,
         MXS_MODULE_ALPHA_RELEASE,
         MXS_ROUTER_VERSION,
         "Resultset concatenation router",
         "V1.0.0",
         caps,
         &Cat::s_object,
-        NULL,   /* Process init. */
-        NULL,   /* Process finish. */
-        NULL,   /* Thread init. */
-        NULL,   /* Thread finish. */
-        {
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
+        {{MXS_END_MODULE_PARAMS}}};
 
     return &info;
 }

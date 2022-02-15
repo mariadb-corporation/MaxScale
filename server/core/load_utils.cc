@@ -48,40 +48,38 @@
 
 namespace
 {
-const char CN_ARG_MAX[] = "arg_max";
-const char CN_ARG_MIN[] = "arg_min";
-const char CN_METHOD[] = "method";
-const char CN_MODULES[] = "modules";
+const char CN_ARG_MAX[]        = "arg_max";
+const char CN_ARG_MIN[]        = "arg_min";
+const char CN_METHOD[]         = "method";
+const char CN_MODULES[]        = "modules";
 const char CN_MODULE_COMMAND[] = "module_command";
-
 
 typedef struct loaded_module
 {
-    char*                  module;  /**< The name of the module */
-    char*                  type;    /**< The module type */
-    char*                  version; /**< Module version */
-    void*                  handle;  /**< The handle returned by dlopen */
-    void*                  modobj;  /**< The module "object" this is the set of entry points */
-    MXS_MODULE*            info;    /**< The module information */
-    struct  loaded_module* next;    /**< Next module in the linked list */
+    char* module;               /**< The name of the module */
+    char* type;                 /**< The module type */
+    char* version;              /**< Module version */
+    void* handle;               /**< The handle returned by dlopen */
+    void* modobj;               /**< The module "object" this is the set of entry points */
+    MXS_MODULE* info;           /**< The module information */
+    struct loaded_module* next; /**< Next module in the linked list */
 } LOADED_MODULE;
 
 struct NAME_MAPPING
 {
-    const char* type;   // The type of the module.
-    const char* from;   // Old module name.
-    const char* to;     // What should be loaded instead.
-    bool        warned; // Whether a warning has been logged.
+    const char* type;  // The type of the module.
+    const char* from;  // Old module name.
+    const char* to;    // What should be loaded instead.
+    bool warned;       // Whether a warning has been logged.
 };
-}
+}  // namespace
 
-static NAME_MAPPING name_mappings[] =
-{
-    {MODULE_MONITOR,       "clustrixmon", "xpandmon",      false},
-    {MODULE_MONITOR,       "mysqlmon",    "mariadbmon",    false},
-    {MODULE_PROTOCOL,      "mysqlclient", "mariadbclient", false},
-    {MODULE_PROTOCOL,      "mariadb",     "mariadbclient", true },
-    {MODULE_AUTHENTICATOR, "mysqlauth",   "mariadbauth",   false},
+static NAME_MAPPING name_mappings[] = {
+    {MODULE_MONITOR, "clustrixmon", "xpandmon", false},
+    {MODULE_MONITOR, "mysqlmon", "mariadbmon", false},
+    {MODULE_PROTOCOL, "mysqlclient", "mariadbclient", false},
+    {MODULE_PROTOCOL, "mariadb", "mariadbclient", true},
+    {MODULE_AUTHENTICATOR, "mysqlauth", "mariadbauth", false},
 };
 
 static const size_t N_NAME_MAPPINGS = sizeof(name_mappings) / sizeof(name_mappings[0]);
@@ -89,10 +87,8 @@ static const size_t N_NAME_MAPPINGS = sizeof(name_mappings) / sizeof(name_mappin
 static LOADED_MODULE* registered = NULL;
 
 static LOADED_MODULE* find_module(const char* module);
-static LOADED_MODULE* register_module(const char* module,
-                                      const char* type,
-                                      void* dlhandle,
-                                      MXS_MODULE* mod_info);
+static LOADED_MODULE* register_module(
+    const char* module, const char* type, void* dlhandle, MXS_MODULE* mod_info);
 static void unregister_module(const char* module);
 
 static const char* module_type_to_str(MXS_MODULE_API type)
@@ -124,7 +120,7 @@ static const char* module_type_to_str(MXS_MODULE_API type)
 
 static bool api_version_mismatch(const MXS_MODULE* mod_info, const char* module)
 {
-    bool rval = false;
+    bool rval              = false;
     MXS_MODULE_VERSION api = {};
 
     switch (mod_info->modapi)
@@ -159,18 +155,17 @@ static bool api_version_mismatch(const MXS_MODULE* mod_info, const char* module)
         break;
     }
 
-    if (api.major != mod_info->api_version.major
-        || api.minor != mod_info->api_version.minor
+    if (api.major != mod_info->api_version.major || api.minor != mod_info->api_version.minor
         || api.patch != mod_info->api_version.patch)
     {
         MXS_ERROR("API version mismatch for '%s': Need version %d.%d.%d, have %d.%d.%d",
-                  module,
-                  api.major,
-                  api.minor,
-                  api.patch,
-                  mod_info->api_version.major,
-                  mod_info->api_version.minor,
-                  mod_info->api_version.patch);
+            module,
+            api.major,
+            api.minor,
+            api.patch,
+            mod_info->api_version.major,
+            mod_info->api_version.minor,
+            mod_info->api_version.patch);
         rval = true;
     }
 
@@ -183,38 +178,32 @@ static bool check_module(const MXS_MODULE* mod_info, const char* type, const cha
 
     if (type)
     {
-        if (strcmp(type, MODULE_PROTOCOL) == 0
-            && mod_info->modapi != MXS_MODULE_API_PROTOCOL)
+        if (strcmp(type, MODULE_PROTOCOL) == 0 && mod_info->modapi != MXS_MODULE_API_PROTOCOL)
         {
             MXS_ERROR("Module '%s' does not implement the protocol API.", module);
             success = false;
         }
-        if (strcmp(type, MODULE_AUTHENTICATOR) == 0
-            && mod_info->modapi != MXS_MODULE_API_AUTHENTICATOR)
+        if (strcmp(type, MODULE_AUTHENTICATOR) == 0 && mod_info->modapi != MXS_MODULE_API_AUTHENTICATOR)
         {
             MXS_ERROR("Module '%s' does not implement the authenticator API.", module);
             success = false;
         }
-        if (strcmp(type, MODULE_ROUTER) == 0
-            && mod_info->modapi != MXS_MODULE_API_ROUTER)
+        if (strcmp(type, MODULE_ROUTER) == 0 && mod_info->modapi != MXS_MODULE_API_ROUTER)
         {
             MXS_ERROR("Module '%s' does not implement the router API.", module);
             success = false;
         }
-        if (strcmp(type, MODULE_MONITOR) == 0
-            && mod_info->modapi != MXS_MODULE_API_MONITOR)
+        if (strcmp(type, MODULE_MONITOR) == 0 && mod_info->modapi != MXS_MODULE_API_MONITOR)
         {
             MXS_ERROR("Module '%s' does not implement the monitor API.", module);
             success = false;
         }
-        if (strcmp(type, MODULE_FILTER) == 0
-            && mod_info->modapi != MXS_MODULE_API_FILTER)
+        if (strcmp(type, MODULE_FILTER) == 0 && mod_info->modapi != MXS_MODULE_API_FILTER)
         {
             MXS_ERROR("Module '%s' does not implement the filter API.", module);
             success = false;
         }
-        if (strcmp(type, MODULE_QUERY_CLASSIFIER) == 0
-            && mod_info->modapi != MXS_MODULE_API_QUERY_CLASSIFIER)
+        if (strcmp(type, MODULE_QUERY_CLASSIFIER) == 0 && mod_info->modapi != MXS_MODULE_API_QUERY_CLASSIFIER)
         {
             MXS_ERROR("Module '%s' does not implement the query classifier API.", module);
             success = false;
@@ -292,7 +281,8 @@ static int load_module_cb(const char* fpath, const struct stat* sb, int typeflag
                 if (is_maxscale_module(fpath) && !load_module(module.c_str(), nullptr))
                 {
                     MXS_ERROR("Failed to load '%s'. Make sure it is not a stale library "
-                              "left over from an old installation of MaxScale.", fpath);
+                              "left over from an old installation of MaxScale.",
+                        fpath);
                     rval = 1;
                 }
             }
@@ -330,8 +320,8 @@ void* load_module(const char* module, const char* type)
         {
             MXS_ERROR("Unable to find library for "
                       "module: %s. Module dir: %s",
-                      module,
-                      mxs::libdir());
+                module,
+                mxs::libdir());
             return NULL;
         }
 
@@ -342,8 +332,8 @@ void* load_module(const char* module, const char* type)
             MXS_ERROR("Unable to load library for module: "
                       "%s\n\n\t\t      %s."
                       "\n\n",
-                      module,
-                      dlerror());
+                module,
+                dlerror());
             return NULL;
         }
 
@@ -353,14 +343,14 @@ void* load_module(const char* module, const char* type)
         {
             MXS_ERROR("Expected entry point interface missing "
                       "from module: %s\n\t\t\t      %s.",
-                      module,
-                      dlerror());
+                module,
+                dlerror());
             dlclose(dlhandle);
             return NULL;
         }
 
-        void* (* entry_point)() = (void* (*)())sym;
-        MXS_MODULE* mod_info = (MXS_MODULE*)entry_point();
+        void* (*entry_point)() = (void* (*) ()) sym;
+        MXS_MODULE* mod_info   = (MXS_MODULE*) entry_point();
 
         if (!check_module(mod_info, type, module))
         {
@@ -383,16 +373,12 @@ void* load_module(const char* module, const char* type)
             if (mod_info->thread_init)
             {
                 mxs::RoutingWorker::broadcast(
-                    [mod_info]() {
-                        mod_info->thread_init();
-                    }, mxs::RoutingWorker::EXECUTE_AUTO);
+                    [mod_info]() { mod_info->thread_init(); }, mxs::RoutingWorker::EXECUTE_AUTO);
 
                 if (mxs::MainWorker::created())
                 {
                     mxs::MainWorker::get()->call(
-                        [mod_info]() {
-                            mod_info->thread_init();
-                        }, mxb::Worker::EXECUTE_AUTO);
+                        [mod_info]() { mod_info->thread_init(); }, mxb::Worker::EXECUTE_AUTO);
                 }
             }
         }
@@ -455,34 +441,32 @@ static LOADED_MODULE* find_module(const char* module)
  * @param mod_info      The module information
  * @return The new registered module or NULL on memory allocation failure
  */
-static LOADED_MODULE* register_module(const char* module,
-                                      const char* type,
-                                      void* dlhandle,
-                                      MXS_MODULE* mod_info)
+static LOADED_MODULE* register_module(
+    const char* module, const char* type, void* dlhandle, MXS_MODULE* mod_info)
 {
-    module = MXS_STRDUP(module);
-    type = MXS_STRDUP(type);
+    module        = MXS_STRDUP(module);
+    type          = MXS_STRDUP(type);
     char* version = MXS_STRDUP(mod_info->version);
 
-    LOADED_MODULE* mod = (LOADED_MODULE*)MXS_MALLOC(sizeof(LOADED_MODULE));
+    LOADED_MODULE* mod = (LOADED_MODULE*) MXS_MALLOC(sizeof(LOADED_MODULE));
 
     if (!module || !type || !version || !mod)
     {
-        MXS_FREE((void*)module);
-        MXS_FREE((void*)type);
+        MXS_FREE((void*) module);
+        MXS_FREE((void*) type);
         MXS_FREE(version);
         MXS_FREE(mod);
         return NULL;
     }
 
-    mod->module = (char*)module;
-    mod->type = (char*)type;
-    mod->handle = dlhandle;
+    mod->module  = (char*) module;
+    mod->type    = (char*) type;
+    mod->handle  = dlhandle;
     mod->version = version;
-    mod->modobj = mod_info->module_object;
-    mod->next = registered;
-    mod->info = mod_info;
-    registered = mod;
+    mod->modobj  = mod_info->module_object;
+    mod->next    = registered;
+    mod->info    = mod_info;
+    registered   = mod;
     return mod;
 }
 
@@ -498,7 +482,7 @@ static void unregister_module(const char* module)
 
     if (!mod)
     {
-        return;         // Module not found
+        return;  // Module not found
     }
     if (registered == mod)
     {
@@ -542,7 +526,7 @@ void unload_all_modules()
 
 struct cb_param
 {
-    json_t*     commands;
+    json_t* commands;
     const char* domain;
     const char* host;
 };
@@ -555,7 +539,7 @@ bool modulecmd_cb(const MODULECMD* cmd, void* data)
     json_object_set_new(obj, CN_ID, json_string(cmd->identifier));
     json_object_set_new(obj, CN_TYPE, json_string(CN_MODULE_COMMAND));
 
-    json_t* attr = json_object();
+    json_t* attr       = json_object();
     const char* method = MODULECMD_MODIFIES_DATA(cmd) ? "POST" : "GET";
     json_object_set_new(attr, CN_METHOD, json_string(method));
     json_object_set_new(attr, CN_ARG_MIN, json_integer(cmd->arg_count_min));
@@ -596,11 +580,11 @@ static json_t* default_value_to_json(mxs_module_param_type type, const char* val
         return json_integer(strtol(value, nullptr, 10));
 
     case MXS_MODULE_PARAM_SIZE:
-        {
-            uint64_t val = 0;
-            get_suffixed_size(value, &val);
-            return json_integer(val);
-        }
+    {
+        uint64_t val = 0;
+        get_suffixed_size(value, &val);
+        return json_integer(val);
+    }
 
     case MXS_MODULE_PARAM_BOOL:
         return json_boolean(config_truth_value(value));
@@ -624,6 +608,7 @@ static json_t* default_value_to_json(mxs_module_param_type type, const char* val
         return json_null();
     }
 }
+
 static json_t* module_param_to_json(const MXS_MODULE_PARAM& param)
 {
     json_t* p = json_object();
@@ -683,7 +668,7 @@ static json_t* module_json_data(const LOADED_MODULE* mod, const char* host)
     json_object_set_new(attr, "maturity", json_string(mxs_module_status_to_string(mod->info->status)));
 
     json_t* commands = json_array();
-    cb_param p = {commands, mod->module, host};
+    cb_param p       = {commands, mod->module, host};
     modulecmd_foreach(mod->module, NULL, modulecmd_cb, &p);
 
     json_t* params = json_array();
@@ -704,17 +689,17 @@ static json_t* module_json_data(const LOADED_MODULE* mod, const char* host)
         break;
 
     case MXS_MODULE_API_PROTOCOL:
-        extra = common_listener_params();
+        extra   = common_listener_params();
         ignored = {CN_SERVICE, CN_TYPE, CN_MODULE};
         break;
 
     case MXS_MODULE_API_ROUTER:
-        extra = common_service_params();
+        extra   = common_service_params();
         ignored = {CN_SERVERS, CN_TARGETS, CN_ROUTER, CN_TYPE, CN_CLUSTER, CN_FILTERS};
         break;
 
     case MXS_MODULE_API_MONITOR:
-        extra = common_monitor_params();
+        extra   = common_monitor_params();
         ignored = {CN_SERVERS, CN_TYPE, CN_MODULE};
         break;
     }
@@ -851,7 +836,7 @@ MXS_MODULE_ITERATOR mxs_module_iterator_get(const char* type)
     }
 
     MXS_MODULE_ITERATOR iterator;
-    iterator.type = type;
+    iterator.type     = type;
     iterator.position = module;
 
     return iterator;
@@ -864,8 +849,8 @@ bool mxs_module_iterator_has_next(const MXS_MODULE_ITERATOR* iterator)
 
 MXS_MODULE* mxs_module_iterator_get_next(MXS_MODULE_ITERATOR* iterator)
 {
-    MXS_MODULE* module = NULL;
-    LOADED_MODULE* loaded_module = (LOADED_MODULE*)iterator->position;
+    MXS_MODULE* module           = NULL;
+    LOADED_MODULE* loaded_module = (LOADED_MODULE*) iterator->position;
 
     if (loaded_module)
     {
@@ -886,7 +871,7 @@ MXS_MODULE* mxs_module_iterator_get_next(MXS_MODULE_ITERATOR* iterator)
 const char* mxs_module_get_effective_name(const char* name)
 {
     const char* effective_name = NULL;
-    size_t i = 0;
+    size_t i                   = 0;
 
     while (!effective_name && (i < N_NAME_MAPPINGS))
     {
@@ -896,10 +881,7 @@ const char* mxs_module_get_effective_name(const char* name)
         {
             if (!nm.warned)
             {
-                MXS_WARNING("%s module '%s' has been deprecated, use '%s' instead.",
-                            nm.type,
-                            nm.from,
-                            nm.to);
+                MXS_WARNING("%s module '%s' has been deprecated, use '%s' instead.", nm.type, nm.from, nm.to);
                 nm.warned = true;
             }
             effective_name = nm.to;
@@ -921,7 +903,7 @@ bool modules_thread_init()
     bool initialized = false;
 
     MXS_MODULE_ITERATOR i = mxs_module_iterator_get(NULL);
-    MXS_MODULE* module = NULL;
+    MXS_MODULE* module    = NULL;
 
     while ((module = mxs_module_iterator_get_next(&i)) != NULL)
     {
@@ -942,7 +924,7 @@ bool modules_thread_init()
         // that module. We now need to call finish on all modules that were
         // successfully initialized.
         MXS_MODULE* failed_module = module;
-        i = mxs_module_iterator_get(NULL);
+        i                         = mxs_module_iterator_get(NULL);
 
         while ((module = mxs_module_iterator_get_next(&i)) != failed_module)
         {
@@ -963,7 +945,7 @@ bool modules_thread_init()
 void modules_thread_finish()
 {
     MXS_MODULE_ITERATOR i = mxs_module_iterator_get(NULL);
-    MXS_MODULE* module = NULL;
+    MXS_MODULE* module    = NULL;
 
     while ((module = mxs_module_iterator_get_next(&i)) != NULL)
     {

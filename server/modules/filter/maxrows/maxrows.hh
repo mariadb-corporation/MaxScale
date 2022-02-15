@@ -17,13 +17,14 @@
 #include <maxscale/ccdefs.hh>
 #include <maxscale/filter.hh>
 
-
 class MaxRowsConfig : public mxs::config::Configuration
 {
 public:
     enum Mode
     {
-        EMPTY, ERR, OK
+        EMPTY,
+        ERR,
+        OK
     };
 
     MaxRowsConfig(const char* zName);
@@ -33,7 +34,7 @@ public:
     int64_t max_rows;
     int64_t max_size;
     int64_t debug;
-    Mode    mode;
+    Mode mode;
 };
 
 
@@ -42,13 +43,13 @@ class MaxRows;
 class MaxRowsSession : public maxscale::FilterSession
 {
 public:
-    MaxRowsSession(const MaxRowsSession&) = delete;
+    MaxRowsSession(const MaxRowsSession&)            = delete;
     MaxRowsSession& operator=(const MaxRowsSession&) = delete;
 
     // Create a new filter session
     static MaxRowsSession* create(MXS_SESSION* pSession, SERVICE* pService, MaxRows* pFilter)
     {
-        return new(std::nothrow) MaxRowsSession(pSession, pService, pFilter);
+        return new (std::nothrow) MaxRowsSession(pSession, pService, pFilter);
     }
 
     // Handle a query from the client
@@ -62,18 +63,17 @@ private:
     MaxRowsSession(MXS_SESSION* pSession, SERVICE* pService, MaxRows* pFilter)
         : FilterSession(pSession, pService)
         , m_instance(pFilter)
-    {
-    }
+    {}
 
-    MaxRows*    m_instance;
-    mxs::Buffer m_buffer;   // Contains the partial resultset
-    bool        m_collect {true};
+    MaxRows* m_instance;
+    mxs::Buffer m_buffer;  // Contains the partial resultset
+    bool m_collect {true};
 };
 
 class MaxRows : public maxscale::Filter<MaxRows, MaxRowsSession>
 {
 public:
-    MaxRows(const MaxRows&) = delete;
+    MaxRows(const MaxRows&)            = delete;
     MaxRows& operator=(const MaxRows&) = delete;
 
     using Config = MaxRowsConfig;
@@ -90,31 +90,21 @@ public:
     }
 
     // Returns JSON form diagnostic data
-    json_t* diagnostics() const
-    {
-        return nullptr;
-    }
+    json_t* diagnostics() const { return nullptr; }
 
     // Get filter capabilities
-    uint64_t getCapabilities()
-    {
-        return CAPABILITIES;
-    }
+    uint64_t getCapabilities() { return CAPABILITIES; }
 
     // Return reference to filter config
-    const Config& config() const
-    {
-        return m_config;
-    }
+    const Config& config() const { return m_config; }
 
 private:
     MaxRows(const char* name, Config&& config)
         : m_name(name)
         , m_config(std::move(config))
-    {
-    }
+    {}
 
 private:
     std::string m_name;
-    Config      m_config;
+    Config m_config;
 };

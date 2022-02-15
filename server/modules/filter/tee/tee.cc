@@ -27,13 +27,8 @@
 #include "tee.hh"
 #include "teesession.hh"
 
-static const MXS_ENUM_VALUE option_values[] =
-{
-    {"ignorecase", PCRE2_CASELESS},
-    {"case",       0             },
-    {"extended",   PCRE2_EXTENDED},
-    {NULL}
-};
+static const MXS_ENUM_VALUE option_values[]
+    = {{"ignorecase", PCRE2_CASELESS}, {"case", 0}, {"extended", PCRE2_EXTENDED}, {NULL}};
 
 Tee::Tee(const char* name, mxs::ConfigParameters* params)
     : m_name(name)
@@ -43,8 +38,7 @@ Tee::Tee(const char* name, mxs::ConfigParameters* params)
     , m_match(params->get_string("match"), params->get_enum("options", option_values))
     , m_exclude(params->get_string("exclude"), params->get_enum("options", option_values))
     , m_enabled(true)
-{
-}
+{}
 
 /**
  * Create an instance of the filter for a particular service
@@ -144,59 +138,43 @@ MXS_BEGIN_DECLS
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    modulecmd_arg_type_t argv[] =
-    {
-        {
-            MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
-            "Filter to modify"
-        }
-    };
+    modulecmd_arg_type_t argv[]
+        = {{MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Filter to modify"}};
 
     modulecmd_register_command(MXS_MODULE_NAME,
-                               "enable",
-                               MODULECMD_TYPE_ACTIVE,
-                               enable_tee,
-                               1,
-                               argv,
-                               "Enable a tee filter instance");
+        "enable",
+        MODULECMD_TYPE_ACTIVE,
+        enable_tee,
+        1,
+        argv,
+        "Enable a tee filter instance");
     modulecmd_register_command(MXS_MODULE_NAME,
-                               "disable",
-                               MODULECMD_TYPE_ACTIVE,
-                               disable_tee,
-                               1,
-                               argv,
-                               "Disable a tee filter instance");
+        "disable",
+        MODULECMD_TYPE_ACTIVE,
+        disable_tee,
+        1,
+        argv,
+        "Disable a tee filter instance");
 
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_FILTER,
+    static MXS_MODULE info = {MXS_MODULE_API_FILTER,
         MXS_MODULE_GA,
         MXS_FILTER_VERSION,
         "A tee piece in the filter plumbing",
         "V1.1.0",
         RCAP_TYPE_CONTIGUOUS_INPUT,
         &Tee::s_object,
-        NULL,                               /* Process init. */
-        NULL,                               /* Process finish. */
-        NULL,                               /* Thread init. */
-        NULL,                               /* Thread finish. */
-        {
-            {"service",                      MXS_MODULE_PARAM_SERVICE, NULL},
-            {"target",                       MXS_MODULE_PARAM_TARGET,  NULL},
-            {"match",                        MXS_MODULE_PARAM_REGEX},
-            {"exclude",                      MXS_MODULE_PARAM_REGEX},
-            {"source",                       MXS_MODULE_PARAM_STRING},
-            {"user",                         MXS_MODULE_PARAM_STRING},
-            {
-                "options",
-                MXS_MODULE_PARAM_ENUM,
-                "ignorecase",
-                MXS_MODULE_OPT_NONE,
-                option_values
-            },
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
+        {{"service", MXS_MODULE_PARAM_SERVICE, NULL},
+            {"target", MXS_MODULE_PARAM_TARGET, NULL},
+            {"match", MXS_MODULE_PARAM_REGEX},
+            {"exclude", MXS_MODULE_PARAM_REGEX},
+            {"source", MXS_MODULE_PARAM_STRING},
+            {"user", MXS_MODULE_PARAM_STRING},
+            {"options", MXS_MODULE_PARAM_ENUM, "ignorecase", MXS_MODULE_OPT_NONE, option_values},
+            {MXS_END_MODULE_PARAMS}}};
 
     return &info;
 }

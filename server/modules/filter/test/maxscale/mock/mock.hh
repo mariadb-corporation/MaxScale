@@ -18,7 +18,6 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/modutil.hh>
 
-
 namespace maxscale
 {
 
@@ -48,5 +47,5 @@ inline GWBUF* create_com_query(const std::string& statement)
 {
     return create_com_query(statement.c_str());
 }
-}
-}
+}  // namespace mock
+}  // namespace maxscale

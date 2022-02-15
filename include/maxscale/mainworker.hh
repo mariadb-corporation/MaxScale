@@ -24,7 +24,7 @@ namespace maxscale
 
 class MainWorker : public mxb::WatchedWorker
 {
-    MainWorker(const MainWorker&) = delete;
+    MainWorker(const MainWorker&)            = delete;
     MainWorker& operator=(const MainWorker&) = delete;
 
 public:
@@ -70,15 +70,9 @@ public:
     /**
      * @return The indexed storage of this worker.
      */
-    IndexedStorage& storage()
-    {
-        return m_storage;
-    }
+    IndexedStorage& storage() { return m_storage; }
 
-    const IndexedStorage& storage() const
-    {
-        return m_storage;
-    }
+    const IndexedStorage& storage() const { return m_storage; }
 
     /**
      * Starts the rebalancing.
@@ -123,18 +117,17 @@ private:
             , frequency(frequency)
             , nextdue(time(0) + frequency)
             , id(0)
-        {
-        }
+        {}
 
         std::string name;
-        TASKFN      func;
-        void*       pData;
-        int         frequency;
-        time_t      nextdue;
-        uint32_t    id;
+        TASKFN func;
+        void* pData;
+        int frequency;
+        time_t nextdue;
+        uint32_t id;
     };
 
-    bool        call_task(Worker::Call::action_t action, Task* pTask);
+    bool call_task(Worker::Call::action_t action, Task* pTask);
     static bool inc_ticks(Worker::Call::action_t action);
 
     bool balance_workers_dc(Worker::Call::action_t action);
@@ -144,8 +137,8 @@ private:
     bool wait_for_shutdown(Worker::Call::action_t action);
 
     std::map<std::string, Task> m_tasks_by_name;
-    IndexedStorage              m_storage;
-    uint32_t                    m_rebalancing_dc {0};
-    mxb::TimePoint              m_last_rebalancing;
+    IndexedStorage m_storage;
+    uint32_t m_rebalancing_dc {0};
+    mxb::TimePoint m_last_rebalancing;
 };
-}
+}  // namespace maxscale

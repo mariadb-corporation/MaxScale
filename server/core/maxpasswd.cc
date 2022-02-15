@@ -33,13 +33,10 @@ using std::endl;
 using std::flush;
 using std::string;
 
-struct option options[] =
-{
-    {"help",        no_argument, nullptr, 'h'},
-    {"decrypt",     no_argument, nullptr, 'd'},
+struct option options[] = {{"help", no_argument, nullptr, 'h'},
+    {"decrypt", no_argument, nullptr, 'd'},
     {"interactive", no_argument, nullptr, 'i'},
-    {nullptr,       0,           nullptr, 0  }
-};
+    {nullptr, 0, nullptr, 0}};
 
 void print_usage(const char* executable, const char* directory)
 {
@@ -101,7 +98,7 @@ bool read_password(string* pPassword)
         if (s1 == s2)
         {
             password = s1;
-            rv = true;
+            rv       = true;
         }
         else
         {
@@ -122,7 +119,6 @@ bool read_password(string* pPassword)
     return rv;
 }
 
-
 int main(int argc, char** argv)
 {
     std::ios::sync_with_stdio();
@@ -136,7 +132,7 @@ int main(int argc, char** argv)
         DECRYPT
     };
 
-    auto mode = Mode::ENCRYPT;
+    auto mode        = Mode::ENCRYPT;
     bool interactive = false;
 
     int c;
@@ -223,16 +219,17 @@ int main(int argc, char** argv)
     if (keydata.ok)
     {
         bool encrypting = (mode == Mode::ENCRYPT);
-        bool new_mode = keydata.iv.empty();     // false -> constant IV from file
+        bool new_mode   = keydata.iv.empty();  // false -> constant IV from file
         if (keydata.key.empty())
         {
             printf("Password encryption key file '%s' not found, cannot %s password.\n",
-                   filepath.c_str(), encrypting ? "encrypt" : "decrypt");
+                filepath.c_str(),
+                encrypting ? "encrypt" : "decrypt");
         }
         else if (encrypting)
         {
-            string encrypted = new_mode ? encrypt_password(keydata.key, input) :
-                encrypt_password_old(keydata.key, keydata.iv, input);
+            string encrypted = new_mode ? encrypt_password(keydata.key, input)
+                                        : encrypt_password_old(keydata.key, keydata.iv, input);
             if (!encrypted.empty())
             {
                 printf("%s\n", encrypted.c_str());
@@ -248,8 +245,8 @@ int main(int argc, char** argv)
             auto is_hex = std::all_of(input.begin(), input.end(), isxdigit);
             if (is_hex && input.length() % 2 == 0)
             {
-                string decrypted = new_mode ? decrypt_password(keydata.key, input) :
-                    decrypt_password_old(keydata.key, keydata.iv, input);
+                string decrypted = new_mode ? decrypt_password(keydata.key, input)
+                                            : decrypt_password_old(keydata.key, keydata.iv, input);
                 if (!decrypted.empty())
                 {
                     printf("%s\n", decrypted.c_str());

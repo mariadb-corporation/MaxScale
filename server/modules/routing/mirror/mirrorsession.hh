@@ -27,7 +27,7 @@ class Mirror;
 class MirrorSession : public mxs::RouterSession
 {
 public:
-    MirrorSession(const MirrorSession&) = delete;
+    MirrorSession(const MirrorSession&)            = delete;
     MirrorSession& operator=(const MirrorSession&) = delete;
 
     MirrorSession(MXS_SESSION* session, Mirror* router, SMyBackends backends);
@@ -43,16 +43,16 @@ public:
     bool handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& pReply);
 
 private:
-    SMyBackends             m_backends;
-    MyBackend*              m_main = nullptr;
-    int                     m_responses = 0;
-    Mirror*                 m_router;
+    SMyBackends m_backends;
+    MyBackend* m_main = nullptr;
+    int m_responses   = 0;
+    Mirror* m_router;
     std::deque<mxs::Buffer> m_queue;
-    std::string             m_query;
-    uint8_t                 m_command = 0;
-    uint64_t                m_num_queries = 0;
-    mxs::Buffer             m_last_chunk;
-    mxs::ReplyRoute         m_last_route;
+    std::string m_query;
+    uint8_t m_command      = 0;
+    uint64_t m_num_queries = 0;
+    mxs::Buffer m_last_chunk;
+    mxs::ReplyRoute m_last_route;
 
     void route_queued_queries();
     void generate_report();

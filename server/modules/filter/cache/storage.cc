@@ -14,10 +14,6 @@
 #define MXS_MODULE_NAME "cache"
 #include "storage.hh"
 
-Storage::Token::~Token()
-{
-}
+Storage::Token::~Token() {}
 
-Storage::~Storage()
-{
-}
+Storage::~Storage() {}

@@ -22,7 +22,10 @@ using std::endl;
 namespace
 {
 
-#define TRIM_TCE(zFrom, zTo) {zFrom, zTo}
+#define TRIM_TCE(zFrom, zTo) \
+    {                        \
+        zFrom, zTo           \
+    }
 
 struct TRIM_TEST_CASE
 {
@@ -30,60 +33,56 @@ struct TRIM_TEST_CASE
     const char* zTo;
 };
 
-TRIM_TEST_CASE trim_testcases[] =
-{
-    TRIM_TCE("",        ""),
-    TRIM_TCE("a",       "a"),
-    TRIM_TCE(" a",      "a"),
-    TRIM_TCE("a ",      "a"),
-    TRIM_TCE(" a ",     "a"),
-    TRIM_TCE("  a",     "a"),
-    TRIM_TCE("a  ",     "a"),
-    TRIM_TCE("  a  ",   "a"),
+TRIM_TEST_CASE trim_testcases[] = {
+    TRIM_TCE("", ""),
+    TRIM_TCE("a", "a"),
+    TRIM_TCE(" a", "a"),
+    TRIM_TCE("a ", "a"),
+    TRIM_TCE(" a ", "a"),
+    TRIM_TCE("  a", "a"),
+    TRIM_TCE("a  ", "a"),
+    TRIM_TCE("  a  ", "a"),
     TRIM_TCE("  a b  ", "a b"),
 };
 
 const int n_trim_testcases = sizeof(trim_testcases) / sizeof(trim_testcases[0]);
 
-TRIM_TEST_CASE ltrim_testcases[] =
-{
-    TRIM_TCE("",        ""),
-    TRIM_TCE("a",       "a"),
-    TRIM_TCE(" a",      "a"),
-    TRIM_TCE("a ",      "a "),
-    TRIM_TCE(" a ",     "a "),
-    TRIM_TCE("  a",     "a"),
-    TRIM_TCE("a  ",     "a  "),
-    TRIM_TCE("  a  ",   "a  "),
+TRIM_TEST_CASE ltrim_testcases[] = {
+    TRIM_TCE("", ""),
+    TRIM_TCE("a", "a"),
+    TRIM_TCE(" a", "a"),
+    TRIM_TCE("a ", "a "),
+    TRIM_TCE(" a ", "a "),
+    TRIM_TCE("  a", "a"),
+    TRIM_TCE("a  ", "a  "),
+    TRIM_TCE("  a  ", "a  "),
     TRIM_TCE("  a b  ", "a b  "),
 };
 
 const int n_ltrim_testcases = sizeof(ltrim_testcases) / sizeof(ltrim_testcases[0]);
 
-TRIM_TEST_CASE rtrim_testcases[] =
-{
-    TRIM_TCE("",        ""),
-    TRIM_TCE("a",       "a"),
-    TRIM_TCE(" a",      " a"),
-    TRIM_TCE("a ",      "a"),
-    TRIM_TCE(" a ",     " a"),
-    TRIM_TCE("  a",     "  a"),
-    TRIM_TCE("a  ",     "a"),
-    TRIM_TCE("  a  ",   "  a"),
+TRIM_TEST_CASE rtrim_testcases[] = {
+    TRIM_TCE("", ""),
+    TRIM_TCE("a", "a"),
+    TRIM_TCE(" a", " a"),
+    TRIM_TCE("a ", "a"),
+    TRIM_TCE(" a ", " a"),
+    TRIM_TCE("  a", "  a"),
+    TRIM_TCE("a  ", "a"),
+    TRIM_TCE("  a  ", "  a"),
     TRIM_TCE("  a b  ", "  a b"),
 };
 
 const int n_rtrim_testcases = sizeof(rtrim_testcases) / sizeof(rtrim_testcases[0]);
 
-
-int test(TRIM_TEST_CASE* pTest_cases, int n_test_cases, char* (*p)(char*))
+int test(TRIM_TEST_CASE* pTest_cases, int n_test_cases, char* (*p)(char*) )
 {
     int rv = 0;
 
     for (int i = 0; i < n_test_cases; ++i)
     {
         const char* zFrom = pTest_cases[i].zFrom;
-        const char* zTo = pTest_cases[i].zTo;
+        const char* zTo   = pTest_cases[i].zTo;
 
         char copy[strlen(zFrom) + 1];
         strcpy(copy, zFrom);
@@ -116,7 +115,7 @@ int test_rtrim()
     cout << "rtrim()" << endl;
     return test(rtrim_testcases, n_rtrim_testcases, mxb::rtrim);
 }
-}
+}  // namespace
 
 int main(int argc, char* argv[])
 {

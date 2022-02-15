@@ -19,12 +19,9 @@
 
 User::User(std::string name)
     : m_name(name)
-{
-}
+{}
 
-User::~User()
-{
-}
+User::~User() {}
 
 const char* User::name() const
 {
@@ -56,7 +53,7 @@ void User::add_rules(match_type mode, const RuleList& rules)
 static bool should_match(GWBUF* buffer)
 {
     return modutil_is_SQL(buffer) || modutil_is_SQL_prepare(buffer)
-           || MYSQL_IS_COM_INIT_DB(GWBUF_DATA(buffer));
+        || MYSQL_IS_COM_INIT_DB(GWBUF_DATA(buffer));
 }
 
 /**
@@ -67,12 +64,8 @@ static bool should_match(GWBUF* buffer)
  * @param user The user whose rules are checked
  * @return True if the query matches at least one of the rules otherwise false
  */
-bool User::match_any(Dbfw* my_instance,
-                     DbfwSession* my_session,
-                     GWBUF* queue,
-                     char** rulename)
+bool User::match_any(Dbfw* my_instance, DbfwSession* my_session, GWBUF* queue, char** rulename)
 {
-
     bool rval = false;
 
     for (RuleListVector::iterator i = rules_or_vector.begin(); i != rules_or_vector.end(); ++i)
@@ -92,7 +85,7 @@ bool User::match_any(Dbfw* my_instance,
                         if (rule_matches(my_instance, my_session, queue, *j, fullquery))
                         {
                             *rulename = MXS_STRDUP_A((*j)->name().c_str());
-                            rval = true;
+                            rval      = true;
                             break;
                         }
                     }
@@ -123,13 +116,10 @@ bool User::match_any(Dbfw* my_instance,
  *
  * @return True if the query matches all of the rules otherwise false
  */
-bool User::do_match(Dbfw* my_instance,
-                    DbfwSession* my_session,
-                    GWBUF* queue,
-                    match_mode mode,
-                    char** rulename)
+bool User::do_match(
+    Dbfw* my_instance, DbfwSession* my_session, GWBUF* queue, match_mode mode, char** rulename)
 {
-    bool rval = false;
+    bool rval             = false;
     bool have_active_rule = false;
     std::string matching_rules;
     RuleListVector& rules_vector = (mode == User::ALL ? rules_and_vector : rules_strict_and_vector);
@@ -195,6 +185,6 @@ bool User::do_match(Dbfw* my_instance,
 bool User::match(Dbfw* instance, DbfwSession* session, GWBUF* buffer, char** rulename)
 {
     return match_any(instance, session, buffer, rulename)
-           || do_match(instance, session, buffer, User::ALL, rulename)
-           || do_match(instance, session, buffer, User::STRICT, rulename);
+        || do_match(instance, session, buffer, User::ALL, rulename)
+        || do_match(instance, session, buffer, User::STRICT, rulename);
 }

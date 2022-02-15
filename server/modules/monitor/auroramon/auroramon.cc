@@ -28,12 +28,9 @@ using maxscale::MonitorServer;
 
 AuroraMonitor::AuroraMonitor(const std::string& name, const std::string& module)
     : MonitorWorkerSimple(name, module)
-{
-}
+{}
 
-AuroraMonitor::~AuroraMonitor()
-{
-}
+AuroraMonitor::~AuroraMonitor() {}
 
 // static
 AuroraMonitor* AuroraMonitor::create(const std::string& name, const std::string& module)
@@ -64,14 +61,15 @@ void AuroraMonitor::update_server_status(MonitorServer* monitored_server)
 
     /** Connection is OK, query for replica status */
     if (mxs_mysql_query(monitored_server->con,
-                        "SELECT @@aurora_server_id, server_id FROM "
-                        "information_schema.replica_host_status "
-                        "WHERE session_id = 'MASTER_SESSION_ID'") == 0
+            "SELECT @@aurora_server_id, server_id FROM "
+            "information_schema.replica_host_status "
+            "WHERE session_id = 'MASTER_SESSION_ID'")
+            == 0
         && (result = mysql_store_result(monitored_server->con)))
     {
         mxb_assert(mysql_field_count(monitored_server->con) == 2);
         MYSQL_ROW row = mysql_fetch_row(result);
-        int status = SERVER_SLAVE;
+        int status    = SERVER_SLAVE;
 
         /** The master will return a row with two identical non-NULL fields */
         if (row && row[0] && row[1] && strcmp(row[0], row[1]) == 0)
@@ -97,23 +95,18 @@ void AuroraMonitor::update_server_status(MonitorServer* monitored_server)
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_MONITOR,
+    static MXS_MODULE info = {MXS_MODULE_API_MONITOR,
         MXS_MODULE_BETA_RELEASE,
         MXS_MONITOR_VERSION,
         "Aurora monitor",
         "V1.0.0",
         MXS_NO_MODULE_CAPABILITIES,
         &maxscale::MonitorApi<AuroraMonitor>::s_api,
-        NULL,   /* Process init. */
-        NULL,   /* Process finish. */
-        NULL,   /* Thread init. */
-        NULL,   /* Thread finish. */
-        {
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
+        {{MXS_END_MODULE_PARAMS}}};
 
     return &info;
 }

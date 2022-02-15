@@ -60,12 +60,12 @@ static bool handle_max_slaves(RWSConfig& config, const char* str)
     if (*endptr == '%' && *(endptr + 1) == '\0' && val >= 0)
     {
         config.rw_max_slave_conn_percent = val;
-        config.max_slave_connections = 0;
+        config.max_slave_connections     = 0;
         MXS_WARNING("Use of percentages in 'max_slave_connections' is deprecated");
     }
     else if (*endptr == '\0' && val >= 0)
     {
-        config.max_slave_connections = val;
+        config.max_slave_connections     = val;
         config.rw_max_slave_conn_percent = 0;
     }
     else
@@ -115,12 +115,9 @@ RWSplit::RWSplit(SERVICE* service, const RWSConfig& config)
     : mxs::Router<RWSplit, RWSplitSession>(service)
     , m_service(service)
     , m_config(config)
-{
-}
+{}
 
-RWSplit::~RWSplit()
-{
-}
+RWSplit::~RWSplit() {}
 
 SERVICE* RWSplit::service() const
 {
@@ -195,10 +192,10 @@ void RWSplit::set_last_gtid(const std::string& str)
 
 int RWSplit::max_slave_count() const
 {
-    int router_nservers = m_service->get_children().size();
-    int conf_max_nslaves = m_config->max_slave_connections > 0 ?
-        m_config->max_slave_connections :
-        (router_nservers * m_config->rw_max_slave_conn_percent) / 100;
+    int router_nservers  = m_service->get_children().size();
+    int conf_max_nslaves = m_config->max_slave_connections > 0
+                             ? m_config->max_slave_connections
+                             : (router_nservers * m_config->rw_max_slave_conn_percent) / 100;
     return MXS_MAX(0, MXS_MIN(router_nservers, conf_max_nslaves));
 }
 
@@ -215,10 +212,10 @@ RWSplit::gtid RWSplit::gtid::from_string(const std::string& str)
     char* end;
     g.domain = strtoul(ptr, &end, 10);
     mxb_assert(*end == '-');
-    ptr = end + 1;
+    ptr         = end + 1;
     g.server_id = strtoul(ptr, &end, 10);
     mxb_assert(*end == '-');
-    ptr = end + 1;
+    ptr        = end + 1;
     g.sequence = strtoul(ptr, &end, 10);
     mxb_assert(*end == '\0');
     return g;
@@ -362,8 +359,8 @@ json_t* RWSplit::diagnostics() const
         json_object_set_new(obj, "total", json_integer(stats.total_queries));
         json_object_set_new(obj, "read", json_integer(stats.total_read_queries));
         json_object_set_new(obj, "write", json_integer(stats.total_write_queries));
-        json_object_set_new(obj, "avg_sess_duration",
-                            json_string(mxb::to_string(stats.ave_session_dur).c_str()));
+        json_object_set_new(
+            obj, "avg_sess_duration", json_string(mxb::to_string(stats.ave_session_dur).c_str()));
         json_object_set_new(obj, "avg_sess_active_pct", json_real(active_pct));
         json_object_set_new(obj, "avg_selects_per_session", json_integer(stats.ave_session_selects));
         json_array_append_new(arr, obj);
@@ -380,7 +377,7 @@ json_t* RWSplit::diagnostics() const
 }
 
 constexpr uint64_t CAPABILITIES = RCAP_TYPE_REQUEST_TRACKING | RCAP_TYPE_TRANSACTION_TRACKING
-    | RCAP_TYPE_SESSION_STATE_TRACKING | RCAP_TYPE_RUNTIME_CONFIG;
+                                | RCAP_TYPE_SESSION_STATE_TRACKING | RCAP_TYPE_RUNTIME_CONFIG;
 
 uint64_t RWSplit::getCapabilities()
 {
@@ -406,9 +403,7 @@ bool RWSplit::configure(mxs::ConfigParameters* params)
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_ROUTER,
+    static MXS_MODULE info = {MXS_MODULE_API_ROUTER,
         MXS_MODULE_GA,
         MXS_ROUTER_VERSION,
         "A Read/Write splitting router for enhancement read scalability",
@@ -418,8 +413,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,
         NULL,
         NULL,
-        NULL
-    };
+        NULL};
 
     s_spec.populate(info);
     return &info;

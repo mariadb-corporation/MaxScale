@@ -25,14 +25,14 @@ namespace maxscale
 
 class SessionCommand;
 typedef std::shared_ptr<SessionCommand> SSessionCommand;
-typedef std::list<SSessionCommand>      SessionCommandList;
+typedef std::list<SSessionCommand> SessionCommandList;
 
 class SessionCommand
 {
     SessionCommand(const SessionCommand&);
     SessionCommand& operator=(const SessionCommand&);
-public:
 
+public:
     /**
      * @brief Get the command type of the session command
      *
@@ -77,10 +77,7 @@ public:
      *
      * @return The protocol command of the session command
      */
-    uint8_t command() const
-    {
-        return m_command;
-    }
+    uint8_t command() const { return m_command; }
 
     /**
      * @brief Equality comparison
@@ -101,10 +98,10 @@ public:
     void mark_as_duplicate(const SessionCommand& rhs);
 
 private:
-    mxs::Buffer m_buffer;       /**< The buffer containing the command */
-    uint8_t     m_command;      /**< The command being executed */
-    uint64_t    m_pos;          /**< Unique position identifier */
-    bool        m_reply_sent;   /**< Whether the session command reply has been sent */
+    mxs::Buffer m_buffer; /**< The buffer containing the command */
+    uint8_t m_command;    /**< The command being executed */
+    uint64_t m_pos;       /**< Unique position identifier */
+    bool m_reply_sent;    /**< Whether the session command reply has been sent */
 };
 
 inline bool operator==(const SessionCommand& lhs, const SessionCommand& rhs)
@@ -116,4 +113,4 @@ inline bool operator!=(const SessionCommand& lhs, const SessionCommand& rhs)
 {
     return !lhs.eq(rhs);
 }
-}
+}  // namespace maxscale

@@ -27,9 +27,9 @@ using namespace maxscale;
 
 /** This contains the database to server mapping */
 typedef std::unordered_multimap<std::string, mxs::Target*> ServerMap;
-typedef std::unordered_map<std::string, mxs::Target*>      StmtMap;
-typedef std::unordered_map<uint64_t, mxs::Target*>         BinaryPSMap;
-typedef std::unordered_map<uint32_t, uint32_t>             PSHandleMap;
+typedef std::unordered_map<std::string, mxs::Target*> StmtMap;
+typedef std::unordered_map<uint64_t, mxs::Target*> BinaryPSMap;
+typedef std::unordered_map<uint32_t, uint32_t> PSHandleMap;
 
 class Shard
 {
@@ -61,15 +61,15 @@ public:
     std::set<mxs::Target*> get_all_locations(std::string db);
     std::set<mxs::Target*> get_all_locations(const std::vector<std::string>& db);
 
-    void         add_statement(std::string stmt, mxs::Target* target);
-    void         add_statement(uint32_t id, mxs::Target* target);
-    void         add_ps_handle(uint32_t id, uint32_t handle);
-    uint32_t     get_ps_handle(uint32_t id);
-    bool         remove_ps_handle(uint32_t id);
+    void add_statement(std::string stmt, mxs::Target* target);
+    void add_statement(uint32_t id, mxs::Target* target);
+    void add_ps_handle(uint32_t id, uint32_t handle);
+    uint32_t get_ps_handle(uint32_t id);
+    bool remove_ps_handle(uint32_t id);
     mxs::Target* get_statement(std::string stmt);
     mxs::Target* get_statement(uint32_t id);
-    bool         remove_statement(std::string stmt);
-    bool         remove_statement(uint32_t id);
+    bool remove_statement(std::string stmt);
+    bool remove_statement(uint32_t id);
 
     /**
      * @brief Check if shard contains stale information
@@ -104,14 +104,14 @@ public:
     bool newer_than(const Shard& shard) const;
 
 private:
-    ServerMap   m_map;
-    StmtMap     stmt_map;
+    ServerMap m_map;
+    StmtMap stmt_map;
     BinaryPSMap m_binary_map;
     PSHandleMap m_ps_handles;
-    time_t      m_last_updated;
+    time_t m_last_updated;
 };
 
-typedef std::unordered_map<std::string, Shard>   ShardMap;
+typedef std::unordered_map<std::string, Shard> ShardMap;
 typedef std::unordered_map<std::string, int64_t> MapLimits;
 
 class ShardManager
@@ -173,7 +173,7 @@ public:
 
 private:
     mutable std::mutex m_lock;
-    ShardMap           m_maps;
-    MapLimits          m_limits;
-    int64_t            m_update_limit {1};
+    ShardMap m_maps;
+    MapLimits m_limits;
+    int64_t m_update_limit {1};
 };

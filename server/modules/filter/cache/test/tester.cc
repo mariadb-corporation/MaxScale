@@ -37,20 +37,11 @@ public:
         mxb_assert(pTask);
     }
 
-    ~Thread()
-    {
-        mxb_assert(m_thread == 0);
-    }
+    ~Thread() { mxb_assert(m_thread == 0); }
 
-    static Thread from_task(Tester::Task* pTask)
-    {
-        return Thread(pTask);
-    }
+    static Thread from_task(Tester::Task* pTask) { return Thread(pTask); }
 
-    Tester::Task* task()
-    {
-        return m_pTask;
-    }
+    Tester::Task* task() { return m_pTask; }
 
     void start()
     {
@@ -71,15 +62,9 @@ public:
         m_thread = 0;
     }
 
-    static void start_thread(Thread& thread)
-    {
-        thread.start();
-    }
+    static void start_thread(Thread& thread) { thread.start(); }
 
-    static void wait_for_thread(Thread& thread)
-    {
-        thread.wait();
-    }
+    static void wait_for_thread(Thread& thread) { thread.wait(); }
 
     void run()
     {
@@ -87,10 +72,7 @@ public:
         m_pTask->set_rv(m_pTask->run());
     }
 
-    static void run(Thread* pThread)
-    {
-        pThread->run();
-    }
+    static void run(Thread* pThread) { pThread->run(); }
 
     static void* thread_main(void* pData)
     {
@@ -100,7 +82,7 @@ public:
 
 private:
     Tester::Task* m_pTask;
-    pthread_t     m_thread;
+    pthread_t m_thread;
 };
 
 //
@@ -111,12 +93,9 @@ Tester::Task::Task(std::ostream* pOut)
     : m_out(*pOut)
     , m_terminate(false)
     , m_rv(0)
-{
-}
+{}
 
-Tester::Task::~Task()
-{
-}
+Tester::Task::~Task() {}
 
 //
 // Tester
@@ -124,30 +103,27 @@ Tester::Task::~Task()
 
 Tester::Tester(ostream* pOut)
     : m_out(*pOut)
-{
-}
+{}
 
-Tester::~Tester()
-{
-}
+Tester::~Tester() {}
 
 // static
 GWBUF* Tester::gwbuf_from_string(const std::string& s)
 {
-    size_t len = s.length();
+    size_t len         = s.length();
     size_t payload_len = len + 1;
-    size_t gwbuf_len = MYSQL_HEADER_LEN + payload_len;
+    size_t gwbuf_len   = MYSQL_HEADER_LEN + payload_len;
 
     GWBUF* pBuf = gwbuf_alloc(gwbuf_len);
 
     if (pBuf)
     {
-        *((unsigned char*)((char*)GWBUF_DATA(pBuf))) = payload_len;
-        *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 1)) = (payload_len >> 8);
-        *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 2)) = (payload_len >> 16);
-        *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 3)) = 0x00;
-        *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 4)) = 0x03;    // COM_QUERY
-        memcpy((char*)GWBUF_DATA(pBuf) + 5, s.c_str(), len);
+        *((unsigned char*) ((char*) GWBUF_DATA(pBuf)))     = payload_len;
+        *((unsigned char*) ((char*) GWBUF_DATA(pBuf) + 1)) = (payload_len >> 8);
+        *((unsigned char*) ((char*) GWBUF_DATA(pBuf) + 2)) = (payload_len >> 16);
+        *((unsigned char*) ((char*) GWBUF_DATA(pBuf) + 3)) = 0x00;
+        *((unsigned char*) ((char*) GWBUF_DATA(pBuf) + 4)) = 0x03;  // COM_QUERY
+        memcpy((char*) GWBUF_DATA(pBuf) + 5, s.c_str(), len);
     }
 
     return pBuf;
@@ -156,19 +132,19 @@ GWBUF* Tester::gwbuf_from_string(const std::string& s)
 // static
 GWBUF* Tester::gwbuf_from_vector(const std::vector<uint8_t>& v)
 {
-    size_t len = v.size();
+    size_t len         = v.size();
     size_t payload_len = len;
-    size_t gwbuf_len = MYSQL_HEADER_LEN + payload_len;
+    size_t gwbuf_len   = MYSQL_HEADER_LEN + payload_len;
 
     GWBUF* pBuf = gwbuf_alloc(gwbuf_len);
 
     if (pBuf)
     {
-        *((unsigned char*)((char*)GWBUF_DATA(pBuf))) = payload_len;
-        *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 1)) = (payload_len >> 8);
-        *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 2)) = (payload_len >> 16);
-        *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 3)) = 0x00;
-        memcpy((char*)GWBUF_DATA(pBuf) + 4, v.data(), len);
+        *((unsigned char*) ((char*) GWBUF_DATA(pBuf)))     = payload_len;
+        *((unsigned char*) ((char*) GWBUF_DATA(pBuf) + 1)) = (payload_len >> 8);
+        *((unsigned char*) ((char*) GWBUF_DATA(pBuf) + 2)) = (payload_len >> 16);
+        *((unsigned char*) ((char*) GWBUF_DATA(pBuf) + 3)) = 0x00;
+        memcpy((char*) GWBUF_DATA(pBuf) + 4, v.data(), len);
     }
 
     return pBuf;
@@ -191,8 +167,7 @@ bool Tester::get_unique_statements(std::istream& in, size_t n_statements, Statem
 
     size_t n = 0;
     string statement;
-    while ((n < n_statements)
-           && ((result = reader.get_statement(statement)) == TestReader::RESULT_STMT))
+    while ((n < n_statements) && ((result = reader.get_statement(statement)) == TestReader::RESULT_STMT))
     {
         if (statements.find(statement) == statements.end())
         {
@@ -221,8 +196,7 @@ bool Tester::get_statements(std::istream& in, size_t n_statements, Statements* p
 
     size_t n = 0;
     string statement;
-    while ((n < n_statements)
-           && ((result = reader.get_statement(statement)) == TestReader::RESULT_STMT))
+    while ((n < n_statements) && ((result = reader.get_statement(statement)) == TestReader::RESULT_STMT))
     {
         pStatements->push_back(statement);
         ++n;
@@ -232,9 +206,7 @@ bool Tester::get_statements(std::istream& in, size_t n_statements, Statements* p
 }
 
 // static
-bool Tester::get_cache_items(const Statements& statements,
-                             const StorageFactory& factory,
-                             CacheItems* pItems)
+bool Tester::get_cache_items(const Statements& statements, const StorageFactory& factory, CacheItems* pItems)
 {
     bool success = true;
 
@@ -271,10 +243,8 @@ bool Tester::get_cache_items(const Statements& statements,
 }
 
 // static
-bool Tester::get_cache_items(std::istream& in,
-                             size_t n_items,
-                             const StorageFactory& factory,
-                             CacheItems* pItems)
+bool Tester::get_cache_items(
+    std::istream& in, size_t n_items, const StorageFactory& factory, CacheItems* pItems)
 {
     Statements statements;
 

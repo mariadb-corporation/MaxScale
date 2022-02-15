@@ -52,31 +52,29 @@ protected:
      * @see Storage::get_value
      */
     cache_result_t do_get_value(Token* pToken,
-                                const CacheKey& key,
-                                uint32_t flags,
-                                uint32_t soft_ttl,
-                                uint32_t hard_ttl,
-                                GWBUF** ppValue);
+        const CacheKey& key,
+        uint32_t flags,
+        uint32_t soft_ttl,
+        uint32_t hard_ttl,
+        GWBUF** ppValue);
 
     /**
      * @see Storage::put_value
      */
     cache_result_t do_put_value(Token* pToken,
-                                const CacheKey& key,
-                                const std::vector<std::string>& invalidation_words,
-                                const GWBUF* pValue);
+        const CacheKey& key,
+        const std::vector<std::string>& invalidation_words,
+        const GWBUF* pValue);
 
     /**
      * @see Storage::del_value
      */
-    cache_result_t do_del_value(Token* pToken,
-                                const CacheKey& key);
+    cache_result_t do_del_value(Token* pToken, const CacheKey& key);
 
     /**
      * @see Storage::invalidate
      */
-    cache_result_t do_invalidate(Token* pToken,
-                                 const std::vector<std::string>& words);
+    cache_result_t do_invalidate(Token* pToken, const std::vector<std::string>& words);
 
     /**
      * @see Storage::clear
@@ -86,14 +84,12 @@ protected:
     /**
      * @see Storage::get_head
      */
-    cache_result_t do_get_head(CacheKey* pKey,
-                               GWBUF** ppValue);
+    cache_result_t do_get_head(CacheKey* pKey, GWBUF** ppValue);
 
     /**
      * @see Storage::get_tail
      */
-    cache_result_t do_get_tail(CacheKey* pKey,
-                               GWBUF** ppValue);
+    cache_result_t do_get_tail(CacheKey* pKey, GWBUF** ppValue);
 
     /**
      * @see Storage::getSize
@@ -111,20 +107,18 @@ private:
 
     enum access_approach_t
     {
-        APPROACH_GET,   // Update head
-        APPROACH_PEEK   // Do not update head
+        APPROACH_GET,  // Update head
+        APPROACH_PEEK  // Do not update head
     };
 
     cache_result_t access_value(access_approach_t approach,
-                                const CacheKey& key,
-                                uint32_t flags,
-                                uint32_t soft_ttl,
-                                uint32_t hard_ttl,
-                                GWBUF** ppValue);
+        const CacheKey& key,
+        uint32_t flags,
+        uint32_t soft_ttl,
+        uint32_t hard_ttl,
+        GWBUF** ppValue);
 
-    cache_result_t peek_value(const CacheKey& key,
-                              uint32_t flags,
-                              GWBUF** ppValue)
+    cache_result_t peek_value(const CacheKey& key, uint32_t flags, GWBUF** ppValue)
     {
         return access_value(APPROACH_PEEK, key, flags, CACHE_USE_CONFIG_TTL, CACHE_USE_CONFIG_TTL, ppValue);
     }
@@ -140,37 +134,19 @@ private:
             , m_size(0)
             , m_pNext(NULL)
             , m_pPrev(NULL)
-        {
-        }
-        ~Node()
-        {
-            remove();
-        }
+        {}
 
-        const CacheKey* key() const
-        {
-            return m_pKey;
-        }
+        ~Node() { remove(); }
 
-        size_t size() const
-        {
-            return m_size;
-        }
+        const CacheKey* key() const { return m_pKey; }
 
-        Node* next() const
-        {
-            return m_pNext;
-        }
+        size_t size() const { return m_size; }
 
-        Node* prev() const
-        {
-            return m_pPrev;
-        }
+        Node* next() const { return m_pNext; }
 
-        const std::vector<std::string>& invalidation_words() const
-        {
-            return m_invalidation_words;
-        }
+        Node* prev() const { return m_pPrev; }
+
+        const std::vector<std::string>& invalidation_words() const { return m_invalidation_words; }
 
         /**
          * Move the node before the node provided as argument.
@@ -231,12 +207,10 @@ private:
             return pNode;
         }
 
-        void reset(const CacheKey* pKey,
-                   size_t size,
-                   const std::vector<std::string>& invalidation_words)
+        void reset(const CacheKey* pKey, size_t size, const std::vector<std::string>& invalidation_words)
         {
-            m_pKey = pKey;
-            m_size = size;
+            m_pKey               = pKey;
+            m_size               = size;
             m_invalidation_words = invalidation_words;
         }
 
@@ -252,11 +226,11 @@ private:
         // TODO: No sense in storing the same table name a million times.
         using Words = std::vector<std::string>;
 
-        const CacheKey* m_pKey;               /*< Points at the key stored in nodes_by_key below. */
-        size_t           m_size;               /*< The size of the data referred to by m_pKey. */
-        Node*            m_pNext;              /*< The next node in the LRU list. */
-        Node*            m_pPrev;              /*< The previous node in the LRU list. */
-        Words            m_invalidation_words; /*< Words that invalidate this node. */
+        const CacheKey* m_pKey;     /*< Points at the key stored in nodes_by_key below. */
+        size_t m_size;              /*< The size of the data referred to by m_pKey. */
+        Node* m_pNext;              /*< The next node in the LRU list. */
+        Node* m_pPrev;              /*< The previous node in the LRU list. */
+        Words m_invalidation_words; /*< Words that invalidate this node. */
     };
 
     typedef std::unordered_map<CacheKey, Node*> NodesByKey;
@@ -270,24 +244,22 @@ private:
 
     Node* vacate_lru();
     Node* vacate_lru(size_t space);
-    bool  free_node_data(Node* pNode, Context context);
+    bool free_node_data(Node* pNode, Context context);
 
     enum class InvalidatorAction
     {
-        IGNORE, // Ignore the invalidator, just free the node.
-        REMOVE, // Free the node and remove it from the invalidator.
+        IGNORE,  // Ignore the invalidator, just free the node.
+        REMOVE,  // Free the node and remove it from the invalidator.
     };
 
-    void  free_node(Node* pNode, InvalidatorAction action) const;
-    void  free_node(NodesByKey::iterator& i, InvalidatorAction action) const;
-    void  remove_node(Node* pNode) const;
-    void  move_to_head(Node* pNode) const;
+    void free_node(Node* pNode, InvalidatorAction action) const;
+    void free_node(NodesByKey::iterator& i, InvalidatorAction action) const;
+    void remove_node(Node* pNode) const;
+    void move_to_head(Node* pNode) const;
 
     cache_result_t get_existing_node(NodesByKey::iterator& i, const GWBUF* pvalue, Node** ppNode);
-    cache_result_t get_new_node(const CacheKey& key,
-                                const GWBUF* pValue,
-                                NodesByKey::iterator* pI,
-                                Node** ppNode);
+    cache_result_t get_new_node(
+        const CacheKey& key, const GWBUF* pValue, NodesByKey::iterator* pI, Node** ppNode);
 
     bool invalidate(Node* pNode, Context context);
 
@@ -297,35 +269,32 @@ private:
     class FullInvalidator;
     class StorageInvalidator;
 
-    Storage* storage() const
-    {
-        return m_pStorage;
-    }
+    Storage* storage() const { return m_pStorage; }
 
 private:
     struct Stats
     {
         void fill(json_t* pObject) const;
 
-        uint64_t size = 0;          /*< The total size of the stored values. */
-        uint64_t items = 0;         /*< The number of stored items. */
-        uint64_t hits = 0;          /*< How many times a key was found in the cache. */
-        uint64_t misses = 0;        /*< How many times a key was not found in the cache. */
-        uint64_t updates = 0;       /*< How many times an existing key in the cache was updated. */
-        uint64_t deletes = 0;       /*< How many times an existing key in the cache was deleted. */
-        uint64_t evictions = 0;     /*< How many times an item has been evicted from the cache. */
+        uint64_t size          = 0; /*< The total size of the stored values. */
+        uint64_t items         = 0; /*< The number of stored items. */
+        uint64_t hits          = 0; /*< How many times a key was found in the cache. */
+        uint64_t misses        = 0; /*< How many times a key was not found in the cache. */
+        uint64_t updates       = 0; /*< How many times an existing key in the cache was updated. */
+        uint64_t deletes       = 0; /*< How many times an existing key in the cache was deleted. */
+        uint64_t evictions     = 0; /*< How many times an item has been evicted from the cache. */
         uint64_t invalidations = 0; /*< How many times an item has been invalidated. */
     };
 
     using SInvalidator = std::unique_ptr<Invalidator>;
 
-    const Config         m_config;        /*< The configuration. */
-    Storage*             m_pStorage;      /*< The actual storage. */
-    const uint64_t       m_max_count;     /*< The maximum number of items in the LRU list, */
-    const uint64_t       m_max_size;      /*< The maximum size of all cached items. */
-    mutable Stats        m_stats;         /*< Cache statistics. */
-    mutable NodesByKey   m_nodes_by_key;  /*< Mapping from cache keys to corresponding Node. */
-    mutable Node*        m_pHead;         /*< The node at the LRU list. */
-    mutable Node*        m_pTail;         /*< The node at bottom of the LRU list.*/
-    mutable SInvalidator m_sInvalidator;  /*< The invalidator. */
+    const Config m_config;               /*< The configuration. */
+    Storage* m_pStorage;                 /*< The actual storage. */
+    const uint64_t m_max_count;          /*< The maximum number of items in the LRU list, */
+    const uint64_t m_max_size;           /*< The maximum size of all cached items. */
+    mutable Stats m_stats;               /*< Cache statistics. */
+    mutable NodesByKey m_nodes_by_key;   /*< Mapping from cache keys to corresponding Node. */
+    mutable Node* m_pHead;               /*< The node at the LRU list. */
+    mutable Node* m_pTail;               /*< The node at bottom of the LRU list.*/
+    mutable SInvalidator m_sInvalidator; /*< The invalidator. */
 };

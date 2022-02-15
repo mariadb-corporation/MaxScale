@@ -23,13 +23,13 @@
 MXS_BEGIN_DECLS
 
 /* Exit status for MaxScale */
-#define MAXSCALE_SHUTDOWN       0   /* Normal shutdown */
-#define MAXSCALE_BADCONFIG      1   /* Configuration file error */
-#define MAXSCALE_NOLIBRARY      2   /* No embedded library found */
-#define MAXSCALE_NOSERVICES     3   /* No services could be started */
-#define MAXSCALE_ALREADYRUNNING 4   /* MaxScale is already running */
-#define MAXSCALE_BADARG         5   /* Bad command line argument */
-#define MAXSCALE_INTERNALERROR  6   /* Internal error, see error log */
+#define MAXSCALE_SHUTDOWN       0 /* Normal shutdown */
+#define MAXSCALE_BADCONFIG      1 /* Configuration file error */
+#define MAXSCALE_NOLIBRARY      2 /* No embedded library found */
+#define MAXSCALE_NOSERVICES     3 /* No services could be started */
+#define MAXSCALE_ALREADYRUNNING 4 /* MaxScale is already running */
+#define MAXSCALE_BADARG         5 /* Bad command line argument */
+#define MAXSCALE_INTERNALERROR  6 /* Internal error, see error log */
 
 /**
  * Return the time when MaxScale was started.

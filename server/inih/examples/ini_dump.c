@@ -4,10 +4,7 @@
 #include <string.h>
 #include "../ini.h"
 
-static int dumper(void* user,
-                  const char* section,
-                  const char* name,
-                  const char* value)
+static int dumper(void* user, const char* section, const char* name, const char* value)
 {
     static char prev_section[50] = "";
 

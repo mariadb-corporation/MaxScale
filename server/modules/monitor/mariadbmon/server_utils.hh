@@ -28,7 +28,6 @@ class MariaDBServer;
 class Gtid
 {
 public:
-
     /**
      * Constructs an invalid Gtid.
      */
@@ -64,13 +63,10 @@ public:
      * @param rhs Right side
      * @return True if lhs should be before rhs
      */
-    static bool compare_domains(const Gtid& lhs, const Gtid& rhs)
-    {
-        return lhs.m_domain < rhs.m_domain;
-    }
+    static bool compare_domains(const Gtid& lhs, const Gtid& rhs) { return lhs.m_domain < rhs.m_domain; }
 
     uint32_t m_domain;
-    int64_t  m_server_id;   // Valid values are 32bit unsigned. 0 is only used by server versions  <= 10.1
+    int64_t m_server_id;  // Valid values are 32bit unsigned. 0 is only used by server versions  <= 10.1
     uint64_t m_sequence;
 };
 
@@ -177,28 +173,19 @@ public:
     explicit EndPoint(const SERVER* server);
     EndPoint();
 
-    std::string host() const
-    {
-        return m_host.address();
-    }
+    std::string host() const { return m_host.address(); }
 
-    int port() const
-    {
-        return m_host.port();
-    }
+    int port() const { return m_host.port(); }
 
     bool operator==(const EndPoint& rhs) const;
-    bool operator!=(const EndPoint& rhs) const
-    {
-        return !(*this == rhs);
-    }
+
+    bool operator!=(const EndPoint& rhs) const { return !(*this == rhs); }
 
     std::string to_string() const;
 
 private:
-    mxb::Host m_host;   /* Address and port */
+    mxb::Host m_host; /* Address and port */
 };
-
 
 // Contains data returned by one row of SHOW ALL SLAVES STATUS
 class SlaveStatus
@@ -230,62 +217,62 @@ public:
          */
         std::string to_string() const;
 
-        std::string name;               /* Slave connection name. Must be unique for the server. */
-        EndPoint    master_endpoint;    /* Master server address & port */
+        std::string name;         /* Slave connection name. Must be unique for the server. */
+        EndPoint master_endpoint; /* Master server address & port */
 
     private:
-        std::string m_owner;            /* Name of the owning server. Used for logging. */
+        std::string m_owner; /* Name of the owning server. Used for logging. */
     };
 
-    Settings settings;      /* User-defined settings for the slave connection. */
+    Settings settings; /* User-defined settings for the slave connection. */
 
     /* If the master is a monitored server, it's written here. */
     const MariaDBServer* master_server {nullptr};
     /* Has this slave connection been seen connected, meaning that the master server id is correct? */
     bool seen_connected = false;
 
-    int64_t master_server_id = SERVER_ID_UNKNOWN;       /* The master's server_id value. Valid ids are
+    int64_t master_server_id            = SERVER_ID_UNKNOWN; /* The master's server_id value. Valid ids are
                                                          * 32bit unsigned. -1 is unread/error. */
-    slave_io_running_t slave_io_running = SLAVE_IO_NO;  /* Slave I/O thread running state: "Yes",
+    slave_io_running_t slave_io_running = SLAVE_IO_NO;       /* Slave I/O thread running state: "Yes",
                                                          * "Connecting" or "No" */
-    bool        slave_sql_running = false;              /* Slave SQL thread running state, true if "Yes" */
-    GtidList    gtid_io_pos;                            /* Gtid I/O position of the slave thread. */
-    std::string last_io_error;                          /* Last IO error encountered. */
-    std::string last_sql_error;                         /* Last SQL error encountered. */
-    int64_t     received_heartbeats = 0;                /* How many heartbeats the connection has
+    bool slave_sql_running              = false; /* Slave SQL thread running state, true if "Yes" */
+    GtidList gtid_io_pos;                        /* Gtid I/O position of the slave thread. */
+    std::string last_io_error;                   /* Last IO error encountered. */
+    std::string last_sql_error;                  /* Last SQL error encountered. */
+    int64_t received_heartbeats = 0;             /* How many heartbeats the connection has
                                                          * received */
 
-    int64_t seconds_behind_master = mxs::Target::RLAG_UNDEFINED;    /* How much behind the slave is. */
+    int64_t seconds_behind_master = mxs::Target::RLAG_UNDEFINED; /* How much behind the slave is. */
 
     /* Time of the latest gtid event or heartbeat the slave connection has received, timed by the monitor. */
     maxbase::TimePoint last_data_time = maxbase::Clock::now();
 
     std::string to_string() const;
-    json_t*     to_json() const;
+    json_t* to_json() const;
 
     bool equal(const SlaveStatus& rhs) const;
 
     static slave_io_running_t slave_io_from_string(const std::string& str);
-    static std::string        slave_io_to_string(slave_io_running_t slave_io);
-    bool                      should_be_copied(std::string* ignore_reason_out) const;
+    static std::string slave_io_to_string(slave_io_running_t slave_io);
+    bool should_be_copied(std::string* ignore_reason_out) const;
 };
 
 using SlaveStatusArray = std::vector<SlaveStatus>;
-using EventNameSet = std::unordered_set<std::string>;
+using EventNameSet     = std::unordered_set<std::string>;
 
 enum class OperationType
 {
     SWITCHOVER,
     FAILOVER,
     REJOIN,
-    UNDO_DEMOTION   // Performed when switchover fails in its first stages.
+    UNDO_DEMOTION  // Performed when switchover fails in its first stages.
 };
 
 class GeneralOpData
 {
 public:
-    json_t** const    error_out;                    // Json error output
-    maxbase::Duration time_remaining;               // How much time remains to complete the operation
+    json_t** const error_out;          // Json error output
+    maxbase::Duration time_remaining;  // How much time remains to complete the operation
 
     GeneralOpData(json_t** error, maxbase::Duration time_remaining);
 };
@@ -294,15 +281,16 @@ public:
 class ServerOperation
 {
 public:
-    MariaDBServer* const   target;          // Target server
-    const bool             to_from_master;  // Was the target a master / should it become one
-    const SlaveStatusArray conns_to_copy;   // Slave connections the target should copy/merge
+    MariaDBServer* const target;           // Target server
+    const bool to_from_master;             // Was the target a master / should it become one
+    const SlaveStatusArray conns_to_copy;  // Slave connections the target should copy/merge
 
-    const EventNameSet events_to_enable;    // Scheduled event names last seen on master.
+    const EventNameSet events_to_enable;  // Scheduled event names last seen on master.
 
-    ServerOperation(MariaDBServer* target, bool was_is_master,
-                    const SlaveStatusArray& conns_to_copy,
-                    const EventNameSet& events_to_enable);
+    ServerOperation(MariaDBServer* target,
+        bool was_is_master,
+        const SlaveStatusArray& conns_to_copy,
+        const EventNameSet& events_to_enable);
 
     ServerOperation(MariaDBServer* target, bool was_is_master);
 };
@@ -313,19 +301,20 @@ class ServerLock
 public:
     enum class Status
     {
-        UNKNOWN,        /* Unknown/error */
-        FREE,           /* Lock is unclaimed */
-        OWNED_SELF,     /* Lock is claimed by current monitor */
-        OWNED_OTHER,    /* Lock is claimed by other monitor/MaxScale */
+        UNKNOWN,     /* Unknown/error */
+        FREE,        /* Lock is unclaimed */
+        OWNED_SELF,  /* Lock is claimed by current monitor */
+        OWNED_OTHER, /* Lock is claimed by other monitor/MaxScale */
     };
 
-    void    set_status(Status new_status, int64_t owner_id = CONN_ID_UNKNOWN);
+    void set_status(Status new_status, int64_t owner_id = CONN_ID_UNKNOWN);
     int64_t owner() const;
-    Status  status() const;
-    bool    is_free() const;
+    Status status() const;
+    bool is_free() const;
 
     bool operator==(const ServerLock& rhs) const;
+
 private:
     int64_t m_owner_id {CONN_ID_UNKNOWN};
-    Status  m_status {Status::UNKNOWN};
+    Status m_status {Status::UNKNOWN};
 };

@@ -30,30 +30,25 @@ static cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::ROUTER);
 static cfg::ParamString s_bootstrap_servers(
     &s_spec, "bootstrap_servers", "Bootstrap servers in host:port format");
 
-static cfg::ParamString s_topic(
-    &s_spec, "topic", "The topic where replicated events are sent");
+static cfg::ParamString s_topic(&s_spec, "topic", "The topic where replicated events are sent");
 
 static cfg::ParamBool s_enable_idempotence(
     &s_spec, "enable_idempotence", "Enables idempotent Kafka producer", false);
 
-static cfg::ParamCount s_timeout(
-    &s_spec, "timeout", "Connection and read timeout for replication", 10);
+static cfg::ParamCount s_timeout(&s_spec, "timeout", "Connection and read timeout for replication", 10);
 
-static cfg::ParamString s_gtid(
-    &s_spec, "gtid", "The GTID position to start from", "");
+static cfg::ParamString s_gtid(&s_spec, "gtid", "The GTID position to start from", "");
 
-static cfg::ParamCount s_server_id(
-    &s_spec, "server_id", "Server ID for direct replication mode", 1234);
+static cfg::ParamCount s_server_id(&s_spec, "server_id", "Server ID for direct replication mode", 1234);
 
 // Never used
 class KafkaCDCSession : public mxs::RouterSession
-{
-};
+{};
 
 class KafkaCDC : public mxs::Router<KafkaCDC, KafkaCDCSession>
 {
 public:
-    KafkaCDC(const KafkaCDC&) = delete;
+    KafkaCDC(const KafkaCDC&)            = delete;
     KafkaCDC& operator=(const KafkaCDC&) = delete;
 
     struct Config
@@ -65,15 +60,14 @@ public:
             , timeout(s_timeout.get(params))
             , gtid(s_gtid.get(params))
             , server_id(s_server_id.get(params))
-        {
-        }
+        {}
 
         std::string bootstrap_servers;
         std::string topic;
-        bool        enable_idempotence;
-        int         timeout;
+        bool enable_idempotence;
+        int timeout;
         std::string gtid;
-        int         server_id;
+        int server_id;
     };
 
     ~KafkaCDC() = default;
@@ -83,24 +77,18 @@ public:
 
     static KafkaCDC* create(SERVICE* pService, mxs::ConfigParameters* params);
 
-    KafkaCDCSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
-    {
-        return nullptr;
-    }
+    KafkaCDCSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints) { return nullptr; }
 
-    uint64_t getCapabilities()
-    {
-        return CAPS;
-    }
+    uint64_t getCapabilities() { return CAPS; }
 
     json_t* diagnostics() const;
-    bool    configure(mxs::ConfigParameters* param);
+    bool configure(mxs::ConfigParameters* param);
 
 private:
     KafkaCDC(SERVICE* pService, Config&& config, std::unique_ptr<cdc::Replicator>&& rpl);
 
     static std::unique_ptr<cdc::Replicator> create_replicator(const Config& config, SERVICE* service);
 
-    Config                           m_config;
+    Config m_config;
     std::unique_ptr<cdc::Replicator> m_replicator;
 };

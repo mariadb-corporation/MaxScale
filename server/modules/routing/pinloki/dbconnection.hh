@@ -44,18 +44,17 @@ enum GtidFlags
 class Connection
 {
 public:
-
     struct ConnectionDetails
     {
-        maxbase::Host        host;
-        std::string          database;  // may be empty
-        std::string          user;
-        std::string          password;
-        unsigned long        flags = 0;
+        maxbase::Host host;
+        std::string database;  // may be empty
+        std::string user;
+        std::string password;
+        unsigned long flags          = 0;
         std::chrono::seconds timeout = std::chrono::seconds(10);
 
         // TLS variables
-        bool        ssl = false;
+        bool ssl = false;
         std::string ssl_ca;
         std::string ssl_capath;
         std::string ssl_cert;
@@ -63,14 +62,14 @@ public:
         std::string ssl_crlpath;
         std::string ssl_key;
         std::string ssl_cipher;
-        bool        ssl_verify_server_cert = false;
+        bool ssl_verify_server_cert = false;
     };
 
     Connection(const ConnectionDetails& details);
     Connection(Connection&&) = delete;
     ~Connection();
 
-    void          start_replication(unsigned int server_id, GtidList gtid = GtidList());
+    void start_replication(unsigned int server_id, GtidList gtid = GtidList());
     MariaRplEvent get_rpl_msg();
 
     /**
@@ -146,20 +145,21 @@ public:
      *  this class's interface.
      *  Example: mc.call(mysql_select_db, "information_schema");
      */
-    template<typename R, typename ... Args>
-    R call(R (&foo)(st_mysql*, Args ...), Args ... args) const;
+    template<typename R, typename... Args>
+    R call(R (&foo)(st_mysql*, Args...), Args... args) const;
+
 private:
-    st_mysql*         m_conn {nullptr};
-    st_mariadb_rpl*   m_rpl {nullptr};
+    st_mysql* m_conn {nullptr};
+    st_mariadb_rpl* m_rpl {nullptr};
     ConnectionDetails m_details;
-    int               m_nesting_level = 0;
+    int m_nesting_level = 0;
 
     void connect();
 };
 
-template<typename R, typename ... Args>
-R Connection::call(R (&foo)(st_mysql*, Args ...), Args... args) const
+template<typename R, typename... Args>
+R Connection::call(R (&foo)(st_mysql*, Args...), Args... args) const
 {
     return foo(m_conn, std::forward<Args>(args)...);
 }
-}
+}  // namespace maxsql

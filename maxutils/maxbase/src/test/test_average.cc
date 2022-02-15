@@ -28,33 +28,33 @@ int main()
     ave.add_value(50);
     ave.add_value(60);
 
-    mxb_assert(ave.value() == 35); // (10 + 20 + 30 + 40 + 50 + 60) / 6 = 35
+    mxb_assert(ave.value() == 35);  // (10 + 20 + 30 + 40 + 50 + 60) / 6 = 35
 
-    ave.add_value(70); // Should cause 10 to drop off.
+    ave.add_value(70);  // Should cause 10 to drop off.
 
-    mxb_assert(ave.value() == 45); // (20 + 30 + 40 + 50 + 60 + 70) / 6 = 45
+    mxb_assert(ave.value() == 45);  // (20 + 30 + 40 + 50 + 60 + 70) / 6 = 45
 
-    ave.resize(5); // Should cause 20 to drop off.
+    ave.resize(5);  // Should cause 20 to drop off.
 
-    mxb_assert(ave.value() == 50); // (30 + 40 + 50 + 60 + 70) / 5 = 50
+    mxb_assert(ave.value() == 50);  // (30 + 40 + 50 + 60 + 70) / 5 = 50
 
-    ave.resize(7); // Nothing should happen
+    ave.resize(7);  // Nothing should happen
 
-    mxb_assert(ave.value() == 50); // (30 + 40 + 50 + 60 + 70) / 5 = 50
+    mxb_assert(ave.value() == 50);  // (30 + 40 + 50 + 60 + 70) / 5 = 50
 
     ave.add_value(80);
 
-    mxb_assert(ave.value() == 55); // (30 + 40 + 50 + 60 + 70 + 80) / 6 = 55
+    mxb_assert(ave.value() == 55);  // (30 + 40 + 50 + 60 + 70 + 80) / 6 = 55
 
     ave.resize(2);
 
-    mxb_assert(ave.value() == 75); // (70 + 80) / 2 = 75
+    mxb_assert(ave.value() == 75);  // (70 + 80) / 2 = 75
 
     ave.resize(1);
 
     ave.add_value(42);
 
-    mxb_assert(ave.value() == 42); // 42 / 1 = 42
+    mxb_assert(ave.value() == 42);  // 42 / 1 = 42
 
     AverageN ave2(1);
 

@@ -59,27 +59,26 @@ namespace
  */
 struct this_unit
 {
-    bool            initialized;        // Whether the initialization has been performed.
-    int             nWorkers;           // How many routing workers there are.
-    RoutingWorker** ppWorkers;          // Array of routing worker instances.
-    mxb::AverageN** ppWorker_loads;     // Array of load averages for workers.
-    int             next_worker_id;     // Next worker id
-    int             epoll_listener_fd;  // Shared epoll descriptor for listening descriptors.
-    int             id_main_worker;     // The id of the worker running in the main thread.
-    int             id_min_worker;      // The smallest routing worker id.
-    int             id_max_worker;      // The largest routing worker id.
-    bool            running;            // True if worker threads are running
-} this_unit =
-{
-    false,              // initialized
-    0,                  // nWorkers
-    nullptr,            // ppWorkers
-    nullptr,            // ppWorker_loads
-    0,                  // next_worker_id
-    -1,                 // epoll_listener_fd
-    WORKER_ABSENT_ID,   // id_main_worker
-    WORKER_ABSENT_ID,   // id_min_worker
-    WORKER_ABSENT_ID,   // id_max_worker
+    bool initialized;                // Whether the initialization has been performed.
+    int nWorkers;                    // How many routing workers there are.
+    RoutingWorker** ppWorkers;       // Array of routing worker instances.
+    mxb::AverageN** ppWorker_loads;  // Array of load averages for workers.
+    int next_worker_id;              // Next worker id
+    int epoll_listener_fd;           // Shared epoll descriptor for listening descriptors.
+    int id_main_worker;              // The id of the worker running in the main thread.
+    int id_min_worker;               // The smallest routing worker id.
+    int id_max_worker;               // The largest routing worker id.
+    bool running;                    // True if worker threads are running
+} this_unit = {
+    false,             // initialized
+    0,                 // nWorkers
+    nullptr,           // ppWorkers
+    nullptr,           // ppWorker_loads
+    0,                 // next_worker_id
+    -1,                // epoll_listener_fd
+    WORKER_ABSENT_ID,  // id_main_worker
+    WORKER_ABSENT_ID,  // id_min_worker
+    WORKER_ABSENT_ID,  // id_max_worker
     false,
 };
 
@@ -90,20 +89,17 @@ int next_worker_id()
 
 thread_local struct this_thread
 {
-    int current_worker_id;      // The worker id of the current thread
-} this_thread =
-{
-    WORKER_ABSENT_ID
-};
+    int current_worker_id;  // The worker id of the current thread
+} this_thread = {WORKER_ABSENT_ID};
 
 bool can_close_dcb(mxs::BackendConnection* b)
 {
     mxb_assert(b->dcb()->role() == DCB::Role::BACKEND);
     const int SHOW_SHUTDOWN_TIMEOUT = 2;
-    auto idle = MXS_CLOCK_TO_SEC(mxs_clock() - b->dcb()->last_read());
+    auto idle                       = MXS_CLOCK_TO_SEC(mxs_clock() - b->dcb()->last_read());
     return idle > SHOW_SHUTDOWN_TIMEOUT || b->can_close();
 }
-}
+}  // namespace
 
 namespace maxscale
 {
@@ -122,8 +118,7 @@ RoutingWorker::PersistentEntry::~PersistentEntry()
 
 RoutingWorker::DCBHandler::DCBHandler(RoutingWorker* pOwner)
     : m_owner(*pOwner)
-{
-}
+{}
 
 // Any activity on a backend DCB that is in the persistent pool, will
 // cause the dcb to be evicted.
@@ -147,19 +142,16 @@ void RoutingWorker::DCBHandler::hangup(DCB* pDcb)
     m_owner.evict_dcb(static_cast<BackendDCB*>(pDcb));
 }
 
-
 RoutingWorker::RoutingWorker(mxb::WatchdogNotifier* pNotifier)
     : mxb::WatchedWorker(pNotifier)
     , m_id(next_worker_id())
     , m_pool_handler(this)
 {
     MXB_POLL_DATA::handler = &RoutingWorker::epoll_instance_handler;
-    MXB_POLL_DATA::owner = this;
+    MXB_POLL_DATA::owner   = this;
 }
 
-RoutingWorker::~RoutingWorker()
-{
-}
+RoutingWorker::~RoutingWorker() {}
 
 // static
 bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
@@ -170,16 +162,16 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
 
     if (this_unit.epoll_listener_fd != -1)
     {
-        int nWorkers = config_threadcount();
-        RoutingWorker** ppWorkers = new(std::nothrow) RoutingWorker* [MXS_MAX_THREADS]();       // 0-inited
-                                                                                                // array
-        AverageN** ppWorker_loads = new(std::nothrow) AverageN* [MXS_MAX_THREADS];
+        int nWorkers              = config_threadcount();
+        RoutingWorker** ppWorkers = new (std::nothrow) RoutingWorker*[MXS_MAX_THREADS]();  // 0-inited
+                                                                                           // array
+        AverageN** ppWorker_loads = new (std::nothrow) AverageN*[MXS_MAX_THREADS];
 
         if (ppWorkers && ppWorker_loads)
         {
             int id_main_worker = WORKER_ABSENT_ID;
-            int id_min_worker = INT_MAX;
-            int id_max_worker = INT_MIN;
+            int id_min_worker  = INT_MAX;
+            int id_max_worker  = INT_MIN;
 
             size_t rebalance_window = mxs::Config::get().rebalance_window.get();
 
@@ -187,7 +179,7 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
             for (i = 0; i < nWorkers; ++i)
             {
                 RoutingWorker* pWorker = RoutingWorker::create(pNotifier, this_unit.epoll_listener_fd);
-                AverageN* pAverage = new AverageN(rebalance_window);
+                AverageN* pAverage     = new AverageN(rebalance_window);
 
                 if (pWorker && pAverage)
                 {
@@ -209,7 +201,7 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
                         id_max_worker = id;
                     }
 
-                    ppWorkers[i] = pWorker;
+                    ppWorkers[i]      = pWorker;
                     ppWorker_loads[i] = pAverage;
                 }
                 else
@@ -228,12 +220,12 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
 
             if (ppWorkers && ppWorker_loads)
             {
-                this_unit.ppWorkers = ppWorkers;
+                this_unit.ppWorkers      = ppWorkers;
                 this_unit.ppWorker_loads = ppWorker_loads;
-                this_unit.nWorkers = nWorkers;
+                this_unit.nWorkers       = nWorkers;
                 this_unit.id_main_worker = id_main_worker;
-                this_unit.id_min_worker = id_min_worker;
-                this_unit.id_max_worker = id_max_worker;
+                this_unit.id_min_worker  = id_min_worker;
+                this_unit.id_max_worker  = id_max_worker;
 
                 this_unit.initialized = true;
             }
@@ -292,7 +284,7 @@ bool RoutingWorker::add_shared_fd(int fd, uint32_t events, MXB_POLL_DATA* pData)
 
     struct epoll_event ev;
 
-    ev.events = events;
+    ev.events   = events;
     ev.data.ptr = pData;
 
     // The main worker takes ownership of all shared fds
@@ -484,7 +476,7 @@ void RoutingWorker::delete_zombies()
             // Check if any of the backend DCBs isn't ready to be closed. If so, delay the closing of the
             // client DCB until the backend connections have fully established and finished authenticating.
             const auto& dcbs = static_cast<Session*>(pDcb->session())->backend_connections();
-            can_close = std::all_of(dcbs.begin(), dcbs.end(), can_close_dcb);
+            can_close        = std::all_of(dcbs.begin(), dcbs.end(), can_close_dcb);
         }
 
         if (can_close)
@@ -505,7 +497,7 @@ void RoutingWorker::delete_zombies()
 
 void RoutingWorker::add(DCB* pDcb)
 {
-    MXB_AT_DEBUG(auto rv = ) m_dcbs.insert(pDcb);
+    MXB_AT_DEBUG(auto rv =) m_dcbs.insert(pDcb);
     mxb_assert(rv.second);
 }
 
@@ -518,8 +510,8 @@ void RoutingWorker::remove(DCB* pDcb)
 
 BackendDCB* RoutingWorker::get_backend_dcb(SERVER* pS, MXS_SESSION* pSession, mxs::Component* pUpstream)
 {
-    Server* pServer = static_cast<Server*>(pS);
-    auto pSes = static_cast<Session*>(pSession);
+    Server* pServer  = static_cast<Server*>(pS);
+    auto pSes        = static_cast<Session*>(pSession);
     BackendDCB* pDcb = nullptr;
 
     if (pServer->persistent_conns_enabled() && pServer->is_running())
@@ -535,9 +527,8 @@ BackendDCB* RoutingWorker::get_backend_dcb(SERVER* pS, MXS_SESSION* pSession, mx
     return pDcb;
 }
 
-BackendDCB* RoutingWorker::get_backend_dcb_from_pool(SERVER* pS,
-                                                     MXS_SESSION* pSession,
-                                                     mxs::Component* pUpstream)
+BackendDCB* RoutingWorker::get_backend_dcb_from_pool(
+    SERVER* pS, MXS_SESSION* pSession, mxs::Component* pUpstream)
 {
     Server* pServer = static_cast<Server*>(pS);
 
@@ -564,11 +555,11 @@ BackendDCB* RoutingWorker::get_backend_dcb_from_pool(SERVER* pS,
             }
         }
 
-        // If proxy protocol is in use there is a possibility that 
-        // no DCBs are suitable to use. 
+        // If proxy protocol is in use there is a possibility that
+        // no DCBs are suitable to use.
         if (!pDcb)
         {
-            break;		
+            break;
         }
 
         // Put back the origininal handler.
@@ -620,17 +611,12 @@ bool RoutingWorker::can_be_destroyed(BackendDCB* pDcb)
     if (!m_evicting)
     {
         // No, so it can potentially be added to the pool.
-        Server* pServer = static_cast<Server*>(pDcb->server());
+        Server* pServer    = static_cast<Server*>(pDcb->server());
         int persistpoolmax = pServer->persistpoolmax();
 
-        if (pDcb->state() == DCB::State::POLLING
-            && pDcb->protocol()->established()
-            && pDcb->session()
-            && session_valid_for_pool(pDcb->session())
-            && persistpoolmax > 0
-            && pServer->is_running()
-            && !pDcb->hanged_up()
-            && evict_dcbs(pServer, Evict::EXPIRED) < persistpoolmax)
+        if (pDcb->state() == DCB::State::POLLING && pDcb->protocol()->established() && pDcb->session()
+            && session_valid_for_pool(pDcb->session()) && persistpoolmax > 0 && pServer->is_running()
+            && !pDcb->hanged_up() && evict_dcbs(pServer, Evict::EXPIRED) < persistpoolmax)
         {
             if (mxb::atomic::add_limited(&pServer->pool_stats().n_persistent, 1, persistpoolmax))
             {
@@ -674,7 +660,7 @@ int RoutingWorker::evict_dcbs(const SERVER* pS, Evict evict)
 
     time_t now = time(nullptr);
 
-    auto pServer = const_cast<Server*>(static_cast<const Server*>(pS));
+    auto pServer                          = const_cast<Server*>(static_cast<const Server*>(pS));
     PersistentEntries& persistent_entries = m_persistent_entries_by_server[pServer];
 
     vector<BackendDCB*> to_be_evicted;
@@ -695,8 +681,8 @@ int RoutingWorker::evict_dcbs(const SERVER* pS, Evict evict)
         PersistentEntry& entry = *j;
 
         bool hanged_up = entry.hanged_up();
-        bool expired = (evict == Evict::ALL) || (now - entry.created() > persistmaxtime);
-        bool too_many = (count > persistpoolmax);
+        bool expired   = (evict == Evict::ALL) || (now - entry.created() > persistmaxtime);
+        bool too_many  = (count > persistpoolmax);
 
         if (hanged_up || expired || too_many)
         {
@@ -711,8 +697,8 @@ int RoutingWorker::evict_dcbs(const SERVER* pS, Evict evict)
         }
     }
 
-    pServer->pool_stats().persistmax = MXS_MAX(pServer->pool_stats().persistmax,
-                                               pServer->pool_stats().n_persistent);
+    pServer->pool_stats().persistmax
+        = MXS_MAX(pServer->pool_stats().persistmax, pServer->pool_stats().n_persistent);
 
     for (BackendDCB* pDcb : to_be_evicted)
     {
@@ -734,10 +720,8 @@ void RoutingWorker::evict_dcb(BackendDCB* pDcb)
 
     // TODO: An issue that we need to do a linear search?
     auto i = std::find_if(persistent_entries.begin(),
-                          persistent_entries.end(),
-                          [pDcb](const PersistentEntry& entry) {
-                              return entry.dcb() == pDcb;
-                          });
+        persistent_entries.end(),
+        [pDcb](const PersistentEntry& entry) { return entry.dcb() == pDcb; });
 
     mxb_assert(i != persistent_entries.end());
 
@@ -808,14 +792,14 @@ void RoutingWorker::post_run()
 // static
 RoutingWorker* RoutingWorker::create(mxb::WatchdogNotifier* pNotifier, int epoll_listener_fd)
 {
-    RoutingWorker* pThis = new(std::nothrow) RoutingWorker(pNotifier);
+    RoutingWorker* pThis = new (std::nothrow) RoutingWorker(pNotifier);
 
     if (pThis)
     {
         struct epoll_event ev;
-        ev.events = EPOLLIN;
+        ev.events            = EPOLLIN;
         MXB_POLL_DATA* pData = pThis;
-        ev.data.ptr = pData;    // Necessary for pointer adjustment, otherwise downcast will not work.
+        ev.data.ptr          = pData;  // Necessary for pointer adjustment, otherwise downcast will not work.
 
         // The shared epoll instance descriptor is *not* added using EPOLLET (edge-triggered)
         // because we want it to be level-triggered. That way, as long as there is a single
@@ -833,7 +817,7 @@ RoutingWorker* RoutingWorker::create(mxb::WatchdogNotifier* pNotifier, int epoll
         {
             MXS_ERROR("Could not add epoll instance for listening sockets to "
                       "epoll instance of worker: %s",
-                      mxs_strerror(errno));
+                mxs_strerror(errno));
             delete pThis;
             pThis = NULL;
         }
@@ -963,11 +947,10 @@ size_t RoutingWorker::broadcast(std::unique_ptr<DisposableTask> sTask)
 }
 
 // static
-size_t RoutingWorker::broadcast(std::function<void ()> func,
-                                mxb::Semaphore* pSem,
-                                mxb::Worker::execute_mode_t mode)
+size_t RoutingWorker::broadcast(
+    std::function<void()> func, mxb::Semaphore* pSem, mxb::Worker::execute_mode_t mode)
 {
-    size_t n = 0;
+    size_t n     = 0;
     int nWorkers = this_unit.next_worker_id;
 
     for (int i = 0; i < nWorkers; ++i)
@@ -1099,7 +1082,7 @@ std::vector<Worker::STATISTICS> get_stats()
 
     return rval;
 }
-}
+}  // namespace
 
 // static
 Worker::STATISTICS RoutingWorker::get_statistics()
@@ -1108,22 +1091,22 @@ Worker::STATISTICS RoutingWorker::get_statistics()
 
     STATISTICS cs;
 
-    cs.n_read = mxs::sum(s, &STATISTICS::n_read);
-    cs.n_write = mxs::sum(s, &STATISTICS::n_write);
-    cs.n_error = mxs::sum(s, &STATISTICS::n_error);
-    cs.n_hup = mxs::sum(s, &STATISTICS::n_hup);
-    cs.n_accept = mxs::sum(s, &STATISTICS::n_accept);
-    cs.n_polls = mxs::sum(s, &STATISTICS::n_polls);
-    cs.n_pollev = mxs::sum(s, &STATISTICS::n_pollev);
-    cs.evq_avg = mxs::avg(s, &STATISTICS::evq_avg);
-    cs.evq_max = mxs::max(s, &STATISTICS::evq_max);
-    cs.maxqtime = mxs::max(s, &STATISTICS::maxqtime);
+    cs.n_read      = mxs::sum(s, &STATISTICS::n_read);
+    cs.n_write     = mxs::sum(s, &STATISTICS::n_write);
+    cs.n_error     = mxs::sum(s, &STATISTICS::n_error);
+    cs.n_hup       = mxs::sum(s, &STATISTICS::n_hup);
+    cs.n_accept    = mxs::sum(s, &STATISTICS::n_accept);
+    cs.n_polls     = mxs::sum(s, &STATISTICS::n_polls);
+    cs.n_pollev    = mxs::sum(s, &STATISTICS::n_pollev);
+    cs.evq_avg     = mxs::avg(s, &STATISTICS::evq_avg);
+    cs.evq_max     = mxs::max(s, &STATISTICS::evq_max);
+    cs.maxqtime    = mxs::max(s, &STATISTICS::maxqtime);
     cs.maxexectime = mxs::max(s, &STATISTICS::maxexectime);
-    cs.n_fds = mxs::sum_element(s, &STATISTICS::n_fds);
-    cs.n_fds = mxs::min_element(s, &STATISTICS::n_fds);
-    cs.n_fds = mxs::max_element(s, &STATISTICS::n_fds);
-    cs.qtimes = mxs::avg_element(s, &STATISTICS::qtimes);
-    cs.exectimes = mxs::avg_element(s, &STATISTICS::exectimes);
+    cs.n_fds       = mxs::sum_element(s, &STATISTICS::n_fds);
+    cs.n_fds       = mxs::min_element(s, &STATISTICS::n_fds);
+    cs.n_fds       = mxs::max_element(s, &STATISTICS::n_fds);
+    cs.qtimes      = mxs::avg_element(s, &STATISTICS::qtimes);
+    cs.exectimes   = mxs::avg_element(s, &STATISTICS::exectimes);
 
     return cs;
 }
@@ -1188,13 +1171,9 @@ bool RoutingWorker::get_qc_stats(int id, QC_CACHE_STATS* pStats)
     public:
         Task(QC_CACHE_STATS* pStats)
             : m_stats(*pStats)
-        {
-        }
+        {}
 
-        void execute(Worker&)
-        {
-            qc_get_cache_stats(&m_stats);
-        }
+        void execute(Worker&) { qc_get_cache_stats(&m_stats); }
 
     private:
         QC_CACHE_STATS& m_stats;
@@ -1268,7 +1247,7 @@ json_t* qc_stats_to_json(const char* zHost, int id, const QC_CACHE_STATS& stats)
 
     return pJson;
 }
-}
+}  // namespace
 
 // static
 std::unique_ptr<json_t> RoutingWorker::get_qc_stats_as_json(const char* zHost, int id)
@@ -1315,12 +1294,12 @@ std::unique_ptr<json_t> RoutingWorker::get_qc_stats_as_json(const char* zHost)
 RoutingWorker* RoutingWorker::pick_worker()
 {
     static uint32_t id_generator = 0;
-    int id = this_unit.id_min_worker
-        + (mxb::atomic::add(&id_generator, 1, mxb::atomic::RELAXED) % this_unit.nWorkers);
+    int id                       = this_unit.id_min_worker
+           + (mxb::atomic::add(&id_generator, 1, mxb::atomic::RELAXED) % this_unit.nWorkers);
     return get(id);
 }
 
-void RoutingWorker::register_epoll_tick_func(std::function<void ()> func)
+void RoutingWorker::register_epoll_tick_func(std::function<void()> func)
 {
     m_epoll_tick_funcs.push_back(func);
 }
@@ -1330,7 +1309,7 @@ void RoutingWorker::collect_worker_load(size_t count)
 {
     for (int i = 0; i < this_unit.nWorkers; ++i)
     {
-        auto* pWorker = this_unit.ppWorkers[i];
+        auto* pWorker      = this_unit.ppWorkers[i];
         auto* pWorker_load = this_unit.ppWorker_loads[i];
 
         if (pWorker_load->size() != count)
@@ -1362,9 +1341,9 @@ bool RoutingWorker::balance_workers(int threshold)
 {
     bool balancing = false;
 
-    int min_load = 100;
-    int max_load = 0;
-    RoutingWorker* pTo = nullptr;
+    int min_load         = 100;
+    int max_load         = 0;
+    RoutingWorker* pTo   = nullptr;
     RoutingWorker* pFrom = nullptr;
 
     auto rebalance_period = mxs::Config::get().rebalance_period.get();
@@ -1381,7 +1360,7 @@ bool RoutingWorker::balance_workers(int threshold)
         if (use_average)
         {
             mxb::Average* pLoad = this_unit.ppWorker_loads[i];
-            load = pLoad->value();
+            load                = pLoad->value();
         }
         else
         {
@@ -1392,13 +1371,13 @@ bool RoutingWorker::balance_workers(int threshold)
         if (load < min_load)
         {
             min_load = load;
-            pTo = pWorker;
+            pTo      = pWorker;
         }
 
         if (load > max_load)
         {
             max_load = load;
-            pFrom = pWorker;
+            pFrom    = pWorker;
         }
     }
 
@@ -1409,7 +1388,10 @@ bool RoutingWorker::balance_workers(int threshold)
         MXS_NOTICE("Difference in load (%d) between the thread with the maximum load (%d) the thread "
                    "with the minimum load (%d) exceeds the 'rebalance_threshold' value of %d, "
                    "moving work from the latter to the former.",
-                   diff_load, max_load, min_load, threshold);
+            diff_load,
+            max_load,
+            min_load,
+            threshold);
         balancing = true;
     }
 
@@ -1418,9 +1400,7 @@ bool RoutingWorker::balance_workers(int threshold)
         mxb_assert(pFrom);
         mxb_assert(pTo);
 
-        if (!pFrom->execute([pFrom, pTo]() {
-                                pFrom->rebalance(pTo);
-                            }, Worker::EXECUTE_QUEUED))
+        if (!pFrom->execute([pFrom, pTo]() { pFrom->rebalance(pTo); }, Worker::EXECUTE_QUEUED))
         {
             MXS_ERROR("Could not post task to worker, worker load balancing will not take place.");
         }
@@ -1447,7 +1427,7 @@ void RoutingWorker::rebalance()
     if (n_requested_moves == 1)
     {
         // Just one, move the most active one.
-        int max_io_activity = 0;
+        int max_io_activity   = 0;
         Session* pMax_session = nullptr;
 
         for (auto& kv : m_sessions)
@@ -1460,7 +1440,7 @@ void RoutingWorker::rebalance()
                 if (io_activity > max_io_activity)
                 {
                     max_io_activity = io_activity;
-                    pMax_session = pSession;
+                    pMax_session    = pSession;
                 }
             }
         }
@@ -1472,7 +1452,8 @@ void RoutingWorker::rebalance()
         else if (!m_sessions.empty())
         {
             MXB_INFO("Could not move any sessions from worker %i because all its sessions are in an "
-                     "unmovable state.", m_id);
+                     "unmovable state.",
+                m_id);
         }
     }
     else if (n_requested_moves > 1)
@@ -1488,7 +1469,7 @@ void RoutingWorker::rebalance()
             if (pSession->is_movable())
             {
                 sessions.push_back(pSession);
-                if (sessions.size() == (size_t)n_requested_moves)
+                if (sessions.size() == (size_t) n_requested_moves)
                 {
                     break;
                 }
@@ -1496,13 +1477,15 @@ void RoutingWorker::rebalance()
         }
 
         int n_available_sessions = m_sessions.size();
-        int n_movable_sessions = sessions.size();
+        int n_movable_sessions   = sessions.size();
         if (n_movable_sessions < n_requested_moves && n_available_sessions >= n_requested_moves)
         {
             // Had enough sessions but some were not movable.
             int non_movable = n_available_sessions - n_movable_sessions;
             MXB_INFO("%i session(s) out of %i on worker %i are in an unmovable state.",
-                     non_movable, n_available_sessions, m_id);
+                non_movable,
+                n_available_sessions,
+                m_id);
         }
 
         for (auto* pSession : sessions)
@@ -1517,10 +1500,13 @@ void RoutingWorker::rebalance()
 // static
 void RoutingWorker::start_shutdown()
 {
-    broadcast([]() {
-                  auto worker = RoutingWorker::get_current();
-                  worker->delayed_call(100, &RoutingWorker::try_shutdown, worker);
-              }, nullptr, EXECUTE_AUTO);
+    broadcast(
+        []() {
+        auto worker = RoutingWorker::get_current();
+        worker->delayed_call(100, &RoutingWorker::try_shutdown, worker);
+        },
+        nullptr,
+        EXECUTE_AUTO);
 }
 
 bool RoutingWorker::try_shutdown(Call::action_t action)
@@ -1544,7 +1530,7 @@ bool RoutingWorker::try_shutdown(Call::action_t action)
 
     return true;
 }
-}
+}  // namespace maxscale
 
 size_t mxs_rworker_broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
 {
@@ -1605,7 +1591,7 @@ public:
     {
         RoutingWorker& rworker = static_cast<RoutingWorker&>(worker);
 
-        json_t* pStats = json_object();
+        json_t* pStats              = json_object();
         const Worker::STATISTICS& s = rworker.statistics();
         json_object_set_new(pStats, "reads", json_integer(s.n_read));
         json_object_set_new(pStats, "writes", json_integer(s.n_write));
@@ -1649,7 +1635,7 @@ public:
         json_object_set_new(pJson, CN_ATTRIBUTES, pAttr);
         json_object_set_new(pJson, CN_LINKS, mxs_json_self_link(m_zHost, CN_THREADS, ss.str().c_str()));
 
-        mxb_assert((size_t)idx < m_data.size());
+        mxb_assert((size_t) idx < m_data.size());
         m_data[idx] = pJson;
     }
 
@@ -1674,32 +1660,26 @@ public:
 
 private:
     vector<json_t*> m_data;
-    const char*     m_zHost;
+    const char* m_zHost;
 };
 
 class FunctionTask : public Worker::DisposableTask
 {
 public:
-    FunctionTask(std::function<void ()> cb)
+    FunctionTask(std::function<void()> cb)
         : m_cb(cb)
-    {
-    }
+    {}
 
-    void execute(Worker& worker)
-    {
-        m_cb();
-    }
+    void execute(Worker& worker) { m_cb(); }
 
 protected:
-    std::function<void ()> m_cb;
+    std::function<void()> m_cb;
 };
-}
+}  // namespace
 
-size_t mxs_rworker_broadcast(void (* cb)(void* data), void* data)
+size_t mxs_rworker_broadcast(void (*cb)(void* data), void* data)
 {
-    std::unique_ptr<FunctionTask> task(new FunctionTask([cb, data]() {
-                                                            cb(data);
-                                                        }));
+    std::unique_ptr<FunctionTask> task(new FunctionTask([cb, data]() { cb(data); }));
 
     return RoutingWorker::broadcast(std::move(task));
 }
@@ -1729,16 +1709,14 @@ namespace
 class WatchdogTask : public Worker::Task
 {
 public:
-    WatchdogTask()
-    {
-    }
+    WatchdogTask() {}
 
     void execute(Worker& worker)
     {
         // Success if this is called.
     }
 };
-}
+}  // namespace
 
 void mxs_rworker_watchdog()
 {

@@ -29,8 +29,8 @@
 #include "service.hh"
 
 // The following may be called from a debugger session so use C-linkage to preserve names.
-extern "C" {
-
+extern "C"
+{
 void printAllSessions();
 void dprintAllSessions(DCB*);
 void dprintSession(DCB*, MXS_SESSION*);
@@ -44,22 +44,21 @@ class Server;
 class SessionFilter
 {
 public:
-
     SessionFilter(const SFilterDef& f)
         : filter(f)
         , instance(filter->filter)
         , session(nullptr)
-    {
-    }
+    {}
 
-    SFilterDef          filter;
-    MXS_FILTER*         instance;
+    SFilterDef filter;
+    MXS_FILTER* instance;
     MXS_FILTER_SESSION* session;
-    mxs::Upstream       up;
-    mxs::Downstream     down;
+    mxs::Upstream up;
+    mxs::Downstream down;
 };
 
-class Session : public MXS_SESSION, public mxs::Component
+class Session : public MXS_SESSION,
+                public mxs::Component
 {
 public:
     class QueryInfo
@@ -69,20 +68,11 @@ public:
 
         json_t* as_json() const;
 
-        bool complete() const
-        {
-            return m_complete;
-        }
+        bool complete() const { return m_complete; }
 
-        const std::shared_ptr<GWBUF>& query() const
-        {
-            return m_sQuery;
-        }
+        const std::shared_ptr<GWBUF>& query() const { return m_sQuery; }
 
-        timespec time_completed() const
-        {
-            return m_completed;
-        }
+        timespec time_completed() const { return m_completed; }
 
         void book_server_response(SERVER* pServer, bool final_response);
         void book_as_complete();
@@ -90,24 +80,23 @@ public:
 
         struct ServerInfo
         {
-            SERVER*  pServer;
+            SERVER* pServer;
             timespec processed;
         };
 
     private:
-        std::shared_ptr<GWBUF>  m_sQuery;           /*< The packet, COM_QUERY *or* something else. */
-        timespec                m_received;         /*< When was it received. */
-        timespec                m_completed;        /*< When was it completed. */
-        std::vector<ServerInfo> m_server_infos;     /*< When different servers responded. */
-        bool                    m_complete = false; /*< Is this information complete? */
+        std::shared_ptr<GWBUF> m_sQuery;        /*< The packet, COM_QUERY *or* something else. */
+        timespec m_received;                    /*< When was it received. */
+        timespec m_completed;                   /*< When was it completed. */
+        std::vector<ServerInfo> m_server_infos; /*< When different servers responded. */
+        bool m_complete = false;                /*< Is this information complete? */
     };
 
-    using FilterList = std::vector<SessionFilter>;
-    using DCBSet = std::unordered_set<DCB*>;
+    using FilterList              = std::vector<SessionFilter>;
+    using DCBSet                  = std::unordered_set<DCB*>;
     using BackendConnectionVector = std::vector<mxs::BackendConnection*>;
 
-    Session(std::shared_ptr<mxs::ListenerSessionData> listener_data,
-            const std::string& host);
+    Session(std::shared_ptr<mxs::ListenerSessionData> listener_data, const std::string& host);
     ~Session();
 
     bool start();
@@ -116,16 +105,11 @@ public:
     // Links a client DCB to a session
     void set_client_dcb(ClientDCB* dcb);
 
-    const FilterList& get_filters() const
-    {
-        return m_filters;
-    }
+    const FilterList& get_filters() const { return m_filters; }
 
-    bool  add_variable(const char* name, session_variable_handler_t handler, void* context);
-    char* set_variable_value(const char* name_begin,
-                             const char* name_end,
-                             const char* value_begin,
-                             const char* value_end);
+    bool add_variable(const char* name, session_variable_handler_t handler, void* context);
+    char* set_variable_value(
+        const char* name_begin, const char* name_end, const char* value_begin, const char* value_end);
     bool remove_variable(const char* name, void** context);
     void retain_statement(GWBUF* pBuffer);
     void dump_statements() const;
@@ -152,23 +136,20 @@ public:
      */
     void unlink_backend_connection(mxs::BackendConnection* conn);
 
-    BackendDCB* create_backend_connection(Server* server, BackendDCB::Manager* manager,
-                                          mxs::Component* upstream);
+    BackendDCB* create_backend_connection(
+        Server* server, BackendDCB::Manager* manager, mxs::Component* upstream);
 
-    const BackendConnectionVector& backend_connections() const
-    {
-        return m_backends_conns;
-    }
+    const BackendConnectionVector& backend_connections() const { return m_backends_conns; }
 
     // Implementation of mxs::Component
     int32_t routeQuery(GWBUF* buffer) override;
     int32_t clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
-    bool    handleError(mxs::ErrorType type, GWBUF* error, mxs::Endpoint* down,
-                        const mxs::Reply& reply) override;
+    bool handleError(
+        mxs::ErrorType type, GWBUF* error, mxs::Endpoint* down, const mxs::Reply& reply) override;
 
-    mxs::ClientConnection*       client_connection() override;
+    mxs::ClientConnection* client_connection() override;
     const mxs::ClientConnection* client_connection() const override;
-    mxs::ListenerSessionData*    listener_data() override;
+    mxs::ListenerSessionData* listener_data() override;
 
     void set_client_connection(mxs::ClientConnection* client_conn) override;
 
@@ -242,32 +223,32 @@ private:
     struct SESSION_VARIABLE
     {
         session_variable_handler_t handler;
-        void*                      context;
+        void* context;
     };
 
     using SessionVarsByName = std::unordered_map<std::string, SESSION_VARIABLE>;
-    using QueryInfos = std::deque<QueryInfo>;
-    using Log = std::deque<std::string>;
+    using QueryInfos        = std::deque<QueryInfo>;
+    using Log               = std::deque<std::string>;
 
-    FilterList        m_filters;
+    FilterList m_filters;
     SessionVarsByName m_variables;
-    QueryInfos        m_last_queries;           /*< The N last queries by the client */
-    int               m_current_query {-1};     /*< The index of the current query */
-    uint32_t          m_retain_last_statements; /*< How many statements be retained */
-    Log               m_log;                    /*< Session specific in-memory log */
-    int64_t           m_ttl = 0;                /*< How many seconds the session has until it is killed  */
-    int64_t           m_ttl_start = 0;          /*< The clock tick when TTL was assigned */
+    QueryInfos m_last_queries;         /*< The N last queries by the client */
+    int m_current_query {-1};          /*< The index of the current query */
+    uint32_t m_retain_last_statements; /*< How many statements be retained */
+    Log m_log;                         /*< Session specific in-memory log */
+    int64_t m_ttl       = 0;           /*< How many seconds the session has until it is killed  */
+    int64_t m_ttl_start = 0;           /*< The clock tick when TTL was assigned */
 
-    BackendConnectionVector m_backends_conns;   /*< Backend connections, in creation order */
-    mxs::ClientConnection*  m_client_conn {nullptr};
+    BackendConnectionVector m_backends_conns; /*< Backend connections, in creation order */
+    mxs::ClientConnection* m_client_conn {nullptr};
 
     // Various listener-specific data the session needs. Ownership shared with the listener that
     // created this session.
     std::shared_ptr<mxs::ListenerSessionData> m_listener_data;
-    std::shared_ptr<mxs::ProtocolModule>      m_protocol;
+    std::shared_ptr<mxs::ProtocolModule> m_protocol;
 
-    static const int N_LOAD = 30;   // Last 30 seconds.
+    static const int N_LOAD = 30;  // Last 30 seconds.
 
     mutable std::array<int, N_LOAD> m_io_activity {};
-    time_t                          m_last_io_activity {0};
+    time_t m_last_io_activity {0};
 };

@@ -21,11 +21,11 @@
 #include <unistd.h>
 #include <sstream>
 
-#if !defined (MXS_MODULE_NAME)
+#if !defined(MXS_MODULE_NAME)
 #define MXS_MODULE_NAME NULL
 #endif
 
-#if !defined (MXB_MODULE_NAME)
+#if !defined(MXB_MODULE_NAME)
 #define MXB_MODULE_NAME MXS_MODULE_NAME
 #endif
 

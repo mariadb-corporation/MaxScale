@@ -18,86 +18,82 @@
 
 using namespace std;
 
-const char valid_minimal[] =
-    "{"
-    "  \"rules\": ["
-    "    {"
-    "      \"replace\": { "
-    "        \"column\": \"a\" "
-    "      },"
-    "      \"with\": {"
-    "        \"value\": \"blah\" "
-    "      }"
-    "    },"
-    "    {"
-    "      \"obfuscate\": { "
-    "        \"column\": \"b\" "
-    "      }"
-    "    }"
-    "  ]"
-    "}";
+const char valid_minimal[] = "{"
+                             "  \"rules\": ["
+                             "    {"
+                             "      \"replace\": { "
+                             "        \"column\": \"a\" "
+                             "      },"
+                             "      \"with\": {"
+                             "        \"value\": \"blah\" "
+                             "      }"
+                             "    },"
+                             "    {"
+                             "      \"obfuscate\": { "
+                             "        \"column\": \"b\" "
+                             "      }"
+                             "    }"
+                             "  ]"
+                             "}";
 
-const char valid_maximal[] =
-    "{"
-    "  \"rules\": ["
-    "    {"
-    "      \"replace\": { "
-    "        \"column\": \"a\", "
-    "        \"table\": \"b\", "
-    "        \"database\": \"c\" "
-    "      },"
-    "      \"with\": {"
-    "        \"value\": \"blah\", "
-    "        \"fill\": \"blah\" "
-    "      },"
-    "      \"applies_to\": ["
-    "        \"'alice'@'host'\","
-    "        \"'bob'@'%'\","
-    "        \"'cecil'@'%.123.45.2'\""
-    "      ],"
-    "      \"exempted\": ["
-    "        \"'admin'\""
-    "      ]"
-    "    },"
-    "    {"
-    "      \"obfuscate\": { "
-    "        \"column\": \"c\", "
-    "        \"table\": \"d\", "
-    "        \"database\": \"e\" "
-    "      }"
-    "    }"
-    "  ]"
-    "}";
+const char valid_maximal[] = "{"
+                             "  \"rules\": ["
+                             "    {"
+                             "      \"replace\": { "
+                             "        \"column\": \"a\", "
+                             "        \"table\": \"b\", "
+                             "        \"database\": \"c\" "
+                             "      },"
+                             "      \"with\": {"
+                             "        \"value\": \"blah\", "
+                             "        \"fill\": \"blah\" "
+                             "      },"
+                             "      \"applies_to\": ["
+                             "        \"'alice'@'host'\","
+                             "        \"'bob'@'%'\","
+                             "        \"'cecil'@'%.123.45.2'\""
+                             "      ],"
+                             "      \"exempted\": ["
+                             "        \"'admin'\""
+                             "      ]"
+                             "    },"
+                             "    {"
+                             "      \"obfuscate\": { "
+                             "        \"column\": \"c\", "
+                             "        \"table\": \"d\", "
+                             "        \"database\": \"e\" "
+                             "      }"
+                             "    }"
+                             "  ]"
+                             "}";
 
 // Neither "obfuscate", nor "replace".
-const char invalid1[] =
-    "{"
-    "  \"rules\": ["
-    "    {"
-    "      \"applies_to\": ["
-    "        \"'alice'@'host'\","
-    "        \"'bob'@'%'\""
-    "      ],"
-    "      \"exempted\": ["
-    "        \"'admin'\""
-    "      ]"
-    "    }"
-    "  ]"
-    "}";
+const char invalid1[] = "{"
+                        "  \"rules\": ["
+                        "    {"
+                        "      \"applies_to\": ["
+                        "        \"'alice'@'host'\","
+                        "        \"'bob'@'%'\""
+                        "      ],"
+                        "      \"exempted\": ["
+                        "        \"'admin'\""
+                        "      ]"
+                        "    }"
+                        "  ]"
+                        "}";
 
 // No "column" in "replace"
-const char invalid2[] =
-    "{"
-    "  \"rules\": ["
-    "    {"
-    "      \"replace\": { "
-    "      },"
-    "      \"with\": { "
-    "        \"value\": \"blah\" "
-    "      }"
-    "    }"
-    "  ]"
-    "}";
+const char invalid2[] = "{"
+                        "  \"rules\": ["
+                        "    {"
+                        "      \"replace\": { "
+                        "      },"
+                        "      \"with\": { "
+                        "        \"value\": \"blah\" "
+                        "      }"
+                        "    }"
+                        "  ]"
+                        "}";
 
 // No "value" or "fill" in "with"
 /**
@@ -111,118 +107,98 @@ const char invalid2[] =
  * void MaskingRules::ReplaceRule::rewrite(LEncString& s)
  *
  */
-const char invalid3[] =
-    "{"
-    "  \"rules\": ["
-    "    {"
-    "      \"replace\": { "
-    "        \"column\": \"a\", "
-    "      },"
-    "      \"with\": {"
-    "      },"
-    "    }"
-    "  ]"
-    "}";
+const char invalid3[] = "{"
+                        "  \"rules\": ["
+                        "    {"
+                        "      \"replace\": { "
+                        "        \"column\": \"a\", "
+                        "      },"
+                        "      \"with\": {"
+                        "      },"
+                        "    }"
+                        "  ]"
+                        "}";
 
 // No "column" in "obfuscate"
-const char invalid4[] =
-    "{"
-    "  \"rules\": ["
-    "    {"
-    "      \"obfuscate\": { "
-    "      }"
-    "    }"
-    "  ]"
-    "}";
+const char invalid4[] = "{"
+                        "  \"rules\": ["
+                        "    {"
+                        "      \"obfuscate\": { "
+                        "      }"
+                        "    }"
+                        "  ]"
+                        "}";
 
 // No "with" in "replace"
-const char invalid5[] =
-    "{"
-    "  \"rules\": ["
-    "    {"
-    "      \"replace\": { "
-    "        \"column\": \"a\" "
-    "      },"
-    "      \"applies_to\": ["
-    "        \"'alice'@'host'\","
-    "        \"'bob'@'%'\""
-    "      ],"
-    "      \"exempted\": ["
-    "        \"'admin'\""
-    "      ]"
-    "    }"
-    "  ]"
-    "}";
+const char invalid5[] = "{"
+                        "  \"rules\": ["
+                        "    {"
+                        "      \"replace\": { "
+                        "        \"column\": \"a\" "
+                        "      },"
+                        "      \"applies_to\": ["
+                        "        \"'alice'@'host'\","
+                        "        \"'bob'@'%'\""
+                        "      ],"
+                        "      \"exempted\": ["
+                        "        \"'admin'\""
+                        "      ]"
+                        "    }"
+                        "  ]"
+                        "}";
 
 struct rule_test
 {
     const char* zJson;
-    bool        valid;
-} rule_tests[] =
-{
-    {valid_minimal, true },
-    {valid_maximal, true },
-    {invalid1,      false},
-    {invalid2,      false},
-    {invalid3,      false},
-    {invalid4,      false},
-    {invalid5,      false},
+    bool valid;
+} rule_tests[] = {
+    {valid_minimal, true},
+    {valid_maximal, true},
+    {invalid1, false},
+    {invalid2, false},
+    {invalid3, false},
+    {invalid4, false},
+    {invalid5, false},
 };
 
 const size_t nRule_tests = (sizeof(rule_tests) / sizeof(rule_tests[0]));
 
 // Valid, lot's of users.
-const char valid_users[] =
-    "{"
-    "  \"rules\": ["
-    "    {"
-    "      \"replace\": { "
-    "        \"column\": \"a\" "
-    "      },"
-    "      \"with\": {"
-    "        \"value\": \"blah\" "
-    "      },"
-    "      \"applies_to\": ["
-    "        \"'alice'@'host'\","
-    "        \"'bob'@'%'\","
-    "        \"'cecil'@'%.123.45.2'\","
-    "        \"'david'\","
-    "        \"@'host'\""
-    "      ],"
-    "      \"exempted\": ["
-    "        \"'admin'\""
-    "      ]"
-    "    }"
-    "  ]"
-    "}";
+const char valid_users[] = "{"
+                           "  \"rules\": ["
+                           "    {"
+                           "      \"replace\": { "
+                           "        \"column\": \"a\" "
+                           "      },"
+                           "      \"with\": {"
+                           "        \"value\": \"blah\" "
+                           "      },"
+                           "      \"applies_to\": ["
+                           "        \"'alice'@'host'\","
+                           "        \"'bob'@'%'\","
+                           "        \"'cecil'@'%.123.45.2'\","
+                           "        \"'david'\","
+                           "        \"@'host'\""
+                           "      ],"
+                           "      \"exempted\": ["
+                           "        \"'admin'\""
+                           "      ]"
+                           "    }"
+                           "  ]"
+                           "}";
 
 struct expected_account
 {
     const char* zUser;
     const char* zHost;
-} expected_accounts[] =
-{
-    {
-        "alice",
-        "host",
-    },
-    {
-        "bob",
-        ".*"
-    },
-    {
-        "cecil",
-        ".*\\.123\\.45\\.2"
-    },
-    {
-        "david",
-        ""
-    },
-    {
-        "",
-        "host"
-    }
-};
+} expected_accounts[] = {{
+                             "alice",
+                             "host",
+                         },
+    {"bob", ".*"},
+    {"cecil", ".*\\.123\\.45\\.2"},
+    {"david", ""},
+    {"", "host"}};
 
 const size_t nExpected_accounts = (sizeof(expected_accounts) / sizeof(expected_accounts[0]));
 

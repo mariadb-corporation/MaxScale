@@ -29,7 +29,7 @@ using namespace std::chrono_literals;
 
 namespace
 {
-using VisitorFunc = std::function<bool (MariaDBServer*)>;   // Used by graph search
+using VisitorFunc = std::function<bool(MariaDBServer*)>;  // Used by graph search
 
 /**
  * Generic depth-first search. Iterates through the root and its child nodes (slaves) and runs
@@ -44,25 +44,25 @@ void topology_DFS(MariaDBServer* root, VisitorFunc& visitor)
 {
     int next_index = NodeData::INDEX_FIRST;
     // This lambda is recursive, so its type needs to be defined and it needs to "capture itself".
-    std::function<void(MariaDBServer*, VisitorFunc&)> topology_DFS_visit =
-        [&topology_DFS_visit, &next_index](MariaDBServer* node, VisitorFunc& visitor) {
-            mxb_assert(node->m_node.index == NodeData::INDEX_NOT_VISITED);
-            node->m_node.index = next_index++;
-            if (visitor(node))
+    std::function<void(MariaDBServer*, VisitorFunc&)> topology_DFS_visit
+        = [&topology_DFS_visit, &next_index](MariaDBServer* node, VisitorFunc& visitor) {
+        mxb_assert(node->m_node.index == NodeData::INDEX_NOT_VISITED);
+        node->m_node.index = next_index++;
+        if (visitor(node))
+        {
+            for (MariaDBServer* slave : node->m_node.children)
             {
-                for (MariaDBServer* slave : node->m_node.children)
+                if (slave->m_node.index == NodeData::INDEX_NOT_VISITED)
                 {
-                    if (slave->m_node.index == NodeData::INDEX_NOT_VISITED)
-                    {
-                        topology_DFS_visit(slave, visitor);
-                    }
+                    topology_DFS_visit(slave, visitor);
                 }
             }
-        };
+        }
+    };
 
     topology_DFS_visit(root, visitor);
 }
-}
+}  // namespace
 
 /**
  * @brief Visit a node in the graph
@@ -79,17 +79,15 @@ void topology_DFS(MariaDBServer* root, VisitorFunc& visitor)
  * @param next_ind Visitation index of next node
  * @param next_cycle Index of next found cycle
  */
-void MariaDBMonitor::tarjan_scc_visit_node(MariaDBServer* node,
-                                           ServerArray* stack,
-                                           int* next_ind,
-                                           int* next_cycle)
+void MariaDBMonitor::tarjan_scc_visit_node(
+    MariaDBServer* node, ServerArray* stack, int* next_ind, int* next_cycle)
 {
     /** Assign an index to this node */
-    NodeData& node_info = node->m_node;
-    auto ind = *next_ind;
-    node_info.index = ind;
+    NodeData& node_info    = node->m_node;
+    auto ind               = *next_ind;
+    node_info.index        = ind;
     node_info.lowest_index = ind;
-    *next_ind = ind + 1;
+    *next_ind              = ind + 1;
 
     if (node_info.parents.empty())
     {
@@ -126,28 +124,29 @@ void MariaDBMonitor::tarjan_scc_visit_node(MariaDBServer* node,
          * on the stack (index > lowest_index). Otherwise, start popping elements. */
         if (node_info.index == node_info.lowest_index)
         {
-            int cycle_size = 0;     // Keep track of cycle size since we don't mark one-node cycles.
+            int cycle_size = 0;  // Keep track of cycle size since we don't mark one-node cycles.
             auto cycle_ind = *next_cycle;
             while (true)
             {
                 mxb_assert(!stack->empty());
                 MariaDBServer* cycle_server = stack->back();
-                NodeData& cycle_node = cycle_server->m_node;
+                NodeData& cycle_node        = cycle_server->m_node;
                 stack->pop_back();
                 cycle_node.in_stack = false;
                 cycle_size++;
-                if (cycle_node.index == node_info.index)    // Last node in cycle
+                if (cycle_node.index == node_info.index)  // Last node in cycle
                 {
                     if (cycle_size > 1)
                     {
-                        cycle_node.cycle = cycle_ind;
-                        ServerArray& members = m_cycles[cycle_ind];     // Creates array if didn't exist
+                        cycle_node.cycle     = cycle_ind;
+                        ServerArray& members = m_cycles[cycle_ind];  // Creates array if didn't exist
                         members.push_back(cycle_server);
                         // Sort the cycle members according to monitor config order.
-                        std::sort(members.begin(), members.end(),
-                                  [](const MariaDBServer* lhs, const MariaDBServer* rhs) -> bool {
-                                      return lhs->m_config_index < rhs->m_config_index;
-                                  });
+                        std::sort(members.begin(),
+                            members.end(),
+                            [](const MariaDBServer* lhs, const MariaDBServer* rhs) -> bool {
+                                return lhs->m_config_index < rhs->m_config_index;
+                            });
                         // All cycle elements popped. Next cycle...
                         *next_cycle = cycle_ind + 1;
                     }
@@ -155,7 +154,7 @@ void MariaDBMonitor::tarjan_scc_visit_node(MariaDBServer* node,
                 }
                 else
                 {
-                    cycle_node.cycle = cycle_ind;   // Has more nodes, mark cycle.
+                    cycle_node.cycle     = cycle_ind;  // Has more nodes, mark cycle.
                     ServerArray& members = m_cycles[cycle_ind];
                     members.push_back(cycle_server);
                 }
@@ -191,7 +190,7 @@ void MariaDBMonitor::build_replication_graph()
             {
                 // Looks promising, check hostname or server id.
                 MariaDBServer* found_master = NULL;
-                bool is_external = false;
+                bool is_external            = false;
                 if (use_hostnames)
                 {
                     found_master = get_server(slave_conn.settings.master_endpoint);
@@ -268,8 +267,8 @@ void MariaDBMonitor::find_graph_cycles()
     m_cycles.clear();
     // The next items need to be passed around in the recursive calls to keep track of algorithm state.
     ServerArray stack;
-    int index = NodeData::INDEX_FIRST;      /* Node visit index */
-    int cycle = NodeData::CYCLE_FIRST;      /* If cycles are found, the nodes in the cycle are given an
+    int index = NodeData::INDEX_FIRST; /* Node visit index */
+    int cycle = NodeData::CYCLE_FIRST; /* If cycles are found, the nodes in the cycle are given an
                                              * identical
                                              * cycle index. */
 
@@ -333,75 +332,75 @@ MariaDBServer* MariaDBMonitor::find_topology_master_server(RequireRunning req_ru
     ServerArray master_candidates;
 
     // Helper function for finding normal master candidates.
-    auto search_outside_cycles = [this, &master_candidates](RequireRunning req_running,
-                                                            DelimitedPrinter& topo_messages) {
-            for (MariaDBServer* server : servers())
+    auto search_outside_cycles
+        = [this, &master_candidates](RequireRunning req_running, DelimitedPrinter& topo_messages) {
+        for (MariaDBServer* server : servers())
+        {
+            if (server->m_node.parents.empty())
             {
-                if (server->m_node.parents.empty())
+                string why_not;
+                if (is_candidate_valid(server, req_running, &why_not))
                 {
-                    string why_not;
-                    if (is_candidate_valid(server, req_running, &why_not))
-                    {
-                        master_candidates.push_back(server);
-                    }
-                    else
-                    {
-                        topo_messages.cat(why_not);
-                    }
+                    master_candidates.push_back(server);
+                }
+                else
+                {
+                    topo_messages.cat(why_not);
                 }
             }
-        };
+        }
+    };
 
     // Helper function for finding master candidates inside cycles.
-    auto search_inside_cycles = [this, &master_candidates](RequireRunning req_running,
-                                                           DelimitedPrinter& topo_messages) {
-            // For each cycle, it's enough to take one sample server, as all members of a cycle have the
-            // same reach. The sample server needs to be valid, though.
-            for (auto& iter : m_cycles)
+    auto search_inside_cycles
+        = [this, &master_candidates](RequireRunning req_running, DelimitedPrinter& topo_messages) {
+        // For each cycle, it's enough to take one sample server, as all members of a cycle have the
+        // same reach. The sample server needs to be valid, though.
+        for (auto& iter : m_cycles)
+        {
+            ServerArray& cycle_members = iter.second;
+            // Check that no server in the cycle is replicating from outside the cycle. This requirement
+            // is analogous with the same requirement for non-cycle servers.
+            if (!cycle_has_master_server(cycle_members))
             {
-                ServerArray& cycle_members = iter.second;
-                // Check that no server in the cycle is replicating from outside the cycle. This requirement
-                // is analogous with the same requirement for non-cycle servers.
-                if (!cycle_has_master_server(cycle_members))
+                // Find a valid candidate from the cycle.
+                MariaDBServer* cycle_cand = nullptr;
+                for (MariaDBServer* elem : cycle_members)
                 {
-                    // Find a valid candidate from the cycle.
-                    MariaDBServer* cycle_cand = nullptr;
-                    for (MariaDBServer* elem : cycle_members)
+                    mxb_assert(elem->m_node.cycle != NodeData::CYCLE_NONE);
+                    if (is_candidate_valid(elem, req_running))
                     {
-                        mxb_assert(elem->m_node.cycle != NodeData::CYCLE_NONE);
-                        if (is_candidate_valid(elem, req_running))
-                        {
-                            cycle_cand = elem;
-                            break;
-                        }
-                    }
-                    if (cycle_cand)
-                    {
-                        master_candidates.push_back(cycle_cand);
-                    }
-                    else
-                    {
-                        // No single server in the cycle was viable. Go through the cycle again and construct
-                        // a message explaining why.
-                        string server_names = monitored_servers_to_string(cycle_members);
-                        string msg_start = string_printf(
-                            "No valid master server could be found in the cycle with servers %s:",
-                            server_names.c_str());
-
-                        DelimitedPrinter cycle_invalid_msg("\n");
-                        cycle_invalid_msg.cat(msg_start);
-                        for (MariaDBServer* elem : cycle_members)
-                        {
-                            string server_msg;
-                            is_candidate_valid(elem, req_running, &server_msg);
-                            cycle_invalid_msg.cat(server_msg);
-                        }
-                        cycle_invalid_msg.cat("");      // Adds a linebreak
-                        topo_messages.cat(cycle_invalid_msg.message());
+                        cycle_cand = elem;
+                        break;
                     }
                 }
+                if (cycle_cand)
+                {
+                    master_candidates.push_back(cycle_cand);
+                }
+                else
+                {
+                    // No single server in the cycle was viable. Go through the cycle again and construct
+                    // a message explaining why.
+                    string server_names = monitored_servers_to_string(cycle_members);
+                    string msg_start
+                        = string_printf("No valid master server could be found in the cycle with servers %s:",
+                            server_names.c_str());
+
+                    DelimitedPrinter cycle_invalid_msg("\n");
+                    cycle_invalid_msg.cat(msg_start);
+                    for (MariaDBServer* elem : cycle_members)
+                    {
+                        string server_msg;
+                        is_candidate_valid(elem, req_running, &server_msg);
+                        cycle_invalid_msg.cat(server_msg);
+                    }
+                    cycle_invalid_msg.cat("");  // Adds a linebreak
+                    topo_messages.cat(cycle_invalid_msg.message());
+                }
             }
-        };
+        }
+    };
 
     // Normally, do not accept downed servers as master.
     DelimitedPrinter topo_messages_reject_down("\n");
@@ -414,7 +413,7 @@ MariaDBServer* MariaDBMonitor::find_topology_master_server(RequireRunning req_ru
     {
         // Found one or more candidates. Select the best one and output the messages.
         best_candidate = find_best_reach_server(master_candidates);
-        messages = topo_messages_reject_down.message();
+        messages       = topo_messages_reject_down.message();
     }
     else if (req_running == RequireRunning::OPTIONAL)
     {
@@ -431,7 +430,7 @@ MariaDBServer* MariaDBMonitor::find_topology_master_server(RequireRunning req_ru
             // messages, output the messages without complaints that a server is down. The caller
             // should detect and explain that a non-running server was selected.
             best_candidate = find_best_reach_server(master_candidates);
-            messages = topo_messages_accept_down.message();
+            messages       = topo_messages_accept_down.message();
         }
         else
         {
@@ -460,16 +459,16 @@ void MariaDBMonitor::calculate_node_reach(MariaDBServer* search_root)
     // Reset indexes since they will be reused.
     reset_node_index_info();
 
-    int reach = 0;
+    int reach           = 0;
     VisitorFunc visitor = [&reach](MariaDBServer* node) -> bool {
-            bool node_running = node->is_running();
-            if (node_running)
-            {
-                reach++;
-            }
-            // The node is expanded if it's running.
-            return node_running;
-        };
+        bool node_running = node->is_running();
+        if (node_running)
+        {
+            reach++;
+        }
+        // The node is expanded if it's running.
+        return node_running;
+    };
 
     topology_DFS(search_root, visitor);
     search_root->m_node.reach = reach;
@@ -488,14 +487,14 @@ int MariaDBMonitor::running_slaves(MariaDBServer* search_root)
     reset_node_index_info();
 
     int n_running_slaves = 0;
-    VisitorFunc visitor = [&n_running_slaves](MariaDBServer* node) -> bool {
-            if (node->is_running())
-            {
-                n_running_slaves++;
-            }
-            // The node is always expanded.
-            return true;
-        };
+    VisitorFunc visitor  = [&n_running_slaves](MariaDBServer* node) -> bool {
+        if (node->is_running())
+        {
+            n_running_slaves++;
+        }
+        // The node is always expanded.
+        return true;
+    };
 
     topology_DFS(search_root, visitor);
     return n_running_slaves;
@@ -509,8 +508,8 @@ void MariaDBMonitor::assign_server_roles()
 {
     // Remove any existing [Master], [Slave] etc flags from 'pending_status', they are still available in
     // 'mon_prev_status'.
-    const uint64_t remove_bits = SERVER_MASTER | SERVER_SLAVE | SERVER_RELAY | SERVER_SLAVE_OF_EXT_MASTER
-        | SERVER_BLR;
+    const uint64_t remove_bits
+        = SERVER_MASTER | SERVER_SLAVE | SERVER_RELAY | SERVER_SLAVE_OF_EXT_MASTER | SERVER_BLR;
     for (auto server : servers())
     {
         server->clear_status(remove_bits);
@@ -527,11 +526,11 @@ void MariaDBMonitor::assign_server_roles()
             m_master->m_replication_lag = 0;
 
             // Check that all master requirements are fulfilled.
-            bool master_conds_ok = true;
-            const auto master_conds = m_settings.master_conds;
+            bool master_conds_ok            = true;
+            const auto master_conds         = m_settings.master_conds;
             const bool req_connecting_slave = master_conds & MasterConds::MCOND_CONNECTING_S;
-            const bool req_connected_slave = master_conds & MasterConds::MCOND_CONNECTED_S;
-            const bool req_running_slave = master_conds & MasterConds::MCOND_RUNNING_S;
+            const bool req_connected_slave  = master_conds & MasterConds::MCOND_CONNECTED_S;
+            const bool req_running_slave    = master_conds & MasterConds::MCOND_RUNNING_S;
             if (req_connecting_slave || req_connected_slave || req_running_slave)
             {
                 // Check that at least one slave fulfills the given conditions. Only check immediate slaves,
@@ -539,14 +538,13 @@ void MariaDBMonitor::assign_server_roles()
                 bool slave_found = false;
                 for (const auto slave : m_master->m_node.children)
                 {
-                    bool is_connected =
-                        (slave->slave_connection_status(m_master)->slave_io_running
-                         == SlaveStatus::SLAVE_IO_YES);
-                    bool is_running = slave->is_running();
+                    bool is_connected = (slave->slave_connection_status(m_master)->slave_io_running
+                                         == SlaveStatus::SLAVE_IO_YES);
+                    bool is_running   = slave->is_running();
 
                     // req_connecting_slave is always met by m_node->children
-                    bool slave_is_ok = !((req_connected_slave && !is_connected)
-                                         || (req_running_slave && !is_running));
+                    bool slave_is_ok
+                        = !((req_connected_slave && !is_connected) || (req_running_slave && !is_running));
                     if (slave_is_ok)
                     {
                         slave_found = true;
@@ -599,27 +597,28 @@ void MariaDBMonitor::assign_server_roles()
 void MariaDBMonitor::assign_slave_and_relay_master()
 {
     mxb_assert(m_master->m_node.index == NodeData::INDEX_NOT_VISITED);
+
     // Combines a node with its connection state. The state tracks whether there is a series of
     // running slave connections all the way to the master server. If even one server is down or
     // a connection is broken in the series, the link is considered stale.
     struct QueueElement
     {
         MariaDBServer* node;
-        bool           active_link;
+        bool active_link;
     };
 
     auto compare = [](const QueueElement& left, const QueueElement& right) {
-            return !left.active_link && right.active_link;
-        };
+        return !left.active_link && right.active_link;
+    };
     /* 'open_set' contains the nodes which the search should expand to. It's a priority queue so that nodes
      * with a functioning chain of slave connections to the master are processed first. Only after all such
      * nodes have been processed does the search expand to downed or disconnected nodes. */
     std::priority_queue<QueueElement, std::vector<QueueElement>, decltype(compare)> open_set(compare);
 
-    const auto slave_conds = m_settings.slave_conds;
-    const bool req_running_master = slave_conds & SlaveConds::SCOND_RUNNING_M;
+    const auto slave_conds         = m_settings.slave_conds;
+    const bool req_running_master  = slave_conds & SlaveConds::SCOND_RUNNING_M;
     const bool req_writable_master = slave_conds & SlaveConds::SCOND_WRITABLE_M;
-    const bool req_coop_master = slave_conds & SlaveConds::SCOND_COOP_M;
+    const bool req_coop_master     = slave_conds & SlaveConds::SCOND_COOP_M;
 
     // First, check conditions that immediately prevent any [Slave]s from being tagged:
     // 1) Require writable master yet master is not a valid master.
@@ -643,7 +642,7 @@ void MariaDBMonitor::assign_slave_and_relay_master()
     // Begin by adding the starting node to the open_set. Then keep running until no more nodes can be found.
     QueueElement start = {m_master, m_master->is_running()};
     open_set.push(start);
-    int next_index = NodeData::INDEX_FIRST;
+    int next_index                = NodeData::INDEX_FIRST;
     const bool allow_stale_slaves = !(slave_conds & SlaveConds::SCOND_LINKED_M);
 
     while (!open_set.empty())
@@ -675,8 +674,8 @@ void MariaDBMonitor::assign_slave_and_relay_master()
 
             // Need to differentiate between stale and running slave connections.
             bool found_slave_conn = false;  // slave->parent connection exists
-            bool conn_is_live = false;      // live connection chain slave->cluster_master exists
-            auto sstatus = slave->slave_connection_status(parent);
+            bool conn_is_live     = false;  // live connection chain slave->cluster_master exists
+            auto sstatus          = slave->slave_connection_status(parent);
             if (sstatus)
             {
                 if (sstatus->slave_io_running == SlaveStatus::SLAVE_IO_YES)
@@ -716,7 +715,7 @@ void MariaDBMonitor::assign_slave_and_relay_master()
                         // in which case take the smallest value. This only counts the slave connections
                         // leading to the master or a relay.
                         int curr_rlag = slave->m_replication_lag;
-                        int new_rlag = sstatus->seconds_behind_master;
+                        int new_rlag  = sstatus->seconds_behind_master;
                         if (new_rlag != mxs::Target::RLAG_UNDEFINED
                             && (curr_rlag == mxs::Target::RLAG_UNDEFINED || new_rlag < curr_rlag))
                         {
@@ -728,8 +727,8 @@ void MariaDBMonitor::assign_slave_and_relay_master()
         }
 
         // Finally, if the node itself is a running slave and has slaves of its own, label it as relay.
-        if (parent != m_master && parent_has_live_link
-            && parent->has_status(SERVER_SLAVE | SERVER_RUNNING) && has_running_slaves)
+        if (parent != m_master && parent_has_live_link && parent->has_status(SERVER_SLAVE | SERVER_RUNNING)
+            && has_running_slaves)
         {
             parent->set_status(SERVER_RELAY);
         }
@@ -765,7 +764,7 @@ bool MariaDBMonitor::master_is_valid(std::string* reason_out)
     else if (m_master->is_running() && m_master->is_read_only())
     {
         is_valid = false;
-        reason = "it is in read-only mode";
+        reason   = "it is in read-only mode";
     }
     // 3) Master lock status is not properly set.
     else if (is_slave_maxscale() && m_master->is_running() && !m_master->marked_as_master(&reason))
@@ -783,9 +782,9 @@ bool MariaDBMonitor::master_is_valid(std::string* reason_out)
              && running_slaves(m_master) == 0)
     {
         is_valid = false;
-        reason = string_printf("it has been down over %d (failcount) monitor updates and "
-                               "it does not have any running slaves",
-                               m_settings.failcount);
+        reason   = string_printf("it has been down over %d (failcount) monitor updates and "
+                                 "it does not have any running slaves",
+            m_settings.failcount);
     }
 
     // Next, test topology changes which may lead to a master change. Only valid when master is running.
@@ -798,7 +797,7 @@ bool MariaDBMonitor::master_is_valid(std::string* reason_out)
             if (!m_master->m_node.parents.empty())
             {
                 is_valid = false;
-                reason = "it has started replicating from another server in the cluster";
+                reason   = "it has started replicating from another server in the cluster";
             }
         }
         // 6) The master was part of a cycle but is no longer, or one of the servers in the cycle is
@@ -812,9 +811,9 @@ bool MariaDBMonitor::master_is_valid(std::string* reason_out)
             // 6a) The master is no longer in a cycle.
             if (current_cycle_id == NodeData::CYCLE_NONE)
             {
-                is_valid = false;
+                is_valid                 = false;
                 ServerArray& old_members = m_master_cycle_status.cycle_members;
-                string server_names_old = monitored_servers_to_string(old_members);
+                string server_names_old  = monitored_servers_to_string(old_members);
                 reason = "it is no longer in the multimaster group (" + server_names_old + ")";
             }
             // 6b) The master is still in a cycle but the cycle has gained a master outside of the cycle.
@@ -823,10 +822,10 @@ bool MariaDBMonitor::master_is_valid(std::string* reason_out)
                 ServerArray& current_members = m_cycles[current_cycle_id];
                 if (cycle_has_master_server(current_members))
                 {
-                    is_valid = false;
+                    is_valid                    = false;
                     string server_names_current = monitored_servers_to_string(current_members);
                     reason = "a server in the master's multimaster group (" + server_names_current
-                        + ") is replicating from a server not in the group";
+                           + ") is replicating from a server not in the group";
                 }
             }
         }
@@ -847,7 +846,7 @@ bool MariaDBMonitor::cycle_has_master_server(ServerArray& cycle_servers)
 {
     mxb_assert(!cycle_servers.empty());
     bool outside_replication = false;
-    int cycle_id = cycle_servers.front()->m_node.cycle;
+    int cycle_id             = cycle_servers.front()->m_node.cycle;
 
     for (MariaDBServer* server : cycle_servers)
     {
@@ -921,7 +920,9 @@ void MariaDBMonitor::update_master()
                 // This is unlikely to be printed continuously because of the topology-change requirement.
                 MXS_WARNING("'%s' is a better master candidate than the current master '%s'. "
                             "Master will change when '%s' is no longer a valid master.",
-                            master_cand->name(), m_master->name(), m_master->name());
+                    master_cand->name(),
+                    m_master->name(),
+                    m_master->name());
             }
         }
     }
@@ -929,8 +930,8 @@ void MariaDBMonitor::update_master()
     {
         // Current master is faulty and swapping to a better, running server is allowed.
         string topology_messages;
-        MariaDBServer* master_cand = find_topology_master_server(RequireRunning::REQUIRED,
-                                                                 &topology_messages);
+        MariaDBServer* master_cand
+            = find_topology_master_server(RequireRunning::REQUIRED, &topology_messages);
         m_warn_cannot_find_master = true;
         if (master_cand)
         {
@@ -941,7 +942,8 @@ void MariaDBMonitor::update_master()
                 mxb_assert(!reason_not_valid.empty());
                 MXS_WARNING("The current master server '%s' is no longer valid because %s. "
                             "Selecting new master server.",
-                            m_master->name(), reason_not_valid.c_str());
+                    m_master->name(),
+                    reason_not_valid.c_str());
 
                 // At this point, print messages explaining why any/other possible master servers
                 // weren't picked.
@@ -961,7 +963,9 @@ void MariaDBMonitor::update_master()
                 // message from printing repeatedly.
                 MXS_WARNING("Attempted to find a replacement for the current master server '%s' because %s, "
                             "but '%s' is still the best master server.",
-                            m_master->name(), reason_not_valid.c_str(), m_master->name());
+                    m_master->name(),
+                    reason_not_valid.c_str(),
+                    m_master->name());
 
                 if (!topology_messages.empty())
                 {
@@ -978,7 +982,8 @@ void MariaDBMonitor::update_master()
             mxb_assert(!reason_not_valid.empty());
             MXS_WARNING("The current master server '%s' is no longer valid because %s, "
                         "but there is no valid alternative to swap to.",
-                        m_master->name(), reason_not_valid.c_str());
+                m_master->name(),
+                reason_not_valid.c_str());
             if (!topology_messages.empty())
             {
                 MXS_WARNING("%s", topology_messages.c_str());
@@ -991,8 +996,8 @@ void MariaDBMonitor::update_master()
         // This happens only when starting from scratch before a master has been selected.
         // Accept either a running or downed master, preferring running servers.
         string topology_messages;
-        MariaDBServer* master_cand = find_topology_master_server(RequireRunning::OPTIONAL,
-                                                                 &topology_messages);
+        MariaDBServer* master_cand
+            = find_topology_master_server(RequireRunning::OPTIONAL, &topology_messages);
         if (master_cand)
         {
             MXS_NOTICE("Selecting new master server.");
@@ -1029,8 +1034,8 @@ void MariaDBMonitor::set_low_disk_slaves_maintenance()
     // Only set pure slave and standalone servers to maintenance.
     for (MariaDBServer* server : servers())
     {
-        if (server->is_low_on_disk_space() && server->is_usable()
-            && !server->is_master() && !server->is_relay_master())
+        if (server->is_low_on_disk_space() && server->is_usable() && !server->is_master()
+            && !server->is_relay_master())
         {
             // TODO: Handle relays somehow, e.g. switch with a slave
             MXS_WARNING("Setting '%s' to maintenance because it is low on disk space.", server->name());
@@ -1077,8 +1082,8 @@ bool MariaDBMonitor::is_candidate_valid(MariaDBServer* cand, RequireRunning req_
 
     if (!is_valid && why_not)
     {
-        *why_not = string_printf("'%s' is not a valid master candidate because %s.",
-                                 cand->name(), reasons.message().c_str());
+        *why_not = string_printf(
+            "'%s' is not a valid master candidate because %s.", cand->name(), reasons.message().c_str());
     }
     return is_valid;
 }
@@ -1095,7 +1100,7 @@ void MariaDBMonitor::update_cluster_lock_status()
         int server_locks_free = 0;
         int server_locks_held = 0;
         int master_locks_held = 0;
-        int running_servers = 0;
+        int running_servers   = 0;
 
         for (MariaDBServer* server : servers())
         {
@@ -1115,7 +1120,7 @@ void MariaDBMonitor::update_cluster_lock_status()
         }
         else
         {
-            required_for_majority = ((int)servers().size() / 2 + 1);
+            required_for_majority = ((int) servers().size() / 2 + 1);
         }
 
         // Check if this monitor can obtain lock majority.
@@ -1146,13 +1151,15 @@ void MariaDBMonitor::update_cluster_lock_status()
                 {
                     MXS_NOTICE("'%s' acquired the exclusive lock on a majority of its servers. "
                                "Configured automatic cluster manipulation operations (e.g. failover) can be "
-                               "performed in %i monitor ticks.", name(), m_settings.failcount);
+                               "performed in %i monitor ticks.",
+                        name(),
+                        m_settings.failcount);
                 }
                 else
                 {
                     MXS_NOTICE("'%s' acquired the exclusive lock on a majority of its servers. "
                                "Manual cluster manipulation operations (e.g. failover) can be performed.",
-                               name());
+                        name());
                 }
                 // Delay automatic operations regardless of if they are configured, as the configuration
                 // could change on any tick.
@@ -1164,13 +1171,15 @@ void MariaDBMonitor::update_cluster_lock_status()
                 {
                     MXS_WARNING("'%s' lost the exclusive lock on a majority of its servers. "
                                 "Configured automatic cluster manipulation operations (e.g. failover) "
-                                "can not be performed.", name());
+                                "can not be performed.",
+                        name());
                 }
                 else
                 {
                     MXS_WARNING("'%s' lost the exclusive lock on a majority of its servers. "
                                 "Manual cluster manipulation operations (e.g. failover) "
-                                "can not be performed.", name());
+                                "can not be performed.",
+                        name());
                 }
             }
         }
@@ -1182,7 +1191,8 @@ void MariaDBMonitor::update_cluster_lock_status()
         {
             MXB_WARNING("'%s' holds %i lock(s) without lock majority, and will release them. "
                         "The monitor of the primary MaxScale must have failed to acquire all server locks.",
-                        name(), total_locks);
+                name(),
+                total_locks);
             for (MariaDBServer* server : servers())
             {
                 server->release_all_locks();
@@ -1205,17 +1215,17 @@ int MariaDBMonitor::get_free_locks()
 
     std::atomic_int locks_acquired {0};
     auto get_lock_task = [&locks_acquired](MariaDBServer* server) {
-            locks_acquired += server->get_lock(LockType::SERVER);
-        };
+        locks_acquired += server->get_lock(LockType::SERVER);
+    };
     execute_task_on_servers(get_lock_task, targets);
     return locks_acquired;
 }
 
 MariaDBMonitor::DNSResolver::StringSet MariaDBMonitor::DNSResolver::resolve_server(const string& host)
 {
-    auto now = mxb::Clock::now();
-    const auto MAX_AGE = 5min;      // Refresh interval for cache entries.
-    auto recent_time = now - MAX_AGE;
+    auto now           = mxb::Clock::now();
+    const auto MAX_AGE = 5min;  // Refresh interval for cache entries.
+    auto recent_time   = now - MAX_AGE;
     DNSResolver::StringSet rval;
 
     auto iter = m_mapping.find(host);
@@ -1231,7 +1241,7 @@ MariaDBMonitor::DNSResolver::StringSet MariaDBMonitor::DNSResolver::resolve_serv
         }
         // If dns failed, the array will be empty. Add/replace the element anyway to prevent repeated lookups.
         m_mapping[host] = {addresses, now};
-        rval = std::move(addresses);
+        rval            = std::move(addresses);
     }
     else
     {

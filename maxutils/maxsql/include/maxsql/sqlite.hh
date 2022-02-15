@@ -33,11 +33,11 @@ class SQLite
 public:
     SQLite() = default;
     ~SQLite();
-    SQLite(const SQLite& rhs) = delete;
+    SQLite(const SQLite& rhs)            = delete;
     SQLite& operator=(const SQLite& rhs) = delete;
 
     static constexpr unsigned int INTERNAL_ERROR = 1;
-    static constexpr unsigned int USER_ERROR = 2;
+    static constexpr unsigned int USER_ERROR     = 2;
 
     template<class T>
     using Callback = int (*)(T* data, int n_columns, char** rows, char** field_names);
@@ -123,9 +123,9 @@ private:
     using CallbackVoid = int (*)(void* data, int n_columns, char** rows, char** field_names);
     bool exec_impl(const std::string& sql, CallbackVoid cb, void* cb_data);
 
-    sqlite3*    m_dbhandle {nullptr};
+    sqlite3* m_dbhandle {nullptr};
     std::string m_errormsg;
-    int         m_errornum {0};
+    int m_errornum {0};
 };
 
 /**
@@ -195,7 +195,7 @@ public:
 
 private:
     sqlite3_stmt* m_stmt {nullptr};
-    int           m_errornum {0};
+    int m_errornum {0};
 };
 
 /**
@@ -226,14 +226,14 @@ public:
     int64_t get_row_count() const override;
 
 private:
-    const char*              row_elem(int64_t column_ind) const override;
-    bool                     advance_row() override;
+    const char* row_elem(int64_t column_ind) const override;
+    bool advance_row() override;
 
-    std::vector<std::string> m_column_names;    /**< Column names */
-    std::vector<std::string> m_data_array;      /**< A flattened 2D-array with results */
+    std::vector<std::string> m_column_names; /**< Column names */
+    std::vector<std::string> m_data_array;   /**< A flattened 2D-array with results */
 
     int m_cols {0};
     int m_rows {0};
     int m_current_row {0};
 };
-}
+}  // namespace maxsql

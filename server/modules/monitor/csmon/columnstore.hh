@@ -54,7 +54,7 @@ const char* to_string(DbrmMode dbrm_mode);
 bool from_string(const char* zDbrm_mode, DbrmMode* pDbrm_mode);
 
 using DbRootIdVector = std::vector<int>;
-using ServiceVector = std::vector<std::pair<std::string,int>>;
+using ServiceVector  = std::vector<std::pair<std::string, int>>;
 
 bool from_string(const char* zTimestamp, std::chrono::system_clock::time_point* pTimestamp);
 bool from_string(const char* zXml, std::unique_ptr<xmlDoc>* psDoc);
@@ -63,15 +63,16 @@ bool services_from_array(json_t* pArray, ServiceVector* pServices);
 
 namespace xml
 {
-const char DBRM_CONTROLLER[]       = "DBRM_Controller";
-const char DDLPROC[]               = "DDLProc";
-const char DMLPROC[]               = "DMLProc";
-const char IPADDR[]                = "IPAddr";
-}
+const char DBRM_CONTROLLER[] = "DBRM_Controller";
+const char DDLPROC[]         = "DDLProc";
+const char DMLPROC[]         = "DMLProc";
+const char IPADDR[]          = "IPAddr";
+}  // namespace xml
 
 namespace rest
 {
-enum Action {
+enum Action
+{
     ADD_NODE,
     BEGIN,
     COMMIT,
@@ -91,22 +92,16 @@ enum Scope
     NODE
 };
 
-std::string create_url(const SERVER& server,
-                       int64_t port,
-                       const std::string& rest_base,
-                       Scope scope,
-                       Action action);
+std::string create_url(
+    const SERVER& server, int64_t port, const std::string& rest_base, Scope scope, Action action);
 
-inline std::string create_url(const mxs::MonitorServer& mserver,
-                              int64_t port,
-                              const std::string& rest_base,
-                              Scope scope,
-                              Action action)
+inline std::string create_url(
+    const mxs::MonitorServer& mserver, int64_t port, const std::string& rest_base, Scope scope, Action action)
 {
     return create_url(*mserver.server, port, rest_base, scope, action);
 }
 
-}
+}  // namespace rest
 
 namespace body
 {
@@ -167,10 +162,8 @@ std::string commit(const std::chrono::seconds& timeout, int id);
  *
  * @return REST-API body.
  */
-std::string config(const xmlDoc& csXml,
-                   int revision,
-                   const std::string& manager,
-                   const std::chrono::seconds& timeout);
+std::string config(
+    const xmlDoc& csXml, int revision, const std::string& manager, const std::chrono::seconds& timeout);
 
 /**
  * @brief JSON body to be used with PUT /node/config
@@ -182,10 +175,8 @@ std::string config(const xmlDoc& csXml,
  *
  * @return REST-API body.
  */
-std::string config_set_cluster_mode(ClusterMode mode,
-                                    int revision,
-                                    const std::string& manager,
-                                    const std::chrono::seconds& timeout);
+std::string config_set_cluster_mode(
+    ClusterMode mode, int revision, const std::string& manager, const std::chrono::seconds& timeout);
 
 /**
  * @brief JSON body to be used with PUT /cluster/remove-node
@@ -220,6 +211,6 @@ std::string shutdown(const std::chrono::seconds& timeout);
  */
 std::string start(const std::chrono::seconds& timeout);
 
-}
+}  // namespace body
 
-}
+}  // namespace cs

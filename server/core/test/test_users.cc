@@ -12,10 +12,10 @@
  */
 
 // To ensure that ss_info_assert asserts also when builing in non-debug mode.
-#if !defined (SS_DEBUG)
+#if !defined(SS_DEBUG)
 #define SS_DEBUG
 #endif
-#if defined (NDEBUG)
+#if defined(NDEBUG)
 #undef NDEBUG
 #endif
 #include <cstdio>

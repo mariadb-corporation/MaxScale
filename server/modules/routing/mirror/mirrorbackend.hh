@@ -37,10 +37,7 @@ public:
 
     void process_result(GWBUF* buffer, const mxs::Reply& reply);
 
-    const mxs::CRC32Checksum& checksum() const
-    {
-        return m_checksum;
-    }
+    const mxs::CRC32Checksum& checksum() const { return m_checksum; }
 
     // Query duration in milliseconds
     uint64_t duration() const
@@ -48,14 +45,11 @@ public:
         return std::chrono::duration_cast<std::chrono::milliseconds>(m_end - m_start).count();
     }
 
-    const mxs::Reply& reply() const
-    {
-        return m_reply;
-    }
+    const mxs::Reply& reply() const { return m_reply; }
 
 private:
-    Clock::time_point  m_start;
-    Clock::time_point  m_end;
+    Clock::time_point m_start;
+    Clock::time_point m_end;
     mxs::CRC32Checksum m_checksum;
-    mxs::Reply         m_reply;
+    mxs::Reply m_reply;
 };

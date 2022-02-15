@@ -26,7 +26,6 @@ StorageModuleT<InMemoryStorage> module;
 
 extern "C"
 {
-
 StorageModule* CacheGetStorageModule()
 {
     return &module;

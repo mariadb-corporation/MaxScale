@@ -45,7 +45,7 @@ MXB_BEGIN_DECLS
  * Any file that is compiled into maxscale-common should *not* have
  * MXB_MODULE_NAME defined.
  */
-#if !defined (MXB_MODULE_NAME)
+#if !defined(MXB_MODULE_NAME)
 #define MXB_MODULE_NAME NULL
 #endif
 
@@ -60,15 +60,15 @@ typedef enum mxb_log_target_t
 
 typedef enum mxb_log_augmentation_t
 {
-    MXB_LOG_AUGMENT_WITH_FUNCTION = 1,      // Each logged line is suffixed with [function-name]
+    MXB_LOG_AUGMENT_WITH_FUNCTION = 1,  // Each logged line is suffixed with [function-name]
     MXB_LOG_AUGMENTATION_MASK     = (MXB_LOG_AUGMENT_WITH_FUNCTION)
 } mxb_log_augmentation_t;
 
 typedef struct MXB_LOG_THROTTLING
 {
-    size_t count;       // Maximum number of a specific message...
-    size_t window_ms;   // ...during this many milliseconds.
-    size_t suppress_ms; // If exceeded, suppress such messages for this many ms.
+    size_t count;        // Maximum number of a specific message...
+    size_t window_ms;    // ...during this many milliseconds.
+    size_t suppress_ms;  // If exceeded, suppress such messages for this many ms.
 } MXB_LOG_THROTTLING;
 
 /**
@@ -83,9 +83,9 @@ typedef struct MXB_LOG_THROTTLING
  *
  * @return Length of data written to buffer.
  */
-typedef size_t (* mxb_log_context_provider_t)(char* buffer, size_t len);
+typedef size_t (*mxb_log_context_provider_t)(char* buffer, size_t len);
 
-typedef void (* mxb_in_memory_log_t)(const char* buffer, size_t len);
+typedef void (*mxb_in_memory_log_t)(const char* buffer, size_t len);
 
 /**
  * @brief Initialize the log
@@ -104,11 +104,11 @@ typedef void (* mxb_in_memory_log_t)(const char* buffer, size_t len);
  * @return true if succeed, otherwise false
  */
 bool mxb_log_init(const char* ident,
-                  const char* logdir,
-                  const char* filename,
-                  mxb_log_target_t target,
-                  mxb_log_context_provider_t context_provider,
-                  mxb_in_memory_log_t in_memory_log);
+    const char* logdir,
+    const char* filename,
+    mxb_log_target_t target,
+    mxb_log_context_provider_t context_provider,
+    mxb_in_memory_log_t in_memory_log);
 
 /**
  * @brief Finalize the log
@@ -260,12 +260,12 @@ void mxb_log_set_session_trace(bool enabled);
  * @return 0 for success, non-zero otherwise.
  */
 int mxb_log_message(int priority,
-                    const char* modname,
-                    const char* file,
-                    int line,
-                    const char* function,
-                    const char* format,
-                    ...) mxb_attribute((format(printf, 6, 7)));
+    const char* modname,
+    const char* file,
+    int line,
+    const char* function,
+    const char* format,
+    ...) mxb_attribute((format(printf, 6, 7)));
 
 /**
  * Log a fatal error message.
@@ -290,10 +290,10 @@ int mxb_log_fatal_error(const char* message);
  * @attention Should typically not be called directly. Use some of the
  *            MXB_ERROR, MXB_WARNING, etc. macros instead.
  */
-#define MXB_LOG_MESSAGE(priority, format, ...) \
-    (mxb_log_is_priority_enabled(priority) || mxb_log_get_session_trace()  \
-     ? mxb_log_message(priority, MXB_MODULE_NAME, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)  \
-     : 0)
+#define MXB_LOG_MESSAGE(priority, format, ...)                                               \
+    (mxb_log_is_priority_enabled(priority) || mxb_log_get_session_trace() ? mxb_log_message( \
+         priority, MXB_MODULE_NAME, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)     \
+                                                                          : 0)
 
 /**
  * Log an alert, error, warning, notice, info, or debug  message.
@@ -317,7 +317,7 @@ int mxb_log_fatal_error(const char* message);
 #define MXB_NOTICE(format, ...)  MXB_LOG_MESSAGE(LOG_NOTICE, format, ##__VA_ARGS__)
 #define MXB_INFO(format, ...)    MXB_LOG_MESSAGE(LOG_INFO, format, ##__VA_ARGS__)
 
-#if defined (SS_DEBUG)
+#if defined(SS_DEBUG)
 #define MXB_DEBUG(format, ...) MXB_LOG_MESSAGE(LOG_DEBUG, format, ##__VA_ARGS__)
 #else
 #define MXB_DEBUG(format, ...)
@@ -349,7 +349,15 @@ int mxb_log_fatal_error(const char* message);
  *
  * @return 0 for success, non-zero otherwise.
  */
-#define MXB_OOM_IFNULL(p) do {if (!p) {MXB_OOM();}} while (false)
+#define MXB_OOM_IFNULL(p) \
+    do                    \
+    {                     \
+        if (!p)           \
+        {                 \
+            MXB_OOM();    \
+        }                 \
+    }                     \
+    while (false)
 
 /**
  * Log an out of memory error using custom message, if the
@@ -360,6 +368,14 @@ int mxb_log_fatal_error(const char* message);
  *
  * @return 0 for success, non-zero otherwise.
  */
-#define MXB_OOM_MESSAGE_IFNULL(p, message) do {if (!p) {MXB_OOM_MESSAGE(message);}} while (false)
+#define MXB_OOM_MESSAGE_IFNULL(p, message) \
+    do                                     \
+    {                                      \
+        if (!p)                            \
+        {                                  \
+            MXB_OOM_MESSAGE(message);      \
+        }                                  \
+    }                                      \
+    while (false)
 
 MXB_END_DECLS

@@ -48,12 +48,12 @@ namespace cfg = mxs::config;
 namespace
 {
 
-constexpr const char CN_EXTRA_PORT[] = "extra_port";
-constexpr const char CN_MONITORPW[] = "monitorpw";
-constexpr const char CN_MONITORUSER[] = "monitoruser";
+constexpr const char CN_EXTRA_PORT[]     = "extra_port";
+constexpr const char CN_MONITORPW[]      = "monitorpw";
+constexpr const char CN_MONITORUSER[]    = "monitoruser";
 constexpr const char CN_PERSISTMAXTIME[] = "persistmaxtime";
 constexpr const char CN_PERSISTPOOLMAX[] = "persistpoolmax";
-constexpr const char CN_PRIORITY[] = "priority";
+constexpr const char CN_PRIORITY[]       = "priority";
 constexpr const char CN_PROXY_PROTOCOL[] = "proxy_protocol";
 
 const char ERR_TOO_LONG_CONFIG_VALUE[] = "The new value for %s is too long. Maximum length is %i characters.";
@@ -95,22 +95,15 @@ public:
     using cfg::Specification::Specification;
 
 protected:
-
     template<class Params>
     bool do_post_validate(Params params) const;
 
-    bool post_validate(const mxs::ConfigParameters& params) const
-    {
-        return do_post_validate(params);
-    }
+    bool post_validate(const mxs::ConfigParameters& params) const { return do_post_validate(params); }
 
-    bool post_validate(json_t* json) const
-    {
-        return do_post_validate(json);
-    }
+    bool post_validate(json_t* json) const { return do_post_validate(json); }
 };
 
-static const auto NO_QUOTES = cfg::ParamString::IGNORED;
+static const auto NO_QUOTES  = cfg::ParamString::IGNORED;
 static const auto AT_RUNTIME = cfg::Param::AT_RUNTIME;
 
 static ServerSpec s_spec(CN_SERVERS, cfg::Specification::SERVER);
@@ -131,9 +124,12 @@ static cfg::ParamString s_monitorpw(&s_spec, CN_MONITORPW, "Monitor password", "
 static cfg::ParamCount s_persistpoolmax(
     &s_spec, CN_PERSISTPOOLMAX, "Maximum size of the persistent connection pool", 0, AT_RUNTIME);
 
-static cfg::ParamSeconds s_persistmaxtime(
-    &s_spec, CN_PERSISTMAXTIME, "Maximum time that a connection can be in the pool",
-    cfg::INTERPRET_AS_SECONDS, 0s, AT_RUNTIME);
+static cfg::ParamSeconds s_persistmaxtime(&s_spec,
+    CN_PERSISTMAXTIME,
+    "Maximum time that a connection can be in the pool",
+    cfg::INTERPRET_AS_SECONDS,
+    0s,
+    AT_RUNTIME);
 
 static cfg::ParamBool s_proxy_protocol(
     &s_spec, CN_PROXY_PROTOCOL, "Enable proxy protocol", false, AT_RUNTIME);
@@ -141,12 +137,12 @@ static cfg::ParamBool s_proxy_protocol(
 static Server::ParamDiskSpaceLimits s_disk_space_threshold(
     &s_spec, CN_DISK_SPACE_THRESHOLD, "Server disk space threshold");
 
-static cfg::ParamEnum<int64_t> s_rank(
-    &s_spec, CN_RANK, "Server rank",
-    {
-        {RANK_PRIMARY, "primary"},
-        {RANK_SECONDARY, "secondary"}
-    }, RANK_PRIMARY, AT_RUNTIME);
+static cfg::ParamEnum<int64_t> s_rank(&s_spec,
+    CN_RANK,
+    "Server rank",
+    {{RANK_PRIMARY, "primary"}, {RANK_SECONDARY, "secondary"}},
+    RANK_PRIMARY,
+    AT_RUNTIME);
 
 //
 // TLS parameters, only configurable at server creation time
@@ -158,15 +154,15 @@ static cfg::ParamPath s_ssl_cert(&s_spec, CN_SSL_CERT, "TLS public certificate",
 static cfg::ParamPath s_ssl_key(&s_spec, CN_SSL_KEY, "TLS private key", cfg::ParamPath::R, "");
 static cfg::ParamPath s_ssl_ca(&s_spec, CN_SSL_CA_CERT, "TLS certificate authority", cfg::ParamPath::R, "");
 
-static cfg::ParamEnum<mxb::ssl_version::Version> s_ssl_version(
-    &s_spec, CN_SSL_VERSION, "Minimum TLS protocol version",
-    {
-        {mxb::ssl_version::SSL_TLS_MAX, "MAX"},
+static cfg::ParamEnum<mxb::ssl_version::Version> s_ssl_version(&s_spec,
+    CN_SSL_VERSION,
+    "Minimum TLS protocol version",
+    {{mxb::ssl_version::SSL_TLS_MAX, "MAX"},
         {mxb::ssl_version::TLS10, "TLSv10"},
         {mxb::ssl_version::TLS11, "TLSv11"},
         {mxb::ssl_version::TLS12, "TLSv12"},
-        {mxb::ssl_version::TLS13, "TLSv13"}
-    }, mxb::ssl_version::SSL_TLS_MAX);
+        {mxb::ssl_version::TLS13, "TLSv13"}},
+    mxb::ssl_version::SSL_TLS_MAX);
 
 static cfg::ParamString s_ssl_cipher(&s_spec, CN_SSL_CIPHER, "TLS cipher list", "", NO_QUOTES);
 
@@ -176,21 +172,20 @@ static cfg::ParamCount s_ssl_cert_verify_depth(
 static cfg::ParamBool s_ssl_verify_peer_certificate(
     &s_spec, CN_SSL_VERIFY_PEER_CERTIFICATE, "Verify TLS peer certificate", false);
 
-static cfg::ParamBool s_ssl_verify_peer_host(
-    &s_spec, CN_SSL_VERIFY_PEER_HOST, "Verify TLS peer host", false);
+static cfg::ParamBool s_ssl_verify_peer_host(&s_spec, CN_SSL_VERIFY_PEER_HOST, "Verify TLS peer host", false);
 
 template<class Params>
 bool ServerSpec::do_post_validate(Params params) const
 {
-    bool rval = true;
+    bool rval    = true;
     auto monuser = s_monitoruser.get(params);
-    auto monpw = s_monitorpw.get(params);
+    auto monpw   = s_monitorpw.get(params);
 
     if (monuser.empty() != monpw.empty())
     {
         MXS_ERROR("If '%s is defined, '%s' must also be defined.",
-                  !monuser.empty() ? CN_MONITORUSER : CN_MONITORPW,
-                  !monuser.empty() ? CN_MONITORPW : CN_MONITORUSER);
+            !monuser.empty() ? CN_MONITORUSER : CN_MONITORPW,
+            !monuser.empty() ? CN_MONITORPW : CN_MONITORUSER);
         rval = false;
     }
 
@@ -206,22 +201,24 @@ bool ServerSpec::do_post_validate(Params params) const
         rval = false;
     }
 
-    auto address = s_address.get(params);
-    auto socket = s_socket.get(params);
+    auto address      = s_address.get(params);
+    auto socket       = s_socket.get(params);
     bool have_address = !address.empty();
-    bool have_socket = !socket.empty();
-    auto addr = have_address ? address : socket;
+    bool have_socket  = !socket.empty();
+    auto addr         = have_address ? address : socket;
 
     if (have_socket && have_address)
     {
         MXS_ERROR("Both '%s=%s' and '%s=%s' defined: only one of the parameters can be defined",
-                  CN_ADDRESS, address.c_str(), CN_SOCKET, socket.c_str());
+            CN_ADDRESS,
+            address.c_str(),
+            CN_SOCKET,
+            socket.c_str());
         rval = false;
     }
     else if (!have_address && !have_socket)
     {
-        MXS_ERROR("Missing a required parameter: either '%s' or '%s' must be defined",
-                  CN_ADDRESS, CN_SOCKET);
+        MXS_ERROR("Missing a required parameter: either '%s' or '%s' must be defined", CN_ADDRESS, CN_SOCKET);
         rval = false;
     }
     else if (have_address && addr[0] == '/')
@@ -244,10 +241,10 @@ bool ServerSpec::do_post_validate(Params params) const
     return rval;
 }
 
-std::pair<bool, std::unique_ptr<mxs::SSLContext>> create_ssl(const char* name,
-                                                             const mxs::ConfigParameters& params)
+std::pair<bool, std::unique_ptr<mxs::SSLContext>> create_ssl(
+    const char* name, const mxs::ConfigParameters& params)
 {
-    bool ok = true;
+    bool ok  = true;
     auto ssl = std::make_unique<mxs::SSLContext>();
 
     if (!ssl->read_configuration(name, params, false))
@@ -265,14 +262,13 @@ std::pair<bool, std::unique_ptr<mxs::SSLContext>> create_ssl(const char* name,
 
     return {ok, std::move(ssl)};
 }
-}
+}  // namespace
 
-Server::ParamDiskSpaceLimits::ParamDiskSpaceLimits(cfg::Specification* pSpecification,
-                                                   const char* zName, const char* zDescription)
+Server::ParamDiskSpaceLimits::ParamDiskSpaceLimits(
+    cfg::Specification* pSpecification, const char* zName, const char* zDescription)
     : cfg::ConcreteParam<ParamDiskSpaceLimits, DiskSpaceLimits>(
         pSpecification, zName, zDescription, AT_RUNTIME, OPTIONAL, MXS_MODULE_PARAM_STRING, value_type())
-{
-}
+{}
 
 std::string Server::ParamDiskSpaceLimits::type() const
 {
@@ -282,15 +278,14 @@ std::string Server::ParamDiskSpaceLimits::type() const
 std::string Server::ParamDiskSpaceLimits::to_string(Server::ParamDiskSpaceLimits::value_type value) const
 {
     std::vector<std::string> tmp;
-    std::transform(value.begin(), value.end(), std::back_inserter(tmp),
-                   [](const auto& a) {
-                       return a.first + ':' + std::to_string(a.second);
-                   });
+    std::transform(value.begin(), value.end(), std::back_inserter(tmp), [](const auto& a) {
+        return a.first + ':' + std::to_string(a.second);
+    });
     return mxb::join(tmp, ",");
 }
 
-bool Server::ParamDiskSpaceLimits::from_string(const std::string& value, value_type* pValue,
-                                               std::string* pMessage) const
+bool Server::ParamDiskSpaceLimits::from_string(
+    const std::string& value, value_type* pValue, std::string* pMessage) const
 {
     return config_parse_disk_space_threshold(pValue, value.c_str());
 }
@@ -307,8 +302,8 @@ json_t* Server::ParamDiskSpaceLimits::to_json(value_type value) const
     return obj;
 }
 
-bool Server::ParamDiskSpaceLimits::from_json(const json_t* pJson, value_type* pValue,
-                                             std::string* pMessage) const
+bool Server::ParamDiskSpaceLimits::from_json(
+    const json_t* pJson, value_type* pValue, std::string* pMessage) const
 {
     bool ok = false;
 
@@ -327,7 +322,7 @@ bool Server::ParamDiskSpaceLimits::from_json(const json_t* pJson, value_type* pV
             }
             else
             {
-                ok = false;
+                ok        = false;
                 *pMessage = "'"s + key + "' is not a JSON number.";
                 break;
             }
@@ -354,8 +349,7 @@ bool Server::ParamDiskSpaceLimits::from_json(const json_t* pJson, value_type* pV
 Server::ParamSSL::ParamSSL(cfg::Specification* pSpecification, const char* zName, const char* zDescription)
     : cfg::ConcreteParam<ParamSSL, bool>(
         pSpecification, zName, zDescription, AT_STARTUP, OPTIONAL, MXS_MODULE_PARAM_STRING, false)
-{
-}
+{}
 
 std::string Server::ParamSSL::type() const
 {
@@ -367,11 +361,10 @@ std::string Server::ParamSSL::to_string(Server::ParamSSL::value_type value) cons
     return value ? "true" : "false";
 }
 
-bool Server::ParamSSL::from_string(const std::string& value, value_type* pValue,
-                                   std::string* pMessage) const
+bool Server::ParamSSL::from_string(const std::string& value, value_type* pValue, std::string* pMessage) const
 {
     bool rval = true;
-    int val = config_truth_value(value.c_str());
+    int val   = config_truth_value(value.c_str());
 
     if (val != -1)
     {
@@ -388,7 +381,7 @@ bool Server::ParamSSL::from_string(const std::string& value, value_type* pValue,
     else
     {
         *pMessage = "Unknown value: " + value;
-        rval = false;
+        rval      = false;
     }
 
     return rval;
@@ -399,14 +392,13 @@ json_t* Server::ParamSSL::to_json(value_type value) const
     return json_boolean(value);
 }
 
-bool Server::ParamSSL::from_json(const json_t* pJson, value_type* pValue,
-                                 std::string* pMessage) const
+bool Server::ParamSSL::from_json(const json_t* pJson, value_type* pValue, std::string* pMessage) const
 {
     bool ok = false;
 
     if (json_is_boolean(pJson))
     {
-        ok = true;
+        ok      = true;
         *pValue = json_boolean_value(pJson);
     }
     else if (json_is_string(pJson))
@@ -488,8 +480,7 @@ Server::Settings::Settings(const std::string& name)
     , m_ssl_verify_peer_certificate(this, &s_ssl_verify_peer_certificate)
     , m_ssl_verify_peer_host(this, &s_ssl_verify_peer_host)
     , m_ssl_cipher(this, &s_ssl_cipher)
-{
-}
+{}
 
 bool Server::Settings::post_configure()
 {
@@ -549,16 +540,14 @@ std::unique_ptr<Server> Server::create(const char* name, json_t* json)
 Server* Server::create_test_server()
 {
     static int next_id = 1;
-    string name = "TestServer" + std::to_string(next_id++);
+    string name        = "TestServer" + std::to_string(next_id++);
     return new Server(name);
 }
 
 void Server::cleanup_persistent_connections() const
 {
     RoutingWorker::execute_concurrently(
-        [this]() {
-            RoutingWorker::get_current()->evict_dcbs(this, RoutingWorker::Evict::EXPIRED);
-        });
+        [this]() { RoutingWorker::get_current()->evict_dcbs(this, RoutingWorker::Evict::EXPIRED); });
 }
 
 uint64_t Server::status() const
@@ -687,6 +676,7 @@ Server::PoolStats& Server::pool_stats()
 {
     return m_pool_stats;
 }
+
 void Server::set_session_track_system_variables(std::string&& value)
 {
     std::lock_guard<std::mutex> guard(m_var_lock);
@@ -701,18 +691,15 @@ std::string Server::get_session_track_system_variables() const
 
 uint64_t Server::status_from_string(const char* str)
 {
-    static std::vector<std::pair<const char*, uint64_t>> status_bits =
-    {
-        {"running",      SERVER_RUNNING },
-        {"master",       SERVER_MASTER  },
-        {"slave",        SERVER_SLAVE   },
-        {"synced",       SERVER_JOINED  },
-        {"maintenance",  SERVER_MAINT   },
-        {"maint",        SERVER_MAINT   },
-        {"drain",        SERVER_DRAINING},
-        {"blr",          SERVER_BLR     },
-        {"binlogrouter", SERVER_BLR     }
-    };
+    static std::vector<std::pair<const char*, uint64_t>> status_bits = {{"running", SERVER_RUNNING},
+        {"master", SERVER_MASTER},
+        {"slave", SERVER_SLAVE},
+        {"synced", SERVER_JOINED},
+        {"maintenance", SERVER_MAINT},
+        {"maint", SERVER_MAINT},
+        {"drain", SERVER_DRAINING},
+        {"blr", SERVER_BLR},
+        {"binlogrouter", SERVER_BLR}};
 
     for (const auto& a : status_bits)
     {
@@ -729,30 +716,32 @@ void Server::set_gtid_list(const std::vector<std::pair<uint32_t, uint64_t>>& dom
 {
     mxs::MainWorker::get()->execute(
         [this, domains]() {
-            auto gtids = *m_gtids;
+        auto gtids = *m_gtids;
 
-            for (const auto& p : domains)
-            {
-                gtids[p.first] = p.second;
-            }
+        for (const auto& p : domains)
+        {
+            gtids[p.first] = p.second;
+        }
 
-            m_gtids.assign(gtids);
-        }, mxb::Worker::EXECUTE_AUTO);
+        m_gtids.assign(gtids);
+        },
+        mxb::Worker::EXECUTE_AUTO);
 }
 
 void Server::clear_gtid_list()
 {
     mxs::MainWorker::get()->execute(
         [this]() {
-            m_gtids->clear();
-            m_gtids.assign(*m_gtids);
-        }, mxb::Worker::EXECUTE_AUTO);
+        m_gtids->clear();
+        m_gtids.assign(*m_gtids);
+        },
+        mxb::Worker::EXECUTE_AUTO);
 }
 
 uint64_t Server::gtid_pos(uint32_t domain) const
 {
     const auto& gtids = *m_gtids;
-    auto it = gtids.find(domain);
+    auto it           = gtids.find(domain);
     return it != gtids.end() ? it->second : 0;
 }
 
@@ -762,9 +751,14 @@ void Server::set_version(uint64_t version_num, const std::string& version_str)
     if (changed)
     {
         auto type_string = m_info.type_string();
-        auto vrs = m_info.version_num();
+        auto vrs         = m_info.version_num();
         MXS_NOTICE("'%s' sent version string '%s'. Detected type: '%s', version: %i.%i.%i.",
-                   name(), version_str.c_str(), type_string.c_str(), vrs.major, vrs.minor, vrs.patch);
+            name(),
+            version_str.c_str(),
+            type_string.c_str(),
+            vrs.major,
+            vrs.minor,
+            vrs.patch);
     }
 }
 
@@ -813,8 +807,8 @@ json_t* Server::json_attributes() const
     json_object_set_new(statistics, "reused_connections", json_integer(m_pool_stats.n_from_pool));
     json_object_set_new(statistics, "connection_pool_empty", json_integer(m_pool_stats.n_new_conn));
     maxbase::Duration response_ave(mxb::from_secs(response_time_average()));
-    json_object_set_new(statistics, "adaptive_avg_select_time",
-                        json_string(mxb::to_string(response_ave).c_str()));
+    json_object_set_new(
+        statistics, "adaptive_avg_select_time", json_string(mxb::to_string(response_ave).c_str()));
 
     json_object_set_new(attr, "statistics", statistics);
     return attr;
@@ -841,7 +835,7 @@ bool Server::VersionInfo::set(uint64_t version, const std::string& version_str)
     uint32_t minor = (version - major * 10000) / 100;
     uint32_t patch = version - major * 10000 - minor * 100;
 
-    Type new_type = Type::UNKNOWN;
+    Type new_type     = Type::UNKNOWN;
     auto version_strz = version_str.c_str();
     if (strcasestr(version_strz, "xpand") || strcasestr(version_strz, "clustrix"))
     {
@@ -858,7 +852,7 @@ bool Server::VersionInfo::set(uint64_t version, const std::string& version_str)
     }
     else if (!version_str.empty())
     {
-        new_type = Type::MYSQL;     // Used for any unrecognized server types.
+        new_type = Type::MYSQL;  // Used for any unrecognized server types.
     }
 
     bool changed = false;
@@ -869,7 +863,7 @@ bool Server::VersionInfo::set(uint64_t version, const std::string& version_str)
 
     if (new_type != m_type || version != m_version_num.total || version_str != m_version_str)
     {
-        m_type = new_type;
+        m_type              = new_type;
         m_version_num.total = version;
         m_version_num.major = major;
         m_version_num.minor = minor;
@@ -938,8 +932,7 @@ ServerEndpoint::ServerEndpoint(mxs::Component* up, MXS_SESSION* session, Server*
     : m_up(up)
     , m_session(session)
     , m_server(server)
-{
-}
+{}
 
 ServerEndpoint::~ServerEndpoint()
 {
@@ -999,8 +992,8 @@ int32_t ServerEndpoint::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const 
     return m_up->clientReply(buffer, down, reply);
 }
 
-bool ServerEndpoint::handleError(mxs::ErrorType type, GWBUF* error,
-                                 mxs::Endpoint* down, const mxs::Reply& reply)
+bool ServerEndpoint::handleError(
+    mxs::ErrorType type, GWBUF* error, mxs::Endpoint* down, const mxs::Reply& reply)
 {
     mxb::LogScope scope(m_server->name());
     mxb_assert(is_open());

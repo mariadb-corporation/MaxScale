@@ -42,7 +42,6 @@ bool init();
  */
 void finish();
 
-
 /**
  * @class MaxBase
  *
@@ -51,7 +50,7 @@ void finish();
  */
 class MaxBase
 {
-    MaxBase(const MaxBase&) = delete;
+    MaxBase(const MaxBase&)            = delete;
     MaxBase& operator=(const MaxBase&) = delete;
 
 public:
@@ -75,11 +74,11 @@ public:
      * @throws std::runtime_error if the initialization failed.
      */
     MaxBase(const char* zIdent,
-            const char* zLogdir,
-            const char* zFilename,
-            mxb_log_target_t target,
-            mxb_log_context_provider_t context_provider,
-            mxb_in_memory_log_t in_memory_log);
+        const char* zLogdir,
+        const char* zFilename,
+        mxb_log_target_t target,
+        mxb_log_context_provider_t context_provider,
+        mxb_in_memory_log_t in_memory_log);
 
     /**
      * @brief Initializes MaxBase and the MaxBase log.
@@ -90,8 +89,7 @@ public:
      */
     MaxBase(mxb_log_target_t target)
         : MaxBase(nullptr, ".", nullptr, target, nullptr, nullptr)
-    {
-    }
+    {}
 
     ~MaxBase()
     {
@@ -106,4 +104,4 @@ public:
 private:
     bool m_log_inited;
 };
-}
+}  // namespace maxbase

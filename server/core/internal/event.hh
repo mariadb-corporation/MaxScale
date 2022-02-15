@@ -23,9 +23,9 @@ namespace event
 
 enum result_t
 {
-    IGNORED,    /**< The configuration was ignored, it does not affect events. */
-    INVALID,    /**< The configuration was invalid. */
-    ACCEPTED    /**< The configuration was accepted. */
+    IGNORED, /**< The configuration was ignored, it does not affect events. */
+    INVALID, /**< The configuration was invalid. */
+    ACCEPTED /**< The configuration was accepted. */
 };
 
 /**
@@ -63,5 +63,5 @@ inline result_t validate(const std::string& name, const std::string& value)
 {
     return validate(name.c_str(), value.c_str());
 }
-}
-}
+}  // namespace event
+}  // namespace maxscale
