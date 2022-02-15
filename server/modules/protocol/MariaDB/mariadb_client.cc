@@ -2039,7 +2039,7 @@ bool MariaDBClientConnection::read_first_client_packet(mxs::Buffer* output)
      */
     GWBUF* read_buffer = nullptr;
     mariadb::HeaderData header;
-    int buffer_len = m_dcb->read(&read_buffer, SSL_REQUEST_PACKET_SIZE);
+    int buffer_len = m_dcb->read(&read_buffer, SSL_REQUEST_PACKET_SIZE, DCB::ReadLimit::STRICT);
     if (buffer_len >= MYSQL_HEADER_LEN)
     {
         header = parse_header(read_buffer);

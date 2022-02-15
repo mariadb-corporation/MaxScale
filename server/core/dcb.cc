@@ -279,7 +279,7 @@ DCB::ReadResult DCB::read(uint32_t min_bytes, uint32_t max_bytes)
     return rval;
 }
 
-int DCB::read(GWBUF** ppHead, size_t maxbytes)
+int DCB::read(GWBUF** ppHead, size_t maxbytes, ReadLimit limit_type)
 {
     mxb_assert(this->owner == RoutingWorker::get_current());
     mxb_assert(m_fd != FD_CLOSED);
@@ -295,6 +295,7 @@ int DCB::read(GWBUF** ppHead, size_t maxbytes)
 
     if (m_encryption.state == SSLState::ESTABLISHED)
     {
+        mxb_assert(limit_type == ReadLimit::RES_LEN);
         int n = read_SSL();
         if (n < 0)
         {
@@ -317,14 +318,14 @@ int DCB::read(GWBUF** ppHead, size_t maxbytes)
     }
     else
     {
-        if (maxbytes > 0 && (size_t)nreadtotal >= maxbytes)
+        if (maxbytes > 0 && m_readq.length() >= maxbytes)
         {
             // Already have enough data. May have more, so read again later.
             trigger_read_event();
         }
         else
         {
-            if (basic_read(maxbytes))
+            if (basic_read(maxbytes, limit_type))
             {
                 nreadtotal = m_readq.length();
             }
@@ -408,23 +409,21 @@ static int dcb_read_no_bytes_available(DCB* dcb, int fd, int nreadtotal)
  *
  * @param maxbytes Maximum bytes to read (0 = no limit)
  */
-bool DCB::basic_read(size_t maxbytes)
+bool DCB::basic_read(size_t maxbytes, ReadLimit limit_type)
 {
-    auto calc_read_limit = [this, maxbytes](bool expect_more) {
-            // The guess is tricky. Higher values mean less reallocations, but also more wasted memory.
-            const size_t base_read_size_limit = expect_more ? 4096 : 128;
-            if (maxbytes > 0)
+    auto calc_read_limit = [this, maxbytes, limit_type](bool expect_more) {
+            if (maxbytes > 0 && limit_type == ReadLimit::STRICT)
             {
-                // Never read more in total than maxbytes. Since maxbytes can be large, limit
-                // the allocation size to something reasonable.
+                // Strict read limit, cannot read more than allowed from socket. Assume that maxbytes is
+                // reasonable.
                 auto max_read_limit = maxbytes - m_readq.length();
-                auto min_read_limit = std::min(max_read_limit, base_read_size_limit);
-                auto [ptr, space_available] = m_readq.prepare_to_write(min_read_limit);
-                auto eff_read_limit = std::min(max_read_limit, space_available);
-                return std::tuple(ptr, eff_read_limit);
+                auto [ptr, _1] = m_readq.prepare_to_write(max_read_limit);
+                return std::tuple(ptr, max_read_limit);
             }
             else
             {
+                // The guess is tricky. Higher values mean less reallocations but also more wasted memory.
+                const size_t base_read_size_limit = expect_more ? 4096 : 128;
                 return m_readq.prepare_to_write(base_read_size_limit);
             }
         };
@@ -434,6 +433,14 @@ bool DCB::basic_read(size_t maxbytes)
     bool socket_cleared = false;
     bool success = true;
     size_t bytes_from_socket = 0;
+    size_t total_readq_limit = 0;
+    if (maxbytes > 0)
+    {
+        // If the read limit is not strict (most cases), allow reading more than what was asked for.
+        // This increases the likelihood of clearing the socket and not having to manually trigger another
+        // read.
+        total_readq_limit = (limit_type == ReadLimit::STRICT) ? maxbytes : maxbytes + 4096;
+    }
 
     while (keep_reading)
     {
@@ -455,8 +462,7 @@ bool DCB::basic_read(size_t maxbytes)
                 expect_more_data = true;
             }
 
-            mxb_assert(maxbytes == 0 || m_readq.length() <= maxbytes);
-            if (maxbytes > 0 && m_readq.length() == maxbytes)
+            if (total_readq_limit > 0 && m_readq.length() >= total_readq_limit)
             {
                 keep_reading = false;
             }
@@ -492,6 +498,8 @@ bool DCB::basic_read(size_t maxbytes)
             }
         }
     }
+
+    mxb_assert(maxbytes == 0 || limit_type == ReadLimit::RES_LEN || m_readq.length() <= maxbytes);
 
     if (success)
     {

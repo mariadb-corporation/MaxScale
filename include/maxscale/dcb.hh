@@ -269,19 +269,26 @@ public:
      */
     int socket_bytes_readable() const;
 
+    enum class ReadLimit
+    {
+        RES_LEN,    /**< Maxbytes only affects the returned data. Socket can be read for more. */
+        STRICT      /**< Exactly the given amount must be read from socket */
+    };
+
     /**
      * Read data from the DCB.
      *
      * @param ppHead    Pointer to pointer to GWBUF to append to. The GWBUF pointed to
      *                  may be NULL in which case it will be non-NULL after a successful read.
      * @param maxbytes  Maximum amount of bytes to read, 0 means no limit.
+     * @param limit_type Type of read limit
      *
      * @return -1 on error, otherwise the total length of the GWBUF. That is, not only
      *         the amount of data appended to the GWBUF.
      *
      * @note The read operation will return data from the readq and the network.
      */
-    int read(GWBUF** ppHead, size_t maxbytes);
+    int read(GWBUF** ppHead, size_t maxbytes, ReadLimit limit_type = ReadLimit::RES_LEN);
 
     struct ReadResult
     {
@@ -624,7 +631,7 @@ private:
 
     bool m_open {true};     /**< Is dcb still open, i.e. close() not called? */
 
-    bool basic_read(size_t maxbytes);
+    bool basic_read(size_t maxbytes, ReadLimit limit_type);
 
     int    read_SSL();
     GWBUF* basic_read_SSL(int* nsingleread);
