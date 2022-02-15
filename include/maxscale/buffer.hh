@@ -141,6 +141,17 @@ public:
     bool           empty() const;
 
     /**
+     * Copy data from buffer. Data is not consumed. If the buffer does not have enough data to fulfill the
+     * copy, copies less than requested.
+     *
+     * @param offset Copy start
+     * @param n_bytes Number of bytes to copy
+     * @param dst Destination buffer
+     * @return How many bytes were copied
+     */
+    size_t copy_data(size_t offset, size_t n_bytes, uint8_t* dst) const;
+
+    /**
      * Prepare the buffer for writing. May reserve more space if needed. write_complete should be called
      * once the write is ready.
      *
@@ -169,9 +180,23 @@ public:
     /**
      * Append contents of the buffer given as parameter to this buffer.
      *
-     * @param buffer Buffer to copy from. The object is left untouched.
+     * @param buffer Buffer to copy from
      */
-    void append(GWBUF* buffer);
+    void append(const GWBUF& buffer);
+
+    /**
+     * Append to front of current data.
+     *
+     * @param buffer Source buffer
+     */
+    void merge_front(GWBUF&& buffer);
+
+    /**
+     * Append to back of current data.
+     *
+     * @param buffer Source buffer
+     */
+    void merge_back(GWBUF&& buffer);
 
     /**
      * Split a part from the front of the current buffer. The splitted part is returned, rest remains in

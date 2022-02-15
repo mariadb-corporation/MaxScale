@@ -539,7 +539,7 @@ int DCB::read_SSL()
     if (buffer)
     {
         nreadtotal += nsingleread;
-        m_readq.append(buffer);
+        m_readq.merge_back(move(*buffer));
         delete buffer;
 
         while (buffer)
@@ -549,7 +549,7 @@ int DCB::read_SSL()
             {
                 nreadtotal += nsingleread;
                 /*< Append read data to the gwbuf */
-                m_readq.append(buffer);
+                m_readq.merge_back(move(*buffer));
                 delete buffer;
             }
         }
@@ -1869,11 +1869,9 @@ void DCB::close(DCB* dcb)
 
 void DCB::unread(GWBUF* buffer)
 {
-    // TODO: write a more efficient "merge"-function for GWBUF.
     if (buffer)
     {
-        buffer->append(&m_readq);
-        m_readq = move(*buffer);
+        m_readq.merge_front(move(*buffer));
         delete buffer;
     }
 }

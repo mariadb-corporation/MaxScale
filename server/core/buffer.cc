@@ -450,14 +450,14 @@ int gwbuf_compare(const GWBUF* lhs, const GWBUF* rhs)
 
 GWBUF* gwbuf_append(GWBUF* head, GWBUF* tail)
 {
-    // This function is used such that 'head' should take ownership of 'tail'. Since 'append' now copies
-    // the contents, free the tail.
-    // In the long run, this function should not be required. The most common use is in reading from a
-    // network socket. That should be optimized to write directly to the buffer.
+    // This function is used such that 'head' should take ownership of 'tail'.
     if (head)
     {
-        head->append(tail);
-        gwbuf_free(tail);
+        if (tail)
+        {
+            head->merge_back(move(*tail));
+            delete tail;
+        }
         return head;
     }
     else
@@ -511,9 +511,12 @@ void* GWBUF::get_classifier_data() const
 
 void GWBUF::append(const uint8_t* new_data, uint64_t n_bytes)
 {
-    auto [ptr, dummy] = prepare_to_write(n_bytes);
-    memcpy(ptr, new_data, n_bytes);
-    write_complete(n_bytes);
+    if (n_bytes > 0)
+    {
+        auto [ptr, _1] = prepare_to_write(n_bytes);
+        memcpy(ptr, new_data, n_bytes);
+        write_complete(n_bytes);
+    }
 }
 
 std::tuple<uint8_t*, size_t> GWBUF::prepare_to_write(uint64_t n_bytes)
@@ -570,9 +573,9 @@ std::tuple<uint8_t*, size_t> GWBUF::prepare_to_write(uint64_t n_bytes)
     return {end, m_sbuf->buf_end - end};
 }
 
-void GWBUF::append(GWBUF* buffer)
+void GWBUF::append(const GWBUF& buffer)
 {
-    append(buffer->data(), buffer->length());
+    append(buffer.data(), buffer.length());
 }
 
 uint8_t* GWBUF::consume(uint64_t bytes)
@@ -614,42 +617,47 @@ GWBUF* gwbuf_make_contiguous(GWBUF* orig)
     return orig;
 }
 
-size_t gwbuf_copy_data(const GWBUF* buffer, size_t offset, size_t bytes, uint8_t* dest)
+void GWBUF::merge_front(GWBUF&& buffer)
 {
-    uint32_t buflen;
-
-    /** Skip unrelated buffers */
-    if (buffer && offset && offset >= (buflen = gwbuf_link_length(buffer)))
+    if (!buffer.empty())
     {
-        mxb_assert(buffer->owner == RoutingWorker::get_current_id());
-        offset -= buflen;
-        buffer = nullptr;
+        buffer.append(*this);
+        // TODO: can be improved with similar logic as in prepare_to_write.
+        move_helper(move(buffer));
     }
+}
 
-    size_t bytes_read = 0;
-    if (buffer)
+void GWBUF::merge_back(GWBUF&& buffer)
+{
+    if (!buffer.empty())
     {
-        mxb_assert(buffer->owner == RoutingWorker::get_current_id());
-        uint8_t* ptr = (uint8_t*) GWBUF_DATA(buffer) + offset;
-        uint32_t bytes_left = gwbuf_link_length(buffer) - offset;
-
-        /** Data is in one buffer */
-        if (bytes_left >= bytes)
+        if (empty())
         {
-            memcpy(dest, ptr, bytes);
-            bytes_read = bytes;
+            move_helper(move(buffer));
         }
         else
         {
-            /** Data is spread across multiple buffers */
-            memcpy(dest, ptr, bytes_left);
-            bytes -= bytes_left;
-            dest += bytes_left;
-            bytes_read += bytes_left;
+            append(buffer);
         }
     }
+}
 
-    return bytes_read;
+size_t GWBUF::copy_data(size_t offset, size_t n_bytes, uint8_t* dst) const
+{
+    auto len = length();
+    size_t copied_bytes = 0;
+    if (offset < len)
+    {
+        auto bytes_left = len - offset;
+        copied_bytes = std::min(bytes_left, n_bytes);
+        memcpy(dst, start + offset, copied_bytes);
+    }
+    return copied_bytes;
+}
+
+size_t gwbuf_copy_data(const GWBUF* buffer, size_t offset, size_t bytes, uint8_t* dest)
+{
+    return buffer->copy_data(offset, bytes, dest);
 }
 
 uint8_t* gwbuf_byte_pointer(GWBUF* buffer, size_t offset)
