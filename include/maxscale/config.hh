@@ -99,6 +99,8 @@ public:
     public:
         using config::ParamCount::ParamCount;
 
+        static const value_type MAX_COUNT = 256; // If this is changed, update documentation as well.
+
         bool from_string(const std::string& value_as_string,
                          value_type* pValue,
                          std::string* pMessage) const override final;

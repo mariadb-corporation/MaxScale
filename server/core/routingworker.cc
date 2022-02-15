@@ -48,7 +48,7 @@ using std::stringstream;
 
 namespace
 {
-const int MXS_MAX_THREADS = 128;    // The maximum number of threads/workers.
+
 /**
  * Unit variables.
  */
@@ -166,9 +166,10 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
     if (this_unit.epoll_listener_fd != -1)
     {
         int nWorkers = config_threadcount();
-        RoutingWorker** ppWorkers = new(std::nothrow) RoutingWorker* [MXS_MAX_THREADS]();       // 0-inited
-                                                                                                // array
-        AverageN** ppWorker_loads = new(std::nothrow) AverageN* [MXS_MAX_THREADS];
+        auto max_count = Config::ParamThreadsCount::MAX_COUNT;
+        // 0-inited arrays.
+        RoutingWorker** ppWorkers = new(std::nothrow) RoutingWorker* [max_count]();
+        AverageN** ppWorker_loads = new(std::nothrow) AverageN* [max_count];
 
         if (ppWorkers && ppWorker_loads)
         {

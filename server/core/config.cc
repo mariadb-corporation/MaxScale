@@ -1107,7 +1107,6 @@ bool Config::ParamThreadsCount::from_string(const std::string& value_as_string,
                                             value_type* pValue,
                                             std::string* pMessage) const
 {
-    const int MXS_MAX_ROUTING_THREADS = 100;
     bool rv = true;
 
     if (value_as_string == CN_AUTO)
@@ -1131,14 +1130,14 @@ bool Config::ParamThreadsCount::from_string(const std::string& value_as_string,
             }
 
             // TODO: Update documentation once this limitation is removed
-            if (value > MXS_MAX_ROUTING_THREADS)
+            if (value > MAX_COUNT)
             {
                 MXS_WARNING("Number of threads set to %d, which is greater than the "
                             "hard maximum of %d. Number of threads adjusted down "
                             "accordingly.",
                             (int)value,
-                            MXS_MAX_ROUTING_THREADS);
-                value = MXS_MAX_ROUTING_THREADS;
+                            (int)MAX_COUNT);
+                value = MAX_COUNT;
             }
 
             *pValue = value;
