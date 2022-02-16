@@ -25,81 +25,44 @@ namespace
 namespace Query
 {
 
-enum Status
+bool execute(MYSQL* pConn, const char* zStmt)
 {
-    SUCCESS,// Execution succeeded.
-    FAILURE,// Execution failed (e.g. broken SQL).
-    ERROR   // Execution succeeded but ended with an error (e.g. deadlock).
-};
-
-struct Result : std::pair<Query::Status, std::string>
-{
-    Result(Status status = Query::FAILURE)
-    {
-        first = status;
-    }
-
-    Result(const std::string& message)
-    {
-        mxb_assert(!message.empty());
-        first = Query::ERROR;
-        second = message;
-    }
-};
-
-Result execute(MYSQL* pConn, const char* zStmt)
-{
-    Result rv;
+    bool rv = false;
 
     if (mysql_query(pConn, zStmt) == 0)
     {
         MYSQL_RES* pRes = mysql_store_result(pConn);
 
-        rv.second = mysql_error(pConn);
-
-        if (rv.second.empty())
+        if (mysql_errno(pConn) == 0)
         {
-            rv.first = Query::SUCCESS;
-        }
-        else
-        {
-            rv.first = Query::ERROR;
+            rv = true;
         }
 
         mysql_free_result(pRes);
     }
-    else
-    {
-        rv.second = mysql_error(pConn);
-    }
 
     return rv;
 }
 
-Result start_execute(MYSQL* pConn, const char* zStmt)
+bool start_execute(MYSQL* pConn, const char* zStmt)
 {
-    Result rv;
+    bool rv;
 
     if (mysql_send_query(pConn, zStmt, strlen(zStmt)) == 0)
     {
-        rv.first = Query::SUCCESS;
-    }
-    else
-    {
-        rv.first = Query::ERROR;
-        rv.second = mysql_error(pConn);
+        rv = true;
     }
 
     return rv;
 }
 
-Result finish_execute(MYSQL* pConn)
+bool finish_execute(MYSQL* pConn)
 {
-    Result rv;
+    bool rv = false;
 
     if (mysql_read_query_result(pConn) == 0)
     {
-        rv.first = Query::SUCCESS;
+        rv = true;
 
         if (auto* res = mysql_store_result(pConn))
         {
@@ -107,24 +70,11 @@ Result finish_execute(MYSQL* pConn)
         }
         else if (mysql_errno(pConn))
         {
-            rv.first = Query::ERROR;
-            rv.second = mysql_error(pConn);
+            rv = false;
         }
-    }
-    else
-    {
-        rv.first = Query::ERROR;
-        rv.second = mysql_error(pConn);
     }
 
     return rv;
-}
-
-void execute(MYSQL* pConn, const char* zStmt, Query::Status expectation)
-{
-    Result rv = execute(pConn, zStmt);
-
-    mxb_assert(rv.first == expectation);
 }
 
 void wait_for_query(Connection c, std::string pattern)
@@ -148,31 +98,42 @@ void run_test(TestConnections& test, Expectation expectation)
 {
     MYSQL* a = test.maxscale->open_rwsplit_connection();
     MYSQL* b = test.maxscale->open_rwsplit_connection();
-    mxb_assert(a && b);
-    mysql_autocommit(b, false);
-    mysql_autocommit(a, false);
+    test.expect(a && b, "Failed to create both connections.");
 
-    Query::execute(a, "BEGIN", Query::SUCCESS);
-    Query::execute(b, "BEGIN", Query::SUCCESS);
-    Query::execute(a, "INSERT INTO mxs2512 VALUES(1)", Query::SUCCESS);
+    test.expect(Query::execute(a, "BEGIN"), "First BEGIN failed.");
+    test.expect(Query::execute(b, "BEGIN"), "Second BEGIN failed.");
+    test.expect(Query::execute(a, "UPDATE mxs2512 SET data = data + 1 WHERE x = 0"),
+                "First UPDATE failed.");
+    test.expect(Query::execute(b, "UPDATE mxs2512 SET data = data + 1 WHERE x = 1"),
+                "Second UPDATE failed.");
 
-    Query::start_execute(b, "SELECT * from mxs2512 FOR UPDATE");
-    Query::wait_for_query(test.repl->get_connection(0), "%mxs2512%FOR UPDATE%");
+    Query::start_execute(a, "UPDATE mxs2512 SET data = data + 1 WHERE x = 1");
+    Query::wait_for_query(test.repl->get_connection(0), "%x = 1%");
 
-    Query::execute(a, "INSERT INTO mxs2512 VALUES(0)", Query::SUCCESS);
-    Query::execute(a, "COMMIT", Query::SUCCESS);
-    Query::Result rv = Query::finish_execute(b);
+    // This will cause a deadlock error to be reported for this connection
+    Query::start_execute(b, "UPDATE mxs2512 SET data = data + 1 WHERE x = 0");
+
+    bool rv1 = Query::finish_execute(a);
+
+    // The transaction must be committed before we read the result from the second connection to prevent the
+    // replayed transaction from constantly conflicting with the open transaction.
+    test.expect(Query::execute(a, "COMMIT"), "COMMIT failed.");
+
+    bool rv2 = Query::finish_execute(b);
+    test.expect(Query::execute(b, "ROLLBACK"), "ROLLBACK failed.");
 
     mysql_close(a);
     mysql_close(b);
 
+    test.expect(rv1, "First UPDATE should always succeed.");
+
     if (expectation == Expectation::FAILURE)
     {
-        test.expect(rv.first == Query::ERROR, "SELECT did NOT fail.");
+        test.expect(!rv2, "UPDATE did NOT fail.");
     }
     else
     {
-        test.expect(rv.first == Query::SUCCESS, "SELECT DID fail.");
+        test.expect(rv2, "UPDATE DID fail.");
     }
 }
 }
@@ -186,20 +147,18 @@ int main(int argc, char* argv[])
 
     // Preparations
     test.try_query(pConn, "DROP TABLE IF EXISTS mxs2512");
-    test.try_query(pConn, "CREATE TABLE mxs2512 (x INT PRIMARY KEY)");
+    test.try_query(pConn, "CREATE TABLE mxs2512 (x INT PRIMARY KEY, data INT)");
+    test.try_query(pConn, "INSERT INTO mxs2512 VALUES (0, 0), (1, 1)");
 
     // Test with 'transaction_replay=false' => should fail.
-    cout << "Testing with 'transaction_replay=false', SELECT should fail." << endl;
+    cout << "Testing with 'transaction_replay=false', UPDATE should fail." << endl;
     run_test(test, Expectation::FAILURE);
 
-
-
-    // Intermediate cleanup; delete contents from table, turn on transaction replay.
-    test.try_query(pConn, "DELETE FROM mxs2512");
+    // Turn on transaction replay.
     test.check_maxctrl("alter service RWS transaction_replay true");
 
     // Test with 'transaction_replay=true' => should succeed.
-    cout << "Testing with 'transaction_replay=true', SELECT should succeed." << endl;
+    cout << "Testing with 'transaction_replay=true', UPDATE should succeed." << endl;
     run_test(test, Expectation::SUCCESS);
 
     // Final cleanup
