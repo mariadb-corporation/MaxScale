@@ -32,7 +32,7 @@ export default [
             icon: '$vuetify.icons.tachometer',
             redirect: '/dashboard/servers',
         },
-        name: 'dashboards',
+        label: 'dashboards',
         children: tabRoutes,
     },
     {
@@ -47,6 +47,7 @@ export default [
             redirect: '/visualization/configuration',
         },
         name: 'visualization',
+        label: 'visualization',
         children: visRoutes,
     },
     {
@@ -59,6 +60,7 @@ export default [
             icon: '$vuetify.icons.settings',
         },
         name: 'settings',
+        label: 'settings',
     },
     {
         path: '/logs',
@@ -70,6 +72,7 @@ export default [
             icon: '$vuetify.icons.logs',
         },
         name: 'logsArchive',
+        label: 'logsArchive',
     },
     {
         path: '/query',
@@ -80,6 +83,6 @@ export default [
             size: 22,
             icon: '$vuetify.icons.queryEditor',
         },
-        name: 'queryEditor',
+        label: 'queryEditor',
     },
 ]

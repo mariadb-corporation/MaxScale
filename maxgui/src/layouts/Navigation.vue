@@ -14,7 +14,7 @@
         @mouseout.native="isMini = true"
     >
         <v-list>
-            <v-list-item-group v-for="item in items" :key="item.name">
+            <v-list-item-group v-for="item in items" :key="item.label">
                 <v-list-item
                     :class="{
                         navitem: true,
@@ -28,14 +28,14 @@
                     <v-list-item-content>
                         <v-list-item-title class="text-capitalize">
                             {{
-                                item.name === 'dashboards'
-                                    ? $tc(`${item.name}`, 1)
-                                    : $tc(`${item.name}`, 2)
+                                item.label === 'dashboards'
+                                    ? $tc(`${item.label}`, 1)
+                                    : $tc(`${item.label}`, 2)
                             }}
                         </v-list-item-title>
                     </v-list-item-content>
                 </v-list-item>
-                <v-divider :key="`divider-${item.name}`"></v-divider>
+                <v-divider :key="`divider-${item.label}`"></v-divider>
             </v-list-item-group>
         </v-list>
     </v-navigation-drawer>
