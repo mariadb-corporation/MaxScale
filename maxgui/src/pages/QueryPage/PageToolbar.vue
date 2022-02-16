@@ -180,16 +180,11 @@ export default {
     methods: {
         ...mapMutations({
             SET_FULLSCREEN: 'query/SET_FULLSCREEN',
-            SET_ACTIVE_WKE_ID: 'query/SET_ACTIVE_WKE_ID',
         }),
         ...mapActions({
-            handleAddNewWke: 'query/handleAddNewWke',
+            addNewWs: 'query/addNewWs',
             pushQueryFavorite: 'persisted/pushQueryFavorite',
         }),
-        addNewWs() {
-            this.handleAddNewWke()
-            this.SET_ACTIVE_WKE_ID(this.worksheets_arr[this.worksheets_arr.length - 1].id)
-        },
         openFavoriteDialog() {
             if (this.query_txt) {
                 this.favorite.date = new Date().valueOf()

@@ -507,11 +507,15 @@ export default {
             await dispatch('updateActiveDb')
             dispatch('changeWkeName', chosenConn.name)
         },
-        handleAddNewWke({ commit }) {
+        addNewWs({ commit, state }) {
             try {
                 commit('ADD_NEW_WKE')
+                commit(
+                    'SET_ACTIVE_WKE_ID',
+                    state.worksheets_arr[state.worksheets_arr.length - 1].id
+                )
             } catch (e) {
-                const logger = this.vue.$logger('store-query-handleAddNewWke')
+                const logger = this.vue.$logger('store-query-addNewWs')
                 logger.error(e)
                 commit(
                     'SET_SNACK_BAR_MESSAGE',

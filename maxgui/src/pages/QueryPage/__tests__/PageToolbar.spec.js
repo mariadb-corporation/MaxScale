@@ -58,21 +58,16 @@ describe(`PageToolbar - mounted hook and child component's interaction tests`, (
 describe('PageToolbar - Add new worksheet tests', () => {
     it(`Should only allow to add new worksheet when a worksheet
       is bound to a connection`, async () => {
-        const addNewWsSpy = sinon.spy(PageToolbar.methods, 'addNewWs')
         let handleAddNewWkeCallCount = 0
-        let setActiveWkeIDCallCount = 0
         let wrapper = mountFactory({
             computed: { cnct_resources: () => [dummy_curr_cnct_resource] },
             methods: {
                 // stubs vuex actions
-                handleAddNewWke: () => handleAddNewWkeCallCount++,
-                SET_ACTIVE_WKE_ID: () => setActiveWkeIDCallCount++,
+                addNewWs: () => handleAddNewWkeCallCount++,
             },
         })
         await clickAddBtnMock(wrapper)
-        addNewWsSpy.should.have.been.calledOnce
         expect(handleAddNewWkeCallCount).to.be.equals(1)
-        expect(setActiveWkeIDCallCount).to.be.equals(1)
     })
 })
 
