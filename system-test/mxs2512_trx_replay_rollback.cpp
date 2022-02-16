@@ -27,9 +27,9 @@ namespace Query
 
 enum Status
 {
-    SUCCESS, // Execution succeeded.
-    FAILURE, // Execution failed (e.g. broken SQL).
-    ERROR    // Execution succeeded but ended with an error (e.g. deadlock).
+    SUCCESS,// Execution succeeded.
+    FAILURE,// Execution failed (e.g. broken SQL).
+    ERROR   // Execution succeeded but ended with an error (e.g. deadlock).
 };
 
 struct Result : std::pair<Query::Status, std::string>
@@ -76,6 +76,50 @@ Result execute(MYSQL* pConn, const char* zStmt)
     return rv;
 }
 
+Result start_execute(MYSQL* pConn, const char* zStmt)
+{
+    Result rv;
+
+    if (mysql_send_query(pConn, zStmt, strlen(zStmt)) == 0)
+    {
+        rv.first = Query::SUCCESS;
+    }
+    else
+    {
+        rv.first = Query::ERROR;
+        rv.second = mysql_error(pConn);
+    }
+
+    return rv;
+}
+
+Result finish_execute(MYSQL* pConn)
+{
+    Result rv;
+
+    if (mysql_read_query_result(pConn) == 0)
+    {
+        rv.first = Query::SUCCESS;
+
+        if (auto* res = mysql_store_result(pConn))
+        {
+            mysql_free_result(res);
+        }
+        else if (mysql_errno(pConn))
+        {
+            rv.first = Query::ERROR;
+            rv.second = mysql_error(pConn);
+        }
+    }
+    else
+    {
+        rv.first = Query::ERROR;
+        rv.second = mysql_error(pConn);
+    }
+
+    return rv;
+}
+
 void execute(MYSQL* pConn, const char* zStmt, Query::Status expectation)
 {
     Result rv = execute(pConn, zStmt);
@@ -83,6 +127,15 @@ void execute(MYSQL* pConn, const char* zStmt, Query::Status expectation)
     mxb_assert(rv.first == expectation);
 }
 
+void wait_for_query(Connection c, std::string pattern)
+{
+    c.connect();
+
+    while (c.field("SELECT COUNT(*) FROM information_schema.processlist "
+                   "WHERE info LIKE '" + pattern + "' AND id != CONNECTION_ID()") == "0")
+    {
+    }
+}
 }
 
 enum class Expectation
@@ -93,43 +146,25 @@ enum class Expectation
 
 void run_test(TestConnections& test, Expectation expectation)
 {
-    maxbase::Semaphore sem1;
-    maxbase::Semaphore sem2;
+    MYSQL* a = test.maxscale->open_rwsplit_connection();
+    MYSQL* b = test.maxscale->open_rwsplit_connection();
+    mxb_assert(a && b);
+    mysql_autocommit(b, false);
+    mysql_autocommit(a, false);
 
-    std::thread t1([&test, &sem1, &sem2]() {
-            MYSQL* pConn = test.maxscale->open_rwsplit_connection();
-            mxb_assert(pConn);
-            mysql_autocommit(pConn, false);
+    Query::execute(a, "BEGIN", Query::SUCCESS);
+    Query::execute(b, "BEGIN", Query::SUCCESS);
+    Query::execute(a, "INSERT INTO mxs2512 VALUES(1)", Query::SUCCESS);
 
-            Query::execute(pConn, "BEGIN", Query::SUCCESS);
-            Query::execute(pConn, "INSERT INTO mxs2512 VALUES(1)", Query::SUCCESS);
-            sem1.post();
-            sem2.wait();
+    Query::start_execute(b, "SELECT * from mxs2512 FOR UPDATE");
+    Query::wait_for_query(test.repl->get_connection(0), "%mxs2512%FOR UPDATE%");
 
-            // First we sleep to be sure that t2 has time to issue its SELECT (that will block).
-            sleep(5);
-            Query::execute(pConn, "INSERT INTO mxs2512 VALUES(0)", Query::SUCCESS);
+    Query::execute(a, "INSERT INTO mxs2512 VALUES(0)", Query::SUCCESS);
+    Query::execute(a, "COMMIT", Query::SUCCESS);
+    Query::Result rv = Query::finish_execute(b);
 
-            mysql_close(pConn);
-        });
-
-    Query::Result rv;
-    std::thread t2([&test, &sem1, &sem2, &rv]() {
-            MYSQL* pConn = test.maxscale->open_rwsplit_connection();
-            mxb_assert(pConn);
-            mysql_autocommit(pConn, false);
-
-            Query::execute(pConn, "BEGIN", Query::SUCCESS);
-            sem1.wait();
-            sem2.post();
-
-            rv = Query::execute(pConn, "SELECT * from mxs2512 FOR UPDATE");
-
-            mysql_close(pConn);
-        });
-
-    t1.join();
-    t2.join();
+    mysql_close(a);
+    mysql_close(b);
 
     if (expectation == Expectation::FAILURE)
     {
@@ -140,7 +175,6 @@ void run_test(TestConnections& test, Expectation expectation)
         test.expect(rv.first == Query::SUCCESS, "SELECT DID fail.");
     }
 }
-
 }
 
 int main(int argc, char* argv[])
@@ -158,21 +192,17 @@ int main(int argc, char* argv[])
     cout << "Testing with 'transaction_replay=false', SELECT should fail." << endl;
     run_test(test, Expectation::FAILURE);
 
-    // Intermediate cleanup; delete contents from table, turn on transaction replay, restart MaxScale.
+
+
+    // Intermediate cleanup; delete contents from table, turn on transaction replay.
     test.try_query(pConn, "DELETE FROM mxs2512");
-    mysql_close(pConn);
-    test.maxscale->stop_and_check_stopped();
-    const char* zSed = "sed -i -e 's/transaction_replay=false/transaction_replay=true/' /etc/maxscale.cnf";
-    test.add_result(test.maxscale->ssh_node(zSed, true), "Could not tweak /etc/maxscale.cnf");
-    test.maxscale->start_and_check_started();
+    test.check_maxctrl("alter service RWS transaction_replay true");
 
     // Test with 'transaction_replay=true' => should succeed.
     cout << "Testing with 'transaction_replay=true', SELECT should succeed." << endl;
     run_test(test, Expectation::SUCCESS);
 
     // Final cleanup
-    pConn = test.maxscale->open_rwsplit_connection();
-    test.expect(pConn, "Could not connect to rwsplit.");
     test.try_query(pConn, "DROP TABLE mxs2512");
     mysql_close(pConn);
 
