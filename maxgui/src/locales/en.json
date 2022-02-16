@@ -235,6 +235,7 @@
     "version_string": "Version String",
     "address": "Address",
     "socket": "Socket",
+    "openQueryEditor": "Open Query Editor",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",

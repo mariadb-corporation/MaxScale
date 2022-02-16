@@ -25,7 +25,21 @@
                 >
                     {{ nodeAttrs.read_only ? $t('readonly') : $t('writable') }}
                 </span>
-                <div class="ml-1 button-container">
+                <div class="ml-1 button-container text-no-wrap">
+                    <v-tooltip
+                        top
+                        transition="slide-y-transition"
+                        content-class="shadow-drop color text-navigation py-1 px-4"
+                    >
+                        <template v-slot:activator="{ on }">
+                            <v-btn small icon :to="`/query/${node.id}`" target="_blank" v-on="on">
+                                <v-icon size="16" :color="iconColor">
+                                    $vuetify.icons.queryEditor
+                                </v-icon>
+                            </v-btn>
+                        </template>
+                        <span>{{ $t('openQueryEditor') }}</span>
+                    </v-tooltip>
                     <v-menu
                         transition="slide-y-transition"
                         offset-y
@@ -34,14 +48,7 @@
                     >
                         <template v-slot:activator="{ on }">
                             <v-btn small class="gear-btn" icon v-on="on">
-                                <v-icon
-                                    size="16"
-                                    :color="
-                                        droppableTargets.includes(node.id)
-                                            ? 'background'
-                                            : 'primary'
-                                    "
-                                >
+                                <v-icon size="16" :color="iconColor">
                                     $vuetify.icons.settings
                                 </v-icon>
                             </v-btn>
@@ -179,6 +186,9 @@ export default {
         }
     },
     computed: {
+        iconColor() {
+            return this.droppableTargets.includes(this.node.id) ? 'background' : 'primary'
+        },
         carouselDelimiterHeight() {
             return 20
         },
