@@ -335,10 +335,8 @@ public:
      * This is called as part of the EPOLLOUT handling of a socket and will try
      * to send any buffered data from the write queue up until the point the
      * write would block.
-     *
-     * @return The number of bytes written.
      */
-    int writeq_drain();
+    void writeq_drain();
 
     /**
      * @return The current length of the writeq.
@@ -636,8 +634,8 @@ private:
     int    read_SSL();
     GWBUF* basic_read_SSL(int* nsingleread);
 
-    int socket_write_SSL(GWBUF* writeq, bool* stop_writing);
-    int socket_write(GWBUF* writeq, bool* stop_writing);
+    int  socket_write_SSL(GWBUF* writeq, bool* stop_writing);
+    void socket_write();
 
     static void free(DCB* dcb);
 

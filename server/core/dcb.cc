@@ -750,63 +750,42 @@ static inline bool dcb_write_parameter_check(DCB* dcb, int fd, GWBUF* queue)
     return true;
 }
 
-int DCB::writeq_drain()
+void DCB::writeq_drain()
 {
     mxb_assert(this->owner == RoutingWorker::get_current());
 
-    if (m_encryption.read_want_write)
+    if (m_encryption.handle)
     {
-        /** The SSL library needs to write more data */
-        this->trigger_read_event();
-    }
+        if (m_encryption.read_want_write)
+        {
+            /** The SSL library needs to write more data */
+            trigger_read_event();
+        }
 
-    if (m_writeq == nullptr)
-    {
-        return 0;
-    }
-
-    int total_written = 0;
-    GWBUF* local_writeq = m_writeq;
-    m_writeq = NULL;
-
-    while (local_writeq)
-    {
-        int written;
+        int total_written = 0;
         bool stop_writing = false;
-        /* The value put into written will be >= 0 */
-        if (m_encryption.handle)
+        while (!stop_writing && m_writeq && !m_writeq->empty())
         {
-            written = socket_write_SSL(local_writeq, &stop_writing);
+            /* The value put into written will be >= 0 */
+            int written = socket_write_SSL(m_writeq, &stop_writing);
+            m_writeq->consume(written);
+            total_written += written;
         }
-        else
-        {
-            written = socket_write(local_writeq, &stop_writing);
-        }
-        /*
-         * If the stop_writing boolean is set, writing has become blocked,
-         * so the remaining data is put back at the front of the write
-         * queue.
-         */
-        if (written)
+
+        if (total_written > 0)
         {
             m_last_write = mxs_clock();
         }
-        if (stop_writing)
+    }
+    else
+    {
+        if (m_writeq)
         {
-            m_writeq = m_writeq ? gwbuf_append(local_writeq, m_writeq) : local_writeq;
-            local_writeq = NULL;
-        }
-        else
-        {
-            /** Consume the bytes we have written from the list of buffers,
-             * and increment the total bytes written. */
-            local_writeq = gwbuf_consume(local_writeq, written);
-            total_written += written;
+            socket_write();
         }
     }
 
-    mxb_assert(m_writeqlen >= (uint32_t)total_written);
-    m_writeqlen -= total_written;
+    m_writeqlen = m_writeq ? m_writeq->length() : 0;
 
     if (m_high_water_reached && DCB_BELOW_LOW_WATER(this))
     {
@@ -814,8 +793,6 @@ int DCB::writeq_drain()
         m_high_water_reached = false;
         m_stats.n_low_water++;
     }
-
-    return total_written;
 }
 
 void DCB::destroy()
@@ -932,51 +909,60 @@ int DCB::socket_write_SSL(GWBUF* writeq, bool* stop_writing)
 }
 
 /**
- * Write data to a DCB. The data is taken from the DCB's write queue.
- *
- * @param dcb           The DCB to write buffer
- * @param writeq        A buffer list containing the data to be written
- * @param stop_writing  Set to true if the caller should stop writing, false otherwise
- * @return              Number of written bytes
+ * Write data to the underlying socket. The data is taken from the DCB's write queue.
  */
-int DCB::socket_write(GWBUF* writeq, bool* stop_writing)
+void DCB::socket_write()
 {
-    int written = 0;
-    int fd = m_fd;
-    size_t nbytes = gwbuf_link_length(writeq);
-    void* buf = GWBUF_DATA(writeq);
-    int saved_errno;
-    mxb_assert(nbytes > 0);
+    mxb_assert(m_fd != FD_CLOSED);
+    bool keep_writing = true;
+    size_t total_written = 0;
 
-    errno = 0;
-
-    if (fd != FD_CLOSED)
+    // Write until socket blocks, we run out of bytes or an error occurs.
+    while (keep_writing && !m_writeq->empty())
     {
-        written = ::write(fd, buf, nbytes);
-    }
-
-    saved_errno = errno;
-    errno = 0;
-
-    if (written < 0)
-    {
-        *stop_writing = true;
-        if (saved_errno != EAGAIN && saved_errno != EWOULDBLOCK && saved_errno != EPIPE && !m_silence_errors)
+        auto res = ::write(m_fd, m_writeq->start, m_writeq->length());
+        if (res > 0)
         {
-            MXS_ERROR("Write to %s %s in state %s failed: %d, %s",
-                      mxs::to_string(m_role),
-                      m_remote.c_str(),
-                      mxs::to_string(m_state),
-                      saved_errno,
-                      mxs_strerror(saved_errno));
+            m_writeq->consume(res);
+            total_written += res;
+        }
+        else if (res == 0)
+        {
+            mxb_assert(!true);
+            keep_writing = false;
+        }
+        else
+        {
+            int eno = errno;
+            // Is EPIPE a normal error?
+            if (eno == EAGAIN || eno == EWOULDBLOCK || eno == EPIPE)
+            {
+                // Done for now, no more can be written.
+                keep_writing = false;
+            }
+            else if (eno == EINTR)
+            {
+                // Just try again.
+            }
+            else
+            {
+                // Unexpected error.
+                if (!m_silence_errors)
+                {
+                    MXB_ERROR("Write to %s %s in state %s failed: %d, %s",
+                              mxs::to_string(m_role), m_remote.c_str(), mxs::to_string(m_state),
+                              eno, mxb_strerror(eno));
+                }
+
+                keep_writing = false;
+            }
         }
     }
-    else
-    {
-        *stop_writing = false;
-    }
 
-    return written > 0 ? written : 0;
+    if (total_written > 0)
+    {
+        m_last_write = mxs_clock();
+    }
 }
 
 bool DCB::add_callback(Reason reason,
