@@ -1032,98 +1032,102 @@ private:
                           words[i].c_str(),
                           redis_error_to_string(rc).c_str(),
                           m_redis.errstr());
+                action = RedisAction::ERROR;
             }
         }
 
-        if (del_argv.size() > 1)
+        if (action == RedisAction::OK)
         {
-            rc = m_redis.appendCommand("MULTI");
-            mxb_assert(rc == REDIS_OK);
-
-            // Delete the relevant keys from the sets.
-            for (size_t i = 0; i < srem_argvs.size(); ++i)
+            if (del_argv.size() > 1)
             {
-                // Delete keys related to a particular table, the SREM commands.
-                const vector<const char*>& srem_argv = srem_argvs[i];
-                const vector<size_t>& srem_argvlen = srem_argvlens[i];
+                rc = m_redis.appendCommand("MULTI");
+                mxb_assert(rc == REDIS_OK);
 
-                if (srem_argv.size() > 2)
+                // Delete the relevant keys from the sets.
+                for (size_t i = 0; i < srem_argvs.size(); ++i)
                 {
-                    const char** ppSrem_argv = const_cast<const char**>(srem_argv.data());
-                    MXB_AT_DEBUG(rc =) m_redis.appendCommandArgv(srem_argv.size(),
-                                                                 ppSrem_argv,
-                                                                 srem_argvlen.data());
-                    mxb_assert(rc == REDIS_OK);
-                }
-            }
+                    // Delete keys related to a particular table, the SREM commands.
+                    const vector<const char*>& srem_argv = srem_argvs[i];
+                    const vector<size_t>& srem_argvlen = srem_argvlens[i];
 
-            // Delete all values, the DEL command.
-            const char** ppDel_argv = const_cast<const char**>(del_argv.data());
-            rc = m_redis.appendCommandArgv(del_argv.size(),
-                                           ppDel_argv,
-                                           del_argvlen.data());
-            mxb_assert(rc == REDIS_OK);
-
-            // This will actually send everything.
-            rc = m_redis.appendCommand("EXEC");
-            mxb_assert(rc == REDIS_OK);
-
-            // This will be the response to MULTI above.
-            if (m_redis.expect_status("OK", "MULTI"))
-            {
-                // All commands before EXEC should only return a status of QUEUED.
-                m_redis.expect_n_status(srem_argvs.size() + 1, "QUEUED", "queued command");
-
-                // The reply to EXEC
-                Redis::Reply reply;
-                rc = m_redis.getReply(&reply);
-
-                if (rc == REDIS_OK)
-                {
-                    if (reply.is_nil())
+                    if (srem_argv.size() > 2)
                     {
-                        // This *may* happen if WATCH is used, but since we are not, it should not.
-                        mxb_assert(!true);
-                        action = RedisAction::RETRY;
+                        const char** ppSrem_argv = const_cast<const char**>(srem_argv.data());
+                        MXB_AT_DEBUG(rc =) m_redis.appendCommandArgv(srem_argv.size(),
+                                                                     ppSrem_argv,
+                                                                     srem_argvlen.data());
+                        mxb_assert(rc == REDIS_OK);
+                    }
+                }
+
+                // Delete all values, the DEL command.
+                const char** ppDel_argv = const_cast<const char**>(del_argv.data());
+                rc = m_redis.appendCommandArgv(del_argv.size(),
+                                               ppDel_argv,
+                                               del_argvlen.data());
+                mxb_assert(rc == REDIS_OK);
+
+                // This will actually send everything.
+                rc = m_redis.appendCommand("EXEC");
+                mxb_assert(rc == REDIS_OK);
+
+                // This will be the response to MULTI above.
+                if (m_redis.expect_status("OK", "MULTI"))
+                {
+                    // All commands before EXEC should only return a status of QUEUED.
+                    m_redis.expect_n_status(srem_argvs.size() + 1, "QUEUED", "queued command");
+
+                    // The reply to EXEC
+                    Redis::Reply reply;
+                    rc = m_redis.getReply(&reply);
+
+                    if (rc == REDIS_OK)
+                    {
+                        if (reply.is_nil())
+                        {
+                            // This *may* happen if WATCH is used, but since we are not, it should not.
+                            mxb_assert(!true);
+                            action = RedisAction::RETRY;
+                        }
+                        else
+                        {
+                            // The reply will not contain the actual responses to the commands
+                            // issued after MULTI.
+                            mxb_assert(reply.is_array());
+                            mxb_assert(reply.elements() == srem_argvs.size() + 1);
+
+#ifdef SS_DEBUG
+                            Redis::Reply element;
+                            // Then we handle the replies to the "SREM" commands.
+                            for (size_t i = 0; i < srem_argvs.size(); ++i)
+                            {
+                                element = reply.element(i);
+                                mxb_assert(element.is_integer());
+                            }
+
+                            // Finally the DEL itself.
+                            element = reply.element(srem_argvs.size());
+                            mxb_assert(element.is_integer());
+#endif
+                        }
                     }
                     else
                     {
-                        // The reply will not contain the actual responses to the commands
-                        // issued after MULTI.
-                        mxb_assert(reply.is_array());
-                        mxb_assert(reply.elements() == srem_argvs.size() + 1);
-
-#ifdef SS_DEBUG
-                        Redis::Reply element;
-                        // Then we handle the replies to the "SREM" commands.
-                        for (size_t i = 0; i < srem_argvs.size(); ++i)
-                        {
-                            element = reply.element(i);
-                            mxb_assert(element.is_integer());
-                        }
-
-                        // Finally the DEL itself.
-                        element = reply.element(srem_argvs.size());
-                        mxb_assert(element.is_integer());
-#endif
+                        MXS_ERROR("Could not read EXEC reply from redis, the cache is now "
+                                  "in an unknown state: %s, %s",
+                                  redis_error_to_string(rc).c_str(),
+                                  m_redis.errstr());
+                        action = RedisAction::ERROR;
                     }
                 }
                 else
                 {
-                    MXS_ERROR("Could not read EXEC reply from redis, the cache is now "
+                    MXS_ERROR("Could not read MULTI reply from redis, the cache is now "
                               "in an unknown state: %s, %s",
                               redis_error_to_string(rc).c_str(),
                               m_redis.errstr());
                     action = RedisAction::ERROR;
                 }
-            }
-            else
-            {
-                MXS_ERROR("Could not read MULTI reply from redis, the cache is now "
-                          "in an unknown state: %s, %s",
-                          redis_error_to_string(rc).c_str(),
-                          m_redis.errstr());
-                action = RedisAction::ERROR;
             }
         }
 
