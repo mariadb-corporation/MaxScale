@@ -1,7 +1,7 @@
 <template>
     <split-pane
         v-model="sidebarPct"
-        class="query-page__content"
+        class="query-view__content"
         :minPercent="minSidebarPct"
         split="vert"
         :disable="is_sidebar_collapsed"

@@ -15,6 +15,7 @@ const Dashboard = () => import(/* webpackChunkName: "sidebar-routes-dashboard" *
 const Settings = () => import(/* webpackChunkName: "sidebar-routes-settings" */ 'pages/Settings')
 const Logs = () => import(/* webpackChunkName: "sidebar-routes-logs" */ 'pages/Logs')
 const QueryPage = () => import(/* webpackChunkName: "query-page" */ 'pages/QueryPage')
+const QueryView = () => import(/* webpackChunkName: "query-view" */ 'pages/QueryPage/QueryView')
 const Visualization = () => import(/* webpackChunkName: "visualization" */ 'pages/Visualization')
 import tabRoutes from './tabRoutes'
 import visRoutes from './visRoutes'
@@ -84,5 +85,19 @@ export default [
             icon: '$vuetify.icons.queryEditor',
         },
         label: 'queryEditor',
+        children: [
+            {
+                path: ':id',
+                component: QueryView,
+                meta: {
+                    requiresAuth: true,
+                    layout: 'app-layout',
+                },
+                name: 'query',
+                props: route => ({
+                    id: route.params.id,
+                }),
+            },
+        ],
     },
 ]

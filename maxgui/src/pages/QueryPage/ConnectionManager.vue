@@ -139,7 +139,6 @@ export default {
             conn_err_state: state => state.query.conn_err_state,
         }),
         ...mapGetters({
-            getActiveWke: 'query/getActiveWke',
             getDbTreeData: 'query/getDbTreeData',
         }),
         /**
@@ -164,9 +163,13 @@ export default {
         },
     },
     watch: {
-        //Watcher to handle multi-worksheets or after creating a connection
+        /**
+         * Watcher to handle multi-worksheets or after creating a connection.
+         * It's set to trigger immediately after creating so it works also as a created hook
+         */
         curr_cnct_resource: {
             deep: true,
+            immediate: true,
             async handler(v) {
                 /**
                  * chosenConn is component'state, so when curr_cnct_resource query's module state
@@ -186,20 +189,16 @@ export default {
     async created() {
         //Auto open dialog if there is no connections
         if (!this.connOptions.length) this.openConnDialog()
-        else {
-            this.assignActiveConn()
-            await this.handleDispatchInitialFetch(this.curr_cnct_resource)
-        }
     },
     methods: {
         ...mapActions({
             openConnect: 'query/openConnect',
             disconnect: 'query/disconnect',
             initialFetch: 'query/initialFetch',
+            updateRoute: 'query/updateRoute',
         }),
         ...mapMutations({
             SET_CURR_CNCT_RESOURCE: 'query/SET_CURR_CNCT_RESOURCE',
-            UPDATE_WKE: 'query/UPDATE_WKE',
         }),
         /**
          * Dispatching initalFetch when connection is valid, curr_cnct_resource
@@ -209,9 +208,13 @@ export default {
         async handleDispatchInitialFetch(curr_cnct_resource) {
             if (curr_cnct_resource.id) await this.initialFetch(curr_cnct_resource)
         },
-        async onSelectConn(v) {
-            this.SET_CURR_CNCT_RESOURCE({ payload: v, active_wke_id: this.active_wke_id })
-            if (this.curr_cnct_resource.id) await this.initialFetch(v)
+        async onSelectConn(chosenConn) {
+            // update curr_cnct_resource module state
+            this.SET_CURR_CNCT_RESOURCE({ payload: chosenConn, active_wke_id: this.active_wke_id })
+            // handle navigate to the corresponding nested route
+            this.updateRoute(this.active_wke_id)
+            // populate data
+            await this.handleDispatchInitialFetch(chosenConn)
         },
         assignActiveConn() {
             if (this.curr_cnct_resource) this.chosenConn = this.curr_cnct_resource
@@ -234,11 +237,17 @@ export default {
              */
             const hasConnectionAlready = Boolean(this.curr_cnct_resource.id)
             await this.openConnect(opts)
+            // handle navigate to the corresponding nested route
+            this.updateRoute(this.active_wke_id)
             if (hasConnectionAlready && !this.conn_err_state)
                 await this.initialFetch(this.curr_cnct_resource)
         },
         async confirmDelConn() {
+            // store the id before deleting to check if there is a need to update route
+            const currCnctResourceId = this.curr_cnct_resource.id
             await this.disconnect({ showSnackbar: true, id: this.targetConn.id })
+            // update route
+            if (currCnctResourceId === this.targetConn.id) this.updateRoute(this.active_wke_id)
         },
     },
 }

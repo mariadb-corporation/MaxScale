@@ -478,8 +478,6 @@ export default {
                     dispatch('deleteInvalidConn', invalidCnctResources)
                     commit('SET_CNCT_RESOURCES', validCnctResources)
                 }
-                if (state.worksheets_arr.length)
-                    commit('SET_ACTIVE_WKE_ID', state.worksheets_arr[0].id)
                 commit('SET_IS_VALIDATING_CONN', false)
             } catch (e) {
                 commit('SET_IS_VALIDATING_CONN', false)
@@ -498,7 +496,52 @@ export default {
                 logger.error(e)
             }
         },
-
+        chooseActiveWke({ state, commit, dispatch }) {
+            const { id: paramId } = this.router.app.$route.params
+            if (paramId) {
+                /**
+                 * Check if there is a worksheet connected to the provided resource id (paramId)
+                 * then if it's not the current active worksheet, change current worksheet tab to targetWke
+                 */
+                const targetWke = state.worksheets_arr.find(
+                    w => w.curr_cnct_resource.name === paramId
+                )
+                if (targetWke) commit('SET_ACTIVE_WKE_ID', targetWke.id)
+                else {
+                    /**
+                     * TODO: openConnDialog with pre-select resource id.
+                     * There should be a module state to open the dialog with pre-select data in
+                     * `connection-manager` component.
+                     */
+                    dispatch('addNewWs')
+                }
+            } else if (state.worksheets_arr.length) {
+                const currActiveWkeId = state.active_wke_id
+                const nextActiveWkeId = state.worksheets_arr[0].id
+                // set the first wke as active if route param id is not specified
+                commit('SET_ACTIVE_WKE_ID', state.worksheets_arr[0].id)
+                if (currActiveWkeId === nextActiveWkeId) dispatch('updateRoute', nextActiveWkeId)
+            }
+        },
+        /**
+         * This handles updating route for the current active worksheet.
+         * If it is bound to a connection, it navigates route to the nested route. i.e /query/:resourceId
+         * Otherwise, it uses worksheet id as nested route id. i.e. /query/:wkeId.
+         * This function must be called in the following cases:
+         * 1. When $route changes. e.g. The use edits url or enter page with an absolute link
+         * 2. When active_wke_id is changed. e.g. The user creates new worksheet or navigate between worksheets
+         * 3. When curr_cnct_resource is changed. e.g. The user selects connection in the dropdown or opens new one
+         * 4. When the connection is unlinked from the worksheet
+         * @param {String} wkeId - worksheet id
+         */
+        updateRoute({ state }, wkeId) {
+            let from = this.router.app.$route.path,
+                to = `/query/${wkeId}`
+            const targetWke = state.worksheets_arr.find(w => w.id === wkeId)
+            const { name } = targetWke.curr_cnct_resource
+            if (name) to = `/query/${name}`
+            if (from !== to) this.router.push(to)
+        },
         /**
          * @param {Object} chosenConn  Chosen connection
          */
