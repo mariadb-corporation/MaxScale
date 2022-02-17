@@ -95,13 +95,14 @@ void set_SSL_mode_bits(SSL* ssl)
      * 1. Partial writes allow consuming from write buffer as writing progresses.
      * 2. Auto-retry is enabled by default on more recent OpenSSL versions. Unclear if it matters for
      * non-blocking sockets.
+     * 3. Moving write buffer is required as GWBUF storage may be reallocated before a write retry.
      */
-    const long SSL_MODE_BITS = SSL_MODE_ENABLE_PARTIAL_WRITE | SSL_MODE_AUTO_RETRY;
+    const long SSL_MODE_BITS = SSL_MODE_ENABLE_PARTIAL_WRITE | SSL_MODE_AUTO_RETRY
+        | SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER;
 
     auto bits = SSL_set_mode(ssl, SSL_MODE_BITS);
     mxb_assert((bits & SSL_MODE_BITS) == SSL_MODE_BITS);
 }
-
 
 /**
  * Create a low level connection to a server.
@@ -850,19 +851,29 @@ void DCB::socket_write_SSL()
         // OpenSSL thread-local error queue should be cleared before an I/O op.
         ERR_clear_error();
 
-        // TODO: Use SSL_write_ex when can assume a more recent OpenSSL (Centos7 limitation).
-        // SSL_write takes the number of bytes as int. It's imaginable that the writeq length
-        // could be greater than INT_MAX, so limit the write amount.
-        int writable = std::min(m_writeq.length(), (size_t)INT_MAX);
+        int writable = 0;
+        if (m_encryption.retry_write_size > 0)
+        {
+            // Previous write failed, try again with the same data. According to testing,
+            // this is not necessary. OpenSSL documentation claims that it is, so best to obey.
+            writable = m_encryption.retry_write_size;
+        }
+        else
+        {
+            // SSL_write takes the number of bytes as int. It's imaginable that the writeq length
+            // could be greater than INT_MAX, so limit the write amount.
+            writable = std::min(m_writeq.length(), (size_t)INT_MAX);
+        }
 
+        // TODO: Use SSL_write_ex when can assume a more recent OpenSSL (Centos7 limitation).
         int res = SSL_write(m_encryption.handle, m_writeq.data(), writable);
         if (res > 0)
         {
             /* Successful write */
             m_encryption.write_want_read = false;
-            m_encryption.write_want_write = false;
             m_writeq.consume(res);
             total_written += res;
+            m_encryption.retry_write_size = 0;
         }
         else
         {
@@ -877,13 +888,13 @@ void DCB::socket_write_SSL()
             case SSL_ERROR_WANT_READ:
                 /* Prevent SSL I/O on connection until retried, return to poll loop */
                 m_encryption.write_want_read = true;
-                m_encryption.write_want_write = false;
+                m_encryption.retry_write_size = writable;
                 break;
 
             case SSL_ERROR_WANT_WRITE:
                 /* Prevent SSL I/O on connection until retried, return to poll loop */
                 m_encryption.write_want_read = false;
-                m_encryption.write_want_write = true;
+                m_encryption.retry_write_size = writable;
                 break;
 
             default:

@@ -591,8 +591,8 @@ protected:
         bool     read_want_read = false;
         bool     read_want_write = false;
         bool     write_want_read = false;
-        bool     write_want_write = false;
         bool     verify_host = false;
+        int      retry_write_size = 0;
     };
 
     const uint64_t m_uid;   /**< Unique identifier for this DCB */
