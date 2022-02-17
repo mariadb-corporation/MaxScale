@@ -813,15 +813,32 @@ public:
             return CACHE_RESULT_OK;
         }
 
-        Redis::Reply reply = m_redis.command("FLUSHALL");
-        mxb_assert(reply.is_status("OK"));
+        cache_result_t rv = CACHE_RESULT_ERROR;
 
-        if (!reply)
+        Redis::Reply reply = m_redis.command("FLUSHALL");
+
+        if (reply)
         {
-            log_error(m_redis, "Failed when clearing the cache");
+            if (reply.is_status("OK"))
+            {
+                rv = CACHE_RESULT_OK;
+            }
+            else if (reply.is_status())
+            {
+                MXS_ERROR("Expected status OK as reponse to FLUSHALL, but received %s.", reply.str());
+            }
+            else
+            {
+                MXS_ERROR("Expected a status message as response to FLUSHALL, but received a %s.",
+                          redis_type_to_string(reply.type()));
+            }
+        }
+        else
+        {
+            log_error(m_redis, "Failed when clearing Redis");
         }
 
-        return reply.is_status("OK") ? CACHE_RESULT_OK : CACHE_RESULT_ERROR;
+        return rv;
     }
 
 private:
