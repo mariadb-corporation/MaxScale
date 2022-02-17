@@ -146,7 +146,7 @@ const uint64_t server_type_bits = SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED;
 
 /** All server bits */
 const uint64_t all_server_bits = SERVER_RUNNING | SERVER_MAINT | SERVER_MASTER | SERVER_SLAVE
-    | SERVER_JOINED;
+    | SERVER_JOINED | SERVER_RELAY | SERVER_BLR;
 
 const char journal_name[] = "monitor.dat";
 const char journal_template[] = "%s/%s/%s";
