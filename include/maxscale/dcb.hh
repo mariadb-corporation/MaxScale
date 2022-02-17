@@ -635,7 +635,7 @@ private:
     int    read_SSL();
     GWBUF* basic_read_SSL(int* nsingleread);
 
-    int  socket_write_SSL(GWBUF* writeq, bool* stop_writing);
+    void socket_write_SSL();
     void socket_write();
 
     static void free(DCB* dcb);

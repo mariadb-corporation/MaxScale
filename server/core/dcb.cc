@@ -88,6 +88,21 @@ static thread_local struct
     DCB* current_dcb;       /** The DCB currently being handled by event handlers. */
 } this_thread;
 
+void set_SSL_mode_bits(SSL* ssl)
+{
+    /*
+     * SSL mode bits:
+     * 1. Partial writes allow consuming from write buffer as writing progresses.
+     * 2. Auto-retry is enabled by default on more recent OpenSSL versions. Unclear if it matters for
+     * non-blocking sockets.
+     */
+    const long SSL_MODE_BITS = SSL_MODE_ENABLE_PARTIAL_WRITE | SSL_MODE_AUTO_RETRY;
+
+    auto bits = SSL_set_mode(ssl, SSL_MODE_BITS);
+    mxb_assert((bits & SSL_MODE_BITS) == SSL_MODE_BITS);
+}
+
+
 /**
  * Create a low level connection to a server.
  *
@@ -757,21 +772,7 @@ void DCB::writeq_drain()
             /** The SSL library needs to write more data */
             trigger_read_event();
         }
-
-        int total_written = 0;
-        bool stop_writing = false;
-        while (!stop_writing && !m_writeq.empty())
-        {
-            /* The value put into written will be >= 0 */
-            int written = socket_write_SSL(&m_writeq, &stop_writing);
-            m_writeq.consume(written);
-            total_written += written;
-        }
-
-        if (total_written > 0)
-        {
-            m_last_write = mxs_clock();
-        }
+        socket_write_SSL();
     }
     else
     {
@@ -838,66 +839,68 @@ void DCB::destroy()
  * Write data to a DCB socket through an SSL structure. The SSL structure is
  * linked from the DCB. All communication is encrypted and done via the SSL
  * structure. Data is written from the DCB write queue.
- *
- * @param dcb           The DCB having an SSL connection
- * @param writeq        A buffer list containing the data to be written
- * @param stop_writing  Set to true if the caller should stop writing, false otherwise
- * @return              Number of written bytes
  */
-int DCB::socket_write_SSL(GWBUF* writeq, bool* stop_writing)
+void DCB::socket_write_SSL()
 {
-    int written;
+    bool keep_writing = true;
+    size_t total_written = 0;
 
-    written = SSL_write(m_encryption.handle, GWBUF_DATA(writeq), gwbuf_link_length(writeq));
-
-    *stop_writing = false;
-    switch ((SSL_get_error(m_encryption.handle, written)))
+    while (keep_writing && !m_writeq.empty())
     {
-    case SSL_ERROR_NONE:
-        /* Successful write */
-        m_encryption.write_want_read = false;
-        m_encryption.write_want_write = false;
-        break;
+        // OpenSSL thread-local error queue should be cleared before an I/O op.
+        ERR_clear_error();
 
-    case SSL_ERROR_ZERO_RETURN:
-        /* react to the SSL connection being closed */
-        *stop_writing = true;
-        trigger_hangup_event();
-        break;
+        // TODO: Use SSL_write_ex when can assume a more recent OpenSSL (Centos7 limitation).
+        // SSL_write takes the number of bytes as int. It's imaginable that the writeq length
+        // could be greater than INT_MAX, so limit the write amount.
+        int writable = std::min(m_writeq.length(), (size_t)INT_MAX);
 
-    case SSL_ERROR_WANT_READ:
-        /* Prevent SSL I/O on connection until retried, return to poll loop */
-        *stop_writing = true;
-        m_encryption.write_want_read = true;
-        m_encryption.write_want_write = false;
-        break;
-
-    case SSL_ERROR_WANT_WRITE:
-        /* Prevent SSL I/O on connection until retried, return to poll loop */
-        *stop_writing = true;
-        m_encryption.write_want_read = false;
-        m_encryption.write_want_write = true;
-        break;
-
-    case SSL_ERROR_SYSCALL:
-        *stop_writing = true;
-        if (log_errors_SSL(written) < 0)
+        int res = SSL_write(m_encryption.handle, m_writeq.data(), writable);
+        if (res > 0)
         {
-            trigger_hangup_event();
+            /* Successful write */
+            m_encryption.write_want_read = false;
+            m_encryption.write_want_write = false;
+            m_writeq.consume(res);
+            total_written += res;
         }
-        break;
-
-    default:
-        /* Report error(s) and shutdown the connection */
-        *stop_writing = true;
-        if (log_errors_SSL(written) < 0)
+        else
         {
-            trigger_hangup_event();
+            keep_writing = false;
+            switch (SSL_get_error(m_encryption.handle, res))
+            {
+            case SSL_ERROR_ZERO_RETURN:
+                /* react to the SSL connection being closed */
+                trigger_hangup_event();
+                break;
+
+            case SSL_ERROR_WANT_READ:
+                /* Prevent SSL I/O on connection until retried, return to poll loop */
+                m_encryption.write_want_read = true;
+                m_encryption.write_want_write = false;
+                break;
+
+            case SSL_ERROR_WANT_WRITE:
+                /* Prevent SSL I/O on connection until retried, return to poll loop */
+                m_encryption.write_want_read = false;
+                m_encryption.write_want_write = true;
+                break;
+
+            default:
+                /* Report error(s) and shutdown the connection */
+                if (log_errors_SSL(res) < 0)
+                {
+                    trigger_hangup_event();
+                }
+                break;
+            }
         }
-        break;
     }
 
-    return written > 0 ? written : 0;
+    if (total_written > 0)
+    {
+        m_last_write = mxs_clock();
+    }
 }
 
 /**
@@ -1743,6 +1746,7 @@ int ClientDCB::ssl_handshake()
         return -1;
     }
 
+    set_SSL_mode_bits(m_encryption.handle);
     int ssl_rval = SSL_accept(m_encryption.handle);
 
     switch (SSL_get_error(m_encryption.handle, ssl_rval))
@@ -1958,8 +1962,11 @@ int BackendDCB::ssl_handshake()
         mxb_assert(m_ssl);
         return -1;
     }
+
+    set_SSL_mode_bits(m_encryption.handle);
     m_encryption.state = SSLState::HANDSHAKE_REQUIRED;
     ssl_rval = SSL_connect(m_encryption.handle);
+
     switch (SSL_get_error(m_encryption.handle, ssl_rval))
     {
     case SSL_ERROR_NONE:
