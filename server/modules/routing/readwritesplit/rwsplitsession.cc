@@ -542,7 +542,9 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
 
     if (reply.is_complete())
     {
-        if (backend->should_ignore_response())
+        bool ignore_response = backend->should_ignore_response();
+
+        if (ignore_response)
         {
             MXS_INFO("Reply complete from '%s', discarding it.", backend->name());
             gwbuf_free(writebuf);
@@ -570,13 +572,6 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
                 m_qc.ps_store_response(reply.generated_id(), reply.param_count());
             }
 
-            if (!finish_causal_read())
-            {
-                // The query timed out on the slave, retry it on the master
-                gwbuf_free(writebuf);
-                return 1;
-            }
-
             if (m_state == OTRX_ROLLBACK)
             {
                 // Transaction rolled back, start replaying it on the master
@@ -590,6 +585,13 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
 
         backend->ack_write();
         backend->select_finished();
+
+        if (!ignore_response && !finish_causal_read())
+        {
+            // The query timed out on the slave, retry it on the master
+            gwbuf_free(writebuf);
+            return 1;
+        }
 
         mxb_assert(m_expected_responses >= 0);
     }
