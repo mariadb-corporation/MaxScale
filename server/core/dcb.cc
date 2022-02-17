@@ -194,16 +194,13 @@ DCB::~DCB()
         SSL_free(m_encryption.handle);
     }
 
-    gwbuf_free(m_writeq);
-
     POLL_DATA::owner = reinterpret_cast<mxb::WORKER*>(0xdeadbeef);
 }
 
 void DCB::clear()
 {
     m_readq.clear();
-    gwbuf_free(m_writeq);
-    m_writeq = NULL;
+    m_writeq.clear();
 
     remove_callbacks();
 
@@ -686,7 +683,9 @@ bool DCB::writeq_append(GWBUF* queue, Drain drain)
         return 0;
     }
 
-    m_writeq = gwbuf_append(m_writeq, queue);
+    // This can be slow in a situation where data is queued faster than it can be sent.
+    m_writeq.merge_back(move(*queue));
+    delete queue;
     m_stats.n_buffered++;
 
     if (drain == Drain::YES)
@@ -764,11 +763,11 @@ void DCB::writeq_drain()
 
         int total_written = 0;
         bool stop_writing = false;
-        while (!stop_writing && m_writeq && !m_writeq->empty())
+        while (!stop_writing && !m_writeq.empty())
         {
             /* The value put into written will be >= 0 */
-            int written = socket_write_SSL(m_writeq, &stop_writing);
-            m_writeq->consume(written);
+            int written = socket_write_SSL(&m_writeq, &stop_writing);
+            m_writeq.consume(written);
             total_written += written;
         }
 
@@ -779,13 +778,10 @@ void DCB::writeq_drain()
     }
     else
     {
-        if (m_writeq)
-        {
-            socket_write();
-        }
+        socket_write();
     }
 
-    m_writeqlen = m_writeq ? m_writeq->length() : 0;
+    m_writeqlen = m_writeq.length();
 
     if (m_high_water_reached && DCB_BELOW_LOW_WATER(this))
     {
@@ -918,12 +914,12 @@ void DCB::socket_write()
     size_t total_written = 0;
 
     // Write until socket blocks, we run out of bytes or an error occurs.
-    while (keep_writing && !m_writeq->empty())
+    while (keep_writing && !m_writeq.empty())
     {
-        auto res = ::write(m_fd, m_writeq->start, m_writeq->length());
+        auto res = ::write(m_fd, m_writeq.start, m_writeq.length());
         if (res > 0)
         {
-            m_writeq->consume(res);
+            m_writeq.consume(res);
             total_written += res;
         }
         else if (res == 0)

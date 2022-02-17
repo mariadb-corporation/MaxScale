@@ -191,7 +191,7 @@ bool MariaDBBackendConnection::can_reuse(MXS_SESSION* session) const
 bool MariaDBBackendConnection::reuse(MXS_SESSION* session, mxs::Component* upstream)
 {
     bool rv = false;
-    mxb_assert(!m_dcb->session() && m_dcb->readq_empty() && !m_dcb->writeq());
+    mxb_assert(!m_dcb->session() && m_dcb->readq_empty() && m_dcb->writeq_empty());
 
     if (m_dcb->state() != DCB::State::POLLING || m_state != State::POOLED || !m_delayed_packets.empty())
     {
@@ -1056,12 +1056,12 @@ void MariaDBBackendConnection::write_ready(DCB* event_dcb)
     if (dcb->state() != DCB::State::POLLING)
     {
         /** Don't write to backend if backend_dcb is not in poll set anymore */
-        uint8_t* data = NULL;
+        const uint8_t* data = NULL;
         bool com_quit = false;
 
-        if (dcb->writeq())
+        if (!dcb->writeq_empty())
         {
-            data = (uint8_t*) GWBUF_DATA(dcb->writeq());
+            data = dcb->writeq().data();
             com_quit = MYSQL_IS_COM_QUIT(data);
         }
 
@@ -1669,7 +1669,7 @@ int64_t MariaDBBackendConnection::seconds_idle() const
     int64_t idle = 0;
 
     // Only treat the connection as idle if there's no buffered data
-    if ((!m_dcb->writeq() || m_dcb->writeq()->empty()) && m_dcb->readq_empty())
+    if (m_dcb->writeq_empty() && m_dcb->readq_empty())
     {
         idle = MXS_CLOCK_TO_SEC(mxs_clock() - std::max(m_dcb->last_read(), m_dcb->last_write()));
     }

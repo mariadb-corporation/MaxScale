@@ -401,7 +401,12 @@ public:
      */
     void remove_callbacks();
 
-    inline GWBUF* writeq()
+    bool writeq_empty()
+    {
+        return m_writeq.empty();
+    }
+
+    const GWBUF& writeq()
     {
         return m_writeq;
     }
@@ -413,7 +418,7 @@ public:
      *
      * @return A buffer of NULL if there is no read queue.
      */
-    inline bool readq_empty()
+    bool readq_empty()
     {
         return m_readq.empty();
     }
@@ -516,10 +521,7 @@ public:
         this->owner = worker;
 #ifdef SS_DEBUG
         int wid = worker ? worker->id() : -1;
-        if (m_writeq)
-        {
-            gwbuf_set_owner(m_writeq, wid);
-        }
+        gwbuf_set_owner(&m_writeq, wid);
         gwbuf_set_owner(&m_readq, wid);
 #endif
     }
@@ -614,7 +616,7 @@ protected:
     Stats      m_stats;                 /**< DCB related statistics */
 
     uint64_t m_writeqlen = 0;           /**< Bytes in writeq */
-    GWBUF*   m_writeq = nullptr;        /**< Write Data Queue */
+    GWBUF    m_writeq;                  /**< Write Data Queue */
     GWBUF    m_readq;                   /**< Read queue for incomplete reads */
     uint32_t m_triggered_event = 0;     /**< Triggered event to be delivered to handler */
     uint32_t m_triggered_event_old = 0; /**< Triggered event before disabling events */
