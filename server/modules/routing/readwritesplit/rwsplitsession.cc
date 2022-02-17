@@ -1031,6 +1031,9 @@ bool RWSplitSession::handle_error_new_connection(RWBackend* backend, GWBUF* errm
         mxb_assert(m_expected_responses == 1);
         m_expected_responses--;
 
+        // Reset causal read state so that the next read starts from the correct one.
+        m_wait_gtid = NONE;
+
         // The backend was busy executing command and the client is expecting a response.
         if (m_current_query.get() && m_config.retry_failed_reads)
         {
