@@ -343,7 +343,7 @@ public:
      */
     uint64_t writeq_len() const
     {
-        return m_writeqlen;
+        return m_writeq.length();
     }
 
     // TODO: Should probably be made protected.
@@ -615,7 +615,6 @@ protected:
     Encryption m_encryption;            /**< Encryption state */
     Stats      m_stats;                 /**< DCB related statistics */
 
-    uint64_t m_writeqlen = 0;           /**< Bytes in writeq */
     GWBUF    m_writeq;                  /**< Write Data Queue */
     GWBUF    m_readq;                   /**< Read queue for incomplete reads */
     uint32_t m_triggered_event = 0;     /**< Triggered event to be delivered to handler */

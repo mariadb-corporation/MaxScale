@@ -68,8 +68,6 @@ using std::move;
 using mxs::ClientConnection;
 using mxs::BackendConnection;
 
-#define DCB_BELOW_LOW_WATER(x)    ((x)->m_low_water && (x)->m_writeqlen < (x)->m_low_water)
-#define DCB_ABOVE_HIGH_WATER(x)   ((x)->m_high_water && (x)->m_writeqlen > (x)->m_high_water)
 #define DCB_THROTTLING_ENABLED(x) ((x)->m_high_water && (x)->m_low_water)
 
 namespace
@@ -676,7 +674,6 @@ int DCB::log_errors_SSL(int ret)
 bool DCB::writeq_append(GWBUF* queue, Drain drain)
 {
     mxb_assert(this->owner == RoutingWorker::get_current());
-    m_writeqlen += gwbuf_length(queue);
     // The following guarantees that queue is not NULL
     if (!dcb_write_parameter_check(this, m_fd, queue))
     {
@@ -693,7 +690,7 @@ bool DCB::writeq_append(GWBUF* queue, Drain drain)
         writeq_drain();
     }
 
-    if (DCB_ABOVE_HIGH_WATER(this) && !m_high_water_reached)
+    if (m_high_water > 0 && m_writeq.length() > m_high_water && !m_high_water_reached)
     {
         call_callback(Reason::HIGH_WATER);
         m_high_water_reached = true;
@@ -781,9 +778,8 @@ void DCB::writeq_drain()
         socket_write();
     }
 
-    m_writeqlen = m_writeq.length();
-
-    if (m_high_water_reached && DCB_BELOW_LOW_WATER(this))
+    // TODO: should m_low_water = 0 be allowed as a default value?
+    if (m_high_water_reached && m_low_water > 0 && m_writeq.length() < m_low_water)
     {
         call_callback(Reason::LOW_WATER);
         m_high_water_reached = false;
