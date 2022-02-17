@@ -32,7 +32,13 @@
                         content-class="shadow-drop color text-navigation py-1 px-4"
                     >
                         <template v-slot:activator="{ on }">
-                            <v-btn small icon :to="`/query/${node.id}`" target="_blank" v-on="on">
+                            <v-btn
+                                small
+                                icon
+                                :to="`/query/servers/${node.id}`"
+                                target="_blank"
+                                v-on="on"
+                            >
                                 <v-icon size="16" :color="iconColor">
                                     $vuetify.icons.queryEditor
                                 </v-icon>

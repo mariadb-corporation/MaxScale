@@ -87,7 +87,7 @@ export default [
         label: 'queryEditor',
         children: [
             {
-                path: ':id',
+                path: ':type/:id',
                 component: QueryView,
                 meta: {
                     requiresAuth: true,
@@ -96,6 +96,7 @@ export default [
                 name: 'query',
                 props: route => ({
                     id: route.params.id,
+                    type: route.params.type,
                 }),
             },
         ],

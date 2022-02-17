@@ -77,7 +77,7 @@ function saWkeStates() {
  */
 export function defWorksheetState() {
     return {
-        id: uniqueId(`wke_${new Date().getUTCMilliseconds()}_`),
+        id: uniqueId(`${new Date().getUTCMilliseconds()}_`),
         name: 'WORKSHEET',
         ...saWkeStates(),
     }
@@ -497,23 +497,25 @@ export default {
             }
         },
         chooseActiveWke({ state, commit, dispatch }) {
-            const { id: paramId } = this.router.app.$route.params
+            const { type = 'blank_wke', id: paramId } = this.router.app.$route.params
             if (paramId) {
-                /**
-                 * Check if there is a worksheet connected to the provided resource id (paramId)
-                 * then if it's not the current active worksheet, change current worksheet tab to targetWke
-                 */
-                const targetWke = state.worksheets_arr.find(
-                    w => w.curr_cnct_resource.name === paramId
-                )
-                if (targetWke) commit('SET_ACTIVE_WKE_ID', targetWke.id)
-                else {
+                if (type !== 'blank_wke') {
                     /**
-                     * TODO: openConnDialog with pre-select resource id.
-                     * There should be a module state to open the dialog with pre-select data in
-                     * `connection-manager` component.
+                     * Check if there is a worksheet connected to the provided resource id (paramId)
+                     * then if it's not the current active worksheet, change current worksheet tab to targetWke
                      */
-                    dispatch('addNewWs')
+                    const targetWke = state.worksheets_arr.find(
+                        w => w.curr_cnct_resource.name === paramId
+                    )
+                    if (targetWke) commit('SET_ACTIVE_WKE_ID', targetWke.id)
+                    else {
+                        /**
+                         * TODO: openConnDialog with pre-select resource id.
+                         * There should be a module state to open the dialog with pre-select data in
+                         * `connection-manager` component.
+                         */
+                        dispatch('addNewWs')
+                    }
                 }
             } else if (state.worksheets_arr.length) {
                 const currActiveWkeId = state.active_wke_id
@@ -525,8 +527,8 @@ export default {
         },
         /**
          * This handles updating route for the current active worksheet.
-         * If it is bound to a connection, it navigates route to the nested route. i.e /query/:resourceId
-         * Otherwise, it uses worksheet id as nested route id. i.e. /query/:wkeId.
+         * If it is bound to a connection, it navigates route to the nested route. i.e /query/:resourceType/:resourceId
+         * Otherwise, it uses worksheet id as nested route id. i.e. /query/blank_wke/:wkeId.
          * This function must be called in the following cases:
          * 1. When $route changes. e.g. The use edits url or enter page with an absolute link
          * 2. When active_wke_id is changed. e.g. The user creates new worksheet or navigate between worksheets
@@ -536,10 +538,10 @@ export default {
          */
         updateRoute({ state }, wkeId) {
             let from = this.router.app.$route.path,
-                to = `/query/${wkeId}`
+                to = `/query/blank_wke/${wkeId}`
             const targetWke = state.worksheets_arr.find(w => w.id === wkeId)
-            const { name } = targetWke.curr_cnct_resource
-            if (name) to = `/query/${name}`
+            const { type, name } = targetWke.curr_cnct_resource
+            if (name) to = `/query/${type}/${name}`
             if (from !== to) this.router.push(to)
         },
         /**
