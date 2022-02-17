@@ -179,23 +179,25 @@ describe(`ConnectionManager - connection list dropdown tests`, () => {
         onSelectConnSpy.should.have.been.calledOnce
         onSelectConnSpy.restore()
     })
-    it(`Should call SET_CURR_CNCT_RESOURCE and initialFetch with accurate arguments
+    it(`Should call SET_CURR_CNCT_RESOURCE and updateRoute with accurate arguments
       when onSelectConn is called`, () => {
-        let initialFetchArgs, setCurrCnctResourceArgs
+        let updateRouteArgs, setCurrCnctResourceArgs, handleDispatchInitialFetchArgs
         wrapper = mountFactory({
             computed: { ...mockActiveConnState() },
             methods: {
                 SET_CURR_CNCT_RESOURCE: v => (setCurrCnctResourceArgs = v),
-                initialFetch: v => (initialFetchArgs = v),
+                updateRoute: v => (updateRouteArgs = v),
+                handleDispatchInitialFetch: v => (handleDispatchInitialFetchArgs = v),
             },
         })
         const selectConn = wrapper.vm.connOptions[1]
         wrapper.vm.onSelectConn(selectConn)
-        expect(initialFetchArgs).to.be.deep.equals(selectConn)
+        expect(updateRouteArgs).to.be.deep.equals(wrapper.vm.active_wke_id)
         expect(setCurrCnctResourceArgs).to.be.deep.equals({
             payload: selectConn,
             active_wke_id: wrapper.vm.active_wke_id,
         })
+        expect(handleDispatchInitialFetchArgs).to.be.deep.equals(selectConn)
     })
 })
 

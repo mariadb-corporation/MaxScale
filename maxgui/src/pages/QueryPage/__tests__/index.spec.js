@@ -21,36 +21,42 @@ const cnct_resources_mock = [
         type: 'listeners',
     },
 ]
-const from_route_mock = { name: 'queryEditor', path: '/query' }
+const from_route_mock = { name: 'queryEditor', path: '/query/listeners/Read-Write-Listener' }
 const to_route_mock = { name: 'settings', path: '/settings' }
 function mockBeforeRouteLeave(wrapper) {
     const next = sinon.stub()
     wrapper.vm.$options.beforeRouteLeave[0].call(wrapper.vm, to_route_mock, from_route_mock, next)
 }
-describe('QueryPage mounting tests', () => {
-    let handleAutoClearQueryHistorySpy, validatingConnSpy
+const stubModuleMethods = {
+    handleAutoClearQueryHistory: () => null,
+    validatingConn: () => null,
+    chooseActiveWke: () => null,
+}
+describe('QueryPage created hook tests', () => {
+    let handleAutoClearQueryHistoryCallCount = 0,
+        validatingConnCallCount = 0
     before(() => {
-        // spy on actions before mounting occurs
-        handleAutoClearQueryHistorySpy = sinon.spy(QueryPage.methods, 'handleAutoClearQueryHistory')
-        validatingConnSpy = sinon.spy(QueryPage.methods, 'validatingConn')
-        mount({ shallow: true, component: QueryPage })
-    })
-    after(() => {
-        handleAutoClearQueryHistorySpy.restore()
-        validatingConnSpy.restore()
+        mount({
+            shallow: true,
+            component: QueryPage,
+            methods: {
+                ...stubModuleMethods,
+                handleAutoClearQueryHistory: () => handleAutoClearQueryHistoryCallCount++,
+                validatingConn: () => validatingConnCallCount++,
+            },
+        })
     })
 
     it('Should call `handleAutoClearQueryHistory` action once when component is created', () => {
-        handleAutoClearQueryHistorySpy.should.have.been.calledOnce
+        expect(handleAutoClearQueryHistoryCallCount).to.be.equals(1)
     })
     it('Should call `validatingConn` action once when component is created', () => {
-        validatingConnSpy.should.have.been.calledOnce
+        expect(validatingConnCallCount).to.be.equals(1)
     })
 })
 
 describe('QueryPage leaving tests', () => {
     let wrapper
-
     it(`Should open confirmation dialog on leaving page when there
       is an active connection`, () => {
         wrapper = mount({
@@ -60,6 +66,7 @@ describe('QueryPage leaving tests', () => {
                 // stub active connection
                 cnct_resources: () => cnct_resources_mock,
             },
+            methods: stubModuleMethods,
         })
         mockBeforeRouteLeave(wrapper)
         expect(wrapper.vm.$data.isConfDlgOpened).to.be.true
@@ -72,6 +79,7 @@ describe('QueryPage leaving tests', () => {
                 // stub for having no active connection
                 cnct_resources: () => [],
             },
+            methods: stubModuleMethods,
         })
         expect(wrapper.vm.cnct_resources).to.be.empty
         mockBeforeRouteLeave(wrapper)
@@ -84,13 +92,6 @@ describe('QueryPage - handle disconnect connections when leaving page', () => {
 
     beforeEach(() => {
         disconnectAllSpy = sinon.spy(QueryPage.methods, 'disconnectAll')
-    })
-    afterEach(() => {
-        disconnectAllSpy.restore()
-    })
-
-    it(`Should disconnect all opened connections by default when
-     confirming leaving the page`, () => {
         wrapper = mount({
             shallow: true,
             component: QueryPage,
@@ -98,7 +99,15 @@ describe('QueryPage - handle disconnect connections when leaving page', () => {
                 // stub active connection
                 cnct_resources: () => cnct_resources_mock,
             },
+            methods: stubModuleMethods,
         })
+    })
+    afterEach(() => {
+        disconnectAllSpy.restore()
+    })
+
+    it(`Should disconnect all opened connections by default when
+     confirming leaving the page`, () => {
         mockBeforeRouteLeave(wrapper) // mockup leaving page
         expect(wrapper.vm.$data.confirmDelAll).to.be.true
         // mock confirm leaving
@@ -107,14 +116,6 @@ describe('QueryPage - handle disconnect connections when leaving page', () => {
     })
 
     it(`Should keep connections even when leaving the page`, async () => {
-        wrapper = mount({
-            shallow: true,
-            component: QueryPage,
-            computed: {
-                // stub active connection
-                cnct_resources: () => cnct_resources_mock,
-            },
-        })
         mockBeforeRouteLeave(wrapper) //mockup leaving page
         // mockup un-checking "Disconnect all" checkbox
         await wrapper.setData({ confirmDelAll: false })

@@ -74,9 +74,9 @@ export default {
             },
         },
     },
-    async beforeCreate() {
-        this.$store.dispatch('persisted/handleAutoClearQueryHistory')
-        await this.$store.dispatch('query/validatingConn')
+    async created() {
+        this.handleAutoClearQueryHistory()
+        await this.validatingConn()
     },
     async beforeRouteLeave(to, from, next) {
         if (this.to) {
@@ -120,6 +120,7 @@ export default {
             clearConn: 'query/clearConn',
             updateRoute: 'query/updateRoute',
             chooseActiveWke: 'query/chooseActiveWke',
+            handleAutoClearQueryHistory: 'persisted/handleAutoClearQueryHistory',
         }),
         async onLeave() {
             if (this.confirmDelAll) await this.disconnectAll()
