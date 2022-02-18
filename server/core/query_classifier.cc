@@ -201,7 +201,7 @@ public:
         constexpr int64_t max_entry_size = 0xffffff - 5;
 
         int64_t cache_max_size = this_unit.cache_max_size() / mxs::Config::get().n_threads;
-        int64_t size = entry_size(canonical_stmt.size());
+        int64_t size = entry_size(canonical_stmt, pInfo);
 
         if (size < max_entry_size && size <= cache_max_size)
         {
@@ -282,24 +282,24 @@ private:
 
     typedef std::unordered_map<std::string, Entry> InfosByStmt;
 
-    constexpr int64_t entry_constant_cost() const
+    int64_t entry_size(const std::string& canonical, const QC_STMT_INFO* pInfo)
     {
-        const int64_t sizeof_QcSqliteInfo = 272;
         const int64_t map_entry_overhead = 4 * sizeof(void *);
-        return sizeof(std::string) + sizeof(Entry) + sizeof_QcSqliteInfo + map_entry_overhead;
+        const int64_t constant_overhead = sizeof(std::string) + sizeof(Entry) + map_entry_overhead;
+
+        return constant_overhead + canonical.size() + this_unit.classifier->qc_info_size(pInfo);
     }
 
-    int64_t entry_size(int canonical_sz) const
+    int64_t entry_size(const InfosByStmt::value_type& entry)
     {
-        /* The 4x multiplier is there until we can get real memory use of QcSqliteInfo */
-        return entry_constant_cost() + 4 * canonical_sz;
+        return entry_size(entry.first, entry.second.pInfo);
     }
 
     void erase(InfosByStmt::iterator& i)
     {
         mxb_assert(i != m_infos.end());
 
-        m_stats.size -= entry_size(i->first.size());
+        m_stats.size -= entry_size(*i);
 
         mxb_assert(this_unit.classifier);
         this_unit.classifier->qc_info_close(i->second.pInfo);
@@ -350,7 +350,7 @@ private:
         // there will be just one.
         if (i != m_infos.end(bucket))
         {
-            freed_space += entry_size(i->first.size());
+            freed_space += entry_size(*i);
 
             MXB_AT_DEBUG(bool erased = ) erase(i->first);
             mxb_assert(erased);
