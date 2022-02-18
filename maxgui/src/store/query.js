@@ -171,6 +171,7 @@ export default {
     state: {
         // connection related states
         is_validating_conn: true,
+        pre_select_conn_rsrc: null,
         // Toolbar states
         is_fullscreen: false,
         rc_target_names_map: {},
@@ -213,6 +214,9 @@ export default {
                 scope: this,
                 active_wke_id,
             })
+        },
+        SET_PRE_SELECT_CONN_RSRC(state, payload) {
+            state.pre_select_conn_rsrc = payload
         },
 
         // Sidebar tree schema mutations
@@ -502,19 +506,22 @@ export default {
                 if (type !== 'blank_wke') {
                     /**
                      * Check if there is a worksheet connected to the provided resource id (paramId)
-                     * then if it's not the current active worksheet, change current worksheet tab to targetWke
+                     * then if it's not the current active worksheet, change current worksheet tab to targetWke.
+                     * Otherwise, find an empty worksheet(has not been bound to a connection), set it as active and
+                     * dispatch SET_PRE_SELECT_CONN_RSRC to open connection dialog
                      */
                     const targetWke = state.worksheets_arr.find(
                         w => w.curr_cnct_resource.name === paramId
                     )
                     if (targetWke) commit('SET_ACTIVE_WKE_ID', targetWke.id)
                     else {
-                        /**
-                         * TODO: openConnDialog with pre-select resource id.
-                         * There should be a module state to open the dialog with pre-select data in
-                         * `connection-manager` component.
-                         */
-                        dispatch('addNewWs')
+                        // Use a blank wke if there is one, otherwise create a new one
+                        const blankWke = state.worksheets_arr.find(
+                            wke => this.vue.$typy(wke, 'curr_cnct_resource').isEmptyObject
+                        )
+                        if (blankWke) commit('SET_ACTIVE_WKE_ID', blankWke.id)
+                        else dispatch('addNewWs')
+                        commit('SET_PRE_SELECT_CONN_RSRC', { type, id: paramId })
                     }
                 }
             } else if (state.worksheets_arr.length) {

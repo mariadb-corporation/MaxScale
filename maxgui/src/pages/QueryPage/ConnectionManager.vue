@@ -18,7 +18,7 @@
             :placeholder="$t('selectConnection')"
             :no-data-text="$t('noConnAvail')"
             :disabled="disabled"
-            @change="onSelectConn"
+            @change="onChangeChosenConn"
         >
             <template v-slot:selection="{ item }">
                 <div class="d-flex align-center pl-1">
@@ -134,6 +134,7 @@ export default {
         ...mapState({
             cnct_resources: state => state.query.cnct_resources,
             curr_cnct_resource: state => state.query.curr_cnct_resource,
+            pre_select_conn_rsrc: state => state.query.pre_select_conn_rsrc,
             worksheets_arr: state => state.query.worksheets_arr,
             active_wke_id: state => state.query.active_wke_id,
             conn_err_state: state => state.query.conn_err_state,
@@ -157,6 +158,9 @@ export default {
                     ? { ...cnctRsrc, disabled: false }
                     : { ...cnctRsrc, disabled: this.usedConnections.includes(cnctRsrc.id) }
             )
+        },
+        availableConnOpts() {
+            return this.connOptions.filter(cnn => !cnn.disabled)
         },
         connToBeDel() {
             return { id: this.targetConn.name }
@@ -187,8 +191,9 @@ export default {
         },
     },
     async created() {
-        //Auto open dialog if there is no connections
-        if (!this.connOptions.length) this.openConnDialog()
+        if (this.pre_select_conn_rsrc) await this.handlePreSelectConnRsrc()
+        //Auto open dialog if there is no connections and pre_select_conn_rsrc
+        else if (!this.connOptions.length) this.openConnDialog()
     },
     methods: {
         ...mapActions({
@@ -201,6 +206,19 @@ export default {
             SET_CURR_CNCT_RESOURCE: 'query/SET_CURR_CNCT_RESOURCE',
         }),
         /**
+         * Check if there is an available connection (connection that has not been bound to a worksheet),
+         * bind it to the current worksheet. otherwise open dialog
+         */
+        async handlePreSelectConnRsrc() {
+            const conn = this.availableConnOpts.find(
+                conn => conn.name === this.pre_select_conn_rsrc.id
+            )
+            if (conn) {
+                this.chosenConn = conn
+                await this.onChangeChosenConn(conn)
+            } else this.openConnDialog()
+        },
+        /**
          * Dispatching initalFetch when connection is valid, curr_cnct_resource
          * state is defined
          * @param {Object} curr_cnct_resource  curr_cnct_resource
@@ -208,7 +226,10 @@ export default {
         async handleDispatchInitialFetch(curr_cnct_resource) {
             if (curr_cnct_resource.id) await this.initialFetch(curr_cnct_resource)
         },
-        async onSelectConn(chosenConn) {
+        /**
+         * Function is called after chosenConn is updated
+         */
+        async onChangeChosenConn(chosenConn) {
             // update curr_cnct_resource module state
             this.SET_CURR_CNCT_RESOURCE({ payload: chosenConn, active_wke_id: this.active_wke_id })
             // handle navigate to the corresponding nested route

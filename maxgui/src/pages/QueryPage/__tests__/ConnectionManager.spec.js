@@ -97,10 +97,21 @@ describe(`ConnectionManager - child component's data communication tests `, () =
 
 describe(`ConnectionManager - on created hook tests `, () => {
     let wrapper
-    it(`Should auto open connection-dialog if no connection found after
-    validating connections`, () => {
-        wrapper = mountFactory()
+    it(`Should auto open connection-dialog if no connection has been found
+    and no pre_select_conn_rsrc after validating connections`, () => {
+        wrapper = mountFactory({
+            computed: {
+                pre_select_conn_rsrc: () => null,
+            },
+        })
         expect(wrapper.vm.isConnDialogOpened).to.be.true
+    })
+    it(`Should call handlePreSelectConnRsrc if pre_select_conn_rsrc has value`, () => {
+        const fnSpy = sinon.spy(ConnectionManager.methods, 'handlePreSelectConnRsrc')
+        const preSelectConnRsrcStub = { id: 'server_1', type: 'servers' }
+        wrapper = mountFactory({ computed: { pre_select_conn_rsrc: () => preSelectConnRsrcStub } })
+        fnSpy.should.have.been.calledOnce
+        fnSpy.restore()
     })
     const fnCalls = ['initialFetch', 'assignActiveConn']
     fnCalls.forEach(fn => {
@@ -115,6 +126,35 @@ describe(`ConnectionManager - on created hook tests `, () => {
 
 describe(`ConnectionManager - methods and computed properties tests `, () => {
     let wrapper
+    it(`Should call onChangeChosenConn if there is available connection has name
+    equals to pre_select_conn_rsrc `, () => {
+        const fnSpy = sinon.spy(ConnectionManager.methods, 'onChangeChosenConn')
+        const preSelectConnRsrcStub = { id: 'server_1', type: 'servers' }
+        wrapper = mountFactory({
+            computed: {
+                //stub availableConnOpts so that  server_1 is available to use
+                availableConnOpts: () => dummy_cnct_resources,
+                pre_select_conn_rsrc: () => preSelectConnRsrcStub,
+            },
+            methods: {
+                SET_CURR_CNCT_RESOURCE: () => null,
+                updateRoute: () => null,
+                handleDispatchInitialFetch: () => null,
+            },
+        })
+        fnSpy.should.have.been.calledOnceWith(
+            dummy_cnct_resources.find(cnn => cnn.name === preSelectConnRsrcStub.id)
+        )
+        fnSpy.restore()
+    })
+    it(`Should call openConnDialog if there is no available connection has name
+    equals to pre_select_conn_rsrc `, () => {
+        const fnSpy = sinon.spy(ConnectionManager.methods, 'openConnDialog')
+        const preSelectConnRsrcStub = { id: 'server_1', type: 'servers' }
+        wrapper = mountFactory({ computed: { pre_select_conn_rsrc: () => preSelectConnRsrcStub } })
+        fnSpy.should.have.been.calledOnce
+        fnSpy.restore()
+    })
     it(`Should assign curr_cnct_resource value to chosenConn if there is an active connection
       bound to the worksheet`, () => {
         wrapper = mountFactory({ computed: { ...mockActiveConnState() } })
@@ -168,8 +208,8 @@ describe(`ConnectionManager - methods and computed properties tests `, () => {
 
 describe(`ConnectionManager - connection list dropdown tests`, () => {
     let wrapper
-    it(`Should call onSelectConn method when select new connection`, async () => {
-        const onSelectConnSpy = sinon.spy(ConnectionManager.methods, 'onSelectConn')
+    it(`Should call onChangeChosenConn method when select new connection`, async () => {
+        const onSelectConnSpy = sinon.spy(ConnectionManager.methods, 'onChangeChosenConn')
         wrapper = mountFactory({
             shallow: false,
             computed: { ...mockActiveConnState() },
@@ -180,7 +220,7 @@ describe(`ConnectionManager - connection list dropdown tests`, () => {
         onSelectConnSpy.restore()
     })
     it(`Should call SET_CURR_CNCT_RESOURCE and updateRoute with accurate arguments
-      when onSelectConn is called`, () => {
+      when onChangeChosenConn is called`, () => {
         let updateRouteArgs, setCurrCnctResourceArgs, handleDispatchInitialFetchArgs
         wrapper = mountFactory({
             computed: { ...mockActiveConnState() },
@@ -191,7 +231,7 @@ describe(`ConnectionManager - connection list dropdown tests`, () => {
             },
         })
         const selectConn = wrapper.vm.connOptions[1]
-        wrapper.vm.onSelectConn(selectConn)
+        wrapper.vm.onChangeChosenConn(selectConn)
         expect(updateRouteArgs).to.be.deep.equals(wrapper.vm.active_wke_id)
         expect(setCurrCnctResourceArgs).to.be.deep.equals({
             payload: selectConn,
