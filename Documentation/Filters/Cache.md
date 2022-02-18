@@ -1177,6 +1177,11 @@ Example:
 ```
 storage_options="server=192.168.1.31:6379"
 ```
+
+Note that Redis should be configured with no idle timeout or with a timeout that
+is very large. Otherwise MaxScale may have to repeatedly connect to Redis, which
+will hurt both the functionality and the performance.
+
 #### Limitations
 * There is no distinction between _soft_ and _hard_ ttl, but only hard ttl is used.
 * Configuration values given to `max_size` and `max_count` are ignored.
