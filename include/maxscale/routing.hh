@@ -145,6 +145,13 @@ enum mxs_routing_capability_t
      * Binary: 0b0000001000000000
      */
     RCAP_TYPE_OLD_PROTOCOL = (1 << 9),
+
+    /**
+     * Force connection to use multi-statements and multi-results
+     *
+     * Binary: 0b0000010000000000
+     */
+    RCAP_TYPE_MULTI_STMT_SQL = (1 << 10),
 };
 
 #define RCAP_TYPE_NONE 0

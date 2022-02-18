@@ -542,7 +542,9 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
 
     if (reply.is_complete())
     {
-        if (backend->should_ignore_response())
+        bool ignore_response = backend->should_ignore_response();
+
+        if (ignore_response)
         {
             MXS_INFO("Reply complete from '%s', discarding it.", backend->name());
             gwbuf_free(writebuf);
@@ -570,13 +572,6 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
                 m_qc.ps_store_response(reply.generated_id(), reply.param_count());
             }
 
-            if (!finish_causal_read())
-            {
-                // The query timed out on the slave, retry it on the master
-                gwbuf_free(writebuf);
-                return 1;
-            }
-
             if (m_state == OTRX_ROLLBACK)
             {
                 // Transaction rolled back, start replaying it on the master
@@ -590,6 +585,13 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
 
         backend->ack_write();
         backend->select_finished();
+
+        if (!ignore_response && !finish_causal_read())
+        {
+            // The query timed out on the slave, retry it on the master
+            gwbuf_free(writebuf);
+            return 1;
+        }
 
         mxb_assert(m_expected_responses >= 0);
     }
@@ -1038,6 +1040,9 @@ bool RWSplitSession::handle_error_new_connection(RWBackend* backend, GWBUF* errm
         // Slaves should never have more than one response waiting
         mxb_assert(m_expected_responses == 1);
         m_expected_responses--;
+
+        // Reset causal read state so that the next read starts from the correct one.
+        m_wait_gtid = NONE;
 
         // The backend was busy executing command and the client is expecting a response.
         if (m_current_query.get() && m_config.retry_failed_reads)
