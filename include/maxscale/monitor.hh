@@ -237,12 +237,16 @@ public:
 
     const char* get_event_name();
 
-    /*
+    /**
      * Determine a monitor event, defined by the difference between the old
      * status of a server and the new status.
      *
-     * @param   node                The monitor server data for a particular server
-     * @result  monitor_event_t     A monitor event (enum)
+     * @return The event for this state change
+     */
+    static mxs_monitor_event_t event_type(uint64_t before, uint64_t after);
+
+    /**
+     * Calls event_type with previous and current server state
      *
      * @note This function must only be called from mon_process_state_changes
      */

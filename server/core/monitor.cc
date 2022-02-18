@@ -620,6 +620,19 @@ void MonitorServer::clear_pending_status(uint64_t bits)
  */
 mxs_monitor_event_t MonitorServer::get_event_type() const
 {
+    auto rval = event_type(mon_prev_status, server->status());
+
+    mxb_assert_message(rval != UNDEFINED_EVENT,
+                       "No event for state transition: [%s] -> [%s]",
+                       Target::status_to_string(mon_prev_status, server->stats().n_current).c_str(),
+                       server->status_string().c_str());
+
+    return rval;
+}
+
+// static
+mxs_monitor_event_t MonitorServer::event_type(uint64_t before, uint64_t after)
+{
     typedef enum
     {
         DOWN_EVENT,
@@ -631,8 +644,8 @@ mxs_monitor_event_t MonitorServer::get_event_type() const
 
     general_event_type event_type = UNSUPPORTED_EVENT;
 
-    uint64_t prev = mon_prev_status & all_server_bits;
-    uint64_t present = server->status() & all_server_bits;
+    uint64_t prev = before & all_server_bits;
+    uint64_t present = after & all_server_bits;
 
     if (prev == present)
     {
@@ -721,7 +734,6 @@ mxs_monitor_event_t MonitorServer::get_event_type() const
         break;
     }
 
-    mxb_assert(rval != UNDEFINED_EVENT);
     return rval;
 }
 
