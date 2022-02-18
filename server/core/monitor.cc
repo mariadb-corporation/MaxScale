@@ -207,6 +207,14 @@ const MXS_ENUM_VALUE monitor_event_values[] =
     {"new_slave",         NEW_SLAVE_EVENT   },
     {"new_synced",        NEW_SYNCED_EVENT  },
     {"new_donor",         NEW_DONOR_EVENT   },
+    {"relay_up",          RELAY_UP_EVENT    },
+    {"relay_down",        RELAY_DOWN_EVENT  },
+    {"lost_relay",        LOST_RELAY_EVENT  },
+    {"new_relay",         NEW_RELAY_EVENT   },
+    {"blr_up",            BLR_UP_EVENT      },
+    {"blr_down",          BLR_DOWN_EVENT    },
+    {"lost_blr",          LOST_BLR_EVENT    },
+    {"new_blr",           NEW_BLR_EVENT     },
     {NULL}
 };
 
@@ -704,6 +712,8 @@ mxs_monitor_event_t MonitorServer::event_type(uint64_t before, uint64_t after)
         rval = (present & SERVER_MASTER) ? MASTER_UP_EVENT :
             (present & SERVER_SLAVE) ? SLAVE_UP_EVENT :
             (present & SERVER_JOINED) ? SYNCED_UP_EVENT :
+            (present & SERVER_RELAY) ? RELAY_UP_EVENT :
+            (present & SERVER_BLR) ? BLR_UP_EVENT :
             SERVER_UP_EVENT;
         break;
 
@@ -711,6 +721,8 @@ mxs_monitor_event_t MonitorServer::event_type(uint64_t before, uint64_t after)
         rval = (prev & SERVER_MASTER) ? MASTER_DOWN_EVENT :
             (prev & SERVER_SLAVE) ? SLAVE_DOWN_EVENT :
             (prev & SERVER_JOINED) ? SYNCED_DOWN_EVENT :
+            (prev & SERVER_RELAY) ? RELAY_DOWN_EVENT :
+            (prev & SERVER_BLR) ? BLR_DOWN_EVENT :
             SERVER_DOWN_EVENT;
         break;
 
@@ -718,6 +730,8 @@ mxs_monitor_event_t MonitorServer::event_type(uint64_t before, uint64_t after)
         rval = (prev & SERVER_MASTER) ? LOST_MASTER_EVENT :
             (prev & SERVER_SLAVE) ? LOST_SLAVE_EVENT :
             (prev & SERVER_JOINED) ? LOST_SYNCED_EVENT :
+            (prev & SERVER_RELAY) ? LOST_RELAY_EVENT :
+            (prev & SERVER_BLR) ? LOST_BLR_EVENT :
             UNDEFINED_EVENT;
         break;
 
@@ -725,6 +739,8 @@ mxs_monitor_event_t MonitorServer::event_type(uint64_t before, uint64_t after)
         rval = (present & SERVER_MASTER) ? NEW_MASTER_EVENT :
             (present & SERVER_SLAVE) ? NEW_SLAVE_EVENT :
             (present & SERVER_JOINED) ? NEW_SYNCED_EVENT :
+            (present & SERVER_RELAY) ? NEW_RELAY_EVENT :
+            (present & SERVER_BLR) ? NEW_BLR_EVENT :
             UNDEFINED_EVENT;
         break;
 

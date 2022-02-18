@@ -107,6 +107,14 @@ enum mxs_monitor_event_t
     NEW_SLAVE_EVENT   = (1 << 15),  /**< new_slave */
     NEW_SYNCED_EVENT  = (1 << 16),  /**< new_synced */
     NEW_DONOR_EVENT   = (1 << 17),  /**< new_donor */
+    RELAY_UP_EVENT    = (1 << 18),  /**< relay_up */
+    RELAY_DOWN_EVENT  = (1 << 19),  /**< relay_down */
+    LOST_RELAY_EVENT  = (1 << 20),  /**< lost_relay */
+    NEW_RELAY_EVENT   = (1 << 21),  /**< new_relay */
+    BLR_UP_EVENT      = (1 << 22),  /**< blr_up */
+    BLR_DOWN_EVENT    = (1 << 23),  /**< blr_down */
+    LOST_BLR_EVENT    = (1 << 24),  /**< lost_blr */
+    NEW_BLR_EVENT     = (1 << 25),  /**< new_blr */
 };
 
 namespace maxscale
