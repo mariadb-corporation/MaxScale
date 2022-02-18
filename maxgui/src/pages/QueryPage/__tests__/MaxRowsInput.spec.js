@@ -67,8 +67,8 @@ describe(`MaxRowsInput- input validation tests`, () => {
             expect(getErrMsgEle(dropdown).text()).to.be.equals(wrapper.vm.$t('errors.nonInteger'))
         })
     })
-    it(`Should show 'largerThanZero' if input is string`, async () => {
-        await wrapper.vm.onInput({ srcElement: { value: -1 } })
+    it(`Should show 'largerThanZero' if input is zero`, async () => {
+        await wrapper.vm.onInput({ srcElement: { value: 0 } })
         wrapper.vm.$nextTick(() => {
             expect(getErrMsgEle(dropdown).text()).to.be.equals(
                 wrapper.vm.$t('errors.largerThanZero')
@@ -84,14 +84,6 @@ describe(`MaxRowsInput- method and other tests`, () => {
         wrapper = mountFactory({ computed: { query_max_rows: () => dummy_query_max_rows } })
         expect(wrapper.vm.$data.maxRows).to.be.deep.equals({
             text: dummy_query_max_rows,
-            value: dummy_query_max_rows,
-        })
-    })
-    it(`Should render "Don't Limit" if max_rows value is 0`, () => {
-        const dummy_query_max_rows = 0
-        wrapper = mountFactory({ computed: { query_max_rows: () => dummy_query_max_rows } })
-        expect(wrapper.vm.$data.maxRows).to.be.deep.equals({
-            text: `Don't Limit`,
             value: dummy_query_max_rows,
         })
     })
