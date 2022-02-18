@@ -497,6 +497,15 @@ struct QUERY_CLASSIFIER
      *         classified), QC_RESULT_ERROR otherwise.
      */
     int32_t (* qc_get_current_stmt)(const char** ppStmt, size_t* pLen);
+
+    /**
+     * Returns the actual size of the info.
+     *
+     * @param info  The info whose size should be returned.
+     *
+     * @return The total amount of memory used by @ info.
+     */
+    int32_t (* qc_info_size)(const QC_STMT_INFO* info);
 };
 
 /**

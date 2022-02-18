@@ -257,6 +257,95 @@ public:
         }
     }
 
+    static int32_t size_of_fields(const QC_FIELD_INFO& info)
+    {
+        int32_t size = 0;
+
+        if (info.database)
+        {
+            size += strlen(info.database) + 1;
+        }
+
+        if (info.table)
+        {
+            size += strlen(info.database) + 1;
+        }
+
+        size += strlen(info.column) + 1;
+
+        return size;
+    }
+
+    int32_t calculate_size() const
+    {
+        using std::for_each;
+
+        int32_t size = sizeof(*this);
+
+        auto add_string_size = [&size](const char* z) {
+            size += strlen(z) + 1;
+        };
+
+        size += m_table_names.capacity() * sizeof(char*);
+        for_each(m_table_names.begin(), m_table_names.end(), add_string_size);
+
+        size += m_table_fullnames.capacity() * sizeof(char*);
+        for_each(m_table_fullnames.begin(), m_table_fullnames.end(), add_string_size);
+
+        if (m_zCreated_table_name)
+        {
+            add_string_size(m_zCreated_table_name);
+        }
+
+        size += m_database_names.capacity() * sizeof(char*);
+        for_each(m_database_names.begin(), m_database_names.end(), add_string_size);
+
+        if (m_zPrepare_name)
+        {
+            add_string_size(m_zPrepare_name);
+        }
+
+        if (m_pPreparable_stmt)
+        {
+            size += sizeof(*m_pPreparable_stmt);
+            size += GWBUF_LENGTH(m_pPreparable_stmt);
+        }
+
+        size += m_field_infos.capacity() * sizeof(QC_FIELD_INFO);
+        for_each(m_field_infos.begin(), m_field_infos.end(), [&size](const QC_FIELD_INFO& info) {
+                size += size_of_fields(info);
+            });
+
+        size += m_function_infos.capacity() * sizeof(QC_FUNCTION_INFO);
+        for_each(m_function_infos.begin(), m_function_infos.end(), [&size](const QC_FUNCTION_INFO& info) {
+                size += strlen(info.name);
+
+                for_each(info.fields, info.fields + info.n_fields, [&size](const QC_FIELD_INFO& field_info) {
+                        size += size_of_fields(field_info);
+                    });
+            });
+
+        using V = vector<QC_FIELD_INFO>;
+        size += m_function_field_usage.capacity() * sizeof(V);
+        for_each(m_function_field_usage.begin(), m_function_field_usage.end(), [&size](const V& v) {
+                size += v.capacity() * sizeof(QC_FIELD_INFO);
+                // Data in m_function_field_usage resides in m_function_infos, so it has already
+                // been accounted for.
+            });
+
+        return size;
+    }
+
+    int32_t size() const
+    {
+        if (m_size == 0)
+        {
+            m_size = calculate_size();
+        }
+
+        return m_size;
+    }
+
     QC_STMT_RESULT get_result() const
     {
         QC_STMT_RESULT result =
@@ -3298,7 +3387,8 @@ public:
 
 private:
     QcSqliteInfo(uint32_t cllct)
-        : m_refs(1)
+        : m_size(0)
+        , m_refs(1)
         , m_status(QC_QUERY_INVALID)
         , m_status_cap(QC_QUERY_PARSED)
         , m_collect(cllct)
@@ -3509,6 +3599,7 @@ private:
 
 public:
     // TODO: Make these private once everything's been updated.
+    mutable int32_t m_size;                     // The total amount of memory used.
     int32_t m_refs;                             // The reference count.
     qc_parse_result_t m_status;                 // The validity of the information in this structure.
     qc_parse_result_t m_status_cap;             // The cap on 'm_status', it won't be set to higher than this.
@@ -3813,6 +3904,9 @@ static bool parse_query(GWBUF* query, uint32_t collect)
 
                     // And turn off logging. Any parsing issues were logged on the first round.
                     suppress_logging = true;
+
+                    // And reset the size so that it will be recalculated.
+                    pInfo->m_size = 0;
                 }
                 else
                 {
@@ -4751,6 +4845,7 @@ static void           qc_sqlite_info_close(QC_STMT_INFO* info);
 static uint32_t       qc_sqlite_get_options();
 static int32_t        qc_sqlite_set_options(uint32_t options);
 static QC_STMT_RESULT qc_sqlite_get_result_from_info(const QC_STMT_INFO* pInfo);
+static int32_t        qc_sqlite_info_size(const QC_STMT_INFO* pInfo);
 
 
 static bool get_key_and_value(char* arg, const char** pkey, const char** pvalue)
@@ -5467,6 +5562,11 @@ int32_t qc_sqlite_get_current_stmt(const char** ppStmt, size_t* pLen)
     return rv;
 }
 
+int32_t qc_sqlite_info_size(const QC_STMT_INFO* pInfo)
+{
+    return static_cast<const QcSqliteInfo*>(pInfo)->size();
+}
+
 /**
  * EXPORTS
  */
@@ -5505,7 +5605,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         qc_sqlite_get_options,
         qc_sqlite_set_options,
         qc_sqlite_get_result_from_info,
-        qc_sqlite_get_current_stmt
+        qc_sqlite_get_current_stmt,
+        qc_sqlite_info_size,
     };
 
     static MXS_MODULE info =
