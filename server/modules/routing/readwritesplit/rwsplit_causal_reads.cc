@@ -147,29 +147,6 @@ bool RWSplitSession::should_do_causal_read() const
     }
 }
 
-bool RWSplitSession::finish_causal_read()
-{
-    bool rval = true;
-
-    if (m_config.causal_reads != CausalReads::NONE && m_wait_gtid != GTID_READ_DONE)
-    {
-        if (m_wait_gtid == RETRYING_ON_MASTER)
-        {
-            // Retry the query on the master
-            GWBUF* buf = m_current_query.release();
-            buf->hints.emplace_back(Hint::Type::ROUTE_TO_MASTER);
-            retry_query(buf, 0);
-            rval = false;
-        }
-
-        // The reply should never be complete while we are still waiting for the header.
-        mxb_assert(m_wait_gtid != WAITING_FOR_HEADER);
-        m_wait_gtid = NONE;
-    }
-
-    return rval;
-}
-
 bool RWSplitSession::continue_causal_read()
 {
     bool rval = false;
@@ -183,6 +160,21 @@ bool RWSplitSession::continue_causal_read()
         retry_query(m_query_queue.front().release(), 0);
         m_query_queue.pop_front();
         rval = true;
+    }
+    else if (m_config.causal_reads != CausalReads::NONE && m_wait_gtid != GTID_READ_DONE)
+    {
+        if (m_wait_gtid == RETRYING_ON_MASTER)
+        {
+            // Retry the query on the master
+            GWBUF* buf = m_current_query.release();
+            buf->hints.emplace_back(Hint::Type::ROUTE_TO_MASTER);
+            retry_query(buf, 0);
+            rval = true;
+        }
+
+        // The reply should never be complete while we are still waiting for the header.
+        mxb_assert(m_wait_gtid != WAITING_FOR_HEADER);
+        m_wait_gtid = NONE;
     }
 
     return rval;

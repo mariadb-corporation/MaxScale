@@ -2040,6 +2040,13 @@ uint32_t MariaDBBackendConnection::create_capabilities(bool with_ssl, uint64_t c
         | GW_MYSQL_CAPABILITIES_SECURE_CONNECTION
         | GW_MYSQL_CAPABILITIES_AUTH_LENENC_DATA;
 
+
+    if (rcap_type_required(capabilities, RCAP_TYPE_MULTI_STMT_SQL))
+    {
+        // Currently only readwritesplit requires this as it implements causal_reads with multi-statements.
+        final_capabilities |= GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS | GW_MYSQL_CAPABILITIES_MULTI_RESULTS;
+    }
+
     return final_capabilities;
 }
 

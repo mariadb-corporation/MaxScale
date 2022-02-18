@@ -173,7 +173,6 @@ private:
 
     GWBUF* handle_causal_read_reply(GWBUF* writebuf, const mxs::Reply& reply, mxs::RWBackend* backend);
     bool   should_do_causal_read() const;
-    bool   finish_causal_read();
     bool   continue_causal_read();
     GWBUF* add_prefix_wait_gtid(GWBUF* origin);
     void   correct_packet_sequence(GWBUF* buffer);
@@ -481,7 +480,7 @@ private:
     mxs::Buffer m_orig_stmt;            /**< The backup of the statement that was interrupted */
     int64_t     m_num_trx_replays = 0;  /**< How many times trx replay has been attempted */
 
-    mxb::StopWatch m_trx_replay_timer;  /**< When the last transaction replay started */
+    mxb::StopWatch m_trx_replay_timer;      /**< When the last transaction replay started */
 
     TargetSessionStats& m_server_stats;     /**< The server stats local to this thread, cached in the
                                              * session object. This avoids the lookup involved in getting

@@ -575,13 +575,6 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
                 m_qc.ps_store_response(reply.generated_id(), reply.param_count());
             }
 
-            if (!finish_causal_read())
-            {
-                // The query timed out on the slave, retry it on the master
-                gwbuf_free(writebuf);
-                return 1;
-            }
-
             if (m_state == OTRX_ROLLBACK)
             {
                 // Transaction rolled back, start replaying it on the master
@@ -595,7 +588,6 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
 
         backend->ack_write();
         backend->select_finished();
-
         mxb_assert(m_expected_responses >= 0);
 
         if (!ignore_response && continue_causal_read())
@@ -863,7 +855,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
         if (reply.command() == MXS_COM_BINLOG_DUMP || reply.command() == MXS_COM_REGISTER_SLAVE)
         {
             MXS_INFO("Session is a replication client, closing connection immediately.");
-            m_pSession->kill(); // Not sending an error causes the replication client to connect again
+            m_pSession->kill();     // Not sending an error causes the replication client to connect again
             return false;
         }
 
@@ -1052,6 +1044,8 @@ bool RWSplitSession::handle_error_new_connection(RWBackend* backend, GWBUF* errm
         m_expected_responses--;
 
         mxb_assert_message(m_wait_gtid != READING_GTID, "Should not be in READING_GTID state");
+        // Reset causal read state so that the next read starts from the correct one.
+        m_wait_gtid = NONE;
 
         // The backend was busy executing command and the client is expecting a response.
         if (m_current_query.get() && m_config.retry_failed_reads)

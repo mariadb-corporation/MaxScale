@@ -401,6 +401,11 @@ public:
         m_timeout = timeout;
     }
 
+    void set_options(int opts)
+    {
+        m_options = opts;
+    }
+
     uint32_t thread_id() const
     {
         return mysql_thread_id(m_conn);
@@ -431,4 +436,5 @@ private:
     bool        m_ssl;
     int         m_timeout = 0;
     MYSQL*      m_conn = nullptr;
+    int         m_options = CLIENT_MULTI_STATEMENTS;
 };

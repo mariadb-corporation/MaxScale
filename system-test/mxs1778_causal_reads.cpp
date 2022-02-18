@@ -65,6 +65,27 @@ void master_retry_test(TestConnections& test)
 
     conn.query("DROP TABLE test.t1");
     test.expect(ok, "Master should reply at least once");
+
+    test.maxctrl("alter service RW-Split-Router causal_reads_timeout 10s");
+}
+
+void mxs4005(TestConnections& test)
+{
+    auto conn = test.maxscale->rwsplit();
+    conn.set_options(0);
+    test.expect(conn.connect(), "Connection should work");
+    conn.query("CREATE OR REPLACE TABLE test.t1(id INT)");
+
+    conn.query("BEGIN");
+    auto master_id = conn.field("SELECT @@server_id");
+    conn.query("COMMIT");
+
+    conn.query("INSERT INTO test.t1 VALUES (1)");
+    auto id = conn.field("SELECT @@server_id");
+
+    test.expect(id != master_id, "Query should not be executed on the master server (%s)", master_id.c_str());
+
+    conn.query("DROP TABLE test.t1");
 }
 
 int main(int argc, char** argv)
@@ -79,6 +100,9 @@ int main(int argc, char** argv)
 
     basic_test(test);
     master_retry_test(test);
+
+    // Regression test case for clients that don't use CLIENT_MULTI_STATEMENTS
+    mxs4005(test);
 
     return test.global_result;
 }

@@ -636,6 +636,6 @@ bool Connection::connect()
     }
 
     return mysql_real_connect(m_conn, m_host.c_str(), m_user.c_str(), m_pw.c_str(), m_db.c_str(), m_port,
-                              NULL, CLIENT_MULTI_STATEMENTS)
+                              NULL, m_options)
            && mysql_errno(m_conn) == 0;
 }
