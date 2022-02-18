@@ -3,7 +3,6 @@
         v-model="isOpened"
         :onSave="onSave"
         :title="`${$t('connectTo')}...`"
-        :hasChanged="hasChanged"
         :lazyValidation="false"
         minBodyWidth="512px"
         :hasSavingErr="hasSavingErr"
@@ -40,7 +39,7 @@
         </template>
         <template v-if="isOpened" v-slot:body>
             <v-select
-                v-model="selectedResourceType"
+                v-model="resourceType"
                 :items="resourceTypes"
                 name="resourceName"
                 outlined
@@ -69,11 +68,11 @@
         <template v-slot:form-body>
             <v-container class="pa-1">
                 <v-row class="my-0 mx-n1">
-                    <v-col v-if="selectedResourceType" cols="12" md="12" class="pa-1">
+                    <v-col v-if="resourceType" cols="12" md="12" class="pa-1">
                         <label class="field__label color text-small-text label-required">
                             {{
                                 $t('resourceLabelName', {
-                                    resourceName: $help.resourceTxtTransform(selectedResourceType),
+                                    resourceName: $help.resourceTxtTransform(resourceType),
                                 })
                             }}
                         </label>
@@ -81,7 +80,7 @@
                             v-model="selectedResource"
                             class="resource-dropdown"
                             :items="resourceItems"
-                            :entityName="selectedResourceType"
+                            :entityName="resourceType"
                             clearable
                             showPlaceHolder
                             required
@@ -192,9 +191,8 @@ export default {
     },
     data() {
         return {
-            selectedResourceType: '',
+            resourceType: '',
             selectedResource: {},
-            hasChanged: false,
             isPwdVisible: false,
             body: {
                 user: '',
@@ -234,7 +232,7 @@ export default {
             },
         },
         resourceItems() {
-            const selectedRsrcType = this.selectedResourceType
+            const selectedRsrcType = this.resourceType
             // Get list of resource name that have been connected
             const connectedResourceNames = this.connOptions.reduce((acc, item) => {
                 if (item.type === selectedRsrcType) {
@@ -264,7 +262,7 @@ export default {
                 if (v) {
                     let rscType = this.resourceTypes[0] // use the first one as default
                     if (this.pre_select_conn_rsrc) rscType = this.pre_select_conn_rsrc.type
-                    this.selectedResourceType = rscType
+                    this.resourceType = rscType
                 } // reset to initial state and bind this context
                 else {
                     this.$nextTick(() => Object.assign(this.$data, this.$options.data.apply(this)))
@@ -272,7 +270,7 @@ export default {
                 }
             },
         },
-        selectedResourceType: {
+        resourceType: {
             immediate: true,
             async handler(v) {
                 if (v) {
@@ -296,23 +294,20 @@ export default {
         /**
          * This function handles automatically select default selectedResource.
          * It chooses the first item in resourceItems if pre_select_conn_rsrc has no value
-         * @param {String} selectedResourceType - resource type
+         * @param {String} resourceType - resource type
          */
-        handleChooseDefRsrc(selectedResourceType) {
+        handleChooseDefRsrc(resourceType) {
             if (this.resourceItems.length) {
                 if (this.pre_select_conn_rsrc) this.selectedResource = this.pre_select_conn_rsrc
                 else this.selectedResource = this.resourceItems[0]
                 this.errRsrcMsg = ''
-            } else
-                this.errRsrcMsg = this.$t('errors.existingRsrcConnection', {
-                    resourceType: selectedResourceType,
-                })
+            } else this.errRsrcMsg = this.$t('errors.existingRsrcConnection', { resourceType })
         },
         async onSave() {
             const { id: resourceName = null } = this.selectedResource
             await this.handleSave({
                 body: { target: resourceName, ...this.body },
-                resourceType: this.selectedResourceType,
+                resourceType: this.resourceType,
             })
         },
     },
