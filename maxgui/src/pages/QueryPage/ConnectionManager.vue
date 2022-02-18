@@ -189,6 +189,11 @@ export default {
                 }
             },
         },
+        pre_select_conn_rsrc: {
+            async handler(v) {
+                if (v) await this.handlePreSelectConnRsrc()
+            },
+        },
     },
     async created() {
         if (this.pre_select_conn_rsrc) await this.handlePreSelectConnRsrc()
