@@ -3933,7 +3933,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         qc_mysql_get_options,
         qc_mysql_set_options,
         nullptr,        // qc_get_result_from_info not supported
-        qc_mysql_get_current_stmt
+        qc_mysql_get_current_stmt,
+        nullptr         // qc_info_size not supported.
     };
 
     static MXS_MODULE info =
