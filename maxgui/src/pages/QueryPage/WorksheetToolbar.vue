@@ -66,17 +66,21 @@
         <v-spacer></v-spacer>
         <portal-target name="wke-toolbar-right">
             <div class="d-flex">
-                <max-rows-input
-                    :style="{ maxWidth: '180px' }"
-                    :height="28"
-                    @change="SET_QUERY_MAX_ROW($event)"
-                >
-                    <template v-slot:prepend-inner>
-                        <label class="field__label color text-small-text">
-                            {{ $t('maxRows') }}
-                        </label>
-                    </template>
-                </max-rows-input>
+                <v-form v-model="isMaxRowsValid">
+                    <max-rows-input
+                        :style="{ maxWidth: '180px' }"
+                        :height="28"
+                        hide-details="auto"
+                        :hasFieldsetBorder="false"
+                        @change="SET_QUERY_MAX_ROW($event)"
+                    >
+                        <template v-slot:prepend-inner>
+                            <label class="field__label color text-small-text">
+                                {{ $t('maxRows') }}
+                            </label>
+                        </template>
+                    </max-rows-input>
+                </v-form>
                 <!-- Run section-->
                 <v-tooltip
                     top
@@ -91,11 +95,7 @@
                             small
                             color="accent-dark"
                             :loading="getLoadingQueryResult"
-                            :disabled="
-                                !query_txt ||
-                                    !hasActiveConn ||
-                                    (getIsQuerying && !getLoadingQueryResult)
-                            "
+                            :disabled="shouldDisableExecute"
                             v-on="on"
                             @click="() => handleRun(selected_query_txt ? 'selected' : 'all')"
                         >
@@ -227,6 +227,7 @@ export default {
             dontShowConfirm: false,
             activeRunMode: 'all',
             isConfDlgOpened: false,
+            isMaxRowsValid: true,
         }
     },
     computed: {
@@ -250,7 +251,8 @@ export default {
             return (
                 !this.query_txt ||
                 !this.hasActiveConn ||
-                (this.getIsQuerying && this.getLoadingQueryResult)
+                (this.getIsQuerying && this.getLoadingQueryResult) ||
+                !this.isMaxRowsValid
             )
         },
         hasActiveConn() {
