@@ -69,7 +69,6 @@ export const APP_CONFIG = Object.freeze({
         DDL_EDITOR: 'DDL_EDITOR',
     }),
     SQL_DEF_MAX_ROWS_OPTS: [
-        0,
         10,
         50,
         100,
@@ -82,7 +81,7 @@ export const APP_CONFIG = Object.freeze({
         5000,
         10000,
         50000,
-    ].map(value => ({ text: value === 0 ? `Don't Limit` : value, value })),
+    ].map(value => ({ text: value, value })),
     QUERY_LOG_TYPES: Object.freeze({
         USER_LOGS: i18n.t('userQueryLogs'),
         ACTION_LOGS: i18n.t('actionLogs'),
