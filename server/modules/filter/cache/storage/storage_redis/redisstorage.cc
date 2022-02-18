@@ -387,7 +387,13 @@ public:
 
     bool connected() const
     {
-        return m_pContext && (m_pContext->flags & REDIS_CONNECTED);
+        return m_pContext && (m_pContext->flags & REDIS_CONNECTED) && (m_pContext->err == 0);
+    }
+
+    int err() const
+    {
+        mxb_assert(m_pContext);
+        return m_pContext->err;
     }
 
     const char* errstr() const
@@ -518,6 +524,22 @@ private:
     redisContext* m_pContext;
 };
 
+
+void log_error(const Redis& redis, const char* zContext)
+{
+    if (redis.err() == REDIS_ERR_EOF)
+    {
+        MXS_ERROR("%s. The Redis server has closed the connection. Ensure that the Redis "
+                  "'timeout' is 0 (disabled) or very large. A reconnection will now be "
+                  "made, but this will hurt both the functionality and the performance.",
+                  zContext);
+    }
+    else
+    {
+        MXS_ERROR("%s: %s", zContext, redis.errstr());
+    }
+}
+
 class RedisToken : public std::enable_shared_from_this<RedisToken>,
                    public Storage::Token
 {
@@ -602,8 +624,7 @@ public:
                 }
                 else
                 {
-                    MXS_WARNING("Fatally failed when fetching cached value from redis: %s",
-                                sThis->m_redis.errstr());
+                    log_error(sThis->m_redis, "Failed when getting cached value from Redis");
                 }
 
                 sThis->m_pWorker->execute([sThis, rv, pValue, cb]() {
@@ -643,7 +664,20 @@ public:
         mxs::thread_pool().execute([sThis, rkey, invalidation_words, pClone, cb]() {
                 RedisAction action = sThis->put_value(rkey, invalidation_words, pClone);
 
-                cache_result_t rv = (action == RedisAction::OK ? CACHE_RESULT_OK : CACHE_RESULT_ERROR);
+                cache_result_t rv;
+
+                switch (action)
+                {
+                case RedisAction::OK:
+                    rv = CACHE_RESULT_OK;
+                    break;
+
+                case RedisAction::ERROR:
+                    log_error(sThis->m_redis, "Failed when putting value to Redis");
+                    //[[fallthrough]]
+                case RedisAction::RETRY:
+                    rv = CACHE_RESULT_ERROR;
+                }
 
                 sThis->m_pWorker->execute([sThis, pClone, rv, cb]() {
                         // TODO: So as not to trigger an assert in buffer.cc, we need to delete
@@ -715,8 +749,7 @@ public:
                 }
                 else
                 {
-                    MXS_WARNING("Failed fatally when deleting cached value from redis: %s",
-                                sThis->m_redis.errstr());
+                    log_error(sThis->m_redis, "Failed when deleting cached value from Redis");
                 }
 
                 sThis->m_pWorker->execute([sThis, rv, cb]() {
@@ -746,7 +779,20 @@ public:
         mxs::thread_pool().execute([sThis, words, cb] () {
                 RedisAction action = sThis->invalidate(words);
 
-                cache_result_t rv = (action == RedisAction::OK ? CACHE_RESULT_OK : CACHE_RESULT_ERROR);
+                cache_result_t rv;
+
+                switch (action)
+                {
+                case RedisAction::OK:
+                    rv = CACHE_RESULT_OK;
+                    break;
+
+                case RedisAction::ERROR:
+                    log_error(sThis->m_redis, "Failed when invalidating");
+                    // [[fallthrough]]
+                case RedisAction::RETRY:
+                    rv = CACHE_RESULT_ERROR;
+                }
 
                 sThis->m_pWorker->execute([sThis, rv, cb]() {
                         if (sThis.use_count() > 1) // The session is still alive
@@ -767,11 +813,32 @@ public:
             return CACHE_RESULT_OK;
         }
 
+        cache_result_t rv = CACHE_RESULT_ERROR;
+
         Redis::Reply reply = m_redis.command("FLUSHALL");
 
-        mxb_assert(reply.is_status("OK"));
+        if (reply)
+        {
+            if (reply.is_status("OK"))
+            {
+                rv = CACHE_RESULT_OK;
+            }
+            else if (reply.is_status())
+            {
+                MXS_ERROR("Expected status OK as reponse to FLUSHALL, but received %s.", reply.str());
+            }
+            else
+            {
+                MXS_ERROR("Expected a status message as response to FLUSHALL, but received a %s.",
+                          redis_type_to_string(reply.type()));
+            }
+        }
+        else
+        {
+            log_error(m_redis, "Failed when clearing Redis");
+        }
 
-        return reply.is_status("OK") ? CACHE_RESULT_OK : CACHE_RESULT_ERROR;
+        return rv;
     }
 
 private:
@@ -982,98 +1049,102 @@ private:
                           words[i].c_str(),
                           redis_error_to_string(rc).c_str(),
                           m_redis.errstr());
+                action = RedisAction::ERROR;
             }
         }
 
-        if (del_argv.size() > 1)
+        if (action == RedisAction::OK)
         {
-            rc = m_redis.appendCommand("MULTI");
-            mxb_assert(rc == REDIS_OK);
-
-            // Delete the relevant keys from the sets.
-            for (size_t i = 0; i < srem_argvs.size(); ++i)
+            if (del_argv.size() > 1)
             {
-                // Delete keys related to a particular table, the SREM commands.
-                const vector<const char*>& srem_argv = srem_argvs[i];
-                const vector<size_t>& srem_argvlen = srem_argvlens[i];
+                rc = m_redis.appendCommand("MULTI");
+                mxb_assert(rc == REDIS_OK);
 
-                if (srem_argv.size() > 2)
+                // Delete the relevant keys from the sets.
+                for (size_t i = 0; i < srem_argvs.size(); ++i)
                 {
-                    const char** ppSrem_argv = const_cast<const char**>(srem_argv.data());
-                    MXB_AT_DEBUG(rc =) m_redis.appendCommandArgv(srem_argv.size(),
-                                                                 ppSrem_argv,
-                                                                 srem_argvlen.data());
-                    mxb_assert(rc == REDIS_OK);
-                }
-            }
+                    // Delete keys related to a particular table, the SREM commands.
+                    const vector<const char*>& srem_argv = srem_argvs[i];
+                    const vector<size_t>& srem_argvlen = srem_argvlens[i];
 
-            // Delete all values, the DEL command.
-            const char** ppDel_argv = const_cast<const char**>(del_argv.data());
-            rc = m_redis.appendCommandArgv(del_argv.size(),
-                                           ppDel_argv,
-                                           del_argvlen.data());
-            mxb_assert(rc == REDIS_OK);
-
-            // This will actually send everything.
-            rc = m_redis.appendCommand("EXEC");
-            mxb_assert(rc == REDIS_OK);
-
-            // This will be the response to MULTI above.
-            if (m_redis.expect_status("OK", "MULTI"))
-            {
-                // All commands before EXEC should only return a status of QUEUED.
-                m_redis.expect_n_status(srem_argvs.size() + 1, "QUEUED", "queued command");
-
-                // The reply to EXEC
-                Redis::Reply reply;
-                rc = m_redis.getReply(&reply);
-
-                if (rc == REDIS_OK)
-                {
-                    if (reply.is_nil())
+                    if (srem_argv.size() > 2)
                     {
-                        // This *may* happen if WATCH is used, but since we are not, it should not.
-                        mxb_assert(!true);
-                        action = RedisAction::RETRY;
+                        const char** ppSrem_argv = const_cast<const char**>(srem_argv.data());
+                        MXB_AT_DEBUG(rc =) m_redis.appendCommandArgv(srem_argv.size(),
+                                                                     ppSrem_argv,
+                                                                     srem_argvlen.data());
+                        mxb_assert(rc == REDIS_OK);
+                    }
+                }
+
+                // Delete all values, the DEL command.
+                const char** ppDel_argv = const_cast<const char**>(del_argv.data());
+                rc = m_redis.appendCommandArgv(del_argv.size(),
+                                               ppDel_argv,
+                                               del_argvlen.data());
+                mxb_assert(rc == REDIS_OK);
+
+                // This will actually send everything.
+                rc = m_redis.appendCommand("EXEC");
+                mxb_assert(rc == REDIS_OK);
+
+                // This will be the response to MULTI above.
+                if (m_redis.expect_status("OK", "MULTI"))
+                {
+                    // All commands before EXEC should only return a status of QUEUED.
+                    m_redis.expect_n_status(srem_argvs.size() + 1, "QUEUED", "queued command");
+
+                    // The reply to EXEC
+                    Redis::Reply reply;
+                    rc = m_redis.getReply(&reply);
+
+                    if (rc == REDIS_OK)
+                    {
+                        if (reply.is_nil())
+                        {
+                            // This *may* happen if WATCH is used, but since we are not, it should not.
+                            mxb_assert(!true);
+                            action = RedisAction::RETRY;
+                        }
+                        else
+                        {
+                            // The reply will not contain the actual responses to the commands
+                            // issued after MULTI.
+                            mxb_assert(reply.is_array());
+                            mxb_assert(reply.elements() == srem_argvs.size() + 1);
+
+#ifdef SS_DEBUG
+                            Redis::Reply element;
+                            // Then we handle the replies to the "SREM" commands.
+                            for (size_t i = 0; i < srem_argvs.size(); ++i)
+                            {
+                                element = reply.element(i);
+                                mxb_assert(element.is_integer());
+                            }
+
+                            // Finally the DEL itself.
+                            element = reply.element(srem_argvs.size());
+                            mxb_assert(element.is_integer());
+#endif
+                        }
                     }
                     else
                     {
-                        // The reply will not contain the actual responses to the commands
-                        // issued after MULTI.
-                        mxb_assert(reply.is_array());
-                        mxb_assert(reply.elements() == srem_argvs.size() + 1);
-
-#ifdef SS_DEBUG
-                        Redis::Reply element;
-                        // Then we handle the replies to the "SREM" commands.
-                        for (size_t i = 0; i < srem_argvs.size(); ++i)
-                        {
-                            element = reply.element(i);
-                            mxb_assert(element.is_integer());
-                        }
-
-                        // Finally the DEL itself.
-                        element = reply.element(srem_argvs.size());
-                        mxb_assert(element.is_integer());
-#endif
+                        MXS_ERROR("Could not read EXEC reply from redis, the cache is now "
+                                  "in an unknown state: %s, %s",
+                                  redis_error_to_string(rc).c_str(),
+                                  m_redis.errstr());
+                        action = RedisAction::ERROR;
                     }
                 }
                 else
                 {
-                    MXS_ERROR("Could not read EXEC reply from redis, the cache is now "
+                    MXS_ERROR("Could not read MULTI reply from redis, the cache is now "
                               "in an unknown state: %s, %s",
                               redis_error_to_string(rc).c_str(),
                               m_redis.errstr());
                     action = RedisAction::ERROR;
                 }
-            }
-            else
-            {
-                MXS_ERROR("Could not read MULTI reply from redis, the cache is now "
-                          "in an unknown state: %s, %s",
-                          redis_error_to_string(rc).c_str(),
-                          m_redis.errstr());
-                action = RedisAction::ERROR;
             }
         }
 
