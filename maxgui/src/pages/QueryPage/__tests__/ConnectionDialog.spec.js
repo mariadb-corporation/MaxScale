@@ -31,6 +31,7 @@ const dummy_rc_target_names_map = {
         { id: 'RO-Service', type: 'services' },
     ],
 }
+const dummy_pre_select_conn_rsrc = { id: 'server_0', type: 'servers' }
 const mountFactory = opts =>
     // deep merge opts
     mount(
@@ -70,7 +71,6 @@ describe(`ConnectionDialog - child component's data communication tests `, () =>
             onSave,
             title,
             lazyValidation,
-            hasChanged,
             hasSavingErr,
             hasFormDivider,
         } = wrapper.findComponent({
@@ -79,7 +79,6 @@ describe(`ConnectionDialog - child component's data communication tests `, () =>
         expect(value).to.be.equals(wrapper.vm.isOpened)
         expect(onSave).to.be.equals(wrapper.vm.onSave)
         expect(title).to.be.equals(`${wrapper.vm.$t('connectTo')}...`)
-        expect(hasChanged).to.be.equals(wrapper.vm.hasChanged)
         expect(lazyValidation).to.be.false
         expect(hasSavingErr).to.be.equals(wrapper.vm.hasSavingErr)
         expect(hasFormDivider).to.be.true
@@ -88,7 +87,7 @@ describe(`ConnectionDialog - child component's data communication tests `, () =>
         const { value, items, hideDetails } = wrapper
             .findComponent({ name: 'base-dialog' })
             .find('.resource-type-dropdown').vm.$props
-        expect(value).to.be.equals(wrapper.vm.$data.selectedResourceType)
+        expect(value).to.be.equals(wrapper.vm.$data.resourceType)
         expect(items).to.be.equals(wrapper.vm.$data.resourceTypes)
         expect(hideDetails).to.be.equals('auto')
     })
@@ -96,7 +95,6 @@ describe(`ConnectionDialog - child component's data communication tests `, () =>
         const {
             value,
             items,
-            defaultItems,
             entityName,
             clearable,
             showPlaceHolder,
@@ -105,8 +103,7 @@ describe(`ConnectionDialog - child component's data communication tests `, () =>
         } = wrapper.findComponent({ name: 'base-dialog' }).find('.resource-dropdown').vm.$props
         expect(value).to.be.deep.equals(wrapper.vm.$data.selectedResource)
         expect(items).to.be.deep.equals(wrapper.vm.resourceItems)
-        expect(defaultItems).to.be.deep.equals(wrapper.vm.$data.defSelectedRsrc)
-        expect(entityName).to.be.equals(wrapper.vm.$data.selectedResourceType)
+        expect(entityName).to.be.equals(wrapper.vm.$data.resourceType)
         expect(clearable).to.be.true
         expect(showPlaceHolder).to.be.true
         expect(required).to.be.true
@@ -114,29 +111,38 @@ describe(`ConnectionDialog - child component's data communication tests `, () =>
     })
 })
 describe(`ConnectionDialog - dialog open/close side-effect tests`, () => {
-    let wrapper, handleResourceSelectSpy, fetchRcTargetNamesSpy
+    let wrapper, handleFetchRsrcsSpy, handleChooseDefRsrcSpy
     beforeEach(() => {
-        handleResourceSelectSpy = sinon.spy(ConnectionDialog.methods, 'handleResourceSelect')
-        fetchRcTargetNamesSpy = sinon.spy(ConnectionDialog.methods, 'fetchRcTargetNames')
-        wrapper = mountFactory()
+        handleFetchRsrcsSpy = sinon.spy(ConnectionDialog.methods, 'handleFetchRsrcs')
+        handleChooseDefRsrcSpy = sinon.spy(ConnectionDialog.methods, 'handleChooseDefRsrc')
+        wrapper = mountFactory({
+            methods: {
+                fetchRcTargetNames: () => null,
+            },
+        })
     })
     afterEach(() => {
-        handleResourceSelectSpy.restore()
-        fetchRcTargetNamesSpy.restore()
+        handleFetchRsrcsSpy.restore()
+        handleChooseDefRsrcSpy.restore()
     })
     it(`Should choose listeners as the default resource when dialog is opened`, () => {
-        expect(wrapper.vm.selectedResourceType).to.be.equals('listeners')
+        expect(wrapper.vm.resourceType).to.be.equals('listeners')
     })
-    it(`Should call handleResourceSelect and dispatch fetchRcTargetNames
-      when dialog is opened`, () => {
-        handleResourceSelectSpy.should.have.been.calledOnceWith(wrapper.vm.$data.defRcType)
-        fetchRcTargetNamesSpy.should.have.been.calledOnceWith(wrapper.vm.$data.defRcType)
+    it(`Should call handleFetchRsrcs and handleChooseDefRsrc when dialog is opened`, async () => {
+        handleFetchRsrcsSpy.should.have.been.calledOnceWith(wrapper.vm.$data.resourceTypes[0])
+        await wrapper.vm.$nextTick()
+        handleChooseDefRsrcSpy.should.have.been.calledOnceWith(wrapper.vm.$data.resourceTypes[0])
     })
     it(`Should reset to initial state after closing dialog`, async () => {
         const initialData = wrapper.vm.$data
         await mockChangingBody({ wrapper, key: 'user', value: 'maxskysql' })
         await wrapper.setProps({ value: false }) // close dialog
         expect(initialData).to.be.deep.equals(wrapper.vm.$data)
+    })
+    it(`Should call SET_PRE_SELECT_CONN_RSRC after closing dialog`, async () => {
+        const spy = sinon.spy(wrapper.vm, 'SET_PRE_SELECT_CONN_RSRC')
+        await wrapper.setProps({ value: false }) // close dialog
+        spy.should.have.been.calledOnceWith(null)
     })
 })
 describe(`ConnectionDialog - methods and computed properties tests `, () => {
@@ -151,15 +157,15 @@ describe(`ConnectionDialog - methods and computed properties tests `, () => {
     const resourceTypes = ['listeners', 'servers', 'services']
     resourceTypes.forEach(type => {
         it(`Should return accurate resources for resourceItems computed property
-        if selectedResourceType is ${type}`, async () => {
+        if resourceType is ${type}`, async () => {
             wrapper = mountFactory({
                 computed: { rc_target_names_map: () => dummy_rc_target_names_map },
             })
-            await wrapper.setData({ selectedResourceType: type })
+            await wrapper.setData({ resourceType: type })
             expect(wrapper.vm.resourceItems).to.be.deep.equals(dummy_rc_target_names_map[type])
         })
         it(`Should not return resources that have been connected
-        for resourceItems computed property if selectedResourceType is ${type}`, () => {
+        for resourceItems computed property if resourceType is ${type}`, () => {
             const resources = dummy_rc_target_names_map[type]
             // assume first resource are connected already
             const dummy_connOptions = [{ ...resources[0], name: resources[0].id, id: 0 }]
@@ -170,8 +176,33 @@ describe(`ConnectionDialog - methods and computed properties tests `, () => {
             expect(wrapper.vm.resourceItems).to.not.include(resources[0])
         })
     })
+    it(`Should use value from pre_select_conn_rsrc to assign it to resourceType`, () => {
+        wrapper = mountFactory({
+            computed: { pre_select_conn_rsrc: () => dummy_pre_select_conn_rsrc },
+        })
+        expect(wrapper.vm.resourceType).to.be.equals(dummy_pre_select_conn_rsrc.type)
+    })
+    it(`Should assign pre_select_conn_rsrc to selectedResource`, () => {
+        wrapper = mountFactory({
+            computed: {
+                rc_target_names_map: () => dummy_rc_target_names_map,
+                pre_select_conn_rsrc: () => dummy_pre_select_conn_rsrc,
+            },
+        })
+        wrapper.vm.handleChooseDefRsrc(dummy_pre_select_conn_rsrc.type)
+        expect(wrapper.vm.$data.selectedResource).to.be.eql(dummy_pre_select_conn_rsrc)
+    })
+    it(`Should assign first resource item to to selectedResource`, () => {
+        wrapper = mountFactory({
+            computed: {
+                rc_target_names_map: () => dummy_rc_target_names_map,
+            },
+        })
+        wrapper.vm.handleChooseDefRsrc('listeners')
+        expect(wrapper.vm.$data.selectedResource).to.be.eql(dummy_rc_target_names_map.listeners[0])
+    })
     it(`Should assign error message to errRsrcMsg if all resources
-      have been connected`, () => {
+      have been connected`, async () => {
         const resources = dummy_rc_target_names_map.listeners
         const dummy_connOptions = resources.map((rsrc, i) => ({
             ...rsrc,
@@ -182,9 +213,10 @@ describe(`ConnectionDialog - methods and computed properties tests `, () => {
             propsData: { connOptions: dummy_connOptions },
             computed: { rc_target_names_map: () => dummy_rc_target_names_map },
         })
+        await wrapper.vm.$nextTick()
         expect(wrapper.vm.$data.errRsrcMsg).to.be.equals(
             wrapper.vm.$t('errors.existingRsrcConnection', {
-                resourceType: wrapper.vm.$data.defRcType,
+                resourceType: wrapper.vm.$data.resourceTypes[0],
             })
         )
     })
@@ -202,7 +234,7 @@ describe(`ConnectionDialog - methods and computed properties tests `, () => {
         // mock form data
         wrapper = mountFactory({
             data: () => ({
-                selectedResourceType: mockSelectedResourceType,
+                resourceType: mockSelectedResourceType,
                 selectedResource: mockSelectedResource,
                 body: mockBodyFormData,
             }),
@@ -232,8 +264,8 @@ describe(`ConnectionDialog - form input tests`, () => {
             wrapper = mountFactory({
                 shallow: false,
                 data: () => ({
-                    selectedResourceType: 'listeners',
-                    defSelectedRsrc: dummy_rc_target_names_map.listeners[0],
+                    resourceType: 'listeners',
+                    selectedResource: dummy_rc_target_names_map.listeners[0],
                     body: {
                         user: 'maxskysql',
                         password: 'skysql',
@@ -258,9 +290,10 @@ describe(`ConnectionDialog - form input tests`, () => {
                 case 'selectedResource': {
                     const dropDownComponent = dlg.find('.resource-dropdown')
                     await itemSelectMock(dropDownComponent, null)
+                    await wrapper.vm.$nextTick()
                     expect(getErrMsgEle(dropDownComponent).text()).to.be.equals(
                         wrapper.vm.$t('errors.requiredInput', {
-                            inputName: wrapper.vm.$tc(wrapper.vm.selectedResourceType, 1),
+                            inputName: wrapper.vm.$tc(wrapper.vm.resourceType, 1),
                         })
                     )
                     break
