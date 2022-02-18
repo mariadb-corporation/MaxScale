@@ -638,6 +638,10 @@ private:
     void socket_write_SSL();
     void socket_write();
 
+    std::tuple<uint8_t*, size_t> calc_read_limit(bool expect_more);
+    std::tuple<uint8_t*, size_t> calc_read_limit_strict(size_t maxbytes);
+    size_t                       calc_total_readq_limit(size_t maxbytes);
+
     static void free(DCB* dcb);
 
     static uint32_t poll_handler(POLL_DATA* data, mxb::WORKER* worker, uint32_t events);

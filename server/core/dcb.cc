@@ -422,40 +422,30 @@ static int dcb_read_no_bytes_available(DCB* dcb, int fd, int nreadtotal)
  */
 bool DCB::basic_read(size_t maxbytes, ReadLimit limit_type)
 {
-    auto calc_read_limit = [this, maxbytes, limit_type](bool expect_more) {
-            if (maxbytes > 0 && limit_type == ReadLimit::STRICT)
-            {
-                // Strict read limit, cannot read more than allowed from socket. Assume that maxbytes is
-                // reasonable.
-                auto max_read_limit = maxbytes - m_readq.length();
-                auto [ptr, _1] = m_readq.prepare_to_write(max_read_limit);
-                return std::tuple(ptr, max_read_limit);
-            }
-            else
-            {
-                // The guess is tricky. Higher values mean less reallocations but also more wasted memory.
-                const size_t base_read_size_limit = expect_more ? 4096 : 128;
-                return m_readq.prepare_to_write(base_read_size_limit);
-            }
-        };
-
     bool keep_reading = true;
     bool expect_more_data = true;
     bool socket_cleared = false;
     bool success = true;
     size_t bytes_from_socket = 0;
     size_t total_readq_limit = 0;
-    if (maxbytes > 0)
+    bool strict_limit = (limit_type == ReadLimit::STRICT);
+    if (strict_limit)
+    {
+        mxb_assert(maxbytes > 0);
+        total_readq_limit = maxbytes;
+    }
+    else if (maxbytes > 0)
     {
         // If the read limit is not strict (most cases), allow reading more than what was asked for.
         // This increases the likelihood of clearing the socket and not having to manually trigger another
         // read.
-        total_readq_limit = (limit_type == ReadLimit::STRICT) ? maxbytes : maxbytes + 4096;
+        total_readq_limit = calc_total_readq_limit(maxbytes);
     }
 
     while (keep_reading)
     {
-        auto [ptr, read_limit] = calc_read_limit(expect_more_data);
+        auto [ptr, read_limit] = strict_limit ? calc_read_limit_strict(maxbytes) :
+            calc_read_limit(expect_more_data);
         auto ret = ::read(m_fd, ptr, read_limit);
         m_stats.n_reads++;
         if (ret > 0)
@@ -969,6 +959,31 @@ void DCB::socket_write()
     {
         m_last_write = mxs_clock();
     }
+}
+
+std::tuple<uint8_t*, size_t> DCB::calc_read_limit(bool expect_more)
+{
+    // The guess is tricky. Higher values mean less reallocations but also more wasted memory.
+    const size_t base_read_size_limit = expect_more ? 4096 : 128;
+    return m_readq.prepare_to_write(base_read_size_limit);
+}
+
+std::tuple<uint8_t*, size_t> DCB::calc_read_limit_strict(size_t maxbytes)
+{
+    // Should only be called when have a valid read limit and the limit is not yet reached.
+    mxb_assert(maxbytes > m_readq.length());
+    // Strict read limit, cannot read more than allowed from socket. Assume that maxbytes is
+    // reasonable.
+    auto max_read_limit = maxbytes - m_readq.length();
+    auto [ptr, _1] = m_readq.prepare_to_write(max_read_limit);
+    return {ptr, max_read_limit};
+}
+
+size_t DCB::calc_total_readq_limit(size_t maxbytes)
+{
+    // A more complicated calculation may be added later.
+    mxb_assert(maxbytes > 0);
+    return maxbytes + 4096;
 }
 
 bool DCB::add_callback(Reason reason,
