@@ -53,7 +53,6 @@
                 dense
                 :height="36"
                 hide-details="auto"
-                @change="handleResourceSelect"
             >
                 <template v-slot:selection="{ item }">
                     <div class="v-select__selection v-select__selection--comma">
@@ -82,7 +81,6 @@
                             v-model="selectedResource"
                             class="resource-dropdown"
                             :items="resourceItems"
-                            :defaultItems="defSelectedRsrc"
                             :entityName="selectedResourceType"
                             clearable
                             showPlaceHolder
@@ -183,7 +181,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions, mapState } from 'vuex'
+import { mapActions, mapMutations, mapState } from 'vuex'
 
 export default {
     name: 'connection-dialog',
@@ -195,8 +193,7 @@ export default {
     data() {
         return {
             selectedResourceType: '',
-            selectedResource: [],
-            defSelectedRsrc: {},
+            selectedResource: {},
             hasChanged: false,
             isPwdVisible: false,
             body: {
@@ -219,7 +216,6 @@ export default {
             },
             isFormValid: false,
             resourceTypes: ['listeners', 'servers', 'services'],
-            defRcType: 'listeners',
             errRsrcMsg: '',
         }
     },
@@ -227,6 +223,7 @@ export default {
         ...mapState({
             rc_target_names_map: state => state.query.rc_target_names_map,
             conn_err_state: state => state.query.conn_err_state,
+            pre_select_conn_rsrc: state => state.query.pre_select_conn_rsrc,
         }),
         isOpened: {
             get() {
@@ -265,10 +262,23 @@ export default {
             immediate: true,
             async handler(v) {
                 if (v) {
-                    this.selectedResourceType = this.defRcType
-                    await this.handleResourceSelect(this.defRcType)
+                    let rscType = this.resourceTypes[0] // use the first one as default
+                    if (this.pre_select_conn_rsrc) rscType = this.pre_select_conn_rsrc.type
+                    this.selectedResourceType = rscType
                 } // reset to initial state and bind this context
-                else this.$nextTick(() => Object.assign(this.$data, this.$options.data.apply(this)))
+                else {
+                    this.$nextTick(() => Object.assign(this.$data, this.$options.data.apply(this)))
+                    this.SET_PRE_SELECT_CONN_RSRC(null)
+                }
+            },
+        },
+        selectedResourceType: {
+            immediate: true,
+            async handler(v) {
+                if (v) {
+                    await this.handleFetchRsrcs(v)
+                    this.handleChooseDefRsrc(v)
+                }
             },
         },
     },
@@ -276,13 +286,27 @@ export default {
         ...mapActions({
             fetchRcTargetNames: 'query/fetchRcTargetNames',
         }),
-        async handleResourceSelect(v) {
+        ...mapMutations({
+            SET_PRE_SELECT_CONN_RSRC: 'query/SET_PRE_SELECT_CONN_RSRC',
+        }),
+        async handleFetchRsrcs(rscType) {
             // fetch if it's not been fetched
-            if (!this.rc_target_names_map[v]) await this.fetchRcTargetNames(v)
+            if (!this.rc_target_names_map[rscType]) await this.fetchRcTargetNames(rscType)
+        },
+        /**
+         * This function handles automatically select default selectedResource.
+         * It chooses the first item in resourceItems if pre_select_conn_rsrc has no value
+         * @param {String} selectedResourceType - resource type
+         */
+        handleChooseDefRsrc(selectedResourceType) {
             if (this.resourceItems.length) {
-                this.defSelectedRsrc = this.resourceItems[0]
+                if (this.pre_select_conn_rsrc) this.selectedResource = this.pre_select_conn_rsrc
+                else this.selectedResource = this.resourceItems[0]
                 this.errRsrcMsg = ''
-            } else this.errRsrcMsg = this.$t('errors.existingRsrcConnection', { resourceType: v })
+            } else
+                this.errRsrcMsg = this.$t('errors.existingRsrcConnection', {
+                    resourceType: selectedResourceType,
+                })
         },
         async onSave() {
             const { id: resourceName = null } = this.selectedResource
