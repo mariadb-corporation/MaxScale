@@ -96,6 +96,7 @@ namespace config
 enum DurationInterpretation
 {
     INTERPRET_AS_SECONDS,
+    INTERPRET_AS_SECONDS_RELAXED,
     INTERPRET_AS_MILLISECONDS,
     NO_INTERPRETATION
 };

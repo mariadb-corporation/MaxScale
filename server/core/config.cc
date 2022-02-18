@@ -3016,6 +3016,7 @@ bool get_suffixed_duration(const char* zValue,
         switch (interpretation)
         {
         case mxs::config::INTERPRET_AS_SECONDS:
+        case mxs::config::INTERPRET_AS_SECONDS_RELAXED:
             duration = std::chrono::duration_cast<milliseconds>(seconds(value));
             break;
 
