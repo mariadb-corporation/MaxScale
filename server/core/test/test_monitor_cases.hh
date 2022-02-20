@@ -365,43 +365,48 @@ std::vector<std::tuple<uint64_t, uint64_t, mxs_monitor_event_t>> test_monitor_te
     },
     {
         SERVER_RUNNING | SERVER_RELAY,
+        SERVER_RUNNING,
+        LOST_RELAY_EVENT
+    },
+    {
+        SERVER_RUNNING | SERVER_RELAY,
         SERVER_RUNNING | SERVER_MASTER,
-        NEW_MASTER_EVENT
+        LOST_RELAY_EVENT
     },
     {
         SERVER_RUNNING | SERVER_RELAY,
         SERVER_RUNNING | SERVER_SLAVE,
-        NEW_SLAVE_EVENT
+        LOST_RELAY_EVENT
     },
     {
         SERVER_RUNNING | SERVER_RELAY,
         SERVER_RUNNING | SERVER_JOINED,
-        NEW_SYNCED_EVENT
+        LOST_RELAY_EVENT
     },
     {
         SERVER_RUNNING | SERVER_RELAY,
         SERVER_RUNNING | SERVER_MASTER | SERVER_JOINED,
-        NEW_MASTER_EVENT
+        LOST_RELAY_EVENT
     },
     {
         SERVER_RUNNING | SERVER_RELAY,
         SERVER_RUNNING | SERVER_SLAVE | SERVER_JOINED,
-        NEW_SLAVE_EVENT
+        LOST_RELAY_EVENT
     },
     {
         SERVER_RUNNING | SERVER_RELAY,
         SERVER_RUNNING | SERVER_MASTER | SERVER_RELAY,
-        NEW_MASTER_EVENT
+        LOST_RELAY_EVENT
     },
     {
         SERVER_RUNNING | SERVER_RELAY,
         SERVER_RUNNING | SERVER_SLAVE | SERVER_RELAY,
-        NEW_SLAVE_EVENT
+        LOST_RELAY_EVENT
     },
     {
         SERVER_RUNNING | SERVER_RELAY,
         SERVER_RUNNING | SERVER_BLR,
-        NEW_BLR_EVENT
+        LOST_RELAY_EVENT
     },
     {
         SERVER_RUNNING | SERVER_MASTER | SERVER_RELAY,
@@ -510,42 +515,47 @@ std::vector<std::tuple<uint64_t, uint64_t, mxs_monitor_event_t>> test_monitor_te
     },
     {
         SERVER_RUNNING | SERVER_BLR,
+        SERVER_RUNNING,
+        LOST_BLR_EVENT
+    },
+    {
+        SERVER_RUNNING | SERVER_BLR,
         SERVER_RUNNING | SERVER_MASTER,
-        NEW_MASTER_EVENT
+        LOST_BLR_EVENT
     },
     {
         SERVER_RUNNING | SERVER_BLR,
         SERVER_RUNNING | SERVER_SLAVE,
-        NEW_SLAVE_EVENT
+        LOST_BLR_EVENT
     },
     {
         SERVER_RUNNING | SERVER_BLR,
         SERVER_RUNNING | SERVER_JOINED,
-        NEW_SYNCED_EVENT
+        LOST_BLR_EVENT
     },
     {
         SERVER_RUNNING | SERVER_BLR,
         SERVER_RUNNING | SERVER_MASTER | SERVER_JOINED,
-        NEW_MASTER_EVENT
+        LOST_BLR_EVENT
     },
     {
         SERVER_RUNNING | SERVER_BLR,
         SERVER_RUNNING | SERVER_SLAVE | SERVER_JOINED,
-        NEW_SLAVE_EVENT
+        LOST_BLR_EVENT
     },
     {
         SERVER_RUNNING | SERVER_BLR,
         SERVER_RUNNING | SERVER_RELAY,
-        NEW_RELAY_EVENT
+        LOST_BLR_EVENT
     },
     {
         SERVER_RUNNING | SERVER_BLR,
         SERVER_RUNNING | SERVER_MASTER | SERVER_RELAY,
-        NEW_MASTER_EVENT
+        LOST_BLR_EVENT
     },
     {
         SERVER_RUNNING | SERVER_BLR,
         SERVER_RUNNING | SERVER_SLAVE | SERVER_RELAY,
-        NEW_SLAVE_EVENT
+        LOST_BLR_EVENT
     },
 };

@@ -142,7 +142,7 @@ private:
 ThisUnit this_unit;
 
 /** Server type specific bits */
-const uint64_t server_type_bits = SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED;
+const uint64_t server_type_bits = SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED | SERVER_RELAY | SERVER_BLR;
 
 /** All server bits */
 const uint64_t all_server_bits = SERVER_RUNNING | SERVER_MAINT | SERVER_MASTER | SERVER_SLAVE
