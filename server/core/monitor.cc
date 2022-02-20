@@ -814,14 +814,20 @@ string Monitor::gen_serverlist(int status, CredentialsApproach approach)
  */
 bool MonitorServer::status_changed()
 {
+    return status_changed(mon_prev_status, server->status());
+}
+
+// static
+bool MonitorServer::status_changed(uint64_t before, uint64_t after)
+{
     bool rval = false;
 
     /* Previous status is -1 if not yet set */
-    if (mon_prev_status != static_cast<uint64_t>(-1))
+    if (before != static_cast<uint64_t>(-1))
     {
 
-        uint64_t old_status = mon_prev_status & all_server_bits;
-        uint64_t new_status = server->status() & all_server_bits;
+        uint64_t old_status = before & all_server_bits;
+        uint64_t new_status = after & all_server_bits;
 
         /**
          * The state has changed if the relevant state bits are not the same,

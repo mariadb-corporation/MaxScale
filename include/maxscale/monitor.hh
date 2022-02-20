@@ -219,6 +219,8 @@ public:
      */
     void stash_current_status();
 
+    static bool status_changed(uint64_t before, uint64_t after);
+
     bool status_changed();
     bool auth_status_changed();
     bool should_print_fail_status();
