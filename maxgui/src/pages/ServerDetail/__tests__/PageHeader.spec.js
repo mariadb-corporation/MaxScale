@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 /*
  * Copyright (c) 2020 MariaDB Corporation Ab
  *
@@ -54,20 +55,16 @@ const serverStatusTestAssertions = ({ wrapper, status, dummyIconFrameIndex }) =>
  * @param {String} payload.dummyServerState - dummy server state
  */
 const serverStateModeAssertion = ({ wrapper, expectStateMode, dummyServerState }) => {
-    it(`stateMode should compute current state: '${dummyServerState}' to
-        return lowercase state mode: '${expectStateMode}'`, () => {
+    it(`Should return accurate currStateMode from state: '${dummyServerState}' to
+    '${expectStateMode}'`, () => {
         // serverState stub
-        wrapper = computedFactory({
-            serverState: () => dummyServerState,
-        })
-        expect(wrapper.vm.stateMode).to.be.equals(expectStateMode)
+        wrapper = computedFactory({ serverState: () => dummyServerState })
+        expect(wrapper.vm.currStateMode).to.be.equals(expectStateMode)
     })
 }
 
-const ALL_BTN_CLASS_PREFIXES = ['maintain', 'clear', 'drain', 'delete']
-
-describe('ServerDetail - PageHeader', () => {
-    let wrapper, axiosDeleteStub, axiosPutStub
+describe('ServerDetail - PageHeader: render assertions', () => {
+    let wrapper
 
     beforeEach(() => {
         wrapper = mount({
@@ -77,14 +74,6 @@ describe('ServerDetail - PageHeader', () => {
                 currentServer: dummy_all_servers[0],
             },
         })
-
-        axiosDeleteStub = sinon.stub(wrapper.vm.$store.$http, 'delete').returns(Promise.resolve())
-        axiosPutStub = sinon.stub(wrapper.vm.$store.$http, 'put').returns(Promise.resolve())
-    })
-
-    afterEach(async () => {
-        await axiosDeleteStub.restore()
-        await axiosPutStub.restore()
     })
 
     it(`Should render version_string if it has value`, () => {
@@ -102,21 +91,6 @@ describe('ServerDetail - PageHeader', () => {
         })
         const span = wrapper.find('.version-string')
         expect(span.exists()).to.be.false
-    })
-
-    it(`Should pass necessary props to confirm-dialog`, () => {
-        const confirmDialog = wrapper.findComponent({
-            name: 'confirm-dialog',
-        })
-        expect(confirmDialog.exists()).to.be.true
-        const { title, type, smallInfo, item, onSave } = confirmDialog.vm.$props
-        const { dialogTitle, dialogType, smallInfo: dialogSmallInfo } = wrapper.vm.$data
-
-        expect(title).to.be.equals(dialogTitle)
-        expect(type).to.be.equals(dialogType)
-        expect(smallInfo).to.be.equals(dialogSmallInfo)
-        expect(item).to.be.deep.equals(wrapper.vm.$props.currentServer)
-        expect(onSave).to.be.equals(wrapper.vm.confirmSave)
     })
 
     describe('Server healthy status tests', () => {
@@ -146,14 +120,45 @@ describe('ServerDetail - PageHeader', () => {
             })
         )
     })
+})
+
+const ALL_BTN_CLASS_PREFIXES = ['maintain', 'clear', 'drain', 'delete']
+
+describe(`ServerDetail - PageHeader: child component's data communication tests `, () => {
+    let wrapper
+
+    beforeEach(() => {
+        wrapper = mount({
+            shallow: false,
+            component: PageHeader,
+            propsData: {
+                currentServer: dummy_all_servers[0],
+            },
+        })
+    })
+
+    it(`Should pass necessary props to confirm-dialog`, () => {
+        const confirmDialog = wrapper.findComponent({
+            name: 'confirm-dialog',
+        })
+        expect(confirmDialog.exists()).to.be.true
+        const { title, type, smallInfo, item, onSave } = confirmDialog.vm.$props
+        const { dialogTitle, dialogType, smallInfo: dialogSmallInfo } = wrapper.vm.$data
+
+        expect(title).to.be.equals(dialogTitle)
+        expect(type).to.be.equals(dialogType)
+        expect(smallInfo).to.be.equals(dialogSmallInfo)
+        expect(item).to.be.deep.equals(wrapper.vm.$props.currentServer)
+        expect(onSave).to.be.equals(wrapper.vm.confirmSave)
+    })
 
     describe('confirm-dialog opening test assertions', () => {
         const dummyStateModes = ['drain', 'maintenance', 'slave', 'maintenance']
         ALL_BTN_CLASS_PREFIXES.forEach((prefix, i) =>
             it(`Should open confirm-dialog when ${prefix} button is clicked`, async () => {
-                // stateMode stub
+                // currStateMode stub
                 wrapper = computedFactory({
-                    stateMode: () => dummyStateModes[i],
+                    currStateMode: () => dummyStateModes[i],
                 })
                 await openConfirmDialog({
                     wrapper,
@@ -164,18 +169,39 @@ describe('ServerDetail - PageHeader', () => {
             })
         )
     })
+})
+describe('ServerDetail - PageHeader: Action tests', () => {
+    let wrapper, axiosDeleteStub, axiosPutStub
+
+    beforeEach(() => {
+        wrapper = mount({
+            shallow: false,
+            component: PageHeader,
+            propsData: {
+                currentServer: dummy_all_servers[0],
+            },
+        })
+
+        axiosDeleteStub = sinon.stub(wrapper.vm.$store.$http, 'delete').returns(Promise.resolve())
+        axiosPutStub = sinon.stub(wrapper.vm.$store.$http, 'put').returns(Promise.resolve())
+    })
+
+    afterEach(async () => {
+        await axiosDeleteStub.restore()
+        await axiosPutStub.restore()
+    })
 
     describe('button disable test assertions', () => {
         const btnClassPrefixes = ['maintain', 'clear', 'drain', 'drain']
         const dummyStateModes = ['maintenance', 'slave', 'drained', 'maintenance']
         btnClassPrefixes.forEach((prefix, i) => {
-            let des = `Should disable ${prefix} btn when stateMode is: ${dummyStateModes[i]}`
+            let des = `Should disable ${prefix} btn when currStateMode is: ${dummyStateModes[i]}`
             if (prefix === 'clear')
-                des = `Should disable clear btn when stateMode !== maintenance or drained`
+                des = `Should disable clear btn when currStateMode !== maintenance or drained`
             it(des, async () => {
-                // stateMode stub
+                // currStateMode stub
                 wrapper = computedFactory({
-                    stateMode: () => dummyStateModes[i],
+                    currStateMode: () => dummyStateModes[i],
                 })
                 await triggerBtnClick(wrapper, '.gear-btn')
                 const btn = wrapper.find(`.${prefix}-btn`)
@@ -189,7 +215,7 @@ describe('ServerDetail - PageHeader', () => {
         const dummyStateModes = ['slave', 'drained', 'slave', 'maintenance']
         ALL_BTN_CLASS_PREFIXES.forEach((prefix, i) => {
             const wrapper = computedFactory({
-                stateMode: () => dummyStateModes[i],
+                currStateMode: () => dummyStateModes[i],
             })
             const cssSelector = `.${prefix}-btn`
             const id = dummy_all_servers[0].id
@@ -240,7 +266,7 @@ describe('ServerDetail - PageHeader', () => {
         const callWith = `/servers/${dummy_all_servers[0].id}/set?state=maintenance&force=yes`
 
         wrapper = computedFactory({
-            stateMode: () => 'slave',
+            currStateMode: () => 'slave',
         })
         await wrapper.setData({
             forceClosing: true,

@@ -217,32 +217,26 @@ export default {
 
         /**
          * @param {Object} param - An object.
-         * @param {String} param.id id of the server
-         * @param {String} param.stateMode state mode of the server: maintenance or drain
-         * @param {String} param.type type set or clear
-         * @param {Function} param.callback callback function after successfully updated
-         * @param {Boolean} param.forceClosing force all connections to the server to be closed immediately. Only works
-         * for maintenance mode
+         * @param {String} param.id - id of the server
+         * @param {String} param.type - type of operation: drain, clear, maintain
+         * @param {String} param.opParams - operation params
+         * @param {Function} param.callback - callback function after successfully updated
+         * @param {Boolean} param.forceClosing - Immediately closing all connections to the server (maintain type)
          */
-        async setOrClearServerState({ commit }, { id, stateMode, type, callback, forceClosing }) {
+        async setOrClearServerState({ commit }, { id, type, opParams, callback, forceClosing }) {
             try {
-                let res, message
-
+                const nextStateMode = opParams.replace(/(clear|set)\?state=/, '')
+                let message = [`Set ${id} to '${nextStateMode}'`]
+                let url = `/servers/${id}/${opParams}`
                 switch (type) {
-                    case 'set':
-                        {
-                            let url = `/servers/${id}/set?state=${stateMode}`
-                            if (stateMode === 'maintenance' && forceClosing)
-                                url = url.concat('&force=yes')
-                            res = await this.$http.put(url)
-                            message = [`Server ${id} is set to ${stateMode}`]
-                        }
+                    case 'maintain':
+                        if (forceClosing) url = url.concat('&force=yes')
                         break
                     case 'clear':
-                        res = await this.$http.put(`/servers/${id}/clear?state=${stateMode}`)
-                        message = [`State ${stateMode} of server ${id} is cleared`]
+                        message = [`State '${nextStateMode}' of server ${id} is cleared`]
                         break
                 }
+                const res = await this.$http.put(url)
                 // response ok
                 if (res.status === 204) {
                     commit(
@@ -296,7 +290,6 @@ export default {
             })
             return map
         },
-
         getAllServersInfo: state => {
             let idArr = []
             let portNumArr = []
@@ -306,6 +299,59 @@ export default {
 
                 return (accumulator = { idArr: idArr, portNumArr: portNumArr })
             }, [])
+        },
+        getCurrStateMode: () => {
+            return serverState => {
+                let currentState = serverState.toLowerCase()
+                if (currentState.indexOf(',') > 0) {
+                    currentState = currentState.slice(0, currentState.indexOf(','))
+                }
+                return currentState
+            }
+        },
+        getServerOps: () => {
+            // scope is needed to access $t
+            return ({ currStateMode, scope }) => ({
+                maintain: {
+                    text: scope.$t('serverOps.actions.maintain'),
+                    type: 'maintain',
+                    icon: ' $vuetify.icons.paused',
+                    iconSize: 22,
+                    color: 'primary',
+                    info: scope.$t(`serverOps.info.maintain`),
+                    params: 'set?state=maintenance',
+                    disabled: currStateMode === 'maintenance',
+                },
+                clear: {
+                    text: scope.$t('serverOps.actions.clear'),
+                    type: 'clear',
+                    icon: '$vuetify.icons.restart',
+                    iconSize: 22,
+                    color: 'primary',
+                    info: '',
+                    params: `clear?state=${currStateMode === 'drained' ? 'drain' : currStateMode}`,
+                    disabled: currStateMode !== 'maintenance' && currStateMode !== 'drained',
+                },
+                drain: {
+                    text: scope.$t('serverOps.actions.drain'),
+                    type: 'drain',
+                    icon: '$vuetify.icons.drain',
+                    iconSize: 22,
+                    color: 'primary',
+                    info: scope.$t(`serverOps.info.drain`),
+                    params: `set?state=drain`,
+                    disabled: currStateMode === 'maintenance' || currStateMode === 'drained',
+                },
+                delete: {
+                    text: scope.$t('serverOps.actions.delete'),
+                    type: 'delete',
+                    icon: '$vuetify.icons.delete',
+                    iconSize: 18,
+                    color: 'error',
+                    info: '',
+                    disabled: false,
+                },
+            })
         },
     },
 }

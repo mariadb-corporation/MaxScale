@@ -76,7 +76,6 @@
     "newUpdateAvailable": "New update available!",
 
     "servers": "server | servers",
-    "currentServerState": "current server state",
     "unHealthy": "Unhealthy",
     "healthy": "Healthy",
     "warning": "Warning",
@@ -271,8 +270,6 @@
         "switchoverPromote": "Promote <b>{newMaster}</b> as a new master?"
     },
     "info": {
-        "serverDrain": "Server is drained of connections",
-        "serverMaintenance": "By default setting a server into maintenance mode will cause connections to be closed only after the next request is sent. Check the box below to force all connections to the server to be closed immediately",
         "switchover": "Swap the running master with a designated slave",
         "queryIncomplete": "Return fewer rows or increase query result max rows in setting (Gear icon in the toolbar)",
         "maxRows": "Indicate the number of rows returned from MaxScale. Increasing it can cause MaxScale to run out of memory. Internally we use `sql_select_limit` to limit the maximum number of rows returned",
@@ -287,7 +284,20 @@
         "reconnSuccessfully": "Reconnection was successful",
         "switchoverPromote": "Promote as Master (Switchover)"
     },
-
+    "serverOps": {
+        "actions": {
+            "maintain": "Maintain server",
+            "clear": "Clear server state",
+            "drain": "Drain server",
+            "delete": "Delete server"
+        },
+        "info": {
+            "maintain": "By default, setting a server into maintenance mode will cause connections to be closed only after the next request is sent. Check the box below to force all connections to the server to be closed immediately",
+            "clear": "",
+            "drain": "Server is drained of connections",
+            "delete": ""
+        }
+    },
     "$vuetify": {
         "badge": "Badge",
         "close": "Close",
