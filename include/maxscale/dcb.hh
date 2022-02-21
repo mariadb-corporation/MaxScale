@@ -632,8 +632,8 @@ private:
 
     bool basic_read(size_t maxbytes, ReadLimit limit_type);
 
-    int    read_SSL();
-    GWBUF* basic_read_SSL(int* nsingleread);
+    bool read_SSL();
+    bool basic_read_SSL();
 
     void socket_write_SSL();
     void socket_write();

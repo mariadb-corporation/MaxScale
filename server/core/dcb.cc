@@ -302,29 +302,13 @@ int DCB::read(GWBUF** ppHead, size_t maxbytes, ReadLimit limit_type)
         return -1;
     }
 
-    int nreadtotal = m_readq.length();
-
+    bool read_success = false;
     if (m_encryption.state == SSLState::ESTABLISHED)
     {
         mxb_assert(limit_type == ReadLimit::RES_LEN);
-        int n = read_SSL();
-        if (n < 0)
+        if (read_SSL())
         {
-            if (nreadtotal != 0)
-            {
-                // TODO: There was something in m_readq, but the SSL
-                // TODO: operation failed. We will now return -1 but whatever data was
-                // TODO: in m_readq is now in head.
-                // TODO: Don't know if this can happen in practice.
-                MXS_ERROR("SSL reading failed when existing data already had been "
-                          "appended to returned buffer.");
-            }
-
-            nreadtotal = -1;
-        }
-        else
-        {
-            nreadtotal += n;
+            read_success = true;
         }
     }
     else
@@ -332,22 +316,20 @@ int DCB::read(GWBUF** ppHead, size_t maxbytes, ReadLimit limit_type)
         if (maxbytes > 0 && m_readq.length() >= maxbytes)
         {
             // Already have enough data. May have more, so read again later.
+            read_success = true;
             trigger_read_event();
         }
         else
         {
             if (basic_read(maxbytes, limit_type))
             {
-                nreadtotal = m_readq.length();
-            }
-            else
-            {
-                nreadtotal = -1;
+                read_success = true;
             }
         }
     }
 
-    if (nreadtotal > 0)
+    int nreadtotal = -1;
+    if (read_success)
     {
         auto res = new GWBUF;
         if (maxbytes > 0 && m_readq.length() > maxbytes)
@@ -358,6 +340,7 @@ int DCB::read(GWBUF** ppHead, size_t maxbytes, ReadLimit limit_type)
         {
             *res = move(m_readq);
         }
+        nreadtotal = res->length();
         *ppHead = res;
     }
     return nreadtotal;
@@ -522,112 +505,89 @@ bool DCB::basic_read(size_t maxbytes, ReadLimit limit_type)
  * structure lined with this DCB. The SSL structure should
  * be initialized and the SSL handshake should be done.
  *
- * @return -1 on error, otherwise the total number of bytes read
+ * @return True on success
  */
-int DCB::read_SSL()
+bool DCB::read_SSL()
 {
-    mxb_assert(m_fd != FD_CLOSED);
-
-    int nsingleread = 0;
-    int nreadtotal = m_readq.length();
-
     if (m_encryption.write_want_read)
     {
         writeq_drain();
     }
 
-    GWBUF* buffer = basic_read_SSL(&nsingleread);
-    if (buffer)
-    {
-        nreadtotal += nsingleread;
-        m_readq.merge_back(move(*buffer));
-        delete buffer;
+    return basic_read_SSL();
+}
 
-        while (buffer)
+/**
+ * Basic read function read all data from SSL connection.
+ * TODO: obey maxbytes-limit.
+ *
+ * @return True on success
+ */
+bool DCB::basic_read_SSL()
+{
+    bool keep_reading = true;
+    bool expect_more_data = true;
+    bool success = true;
+    size_t bytes_from_socket = 0;
+
+    while (keep_reading)
+    {
+        auto [ptr, alloc_limit] = calc_read_limit(expect_more_data);
+        // In theory, the readq could be larger than INT_MAX bytes.
+        int read_limit = std::min(alloc_limit, (size_t)INT_MAX);
+
+        ERR_clear_error();
+        auto ret = SSL_read(m_encryption.handle, ptr, read_limit);
+        m_stats.n_reads++;
+        if (ret > 0)
         {
-            buffer = basic_read_SSL(&nsingleread);
-            if (buffer)
+            m_readq.write_complete(ret);
+            bytes_from_socket += ret;
+            expect_more_data = (ret == read_limit);
+
+            /* If we were in a retry situation, need to clear flag and attempt write */
+            if (m_encryption.read_want_write || m_encryption.read_want_read)
             {
-                nreadtotal += nsingleread;
-                /*< Append read data to the gwbuf */
-                m_readq.merge_back(move(*buffer));
-                delete buffer;
+                m_encryption.read_want_write = false;
+                m_encryption.read_want_read = false;
+                writeq_drain();
+            }
+        }
+        else
+        {
+            keep_reading = false;
+            switch (SSL_get_error(m_encryption.handle, ret))
+            {
+            case SSL_ERROR_ZERO_RETURN:
+                /* react to the SSL connection being closed */
+                trigger_hangup_event();
+                break;
+
+            case SSL_ERROR_WANT_READ:
+                /* Prevent SSL I/O on connection until retried, return to poll loop */
+                m_encryption.read_want_write = false;
+                m_encryption.read_want_read = true;
+                break;
+
+            case SSL_ERROR_WANT_WRITE:
+                /* Prevent SSL I/O on connection until retried, return to poll loop */
+                m_encryption.read_want_write = true;
+                m_encryption.read_want_read = false;
+                break;
+
+            default:
+                success = (log_errors_SSL(ret) >= 0);
+                break;
             }
         }
     }
 
-    return nsingleread < 0 ? nsingleread : nreadtotal;
-}
-
-/**
- * Basic read function to carry out a single read on the DCB's SSL connection
- *
- * @param dcb           The DCB to read from
- * @param nsingleread   To be set as the number of bytes read this time
- * @return              GWBUF* buffer containing the data, or null.
- */
-GWBUF* DCB::basic_read_SSL(int* nsingleread)
-{
-    const size_t MXS_SO_RCVBUF_SIZE = (128 * 1024);
-    unsigned char temp_buffer[MXS_SO_RCVBUF_SIZE];
-    GWBUF* buffer = NULL;
-
-    *nsingleread = SSL_read(m_encryption.handle, temp_buffer, MXS_SO_RCVBUF_SIZE);
-
-    if (*nsingleread)
+    if (bytes_from_socket > 0)
     {
         m_last_read = mxs_clock();
     }
 
-    m_stats.n_reads++;
-
-    switch (SSL_get_error(m_encryption.handle, *nsingleread))
-    {
-    case SSL_ERROR_NONE:
-        /* Successful read */
-        if (*nsingleread && (buffer = gwbuf_alloc_and_load(*nsingleread, (void*)temp_buffer)) == NULL)
-        {
-            *nsingleread = -1;
-            return NULL;
-        }
-        /* If we were in a retry situation, need to clear flag and attempt write */
-        if (m_encryption.read_want_write || m_encryption.read_want_read)
-        {
-            m_encryption.read_want_write = false;
-            m_encryption.read_want_read = false;
-            writeq_drain();
-        }
-        break;
-
-    case SSL_ERROR_ZERO_RETURN:
-        /* react to the SSL connection being closed */
-        trigger_hangup_event();
-        *nsingleread = 0;
-        break;
-
-    case SSL_ERROR_WANT_READ:
-        /* Prevent SSL I/O on connection until retried, return to poll loop */
-        m_encryption.read_want_write = false;
-        m_encryption.read_want_read = true;
-        *nsingleread = 0;
-        break;
-
-    case SSL_ERROR_WANT_WRITE:
-        /* Prevent SSL I/O on connection until retried, return to poll loop */
-        m_encryption.read_want_write = true;
-        m_encryption.read_want_read = false;
-        *nsingleread = 0;
-        break;
-
-    case SSL_ERROR_SYSCALL:
-        *nsingleread = log_errors_SSL(*nsingleread);
-        break;
-
-    default:
-        *nsingleread = log_errors_SSL(*nsingleread);
-        break;
-    }
-    return buffer;
+    return success;
 }
 
 /**
