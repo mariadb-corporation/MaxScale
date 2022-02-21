@@ -31,6 +31,7 @@ const stubModuleMethods = {
     handleAutoClearQueryHistory: () => null,
     validatingConn: () => null,
     chooseActiveWke: () => null,
+    updateRoute: () => null,
 }
 describe('QueryPage created hook tests', () => {
     let handleAutoClearQueryHistoryCallCount = 0,
