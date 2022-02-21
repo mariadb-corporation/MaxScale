@@ -7,12 +7,14 @@
         v-on="$listeners"
     >
         <template v-slot:form-body>
-            <p v-if="!$help.isNull(item)">
-                <span
+            <slot name="confirm-text">
+                <p
+                    v-if="!$help.isNull(item)"
                     class="confirmations-text"
                     v-html="$t(`confirmations.${type}`, { targetId: item.id })"
-                />
-            </p>
+                ></p>
+            </slot>
+
             <slot name="body-prepend"></slot>
             <small> {{ smallInfo }} </small>
             <slot name="body-append"></slot>

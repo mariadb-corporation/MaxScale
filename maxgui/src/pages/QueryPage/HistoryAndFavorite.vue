@@ -143,7 +143,7 @@
             minBodyWidth="624px"
             :onSave="deleteSelectedRows"
         >
-            <template v-slot:body-prepend>
+            <template v-slot:confirm-text>
                 <p>
                     {{
                         $t('info.clearSelectedQueries', {

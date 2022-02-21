@@ -10,6 +10,9 @@
             @on-close="cancelLeave"
             @on-cancel="cancelLeave"
         >
+            <template v-slot:confirm-text>
+                <p>{{ $t('info.disconnectAll') }}</p>
+            </template>
             <template v-slot:body-append>
                 <v-checkbox
                     v-model="confirmDelAll"
@@ -18,9 +21,6 @@
                     color="primary"
                     hide-details
                 />
-            </template>
-            <template v-slot:body-prepend>
-                <p>{{ $t('info.disconnectAll') }}</p>
             </template>
         </confirm-dialog>
     </div>
