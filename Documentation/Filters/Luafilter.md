@@ -63,9 +63,9 @@ The entry points for the Lua script expect the following signatures:
       is replaced with the return value and the query will be routed. If nil is
       returned, the query is routed normally.
 
-  - `nil clientReply()` - reply to a query is being routed
+  - `nil clientReply(string)` - reply to a query is being routed
 
-    - This function calls the `clientReply` function of the Lua scripts.
+    - This function is called with the name of the server that returned the response.
 
   - `string diagnostic()` - global script only, print diagnostic information
 
@@ -98,7 +98,7 @@ function routeQuery(query)
 
 end
 
-function clientReply(query)
+function clientReply(server)
 
 end
 
@@ -109,9 +109,10 @@ end
 
 ### Functions Exposed by the Luafilter
 
-The luafilter exposes three functions that can be called from the Lua script.
+The luafilter exposes the following functions that can be called inside the Lua
+script API endpoints.
 
-- `string lua_qc_get_type_mask()`
+- `string mxs_get_type_mask()`
 
   - Returns the type of the current query being executed as a string. The values
     are the string versions of the query types defined in _query_classifier.h_
@@ -119,23 +120,36 @@ The luafilter exposes three functions that can be called from the Lua script.
 
     This function can only be called from the `routeQuery` entry point.
 
-- `string lua_qc_get_operation()`
+- `string mxs_get_operation()`
 
   - Returns the current operation type as a string. The values are defined in
     _query_classifier.h_.
 
     This function can only be called from the `routeQuery` entry point.
 
-- `string lua_get_canonical()`
+- `string mxs_get_canonical()`
 
   - Returns the canonical version of a query by replacing all user-defined constant values with question marks.
 
     This function can only be called from the `routeQuery` entry point.
 
-- `number id_gen()`
+- `number mxs_get_session_id()`
 
-  - This function generates unique integers that can be used to distinct
-    sessions from each other.
+  - This function returns the session ID of the current session. Inside the
+    `createInstance` and `diagnostic` endpoints this function will always return
+    the value 0.
+
+- `string mxs_get_db()`
+
+  - Returns the current default database used by the connection.
+
+- `string mxs_get_user()`
+
+  - Returns the username of the client connection.
+
+- `string mxs_get_host()`
+
+  - Returns the address of the client connection.
 
 ## Example Configuration and Script
 
@@ -166,11 +180,11 @@ function closeSession()
 end
 
 function routeQuery(string)
-    f:write("routeQuery: " .. string .. " -- type: " .. lua_qc_get_type_mask() .. " operation: " .. lua_qc_get_operation() .. "\n")
+    f:write("routeQuery: " .. string .. " -- type: " .. mxs_qc_get_type_mask() .. " operation: " .. mxs_qc_get_operation() .. "\n")
 end
 
-function clientReply()
-    f:write("clientReply\n")
+function clientReply(server)
+    f:write("clientReply: " .. server .. "\n")
 end
 
 function diagnostic()
