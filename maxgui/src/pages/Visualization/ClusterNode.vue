@@ -59,8 +59,41 @@
                                 </v-icon>
                             </v-btn>
                         </template>
-                        <!-- TODO: Render cluster node actions -->
-                        <v-list class="color bg-color-background"> </v-list>
+
+                        <v-list class="color bg-color-background">
+                            <template v-for="(opt, i) in nodeOpts">
+                                <v-divider v-if="opt.divider" :key="`divider-${i}`" />
+                                <v-list-item
+                                    v-else
+                                    :key="i"
+                                    dense
+                                    link
+                                    :disabled="opt.disabled"
+                                    class="px-2"
+                                    @click="$emit('on-node-opt-click', { opt, node })"
+                                >
+                                    <v-list-item-title
+                                        class="color text-text align-center node-opt-item"
+                                        :class="{ 'node-opt-item--disabled': opt.disabled }"
+                                    >
+                                        <div
+                                            v-if="opt.icon"
+                                            class="d-inline-block text-center mr-1"
+                                            style="width:22px"
+                                        >
+                                            <v-icon
+                                                class="node-opt-item__icon"
+                                                :color="opt.color"
+                                                :size="opt.iconSize"
+                                            >
+                                                {{ opt.icon }}
+                                            </v-icon>
+                                        </div>
+                                        <span class="node-opt-item__text">{{ opt.text }}</span>
+                                    </v-list-item-title>
+                                </v-list-item>
+                            </template>
+                        </v-list>
                     </v-menu>
                 </div>
             </div>
@@ -172,9 +205,12 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { mapGetters } from 'vuex'
+
 /*
 @cluster-node-height: v: Number. Cluster node height
 @get-expanded-node: v: String. Id of expanded cluster node
+@on-node-opt-click: { opt:Object, node:Object }. Option chosen and node data
 */
 export default {
     name: 'cluster-node',
@@ -192,6 +228,10 @@ export default {
         }
     },
     computed: {
+        ...mapGetters({
+            getCurrStateMode: 'server/getCurrStateMode',
+            getServerOps: 'server/getServerOps',
+        }),
         iconColor() {
             return this.droppableTargets.includes(this.node.id) ? 'background' : 'primary'
         },
@@ -206,6 +246,13 @@ export default {
         },
         nodeAttrs() {
             return this.node.data.serverData.attributes
+        },
+        currStateMode() {
+            let stateMode = this.nodeAttrs.state.toLowerCase()
+            if (stateMode.indexOf(',') > 0) {
+                stateMode = stateMode.slice(0, stateMode.indexOf(','))
+            }
+            return stateMode
         },
         // only slave node has this property
         slave_connections() {
@@ -273,6 +320,15 @@ export default {
                 if (numOfLines > max) max = numOfLines
             })
             return max
+        },
+        serverOps() {
+            const currStateMode = this.getCurrStateMode(this.nodeAttrs.state)
+            const ops = this.getServerOps({ currStateMode, scope: this })
+            return Object.values(ops)
+        },
+        //TODO: add cluster control options .e.g. reset-replication, release-locks, rejoin
+        nodeOpts() {
+            return [...this.serverOps]
         },
     },
     mounted() {
@@ -354,6 +410,18 @@ export default {
                     }
                 }
             }
+        }
+    }
+}
+::v-deep.node-opt-item {
+    &--disabled {
+        .node-opt-item__icon {
+            svg {
+                color: rgba(0, 0, 0, 0.26) !important;
+            }
+        }
+        .node-opt-item__text {
+            color: rgba(0, 0, 0, 0.26) !important;
         }
     }
 }
