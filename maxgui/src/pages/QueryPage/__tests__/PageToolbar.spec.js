@@ -43,7 +43,8 @@ describe(`PageToolbar - mounted hook and child component's interaction tests`, (
     it(`Should pass accurate data to confirm-dialog
       (confirm saving query to favorite) via props`, () => {
         const confirmDialog = wrapper.findComponent({ name: 'confirm-dialog' })
-        const { value, title, type, onSave } = confirmDialog.vm.$props
+        const { value, title, onSave } = confirmDialog.vm.$attrs
+        const { type } = confirmDialog.vm.$props
         expect(value).to.be.equals(wrapper.vm.isConfDlgOpened)
         expect(title).to.be.equals(wrapper.vm.$t('confirmations.addToFavorite'))
         expect(type).to.be.equals('add')

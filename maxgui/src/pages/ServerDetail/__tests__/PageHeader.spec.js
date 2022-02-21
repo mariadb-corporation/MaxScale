@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 /*
  * Copyright (c) 2020 MariaDB Corporation Ab
  *
@@ -142,9 +141,16 @@ describe(`ServerDetail - PageHeader: child component's data communication tests 
             name: 'confirm-dialog',
         })
         expect(confirmDialog.exists()).to.be.true
-        const { title, type, smallInfo, item, onSave } = confirmDialog.vm.$props
-        const { dialogTitle, dialogType, smallInfo: dialogSmallInfo } = wrapper.vm.$data
+        const { value, title, onSave } = confirmDialog.vm.$attrs
+        const { type, smallInfo, item } = confirmDialog.vm.$props
+        const {
+            dialogTitle,
+            dialogType,
+            smallInfo: dialogSmallInfo,
+            isConfDlgOpened,
+        } = wrapper.vm.$data
 
+        expect(value).to.be.equals(isConfDlgOpened)
         expect(title).to.be.equals(dialogTitle)
         expect(type).to.be.equals(dialogType)
         expect(smallInfo).to.be.equals(dialogSmallInfo)
@@ -165,7 +171,7 @@ describe(`ServerDetail - PageHeader: child component's data communication tests 
                     cssSelector: `.${prefix}-btn`,
                 })
                 const confirmDialog = wrapper.findComponent({ name: 'confirm-dialog' })
-                expect(confirmDialog.vm.isDlgOpened).to.be.true
+                expect(confirmDialog.vm.$attrs.value).to.be.true
             })
         )
     })

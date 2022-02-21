@@ -1,56 +1,24 @@
 <template>
+    <!-- Confirmation type may have different text for save button,
+    so it will use `saveText` in $attrs if it's provided-->
     <base-dialog
-        v-model="isDlgOpened"
-        :onSave="onSave"
-        :title="title"
-        :saveText="type"
-        :minBodyWidth="minBodyWidth"
-        :closeImmediate="closeImmediate"
-        :hasSavingErr="hasSavingErr"
-        :allowEnterToSubmit="allowEnterToSubmit"
+        v-bind="{ ...$attrs }"
+        :saveText="$attrs.saveText ? $attrs.saveText : type"
         v-on="$listeners"
     >
         <template v-slot:form-body>
             <p v-if="!$help.isNull(item)">
-                <span class="confirmations-text">
-                    {{ $t(`confirmations.${type}`, { targetId: item.id }) }}
-                </span>
+                <span
+                    class="confirmations-text"
+                    v-html="$t(`confirmations.${type}`, { targetId: item.id })"
+                />
             </p>
             <slot name="body-prepend"></slot>
-            <small>
-                {{ smallInfo }}
-            </small>
+            <small> {{ smallInfo }} </small>
             <slot name="body-append"></slot>
         </template>
-
-        <template v-slot:actions="{ cancel, save, isSaveDisabled }">
-            <slot name="action-prepend"></slot>
-            <v-spacer />
-            <v-btn
-                small
-                height="36"
-                color="primary"
-                class="cancel font-weight-medium px-7 text-capitalize"
-                rounded
-                outlined
-                depressed
-                @click="cancel"
-            >
-                {{ $t('cancel') }}
-            </v-btn>
-            <v-btn
-                small
-                height="36"
-                color="primary"
-                class="save font-weight-medium px-7 text-capitalize"
-                rounded
-                depressed
-                :disabled="isSaveDisabled"
-                @click="save"
-            >
-                {{ $t(type) }}
-            </v-btn>
-        </template>
+        <!-- Pass on all named slots -->
+        <slot v-for="slot in Object.keys($slots)" :slot="slot" :name="slot" />
     </base-dialog>
 </template>
 
@@ -69,27 +37,11 @@
  */
 export default {
     name: 'confirm-dialog',
+    inheritAttrs: false,
     props: {
-        value: { type: Boolean, required: true },
-        type: { type: String, required: true }, //delete, unlink, destroy, stop, start
-        title: { type: String, required: true },
-        onSave: { type: Function, required: true },
+        type: { type: String, required: true }, //check confirmations in en.json
         item: { type: Object, default: null },
         smallInfo: { type: String, default: '' },
-        minBodyWidth: { type: String, default: '466px' },
-        closeImmediate: { type: Boolean, default: false },
-        hasSavingErr: { type: Boolean, default: false },
-        allowEnterToSubmit: { type: Boolean, default: true },
-    },
-    computed: {
-        isDlgOpened: {
-            get() {
-                return this.value
-            },
-            set(value) {
-                this.$emit('input', value)
-            },
-        },
     },
 }
 </script>

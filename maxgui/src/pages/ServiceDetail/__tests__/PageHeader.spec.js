@@ -78,15 +78,15 @@ describe('ServiceDetail - PageHeader', () => {
         })
         expect(confirmDialog.exists()).to.be.true
 
-        const { title, type, item, onSave, onClose, onCancel } = confirmDialog.vm.$props
-        const { dialogTitle, dialogType } = wrapper.vm.$data
+        const { value, title, onSave } = confirmDialog.vm.$attrs
+        const { type, item } = confirmDialog.vm.$props
+        const { dialogTitle, dialogType, isConfDlgOpened } = wrapper.vm.$data
 
+        expect(value).to.be.equals(isConfDlgOpened)
         expect(title).to.be.equals(dialogTitle)
         expect(type).to.be.equals(dialogType)
         expect(item).to.be.deep.equals(wrapper.vm.$props.currentService)
         expect(onSave).to.be.equals(wrapper.vm.confirmSave)
-        expect(onClose).to.be.equals(wrapper.vm.handleClose)
-        expect(onCancel).to.be.equals(wrapper.vm.handleClose)
     })
 
     describe('Service state tests', () => {
@@ -113,7 +113,7 @@ describe('ServiceDetail - PageHeader', () => {
                 const confirmDialog = wrapper.findComponent({
                     name: 'confirm-dialog',
                 })
-                expect(confirmDialog.vm.isDlgOpened).to.be.true
+                expect(confirmDialog.vm.$attrs.value).to.be.true
             })
         )
     })

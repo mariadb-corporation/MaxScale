@@ -17,46 +17,31 @@ import ConfirmDialog from '@/components/common/Dialogs/ConfirmDialog'
 describe('ConfirmDialog.vue', () => {
     let wrapper
 
-    let initialProps = {
+    let initialAttrs = {
         value: false, // control visibility of the dialog
-        type: 'unlink', //delete, unlink, destroy, stop, start (lowercase only)
-        title: 'Unlink server', // translate before passing
-
-        onSave: () => wrapper.setProps({ value: false }),
-
-        //optional props
-        item: { id: 'row_server_1', type: 'servers' },
-        smallInfo: '', // translate before passing
     }
     beforeEach(() => {
         wrapper = mount({
             shallow: false,
             component: ConfirmDialog,
-            propsData: initialProps,
+            attrs: initialAttrs,
+            propsData: {
+                type: 'unlink',
+                item: null,
+                smallInfo: '',
+            },
         })
     })
 
-    it(`Testing component renders accurate confirmation text`, async () => {
-        // component need to be shallowed, ignoring child components
-        wrapper = mount({
-            shallow: false,
-            component: ConfirmDialog,
-            propsData: initialProps,
-        })
-        // get confirmation text span
+    it(`Should render accurate confirmation text when item is defined`, async () => {
+        await wrapper.setProps({ type: 'destroy', item: { id: 'Monitor', type: 'monitors' } })
         let span = wrapper.find('.confirmations-text').html()
         // check include correct span value
-        expect(span).to.be.include('Are you sure you want to unlink row_server_1?')
-
-        await wrapper.setProps({ type: 'destroy', item: { id: 'Monitor', type: 'monitors' } })
-
-        span = wrapper.find('.confirmations-text').html()
-        // check include correct span value
         expect(span).to.be.include('Are you sure you want to destroy Monitor?')
-
+    })
+    it(`Should not render confirmation text when item is not defined`, async () => {
         await wrapper.setProps({ type: 'destroy', item: null })
-        span = wrapper.find('.confirmations-text')
-        // Dont render confirmation text span if target item is null
+        let span = wrapper.find('.confirmations-text')
         expect(span.exists()).to.be.equal(false)
     })
 
@@ -65,7 +50,7 @@ describe('ConfirmDialog.vue', () => {
         wrapper = mount({
             shallow: false,
             component: ConfirmDialog,
-            propsData: initialProps,
+            attrs: initialAttrs,
             slots: {
                 'body-append': '<div class="body-append">test div</div>',
             },

@@ -34,23 +34,23 @@ describe('FilterDetail - PageHeader', () => {
         axiosStub.restore()
     })
 
-    it(`Should pass necessary props to confirm-dialog`, () => {
+    it(`Should pass necessary props & attrs to confirm-dialog`, () => {
         const confirmDialog = wrapper.findComponent({ name: 'confirm-dialog' })
         expect(confirmDialog.exists()).to.be.true
-        const { title, type, item, onSave, onClose, onCancel } = confirmDialog.vm.$props
-        const { dialogTitle, dialogType } = wrapper.vm.$data
+        const { type, item } = confirmDialog.vm.$props
+        const { title, onSave, value } = confirmDialog.vm.$attrs
+        const { dialogTitle, dialogType, isConfDlgOpened } = wrapper.vm.$data
+        expect(value).to.be.equals(isConfDlgOpened)
         expect(title).to.be.equals(dialogTitle)
         expect(type).to.be.equals(dialogType)
         expect(item).to.be.deep.equals(wrapper.vm.$props.currentFilter)
         expect(onSave).to.be.equals(wrapper.vm.confirmSave)
-        expect(onClose).to.be.equals(wrapper.vm.handleClose)
-        expect(onCancel).to.be.equals(wrapper.vm.handleClose)
     })
 
     it(`Should open confirm-dialog when delete button is clicked`, async () => {
         await openConfirmDialog({ wrapper, cssSelector: '.delete-btn' })
         const confirmDialog = wrapper.findComponent({ name: 'confirm-dialog' })
-        expect(confirmDialog.vm.isDlgOpened).to.be.true
+        expect(confirmDialog.vm.$attrs.value).to.be.true
     })
 
     it(`Should send delete request after confirming delete`, async () => {

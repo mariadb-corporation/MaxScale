@@ -41,7 +41,7 @@
             v-model="isConfDlgOpened"
             :title="confDlgTitle"
             :type="confDlgType"
-            closeImmediate
+            :closeImmediate="true"
             :onSave="onConfirm"
         >
             <template v-slot:body-prepend>

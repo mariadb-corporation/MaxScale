@@ -88,7 +88,7 @@
             v-model="isConfDlgOpened"
             :title="$t('disconnectConn')"
             type="disconnect"
-            closeImmediate
+            :closeImmediate="true"
             :item="connToBeDel"
             :onSave="confirmDelConn"
         />

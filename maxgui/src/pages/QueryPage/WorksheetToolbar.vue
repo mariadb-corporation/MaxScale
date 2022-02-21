@@ -162,7 +162,7 @@
                     :title="$t('confirmations.runQuery')"
                     type="run"
                     minBodyWidth="768px"
-                    closeImmediate
+                    :closeImmediate="true"
                     :onSave="confirmRunning"
                 >
                     <template v-slot:body-prepend>

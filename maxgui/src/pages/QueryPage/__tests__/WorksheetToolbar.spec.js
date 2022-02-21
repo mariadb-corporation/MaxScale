@@ -35,7 +35,8 @@ describe(`WorksheetToolbar - child component's data communication tests`, () => 
         // shallow mount so that confirm-dialog in connection-manager will be stubbed
         wrapper = mountFactory({ shallow: true, computed: { query_confirm_flag: () => 1 } })
         const confirmDialog = wrapper.findComponent({ name: 'confirm-dialog' })
-        const { value, title, type, onSave, closeImmediate } = confirmDialog.vm.$props
+        const { value, title, onSave, closeImmediate } = confirmDialog.vm.$attrs
+        const { type } = confirmDialog.vm.$props
         expect(value).to.be.equals(wrapper.vm.isConfDlgOpened)
         expect(title).to.be.equals(wrapper.vm.$t('confirmations.runQuery'))
         expect(type).to.be.equals('run')

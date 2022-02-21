@@ -64,9 +64,9 @@ describe(`ConnectionManager - child component's data communication tests `, () =
         expect(handleSave).to.be.equals(wrapper.vm.handleOpenConn)
     })
     it(`Should pass accurate data to confirm-dialog via props`, () => {
-        const { value, title, type, closeImmediate, item, onSave } = wrapper.findComponent({
-            name: 'confirm-dialog',
-        }).vm.$props
+        const confirmDlg = wrapper.findComponent({ name: 'confirm-dialog' }).vm
+        const { type, item } = confirmDlg.$props
+        const { value, title, closeImmediate, onSave } = confirmDlg.$attrs
         expect(value).to.be.equals(wrapper.vm.isConfDlgOpened)
         expect(title).to.be.equals(wrapper.vm.$t('disconnectConn'))
         expect(type).to.be.equals('disconnect')
