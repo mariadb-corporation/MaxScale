@@ -83,8 +83,8 @@ export default {
             droppableTargets: [],
             opType: '',
             initialNodeInnerHTML: null,
-            srcNodeId: null,
-            targetNodeId: null,
+            draggingNodeId: null,
+            droppingNodeId: null,
             isConfDlgOpened: false,
             confDlgTitle: '',
             confDlgBody: '',
@@ -219,12 +219,12 @@ export default {
         },
         /**
          *
-         * @param {Object} srcNode - dragging node
-         * @param {Object} targetNode - target node
+         * @param {Object} draggingNode - dragging node
+         * @param {Object} droppingNode - dropping node
          */
-        detectOperationType({ srcNode, targetNode }) {
-            if (srcNode.isMaster) this.opType = ''
-            else if (targetNode.isMaster) {
+        detectOperationType({ draggingNode, droppingNode }) {
+            if (draggingNode.isMaster) this.opType = ''
+            else if (droppingNode.isMaster) {
                 this.opType = 'switchover'
             }
             this.changeNodeTxt(this.opType)
@@ -248,18 +248,18 @@ export default {
             this.isDroppable = false
         },
         onMove(e, cb) {
-            this.srcNodeId = e.dragged.getAttribute('node_id')
-            const srcNode = this.graphDataHash[this.srcNodeId]
+            this.draggingNodeId = e.dragged.getAttribute('node_id')
+            const draggingNode = this.graphDataHash[this.draggingNodeId]
 
-            const targetEle = e.related // drop target node element
+            const dropEle = e.related // drop target node element
             // listen on the target element
-            targetEle.addEventListener('mouseleave', this.onNodeSwapLeave)
+            dropEle.addEventListener('mouseleave', this.onNodeSwapLeave)
 
-            this.targetNodeId = targetEle.getAttribute('node_id')
-            const targetNode = this.graphDataHash[this.targetNodeId]
-            this.isDroppable = this.droppableTargets.includes(this.targetNodeId)
+            this.droppingNodeId = dropEle.getAttribute('node_id')
+            const droppingNode = this.graphDataHash[this.droppingNodeId]
+            this.isDroppable = this.droppableTargets.includes(this.droppingNodeId)
             if (this.isDroppable) {
-                this.detectOperationType({ srcNode, targetNode })
+                this.detectOperationType({ draggingNode, droppingNode })
             } else this.onCancelSwap()
             // return false to cancel automatically swap by sortable.js
             cb(false)
@@ -271,7 +271,7 @@ export default {
                         this.confDlgType = 'promote'
                         this.confDlgTitle = this.$t('switchover')
                         this.confDlgBody = this.$t('confirmations.switchoverPromote', {
-                            newMaster: this.srcNodeId,
+                            newMaster: this.draggingNodeId,
                         })
                         break
                 }
@@ -286,7 +286,7 @@ export default {
                     await this.switchOver({
                         monitorModule: this.current_cluster.module,
                         monitorId: this.current_cluster.id,
-                        masterId: this.srcNodeId,
+                        masterId: this.draggingNodeId,
                         successCb: this.fetchCluster,
                     })
                     break
