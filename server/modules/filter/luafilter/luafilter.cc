@@ -106,9 +106,9 @@ public:
     }
 
     void new_session(MXS_SESSION* session);
-    bool route_query(GWBUF** buffer);
-    void client_reply();
-    void close_session();
+    bool route_query(MXS_SESSION* session, GWBUF** buffer);
+    void client_reply(MXS_SESSION* session, const char* target);
+    void close_session(MXS_SESSION* session);
 
     bool post_configure();
 
@@ -239,20 +239,22 @@ LuaFilterSession::~LuaFilterSession()
 {
     if (m_context)
     {
-        m_context->close_session();
+        m_context->close_session(m_pSession);
     }
 
-    m_filter->close_session();
+    m_filter->close_session(m_pSession);
 }
 
 bool LuaFilterSession::clientReply(GWBUF* queue, const maxscale::ReplyRoute& down, const mxs::Reply& reply)
 {
+    const char* target = down.empty() ? "" : down.front()->target()->name();
+
     if (m_context)
     {
-        m_context->client_reply();
+        m_context->client_reply(m_pSession, target);
     }
 
-    m_filter->client_reply();
+    m_filter->client_reply(m_pSession, target);
 
     return FilterSession::clientReply(queue, down, reply);
 }
@@ -263,12 +265,12 @@ bool LuaFilterSession::routeQuery(GWBUF* queue)
 
     if (m_context)
     {
-        route = m_context->route_query(&queue);
+        route = m_context->route_query(m_pSession, &queue);
     }
 
     if (route)
     {
-        m_filter->route_query(&queue);
+        m_filter->route_query(m_pSession, &queue);
     }
 
     bool ok = true;
@@ -315,36 +317,36 @@ void LuaFilter::new_session(MXS_SESSION* session)
     }
 }
 
-bool LuaFilter::route_query(GWBUF** buffer)
+bool LuaFilter::route_query(MXS_SESSION* session, GWBUF** buffer)
 {
-    bool ok = true;
+    bool rval = true;
     std::lock_guard guard(m_lock);
 
     if (m_context)
     {
-        ok = m_context->route_query(buffer);
+        rval = m_context->route_query(session, buffer);
     }
 
-    return ok;
+    return rval;
 }
 
-void LuaFilter::client_reply()
+void LuaFilter::client_reply(MXS_SESSION* session, const char* target)
 {
     std::lock_guard guard(m_lock);
 
     if (m_context)
     {
-        m_context->client_reply();
+        m_context->client_reply(session, target);
     }
 }
 
-void LuaFilter::close_session()
+void LuaFilter::close_session(MXS_SESSION* session)
 {
     std::lock_guard guard(m_lock);
 
     if (m_context)
     {
-        m_context->close_session();
+        m_context->close_session(session);
     }
 }
 

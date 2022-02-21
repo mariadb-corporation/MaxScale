@@ -24,6 +24,12 @@ extern "C" {
 #include <lualib.h>
 }
 
+struct LuaData
+{
+    MXS_SESSION* session = nullptr;
+    GWBUF*       buffer = nullptr;
+};
+
 class LuaContext
 {
 public:
@@ -34,14 +40,32 @@ public:
     // API methods
     void        create_instance();
     void        new_session(MXS_SESSION* session);
-    bool        route_query(GWBUF** buffer);
-    void        client_reply();
-    void        close_session();
+    bool        route_query(MXS_SESSION* session, GWBUF** buffer);
+    void        client_reply(MXS_SESSION* session, const char* target);
+    void        close_session(MXS_SESSION* session);
     std::string diagnostics();
 
 private:
     LuaContext(lua_State* state);
 
-    GWBUF*     m_query {nullptr};
+    // Helper class for making sure the data is reset to a known good state after each function call
+    struct Scope
+    {
+        Scope(LuaContext* ctx, LuaData new_data)
+            : m_ctx(ctx)
+            , m_data(std::exchange(ctx->m_data, new_data))
+        {
+        }
+
+        ~Scope()
+        {
+            m_ctx->m_data = m_data;
+        }
+
+        LuaContext* m_ctx;
+        LuaData     m_data;
+    };
+
+    LuaData    m_data;
     lua_State* m_state {nullptr};
 };

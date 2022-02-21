@@ -18,21 +18,33 @@
 
 namespace
 {
-static int id_gen(lua_State* state)
+
+const LuaData& get_data(lua_State* state)
 {
-    static int id_pool = 0;
-    lua_pushinteger(state, atomic_add(&id_pool, 1));
+    return *static_cast<LuaData*>(lua_touserdata(state, lua_upvalueindex(1)));
+}
+
+static int lua_get_session_id(lua_State* state)
+{
+    uint64_t id = 0;
+    const auto& data = get_data(state);
+
+    if (data.session)
+    {
+        id = data.session->id();
+    }
+
+    lua_pushinteger(state, id);
     return 1;
 }
 
-static int lua_qc_get_type_mask(lua_State* state)
+static int lua_get_type_mask(lua_State* state)
 {
-    int ibuf = lua_upvalueindex(1);
-    GWBUF* buf = *((GWBUF**)lua_touserdata(state, ibuf));
+    const auto& data = get_data(state);
 
-    if (buf)
+    if (data.buffer)
     {
-        uint32_t type = qc_get_type_mask(buf);
+        uint32_t type = qc_get_type_mask(data.buffer);
         char* mask = qc_typemask_to_string(type);
         lua_pushstring(state, mask);
         MXS_FREE(mask);
@@ -45,42 +57,76 @@ static int lua_qc_get_type_mask(lua_State* state)
     return 1;
 }
 
-static int lua_qc_get_operation(lua_State* state)
+static int lua_get_operation(lua_State* state)
 {
-    int ibuf = lua_upvalueindex(1);
-    GWBUF* buf = *((GWBUF**)lua_touserdata(state, ibuf));
+    const auto& data = get_data(state);
+    const char* opstring = "";
 
-    if (buf)
+    if (data.buffer)
     {
-        qc_query_op_t op = qc_get_operation(buf);
-        const char* opstring = qc_op_to_string(op);
-        lua_pushstring(state, opstring);
-    }
-    else
-    {
-        lua_pushliteral(state, "");
+        qc_query_op_t op = qc_get_operation(data.buffer);
+        opstring = qc_op_to_string(op);
     }
 
+    lua_pushstring(state, opstring);
     return 1;
 }
 
 static int lua_get_canonical(lua_State* state)
 {
-    int ibuf = lua_upvalueindex(1);
-    GWBUF* buf = *((GWBUF**)lua_touserdata(state, ibuf));
+    const auto& data = get_data(state);
+    std::string sql;
 
-    if (buf)
+    if (data.buffer)
     {
-        std::string sql = buf->get_sql();
+        sql = data.buffer->get_sql();
         maxsimd::Markers markers;
         maxsimd::get_canonical(&sql, &markers);
-        lua_pushstring(state, sql.c_str());
-    }
-    else
-    {
-        lua_pushliteral(state, "");
     }
 
+    lua_pushstring(state, sql.c_str());
+    return 1;
+}
+
+static int lua_get_db(lua_State* state)
+{
+    const auto& data = get_data(state);
+    std::string db;
+
+    if (data.session)
+    {
+        db = data.session->client_connection()->current_db();
+    }
+
+    lua_pushstring(state, db.c_str());
+    return 1;
+}
+
+static int lua_get_user(lua_State* state)
+{
+    const auto& data = get_data(state);
+    std::string user;
+
+    if (data.session)
+    {
+        user = data.session->user();
+    }
+
+    lua_pushstring(state, user.c_str());
+    return 1;
+}
+
+static int lua_get_host(lua_State* state)
+{
+    const auto& data = get_data(state);
+    std::string remote;
+
+    if (data.session)
+    {
+        remote = data.session->client_remote();
+    }
+
+    lua_pushstring(state, remote.c_str());
     return 1;
 }
 }
@@ -115,22 +161,33 @@ std::unique_ptr<LuaContext> LuaContext::create(const std::string& script)
 LuaContext::LuaContext(lua_State* state)
     : m_state(state)
 {
-    /** Expose an ID generation function */
-    lua_pushcfunction(m_state, id_gen);
-    lua_setglobal(m_state, "id_gen");
+    lua_pushlightuserdata(m_state, &m_data);
+    lua_pushcclosure(m_state, lua_get_session_id, 1);
+    lua_setglobal(m_state, "mxs_get_session_id");
 
-    /** Expose a part of the query classifier API */
-    lua_pushlightuserdata(m_state, &m_query);
-    lua_pushcclosure(m_state, lua_qc_get_type_mask, 1);
-    lua_setglobal(m_state, "lua_qc_get_type_mask");
+    lua_pushlightuserdata(m_state, &m_data);
+    lua_pushcclosure(m_state, lua_get_type_mask, 1);
+    lua_setglobal(m_state, "mxs_get_type_mask");
 
-    lua_pushlightuserdata(m_state, &m_query);
-    lua_pushcclosure(m_state, lua_qc_get_operation, 1);
-    lua_setglobal(m_state, "lua_qc_get_operation");
+    lua_pushlightuserdata(m_state, &m_data);
+    lua_pushcclosure(m_state, lua_get_operation, 1);
+    lua_setglobal(m_state, "mxs_get_operation");
 
-    lua_pushlightuserdata(m_state, &m_query);
+    lua_pushlightuserdata(m_state, &m_data);
     lua_pushcclosure(m_state, lua_get_canonical, 1);
-    lua_setglobal(m_state, "lua_get_canonical");
+    lua_setglobal(m_state, "mxs_get_canonical");
+
+    lua_pushlightuserdata(m_state, &m_data);
+    lua_pushcclosure(m_state, lua_get_db, 1);
+    lua_setglobal(m_state, "mxs_get_db");
+
+    lua_pushlightuserdata(m_state, &m_data);
+    lua_pushcclosure(m_state, lua_get_user, 1);
+    lua_setglobal(m_state, "mxs_get_user");
+
+    lua_pushlightuserdata(m_state, &m_data);
+    lua_pushcclosure(m_state, lua_get_host, 1);
+    lua_setglobal(m_state, "mxs_get_host");
 }
 
 LuaContext::~LuaContext()
@@ -153,6 +210,8 @@ void LuaContext::create_instance()
 
 void LuaContext::new_session(MXS_SESSION* session)
 {
+    Scope scope(this, {session, nullptr});
+
     /** Call the newSession entry point */
     lua_getglobal(m_state, "newSession");
     lua_pushstring(m_state, session->user().c_str());
@@ -166,11 +225,11 @@ void LuaContext::new_session(MXS_SESSION* session)
     }
 }
 
-bool LuaContext::route_query(GWBUF** buffer)
+bool LuaContext::route_query(MXS_SESSION* session, GWBUF** buffer)
 {
+    Scope scope(this, {session, *buffer});
     bool route = true;
-    m_query = *buffer;
-    const auto& sql = m_query->get_sql();
+    const auto& sql = m_data.buffer->get_sql();
 
     if (!sql.empty())
     {
@@ -197,24 +256,28 @@ bool LuaContext::route_query(GWBUF** buffer)
         }
     }
 
-    m_query = nullptr;
-
     return route;
 }
 
-void LuaContext::client_reply()
+void LuaContext::client_reply(MXS_SESSION* session, const char* target)
 {
+    Scope scope(this, {session, nullptr});
+
     lua_getglobal(m_state, "clientReply");
 
-    if (lua_pcall(m_state, 0, 0, 0))
+    lua_pushstring(m_state, target);
+
+    if (lua_pcall(m_state, 1, 0, 0))
     {
         MXS_ERROR("Call to 'clientReply' failed: '%s'.", lua_tostring(m_state, -1));
         lua_pop(m_state, -1);
     }
 }
 
-void LuaContext::close_session()
+void LuaContext::close_session(MXS_SESSION* session)
 {
+    Scope scope(this, {session, nullptr});
+
     lua_getglobal(m_state, "closeSession");
     if (lua_pcall(m_state, 0, 0, 0))
     {
