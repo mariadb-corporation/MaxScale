@@ -402,9 +402,7 @@ Server::Settings::Settings(const std::string& name)
     , m_ssl_verify_peer_certificate(this, &s_ssl_verify_peer_certificate)
     , m_ssl_verify_peer_host(this, &s_ssl_verify_peer_host)
     , m_ssl_cipher(this, &s_ssl_cipher)
-    , m_persistpoolmax(this, &s_persistpoolmax, [name](int64_t val) {
-                           persistpoolmax_modified(name, val);
-                       })
+    , m_persistpoolmax(this, &s_persistpoolmax)
 {
 }
 
@@ -419,6 +417,28 @@ bool Server::Settings::post_configure(const std::map<string, mxs::ConfigParamete
     careful_strcpy(monpw, MAX_MONPW_LEN, m_monitorpw.get());
 
     m_have_disk_space_limits.store(!m_disk_space_threshold.get().empty());
+
+    auto persistpoolmax_eff_old = m_persistpoolmax_eff;
+    m_persistpoolmax_eff = m_persistpoolmax.get();
+    if (m_persistpoolmax_eff > 0)
+    {
+        auto n_threads = mxs::Config::get().n_threads;
+        auto remainder = m_persistpoolmax_eff % n_threads;
+        if (remainder != 0)
+        {
+            m_persistpoolmax_eff += n_threads - remainder;
+            MXB_NOTICE("'%s' set to %li to ensure equal poolsize for every thread.",
+                       CN_PERSISTPOOLMAX, m_persistpoolmax_eff);
+        }
+    }
+
+    if (m_persistpoolmax_eff != persistpoolmax_eff_old)
+    {
+        auto func = [this, srvname = name()]() {
+                RoutingWorker::pool_set_size(srvname, m_persistpoolmax_eff);
+            };
+        mxs::RoutingWorker::broadcast(func, nullptr, mxb::Worker::EXECUTE_AUTO);
+    }
 
     return true;
 }

@@ -2134,16 +2134,22 @@ and [extra_max_connections](https://mariadb.com/kb/en/thread-pool-system-status-
 
 ### `persistpoolmax`
 
-The `persistpoolmax` parameter defaults to zero but can be set to an integer
-value for a back end server. If it is non zero, then when a DCB connected to a
-back end server is discarded by the system, it will be held in a pool for reuse,
-remaining connected to the back end server. If the number of DCBs in the pool
-has reached the value given by `persistpoolmax` then any further DCB that is
-discarded will not be retained, but disconnected and discarded.
 
-When a MariaDB protocol connection is taken from the pool, the state of the
-session is reset. This means that a pooled connection works exactly like a fresh
-connection.
+- **Type**: integer
+- **Default**: 0
+- **Dynamic**: Yes
+
+Sets the size of the server connection pool. Disabled by default. When enabled,
+MaxScale places unused connections to the server to a pool and reuses them
+later. Connections typically become unused when a session closes. If the size of
+the pool reaches *persistpoolmax*, unused connections are closed instead.
+
+Every routing thread has its own pool. As of version 6.3.0, MaxScale will round
+up *persistpoolmax* so that every thread has an equal size pool.
+
+When a MariaDB-protocol connection is taken from the pool to be used in a new
+session, the state of the connection is dependent on the router. ReadWriteSplit
+restores the connection to match the session state. Other routers do not.
 
 ### `persistmaxtime`
 

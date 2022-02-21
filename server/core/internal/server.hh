@@ -76,22 +76,12 @@ public:
 
     long persistpoolmax() const
     {
-        return m_settings.m_persistpoolmax.get();
-    }
-
-    void set_persistpoolmax(long persistpoolmax)
-    {
-        m_settings.m_persistpoolmax.set(persistpoolmax);
+        return m_settings.m_persistpoolmax_eff;
     }
 
     long persistmaxtime() const
     {
         return m_settings.m_persistmaxtime.get().count();
-    }
-
-    void set_persistmaxtime(long persistmaxtime)
-    {
-        m_settings.m_persistmaxtime.set(std::chrono::seconds(persistmaxtime));
     }
 
     void set_rank(int64_t rank)
@@ -116,7 +106,7 @@ public:
 
     bool persistent_conns_enabled() const override
     {
-        return m_settings.m_persistpoolmax.get() > 0;
+        return m_settings.m_persistpoolmax_eff > 0;
     }
 
     void set_version(uint64_t version_num, const std::string& version_str) override;
@@ -414,6 +404,7 @@ private:
         // NOTE: Keep this last so that we can initialize it last. For some unknown reason the Uncrustify
         // comma placement stops working after the line that initializes this.
         mxs::config::Count m_persistpoolmax;
+        int64_t            m_persistpoolmax_eff {0};/**< Effective persistpoolmax value */
 
     protected:
         bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override final;

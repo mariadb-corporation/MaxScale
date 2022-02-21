@@ -596,11 +596,7 @@ mxs::BackendConnection* RoutingWorker::ConnectionPool::get_connection(MXS_SESSIO
 void RoutingWorker::ConnectionPool::set_capacity(int global_capacity)
 {
     // Capacity has changed, recalculate local capacity.
-    long n = this_unit.nWorkers;
-    long base_amount = global_capacity / n;
-    long leftover = global_capacity - n * base_amount;
-    auto local_capacity = base_amount + ((m_owner->m_id < leftover) ? 1 : 0);
-    m_capacity = local_capacity;
+    m_capacity = global_capacity / this_unit.nWorkers;
 }
 
 mxs::BackendConnection*
