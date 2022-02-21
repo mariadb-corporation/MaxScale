@@ -41,13 +41,12 @@
             v-model="isConfDlgOpened"
             :title="confDlgTitle"
             :type="confDlgType"
+            :saveText="confDlgSaveTxt"
+            :item="targetNode"
+            :smallInfo="smallInfo"
             :closeImmediate="true"
             :onSave="onConfirm"
-        >
-            <template v-slot:body-prepend>
-                <span v-html="confDlgBody" />
-            </template>
-        </confirm-dialog>
+        />
     </page-wrapper>
 </template>
 
@@ -79,21 +78,26 @@ export default {
     data() {
         return {
             ctrDim: {},
+            // states for controlling drag behaviors
             isDroppable: false,
             droppableTargets: [],
             opType: '',
             initialNodeInnerHTML: null,
             draggingNodeId: null,
             droppingNodeId: null,
-            isConfDlgOpened: false,
-            confDlgTitle: '',
-            confDlgBody: '',
-            confDlgType: '',
-            nodeTxtWrapperClassName: 'node-text-wrapper',
+            //states for tree-graph
             expandedNodes: [],
             defClusterNodeHeight: 119,
             defClusterNodeWidth: 290,
             clusterNodeHeightMap: {},
+            //states for cluster-node
+            nodeTxtWrapperClassName: 'node-text-wrapper',
+            // states for confirm-dialog
+            isConfDlgOpened: false,
+            confDlgTitle: '',
+            confDlgType: '',
+            targetNode: null,
+            smallInfo: '',
         }
     },
     computed: {
@@ -139,6 +143,14 @@ export default {
             )
                 return true
             return false
+        },
+        confDlgSaveTxt() {
+            switch (this.confDlgType) {
+                case 'switchoverPromote':
+                    return 'promote'
+                default:
+                    return this.confDlgType
+            }
         },
     },
     async created() {
@@ -268,11 +280,9 @@ export default {
             if (this.isDroppable) {
                 switch (this.opType) {
                     case 'switchover':
-                        this.confDlgType = 'promote'
+                        this.confDlgType = 'switchoverPromote'
                         this.confDlgTitle = this.$t('switchover')
-                        this.confDlgBody = this.$t('confirmations.switchoverPromote', {
-                            newMaster: this.draggingNodeId,
-                        })
+                        this.targetNode = { id: this.draggingNodeId }
                         break
                 }
                 this.isConfDlgOpened = true

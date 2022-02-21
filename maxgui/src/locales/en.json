@@ -267,7 +267,7 @@
         "leavePage": "Are you sure you want to leave?",
         "addToFavorite": "Add the following statements to favorite?",
         "exeStatements": "Execute the following statement? | Execute the following statements?",
-        "switchoverPromote": "Promote <b>{newMaster}</b> as a new master?"
+        "switchoverPromote": "Promote <b>{targetId}</b> as a new master?"
     },
     "info": {
         "switchover": "Swap the running master with a designated slave",
