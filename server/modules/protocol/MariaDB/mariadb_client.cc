@@ -1110,8 +1110,10 @@ MariaDBClientConnection::handle_query_kill(GWBUF* read_buffer, uint32_t packet_l
             {
                 execute_kill_user(user.c_str(), kt);
             }
-
-            write_ok_packet(1);
+            else
+            {
+                write_ok_packet(1);
+            }
         }
     }
 
@@ -1190,7 +1192,6 @@ MariaDBClientConnection::process_special_commands(GWBUF* read_buffer, uint8_t cm
     {
         uint64_t process_id = mariadb::get_byte4(GWBUF_DATA(read_buffer) + MYSQL_HEADER_LEN + 1);
         mxs_mysql_execute_kill(process_id, KT_CONNECTION);
-        write_ok_packet(1);
         rval = SpecialCmdRes::END;
     }
     else if (m_command == MXS_COM_INIT_DB)
@@ -1740,9 +1741,12 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info)
                     dcb_foreach_local(info->cb, info.get());
                 });
 
+            // TODO: This doesn't handle the case where a session is moved from one worker to another while
+            // this was being executed on the MainWorker.
+
             // Then move execution back to the original worker to keep all connections on the same thread
             origin->call(
-                [this, info, ref]() {
+                [this, info, ref, origin]() {
                     for (const auto& a : info->targets)
                     {
                         if (LocalClient* client = LocalClient::create(info->session, a.first))
@@ -1750,6 +1754,7 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info)
                             client->connect();
                             // TODO: There can be multiple connections to the same server. Currently only one
                             // connection per server is killed.
+                            MXS_INFO("KILL on '%s': %s", a.first->name(), a.second.c_str());
                             client->queue_query(modutil_create_query(a.second.c_str()));
                             client->queue_query(mysql_create_com_quit(NULL, 0));
 
@@ -1758,11 +1763,35 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info)
                         }
                     }
 
-                    session_put_ref(ref);
+                    // Now wait for the COM_QUIT to close the connections.
+                    auto wait_for_conns = [this, ref](auto action){
+                            bool rv = true;
+
+                            if (action == mxb::Worker::Call::CANCEL || !have_local_clients())
+                            {
+                                // Check if the DCB is still open. If MaxScale is shutting down, the DCB is
+                                // already closed when this callback is called and an error about a write to a
+                                // closed DCB would be logged.
+                                if (!m_dcb->is_closed())
+                                {
+                                    write_ok_packet(1);
+                                }
+
+                                session_put_ref(ref);
+                                MXS_INFO("All KILL commands finished");
+                                rv = false;
+                            }
+
+                            return rv;
+                        };
+
+                    // TODO: Polling for this is slow. A callback in the LocalClient's destructor would be
+                    // better as it would close the connection as soon as possible.
+                    origin->delayed_call(100, wait_for_conns);
                 }, mxs::RoutingWorker::EXECUTE_AUTO);
         };
 
-    std::thread(func).detach();
+    mxs::MainWorker::get()->execute(func, mxb::Worker::EXECUTE_QUEUED);
 }
 
 void MariaDBClientConnection::mxs_mysql_execute_kill(uint64_t target_id, kill_type_t type)
@@ -2502,6 +2531,11 @@ void MariaDBClientConnection::add_local_client(LocalClient* client)
     m_local_clients.erase(it, m_local_clients.end());
 
     m_local_clients.emplace_back(client);
+}
+
+bool MariaDBClientConnection::have_local_clients()
+{
+    return std::any_of(m_local_clients.begin(), m_local_clients.end(), std::mem_fn(&LocalClient::is_open));
 }
 
 void MariaDBClientConnection::kill()
