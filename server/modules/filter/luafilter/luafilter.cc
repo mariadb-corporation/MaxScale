@@ -187,7 +187,7 @@ bool LuaFilter::post_configure()
         if (auto context = LuaContext::create(m_config.global_script))
         {
             m_context = std::move(context);
-            m_context->create_instance();
+            m_context->create_instance(m_config.name());
         }
         else
         {

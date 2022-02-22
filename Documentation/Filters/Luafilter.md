@@ -37,10 +37,11 @@ unique Lua environment. Use this script to do session specific tasks.
 
 The entry points for the Lua script expect the following signatures:
 
-  - `nil createInstance()` - global script only, called when MaxScale is started
+  - `nil createInstance(name)` - global script only, called when the script is first loaded
 
-    - The global script will be loaded in this function and executed once on a
-      global level before calling the createInstance function in the Lua script.
+    - When the global script is loaded, it first executes on a global level
+      before the luafilter calls the createInstance function in the Lua script
+      with the filter's name as its argument.
 
   - `nil newSession(string, string)` - new session is created
 
@@ -82,7 +83,7 @@ into a file and add `global_script=<path to script>` into the filter
 configuration. Make sure the file is readable by the `maxscale` user.
 
 ```
-function createInstance()
+function createInstance(name)
 
 end
 
@@ -167,20 +168,20 @@ And here is a script that opens a file in `/tmp/` and logs output to it.
 ```
 f = io.open("/tmp/test.log", "a+")
 
-function createInstance()
-    f:write("createInstance\n")
+function createInstance(name)
+    f:write("createInstance for " .. name .. "\n")
 end
 
-function newSession(a, b)
-    f:write("newSession for: " .. a .. "@" .. b .. "\n")
+function newSession(user, host)
+    f:write("newSession for: " .. user .. "@" .. host .. "\n")
 end
 
 function closeSession()
     f:write("closeSession\n")
 end
 
-function routeQuery(string)
-    f:write("routeQuery: " .. string .. " -- type: " .. mxs_qc_get_type_mask() .. " operation: " .. mxs_qc_get_operation() .. "\n")
+function routeQuery(query)
+    f:write("routeQuery: " .. query .. " -- type: " .. mxs_qc_get_type_mask() .. " operation: " .. mxs_qc_get_operation() .. "\n")
 end
 
 function clientReply(server)

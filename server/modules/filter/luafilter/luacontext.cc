@@ -195,11 +195,12 @@ LuaContext::~LuaContext()
     lua_close(m_state);
 }
 
-void LuaContext::create_instance()
+void LuaContext::create_instance(const std::string& name)
 {
     lua_getglobal(m_state, "createInstance");
+    lua_pushstring(m_state, name.c_str());
 
-    if (lua_pcall(m_state, 0, 0, 0))
+    if (lua_pcall(m_state, 1, 0, 0))
     {
         MXS_WARNING("Failed to get global variable 'createInstance':  %s. The createInstance "
                     "entry point will not be called.",
