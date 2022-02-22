@@ -6,7 +6,7 @@ This document describes the changes in release 6.2.0, when compared to the
 previous release in the same series.
 
 If you are upgrading from an older major version of MaxScale, please read the
-[upgrading document](../Upgrading/Upgrading-To-MaxScale-6.2.md) for
+[upgrading document](../Upgrading/Upgrading-To-MaxScale-6.md) for
 this MaxScale version.
 
 For any problems you encounter, please consider submitting a bug
