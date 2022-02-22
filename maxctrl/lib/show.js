@@ -296,6 +296,11 @@ const filter_fields = [
     path: "attributes.parameters",
     description: "Filter parameters",
   },
+  {
+    name: "Diagnostics",
+    path: "attributes.filter_diagnostics",
+    description: "Filter diagnostics",
+  },
 ];
 
 const listener_fields = [
