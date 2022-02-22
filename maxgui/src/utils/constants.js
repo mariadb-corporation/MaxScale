@@ -94,4 +94,5 @@ export const APP_CONFIG = Object.freeze({
         DRAIN: 'drain',
         DELETE: 'delete',
     }),
+    MONITOR_OP_TYPES: Object.freeze({ SWITCHOVER: 'switchover' }),
 })

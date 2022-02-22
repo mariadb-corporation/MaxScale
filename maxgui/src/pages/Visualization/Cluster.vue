@@ -103,6 +103,7 @@ export default {
     computed: {
         ...mapState({
             current_cluster: state => state.visualization.current_cluster,
+            MONITOR_OP_TYPES: state => state.app_config.MONITOR_OP_TYPES,
         }),
         graphData() {
             return this.$typy(this.current_cluster, 'children[0]').safeObjectOrEmpty
@@ -219,8 +220,9 @@ export default {
                 let nodeTxtWrapper = cloneEle[0].getElementsByClassName(
                     this.nodeTxtWrapperClassName
                 )
+                const { SWITCHOVER } = this.MONITOR_OP_TYPES
                 switch (type) {
-                    case 'switchover':
+                    case SWITCHOVER:
                         nodeTxtWrapper[0].innerHTML = this.$t('info.switchoverPromote')
                         break
                     default:
@@ -237,7 +239,8 @@ export default {
         detectOperationType({ draggingNode, droppingNode }) {
             if (draggingNode.isMaster) this.opType = ''
             else if (droppingNode.isMaster) {
-                this.opType = 'switchover'
+                const { SWITCHOVER } = this.MONITOR_OP_TYPES
+                this.opType = SWITCHOVER
             }
             this.changeNodeTxt(this.opType)
         },
@@ -278,8 +281,9 @@ export default {
         },
         onNodeSwapEnd() {
             if (this.isDroppable) {
+                const { SWITCHOVER } = this.MONITOR_OP_TYPES
                 switch (this.opType) {
-                    case 'switchover':
+                    case SWITCHOVER:
                         this.confDlgType = 'switchoverPromote'
                         this.confDlgTitle = this.$t('switchover')
                         this.targetNode = { id: this.draggingNodeId }
@@ -291,8 +295,9 @@ export default {
             document.body.classList.remove('cursor--all-move')
         },
         async onConfirm() {
+            const { SWITCHOVER } = this.MONITOR_OP_TYPES
             switch (this.opType) {
-                case 'switchover':
+                case SWITCHOVER:
                     await this.switchOver({
                         monitorModule: this.current_cluster.module,
                         monitorId: this.current_cluster.id,
