@@ -60,17 +60,18 @@ export default {
             should_refresh_resource: 'should_refresh_resource',
             current_monitor: state => state.monitor.current_monitor,
             all_servers: state => state.server.all_servers,
+            MONITOR_OP_TYPES: state => state.app_config.MONITOR_OP_TYPES,
         }),
 
-        monitorId: function() {
+        monitorId() {
             return this.current_monitor.id
         },
-        monitorModule: function() {
+        monitorModule() {
             return this.current_monitor.attributes.module
         },
     },
     watch: {
-        all_servers: function() {
+        all_servers() {
             let availableEntities = []
             this.all_servers.forEach(server => {
                 if (this.$help.lodash.isEmpty(server.relationships.monitors))
@@ -108,7 +109,7 @@ export default {
             fetchMonitorById: 'monitor/fetchMonitorById',
             updateMonitorParameters: 'monitor/updateMonitorParameters',
             updateMonitorRelationship: 'monitor/updateMonitorRelationship',
-            switchOver: 'monitor/switchOver',
+            manipulateMonitor: 'monitor/manipulateMonitor',
             fetchAllServers: 'server/fetchAllServers',
         }),
 
@@ -152,12 +153,13 @@ export default {
         },
 
         async handleSwitchover(masterId) {
-            await this.switchOver({
-                monitorModule: this.monitorModule,
-                monitorId: this.monitorId,
-                masterId,
-                successCb: this.fetchMonitor,
-            })
+            let payload = {
+                id: this.monitorId,
+                type: this.MONITOR_OP_TYPES.SWITCHOVER,
+                opParams: { moduleType: this.monitorModule, masterId },
+                callback: this.fetchMonitor,
+            }
+            await this.manipulateMonitor(payload)
         },
     },
 }

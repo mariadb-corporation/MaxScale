@@ -33,7 +33,6 @@
     "rememberMe": "Remember me",
     "signIn": "Sign In",
     "initializing": "initializing",
-    "switchover": "Switchover",
     "add": "Add",
     "change": "Change",
     "swap": "Swap",
@@ -302,7 +301,8 @@
         "actions": {
             "stop": "Stop monitor",
             "start": "Start monitor",
-            "destroy": "Destroy monitor"
+            "destroy": "Destroy monitor",
+            "switchover": "Switchover"
         }
     },
     "$vuetify": {

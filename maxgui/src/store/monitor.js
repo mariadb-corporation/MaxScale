@@ -141,15 +141,15 @@ export default {
         /**
          * @param {String} param.id - id of the monitor to be manipulated
          * @param {String} param.type - type of operation: destroy, stop, start
-         * @param {String} param.opParams - operation params
+         * @param {String|Object} param.opParams - operation params. Either a string or an object of params
          * @param {Function} param.callback callback function after successfully updated
          */
-        async manipulateMonitor({ commit, rootState }, { id, type, opParams, callback }) {
+        async manipulateMonitor({ dispatch, commit, rootState }, { id, type, opParams, callback }) {
             try {
                 let url = `/monitors/${id}/${opParams}`,
                     method = 'put',
                     message
-                const { STOP, START, DESTROY } = rootState.app_config.MONITOR_OP_TYPES
+                const { STOP, START, DESTROY, SWITCHOVER } = rootState.app_config.MONITOR_OP_TYPES
                 switch (type) {
                     case DESTROY:
                         method = 'delete'
@@ -162,16 +162,33 @@ export default {
                     case START:
                         message = [`Monitor ${id} is started`]
                         break
+                    case SWITCHOVER: {
+                        method = 'post'
+                        const { moduleType, masterId } = opParams
+                        url = `/maxscale/modules/${moduleType}/async-switchover?${id}&${masterId}`
+                        break
+                    }
                 }
                 const res = await this.$http[method](url)
                 // response ok
                 if (res.status === 204) {
-                    commit(
-                        'SET_SNACK_BAR_MESSAGE',
-                        { text: message, type: 'success' },
-                        { root: true }
-                    )
-                    if (this.vue.$help.isFunction(callback)) await callback()
+                    switch (type) {
+                        case SWITCHOVER:
+                            await dispatch('checkSwitchOverRes', {
+                                monitorModule: opParams.moduleType,
+                                monitorId: id,
+                                successCb: callback,
+                            })
+                            break
+                        default:
+                            commit(
+                                'SET_SNACK_BAR_MESSAGE',
+                                { text: message, type: 'success' },
+                                { root: true }
+                            )
+                            if (this.vue.$help.isFunction(callback)) await callback()
+                            break
+                    }
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-monitor-manipulateMonitor')
@@ -210,25 +227,6 @@ export default {
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-monitor-updateMonitorRelationship')
-                logger.error(e)
-            }
-        },
-        /**
-         * @param {String} payload.monitorModule Monitor module
-         * @param {String} payload.monitorId Monitor id
-         * @param {String} payload.masterId Name of the new master server
-         * @param {Function} successCb - callback function after successfully switchover
-         */
-        async switchOver({ dispatch }, { monitorModule, monitorId, masterId, successCb }) {
-            try {
-                const { status } = await this.$http.post(
-                    `/maxscale/modules/${monitorModule}/async-switchover?${monitorId}&${masterId}`
-                )
-                // response ok
-                if (status === 204)
-                    await dispatch('checkSwitchOverRes', { monitorModule, monitorId, successCb })
-            } catch (e) {
-                const logger = this.vue.$logger('store-monitor-switchOver')
                 logger.error(e)
             }
         },
@@ -319,7 +317,7 @@ export default {
             }, [])
         },
         getMonitorOps: (state, getters, rootState) => {
-            const { STOP, START, DESTROY } = rootState.app_config.MONITOR_OP_TYPES
+            const { STOP, START, DESTROY, SWITCHOVER } = rootState.app_config.MONITOR_OP_TYPES
             // scope is needed to access $t
             return ({ currState, scope }) => ({
                 [STOP]: {
@@ -346,6 +344,12 @@ export default {
                     icon: '$vuetify.icons.delete',
                     iconSize: 18,
                     color: 'error',
+                    disabled: false,
+                },
+                [SWITCHOVER]: {
+                    text: scope.$t('monitorOps.actions.switchover'),
+                    type: SWITCHOVER,
+                    color: 'primary',
                     disabled: false,
                 },
             })

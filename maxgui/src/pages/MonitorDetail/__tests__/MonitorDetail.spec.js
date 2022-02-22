@@ -128,10 +128,10 @@ describe('MonitorDetail index', () => {
     })
 
     describe('Module command switch-over assertions', () => {
-        let switchoverSpy, overviewHeader, axiosPostStub
+        let manipulateMonitorSpy, overviewHeader, axiosPostStub
         const dummyMasterId = 'new_master_id'
         beforeEach(async () => {
-            switchoverSpy = sinon.spy(MonitorDetail.methods, 'switchOver')
+            manipulateMonitorSpy = sinon.spy(MonitorDetail.methods, 'manipulateMonitor')
 
             wrapper = computedFactory()
             axiosPostStub = sinon.stub(store.$http, 'post').returns(
@@ -146,12 +146,17 @@ describe('MonitorDetail index', () => {
 
         afterEach(() => {
             axiosPostStub.restore()
-            switchoverSpy.restore()
+            manipulateMonitorSpy.restore()
             wrapper.destroy()
         })
 
-        it(`Should call switchOver action when @switch-over is emitted`, () => {
-            switchoverSpy.should.have.been.calledOnce
+        it(`Should call manipulateMonitor action when @switch-over is emitted`, () => {
+            manipulateMonitorSpy.should.have.been.calledOnceWith({
+                id: wrapper.vm.monitorId,
+                type: wrapper.vm.MONITOR_OP_TYPES.SWITCHOVER,
+                opParams: { moduleType: wrapper.vm.monitorModule, masterId: dummyMasterId },
+                callback: wrapper.vm.fetchMonitor,
+            })
         })
 
         it(`Should send POST request with accurate params to peform switchover`, async () => {

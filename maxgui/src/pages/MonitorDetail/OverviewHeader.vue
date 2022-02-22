@@ -28,7 +28,7 @@
                         v-show="showEditBtn"
                         class="switchover-edit-btn"
                         icon
-                        @click="() => onEdit('switchover')"
+                        @click="() => onEdit(switchoverOp.type)"
                     >
                         <v-icon size="18" color="primary">
                             $vuetify.icons.edit
@@ -40,7 +40,7 @@
                         content-class="shadow-drop color text-navigation py-1 px-4"
                         activator=".switchover-edit-btn"
                     >
-                        <span>{{ $t('switchover') }} </span>
+                        <span>{{ switchoverOp.text }} </span>
                     </v-tooltip>
                 </template>
 
@@ -83,6 +83,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { mapGetters, mapState } from 'vuex'
+
 export default {
     name: 'overview-header',
     props: {
@@ -102,7 +104,9 @@ export default {
         }
     },
     computed: {
-        getTopOverviewInfo: function() {
+        ...mapState({ MONITOR_OP_TYPES: state => state.app_config.MONITOR_OP_TYPES }),
+        ...mapGetters({ getMonitorOps: 'monitor/getMonitorOps' }),
+        getTopOverviewInfo() {
             /*
             Set fallback undefined value as string if properties doesnt exist
             This allows it to be render as text
@@ -131,6 +135,9 @@ export default {
             } = this.currentMonitor
             return serversData.map(server => ({ id: server.id, type: server.type }))
         },
+        switchoverOp() {
+            return this.getMonitorOps({ scope: this })[this.MONITOR_OP_TYPES.SWITCHOVER]
+        },
     },
     methods: {
         // get available entities and set default item when select-dialog is opened
@@ -147,12 +154,9 @@ export default {
         },
 
         onEdit(type) {
-            this.dialogTitle = `${this.$t(`changeEntity`, {
-                entityName: this.$tc(type, 1),
-            })}`
             switch (type) {
-                case 'switchover':
-                    this.dialogTitle = `${this.$t(type)}`
+                case this.MONITOR_OP_TYPES.SWITCHOVER:
+                    this.dialogTitle = this.switchoverOp.text
                     this.smallInfo = 'info.switchover'
                     this.targetSelectItemType = 'servers'
                     break

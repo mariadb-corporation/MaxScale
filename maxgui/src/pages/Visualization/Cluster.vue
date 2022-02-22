@@ -176,7 +176,7 @@ export default {
     methods: {
         ...mapActions({
             fetchClusterById: 'visualization/fetchClusterById',
-            switchOver: 'monitor/switchOver',
+            manipulateMonitor: 'monitor/manipulateMonitor',
             destroyServer: 'server/destroyServer',
             setOrClearServerState: 'server/setOrClearServerState',
         }),
@@ -302,7 +302,7 @@ export default {
                 switch (this.opType) {
                     case SWITCHOVER:
                         this.confDlgType = 'switchoverPromote'
-                        this.confDlgTitle = this.$t('switchover')
+                        this.confDlgTitle = this.$t('monitorOps.actions.switchover')
                         this.targetNode = { id: this.draggingNodeId }
                         break
                 }
@@ -316,11 +316,14 @@ export default {
             const { MAINTAIN, CLEAR, DRAIN, DELETE } = this.SERVER_OP_TYPES
             switch (this.opType) {
                 case SWITCHOVER:
-                    await this.switchOver({
-                        monitorModule: this.current_cluster.module,
-                        monitorId: this.current_cluster.id,
-                        masterId: this.draggingNodeId,
-                        successCb: this.fetchCluster,
+                    await this.manipulateMonitor({
+                        id: this.current_cluster.id,
+                        type: SWITCHOVER,
+                        opParams: {
+                            moduleType: this.current_cluster.module,
+                            masterId: this.draggingNodeId,
+                        },
+                        callback: this.fetchCluster,
                     })
                     break
                 //TODO: Determine whether DELETE option is necessary
