@@ -88,4 +88,10 @@ export const APP_CONFIG = Object.freeze({
     }),
     MARIADB_NET_ERRNO: [2001, 2002, 2003, 2004, 2006, 2011, 2013],
     MAXSCALE_LOG_LEVELS: ['alert', 'error', 'warning', 'notice', 'info', 'debug'],
+    SERVER_OP_TYPES: Object.freeze({
+        MAINTAIN: 'maintain',
+        CLEAR: 'clear',
+        DRAIN: 'drain',
+        DELETE: 'delete',
+    }),
 })

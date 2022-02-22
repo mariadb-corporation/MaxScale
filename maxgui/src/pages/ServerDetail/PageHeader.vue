@@ -4,7 +4,10 @@
             <details-icon-group-wrapper multiIcons>
                 <template v-slot:body>
                     <v-tooltip
-                        v-for="op in [serverOps.maintain, serverOps.clear]"
+                        v-for="op in [
+                            serverOps[SERVER_OP_TYPES.MAINTAIN],
+                            serverOps[SERVER_OP_TYPES.CLEAR],
+                        ]"
                         :key="op.text"
                         bottom
                         transition="slide-y-transition"
@@ -27,7 +30,7 @@
                 </template>
             </details-icon-group-wrapper>
             <details-icon-group-wrapper
-                v-for="op in [serverOps.drain, serverOps.delete]"
+                v-for="op in [serverOps[SERVER_OP_TYPES.DRAIN], serverOps[SERVER_OP_TYPES.DELETE]]"
                 :key="op.text"
             >
                 <template v-slot:body>
@@ -100,7 +103,7 @@
  * Public License.
  */
 
-import { mapActions, mapGetters } from 'vuex'
+import { mapActions, mapGetters, mapState } from 'vuex'
 import goBack from 'mixins/goBack'
 
 export default {
@@ -121,6 +124,7 @@ export default {
         }
     },
     computed: {
+        ...mapState({ SERVER_OP_TYPES: state => state.app_config.SERVER_OP_TYPES }),
         ...mapGetters({
             getCurrStateMode: 'server/getCurrStateMode',
             getServerOps: 'server/getServerOps',
@@ -164,14 +168,15 @@ export default {
             this.isConfDlgOpened = true
         },
         async confirmSave() {
+            const { MAINTAIN, CLEAR, DRAIN, DELETE } = this.SERVER_OP_TYPES
             switch (this.dialogType) {
-                case 'delete':
+                case DELETE:
                     await this.destroyServer(this.currentServer.id)
                     this.goBack()
                     break
-                case 'drain':
-                case 'clear':
-                case 'maintain':
+                case DRAIN:
+                case CLEAR:
+                case MAINTAIN:
                     await this.setOrClearServerState({
                         id: this.currentServer.id,
                         opParams: this.opParams,

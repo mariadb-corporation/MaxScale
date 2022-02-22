@@ -309,12 +309,13 @@ export default {
                 return currentState
             }
         },
-        getServerOps: () => {
+        getServerOps: (state, getters, rootState) => {
+            const { MAINTAIN, CLEAR, DRAIN, DELETE } = rootState.app_config.SERVER_OP_TYPES
             // scope is needed to access $t
             return ({ currStateMode, scope }) => ({
-                maintain: {
+                [MAINTAIN]: {
                     text: scope.$t('serverOps.actions.maintain'),
-                    type: 'maintain',
+                    type: MAINTAIN,
                     icon: ' $vuetify.icons.paused',
                     iconSize: 22,
                     color: 'primary',
@@ -322,9 +323,9 @@ export default {
                     params: 'set?state=maintenance',
                     disabled: currStateMode === 'maintenance',
                 },
-                clear: {
+                [CLEAR]: {
                     text: scope.$t('serverOps.actions.clear'),
-                    type: 'clear',
+                    type: CLEAR,
                     icon: '$vuetify.icons.restart',
                     iconSize: 22,
                     color: 'primary',
@@ -332,9 +333,9 @@ export default {
                     params: `clear?state=${currStateMode === 'drained' ? 'drain' : currStateMode}`,
                     disabled: currStateMode !== 'maintenance' && currStateMode !== 'drained',
                 },
-                drain: {
+                [DRAIN]: {
                     text: scope.$t('serverOps.actions.drain'),
-                    type: 'drain',
+                    type: DRAIN,
                     icon: '$vuetify.icons.drain',
                     iconSize: 22,
                     color: 'primary',
@@ -342,9 +343,9 @@ export default {
                     params: `set?state=drain`,
                     disabled: currStateMode === 'maintenance' || currStateMode === 'drained',
                 },
-                delete: {
+                [DELETE]: {
                     text: scope.$t('serverOps.actions.delete'),
-                    type: 'delete',
+                    type: DELETE,
                     icon: '$vuetify.icons.delete',
                     iconSize: 18,
                     color: 'error',
