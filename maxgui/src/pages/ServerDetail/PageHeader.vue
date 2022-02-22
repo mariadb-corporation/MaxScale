@@ -63,6 +63,7 @@
                 :type="dialogType"
                 :smallInfo="smallInfo"
                 :item="currentServer"
+                :saveText="confDlgSaveTxt"
                 :onSave="confirmSave"
             >
                 <template v-if="dialogType === 'maintain'" v-slot:body-append>
@@ -156,6 +157,15 @@ export default {
         },
         serverOps() {
             return this.getServerOps({ currStateMode: this.currStateMode, scope: this })
+        },
+        confDlgSaveTxt() {
+            const { MAINTAIN } = this.SERVER_OP_TYPES
+            switch (this.dialogType) {
+                case MAINTAIN:
+                    return 'set'
+                default:
+                    return this.confDlgType
+            }
         },
     },
     methods: {

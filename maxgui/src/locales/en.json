@@ -234,6 +234,7 @@
     "address": "Address",
     "socket": "Socket",
     "openQueryEditor": "Open Query Editor",
+    "set": "Set",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
@@ -253,7 +254,7 @@
         "reconnFailed": "Reconnection failed or connection is already in use"
     },
     "confirmations": {
-        "maintain": "Are you sure you want to set {targetId} into maintenance mode?",
+        "maintain": "Are you sure you want to set {targetId} to maintenance mode?",
         "clear": "Are you sure you want to clear current state of {targetId}?",
         "drain": "Are you sure you want to drain {targetId}?",
         "unlink": "Are you sure you want to unlink {targetId}?",
@@ -285,13 +286,13 @@
     },
     "serverOps": {
         "actions": {
-            "maintain": "Maintain server",
+            "maintain": "Set maintenance mode",
             "clear": "Clear server state",
             "drain": "Drain server",
             "delete": "Delete server"
         },
         "info": {
-            "maintain": "By default, setting a server into maintenance mode will cause connections to be closed only after the next request is sent. Check the box below to force all connections to the server to be closed immediately",
+            "maintain": "By default, setting a server to maintenance mode will cause connections to be closed only after the next request is sent. Check the box below to force all connections to the server to be closed immediately",
             "clear": "",
             "drain": "Server is drained of connections",
             "delete": ""
