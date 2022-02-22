@@ -31,7 +31,7 @@ const computedFactory = (computed = {}) =>
         computed,
     })
 
-const ALL_BTN_CLASS_PREFIXES = ['stop', 'start', 'delete']
+const ALL_BTN_CLASS_PREFIXES = ['stop', 'start', 'destroy']
 
 describe('MonitorDetail - PageHeader', () => {
     let wrapper, axiosDeleteStub, axiosPutStub
@@ -85,9 +85,9 @@ describe('MonitorDetail - PageHeader', () => {
         const dummyState = ['Running', 'Stopped', 'Running']
         ALL_BTN_CLASS_PREFIXES.forEach((prefix, i) =>
             it(`Should open confirm-dialog when ${prefix} button is clicked`, async () => {
-                // getState stub
+                // currState stub
                 wrapper = computedFactory({
-                    getState: () => dummyState[i],
+                    currState: () => dummyState[i],
                 })
                 await openConfirmDialog({
                     wrapper,
@@ -105,9 +105,9 @@ describe('MonitorDetail - PageHeader', () => {
         btnClassPrefixes.forEach((prefix, i) => {
             let des = `Should disable ${prefix} btn when state is: ${dummyState[i]}`
             it(des, async () => {
-                // getState stub
+                // currState stub
                 wrapper = computedFactory({
-                    getState: () => dummyState[i],
+                    currState: () => dummyState[i],
                 })
                 await triggerBtnClick(wrapper, '.gear-btn')
                 const btn = wrapper.find(`.${prefix}-btn`)
@@ -120,15 +120,15 @@ describe('MonitorDetail - PageHeader', () => {
         // dummy states that btn can be clicked
         const dummyState = ['Running', 'Stopped', 'Running']
         ALL_BTN_CLASS_PREFIXES.forEach((prefix, i) => {
-            // getState stub
+            // currState stub
             const wrapper = computedFactory({
-                getState: () => dummyState[i],
+                currState: () => dummyState[i],
             })
             const cssSelector = `.${prefix}-btn`
             const id = dummy_all_monitors[0].id
             let httpMethod = 'PUT'
 
-            if (prefix === 'delete') httpMethod = 'DELETE'
+            if (prefix === 'destroy') httpMethod = 'DELETE'
             const des = `Should send ${httpMethod} request after confirming ${prefix} a monitor`
             it(des, async () => {
                 switch (prefix) {
@@ -141,7 +141,7 @@ describe('MonitorDetail - PageHeader', () => {
                             axiosStubCalledWith: `/monitors/${id}/${prefix}`,
                         })
                         break
-                    case 'delete':
+                    case 'destroy':
                         await assertSendingRequest({
                             wrapper,
                             cssSelector,

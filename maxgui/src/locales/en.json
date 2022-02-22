@@ -298,6 +298,13 @@
             "delete": ""
         }
     },
+    "monitorOps": {
+        "actions": {
+            "stop": "Stop monitor",
+            "start": "Start monitor",
+            "destroy": "Destroy monitor"
+        }
+    },
     "$vuetify": {
         "badge": "Badge",
         "close": "Close",

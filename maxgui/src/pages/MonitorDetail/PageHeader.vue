@@ -4,70 +4,53 @@
             <details-icon-group-wrapper multiIcons>
                 <template v-slot:body>
                     <v-tooltip
+                        v-for="op in [
+                            monitorOps[MONITOR_OP_TYPES.STOP],
+                            monitorOps[MONITOR_OP_TYPES.START],
+                        ]"
+                        :key="op.text"
                         bottom
                         transition="slide-y-transition"
                         content-class="shadow-drop color text-navigation py-1 px-4"
                     >
                         <template v-slot:activator="{ on }">
                             <v-btn
-                                class="stop-btn"
+                                :class="`${op.type}-btn`"
                                 text
-                                color="primary"
-                                :disabled="getState === 'Stopped'"
+                                :color="op.color"
+                                :disabled="op.disabled"
                                 v-on="on"
-                                @click="actionHandle('stop')"
+                                @click="handleClick(op)"
                             >
-                                <v-icon size="22">
-                                    $vuetify.icons.stopped
-                                </v-icon>
+                                <v-icon :size="op.iconSize"> {{ op.icon }} </v-icon>
                             </v-btn>
                         </template>
-                        <span>{{ $t('stop') }} {{ $tc('monitors', 1) }} </span>
-                    </v-tooltip>
-                    <v-tooltip
-                        bottom
-                        transition="slide-y-transition"
-                        content-class="shadow-drop color text-navigation py-1 px-4"
-                    >
-                        <template v-slot:activator="{ on }">
-                            <v-btn
-                                class="start-btn"
-                                text
-                                color="primary"
-                                :disabled="getState === 'Running'"
-                                v-on="on"
-                                @click="actionHandle('start')"
-                            >
-                                <v-icon size="22">
-                                    $vuetify.icons.running
-                                </v-icon>
-                            </v-btn>
-                        </template>
-                        <span>{{ $t('start') }} {{ $tc('monitors', 1) }} </span>
+                        <span>{{ op.text }} </span>
                     </v-tooltip>
                 </template>
             </details-icon-group-wrapper>
             <details-icon-group-wrapper>
                 <template v-slot:body>
                     <v-tooltip
+                        v-for="op in [monitorOps[MONITOR_OP_TYPES.DESTROY]]"
+                        :key="op.text"
                         bottom
                         transition="slide-y-transition"
                         content-class="shadow-drop color text-navigation py-1 px-4"
                     >
                         <template v-slot:activator="{ on }">
                             <v-btn
-                                class="delete-btn"
+                                :class="`${op.type}-btn`"
                                 text
-                                color="error"
+                                :color="op.color"
+                                :disabled="op.disabled"
                                 v-on="on"
-                                @click="actionHandle('destroy')"
+                                @click="handleClick(op)"
                             >
-                                <v-icon size="18">
-                                    $vuetify.icons.delete
-                                </v-icon>
+                                <v-icon :size="op.iconSize"> {{ op.icon }} </v-icon>
                             </v-btn>
                         </template>
-                        <span>{{ $t('destroy') }} {{ $tc('monitors', 1) }} </span>
+                        <span>{{ op.text }} </span>
                     </v-tooltip>
                 </template>
             </details-icon-group-wrapper>
@@ -83,12 +66,12 @@
             <icon-sprite-sheet
                 size="13"
                 class="status-icon mr-1"
-                :frame="$help.monitorStateIcon(getState)"
+                :frame="$help.monitorStateIcon(currState)"
             >
                 status
             </icon-sprite-sheet>
             <span class="resource-state color text-navigation text-body-2">
-                {{ getState }}
+                {{ currState }}
             </span>
             <span class="color text-field-text text-body-2">
                 |
@@ -112,7 +95,7 @@
  * Public License.
  */
 
-import { mapActions } from 'vuex'
+import { mapActions, mapState, mapGetters } from 'vuex'
 import goBack from 'mixins/goBack'
 
 export default {
@@ -126,48 +109,54 @@ export default {
         return {
             dialogTitle: '',
             dialogType: 'destroy',
+            opParams: '',
             isConfDlgOpened: false,
         }
     },
     computed: {
-        getState: function() {
+        ...mapState({ MONITOR_OP_TYPES: state => state.app_config.MONITOR_OP_TYPES }),
+        ...mapGetters({ getMonitorOps: 'monitor/getMonitorOps' }),
+        currState() {
             const { attributes: { state = 'null' } = {} } = this.currentMonitor
             return state
         },
-        getModule: function() {
+        getModule() {
             const { attributes: { module: monitorModule = null } = {} } = this.currentMonitor
             return monitorModule
+        },
+        monitorOps() {
+            return this.getMonitorOps({ currState: this.currState, scope: this })
         },
     },
     methods: {
         ...mapActions('monitor', ['manipulateMonitor']),
         async confirmSave() {
-            await this.performAsyncLoadingAction(this.dialogType)
+            await this.handleMonitorOp(this.dialogType)
         },
 
-        async performAsyncLoadingAction(mode) {
+        async handleMonitorOp(type) {
             const { id } = this.currentMonitor
-            switch (mode) {
-                case 'destroy':
-                    await this.manipulateMonitor({
-                        id,
-                        mode,
-                    })
-
-                    this.goBack()
-                    break
-                default:
-                    await this.manipulateMonitor({
-                        id,
-                        mode,
-                        callback: this.onEditSucceeded,
-                    })
+            const { STOP, START, DESTROY } = this.MONITOR_OP_TYPES
+            let payload = {
+                id,
+                type,
+                opParams: this.opParams,
             }
+            switch (type) {
+                case DESTROY:
+                    payload.callback = this.goBack
+                    break
+                case STOP:
+                case START:
+                    payload.callback = this.onEditSucceeded
+            }
+            await this.manipulateMonitor(payload)
         },
 
-        actionHandle(type) {
+        handleClick({ type, text, params }) {
             this.dialogType = type
-            this.dialogTitle = `${this.$t(type)} ${this.$tc('monitors', 1)}`
+            this.dialogTitle = text
+            this.opParams = params
             this.isConfDlgOpened = true
         },
     },

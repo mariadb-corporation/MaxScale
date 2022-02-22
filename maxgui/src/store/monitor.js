@@ -139,39 +139,36 @@ export default {
             }
         },
         /**
-         * @param {String} id id of the monitor to be manipulated
-         * @param {String} mode Mode to manipulate the monitor ( destroy, stop, start)
-         * @param {Function} callback callback function after successfully updated
+         * @param {String} param.id - id of the monitor to be manipulated
+         * @param {String} param.type - type of operation: destroy, stop, start
+         * @param {String} param.opParams - operation params
+         * @param {Function} param.callback callback function after successfully updated
          */
-        async manipulateMonitor({ commit }, { id, mode, callback }) {
+        async manipulateMonitor({ commit, rootState }, { id, type, opParams, callback }) {
             try {
-                let res, message
-                switch (mode) {
-                    case 'destroy':
-                        /*  Destroy a created monitor.
-                        The monitor must not have relationships to any servers in order to be destroyed. */
-                        res = await this.$http.delete(`/monitors/${id}?force=yes`)
+                let url = `/monitors/${id}/${opParams}`,
+                    method = 'put',
+                    message
+                const { STOP, START, DESTROY } = rootState.app_config.MONITOR_OP_TYPES
+                switch (type) {
+                    case DESTROY:
+                        method = 'delete'
+                        url = `/monitors/${id}?force=yes`
                         message = [`Monitor ${id} is destroyed`]
                         break
-                    case 'stop':
-                        //Stops a started monitor.
-                        res = await this.$http.put(`/monitors/${id}/stop`)
+                    case STOP:
                         message = [`Monitor ${id} is stopped`]
                         break
-                    case 'start':
-                        //Starts a stopped monitor.
-                        res = await this.$http.put(`/monitors/${id}/start`)
+                    case START:
                         message = [`Monitor ${id} is started`]
                         break
                 }
+                const res = await this.$http[method](url)
                 // response ok
                 if (res.status === 204) {
                     commit(
                         'SET_SNACK_BAR_MESSAGE',
-                        {
-                            text: message,
-                            type: 'success',
-                        },
+                        { text: message, type: 'success' },
                         { root: true }
                     )
                     if (this.vue.$help.isFunction(callback)) await callback()
@@ -320,6 +317,38 @@ export default {
                 idArr.push(array[index].id)
                 return (accumulator = { idArr: idArr })
             }, [])
+        },
+        getMonitorOps: (state, getters, rootState) => {
+            const { STOP, START, DESTROY } = rootState.app_config.MONITOR_OP_TYPES
+            // scope is needed to access $t
+            return ({ currState, scope }) => ({
+                [STOP]: {
+                    text: scope.$t('monitorOps.actions.stop'),
+                    type: STOP,
+                    icon: ' $vuetify.icons.stopped',
+                    iconSize: 22,
+                    color: 'primary',
+                    params: 'stop',
+                    disabled: currState === 'Stopped',
+                },
+                [START]: {
+                    text: scope.$t('monitorOps.actions.start'),
+                    type: START,
+                    icon: '$vuetify.icons.running',
+                    iconSize: 22,
+                    color: 'primary',
+                    params: 'start',
+                    disabled: currState === 'Running',
+                },
+                [DESTROY]: {
+                    text: scope.$t('monitorOps.actions.destroy'),
+                    type: DESTROY,
+                    icon: '$vuetify.icons.delete',
+                    iconSize: 18,
+                    color: 'error',
+                    disabled: false,
+                },
+            })
         },
     },
 }
