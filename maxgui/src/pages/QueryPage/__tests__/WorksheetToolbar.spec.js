@@ -81,7 +81,8 @@ describe('WorksheetToolbar - use-db-btn, run-btn and visualize-btn common tests'
                     query_txt: () => 'SELECT 1',
                     hasActiveConn: () => true,
                     getIsQuerying: () => true,
-                    getLoadingQueryResult: () => false,
+                    getLoadingQueryResult: () => true,
+                    isMaxRowsValid: () => true,
                 },
             })
             const btnComponent = wrapper.find(`.${btn}`)
@@ -96,6 +97,7 @@ describe('WorksheetToolbar - use-db-btn, run-btn and visualize-btn common tests'
                     hasActiveConn: () => false,
                     getIsQuerying: () => false,
                     getLoadingQueryResult: () => false,
+                    isMaxRowsValid: () => true,
                 },
             })
             const useDbBtn = wrapper.find('.use-db-btn')
@@ -110,6 +112,7 @@ describe('WorksheetToolbar - use-db-btn, run-btn and visualize-btn common tests'
                     hasActiveConn: () => true,
                     getIsQuerying: () => false,
                     getLoadingQueryResult: () => false,
+                    isMaxRowsValid: () => true,
                 },
             })
             const btnComponent = wrapper.find(`.${btn}`)
@@ -147,17 +150,18 @@ describe('WorksheetToolbar - Run button tests', () => {
         const btn = wrapper.find('.run-btn')
         expect(btn.element.disabled).to.be.true
     })
-    it(`Should not disable run-btn if query result is still loading`, () => {
+    it(`Should disable run-btn if query result is still loading`, () => {
         wrapper = mountFactory({
             computed: {
                 query_txt: () => 'SELECT 1',
                 hasActiveConn: () => true,
                 getIsQuerying: () => true,
                 getLoadingQueryResult: () => true,
+                isMaxRowsValid: () => true,
             },
         })
         const btnComponent = wrapper.find(`.run-btn`)
-        expect(btnComponent.element.disabled).to.be.false
+        expect(btnComponent.element.disabled).to.be.true
     })
     const runModes = ['all', 'selected']
     const getConditionsToRun = (mode = 'all') => ({
