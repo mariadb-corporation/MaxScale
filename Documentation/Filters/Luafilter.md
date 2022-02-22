@@ -70,8 +70,9 @@ The entry points for the Lua script expect the following signatures:
 
   - `string diagnostic()` - global script only, print diagnostic information
 
-    - This will call the matching `diagnostics` entry point in the Lua script. If
-      the Lua function returns a string, it will be printed to the client.
+    - If the Lua function returns a string that is valid JSON, it will be
+      decoded as JSON and displayed as such in the REST API. If the object does
+      not decode into JSON, it will be stored as a JSON string.
 
 These functions, if found in the script, will be called whenever a call to the
 matching entry point is made.

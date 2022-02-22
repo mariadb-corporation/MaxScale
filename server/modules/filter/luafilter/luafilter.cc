@@ -300,7 +300,16 @@ json_t* LuaFilter::diagnostics() const
 
         if (!str.empty())
         {
-            json_object_set_new(rval, "script_output", json_string(str.c_str()));
+            json_error_t err;
+            json_t* js = json_loads(str.c_str(), JSON_DECODE_ANY, &err);
+
+            if (!js)
+            {
+                // The output wasn't a JSON object, just store it as a JSON string
+                js = json_string(str.c_str());
+            }
+
+            json_object_set_new(rval, "script_output", js);
         }
     }
 
