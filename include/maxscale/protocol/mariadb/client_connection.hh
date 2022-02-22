@@ -54,7 +54,17 @@ public:
 
     static bool parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out,
                                  std::string* user_out);
+
+    /**
+     * Kill a connection
+     *
+     * @param target_id The session ID in MaxScale to kill
+     * @param type      The type of the KILL to perform
+     *
+     * @see kill_type_t
+     */
     void mxs_mysql_execute_kill(uint64_t target_id, kill_type_t type);
+
     bool in_routing_state() const;
 
     json_t* diagnostics() const;
@@ -111,7 +121,7 @@ private:
     void track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf);
     void execute_kill_all_others(uint64_t target_id, uint64_t keep_protocol_thread_id, kill_type_t type);
     void execute_kill_user(const char* user, kill_type_t type);
-    void execute_kill(std::shared_ptr<KillInfo> info);
+    void execute_kill(std::shared_ptr<KillInfo> info, bool send_ok);
     void track_current_command(const mxs::Buffer& buf);
     void update_sequence(GWBUF* buf);
     bool large_query_continues(const mxs::Buffer& buffer) const;
