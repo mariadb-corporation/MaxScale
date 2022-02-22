@@ -261,7 +261,7 @@ export default {
                             attributes: {
                                 state: monitorState,
                                 module: monitorModule,
-                                monitor_diagnostics: { master },
+                                monitor_diagnostics: { master } = {},
                             },
                         } = this.getAllMonitorsMap.get(monitorsData[0].id) || {}
 
