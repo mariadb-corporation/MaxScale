@@ -292,15 +292,42 @@ DCB::ReadResult DCB::read(uint32_t min_bytes, uint32_t max_bytes)
 
 int DCB::read(GWBUF** ppHead, size_t maxbytes, ReadLimit limit_type)
 {
+    mxb_assert(*ppHead == nullptr);
+    int rval = -1;
+    auto [success, buf] = read_impl(0, maxbytes, limit_type);
+    if (buf.empty())
+    {
+        if (success)
+        {
+            // Empty read.
+            rval = 0;
+        }
+    }
+    else
+    {
+        rval = buf.length();
+        auto res = new GWBUF;
+        *res = move(buf);
+        *ppHead = res;
+    }
+    return rval;
+}
+
+std::tuple<bool, GWBUF> DCB::read2(size_t minbytes, size_t maxbytes)
+{
+    return read_impl(minbytes, maxbytes, ReadLimit::RES_LEN);
+}
+
+std::tuple<bool, GWBUF> DCB::read_strict(size_t minbytes, size_t maxbytes)
+{
+    return read_impl(minbytes, maxbytes, ReadLimit::STRICT);
+}
+
+std::tuple<bool, GWBUF> DCB::read_impl(size_t minbytes, size_t maxbytes, ReadLimit limit_type)
+{
     mxb_assert(this->owner == RoutingWorker::get_current());
     mxb_assert(m_fd != FD_CLOSED);
-    mxb_assert(*ppHead == nullptr);
-
-    if (m_fd == FD_CLOSED)
-    {
-        MXS_ERROR("Read failed, dcb is closed.");
-        return -1;
-    }
+    mxb_assert(maxbytes >= minbytes || maxbytes == 0);
 
     bool read_success = false;
     if (m_encryption.state == SSLState::ESTABLISHED)
@@ -328,22 +355,23 @@ int DCB::read(GWBUF** ppHead, size_t maxbytes, ReadLimit limit_type)
         }
     }
 
-    int nreadtotal = -1;
+    GWBUF rval_buf;
+    bool rval_ok = false;
+
     if (read_success)
     {
-        auto res = new GWBUF;
-        if (maxbytes > 0 && m_readq.length() > maxbytes)
+        rval_ok = true;
+        auto readq_len = m_readq.length();
+        if (maxbytes > 0 && readq_len >= maxbytes)
         {
-            *res = m_readq.split(maxbytes);
+            rval_buf = m_readq.split(maxbytes);
         }
-        else
+        else if ((minbytes > 0 && readq_len >= minbytes) || (minbytes == 0 && readq_len > 0))
         {
-            *res = move(m_readq);
+            rval_buf = move(m_readq);
         }
-        nreadtotal = res->length();
-        *ppHead = res;
     }
-    return nreadtotal;
+    return {rval_ok, move(rval_buf)};
 }
 
 int DCB::socket_bytes_readable() const
