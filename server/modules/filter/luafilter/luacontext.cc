@@ -19,10 +19,56 @@
 namespace
 {
 
+//
+// Helpers for dealing with the Lua C API
+//
+
 const LuaData& get_data(lua_State* state)
 {
     return *static_cast<LuaData*>(lua_touserdata(state, lua_upvalueindex(1)));
 }
+
+void push_arg(lua_State* state, const std::string& str)
+{
+    lua_pushstring(state, str.c_str());
+}
+
+void push_arg(lua_State* state, int64_t i)
+{
+    lua_pushinteger(state, i);
+}
+
+template<class ... Args>
+bool call_function(lua_State* state, const char* name, int nret, Args ... args)
+{
+    bool ok = true;
+    int type = lua_getglobal(state, name);
+
+    if (type != LUA_TFUNCTION)
+    {
+        ok = false;
+        MXS_WARNING("The '%s' global is not a function but a %s", name, lua_typename(state, type));
+        lua_pop(state, -1);     // Pop the value off the stack
+    }
+    else
+    {
+        (push_arg(state, std::forward<Args>(args)), ...);
+        constexpr int nargs = sizeof...(Args);
+
+        if (lua_pcall(state, nargs, nret, 0))
+        {
+            MXS_WARNING("The call to '%s' failed: %s", name, lua_tostring(state, -1));
+            lua_pop(state, -1);     // Pop the error off the stack
+            ok = false;
+        }
+    }
+
+    return ok;
+}
+
+//
+// Functions that are exposed to the Lua environment
+//
 
 static int lua_get_session_id(lua_State* state)
 {
@@ -197,53 +243,23 @@ LuaContext::~LuaContext()
 
 void LuaContext::create_instance(const std::string& name)
 {
-    lua_getglobal(m_state, "createInstance");
-    lua_pushstring(m_state, name.c_str());
-
-    if (lua_pcall(m_state, 1, 0, 0))
-    {
-        MXS_WARNING("Failed to get global variable 'createInstance':  %s. The createInstance "
-                    "entry point will not be called.",
-                    lua_tostring(m_state, -1));
-        lua_pop(m_state, -1);   // Pop the error off the stack
-    }
+    call_function(m_state, "createInstance", 0, name);
 }
 
 void LuaContext::new_session(MXS_SESSION* session)
 {
     Scope scope(this, {session, nullptr});
-
-    /** Call the newSession entry point */
-    lua_getglobal(m_state, "newSession");
-    lua_pushstring(m_state, session->user().c_str());
-    lua_pushstring(m_state, session->client_remote().c_str());
-
-    if (lua_pcall(m_state, 2, 0, 0))
-    {
-        MXS_WARNING("Failed to get global variable 'newSession': '%s'. The newSession entry "
-                    "point will not be called.", lua_tostring(m_state, -1));
-        lua_pop(m_state, -1);   // Pop the error off the stack
-    }
+    call_function(m_state, "newSession", 0, session->user(), session->client_remote());
 }
 
 bool LuaContext::route_query(MXS_SESSION* session, GWBUF** buffer)
 {
     Scope scope(this, {session, *buffer});
     bool route = true;
-    const auto& sql = m_data.buffer->get_sql();
 
-    if (!sql.empty())
+    if (call_function(m_state, "routeQuery", 1, m_data.buffer->get_sql()))
     {
-        lua_getglobal(m_state, "routeQuery");
-
-        lua_pushstring(m_state, sql.c_str());
-
-        if (lua_pcall(m_state, 1, 1, 0))
-        {
-            MXS_ERROR("Call to 'routeQuery' failed: '%s'.", lua_tostring(m_state, -1));
-            lua_pop(m_state, -1);
-        }
-        else if (lua_gettop(m_state))
+        if (lua_gettop(m_state))
         {
             if (lua_isstring(m_state, -1))
             {
@@ -263,38 +279,20 @@ bool LuaContext::route_query(MXS_SESSION* session, GWBUF** buffer)
 void LuaContext::client_reply(MXS_SESSION* session, const char* target)
 {
     Scope scope(this, {session, nullptr});
-
-    lua_getglobal(m_state, "clientReply");
-
-    lua_pushstring(m_state, target);
-
-    if (lua_pcall(m_state, 1, 0, 0))
-    {
-        MXS_ERROR("Call to 'clientReply' failed: '%s'.", lua_tostring(m_state, -1));
-        lua_pop(m_state, -1);
-    }
+    call_function(m_state, "clientReply", 0, target);
 }
 
 void LuaContext::close_session(MXS_SESSION* session)
 {
     Scope scope(this, {session, nullptr});
-
-    lua_getglobal(m_state, "closeSession");
-    if (lua_pcall(m_state, 0, 0, 0))
-    {
-        MXS_WARNING("Failed to get global variable 'closeSession': '%s'. The closeSession entry point "
-                    "will not be called.",
-                    lua_tostring(m_state, -1));
-        lua_pop(m_state, -1);
-    }
+    call_function(m_state, "closeSession", 0);
 }
 
 std::string LuaContext::diagnostics()
 {
     std::string rval;
-    lua_getglobal(m_state, "diagnostic");
 
-    if (lua_pcall(m_state, 0, 1, 0) == 0)
+    if (call_function(m_state, "diagnostic", 1))
     {
         lua_gettop(m_state);
 
@@ -302,10 +300,6 @@ std::string LuaContext::diagnostics()
         {
             rval = lua_tostring(m_state, -1);
         }
-    }
-    else
-    {
-        lua_pop(m_state, -1);
     }
 
     return rval;
