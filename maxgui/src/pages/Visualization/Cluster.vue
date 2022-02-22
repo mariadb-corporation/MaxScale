@@ -33,6 +33,7 @@
                         @cluster-node-height="
                             handleAssignNodeHeightMap({ height: $event, nodeId: node.id })
                         "
+                        @on-node-opt-click="onNodeOptClick"
                     />
                 </template>
             </tree-graph>
@@ -46,7 +47,17 @@
             :smallInfo="smallInfo"
             :closeImmediate="true"
             :onSave="onConfirm"
-        />
+        >
+            <template v-if="confDlgType === SERVER_OP_TYPES.MAINTAIN" v-slot:body-append>
+                <v-checkbox
+                    v-model="forceClosing"
+                    class="small mt-2 mb-4"
+                    :label="$t('forceClosing')"
+                    color="primary"
+                    hide-details
+                />
+            </template>
+        </confirm-dialog>
     </page-wrapper>
 </template>
 
@@ -98,12 +109,16 @@ export default {
             confDlgType: '',
             targetNode: null,
             smallInfo: '',
+            forceClosing: false,
+            // states for server options
+            opParams: '',
         }
     },
     computed: {
         ...mapState({
             current_cluster: state => state.visualization.current_cluster,
             MONITOR_OP_TYPES: state => state.app_config.MONITOR_OP_TYPES,
+            SERVER_OP_TYPES: state => state.app_config.SERVER_OP_TYPES,
         }),
         graphData() {
             return this.$typy(this.current_cluster, 'children[0]').safeObjectOrEmpty
@@ -162,6 +177,8 @@ export default {
         ...mapActions({
             fetchClusterById: 'visualization/fetchClusterById',
             switchOver: 'monitor/switchOver',
+            destroyServer: 'server/destroyServer',
+            setOrClearServerState: 'server/setOrClearServerState',
         }),
         async fetchCluster() {
             await this.fetchClusterById(this.$route.params.id)
@@ -296,6 +313,7 @@ export default {
         },
         async onConfirm() {
             const { SWITCHOVER } = this.MONITOR_OP_TYPES
+            const { MAINTAIN, CLEAR, DRAIN, DELETE } = this.SERVER_OP_TYPES
             switch (this.opType) {
                 case SWITCHOVER:
                     await this.switchOver({
@@ -305,7 +323,31 @@ export default {
                         successCb: this.fetchCluster,
                     })
                     break
+                //TODO: Determine whether DELETE option is necessary
+                case DELETE:
+                    await this.destroyServer(this.targetNode.id)
+                    break
+                case DRAIN:
+                case CLEAR:
+                case MAINTAIN:
+                    await this.setOrClearServerState({
+                        id: this.targetNode.id,
+                        opParams: this.opParams,
+                        type: this.opType,
+                        callback: this.fetchCluster,
+                        forceClosing: this.forceClosing,
+                    })
+                    break
             }
+        },
+        onNodeOptClick({ opt: { type, text, info, params }, node: { id: nodeId } }) {
+            this.confDlgType = type
+            this.opType = type
+            this.confDlgTitle = text
+            this.opParams = params
+            this.targetNode = { id: nodeId }
+            this.smallInfo = info
+            this.isConfDlgOpened = true
         },
     },
 }
