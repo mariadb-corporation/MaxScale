@@ -14,11 +14,10 @@
                 </v-btn>
                 <div class="d-inline-flex align-center">
                     <truncate-string :text="$route.params.id" :maxWidth="600">
-                        <span
-                            style="line-height: normal;"
-                            class="ml-1 mb-0 color text-navigation text-h4 page-title"
-                        >
-                            {{ $route.params.id }}
+                        <span class="ml-1 mb-0 color text-navigation text-h4 page-title">
+                            <slot name="page-title" :pageId="$route.params.id">
+                                {{ $route.params.id }}
+                            </slot>
                         </span>
                     </truncate-string>
 
@@ -90,5 +89,8 @@ export default {
         padding-top: 0;
         padding-bottom: 0;
     }
+}
+.page-title {
+    line-height: normal;
 }
 </style>

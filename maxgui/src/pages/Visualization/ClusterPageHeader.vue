@@ -1,5 +1,10 @@
 <template>
     <details-page-title :showSearch="false" :showCreateRscBtn="false">
+        <template v-slot:page-title="{ pageId }">
+            <router-link :to="`/dashboard/monitors/${pageId}`" class="rsrc-link">
+                {{ pageId }}
+            </router-link>
+        </template>
         <template v-slot:setting-menu>
             <details-icon-group-wrapper multiIcons>
                 <template v-slot:body>
