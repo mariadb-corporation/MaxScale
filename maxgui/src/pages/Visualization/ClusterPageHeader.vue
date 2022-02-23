@@ -1,5 +1,35 @@
 <template>
     <details-page-title :showSearch="false" :showCreateRscBtn="false">
+        <template v-slot:setting-menu>
+            <details-icon-group-wrapper multiIcons>
+                <template v-slot:body>
+                    <v-tooltip
+                        v-for="op in [
+                            monitorOps[MONITOR_OP_TYPES.STOP],
+                            monitorOps[MONITOR_OP_TYPES.START],
+                        ]"
+                        :key="op.text"
+                        bottom
+                        transition="slide-y-transition"
+                        content-class="shadow-drop color text-navigation py-1 px-4"
+                    >
+                        <template v-slot:activator="{ on }">
+                            <v-btn
+                                :class="`${op.type}-btn`"
+                                text
+                                :color="op.color"
+                                :disabled="op.disabled"
+                                v-on="on"
+                                @click="$emit('on-choose-op', { op, target: current_cluster })"
+                            >
+                                <v-icon :size="op.iconSize"> {{ op.icon }} </v-icon>
+                            </v-btn>
+                        </template>
+                        <span>{{ op.text }} </span>
+                    </v-tooltip>
+                </template>
+            </details-icon-group-wrapper>
+        </template>
         <template v-slot:append>
             <div class="pl-6">
                 <icon-sprite-sheet
@@ -34,14 +64,22 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
+/*
+@on-choose-op: { op:Object, target:Object }. Operation chosen and target object to dispatch update action
+*/
+import { mapState, mapGetters } from 'vuex'
 
 export default {
     name: 'cluster-page-header',
     computed: {
         ...mapState({
             current_cluster: state => state.visualization.current_cluster,
+            MONITOR_OP_TYPES: state => state.app_config.MONITOR_OP_TYPES,
         }),
+        ...mapGetters({ getMonitorOps: 'monitor/getMonitorOps' }),
+        monitorOps() {
+            return this.getMonitorOps({ currState: this.current_cluster.state, scope: this })
+        },
     },
 }
 </script>

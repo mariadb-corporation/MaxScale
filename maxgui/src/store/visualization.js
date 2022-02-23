@@ -75,7 +75,7 @@ export default {
                 const {
                     id: monitorId,
                     attributes: {
-                        monitor_diagnostics: { master: masterName, server_info },
+                        monitor_diagnostics: { master: masterName, server_info } = {},
                         state,
                         module,
                     },

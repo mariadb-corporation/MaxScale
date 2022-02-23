@@ -1,6 +1,6 @@
 <template>
     <page-wrapper>
-        <cluster-page-header />
+        <cluster-page-header @on-choose-op="onChooseOp" />
         <v-card
             ref="graphContainer"
             v-resize.quiet="setCtrDim"
@@ -312,18 +312,29 @@ export default {
             document.body.classList.remove('cursor--all-move')
         },
         async onConfirm() {
-            const { SWITCHOVER } = this.MONITOR_OP_TYPES
+            const { SWITCHOVER, STOP, START } = this.MONITOR_OP_TYPES
             const { MAINTAIN, CLEAR, DRAIN, DELETE } = this.SERVER_OP_TYPES
+            let payload = {
+                type: this.opType,
+                callback: this.fetchCluster,
+            }
             switch (this.opType) {
                 case SWITCHOVER:
                     await this.manipulateMonitor({
+                        ...payload,
                         id: this.current_cluster.id,
-                        type: SWITCHOVER,
                         opParams: {
                             moduleType: this.current_cluster.module,
                             masterId: this.draggingNodeId,
                         },
-                        callback: this.fetchCluster,
+                    })
+                    break
+                case STOP:
+                case START:
+                    await this.manipulateMonitor({
+                        ...payload,
+                        id: this.current_cluster.id,
+                        opParams: this.opParams,
                     })
                     break
                 //TODO: Determine whether DELETE option is necessary
@@ -334,10 +345,9 @@ export default {
                 case CLEAR:
                 case MAINTAIN:
                     await this.setOrClearServerState({
+                        ...payload,
                         id: this.targetNode.id,
                         opParams: this.opParams,
-                        type: this.opType,
-                        callback: this.fetchCluster,
                         forceClosing: this.forceClosing,
                     })
                     break
