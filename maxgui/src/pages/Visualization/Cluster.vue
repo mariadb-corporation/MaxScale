@@ -180,7 +180,6 @@ export default {
         ...mapActions({
             fetchClusterById: 'visualization/fetchClusterById',
             manipulateMonitor: 'monitor/manipulateMonitor',
-            destroyServer: 'server/destroyServer',
             setOrClearServerState: 'server/setOrClearServerState',
         }),
         async fetchCluster() {
@@ -316,7 +315,7 @@ export default {
         },
         async onConfirm() {
             const { SWITCHOVER, STOP, START } = this.MONITOR_OP_TYPES
-            const { MAINTAIN, CLEAR, DRAIN, DELETE } = this.SERVER_OP_TYPES
+            const { MAINTAIN, CLEAR, DRAIN } = this.SERVER_OP_TYPES
             let payload = {
                 type: this.opType,
                 callback: this.fetchCluster,
@@ -339,10 +338,6 @@ export default {
                         id: this.current_cluster.id,
                         opParams: this.opParams,
                     })
-                    break
-                //TODO: Determine whether DELETE option is necessary
-                case DELETE:
-                    await this.destroyServer(this.targetNode.id)
                     break
                 case DRAIN:
                 case CLEAR:

@@ -205,7 +205,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters } from 'vuex'
+import { mapState, mapGetters } from 'vuex'
 
 /*
 @cluster-node-height: v: Number. Cluster node height
@@ -228,6 +228,9 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            SERVER_OP_TYPES: state => state.app_config.SERVER_OP_TYPES,
+        }),
         ...mapGetters({
             getCurrStateMode: 'server/getCurrStateMode',
             getServerOps: 'server/getServerOps',
@@ -323,9 +326,10 @@ export default {
             return max
         },
         serverOps() {
+            const { MAINTAIN, CLEAR, DRAIN } = this.SERVER_OP_TYPES
             const currStateMode = this.getCurrStateMode(this.nodeAttrs.state)
             const ops = this.getServerOps({ currStateMode, scope: this })
-            return Object.values(ops)
+            return [ops[MAINTAIN], ops[CLEAR], ops[DRAIN]]
         },
         //TODO: add cluster control operations .e.g. reset-replication, release-locks, rejoin
         nodeOps() {
