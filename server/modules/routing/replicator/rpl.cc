@@ -1867,7 +1867,8 @@ bool Rpl::handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr)
 
         if (res.first.empty())
         {
-            auto rset = res.second->result("SHOW CREATE TABLE "s + table_ident);
+            std::string query = "SHOW CREATE TABLE "s + table_ident;
+            auto rset = res.second->result(query);
 
             if (!rset.empty() && rset.front().size() == 2)
             {
@@ -1876,6 +1877,11 @@ bool Rpl::handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr)
                 normalize_sql_string(sql);
                 parse_sql(sql, std::string(table_ident, strchr(table_ident, '.')));
                 create = m_created_tables.find(table_ident);
+            }
+            else if (int err = res.second->errnum())
+            {
+                MXS_ERROR("Failed to execute '%s' on [%s]:%d : %d, %s", query.c_str(),
+                          m_server.host.c_str(), m_server.port, err, res.second->error().c_str());
             }
         }
         else
