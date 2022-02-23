@@ -161,9 +161,12 @@ export default {
             return false
         },
         confDlgSaveTxt() {
+            const { MAINTAIN } = this.SERVER_OP_TYPES
             switch (this.confDlgType) {
                 case 'switchoverPromote':
                     return 'promote'
+                case MAINTAIN:
+                    return 'set'
                 default:
                     return this.confDlgType
             }
