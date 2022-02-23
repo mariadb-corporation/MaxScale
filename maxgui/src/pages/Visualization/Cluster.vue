@@ -313,6 +313,16 @@ export default {
             this.droppableTargets = []
             document.body.classList.remove('cursor--all-move')
         },
+        /**
+         * Swap height of draggingNodeId with droppingNodeId
+         */
+        swapNodeHeight() {
+            const a = this.draggingNodeId,
+                b = this.droppingNodeId,
+                temp = this.clusterNodeHeightMap[a]
+            this.$set(this.clusterNodeHeightMap, a, this.clusterNodeHeightMap[b])
+            this.$set(this.clusterNodeHeightMap, b, temp)
+        },
         async onConfirm() {
             const { SWITCHOVER, STOP, START } = this.MONITOR_OP_TYPES
             const { MAINTAIN, CLEAR, DRAIN } = this.SERVER_OP_TYPES
@@ -330,6 +340,7 @@ export default {
                             masterId: this.draggingNodeId,
                         },
                     })
+                    this.swapNodeHeight()
                     break
                 case STOP:
                 case START:
