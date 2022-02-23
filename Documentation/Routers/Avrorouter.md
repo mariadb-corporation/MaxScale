@@ -29,7 +29,8 @@ streams from a database table.
 MaxScale 2.4.0 added a direct replication mode that connects the avrorouter
 directly to a MariaDB server. This mode is an improvement over the binlogrouter
 based replication as it provides a more space-efficient and faster conversion
-process.
+process. This is the recommended method of using the avrorouter as it is faster,
+more efficient and less prone to errors caused by missing DDL events.
 
 To enable the direct replication mode, add either the `servers` or the `cluster`
 parameter to the avrorouter service. The avrorouter will then use one of the
@@ -65,6 +66,10 @@ In direct replication mode, the avrorouter stores the latest replicated GTID in
 the `last_gtid.txt` file located in the `avrodir` (defaults to
 `/var/lib/maxscale`). To reset the replication process, stop MaxScale and remove
 the file.
+
+Additionally, the avrorouter will attempt to automatically create any missing
+schema files for tables that have data events for them but the DDL for those
+tables is not contained in the binlogs.
 
 ## Configuration
 
@@ -159,11 +164,6 @@ the index would be 5.
 If you need to start from a binlog file other than 1, you need to set the value
 of this option to the correct index. The avrorouter will always start from the
 beginning of the binary log file.
-
-**Note**: MaxScale version 2.2 introduces MariaDB GTID support in Binlog Server:
-currently, if used with Avrorouter, the option `mariadb10_master_gtid` must be
-set to off in the Binlog Server configuration in order to correclty read the
-binlog files.
 
 ##### Example configuration
 
@@ -288,8 +288,18 @@ and a short usage description of the client program.
 
 ## Avro Schema Generator
 
-If the CREATE TABLE statements for the tables aren't present in the current
-binary logs, the schema files must be generated with a schema file
+The avrorouter needs to have access to the CREATE TABLE statement for all tables
+for which there are data events in the binary logs. If the CREATE TABLE
+statements for the tables aren't present in the current binary logs, the schema
+files must be created.
+
+In the direct replication mode, avrorouter will automatically create the missing
+schema files by connecting to the database and executing a `SHOW CREATE TABLE`
+statement. If a connection cannot be made or the service user lacks the
+permission, an error will be logged and the data events for that table will not
+be processed.
+
+For the legacy binlog mode, the files must be generated with a schema file
 generator. There are currently two methods to generate the .avsc schema files.
 
 ### Simple Schema Generator
