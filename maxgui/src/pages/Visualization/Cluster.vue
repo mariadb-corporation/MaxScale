@@ -33,7 +33,7 @@
                         @cluster-node-height="
                             handleAssignNodeHeightMap({ height: $event, nodeId: node.id })
                         "
-                        @on-node-opt-click="onNodeOptClick"
+                        @on-choose-op="onChooseOp"
                     />
                 </template>
             </tree-graph>
@@ -343,12 +343,12 @@ export default {
                     break
             }
         },
-        onNodeOptClick({ opt: { type, text, info, params }, node: { id: nodeId } }) {
+        onChooseOp({ op: { type, text, info, params }, target: { id } }) {
             this.confDlgType = type
             this.opType = type
             this.confDlgTitle = text
             this.opParams = params
-            this.targetNode = { id: nodeId }
+            this.targetNode = { id }
             this.smallInfo = info
             this.isConfDlgOpened = true
         },

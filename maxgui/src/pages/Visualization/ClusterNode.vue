@@ -61,35 +61,35 @@
                         </template>
 
                         <v-list class="color bg-color-background">
-                            <template v-for="(opt, i) in nodeOpts">
-                                <v-divider v-if="opt.divider" :key="`divider-${i}`" />
+                            <template v-for="(op, i) in nodeOps">
+                                <v-divider v-if="op.divider" :key="`divider-${i}`" />
                                 <v-list-item
                                     v-else
                                     :key="i"
                                     dense
                                     link
-                                    :disabled="opt.disabled"
+                                    :disabled="op.disabled"
                                     class="px-2"
-                                    @click="$emit('on-node-opt-click', { opt, node })"
+                                    @click="$emit('on-choose-op', { op, target: node })"
                                 >
                                     <v-list-item-title
-                                        class="color text-text align-center node-opt-item"
-                                        :class="{ 'node-opt-item--disabled': opt.disabled }"
+                                        class="color text-text align-center node-op-item"
+                                        :class="{ 'node-op-item--disabled': op.disabled }"
                                     >
                                         <div
-                                            v-if="opt.icon"
+                                            v-if="op.icon"
                                             class="d-inline-block text-center mr-1"
                                             style="width:22px"
                                         >
                                             <v-icon
-                                                class="node-opt-item__icon"
-                                                :color="opt.color"
-                                                :size="opt.iconSize"
+                                                class="node-op-item__icon"
+                                                :color="op.color"
+                                                :size="op.iconSize"
                                             >
-                                                {{ opt.icon }}
+                                                {{ op.icon }}
                                             </v-icon>
                                         </div>
-                                        <span class="node-opt-item__text">{{ opt.text }}</span>
+                                        <span class="node-op-item__text">{{ op.text }}</span>
                                     </v-list-item-title>
                                 </v-list-item>
                             </template>
@@ -210,7 +210,7 @@ import { mapGetters } from 'vuex'
 /*
 @cluster-node-height: v: Number. Cluster node height
 @get-expanded-node: v: String. Id of expanded cluster node
-@on-node-opt-click: { opt:Object, node:Object }. Option chosen and node data
+@on-choose-op: { op:Object, target:Object }. Operation chosen and target object to dispatch update action
 */
 export default {
     name: 'cluster-node',
@@ -327,8 +327,8 @@ export default {
             const ops = this.getServerOps({ currStateMode, scope: this })
             return Object.values(ops)
         },
-        //TODO: add cluster control options .e.g. reset-replication, release-locks, rejoin
-        nodeOpts() {
+        //TODO: add cluster control operations .e.g. reset-replication, release-locks, rejoin
+        nodeOps() {
             return [...this.serverOps]
         },
     },
@@ -414,14 +414,14 @@ export default {
         }
     }
 }
-::v-deep.node-opt-item {
+::v-deep.node-op-item {
     &--disabled {
-        .node-opt-item__icon {
+        .node-op-item__icon {
             svg {
                 color: rgba(0, 0, 0, 0.26) !important;
             }
         }
-        .node-opt-item__text {
+        .node-op-item__text {
             color: rgba(0, 0, 0, 0.26) !important;
         }
     }
