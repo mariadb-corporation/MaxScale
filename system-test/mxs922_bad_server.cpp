@@ -90,6 +90,9 @@ int main(int argc, char* argv[])
     test->tprintf("Wait for the monitor to see the new servers");
     sleep(2);
 
+    test->tprintf("Reload users");
+    test.check_maxctrl("reload service rwsplit-service");
+
     do_query(test, false);
 
     /** Remove everything */
