@@ -88,7 +88,7 @@ function createInstance(name)
 
 end
 
-function newSession()
+function newSession(user, host)
 
 end
 
