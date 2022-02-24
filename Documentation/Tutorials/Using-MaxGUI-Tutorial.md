@@ -70,3 +70,29 @@ this is used for illustration purpose.
     object. This "unlink" icon is shown on the mouseover event allowing to
     remove the relationship between two objects.
 5.  This button is used to link other MaxScale objects to the relationship.
+
+# Settings
+
+This page shows and allows editing of MaxScale parameters.
+
+![MaxGUI MaxScale Settings](./images/MaxGUI-settings.png)
+
+## Annotation
+
+1.  Edit parameters button. This button is shown on the mouseover event allowing
+    to edit the MaxScale parameter. Clicking on it will enable editable mode on
+    the table..
+2.  Editable parameters are visible as it's illustrated in the screenshot.
+3.  After finishing editing the parameters, simply click the _Done Editing_
+    button.
+
+# Logs Archive
+
+This page show real-time MaxScale logs with filter options.
+
+![MaxGUI MaxScale Logs Archive](./images/MaxGUI-logs-archive.png)
+
+## Annotation
+
+1.  Filter by dropdown. All logs types are selected to be shown by default
+2.  Uncheck the box to disable showing a particular log type.
