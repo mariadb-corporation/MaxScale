@@ -4,9 +4,6 @@ GSSAPI is an authentication protocol that is commonly implemented with
 Kerberos on Unix or Active Directory on Windows. This document describes
 the GSSAPI authentication in MaxScale.
 
-The _GSSAPIAuth_ module implements the client side authentication and the
-_GSSAPIBackendAuth_ module implements the backend authentication.
-
 ## Preparing the GSSAPI system
 
 For Unix systems, the usual GSSAPI implementation is Kerberos. This is a short
@@ -34,12 +31,6 @@ authenticator_options=principal_name=mariadb/localhost.localdomain@EXAMPLE.COM
 
 Change the principal name to the same value you configured for the MariaDB
 server.
-
-After the listeners are configured, add the following to all servers that use GSSAPI users.
-
-```
-authenticator=GSSAPIBackendAuth
-```
 
 ## Authenticator options
 
@@ -74,12 +65,13 @@ authentic, the server sends the final OK packet.
 
 ## Limitations
 
-Client side GSSAPI authentication is only supported when the backend
-connections use GSSAPI authentication.
+Client side GSSAPI authentication is only supported when the backend connections
+also use GSSAPI authentication. MaxScale will automatically use the correct
+authentication mechanism based on what the client authenticates with.
 
 See the [Limitations](../About/Limitations.md) document for more details.
 
 ## Building the module
 
-The GSSAPI authenticator modules require the GSSAPI and the SQLite3 development
-libraries (krb5-devel and sqlite-devel on CentOS 7).
+The GSSAPI authenticator modules require the GSSAPI development libraries
+(krb5-devel on CentOS 7).
