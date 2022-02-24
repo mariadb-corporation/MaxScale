@@ -628,6 +628,7 @@ bool Monitor::test_permissions(const string& query)
             }
 
             mondb->maybe_fetch_session_track();
+            mondb->fetch_uptime();
         }
     }
 
@@ -1219,6 +1220,17 @@ void MonitorServer::fetch_session_track()
         if (r->next_row() && r->get_col_count() > 0)
         {
             server->set_session_track_system_variables(r->get_string(0));
+        }
+    }
+}
+
+void MonitorServer::fetch_uptime()
+{
+    if (auto r = mxs::execute_query(con, "SHOW STATUS LIKE 'Uptime'"))
+    {
+        if (r->next_row() && r->get_col_count() > 1)
+        {
+            server->set_uptime(r->get_int(1));
         }
     }
 }
@@ -2003,6 +2015,7 @@ void MonitorWorkerSimple::tick()
         if (connection_is_ok(rval))
         {
             pMs->maybe_fetch_session_track();
+            pMs->fetch_uptime();
             pMs->clear_pending_status(SERVER_AUTH_ERROR);
             pMs->set_pending_status(SERVER_RUNNING);
 

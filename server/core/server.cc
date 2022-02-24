@@ -616,6 +616,16 @@ void Server::set_session_track_system_variables(std::string&& value)
     m_session_track_system_variables = std::move(value);
 }
 
+void Server::set_uptime(int64_t uptime)
+{
+    m_uptime.store(uptime, std::memory_order_relaxed);
+}
+
+int64_t Server::get_uptime() const
+{
+    return m_uptime.load(std::memory_order_relaxed);
+}
+
 std::string Server::get_session_track_system_variables() const
 {
     std::lock_guard<std::mutex> guard(m_var_lock);
@@ -727,6 +737,7 @@ json_t* Server::json_attributes() const
 
     json_object_set_new(attr, CN_VERSION_STRING, json_string(m_info.version_string()));
     json_object_set_new(attr, "replication_lag", json_integer(replication_lag()));
+    json_object_set_new(attr, "uptime", json_integer(get_uptime()));
 
     json_t* statistics = stats().to_json();
     auto pool_stats = mxs::RoutingWorker::pool_get_stats(this);

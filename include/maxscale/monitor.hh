@@ -241,6 +241,11 @@ public:
      */
     void maybe_fetch_session_track();
 
+    /**
+     * Update the Uptime status variable of the server
+     */
+    void fetch_uptime();
+
     const char* get_event_name();
 
     /*

@@ -274,6 +274,20 @@ public:
     virtual std::string get_session_track_system_variables() const = 0;
 
     /**
+     * Set server uptime
+     *
+     * @param uptime Uptime in seconds
+     */
+    virtual void set_uptime(int64_t uptime) = 0;
+
+    /**
+     * Get server uptime
+     *
+     * @return Uptime in seconds
+     */
+    virtual int64_t get_uptime() const = 0;
+
+    /**
      * Set GTID positions
      *
      * @param positions List of pairs for the domain and the GTID position for it

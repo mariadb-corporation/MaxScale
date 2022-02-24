@@ -40,6 +40,11 @@ const server_fields = [
     description: "Server version",
   },
   {
+    name: "Uptime",
+    path: "attributes.uptime",
+    description: "Server uptime in seconds",
+  },
+  {
     name: "Last Event",
     path: "attributes.last_event",
     description: "The type of the latest event",

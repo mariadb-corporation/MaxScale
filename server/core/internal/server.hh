@@ -299,6 +299,8 @@ public:
 
     void        set_session_track_system_variables(std::string&& value) override;
     std::string get_session_track_system_variables() const override;
+    void        set_uptime(int64_t uptime) override;
+    int64_t     get_uptime() const override;
 
     uint64_t gtid_pos(uint32_t domain) const override;
     void     set_gtid_list(const std::vector<std::pair<uint32_t, uint64_t>>& positions) override;
@@ -429,6 +431,8 @@ private:
 
     // Latest value of server global variable 'session_track_system_variables'. Updated every 10min
     std::string m_session_track_system_variables;
+    // Uptime in seconds, updated by monitors
+    std::atomic<int64_t> m_uptime {0};
     // Lock that protects m_variables
     mutable std::mutex m_var_lock;
 
