@@ -221,22 +221,7 @@ json_t* ServerManager::server_to_json_data_relations(const Server* server, const
 
     auto json_data = server->to_json_data(host);
     json_object_set_new(json_data, CN_RELATIONSHIPS, rel);
-    json_object_set_new(json_data, CN_ATTRIBUTES, server_to_json_attributes(server));
     return json_data;
-}
-
-json_t* ServerManager::server_to_json_attributes(const Server* server)
-{
-    json_t* attr = server->json_attributes();
-
-    // Retrieve additional server-specific attributes from monitor and combine it with the base data.
-    if (auto extra = MonitorManager::monitored_server_attributes_json(server))
-    {
-        json_object_update(attr, extra);
-        json_decref(extra);
-    }
-
-    return attr;
 }
 
 SERVER* SERVER::find_by_unique_name(const string& name)

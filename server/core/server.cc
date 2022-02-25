@@ -34,6 +34,7 @@
 #include <maxscale/routingworker.hh>
 
 #include "internal/config.hh"
+#include "internal/monitormanager.hh"
 
 using maxbase::Worker;
 using maxscale::RoutingWorker;
@@ -817,6 +818,14 @@ json_t* Server::json_attributes() const
                         json_string(mxb::to_string(response_ave).c_str()));
 
     json_object_set_new(attr, "statistics", statistics);
+
+    // Retrieve additional server-specific attributes from monitor and combine it with the base data.
+    if (auto extra = MonitorManager::monitored_server_attributes_json(this))
+    {
+        json_object_update(attr, extra);
+        json_decref(extra);
+    }
+
     return attr;
 }
 
