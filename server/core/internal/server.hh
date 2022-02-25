@@ -431,15 +431,6 @@ private:
 
     mxs::WorkerGlobal<std::unordered_map<uint32_t, uint64_t>> m_gtids;
 
-    /**
-     * @brief Clean up any stale persistent connections
-     *
-     * This function purges any stale persistent connections from @c server.
-     *
-     * @param server Server to clean up
-     */
-    void cleanup_persistent_connections() const;
-
     bool configure_ssl(const mxs::ConfigParameters& params);
 };
 
