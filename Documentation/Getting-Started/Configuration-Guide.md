@@ -66,10 +66,9 @@ of MaxScale. That is, a filter will see a request before it reaches the router
 and before a response is sent back to the client. This allows filters to
 reject, handle, alter or log information about a request.
 
-Examples of filters are `dbfwfilter` that is a configurable firewall, `cache`
-that provides query caching according to rules, `regexfilter` that can rewrite
-requests according to regular expressions, and `qlafilter` that logs
-information about requests.
+Examples of filters `cache` that provides query caching according to rules,
+`regexfilter` that can rewrite requests according to regular expressions, and
+`qlafilter` that logs information about requests.
 
 Filters have sections of their own in the MaxScale configuration file that are
 referred to from _services_.
@@ -813,7 +812,7 @@ persistdir=/var/lib/maxscale/maxscale.cnf.d/
 
 Configure the directory where module configurations are stored. Path arguments
 are resolved relative to this directory. This directory should be used to store
-module specific configurations e.g. dbfwfilter rule files.
+module specific configurations.
 
 Any configuration parameter that is not an absolute path will be interpreted as
 a relative path. The relative paths use the module configuration directory as

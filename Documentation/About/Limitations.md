@@ -144,11 +144,6 @@ For example, a netmask of 255.255.255.0 is fine while 255.255.255.192 is not.
 
 ## Filter limitations
 
-### Database Firewall limitations (dbfwfilter)
-
-The Database Firewall filter does not support multi-statements. Using them will
-result in an error being sent to the client.
-
 ### Tee filter limitations (tee)
 
 The Tee filter does not support binary protocol prepared statements. The

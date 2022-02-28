@@ -12,12 +12,21 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Dropped Features
 
+### MariaDB Monitor
+
 MariaDB-Monitor settings `ignore_external_masters`, `detect_replication_lag`
 `detect_standalone_master`, `detect_stale_master` and `detect_stale_slave`
 have been removed. The first two were ineffective, the latter three are
 replaced by `master_conditions` and `slave_conditions`.
 
+### REST API
+
 The `/v1/maxscale/tasks/` endpoint has been removed from the REST-API.
+
+### Database Firewall Filter
+
+The `dbfwfilter` that was deprecated in MaxScale 6 has been removed in
+MaxScale 7.
 
 ## Deprecated Features
 

@@ -77,7 +77,6 @@ Here are detailed documents about the filters MariaDB MaxScale offers. They cont
  - [Binlog Filter](Filters/BinlogFilter.md)
  - [Cache](Filters/Cache.md)
  - [Consistent Critical Read Filter](Filters/CCRFilter.md)
- - [Database Firewall Filter](Filters/Database-Firewall-Filter.md)
  - [Hint Filter](Filters/Hintfilter.md)
  - [Insert Stream Filter](Filters/Insert-Stream-Filter.md)
  - [Luafilter](Filters/Luafilter.md)

@@ -400,7 +400,7 @@ namespace
 {
 
 char USAGE[] =
-    "usage: test_dbfwfilter [-d]\n"
+    "usage: test_cacheoptions [-d]\n"
     "\n"
     "-d    don't stop at first error\n";
 }

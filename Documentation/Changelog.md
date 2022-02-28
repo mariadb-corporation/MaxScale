@@ -8,6 +8,7 @@ For more details, please refer to:
   `detect_standalone_master`, `detect_stale_master` and `detect_stale_slave`
   have been removed. The first two were ineffective, the latter three are
   replaced by `master_conditions` and `slave_conditions`.
+* The `dbfwfilter` module that was deprecated in version 6 has now been removed.
 
 ## MariaDB MaxScale 6.2
 

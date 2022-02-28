@@ -37,7 +37,7 @@
  * Preload a module
  *
  * If the test uses code that is not a part of the core, the module must be preloaded before the test is
- * started. In most cases this is only required for module-level unit tests (e.g. dbfwfilter).
+ * started. In most cases this is only required for module-level unit tests.
  */
 void preload_module(const char* name, const char* path, mxs::ModuleType type)
 {

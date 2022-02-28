@@ -338,11 +338,11 @@ The _:module_ in the URI must be a valid name of a loaded module and _:command_
 must be a valid command identifier that is exposed by that module. All
 parameters to the module commands are passed as HTTP request parameters.
 
-Here is an example POST requests to the dbfwfilter module command _reload_ with
-two parameters, the name of the filter instance and the path to a file:
+Here is an example POST requests to the mariadbmon module command _reset-replication_ with
+two parameters, the name of the monitor instance and the server name:
 
 ```
-POST /v1/maxscale/modules/dbfwfilter/reload?my-dbfwfilter-instance&/path/to/file.txt
+POST /v1/maxscale/modules/mariadbmon/reset-replication?MariaDB-Monitor&server1
 ```
 
 #### Response
@@ -354,13 +354,11 @@ Command with output:
 ```javascript
 {
     "links": {
-        "self": "http://localhost:8989/v1/maxscale/modules/dbfwfilter/rules/json"
+        "self": "http://localhost:8989/v1/maxscale/modules/mariadbmon/reset-replication"
     },
     "meta": [ // Output of module command (module dependent)
         {
-            "name": "test3",
-            "type": "COLUMN",
-            "times_matched": 0
+            "name": "value"
         }
     ]
 }

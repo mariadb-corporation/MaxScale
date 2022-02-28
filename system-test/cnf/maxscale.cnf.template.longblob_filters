@@ -20,9 +20,9 @@ user=maxskysql
 password=skysql
 slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
 max_slave_connections=1
-#filters=duplicate|hints|regex|ccrfilter|MaxRows|Masking|Cache|namedserverfilter|Database-Firewall
+#filters=duplicate|hints|regex|ccrfilter|MaxRows|Masking|Cache|namedserverfilter
 filters=duplicate
-#filters=hints|regex|ccrfilter|MaxRows|Masking|Cache|namedserverfilter|Database-Firewall
+#filters=hints|regex|ccrfilter|MaxRows|Masking|Cache|namedserverfilter
 
 
 [Read-Connection-Router-Slave]
@@ -137,13 +137,6 @@ type=filter
 module=namedserverfilter
 match=SELECT
 server=server2
-
-[Database-Firewall]
-type=filter
-module=dbfwfilter
-rules=/###access_homedir###/rules/rules.txt
-log_match=true
-log_no_match=true
 
 [Galera-Monitor]
 type=monitor
