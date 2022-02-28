@@ -485,6 +485,8 @@ void RoutingWorker::process_timeouts()
             }
         }
 
+        std::lock_guard<std::mutex> guard(m_pool_lock);
+
         // Close expired connections in the thread local pool. If the server is down, purge all connections.
         for (auto it = m_pool_group.begin(); it != m_pool_group.end(); ++it)
         {
@@ -612,6 +614,8 @@ void RoutingWorker::ConnectionPool::set_capacity(int global_capacity)
 mxs::BackendConnection*
 RoutingWorker::pool_get_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Component* pUpstream)
 {
+    std::lock_guard<std::mutex> guard(m_pool_lock);
+
     auto pServer = static_cast<Server*>(pSrv);
     mxb_assert(pServer);
     auto pSession = static_cast<Session*>(pSes);
@@ -672,6 +676,8 @@ RoutingWorker::pool_get_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Compone
 
 bool RoutingWorker::move_to_conn_pool(BackendDCB* pDcb)
 {
+    std::lock_guard<std::mutex> guard(m_pool_lock);
+
     bool moved_to_pool = false;
     auto* pServer = static_cast<Server*>(pDcb->server());
     long global_pool_cap = pServer->persistpoolmax();
@@ -847,6 +853,8 @@ RoutingWorker::ConnectionPoolStats RoutingWorker::ConnectionPool::stats() const
 
 void RoutingWorker::evict_dcb(BackendDCB* pDcb)
 {
+    std::lock_guard<std::mutex> guard(m_pool_lock);
+
     auto it = m_pool_group.find(pDcb->server());
     mxb_assert(it != m_pool_group.end());
     ConnectionPool& conn_pool = it->second;
@@ -1679,30 +1687,28 @@ void RoutingWorker::pool_set_size(const std::string& srvname, int64_t size)
 RoutingWorker::ConnectionPoolStats RoutingWorker::pool_get_stats(const SERVER* pSrv)
 {
     mxb_assert(mxs::MainWorker::is_main_worker());
-    int n_workers = this_unit.nWorkers;
-    // Bad for cache, but this is unlikely to be called thousands of times per second.
-    ConnectionPoolStats thread_stats[n_workers];
-
-    auto fetch_thread_stats = [&]() {
-            auto rworker = RoutingWorker::get_current();
-            ConnectionPoolStats* output = &thread_stats[rworker->m_id];
-            auto& pool_grp = rworker->m_pool_group;
-
-            auto it = pool_grp.find(pSrv);
-            if (it != pool_grp.end())
-            {
-                *output = it->second.stats();
-            }
-        };
-
-    mxs::RoutingWorker::execute_concurrently(fetch_thread_stats);
-
-    // Calculate the sum.
     RoutingWorker::ConnectionPoolStats rval;
-    for (auto& stats : thread_stats)
+
+    for (int i = 0; i < this_unit.next_worker_id; ++i)
     {
-        rval.add(stats);
+        rval.add(this_unit.ppWorkers[i]->pool_stats(pSrv));
     }
+
+    return rval;
+}
+
+RoutingWorker::ConnectionPoolStats RoutingWorker::pool_stats(const SERVER* pSrv)
+{
+    ConnectionPoolStats rval;
+    std::lock_guard<std::mutex> guard(m_pool_lock);
+
+    auto it = m_pool_group.find(pSrv);
+
+    if (it != m_pool_group.end())
+    {
+        rval = it->second.stats();
+    }
+
     return rval;
 }
 
