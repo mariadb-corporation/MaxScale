@@ -71,6 +71,43 @@ this is used for illustration purpose.
     remove the relationship between two objects.
 5.  This button is used to link other MaxScale objects to the relationship.
 
+# Visualization
+
+This page visualizes MaxScale configuration and clusters.
+
+## Clusters
+
+This page shows all monitor clusters using
+[mariadbmon](../Monitors/MariaDB-Monitor.md) module in a card-like view.
+Clicking on the card will visualize the cluster into a tree graph as shown in
+the figure below.
+
+![MaxGUI MaxScale Cluster visualization](./images/MaxGUI-cluster-visualization.png)
+
+### Annotation
+
+1.  Drag a secondary server on top of a primary server to promote the secondary
+    server as the new primary server.
+2.  Server manipulation operations button. Showing a dropdown with the following
+    operations:
+    - Set maintenance mode: Setting a server to a maintenance mode.
+    - Clear server state: Clear current server state.
+    - Drain server: Drain the server of connections.
+3.  Quick access to query editor button. Opening the `Query Editor` page for
+    this server. If the connection is already created for that server, it'll use
+    it. Otherwise, it creates a blank worksheet and shows a connection dialog to
+    connect to that server.
+4.  Carousel navigation button. Viewing more information about the server in the
+    next slide.
+5.  Collapse the carousel.
+6.  Anchor link of the server. Opening the detail page of the server in a new
+    tab.
+7.  Collapse its children nodes.
+8.  Monitor manipulation operations button. Showing a dropdown with the
+    following operations:
+    - Stop monitor.
+    - Start monitor.
+
 # Settings
 
 This page shows and allows editing of MaxScale parameters.
