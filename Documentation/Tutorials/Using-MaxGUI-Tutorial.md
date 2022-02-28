@@ -96,3 +96,79 @@ This page show real-time MaxScale logs with filter options.
 
 1.  Filter by dropdown. All logs types are selected to be shown by default
 2.  Uncheck the box to disable showing a particular log type.
+
+# Query Editor
+
+A SQL editor tool to run queries and perform other SQL operations.
+
+![MaxGUI MaxScale Query Editor](./images/MaxGUI-query-editor.png)
+
+## Annotation
+
+1.  Worksheet tab navigation. Each worksheet is bound to a connection, so
+    sessions querying within a worksheet is not yet supported.
+2.  Add a new worksheet button.
+3.  Connection manager dropdown. With this dropdown, you can create a new
+    connection or change the connection for the current active worksheet. A new
+    connection can be created by selecting the last option in the dropdown
+    labeled as `New connection`. Once a connection is created, it automatically
+    binds the connection to the current active worksheet.
+4.  Active database dropdown. Allowing to quickly change the default (current)
+    database.
+5.  Schemas sidebar. Showing available schemas on the current connection. As
+    shown in the figure above, these items can be explored to show tables,
+    stored procedures, columns, and triggers within the schema.
+6.  Schemas sidebar object.
+    - Each object has its own context menu providing different options. e.g. For
+      the table object as shown in the figure above, it has options to
+      `Preview Data (top 1000)` and `View Details`. The query result for these
+      options is shown in the `Data Preview` result tab which is annotated as
+      number 12. The context menu can be shown by right-clicking on the object
+      or clicking on the three dots icon placed on the right side of the object.
+    - Quick access to the `Preview Data (top 1000)` context menu option. For a
+      table object, its preview data can also be seen by clicking on its name.
+    - Quick overview tooltip. Each object has its own tooltip providing an
+      overview of the object.
+7.  Refresh schema objects button. After deleting or creating schema object, the
+    `Schemas sidebar` needs to be manually refreshed.
+8.  Collapse the `Schemas sidebar` button.
+9.  SQL editor. The editor is powered by
+    [Monaco editor](https://microsoft.github.io/monaco-editor/) which means its
+    functionalities are similar to VS code. Available commands can be seen by
+    pressing F1 while the cursor is active on the editor. This is an intention
+    to prevent conflict between the browser's shortcut keys and the SQL
+    editor's. This also means the editor shortcut key commands are valid only
+    when the cursor is active on the `SQL editor` with an exception for the
+    `Run all statements`, `Run selected statements` and
+    `Save statements to favorite` commands.
+10. Run button. Running the queries written in the `SQL editor`. Alternatively,
+    pressing `Ctrl/CMD+Shift+Enter` to `Run all statements` or `Ctrl/CMD+Enter`
+    to `Run selected statements`.
+11. Query Results. Showing the query results of queries written in the SQL
+    editor.
+12. Data Preview. Showing the query results of `Preview Data (top 1000)` and
+    `View Details` options of the schema sidebar context menu.
+13. History/Favorite. Showing query history and favorite queries.
+14. Result tab navigation. Navigating between SQL queries results.
+15. Filter query history logs. The query history is divided into two types of
+    logs The `User query logs` contains logs for queries written in the
+    `SQL editor` while the `Action logs` contains logs for auto-generated SQL,
+    such as `Preview Data (top 1000)`, `View Details`, `Drop Table` and
+    `Truncate Table`.
+16. Export query result button. Exporting as `json`, `csv` with a custom
+    delimiter.
+17. Filter query result columns dropdown. Selecting columns to be visible.
+18. Vertical query result button. Switching to vertical mode.
+19. Visualize query result button. Visualizing a query result into a line,
+    scatter, vertical bar, and horizontal bar graph.
+20. Export graph as a jpeg file.
+21. [sql_select_limit](https://mariadb.com/docs/reference/mdb/system-variables/sql_select_limit/)
+    input. Changing the maximum number of rows to return from SELECT statements.
+22. Save SQL queries to the favorite button. Saving queries written in the
+    `SQL editor`. Alternatively, press `Ctrl/CMD+S`.
+23. Query Editor settings button. Open `Query configuration` dialog to change
+    the value of `Max rows` (sql_select_limit),
+    `Query history retention period (in days)`,
+    `Show confirmation before executing the statements` and
+    `Show system schemas`.
+24. Maximize Query Editor window.
