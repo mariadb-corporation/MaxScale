@@ -107,6 +107,14 @@ enum mxs_monitor_event_t
     NEW_SLAVE_EVENT   = (1 << 15),  /**< new_slave */
     NEW_SYNCED_EVENT  = (1 << 16),  /**< new_synced */
     NEW_DONOR_EVENT   = (1 << 17),  /**< new_donor */
+    RELAY_UP_EVENT    = (1 << 18),  /**< relay_up */
+    RELAY_DOWN_EVENT  = (1 << 19),  /**< relay_down */
+    LOST_RELAY_EVENT  = (1 << 20),  /**< lost_relay */
+    NEW_RELAY_EVENT   = (1 << 21),  /**< new_relay */
+    BLR_UP_EVENT      = (1 << 22),  /**< blr_up */
+    BLR_DOWN_EVENT    = (1 << 23),  /**< blr_down */
+    LOST_BLR_EVENT    = (1 << 24),  /**< lost_blr */
+    NEW_BLR_EVENT     = (1 << 25),  /**< new_blr */
 };
 
 namespace maxscale
@@ -211,6 +219,8 @@ public:
      */
     void stash_current_status();
 
+    static bool status_changed(uint64_t before, uint64_t after);
+
     bool status_changed();
     bool auth_status_changed();
     bool should_print_fail_status();
@@ -237,12 +247,16 @@ public:
 
     const char* get_event_name();
 
-    /*
+    /**
      * Determine a monitor event, defined by the difference between the old
      * status of a server and the new status.
      *
-     * @param   node                The monitor server data for a particular server
-     * @result  monitor_event_t     A monitor event (enum)
+     * @return The event for this state change
+     */
+    static mxs_monitor_event_t event_type(uint64_t before, uint64_t after);
+
+    /**
+     * Calls event_type with previous and current server state
      *
      * @note This function must only be called from mon_process_state_changes
      */
