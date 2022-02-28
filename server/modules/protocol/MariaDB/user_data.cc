@@ -421,7 +421,7 @@ MariaDBUserManager::load_users_from_backends(string&& conn_user, string&& conn_p
             if (srv_info.type() == ServerType::UNKNOWN)
             {
                 auto new_info = con.version_info();
-                srv->set_version(new_info.version, new_info.info);
+                srv->set_version(new_info.version, new_info.info, new_info.capabilities);
             }
 
             switch (srv_info.type())

@@ -218,4 +218,13 @@ char* lestr_consume(uint8_t** c, size_t* size)
     *c += slen;
     return start;
 }
+
+uint64_t mysql_get_server_capabilities(MYSQL* conn)
+{
+    uint64_t base_caps = 0;
+    uint64_t extra_caps = 0;
+    mariadb_get_infov(conn, MARIADB_CONNECTION_SERVER_CAPABILITIES, &base_caps);
+    mariadb_get_infov(conn, MARIADB_CONNECTION_EXTENDED_SERVER_CAPABILITIES, &extra_caps);
+    return base_caps | (extra_caps << 32);
+}
 }

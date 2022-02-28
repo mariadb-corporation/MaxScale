@@ -110,14 +110,23 @@ enum class CapTypes
     MARIADB,    // All capabilities
 };
 
-std::pair<CapTypes, uint64_t> get_supported_cap_types(SERVICE* service)
+// Returns the capability type, version number and the capabilities themselves
+std::tuple<CapTypes, uint64_t, uint64_t> get_supported_cap_types(SERVICE* service)
 {
+    uint64_t caps = GW_MYSQL_CAPABILITIES_SERVER;
     CapTypes type = CapTypes::MARIADB;
     uint64_t version = std::numeric_limits<uint64_t>::max();
 
     for (SERVER* s : service->reachable_servers())
     {
-        if (s->info().type() == SERVER::VersionInfo::Type::XPAND)
+        const auto& info = s->info();
+
+        if (info.type() != SERVER::VersionInfo::Type::UNKNOWN)
+        {
+            caps &= info.capabilities();
+        }
+
+        if (info.type() == SERVER::VersionInfo::Type::XPAND)
         {
             // At least one node is XPand and since it's the most restrictive, we can return early.
             type = CapTypes::XPAND;
@@ -125,7 +134,7 @@ std::pair<CapTypes, uint64_t> get_supported_cap_types(SERVICE* service)
         }
         else
         {
-            version = std::min(s->info().version_num().total, version);
+            version = std::min(info.version_num().total, version);
 
             if (version < 100200)
             {
@@ -134,7 +143,7 @@ std::pair<CapTypes, uint64_t> get_supported_cap_types(SERVICE* service)
         }
     }
 
-    return {type, version};
+    return {type, version, caps};
 }
 
 mariadb::HeaderData parse_header(GWBUF* buffer)
@@ -503,11 +512,7 @@ bool MariaDBClientConnection::send_server_handshake()
     // Filler byte.
     *ptr++ = 0;
 
-    // 8 bytes of capabilities, sent in three parts.
-    uint64_t caps = GW_MYSQL_CAPABILITIES_SERVER;
-    CapTypes cap_types;
-    int min_version;
-    std::tie(cap_types, min_version) = get_supported_cap_types(service);
+    auto [cap_types, min_version, caps] = get_supported_cap_types(service);
 
     if (cap_types == CapTypes::MARIADB)
     {
@@ -551,6 +556,7 @@ bool MariaDBClientConnection::send_server_handshake()
 
     m_session_data->client_caps.advertised_capabilities = caps;
 
+    // 8 bytes of capabilities, sent in three parts.
     // Convert to little endian, write 2 bytes.
     uint8_t caps_le[8];
     mariadb::set_byte8(caps_le, caps);

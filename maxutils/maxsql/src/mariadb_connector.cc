@@ -407,12 +407,15 @@ MariaDB::VersionInfo MariaDB::version_info() const
 {
     const char* info = nullptr;
     unsigned long version = 0;
+    uint64_t caps = 0;
+
     if (m_conn)
     {
         info = mysql_get_server_info(m_conn);
         version = mysql_get_server_version(m_conn);
+        caps = mysql_get_server_capabilities(m_conn);
     }
-    return VersionInfo {version, info ? info : ""};
+    return VersionInfo {version, caps, info ? info : ""};
 }
 
 bool MariaDB::open_extra(const string& host, int port, int extra_port, const string& db)

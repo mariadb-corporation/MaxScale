@@ -58,11 +58,12 @@ public:
         /**
          * Reads in version data. Deduces server type from version string.
          *
-         * @param version_num Version number from server
+         * @param version_num    Version number from server
          * @param version_string Version string from server
+         * @param caps           Server capabilities
          * @return True if version data changed
          */
-        bool set(uint64_t version_num, const std::string& version_string);
+        bool set(uint64_t version_num, const std::string& version_string, uint64_t caps);
 
         /**
          * Return true if the server is a real database and can process queries. Returns false if server
@@ -76,14 +77,16 @@ public:
         const Version& version_num() const;
         const char*    version_string() const;
         std::string    type_string() const;
+        uint64_t       capabilities() const;
 
     private:
         static const int MAX_VERSION_LEN = 256;
 
         mutable std::mutex m_lock;      /**< Protects against concurrent writing */
 
-        Version m_version_num;          /**< Numeric version */
-        Type    m_type {Type::UNKNOWN}; /**< Server type */
+        Version  m_version_num;         /**< Numeric version */
+        Type     m_type {Type::UNKNOWN};/**< Server type */
+        uint64_t m_caps {0};
 
         char m_version_str[MAX_VERSION_LEN + 1] {'\0'};     /**< Server version string */
     };
@@ -175,8 +178,9 @@ public:
      *
      * @param version_num New numeric version
      * @param version_str New version string
+     * @param caps        Server capabilities
      */
-    virtual void set_version(uint64_t version_num, const std::string& version_str) = 0;
+    virtual void set_version(uint64_t version_num, const std::string& version_str, uint64_t caps) = 0;
 
     /**
      * Get version information. The contents of the referenced object may change at any time,

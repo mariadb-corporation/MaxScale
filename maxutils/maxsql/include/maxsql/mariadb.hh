@@ -65,4 +65,14 @@ char* lestr_consume(uint8_t** c, size_t* size);
 
 // Logs the statement if statement logging is enabled
 void log_statement(int rc, MYSQL* conn, const std::string& query);
+
+/**
+ * Get server capabilities
+ *
+ * @param conn Connection to use
+ *
+ * @return The 64 bits of capabilities. The lower 32 bits are the basic capabilities and the upper 32 bits are
+ * the MariaDB extended ones.
+ */
+uint64_t mysql_get_server_capabilities(MYSQL* conn);
 }

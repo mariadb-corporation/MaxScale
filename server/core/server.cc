@@ -690,9 +690,9 @@ uint64_t Server::gtid_pos(uint32_t domain) const
     return it != gtids.end() ? it->second : 0;
 }
 
-void Server::set_version(uint64_t version_num, const std::string& version_str)
+void Server::set_version(uint64_t version_num, const std::string& version_str, uint64_t caps)
 {
-    bool changed = m_info.set(version_num, version_str);
+    bool changed = m_info.set(version_num, version_str, caps);
     if (changed)
     {
         auto type_string = m_info.type_string();
@@ -848,7 +848,7 @@ mxb::SSLConfig Server::create_ssl_config()
     return cfg;
 }
 
-bool Server::VersionInfo::set(uint64_t version, const std::string& version_str)
+bool Server::VersionInfo::set(uint64_t version, const std::string& version_str, uint64_t caps)
 {
     uint32_t major = version / 10000;
     uint32_t minor = (version - major * 10000) / 100;
@@ -882,6 +882,7 @@ bool Server::VersionInfo::set(uint64_t version, const std::string& version_str)
 
     if (new_type != m_type || version != m_version_num.total || version_str != m_version_str)
     {
+        m_caps = caps;
         m_type = new_type;
         m_version_num.total = version;
         m_version_num.major = major;
@@ -940,6 +941,11 @@ std::string SERVER::VersionInfo::type_string() const
         break;
     }
     return type_str;
+}
+
+uint64_t SERVER::VersionInfo::capabilities() const
+{
+    return m_caps;
 }
 
 const SERVER::VersionInfo& Server::info() const

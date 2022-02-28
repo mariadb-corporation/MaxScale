@@ -65,6 +65,7 @@ public:
     struct VersionInfo
     {
         uint64_t    version {0};
+        uint64_t    capabilities {0};
         std::string info;
     };
 
