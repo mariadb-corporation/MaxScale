@@ -1793,17 +1793,22 @@ even if the duration is longer than a second.
 
 ### `max_sescmd_history`
 
-`max_sescmd_history` sets a limit on how many distinct session commands each
-session can execute before the session command history is disabled. The default
-is 50 session commands.
+- **Type**: integer
+- **Default**: 50
+- **Dynamic**: Yes
 
-If you have long-running sessions which change the session state often, increase
-the value of this parameter if server reconnections fail due to disabled session
-command history.
+`max_sescmd_history` sets a limit on how many distinct session commands are
+stored in the session command history. When the history limit is exceeded, the
+history is either pruned to the last `max_sescmd_history` command (when
+`prune_sescmd_history` is enabled) or the history is disabled and server
+reconnections are no longer possible.
 
-When a limitation is set, it effectively creates a cap on the session's memory
-consumption. This might be useful if connection pooling is used and the sessions
-use large amounts of session commands.
+The required history size can be estimated by counting the total number of
+prepared statements and session state modifying commands (e.g `SET NAMES`) that
+are used by a client. Note that connectors usually add some commands that aren't
+visible to the application developer which means a safety margin should be
+added. A good rule of thumb is to count the expected number of statements and
+double that number.
 
 This parameter was moved into the MaxScale core in MaxScale 6.0. The parameter
 can be configured for all routers that support the session command

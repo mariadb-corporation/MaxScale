@@ -994,6 +994,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_change_
             if (m_state == State::READ_CHANGE_USER)
             {
                 mxs::ReplyRoute route;
+                m_reply.clear();
                 m_reply.set_is_ok(cmd == MYSQL_REPLY_OK);
                 if (m_upstream->clientReply(buffer.release(), route, m_reply))
                 {

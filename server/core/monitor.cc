@@ -259,11 +259,11 @@ private:
 ThisUnit this_unit;
 
 /** Server type specific bits */
-const uint64_t server_type_bits = SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED;
+const uint64_t server_type_bits = SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED | SERVER_RELAY | SERVER_BLR;
 
 /** All server bits */
 const uint64_t all_server_bits = SERVER_RUNNING | SERVER_MAINT | SERVER_MASTER | SERVER_SLAVE
-    | SERVER_JOINED;
+    | SERVER_JOINED | SERVER_RELAY | SERVER_BLR;
 
 const char journal_name[] = "monitor.dat";
 const char journal_template[] = "%s/%s/%s";
@@ -707,6 +707,19 @@ void MonitorServer::clear_pending_status(uint64_t bits)
  */
 mxs_monitor_event_t MonitorServer::get_event_type() const
 {
+    auto rval = event_type(mon_prev_status, server->status());
+
+    mxb_assert_message(rval != UNDEFINED_EVENT,
+                       "No event for state transition: [%s] -> [%s]",
+                       Target::status_to_string(mon_prev_status, server->stats().n_current_conns()).c_str(),
+                       server->status_string().c_str());
+
+    return rval;
+}
+
+// static
+mxs_monitor_event_t MonitorServer::event_type(uint64_t before, uint64_t after)
+{
     typedef enum
     {
         DOWN_EVENT,
@@ -718,8 +731,8 @@ mxs_monitor_event_t MonitorServer::get_event_type() const
 
     general_event_type event_type = UNSUPPORTED_EVENT;
 
-    uint64_t prev = mon_prev_status & all_server_bits;
-    uint64_t present = server->status() & all_server_bits;
+    uint64_t prev = before & all_server_bits;
+    uint64_t present = after & all_server_bits;
 
     if (prev == present)
     {
@@ -778,6 +791,8 @@ mxs_monitor_event_t MonitorServer::get_event_type() const
         rval = (present & SERVER_MASTER) ? MASTER_UP_EVENT :
             (present & SERVER_SLAVE) ? SLAVE_UP_EVENT :
             (present & SERVER_JOINED) ? SYNCED_UP_EVENT :
+            (present & SERVER_RELAY) ? RELAY_UP_EVENT :
+            (present & SERVER_BLR) ? BLR_UP_EVENT :
             SERVER_UP_EVENT;
         break;
 
@@ -785,6 +800,8 @@ mxs_monitor_event_t MonitorServer::get_event_type() const
         rval = (prev & SERVER_MASTER) ? MASTER_DOWN_EVENT :
             (prev & SERVER_SLAVE) ? SLAVE_DOWN_EVENT :
             (prev & SERVER_JOINED) ? SYNCED_DOWN_EVENT :
+            (prev & SERVER_RELAY) ? RELAY_DOWN_EVENT :
+            (prev & SERVER_BLR) ? BLR_DOWN_EVENT :
             SERVER_DOWN_EVENT;
         break;
 
@@ -792,6 +809,8 @@ mxs_monitor_event_t MonitorServer::get_event_type() const
         rval = (prev & SERVER_MASTER) ? LOST_MASTER_EVENT :
             (prev & SERVER_SLAVE) ? LOST_SLAVE_EVENT :
             (prev & SERVER_JOINED) ? LOST_SYNCED_EVENT :
+            (prev & SERVER_RELAY) ? LOST_RELAY_EVENT :
+            (prev & SERVER_BLR) ? LOST_BLR_EVENT :
             UNDEFINED_EVENT;
         break;
 
@@ -799,6 +818,8 @@ mxs_monitor_event_t MonitorServer::get_event_type() const
         rval = (present & SERVER_MASTER) ? NEW_MASTER_EVENT :
             (present & SERVER_SLAVE) ? NEW_SLAVE_EVENT :
             (present & SERVER_JOINED) ? NEW_SYNCED_EVENT :
+            (present & SERVER_RELAY) ? NEW_RELAY_EVENT :
+            (present & SERVER_BLR) ? NEW_BLR_EVENT :
             UNDEFINED_EVENT;
         break;
 
@@ -808,7 +829,6 @@ mxs_monitor_event_t MonitorServer::get_event_type() const
         break;
     }
 
-    mxb_assert(rval != UNDEFINED_EVENT);
     return rval;
 }
 
@@ -833,7 +853,15 @@ const char* Monitor::get_event_name(mxs_monitor_event_t event)
         {NEW_MASTER_EVENT,  "new_master",  },
         {NEW_SLAVE_EVENT,   "new_slave",   },
         {NEW_SYNCED_EVENT,  "new_synced",  },
-        {NEW_DONOR_EVENT,   "new_donor",   }
+        {NEW_DONOR_EVENT,   "new_donor",   },
+        {RELAY_UP_EVENT,    "relay_up",    },
+        {RELAY_DOWN_EVENT,  "relay_down",  },
+        {LOST_RELAY_EVENT,  "lost_relay",  },
+        {NEW_RELAY_EVENT,   "new_relay",   },
+        {BLR_UP_EVENT,      "blr_up",      },
+        {BLR_DOWN_EVENT,    "blr_down",    },
+        {LOST_BLR_EVENT,    "lost_blr",    },
+        {NEW_BLR_EVENT,     "new_blr",     },
     };
 
     auto it = values.find(event);
@@ -888,14 +916,20 @@ string Monitor::gen_serverlist(int status, CredentialsApproach approach)
  */
 bool MonitorServer::status_changed()
 {
+    return status_changed(mon_prev_status, server->status());
+}
+
+// static
+bool MonitorServer::status_changed(uint64_t before, uint64_t after)
+{
     bool rval = false;
 
     /* Previous status is -1 if not yet set */
-    if (mon_prev_status != static_cast<uint64_t>(-1))
+    if (before != static_cast<uint64_t>(-1))
     {
 
-        uint64_t old_status = mon_prev_status & all_server_bits;
-        uint64_t new_status = server->status() & all_server_bits;
+        uint64_t old_status = before & all_server_bits;
+        uint64_t new_status = after & all_server_bits;
 
         /**
          * The state has changed if the relevant state bits are not the same,
