@@ -74,7 +74,17 @@ public:
      */
     static SpecialQueryDesc parse_special_query(const char* sql, int len);
 
+
+    /**
+     * Kill a connection
+     *
+     * @param target_id The session ID in MaxScale to kill
+     * @param type      The type of the KILL to perform
+     *
+     * @see kill_type_t
+     */
     void mxs_mysql_execute_kill(uint64_t target_id, kill_type_t type);
+
     bool in_routing_state() const override;
 
     json_t* diagnostics() const override;
@@ -161,10 +171,11 @@ private:
     void          handle_query_kill(const SpecialQueryDesc& kill_contents);
 
     void add_local_client(LocalClient* client);
+    bool have_local_clients();
 
     void execute_kill_all_others(uint64_t target_id, uint64_t keep_protocol_thread_id, kill_type_t type);
     void execute_kill_user(const char* user, kill_type_t type);
-    void execute_kill(std::shared_ptr<KillInfo> info);
+    void execute_kill(std::shared_ptr<KillInfo> info, bool send_ok);
 
     void track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf);
     void track_current_command(const mxs::Buffer& buf);

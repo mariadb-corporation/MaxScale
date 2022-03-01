@@ -632,7 +632,7 @@ mxs_monitor_event_t MonitorServer::get_event_type() const
 
     mxb_assert_message(rval != UNDEFINED_EVENT,
                        "No event for state transition: [%s] -> [%s]",
-                       Target::status_to_string(mon_prev_status, server->stats().n_current).c_str(),
+                       Target::status_to_string(mon_prev_status, server->stats().n_current_conns()).c_str(),
                        server->status_string().c_str());
 
     return rval;
