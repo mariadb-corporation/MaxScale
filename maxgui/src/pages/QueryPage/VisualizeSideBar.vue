@@ -155,21 +155,11 @@ export default {
             }
             return resSets
         },
-
         numericFields() {
-            // Iterates the first row to get column type
-            let types = []
-            this.resSet.data[0].forEach(col => {
-                types.push(typeof col)
-            })
-            // get numeric column indexes
             let indices = []
-            const numType = 'number'
-            let idx = types.indexOf(numType)
-            while (idx != -1) {
-                indices.push(idx)
-                idx = types.indexOf(numType, idx + 1)
-            }
+            this.resSet.data[0].forEach((cell, i) => {
+                if (this.IsNumericCell(cell)) indices.push(i)
+            })
             // show numeric fields only
             let fields = [
                 this.numberSign,
@@ -320,9 +310,12 @@ export default {
                 }
             return dataset
         },
-
+        // parse value to float number and check if it is number
+        IsNumericCell(cell) {
+            return this.$typy(parseFloat(cell)).isNumber
+        },
         isLinearAxes(axisVal) {
-            return typeof axisVal === 'number'
+            return this.IsNumericCell(axisVal)
         },
         isTimeAxes(axisVal) {
             return this.$moment(axisVal).isValid()
