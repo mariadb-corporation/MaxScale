@@ -28,6 +28,12 @@ See [Limitations](#limitations) for more information.
 
 From 2.3.0 onwards, SchemaRouter is capable of limited table family sharding.
 
+## Changes in Version 6
+
+* The `auth_all_servers` parameter is no longer automatically enabled by the
+  schemarouter. To retain the old behavior that was present in 2.5, explicitly
+  define `auth_all_servers=true` for all schemarouter services.
+
 [TOC]
 
 ## Routing Logic
