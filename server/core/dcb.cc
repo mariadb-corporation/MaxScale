@@ -1872,6 +1872,11 @@ void DCB::unread(GWBUF* buffer)
     }
 }
 
+void DCB::unread(GWBUF&& buffer)
+{
+    m_readq.merge_front(move(buffer));
+}
+
 /**
  * BackendDCB
  */

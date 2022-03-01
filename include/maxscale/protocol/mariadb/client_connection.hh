@@ -139,15 +139,15 @@ private:
         CHANGE_USER,
     };
 
-    bool            read_first_client_packet(mxs::Buffer* output);
-    DCB::ReadResult read_protocol_packet();
+    std::tuple<bool, GWBUF> read_first_client_packet();
+    DCB::ReadResult         read_protocol_packet();
 
     StateMachineRes process_handshake();
     StateMachineRes process_authentication(AuthType auth_type);
     StateMachineRes process_normal_read();
 
     bool send_server_handshake();
-    bool parse_ssl_request_packet(GWBUF* buffer);
+    bool parse_ssl_request_packet(const GWBUF& buffer);
     bool parse_handshake_response_packet(GWBUF* buffer);
 
     bool perform_auth_exchange(mariadb::AuthenticationData& auth_data);

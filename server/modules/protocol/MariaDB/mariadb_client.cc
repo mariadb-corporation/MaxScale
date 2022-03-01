@@ -1980,16 +1980,16 @@ const MariaDBUserCache* MariaDBClientConnection::user_account_cache()
     return static_cast<const MariaDBUserCache*>(users);
 }
 
-bool MariaDBClientConnection::parse_ssl_request_packet(GWBUF* buffer)
+bool MariaDBClientConnection::parse_ssl_request_packet(const GWBUF& buffer)
 {
-    size_t len = gwbuf_length(buffer);
+    size_t len = buffer.length();
     // The packet length should be exactly header + 32 = 36 bytes.
     bool rval = false;
     if (len == MYSQL_AUTH_PACKET_BASE_SIZE)
     {
         packet_parser::ByteVec data;
         data.resize(CLIENT_CAPABILITIES_LEN);
-        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, CLIENT_CAPABILITIES_LEN, data.data());
+        buffer.copy_data(MYSQL_HEADER_LEN, CLIENT_CAPABILITIES_LEN, data.data());
         auto res = packet_parser::parse_client_capabilities(data, m_session_data->client_caps);
         m_session_data->client_caps = res.capabilities;
         m_session_data->auth_data->collation = res.collation;
@@ -2069,7 +2069,7 @@ bool MariaDBClientConnection::require_ssl() const
     return m_session->listener_data()->m_ssl.valid();
 }
 
-bool MariaDBClientConnection::read_first_client_packet(mxs::Buffer* output)
+std::tuple<bool, GWBUF> MariaDBClientConnection::read_first_client_packet()
 {
     /**
      * Client may send two different kinds of handshakes with different lengths: SSLRequest 36 bytes,
@@ -2080,75 +2080,55 @@ bool MariaDBClientConnection::read_first_client_packet(mxs::Buffer* output)
      * To maintain compatibility with both, read in two steps. This adds one extra read during
      * authentication for non-ssl-connections.
      */
-    GWBUF* read_buffer = nullptr;
-    mariadb::HeaderData header;
-    int buffer_len = m_dcb->read(&read_buffer, SSL_REQUEST_PACKET_SIZE, DCB::ReadLimit::STRICT);
-    if (buffer_len >= MYSQL_HEADER_LEN)
+
+    bool rval_ok = false;
+    GWBUF rval_buf;
+
+    auto [ssl_req_ok, ssl_req_buf] = m_dcb->read_strict(SSL_REQUEST_PACKET_SIZE, SSL_REQUEST_PACKET_SIZE);
+    if (ssl_req_buf.empty())
     {
-        header = parse_header(read_buffer);
-    }
-    else if (buffer_len >= 0)
-    {
-        // Didn't read enough, try again.
-        m_dcb->unread(read_buffer);
-        return true;
+        // Not enough data.
+        rval_ok = ssl_req_ok;
     }
     else
     {
-        return false;
-    }
+        auto header = mariadb::get_header(ssl_req_buf.data());
+        int prot_packet_len = MYSQL_HEADER_LEN + header.pl_length;
+        if (prot_packet_len == SSL_REQUEST_PACKET_SIZE)
+        {
+            // SSLRequest packet.
+            rval_ok = true;
+            rval_buf = move(ssl_req_buf);
+        }
+        else if (prot_packet_len >= NORMAL_HS_RESP_MIN_SIZE)
+        {
+            // Normal response. Need to read again. Likely the entire packet is available at the socket.
+            m_dcb->unread(move(ssl_req_buf));
+            auto [resp_packet_ok, resp_packet_buf] = m_dcb->read2(prot_packet_len, prot_packet_len);
+            if (resp_packet_buf.empty())
+            {
+                // Not enough data.
+                rval_ok = resp_packet_ok;
+            }
+            else
+            {
+                rval_ok = true;
+                rval_buf = move(resp_packet_buf);
+            }
+        }
+        else
+        {
+            // Unexpected packet size.
+        }
 
-    // Got the protocol packet length.
-    bool rval = true;
-    int prot_packet_len = header.pl_length + MYSQL_HEADER_LEN;
-    if (prot_packet_len == SSL_REQUEST_PACKET_SIZE)
-    {
-        // SSLRequest packet. Most likely the entire packet was already read out. If not, try again later.
-        if (buffer_len < prot_packet_len)
-        {
-            m_dcb->unread(read_buffer);
-            read_buffer = nullptr;
-        }
-    }
-    else if (prot_packet_len >= NORMAL_HS_RESP_MIN_SIZE)
-    {
-        // Normal response. Need to read again. Likely the entire packet is available at the socket.
-        m_dcb->unread(read_buffer);
-        read_buffer = nullptr;
-        int ret = m_dcb->read(&read_buffer, prot_packet_len);
-        buffer_len = gwbuf_length(read_buffer);
-        if (ret < 0)
-        {
-            rval = false;
-        }
-        else if (buffer_len < prot_packet_len)
-        {
-            // Still didn't get the full response.
-            m_dcb->unread(read_buffer);
-            read_buffer = nullptr;
-        }
-    }
-    else
-    {
-        // Unexpected packet size.
-        rval = false;
-    }
-
-    if (rval)
-    {
-        if (read_buffer)
+        if (!rval_buf.empty())
         {
             m_sequence = header.seq;
             m_next_sequence = header.seq + 1;
         }
-        output->reset(read_buffer);
     }
-    else
-    {
-        // Free any previously read data.
-        gwbuf_free(read_buffer);
-    }
-    return rval;
+
+    return {rval_ok, move(rval_buf)};
 }
 
 void MariaDBClientConnection::wakeup()
@@ -2286,28 +2266,28 @@ void MariaDBClientConnection::cancel_change_user_p2(GWBUF* buffer)
 
 MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handshake()
 {
-    mxs::Buffer read_buffer;
+    GWBUF buffer;
     bool read_success;
     if (m_handshake_state == HSState::INIT)
     {
         // The first response from client requires special handling.
-        read_success = read_first_client_packet(&read_buffer);
+        std::tie(read_success, buffer) = read_first_client_packet();
     }
     else
     {
         auto read_res = read_protocol_packet();
-        read_buffer = move(read_res.data);
         read_success = !read_res.error();
+        if (!read_res.data.empty())
+        {
+            GWBUF* temp = read_res.data.release();
+            buffer = move(*temp);
+            delete temp;
+        }
     }
 
-    if (!read_success)
+    if (buffer.empty())
     {
-        return StateMachineRes::ERROR;
-    }
-    else if (read_buffer.empty())
-    {
-        // Not enough data was available yet.
-        return StateMachineRes::IN_PROGRESS;
+        return read_success ? StateMachineRes::IN_PROGRESS : StateMachineRes::ERROR;
     }
 
     const char wrong_sequence[] = "Client (%s) sent packet with unexpected sequence number. "
@@ -2317,7 +2297,6 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
     const int er_bad_handshake = 1043;
     const int er_out_of_order = 1156;
 
-    auto buffer = read_buffer.get();
     auto rval = StateMachineRes::IN_PROGRESS;   // Returned to upper level SM
     bool state_machine_continue = true;
 
@@ -2339,7 +2318,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
                     {
                         m_handshake_state = HSState::SSL_NEG;
                     }
-                    else if (parse_handshake_response_packet(buffer))
+                    else if (parse_handshake_response_packet(&buffer))
                     {
                         send_authentication_error(AuthErrorType::ACCESS_DENIED);
                         m_handshake_state = HSState::FAIL;
@@ -2391,7 +2370,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
                 int expected_seq = require_ssl() ? 2 : 1;
                 if (m_sequence == expected_seq)
                 {
-                    if (parse_handshake_response_packet(buffer))
+                    if (parse_handshake_response_packet(&buffer))
                     {
                         m_handshake_state = HSState::COMPLETE;
                     }

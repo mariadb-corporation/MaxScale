@@ -433,6 +433,8 @@ public:
      */
     void unread(GWBUF* buffer);
 
+    void unread(GWBUF&& buffer);
+
     int64_t last_read() const
     {
         return m_last_read;
