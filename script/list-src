@@ -2,10 +2,9 @@
 
 default_header_ext="h hh hpp"
 default_source_ext="c cc cpp"
-path=$PWD
 
 usage() {
-    echo "Usage:" $(basename $0) "[-fhsHS --help] [path...]"
+    echo "Usage:" $(basename $0) "[-fhsHS --help] [path]"
     echo "  Produce a list of 'source' files from current dir, or path if given."
     echo "  By default lists both headers and sources and these extentions are used:"
     echo "  headers: '$default_header_ext'"
@@ -19,10 +18,14 @@ usage() {
     echo "    (adds -h, unless -s given.)"
     echo " -S quotedlist of source extensions"
     echo "    (adds -s, unless -h given.)"
+    echo " -i quoted list of directories relative to 'path' to include"
     echo " -x quoted list of directories to exclude"
+    echo " Note: If both -i and -x are defined -x wins. But using both is"
+    echo "       still useful when a sub directory of an included directory"
+    echo "       should be excluded."
 }
 
-opts=$(getopt -o "fhsH:S:x:" --long "help" -n $(basename $0) -- "$@")
+opts=$(getopt -o "fhsH:S:i:x:" --long "help" -n $(basename $0) -- "$@")
 if [ $? -ne 0 ]; then
 	usage
 	exit 1
@@ -41,6 +44,9 @@ while true; do
 	-S) source_ext="$2"
 	    shift
 	    ;;
+    -i) inclusion_list="$2"
+        shift
+        ;;
     -x) exclusion_list="$2"
         shift
         ;;
@@ -56,6 +62,7 @@ while true; do
 done
 shift $((OPTIND-1))
 
+path="./"
 if [[ -n $1 ]]; then
     path=$1
 fi
@@ -82,8 +89,6 @@ else
     regex='[.][^h]*$'  # no h in extension
 fi
 
-#find /home/nantti/tmp/list-src-test -type d \( -name 'exclude' -o -name 'include' \) -prune -o -type f -print
-
 # build find command
 if ! [[ -z $exclusion_list ]]; then
     for exclude in $exclusion_list
@@ -99,24 +104,33 @@ if ! [[ -z $exclusion_list ]]; then
     exclusion_cmd="$exclusion_cmd \) -prune -o "
 fi
 
-FIND="find $path $exclusion_cmd -type f -print"
+if ! [[ -z $inclusion_list ]]; then
+    for inc in $inclusion_list
+    do
+        full=$path/$inc
+        inclusion_list_extended="$full $inclusion_list_extended"
+    done
+    unset path
+fi
+
+FIND="find $path $inclusion_list_extended $exclusion_cmd -type f -print"
 
 for file in $(eval $FIND)
 do
     if [[ $use_file_cmd ]]; then
 	if [[ `file -b $file` =~ "source" ]]; then
             if [[ $file =~ $regex ]]; then
-		echo $file
+		echo $(readlink -m $file)
             fi
 	fi
     else
 	regex="\b${file##*.}\b"
 	if [[ $list_headers && $header_ext =~ $regex ]]; then
-	    echo $file
+	    echo $(readlink -m $file)
 	fi
 
 	if [[ $list_sources && $source_ext =~ $regex ]]; then
-       	    echo $file
+       	    echo $(readlink -m $file)
 	fi
 
     fi

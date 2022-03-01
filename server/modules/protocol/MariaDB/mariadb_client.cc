@@ -966,9 +966,11 @@ void MariaDBClientConnection::handle_query_kill(const SpecialQueryDesc& kill_con
         {
             execute_kill_user(user.c_str(), (kill_type_t)kt);
         }
+        else
+        {
+            write_ok_packet(1);
+        }
     }
-    // Always return OK to client, as we don't yet detect non-existing thread id:s or users.
-    write_ok_packet(1);
 }
 
 MariaDBClientConnection::SpecialQueryDesc
@@ -1813,21 +1815,24 @@ GWBUF* MariaDBClientConnection::create_standard_error(int packet_number, int err
     return buf;
 }
 
-void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info)
+void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, bool send_ok)
 {
     MXS_SESSION* ref = session_get_ref(m_session);
     auto origin = mxs::RoutingWorker::get_current();
 
-    auto func = [this, info, ref, origin]() {
+    auto func = [this, info, ref, origin, send_ok]() {
             // First, gather the list of servers where the KILL should be sent
             mxs::RoutingWorker::execute_concurrently(
                 [info, ref]() {
                     dcb_foreach_local(info->cb, info.get());
                 });
 
+            // TODO: This doesn't handle the case where a session is moved from one worker to another while
+            // this was being executed on the MainWorker.
+
             // Then move execution back to the original worker to keep all connections on the same thread
             origin->call(
-                [this, info, ref]() {
+                [this, info, ref, origin, send_ok]() {
                     for (const auto& a : info->targets)
                     {
                         if (LocalClient* client = LocalClient::create(info->session, a.first))
@@ -1835,6 +1840,7 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info)
                             client->connect();
                             // TODO: There can be multiple connections to the same server. Currently only one
                             // connection per server is killed.
+                            MXS_INFO("KILL on '%s': %s", a.first->name(), a.second.c_str());
                             client->queue_query(modutil_create_query(a.second.c_str()));
                             client->queue_query(mysql_create_com_quit(NULL, 0));
 
@@ -1843,16 +1849,52 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info)
                         }
                     }
 
-                    session_put_ref(ref);
+                    // Now wait for the COM_QUIT to close the connections.
+                    auto wait_for_conns = [this, ref, send_ok](auto action){
+                            bool rv = true;
+
+                            if (action == mxb::Worker::Call::CANCEL || !have_local_clients())
+                            {
+                                // Check if the DCB is still open. If MaxScale is shutting down, the DCB is
+                                // already closed when this callback is called and an error about a write to a
+                                // closed DCB would be logged.
+                                if (m_dcb->is_open() && send_ok)
+                                {
+                                    write_ok_packet(1);
+                                }
+
+                                session_put_ref(ref);
+                                MXS_INFO("All KILL commands finished");
+                                rv = false;
+                            }
+
+                            return rv;
+                        };
+
+                    // TODO: Polling for this is slow. A callback in the LocalClient's destructor would be
+                    // better as it would close the connection as soon as possible.
+                    origin->delayed_call(100, wait_for_conns);
                 }, mxs::RoutingWorker::EXECUTE_AUTO);
         };
 
-    std::thread(func).detach();
+    mxs::MainWorker::get()->execute(func, mxb::Worker::EXECUTE_QUEUED);
 }
 
-void MariaDBClientConnection::mxs_mysql_execute_kill(uint64_t target_id, kill_type_t type)
+std::string kill_query_prefix(MariaDBClientConnection::kill_type_t type)
 {
-    execute_kill_all_others(target_id, 0, type);
+    using Type = MariaDBClientConnection::kill_type_t;
+    const char* hard = (type & Type::KT_HARD) ? "HARD " : (type & Type::KT_SOFT) ? "SOFT " : "";
+    const char* query = (type & Type::KT_QUERY) ? "QUERY " : "";
+    std::stringstream ss;
+    ss << "KILL " << hard << query;
+    return ss.str();
+}
+
+void MariaDBClientConnection::mxs_mysql_execute_kill(uint64_t target_id, MariaDBClientConnection::kill_type_t type)
+{
+    auto str = kill_query_prefix(type);
+    auto info = std::make_shared<ConnKillInfo>(target_id, str, m_session, 0);
+    execute_kill(info, false);
 }
 
 /**
@@ -1863,26 +1905,21 @@ void MariaDBClientConnection::mxs_mysql_execute_kill(uint64_t target_id, kill_ty
  */
 void MariaDBClientConnection::execute_kill_all_others(uint64_t target_id,
                                                       uint64_t keep_protocol_thread_id,
-                                                      kill_type_t type)
+                                                      MariaDBClientConnection::kill_type_t type)
 {
-    const char* hard = (type & KT_HARD) ? "HARD " : (type & KT_SOFT) ? "SOFT " : "";
-    const char* query = (type & KT_QUERY) ? "QUERY " : "";
-    std::stringstream ss;
-    ss << "KILL " << hard << query;
-
-    auto info = std::make_shared<ConnKillInfo>(target_id, ss.str(), m_session, keep_protocol_thread_id);
-    execute_kill(info);
+    auto str = kill_query_prefix(type);
+    auto info = std::make_shared<ConnKillInfo>(target_id, str, m_session, keep_protocol_thread_id);
+    execute_kill(info, true);
 }
 
 void MariaDBClientConnection::execute_kill_user(const char* user, kill_type_t type)
 {
-    const char* hard = (type & KT_HARD) ? "HARD " : (type & KT_SOFT) ? "SOFT " : "";
-    const char* query = (type & KT_QUERY) ? "QUERY " : "";
-    std::stringstream ss;
-    ss << "KILL " << hard << query << "USER " << user;
+    auto str = kill_query_prefix(type);
+    str += "USER ";
+    str += user;
 
-    auto info = std::make_shared<UserKillInfo>(user, ss.str(), m_session);
-    execute_kill(info);
+    auto info = std::make_shared<UserKillInfo>(user, str, m_session);
+    execute_kill(info, true);
 }
 
 std::string MariaDBClientConnection::current_db() const
@@ -2914,6 +2951,11 @@ void MariaDBClientConnection::add_local_client(LocalClient* client)
     m_local_clients.erase(it, m_local_clients.end());
 
     m_local_clients.emplace_back(client);
+}
+
+bool MariaDBClientConnection::have_local_clients()
+{
+    return std::any_of(m_local_clients.begin(), m_local_clients.end(), std::mem_fn(&LocalClient::is_open));
 }
 
 void MariaDBClientConnection::kill()
