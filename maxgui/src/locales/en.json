@@ -234,6 +234,8 @@
     "socket": "Socket",
     "openQueryEditor": "Open Query Editor",
     "set": "Set",
+    "refreshRate": "Refresh rate",
+    "noRefresh": "No refresh",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
@@ -281,7 +283,8 @@
         "alterTableSuccessfully": "Alter table successfully",
         "exeActionSuccessfully": "Successfully {action}",
         "reconnSuccessfully": "Reconnection was successful",
-        "switchoverPromote": "Promote as Master (Switchover)"
+        "switchoverPromote": "Promote as Master (Switchover)",
+        "refreshRate": "Click to change refresh rate"
     },
     "serverOps": {
         "actions": {

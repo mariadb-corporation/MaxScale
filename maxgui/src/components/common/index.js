@@ -32,6 +32,7 @@ import TruncateString from './TruncateString'
 import SubMenu from './SubMenu'
 import FilterList from './FilterList'
 import RepTooltip from './RepTooltip'
+import RefreshRate from './RefreshRate'
 
 export default {
     'page-wrapper': PageWrapper,
@@ -53,4 +54,5 @@ export default {
     'sub-menu': SubMenu,
     'filter-list': FilterList,
     'rep-tooltip': RepTooltip,
+    'refresh-rate': RefreshRate,
 }
