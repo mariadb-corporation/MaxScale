@@ -163,7 +163,7 @@
     "graph": "Graph",
     "selectResultSet": "Select result set",
     "emptySet": "Empty set",
-    "seconds": "{value} seconds",
+    "seconds": "{value} second | {value} seconds",
     "totalDuration": "Total Duration",
     "networkDelay": "Network delay",
     "exeTime": "Execution Time",

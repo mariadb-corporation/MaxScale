@@ -7,21 +7,23 @@
             content-class="shadow-drop pa-3"
         >
             <template v-slot:activator="{ on }">
-                <pre v-on="on">  {{ $t('seconds', { value: duration }) }}</pre>
+                <pre v-on="on">
+                    {{ $tc('seconds', duration === 1 ? 1 : 2, { value: duration }) }}</pre
+                >
             </template>
             <v-sheet min-width="220" max-width="450" class="color text-small-text">
                 <div class="d-flex align-center color text-navigation font-weight-bold">
                     <span>{{ $t('totalDuration') }}:</span>
                     <v-spacer />
-                    <span> {{ $t('seconds', { value: duration }) }}</span>
+                    <span> {{ $tc('seconds', duration === 1 ? 1 : 2, { value: duration }) }}</span>
                 </div>
                 <div class="d-flex align-center">
                     <span>{{ $t('networkDelay') }} </span>
                     <v-spacer />
                     <span class="color text-navigation">
                         {{
-                            $t('seconds', {
-                                value: Math.abs(duration - executionTime).toFixed(4),
+                            $tc('seconds', networkDelay === 1 ? 1 : 2, {
+                                value: networkDelay,
                             })
                         }}
                     </span>
@@ -30,7 +32,7 @@
                     <span>{{ $t('exeTime') }}: </span>
                     <v-spacer />
                     <span class="color text-navigation">
-                        {{ $t('seconds', { value: executionTime }) }}
+                        {{ $tc('seconds', executionTime === 1 ? 1 : 2, { value: executionTime }) }}
                     </span>
                 </div>
             </v-sheet>
@@ -76,6 +78,9 @@ export default {
     computed: {
         isGettingEndTime() {
             return this.totalDuration === 0
+        },
+        networkDelay() {
+            return Math.abs(this.duration - this.executionTime).toFixed(4)
         },
     },
     activated() {
