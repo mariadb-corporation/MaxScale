@@ -225,14 +225,14 @@ ${CMAKE_SOURCE_DIR}/Documentation/Upgrading/Upgrading-To-MaxScale-1.2.md
 install_file(${CMAKE_BINARY_DIR}/Changelog.txt core)
 install_file(${CMAKE_BINARY_DIR}/ReleaseNotes.txt core)
 install_file(${CMAKE_BINARY_DIR}/UpgradingToMaxScale12.txt core)
-install_file(server/maxscale.cnf.template core)
+install_file(etc/maxscale.cnf.template core)
 install_program(script/create_grants core)
 install_file(script/create_roles.sql core)
 install_script(script/maxscale_generate_support_info.py core)
 
 # Install the template into /etc
 if(WITH_MAXSCALE_CNF AND (NOT TARGET_COMPONENT OR "core" STREQUAL "${TARGET_COMPONENT}"))
-  install_custom_file(server/maxscale.cnf.template ${MAXSCALE_CONFDIR} core)
+  install_custom_file(etc/maxscale.cnf.template ${MAXSCALE_CONFDIR} core)
 endif()
 
 install_file(${CMAKE_SOURCE_DIR}/COPYRIGHT core)
