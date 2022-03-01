@@ -714,7 +714,7 @@ namespace maxscale
  * @param ppState  On return will point to the state in @c pBuffer.
  * @param pnState  On return the pointed to value will be 6.
  */
-static inline void extract_error_state(uint8_t* pBuffer, uint8_t** ppState, uint16_t* pnState)
+static inline void extract_error_state(const uint8_t* pBuffer, const uint8_t** ppState, uint16_t* pnState)
 {
     mxb_assert(MYSQL_IS_ERROR_PACKET(pBuffer));
 
@@ -733,7 +733,8 @@ static inline void extract_error_state(uint8_t* pBuffer, uint8_t** ppState, uint
  * @param ppMessage  On return will point to the start of the message in @c pBuffer.
  * @param pnMessage  On return the pointed to value will be the length of the message.
  */
-static inline void extract_error_message(uint8_t* pBuffer, uint8_t** ppMessage, uint16_t* pnMessage)
+static inline void extract_error_message(const uint8_t* pBuffer, const uint8_t** ppMessage,
+                                         uint16_t* pnMessage)
 {
     mxb_assert(MYSQL_IS_ERROR_PACKET(pBuffer));
 
@@ -752,26 +753,22 @@ static inline void extract_error_message(uint8_t* pBuffer, uint8_t** ppMessage, 
     }
 }
 
-std::string extract_error(GWBUF* buffer)
+std::string extract_error(const GWBUF* buffer)
 {
     std::string rval;
-
-    if (MYSQL_IS_ERROR_PACKET(((uint8_t*)GWBUF_DATA(buffer))))
+    auto* data = buffer->data();
+    if (MYSQL_IS_ERROR_PACKET(data))
     {
-        size_t replylen = MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buffer)) + MYSQL_HEADER_LEN;
-        uint8_t replybuf[replylen];
-        gwbuf_copy_data(buffer, 0, sizeof(replybuf), replybuf);
-
-        uint8_t* pState;
+        const uint8_t* pState;
         uint16_t nState;
-        extract_error_state(replybuf, &pState, &nState);
+        extract_error_state(data, &pState, &nState);
 
-        uint8_t* pMessage;
+        const uint8_t* pMessage;
         uint16_t nMessage;
-        extract_error_message(replybuf, &pMessage, &nMessage);
+        extract_error_message(data, &pMessage, &nMessage);
 
-        std::string err(reinterpret_cast<const char*>(pState), nState);
-        std::string msg(reinterpret_cast<const char*>(pMessage), nMessage);
+        std::string err((const char*)pState, nState);
+        std::string msg((const char*)pMessage, nMessage);
 
         rval = err.empty() ? msg : err + ": " + msg;
     }

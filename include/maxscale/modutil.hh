@@ -106,7 +106,7 @@ namespace maxscale
  *
  * @return String representation of the error
  */
-std::string extract_error(GWBUF* buffer);
+std::string extract_error(const GWBUF* buffer);
 
 /**
  * Truncate buffers at packet boundaries

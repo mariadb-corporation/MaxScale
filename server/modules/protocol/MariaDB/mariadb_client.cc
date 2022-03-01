@@ -3206,14 +3206,14 @@ mariadb::AuthenticatorModule* MariaDBClientConnection::find_auth_module(const st
  */
 DCB::ReadResult MariaDBClientConnection::read_protocol_packet()
 {
-    auto rval = mariadb::read_protocol_packet(m_dcb);
-    if (!rval.data.empty())
+    auto [read_ok, buffer] = mariadb::read_protocol_packet(m_dcb);
+    if (!buffer.empty())
     {
-        uint8_t seq = MYSQL_GET_PACKET_NO(rval.data.data());
+        uint8_t seq = MYSQL_GET_PACKET_NO(buffer.data());
         m_sequence = seq;
         m_next_sequence = seq + 1;
     }
-    return rval;
+    return tuple_to_readresult(read_ok, move(buffer));
 }
 
 mariadb::AuthenticationData& MariaDBClientConnection::authentication_data(AuthType type)

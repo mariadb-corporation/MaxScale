@@ -785,3 +785,13 @@ SHARED_BUF::SHARED_BUF(size_t len)
     , buf_end(buf_start.get() + len)
 {
 }
+
+mxs::Buffer mxs::gwbuf_to_buffer(GWBUF&& buffer)
+{
+    return Buffer(gwbuf_to_gwbufptr(move(buffer)));
+}
+
+GWBUF* mxs::gwbuf_to_gwbufptr(GWBUF&& buffer)
+{
+    return new GWBUF(move(buffer));
+}

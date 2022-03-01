@@ -28,6 +28,7 @@
 #include "packet_parser.hh"
 
 using std::string;
+using std::move;
 using mxs::ReplyState;
 using UserEntry = mariadb::UserEntry;
 
@@ -519,37 +520,32 @@ bool UserEntry::host_pattern_is_more_specific(const UserEntry& lhs, const UserEn
  * @return Result structure. Success, if reading succeeded. Also returns success if the entire packet was
  * not yet available and the function should be called again later.
  */
-DCB::ReadResult mariadb::read_protocol_packet(DCB* dcb)
+std::tuple<bool, GWBUF> mariadb::read_protocol_packet(DCB* dcb)
 {
-    // TODO: add some way to peek dcb readq and check if a packet is available.
-
     const int MAX_PACKET_SIZE = MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN;
-    DCB::ReadResult read_res = dcb->read(MYSQL_HEADER_LEN, MAX_PACKET_SIZE);
+    // TODO: add read_peek once trigger_read_event issue fixed.
+    auto [read_ok, buffer] = dcb->read2(MYSQL_HEADER_LEN, MAX_PACKET_SIZE);
 
-    DCB::ReadResult rval;
-    rval.status = read_res.status;
-    if (read_res)
+    if (!buffer.empty())
     {
-        int buffer_len = read_res.data.length();
-        GWBUF* read_buffer = read_res.data.release();
-
         // Got enough that the entire packet may be available.
-        int prot_packet_len = MYSQL_GET_PACKET_LEN(read_buffer);
+        auto buffer_len = buffer.length();
+        auto prot_packet_len = mariadb::get_packet_length(buffer.data());
 
         // Protocol packet length read. Either received more than the packet, the exact packet or
         // a partial packet.
         if (prot_packet_len < buffer_len)
         {
             // Got more than needed, save extra to DCB and trigger a read.
-            auto first_packet = gwbuf_split(&read_buffer, prot_packet_len);
-            rval.data.reset(first_packet);
-            dcb->unread(read_buffer);
+            auto first_packet = buffer.split(prot_packet_len);
+
+            dcb->unread(move(buffer));
+            buffer = move(first_packet);
             dcb->trigger_read_event();
         }
         else if (prot_packet_len == buffer_len)
         {
-            // Read exact packet. Return it.
-            rval.data.reset(read_buffer);
+            // Read exact packet. Return it. TODO: remove this when possible
             if (buffer_len == MAX_PACKET_SIZE && dcb->socket_bytes_readable() > 0)
             {
                 // Read a maximally long packet when socket has even more. Route this packet,
@@ -560,11 +556,11 @@ DCB::ReadResult mariadb::read_protocol_packet(DCB* dcb)
         else
         {
             // Could not read enough, try again later. Save results to dcb.
-            dcb->unread(read_buffer);
-            rval.status = DCB::ReadResult::Status::INSUFFICIENT_DATA;
+            dcb->unread(move(buffer));
+            buffer = GWBUF();
         }
     }
-    return rval;
+    return {read_ok, move(buffer)};
 }
 
 namespace mariadb
@@ -653,6 +649,12 @@ HeaderData get_header(const uint8_t* buffer)
     rval.pl_length = (bytes & 0xFFFFFFu);
     rval.seq = bytes >> 24u;
     return rval;
+}
+
+uint32_t get_packet_length(const uint8_t* buffer)
+{
+    auto header = get_header(buffer);
+    return MYSQL_HEADER_LEN + header.pl_length;
 }
 
 BackendAuthData::BackendAuthData(const char* srv_name)

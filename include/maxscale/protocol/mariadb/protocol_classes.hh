@@ -66,8 +66,8 @@ struct AuthSwitchReqContents
     ByteVec     plugin_data;    /**< Data for plugin */
 };
 
-AuthSwitchReqContents parse_auth_switch_request(const mxs::Buffer& input);
-DCB::ReadResult       read_protocol_packet(DCB* dcb);
+AuthSwitchReqContents   parse_auth_switch_request(const mxs::Buffer& input);
+std::tuple<bool, GWBUF> read_protocol_packet(DCB* dcb);
 }
 
 /*

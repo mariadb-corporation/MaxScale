@@ -1426,4 +1426,8 @@ inline bool operator!=(const Buffer& lhs, const GWBUF& rhs)
 {
     return !lhs.eq(rhs);
 }
+
+// Conversion functions. Likely needed only temporarily.
+Buffer gwbuf_to_buffer(GWBUF&& buffer);
+GWBUF* gwbuf_to_gwbufptr(GWBUF&& buffer);
 }

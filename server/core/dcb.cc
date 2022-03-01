@@ -1913,6 +1913,11 @@ void DCB::close(DCB* dcb)
     }
 }
 
+size_t DCB::readq_peek(size_t n_bytes, uint8_t* dst) const
+{
+    return m_readq.copy_data(0, n_bytes, dst);
+}
+
 void DCB::unread(GWBUF* buffer)
 {
     if (buffer)
@@ -2284,4 +2289,22 @@ bool DCB::ReadResult::error() const
 DCB::ReadResult::operator bool() const
 {
     return ok();
+}
+
+DCB::ReadResult tuple_to_readresult(bool success, GWBUF&& buf)
+{
+    DCB::ReadResult rval;
+    if (buf.empty())
+    {
+        if (success)
+        {
+            rval.status = DCB::ReadResult::Status::INSUFFICIENT_DATA;
+        }
+    }
+    else
+    {
+        rval.status = DCB::ReadResult::Status::READ_OK;
+        rval.data.reset(new GWBUF(std::move(buf)));
+    }
+    return rval;
 }

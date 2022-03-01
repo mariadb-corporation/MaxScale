@@ -156,11 +156,11 @@ private:
     void pin_history_responses();
 
     GWBUF* track_response(GWBUF** buffer);
-    bool   read_backend_handshake(mxs::Buffer&& buffer);
+    bool   read_backend_handshake(GWBUF&& buffer);
     void   handle_error_response(DCB* plain_dcb, GWBUF* buffer);
     bool   session_ok_to_route(DCB* dcb);
-    bool   handle_auth_change_response(GWBUF* reply, DCB* dcb);
-    int    send_mysql_native_password_response(DCB* dcb, GWBUF* reply);
+    bool   handle_auth_change_response(const GWBUF& reply, DCB* dcb);
+    int    send_mysql_native_password_response(const GWBUF& reply, DCB* dcb);
     int    gw_decode_mysql_server_handshake(uint8_t* payload);
     GWBUF* gw_generate_auth_response(bool with_ssl, bool ssl_established, uint64_t service_capabilities);
     bool   expecting_reply() const;

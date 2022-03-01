@@ -427,6 +427,15 @@ public:
     }
 
     /**
+     * Copy bytes from the readq without consuming.
+     *
+     * @param n_bytes Maximum number of bytes to copy
+     * @param dst Destination buffer
+     * @return Number of bytes actually copied
+     */
+    size_t readq_peek(size_t n_bytes, uint8_t* dst) const;
+
+    /**
      * Prepend a buffer to the DCB's readqueue. Effectively unreads data so it may be read again.
      *
      * @param buffer The buffer to prepend
@@ -869,3 +878,8 @@ bool dcb_foreach(bool (* func)(DCB* dcb, void* data), void* data);
  * @param data User provided data passed as the second parameter to @c func
  */
 void dcb_foreach_local(bool (* func)(DCB* dcb, void* data), void* data);
+
+/**
+ * Temporary conversion function. Converts a tuple result to ReadResult.
+ */
+DCB::ReadResult tuple_to_readresult(bool success, GWBUF&& buf);
