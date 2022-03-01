@@ -12,9 +12,7 @@
                 </div>
             </div>
         </portal>
-        <portal to="page-search">
-            <global-search />
-        </portal>
+        <portal to="page-header--right"><global-search /></portal>
     </div>
 </template>
 

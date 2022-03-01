@@ -1,12 +1,9 @@
 <template>
     <div class="wrapper-container d-flex flex-column fill-height">
-        <div class="d-flex ml-n1">
+        <div class="d-flex ml-n1 flex-wrap">
             <portal-target name="page-header" />
             <v-spacer />
-            <div class="d-flex flex-wrap ">
-                <portal-target name="page-search" />
-                <portal-target name="create-resource" />
-            </div>
+            <portal-target name="page-header--right" />
         </div>
         <slot></slot>
     </div>

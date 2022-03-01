@@ -93,11 +93,9 @@
                 </v-sheet>
             </v-menu>
         </portal>
-        <portal to="page-search">
-            <global-search />
-        </portal>
-        <portal to="create-resource">
-            <create-resource />
+        <portal to="page-header--right">
+            <global-search class="mr-4 d-inline-block" />
+            <create-resource class="d-inline-block" />
         </portal>
     </div>
 </template>

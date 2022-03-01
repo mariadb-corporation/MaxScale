@@ -51,11 +51,9 @@
                 </div>
             </div>
         </portal>
-        <portal v-if="showSearch" to="page-search">
-            <global-search />
-        </portal>
-        <portal v-if="showCreateRscBtn" to="create-resource">
-            <create-resource />
+        <portal to="page-header--right">
+            <global-search v-if="showSearch" class="mr-4 d-inline-block" />
+            <create-resource v-if="showCreateRscBtn" class="d-inline-block" />
         </portal>
         <slot name="append"></slot>
     </div>
