@@ -36,6 +36,11 @@
             </details-icon-group-wrapper>
         </template>
         <template v-slot:append>
+            <portal to="page-header--right">
+                <div class="d-flex align-center fill-height">
+                    <refresh-rate :defRefreshRate="60" v-on="$listeners" />
+                </div>
+            </portal>
             <div class="pl-6">
                 <icon-sprite-sheet
                     size="13"
@@ -71,6 +76,7 @@
  */
 /*
 @on-choose-op: { op:Object, target:Object }. Operation chosen and target object to dispatch update action
+@on-count-done. Emit event after amount of time from <refresh-rate/>
 */
 import { mapState, mapGetters } from 'vuex'
 

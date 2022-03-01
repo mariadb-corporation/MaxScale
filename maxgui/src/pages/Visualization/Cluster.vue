@@ -1,6 +1,6 @@
 <template>
     <page-wrapper>
-        <cluster-page-header @on-choose-op="onChooseOp" />
+        <cluster-page-header @on-choose-op="onChooseOp" @on-count-done="fetchCluster" />
         <v-card
             ref="graphContainer"
             v-resize.quiet="setCtrDim"
