@@ -110,9 +110,10 @@ This component emits the following events
 */
 import { mapGetters, mapMutations, mapState } from 'vuex'
 import customDragEvt from 'mixins/customDragEvt'
+import asyncEmit from 'mixins/asyncEmit'
 export default {
     name: 'db-list-tree',
-    mixins: [customDragEvt],
+    mixins: [customDragEvt, asyncEmit],
     data() {
         return {
             showCtxMenu: false,
@@ -295,15 +296,7 @@ export default {
             nodes.map(node => ({ id: node.id, type: node.type, level: node.level })),
 
         async handleLoadChildren(item) {
-            await this.emitPromise('load-children', item)
-        },
-        async emitPromise(method, ...params) {
-            const listener = this.$listeners[method]
-            if (listener) {
-                const res = await listener(...params)
-                return res === undefined || res
-            }
-            return false
+            await this.asyncEmit('load-children', item)
         },
         handleOpenCtxMenu({ e, item }) {
             e.stopPropagation()

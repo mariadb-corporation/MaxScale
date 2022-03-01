@@ -68,9 +68,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
+import asyncEmit from 'mixins/asyncEmit'
 export default {
     name: 'overview-header',
+    mixins: [asyncEmit],
     props: {
         currentService: { type: Object, required: true },
         serviceConnectionsDatasets: { type: Array, required: true },
@@ -94,12 +95,6 @@ export default {
     },
 
     methods: {
-        asyncEmit(eventName) {
-            return new Promise(resolve => {
-                this.$emit(eventName)
-                this.$nextTick(resolve)
-            })
-        },
         async updateChart() {
             const { serviceConnectionsChart } = this.$refs
             if (serviceConnectionsChart) {
