@@ -90,7 +90,7 @@ int main(int argc, char* argv[])
     sleep(5);
 
     test->tprintf("Reload users");
-    test.check_maxctrl("reload service rwsplit-service");
+    test->check_maxctrl("reload service rwsplit-service");
 
     do_query(test, false);
 
