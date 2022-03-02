@@ -463,6 +463,8 @@ void RoutingWorker::process_timeouts()
                 static_cast<Session*>(pDcb->session())->tick(idle);
             }
         }
+
+        evict_dcbs(Evict::EXPIRED);
     }
 }
 
