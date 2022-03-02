@@ -22,6 +22,13 @@ export const APP_CONFIG = Object.freeze({
 |  |  |  |  /  _____  \\   /  .  \\  .----)   |   |  '----. /  _____  \\  |  '----.|  |____
 |__|  |__| /__/     \\__\\ /__/ \\__\\ |_______/     \\______|/__/     \\__\\ |_______||_______|
 `,
+    RESOURCE_FORM_TYPES: Object.freeze({
+        SERVICE: 'Service',
+        SERVER: 'Server',
+        MONITOR: 'Monitor',
+        LISTENER: 'Listener',
+        FILTER: 'Filter',
+    }),
     QUERY_SHORTCUT_KEYS: Object.freeze({
         'win-ctrl-s': ['ctrl', 's'],
         'mac-cmd-s': ['meta', 's'],

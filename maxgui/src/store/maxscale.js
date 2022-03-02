@@ -243,4 +243,9 @@ export default {
             }
         },
     },
+    getters: {
+        getModulesByType: state => {
+            return type => state.all_modules_map[type] || []
+        },
+    },
 }

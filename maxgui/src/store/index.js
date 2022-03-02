@@ -64,7 +64,7 @@ const store = new Vuex.Store({
         update_availability: false,
         prev_route: null,
         module_parameters: [],
-        form_type: null,
+        form_type: '',
         should_refresh_resource: false,
     },
     mutations: {

@@ -56,7 +56,7 @@
                                             :tableRows="listenersTableRows"
                                             readOnly
                                             @open-listener-form-dialog="
-                                                SET_FORM_TYPE(FORM_LISTENER)
+                                                SET_FORM_TYPE(RESOURCE_FORM_TYPES.LISTENER)
                                             "
                                         />
                                     </v-col>
@@ -108,7 +108,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { FORM_LISTENER } from 'store/formTypes'
 import { mapActions, mapMutations, mapState } from 'vuex'
 import OverviewHeader from './OverviewHeader'
 import PageHeader from './PageHeader'
@@ -121,7 +120,6 @@ export default {
     },
     data() {
         return {
-            FORM_LISTENER: FORM_LISTENER,
             currentActiveTab: null,
             tabs: [
                 { name: `${this.$tc('parameters', 2)} & ${this.$tc('relationships', 2)}` },
@@ -146,6 +144,7 @@ export default {
             service_connections_datasets: state => state.service.service_connections_datasets,
             service_connection_info: state => state.service.service_connection_info,
             sessions_by_service: state => state.session.sessions_by_service,
+            RESOURCE_FORM_TYPES: state => state.app_config.RESOURCE_FORM_TYPES,
         }),
 
         routerDiagnostics: function() {

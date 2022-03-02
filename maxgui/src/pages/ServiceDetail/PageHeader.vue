@@ -75,7 +75,7 @@
         <template v-slot:append>
             <portal to="page-header--right">
                 <global-search class="mr-4 d-inline-block" />
-                <create-resource class="d-inline-block" />
+                <create-resource class="d-inline-block" :defFormType="RESOURCE_FORM_TYPES.SERVER" />
             </portal>
             <confirm-dialog
                 v-model="isConfDlgOpened"
@@ -112,7 +112,7 @@
  * Public License.
  */
 
-import { mapActions } from 'vuex'
+import { mapActions, mapState } from 'vuex'
 import goBack from 'mixins/goBack'
 
 export default {
@@ -130,7 +130,10 @@ export default {
         }
     },
     computed: {
-        serviceState: function() {
+        ...mapState({
+            RESOURCE_FORM_TYPES: state => state.app_config.RESOURCE_FORM_TYPES,
+        }),
+        serviceState() {
             return this.currentService.attributes.state
         },
     },

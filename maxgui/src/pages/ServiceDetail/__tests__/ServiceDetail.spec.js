@@ -382,11 +382,11 @@ describe('ServiceDetail index', () => {
         describe('Passes event handler to relationship-table test assertions', () => {
             ALL_RELATIONSHIP_TABLES.forEach(name => {
                 const refName = `${name}-relationship-table`
-                let des = `Should only call dispatchRelationshipUpdate method for ${refName}`
+                let des = `Should only call dispatchRelationshipUpdate for ${refName}`
                 if (name === 'listeners') {
                     des = des.replace(
                         'dispatchRelationshipUpdate',
-                        'SET_FORM_TYPE mutation with FORM_LISTENER as argument'
+                        `SET_FORM_TYPE mutation with Listener as argument`
                     )
                 }
 
@@ -405,7 +405,9 @@ describe('ServiceDetail index', () => {
 
                     if (name === 'listeners') {
                         await SET_FORM_TYPE_STUB.should.have.been.called
-                        await SET_FORM_TYPE_STUB.should.have.been.calledWith('FORM_LISTENER')
+                        await SET_FORM_TYPE_STUB.should.have.been.calledWith(
+                            wrapper.vm.RESOURCE_FORM_TYPES.LISTENER
+                        )
                         await dispatchRelationshipUpdateSpy.should.have.not.been.called
                     } else {
                         await SET_FORM_TYPE_STUB.should.have.not.been.called

@@ -58,7 +58,7 @@
         <template v-slot:append>
             <portal to="page-header--right">
                 <global-search class="mr-4 d-inline-block" />
-                <create-resource class="d-inline-block" />
+                <create-resource class="d-inline-block" :defFormType="RESOURCE_FORM_TYPES.SERVER" />
             </portal>
             <confirm-dialog
                 v-model="isConfDlgOpened"
@@ -118,7 +118,10 @@ export default {
         }
     },
     computed: {
-        ...mapState({ MONITOR_OP_TYPES: state => state.app_config.MONITOR_OP_TYPES }),
+        ...mapState({
+            MONITOR_OP_TYPES: state => state.app_config.MONITOR_OP_TYPES,
+            RESOURCE_FORM_TYPES: state => state.app_config.RESOURCE_FORM_TYPES,
+        }),
         ...mapGetters({ getMonitorOps: 'monitor/getMonitorOps' }),
         currState() {
             const { attributes: { state = 'null' } = {} } = this.currentMonitor

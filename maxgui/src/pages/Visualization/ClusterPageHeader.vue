@@ -39,7 +39,10 @@
             <portal to="page-header--right">
                 <div class="d-flex align-center fill-height">
                     <refresh-rate :defRefreshRate="60" v-on="$listeners" />
-                    <create-resource class="ml-2 d-inline-block" />
+                    <create-resource
+                        class="ml-2 d-inline-block"
+                        :defFormType="RESOURCE_FORM_TYPES.SERVER"
+                    />
                 </div>
             </portal>
             <div class="pl-6">
@@ -87,6 +90,7 @@ export default {
         ...mapState({
             current_cluster: state => state.visualization.current_cluster,
             MONITOR_OP_TYPES: state => state.app_config.MONITOR_OP_TYPES,
+            RESOURCE_FORM_TYPES: state => state.app_config.RESOURCE_FORM_TYPES,
         }),
         ...mapGetters({ getMonitorOps: 'monitor/getMonitorOps' }),
         monitorOps() {

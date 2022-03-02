@@ -15,7 +15,7 @@
         </v-btn>
         <base-dialog
             ref="baseDialog"
-            v-model="isDialogOpen"
+            v-model="isDlgOpened"
             :onSave="onSave"
             :title="`${$t('createANew')}...`"
             isDynamicWidth
@@ -25,7 +25,7 @@
                 <v-select
                     id="resource-select"
                     v-model="selectedForm"
-                    :items="formTypes"
+                    :items="Object.values(RESOURCE_FORM_TYPES)"
                     name="resourceName"
                     outlined
                     dense
@@ -43,63 +43,58 @@
                 />
             </template>
             <template v-if="selectedForm" v-slot:form-body>
-                <div class="mb-0">
-                    <label class="field__label color text-small-text d-block">
-                        {{ $t('resourceLabelName', { resourceName: selectedForm }) }}
-                    </label>
-                    <v-text-field
-                        id="id"
-                        v-model="resourceId"
-                        :rules="rules.resourceId"
-                        name="id"
-                        required
-                        class="resource-id std error--text__bottom"
-                        dense
-                        :height="36"
-                        outlined
-                        :placeholder="$t('nameYour', { resourceName: selectedForm.toLowerCase() })"
-                    />
-                </div>
-
-                <div v-if="selectedForm === 'Service'" class="mb-0">
-                    <service-form-input
-                        ref="formService"
-                        :resourceModules="resourceModules"
-                        :allServers="all_servers"
-                        :allFilters="all_filters"
-                        :defaultItems="defaultRelationshipItems"
-                    />
-                </div>
-                <div v-else-if="selectedForm === 'Monitor'" class="mb-0">
-                    <monitor-form-input
-                        ref="formMonitor"
-                        :resourceModules="resourceModules"
-                        :allServers="all_servers"
-                        :defaultItems="defaultRelationshipItems"
-                    />
-                </div>
-                <div v-else-if="selectedForm === 'Filter'" class="mb-0">
-                    <filter-form-input ref="formFilter" :resourceModules="resourceModules" />
-                </div>
-                <div v-else-if="selectedForm === 'Listener'" class="mb-0">
-                    <listener-form-input
-                        ref="formListener"
-                        :parentForm="$refs.baseDialog.$refs.form || {}"
-                        :resourceModules="resourceModules"
-                        :allServices="all_services"
-                        :defaultItems="defaultRelationshipItems"
-                    />
-                </div>
-                <div v-else-if="selectedForm === 'Server'" class="mb-0">
-                    <server-form-input
-                        ref="formServer"
-                        :allServices="all_services"
-                        :allMonitors="all_monitors"
-                        :resourceModules="resourceModules"
-                        :parentForm="$refs.baseDialog.$refs.form || {}"
-                        :defaultItems="defaultRelationshipItems"
-                    />
-                </div>
+                <label class="field__label color text-small-text d-block">
+                    {{ $t('resourceLabelName', { resourceName: selectedForm }) }}
+                </label>
+                <v-text-field
+                    id="id"
+                    v-model="resourceId"
+                    :rules="rules.resourceId"
+                    name="id"
+                    required
+                    class="resource-id std error--text__bottom"
+                    dense
+                    :height="36"
+                    outlined
+                    :placeholder="$t('nameYour', { resourceName: selectedForm.toLowerCase() })"
+                />
+                <service-form-input
+                    v-if="selectedForm === RESOURCE_FORM_TYPES.SERVICE"
+                    :ref="`form_${RESOURCE_FORM_TYPES.SERVICE}`"
+                    :resourceModules="resourceModules"
+                    :allServers="all_servers"
+                    :allFilters="all_filters"
+                    :defaultItems="defaultRelationshipItems"
+                />
+                <monitor-form-input
+                    v-else-if="selectedForm === RESOURCE_FORM_TYPES.MONITOR"
+                    :ref="`form_${RESOURCE_FORM_TYPES.MONITOR}`"
+                    :resourceModules="resourceModules"
+                    :allServers="all_servers"
+                    :defaultItems="defaultRelationshipItems"
+                />
+                <filter-form-input
+                    v-else-if="selectedForm === RESOURCE_FORM_TYPES.FILTER"
+                    :ref="`form_${RESOURCE_FORM_TYPES.FILTER}`"
+                    :resourceModules="resourceModules"
+                />
+                <listener-form-input
+                    v-else-if="selectedForm === RESOURCE_FORM_TYPES.LISTENER"
+                    :ref="`form_${RESOURCE_FORM_TYPES.LISTENER}`"
+                    :parentForm="$typy($refs, 'baseDialog.$refs.form').safeObjectOrEmpty"
+                    :resourceModules="resourceModules"
+                    :allServices="all_services"
+                    :defaultItems="defaultRelationshipItems"
+                />
+                <server-form-input
+                    v-else-if="selectedForm === RESOURCE_FORM_TYPES.SERVER"
+                    :ref="`form_${RESOURCE_FORM_TYPES.SERVER}`"
+                    :allServices="all_services"
+                    :allMonitors="all_monitors"
+                    :resourceModules="resourceModules"
+                    :parentForm="$typy($refs, 'baseDialog.$refs.form').safeObjectOrEmpty"
+                    :defaultItems="defaultRelationshipItems"
+                />
             </template>
         </base-dialog>
     </div>
@@ -134,38 +129,25 @@ export default {
         ListenerFormInput,
         ServerFormInput,
     },
-    data: function() {
+    props: {
+        defFormType: { type: String, default: '' },
+    },
+    data() {
         return {
-            isDialogOpen: false,
+            isDlgOpened: false,
             selectedForm: '',
-            formTypes: ['Service', 'Server', 'Monitor', 'Filter', 'Listener'],
-            // module for monitor, service, and filter, listener
-            resourceModules: [],
             //COMMON
             resourceId: '', // resourceId is the name of resource being created
             rules: {
                 resourceId: [val => this.validateResourceId(val)],
             },
             validateInfo: {},
-            // this is used to auto assign default selectedForm
-            matchRoutes: [
-                'monitor',
-                'monitors',
-                'server',
-                'servers',
-                'service',
-                'services',
-                'listener',
-                'listeners',
-                'filter',
-                'filters',
-            ],
             defaultRelationshipItems: null,
         }
     },
-
     computed: {
         ...mapState({
+            RESOURCE_FORM_TYPES: state => state.app_config.RESOURCE_FORM_TYPES,
             form_type: 'form_type',
             all_filters: state => state.filter.all_filters,
             all_modules_map: state => state.maxscale.all_modules_map,
@@ -174,6 +156,8 @@ export default {
             all_services: state => state.service.all_services,
         }),
         ...mapGetters({
+            getModulesByType: 'maxscale/getModulesByType',
+
             getAllServicesMap: 'service/getAllServicesMap',
             getAllServicesInfo: 'service/getAllServicesInfo',
 
@@ -189,28 +173,60 @@ export default {
 
             getAllListenersInfo: 'listener/getAllListenersInfo',
         }),
-    },
-    watch: {
-        form_type: async function(val) {
-            if (val) await this.onCreate()
-            else if (this.form_type) this.SET_FORM_TYPE(null)
-        },
-        isDialogOpen: async function(val) {
-            if (val) {
-                // use route name to set default form
-                if (!this.form_type) await this.setFormByRoute(this.$route.name)
-                // use global form_type state to set default form
-                else {
-                    let formType = this.form_type.replace('FORM_', '') // remove FORM_ prefix
-                    this.selectedForm = this.$help.resourceTxtTransform(formType)
-                    await this.handleFormSelection(this.selectedForm)
+        resourceModules() {
+            const { SERVICE, SERVER, MONITOR, LISTENER, FILTER } = this.RESOURCE_FORM_TYPES
+            switch (this.selectedForm) {
+                case SERVICE:
+                    return this.getModulesByType('Router')
+                case SERVER:
+                    return this.getModulesByType('servers')
+                case MONITOR:
+                    return this.getModulesByType('Monitor')
+                case FILTER:
+                    return this.getModulesByType('Filter')
+                case LISTENER: {
+                    let authenticators = this.getModulesByType('Authenticator').map(item => item.id)
+                    let protocols = this.getModulesByType('Protocol')
+                    if (protocols.length) {
+                        protocols.forEach(protocol => {
+                            // add default_value for protocol param
+                            let protocolParamObj = protocol.attributes.parameters.find(
+                                o => o.name === 'protocol'
+                            )
+                            protocolParamObj.default_value = protocol.id
+                            protocolParamObj.disabled = true
+                            // Transform authenticator parameter from string type to enum type,
+                            let authenticatorParamObj = protocol.attributes.parameters.find(
+                                o => o.name === 'authenticator'
+                            )
+                            if (authenticatorParamObj) {
+                                authenticatorParamObj.type = 'enum'
+                                authenticatorParamObj.enum_values = authenticators
+                                // add default_value for authenticator
+                                authenticatorParamObj.default_value = ''
+                            }
+                        })
+                    }
+                    return protocols
                 }
-            } else {
-                if (this.form_type) this.SET_FORM_TYPE(null)
-                this.selectedForm = ''
+                default:
+                    return []
             }
         },
-        resourceId: function(val) {
+    },
+    watch: {
+        // trigger open dialog since form_type is used to open dialog without clicking button in this component
+        async form_type(val) {
+            if (val) await this.onCreate()
+        },
+        async isDlgOpened(val) {
+            if (val) this.handleSetFormType()
+            else if (this.form_type) this.SET_FORM_TYPE(null) // clear form_type
+        },
+        async selectedForm(v) {
+            await this.handleFormSelection(v)
+        },
+        resourceId(val) {
             // add hyphens when ever input have whitespace
             this.resourceId = val ? val.split(' ').join('-') : val
         },
@@ -232,15 +248,24 @@ export default {
             fetchAllModules: 'maxscale/fetchAllModules',
         }),
         async onCreate() {
-            await this.fetchAllModules()
-            this.isDialogOpen = true
+            // fetch data before open dlg
+            if (this.$typy(this.all_modules_map).isEmptyObject) await this.fetchAllModules()
+            this.isDlgOpened = true
         },
-
+        /**
+         *  global form_type state has higher priority. It is
+         *  used to trigger opening form dialog without
+         *  clicking the button in this component
+         */
+        handleSetFormType() {
+            if (this.form_type) this.selectedForm = this.form_type
+            else if (this.defFormType) this.selectedForm = this.defFormType
+            else this.selectedForm = this.RESOURCE_FORM_TYPES.SERVICE
+        },
         async handleFormSelection(val) {
             switch (val) {
                 case 'Service':
                     {
-                        this.resourceModules = this.getModuleType('Router')
                         await this.fetchAllServices()
                         this.validateInfo = this.getAllServicesInfo
                         await this.fetchAllServers()
@@ -258,7 +283,6 @@ export default {
                     }
                     break
                 case 'Server':
-                    this.resourceModules = this.getModuleType('servers')
                     await this.fetchAllServers()
                     this.validateInfo = this.getAllServersInfo
                     await this.fetchAllServices()
@@ -276,7 +300,6 @@ export default {
                     break
                 case 'Monitor':
                     {
-                        this.resourceModules = this.getModuleType('Monitor')
                         await this.fetchAllMonitors()
                         this.validateInfo = this.getAllMonitorsInfo
                         await this.fetchAllServers()
@@ -288,39 +311,11 @@ export default {
                     }
                     break
                 case 'Filter':
-                    this.resourceModules = this.getModuleType('Filter')
                     await this.fetchAllFilters()
                     this.validateInfo = this.getAllFiltersInfo
                     break
                 case 'Listener':
                     {
-                        let authenticators = this.getModuleType('Authenticator')
-                        let authenticatorId = authenticators.map(item => `${item.id}`)
-                        let protocols = this.getModuleType('Protocol')
-                        if (protocols.length) {
-                            protocols.forEach(protocol => {
-                                // add default_value for protocol param
-                                let protocolParamObj = protocol.attributes.parameters.find(
-                                    o => o.name === 'protocol'
-                                )
-                                protocolParamObj.default_value = protocol.id
-                                protocolParamObj.disabled = true
-                                /*
-                                    Transform authenticator parameter from string type to enum type,
-                                 */
-                                let authenticatorParamObj = protocol.attributes.parameters.find(
-                                    o => o.name === 'authenticator'
-                                )
-                                if (authenticatorParamObj) {
-                                    authenticatorParamObj.type = 'enum'
-                                    authenticatorParamObj.enum_values = authenticatorId
-                                    // add default_value for authenticator
-                                    authenticatorParamObj.default_value = ''
-                                }
-                            })
-                        }
-
-                        this.resourceModules = protocols
                         await this.fetchAllListeners()
                         this.validateInfo = this.getAllListenersInfo
                         await this.fetchAllServices()
@@ -342,6 +337,7 @@ export default {
          * chosen items will be an array
          */
         setDefaultRelationship({ allResourcesMap, routeName, isMultiple }) {
+            //TODO: Replace this.$route.name with something else
             if (this.$route.name === routeName) {
                 let currentResourceId = this.$route.params.id
                 const { id = null, type = null } = allResourcesMap.get(currentResourceId) || {}
@@ -349,48 +345,28 @@ export default {
             }
         },
 
-        /**
-         * This function set default form based on route name
-         * @param {String} routeName route name
-         */
-        async setFormByRoute(routeName) {
-            if (this.matchRoutes.includes(routeName)) {
-                this.selectedForm = this.$help.resourceTxtTransform(routeName)
-                await this.handleFormSelection(this.selectedForm)
-            } else {
-                this.selectedForm = 'Service'
-                await this.handleFormSelection('Service')
-            }
-        },
-
-        getModuleType(type) {
-            let allResourceModules = []
-            if (this.all_modules_map[type]) allResourceModules = this.all_modules_map[type]
-            return allResourceModules
-        },
-
         async onSave() {
-            const form = this.$refs[`form${this.selectedForm}`]
+            const form = this.$refs[`form_${this.selectedForm}`]
             const { moduleId, parameters, relationships } = form.getValues()
-
+            const { SERVICE, SERVER, MONITOR, LISTENER, FILTER } = this.RESOURCE_FORM_TYPES
             let payload = {
                 id: this.resourceId,
                 parameters,
                 callback: this[`fetchAll${this.selectedForm}s`],
             }
             switch (this.selectedForm) {
-                case 'Service':
-                case 'Monitor':
+                case SERVICE:
+                case MONITOR:
                     {
                         payload.module = moduleId
                         payload.relationships = relationships
                     }
                     break
-                case 'Listener':
-                case 'Server':
+                case LISTENER:
+                case SERVER:
                     payload.relationships = relationships
                     break
-                case 'Filter':
+                case FILTER:
                     payload.module = moduleId
                     break
             }
