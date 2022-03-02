@@ -223,6 +223,11 @@ public:
         }
     }
 
+    void update_total_size(int32_t delta)
+    {
+        m_stats.size += delta;
+    }
+
     void get_stats(QC_CACHE_STATS* pStats)
     {
         * pStats = m_stats;
@@ -403,6 +408,9 @@ public:
     QCInfoCacheScope(GWBUF* pStmt)
         : m_pStmt(pStmt)
     {
+        auto pInfo = static_cast<QC_STMT_INFO*>(gwbuf_get_buffer_object_data(m_pStmt, GWBUF_PARSING_INFO));
+        m_info_size_before = pInfo ? this_unit.classifier->qc_info_size(pInfo) : 0;
+
         if (use_cached_result() && has_not_been_parsed(m_pStmt))
         {
             mxb_assert(gwbuf_is_contiguous(m_pStmt));
@@ -422,7 +430,7 @@ public:
                 m_canonical += ":P";
             }
 
-            QC_STMT_INFO* pInfo = this_thread.pInfo_cache->get(m_canonical);
+            pInfo = this_thread.pInfo_cache->get(m_canonical);
 
             if (pInfo)
             {
@@ -434,41 +442,43 @@ public:
 
     ~QCInfoCacheScope()
     {
-        if (store_in_cache())
-        {
+        bool exclude = exclude_from_cache();
+
+        if (!m_canonical.empty() && !exclude)
+        {   // Cache for the first time
             void* pData = gwbuf_get_buffer_object_data(m_pStmt, GWBUF_PARSING_INFO);
             mxb_assert(pData);
             QC_STMT_INFO* pInfo = static_cast<QC_STMT_INFO*>(pData);
 
             this_thread.pInfo_cache->insert(m_canonical, pInfo);
         }
+        else if (!exclude)
+        {   // The size might have changed
+            auto pInfo = static_cast<QC_STMT_INFO*>(gwbuf_get_buffer_object_data(m_pStmt, GWBUF_PARSING_INFO));
+            auto info_size_after = pInfo ? this_unit.classifier->qc_info_size(pInfo) : 0;
+
+            if (m_info_size_before != info_size_after)
+            {
+                mxb_assert(m_info_size_before < info_size_after);
+                this_thread.pInfo_cache->update_total_size(info_size_after - m_info_size_before);
+            }
+        }
     }
 
 private:
     GWBUF*      m_pStmt;
     std::string m_canonical;
+    int32_t     m_info_size_before;
 
-    bool store_in_cache() const
+    bool exclude_from_cache() const
     {
-        bool store = false;
-
-        if (!m_canonical.empty())
-        {
-            constexpr const int is_autocommit = QUERY_TYPE_ENABLE_AUTOCOMMIT | QUERY_TYPE_DISABLE_AUTOCOMMIT;
-            uint32_t type_mask = QUERY_TYPE_UNKNOWN;
-            this_unit.classifier->qc_get_type_mask(m_pStmt, &type_mask);
-
-            if ((type_mask & is_autocommit) == 0)
-            {
-                store = true;
-            }
-        }
-
-        return store;
+        constexpr const int is_autocommit = QUERY_TYPE_ENABLE_AUTOCOMMIT | QUERY_TYPE_DISABLE_AUTOCOMMIT;
+        uint32_t type_mask = QUERY_TYPE_UNKNOWN;
+        this_unit.classifier->qc_get_type_mask(m_pStmt, &type_mask);
+        return (type_mask & is_autocommit) != 0;
     }
 };
 }
-
 
 bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
               qc_sql_mode_t sql_mode,
