@@ -318,7 +318,7 @@ public:
 
         size += m_function_infos.capacity() * sizeof(QC_FUNCTION_INFO);
         for_each(m_function_infos.begin(), m_function_infos.end(), [&size](const QC_FUNCTION_INFO& info) {
-                size += strlen(info.name);
+                size += strlen(info.name) + 1;
 
                 for_each(info.fields, info.fields + info.n_fields, [&size](const QC_FIELD_INFO& field_info) {
                         size += size_of_fields(field_info);

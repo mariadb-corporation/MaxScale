@@ -29,7 +29,9 @@ void test_main(TestConnections& test)
     {
         sleep(2);
         test.tprintf("Test 1:");
-        IntVector expected = {1, 5, 10, 30};
+        // The config file is configured for 1, 5, 10, 30 connections and 3 threads. Due to rounding,
+        // the effective values are slightly different.
+        IntVector expected = {3, 6, 12, 30};
         check_conn_pool_size(test, expected);
 
         test.tprintf("Test 2:");
@@ -42,13 +44,13 @@ void test_main(TestConnections& test)
             test.tprintf("Test 3:");
             test.tprintf("Sleeping 5 seconds. Check that pool of server4 is clear...");
             sleep(5);
-            expected = {1, 5, 10, 0};
+            expected = {3, 6, 12, 0};
             check_conn_pool_size(test, expected);
 
             test.tprintf("Test 4:");
             test.tprintf("Sleeping 5 seconds. Check that pools of servers 2 to 4 are clear.");
             sleep(5);
-            expected = {1, 0, 0, 0};
+            expected = {3, 0, 0, 0};
             check_conn_pool_size(test, expected);
         }
     }
@@ -66,6 +68,7 @@ void test_main(TestConnections& test)
 
         auto generate_conns = [&mxs](int n_conns) {
                 std::vector<std::unique_ptr<mxt::MariaDB>> conns;
+                conns.reserve(n_conns);
                 for (int i = 0; i < n_conns; i++)
                 {
                     conns.push_back(mxs.open_rwsplit_connection2());
@@ -95,40 +98,7 @@ void test_main(TestConnections& test)
         sleep(1);
 
         int conn_count_1C = get_server_conn_count(test);
-        expect_conn_count(conn_count_1C, idle_conn_count + 1);      // +1 because one left in pool
-
-        if (test.ok())
-        {
-            // Set up pooling. Again restart to reset pool.
-            mxs.stop();
-            mxs.start();
-            sleep(2);
-
-            mxs.alter_server("server1", "persistpoolmax", "100");
-            mxs.alter_service("RW-Split-Router", "idle_session_pool_time", "5s");
-            test.tprintf("Idle session pooling enabled.");
-
-            // Generate connections, then wait for MaxScale to pool them.
-            auto conns_2A = generate_conns(n_conns);
-            int conn_count_2A = get_server_conn_count(test);
-            expect_conn_count(conn_count_2A, idle_conn_count + n_conns);
-
-            test.tprintf("%i connections to backend, waiting for MaxScale to pool them.", conn_count_2A);
-            sleep(8);
-            check_conn_pool_size(test, {n_conns});
-
-            // Generate more connections. This should not increase count on backend as much as before,
-            // since most connections can be taken from pool. Due to uneven distribution of connections
-            // in thread-specific pools, the end result is not exact.
-            auto conns_2B = generate_conns(n_conns);
-            int conn_count_2B = get_server_conn_count(test);
-            int increase = conn_count_2B - conn_count_2A;
-            test.tprintf("Generated %i new connections to MaxScale, which resulted in %i more connections "
-                         "to backend.", n_conns, increase);
-            int expected_increase_max = n_conns / 2;    // This depends on how connections divide to threads.
-            test.expect(increase < expected_increase_max, "Got %i new connections when at most %i was "
-                                                          "expected", increase, expected_increase_max);
-        }
+        expect_conn_count(conn_count_1C, idle_conn_count + 3);      // +3 because of conns left in pool
     }
 }
 
