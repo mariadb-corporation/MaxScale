@@ -42,7 +42,8 @@ template<class ... Args>
 bool call_function(lua_State* state, const char* name, int nret, Args ... args)
 {
     bool ok = true;
-    int type = lua_getglobal(state, name);
+    lua_getglobal(state, name);
+    int type = lua_type(state, -1);
 
     if (type != LUA_TFUNCTION)
     {
