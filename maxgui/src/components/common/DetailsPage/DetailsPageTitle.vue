@@ -51,10 +51,6 @@
                 </div>
             </div>
         </portal>
-        <portal to="page-header--right">
-            <global-search v-if="showSearch" class="mr-4 d-inline-block" />
-            <create-resource v-if="showCreateRscBtn" class="d-inline-block" />
-        </portal>
         <slot name="append"></slot>
     </div>
 </template>
@@ -64,10 +60,6 @@ import goBack from 'mixins/goBack'
 export default {
     name: 'details-page-title',
     mixins: [goBack],
-    props: {
-        showSearch: { type: Boolean, default: true },
-        showCreateRscBtn: { type: Boolean, default: true },
-    },
     computed: {
         ...mapState(['prev_route']),
     },

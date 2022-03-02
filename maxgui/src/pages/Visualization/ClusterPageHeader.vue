@@ -1,5 +1,5 @@
 <template>
-    <details-page-title :showSearch="false" :showCreateRscBtn="false">
+    <details-page-title>
         <template v-slot:page-title="{ pageId }">
             <router-link :to="`/dashboard/monitors/${pageId}`" class="rsrc-link">
                 {{ pageId }}
@@ -39,6 +39,7 @@
             <portal to="page-header--right">
                 <div class="d-flex align-center fill-height">
                     <refresh-rate :defRefreshRate="60" v-on="$listeners" />
+                    <create-resource class="ml-2 d-inline-block" />
                 </div>
             </portal>
             <div class="pl-6">
