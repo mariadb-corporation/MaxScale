@@ -29,7 +29,13 @@
         <template v-slot:append>
             <portal to="page-header--right">
                 <global-search class="mr-4 d-inline-block" />
-                <create-resource class="d-inline-block" />
+                <create-resource
+                    class="d-inline-block"
+                    :defRelationshipObj="{
+                        id: $route.params.id,
+                        type: RELATIONSHIP_TYPES.FILTERS,
+                    }"
+                />
             </portal>
             <confirm-dialog
                 v-model="isConfDlgOpened"
@@ -56,7 +62,7 @@
  * Public License.
  */
 
-import { mapActions } from 'vuex'
+import { mapActions, mapState } from 'vuex'
 import goBack from 'mixins/goBack'
 
 export default {
@@ -72,7 +78,9 @@ export default {
             isConfDlgOpened: false,
         }
     },
-
+    computed: {
+        ...mapState({ RELATIONSHIP_TYPES: state => state.app_config.RELATIONSHIP_TYPES }),
+    },
     methods: {
         ...mapActions('filter', ['destroyFilter']),
         async confirmSave() {

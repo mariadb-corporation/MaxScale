@@ -75,7 +75,14 @@
         <template v-slot:append>
             <portal to="page-header--right">
                 <global-search class="mr-4 d-inline-block" />
-                <create-resource class="d-inline-block" :defFormType="RESOURCE_FORM_TYPES.SERVER" />
+                <create-resource
+                    class="d-inline-block"
+                    :defFormType="RESOURCE_FORM_TYPES.SERVER"
+                    :defRelationshipObj="{
+                        id: $route.params.id,
+                        type: RELATIONSHIP_TYPES.SERVICES,
+                    }"
+                />
             </portal>
             <confirm-dialog
                 v-model="isConfDlgOpened"
@@ -132,6 +139,7 @@ export default {
     computed: {
         ...mapState({
             RESOURCE_FORM_TYPES: state => state.app_config.RESOURCE_FORM_TYPES,
+            RELATIONSHIP_TYPES: state => state.app_config.RELATIONSHIP_TYPES,
         }),
         serviceState() {
             return this.currentService.attributes.state

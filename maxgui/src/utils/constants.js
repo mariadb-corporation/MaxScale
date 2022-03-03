@@ -29,6 +29,13 @@ export const APP_CONFIG = Object.freeze({
         LISTENER: 'Listener',
         FILTER: 'Filter',
     }),
+    RELATIONSHIP_TYPES: Object.freeze({
+        SERVICES: 'services',
+        SERVERS: 'servers',
+        MONITORS: 'monitors',
+        LISTENERS: 'listeners',
+        FILTERS: 'filters',
+    }),
     QUERY_SHORTCUT_KEYS: Object.freeze({
         'win-ctrl-s': ['ctrl', 's'],
         'mac-cmd-s': ['meta', 's'],

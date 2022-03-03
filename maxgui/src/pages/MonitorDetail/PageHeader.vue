@@ -58,7 +58,14 @@
         <template v-slot:append>
             <portal to="page-header--right">
                 <global-search class="mr-4 d-inline-block" />
-                <create-resource class="d-inline-block" :defFormType="RESOURCE_FORM_TYPES.SERVER" />
+                <create-resource
+                    class="d-inline-block"
+                    :defFormType="RESOURCE_FORM_TYPES.SERVER"
+                    :defRelationshipObj="{
+                        id: $route.params.id,
+                        type: RELATIONSHIP_TYPES.MONITORS,
+                    }"
+                />
             </portal>
             <confirm-dialog
                 v-model="isConfDlgOpened"
@@ -121,6 +128,7 @@ export default {
         ...mapState({
             MONITOR_OP_TYPES: state => state.app_config.MONITOR_OP_TYPES,
             RESOURCE_FORM_TYPES: state => state.app_config.RESOURCE_FORM_TYPES,
+            RELATIONSHIP_TYPES: state => state.app_config.RELATIONSHIP_TYPES,
         }),
         ...mapGetters({ getMonitorOps: 'monitor/getMonitorOps' }),
         currState() {

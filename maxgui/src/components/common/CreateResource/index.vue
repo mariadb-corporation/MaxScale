@@ -131,6 +131,7 @@ export default {
     },
     props: {
         defFormType: { type: String, default: '' },
+        defRelationshipObj: { type: Object, default: () => {} },
     },
     data() {
         return {
@@ -148,6 +149,7 @@ export default {
     computed: {
         ...mapState({
             RESOURCE_FORM_TYPES: state => state.app_config.RESOURCE_FORM_TYPES,
+            RELATIONSHIP_TYPES: state => state.app_config.RELATIONSHIP_TYPES,
             form_type: 'form_type',
             all_filters: state => state.filter.all_filters,
             all_modules_map: state => state.maxscale.all_modules_map,
@@ -263,8 +265,10 @@ export default {
             else this.selectedForm = this.RESOURCE_FORM_TYPES.SERVICE
         },
         async handleFormSelection(val) {
+            const { SERVICE, SERVER, MONITOR, LISTENER, FILTER } = this.RESOURCE_FORM_TYPES
+            const { SERVICES, SERVERS, MONITORS, FILTERS } = this.RELATIONSHIP_TYPES
             switch (val) {
-                case 'Service':
+                case SERVICE:
                     {
                         await this.fetchAllServices()
                         this.validateInfo = this.getAllServicesInfo
@@ -272,59 +276,55 @@ export default {
                         await this.fetchAllFilters()
                         this.setDefaultRelationship({
                             allResourcesMap: this.getAllServersMap,
-                            routeName: 'server',
+                            relationshipType: SERVERS,
                             isMultiple: true,
                         })
                         this.setDefaultRelationship({
                             allResourcesMap: this.getAllFiltersMap,
-                            routeName: 'filter',
+                            relationshipType: FILTERS,
                             isMultiple: true,
                         })
                     }
                     break
-                case 'Server':
+                case SERVER:
                     await this.fetchAllServers()
                     this.validateInfo = this.getAllServersInfo
                     await this.fetchAllServices()
                     await this.fetchAllMonitors()
                     this.setDefaultRelationship({
                         allResourcesMap: this.getAllServicesMap,
-                        routeName: 'service',
+                        relationshipType: SERVICES,
                         isMultiple: true,
                     })
                     this.setDefaultRelationship({
                         allResourcesMap: this.getAllMonitorsMap,
-                        routeName: 'monitor',
+                        relationshipType: MONITORS,
                         isMultiple: false,
                     })
                     break
-                case 'Monitor':
-                    {
-                        await this.fetchAllMonitors()
-                        this.validateInfo = this.getAllMonitorsInfo
-                        await this.fetchAllServers()
-                        this.setDefaultRelationship({
-                            allResourcesMap: this.getAllServersMap,
-                            routeName: 'server',
-                            isMultiple: true,
-                        })
-                    }
+                case MONITOR:
+                    await this.fetchAllMonitors()
+                    this.validateInfo = this.getAllMonitorsInfo
+                    await this.fetchAllServers()
+                    this.setDefaultRelationship({
+                        allResourcesMap: this.getAllServersMap,
+                        relationshipType: SERVERS,
+                        isMultiple: true,
+                    })
                     break
-                case 'Filter':
+                case FILTER:
                     await this.fetchAllFilters()
                     this.validateInfo = this.getAllFiltersInfo
                     break
-                case 'Listener':
-                    {
-                        await this.fetchAllListeners()
-                        this.validateInfo = this.getAllListenersInfo
-                        await this.fetchAllServices()
-                        this.setDefaultRelationship({
-                            allResourcesMap: this.getAllServicesMap,
-                            routeName: 'service',
-                            isMultiple: false,
-                        })
-                    }
+                case LISTENER:
+                    await this.fetchAllListeners()
+                    this.validateInfo = this.getAllListenersInfo
+                    await this.fetchAllServices()
+                    this.setDefaultRelationship({
+                        allResourcesMap: this.getAllServicesMap,
+                        relationshipType: SERVICES,
+                        isMultiple: false,
+                    })
                     break
             }
         },
@@ -332,15 +332,14 @@ export default {
          * If current page is a detail page and have relationship object,
          * set default relationship item
          * @param {Map} payload.allResourcesMap - A Map object holds key-value in which key is the id of the resource
-         * @param {String} payload.routeName - route name of the details page: service, monitor, server, filter
+         * @param {String} payload.relationshipType - relationship type
          * @param {Boolean} payload.isMultiple - if relationship data allows multiple objects,
          * chosen items will be an array
          */
-        setDefaultRelationship({ allResourcesMap, routeName, isMultiple }) {
-            //TODO: Replace this.$route.name with something else
-            if (this.$route.name === routeName) {
-                let currentResourceId = this.$route.params.id
-                const { id = null, type = null } = allResourcesMap.get(currentResourceId) || {}
+        setDefaultRelationship({ allResourcesMap, relationshipType, isMultiple }) {
+            if (this.$typy(this.defRelationshipObj, 'type').safeString === relationshipType) {
+                const objId = this.defRelationshipObj.id
+                const { id = null, type = null } = allResourcesMap.get(objId) || {}
                 if (id) this.defaultRelationshipItems = isMultiple ? [{ id, type }] : { id, type }
             }
         },

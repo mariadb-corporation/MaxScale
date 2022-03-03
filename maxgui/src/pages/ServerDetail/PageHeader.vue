@@ -59,7 +59,13 @@
         <template v-slot:append>
             <portal to="page-header--right">
                 <global-search class="mr-4 d-inline-block" />
-                <create-resource class="d-inline-block" />
+                <create-resource
+                    class="d-inline-block"
+                    :defRelationshipObj="{
+                        id: $route.params.id,
+                        type: RELATIONSHIP_TYPES.SERVERS,
+                    }"
+                />
             </portal>
             <confirm-dialog
                 v-model="isConfDlgOpened"
@@ -129,7 +135,10 @@ export default {
         }
     },
     computed: {
-        ...mapState({ SERVER_OP_TYPES: state => state.app_config.SERVER_OP_TYPES }),
+        ...mapState({
+            SERVER_OP_TYPES: state => state.app_config.SERVER_OP_TYPES,
+            RELATIONSHIP_TYPES: state => state.app_config.RELATIONSHIP_TYPES,
+        }),
         ...mapGetters({
             getCurrStateMode: 'server/getCurrStateMode',
             getServerOps: 'server/getServerOps',

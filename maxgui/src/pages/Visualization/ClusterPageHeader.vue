@@ -42,6 +42,10 @@
                     <create-resource
                         class="ml-2 d-inline-block"
                         :defFormType="RESOURCE_FORM_TYPES.SERVER"
+                        :defRelationshipObj="{
+                            id: $route.params.id,
+                            type: RELATIONSHIP_TYPES.MONITORS,
+                        }"
                     />
                 </div>
             </portal>
@@ -91,6 +95,7 @@ export default {
             current_cluster: state => state.visualization.current_cluster,
             MONITOR_OP_TYPES: state => state.app_config.MONITOR_OP_TYPES,
             RESOURCE_FORM_TYPES: state => state.app_config.RESOURCE_FORM_TYPES,
+            RELATIONSHIP_TYPES: state => state.app_config.RELATIONSHIP_TYPES,
         }),
         ...mapGetters({ getMonitorOps: 'monitor/getMonitorOps' }),
         monitorOps() {
