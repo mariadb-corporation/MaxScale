@@ -1,9 +1,16 @@
 <template>
-    <div ref="nodeWrapper" class="cluster-node-wrapper d-flex flex-column fill-height">
-        <v-card outlined class="node-card fill-height" width="288">
+    <tree-node
+        :node="node"
+        :lineHeight="lineHeight"
+        :bodyWrapperClass="bodyWrapperClass"
+        :expandOnMount="expandOnMount"
+        :extraInfoSlides="extraInfoSlides"
+        v-on="$listeners"
+    >
+        <template v-slot:node-heading>
             <div
-                class="node-title-wrapper d-flex align-center flex-row px-3 py-1"
-                :class="[droppableTargets.includes(node.id) ? 'node-card__droppable' : '']"
+                class="node-heading d-flex align-center flex-row px-3 py-1"
+                :class="[droppableTargets.includes(node.id) ? 'node-heading__droppable' : '']"
             >
                 <icon-sprite-sheet
                     size="13"
@@ -97,99 +104,43 @@
                     </v-menu>
                 </div>
             </div>
-            <v-divider />
-            <div
-                :class="
-                    `color text-navigation d-flex justify-center flex-column px-3 py-1 ${nodeTxtWrapperClassName}`
-                "
-            >
-                <div
-                    class="node-state d-flex flex-row flex-grow-1 text-capitalize"
-                    :style="{ lineHeight }"
-                >
-                    <span class="sbm mr-2 font-weight-bold">
-                        {{ $t('state') }}
+        </template>
+        <template v-slot:node-body>
+            <div class="d-flex flex-row flex-grow-1 text-capitalize" :style="{ lineHeight }">
+                <span class="sbm mr-2 font-weight-bold">
+                    {{ $t('state') }}
+                </span>
+                <truncate-string :text="`${nodeAttrs.state}`" />
+                <v-spacer />
+                <span v-if="!node.data.isMaster" class="ml-1">
+                    <span class="font-weight-bold text-capitalize">
+                        {{ $t('lag') }}
                     </span>
-                    <truncate-string :text="`${nodeAttrs.state}`" />
-                    <v-spacer />
-                    <span v-if="!node.data.isMaster" class="sbm ml-1">
-                        <span class="font-weight-bold text-capitalize">
-                            {{ $t('lag') }}
-                        </span>
-                        <span> {{ sbm }}s </span>
-                    </span>
-                </div>
-                <div class="node-connections d-flex flex-grow-1" :style="{ lineHeight }">
-                    <span class="text-capitalize font-weight-bold mr-2">
-                        {{ $tc('connections', 2) }}
-                    </span>
-                    <span>{{ nodeAttrs.statistics.connections }} </span>
-                </div>
-                <div class="node-address-socket d-flex flex-grow-1" :style="{ lineHeight }">
-                    <span class="text-capitalize font-weight-bold mr-2">
-                        {{ nodeAttrs.parameters.socket ? $t('socket') : $t('address') }}
-                    </span>
-                    <truncate-string
-                        :text="
-                            `${
-                                nodeAttrs.parameters.socket
-                                    ? nodeAttrs.parameters.socket
-                                    : `${nodeAttrs.parameters.address}:${nodeAttrs.parameters.port}`
-                            }`
-                        "
-                    />
-                </div>
-                <v-expand-transition>
-                    <div
-                        v-if="isExpanded"
-                        class="node-text--expanded-content mx-n3 mb-n2 px-3 pt-0 pb-2"
-                    >
-                        <v-carousel
-                            v-model="activeInfoSlideIdx"
-                            class="extra-info-carousel"
-                            :show-arrows="false"
-                            hide-delimiter-background
-                            :height="maxNumOfExtraLines * lineHeightNum + carouselDelimiterHeight"
-                        >
-                            <v-carousel-item
-                                v-for="(slide, i) in extraInfoSlides"
-                                :key="i"
-                                class="mt-4"
-                            >
-                                <div
-                                    v-for="(value, key) in slide"
-                                    :key="`${key}`"
-                                    class="text-no-wrap d-flex"
-                                    :style="{ lineHeight }"
-                                >
-                                    <span class="mr-2 font-weight-bold text-capitalize">
-                                        {{ $t(key) }}
-                                    </span>
-                                    <truncate-string :text="`${value}`" />
-                                </div>
-                            </v-carousel-item>
-                        </v-carousel>
-                    </div>
-                </v-expand-transition>
+                    <span> {{ sbm }}s </span>
+                </span>
             </div>
-        </v-card>
-
-        <v-btn
-            v-if="Object.keys(activeInfoSlide).length"
-            x-small
-            height="16"
-            class="arrow-toggle mx-auto text-capitalize font-weight-medium px-2 color bg-background"
-            style="box-sizing: content-box;"
-            depressed
-            outlined
-            color="#e3e6ea"
-            @click="toggleExpand(node)"
-        >
-            <v-icon :class="[isExpanded ? 'arrow-up' : 'arrow-down']" size="20" color="primary">
-                $expand
-            </v-icon>
-        </v-btn>
-    </div>
+            <div class="d-flex flex-grow-1" :style="{ lineHeight }">
+                <span class="text-capitalize font-weight-bold mr-2">
+                    {{ $tc('connections', 2) }}
+                </span>
+                <span>{{ nodeAttrs.statistics.connections }} </span>
+            </div>
+            <div class="d-flex flex-grow-1" :style="{ lineHeight }">
+                <span class="text-capitalize font-weight-bold mr-2">
+                    {{ nodeAttrs.parameters.socket ? $t('socket') : $t('address') }}
+                </span>
+                <truncate-string
+                    :text="
+                        `${
+                            nodeAttrs.parameters.socket
+                                ? nodeAttrs.parameters.socket
+                                : `${nodeAttrs.parameters.address}:${nodeAttrs.parameters.port}`
+                        }`
+                    "
+                />
+            </div>
+        </template>
+    </tree-node>
 </template>
 
 <script>
@@ -206,26 +157,20 @@
  * Public License.
  */
 import { mapState, mapGetters } from 'vuex'
-
+import TreeNode from './TreeNode.vue'
 /*
-@cluster-node-height: v: Number. Cluster node height
-@get-expanded-node: v: String. Id of expanded cluster node
+@node-height: v: Number. Cluster node height. Emit from <tree-node/>
+@get-expanded-node: v: String. Id of expanded node. Emit from <tree-node/>
 @on-choose-op: { op:Object, target:Object }. Operation chosen and target object to dispatch update action
 */
 export default {
     name: 'cluster-node',
+    components: { 'tree-node': TreeNode },
     props: {
         node: { type: Object, required: true },
         droppableTargets: { type: Array, required: true },
-        nodeTxtWrapperClassName: { type: String, default: '' },
+        bodyWrapperClass: { type: String, default: '' },
         expandOnMount: { type: Boolean, default: false },
-    },
-    data() {
-        return {
-            isExpanded: false,
-            defHeight: 0,
-            activeInfoSlideIdx: 0,
-        }
     },
     computed: {
         ...mapState({
@@ -238,14 +183,8 @@ export default {
         iconColor() {
             return this.droppableTargets.includes(this.node.id) ? 'background' : 'primary'
         },
-        carouselDelimiterHeight() {
-            return 20
-        },
         lineHeight() {
             return `18px`
-        },
-        lineHeightNum() {
-            return Number(this.lineHeight.replace('px', ''))
         },
         nodeAttrs() {
             return this.node.data.serverData.attributes
@@ -313,18 +252,6 @@ export default {
         extraInfoSlides() {
             return this.extraInfo
         },
-        activeInfoSlide() {
-            return this.extraInfoSlides[this.activeInfoSlideIdx]
-        },
-        // Determine maximum number of new lines will be shown
-        maxNumOfExtraLines() {
-            let max = 0
-            this.extraInfoSlides.forEach(slide => {
-                let numOfLines = Object.keys(slide).length
-                if (numOfLines > max) max = numOfLines
-            })
-            return max
-        },
         serverOps() {
             const { MAINTAIN, CLEAR, DRAIN } = this.SERVER_OP_TYPES
             const currStateMode = this.getCurrStateMode(this.nodeAttrs.state)
@@ -336,44 +263,12 @@ export default {
             return [...this.serverOps]
         },
     },
-    mounted() {
-        this.$nextTick(() => {
-            this.defHeight = this.$refs.nodeWrapper.clientHeight
-            this.$emit('cluster-node-height', this.defHeight)
-            if (this.expandOnMount) this.toggleExpand(this.node)
-        })
-    },
-    beforeDestroy() {
-        this.$emit('get-expanded-node', { type: 'destroy', id: this.node.id })
-    },
-    methods: {
-        getExpandedNodeHeight() {
-            return (
-                this.defHeight +
-                this.maxNumOfExtraLines * this.lineHeightNum +
-                this.carouselDelimiterHeight
-            )
-        },
-        toggleExpand(node) {
-            let height = this.defHeight
-            this.isExpanded = !this.isExpanded
-            // calculate the new height of the card before it's actually expanded
-            if (this.isExpanded) {
-                height = this.getExpandedNodeHeight()
-            }
-            this.$emit('get-expanded-node', { type: 'update', id: node.id })
-            this.$emit('cluster-node-height', height)
-        },
-    },
+    methods: {},
 }
 </script>
 
 <style lang="scss" scoped>
-.cluster-node-wrapper {
-    background: transparent;
-}
-.node-card {
-    font-size: 12px;
+.node-heading {
     &__droppable {
         background: $success;
         color: $background;
@@ -384,40 +279,8 @@ export default {
             color: $background !important;
         }
     }
-    .node-text--expanded-content {
-        background: $reflection;
-        box-sizing: content-box;
-        ::v-deep .extra-info-carousel {
-            .v-carousel__controls {
-                top: 0;
-                height: 20px;
-                .v-item-group {
-                    height: 20px;
-                    .v-carousel__controls__item {
-                        background: white;
-                        width: 32px;
-                        height: 6px;
-                        border-radius: 4px;
-                        &::before {
-                            // make it easier to click even the button height is visible as 6px, but it's actually 24px
-                            top: -7px;
-                            opacity: 0;
-                            width: 32px;
-                            height: 20px;
-                            pointer-events: all;
-                        }
-                        i {
-                            display: none;
-                        }
-                    }
-                    .v-item--active {
-                        background: $electric-ele;
-                    }
-                }
-            }
-        }
-    }
 }
+
 ::v-deep.node-op-item {
     &--disabled {
         .node-op-item__icon {

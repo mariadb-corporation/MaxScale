@@ -27,10 +27,10 @@
                         v-if="!$typy(node, 'data').isEmptyObject"
                         :node="node"
                         :droppableTargets="droppableTargets"
-                        :nodeTxtWrapperClassName="nodeTxtWrapperClassName"
+                        :bodyWrapperClass="nodeTxtWrapperClassName"
                         :expandOnMount="expandOnMount"
                         @get-expanded-node="handleExpandedNode"
-                        @cluster-node-height="
+                        @node-height="
                             handleAssignNodeHeightMap({ height: $event, nodeId: node.id })
                         "
                         @on-choose-op="onChooseOp"
