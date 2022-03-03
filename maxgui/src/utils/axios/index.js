@@ -154,13 +154,13 @@ function queryHttp(store) {
             const { getErrorsArr } = store.vue.$help
             const { response: { status = null } = {} } = error || {}
             const errStatusHandlerMap = baseErrStatusHandlerMap({ store, error })
-            if (Object.keys(errStatusHandlerMap).includes(`${status}`)) {
-                await errStatusHandlerMap[status]()
-            } else if (status === 503) {
+            if (status === 404 || status === 503) {
                 return store.commit('SET_SNACK_BAR_MESSAGE', {
                     text: [...getErrorsArr(error), 'Please reconnect'],
                     type: 'error',
                 })
+            } else if (Object.keys(errStatusHandlerMap).includes(`${status}`)) {
+                await errStatusHandlerMap[status]()
             } else defErrStatusHandler({ store, error })
             updateIsQueryingMap({ store, value: false })
         }
