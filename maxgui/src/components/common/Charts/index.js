@@ -16,6 +16,8 @@ import LineChart from './LineChart.vue'
 import ScatterChart from './ScatterChart.vue'
 import VertBarChart from './VertBarChart.vue'
 import HorizBarChart from './HorizBarChart.vue'
+import TreeGraph from './TreeGraph.vue'
+import TreeGraphNode from './TreeGraphNode.vue'
 import './customTooltip.scss'
 import 'chartjs-plugin-trendline'
 Chart.defaults.global.defaultFontFamily = "'azo-sans-web', adrianna, serif"
@@ -40,4 +42,6 @@ export default {
     'scatter-chart': ScatterChart,
     'vert-bar-chart': VertBarChart,
     'horiz-bar-chart': HorizBarChart,
+    'tree-graph': TreeGraph, // d3 graph
+    'tree-graph-node': TreeGraphNode,
 }

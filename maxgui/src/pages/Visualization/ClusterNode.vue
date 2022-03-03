@@ -1,5 +1,5 @@
 <template>
-    <tree-node
+    <tree-graph-node
         :node="node"
         :lineHeight="lineHeight"
         :bodyWrapperClass="bodyWrapperClass"
@@ -140,7 +140,7 @@
                 />
             </div>
         </template>
-    </tree-node>
+    </tree-graph-node>
 </template>
 
 <script>
@@ -157,15 +157,13 @@
  * Public License.
  */
 import { mapState, mapGetters } from 'vuex'
-import TreeNode from './TreeNode.vue'
 /*
-@node-height: v: Number. Cluster node height. Emit from <tree-node/>
-@get-expanded-node: v: String. Id of expanded node. Emit from <tree-node/>
+@node-height: v: Number. Cluster node height. Emit from <tree-graph-node/>
+@get-expanded-node: v: String. Id of expanded node. Emit from <tree-graph-node/>
 @on-choose-op: { op:Object, target:Object }. Operation chosen and target object to dispatch update action
 */
 export default {
     name: 'cluster-node',
-    components: { 'tree-node': TreeNode },
     props: {
         node: { type: Object, required: true },
         droppableTargets: { type: Array, required: true },

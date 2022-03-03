@@ -81,7 +81,7 @@
  * @get-expanded-node: v: String. Id of expanded node.
  */
 export default {
-    name: 'tree-node',
+    name: 'tree-graph-node',
     props: {
         node: { type: Object, required: true },
         lineHeight: { type: String, default: '18px' },

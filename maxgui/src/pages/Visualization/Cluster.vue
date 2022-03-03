@@ -75,14 +75,12 @@
  * Public License.
  */
 import { mapState, mapActions } from 'vuex'
-import TreeGraph from './TreeGraph.vue'
 import ClusterPageHeader from './ClusterPageHeader.vue'
 import ClusterNode from './ClusterNode.vue'
 
 export default {
     name: 'cluster',
     components: {
-        'tree-graph': TreeGraph,
         'cluster-page-header': ClusterPageHeader,
         'cluster-node': ClusterNode,
     },
