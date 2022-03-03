@@ -2447,7 +2447,8 @@ void MariaDBClientConnection::perform_check_token(AuthType auth_type)
         }
         else
         {
-            if (auth_val.status == AuthRes::Status::FAIL_WRONG_PW)
+            if (auth_val.status == AuthRes::Status::FAIL_WRONG_PW
+                && user_account_cache()->can_update_immediately())
             {
                 // Again, this may be because user data is obsolete. Update userdata, but fail
                 // session anyway since I/O with client cannot be redone.

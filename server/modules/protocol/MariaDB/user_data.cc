@@ -172,10 +172,6 @@ void MariaDBUserManager::updater_thread_function()
     bool throttling = false;
     TimePoint last_update = Clock::now();
 
-    auto should_stop_running = [this]() {
-            return !m_keep_running.load(acquire);
-        };
-
     auto should_stop_waiting = [this]() {
             return !m_keep_running.load(acquire) || m_update_users_requested.load(acquire);
         };
@@ -225,7 +221,7 @@ void MariaDBUserManager::updater_thread_function()
 
         MutexLock lock(m_notifier_lock);
         // Wait until "next_possible_update", or until the thread should stop.
-        m_notifier.wait_until(lock, next_possible_update, should_stop_running);
+        m_notifier.wait_until(lock, next_possible_update, should_stop_waiting);
 
         m_can_update.store(true, release);
         if (first_iteration)
