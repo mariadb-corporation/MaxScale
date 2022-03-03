@@ -82,7 +82,7 @@ bool TeeSession::routeQuery(GWBUF* queue)
         return true;
     }
 
-    if (m_client && query_matches(queue) && m_client->queue_query(gwbuf_deep_clone(queue)))
+    if (m_client && query_matches(queue) && m_client->queue_query(gwbuf_clone_shallow(queue)))
     {
         if (m_sync && mxs_mysql_command_will_respond(mxs_mysql_get_command(queue)))
         {

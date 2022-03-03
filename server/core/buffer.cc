@@ -143,6 +143,21 @@ GWBUF::GWBUF(size_t reserve_size)
     end = start;
 }
 
+GWBUF::GWBUF(const GWBUF& rhs)
+    : GWBUF()
+{
+    clone_helper(rhs);
+}
+
+GWBUF& GWBUF::operator=(const GWBUF& rhs)
+{
+    if (this != &rhs)
+    {
+        clone_helper(rhs);
+    }
+    return *this;
+}
+
 GWBUF::GWBUF(GWBUF&& rhs) noexcept
     : GWBUF()
 {
@@ -213,36 +228,15 @@ void GWBUF::clone_helper(const GWBUF& other)
     m_sql = other.m_sql;
     m_canonical = other.m_canonical;
     // No need to copy 'markers'.
-}
 
-GWBUF GWBUF::clone_shallow() const
-{
-    GWBUF rval;
-    rval.clone_helper(*this);
-
-    rval.start = start;
-    rval.end = end;
-    rval.m_sbuf = m_sbuf;
-    return rval;
-}
-
-GWBUF GWBUF::clone_deep() const
-{
-    auto len = length();
-    GWBUF rval(len);
-    rval.clone_helper(*this);
-
-    memcpy(rval.start, start, len);
-    rval.write_complete(len);
-    // TODO: clone BufferObject
-    return rval;
+    start = other.start;
+    end = other.end;
+    m_sbuf = other.m_sbuf;
 }
 
 GWBUF* gwbuf_clone_shallow(GWBUF* buf)
 {
-    auto* rval = new GWBUF();
-    *rval = buf->clone_shallow();
-    return rval;
+    return new GWBUF(*buf);
 }
 
 static GWBUF* gwbuf_deep_clone_portion(const GWBUF* buf, size_t length)
@@ -271,13 +265,6 @@ static GWBUF* gwbuf_deep_clone_portion(const GWBUF* buf, size_t length)
     return rval;
 }
 
-GWBUF* gwbuf_deep_clone(const GWBUF* buf)
-{
-    auto rval = new GWBUF();
-    *rval = buf->clone_deep();
-    return rval;
-}
-
 GWBUF GWBUF::split(uint64_t n_bytes)
 {
     auto len = length();
@@ -296,7 +283,7 @@ GWBUF GWBUF::split(uint64_t n_bytes)
     else
     {
         // Shallow clone buffer, then consume and trim accordingly.
-        rval = clone_shallow();
+        rval = *this;
         consume(n_bytes);
         rval.rtrim(len - n_bytes);
     }
@@ -596,6 +583,12 @@ void GWBUF::rtrim(uint64_t bytes)
 void GWBUF::clear()
 {
     move_helper(GWBUF());
+}
+
+void GWBUF::ensure_unique()
+{
+    prepare_to_write(0);
+    mxb_assert(!m_sbuf || m_sbuf.unique());
 }
 
 void gwbuf_set_id(GWBUF* buffer, uint32_t id)

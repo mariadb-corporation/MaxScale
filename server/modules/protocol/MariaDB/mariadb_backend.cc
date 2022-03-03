@@ -1174,14 +1174,12 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
 
                 if (it != m_ps_map.end())
                 {
-                    // Do a deep clone of the buffer to prevent our modification of the PS ID from
+                    // Ensure unique GWBUF to prevent our modification of the PS ID from
                     // affecting the original buffer.
-                    GWBUF* tmp = gwbuf_deep_clone(queue);
-                    gwbuf_free(queue);
-                    queue = tmp;
+                    queue->ensure_unique();
 
                     // Replace our generated ID with the real PS ID
-                    uint8_t* ptr = GWBUF_DATA(queue) + MYSQL_PS_ID_OFFSET;
+                    uint8_t* ptr = queue->data() + MYSQL_PS_ID_OFFSET;
                     mariadb::set_byte4(ptr, it->second.real_id);
 
                     if (cmd == MXS_COM_STMT_CLOSE)

@@ -283,7 +283,8 @@ bool RWSplitSession::reuse_prepared_stmt(const mxs::Buffer& buffer)
         if (it != m_ps_cache.end())
         {
             mxs::ReplyRoute route;
-            RouterSession::clientReply(gwbuf_deep_clone(it->second.get()), route, mxs::Reply());
+            // Cannot reuse the GWBUF* stored in the ps cache.
+            RouterSession::clientReply(gwbuf_clone_shallow(it->second.get()), route, mxs::Reply());
             return true;
         }
     }

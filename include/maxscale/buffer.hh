@@ -113,12 +113,15 @@ public:
     GWBUF(GWBUF&& rhs) noexcept;
     GWBUF& operator=(GWBUF&& rhs) noexcept;
 
-    // No copy-ctor, as it is not intuitively clear whether it should deep or shallow clone. Separate
-    // functions keep things clear.
-    GWBUF(GWBUF& rhs) = delete;
+    /**
+     * Shallow-clones the source buffer.
+     */
+    explicit GWBUF(const GWBUF& rhs);
 
-    GWBUF clone_shallow() const;
-    GWBUF clone_deep() const;
+    /**
+     * Shallow-clones the source buffer.
+     */
+    GWBUF& operator=(const GWBUF& rhs);
 
     /**
      * Set classifier data. Can only be set once.
@@ -226,6 +229,12 @@ public:
      * Clears the buffer. Releases any internal data.
      */
     void clear();
+
+    /**
+     * Ensure the underlying data is uniquely owned by this GWBUF. If not, will clone the data. This should
+     * be called before writing manually to the internal buffer.
+     */
+    void ensure_unique();
 
 private:
     std::shared_ptr<SHARED_BUF> m_sbuf;     /*< The shared buffer with the real data */
@@ -389,21 +398,6 @@ extern void gwbuf_free(GWBUF* buf);
  * @return The cloned GWBUF, or NULL if any part of @buf could not be cloned.
  */
 GWBUF* gwbuf_clone_shallow(GWBUF* buf);
-
-/**
- * @brief Deep clone a GWBUF
- *
- * Clone the data inside a GWBUF into a new buffer. The created buffer has its
- * own internal buffer and any modifications to the deep cloned buffer will not
- * reflect on the original one. Any buffer objects attached to the original buffer
- * will not be copied. Only the buffer type of the original buffer will be copied
- * over to the cloned buffer.
- *
- * @param buf Buffer to clone
- *
- * @return Deep copy of @c buf or NULL on error
- */
-extern GWBUF* gwbuf_deep_clone(const GWBUF* buf);
 
 /**
  * Compare two GWBUFs. Two GWBUFs are considered identical if their
