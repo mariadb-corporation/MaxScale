@@ -163,7 +163,7 @@ import { mapState, mapGetters } from 'vuex'
 @on-choose-op: { op:Object, target:Object }. Operation chosen and target object to dispatch update action
 */
 export default {
-    name: 'cluster-node',
+    name: 'server-node',
     props: {
         node: { type: Object, required: true },
         droppableTargets: { type: Array, required: true },

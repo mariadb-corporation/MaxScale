@@ -1,6 +1,6 @@
 <template>
     <page-wrapper>
-        <cluster-page-header @on-choose-op="onChooseOp" @on-count-done="fetchCluster" />
+        <page-header @on-choose-op="onChooseOp" @on-count-done="fetchCluster" />
         <v-card
             ref="graphContainer"
             v-resize.quiet="setCtrDim"
@@ -22,8 +22,8 @@
                 @on-node-dragend="onNodeSwapEnd"
             >
                 <template v-slot:rect-node-content="{ data: { node } }">
-                    <!-- Render cluster-node only when `data` object is passed from tree-graph -->
-                    <cluster-node
+                    <!-- Render server-node only when `data` object is passed from tree-graph -->
+                    <server-node
                         v-if="!$typy(node, 'data').isEmptyObject"
                         :node="node"
                         :droppableTargets="droppableTargets"
@@ -75,14 +75,14 @@
  * Public License.
  */
 import { mapState, mapActions } from 'vuex'
-import ClusterPageHeader from './ClusterPageHeader.vue'
-import ClusterNode from './ClusterNode.vue'
+import PageHeader from './PageHeader.vue'
+import ServerNode from './ServerNode.vue'
 
 export default {
     name: 'cluster',
     components: {
-        'cluster-page-header': ClusterPageHeader,
-        'cluster-node': ClusterNode,
+        'page-header': PageHeader,
+        'server-node': ServerNode,
     },
     data() {
         return {
@@ -99,7 +99,7 @@ export default {
             defClusterNodeHeight: 119,
             defClusterNodeWidth: 290,
             clusterNodeHeightMap: {},
-            //states for cluster-node
+            //states for server-node
             nodeTxtWrapperClassName: 'node-text-wrapper',
             // states for confirm-dialog
             isConfDlgOpened: false,

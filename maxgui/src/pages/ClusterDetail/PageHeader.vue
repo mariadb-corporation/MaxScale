@@ -89,7 +89,7 @@
 import { mapState, mapGetters } from 'vuex'
 
 export default {
-    name: 'cluster-page-header',
+    name: 'page-header',
     computed: {
         ...mapState({
             current_cluster: state => state.visualization.current_cluster,
