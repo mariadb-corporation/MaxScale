@@ -114,6 +114,11 @@ public:
      */
     bool read_configuration(const std::string& name, const mxs::ConfigParameters& params, bool require_cert);
 
+    void set_usage(mxb::KeyUsage usage)
+    {
+        m_usage = usage;
+    }
+
 private:
     bool configure(const mxs::ConfigParameters& params);
     void reset();
@@ -122,7 +127,8 @@ private:
     SSL_CTX*    m_ctx {nullptr};
     SSL_METHOD* m_method {nullptr};         /**<  SSLv3 or TLS1.0/1.1/1.2 methods
                                              * see: https://www.openssl.org/docs/ssl/SSL_CTX_new.html */
-    SSLConfig m_cfg;
+    SSLConfig     m_cfg;
+    mxb::KeyUsage m_usage {mxb::KeyUsage::NONE};
 };
 
 // A SSL connection provider (incoming or outgoing). Used by servers and listeners.

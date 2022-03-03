@@ -969,6 +969,7 @@ Listener::create_shared_data(const mxs::ConfigParameters& params, const std::str
     }
 
     mxs::SSLContext ssl;
+    ssl.set_usage(mxb::KeyUsage::SERVER);
     if (!ssl.read_configuration(listener_name, params, true))
     {
         return nullptr;

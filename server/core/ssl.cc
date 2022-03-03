@@ -16,6 +16,10 @@
 #include <maxscale/ssl.hh>
 #include <maxscale/routingworker.hh>
 
+#ifdef OPENSSL_1_1
+#include <openssl/x509v3.h>
+#endif
+
 const MXS_ENUM_VALUE ssl_version_values[] =
 {
     {"MAX",    mxb::ssl_version::SSL_TLS_MAX},
@@ -346,6 +350,29 @@ bool SSLContext::init()
             MXS_NOTICE("OpenSSL reported problems in the certificate chain: %s%s",
                        err.c_str(), extra.c_str());
         }
+
+#ifdef OPENSSL_1_1
+        X509* cert = SSL_CTX_get0_certificate(m_ctx);
+        uint32_t usage = X509_get_extended_key_usage(cert);
+
+        // OpenSSL explicitly states that it returns UINT32_MAX if it doesn't have the extended key usage.
+        if (usage != UINT32_MAX)
+        {
+            bool is_client = (usage & (XKU_SSL_SERVER | XKU_SSL_CLIENT)) == XKU_SSL_CLIENT;
+            bool is_server = (usage & (XKU_SSL_SERVER | XKU_SSL_CLIENT)) == XKU_SSL_SERVER;
+
+            if (!is_client && is_server && m_usage == mxb::KeyUsage::CLIENT)
+            {
+                MXS_ERROR("Certificate has serverAuth extended key usage when clientAuth was expected.");
+                return false;
+            }
+            else if (!is_server && is_client && m_usage == mxb::KeyUsage::SERVER)
+            {
+                MXS_ERROR("Certificate has clientAuth extended key usage when serverAuth was expected.");
+                return false;
+            }
+        }
+#endif
     }
 
     /* Set to require peer (client) certificate verification */

@@ -250,6 +250,7 @@ std::pair<bool, std::unique_ptr<mxs::SSLContext>> create_ssl(const char* name,
 {
     bool ok = true;
     auto ssl = std::make_unique<mxs::SSLContext>();
+    ssl->set_usage(mxb::KeyUsage::CLIENT);
 
     if (!ssl->read_configuration(name, params, false))
     {
