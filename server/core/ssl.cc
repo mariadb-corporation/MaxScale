@@ -331,6 +331,21 @@ bool SSLContext::init()
             MXS_ERROR("Server SSL certificate and key do not match: %s", get_ssl_errors());
             return false;
         }
+
+        if (SSL_CTX_build_cert_chain(m_ctx, SSL_BUILD_CHAIN_FLAG_CHECK) != 1)
+        {
+            std::string err = get_ssl_errors();
+            std::string extra;
+
+            if (err.find("ssl_build_cert_chain:certificate verify failed") != std::string::npos)
+            {
+                extra = ". This is expected for certificates that do "
+                        "not contain the whole certificate chain.";
+            }
+
+            MXS_NOTICE("OpenSSL reported problems in the certificate chain: %s%s",
+                       err.c_str(), extra.c_str());
+        }
     }
 
     /* Set to require peer (client) certificate verification */
