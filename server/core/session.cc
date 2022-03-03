@@ -383,13 +383,13 @@ void Session::set_can_pool_backends(bool value)
 {
     if (value)
     {
-        if (m_pooling_time_ms > 0ms)
+        if (m_pooling_time > 0ms)
         {
             // If pooling check was already scheduled, do nothing. This likely only happens when killing
             // an idle session.
             if (m_idle_pool_call_id == mxb::Worker::NO_CALL)
             {
-                m_idle_pool_call_id = m_worker->delayed_call(m_pooling_time_ms, &Session::pool_backends_cb,
+                m_idle_pool_call_id = m_worker->delayed_call(m_pooling_time, &Session::pool_backends_cb,
                                                              this);
             }
         }
@@ -684,11 +684,11 @@ Session::Session(std::shared_ptr<const ListenerData> listener_data,
     auto pooling_time = svc_config.idle_session_pooling_time;
     if (pooling_time == 0ms)
     {
-        m_pooling_time_ms = 1ms;      // Quickly check for idle sessions.
+        m_pooling_time = 1ms;      // Quickly check for idle sessions.
     }
     else if (pooling_time > 0ms)
     {
-        m_pooling_time_ms = pooling_time;
+        m_pooling_time = pooling_time;
     }
 }
 
@@ -1684,7 +1684,7 @@ bool Session::is_movable() const
     }
 
     // Do not move a session which may be waiting for a connection.
-    return m_pooling_time_ms == 0ms;
+    return m_pooling_time == 0ms;
 }
 
 void Session::notify_userdata_change()
@@ -1759,9 +1759,9 @@ bool Session::pool_backends_cb(mxb::Worker::Call::action_t action)
             // Need to remove this manually as cancel-mode is not called.
             m_idle_pool_call_id = mxb::Worker::NO_CALL;
         }
-        else if (m_pooling_time_ms < 1000ms)
+        else if (m_pooling_time < 1000ms)
         {
-            // Returning true means the delayed call will run again after 'm_pooling_time_ms'.
+            // Returning true means the delayed call will run again after 'm_pooling_time'.
             // This is ok if the time is several seconds, as some connections may not yet have
             // been in a poolable state. This is not so ok if the time is very short. Enforce
             // a minimum delay.
@@ -1780,7 +1780,7 @@ bool Session::pool_backends_cb(mxb::Worker::Call::action_t action)
 
 int64_t Session::pooling_time_ms() const
 {
-    return m_pooling_time_ms.count();
+    return m_pooling_time.count();
 }
 
 MXS_SESSION::EventSubscriber::EventSubscriber(MXS_SESSION* session)

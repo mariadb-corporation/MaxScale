@@ -593,31 +593,6 @@ public:
      *
      * @param delay      The delay in milliseconds.
      * @param pFunction  The function to call.
-     *
-     * @return A unique identifier for the delayed call. Using that identifier
-     *         the call can be cancelled.
-     *
-     * @attention When invoked, if @c action is @c Worker::Call::EXECUTE, the
-     *            function should perform the delayed call and return @true, if
-     *            the function should be called again. If the function returns
-     *            @c false, it will not be called again.
-     *
-     *            If @c action is @c Worker::Call::CANCEL, then the function
-     *            should perform whatever canceling actions are needed. In that
-     *            case the return value is ignored and the function will not
-     *            be called again.
-     */
-    DCId delayed_call(const std::chrono::milliseconds& delay,
-                      bool (* pFunction)(Worker::Call::action_t action))
-    {
-        return add_delayed_call(new DelayedCallFunctionVoid(delay, next_delayed_call_id(), pFunction));
-    }
-
-    /**
-     * Push a function for delayed execution.
-     *
-     * @param delay      The delay in milliseconds.
-     * @param pFunction  The function to call.
      * @param data       The data to be provided to the function when invoked.
      *
      * @return A unique identifier for the delayed call. Using that identifier
@@ -909,31 +884,6 @@ private:
     private:
         bool (* m_pFunction)(Worker::Call::action_t, D);
         D m_data;
-    };
-
-    // Explicit specialization requires namespace scope
-    class DelayedCallFunctionVoid : public DelayedCall
-    {
-        DelayedCallFunctionVoid(const DelayedCallFunctionVoid&) = delete;
-        DelayedCallFunctionVoid& operator=(const DelayedCallFunctionVoid&) = delete;
-
-    public:
-        DelayedCallFunctionVoid(const std::chrono::milliseconds& delay,
-                                DCId id,
-                                bool (*pFunction)(Worker::Call::action_t action))
-            : DelayedCall(delay, id)
-            , m_pFunction(pFunction)
-        {
-        }
-
-    private:
-        bool do_call(Worker::Call::action_t action) override
-        {
-            return m_pFunction(action);
-        }
-
-    private:
-        bool (* m_pFunction)(Worker::Call::action_t action);
     };
 
     template<class T, class D>
