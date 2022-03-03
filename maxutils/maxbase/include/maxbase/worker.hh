@@ -609,14 +609,13 @@ public:
      */
     DCId delayed_call(int32_t delay, bool (* pFunction)(Worker::Call::action_t action))
     {
-        return add_delayed_call(new DelayedCallFunctionVoid(delay, next_delayed_call_id(), pFunction));
+        return delayed_call(std::chrono::milliseconds(delay), pFunction);
     }
 
     DCId delayed_call(const std::chrono::milliseconds& delay,
                       bool (* pFunction)(Worker::Call::action_t action))
     {
-        int32_t ms = delay.count();
-        return delayed_call(ms, pFunction);
+        return add_delayed_call(new DelayedCallFunctionVoid(delay, next_delayed_call_id(), pFunction));
     }
 
     /**
@@ -644,7 +643,7 @@ public:
                       bool (* pFunction)(Worker::Call::action_t action, D data),
                       D data)
     {
-        return add_delayed_call(new DelayedCallFunction<D>(delay, next_delayed_call_id(), pFunction, data));
+        return delayed_call(std::chrono::milliseconds(delay), pFunction, data);
     }
 
     template<class D>
@@ -652,8 +651,7 @@ public:
                       bool (* pFunction)(Worker::Call::action_t action, D data),
                       D data)
     {
-        int32_t ms = delay.count();
-        return delayed_call(ms, pFunction, data);
+        return add_delayed_call(new DelayedCallFunction<D>(delay, next_delayed_call_id(), pFunction, data));
     }
 
     /**
@@ -680,7 +678,7 @@ public:
                       bool (T::* pMethod)(Worker::Call::action_t action),
                       T* pT)
     {
-        return add_delayed_call(new DelayedCallMethodVoid<T>(delay, next_delayed_call_id(), pMethod, pT));
+        return delayed_call(std::chrono::milliseconds(delay), pMethod, pT);
     }
 
     template<class T>
@@ -688,8 +686,7 @@ public:
                       bool (T::* pMethod)(Worker::Call::action_t action),
                       T* pT)
     {
-        int32_t ms = delay.count();
-        return delayed_call(ms, pMethod, pT);
+        return add_delayed_call(new DelayedCallMethodVoid<T>(delay, next_delayed_call_id(), pMethod, pT));
     }
 
     /**
@@ -718,11 +715,7 @@ public:
                       T* pT,
                       D data)
     {
-        return add_delayed_call(new DelayedCallMethod<T, D>(delay,
-                                                            next_delayed_call_id(),
-                                                            pMethod,
-                                                            pT,
-                                                            data));
+        return delayed_call(std::chrono::milliseconds(delay), pMethod, pT, data);
     }
 
     template<class T, class D>
@@ -731,8 +724,11 @@ public:
                       T* pT,
                       D data)
     {
-        int32_t ms = delay.count();
-        return delayed_call(ms, pMethod, pT, data);
+        return add_delayed_call(new DelayedCallMethod<T, D>(delay,
+                                                            next_delayed_call_id(),
+                                                            pMethod,
+                                                            pT,
+                                                            data));
     }
 
     /**
@@ -757,13 +753,13 @@ public:
     DCId delayed_call(int32_t delay,
                       std::function<bool(Worker::Call::action_t action)>&& f)
     {
-        return add_delayed_call(new DelayedCallFunctor(delay, next_delayed_call_id(), std::move(f)));
+        return delayed_call(std::chrono::milliseconds(delay), std::move(f));
     }
 
     DCId delayed_call(const std::chrono::milliseconds& delay,
                       std::function<bool(Worker::Call::action_t action)>&& f)
     {
-        return add_delayed_call(new DelayedCallFunctor(delay.count(), next_delayed_call_id(), std::move(f)));
+        return add_delayed_call(new DelayedCallFunctor(delay, next_delayed_call_id(), std::move(f)));
     }
 
     /**
@@ -897,12 +893,12 @@ private:
         }
 
     protected:
-        DelayedCall(int32_t delay, DCId id)
+        DelayedCall(const std::chrono::milliseconds& delay, DCId id)
             : m_id(id)
-            , m_delay(delay >= 0 ? delay : 0)
-            , m_at(get_at(delay, mxb::Clock::now()))
+            , m_delay(delay >= std::chrono::milliseconds(0) ? delay.count() : 0)
+            , m_at(get_at(m_delay, mxb::Clock::now()))
         {
-            mxb_assert(delay >= 0);
+            mxb_assert(delay.count() >= 0);
         }
 
         virtual bool do_call(Worker::Call::action_t action) = 0;
@@ -930,7 +926,7 @@ private:
         DelayedCallFunction& operator=(const DelayedCallFunction&) = delete;
 
     public:
-        DelayedCallFunction(int32_t delay,
+        DelayedCallFunction(const std::chrono::milliseconds& delay,
                             DCId id,
                             bool (*pFunction)(Worker::Call::action_t action, D data),
                             D data)
@@ -958,7 +954,7 @@ private:
         DelayedCallFunctionVoid& operator=(const DelayedCallFunctionVoid&) = delete;
 
     public:
-        DelayedCallFunctionVoid(int32_t delay,
+        DelayedCallFunctionVoid(const std::chrono::milliseconds& delay,
                                 DCId id,
                                 bool (*pFunction)(Worker::Call::action_t action))
             : DelayedCall(delay, id)
@@ -983,7 +979,7 @@ private:
         DelayedCallMethod& operator=(const DelayedCallMethod&) = delete;
 
     public:
-        DelayedCallMethod(int32_t delay,
+        DelayedCallMethod(const std::chrono::milliseconds& delay,
                           DCId id,
                           bool (T::* pMethod)(Worker::Call::action_t action, D data),
                           T* pT,
@@ -1014,7 +1010,7 @@ private:
         DelayedCallMethodVoid& operator=(const DelayedCallMethodVoid&) = delete;
 
     public:
-        DelayedCallMethodVoid(int32_t delay,
+        DelayedCallMethodVoid(const std::chrono::milliseconds& delay,
                               DCId id,
                               bool (T::* pMethod)(Worker::Call::action_t),
                               T* pT)
@@ -1041,7 +1037,7 @@ private:
         DelayedCallFunctor& operator=(const DelayedCallFunctor&) = delete;
 
     public:
-        DelayedCallFunctor(int32_t delay,
+        DelayedCallFunctor(const std::chrono::milliseconds& delay,
                            DCId id,
                            std::function<bool(Worker::Call::action_t)>&& f)
             : DelayedCall(delay, id)
