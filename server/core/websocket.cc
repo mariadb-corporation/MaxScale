@@ -48,7 +48,7 @@ void WebSocket::create(int fd, MHD_UpgradeResponseHandle* urh, std::function<std
         worker->call(
             [&]() {
                 // Also add a delayed callback to make sure any additional data is eventually delivered
-                ws->m_dcid = worker->delayed_call(1000, &WebSocket::delayed_send, ws.get());
+                ws->m_dcid = worker->delayed_call(1000ms, &WebSocket::delayed_send, ws.get());
             }, mxb::Worker::EXECUTE_AUTO);
 
         // All the connections need to be stored to be able to close them when the system is going down.

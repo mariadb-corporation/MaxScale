@@ -1225,7 +1225,7 @@ void XpandMonitor::initiate_delayed_http_check()
         ms = max_delay_ms;
     }
 
-    m_delayed_http_check_id = delayed_call(ms, &XpandMonitor::check_http, this);
+    m_delayed_http_check_id = delayed_call(std::chrono::milliseconds(ms), &XpandMonitor::check_http, this);
 }
 
 bool XpandMonitor::check_http(Call::action_t action)

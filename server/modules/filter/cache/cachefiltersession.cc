@@ -1645,7 +1645,7 @@ void CacheFilterSession::ready_for_another_call()
     {
         Worker* pWorker = Worker::get_current();
 
-        m_did = pWorker->delayed_call(0, [this](Worker::Call::action_t action) {
+        m_did = pWorker->delayed_call(0ms, [this](Worker::Call::action_t action) {
                 m_did = 0;
 
                 if (action == Worker::Call::EXECUTE)

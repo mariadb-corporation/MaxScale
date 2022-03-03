@@ -607,11 +607,6 @@ public:
      *            case the return value is ignored and the function will not
      *            be called again.
      */
-    DCId delayed_call(int32_t delay, bool (* pFunction)(Worker::Call::action_t action))
-    {
-        return delayed_call(std::chrono::milliseconds(delay), pFunction);
-    }
-
     DCId delayed_call(const std::chrono::milliseconds& delay,
                       bool (* pFunction)(Worker::Call::action_t action))
     {
@@ -638,14 +633,6 @@ public:
      *            case the return value is ignored and the function will not
      *            be called again.
      */
-    template<class D>
-    DCId delayed_call(int32_t delay,
-                      bool (* pFunction)(Worker::Call::action_t action, D data),
-                      D data)
-    {
-        return delayed_call(std::chrono::milliseconds(delay), pFunction, data);
-    }
-
     template<class D>
     DCId delayed_call(const std::chrono::milliseconds& delay,
                       bool (* pFunction)(Worker::Call::action_t action, D data),
@@ -674,14 +661,6 @@ public:
      *            be called again.
      */
     template<class T>
-    DCId delayed_call(int32_t delay,
-                      bool (T::* pMethod)(Worker::Call::action_t action),
-                      T* pT)
-    {
-        return delayed_call(std::chrono::milliseconds(delay), pMethod, pT);
-    }
-
-    template<class T>
     DCId delayed_call(const std::chrono::milliseconds& delay,
                       bool (T::* pMethod)(Worker::Call::action_t action),
                       T* pT)
@@ -709,15 +688,6 @@ public:
      *            case the return value is ignored and the function will not
      *            be called again.
      */
-    template<class T, class D>
-    DCId delayed_call(int32_t delay,
-                      bool (T::* pMethod)(Worker::Call::action_t action, D data),
-                      T* pT,
-                      D data)
-    {
-        return delayed_call(std::chrono::milliseconds(delay), pMethod, pT, data);
-    }
-
     template<class T, class D>
     DCId delayed_call(const std::chrono::milliseconds& delay,
                       bool (T::* pMethod)(Worker::Call::action_t action, D data),
@@ -750,12 +720,6 @@ public:
      *            case the return value is ignored and the function will not
      *            be called again.
      */
-    DCId delayed_call(int32_t delay,
-                      std::function<bool(Worker::Call::action_t action)>&& f)
-    {
-        return delayed_call(std::chrono::milliseconds(delay), std::move(f));
-    }
-
     DCId delayed_call(const std::chrono::milliseconds& delay,
                       std::function<bool(Worker::Call::action_t action)>&& f)
     {

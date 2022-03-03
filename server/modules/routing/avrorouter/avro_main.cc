@@ -174,7 +174,7 @@ public:
 
         if (m_start)
         {
-            m_instance->task_handle = worker.delayed_call(1000, converter_func, m_instance);
+            m_instance->task_handle = worker.delayed_call(1000ms, converter_func, m_instance);
         }
     }
 

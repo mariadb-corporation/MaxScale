@@ -101,20 +101,20 @@ void MainWorker::update_rebalancing()
 
     std::chrono::milliseconds period = config.rebalance_period.get();
 
-    if (period != std::chrono::milliseconds(0))
+    if (period != 0ms)
     {
         MXS_WARNING("An attempt to enable rebalancing was made, but the functionality "
                     "is disabled in this release.");
     }
     else
     {
-        if (m_rebalancing_dc == 0 && period != std::chrono::milliseconds(0))
+        if (m_rebalancing_dc == 0 && period != 0ms)
         {
             // If the rebalancing delayed call is not currently active and the
             // period is now != 0, then we order a delayed call.
             order_balancing_dc();
         }
-        else if (m_rebalancing_dc != 0 && period == std::chrono::milliseconds(0))
+        else if (m_rebalancing_dc != 0 && period == 0ms)
         {
             // If the rebalancing delayed call is currently active and the
             // period is now 0, then we cancel the call, effectively shutting
@@ -131,7 +131,7 @@ bool MainWorker::pre_run()
 
     bool rval = false;
 
-    delayed_call(100, &MainWorker::inc_ticks);
+    delayed_call(100ms, &MainWorker::inc_ticks);
 
     update_rebalancing();
 
@@ -210,7 +210,7 @@ void MainWorker::order_balancing_dc()
 {
     mxb_assert(m_rebalancing_dc == 0);
 
-    m_rebalancing_dc = delayed_call(1000, &MainWorker::balance_workers_dc, this);
+    m_rebalancing_dc = delayed_call(1000ms, &MainWorker::balance_workers_dc, this);
 }
 
 // static
@@ -236,7 +236,7 @@ void MainWorker::start_shutdown()
 
             // Wait until RoutingWorkers have stopped before proceeding with MainWorker shudown
             auto self = MainWorker::get();
-            self->delayed_call(100, &MainWorker::wait_for_shutdown, self);
+            self->delayed_call(100ms, &MainWorker::wait_for_shutdown, self);
         };
 
     MainWorker::get()->execute(func, EXECUTE_QUEUED);

@@ -1913,7 +1913,7 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, bool 
 
                     // TODO: Polling for this is slow. A callback in the LocalClient's destructor would be
                     // better as it would close the connection as soon as possible.
-                    origin->delayed_call(100, wait_for_conns);
+                    origin->delayed_call(100ms, wait_for_conns);
                 }, mxs::RoutingWorker::EXECUTE_AUTO);
         };
 

@@ -37,16 +37,16 @@ class TimerTest
 public:
     static int s_ticks;
 
-    TimerTest(Worker* pWorker, int* pRv, int32_t delay)
+    TimerTest(Worker* pWorker, int* pRv, const std::chrono::milliseconds& delay)
         : m_id(s_id++)
         , m_worker(*pWorker)
         , m_delay(delay)
-        , m_at(get_monotonic_time_ms() + delay)
+        , m_at(get_monotonic_time_ms() + delay.count())
         , m_rv(*pRv)
     {
     }
 
-    int32_t delay() const
+    std::chrono::milliseconds delay() const
     {
         return m_delay;
     }
@@ -68,7 +68,7 @@ public:
                 m_rv = EXIT_FAILURE;
             }
 
-            m_at += m_delay;
+            m_at += m_delay.count();
 
             if (--s_ticks < 0)
             {
@@ -84,11 +84,11 @@ public:
 private:
     static int s_id;
 
-    int     m_id;
-    Worker& m_worker;
-    int32_t m_delay;
-    int64_t m_at;
-    int&    m_rv;
+    int                       m_id;
+    Worker&                   m_worker;
+    std::chrono::milliseconds m_delay;
+    int64_t                   m_at;
+    int&                      m_rv;
 };
 
 int TimerTest::s_id = 1;
@@ -102,11 +102,11 @@ int run()
 
     Worker w;
 
-    TimerTest t1(&w, &rv, 200);
-    TimerTest t2(&w, &rv, 300);
-    TimerTest t3(&w, &rv, 400);
-    TimerTest t4(&w, &rv, 500);
-    TimerTest t5(&w, &rv, 600);
+    TimerTest t1(&w, &rv, 200ms);
+    TimerTest t2(&w, &rv, 300ms);
+    TimerTest t3(&w, &rv, 400ms);
+    TimerTest t4(&w, &rv, 500ms);
+    TimerTest t5(&w, &rv, 600ms);
 
     w.execute([&]() {
                   w.delayed_call(t1.delay(), &TimerTest::tick, &t1);

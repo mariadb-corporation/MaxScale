@@ -330,7 +330,7 @@ private:
     int64_t           m_ttl = 0;                /*< How many seconds the session has until it is killed  */
     int64_t           m_ttl_start = 0;          /*< The clock tick when TTL was assigned */
 
-    int64_t m_pooling_time_ms {0};  /**< Pre-emptive pooling time. Set at session begin. */
+    std::chrono::milliseconds m_pooling_time_ms {0};  /**< Pre-emptive pooling time. Set at session begin. */
 
     /**
      * Delayed call id for idle connection pooling. Needs to be cancelled on dtor or session move.

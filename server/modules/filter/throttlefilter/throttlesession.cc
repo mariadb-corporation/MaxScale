@@ -65,7 +65,7 @@ int ThrottleSession::real_routeQuery(GWBUF* buffer, bool is_delayed)
         int32_t delay = 1 + std::ceil(1000.0 / m_max_qps);
         maxbase::Worker* worker = maxbase::Worker::get_current();
         mxb_assert(worker);
-        m_delayed_call_id = worker->delayed_call(delay,
+        m_delayed_call_id = worker->delayed_call(std::chrono::milliseconds(delay),
                                                  &ThrottleSession::delayed_routeQuery,
                                                  this,
                                                  buffer);

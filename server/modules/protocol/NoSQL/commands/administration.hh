@@ -269,7 +269,7 @@ private:
         m_action = Action::CREATING_DATABASE;
 
         mxb_assert(m_dcid == 0);
-        m_dcid = worker().delayed_call(0, [this](Worker::Call::action_t action) {
+        m_dcid = worker().delayed_call(0ms, [this](Worker::Call::action_t action) {
                 m_dcid = 0;
 
                 if (action == Worker::Call::EXECUTE)
@@ -290,7 +290,7 @@ private:
         m_action = Action::CREATING_TABLE;
 
         mxb_assert(m_dcid == 0);
-        m_dcid = worker().delayed_call(0, [this](Worker::Call::action_t action) {
+        m_dcid = worker().delayed_call(0ms, [this](Worker::Call::action_t action) {
                 m_dcid = 0;
 
                 if (action == Worker::Call::EXECUTE)
@@ -519,7 +519,7 @@ public:
         m_action = Action::CREATING_DATABASE;
 
         mxb_assert(m_dcid == 0);
-        m_dcid = worker().delayed_call(0, [this](Worker::Call::action_t action) {
+        m_dcid = worker().delayed_call(0ms, [this](Worker::Call::action_t action) {
                 m_dcid = 0;
 
                 if (action == Worker::Call::EXECUTE)
@@ -540,7 +540,7 @@ public:
         m_action = Action::CREATING_TABLE;
 
         mxb_assert(m_dcid == 0);
-        m_dcid = worker().delayed_call(0, [this](Worker::Call::action_t action) {
+        m_dcid = worker().delayed_call(0ms, [this](Worker::Call::action_t action) {
                 m_dcid = 0;
 
                 if (action == Worker::Call::EXECUTE)

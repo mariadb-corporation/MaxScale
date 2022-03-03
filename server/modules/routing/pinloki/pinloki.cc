@@ -162,7 +162,7 @@ Pinloki::Pinloki(SERVICE* pService)
     m_service(pService),
     m_inventory(m_config)
 {
-    m_dcid = mxs::MainWorker::get()->delayed_call(1000, &Pinloki::update_details, this);
+    m_dcid = mxs::MainWorker::get()->delayed_call(1000ms, &Pinloki::update_details, this);
 }
 
 Pinloki::~Pinloki()

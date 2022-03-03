@@ -299,7 +299,7 @@ bool SchemaRouterSession::routeQuery(GWBUF* pPacket)
                 m_queue.push_back(pPacket);
 
                 auto worker = mxs::RoutingWorker::get_current();
-                m_dcid = worker->delayed_call(1000, &SchemaRouterSession::delay_routing, this);
+                m_dcid = worker->delayed_call(1000ms, &SchemaRouterSession::delay_routing, this);
                 MXS_INFO("Waiting for the database mapping to be completed by another session");
 
                 return 1;
