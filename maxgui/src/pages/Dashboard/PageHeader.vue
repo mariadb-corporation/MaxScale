@@ -95,7 +95,7 @@
         </portal>
         <portal to="page-header--right">
             <global-search class="mr-4 d-inline-block" />
-            <create-resource class="d-inline-block" />
+            <create-resource class="d-inline-block" :defFormType="defFormType" />
         </portal>
     </div>
 </template>
@@ -130,6 +130,7 @@ export default {
     computed: {
         ...mapState({
             maxscale_overview_info: state => state.maxscale.maxscale_overview_info,
+            RESOURCE_FORM_TYPES: state => state.app_config.RESOURCE_FORM_TYPES,
         }),
         pageTitle: function() {
             const { version = '' } = this.maxscale_overview_info
@@ -141,6 +142,21 @@ export default {
                 commit,
                 started_at,
                 activated_at,
+            }
+        },
+        defFormType() {
+            const { SERVER, SERVICE, LISTENER, FILTER } = this.RESOURCE_FORM_TYPES
+            switch (this.$route.name) {
+                case 'servers':
+                    return SERVER
+                case 'services':
+                    return SERVICE
+                case 'listeners':
+                    return LISTENER
+                case 'filters':
+                    return FILTER
+                default:
+                    return SERVICE
             }
         },
     },
