@@ -2039,7 +2039,7 @@ bool MonitorWorker::start()
     if (m_checked)
     {
         m_loop_called = get_time_ms() - settings().interval;    // Next tick should happen immediately.
-        if (!Worker::start())
+        if (!Worker::start(name()))
         {
             MXS_ERROR("Failed to start worker for monitor '%s'.", name());
         }

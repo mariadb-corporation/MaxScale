@@ -457,7 +457,7 @@ public:
      *
      * @return True if the thread could be started, false otherwise.
      */
-    virtual bool start();
+    virtual bool start(const std::string& name);
 
     /**
      * Waits for the worker to finish.
