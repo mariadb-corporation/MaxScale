@@ -171,11 +171,12 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
 
         if (ppWorkers && ppWorker_loads)
         {
-            int id_min_worker = INT_MAX;
-            int id_max_worker = INT_MIN;
+            int id_min_worker = -1;
+            int id_max_worker = 0;
 
             size_t rebalance_window = mxs::Config::get().rebalance_window.get();
 
+            MXB_AT_DEBUG(int id_prev = -1);
             int i;
             for (i = 0; i < nWorkers; ++i)
             {
@@ -186,7 +187,11 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
                 {
                     int id = pWorker->id();
 
-                    if (id < id_min_worker)
+                    // We require the routing worker ids to be consequtive.
+                    mxb_assert(id_prev == -1 || (id_prev + 1 == id));
+                    MXB_AT_DEBUG(id_prev = id);
+
+                    if (id_min_worker == -1)
                     {
                         id_min_worker = id;
                     }
@@ -242,7 +247,7 @@ void RoutingWorker::finish()
 {
     mxb_assert(this_unit.initialized);
 
-    for (int i = this_unit.id_max_worker; i >= this_unit.id_min_worker; --i)
+    for (int i = this_unit.nWorkers - 1; i >= 0; --i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
@@ -320,7 +325,7 @@ RoutingWorker* RoutingWorker::get(int worker_id)
 
     bool valid = (worker_id >= this_unit.id_min_worker && worker_id <= this_unit.id_max_worker);
 
-    return valid ? this_unit.ppWorkers[worker_id] : nullptr;
+    return valid ? this_unit.ppWorkers[worker_id  - this_unit.id_min_worker] : nullptr;
 }
 
 RoutingWorker* RoutingWorker::get_current()
@@ -347,14 +352,14 @@ bool RoutingWorker::start_workers()
 {
     bool rv = true;
 
-    for (int i = this_unit.id_min_worker; i <= this_unit.id_max_worker; ++i)
+    for (int i = 0; i < this_unit.nWorkers; ++i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
 
         if (!pWorker->start(MAKE_STR("Worker-" << std::setw(2) << std::setfill('0') << i)))
         {
-            MXS_ALERT("Could not start routing worker %d of %d.", i, config_threadcount());
+            MXS_ALERT("Could not start routing worker %d of %d.", i, this_unit.nWorkers);
             rv = false;
             // At startup, so we don't even try to clean up.
             break;
@@ -378,7 +383,7 @@ bool RoutingWorker::is_running()
 // static
 void RoutingWorker::join_workers()
 {
-    for (int i = this_unit.id_min_worker; i <= this_unit.id_max_worker; i++)
+    for (int i = 0; i < this_unit.nWorkers; ++i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
@@ -394,7 +399,7 @@ bool RoutingWorker::shutdown_complete()
 {
     bool rval = true;
 
-    for (int i = this_unit.id_min_worker; i <= this_unit.id_max_worker; i++)
+    for (int i = 0; i < this_unit.nWorkers; ++i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
@@ -1051,8 +1056,7 @@ size_t RoutingWorker::broadcast(Task* pTask, Semaphore* pSem)
     // No logging here, function must be signal safe.
     size_t n = 0;
 
-    int nWorkers = this_unit.next_worker_id;
-    for (int i = 0; i < nWorkers; ++i)
+    for (int i = 0; i < this_unit.nWorkers; ++i)
     {
         Worker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
@@ -1074,8 +1078,7 @@ size_t RoutingWorker::broadcast(std::unique_ptr<DisposableTask> sTask)
 
     size_t n = 0;
 
-    int nWorkers = this_unit.next_worker_id;
-    for (int i = 0; i < nWorkers; ++i)
+    for (int i = 0; i < this_unit.nWorkers; ++i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
@@ -1097,9 +1100,8 @@ size_t RoutingWorker::broadcast(const std::function<void ()>& func,
                                 mxb::Worker::execute_mode_t mode)
 {
     size_t n = 0;
-    int nWorkers = this_unit.next_worker_id;
 
-    for (int i = 0; i < nWorkers; ++i)
+    for (int i = 0; i < this_unit.nWorkers; ++i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
@@ -1119,8 +1121,7 @@ size_t RoutingWorker::execute_serially(Task& task)
     Semaphore sem;
     size_t n = 0;
 
-    int nWorkers = this_unit.next_worker_id;
-    for (int i = 0; i < nWorkers; ++i)
+    for (int i = 0; i < this_unit.nWorkers; ++i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
@@ -1141,8 +1142,7 @@ size_t RoutingWorker::execute_serially(const std::function<void()>& func)
     Semaphore sem;
     size_t n = 0;
 
-    int nWorkers = this_unit.next_worker_id;
-    for (int i = 0; i < nWorkers; ++i)
+    for (int i = 0; i < this_unit.nWorkers; ++i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
@@ -1178,8 +1178,7 @@ size_t RoutingWorker::broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t
 
     size_t n = 0;
 
-    int nWorkers = this_unit.next_worker_id;
-    for (int i = 0; i < nWorkers; ++i)
+    for (int i = 0; i < this_unit.nWorkers; ++i)
     {
         Worker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
@@ -1197,10 +1196,9 @@ size_t RoutingWorker::broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t
 void RoutingWorker::shutdown_all()
 {
     // NOTE: No logging here, this function must be signal safe.
-    mxb_assert((this_unit.next_worker_id == 0) || (this_unit.ppWorkers != NULL));
+    mxb_assert(this_unit.ppWorkers != NULL);
 
-    int nWorkers = this_unit.next_worker_id;
-    for (int i = 0; i < nWorkers; ++i)
+    for (int i = 0; i < this_unit.nWorkers; ++i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
@@ -1216,11 +1214,9 @@ std::vector<Worker::STATISTICS> get_stats()
 {
     std::vector<Worker::STATISTICS> rval;
 
-    int nWorkers = this_unit.next_worker_id;
-
-    for (int i = 0; i < nWorkers; ++i)
+    for (int i = 0; i < this_unit.nWorkers; ++i)
     {
-        RoutingWorker* pWorker = RoutingWorker::get(i);
+        RoutingWorker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
 
         rval.push_back(pWorker->statistics());
@@ -1299,7 +1295,7 @@ void RoutingWorker::get_qc_stats(std::vector<QC_CACHE_STATS>& all_stats)
         Task(std::vector<QC_CACHE_STATS>* pAll_stats)
             : m_all_stats(*pAll_stats)
         {
-            m_all_stats.resize(config_threadcount());
+            m_all_stats.resize(this_unit.nWorkers);
         }
 
         void execute(Worker& worker) override final
@@ -1655,7 +1651,7 @@ RoutingWorker::ConnectionPoolStats RoutingWorker::pool_get_stats(const SERVER* p
     mxb_assert(mxs::MainWorker::is_main_worker());
     RoutingWorker::ConnectionPoolStats rval;
 
-    for (int i = 0; i < this_unit.next_worker_id; ++i)
+    for (int i = 0; i < this_unit.nWorkers; ++i)
     {
         rval.add(this_unit.ppWorkers[i]->pool_stats(pSrv));
     }
@@ -1974,7 +1970,7 @@ json_t* mxs_rworker_to_json(const char* zHost, int id)
 
 json_t* mxs_rworker_list_to_json(const char* host)
 {
-    WorkerInfoTask task(host, config_threadcount());
+    WorkerInfoTask task(host, this_unit.nWorkers);
     RoutingWorker::execute_concurrently(task);
     return task.resource();
 }
