@@ -308,16 +308,6 @@ public:
     static size_t broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2);
 
     /**
-     * Initate shutdown of all workers.
-     *
-     * @attention A call to this function will only initiate the shutdowm,
-     *            the workers will not have shut down when the function returns.
-     *
-     * @attention This function is signal safe.
-     */
-    static void shutdown_all();
-
-    /**
      * Returns statistics for all workers.
      *
      * @return Combined statistics.

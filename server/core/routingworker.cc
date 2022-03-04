@@ -1192,21 +1192,6 @@ size_t RoutingWorker::broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t
     return n;
 }
 
-// static
-void RoutingWorker::shutdown_all()
-{
-    // NOTE: No logging here, this function must be signal safe.
-    mxb_assert(this_unit.ppWorkers != NULL);
-
-    for (int i = 0; i < this_unit.nWorkers; ++i)
-    {
-        RoutingWorker* pWorker = this_unit.ppWorkers[i];
-        mxb_assert(pWorker);
-
-        pWorker->shutdown();
-    }
-}
-
 namespace
 {
 
