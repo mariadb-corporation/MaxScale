@@ -36,7 +36,7 @@
                     v-if="node.children || node._children"
                     class="node__circle node__circle--clickable"
                     :style="{
-                        border: `1px solid ${node.data.stroke}`,
+                        border: `1px solid ${node.data.linkColor}`,
                     }"
                     @click="onNodeClick(node)"
                 />
@@ -417,7 +417,7 @@ export default {
                 .attr('class', 'link_line')
                 .attr('fill', 'none')
                 .attr('stroke-width', 2.5)
-                .attr('stroke', d => d.data.stroke)
+                .attr('stroke', d => d.data.linkColor)
                 .attr('d', () =>
                     this.diagonal({
                         dest: {
@@ -464,7 +464,7 @@ export default {
                 .select('path.link__arrow')
                 .transition()
                 .duration(this.duration)
-                .attr('fill', d => d.data.stroke)
+                .attr('fill', d => d.data.linkColor)
                 .attr('transform', d => {
                     const p = this.getRotatedPoint({
                         dest: d,

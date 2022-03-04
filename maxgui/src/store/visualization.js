@@ -86,7 +86,7 @@ export default {
                     name: monitorId,
                     state,
                     module,
-                    stroke: '#0e9bc0',
+                    linkColor: '#0e9bc0',
                     children: [], // contains a master server data
                 }
                 if (masterName)
@@ -95,7 +95,7 @@ export default {
                         name: masterName,
                         serverData: getters.getServerData(masterName),
                         isMaster: true,
-                        stroke: '#0e9bc0',
+                        linkColor: '#0e9bc0',
                         children: [], // contains replicate servers data
                     })
                 if (root.children.length)
@@ -114,7 +114,7 @@ export default {
                                     ...server,
                                     slave_connections: connectionsToMaster,
                                 },
-                                stroke: '#0e9bc0',
+                                linkColor: '#0e9bc0',
                             })
                     })
                 return root
