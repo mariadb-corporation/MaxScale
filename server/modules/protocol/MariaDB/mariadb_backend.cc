@@ -1380,7 +1380,9 @@ bool MariaDBBackendConnection::established()
 
 void MariaDBBackendConnection::ping()
 {
-    if (m_reply.state() == ReplyState::DONE && m_reply.command() != MXS_COM_STMT_SEND_LONG_DATA)
+    if (m_reply.state() == ReplyState::DONE
+        && m_reply.command() != MXS_COM_STMT_SEND_LONG_DATA
+        && m_ignore_replies == 0)
     {
         MXS_INFO("Pinging '%s', idle for %ld seconds", m_server.name(), seconds_idle());
 
