@@ -441,6 +441,8 @@ public:
     };
     static ConnectionPoolStats pool_get_stats(const SERVER* pSrv);
 
+    ConnectionPoolStats pool_stats(const SERVER* pSrv);
+
     /**
      * Register a function to be called every epoll_tick.
      */
@@ -616,6 +618,12 @@ private:
     };
 
     using ConnPoolGroup = std::map<const SERVER*, ConnectionPool>;
+
+    // Protects the connection pool. This is only contended when the REST API asks for statistics on the
+    // connection pool and accessing it directly is significantly faster than waiting for the worker to finish
+    // their current work and post the results.
+    mutable std::mutex m_pool_lock;
+
     ConnPoolGroup m_pool_group;     /**< Pooled connections for each server */
 
     using EndpointsBySrv = std::map<const SERVER*, std::deque<ServerEndpoint*>>;
