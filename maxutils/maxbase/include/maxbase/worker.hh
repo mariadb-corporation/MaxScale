@@ -455,6 +455,7 @@ public:
      * This function will start a new thread, in which the `run`
      * function will be executed.
      *
+     * @param name  The name of the worker.
      * @return True if the thread could be started, false otherwise.
      */
     virtual bool start(const std::string& name);

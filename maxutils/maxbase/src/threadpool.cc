@@ -135,7 +135,7 @@ void ThreadPool::execute(const Task& task, const std::string& name)
         {
             ++m_nThreads;
 
-            pThread = new Thread;
+            pThread = new Thread(name);
         }
     }
     else

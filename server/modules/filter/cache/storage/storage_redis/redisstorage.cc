@@ -637,7 +637,7 @@ public:
                             gwbuf_free(pValue);
                         }
                     }, mxb::Worker::EXECUTE_QUEUED);
-            });
+            }, "redis-get");
 
         return CACHE_RESULT_PENDING;
     }
@@ -691,7 +691,7 @@ public:
                             cb(rv);
                         }
                     }, mxb::Worker::EXECUTE_QUEUED);
-            });
+            }, "redis-put");
 
         return CACHE_RESULT_PENDING;
     }
@@ -758,7 +758,7 @@ public:
                             cb(rv);
                         }
                     }, mxb::Worker::EXECUTE_QUEUED);
-            });
+            }, "redis-del");
 
         return CACHE_RESULT_PENDING;
     }
@@ -800,7 +800,7 @@ public:
                             cb(rv);
                         }
                     }, mxb::Worker::EXECUTE_QUEUED);
-            });
+            }, "redis-invalidate");
 
         return CACHE_RESULT_PENDING;
     }
@@ -1244,7 +1244,7 @@ private:
                             redisFree(pContext);
                         }
                     }, mxb::Worker::EXECUTE_QUEUED);
-            });
+            }, "redis-connect");
     }
 
     void reconnect()

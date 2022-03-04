@@ -218,8 +218,6 @@ bool Replicator::Imp::connect()
 
 void Replicator::Imp::process_events()
 {
-    mxb::set_thread_name(m_thr, "cdc::Replicator");
-
     // Load the stored GTID to continue where MaxScale previously left off.
     if (!load_gtid_state())
     {

@@ -45,7 +45,7 @@ public:
         /**
          * Creates a Thread object with an associated thread.
          */
-        Thread(const std::string& name = std::string("unnamed"));
+        Thread(const std::string& name);
 
         /**
          * Destroys the Thread object and its associated thread. If the
@@ -139,7 +139,7 @@ public:
      *
      * @param task  The task to execute.
      */
-    void execute(const Task& task, const std::string& name = std::string("task"));
+    void execute(const Task& task, const std::string& name);
 
     /**
      * Stop the pool.
@@ -155,13 +155,13 @@ public:
     void stop(bool abandon_tasks = false);
 
 private:
-    using TaskPair = std::pair<Task, std::string>; // <task, name>
+    using TaskNamePair = std::pair<Task, std::string>; // <task, name>
     bool                     m_stop { false };
     int                      m_nThreads { 0 };
     std::stack<Thread*>      m_idle_threads;
     mutable std::mutex       m_idle_threads_mx;
     std::condition_variable  m_idle_threads_cv;
-    std::queue<TaskPair>     m_tasks;
+    std::queue<TaskNamePair> m_tasks;
     std::mutex               m_tasks_mx;
     const int                m_nMax_threads;
 };
