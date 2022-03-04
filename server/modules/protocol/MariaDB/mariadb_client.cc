@@ -272,7 +272,7 @@ struct KillInfo
     typedef  bool (* DcbCallback)(DCB* dcb, void* data);
 
     KillInfo(std::string query, MXS_SESSION* ses, DcbCallback callback)
-        : origin(mxs_rworker_get_current_id())
+        : origin(mxs::RoutingWorker::get_current_id())
         , session(ses)
         , query_base(query)
         , cb(callback)

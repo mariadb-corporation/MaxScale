@@ -33,34 +33,6 @@
 #include <maxscale/query_classifier.hh>
 #include <maxscale/session.hh>
 
-MXS_BEGIN_DECLS
-
-// The worker ID of the "main" thread
-#define MXS_RWORKER_MAIN -1
-
-/**
- * Return the routing worker associated with the provided worker id.
- *
- * @param worker_id  A worker id. If MXS_RWORKER_MAIN is used, the
- *                   routing worker running in the main thread will
- *                   be returned.
- *
- * @return The corresponding routing worker instance, or NULL if the
- *         id does not correspond to a routing worker.
- */
-mxb::WORKER* mxs_rworker_get(int worker_id);
-
-/**
- * Return the id of the current routing worker.
- *
- * @return The id of the routing worker, or -1 if there is no current
- *         routing worker.
- */
-int mxs_rworker_get_current_id();
-
-
-MXS_END_DECLS
-
 class ServerEndpoint;
 
 namespace maxscale

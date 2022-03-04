@@ -186,7 +186,7 @@ bool Resource::matching_variable_path(const string& path, const string& target) 
             char* end;
             int id = strtol(target.c_str(), &end, 10);
 
-            if (*end == '\0' && mxs_rworker_get(id))
+            if (*end == '\0' && mxs::RoutingWorker::get(id))
             {
                 rval = true;
             }

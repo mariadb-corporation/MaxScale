@@ -189,7 +189,7 @@ bool conversion_task_ctl(Avro* inst, bool start)
 
     if (!maxscale_is_shutting_down())
     {
-        Worker* worker = static_cast<Worker*>(mxs_rworker_get(MXS_RWORKER_MAIN));
+        Worker* worker = static_cast<Worker*>(mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN));
         std::unique_ptr<ConversionCtlTask> task(new(std::nothrow) ConversionCtlTask(inst, start));
 
         if (task.get())

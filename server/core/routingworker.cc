@@ -1862,16 +1862,6 @@ void RoutingWorker::ConnectionPoolStats::add(const ConnectionPoolStats& rhs)
 }
 }
 
-mxb::WORKER* mxs_rworker_get(int worker_id)
-{
-    return RoutingWorker::get(worker_id);
-}
-
-int mxs_rworker_get_current_id()
-{
-    return RoutingWorker::get_current_id();
-}
-
 namespace
 {
 

@@ -161,7 +161,7 @@ PerformanceInfo SmartRouter::perf_find(const std::string& canonical)
 {
     using namespace maxbase;
 
-    auto pShared_data = m_updater.get_shared_data_by_index(mxs_rworker_get_current_id());
+    auto pShared_data = m_updater.get_shared_data_by_index(mxs::RoutingWorker::get_current_id());
     auto sShared_ptr = make_shared_data_ptr(pShared_data);
 
     auto pContainer = sShared_ptr.get();
@@ -202,7 +202,7 @@ void SmartRouter::perf_update(const std::string& canonical, PerformanceInfo perf
 {
     using namespace maxbase;
 
-    auto pShared_data = m_updater.get_shared_data_by_index(mxs_rworker_get_current_id());
+    auto pShared_data = m_updater.get_shared_data_by_index(mxs::RoutingWorker::get_current_id());
     auto sShared_ptr = make_shared_data_ptr(pShared_data);
 
     auto pContainer = sShared_ptr.get();
