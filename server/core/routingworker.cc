@@ -1890,6 +1890,8 @@ void RoutingWorker::fail_timed_out_endpoints()
 
 void RoutingWorker::pool_close_expired()
 {
+    std::lock_guard<std::mutex> guard(m_pool_lock);
+
     // Close expired connections in the thread local pool. If the server is down, purge all connections.
     for (auto& kv : m_pool_group)
     {
