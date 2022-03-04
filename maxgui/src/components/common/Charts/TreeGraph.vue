@@ -37,6 +37,7 @@
                     class="node__circle node__circle--clickable"
                     :style="{
                         border: `1px solid ${node.data.linkColor}`,
+                        background: !node.children ? node.data.linkColor : 'white',
                     }"
                     @click="onNodeClick(node)"
                 />
@@ -624,7 +625,6 @@ export default {
                 top: calc(50% + 7px);
                 left: 0;
                 transform: translate(-50%, -100%);
-                background: white;
                 width: 14px;
                 height: 14px;
                 border-radius: 50%;
