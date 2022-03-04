@@ -268,7 +268,7 @@ public:
 
         if (info.table)
         {
-            size += strlen(info.database) + 1;
+            size += strlen(info.table) + 1;
         }
 
         size += strlen(info.column) + 1;
