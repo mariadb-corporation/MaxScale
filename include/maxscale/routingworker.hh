@@ -48,7 +48,7 @@ class RoutingWorker : public mxb::WatchedWorker
 public:
     enum
     {
-        MAIN = -1
+        FIRST = -1 // Shorthand for first created RoutingWorker, for testing purposes.
     };
 
     typedef mxs::Registry<MXS_SESSION> SessionsById;

@@ -60,7 +60,6 @@ struct this_unit
     mxb::AverageN** ppWorker_loads;     // Array of load averages for workers.
     int             next_worker_id;     // Next worker id
     int             epoll_listener_fd;  // Shared epoll descriptor for listening descriptors.
-    int             id_main_worker;     // The id of the worker running in the main thread.
     int             id_min_worker;      // The smallest routing worker id.
     int             id_max_worker;      // The largest routing worker id.
     bool            running;            // True if worker threads are running
@@ -72,7 +71,6 @@ struct this_unit
     nullptr,            // ppWorker_loads
     0,                  // next_worker_id
     -1,                 // epoll_listener_fd
-    WORKER_ABSENT_ID,   // id_main_worker
     WORKER_ABSENT_ID,   // id_min_worker
     WORKER_ABSENT_ID,   // id_max_worker
     false,
@@ -173,7 +171,6 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
 
         if (ppWorkers && ppWorker_loads)
         {
-            int id_main_worker = WORKER_ABSENT_ID;
             int id_min_worker = INT_MAX;
             int id_max_worker = INT_MIN;
 
@@ -188,12 +185,6 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
                 if (pWorker && pAverage)
                 {
                     int id = pWorker->id();
-
-                    // The first created worker will be the main worker.
-                    if (id_main_worker == WORKER_ABSENT_ID)
-                    {
-                        id_main_worker = id;
-                    }
 
                     if (id < id_min_worker)
                     {
@@ -227,7 +218,6 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
                 this_unit.ppWorkers = ppWorkers;
                 this_unit.ppWorker_loads = ppWorker_loads;
                 this_unit.nWorkers = nWorkers;
-                this_unit.id_main_worker = id_main_worker;
                 this_unit.id_min_worker = id_min_worker;
                 this_unit.id_max_worker = id_max_worker;
 
@@ -292,7 +282,7 @@ bool RoutingWorker::add_shared_fd(int fd, uint32_t events, POLL_DATA* pData)
     ev.data.ptr = pData;
 
     // The main worker takes ownership of all shared fds
-    pData->owner = RoutingWorker::get(RoutingWorker::MAIN);
+    pData->owner = MainWorker::get();
 
     if (epoll_ctl(this_unit.epoll_listener_fd, EPOLL_CTL_ADD, fd, &ev) != 0)
     {
@@ -323,9 +313,9 @@ RoutingWorker* RoutingWorker::get(int worker_id)
 {
     mxb_assert(this_unit.initialized);
 
-    if (worker_id == MAIN)
+    if (worker_id == FIRST)
     {
-        worker_id = this_unit.id_main_worker;
+        worker_id = this_unit.id_min_worker;
     }
 
     bool valid = (worker_id >= this_unit.id_min_worker && worker_id <= this_unit.id_max_worker);
