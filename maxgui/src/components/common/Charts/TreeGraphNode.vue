@@ -1,6 +1,6 @@
 <template>
     <div ref="nodeWrapper" class="tree-node-wrapper d-flex flex-column fill-height">
-        <v-card outlined class="node-card fill-height" width="288">
+        <v-card outlined class="node-card fill-height" :width="nodeWidth - 2">
             <slot name="node-heading"></slot>
             <v-divider />
             <div
@@ -84,6 +84,7 @@ export default {
     name: 'tree-graph-node',
     props: {
         node: { type: Object, required: true },
+        nodeWidth: { type: Number, default: 290 },
         lineHeight: { type: String, default: '18px' },
         bodyWrapperClass: { type: String, default: '' },
         expandOnMount: { type: Boolean, default: false },
