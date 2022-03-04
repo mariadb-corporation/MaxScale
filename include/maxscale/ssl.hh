@@ -96,6 +96,11 @@ public:
      */
     bool configure(const mxb::SSLConfig& config);
 
+    void set_usage(mxb::KeyUsage usage)
+    {
+        m_usage = usage;
+    }
+
 private:
     void reset();
     bool init();
@@ -104,5 +109,6 @@ private:
     SSL_METHOD* m_method {nullptr};         /**<  SSLv3 or TLS1.0/1.1/1.2 methods
                                              * see: https://www.openssl.org/docs/ssl/SSL_CTX_new.html */
     mxb::SSLConfig m_cfg;
+    mxb::KeyUsage m_usage {mxb::KeyUsage::NONE};
 };
 }

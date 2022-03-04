@@ -1073,6 +1073,7 @@ Listener::SData Listener::create_shared_data(const mxs::ConfigParameters& protoc
     {
         // TODO: The old behavior where the global sql_mode was used if the listener one isn't configured
         mxs::SSLContext ssl;
+        ssl.set_usage(mxb::KeyUsage::SERVER);
         ListenerData::ConnectionInitSql init_sql;
         ListenerData::SMappingInfo mapping_info;
 
