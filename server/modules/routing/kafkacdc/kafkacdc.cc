@@ -62,6 +62,14 @@ cfg::ParamBool s_cooperative_replication(
     &s_spec, "cooperative_replication", "Cooperate with other instances replicating from the same cluster",
     false, cfg::Param::AT_RUNTIME);
 
+cfg::ParamRegex s_match(
+    &s_spec, "match", "Only include data from tables that match this pattern",
+    "", cfg::Param::AT_RUNTIME);
+
+cfg::ParamRegex s_exclude(
+    &s_spec, "exclude", "Exclude data from tables that match this pattern",
+    "", cfg::Param::AT_RUNTIME);
+
 KafkaCommonConfig s_kafka(&s_spec);
 
 bool KafkaSpecification::post_validate(const mxs::ConfigParameters& params) const
@@ -193,10 +201,16 @@ public:
 
     bool create_table(const Table& table) override
     {
-        json_t* js = table.to_json();
-        auto gtid = table.gtid.to_string();
-        bool rval = produce(js, gtid.c_str(), gtid.length());
-        json_decref(js);
+        bool rval = true;
+
+        if (table_matches(table))
+        {
+            json_t* js = table.to_json();
+            auto gtid = table.gtid.to_string();
+            rval = produce(js, gtid.c_str(), gtid.length());
+            json_decref(js);
+        }
+
         return rval;
     }
 
@@ -220,64 +234,99 @@ public:
                      const REP_HEADER& hdr,
                      RowEvent event_type) override
     {
-        auto type = roweventtype_to_string(event_type);
 
-        // This uniquely identifies the event we're producing
-        m_key = gtid.to_string() + ':' + std::to_string(gtid.event_num);
+        if (table_matches(create))
+        {
+            auto type = roweventtype_to_string(event_type);
 
-        m_obj = json_object();
-        json_object_set_new(m_obj, "domain", json_integer(gtid.domain));
-        json_object_set_new(m_obj, "server_id", json_integer(gtid.server_id));
-        json_object_set_new(m_obj, "sequence", json_integer(gtid.seq));
-        json_object_set_new(m_obj, "event_number", json_integer(gtid.event_num));
-        json_object_set_new(m_obj, "timestamp", json_integer(hdr.timestamp));
-        json_object_set_new(m_obj, "event_type", json_string(type));
-        json_object_set_new(m_obj, "table_schema", json_string(create.database.c_str()));
-        json_object_set_new(m_obj, "table_name", json_string(create.table.c_str()));
+            // This uniquely identifies the event we're producing
+            m_key = gtid.to_string() + ':' + std::to_string(gtid.event_num);
+
+            m_obj = json_object();
+            json_object_set_new(m_obj, "domain", json_integer(gtid.domain));
+            json_object_set_new(m_obj, "server_id", json_integer(gtid.server_id));
+            json_object_set_new(m_obj, "sequence", json_integer(gtid.seq));
+            json_object_set_new(m_obj, "event_number", json_integer(gtid.event_num));
+            json_object_set_new(m_obj, "timestamp", json_integer(hdr.timestamp));
+            json_object_set_new(m_obj, "event_type", json_string(type));
+            json_object_set_new(m_obj, "table_schema", json_string(create.database.c_str()));
+            json_object_set_new(m_obj, "table_name", json_string(create.table.c_str()));
+        }
+        else
+        {
+            mxb_assert(m_obj == nullptr);
+        }
     }
 
     bool commit(const Table& create, const gtid_pos_t& gtid) override
     {
-        bool rval = produce(m_obj, m_key.c_str(), m_key.length());
-        json_decref(m_obj);
-        m_obj = nullptr;
+        bool rval = true;
+
+        if (m_obj)
+        {
+            rval = produce(m_obj, m_key.c_str(), m_key.length());
+            json_decref(m_obj);
+            m_obj = nullptr;
+        }
+
         return rval;
     }
 
     void column_int(const Table& create, int i, int32_t value) override
     {
-        json_object_set_new(m_obj, create.columns[i].name.c_str(), json_integer(value));
+        if (m_obj)
+        {
+            json_object_set_new(m_obj, create.columns[i].name.c_str(), json_integer(value));
+        }
     }
 
     void column_long(const Table& create, int i, int64_t value) override
     {
-        json_object_set_new(m_obj, create.columns[i].name.c_str(), json_integer(value));
+        if (m_obj)
+        {
+            json_object_set_new(m_obj, create.columns[i].name.c_str(), json_integer(value));
+        }
     }
 
     void column_float(const Table& create, int i, float value) override
     {
-        json_object_set_new(m_obj, create.columns[i].name.c_str(), json_real(value));
+        if (m_obj)
+        {
+            json_object_set_new(m_obj, create.columns[i].name.c_str(), json_real(value));
+        }
     }
 
     void column_double(const Table& create, int i, double value) override
     {
-        json_object_set_new(m_obj, create.columns[i].name.c_str(), json_real(value));
+        if (m_obj)
+        {
+            json_object_set_new(m_obj, create.columns[i].name.c_str(), json_real(value));
+        }
     }
 
     void column_string(const Table& create, int i, const std::string& value) override
     {
-        json_object_set_new(m_obj, create.columns[i].name.c_str(), json_string(value.c_str()));
+        if (m_obj)
+        {
+            json_object_set_new(m_obj, create.columns[i].name.c_str(), json_string(value.c_str()));
+        }
     }
 
     void column_bytes(const Table& create, int i, uint8_t* value, int len) override
     {
-        json_object_set_new(m_obj, create.columns[i].name.c_str(),
-                            json_stringn_nocheck((const char*)value, len));
+        if (m_obj)
+        {
+            json_object_set_new(m_obj, create.columns[i].name.c_str(),
+                                json_stringn_nocheck((const char*)value, len));
+        }
     }
 
     void column_null(const Table& create, int i) override
     {
-        json_object_set_new(m_obj, create.columns[i].name.c_str(), json_null());
+        if (m_obj)
+        {
+            json_object_set_new(m_obj, create.columns[i].name.c_str(), json_null());
+        }
     }
 
 private:
@@ -362,6 +411,13 @@ private:
 
         return KafkaCommonConfig::create_config(values);
     }
+
+    bool table_matches(const Table& create)
+    {
+        std::string identifier = create.id();
+        return (m_config.match.empty() || m_config.match.match(identifier))
+               && (m_config.exclude.empty() || !m_config.exclude.match(identifier));
+    }
 };
 }
 
@@ -376,6 +432,8 @@ KafkaCDC::Config::Config(const std::string& name, KafkaCDC* router)
     add_native(&Config::gtid, &s_gtid);
     add_native(&Config::server_id, &s_server_id);
     add_native(&Config::cooperative_replication, &s_cooperative_replication);
+    add_native(&Config::match, &s_match);
+    add_native(&Config::exclude, &s_exclude);
     add_native(&Config::ssl, &s_kafka.kafka_ssl);
     add_native(&Config::ssl_ca, &s_kafka.kafka_ssl_ca);
     add_native(&Config::ssl_cert, &s_kafka.kafka_ssl_cert);

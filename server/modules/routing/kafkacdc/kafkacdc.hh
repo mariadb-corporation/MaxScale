@@ -48,6 +48,9 @@ public:
         int64_t     server_id;
         bool        cooperative_replication;
 
+        mxs::config::RegexValue match;
+        mxs::config::RegexValue exclude;
+
         bool        ssl;
         std::string ssl_ca;
         std::string ssl_key;
