@@ -19,8 +19,8 @@
 #include "avrorouter.hh"
 
 #include <stdio.h>
-#include <maxbase/worker.hh>
 #include <maxbase/alloc.h>
+#include <maxscale/mainworker.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/router.hh>
 #include <maxscale/service.hh>
@@ -66,7 +66,7 @@ bool Avro::post_configure()
 
         conversion_task_ctl(this, false);
 
-        auto worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
+        auto worker = mxs::MainWorker::get();
         worker->execute(
             [this, cnf, block_size, codec]() {
                 SRowEventHandler hndl(new AvroConverter(cnf.service, cnf.statedir, block_size, codec));

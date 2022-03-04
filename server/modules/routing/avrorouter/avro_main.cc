@@ -18,8 +18,8 @@
 #include <sys/stat.h>
 #include <glob.h>
 #include <maxscale/maxscale.hh>
-#include <maxbase/worker.hh>
 #include <maxbase/alloc.h>
+#include <maxscale/mainworker.hh>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
@@ -189,7 +189,7 @@ bool conversion_task_ctl(Avro* inst, bool start)
 
     if (!maxscale_is_shutting_down())
     {
-        Worker* worker = static_cast<Worker*>(mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN));
+        Worker* worker = mxs::MainWorker::get();
         std::unique_ptr<ConversionCtlTask> task(new(std::nothrow) ConversionCtlTask(inst, start));
 
         if (task.get())
