@@ -268,7 +268,7 @@ bool CDCClientConnection::init_connection()
     /* client protocol state change to CDC_STATE_WAIT_FOR_AUTH */
     m_state = CDC_STATE_WAIT_FOR_AUTH;
 
-    MXS_NOTICE("%s: new connection from [%s]", m_dcb->service()->name(), m_dcb->remote().c_str());
+    MXS_INFO("%s: new connection from [%s]", m_dcb->service()->name(), m_dcb->remote().c_str());
     return true;
 }
 

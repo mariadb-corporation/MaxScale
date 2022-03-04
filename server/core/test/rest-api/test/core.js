@@ -65,5 +65,11 @@ describe("MaxScale Core", function () {
     });
   });
 
+  describe("Debug Functionality", function () {
+    it("/maxscale/debug/monitor_wait", function () {
+      return request.get(base_url + "/maxscale/debug/monitor_wait");
+    });
+  });
+
   after(stopMaxScale);
 });

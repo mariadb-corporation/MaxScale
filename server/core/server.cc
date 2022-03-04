@@ -270,6 +270,10 @@ std::pair<bool, std::unique_ptr<mxs::SSLContext>> create_ssl(const char* name, c
         // SSLContext as value.
         ssl.reset();
     }
+    else
+    {
+        ssl->set_usage(mxb::KeyUsage::CLIENT);
+    }
 
     return {ok, std::move(ssl)};
 }
