@@ -63,6 +63,7 @@
 #include <maxbase/atomic.h>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxbase/threadpool.hh>
 
 /* The maximum size for query statements in a transaction (64MB) */
 static size_t sql_size_limit = 64 * 1024 * 1024;
@@ -287,6 +288,7 @@ static MXS_FILTER* createInstance(const char* name, mxs::ConfigParameters* param
             try
             {
                 my_instance->thread = std::thread(checkNamedPipe, my_instance);
+                mxb::set_thread_name(my_instance->thread, "tmpfilter");
             }
             catch (const std::exception& x)
             {

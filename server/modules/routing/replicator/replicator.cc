@@ -24,6 +24,7 @@
 #include <mariadb_rpl.h>
 #include <errmsg.h>
 
+#include <maxbase/threadpool.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/routingworker.hh>
@@ -123,6 +124,7 @@ Replicator::Imp::Imp(const Config& cnf, SRowEventHandler handler)
     , m_rpl(cnf.service, std::move(handler), cnf.match, cnf.exclude)
     , m_thr(std::thread(&Imp::process_events, this))
 {
+    mxb::set_thread_name(m_thr, "Replicator");
 }
 
 bool Replicator::Imp::ok() const
@@ -216,7 +218,7 @@ bool Replicator::Imp::connect()
 
 void Replicator::Imp::process_events()
 {
-    pthread_setname_np(m_thr.native_handle(), "cdc::Replicator");
+    mxb::set_thread_name(m_thr, "cdc::Replicator");
 
     // Load the stored GTID to continue where MaxScale previously left off.
     if (!load_gtid_state())
