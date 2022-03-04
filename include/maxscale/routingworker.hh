@@ -108,16 +108,6 @@ public:
     static bool remove_shared_fd(int fd);
 
     /**
-     * Returns the id of the routing worker
-     *
-     * @return The id of the routing worker.
-     */
-    int id() const override
-    {
-        return m_id;
-    }
-
-    /**
      * Return a reference to the session registry of this worker.
      *
      * @return Session registry.
@@ -450,7 +440,6 @@ private:
     bool try_shutdown(Call::action_t action);
 
 private:
-    const int      m_id;        /*< The id of the worker. */
     SessionsById   m_sessions;  /*< A mapping of session_id->MXS_SESSION */
     Zombies        m_zombies;   /*< DCBs to be deleted. */
     IndexedStorage m_storage;   /*< The storage of this worker. */

@@ -58,7 +58,6 @@ struct this_unit
     int             nWorkers;           // How many routing workers there are.
     RoutingWorker** ppWorkers;          // Array of routing worker instances.
     mxb::AverageN** ppWorker_loads;     // Array of load averages for workers.
-    int             next_worker_id;     // Next worker id
     int             epoll_listener_fd;  // Shared epoll descriptor for listening descriptors.
     int             id_min_worker;      // The smallest routing worker id.
     int             id_max_worker;      // The largest routing worker id.
@@ -69,17 +68,11 @@ struct this_unit
     0,                  // nWorkers
     nullptr,            // ppWorkers
     nullptr,            // ppWorker_loads
-    0,                  // next_worker_id
     -1,                 // epoll_listener_fd
     WORKER_ABSENT_ID,   // id_min_worker
     WORKER_ABSENT_ID,   // id_max_worker
     false,
 };
-
-int next_worker_id()
-{
-    return mxb::atomic::add(&this_unit.next_worker_id, 1, mxb::atomic::RELAXED);
-}
 
 thread_local struct this_thread
 {
@@ -143,7 +136,6 @@ void RoutingWorker::DCBHandler::hangup(DCB* pDcb)
 
 RoutingWorker::RoutingWorker(mxb::WatchdogNotifier* pNotifier)
     : mxb::WatchedWorker(pNotifier)
-    , m_id(next_worker_id())
     , m_pool_handler(this)
 {
     POLL_DATA::handler = &RoutingWorker::epoll_instance_handler;
@@ -867,7 +859,7 @@ void RoutingWorker::close_pooled_dcb(BackendDCB* pDcb)
 
 bool RoutingWorker::pre_run()
 {
-    this_thread.current_worker_id = m_id;
+    this_thread.current_worker_id = id();
 
     bool rv = modules_thread_init() && qc_thread_init(QC_INIT_SELF);
 
@@ -1037,11 +1029,11 @@ uint32_t RoutingWorker::handle_epoll_events(uint32_t events)
     }
     else if (nfds == 0)
     {
-        MXS_DEBUG("No events for worker %d.", m_id);
+        MXS_DEBUG("No events for worker %d.", id());
     }
     else
     {
-        MXS_DEBUG("1 event for worker %d.", m_id);
+        MXS_DEBUG("1 event for worker %d.", id());
         POLL_DATA* pData = static_cast<POLL_DATA*>(epoll_events[0].data.ptr);
 
         actions = pData->handler(pData, this, epoll_events[0].events);
@@ -1530,7 +1522,7 @@ void RoutingWorker::rebalance()
         else if (!m_sessions.empty())
         {
             MXB_INFO("Could not move any sessions from worker %i because all its sessions are in an "
-                     "unmovable state.", m_id);
+                     "unmovable state.", id());
         }
     }
     else if (n_requested_moves > 1)
@@ -1560,7 +1552,7 @@ void RoutingWorker::rebalance()
             // Had enough sessions but some were not movable.
             int non_movable = n_available_sessions - n_movable_sessions;
             MXB_INFO("%i session(s) out of %i on worker %i are in an unmovable state.",
-                     non_movable, n_available_sessions, m_id);
+                     non_movable, n_available_sessions, id());
         }
 
         for (auto* pSession : sessions)

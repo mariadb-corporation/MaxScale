@@ -348,11 +348,11 @@ public:
     /**
      * Returns the id of the worker
      *
-     * @return The address of the worker cast to an int
+     * @return The id of the worker.
      */
-    virtual int id() const
+    int32_t id() const
     {
-        return (intptr_t)this;
+        return m_id;
     }
 
     int load(Load::counter_t counter)
@@ -1078,6 +1078,7 @@ private:
     typedef std::multimap<int64_t, DCall*>   DCallsByTime;
     typedef std::unordered_map<DCId, DCall*> DCallsById;
 
+    const int32_t m_id;                        /*< The id of the worker. */
     uint32_t      m_max_events;                /*< Maximum numer of events in each epoll_wait call. */
     STATISTICS    m_statistics;                /*< Worker statistics. */
     MessageQueue* m_pQueue {nullptr};          /*< The message queue of the worker. */

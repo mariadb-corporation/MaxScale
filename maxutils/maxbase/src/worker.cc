@@ -47,11 +47,19 @@ using maxbase::Worker;
  */
 struct this_unit
 {
-    bool initialized;   // Whether the initialization has been performed.
+    bool initialized;    // Whether the initialization has been performed.
+    int  next_worker_id; // Next worker id
+
 } this_unit =
 {
-    false,      // initialized
+    false, // initialized
+    1,     // next_worker_id
 };
+
+int32_t next_worker_id()
+{
+    return mxb::atomic::add(&this_unit.next_worker_id, 1, mxb::atomic::RELAXED);
+}
 
 thread_local struct this_thread
 {
@@ -272,6 +280,7 @@ int create_epoll_instance()
 
 Worker::Worker(int max_events)
     : m_epoll_fd(create_epoll_instance())
+    , m_id(next_worker_id())
     , m_max_events(max_events)
     , m_pTimer(new PrivateTimer(this, this, &Worker::tick))
 {
