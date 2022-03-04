@@ -43,6 +43,16 @@ const char* to_string(Version version);
 Version from_string(const char* str);
 }
 
+// TLS key extended usage. This tells what kind of purpose the key should be used for. If the expected bit
+// (clientAuth for CLIENT and serverAuth for SERVER) is not present, then it is assumed that the other bit is
+// not present either. This is essentially a XNOR of the clientAuth and serverAuth bits.
+enum class KeyUsage
+{
+    NONE,   // No specific purpose
+    CLIENT, // Used with outbound connection where MaxScale acts as a client
+    SERVER, // Used with inbound connections where MaxScale is the server
+};
+
 // SSL configuration
 struct SSLConfig
 {

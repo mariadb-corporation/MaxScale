@@ -2571,6 +2571,13 @@ server does.
 TLS encryption must be enabled for listeners when they are created. For servers,
 the TLS can be enabled after creation but it cannot be disabled or altered.
 
+Starting with MaxScale 2.5.20, if the TLS certificate given to MaxScale has the
+X509v3 extended key usage information, MaxScale will check it and refuse to use
+a certificate with the wrong usage. This means that a certificate with only
+clientAuth can only be used with servers and a certificate with only serverAuth
+can only be used with listeners. In order to use the same certificate for both
+listeners and servers, it must have both the clientAuth and serverAuth usages.
+
 ### `ssl`
 
 - **Type**: [boolean](#booleans)

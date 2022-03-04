@@ -1623,8 +1623,14 @@ int CacheFilterSession::continue_routing(GWBUF* pPacket)
         }
         else
         {
-            MXS_WARNING("Invalidation is enabled but the current statement could not "
-                        "be parsed. Consequently, the result cannot be cached.");
+            char* pSql;
+            int len;
+            modutil_extract_SQL(pPacket, &pSql, &len);
+
+            MXS_INFO("Invalidation is enabled, but the current statement could not "
+                     "be parsed. Consequently the accessed tables are not known and "
+                     "hence the result cannot be cached, as it would not be known when "
+                     "the result should be invalidated, stmt: %.*s", len, pSql);
             m_state = CACHE_IGNORING_RESPONSE;
         }
     }
