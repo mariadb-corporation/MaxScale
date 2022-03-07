@@ -129,15 +129,7 @@
                 <span class="text-capitalize font-weight-bold mr-2">
                     {{ nodeAttrs.parameters.socket ? $t('socket') : $t('address') }}
                 </span>
-                <truncate-string
-                    :text="
-                        `${
-                            nodeAttrs.parameters.socket
-                                ? nodeAttrs.parameters.socket
-                                : `${nodeAttrs.parameters.address}:${nodeAttrs.parameters.port}`
-                        }`
-                    "
-                />
+                <truncate-string :text="$help.getAddress(nodeAttrs.parameters)" />
             </div>
         </template>
     </tree-graph-node>

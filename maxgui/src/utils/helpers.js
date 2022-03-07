@@ -840,6 +840,15 @@ export function getRepStats(serverInfo) {
 
     return repStats
 }
+/**
+ * Return either socket path or TCP address
+ * @param {Object} parameters
+ * @returns {String} - either socket path or TCP address
+ */
+export function getAddress(parameters) {
+    const { socket, address, port } = parameters
+    return `${socket ? socket : `${address}:${port}`}`
+}
 Object.defineProperties(Vue.prototype, {
     $help: {
         get() {
@@ -900,6 +909,7 @@ Object.defineProperties(Vue.prototype, {
                 getMostFreq,
                 getRepStats,
                 filterSlaveConn,
+                getAddress,
             }
         },
     },
