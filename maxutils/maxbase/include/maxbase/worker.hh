@@ -653,39 +653,6 @@ public:
     }
 
     /**
-     * Push a member function for delayed execution.
-     *
-     * @param delay    The delay in milliseconds.
-     * @param pMethod  The member function to call.
-     * @param data     The data to be provided to the function when invoked.
-     *
-     * @return A unique identifier for the delayed call. Using that identifier
-     *         the call can be cancelled.
-     *
-     * @attention When invoked, if @c action is @c Worker::Call::EXECUTE, the
-     *            function should perform the delayed call and return @true, if
-     *            the function should be called again. If the function returns
-     *            @c false, it will not be called again.
-     *
-     *            If @c action is @c Worker::Call::CANCEL, then the function
-     *            should perform whatever canceling actions are needed. In that
-     *            case the return value is ignored and the function will not
-     *            be called again.
-     */
-    template<class T, class D>
-    DCId dcall(const std::chrono::milliseconds& delay,
-               bool (T::* pMethod)(Worker::Call::action_t action, D data),
-               T* pT,
-               D data)
-    {
-        return add_dcall(new DCallMethod<T, D>(delay,
-                                               next_dcall_id(),
-                                               pMethod,
-                                               pT,
-                                               data));
-    }
-
-    /**
      * Push a general-purpose function wrapper for delayed execution.
      *
      * @param delay    The delay in milliseconds.
@@ -901,37 +868,6 @@ private:
     private:
         bool (* m_pFunction)(Worker::Call::action_t, D);
         D m_data;
-    };
-
-    template<class T, class D>
-    class DCallMethod : public DCall
-    {
-        DCallMethod(const DCallMethod&) = delete;
-        DCallMethod& operator=(const DCallMethod&) = delete;
-
-    public:
-        DCallMethod(const std::chrono::milliseconds& delay,
-                    DCId id,
-                    bool (T::* pMethod)(Worker::Call::action_t action, D data),
-                    T* pT,
-                    D data)
-            : DCall(delay, id)
-            , m_pMethod(pMethod)
-            , m_pT(pT)
-            , m_data(data)
-        {
-        }
-
-    private:
-        bool do_call(Worker::Call::action_t action) override final
-        {
-            return (m_pT->*m_pMethod)(action, m_data);
-        }
-
-    private:
-        bool (T::* m_pMethod)(Worker::Call::action_t, D);
-        T* m_pT;
-        D  m_data;
     };
 
     template<class T>
