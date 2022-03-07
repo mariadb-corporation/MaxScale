@@ -27,7 +27,7 @@ namespace
 
 using namespace nosql;
 
-class ThisUnit
+class ThisUnit : public mxb::Worker::Object
 {
 public:
     ThisUnit()
@@ -286,7 +286,7 @@ void NoSQLCursor::start_purging_idle_cursors(const std::chrono::seconds& cursor_
 
     // We don't ever want to cancel this explicitly so the delayed call will
     // be cancelled when MainWorker is destructed.
-    pMain->dcall(wait_timeout, [pMain, cursor_timeout](mxb::Worker::Call::action_t action) {
+    pMain->dcall(&this_unit, wait_timeout, [pMain, cursor_timeout](mxb::Worker::Call::action_t action) {
             if (action == mxb::Worker::Call::EXECUTE)
             {
                 kill_idle(pMain->epoll_tick_now(), cursor_timeout);

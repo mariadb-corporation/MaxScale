@@ -106,6 +106,7 @@ private:
 };
 
 class Avro : public mxs::Router
+           , public mxb::Worker::Object
 {
     Avro(const Avro&) = delete;
     Avro& operator=(const Avro&) = delete;

@@ -60,7 +60,7 @@ void Reader::start()
     {
         MXB_SINFO("ReplSYNC: reader waiting for primary to synchronize "
                   << "primary: " << gtid_list << ", replica: " << m_start_gtid_list);
-        m_startup_poll_dcid = m_get_worker().dcall(1000ms, &Reader::poll_start_reading, this);
+        m_startup_poll_dcid = m_get_worker().dcall(this, 1000ms, &Reader::poll_start_reading, this);
     }
 }
 
@@ -74,7 +74,7 @@ void Reader::start_reading()
 
     if (m_heartbeat_interval.count())
     {
-        m_heartbeat_dcid = m_get_worker().dcall(1000ms, &Reader::generate_heartbeats, this);
+        m_heartbeat_dcid = m_get_worker().dcall(this, 1000ms, &Reader::generate_heartbeats, this);
     }
 }
 

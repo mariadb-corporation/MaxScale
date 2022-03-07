@@ -174,7 +174,7 @@ public:
 
         if (m_start)
         {
-            m_instance->task_handle = worker.dcall(1000ms, converter_func, m_instance);
+            m_instance->task_handle = worker.dcall(m_instance, 1000ms, converter_func, m_instance);
         }
     }
 

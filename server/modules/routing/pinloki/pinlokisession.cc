@@ -560,7 +560,7 @@ void PinlokiSession::master_gtid_wait(const std::string& gtid, int timeout)
     {
         if (cb(mxb::Worker::Call::EXECUTE))
         {
-            m_mgw_dcid = m_pSession->worker()->dcall(1000ms, cb);
+            m_mgw_dcid = m_pSession->dcall(1000ms, cb);
         }
     }
     else

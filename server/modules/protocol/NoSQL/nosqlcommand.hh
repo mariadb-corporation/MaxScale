@@ -143,6 +143,8 @@ protected:
 
     mxs::RoutingWorker& worker() const;
 
+    MXS_SESSION& session();
+
     Database&         m_database;
     GWBUF*            m_pRequest;
     const int32_t     m_request_id;

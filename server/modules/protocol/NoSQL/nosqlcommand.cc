@@ -135,7 +135,7 @@ void Command::send_downstream_via_loop(const string& sql)
 {
     mxb_assert(m_dcid == 0);
 
-    m_dcid = m_database.context().worker().dcall(0ms, [this, sql](Worker::Call::action_t action) {
+    m_dcid = session().dcall(0ms, [this, sql](Worker::Call::action_t action) {
             m_dcid = 0;
 
             if (action == Worker::Call::EXECUTE)
@@ -145,6 +145,11 @@ void Command::send_downstream_via_loop(const string& sql)
 
             return false;
         });
+}
+
+MXS_SESSION& Command::session()
+{
+    return m_database.context().session();
 }
 
 namespace

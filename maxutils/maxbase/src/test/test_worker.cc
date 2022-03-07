@@ -32,7 +32,7 @@ int64_t get_monotonic_time_ms()
     return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
 
-class TimerTest
+class TimerTest : public Worker::Object
 {
 public:
     static int s_ticks;
@@ -109,11 +109,11 @@ int run()
     TimerTest t5(&w, &rv, 600ms);
 
     w.execute([&]() {
-                  w.dcall(t1.delay(), &TimerTest::tick, &t1);
-                  w.dcall(t2.delay(), &TimerTest::tick, &t2);
-                  w.dcall(t3.delay(), &TimerTest::tick, &t3);
-                  w.dcall(t4.delay(), &TimerTest::tick, &t4);
-                  w.dcall(t5.delay(), &TimerTest::tick, &t5);
+                  w.dcall(&t1, t1.delay(), &TimerTest::tick, &t1);
+                  w.dcall(&t2, t2.delay(), &TimerTest::tick, &t2);
+                  w.dcall(&t3, t3.delay(), &TimerTest::tick, &t3);
+                  w.dcall(&t4, t4.delay(), &TimerTest::tick, &t4);
+                  w.dcall(&t5, t5.delay(), &TimerTest::tick, &t5);
               }, mxb::Worker::EXECUTE_QUEUED);
 
     w.run();

@@ -394,8 +394,7 @@ void Session::set_can_pool_backends(bool value)
             // an idle session.
             if (m_idle_pool_call_id == mxb::Worker::NO_CALL)
             {
-                m_idle_pool_call_id = m_worker->dcall(m_pooling_time, &Session::pool_backends_cb,
-                                                      this);
+                m_idle_pool_call_id = dcall(m_pooling_time, &Session::pool_backends_cb, this);
             }
         }
     }
@@ -627,7 +626,7 @@ void session_delay_routing(MXS_SESSION* session, GWBUF* buffer, int seconds, std
 
     // Delay the routing for at least a millisecond
     int32_t delay = 1 + seconds * 1000;
-    worker->dcall(std::chrono::milliseconds(delay), delayed_routing_cb, task.release());
+    worker->dcall(session, std::chrono::milliseconds(delay), delayed_routing_cb, task.release());
 }
 
 void session_delay_routing(MXS_SESSION* session, mxs::Routable* down, GWBUF* buffer, int seconds)
@@ -1773,7 +1772,7 @@ bool Session::pool_backends_cb(mxb::Worker::Call::action_t action)
 
             // TODO: Nicer if delayed call could modify its own timing.
             call_again = false;
-            m_idle_pool_call_id = m_worker->dcall(1000ms, &Session::pool_backends_cb, this);
+            m_idle_pool_call_id = dcall(1000ms, &Session::pool_backends_cb, this);
         }
     }
     else

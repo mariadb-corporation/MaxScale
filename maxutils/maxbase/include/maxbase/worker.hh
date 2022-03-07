@@ -267,6 +267,22 @@ public:
     // Must be zero since the id is used in if-statements. Existing code assumes that a normal id is never 0.
     static constexpr DCId NO_CALL = 0;
 
+    class Object
+    {
+    public:
+        Object(const Object&) = delete;
+        Object& operator = (const Object&) = delete;
+
+        virtual ~Object()
+        {
+        }
+
+    protected:
+        Object()
+        {
+        }
+    };
+
     /**
      * A delegating timer that delegates the timer tick handling
      * to another object.
@@ -610,7 +626,8 @@ public:
      *            be called again.
      */
     template<class D>
-    DCId dcall(const std::chrono::milliseconds& delay,
+    DCId dcall(Object* pObject,
+               const std::chrono::milliseconds& delay,
                bool (* pFunction)(Worker::Call::action_t action, D data),
                D data)
     {
@@ -637,7 +654,8 @@ public:
      *            be called again.
      */
     template<class T>
-    DCId dcall(const std::chrono::milliseconds& delay,
+    DCId dcall(Object* pObject,
+               const std::chrono::milliseconds& delay,
                bool (T::* pMethod)(Worker::Call::action_t action),
                T* pT)
     {
@@ -671,7 +689,8 @@ public:
      *            case the return value is ignored and the function will not
      *            be called again.
      */
-    DCId dcall(const std::chrono::milliseconds& delay,
+    DCId dcall(Object* pObject,
+               const std::chrono::milliseconds& delay,
                std::function<bool(Worker::Call::action_t action)>&& f)
     {
         return add_dcall(new DCallFunctorWithCancel(delay, next_dcall_id(), std::move(f)));
@@ -751,6 +770,32 @@ protected:
      * @param op      Either EPOLL_CTL_ADD or EPOLL_CTL_DEL.
      */
     static void resolve_poll_error(int fd, int err, int op);
+
+    /**
+     * Delayed calls for derived workers.
+     */
+    template<class D>
+    DCId dcall(const std::chrono::milliseconds& delay,
+               bool (* pFunction)(mxb::Worker::Call::action_t action, D data),
+               D data)
+    {
+        return dcall(nullptr, delay, pFunction, data);
+    }
+
+    template<class T>
+    DCId dcall(const std::chrono::milliseconds& delay,
+               bool (T::* pMethod)(mxb::Worker::Call::action_t action),
+               T* pT)
+    {
+        return dcall(nullptr, delay, pMethod, pT);
+    }
+
+    DCId dcall(const std::chrono::milliseconds& delay,
+               std::function<bool(mxb::Worker::Call::action_t action)>&& f)
+    {
+        return dcall(nullptr, delay, std::move(f));
+    }
+
 
 private:
     friend class Initer;

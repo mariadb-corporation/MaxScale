@@ -65,10 +65,10 @@ int ThrottleSession::real_routeQuery(GWBUF* buffer, bool is_delayed)
         int32_t delay = 1 + std::ceil(1000.0 / m_max_qps);
         maxbase::Worker* worker = maxbase::Worker::get_current();
         mxb_assert(worker);
-        m_delayed_call_id = worker->dcall(std::chrono::milliseconds(delay),
-                                          [this, buffer](mxb::Worker::Call::action_t action) {
-                                              return delayed_routeQuery(action, buffer);
-                                          });
+        m_delayed_call_id = m_pSession->dcall(std::chrono::milliseconds(delay),
+                                              [this, buffer](mxb::Worker::Call::action_t action) {
+                                                  return delayed_routeQuery(action, buffer);
+                                              });
 
         if (m_state == State::MEASURING)
         {

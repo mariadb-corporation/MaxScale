@@ -101,7 +101,7 @@ typedef char* (* session_variable_handler_t)(void* context,
  * Note that the first few fields (up to and including "entry_is_ready") must
  * precisely match the LIST_ENTRY structure defined in the list manager.
  */
-class MXS_SESSION
+class MXS_SESSION : public mxb::Worker::Object
 {
 public:
     enum class State
@@ -369,33 +369,33 @@ public:
     /**
      * Delayed Call
      *
-     * @see mxb::Worker::delayed_call
+     * @see mxb::Worker::dcall
      */
     template<class D>
-    mxb::Worker::DCId delayed_call(const std::chrono::milliseconds& delay,
-                                   bool (* pFunction)(mxb::Worker::Call::action_t action, D data),
-                                   D data)
+    mxb::Worker::DCId dcall(const std::chrono::milliseconds& delay,
+                            bool (* pFunction)(mxb::Worker::Call::action_t action, D data),
+                            D data)
     {
-        return mxb_worker()->delayed_call(delay, pFunction, data);
+        return mxb_worker()->dcall(this, delay, pFunction, data);
     }
 
     template<class T>
-    mxb::Worker::DCId delayed_call(const std::chrono::milliseconds& delay,
-                                   bool (T::* pMethod)(mxb::Worker::Call::action_t action),
-                                   T* pT)
+    mxb::Worker::DCId dcall(const std::chrono::milliseconds& delay,
+                            bool (T::* pMethod)(mxb::Worker::Call::action_t action),
+                            T* pT)
     {
-        return mxb_worker()->delayed_call(delay, pMethod, pT);
+        return mxb_worker()->dcall(this, delay, pMethod, pT);
     }
 
-    mxb::Worker::DCId delayed_call(const std::chrono::milliseconds& delay,
-                                   std::function<bool(mxb::Worker::Call::action_t action)>&& f)
+    mxb::Worker::DCId dcall(const std::chrono::milliseconds& delay,
+                            std::function<bool(mxb::Worker::Call::action_t action)>&& f)
     {
-        return mxb_worker()->delayed_call(delay, std::move(f));
+        return mxb_worker()->dcall(this, delay, std::move(f));
     }
 
-    bool cancel_delayed_call(mxb::Worker::DCId id)
+    bool cancel_dcall(mxb::Worker::DCId id)
     {
-        return mxb_worker()->cancel_delayed_call(id);
+        return mxb_worker()->cancel_dcall(id);
     }
 
 protected:
