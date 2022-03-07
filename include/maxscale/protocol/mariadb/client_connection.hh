@@ -173,7 +173,9 @@ private:
     void add_local_client(LocalClient* client);
     bool have_local_clients();
 
-    void execute_kill_all_others(uint64_t target_id, uint64_t keep_protocol_thread_id, kill_type_t type);
+    // These versions automatically send an OK packet to the client once the KILL command has completed. Use
+    // mxs_mysql_execute_kill if you don't want that.
+    void execute_kill_connection(uint64_t target_id, kill_type_t type);
     void execute_kill_user(const char* user, kill_type_t type);
     void execute_kill(std::shared_ptr<KillInfo> info, bool send_ok);
 
