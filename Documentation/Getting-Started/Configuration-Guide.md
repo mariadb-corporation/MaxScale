@@ -880,6 +880,11 @@ amount of memory available for each thread, divide the cache size with the value
 of `threads`. If statements are evicted from the cache (visible in the
 diagnostic output), consider increasing the cache size.
 
+Note also that limit is not a hard limit, but an approximate one. Namely, although
+the memory needed for storing the canonicalized statement and the classification
+result is correctly accounted for, there is additional overhead whose size is not
+exactly known and over which we do not have direct control.
+
 Using `maxctrl show threads` it is possible to check what the actual size of
 the cache is and to see performance statistics.
 
