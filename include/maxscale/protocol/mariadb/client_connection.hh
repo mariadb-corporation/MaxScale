@@ -140,7 +140,7 @@ private:
     };
 
     std::tuple<bool, GWBUF> read_first_client_packet();
-    DCB::ReadResult         read_protocol_packet();
+    std::tuple<bool, GWBUF> read_protocol_packet();
 
     StateMachineRes process_handshake();
     StateMachineRes process_authentication(AuthType auth_type);
@@ -148,7 +148,7 @@ private:
 
     bool send_server_handshake();
     bool parse_ssl_request_packet(const GWBUF& buffer);
-    bool parse_handshake_response_packet(GWBUF* buffer);
+    bool parse_handshake_response_packet(const GWBUF& buffer);
 
     bool perform_auth_exchange(mariadb::AuthenticationData& auth_data);
     void perform_check_token(AuthType auth_type);
@@ -182,7 +182,7 @@ private:
 
     void track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf);
     void track_current_command(const mxs::Buffer& buf);
-    bool large_query_continues(const mxs::Buffer& buffer) const;
+    bool large_query_continues(const GWBUF& buffer) const;
     bool require_ssl() const;
 
     void update_user_account_entry(mariadb::AuthenticationData& auth_data);

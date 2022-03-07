@@ -1406,16 +1406,11 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
         m_routing_state = RoutingState::PACKET_START;
     }
 
-    auto read_res = read_protocol_packet();
-    mxs::Buffer buffer = move(read_res.data);
-    if (read_res.error())
+    auto [read_ok, buffer] = read_protocol_packet();
+    if (buffer.empty())
     {
-        return StateMachineRes::ERROR;
-    }
-    else if (buffer.empty())
-    {
-        // Didn't get a complete packet, wait for more data.
-        return StateMachineRes::IN_PROGRESS;
+        // Either an error or an incomplete packet.
+        return read_ok ? StateMachineRes::IN_PROGRESS : StateMachineRes::ERROR;
     }
 
     bool routed = false;
@@ -1432,27 +1427,21 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
     case RoutingState::PACKET_START:
         if (buffer.length() > MYSQL_HEADER_LEN)
         {
-            routed = process_normal_packet(move(buffer));
+            routed = process_normal_packet(mxs::gwbuf_to_buffer(move(buffer)));
         }
         else
         {
             // Unexpected, client should not be sending empty (header-only) packets in this case.
             MXS_ERROR("Client %s sent empty packet when a normal packet was expected.",
                       m_session->user_and_host().c_str());
-            buffer.reset();
         }
         break;
 
     case RoutingState::LARGE_PACKET:
         {
-            if (rcap_type_required(m_session->capabilities(), RCAP_TYPE_STMT_INPUT))
-            {
-                buffer.make_contiguous();
-            }
-
             // No command bytes, just continue routing large packet.
             bool is_large = large_query_continues(buffer);
-            routed = m_downstream->routeQuery(buffer.release()) != 0;
+            routed = m_downstream->routeQuery(mxs::gwbuf_to_gwbufptr(move(buffer))) != 0;
 
             if (!is_large)
             {
@@ -1465,9 +1454,10 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
     case RoutingState::LARGE_HISTORY_PACKET:
         {
             // A continuation of a recoded command, append it to the current command and route it forward
-            m_pending_cmd.append(gwbuf_clone_shallow(buffer.get()));
             bool is_large = large_query_continues(buffer);
-            routed = m_downstream->routeQuery(buffer.release()) != 0;
+            auto temp = mxs::gwbuf_to_gwbufptr(move(buffer));
+            m_pending_cmd.append(gwbuf_clone_shallow(temp));
+            routed = m_downstream->routeQuery(temp) != 0;
 
             if (!is_large)
             {
@@ -1482,7 +1472,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
         {
             // Local-infile routing continues until client sends an empty packet. Again, tracked by backend
             // but this time on the downstream side.
-            routed = route_statement(move(buffer));
+            routed = route_statement(mxs::gwbuf_to_buffer(move(buffer)));
             if (!session_is_load_active(m_session))
             {
                 m_routing_state = RoutingState::PACKET_START;
@@ -1997,9 +1987,9 @@ bool MariaDBClientConnection::parse_ssl_request_packet(const GWBUF& buffer)
     return rval;
 }
 
-bool MariaDBClientConnection::parse_handshake_response_packet(GWBUF* buffer)
+bool MariaDBClientConnection::parse_handshake_response_packet(const GWBUF& buffer)
 {
-    size_t buflen = gwbuf_length(buffer);
+    size_t buflen = buffer.length();
     bool rval = false;
 
     /**
@@ -2016,7 +2006,7 @@ bool MariaDBClientConnection::parse_handshake_response_packet(GWBUF* buffer)
         int datalen = buflen - MYSQL_HEADER_LEN;
         packet_parser::ByteVec data;
         data.resize(datalen + 1);
-        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, datalen, data.data());
+        buffer.copy_data(MYSQL_HEADER_LEN, datalen, data.data());
         data[datalen] = '\0';   // Simplifies some later parsing.
 
         auto client_info = packet_parser::parse_client_capabilities(data, m_session_data->client_caps);
@@ -2265,28 +2255,12 @@ void MariaDBClientConnection::cancel_change_user_p2(GWBUF* buffer)
 
 MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handshake()
 {
-    GWBUF buffer;
-    bool read_success;
-    if (m_handshake_state == HSState::INIT)
-    {
-        // The first response from client requires special handling.
-        std::tie(read_success, buffer) = read_first_client_packet();
-    }
-    else
-    {
-        auto read_res = read_protocol_packet();
-        read_success = !read_res.error();
-        if (!read_res.data.empty())
-        {
-            GWBUF* temp = read_res.data.release();
-            buffer = move(*temp);
-            delete temp;
-        }
-    }
-
+    // The first response from client requires special handling.
+    auto [read_ok, buffer] = (m_handshake_state == HSState::INIT) ? read_first_client_packet() :
+        read_protocol_packet();
     if (buffer.empty())
     {
-        return read_success ? StateMachineRes::IN_PROGRESS : StateMachineRes::ERROR;
+        return read_ok ? StateMachineRes::IN_PROGRESS : StateMachineRes::ERROR;
     }
 
     const char wrong_sequence[] = "Client (%s) sent packet with unexpected sequence number. "
@@ -2317,7 +2291,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
                     {
                         m_handshake_state = HSState::SSL_NEG;
                     }
-                    else if (parse_handshake_response_packet(&buffer))
+                    else if (parse_handshake_response_packet(buffer))
                     {
                         send_authentication_error(AuthErrorType::ACCESS_DENIED);
                         m_handshake_state = HSState::FAIL;
@@ -2369,7 +2343,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
                 int expected_seq = require_ssl() ? 2 : 1;
                 if (m_sequence == expected_seq)
                 {
-                    if (parse_handshake_response_packet(&buffer))
+                    if (parse_handshake_response_packet(buffer))
                     {
                         m_handshake_state = HSState::COMPLETE;
                     }
@@ -2474,21 +2448,24 @@ bool MariaDBClientConnection::perform_auth_exchange(mariadb::AuthenticationData&
     // Nothing to read on first exchange-call.
     if (m_auth_state == AuthState::CONTINUE_EXCHANGE)
     {
-        auto read_res = read_protocol_packet();
-        if (read_res)
+        auto [read_ok, buffer] = read_protocol_packet();
+        if (buffer.empty())
         {
-            read_buffer = move(read_res.data);
-        }
-        else if (read_res.error())
-        {
-            // Connection is likely broken, no need to send error message.
-            m_auth_state = AuthState::FAIL;
-            return true;
+            if (read_ok)
+            {
+                // Not enough data was available yet.
+                return false;
+            }
+            else
+            {
+                // Connection is likely broken, no need to send error message.
+                m_auth_state = AuthState::FAIL;
+                return true;
+            }
         }
         else
         {
-            // Not enough data was available yet.
-            return false;
+            read_buffer = mxs::gwbuf_to_buffer(move(buffer));
         }
     }
 
@@ -2634,9 +2611,9 @@ json_t* MariaDBClientConnection::diagnostics() const
     return json_pack("{ss}", "cipher", m_dcb->ssl_cipher().c_str());
 }
 
-bool MariaDBClientConnection::large_query_continues(const mxs::Buffer& buffer) const
+bool MariaDBClientConnection::large_query_continues(const GWBUF& buffer) const
 {
-    return MYSQL_GET_PACKET_LEN(buffer.get()) == MAX_PACKET_SIZE;
+    return MYSQL_GET_PACKET_LEN(&buffer) == MAX_PACKET_SIZE;
 }
 
 bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
@@ -3204,7 +3181,7 @@ mariadb::AuthenticatorModule* MariaDBClientConnection::find_auth_module(const st
 /**
  * Read protocol packet and update packet sequence.
  */
-DCB::ReadResult MariaDBClientConnection::read_protocol_packet()
+std::tuple<bool, GWBUF> MariaDBClientConnection::read_protocol_packet()
 {
     auto [read_ok, buffer] = mariadb::read_protocol_packet(m_dcb);
     if (!buffer.empty())
@@ -3213,7 +3190,7 @@ DCB::ReadResult MariaDBClientConnection::read_protocol_packet()
         m_sequence = seq;
         m_next_sequence = seq + 1;
     }
-    return tuple_to_readresult(read_ok, move(buffer));
+    return {read_ok, move(buffer)};
 }
 
 mariadb::AuthenticationData& MariaDBClientConnection::authentication_data(AuthType type)
