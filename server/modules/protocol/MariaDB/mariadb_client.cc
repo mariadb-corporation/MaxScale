@@ -982,7 +982,7 @@ void MariaDBClientConnection::handle_query_kill(const SpecialQueryDesc& kill_con
     {
         if (kill_contents.kill_id > 0)
         {
-            mxs_mysql_execute_kill(kill_contents.kill_id, (kill_type_t)kt);
+            execute_kill_connection(kill_contents.kill_id, (kill_type_t)kt);
         }
         else if (!user.empty())
         {
@@ -1943,12 +1943,11 @@ void MariaDBClientConnection::mxs_mysql_execute_kill(uint64_t target_id, MariaDB
  *       and really goes to the heart of explaining what the session_id/thread_id means in terms
  *       of a service/server pipeline and the recursiveness of this call.
  */
-void MariaDBClientConnection::execute_kill_all_others(uint64_t target_id,
-                                                      uint64_t keep_protocol_thread_id,
+void MariaDBClientConnection::execute_kill_connection(uint64_t target_id,
                                                       MariaDBClientConnection::kill_type_t type)
 {
     auto str = kill_query_prefix(type);
-    auto info = std::make_shared<ConnKillInfo>(target_id, str, m_session, keep_protocol_thread_id);
+    auto info = std::make_shared<ConnKillInfo>(target_id, str, m_session, 0);
     execute_kill(info, true);
 }
 
@@ -2706,8 +2705,7 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
             buffer.make_contiguous();
             const uint8_t* data = buffer.data();
             uint64_t process_id = mariadb::get_byte4(data + MYSQL_HEADER_LEN + 1);
-            mxs_mysql_execute_kill(process_id, KT_CONNECTION);
-            write_ok_packet(1);
+            execute_kill_connection(process_id, KT_CONNECTION);
             success = true;     // No further processing or routing.
         }
         break;
