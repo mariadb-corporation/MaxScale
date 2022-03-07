@@ -93,6 +93,11 @@ MXS_SESSION::MXS_SESSION(const std::string& host, SERVICE* service)
     mxs::RoutingWorker::get_current()->register_session(this);
 }
 
+mxb::Worker* MXS_SESSION::mxb_worker() const
+{
+    return m_worker;
+}
+
 MXS_SESSION::~MXS_SESSION()
 {
     mxs::RoutingWorker::get_current()->deregister_session(m_id);
