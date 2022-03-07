@@ -283,7 +283,12 @@ Worker::Worker(int max_events)
     , m_id(next_worker_id())
     , m_max_events(max_events)
     , m_pTimer(new PrivateTimer(this, this, &Worker::tick))
+    , m_prev_dcid(m_id)
 {
+    // The 16 most significant bits of the 64 bit delayed call id, are the 16
+    // least significant bits of the worker id.
+    m_prev_dcid <<= 48;
+
     mxb_assert(max_events > 0);
 
     if (m_epoll_fd != -1)
