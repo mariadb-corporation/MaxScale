@@ -587,7 +587,8 @@ protected:
 
     void stop_polling_and_shutdown();
 
-    int log_errors_SSL(int ret);
+    int         log_errors_SSL(int ret);
+    std::string get_one_SSL_error(unsigned long ssl_errno);
 
     struct Encryption
     {
