@@ -260,7 +260,7 @@ void DCB::stop_polling_and_shutdown()
     shutdown();
 }
 
-std::tuple<bool, GWBUF> DCB::read2(size_t minbytes, size_t maxbytes)
+std::tuple<bool, GWBUF> DCB::read(size_t minbytes, size_t maxbytes)
 {
     return read_impl(minbytes, maxbytes, ReadLimit::RES_LEN);
 }

@@ -2083,7 +2083,7 @@ std::tuple<bool, GWBUF> MariaDBClientConnection::read_first_client_packet()
         {
             // Normal response. Need to read again. Likely the entire packet is available at the socket.
             m_dcb->unread(move(ssl_req_buf));
-            auto [resp_packet_ok, resp_packet_buf] = m_dcb->read2(prot_packet_len, prot_packet_len);
+            auto [resp_packet_ok, resp_packet_buf] = m_dcb->read(prot_packet_len, prot_packet_len);
             if (resp_packet_buf.empty())
             {
                 // Not enough data.

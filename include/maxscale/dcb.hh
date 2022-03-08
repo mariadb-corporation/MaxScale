@@ -277,7 +277,7 @@ public:
      * @return First return value is success, second is data. Data can be empty if not enough bytes were
      * available. Success is false only on socket error.
      */
-    std::tuple<bool, GWBUF> read2(size_t minbytes, size_t maxbytes);
+    std::tuple<bool, GWBUF> read(size_t minbytes, size_t maxbytes);
 
     /**
      * Same as above, with the difference that at most maxbytes (minus existing readq) is read from socket.

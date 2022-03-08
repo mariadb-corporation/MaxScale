@@ -523,7 +523,7 @@ std::tuple<bool, GWBUF> mariadb::read_protocol_packet(DCB* dcb)
 {
     const int MAX_PACKET_SIZE = MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN;
     // TODO: add read_peek once trigger_read_event issue fixed.
-    auto [read_ok, buffer] = dcb->read2(MYSQL_HEADER_LEN, MAX_PACKET_SIZE);
+    auto [read_ok, buffer] = dcb->read(MYSQL_HEADER_LEN, MAX_PACKET_SIZE);
 
     if (!buffer.empty())
     {

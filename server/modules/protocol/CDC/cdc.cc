@@ -149,7 +149,7 @@ void CDCClientConnection::ready_for_reading(DCB* event_dcb)
     CDCClientConnection* protocol = this;
     int auth_val = CDC_STATE_AUTH_FAILED;
 
-    auto [read_ok, buffer] = m_dcb->read2(0, 0);
+    auto [read_ok, buffer] = m_dcb->read(0, 0);
     if (!buffer.empty())
     {
         auto* head = new GWBUF(std::move(buffer));

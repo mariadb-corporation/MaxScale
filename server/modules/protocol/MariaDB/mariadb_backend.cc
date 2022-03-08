@@ -647,7 +647,7 @@ bool MariaDBBackendConnection::handle_auth_change_response(const GWBUF& reply, D
  */
 void MariaDBBackendConnection::normal_read()
 {
-    auto [read_ok, buffer] = m_dcb->read2(MYSQL_HEADER_LEN, 0);
+    auto [read_ok, buffer] = m_dcb->read(MYSQL_HEADER_LEN, 0);
 
     if (buffer.empty())
     {
@@ -814,7 +814,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_history
 
     while (!m_history_responses.empty() && rval == StateMachineRes::DONE)
     {
-        auto [read_ok, buffer] = m_dcb->read2(MYSQL_HEADER_LEN, 0);
+        auto [read_ok, buffer] = m_dcb->read(MYSQL_HEADER_LEN, 0);
 
         if (buffer.empty())
         {
