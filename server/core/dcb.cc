@@ -579,6 +579,62 @@ GWBUF* DCB::basic_read_SSL(int* nsingleread)
     return buffer;
 }
 
+std::string DCB::get_one_SSL_error(unsigned long ssl_errno)
+{
+    // OpenSSL says the buffer size must be greater than 120 bytes for 1.0.2 but in 1.1.1 it must be greater
+    // than 256 (same for 3.0). Using ERR_error_string_n checks the length so this is forwards compatible.
+    std::array<char, 256> buf {};
+    ERR_error_string_n(ssl_errno, buf.data(), buf.size());
+    std::string rval = buf.data();
+
+    if (rval.find("no shared cipher") != std::string::npos)
+    {
+        // No shared ciphers, print the list of ciphers we offered and, if possible, the ones the client asked
+        // for. This should help administrators determine why the failure happened. Usually this happens when
+        // an older client attempts to connect to a MaxScale instance that uses a newer TLS version.
+
+#ifdef OPENSSL_1_1
+        // This only works when we're acting as the server.
+        if (STACK_OF(SSL_CIPHER) * ciphers = SSL_get_client_ciphers(m_encryption.handle))
+        {
+            rval += " (Client ciphers: ";
+            int n = sk_SSL_CIPHER_num(ciphers);
+
+            for (int i = 0; i < n; i++)
+            {
+                if (i != 0)
+                {
+                    rval += ":";
+                }
+
+                rval += SSL_CIPHER_get_name(sk_SSL_CIPHER_value(ciphers, i));
+            }
+
+            rval += ")";
+        }
+#endif
+
+        rval += " (Our ciphers: ";
+        int i = 0;
+        std::string ciphers;
+
+        while (const char* c = SSL_get_cipher_list(m_encryption.handle, i))
+        {
+            if (i != 0)
+            {
+                rval += ":";
+            }
+
+            rval += c;
+            ++i;
+        }
+
+        rval += ")";
+    }
+
+    return rval;
+}
+
 /**
  * Log errors from an SSL operation
  *
@@ -589,40 +645,34 @@ GWBUF* DCB::basic_read_SSL(int* nsingleread)
  */
 int DCB::log_errors_SSL(int ret)
 {
-    char errbuf[MXS_STRERROR_BUFLEN];
-    unsigned long ssl_errno;
+    std::ostringstream ss;
+    unsigned long ssl_errno = ERR_get_error();
 
-    ssl_errno = ERR_get_error();
     if (0 == ssl_errno || m_silence_errors)
     {
         return 0;
     }
-    if (ret || ssl_errno)
-    {
-        MXS_ERROR("SSL operation failed, %s at '%s' in state "
-                  "%s fd %d return code %d. More details may follow.",
-                  mxs::to_string(m_role),
-                  client_remote().c_str(),
-                  mxs::to_string(m_state),
-                  m_fd,
-                  ret);
-    }
+
     if (ret && !ssl_errno)
     {
-        int local_errno = errno;
-        MXS_ERROR("SSL error caused by TCP error %d %s",
-                  local_errno,
-                  mxs_strerror(local_errno));
+        ss << "network error (" << errno << ", " << mxs_strerror(errno) << ")";
     }
     else
     {
-        while (ssl_errno != 0)
+        ss << get_one_SSL_error(ssl_errno);
+
+        while ((ssl_errno = ERR_get_error()) != 0)
         {
-            ERR_error_string_n(ssl_errno, errbuf, MXS_STRERROR_BUFLEN);
-            MXS_ERROR("%s", errbuf);
-            ssl_errno = ERR_get_error();
+            ss << ", " << get_one_SSL_error(ssl_errno);
         }
     }
+
+    if (ret || ssl_errno)
+    {
+        MXS_ERROR("SSL operation failed for %s at '%s': %s",
+                  mxs::to_string(m_role), client_remote().c_str(), ss.str().c_str());
+    }
+
     return -1;
 }
 
