@@ -883,12 +883,26 @@ void Worker::tick()
         m_sorted_calls.erase(i);
         m_calls.erase(j);
 
-        if (pCall->call(Worker::Call::EXECUTE))
+        // pRef is null if this is a delayed call made by the worker itself. In that
+        // case the fact that we are here, is proof that it is alive and the call
+        // is possible.
+        auto* pRef = pCall->reference();
+
+        if (!pRef || pRef->object())
         {
-            repeating_calls.push_back(pCall);
+            if (pCall->call(Worker::Call::EXECUTE))
+            {
+                repeating_calls.push_back(pCall);
+            }
+            else
+            {
+                delete pCall;
+            }
         }
         else
         {
+            mxb_assert(pRef && !pRef->object());
+            MXB_ERROR("Recipient of delayed call was deleted before delayed call was due.");
             delete pCall;
         }
 
