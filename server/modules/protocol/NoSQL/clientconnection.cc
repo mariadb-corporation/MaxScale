@@ -174,11 +174,11 @@ void ClientConnection::ready_for_reading(DCB* pDcb)
 
     if (!m_ssl_required || ssl_is_ready())
     {
-        DCB::ReadResult result = m_pDcb->read(protocol::HEADER_LEN, protocol::MAX_MSG_SIZE);
+        auto [read_ok, buffer] = m_pDcb->read2(protocol::HEADER_LEN, protocol::MAX_MSG_SIZE);
 
-        if (result)
+        if (!buffer.empty())
         {
-            ready_for_reading(result.data.release());
+            ready_for_reading(new GWBUF(move(buffer)));
         }
     }
 }

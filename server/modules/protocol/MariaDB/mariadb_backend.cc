@@ -647,20 +647,22 @@ bool MariaDBBackendConnection::handle_auth_change_response(const GWBUF& reply, D
  */
 void MariaDBBackendConnection::normal_read()
 {
-    DCB::ReadResult read_res = m_dcb->read(MYSQL_HEADER_LEN, 0);
+    auto [read_ok, buffer] = m_dcb->read2(MYSQL_HEADER_LEN, 0);
 
-    if (read_res.error())
+    if (buffer.empty())
     {
-        do_handle_error(m_dcb, "Read from backend failed");
-        return;
-    }
-    else if (read_res.data.empty())
-    {
-        return;
+        if (read_ok)
+        {
+            return;
+        }
+        else
+        {
+            do_handle_error(m_dcb, "Read from backend failed");
+            return;
+        }
     }
 
-    GWBUF* read_buffer = read_res.data.release();
-    mxb_assert(read_buffer);
+    auto* read_buffer = new GWBUF(move(buffer));
 
     /** Ask what type of output the router/filter chain expects */
     MXS_SESSION* session = m_dcb->session();
@@ -812,16 +814,23 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_history
 
     while (!m_history_responses.empty() && rval == StateMachineRes::DONE)
     {
-        DCB::ReadResult read_res = m_dcb->read(MYSQL_HEADER_LEN, 0);
+        auto [read_ok, buffer] = m_dcb->read2(MYSQL_HEADER_LEN, 0);
 
-        if (read_res.error())
+        if (buffer.empty())
         {
-            do_handle_error(m_dcb, "Read from backend failed");
-            rval = StateMachineRes::ERROR;
+            if (read_ok)
+            {
+                rval = StateMachineRes::IN_PROGRESS;
+            }
+            else
+            {
+                do_handle_error(m_dcb, "Read from backend failed");
+                rval = StateMachineRes::ERROR;
+            }
         }
-        else if (!read_res.data.empty())
+        else
         {
-            GWBUF* read_buffer = read_res.data.release();
+            GWBUF* read_buffer = new GWBUF(move(buffer));
             mxs::Buffer result = track_response(&read_buffer);
 
             if (read_buffer)
@@ -855,10 +864,6 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_history
                 // has multiple input/output parameters.
                 rval = StateMachineRes::IN_PROGRESS;
             }
-        }
-        else
-        {
-            rval = StateMachineRes::IN_PROGRESS;
         }
     }
 

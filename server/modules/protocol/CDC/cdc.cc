@@ -149,10 +149,10 @@ void CDCClientConnection::ready_for_reading(DCB* event_dcb)
     CDCClientConnection* protocol = this;
     int auth_val = CDC_STATE_AUTH_FAILED;
 
-    DCB::ReadResult read_res = dcb->read((uint32_t)0, (uint32_t)0);
-    if (read_res.data.length() > 0)
+    auto [read_ok, buffer] = m_dcb->read2(0, 0);
+    if (!buffer.empty())
     {
-        GWBUF* head = read_res.data.release();
+        auto* head = new GWBUF(std::move(buffer));
         switch (protocol->m_state)
         {
         case CDC_STATE_WAIT_FOR_AUTH:
@@ -164,7 +164,7 @@ void CDCClientConnection::ready_for_reading(DCB* event_dcb)
             }
 
             /* Discard input buffer */
-            gwbuf_free(head);
+            delete head;
 
             if (auth_val == CDC_STATE_AUTH_OK)
             {
@@ -204,7 +204,7 @@ void CDCClientConnection::ready_for_reading(DCB* event_dcb)
                 // rc = mxs_route_query(session, head);
 
                 // buffer not handled by router right now, consume it
-                gwbuf_free(head);
+                delete head;
 
                 /* right now, just force the client connection close */
                 ClientDCB::close(dcb);
@@ -227,7 +227,7 @@ void CDCClientConnection::ready_for_reading(DCB* event_dcb)
                      dcb->service()->name(),
                      dcb->remote().c_str(),
                      protocol->m_state);
-            gwbuf_free(head);
+            delete head;
 
             break;
         }

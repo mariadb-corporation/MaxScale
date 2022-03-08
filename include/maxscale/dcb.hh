@@ -269,43 +269,20 @@ public:
      */
     int socket_bytes_readable() const;
 
-    enum class ReadLimit
-    {
-        RES_LEN,    /**< Maxbytes only affects the returned data. Socket can be read for more. */
-        STRICT      /**< Exactly the given amount must be read from socket */
-    };
+    /**
+     * Read data from socket.
+     *
+     * @param minbytes Return at least this many bytes.
+     * @param maxbytes Return at most this many bytes. More can be read from socket.
+     * @return First return value is success, second is data. Data can be empty if not enough bytes were
+     * available. Success is false only on socket error.
+     */
+    std::tuple<bool, GWBUF> read2(size_t minbytes, size_t maxbytes);
 
     /**
-     * Read data from the DCB.
-     *
-     * @param ppHead    Pointer to pointer to GWBUF to append to. The GWBUF pointed to
-     *                  may be NULL in which case it will be non-NULL after a successful read.
-     * @param maxbytes  Maximum amount of bytes to read, 0 means no limit.
-     * @param limit_type Type of read limit
-     *
-     * @return -1 on error, otherwise the total length of the GWBUF. That is, not only
-     *         the amount of data appended to the GWBUF.
-     *
-     * @note The read operation will return data from the readq and the network.
+     * Same as above, with the difference that at most maxbytes (minus existing readq) is read from socket.
      */
-    int read(GWBUF** ppHead, size_t maxbytes, ReadLimit limit_type = ReadLimit::RES_LEN);
-
-    std::tuple<bool, GWBUF> read2(size_t minbytes, size_t maxbytes);
     std::tuple<bool, GWBUF> read_strict(size_t minbytes, size_t maxbytes);
-
-    struct ReadResult
-    {
-        enum class Status {READ_OK, INSUFFICIENT_DATA, ERROR};
-
-        bool ok() const;
-        bool error() const;
-
-        explicit operator bool() const;
-
-        Status      status {Status::ERROR};
-        mxs::Buffer data;
-    };
-    ReadResult read(uint32_t min_bytes, uint32_t max_bytes);
 
     /**
      * Write data to the DCB.
@@ -645,6 +622,11 @@ private:
 
     bool m_open {true};     /**< Is dcb still open, i.e. close() not called? */
 
+    enum class ReadLimit
+    {
+        RES_LEN,    /**< Maxbytes only affects the returned data. Socket can be read for more. */
+        STRICT      /**< Exactly the given amount must be read from socket */
+    };
     bool basic_read(size_t maxbytes, ReadLimit limit_type);
 
     bool read_SSL();
@@ -878,8 +860,3 @@ bool dcb_foreach(bool (* func)(DCB* dcb, void* data), void* data);
  * @param data User provided data passed as the second parameter to @c func
  */
 void dcb_foreach_local(bool (* func)(DCB* dcb, void* data), void* data);
-
-/**
- * Temporary conversion function. Converts a tuple result to ReadResult.
- */
-DCB::ReadResult tuple_to_readresult(bool success, GWBUF&& buf);

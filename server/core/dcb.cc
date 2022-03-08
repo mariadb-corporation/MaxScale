@@ -260,57 +260,6 @@ void DCB::stop_polling_and_shutdown()
     shutdown();
 }
 
-DCB::ReadResult DCB::read(uint32_t min_bytes, uint32_t max_bytes)
-{
-    mxb_assert(max_bytes >= min_bytes || max_bytes == 0);
-    ReadResult rval;
-    GWBUF* read_buffer = nullptr;
-    int ret = read(&read_buffer, max_bytes);
-    if (ret > 0)
-    {
-        if ((uint32_t)ret >= min_bytes)
-        {
-            // Enough data.
-            rval.data.reset(read_buffer);
-            rval.status = ReadResult::Status::READ_OK;
-        }
-        else
-        {
-            // Not enough data, save any read data to readq.
-            unread(read_buffer);
-            rval.status = ReadResult::Status::INSUFFICIENT_DATA;
-        }
-    }
-    else if (ret == 0)
-    {
-        rval.status = ReadResult::Status::INSUFFICIENT_DATA;
-    }
-    return rval;
-}
-
-int DCB::read(GWBUF** ppHead, size_t maxbytes, ReadLimit limit_type)
-{
-    mxb_assert(*ppHead == nullptr);
-    int rval = -1;
-    auto [success, buf] = read_impl(0, maxbytes, limit_type);
-    if (buf.empty())
-    {
-        if (success)
-        {
-            // Empty read.
-            rval = 0;
-        }
-    }
-    else
-    {
-        rval = buf.length();
-        auto res = new GWBUF;
-        *res = move(buf);
-        *ppHead = res;
-    }
-    return rval;
-}
-
 std::tuple<bool, GWBUF> DCB::read2(size_t minbytes, size_t maxbytes)
 {
     return read_impl(minbytes, maxbytes, ReadLimit::RES_LEN);
@@ -2272,37 +2221,4 @@ json_t* maxscale::ClientConnectionBase::diagnostics() const
 bool mxs::ClientConnectionBase::in_routing_state() const
 {
     return m_dcb != nullptr;
-}
-
-bool DCB::ReadResult::ok() const
-{
-    return status == Status::READ_OK;
-}
-
-bool DCB::ReadResult::error() const
-{
-    return status == Status::ERROR;
-}
-
-DCB::ReadResult::operator bool() const
-{
-    return ok();
-}
-
-DCB::ReadResult tuple_to_readresult(bool success, GWBUF&& buf)
-{
-    DCB::ReadResult rval;
-    if (buf.empty())
-    {
-        if (success)
-        {
-            rval.status = DCB::ReadResult::Status::INSUFFICIENT_DATA;
-        }
-    }
-    else
-    {
-        rval.status = DCB::ReadResult::Status::READ_OK;
-        rval.data.reset(new GWBUF(std::move(buf)));
-    }
-    return rval;
 }
