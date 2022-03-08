@@ -107,6 +107,7 @@ int run()
     TimerTest t3(&w, &rv, 400ms);
     TimerTest t4(&w, &rv, 500ms);
     TimerTest t5(&w, &rv, 600ms);
+    TimerTest* pT6 = new TimerTest(&w, &rv, 500ms);
 
     w.execute([&]() {
                   w.dcall(&t1, t1.delay(), &TimerTest::tick, &t1);
@@ -114,6 +115,9 @@ int run()
                   w.dcall(&t3, t3.delay(), &TimerTest::tick, &t3);
                   w.dcall(&t4, t4.delay(), &TimerTest::tick, &t4);
                   w.dcall(&t5, t5.delay(), &TimerTest::tick, &t5);
+                  w.dcall(pT6, pT6->delay(), &TimerTest::tick, pT6);
+
+                  delete pT6;
               }, mxb::Worker::EXECUTE_QUEUED);
 
     w.run();
