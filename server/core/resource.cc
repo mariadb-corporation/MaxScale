@@ -156,7 +156,7 @@ bool Resource::matching_variable_path(const string& path, const string& target) 
 
     if (path[0] == ':')
     {
-        if ((path == ":service" && service_find(target.c_str()))
+        if ((path == ":service" && Service::find(target))
             || (path == ":server" && ServerManager::find_by_unique_name(target))
             || (path == ":filter" && filter_find(target.c_str()))
             || (path == ":monitor" && MonitorManager::find_monitor(target.c_str()))
@@ -302,7 +302,7 @@ HttpResponse cb_start_monitor(const HttpRequest& request)
 HttpResponse cb_stop_service(const HttpRequest& request)
 {
     Service* service = Service::find(request.uri_part(1).c_str());
-    serviceStop(service);
+    service->stop();
 
     if (request.get_option(CN_FORCE) == CN_YES)
     {
@@ -315,7 +315,7 @@ HttpResponse cb_stop_service(const HttpRequest& request)
 HttpResponse cb_start_service(const HttpRequest& request)
 {
     Service* service = Service::find(request.uri_part(1).c_str());
-    serviceStart(service);
+    service->start();
     return HttpResponse(MHD_HTTP_NO_CONTENT);
 }
 

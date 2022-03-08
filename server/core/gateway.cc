@@ -185,7 +185,7 @@ static void enable_statement_logging(const char* arg);
 static void disable_statement_logging(const char* arg);
 static void enable_cors(const char* arg);
 static void allow_duplicate_servers(const char* arg);
-static void   use_gdb(const char* arg);
+static void use_gdb(const char* arg);
 static void redirect_output_to_file(const char* arg);
 static bool user_is_acceptable(const char* specified_user);
 static bool init_sqlite3();
@@ -2186,7 +2186,7 @@ int main(int argc, char** argv)
                 MonitorManager::start_all_monitors();
                 MonitorManager::wait_one_tick();
 
-                if (!service_launch_all())
+                if (!Service::launch_all())
                 {
                     log_startup_error("Failed to start all MaxScale services.");
                     rc = MAXSCALE_NOSERVICES;

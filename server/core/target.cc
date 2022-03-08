@@ -17,6 +17,8 @@
 
 #include <mysqld_error.h>
 
+#include "internal/service.hh"
+
 namespace maxscale
 {
 
@@ -27,7 +29,7 @@ Target* Target::find(const std::string& name)
 
     if (!rval)
     {
-        rval = service_find(name.c_str());
+        rval = Service::find(name);
     }
 
     return rval;
@@ -41,12 +43,12 @@ std::string Target::status_to_string(uint64_t flags, int n_connections)
 
     // Helper function.
     auto concatenate_if = [&result, &separator](bool condition, const std::string& desc) {
-            if (condition)
-            {
-                result += separator + desc;
-                separator = ", ";
-            }
-        };
+        if (condition)
+        {
+            result += separator + desc;
+            separator = ", ";
+        }
+    };
 
     // TODO: The following values should be revisited at some point, but since they are printed by
     // the REST API they should not be changed suddenly. Strictly speaking, even the combinations

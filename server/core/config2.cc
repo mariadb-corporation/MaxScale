@@ -1806,7 +1806,7 @@ bool ParamService::from_string(const std::string& value_as_string,
                                value_type* pValue,
                                std::string* pMessage) const
 {
-    *pValue = service_find(value_as_string.c_str());
+    *pValue = ::Service::find(value_as_string);
 
     if (!*pValue && pMessage)
     {

@@ -49,6 +49,16 @@ public:
     using SAccountCache = std::unique_ptr<mxs::UserAccountCache>;
 
     /**
+     * @brief Launch all services
+     *
+     * Initialize and start all services. This should only be called once by the
+     * main initialization code and after the whole configuration has been read.
+     *
+     * @return False if a fatal error occurred
+     */
+    static bool launch_all();
+
+    /**
      * Find a service by name
      *
      * @param Name of the service to find
@@ -67,6 +77,20 @@ public:
      */
     static Service* create(const char* name, const mxs::ConfigParameters& params);
     static Service* create(const char* name, json_t* params);
+
+    /**
+     * Stop a service
+     *
+     * This calls stop() on all the listeners that point to this service.
+     */
+    void stop();
+
+    /**
+     * Restart a stopped service
+     *
+     * This calls start() on all the listeners that point to this service.
+     */
+    void start();
 
     /**
      * Destroy a service
@@ -220,7 +244,7 @@ public:
     void request_user_account_update() override;
     void sync_user_account_caches() override;
 
-    mxs::UserAccountManager* user_account_manager();
+    mxs::UserAccountManager*       user_account_manager();
     const mxs::UserAccountManager* user_account_manager() const;
 
     /**
@@ -261,6 +285,8 @@ private:
     static Service* create(const std::string& name, Params params, Unknown unknown);
 
     Service(const std::string& name, const std::string& router);
+
+    bool launch();
 
     /**
      * Recalculate internal data
@@ -423,16 +449,6 @@ void service_shutdown(void);
 void service_destroy_instances(void);
 
 /**
- * @brief Launch all services
- *
- * Initialize and start all services. This should only be called once by the
- * main initialization code.
- *
- * @return False if a fatal error occurred
- */
-bool service_launch_all(void);
-
-/**
  * @brief Remove a listener from use
  *
  * @note This does not free the memory
@@ -467,14 +483,6 @@ std::vector<Service*> service_server_in_use(const SERVER* server);
  * @return List of services that use the filter
  */
 std::vector<Service*> service_filter_in_use(const SFilterDef& filter);
-
-/**
- * @brief Check if a service uses a server
- * @param service Service to check
- * @param server Server being used
- * @return True if service uses the server
- */
-bool serviceHasBackend(Service* service, SERVER* server);
 
 /**
  * @brief Find listener with specified properties.

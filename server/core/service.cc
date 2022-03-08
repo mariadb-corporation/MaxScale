@@ -584,18 +584,15 @@ bool service_isvalid(Service* service)
                      service) != this_unit.services.end();
 }
 
-/**
- * Start all ports for a service.
- * serviceStartAllPorts will try to start all listeners associated with the service.
- * If no listeners are started, the starting of ports will be retried after a period of time.
- * @param service Service to start
- * @return Number of started listeners. This is equal to the number of ports the service
- * is listening to.
- */
-int serviceStartAllPorts(Service* service)
+bool Service::launch()
 {
-    int listeners = 0;
-    auto my_listeners = listener_find_by_service(service);
+    if (mxs::Config::get().config_check)
+    {
+        return true;
+    }
+
+    bool ok = true;
+    auto my_listeners = listener_find_by_service(this);
 
     if (!my_listeners.empty())
     {
@@ -606,82 +603,39 @@ int serviceStartAllPorts(Service* service)
                 break;
             }
 
-            if (listener->listen())
+            if (!listener->listen())
             {
-                ++listeners;
-            }
-            else
-            {
-                return 0;
+                ok = false;
+                break;
             }
         }
 
-        if (service->state == SERVICE::State::FAILED)
+        if (state == SERVICE::State::FAILED)
         {
-            listeners = 0;
+            ok = false;
         }
-        else if (listeners)
+        else if (ok)
         {
-            service->state = SERVICE::State::STARTED;
-            service->started = time(0);
+            state = SERVICE::State::STARTED;
+            started = time(0);
 
-            if (service->get_children().empty())
+            if (get_children().empty())
             {
-                MXS_WARNING("Service '%s' has a listener but no servers", service->name());
+                MXS_WARNING("Service '%s' has a listener but no servers", name());
             }
         }
     }
     else
     {
-        MXS_WARNING("Service '%s' has no listeners defined.", service->name());
-        listeners = 1;      /** Set this to one to suppress errors */
+        MXS_WARNING("Service '%s' has no listeners defined.", name());
     }
 
-    return listeners;
+    return ok;
 }
 
-/**
- * Start a service
- *
- * This function loads the protocol modules for each port on which the
- * service listens and starts the listener on that port
- *
- * @param service The Service that should be started
- *
- * @return Returns the number of listeners created
- */
-int serviceInitialize(Service* service)
+// static
+bool Service::launch_all()
 {
-    int listeners = 0;
-
-    if (!mxs::Config::get().config_check)
-    {
-        listeners = serviceStartAllPorts(service);
-    }
-    else
-    {
-        /** We're only checking that the configuration is valid */
-        listeners++;
-    }
-
-    return listeners;
-}
-
-bool serviceStopListener(SERVICE* svc, const char* name)
-{
-    auto listener = listener_find(name);
-    return listener && listener->service() == svc && listener->stop();
-}
-
-bool serviceStartListener(SERVICE* svc, const char* name)
-{
-    auto listener = listener_find(name);
-    return listener && listener->service() == svc && listener->start();
-}
-
-bool service_launch_all()
-{
-    int n = 0, i;
     bool ok = true;
     int num_svc = this_unit.services.size();
 
@@ -697,10 +651,11 @@ bool service_launch_all()
     int curr_svc = 1;
     for (Service* service : this_unit.services)
     {
-        n += (i = serviceInitialize(service));
-        MXS_NOTICE("Service '%s' started (%d/%d)", service->name(), curr_svc++, num_svc);
-
-        if (i == 0)
+        if (service->launch())
+        {
+            MXS_NOTICE("Service '%s' started (%d/%d)", service->name(), curr_svc++, num_svc);
+        }
+        else
         {
             MXS_ERROR("Failed to start service '%s'.", service->name());
             ok = false;
@@ -715,52 +670,24 @@ bool service_launch_all()
     return ok;
 }
 
-bool serviceStop(SERVICE* service)
+void Service::stop()
 {
-    int listeners = 0;
-
-    if (service)
+    for (const auto& listener : listener_find_by_service(this))
     {
-        for (const auto& listener : listener_find_by_service(service))
-        {
-            if (listener->stop())
-            {
-                listeners++;
-            }
-        }
-
-        service->state = SERVICE::State::STOPPED;
+        listener->stop();
     }
 
-    return listeners > 0;
+    state = SERVICE::State::STOPPED;
 }
 
-/**
- * Restart a service
- *
- * This function stops the listener for the service
- *
- * @param service       The Service that should be restarted
- * @return      Returns the number of listeners restarted
- */
-bool serviceStart(SERVICE* service)
+void Service::start()
 {
-    int listeners = 0;
-
-    if (service)
+    for (const auto& listener : listener_find_by_service(this))
     {
-        for (const auto& listener : listener_find_by_service(service))
-        {
-            if (listener->start())
-            {
-                listeners++;
-            }
-        }
-
-        service->state = SERVICE::State::STARTED;
+        listener->start();
     }
 
-    return listeners > 0;
+    state = SERVICE::State::STARTED;
 }
 
 bool service_remove_listener(Service* service, const char* target)
@@ -838,21 +765,6 @@ bool Service::can_be_destroyed() const
     }
 
     return names.empty();
-}
-
-/**
- * Get the service user that is used to log in to the backend servers
- * associated with this service.
- *
- * @param service       The service we are setting the data for
- * @param user          The user name to use for connections
- * @param auth          The authentication data we need, e.g. MySQL SHA1 password
- */
-void serviceGetUser(SERVICE* svc, const char** user, const char** auth)
-{
-    Service* service = static_cast<Service*>(svc);
-    *user = service->config()->user.c_str();
-    *auth = service->config()->password.c_str();
 }
 
 bool Service::set_filters(const std::vector<std::string>& filters)
@@ -939,17 +851,6 @@ std::vector<Service*> service_uses_monitor(mxs::Monitor* monitor)
     return rval;
 }
 
-/**
- * Return a named service
- *
- * @param servname      The name of the service to find
- * @return The service or NULL if not found
- */
-SERVICE* service_find(const char* servname)
-{
-    return Service::find(servname);
-}
-
 void service_destroy_instances(void)
 {
     // The global list is modified by service_free so we need a copy of it
@@ -959,24 +860,6 @@ void service_destroy_instances(void)
     {
         delete s;
     }
-}
-
-/**
- * Return the count of all sessions active for all services
- *
- * @return Count of all active sessions
- */
-int serviceSessionCountAll()
-{
-    int rval = 0;
-    LockGuard guard(this_unit.lock);
-
-    for (Service* service : this_unit.services)
-    {
-        rval += service->stats().n_current_conns();
-    }
-
-    return rval;
 }
 
 /**

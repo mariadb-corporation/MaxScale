@@ -327,62 +327,6 @@ typedef enum count_spec_t
 } count_spec_t;
 
 /**
- * Find a service
- *
- * @param name Service name
- *
- * @return Service or NULL of no service was found
- */
-SERVICE* service_find(const char* name);
-
-/**
- * @brief Stop a service
- *
- * @param service Service to stop
- *
- * @return True if service was stopped
- */
-bool serviceStop(SERVICE* service);
-
-/**
- * @brief Restart a stopped service
- *
- * @param service Service to restart
- *
- * @return True if service was restarted
- */
-bool serviceStart(SERVICE* service);
-
-/**
- * @brief Stop a listener for a service
- *
- * @param service Service where the listener is linked
- * @param name Name of the listener
- *
- * @return True if listener was stopped
- */
-bool serviceStopListener(SERVICE* service, const char* name);
-
-/**
- * @brief Restart a stopped listener
- *
- * @param service Service where the listener is linked
- * @param name Name of the listener
- *
- * @return True if listener was restarted
- */
-bool serviceStartListener(SERVICE* service, const char* name);
-
-// Used by authenticators
-void serviceGetUser(SERVICE* service, const char** user, const char** auth);
-
-/**
- * Diagnostics
- */
-
-int serviceSessionCountAll(void);
-
-/**
  * Return the version of the service. The returned version can be
  *
  * - the version of any (in practice the first) server associated

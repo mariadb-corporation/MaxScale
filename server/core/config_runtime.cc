@@ -1938,7 +1938,7 @@ bool runtime_create_service_from_json(json_t* json)
                     if (save_config(service))
                     {
                         MXS_NOTICE("Created service '%s'", name);
-                        serviceStart(service);
+                        service->start();
                         rval = true;
                     }
                     else

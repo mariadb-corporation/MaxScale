@@ -276,7 +276,7 @@ static bool process_argument(const MODULECMD* cmd,
             break;
 
         case MODULECMD_ARG_SERVICE:
-            if ((arg->value.service = service_find((char*)value)))
+            if ((arg->value.service = Service::find((char*)value)))
             {
                 if (MODULECMD_ALLOW_NAME_MISMATCH(type)
                     || strcmp(cmd->domain, arg->value.service->router_name()) == 0)

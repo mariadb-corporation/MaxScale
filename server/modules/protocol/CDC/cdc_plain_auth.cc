@@ -257,15 +257,11 @@ bool CDCClientAuthenticator::set_client_data(uint8_t* client_auth_packet, int cl
  */
 int CDCAuthenticatorModule::set_service_user(SERVICE* service)
 {
-    const char* service_user = NULL;
-    const char* service_passwd = NULL;
-    serviceGetUser(service, &service_user, &service_passwd);
-
-    auto dpwd = mxs::decrypt_password(service_passwd);
-    std::string newpasswd = mxs::create_hex_sha1_sha1_passwd(dpwd.c_str());
+    auto service_user = service->config()->user;
+    std::string newpasswd = mxs::create_hex_sha1_sha1_passwd(service->config()->password.c_str());
     if (newpasswd.empty())
     {
-        MXS_ERROR("create hex_sha1_sha1_password failed for service user %s", service_user);
+        MXS_ERROR("create hex_sha1_sha1_password failed for service user %s", service_user.c_str());
         return 1;
     }
 
