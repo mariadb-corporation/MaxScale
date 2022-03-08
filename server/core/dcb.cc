@@ -145,9 +145,8 @@ int connect_socket(const char* host, int port)
 }
 }
 
-static inline bool dcb_write_parameter_check(DCB* dcb, int fd, GWBUF* queue);
-static int         dcb_read_no_bytes_available(DCB* dcb, int fd, int nreadtotal);
-static int         dcb_set_socket_option(int sockfd, int level, int optname, void* optval, socklen_t optlen);
+static int dcb_read_no_bytes_available(DCB* dcb, int fd, int nreadtotal);
+static int dcb_set_socket_option(int sockfd, int level, int optname, void* optval, socklen_t optlen);
 
 static int upstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userdata);
 static int downstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userdata);
@@ -662,58 +661,52 @@ int DCB::log_errors_SSL(int ret)
     return -1;
 }
 
-bool DCB::writeq_append(GWBUF* queue, Drain drain)
+bool DCB::writeq_append(GWBUF* queue)
+{
+    mxb_assert(queue);
+    GWBUF buffer(move(*queue));
+    delete queue;
+    return writeq_append(move(buffer));
+}
+
+bool DCB::writeq_append(GWBUF&& data)
 {
     mxb_assert(this->owner == RoutingWorker::get_current());
-    // The following guarantees that queue is not NULL
-    if (!dcb_write_parameter_check(this, m_fd, queue))
-    {
-        return 0;
-    }
 
     // This can be slow in a situation where data is queued faster than it can be sent.
-    m_writeq.merge_back(move(*queue));
-    delete queue;
-    m_stats.n_buffered++;
+    m_writeq.merge_back(move(data));
+    bool rval = false;
 
-    if (drain == Drain::YES)
+    if (write_parameter_check())
     {
+        m_stats.n_buffered++;
         writeq_drain();
-    }
 
-    if (m_high_water > 0 && m_writeq.length() > m_high_water && !m_high_water_reached)
-    {
-        call_callback(Reason::HIGH_WATER);
-        m_high_water_reached = true;
-        m_stats.n_high_water++;
+        if (m_high_water > 0 && m_writeq.length() > m_high_water && !m_high_water_reached)
+        {
+            call_callback(Reason::HIGH_WATER);
+            m_high_water_reached = true;
+            m_stats.n_high_water++;
+        }
+        rval = true;
     }
-
-    return 1;
+    return rval;
 }
 
 /**
  * Check the parameters for dcb_write
  *
- * @param dcb   The DCB of the client
- * @param fd    The file descriptor.
- * @param queue Queue of buffers to write
  * @return true if parameters acceptable, false otherwise
  */
-static inline bool dcb_write_parameter_check(DCB* dcb, int fd, GWBUF* queue)
+bool DCB::write_parameter_check()
 {
-    if (queue == NULL)
-    {
-        return false;
-    }
-
-    if (fd == DCB::FD_CLOSED)
+    if (m_fd == DCB::FD_CLOSED)
     {
         MXS_ERROR("Write failed, dcb is closed.");
-        gwbuf_free(queue);
         return false;
     }
 
-    if (dcb->session() == NULL || dcb->session()->state() != MXS_SESSION::State::STOPPING)
+    if (!m_session || m_session->state() != MXS_SESSION::State::STOPPING)
     {
         /**
          * MXS_SESSION::State::STOPPING means that one of the backends is closing
@@ -723,14 +716,11 @@ static inline bool dcb_write_parameter_check(DCB* dcb, int fd, GWBUF* queue)
          * before router's closeSession is called and that tells that DCB may
          * still be writable.
          */
-        if (dcb->state() != DCB::State::CREATED
-            && dcb->state() != DCB::State::POLLING
-            && dcb->state() != DCB::State::NOPOLLING)
+        if (m_state != DCB::State::CREATED && m_state != DCB::State::POLLING
+            && m_state != DCB::State::NOPOLLING)
         {
             MXS_DEBUG("Write aborted to dcb %p because it is in state %s",
-                      dcb,
-                      mxs::to_string(dcb->state()));
-            gwbuf_free(queue);
+                      this, mxs::to_string(m_state));
             return false;
         }
     }

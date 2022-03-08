@@ -285,29 +285,14 @@ public:
     std::tuple<bool, GWBUF> read_strict(size_t minbytes, size_t maxbytes);
 
     /**
-     * Write data to the DCB.
-     *
-     * @param pData  The GWBUF to write.
-     * @param drain  Whether the writeq should be drained or not.
-     *
-     * @return False on failure, true on success.
-     */
-    enum class Drain
-    {
-        YES,    // Drain the writeq.
-        NO      // Do not drain the writeq.
-    };
-
-    /**
      * Append data to the write queue.
      *
      * @param data   The data to be appended to the write queue.
-     * @param drain  Whether the write queue should be drained, that is,
-     *               written to the socket.
-     *
      * @return True if the data could be appended, false otherwise.
      */
-    bool writeq_append(GWBUF* data, Drain drain = Drain::YES);
+    bool writeq_append(GWBUF* data);
+
+    bool writeq_append(GWBUF&& data);
 
     /**
      * Drain the write queue of the DCB.
@@ -653,6 +638,7 @@ private:
     void call_callback(Reason reason);
 
     void add_event(uint32_t ev);
+    bool write_parameter_check();
 };
 
 class ClientDCB : public DCB
