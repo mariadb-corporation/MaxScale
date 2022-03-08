@@ -152,23 +152,23 @@ private:
 
     bool perform_auth_exchange(mariadb::AuthenticationData& auth_data);
     void perform_check_token(AuthType auth_type);
-    bool process_normal_packet(mxs::Buffer&& buffer);
+    bool process_normal_packet(GWBUF&& buffer);
     bool route_statement(mxs::Buffer&& buffer);
     void finish_recording_history(const GWBUF* buffer, const mxs::Reply& reply);
     bool record_for_history(mxs::Buffer& buffer, uint8_t cmd);
     void prune_history();
 
-    bool start_change_user(mxs::Buffer&& buffer);
+    bool start_change_user(GWBUF&& buffer);
     bool complete_change_user_p1();
     void complete_change_user_p2();
     void cancel_change_user_p1();
     void cancel_change_user_p2(GWBUF* buffer);
 
-    void  handle_use_database(GWBUF* read_buffer);
-    char* handle_variables(mxs::Buffer& buffer);
+    void  handle_use_database(GWBUF& read_buffer);
+    char* handle_variables(GWBUF& buffer);
 
-    bool          should_inspect_query(mxs::Buffer& buffer) const;
-    SpecialCmdRes process_special_queries(mxs::Buffer& buffer);
+    bool          should_inspect_query(GWBUF& buffer) const;
+    SpecialCmdRes process_special_queries(GWBUF& buffer);
     void          handle_query_kill(const SpecialQueryDesc& kill_contents);
 
     void add_local_client(LocalClient* client);
@@ -287,7 +287,7 @@ private:
         /**
          * The original change-user-packet from client. Given as-is to router, although backend protocol
          * will replace it with a generated packed. */
-        mxs::Buffer client_query;
+        GWBUF client_query;
 
         /**
          * Authentication data. All client-side code should read this field for authentication-related data

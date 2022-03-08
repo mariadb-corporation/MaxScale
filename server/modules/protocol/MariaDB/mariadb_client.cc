@@ -804,10 +804,10 @@ void MariaDBClientConnection::update_user_account_entry(mariadb::AuthenticationD
  *
  * @return NULL if successful, otherwise dynamically allocated error message.
  */
-char* MariaDBClientConnection::handle_variables(mxs::Buffer& buffer)
+char* MariaDBClientConnection::handle_variables(GWBUF& buffer)
 {
     char* message = NULL;
-    auto read_buffer = buffer.release();
+    auto read_buffer = mxs::gwbuf_to_gwbufptr(move(buffer));
     SetParser set_parser;
     SetParser::Result result;
 
@@ -823,10 +823,8 @@ char* MariaDBClientConnection::handle_variables(mxs::Buffer& buffer)
 
             const SetParser::Result::Items& values = result.values();
 
-            for (SetParser::Result::Items::const_iterator i = values.begin(); i != values.end(); ++i)
+            for (const auto& value : values)
             {
-                const SetParser::Result::Item& value = *i;
-
                 switch (sql_mode_parser.get_sql_mode(value.first, value.second))
                 {
                 case SqlModeParser::ORACLE:
@@ -854,8 +852,8 @@ char* MariaDBClientConnection::handle_variables(mxs::Buffer& buffer)
             const SetParser::Result::Items& variables = result.variables();
             const SetParser::Result::Items& values = result.values();
 
-            SetParser::Result::Items::const_iterator i = variables.begin();
-            SetParser::Result::Items::const_iterator j = values.begin();
+            auto i = variables.begin();
+            auto j = values.begin();
 
             while (!message && (i != variables.end()))
             {
@@ -876,8 +874,8 @@ char* MariaDBClientConnection::handle_variables(mxs::Buffer& buffer)
         mxb_assert(!true);
     }
 
-    buffer.reset(read_buffer);
-
+    buffer = move(*read_buffer);
+    delete read_buffer;
     return message;
 }
 
@@ -1054,22 +1052,22 @@ MariaDBClientConnection::parse_kill_query_elems(const char* sql)
     return rval;
 }
 
-void MariaDBClientConnection::handle_use_database(GWBUF* read_buffer)
+void MariaDBClientConnection::handle_use_database(GWBUF& read_buffer)
 {
-    auto databases = qc_get_database_names(read_buffer);
+    auto databases = qc_get_database_names(&read_buffer);
     if (!databases.empty())
     {
         start_change_db(move(databases[0]));
     }
 }
 
-bool MariaDBClientConnection::should_inspect_query(mxs::Buffer& buffer) const
+bool MariaDBClientConnection::should_inspect_query(GWBUF& buffer) const
 {
     bool rval = true;
 
-    if (qc_parse(buffer.get(), QC_COLLECT_ALL) == QC_QUERY_PARSED)
+    if (qc_parse(&buffer, QC_COLLECT_ALL) == QC_QUERY_PARSED)
     {
-        auto op = qc_get_operation(buffer.get());
+        auto op = qc_get_operation(&buffer);
 
         if (op != QUERY_OP_KILL && op != QUERY_OP_SET && op != QUERY_OP_CHANGE_DB)
         {
@@ -1088,7 +1086,7 @@ bool MariaDBClientConnection::should_inspect_query(mxs::Buffer& buffer) const
  * @return see @c spec_com_res_t
  */
 MariaDBClientConnection::SpecialCmdRes
-MariaDBClientConnection::process_special_queries(mxs::Buffer& buffer)
+MariaDBClientConnection::process_special_queries(GWBUF& buffer)
 {
     auto rval = SpecialCmdRes::CONTINUE;
 
@@ -1105,12 +1103,9 @@ MariaDBClientConnection::process_special_queries(mxs::Buffer& buffer)
     {
         const char* sql = nullptr;
         int len = 0;
-
-        buffer.make_contiguous();
-
         bool is_special = false;
 
-        if (modutil_extract_SQL(buffer.get(), const_cast<char**>(&sql), &len))
+        if (modutil_extract_SQL(&buffer, const_cast<char**>(&sql), &len))
         {
             auto pEnd = sql + len;
             is_special = detect_special_query(&sql, pEnd);
@@ -1132,7 +1127,7 @@ MariaDBClientConnection::process_special_queries(mxs::Buffer& buffer)
                 break;
 
             case SpecialQueryDesc::Type::USE_DB:
-                handle_use_database(buffer.get());
+                handle_use_database(buffer);
                 break;
 
             case SpecialQueryDesc::Type::SET_ROLE:
@@ -1427,7 +1422,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
     case RoutingState::PACKET_START:
         if (buffer.length() > MYSQL_HEADER_LEN)
         {
-            routed = process_normal_packet(mxs::gwbuf_to_buffer(move(buffer)));
+            routed = process_normal_packet(move(buffer));
         }
         else
         {
@@ -2138,7 +2133,7 @@ bool MariaDBClientConnection::is_idle() const
     return in_routing_state();
 }
 
-bool MariaDBClientConnection::start_change_user(mxs::Buffer&& buffer)
+bool MariaDBClientConnection::start_change_user(GWBUF&& buffer)
 {
     // Parse the COM_CHANGE_USER-packet. The packet is somewhat similar to a typical handshake response.
     size_t buflen = buffer.length();
@@ -2151,7 +2146,7 @@ bool MariaDBClientConnection::start_change_user(mxs::Buffer&& buffer)
         int datalen = buflen - MYSQL_HEADER_LEN;
         packet_parser::ByteVec data;
         data.resize(datalen + 1);
-        gwbuf_copy_data(buffer.get(), MYSQL_HEADER_LEN, datalen, data.data());
+        buffer.copy_data(MYSQL_HEADER_LEN, datalen, data.data());
         data[datalen] = '\0';   // Simplifies some later parsing.
 
         auto parse_res = packet_parser::parse_change_user_packet(data, m_session_data->client_capabilities());
@@ -2201,7 +2196,7 @@ bool MariaDBClientConnection::complete_change_user_p1()
 
     bool rval = false;
     // Failure here means a comms error -> session failure.
-    if (route_statement(move(m_change_user.client_query)))
+    if (route_statement(mxs::gwbuf_to_buffer(move(m_change_user.client_query))))
     {
         m_routing_state = RoutingState::CHANGING_USER;
         rval = true;
@@ -2214,7 +2209,7 @@ void MariaDBClientConnection::cancel_change_user_p1()
     MXB_INFO("COM_CHANGE_USER from '%s' to '%s' failed.",
              m_session_data->auth_data->user.c_str(), m_change_user.auth_data->user.c_str());
     // The main session fields have not been modified at this point, so canceling is simple.
-    m_change_user.client_query.reset();
+    m_change_user.client_query.clear();
     m_change_user.auth_data.reset();
 }
 
@@ -2616,7 +2611,7 @@ bool MariaDBClientConnection::large_query_continues(const GWBUF& buffer) const
     return MYSQL_GET_PACKET_LEN(&buffer) == MAX_PACKET_SIZE;
 }
 
-bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
+bool MariaDBClientConnection::process_normal_packet(GWBUF&& buffer)
 {
     bool success = false;
     bool is_large = false;
@@ -2651,7 +2646,7 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
          * In most cases we can assume that the connections are idle. */
         m_session->set_can_pool_backends(true);
         m_session->set_normal_quit();
-        success = route_statement(move(buffer));
+        success = route_statement(mxs::gwbuf_to_buffer(move(buffer)));
         break;
 
     case MXS_COM_SET_OPTION:
@@ -2662,7 +2657,6 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
          * multi-statements and 1 for disabling it.
          */
         {
-            buffer.make_contiguous();
             auto& caps = m_session_data->client_caps.basic_capabilities;
             if (buffer.data()[MYSQL_HEADER_LEN + 2])
             {
@@ -2672,14 +2666,13 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
             {
                 caps |= GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
             }
-            success = route_statement(move(buffer));
+            success = route_statement(mxs::gwbuf_to_buffer(move(buffer)));
         }
 
         break;
 
     case MXS_COM_PROCESS_KILL:
         {
-            buffer.make_contiguous();
             const uint8_t* data = buffer.data();
             uint64_t process_id = mariadb::get_byte4(data + MYSQL_HEADER_LEN + 1);
             execute_kill_connection(process_id, KT_CONNECTION);
@@ -2689,12 +2682,11 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
 
     case MXS_COM_INIT_DB:
         {
-            buffer.make_contiguous();
             const uint8_t* data = buffer.data();
             auto start = data + MYSQL_HEADER_LEN + 1;
             auto end = data + buffer.length();
             start_change_db(string(start, end));
-            success = route_statement(move(buffer));
+            success = route_statement(mxs::gwbuf_to_buffer(move(buffer)));
         }
         break;
 
@@ -2705,7 +2697,6 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
 
             if (rcap_type_required(m_session->capabilities(), RCAP_TYPE_QUERY_CLASSIFICATION))
             {
-                buffer.make_contiguous();
                 inspect = should_inspect_query(buffer);
             }
 
@@ -2732,14 +2723,14 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
 
             if (route)
             {
-                success = route_statement(move(buffer));
+                success = route_statement(mxs::gwbuf_to_buffer(move(buffer)));
             }
         }
         break;
 
     default:
         // Not a query, just a command which does not require special handling.
-        success = route_statement(move(buffer));
+        success = route_statement(mxs::gwbuf_to_buffer(move(buffer)));
         break;
     }
 
