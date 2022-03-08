@@ -40,6 +40,7 @@ namespace maxscale
 
 class RoutingWorker : public mxb::WatchedWorker
                     , public BackendDCB::Manager
+                    , private mxb::Worker::Object
                     , private mxb::POLL_DATA
 {
     RoutingWorker(const RoutingWorker&) = delete;

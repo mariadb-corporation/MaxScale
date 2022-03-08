@@ -22,6 +22,7 @@ namespace maxscale
 {
 
 class MainWorker : public mxb::WatchedWorker
+                 , private mxb::Worker::Object
 {
     MainWorker(const MainWorker&) = delete;
     MainWorker& operator=(const MainWorker&) = delete;

@@ -820,6 +820,7 @@ private:
  */
 class MonitorWorker : public Monitor
                     , protected maxbase::Worker
+                    , protected mxb::Worker::Object
 {
 public:
     MonitorWorker(const MonitorWorker&) = delete;

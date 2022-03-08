@@ -853,31 +853,6 @@ protected:
      */
     static void resolve_poll_error(int fd, int err, int op);
 
-    /**
-     * Delayed calls for derived workers.
-     */
-    template<class D>
-    DCId dcall(const std::chrono::milliseconds& delay,
-               bool (* pFunction)(mxb::Worker::Call::action_t action, D data),
-               D data)
-    {
-        return dcall(static_cast<Object::Reference*>(nullptr), delay, pFunction, data);
-    }
-
-    template<class T>
-    DCId dcall(const std::chrono::milliseconds& delay,
-               bool (T::* pMethod)(mxb::Worker::Call::action_t action),
-               T* pT)
-    {
-        return dcall(static_cast<Object::Reference*>(nullptr), delay, pMethod, pT);
-    }
-
-    DCId dcall(const std::chrono::milliseconds& delay,
-               std::function<bool(mxb::Worker::Call::action_t action)>&& f)
-    {
-        return dcall(static_cast<Object::Reference*>(nullptr), delay, std::move(f));
-    }
-
 private:
     friend class Initer;
     static bool init();

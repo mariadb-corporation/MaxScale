@@ -131,7 +131,7 @@ bool MainWorker::pre_run()
 
     bool rval = false;
 
-    dcall(100ms, &MainWorker::inc_ticks);
+    dcall(this, 100ms, &MainWorker::inc_ticks);
 
     update_rebalancing();
 
@@ -210,7 +210,7 @@ void MainWorker::order_balancing_dc()
 {
     mxb_assert(m_rebalancing_dc == 0);
 
-    m_rebalancing_dc = dcall(1000ms, &MainWorker::balance_workers_dc, this);
+    m_rebalancing_dc = dcall(this, 1000ms, &MainWorker::balance_workers_dc, this);
 }
 
 // static
@@ -236,7 +236,7 @@ void MainWorker::start_shutdown()
 
             // Wait until RoutingWorkers have stopped before proceeding with MainWorker shudown
             auto self = MainWorker::get();
-            self->dcall(100ms, &MainWorker::wait_for_shutdown, self);
+            self->dcall(self, 100ms, &MainWorker::wait_for_shutdown, self);
         };
 
     MainWorker::get()->execute(func, EXECUTE_QUEUED);
