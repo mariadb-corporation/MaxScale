@@ -366,14 +366,15 @@ struct TEST_CASE
 
 const int N_TEST_CASES = sizeof(test_cases) / sizeof(test_cases[0]);
 
-int test(GWBUF** ppStmt, SetParser::status_t expected_status, const TEST_CASE::EXPECTATION expectations[])
+int test(const GWBUF& stmt, SetParser::status_t expected_status,
+         const TEST_CASE::EXPECTATION expectations[])
 {
     int rv = EXIT_SUCCESS;
 
     SetParser parser;
 
     SetParser::Result result;
-    SetParser::status_t status = parser.check(ppStmt, &result);
+    SetParser::status_t status = parser.check(stmt, &result);
 
     if (status == expected_status)
     {
@@ -475,10 +476,7 @@ int test(const TEST_CASE& test_case)
     cout << test_case.zStmt << ": ";
 
     GWBUF* pStmt = gwbuf_create_com_query(test_case.zStmt);
-    mxb_assert(pStmt);
-
-    rv = test(&pStmt, test_case.status, test_case.expectations);
-
+    rv = test(*pStmt, test_case.status, test_case.expectations);
     gwbuf_free(pStmt);
 
     return rv;
@@ -539,7 +537,7 @@ int test_non_contiguous()
 
         cout << "): " << flush;
 
-        if (test(&pStmt, test_case.status, test_case.expectations) == EXIT_FAILURE)
+        if (test(*pStmt, test_case.status, test_case.expectations) == EXIT_FAILURE)
         {
             rv = EXIT_FAILURE;
         }

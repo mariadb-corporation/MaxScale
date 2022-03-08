@@ -292,14 +292,13 @@ public:
      * @param value_begin  Should point to the beginning of the value.
      * @param value_end    Should point one past the end of the value.
      *
-     * @return NULL if successful, otherwise a dynamically allocated string
-     *         containing an end-user friendly error message.
+     * @return Empty if successful, otherwise an end-user friendly error message.
      *
      * @note Should only be called from the protocol module that scans
      *       incoming statements.
      */
-    virtual char* set_variable_value(const char* name_begin, const char* name_end,
-                                     const char* value_begin, const char* value_end) = 0;
+    virtual std::string set_variable_value(const char* name_begin, const char* name_end,
+                                           const char* value_begin, const char* value_end) = 0;
     /**
      * @brief Remove MaxScale specific user variable from the session.
      *

@@ -798,20 +798,18 @@ void MariaDBClientConnection::update_user_account_entry(mariadb::AuthenticationD
 }
 
 /**
- * Handle relevant variables
+ * Handle relevant variables.
  *
- * @param buffer  Buffer, assumed to contain a statement. May be reallocated if not contiguous.
- *
- * @return NULL if successful, otherwise dynamically allocated error message.
+ * @param buffer  Buffer, assumed to contain a statement.
+ * @return Empty if successful, otherwise the error message.
  */
-char* MariaDBClientConnection::handle_variables(GWBUF& buffer)
+string MariaDBClientConnection::handle_variables(GWBUF& buffer)
 {
-    char* message = NULL;
-    auto read_buffer = mxs::gwbuf_to_gwbufptr(move(buffer));
+    string message;
     SetParser set_parser;
     SetParser::Result result;
 
-    switch (set_parser.check(&read_buffer, &result))
+    switch (set_parser.check(buffer, &result))
     {
     case SetParser::ERROR:
         // In practice only OOM.
@@ -855,7 +853,7 @@ char* MariaDBClientConnection::handle_variables(GWBUF& buffer)
             auto i = variables.begin();
             auto j = values.begin();
 
-            while (!message && (i != variables.end()))
+            while (message.empty() && (i != variables.end()))
             {
                 const SetParser::Result::Item& variable = *i;
                 const SetParser::Result::Item& value = *j;
@@ -874,8 +872,6 @@ char* MariaDBClientConnection::handle_variables(GWBUF& buffer)
         mxb_assert(!true);
     }
 
-    buffer = move(*read_buffer);
-    delete read_buffer;
     return message;
 }
 
@@ -2704,12 +2700,11 @@ bool MariaDBClientConnection::process_normal_packet(GWBUF&& buffer)
             {
                 // Track MaxScale-specific sql. If the variable setting succeeds, the query is routed normally
                 // so that the same variable is visible on backend.
-                char* errmsg = handle_variables(buffer);
-                if (errmsg)
+                string errmsg = handle_variables(buffer);
+                if (!errmsg.empty())
                 {
                     // No need to route the query, send error to client.
-                    success = write(modutil_create_mysql_err_msg(1, 0, 1193, "HY000", errmsg)) != 0;
-                    MXS_FREE(errmsg);
+                    success = write(modutil_create_mysql_err_msg(1, 0, 1193, "HY000", errmsg.c_str())) != 0;
                     route = false;
                 }
                 // Some queries require special handling. Some of these are text versions of other

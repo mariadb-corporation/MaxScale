@@ -93,54 +93,24 @@ public:
      *         IS_SET_SQL_MODE  if the statement is a "SET SQL_MODE=" statement
      *         NOT_SET_SQL_MODE if the statement is not a "SET SQL_MODE="
      *                          statement
-     *
-     * @attention If the result cannot be deduced without parsing the statement,
-     *            then the buffer will be made contiguous and the value of
-     *            @c *ppBuffer will be updated accordingly.
      */
-    status_t check(GWBUF** ppBuffer, Result* pResult)
+    status_t check(const GWBUF& buffer, Result* pResult)
     {
         status_t rv = NOT_RELEVANT;
+        size_t buf_len = buffer.length();
+        mxb_assert(buf_len >= MYSQL_HEADER_LEN);
 
-        GWBUF* pBuffer = *ppBuffer;
-
-        mxb_assert(gwbuf_length(pBuffer) >= MYSQL_HEADER_LEN);
-
-        size_t buf_len = gwbuf_link_length(pBuffer);
-        size_t payload_len;
-        if (buf_len >= MYSQL_HEADER_LEN)
-        {
-            // The first buffer in the chain contains the header so we
-            // can read the length directly.
-            payload_len = MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(pBuffer));
-        }
-        else
-        {
-            // The first buffer in the chain does not contain the full
-            // header so we need to copy it first.
-            uint8_t header[MYSQL_HEADER_LEN];
-            gwbuf_copy_data(pBuffer, 0, sizeof(header), header);
-            payload_len = MYSQL_GET_PAYLOAD_LEN(header);
-        }
+        auto* pData = buffer.data();
+        auto header = mariadb::get_header(pData);
+        auto payload_len = header.pl_length;
 
         // sizeof(command_byte) + MIN(strlen("SET maxscale"), strlen("SET sql_mode=ORACLE"))
         if (payload_len >= 13)
         {
             // We need 4 bytes from the payload to deduce whether more investigations are needed.
-            uint8_t payload[4];
-            uint8_t* pPayload;
-
-            if (buf_len >= MYSQL_HEADER_LEN + sizeof(payload))
-            {
-                // Enough data in the first buffer of the chain, we can access directly.
-                pPayload = GWBUF_DATA(pBuffer) + MYSQL_HEADER_LEN;
-            }
-            else
-            {
-                // Not enough, we copy what we need.
-                gwbuf_copy_data(pBuffer, MYSQL_HEADER_LEN, sizeof(payload), payload);
-                pPayload = payload;
-            }
+            mxb_assert(buf_len >= MYSQL_HEADER_LEN + 4);
+            // Enough data in the first buffer of the chain, we can access directly.
+            auto pPayload = pData + MYSQL_HEADER_LEN;
 
             uint8_t command = pPayload[0];
 
@@ -153,46 +123,21 @@ public:
                     // First character is alphabetic, we can check whether it is "SET".
                     if (is_set(pStmt))
                     {
-                        // It is, so we must parse further and must therefore ensure that
-                        // the buffer is contiguous. We get the same buffer back if it
-                        // already is.
-                        pBuffer = gwbuf_make_contiguous(*ppBuffer);
-
-                        if (pBuffer)
-                        {
-                            *ppBuffer = pBuffer;
-                            initialize(pBuffer);
-
-                            rv = parse(pResult);
-                        }
-                        else
-                        {
-                            rv = ERROR;
-                        }
+                        // It is, so we must parse further.
+                        initialize(buffer);
+                        rv = parse(pResult);
                     }
                 }
                 else
                 {
                     // If the first character is not an alphabetic character we assume there
-                    // is a comment and make the buffer contiguous to make it possible to
-                    // efficiently bypass the whitespace.
-                    pBuffer = gwbuf_make_contiguous(*ppBuffer);
+                    // is a comment.
+                    initialize(buffer);
+                    bypass_whitespace();
 
-                    if (pBuffer)
+                    if (m_pEnd - m_pI > 3 && is_set(m_pI))
                     {
-                        *ppBuffer = pBuffer;
-                        initialize(pBuffer);
-
-                        bypass_whitespace();
-
-                        if (m_pEnd - m_pI > 3 && is_set(m_pI))
-                        {
-                            rv = parse(pResult);
-                        }
-                    }
-                    else
-                    {
-                        rv = ERROR;
+                        rv = parse(pResult);
                     }
                 }
             }
@@ -248,12 +193,12 @@ private:
         return rv == ERROR;
     }
 
-    status_t initialize(GWBUF* pBuffer)
+    status_t initialize(const GWBUF& buffer)
     {
         status_t rv = ERROR;
 
         const char* pSql;
-        if (modutil_extract_SQL(*pBuffer, &pSql, &m_len))
+        if (modutil_extract_SQL(buffer, &pSql, &m_len))
         {
             m_pSql = pSql;
             m_pI = m_pSql;

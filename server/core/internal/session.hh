@@ -121,9 +121,9 @@ public:
         return m_filters;
     }
 
-    bool  add_variable(const char* name, session_variable_handler_t handler, void* context) override;
-    char* set_variable_value(const char* name_begin, const char* name_end,
-                             const char* value_begin, const char* value_end) override;
+    bool        add_variable(const char* name, session_variable_handler_t handler, void* context) override;
+    std::string set_variable_value(const char* name_begin, const char* name_end,
+                                   const char* value_begin, const char* value_end) override;
     bool remove_variable(const char* name, void** context) override;
     void retain_statement(GWBUF* pBuffer) override;
     void dump_statements() const override;

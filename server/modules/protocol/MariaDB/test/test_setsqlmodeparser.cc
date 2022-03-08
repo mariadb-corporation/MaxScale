@@ -175,7 +175,7 @@ struct TEST_CASE
 
 const int N_TEST_CASES = sizeof(test_cases) / sizeof(test_cases[0]);
 
-int test(GWBUF** ppStmt,
+int test(const GWBUF& stmt,
          SqlModeParser::sql_mode_t expected_sql_mode,
          SetParser::status_t expected_status)
 {
@@ -184,7 +184,7 @@ int test(GWBUF** ppStmt,
     SetParser set_parser;
     SetParser::Result result;
 
-    SetParser::status_t status = set_parser.check(ppStmt, &result);
+    SetParser::status_t status = set_parser.check(stmt, &result);
 
     if (status == expected_status)
     {
@@ -192,7 +192,7 @@ int test(GWBUF** ppStmt,
         {
             const SetParser::Result::Items& values = result.values();
 
-            for (SetParser::Result::Items::const_iterator i = values.begin(); i != values.end(); ++i)
+            for (auto i = values.begin(); i != values.end(); ++i)
             {
                 const SetParser::Result::Item& item = *i;
 
@@ -241,10 +241,7 @@ int test(const TEST_CASE& test_case)
     cout << test_case.zStmt << ": ";
 
     GWBUF* pStmt = gwbuf_create_com_query(test_case.zStmt);
-    mxb_assert(pStmt);
-
-    rv = test(&pStmt, test_case.sql_mode, test_case.status);
-
+    rv = test(*pStmt, test_case.sql_mode, test_case.status);
     gwbuf_free(pStmt);
 
     return rv;
@@ -305,7 +302,7 @@ int test_non_contiguous()
 
         cout << "): " << flush;
 
-        if (test(&pStmt, test_case.sql_mode, test_case.status) == EXIT_FAILURE)
+        if (test(*pStmt, test_case.sql_mode, test_case.status) == EXIT_FAILURE)
         {
             rv = EXIT_FAILURE;
         }

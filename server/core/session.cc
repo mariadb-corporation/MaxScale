@@ -19,16 +19,15 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
-#include <errno.h>
 #include <algorithm>
 #include <string>
 #include <sstream>
 
+#include <maxbase/alloc.h>
 #include <maxbase/atomic.hh>
 #include <maxbase/host.hh>
-#include <maxbase/alloc.h>
+#include <maxbase/format.hh>
 #include <maxscale/clock.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/dcb.hh>
@@ -858,12 +857,12 @@ bool Session::add_variable(const char* name, session_variable_handler_t handler,
     return added;
 }
 
-char* Session::set_variable_value(const char* name_begin,
-                                  const char* name_end,
-                                  const char* value_begin,
-                                  const char* value_end)
+string Session::set_variable_value(const char* name_begin,
+                                   const char* name_end,
+                                   const char* value_begin,
+                                   const char* value_end)
 {
-    char* rv = NULL;
+    string rv;
 
     string key(name_begin, name_end - name_begin);
 
@@ -873,23 +872,19 @@ char* Session::set_variable_value(const char* name_begin,
 
     if (it != m_variables.end())
     {
-        rv = it->second.handler(it->second.context, key.c_str(), value_begin, value_end);
+        char* temp = it->second.handler(it->second.context, key.c_str(), value_begin, value_end);
+        if (temp)
+        {
+            rv = temp;
+            MXS_FREE(temp);
+        }
     }
     else
     {
         const char FORMAT[] = "Attempt to set unknown MaxScale user variable %.*s";
-
         int name_length = name_end - name_begin;
-        int len = snprintf(NULL, 0, FORMAT, name_length, name_begin);
-
-        rv = static_cast<char*>(MXS_MALLOC(len + 1));
-
-        if (rv)
-        {
-            sprintf(rv, FORMAT, name_length, name_begin);
-        }
-
-        MXS_WARNING(FORMAT, name_length, name_begin);
+        rv = mxb::string_printf(FORMAT, name_length, name_begin);
+        MXB_WARNING("%s", rv.c_str());
     }
 
     return rv;
