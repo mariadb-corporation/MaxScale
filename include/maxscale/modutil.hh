@@ -91,7 +91,7 @@ GWBUF* modutil_create_eof(uint8_t sequence);
  *          entire buffer is only whitespace, the returned pointer will point
  *          to the character following the buffer (i.e. sql + len).
  */
-char* modutil_MySQL_bypass_whitespace(char* sql, size_t len);
+const char* modutil_MySQL_bypass_whitespace(const char* sql, size_t len);
 
 // TODO: Move modutil out of the core
 const char* STRPACKETTYPE(int p);
@@ -131,12 +131,11 @@ GWBUF* truncate_packets(GWBUF* b, uint64_t pkt);
  * @return      True if the packet is a COM_QUERY or COM_STMT_PREPARE packet, and
  *              sql was extracted.
  */
-inline bool modutil_extract_SQL(GWBUF* buf, char** pSql, int* length)
+inline bool modutil_extract_SQL(const GWBUF& buf, const char** pSql, int* length)
 {
-    const auto& sql = buf->get_sql();
-
-    *pSql = const_cast<char*>(sql.c_str());
-    *length = sql.length();
-
-    return *length;
+    const auto& sql = buf.get_sql();
+    *pSql = sql.c_str();
+    auto sql_len = sql.length();
+    *length = sql_len;
+    return sql_len > 0;
 }

@@ -483,10 +483,10 @@ void prepare_pcre2_patterns()
 }
 
 
-char* modutil_MySQL_bypass_whitespace(char* sql, size_t len)
+const char* modutil_MySQL_bypass_whitespace(const char* sql, size_t len)
 {
-    char* i = sql;
-    char* end = i + len;
+    const char* i = sql;
+    const char* end = i + len;
 
     while (i != end)
     {

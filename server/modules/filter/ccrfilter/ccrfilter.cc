@@ -287,9 +287,9 @@ bool CCRSession::routeQuery(GWBUF* queue)
          * with unknown query type, the safest thing to do is to treat it as a data modifying statement. */
         if (qc_query_is_type(qc_get_type_mask(queue), QUERY_TYPE_WRITE))
         {
-            char* sql;
+            const char* sql;
             int length;
-            if (modutil_extract_SQL(queue, &sql, &length))
+            if (modutil_extract_SQL(*queue, &sql, &length))
             {
                 bool trigger_ccr = true;
                 bool decided = false;   // Set by hints to take precedence.

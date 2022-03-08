@@ -1508,11 +1508,11 @@ static bool cache_rule_matches_query(CACHE_RULE* self,
 {
     mxb_assert(self->attribute == CACHE_ATTRIBUTE_QUERY);
 
-    char* sql;
+    const char* sql;
     int len;
 
     // Will succeed, query contains a contiguous COM_QUERY.
-    modutil_extract_SQL((GWBUF*)query, &sql, &len);
+    modutil_extract_SQL(*query, &sql, &len);
 
     return cache_rule_compare_n(self, thread_id, sql, len);
 }
@@ -1764,9 +1764,9 @@ static bool cache_rule_matches(CACHE_RULE* self, int thread_id, const char* defa
     if ((matches && (self->debug & CACHE_DEBUG_MATCHING))
         || (!matches && (self->debug & CACHE_DEBUG_NON_MATCHING)))
     {
-        char* sql;
+        const char* sql;
         int sql_len;
-        modutil_extract_SQL((GWBUF*)query, &sql, &sql_len);
+        modutil_extract_SQL(*query, &sql, &sql_len);
         const char* text;
 
         if (matches)

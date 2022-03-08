@@ -252,8 +252,8 @@ private:
     {
         status_t rv = ERROR;
 
-        char* pSql;
-        if (modutil_extract_SQL(pBuffer, &pSql, &m_len))
+        const char* pSql;
+        if (modutil_extract_SQL(*pBuffer, &pSql, &m_len))
         {
             m_pSql = pSql;
             m_pI = m_pSql;

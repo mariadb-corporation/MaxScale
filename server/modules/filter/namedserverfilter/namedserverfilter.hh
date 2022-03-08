@@ -145,7 +145,7 @@ private:
 
     std::shared_ptr<RegexHintFilter::Setup> m_setup;
 
-    const RegexToServers* find_servers(char* sql, int sql_len);
+    const RegexToServers* find_servers(const char* sql, int sql_len);
 };
 
 /* Storage class which maps a regex to a set of servers. Note that this struct

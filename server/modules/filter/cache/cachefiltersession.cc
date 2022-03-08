@@ -157,13 +157,13 @@ StatementType get_statement_type(GWBUF* pStmt)
 {
     StatementType type = StatementType::UNKNOWN;
 
-    char* pSql;
+    const char* pSql;
     int len;
 
-    MXB_AT_DEBUG(int rc = ) modutil_extract_SQL(pStmt, &pSql, &len);
+    MXB_AT_DEBUG(int rc = ) modutil_extract_SQL(*pStmt, &pSql, &len);
     mxb_assert(rc == 1);
 
-    char* pSql_end = pSql + len;
+    const char* pSql_end = pSql + len;
 
     pSql = modutil_MySQL_bypass_whitespace(pSql, len);
 
@@ -1016,12 +1016,12 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
 
         if (log_decisions())
         {
-            char* pSql;
+            const char* pSql;
             int length;
             const int max_length = 40;
 
             // At this point we know it's a COM_QUERY and that the buffer is contiguous
-            modutil_extract_SQL(pPacket, &pSql, &length);
+            modutil_extract_SQL(*pPacket, &pSql, &length);
 
             const char* zFormat;
 
@@ -1623,9 +1623,9 @@ int CacheFilterSession::continue_routing(GWBUF* pPacket)
         }
         else
         {
-            char* pSql;
+            const char* pSql;
             int len;
-            modutil_extract_SQL(pPacket, &pSql, &len);
+            modutil_extract_SQL(*pPacket, &pSql, &len);
 
             MXS_INFO("Invalidation is enabled, but the current statement could not "
                      "be parsed. Consequently the accessed tables are not known and "

@@ -180,10 +180,10 @@ static void inspect_query(GWBUF* pPacket, uint32_t* type, qc_query_op_t* op, uin
 
     if (mxb_log_should_log(LOG_INFO))
     {
-        char* sql;
+        const char* sql;
         int sql_len;
         char* qtypestr = qc_typemask_to_string(*type);
-        int rc = modutil_extract_SQL(pPacket, &sql, &sql_len);
+        int rc = modutil_extract_SQL(*pPacket, &sql, &sql_len);
 
         MXS_INFO("> Command: %s, stmt: %.*s %s%s",
                  STRPACKETTYPE(*command),

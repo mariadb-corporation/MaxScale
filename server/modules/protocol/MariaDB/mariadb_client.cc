@@ -1105,7 +1105,7 @@ MariaDBClientConnection::process_special_queries(GWBUF& buffer)
         int len = 0;
         bool is_special = false;
 
-        if (modutil_extract_SQL(&buffer, const_cast<char**>(&sql), &len))
+        if (modutil_extract_SQL(buffer, &sql, &len))
         {
             auto pEnd = sql + len;
             is_special = detect_special_query(&sql, pEnd);

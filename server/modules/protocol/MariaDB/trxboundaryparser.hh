@@ -138,8 +138,8 @@ public:
     {
         uint32_t type_mask = 0;
 
-        char* pSql;
-        if (modutil_extract_SQL(pBuf, &pSql, &m_len))
+        const char* pSql;
+        if (modutil_extract_SQL(*pBuf, &pSql, &m_len))
         {
             m_pSql = pSql;
             m_pI = m_pSql;
@@ -769,7 +769,7 @@ private:
 
     void bypass_whitespace()
     {
-        m_pI = modutil_MySQL_bypass_whitespace(const_cast<char*>(m_pI), m_pEnd - m_pI);
+        m_pI = modutil_MySQL_bypass_whitespace(m_pI, m_pEnd - m_pI);
     }
 
     token_t next_token(token_required_t required = TOKEN_NOT_REQUIRED)

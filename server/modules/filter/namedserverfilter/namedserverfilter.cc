@@ -335,9 +335,9 @@ bool RegexHintFSession::routeQuery(GWBUF* queue)
 {
     if (m_active)
     {
-        char* sql = nullptr;
+        const char* sql = nullptr;
         int sql_len = 0;
-        if (modutil_extract_SQL(queue, &sql, &sql_len))
+        if (modutil_extract_SQL(*queue, &sql, &sql_len))
         {
             // Is either a COM_QUERY or COM_STMT_PREPARE. In either case, generate hints.
             const RegexToServers* reg_serv = find_servers(sql, sql_len);
@@ -488,7 +488,7 @@ mxs::FilterSession* RegexHintFilter::newSession(MXS_SESSION* session, SERVICE* s
  * @paran sql_len   length of SQL-query
  * @return A set of servers from the main mapping container
  */
-const RegexToServers* RegexHintFSession::find_servers(char* sql, int sql_len)
+const RegexToServers* RegexHintFSession::find_servers(const char* sql, int sql_len)
 {
     /* Go through the regex array and find a match. */
     for (auto& regex_map : m_setup->mapping)

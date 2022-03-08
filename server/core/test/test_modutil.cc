@@ -35,7 +35,7 @@
 static int test1()
 {
     GWBUF* buffer;
-    char* sql;
+    const char* sql;
     int result, length, residual;
 
     /* Poll tests */
@@ -46,7 +46,7 @@ static int test1()
     mxb_assert_message(0 == modutil_is_SQL(buffer), "Default buffer should be diagnosed as not SQL");
     /* There would ideally be some straightforward way to create a SQL buffer? */
     fprintf(stderr, "\t..done\nExtract SQL from buffer");
-    mxb_assert_message(0 == modutil_extract_SQL(buffer, &sql, &length), "Default buffer should fail");
+    mxb_assert_message(0 == modutil_extract_SQL(*buffer, &sql, &length), "Default buffer should fail");
     fprintf(stderr, "\t..done\nExtract SQL from buffer different way?");
     fprintf(stderr, "\t..done\nTidy up.");
     gwbuf_free(buffer);
@@ -586,14 +586,14 @@ void test_large_packets()
     }
 }
 
-char* bypass_whitespace(const char* sql)
+const char* bypass_whitespace(const char* sql)
 {
-    return modutil_MySQL_bypass_whitespace((char*)sql, strlen(sql));
+    return modutil_MySQL_bypass_whitespace(sql, strlen(sql));
 }
 
 void test_bypass_whitespace()
 {
-    char* sql;
+    const char* sql;
 
     sql = bypass_whitespace("SELECT");
     mxb_assert_message(*sql == 'S', "1");

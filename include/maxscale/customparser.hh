@@ -185,7 +185,7 @@ protected:
      */
     void bypass_whitespace()
     {
-        m_pI = modutil_MySQL_bypass_whitespace(const_cast<char*>(m_pI), m_pEnd - m_pI);
+        m_pI = modutil_MySQL_bypass_whitespace(m_pI, m_pEnd - m_pI);
     }
 
     /**

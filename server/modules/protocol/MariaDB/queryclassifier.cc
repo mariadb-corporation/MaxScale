@@ -611,18 +611,18 @@ void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype)
         unsigned char command = packet[4];
         int len = 0;
         std::string sqldata;
-        char* sql = (char*)"<non-SQL>";
+        const char* sql = "<non-SQL>";
         char* qtypestr = qc_typemask_to_string(qtype);
 
         if (qc_mysql_is_ps_command(command))
         {
             sqldata = "ID: " + std::to_string(mysql_extract_ps_id(querybuf));
-            sql = (char*)sqldata.c_str();
+            sql = sqldata.c_str();
             len = sqldata.length();
         }
         else
         {
-            modutil_extract_SQL(querybuf, &sql, &len);
+            modutil_extract_SQL(*querybuf, &sql, &len);
         }
 
         if (len > QC_TRACE_MSG_LEN)
