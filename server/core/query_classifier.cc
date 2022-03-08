@@ -201,6 +201,13 @@ public:
         constexpr int64_t max_entry_size = 0xffffff - 5;
 
         int64_t cache_max_size = this_unit.cache_max_size() / mxs::Config::get().n_threads;
+
+        /** Because some queries cause much more memory to be used than can be measured,
+         *  the limit is reduced here. In the future the cache entries will be changed so
+         *  that memory fragmentation is minimized.
+         */
+        cache_max_size *= 0.65;
+
         int64_t size = entry_size(canonical_stmt, pInfo);
 
         if (size < max_entry_size && size <= cache_max_size)
