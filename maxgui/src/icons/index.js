@@ -41,6 +41,7 @@ import Tachometer from 'icons/Tachometer'
 import Table from 'icons/Table'
 import Unlink from 'icons/Unlink'
 import User from 'icons/User'
+import GridBg from 'icons/GridBg'
 
 export default {
     alertWarning: {
@@ -75,6 +76,9 @@ export default {
     },
     notFound: {
         component: NotFound,
+    },
+    gridBg: {
+        component: GridBg,
     },
     logs: {
         component: Logs,

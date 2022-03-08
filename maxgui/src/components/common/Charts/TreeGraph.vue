@@ -1,6 +1,6 @@
 <template>
     <div class="tree-graph-container">
-        <svg ref="svgGridBg" class="svg-grid-bg" />
+        <v-icon class="svg-grid-bg" color="#e3e6ea">$vuetify.icons.gridBg</v-icon>
         <svg ref="svg" class="tree-graph">
             <g
                 id="node-group"
@@ -158,35 +158,7 @@ export default {
             this.$set(this.root, 'y0', 0)
         },
         initSvg() {
-            // Draw grid background
-            let svgGridBg = d3Select(this.$refs.svgGridBg)
-            let pattern = svgGridBg.append('defs').append('pattern')
-            pattern
-                .attr('id', 'grid')
-                .attr('width', 60)
-                .attr('height', 20)
-                .attr('patternUnits', 'userSpaceOnUse')
-                .append('line')
-                .attr('x1', 4)
-                .attr('x2', 60)
-                .attr('y1', 20)
-                .attr('y2', 20)
-                .attr('stroke', '#e3e6ea')
-                .attr('stroke-width', 2)
-                .attr('stroke-dasharray', 4)
-            pattern
-                .insert('line')
-                .attr('x1', 60)
-                .attr('x2', 60)
-                .attr('y1', 0)
-                .attr('y2', 20)
-                .attr('stroke', '#e3e6ea')
             const { left } = this.layout.margin
-            svgGridBg
-                .append('rect')
-                .attr('width', '100%')
-                .attr('height', '100%')
-                .attr('fill', 'url(#grid)')
             this.nodeGroupTransform = zoomIdentity
                 .translate(left, -this.nodeSize.height / 2)
                 .scale(1)
@@ -599,11 +571,11 @@ export default {
     .svg-grid-bg {
         width: 100%;
         height: 100%;
-        position: absolute;
         z-index: 1;
-        left: 0;
         pointer-events: none;
         background: transparent;
+        position: absolute;
+        left: 0;
     }
     ::v-deep.tree-graph {
         position: relative;
