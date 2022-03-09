@@ -166,12 +166,44 @@ replication is started from the beginning. The value of this parameter is only
 used if no previously replicated events with GTID positions can be retrieved
 from Kafka.
 
-#### `server_id`
+### `server_id`
 
 The
 [server_id](https://mariadb.com/kb/en/replication-and-binary-log-system-variables/#server_id)
 used when replicating from the master in direct replication mode. The default
 value is 1234. This parameter was added in MaxScale 6.0.
+
+### `match`
+
+- **Type**: [regex](../Getting-Started/Configuration-Guide.md#regular-expressions)
+- **Mandatory**: No
+- **Dynamic**: Yes
+
+Only include data from tables that match this pattern.
+
+For example, if configured with `match=accounts[.].*`, only data from the
+`accounts` database is sent to Kafka.
+
+The pattern is matched against the combined database and table name separated by
+a period. This means that the event for the table `t1` in the `test` database
+would appear as `test.t1`. The behavior is the same even if the database or the
+table name contains a period. This means that an event for the `test.table`
+table in the `my.data` database would appear as `my.data.test.table`.
+
+### `exclude`
+
+- **Type**: [regex](../Getting-Started/Configuration-Guide.md#regular-expressions)
+- **Mandatory**: No
+- **Dynamic**: Yes
+
+Exclude data from tables that match this pattern.
+
+For example, if configured with `exclude=mydb[.].*`, all data from the tables in
+the `mydb` database is not sent to Kafka.
+
+The pattern matching works the same way for both of the `exclude` and `match`
+parameters. See [`match`](#match) for an explanation on how the patterns are
+matched against the database and table names.
 
 ### `cooperative_replication`
 
