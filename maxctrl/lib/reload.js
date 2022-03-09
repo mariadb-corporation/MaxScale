@@ -29,6 +29,20 @@ exports.builder = function (yargs) {
         });
       }
     )
+    .command(
+      "tls",
+      "Reload TLS certificates",
+      function (yargs) {
+        return yargs
+          .epilog("This command reloads the TLS certificates for all listeners and servers in MaxScale.")
+          .usage("Usage: reload service <service>");
+      },
+      function (argv) {
+        maxctrl(argv, function (host) {
+          return doRequest(host, "maxscale/tls/reload", { method: "POST" });
+        });
+      }
+    )
     .usage("Usage: reload <command>")
     .help()
     .wrap(null)

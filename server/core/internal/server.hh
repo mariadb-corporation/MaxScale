@@ -233,6 +233,7 @@ public:
     static uint64_t status_from_string(const char* str);
 
     json_t* json_attributes() const;
+    json_t* json_parameters() const;
 
     std::unique_ptr<mxs::Endpoint> get_connection(mxs::Component* upstream, MXS_SESSION* session) override;
 

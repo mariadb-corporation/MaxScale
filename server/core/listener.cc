@@ -309,6 +309,23 @@ void ListenerManager::stop_all()
     }
 }
 
+bool ListenerManager::reload_tls()
+{
+    bool ok = true;
+    std::lock_guard<std::mutex> guard(m_lock);
+
+    for (const auto& a : m_listeners)
+    {
+        if (!a->force_config_reload())
+        {
+            ok = false;
+            break;
+        }
+    }
+
+    return ok;
+}
+
 SListener ListenerManager::find(const std::string& name)
 {
     SListener rval;
@@ -481,6 +498,16 @@ void Listener::set_type()
     }
 }
 
+bool Listener::force_config_reload()
+{
+    mxb::LogScope scope(name());
+    mxb::Json js(json_parameters(), mxb::Json::RefType::STEAL);
+    js.remove_nulls();
+
+    m_config.mark_as_modified();
+    return m_config.specification().validate(js.get_json()) && m_config.configure(js.get_json());
+}
+
 void listener_destroy_instances()
 {
     this_unit.destroy_instances();
@@ -519,6 +546,12 @@ void Listener::destroy(const SListener& listener)
 void Listener::stop_all()
 {
     this_unit.stop_all();
+}
+
+// static
+bool Listener::reload_tls()
+{
+    return this_unit.reload_tls();
 }
 
 // Helper function that executes a function on all workers and checks the result
@@ -617,6 +650,16 @@ std::ostream& Listener::persist(std::ostream& os) const
     return os;
 }
 
+json_t* Listener::json_parameters() const
+{
+    json_t* params = m_config.to_json();
+    json_t* tmp = m_shared_data->m_proto_module->getConfiguration().to_json();
+    json_object_update(params, tmp);
+    json_decref(tmp);
+
+    return params;
+}
+
 json_t* Listener::to_json(const char* host) const
 {
     const char CN_AUTHENTICATOR_DIAGNOSTICS[] = "authenticator_diagnostics";
@@ -626,12 +669,7 @@ json_t* Listener::to_json(const char* host) const
 
     auto& protocol_module = m_shared_data->m_proto_module;
 
-    json_t* params = m_config.to_json();
-    json_t* tmp = protocol_module->getConfiguration().to_json();
-    json_object_update(params, tmp);
-    json_decref(tmp);
-
-    json_object_set_new(attr, CN_PARAMETERS, params);
+    json_object_set_new(attr, CN_PARAMETERS, json_parameters());
 
     json_t* diag = protocol_module->print_auth_users_json();
     if (diag)

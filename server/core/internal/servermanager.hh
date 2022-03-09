@@ -91,6 +91,13 @@ public:
      */
     static void set_allow_duplicates(bool value);
 
+    /**
+     * Reloads TLS certificates for all servers
+     *
+     * @return True if reloading of all certificates succeeded
+     */
+    static bool reload_tls();
+
 private:
     static json_t* server_to_json_data_relations(const Server* server, const char* host);
 };

@@ -221,6 +221,29 @@ json_t* ServerManager::server_to_json_data_relations(const Server* server, const
     return json_data;
 }
 
+// static
+bool ServerManager::reload_tls()
+{
+    bool ok = true;
+
+    this_unit.foreach_server(
+        [&](Server* server) {
+            mxb::LogScope scope(server->name());
+            mxb::Json js(server->json_parameters(), mxb::Json::RefType::STEAL);
+            js.remove_nulls();
+
+            if (!Server::specification().validate(js.get_json()) || !server->configure(js.get_json()))
+            {
+                MXS_ERROR("Failed to reload TLS certificates for '%s'", server->name());
+                ok = false;
+            }
+
+            return ok;
+        });
+
+    return ok;
+}
+
 SERVER* SERVER::find_by_unique_name(const string& name)
 {
     return ServerManager::find_by_unique_name(name);

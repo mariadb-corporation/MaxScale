@@ -706,14 +706,10 @@ void Server::set_version(uint64_t version_num, const std::string& version_str, u
     }
 }
 
-json_t* Server::json_attributes() const
+json_t* Server::json_parameters() const
 {
-    /** Resource attributes */
-    json_t* attr = json_object();
-
     /** Store server parameters in attributes */
-    json_t* params = json_object();
-    m_settings.fill(params);
+    json_t* params = m_settings.to_json();
 
     // Return either address/port or socket, not both
     auto socket = json_object_get(params, CN_SOCKET);
@@ -734,7 +730,15 @@ json_t* Server::json_attributes() const
     json_object_del(params, CN_AUTHENTICATOR);
     json_object_del(params, CN_PROTOCOL);
 
-    json_object_set_new(attr, CN_PARAMETERS, params);
+    return params;
+}
+
+json_t* Server::json_attributes() const
+{
+    /** Resource attributes */
+    json_t* attr = json_object();
+
+    json_object_set_new(attr, CN_PARAMETERS, json_parameters());
 
     /** Store general information about the server state */
     string stat = status_string();
@@ -817,10 +821,6 @@ json_t* Server::to_json_data(const char* host) const
 
 bool Server::post_configure()
 {
-    json_t* js = m_settings.to_json();
-    auto params = mxs::ConfigParameters::from_json(js);
-    json_decref(js);
-
     bool ok;
     std::shared_ptr<mxs::SSLContext> ctx;
     std::tie(ok, ctx) = create_ssl(m_name.c_str(), create_ssl_config());

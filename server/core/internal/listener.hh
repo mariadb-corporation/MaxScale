@@ -106,6 +106,13 @@ public:
     static void stop_all();
 
     /**
+     * Reloads TLS certificates for all listeners
+     *
+     * @return True if certificate reload succeeded on all listeners
+     */
+    static bool reload_tls();
+
+    /**
      * Get listener config
      */
     mxs::config::Configuration& config()
@@ -334,6 +341,8 @@ private:
     SData          create_shared_data(const mxs::ConfigParameters& protocol_params);
     mxb::SSLConfig create_ssl_config() const;
     void           set_type();
+    json_t*        json_parameters() const;
+    bool           force_config_reload();
 };
 
 class ListenerManager
@@ -350,6 +359,7 @@ public:
     SListener              find(const std::string& name);
     std::vector<SListener> find_by_service(const SERVICE* service);
     void                   stop_all();
+    bool                   reload_tls();
 
 private:
     std::list<SListener> m_listeners;
