@@ -27,7 +27,8 @@ import { select as d3Select } from 'd3-selection'
 import * as d3d from 'd3-dag'
 import 'd3-transition'
 import { zoom, zoomIdentity } from 'd3-zoom'
-import { curveStepAfter, line } from 'd3-shape'
+import { curveLinear, line } from 'd3-shape'
+
 export default {
     name: 'dag-graph',
     props: {
@@ -36,6 +37,7 @@ export default {
         nodeSize: { type: Object, required: true },
         dynNodeHeightMap: { type: Object, default: () => {} },
         revert: { type: Boolean, default: false },
+        colorizingLinkFn: { type: Function, default: () => '' },
     },
     data() {
         return {
@@ -103,8 +105,8 @@ export default {
             this.layout = d3d
                 .sugiyama() // base layout
                 .layering(d3d.layeringSimplex())
-                .decross(d3d.decrossOpt()) // minimize number of crossings
-                .coord(d3d.coordQuad())
+                .decross(d3d.decrossTwoLayer()) // minimize number of crossings
+                .coord(d3d.coordCenter())
                 .nodeSize(() => [this.nodeSize.width * 1.2, this.nodeSize.height * 1.5])
 
             const { width, height } = this.layout(this.dag)
@@ -181,9 +183,8 @@ export default {
         },
 
         diagonal(points) {
-            //TODO: Use a different curve or customized curve
             const line = this.d3Line()
-                .curve(curveStepAfter)
+                .curve(curveLinear)
                 .x(d => d.x)
                 .y(d => d.y)
             return line(points)
@@ -200,9 +201,9 @@ export default {
                 .attr('class', 'link_line')
                 .attr('fill', 'none')
                 .attr('stroke-width', 2.5)
-                .attr('stroke', () => {
-                    //TODO: Use dynamic link color from node data
-                    return '#0e9bc0'
+                .attr('stroke', d => {
+                    let color = this.colorizingLinkFn(d) || '#0e9bc0'
+                    return color
                 })
                 .attr('d', ({ points }) => this.diagonal(points))
             // UPDATE
