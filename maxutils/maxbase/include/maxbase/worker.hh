@@ -288,6 +288,14 @@ public:
         virtual ~Object();
 
         /**
+         * @return The worker this object is associated with.
+         */
+        Worker* worker() const
+        {
+            return m_pWorker;
+        }
+
+        /**
          * Cancel all dcalls.
          *
          * @param call  If true, then the delayed function will be called with Call::CANCEL.
@@ -318,6 +326,12 @@ public:
         Object(Worker* pWorker)
             : m_pWorker(pWorker)
         {
+        }
+
+        void set_worker(Worker* pWorker)
+        {
+            mxb_assert(m_dcalls.empty() || m_dcalls_suspended);
+            m_pWorker = pWorker;
         }
 
     private:

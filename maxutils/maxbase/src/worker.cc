@@ -960,6 +960,7 @@ void Worker::tick()
     while (!m_sorted_calls.empty() && (i->first <= now))
     {
         DCall* pCall = i->second;
+        mxb_assert(pCall->owner().worker() == this);
 
         auto j = m_calls.find(pCall->id());
         mxb_assert(j != m_calls.end());
