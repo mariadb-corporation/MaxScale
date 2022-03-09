@@ -5,7 +5,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2026-02-11
+ * Change Date: 2026-03-08
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -1850,7 +1850,7 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, bool 
                     }
 
                     // Now wait for the COM_QUIT to close the connections.
-                    auto wait_for_conns = [this, ref, send_ok](auto action){
+                    auto wait_for_conns = [this, ref, send_ok](mxb::Worker::Call::action_t action){
                             bool rv = true;
 
                             if (action == mxb::Worker::Call::CANCEL || !have_local_clients())
