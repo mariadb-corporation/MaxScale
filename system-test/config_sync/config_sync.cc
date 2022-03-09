@@ -586,7 +586,7 @@ void test_failures(TestConnections& test)
     test.repl->start_nodes();
 
     test.tprintf("Next update should override change done with --skip-sync");
-    test.maxscale->wait_for_monitor();
+    test.maxscale->sleep_and_wait_for_monitor(2, 2);
     expect_equal(test, "maxscale", "/data/attributes/config_sync/version");
     config_update(test.maxscale2);
     expect_equal(test, "services/RW-Split-Router", "/data/attributes/parameters");
