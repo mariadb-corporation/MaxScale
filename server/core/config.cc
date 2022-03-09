@@ -1934,8 +1934,8 @@ Groups<T> get_graph_cycles(Container<T> graph)
     std::vector<Node<T>> nodes;
 
     auto find_node = [&](T target, const Node<T>& n) {
-            return n.value == target;
-        };
+        return n.value == target;
+    };
 
     // Iterate over all values and place unique values in the vector.
     for (auto&& a : graph)
@@ -1960,52 +1960,52 @@ Groups<T> get_graph_cycles(Container<T> graph)
     Groups<T> groups;
 
     std::function<void(Node<T>*)> visit_node = [&](Node<T>* n) {
-            static int s_index = 1;
-            n->index = s_index++;
-            n->lowlink = n->index;
-            stack.push_back(n);
-            n->on_stack = true;
-            auto range = node_graph.equal_range(n);
+        static int s_index = 1;
+        n->index = s_index++;
+        n->lowlink = n->index;
+        stack.push_back(n);
+        n->on_stack = true;
+        auto range = node_graph.equal_range(n);
 
-            for (auto it = range.first; it != range.second; it++)
+        for (auto it = range.first; it != range.second; it++)
+        {
+            Node<T>* s = it->second;
+
+            if (s->index == Node<T>::NOT_VISITED)
             {
-                Node<T>* s = it->second;
-
-                if (s->index == Node<T>::NOT_VISITED)
-                {
-                    visit_node(s);
-                    n->lowlink = std::min(n->lowlink, s->lowlink);
-                }
-                else if (n == s)
-                {
-                    // This isn't strictly according to the algorithm but this is a convenient spot where we
-                    // can easily spot cycles of size one. Adding an extra group with the two nodes in it
-                    // causes it to be reported correctly.
-                    groups.push_back({n->value, s->value});
-                }
-                else if (s->on_stack)
-                {
-                    n->lowlink = std::min(n->lowlink, s->index);
-                }
+                visit_node(s);
+                n->lowlink = std::min(n->lowlink, s->lowlink);
             }
-
-            if (n->index == n->lowlink)
+            else if (n == s)
             {
-                // Start a new group
-                groups.emplace_back();
-
-                Node<T>* c;
-
-                do
-                {
-                    c = stack.back();
-                    stack.pop_back();
-                    c->on_stack = false;
-                    groups.back().push_back(c->value);
-                }
-                while (c != n);
+                // This isn't strictly according to the algorithm but this is a convenient spot where we
+                // can easily spot cycles of size one. Adding an extra group with the two nodes in it
+                // causes it to be reported correctly.
+                groups.push_back({n->value, s->value});
             }
-        };
+            else if (s->on_stack)
+            {
+                n->lowlink = std::min(n->lowlink, s->index);
+            }
+        }
+
+        if (n->index == n->lowlink)
+        {
+            // Start a new group
+            groups.emplace_back();
+
+            Node<T>* c;
+
+            do
+            {
+                c = stack.back();
+                stack.pop_back();
+                c->on_stack = false;
+                groups.back().push_back(c->value);
+            }
+            while (c != n);
+        }
+    };
 
     for (auto n = nodes.begin(); n != nodes.end(); n++)
     {
