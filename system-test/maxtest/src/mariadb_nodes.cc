@@ -177,8 +177,8 @@ int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
     setenv(key_ssl.c_str(), m_ssl ? "true" : "false", 1);
 
     const string space = " ";
-    const char start_db_def[] = "systemctl start mariadb || service mysql start";
-    const char stop_db_def[] = "systemctl stop mariadb || service mysql stop";
+    const char start_db_def[] = "systemctl start mariadb";
+    const char stop_db_def[] = "systemctl stop mariadb";
     const char clean_db_def[] = "rm -rf /var/lib/mysql/*; killall -9 mysqld";
 
     clear_vms();
