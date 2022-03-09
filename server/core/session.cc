@@ -1583,6 +1583,9 @@ bool Session::move_to(RoutingWorker* pTo)
     // TODO: Change to MXS_INFO when everything is ready.
     MXS_NOTICE("Moving session from %d to %d.", pFrom->id(), pTo->id());
 
+    suspend_dcalls();
+    set_worker(nullptr);
+
     std::vector<DCB*> to_be_enabled;
 
     DCB* pDcb = m_client_conn->dcb();
@@ -1641,6 +1644,9 @@ bool Session::move_to(RoutingWorker* pTo)
                 kill();
             }
 
+            set_worker(pTo);
+            resume_dcalls();
+
             MXS_NOTICE("Moved session from %d to %d.", pFrom->id(), pTo->id());
         };
     bool posted = pTo->execute(receive_session, mxb::Worker::EXECUTE_QUEUED);
@@ -1668,6 +1674,9 @@ bool Session::move_to(RoutingWorker* pTo)
             MXS_ERROR("Could not re-enable epoll events, session will be terminated.");
             kill();
         }
+
+        set_worker(pFrom);
+        resume_dcalls();
     }
 
     return posted;
