@@ -226,7 +226,7 @@ public:
                             gwbuf_free(pValue);
                         }
                     }, mxb::Worker::EXECUTE_QUEUED);
-            });
+            }, "memcached-get");
 
         return CACHE_RESULT_PENDING;
     }
@@ -285,7 +285,7 @@ public:
                             cb(rv);
                         }
                     }, mxb::Worker::EXECUTE_QUEUED);
-            });
+            }, "memcached-put");
 
         return CACHE_RESULT_PENDING;
     }
@@ -331,7 +331,7 @@ public:
                             cb(rv);
                         }
                     }, mxb::Worker::EXECUTE_QUEUED);
-            });
+            }, "memcached-del");
 
         return CACHE_RESULT_PENDING;
     }
@@ -396,7 +396,7 @@ private:
                             sThis->connection_checked(pinged);
                         }
                     }, mxb::Worker::EXECUTE_QUEUED);
-            });
+            }, "memcached-cnct");
     }
 
     void reconnect()

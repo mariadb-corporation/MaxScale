@@ -18,6 +18,7 @@
 #include "pinloki.hh"
 #include <maxbase/hexdump.hh>
 #include <maxbase/stopwatch.hh>
+#include <maxbase/threadpool.hh>
 
 #include <fstream>
 #include <iostream>
@@ -27,6 +28,7 @@
 
 #include <assert.h>
 #include <mariadb_rpl.h>
+using namespace std::chrono_literals;
 
 using namespace std::literals::string_literals;
 
@@ -49,7 +51,7 @@ Writer::Writer(const mxq::Connection::ConnectionDetails& details, InventoryWrite
     {
         if (m_current_gtid_list.is_included(req_state))
         {
-            MXB_SDEBUG("The requested gtid is already in the logs, removing.");
+            MXB_SDEBUG("The requested gtid is already in the logs, removing request.");
             m_inventory.clear_requested_rpl_state();
         }
         else
@@ -59,6 +61,7 @@ Writer::Writer(const mxq::Connection::ConnectionDetails& details, InventoryWrite
     }
 
     m_thread = std::thread(&Writer::run, this);
+    mxb::set_thread_name(m_thread, "Writer");
 }
 
 Writer::~Writer()
@@ -142,6 +145,7 @@ void Writer::run()
                 m_error = Error {};
             }
 
+            mxb::set_thread_name(m_thread, MAKE_STR(details.host.address() << ":Writer"));
             log_host_warning = true;
 
             FileWriter file(&m_inventory, *this);
@@ -163,7 +167,6 @@ void Writer::run()
 
                 if (m_inventory.config().select_master() && timer.alarm() && has_master_changed(conn))
                 {
-
                     MXB_INFO("Pinloki switching to new master at '%s'", host.c_str());
                     break;
                 }

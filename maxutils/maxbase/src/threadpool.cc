@@ -17,9 +17,23 @@
 namespace maxbase
 {
 
-ThreadPool::Thread::Thread()
+void set_thread_name(std::thread& thread, const std::string& name)
+{
+    const size_t MAX_LEN = 15;
+    if (name.size() > MAX_LEN)
+    {
+        pthread_setname_np(thread.native_handle(), name.substr(0, MAX_LEN).c_str());
+    }
+    else
+    {
+        pthread_setname_np(thread.native_handle(), name.c_str());
+    }
+}
+
+ThreadPool::Thread::Thread(const std::string& name)
 {
     m_thread = std::thread(&Thread::main, this);
+    set_thread_name(m_thread, name);
 }
 
 ThreadPool::Thread::~Thread()
@@ -30,6 +44,11 @@ ThreadPool::Thread::~Thread()
     }
 
     m_thread.join();
+}
+
+void ThreadPool::Thread::set_name(const std::string& name)
+{
+    set_thread_name(m_thread, name);
 }
 
 void ThreadPool::Thread::execute(const Task& task)
@@ -102,7 +121,7 @@ int ThreadPool::num_of_threads() const
     return m_nThreads;
 }
 
-void ThreadPool::execute(const Task& task)
+void ThreadPool::execute(const Task& task, const std::string& name)
 {
     mxb_assert(!m_stop);
 
@@ -116,7 +135,7 @@ void ThreadPool::execute(const Task& task)
         {
             ++m_nThreads;
 
-            pThread = new Thread;
+            pThread = new Thread(name);
         }
     }
     else
@@ -129,6 +148,7 @@ void ThreadPool::execute(const Task& task)
     {
         threads_lock.unlock();
 
+        pThread->set_name(name);
         pThread->execute([this, task, pThread]() {
                 bool ready = false;
 
@@ -142,16 +162,16 @@ void ThreadPool::execute(const Task& task)
                     {
                         threads_lock.unlock();
 
-                        Task t = std::move(m_tasks.front());
+                        auto tp = std::move(m_tasks.front());
                         m_tasks.pop();
                         tasks_lock.unlock();
-
-                        t();
+                        pThread->set_name(tp.second);
+                        tp.first();
                     }
                     else
                     {
                         tasks_lock.unlock();
-
+                        pThread->set_name("idle");
                         m_idle_threads.push(pThread);
                         threads_lock.unlock();
 
@@ -166,7 +186,7 @@ void ThreadPool::execute(const Task& task)
     else
     {
         std::unique_lock<std::mutex> tasks_lock(m_tasks_mx);
-        m_tasks.push(task);
+        m_tasks.emplace(task, name);
         tasks_lock.unlock();
         threads_lock.unlock();
     }

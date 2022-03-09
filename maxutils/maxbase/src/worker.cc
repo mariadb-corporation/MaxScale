@@ -27,6 +27,7 @@
 #include <maxbase/log.h>
 #include <maxbase/string.hh>
 #include <maxbase/stopwatch.hh>
+#include <maxbase/threadpool.hh>
 
 #define WORKER_ABSENT_ID -1
 
@@ -573,7 +574,7 @@ void Worker::run(mxb::Semaphore* pSem)
     this_thread.pCurrent_worker = nullptr;
 }
 
-bool Worker::start()
+bool Worker::start(const std::string& name)
 {
     mxb_assert(!m_started);
     mxb_assert(m_thread.get_id() == std::thread::id());
@@ -586,6 +587,7 @@ bool Worker::start()
     try
     {
         m_thread = std::thread(&Worker::thread_main, this, &sem);
+        set_thread_name(m_thread, name);
         sem.wait();
     }
     catch (const std::exception& x)
