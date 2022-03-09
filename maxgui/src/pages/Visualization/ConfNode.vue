@@ -1,4 +1,7 @@
 <template>
+    <!-- Create a new component instead of re-using tree-graph-node because
+    dag node is different from tree node
+    -->
     <tree-graph-node
         v-if="!$typy(node, 'data').isEmptyObject"
         :node="node"
@@ -13,11 +16,11 @@
             >
                 <router-link
                     target="_blank"
-                    :to="`/dashboard/${node.data.type}/${node.data.name}`"
+                    :to="`/dashboard/${node.data.type}/${node.data.id}`"
                     class="text-truncate rsrc-link"
                     :style="{ color: headingColor.txt }"
                 >
-                    {{ node.data.name }}
+                    {{ node.data.id }}
                 </router-link>
                 <v-spacer />
                 <span
