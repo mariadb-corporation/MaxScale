@@ -23,6 +23,14 @@
 namespace maxbase
 {
 
+/**
+ * @brief set_thread_name - Set the name of a thread.
+ *                          Usefull e.g. with "top -H -p $(pidof maxscale)"
+ * @param thread
+ * @param name            - Note: only the first 15 chars can be used
+ */
+void set_thread_name(std::thread& thread, const std::string& name);
+
 class ThreadPool
 {
 public:
@@ -37,13 +45,16 @@ public:
         /**
          * Creates a Thread object with an associated thread.
          */
-        Thread();
+        Thread(const std::string& name);
 
         /**
          * Destroys the Thread object and its associated thread. If the
          * Thread has not already been stopped, @c stop(true) will be called.
          */
         ~Thread();
+
+        /** Sets the name of the thread. See set_thread_name() above */
+        void set_name(const std::string& name);
 
         /**
          * Enqueue a task (aka std::function<void()>) for execution on
@@ -128,7 +139,7 @@ public:
      *
      * @param task  The task to execute.
      */
-    void execute(const Task& task);
+    void execute(const Task& task, const std::string& name);
 
     /**
      * Stop the pool.
@@ -144,12 +155,13 @@ public:
     void stop(bool abandon_tasks = false);
 
 private:
+    using TaskNamePair = std::pair<Task, std::string>; // <task, name>
     bool                     m_stop { false };
     int                      m_nThreads { 0 };
     std::stack<Thread*>      m_idle_threads;
     mutable std::mutex       m_idle_threads_mx;
     std::condition_variable  m_idle_threads_cv;
-    std::queue<Task>         m_tasks;
+    std::queue<TaskNamePair> m_tasks;
     std::mutex               m_tasks_mx;
     const int                m_nMax_threads;
 };

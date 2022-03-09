@@ -1164,7 +1164,7 @@ void MariaDBMonitor::execute_task_on_servers(const ServerFunction& task, const S
                 task(server);
                 task_complete.post();
             };
-        m_threadpool.execute(server_task);
+        m_threadpool.execute(server_task, "monitor-task");
     }
     task_complete.wait_n(servers.size());
 }

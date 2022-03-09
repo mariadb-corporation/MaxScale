@@ -18,6 +18,7 @@
 #include <mysqld_error.h>
 #include <maxbase/format.hh>
 #include <maxbase/host.hh>
+#include <maxbase/threadpool.hh>
 #include <maxsql/mariadb_connector.hh>
 #include <maxscale/server.hh>
 #include <maxscale/service.hh>
@@ -111,6 +112,7 @@ void MariaDBUserManager::start()
     m_updater_thread = std::thread([this] {
                                        updater_thread_function();
                                    });
+    mxb::set_thread_name(m_updater_thread, "UserManager");
     m_thread_started.wait();
 }
 

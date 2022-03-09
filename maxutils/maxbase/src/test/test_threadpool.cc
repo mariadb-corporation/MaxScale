@@ -17,6 +17,7 @@
 #include <maxbase/assert.h>
 #include <maxbase/log.hh>
 #include <maxbase/semaphore.hh>
+#include <maxbase/string.hh>
 
 using namespace std;
 using mxb::ThreadPool;
@@ -51,8 +52,8 @@ void test_iterative(int limit)
     for (int i = 0; i < 10; ++i)
     {
         tp.execute([i]() {
-                iterative_thread(i);
-            });
+                       iterative_thread(i);
+                   }, MAKE_STR("Test-" << i));
     }
 
     sem_start.post_n(10);
@@ -67,8 +68,8 @@ void recursive_thread(int i)
     if (i > 1)
     {
         pTp->execute([i]() {
-                recursive_thread(i - 1);
-            });
+                         recursive_thread(i - 1);
+                     }, MAKE_STR("Recursive-" << i));
     }
 
     stringstream ss;
@@ -87,14 +88,13 @@ void test_recursive(int limit)
     pSem_stop = &sem;
 
     tp.execute([]() {
-            recursive_thread(10);
-        });
+                   recursive_thread(10);
+               }, "Recursive");
 
     cout << "Waiting.\n" << flush;
     sem.wait_n(10);
     cout << "Waited.\n" << flush;
 }
-
 }
 
 int main()

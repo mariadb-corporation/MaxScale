@@ -1848,7 +1848,7 @@ bool MonitorWorker::start()
     {
         // Next tick should happen immediately.
         m_loop_called = get_time_ms() - settings().interval.count();
-        if (!Worker::start())
+        if (!Worker::start(name()))
         {
             MXS_ERROR("Failed to start worker for monitor '%s'.", name());
         }

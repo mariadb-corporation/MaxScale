@@ -26,6 +26,7 @@
 #include <mariadb_rpl.h>
 #include <errmsg.h>
 
+#include <maxbase/threadpool.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/routingworker.hh>
@@ -132,6 +133,7 @@ Replicator::Imp::Imp(const Config& cnf, SRowEventHandler handler)
     , m_rpl(cnf.service, std::move(handler), cnf.match, cnf.exclude)
     , m_thr(std::thread(&Imp::process_events, this))
 {
+    mxb::set_thread_name(m_thr, "Replicator");
 }
 
 bool Replicator::Imp::ok() const
