@@ -745,6 +745,34 @@ void DCB::writeq_drain()
         socket_write();
     }
 
+    if (m_writeq.empty())
+    {
+        /**
+         * Writeq has been completely consumed. Take some simple steps to recycle buffers.
+         *  Don't try to recycle if:
+         *  1. Underlying data is shared or null. Let the last owner recycle it.
+         *  2. The allocated buffer is large. The large buffer limit is subject to discussion. This limit
+         *  is required to avoid keeping large amounts of memory tied to one GWBUF.
+         *
+         *  If writeq is suitable, readq is empty and has less capacity than writeq, recycle writeq.
+         */
+
+        // TODO: Add smarter way to estimate required readq capacity. E.g. average packet size.
+        auto writeq_cap = m_writeq.capacity();
+        if (m_writeq.is_unique() && writeq_cap > 0 && writeq_cap < 1048576
+            && m_readq.empty() && m_readq.capacity() < writeq_cap)
+        {
+            m_writeq.reset();
+            m_readq = move(m_writeq);
+        }
+        else
+        {
+            // Would end up happening later on anyway, best to clear now. If the underlying data was
+            // shared the other owner may become unique and won't need to allocate when writing.
+            m_writeq.clear();
+        }
+    }
+
     // TODO: should m_low_water = 0 be allowed as a default value?
     if (m_high_water_reached && m_low_water > 0 && m_writeq.length() < m_low_water)
     {

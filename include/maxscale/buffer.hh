@@ -48,6 +48,8 @@ struct BufferObject
     void  (* deleter)(void*) = nullptr;
 
     ~BufferObject();
+
+    void clear();
 };
 
 /**
@@ -144,6 +146,13 @@ public:
     bool           empty() const;
 
     /**
+     * Capacity of underlying shared buffer.
+     *
+     * @return Internal buffer capacity
+     */
+    size_t capacity() const;
+
+    /**
      * Copy data from buffer. Data is not consumed. If the buffer does not have enough data to fulfill the
      * copy, copies less than requested.
      *
@@ -231,10 +240,23 @@ public:
     void clear();
 
     /**
+     * Clears the buffer without releasing the internal buffer. Resets start and end pointers so buffer
+     * has no data.
+     */
+    void reset();
+
+    /**
      * Ensure the underlying data is uniquely owned by this GWBUF. If not, will clone the data. This should
      * be called before writing manually to the internal buffer.
      */
     void ensure_unique();
+
+    /**
+     * Is the buffer unique? Returns true if internal data exists and is not shared with other GWBUFs.
+     *
+     * @return True if unique
+     */
+    bool is_unique() const;
 
 private:
     std::shared_ptr<SHARED_BUF> m_sbuf;     /*< The shared buffer with the real data */

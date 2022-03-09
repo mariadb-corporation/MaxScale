@@ -584,10 +584,44 @@ void GWBUF::clear()
     move_helper(GWBUF());
 }
 
+void GWBUF::reset()
+{
+    if (m_sbuf)
+    {
+        start = m_sbuf->buf_start.get();
+        end = start;
+
+        m_sbuf->classifier_data.clear();
+    }
+    else
+    {
+        mxb_assert(start == nullptr && end == nullptr);
+    }
+
+    hints.clear();
+    gwbuf_type = GWBUF_TYPE_UNDEFINED;
+    id = 0;
+
+    // TODO: do these really need to be cleared or would they be overwritten?
+    m_sql.clear();
+    m_canonical.clear();
+    m_markers.clear();
+}
+
 void GWBUF::ensure_unique()
 {
     prepare_to_write(0);
     mxb_assert(!m_sbuf || m_sbuf.unique());
+}
+
+bool GWBUF::is_unique() const
+{
+    return m_sbuf.unique();
+}
+
+size_t GWBUF::capacity() const
+{
+    return m_sbuf ? m_sbuf->size() : 0;
 }
 
 void gwbuf_set_id(GWBUF* buffer, uint32_t id)
@@ -773,9 +807,16 @@ const uint8_t* maxscale::Buffer::data() const
 
 BufferObject::~BufferObject()
 {
+    clear();
+}
+
+void BufferObject::clear()
+{
     if (deleter)
     {
         deleter(data);
+        deleter = nullptr;
+        data = nullptr;
     }
 }
 
