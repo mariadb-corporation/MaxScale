@@ -164,6 +164,9 @@ public:
      * Causes: server id, slave connections, read-only. */
     bool m_topology_changed = true;
 
+    // If true, warn when querying of events fails
+    bool m_warn_event_handling = true;
+
     /* Miscellaneous replication related settings. These are not normally queried from the server, call
      * 'update_replication_settings' before use. */
     ReplicationSettings m_rpl_settings;
