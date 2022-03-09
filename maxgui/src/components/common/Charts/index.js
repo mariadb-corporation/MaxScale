@@ -18,6 +18,7 @@ import VertBarChart from './VertBarChart.vue'
 import HorizBarChart from './HorizBarChart.vue'
 import TreeGraph from './TreeGraph.vue'
 import TreeGraphNode from './TreeGraphNode.vue'
+import DagGraph from './DagGraph.vue'
 import './customTooltip.scss'
 import 'chartjs-plugin-trendline'
 Chart.defaults.global.defaultFontFamily = "'azo-sans-web', adrianna, serif"
@@ -44,4 +45,5 @@ export default {
     'horiz-bar-chart': HorizBarChart,
     'tree-graph': TreeGraph, // d3 graph
     'tree-graph-node': TreeGraphNode,
+    'dag-graph': DagGraph,
 }
