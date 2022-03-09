@@ -1850,7 +1850,7 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, bool 
                     }
 
                     // Now wait for the COM_QUIT to close the connections.
-                    auto wait_for_conns = [this, ref, send_ok](auto action){
+                    auto wait_for_conns = [this, ref, send_ok](mxb::Worker::Call::action_t action){
                             bool rv = true;
 
                             if (action == mxb::Worker::Call::CANCEL || !have_local_clients())
