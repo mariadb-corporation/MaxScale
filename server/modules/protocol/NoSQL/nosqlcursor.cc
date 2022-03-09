@@ -31,6 +31,7 @@ class ThisUnit : public mxb::Worker::Object
 {
 public:
     ThisUnit()
+        : mxb::Worker::Object(mxs::MainWorker::get())
     {
     }
 

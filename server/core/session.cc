@@ -77,7 +77,8 @@ struct
 const int Session::N_LOAD;
 
 MXS_SESSION::MXS_SESSION(const std::string& host, SERVICE* service)
-    : m_state(MXS_SESSION::State::CREATED)
+    : mxb::Worker::Object(mxs::RoutingWorker::get_current())
+    , m_state(MXS_SESSION::State::CREATED)
     , m_id(session_get_next_id())
     , m_worker(mxs::RoutingWorker::get_current())
     , m_host(host)

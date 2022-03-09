@@ -351,11 +351,13 @@ public:
         }
 
     protected:
-        Object()
+        Object(Worker* pWorker)
+            : m_pWorker(pWorker)
         {
         }
 
     private:
+        Worker*            m_pWorker;
         mutable Reference* m_pReference { nullptr };
     };
 

@@ -48,6 +48,7 @@ namespace maxscale
 
 MainWorker::MainWorker(mxb::WatchdogNotifier* pNotifier)
     : mxb::WatchedWorker(pNotifier)
+    , mxb::Worker::Object(this)
 {
     mxb_assert(!this_unit.pMain);
 

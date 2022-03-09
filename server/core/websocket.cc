@@ -58,7 +58,8 @@ void WebSocket::create(int fd, MHD_UpgradeResponseHandle* urh, std::function<std
 }
 
 WebSocket::WebSocket(int fd, MHD_UpgradeResponseHandle* urh, std::function<std::string ()> cb)
-    : m_fd(fd)
+    : mxb::Worker::Object(mxs::MainWorker::get())
+    , m_fd(fd)
     , m_urh(urh)
     , m_cb(cb)
 {

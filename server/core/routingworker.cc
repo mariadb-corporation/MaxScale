@@ -136,6 +136,7 @@ void RoutingWorker::DCBHandler::hangup(DCB* pDcb)
 
 RoutingWorker::RoutingWorker(mxb::WatchdogNotifier* pNotifier)
     : mxb::WatchedWorker(pNotifier)
+    , mxb::Worker::Object(this)
     , m_pool_handler(this)
 {
     POLL_DATA::handler = &RoutingWorker::epoll_instance_handler;

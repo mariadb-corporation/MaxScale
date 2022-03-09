@@ -38,7 +38,8 @@ public:
     static int s_ticks;
 
     TimerTest(Worker* pWorker, int* pRv, const std::chrono::milliseconds& delay)
-        : m_id(s_id++)
+        : Worker::Object(pWorker)
+        , m_id(s_id++)
         , m_worker(*pWorker)
         , m_delay(delay)
         , m_at(get_monotonic_time_ms() + delay.count())

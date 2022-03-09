@@ -1787,6 +1787,7 @@ void Monitor::load_monitor_specific_journal_data(const mxb::Json& data)
 
 MonitorWorker::MonitorWorker(const string& name, const string& module)
     : Monitor(name, module)
+    , mxb::Worker::Object(this)
     , m_thread_running(false)
     , m_shutdown(0)
     , m_checked(false)
