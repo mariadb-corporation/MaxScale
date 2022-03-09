@@ -280,39 +280,86 @@ int create_epoll_instance()
 
 Worker::Object::~Object()
 {
-    if (!m_dcids.empty())
+    if (!m_dcalls.empty())
     {
-        // In the olden days, if the target of a delayed call was deleted before the
+        // Before MaxScale 7, if the target of a delayed call was deleted before the
         // delayed call was due, it would have resulted in a random crash, so it should
         // be a very rare occurrence. If we ever see this, then we know that some
-        // unexplained crashed may have been caused by this.
+        // unexplained crash may have been caused by this.
         MXB_ERROR("Recipient of delayed call was deleted before delayed call was due.");
     }
 
-    // Can't iterate; the cancel_dcall() will cause unregister_dcid() to be called.
-    while (!m_dcids.empty())
+    if (m_dcalls_suspended)
     {
-        auto id = *m_dcids.begin();
+        // If the dcalls have been suspended, then we have to delete them here, as
+        // the worker has no knowledge about them.
+
+        for (auto kv : m_dcalls)
+        {
+            auto* pCall = kv.second;
+            delete pCall;
+        }
+    }
+    else
+    {
+        cancel_dcalls(false);
+    }
+}
+
+void Worker::Object::cancel_dcalls(bool call)
+{
+    // Can't iterate; the cancel_delayed_call() will cause unregister_dcall() to be called.
+    while (!m_dcalls.empty())
+    {
+        auto id = m_dcalls.begin()->first;
 
         // At this point, we have but Object left so the function can not be called
         // with Call::CANCEL as chances are we would then access data that already
         // has been destructed.
-        m_pWorker->cancel_dcall(id, false);
+        m_pWorker->cancel_dcall(id, call);
     }
 }
 
-void Worker::Object::register_dcid(DCId id)
+void Worker::Object::suspend_dcalls()
 {
-    mxb_assert(m_dcids.find(id) == m_dcids.end());
-    m_dcids.insert(id);
+    mxb_assert(!m_dcalls_suspended);
+
+    for (auto kv : m_dcalls)
+    {
+        auto id = kv.first;
+
+        auto pCall = m_pWorker->remove_dcall(id);
+        mxb_assert(pCall == kv.second);
+    }
+
+    m_dcalls_suspended = true;
 }
 
-void Worker::Object::unregister_dcid(DCId id)
+void Worker::Object::resume_dcalls()
 {
-    auto it = m_dcids.find(id);
-    mxb_assert(it != m_dcids.end());
+    mxb_assert(m_dcalls_suspended);
 
-    m_dcids.erase(it);
+    for (auto kv : m_dcalls)
+    {
+        auto pCall = kv.second;
+        m_pWorker->restore_dcall(pCall);
+    }
+
+    m_dcalls_suspended = false;
+}
+
+void Worker::Object::register_dcall(Worker::DCall* pCall)
+{
+    mxb_assert(m_dcalls.find(pCall->id()) == m_dcalls.end());
+    m_dcalls.emplace(pCall->id(), pCall);
+}
+
+void Worker::Object::unregister_dcall(DCId id)
+{
+    auto it = m_dcalls.find(id);
+    mxb_assert(it != m_dcalls.end());
+
+    m_dcalls.erase(it);
 }
 
 Worker::Worker(int max_events)
@@ -926,7 +973,7 @@ void Worker::tick()
         }
         else
         {
-            pCall->owner().unregister_dcid(pCall->id());
+            pCall->owner().unregister_dcall(pCall->id());
             delete pCall;
         }
 
@@ -949,37 +996,18 @@ void Worker::tick()
 Worker::DCId Worker::add_dcall(DCall* pCall)
 {
     mxb_assert(Worker::get_current() == this);
-    bool adjust = true;
 
-    if (!m_sorted_calls.empty())
+    if (!pCall->owner().dcalls_suspended())
     {
-        DCall* pFirst = m_sorted_calls.begin()->second;
-
-        if (pCall->at() > pFirst->at())
-        {
-            // If the added delayed call needs to be called later
-            // than the first delayed call, then we do not need to
-            // adjust the timer.
-            adjust = false;
-        }
+        // Only if the dcalls are currently not suspended, we actually add it.
+        // Otherwise it will be added when the dcalls of the object eventually
+        // are resumed.
+        restore_dcall(pCall);
     }
 
-    // Insert the delayed call into the map ordered by invocation time.
-    m_sorted_calls.insert(std::make_pair(pCall->at(), pCall));
+    pCall->owner().register_dcall(pCall);
 
-    // Insert the delayed call into the map indexed by id.
-    auto id = pCall->id();
-    mxb_assert(m_calls.find(id) == m_calls.end());
-    m_calls.insert(std::make_pair(id, pCall));
-
-    pCall->owner().register_dcid(id);
-
-    if (adjust)
-    {
-        adjust_timer();
-    }
-
-    return id;
+    return pCall->id();
 }
 
 void Worker::adjust_timer()
@@ -1004,16 +1032,15 @@ void Worker::adjust_timer()
     }
 }
 
-bool Worker::cancel_dcall(DCId id, bool call)
+Worker::DCall* Worker::remove_dcall(DCId id)
 {
-    mxb_assert(Worker::get_current() == this || m_state == FINISHED);
-    bool found = false;
+    DCall* pCall = nullptr;
 
     auto i = m_calls.find(id);
 
     if (i != m_calls.end())
     {
-        DCall* pCall = i->second;
+        pCall = i->second;
         m_calls.erase(i);
 
         // All delayed calls with exactly the same trigger time.
@@ -1027,20 +1054,11 @@ bool Worker::cancel_dcall(DCId id, bool call)
             if (k->second == pCall)
             {
                 m_sorted_calls.erase(k);
-
-                if (call)
-                {
-                    pCall->call(Worker::Call::CANCEL);
-                }
-                pCall->owner().unregister_dcid(pCall->id());
-                delete pCall;
-
-                found = true;
                 break;
             }
         }
 
-        mxb_assert(found);
+        mxb_assert(pCall);
     }
     else
     {
@@ -1051,6 +1069,58 @@ bool Worker::cancel_dcall(DCId id, bool call)
         MXB_WARNING("Attempt to remove a delayed call, associated with non-existing id.");
     }
 
-    return found;
+    return pCall;
+}
+
+void Worker::restore_dcall(DCall* pCall)
+{
+    bool adjust = true;
+
+    if (!m_sorted_calls.empty())
+    {
+        DCall* pFirst = m_sorted_calls.begin()->second;
+
+        if (pCall->at() > pFirst->at())
+        {
+            // If the added delayed call needs to be called later
+            // than the first delayed call, then we do not need to
+            // adjust the timer.
+            adjust = false;
+        }
+    }
+
+    // Insert the delayed call into the map ordered by invocation time.
+    m_sorted_calls.insert(std::make_pair(pCall->at(), pCall));
+
+    // Insert the delayed call into the map indexed by id.
+    auto id = pCall->id();
+    mxb_assert(m_calls.find(id) == m_calls.end());
+    m_calls.insert(std::make_pair(id, pCall));
+
+    pCall->owner().register_dcall(pCall);
+
+    if (adjust)
+    {
+        adjust_timer();
+    }
+}
+
+bool Worker::cancel_dcall(DCId id, bool call)
+{
+    mxb_assert(Worker::get_current() == this || m_state == FINISHED);
+
+    DCall* pCall = remove_dcall(id);
+
+    if (pCall)
+    {
+        if (call)
+        {
+            pCall->call(Worker::Call::CANCEL);
+        }
+        pCall->owner().unregister_dcall(pCall->id());
+        delete pCall;
+    }
+
+    return pCall != nullptr;
 }
 }

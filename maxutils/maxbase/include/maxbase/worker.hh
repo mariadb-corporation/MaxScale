@@ -268,6 +268,10 @@ public:
     // Must be zero since the id is used in if-statements. Existing code assumes that a normal id is never 0.
     static constexpr DCId NO_CALL = 0;
 
+private:
+    class DCall;
+
+public:
     /**
      * In order to make delayed calls on a Worker, an object, derived from Worker::Object,
      * must be provided, using which the Worker can detect whether the target for the
@@ -283,6 +287,33 @@ public:
 
         virtual ~Object();
 
+        /**
+         * Cancel all dcalls.
+         *
+         * @param call  If true, then the delayed function will be called with Call::CANCEL.
+         *              Otherwise, the function will not be called at all.
+         */
+        void cancel_dcalls(bool call = true);
+
+        /**
+         * Suspend all dcalls of this object. Will cause them to be removed from the worker.
+         */
+        void suspend_dcalls();
+
+        /**
+         * Resume all previously suspended dcalls of this object. Will cause them to be added
+         * back to the worker.
+         */
+        void resume_dcalls();
+
+        /**
+         * @return True, if the dcalls currently are suspended.
+         */
+        bool dcalls_suspended() const
+        {
+            return m_dcalls_suspended;
+        }
+
     protected:
         Object(Worker* pWorker)
             : m_pWorker(pWorker)
@@ -291,12 +322,13 @@ public:
 
     private:
         friend class Worker;
-        void register_dcid(DCId id);
-        void unregister_dcid(DCId id);
+        void register_dcall(DCall* pCall);
+        void unregister_dcall(DCId id);
 
     private:
-        Worker*        m_pWorker;
-        std::set<DCId> m_dcids;
+        Worker*                m_pWorker;
+        std::map<DCId, DCall*> m_dcalls;
+        bool                   m_dcalls_suspended { true };
     };
 
     /**
@@ -802,7 +834,6 @@ private:
     static void finish();
 
 private:
-    class DCall;
     friend class DCall;
 
     DCId next_dcall_id()
@@ -1078,6 +1109,9 @@ private:
 
     DCId add_dcall(DCall* pdcall);
     void adjust_timer();
+
+    DCall* remove_dcall(DCId id);
+    void restore_dcall(DCall* pCall);
 
     void handle_message(MessageQueue& queue, const MessageQueue::Message& msg) override;
 
