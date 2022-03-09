@@ -16,6 +16,7 @@ export default {
     state: {
         clusters: {}, // key is the name of the monitor, value is the monitor cluster
         current_cluster: {},
+        config_graph_data: [],
     },
     mutations: {
         SET_CLUSTERS(state, payload) {
@@ -23,6 +24,9 @@ export default {
         },
         SET_CURR_CLUSTER(state, payload) {
             state.current_cluster = payload
+        },
+        SET_CONFIG_GRAPH_DATA(state, payload) {
+            state.config_graph_data = payload
         },
     },
     actions: {
@@ -60,6 +64,21 @@ export default {
                 commit('SET_CURR_CLUSTER', cluster)
             } catch (e) {
                 const logger = this.vue.$logger('store-visualization-fetchClusterById')
+                logger.error(e)
+            }
+        },
+        async fetchConfigData({ commit, dispatch, getters }) {
+            try {
+                await Promise.all([
+                    dispatch('monitor/fetchAllMonitors', {}, { root: true }),
+                    dispatch('server/fetchAllServers', {}, { root: true }),
+                    dispatch('service/fetchAllServices', {}, { root: true }),
+                    dispatch('filter/fetchAllFilters', {}, { root: true }),
+                    dispatch('listener/fetchAllListeners', {}, { root: true }),
+                ])
+                commit('SET_CONFIG_GRAPH_DATA', getters.getConfigGraphData)
+            } catch (e) {
+                const logger = this.vue.$logger('store-visualization-fetchConfigData')
                 logger.error(e)
             }
         },
@@ -119,6 +138,55 @@ export default {
                     })
                 return root
             }
+        },
+        /*
+         * This generates data for d3-dag StratifyOperator
+         */
+        getConfigGraphData: (state, getters, rootState) => {
+            const {
+                service: { all_services },
+                server: { all_servers },
+                monitor: { all_monitors },
+                listener: { all_listeners },
+            } = rootState
+            let data = []
+            const { SERVICES, SERVERS, LISTENERS } = rootState.app_config.RELATIONSHIP_TYPES
+            const rsrcData = [all_services, all_servers, all_listeners, all_monitors]
+            rsrcData.forEach(rsrc =>
+                rsrc.forEach(item => {
+                    const { id, type, relationships } = item
+                    let node = { id, type, nodeData: item, parentIds: [] }
+                    /**
+                     * DAG graph requires root nodes.
+                     * With current data from API, accurate links between nodes can only be found by
+                     * checking the relationships data of a service. So monitors are root nodes here.
+                     * This adds parent node ids for services, servers and listeners node to create links except
+                     * monitors, as the links between monitors and servers or monitors and services are created
+                     * already. This is an intention to prevent circular reference.
+                     */
+                    let relationshipTypes = []
+                    switch (type) {
+                        case SERVICES:
+                            // a service can also target services or monitors
+                            relationshipTypes = ['servers', 'services', 'monitors']
+                            break
+                        case SERVERS:
+                            relationshipTypes = ['monitors']
+                            break
+                        case LISTENERS:
+                            relationshipTypes = ['services']
+                            break
+                    }
+                    Object.keys(relationships).forEach(key => {
+                        if (relationshipTypes.includes(key))
+                            relationships[key].data.forEach(n => {
+                                node.parentIds.push(n.id) // create links
+                            })
+                    })
+                    data.push(node)
+                })
+            )
+            return data
         },
     },
 }
