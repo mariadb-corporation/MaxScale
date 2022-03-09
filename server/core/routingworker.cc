@@ -371,7 +371,7 @@ bool RoutingWorker::start_workers()
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
         mxb_assert(pWorker);
 
-        if (!pWorker->start())
+        if (!pWorker->start(MAKE_STR("Worker-" << std::setw(2) << std::setfill('0') << i)))
         {
             MXS_ALERT("Could not start routing worker %d of %d.", i, config_threadcount());
             rv = false;

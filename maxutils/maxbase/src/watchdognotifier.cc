@@ -11,6 +11,7 @@
  * Public License.
  */
 #include <maxbase/watchdognotifier.hh>
+#include <maxbase/threadpool.hh>
 #include <algorithm>
 #ifdef HAVE_SYSTEMD
 #include <systemd/sd-daemon.h>
@@ -170,6 +171,7 @@ void WatchdogNotifier::start()
     if (m_interval.count() != 0)
     {
         m_thread = std::thread(&WatchdogNotifier::run, this);
+        mxb::set_thread_name(m_thread, "WD-Notifier");
     }
 }
 

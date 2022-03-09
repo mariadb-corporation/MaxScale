@@ -817,7 +817,7 @@ int Client::queue_delayed_response(const HttpResponse::Callback& cb)
         [cb, this]() {
             queue_response(cb());
             MHD_resume_connection(m_connection);
-        });
+        }, "mhd_resume");
 
     return MHD_YES;
 }

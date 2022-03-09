@@ -145,7 +145,7 @@ bool SharedData::concurrent_run(const BoolFuncArray& funcs)
                     results[i] = funcs[i]();
                     sem.post();
                 };
-            threadpool.execute(pool_task);
+            threadpool.execute(pool_task, "log");
         }
 
         sem.wait_n(n);

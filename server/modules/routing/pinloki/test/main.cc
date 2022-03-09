@@ -62,7 +62,7 @@ void prog_main(const maxsql::GtidList& gtid_list, const std::string& host,
     if (writer_mode)
     {
         pinloki::Writer writer(details, &write_inventory());
-        worker.start();
+        worker.start("Writer");
         worker.join();
     }
     else
@@ -76,7 +76,7 @@ void prog_main(const maxsql::GtidList& gtid_list, const std::string& host,
                                },
                                config(), gtid_list, 30s);
 
-        worker.start();
+        worker.start("Reader");
         worker.execute([&reader]{
                            reader.start();
                        }, mxb::Worker::EXECUTE_QUEUED);
