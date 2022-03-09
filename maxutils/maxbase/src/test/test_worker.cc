@@ -37,19 +37,33 @@ class TimerTest : public Worker::Object
 public:
     static int s_ticks;
 
-    TimerTest(Worker* pWorker, int* pRv, const std::chrono::milliseconds& delay)
+    TimerTest(Worker* pWorker, int* pRv, const std::chrono::milliseconds& delay, bool cancel_at_destruct = true)
         : Worker::Object(pWorker)
         , m_id(s_id++)
         , m_worker(*pWorker)
         , m_delay(delay)
         , m_at(get_monotonic_time_ms() + delay.count())
         , m_rv(*pRv)
+        , m_cancel_at_destruct(cancel_at_destruct)
     {
+    }
+
+    ~TimerTest()
+    {
+        if (m_cancel_at_destruct)
+        {
+            m_worker.cancel_dcall(m_dcid);
+        }
     }
 
     std::chrono::milliseconds delay() const
     {
         return m_delay;
+    }
+
+    void start()
+    {
+        m_dcid = m_worker.dcall(this, delay(), &TimerTest::tick, this);
     }
 
     bool tick(Worker::Call::action_t action)
@@ -90,6 +104,8 @@ private:
     std::chrono::milliseconds m_delay;
     int64_t                   m_at;
     int&                      m_rv;
+    Worker::DCId              m_dcid { 0 };
+    bool                      m_cancel_at_destruct;
 };
 
 int TimerTest::s_id = 1;
@@ -108,7 +124,8 @@ int run()
     TimerTest t3(&w, &rv, 400ms);
     TimerTest t4(&w, &rv, 500ms);
     TimerTest t5(&w, &rv, 600ms);
-    TimerTest* pT6 = new TimerTest(&w, &rv, 500ms);
+    auto cancel_at_destruct = false;
+    TimerTest* pT6 = new TimerTest(&w, &rv, 500ms, cancel_at_destruct);
 
     w.execute([&]() {
                   w.dcall(&t1, t1.delay(), &TimerTest::tick, &t1);
@@ -117,6 +134,13 @@ int run()
                   w.dcall(&t4, t4.delay(), &TimerTest::tick, &t4);
                   w.dcall(&t5, t5.delay(), &TimerTest::tick, &t5);
                   w.dcall(pT6, pT6->delay(), &TimerTest::tick, pT6);
+
+                  t1.start();
+                  t2.start();
+                  t3.start();
+                  t4.start();
+                  t5.start();
+                  pT6->start();
 
                   delete pT6;
               }, mxb::Worker::EXECUTE_QUEUED);

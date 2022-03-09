@@ -19,6 +19,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <set>
 #include <thread>
 #include <unordered_map>
 
@@ -277,78 +278,10 @@ public:
     class Object
     {
     public:
-        class Reference final
-        {
-        public:
-            int32_t inc() const
-            {
-                mxb_assert(m_nCount != 0);
-                return ++m_nCount;
-            }
-
-            int32_t dec() const
-            {
-                mxb_assert(m_nCount > 0);
-                int32_t count = --m_nCount;
-
-                if (m_nCount == 0)
-                {
-                    delete this;
-                }
-
-                return count;
-            }
-
-            int32_t count() const
-            {
-                return m_nCount;
-            }
-
-            Object* object() const
-            {
-                return m_pObject;
-            }
-
-        private:
-            friend class Object;
-
-            Reference(Object* pObject)
-                : m_pObject(pObject)
-            {
-            }
-
-            void reset()
-            {
-                m_pObject = nullptr;
-            }
-
-            Object*         m_pObject;
-            mutable int32_t m_nCount { 1 };
-        };
-
         Object(const Object&) = delete;
         Object& operator = (const Object&) = delete;
 
-        virtual ~Object()
-        {
-            if (m_pReference)
-            {
-                m_pReference->reset();
-                m_pReference->dec();
-            }
-        }
-
-        Reference* inc_reference()
-        {
-            if (!m_pReference)
-            {
-                m_pReference = new Reference(this);
-            }
-
-            m_pReference->inc();
-
-            return m_pReference;
-        }
+        virtual ~Object();
 
     protected:
         Object(Worker* pWorker)
@@ -357,8 +290,13 @@ public:
         }
 
     private:
-        Worker*            m_pWorker;
-        mutable Reference* m_pReference { nullptr };
+        friend class Worker;
+        void register_dcid(DCId id);
+        void unregister_dcid(DCId id);
+
+    private:
+        Worker*        m_pWorker;
+        std::set<DCId> m_dcids;
     };
 
     /**
@@ -686,6 +624,7 @@ public:
     /**
      * Push a function for delayed execution.
      *
+     * @param pOwner     The owner of the delayed call.
      * @param delay      The delay in milliseconds.
      * @param pFunction  The function to call.
      * @param data       The data to be provided to the function when invoked.
@@ -704,19 +643,22 @@ public:
      *            be called again.
      */
     template<class D>
-    DCId dcall(Object* pObject,
+    DCId dcall(Object* pOwner,
                const std::chrono::milliseconds& delay,
                bool (* pFunction)(Worker::Call::action_t action, D data),
                D data)
     {
-        return dcall(pObject->inc_reference(), delay, pFunction, data);
+        auto id = next_dcall_id();
+        return add_dcall(new DCallFunction<D>(pOwner, delay, id, pFunction, data));
     }
 
     /**
      * Push a member function for delayed execution.
      *
+     * @param pOwner   The owner of the delayed call.
      * @param delay    The delay in milliseconds.
      * @param pMethod  The member function to call.
+     * @param pT       The object on which @c pMethod should be invoked.
      *
      * @return A unique identifier for the delayed call. Using that identifier
      *         the call can be cancelled.
@@ -732,28 +674,27 @@ public:
      *            be called again.
      */
     template<class T>
-    DCId dcall(Object* pObject,
+    DCId dcall(Object* pOwner,
                const std::chrono::milliseconds& delay,
                bool (T::* pMethod)(Worker::Call::action_t action),
                T* pT)
     {
-        return add_dcall(new DCallMethodWithCancel<T>(pObject->inc_reference(),
-                                                      delay, next_dcall_id(), pMethod, pT));
+        return add_dcall(new DCallMethodWithCancel<T>(pOwner, delay, next_dcall_id(), pMethod, pT));
     }
 
     template<class T>
-    DCId dcall(Object* pObject,
+    DCId dcall(Object* pOwner,
                const std::chrono::milliseconds& delay,
                bool (T::* pMethod)(void),
                T* pT)
     {
-        return add_dcall(new DCallMethodWithoutCancel<T>(pObject->inc_reference(),
-                                                         delay, next_dcall_id(), pMethod, pT));
+        return add_dcall(new DCallMethodWithoutCancel<T>(pOwner, delay, next_dcall_id(), pMethod, pT));
     }
 
     /**
      * Push a general-purpose function wrapper for delayed execution.
      *
+     * @param pOwner   The owner of the delayed call.
      * @param delay    The delay in milliseconds.
      * @param f        The function wrapper.
      *
@@ -770,20 +711,18 @@ public:
      *            case the return value is ignored and the function will not
      *            be called again.
      */
-    DCId dcall(Object* pObject,
+    DCId dcall(Object* pOwner,
                const std::chrono::milliseconds& delay,
                std::function<bool(Worker::Call::action_t action)>&& f)
     {
-        return add_dcall(new DCallFunctorWithCancel(pObject->inc_reference(),
-                                                    delay, next_dcall_id(), std::move(f)));
+        return add_dcall(new DCallFunctorWithCancel(pOwner, delay, next_dcall_id(), std::move(f)));
     }
 
-    DCId dcall(Object* pObject,
+    DCId dcall(Object* pOwner,
                const std::chrono::milliseconds& delay,
                std::function<bool(void)>&& f)
     {
-        return add_dcall(new DCallFunctorWithoutCancel(pObject->inc_reference(),
-                                                       delay, next_dcall_id(), std::move(f)));
+        return add_dcall(new DCallFunctorWithoutCancel(pOwner, delay, next_dcall_id(), std::move(f)));
     }
 
     /**
@@ -793,11 +732,13 @@ public:
      * *synchronously* with the @c action argument being @c Worker::Call::CANCEL.
      * That is, when this function returns, the function has been canceled.
      *
-     * @param id  The id that was returned when the delayed call was scheduled.
+     * @param id    The id that was returned when the delayed call was scheduled.
+     * @param call  If @c true, the cancelled function will be called with
+     *              Call::CANCEL as argument.
      *
      * @return True, if the id represented an existing delayed call.
      */
-    bool cancel_dcall(DCId id);
+    bool cancel_dcall(DCId id, bool call = true);
 
 protected:
     const int m_epoll_fd;               /*< The epoll file descriptor. */
@@ -872,6 +813,7 @@ private:
         return ++m_prev_dcid;
     }
 
+    /*
     template<class D>
     DCId dcall(Object::Reference* pReference,
                const std::chrono::milliseconds& delay,
@@ -901,6 +843,8 @@ private:
     }
 
     class DCall
+    */
+    class DCall
     {
         DCall(const DCall&) = delete;
         DCall& operator=(const DCall&) = delete;
@@ -908,10 +852,12 @@ private:
     public:
         virtual ~DCall()
         {
-            if (m_pReference)
-            {
-                m_pReference->dec();
-            }
+        }
+
+        Object& owner() const
+        {
+            mxb_assert(m_pOwner);
+            return *m_pOwner;
         }
 
         int32_t delay() const
@@ -950,14 +896,9 @@ private:
             return rv;
         }
 
-        Object::Reference* reference()
-        {
-            return m_pReference;
-        }
-
     protected:
-        DCall(Object::Reference* pReference, const std::chrono::milliseconds& delay, DCId id)
-            : m_pReference(pReference)
+        DCall(Object* pOwner, const std::chrono::milliseconds& delay, DCId id)
+            : m_pOwner(pOwner)
             , m_id(id)
             , m_delay(delay >= std::chrono::milliseconds(0) ? delay.count() : 0)
             , m_at(get_at(m_delay, mxb::Clock::now()))
@@ -978,10 +919,10 @@ private:
         }
 
     private:
-        Object::Reference* m_pReference; // The reference of the target object.
-        DCId               m_id;         // The id of the delayed call.
-        int32_t            m_delay;      // The delay in milliseconds.
-        int64_t            m_at;         // The next time the function should be invoked.
+        Object* m_pOwner; // The target object.
+        DCId    m_id;      // The id of the delayed call.
+        int32_t m_delay;   // The delay in milliseconds.
+        int64_t m_at;      // The next time the function should be invoked.
     };
 
     template<class D>
@@ -991,12 +932,12 @@ private:
         DCallFunction& operator=(const DCallFunction&) = delete;
 
     public:
-        DCallFunction(Object::Reference* pReference,
+        DCallFunction(Object* pOwner,
                       const std::chrono::milliseconds& delay,
                       DCId id,
                       bool (*pFunction)(Worker::Call::action_t action, D data),
                       D data)
-            : DCall(pReference, delay, id)
+            : DCall(pOwner, delay, id)
             , m_pFunction(pFunction)
             , m_data(data)
         {
@@ -1020,12 +961,12 @@ private:
         DCallMethodWithCancel& operator=(const DCallMethodWithCancel&) = delete;
 
     public:
-        DCallMethodWithCancel(Object::Reference* pReference,
+        DCallMethodWithCancel(Object* pOwner,
                               const std::chrono::milliseconds& delay,
                               DCId id,
                               bool (T::* pMethod)(Worker::Call::action_t),
                               T* pT)
-            : DCall(pReference, delay, id)
+            : DCall(pOwner, delay, id)
             , m_pMethod(pMethod)
             , m_pT(pT)
         {
@@ -1049,12 +990,12 @@ private:
         DCallMethodWithoutCancel& operator=(const DCallMethodWithoutCancel&) = delete;
 
     public:
-        DCallMethodWithoutCancel(Object::Reference* pReference,
+        DCallMethodWithoutCancel(Object* pOwner,
                                  const std::chrono::milliseconds& delay,
                                  DCId id,
                                  bool (T::* pMethod)(void),
                                  T* pT)
-            : DCall(pReference, delay, id)
+            : DCall(pOwner, delay, id)
             , m_pMethod(pMethod)
             , m_pT(pT)
         {
@@ -1084,11 +1025,11 @@ private:
         DCallFunctorWithCancel& operator=(const DCallFunctorWithCancel&) = delete;
 
     public:
-        DCallFunctorWithCancel(Object::Reference* pReference,
+        DCallFunctorWithCancel(Object* pOwner,
                                const std::chrono::milliseconds& delay,
                                DCId id,
                                std::function<bool (Worker::Call::action_t)> f)
-            : DCall(pReference, delay, id)
+            : DCall(pOwner, delay, id)
             , m_f(std::move(f))
         {
         }
@@ -1109,11 +1050,11 @@ private:
         DCallFunctorWithoutCancel& operator=(const DCallFunctorWithoutCancel&) = delete;
 
     public:
-        DCallFunctorWithoutCancel(Object::Reference* pReference,
+        DCallFunctorWithoutCancel(Object* pOwner,
                                   const std::chrono::milliseconds& delay,
                                   DCId id,
                                   std::function<bool (void)> f)
-            : DCall(pReference, delay, id)
+            : DCall(pOwner, delay, id)
             , m_f(f)
         {
         }
