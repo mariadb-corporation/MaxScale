@@ -2177,11 +2177,28 @@ bool MariaDBServer::update_enabled_events()
                                     "Status = 'ENABLED';", &error_msg);
     if (event_info.get() == NULL)
     {
-        MXS_ERROR("Could not query events of '%s': %s Event handling can be disabled by "
-                  "setting '%s' to false.",
-                  name(), error_msg.c_str(), CN_HANDLE_EVENTS);
+        std::string errmsg = mxb::string_printf("Could not query events of '%s': %s",
+                                                name(), error_msg.c_str());
+
+        bool scheduler_disabled = error_msg.find("event scheduler is disabled") != std::string::npos;
+
+        if (scheduler_disabled)
+        {
+            errmsg += mxb::string_printf(" Event handling can be disabled by setting '%s' to false,"
+                                         " will keep retrying with this message suppressed.",
+                                         CN_HANDLE_EVENTS);
+        }
+
+        if (m_warn_event_handling || !scheduler_disabled)
+        {
+            MXS_ERROR("%s", errmsg.c_str());
+        }
+
+        m_warn_event_handling = !scheduler_disabled;
         return false;
     }
+
+    m_warn_event_handling = true;
 
     auto db_name_ind = 0;
     auto event_name_ind = 1;
