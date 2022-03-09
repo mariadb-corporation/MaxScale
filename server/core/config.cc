@@ -1319,7 +1319,6 @@ bool config_add_to_context(const std::string& source_file, ConfigSection::Source
 
             if (header_ok)
             {
-                bool is_persisted = (source_type == Type::RUNTIME);
                 const auto& kvs = section.second.key_values;
                 auto& params_out = it->second.m_parameters;
 
@@ -1328,30 +1327,11 @@ bool config_add_to_context(const std::string& source_file, ConfigSection::Source
                     const string& name = kv.first;
                     const string& value = kv.second.value;
 
-                    if (is_persisted && name == "passwd")
-                    {
-                        /**
-                         * Ignore legacy parameters in persisted configurations. Needs to be
-                         * done to make upgrades from pre-2.3 versions work.
-                         */
-                        continue;
-                    }
-
                     if (is_empty_string(value))
                     {
-                        if (is_persisted)
-                        {
-                            /**
-                             * Found old-style persisted configuration. These will be automatically
-                             * upgraded on the next modification so we can safely ignore it.
-                             */
-                        }
-                        else
-                        {
-                            MXS_ERROR("Empty value given to parameter '%s' in %s file '%s'.",
-                                      name.c_str(), type_to_str(source_type), source_file.c_str());
-                            errors++;
-                        }
+                        MXS_ERROR("Empty value given to parameter '%s' in %s file '%s'.",
+                                  name.c_str(), type_to_str(source_type), source_file.c_str());
+                        errors++;
                     }
                     else
                     {
