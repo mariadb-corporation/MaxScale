@@ -115,11 +115,18 @@ const Relationship to_filter_rel
     filter_relation_is_valid
 };
 
+bool should_save()
+{
+    const auto& cnf = mxs::Config::get();
+    return cnf.config_sync_cluster.empty() && cnf.persist_runtime_changes;
+}
+
 bool save_config(Server* server)
 {
     bool ok = true;
 
-    if (mxs::Config::get().config_sync_cluster.empty())
+
+    if (should_save())
     {
         bool old_val = config_set_mask_passwords(false);
         std::ostringstream ss;
@@ -135,7 +142,7 @@ bool save_config(Service* service)
 {
     bool ok = true;
 
-    if (mxs::Config::get().config_sync_cluster.empty())
+    if (should_save())
     {
         bool old_val = config_set_mask_passwords(false);
         std::ostringstream ss;
@@ -151,7 +158,7 @@ bool save_config(const SListener& listener)
 {
     bool ok = true;
 
-    if (mxs::Config::get().config_sync_cluster.empty())
+    if (should_save())
     {
         bool old_val = config_set_mask_passwords(false);
         std::ostringstream ss;
@@ -167,7 +174,7 @@ bool save_config(mxs::Monitor* monitor)
 {
     bool ok = true;
 
-    if (mxs::Config::get().config_sync_cluster.empty())
+    if (should_save())
     {
         bool old_val = config_set_mask_passwords(false);
         std::ostringstream ss;
@@ -183,7 +190,7 @@ bool save_config(const SFilterDef& filter)
 {
     bool ok = true;
 
-    if (mxs::Config::get().config_sync_cluster.empty())
+    if (should_save())
     {
         bool old_val = config_set_mask_passwords(false);
         std::ostringstream ss;
@@ -199,7 +206,7 @@ bool save_config(const mxs::Config& config)
 {
     bool ok = true;
 
-    if (config.config_sync_cluster.empty())
+    if (should_save())
     {
         bool old_val = config_set_mask_passwords(false);
         std::ostringstream ss;

@@ -202,6 +202,7 @@ public:
 
     std::string  local_address;                 /**< Local address to use when connecting */
     bool         load_persisted_configs;        /**< Load persisted configuration files on startup */
+    bool         persist_runtime_changes;       /**< Persist runtime changes */
     std::string  config_sync_cluster;           /**< Cluster used for config sync */
     std::string  config_sync_user;              /**< User used for config sync */
     std::string  config_sync_password;          /**< Password used for config sync */
@@ -300,6 +301,7 @@ private:
     static config::ParamString                          s_admin_ssl_ca_cert;
     static config::ParamString                          s_local_address;
     static config::ParamBool                            s_load_persisted_configs;
+    static config::ParamBool                            s_persist_runtime_changes;
     static config::ParamString                          s_config_sync_cluster;
     static config::ParamString                          s_config_sync_user;
     static config::ParamPassword                        s_config_sync_password;

@@ -157,6 +157,7 @@ runtime and can only be defined in a configuration file:
 * `language`
 * `libdir`
 * `load_persisted_configs`
+* `persist_runtime_changes`
 * `local_address`
 * `log_augmentation`
 * `log_warn_super_user`
@@ -244,10 +245,10 @@ modifications done to `/etc/maxscale.cnf` after a runtime change has been made
 are ignored for that object.
 
 To prevent the saving of runtime changes and to make all runtime changes
-volatile, add [`load_persisted_configs=false`](#load_persisted_configs) under
-the `[maxscale]` section. This will make MaxScale behave like the MariaDB server
-does: any changes done with `SET GLOBAL` statements are lost if the process is
-restarted.
+volatile, add [`persist_runtime_changes=false`](#persist_runtime_changes) and
+[`load_persisted_configs=false`](#load_persisted_configs) under the `[maxscale]`
+section. This will make MaxScale behave like the MariaDB server does: any
+changes done with `SET GLOBAL` statements are lost if the process is restarted.
 
 ## Special Parameter Types
 
@@ -1137,6 +1138,20 @@ The value of `writeq_high_water` must always be greater than the value of
 Network throttling is only enabled when both `writeq_high_water` and
 `writeq_low_water` have a non-zero value. To disable throttling, set the value
 to 0.
+
+### `persist_runtime_changes`
+
+- **Type**: [boolean](#booleans)
+- **Default**: true
+- **Dynamic**: No
+
+Persist changes done at runtime. This parameter was added in MaxScale 7.0.0.
+
+When `persist_runtime_changes` is enabled, runtime configuration changes done
+with the GUI, MaxCtrl or via the REST API cause a new configuration file to be
+saved in `/var/lib/maxscale/maxscale.cnf.d/`. If `load_persisted_configs` is
+enabled, these files will be applied on top of any existing values found in
+static configuration files whenever MaxScale is starting up.
 
 ### `load_persisted_configs`
 

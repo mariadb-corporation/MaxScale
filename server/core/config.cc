@@ -99,6 +99,7 @@ constexpr char CN_LOG_WARN_SUPER_USER[] = "log_warn_super_user";
 constexpr char CN_MAX_AUTH_ERRORS_UNTIL_BLOCK[] = "max_auth_errors_until_block";
 constexpr char CN_MS_TIMESTAMP[] = "ms_timestamp";
 constexpr char CN_PASSIVE[] = "passive";
+constexpr char CN_PERSIST_RUNTIME_CHANGES[] = "persist_runtime_changes";
 constexpr char CN_QUERY_CLASSIFIER_ARGS[] = "query_classifier_args";
 constexpr char CN_QUERY_RETRIES[] = "query_retries";
 constexpr char CN_QUERY_RETRY_TIMEOUT[] = "query_retry_timeout";
@@ -561,6 +562,12 @@ config::ParamBool Config::s_load_persisted_configs(
     "Specifies whether persisted configuration files should be loaded on startup.",
     true);
 
+config::ParamBool Config::s_persist_runtime_changes(
+    &Config::s_specification,
+    CN_PERSIST_RUNTIME_CHANGES,
+    "Persist configurations changes done at runtime.",
+    true);
+
 config::ParamString Config::s_config_sync_cluster(
     &Config::s_specification,
     CN_CONFIG_SYNC_CLUSTER,
@@ -787,6 +794,7 @@ Config::Config(int argc, char** argv)
     add_native(&Config::admin_ssl_version, &s_admin_ssl_version);
     add_native(&Config::local_address, &s_local_address);
     add_native(&Config::load_persisted_configs, &s_load_persisted_configs);
+    add_native(&Config::persist_runtime_changes, &s_persist_runtime_changes);
     add_native(&Config::config_sync_cluster, &s_config_sync_cluster);
     add_native(&Config::config_sync_user, &s_config_sync_user, reconnect_config_manager);
     add_native(&Config::config_sync_password, &s_config_sync_password, reconnect_config_manager);
