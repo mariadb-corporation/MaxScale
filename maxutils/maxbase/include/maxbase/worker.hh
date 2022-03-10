@@ -21,6 +21,7 @@
 #include <memory>
 #include <set>
 #include <thread>
+#include <type_traits>
 #include <unordered_map>
 
 #include <maxbase/assert.h>
@@ -744,6 +745,38 @@ public:
                T* pT)
     {
         return add_dcall(new DCallMethodWithoutCancel<T>(pOwner, delay, next_dcall_id(), pMethod, pT));
+    }
+
+    /**
+     * Push a member function for delayed execution.
+     *
+     * @param delay    The delay in milliseconds.
+     * @param pMethod  The member function to call.
+     * @param pT       The object on which @c pMethod should be invoked.
+     *                 Must be derived from Worker::Object.
+     *
+     * @return A unique identifier for the delayed call. Using that identifier
+     *         the call can be cancelled.
+     *
+     * @attention When invoked, if @c action is @c Worker::Call::EXECUTE, the
+     *            function should perform the delayed call and return @true, if
+     *            the function should be called again. If the function returns
+     *            @c false, it will not be called again.
+     *
+     *            If @c action is @c Worker::Call::CANCEL, then the function
+     *            should perform whatever canceling actions are needed. In that
+     *            case the return value is ignored and the function will not
+     *            be called again.
+     */
+    template<class T>
+    DCId delayed_call(const std::chrono::milliseconds& delay,
+                      bool (T::* pMethod)(Worker::Call::action_t action),
+                      T* pT)
+    {
+        static_assert(std::is_base_of_v<Object, T>,
+                      "If a specific owner is not provided as first argument, the call object "
+                      "must be derived from Worker::Object.");
+        return delayed_call(pT, delay, pMethod, pT);
     }
 
     /**
