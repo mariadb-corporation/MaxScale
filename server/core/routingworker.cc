@@ -887,7 +887,7 @@ bool RoutingWorker::pre_run()
                 }
                 return true;
             };
-        delayed_call(1s, check_pool_cb);
+        dcall(1s, check_pool_cb);
 
         // The normal connection availability notification is not fool-proof, as it's only sent to the
         // current worker. Every now and then, each worker should check for connections regardless since
@@ -899,7 +899,7 @@ bool RoutingWorker::pre_run()
                 }
                 return true;
             };
-        delayed_call(5s, activate_eps_cb);
+        dcall(5s, activate_eps_cb);
 
         auto timeout_eps_cb = [this](Worker::Call::action_t action) {
                 if (action == mxb::Worker::Call::action_t::EXECUTE)
@@ -908,7 +908,7 @@ bool RoutingWorker::pre_run()
                 }
                 return true;
             };
-        delayed_call(10s, timeout_eps_cb);
+        dcall(10s, timeout_eps_cb);
     }
     else
     {
@@ -1606,7 +1606,7 @@ void RoutingWorker::start_shutdown()
 {
     broadcast([]() {
                   auto worker = RoutingWorker::get_current();
-                  worker->delayed_call(100ms, &RoutingWorker::try_shutdown, worker);
+                  worker->dcall(100ms, &RoutingWorker::try_shutdown, worker);
               }, nullptr, EXECUTE_AUTO);
 }
 

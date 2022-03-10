@@ -45,7 +45,7 @@ ThrottleSession::~ThrottleSession()
     {
         maxbase::Worker* worker = maxbase::Worker::get_current();
         mxb_assert(worker);
-        worker->cancel_delayed_call(m_delayed_call_id);
+        worker->cancel_dcall(m_delayed_call_id);
     }
 }
 
@@ -65,10 +65,10 @@ int ThrottleSession::real_routeQuery(GWBUF* buffer, bool is_delayed)
         int32_t delay = 1 + std::ceil(1000.0 / m_max_qps);
         maxbase::Worker* worker = maxbase::Worker::get_current();
         mxb_assert(worker);
-        m_delayed_call_id = worker->delayed_call(std::chrono::milliseconds(delay),
-                                                 &ThrottleSession::delayed_routeQuery,
-                                                 this,
-                                                 buffer);
+        m_delayed_call_id = worker->dcall(std::chrono::milliseconds(delay),
+                                          &ThrottleSession::delayed_routeQuery,
+                                          this,
+                                          buffer);
         if (m_state == State::MEASURING)
         {
             MXS_INFO("Query throttling STARTED session %ld user %s",
