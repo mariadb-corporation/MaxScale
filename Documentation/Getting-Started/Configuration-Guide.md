@@ -118,6 +118,11 @@ For detailed information about _MaxCtrl_ please refer to the specific
 documentation referred to above. In the following it will only be explained how
 MaxCtrl relate to each other, as far as user credentials go.
 
+**Note**: By default all runtime configuration changes are saved on disk and
+  loaded on startup. Refer to the
+  [Dynamic Configuration](#dynamic-configuration) section for more details
+  on how it works and how to disable it.
+
 MaxCtrl can connect using TCP/IP sockets. When connecting with MaxCtrl using
 TCP/IP sockets, the user and password must be provided and are checked against a
 separate user credentials database. By default, that database contains the user
@@ -221,6 +226,24 @@ some_parameter=123
 
 Section names may not contain whitespace and must not start with the characters
 `@@`, but otherwise there are no restrictions.
+
+## Dynamic Configuration
+
+By default all changes done at runtime via the MaxScale GUI, MaxCtrl or the REST
+API will be saved on disk, inside the [persistdir](#persistdir) directory. The
+changes done at runtime will override the configuration found in the static
+configuration files for that particular object.
+
+This means that if an object that is found in `/etc/maxscale.cnf` is modified at
+runtime, all future changes to it must also be done at runtime. Any
+modifications done to `/etc/maxscale.cnf` after a runtime change has been made
+are ignored for that object.
+
+To prevent the saving of runtime changes and to make all runtime changes
+volatile, add [`load_persisted_configs=false`](#load_persisted_configs) under
+the `[maxscale]` section. This will make MaxScale behave like the MariaDB server
+does: any changes done with `SET GLOBAL` statements are lost if the process is
+restarted.
 
 ## Special Parameter Types
 
@@ -803,7 +826,9 @@ connector_plugindir=/usr/lib/mysql/plugin/
 
 Configure the directory where persisted configurations are stored. When a new
 object is created via MaxCtrl, it will be stored in this directory. Do not use
-or modify the contents of this directory, use _/etc/maxscale.cnf.d/_ instead.
+this directory for normal configuration files, use _/etc/maxscale.cnf.d/_
+instead. The user MaxScale is running as must be able to write into this
+directory.
 
 The default value is `/var/lib/maxscale/maxscale.cnf.d/`.
 
@@ -2271,11 +2296,13 @@ configuration at runtime.
 
 * [REST API](../REST-API/API.md) documentation
 
-All changes to the configuration are persisted as individual configuration files
-in `/var/lib/maxscale/maxscale.cnf.d/`. These files are applied after the main
-configuration file and all auxiliary configurations have been loaded. This means
-that once runtime configurations have been made, they need to be incorporated
-into the main configuration files.
+All changes to the configuration done via MaxCtrl are persisted as individual
+configuration files in `/var/lib/maxscale/maxscale.cnf.d/`. The content of these
+files will override any configurations found in the main configuration file or
+any auxiliary configuration files.
+
+Refer to the [Dynamic Configuration](#dynamic-configuration) section for more
+details on how this mechanism works and how to disable it.
 
 ## Backing Up Configuration Changes
 
