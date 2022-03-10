@@ -37,6 +37,7 @@ export default {
         dynNodeHeightMap: { type: Object, default: () => {} },
         revert: { type: Boolean, default: false },
         colorizingLinkFn: { type: Function, default: () => '' },
+        handleRevertDiagonal: { type: Function, default: () => false },
     },
     data() {
         return {
@@ -178,15 +179,24 @@ export default {
                 .remove()
         },
         /**
-         * Creates an orthogonal link between nodes
-         * @param {Array} points - Points from source to target node
+         * Creates a polyline between nodes where it draws from the source point
+         * to the vertical middle point (middle point between source.y and target.y) as
+         * a straight line. Then it draws from that midpoint to the source point which is
+         * perpendicular to the source node
+         * @param {Array} points - Points from source to target node. There could be more than 2 points
          */
-        diagonal(points) {
+        obtuseShape(points) {
             const src = points[0]
             const target = points[points.length - 1] // d3-dag could provide more than 2 points.
             const midPoint = [target.x, src.y + (target.y - src.y) / 2]
             const h = target.x // horizontal line from source to target
             return `M ${src.x} ${src.y} ${midPoint} H ${h} L ${target.x} ${target.y}`
+        },
+        handleCreateDiagonal(data) {
+            let points = data.points
+            let shouldRevert = this.handleRevertDiagonal(data)
+            if (shouldRevert) points = points.reverse()
+            return this.obtuseShape(points)
         },
         drawLinks(data) {
             //TODO: Add arrow
@@ -204,7 +214,7 @@ export default {
                     let color = this.colorizingLinkFn(d) || '#0e9bc0'
                     return color
                 })
-                .attr('d', ({ points }) => this.diagonal(points))
+                .attr('d', d => this.handleCreateDiagonal(d))
             // UPDATE
             let linkGroupUpdate = linkGroupEnter.merge(linkGroup)
             // update link_line
@@ -212,7 +222,7 @@ export default {
                 .select('path.link_line')
                 .transition()
                 .duration(this.duration)
-                .attr('d', ({ points }) => this.diagonal(points))
+                .attr('d', d => this.handleCreateDiagonal(d))
             // Remove any exiting links
             let linkExit = linkGroup
                 .exit()
@@ -222,7 +232,7 @@ export default {
             // remove link_line
             linkExit
                 .select('path.link_line')
-                .attr('d', ({ points }) => this.diagonal(points))
+                .attr('d', d => this.handleCreateDiagonal(d))
                 .remove()
         },
     },
