@@ -1234,7 +1234,7 @@ void XpandMonitor::initiate_delayed_http_check()
         ms = max_delay_ms;
     }
 
-    m_delayed_http_check_id = delayed_call(ms, &XpandMonitor::check_http, this);
+    m_delayed_http_check_id = dcall(ms, &XpandMonitor::check_http, this);
 }
 
 bool XpandMonitor::check_http(Call::action_t action)
@@ -1307,7 +1307,7 @@ void XpandMonitor::update_http_urls()
     {
         if (m_delayed_http_check_id != 0)
         {
-            cancel_delayed_call(m_delayed_http_check_id);
+            cancel_dcall(m_delayed_http_check_id);
             m_delayed_http_check_id = 0;
         }
 

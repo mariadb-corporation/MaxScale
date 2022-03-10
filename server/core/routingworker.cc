@@ -1631,7 +1631,7 @@ void RoutingWorker::start_shutdown()
 {
     broadcast([]() {
                   auto worker = RoutingWorker::get_current();
-                  worker->delayed_call(100, &RoutingWorker::try_shutdown, worker);
+                  worker->dcall(100, &RoutingWorker::try_shutdown, worker);
               }, nullptr, EXECUTE_AUTO);
 }
 
