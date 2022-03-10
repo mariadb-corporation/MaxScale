@@ -292,7 +292,7 @@ Worker::Worker(int max_events)
     , m_nCurrent_descriptors(0)
     , m_nTotal_descriptors(0)
     , m_pTimer(new PrivateTimer(this, this, &Worker::tick))
-    , m_next_delayed_call_id{1}
+    , m_next_dcall_id{1}
 {
     mxb_assert(max_events > 0);
 
@@ -926,14 +926,14 @@ void Worker::tick()
 {
     int64_t now = WorkerLoad::get_time_ms();
 
-    vector<DelayedCall*> repeating_calls;
+    vector<DCall*> repeating_calls;
 
     auto i = m_sorted_calls.begin();
 
     // i->first is the time when the first call should be invoked.
     while (!m_sorted_calls.empty() && (i->first <= now))
     {
-        DelayedCall* pCall = i->second;
+        DCall* pCall = i->second;
 
         auto j = m_calls.find(pCall->id());
         mxb_assert(j != m_calls.end());
@@ -957,7 +957,7 @@ void Worker::tick()
 
     for (auto i = repeating_calls.begin(); i != repeating_calls.end(); ++i)
     {
-        DelayedCall* pCall = *i;
+        DCall* pCall = *i;
 
         m_sorted_calls.insert(std::make_pair(pCall->at(), pCall));
         m_calls.insert(std::make_pair(pCall->id(), pCall));
@@ -966,14 +966,14 @@ void Worker::tick()
     adjust_timer();
 }
 
-uint32_t Worker::add_delayed_call(DelayedCall* pCall)
+uint32_t Worker::add_dcall(DCall* pCall)
 {
     mxb_assert(Worker::get_current() == this);
     bool adjust = true;
 
     if (!m_sorted_calls.empty())
     {
-        DelayedCall* pFirst = m_sorted_calls.begin()->second;
+        DCall* pFirst = m_sorted_calls.begin()->second;
 
         if (pCall->at() > pFirst->at())
         {
@@ -1003,7 +1003,7 @@ void Worker::adjust_timer()
 {
     if (!m_sorted_calls.empty())
     {
-        DelayedCall* pCall = m_sorted_calls.begin()->second;
+        DCall* pCall = m_sorted_calls.begin()->second;
 
         uint64_t now = WorkerLoad::get_time_ms();
         int64_t delay = pCall->at() - now;
@@ -1021,7 +1021,7 @@ void Worker::adjust_timer()
     }
 }
 
-bool Worker::cancel_delayed_call(uint32_t id)
+bool Worker::cancel_dcall(uint32_t id)
 {
     mxb_assert(Worker::get_current() == this || m_state == FINISHED);
     bool found = false;
@@ -1030,7 +1030,7 @@ bool Worker::cancel_delayed_call(uint32_t id)
 
     if (i != m_calls.end())
     {
-        DelayedCall* pCall = i->second;
+        DCall* pCall = i->second;
         m_calls.erase(i);
 
         // All delayed calls with exactly the same trigger time.

@@ -100,7 +100,7 @@ void PinlokiSession::close()
 {
     if (m_mgw_dcid)
     {
-        m_pSession->worker()->cancel_delayed_call(m_mgw_dcid);
+        m_pSession->worker()->cancel_dcall(m_mgw_dcid);
     }
 }
 
@@ -559,7 +559,7 @@ void PinlokiSession::master_gtid_wait(const std::string& gtid, int timeout)
     {
         if (cb(mxb::Worker::Call::EXECUTE))
         {
-            m_mgw_dcid = m_pSession->worker()->delayed_call(1000, cb);
+            m_mgw_dcid = m_pSession->worker()->dcall(1000, cb);
         }
     }
     else

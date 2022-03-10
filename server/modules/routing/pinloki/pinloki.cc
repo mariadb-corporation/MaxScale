@@ -180,15 +180,15 @@ Pinloki::Pinloki(SERVICE* pService, Config&& config)
 
         using namespace std::chrono;
         auto ms = duration_cast<milliseconds>(m_config.purge_startup_delay());
-        worker->delayed_call(ms, &Pinloki::purge_old_binlogs, this);
+        worker->dcall(ms, &Pinloki::purge_old_binlogs, this);
     }
 
-    m_dcid = mxs::MainWorker::get()->delayed_call(1000, &Pinloki::update_details, this);
+    m_dcid = mxs::MainWorker::get()->dcall(1000, &Pinloki::update_details, this);
 }
 
 Pinloki::~Pinloki()
 {
-    mxs::MainWorker::get()->cancel_delayed_call(m_dcid);
+    mxs::MainWorker::get()->cancel_dcall(m_dcid);
 }
 
 // static
@@ -890,7 +890,7 @@ bool Pinloki::purge_old_binlogs(mxb::Worker::Call::action_t action)
     using namespace std::chrono;
     auto wait_ms = duration_cast<milliseconds>(next_purge_time - now);
 
-    worker->delayed_call(wait_ms, &Pinloki::purge_old_binlogs, this);
+    worker->dcall(wait_ms, &Pinloki::purge_old_binlogs, this);
 
     return false;
 }

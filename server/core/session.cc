@@ -760,7 +760,7 @@ bool session_delay_routing(MXS_SESSION* session, mxs::Downstream down, GWBUF* bu
 
         // Delay the routing for at least a millisecond
         int32_t delay = 1 + seconds * 1000;
-        worker->delayed_call(delay, delayed_routing_cb, task.release());
+        worker->dcall(delay, delayed_routing_cb, task.release());
 
         success = true;
     }
