@@ -37,7 +37,10 @@ class TimerTest : public Worker::Object
 public:
     static int s_ticks;
 
-    TimerTest(Worker* pWorker, int* pRv, const std::chrono::milliseconds& delay, bool cancel_at_destruct = true)
+    TimerTest(Worker* pWorker,
+              int* pRv,
+              const std::chrono::milliseconds& delay,
+              bool cancel_at_destruct = true)
         : Worker::Object(pWorker)
         , m_id(s_id++)
         , m_worker(*pWorker)
@@ -111,7 +114,7 @@ private:
 int TimerTest::s_id = 1;
 int TimerTest::s_ticks;
 
-int run()
+int run_timer_test()
 {
     int rv = EXIT_SUCCESS;
 
@@ -147,13 +150,114 @@ int run()
 
     w.run();
 
-    return EXIT_SUCCESS;
+    return rv;
 }
+
+class MoveTest : public Worker::Object
+{
+public:
+    MoveTest(Worker* pW1, Worker* pW2, Worker* pW3)
+        : Worker::Object(pW1)
+        , m_pW1(pW1)
+        , m_pW2(pW2)
+        , m_pW3(pW3)
+    {
+    }
+
+    ~MoveTest()
+    {
+        cancel_dcalls();
+    }
+
+    void start()
+    {
+        worker()->dcall(this, 10ms, &MoveTest::move, this);
+    }
+
+    bool move(Worker::Call::action_t action)
+    {
+        if (action == Worker::Call::CANCEL)
+        {
+            return false;
+        }
+
+        auto* pW = worker();
+
+        cout << pW << endl;
+
+        suspend_dcalls();
+        set_worker(nullptr);
+
+        if (pW == m_pW1)
+        {
+            pW = m_pW2;
+        }
+        else if (pW == m_pW2)
+        {
+            pW = m_pW3;
+        }
+        else
+        {
+            mxb_assert(pW == m_pW3);
+            pW = m_pW1;
+        }
+
+        ++m_nMoves;
+        if (m_nMoves < 200)
+        {
+            pW->execute([this, pW]() {
+                    set_worker(pW);
+                    resume_dcalls();
+                }, mxb::Worker::EXECUTE_QUEUED);
+        }
+        else
+        {
+            set_worker(m_pW1); // Back where we started.
+
+            m_pW3->shutdown();
+            m_pW2->shutdown();
+            m_pW1->shutdown();
+        }
+
+        return true;
+    }
+
+private:
+    Worker*      m_pW1;
+    Worker*      m_pW2;
+    Worker*      m_pW3;
+    Worker::DCId m_dcid { 0 };
+    int32_t      m_nMoves { 0 };
+};
+
+void run_move_test()
+{
+    Worker w1;
+    Worker w2;
+    Worker w3;
+
+    MoveTest m(&w1, &w2, &w3);
+
+    w1.execute([&]() {
+            m.start();
+        }, mxb::Worker::EXECUTE_QUEUED);
+
+    w3.start("w3");
+    w2.start("w2");
+    w1.run();
+
+    w3.join();
+    w2.join();
+}
+
 }
 
 int main()
 {
     mxb::MaxBase mxb(MXB_LOG_TARGET_STDOUT);
 
-    return run();
+    int rv = run_timer_test();
+    run_move_test(); // Expected to crash, if there are issues.
+
+    return rv;
 }
