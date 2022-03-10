@@ -168,7 +168,7 @@ Pinloki::Pinloki(SERVICE* pService)
 
 Pinloki::~Pinloki()
 {
-    mxs::MainWorker::get()->cancel_dcall(m_dcid);
+    mxs::MainWorker::get()->Worker::cancel_dcall(m_dcid);
 }
 
 bool Pinloki::post_configure()

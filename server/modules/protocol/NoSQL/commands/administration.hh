@@ -33,7 +33,7 @@ public:
     {
         if (m_dcid)
         {
-            worker().cancel_dcall(m_dcid);
+            worker().Worker::cancel_dcall(m_dcid);
         }
     }
 

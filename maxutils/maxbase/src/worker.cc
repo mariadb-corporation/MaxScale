@@ -294,6 +294,33 @@ Worker::Object::~Object()
     cancel_dcalls(false);
 }
 
+void Worker::Object::cancel_dcall(Worker::DCId id, bool call)
+{
+    if (m_dcalls_suspended)
+    {
+        // If the dcalls have been suspended, then we have to delete the call here, as
+        // the worker has no knowledge about it.
+
+        auto it = m_dcalls.find(id);
+
+        if (it != m_dcalls.end())
+        {
+            auto* pCall = it->second;
+            if (call)
+            {
+                pCall->call(Worker::Call::CANCEL);
+            }
+            m_dcalls.erase(it);
+            delete pCall;
+        }
+    }
+    else
+    {
+        mxb_assert(m_pWorker);
+        m_pWorker->cancel_dcall(id, call);
+    }
+}
+
 void Worker::Object::cancel_dcalls(bool call)
 {
     if (m_dcalls_suspended)

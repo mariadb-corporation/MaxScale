@@ -120,7 +120,7 @@ void MainWorker::update_rebalancing()
             // If the rebalancing delayed call is currently active and the
             // period is now 0, then we cancel the call, effectively shutting
             // down the rebalancing.
-            cancel_dcall(m_rebalancing_dc);
+            Worker::cancel_dcall(m_rebalancing_dc);
             m_rebalancing_dc = 0;
         }
     }

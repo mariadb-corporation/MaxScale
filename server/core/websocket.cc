@@ -74,7 +74,7 @@ WebSocket::~WebSocket()
     if (auto id = m_dcid)
     {
         m_dcid = 0;
-        worker->cancel_dcall(id);
+        worker->Worker::cancel_dcall(id);
     }
 
     worker->remove_fd(m_fd);

@@ -1298,7 +1298,7 @@ void XpandMonitor::update_http_urls()
     {
         if (m_delayed_http_check_id != 0)
         {
-            cancel_dcall(m_delayed_http_check_id);
+            Worker::cancel_dcall(m_delayed_http_check_id);
             m_delayed_http_check_id = 0;
         }
 

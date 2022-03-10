@@ -217,7 +217,7 @@ void ConfigManager::stop_sync()
 
     if (m_dcid)
     {
-        m_worker->cancel_dcall(m_dcid);
+        m_worker->Worker::cancel_dcall(m_dcid);
         m_dcid = 0;
     }
 }

@@ -296,6 +296,15 @@ public:
         }
 
         /**
+         * Cancel a dcalls.
+         *
+         * @param id    The dcall id.
+         * @param call  If true, then the delayed function will be called with Call::CANCEL.
+         *              Otherwise, the function will not be called at all.
+         */
+        void cancel_dcall(DCId id, bool call = true);
+
+        /**
          * Cancel all dcalls.
          *
          * @param call  If true, then the delayed function will be called with Call::CANCEL.
