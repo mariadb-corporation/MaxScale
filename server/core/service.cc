@@ -382,7 +382,7 @@ int serviceStartAllPorts(Service* service)
 
             mxb::Worker* worker = mxb::Worker::get_current();
             mxb_assert(worker);
-            worker->delayed_call(retry_after * 1000, service_internal_restart, service);
+            worker->dcall(retry_after * 1000, service_internal_restart, service);
 
             /** This will prevent MaxScale from shutting down if service start is retried later */
             listeners = 1;

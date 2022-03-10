@@ -34,7 +34,7 @@ MainWorker::MainWorker()
 
     this_unit.pCurrent_main = this;
 
-    delayed_call(100, &MainWorker::inc_ticks);
+    dcall(100, &MainWorker::inc_ticks);
 }
 
 MainWorker::~MainWorker()
@@ -68,10 +68,10 @@ void MainWorker::add_task(const std::string& name, TASKFN func, void* pData, int
                 auto p = m_tasks_by_name.insert(std::make_pair(name, task));
                 Task& inserted_task = (*p.first).second;
 
-                inserted_task.id = delayed_call(frequency * 1000,
-                                                &MainWorker::call_task,
-                                                this,
-                                                &inserted_task);
+                inserted_task.id = dcall(frequency * 1000,
+                                         &MainWorker::call_task,
+                                         this,
+                                         &inserted_task);
             },
             EXECUTE_AUTO);
 }
@@ -85,7 +85,7 @@ void MainWorker::remove_task(const std::string& name)
 
              if (it != m_tasks_by_name.end())
              {
-                 MXB_AT_DEBUG(bool cancelled = ) cancel_delayed_call(it->second.id);
+                 MXB_AT_DEBUG(bool cancelled = ) cancel_dcall(it->second.id);
                  mxb_assert(cancelled);
 
                  m_tasks_by_name.erase(it);

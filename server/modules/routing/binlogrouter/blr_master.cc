@@ -317,7 +317,7 @@ bool blr_start_master_in_main(ROUTER_INSTANCE* data, int32_t delay)
     mxb::Worker* worker = (mxb::Worker*)mxs_rworker_get(MXS_RWORKER_MAIN);
     mxb_assert(worker);
 
-    worker->delayed_call(delay == 0 ? 1 : delay * 1000, worker_cb_start_master, data);
+    worker->dcall(delay == 0 ? 1 : delay * 1000, worker_cb_start_master, data);
 
     return false;
 }
