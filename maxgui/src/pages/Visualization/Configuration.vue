@@ -85,12 +85,14 @@ export default {
             switch (sourceType) {
                 case MONITORS:
                     if (targetType === SERVERS || targetType === SERVERS) return '#0E9BC0'
+                    else if (targetType === SERVICES) return '#7dd012'
                     break
                 case SERVERS:
                     if (targetType === SERVICES) return '#7dd012'
                     break
                 case SERVICES:
                     if (targetType === LISTENERS) return '#424f62'
+                    else if (targetType === SERVICES) return '#7dd012'
             }
         },
     },
