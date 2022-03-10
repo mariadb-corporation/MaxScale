@@ -303,7 +303,9 @@ public:
          * @param call  If true, then the delayed function will be called with Call::CANCEL.
          *              Otherwise, the function will not be called at all.
          */
-        void cancel_dcall(DCId id, bool call = true);
+        // TODO: This should be cancel_dcall() and will be once there are no workers who
+        // TODO: also are derived from Worker::Object.
+        void dcall_cancel(DCId id, bool call = true);
 
         /**
          * Cancel all dcalls.
@@ -769,14 +771,14 @@ public:
      *            be called again.
      */
     template<class T>
-    DCId delayed_call(const std::chrono::milliseconds& delay,
-                      bool (T::* pMethod)(Worker::Call::action_t action),
-                      T* pT)
+    DCId dcall(const std::chrono::milliseconds& delay,
+               bool (T::* pMethod)(Worker::Call::action_t action),
+               T* pT)
     {
         static_assert(std::is_base_of_v<Object, T>,
                       "If a specific owner is not provided as first argument, the call object "
                       "must be derived from Worker::Object.");
-        return delayed_call(pT, delay, pMethod, pT);
+        return dcall(pT, delay, pMethod, pT);
     }
 
     /**

@@ -1570,7 +1570,7 @@ void RoutingWorker::start_shutdown()
 {
     broadcast([]() {
                   auto worker = RoutingWorker::get_current();
-                  worker->dcall(worker, 100ms, &RoutingWorker::try_shutdown, worker);
+                  worker->dcall(100ms, &RoutingWorker::try_shutdown, worker);
               }, nullptr, EXECUTE_AUTO);
 }
 

@@ -66,7 +66,7 @@ public:
 
     void start()
     {
-        m_dcid = m_worker.dcall(this, delay(), &TimerTest::tick, this);
+        m_dcid = m_worker.dcall(delay(), &TimerTest::tick, this);
     }
 
     bool tick(Worker::Call::action_t action)
@@ -171,7 +171,7 @@ public:
 
     void start()
     {
-        worker()->dcall(this, 10ms, &MoveTest::move, this);
+        worker()->dcall(10ms, &MoveTest::move, this);
     }
 
     bool move(Worker::Call::action_t action)

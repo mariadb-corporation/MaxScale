@@ -294,7 +294,7 @@ Worker::Object::~Object()
     cancel_dcalls(false);
 }
 
-void Worker::Object::cancel_dcall(Worker::DCId id, bool call)
+void Worker::Object::dcall_cancel(Worker::DCId id, bool call)
 {
     if (m_dcalls_suspended)
     {
