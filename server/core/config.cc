@@ -635,6 +635,9 @@ struct ThisUnit
     CONFIG_CONTEXT config_context;
     bool           is_root_config_file = true;  /**< The first one will be. */
     bool           mask_passwords = true;
+
+    // The set of objects that were read from the configuration files
+    std::set<std::string> static_objects {"maxscale"};
 } this_unit;
 
 void reconnect_config_manager(const std::string& ignored)
@@ -845,6 +848,12 @@ Config& Config::init(int argc, char** argv)
 Config& Config::get()
 {
     return init(0, nullptr);
+}
+
+// static
+bool Config::is_static_object(const std::string& name)
+{
+    return this_unit.static_objects.find(name) != this_unit.static_objects.end();
 }
 
 bool Config::configure(const mxs::ConfigParameters& params, mxs::ConfigParameters* pUnrecognized)
@@ -1901,6 +1910,11 @@ static bool config_load_and_process(const char* filename, bool (* process_config
             if (is_directory(dir))
             {
                 rval = config_load_dir(dir, &dcontext, &this_unit.config_context);
+            }
+
+            for (CONFIG_CONTEXT* obj = &this_unit.config_context; obj; obj = obj->m_next)
+            {
+                this_unit.static_objects.insert(obj->m_name);
             }
 
             const char* persist_cnf = mxs::config_persistdir();

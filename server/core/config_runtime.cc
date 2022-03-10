@@ -2593,6 +2593,7 @@ bool runtime_save_config(const char* name, const std::string& config)
     {
         // Remove the .tmp suffix
         auto final_filename = filename.substr(0, filename.size() - 4);
+        bool new_file = access(final_filename.c_str(), F_OK) != 0 && errno == ENOENT;
 
         if (rename(filename.c_str(), final_filename.c_str()) == -1)
         {
@@ -2601,6 +2602,13 @@ bool runtime_save_config(const char* name, const std::string& config)
         }
         else
         {
+            if (new_file && mxs::Config::is_static_object(name))
+            {
+                MXS_WARNING("Runtime modification to '%s' was saved in '%s'. "
+                            "The static configuration for this object will be ignored.",
+                            name, final_filename.c_str());
+            }
+
             rval = true;
         }
     }

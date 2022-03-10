@@ -47,6 +47,15 @@ public:
      */
     static Config& get();
 
+    /**
+     * Check if an object was read from a static configuration file
+     *
+     * @param name Name of the object
+     *
+     * @return True if an object with the given name was read from the configuration
+     */
+    static bool is_static_object(const std::string& name);
+
     class ParamUsersRefreshTime : public config::ParamSeconds
     {
     public:
