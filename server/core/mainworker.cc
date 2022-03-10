@@ -85,10 +85,10 @@ void MainWorker::add_task(const std::string& name, TASKFN func, void* pData, int
                 auto p = m_tasks_by_name.insert(std::make_pair(name, task));
                 Task& inserted_task = (*p.first).second;
 
-                inserted_task.id = delayed_call(frequency * 1000,
-                                                &MainWorker::call_task,
-                                                this,
-                                                &inserted_task);
+                inserted_task.id = dcall(frequency * 1000,
+                                         &MainWorker::call_task,
+                                         this,
+                                         &inserted_task);
             },
             EXECUTE_AUTO);
 }
@@ -102,7 +102,7 @@ void MainWorker::remove_task(const std::string& name)
 
              if (it != m_tasks_by_name.end())
              {
-                 MXB_AT_DEBUG(bool cancelled = ) cancel_delayed_call(it->second.id);
+                 MXB_AT_DEBUG(bool cancelled = ) cancel_dcall(it->second.id);
                  mxb_assert(cancelled);
 
                  m_tasks_by_name.erase(it);
@@ -192,7 +192,7 @@ void MainWorker::update_rebalancing()
             // If the rebalancing delayed call is currently active and the
             // period is now 0, then we cancel the call, effectively shutting
             // down the rebalancing.
-            cancel_delayed_call(m_rebalancing_dc);
+            cancel_dcall(m_rebalancing_dc);
             m_rebalancing_dc = 0;
         }
     }
@@ -204,7 +204,7 @@ bool MainWorker::pre_run()
 
     bool rval = false;
 
-    delayed_call(100, &MainWorker::inc_ticks);
+    dcall(100, &MainWorker::inc_ticks);
 
     update_rebalancing();
 
@@ -311,7 +311,7 @@ void MainWorker::order_balancing_dc()
 {
     mxb_assert(m_rebalancing_dc == 0);
 
-    m_rebalancing_dc = delayed_call(1000, &MainWorker::balance_workers_dc, this);
+    m_rebalancing_dc = dcall(1000, &MainWorker::balance_workers_dc, this);
 }
 
 // static
@@ -337,7 +337,7 @@ void MainWorker::start_shutdown()
 
             // Wait until RoutingWorkers have stopped before proceeding with MainWorker shudown
             auto self = MainWorker::get();
-            self->delayed_call(100, &MainWorker::wait_for_shutdown, self);
+            self->dcall(100, &MainWorker::wait_for_shutdown, self);
         };
 
     MainWorker::get()->execute(func, EXECUTE_QUEUED);

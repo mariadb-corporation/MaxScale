@@ -392,14 +392,14 @@ void Session::set_can_pool_backends(bool value)
             // an idle session.
             if (m_idle_pool_call_id == mxb::Worker::NO_CALL)
             {
-                m_idle_pool_call_id = m_worker->delayed_call(m_pooling_time_ms, &Session::pool_backends_cb,
-                                                             this);
+                m_idle_pool_call_id = m_worker->dcall(m_pooling_time_ms, &Session::pool_backends_cb,
+                                                      this);
             }
         }
     }
     else if (m_idle_pool_call_id != mxb::Worker::NO_CALL)
     {
-        m_worker->cancel_delayed_call(m_idle_pool_call_id);
+        m_worker->cancel_dcall(m_idle_pool_call_id);
     }
 
     m_can_pool_backends = value;
@@ -628,7 +628,7 @@ bool session_delay_routing(MXS_SESSION* session, mxs::Routable* down, GWBUF* buf
 
         // Delay the routing for at least a millisecond
         int32_t delay = 1 + seconds * 1000;
-        worker->delayed_call(delay, delayed_routing_cb, task.release());
+        worker->dcall(delay, delayed_routing_cb, task.release());
 
         success = true;
     }
@@ -712,7 +712,7 @@ Session::~Session()
 
     if (m_idle_pool_call_id != mxb::Worker::NO_CALL)
     {
-        m_worker->cancel_delayed_call(m_idle_pool_call_id);
+        m_worker->cancel_dcall(m_idle_pool_call_id);
     }
     if (this_unit.dump_statements == SESSION_DUMP_STATEMENTS_ON_CLOSE)
     {
@@ -1626,7 +1626,7 @@ bool Session::move_to(RoutingWorker* pTo)
 
     if (m_idle_pool_call_id != mxb::Worker::NO_CALL)
     {
-        m_worker->cancel_delayed_call(m_idle_pool_call_id);
+        m_worker->cancel_dcall(m_idle_pool_call_id);
     }
 
     for (mxs::BackendConnection* backend_conn : m_backends_conns)
@@ -1802,7 +1802,7 @@ bool Session::pool_backends_cb(mxb::Worker::Call::action_t action)
 
             // TODO: Nicer if delayed call could modify its own timing.
             call_again = false;
-            m_idle_pool_call_id = m_worker->delayed_call(1000, &Session::pool_backends_cb, this);
+            m_idle_pool_call_id = m_worker->dcall(1000, &Session::pool_backends_cb, this);
         }
     }
     else

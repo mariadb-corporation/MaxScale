@@ -869,14 +869,14 @@ void Worker::tick()
 {
     int64_t now = WorkerLoad::get_time_ms(mxb::Clock::now());
 
-    vector<DelayedCall*> repeating_calls;
+    vector<DCall*> repeating_calls;
 
     auto i = m_sorted_calls.begin();
 
     // i->first is the time when the first call should be invoked.
     while (!m_sorted_calls.empty() && (i->first <= now))
     {
-        DelayedCall* pCall = i->second;
+        DCall* pCall = i->second;
 
         auto j = m_calls.find(pCall->id());
         mxb_assert(j != m_calls.end());
@@ -900,7 +900,7 @@ void Worker::tick()
 
     for (auto i = repeating_calls.begin(); i != repeating_calls.end(); ++i)
     {
-        DelayedCall* pCall = *i;
+        DCall* pCall = *i;
 
         m_sorted_calls.insert(std::make_pair(pCall->at(), pCall));
         m_calls.insert(std::make_pair(pCall->id(), pCall));
@@ -909,14 +909,14 @@ void Worker::tick()
     adjust_timer();
 }
 
-Worker::DCId Worker::add_delayed_call(DelayedCall* pCall)
+Worker::DCId Worker::add_dcall(DCall* pCall)
 {
     mxb_assert(Worker::get_current() == this);
     bool adjust = true;
 
     if (!m_sorted_calls.empty())
     {
-        DelayedCall* pFirst = m_sorted_calls.begin()->second;
+        DCall* pFirst = m_sorted_calls.begin()->second;
 
         if (pCall->at() > pFirst->at())
         {
@@ -946,7 +946,7 @@ void Worker::adjust_timer()
 {
     if (!m_sorted_calls.empty())
     {
-        DelayedCall* pCall = m_sorted_calls.begin()->second;
+        DCall* pCall = m_sorted_calls.begin()->second;
 
         uint64_t now = WorkerLoad::get_time_ms(mxb::Clock::now());
         int64_t delay = pCall->at() - now;
@@ -964,7 +964,7 @@ void Worker::adjust_timer()
     }
 }
 
-bool Worker::cancel_delayed_call(DCId id)
+bool Worker::cancel_dcall(DCId id)
 {
     mxb_assert(Worker::get_current() == this || m_state == FINISHED);
     bool found = false;
@@ -973,7 +973,7 @@ bool Worker::cancel_delayed_call(DCId id)
 
     if (i != m_calls.end())
     {
-        DelayedCall* pCall = i->second;
+        DCall* pCall = i->second;
         m_calls.erase(i);
 
         // All delayed calls with exactly the same trigger time.

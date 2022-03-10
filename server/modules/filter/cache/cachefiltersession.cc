@@ -309,7 +309,7 @@ CacheFilterSession::~CacheFilterSession()
 
     if (m_did != 0)
     {
-        Worker::get_current()->cancel_delayed_call(m_did);
+        Worker::get_current()->cancel_dcall(m_did);
         m_did = 0;
     }
 }
@@ -1651,7 +1651,7 @@ void CacheFilterSession::ready_for_another_call()
     {
         Worker* pWorker = Worker::get_current();
 
-        m_did = pWorker->delayed_call(0, [this](Worker::Call::action_t action) {
+        m_did = pWorker->dcall(0, [this](Worker::Call::action_t action) {
                 m_did = 0;
 
                 if (action == Worker::Call::EXECUTE)
