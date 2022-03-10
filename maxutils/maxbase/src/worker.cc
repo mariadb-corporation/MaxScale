@@ -289,6 +289,13 @@ Worker::Object::~Object()
         MXB_ERROR("Recipient of delayed call was deleted before delayed call was due.");
     }
 
+    // false, because the dcalls can't be called with Worker::Call::CANCEL as most
+    // parts of the object to be called already has been destructed at this point.
+    cancel_dcalls(false);
+}
+
+void Worker::Object::cancel_dcalls(bool call)
+{
     if (m_dcalls_suspended)
     {
         // If the dcalls have been suspended, then we have to delete them here, as
@@ -297,26 +304,24 @@ Worker::Object::~Object()
         for (auto kv : m_dcalls)
         {
             auto* pCall = kv.second;
+
+            if (call)
+            {
+                pCall->call(Worker::Call::CANCEL);
+            }
             delete pCall;
         }
+
+        m_dcalls.clear();
     }
     else
     {
-        cancel_dcalls(false);
-    }
-}
-
-void Worker::Object::cancel_dcalls(bool call)
-{
-    // Can't iterate; the cancel_delayed_call() will cause unregister_dcall() to be called.
-    while (!m_dcalls.empty())
-    {
-        auto id = m_dcalls.begin()->first;
-
-        // At this point, we have but Object left so the function can not be called
-        // with Call::CANCEL as chances are we would then access data that already
-        // has been destructed.
-        m_pWorker->cancel_dcall(id, call);
+        // Can't iterate; the cancel_delayed_call() will cause unregister_dcall() to be called.
+        while (!m_dcalls.empty())
+        {
+            auto id = m_dcalls.begin()->first;
+            m_pWorker->cancel_dcall(id, call);
+        }
     }
 }
 
