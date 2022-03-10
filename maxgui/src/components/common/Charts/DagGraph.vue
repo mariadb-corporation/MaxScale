@@ -27,7 +27,6 @@ import { select as d3Select } from 'd3-selection'
 import * as d3d from 'd3-dag'
 import 'd3-transition'
 import { zoom, zoomIdentity } from 'd3-zoom'
-import { curveLinear, line } from 'd3-shape'
 
 export default {
     name: 'dag-graph',
@@ -48,9 +47,6 @@ export default {
         }
     },
     computed: {
-        d3Line() {
-            return line
-        },
         nodeGroupTransformStyle() {
             const { x, y, k } = this.nodeGroupTransform
             return `translate(${x}px, ${y}px) scale(${k})`
@@ -181,13 +177,16 @@ export default {
                 .attr('transform', d => `translate(${d.x}, ${d.y})`)
                 .remove()
         },
-
+        /**
+         * Creates an orthogonal link between nodes
+         * @param {Array} points - Points from source to target node
+         */
         diagonal(points) {
-            const line = this.d3Line()
-                .curve(curveLinear)
-                .x(d => d.x)
-                .y(d => d.y)
-            return line(points)
+            const src = points[0]
+            const target = points[points.length - 1] // d3-dag could provide more than 2 points.
+            const midPoint = [target.x, src.y + (target.y - src.y) / 2]
+            const h = target.x // horizontal line from source to target
+            return `M ${src.x} ${src.y} ${midPoint} H ${h} L ${target.x} ${target.y}`
         },
         drawLinks(data) {
             //TODO: Add arrow
