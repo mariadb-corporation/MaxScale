@@ -326,10 +326,9 @@ void Worker::Object::suspend_dcalls()
 
     for (auto kv : m_dcalls)
     {
-        auto id = kv.first;
+        auto* pCall = kv.second;
 
-        auto pCall = m_pWorker->remove_dcall(id);
-        mxb_assert(pCall == kv.second);
+        m_pWorker->remove_dcall(pCall);
     }
 
     m_dcalls_suspended = true;
@@ -968,9 +967,16 @@ void Worker::tick()
         m_sorted_calls.erase(i);
         m_calls.erase(j);
 
-        if (pCall->call(Worker::Call::EXECUTE))
+        m_pCurrent_call = pCall;
+        bool repeat = pCall->call(Worker::Call::EXECUTE);
+        m_pCurrent_call = nullptr;
+
+        if (repeat)
         {
-            repeating_calls.push_back(pCall);
+            if (!pCall->owner().dcalls_suspended())
+            {
+                repeating_calls.push_back(pCall);
+            }
         }
         else
         {
@@ -1073,6 +1079,17 @@ Worker::DCall* Worker::remove_dcall(DCId id)
     return pCall;
 }
 
+void Worker::remove_dcall(DCall* pCall)
+{
+    // Prevent re-entrancy problems if delayed calls are suspended from
+    // a delayed call.
+    if (pCall != m_pCurrent_call)
+    {
+        MXB_AT_DEBUG(auto* p = )remove_dcall(pCall->id());
+        mxb_assert(p == pCall);
+    }
+}
+
 void Worker::restore_dcall(DCall* pCall)
 {
     bool adjust = true;
@@ -1097,8 +1114,6 @@ void Worker::restore_dcall(DCall* pCall)
     auto id = pCall->id();
     mxb_assert(m_calls.find(id) == m_calls.end());
     m_calls.insert(std::make_pair(id, pCall));
-
-    pCall->owner().register_dcall(pCall);
 
     if (adjust)
     {

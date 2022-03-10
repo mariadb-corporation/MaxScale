@@ -342,7 +342,7 @@ public:
     private:
         Worker*                m_pWorker;
         std::map<DCId, DCall*> m_dcalls;
-        bool                   m_dcalls_suspended { true };
+        bool                   m_dcalls_suspended { false };
     };
 
     /**
@@ -1125,6 +1125,7 @@ private:
     void adjust_timer();
 
     DCall* remove_dcall(DCId id);
+    void remove_dcall(DCall* pCall);
     void restore_dcall(DCall* pCall);
 
     void handle_message(MessageQueue& queue, const MessageQueue::Message& msg) override;
@@ -1164,6 +1165,7 @@ private:
     PrivateTimer* m_pTimer;                    /*< The worker's own timer. */
     DCallsByTime  m_sorted_calls;              /*< Current delayed calls sorted by time. */
     DCallsById    m_calls;                     /*< Current delayed calls indexed by id. */
+    DCall*        m_pCurrent_call { nullptr }; /*< The current call, or nullptr if there is not one. */
     RandomEngine  m_random_engine;             /*< Random engine for this worker (this thread). */
     TimePoint     m_epoll_tick_now;            /*< TimePoint when epoll_tick() was called */
     DCId          m_prev_dcid {NO_CALL};       /*< Previous delayed call id. */
