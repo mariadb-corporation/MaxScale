@@ -9,7 +9,6 @@
         >
             <tree-graph
                 v-if="ctrDim.height && !$typy(graphData).isEmptyObject"
-                :style="{ width: `${ctrDim.width}px`, height: `${ctrDim.height}px` }"
                 :data="graphData"
                 :dim="ctrDim"
                 :nodeSize="nodeSize"
@@ -171,8 +170,10 @@ export default {
         },
     },
     async created() {
-        this.$nextTick(() => this.setCtrDim())
         if (this.$typy(this.current_cluster).isEmptyObject) await this.fetchCluster()
+    },
+    mounted() {
+        this.$nextTick(() => this.setCtrDim())
     },
     methods: {
         ...mapActions({
@@ -185,7 +186,7 @@ export default {
         },
         setCtrDim() {
             const { clientHeight, clientWidth } = this.$refs.graphContainer.$el
-            this.ctrDim = { width: clientWidth, height: clientHeight - 2 }
+            this.ctrDim = { width: clientWidth, height: clientHeight }
         },
         handleExpandedNode({ type, id }) {
             let target = this.expandedNodes.indexOf(id)

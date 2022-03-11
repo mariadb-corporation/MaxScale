@@ -1,7 +1,7 @@
 <template>
-    <div class="tree-graph-container">
+    <div class="tree-graph-container fill-height">
         <v-icon class="svg-grid-bg" color="#e3e6ea">$vuetify.icons.gridBg</v-icon>
-        <svg ref="svg" class="tree-graph">
+        <svg ref="svg" class="tree-graph" :width="dim.width" height="100%">
             <g
                 id="node-group"
                 :transform="
@@ -164,8 +164,6 @@ export default {
                 .scale(1)
             // Draw svg tree-graph
             this.svg = d3Select(this.$refs.svg)
-                .attr('width', this.dim.width)
-                .attr('height', this.dim.height)
                 .call(zoom().transform, this.nodeGroupTransform)
                 .call(
                     zoom().on('zoom', e => {

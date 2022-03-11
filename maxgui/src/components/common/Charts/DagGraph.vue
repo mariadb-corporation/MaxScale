@@ -1,7 +1,7 @@
 <template>
-    <div class="dag-graph-container" :style="revertGraphStyle">
+    <div class="dag-graph-container fill-height" :style="revertGraphStyle">
         <v-icon class="svg-grid-bg" color="#e3e6ea">$vuetify.icons.gridBg</v-icon>
-        <svg ref="svg" class="dag-graph" :width="dim.width" :height="dim.height">
+        <svg ref="svg" class="dag-graph" :width="dim.width" height="100%">
             <g id="dag-node-group" :style="{ transform: nodeGroupTransformStyle }" />
         </svg>
         <div class="node-div-wrapper" :style="{ transform: nodeGroupTransformStyle }">

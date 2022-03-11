@@ -68,8 +68,10 @@ export default {
         },
     },
     async created() {
-        this.$nextTick(() => this.setCtrDim())
         await this.fetchConfigData()
+    },
+    mounted() {
+        this.$nextTick(() => this.setCtrDim())
     },
     methods: {
         ...mapActions({
@@ -77,7 +79,7 @@ export default {
         }),
         setCtrDim() {
             const { clientHeight, clientWidth } = this.$refs.wrapper.$el
-            this.ctrDim = { width: clientWidth, height: clientHeight - 2 }
+            this.ctrDim = { width: clientWidth, height: clientHeight }
         },
         colorizingLinkFn({ source, target }) {
             const sourceType = source.data.type
