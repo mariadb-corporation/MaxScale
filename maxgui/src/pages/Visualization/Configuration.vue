@@ -5,8 +5,8 @@
                 v-if="ctrDim.height && config_graph_data.length"
                 :data="config_graph_data"
                 :dim="ctrDim"
-                :nodeSize="nodeSize"
-                :dynNodeHeightMap="dynNodeHeightMap"
+                :nodeWidth="nodeWidth"
+                dynNodeHeight
                 revert
                 :colorizingLinkFn="colorizingLinkFn"
                 :handleRevertDiagonal="handleRevertDiagonal"
@@ -15,8 +15,7 @@
                     <conf-node
                         v-if="!$typy(node, 'data').isEmptyObject"
                         :node="node"
-                        :nodeSize="nodeSize"
-                        @node-height="$set(dynNodeHeightMap, node.data.id, $event)"
+                        :nodeWidth="nodeWidth"
                     />
                 </template>
             </dag-graph>
@@ -48,8 +47,7 @@ export default {
         return {
             //states for tree-graph
             ctrDim: {},
-            defNodeHeight: 100,
-            defNodeWidth: 220,
+            nodeWidth: 220,
             dynNodeHeightMap: {},
         }
     },
@@ -58,14 +56,6 @@ export default {
             config_graph_data: state => state.visualization.config_graph_data,
             RELATIONSHIP_TYPES: state => state.app_config.RELATIONSHIP_TYPES,
         }),
-        maxNodeHeight() {
-            const v = Math.max(...Object.values(this.dynNodeHeightMap).map(n => n.height))
-            if (this.$typy(v).isNumber) return v
-            return this.defNodeHeight
-        },
-        nodeSize() {
-            return { width: this.defNodeWidth, height: this.maxNodeHeight }
-        },
     },
     async created() {
         await this.fetchConfigData()

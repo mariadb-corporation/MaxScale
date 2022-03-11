@@ -1,37 +1,32 @@
 <template>
-    <!-- Create a new component instead of re-using tree-graph-node because
-    dag node is different from tree node
-    -->
-    <tree-graph-node
+    <v-card
         v-if="!$typy(node, 'data').isEmptyObject"
-        :node="node"
-        :nodeWidth="nodeSize.width"
-        :lineHeight="lineHeight"
-        v-on="$listeners"
+        outlined
+        class="node-card fill-height"
+        :width="nodeWidth - 2"
     >
-        <template v-slot:node-heading>
-            <div
-                class="node-heading d-flex align-center flex-row px-3 py-1"
-                :style="{ backgroundColor: headingColor.bg }"
+        <div
+            class="node-heading d-flex align-center flex-row px-3 py-1"
+            :style="{ backgroundColor: headingColor.bg }"
+        >
+            <router-link
+                target="_blank"
+                :to="`/dashboard/${node.data.type}/${node.data.id}`"
+                class="text-truncate rsrc-link"
+                :style="{ color: headingColor.txt }"
             >
-                <router-link
-                    target="_blank"
-                    :to="`/dashboard/${node.data.type}/${node.data.id}`"
-                    class="text-truncate rsrc-link"
-                    :style="{ color: headingColor.txt }"
-                >
-                    {{ node.data.id }}
-                </router-link>
-                <v-spacer />
-                <span
-                    class="node-type ml-2 font-weight-medium text-no-wrap text-uppercase"
-                    :style="{ color: headingColor.txt }"
-                >
-                    {{ $help.resourceTxtTransform(node.data.type) }}
-                </span>
-            </div>
-        </template>
-        <template v-slot:node-body>
+                {{ node.data.id }}
+            </router-link>
+            <v-spacer />
+            <span
+                class="node-type ml-2 font-weight-medium text-no-wrap text-uppercase"
+                :style="{ color: headingColor.txt }"
+            >
+                {{ $help.resourceTxtTransform(node.data.type) }}
+            </span>
+        </div>
+        <v-divider />
+        <div class="color text-navigation d-flex justify-center flex-column px-3 py-1">
             <div
                 v-for="(value, key) in nodeBody"
                 :key="key"
@@ -43,8 +38,8 @@
                 </span>
                 <truncate-string :text="`${value}`" />
             </div>
-        </template>
-    </tree-graph-node>
+        </div>
+    </v-card>
 </template>
 
 <script>
@@ -66,7 +61,7 @@ export default {
     name: 'conf-node',
     props: {
         node: { type: Object, required: true },
-        nodeSize: { type: Object, required: true },
+        nodeWidth: { type: Number, required: true },
     },
     computed: {
         ...mapState({ RELATIONSHIP_TYPES: state => state.app_config.RELATIONSHIP_TYPES }),
@@ -141,3 +136,9 @@ export default {
     },
 }
 </script>
+
+<style lang="scss" scoped>
+.node-card {
+    font-size: 12px;
+}
+</style>

@@ -7,9 +7,10 @@
         <div class="node-div-wrapper" :style="{ transform: nodeGroupTransformStyle }">
             <div
                 v-for="node in nodeDivData"
-                :key="node.id"
+                ref="rectNode"
+                :key="node.data.id"
                 class="rect-node"
-                :node_id="node.id"
+                :node_id="node.data.id"
                 :style="{
                     top: `${node.y}px`,
                     left: `${node.x}px`,
@@ -33,8 +34,8 @@ export default {
     props: {
         data: { type: Array, required: true },
         dim: { type: Object, required: true },
-        nodeSize: { type: Object, required: true },
-        dynNodeHeightMap: { type: Object, default: () => {} },
+        nodeWidth: { type: Number, default: 200 },
+        dynNodeHeight: { type: Boolean, default: false },
         revert: { type: Boolean, default: false },
         colorizingLinkFn: { type: Function, default: () => '' },
         handleRevertDiagonal: { type: Function, default: () => false },
@@ -45,6 +46,8 @@ export default {
             dagDim: { width: 0, height: 0 }, // dag-node-group dim
             nodeGroupTransform: { x: 24, y: this.dim.height / 2, k: 1 },
             nodeDivData: [],
+            defNodeHeight: 100,
+            dynNodeHeightMap: {},
         }
     },
     computed: {
@@ -54,6 +57,14 @@ export default {
         },
         revertGraphStyle() {
             return { transform: this.revert ? 'rotate(180deg)' : 'rotate(0d)' }
+        },
+        maxNodeHeight() {
+            const v = Math.max(...Object.values(this.dynNodeHeightMap))
+            if (this.$typy(v).isNumber) return v
+            return this.defNodeHeight
+        },
+        nodeSize() {
+            return { width: this.nodeWidth, height: this.maxNodeHeight }
         },
     },
     watch: {
@@ -144,6 +155,14 @@ export default {
             this.drawNodes(nodes)
             this.drawLinks(links)
             this.nodeDivData = nodes
+            if (this.dynNodeHeight) this.$nextTick(() => this.computeDynNodeHeight())
+        },
+        computeDynNodeHeight() {
+            const rectNode = this.$typy(this.$refs, 'rectNode').safeArray
+            let heightMap = {}
+            rectNode.forEach(node => (heightMap[node.getAttribute('node_id')] = node.clientHeight))
+            if (!this.$help.lodash.isEqual(this.dynNodeHeightMap, heightMap))
+                this.dynNodeHeightMap = heightMap
         },
         drawNodes(data) {
             let nodes = this.svgGroup.selectAll('g.node-rect-group').data(data)
