@@ -9,6 +9,7 @@
                 :dynNodeHeightMap="dynNodeHeightMap"
                 revert
                 :colorizingLinkFn="colorizingLinkFn"
+                :handleRevertDiagonal="handleRevertDiagonal"
             >
                 <template v-slot:rect-node-content="{ data: { node } }">
                     <conf-node
@@ -94,6 +95,21 @@ export default {
                     if (targetType === LISTENERS) return '#424f62'
                     else if (targetType === SERVICES) return '#7dd012'
             }
+        },
+        handleRevertDiagonal({ source, target }) {
+            const sourceType = source.data.type
+            const targetType = target.data.type
+            const { SERVICES, SERVERS, MONITORS, LISTENERS } = this.RELATIONSHIP_TYPES
+            switch (sourceType) {
+                case MONITORS:
+                case SERVERS:
+                    if (targetType === SERVICES) return true
+                    break
+                case SERVICES:
+                    if (targetType === LISTENERS) return true
+                    break
+            }
+            return false
         },
     },
 }
