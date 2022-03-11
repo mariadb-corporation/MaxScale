@@ -199,7 +199,6 @@ export default {
             return this.obtuseShape(points)
         },
         drawLinks(data) {
-            //TODO: Add arrow
             let linkGroup = this.svgGroup.selectAll('.link-group').data(data)
             let linkGroupEnter = linkGroup
                 .enter()
@@ -215,6 +214,18 @@ export default {
                     return color
                 })
                 .attr('d', d => this.handleCreateDiagonal(d))
+            linkGroupEnter
+                .append('path')
+                .attr('class', 'link__arrow')
+                .attr('stroke-width', 3)
+                .attr('d', 'M12,0 L-5,-8 L0,0 L-5,8 Z')
+                .attr('stroke-linecap', 'round')
+                .attr('stroke-linejoin', 'round')
+                .attr('transform', d => {
+                    const p = this.getRotatedArrowPoint(d)
+                    return `translate(${p.position.x}, ${p.position.y}) rotate(${p.angle})`
+                })
+
             // UPDATE
             let linkGroupUpdate = linkGroupEnter.merge(linkGroup)
             // update link_line
@@ -223,6 +234,19 @@ export default {
                 .transition()
                 .duration(this.duration)
                 .attr('d', d => this.handleCreateDiagonal(d))
+            // update link__arrow
+            linkGroupUpdate
+                .select('path.link__arrow')
+                .transition()
+                .duration(this.duration)
+                .attr('fill', d => {
+                    let color = this.colorizingLinkFn(d) || '#0e9bc0'
+                    return color
+                })
+                .attr('transform', d => {
+                    const p = this.getRotatedArrowPoint(d)
+                    return `translate(${p.position.x}, ${p.position.y}) rotate(${p.angle})`
+                })
             // Remove any exiting links
             let linkExit = linkGroup
                 .exit()
@@ -234,6 +258,26 @@ export default {
                 .select('path.link_line')
                 .attr('d', d => this.handleCreateDiagonal(d))
                 .remove()
+            // remove link__arrow
+            linkExit
+                .select('path.link__arrow')
+                .attr('fill', 'transparent')
+                .attr('transform', d => {
+                    const p = this.getRotatedArrowPoint(d)
+                    return `translate(${p.position.x}, ${p.position.y}) rotate(${p.angle})`
+                })
+                .remove()
+        },
+        getRotatedArrowPoint(data) {
+            const { points } = data
+            let arrowPoint = points[points.length - 1]
+            let shouldRevert = this.handleRevertDiagonal(data)
+            const offset = shouldRevert ? 10 : -10
+            const angle = shouldRevert ? 270 : 90
+            return {
+                position: { x: arrowPoint.x, y: arrowPoint.y + offset },
+                angle,
+            }
         },
     },
 }
