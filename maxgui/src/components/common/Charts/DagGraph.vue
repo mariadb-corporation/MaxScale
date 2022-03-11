@@ -210,10 +210,7 @@ export default {
                 .attr('fill', 'none')
                 .attr('stroke-width', 2.5)
                 .attr('stroke-dasharray', '5')
-                .attr('stroke', d => {
-                    let color = this.colorizingLinkFn(d) || '#0e9bc0'
-                    return color
-                })
+                .attr('stroke', d => this.colorizingLinkFn(d) || '#0e9bc0')
                 .attr('d', d => this.handleCreateDiagonal(d))
             linkGroupEnter
                 .append('path')
@@ -222,10 +219,8 @@ export default {
                 .attr('d', 'M12,0 L-5,-8 L0,0 L-5,8 Z')
                 .attr('stroke-linecap', 'round')
                 .attr('stroke-linejoin', 'round')
-                .attr('transform', d => {
-                    const p = this.getRotatedArrowPoint(d)
-                    return `translate(${p.position.x}, ${p.position.y}) rotate(${p.angle})`
-                })
+                .attr('fill', d => this.colorizingLinkFn(d) || '#0e9bc0')
+                .attr('transform', d => this.transformArrow(d))
 
             // UPDATE
             let linkGroupUpdate = linkGroupEnter.merge(linkGroup)
@@ -234,51 +229,29 @@ export default {
                 .select('path.link_line')
                 .transition()
                 .duration(this.duration)
+                .attr('stroke', d => this.colorizingLinkFn(d) || '#0e9bc0')
                 .attr('d', d => this.handleCreateDiagonal(d))
             // update link__arrow
             linkGroupUpdate
                 .select('path.link__arrow')
                 .transition()
                 .duration(this.duration)
-                .attr('fill', d => {
-                    let color = this.colorizingLinkFn(d) || '#0e9bc0'
-                    return color
-                })
-                .attr('transform', d => {
-                    const p = this.getRotatedArrowPoint(d)
-                    return `translate(${p.position.x}, ${p.position.y}) rotate(${p.angle})`
-                })
+                .attr('fill', d => this.colorizingLinkFn(d) || '#0e9bc0')
+                .attr('transform', d => this.transformArrow(d))
             // Remove any exiting links
-            let linkExit = linkGroup
+            linkGroup
                 .exit()
                 .transition()
                 .duration(this.duration)
                 .remove()
-            // remove link_line
-            linkExit
-                .select('path.link_line')
-                .attr('d', d => this.handleCreateDiagonal(d))
-                .remove()
-            // remove link__arrow
-            linkExit
-                .select('path.link__arrow')
-                .attr('fill', 'transparent')
-                .attr('transform', d => {
-                    const p = this.getRotatedArrowPoint(d)
-                    return `translate(${p.position.x}, ${p.position.y}) rotate(${p.angle})`
-                })
-                .remove()
         },
-        getRotatedArrowPoint(data) {
+        transformArrow(data) {
             const { points } = data
             let arrowPoint = points[points.length - 1]
             let shouldRevert = this.handleRevertDiagonal(data)
-            const offset = shouldRevert ? 10 : -10
+            const offset = shouldRevert ? 11.5 : -11.5
             const angle = shouldRevert ? 270 : 90
-            return {
-                position: { x: arrowPoint.x, y: arrowPoint.y + offset },
-                angle,
-            }
+            return `translate(${arrowPoint.x}, ${arrowPoint.y + offset}) rotate(${angle})`
         },
     },
 }
