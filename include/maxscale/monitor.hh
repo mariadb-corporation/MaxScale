@@ -820,7 +820,6 @@ private:
  */
 class MonitorWorker : public Monitor
                     , protected maxbase::Worker
-                    , public mxb::Worker::Object
 {
 public:
     MonitorWorker(const MonitorWorker&) = delete;
@@ -949,6 +948,8 @@ protected:
      * @return True if tick should be ran
      */
     virtual bool immediate_tick_required();
+
+    Worker::Object m_wobject; /**< Context for own dcalls */
 
 private:
     std::atomic<bool> m_thread_running; /**< Thread state. Only visible inside MonitorInstance. */

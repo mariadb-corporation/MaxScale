@@ -40,7 +40,6 @@ namespace maxscale
 
 class RoutingWorker : public mxb::WatchedWorker
                     , public BackendDCB::Manager
-                    , public mxb::Worker::Object
                     , private mxb::POLL_DATA
 {
     RoutingWorker(const RoutingWorker&) = delete;
@@ -441,6 +440,7 @@ private:
     bool try_shutdown(Call::action_t action);
 
 private:
+    Worker::Object m_wobject;   /*< Context for own dcalls */
     SessionsById   m_sessions;  /*< A mapping of session_id->MXS_SESSION */
     Zombies        m_zombies;   /*< DCBs to be deleted. */
     IndexedStorage m_storage;   /*< The storage of this worker. */

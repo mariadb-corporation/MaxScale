@@ -283,6 +283,11 @@ public:
     class Object
     {
     public:
+        Object(Worker* pWorker)
+            : m_pWorker(pWorker)
+        {
+        }
+
         Object(const Object&) = delete;
         Object& operator = (const Object&) = delete;
 
@@ -302,10 +307,10 @@ public:
          * @param id    The dcall id.
          * @param call  If true, then the delayed function will be called with Call::CANCEL.
          *              Otherwise, the function will not be called at all.
+         *
+         * @return True, if the id represented an existing delayed call.
          */
-        // TODO: This should be cancel_dcall() and will be once there are no workers who
-        // TODO: also are derived from Worker::Object.
-        void dcall_cancel(DCId id, bool call = true);
+        bool cancel_dcall(DCId id, bool call = true);
 
         /**
          * Cancel all dcalls.
@@ -335,11 +340,6 @@ public:
         }
 
     protected:
-        Object(Worker* pWorker)
-            : m_pWorker(pWorker)
-        {
-        }
-
         void set_worker(Worker* pWorker)
         {
             mxb_assert(m_dcalls.empty() || m_dcalls_suspended);

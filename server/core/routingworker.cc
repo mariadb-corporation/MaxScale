@@ -136,7 +136,7 @@ void RoutingWorker::DCBHandler::hangup(DCB* pDcb)
 
 RoutingWorker::RoutingWorker(mxb::WatchdogNotifier* pNotifier)
     : mxb::WatchedWorker(pNotifier)
-    , mxb::Worker::Object(this)
+    , m_wobject(this)
     , m_pool_handler(this)
 {
     POLL_DATA::handler = &RoutingWorker::epoll_instance_handler;
@@ -875,7 +875,7 @@ bool RoutingWorker::pre_run()
                 }
                 return true;
             };
-        dcall(this, 1s, check_pool_cb);
+        dcall(&m_wobject, 1s, check_pool_cb);
 
         // The normal connection availability notification is not fool-proof, as it's only sent to the
         // current worker. Every now and then, each worker should check for connections regardless since
@@ -887,7 +887,7 @@ bool RoutingWorker::pre_run()
                 }
                 return true;
             };
-        dcall(this, 5s, activate_eps_cb);
+        dcall(&m_wobject, 5s, activate_eps_cb);
 
         auto timeout_eps_cb = [this](Worker::Call::action_t action) {
                 if (action == mxb::Worker::Call::action_t::EXECUTE)
@@ -896,7 +896,7 @@ bool RoutingWorker::pre_run()
                 }
                 return true;
             };
-        dcall(this, 10s, timeout_eps_cb);
+        dcall(&m_wobject, 10s, timeout_eps_cb);
     }
     else
     {
@@ -1570,7 +1570,7 @@ void RoutingWorker::start_shutdown()
 {
     broadcast([]() {
                   auto worker = RoutingWorker::get_current();
-                  worker->dcall(100ms, &RoutingWorker::try_shutdown, worker);
+                  worker->dcall(&worker->m_wobject, 100ms, &RoutingWorker::try_shutdown, worker);
               }, nullptr, EXECUTE_AUTO);
 }
 

@@ -25,6 +25,7 @@
 namespace http = mxb::http;
 using namespace std;
 using maxscale::MonitorServer;
+using std::chrono::milliseconds;
 
 #define LOG_JSON_ERROR(ppJson, format, ...)                             \
     do {                                                                \
@@ -43,12 +44,12 @@ namespace xpandmon
 
 config::Specification specification(MXS_MODULE_NAME, config::Specification::MONITOR);
 
-config::ParamDuration<std::chrono::milliseconds>
+config::ParamDuration<milliseconds>
 cluster_monitor_interval(&specification,
                          "cluster_monitor_interval",
                          "How frequently the Xpand monitor should perform a cluster check.",
                          mxs::config::INTERPRET_AS_MILLISECONDS,
-                         std::chrono::milliseconds(DEFAULT_CLUSTER_MONITOR_INTERVAL));
+                         milliseconds(DEFAULT_CLUSTER_MONITOR_INTERVAL));
 
 config::ParamCount
     health_check_threshold(&specification,
@@ -268,8 +269,6 @@ XpandMonitor* XpandMonitor::create(const string& name, const string& module)
 
     return pThis;
 }
-
-using std::chrono::milliseconds;
 
 bool XpandMonitor::post_configure()
 {
@@ -1141,8 +1140,6 @@ SERVER* XpandMonitor::create_volatile_server(const std::string& server_name,
         {
             int attempts = 0;
 
-            using std::chrono::milliseconds;
-
             milliseconds sleep(1); // Yielding is not sufficient, but 1ms seems to be most of the time.
             milliseconds total_slept(0);
             milliseconds max_sleep(5000);
@@ -1225,7 +1222,7 @@ void XpandMonitor::initiate_delayed_http_check()
         ms = max_delay_ms;
     }
 
-    m_delayed_http_check_id = dcall(std::chrono::milliseconds(ms), &XpandMonitor::check_http, this);
+    m_delayed_http_check_id = dcall(&m_wobject, milliseconds(ms), &XpandMonitor::check_http, this);
 }
 
 bool XpandMonitor::check_http(Call::action_t action)
@@ -1298,7 +1295,7 @@ void XpandMonitor::update_http_urls()
     {
         if (m_delayed_http_check_id != 0)
         {
-            Worker::cancel_dcall(m_delayed_http_check_id);
+            cancel_dcall(m_delayed_http_check_id);
             m_delayed_http_check_id = 0;
         }
 

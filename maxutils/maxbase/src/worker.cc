@@ -294,8 +294,10 @@ Worker::Object::~Object()
     cancel_dcalls(false);
 }
 
-void Worker::Object::dcall_cancel(Worker::DCId id, bool call)
+bool Worker::Object::cancel_dcall(Worker::DCId id, bool call)
 {
+    bool rv = false;
+
     if (m_dcalls_suspended)
     {
         // If the dcalls have been suspended, then we have to delete the call here, as
@@ -312,13 +314,17 @@ void Worker::Object::dcall_cancel(Worker::DCId id, bool call)
             }
             m_dcalls.erase(it);
             delete pCall;
+
+            rv = true;
         }
     }
     else
     {
         mxb_assert(m_pWorker);
-        m_pWorker->cancel_dcall(id, call);
+        rv = m_pWorker->cancel_dcall(id, call);
     }
+
+    return rv;
 }
 
 void Worker::Object::cancel_dcalls(bool call)

@@ -1787,7 +1787,7 @@ void Monitor::load_monitor_specific_journal_data(const mxb::Json& data)
 
 MonitorWorker::MonitorWorker(const string& name, const string& module)
     : Monitor(name, module)
-    , mxb::Worker::Object(this)
+    , m_wobject(this)
     , m_thread_running(false)
     , m_shutdown(0)
     , m_checked(false)
@@ -2125,7 +2125,7 @@ bool MonitorWorker::pre_run()
         m_semaphore.post();
 
         pre_loop();
-        dcall(1ms, &MonitorWorker::call_run_one_tick, this);
+        dcall(&m_wobject, 1ms, &MonitorWorker::call_run_one_tick, this);
     }
     else
     {
@@ -2169,7 +2169,7 @@ bool MonitorWorker::call_run_one_tick(Worker::Call::action_t action)
         int64_t delay = ((ms_to_next_call <= 0) || (ms_to_next_call >= base_interval_ms)) ?
             base_interval_ms : ms_to_next_call;
 
-        dcall(milliseconds(delay), &MonitorWorker::call_run_one_tick, this);
+        dcall(&m_wobject, milliseconds(delay), &MonitorWorker::call_run_one_tick, this);
     }
     return false;
 }

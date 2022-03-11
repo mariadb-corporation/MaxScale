@@ -22,7 +22,6 @@ namespace maxscale
 {
 
 class MainWorker : public mxb::WatchedWorker
-                 , private mxb::Worker::Object
 {
     MainWorker(const MainWorker&) = delete;
     MainWorker& operator=(const MainWorker&) = delete;
@@ -116,6 +115,7 @@ private:
     // Waits until all RoutingWorkers have stopped and then stops the MainWorker
     bool wait_for_shutdown(Worker::Call::action_t action);
 
+    Worker::Object    m_wobject;
     IndexedStorage    m_storage;
     mxb::Worker::DCId m_rebalancing_dc {0};
     mxb::TimePoint    m_last_rebalancing;
