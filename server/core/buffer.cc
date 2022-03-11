@@ -238,32 +238,6 @@ GWBUF* gwbuf_clone_shallow(GWBUF* buf)
     return new GWBUF(*buf);
 }
 
-static GWBUF* gwbuf_deep_clone_portion(const GWBUF* buf, size_t length)
-{
-    ensure_owned(buf);
-    GWBUF* rval = NULL;
-
-    if (buf)
-    {
-        rval = gwbuf_alloc(length);
-
-        if (rval && gwbuf_copy_data(buf, 0, length, GWBUF_DATA(rval)) == length)
-        {
-            // The copying of the type is done to retain the type characteristic of the buffer without
-            // having a link the orginal data or parsing info.
-            rval->gwbuf_type = buf->gwbuf_type;
-            rval->id = buf->id;
-        }
-        else
-        {
-            gwbuf_free(rval);
-            rval = NULL;
-        }
-    }
-
-    return rval;
-}
-
 GWBUF GWBUF::split(uint64_t n_bytes)
 {
     auto len = length();
@@ -291,147 +265,35 @@ GWBUF GWBUF::split(uint64_t n_bytes)
 
 GWBUF* gwbuf_split(GWBUF** buf, size_t length)
 {
-    validate_buffer(*buf);
-    GWBUF* head = NULL;
+    mxb_assert(buf && *buf);
+    GWBUF* rval = nullptr;
 
-    if (length > 0 && buf && *buf)
+    if (length > 0)
     {
-        GWBUF* buffer = *buf;
-        GWBUF* orig_tail = nullptr;
-        head = buffer;
-        ensure_owned(buffer);
+        GWBUF* source = *buf;
+        auto splitted = source->split(length);
+        rval = new GWBUF(move(splitted));
 
-        /** Handle complete buffers */
-        while (buffer && length && length >= gwbuf_link_length(buffer))
+        if (source->empty())
         {
-            length -= gwbuf_link_length(buffer);
-            buffer = nullptr;
+            delete source;
+            *buf = nullptr;
         }
-
-        /** Some data is left in the original buffer */
-        if (buffer)
-        {
-            if (length > 0)
-            {
-                mxb_assert(gwbuf_link_length(buffer) > length);
-                GWBUF* partial = gwbuf_deep_clone_portion(buffer, length);
-
-                /** If the head points to the original head of the buffer chain
-                 * and we are splitting a contiguous buffer, we only need to return
-                 * the partial clone of the first buffer. If we are splitting multiple
-                 * buffers, we need to append them to the full buffers. */
-                head = head == buffer ? partial : gwbuf_append(head, partial);
-
-                buffer = gwbuf_consume(buffer, length);
-            }
-        }
-
-        *buf = buffer;
     }
-
-    return head;
-}
-
-/**
- * Get a byte from a GWBUF at a particular offset. Intended to be use like:
- *
- *     GWBUF *buf = ...;
- *     size_t offset = 0;
- *     uint8_t c;
- *
- *     while (gwbuf_get_byte(&buf, &offset, &c))
- *     {
- *         printf("%c", c);
- *     }
- *
- * @param buf     Pointer to pointer to GWBUF. The GWBUF pointed to may be adjusted
- *                as a result of the call.
- * @param offset  Pointer to variable containing the offset. Value of variable will
- *                incremented as a result of the call.
- * @param b       Pointer to variable that upon successful return will contain the
- *                next byte.
- *
- * @return True, if offset refers to a byte in the GWBUF.
- */
-static inline bool gwbuf_get_byte(const GWBUF** buf, size_t* offset, uint8_t* b)
-{
-    bool rv = false;
-
-    // Ignore NULL buffer and walk past empty or too short buffers.
-    while (*buf && (gwbuf_link_length(*buf) <= *offset))
-    {
-        mxb_assert((*buf)->owner == RoutingWorker::get_current_id());
-        *offset -= gwbuf_link_length(*buf);
-        *buf = nullptr;
-    }
-
-    mxb_assert(!*buf || (gwbuf_link_length(*buf) > *offset));
-
-    if (*buf)
-    {
-        mxb_assert((*buf)->owner == RoutingWorker::get_current_id());
-        *b = *(GWBUF_DATA(*buf) + *offset);
-        *offset += 1;
-
-        rv = true;
-    }
-
-    return rv;
+    return rval;
 }
 
 int gwbuf_compare(const GWBUF* lhs, const GWBUF* rhs)
 {
-    validate_buffer(lhs);
-    validate_buffer(rhs);
+    return lhs->compare(*rhs);
+}
 
-    int rv;
+int GWBUF::compare(const GWBUF& rhs) const
+{
+    size_t llen = length();
+    size_t rlen = rhs.length();
 
-    size_t llen = gwbuf_length(lhs);
-    size_t rlen = gwbuf_length(rhs);
-
-    if (llen < rlen)
-    {
-        rv = -1;
-    }
-    else if (rlen < llen)
-    {
-        rv = 1;
-    }
-    else
-    {
-        mxb_assert(llen == rlen);
-
-        rv = 0;
-        size_t i = 0;
-        size_t loffset = 0;
-        size_t roffset = 0;
-
-        while ((rv == 0) && (i < llen))
-        {
-            uint8_t lc = 0;
-            uint8_t rc = 0;
-
-            MXB_AT_DEBUG(bool rv1 = ) gwbuf_get_byte(&lhs, &loffset, &lc);
-            MXB_AT_DEBUG(bool rv2 = ) gwbuf_get_byte(&rhs, &roffset, &rc);
-
-            mxb_assert(rv1 && rv2);
-
-            rv = (int)lc - (int)rc;
-
-            ++i;
-        }
-
-        if (rv < 0)
-        {
-            rv = -1;
-        }
-        else if (rv > 0)
-        {
-            rv = 1;
-        }
-    }
-
-    return rv;
+    return (llen == rlen) ? memcmp(data(), rhs.data(), llen) : ((llen > rlen) ? 1 : -1);
 }
 
 GWBUF* gwbuf_append(GWBUF* head, GWBUF* tail)
@@ -684,16 +546,6 @@ size_t GWBUF::copy_data(size_t offset, size_t n_bytes, uint8_t* dst) const
 size_t gwbuf_copy_data(const GWBUF* buffer, size_t offset, size_t bytes, uint8_t* dest)
 {
     return buffer->copy_data(offset, bytes, dest);
-}
-
-uint8_t* gwbuf_byte_pointer(GWBUF* buffer, size_t offset)
-{
-    uint8_t* rval = nullptr;
-    if (buffer && buffer->length() > offset)
-    {
-        rval = buffer->start + offset;
-    }
-    return rval;
 }
 
 static std::string dump_one_buffer(GWBUF* buffer)

@@ -258,6 +258,16 @@ public:
      */
     bool is_unique() const;
 
+    /**
+     * Compare contents of two buffers. Returns 0 if buffers are equal length and have same contents.
+     * Returns negative if this buffer is shorter or the first byte that differs is smaller. Otherwise
+     * returns a positive number.
+     *
+     * @param rhs Buffer to compare to
+     * @return Comparison result
+     */
+    int compare(const GWBUF& rhs) const;
+
 private:
     std::shared_ptr<SHARED_BUF> m_sbuf;     /*< The shared buffer with the real data */
 
@@ -573,18 +583,6 @@ void gwbuf_hexdump(GWBUF* buffer, int log_level = LOG_INFO);
  * @param log_level Log priority where the message is written
  */
 void gwbuf_hexdump_pretty(GWBUF* buffer, int log_level = LOG_INFO);
-
-/**
- * Return pointer of the byte at offset from start of chained buffer
- * Warning: It not guaranteed to point to a contiguous segment of memory,
- * it is only safe to modify the first byte this pointer point to.
- *
- * @param buffer  one or more chained buffer
- * @param offset  Offset into the buffer
- * @return  if total buffer length is bigger than offset then return
- *      the offset byte pointer, otherwise return null
- */
-extern uint8_t* gwbuf_byte_pointer(GWBUF* buffer, size_t offset);
 
 #ifdef SS_DEBUG
 /**

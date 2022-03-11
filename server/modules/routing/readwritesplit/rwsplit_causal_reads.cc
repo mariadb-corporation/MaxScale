@@ -69,10 +69,11 @@ void RWSplitSession::correct_packet_sequence(GWBUF* buffer)
     uint8_t header[3];
     uint32_t offset = 0;
 
-    while (gwbuf_copy_data(buffer, offset, 3, header) == 3)
+    buffer->ensure_unique();
+    while (buffer->copy_data(offset, 3, header) == 3)
     {
         uint32_t packet_len = MYSQL_GET_PAYLOAD_LEN(header) + MYSQL_HEADER_LEN;
-        uint8_t* seq = gwbuf_byte_pointer(buffer, offset + MYSQL_SEQ_OFFSET);
+        uint8_t* seq = buffer->data() + offset + MYSQL_SEQ_OFFSET;
         *seq = m_next_seq++;
         offset += packet_len;
     }
