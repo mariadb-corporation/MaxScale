@@ -86,9 +86,9 @@ bool test_load_config(const char* input, Server* server)
 
             TEST(strcmp(obj->name(), server->name()) == 0, "Server names differ");
             TEST(param->get_string("address") == server->address(), "Server addresses differ");
-            TEST(param->get_integer("port") == server->port(), "Server ports differ");
-            TEST(ServerManager::create_server(obj->name(), obj->m_parameters),
-                 "Failed to create server from loaded config");
+            Server* new_server = ServerManager::create_server(obj->name(), obj->m_parameters);
+            TEST(server, "Failed to create server from loaded config");
+            TEST(new_server->port() == server->port(), "Server ports differ");
             duplicate_context_finish(&dcontext);
             config_context_free(obj);
         }

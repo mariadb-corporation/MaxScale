@@ -1293,3 +1293,8 @@ std::unique_ptr<mxs::Endpoint> Server::get_connection(mxs::Component* up, MXS_SE
 {
     return std::unique_ptr<mxs::Endpoint>(new ServerEndpoint(up, session, this));
 }
+
+std::ostream& Server::persist(std::ostream& os) const
+{
+    return m_settings.persist(os, {s_type.name()});
+}

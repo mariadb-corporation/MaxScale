@@ -2637,8 +2637,9 @@ bool runtime_save_config(const char* name, const std::string& config)
 
                 if (mxs::Config::is_static_object(name))
                 {
-                    auto msg = mxb::string_printf("Runtime modification to '%s' was saved in '%s'. "
-                                                  "The static configuration for this object will be ignored.",
+                    auto msg = mxb::string_printf("Saving runtime modifications to '%s' in '%s'. "
+                                                  "The modified values will override the values found "
+                                                  "in the static configuration files.",
                                                   name, final_filename.c_str());
                     runtime_add_warning(msg);
 

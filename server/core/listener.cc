@@ -612,7 +612,7 @@ std::vector<SListener> listener_find_by_service(const SERVICE* service)
 
 std::ostream& Listener::persist(std::ostream& os) const
 {
-    m_config.persist(os);
+    m_config.persist(os, {s_type.name()});
     m_shared_data->m_proto_module->getConfiguration().persist_append(os);
     return os;
 }

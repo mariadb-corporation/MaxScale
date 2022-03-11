@@ -1060,7 +1060,7 @@ std::vector<Service*> service_filter_in_use(const SFilterDef& filter)
 std::ostream& Service::persist(std::ostream& os) const
 {
     m_router->getConfiguration().persist(os);
-    m_config.persist_append(os);
+    m_config.persist_append(os, {s_type.name()});
 
     const auto& data = *m_data;
 

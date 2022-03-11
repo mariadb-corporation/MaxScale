@@ -844,27 +844,33 @@ const Type* Configuration::find_value(const string& name) const
     return const_cast<Configuration*>(this)->find_value(name);
 }
 
-ostream& Configuration::persist(ostream& out) const
+ostream& Configuration::persist(ostream& out, const std::set<std::string>& force_persist) const
 {
     out << '[' << m_name << ']' << '\n';
-    return persist_append(out);
+    return persist_append(out, force_persist);
 }
 
-ostream& Configuration::persist_append(ostream& out) const
+ostream& Configuration::persist_append(ostream& out, const std::set<std::string>& force_persist) const
 {
     for (const auto& entry : m_values)
     {
         Type* pValue = entry.second;
-        auto str = pValue->persist();
 
-        if (!str.empty())
+        if (pValue->parameter().is_mandatory()
+            || force_persist.count(pValue->parameter().name())
+            || pValue->to_string() != pValue->parameter().default_to_string())
         {
-            if (!m_pSpecification->prefix().empty())
-            {
-                out << m_pSpecification->prefix() << '.';
-            }
+            auto str = pValue->persist();
 
-            out << str << '\n';
+            if (!str.empty())
+            {
+                if (!m_pSpecification->prefix().empty())
+                {
+                    out << m_pSpecification->prefix() << '.';
+                }
+
+                out << str << '\n';
+            }
         }
     }
 

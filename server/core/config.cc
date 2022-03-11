@@ -4910,7 +4910,13 @@ std::string serialize_params(const mxs::ConfigParameters& parameters, const MXS_
             {
                 // Parameter value in the container can be an empty string and still be printed.
                 string param_value = parameters.get_string(param_name);
-                output += param_name + "=" + param_value + "\n";
+
+                if (!param_info->default_value
+                    || (param_info->options & MXS_MODULE_OPT_REQUIRED)
+                    || param_value != param_info->default_value)
+                {
+                    output += param_name + "=" + param_value + "\n";
+                }
             }
         }
     }
