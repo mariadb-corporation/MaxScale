@@ -366,38 +366,6 @@ public:
         return m_capabilities;
     }
 
-    /**
-     * Delayed Call
-     *
-     * @see mxb::Worker::dcall
-     */
-    template<class D>
-    mxb::Worker::DCId dcall(const std::chrono::milliseconds& delay,
-                            bool (* pFunction)(mxb::Worker::Call::action_t action, D data),
-                            D data)
-    {
-        return mxb_worker()->dcall(this, delay, pFunction, data);
-    }
-
-    template<class T>
-    mxb::Worker::DCId dcall(const std::chrono::milliseconds& delay,
-                            bool (T::* pMethod)(mxb::Worker::Call::action_t action),
-                            T* pT)
-    {
-        return mxb_worker()->dcall(this, delay, pMethod, pT);
-    }
-
-    mxb::Worker::DCId dcall(const std::chrono::milliseconds& delay,
-                            std::function<bool(mxb::Worker::Call::action_t action)>&& f)
-    {
-        return mxb_worker()->dcall(this, delay, std::move(f));
-    }
-
-    bool cancel_dcall(mxb::Worker::DCId id)
-    {
-        return mxb_worker()->cancel_dcall(id);
-    }
-
 protected:
     State                    m_state;   /**< Current descriptor state */
     uint64_t                 m_id;      /**< Unique session identifier */
@@ -431,10 +399,6 @@ public:
     void          set_protocol_data(std::unique_ptr<ProtocolData> new_data);
 
 private:
-    // TODO: routingworker.hh would need to be included to make it known that mxs::RoutingWorker
-    // TODO: is a mxb::Worker, but doing that causes an circular include dependency.
-    mxb::Worker* mxb_worker() const;
-
     std::unique_ptr<ProtocolData> m_protocol_data;
 
     bool m_killed {false};

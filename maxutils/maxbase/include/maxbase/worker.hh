@@ -273,6 +273,15 @@ private:
     class DCall;
 
 public:
+    struct Call
+    {
+        enum action_t
+        {
+            EXECUTE,    /**< Execute the call */
+            CANCEL      /**< Cancel the call */
+        };
+    };
+
     /**
      * In order to make delayed calls on a Worker, an object, derived from Worker::Object,
      * must be provided, using which the Worker can detect whether the target for the
@@ -302,14 +311,33 @@ public:
         }
 
         /**
-         * Cancel a dcalls.
-         *
-         * @param id    The dcall id.
-         * @param call  If true, then the delayed function will be called with Call::CANCEL.
-         *              Otherwise, the function will not be called at all.
-         *
-         * @return True, if the id represented an existing delayed call.
+         * @see mxb::Worker::dcall
          */
+        template<class D>
+        DCId dcall(const std::chrono::milliseconds& delay,
+                   bool (* pFunction)(Call::action_t action, D data),
+                   D data)
+        {
+            mxb_assert(m_pWorker);
+            return m_pWorker->dcall(this, delay, pFunction, data);
+        }
+
+        template<class T>
+        DCId dcall(const std::chrono::milliseconds& delay,
+                   bool (T::* pMethod)(Call::action_t action),
+                   T* pT)
+        {
+            mxb_assert(m_pWorker);
+            return m_pWorker->dcall(this, delay, pMethod, pT);
+        }
+
+        DCId dcall(const std::chrono::milliseconds& delay,
+                   std::function<bool(Call::action_t action)>&& f)
+        {
+            mxb_assert(m_pWorker);
+            return m_pWorker->dcall(this, delay, std::move(f));
+        }
+
         bool cancel_dcall(DCId id, bool call = true);
 
         /**
@@ -409,15 +437,6 @@ public:
         EXECUTE_DIRECT, /**< Always execute directly using the calling thread/worker. */
         EXECUTE_QUEUED, /**< Always execute via the event loop using this thread/worker. */
         EXECUTE_AUTO,   /**< If calling thread/worker is this worker, call directly otherwise queued. */
-    };
-
-    struct Call
-    {
-        enum action_t
-        {
-            EXECUTE,    /**< Execute the call */
-            CANCEL      /**< Cancel the call */
-        };
     };
 
     enum
