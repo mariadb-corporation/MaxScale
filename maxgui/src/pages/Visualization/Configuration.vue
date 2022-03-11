@@ -1,5 +1,14 @@
 <template>
     <div class="d-flex flex-column fill-height">
+        <portal to="page-header--right">
+            <div class="d-flex align-center fill-height">
+                <refresh-rate
+                    :key="$route.name"
+                    :defRefreshRate="60"
+                    @on-count-done="fetchConfigData"
+                />
+            </div>
+        </portal>
         <v-card ref="wrapper" v-resize.quiet="setCtrDim" class="fill-height graph-card" outlined>
             <dag-graph
                 v-if="ctrDim.height && config_graph_data.length"

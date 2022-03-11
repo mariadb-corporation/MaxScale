@@ -1,5 +1,14 @@
 <template>
     <v-container v-if="!$typy(clusters).isEmptyObject" fluid>
+        <portal to="page-header--right">
+            <div class="d-flex align-center fill-height">
+                <refresh-rate
+                    :key="$route.name"
+                    :defRefreshRate="60"
+                    @on-count-done="discoveryClusters"
+                />
+            </div>
+        </portal>
         <v-row>
             <v-col
                 v-for="cluster in clusters"
