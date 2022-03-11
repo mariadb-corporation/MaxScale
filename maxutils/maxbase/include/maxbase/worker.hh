@@ -641,7 +641,15 @@ public:
                bool (T::* pMethod)(Worker::Call::action_t action),
                T* pT)
     {
-        return add_dcall(new DCallMethodVoid<T>(delay, next_dcall_id(), pMethod, pT));
+        return add_dcall(new DCallMethodWithCancel<T>(delay, next_dcall_id(), pMethod, pT));
+    }
+
+    template<class T>
+    DCId dcall(const std::chrono::milliseconds& delay,
+               bool (T::* pMethod)(void),
+               T* pT)
+    {
+        return add_dcall(new DCallMethodWithoutCancel<T>(delay, next_dcall_id(), pMethod, pT));
     }
 
     /**
@@ -699,7 +707,13 @@ public:
     DCId dcall(const std::chrono::milliseconds& delay,
                std::function<bool(Worker::Call::action_t action)>&& f)
     {
-        return add_dcall(new DCallFunctor(delay, next_dcall_id(), std::move(f)));
+        return add_dcall(new DCallFunctorWithCancel(delay, next_dcall_id(), std::move(f)));
+    }
+
+    DCId dcall(const std::chrono::milliseconds& delay,
+               std::function<bool(void)>&& f)
+    {
+        return add_dcall(new DCallFunctorWithoutCancel(delay, next_dcall_id(), std::move(f)));
     }
 
     /**
@@ -921,16 +935,16 @@ private:
     };
 
     template<class T>
-    class DCallMethodVoid : public DCall
+    class DCallMethodWithCancel : public DCall
     {
-        DCallMethodVoid(const DCallMethodVoid&) = delete;
-        DCallMethodVoid& operator=(const DCallMethodVoid&) = delete;
+        DCallMethodWithCancel(const DCallMethodWithCancel&) = delete;
+        DCallMethodWithCancel& operator=(const DCallMethodWithCancel&) = delete;
 
     public:
-        DCallMethodVoid(const std::chrono::milliseconds& delay,
-                        DCId id,
-                        bool (T::* pMethod)(Worker::Call::action_t),
-                        T* pT)
+        DCallMethodWithCancel(const std::chrono::milliseconds& delay,
+                              DCId id,
+                              bool (T::* pMethod)(Worker::Call::action_t),
+                              T* pT)
             : DCall(delay, id)
             , m_pMethod(pMethod)
             , m_pT(pT)
@@ -948,15 +962,50 @@ private:
         T* m_pT;
     };
 
-    class DCallFunctor : public DCall
+    template<class T>
+    class DCallMethodWithoutCancel : public DCall
     {
-        DCallFunctor(const DCallFunctor&) = delete;
-        DCallFunctor& operator=(const DCallFunctor&) = delete;
+        DCallMethodWithoutCancel(const DCallMethodWithoutCancel&) = delete;
+        DCallMethodWithoutCancel& operator=(const DCallMethodWithoutCancel&) = delete;
 
     public:
-        DCallFunctor(const std::chrono::milliseconds& delay,
-                     DCId id,
-                     std::function<bool(Worker::Call::action_t)>&& f)
+        DCallMethodWithoutCancel(const std::chrono::milliseconds& delay,
+                                 DCId id,
+                                 bool (T::* pMethod)(void),
+                                 T* pT)
+            : DCall(delay, id)
+            , m_pMethod(pMethod)
+            , m_pT(pT)
+        {
+        }
+
+    private:
+        bool do_call(Worker::Call::action_t action) override final
+        {
+            bool rv = false;
+
+            if (action == Call::EXECUTE)
+            {
+                rv = (m_pT->*m_pMethod)();
+            }
+
+            return rv;
+        }
+
+    private:
+        bool (T::* m_pMethod)(void);
+        T* m_pT;
+    };
+
+    class DCallFunctorWithCancel : public DCall
+    {
+        DCallFunctorWithCancel(const DCallFunctorWithCancel&) = delete;
+        DCallFunctorWithCancel& operator=(const DCallFunctorWithCancel&) = delete;
+
+    public:
+        DCallFunctorWithCancel(const std::chrono::milliseconds& delay,
+                               DCId id,
+                               std::function<bool (Worker::Call::action_t)> f)
             : DCall(delay, id)
             , m_f(std::move(f))
         {
@@ -970,6 +1019,37 @@ private:
 
     private:
         std::function<bool(Worker::Call::action_t)> m_f;
+    };
+
+    class DCallFunctorWithoutCancel : public DCall
+    {
+        DCallFunctorWithoutCancel(const DCallFunctorWithoutCancel&) = delete;
+        DCallFunctorWithoutCancel& operator=(const DCallFunctorWithoutCancel&) = delete;
+
+    public:
+        DCallFunctorWithoutCancel(const std::chrono::milliseconds& delay,
+                                  DCId id,
+                                  std::function<bool (void)> f)
+            : DCall(delay, id)
+            , m_f(f)
+        {
+        }
+
+    private:
+        bool do_call(Worker::Call::action_t action) override
+        {
+            bool rv = false;
+
+            if (action == Call::EXECUTE)
+            {
+                rv = m_f();
+            }
+
+            return rv;
+        }
+
+    private:
+        std::function<bool(void)> m_f;
     };
 
     DCId add_dcall(DCall* pdcall);
