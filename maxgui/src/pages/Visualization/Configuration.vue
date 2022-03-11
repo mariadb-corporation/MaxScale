@@ -108,7 +108,7 @@ export default {
                     if (targetType === SERVICES) return true
                     break
                 case SERVICES:
-                    if (targetType === LISTENERS) return true
+                    if (targetType === LISTENERS || targetType === SERVICES) return true
                     break
             }
             return false
