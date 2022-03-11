@@ -1746,6 +1746,13 @@ static HttpResponse handle_request(const HttpRequest& request)
 
     HttpResponse rval = this_unit.resources.process_request(request, resource);
 
+    std::string warning = runtime_get_warnings();
+
+    if (!warning.empty())
+    {
+        rval.add_header("Mxs-Warning", warning);
+    }
+
     // Calculate the checksum from the generated JSON
     auto str = mxs::json_dump(rval.get_response(), JSON_COMPACT);
     auto cksum = '"' + mxs::checksum<mxs::SHA1Checksum>(str) + '"';

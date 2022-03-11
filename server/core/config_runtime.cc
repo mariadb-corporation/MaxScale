@@ -35,6 +35,7 @@
 #include <maxscale/paths.hh>
 #include <maxscale/router.hh>
 #include <maxscale/users.hh>
+#include <maxbase/format.hh>
 
 #include "internal/adminusers.hh"
 #include "internal/config.hh"
@@ -62,6 +63,13 @@ typedef std::pair<const char*, JsonValidator>                        Relationshi
 
 namespace
 {
+
+struct ThisUnit
+{
+    std::vector<std::string> warnings;
+};
+
+static ThisUnit this_unit;
 
 const char CN_DEFAULT[] = "default";
 
@@ -1705,6 +1713,19 @@ void config_runtime_add_error(const std::string& error)
     runtime_errmsg.push_back(error);
 }
 
+void runtime_add_warning(const std::string& warning)
+{
+    this_unit.warnings.push_back(warning);
+}
+
+std::string runtime_get_warnings()
+{
+    // We're really only expecting one warning per request
+    auto rval = mxb::join(this_unit.warnings, ";");
+    this_unit.warnings.clear();
+    return rval;
+}
+
 json_t* runtime_get_json_error()
 {
     json_t* obj = NULL;
@@ -2561,6 +2582,14 @@ bool runtime_remove_config(const char* name)
         rval = false;
     }
 
+    if (mxs::Config::is_static_object(name))
+    {
+        auto msg = mxb::string_printf("Object '%s' is defined in a static configuration file and "
+                                      "cannot be permanently deleted. If MaxScale is restarted, "
+                                      "the object will appear again.", name);
+        runtime_add_warning(msg);
+    }
+
     return rval;
 }
 
@@ -2602,11 +2631,17 @@ bool runtime_save_config(const char* name, const std::string& config)
         }
         else
         {
-            if (new_file && mxs::Config::is_static_object(name))
+            if (mxs::Config::get().load_persisted_configs && mxs::Config::is_static_object(name))
             {
-                MXS_WARNING("Runtime modification to '%s' was saved in '%s'. "
-                            "The static configuration for this object will be ignored.",
-                            name, final_filename.c_str());
+                auto msg = mxb::string_printf("Runtime modification to '%s' was saved in '%s'. "
+                                              "The static configuration for this object will be ignored.",
+                                              name, final_filename.c_str());
+                runtime_add_warning(msg);
+
+                if (new_file)
+                {
+                    MXS_WARNING("%s", msg.c_str());
+                }
             }
 
             rval = true;
