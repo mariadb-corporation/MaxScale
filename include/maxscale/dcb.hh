@@ -281,6 +281,7 @@ public:
 
     /**
      * Same as above, with the difference that at most maxbytes (minus existing readq) is read from socket.
+     * Should only be used in special situations. Will not self-trigger reads if more data may be available.
      */
     std::tuple<bool, GWBUF> read_strict(size_t minbytes, size_t maxbytes);
 
@@ -399,6 +400,8 @@ public:
 
     /**
      * Prepend a buffer to the DCB's readqueue. Effectively unreads data so it may be read again.
+     * The caller should call 'trigger_read_event' afterwards if the remaining data can be processed right
+     * after. Care needs to be taken to avoid an endless loop.
      *
      * @param buffer The buffer to prepend
      */

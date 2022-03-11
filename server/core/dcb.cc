@@ -276,6 +276,7 @@ std::tuple<bool, GWBUF> DCB::read_impl(size_t minbytes, size_t maxbytes, ReadLim
     mxb_assert(maxbytes >= minbytes || maxbytes == 0);
 
     bool read_success = false;
+    bool trigger_again = false;
     if (m_encryption.state == SSLState::ESTABLISHED)
     {
         mxb_assert(limit_type == ReadLimit::RES_LEN);
@@ -288,9 +289,11 @@ std::tuple<bool, GWBUF> DCB::read_impl(size_t minbytes, size_t maxbytes, ReadLim
     {
         if (maxbytes > 0 && m_readq.length() >= maxbytes)
         {
-            // Already have enough data. May have more, so read again later.
+            // Already have enough data. May have more (either in readq or in socket), so read again later.
+            // Should not happen on first read (strict limit).
+            mxb_assert(limit_type == ReadLimit::RES_LEN);
             read_success = true;
-            trigger_read_event();
+            trigger_again = true;
         }
         else
         {
@@ -310,11 +313,27 @@ std::tuple<bool, GWBUF> DCB::read_impl(size_t minbytes, size_t maxbytes, ReadLim
         auto readq_len = m_readq.length();
         if (maxbytes > 0 && readq_len >= maxbytes)
         {
-            rval_buf = m_readq.split(maxbytes);
+            // Maxbytes-limit is in effect.
+            if (readq_len > maxbytes)
+            {
+                // Readq has data left after this read, must read again.
+                trigger_again = true;
+                rval_buf = m_readq.split(maxbytes);
+            }
+            else
+            {
+                // If socket has data left, a read has already been scheduled by a lower level function.
+                rval_buf = move(m_readq);
+            }
         }
         else if ((minbytes > 0 && readq_len >= minbytes) || (minbytes == 0 && readq_len > 0))
         {
             rval_buf = move(m_readq);
+        }
+
+        if (trigger_again)
+        {
+            trigger_read_event();
         }
     }
     return {rval_ok, move(rval_buf)};
@@ -465,10 +484,9 @@ bool DCB::basic_read(size_t maxbytes, ReadLimit limit_type)
         {
             m_last_read = mxs_clock();      // Empty reads do not delay idle status.
         }
-        if (!socket_cleared)
+        if (!socket_cleared && !strict_limit)
         {
-            // TODO: uncomment the next line once protocol code handles it properly.
-            // trigger_read_event();   // Edge-triggered, so add to ready list.
+            trigger_read_event();   // Edge-triggered, so add to ready list as more data may be available.
         }
     }
     return success;

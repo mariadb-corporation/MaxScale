@@ -522,8 +522,19 @@ bool UserEntry::host_pattern_is_more_specific(const UserEntry& lhs, const UserEn
 std::tuple<bool, GWBUF> mariadb::read_protocol_packet(DCB* dcb)
 {
     const int MAX_PACKET_SIZE = MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN;
-    // TODO: add read_peek once trigger_read_event issue fixed.
-    auto [read_ok, buffer] = dcb->read(MYSQL_HEADER_LEN, MAX_PACKET_SIZE);
+
+    size_t bytes_to_read;
+    uint8_t header_data[MYSQL_HEADER_LEN];
+    if (dcb->readq_peek(MYSQL_HEADER_LEN, header_data) == MYSQL_HEADER_LEN)
+    {
+        bytes_to_read = mariadb::get_packet_length(header_data);
+    }
+    else
+    {
+        bytes_to_read = MAX_PACKET_SIZE;
+    }
+
+    auto [read_ok, buffer] = dcb->read(MYSQL_HEADER_LEN, bytes_to_read);
 
     if (!buffer.empty())
     {
@@ -544,13 +555,7 @@ std::tuple<bool, GWBUF> mariadb::read_protocol_packet(DCB* dcb)
         }
         else if (prot_packet_len == buffer_len)
         {
-            // Read exact packet. Return it. TODO: remove this when possible
-            if (buffer_len == MAX_PACKET_SIZE && dcb->socket_bytes_readable() > 0)
-            {
-                // Read a maximally long packet when socket has even more. Route this packet,
-                // then read again.
-                dcb->trigger_read_event();
-            }
+            // Read exact packet. Return it.
         }
         else
         {
