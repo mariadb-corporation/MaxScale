@@ -623,6 +623,7 @@ json_t* Listener::to_json(const char* host) const
 
     json_t* attr = json_object();
     json_object_set_new(attr, CN_STATE, json_string(state()));
+    json_object_set_new(attr, CN_SOURCE, mxs::Config::object_source_to_json(name()));
 
     auto& protocol_module = m_shared_data->m_proto_module;
 

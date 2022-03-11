@@ -1227,6 +1227,8 @@ json_t* service_attributes(const char* host, const SERVICE* svc)
     // the service attributes for backwards compatibility.
     json_object_set_new(attr, "statistics", service->stats().to_json());
 
+    json_object_set_new(attr, CN_SOURCE, mxs::Config::object_source_to_json(svc->name()));
+
     /** Add service parameters and listeners */
     json_t* params = service_parameters_to_json(service);
 

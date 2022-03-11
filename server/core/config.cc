@@ -638,6 +638,15 @@ struct ThisUnit
 
     // The set of objects that were read from the configuration files
     std::set<std::string> static_objects {"maxscale"};
+
+    // The objects that were created at runtime or read from persisted configuration files
+    std::set<std::string> dynamic_objects;
+
+    // The names of all objects mapped to the source file they were read from.
+    std::map<std::string, std::string> source_files;
+
+    // The current file being processed, only valid inside the ini_parse handler.
+    std::string current_file;
 } this_unit;
 
 void reconnect_config_manager(const std::string& ignored)
@@ -854,6 +863,32 @@ Config& Config::get()
 bool Config::is_static_object(const std::string& name)
 {
     return this_unit.static_objects.find(name) != this_unit.static_objects.end();
+}
+
+// static
+bool Config::is_dynamic_object(const std::string& name)
+{
+    return this_unit.dynamic_objects.find(name) != this_unit.dynamic_objects.end()
+           || !is_static_object(name);
+}
+
+// static
+void Config::set_object_source_file(const std::string& name, const std::string& file)
+{
+    this_unit.source_files[name] = file;
+}
+
+// static
+json_t* Config::object_source_to_json(const std::string& name)
+{
+    json_t* obj = json_object();
+
+    // We expect the file to be there but in case it isn't, use the bracket operator to be safe.
+    mxb_assert(this_unit.source_files.find(name) != this_unit.source_files.end());
+    json_object_set_new(obj, "file", json_string(this_unit.source_files[name].c_str()));
+    json_object_set_new(obj, "type", json_string(is_dynamic_object(name) ? "runtime" : "static"));
+
+    return obj;
 }
 
 bool Config::configure(const mxs::ConfigParameters& params, mxs::ConfigParameters* pUnrecognized)
@@ -1514,6 +1549,8 @@ static int ini_handler(void* userdata, const char* section, const char* name, co
         }
     }
 
+    mxs::Config::set_object_source_file(ptr->m_name, this_unit.current_file);
+
     if (ptr && !ptr->m_was_persisted && this_unit.is_persisted_config)
     {
         MXS_WARNING("Found static and runtime configurations for [%s], ignoring static "
@@ -1606,6 +1643,8 @@ bool config_load_single_file(const char* file,
 
     if (!config_has_duplicate_sections(file, dcontext))
     {
+        this_unit.current_file = file;
+
         if ((rval = ini_parse(file, ini_handler, ccontext)) != 0)
         {
             log_config_error(file, rval);
@@ -1948,6 +1987,14 @@ static bool config_load_and_process(const char* filename, bool (* process_config
                 {
                     rval = config_load_dir(persist_cnf, &p_dcontext, &this_unit.config_context);
                     duplicate_context_finish(&p_dcontext);
+
+                    for (CONFIG_CONTEXT* obj = &this_unit.config_context; obj; obj = obj->m_next)
+                    {
+                        if (obj->m_was_persisted)
+                        {
+                            this_unit.dynamic_objects.insert(obj->m_name);
+                        }
+                    }
                 }
                 else
                 {
@@ -1980,6 +2027,10 @@ static bool config_load_and_process(const char* filename, bool (* process_config
 
 bool config_load_global(const char* filename)
 {
+    // This isn't technically needed as there's only one static file that can have the [maxscale] section but
+    // it keeps the behavior consistent.
+    this_unit.current_file = filename;
+
     mxs::ConfigParameters params;
     bool rval = (ini_parse(filename, ini_global_handler, &params) == 0);
 

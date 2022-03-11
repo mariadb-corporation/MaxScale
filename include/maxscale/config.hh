@@ -56,6 +56,33 @@ public:
      */
     static bool is_static_object(const std::string& name);
 
+    /**
+     * Check if an object was created at runtime or read from a persisted configuration file
+     *
+     * @param name Name of the object
+     *
+     * @return True if an object with the given name was created at runtime or read from a persisted
+     *         configuration file
+     */
+    static bool is_dynamic_object(const std::string& name);
+
+    /**
+     * Set the file where the object is stored in
+     *
+     * @param name The object name
+     * @param file The file where the object is stored in
+     */
+    static void set_object_source_file(const std::string& name, const std::string& file);
+
+    /**
+     * Get object source type and file as a JSON object
+     *
+     * @param name Name of the object
+     *
+     * @return A JSON object that contains the source type and the file the object was read from
+     */
+    static json_t* object_source_to_json(const std::string& name);
+
     class ParamUsersRefreshTime : public config::ParamSeconds
     {
     public:

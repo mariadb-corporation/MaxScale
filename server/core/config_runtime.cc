@@ -2631,16 +2631,21 @@ bool runtime_save_config(const char* name, const std::string& config)
         }
         else
         {
-            if (mxs::Config::get().load_persisted_configs && mxs::Config::is_static_object(name))
+            if (mxs::Config::get().load_persisted_configs)
             {
-                auto msg = mxb::string_printf("Runtime modification to '%s' was saved in '%s'. "
-                                              "The static configuration for this object will be ignored.",
-                                              name, final_filename.c_str());
-                runtime_add_warning(msg);
+                mxs::Config::set_object_source_file(name, final_filename);
 
-                if (new_file)
+                if (mxs::Config::is_static_object(name))
                 {
-                    MXS_WARNING("%s", msg.c_str());
+                    auto msg = mxb::string_printf("Runtime modification to '%s' was saved in '%s'. "
+                                                  "The static configuration for this object will be ignored.",
+                                                  name, final_filename.c_str());
+                    runtime_add_warning(msg);
+
+                    if (new_file)
+                    {
+                        MXS_WARNING("%s", msg.c_str());
+                    }
                 }
             }
 
