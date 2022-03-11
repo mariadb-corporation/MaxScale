@@ -209,6 +209,7 @@ export default {
                 .attr('class', 'link_line')
                 .attr('fill', 'none')
                 .attr('stroke-width', 2.5)
+                .attr('stroke-dasharray', '5')
                 .attr('stroke', d => {
                     let color = this.colorizingLinkFn(d) || '#0e9bc0'
                     return color
