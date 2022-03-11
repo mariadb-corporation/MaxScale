@@ -186,7 +186,23 @@ export default {
             let linkGroupEnter = linkGroup
                 .enter()
                 .insert('g', 'g.node-rect-group') // insert after .node-rect-group
-                .attr('class', 'link-group')
+                .attr('class', 'link-group pointer')
+                .style('opacity', 0.5)
+                .on('mouseover', function() {
+                    d3Select(this)
+                        .style('opacity', 1)
+                        .style('z-index', 10)
+                        .select('path.link_line')
+                        .attr('stroke-dasharray', null)
+                })
+                .on('mouseout', function() {
+                    d3Select(this)
+                        .style('opacity', 0.5)
+                        .style('z-index', 'unset')
+                        .select('path.link_line')
+                        .attr('stroke-dasharray', '5')
+                })
+
             linkGroupEnter
                 .append('path')
                 .attr('class', 'link_line')
