@@ -103,7 +103,7 @@ export default {
                 .sugiyama() // base layout
                 .layering(d3d.layeringSimplex())
                 .decross(d3d.decrossTwoLayer()) // minimize number of crossings
-                .coord(d3d.coordCenter())
+                .coord(d3d.coordGreedy())
                 .nodeSize(() => [this.nodeSize.width * 1.2, this.nodeSize.height * 1.5])
 
             const { width, height } = this.layout(this.dag)
