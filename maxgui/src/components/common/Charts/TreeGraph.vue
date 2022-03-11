@@ -326,52 +326,6 @@ export default {
             }
             this.update(node)
         },
-        drawNodes({ srcNode, nodes }) {
-            // ****************** Nodes drawing transition ***************************
-            // Declare the nodes…
-            let node = this.svgGroup
-                .selectAll('g.node')
-                .data(nodes, node => (node.id = node.data.name))
-            // Enter any new nodes at the parent's previous position.
-            let nodeEnter = node
-                .enter()
-                .append('g')
-                .attr('class', 'node')
-                .attr('data-node-id', n => n.id)
-                // use srcNode.y as x for translate to make horizontal graph
-                .attr('transform', () => `translate(${srcNode.y0},${srcNode.x0})`)
-                .on('click', (e, n) => {
-                    e.stopPropagation()
-                    this.onNodeClick(n)
-                })
-
-            nodeEnter
-                .append('g')
-                .append('rect')
-                .attr('width', this.nodeSize.width)
-                .attr('height', this.nodeSize.height)
-                .attr('class', 'node-rect')
-                .style('visibility', 'hidden')
-
-            // On node update
-            let nodeUpdate = nodeEnter.merge(node)
-            // Transition to the proper position for the node
-            nodeUpdate
-                .transition()
-                .duration(this.duration)
-                .attr('transform', d => `translate(${d.y},${d.x})`)
-
-            // Update the node attributes and style
-            nodeUpdate
-                .select('rect')
-                .attr('width', this.nodeSize.width)
-                .attr('height', this.nodeSize.height)
-            node.exit()
-                .transition()
-                .duration(this.duration)
-                .attr('transform', () => `translate(${srcNode.y},${srcNode.x})`)
-                .remove()
-        },
         drawLinks({ srcNode, links }) {
             // Update the links...
             let linkGroup = this.svgGroup.selectAll('.link-group').data(links, d => d.id)
@@ -497,8 +451,8 @@ export default {
             // Normalize for fixed-depth.
             nodes.forEach(node => {
                 node.y = node.depth * (this.nodeSize.width * 1.5)
+                node.id = node.data.name
             })
-            this.drawNodes({ srcNode, nodes })
             this.drawLinks({ srcNode, links })
             // Store the old positions for transition.
             nodes.forEach(d => {

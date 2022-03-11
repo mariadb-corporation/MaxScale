@@ -71,10 +71,8 @@ export default {
         data: {
             deep: true,
             handler(v) {
-                if (v.length) {
-                    this.computeLayout(v)
-                    this.update()
-                }
+                this.computeLayout(v)
+                this.update()
             },
         },
         dynNodeHeightMap: {
@@ -152,7 +150,6 @@ export default {
                     else p.y = p.y - this.getDynNodeSize(d.target).height / 2
                 })
             })
-            this.drawNodes(nodes)
             this.drawLinks(links)
             this.nodeDivData = nodes
             if (this.dynNodeHeight) this.$nextTick(() => this.computeDynNodeHeight())
@@ -163,39 +160,6 @@ export default {
             rectNode.forEach(node => (heightMap[node.getAttribute('node_id')] = node.clientHeight))
             if (!this.$help.lodash.isEqual(this.dynNodeHeightMap, heightMap))
                 this.dynNodeHeightMap = heightMap
-        },
-        drawNodes(data) {
-            let nodes = this.svgGroup.selectAll('g.node-rect-group').data(data)
-            // Enter any new nodes at the parent's previous position.
-            let nodeEnter = nodes
-                .enter()
-                .append('g')
-                .attr('class', 'node-rect-group')
-                .attr('transform', d => `translate(${d.x}, ${d.y})`)
-            nodeEnter
-                .append('rect')
-                .attr('width', d => this.getDynNodeSize(d).width)
-                .attr('height', d => this.getDynNodeSize(d).height)
-                .attr('class', 'node__rect')
-                .style('visibility', 'hidden')
-
-            // On node update, get dynamic nodeSize
-            let nodeUpdate = nodeEnter.merge(nodes)
-            nodeUpdate
-                .transition()
-                .duration(this.duration)
-                .attr('transform', d => `translate(${d.x}, ${d.y})`)
-            nodeUpdate
-                .select('rect')
-                .attr('width', d => this.getDynNodeSize(d).width)
-                .attr('height', d => this.getDynNodeSize(d).height)
-            // node exit
-            nodes
-                .exit()
-                .transition()
-                .duration(this.duration)
-                .attr('transform', d => `translate(${d.x}, ${d.y})`)
-                .remove()
         },
         /**
          * Creates a polyline between nodes where it draws from the source point
