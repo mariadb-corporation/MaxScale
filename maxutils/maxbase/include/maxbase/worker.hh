@@ -331,8 +331,24 @@ public:
             return m_pWorker->dcall(this, delay, pMethod, pT);
         }
 
+        template<class T>
+        DCId dcall(const std::chrono::milliseconds& delay,
+                   bool (T::* pMethod)(),
+                   T* pT)
+        {
+            mxb_assert(m_pWorker);
+            return m_pWorker->dcall(this, delay, pMethod, pT);
+        }
+
         DCId dcall(const std::chrono::milliseconds& delay,
                    std::function<bool(Call::action_t action)>&& f)
+        {
+            mxb_assert(m_pWorker);
+            return m_pWorker->dcall(this, delay, std::move(f));
+        }
+
+        DCId dcall(const std::chrono::milliseconds& delay,
+                   std::function<bool()>&& f)
         {
             mxb_assert(m_pWorker);
             return m_pWorker->dcall(this, delay, std::move(f));
@@ -792,6 +808,17 @@ public:
     template<class T>
     DCId dcall(const std::chrono::milliseconds& delay,
                bool (T::* pMethod)(Worker::Call::action_t action),
+               T* pT)
+    {
+        static_assert(std::is_base_of_v<Object, T>,
+                      "If a specific owner is not provided as first argument, the call object "
+                      "must be derived from Worker::Object.");
+        return dcall(pT, delay, pMethod, pT);
+    }
+
+    template<class T>
+    DCId dcall(const std::chrono::milliseconds& delay,
+               bool (T::* pMethod)(),
                T* pT)
     {
         static_assert(std::is_base_of_v<Object, T>,
