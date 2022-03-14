@@ -31,6 +31,7 @@ export const countBy = require('lodash/countBy')
 export const keyBy = require('lodash/keyBy')
 export const values = require('lodash/values')
 export const mergeWith = require('lodash/mergeWith')
+export const camelCase = require('lodash/camelCase')
 export const lodash = {
     isEmpty,
     cloneDeep,
@@ -48,6 +49,7 @@ export const lodash = {
     countBy,
     keyBy,
     values,
+    camelCase,
 }
 
 export function isNull(v) {

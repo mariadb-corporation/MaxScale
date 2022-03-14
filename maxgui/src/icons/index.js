@@ -10,134 +10,23 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import AlertWarning from 'icons/AlertWarning'
-import AlertSuccess from 'icons/AlertSuccess'
-import AlertError from 'icons/AlertError'
-import ArrowDown from 'icons/ArrowDown'
-import Close from 'icons/Close'
-import Database from 'icons/Database'
-import Delete from 'icons/Delete'
-import Drain from 'icons/Drain'
-import Edit from 'icons/Edit'
-import Filter from 'icons/Filter.vue'
-import NotFound from 'icons/NotFound'
-import Logs from 'icons/Logs'
-import Paused from 'icons/Paused'
-import QueryEditor from 'icons/QueryEditor'
-import Reports from 'icons/Reports'
-import Restart from 'icons/Restart'
-import Reload from 'icons/Reload'
-import Running from 'icons/Running'
-import Search from 'icons/Search'
-import Server from 'icons/Server'
-import Settings from 'icons/Settings'
-import StatusError from 'icons/StatusError'
-import StatusInfo from 'icons/StatusInfo'
-import StatusOk from 'icons/StatusOk'
-import StatusWarning from 'icons/StatusWarning'
-import Stopped from 'icons/Stopped'
-import StoredProcedures from 'icons/StoredProcedures'
-import Tachometer from 'icons/Tachometer'
-import Table from 'icons/Table'
-import Unlink from 'icons/Unlink'
-import User from 'icons/User'
-import GridBg from 'icons/GridBg'
+import { camelCase } from 'utils/helpers'
+let icons = {}
+const req = require.context(
+    // The relative path of the components folder
+    './',
+    // Whether or not to look in subfolders
+    false,
+    /\.(vue)$/i
+)
+req.keys().forEach(fileName => {
+    const name = camelCase(
+        fileName
+            .split('/')
+            .pop()
+            .replace(/\.\w+$/, '')
+    )
+    icons[name] = { component: req(fileName).default }
+})
 
-export default {
-    alertWarning: {
-        component: AlertWarning,
-    },
-    alertSuccess: {
-        component: AlertSuccess,
-    },
-    alertError: {
-        component: AlertError,
-    },
-    arrowDown: {
-        component: ArrowDown,
-    },
-    close: {
-        component: Close,
-    },
-    database: {
-        component: Database,
-    },
-    delete: {
-        component: Delete,
-    },
-    drain: {
-        component: Drain,
-    },
-    edit: {
-        component: Edit,
-    },
-    filter: {
-        component: Filter,
-    },
-    notFound: {
-        component: NotFound,
-    },
-    gridBg: {
-        component: GridBg,
-    },
-    logs: {
-        component: Logs,
-    },
-    paused: {
-        component: Paused,
-    },
-    queryEditor: {
-        component: QueryEditor,
-    },
-    reports: {
-        component: Reports,
-    },
-    restart: {
-        component: Restart,
-    },
-    reload: {
-        component: Reload,
-    },
-    running: {
-        component: Running,
-    },
-    search: {
-        component: Search,
-    },
-    server: {
-        component: Server,
-    },
-    settings: {
-        component: Settings,
-    },
-    statusError: {
-        component: StatusError,
-    },
-    statusInfo: {
-        component: StatusInfo,
-    },
-    statusOk: {
-        component: StatusOk,
-    },
-    statusWarning: {
-        component: StatusWarning,
-    },
-    stopped: {
-        component: Stopped,
-    },
-    storedProcedures: {
-        component: StoredProcedures,
-    },
-    tachometer: {
-        component: Tachometer,
-    },
-    table: {
-        component: Table,
-    },
-    unlink: {
-        component: Unlink,
-    },
-    user: {
-        component: User,
-    },
-}
+export default icons
