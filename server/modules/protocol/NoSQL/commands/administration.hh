@@ -269,16 +269,13 @@ private:
         m_action = Action::CREATING_DATABASE;
 
         mxb_assert(m_dcid == 0);
-        m_dcid = session().dcall(0ms, [this](Worker::Call::action_t action) {
+        m_dcid = session().dcall(0ms, [this]() {
                 m_dcid = 0;
 
-                if (action == Worker::Call::EXECUTE)
-                {
-                    ostringstream ss;
-                    ss << "CREATE DATABASE `" << m_database.name() << "`";
+                ostringstream ss;
+                ss << "CREATE DATABASE `" << m_database.name() << "`";
 
-                    send_downstream(ss.str());
-                }
+                send_downstream(ss.str());
 
                 return false;
             });
@@ -290,15 +287,11 @@ private:
         m_action = Action::CREATING_TABLE;
 
         mxb_assert(m_dcid == 0);
-        m_dcid = session().dcall(0ms, [this](Worker::Call::action_t action) {
+        m_dcid = session().dcall(0ms, [this]() {
                 m_dcid = 0;
 
-                if (action == Worker::Call::EXECUTE)
-                {
-                    auto statement = nosql::table_create_statement(table(), m_database.config().id_length);
-
-                    send_downstream(statement);
-                }
+                auto statement = nosql::table_create_statement(table(), m_database.config().id_length);
+                send_downstream(statement);
 
                 return false;
             });
@@ -519,16 +512,13 @@ public:
         m_action = Action::CREATING_DATABASE;
 
         mxb_assert(m_dcid == 0);
-        m_dcid = session().dcall(0ms, [this](Worker::Call::action_t action) {
+        m_dcid = session().dcall(0ms, [this]() {
                 m_dcid = 0;
 
-                if (action == Worker::Call::EXECUTE)
-                {
-                    ostringstream ss;
-                    ss << "CREATE DATABASE `" << m_database.name() << "`";
+                ostringstream ss;
+                ss << "CREATE DATABASE `" << m_database.name() << "`";
 
-                    send_downstream(ss.str());
-                }
+                send_downstream(ss.str());
 
                 return false;
             });
@@ -540,13 +530,10 @@ public:
         m_action = Action::CREATING_TABLE;
 
         mxb_assert(m_dcid == 0);
-        m_dcid = session().dcall(0ms, [this](Worker::Call::action_t action) {
+        m_dcid = session().dcall(0ms, [this]() {
                 m_dcid = 0;
 
-                if (action == Worker::Call::EXECUTE)
-                {
-                    send_downstream(m_statement);
-                }
+                send_downstream(m_statement);
 
                 return false;
             });

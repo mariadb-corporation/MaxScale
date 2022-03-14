@@ -154,13 +154,8 @@ bool WebSocket::send()
     return res != ERROR;
 }
 
-bool WebSocket::delayed_send(mxb::Worker::Call::action_t action)
+bool WebSocket::delayed_send()
 {
-    if (action == mxb::Worker::Call::CANCEL)
-    {
-        return false;
-    }
-
     bool rval = send();
 
     if (!rval)

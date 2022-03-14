@@ -461,16 +461,13 @@ bool Pinloki::is_slave_running() const
     return m_writer.get();
 }
 
-bool Pinloki::update_details(mxb::Worker::Call::action_t action)
+bool Pinloki::update_details()
 {
-    if (action == mxb::Worker::Call::EXECUTE)
-    {
-        std::lock_guard<std::mutex> guard(m_lock);
+    std::lock_guard<std::mutex> guard(m_lock);
 
-        if (m_writer)
-        {
-            m_writer->set_connection_details(generate_details());
-        }
+    if (m_writer)
+    {
+        m_writer->set_connection_details(generate_details());
     }
 
     return true;
@@ -836,13 +833,8 @@ PurgeResult purge_binlogs(InventoryWriter* pInventory, const std::string& up_to)
     return PurgeResult::Ok;
 }
 
-bool Pinloki::purge_old_binlogs(mxb::Worker::Call::action_t action)
+bool Pinloki::purge_old_binlogs()
 {
-    if (action == mxb::Worker::Call::CANCEL)
-    {
-        return false;
-    }
-
     auto now = wall_time::Clock::now();
     auto purge_before = now - config().expire_log_duration();
     const auto& file_names = m_inventory.file_names();

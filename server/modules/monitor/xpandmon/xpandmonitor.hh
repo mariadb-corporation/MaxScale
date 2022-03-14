@@ -125,7 +125,7 @@ private:
 
     void make_health_check();
     void initiate_delayed_http_check();
-    bool check_http(Call::action_t action);
+    bool check_http();
     void update_http_urls();
 
     bool perform_softfail(SERVER* pServer, json_t** ppError);

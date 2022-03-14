@@ -963,7 +963,7 @@ private:
     bool pre_run() override final;
     void post_run() override final;
 
-    bool call_run_one_tick(Worker::Call::action_t action);
+    bool call_run_one_tick();
     void run_one_tick();
 };
 

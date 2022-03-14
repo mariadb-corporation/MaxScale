@@ -117,7 +117,7 @@ private:
     int                  inspect_mapping_states(SRBackend* bref, GWBUF** wbuf);
     enum showdb_response parse_mapping_response(SRBackend* bref, GWBUF** buffer);
     void                 route_queued_query();
-    bool                 delay_routing(mxb::Worker::Call::action_t action);
+    bool                 delay_routing();
     void                 synchronize_shards();
     void                 handle_mapping_reply(SRBackend* bref, GWBUF** pPacket);
     std::string          get_cache_key() const;

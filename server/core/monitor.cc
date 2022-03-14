@@ -2143,34 +2143,32 @@ void MonitorWorker::post_run()
     mysql_thread_end();
 }
 
-bool MonitorWorker::call_run_one_tick(Worker::Call::action_t action)
+bool MonitorWorker::call_run_one_tick()
 {
     /** This is both the minimum sleep between two ticks and also the maximum time between early
      *  wakeup checks. */
     const int base_interval_ms = 100;
-    if (action == Worker::Call::EXECUTE)
+    int64_t now = get_time_ms();
+    // Enough time has passed,
+    if ((now - m_loop_called > settings().interval.count())
+        // or a server status change request is waiting,
+        || server_status_request_waiting()
+        // or a monitor-specific condition is met.
+        || immediate_tick_required())
     {
-        int64_t now = get_time_ms();
-        // Enough time has passed,
-        if ((now - m_loop_called > settings().interval.count())
-            // or a server status change request is waiting,
-            || server_status_request_waiting()
-            // or a monitor-specific condition is met.
-            || immediate_tick_required())
-        {
-            m_loop_called = now;
-            run_one_tick();
-            now = get_time_ms();
-        }
-
-        int64_t ms_to_next_call = settings().interval.count() - (now - m_loop_called);
-        // ms_to_next_call will be negative, if the run_one_tick() call took
-        // longer than one monitor interval.
-        int64_t delay = ((ms_to_next_call <= 0) || (ms_to_next_call >= base_interval_ms)) ?
-            base_interval_ms : ms_to_next_call;
-
-        dcall(&m_wobject, milliseconds(delay), &MonitorWorker::call_run_one_tick, this);
+        m_loop_called = now;
+        run_one_tick();
+        now = get_time_ms();
     }
+
+    int64_t ms_to_next_call = settings().interval.count() - (now - m_loop_called);
+    // ms_to_next_call will be negative, if the run_one_tick() call took
+    // longer than one monitor interval.
+    int64_t delay = ((ms_to_next_call <= 0) || (ms_to_next_call >= base_interval_ms)) ?
+        base_interval_ms : ms_to_next_call;
+
+    dcall(&m_wobject, milliseconds(delay), &MonitorWorker::call_run_one_tick, this);
+
     return false;
 }
 

@@ -910,32 +910,29 @@ void SchemaRouterSession::route_queued_query()
     session_delay_routing(m_pSession, this, tmp, 0);
 }
 
-bool SchemaRouterSession::delay_routing(mxb::Worker::Call::action_t action)
+bool SchemaRouterSession::delay_routing()
 {
     bool rv = false;
 
-    if (action == mxb::Worker::Call::EXECUTE)
-    {
-        mxb_assert(m_shard.empty());
-        m_shard = m_router->m_shard_manager.get_shard(m_key, m_config.refresh_interval.count());
+    mxb_assert(m_shard.empty());
+    m_shard = m_router->m_shard_manager.get_shard(m_key, m_config.refresh_interval.count());
 
-        if (!m_shard.empty())
-        {
-            MXS_INFO("Another session updated the shard information, reusing the result");
-            route_queued_query();
-            m_dcid = 0;
-        }
-        else if (m_router->m_shard_manager.start_update(m_key))
-        {
-            // No other sessions are doing an update, start our own update
-            query_databases();
-            m_dcid = 0;
-        }
-        else
-        {
-            // We're still waiting for an update from another session
-            rv = true;
-        }
+    if (!m_shard.empty())
+    {
+        MXS_INFO("Another session updated the shard information, reusing the result");
+        route_queued_query();
+        m_dcid = 0;
+    }
+    else if (m_router->m_shard_manager.start_update(m_key))
+    {
+        // No other sessions are doing an update, start our own update
+        query_databases();
+        m_dcid = 0;
+    }
+    else
+    {
+        // We're still waiting for an update from another session
+        rv = true;
     }
 
     return rv;

@@ -437,7 +437,7 @@ private:
     void evict_dcb(BackendDCB* pDcb);
     void close_pooled_dcb(BackendDCB* pDcb);
 
-    bool try_shutdown(Call::action_t action);
+    bool try_shutdown();
 
 private:
     Worker::Object m_wobject;   /*< Context for own dcalls */

@@ -532,25 +532,22 @@ void PinlokiSession::master_gtid_wait(const std::string& gtid, int timeout)
     auto target = mxq::GtidList::from_string(gtid);
     auto start = steady_clock::now();
 
-    auto cb = [this, start, target, timeout, header](auto action) {
+    auto cb = [this, start, target, timeout, header]() {
             bool again = false;
 
-            if (action == mxb::Worker::Call::EXECUTE)
+            if (m_router->gtid_io_pos().is_included(target))
             {
-                if (m_router->gtid_io_pos().is_included(target))
-                {
-                    send(create_resultset({header}, {"0"}));
-                    m_mgw_dcid = 0;
-                }
-                else if (duration_cast<seconds>(steady_clock::now() - start).count() > timeout)
-                {
-                    send(create_resultset({header}, {"-1"}));
-                    m_mgw_dcid = 0;
-                }
-                else
-                {
-                    again = true;
-                }
+                send(create_resultset({header}, {"0"}));
+                m_mgw_dcid = 0;
+            }
+            else if (duration_cast<seconds>(steady_clock::now() - start).count() > timeout)
+            {
+                send(create_resultset({header}, {"-1"}));
+                m_mgw_dcid = 0;
+            }
+            else
+            {
+                again = true;
             }
 
             return again;
@@ -558,7 +555,7 @@ void PinlokiSession::master_gtid_wait(const std::string& gtid, int timeout)
 
     if (target.is_valid())
     {
-        if (cb(mxb::Worker::Call::EXECUTE))
+        if (cb())
         {
             m_mgw_dcid = m_pSession->dcall(1000ms, cb);
         }

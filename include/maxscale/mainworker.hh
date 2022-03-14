@@ -109,11 +109,11 @@ private:
 
     static bool inc_ticks(Worker::Call::action_t action);
 
-    bool balance_workers_dc(Worker::Call::action_t action);
+    bool balance_workers_dc();
     void order_balancing_dc();
 
     // Waits until all RoutingWorkers have stopped and then stops the MainWorker
-    bool wait_for_shutdown(Worker::Call::action_t action);
+    bool wait_for_shutdown();
 
     Worker::Object    m_wobject;
     IndexedStorage    m_storage;

@@ -1574,22 +1574,19 @@ void RoutingWorker::start_shutdown()
               }, nullptr, EXECUTE_AUTO);
 }
 
-bool RoutingWorker::try_shutdown(Call::action_t action)
+bool RoutingWorker::try_shutdown()
 {
-    if (action == Call::EXECUTE)
-    {
-        pool_close_all_conns();
+    pool_close_all_conns();
 
-        if (m_sessions.empty())
+    if (m_sessions.empty())
+    {
+        shutdown();
+    }
+    else
+    {
+        for (const auto& s : m_sessions)
         {
-            shutdown();
-        }
-        else
-        {
-            for (const auto& s : m_sessions)
-            {
-                s.second->kill();
-            }
+            s.second->kill();
         }
     }
 

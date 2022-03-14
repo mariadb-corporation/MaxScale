@@ -1225,56 +1225,53 @@ void XpandMonitor::initiate_delayed_http_check()
     m_delayed_http_check_id = dcall(&m_wobject, milliseconds(ms), &XpandMonitor::check_http, this);
 }
 
-bool XpandMonitor::check_http(Call::action_t action)
+bool XpandMonitor::check_http()
 {
     m_delayed_http_check_id = 0;
 
-    if (action == Call::EXECUTE)
+    switch (m_http.perform())
     {
-        switch (m_http.perform())
+    case http::Async::PENDING:
+        initiate_delayed_http_check();
+        break;
+
+    case http::Async::READY:
         {
-        case http::Async::PENDING:
-            initiate_delayed_http_check();
-            break;
+            mxb_assert(m_health_urls == m_http.urls());
+            // There are as many responses as there are nodes,
+            // and the responses are in node order.
+            const vector<http::Response>& responses = m_http.responses();
+            mxb_assert(responses.size() == m_nodes_by_id.size());
 
-        case http::Async::READY:
+            auto it = m_nodes_by_id.begin();
+
+            for (const auto& response : responses)
             {
-                mxb_assert(m_health_urls == m_http.urls());
-                // There are as many responses as there are nodes,
-                // and the responses are in node order.
-                const vector<http::Response>& responses = m_http.responses();
-                mxb_assert(responses.size() == m_nodes_by_id.size());
+                bool running = (response.code == 200);      // HTTP OK
 
-                auto it = m_nodes_by_id.begin();
+                XpandNode& node = it->second;
 
-                for (const auto& response : responses)
+                node.set_running(running);
+
+                if (!running)
                 {
-                    bool running = (response.code == 200);      // HTTP OK
-
-                    XpandNode& node = it->second;
-
-                    node.set_running(running);
-
-                    if (!running)
+                    // We have to explicitly check whether the node is to be
+                    // considered down, as the value of `health_check_threshold`
+                    // defines how quickly a node should be considered down.
+                    if (!node.is_running())
                     {
-                        // We have to explicitly check whether the node is to be
-                        // considered down, as the value of `health_check_threshold`
-                        // defines how quickly a node should be considered down.
-                        if (!node.is_running())
-                        {
-                            // Ok, the node is down. Trigger a cluster check at next tick.
-                            trigger_cluster_check();
-                        }
+                        // Ok, the node is down. Trigger a cluster check at next tick.
+                        trigger_cluster_check();
                     }
-
-                    ++it;
                 }
-            }
-            break;
 
-        case http::Async::ERROR:
-            MXS_ERROR("%s: Health check waiting ended with general error.", name());
+                ++it;
+            }
         }
+        break;
+
+    case http::Async::ERROR:
+        MXS_ERROR("%s: Health check waiting ended with general error.", name());
     }
 
     return false;

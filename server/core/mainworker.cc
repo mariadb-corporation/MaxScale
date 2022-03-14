@@ -195,16 +195,11 @@ bool MainWorker::balance_workers(BalancingApproach approach, int threshold)
     return rebalanced;
 }
 
-bool MainWorker::balance_workers_dc(Worker::Call::action_t action)
+bool MainWorker::balance_workers_dc()
 {
-    bool rv = true;
+    balance_workers(BALANCE_ACCORDING_TO_PERIOD);
 
-    if (action == Worker::Call::EXECUTE)
-    {
-        balance_workers(BALANCE_ACCORDING_TO_PERIOD);
-    }
-
-    return rv;
+    return true;
 }
 
 void MainWorker::order_balancing_dc()
@@ -243,14 +238,11 @@ void MainWorker::start_shutdown()
     MainWorker::get()->execute(func, EXECUTE_QUEUED);
 }
 
-bool MainWorker::wait_for_shutdown(Call::action_t action)
+bool MainWorker::wait_for_shutdown()
 {
-    if (action == Call::EXECUTE)
+    if (RoutingWorker::shutdown_complete())
     {
-        if (RoutingWorker::shutdown_complete())
-        {
-            shutdown();
-        }
+        shutdown();
     }
 
     return true;

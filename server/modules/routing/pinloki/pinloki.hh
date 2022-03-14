@@ -78,11 +78,11 @@ public:
 private:
     Pinloki(SERVICE* pService);
 
-    bool update_details(mxb::Worker::Call::action_t action);
+    bool update_details();
 
     maxsql::Connection::ConnectionDetails generate_details();
 
-    bool        purge_old_binlogs(maxbase::Worker::Call::action_t action);
+    bool        purge_old_binlogs();
     std::string verify_master_settings();
 
     struct MasterConfig

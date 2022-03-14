@@ -1651,23 +1651,20 @@ void CacheFilterSession::ready_for_another_call()
     {
         Worker* pWorker = Worker::get_current();
 
-        m_did = m_pSession->dcall(0ms, [this](Worker::Call::action_t action) {
+        m_did = m_pSession->dcall(0ms, [this]() {
                 m_did = 0;
 
-                if (action == Worker::Call::EXECUTE)
+                // We may already be processing, if a packet arrived from the client
+                // and processed, before the delayed call got handled.
+                if (!m_processing)
                 {
-                    // We may already be processing, if a packet arrived from the client
-                    // and processed, before the delayed call got handled.
-                    if (!m_processing)
+                    if (!m_queued_packets.empty())
                     {
-                        if (!m_queued_packets.empty())
-                        {
-                            GWBUF* pPacket = m_queued_packets.front().release();
-                            mxb_assert(pPacket);
-                            m_queued_packets.pop_front();
+                        GWBUF* pPacket = m_queued_packets.front().release();
+                        mxb_assert(pPacket);
+                        m_queued_packets.pop_front();
 
-                            routeQuery(pPacket);
-                        }
+                        routeQuery(pPacket);
                     }
                 }
                 return false;

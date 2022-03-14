@@ -183,18 +183,11 @@ void ConfigManager::reconnect()
     m_reconnect = true;
 }
 
-bool ConfigManager::sync_callback(mxb::Worker::Call::action_t action)
+bool ConfigManager::sync_callback()
 {
-    if (action == mxb::Worker::Call::EXECUTE)
-    {
-        sync();
+    sync();
 
-        m_dcid = dcall(mxs::Config::get().config_sync_interval, &ConfigManager::sync_callback, this);
-    }
-    else
-    {
-        m_dcid = 0;
-    }
+    m_dcid = dcall(mxs::Config::get().config_sync_interval, &ConfigManager::sync_callback, this);
 
     return false;
 }

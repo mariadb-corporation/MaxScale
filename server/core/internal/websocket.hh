@@ -70,7 +70,7 @@ private:
     static void     close(WebSocket* ws);
 
     bool send();
-    bool delayed_send(mxb::Worker::Call::action_t action = mxb::Worker::Call::EXECUTE);
+    bool delayed_send();
 
     void   enqueue_frame(const std::string& data);
     Result drain();

@@ -46,10 +46,10 @@ public:
 private:
     static uint32_t epoll_update(struct mxb::POLL_DATA* data, mxb::WORKER* worker, uint32_t events);
     void            start_reading();
-    bool            poll_start_reading(mxb::Worker::Call::action_t action);
+    bool            poll_start_reading();
     void            notify_concrete_reader(uint32_t events);
 
-    bool generate_heartbeats(mxb::Worker::Call::action_t action);
+    bool generate_heartbeats();
 
     struct PollData : public mxb::POLL_DATA
     {

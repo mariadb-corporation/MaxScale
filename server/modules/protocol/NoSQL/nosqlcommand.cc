@@ -135,13 +135,10 @@ void Command::send_downstream_via_loop(const string& sql)
 {
     mxb_assert(m_dcid == 0);
 
-    m_dcid = session().dcall(0ms, [this, sql](Worker::Call::action_t action) {
+    m_dcid = session().dcall(0ms, [this, sql]() {
             m_dcid = 0;
 
-            if (action == Worker::Call::EXECUTE)
-            {
-                send_downstream(sql);
-            }
+            send_downstream(sql);
 
             return false;
         });

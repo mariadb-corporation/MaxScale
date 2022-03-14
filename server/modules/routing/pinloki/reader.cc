@@ -79,35 +79,32 @@ void Reader::start_reading()
     }
 }
 
-bool Reader::poll_start_reading(mxb::Worker::Call::action_t action)
+bool Reader::poll_start_reading()
 {
     // This version waits for ever.
     // Is there reason to timeout and send an error message?
     bool continue_poll = true;
-    if (action == mxb::Worker::Call::EXECUTE)
+    auto gtid_list = m_inventory.rpl_state();
+    if (gtid_list.is_included(maxsql::GtidList({m_start_gtid_list})))
     {
-        auto gtid_list = m_inventory.rpl_state();
-        if (gtid_list.is_included(maxsql::GtidList({m_start_gtid_list})))
-        {
-            MXB_SINFO("ReplSYNC: Primary synchronized, start file_reader");
+        MXB_SINFO("ReplSYNC: Primary synchronized, start file_reader");
 
-            try
-            {
-                start_reading();
-                continue_poll = false;
-            }
-            catch (const mxb::Exception& err)
-            {
-                MXS_ERROR("Failed to start reading: %s", err.what());
-            }
-        }
-        else
+        try
         {
-            if (m_timer.alarm())
-            {
-                MXB_SINFO("ReplSYNC: Reader waiting for primary to sync. "
-                          << "primary: " << gtid_list << ", replica: " << m_start_gtid_list);
-            }
+            start_reading();
+            continue_poll = false;
+        }
+        catch (const mxb::Exception& err)
+        {
+            MXS_ERROR("Failed to start reading: %s", err.what());
+        }
+    }
+    else
+    {
+        if (m_timer.alarm())
+        {
+            MXB_SINFO("ReplSYNC: Reader waiting for primary to sync. "
+                      << "primary: " << gtid_list << ", replica: " << m_start_gtid_list);
         }
     }
 
@@ -174,13 +171,12 @@ void Reader::send_events()
     }
 }
 
-bool Reader::generate_heartbeats(mxb::Worker::Call::action_t action)
+bool Reader::generate_heartbeats()
 {
     auto now = maxbase::Clock::now();
 
     // Only send heartbeats if the connection is idle
-    if (action == mxb::Worker::Call::EXECUTE
-        && !m_in_high_water
+    if (!m_in_high_water
         && now - m_last_event >= m_heartbeat_interval)
     {
         m_send_callback(m_sFile_reader->create_heartbeat_event());
