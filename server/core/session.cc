@@ -518,77 +518,40 @@ uint32_t session_get_session_trace()
     return this_unit.session_trace;
 }
 
-class DelayedRoutingTask
+void MXS_SESSION::delay_routing(GWBUF* buffer, int seconds, std::function<bool(GWBUF*)>&& fn)
 {
-    DelayedRoutingTask(const DelayedRoutingTask&) = delete;
-    DelayedRoutingTask& operator=(const DelayedRoutingTask&) = delete;
+    auto session = session_get_ref(this);
 
-public:
-    DelayedRoutingTask(MXS_SESSION* session, GWBUF* buffer, std::function<bool(GWBUF*)> fn)
-        : m_session(session_get_ref(session))
-        , m_buffer(buffer)
-        , m_fn(std::move(fn))
+    auto cb = [session, fn, buffer](mxb::Worker::Call::action_t action)
     {
-    }
-
-    ~DelayedRoutingTask()
-    {
-        session_put_ref(m_session);
-        gwbuf_free(m_buffer);
-    }
-
-    void execute()
-    {
-        if (m_session->state() == MXS_SESSION::State::STARTED)
+        if (action == mxb::Worker::Call::EXECUTE)
         {
-            mxb_assert(mxs::RoutingWorker::get_current() == m_session->worker());
-            GWBUF* buffer = m_buffer;
-            m_buffer = NULL;
-
             // Setting the current client DCB adds the session ID to the log messages
             DCB* old_dcb = dcb_get_current();
-            dcb_set_current(m_session->client_dcb);
+            dcb_set_current(session->client_dcb);
 
-            bool ok = m_fn(buffer);
+            bool ok = fn(buffer);
 
             dcb_set_current(old_dcb);
 
             if (!ok)
             {
                 // Routing failed, send a hangup to the client.
-                m_session->client_connection()->dcb()->trigger_hangup_event();
+                session->client_connection()->dcb()->trigger_hangup_event();
             }
         }
-    }
+        else
+        {
+            gwbuf_free(buffer);
+        }
 
-private:
-    MXS_SESSION*                m_session;
-    GWBUF*                      m_buffer;
-    std::function<bool(GWBUF*)> m_fn;
-};
+        session_put_ref(session);
+        return false;
+    };
 
-static bool delayed_routing_cb(Worker::Call::action_t action, DelayedRoutingTask* task)
-{
-    if (action == Worker::Call::EXECUTE)
-    {
-        task->execute();
-    }
-
-    delete task;
-
-    return false;
-}
-
-void MXS_SESSION::delay_routing(GWBUF* buffer, int seconds, std::function<bool(GWBUF*)>&& fn)
-{
-    Worker* worker = Worker::get_current();
-    mxb_assert(worker == client_connection()->dcb()->owner);
-
-    auto task = std::make_unique<DelayedRoutingTask>(this, buffer, std::move(fn));
-
-    // Delay the routing for at least a millisecond
     int32_t delay = 1 + seconds * 1000;
-    worker->dcall(this, std::chrono::milliseconds(delay), delayed_routing_cb, task.release());
+
+    dcall(std::chrono::milliseconds(delay), cb);
 }
 
 void MXS_SESSION::delay_routing(mxs::Routable* down, GWBUF* buffer, int seconds)
