@@ -30,12 +30,22 @@
             <div
                 v-for="(value, key) in nodeBody"
                 :key="key"
-                class="d-flex flex-row flex-grow-1"
+                class="d-flex flex-row flex-grow-1 align-center"
                 :style="{ lineHeight }"
             >
                 <span class="mr-2 font-weight-bold text-capitalize">
                     {{ key }}
                 </span>
+
+                <icon-sprite-sheet
+                    v-if="key === 'state'"
+                    size="13"
+                    class="status-icon mr-1"
+                    :frame="stateIconFrame(value)"
+                >
+                    status
+                </icon-sprite-sheet>
+
                 <truncate-string :text="`${value}`" />
             </div>
         </div>
@@ -70,7 +80,7 @@ export default {
         },
         headingColor() {
             const { SERVICES, SERVERS, MONITORS, FILTERS, LISTENERS } = this.RELATIONSHIP_TYPES
-            switch (this.node.data.type) {
+            switch (this.nodeType) {
                 case MONITORS:
                     return { bg: '#0E9BC0', txt: '#fff' }
                 case SERVERS:
@@ -88,9 +98,12 @@ export default {
         nodeData() {
             return this.node.data.nodeData
         },
+        nodeType() {
+            return this.node.data.type
+        },
         nodeBody() {
             const { SERVICES, SERVERS, MONITORS, FILTERS, LISTENERS } = this.RELATIONSHIP_TYPES
-            switch (this.node.data.type) {
+            switch (this.nodeType) {
                 case MONITORS: {
                     const { state, module } = this.nodeData.attributes
                     return { state, module }
@@ -131,6 +144,21 @@ export default {
                 }
                 default:
                     return {}
+            }
+        },
+    },
+    methods: {
+        stateIconFrame(value) {
+            const { SERVICES, SERVERS, MONITORS, LISTENERS } = this.RELATIONSHIP_TYPES
+            switch (this.nodeType) {
+                case MONITORS:
+                    return this.$help.monitorStateIcon(value)
+                case SERVERS:
+                    return this.$help.serverStateIcon(value)
+                case SERVICES:
+                    return this.$help.serviceStateIcon(value)
+                case LISTENERS:
+                    return this.$help.listenerStateIcon(value)
             }
         },
     },
