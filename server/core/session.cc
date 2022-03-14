@@ -579,22 +579,21 @@ static bool delayed_routing_cb(Worker::Call::action_t action, DelayedRoutingTask
     return false;
 }
 
-void session_delay_routing(MXS_SESSION* session, GWBUF* buffer, int seconds, std::function<bool(GWBUF*)> fn)
+void MXS_SESSION::delay_routing(GWBUF* buffer, int seconds, std::function<bool(GWBUF*)> fn)
 {
     Worker* worker = Worker::get_current();
-    mxb_assert(worker == session->client_connection()->dcb()->owner);
+    mxb_assert(worker == client_connection()->dcb()->owner);
 
-    auto task = std::make_unique<DelayedRoutingTask>(session, buffer, std::move(fn));
+    auto task = std::make_unique<DelayedRoutingTask>(this, buffer, std::move(fn));
 
     // Delay the routing for at least a millisecond
     int32_t delay = 1 + seconds * 1000;
-    worker->dcall(session, std::chrono::milliseconds(delay), delayed_routing_cb, task.release());
+    worker->dcall(this, std::chrono::milliseconds(delay), delayed_routing_cb, task.release());
 }
 
-void session_delay_routing(MXS_SESSION* session, mxs::Routable* down, GWBUF* buffer, int seconds)
+void MXS_SESSION::delay_routing(mxs::Routable* down, GWBUF* buffer, int seconds)
 {
-    session_delay_routing(
-        session, buffer, seconds, [down](GWBUF* buffer){
+    delay_routing(buffer, seconds, [down](GWBUF* buffer){
             return down->routeQuery(buffer);
         });
 }

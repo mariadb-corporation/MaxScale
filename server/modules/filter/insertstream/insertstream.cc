@@ -382,7 +382,7 @@ bool InsertStreamSession::clientReply(GWBUF* buffer, const mxs::ReplyRoute& down
             m_packet_num++;
         }
 
-        session_delay_routing(m_pSession, this, queue, 0);
+        m_pSession->delay_routing(this, queue, 0);
     }
     else
     {

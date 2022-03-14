@@ -69,8 +69,8 @@ void RWSplitSession::retry_query(GWBUF* querybuf, int delay)
     gwbuf_set_type(querybuf, GWBUF_TYPE_REPLAYED);
 
     // Route the query again later
-    session_delay_routing(
-        m_pSession, querybuf, delay, [this](GWBUF* buffer){
+    m_pSession->delay_routing(
+        querybuf, delay, [this](GWBUF* buffer){
             mxb_assert(m_pending_retries > 0);
             --m_pending_retries;
 
