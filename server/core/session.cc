@@ -579,7 +579,7 @@ static bool delayed_routing_cb(Worker::Call::action_t action, DelayedRoutingTask
     return false;
 }
 
-void MXS_SESSION::delay_routing(GWBUF* buffer, int seconds, std::function<bool(GWBUF*)> fn)
+void MXS_SESSION::delay_routing(GWBUF* buffer, int seconds, std::function<bool(GWBUF*)>&& fn)
 {
     Worker* worker = Worker::get_current();
     mxb_assert(worker == client_connection()->dcb()->owner);

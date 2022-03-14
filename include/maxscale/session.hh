@@ -383,7 +383,7 @@ public:
      * @param seconds Number of seconds to wait before routing the query. Use 0 for immediate re-routing.
      * @param fn      The function to call
      */
-    void delay_routing(GWBUF* buffer, int seconds, std::function<bool(GWBUF*)> fn);
+    void delay_routing(GWBUF* buffer, int seconds, std::function<bool(GWBUF*)>&& fn);
 
 protected:
     State                    m_state;   /**< Current descriptor state */
