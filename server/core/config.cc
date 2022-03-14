@@ -882,11 +882,41 @@ void Config::set_object_source_file(const std::string& name, const std::string& 
 json_t* Config::object_source_to_json(const std::string& name)
 {
     json_t* obj = json_object();
+    json_t* source_file = nullptr;
+    json_t* source_type = nullptr;
 
-    // We expect the file to be there but in case it isn't, use the bracket operator to be safe.
-    mxb_assert(this_unit.source_files.find(name) != this_unit.source_files.end());
-    json_object_set_new(obj, "file", json_string(this_unit.source_files[name].c_str()));
-    json_object_set_new(obj, "type", json_string(is_dynamic_object(name) ? "runtime" : "static"));
+    if (name.substr(0, 2) == "@@")
+    {
+        source_file = json_null();
+        source_type = json_string("volatile");
+    }
+    else if (!mxs::Config::get().config_sync_cluster.empty())
+    {
+        source_file = json_string(mxs::ConfigManager::get()->dynamic_config_filename().c_str());
+        source_type = json_string("cluster");
+    }
+    else if (mxs::Config::get().load_persisted_configs || is_static_object(name))
+    {
+        // We expect the file to be there but in case it isn't, use the bracket operator to be safe. This
+        // also covers the case where load_persisted_configs is disabled but the object was found in a static
+        // file.
+        mxb_assert(this_unit.source_files.find(name) != this_unit.source_files.end());
+        source_file = json_string(this_unit.source_files[name].c_str());
+        source_type = json_string(is_dynamic_object(name) ? "runtime" : "static");
+    }
+    else
+    {
+        // load_persisted_configs has been disabled which means we don't know if the object was modified, only
+        // if it originated from a config file or not. This branch should only be reached with objects that
+        // were created at runtime.
+        mxb_assert(!mxs::Config::get().load_persisted_configs && !is_static_object(name));
+        source_file = json_null();
+        source_type = json_string("runtime");
+    }
+
+    mxb_assert(source_file && source_type);
+    json_object_set_new(obj, "file", source_file);
+    json_object_set_new(obj, "type", source_type);
 
     return obj;
 }
