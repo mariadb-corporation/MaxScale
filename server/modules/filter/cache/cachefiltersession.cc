@@ -309,7 +309,7 @@ CacheFilterSession::~CacheFilterSession()
 
     if (m_did != 0)
     {
-        Worker::get_current()->cancel_dcall(m_did);
+        m_pSession->cancel_dcall(m_did);
         m_did = 0;
     }
 }

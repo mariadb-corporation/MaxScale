@@ -163,12 +163,12 @@ Pinloki::Pinloki(SERVICE* pService)
     m_service(pService),
     m_inventory(m_config)
 {
-    m_dcid = mxs::MainWorker::get()->dcall(1000ms, &Pinloki::update_details, this);
+    m_dcid = dcall(1000ms, &Pinloki::update_details, this);
 }
 
 Pinloki::~Pinloki()
 {
-    mxs::MainWorker::get()->cancel_dcall(m_dcid);
+    cancel_dcall(m_dcid);
 }
 
 bool Pinloki::post_configure()
@@ -190,12 +190,11 @@ bool Pinloki::post_configure()
     // Kick off the independent purging
     if (m_config.expire_log_duration().count())
     {
-        maxbase::Worker* worker = maxbase::Worker::get_current();
-        mxb_assert(worker);
+        mxb_assert(maxbase::Worker::get_current() == mxs::MainWorker::get());
 
         using namespace std::chrono;
         auto ms = duration_cast<milliseconds>(m_config.purge_startup_delay());
-        worker->dcall(ms, &Pinloki::purge_old_binlogs, this);
+        dcall(ms, &Pinloki::purge_old_binlogs, this);
     }
 
     return true;

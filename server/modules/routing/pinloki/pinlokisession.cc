@@ -100,7 +100,7 @@ PinlokiSession::~PinlokiSession()
 {
     if (m_mgw_dcid)
     {
-        m_pSession->worker()->cancel_dcall(m_mgw_dcid);
+        m_pSession->cancel_dcall(m_mgw_dcid);
     }
 }
 

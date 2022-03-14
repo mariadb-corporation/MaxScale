@@ -89,7 +89,7 @@ SchemaRouterSession::~SchemaRouterSession()
 
         if (m_dcid)
         {
-            mxb::Worker::get_current()->cancel_dcall(m_dcid);
+            m_pSession->cancel_dcall(m_dcid);
         }
 
         for (const auto& a : m_backends)

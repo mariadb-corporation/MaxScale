@@ -395,7 +395,7 @@ void Session::set_can_pool_backends(bool value)
     }
     else if (m_idle_pool_call_id != mxb::Worker::NO_CALL)
     {
-        m_worker->cancel_dcall(m_idle_pool_call_id);
+        cancel_dcall(m_idle_pool_call_id);
     }
 
     m_can_pool_backends = value;
@@ -704,7 +704,7 @@ Session::~Session()
 
     if (m_idle_pool_call_id != mxb::Worker::NO_CALL)
     {
-        m_worker->cancel_dcall(m_idle_pool_call_id);
+        cancel_dcall(m_idle_pool_call_id);
     }
     if (this_unit.dump_statements == SESSION_DUMP_STATEMENTS_ON_CLOSE)
     {
@@ -1590,7 +1590,7 @@ bool Session::move_to(RoutingWorker* pTo)
 
     if (m_idle_pool_call_id != mxb::Worker::NO_CALL)
     {
-        m_worker->cancel_dcall(m_idle_pool_call_id);
+        cancel_dcall(m_idle_pool_call_id);
     }
 
     for (mxs::BackendConnection* backend_conn : m_backends_conns)

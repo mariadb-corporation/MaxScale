@@ -68,7 +68,7 @@ Command::~Command()
 
     if (m_dcid != 0)
     {
-        m_database.context().worker().cancel_dcall(m_dcid);
+        session().cancel_dcall(m_dcid);
         m_dcid = 0;
     }
 }

@@ -43,9 +43,7 @@ ThrottleSession::~ThrottleSession()
 {
     if (m_delayed_call_id)
     {
-        maxbase::Worker* worker = maxbase::Worker::get_current();
-        mxb_assert(worker);
-        worker->cancel_dcall(m_delayed_call_id);
+        m_pSession->cancel_dcall(m_delayed_call_id);
     }
 }
 
