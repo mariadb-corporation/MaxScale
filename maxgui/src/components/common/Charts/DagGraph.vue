@@ -63,7 +63,7 @@ export default {
             if (this.$typy(v).isNumber) return v
             return this.defNodeHeight
         },
-        nodeSize() {
+        defNodeSize() {
             return { width: this.nodeWidth, height: this.maxNodeHeight }
         },
     },
@@ -92,15 +92,15 @@ export default {
     },
     methods: {
         /**
-         * Either return dynamic node size of a node or nodeSize
+         * Either return dynamic node size of a node or defNodeSize
          * @param {Object} node - dag node
          * @returns {Object} - { width: Number, height: Number}
          */
         getDynNodeSize(node) {
             const nodeId = this.$typy(node, 'data.id').safeString
             const nodeHeight = this.$typy(this.dynNodeHeightMap, `[${nodeId}]`).safeNumber
-            if (nodeHeight) return { width: this.nodeSize.width, height: nodeHeight }
-            return this.nodeSize
+            if (nodeHeight) return { width: this.defNodeSize.width, height: nodeHeight }
+            return this.defNodeSize
         },
         /**
          * compute dag layout
@@ -113,7 +113,17 @@ export default {
                 .layering(d3d.layeringSimplex())
                 .decross(d3d.decrossTwoLayer()) // minimize number of crossings
                 .coord(d3d.coordGreedy())
-                .nodeSize(() => [this.nodeSize.width * 1.2, this.nodeSize.height * 1.5])
+                .sugiNodeSize(d => {
+                    let width = this.defNodeSize.width,
+                        height = this.defNodeSize.height
+                    if (d.data.node) {
+                        const nodeSize = this.getDynNodeSize(d.data.node)
+                        width = nodeSize.width
+                        height = nodeSize.height
+                    }
+                    // plus padding for each node as nodes are densely packed
+                    return [width + 20, height + 60]
+                })
 
             const { width, height } = this.layout(this.dag)
             this.dagDim = { width, height }
