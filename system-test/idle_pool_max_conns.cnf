@@ -29,7 +29,7 @@ address=###node_server_IP_1###
 port=###node_server_port_1###
 persistpoolmax=100
 persistmaxtime=1000
-max_connections=100
+max_routing_connections=100
 
 [server2]
 type=server
@@ -37,7 +37,7 @@ address=###node_server_IP_2###
 port=###node_server_port_2###
 persistpoolmax=100
 persistmaxtime=1000
-max_connections=100
+max_routing_connections=100
 
 [server3]
 type=server
@@ -45,7 +45,7 @@ address=###node_server_IP_3###
 port=###node_server_port_3###
 persistpoolmax=100
 persistmaxtime=1000
-max_connections=100
+max_routing_connections=100
 
 [server4]
 type=server
@@ -53,5 +53,5 @@ address=###node_server_IP_4###
 port=###node_server_port_4###
 persistpoolmax=100
 persistmaxtime=1000
-max_connections=100
+max_routing_connections=100
 
