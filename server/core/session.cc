@@ -537,56 +537,28 @@ public:
         gwbuf_free(m_buffer);
     }
 
-    enum Action
+    void execute()
     {
-        DISPOSE,
-        RETAIN
-    };
-
-    Action execute()
-    {
-        Action action = DISPOSE;
-
         if (m_session->state() == MXS_SESSION::State::STARTED)
         {
-            if (mxs::RoutingWorker::get_current() == m_session->worker())
+            mxb_assert(mxs::RoutingWorker::get_current() == m_session->worker());
+            GWBUF* buffer = m_buffer;
+            m_buffer = NULL;
+
+            // Setting the current client DCB adds the session ID to the log messages
+            DCB* old_dcb = dcb_get_current();
+            dcb_set_current(m_session->client_dcb);
+
+            bool ok = m_fn(buffer);
+
+            dcb_set_current(old_dcb);
+
+            if (!ok)
             {
-                GWBUF* buffer = m_buffer;
-                m_buffer = NULL;
-
-                // Setting the current client DCB adds the session ID to the log messages
-                DCB* old_dcb = dcb_get_current();
-                dcb_set_current(m_session->client_dcb);
-
-                bool ok = m_fn(buffer);
-
-                dcb_set_current(old_dcb);
-
-                if (!ok)
-                {
-                    // Routing failed, send a hangup to the client.
-                    m_session->client_connection()->dcb()->trigger_hangup_event();
-                }
-            }
-            else
-            {
-                // Ok, so the session was moved during the delayed call. We need
-                // to send the task to that worker.
-
-                DelayedRoutingTask* task = this;
-
-                m_session->worker()->execute([task]() {
-                                                 if (task->execute() == DISPOSE)
-                                                 {
-                                                     delete task;
-                                                 }
-                                             }, mxb::Worker::EXECUTE_QUEUED);
-
-                action = RETAIN;
+                // Routing failed, send a hangup to the client.
+                m_session->client_connection()->dcb()->trigger_hangup_event();
             }
         }
-
-        return action;
     }
 
 private:
@@ -597,17 +569,12 @@ private:
 
 static bool delayed_routing_cb(Worker::Call::action_t action, DelayedRoutingTask* task)
 {
-    DelayedRoutingTask::Action next_step = DelayedRoutingTask::DISPOSE;
-
     if (action == Worker::Call::EXECUTE)
     {
-        next_step = task->execute();
+        task->execute();
     }
 
-    if (next_step == DelayedRoutingTask::DISPOSE)
-    {
-        delete task;
-    }
+    delete task;
 
     return false;
 }
