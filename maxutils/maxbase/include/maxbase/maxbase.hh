@@ -15,7 +15,6 @@
 #include <maxbase/ccdefs.hh>
 #include <stdexcept>
 #include <maxbase/log.hh>
-#include <maxbase/maxbase.h>
 
 namespace maxbase
 {
@@ -61,7 +60,7 @@ public:
     MaxBase()
         : m_log_inited(false)
     {
-        if (!maxbase_init())
+        if (!maxbase::init())
         {
             throw std::runtime_error("Initialization of maxbase failed.");
         }

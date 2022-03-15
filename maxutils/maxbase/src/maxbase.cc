@@ -163,13 +163,3 @@ void finish()
     Initer::finish();
 }
 }
-
-bool maxbase_init()
-{
-    return maxbase::init();
-}
-
-void maxbase_finish()
-{
-    return maxbase::finish();
-}
