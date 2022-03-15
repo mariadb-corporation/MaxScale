@@ -1833,6 +1833,7 @@ class WorkerInfoTask : public Worker::Task
 public:
     WorkerInfoTask(const char* zHost, uint32_t nThreads)
         : m_zHost(zHost)
+        , m_nOffset(RoutingWorker::get(RoutingWorker::FIRST)->id())
     {
         m_data.resize(nThreads);
     }
@@ -1875,9 +1876,9 @@ public:
         json_t* pAttr = json_object();
         json_object_set_new(pAttr, "stats", pStats);
 
-        int idx = rworker.id();
+        int id = rworker.id();
         stringstream ss;
-        ss << idx;
+        ss << id;
 
         json_t* pJson = json_object();
         json_object_set_new(pJson, CN_ID, json_string(ss.str().c_str()));
@@ -1885,8 +1886,10 @@ public:
         json_object_set_new(pJson, CN_ATTRIBUTES, pAttr);
         json_object_set_new(pJson, CN_LINKS, mxs_json_self_link(m_zHost, CN_THREADS, ss.str().c_str()));
 
-        mxb_assert((size_t)idx < m_data.size());
-        m_data[idx] = pJson;
+        mxb_assert(id >= m_nOffset);
+        int32_t i = id - m_nOffset;
+        mxb_assert((size_t)i < m_data.size());
+        m_data[i] = pJson;
     }
 
     json_t* resource()
@@ -1911,6 +1914,7 @@ public:
 private:
     vector<json_t*> m_data;
     const char*     m_zHost;
+    int32_t         m_nOffset { 0 };
 };
 
 class FunctionTask : public Worker::DisposableTask
