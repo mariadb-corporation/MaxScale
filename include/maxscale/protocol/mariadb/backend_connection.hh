@@ -37,16 +37,16 @@ public:
 
     int32_t write(GWBUF* buffer) override;
 
-    void    finish_connection() override;
-    bool    can_reuse(MXS_SESSION* session) const override;
-    bool    reuse(MXS_SESSION* session, mxs::Component* upstream) override;
-    bool    established() override;
-    void    set_to_pooled() override;
-    void    ping() override;
-    bool    can_close() const override;
-    bool    is_idle() const override;
-    int64_t seconds_idle() const override;
-    json_t* diagnostics() const override;
+    void     finish_connection() override;
+    uint64_t can_reuse(MXS_SESSION* session) const override;
+    bool     reuse(MXS_SESSION* session, mxs::Component* upstream, uint64_t reuse_type) override;
+    bool     established() override;
+    void     set_to_pooled() override;
+    void     ping() override;
+    bool     can_close() const override;
+    bool     is_idle() const override;
+    int64_t  seconds_idle() const override;
+    json_t*  diagnostics() const override;
 
     void              set_dcb(DCB* dcb) override;
     const BackendDCB* dcb() const override;
@@ -92,6 +92,12 @@ private:
         IN_PROGRESS,// The SM should be called again once more data is available.
         DONE,       // The SM is complete for now, the protocol may advance to next state.
         ERROR,      // The SM encountered an error. The connection should be closed.
+    };
+
+    enum ReuseType
+    {
+        CHANGE_USER      = 1,               // Only used if necessary, slower than a COM_RESET_CONNECTION
+        RESET_CONNECTION = OPTIMAL_REUSE,   // Faster than COM_CHANGE_USER but still requires a roundtrip
     };
 
     // Information about executed prepared statements
@@ -148,6 +154,7 @@ private:
 
     bool   send_proxy_protocol_header();
     GWBUF* create_change_user_packet();
+    GWBUF* create_reset_connection_packet();
     void   read_com_ping_response();
     void   do_handle_error(DCB* dcb, const std::string& errmsg,
                            mxs::ErrorType type = mxs::ErrorType::TRANSIENT);
@@ -218,6 +225,8 @@ private:
 
     uint64_t    m_thread_id {0};                    /**< Backend thread id, received in backend handshake */
     uint64_t    m_capabilities {0};                 /**< Connection capability bits */
+    std::string m_account;                          /**< The user@host that last used this connection */
+    std::string m_db;                               /**< The database last used with this connection */
     bool        m_collect_result {false};           /**< Collect the next result set as one buffer */
     bool        m_track_state {false};              /**< Track session state */
     bool        m_skip_next {false};

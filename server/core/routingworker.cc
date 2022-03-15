@@ -558,18 +558,33 @@ RoutingWorker::get_backend_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Comp
     return rval;
 }
 
-mxs::BackendConnection* RoutingWorker::ConnectionPool::get_connection(MXS_SESSION* session)
+std::pair<uint64_t, mxs::BackendConnection*>
+RoutingWorker::ConnectionPool::get_connection(MXS_SESSION* session)
 {
     mxs::BackendConnection* rval = nullptr;
+    uint64_t best_reuse = mxs::BackendConnection::REUSE_NOT_POSSIBLE;
+    auto best = m_contents.end();
 
-    auto it = std::find_if(m_contents.begin(), m_contents.end(), [&](const auto& kv){
-                               return kv.first->can_reuse(session);
-                           });
-
-    if (it != m_contents.end())
+    for (auto it = m_contents.begin(); it != m_contents.end(); ++it)
     {
-        rval = it->second.release_conn();
-        m_contents.erase(it);
+        auto current_reuse = it->first->can_reuse(session);
+
+        if (current_reuse > best_reuse)
+        {
+            best = it;
+            best_reuse = current_reuse;
+
+            if (current_reuse == mxs::BackendConnection::OPTIMAL_REUSE)
+            {
+                break;
+            }
+        }
+    }
+
+    if (best != m_contents.end())
+    {
+        rval = best->second.release_conn();
+        m_contents.erase(best);
         m_stats.times_found++;
     }
     else
@@ -577,7 +592,7 @@ mxs::BackendConnection* RoutingWorker::ConnectionPool::get_connection(MXS_SESSIO
         m_stats.times_empty++;
     }
 
-    return rval;
+    return {best_reuse, rval};
 }
 
 void RoutingWorker::ConnectionPool::set_capacity(int global_capacity)
@@ -604,7 +619,7 @@ RoutingWorker::pool_get_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Compone
 
         while (!found_conn)
         {
-            mxs::BackendConnection* candidate = conn_pool.get_connection(pSession);
+            auto [reuse, candidate] = conn_pool.get_connection(pSession);
 
             // If no candidate could be found, stop right away.
             if (!candidate)
@@ -618,7 +633,7 @@ RoutingWorker::pool_get_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Compone
             pDcb->set_handler(candidate);
             pSession->link_backend_connection(candidate);
 
-            if (candidate->reuse(pSes, pUpstream))
+            if (candidate->reuse(pSes, pUpstream, reuse))
             {
                 found_conn = candidate;
             }

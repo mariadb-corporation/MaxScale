@@ -264,6 +264,9 @@ class BackendConnection : public mxs::ProtocolConnection
 public:
     virtual ~BackendConnection() = default;
 
+    static constexpr const uint64_t REUSE_NOT_POSSIBLE = 0;
+    static constexpr const uint64_t OPTIMAL_REUSE = std::numeric_limits<uint64_t>::max();
+
     /**
      * Finalize a connection. Called right before the DCB itself is closed.
      */
@@ -277,21 +280,25 @@ public:
      *
      * @param session The session to check compatibility for
      *
-     * @return True if this connection can be reused by the session
+     * @return A number representing how well this connection matches. A larger number represents a better
+     * candidate for reuse. To stop the search early, the function should return the OPTIMAL_REUSE constant to
+     * indicate that the best candidate was found. If a connection cannot be reused, the function should
+     * return the REUSE_NOT_POSSIBLE constant.
      */
-    virtual bool can_reuse(MXS_SESSION* session) const = 0;
+    virtual uint64_t can_reuse(MXS_SESSION* session) const = 0;
 
     /**
      * Reuse a connection. The connection was in the persistent pool
      * and will now be taken into use again.
      *
-     * @param session           The session to attach to.
-     * @param upstream          The upstream component.
+     * @param session    The session to attach to.
+     * @param upstream   The upstream component.
+     * @param reuse_type The value returned by the can_reuse method.
      *
      * @return True, if the connection can be reused, false otherwise.
      *         If @c false is returned, the connection should be closed.
      */
-    virtual bool reuse(MXS_SESSION* session, mxs::Component* upstream) = 0;
+    virtual bool reuse(MXS_SESSION* session, mxs::Component* upstream, uint64_t reuse_type) = 0;
 
     /**
      * Check if the connection has been fully established, used by connection pooling

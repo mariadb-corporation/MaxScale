@@ -556,8 +556,9 @@ private:
 
         ConnectionPoolStats stats() const;
 
-        mxs::BackendConnection* get_connection(MXS_SESSION* session);
-        void                    add_connection(mxs::BackendConnection* conn);
+        std::pair<uint64_t, mxs::BackendConnection*> get_connection(MXS_SESSION* session);
+
+        void add_connection(mxs::BackendConnection* conn);
 
     private:
         std::map<mxs::BackendConnection*, ConnPoolEntry> m_contents;

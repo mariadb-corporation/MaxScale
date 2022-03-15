@@ -168,7 +168,7 @@ void MariaDBBackendConnection::finish_connection()
     m_dcb->writeq_append(mysql_create_com_quit(nullptr, 0));
 }
 
-bool MariaDBBackendConnection::can_reuse(MXS_SESSION* session) const
+uint64_t MariaDBBackendConnection::can_reuse(MXS_SESSION* session) const
 {
     MYSQL_session* data = static_cast<MYSQL_session*>(session->protocol_data());
 
@@ -185,10 +185,22 @@ bool MariaDBBackendConnection::can_reuse(MXS_SESSION* session) const
     // this connection. This prevents sharing of the same connection between different user accounts.
     bool remote_ok = !m_server.proxy_protocol() || m_dcb->client_remote() == session->client_remote();
 
-    return caps_ok && remote_ok;
+    uint64_t rv = REUSE_NOT_POSSIBLE;
+
+    if (caps_ok && remote_ok)
+    {
+        rv = ReuseType::CHANGE_USER;
+
+        if (m_account == session->user_and_host() && m_db == data->current_db)
+        {
+            rv = ReuseType::RESET_CONNECTION;
+        }
+    }
+
+    return rv;
 }
 
-bool MariaDBBackendConnection::reuse(MXS_SESSION* session, mxs::Component* upstream)
+bool MariaDBBackendConnection::reuse(MXS_SESSION* session, mxs::Component* upstream, uint64_t reuse_type)
 {
     bool rv = false;
     mxb_assert(!m_dcb->session() && m_dcb->readq_empty() && m_dcb->writeq_empty());
@@ -204,12 +216,16 @@ bool MariaDBBackendConnection::reuse(MXS_SESSION* session, mxs::Component* upstr
         assign_session(session, upstream);
         m_dcb->reset(session);
 
+        bool reset_conn = reuse_type == ReuseType::RESET_CONNECTION;
+        GWBUF* buffer = reset_conn ? create_reset_connection_packet() : create_change_user_packet();
+
         /**
          * This is a connection that was just taken out of the persistent connection pool.
          * Send a COM_CHANGE_USER query to the backend to reset the session state. */
-        if (m_dcb->writeq_append(create_change_user_packet()))
+        if (m_dcb->writeq_append(buffer))
         {
-            MXB_INFO("Reusing connection, sending COM_CHANGE_USER");
+            MXB_INFO("Reusing connection, sending %s",
+                     reset_conn ? "COM_RESET_CONNECTION" : "COM_CHANGE_USER");
             m_state = State::RESET_CONNECTION;
             rv = true;
 
@@ -1363,6 +1379,12 @@ void MariaDBBackendConnection::hangup(DCB* event_dcb)
     {
         do_handle_error(m_dcb, "Lost connection to backend server: connection closed by peer");
     }
+}
+
+GWBUF* MariaDBBackendConnection::create_reset_connection_packet()
+{
+    uint8_t buf[] = {0x1, 0x0, 0x0, 0x0, MXS_COM_RESET_CONNECTION};
+    return gwbuf_alloc_and_load(sizeof(buf), buf);
 }
 
 /**
@@ -3056,6 +3078,8 @@ void MariaDBBackendConnection::set_to_pooled()
 {
     auto* ms = mysql_session();
     m_capabilities = ms->full_capabilities();
+    m_account = m_session->user_and_host();
+    m_db = ms->current_db;
     ms->history_info.erase(this);
 
     m_session = nullptr;
