@@ -673,7 +673,7 @@ static std::string dump_one_buffer(GWBUF* buffer)
     while (len > 0)
     {
         // Process the buffer in 40 byte chunks
-        int n = MXS_MIN(40, len);
+        int n = std::min(40, len);
         char output[n * 2 + 1];
         mxs::bin2hex(data, n, output);
         char* ptr = output;

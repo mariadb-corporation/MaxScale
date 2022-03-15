@@ -109,12 +109,12 @@ void MariaDBMonitor::tarjan_scc_visit_node(MariaDBServer* node,
             {
                 /** Node has not been visited, so recurse. */
                 tarjan_scc_visit_node(parent, stack, next_ind, next_cycle);
-                node_info.lowest_index = MXS_MIN(node_info.lowest_index, parent_node.lowest_index);
+                node_info.lowest_index = std::min(node_info.lowest_index, parent_node.lowest_index);
             }
             else if (parent_node.in_stack)
             {
                 /* The parent node has been visited and is still on the stack. We have a cycle. */
-                node_info.lowest_index = MXS_MIN(node_info.lowest_index, parent_node.index);
+                node_info.lowest_index = std::min(node_info.lowest_index, parent_node.index);
             }
 
             /* The else-clause here can be omitted, since in that case the parent has been visited,

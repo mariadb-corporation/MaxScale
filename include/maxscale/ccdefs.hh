@@ -22,9 +22,16 @@
 #error This file is only to be included by C++ code.
 #endif
 
-#include <maxscale/cdefs.h>
 #include <maxbase/ccdefs.hh>
 #include <maxscale/log.hh>
+
+/**
+ * Define intended for use with strerror.
+ *
+ * char errbuf[MXS_STRERROR_BUFLEN];
+ * strerror_r(errno, errbuf, sizeof(errbuf))
+ */
+#define MXS_STRERROR_BUFLEN 512
 
 /**
  * All classes of MaxScale are defined in the namespace @c maxscale.

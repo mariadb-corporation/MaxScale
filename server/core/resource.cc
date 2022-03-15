@@ -111,7 +111,7 @@ bool Resource::match(const HttpRequest& request) const
     if (request.uri_part_count() == m_path.size() || m_is_glob)
     {
         rval = true;
-        size_t parts = MXS_MIN(request.uri_part_count(), m_path.size());
+        size_t parts = std::min(request.uri_part_count(), m_path.size());
 
         for (size_t i = 0; i < parts; i++)
         {

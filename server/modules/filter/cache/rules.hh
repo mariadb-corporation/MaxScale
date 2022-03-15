@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_FILTER_CACHE_RULES_H
-#define _MAXSCALE_FILTER_CACHE_RULES_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -22,8 +20,6 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/session.hh>
 #include <maxscale/pcre2.hh>
-
-MXS_BEGIN_DECLS
 
 enum cache_rule_attribute_t
 {
@@ -182,10 +178,6 @@ bool cache_rules_should_store(CACHE_RULES* rules, int thread_id, const char* def
  */
 bool cache_rules_should_use(CACHE_RULES* rules, int thread_id, const MXS_SESSION* session);
 
-MXS_END_DECLS
-
-#if defined (__cplusplus)
-
 class CacheRules
 {
 public:
@@ -270,7 +262,3 @@ private:
 private:
     CACHE_RULES* m_pRules;
 };
-
-#endif
-
-#endif

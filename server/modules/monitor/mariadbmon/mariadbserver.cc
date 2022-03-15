@@ -233,7 +233,7 @@ bool MariaDBServer::execute_cmd_time_limit(const std::string& cmd, maxbase::Dura
                 if (query_time < min_query_time)
                 {
                     Duration query_sleep = min_query_time - query_time;
-                    Duration this_sleep = MXS_MIN(time_remaining, query_sleep);
+                    Duration this_sleep = std::min(time_remaining, query_sleep);
                     std::this_thread::sleep_for(this_sleep);
                 }
             }
@@ -593,7 +593,7 @@ bool MariaDBServer::catchup_to_master(GeneralOpData& op, const GtidList& target)
                 if (op.time_remaining.count() > 0)
                 {
                     // Sleep for a moment, then try again.
-                    Duration this_sleep = MXS_MIN(sleep_time, op.time_remaining);
+                    Duration this_sleep = std::min(sleep_time, op.time_remaining);
                     std::this_thread::sleep_for(this_sleep);
                     sleep_time += 100ms;    // Sleep a bit more next iteration.
                 }

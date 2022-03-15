@@ -22,8 +22,6 @@
 #include <mysql.h>
 #include <mariadb_rpl.h>
 
-MXS_BEGIN_DECLS
-
 #define BINLOG_FNAMELEN   255
 #define BLR_PROTOCOL      "MySQLBackend"
 #define BINLOG_MAGIC      {0xfe, 0x62, 0x69, 0x6e}
@@ -165,5 +163,3 @@ MXS_BEGIN_DECLS
 /* MariadDB 10 GTID event flags */
 #define MARIADB_FL_DDL        32
 #define MARIADB_FL_STANDALONE 1
-
-MXS_END_DECLS

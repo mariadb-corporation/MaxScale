@@ -159,7 +159,7 @@ void log(id_t event_id,
          int line,
          const char* function,
          const char* format,
-         ...) mxs_attribute((format(printf, 6, 7)));
+         ...) mxb_attribute((format(printf, 6, 7)));
 }
 }
 

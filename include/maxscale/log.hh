@@ -12,8 +12,8 @@
  */
 #pragma once
 
-// NOTE: Do not include <maxscale/ccefs.hh>, it includes this.
-#include <maxscale/cdefs.h>
+// NOTE: Do not include <maxscale/ccdefs.hh>, it includes this.
+#include <maxbase/ccdefs.hh>
 
 #include <assert.h>
 #include <stdbool.h>

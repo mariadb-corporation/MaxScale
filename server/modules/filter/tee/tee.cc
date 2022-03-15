@@ -196,8 +196,6 @@ static bool disable_tee(const MODULECMD_ARG* argv, json_t** output)
     return true;
 }
 
-MXS_BEGIN_DECLS
-
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -206,7 +204,7 @@ MXS_BEGIN_DECLS
  *
  * @return The module object
  */
-MXS_MODULE* MXS_CREATE_MODULE()
+extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     modulecmd_arg_type_t argv[] =
     {
@@ -251,5 +249,3 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     return &info;
 }
-
-MXS_END_DECLS
