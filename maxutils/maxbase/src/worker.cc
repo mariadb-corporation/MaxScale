@@ -443,8 +443,11 @@ Worker::~Worker()
     // When going down, we need to cancel all pending calls.
     for (auto i = m_calls.begin(); i != m_calls.end(); ++i)
     {
-        i->second->call(Call::CANCEL);
-        delete i->second;
+        DCall* pCall = i->second;
+
+        pCall->call(Call::CANCEL);
+        pCall->owner().unregister_dcall(pCall->id());
+        delete pCall;
     }
 }
 
