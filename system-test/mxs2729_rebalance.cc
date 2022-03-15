@@ -201,11 +201,13 @@ int main(int argc, char* argv[])
 
     int nConn_per_session = (nConn_total2 - nConn_total1) / nThreads;
 
-    move_connections_to_thread(test, 0, cbt2);
+    int recipient = cbt1.begin()->first;
+    move_connections_to_thread(test, recipient, cbt2);
     sleep(2);   // To allow some time for the explicit moving to have time to finish.
 
     map<int, ThreadInfo> cbt3 = get_thread_info(test);
-    cout << "Connection distribution after explicit rebalance to thread 0:\n" << cbt3 << endl;
+    cout << "Connection distribution after explicit rebalance to thread "
+         << recipient << ":\n" << cbt3 << endl;
     mxb_assert(cbt3.size() == cbt2.size());
 
     auto it1 = cbt1.begin();
@@ -215,7 +217,7 @@ int main(int argc, char* argv[])
     {
         int wid = it1->first;
 
-        if (wid != 0)
+        if (wid != recipient)
         {
             int conns1 = it1->second.nConnections;
             int conns2 = it3->second.nConnections;
@@ -228,7 +230,7 @@ int main(int argc, char* argv[])
         ++it3;
     }
 
-    int nConn_max = cbt3[0].nConnections;
+    int nConn_max = cbt3[recipient].nConnections;
     int nConn_to_move = (nMaxscale_threads - 1) * (nConn_max - nConn_default) / nMaxscale_threads;
     int nMax_rounds = nConn_to_move / nConn_per_session;    // Should be worst case.
 
