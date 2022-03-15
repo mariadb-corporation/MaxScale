@@ -232,6 +232,16 @@ bool MariaDBBackendConnection::reuse(MXS_SESSION* session, mxs::Component* upstr
             // Clear out any old prepared statements, those are reset by the COM_CHANGE_USER
             m_ps_map.clear();
             pin_history_responses();
+
+            if (reset_conn && m_session->listener_data()->m_conn_init_sql.buffer_contents.empty())
+            {
+                // We don't have any initialization queries. This means we can send the history without having
+                // to wait for the server's response as we know that the COM_RESET_CONNECTION will send only
+                // one packet. This can't be done with a COM_CHANGE_USER as the server might respond with an
+                // AuthSwitchRequest packet.
+                m_state = State::RESET_CONNECTION_FAST;
+                send_history();
+            }
         }
     }
 
@@ -493,6 +503,7 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
             send_delayed_packets();
             break;
 
+        case State::RESET_CONNECTION_FAST:
         case State::RESET_CONNECTION:
         case State::READ_CHANGE_USER:
             {
@@ -1005,13 +1016,14 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_change_
     }
     else
     {
-        // The COM_CHANGE_USER is now complete. The reply state must be updated here as the normal
-        // result processing code doesn't deal with the COM_CHANGE_USER responses.
-        set_reply_state(ReplyState::DONE);
         int cmd = mxs_mysql_get_command(&buffer);
 
         if (m_state == State::READ_CHANGE_USER)
         {
+            // The COM_CHANGE_USER is now complete. The reply state must be updated here as the normal
+            // result processing code doesn't deal with the COM_CHANGE_USER responses.
+            set_reply_state(ReplyState::DONE);
+
             mxs::ReplyRoute route;
             m_reply.clear();
             m_reply.set_is_ok(cmd == MYSQL_REPLY_OK);
@@ -1027,7 +1039,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_change_
                 rv = StateMachineRes::ERROR;
             }
         }
-        else if (m_state == State::RESET_CONNECTION)
+        else if (m_state == State::RESET_CONNECTION || m_state == State::RESET_CONNECTION_FAST)
         {
             if (cmd == MYSQL_REPLY_ERR)
             {
@@ -1037,8 +1049,11 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_change_
             }
             else
             {
+                MXB_INFO("Connection reset complete");
                 // Connection is being attached to a new session, so all initializations must be redone.
-                m_state = State::CONNECTION_INIT;
+                m_state = m_state == State::RESET_CONNECTION_FAST ?
+                    State::READ_HISTORY : State::CONNECTION_INIT;
+
                 rv = StateMachineRes::DONE;
             }
         }
@@ -2638,7 +2653,7 @@ void MariaDBBackendConnection::track_query(const TrackedQuery& query)
 {
     mxb_assert(m_state == State::ROUTING || m_state == State::SEND_HISTORY
                || m_state == State::READ_HISTORY || m_state == State::PREPARE_PS
-               || m_state == State::SEND_CHANGE_USER);
+               || m_state == State::SEND_CHANGE_USER || m_state == State::RESET_CONNECTION_FAST);
 
     mxb_assert(!session_is_load_active(m_session) || m_reply.state() == ReplyState::LOAD_DATA_END);
 
@@ -2721,6 +2736,10 @@ std::string MariaDBBackendConnection::to_string(State auth_state)
 
     case State::RESET_CONNECTION:
         rval = "Resetting connection";
+        break;
+
+    case State::RESET_CONNECTION_FAST:
+        rval = "Fast connection reset";
         break;
 
     case State::READ_CHANGE_USER:

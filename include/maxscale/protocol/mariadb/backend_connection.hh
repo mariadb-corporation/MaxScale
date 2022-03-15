@@ -60,20 +60,21 @@ public:
 private:
     enum class State
     {
-        HANDSHAKING,        /**< Handshaking with backend */
-        AUTHENTICATING,     /**< Authenticating with backend */
-        CONNECTION_INIT,    /**< Sending connection init file contents */
-        SEND_DELAYQ,        /**< Sending contents of delay queue */
-        ROUTING,            /**< Ready to route queries */
-        SEND_CHANGE_USER,   /**< Sending a COM_CHANGE_USER */
-        READ_CHANGE_USER,   /**< Reading the response to a COM_CHANGE_USER */
-        RESET_CONNECTION,   /**< Reset the connection with a COM_CHANGE_USER */
-        PINGING,            /**< Pinging backend server */
-        POOLED,             /**< The connection is in pool and should not route replies */
-        SEND_HISTORY,       /**< Sending stored session command history */
-        READ_HISTORY,       /**< Reading results of history execution */
-        PREPARE_PS,         /**< Executing a COM_STMT_PREPARE */
-        FAILED,             /**< Handshake/authentication failed */
+        HANDSHAKING,            /**< Handshaking with backend */
+        AUTHENTICATING,         /**< Authenticating with backend */
+        CONNECTION_INIT,        /**< Sending connection init file contents */
+        SEND_DELAYQ,            /**< Sending contents of delay queue */
+        ROUTING,                /**< Ready to route queries */
+        SEND_CHANGE_USER,       /**< Sending a COM_CHANGE_USER */
+        READ_CHANGE_USER,       /**< Reading the response to a COM_CHANGE_USER */
+        RESET_CONNECTION,       /**< Reset the connection with a COM_CHANGE_USER */
+        RESET_CONNECTION_FAST,  /**< Fast path for connection reset with COM_RESET_CONNECTION */
+        PINGING,                /**< Pinging backend server */
+        POOLED,                 /**< The connection is in pool and should not route replies */
+        SEND_HISTORY,           /**< Sending stored session command history */
+        READ_HISTORY,           /**< Reading results of history execution */
+        PREPARE_PS,             /**< Executing a COM_STMT_PREPARE */
+        FAILED,                 /**< Handshake/authentication failed */
     };
 
     enum class HandShakeState
