@@ -2118,7 +2118,7 @@ bool runtime_create_listener_from_json(json_t* json, Service* service)
         }
         else if (const char* other = get_object_type(name))
         {
-            MXS_ERROR("Can't create server '%s', a %s with that name already exists", name, other);
+            MXS_ERROR("Can't create listener '%s', a %s with that name already exists", name, other);
         }
         else
         {
