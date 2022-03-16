@@ -43,7 +43,6 @@
 #include <string.h>
 #include <dlfcn.h>
 #include <mutex>
-#include <maxbase/alloc.h>
 #include <maxscale/config_common.hh>
 #include <maxscale/config2.hh>
 #include <maxscale/filter.hh>

@@ -15,6 +15,7 @@
 
 #include <maxsimd/canonical.hh>
 #include <maxscale/modutil.hh>
+#include <maxbase/alloc.hh>
 
 namespace
 {
@@ -94,7 +95,7 @@ static int lua_get_type_mask(lua_State* state)
         uint32_t type = qc_get_type_mask(data.buffer);
         char* mask = qc_typemask_to_string(type);
         lua_pushstring(state, mask);
-        MXS_FREE(mask);
+        MXB_FREE(mask);
     }
     else
     {
