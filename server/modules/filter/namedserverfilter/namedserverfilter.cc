@@ -370,7 +370,7 @@ bool RegexHintFSession::routeQuery(GWBUF* queue)
                     {
                         // The PS ID is the id of the buffer. This is set by client protocol and should be
                         // used all over the routing chain.
-                        uint32_t ps_id = queue->id;
+                        uint32_t ps_id = queue->id();
                         // Replacing an existing hint list is ok, although this should not happen as long
                         // as the PS IDs are unique.
                         auto& hints = m_ps_id_to_hints[ps_id];

@@ -330,7 +330,7 @@ void ClientConnection::prepare_session(const string& user, const vector<uint8_t>
     // of when a connection to a particular server is created.
     uint32_t id = 1;
     GWBUF* pStmt = modutil_create_query("set names utf8mb4 collate utf8mb4_bin");
-    gwbuf_set_id(pStmt, id);
+    pStmt->set_id(id);
 
     m_session_data.history.push_back(mxs::Buffer(pStmt));
     m_session_data.history_responses.insert(std::make_pair(id, true));

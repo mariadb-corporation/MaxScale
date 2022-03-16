@@ -500,8 +500,8 @@ public:
         this->owner = worker;
 #ifdef SS_DEBUG
         int wid = worker ? worker->id() : -1;
-        gwbuf_set_owner(&m_writeq, wid);
-        gwbuf_set_owner(&m_readq, wid);
+        m_writeq.set_owner(wid);
+        m_readq.set_owner(wid);
 #endif
     }
 

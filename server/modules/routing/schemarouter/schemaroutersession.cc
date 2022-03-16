@@ -1514,8 +1514,8 @@ mxs::Target* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, q
 
         if (rval)
         {
-            mxb_assert(gwbuf_get_id(buffer) != 0);
-            m_shard.add_statement(gwbuf_get_id(buffer), rval);
+            mxb_assert(buffer->id() != 0);
+            m_shard.add_statement(buffer->id(), rval);
         }
 
         MXB_INFO("Prepare statement on server %s", rval ? rval->name() : "<no target found>");

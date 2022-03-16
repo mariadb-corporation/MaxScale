@@ -90,11 +90,6 @@ public:
 
     HintVector hints;                               /*< Hint data for this buffer */
     uint32_t   gwbuf_type {GWBUF_TYPE_UNDEFINED};   /*< buffer's data type information */
-    uint32_t   id {0};                              /*< Unique ID for this buffer, 0 if no ID
-                                                     * is assigned */
-#ifdef SS_DEBUG
-    int owner {-1};     /*< Owner of the thread, only for debugging */
-#endif
 
     const std::string& get_sql() const;
     const std::string& get_canonical() const;
@@ -144,6 +139,7 @@ public:
     uint8_t*       data();
     size_t         length() const;
     bool           empty() const;
+    uint32_t       id() const;
 
     /**
      * Capacity of underlying shared buffer.
@@ -268,8 +264,20 @@ public:
      */
     int compare(const GWBUF& rhs) const;
 
+    void set_id(uint32_t new_id);
+
+#ifdef SS_DEBUG
+    void set_owner(int owner);
+#endif
+
 private:
-    std::shared_ptr<SHARED_BUF> m_sbuf;     /*< The shared buffer with the real data */
+    std::shared_ptr<SHARED_BUF> m_sbuf;     /**< The shared buffer with the real data */
+
+    uint32_t m_id {0};      /**< Buffer ID. Typically used for session command tracking. */
+
+#ifdef SS_DEBUG
+    int m_owner {-1};       /**< Owning thread id. Used for debugging */
+#endif
 
     mutable std::string      m_sql;
     mutable std::string      m_canonical;
@@ -356,6 +364,11 @@ inline void GWBUF::write_complete(size_t n_bytes)
 {
     end += n_bytes;
     mxb_assert(end <= m_sbuf->buf_end);
+}
+
+inline uint32_t GWBUF::id() const
+{
+    return m_id;
 }
 
 /*< Number of bytes in the individual buffer */
@@ -548,23 +561,6 @@ extern void dprintAllBuffers(void* pdcb);
 #endif
 
 /**
- * Assign an ID for this buffer
- *
- * @param buffer The buffer to modify
- * @param id     The ID to set, must be a non-zero value
- */
-void gwbuf_set_id(GWBUF* buffer, uint32_t id);
-
-/**
- * Get buffer ID
- *
- * @param buffer The buffer to inspect
- *
- * @return The ID of the buffer or 0 if no ID is assigned
- */
-uint32_t gwbuf_get_id(GWBUF* buffer);
-
-/**
  * Debug function for dumping buffer contents to log
  *
  * @see mxs::Buffer::hexdump
@@ -583,18 +579,6 @@ void gwbuf_hexdump(GWBUF* buffer, int log_level = LOG_INFO);
  * @param log_level Log priority where the message is written
  */
 void gwbuf_hexdump_pretty(GWBUF* buffer, int log_level = LOG_INFO);
-
-#ifdef SS_DEBUG
-/**
- * Set the owner of the GWBUF.
- *
- * @param int  An integer identifying the owner.
- */
-inline void gwbuf_set_owner(GWBUF* buf, int owner)
-{
-    buf->owner = owner;
-}
-#endif
 
 namespace maxscale
 {
@@ -1336,7 +1320,7 @@ public:
      */
     void set_id(uint32_t id)
     {
-        gwbuf_set_id(m_pBuffer, id);
+        m_pBuffer->set_id(id);
     }
 
     /**
@@ -1346,7 +1330,7 @@ public:
      */
     uint32_t id() const
     {
-        return gwbuf_get_id(m_pBuffer);
+        return m_pBuffer->id();
     }
 
     /**

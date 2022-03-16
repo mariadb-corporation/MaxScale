@@ -130,7 +130,7 @@ const std::string& GWBUF::get_canonical() const
 GWBUF::GWBUF()
 {
 #ifdef SS_DEBUG
-    owner = RoutingWorker::get_current_id();
+    m_owner = RoutingWorker::get_current_id();
 #endif
 }
 
@@ -178,7 +178,7 @@ void GWBUF::move_helper(GWBUF&& rhs) noexcept
     start = exchange(rhs.start, nullptr);
     end = exchange(rhs.end, nullptr);
     gwbuf_type = exchange(rhs.gwbuf_type, GWBUF_TYPE_UNDEFINED);
-    id = exchange(rhs.id, 0);
+    m_id = exchange(rhs.m_id, 0);
 
     hints = move(rhs.hints);
     m_sbuf = move(rhs.m_sbuf);
@@ -222,7 +222,7 @@ void GWBUF::clone_helper(const GWBUF& other)
 {
     hints = other.hints;
     gwbuf_type = other.gwbuf_type;
-    id = other.id;
+    m_id = other.m_id;
 
     m_sql = other.m_sql;
     m_canonical = other.m_canonical;
@@ -462,7 +462,7 @@ void GWBUF::reset()
 
     hints.clear();
     gwbuf_type = GWBUF_TYPE_UNDEFINED;
-    id = 0;
+    m_id = 0;
 
     // TODO: do these really need to be cleared or would they be overwritten?
     m_sql.clear();
@@ -486,18 +486,18 @@ size_t GWBUF::capacity() const
     return m_sbuf ? m_sbuf->size() : 0;
 }
 
-void gwbuf_set_id(GWBUF* buffer, uint32_t id)
+void GWBUF::set_id(uint32_t new_id)
 {
-    validate_buffer(buffer);
-    mxb_assert(buffer->id == 0);
-    buffer->id = id;
+    mxb_assert(m_id == 0);
+    m_id = new_id;
 }
 
-uint32_t gwbuf_get_id(GWBUF* buffer)
+#ifdef SS_DEBUG
+void GWBUF::set_owner(int owner)
 {
-    validate_buffer(buffer);
-    return buffer->id;
+    m_owner = owner;
 }
+#endif
 
 GWBUF* gwbuf_make_contiguous(GWBUF* orig)
 {

@@ -2631,7 +2631,7 @@ MariaDBBackendConnection::TrackedQuery::TrackedQuery(GWBUF* buffer)
     : payload_len(MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buffer)))
     , command(MYSQL_GET_COMMAND(GWBUF_DATA(buffer)))
     , collect_rows(gwbuf_should_collect_rows(buffer))
-    , id(gwbuf_get_id(buffer))
+    , id(buffer->id())
 {
     if (command == MXS_COM_STMT_EXECUTE)
     {
