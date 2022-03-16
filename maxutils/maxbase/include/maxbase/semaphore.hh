@@ -16,7 +16,7 @@
 #include <cerrno>
 #include <climits>
 #include <maxbase/assert.h>
-#include <maxbase/semaphore.h>
+#include <semaphore.h>
 
 namespace maxbase
 {
