@@ -13,7 +13,7 @@
  */
 
 #include <maxscale/protocol/mariadb/module_names.hh>
-#define MXS_MODULE_NAME MXS_MARIADB_PROTOCOL_NAME
+#define MXB_MODULE_NAME MXS_MARIADB_PROTOCOL_NAME
 
 #include <maxscale/protocol/mariadb/client_connection.hh>
 

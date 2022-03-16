@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "cache"
+#define MXB_MODULE_NAME "cache"
 #include "cache.hh"
 #include <lzma.h>
 #include <new>

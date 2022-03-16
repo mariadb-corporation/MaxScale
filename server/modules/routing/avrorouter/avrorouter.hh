@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#define MXS_MODULE_NAME "avrorouter"
+#define MXB_MODULE_NAME "avrorouter"
 
 #include <maxscale/ccdefs.hh>
 #include <stdbool.h>

@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "storage_memcached"
+#define MXB_MODULE_NAME "storage_memcached"
 #include "memcachedstorage.hh"
 #include <memory>
 #include <libmemcached/memcached.h>

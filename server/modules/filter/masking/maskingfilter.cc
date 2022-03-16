@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "masking"
+#define MXB_MODULE_NAME "masking"
 #include "maskingfilter.hh"
 
 #include <maxscale/json_api.hh>
@@ -68,7 +68,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         {MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Masking name"}
     };
 
-    modulecmd_register_command(MXS_MODULE_NAME,
+    modulecmd_register_command(MXB_MODULE_NAME,
                                "reload",
                                MODULECMD_TYPE_ACTIVE,
                                masking_command_reload,
@@ -79,7 +79,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::FILTER,
         mxs::ModuleStatus::IN_DEVELOPMENT,
         MXS_FILTER_VERSION,

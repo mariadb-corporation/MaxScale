@@ -24,7 +24,7 @@ namespace
 namespace smartrouter
 {
 
-config::Specification specification(MXS_MODULE_NAME, config::Specification::ROUTER);
+config::Specification specification(MXB_MODULE_NAME, config::Specification::ROUTER);
 
 config::ParamTarget
     master(&specification,
@@ -50,7 +50,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::ROUTER,
         mxs::ModuleStatus::GA,
         MXS_ROUTER_VERSION,

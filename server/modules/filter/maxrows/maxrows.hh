@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#define MXS_MODULE_NAME "maxrows"
+#define MXB_MODULE_NAME "maxrows"
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/config2.hh>

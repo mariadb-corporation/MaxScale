@@ -4,7 +4,7 @@
  * This software is released under the MIT License.
  */
 
-#define MXS_MODULE_NAME "throttlefilter"
+#define MXB_MODULE_NAME "throttlefilter"
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/config2.hh>
@@ -20,7 +20,7 @@ namespace
 namespace cfg = mxs::config;
 using std::chrono::milliseconds;
 
-cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::FILTER);
+cfg::Specification s_spec(MXB_MODULE_NAME, cfg::Specification::FILTER);
 
 cfg::ParamInteger s_max_qps(
     &s_spec, "max_qps", "Maximum queries per second",
@@ -47,7 +47,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::FILTER,
         mxs::ModuleStatus::IN_DEVELOPMENT,
         MXS_FILTER_VERSION,

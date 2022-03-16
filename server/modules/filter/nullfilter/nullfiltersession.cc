@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "nullfilter"
+#define MXB_MODULE_NAME "nullfilter"
 #include "nullfiltersession.hh"
 
 NullFilterSession::NullFilterSession(MXS_SESSION* pSession, SERVICE* pService, const NullFilter* pFilter)

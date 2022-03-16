@@ -523,53 +523,53 @@ bool csmon_rollback(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
 void register_commands()
 {
-    modulecmd_register_command(MXS_MODULE_NAME, "config-get", MODULECMD_TYPE_PASSIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "config-get", MODULECMD_TYPE_PASSIVE,
                                csmon_config_get,
                                MXS_ARRAY_NELEMS(csmon_config_get_argv), csmon_config_get_argv,
                                CSMON_CONFIG_GET_DESC);
 
-    modulecmd_register_command(MXS_MODULE_NAME, "mode-set", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "mode-set", MODULECMD_TYPE_ACTIVE,
                                csmon_mode_set,
                                MXS_ARRAY_NELEMS(csmon_mode_set_argv), csmon_mode_set_argv,
                                CSMON_MODE_SET_DESC);
 
-    modulecmd_register_command(MXS_MODULE_NAME, "shutdown", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "shutdown", MODULECMD_TYPE_ACTIVE,
                                csmon_shutdown,
                                MXS_ARRAY_NELEMS(csmon_shutdown_argv), csmon_shutdown_argv,
                                CSMON_SHUTDOWN_DESC);
 
-    modulecmd_register_command(MXS_MODULE_NAME, "start", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "start", MODULECMD_TYPE_ACTIVE,
                                csmon_start,
                                MXS_ARRAY_NELEMS(csmon_start_argv), csmon_start_argv,
                                CSMON_START_DESC);
 
-    modulecmd_register_command(MXS_MODULE_NAME, "status", MODULECMD_TYPE_PASSIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "status", MODULECMD_TYPE_PASSIVE,
                                csmon_status,
                                MXS_ARRAY_NELEMS(csmon_status_argv), csmon_status_argv,
                                CSMON_STATUS_DESC);
 
-    modulecmd_register_command(MXS_MODULE_NAME, "add-node", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "add-node", MODULECMD_TYPE_ACTIVE,
                                csmon_add_node,
                                MXS_ARRAY_NELEMS(csmon_add_node_argv), csmon_add_node_argv,
                                CSMON_ADD_NODE_DESC);
 
-    modulecmd_register_command(MXS_MODULE_NAME, "remove-node", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "remove-node", MODULECMD_TYPE_ACTIVE,
                                csmon_remove_node,
                                MXS_ARRAY_NELEMS(csmon_remove_node_argv), csmon_remove_node_argv,
                                CSMON_REMOVE_NODE_DESC);
 
 #if defined(CSMON_EXPOSE_TRANSACTIONS)
-    modulecmd_register_command(MXS_MODULE_NAME, "begin", MODULECMD_TYPE_PASSIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "begin", MODULECMD_TYPE_PASSIVE,
                                csmon_begin,
                                MXS_ARRAY_NELEMS(csmon_begin_argv), csmon_begin_argv,
                                CSMON_BEGIN_DESC);
 
-    modulecmd_register_command(MXS_MODULE_NAME, "commit", MODULECMD_TYPE_PASSIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "commit", MODULECMD_TYPE_PASSIVE,
                                csmon_commit,
                                MXS_ARRAY_NELEMS(csmon_commit_argv), csmon_commit_argv,
                                CSMON_COMMIT_DESC);
 
-    modulecmd_register_command(MXS_MODULE_NAME, "rollback", MODULECMD_TYPE_PASSIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "rollback", MODULECMD_TYPE_PASSIVE,
                                csmon_rollback,
                                MXS_ARRAY_NELEMS(csmon_rollback_argv), csmon_rollback_argv,
                                CSMON_ROLLBACK_DESC);
@@ -582,7 +582,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::MONITOR,
         mxs::ModuleStatus::BETA,
         MXS_MONITOR_VERSION,

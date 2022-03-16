@@ -22,12 +22,12 @@
 #include <functional>
 #include <set>
 
-#if !defined (MXS_MODULE_NAME)
-#define MXS_MODULE_NAME NULL
+#if defined (MXS_MODULE_NAME)
+#error In MaxScale >= 7, a module must not declare MXS_MODULE_NAME, but MXB_MODULE_NAME.
 #endif
 
 #if !defined (MXB_MODULE_NAME)
-#define MXB_MODULE_NAME MXS_MODULE_NAME
+#define MXB_MODULE_NAME NULL
 #endif
 
 #include <maxbase/log.hh>

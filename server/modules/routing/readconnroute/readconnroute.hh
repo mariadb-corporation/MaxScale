@@ -16,7 +16,7 @@
  * @file readconnection.hh - The read connection balancing query module header file
  */
 
-#define MXS_MODULE_NAME "readconnroute"
+#define MXB_MODULE_NAME "readconnroute"
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/router.hh>

@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "cache"
+#define MXB_MODULE_NAME "cache"
 #include "storagefactory.hh"
 #include <dlfcn.h>
 #include <sys/param.h>

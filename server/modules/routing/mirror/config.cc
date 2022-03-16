@@ -39,7 +39,7 @@ protected:
     }
 };
 
-MirrorSpec s_spec(MXS_MODULE_NAME, cfg::Specification::ROUTER);
+MirrorSpec s_spec(MXB_MODULE_NAME, cfg::Specification::ROUTER);
 
 cfg::ParamEnum<ExporterType> s_exporter(
     &s_spec, "exporter", "Exporter to use",

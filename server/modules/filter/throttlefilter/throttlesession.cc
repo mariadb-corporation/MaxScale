@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "throttlefilter"
+#define MXB_MODULE_NAME "throttlefilter"
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/modutil.hh>

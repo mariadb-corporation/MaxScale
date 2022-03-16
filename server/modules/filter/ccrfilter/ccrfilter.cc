@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "ccrfilter"
+#define MXB_MODULE_NAME "ccrfilter"
 
 #include <maxscale/ccdefs.hh>
 
@@ -67,7 +67,7 @@ protected:
     }
 };
 
-CCRSpecification specification(MXS_MODULE_NAME, config::Specification::FILTER);
+CCRSpecification specification(MXB_MODULE_NAME, config::Specification::FILTER);
 
 config::ParamCount count(
     &specification,
@@ -413,7 +413,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::FILTER,
         mxs::ModuleStatus::GA,
         MXS_FILTER_VERSION,

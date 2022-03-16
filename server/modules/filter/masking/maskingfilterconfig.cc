@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "masking"
+#define MXB_MODULE_NAME "masking"
 #include "maskingfilterconfig.hh"
 #include "maskingfilter.hh"
 #include "maskingrules.hh"
@@ -24,7 +24,7 @@ namespace masking
 
 namespace config = mxs::config;
 
-config::Specification specification(MXS_MODULE_NAME, config::Specification::FILTER);
+config::Specification specification(MXB_MODULE_NAME, config::Specification::FILTER);
 
 config::ParamEnum<MaskingFilterConfig::large_payload_t> large_payload(
     &specification,

@@ -55,7 +55,7 @@ const config::ParamServer::value_type    DEFAULT_PRIMARY                  = null
 const config::ParamBool::value_type      DEFAULT_DYNAMIC_NODE_DETECTION   = false;
 const ClusterMonitorInterval::value_type DEFAULT_CLUSTER_MONITOR_INTERVAL = std::chrono::milliseconds(10000);
 
-config::Specification specification(MXS_MODULE_NAME, config::Specification::MONITOR);
+config::Specification specification(MXB_MODULE_NAME, config::Specification::MONITOR);
 
 config::ParamEnum<cs::Version> version(
     &specification,

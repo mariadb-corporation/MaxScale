@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "hintrouter"
+#define MXB_MODULE_NAME "hintrouter"
 #include "hintrouter.hh"
 
 #include <limits>
@@ -21,7 +21,7 @@ namespace
 {
 namespace cfg = mxs::config;
 
-cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::ROUTER);
+cfg::Specification s_spec(MXB_MODULE_NAME, cfg::Specification::ROUTER);
 
 cfg::ParamEnum<Hint::Type> s_default_action(
     &s_spec, "default_action", "Default action to take",
@@ -163,7 +163,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE module =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::ROUTER,
         mxs::ModuleStatus::BETA,
         MXS_ROUTER_VERSION,

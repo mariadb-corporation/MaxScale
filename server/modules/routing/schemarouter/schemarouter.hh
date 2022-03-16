@@ -16,7 +16,7 @@
  * @file schemarouter.hh - Common schemarouter definitions
  */
 
-#define MXS_MODULE_NAME "schemarouter"
+#define MXB_MODULE_NAME "schemarouter"
 
 #include <maxscale/ccdefs.hh>
 

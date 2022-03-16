@@ -42,7 +42,7 @@ namespace
 namespace xpandmon
 {
 
-config::Specification specification(MXS_MODULE_NAME, config::Specification::MONITOR);
+config::Specification specification(MXB_MODULE_NAME, config::Specification::MONITOR);
 
 config::ParamDuration<milliseconds>
 cluster_monitor_interval(&specification,

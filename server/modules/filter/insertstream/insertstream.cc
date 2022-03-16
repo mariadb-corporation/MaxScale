@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "insertstream"
+#define MXB_MODULE_NAME "insertstream"
 
 #include <maxscale/ccdefs.hh>
 
@@ -31,7 +31,7 @@
 namespace
 {
 
-mxs::config::Specification s_spec(MXS_MODULE_NAME, mxs::config::Specification::FILTER);
+mxs::config::Specification s_spec(MXB_MODULE_NAME, mxs::config::Specification::FILTER);
 
 static uint64_t CAPS = RCAP_TYPE_TRANSACTION_TRACKING;
 
@@ -397,7 +397,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::FILTER,
         mxs::ModuleStatus::EXPERIMENTAL,
         MXS_FILTER_VERSION,

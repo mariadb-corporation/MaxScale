@@ -15,7 +15,7 @@
  * @file auroramon.c - Amazon RDS Aurora monitor
  */
 
-#define MXS_MODULE_NAME "auroramon"
+#define MXB_MODULE_NAME "auroramon"
 
 #include "auroramon.hh"
 #include <mysql.h>
@@ -25,7 +25,7 @@
 
 using maxscale::MonitorServer;
 
-mxs::config::Specification s_spec(MXS_MODULE_NAME, mxs::config::Specification::MONITOR);
+mxs::config::Specification s_spec(MXB_MODULE_NAME, mxs::config::Specification::MONITOR);
 
 AuroraMonitor::AuroraMonitor(const std::string& name, const std::string& module)
     : MonitorWorkerSimple(name, module)
@@ -107,7 +107,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::MONITOR,
         mxs::ModuleStatus::BETA,
         MXS_MONITOR_VERSION,

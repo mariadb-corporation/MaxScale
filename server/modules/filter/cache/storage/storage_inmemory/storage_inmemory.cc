@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "storage_inmemory"
+#define MXB_MODULE_NAME "storage_inmemory"
 #include <maxscale/ccdefs.hh>
 #include "../../cache_storage_api.hh"
 #include "../storagemodule.hh"

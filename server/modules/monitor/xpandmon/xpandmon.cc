@@ -65,7 +65,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         }
     };
 
-    modulecmd_register_command(MXS_MODULE_NAME, "softfail", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "softfail", MODULECMD_TYPE_ACTIVE,
                                handle_softfail, MXS_ARRAY_NELEMS(softfail_argv), softfail_argv,
                                "Perform softfail of node");
 
@@ -80,14 +80,14 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         }
     };
 
-    modulecmd_register_command(MXS_MODULE_NAME, "unsoftfail", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "unsoftfail", MODULECMD_TYPE_ACTIVE,
                                handle_unsoftfail, MXS_ARRAY_NELEMS(unsoftfail_argv), unsoftfail_argv,
                                "Perform unsoftfail of node");
 
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::MONITOR,
         mxs::ModuleStatus::GA,
         MXS_MONITOR_VERSION,

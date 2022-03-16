@@ -16,7 +16,7 @@
  * Common definitions for MariaDBMonitor module. Should be included in every header or source file.
  */
 
-#define MXS_MODULE_NAME "mariadbmon"
+#define MXB_MODULE_NAME "mariadbmon"
 
 #include <maxscale/ccdefs.hh>
 

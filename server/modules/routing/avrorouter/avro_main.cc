@@ -32,7 +32,7 @@ namespace cfg = mxs::config;
 using Opt = cfg::ParamPath::Options;
 constexpr uint32_t opts = Opt::C | Opt::X | Opt::R | Opt::W;
 
-static cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::Kind::ROUTER);
+static cfg::Specification s_spec(MXB_MODULE_NAME, cfg::Specification::Kind::ROUTER);
 
 static cfg::ParamPath s_binlogdir(
     &s_spec, "binlogdir", "Path to directory containing binlog files", opts, mxs::datadir());
@@ -304,7 +304,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         {MODULECMD_ARG_STRING,
          "Action, whether to 'start' or 'stop' the conversion process"}
     };
-    modulecmd_register_command(MXS_MODULE_NAME,
+    modulecmd_register_command(MXB_MODULE_NAME,
                                "convert",
                                MODULECMD_TYPE_ACTIVE,
                                avro_handle_convert,
@@ -319,7 +319,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             "The avrorouter service to purge (NOTE: THIS REMOVES ALL CONVERTED FILES)"
         }
     };
-    modulecmd_register_command(MXS_MODULE_NAME,
+    modulecmd_register_command(MXB_MODULE_NAME,
                                "purge",
                                MODULECMD_TYPE_ACTIVE,
                                avro_handle_purge,
@@ -331,7 +331,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::ROUTER,
         mxs::ModuleStatus::GA,
         MXS_ROUTER_VERSION,

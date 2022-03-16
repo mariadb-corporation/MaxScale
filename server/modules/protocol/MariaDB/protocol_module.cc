@@ -11,7 +11,7 @@
  * Public License.
  */
 #include <maxscale/protocol/mariadb/module_names.hh>
-#define MXS_MODULE_NAME MXS_MARIADB_PROTOCOL_NAME
+#define MXB_MODULE_NAME MXS_MARIADB_PROTOCOL_NAME
 
 #include "protocol_module.hh"
 #include <maxscale/protocol/mariadb/client_connection.hh>
@@ -26,7 +26,7 @@ using std::string;
 
 namespace
 {
-mxs::config::Specification s_spec(MXS_MODULE_NAME, mxs::config::Specification::PROTOCOL);
+mxs::config::Specification s_spec(MXB_MODULE_NAME, mxs::config::Specification::PROTOCOL);
 }
 
 MySQLProtocolModule::MySQLProtocolModule(const std::string& name)
@@ -83,7 +83,7 @@ GWBUF* MySQLProtocolModule::reject(const std::string& host)
 
 std::string MySQLProtocolModule::name() const
 {
-    return MXS_MODULE_NAME;
+    return MXB_MODULE_NAME;
 }
 
 std::unique_ptr<mxs::UserAccountManager> MySQLProtocolModule::create_user_data_manager()
@@ -219,7 +219,7 @@ MySQLProtocolModule::create_authenticators(const mxs::ConfigParameters& params)
             {
                 // Check that the authenticator supports the protocol. Use case-insensitive comparison.
                 auto supported_protocol = new_auth_module->supported_protocol();
-                if (strcasecmp(MXS_MODULE_NAME, supported_protocol.c_str()) == 0)
+                if (strcasecmp(MXB_MODULE_NAME, supported_protocol.c_str()) == 0)
                 {
                     authenticators.push_back(move(new_auth_module));
                 }
@@ -229,7 +229,7 @@ MySQLProtocolModule::create_authenticators(const mxs::ConfigParameters& params)
                     // not the effective name.
                     MXB_ERROR("Authenticator module '%s' expects to be paired with protocol '%s', "
                               "not with '%s'.",
-                              auth_namez, supported_protocol.c_str(), MXS_MODULE_NAME);
+                              auth_namez, supported_protocol.c_str(), MXB_MODULE_NAME);
                     error = true;
                 }
             }
@@ -330,7 +330,7 @@ MXS_MODULE* mariadbprotocol_info()
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::PROTOCOL,
         mxs::ModuleStatus::GA,
         MXS_PROTOCOL_VERSION,

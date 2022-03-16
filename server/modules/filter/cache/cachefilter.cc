@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "cache"
+#define MXB_MODULE_NAME "cache"
 #include "cachefilter.hh"
 
 #include <maxscale/jansson.hh>
@@ -79,7 +79,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         {MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Cache name"}
     };
 
-    modulecmd_register_command(MXS_MODULE_NAME,
+    modulecmd_register_command(MXB_MODULE_NAME,
                                "show",
                                MODULECMD_TYPE_PASSIVE,
                                cache_command_show,
@@ -90,7 +90,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::FILTER,
         mxs::ModuleStatus::GA,
         MXS_FILTER_VERSION,

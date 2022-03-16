@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#define MXS_MODULE_NAME "nosqlprotocol"
+#define MXB_MODULE_NAME "nosqlprotocol"
 
 #include <maxscale/ccdefs.hh>
 #include <maxbase/assert.hh>

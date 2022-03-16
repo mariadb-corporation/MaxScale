@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "hintfilter"
+#define MXB_MODULE_NAME "hintfilter"
 
 #include <unordered_map>
 

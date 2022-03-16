@@ -13,7 +13,7 @@
 
 #include "config.hh"
 
-static_assert(MXS_MODULE_NAME != nullptr, "MXS_MODULE_NAME is null");
+static_assert(MXB_MODULE_NAME != nullptr, "MXB_MODULE_NAME is null");
 
 namespace
 {
@@ -31,7 +31,7 @@ protected:
     bool post_validate(json_t* json) const override;
 };
 
-KafkaSpecification s_spec(MXS_MODULE_NAME, cfg::Specification::ROUTER);
+KafkaSpecification s_spec(MXB_MODULE_NAME, cfg::Specification::ROUTER);
 
 cfg::ParamString s_bootstrap_servers(
     &s_spec, "bootstrap_servers", "Kafka bootstrap servers in host:port format",

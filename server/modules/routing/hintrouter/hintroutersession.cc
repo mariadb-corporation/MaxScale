@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "hintrouter"
+#define MXB_MODULE_NAME "hintrouter"
 #include "hintroutersession.hh"
 
 #include <algorithm>

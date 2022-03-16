@@ -28,7 +28,7 @@
  * @endverbatim
  */
 
-#define MXS_MODULE_NAME "namedserverfilter"
+#define MXB_MODULE_NAME "namedserverfilter"
 
 #include "namedserverfilter.hh"
 
@@ -73,7 +73,7 @@ private:
     }
 };
 
-Specification s_spec(MXS_MODULE_NAME, cfg::Specification::FILTER);
+Specification s_spec(MXB_MODULE_NAME, cfg::Specification::FILTER);
 
 ParamString s_user(&s_spec, "user", "Only divert queries from this user", "", su);
 ParamString s_source(&s_spec, "source", "Only divert queries from these addresses", "", su);
@@ -1098,7 +1098,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::FILTER,
         mxs::ModuleStatus::GA,
         MXS_FILTER_VERSION,

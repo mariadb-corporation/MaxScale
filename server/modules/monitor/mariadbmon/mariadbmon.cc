@@ -95,7 +95,7 @@ protected:
     }
 };
 
-cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::MONITOR);
+cfg::Specification s_spec(MXB_MODULE_NAME, cfg::Specification::MONITOR);
 
 cfg::ParamCount s_failcount(
     &s_spec, CN_FAILCOUNT,
@@ -1478,11 +1478,11 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         {MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL,             "Current master (optional)"}
     };
 
-    modulecmd_register_command(MXS_MODULE_NAME, "switchover", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "switchover", MODULECMD_TYPE_ACTIVE,
                                handle_manual_switchover, MXS_ARRAY_NELEMS(switchover_argv), switchover_argv,
                                "Perform master switchover");
 
-    modulecmd_register_command(MXS_MODULE_NAME, "async-switchover", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-switchover", MODULECMD_TYPE_ACTIVE,
                                handle_async_switchover, MXS_ARRAY_NELEMS(switchover_argv), switchover_argv,
                                "Schedule master switchover without waiting for completion");
 
@@ -1491,7 +1491,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC},
     };
 
-    modulecmd_register_command(MXS_MODULE_NAME, failover_cmd, MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, failover_cmd, MODULECMD_TYPE_ACTIVE,
                                handle_manual_failover, MXS_ARRAY_NELEMS(failover_argv), failover_argv,
                                "Perform master failover");
 
@@ -1501,7 +1501,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         {MODULECMD_ARG_SERVER,                                      "Joining server"}
     };
 
-    modulecmd_register_command(MXS_MODULE_NAME, rejoin_cmd, MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, rejoin_cmd, MODULECMD_TYPE_ACTIVE,
                                handle_manual_rejoin, MXS_ARRAY_NELEMS(rejoin_argv), rejoin_argv,
                                "Rejoin server to a cluster");
 
@@ -1511,7 +1511,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         {MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL,             "Master server (optional)"}
     };
 
-    modulecmd_register_command(MXS_MODULE_NAME, reset_repl_cmd, MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, reset_repl_cmd, MODULECMD_TYPE_ACTIVE,
                                handle_manual_reset_replication,
                                MXS_ARRAY_NELEMS(reset_gtid_argv), reset_gtid_argv,
                                "Delete slave connections, delete binary logs and "
@@ -1522,7 +1522,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC},
     };
 
-    modulecmd_register_command(MXS_MODULE_NAME, release_locks_cmd, MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, release_locks_cmd, MODULECMD_TYPE_ACTIVE,
                                handle_release_locks,
                                MXS_ARRAY_NELEMS(release_locks_argv), release_locks_argv,
                                "Release any held server locks for 1 minute.");
@@ -1533,12 +1533,12 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     };
 
     static const char fetch_desc[] = "Fetch result of the last scheduled command.";
-    modulecmd_register_command(MXS_MODULE_NAME, "fetch-cmd-results", MODULECMD_TYPE_PASSIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "fetch-cmd-results", MODULECMD_TYPE_PASSIVE,
                                handle_fetch_cmd_result,
                                MXS_ARRAY_NELEMS(fetch_cmd_result_argv), fetch_cmd_result_argv,
                                fetch_desc);
 
-    modulecmd_register_command(MXS_MODULE_NAME, "fetch-cmd-result", MODULECMD_TYPE_PASSIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "fetch-cmd-result", MODULECMD_TYPE_PASSIVE,
                                handle_fetch_cmd_result,
                                MXS_ARRAY_NELEMS(fetch_cmd_result_argv), fetch_cmd_result_argv,
                                fetch_desc);
@@ -1546,7 +1546,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::MONITOR,
         mxs::ModuleStatus::GA,
         MXS_MONITOR_VERSION,

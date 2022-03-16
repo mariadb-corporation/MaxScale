@@ -15,7 +15,7 @@
  * @file tee.cc  A filter that splits the processing pipeline in two
  */
 
-#define MXS_MODULE_NAME "tee"
+#define MXB_MODULE_NAME "tee"
 
 #include <maxscale/ccdefs.hh>
 
@@ -50,7 +50,7 @@ protected:
     }
 };
 
-TeeSpecification s_spec(MXS_MODULE_NAME, cfg::Specification::FILTER);
+TeeSpecification s_spec(MXB_MODULE_NAME, cfg::Specification::FILTER);
 
 cfg::ParamTarget s_target(
     &s_spec, "target", "The target where the queries are duplicated",
@@ -213,14 +213,14 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         }
     };
 
-    modulecmd_register_command(MXS_MODULE_NAME,
+    modulecmd_register_command(MXB_MODULE_NAME,
                                "enable",
                                MODULECMD_TYPE_ACTIVE,
                                enable_tee,
                                1,
                                argv,
                                "Enable a tee filter instance");
-    modulecmd_register_command(MXS_MODULE_NAME,
+    modulecmd_register_command(MXB_MODULE_NAME,
                                "disable",
                                MODULECMD_TYPE_ACTIVE,
                                disable_tee,
@@ -231,7 +231,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::FILTER,
         mxs::ModuleStatus::GA,
         MXS_FILTER_VERSION,

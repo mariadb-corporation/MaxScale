@@ -15,7 +15,7 @@
  * @file A MySQL Group Replication cluster monitor
  */
 
-#define MXS_MODULE_NAME "grmon"
+#define MXB_MODULE_NAME "grmon"
 
 #include "grmon.hh"
 
@@ -26,7 +26,7 @@
 
 using maxscale::MonitorServer;
 
-mxs::config::Specification s_spec(MXS_MODULE_NAME, mxs::config::Specification::MONITOR);
+mxs::config::Specification s_spec(MXB_MODULE_NAME, mxs::config::Specification::MONITOR);
 
 GRMon::GRMon(const std::string& name, const std::string& module)
     : MonitorWorkerSimple(name, module)
@@ -147,7 +147,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::MONITOR,
         mxs::ModuleStatus::GA,
         MXS_MONITOR_VERSION,

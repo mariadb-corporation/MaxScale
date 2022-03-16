@@ -16,7 +16,7 @@
  * @file Readwritesplit common header
  */
 
-#define MXS_MODULE_NAME "readwritesplit"
+#define MXB_MODULE_NAME "readwritesplit"
 
 #include <maxscale/ccdefs.hh>
 
@@ -101,7 +101,7 @@ enum class TrxChecksum
     NO_INSERT_ID,   // Same as RESULT_ONLY but also ignores results from queries that use LAST_INSERT_ID()
 };
 
-static cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::ROUTER);
+static cfg::Specification s_spec(MXB_MODULE_NAME, cfg::Specification::ROUTER);
 
 static cfg::ParamEnum<mxs_target_t> s_use_sql_variables_in(
     &s_spec, "use_sql_variables_in",

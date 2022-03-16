@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "binlogfilter"
+#define MXB_MODULE_NAME "binlogfilter"
 
 #include "binlogconfig.hh"
 
@@ -37,7 +37,7 @@ class BinlogfilterSpecification : public cfg::Specification
     }
 };
 
-BinlogfilterSpecification s_spec(MXS_MODULE_NAME, cfg::Specification::FILTER);
+BinlogfilterSpecification s_spec(MXB_MODULE_NAME, cfg::Specification::FILTER);
 
 cfg::ParamRegex s_match(
     &s_spec, "match", "Only process events from tables matching this pattern", "",

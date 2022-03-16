@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "nullfilter"
+#define MXB_MODULE_NAME "nullfilter"
 #include "nullfilter.hh"
 #include <string>
 
@@ -25,7 +25,7 @@ namespace
 namespace nullfilter
 {
 
-config::Specification specification(MXS_MODULE_NAME, config::Specification::FILTER);
+config::Specification specification(MXB_MODULE_NAME, config::Specification::FILTER);
 
 config::ParamEnumMask<mxs_routing_capability_t> capabilities(
     &specification,
@@ -53,7 +53,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::FILTER,
         mxs::ModuleStatus::IN_DEVELOPMENT,
         MXS_FILTER_VERSION,

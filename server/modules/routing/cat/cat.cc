@@ -18,7 +18,7 @@ using namespace maxscale;
 
 namespace
 {
-mxs::config::Specification s_spec(MXS_MODULE_NAME, mxs::config::Specification::ROUTER);
+mxs::config::Specification s_spec(MXB_MODULE_NAME, mxs::config::Specification::ROUTER);
 }
 
 Cat::Cat(const std::string& name)

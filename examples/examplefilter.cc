@@ -12,7 +12,7 @@
  */
 
 // All log messages from this module are prefixed with this
-#define MXS_MODULE_NAME "examplecppfilter"
+#define MXB_MODULE_NAME "examplecppfilter"
 
 /*
  * To use the filter in a configuration, add the following section to the config file:
@@ -35,7 +35,7 @@ namespace
 {
 namespace cfg = mxs::config;
 
-cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::FILTER);
+cfg::Specification s_spec(MXB_MODULE_NAME, cfg::Specification::FILTER);
 
 cfg::ParamString s_an_example_parameter(
     &s_spec, "an_example_parameter", "An example string parameter",
@@ -54,7 +54,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::FILTER,
         mxs::ModuleStatus::IN_DEVELOPMENT,
         MXS_FILTER_VERSION,

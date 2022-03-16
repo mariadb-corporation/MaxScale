@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "hintfilter"
+#define MXB_MODULE_NAME "hintfilter"
 
 #include <stdio.h>
 #include <maxscale/filter.hh>
@@ -26,7 +26,7 @@
  *
  */
 
-mxs::config::Specification s_spec(MXS_MODULE_NAME, mxs::config::Specification::FILTER);
+mxs::config::Specification s_spec(MXB_MODULE_NAME, mxs::config::Specification::FILTER);
 
 // static
 HintInstance* HintInstance::create(const char* zName)
@@ -97,7 +97,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::FILTER,
         mxs::ModuleStatus::ALPHA,
         MXS_FILTER_VERSION,

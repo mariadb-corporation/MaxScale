@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "masking"
+#define MXB_MODULE_NAME "masking"
 #include "maskingfiltersession.hh"
 
 #include <sstream>

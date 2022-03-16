@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "storage_inmemory"
+#define MXB_MODULE_NAME "storage_inmemory"
 #include "inmemorystoragemt.hh"
 
 using std::unique_ptr;

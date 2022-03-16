@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#define MXS_MODULE_NAME "kafkacdc"
+#define MXB_MODULE_NAME "kafkacdc"
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/router.hh>

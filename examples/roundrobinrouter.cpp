@@ -30,7 +30,7 @@
  */
 
 /* The log macros use this definition. */
-#define MXS_MODULE_NAME "RoundRobinRouter"
+#define MXB_MODULE_NAME "RoundRobinRouter"
 
 #include <maxscale/ccdefs.hh>
 
@@ -82,7 +82,7 @@ const uint32_t q_route_to_write = (QUERY_TYPE_WRITE | QUERY_TYPE_PREPARE_NAMED_S
 
 namespace cfg = mxs::config;
 
-cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::ROUTER);
+cfg::Specification s_spec(MXB_MODULE_NAME, cfg::Specification::ROUTER);
 
 cfg::ParamCount s_max_backends(
     &s_spec, "max_backends", "Maximum number of backends to use",
@@ -600,7 +600,7 @@ static modulecmd_arg_type_t custom_cmd_args[] =
  */
 bool custom_cmd_example(const MODULECMD_ARG* argv, json_t** output)
 {
-    cout << MXS_MODULE_NAME << " wishes the Admin a good day.\n";
+    cout << MXB_MODULE_NAME << " wishes the Admin a good day.\n";
     int n_args = argv->argc;
     cout << "The module got " << n_args << " arguments.\n";
     for (int i = 0; i < n_args; i++)
@@ -660,7 +660,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE moduleObject =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::ROUTER,        /* Module type */
         mxs::ModuleStatus::BETA,        /* Release status */
         MXS_ROUTER_VERSION,             /* Implemented module API version */

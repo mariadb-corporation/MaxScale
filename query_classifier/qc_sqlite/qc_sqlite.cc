@@ -16,7 +16,7 @@
 // NOTE: which is the reason why there is a mix of C-style and C++-style
 // NOTE: approaches.
 
-#define MXS_MODULE_NAME "qc_sqlite"
+#define MXB_MODULE_NAME "qc_sqlite"
 #include <sqliteInt.h>
 
 #include <signal.h>
@@ -5720,7 +5720,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::QUERY_CLASSIFIER,
         mxs::ModuleStatus::GA,
         MXS_QUERY_CLASSIFIER_VERSION,

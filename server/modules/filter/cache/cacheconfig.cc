@@ -11,12 +11,12 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "cache"
+#define MXB_MODULE_NAME "cache"
 #include "cacheconfig.hh"
 #include "cache.hh"
 #include "cachefilter.hh"
 
-config::Specification CacheConfig::s_specification(MXS_MODULE_NAME, config::Specification::FILTER);
+config::Specification CacheConfig::s_specification(MXB_MODULE_NAME, config::Specification::FILTER);
 
 config::ParamString CacheConfig::s_storage(
     &s_specification,

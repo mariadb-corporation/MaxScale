@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-#define MXS_MODULE_NAME "GSSAPIAuth"
+#define MXB_MODULE_NAME "GSSAPIAuth"
 
 #include <maxscale/ccdefs.hh>
 #include <gssapi.h>

@@ -131,7 +131,7 @@
 // for everyone.
 //
 
-#define MXS_MODULE_NAME "storage_redis"
+#define MXB_MODULE_NAME "storage_redis"
 #include "redisstorage.hh"
 #include <hiredis.h>
 #include <maxbase/alloc.hh>

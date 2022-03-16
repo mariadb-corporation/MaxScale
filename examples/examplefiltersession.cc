@@ -12,7 +12,7 @@
  */
 
 // All log messages from this module are prefixed with this
-#define MXS_MODULE_NAME "examplefilter"
+#define MXB_MODULE_NAME "examplefilter"
 
 #include "examplefiltersession.hh"
 #include "examplefilter.hh"

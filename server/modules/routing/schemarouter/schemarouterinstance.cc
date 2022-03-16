@@ -32,7 +32,7 @@ namespace
 {
 namespace cfg = mxs::config;
 
-cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::ROUTER);
+cfg::Specification s_spec(MXB_MODULE_NAME, cfg::Specification::ROUTER);
 
 cfg::ParamStringList s_ignore_tables(
     &s_spec, "ignore_tables", "List of tables to ignore when checking for duplicates",
@@ -247,7 +247,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::ROUTER,
         mxs::ModuleStatus::BETA,
         MXS_ROUTER_VERSION,

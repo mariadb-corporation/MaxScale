@@ -36,7 +36,7 @@
  * or diagnostic being made for the session script.
  */
 
-#define MXS_MODULE_NAME "luafilter"
+#define MXB_MODULE_NAME "luafilter"
 
 #include <maxscale/ccdefs.hh>
 
@@ -58,7 +58,7 @@ namespace
 
 namespace cfg = mxs::config;
 
-cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::FILTER);
+cfg::Specification s_spec(MXB_MODULE_NAME, cfg::Specification::FILTER);
 
 cfg::ParamPath s_global_script(
     &s_spec, "global_script", "Path to global level Lua script",
@@ -375,7 +375,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::FILTER,
         mxs::ModuleStatus::EXPERIMENTAL,
         MXS_FILTER_VERSION,

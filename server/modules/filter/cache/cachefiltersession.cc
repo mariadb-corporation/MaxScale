@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "cache"
+#define MXB_MODULE_NAME "cache"
 #include "cachefiltersession.hh"
 #include <new>
 #include <maxbase/alloc.hh>

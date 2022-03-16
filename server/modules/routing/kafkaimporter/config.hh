@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#define MXS_MODULE_NAME "kafkaimporter"
+#define MXB_MODULE_NAME "kafkaimporter"
 
 #include <maxscale/config2.hh>
 

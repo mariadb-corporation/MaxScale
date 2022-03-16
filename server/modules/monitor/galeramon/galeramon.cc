@@ -15,7 +15,7 @@
  * @file galera_mon.c - A MySQL Galera cluster monitor
  */
 
-#define MXS_MODULE_NAME "galeramon"
+#define MXB_MODULE_NAME "galeramon"
 
 #include "galeramon.hh"
 #include <stdio.h>
@@ -39,7 +39,7 @@ namespace
 {
 namespace cfg = mxs::config;
 
-cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::MONITOR);
+cfg::Specification s_spec(MXB_MODULE_NAME, cfg::Specification::MONITOR);
 
 cfg::ParamBool s_disable_master_failback(
     &s_spec, "disable_master_failback", "Only change the master node if the current one fails",
@@ -949,7 +949,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::MONITOR,
         mxs::ModuleStatus::GA,
         MXS_MONITOR_VERSION,

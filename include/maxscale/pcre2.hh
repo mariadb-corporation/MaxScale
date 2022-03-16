@@ -23,7 +23,7 @@
  * @param errorcode value returned by pcre2 functions
  */
 #define MXS_PCRE2_PRINT_ERROR(errorcode) \
-    mxs_pcre2_print_error(errorcode, MXS_MODULE_NAME, __FILE__, __LINE__, __func__)
+    mxs_pcre2_print_error(errorcode, MXB_MODULE_NAME, __FILE__, __LINE__, __func__)
 
 typedef enum
 {

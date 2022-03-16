@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "qlafilter"
+#define MXB_MODULE_NAME "qlafilter"
 
 #include <maxscale/ccdefs.hh>
 

@@ -31,7 +31,7 @@
  */
 
 #include <maxscale/protocol/cdc/module_names.hh>
-#define MXS_MODULE_NAME MXS_CDC_PROTOCOL_NAME
+#define MXB_MODULE_NAME MXS_CDC_PROTOCOL_NAME
 
 #include <maxscale/ccdefs.hh>
 #include <cstdio>
@@ -45,7 +45,7 @@
 
 namespace
 {
-mxs::config::Specification s_spec(MXS_MODULE_NAME, mxs::config::Specification::PROTOCOL);
+mxs::config::Specification s_spec(MXB_MODULE_NAME, mxs::config::Specification::PROTOCOL);
 }
 
 class CDCProtocolModule : public mxs::ProtocolModule
@@ -76,7 +76,7 @@ public:
 
     std::string name() const override
     {
-        return MXS_MODULE_NAME;
+        return MXB_MODULE_NAME;
     }
 
     json_t* print_auth_users_json() override
@@ -121,7 +121,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::PROTOCOL,
         mxs::ModuleStatus::IN_DEVELOPMENT,
         MXS_PROTOCOL_VERSION,

@@ -89,7 +89,7 @@ uint64_t ProtocolModule::capabilities() const
 
 string ProtocolModule::name() const
 {
-    return MXS_MODULE_NAME;
+    return MXB_MODULE_NAME;
 }
 
 unique_ptr<mxs::UserAccountManager> ProtocolModule::create_user_data_manager()

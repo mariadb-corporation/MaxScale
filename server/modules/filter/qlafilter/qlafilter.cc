@@ -57,7 +57,7 @@ const char HEADER_ERROR[] = "Failed to print header to file %s. Error %i: '%s'."
 
 namespace cfg = mxs::config;
 
-cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::FILTER);
+cfg::Specification s_spec(MXB_MODULE_NAME, cfg::Specification::FILTER);
 
 cfg::ParamEnum<QlaInstance::DurationMultiplier> s_duration_multiplier(
     &s_spec, "duration_unit", "Duration in milliseconds (ms) or microseconds (us)",
@@ -1000,7 +1000,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         }
     };
 
-    modulecmd_register_command(MXS_MODULE_NAME, "log", MODULECMD_TYPE_PASSIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "log", MODULECMD_TYPE_PASSIVE,
                                cb_log, 3, args,
                                "Show unified log file as a JSON array");
 
@@ -1008,7 +1008,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::FILTER,
         mxs::ModuleStatus::GA,
         MXS_FILTER_VERSION,

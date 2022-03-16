@@ -12,7 +12,7 @@
  */
 
 #include <maxscale/protocol/cdc/module_names.hh>
-#define MXS_MODULE_NAME MXS_CDC_PROTOCOL_NAME
+#define MXB_MODULE_NAME MXS_CDC_PROTOCOL_NAME
 
 #include "cdc_plain_auth.hh"
 

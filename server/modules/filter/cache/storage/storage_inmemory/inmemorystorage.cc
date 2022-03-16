@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "storage_inmemory"
+#define MXB_MODULE_NAME "storage_inmemory"
 #include "inmemorystorage.hh"
 #include <maxscale/modutil.hh>
 #include <maxscale/protocol/mariadb/query_classifier.hh>

@@ -12,7 +12,7 @@
  */
 
 // All log messages from this module are prefixed with this
-#define MXS_MODULE_NAME "commentfilter"
+#define MXB_MODULE_NAME "commentfilter"
 
 #include "commentfiltersession.hh"
 #include "commentfilter.hh"

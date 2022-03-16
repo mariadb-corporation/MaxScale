@@ -24,7 +24,7 @@
  * name in order that each session logs to a different file.
  */
 
-#define MXS_MODULE_NAME "topfilter"
+#define MXB_MODULE_NAME "topfilter"
 
 #include <maxscale/ccdefs.hh>
 
@@ -80,7 +80,7 @@ namespace
 
 namespace cfg = mxs::config;
 
-cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::FILTER);
+cfg::Specification s_spec(MXB_MODULE_NAME, cfg::Specification::FILTER);
 
 cfg::ParamCount s_count(
     &s_spec, "count", "How many SQL statements to store", 10, cfg::Param::AT_RUNTIME);
@@ -347,7 +347,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::FILTER,
         mxs::ModuleStatus::GA,
         MXS_FILTER_VERSION,

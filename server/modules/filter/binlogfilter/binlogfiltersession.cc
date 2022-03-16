@@ -42,7 +42,7 @@
  */
 
 // All log messages from this module are prefixed with this
-#define MXS_MODULE_NAME "binlogfilter"
+#define MXB_MODULE_NAME "binlogfilter"
 
 #include <zlib.h>
 #include <inttypes.h>

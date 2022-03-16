@@ -12,7 +12,7 @@
  */
 
 #include <maxscale/protocol/mariadb/module_names.hh>
-#define MXS_MODULE_NAME MXS_MARIADBAUTH_AUTHENTICATOR_NAME
+#define MXB_MODULE_NAME MXS_MARIADBAUTH_AUTHENTICATOR_NAME
 
 #include "mysql_auth.hh"
 #include <maxbase/format.hh>
@@ -66,7 +66,7 @@ std::string MariaDBAuthenticatorModule::supported_protocol() const
 
 std::string MariaDBAuthenticatorModule::name() const
 {
-    return MXS_MODULE_NAME;
+    return MXB_MODULE_NAME;
 }
 
 const std::unordered_set<std::string>& MariaDBAuthenticatorModule::supported_plugins() const
@@ -359,7 +359,7 @@ MXS_MODULE* mariadbauthenticator_info()
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::AUTHENTICATOR,
         mxs::ModuleStatus::GA,
         MXS_AUTHENTICATOR_VERSION,

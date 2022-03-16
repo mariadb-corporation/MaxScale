@@ -15,7 +15,7 @@
 /*
  * Common definitions and includes for PAM authenticator.
  */
-#define MXS_MODULE_NAME "PAMAuth"
+#define MXB_MODULE_NAME "PAMAuth"
 
 #include <maxscale/ccdefs.hh>
 #include <string>

@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-#define MXS_MODULE_NAME "commentfilter"
+#define MXB_MODULE_NAME "commentfilter"
 
 #include <maxscale/ccdefs.hh>
 #include "commentconfig.hh"
@@ -20,7 +20,7 @@ namespace comment
 
 namespace config = mxs::config;
 
-config::Specification specification(MXS_MODULE_NAME, config::Specification::FILTER);
+config::Specification specification(MXB_MODULE_NAME, config::Specification::FILTER);
 
 config::ParamString inject(
     &specification,

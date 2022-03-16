@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "storage_redis"
+#define MXB_MODULE_NAME "storage_redis"
 #include <maxscale/ccdefs.hh>
 #include "../../cache_storage_api.hh"
 #include "../storagemodule.hh"

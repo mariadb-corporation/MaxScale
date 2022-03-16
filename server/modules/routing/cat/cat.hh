@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#define MXS_MODULE_NAME "cat"
+#define MXB_MODULE_NAME "cat"
 
 #include <maxscale/router.hh>
 #include <maxscale/config2.hh>

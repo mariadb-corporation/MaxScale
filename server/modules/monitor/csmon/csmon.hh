@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#define MXS_MODULE_NAME "csmon"
+#define MXB_MODULE_NAME "csmon"
 
 #include <maxscale/ccdefs.hh>
 #include <memory>

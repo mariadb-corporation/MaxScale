@@ -92,7 +92,7 @@ int main(int argc, char** argv)
 }
 
 MariaDBMonitor::Test::Test(bool use_hostnames)
-    : Monitor::Test(new MariaDBMonitor("TestMonitor", MXS_MODULE_NAME))
+    : Monitor::Test(new MariaDBMonitor("TestMonitor", MXB_MODULE_NAME))
     , m_use_hostnames(use_hostnames)
 {
 }

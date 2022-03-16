@@ -172,4 +172,4 @@ void log(id_t event_id,
  *
  */
 #define MXS_LOG_EVENT(event_id, format, ...) \
-    maxscale::event::log(event_id, MXS_MODULE_NAME, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)
+    maxscale::event::log(event_id, MXB_MODULE_NAME, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)

@@ -40,7 +40,7 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/service.hh>
 
-config::Specification RCR::Config::s_specification(MXS_MODULE_NAME, config::Specification::ROUTER);
+config::Specification RCR::Config::s_specification(MXB_MODULE_NAME, config::Specification::ROUTER);
 
 config::ParamEnumMask<uint32_t> RCR::Config::s_router_options(
     &s_specification,
@@ -86,7 +86,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::ROUTER,
         mxs::ModuleStatus::GA,
         MXS_ROUTER_VERSION,

@@ -103,7 +103,7 @@ GSSAPIAuthenticatorModule::create_backend_authenticator(mariadb::BackendAuthData
 
 std::string GSSAPIAuthenticatorModule::name() const
 {
-    return MXS_MODULE_NAME;
+    return MXB_MODULE_NAME;
 }
 
 const std::unordered_set<std::string>& GSSAPIAuthenticatorModule::supported_plugins() const
@@ -122,7 +122,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::AUTHENTICATOR,
         mxs::ModuleStatus::GA,
         MXS_AUTHENTICATOR_VERSION,

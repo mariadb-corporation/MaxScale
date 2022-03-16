@@ -33,7 +33,7 @@ protected:
     bool post_validate(json_t* json) const override;
 };
 
-KafkaSpecification s_spec(MXS_MODULE_NAME, cfg::Specification::ROUTER);
+KafkaSpecification s_spec(MXB_MODULE_NAME, cfg::Specification::ROUTER);
 
 cfg::ParamString s_bootstrap_servers(
     &s_spec, "bootstrap_servers", "Bootstrap servers in host:port format",
@@ -506,7 +506,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,
-        MXS_MODULE_NAME,
+        MXB_MODULE_NAME,
         mxs::ModuleType::ROUTER,
         mxs::ModuleStatus::ALPHA,
         MXS_ROUTER_VERSION,

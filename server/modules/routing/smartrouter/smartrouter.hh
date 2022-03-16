@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#define MXS_MODULE_NAME "smartrouter"
+#define MXB_MODULE_NAME "smartrouter"
 
 /**
  * @file Smart Router. Routes queries to the best router for the type of query.
