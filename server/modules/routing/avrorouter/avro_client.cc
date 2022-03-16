@@ -629,7 +629,7 @@ GWBUF* read_avro_json_schema(std::string avrofile, std::string dir)
         MXS_ERROR("Failed to open file '%s': %d, %s",
                   schemafile.c_str(),
                   errno,
-                  mxs_strerror(errno));
+                  mxb_strerror(errno));
     }
 
     return rval;

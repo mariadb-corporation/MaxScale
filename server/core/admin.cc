@@ -185,7 +185,7 @@ std::string load_file(const std::string& file)
     }
     else
     {
-        MXS_ERROR("Failed to load file '%s': %d, %s", file.c_str(), errno, mxs_strerror(errno));
+        MXS_ERROR("Failed to load file '%s': %d, %s", file.c_str(), errno, mxb_strerror(errno));
     }
 
     return ss.str();

@@ -115,7 +115,7 @@ sd_journal* open_journal(const std::string& cursor)
 
     if (rc < 0)
     {
-        MXS_ERROR("Failed to open system journal: %s", mxs_strerror(-rc));
+        MXS_ERROR("Failed to open system journal: %s", mxb_strerror(-rc));
     }
     else
     {

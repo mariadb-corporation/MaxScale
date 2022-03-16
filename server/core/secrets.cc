@@ -208,7 +208,7 @@ ReadKeyResult secrets_readkeys(const string& filepath)
     else
     {
         MXS_ERROR("stat() for secrets file '%s' failed. Error %d, %s.",
-                  filepathc, errno, mxs_strerror(errno));
+                  filepathc, errno, mxb_strerror(errno));
         stat_error = true;
     }
 
@@ -236,13 +236,13 @@ ReadKeyResult secrets_readkeys(const string& filepath)
             else
             {
                 MXS_ERROR("Read from secrets file %s failed. Read %li, expected %i bytes. Error %d, %s.",
-                          filepathc, file.gcount(), binary_total_len, errno, mxs_strerror(errno));
+                          filepathc, file.gcount(), binary_total_len, errno, mxb_strerror(errno));
             }
         }
         else
         {
             MXS_ERROR("Could not open secrets file '%s'. Error %d, %s.",
-                      filepathc, errno, mxs_strerror(errno));
+                      filepathc, errno, mxb_strerror(errno));
         }
     }
     else
@@ -508,7 +508,7 @@ bool secrets_write_keys(const ByteVec& key, const string& filepath, const string
     else
     {
         printf("Write to secrets file '%s' failed. Error %d, %s.\n",
-               filepathc, errno, mxs_strerror(errno));
+               filepathc, errno, mxb_strerror(errno));
     }
     json_decref(obj);
 
@@ -544,7 +544,7 @@ bool secrets_write_keys(const ByteVec& key, const string& filepath, const string
         else
         {
             printf("Failed to change the permissions of the secrets file '%s'. Error %d, %s.\n",
-                   filepathc, errno, mxs_strerror(errno));
+                   filepathc, errno, mxb_strerror(errno));
         }
     }
     return rval;

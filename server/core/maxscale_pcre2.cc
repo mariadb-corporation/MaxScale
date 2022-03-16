@@ -175,7 +175,7 @@ void mxs_pcre2_print_error(int errorcode,
         const PCRE2_SIZE errbuf_len = 120;
         PCRE2_UCHAR errorbuf[errbuf_len];
         pcre2_get_error_message(errorcode, errorbuf, errbuf_len);
-        mxs_log_message(LOG_ERR,
+        mxb_log_message(LOG_ERR,
                         module_name,
                         filename,
                         line_num,
@@ -203,7 +203,7 @@ bool mxs_pcre2_check_match_exclude(pcre2_code* re_match,
             rval = false;   // Didn't match the "match"-regex
             if (mxb_log_should_log(LOG_INFO))
             {
-                mxs_log_message(LOG_INFO,
+                mxb_log_message(LOG_INFO,
                                 calling_module,
                                 __FILE__,
                                 __LINE__,
@@ -229,7 +229,7 @@ bool mxs_pcre2_check_match_exclude(pcre2_code* re_match,
             rval = false;   // Matched the "exclude"-regex
             if (mxb_log_should_log(LOG_INFO))
             {
-                mxs_log_message(LOG_INFO,
+                mxb_log_message(LOG_INFO,
                                 calling_module,
                                 __FILE__,
                                 __LINE__,

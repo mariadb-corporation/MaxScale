@@ -1313,7 +1313,7 @@ bool ParamPath::is_valid(const value_type& value) const
                  * if it doesn't exist.
                  */
                 MXS_ERROR("Bad path parameter '%s' (absolute path '%s'): %d, %s",
-                          value.c_str(), buf.c_str(), er, mxs_strerror(er));
+                          value.c_str(), buf.c_str(), er, mxb_strerror(er));
             }
             else if (mxs_mkdir_all(buf.c_str(), mask))
             {
@@ -1324,7 +1324,7 @@ bool ParamPath::is_valid(const value_type& value) const
             {
                 /** Failed to create the directory, errno is set in `mxs_mkdir_all` */
                 MXS_ERROR("Can't create path '%s' (absolute path '%s'): %d, %s",
-                          value.c_str(), buf.c_str(), errno, mxs_strerror(errno));
+                          value.c_str(), buf.c_str(), errno, mxb_strerror(errno));
             }
         }
     }

@@ -2369,7 +2369,7 @@ bool runtime_remove_config(const char* name)
     if (unlink(filename.c_str()) == -1 && errno != ENOENT)
     {
         MXS_ERROR("Failed to remove persisted configuration '%s': %d, %s",
-                  filename.c_str(), errno, mxs_strerror(errno));
+                  filename.c_str(), errno, mxb_strerror(errno));
         rval = false;
     }
 
@@ -2384,7 +2384,7 @@ bool runtime_save_config(const char* name, const std::string& config)
     if (unlink(filename.c_str()) == -1 && errno != ENOENT)
     {
         MXS_ERROR("Failed to remove temporary configuration at '%s': %d, %s",
-                  filename.c_str(), errno, mxs_strerror(errno));
+                  filename.c_str(), errno, mxb_strerror(errno));
         return false;
     }
 
@@ -2393,13 +2393,13 @@ bool runtime_save_config(const char* name, const std::string& config)
     if (fd == -1)
     {
         MXS_ERROR("Failed to open file '%s' when serializing '%s': %d, %s",
-                  filename.c_str(), name, errno, mxs_strerror(errno));
+                  filename.c_str(), name, errno, mxb_strerror(errno));
         return false;
     }
 
     if (write(fd, config.c_str(), config.size()) == -1)
     {
-        MXS_ERROR("Failed to serialize file '%s': %d, %s", filename.c_str(), errno, mxs_strerror(errno));
+        MXS_ERROR("Failed to serialize file '%s': %d, %s", filename.c_str(), errno, mxb_strerror(errno));
     }
     else
     {
@@ -2409,7 +2409,7 @@ bool runtime_save_config(const char* name, const std::string& config)
         if (rename(filename.c_str(), final_filename.c_str()) == -1)
         {
             MXS_ERROR("Failed to rename temporary configuration at '%s': %d, %s",
-                      filename.c_str(), errno, mxs_strerror(errno));
+                      filename.c_str(), errno, mxb_strerror(errno));
         }
         else
         {

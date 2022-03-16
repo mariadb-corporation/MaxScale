@@ -1542,7 +1542,7 @@ static bool is_directory(const char* dir)
         {
             MXS_WARNING("Could not access %s, not reading: %s",
                         dir,
-                        mxs_strerror(errno));
+                        mxb_strerror(errno));
         }
     }
     else
@@ -1595,7 +1595,7 @@ bool export_config_file(const char* filename, ConfigSectionMap& config)
         if (write(fd, payload.c_str(), payload.size()) == -1)
         {
             MXS_ERROR("Failed to write to file '%s': %d, %s",
-                      filename, errno, mxs_strerror(errno));
+                      filename, errno, mxb_strerror(errno));
             rval = false;
         }
 
@@ -1604,7 +1604,7 @@ bool export_config_file(const char* filename, ConfigSectionMap& config)
     else
     {
         MXS_ERROR("Failed to open configuration export file '%s': %d, %s",
-                  filename, errno, mxs_strerror(errno));
+                  filename, errno, mxb_strerror(errno));
         rval = false;
     }
 

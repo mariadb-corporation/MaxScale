@@ -85,7 +85,7 @@ bool admin_dump_users(const Users* users, const char* fname)
             MXS_ERROR("Failed to create directory '%s': %d, %s",
                       mxs::datadir(),
                       errno,
-                      mxs_strerror(errno));
+                      mxb_strerror(errno));
             return false;
         }
     }
@@ -98,7 +98,7 @@ bool admin_dump_users(const Users* users, const char* fname)
 
     if (fd == -1)
     {
-        MXS_ERROR("Failed to create '%s': %d, %s", tmppath.c_str(), errno, mxs_strerror(errno));
+        MXS_ERROR("Failed to create '%s': %d, %s", tmppath.c_str(), errno, mxb_strerror(errno));
     }
     else
     {
@@ -109,12 +109,12 @@ bool admin_dump_users(const Users* users, const char* fname)
         if (write(fd, str, strlen(str)) == -1)
         {
             MXS_ERROR("Failed to dump admin users to '%s': %d, %s",
-                      tmppath.c_str(), errno, mxs_strerror(errno));
+                      tmppath.c_str(), errno, mxb_strerror(errno));
         }
         else if (rename(tmppath.c_str(), path.c_str()) == -1)
         {
             MXS_ERROR("Failed to rename to '%s': %d, %s",
-                      path.c_str(), errno, mxs_strerror(errno));
+                      path.c_str(), errno, mxb_strerror(errno));
         }
         else
         {
@@ -330,7 +330,7 @@ bool load_rest_users()
 
                 if (rename(pathc, old_users_buc) != 0)
                 {
-                    MXS_ERROR("Failed to rename old users file: %d, %s", errno, mxs_strerror(errno));
+                    MXS_ERROR("Failed to rename old users file: %d, %s", errno, mxb_strerror(errno));
                 }
                 else if (admin_dump_users(&output, fname))
                 {

@@ -799,7 +799,7 @@ bool MariaDBServer::run_sql_from_file(const string& path, json_t** error_out)
                 PRINT_MXS_JSON_ERROR(error_out,
                                      "Error when reading sql text file '%s': '%s'.",
                                      path.c_str(),
-                                     mxs_strerror(errno));
+                                     mxb_strerror(errno));
                 error = true;
             }
             // Skip empty lines and comment lines

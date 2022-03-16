@@ -271,7 +271,7 @@ bool QlaInstance::LogManager::prepare()
         if (!open_unified_logfile())
         {
             MXS_ERROR("Failed to open file '%s'. Error %i: '%s'.",
-                      m_unified_filename.c_str(), errno, mxs_strerror(errno));
+                      m_unified_filename.c_str(), errno, mxb_strerror(errno));
             return false;
         }
     }
@@ -399,7 +399,7 @@ void QlaInstance::LogManager::check_reopen_file(const string& filename, uint64_t
         string header = generate_log_header(data_flags);
         if (!write_to_logfile((*psFile)->log_stream, header))
         {
-            MXS_ERROR(HEADER_ERROR, filename.c_str(), errno, mxs_strerror(errno));
+            MXS_ERROR(HEADER_ERROR, filename.c_str(), errno, mxb_strerror(errno));
         }
     }
     // Either the old file existed or file creation failed.
@@ -564,14 +564,14 @@ SFile QlaInstance::LogManager::open_log_file(uint64_t data_flags, const string& 
 
     if (!sFile->is_open())
     {
-        MXS_ERROR("Failed to open file '%s'. Error %i: '%s'.", filename.c_str(), errno, mxs_strerror(errno));
+        MXS_ERROR("Failed to open file '%s'. Error %i: '%s'.", filename.c_str(), errno, mxb_strerror(errno));
     }
     else if (!file_existed && data_flags != 0)
     {
         string header = generate_log_header(data_flags);
         if (!write_to_logfile(sFile->log_stream, header))
         {
-            MXS_ERROR(HEADER_ERROR, filename.c_str(), errno, mxs_strerror(errno));
+            MXS_ERROR(HEADER_ERROR, filename.c_str(), errno, mxb_strerror(errno));
         }
     }
 
@@ -955,7 +955,7 @@ bool check_replace_file(const string& filename, SFile* psFile)
         if (!(*psFile)->log_stream.is_open())
         {
             MXS_ERROR("Could not open log file '%s'. open() failed with error code %i: '%s'. %s",
-                      filename.c_str(), errno, mxs_strerror(errno), retry_later);
+                      filename.c_str(), errno, mxb_strerror(errno), retry_later);
         }
         MXS_INFO("Log file '%s' recreated.", filename.c_str());
     }

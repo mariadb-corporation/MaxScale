@@ -959,7 +959,7 @@ RoutingWorker* RoutingWorker::create(mxb::WatchdogNotifier* pNotifier, int epoll
         {
             MXS_ERROR("Could not add epoll instance for listening sockets to "
                       "epoll instance of worker: %s",
-                      mxs_strerror(errno));
+                      mxb_strerror(errno));
             delete pThis;
             pThis = NULL;
         }
@@ -1025,7 +1025,7 @@ uint32_t RoutingWorker::handle_epoll_events(uint32_t events)
 
     if (nfds == -1)
     {
-        MXS_ERROR("epoll_wait failed: %s", mxs_strerror(errno));
+        MXS_ERROR("epoll_wait failed: %s", mxb_strerror(errno));
     }
     else if (nfds == 0)
     {

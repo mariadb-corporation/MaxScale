@@ -207,7 +207,7 @@ int ExternalCmd::externcmd_execute()
     int fd[2];
     if (pipe(fd) == -1)
     {
-        MXS_ERROR("Failed to open pipe: [%d] %s", errno, mxs_strerror(errno));
+        MXS_ERROR("Failed to open pipe: [%d] %s", errno, mxb_strerror(errno));
         return -1;
     }
 
@@ -225,7 +225,7 @@ int ExternalCmd::externcmd_execute()
         close(fd[0]);
         close(fd[1]);
         MXS_ERROR("Failed to execute command '%s', fork failed: [%d] %s",
-                  cmdname, errno, mxs_strerror(errno));
+                  cmdname, errno, mxb_strerror(errno));
         rval = -1;
     }
     else if (pid == 0)
@@ -277,7 +277,7 @@ int ExternalCmd::externcmd_execute()
             switch (waitpid(pid, &exit_status, WNOHANG))
             {
             case -1:
-                MXS_ERROR("Failed to wait for child process: %d, %s", errno, mxs_strerror(errno));
+                MXS_ERROR("Failed to wait for child process: %d, %s", errno, mxb_strerror(errno));
                 again = false;
                 break;
 

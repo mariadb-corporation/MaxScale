@@ -562,7 +562,7 @@ static int signal_set(int sig, void (* handler)(int))
         MXS_ERROR("Failed call sigaction() in %s due to %d, %s.",
                   program_invocation_short_name,
                   errno,
-                  mxs_strerror(errno));
+                  mxb_strerror(errno));
         rc = 1;
     }
 
@@ -596,7 +596,7 @@ static bool create_datadir(const char* base, char* datadir)
             {
                 MXS_ERROR("Cannot create data directory '%s': %s",
                           datadir,
-                          mxs_strerror(errno));
+                          mxb_strerror(errno));
             }
         }
     }
@@ -606,7 +606,7 @@ static bool create_datadir(const char* base, char* datadir)
         {
             MXS_ERROR("Cannot create data directory '%s': %s",
                       datadir,
-                      mxs_strerror(errno));
+                      mxb_strerror(errno));
         }
         else
         {
@@ -642,7 +642,7 @@ int ntfw_cb(const char* filename,
             MXS_ERROR("Failed to remove the data directory %s of MaxScale due to %d, %s.",
                       filename_string.c_str(),
                       eno,
-                      mxs_strerror(eno));
+                      mxb_strerror(eno));
         }
     }
     return rc;
@@ -779,7 +779,7 @@ static void print_message(const char* tag, int eno, const char* message)
             tag,
             message,
             eno == 0 ? "" : ": ",
-            eno == 0 ? "" : mxs_strerror(eno),
+            eno == 0 ? "" : mxb_strerror(eno),
             eno == 0 ? "" : ".");
     fflush(stderr);
 }
@@ -839,7 +839,7 @@ static void log_startup_message(int eno, const char* message)
         MXS_ALERT("%s%s%s%s",
                   message,
                   eno == 0 ? "" : ": ",
-                  eno == 0 ? "" : mxs_strerror(eno),
+                  eno == 0 ? "" : mxb_strerror(eno),
                   eno == 0 ? "" : ".");
     }
 
@@ -2326,7 +2326,7 @@ static void unlink_pidfile(void)
     {
         if (unlink(this_unit.pidfile))
         {
-            MXS_WARNING("Failed to remove pidfile %s: %s", this_unit.pidfile, mxs_strerror(errno));
+            MXS_WARNING("Failed to remove pidfile %s: %s", this_unit.pidfile, mxb_strerror(errno));
         }
     }
 }
@@ -2762,7 +2762,7 @@ static int set_user(const char* user)
         printf("Error: Failed to retrieve user information for '%s': %d %s\n",
                user,
                errno,
-               errno == 0 ? "User not found" : mxs_strerror(errno));
+               errno == 0 ? "User not found" : mxb_strerror(errno));
         return -1;
     }
 
@@ -2772,7 +2772,7 @@ static int set_user(const char* user)
         printf("Error: Failed to change group to '%d': %d %s\n",
                pwname->pw_gid,
                errno,
-               mxs_strerror(errno));
+               mxb_strerror(errno));
         return rval;
     }
 
@@ -2782,7 +2782,7 @@ static int set_user(const char* user)
         printf("Error: Failed to change user to '%s': %d %s\n",
                pwname->pw_name,
                errno,
-               mxs_strerror(errno));
+               mxb_strerror(errno));
         return rval;
     }
     if (prctl(PR_GET_DUMPABLE) == 0)
@@ -2792,7 +2792,7 @@ static int set_user(const char* user)
             printf("Error: Failed to set dumpable flag on for the process '%s': %d %s\n",
                    pwname->pw_name,
                    errno,
-                   mxs_strerror(errno));
+                   mxb_strerror(errno));
             return -1;
         }
     }
@@ -2840,12 +2840,12 @@ static bool change_cwd()
                   "Trying to change working directory to '/'.",
                   mxs::logdir(),
                   errno,
-                  mxs_strerror(errno));
+                  mxb_strerror(errno));
         if (chdir("/") != 0)
         {
             MXS_ERROR("Failed to change working directory to '/': %d, %s",
                       errno,
-                      mxs_strerror(errno));
+                      mxb_strerror(errno));
             rval = false;
         }
         else
@@ -3204,7 +3204,7 @@ static bool lock_dir(const std::string& path)
 
     if (fd == -1)
     {
-        MXS_ERROR("Failed to open lock file %s: %s", lock.c_str(), mxs_strerror(errno));
+        MXS_ERROR("Failed to open lock file %s: %s", lock.c_str(), mxb_strerror(errno));
         return false;
     }
 
@@ -3220,7 +3220,7 @@ static bool lock_dir(const std::string& path)
         }
         else
         {
-            MXS_ERROR("Failed to lock file %s. %s", lock.c_str(), mxs_strerror(errno));
+            MXS_ERROR("Failed to lock file %s. %s", lock.c_str(), mxb_strerror(errno));
         }
         close(fd);
         return false;
@@ -3228,7 +3228,7 @@ static bool lock_dir(const std::string& path)
 
     if (ftruncate(fd, 0) == -1)
     {
-        MXS_ERROR("Failed to truncate lock file %s: %s", lock.c_str(), mxs_strerror(errno));
+        MXS_ERROR("Failed to truncate lock file %s: %s", lock.c_str(), mxb_strerror(errno));
         close(fd);
         unlink(lock.c_str());
         return false;
@@ -3236,7 +3236,7 @@ static bool lock_dir(const std::string& path)
 
     if (write(fd, pid.c_str(), pid.length()) == -1)
     {
-        MXS_ERROR("Failed to write into lock file %s: %s", lock.c_str(), mxs_strerror(errno));
+        MXS_ERROR("Failed to write into lock file %s: %s", lock.c_str(), mxb_strerror(errno));
         close(fd);
         unlink(lock.c_str());
         return false;

@@ -767,7 +767,7 @@ static int create_unix_socket(const char* path)
 {
     if (unlink(path) == -1 && errno != ENOENT)
     {
-        MXS_ERROR("Failed to unlink Unix Socket %s: %d %s", path, errno, mxs_strerror(errno));
+        MXS_ERROR("Failed to unlink Unix Socket %s: %d %s", path, errno, mxb_strerror(errno));
     }
 
     struct sockaddr_un local_addr;
@@ -776,7 +776,7 @@ static int create_unix_socket(const char* path)
     if (listener_socket >= 0 && chmod(path, 0777) < 0)
     {
         MXS_ERROR("Failed to change permissions on UNIX Domain socket '%s': %d, %s",
-                  path, errno, mxs_strerror(errno));
+                  path, errno, mxb_strerror(errno));
     }
 
     return listener_socket;
@@ -831,7 +831,7 @@ int start_listening(const std::string& host, uint16_t port)
         if (listen(listener_socket, INT_MAX) != 0)
         {
             MXS_ERROR("Failed to start listening on [%s]:%u: %d, %s", host.c_str(), port, errno,
-                      mxs_strerror(errno));
+                      mxb_strerror(errno));
             close(listener_socket);
             return -1;
         }
@@ -887,7 +887,7 @@ static ClientConn accept_one_connection(int fd)
     }
     else if (errno != EAGAIN && errno != EWOULDBLOCK)
     {
-        MXS_ERROR("Failed to accept new client connection: %d, %s", errno, mxs_strerror(errno));
+        MXS_ERROR("Failed to accept new client connection: %d, %s", errno, mxb_strerror(errno));
     }
 
     return conn;

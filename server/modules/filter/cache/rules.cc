@@ -273,7 +273,7 @@ bool cache_rules_load(const char* zPath,
     {
         MXS_ERROR("Could not open rules file %s for reading: %s",
                   zPath,
-                  mxs_strerror(errno));
+                  mxb_strerror(errno));
     }
 
     return rv;

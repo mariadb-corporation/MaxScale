@@ -105,8 +105,10 @@ json_t* mxs_log_data_to_json(const char* host, const std::string& cursor, int ro
 std::function<std::string()> mxs_logs_stream(const std::string& cursor,
                                              const std::set<std::string>& priorities);
 
-#define mxs_log_finish  mxb_log_finish
-#define mxs_log_message mxb_log_message
+inline void mxs_log_finish()
+{
+    mxb_log_finish();
+}
 
 #define mxs_log_get_throttling            mxb_log_get_throttling
 #define mxs_log_set_augmentation          mxb_log_set_augmentation
@@ -137,5 +139,3 @@ std::function<std::string()> mxs_logs_stream(const std::string& cursor,
 #define MXS_OOM_MESSAGE_IFNULL MXB_OOM_MESSAGE_IFNULL
 #define MXS_OOM                MXB_OOM
 #define MXS_OOM_IFNULL         MXB_OOM_IFNULL
-
-#define mxs_strerror mxb_strerror
