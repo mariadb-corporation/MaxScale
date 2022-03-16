@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
         mxs::set_langdir(".");
         mxs::set_process_datadir("/tmp");
 
-        if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
+        if (mxs_log_init(NULL, ".", MXB_LOG_TARGET_DEFAULT))
         {
             size_t len = strlen(zStatement);
             maxscale::TrxBoundaryParser parser;

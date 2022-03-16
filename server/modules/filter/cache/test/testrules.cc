@@ -567,7 +567,7 @@ int main(int argc, char** argv)
     int rc = EXIT_FAILURE;
     mxs::Config::init(argc, argv);
 
-    if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
+    if (mxs_log_init(NULL, ".", MXB_LOG_TARGET_DEFAULT))
     {
         mxs::Config& config = mxs::Config::get();
         config.n_threads = 1;

@@ -33,7 +33,7 @@ int main(int argc, char** argv)
         return rc;
     }
 
-    mxs_log_init(NULL, NULL, MXS_LOG_TARGET_STDOUT);
+    mxs_log_init(NULL, NULL, MXB_LOG_TARGET_STDOUT);
     atexit(mxs_log_finish);
 
     std::ifstream infile(argv[1]);

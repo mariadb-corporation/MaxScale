@@ -296,7 +296,7 @@ int main()
 {
     int rc = EXIT_SUCCESS;
 
-    if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_STDOUT))
+    if (mxs_log_init(NULL, ".", MXB_LOG_TARGET_STDOUT))
     {
         rc = (MaskingRulesTester::test_parsing() == EXIT_FAILURE) ? EXIT_FAILURE : EXIT_SUCCESS;
         if (!rc)

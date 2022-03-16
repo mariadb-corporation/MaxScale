@@ -57,19 +57,19 @@ public:
                          std::string* pMessage) const;
     };
 
-    class ParamLogThrottling : public config::ConcreteParam<ParamLogThrottling, MXS_LOG_THROTTLING>
+    class ParamLogThrottling : public config::ConcreteParam<ParamLogThrottling, MXB_LOG_THROTTLING>
     {
     public:
-        using value_type = MXS_LOG_THROTTLING;
+        using value_type = MXB_LOG_THROTTLING;
 
         ParamLogThrottling(config::Specification* pSpecification,
                            const char* zName,
                            const char* zDescription)
-            : config::ConcreteParam<ParamLogThrottling, MXS_LOG_THROTTLING>(
+            : config::ConcreteParam<ParamLogThrottling, MXB_LOG_THROTTLING>(
                 pSpecification, zName, zDescription,
                 Modifiable::AT_RUNTIME,
                 Param::OPTIONAL,
-                MXS_LOG_THROTTLING {10, 1000, 10000})
+                MXB_LOG_THROTTLING {10, 1000, 10000})
         {
         }
 

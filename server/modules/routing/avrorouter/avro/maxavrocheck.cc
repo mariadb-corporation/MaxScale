@@ -152,7 +152,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    if (!mxs_log_init(NULL, NULL, MXS_LOG_TARGET_STDOUT))
+    if (!mxs_log_init(NULL, NULL, MXB_LOG_TARGET_STDOUT))
     {
         fprintf(stderr, "Failed to initialize log.\n");
         return 2;

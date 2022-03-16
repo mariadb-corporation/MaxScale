@@ -50,7 +50,7 @@ int TestStorage::run(int argc, char** argv)
 
     if ((argc >= 2) || (argc <= 7))
     {
-        if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
+        if (mxs_log_init(NULL, ".", MXB_LOG_TARGET_DEFAULT))
         {
             if (qc_setup(NULL, QC_SQL_MODE_DEFAULT, NULL, NULL) && qc_process_init(QC_INIT_BOTH))
             {

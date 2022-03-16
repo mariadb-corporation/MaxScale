@@ -179,7 +179,7 @@ int main(int argc, char** argv)
 {
     int result = 0;
 
-    if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_FS))
+    if (mxs_log_init(NULL, ".", MXB_LOG_TARGET_FS))
     {
         result += test_disk_space_threshold();
         mxs_log_finish();

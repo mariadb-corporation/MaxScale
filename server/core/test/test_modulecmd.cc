@@ -480,7 +480,7 @@ int main(int argc, char** argv)
     int rc = 0;
 
     mxs::Config::init(argc, argv);
-    mxs_log_init(NULL, NULL, MXS_LOG_TARGET_STDOUT);
+    mxs_log_init(NULL, NULL, MXB_LOG_TARGET_STDOUT);
     maxbase::init();
 
     mxb::WatchdogNotifier wn(0);

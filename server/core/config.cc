@@ -705,7 +705,7 @@ Config::Config(int argc, char** argv)
     log_warning(this, &s_log_warning, [](bool enable) {
                     mxb_log_set_priority_enabled(LOG_WARNING, enable);
                 }),
-    log_throttling(this, &s_log_throttling, [](MXS_LOG_THROTTLING throttling) {
+    log_throttling(this, &s_log_throttling, [](MXB_LOG_THROTTLING throttling) {
                        mxb_log_set_throttling(&throttling);
                    }),
     dump_statements(this, &s_dump_statements, [](session_dump_statements_t when) {
@@ -960,7 +960,7 @@ bool Config::ParamLogThrottling::from_string(const std::string& value_as_string,
 
     if (value_as_string.empty())
     {
-        *pValue = MXS_LOG_THROTTLING {0, 0, 0};
+        *pValue = MXB_LOG_THROTTLING {0, 0, 0};
         rv = true;
     }
     else
@@ -1004,7 +1004,7 @@ bool Config::ParamLogThrottling::from_string(const std::string& value_as_string,
                 && get_milliseconds(name().c_str(), window_ms, value_as_string.c_str(), &w)
                 && get_milliseconds(name().c_str(), suppress_ms, value_as_string.c_str(), &s))
             {
-                MXS_LOG_THROTTLING throttling;
+                MXB_LOG_THROTTLING throttling;
                 throttling.count = c;
                 throttling.window_ms = w;
                 throttling.suppress_ms = s;

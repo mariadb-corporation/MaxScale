@@ -81,7 +81,7 @@ int test_one_query(const test_t& test)
 
 int main(int argc, char** argv)
 {
-    mxs_log_init(NULL, ".", MXS_LOG_TARGET_STDOUT);
+    mxs_log_init(NULL, ".", MXB_LOG_TARGET_STDOUT);
     MariaDBClientConnection::module_init();
 
     /*

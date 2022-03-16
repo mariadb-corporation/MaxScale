@@ -34,13 +34,6 @@
 #include <maxbase/jansson.hh>
 #include <maxbase/string.hh>
 
-typedef mxb_log_target_t mxs_log_target_t;
-#define MXS_LOG_TARGET_DEFAULT MXB_LOG_TARGET_DEFAULT
-#define MXS_LOG_TARGET_FS      MXB_LOG_TARGET_FS
-#define MXS_LOG_TARGET_STDOUT  MXB_LOG_TARGET_STDOUT
-
-typedef MXB_LOG_THROTTLING MXS_LOG_THROTTLING;
-
 /**
  * Initializes MaxScale log manager
  *
@@ -50,7 +43,7 @@ typedef MXB_LOG_THROTTLING MXS_LOG_THROTTLING;
  *
  * @return true if succeed, otherwise false
  */
-bool mxs_log_init(const char* ident, const char* logdir, mxs_log_target_t target);
+bool mxs_log_init(const char* ident, const char* logdir, mxb_log_target_t target);
 
 /**
  * Close and reopen MaxScale log files. Also increments a global rotation counter which modules

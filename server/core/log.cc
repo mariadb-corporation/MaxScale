@@ -80,7 +80,7 @@ bool mxs_should_log(int priority)
 }
 }
 
-bool mxs_log_init(const char* ident, const char* logdir, mxs_log_target_t target)
+bool mxs_log_init(const char* ident, const char* logdir, mxb_log_target_t target)
 {
     mxb::Logger::set_ident("MariaDB MaxScale");
 

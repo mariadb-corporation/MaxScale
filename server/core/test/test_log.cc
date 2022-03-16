@@ -41,7 +41,7 @@ int main(int argc, char* argv[])
     struct tm tm;
     char c;
 
-    succp = mxs_log_init(NULL, "/tmp", MXS_LOG_TARGET_FS);
+    succp = mxs_log_init(NULL, "/tmp", MXB_LOG_TARGET_FS);
 
     mxb_assert_message(succp, "Log manager initialization failed");
 

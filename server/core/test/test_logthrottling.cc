@@ -50,7 +50,7 @@ void ensure(bool ok)
     }
 }
 
-ostream& operator<<(ostream& out, const MXS_LOG_THROTTLING& t)
+ostream& operator<<(ostream& out, const MXB_LOG_THROTTLING& t)
 {
     out << "{" << t.count << ", " << t.window_ms << ", " << t.suppress_ms << "}";
     return out;
@@ -102,7 +102,7 @@ void* thread_main(void* pv)
     return 0;
 }
 
-bool run(const MXS_LOG_THROTTLING& throttling, int priority, size_t n_generate, size_t n_expect)
+bool run(const MXB_LOG_THROTTLING& throttling, int priority, size_t n_generate, size_t n_expect)
 {
     cout << "Logging " << n_generate << " messages with throttling as " << throttling << "," << endl;
 
@@ -168,9 +168,9 @@ int main(int argc, char* argv[])
     ensure(logdir);
     logfile.assign(string(logdir) + '/' + LOGNAME);
 
-    if (mxs_log_init(NULL, logdir, MXS_LOG_TARGET_FS))
+    if (mxs_log_init(NULL, logdir, MXB_LOG_TARGET_FS))
     {
-        MXS_LOG_THROTTLING t;
+        MXB_LOG_THROTTLING t;
 
         t.count = 0;
         t.window_ms = 0;

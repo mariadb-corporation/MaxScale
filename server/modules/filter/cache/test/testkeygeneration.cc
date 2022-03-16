@@ -126,7 +126,7 @@ int main(int argc, char* argv[])
     {
         mxs::set_libdir("../../../../../query_classifier/qc_sqlite/");
 
-        if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
+        if (mxs_log_init(NULL, ".", MXB_LOG_TARGET_DEFAULT))
         {
             if (qc_setup(NULL, QC_SQL_MODE_DEFAULT, NULL, NULL) && qc_process_init(QC_INIT_BOTH))
             {

@@ -75,7 +75,7 @@ int main(int argc, char** argv)
     iterations = atoi(argv[1]);
     interval = atoi(argv[2]);
 
-    succp = mxs_log_init(NULL, tmp, MXS_LOG_TARGET_FS);
+    succp = mxs_log_init(NULL, tmp, MXB_LOG_TARGET_FS);
 
     if (!succp)
     {

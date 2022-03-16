@@ -575,7 +575,7 @@ int main()
 
     srandom(time(NULL));
 
-    if (mxs_log_init("TEST_EVENT", ".", MXS_LOG_TARGET_DEFAULT))
+    if (mxs_log_init("TEST_EVENT", ".", MXB_LOG_TARGET_DEFAULT))
     {
         mxb_log_set_syslog_enabled(true);
 

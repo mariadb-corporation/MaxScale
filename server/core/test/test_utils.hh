@@ -116,7 +116,7 @@ void init_test_env(char* __attribute((unused))path = nullptr, uint32_t init_type
     SSL_load_error_strings();
     OPENSSL_add_all_algorithms_noconf();
 
-    if (!mxs_log_init(NULL, NULL, MXS_LOG_TARGET_STDOUT))
+    if (!mxs_log_init(NULL, NULL, MXB_LOG_TARGET_STDOUT))
     {
         exit(1);
     }

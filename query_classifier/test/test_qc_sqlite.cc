@@ -29,7 +29,7 @@ public:
         mxs::set_langdir(".");
         mxs::set_process_datadir("/tmp");
 
-        if (!mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
+        if (!mxs_log_init(NULL, ".", MXB_LOG_TARGET_DEFAULT))
         {
             throw std::runtime_error("Failed to initialize the log");
         }
