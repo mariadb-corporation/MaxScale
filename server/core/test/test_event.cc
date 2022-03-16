@@ -577,7 +577,7 @@ int main()
 
     if (mxs_log_init("TEST_EVENT", ".", MXS_LOG_TARGET_DEFAULT))
     {
-        mxs_log_set_syslog_enabled(true);
+        mxb_log_set_syslog_enabled(true);
 
         errors += test_levels();
         errors += test_facilities();

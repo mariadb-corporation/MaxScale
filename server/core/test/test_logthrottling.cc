@@ -107,7 +107,7 @@ bool run(const MXS_LOG_THROTTLING& throttling, int priority, size_t n_generate, 
 {
     cout << "Logging " << n_generate << " messages with throttling as " << throttling << "," << endl;
 
-    mxs_log_set_throttling(&throttling);    // Causes message to be logged.
+    mxb_log_set_throttling(&throttling);    // Causes message to be logged.
 
     ifstream in(logfile.c_str());
     in.seekg(0, ios_base::end);
@@ -239,7 +239,7 @@ int main(int argc, char* argv[])
             rc = EXIT_FAILURE;
         }
 
-        mxs_log_set_priority_enabled(LOG_INFO, true);
+        mxb_log_set_priority_enabled(LOG_INFO, true);
 
         // 20 messages * N_THREADS, and since we are logging INFO messages, we should
         // get 20 * N_THREADS messages.
@@ -248,9 +248,9 @@ int main(int argc, char* argv[])
             rc = EXIT_FAILURE;
         }
 
-        mxs_log_set_priority_enabled(LOG_INFO, false);
+        mxb_log_set_priority_enabled(LOG_INFO, false);
 
-        mxs_log_set_priority_enabled(LOG_DEBUG, true);
+        mxb_log_set_priority_enabled(LOG_DEBUG, true);
 
         // 20 messages * N_THREADS, and since we are logging DEBUG messages, we should
         // get 20 * N_THREADS messages.

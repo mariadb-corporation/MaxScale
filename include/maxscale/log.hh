@@ -110,15 +110,6 @@ inline void mxs_log_finish()
     mxb_log_finish();
 }
 
-#define mxs_log_get_throttling            mxb_log_get_throttling
-#define mxs_log_set_augmentation          mxb_log_set_augmentation
-#define mxs_log_set_highprecision_enabled mxb_log_set_highprecision_enabled
-#define mxs_log_set_maxlog_enabled        mxb_log_set_maxlog_enabled
-#define mxs_log_set_highprecision_enabled mxb_log_set_highprecision_enabled
-#define mxs_log_set_priority_enabled      mxb_log_set_priority_enabled
-#define mxs_log_set_syslog_enabled        mxb_log_set_syslog_enabled
-#define mxs_log_set_throttling            mxb_log_set_throttling
-
 #define MXS_LOG_MESSAGE MXB_LOG_MESSAGE
 
 #define MXS_ALERT   MXB_ALERT
