@@ -159,7 +159,7 @@ MAXAVRO_SCHEMA* maxavro_schema_alloc(const char* json)
 
                         for (int j = 0; j < i; j++)
                         {
-                            MXS_FREE(rval->fields[j].name);
+                            MXB_FREE(rval->fields[j].name);
                         }
                         break;
                     }
@@ -181,7 +181,7 @@ MAXAVRO_SCHEMA* maxavro_schema_alloc(const char* json)
 
         if (error)
         {
-            MXS_FREE(rval);
+            MXB_FREE(rval);
             rval = NULL;
         }
     }
@@ -197,7 +197,7 @@ static void maxavro_schema_field_free(MAXAVRO_SCHEMA_FIELD* field)
 {
     if (field)
     {
-        MXS_FREE(field->name);
+        MXB_FREE(field->name);
         if (field->type == MAXAVRO_TYPE_ENUM || field->type == MAXAVRO_TYPE_UNION)
         {
             json_decref((json_t*)field->extra);
@@ -217,7 +217,7 @@ void maxavro_schema_free(MAXAVRO_SCHEMA* schema)
         {
             maxavro_schema_field_free(&schema->fields[i]);
         }
-        MXS_FREE(schema->fields);
-        MXS_FREE(schema);
+        MXB_FREE(schema->fields);
+        MXB_FREE(schema);
     }
 }

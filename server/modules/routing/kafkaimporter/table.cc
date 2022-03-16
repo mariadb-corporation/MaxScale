@@ -84,7 +84,7 @@ void Table::free_values()
 {
     for (auto ptr : m_values)
     {
-        MXS_FREE(ptr);
+        MXB_FREE(ptr);
     }
 
     m_values.clear();
@@ -129,7 +129,7 @@ bool Table::prepare(MYSQL* mysql)
 
 bool Table::insert(const std::string& value)
 {
-    m_values.push_back(MXS_STRDUP(value.c_str()));
+    m_values.push_back(MXB_STRDUP(value.c_str()));
     m_lengths.push_back(value.length());
     return true;
 }

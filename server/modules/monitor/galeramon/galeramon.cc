@@ -684,7 +684,7 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
     MonitorServer* node_list[is_cluster - 1];
     /* Donor list size = DONOR_LIST_SET_VAR + n_hosts * max_host_len + n_hosts + 1 */
 
-    char* donor_list = static_cast<char*>(MXS_CALLOC(1,
+    char* donor_list = static_cast<char*>(MXB_CALLOC(1,
                                                      strlen(DONOR_LIST_SET_VAR)
                                                      + is_cluster * DONOR_NODE_NAME_MAX_LEN
                                                      + is_cluster + 1));
@@ -775,7 +775,7 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
         }
     }
 
-    MXS_FREE(donor_list);
+    MXB_FREE(donor_list);
 }
 
 /**

@@ -383,7 +383,7 @@ string ScramSHA256::get_digested_password(const std::string&, const std::string&
     }
 
     string digested_password = zPassword;
-    MXS_FREE(zPassword);
+    MXB_FREE(zPassword);
 
     return digested_password;
 }

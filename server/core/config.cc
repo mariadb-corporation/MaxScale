@@ -1271,7 +1271,7 @@ void duplicate_context_finish(DUPLICATE_CONTEXT* context)
 char* config_clean_string_list(const char* str)
 {
     size_t destsize = strlen(str) + 1;
-    char* dest = (char*)MXS_MALLOC(destsize);
+    char* dest = (char*)MXB_MALLOC(destsize);
 
     if (dest)
     {
@@ -1295,7 +1295,7 @@ char* config_clean_string_list(const char* str)
                       (int)err_offset,
                       errbuf);
             pcre2_code_free(re);
-            MXS_FREE(dest);
+            MXB_FREE(dest);
             return NULL;
         }
 
@@ -1315,10 +1315,10 @@ char* config_clean_string_list(const char* str)
                                         &destsize_tmp)) == PCRE2_ERROR_NOMEMORY)
         {
             destsize_tmp = 2 * destsize;
-            char* tmp = (char*)MXS_REALLOC(dest, destsize_tmp);
+            char* tmp = (char*)MXB_REALLOC(dest, destsize_tmp);
             if (tmp == NULL)
             {
-                MXS_FREE(dest);
+                MXB_FREE(dest);
                 dest = NULL;
                 break;
             }
@@ -2621,7 +2621,7 @@ char* mxs::ConfigParameters::get_c_str_copy(const string& key) const
     char* rval = NULL;
     if (!value.empty())
     {
-        rval = MXS_STRDUP_A(value.c_str());
+        rval = MXB_STRDUP_A(value.c_str());
     }
     return rval;
 }
@@ -2766,7 +2766,7 @@ bool config_append_param(CONFIG_CONTEXT* obj, const char* key, const char* value
     if (new_val_z)
     {
         obj->m_parameters.set(key, new_val_z);
-        MXS_FREE(new_val_z);
+        MXB_FREE(new_val_z);
         rval = true;
     }
     return rval;
@@ -3429,7 +3429,7 @@ bool config_has_duplicate_sections(const char* filename, DUPLICATE_CONTEXT* cont
     bool rval = false;
 
     int size = 1024;
-    char* buffer = (char*)MXS_MALLOC(size * sizeof(char));
+    char* buffer = (char*)MXB_MALLOC(size * sizeof(char));
 
     if (buffer)
     {
@@ -3480,7 +3480,7 @@ bool config_has_duplicate_sections(const char* filename, DUPLICATE_CONTEXT* cont
         rval = true;
     }
 
-    MXS_FREE(buffer);
+    MXB_FREE(buffer);
     return rval;
 }
 
@@ -3514,7 +3514,7 @@ int maxscale_getline(char** dest, int* size, FILE* file)
     {
         if (*size <= offset)
         {
-            char* tmp = (char*)MXS_REALLOC(destptr, *size * 2);
+            char* tmp = (char*)MXB_REALLOC(destptr, *size * 2);
             if (tmp)
             {
                 destptr = tmp;

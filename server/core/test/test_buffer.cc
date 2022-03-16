@@ -42,8 +42,8 @@
  */
 uint8_t* generate_data(size_t count)
 {
-    uint8_t* data = (uint8_t*)MXS_MALLOC(count);
-    MXS_ABORT_IF_NULL(data);
+    uint8_t* data = (uint8_t*)MXB_MALLOC(count);
+    MXB_ABORT_IF_NULL(data);
 
     srand(0);
 
@@ -82,7 +82,7 @@ GWBUF* create_test_buffer()
         total += buffers[i];
     }
 
-    MXS_FREE(data);
+    MXB_FREE(data);
 
     return head;
 }
@@ -138,7 +138,7 @@ void copy_buffer(int n, int offset)
     mxb_assert_message(gwbuf_copy_data(buffer, 0, cutoff, dest) == cutoff, "All bytes should be read");
     mxb_assert_message(memcmp(data, dest, sizeof(dest)) == 0, "Data should be OK");
     gwbuf_free(buffer);
-    MXS_FREE(data);
+    MXB_FREE(data);
 }
 
 /** gwbuf_split test - These tests assume allocation will always succeed */

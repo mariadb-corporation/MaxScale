@@ -91,14 +91,14 @@ bool User::match_any(Dbfw* my_instance,
                     {
                         if (rule_matches(my_instance, my_session, queue, *j, fullquery))
                         {
-                            *rulename = MXS_STRDUP_A((*j)->name().c_str());
+                            *rulename = MXB_STRDUP_A((*j)->name().c_str());
                             rval = true;
                             break;
                         }
                     }
                 }
 
-                MXS_FREE(fullquery);
+                MXB_FREE(fullquery);
             }
         }
 
@@ -173,7 +173,7 @@ bool User::do_match(Dbfw* my_instance,
                     /** No active rules */
                     rval = false;
                 }
-                MXS_FREE(fullquery);
+                MXB_FREE(fullquery);
             }
         }
 
@@ -186,7 +186,7 @@ bool User::do_match(Dbfw* my_instance,
     /** Set the list of matched rule names */
     if (matching_rules.length() > 0)
     {
-        *rulename = MXS_STRDUP_A(matching_rules.c_str());
+        *rulename = MXB_STRDUP_A(matching_rules.c_str());
     }
 
     return rval;

@@ -370,7 +370,7 @@ private:
             else if (err != RdKafka::ERR_NO_ERROR)
             {
                 MXS_ERROR("%s", RdKafka::err2str(err).c_str());
-                MXS_FREE(json);
+                MXB_FREE(json);
                 break;
             }
         }

@@ -709,7 +709,7 @@ static char* extract_column(GWBUF* buf, int col)
         ptr += collen;
     }
     collen = *ptr++;
-    if ((rval = (char*)MXS_MALLOC(collen + 1)) == NULL)
+    if ((rval = (char*)MXB_MALLOC(collen + 1)) == NULL)
     {
         return NULL;
     }
@@ -749,7 +749,7 @@ void BinlogFilterSession::getReplicationChecksum(GWBUF* pPacket)
             m_crc = true;
         }
 
-        MXS_FREE(crc);
+        MXB_FREE(crc);
     }
 }
 

@@ -45,14 +45,14 @@ HINT* hint_dup(const HINT* hint)
 
     while (ptr1)
     {
-        if ((ptr2 = (HINT*)MXS_MALLOC(sizeof(HINT))) == NULL)
+        if ((ptr2 = (HINT*)MXB_MALLOC(sizeof(HINT))) == NULL)
         {
             return nlhead;
         }
         ptr2->type = ptr1->type;
         if (ptr1->data)
         {
-            ptr2->data = MXS_STRDUP_A((const char*)ptr1->data);
+            ptr2->data = MXB_STRDUP_A((const char*)ptr1->data);
         }
         else
         {
@@ -60,7 +60,7 @@ HINT* hint_dup(const HINT* hint)
         }
         if (ptr1->value)
         {
-            ptr2->value = MXS_STRDUP_A((const char*)ptr1->value);
+            ptr2->value = MXB_STRDUP_A((const char*)ptr1->value);
         }
         else
         {
@@ -94,7 +94,7 @@ HINT* hint_create_route(HINT* head, HINT_TYPE type, const char* data)
 {
     HINT* hint;
 
-    if ((hint = (HINT*)MXS_MALLOC(sizeof(HINT))) == NULL)
+    if ((hint = (HINT*)MXB_MALLOC(sizeof(HINT))) == NULL)
     {
         return head;
     }
@@ -102,7 +102,7 @@ HINT* hint_create_route(HINT* head, HINT_TYPE type, const char* data)
     hint->type = type;
     if (data)
     {
-        hint->data = MXS_STRDUP_A(data);
+        hint->data = MXB_STRDUP_A(data);
     }
     else
     {
@@ -149,14 +149,14 @@ HINT* hint_create_parameter(HINT* head, const char* pname, const char* value)
 {
     HINT* hint;
 
-    if ((hint = (HINT*)MXS_MALLOC(sizeof(HINT))) == NULL)
+    if ((hint = (HINT*)MXB_MALLOC(sizeof(HINT))) == NULL)
     {
         return head;
     }
     hint->next = head;
     hint->type = HINT_PARAMETER;
-    hint->data = MXS_STRDUP_A(pname);
-    hint->value = MXS_STRDUP_A(value);
+    hint->data = MXB_STRDUP_A(pname);
+    hint->value = MXB_STRDUP_A(value);
     return hint;
 }
 
@@ -171,13 +171,13 @@ void hint_free(HINT* hint)
     {
         if (hint->data)
         {
-            MXS_FREE(hint->data);
+            MXB_FREE(hint->data);
         }
         if (hint->value)
         {
-            MXS_FREE(hint->value);
+            MXB_FREE(hint->value);
         }
-        MXS_FREE(hint);
+        MXB_FREE(hint);
     }
 }
 

@@ -106,13 +106,13 @@ bool HintRouterSession::routeQuery(GWBUF* pPacket)
         default_hint.type = m_router->get_default_action();
         if (default_hint.type == HINT_ROUTE_TO_NAMED_SERVER)
         {
-            default_hint.data = MXS_STRDUP(m_router->get_default_server().c_str());
+            default_hint.data = MXB_STRDUP(m_router->get_default_server().c_str());
             // Ignore allocation error, it will just result in an error later on
         }
         success = route_by_hint(pPacket, &default_hint, true);
         if (default_hint.type == HINT_ROUTE_TO_NAMED_SERVER)
         {
-            MXS_FREE(default_hint.data);
+            MXB_FREE(default_hint.data);
         }
     }
 

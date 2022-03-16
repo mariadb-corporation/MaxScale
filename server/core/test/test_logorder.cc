@@ -62,7 +62,7 @@ int main(int argc, char** argv)
     }
 
     if (getcwd(cwd, sizeof(cwd)) == NULL
-        || (message = (char*)MXS_MALLOC(sizeof(char) * block_size)) == NULL)
+        || (message = (char*)MXB_MALLOC(sizeof(char) * block_size)) == NULL)
     {
         fprintf(stderr, "Fatal Error, exiting...");
         return 1;
@@ -116,6 +116,6 @@ int main(int argc, char** argv)
     }
 
     mxs_log_finish();
-    MXS_FREE(message);
+    MXB_FREE(message);
     return 0;
 }

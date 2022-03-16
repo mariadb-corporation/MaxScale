@@ -17,6 +17,7 @@
 
 #include <maxbase/alloc.h>
 #include <maxscale/buffer.hh>
+#include <maxscale/buffer.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 
@@ -36,7 +37,7 @@ Rule::Rule(std::string name, std::string type)
 
 Rule::~Rule()
 {
-    MXS_FREE(active);
+    MXB_FREE(active);
 }
 
 bool Rule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const
@@ -132,7 +133,7 @@ bool RegexRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg) c
     {
         pcre2_code* re = m_re.get();
         pcre2_match_data* mdata = pcre2_match_data_create_from_pattern(re, NULL);
-        MXS_ABORT_IF_NULL(mdata);
+        MXB_ABORT_IF_NULL(mdata);
 
         char* sql;
         int len;

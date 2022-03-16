@@ -93,7 +93,7 @@ public:
 
                 cout << zStmt << ": " << zType_mask << endl;
 
-                MXS_FREE(zType_mask);
+                MXB_FREE(zType_mask);
             }
         }
         else
@@ -107,8 +107,8 @@ public:
                      << "  QC    : " << zType_mask_qc << "\n"
                      << "  PARSER: " << zType_mask_parser << endl;
 
-                MXS_FREE(zType_mask_qc);
-                MXS_FREE(zType_mask_parser);
+                MXB_FREE(zType_mask_qc);
+                MXB_FREE(zType_mask_parser);
             }
 
             rc = EXIT_FAILURE;

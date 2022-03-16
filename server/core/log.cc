@@ -103,7 +103,7 @@ std::string get_cursor(sd_journal* j)
     char* c;
     sd_journal_get_cursor(j, &c);
     std::string cur = c;
-    MXS_FREE(c);
+    MXB_FREE(c);
     return cur;
 }
 

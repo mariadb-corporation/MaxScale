@@ -19,10 +19,10 @@
 /**
  * @brief Allocates memory; behaves exactly like `malloc`.
  *
- * Usually `mxs_malloc` is not used, but the macro `MXS_MALLOC` instead.
+ * Usually `mxb_malloc` is not used, but the macro `MXB_MALLOC` instead.
  *
- * @note The returned pointer can be passed to `mxs_realloc`, `mxs_realloc_a`
- *       and `mxs_free`.
+ * @note The returned pointer can be passed to `mxb_realloc`, `mxb_realloc_a`
+ *       and `mxb_free`.
  *
  * @param size The amount of memory to allocate.
  * @param caller The name of the function calling this function.
@@ -33,7 +33,7 @@ void* mxb_malloc(size_t size    /*, const char *caller*/)
     void* ptr = malloc(size);
     if (!ptr)
     {
-        // MXS_OOM_MESSAGE(caller);
+        // MXB_OOM_MESSAGE(caller);
         MXB_OOM();
     }
     return ptr;
@@ -42,10 +42,10 @@ void* mxb_malloc(size_t size    /*, const char *caller*/)
 /**
  * @brief Allocates memory; behaves exactly like `calloc`.
  *
- * Usually `mxs_calloc` is not used, but the macro `MXS_CALLOC` instead.
+ * Usually `mxb_calloc` is not used, but the macro `MXB_CALLOC` instead.
  *
- * @note The returned pointer can be passed to `mxs_realloc`, `mxs_realloc_a`
- *       and `mxs_free`.
+ * @note The returned pointer can be passed to `mxb_realloc`, `mxb_realloc_a`
+ *       and `mxb_free`.
  *
  * @param nmemb The number of elements.
  * @param size The size of each element.
@@ -57,7 +57,7 @@ void* mxb_calloc(size_t nmemb, size_t size    /*, const char *caller*/)
     void* ptr = calloc(nmemb, size);
     if (!ptr)
     {
-        // MXS_OOM_MESSAGE(caller);
+        // MXB_OOM_MESSAGE(caller);
         MXB_OOM();
     }
     return ptr;
@@ -66,13 +66,13 @@ void* mxb_calloc(size_t nmemb, size_t size    /*, const char *caller*/)
 /**
  * @brief Re-allocates memory; behaves exactly like `realloc`.
  *
- * Usually `mxs_realloc` is not used, but the macro `MXS_REALLOC` instead.
+ * Usually `mxb_realloc` is not used, but the macro `MXB_REALLOC` instead.
  *
- * @note The returned pointer can be passed to `mxs_realloc`, `mxs_realloc_a`
- *       and `mxs_free`.
+ * @note The returned pointer can be passed to `mxb_realloc`, `mxb_realloc_a`
+ *       and `mxb_free`.
  *
- * @param ptr Pointer to memory earlier allocated by `mxs_malloc`,
- *            `mxs_calloc`, `mxs_realloc`, `mxs_strdup`, `mxs_strndup`
+ * @param ptr Pointer to memory earlier allocated by `mxb_malloc`,
+ *            `mxb_calloc`, `mxb_realloc`, `mxb_strdup`, `mxb_strndup`
  *             or or their `_a` equivalents.
  * @param size What size the memory block should be changed to.
  * @param caller The name of the function calling this function.
@@ -83,7 +83,7 @@ void* mxb_realloc(void* ptr, size_t size    /*, const char *caller*/)
     ptr = realloc(ptr, size);
     if (!ptr)
     {
-        // MXS_OOM_MESSAGE(caller);
+        // MXB_OOM_MESSAGE(caller);
         MXB_OOM();
     }
     return ptr;
@@ -92,9 +92,9 @@ void* mxb_realloc(void* ptr, size_t size    /*, const char *caller*/)
 /**
  * @brief Duplicates a string; behaves exactly like `strdup`.
  *
- * Usually `mxs_strdup` is not used, but the macro `MXS_STRDUP` instead.
+ * Usually `mxb_strdup` is not used, but the macro `MXB_STRDUP` instead.
  *
- * @note The returned pointer can be passed to `mxs_realloc` and `mxs_free`.
+ * @note The returned pointer can be passed to `mxb_realloc` and `mxb_free`.
  *
  * @param s1 The string to be duplicated.
  * @param caller The name of the function calling this function.
@@ -105,7 +105,7 @@ char* mxb_strdup(const char* s1    /*, const char *caller*/)
     char* s2 = strdup(s1);
     if (!s2)
     {
-        // MXS_OOM_MESSAGE(caller);
+        // MXB_OOM_MESSAGE(caller);
         MXB_OOM();
     }
     return s2;
@@ -114,9 +114,9 @@ char* mxb_strdup(const char* s1    /*, const char *caller*/)
 /**
  * @brief Duplicates a string; behaves exactly like `strndup`.
  *
- * Usually `mxs_strndup` is not used, but the macro `MXS_STRNDUP` instead.
+ * Usually `mxb_strndup` is not used, but the macro `MXB_STRNDUP` instead.
  *
- * @note The returned pointer can be passed to `mxs_realloc` and `mxs_free`.
+ * @note The returned pointer can be passed to `mxb_realloc` and `mxb_free`.
  *
  * @param s1 The string to be duplicated.
  * @param n At most n bytes should be copied.
@@ -128,7 +128,7 @@ char* mxb_strndup(const char* s1, size_t n    /*, const char *caller*/)
     char* s2 = strndup(s1, n);
     if (!s2)
     {
-        // MXS_OOM_MESSAGE(caller);
+        // MXB_OOM_MESSAGE(caller);
         MXB_OOM();
     }
     return s2;
@@ -137,10 +137,10 @@ char* mxb_strndup(const char* s1, size_t n    /*, const char *caller*/)
 /**
  * @brief Frees memory.
  *
- * Usually `mxs_free` is not used, but the macro `MXS_FREE` instead.
+ * Usually `mxb_free` is not used, but the macro `MXB_FREE` instead.
  *
- * @note The memory must have earlier been allocated with `mxs_malloc`,
- *       `mxs_calloc`, `mxs_realloc`, `mxs_strdup`, `mxs_strndup`, or
+ * @note The memory must have earlier been allocated with `mxb_malloc`,
+ *       `mxb_calloc`, `mxb_realloc`, `mxb_strdup`, `mxb_strndup`, or
  *       their `_a` equivalents.
  *
  * @param ptr Pointer to the memory to be freed.
@@ -154,14 +154,14 @@ void mxb_free(void* ptr    /*, const char *caller*/)
 /**
  * @brief Duplicates a string.
  *
- * Behaves exactly like `strdup`, except that `mxs_strdup_a` _always_
- * returns a non-NULL pointer. In case `mxs_strdup_a` cannot do that,
+ * Behaves exactly like `strdup`, except that `mxb_strdup_a` _always_
+ * returns a non-NULL pointer. In case `mxb_strdup_a` cannot do that,
  * it _as_ the process.
  *
- * Usually `mxs_strdup_a` is not used, but the macro `MXS_STRDUP_A`
+ * Usually `mxb_strdup_a` is not used, but the macro `MXB_STRDUP_A`
  * instead.
  *
- * @note The returned pointer can be passed to `mxs_realloc` and `mxs_free`.
+ * @note The returned pointer can be passed to `mxb_realloc` and `mxb_free`.
  *
  * @param s1 The string to be duplicated.
  * @param caller The name of the function calling this function.
@@ -180,14 +180,14 @@ char* mxb_strdup_a(const char* s1    /*, const char *caller*/)
 /**
  * @breif Duplicates a string.
  *
- * Behaves exactly like `strndup` except that `mxs_strndup_a` _always_
- * returns a non-NULL pointer. In case `mxs_strndup_a` cannot do that, it
+ * Behaves exactly like `strndup` except that `mxb_strndup_a` _always_
+ * returns a non-NULL pointer. In case `mxb_strndup_a` cannot do that, it
  * _as_ the process.
  *
- * Usually `mxs_strndup_a` is not used, but the macro MXS_STRNDUP_A
+ * Usually `mxb_strndup_a` is not used, but the macro MXB_STRNDUP_A
  * instead.
  *
- * @note The returned pointer can be passed to `mxs_realloc` and `mxs_free`.
+ * @note The returned pointer can be passed to `mxb_realloc` and `mxb_free`.
  *
  * @param s1 The string to be duplicated.
  * @param n At most n bytes should be copied.

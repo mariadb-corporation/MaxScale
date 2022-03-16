@@ -138,7 +138,7 @@ std::string get_text_ps_id(GWBUF* buffer)
     if (name)
     {
         rval = name;
-        MXS_FREE(name);
+        MXB_FREE(name);
     }
 
     return rval;
@@ -651,7 +651,7 @@ void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype)
                  hint,
                  hint_type);
 
-        MXS_FREE(qtypestr);
+        MXB_FREE(qtypestr);
     }
     else if (m_route_info.load_data_state() == QueryClassifier::LOAD_DATA_END)
     {

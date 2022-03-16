@@ -79,7 +79,7 @@ static int value_copy_iterator(void* cls,
     }
 
     char**& dest = *(char***) cls;
-    *dest = MXS_STRDUP_A(k.c_str());
+    *dest = MXB_STRDUP_A(k.c_str());
     dest++;
 
     return MHD_YES;

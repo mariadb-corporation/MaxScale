@@ -823,7 +823,7 @@ void Session::dump_statements() const
 
                 if (deallocate)
                 {
-                    MXS_FREE(pStmt);
+                    MXB_FREE(pStmt);
                 }
             }
 
@@ -916,7 +916,7 @@ char* Session::set_variable_value(const char* name_begin,
         int name_length = name_end - name_begin;
         int len = snprintf(NULL, 0, FORMAT, name_length, name_begin);
 
-        rv = static_cast<char*>(MXS_MALLOC(len + 1));
+        rv = static_cast<char*>(MXB_MALLOC(len + 1));
 
         if (rv)
         {
@@ -1098,7 +1098,7 @@ json_t* Session::QueryInfo::as_json() const
 
         if (deallocate)
         {
-            MXS_FREE(pStmt);
+            MXB_FREE(pStmt);
         }
     }
 

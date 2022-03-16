@@ -987,7 +987,7 @@ bool DCB::add_callback(Reason reason,
     CALLBACK* ptr;
     CALLBACK* lastcb = NULL;
 
-    if ((ptr = (CALLBACK*)MXS_MALLOC(sizeof(CALLBACK))) == NULL)
+    if ((ptr = (CALLBACK*)MXB_MALLOC(sizeof(CALLBACK))) == NULL)
     {
         return false;
     }
@@ -1003,7 +1003,7 @@ bool DCB::add_callback(Reason reason,
             && cb->userdata == userdata)
         {
             /* Callback is a duplicate, abandon it */
-            MXS_FREE(ptr);
+            MXB_FREE(ptr);
             return false;
         }
         lastcb = cb;
@@ -1045,7 +1045,7 @@ bool DCB::remove_callback(Reason reason,
                 m_callbacks = cb->next;
             }
 
-            MXS_FREE(cb);
+            MXB_FREE(cb);
             rval = true;
             break;
         }
@@ -1062,7 +1062,7 @@ void DCB::remove_callbacks()
     {
         CALLBACK* cb = m_callbacks;
         m_callbacks = m_callbacks->next;
-        MXS_FREE(cb);
+        MXB_FREE(cb);
     }
 }
 

@@ -129,13 +129,13 @@ GWBUF* gwbuf_alloc(unsigned int size)
 {
     mxb_assert(size > 0);
     size_t sbuf_size = sizeof(SHARED_BUF) + (size ? size - 1 : 0);
-    GWBUF* rval = (GWBUF*)MXS_MALLOC(sizeof(GWBUF));
-    SHARED_BUF* sbuf = (SHARED_BUF*)MXS_MALLOC(sbuf_size);
+    GWBUF* rval = (GWBUF*)MXB_MALLOC(sizeof(GWBUF));
+    SHARED_BUF* sbuf = (SHARED_BUF*)MXB_MALLOC(sbuf_size);
 
     if (rval == NULL || sbuf == NULL)
     {
-        MXS_FREE(rval);
-        MXS_FREE(sbuf);
+        MXB_FREE(rval);
+        MXB_FREE(sbuf);
         return NULL;
     }
 
@@ -217,7 +217,7 @@ static void gwbuf_free_one(GWBUF* buf)
             bo = gwbuf_remove_buffer_object(buf, bo);
         }
 
-        MXS_FREE(buf->sbuf);
+        MXB_FREE(buf->sbuf);
     }
 
     /** Release the hint */
@@ -228,7 +228,7 @@ static void gwbuf_free_one(GWBUF* buf)
         hint_free(h);
     }
 
-    MXS_FREE(buf);
+    MXB_FREE(buf);
 }
 
 /**
@@ -243,7 +243,7 @@ static void gwbuf_free_one(GWBUF* buf)
  */
 static GWBUF* gwbuf_clone_one(GWBUF* buf)
 {
-    GWBUF* rval = (GWBUF*)MXS_CALLOC(1, sizeof(GWBUF));
+    GWBUF* rval = (GWBUF*)MXB_CALLOC(1, sizeof(GWBUF));
 
     if (rval == NULL)
     {
@@ -341,7 +341,7 @@ static GWBUF* gwbuf_clone_portion(GWBUF* buf,
     ensure_owned(buf);
     mxb_assert(start_offset + length <= gwbuf_link_length(buf));
 
-    GWBUF* clonebuf = (GWBUF*)MXS_MALLOC(sizeof(GWBUF));
+    GWBUF* clonebuf = (GWBUF*)MXB_MALLOC(sizeof(GWBUF));
 
     if (clonebuf == NULL)
     {
@@ -640,8 +640,8 @@ void gwbuf_add_buffer_object(GWBUF* buf,
 {
     validate_buffer(buf);
 
-    buffer_object_t* newb = (buffer_object_t*)MXS_MALLOC(sizeof(buffer_object_t));
-    MXS_ABORT_IF_NULL(newb);
+    buffer_object_t* newb = (buffer_object_t*)MXB_MALLOC(sizeof(buffer_object_t));
+    MXB_ABORT_IF_NULL(newb);
 
     newb->bo_id = id;
     newb->bo_data = data;
@@ -695,7 +695,7 @@ static buffer_object_t* gwbuf_remove_buffer_object(GWBUF* buf, buffer_object_t* 
     buffer_object_t* next = bufobj->bo_next;
     /** Call corresponding clean-up function to clean buffer object's data */
     bufobj->bo_donefun_fp(bufobj->bo_data);
-    MXS_FREE(bufobj);
+    MXB_FREE(bufobj);
     return next;
 }
 
@@ -710,7 +710,7 @@ GWBUF* gwbuf_make_contiguous(GWBUF* orig)
     }
 
     GWBUF* newbuf = gwbuf_alloc(gwbuf_length(orig));
-    MXS_ABORT_IF_NULL(newbuf);
+    MXB_ABORT_IF_NULL(newbuf);
 
     newbuf->gwbuf_type = orig->gwbuf_type;
     newbuf->hint = hint_dup(orig->hint);

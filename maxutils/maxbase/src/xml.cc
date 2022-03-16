@@ -28,7 +28,7 @@ string mxb::xml::get_content(const xmlNode& node)
 {
     xmlChar* pContent = xmlNodeGetContent(const_cast<xmlNode*>(&node));
     string content(reinterpret_cast<const char*>(pContent));
-    MXS_FREE(pContent);
+    MXB_FREE(pContent);
     return content;
 }
 
@@ -459,7 +459,7 @@ string mxb::xml::dump(const xmlDoc& doc)
 
     string xml(zXml);
 
-    MXS_FREE(pXml);
+    MXB_FREE(pXml);
     xmlBufferFree(pBuffer);
 
     return xml;

@@ -127,7 +127,7 @@ char* modutil_get_SQL(GWBUF* buf)
         length += (*ptr++ << 8);
         length += (*ptr++ << 16);
 
-        rval = (char*) MXS_MALLOC(length + 1);
+        rval = (char*) MXB_MALLOC(length + 1);
 
         if (rval)
         {
@@ -177,7 +177,7 @@ char* modutil_get_query(GWBUF* buf)
     {
     case MXS_COM_QUIT:
         len = strlen("[Quit msg]") + 1;
-        if ((query_str = (char*)MXS_MALLOC(len + 1)) == NULL)
+        if ((query_str = (char*)MXB_MALLOC(len + 1)) == NULL)
         {
             goto retblock;
         }
@@ -187,7 +187,7 @@ char* modutil_get_query(GWBUF* buf)
 
     case MXS_COM_QUERY:
         len = MYSQL_GET_PAYLOAD_LEN(packet) - 1;    /*< distract 1 for packet type byte */
-        if (len < 1 || len > ~(size_t)0 - 1 || (query_str = (char*)MXS_MALLOC(len + 1)) == NULL)
+        if (len < 1 || len > ~(size_t)0 - 1 || (query_str = (char*)MXB_MALLOC(len + 1)) == NULL)
         {
             if (len >= 1 && len <= ~(size_t)0 - 1)
             {
@@ -201,7 +201,7 @@ char* modutil_get_query(GWBUF* buf)
 
     default:
         len = strlen(STRPACKETTYPE(packet_type)) + 1;
-        if (len < 1 || len > ~(size_t)0 - 1 || (query_str = (char*)MXS_MALLOC(len + 1)) == NULL)
+        if (len < 1 || len > ~(size_t)0 - 1 || (query_str = (char*)MXB_MALLOC(len + 1)) == NULL)
         {
             if (len >= 1 && len <= ~(size_t)0 - 1)
             {
@@ -638,8 +638,8 @@ mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char*
     bool err = false;
     PCRE2_SIZE matchsize = strlen(string) + 1;
     PCRE2_SIZE tempsize = matchsize;
-    char* matchstr = (char*) MXS_MALLOC(matchsize);
-    char* tempstr = (char*) MXS_MALLOC(tempsize);
+    char* matchstr = (char*) MXB_MALLOC(matchsize);
+    char* tempstr = (char*) MXB_MALLOC(tempsize);
 
     if (matchstr && tempstr)
     {
@@ -699,8 +699,8 @@ mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char*
         pcre2_match_data_free(mdata_escape);
     }
 
-    MXS_FREE(matchstr);
-    MXS_FREE(tempstr);
+    MXB_FREE(matchstr);
+    MXB_FREE(tempstr);
 
     return rval;
 }

@@ -76,7 +76,7 @@ int check_file(const char* filename)
                 if (json)
                 {
                     printf("%s\n", json);
-                    MXS_FREE(json);
+                    MXB_FREE(json);
 
                     if (num_rows > 0)
                     {

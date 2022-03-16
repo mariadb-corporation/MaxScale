@@ -184,7 +184,7 @@ public:
                             rv = CACHE_RESULT_NOT_FOUND | CACHE_RESULT_STALE;
                         }
 
-                        MXS_FREE(pData);
+                        MXB_FREE(pData);
                     }
                     else
                     {
@@ -245,7 +245,7 @@ public:
         vector<char> mkey = key.to_vector();
 
         GWBUF* pClone = gwbuf_clone(const_cast<GWBUF*>(pValue));
-        MXS_ABORT_IF_NULL(pClone);
+        MXB_ABORT_IF_NULL(pClone);
 
         auto sThis = get_shared();
 

@@ -121,7 +121,7 @@ int test_user()
             cache_rules_free(pRules);
         }
 
-        MXS_FREE(ppRules);
+        MXB_FREE(ppRules);
     }
 
     return errors;
@@ -412,7 +412,7 @@ int test_store()
             cache_rules_free(pRules);
         }
 
-        MXS_FREE(ppRules);
+        MXB_FREE(ppRules);
     }
 
     return errors;

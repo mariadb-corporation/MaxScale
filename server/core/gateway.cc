@@ -298,7 +298,7 @@ struct CRYPTO_dynlock_value
 static struct CRYPTO_dynlock_value* ssl_create_dynlock(const char* file, int line)
 {
     struct CRYPTO_dynlock_value* lock =
-        (struct CRYPTO_dynlock_value*) MXS_MALLOC(sizeof(struct CRYPTO_dynlock_value));
+        (struct CRYPTO_dynlock_value*) MXB_MALLOC(sizeof(struct CRYPTO_dynlock_value));
     if (lock)
     {
         pthread_mutex_init(&lock->lock, NULL);
@@ -333,7 +333,7 @@ static void ssl_lock_dynlock(int mode, struct CRYPTO_dynlock_value* n, const cha
  */
 static void ssl_free_dynlock(struct CRYPTO_dynlock_value* n, const char* file, int line)
 {
-    MXS_FREE(n);
+    MXB_FREE(n);
 }
 
 #ifdef OPENSSL_1_0
@@ -2629,7 +2629,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
                     char** s = (char**)data;
 
                     static const char FORMAT[] = "The environment variable %s does not exist.";
-                    *s = (char*)MXS_MALLOC(sizeof(FORMAT) + strlen(value));
+                    *s = (char*)MXB_MALLOC(sizeof(FORMAT) + strlen(value));
 
                     if (*s)
                     {
@@ -3055,7 +3055,7 @@ static bool sniff_configuration(const char* filepath)
             {
                 print_alert("Failed to pre-parse configuration file %s. Error on line %d. %s",
                             filepath, rv, s);
-                MXS_FREE(s);
+                MXB_FREE(s);
             }
             else
             {
@@ -3325,7 +3325,7 @@ static bool init_ssl()
 
 #ifndef OPENSSL_1_1
     int numlocks = CRYPTO_num_locks();
-    this_unit.ssl_locks = (pthread_mutex_t*)MXS_MALLOC(sizeof(pthread_mutex_t) * (numlocks + 1));
+    this_unit.ssl_locks = (pthread_mutex_t*)MXB_MALLOC(sizeof(pthread_mutex_t) * (numlocks + 1));
 
     if (this_unit.ssl_locks != NULL)
     {
@@ -3374,7 +3374,7 @@ static void finish_ssl()
         pthread_mutex_destroy(&this_unit.ssl_locks[i]);
     }
 
-    MXS_FREE(this_unit.ssl_locks);
+    MXB_FREE(this_unit.ssl_locks);
     this_unit.ssl_locks = nullptr;
 #endif
 }

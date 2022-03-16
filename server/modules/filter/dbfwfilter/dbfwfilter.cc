@@ -415,7 +415,7 @@ static TIMERANGE* parse_time(const char* str)
             CHK_TIMES((&start));
             CHK_TIMES((&end));
 
-            tr = (TIMERANGE*) MXS_MALLOC(sizeof(TIMERANGE));
+            tr = (TIMERANGE*) MXB_MALLOC(sizeof(TIMERANGE));
 
             if (tr)
             {
@@ -438,8 +438,8 @@ TIMERANGE* split_reverse_time(TIMERANGE* tr)
 {
     TIMERANGE* tmp = NULL;
 
-    tmp = (TIMERANGE*) MXS_CALLOC(1, sizeof(TIMERANGE));
-    MXS_ABORT_IF_NULL(tmp);
+    tmp = (TIMERANGE*) MXB_CALLOC(1, sizeof(TIMERANGE));
+    MXB_ABORT_IF_NULL(tmp);
     tmp->next = tr;
     tmp->start.tm_hour = 0;
     tmp->start.tm_min = 0;
@@ -604,7 +604,7 @@ void timerange_free(TIMERANGE* tr)
     {
         tmp = node;
         node = node->next;
-        MXS_FREE(tmp);
+        MXB_FREE(tmp);
     }
 }
 
@@ -1561,7 +1561,7 @@ bool DbfwSession::routeQuery(GWBUF* buffer)
                     }
                 }
 
-                MXS_FREE(rname);
+                MXB_FREE(rname);
             }
             /** If the instance is in whitelist mode, only users that have a rule
              * defined for them are allowed */
@@ -1661,8 +1661,8 @@ char* create_error(const char* format, ...)
     int message_len = vsnprintf(NULL, 0, format, valist);
     va_end(valist);
 
-    char* rval = (char*)MXS_MALLOC(message_len + 1);
-    MXS_ABORT_IF_NULL(rval);
+    char* rval = (char*)MXB_MALLOC(message_len + 1);
+    MXB_ABORT_IF_NULL(rval);
 
     va_start(valist, format);
     vsnprintf(rval, message_len + 1, format, valist);
@@ -1761,7 +1761,7 @@ bool rule_matches(Dbfw* my_instance,
     }
 
     my_session->set_error(msg);
-    MXS_FREE(msg);
+    MXB_FREE(msg);
 
     return matches;
 }

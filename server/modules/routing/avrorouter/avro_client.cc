@@ -383,7 +383,7 @@ int AvroSession::send_row(json_t* row)
         MXS_ERROR("Failed to dump JSON value.");
         rc = 0;
     }
-    MXS_FREE(json);
+    MXB_FREE(json);
     return rc;
 }
 

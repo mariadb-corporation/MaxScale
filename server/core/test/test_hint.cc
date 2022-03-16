@@ -37,9 +37,9 @@ static int test1()
     /* Hint tests */
     fprintf(stderr,
             "testhint : Add a parameter hint to a null list");
-    char* name = MXS_STRDUP_A("name");
+    char* name = MXB_STRDUP_A("name");
     hint = hint_create_parameter(NULL, name, "value");
-    MXS_FREE(name);
+    MXB_FREE(name);
     mxb_assert_message(NULL != hint, "New hint list should not be null");
     mxb_assert_message(0 == strcmp("value", (char*)hint->value), "Hint value should be correct");
     mxb_assert_message(0 != hint_exists(&hint, HINT_PARAMETER), "Hint of parameter type should exist");

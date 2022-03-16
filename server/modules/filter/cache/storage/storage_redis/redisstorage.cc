@@ -657,7 +657,7 @@ public:
         vector<char> rkey = key.to_vector();
 
         GWBUF* pClone = gwbuf_clone(const_cast<GWBUF*>(pValue));
-        MXS_ABORT_IF_NULL(pClone);
+        MXB_ABORT_IF_NULL(pClone);
 
         auto sThis = get_shared();
 

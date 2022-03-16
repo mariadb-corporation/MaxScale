@@ -2714,7 +2714,7 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
             {
                 // No need to route the query, send error to client.
                 success = write(modutil_create_mysql_err_msg(1, 0, 1193, "HY000", errmsg)) != 0;
-                MXS_FREE(errmsg);
+                MXB_FREE(errmsg);
             }
             else
             {
