@@ -1,7 +1,7 @@
 #include <maxtest/testconnections.hh>
 #include <maxtest/kafka.hh>
 
-#include <maxbase/jansson.h>
+#include <maxbase/jansson.hh>
 
 #include <fstream>
 

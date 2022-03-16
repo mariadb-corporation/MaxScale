@@ -1,7 +1,7 @@
 #include <maxtest/maxscales.hh>
 #include <string>
 #include <maxbase/format.hh>
-#include <maxbase/jansson.h>
+#include <maxbase/jansson.hh>
 #include <maxbase/json.hh>
 #include <maxbase/string.hh>
 #include <maxtest/envv.hh>

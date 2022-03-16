@@ -21,7 +21,7 @@
 #include <openssl/err.h>
 #include <openssl/dh.h>
 
-#include <maxbase/jansson.h>
+#include <maxbase/jansson.hh>
 #include <maxscale/config2.hh>
 #include <maxscale/protocol.hh>
 #include <maxscale/dcb.hh>

@@ -23,7 +23,7 @@
  */
 
 #include <maxscale/ccdefs.hh>
-#include <maxbase/jansson.h>
+#include <maxbase/jansson.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/monitor.hh>

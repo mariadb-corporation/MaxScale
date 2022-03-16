@@ -12,5 +12,5 @@
  */
 #pragma once
 
-#include <maxbase/cdefs.h>
+#include <maxbase/ccdefs.hh>
 #include <jansson.h>

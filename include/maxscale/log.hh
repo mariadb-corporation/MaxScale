@@ -31,7 +31,7 @@
 #endif
 
 #include <maxbase/log.hh>
-#include <maxbase/jansson.h>
+#include <maxbase/jansson.hh>
 #include <maxbase/string.hh>
 
 typedef mxb_log_target_t mxs_log_target_t;

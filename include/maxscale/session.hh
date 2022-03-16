@@ -16,7 +16,7 @@
 
 #include <time.h>
 
-#include <maxbase/jansson.h>
+#include <maxbase/jansson.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/routing.hh>

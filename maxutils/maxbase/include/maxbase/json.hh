@@ -12,13 +12,13 @@
  */
 
 #pragma once
+#include <maxbase/ccdefs.hh>
 
 #include <functional>
 #include <string>
 #include <vector>
 
-#include <maxbase/ccdefs.hh>
-#include <maxbase/jansson.h>
+#include <maxbase/jansson.hh>
 
 namespace maxbase
 {

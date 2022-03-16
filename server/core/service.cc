@@ -34,7 +34,7 @@
 #include <unordered_set>
 #include <fstream>
 
-#include <maxbase/jansson.h>
+#include <maxbase/jansson.hh>
 
 #include <maxscale/service.hh>
 #include <maxbase/log.hh>

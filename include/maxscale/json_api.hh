@@ -19,7 +19,7 @@
  */
 
 #include <maxscale/ccdefs.hh>
-#include <maxbase/jansson.h>
+#include <maxbase/jansson.hh>
 #include <maxscale/json.hh>
 #include <vector>
 

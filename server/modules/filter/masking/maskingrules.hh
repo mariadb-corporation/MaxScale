@@ -18,7 +18,7 @@
 #include <memory>
 #include <vector>
 
-#include <maxbase/jansson.h>
+#include <maxbase/jansson.hh>
 #include <maxscale/pcre2.hh>
 #include <maxscale/protocol/mariadb/queryclassifier.hh>
 #include "mysql.hh"

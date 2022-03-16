@@ -22,7 +22,7 @@
 #include <initializer_list>
 #include <unordered_set>
 
-#include <maxbase/jansson.h>
+#include <maxbase/jansson.hh>
 #include <maxbase/ini.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/ssl.hh>
