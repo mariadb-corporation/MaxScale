@@ -107,7 +107,7 @@ std::unique_ptr<Exporter> build_exporter(const Config& config)
             else
             {
                 MXS_ERROR("Failed to open file '%s', %d, %s", config.file.c_str(), errno,
-                          mxs_strerror(errno));
+                          mxb_strerror(errno));
             }
         }
         break;

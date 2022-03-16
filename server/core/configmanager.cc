@@ -561,7 +561,7 @@ bool ConfigManager::discard_config()
         else
         {
             MXS_ALERT("Failed to rename cached configuration file at '%s': %d, %s.",
-                      old_name.c_str(), errno, mxs_strerror(errno));
+                      old_name.c_str(), errno, mxb_strerror(errno));
 
             if (unlink(old_name.c_str()) == 0)
             {
@@ -571,7 +571,7 @@ bool ConfigManager::discard_config()
             else
             {
                 MXS_ALERT("Failed to discard bad cached configuration file at '%s': %d, %s.",
-                          old_name.c_str(), errno, mxs_strerror(errno));
+                          old_name.c_str(), errno, mxb_strerror(errno));
             }
         }
     }

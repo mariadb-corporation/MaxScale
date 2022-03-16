@@ -139,7 +139,7 @@ int setnonblocking(int fd)
         MXS_ERROR("Can't GET fcntl for %i, errno = %d, %s.",
                   fd,
                   errno,
-                  mxs_strerror(errno));
+                  mxb_strerror(errno));
         return 1;
     }
 
@@ -148,7 +148,7 @@ int setnonblocking(int fd)
         MXS_ERROR("Can't SET fcntl for %i, errno = %d, %s",
                   fd,
                   errno,
-                  mxs_strerror(errno));
+                  mxb_strerror(errno));
         return 1;
     }
     return 0;
@@ -163,7 +163,7 @@ int setblocking(int fd)
         MXS_ERROR("Can't GET fcntl for %i, errno = %d, %s.",
                   fd,
                   errno,
-                  mxs_strerror(errno));
+                  mxb_strerror(errno));
         return 1;
     }
 
@@ -172,7 +172,7 @@ int setblocking(int fd)
         MXS_ERROR("Can't SET fcntl for %i, errno = %d, %s",
                   fd,
                   errno,
-                  mxs_strerror(errno));
+                  mxb_strerror(errno));
         return 1;
     }
     return 0;
@@ -389,7 +389,7 @@ static bool mkdir_all_internal(char* path, mode_t mask, bool log_errors)
                     else if (log_errors)
                     {
                         MXS_ERROR("Failed to create directory '%s': %d, %s",
-                                  path, errno, mxs_strerror(errno));
+                                  path, errno, mxb_strerror(errno));
                     }
                 }
             }
@@ -397,7 +397,7 @@ static bool mkdir_all_internal(char* path, mode_t mask, bool log_errors)
         else if (log_errors)
         {
             MXS_ERROR("Failed to create directory '%s': %d, %s",
-                      path, errno, mxs_strerror(errno));
+                      path, errno, mxb_strerror(errno));
         }
     }
     else
@@ -494,7 +494,7 @@ bool configure_network_socket(int so, int type)
         if (setsockopt(so, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) != 0
             || setsockopt(so, SOL_SOCKET, SO_KEEPALIVE, &one, sizeof(one)) != 0)
         {
-            MXS_ERROR("Failed to set socket option: %d, %s.", errno, mxs_strerror(errno));
+            MXS_ERROR("Failed to set socket option: %d, %s.", errno, mxb_strerror(errno));
             mxb_assert(!true);
             return false;
         }
@@ -510,7 +510,7 @@ static bool configure_listener_socket(int so)
     if (setsockopt(so, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one)) != 0
         || setsockopt(so, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) != 0)
     {
-        MXS_ERROR("Failed to set socket option: %d, %s.", errno, mxs_strerror(errno));
+        MXS_ERROR("Failed to set socket option: %d, %s.", errno, mxb_strerror(errno));
         return false;
     }
 
@@ -519,7 +519,7 @@ static bool configure_listener_socket(int so)
     {
         if (setsockopt(so, SOL_SOCKET, SO_REUSEPORT, &one, sizeof(one)) != 0)
         {
-            MXS_ERROR("Failed to set socket option: %d, %s.", errno, mxs_strerror(errno));
+            MXS_ERROR("Failed to set socket option: %d, %s.", errno, mxb_strerror(errno));
             return false;
         }
     }
@@ -570,7 +570,7 @@ int open_network_socket(enum mxs_socket_type type,
     {
         if ((so = socket(ai->ai_family, SOCK_STREAM, 0)) == -1)
         {
-            MXS_ERROR("Socket creation failed: %d, %s.", errno, mxs_strerror(errno));
+            MXS_ERROR("Socket creation failed: %d, %s.", errno, mxb_strerror(errno));
         }
         else
         {
@@ -589,7 +589,7 @@ int open_network_socket(enum mxs_socket_type type,
                           host,
                           port,
                           errno,
-                          mxs_strerror(errno));
+                          mxb_strerror(errno));
                 close(so);
                 so = -1;
             }
@@ -625,7 +625,7 @@ int open_network_socket(enum mxs_socket_type type,
                             MXS_ERROR("Could not bind connecting socket to local address \"%s\", "
                                       "connecting to server using default local address: %s",
                                       la.c_str(),
-                                      mxs_strerror(errno));
+                                      mxb_strerror(errno));
                         }
                     }
                     else
@@ -633,7 +633,7 @@ int open_network_socket(enum mxs_socket_type type,
                         MXS_ERROR("Could not get address information for local address \"%s\", "
                                   "connecting to server using default local address: %s",
                                   la.c_str(),
-                                  mxs_strerror(errno));
+                                  mxb_strerror(errno));
                     }
                 }
             }
@@ -651,7 +651,7 @@ static bool configure_unix_socket(int so)
 
     if (setsockopt(so, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one)) != 0)
     {
-        MXS_ERROR("Failed to set socket option: %d, %s.", errno, mxs_strerror(errno));
+        MXS_ERROR("Failed to set socket option: %d, %s.", errno, mxb_strerror(errno));
         return false;
     }
 
@@ -671,7 +671,7 @@ int open_unix_socket(enum mxs_socket_type type, struct sockaddr_un* addr, const 
     }
     else if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
     {
-        MXS_ERROR("Can't create UNIX socket: %d, %s", errno, mxs_strerror(errno));
+        MXS_ERROR("Can't create UNIX socket: %d, %s", errno, mxb_strerror(errno));
     }
     else if (configure_unix_socket(fd))
     {
@@ -684,7 +684,7 @@ int open_unix_socket(enum mxs_socket_type type, struct sockaddr_un* addr, const 
             MXS_ERROR("Failed to bind to UNIX Domain socket '%s': %d, %s",
                       path,
                       errno,
-                      mxs_strerror(errno));
+                      mxb_strerror(errno));
             close(fd);
             fd = -1;
         }

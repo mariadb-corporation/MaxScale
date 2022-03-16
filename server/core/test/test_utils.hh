@@ -85,7 +85,7 @@ static int set_signal(int sig, void (* handler)(int))
         MXS_ERROR("Failed call sigaction() in %s due to %d, %s.",
                   program_invocation_short_name,
                   errno,
-                  mxs_strerror(errno));
+                  mxb_strerror(errno));
         rc = 1;
     }
 

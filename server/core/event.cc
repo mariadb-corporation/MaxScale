@@ -533,7 +533,7 @@ void log(id_t event_id,
     vsnprintf(message, len + 1, format, valist);
     va_end(valist);
 
-    mxs_log_message(priority, modname, file, line, function, "%s", message);
+    mxb_log_message(priority, modname, file, line, function, "%s", message);
 }
 }   // event
 }   // maxscale

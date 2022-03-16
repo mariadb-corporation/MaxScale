@@ -51,7 +51,7 @@ bool avro_open_binlog(const char* binlogdir, const char* file, int* dest)
             MXS_ERROR("Failed to open binlog file %s: %d, %s",
                       path,
                       errno,
-                      mxs_strerror(errno));
+                      mxb_strerror(errno));
         }
         return false;
     }
@@ -92,7 +92,7 @@ bool avro_save_conversion_state(Avro* router)
         MXS_ERROR("Failed to open file '%s': %d, %s",
                   filename,
                   errno,
-                  mxs_strerror(errno));
+                  mxb_strerror(errno));
         return false;
     }
 
@@ -119,7 +119,7 @@ bool avro_save_conversion_state(Avro* router)
                   filename,
                   newname,
                   errno,
-                  mxs_strerror(errno));
+                  mxb_strerror(errno));
         return false;
     }
 
@@ -392,7 +392,7 @@ static GWBUF* read_event_data(Avro* router, REP_HEADER* hdr, uint64_t pos)
                           "%s, expected %d bytes.",
                           pos,
                           router->binlog_name.c_str(),
-                          mxs_strerror(errno),
+                          mxb_strerror(errno),
                           hdr->event_size - BINLOG_EVENT_HDR_LEN);
             }
             else
@@ -457,7 +457,7 @@ bool read_header(Avro* router, unsigned long long pos, REP_HEADER* hdr, avro_bin
             MXS_ERROR("Failed to read binlog file %s at position %llu (%s).",
                       router->binlog_name.c_str(),
                       pos,
-                      mxs_strerror(errno));
+                      mxb_strerror(errno));
             break;
 
         default:
@@ -579,7 +579,7 @@ avro_binlog_end_t avro_read_all_events(Avro* router)
     {
         MXS_ERROR("Failed to read the FDE event from the binary log: %d, %s",
                   errno,
-                  mxs_strerror(errno));
+                  mxb_strerror(errno));
         return AVRO_BINLOG_ERROR;
     }
 

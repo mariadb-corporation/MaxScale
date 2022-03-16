@@ -793,14 +793,14 @@ bool MariaDBMonitor::check_sql_files()
     if (!prom_file.empty() && access(prom_file.c_str(), R_OK) != 0)
     {
         rval = false;
-        MXS_ERROR(ERRMSG, CN_PROMOTION_SQL_FILE, prom_file.c_str(), mxs_strerror(errno));
+        MXS_ERROR(ERRMSG, CN_PROMOTION_SQL_FILE, prom_file.c_str(), mxb_strerror(errno));
     }
 
     auto dem_file = m_settings.shared.demotion_sql_file;
     if (!dem_file.empty() && access(dem_file.c_str(), R_OK) != 0)
     {
         rval = false;
-        MXS_ERROR(ERRMSG, CN_DEMOTION_SQL_FILE, dem_file.c_str(), mxs_strerror(errno));
+        MXS_ERROR(ERRMSG, CN_DEMOTION_SQL_FILE, dem_file.c_str(), mxb_strerror(errno));
     }
     return rval;
 }

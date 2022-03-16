@@ -656,7 +656,7 @@ unique_ptr<UserManager> UserManager::create(const string& name)
                     else
                     {
                         MXS_ERROR("Could not make '%s' usable only by MaxScale: %s",
-                                  path.c_str(), mxs_strerror(errno));
+                                  path.c_str(), mxb_strerror(errno));
 
                         sqlite3_close_v2(pDb);
                         pDb = nullptr;

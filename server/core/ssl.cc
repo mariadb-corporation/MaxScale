@@ -268,7 +268,7 @@ bool SSLContext::init()
         }
         else
         {
-            MXS_ERROR("Failed to load CRL file: %d, %s", errno, mxs_strerror(errno));
+            MXS_ERROR("Failed to load CRL file: %d, %s", errno, mxb_strerror(errno));
             return false;
         }
     }

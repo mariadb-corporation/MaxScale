@@ -1111,7 +1111,7 @@ static bool do_process_rule_file(const char* filename, RuleList* rules, UserMap*
         MXS_ERROR("Failed to open rule file '%s': %d, %s",
                   filename,
                   errno,
-                  mxs_strerror(errno));
+                  mxb_strerror(errno));
     }
 
     return rc == 0;
@@ -1285,7 +1285,7 @@ bool Dbfw::do_reload_rules(std::string filename)
         modulecmd_set_error("Failed to read rules at '%s': %d, %s",
                             filename.c_str(),
                             errno,
-                            mxs_strerror(errno));
+                            mxb_strerror(errno));
     }
 
     return rval;

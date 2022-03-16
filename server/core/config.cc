@@ -1757,7 +1757,7 @@ static bool is_directory(const char* dir)
         {
             MXS_WARNING("Could not access %s, not reading: %s",
                         dir,
-                        mxs_strerror(errno));
+                        mxb_strerror(errno));
         }
     }
     else
@@ -1851,7 +1851,7 @@ bool export_config_file(const char* filename)
         if (write(fd, payload.c_str(), payload.size()) == -1)
         {
             MXS_ERROR("Failed to write to file '%s': %d, %s",
-                      filename, errno, mxs_strerror(errno));
+                      filename, errno, mxb_strerror(errno));
             rval = false;
         }
 
@@ -1860,7 +1860,7 @@ bool export_config_file(const char* filename)
     else
     {
         MXS_ERROR("Failed to open configuration export file '%s': %d, %s",
-                  filename, errno, mxs_strerror(errno));
+                  filename, errno, mxb_strerror(errno));
         rval = false;
     }
 
@@ -3469,7 +3469,7 @@ bool config_has_duplicate_sections(const char* filename, DUPLICATE_CONTEXT* cont
         }
         else
         {
-            MXS_ERROR("Failed to open file '%s': %s", filename, mxs_strerror(errno));
+            MXS_ERROR("Failed to open file '%s': %s", filename, mxb_strerror(errno));
             rval = true;
         }
     }
@@ -3865,7 +3865,7 @@ bool config_is_ssl_parameter(const char* key)
                           value,
                           buf,
                           er,
-                          mxs_strerror(er));
+                          mxb_strerror(er));
             }
             else if (mxs_mkdir_all(buf, mask))
             {
@@ -3879,7 +3879,7 @@ bool config_is_ssl_parameter(const char* key)
                           value,
                           buf,
                           errno,
-                          mxs_strerror(errno));
+                          mxb_strerror(errno));
             }
         }
     }

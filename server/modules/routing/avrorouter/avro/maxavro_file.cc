@@ -30,7 +30,7 @@ static bool maxavro_read_sync(FILE* file, uint8_t* sync)
         {
             MXS_ERROR("Failed to read file sync marker: %d, %s",
                       errno,
-                      mxs_strerror(errno));
+                      mxb_strerror(errno));
         }
         else if (feof(file))
         {
@@ -53,7 +53,7 @@ bool maxavro_verify_block(MAXAVRO_FILE* file)
     {
         if (ferror(file->file))
         {
-            MXS_ERROR("Failed to read file: %d %s", errno, mxs_strerror(errno));
+            MXS_ERROR("Failed to read file: %d %s", errno, mxb_strerror(errno));
         }
         else if (rc > 0 || !feof(file->file))
         {
@@ -187,7 +187,7 @@ bool maxavro_read_datablock_start(MAXAVRO_FILE* file)
         {
             MXS_ERROR("Failed to read datablock start: %d, %s",
                       errno,
-                      mxs_strerror(errno));
+                      mxb_strerror(errno));
         }
         else
         {
@@ -224,7 +224,7 @@ bool maxavro_read_datablock_start(MAXAVRO_FILE* file)
         {
             MXS_SERROR("Failed to restore read position for " << file->filename <<
                        " to position " << file->block_start_pos
-                       << " " << mxs_strerror(errno));
+                       << " " << mxb_strerror(errno));
         }
     }
 
@@ -439,7 +439,7 @@ GWBUF* maxavro_file_binary_header(MAXAVRO_FILE* file)
                 {
                     MXS_ERROR("Failed to read binary header: %d, %s",
                               errno,
-                              mxs_strerror(errno));
+                              mxb_strerror(errno));
                 }
                 else if (feof(file->file))
                 {
@@ -462,7 +462,7 @@ GWBUF* maxavro_file_binary_header(MAXAVRO_FILE* file)
     {
         MXS_ERROR("Failed to read binary header: %d, %s",
                   errno,
-                  mxs_strerror(errno));
+                  mxb_strerror(errno));
     }
 
     return rval;

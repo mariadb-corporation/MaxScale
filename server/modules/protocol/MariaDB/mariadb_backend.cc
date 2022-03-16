@@ -565,7 +565,7 @@ void MariaDBBackendConnection::do_handle_error(DCB* dcb, const std::string& errm
 
     if (int err = gw_getsockerrno(dcb->fd()))
     {
-        ss << ": " << err << ", " << mxs_strerror(err);
+        ss << ": " << err << ", " << mxb_strerror(err);
     }
     else if (dcb->is_fake_event())
     {
@@ -1318,7 +1318,7 @@ void MariaDBBackendConnection::error(DCB* event_dcb)
         {
             MXS_ERROR("Network error in connection to server '%s', session in state '%s' (%s): %d, %s",
                       m_server.name(), session_state_to_string(m_session->state()), mxs::to_string(dcb_state),
-                      error, mxs_strerror(error));
+                      error, mxb_strerror(error));
         }
     }
     else
@@ -1354,7 +1354,7 @@ void MariaDBBackendConnection::hangup(DCB* event_dcb)
             {
                 MXS_ERROR("Network hangup in connection to server '%s', session in state '%s' (%s): %d, %s",
                           m_server.name(), session_state_to_string(m_session->state()),
-                          mxs::to_string(m_dcb->state()), error, mxs_strerror(error));
+                          mxs::to_string(m_dcb->state()), error, mxb_strerror(error));
             }
         }
     }

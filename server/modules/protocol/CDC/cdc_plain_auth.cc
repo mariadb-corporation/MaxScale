@@ -80,7 +80,7 @@ bool cdc_add_new_user(const MODULECMD_ARG* args, json_t** output)
             }
             else
             {
-                const char* real_err = mxs_strerror(errno);
+                const char* real_err = mxb_strerror(errno);
                 MXS_NOTICE("Failed to write to file '%s': %s", path, real_err);
                 modulecmd_set_error("Failed to write to file '%s': %s", path, real_err);
             }
@@ -89,7 +89,7 @@ bool cdc_add_new_user(const MODULECMD_ARG* args, json_t** output)
         }
         else
         {
-            const char* real_err = mxs_strerror(errno);
+            const char* real_err = mxb_strerror(errno);
             MXS_NOTICE("Failed to open file '%s': %s", path, real_err);
             modulecmd_set_error("Failed to open file '%s': %s", path, real_err);
         }

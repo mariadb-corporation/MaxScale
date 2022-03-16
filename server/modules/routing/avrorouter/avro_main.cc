@@ -280,7 +280,7 @@ static bool do_unlink_with_pattern(const char* format, ...)
         modulecmd_set_error("Failed to search '%s': %d, %s",
                             filename,
                             errno,
-                            mxs_strerror(errno));
+                            mxb_strerror(errno));
         rval = false;
     }
 

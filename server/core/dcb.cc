@@ -121,7 +121,7 @@ int connect_socket(const char* host, int port)
         if (::connect(so, (struct sockaddr*)&addr, sz) == -1 && errno != EINPROGRESS)
         {
             MXS_ERROR("Failed to connect backend server [%s]:%d due to: %d, %s.",
-                      host, port, errno, mxs_strerror(errno));
+                      host, port, errno, mxb_strerror(errno));
             ::close(so);
             so = -1;
         }
@@ -379,7 +379,7 @@ int DCB::socket_bytes_readable() const
                   mxs::to_string(m_state),
                   m_fd,
                   errno,
-                  mxs_strerror(errno));
+                  mxb_strerror(errno));
         return -1;
     }
     else
@@ -453,7 +453,7 @@ GWBUF* DCB::basic_read(int bytesavailable, int maxbytes, int nreadtotal, int* ns
                           mxs::to_string(m_state),
                           m_fd,
                           errno,
-                          mxs_strerror(errno));
+                          mxb_strerror(errno));
             }
             gwbuf_free(buffer);
             buffer = NULL;
@@ -655,7 +655,7 @@ int DCB::log_errors_SSL(int ret)
 
     if (ret && !ssl_errno)
     {
-        ss << "network error (" << errno << ", " << mxs_strerror(errno) << ")";
+        ss << "network error (" << errno << ", " << mxb_strerror(errno) << ")";
     }
     else
     {
@@ -851,7 +851,7 @@ void DCB::destroy()
                       m_fd,
                       this,
                       eno,
-                      mxs_strerror(eno));
+                      mxb_strerror(eno));
         }
         else
         {
@@ -968,7 +968,7 @@ int DCB::socket_write(GWBUF* writeq, bool* stop_writing)
                       m_remote.c_str(),
                       mxs::to_string(m_state),
                       saved_errno,
-                      mxs_strerror(saved_errno));
+                      mxb_strerror(saved_errno));
         }
     }
     else
@@ -1184,7 +1184,7 @@ static int dcb_set_socket_option(int sockfd, int level, int optname, void* optva
     {
         MXS_ERROR("Failed to set socket options: %d, %s",
                   errno,
-                  mxs_strerror(errno));
+                  mxb_strerror(errno));
         return -1;
     }
     return 0;
