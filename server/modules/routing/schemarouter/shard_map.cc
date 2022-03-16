@@ -36,7 +36,7 @@ void Shard::add_statement(std::string stmt, mxs::Target* target)
 
 void Shard::add_statement(uint32_t id, mxs::Target* target)
 {
-    MXS_DEBUG("ADDING ID: [%u] server: [%s]", id, target->name());
+    MXB_DEBUG("ADDING ID: [%u] server: [%s]", id, target->name());
     m_binary_map[id] = target;
 }
 
@@ -187,7 +187,7 @@ void ShardManager::update_shard(Shard& shard, const std::string& user)
 
     if (iter == m_maps.end() || shard.newer_than(iter->second))
     {
-        MXS_INFO("Updated shard map for user '%s'", user.c_str());
+        MXB_INFO("Updated shard map for user '%s'", user.c_str());
         m_maps[user] = shard;
     }
 

@@ -97,14 +97,14 @@ public:
             }
             else
             {
-                MXS_ERROR("Could not turn on memcached binary protocol: %s",
+                MXB_ERROR("Could not turn on memcached binary protocol: %s",
                           memcached_strerror(pMemc, mrv));
                 memcached_free(pMemc);
             }
         }
         else
         {
-            MXS_ERROR("Could not create memcached handle using the arguments '%s'. "
+            MXB_ERROR("Could not create memcached handle using the arguments '%s'. "
                       "Is the host/port and timeout combination valid?",
                       arguments.c_str());
         }
@@ -192,7 +192,7 @@ public:
                         // TODO: With the textual protocol you could get this; NULL returned but
                         // TODO: no error reported. Does not seem to be a problem with the binary
                         // TODO: protocol enabled.
-                        MXS_WARNING("NULL value returned from memcached, but no error reported.");
+                        MXB_WARNING("NULL value returned from memcached, but no error reported.");
                         rv = CACHE_RESULT_NOT_FOUND;
                     }
                 }
@@ -205,7 +205,7 @@ public:
                         break;
 
                     default:
-                        MXS_WARNING("Failed when fetching cached value from memcached: %s, %s",
+                        MXB_WARNING("Failed when fetching cached value from memcached: %s, %s",
                                     memcached_strerror(sThis->m_pMemc, mrv),
                                     memcached_last_error_message(sThis->m_pMemc));
                         rv = CACHE_RESULT_ERROR;
@@ -263,7 +263,7 @@ public:
                 }
                 else
                 {
-                    MXS_WARNING("Failed when storing cache value to memcached: %s, %s",
+                    MXB_WARNING("Failed when storing cache value to memcached: %s, %s",
                                 memcached_strerror(sThis->m_pMemc, mrv),
                                 memcached_last_error_message(sThis->m_pMemc));
                     rv = CACHE_RESULT_ERROR;
@@ -315,7 +315,7 @@ public:
                 }
                 else
                 {
-                    MXS_WARNING("Failed when deleting cached value from memcached: %s, %s",
+                    MXB_WARNING("Failed when deleting cached value from memcached: %s, %s",
                                 memcached_strerror(sThis->m_pMemc, mrv),
                                 memcached_last_error_message(sThis->m_pMemc));
                     rv = CACHE_RESULT_ERROR;
@@ -385,7 +385,7 @@ private:
                     break;
 
                 default:
-                    MXS_ERROR("Could not ping memcached server, memcached caching will be "
+                    MXB_ERROR("Could not ping memcached server, memcached caching will be "
                               "disabled: %s, %s",
                               memcached_strerror(sThis->m_pMemc, rv),
                               memcached_last_error_message(sThis->m_pMemc));
@@ -426,7 +426,7 @@ private:
             if (m_reconnecting)
             {
                 // Reconnected after having been disconnected, let's log a note.
-                MXS_NOTICE("Connected to Memcached storage. Caching is enabled.");
+                MXB_NOTICE("Connected to Memcached storage. Caching is enabled.");
             }
         }
 
@@ -509,19 +509,19 @@ MemcachedStorage* MemcachedStorage::create(const string& name,
 
     if (config.invalidate != CACHE_INVALIDATE_NEVER)
     {
-        MXS_ERROR("The storage storage_memcached does not support invalidation.");
+        MXB_ERROR("The storage storage_memcached does not support invalidation.");
     }
     else
     {
         if (config.max_size != 0)
         {
-            MXS_WARNING("The storage storage_memcached does not support specifying "
+            MXB_WARNING("The storage storage_memcached does not support specifying "
                         "a maximum size of the cache storage.");
         }
 
         if (config.max_count != 0)
         {
-            MXS_WARNING("The storage storage_memcached does not support specifying "
+            MXB_WARNING("The storage storage_memcached does not support specifying "
                         "a maximum number of items in the cache storage.");
         }
 
@@ -549,7 +549,7 @@ MemcachedStorage* MemcachedStorage::create(const string& name,
             }
             else
             {
-                MXS_ERROR("The mandatory argument '%s' is missing.", CN_STORAGE_ARG_SERVER);
+                MXB_ERROR("The mandatory argument '%s' is missing.", CN_STORAGE_ARG_SERVER);
                 error = true;
             }
 
@@ -564,7 +564,7 @@ MemcachedStorage* MemcachedStorage::create(const string& name,
                 }
                 else
                 {
-                    MXS_ERROR("'%s' is not a valid value for '%s'.",
+                    MXB_ERROR("'%s' is not a valid value for '%s'.",
                               it->second.c_str(), CN_MEMCACHED_MAX_VALUE_SIZE);
                     error = true;
                 }
@@ -574,13 +574,13 @@ MemcachedStorage* MemcachedStorage::create(const string& name,
 
             for (const auto& kv : arguments)
             {
-                MXS_WARNING("Unknown `storage_memcached` argument: %s=%s",
+                MXB_WARNING("Unknown `storage_memcached` argument: %s=%s",
                             kv.first.c_str(), kv.second.c_str());
             }
 
             if (!error)
             {
-                MXS_NOTICE("Resultsets up to %u bytes in size will be cached by '%s'.",
+                MXB_NOTICE("Resultsets up to %u bytes in size will be cached by '%s'.",
                            max_value_size, name.c_str());
 
                 pStorage = new (std::nothrow) MemcachedStorage(name,
@@ -592,7 +592,7 @@ MemcachedStorage* MemcachedStorage::create(const string& name,
         }
         else
         {
-            MXS_ERROR("Could not create memcached handle.");
+            MXB_ERROR("Could not create memcached handle.");
         }
     }
 

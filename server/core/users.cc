@@ -236,7 +236,7 @@ void Users::load_json(json_t* json)
         }
         else
         {
-            MXS_ERROR("Corrupt JSON value in users file: %s", mxs::json_dump(value).c_str());
+            MXB_ERROR("Corrupt JSON value in users file: %s", mxs::json_dump(value).c_str());
         }
     }
 }

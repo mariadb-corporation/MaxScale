@@ -132,7 +132,7 @@ bool SSLContext::init()
 #ifndef OPENSSL_1_1
         m_method = (SSL_METHOD*)TLSv1_method();
 #else
-        MXS_ERROR("TLSv1.0 is not supported on this system.");
+        MXB_ERROR("TLSv1.0 is not supported on this system.");
         return false;
 #endif
         break;
@@ -142,7 +142,7 @@ bool SSLContext::init()
 #if defined (OPENSSL_1_0) || defined (OPENSSL_1_1)
         m_method = (SSL_METHOD*)TLSv1_1_method();
 #else
-        MXS_ERROR("TLSv1.1 is not supported on this system.");
+        MXB_ERROR("TLSv1.1 is not supported on this system.");
         return false;
 #endif
         break;
@@ -151,7 +151,7 @@ bool SSLContext::init()
 #if defined (OPENSSL_1_0) || defined (OPENSSL_1_1)
         m_method = (SSL_METHOD*)TLSv1_2_method();
 #else
-        MXS_ERROR("TLSv1.2 is not supported on this system.");
+        MXB_ERROR("TLSv1.2 is not supported on this system.");
         return false;
 #endif
         break;
@@ -160,7 +160,7 @@ bool SSLContext::init()
 #ifdef OPENSSL_1_1
         m_method = (SSL_METHOD*)TLS_method();
 #else
-        MXS_ERROR("TLSv1.3 is not supported on this system.");
+        MXB_ERROR("TLSv1.3 is not supported on this system.");
         return false;
 #endif
         break;
@@ -181,7 +181,7 @@ bool SSLContext::init()
 
     if (m_ctx == NULL)
     {
-        MXS_ERROR("SSL context initialization failed: %s", get_ssl_errors());
+        MXB_ERROR("SSL context initialization failed: %s", get_ssl_errors());
         return false;
     }
 
@@ -209,12 +209,12 @@ bool SSLContext::init()
     /** Generate the 512-bit and 1024-bit RSA keys */
     if (rsa_512 == NULL && (rsa_512 = create_rsa(512)) == NULL)
     {
-        MXS_ERROR("512-bit RSA key generation failed.");
+        MXB_ERROR("512-bit RSA key generation failed.");
         return false;
     }
     else if (rsa_1024 == NULL && (rsa_1024 = create_rsa(1024)) == NULL)
     {
-        MXS_ERROR("1024-bit RSA key generation failed.");
+        MXB_ERROR("1024-bit RSA key generation failed.");
         return false;
     }
     else
@@ -228,13 +228,13 @@ bool SSLContext::init()
         /* Load the CA certificate into the SSL_CTX structure */
         if (!SSL_CTX_load_verify_locations(m_ctx, m_cfg.ca.c_str(), NULL))
         {
-            MXS_ERROR("Failed to set Certificate Authority file: %s", get_ssl_errors());
+            MXB_ERROR("Failed to set Certificate Authority file: %s", get_ssl_errors());
             return false;
         }
     }
     else if (SSL_CTX_set_default_verify_paths(m_ctx) == 0)
     {
-        MXS_ERROR("Failed to set default CA verify paths: %s", get_ssl_errors());
+        MXB_ERROR("Failed to set default CA verify paths: %s", get_ssl_errors());
         return false;
     }
 
@@ -248,13 +248,13 @@ bool SSLContext::init()
 
             if (!PEM_read_X509_CRL(fp, &crl, nullptr, nullptr))
             {
-                MXS_ERROR("Failed to process CRL file: %s", get_ssl_errors());
+                MXB_ERROR("Failed to process CRL file: %s", get_ssl_errors());
                 fclose(fp);
                 return false;
             }
             else if (!X509_STORE_add_crl(store, crl))
             {
-                MXS_ERROR("Failed to set CRL: %s", get_ssl_errors());
+                MXB_ERROR("Failed to set CRL: %s", get_ssl_errors());
                 fclose(fp);
                 return false;
             }
@@ -268,7 +268,7 @@ bool SSLContext::init()
         }
         else
         {
-            MXS_ERROR("Failed to load CRL file: %d, %s", errno, mxb_strerror(errno));
+            MXB_ERROR("Failed to load CRL file: %d, %s", errno, mxb_strerror(errno));
             return false;
         }
     }
@@ -278,21 +278,21 @@ bool SSLContext::init()
         /** Load the server certificate */
         if (SSL_CTX_use_certificate_chain_file(m_ctx, m_cfg.cert.c_str()) <= 0)
         {
-            MXS_ERROR("Failed to set server SSL certificate: %s", get_ssl_errors());
+            MXB_ERROR("Failed to set server SSL certificate: %s", get_ssl_errors());
             return false;
         }
 
         /* Load the private-key corresponding to the server certificate */
         if (SSL_CTX_use_PrivateKey_file(m_ctx, m_cfg.key.c_str(), SSL_FILETYPE_PEM) <= 0)
         {
-            MXS_ERROR("Failed to set server SSL key: %s", get_ssl_errors());
+            MXB_ERROR("Failed to set server SSL key: %s", get_ssl_errors());
             return false;
         }
 
         /* Check if the server certificate and private-key matches */
         if (!SSL_CTX_check_private_key(m_ctx))
         {
-            MXS_ERROR("Server SSL certificate and key do not match: %s", get_ssl_errors());
+            MXB_ERROR("Server SSL certificate and key do not match: %s", get_ssl_errors());
             return false;
         }
 
@@ -307,7 +307,7 @@ bool SSLContext::init()
                         "not contain the whole certificate chain.";
             }
 
-            MXS_NOTICE("OpenSSL reported problems in the certificate chain: %s%s",
+            MXB_NOTICE("OpenSSL reported problems in the certificate chain: %s%s",
                        err.c_str(), extra.c_str());
         }
 
@@ -323,12 +323,12 @@ bool SSLContext::init()
 
             if (!is_client && is_server && m_usage == mxb::KeyUsage::CLIENT)
             {
-                MXS_ERROR("Certificate has serverAuth extended key usage when clientAuth was expected.");
+                MXB_ERROR("Certificate has serverAuth extended key usage when clientAuth was expected.");
                 return false;
             }
             else if (!is_server && is_client && m_usage == mxb::KeyUsage::SERVER)
             {
-                MXS_ERROR("Certificate has clientAuth extended key usage when serverAuth was expected.");
+                MXB_ERROR("Certificate has clientAuth extended key usage when serverAuth was expected.");
                 return false;
             }
         }
@@ -348,7 +348,7 @@ bool SSLContext::init()
     {
         if (SSL_CTX_set_cipher_list(m_ctx, m_cfg.cipher.c_str()) == 0)
         {
-            MXS_ERROR("Could not set cipher list '%s': %s", m_cfg.cipher.c_str(), get_ssl_errors());
+            MXB_ERROR("Could not set cipher list '%s': %s", m_cfg.cipher.c_str(), get_ssl_errors());
             return false;
         }
     }
@@ -399,7 +399,7 @@ bool SSLContext::configure(const mxb::SSLConfig& config)
 #ifndef OPENSSL_1_1
     if (m_cfg.verify_host)
     {
-        MXS_ERROR("%s is not supported on this system.", CN_SSL_VERIFY_PEER_HOST);
+        MXB_ERROR("%s is not supported on this system.", CN_SSL_VERIFY_PEER_HOST);
         return false;
     }
 #endif

@@ -134,13 +134,13 @@ bool BinlogFilterSession::routeQuery(GWBUF* pPacket)
     case MXS_COM_REGISTER_SLAVE:
         // Connected client is registering as Slave Server
         m_serverid = gw_mysql_get_byte4(data + MYSQL_HEADER_LEN + 1);
-        MXS_INFO("Client is registering as Slave server with ID %u", m_serverid);
+        MXB_INFO("Client is registering as Slave server with ID %u", m_serverid);
         break;
 
     case MXS_COM_BINLOG_DUMP:
         // Connected Slave server is waiting for binlog events
         m_state = BINLOG_MODE;
-        MXS_INFO("Slave server %u is waiting for binlog events.", m_serverid);
+        MXB_INFO("Slave server %u is waiting for binlog events.", m_serverid);
 
         if (!m_is_gtid && m_config.rewrite_src)
         {
@@ -296,7 +296,7 @@ bool BinlogFilterSession::checkEvent(GWBUF** buffer, const REP_HEADER& hdr)
         // Error in binlog stream: no filter
         m_state = ERRORED;
         m_skip = false;
-        MXS_INFO("Slave server %u received error in replication stream", m_serverid);
+        MXB_INFO("Slave server %u received error in replication stream", m_serverid);
     }
     else
     {
@@ -457,7 +457,7 @@ void BinlogFilterSession::skipDatabaseTable(const uint8_t* data)
 {
     std::string table = extract_table_info(data);
     m_skip = should_skip(m_config, table);
-    MXS_INFO("[%s] TABLE_MAP: %s", m_skip ? "SKIP" : "    ", table.c_str());
+    MXB_INFO("[%s] TABLE_MAP: %s", m_skip ? "SKIP" : "    ", table.c_str());
 }
 
 /**
@@ -834,7 +834,7 @@ void BinlogFilterSession::checkStatement(GWBUF** buffer, const REP_HEADER& hdr, 
 
     const auto& config = m_config;
     m_skip = should_skip_query(config, sql, db);
-    MXS_INFO("[%s] (%s) %s", m_skip ? "SKIP" : "    ", db.c_str(), sql.c_str());
+    MXB_INFO("[%s] (%s) %s", m_skip ? "SKIP" : "    ", db.c_str(), sql.c_str());
 
     if (!m_skip && config.rewrite_src)
     {
@@ -843,7 +843,7 @@ void BinlogFilterSession::checkStatement(GWBUF** buffer, const REP_HEADER& hdr, 
 
         if ((new_db.empty() && !db.empty()) || (new_sql.empty() && !sql.empty()))
         {
-            MXS_ERROR("PCRE2 error on pattern '%s' with replacement '%s': %s",
+            MXB_ERROR("PCRE2 error on pattern '%s' with replacement '%s': %s",
                       config.rewrite_src.pattern().c_str(),
                       config.rewrite_dest.c_str(),
                       config.rewrite_src.error().c_str());
@@ -876,7 +876,7 @@ void BinlogFilterSession::checkStatement(GWBUF** buffer, const REP_HEADER& hdr, 
             // Also fix the packet length
             gw_mysql_set_byte3(GWBUF_DATA(*buffer), gwbuf_length(*buffer) - MYSQL_HEADER_LEN);
 
-            MXS_INFO("Rewrote query: (%s) %s", db.c_str(), sql.c_str());
+            MXB_INFO("Rewrote query: (%s) %s", db.c_str(), sql.c_str());
         }
     }
 }
@@ -885,5 +885,5 @@ void BinlogFilterSession::checkAnnotate(const uint8_t* event, const uint32_t eve
 {
     std::string sql((char*)event, event_size - (m_crc ? 4 : 0));
     m_skip = should_skip_query(m_config, sql);
-    MXS_INFO("[%s] Annotate: %s", m_skip ? "SKIP" : "    ", sql.c_str());
+    MXB_INFO("[%s] Annotate: %s", m_skip ? "SKIP" : "    ", sql.c_str());
 }

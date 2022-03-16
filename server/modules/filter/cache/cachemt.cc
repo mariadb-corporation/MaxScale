@@ -25,7 +25,7 @@ CacheMT::CacheMT(const std::string& name,
                  Storage* pStorage)
     : CacheSimple(name, pConfig, rules, sFactory, pStorage)
 {
-    MXS_NOTICE("Created multi threaded cache.");
+    MXB_NOTICE("Created multi threaded cache.");
 }
 
 CacheMT::~CacheMT()

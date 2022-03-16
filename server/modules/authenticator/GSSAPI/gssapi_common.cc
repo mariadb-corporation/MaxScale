@@ -33,7 +33,7 @@ void report_error(OM_uint32 major, OM_uint32 minor, const char* failed_func)
     OM_uint32 minor_status = 0;
     gss_display_status(&minor_status, major, GSS_C_GSS_CODE, nullptr, &res, &major_msg);
     gss_display_status(&minor_status, minor, GSS_C_MECH_CODE, nullptr, &res, &minor_msg);
-    MXS_ERROR("%s failed. Major error %u: '%.*s' Minor error %u: '%.*s'",
+    MXB_ERROR("%s failed. Major error %u: '%.*s' Minor error %u: '%.*s'",
               failed_func, major, (int)major_msg.length, (const char*)major_msg.value,
               minor, (int)minor_msg.length, (const char*)minor_msg.value);
     gss_release_buffer(&minor_status, &major_msg);
@@ -75,14 +75,14 @@ GSSAPIAuthenticatorModule* GSSAPIAuthenticatorModule::create(mxs::ConfigParamete
         else
         {
             instance->m_service_principal = default_princ_name;
-            MXS_NOTICE("Using default principal name: %s", instance->m_service_principal.c_str());
+            MXB_NOTICE("Using default principal name: %s", instance->m_service_principal.c_str());
         }
 
         const string keytab_option = "gssapi_keytab_path";
         if (options->contains(keytab_option))
         {
             string keytab_path = options->get_string(keytab_option);
-            MXS_INFO("Setting default krb5 keytab environment variable to '%s'.", keytab_path.c_str());
+            MXB_INFO("Setting default krb5 keytab environment variable to '%s'.", keytab_path.c_str());
             setenv("KRB5_KTNAME", keytab_path.c_str(), 1);
             options->remove(keytab_option);
         }

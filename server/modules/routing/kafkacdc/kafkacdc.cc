@@ -129,7 +129,7 @@ public:
             }
             else
             {
-                MXS_ERROR("Failed to create Kafka producer: %s", err.c_str());
+                MXB_ERROR("Failed to create Kafka producer: %s", err.c_str());
             }
         }
 
@@ -167,25 +167,25 @@ public:
                         if (msg->key())
                         {
                             rval = gtid_pos_t::from_string(*msg->key());
-                            MXS_INFO("Continuing replication from latest stored GTID in Kafka: %s",
+                            MXB_INFO("Continuing replication from latest stored GTID in Kafka: %s",
                                      rval.to_string().c_str());
                         }
                         else
                         {
-                            MXS_WARNING("Stored Kafka message does not contain a key, "
+                            MXB_WARNING("Stored Kafka message does not contain a key, "
                                         "cannot restore position.");
                         }
                     }
                     else if (msg->err() != RdKafka::ERR_REQUEST_TIMED_OUT)
                     {
-                        MXS_ERROR("Couldn't read GTID from Kafka: %s", msg->errstr().c_str());
+                        MXB_ERROR("Couldn't read GTID from Kafka: %s", msg->errstr().c_str());
                     }
 
                     delete msg;
                 }
                 else
                 {
-                    MXS_INFO("Kafka watermarks: High: %ld Low: %ld", high, low);
+                    MXB_INFO("Kafka watermarks: High: %ld Low: %ld", high, low);
                 }
 
                 consumer->close();
@@ -193,7 +193,7 @@ public:
             }
             else
             {
-                MXS_ERROR("%s", err.c_str());
+                MXB_ERROR("%s", err.c_str());
             }
         }
 
@@ -370,7 +370,7 @@ private:
             }
             else if (err != RdKafka::ERR_NO_ERROR)
             {
-                MXS_ERROR("%s", RdKafka::err2str(err).c_str());
+                MXB_ERROR("%s", RdKafka::err2str(err).c_str());
                 MXB_FREE(json);
                 break;
             }

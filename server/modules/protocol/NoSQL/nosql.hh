@@ -1057,7 +1057,7 @@ private:
     {
         if (m_config.should_log_in())
         {
-            MXS_NOTICE("%s: %s", zContext, req.to_string().c_str());
+            MXB_NOTICE("%s: %s", zContext, req.to_string().c_str());
         }
     }
 

@@ -151,7 +151,7 @@ private:
         UserManager::UserInfo info;
         if (!um.get_info(scope, user, &info))
         {
-            MXS_WARNING("User '%s' does not exist.", user.c_str());
+            MXB_WARNING("User '%s' does not exist.", user.c_str());
             throw SoftError("Authentication failed", error::AUTHENTICATION_FAILED);
         }
 
@@ -350,7 +350,7 @@ private:
 
         if (server_client_proof != client_proof)
         {
-            MXS_WARNING("Invalid client proof.");
+            MXB_WARNING("Invalid client proof.");
             throw SoftError("Authentication failed", error::AUTHENTICATION_FAILED);
         }
 

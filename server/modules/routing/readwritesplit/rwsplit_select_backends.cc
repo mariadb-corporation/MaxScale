@@ -344,7 +344,7 @@ static void log_server_connections(select_criteria_t criteria, const PRWBackends
 {
     using maxbase::operator<<;
 
-    MXS_INFO("Target connection counts:");
+    MXB_INFO("Target connection counts:");
 
     for (auto b : backends)
     {
@@ -352,19 +352,19 @@ static void log_server_connections(select_criteria_t criteria, const PRWBackends
         {
         case LEAST_GLOBAL_CONNECTIONS:
         case LEAST_ROUTER_CONNECTIONS:
-            MXS_INFO("MaxScale connections : %ld in \t%s %s",
+            MXB_INFO("MaxScale connections : %ld in \t%s %s",
                      b->target()->stats().n_current_conns(),
                      b->name(), b->target()->status_string().c_str());
             break;
 
         case LEAST_CURRENT_OPERATIONS:
-            MXS_INFO("current operations : %ld in \t%s %s",
+            MXB_INFO("current operations : %ld in \t%s %s",
                      b->target()->stats().n_current_ops(),
                      b->name(), b->target()->status_string().c_str());
             break;
 
         case LEAST_BEHIND_MASTER:
-            MXS_INFO("replication lag : %ld in \t%s %s",
+            MXB_INFO("replication lag : %ld in \t%s %s",
                      b->target()->replication_lag(),
                      b->name(), b->target()->status_string().c_str());
             break;
@@ -374,7 +374,7 @@ static void log_server_connections(select_criteria_t criteria, const PRWBackends
                 maxbase::Duration response_ave(mxb::from_secs(b->target()->response_time_average()));
                 std::ostringstream os;
                 os << response_ave;
-                MXS_INFO("adaptive avg. select time: %s from \t%s %s",
+                MXB_INFO("adaptive avg. select time: %s from \t%s %s",
                          os.str().c_str(), b->name(), b->target()->status_string().c_str());
             }
             break;
@@ -436,11 +436,11 @@ bool RWSplitSession::open_connections()
     {
         if (!master)
         {
-            MXS_ERROR("Couldn't find suitable Master from %lu candidates.", m_raw_backends.size());
+            MXB_ERROR("Couldn't find suitable Master from %lu candidates.", m_raw_backends.size());
         }
         else
         {
-            MXS_ERROR("Master exists (%s), but it is being drained and cannot be used.", master->name());
+            MXB_ERROR("Master exists (%s), but it is being drained and cannot be used.", master->name());
         }
         return false;
     }
@@ -455,7 +455,7 @@ bool RWSplitSession::open_connections()
         // A master connection can be safely attempted
         if (master && !master->in_use() && master->can_connect() && prepare_connection(master))
         {
-            MXS_INFO("Selected Master: %s", master->name());
+            MXB_INFO("Selected Master: %s", master->name());
             m_current_master = master;
         }
     }
@@ -484,7 +484,7 @@ bool RWSplitSession::open_connections()
     {
         if (prepare_connection(candidate))
         {
-            MXS_INFO("Selected Slave: %s", candidate->name());
+            MXB_INFO("Selected Slave: %s", candidate->name());
             ++n_slaves;
         }
 

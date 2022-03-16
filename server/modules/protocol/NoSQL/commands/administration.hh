@@ -346,7 +346,7 @@ public:
         {
             const char* zMessage = "Capped collections are not supported (MaxScale)";
 
-            MXS_WARNING("%s", zMessage);
+            MXB_WARNING("%s", zMessage);
             throw SoftError(zMessage, error::COMMAND_NOT_SUPPORTED);
         }
 
@@ -355,7 +355,7 @@ public:
         {
             const char* zMessage = "Views are not supported (MaxScale)";
 
-            MXS_WARNING("%s", zMessage);
+            MXB_WARNING("%s", zMessage);
             throw SoftError(zMessage, error::COMMAND_NOT_SUPPORTED);
         }
 
@@ -722,7 +722,7 @@ private:
 
     GWBUF* report_success(bool created)
     {
-        MXS_WARNING("Unsupported command '%s' used, claiming success.", name().c_str());
+        MXB_WARNING("Unsupported command '%s' used, claiming success.", name().c_str());
 
         DocumentBuilder doc;
         doc.append(kvp(key::CREATED_COLLECTION_AUTOMATICALLY, created));
@@ -947,7 +947,7 @@ private:
             }
         }
 
-        MXS_WARNING("Unsupported command '%s' used, claiming success.", name().c_str());
+        MXB_WARNING("Unsupported command '%s' used, claiming success.", name().c_str());
 
         DocumentBuilder doc;
         doc.append(kvp("nIndexesWas", nIndexes_was));
@@ -1114,7 +1114,7 @@ public:
                 else
                 {
                     string name(element.key().data(), element.key().length());
-                    MXS_WARNING("listCollections.filter.%s is not supported.", name.c_str());
+                    MXB_WARNING("listCollections.filter.%s is not supported.", name.c_str());
                 }
             }
         }

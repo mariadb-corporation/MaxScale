@@ -165,13 +165,13 @@ void Target::set_rlag_state(RLagState new_state, int max_rlag)
 
             if (lag != mxs::Target::RLAG_UNDEFINED)
             {
-                MXS_WARNING("Replication lag of '%s' is %ld seconds, which is above the configured "
+                MXB_WARNING("Replication lag of '%s' is %ld seconds, which is above the configured "
                             "limit %is. '%s' is excluded from query routing.", name(), lag, max_rlag, name());
             }
         }
         else if (old_state == RLagState::ABOVE_LIMIT)
         {
-            MXS_WARNING("Replication lag of '%s' is %ld seconds, which is below the configured limit %is. "
+            MXB_WARNING("Replication lag of '%s' is %ld seconds, which is below the configured limit %is. "
                         "'%s' is returned to query routing.", name(), replication_lag(), max_rlag, name());
         }
     }

@@ -189,12 +189,12 @@ ReadKeyResult secrets_readkeys(const string& filepath)
         auto filemode = filestats.st_mode;
         if (!S_ISREG(filemode))
         {
-            MXS_ERROR("Secrets file '%s' is not a regular file.", filepathc);
+            MXB_ERROR("Secrets file '%s' is not a regular file.", filepathc);
             stat_error = true;
         }
         else if ((filemode & (S_IRWXU | S_IRWXG | S_IRWXO)) != S_IRUSR)
         {
-            MXS_ERROR("Secrets file '%s' permissions are wrong. The only permission on the file should be "
+            MXB_ERROR("Secrets file '%s' permissions are wrong. The only permission on the file should be "
                       "owner:read.", filepathc);
             stat_error = true;
         }
@@ -207,7 +207,7 @@ ReadKeyResult secrets_readkeys(const string& filepath)
     }
     else
     {
-        MXS_ERROR("stat() for secrets file '%s' failed. Error %d, %s.",
+        MXB_ERROR("stat() for secrets file '%s' failed. Error %d, %s.",
                   filepathc, errno, mxb_strerror(errno));
         stat_error = true;
     }
@@ -235,13 +235,13 @@ ReadKeyResult secrets_readkeys(const string& filepath)
             }
             else
             {
-                MXS_ERROR("Read from secrets file %s failed. Read %li, expected %i bytes. Error %d, %s.",
+                MXB_ERROR("Read from secrets file %s failed. Read %li, expected %i bytes. Error %d, %s.",
                           filepathc, file.gcount(), binary_total_len, errno, mxb_strerror(errno));
             }
         }
         else
         {
-            MXS_ERROR("Could not open secrets file '%s'. Error %d, %s.",
+            MXB_ERROR("Could not open secrets file '%s'. Error %d, %s.",
                       filepathc, errno, mxb_strerror(errno));
         }
     }

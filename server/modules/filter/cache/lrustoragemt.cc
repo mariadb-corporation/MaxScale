@@ -17,7 +17,7 @@
 LRUStorageMT::LRUStorageMT(const Config& config, Storage* pStorage)
     : LRUStorage(config, pStorage)
 {
-    MXS_NOTICE("Created multi threaded LRU storage.");
+    MXB_NOTICE("Created multi threaded LRU storage.");
 }
 
 LRUStorageMT::~LRUStorageMT()

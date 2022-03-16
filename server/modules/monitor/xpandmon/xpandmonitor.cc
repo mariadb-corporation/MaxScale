@@ -29,7 +29,7 @@ using std::chrono::milliseconds;
 
 #define LOG_JSON_ERROR(ppJson, format, ...)                             \
     do {                                                                \
-        MXS_ERROR(format, ##__VA_ARGS__);                               \
+        MXB_ERROR(format, ##__VA_ARGS__);                               \
         if (ppJson)                                                     \
         {                                                               \
             *ppJson = mxs_json_error_append(*ppJson, format, ##__VA_ARGS__); \
@@ -145,7 +145,7 @@ bool create_schema(sqlite3* pDb)
 
     if (rv != SQLITE_OK)
     {
-        MXS_ERROR("Could not initialize sqlite3 database: %s", pError ? pError : "Unknown error");
+        MXB_ERROR("Could not initialize sqlite3 database: %s", pError ? pError : "Unknown error");
     }
 
     return rv == SQLITE_OK;
@@ -161,15 +161,15 @@ sqlite3* open_or_create_db(const std::string& path)
     {
         if (create_schema(pDb))
         {
-            MXS_NOTICE("sqlite3 database %s open/created and initialized.", path.c_str());
+            MXB_NOTICE("sqlite3 database %s open/created and initialized.", path.c_str());
         }
         else
         {
-            MXS_ERROR("Could not create schema in sqlite3 database %s.", path.c_str());
+            MXB_ERROR("Could not create schema in sqlite3 database %s.", path.c_str());
 
             if (unlink(path.c_str()) != 0)
             {
-                MXS_ERROR("Failed to delete database %s that could not be properly "
+                MXB_ERROR("Failed to delete database %s that could not be properly "
                           "initialized. It should be deleted manually.", path.c_str());
                 sqlite3_close_v2(pDb);
                 pDb = nullptr;
@@ -182,10 +182,10 @@ sqlite3* open_or_create_db(const std::string& path)
         {
             // Memory allocation failure is explained by the caller. Don't close the handle, as the
             // caller will still use it even if open failed!!
-            MXS_ERROR("Opening/creating the sqlite3 database %s failed: %s",
+            MXB_ERROR("Opening/creating the sqlite3 database %s failed: %s",
                       path.c_str(), sqlite3_errmsg(pDb));
         }
-        MXS_ERROR("Could not open sqlite3 database for storing information "
+        MXB_ERROR("Could not open sqlite3 database for storing information "
                   "about dynamically detected Xpand nodes. The Xpand "
                   "monitor will remain dependent upon statically defined "
                   "bootstrap nodes.");
@@ -239,7 +239,7 @@ XpandMonitor* XpandMonitor::create(const string& name, const string& module)
 
     if (!mxs_mkdir_all(path.c_str(), 0744))
     {
-        MXS_ERROR("Could not create the directory %s, MaxScale will not be "
+        MXB_ERROR("Could not create the directory %s, MaxScale will not be "
                   "able to create database for persisting connection "
                   "information of dynamically detected Xpand nodes.",
                   path.c_str());
@@ -263,7 +263,7 @@ XpandMonitor* XpandMonitor::create(const string& name, const string& module)
     {
         // The handle will be null, *only* if the opening fails due to a memory
         // allocation error.
-        MXS_ALERT("sqlite3 memory allocation failed, the Xpand monitor "
+        MXB_ALERT("sqlite3 memory allocation failed, the Xpand monitor "
                   "cannot continue.");
     }
 
@@ -419,11 +419,11 @@ void XpandMonitor::tick()
     switch (m_http.status())
     {
     case http::Async::PENDING:
-        MXS_WARNING("%s: Health check round had not completed when next tick arrived.", name());
+        MXB_WARNING("%s: Health check round had not completed when next tick arrived.", name());
         break;
 
     case http::Async::ERROR:
-        MXS_WARNING("%s: Health check round ended with general error.", name());
+        MXB_WARNING("%s: Health check round ended with general error.", name());
         make_health_check();
         break;
 
@@ -464,12 +464,12 @@ void XpandMonitor::choose_hub(xpand::Softfailed softfailed)
 
     if (m_pHub_con)
     {
-        MXS_NOTICE("%s: Monitoring Xpand cluster state using node %s:%d.",
+        MXB_NOTICE("%s: Monitoring Xpand cluster state using node %s:%d.",
                    name(), m_pHub_server->address(), m_pHub_server->port());
     }
     else
     {
-        MXS_ERROR("%s: Could not connect to any server or no server that could "
+        MXB_ERROR("%s: Could not connect to any server or no server that could "
                   "be connected to was part of the quorum.", name());
     }
 }
@@ -527,7 +527,7 @@ bool XpandMonitor::choose_bootstrap_hub(xpand::Softfailed softfailed, std::set<s
 
 bool XpandMonitor::refresh_using_persisted_nodes(std::set<string>& ips_checked)
 {
-    MXS_NOTICE("Attempting to find a Xpand bootstrap node from one of the nodes "
+    MXB_NOTICE("Attempting to find a Xpand bootstrap node from one of the nodes "
                "used during the previous run of MaxScale.");
 
     bool refreshed = false;
@@ -555,7 +555,7 @@ bool XpandMonitor::refresh_using_persisted_nodes(std::set<string>& ips_checked)
                 ips_checked.insert(host);
                 int port = node.second;
 
-                MXS_NOTICE("Trying to find out cluster nodes from %s:%d.", host.c_str(), port);
+                MXB_NOTICE("Trying to find out cluster nodes from %s:%d.", host.c_str(), port);
 
                 MYSQL* pHub_con = mysql_init(NULL);
 
@@ -568,18 +568,18 @@ bool XpandMonitor::refresh_using_persisted_nodes(std::set<string>& ips_checked)
                     {
                         if (refresh_nodes(pHub_con))
                         {
-                            MXS_NOTICE("Cluster nodes refreshed.");
+                            MXB_NOTICE("Cluster nodes refreshed.");
                             refreshed = true;
                         }
                     }
                     else
                     {
-                        MXS_WARNING("%s:%d is not part of the quorum, ignoring.", host.c_str(), port);
+                        MXB_WARNING("%s:%d is not part of the quorum, ignoring.", host.c_str(), port);
                     }
                 }
                 else
                 {
-                    MXS_WARNING("Could not connect to %s:%d.", host.c_str(), port);
+                    MXB_WARNING("Could not connect to %s:%d.", host.c_str(), port);
                 }
 
                 mysql_close(pHub_con);
@@ -590,7 +590,7 @@ bool XpandMonitor::refresh_using_persisted_nodes(std::set<string>& ips_checked)
     }
     else
     {
-        MXS_ERROR("Could not look up persisted nodes: %s", pError ? pError : "Unknown error");
+        MXB_ERROR("Could not look up persisted nodes: %s", pError ? pError : "Unknown error");
     }
 
     return refreshed;
@@ -664,7 +664,7 @@ bool XpandMonitor::refresh_nodes(MYSQL* pHub_con)
 
                             if (softfailed && !is_draining)
                             {
-                                MXS_NOTICE("%s: Node %d (%s) has been SOFTFAILed. "
+                                MXB_NOTICE("%s: Node %d (%s) has been SOFTFAILed. "
                                            "Turning ON 'Being Drained'.",
                                            name(), node.id(), node.server()->address());
 
@@ -672,7 +672,7 @@ bool XpandMonitor::refresh_nodes(MYSQL* pHub_con)
                             }
                             else if (!softfailed && is_draining)
                             {
-                                MXS_NOTICE("%s: Node %d (%s) is no longer being SOFTFAILed. "
+                                MXB_NOTICE("%s: Node %d (%s) is no longer being SOFTFAILed. "
                                            "Turning OFF 'Being Drained'.",
                                            name(), node.id(), node.server()->address());
 
@@ -690,7 +690,7 @@ bool XpandMonitor::refresh_nodes(MYSQL* pHub_con)
 
                             if (pServer)
                             {
-                                MXS_INFO("%s: Reusing volatile server %s.", name(), server_name.c_str());
+                                MXB_INFO("%s: Reusing volatile server %s.", name(), server_name.c_str());
                             }
                             else
                             {
@@ -699,7 +699,7 @@ bool XpandMonitor::refresh_nodes(MYSQL* pHub_con)
 
                                 if (!pServer)
                                 {
-                                    MXS_ERROR("%s: Could not create server %s at %s:%d.",
+                                    MXB_ERROR("%s: Could not create server %s at %s:%d.",
                                               name(), server_name.c_str(), ip.c_str(), mysql_port);
                                 }
                             }
@@ -729,14 +729,14 @@ bool XpandMonitor::refresh_nodes(MYSQL* pHub_con)
                         else
                         {
                             // Node found in system.node_info but not in system.membership
-                            MXS_ERROR("%s: Node %d at %s:%d,%d found in system.node_info "
+                            MXB_ERROR("%s: Node %d at %s:%d,%d found in system.node_info "
                                       "but not in system.membership.",
                                       name(), id, ip.c_str(), mysql_port, health_port);
                         }
                     }
                     else
                     {
-                        MXS_WARNING("%s: Either nodeid and/or iface_ip is missing, ignoring node.",
+                        MXB_WARNING("%s: Either nodeid and/or iface_ip is missing, ignoring node.",
                                     name());
                     }
                 }
@@ -758,13 +758,13 @@ bool XpandMonitor::refresh_nodes(MYSQL* pHub_con)
             }
             else
             {
-                MXS_WARNING("%s: No result returned for '%s' on %s.",
+                MXB_WARNING("%s: No result returned for '%s' on %s.",
                             name(), ZQUERY, mysql_get_host_info(pHub_con));
             }
         }
         else
         {
-            MXS_ERROR("%s: Could not execute '%s' on %s: %s",
+            MXB_ERROR("%s: Could not execute '%s' on %s: %s",
                       name(), ZQUERY, mysql_get_host_info(pHub_con), mysql_error(pHub_con));
         }
 
@@ -805,12 +805,12 @@ void XpandMonitor::check_bootstrap_servers()
 
         if (prev_bootstrap_servers == current_bootstrap_servers)
         {
-            MXS_NOTICE("Current bootstrap servers are the same as the ones used on "
+            MXB_NOTICE("Current bootstrap servers are the same as the ones used on "
                        "previous run, using persisted connection information.");
         }
         else if (!prev_bootstrap_servers.empty())
         {
-            MXS_NOTICE("Current bootstrap servers (%s) are different than the ones "
+            MXB_NOTICE("Current bootstrap servers (%s) are different than the ones "
                        "used on the previous run (%s), NOT using persistent connection "
                        "information.",
                        mxb::join(current_bootstrap_servers, ", ").c_str(),
@@ -824,7 +824,7 @@ void XpandMonitor::check_bootstrap_servers()
     }
     else
     {
-        MXS_WARNING("Could not lookup earlier bootstrap servers: %s", pError ? pError : "Unknown error");
+        MXB_WARNING("Could not lookup earlier bootstrap servers: %s", pError ? pError : "Unknown error");
     }
 }
 
@@ -836,13 +836,13 @@ bool XpandMonitor::remove_persisted_information()
     int rv1 = sqlite3_exec(m_pDb, SQL_BN_DELETE, nullptr, nullptr, &pError);
     if (rv1 != SQLITE_OK)
     {
-        MXS_ERROR("Could not delete persisted bootstrap nodes: %s", pError ? pError : "Unknown error");
+        MXB_ERROR("Could not delete persisted bootstrap nodes: %s", pError ? pError : "Unknown error");
     }
 
     int rv2 = sqlite3_exec(m_pDb, SQL_DN_DELETE, nullptr, nullptr, &pError);
     if (rv2 != SQLITE_OK)
     {
-        MXS_ERROR("Could not delete persisted dynamic nodes: %s", pError ? pError : "Unknown error");
+        MXB_ERROR("Could not delete persisted dynamic nodes: %s", pError ? pError : "Unknown error");
     }
 
     return rv1 == SQLITE_OK && rv2 == SQLITE_OK;
@@ -880,7 +880,7 @@ void XpandMonitor::persist_bootstrap_servers()
 
         if (rv != SQLITE_OK)
         {
-            MXS_ERROR("Could not persist information about current bootstrap nodes: %s",
+            MXB_ERROR("Could not persist information about current bootstrap nodes: %s",
                       pError ? pError : "Unknown error");
         }
     }
@@ -975,7 +975,7 @@ bool XpandMonitor::check_cluster_membership(MYSQL* pHub_con,
                 }
                 else
                 {
-                    MXS_WARNING("%s: No node id returned in row for '%s'.",
+                    MXB_WARNING("%s: No node id returned in row for '%s'.",
                                 name(), ZQUERY);
                 }
             }
@@ -997,12 +997,12 @@ bool XpandMonitor::check_cluster_membership(MYSQL* pHub_con,
         }
         else
         {
-            MXS_WARNING("%s: No result returned for '%s'.", name(), ZQUERY);
+            MXB_WARNING("%s: No result returned for '%s'.", name(), ZQUERY);
         }
     }
     else
     {
-        MXS_ERROR("%s: Could not execute '%s' on %s: %s",
+        MXB_ERROR("%s: Could not execute '%s' on %s: %s",
                   name(), ZQUERY, mysql_get_host_info(pHub_con), mysql_error(pHub_con));
     }
 
@@ -1112,14 +1112,14 @@ SERVER* XpandMonitor::create_volatile_server(const std::string& server_name,
 
             if (!pServer)
             {
-                MXS_ERROR("%s: Created server %s (at %s:%d) could not be "
+                MXB_ERROR("%s: Created server %s (at %s:%d) could not be "
                           "looked up using its name.",
                           name(), server_name.c_str(), ip.c_str(), mysql_port);
             }
         }
         else
         {
-            MXS_ERROR("%s: Could not create server %s at %s:%d.",
+            MXB_ERROR("%s: Could not create server %s at %s:%d.",
                       who.c_str(), server_name.c_str(), ip.c_str(), port);
         }
     }
@@ -1129,7 +1129,7 @@ SERVER* XpandMonitor::create_volatile_server(const std::string& server_name,
         auto f = [who, server_name, ip, port](){
             if (!runtime_create_volatile_server(server_name, ip, port))
             {
-                MXS_ERROR("%s: Could not create server %s at %s:%d.",
+                MXB_ERROR("%s: Could not create server %s at %s:%d.",
                           who.c_str(), server_name.c_str(), ip.c_str(), port);
             }
         };
@@ -1165,13 +1165,13 @@ SERVER* XpandMonitor::create_volatile_server(const std::string& server_name,
 
             if (pServer)
             {
-                MXS_INFO("Created volatile server found after %d lookup attempts and "
+                MXB_INFO("Created volatile server found after %d lookup attempts and "
                          "a total sleep time of %d milliseconds.",
                          attempts, (int)total_slept.count());
             }
             else
             {
-                MXS_ERROR("%s: After %d lookup attempts and a total sleep time of %d milliseconds, "
+                MXB_ERROR("%s: After %d lookup attempts and a total sleep time of %d milliseconds, "
                           "the volatile server %s was not found. The creation of the server may "
                           "have failed. ",
                           name(), attempts, (int)total_slept.count(), server_name.c_str());
@@ -1179,7 +1179,7 @@ SERVER* XpandMonitor::create_volatile_server(const std::string& server_name,
         }
         else
         {
-            MXS_ERROR("%s: Could not send request to create server %s at %s:%d to main worker.",
+            MXB_ERROR("%s: Could not send request to create server %s at %s:%d to main worker.",
                       name(), server_name.c_str(), ip.c_str(), port);
         }
     }
@@ -1200,11 +1200,11 @@ void XpandMonitor::make_health_check()
         break;
 
     case http::Async::ERROR:
-        MXS_ERROR("%s: Could not initiate health check.", name());
+        MXB_ERROR("%s: Could not initiate health check.", name());
         break;
 
     case http::Async::READY:
-        MXS_INFO("%s: Health check available immediately.", name());
+        MXB_INFO("%s: Health check available immediately.", name());
         break;
     }
 }
@@ -1271,7 +1271,7 @@ bool XpandMonitor::check_http()
         break;
 
     case http::Async::ERROR:
-        MXS_ERROR("%s: Health check waiting ended with general error.", name());
+        MXB_ERROR("%s: Health check waiting ended with general error.", name());
     }
 
     return false;
@@ -1355,12 +1355,12 @@ bool XpandMonitor::perform_operation(Operation operation,
 
             if (mysql_query(m_pHub_con, zQuery) == 0)
             {
-                MXS_NOTICE("%s: %s performed on node %d (%s).",
+                MXB_NOTICE("%s: %s performed on node %d (%s).",
                            name(), zOperation, id, pServer->address());
 
                 if (operation == Operation::SOFTFAIL)
                 {
-                    MXS_NOTICE("%s: Turning on 'Being Drained' on server %s.",
+                    MXB_NOTICE("%s: Turning on 'Being Drained' on server %s.",
                                name(), pServer->address());
                     pServer->set_status(SERVER_DRAINING);
                 }
@@ -1368,7 +1368,7 @@ bool XpandMonitor::perform_operation(Operation operation,
                 {
                     mxb_assert(operation == Operation::UNSOFTFAIL);
 
-                    MXS_NOTICE("%s: Turning off 'Being Drained' on server %s.",
+                    MXB_NOTICE("%s: Turning off 'Being Drained' on server %s.",
                                name(), pServer->address());
                     pServer->clear_status(SERVER_DRAINING);
                 }
@@ -1418,12 +1418,12 @@ void XpandMonitor::persist(const XpandNode& node)
     char* pError = nullptr;
     if (sqlite3_exec(m_pDb, sql_upsert, nullptr, nullptr, &pError) == SQLITE_OK)
     {
-        MXS_INFO("Updated Xpand node in bookkeeping: %d, '%s', %d, %d.",
+        MXB_INFO("Updated Xpand node in bookkeeping: %d, '%s', %d, %d.",
                  id, zIp, mysql_port, health_port);
     }
     else
     {
-        MXS_ERROR("Could not update Ćlustrix node (%d, '%s', %d, %d) in bookkeeping: %s",
+        MXB_ERROR("Could not update Ćlustrix node (%d, '%s', %d, %d) in bookkeeping: %s",
                   id, zIp, mysql_port, health_port, pError ? pError : "Unknown error");
     }
 }
@@ -1444,11 +1444,11 @@ void XpandMonitor::unpersist(const XpandNode& node)
     char* pError = nullptr;
     if (sqlite3_exec(m_pDb, sql_delete, nullptr, nullptr, &pError) == SQLITE_OK)
     {
-        MXS_INFO("Deleted Xpand node %d from bookkeeping.", id);
+        MXB_INFO("Deleted Xpand node %d from bookkeeping.", id);
     }
     else
     {
-        MXS_ERROR("Could not delete Ćlustrix node %d from bookkeeping: %s",
+        MXB_ERROR("Could not delete Ćlustrix node %d from bookkeeping: %s",
                   id, pError ? pError : "Unknown error");
     }
 }

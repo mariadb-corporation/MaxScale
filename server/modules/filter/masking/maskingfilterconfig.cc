@@ -141,7 +141,7 @@ bool MaskingFilterConfig::post_configure(const std::map<std::string, mxs::Config
 
             if (cache_properties.max_size != 0)
             {
-                MXS_NOTICE("The parameter 'treat_string_arg_as_field' is enabled for %s, "
+                MXB_NOTICE("The parameter 'treat_string_arg_as_field' is enabled for %s, "
                            "disabling the query classifier cache.",
                            name().c_str());
 

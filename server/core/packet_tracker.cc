@@ -41,7 +41,7 @@ PacketTracker::PacketTracker(GWBUF* pPacket)
     m_command = request.command();
     m_expect_more_split_query_packets = request.is_split_leader();
 
-    MXS_SDEBUG("PacketTracker Command: " << STRPACKETTYPE(m_command));
+    MXB_SDEBUG("PacketTracker Command: " << STRPACKETTYPE(m_command));
 
     if (request.server_will_respond())
     {
@@ -72,18 +72,18 @@ PacketTracker::PacketTracker(GWBUF* pPacket)
 
 bool PacketTracker::update_request(GWBUF* pPacket)
 {
-    MXS_SDEBUG("PacketTracker update_request: " << STRPACKETTYPE(m_command));
+    MXB_SDEBUG("PacketTracker update_request: " << STRPACKETTYPE(m_command));
     ComPacket com_packet(pPacket, &m_client_com_packet_internal);
 
     if (!m_expect_more_split_query_packets)
     {
-        MXS_SERROR("PacketTracker::update_request() called while not expecting splits");
+        MXB_SERROR("PacketTracker::update_request() called while not expecting splits");
         mxb_assert(!true);
         m_state = State::Error;
     }
     else if (!com_packet.is_split_continuation())
     {
-        MXS_SERROR("PacketTracker::update_request() received a non-split packet");
+        MXB_SERROR("PacketTracker::update_request() received a non-split packet");
         mxb_assert(!true);
         m_state = State::Error;
     }
@@ -137,7 +137,7 @@ void PacketTracker::update_response(GWBUF* pPacket)
 
     if (response.is_split_continuation())
     {   // no state change, just more of the same data
-        MXS_SDEBUG("PacketTracker::update_response IGNORE trailing split packets");
+        MXB_SDEBUG("PacketTracker::update_response IGNORE trailing split packets");
         return;
     }
 
@@ -201,13 +201,13 @@ PacketTracker::State PacketTracker::first_packet(const ComResponse& response)
     }
     else if (response.is_local_infile())
     {
-        MXS_SERROR("TODO handle local infile packet");
+        MXB_SERROR("TODO handle local infile packet");
         mxb_assert(!true);
         new_state = State::Error;
     }
     else
     {
-        MXS_SERROR("PacketTracker unexpected " << response.type() << " in state " << m_state);
+        MXB_SERROR("PacketTracker unexpected " << response.type() << " in state " << m_state);
         new_state = State::Error;
     }
 
@@ -220,7 +220,7 @@ PacketTracker::State PacketTracker::field(const ComResponse& response)
 
     if (!response.is_data())
     {
-        MXS_SERROR("PacketTracker unexpected " << response.type() << " in state " << m_state);
+        MXB_SERROR("PacketTracker unexpected " << response.type() << " in state " << m_state);
         new_state = State::Error;
     }
     else if (++m_field_count == m_total_fields)
@@ -241,7 +241,7 @@ PacketTracker::State PacketTracker::field_eof(const ComResponse& response)
     }
     else
     {
-        MXS_SERROR("PacketTracker unexpected " << response.type() << " in state " << m_state);
+        MXB_SERROR("PacketTracker unexpected " << response.type() << " in state " << m_state);
         new_state = State::Error;
     }
 
@@ -262,7 +262,7 @@ PacketTracker::State PacketTracker::row(const ComResponse& response)
     }
     else
     {
-        MXS_SERROR("PacketTracker unexpected " << response.type() << " in state " << m_state);
+        MXB_SERROR("PacketTracker unexpected " << response.type() << " in state " << m_state);
         new_state = State::Error;
     }
 
@@ -283,7 +283,7 @@ PacketTracker::State PacketTracker::com_field_list(const ComResponse& response)
     }
     else
     {
-        MXS_SERROR("PacketTracker unexpected " << response.type() << " in state " << m_state);
+        MXB_SERROR("PacketTracker unexpected " << response.type() << " in state " << m_state);
         new_state = State::Error;
     }
 
@@ -300,7 +300,7 @@ PacketTracker::State PacketTracker::com_statistics(const maxsql::ComResponse& re
     }
     else
     {
-        MXS_SERROR("PacketTracker unexpected " << response.type() << " in state " << m_state);
+        MXB_SERROR("PacketTracker unexpected " << response.type() << " in state " << m_state);
         new_state = State::Error;
     }
 
@@ -321,7 +321,7 @@ PacketTracker::State PacketTracker::com_stmt_fetch(const maxsql::ComResponse& re
     }
     else
     {
-        MXS_SERROR("PacketTracker unexpected " << response.type() << " in state " << m_state);
+        MXB_SERROR("PacketTracker unexpected " << response.type() << " in state " << m_state);
         new_state = State::Error;
     }
 
@@ -330,7 +330,7 @@ PacketTracker::State PacketTracker::com_stmt_fetch(const maxsql::ComResponse& re
 
 PacketTracker::State PacketTracker::expect_no_response_packets(const ComResponse& response)
 {
-    MXS_SERROR("PacketTracker unexpected " << response.type() << " in state " << m_state);
+    MXB_SERROR("PacketTracker unexpected " << response.type() << " in state " << m_state);
     return State::Error;
 }
 }

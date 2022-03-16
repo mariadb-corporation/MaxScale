@@ -254,7 +254,7 @@ bool ServiceSpec::do_post_validate(Params params) const
 
     if (!servers.empty() + !targets.empty() + !cluster.empty() > 1)
     {
-        MXS_ERROR("Only one '%s', '%s' or '%s' is allowed.", s_servers.name().c_str(),
+        MXB_ERROR("Only one '%s', '%s' or '%s' is allowed.", s_servers.name().c_str(),
                   s_targets.name().c_str(), s_cluster.name().c_str());
         ok = false;
     }
@@ -264,7 +264,7 @@ bool ServiceSpec::do_post_validate(Params params) const
 
         if (it != servers.end())
         {
-            MXS_ERROR("'%s' is not a valid server", it->c_str());
+            MXB_ERROR("'%s' is not a valid server", it->c_str());
             ok = false;
         }
     }
@@ -274,7 +274,7 @@ bool ServiceSpec::do_post_validate(Params params) const
 
         if (it != targets.end())
         {
-            MXS_ERROR("'%s' is not a valid target", it->c_str());
+            MXB_ERROR("'%s' is not a valid target", it->c_str());
             ok = false;
         }
     }
@@ -282,7 +282,7 @@ bool ServiceSpec::do_post_validate(Params params) const
     {
         if (!MonitorManager::find_monitor(cluster.c_str()))
         {
-            MXS_ERROR("'%s' is not a valid cluster", cluster.c_str());
+            MXB_ERROR("'%s' is not a valid cluster", cluster.c_str());
             ok = false;
         }
     }
@@ -295,7 +295,7 @@ bool ServiceSpec::do_post_validate(Params params) const
 
         if (it != filters.end())
         {
-            MXS_ERROR("'%s' is not a valid filter", it->c_str());
+            MXB_ERROR("'%s' is not a valid filter", it->c_str());
             ok = false;
         }
     }
@@ -341,7 +341,7 @@ Service* Service::create(const std::string& name, Params params, Unknown unknown
 
     if (!service->m_router)
     {
-        MXS_ERROR("%s: Failed to create router instance. Service not started.", service->name());
+        MXB_ERROR("%s: Failed to create router instance. Service not started.", service->name());
         service->state = State::FAILED;
         return nullptr;
     }
@@ -400,7 +400,7 @@ Service* Service::create(const std::string& name, Params params, Unknown unknown
     // where the router inspects a part of the service (e.g. the servers it uses) when it is being configured.
     if (!service->m_router->getConfiguration().configure(params))
     {
-        MXS_ERROR("%s: Failed to configure router instance.", service->name());
+        MXB_ERROR("%s: Failed to configure router instance.", service->name());
         service->state = State::FAILED;
         return nullptr;
     }
@@ -555,7 +555,7 @@ Service::~Service()
         auto it = std::remove(this_unit.services.begin(), this_unit.services.end(), this);
         mxb_assert(it != this_unit.services.end());
         this_unit.services.erase(it);
-        MXS_INFO("Destroying '%s'", name());
+        MXB_INFO("Destroying '%s'", name());
     }
 }
 
@@ -619,13 +619,13 @@ bool Service::launch()
 
             if (get_children().empty())
             {
-                MXS_WARNING("Service '%s' has a listener but no servers", name());
+                MXB_WARNING("Service '%s' has a listener but no servers", name());
             }
         }
     }
     else
     {
-        MXS_WARNING("Service '%s' has no listeners defined.", name());
+        MXB_WARNING("Service '%s' has no listeners defined.", name());
     }
 
     return ok;
@@ -639,11 +639,11 @@ bool Service::launch_all()
 
     if (num_svc > 0)
     {
-        MXS_NOTICE("Starting a total of %d services...", num_svc);
+        MXB_NOTICE("Starting a total of %d services...", num_svc);
     }
     else
     {
-        MXS_NOTICE("No services defined in any of the configuration files");
+        MXB_NOTICE("No services defined in any of the configuration files");
     }
 
     int curr_svc = 1;
@@ -651,11 +651,11 @@ bool Service::launch_all()
     {
         if (service->launch())
         {
-            MXS_NOTICE("Service '%s' started (%d/%d)", service->name(), curr_svc++, num_svc);
+            MXB_NOTICE("Service '%s' started (%d/%d)", service->name(), curr_svc++, num_svc);
         }
         else
         {
-            MXS_ERROR("Failed to start service '%s'.", service->name());
+            MXB_ERROR("Failed to start service '%s'.", service->name());
             ok = false;
         }
 
@@ -739,7 +739,7 @@ bool Service::can_be_destroyed() const
 
     if (!names.empty())
     {
-        MXS_ERROR("Cannot destroy service '%s', it uses the following objects: %s",
+        MXB_ERROR("Cannot destroy service '%s', it uses the following objects: %s",
                   name(), mxb::join(names, ", ").c_str());
     }
     else
@@ -757,7 +757,7 @@ bool Service::can_be_destroyed() const
 
         if (!names.empty())
         {
-            MXS_ERROR("Cannot destroy service '%s', the following objects depend on it: %s",
+            MXB_ERROR("Cannot destroy service '%s', the following objects depend on it: %s",
                       name(), mxb::join(names, ", ").c_str());
         }
     }
@@ -782,7 +782,7 @@ bool Service::set_filters(const std::vector<std::string>& filters)
         }
         else
         {
-            MXS_ERROR("Unable to find filter '%s' for service '%s'", f.c_str(), name());
+            MXB_ERROR("Unable to find filter '%s' for service '%s'", f.c_str(), name());
             rval = false;
         }
     }
@@ -873,7 +873,7 @@ bool service_all_services_have_listeners()
     {
         if (listener_find_by_service(service).empty())
         {
-            MXS_ERROR("Service '%s' has no listeners.", service->name());
+            MXB_ERROR("Service '%s' has no listeners.", service->name());
             rval = false;
         }
     }
@@ -1369,7 +1369,7 @@ bool Service::configure(json_t* params)
             // Null values should be ignored
             if (!json_is_null(value))
             {
-                MXS_ERROR("Parameter '%s' cannot be modified at runtime", name.c_str());
+                MXB_ERROR("Parameter '%s' cannot be modified at runtime", name.c_str());
                 ok = false;
             }
         }
@@ -1450,7 +1450,7 @@ bool ServiceEndpoint::connect()
 
     if (!m_router_session)
     {
-        MXS_ERROR("Failed to create new router session for service '%s'. "
+        MXB_ERROR("Failed to create new router session for service '%s'. "
                   "See previous errors for more details.", m_service->name());
         return false;
     }
@@ -1470,7 +1470,7 @@ bool ServiceEndpoint::connect()
 
         if (!f.session)
         {
-            MXS_ERROR("Failed to create filter session for '%s'", f.filter->name());
+            MXB_ERROR("Failed to create filter session for '%s'", f.filter->name());
 
             for (auto d = m_filters.begin(); d != it; ++d)
             {

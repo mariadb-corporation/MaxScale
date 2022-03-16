@@ -92,7 +92,7 @@ void MirrorSession::route_queued_queries()
 {
     while (!m_queue.empty() && m_responses == 0)
     {
-        MXS_INFO(">>> Routing queued queries");
+        MXB_INFO(">>> Routing queued queries");
         auto query = m_queue.front().release();
         m_queue.pop_front();
 
@@ -101,7 +101,7 @@ void MirrorSession::route_queued_queries()
             break;
         }
 
-        MXS_INFO("<<< Queued queries routed");
+        MXB_INFO("<<< Queued queries routed");
 
         // Routing of queued queries should never cause the same query to be put back into the queue. The
         // check for m_responses should prevent it.
@@ -113,7 +113,7 @@ void MirrorSession::finalize_reply()
 {
     // All replies have now arrived. Return the last chunk of the result to the client
     // that we've been storing in the session.
-    MXS_INFO("All replies received, routing last chunk to the client.");
+    MXB_INFO("All replies received, routing last chunk to the client.");
 
     RouterSession::clientReply(m_last_chunk.release(), m_last_route, m_main->reply());
 
@@ -131,7 +131,7 @@ bool MirrorSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, con
         backend->ack_write();
         --m_responses;
 
-        MXS_INFO("Reply from '%s' complete%s.", backend->name(), backend == m_main ?
+        MXB_INFO("Reply from '%s' complete%s.", backend->name(), backend == m_main ?
                  ", delaying routing of last chunk until all replies have been received" : "");
 
         if (backend == m_main)

@@ -153,7 +153,7 @@ bool RWSplitSession::continue_causal_read()
 
     if (m_wait_gtid == GTID_READ_DONE)
     {
-        MXS_INFO("Continuing with causal read");
+        MXB_INFO("Continuing with causal read");
         mxb_assert(m_current_query.empty());
         mxb_assert(!m_query_queue.empty());
 
@@ -270,7 +270,7 @@ void RWSplitSession::send_sync_query(mxs::RWBackend* target)
 
 std::pair<mxs::Buffer, RWSplitSession::RoutingPlan> RWSplitSession::start_gtid_probe()
 {
-    MXS_INFO("Starting GTID probe");
+    MXB_INFO("Starting GTID probe");
 
     m_wait_gtid = READING_GTID;
     mxs::Buffer buffer(modutil_create_query("SELECT @@gtid_current_pos"));
@@ -313,7 +313,7 @@ GWBUF* RWSplitSession::parse_gtid_result(GWBUF* buffer, const mxs::Reply& reply)
 
         m_gtid_pos.parse(reply.row_data().front().front());
         m_wait_gtid = GTID_READ_DONE;
-        MXS_INFO("GTID probe complete, GTID is: %s", m_gtid_pos.to_string().c_str());
+        MXB_INFO("GTID probe complete, GTID is: %s", m_gtid_pos.to_string().c_str());
 
         // We need to return something for the upper layer, an OK packet should be adequate
         rval = modutil_create_ok();

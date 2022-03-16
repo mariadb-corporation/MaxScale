@@ -90,11 +90,11 @@ bool Consumer::commit()
             if (err == RdKafka::ERR_NO_ERROR)
             {
                 m_records = 0;
-                MXS_INFO("Offsets committed: %s", offsets_to_string().c_str());
+                MXB_INFO("Offsets committed: %s", offsets_to_string().c_str());
             }
             else
             {
-                MXS_ERROR("Failed to commit offsets: %s", RdKafka::err2str(err).c_str());
+                MXB_ERROR("Failed to commit offsets: %s", RdKafka::err2str(err).c_str());
                 ok = false;
             }
         }
@@ -172,7 +172,7 @@ bool Consumer::consume()
                     }
                     else if (use_key)
                     {
-                        MXS_INFO("Ignoring record at offset %ld, no record key provided.", msg->offset());
+                        MXB_INFO("Ignoring record at offset %ld, no record key provided.", msg->offset());
                         continue;
                     }
 
@@ -206,13 +206,13 @@ bool Consumer::consume()
                 else if (msg->err() == RdKafka::ERR_UNKNOWN_TOPIC_OR_PART)
                 {
                     ok = false;
-                    MXS_WARNING("%s", msg->errstr().c_str());
+                    MXB_WARNING("%s", msg->errstr().c_str());
                     break;
                 }
                 else
                 {
                     ok = false;
-                    MXS_ERROR("%s", msg->errstr().c_str());
+                    MXB_ERROR("%s", msg->errstr().c_str());
                     break;
                 }
             }
@@ -227,7 +227,7 @@ bool Consumer::consume()
         }
         else
         {
-            MXS_ERROR("Failed to create consumer: %s", err.c_str());
+            MXB_ERROR("Failed to create consumer: %s", err.c_str());
             ok = false;
         }
     }

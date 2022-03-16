@@ -64,7 +64,7 @@ Gtid Gtid::from_string(const std::string& gtid_str)
     }
     else
     {
-        MXS_SERROR("Invalid gtid string: '" << gtid_str);
+        MXB_SERROR("Invalid gtid string: '" << gtid_str);
         return Gtid();
     }
 }

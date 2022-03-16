@@ -181,7 +181,7 @@ bool HintRouterSession::route_by_hint(GWBUF* pPacket, const Hint& hint, bool pri
             }
             else if (print_errors)
             {
-                MXS_ERROR("Hint suggests routing to master when no master connected.");
+                MXB_ERROR("Hint suggests routing to master when no master connected.");
             }
         }
         break;
@@ -212,7 +212,7 @@ bool HintRouterSession::route_by_hint(GWBUF* pPacket, const Hint& hint, bool pri
                 /* This shouldn't be possible with current setup as server names are
                  * checked on startup. With a different filter and the 'print_errors'
                  * on for the first call this is possible. */
-                MXS_ERROR("Hint suggests routing to backend '%s' when no such backend connected.",
+                MXB_ERROR("Hint suggests routing to backend '%s' when no such backend connected.",
                           backend_name.c_str());
             }
         }
@@ -239,7 +239,7 @@ bool HintRouterSession::route_by_hint(GWBUF* pPacket, const Hint& hint, bool pri
                 HR_DEBUG("Write to all failed.");
                 if (print_errors)
                 {
-                    MXS_ERROR("Write failed for '%lu' out of '%lu' backends.",
+                    MXB_ERROR("Write failed for '%lu' out of '%lu' backends.",
                               (size - n_writes),
                               size);
                 }
@@ -248,7 +248,7 @@ bool HintRouterSession::route_by_hint(GWBUF* pPacket, const Hint& hint, bool pri
         break;
 
     default:
-        MXS_ERROR("Unsupported hint type '%s'", Hint::type_to_str(hint.type));
+        MXB_ERROR("Unsupported hint type '%s'", Hint::type_to_str(hint.type));
         break;
     }
     return success;
@@ -319,11 +319,11 @@ bool HintRouterSession::route_to_slave(GWBUF* pPacket, bool print_errors)
     {
         if (!size)
         {
-            MXS_ERROR("Hint suggests routing to slave when no slaves found.");
+            MXB_ERROR("Hint suggests routing to slave when no slaves found.");
         }
         else
         {
-            MXS_ERROR("Could not write to any of '%lu' slaves.", size);
+            MXB_ERROR("Could not write to any of '%lu' slaves.", size);
         }
     }
     return success;
@@ -349,7 +349,7 @@ void HintRouterSession::update_connections()
             }
             else
             {
-                MXS_WARNING("Found multiple master servers when updating connections.");
+                MXB_WARNING("Found multiple master servers when updating connections.");
             }
         }
         else if (server->is_slave())

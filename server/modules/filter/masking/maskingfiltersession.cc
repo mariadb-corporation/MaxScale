@@ -349,7 +349,7 @@ bool MaskingFilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& do
         switch (m_state)
         {
         case EXPECTING_NOTHING:
-            MXS_WARNING("Received data, although expected nothing.");
+            MXB_WARNING("Received data, although expected nothing.");
 
         case IGNORING_RESPONSE:
             break;
@@ -472,7 +472,7 @@ void MaskingFilterSession::handle_eof(GWBUF* pPacket)
     }
     else
     {
-        MXS_ERROR("Expected EOF, got something else: %d", response.type());
+        MXB_ERROR("Expected EOF, got something else: %d", response.type());
         m_state = IGNORING_RESPONSE;
     }
 }
@@ -482,7 +482,7 @@ namespace
 
 void warn_of_type_mismatch(const MaskingRules::Rule& rule)
 {
-    MXS_WARNING("The rule targeting \"%s\" matches a column "
+    MXB_WARNING("The rule targeting \"%s\" matches a column "
                 "that is not of string type.",
                 rule.match().c_str());
 }
@@ -528,13 +528,13 @@ void MaskingFilterSession::handle_large_payload()
 {
     if (m_config.large_payload == Config::LARGE_ABORT)
     {
-        MXS_WARNING("Payload > 16MB, closing the connection.");
+        MXB_WARNING("Payload > 16MB, closing the connection.");
         m_pSession->kill();
         m_state = SUPPRESSING_RESPONSE;
     }
     else
     {
-        MXS_WARNING("Payload > 16MB, no masking is performed.");
+        MXB_WARNING("Payload > 16MB, no masking is performed.");
         m_state = IGNORING_RESPONSE;
     }
 }
@@ -600,7 +600,7 @@ void MaskingFilterSession::mask_values(ComPacket& response)
         break;
 
     default:
-        MXS_ERROR("Unexpected request: %d", m_res.command());
+        MXB_ERROR("Unexpected request: %d", m_res.command());
         mxb_assert(!true);
     }
 }

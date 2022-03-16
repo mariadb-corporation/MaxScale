@@ -150,7 +150,7 @@ MariaDBClientAuthenticator::exchange(GWBUF* buf, MYSQL_session* session, Authent
         else
         {
             // Client is attempting to use wrong authenticator, send switch request packet.
-            MXS_INFO("Client %s is using an unsupported authenticator plugin '%s'. Trying to "
+            MXB_INFO("Client %s is using an unsupported authenticator plugin '%s'. Trying to "
                      "switch to '%s'.",
                      session->user_and_host().c_str(),
                      auth_data.plugin.c_str(), DEFAULT_MYSQL_AUTH_PLUGIN);

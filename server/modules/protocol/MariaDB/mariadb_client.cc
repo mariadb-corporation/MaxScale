@@ -418,7 +418,7 @@ int MariaDBClientConnection::ssl_authenticate_client()
     {
         /* Should be SSL, but client is not SSL capable. Cannot print the username, as client has not
          * sent that yet. */
-        MXS_INFO("Client from '%s' attempted to connect to service '%s' without SSL when SSL was required.",
+        MXB_INFO("Client from '%s' attempted to connect to service '%s' without SSL when SSL was required.",
                  remote, service);
         return SSL_ERROR_CLIENT_NOT_SSL;
     }
@@ -443,7 +443,7 @@ int MariaDBClientConnection::ssl_authenticate_client()
         return_code = dcb->ssl_handshake();
         if (return_code < 0)
         {
-            MXS_INFO("Client from '%s' failed to connect to service '%s' with SSL.",
+            MXB_INFO("Client from '%s' failed to connect to service '%s' with SSL.",
                      remote, service);
             return SSL_ERROR_ACCEPT_FAILED;
         }
@@ -451,12 +451,12 @@ int MariaDBClientConnection::ssl_authenticate_client()
         {
             if (return_code == 1)
             {
-                MXS_INFO("Client from '%s' connected to service '%s' with SSL.",
+                MXB_INFO("Client from '%s' connected to service '%s' with SSL.",
                          remote, service);
             }
             else
             {
-                MXS_INFO("Client from '%s' is in progress of connecting to service '%s' with SSL.",
+                MXB_INFO("Client from '%s' is in progress of connecting to service '%s' with SSL.",
                          remote, service);
             }
         }
@@ -649,7 +649,7 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
                     }
                     else
                     {
-                        MXS_WARNING(USERS_RECENTLY_UPDATED_FMT, m_session_data->user_and_host().c_str());
+                        MXB_WARNING(USERS_RECENTLY_UPDATED_FMT, m_session_data->user_and_host().c_str());
                         // If plugin exists, start exchange. Authentication will surely fail.
                         m_auth_state = (user_entry_type == UserEntryType::PLUGIN_IS_NOT_LOADED) ?
                             AuthState::NO_PLUGIN : AuthState::START_EXCHANGE;
@@ -1304,7 +1304,7 @@ void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer, cons
 {
     if (reply.is_complete())
     {
-        MXS_INFO("Added %s to history with ID %u: %s (result: %s)",
+        MXB_INFO("Added %s to history with ID %u: %s (result: %s)",
                  STRPACKETTYPE(m_pending_cmd.data()[4]), m_pending_cmd.id(),
                  maxbase::show_some(m_pending_cmd.get_sql(), 200).c_str(),
                  reply.is_ok() ? "OK" : reply.error().message().c_str());
@@ -1366,7 +1366,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
     {
         if (session_state_value != MXS_SESSION::State::STOPPING)
         {
-            MXS_ERROR("Session received a query in incorrect state: %s",
+            MXB_ERROR("Session received a query in incorrect state: %s",
                       session_state_to_string(session_state_value));
         }
         return StateMachineRes::ERROR;
@@ -1422,7 +1422,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
         else
         {
             // Unexpected, client should not be sending empty (header-only) packets in this case.
-            MXS_ERROR("Client %s sent empty packet when a normal packet was expected.",
+            MXB_ERROR("Client %s sent empty packet when a normal packet was expected.",
                       m_session->user_and_host().c_str());
         }
         break;
@@ -1485,7 +1485,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
         /** Routing failed, close the client connection */
         m_session->close_reason = SESSION_CLOSE_ROUTING_FAILED;
         rval = StateMachineRes::ERROR;
-        MXS_ERROR("Routing the query failed. Session will be closed.");
+        MXB_ERROR("Routing the query failed. Session will be closed.");
     }
     else if (m_command == MXS_COM_QUIT)
     {
@@ -1860,7 +1860,7 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, bool 
                             client->connect();
                             // TODO: There can be multiple connections to the same server. Currently only one
                             // connection per server is killed.
-                            MXS_INFO("KILL on '%s': %s", a.first->name(), a.second.c_str());
+                            MXB_INFO("KILL on '%s': %s", a.first->name(), a.second.c_str());
                             client->queue_query(modutil_create_query(a.second.c_str()));
                             client->queue_query(mysql_create_com_quit(NULL, 0));
 
@@ -1884,7 +1884,7 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, bool 
                                 }
 
                                 session_put_ref(ref);
-                                MXS_INFO("All KILL commands finished");
+                                MXB_INFO("All KILL commands finished");
                                 rv = false;
                             }
 

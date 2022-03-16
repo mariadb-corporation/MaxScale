@@ -67,7 +67,7 @@ bool CsMonitorServer::set_node_mode(const Config& config, json_t* pOutput)
         }
         else
         {
-            MXS_ERROR("MaxScale thinks the IP address of the server '%s' is %s, "
+            MXB_ERROR("MaxScale thinks the IP address of the server '%s' is %s, "
                       "while the server itself thinks it is %s.",
                       name(), address(), ip.c_str());
             rv = false;
@@ -75,7 +75,7 @@ bool CsMonitorServer::set_node_mode(const Config& config, json_t* pOutput)
     }
     else
     {
-        MXS_ERROR("Could not get DMRM_Controller IP of '%s'.", name());
+        MXB_ERROR("Could not get DMRM_Controller IP of '%s'.", name());
         rv = false;
     }
 
@@ -125,7 +125,7 @@ Result CsMonitorServer::begin(const std::chrono::seconds& timeout, json_t* pOutp
 {
     if (m_trx_state != TRX_INACTIVE)
     {
-        MXS_WARNING("Transaction begin, when transaction state is not inactive.");
+        MXB_WARNING("Transaction begin, when transaction state is not inactive.");
         mxb_assert(!true);
     }
 
@@ -152,7 +152,7 @@ Result CsMonitorServer::commit(const std::chrono::seconds& timeout, json_t* pOut
 {
     if (m_trx_state != TRX_ACTIVE)
     {
-        MXS_WARNING("Transaction commit, when state is not active.");
+        MXB_WARNING("Transaction commit, when state is not active.");
         mxb_assert(!true);
     }
 
@@ -398,7 +398,7 @@ bool CsMonitorServer::begin(const std::vector<CsMonitorServer*>& servers,
         }
         else
         {
-            MXS_ERROR("Transaction begin on '%s' failed: %s",
+            MXB_ERROR("Transaction begin on '%s' failed: %s",
                       pServer->name(), response.body.c_str());
             rv = false;
             pServer->m_trx_state = TRX_INACTIVE;
@@ -465,7 +465,7 @@ bool CsMonitorServer::commit(const std::vector<CsMonitorServer*>& servers,
 
         if (!result.ok())
         {
-            MXS_ERROR("Committing transaction on '%s' failed: %s",
+            MXB_ERROR("Committing transaction on '%s' failed: %s",
                       pServer->name(), response.body.c_str());
             rv = false;
         }
@@ -532,7 +532,7 @@ bool CsMonitorServer::rollback(const std::vector<CsMonitorServer*>& servers,
 
         if (!result.ok())
         {
-            MXS_ERROR("Rollbacking transaction on '%s' failed: %s",
+            MXB_ERROR("Rollbacking transaction on '%s' failed: %s",
                       pServer->name(), response.body.c_str());
             rv = false;
         }
@@ -637,7 +637,7 @@ bool CsMonitorServer::set_cluster_mode(const std::vector<CsMonitorServer*>& serv
                 result = pMaster->rollback(pOutput);
                 if (!result.ok())
                 {
-                    MXS_ERROR("Could not rollback transaction.");
+                    MXB_ERROR("Could not rollback transaction.");
                 }
             }
         }
@@ -656,7 +656,7 @@ CsMonitorServer* CsMonitorServer::get_master(const std::vector<CsMonitorServer*>
     Statuses statuses;
     if (!fetch_statuses(servers, context, &statuses))
     {
-        MXS_ERROR("Could not fetch the status of all servers. Will continue with the mode change "
+        MXB_ERROR("Could not fetch the status of all servers. Will continue with the mode change "
                   "if single DBMR master was refreshed.");
     }
 

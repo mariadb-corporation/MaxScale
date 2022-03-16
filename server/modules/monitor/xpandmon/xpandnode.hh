@@ -156,7 +156,7 @@ public:
 
         if (ip != m_ip)
         {
-            MXS_WARNING("Address of node '%d' has changed from '%s' to '%s', updating.",
+            MXB_WARNING("Address of node '%d' has changed from '%s' to '%s', updating.",
                         m_id, m_ip.c_str(), ip.c_str());
 
             m_ip = ip;
@@ -166,7 +166,7 @@ public:
 
         if (mysql_port != m_mysql_port)
         {
-            MXS_WARNING("MariaDB port of node '%d' has changed from '%d' to '%d', updating.",
+            MXB_WARNING("MariaDB port of node '%d' has changed from '%d' to '%d', updating.",
                         m_id, m_mysql_port, mysql_port);
 
             m_mysql_port = mysql_port;
@@ -176,7 +176,7 @@ public:
 
         if (health_port != m_health_port)
         {
-            MXS_WARNING("Healtch check port of node '%d' has changed from '%d' to '%d', updating.",
+            MXB_WARNING("Healtch check port of node '%d' has changed from '%d' to '%d', updating.",
                         m_id, m_health_port, health_port);
 
             m_health_port = health_port;

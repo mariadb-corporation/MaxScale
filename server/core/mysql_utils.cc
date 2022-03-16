@@ -103,7 +103,7 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, int port, const char* 
 
     if (server_is_db && mysql && mysql_query(mysql, "SET NAMES latin1") != 0)
     {
-        MXS_ERROR("Failed to set latin1 character set: %s", mysql_error(mysql));
+        MXB_ERROR("Failed to set latin1 character set: %s", mysql_error(mysql));
         mysql = NULL;
     }
 
@@ -117,7 +117,7 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, int port, const char* 
 
         if (ssl.enabled && mysql_get_ssl_cipher(con) == NULL)
         {
-            MXS_ERROR("An encrypted connection to '%s' could not be created, "
+            MXB_ERROR("An encrypted connection to '%s' could not be created, "
                       "ensure that TLS is enabled on the target server.",
                       server->name());
             // Don't close the connection as it is closed elsewhere, just set to NULL
@@ -413,7 +413,7 @@ void mxs_update_server_charset(MYSQL* mysql, SERVER* server)
 
                     if (server->charset() != charset)
                     {
-                        MXS_NOTICE("Server '%s' charset: %s", server->name(), row[1]);
+                        MXB_NOTICE("Server '%s' charset: %s", server->name(), row[1]);
                         server->set_charset(charset);
                     }
                 }

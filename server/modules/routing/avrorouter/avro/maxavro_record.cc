@@ -125,7 +125,7 @@ static json_t* read_and_pack_value(MAXAVRO_FILE* file,
         break;
 
     default:
-        MXS_ERROR("Unimplemented type: %d", field->type);
+        MXB_ERROR("Unimplemented type: %d", field->type);
         break;
     }
     return value;
@@ -160,7 +160,7 @@ static void skip_value(MAXAVRO_FILE* file, enum maxavro_value_type type)
         break;
 
     default:
-        MXS_ERROR("Unimplemented type: %d - %s", type, type_to_string(type));
+        MXB_ERROR("Unimplemented type: %d - %s", type, type_to_string(type));
         break;
     }
 }
@@ -199,7 +199,7 @@ json_t* maxavro_record_read_json(MAXAVRO_FILE* file)
                 else
                 {
                     long pos = ftell(file->file);
-                    MXS_ERROR("Failed to read field value '%s', type '%s' at "
+                    MXB_ERROR("Failed to read field value '%s', type '%s' at "
                               "file offset %ld, record number %lu.",
                               file->schema->fields[i].name,
                               type_to_string(file->schema->fields[i].type),
@@ -345,7 +345,7 @@ GWBUF* maxavro_record_read_binary(MAXAVRO_FILE* file)
             {
                 if (ferror(file->file))
                 {
-                    MXS_ERROR("Failed to read %ld bytes: %d, %s",
+                    MXB_ERROR("Failed to read %ld bytes: %d, %s",
                               data_size,
                               errno,
                               mxb_strerror(errno));
@@ -357,12 +357,12 @@ GWBUF* maxavro_record_read_binary(MAXAVRO_FILE* file)
         }
         else
         {
-            MXS_ERROR("Failed to allocate %ld bytes for data block.", data_size);
+            MXB_ERROR("Failed to allocate %ld bytes for data block.", data_size);
         }
     }
     else
     {
-        MXS_ERROR("Attempting to read from a failed Avro file '%s', error is: %s",
+        MXB_ERROR("Attempting to read from a failed Avro file '%s', error is: %s",
                   file->filename,
                   maxavro_get_error_string(file));
     }

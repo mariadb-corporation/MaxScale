@@ -17,7 +17,7 @@ namespace
 {
 void log_error(int errnum, const typename SharedLogLine::InternalUpdate& iu)
 {
-    MXS_SERROR("Failed to write to unified log file "
+    MXB_SERROR("Failed to write to unified log file "
                << iu.update.sFile->filename
                << ". Error: (" << errnum << ") " << strerror(errnum)
                << ". Suppressing further similar error messages.");

@@ -100,11 +100,11 @@ int main(int argc, char** argv)
         memset(message + block_size - 1, '\0', 1);
         if (interval > 0 && i % interval == 0)
         {
-            err = MXS_ERROR("%s", message);
+            err = MXB_ERROR("%s", message);
         }
         else
         {
-            err = MXS_ERROR("%s", message);
+            err = MXB_ERROR("%s", message);
         }
         if (err)
         {

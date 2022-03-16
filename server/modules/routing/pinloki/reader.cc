@@ -96,7 +96,7 @@ bool Reader::poll_start_reading()
         }
         catch (const mxb::Exception& err)
         {
-            MXS_ERROR("Failed to start reading: %s", err.what());
+            MXB_ERROR("Failed to start reading: %s", err.what());
         }
     }
     else

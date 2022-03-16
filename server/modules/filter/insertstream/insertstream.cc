@@ -292,7 +292,7 @@ bool InsertStreamSession::routeQuery(GWBUF* queue)
             break;
 
         default:
-            MXS_ERROR("Unexpected state: %d", m_state);
+            MXB_ERROR("Unexpected state: %d", m_state);
             mxb_assert(false);
             break;
         }

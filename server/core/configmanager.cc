@@ -240,7 +240,7 @@ void ConfigManager::sync()
             if (config.valid())
             {
                 next_version = config.get_int(CN_VERSION);
-                MXS_NOTICE("Updating to configuration version %ld", next_version);
+                MXB_NOTICE("Updating to configuration version %ld", next_version);
 
                 process_config(config);
 
@@ -265,7 +265,7 @@ void ConfigManager::sync()
         {
             if (m_log_sync_error)
             {
-                MXS_ERROR("Failed to sync configuration: %s", e.what());
+                MXB_ERROR("Failed to sync configuration: %s", e.what());
                 m_log_sync_error = false;
             }
 
@@ -275,7 +275,7 @@ void ConfigManager::sync()
             {
                 if (revert_changes())
                 {
-                    MXS_WARNING("Successfully reverted the failed configuration change, "
+                    MXB_WARNING("Successfully reverted the failed configuration change, "
                                 "ignoring configuration version %ld.", next_version);
                 }
 
@@ -303,18 +303,18 @@ bool ConfigManager::revert_changes()
     }
     catch (const ConfigManager::Exception& e)
     {
-        MXS_ERROR("Failed to revert the failed configuration change, the MaxScale configuration "
+        MXB_ERROR("Failed to revert the failed configuration change, the MaxScale configuration "
                   "is in an indeterminate state. The error that caused the failure was: %s",
                   e.what());
 
         if (discard_config())
         {
-            MXS_ALERT("Aborting the MaxScale process...");
+            MXB_ALERT("Aborting the MaxScale process...");
             raise(SIGABRT);
         }
         else
         {
-            MXS_ERROR("Cached configuration was not removed, cannot safely abort the process.");
+            MXB_ERROR("Cached configuration was not removed, cannot safely abort the process.");
         }
     }
 
@@ -340,7 +340,7 @@ bool ConfigManager::load_cached_config()
 
             if (cluster_name == m_cluster)
             {
-                MXS_NOTICE("Using cached configuration for cluster '%s', version %ld: %s",
+                MXB_NOTICE("Using cached configuration for cluster '%s', version %ld: %s",
                            cluster_name.c_str(), version, filename.c_str());
 
                 m_current_config = std::move(new_json);
@@ -348,7 +348,7 @@ bool ConfigManager::load_cached_config()
             }
             else
             {
-                MXS_WARNING("Found cached configuration for cluster '%s' when configured "
+                MXB_WARNING("Found cached configuration for cluster '%s' when configured "
                             "to use cluster '%s', ignoring the cached configuration: %s",
                             cluster_name.c_str(), m_cluster.c_str(), filename.c_str());
             }
@@ -382,7 +382,7 @@ ConfigManager::Startup ConfigManager::process_cached_config()
     }
     catch (const ConfigManager::Exception& e)
     {
-        MXS_ERROR("Failed to apply cached configuration: %s", e.what());
+        MXB_ERROR("Failed to apply cached configuration: %s", e.what());
         status = discard_config() ? Startup::RESTART : Startup::ERROR;
 
         // Reset the current configuration to signal that it must be recreated in the next process_config call
@@ -414,7 +414,7 @@ bool ConfigManager::start()
         }
         catch (const Exception& e)
         {
-            MXS_ERROR("Cannot start configuration change: %s", e.what());
+            MXB_ERROR("Cannot start configuration change: %s", e.what());
             ok = false;
             rollback();
         }
@@ -448,7 +448,7 @@ bool ConfigManager::commit()
 
         if (config.get_object(CN_CONFIG) == m_current_config.get_object(CN_CONFIG))
         {
-            MXS_INFO("Resulting configuration is the same as current configuration, ignoring update.");
+            MXB_INFO("Resulting configuration is the same as current configuration, ignoring update.");
             rollback();
             return true;
         }
@@ -467,7 +467,7 @@ bool ConfigManager::commit()
     }
     catch (const Exception& e)
     {
-        MXS_ERROR("Cannot complete configuration change: %s", e.what());
+        MXB_ERROR("Cannot complete configuration change: %s", e.what());
         rollback();
 
         // Try to revert any changes that were applied
@@ -525,7 +525,7 @@ void ConfigManager::save_config(const std::string& payload)
     if (!file.write(payload.c_str(), payload.size()) || !file.flush()
         || rename(tmpname.c_str(), filename.c_str()) != 0)
     {
-        MXS_WARNING("Failed to save configuration at '%s': %d, %s",
+        MXB_WARNING("Failed to save configuration at '%s': %d, %s",
                     filename.c_str(), errno, mxb_strerror(errno));
     }
 }
@@ -538,7 +538,7 @@ bool ConfigManager::discard_config()
 
     if (rename(old_name.c_str(), new_name.c_str()) == 0)
     {
-        MXS_ERROR("Renamed cached configuration, using static configuration on next startup. "
+        MXB_ERROR("Renamed cached configuration, using static configuration on next startup. "
                   "A copy of the bad cached configuration is stored at: %s", new_name.c_str());
         discarded = true;
     }
@@ -552,17 +552,17 @@ bool ConfigManager::discard_config()
         }
         else
         {
-            MXS_ALERT("Failed to rename cached configuration file at '%s': %d, %s.",
+            MXB_ALERT("Failed to rename cached configuration file at '%s': %d, %s.",
                       old_name.c_str(), errno, mxb_strerror(errno));
 
             if (unlink(old_name.c_str()) == 0)
             {
-                MXS_ERROR("Removed cached configuration, using static configuration on next startup.");
+                MXB_ERROR("Removed cached configuration, using static configuration on next startup.");
                 discarded = true;
             }
             else
             {
-                MXS_ALERT("Failed to discard bad cached configuration file at '%s': %d, %s.",
+                MXB_ALERT("Failed to discard bad cached configuration file at '%s': %d, %s.",
                           old_name.c_str(), errno, mxb_strerror(errno));
             }
         }
@@ -654,7 +654,7 @@ void ConfigManager::process_config(const mxb::Json& new_json)
             {
                 // A conflicting change was detected, add it to both the removed and added sets. This will
                 // first destroy it and then recreate it using the new configuration.
-                MXS_NOTICE("Recreating object '%s': %s", name.c_str(), reason.str().c_str());
+                MXB_NOTICE("Recreating object '%s': %s", name.c_str(), reason.str().c_str());
                 removed.insert(name);
                 added.insert(name);
             }
@@ -1291,7 +1291,7 @@ void ConfigManager::try_update_status(const std::string& msg)
     // expecting it to fail so any errors might still be of interest.
     if (!m_conn.cmd(sql_update_status(m_cluster, m_version, msg)))
     {
-        MXS_WARNING("Failed to update node state to '%s' for hostname '%s': %s",
+        MXB_WARNING("Failed to update node state to '%s' for hostname '%s': %s",
                     msg.c_str(), hostname().c_str(), m_conn.error());
     }
 }
@@ -1332,7 +1332,7 @@ mxb::Json ConfigManager::fetch_config()
                 // stabilize to some known configuration which is easier to deal with (for both MaxScale and
                 // the users) than trying to figure out which of the configurations is the real one.
                 mxb_assert(m_server);
-                MXS_WARNING("The local configuration version (%ld) is ahead of the cluster "
+                MXB_WARNING("The local configuration version (%ld) is ahead of the cluster "
                             "configuration (%ld) found on server '%s', ignoring to cluster "
                             "configuration.", m_version, version, m_server->name());
                 m_log_stale_cluster = false;
@@ -1375,7 +1375,7 @@ mxb::Json ConfigManager::fetch_config()
 
         if (config_version != db_version)
         {
-            MXS_WARNING("Version mismatch between JSON (%ld) and version field in database (%ld),"
+            MXB_WARNING("Version mismatch between JSON (%ld) and version field in database (%ld),"
                         " using version from database.", config_version, db_version);
             config.set_int(CN_VERSION, db_version);
         }

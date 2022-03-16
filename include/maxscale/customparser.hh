@@ -62,7 +62,7 @@ protected:
     void log_unexpected()
     {
 #ifdef MXS_CP_LOG_UNEXPECTED_AND_EXHAUSTED
-        MXS_NOTICE("Custom parser: In statement '%.*s', unexpected token at '%.*s'.",
+        MXB_NOTICE("Custom parser: In statement '%.*s', unexpected token at '%.*s'.",
                    (int)m_len,
                    m_pSql,
                    (int)(m_pEnd - m_pI),
@@ -79,7 +79,7 @@ protected:
     void log_exhausted()
     {
 #ifdef MXS_CP_LOG_UNEXPECTED_AND_EXHAUSTED
-        MXS_NOTICE("Custom parser: More tokens expected in statement '%.*s'.", (int)m_len, m_pSql);
+        MXB_NOTICE("Custom parser: More tokens expected in statement '%.*s'.", (int)m_len, m_pSql);
 #endif
     }
 

@@ -54,7 +54,7 @@ CachePT::CachePT(const std::string& name,
     : Cache(name, pConfig, rules, sFactory)
     , m_caches(caches)
 {
-    MXS_NOTICE("Created cache per thread.");
+    MXB_NOTICE("Created cache per thread.");
 }
 
 CachePT::~CachePT()

@@ -155,7 +155,7 @@ bool Config::Specification::validate(const ConfigParameters& params,
                 }
                 else
                 {
-                    MXS_ERROR("Unknown global parameter '%s'.", name.c_str());
+                    MXB_ERROR("Unknown global parameter '%s'.", name.c_str());
                     validated = false;
                 }
             }
@@ -167,13 +167,13 @@ bool Config::Specification::validate(const ConfigParameters& params,
     {
         if (s_config_sync_user.get(params).empty())
         {
-            MXS_ERROR("Parameter '%s' must be defined when '%s' is used.",
+            MXB_ERROR("Parameter '%s' must be defined when '%s' is used.",
                       s_config_sync_user.name().c_str(), s_config_sync_cluster.name().c_str());
             validated = false;
         }
         else if (s_config_sync_password.get(params).empty())
         {
-            MXS_ERROR("Parameter '%s' must be defined when '%s' is used.",
+            MXB_ERROR("Parameter '%s' must be defined when '%s' is used.",
                       s_config_sync_password.name().c_str(), s_config_sync_cluster.name().c_str());
             validated = false;
         }
@@ -192,7 +192,7 @@ bool Config::Specification::validate(json_t* pJson, std::set<std::string>* pUnre
         // TODO: Build length limits into ParamString
         if (cluster.length() > mxs::ConfigManager::CLUSTER_MAX_LEN)
         {
-            MXS_ERROR("The cluster name for '%s' must be less than %d characters long.",
+            MXB_ERROR("The cluster name for '%s' must be less than %d characters long.",
                       CN_CONFIG_SYNC_CLUSTER, mxs::ConfigManager::CLUSTER_MAX_LEN);
         }
         else
@@ -202,7 +202,7 @@ bool Config::Specification::validate(json_t* pJson, std::set<std::string>* pUnre
     }
     else
     {
-        MXS_ERROR("The value of '%s' is not the name of a monitor: %s.",
+        MXB_ERROR("The value of '%s' is not the name of a monitor: %s.",
                   CN_CONFIG_SYNC_CLUSTER, cluster.c_str());
     }
 
@@ -210,13 +210,13 @@ bool Config::Specification::validate(json_t* pJson, std::set<std::string>* pUnre
     {
         if (s_config_sync_user.get(pJson).empty())
         {
-            MXS_ERROR("Parameter '%s' must be defined when '%s' is used.",
+            MXB_ERROR("Parameter '%s' must be defined when '%s' is used.",
                       s_config_sync_user.name().c_str(), s_config_sync_cluster.name().c_str());
             ok = false;
         }
         if (s_config_sync_password.get(pJson).empty())
         {
-            MXS_ERROR("Parameter '%s' must be defined when '%s' is used.",
+            MXB_ERROR("Parameter '%s' must be defined when '%s' is used.",
                       s_config_sync_password.name().c_str(), s_config_sync_cluster.name().c_str());
             ok = false;
         }
@@ -692,7 +692,7 @@ Config::Config(int argc, char** argv)
     , argv(argv, argv + argc)
     , log_debug(this, &s_log_debug, [](bool enable) {
 #ifndef SS_DEBUG
-                    MXS_WARNING("The 'log_debug' option has no effect in release mode.");
+                    MXB_WARNING("The 'log_debug' option has no effect in release mode.");
 #endif
                     mxb_log_set_priority_enabled(LOG_DEBUG, enable);
                 }),
@@ -856,17 +856,17 @@ bool Config::configure(const mxs::ConfigParameters& params, mxs::ConfigParameter
 
         if (DEFAULT_QC_CACHE_SIZE == 0)
         {
-            MXS_WARNING("Failed to automatically detect available system memory: disabling the query "
+            MXB_WARNING("Failed to automatically detect available system memory: disabling the query "
                         "classifier cache. To enable it, add '%s' to the configuration file.",
                         CN_QUERY_CLASSIFIER_CACHE_SIZE);
         }
         else if (this->qc_cache_properties.max_size == 0)
         {
-            MXS_NOTICE("Query classifier cache is disabled");
+            MXB_NOTICE("Query classifier cache is disabled");
         }
         else
         {
-            MXS_NOTICE("Using up to %s of memory for query classifier cache",
+            MXB_NOTICE("Using up to %s of memory for query classifier cache",
                        mxb::pretty_size(this->qc_cache_properties.max_size).c_str());
         }
     }
@@ -906,7 +906,7 @@ bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& 
     {
         if (whw <= wlw)
         {
-            MXS_ERROR("Invalid configuration, writeq_high_water should be greater than writeq_low_water.");
+            MXB_ERROR("Invalid configuration, writeq_high_water should be greater than writeq_low_water.");
             rv = false;
         }
     }
@@ -925,7 +925,7 @@ bool Config::ParamUsersRefreshTime::from_string(const std::string& value_as_stri
 
     if (*endptr == '\0' && value < 0)
     {
-        MXS_NOTICE("The value of '%s' is less than 0, users will be updated "
+        MXB_NOTICE("The value of '%s' is less than 0, users will be updated "
                    "as fast as the user account manager can.",
                    CN_USERS_REFRESH_TIME);
         // Strictly speaking they will be refreshed once every 68 years,
@@ -988,7 +988,7 @@ bool Config::ParamLogThrottling::from_string(const std::string& value_as_string,
 
         if (!count || !window_ms || !suppress_ms)
         {
-            MXS_ERROR("Invalid value for the `log_throttling` configuration entry: '%s'. "
+            MXB_ERROR("Invalid value for the `log_throttling` configuration entry: '%s'. "
                       "The format of the value for `log_throttling` is 'X, Y, Z', where "
                       "X is the maximum number of times a particular error can be logged "
                       "in the time window of Y milliseconds, before the logging is suppressed "
@@ -1014,7 +1014,7 @@ bool Config::ParamLogThrottling::from_string(const std::string& value_as_string,
             }
             else
             {
-                MXS_ERROR("Invalid value for the `log_throttling` configuration entry: '%s'. "
+                MXB_ERROR("Invalid value for the `log_throttling` configuration entry: '%s'. "
                           "The configuration entry `log_throttling` requires as value one zero or "
                           "positive integer and two durations.", value_as_string.c_str());
             }
@@ -1121,7 +1121,7 @@ bool Config::ParamThreadsCount::from_string(const std::string& value_as_string,
             int processor_count = get_processor_count();
             if (value > processor_count)
             {
-                MXS_WARNING("Number of threads set to %d, which is greater than "
+                MXB_WARNING("Number of threads set to %d, which is greater than "
                             "the number of processors available: %d",
                             (int)value,
                             processor_count);
@@ -1130,7 +1130,7 @@ bool Config::ParamThreadsCount::from_string(const std::string& value_as_string,
             // TODO: Update documentation once this limitation is removed
             if (value > MAX_COUNT)
             {
-                MXS_WARNING("Number of threads set to %d, which is greater than the "
+                MXB_WARNING("Number of threads set to %d, which is greater than the "
                             "hard maximum of %d. Number of threads adjusted down "
                             "accordingly.",
                             (int)value,
@@ -1248,7 +1248,7 @@ bool config_add_to_context(const std::string& source_file, ConfigSection::Source
         string reason;
         if (!config_is_valid_name(header, &reason))
         {
-            MXS_ERROR("%s", reason.c_str());
+            MXB_ERROR("%s", reason.c_str());
             errors++;
         }
         else
@@ -1270,7 +1270,7 @@ bool config_add_to_context(const std::string& source_file, ConfigSection::Source
                                        "with contents from runtime file '%s'. To prevent this warning "
                                        "message, manually move the runtime changes to the %s file.";
                     auto* prev_type_str = type_to_str(prev_type);
-                    MXS_WARNING(msg, header.c_str(), prev_type_str, prev_entry.source_file.c_str(),
+                    MXB_WARNING(msg, header.c_str(), prev_type_str, prev_entry.source_file.c_str(),
                                 source_file.c_str(), prev_type_str);
 
                     output.erase(it);
@@ -1297,7 +1297,7 @@ bool config_add_to_context(const std::string& source_file, ConfigSection::Source
                     };
                 if (!std::all_of(new_ctxt.m_name.begin(), new_ctxt.m_name.end(), is_url_char))
                 {
-                    MXS_WARNING("Configuration section name '%s' in %s file '%s' contains URL-unsafe "
+                    MXB_WARNING("Configuration section name '%s' in %s file '%s' contains URL-unsafe "
                                 "characters. It cannot be safely used with the REST API or MaxCtrl.",
                                 new_ctxt.name(), type_to_str(source_type), source_file.c_str());
                 }
@@ -1327,7 +1327,7 @@ bool config_add_to_context(const std::string& source_file, ConfigSection::Source
 
                     if (is_empty_string(value))
                     {
-                        MXS_ERROR("Empty value given to parameter '%s' in %s file '%s'.",
+                        MXB_ERROR("Empty value given to parameter '%s' in %s file '%s'.",
                                   name.c_str(), type_to_str(source_type), source_file.c_str());
                         errors++;
                     }
@@ -1377,7 +1377,7 @@ int config_files_search_cb(const char* fpath, const struct stat* sb, int typefla
 
             case S_IFDIR:
                 // Points to a directory; we'll ignore that.
-                MXS_WARNING("Symbolic link %s in configuration directory points to a "
+                MXB_WARNING("Symbolic link %s in configuration directory points to a "
                             "directory; it will be ignored.", fpath);
                 break;
 
@@ -1387,7 +1387,7 @@ int config_files_search_cb(const char* fpath, const struct stat* sb, int typefla
         }
         else
         {
-            MXS_WARNING("Could not get information about the symbolic link %s; "
+            MXB_WARNING("Could not get information about the symbolic link %s; "
                         "it will be ignored.", fpath);
         }
     }
@@ -1409,7 +1409,7 @@ int config_files_search_cb(const char* fpath, const struct stat* sb, int typefla
 
         if (hidden_dirs.count(path_to))
         {
-            MXS_INFO("Ignoring file inside hidden directory: %s", fpath);
+            MXB_INFO("Ignoring file inside hidden directory: %s", fpath);
         }
         else if (dot && *filename != '.')   // that have a suffix .cnf and are not hidden.
         {
@@ -1536,11 +1536,11 @@ static bool is_directory(const char* dir)
     {
         if (errno == ENOENT)
         {
-            MXS_NOTICE("%s does not exist, not reading.", dir);
+            MXB_NOTICE("%s does not exist, not reading.", dir);
         }
         else
         {
-            MXS_WARNING("Could not access %s, not reading: %s",
+            MXB_WARNING("Could not access %s, not reading: %s",
                         dir,
                         mxb_strerror(errno));
         }
@@ -1553,7 +1553,7 @@ static bool is_directory(const char* dir)
         }
         else
         {
-            MXS_WARNING("%s exists, but it is not a directory. Ignoring.", dir);
+            MXB_WARNING("%s exists, but it is not a directory. Ignoring.", dir);
         }
     }
 
@@ -1594,7 +1594,7 @@ bool export_config_file(const char* filename, ConfigSectionMap& config)
 
         if (write(fd, payload.c_str(), payload.size()) == -1)
         {
-            MXS_ERROR("Failed to write to file '%s': %d, %s",
+            MXB_ERROR("Failed to write to file '%s': %d, %s",
                       filename, errno, mxb_strerror(errno));
             rval = false;
         }
@@ -1603,7 +1603,7 @@ bool export_config_file(const char* filename, ConfigSectionMap& config)
     }
     else
     {
-        MXS_ERROR("Failed to open configuration export file '%s': %d, %s",
+        MXB_ERROR("Failed to open configuration export file '%s': %d, %s",
                   filename, errno, mxb_strerror(errno));
         rval = false;
     }
@@ -1714,7 +1714,7 @@ bool is_valid_module(const ConfigSection* obj)
         if (!get_module(param_value, expected))
         {
             // An error is already printed by get_module, but we can print additional info.
-            MXS_ERROR("'%s' is not a valid %s for %s '%s'",
+            MXB_ERROR("'%s' is not a valid %s for %s '%s'",
                       param_value.c_str(), param_name.c_str(), type_str.c_str(), obj->m_name.c_str());
             rval = false;
         }
@@ -1764,7 +1764,7 @@ ConfigSection* name_to_object(const std::vector<ConfigSection*>& objects,
 
     if (it == objects.end())
     {
-        MXS_ERROR("Could not find object '%s' that '%s' depends on. "
+        MXB_ERROR("Could not find object '%s' that '%s' depends on. "
                   "Check that the configuration object exists.",
                   name.c_str(),
                   obj->name());
@@ -2039,7 +2039,7 @@ bool resolve_dependencies(std::vector<ConfigSection*>& objects)
                 std::string first = group[0]->m_name;
                 std::string str_group = std::accumulate(std::next(group.begin()), group.end(), first, join);
                 str_group += " -> " + first;
-                MXS_ERROR("A circular dependency chain was found in the configuration: %s",
+                MXB_ERROR("A circular dependency chain was found in the configuration: %s",
                           str_group.c_str());
                 errors++;
             }
@@ -2198,7 +2198,7 @@ static bool process_config_context(ConfigSectionMap& context)
     }
     else
     {
-        MXS_ERROR("%d errors were encountered while processing configuration.", error_count);
+        MXB_ERROR("%d errors were encountered while processing configuration.", error_count);
     }
 
     return error_count == 0;
@@ -2332,7 +2332,7 @@ static bool check_config_objects(ConfigSectionMap& context)
         }
         else if (const char* missing_module_def = get_missing_module_parameter_name(&obj))
         {
-            MXS_ERROR("'%s' in file '%s' is missing a required parameter '%s'.",
+            MXB_ERROR("'%s' in file '%s' is missing a required parameter '%s'.",
                       obj.name(), filec, missing_module_def);
             rval = false;
         }
@@ -2571,7 +2571,7 @@ int create_new_service(ConfigSection* obj)
 
     if (!Service::create(obj->name(), obj->m_parameters))
     {
-        MXS_ERROR("Service '%s' creation failed.", obj->name());
+        MXB_ERROR("Service '%s' creation failed.", obj->name());
         error_count++;
     }
 
@@ -2589,7 +2589,7 @@ int create_new_server(ConfigSection* obj)
 
     if (!ServerManager::create_server(obj->name(), obj->m_parameters))
     {
-        MXS_ERROR("Failed to create a new server.");
+        MXB_ERROR("Failed to create a new server.");
         error = true;
     }
 
@@ -2614,7 +2614,7 @@ int create_new_monitor(ConfigSection* obj)
     }
     else
     {
-        MXS_ERROR("Failed to create monitor '%s'.", obj->name());
+        MXB_ERROR("Failed to create monitor '%s'.", obj->name());
     }
 
     return rval;
@@ -2653,13 +2653,13 @@ int create_new_filter(ConfigSection* obj)
 
         if (!filter_alloc(obj->name(), obj->m_parameters))
         {
-            MXS_ERROR("Failed to create filter '%s'.", obj->name());
+            MXB_ERROR("Failed to create filter '%s'.", obj->name());
             error_count++;
         }
     }
     else
     {
-        MXS_ERROR("Failed to load filter module '%s'", module);
+        MXB_ERROR("Failed to load filter module '%s'", module);
         error_count++;
     }
 
@@ -2775,7 +2775,7 @@ pcre2_code* compile_regex_string(const char* regex_string,
             // Try to compile even further for faster matching
             if (pcre2_jit_compile(machine, PCRE2_JIT_COMPLETE) < 0)
             {
-                MXS_WARNING("PCRE2 JIT compilation of pattern '%s' failed, "
+                MXB_WARNING("PCRE2 JIT compilation of pattern '%s' failed, "
                             "falling back to normal compilation.",
                             regex_string);
             }
@@ -2790,7 +2790,7 @@ pcre2_code* compile_regex_string(const char* regex_string,
     }
     else
     {
-        MXS_ERROR("Invalid PCRE2 regular expression '%s' (position '%zu').",
+        MXB_ERROR("Invalid PCRE2 regular expression '%s' (position '%zu').",
                   regex_string,
                   error_offset);
         MXS_PCRE2_PRINT_ERROR(errorcode);
@@ -2828,7 +2828,7 @@ static bool test_regex_string_validity(const char* regex_string, const char* key
     if (!check_first_last_char(regex_string, '/'))
     {
         // return false; // Uncomment this line once '/ .. /' is no longer optional
-        MXS_WARNING("Missing slashes (/) around a regular expression is deprecated: '%s=%s'.",
+        MXB_WARNING("Missing slashes (/) around a regular expression is deprecated: '%s=%s'.",
                     key,
                     regex_string);
     }
@@ -3038,7 +3038,7 @@ bool get_suffixed_duration(const char* zValue,
 
 static void log_duration_suffix_warning(const char* zName, const char* zValue)
 {
-    MXS_INFO("Specifying durations without a suffix denoting the unit "
+    MXB_INFO("Specifying durations without a suffix denoting the unit "
              "is strongly discouraged as it will be deprecated in the "
              "future: %s=%s. Use the suffixes 'h' (hour), 'm' (minute), "
              "'s' (second) or 'ms' (milliseconds).", zName, zValue);
@@ -3070,7 +3070,7 @@ static bool get_milliseconds(const char* zName,
     }
     else
     {
-        MXS_ERROR("Invalid duration %s: %s=%s.", zName, zValue, zDisplay_value);
+        MXB_ERROR("Invalid duration %s: %s=%s.", zName, zValue, zDisplay_value);
     }
 
     return valid;
@@ -3137,14 +3137,14 @@ bool config_parse_disk_space_threshold(DiskSpaceLimits* pDisk_space_threshold,
                 }
                 else
                 {
-                    MXS_ERROR("The value following the ':' must be a percentage: %s",
+                    MXB_ERROR("The value following the ':' must be a percentage: %s",
                               entry.c_str());
                     success = false;
                 }
             }
             else
             {
-                MXS_ERROR("The %s parameter '%s' contains an invalid entry: '%s'",
+                MXB_ERROR("The %s parameter '%s' contains an invalid entry: '%s'",
                           CN_DISK_SPACE_THRESHOLD,
                           zDisk_space_threshold,
                           entry.c_str());
@@ -3153,7 +3153,7 @@ bool config_parse_disk_space_threshold(DiskSpaceLimits* pDisk_space_threshold,
         }
         else
         {
-            MXS_ERROR("The %s parameter '%s' contains an invalid entry: '%s'",
+            MXB_ERROR("The %s parameter '%s' contains an invalid entry: '%s'",
                       CN_DISK_SPACE_THRESHOLD,
                       zDisk_space_threshold,
                       entry.c_str());
@@ -3219,7 +3219,7 @@ bool config_set_rebalance_threshold(const char* value)
     }
     else
     {
-        MXS_ERROR("Invalid value (percentage expected) for '%s': %s", CN_REBALANCE_THRESHOLD, value);
+        MXB_ERROR("Invalid value (percentage expected) for '%s': %s", CN_REBALANCE_THRESHOLD, value);
     }
 
     return rv;

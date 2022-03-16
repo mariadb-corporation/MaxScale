@@ -26,7 +26,7 @@ mxs::RouterSession* Mirror::newSession(MXS_SESSION* pSession, const mxs::Endpoin
 
     if (std::find(children.begin(), children.end(), m_config.main) == children.end())
     {
-        MXS_ERROR("Main target '%s' is not listed in `targets`", m_config.main->name());
+        MXB_ERROR("Main target '%s' is not listed in `targets`", m_config.main->name());
         return nullptr;
     }
 

@@ -140,7 +140,7 @@ bool connect_backend_servers(SRBackendList& backends, MXS_SESSION* session)
                 else
                 {
                     succp = false;
-                    MXS_ERROR("Unable to establish "
+                    MXB_ERROR("Unable to establish "
                               "connection with slave '%s'",
                               b->name());
                     /* handle connect error */
@@ -160,7 +160,7 @@ bool connect_backend_servers(SRBackendList& backends, MXS_SESSION* session)
             {
                 if (b->in_use())
                 {
-                    MXS_INFO("Connected %s in \t'%s'",
+                    MXB_INFO("Connected %s in \t'%s'",
                              b->target()->status_string().c_str(),
                              b->name());
                 }
@@ -188,7 +188,7 @@ mxs::RouterSession* SchemaRouter::newSession(MXS_SESSION* pSession, const Endpoi
     }
     else
     {
-        MXS_ERROR("Failed to connect to any of the backend servers");
+        MXB_ERROR("Failed to connect to any of the backend servers");
     }
 
 

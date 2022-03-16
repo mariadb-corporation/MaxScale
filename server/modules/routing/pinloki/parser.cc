@@ -427,7 +427,7 @@ struct ResultVisitor : public boost::static_visitor<>
     {
         if (!s.connection_name.empty())
         {
-            MXS_SWARNING("Connection name ignored in CHANGE MASTER. "
+            MXB_SWARNING("Connection name ignored in CHANGE MASTER. "
                          "Multi-Source Replication is not supported by Binlog Router");
         }
 

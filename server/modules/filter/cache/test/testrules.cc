@@ -582,7 +582,7 @@ int main(int argc, char** argv)
         }
         else
         {
-            MXS_ERROR("Could not initialize query classifier.");
+            MXB_ERROR("Could not initialize query classifier.");
         }
 
         mxs_log_finish();

@@ -483,20 +483,20 @@ public:
             {
                 if (strcmp(reply.str(), zValue) != 0)
                 {
-                    MXS_ERROR("Expected status message '%s' in the context of %s, "
+                    MXB_ERROR("Expected status message '%s' in the context of %s, "
                               "but received '%s'.", zValue, zContext, reply.str());
                     rv = REDIS_ERR;
                 }
             }
             else
             {
-                MXS_ERROR("Expected status message in the context of %s, "
+                MXB_ERROR("Expected status message in the context of %s, "
                           "but received a %s.", zContext, redis_type_to_string(reply.type()));
             }
         }
         else
         {
-            MXS_ERROR("Failed to read reply in the context of %s: %s, %s",
+            MXB_ERROR("Failed to read reply in the context of %s: %s, %s",
                       zContext, redis_error_to_string(rv).c_str(), errstr());
         }
 
@@ -529,14 +529,14 @@ void log_error(const Redis& redis, const char* zContext)
 {
     if (redis.err() == REDIS_ERR_EOF)
     {
-        MXS_ERROR("%s. The Redis server has closed the connection. Ensure that the Redis "
+        MXB_ERROR("%s. The Redis server has closed the connection. Ensure that the Redis "
                   "'timeout' is 0 (disabled) or very large. A reconnection will now be "
                   "made, but this will hurt both the functionality and the performance.",
                   zContext);
     }
     else
     {
-        MXS_ERROR("%s: %s", zContext, redis.errstr());
+        MXB_ERROR("%s: %s", zContext, redis.errstr());
     }
 }
 
@@ -614,11 +614,11 @@ public:
                         break;
 
                     case REDIS_REPLY_ERROR:
-                        MXS_ERROR("Redis replied with error: %s", sThis->m_redis.errstr());
+                        MXB_ERROR("Redis replied with error: %s", sThis->m_redis.errstr());
                         break;
 
                     default:
-                        MXS_WARNING("Unexpected redis redis return type (%s) received.",
+                        MXB_WARNING("Unexpected redis redis return type (%s) received.",
                                     redis_type_to_string(reply.type()));
                     }
                 }
@@ -727,7 +727,7 @@ public:
                                 break;
 
                             default:
-                                MXS_WARNING("Unexpected number of values - %lld - deleted with one key,",
+                                MXB_WARNING("Unexpected number of values - %lld - deleted with one key,",
                                             reply.integer());
                                 /* FLOWTHROUGH */
                             case 1:
@@ -738,11 +738,11 @@ public:
                         break;
 
                     case REDIS_REPLY_ERROR:
-                        MXS_ERROR("Redis replied with error: %s", sThis->m_redis.errstr());
+                        MXB_ERROR("Redis replied with error: %s", sThis->m_redis.errstr());
                         break;
 
                     default:
-                        MXS_WARNING("Unexpected redis return type (%s) received.",
+                        MXB_WARNING("Unexpected redis return type (%s) received.",
                                     redis_type_to_string(reply.type()));
                         break;
                     }
@@ -825,11 +825,11 @@ public:
             }
             else if (reply.is_status())
             {
-                MXS_ERROR("Expected status OK as reponse to FLUSHALL, but received %s.", reply.str());
+                MXB_ERROR("Expected status OK as reponse to FLUSHALL, but received %s.", reply.str());
             }
             else
             {
-                MXS_ERROR("Expected a status message as response to FLUSHALL, but received a %s.",
+                MXB_ERROR("Expected a status message as response to FLUSHALL, but received a %s.",
                           redis_type_to_string(reply.type()));
             }
         }
@@ -935,7 +935,7 @@ private:
 
                     if (!element.is_status("OK"))
                     {
-                        MXS_ERROR("Failed when storing cache value to redis, expected 'OK' but "
+                        MXB_ERROR("Failed when storing cache value to redis, expected 'OK' but "
                                   "received '%s'.", reply.str());
                         action = RedisAction::ERROR;
                     }
@@ -943,7 +943,7 @@ private:
             }
             else
             {
-                MXS_WARNING("Failed fatally when reading reply to EXEC: %s, %s",
+                MXB_WARNING("Failed fatally when reading reply to EXEC: %s, %s",
                             redis_error_to_string(rc).c_str(),
                             m_redis.errstr());
                 action = RedisAction::ERROR;
@@ -951,7 +951,7 @@ private:
         }
         else
         {
-            MXS_ERROR("Failed when reading response to MULTI: %s, %s",
+            MXB_ERROR("Failed when reading response to MULTI: %s, %s",
                       redis_error_to_string(rc).c_str(),
                       m_redis.errstr());
             action = RedisAction::ERROR;
@@ -1032,7 +1032,7 @@ private:
                         }
                         else
                         {
-                            MXS_ERROR("Unexpected type returned by redis: %s",
+                            MXB_ERROR("Unexpected type returned by redis: %s",
                                       redis_type_to_string(element.type()));
                         }
                     }
@@ -1045,7 +1045,7 @@ private:
             }
             else
             {
-                MXS_ERROR("Could not read redis reply for set update for '%s': %s, %s",
+                MXB_ERROR("Could not read redis reply for set update for '%s': %s, %s",
                           words[i].c_str(),
                           redis_error_to_string(rc).c_str(),
                           m_redis.errstr());
@@ -1130,7 +1130,7 @@ private:
                     }
                     else
                     {
-                        MXS_ERROR("Could not read EXEC reply from redis, the cache is now "
+                        MXB_ERROR("Could not read EXEC reply from redis, the cache is now "
                                   "in an unknown state: %s, %s",
                                   redis_error_to_string(rc).c_str(),
                                   m_redis.errstr());
@@ -1139,7 +1139,7 @@ private:
                 }
                 else
                 {
-                    MXS_ERROR("Could not read MULTI reply from redis, the cache is now "
+                    MXB_ERROR("Could not read MULTI reply from redis, the cache is now "
                               "in an unknown state: %s, %s",
                               redis_error_to_string(rc).c_str(),
                               m_redis.errstr());
@@ -1189,14 +1189,14 @@ private:
         {
             if (pContext->err != 0)
             {
-                MXS_ERROR("%s. Is the address '%s:%d' valid? Caching will not be enabled.",
+                MXB_ERROR("%s. Is the address '%s:%d' valid? Caching will not be enabled.",
                           pContext->errstr ? pContext->errstr : "Could not connect to redis",
                           m_host.c_str(), m_port);
             }
         }
         else
         {
-            MXS_ERROR("Could not create Redis handle. Caching will not be enabled.");
+            MXB_ERROR("Could not create Redis handle. Caching will not be enabled.");
         }
 
         m_redis.reset(pContext);
@@ -1206,7 +1206,7 @@ private:
             if (m_reconnecting)
             {
                 // Reconnected after having been disconnected, let's log a note.
-                MXS_NOTICE("Connected to Redis storage. Caching is enabled.");
+                MXB_NOTICE("Connected to Redis storage. Caching is enabled.");
             }
         }
 
@@ -1291,7 +1291,7 @@ RedisStorage::RedisStorage(const string& name,
 {
     if (config.soft_ttl != config.hard_ttl)
     {
-        MXS_WARNING("The storage storage_redis does not distinguish between "
+        MXB_WARNING("The storage storage_redis does not distinguish between "
                     "soft (%u ms) and hard ttl (%u ms). Hard ttl is used.",
                     config.soft_ttl, config.hard_ttl);
     }
@@ -1323,13 +1323,13 @@ RedisStorage* RedisStorage::create(const string& name,
 
     if (config.max_size != 0)
     {
-        MXS_WARNING("The storage storage_redis does not support specifying "
+        MXB_WARNING("The storage storage_redis does not support specifying "
                     "a maximum size of the cache storage.");
     }
 
     if (config.max_count != 0)
     {
-        MXS_WARNING("The storage storage_redis does not support specifying "
+        MXB_WARNING("The storage storage_redis does not support specifying "
                     "a maximum number of items in the cache storage.");
     }
 
@@ -1354,13 +1354,13 @@ RedisStorage* RedisStorage::create(const string& name,
         }
         else
         {
-            MXS_ERROR("The mandatory argument '%s' is missing.", CN_STORAGE_ARG_SERVER);
+            MXB_ERROR("The mandatory argument '%s' is missing.", CN_STORAGE_ARG_SERVER);
             error = true;
         }
 
         for (const auto& kv : arguments)
         {
-            MXS_WARNING("Unknown `storage_redis` argument: %s=%s",
+            MXB_WARNING("Unknown `storage_redis` argument: %s=%s",
                         kv.first.c_str(), kv.second.c_str());
         }
 

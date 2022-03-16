@@ -161,7 +161,7 @@ private:
     void log_unexpected()
     {
 #ifdef TBP_LOG_UNEXPECTED_AND_EXHAUSTED
-        MXS_NOTICE("Transaction tracking: In statement '%.*s', unexpected token at '%.*s'.",
+        MXB_NOTICE("Transaction tracking: In statement '%.*s', unexpected token at '%.*s'.",
                    (int)m_len,
                    m_pSql,
                    (int)(m_pEnd - m_pI),
@@ -172,7 +172,7 @@ private:
     void log_exhausted()
     {
 #ifdef TBP_LOG_UNEXPECTED_AND_EXHAUSTED
-        MXS_NOTICE("Transaction tracking: More tokens expected in statement '%.*s'.", (int)m_len, m_pSql);
+        MXB_NOTICE("Transaction tracking: More tokens expected in statement '%.*s'.", (int)m_len, m_pSql);
 #endif
     }
 
@@ -793,7 +793,7 @@ private:
 
             if (m_pI != m_pEnd)
             {
-                MXS_INFO("Non-space data found after semi-colon: '%.*s'.",
+                MXB_INFO("Non-space data found after semi-colon: '%.*s'.",
                          (int)(m_pEnd - m_pI),
                          m_pI);
             }

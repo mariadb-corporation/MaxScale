@@ -35,7 +35,7 @@ TeeSession::TeeSession(MXS_SESSION* session, SERVICE* service, LocalClient* clie
             };
 
         auto err = [this](GWBUF* err, mxs::Target* target, const mxs::Reply& reply) {
-                MXS_INFO("Branch connection failed: %s", mxs::extract_error(err).c_str());
+                MXB_INFO("Branch connection failed: %s", mxs::extract_error(err).c_str());
                 // Note: we don't own the error passed to this function
                 m_pSession->kill(gwbuf_clone_shallow(err));
             };
@@ -59,7 +59,7 @@ TeeSession* TeeSession::create(Tee* my_instance, MXS_SESSION* session, SERVICE* 
         }
         else
         {
-            MXS_ERROR("Failed to create local client connection to '%s'",
+            MXB_ERROR("Failed to create local client connection to '%s'",
                       config.target->name());
             return nullptr;
         }
@@ -77,7 +77,7 @@ bool TeeSession::routeQuery(GWBUF* queue)
 {
     if (m_client && m_sync && m_branch_replies + m_main_replies > 0)
     {
-        MXS_INFO("Waiting for replies: %d from branch, %d from main", m_branch_replies, m_main_replies);
+        MXB_INFO("Waiting for replies: %d from branch, %d from main", m_branch_replies, m_main_replies);
         m_queue.push_back(queue);
         return true;
     }
@@ -105,12 +105,12 @@ void TeeSession::handle_reply(const mxs::Reply& reply, bool is_branch)
     {
         mxb_assert(expected_replies == 1);
         --expected_replies;
-        MXS_INFO("%s reply complete", is_branch ? "Brach" : "Main");
+        MXB_INFO("%s reply complete", is_branch ? "Brach" : "Main");
     }
 
     if (m_branch_replies + m_main_replies == 0 && !m_queue.empty())
     {
-        MXS_INFO("Both replies received, routing queued query: %s",
+        MXB_INFO("Both replies received, routing queued query: %s",
                  m_queue.front().get_sql().c_str());
         m_pSession->delay_routing(this, m_queue.front().release(), 0);
         m_queue.pop_front();
@@ -140,12 +140,12 @@ bool TeeSession::query_matches(GWBUF* buffer)
         {
             if (m_match && !m_match.match(sql))
             {
-                MXS_INFO("Query does not match the 'match' pattern: %s", sql.c_str());
+                MXB_INFO("Query does not match the 'match' pattern: %s", sql.c_str());
                 rval = false;
             }
             else if (m_exclude && m_exclude.match(sql))
             {
-                MXS_INFO("Query matches the 'exclude' pattern: %s", sql.c_str());
+                MXB_INFO("Query matches the 'exclude' pattern: %s", sql.c_str());
                 rval = false;
             }
         }

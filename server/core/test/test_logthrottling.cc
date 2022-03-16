@@ -77,7 +77,7 @@ void log_messages(uint32_t id, size_t n_generate, int priority)
 {
     for (size_t i = 0; i < n_generate; ++i)
     {
-        MXS_LOG_MESSAGE(priority, "[%u] Message %lu.", id, i);
+        MXB_LOG_MESSAGE(priority, "[%u] Message %lu.", id, i);
 
         sched_yield();
     }

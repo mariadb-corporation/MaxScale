@@ -87,12 +87,12 @@ bool maxavro_read_integer_from_file(MAXAVRO_FILE* file, uint64_t* dest)
         {
             if (rdsz != 0)
             {
-                MXS_ERROR("Failed to read %lu bytes from '%s'", sizeof(byte), file->filename);
+                MXB_ERROR("Failed to read %lu bytes from '%s'", sizeof(byte), file->filename);
                 file->last_error = MAXAVRO_ERR_IO;
             }
             else
             {
-                MXS_DEBUG("Read 0 bytes from file '%s'", file->filename);
+                MXB_DEBUG("Read 0 bytes from file '%s'", file->filename);
             }
             return false;
         }
@@ -263,7 +263,7 @@ bool maxavro_read_float(MAXAVRO_FILE* file, float* dest)
     else
     {
         mxb_assert(!true);
-        MXS_ERROR("Block cannot hold a value of type float");
+        MXB_ERROR("Block cannot hold a value of type float");
     }
 
     return rval;
@@ -302,7 +302,7 @@ bool maxavro_read_double(MAXAVRO_FILE* file, double* dest)
     else
     {
         mxb_assert(!true);
-        MXS_ERROR("Block cannot hold a value of type double");
+        MXB_ERROR("Block cannot hold a value of type double");
     }
 
     return rval;

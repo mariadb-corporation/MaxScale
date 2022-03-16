@@ -25,7 +25,7 @@ class LogExporter : public Exporter
 public:
     void ship(json_t* obj) override final
     {
-        MXS_INFO("%s", mxs::json_dump(obj, JSON_COMPACT).c_str());
+        MXB_INFO("%s", mxs::json_dump(obj, JSON_COMPACT).c_str());
     }
 };
 
@@ -106,7 +106,7 @@ std::unique_ptr<Exporter> build_exporter(const Config& config)
             }
             else
             {
-                MXS_ERROR("Failed to open file '%s', %d, %s", config.file.c_str(), errno,
+                MXB_ERROR("Failed to open file '%s', %d, %s", config.file.c_str(), errno,
                           mxb_strerror(errno));
             }
         }
@@ -125,12 +125,12 @@ std::unique_ptr<Exporter> build_exporter(const Config& config)
                 }
                 else
                 {
-                    MXS_ERROR("Failed to create Kafka producer: %s", err.c_str());
+                    MXB_ERROR("Failed to create Kafka producer: %s", err.c_str());
                 }
             }
             else
             {
-                MXS_ERROR("Failed to set Kafka parameter `bootstrap.servers`: %s", err.c_str());
+                MXB_ERROR("Failed to set Kafka parameter `bootstrap.servers`: %s", err.c_str());
             }
 
             delete cnf;

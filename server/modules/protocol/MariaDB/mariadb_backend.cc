@@ -195,7 +195,7 @@ bool MariaDBBackendConnection::reuse(MXS_SESSION* session, mxs::Component* upstr
 
     if (m_dcb->state() != DCB::State::POLLING || m_state != State::POOLED || !m_delayed_packets.empty())
     {
-        MXS_INFO("DCB and protocol state do not qualify for reuse: %s, %s, %s",
+        MXB_INFO("DCB and protocol state do not qualify for reuse: %s, %s, %s",
                  mxs::to_string(m_dcb->state()), to_string(m_state).c_str(),
                  m_delayed_packets.empty() ? "no packets" : "stored packets");
     }
@@ -209,7 +209,7 @@ bool MariaDBBackendConnection::reuse(MXS_SESSION* session, mxs::Component* upstr
          * Send a COM_CHANGE_USER query to the backend to reset the session state. */
         if (m_dcb->writeq_append(create_change_user_packet()))
         {
-            MXS_INFO("Reusing connection, sending COM_CHANGE_USER");
+            MXB_INFO("Reusing connection, sending COM_CHANGE_USER");
             m_state = State::RESET_CONNECTION;
             rv = true;
 
@@ -240,7 +240,7 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
 
     if (m_session->service->config()->log_auth_warnings)
     {
-        MXS_ERROR("%s", errmsg.c_str());
+        MXB_ERROR("%s", errmsg.c_str());
     }
 
     /** If the error is ER_HOST_IS_BLOCKED put the server into maintenance mode.
@@ -253,7 +253,7 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
                                  MonitorManager::set_server_status(server, SERVER_MAINT);
                              }, mxb::Worker::EXECUTE_AUTO);
 
-        MXS_ERROR("Server %s has been put into maintenance mode due to the server blocking connections "
+        MXB_ERROR("Server %s has been put into maintenance mode due to the server blocking connections "
                   "from MaxScale. Run 'mysqladmin -h %s -P %d flush-hosts' on this server before taking "
                   "this server out of maintenance mode. To avoid this problem in the future, set "
                   "'max_connect_errors' to a larger value in the backend server.",
@@ -274,7 +274,7 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
             }
             else
             {
-                MXS_WARNING(USERS_RECENTLY_UPDATED_FMT, m_session->user_and_host().c_str());
+                MXB_WARNING(USERS_RECENTLY_UPDATED_FMT, m_session->user_and_host().c_str());
             }
         }
         // If user cache does not exist, do nothing.
@@ -367,7 +367,7 @@ void MariaDBBackendConnection::process_stmt_execute(GWBUF** original, uint32_t i
             else
             {
                 mxb_assert_message(ps_info.n_params > 0, "Only PS with params can be malformed");
-                MXS_WARNING("Malformed COM_STMT_EXECUTE (ID %u): could not find previous "
+                MXB_WARNING("Malformed COM_STMT_EXECUTE (ID %u): could not find previous "
                             "execution with metadata and current execution doesn't contain it", id);
             }
         }
@@ -799,7 +799,7 @@ void MariaDBBackendConnection::send_history()
                 m_track_queue.push(query);
             }
 
-            MXS_INFO("Execute %s on '%s': %s", STRPACKETTYPE(query.command),
+            MXB_INFO("Execute %s on '%s': %s", STRPACKETTYPE(query.command),
                      m_server.name(), buffer.get_sql().c_str());
 
             m_dcb->writeq_append(buffer.release());
@@ -1073,13 +1073,13 @@ void MariaDBBackendConnection::write_ready(DCB* event_dcb)
         {
             if (!com_quit)
             {
-                MXS_ERROR("Attempt to write buffered data to backend failed due internal inconsistent "
+                MXB_ERROR("Attempt to write buffered data to backend failed due internal inconsistent "
                           "state: %s", mxs::to_string(dcb->state()));
             }
         }
         else
         {
-            MXS_DEBUG("Dcb %p in state %s but there's nothing to write either.",
+            MXB_DEBUG("Dcb %p in state %s but there's nothing to write either.",
                       dcb, mxs::to_string(dcb->state()));
         }
     }
@@ -1117,7 +1117,7 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
     case State::FAILED:
         if (m_session->state() != MXS_SESSION::State::STOPPING)
         {
-            MXS_ERROR("Unable to write to backend '%s' because connection has failed. Server in state %s.",
+            MXB_ERROR("Unable to write to backend '%s' because connection has failed. Server in state %s.",
                       m_server.name(), m_server.status_string().c_str());
         }
 
@@ -1231,7 +1231,7 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
                         m_dcb->trigger_read_event();
                     }
 
-                    MXS_WARNING("%s", ss.str().c_str());
+                    MXB_WARNING("%s", ss.str().c_str());
 
                     // This is an error condition that is very likely to happen if something is broken in the
                     // prepared statement handling. Asserting that we never get here when we're testing helps
@@ -1278,7 +1278,7 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
             }
             else
             {
-                MXS_INFO("Storing %s while in state '%s': %s", STRPACKETTYPE(mxs_mysql_get_command(queue)),
+                MXB_INFO("Storing %s while in state '%s': %s", STRPACKETTYPE(mxs_mysql_get_command(queue)),
                          to_string(m_state).c_str(), queue->get_sql().c_str());
                 m_delayed_packets.emplace_back(queue);
                 rc = 1;
@@ -1288,7 +1288,7 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
 
     default:
         {
-            MXS_INFO("Storing %s while in state '%s': %s", STRPACKETTYPE(mxs_mysql_get_command(queue)),
+            MXB_INFO("Storing %s while in state '%s': %s", STRPACKETTYPE(mxs_mysql_get_command(queue)),
                      to_string(m_state).c_str(), queue->get_sql().c_str());
             m_delayed_packets.emplace_back(queue);
             rc = 1;
@@ -1317,7 +1317,7 @@ void MariaDBBackendConnection::error(DCB* event_dcb)
 
         if (getsockopt(m_dcb->fd(), SOL_SOCKET, SO_ERROR, &error, (socklen_t*) &len) == 0 && error != 0)
         {
-            MXS_ERROR("Network error in connection to server '%s', session in state '%s' (%s): %d, %s",
+            MXB_ERROR("Network error in connection to server '%s', session in state '%s' (%s): %d, %s",
                       m_server.name(), session_state_to_string(m_session->state()), mxs::to_string(dcb_state),
                       error, mxb_strerror(error));
         }
@@ -1353,7 +1353,7 @@ void MariaDBBackendConnection::hangup(DCB* event_dcb)
         {
             if (error != 0 && session->state() != MXS_SESSION::State::STOPPING)
             {
-                MXS_ERROR("Network hangup in connection to server '%s', session in state '%s' (%s): %d, %s",
+                MXB_ERROR("Network hangup in connection to server '%s', session in state '%s' (%s): %d, %s",
                           m_server.name(), session_state_to_string(m_session->state()),
                           mxs::to_string(m_dcb->state()), error, mxb_strerror(error));
             }
@@ -1491,7 +1491,7 @@ bool MariaDBBackendConnection::send_proxy_protocol_header()
     if (res != 0)
     {
         int eno = errno;
-        MXS_ERROR("getpeername() failed on connection to '%s' when forming proxy protocol header. "
+        MXB_ERROR("getpeername() failed on connection to '%s' when forming proxy protocol header. "
                   "Error %d: '%s'", m_server.name(), eno, mxb_strerror(eno));
         return false;
     }
@@ -1539,14 +1539,14 @@ bool MariaDBBackendConnection::send_proxy_protocol_header()
 
         if (ret < 0 || ret >= (int)sizeof(proxy_header))
         {
-            MXS_ERROR("Proxy header printing error, produced '%s'.", proxy_header);
+            MXB_ERROR("Proxy header printing error, produced '%s'.", proxy_header);
         }
         else
         {
             GWBUF* headerbuf = gwbuf_alloc_and_load(strlen(proxy_header), proxy_header);
             if (headerbuf)
             {
-                MXS_INFO("Sending proxy-protocol header '%.*s' to server '%s'.",
+                MXB_INFO("Sending proxy-protocol header '%.*s' to server '%s'.",
                          (int)strlen(proxy_header) - 2, proxy_header, m_server.name());
                 if (m_dcb->writeq_append(headerbuf))
                 {
@@ -1561,12 +1561,12 @@ bool MariaDBBackendConnection::send_proxy_protocol_header()
     }
     else if (!client_res.success)
     {
-        MXS_ERROR("Could not convert network address of %s to string form. %s",
+        MXB_ERROR("Could not convert network address of %s to string form. %s",
                   m_session->user_and_host().c_str(), client_res.error_msg.c_str());
     }
     else
     {
-        MXS_ERROR("Could not convert network address of server '%s' to string form. %s",
+        MXB_ERROR("Could not convert network address of server '%s' to string form. %s",
                   m_server.name(), server_res.error_msg.c_str());
     }
     return success;
@@ -1638,7 +1638,7 @@ void MariaDBBackendConnection::ping()
 {
     mxb_assert(m_reply.state() == ReplyState::DONE);
     mxb_assert(is_idle());
-    MXS_INFO("Pinging '%s', idle for %ld seconds", m_server.name(), seconds_idle());
+    MXB_INFO("Pinging '%s', idle for %ld seconds", m_server.name(), seconds_idle());
 
     constexpr uint8_t com_ping_packet[] =
     {
@@ -1734,7 +1734,7 @@ bool MariaDBBackendConnection::capability_mismatch() const
         // the capability handling of MaxScale. Separate code should exist for routers for any unexpected
         // responses as bugs in the server can cause mismatching result types to be sent,
         // https://bugs.mysql.com/bug.php?id=83346 is one example of such.
-        MXS_INFO("Client uses DEPRECATE_EOF protocol but the server does not implement it");
+        MXB_INFO("Client uses DEPRECATE_EOF protocol but the server does not implement it");
         mxb_assert_message(!true, "DEPRECATE_EOF should be used by both client and backend");
         mismatch = true;
     }
@@ -1807,7 +1807,7 @@ int MariaDBBackendConnection::gw_decode_mysql_server_handshake(uint8_t* payload)
     // get ThreadID: 4 bytes
     uint32_t tid = mariadb::get_byte4(payload);
 
-    MXS_INFO("Connected to '%s' with thread id %u", m_server.name(), tid);
+    MXB_INFO("Connected to '%s' with thread id %u", m_server.name(), tid);
 
     /* TODO: Correct value of thread id could be queried later from backend if
      * there is any worry it might be larger than 32bit allows. */
@@ -2123,13 +2123,13 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
         // This should not happen as the server is supposed to wait for the whole LOAD DATA LOCAL INFILE to
         // complete before sending a response. It is however possible that something else, for example another
         // MaxScale, causes an error to be sent even if the client hasn't finished sending the data.
-        MXS_ERROR("Response to LOAD DATA LOCAL INFILE read before the upload was complete: "
+        MXB_ERROR("Response to LOAD DATA LOCAL INFILE read before the upload was complete: "
                   "cmd: 0x%02hhx, len: %u, server: %s", cmd, len, m_server.name());
         mxb_assert(!true);
     /** Fallthrough */
 
     case ReplyState::LOAD_DATA_END:
-        MXS_INFO("Load data ended on '%s'", m_server.name());
+        MXB_INFO("Load data ended on '%s'", m_server.name());
         session_set_load_active(m_session, false);
 
         if (cmd == MYSQL_REPLY_ERR)
@@ -2151,7 +2151,7 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
         }
         else
         {
-            MXS_ERROR("Unexpected response to LOAD DATA LOCAL INFILE: cmd: 0x%02hhx, len: %u, server: %s",
+            MXB_ERROR("Unexpected response to LOAD DATA LOCAL INFILE: cmd: 0x%02hhx, len: %u, server: %s",
                       cmd, len, m_server.name());
             m_session->dump_statements();
             m_session->dump_session_log();
@@ -2181,7 +2181,7 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
         else
         {
             // This should never happen
-            MXS_ERROR("Unexpected result state. cmd: 0x%02hhx, len: %u server: %s",
+            MXB_ERROR("Unexpected result state. cmd: 0x%02hhx, len: %u server: %s",
                       cmd, len, m_server.name());
             m_session->dump_statements();
             m_session->dump_session_log();
@@ -2222,7 +2222,7 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
                 // The cursor does not exist if the result contains only one row
                 if (status & SERVER_STATUS_CURSOR_EXISTS)
                 {
-                    MXS_INFO("Cursor successfully opened");
+                    MXB_INFO("Cursor successfully opened");
                     set_reply_state(ReplyState::DONE);
                 }
             }
@@ -2365,7 +2365,7 @@ void MariaDBBackendConnection::process_ok_packet(Iter it, Iter end)
             default:
                 mxb_assert(!true);
                 it.advance(total_size);
-                MXS_WARNING("Received unexpecting session track type: %lu", type);
+                MXB_WARNING("Received unexpecting session track type: %lu", type);
                 break;
             }
         }
@@ -2415,7 +2415,7 @@ void MariaDBBackendConnection::process_ps_response(Iter it, Iter end)
 
     auto& ps_map = m_ps_map[internal_id];
     ps_map.real_id = stmt_id;
-    MXS_INFO("PS internal ID %u maps to external ID %u on server '%s'",
+    MXB_INFO("PS internal ID %u maps to external ID %u on server '%s'",
              internal_id, stmt_id, m_dcb->server()->name());
 
     // Columns

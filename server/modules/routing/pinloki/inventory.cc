@@ -113,7 +113,7 @@ void InventoryWriter::pop_front(const std::string& file_name)
         // in addition there is the timeout based purging as well.
         // Not a problem so just an info message. Both (or all) purges will
         // finish succesfully.
-        MXS_SINFO("pop_front " << file_name << "does not match front " << file_name);
+        MXB_SINFO("pop_front " << file_name << "does not match front " << file_name);
     }
     else
     {

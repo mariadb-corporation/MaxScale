@@ -221,12 +221,12 @@ bool MariaDBServer::execute_cmd_time_limit(const std::string& cmd, maxbase::Dura
                                                 mxb::to_secs(time_remaining));
                 if (non_fatal_connector_err)
                 {
-                    MXS_WARNING("%s %s", error_msg.c_str(), retrying.c_str());
+                    MXB_WARNING("%s %s", error_msg.c_str(), retrying.c_str());
                 }
                 else
                 {
                     // Timed out because of max_statement_time.
-                    MXS_WARNING("Query '%s' timed out on '%s'. %s",
+                    MXB_WARNING("Query '%s' timed out on '%s'. %s",
                                 command.c_str(), name(), retrying.c_str());
                 }
 
@@ -287,7 +287,7 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
         || i_master_server_id < 0 || i_last_io_errno < 0 || i_last_io_error < 0 || i_last_sql_error < 0
         || i_seconds_behind_master < 0)
     {
-        MXS_ERROR(INVALID_DATA, query.c_str());
+        MXB_ERROR(INVALID_DATA, query.c_str());
         return false;
     }
 
@@ -303,7 +303,7 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
         if (i_connection_name < 0 || i_slave_rec_hbs < 0 || i_slave_hb_period < 0
             || i_using_gtid < 0 || i_gtid_io_pos < 0)
         {
-            MXS_ERROR(INVALID_DATA, query.c_str());
+            MXB_ERROR(INVALID_DATA, query.c_str());
             return false;
         }
     }
@@ -552,14 +552,14 @@ void MariaDBServer::warn_replication_settings() const
         const char NO_STRICT[] =
             "Slave '%s' has gtid_strict_mode disabled. Enabling this setting is recommended. "
             "For more information, see https://mariadb.com/kb/en/library/gtid/#gtid_strict_mode";
-        MXS_WARNING(NO_STRICT, servername);
+        MXB_WARNING(NO_STRICT, servername);
     }
     if (m_rpl_settings.log_slave_updates == false)
     {
         const char NO_SLAVE_UPDATES[] =
             "Slave '%s' has log_slave_updates disabled. It is a valid candidate but replication "
             "will break for lagging slaves if '%s' is promoted.";
-        MXS_WARNING(NO_SLAVE_UPDATES, servername, servername);
+        MXB_WARNING(NO_SLAVE_UPDATES, servername, servername);
     }
 }
 
@@ -787,7 +787,7 @@ bool MariaDBServer::run_sql_from_file(const string& path, json_t** error_out)
     std::ifstream sql_file(path);
     if (sql_file.is_open())
     {
-        MXS_NOTICE("Executing sql queries from file '%s' on server '%s'.", path.c_str(), name());
+        MXB_NOTICE("Executing sql queries from file '%s' on server '%s'.", path.c_str(), name());
         int lines_executed = 0;
 
         while (!sql_file.eof() && !error)
@@ -827,7 +827,7 @@ bool MariaDBServer::run_sql_from_file(const string& path, json_t** error_out)
                 }
             }
         }
-        MXS_NOTICE("%d queries executed successfully.", lines_executed);
+        MXB_NOTICE("%d queries executed successfully.", lines_executed);
     }
     else
     {
@@ -861,7 +861,7 @@ void MariaDBServer::monitor_server()
      * ways. */
     else if (!errmsg.empty() && m_print_update_errormsg)
     {
-        MXS_WARNING("Error during monitor update of server '%s': %s", name(), errmsg.c_str());
+        MXB_WARNING("Error during monitor update of server '%s': %s", name(), errmsg.c_str());
         m_print_update_errormsg = false;
     }
 }
@@ -958,7 +958,7 @@ void MariaDBServer::check_permissions()
         // Only print error if last round was ok.
         if (!had_status(SERVER_AUTH_ERROR))
         {
-            MXS_WARNING("Error during monitor permissions test for server '%s': %s", name(), err_msg.c_str());
+            MXB_WARNING("Error during monitor permissions test for server '%s': %s", name(), err_msg.c_str());
         }
     }
     else
@@ -1289,7 +1289,7 @@ MariaDBServer::alter_events(BinlogMode binlog_mode, const EventStatusMapper& map
             string charset_errmsg;
             if (!execute_cmd("SET NAMES latin1 COLLATE latin1_swedish_ci;", &charset_errmsg))
             {
-                MXS_ERROR("Could not reset character set: %s", charset_errmsg.c_str());
+                MXB_ERROR("Could not reset character set: %s", charset_errmsg.c_str());
             }
             warn_event_scheduler();
         }
@@ -1319,14 +1319,14 @@ void MariaDBServer::warn_event_scheduler()
     auto proc_list = execute_query(scheduler_query, &error_msg);
     if (proc_list.get() == NULL)
     {
-        MXS_ERROR("Could not query the event scheduler status of '%s': %s", name(), error_msg.c_str());
+        MXB_ERROR("Could not query the event scheduler status of '%s': %s", name(), error_msg.c_str());
     }
     else
     {
         if (proc_list->get_row_count() < 1)
         {
             // This is ok, though unexpected since events were found.
-            MXS_WARNING("Event scheduler is inactive on '%s' although events were found.", name());
+            MXB_WARNING("Event scheduler is inactive on '%s' although events were found.", name());
         }
     }
 }
@@ -1346,7 +1346,7 @@ bool MariaDBServer::events_foreach(EventManipulator& func, json_t** error_out)
     auto event_info = execute_query("SELECT * FROM information_schema.EVENTS;", &error_msg);
     if (event_info.get() == NULL)
     {
-        MXS_ERROR("Could not query event status of '%s': %s Event handling can be disabled by "
+        MXB_ERROR("Could not query event status of '%s': %s Event handling can be disabled by "
                   "setting '%s' to false.",
                   name(), error_msg.c_str(), CN_HANDLE_EVENTS);
         return false;
@@ -1417,7 +1417,7 @@ bool MariaDBServer::alter_event(const EventInfo& event, const string& target_sta
     {
         rval = true;
         const char FMT[] = "Event '%s' on server '%s' set to '%s'.";
-        MXS_NOTICE(FMT, event.name.c_str(), name(), target_status.c_str());
+        MXB_NOTICE(FMT, event.name.c_str(), name(), target_status.c_str());
     }
     else
     {
@@ -1451,7 +1451,7 @@ bool MariaDBServer::reset_all_slave_conns(json_t** error_out)
 
     if (!error && !m_slave_status.empty())
     {
-        MXS_NOTICE("Removed %lu slave connection(s) from '%s'.", m_slave_status.size(), name());
+        MXB_NOTICE("Removed %lu slave connection(s) from '%s'.", m_slave_status.size(), name());
     }
     return !error;
 }
@@ -1954,12 +1954,12 @@ bool MariaDBServer::merge_slave_conns(GeneralOpData& op, const SlaveStatusArray&
                 if (connection_names.count(second_try) > 0)
                 {
                     // Even this one exists, something is really wrong. Give up.
-                    MXS_ERROR("Could not generate a unique connection name for '%s': both '%s' and '%s' are "
+                    MXB_ERROR("Could not generate a unique connection name for '%s': both '%s' and '%s' are "
                               "already taken.", name(), conn_name.c_str(), second_try.c_str());
                 }
                 else
                 {
-                    MXS_WARNING("A slave connection with name '%s' already exists on '%s', using generated "
+                    MXB_WARNING("A slave connection with name '%s' already exists on '%s', using generated "
                                 "name '%s' instead.", conn_name.c_str(), name(), second_try.c_str());
                     conn_settings->name = second_try;
                     name_is_unique = true;
@@ -2000,7 +2000,7 @@ bool MariaDBServer::merge_slave_conns(GeneralOpData& op, const SlaveStatusArray&
         else
         {
             mxb_assert(!ignore_reason.empty());
-            MXS_WARNING("%s was ignored when promoting '%s' because %s",
+            MXB_WARNING("%s was ignored when promoting '%s' because %s",
                         slave_conn.settings.to_string().c_str(), name(), ignore_reason.c_str());
         }
     }
@@ -2046,7 +2046,7 @@ bool MariaDBServer::copy_slave_conns(GeneralOpData& op, const SlaveStatusArray& 
         }
         else
         {
-            MXS_WARNING("%s was not copied to '%s' because %s",
+            MXB_WARNING("%s was not copied to '%s' because %s",
                         slave_conn.settings.to_string().c_str(), name(), reason_not_copied.c_str());
         }
     }
@@ -2072,18 +2072,18 @@ bool MariaDBServer::create_start_slave(GeneralOpData& op, const SlaveStatus::Set
         if (slave_started)
         {
             success = true;
-            MXS_NOTICE("%s created and started.", new_settings.to_string().c_str());
+            MXB_NOTICE("%s created and started.", new_settings.to_string().c_str());
         }
         else
         {
-            MXS_ERROR("%s could not be started: %s",
+            MXB_ERROR("%s could not be started: %s",
                       new_settings.to_string().c_str(), error_msg.c_str());
         }
     }
     else
     {
         // TODO: This may currently print out passwords.
-        MXS_ERROR("%s could not be created: %s",
+        MXB_ERROR("%s could not be created: %s",
                   new_settings.to_string().c_str(), error_msg.c_str());
     }
     return success;
@@ -2112,7 +2112,7 @@ string MariaDBServer::generate_change_master_cmd(const SlaveStatus::Settings& co
 #if defined (SS_DEBUG)
     string change_cmd_nopw = change_cmd;
     change_cmd_nopw += string_printf(MASTER_PW, "******");
-    MXS_DEBUG("Change master command is '%s'.", change_cmd_nopw.c_str());
+    MXB_DEBUG("Change master command is '%s'.", change_cmd_nopw.c_str());
 #endif
     change_cmd += string_printf(MASTER_PW, m_settings.replication_password.c_str());
     return change_cmd;
@@ -2191,7 +2191,7 @@ bool MariaDBServer::update_enabled_events()
 
         if (m_warn_event_handling || !scheduler_disabled)
         {
-            MXS_ERROR("%s", errmsg.c_str());
+            MXB_ERROR("%s", errmsg.c_str());
         }
 
         m_warn_event_handling = !scheduler_disabled;
@@ -2484,7 +2484,7 @@ bool MariaDBServer::release_lock(LockType lock_type)
     }
     else
     {
-        MXS_ERROR("Failed to release lock on server '%s'. %s", name(), err_msg.c_str());
+        MXB_ERROR("Failed to release lock on server '%s'. %s", name(), err_msg.c_str());
     }
 
     *output = lock_result;

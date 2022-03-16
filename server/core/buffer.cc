@@ -705,7 +705,7 @@ void gwbuf_hexdump(GWBUF* buffer, int log_level)
         n = 1024;
     }
 
-    MXS_LOG_MESSAGE(log_level, "%.*s", n, ss.str().c_str());
+    MXB_LOG_MESSAGE(log_level, "%.*s", n, ss.str().c_str());
 }
 
 void gwbuf_hexdump_pretty(GWBUF* buffer, int log_level)
@@ -758,7 +758,7 @@ void mxs::Buffer::hexdump_pretty(int log_level) const
         readable.clear();
     }
 
-    MXS_LOG_MESSAGE(log_level, "%s", result.c_str());
+    MXB_LOG_MESSAGE(log_level, "%s", result.c_str());
 }
 
 uint8_t* maxscale::Buffer::data()

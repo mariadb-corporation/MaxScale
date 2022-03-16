@@ -316,7 +316,7 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
                     break;
 
                 case SKIP_TERMINATE:
-                    MXS_ERROR("Cannot handle line %u: %s", (unsigned)m_line, line.c_str());
+                    MXB_ERROR("Cannot handle line %u: %s", (unsigned)m_line, line.c_str());
                     error = true;
                     break;
                 }

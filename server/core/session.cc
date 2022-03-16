@@ -163,7 +163,7 @@ void Session::unlink_backend_connection(mxs::BackendConnection* conn)
  */
 static void session_free(MXS_SESSION* session)
 {
-    MXS_INFO("Stopped %s client session [%" PRIu64 "]", session->service->name(), session->id());
+    MXB_INFO("Stopped %s client session [%" PRIu64 "]", session->service->name(), session->id());
     Service* service = static_cast<Service*>(session->service);
 
     delete static_cast<Session*>(session);
@@ -682,7 +682,7 @@ void Session::dump_statements() const
 
         if ((current_id != 0) && (current_id != id()))
         {
-            MXS_WARNING("Current session is %lu, yet statements are dumped for %lu. "
+            MXB_WARNING("Current session is %lu, yet statements are dumped for %lu. "
                         "The session id in the subsequent dumped statements is the wrong one.",
                         current_id, id());
         }
@@ -705,14 +705,14 @@ void Session::dump_statements() const
             {
                 if (current_id != 0)
                 {
-                    MXS_NOTICE("Stmt %d(%s): %.*s", n, timestamp, len, pStmt);
+                    MXB_NOTICE("Stmt %d(%s): %.*s", n, timestamp, len, pStmt);
                 }
                 else
                 {
                     // We are in a context where we do not have a current session, so we need to
                     // log the session id ourselves.
 
-                    MXS_NOTICE("(%" PRIu64 ") Stmt %d(%s): %.*s", id(), n, timestamp, len, pStmt);
+                    MXB_NOTICE("(%" PRIu64 ") Stmt %d(%s): %.*s", id(), n, timestamp, len, pStmt);
                 }
 
                 if (deallocate)
@@ -775,12 +775,12 @@ bool Session::add_variable(const char* name, session_variable_handler_t handler,
         }
         else
         {
-            MXS_ERROR("Session variable '%s' has been added already.", name);
+            MXB_ERROR("Session variable '%s' has been added already.", name);
         }
     }
     else
     {
-        MXS_ERROR("Session variable '%s' is not of the correct format.", name);
+        MXB_ERROR("Session variable '%s' is not of the correct format.", name);
     }
 
     return added;
@@ -880,7 +880,7 @@ void Session::book_server_response(SERVER* pServer, bool final_response)
 
         if (m_current_query < 0)
         {
-            MXS_ALERT("Internal logic error, disabling retain_last_statements.");
+            MXB_ALERT("Internal logic error, disabling retain_last_statements.");
             m_retain_last_statements = 0;
             return;
         }
@@ -1073,7 +1073,7 @@ bool Session::start()
         rval = true;
         m_state = MXS_SESSION::State::STARTED;
 
-        MXS_INFO("Started %s client session [%" PRIu64 "] for '%s' from %s",
+        MXB_INFO("Started %s client session [%" PRIu64 "] for '%s' from %s",
                  service->name(), id(),
                  !m_user.empty() ? m_user.c_str() : "<no user>",
                  m_client_conn->dcb()->remote().c_str());
@@ -1109,7 +1109,7 @@ void Session::dump_session_log()
             log += s;
         }
 
-        MXS_NOTICE("Session log for session (%" PRIu64 "): \n%s ", id(), log.c_str());
+        MXB_NOTICE("Session log for session (%" PRIu64 "): \n%s ", id(), log.c_str());
     }
 }
 
@@ -1182,7 +1182,7 @@ Session::create_backend_connection(Server* server, BackendDCB::Manager* manager,
         conn = proto_module->create_backend_protocol(this, server, upstream);
         if (!conn)
         {
-            MXS_ERROR("Failed to create protocol session for backend DCB.");
+            MXB_ERROR("Failed to create protocol session for backend DCB.");
         }
     }
     else
@@ -1229,7 +1229,7 @@ void Session::tick(int64_t idle)
     {
         if (idle > timeout && is_idle())
         {
-            MXS_WARNING("Timing out %s, idle for %ld seconds", user_and_host().c_str(), idle);
+            MXB_WARNING("Timing out %s, idle for %ld seconds", user_and_host().c_str(), idle);
             close_reason = SESSION_CLOSE_TIMEOUT;
             kill();
         }
@@ -1239,7 +1239,7 @@ void Session::tick(int64_t idle)
     {
         if (idle > net_timeout && client_dcb->writeq_len() > 0)
         {
-            MXS_WARNING("Network write timed out for %s.", user_and_host().c_str());
+            MXB_WARNING("Network write timed out for %s.", user_and_host().c_str());
             close_reason = SESSION_CLOSE_TIMEOUT;
             kill();
         }
@@ -1258,7 +1258,7 @@ void Session::tick(int64_t idle)
 
     if (m_ttl && MXS_CLOCK_TO_SEC(mxs_clock() - m_ttl_start) > m_ttl)
     {
-        MXS_WARNING("Killing session %lu, session TTL exceeded.", id());
+        MXB_WARNING("Killing session %lu, session TTL exceeded.", id());
         kill();
     }
 }
@@ -1331,19 +1331,19 @@ bool Session::update(json_t* json)
 
                     if (!sf.session)
                     {
-                        MXS_ERROR("Failed to create filter session for '%s'", sf.filter->name());
+                        MXB_ERROR("Failed to create filter session for '%s'", sf.filter->name());
                         return false;
                     }
                 }
                 else
                 {
-                    MXS_ERROR("Not a valid filter: %s", filter_name);
+                    MXB_ERROR("Not a valid filter: %s", filter_name);
                     return false;
                 }
             }
             else
             {
-                MXS_ERROR("Not a JSON string but a %s", mxb::json_type_to_string(name));
+                MXB_ERROR("Not a JSON string but a %s", mxb::json_type_to_string(name));
                 return false;
             }
         }
@@ -1485,7 +1485,7 @@ bool enable_events(const std::vector<DCB*>& dcbs)
     {
         if (!pDcb->enable_events())
         {
-            MXS_ERROR("Could not re-enable epoll events, session will be terminated.");
+            MXB_ERROR("Could not re-enable epoll events, session will be terminated.");
             enabled = false;
             break;
         }
@@ -1499,8 +1499,8 @@ bool Session::move_to(RoutingWorker* pTo)
 {
     mxs::RoutingWorker* pFrom = RoutingWorker::get_current();
     mxb_assert(m_worker == pFrom);
-    // TODO: Change to MXS_INFO when everything is ready.
-    MXS_NOTICE("Moving session from %d to %d.", pFrom->id(), pTo->id());
+    // TODO: Change to MXB_INFO when everything is ready.
+    MXB_NOTICE("Moving session from %d to %d.", pFrom->id(), pTo->id());
 
     suspend_dcalls();
     set_worker(nullptr);
@@ -1566,13 +1566,13 @@ bool Session::move_to(RoutingWorker* pTo)
             set_worker(pTo);
             resume_dcalls();
 
-            MXS_NOTICE("Moved session from %d to %d.", pFrom->id(), pTo->id());
+            MXB_NOTICE("Moved session from %d to %d.", pFrom->id(), pTo->id());
         };
     bool posted = pTo->execute(receive_session, mxb::Worker::EXECUTE_QUEUED);
 
     if (!posted)
     {
-        MXS_ERROR("Could not move session from worker %d to worker %d.",
+        MXB_ERROR("Could not move session from worker %d to worker %d.",
                   pFrom->id(), pTo->id());
 
         m_worker = pFrom;
@@ -1590,7 +1590,7 @@ bool Session::move_to(RoutingWorker* pTo)
 
         if (!enable_events(to_be_enabled))
         {
-            MXS_ERROR("Could not re-enable epoll events, session will be terminated.");
+            MXB_ERROR("Could not re-enable epoll events, session will be terminated.");
             kill();
         }
 

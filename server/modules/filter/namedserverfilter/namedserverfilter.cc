@@ -198,7 +198,7 @@ bool Specification::do_post_validate(Params params) const
 
     if (legacy_match.empty() != legacy_target.empty())
     {
-        MXS_ERROR("Only one of '%s' and '%s' is set. If using legacy mode, set both."
+        MXB_ERROR("Only one of '%s' and '%s' is set. If using legacy mode, set both."
                   "If using indexed parameters, set neither and use '%s01' and '%s01' etc.",
                   s_match.name().c_str(), s_server.name().c_str(),
                   s_match01.name().c_str(), s_target01.name().c_str());
@@ -212,14 +212,14 @@ bool Specification::do_post_validate(Params params) const
 
         if (!re.valid())
         {
-            MXS_ERROR("Invalid regular expression for '%s': %s",
+            MXB_ERROR("Invalid regular expression for '%s': %s",
                       s_match.name().c_str(), re.error().c_str());
             ok = false;
         }
 
         if (!SERVER::find_by_unique_name(legacy_target))
         {
-            MXS_ERROR("'%s' is not a valid value for '%s'",
+            MXB_ERROR("'%s' is not a valid value for '%s'",
                       legacy_target.c_str(), s_server.name().c_str());
             ok = false;
         }
@@ -238,7 +238,7 @@ bool Specification::do_post_validate(Params params) const
         {
             if (legacy_mode)
             {
-                MXS_ERROR("Found both legacy parameters and indexed parameters. "
+                MXB_ERROR("Found both legacy parameters and indexed parameters. "
                           "Use only one type of parameters.");
                 ok = false;
                 break;
@@ -255,7 +255,7 @@ bool Specification::do_post_validate(Params params) const
                     && targets[0] != "->slave"
                     && targets[0] != "->all")
                 {
-                    MXS_ERROR("'%s' is not a valid value for '%s'",
+                    MXB_ERROR("'%s' is not a valid value for '%s'",
                               targets[0].c_str(), a.target->name().c_str());
                     ok = false;
                 }
@@ -266,7 +266,7 @@ bool Specification::do_post_validate(Params params) const
                 {
                     if (!SERVER::find_by_unique_name(t))
                     {
-                        MXS_ERROR("'%s' is not a valid value for '%s': %s",
+                        MXB_ERROR("'%s' is not a valid value for '%s': %s",
                                   targets[0].c_str(), a.target->name().c_str(), target.c_str());
                         ok = false;
                     }
@@ -274,7 +274,7 @@ bool Specification::do_post_validate(Params params) const
             }
             else
             {
-                MXS_ERROR("Invalid target string for '%s': %s",
+                MXB_ERROR("Invalid target string for '%s': %s",
                           a.target->name().c_str(), target.c_str());
                 ok = false;
             }
@@ -283,7 +283,7 @@ bool Specification::do_post_validate(Params params) const
 
             if (!re.valid())
             {
-                MXS_ERROR("Invalid regular expression for '%s': %s",
+                MXB_ERROR("Invalid regular expression for '%s': %s",
                           a.match->name().c_str(), re.error().c_str());
                 ok = false;
             }
@@ -299,7 +299,7 @@ bool Specification::do_post_validate(Params params) const
 
     if (ok && !found && !legacy_mode)
     {
-        MXS_ERROR("At least one match-target pair must be defined.");
+        MXB_ERROR("At least one match-target pair must be defined.");
         ok = false;
     }
 
@@ -728,7 +728,7 @@ bool RegexHintFilter::regex_compile_and_add(const std::shared_ptr<Setup>& setup,
         // Try to compile even further for faster matching
         if (pcre2_jit_compile(regex, PCRE2_JIT_COMPLETE) < 0)
         {
-            MXS_NOTICE("PCRE2 JIT compilation of pattern '%s' failed, falling back to normal compilation.",
+            MXB_NOTICE("PCRE2 JIT compilation of pattern '%s' failed, falling back to normal compilation.",
                        match.c_str());
         }
 
@@ -758,13 +758,13 @@ bool RegexHintFilter::regex_compile_and_add(const std::shared_ptr<Setup>& setup,
         else
         {
             // The targets string didn't seem to contain a valid routing target.
-            MXS_ERROR("Could not parse a routing target from '%s'.", target.c_str());
+            MXB_ERROR("Could not parse a routing target from '%s'.", target.c_str());
             success = false;
         }
     }
     else
     {
-        MXS_ERROR("Invalid PCRE2 regular expression '%s' (position '%zu').",
+        MXB_ERROR("Invalid PCRE2 regular expression '%s' (position '%zu').",
                   match.c_str(), error_offset);
         MXS_PCRE2_PRINT_ERROR(errorcode);
         mxb_assert_message(!true, "This should be detected earlier");
@@ -887,7 +887,7 @@ bool RegexHintFilter::check_source_host(const std::shared_ptr<Setup>& setup,
 
         if (rval)
         {
-            MXS_INFO("Client IP %s matches host source %s%s",
+            MXB_INFO("Client IP %s matches host source %s%s",
                      remote,
                      source.m_netmask < 128 ? "with wildcards " : "",
                      source.m_address.c_str());
@@ -909,7 +909,7 @@ bool RegexHintFilter::check_source_hostnames(const std::shared_ptr<Setup>& setup
 
     if (rc != 0)
     {
-        MXS_INFO("Failed to resolve hostname due to %s", gai_strerror(rc));
+        MXB_INFO("Failed to resolve hostname due to %s", gai_strerror(rc));
         return false;
     }
 
@@ -917,7 +917,7 @@ bool RegexHintFilter::check_source_hostnames(const std::shared_ptr<Setup>& setup
     {
         if (strcmp(hbuf, host.c_str()) == 0)
         {
-            MXS_INFO("Client hostname %s matches host source %s", hbuf, host.c_str());
+            MXB_INFO("Client hostname %s matches host source %s", hbuf, host.c_str());
             return true;
         }
     }
@@ -1009,7 +1009,7 @@ bool RegexHintFilter::add_source_address(const std::shared_ptr<Setup>& setup, co
     if (rc == 0)
     {
         memcpy(&ipv6, ai->ai_addr, ai->ai_addrlen);
-        MXS_INFO("Input %s is valid with netmask %d", address.c_str(), netmask);
+        MXB_INFO("Input %s is valid with netmask %d", address.c_str(), netmask);
         freeaddrinfo(ai);
     }
     else
@@ -1029,7 +1029,7 @@ void RegexHintFilter::set_source_addresses(const std::shared_ptr<Setup>& setup, 
 
         if (!add_source_address(setup, trimmed_host))
         {
-            MXS_INFO("The given 'source' parameter '%s' is not a valid IP address. Adding it as hostname.",
+            MXB_INFO("The given 'source' parameter '%s' is not a valid IP address. Adding it as hostname.",
                      trimmed_host.c_str());
             setup->hostnames.emplace_back(trimmed_host);
         }
@@ -1063,7 +1063,7 @@ bool RegexHintFilter::post_configure()
 
     if (legacy_mode && setup->mapping.empty())
     {
-        MXS_WARNING("Use of legacy parameters 'match' and 'server' is deprecated.");
+        MXB_WARNING("Use of legacy parameters 'match' and 'server' is deprecated.");
         /* Using legacy mode and no indexed parameters found. Add the legacy parameters
          * to the mapping. */
         if (!regex_compile_and_add(setup, pcre_ops, true, sett.m_match, sett.m_server))

@@ -60,7 +60,7 @@ int cache_process_init()
 
     if (!jit_available)
     {
-        MXS_WARNING("pcre2 JIT is not available; regex matching will not be "
+        MXB_WARNING("pcre2 JIT is not available; regex matching will not be "
                     "as efficient as it could be.");
     }
 
@@ -134,12 +134,12 @@ bool CacheFilter::post_configure()
     switch (m_config.thread_model)
     {
     case CACHE_THREAD_MODEL_MT:
-        MXS_NOTICE("Creating shared cache.");
+        MXB_NOTICE("Creating shared cache.");
         MXS_EXCEPTION_GUARD(pCache = CacheMT::create(m_config.name(), &m_config));
         break;
 
     case CACHE_THREAD_MODEL_ST:
-        MXS_NOTICE("Creating thread specific cache.");
+        MXB_NOTICE("Creating thread specific cache.");
         MXS_EXCEPTION_GUARD(pCache = CachePT::create(m_config.name(), &m_config));
         break;
 
@@ -161,7 +161,7 @@ bool CacheFilter::post_configure()
 
         if (max_resultset_size > limits.max_value_size)
         {
-            MXS_WARNING("The used cache storage limits the maximum size of a value to "
+            MXB_WARNING("The used cache storage limits the maximum size of a value to "
                         "%u bytes, but either no value has been specified for "
                         "max_resultset_size or the value is larger. Setting "
                         "max_resultset_size to the maximum size.", limits.max_value_size);

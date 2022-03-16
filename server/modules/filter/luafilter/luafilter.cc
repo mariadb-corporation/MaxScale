@@ -402,7 +402,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     }
     else
     {
-        MXS_WARNING("Failed to load the core Lua library: %s. Some external Lua libraries might not work "
+        MXB_WARNING("Failed to load the core Lua library: %s. Some external Lua libraries might not work "
                     "as a result of this. The core Lua library can be manually loaded by using "
                     "LD_PRELOAD and pointing it at the correct 'liblua.so' library.", dlerror());
     }

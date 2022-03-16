@@ -63,8 +63,8 @@ AvroTable* avro_table_alloc(const char* filepath,
                                      strlen(json_schema),
                                      &avro_schema))
     {
-        MXS_ERROR("Avro error: %s", avro_strerror());
-        MXS_INFO("Avro schema: %s", json_schema);
+        MXB_ERROR("Avro error: %s", avro_strerror());
+        MXB_INFO("Avro schema: %s", json_schema);
         return NULL;
     }
 
@@ -85,14 +85,14 @@ AvroTable* avro_table_alloc(const char* filepath,
 
     if (rc)
     {
-        MXS_ERROR("Avro error: %s", avro_strerror());
+        MXB_ERROR("Avro error: %s", avro_strerror());
         avro_schema_decref(avro_schema);
         return NULL;
     }
 
     if ((avro_writer_iface = avro_generic_class_from_schema(avro_schema)) == NULL)
     {
-        MXS_ERROR("Avro error: %s", avro_strerror());
+        MXB_ERROR("Avro error: %s", avro_strerror());
         avro_schema_decref(avro_schema);
         avro_file_writer_close(avro_file);
         return NULL;
@@ -105,7 +105,7 @@ AvroTable* avro_table_alloc(const char* filepath,
         avro_file_writer_close(avro_file);
         avro_value_iface_decref(avro_writer_iface);
         avro_schema_decref(avro_schema);
-        MXS_OOM();
+        MXB_OOM();
     }
 
     return table;
@@ -176,12 +176,12 @@ bool AvroConverter::open_table(const Table& create)
         }
         else
         {
-            MXS_ERROR("Failed to open new Avro file for writing.");
+            MXB_ERROR("Failed to open new Avro file for writing.");
         }
     }
     else
     {
-        MXS_ERROR("Failed to create JSON schema.");
+        MXB_ERROR("Failed to create JSON schema.");
     }
 
     return rval;
@@ -241,7 +241,7 @@ bool AvroConverter::commit(const Table& create, const gtid_pos_t& gtid)
 
     if (avro_file_writer_append_value(*m_avro_file, &m_record))
     {
-        MXS_ERROR("Failed to write value: %s", avro_strerror());
+        MXB_ERROR("Failed to write value: %s", avro_strerror());
         rval = false;
     }
 

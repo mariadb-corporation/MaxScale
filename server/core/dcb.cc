@@ -131,7 +131,7 @@ int connect_socket(const char* host, int port)
     {
         if (::connect(so, (struct sockaddr*)&addr, sz) == -1 && errno != EINPROGRESS)
         {
-            MXS_ERROR("Failed to connect backend server [%s]:%d due to: %d, %s.",
+            MXB_ERROR("Failed to connect backend server [%s]:%d due to: %d, %s.",
                       host, port, errno, mxb_strerror(errno));
             ::close(so);
             so = -1;
@@ -139,7 +139,7 @@ int connect_socket(const char* host, int port)
     }
     else
     {
-        MXS_ERROR("Establishing connection to backend server [%s]:%d failed.", host, port);
+        MXB_ERROR("Establishing connection to backend server [%s]:%d failed.", host, port);
     }
     return so;
 }
@@ -326,7 +326,7 @@ int DCB::socket_bytes_readable() const
 
     if (-1 == ioctl(m_fd, FIONREAD, &bytesavailable))
     {
-        MXS_ERROR("ioctl FIONREAD for dcb %p in state %s fd %d failed: %d, %s",
+        MXB_ERROR("ioctl FIONREAD for dcb %p in state %s fd %d failed: %d, %s",
                   this,
                   mxs::to_string(m_state),
                   m_fd,
@@ -654,7 +654,7 @@ int DCB::log_errors_SSL(int ret)
 
     if (ret || ssl_errno)
     {
-        MXS_ERROR("SSL operation failed for %s at '%s': %s",
+        MXB_ERROR("SSL operation failed for %s at '%s': %s",
                   mxs::to_string(m_role), client_remote().c_str(), ss.str().c_str());
     }
 
@@ -702,7 +702,7 @@ bool DCB::write_parameter_check()
 {
     if (m_fd == DCB::FD_CLOSED)
     {
-        MXS_ERROR("Write failed, dcb is closed.");
+        MXB_ERROR("Write failed, dcb is closed.");
         return false;
     }
 
@@ -719,7 +719,7 @@ bool DCB::write_parameter_check()
         if (m_state != DCB::State::CREATED && m_state != DCB::State::POLLING
             && m_state != DCB::State::NOPOLLING)
         {
-            MXS_DEBUG("Write aborted to dcb %p because it is in state %s",
+            MXB_DEBUG("Write aborted to dcb %p because it is in state %s",
                       this, mxs::to_string(m_state));
             return false;
         }
@@ -761,7 +761,7 @@ void DCB::destroy()
     RoutingWorker* owner = static_cast<RoutingWorker*>(this->owner);
     if (current && (current != owner))
     {
-        MXS_ALERT("dcb_final_close(%p) called by %d, owned by %d.",
+        MXB_ALERT("dcb_final_close(%p) called by %d, owned by %d.",
                   this,
                   current->id(),
                   owner->id());
@@ -783,7 +783,7 @@ void DCB::destroy()
         {
             int eno = errno;
             errno = 0;
-            MXS_ERROR("Failed to close socket %d on dcb %p: %d, %s",
+            MXB_ERROR("Failed to close socket %d on dcb %p: %d, %s",
                       m_fd,
                       this,
                       eno,
@@ -791,7 +791,7 @@ void DCB::destroy()
         }
         else
         {
-            MXS_DEBUG("Closed socket %d on dcb %p.", m_fd, this);
+            MXB_DEBUG("Closed socket %d on dcb %p.", m_fd, this);
         }
 
         m_fd = FD_CLOSED;
@@ -1106,13 +1106,13 @@ bool DCB::create_SSL(const mxs::SSLContext& ssl)
     m_encryption.handle = ssl.open();
     if (!m_encryption.handle)
     {
-        MXS_ERROR("Failed to initialize SSL for connection.");
+        MXB_ERROR("Failed to initialize SSL for connection.");
         return false;
     }
 
     if (SSL_set_fd(m_encryption.handle, m_fd) == 0)
     {
-        MXS_ERROR("Failed to set file descriptor for SSL connection.");
+        MXB_ERROR("Failed to set file descriptor for SSL connection.");
         return false;
     }
 
@@ -1135,7 +1135,7 @@ bool DCB::verify_peer_host()
             {
                 char buf[1024] = "";
                 X509_NAME_oneline(X509_get_subject_name(cert), buf, sizeof(buf));
-                MXS_ERROR("Peer host '%s' does not match certificate: %s", r.c_str(), buf);
+                MXB_ERROR("Peer host '%s' does not match certificate: %s", r.c_str(), buf);
                 rval = false;
             }
 
@@ -1164,7 +1164,7 @@ static int dcb_set_socket_option(int sockfd, int level, int optname, void* optva
 {
     if (setsockopt(sockfd, level, optname, optval, optlen) != 0)
     {
-        MXS_ERROR("Failed to set socket options: %d, %s",
+        MXB_ERROR("Failed to set socket options: %d, %s",
                   errno,
                   mxb_strerror(errno));
         return -1;
@@ -1448,7 +1448,7 @@ void DCB::add_event(uint32_t ev)
         }
         else
         {
-            MXS_OOM();
+            MXB_OOM();
         }
     }
 }
@@ -1543,19 +1543,19 @@ static int upstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userda
     // DCBs are only removed from the list when they are closed.
     if (reason == DCB::Reason::HIGH_WATER)
     {
-        MXS_INFO("High water mark hit for '%s'@'%s', not reading data until low water mark is hit",
+        MXB_INFO("High water mark hit for '%s'@'%s', not reading data until low water mark is hit",
                  session->user().c_str(), client_dcb->remote().c_str());
 
         client_dcb->disable_events();
     }
     else if (reason == DCB::Reason::LOW_WATER)
     {
-        MXS_INFO("Low water mark hit for '%s'@'%s', accepting new data",
+        MXB_INFO("Low water mark hit for '%s'@'%s', accepting new data",
                  session->user().c_str(), client_dcb->remote().c_str());
 
         if (!client_dcb->enable_events())
         {
-            MXS_ERROR("Could not re-enable I/O events for client connection whose I/O events "
+            MXB_ERROR("Could not re-enable I/O events for client connection whose I/O events "
                       "earlier were disabled due to the high water mark having been hit. "
                       "Closing session.");
             client_dcb->trigger_hangup_event();
@@ -1572,7 +1572,7 @@ bool backend_dcb_remove_func(DCB* dcb, void* data)
     if (dcb->session() == session && dcb->role() == DCB::Role::BACKEND)
     {
         BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
-        MXS_INFO("High water mark hit for connection to '%s' from %s'@'%s', not reading data until low water "
+        MXB_INFO("High water mark hit for connection to '%s' from %s'@'%s', not reading data until low water "
                  "mark is hit", backend_dcb->server()->name(),
                  session->user().c_str(), session->client_remote().c_str());
 
@@ -1590,13 +1590,13 @@ bool backend_dcb_add_func(DCB* dcb, void* data)
     {
         BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
         auto client_dcb = session->client_connection()->dcb();
-        MXS_INFO("Low water mark hit for connection to '%s' from '%s'@'%s', accepting new data",
+        MXB_INFO("Low water mark hit for connection to '%s' from '%s'@'%s', accepting new data",
                  backend_dcb->server()->name(),
                  session->user().c_str(), client_dcb->remote().c_str());
 
         if (!backend_dcb->enable_events())
         {
-            MXS_ERROR("Could not re-enable I/O events for backend connection whose I/O events "
+            MXB_ERROR("Could not re-enable I/O events for backend connection whose I/O events "
                       "earlier were disabled due to the high water mark having been hit. "
                       "Closing session.");
             client_dcb->trigger_hangup_event();
@@ -1753,28 +1753,28 @@ int ClientDCB::ssl_handshake()
     switch (SSL_get_error(m_encryption.handle, ssl_rval))
     {
     case SSL_ERROR_NONE:
-        MXS_DEBUG("SSL_accept done for %s", m_remote.c_str());
+        MXB_DEBUG("SSL_accept done for %s", m_remote.c_str());
         m_encryption.state = SSLState::ESTABLISHED;
         m_encryption.read_want_write = false;
         return verify_peer_host() ? 1 : -1;
 
     case SSL_ERROR_WANT_READ:
-        MXS_DEBUG("SSL_accept ongoing want read for %s", m_remote.c_str());
+        MXB_DEBUG("SSL_accept ongoing want read for %s", m_remote.c_str());
         return 0;
 
     case SSL_ERROR_WANT_WRITE:
-        MXS_DEBUG("SSL_accept ongoing want write for %s", m_remote.c_str());
+        MXB_DEBUG("SSL_accept ongoing want write for %s", m_remote.c_str());
         m_encryption.read_want_write = true;
         return 0;
 
     case SSL_ERROR_ZERO_RETURN:
-        MXS_DEBUG("SSL error, shut down cleanly during SSL accept %s", m_remote.c_str());
+        MXB_DEBUG("SSL error, shut down cleanly during SSL accept %s", m_remote.c_str());
         log_errors_SSL(0);
         trigger_hangup_event();
         return 0;
 
     case SSL_ERROR_SYSCALL:
-        MXS_DEBUG("SSL connection SSL_ERROR_SYSCALL error during accept %s", m_remote.c_str());
+        MXB_DEBUG("SSL connection SSL_ERROR_SYSCALL error during accept %s", m_remote.c_str());
         if (log_errors_SSL(ssl_rval) < 0)
         {
             m_encryption.state = SSLState::HANDSHAKE_FAILED;
@@ -1787,7 +1787,7 @@ int ClientDCB::ssl_handshake()
         }
 
     default:
-        MXS_DEBUG("SSL connection shut down with error during SSL accept %s", m_remote.c_str());
+        MXB_DEBUG("SSL connection shut down with error during SSL accept %s", m_remote.c_str());
         if (log_errors_SSL(ssl_rval) < 0)
         {
             m_encryption.state = SSLState::HANDSHAKE_FAILED;
@@ -1845,7 +1845,7 @@ void DCB::close(DCB* dcb)
     else
     {
         // TODO: Will this happen on a regular basis?
-        MXS_WARNING("DCB::close(%p) called on a closed dcb.", dcb);
+        MXB_WARNING("DCB::close(%p) called on a closed dcb.", dcb);
         mxb_assert(!true);
     }
 }
@@ -1981,25 +1981,25 @@ int BackendDCB::ssl_handshake()
     switch (SSL_get_error(m_encryption.handle, ssl_rval))
     {
     case SSL_ERROR_NONE:
-        MXS_DEBUG("SSL_connect done for %s", m_remote.c_str());
+        MXB_DEBUG("SSL_connect done for %s", m_remote.c_str());
         m_encryption.state = SSLState::ESTABLISHED;
         m_encryption.read_want_write = false;
         return_code = verify_peer_host() ? 1 : -1;
         break;
 
     case SSL_ERROR_WANT_READ:
-        MXS_DEBUG("SSL_connect ongoing want read for %s", m_remote.c_str());
+        MXB_DEBUG("SSL_connect ongoing want read for %s", m_remote.c_str());
         return_code = 0;
         break;
 
     case SSL_ERROR_WANT_WRITE:
-        MXS_DEBUG("SSL_connect ongoing want write for %s", m_remote.c_str());
+        MXB_DEBUG("SSL_connect ongoing want write for %s", m_remote.c_str());
         m_encryption.read_want_write = true;
         return_code = 0;
         break;
 
     case SSL_ERROR_ZERO_RETURN:
-        MXS_DEBUG("SSL error, shut down cleanly during SSL connect %s", m_remote.c_str());
+        MXB_DEBUG("SSL error, shut down cleanly during SSL connect %s", m_remote.c_str());
         if (log_errors_SSL(0) < 0)
         {
             trigger_hangup_event();
@@ -2008,7 +2008,7 @@ int BackendDCB::ssl_handshake()
         break;
 
     case SSL_ERROR_SYSCALL:
-        MXS_DEBUG("SSL connection shut down with SSL_ERROR_SYSCALL during SSL connect %s", m_remote.c_str());
+        MXB_DEBUG("SSL connection shut down with SSL_ERROR_SYSCALL during SSL connect %s", m_remote.c_str());
         if (log_errors_SSL(ssl_rval) < 0)
         {
             m_encryption.state = SSLState::HANDSHAKE_FAILED;
@@ -2022,7 +2022,7 @@ int BackendDCB::ssl_handshake()
         break;
 
     default:
-        MXS_DEBUG("SSL connection shut down with error during SSL connect %s", m_remote.c_str());
+        MXB_DEBUG("SSL connection shut down with error during SSL connect %s", m_remote.c_str());
         if (log_errors_SSL(ssl_rval) < 0)
         {
             m_encryption.state = SSLState::HANDSHAKE_FAILED;

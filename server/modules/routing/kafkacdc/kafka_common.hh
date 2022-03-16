@@ -39,11 +39,11 @@ public:
             break;
 
         case RdKafka::Event::EVENT_ERROR:
-            MXS_ERROR("%s", RdKafka::err2str(event.err()).c_str());
+            MXB_ERROR("%s", RdKafka::err2str(event.err()).c_str());
             break;
 
         default:
-            MXS_INFO("%s", event.str().c_str());
+            MXB_INFO("%s", event.str().c_str());
             break;
         }
     }
@@ -88,7 +88,7 @@ struct KafkaCommonConfig
 
         if (kafka_ssl_key.get(param).empty() != kafka_ssl_cert.get(param).empty())
         {
-            MXS_ERROR("Both '%s' and '%s' must be defined",
+            MXB_ERROR("Both '%s' and '%s' must be defined",
                       kafka_ssl_key.name().c_str(),
                       kafka_ssl_cert.name().c_str());
             ok = false;
@@ -96,7 +96,7 @@ struct KafkaCommonConfig
 
         if (kafka_sasl_user.get(param).empty() != kafka_sasl_password.get(param).empty())
         {
-            MXS_ERROR("Both '%s' and '%s' must be defined",
+            MXB_ERROR("Both '%s' and '%s' must be defined",
                       kafka_sasl_user.name().c_str(),
                       kafka_sasl_password.name().c_str());
             ok = false;
@@ -116,7 +116,7 @@ struct KafkaCommonConfig
         {
             if (!kv.second.empty() && cnf->set(kv.first, kv.second, err) != OK)
             {
-                MXS_ERROR("Failed to set `%s`: %s", kv.first.c_str(), err.c_str());
+                MXB_ERROR("Failed to set `%s`: %s", kv.first.c_str(), err.c_str());
                 cnf.reset();
                 break;
             }
@@ -126,7 +126,7 @@ struct KafkaCommonConfig
 
         if (cnf && cnf->set("event_cb", &kafka_logger, err) != OK)
         {
-            MXS_ERROR("Failed to set Kafka event logger: %s", err.c_str());
+            MXB_ERROR("Failed to set Kafka event logger: %s", err.c_str());
             cnf.reset();
         }
 

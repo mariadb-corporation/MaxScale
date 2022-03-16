@@ -82,7 +82,7 @@ bool admin_dump_users(const Users* users, const char* fname)
     {
         if (mkdir(mxs::datadir(), S_IRWXU) != 0 && errno != EEXIST)
         {
-            MXS_ERROR("Failed to create directory '%s': %d, %s",
+            MXB_ERROR("Failed to create directory '%s': %d, %s",
                       mxs::datadir(),
                       errno,
                       mxb_strerror(errno));
@@ -98,7 +98,7 @@ bool admin_dump_users(const Users* users, const char* fname)
 
     if (fd == -1)
     {
-        MXS_ERROR("Failed to create '%s': %d, %s", tmppath.c_str(), errno, mxb_strerror(errno));
+        MXB_ERROR("Failed to create '%s': %d, %s", tmppath.c_str(), errno, mxb_strerror(errno));
     }
     else
     {
@@ -108,12 +108,12 @@ bool admin_dump_users(const Users* users, const char* fname)
 
         if (write(fd, str, strlen(str)) == -1)
         {
-            MXS_ERROR("Failed to dump admin users to '%s': %d, %s",
+            MXB_ERROR("Failed to dump admin users to '%s': %d, %s",
                       tmppath.c_str(), errno, mxb_strerror(errno));
         }
         else if (rename(tmppath.c_str(), path.c_str()) == -1)
         {
-            MXS_ERROR("Failed to rename to '%s': %d, %s",
+            MXB_ERROR("Failed to rename to '%s': %d, %s",
                       path.c_str(), errno, mxb_strerror(errno));
         }
         else
@@ -163,7 +163,7 @@ const char* admin_remove_user(Users* users, const char* fname, const char* uname
 {
     if (!users->remove(uname))
     {
-        MXS_ERROR("Couldn't find user %s. Removing user failed.", uname);
+        MXB_ERROR("Couldn't find user %s. Removing user failed.", uname);
         return ADMIN_ERR_USERNOTFOUND;
     }
 
@@ -264,7 +264,7 @@ bool load_legacy_users(FILE* fp, const std::string& path, Users* output)
         }
         else if (!feof(fp))
         {
-            MXS_ERROR("Line length exceeds %d characters, possibly corrupted 'passwd' file in: %s",
+            MXB_ERROR("Line length exceeds %d characters, possibly corrupted 'passwd' file in: %s",
                       LINELEN, path.c_str());
             error = true;
             break;
@@ -330,16 +330,16 @@ bool load_rest_users()
 
                 if (rename(pathc, old_users_buc) != 0)
                 {
-                    MXS_ERROR("Failed to rename old users file: %d, %s", errno, mxb_strerror(errno));
+                    MXB_ERROR("Failed to rename old users file: %d, %s", errno, mxb_strerror(errno));
                 }
                 else if (admin_dump_users(&output, fname))
                 {
-                    MXS_NOTICE("Upgraded users file at '%s' to new format, backup of the old file is stored "
+                    MXB_NOTICE("Upgraded users file at '%s' to new format, backup of the old file is stored "
                                "in '%s'.", pathc, old_users_buc);
                 }
                 else
                 {
-                    MXS_ERROR("Failed to dump new users. Please rename the file '%s' manually to '%s' and "
+                    MXB_ERROR("Failed to dump new users. Please rename the file '%s' manually to '%s' and "
                               "restart MaxScale to attempt again.", old_users_buc, pathc);
                 }
             }

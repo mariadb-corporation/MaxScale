@@ -253,7 +253,7 @@ public:
         }
         else if (id != MARIADB_PS_DIRECT_EXEC_ID)
         {
-            MXS_WARNING("Using unknown prepared statement with ID %u", id);
+            MXB_WARNING("Using unknown prepared statement with ID %u", id);
         }
 
         return rval;
@@ -270,7 +270,7 @@ public:
         }
         else
         {
-            MXS_WARNING("Using unknown prepared statement with ID '%s'", id.c_str());
+            MXB_WARNING("Using unknown prepared statement with ID '%s'", id.c_str());
         }
 
         return rval;
@@ -280,7 +280,7 @@ public:
     {
         if (m_text_ps.erase(id) == 0)
         {
-            MXS_WARNING("Closing unknown prepared statement with ID '%s'", id.c_str());
+            MXB_WARNING("Closing unknown prepared statement with ID '%s'", id.c_str());
         }
     }
 
@@ -288,7 +288,7 @@ public:
     {
         if (m_binary_ps.erase(id) == 0)
         {
-            MXS_WARNING("Closing unknown prepared statement with ID %u", id);
+            MXB_WARNING("Closing unknown prepared statement with ID %u", id);
         }
     }
 
@@ -418,14 +418,14 @@ void QueryClassifier::process_routing_hints(const GWBUF::HintVector& hints, uint
             case Type::ROUTE_TO_MASTER:
                 // This means override, so we bail out immediately.
                 *target = TARGET_MASTER;
-                MXS_DEBUG("Hint: route to master");
+                MXB_DEBUG("Hint: route to master");
                 check_more = false;
                 break;
 
             case Type::ROUTE_TO_NAMED_SERVER:
                 // The router is expected to look up the named server.
                 *target |= TARGET_NAMED_SERVER;
-                MXS_DEBUG("Hint: route to named server: %s", hint.data.c_str());
+                MXB_DEBUG("Hint: route to named server: %s", hint.data.c_str());
                 break;
 
             case Type::ROUTE_TO_UPTODATE_SERVER:
@@ -439,7 +439,7 @@ void QueryClassifier::process_routing_hints(const GWBUF::HintVector& hints, uint
                 break;
 
             case Type::ROUTE_TO_LAST_USED:
-                MXS_DEBUG("Hint: route to last used");
+                MXB_DEBUG("Hint: route to last used");
                 *target = TARGET_LAST_USED;
                 break;
 
@@ -450,14 +450,14 @@ void QueryClassifier::process_routing_hints(const GWBUF::HintVector& hints, uint
                 }
                 else
                 {
-                    MXS_ERROR("Unknown hint parameter '%s' when '%s' was expected.",
+                    MXB_ERROR("Unknown hint parameter '%s' when '%s' was expected.",
                               hint.data.c_str(), max_rlag);
                 }
                 break;
 
             case Type::ROUTE_TO_SLAVE:
                 *target = TARGET_SLAVE;
-                MXS_DEBUG("Hint: route to slave.");
+                MXB_DEBUG("Hint: route to slave.");
                 break;
 
             case Type::NONE:
@@ -516,7 +516,7 @@ uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype)
          */
         if (qc_query_is_type(qtype, QUERY_TYPE_READ))
         {
-            MXS_WARNING("The query can't be routed to all "
+            MXB_WARNING("The query can't be routed to all "
                         "backend servers because it includes SELECT and "
                         "SQL variable modifications which is not supported. "
                         "Set use_sql_variables_in=master or split the "
@@ -603,7 +603,7 @@ void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype)
 {
     if (m_route_info.large_query())
     {
-        MXS_INFO("> Processing large request with more than 2^24 bytes of data");
+        MXB_INFO("> Processing large request with more than 2^24 bytes of data");
     }
     else if (m_route_info.load_data_state() == QueryClassifier::LOAD_DATA_INACTIVE)
     {
@@ -639,7 +639,7 @@ void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype)
         const char* hint = querybuf->hints.empty() ? "" : ", Hint:";
         const char* hint_type = querybuf->hints.empty() ? "" : Hint::type_to_str(querybuf->hints[0].type);
 
-        MXS_INFO("> Autocommit: %s, trx is %s, cmd: (0x%02x) %s, plen: %u, type: %s, stmt: %.*s%s %s",
+        MXB_INFO("> Autocommit: %s, trx is %s, cmd: (0x%02x) %s, plen: %u, type: %s, stmt: %.*s%s %s",
                  autocommit,
                  transaction,
                  command,
@@ -655,11 +655,11 @@ void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype)
     }
     else if (m_route_info.load_data_state() == QueryClassifier::LOAD_DATA_END)
     {
-        MXS_INFO("> LOAD DATA LOCAL INFILE finished: %lu bytes sent.", m_route_info.load_data_sent());
+        MXB_INFO("> LOAD DATA LOCAL INFILE finished: %lu bytes sent.", m_route_info.load_data_sent());
     }
     else
     {
-        MXS_INFO("> Processing LOAD DATA LOCAL INFILE: %lu bytes sent.", m_route_info.load_data_sent());
+        MXB_INFO("> Processing LOAD DATA LOCAL INFILE: %lu bytes sent.", m_route_info.load_data_sent());
     }
 }
 
@@ -740,7 +740,7 @@ void QueryClassifier::check_create_tmp_table(GWBUF* querybuf, uint32_t type)
             break;
         }
 
-        MXS_INFO("Added temporary table %s", table.c_str());
+        MXB_INFO("Added temporary table %s", table.c_str());
 
         /** Add the table to the set of temporary tables */
         m_route_info.add_tmp_table(table);
@@ -1052,7 +1052,7 @@ bool QueryClassifier::find_table(QueryClassifier& qc, const std::string& table)
 {
     if (qc.m_route_info.is_tmp_table(table))
     {
-        MXS_INFO("Query targets a temporary table: %s", table.c_str());
+        MXB_INFO("Query targets a temporary table: %s", table.c_str());
         return false;
     }
 

@@ -116,12 +116,12 @@ bool Table::prepare(MYSQL* mysql)
         }
         else
         {
-            MXS_ERROR("Failed to prepare statement: %s", mysql_stmt_error(m_stmt));
+            MXB_ERROR("Failed to prepare statement: %s", mysql_stmt_error(m_stmt));
         }
     }
     else
     {
-        MXS_ERROR("Failed to create table `%s`: %s", m_table.c_str(), mysql_error(mysql));
+        MXB_ERROR("Failed to create table `%s`: %s", m_table.c_str(), mysql_error(mysql));
     }
 
     return ok;
@@ -157,19 +157,19 @@ bool Table::flush()
 
             if (is_json_error(errnum))
             {
-                MXS_INFO("Ignoring malformed JSON: %d, %s", errnum, error);
+                MXB_INFO("Ignoring malformed JSON: %d, %s", errnum, error);
             }
             else if (errnum == ER_DUP_ENTRY)
             {
-                MXS_INFO("Ignoring record with duplicate value for key `_id`: %d, %s", errnum, error);
+                MXB_INFO("Ignoring record with duplicate value for key `_id`: %d, %s", errnum, error);
             }
             else if (errnum == ER_CONSTRAINT_FAILED)
             {
-                MXS_INFO("Ignoring record due to constraint failure: %d, %s", errnum, error);
+                MXB_INFO("Ignoring record due to constraint failure: %d, %s", errnum, error);
             }
             else
             {
-                MXS_ERROR("Failed to insert value into '%s': %d, %s", m_table.c_str(), errnum, error);
+                MXB_ERROR("Failed to insert value into '%s': %d, %s", m_table.c_str(), errnum, error);
                 ok = false;
             }
         }

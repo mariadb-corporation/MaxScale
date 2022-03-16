@@ -124,26 +124,26 @@ bool xpand::is_part_of_the_quorum(const char* zName, MYSQL* pCon)
                     break;
 
                 case xpand::Status::STATIC:
-                    MXS_NOTICE("%s: Node %s is not part of the quorum (static), switching to "
+                    MXB_NOTICE("%s: Node %s is not part of the quorum (static), switching to "
                                "other node for monitoring.",
                                zName, mysql_get_host_info(pCon));
                     break;
 
                 case xpand::Status::DYNAMIC:
-                    MXS_NOTICE("%s: Node %s is not part of the quorum (dynamic), switching to "
+                    MXB_NOTICE("%s: Node %s is not part of the quorum (dynamic), switching to "
                                "other node for monitoring.",
                                zName, mysql_get_host_info(pCon));
                     break;
 
                 case xpand::Status::UNKNOWN:
-                    MXS_WARNING("%s: Do not know how to interpret '%s'. Assuming node %s "
+                    MXB_WARNING("%s: Do not know how to interpret '%s'. Assuming node %s "
                                 "is not part of the quorum.",
                                 zName, row[0], mysql_get_host_info(pCon));
                 }
             }
             else
             {
-                MXS_WARNING("%s: No status returned for '%s' on %s.",
+                MXB_WARNING("%s: No status returned for '%s' on %s.",
                             zName, ZQUERY, mysql_get_host_info(pCon));
             }
 
@@ -151,13 +151,13 @@ bool xpand::is_part_of_the_quorum(const char* zName, MYSQL* pCon)
         }
         else
         {
-            MXS_WARNING("%s: No result returned for '%s' on %s.",
+            MXB_WARNING("%s: No result returned for '%s' on %s.",
                         zName, ZQUERY, mysql_get_host_info(pCon));
         }
     }
     else
     {
-        MXS_ERROR("%s: Could not execute '%s' on %s: %s",
+        MXB_ERROR("%s: Could not execute '%s' on %s: %s",
                   zName, ZQUERY, mysql_get_host_info(pCon), mysql_error(pCon));
     }
 
@@ -189,13 +189,13 @@ bool xpand::is_being_softfailed(const char* zName, MYSQL* pCon)
         }
         else
         {
-            MXS_WARNING("%s: No result returned for '%s' on %s.",
+            MXB_WARNING("%s: No result returned for '%s' on %s.",
                         zName, ZQUERY, mysql_get_host_info(pCon));
         }
     }
     else
     {
-        MXS_ERROR("%s: Could not execute '%s' on %s: %s",
+        MXB_ERROR("%s: Could not execute '%s' on %s: %s",
                   zName, ZQUERY, mysql_get_host_info(pCon), mysql_error(pCon));
     }
 
@@ -218,7 +218,7 @@ bool xpand::ping_or_connect_to_hub(const char* zName,
         {
             if ((softfailed == Softfailed::REJECT) && xpand::is_being_softfailed(zName, *ppCon))
             {
-                MXS_NOTICE("%s: The Xpand node %s used as hub is part of the quorum, "
+                MXB_NOTICE("%s: The Xpand node %s used as hub is part of the quorum, "
                            "but it is being softfailed. Switching to another node.",
                            zName, server.address());
             }
@@ -230,7 +230,7 @@ bool xpand::ping_or_connect_to_hub(const char* zName,
     }
     else
     {
-        MXS_ERROR("%s: Could either not ping or create connection to %s:%d: %s",
+        MXB_ERROR("%s: Could either not ping or create connection to %s:%d: %s",
                   zName, server.address(), server.port(), err.c_str());
     }
 

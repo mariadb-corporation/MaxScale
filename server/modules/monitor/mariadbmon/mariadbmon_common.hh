@@ -23,10 +23,10 @@
 #include <string>
 #include <maxscale/json_api.hh>
 
-/** Utility macros for printing both MXS_ERROR and json error */
+/** Utility macros for printing both MXB_ERROR and json error */
 #define PRINT_MXS_JSON_ERROR(err_out, format, ...) \
     do { \
-        MXS_ERROR(format, ##__VA_ARGS__); \
+        MXB_ERROR(format, ##__VA_ARGS__); \
         if (err_out) \
         { \
             *err_out = mxs_json_error_append(*err_out, format, ##__VA_ARGS__); \

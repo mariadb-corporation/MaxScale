@@ -376,7 +376,7 @@ static void sighup_handler(int i)
  */
 static void sigusr1_handler(int i)
 {
-    MXS_NOTICE("Log file flush following reception of SIGUSR1\n");
+    MXB_NOTICE("Log file flush following reception of SIGUSR1\n");
     mxs_log_rotate();
 }
 
@@ -464,7 +464,7 @@ static void sigfatal_handler(int i)
                 "Commit ID: %s System name: %s Release string: %s\n\n",
                 MAXSCALE_VERSION, i, maxscale_commit, cnf.sysname.c_str(), cnf.release_string);
 
-    MXS_ALERT("MaxScale %s received fatal signal %d. "
+    MXB_ALERT("MaxScale %s received fatal signal %d. "
               "Commit ID: %s System name: %s Release string: %s",
               MAXSCALE_VERSION, i, maxscale_commit, cnf.sysname.c_str(), cnf.release_string);
 
@@ -477,7 +477,7 @@ static void sigfatal_handler(int i)
         nStmt = strlen(pStmt);
     }
 
-    MXS_ALERT("Statement currently being classified: %.*s", (int)nStmt, pStmt);
+    MXB_ALERT("Statement currently being classified: %.*s", (int)nStmt, pStmt);
 
     if (DCB* dcb = dcb_get_current())
     {
@@ -486,7 +486,7 @@ static void sigfatal_handler(int i)
         {
             ses->dump_statements();
             ses->dump_session_log();
-            MXS_ALERT("DCB: %p Session: %lu Service: %s",
+            MXB_ALERT("DCB: %p Session: %lu Service: %s",
                       dcb, dcb->session()->id(), dcb->session()->service->name());
         }
     }
@@ -502,7 +502,7 @@ static void sigfatal_handler(int i)
     }
     else
     {
-        MXS_NOTICE("For a more detailed stacktrace, install GDB and "
+        MXB_NOTICE("For a more detailed stacktrace, install GDB and "
                    "add 'debug=gdb-stacktrace' under the [maxscale] section.");
 
         auto cb = [](const char* symbol, const char* cmd) {
@@ -559,7 +559,7 @@ static int signal_set(int sig, void (* handler)(int))
 
     if (err < 0)
     {
-        MXS_ERROR("Failed call sigaction() in %s due to %d, %s.",
+        MXB_ERROR("Failed call sigaction() in %s due to %d, %s.",
                   program_invocation_short_name,
                   errno,
                   mxb_strerror(errno));
@@ -594,7 +594,7 @@ static bool create_datadir(const char* base, char* datadir)
             }
             else
             {
-                MXS_ERROR("Cannot create data directory '%s': %s",
+                MXB_ERROR("Cannot create data directory '%s': %s",
                           datadir,
                           mxb_strerror(errno));
             }
@@ -604,13 +604,13 @@ static bool create_datadir(const char* base, char* datadir)
     {
         if (len < PATH_MAX)
         {
-            MXS_ERROR("Cannot create data directory '%s': %s",
+            MXB_ERROR("Cannot create data directory '%s': %s",
                       datadir,
                       mxb_strerror(errno));
         }
         else
         {
-            MXS_ERROR("Data directory pathname exceeds the maximum allowed pathname "
+            MXB_ERROR("Data directory pathname exceeds the maximum allowed pathname "
                       "length: %s/data%d.",
                       base,
                       getpid());
@@ -639,7 +639,7 @@ int ntfw_cb(const char* filename,
         {
             int eno = errno;
             errno = 0;
-            MXS_ERROR("Failed to remove the data directory %s of MaxScale due to %d, %s.",
+            MXB_ERROR("Failed to remove the data directory %s of MaxScale due to %d, %s.",
                       filename_string.c_str(),
                       eno,
                       mxb_strerror(eno));
@@ -836,7 +836,7 @@ static void log_startup_message(int eno, const char* message)
 {
     if (mxb_log_inited() || init_log())
     {
-        MXS_ALERT("%s%s%s%s",
+        MXB_ALERT("%s%s%s%s",
                   message,
                   eno == 0 ? "" : ": ",
                   eno == 0 ? "" : mxb_strerror(eno),
@@ -1970,16 +1970,16 @@ int main(int argc, char** argv)
     }
 
     // Config successfully read and we are a unique MaxScale, time to log some info.
-    MXS_NOTICE("Host: '%s' OS: %s@%s, %s, %s with %lu processor cores.",
+    MXB_NOTICE("Host: '%s' OS: %s@%s, %s, %s with %lu processor cores.",
                cnf.nodename.c_str(), cnf.sysname.c_str(), cnf.release.c_str(),
                cnf.version.c_str(), cnf.machine.c_str(), get_processor_count());
 
     struct sysinfo info;
     sysinfo(&info);
-    MXS_NOTICE("Total usable main memory: %s.",
+    MXB_NOTICE("Total usable main memory: %s.",
                mxb::pretty_size(info.mem_unit * info.totalram).c_str());
-    MXS_NOTICE("MariaDB MaxScale %s started (Commit: %s)", MAXSCALE_VERSION, MAXSCALE_COMMIT);
-    MXS_NOTICE("MaxScale is running in process %i", getpid());
+    MXB_NOTICE("MariaDB MaxScale %s started (Commit: %s)", MAXSCALE_VERSION, MAXSCALE_COMMIT);
+    MXB_NOTICE("MaxScale is running in process %i", getpid());
 
     if (!this_unit.daemon_mode)
     {
@@ -1997,11 +1997,11 @@ int main(int argc, char** argv)
                 mxs::cachedir());
     }
 
-    MXS_NOTICE("Configuration file: %s", cnf_file_path.c_str());
-    MXS_NOTICE("Log directory: %s", mxs::logdir());
-    MXS_NOTICE("Data directory: %s", mxs::datadir());
-    MXS_NOTICE("Module directory: %s", mxs::libdir());
-    MXS_NOTICE("Service cache: %s", mxs::cachedir());
+    MXB_NOTICE("Configuration file: %s", cnf_file_path.c_str());
+    MXB_NOTICE("Log directory: %s", mxs::logdir());
+    MXB_NOTICE("Data directory: %s", mxs::datadir());
+    MXB_NOTICE("Module directory: %s", mxs::libdir());
+    MXB_NOTICE("Service cache: %s", mxs::cachedir());
 
     if (this_unit.daemon_mode)
     {
@@ -2078,7 +2078,7 @@ int main(int argc, char** argv)
                 {
                     print_alert("Failed to open, read or process the MaxScale configuration "
                                 "file. See the error log for details.");
-                    MXS_ALERT("Failed to open, read or process the MaxScale configuration file %s.",
+                    MXB_ALERT("Failed to open, read or process the MaxScale configuration file %s.",
                               cnf_file_path.c_str());
                     rc = MAXSCALE_BADCONFIG;
                     maxscale_shutdown();
@@ -2087,11 +2087,11 @@ int main(int argc, char** argv)
 
                 if (cnf.config_check)
                 {
-                    MXS_NOTICE("Configuration was successfully verified.");
+                    MXB_NOTICE("Configuration was successfully verified.");
 
                     if (*export_cnf && export_config_file(export_cnf, config_context))
                     {
-                        MXS_NOTICE("Configuration exported to '%s'", export_cnf);
+                        MXB_NOTICE("Configuration exported to '%s'", export_cnf);
                     }
 
                     rc = MAXSCALE_SHUTDOWN;
@@ -2107,7 +2107,7 @@ int main(int argc, char** argv)
                 {
                     if (res == mxs::ConfigManager::Startup::RESTART)
                     {
-                        MXS_NOTICE("Attempting to restart MaxScale");
+                        MXB_NOTICE("Attempting to restart MaxScale");
 
                         if (this_unit.daemon_mode)
                         {
@@ -2125,7 +2125,7 @@ int main(int argc, char** argv)
                     }
                     else
                     {
-                        MXS_ALERT("Failed to apply cached configuration, cannot continue. "
+                        MXB_ALERT("Failed to apply cached configuration, cannot continue. "
                                   "To start MaxScale without the cached configuration, disable "
                                   "configuration synchronization or remove the cached file.");
                         rc = MAXSCALE_BADCONFIG;
@@ -2142,7 +2142,7 @@ int main(int argc, char** argv)
 
                 if (!success && (cnf.admin_host == "::"))
                 {
-                    MXS_WARNING("Failed to bind on address '::', attempting to "
+                    MXB_WARNING("Failed to bind on address '::', attempting to "
                                 "bind on IPv4 address '0.0.0.0'.");
                     cnf.admin_host = "0.0.0.0";
                     success = mxs_admin_init();
@@ -2150,7 +2150,7 @@ int main(int argc, char** argv)
 
                 if (success)
                 {
-                    MXS_NOTICE("Started REST API on [%s]:%d",
+                    MXB_NOTICE("Started REST API on [%s]:%d",
                                cnf.admin_host.c_str(), (int)cnf.admin_port);
                     // Start HttpSql cleanup thread.
                     HttpSql::start_cleanup();
@@ -2224,7 +2224,7 @@ int main(int argc, char** argv)
                     // Start the routing workers, each in a thread of its own.
                     if (RoutingWorker::start_workers())
                     {
-                        MXS_NOTICE("MaxScale started with %d worker threads.", config_threadcount());
+                        MXB_NOTICE("MaxScale started with %d worker threads.", config_threadcount());
 
                         if (configure_normal_signals())
                         {
@@ -2232,14 +2232,14 @@ int main(int argc, char** argv)
                             {
                                 // This call will block until MaxScale is shut down.
                                 main_worker.run();
-                                MXS_NOTICE("MaxScale is shutting down.");
+                                MXB_NOTICE("MaxScale is shutting down.");
 
                                 disable_normal_signals();
                                 mxs_admin_finish();
 
                                 // Shutting down started, wait for all routing workers.
                                 RoutingWorker::join_workers();
-                                MXS_NOTICE("All workers have shut down.");
+                                MXB_NOTICE("All workers have shut down.");
 
                                 MonitorManager::destroy_all_monitors();
 
@@ -2249,7 +2249,7 @@ int main(int argc, char** argv)
                                 listener_destroy_instances();
                                 ServerManager::destroy_all();
 
-                                MXS_NOTICE("MaxScale shutdown completed.");
+                                MXB_NOTICE("MaxScale shutdown completed.");
                             }
                             else
                             {
@@ -2326,7 +2326,7 @@ static void unlink_pidfile(void)
     {
         if (unlink(this_unit.pidfile))
         {
-            MXS_WARNING("Failed to remove pidfile %s: %s", this_unit.pidfile, mxb_strerror(errno));
+            MXB_WARNING("Failed to remove pidfile %s: %s", this_unit.pidfile, mxb_strerror(errno));
         }
     }
 }
@@ -2468,7 +2468,7 @@ static int write_pid_file()
 {
     if (!mxs_mkdir_all(mxs::piddir(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH))
     {
-        MXS_ERROR("Failed to create PID directory.");
+        MXB_ERROR("Failed to create PID directory.");
         return 1;
     }
 
@@ -2836,27 +2836,27 @@ static bool change_cwd()
 
     if (chdir(mxs::logdir()) != 0)
     {
-        MXS_ERROR("Failed to change working directory to '%s': %d, %s. "
+        MXB_ERROR("Failed to change working directory to '%s': %d, %s. "
                   "Trying to change working directory to '/'.",
                   mxs::logdir(),
                   errno,
                   mxb_strerror(errno));
         if (chdir("/") != 0)
         {
-            MXS_ERROR("Failed to change working directory to '/': %d, %s",
+            MXB_ERROR("Failed to change working directory to '/': %d, %s",
                       errno,
                       mxb_strerror(errno));
             rval = false;
         }
         else
         {
-            MXS_WARNING("Using '/' instead of '%s' as the current working directory.",
+            MXB_WARNING("Using '/' instead of '%s' as the current working directory.",
                         mxs::logdir());
         }
     }
     else
     {
-        MXS_NOTICE("Working directory: %s", mxs::logdir());
+        MXB_NOTICE("Working directory: %s", mxs::logdir());
     }
 
     return rval;
@@ -2870,11 +2870,11 @@ static void log_exit_status()
     switch (this_unit.last_signal)
     {
     case SIGTERM:
-        MXS_NOTICE("MaxScale received signal SIGTERM. Exiting.");
+        MXB_NOTICE("MaxScale received signal SIGTERM. Exiting.");
         break;
 
     case SIGINT:
-        MXS_NOTICE("MaxScale received signal SIGINT. Exiting.");
+        MXB_NOTICE("MaxScale received signal SIGINT. Exiting.");
         break;
 
     default:
@@ -3182,13 +3182,13 @@ static bool init_sqlite3()
     // has a significant impact on the performance.
     if (sqlite3_config(SQLITE_CONFIG_MEMSTATUS, (int)0) != SQLITE_OK)   // 0 turns off.
     {
-        MXS_WARNING("Could not turn off the collection of SQLite memory allocation statistics.");
+        MXB_WARNING("Could not turn off the collection of SQLite memory allocation statistics.");
         // Non-fatal, we simply will take a small performance hit.
     }
 
     if (sqlite3_config(SQLITE_CONFIG_MULTITHREAD) != SQLITE_OK)
     {
-        MXS_ERROR("Could not set the threading mode of SQLite to Multi-thread. "
+        MXB_ERROR("Could not set the threading mode of SQLite to Multi-thread. "
                   "MaxScale will terminate.");
         rv = false;
     }
@@ -3204,7 +3204,7 @@ static bool lock_dir(const std::string& path)
 
     if (fd == -1)
     {
-        MXS_ERROR("Failed to open lock file %s: %s", lock.c_str(), mxb_strerror(errno));
+        MXB_ERROR("Failed to open lock file %s: %s", lock.c_str(), mxb_strerror(errno));
         return false;
     }
 
@@ -3212,7 +3212,7 @@ static bool lock_dir(const std::string& path)
     {
         if (errno == EACCES || errno == EAGAIN)
         {
-            MXS_ERROR("Failed to lock directory with file '%s', another process is holding a lock on it. "
+            MXB_ERROR("Failed to lock directory with file '%s', another process is holding a lock on it. "
                       "Please confirm that no other MaxScale process is using the "
                       "directory %s",
                       lock.c_str(),
@@ -3220,7 +3220,7 @@ static bool lock_dir(const std::string& path)
         }
         else
         {
-            MXS_ERROR("Failed to lock file %s. %s", lock.c_str(), mxb_strerror(errno));
+            MXB_ERROR("Failed to lock file %s. %s", lock.c_str(), mxb_strerror(errno));
         }
         close(fd);
         return false;
@@ -3228,7 +3228,7 @@ static bool lock_dir(const std::string& path)
 
     if (ftruncate(fd, 0) == -1)
     {
-        MXS_ERROR("Failed to truncate lock file %s: %s", lock.c_str(), mxb_strerror(errno));
+        MXB_ERROR("Failed to truncate lock file %s: %s", lock.c_str(), mxb_strerror(errno));
         close(fd);
         unlink(lock.c_str());
         return false;
@@ -3236,7 +3236,7 @@ static bool lock_dir(const std::string& path)
 
     if (write(fd, pid.c_str(), pid.length()) == -1)
     {
-        MXS_ERROR("Failed to write into lock file %s: %s", lock.c_str(), mxb_strerror(errno));
+        MXB_ERROR("Failed to write into lock file %s: %s", lock.c_str(), mxb_strerror(errno));
         close(fd);
         unlink(lock.c_str());
         return false;

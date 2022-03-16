@@ -48,7 +48,7 @@ bool call_function(lua_State* state, const char* name, int nret, Args ... args)
     if (type != LUA_TFUNCTION)
     {
         ok = false;
-        MXS_WARNING("The '%s' global is not a function but a %s", name, lua_typename(state, type));
+        MXB_WARNING("The '%s' global is not a function but a %s", name, lua_typename(state, type));
         lua_pop(state, -1);     // Pop the value off the stack
     }
     else
@@ -58,7 +58,7 @@ bool call_function(lua_State* state, const char* name, int nret, Args ... args)
 
         if (lua_pcall(state, nargs, nret, 0))
         {
-            MXS_WARNING("The call to '%s' failed: %s", name, lua_tostring(state, -1));
+            MXB_WARNING("The call to '%s' failed: %s", name, lua_tostring(state, -1));
             lua_pop(state, -1);     // Pop the error off the stack
             ok = false;
         }
@@ -189,7 +189,7 @@ std::unique_ptr<LuaContext> LuaContext::create(const std::string& script)
 
         if (luaL_dofile(state, script.c_str()))
         {
-            MXS_ERROR("Failed to load script at '%s':%s.", script.c_str(), lua_tostring(state, -1));
+            MXB_ERROR("Failed to load script at '%s':%s.", script.c_str(), lua_tostring(state, -1));
             lua_close(state);
         }
         else
@@ -199,7 +199,7 @@ std::unique_ptr<LuaContext> LuaContext::create(const std::string& script)
     }
     else
     {
-        MXS_ERROR("Unable to initialize new Lua state.");
+        MXB_ERROR("Unable to initialize new Lua state.");
     }
 
     return rval;

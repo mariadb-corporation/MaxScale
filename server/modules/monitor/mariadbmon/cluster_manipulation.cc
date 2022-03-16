@@ -77,7 +77,7 @@ MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* current_master)
         switchover_done = switchover_perform(*op);
         if (switchover_done)
         {
-            MXS_NOTICE(SWITCHOVER_OK, op->demotion.target->name(), op->promotion.target->name());
+            MXB_NOTICE(SWITCHOVER_OK, op->demotion.target->name(), op->promotion.target->name());
         }
         else
         {
@@ -116,7 +116,7 @@ MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_failover()
         failover_done = failover_perform(*op);
         if (failover_done)
         {
-            MXS_NOTICE(FAILOVER_OK, op->demotion_target->name(), op->promotion.target->name());
+            MXB_NOTICE(FAILOVER_OK, op->demotion_target->name(), op->promotion.target->name());
         }
         else
         {
@@ -191,7 +191,7 @@ MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_rejoin(SERVER* rejo
                         if (do_rejoin(joinable_server, output) == 1)
                         {
                             rejoin_done = true;
-                            MXS_NOTICE("Rejoin performed.");
+                            MXB_NOTICE("Rejoin performed.");
                         }
                         else
                         {
@@ -392,7 +392,7 @@ MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_reset_replication(S
                     }
                     else
                     {
-                        MXS_WARNING("No scheduled events were enabled on '%s' because previous master is "
+                        MXB_WARNING("No scheduled events were enabled on '%s' because previous master is "
                                     "unknown. Check events manually.", new_master->name());
                     }
                 }
@@ -434,7 +434,7 @@ MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_reset_replication(S
                     if (slave_conns_started == slaves.size())
                     {
                         // TODO: Properly check slave IO/SQL threads.
-                        MXS_NOTICE("All slaves redirected successfully.");
+                        MXB_NOTICE("All slaves redirected successfully.");
                     }
                     else
                     {
@@ -516,19 +516,19 @@ int MariaDBMonitor::redirect_slaves_ex(GeneralOpData& general, OperationType typ
     // Print both name lists if both have items, otherwise just the one with items.
     if (!slave_names_to_promo.empty() && !slave_names_to_demo.empty())
     {
-        MXS_NOTICE("Redirecting %s to replicate from '%s' instead of '%s', and %s to replicate from "
+        MXB_NOTICE("Redirecting %s to replicate from '%s' instead of '%s', and %s to replicate from "
                    "'%s' instead of '%s'.",
                    slave_names_to_promo.c_str(), promotion_target->name(), demotion_target->name(),
                    slave_names_to_demo.c_str(), demotion_target->name(), promotion_target->name());
     }
     else if (!slave_names_to_promo.empty())
     {
-        MXS_NOTICE(redir_fmt,
+        MXB_NOTICE(redir_fmt,
                    slave_names_to_promo.c_str(), promotion_target->name(), demotion_target->name());
     }
     else if (!slave_names_to_demo.empty())
     {
-        MXS_NOTICE(redir_fmt,
+        MXB_NOTICE(redir_fmt,
                    slave_names_to_demo.c_str(), demotion_target->name(), promotion_target->name());
     }
 
@@ -551,7 +551,7 @@ int MariaDBMonitor::redirect_slaves_ex(GeneralOpData& general, OperationType typ
                 {
                     // Already has a connection to redirect target.
                     conflicts++;
-                    MXS_WARNING("'%s' already has a slave connection to '%s', connection to '%s' was "
+                    MXB_WARNING("'%s' already has a slave connection to '%s', connection to '%s' was "
                                 "not redirected.",
                                 redirectable->name(), to->name(), from->name());
                 }
@@ -577,17 +577,17 @@ int MariaDBMonitor::redirect_slaves_ex(GeneralOpData& general, OperationType typ
 
     if (fails == 0 && conflicts == 0)
     {
-        MXS_NOTICE("All redirects successful.");
+        MXB_NOTICE("All redirects successful.");
     }
     else if (fails == 0)
     {
-        MXS_NOTICE("%i slave connections were redirected while %i connections were ignored.",
+        MXB_NOTICE("%i slave connections were redirected while %i connections were ignored.",
                    successes, conflicts);
     }
     else
     {
         int total = fails + conflicts + successes;
-        MXS_WARNING("%i redirects failed, %i slave connections ignored and %i redirects successful "
+        MXB_WARNING("%i redirects failed, %i slave connections ignored and %i redirects successful "
                     "out of %i.", fails, conflicts, successes, total);
     }
     return successes;
@@ -626,7 +626,7 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
                 ServerOperation demotion(joinable, true);
                 if (joinable->demote(general, demotion, OperationType::REJOIN))
                 {
-                    MXS_NOTICE("Directing standalone server '%s' to replicate from '%s'.", name, master_name);
+                    MXB_NOTICE("Directing standalone server '%s' to replicate from '%s'.", name, master_name);
                     // A slave connection description is required. As this is the only connection, no name
                     // is required.
                     SlaveStatus::Settings new_conn("", master_server);
@@ -641,7 +641,7 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
             }
             else
             {
-                MXS_NOTICE("Server '%s' is replicating from a server other than '%s', "
+                MXB_NOTICE("Server '%s' is replicating from a server other than '%s', "
                            "redirecting it to '%s'.",
                            name, master_name, master_name);
                 // Multisource replication does not get to this point unless enforce_simple_topology is
@@ -653,7 +653,7 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
                     SlaveStatusArray extra_conns(std::next(joinable->m_slave_status.begin()),
                                                  joinable->m_slave_status.end());
 
-                    MXS_NOTICE("Erasing %lu replication connections(s) from server '%s'.",
+                    MXB_NOTICE("Erasing %lu replication connections(s) from server '%s'.",
                                extra_conns.size(), name);
                     joinable->remove_slave_conns(general, extra_conns);
                 }
@@ -733,7 +733,7 @@ bool MariaDBMonitor::get_joinable_servers(ServerArray* output)
                 else if (m_warn_cannot_rejoin)
                 {
                     // Print a message explaining why an auto-rejoin is not done. Suppress printing.
-                    MXS_WARNING("Automatic rejoin was not attempted on server '%s' even though it is a "
+                    MXB_WARNING("Automatic rejoin was not attempted on server '%s' even though it is a "
                                 "valid candidate. Will keep retrying with this message suppressed for all "
                                 "servers. Errors: \n%s",
                                 suspects[i]->name(),
@@ -744,7 +744,7 @@ bool MariaDBMonitor::get_joinable_servers(ServerArray* output)
         }
         else
         {
-            MXS_ERROR("The GTIDs of master server '%s' could not be updated while attempting an automatic "
+            MXB_ERROR("The GTIDs of master server '%s' could not be updated while attempting an automatic "
                       "rejoin: %s", m_master->name(), gtid_update_error.c_str());
             comm_ok = false;
         }
@@ -858,7 +858,7 @@ bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
         m_state = State::WAIT_FOR_TARGET_CATCHUP;
         if (promotion_target->catchup_to_master(op.general, demotion_target->m_gtid_binlog_pos))
         {
-            MXS_INFO("Switchover: Catchup took %.1f seconds.", mxb::to_secs(timer.lap()));
+            MXB_INFO("Switchover: Catchup took %.1f seconds.", mxb::to_secs(timer.lap()));
             // Step 3: On new master: remove slave connections, set read-only to OFF etc.
             m_state = State::PROMOTE_TARGET;
             if (promotion_target->promote(op.general, op.promotion, type, demotion_target))
@@ -883,7 +883,7 @@ bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
                 }
                 else
                 {
-                    MXS_WARNING("Could not copy slave connections from '%s' to '%s'.",
+                    MXB_WARNING("Could not copy slave connections from '%s' to '%s'.",
                                 promotion_target->name(), demotion_target->name());
                 }
                 ServerArray redirected_to_demo_target;
@@ -898,7 +898,7 @@ bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
                     wait_cluster_stabilization(op.general, redirected_to_promo_target, promotion_target);
                     wait_cluster_stabilization(op.general, redirected_to_demo_target, demotion_target);
                     auto step6_duration = timer.lap();
-                    MXS_INFO("Switchover: slave replication confirmation took %.1f seconds with "
+                    MXB_INFO("Switchover: slave replication confirmation took %.1f seconds with "
                              "%.1f seconds to spare.",
                              mxb::to_secs(step6_duration), mxb::to_secs(op.general.time_remaining));
                 }
@@ -909,12 +909,12 @@ bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
         {
             // Step 2 or 3 failed, try to undo step 1 by promoting the demotion target back to master.
             // Reset the time limit since the last part may have used it all.
-            MXS_NOTICE("Attempting to undo changes to '%s'.", demotion_target->name());
+            MXB_NOTICE("Attempting to undo changes to '%s'.", demotion_target->name());
             const mxb::Duration demotion_undo_time_limit(m_settings.switchover_timeout);
             GeneralOpData general_undo(op.general.error_out, demotion_undo_time_limit);
             if (demotion_target->promote(general_undo, op.promotion, OperationType::UNDO_DEMOTION, nullptr))
             {
-                MXS_NOTICE("'%s' restored to original status.", demotion_target->name());
+                MXB_NOTICE("'%s' restored to original status.", demotion_target->name());
             }
             else
             {
@@ -968,7 +968,7 @@ bool MariaDBMonitor::failover_perform(FailoverParams& op)
              * once so that latest status is printed. */
             m_state = State::CONFIRM_REPLICATION;
             wait_cluster_stabilization(op.general, redirected_slaves, promotion_target);
-            MXS_INFO("Failover: slave replication confirmation took %.1f seconds with "
+            MXB_INFO("Failover: slave replication confirmation took %.1f seconds with "
                      "%.1f seconds to spare.",
                      mxb::to_secs(timer.lap()), mxb::to_secs(op.general.time_remaining));
         }
@@ -1015,7 +1015,7 @@ void MariaDBMonitor::wait_cluster_stabilization(GeneralOpData& op, const ServerA
                 if (slave_conn == NULL)
                 {
                     // Highly unlikely. Maybe someone just removed the slave connection after it was created.
-                    MXS_WARNING("'%s' does not have a slave connection to '%s' although one should have "
+                    MXB_WARNING("'%s' does not have a slave connection to '%s' although one should have "
                                 "been created.",
                                 slave->name(), new_master->name());
                     repl_fails.push_back(*iter);
@@ -1031,7 +1031,7 @@ void MariaDBMonitor::wait_cluster_stabilization(GeneralOpData& op, const ServerA
                 else if (slave_conn->slave_io_running == SlaveStatus::SLAVE_IO_NO)
                 {
                     // IO error on slave
-                    MXS_WARNING("%s cannot start replication because of IO thread error: '%s'.",
+                    MXB_WARNING("%s cannot start replication because of IO thread error: '%s'.",
                                 slave_conn->settings.to_string().c_str(), slave_conn->last_io_error.c_str());
                     repl_fails.push_back(*iter);
                     iter = unconfirmed.erase(iter);
@@ -1039,7 +1039,7 @@ void MariaDBMonitor::wait_cluster_stabilization(GeneralOpData& op, const ServerA
                 else if (slave_conn->slave_sql_running == false)
                 {
                     // SQL error on slave
-                    MXS_WARNING("%s cannot start replication because of SQL thread error: '%s'.",
+                    MXB_WARNING("%s cannot start replication because of SQL thread error: '%s'.",
                                 slave_conn->settings.to_string().c_str(), slave_conn->last_sql_error.c_str());
                     repl_fails.push_back(*iter);
                     iter = unconfirmed.erase(iter);
@@ -1082,13 +1082,13 @@ void MariaDBMonitor::wait_cluster_stabilization(GeneralOpData& op, const ServerA
     if (successes.size() == redirected_slaves.size())
     {
         // Complete success.
-        MXS_NOTICE("All redirected slaves successfully started replication from '%s'.", new_master->name());
+        MXB_NOTICE("All redirected slaves successfully started replication from '%s'.", new_master->name());
     }
     else
     {
         if (!successes.empty())
         {
-            MXS_NOTICE("%s successfully started replication from '%s'.",
+            MXB_NOTICE("%s successfully started replication from '%s'.",
                        monitored_servers_to_string(successes).c_str(), new_master->name());
         }
         // Something went wrong.
@@ -1096,7 +1096,7 @@ void MariaDBMonitor::wait_cluster_stabilization(GeneralOpData& op, const ServerA
         const char MSG[] = "%lu slaves did not start replicating from '%s'. "
                            "%lu encountered an I/O or SQL error, %lu failed to reply and %lu did not "
                            "connect to '%s' within the time limit.";
-        MXS_WARNING(MSG, fails, new_master->name(), repl_fails.size(), query_fails.size(),
+        MXB_WARNING(MSG, fails, new_master->name(), repl_fails.size(), query_fails.size(),
                     unconfirmed.size(), new_master->name());
 
         // If any of the unconfirmed slaves have error messages in their slave status, print them. They
@@ -1137,7 +1137,7 @@ MariaDBMonitor::select_promotion_target(MariaDBServer* demotion_target, Operatio
     {
         if (log_mode == Log::ON)
         {
-            MXS_NOTICE("Selecting a server to promote and replace '%s'. Candidates are: %s.",
+            MXB_NOTICE("Selecting a server to promote and replace '%s'. Candidates are: %s.",
                        demotion_target->name(),
                        monitored_servers_to_string(demotion_target->m_node.children).c_str());
         }
@@ -1204,18 +1204,18 @@ MariaDBMonitor::select_promotion_target(MariaDBServer* demotion_target, Operatio
             mxb_assert(gtid_domain != GTID_DOMAIN_UNKNOWN);
             if (log_mode == Log::ON)
             {
-                MXS_WARNING("Gtid-domain id of '%s' is unknown, attempting to guess it by looking at "
+                MXB_WARNING("Gtid-domain id of '%s' is unknown, attempting to guess it by looking at "
                             "gtid:s of candidates.", m_master->name());
                 if (id_missing_count > 0)
                 {
-                    MXS_WARNING("Guessed domain id %" PRIi64 ", which is missing on %i candidates. "
+                    MXB_WARNING("Guessed domain id %" PRIi64 ", which is missing on %i candidates. "
                                                              "This may cause faulty promotion target selection.",
                                 gtid_domain,
                                 id_missing_count);
                 }
                 else
                 {
-                    MXS_WARNING("Guessed domain id %" PRIi64 ", which is on all candidates.", gtid_domain);
+                    MXB_WARNING("Guessed domain id %" PRIi64 ", which is on all candidates.", gtid_domain);
                 }
             }
         }
@@ -1225,7 +1225,7 @@ MariaDBMonitor::select_promotion_target(MariaDBServer* demotion_target, Operatio
         candidates.erase(candidates.begin());
         if (!all_reasons.empty() && log_mode == Log::ON)
         {
-            MXS_WARNING("Some servers were disqualified for promotion:\n%s", all_reasons.c_str());
+            MXB_WARNING("Some servers were disqualified for promotion:\n%s", all_reasons.c_str());
         }
         for (MariaDBServer* cand : candidates)
         {
@@ -1247,7 +1247,7 @@ MariaDBMonitor::select_promotion_target(MariaDBServer* demotion_target, Operatio
             {
                 const char EXCLUDED_ONLY_CAND[] = "Server '%s' is a viable choice for new master, "
                                                   "but cannot be selected as it's excluded.";
-                MXS_WARNING(EXCLUDED_ONLY_CAND, excluded_name);
+                MXB_WARNING(EXCLUDED_ONLY_CAND, excluded_name);
                 break;
             }
             else if (is_candidate_better(excluded, current_best, demotion_target, gtid_domain))
@@ -1256,7 +1256,7 @@ MariaDBMonitor::select_promotion_target(MariaDBServer* demotion_target, Operatio
                 const char EXCLUDED_CAND[] = "Server '%s' is superior to current best candidate '%s', "
                                              "but cannot be selected as it's excluded. This may lead to "
                                              "loss of data if '%s' is ahead of other servers.";
-                MXS_WARNING(EXCLUDED_CAND, excluded_name, current_best->name(), excluded_name);
+                MXB_WARNING(EXCLUDED_CAND, excluded_name, current_best->name(), excluded_name);
                 break;
             }
         }
@@ -1275,7 +1275,7 @@ MariaDBMonitor::select_promotion_target(MariaDBServer* demotion_target, Operatio
             // If the first candidate was chosen (likely all servers were equally good), do not print.
             string msg = string_printf("Selected '%s'", current_best->name());
             msg += current_best_reason.empty() ? "." : (" because " + current_best_reason);
-            MXS_NOTICE("%s", msg.c_str());
+            MXB_NOTICE("%s", msg.c_str());
         }
     }
     return current_best;
@@ -1465,7 +1465,7 @@ unique_ptr<MariaDBMonitor::FailoverParams> MariaDBMonitor::failover_prepare(Log 
                 {
                     // For automatic failover the message is more typical. TODO: Think if this message should
                     // be logged more often.
-                    MXS_WARNING("%s To avoid data loss, failover is postponed until the log "
+                    MXB_WARNING("%s To avoid data loss, failover is postponed until the log "
                                 "has been processed.", unproc_events.c_str());
                 }
             }
@@ -1558,15 +1558,15 @@ void MariaDBMonitor::handle_auto_failover()
                 if (op)
                 {
                     m_warn_failover_precond = true;
-                    MXS_NOTICE("Performing automatic failover to replace failed master '%s'.",
+                    MXB_NOTICE("Performing automatic failover to replace failed master '%s'.",
                                m_master->name());
                     if (failover_perform(*op))
                     {
-                        MXS_NOTICE(FAILOVER_OK, op->demotion_target->name(), op->promotion.target->name());
+                        MXB_NOTICE(FAILOVER_OK, op->demotion_target->name(), op->promotion.target->name());
                     }
                     else
                     {
-                        MXS_ERROR(FAILOVER_FAIL, op->demotion_target->name(), op->promotion.target->name());
+                        MXB_ERROR(FAILOVER_FAIL, op->demotion_target->name(), op->promotion.target->name());
                         delay_auto_cluster_ops();
                     }
                 }
@@ -1576,7 +1576,7 @@ void MariaDBMonitor::handle_auto_failover()
                     // Servers were not modified, so it's ok to try this again.
                     if (m_warn_failover_precond)
                     {
-                        MXS_WARNING("Not performing automatic failover. Will keep retrying with most "
+                        MXB_WARNING("Not performing automatic failover. Will keep retrying with most "
                                     "error messages suppressed.");
                         m_warn_failover_precond = false;
                     }
@@ -1633,7 +1633,7 @@ void MariaDBMonitor::check_cluster_operations_support()
             "The backend cluster does not support failover/switchover due to the following reason(s):\n"
             "%s\n";
         string msg = string_printf(PROBLEMS, all_reasons.c_str());
-        MXS_ERROR("%s", msg.c_str());
+        MXB_ERROR("%s", msg.c_str());
         delay_auto_cluster_ops();
     }
 }
@@ -1803,11 +1803,11 @@ void MariaDBMonitor::enforce_read_only_on_slaves()
             MYSQL* conn = server->con;
             if (mxs_mysql_query(conn, QUERY) == 0)
             {
-                MXS_NOTICE("read_only set to ON on '%s'.", server->name());
+                MXB_NOTICE("read_only set to ON on '%s'.", server->name());
             }
             else
             {
-                MXS_ERROR("Setting read_only on '%s' failed: '%s'.", server->name(), mysql_error(conn));
+                MXB_ERROR("Setting read_only on '%s' failed: '%s'.", server->name(), mysql_error(conn));
                 error = true;
             }
         }
@@ -1832,11 +1832,11 @@ void MariaDBMonitor::enforce_writable_on_master()
             MYSQL* conn = m_master->con;
             if (mxs_mysql_query(conn, QUERY) == 0)
             {
-                MXS_NOTICE("read_only set to OFF on '%s'.", m_master->name());
+                MXB_NOTICE("read_only set to OFF on '%s'.", m_master->name());
             }
             else
             {
-                MXS_ERROR("Disabling read_only on '%s' failed: '%s'.", m_master->name(), mysql_error(conn));
+                MXB_ERROR("Disabling read_only on '%s' failed: '%s'.", m_master->name(), mysql_error(conn));
                 error = true;
             }
         }
@@ -1854,7 +1854,7 @@ void MariaDBMonitor::handle_low_disk_space_master()
     {
         if (m_warn_switchover_precond)
         {
-            MXS_WARNING("Master server '%s' is low on disk space. Attempting to switch it with a slave.",
+            MXB_WARNING("Master server '%s' is low on disk space. Attempting to switch it with a slave.",
                         m_master->name());
         }
 
@@ -1868,11 +1868,11 @@ void MariaDBMonitor::handle_low_disk_space_master()
             bool switched = switchover_perform(*op);
             if (switched)
             {
-                MXS_NOTICE(SWITCHOVER_OK, op->demotion.target->name(), op->promotion.target->name());
+                MXB_NOTICE(SWITCHOVER_OK, op->demotion.target->name(), op->promotion.target->name());
             }
             else
             {
-                MXS_ERROR(SWITCHOVER_FAIL, op->demotion.target->name(), op->promotion.target->name());
+                MXB_ERROR(SWITCHOVER_FAIL, op->demotion.target->name(), op->promotion.target->name());
                 delay_auto_cluster_ops();
             }
         }
@@ -1882,7 +1882,7 @@ void MariaDBMonitor::handle_low_disk_space_master()
             // Servers were not modified, so it's ok to try this again.
             if (m_warn_switchover_precond)
             {
-                MXS_WARNING("Not performing automatic switchover. Will keep retrying with this message "
+                MXB_WARNING("Not performing automatic switchover. Will keep retrying with this message "
                             "suppressed.");
                 m_warn_switchover_precond = false;
             }
@@ -1902,7 +1902,7 @@ void MariaDBMonitor::handle_auto_rejoin()
         uint32_t joins = do_rejoin(joinable_servers, NULL);
         if (joins > 0)
         {
-            MXS_NOTICE("%d server(s) redirected or rejoined the cluster.", joins);
+            MXB_NOTICE("%d server(s) redirected or rejoined the cluster.", joins);
         }
     }
     // get_joinable_servers prints an error if master is unresponsive
@@ -1985,7 +1985,7 @@ void MariaDBMonitor::delay_auto_cluster_ops(Log log)
     if (log == Log::ON && cluster_ops_configured())
     {
         const char DISABLING_AUTO_OPS[] = "Disabling automatic cluster operations for %li monitor ticks.";
-        MXS_NOTICE(DISABLING_AUTO_OPS, m_settings.failcount);
+        MXB_NOTICE(DISABLING_AUTO_OPS, m_settings.failcount);
     }
     // + 1 because the start of next tick subtracts 1.
     cluster_operation_disable_timer = m_settings.failcount + 1;

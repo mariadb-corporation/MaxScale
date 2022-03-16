@@ -71,7 +71,7 @@ bool get_value(xmlNode* pNode,
         static const char FORMAT[] =
             "The Columnstore config does not contain the element '%s', or it lacks a value.";
 
-        MXS_ERROR(FORMAT, zValue_name);
+        MXB_ERROR(FORMAT, zValue_name);
 
         if (pOutput)
         {
@@ -107,7 +107,7 @@ bool get_value(xmlNode* pNode,
                 "The Columnstore config contains the element '%s', but either its "
                 "child node '%s' is missing or it lacks a value.";
 
-            MXS_ERROR(FORMAT, zElement_name, zValue_name);
+            MXB_ERROR(FORMAT, zElement_name, zValue_name);
 
             if (pOutput)
             {
@@ -160,14 +160,14 @@ Result::Result(const http::Response& response)
 #if defined(SS_DEBUG)
     if (response.is_client_error())
     {
-        MXS_ERROR("HTTP client error %d: %s", response.code, response.body.c_str());
+        MXB_ERROR("HTTP client error %d: %s", response.code, response.body.c_str());
         mxb_assert(!true);
     }
 #endif
 
     if (response.is_fatal())
     {
-        MXS_ERROR("REST-API call failed: (%d) %s: %s",
+        MXB_ERROR("REST-API call failed: (%d) %s: %s",
                   response.code,
                   http::Response::to_string(response.code),
                   response.body.empty() ? "" : response.body.c_str());
@@ -182,7 +182,7 @@ Result::Result(const http::Response& response)
 
             if (!sJson)
             {
-                MXS_ERROR("Could not parse returned response '%s' as JSON: %s",
+                MXB_ERROR("Could not parse returned response '%s' as JSON: %s",
                           response.body.c_str(),
                           error.text);
                 mxb_assert(!true);
@@ -191,12 +191,12 @@ Result::Result(const http::Response& response)
 
         if (response.is_server_error())
         {
-            MXS_ERROR("Server error: (%d) %s",
+            MXB_ERROR("Server error: (%d) %s",
                       response.code, http::Response::to_string(response.code));
         }
         else if (!response.is_success())
         {
-            MXS_ERROR("Unexpected response from server: (%d) %s",
+            MXB_ERROR("Unexpected response from server: (%d) %s",
                       response.code, http::Response::to_string(response.code));
         }
     }
@@ -227,14 +227,14 @@ Config::Config(const http::Response& response)
 
             if (!b1 || !b2)
             {
-                MXS_ERROR("Could not convert '%s' and/or '%s' to actual values: %s",
+                MXB_ERROR("Could not convert '%s' and/or '%s' to actual values: %s",
                           zXml, zTimestamp, response.body.c_str());
                 mxb_assert(!true);
             }
         }
         else
         {
-            MXS_ERROR("Obtained config object does not have the keys '%s' and/or '%s': %s",
+            MXB_ERROR("Obtained config object does not have the keys '%s' and/or '%s': %s",
                       cs::body::CONFIG, cs::body::TIMESTAMP, response.body.c_str());
             mxb_assert(!true);
         }
@@ -270,13 +270,13 @@ bool Config::get_value(const char* zValue_name,
                 mxs_json_error_append(pOutput, FORMAT, zValue_name);
             }
 
-            MXS_ERROR(FORMAT, zValue_name);
+            MXB_ERROR(FORMAT, zValue_name);
         }
     }
     else
     {
         assert(!true);
-        MXS_ERROR("'%s' queried of config that is not valid.", zValue_name);
+        MXB_ERROR("'%s' queried of config that is not valid.", zValue_name);
     }
 
     return rv;
@@ -306,13 +306,13 @@ bool Config::get_value(const char* zElement_name,
                 mxs_json_error_append(pOutput, FORMAT, zValue_name, zElement_name);
             }
 
-            MXS_ERROR(FORMAT, zValue_name, zElement_name);
+            MXB_ERROR(FORMAT, zValue_name, zElement_name);
         }
     }
     else
     {
         assert(!true);
-        MXS_ERROR("'%s' of '%s' queried of config that is not valid.",
+        MXB_ERROR("'%s' of '%s' queried of config that is not valid.",
                   zValue_name, zElement_name);
     }
 
@@ -353,7 +353,7 @@ void Status::construct()
 
             if (!b1 || !b2 || !b3 || !b4)
             {
-                MXS_ERROR("Could not convert values '%s' and/or '%s', and/or arrays '%s' and/or '%s' "
+                MXB_ERROR("Could not convert values '%s' and/or '%s', and/or arrays '%s' and/or '%s' "
                           "to actual values: %s",
                           zCluster_mode, zDbrm_mode, cs::body::DBROOTS, cs::body::SERVICES, response.body.c_str());
                 mxb_assert(!true);
@@ -361,7 +361,7 @@ void Status::construct()
         }
         else
         {
-            MXS_ERROR("Obtained status object does not have the keys '%s', '%s', '%s' or '%s: %s",
+            MXB_ERROR("Obtained status object does not have the keys '%s', '%s', '%s' or '%s: %s",
                       cs::body::CLUSTER_MODE,
                       cs::body::DBRM_MODE,
                       cs::body::DBROOTS,
@@ -570,7 +570,7 @@ bool services_from_array(json_t* pArray, ServiceVector* pServices)
             }
             else
             {
-                MXS_ERROR("Object in services array does not have 'name' and/or 'pid' fields.");
+                MXB_ERROR("Object in services array does not have 'name' and/or 'pid' fields.");
             }
         }
 

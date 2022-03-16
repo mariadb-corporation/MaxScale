@@ -111,7 +111,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 MaskingFilter::MaskingFilter(const char* zName)
     : m_config(zName, *this)
 {
-    MXS_NOTICE("Masking filter [%s] created.", m_config.name().c_str());
+    MXB_NOTICE("Masking filter [%s] created.", m_config.name().c_str());
 }
 
 MaskingFilter::~MaskingFilter()
@@ -148,12 +148,12 @@ bool MaskingFilter::reload()
 
     if (rval)
     {
-        MXS_NOTICE("Rules for masking filter '%s' were reloaded from '%s'.",
+        MXB_NOTICE("Rules for masking filter '%s' were reloaded from '%s'.",
                    m_config.name().c_str(), cnf.rules.c_str());
     }
     else
     {
-        MXS_ERROR("Rules for masking filter '%s' could not be reloaded from '%s'.",
+        MXB_ERROR("Rules for masking filter '%s' could not be reloaded from '%s'.",
                   m_config.name().c_str(), cnf.rules.c_str());
     }
 

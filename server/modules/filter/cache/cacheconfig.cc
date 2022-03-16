@@ -220,7 +220,7 @@ bool CacheConfig::post_configure(const std::map<std::string, mxs::ConfigParamete
 
     if ((this->debug < CACHE_DEBUG_MIN) || (this->debug > CACHE_DEBUG_MAX))
     {
-        MXS_ERROR("The value of the configuration entry 'debug' must "
+        MXB_ERROR("The value of the configuration entry 'debug' must "
                   "be between %d and %d, inclusive.",
                   CACHE_DEBUG_MIN,
                   CACHE_DEBUG_MAX);
@@ -229,7 +229,7 @@ bool CacheConfig::post_configure(const std::map<std::string, mxs::ConfigParamete
 
     if (this->soft_ttl > this->hard_ttl)
     {
-        MXS_WARNING("The value of 'soft_ttl' must be less than or equal to that of 'hard_ttl'. "
+        MXB_WARNING("The value of 'soft_ttl' must be less than or equal to that of 'hard_ttl'. "
                     "Setting 'soft_ttl' to the same value as 'hard_ttl'.");
         this->soft_ttl = this->hard_ttl;
     }
@@ -247,7 +247,7 @@ bool CacheConfig::post_configure(const std::map<std::string, mxs::ConfigParamete
     {
         if ((this->max_size != 0) && (this->max_resultset_size > this->max_size))
         {
-            MXS_WARNING("The value of 'max_resultset_size' %ld should not be larger than "
+            MXB_WARNING("The value of 'max_resultset_size' %ld should not be larger than "
                         "the value of 'max_size' %ld. Adjusting the value of 'max_resultset_size' "
                         "down to %ld.",
                         this->max_resultset_size,

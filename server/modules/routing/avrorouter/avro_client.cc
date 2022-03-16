@@ -71,7 +71,7 @@ bool AvroSession::routeQuery(GWBUF* queue)
             m_client->write("OK");
 
             m_state = AVRO_CLIENT_REGISTERED;
-            MXS_INFO("%s: Client [%s] has completed REGISTRATION action",
+            MXB_INFO("%s: Client [%s] has completed REGISTRATION action",
                      m_session->service->name(),
                      m_session->client_remote().c_str());
         }
@@ -378,7 +378,7 @@ int AvroSession::send_row(json_t* row)
     }
     else
     {
-        MXS_ERROR("Failed to dump JSON value.");
+        MXB_ERROR("Failed to dump JSON value.");
         rc = 0;
     }
     MXB_FREE(json);
@@ -517,7 +517,7 @@ bool AvroSession::seek_to_gtid()
 
                     if (value == m_gtid.domain)
                     {
-                        MXS_INFO("Found GTID %lu-%lu-%lu for %s@%s",
+                        MXB_INFO("Found GTID %lu-%lu-%lu for %s@%s",
                                  m_gtid.domain,
                                  m_gtid.server_id,
                                  m_gtid.seq,
@@ -581,7 +581,7 @@ bool AvroSession::stream_data()
                 break;
 
             default:
-                MXS_ERROR("Unexpected format: %d", m_format);
+                MXB_ERROR("Unexpected format: %d", m_format);
                 break;
             }
 
@@ -589,7 +589,7 @@ bool AvroSession::stream_data()
             if (maxavro_get_error(m_file_handle) != MAXAVRO_ERR_NONE)
             {
                 std::string msg = maxavro_get_error_string(m_file_handle);
-                MXS_ERROR("Reading Avro file failed with error '%s'.", msg.c_str());
+                MXB_ERROR("Reading Avro file failed with error '%s'.", msg.c_str());
 
                 m_client->write(("ERR fatal error: " + msg).c_str());
                 m_client->dcb()->trigger_hangup_event();
@@ -626,7 +626,7 @@ GWBUF* read_avro_json_schema(std::string avrofile, std::string dir)
     }
     else
     {
-        MXS_ERROR("Failed to open file '%s': %d, %s",
+        MXB_ERROR("Failed to open file '%s': %d, %s",
                   schemafile.c_str(),
                   errno,
                   mxb_strerror(errno));
@@ -648,7 +648,7 @@ GWBUF* read_avro_binary_schema(std::string avrofile, std::string dir)
     }
     else
     {
-        MXS_ERROR("Failed to open file '%s'.", filename.c_str());
+        MXB_ERROR("Failed to open file '%s'.", filename.c_str());
     }
 
     return rval;
@@ -670,11 +670,11 @@ void AvroSession::rotate_avro_file(std::string fullname)
 
     if ((m_file_handle = maxavro_file_open(fullname.c_str())) == NULL)
     {
-        MXS_ERROR("Failed to open file: %s", fullname.c_str());
+        MXB_ERROR("Failed to open file: %s", fullname.c_str());
     }
     else
     {
-        MXS_INFO("Rotated '%s'@'%s' to file: %s",
+        MXB_INFO("Rotated '%s'@'%s' to file: %s",
                  m_session->user().c_str(),
                  m_session->client_remote().c_str(),
                  fullname.c_str());
@@ -740,7 +740,7 @@ void AvroSession::client_callback()
                 break;
 
             default:
-                MXS_ERROR("Unknown client format: %d", m_format);
+                MXB_ERROR("Unknown client format: %d", m_format);
                 break;
             }
 
@@ -778,7 +778,7 @@ void AvroSession::notify_all_clients(SERVICE* service)
         [service]() {
             for (auto a : client_sessions)
             {
-                MXS_INFO("%p", a);
+                MXB_INFO("%p", a);
 
                 if (a->m_router->service == service)
                 {

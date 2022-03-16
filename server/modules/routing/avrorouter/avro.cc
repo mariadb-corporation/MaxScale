@@ -54,7 +54,7 @@ bool Avro::post_configure()
 
     if (!service->get_children().empty())
     {
-        MXS_NOTICE("Replicating directly from a master server");
+        MXB_NOTICE("Replicating directly from a master server");
         cdc::Config cnf;
         cnf.service = service;
         cnf.statedir = m_config.avrodir;
@@ -90,8 +90,8 @@ bool Avro::post_configure()
                  static_cast<int>(m_config.start_index));
         binlog_name = filename;
 
-        MXS_NOTICE("Reading MySQL binlog files from %s", m_config.binlogdir.c_str());
-        MXS_NOTICE("First binlog is: %s", binlog_name.c_str());
+        MXB_NOTICE("Reading MySQL binlog files from %s", m_config.binlogdir.c_str());
+        MXB_NOTICE("First binlog is: %s", binlog_name.c_str());
 
         // TODO: Do these in Avro::create
         avro_load_conversion_state(this);
@@ -100,7 +100,7 @@ bool Avro::post_configure()
         conversion_task_ctl(this, true);
     }
 
-    MXS_NOTICE("Avro files stored at: %s", m_config.avrodir.c_str());
+    MXB_NOTICE("Avro files stored at: %s", m_config.avrodir.c_str());
     return true;
 }
 

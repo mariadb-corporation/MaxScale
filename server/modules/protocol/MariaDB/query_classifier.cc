@@ -35,7 +35,7 @@
 #undef QC_TRACE_ENABLED
 
 #if defined (QC_TRACE_ENABLED)
-#define QC_TRACE() MXS_NOTICE(__func__)
+#define QC_TRACE() MXB_NOTICE(__func__)
 #else
 #define QC_TRACE()
 #endif
@@ -485,7 +485,7 @@ bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
 
     if (!plugin_name || (*plugin_name == 0))
     {
-        MXS_NOTICE("No query classifier specified, using default '%s'.", DEFAULT_QC_NAME);
+        MXB_NOTICE("No query classifier specified, using default '%s'.", DEFAULT_QC_NAME);
         plugin_name = DEFAULT_QC_NAME;
     }
 
@@ -506,12 +506,12 @@ bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
             if (cache_max_size)
             {
                 int64_t size_per_thr = cache_max_size / mxs::Config::get().n_threads;
-                MXS_NOTICE("Query classification results are cached and reused. "
+                MXB_NOTICE("Query classification results are cached and reused. "
                            "Memory used per thread: %s", mxb::pretty_size(size_per_thr).c_str());
             }
             else
             {
-                MXS_NOTICE("Query classification results are not cached.");
+                MXB_NOTICE("Query classification results are not cached.");
             }
 
             this_unit.set_cache_max_size(cache_max_size);
@@ -570,16 +570,16 @@ bool qc_process_init(uint32_t kind)
         if (strcmp(parse_using, "QC_TRX_PARSE_USING_QC") == 0)
         {
             this_unit.qc_trx_parse_using = QC_TRX_PARSE_USING_QC;
-            MXS_NOTICE("Transaction detection using QC.");
+            MXB_NOTICE("Transaction detection using QC.");
         }
         else if (strcmp(parse_using, "QC_TRX_PARSE_USING_PARSER") == 0)
         {
             this_unit.qc_trx_parse_using = QC_TRX_PARSE_USING_PARSER;
-            MXS_NOTICE("Transaction detection using custom PARSER.");
+            MXB_NOTICE("Transaction detection using custom PARSER.");
         }
         else
         {
-            MXS_NOTICE("QC_TRX_PARSE_USING set, but the value %s is not known. "
+            MXB_NOTICE("QC_TRX_PARSE_USING set, but the value %s is not known. "
                        "Parsing using QC.",
                        parse_using);
         }
@@ -1430,7 +1430,7 @@ bool qc_set_cache_properties(const QC_CACHE_PROPERTIES* properties)
     {
         if (properties->max_size == 0)
         {
-            MXS_NOTICE("Query classifier cache disabled.");
+            MXB_NOTICE("Query classifier cache disabled.");
         }
 
         this_unit.set_cache_max_size(properties->max_size);
@@ -1438,7 +1438,7 @@ bool qc_set_cache_properties(const QC_CACHE_PROPERTIES* properties)
     }
     else
     {
-        MXS_ERROR("Ignoring attempt to set size of query classifier "
+        MXB_ERROR("Ignoring attempt to set size of query classifier "
                   "cache to a negative value: %" PRIi64 ".",
                   properties->max_size);
     }

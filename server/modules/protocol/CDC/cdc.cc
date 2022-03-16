@@ -195,7 +195,7 @@ void CDCClientConnection::ready_for_reading(DCB* event_dcb)
             // transmission
             if (strncmp((char*)GWBUF_DATA(head), "CLOSE", gwbuf_link_length(head)) == 0)
             {
-                MXS_INFO("%s: Client [%s] has requested CLOSE action",
+                MXB_INFO("%s: Client [%s] has requested CLOSE action",
                          dcb->service()->name(),
                          dcb->remote().c_str());
 
@@ -211,7 +211,7 @@ void CDCClientConnection::ready_for_reading(DCB* event_dcb)
             }
             else
             {
-                MXS_INFO("%s: Client [%s] requested [%.*s] action",
+                MXB_INFO("%s: Client [%s] requested [%.*s] action",
                          dcb->service()->name(),
                          dcb->remote().c_str(),
                          (int)gwbuf_link_length(head),
@@ -223,7 +223,7 @@ void CDCClientConnection::ready_for_reading(DCB* event_dcb)
             break;
 
         default:
-            MXS_INFO("%s: Client [%s] in unknown state %d",
+            MXB_INFO("%s: Client [%s] in unknown state %d",
                      dcb->service()->name(),
                      dcb->remote().c_str(),
                      protocol->m_state);
@@ -264,7 +264,7 @@ bool CDCClientConnection::init_connection()
     /* client protocol state change to CDC_STATE_WAIT_FOR_AUTH */
     m_state = CDC_STATE_WAIT_FOR_AUTH;
 
-    MXS_INFO("%s: new connection from [%s]", m_dcb->service()->name(), m_dcb->remote().c_str());
+    MXB_INFO("%s: new connection from [%s]", m_dcb->service()->name(), m_dcb->remote().c_str());
     return true;
 }
 

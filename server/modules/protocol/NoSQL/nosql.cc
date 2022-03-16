@@ -3684,7 +3684,7 @@ void add_value(json_t* pParent, const string& key, const string& value)
     }
     else
     {
-        MXS_ERROR("Could not decode JSON value '%s': %s", value.c_str(), error.text);
+        MXB_ERROR("Could not decode JSON value '%s': %s", value.c_str(), error.text);
     }
 }
 

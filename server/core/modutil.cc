@@ -467,7 +467,7 @@ void prepare_pcre2_patterns()
         else
         {
             pcre2_get_error_message(err, errbuf, sizeof(errbuf));
-            MXS_ERROR("Failed to compile PCRE2 pattern: %s", errbuf);
+            MXB_ERROR("Failed to compile PCRE2 pattern: %s", errbuf);
         }
 
         if (!pattern_init)

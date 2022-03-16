@@ -25,7 +25,7 @@ CacheST::CacheST(const std::string& name,
                  Storage* pStorage)
     : CacheSimple(name, pConfig, rules, sFactory, pStorage)
 {
-    MXS_NOTICE("Created single threaded cache.");
+    MXB_NOTICE("Created single threaded cache.");
 }
 
 CacheST::~CacheST()

@@ -52,7 +52,7 @@
 #undef DEBUG_RROUTER
 
 #ifdef DEBUG_RRROUTER
-#define RR_DEBUG(msg, ...) MXS_NOTICE(msg, ##__VA_ARGS__)
+#define RR_DEBUG(msg, ...) MXB_NOTICE(msg, ##__VA_ARGS__)
 #else
 #define RR_DEBUG(msg, ...)
 #endif
@@ -262,7 +262,7 @@ mxs::RouterSession* RRRouter::newSession(MXS_SESSION* session, const mxs::Endpoi
     }
     else
     {
-        MXS_ERROR("Session creation failed, could not connect to any read backends.");
+        MXB_ERROR("Session creation failed, could not connect to any read backends.");
     }
 
     return rses;
@@ -334,7 +334,7 @@ bool RRRouterSession::routeQuery(GWBUF* querybuf)
         /* We have one target backend */
         if (print)
         {
-            MXS_NOTICE("Routing statement of length %du  to backend '%s'.",
+            MXB_NOTICE("Routing statement of length %du  to backend '%s'.",
                        gwbuf_length(querybuf), target->target()->name());
         }
 
@@ -344,7 +344,7 @@ bool RRRouterSession::routeQuery(GWBUF* querybuf)
     {
         if (print)
         {
-            MXS_NOTICE("Routing statement of length %du to %lu backends.",
+            MXB_NOTICE("Routing statement of length %du to %lu backends.",
                        gwbuf_length(querybuf), m_backends.size());
         }
 
@@ -370,7 +370,7 @@ bool RRRouterSession::routeQuery(GWBUF* querybuf)
     }
     else
     {
-        MXS_ERROR("Could not find a valid routing backend. Either the "
+        MXB_ERROR("Could not find a valid routing backend. Either the "
                   "'%s' is not set or the command is not recognized.",
                   s_write_backend.name().c_str());
         gwbuf_free(querybuf);
@@ -415,7 +415,7 @@ bool RRRouterSession::clientReply(GWBUF* buf, const mxs::ReplyRoute& down, const
     m_router->m_routing_c++;
     if (m_router->m_config.print_on_routing)
     {
-        MXS_NOTICE("Replied to client.\n");
+        MXB_NOTICE("Replied to client.\n");
     }
 
     return rc;
@@ -516,7 +516,7 @@ void RRRouterSession::decide_target(GWBUF* querybuf, mxs::Endpoint*& target, boo
          * TODO: Add support for other commands if needed.
          * This error message will only print the number of the cmd.
          */
-        MXS_ERROR("Received unexpected sql command type: '%d'.", cmd_type);
+        MXB_ERROR("Received unexpected sql command type: '%d'.", cmd_type);
         break;
     }
 
@@ -654,7 +654,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
                                     custom_cmd_args,
                                     "This is the command description"))
     {
-        MXS_ERROR("Module command registration failed.");
+        MXB_ERROR("Module command registration failed.");
     }
 
     static MXS_MODULE moduleObject =

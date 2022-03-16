@@ -907,7 +907,7 @@ void MariaDBMonitor::update_master()
             if (master_cand && (master_cand != m_master))
             {
                 // This is unlikely to be printed continuously because of the topology-change requirement.
-                MXS_WARNING("'%s' is a better master candidate than the current master '%s'. "
+                MXB_WARNING("'%s' is a better master candidate than the current master '%s'. "
                             "Master will change when '%s' is no longer a valid master.",
                             master_cand->name(), m_master->name(), m_master->name());
             }
@@ -927,7 +927,7 @@ void MariaDBMonitor::update_master()
                 // We have another master to swap to. The messages give the impression that new master
                 // selection has not yet happened, but this is just for clarity for the user.
                 mxb_assert(!reason_not_valid.empty());
-                MXS_WARNING("The current master server '%s' is no longer valid because %s. "
+                MXB_WARNING("The current master server '%s' is no longer valid because %s. "
                             "Selecting new master server.",
                             m_master->name(), reason_not_valid.c_str());
 
@@ -935,10 +935,10 @@ void MariaDBMonitor::update_master()
                 // weren't picked.
                 if (!topology_messages.empty())
                 {
-                    MXS_WARNING("%s", topology_messages.c_str());
+                    MXB_WARNING("%s", topology_messages.c_str());
                 }
 
-                MXS_NOTICE("Setting '%s' as master.", master_cand->name());
+                MXB_NOTICE("Setting '%s' as master.", master_cand->name());
                 // Change the master, even though this may break replication.
                 assign_new_master(master_cand);
             }
@@ -947,13 +947,13 @@ void MariaDBMonitor::update_master()
                 // Tried to find another master but the current one is still the best. This is typically
                 // caused by a topology change. The check on 'm_cluster_topology_changed' should stop this
                 // message from printing repeatedly.
-                MXS_WARNING("Attempted to find a replacement for the current master server '%s' because %s, "
+                MXB_WARNING("Attempted to find a replacement for the current master server '%s' because %s, "
                             "but '%s' is still the best master server.",
                             m_master->name(), reason_not_valid.c_str(), m_master->name());
 
                 if (!topology_messages.empty())
                 {
-                    MXS_WARNING("%s", topology_messages.c_str());
+                    MXB_WARNING("%s", topology_messages.c_str());
                 }
                 // The following updates some data on the master.
                 assign_new_master(master_cand);
@@ -964,12 +964,12 @@ void MariaDBMonitor::update_master()
             // No alternative master. Keep current status and print warnings.
             // This situation may stick so only print the messages once.
             mxb_assert(!reason_not_valid.empty());
-            MXS_WARNING("The current master server '%s' is no longer valid because %s, "
+            MXB_WARNING("The current master server '%s' is no longer valid because %s, "
                         "but there is no valid alternative to swap to.",
                         m_master->name(), reason_not_valid.c_str());
             if (!topology_messages.empty())
             {
-                MXS_WARNING("%s", topology_messages.c_str());
+                MXB_WARNING("%s", topology_messages.c_str());
             }
             m_warn_current_master_invalid = false;
         }
@@ -983,29 +983,29 @@ void MariaDBMonitor::update_master()
                                                                  &topology_messages);
         if (master_cand)
         {
-            MXS_NOTICE("Selecting new master server.");
+            MXB_NOTICE("Selecting new master server.");
             if (master_cand->is_down())
             {
                 const char msg[] = "No running master candidates detected and no master currently set. "
                                    "Accepting a non-running server as master.";
-                MXS_WARNING("%s", msg);
+                MXB_WARNING("%s", msg);
             }
 
             if (!topology_messages.empty())
             {
-                MXS_WARNING("%s", topology_messages.c_str());
+                MXB_WARNING("%s", topology_messages.c_str());
             }
 
-            MXS_NOTICE("Setting '%s' as master.", master_cand->name());
+            MXB_NOTICE("Setting '%s' as master.", master_cand->name());
             assign_new_master(master_cand);
         }
         else if (m_warn_cannot_find_master)
         {
             // No current master and could not select another. This situation may stick so only print once.
-            MXS_WARNING("Tried to find a master but no valid master server found.");
+            MXB_WARNING("Tried to find a master but no valid master server found.");
             if (!topology_messages.empty())
             {
-                MXS_WARNING("%s", topology_messages.c_str());
+                MXB_WARNING("%s", topology_messages.c_str());
             }
             m_warn_cannot_find_master = false;
         }
@@ -1021,7 +1021,7 @@ void MariaDBMonitor::set_low_disk_slaves_maintenance()
             && !server->is_master() && !server->is_relay_master())
         {
             // TODO: Handle relays somehow, e.g. switch with a slave
-            MXS_WARNING("Setting '%s' to maintenance because it is low on disk space.", server->name());
+            MXB_WARNING("Setting '%s' to maintenance because it is low on disk space.", server->name());
             server->set_status(SERVER_MAINT);
         }
     }
@@ -1132,13 +1132,13 @@ void MariaDBMonitor::update_cluster_lock_status()
             {
                 if (cluster_ops_on)
                 {
-                    MXS_NOTICE("'%s' acquired the exclusive lock on a majority of its servers. "
+                    MXB_NOTICE("'%s' acquired the exclusive lock on a majority of its servers. "
                                "Configured automatic cluster manipulation operations (e.g. failover) can be "
                                "performed in %li monitor ticks.", name(), m_settings.failcount);
                 }
                 else
                 {
-                    MXS_NOTICE("'%s' acquired the exclusive lock on a majority of its servers. "
+                    MXB_NOTICE("'%s' acquired the exclusive lock on a majority of its servers. "
                                "Manual cluster manipulation operations (e.g. failover) can be performed.",
                                name());
                 }
@@ -1150,13 +1150,13 @@ void MariaDBMonitor::update_cluster_lock_status()
             {
                 if (cluster_ops_on)
                 {
-                    MXS_WARNING("'%s' lost the exclusive lock on a majority of its servers. "
+                    MXB_WARNING("'%s' lost the exclusive lock on a majority of its servers. "
                                 "Configured automatic cluster manipulation operations (e.g. failover) "
                                 "can not be performed.", name());
                 }
                 else
                 {
-                    MXS_WARNING("'%s' lost the exclusive lock on a majority of its servers. "
+                    MXB_WARNING("'%s' lost the exclusive lock on a majority of its servers. "
                                 "Manual cluster manipulation operations (e.g. failover) "
                                 "can not be performed.", name());
                 }

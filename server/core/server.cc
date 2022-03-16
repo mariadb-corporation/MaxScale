@@ -196,7 +196,7 @@ bool ServerSpec::do_post_validate(Params params) const
 
     if (monuser.empty() != monpw.empty())
     {
-        MXS_ERROR("If '%s is defined, '%s' must also be defined.",
+        MXB_ERROR("If '%s is defined, '%s' must also be defined.",
                   !monuser.empty() ? CN_MONITORUSER : CN_MONITORPW,
                   !monuser.empty() ? CN_MONITORPW : CN_MONITORUSER);
         rval = false;
@@ -204,13 +204,13 @@ bool ServerSpec::do_post_validate(Params params) const
 
     if (monuser.length() > Server::MAX_MONUSER_LEN)
     {
-        MXS_ERROR(ERR_TOO_LONG_CONFIG_VALUE, CN_MONITORUSER, Server::MAX_MONUSER_LEN);
+        MXB_ERROR(ERR_TOO_LONG_CONFIG_VALUE, CN_MONITORUSER, Server::MAX_MONUSER_LEN);
         rval = false;
     }
 
     if (monpw.length() > Server::MAX_MONPW_LEN)
     {
-        MXS_ERROR(ERR_TOO_LONG_CONFIG_VALUE, CN_MONITORPW, Server::MAX_MONPW_LEN);
+        MXB_ERROR(ERR_TOO_LONG_CONFIG_VALUE, CN_MONITORPW, Server::MAX_MONPW_LEN);
         rval = false;
     }
 
@@ -222,30 +222,30 @@ bool ServerSpec::do_post_validate(Params params) const
 
     if (have_socket && have_address)
     {
-        MXS_ERROR("Both '%s=%s' and '%s=%s' defined: only one of the parameters can be defined",
+        MXB_ERROR("Both '%s=%s' and '%s=%s' defined: only one of the parameters can be defined",
                   CN_ADDRESS, address.c_str(), CN_SOCKET, socket.c_str());
         rval = false;
     }
     else if (!have_address && !have_socket)
     {
-        MXS_ERROR("Missing a required parameter: either '%s' or '%s' must be defined",
+        MXB_ERROR("Missing a required parameter: either '%s' or '%s' must be defined",
                   CN_ADDRESS, CN_SOCKET);
         rval = false;
     }
     else if (have_address && addr[0] == '/')
     {
-        MXS_ERROR("The '%s' parameter is not a valid IP or hostname", CN_ADDRESS);
+        MXB_ERROR("The '%s' parameter is not a valid IP or hostname", CN_ADDRESS);
         rval = false;
     }
     else if (addr.length() > Server::MAX_ADDRESS_LEN)
     {
-        MXS_ERROR(ERR_TOO_LONG_CONFIG_VALUE, have_address ? CN_ADDRESS : CN_SOCKET, Server::MAX_ADDRESS_LEN);
+        MXB_ERROR(ERR_TOO_LONG_CONFIG_VALUE, have_address ? CN_ADDRESS : CN_SOCKET, Server::MAX_ADDRESS_LEN);
         rval = false;
     }
 
     if (s_ssl.get(params) && s_ssl_cert.get(params).empty() != s_ssl_key.get(params).empty())
     {
-        MXS_ERROR("Both '%s' and '%s' must be defined", s_ssl_cert.name().c_str(), s_ssl_key.name().c_str());
+        MXB_ERROR("Both '%s' and '%s' must be defined", s_ssl_cert.name().c_str(), s_ssl_key.name().c_str());
         rval = false;
     }
 
@@ -259,7 +259,7 @@ std::pair<bool, std::unique_ptr<mxs::SSLContext>> create_ssl(const char* name, c
 
     if (!ssl)
     {
-        MXS_ERROR("Unable to initialize SSL for server '%s'", name);
+        MXB_ERROR("Unable to initialize SSL for server '%s'", name);
         ok = false;
     }
     else if (!ssl->valid())
@@ -520,7 +520,7 @@ bool Server::set_monitor_user(const string& username)
     }
     else
     {
-        MXS_ERROR(ERR_TOO_LONG_CONFIG_VALUE, CN_MONITORUSER, MAX_MONUSER_LEN);
+        MXB_ERROR(ERR_TOO_LONG_CONFIG_VALUE, CN_MONITORUSER, MAX_MONUSER_LEN);
     }
     return rval;
 }
@@ -535,7 +535,7 @@ bool Server::set_monitor_password(const string& password)
     }
     else
     {
-        MXS_ERROR(ERR_TOO_LONG_CONFIG_VALUE, CN_MONITORPW, MAX_MONPW_LEN);
+        MXB_ERROR(ERR_TOO_LONG_CONFIG_VALUE, CN_MONITORPW, MAX_MONPW_LEN);
     }
     return rval;
 }
@@ -562,12 +562,12 @@ bool Server::set_address(const string& new_address)
         }
         else
         {
-            MXS_ERROR("The specifed server address '%s' is not valid.", new_address.c_str());
+            MXB_ERROR("The specifed server address '%s' is not valid.", new_address.c_str());
         }
     }
     else
     {
-        MXS_ERROR(ERR_TOO_LONG_CONFIG_VALUE, CN_ADDRESS, MAX_ADDRESS_LEN);
+        MXB_ERROR(ERR_TOO_LONG_CONFIG_VALUE, CN_ADDRESS, MAX_ADDRESS_LEN);
     }
     return rval;
 }
@@ -699,7 +699,7 @@ void Server::set_version(uint64_t version_num, const std::string& version_str, u
     {
         auto type_string = m_info.type_string();
         auto vrs = m_info.version_num();
-        MXS_NOTICE("'%s' sent version string '%s'. Detected type: '%s', version: %i.%i.%i.",
+        MXB_NOTICE("'%s' sent version string '%s'. Detected type: '%s', version: %i.%i.%i.",
                    name(), version_str.c_str(), type_string.c_str(), vrs.major, vrs.minor, vrs.patch);
     }
 }

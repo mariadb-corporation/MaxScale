@@ -131,7 +131,7 @@ int setnonblocking(int fd)
 
     if ((fl = fcntl(fd, F_GETFL, 0)) == -1)
     {
-        MXS_ERROR("Can't GET fcntl for %i, errno = %d, %s.",
+        MXB_ERROR("Can't GET fcntl for %i, errno = %d, %s.",
                   fd,
                   errno,
                   mxb_strerror(errno));
@@ -140,7 +140,7 @@ int setnonblocking(int fd)
 
     if (fcntl(fd, F_SETFL, fl | O_NONBLOCK) == -1)
     {
-        MXS_ERROR("Can't SET fcntl for %i, errno = %d, %s",
+        MXB_ERROR("Can't SET fcntl for %i, errno = %d, %s",
                   fd,
                   errno,
                   mxb_strerror(errno));
@@ -155,7 +155,7 @@ int setblocking(int fd)
 
     if ((fl = fcntl(fd, F_GETFL, 0)) == -1)
     {
-        MXS_ERROR("Can't GET fcntl for %i, errno = %d, %s.",
+        MXB_ERROR("Can't GET fcntl for %i, errno = %d, %s.",
                   fd,
                   errno,
                   mxb_strerror(errno));
@@ -164,7 +164,7 @@ int setblocking(int fd)
 
     if (fcntl(fd, F_SETFL, fl & ~O_NONBLOCK) == -1)
     {
-        MXS_ERROR("Can't SET fcntl for %i, errno = %d, %s",
+        MXB_ERROR("Can't SET fcntl for %i, errno = %d, %s",
                   fd,
                   errno,
                   mxb_strerror(errno));
@@ -357,7 +357,7 @@ static bool mkdir_all_internal(char* path, mode_t mask, bool log_errors)
                     }
                     else if (log_errors)
                     {
-                        MXS_ERROR("Failed to create directory '%s': %d, %s",
+                        MXB_ERROR("Failed to create directory '%s': %d, %s",
                                   path, errno, mxb_strerror(errno));
                     }
                 }
@@ -365,7 +365,7 @@ static bool mkdir_all_internal(char* path, mode_t mask, bool log_errors)
         }
         else if (log_errors)
         {
-            MXS_ERROR("Failed to create directory '%s': %d, %s",
+            MXB_ERROR("Failed to create directory '%s': %d, %s",
                       path, errno, mxb_strerror(errno));
         }
     }
@@ -399,7 +399,7 @@ bool configure_network_socket(int so, int type)
         if (setsockopt(so, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) != 0
             || setsockopt(so, SOL_SOCKET, SO_KEEPALIVE, &one, sizeof(one)) != 0)
         {
-            MXS_ERROR("Failed to set socket option: %d, %s.", errno, mxb_strerror(errno));
+            MXB_ERROR("Failed to set socket option: %d, %s.", errno, mxb_strerror(errno));
             mxb_assert(!true);
             return false;
         }
@@ -415,7 +415,7 @@ static bool configure_listener_socket(int so)
     if (setsockopt(so, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one)) != 0
         || setsockopt(so, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) != 0)
     {
-        MXS_ERROR("Failed to set socket option: %d, %s.", errno, mxb_strerror(errno));
+        MXB_ERROR("Failed to set socket option: %d, %s.", errno, mxb_strerror(errno));
         return false;
     }
 
@@ -424,7 +424,7 @@ static bool configure_listener_socket(int so)
     {
         if (setsockopt(so, SOL_SOCKET, SO_REUSEPORT, &one, sizeof(one)) != 0)
         {
-            MXS_ERROR("Failed to set socket option: %d, %s.", errno, mxb_strerror(errno));
+            MXB_ERROR("Failed to set socket option: %d, %s.", errno, mxb_strerror(errno));
             return false;
         }
     }
@@ -447,7 +447,7 @@ static void set_port(struct sockaddr_storage* addr, uint16_t port)
     }
     else
     {
-        MXS_ERROR("Unknown address family: %d", (int)addr->ss_family);
+        MXB_ERROR("Unknown address family: %d", (int)addr->ss_family);
         mxb_assert(false);
     }
 }
@@ -463,7 +463,7 @@ int open_network_socket(mxs_socket_type type, sockaddr_storage* addr, const char
 
     if ((rc = getaddrinfo(host, NULL, &hint, &ai)) != 0)
     {
-        MXS_ERROR("Failed to obtain address for host %s: %s", host, gai_strerror(rc));
+        MXB_ERROR("Failed to obtain address for host %s: %s", host, gai_strerror(rc));
         return -1;
     }
 
@@ -472,7 +472,7 @@ int open_network_socket(mxs_socket_type type, sockaddr_storage* addr, const char
     {
         if ((so = socket(ai->ai_family, SOCK_STREAM, 0)) == -1)
         {
-            MXS_ERROR("Socket creation failed: %d, %s.", errno, mxb_strerror(errno));
+            MXB_ERROR("Socket creation failed: %d, %s.", errno, mxb_strerror(errno));
         }
         else
         {
@@ -487,7 +487,7 @@ int open_network_socket(mxs_socket_type type, sockaddr_storage* addr, const char
             }
             else if (type == MXS_SOCKET_LISTENER && bind(so, (struct sockaddr*)addr, sizeof(*addr)) < 0)
             {
-                MXS_ERROR("Failed to bind on '%s:%u': %d, %s",
+                MXB_ERROR("Failed to bind on '%s:%u': %d, %s",
                           host,
                           port,
                           errno,
@@ -520,11 +520,11 @@ int open_network_socket(mxs_socket_type type, sockaddr_storage* addr, const char
 
                         if (bind(so, (struct sockaddr*)&local_address, sizeof(local_address)) == 0)
                         {
-                            MXS_INFO("Bound connecting socket to \"%s\".", la.c_str());
+                            MXB_INFO("Bound connecting socket to \"%s\".", la.c_str());
                         }
                         else
                         {
-                            MXS_ERROR("Could not bind connecting socket to local address \"%s\", "
+                            MXB_ERROR("Could not bind connecting socket to local address \"%s\", "
                                       "connecting to server using default local address: %s",
                                       la.c_str(),
                                       mxb_strerror(errno));
@@ -532,7 +532,7 @@ int open_network_socket(mxs_socket_type type, sockaddr_storage* addr, const char
                     }
                     else
                     {
-                        MXS_ERROR("Could not get address information for local address \"%s\", "
+                        MXB_ERROR("Could not get address information for local address \"%s\", "
                                   "connecting to server using default local address: %s",
                                   la.c_str(),
                                   mxb_strerror(errno));
@@ -553,7 +553,7 @@ static bool configure_unix_socket(int so)
 
     if (setsockopt(so, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one)) != 0)
     {
-        MXS_ERROR("Failed to set socket option: %d, %s.", errno, mxb_strerror(errno));
+        MXB_ERROR("Failed to set socket option: %d, %s.", errno, mxb_strerror(errno));
         return false;
     }
 
@@ -566,14 +566,14 @@ int open_unix_socket(mxs_socket_type type, sockaddr_un* addr, const char* path)
 
     if (strlen(path) > sizeof(addr->sun_path) - 1)
     {
-        MXS_ERROR("The path %s specified for the UNIX domain socket is too long. "
+        MXB_ERROR("The path %s specified for the UNIX domain socket is too long. "
                   "The maximum length is %lu.",
                   path,
                   sizeof(addr->sun_path) - 1);
     }
     else if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
     {
-        MXS_ERROR("Can't create UNIX socket: %d, %s", errno, mxb_strerror(errno));
+        MXB_ERROR("Can't create UNIX socket: %d, %s", errno, mxb_strerror(errno));
     }
     else if (configure_unix_socket(fd))
     {
@@ -583,7 +583,7 @@ int open_unix_socket(mxs_socket_type type, sockaddr_un* addr, const char* path)
         /* Bind the socket to the Unix domain socket */
         if (type == MXS_SOCKET_LISTENER && bind(fd, (struct sockaddr*)addr, sizeof(*addr)) < 0)
         {
-            MXS_ERROR("Failed to bind to UNIX Domain socket '%s': %d, %s",
+            MXB_ERROR("Failed to bind to UNIX Domain socket '%s': %d, %s",
                       path,
                       errno,
                       mxb_strerror(errno));
@@ -608,7 +608,7 @@ int64_t get_total_memory()
 #if defined _SC_PAGESIZE && defined _SC_PHYS_PAGES
     if ((pagesize = sysconf(_SC_PAGESIZE)) <= 0 || (num_pages = sysconf(_SC_PHYS_PAGES)) <= 0)
     {
-        MXS_WARNING("Unable to establish total system memory");
+        MXB_WARNING("Unable to establish total system memory");
         pagesize = 0;
         num_pages = 0;
     }

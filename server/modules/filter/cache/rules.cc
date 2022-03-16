@@ -260,7 +260,7 @@ bool cache_rules_load(const char* zPath,
         }
         else
         {
-            MXS_ERROR("Loading rules file failed: (%s:%d:%d): %s",
+            MXB_ERROR("Loading rules file failed: (%s:%d:%d): %s",
                       zPath,
                       error.line,
                       error.column,
@@ -271,7 +271,7 @@ bool cache_rules_load(const char* zPath,
     }
     else
     {
-        MXS_ERROR("Could not open rules file %s for reading: %s",
+        MXB_ERROR("Could not open rules file %s for reading: %s",
                   zPath,
                   mxb_strerror(errno));
     }
@@ -303,7 +303,7 @@ bool cache_rules_parse(const char* zJson,
     }
     else
     {
-        MXS_ERROR("Parsing rules failed: (%d:%d): %s",
+        MXB_ERROR("Parsing rules failed: (%d:%d): %s",
                   error.line,
                   error.column,
                   error.text);
@@ -633,7 +633,7 @@ static CACHE_RULE* cache_rule_create_regexp(cache_rule_attribute_t attribute,
         }
         else
         {
-            MXS_ERROR("PCRE2 match data creation failed. Most likely due to a "
+            MXB_ERROR("PCRE2 match data creation failed. Most likely due to a "
                       "lack of available memory.");
             pcre2_code_free(code);
         }
@@ -642,7 +642,7 @@ static CACHE_RULE* cache_rule_create_regexp(cache_rule_attribute_t attribute,
     {
         PCRE2_UCHAR errbuf[512];
         pcre2_get_error_message(errcode, errbuf, sizeof(errbuf));
-        MXS_ERROR("Regex compilation failed at %d for regex '%s': %s",
+        MXB_ERROR("Regex compilation failed at %d for regex '%s': %s",
                   (int)erroffset,
                   cvalue,
                   errbuf);
@@ -748,12 +748,12 @@ static CACHE_RULE* cache_rule_create_simple_user(cache_rule_attribute_t attribut
         }
         else
         {
-            MXS_ERROR("Could not trim quotes from host %s.", cvalue);
+            MXB_ERROR("Could not trim quotes from host %s.", cvalue);
         }
     }
     else
     {
-        MXS_ERROR("Could not trim quotes from user %s.", cvalue);
+        MXB_ERROR("Could not trim quotes from user %s.", cvalue);
     }
 
     return rule;
@@ -859,7 +859,7 @@ static CACHE_RULE* cache_rule_create_simple_ctd(cache_rule_attribute_t attribute
         case CACHE_ATTRIBUTE_TABLE:
             if (third)
             {
-                MXS_ERROR("A cache rule value for matching a table name, cannot contain two dots: '%s'",
+                MXB_ERROR("A cache rule value for matching a table name, cannot contain two dots: '%s'",
                           cvalue);
                 allocation_failed = true;
             }
@@ -888,7 +888,7 @@ static CACHE_RULE* cache_rule_create_simple_ctd(cache_rule_attribute_t attribute
         case CACHE_ATTRIBUTE_DATABASE:
             if (second)
             {
-                MXS_ERROR("A cache rule value for matching a database, cannot contain a dot: '%s'",
+                MXB_ERROR("A cache rule value for matching a database, cannot contain a dot: '%s'",
                           cvalue);
                 allocation_failed = true;
             }
@@ -1000,7 +1000,7 @@ static CACHE_RULE* cache_rule_create_simple(cache_rule_attribute_t attribute,
         break;
 
     default:
-        MXS_ERROR("Unknown attribute type: %d", (int)attribute);
+        MXB_ERROR("Unknown attribute type: %d", (int)attribute);
         mxb_assert(!true);
     }
 
@@ -1038,7 +1038,7 @@ static CACHE_RULE* cache_rule_create(cache_rule_attribute_t attribute,
 
     default:
         mxb_assert(!true);
-        MXS_ERROR("Internal error.");
+        MXB_ERROR("Internal error.");
         break;
     }
 
@@ -1710,7 +1710,7 @@ static bool cache_rule_matches_user(CACHE_RULE* self, int thread_id, const char*
             text = "does NOT match";
         }
 
-        MXS_NOTICE("Rule { \"attribute\": \"%s\", \"op\": \"%s\", \"value\": \"%s\" } %s \"%s\".",
+        MXB_NOTICE("Rule { \"attribute\": \"%s\", \"op\": \"%s\", \"value\": \"%s\" } %s \"%s\".",
                    cache_rule_attribute_to_string(self->attribute),
                    cache_rule_op_to_string(self->op),
                    self->value,
@@ -1778,7 +1778,7 @@ static bool cache_rule_matches(CACHE_RULE* self, int thread_id, const char* defa
             text = "does NOT match";
         }
 
-        MXS_NOTICE("Rule { \"attribute\": \"%s\", \"op\": \"%s\", \"value\": \"%s\" } %s \"%.*s\".",
+        MXB_NOTICE("Rule { \"attribute\": \"%s\", \"op\": \"%s\", \"value\": \"%s\" } %s \"%.*s\".",
                    cache_rule_attribute_to_string(self->attribute),
                    cache_rule_op_to_string(self->op),
                    self->value,
@@ -1998,7 +1998,7 @@ static bool cache_rules_parse_json(CACHE_RULES* self, json_t* root)
         }
         else
         {
-            MXS_ERROR("The cache rules object contains a `%s` key, but it is not an array.", KEY_STORE);
+            MXB_ERROR("The cache rules object contains a `%s` key, but it is not an array.", KEY_STORE);
         }
     }
 
@@ -2014,7 +2014,7 @@ static bool cache_rules_parse_json(CACHE_RULES* self, json_t* root)
             }
             else
             {
-                MXS_ERROR("The cache rules object contains a `%s` key, but it is not an array.", KEY_USE);
+                MXB_ERROR("The cache rules object contains a `%s` key, but it is not an array.", KEY_USE);
             }
         }
         else
@@ -2059,7 +2059,7 @@ static bool cache_rules_parse_array(CACHE_RULES* self,
         }
         else
         {
-            MXS_ERROR("Element %lu of the '%s' array is not an object.", i, name);
+            MXB_ERROR("Element %lu of the '%s' array is not an object.", i, name);
             parsed = false;
         }
 
@@ -2106,7 +2106,7 @@ static CACHE_RULE* cache_rules_parse_element(CACHE_RULES* self,
             }
             else
             {
-                MXS_ERROR("Element %lu in the `%s` array has an invalid value "
+                MXB_ERROR("Element %lu in the `%s` array has an invalid value "
                           "\"%s\" for 'op'.",
                           index,
                           array_name,
@@ -2115,7 +2115,7 @@ static CACHE_RULE* cache_rules_parse_element(CACHE_RULES* self,
         }
         else
         {
-            MXS_ERROR("Element %lu in the `%s` array has an invalid value "
+            MXB_ERROR("Element %lu in the `%s` array has an invalid value "
                       "\"%s\" for 'attribute'.",
                       index,
                       array_name,
@@ -2124,7 +2124,7 @@ static CACHE_RULE* cache_rules_parse_element(CACHE_RULES* self,
     }
     else
     {
-        MXS_ERROR("Element %lu in the `%s` array does not contain "
+        MXB_ERROR("Element %lu in the `%s` array does not contain "
                   "'attribute', 'op' and/or 'value', or one or all of them "
                   "is not a string.",
                   index,

@@ -130,13 +130,13 @@ Monitor* do_create_monitor(const string& name, const string& module_name, Params
         }
         else
         {
-            MXS_ERROR("Unable to create monitor instance for '%s', using module '%s'.",
+            MXB_ERROR("Unable to create monitor instance for '%s', using module '%s'.",
                       name.c_str(), module_name.c_str());
         }
     }
     else
     {
-        MXS_ERROR("Unable to load library file for monitor '%s'.", name.c_str());
+        MXB_ERROR("Unable to load library file for monitor '%s'.", name.c_str());
     }
     return new_monitor;
 }
@@ -237,7 +237,7 @@ void MonitorManager::start_monitor(Monitor* monitor)
     {
         if (!monitor->start())
         {
-            MXS_ERROR("Failed to start monitor '%s'.", monitor->name());
+            MXB_ERROR("Failed to start monitor '%s'.", monitor->name());
         }
     }
 }

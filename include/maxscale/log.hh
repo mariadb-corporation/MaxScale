@@ -109,24 +109,3 @@ inline void mxs_log_finish()
 {
     mxb_log_finish();
 }
-
-#define MXS_LOG_MESSAGE MXB_LOG_MESSAGE
-
-#define MXS_ALERT   MXB_ALERT
-#define MXS_ERROR   MXB_ERROR
-#define MXS_WARNING MXB_WARNING
-#define MXS_NOTICE  MXB_NOTICE
-#define MXS_INFO    MXB_INFO
-#define MXS_DEBUG   MXB_DEBUG
-
-#define MXS_SALERT   MXB_SALERT
-#define MXS_SERROR   MXB_SERROR
-#define MXS_SWARNING MXB_SWARNING
-#define MXS_SNOTICE  MXB_SNOTICE
-#define MXS_SINFO    MXB_SINFO
-#define MXS_SDEBUG   MXB_SDEBUG
-
-#define MXS_OOM_MESSAGE        MXB_OOM_MESSAGE
-#define MXS_OOM_MESSAGE_IFNULL MXB_OOM_MESSAGE_IFNULL
-#define MXS_OOM                MXB_OOM
-#define MXS_OOM_IFNULL         MXB_OOM_IFNULL

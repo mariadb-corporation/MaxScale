@@ -230,7 +230,7 @@ event::result_t validate_facility(event::id_t id, const char* zValue)
     }
     else
     {
-        MXS_ERROR("%s is not a valid facility.", zValue);
+        MXB_ERROR("%s is not a valid facility.", zValue);
     }
 
     return rv;
@@ -248,7 +248,7 @@ event::result_t configure_facility(event::id_t id, const char* zValue)
     }
     else
     {
-        MXS_ERROR("%s is not a valid facility.", zValue);
+        MXB_ERROR("%s is not a valid facility.", zValue);
     }
 
     return rv;
@@ -265,7 +265,7 @@ event::result_t validate_level(event::id_t id, const char* zValue)
     }
     else
     {
-        MXS_ERROR("%s is not a valid level.", zValue);
+        MXB_ERROR("%s is not a valid level.", zValue);
     }
 
     return rv;
@@ -283,7 +283,7 @@ event::result_t configure_level(event::id_t id, const char* zValue)
     }
     else
     {
-        MXS_ERROR("%s is not a valid level.", zValue);
+        MXB_ERROR("%s is not a valid level.", zValue);
     }
 
     return rv;
@@ -324,17 +324,17 @@ event::result_t action(const char* zName,
                 }
                 else
                 {
-                    MXS_ERROR("%s is neither %s nor %s.", property.c_str(), CN_FACILITY, CN_LEVEL);
+                    MXB_ERROR("%s is neither %s nor %s.", property.c_str(), CN_FACILITY, CN_LEVEL);
                 }
             }
             else
             {
-                MXS_ERROR("%s does not refer to a known event.", zValue);
+                MXB_ERROR("%s does not refer to a known event.", zValue);
             }
         }
         else
         {
-            MXS_ERROR("%s is not a valid event configuration.", zName);
+            MXB_ERROR("%s is not a valid event configuration.", zName);
         }
     }
 

@@ -47,7 +47,7 @@ bool RWSplitSession::prepare_connection(RWBackend* target)
 
     if (rval)
     {
-        MXS_INFO("Connected to '%s'", target->name());
+        MXB_INFO("Connected to '%s'", target->name());
         mxb_assert(!target->is_waiting_result());
     }
 
@@ -117,7 +117,7 @@ void RWSplitSession::track_optimistic_trx(mxs::Buffer* buffer, const RoutingPlan
         else if (!route_info().is_trx_still_read_only())
         {
             // Not a plain SELECT, roll it back on the slave and start it on the master
-            MXS_INFO("Rolling back current optimistic transaction");
+            MXB_INFO("Rolling back current optimistic transaction");
 
             /**
              * Store the actual statement we were attempting to execute and
@@ -189,12 +189,12 @@ bool RWSplitSession::handle_routing_failure(mxs::Buffer&& buffer, const RoutingP
     }
     else if (can_retry_query() || can_continue_trx_replay())
     {
-        MXS_INFO("Delaying routing: %s", buffer.get_sql().c_str());
+        MXB_INFO("Delaying routing: %s", buffer.get_sql().c_str());
         retry_query(buffer.release());
     }
     else if (m_config.master_failure_mode == RW_ERROR_ON_WRITE)
     {
-        MXS_INFO("Sending read-only error, no valid target found for %s",
+        MXB_INFO("Sending read-only error, no valid target found for %s",
                  route_target_to_string(res.route_target));
         send_readonly_error();
         discard_connection(m_current_master, "The original master is not available");
@@ -209,7 +209,7 @@ bool RWSplitSession::handle_routing_failure(mxs::Buffer&& buffer, const RoutingP
 
     else
     {
-        MXS_ERROR("Could not find valid server for target type %s (%s: %s), closing connection.\n%s",
+        MXB_ERROR("Could not find valid server for target type %s (%s: %s), closing connection.\n%s",
                   route_target_to_string(res.route_target), STRPACKETTYPE(buffer.data()[4]),
                   buffer.get_sql().c_str(), get_verbose_status().c_str());
         ok = false;
@@ -253,7 +253,7 @@ bool RWSplitSession::query_not_supported(GWBUF* querybuf)
     else if (TARGET_IS_ALL(route_target) && (TARGET_IS_MASTER(route_target) || TARGET_IS_SLAVE(route_target)))
     {
         // Conflicting routing targets. Return an error to the client.
-        MXS_ERROR("Can't route %s '%s'. SELECT with session data modification is not "
+        MXB_ERROR("Can't route %s '%s'. SELECT with session data modification is not "
                   "supported with `use_sql_variables_in=all`.",
                   STRPACKETTYPE(info.command()), querybuf->get_sql().c_str());
 
@@ -338,14 +338,14 @@ bool RWSplitSession::route_single_stmt(mxs::Buffer&& buffer, const RoutingPlan& 
     {
         if (should_replace_master(target))
         {
-            MXS_INFO("Replacing old master '%s' with new master '%s'",
+            MXB_INFO("Replacing old master '%s' with new master '%s'",
                      m_current_master ? m_current_master->name() : "<no previous master>",
                      target->name());
             replace_master(target);
         }
         else if (target)
         {
-            MXS_INFO("Cannot replace old master with '%s'", target->name());
+            MXB_INFO("Cannot replace old master with '%s'", target->name());
             target = nullptr;
         }
     }
@@ -406,7 +406,7 @@ RWBackend* RWSplitSession::get_target(const mxs::Buffer& buffer, route_target_t 
         // problems.
         if (m_config.transaction_replay && trx_is_open() && m_trx.target())
         {
-            MXS_INFO("Transaction replay is enabled, ignoring routing hint while inside a transaction.");
+            MXB_INFO("Transaction replay is enabled, ignoring routing hint while inside a transaction.");
         }
         else
         {
@@ -428,7 +428,7 @@ RWBackend* RWSplitSession::get_target(const mxs::Buffer& buffer, route_target_t 
     }
     else
     {
-        MXS_ERROR("Unexpected target type: %s", route_target_to_string(route_target));
+        MXB_ERROR("Unexpected target type: %s", route_target_to_string(route_target));
         mxb_assert(!true);
     }
 
@@ -484,11 +484,11 @@ bool RWSplitSession::write_session_command(RWBackend* backend, mxs::Buffer buffe
     {
         m_server_stats[backend->target()].inc_total();
         m_server_stats[backend->target()].inc_read();
-        MXS_INFO("Route query to %s: %s", backend == m_current_master ? "master" : "slave", backend->name());
+        MXB_INFO("Route query to %s: %s", backend == m_current_master ? "master" : "slave", backend->name());
     }
     else
     {
-        MXS_ERROR("Failed to execute session command in %s", backend->name());
+        MXB_ERROR("Failed to execute session command in %s", backend->name());
         backend->close();
 
         if (m_config.master_failure_mode == RW_FAIL_INSTANTLY && backend == m_current_master)
@@ -521,24 +521,24 @@ bool RWSplitSession::write_session_command(RWBackend* backend, mxs::Buffer buffe
  */
 bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint32_t type)
 {
-    MXS_INFO("Session write, routing to all servers.");
+    MXB_INFO("Session write, routing to all servers.");
     mxs::Buffer buffer(querybuf);
     bool ok = true;
     std::ostringstream error;
 
     if (!have_open_connections())
     {
-        MXS_INFO("No connections available for session command");
+        MXB_INFO("No connections available for session command");
 
         if (command == MXS_COM_QUIT)
         {
             // We have no open connections and opening one just to close it is pointless.
-            MXS_INFO("Ignoring COM_QUIT");
+            MXB_INFO("Ignoring COM_QUIT");
             return true;
         }
         else if (can_recover_servers())
         {
-            MXS_INFO("Attempting to create a connection");
+            MXB_INFO("Attempting to create a connection");
             // No connections are open, create one and execute the session command on it
             create_one_connection_for_sescmd();
         }
@@ -604,7 +604,7 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
             {
                 m_expected_responses++;
                 mxb_assert(m_expected_responses == 1);
-                MXS_INFO("Will return response from '%s' to the client", m_sescmd_replier->name());
+                MXB_INFO("Will return response from '%s' to the client", m_sescmd_replier->name());
             }
 
             if (trx_is_open() && !m_trx.target())
@@ -642,7 +642,7 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
     {
         if (can_retry_query() || can_continue_trx_replay())
         {
-            MXS_INFO("Delaying routing: %s", buffer.get_sql().c_str());
+            MXB_INFO("Delaying routing: %s", buffer.get_sql().c_str());
             retry_query(buffer.release());
             ok = true;
         }
@@ -655,7 +655,7 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
 
             error << " Connection status: " << get_verbose_status();
 
-            MXS_ERROR("%s", error.str().c_str());
+            MXB_ERROR("%s", error.str().c_str());
         }
     }
 
@@ -782,7 +782,7 @@ RWBackend* RWSplitSession::handle_hinted_target(const GWBUF* querybuf, route_tar
         {
             // Set the name of searched backend server.
             const char* named_server = hint.data.c_str();
-            MXS_INFO("Hint: route to server '%s'.", named_server);
+            MXB_INFO("Hint: route to server '%s'.", named_server);
             target = get_target_backend(BE_UNDEFINED, named_server, config_max_rlag);
             if (!target)
             {
@@ -799,7 +799,7 @@ RWBackend* RWSplitSession::handle_hinted_target(const GWBUF* querybuf, route_tar
                             break;
                         }
                     }
-                    MXS_INFO("Was supposed to route to named server %s but couldn't find the server in a "
+                    MXB_INFO("Was supposed to route to named server %s but couldn't find the server in a "
                              "suitable state. Server state: %s",
                              named_server, !status.empty() ? status.c_str() : "Could not find server");
                 }
@@ -812,17 +812,17 @@ RWBackend* RWSplitSession::handle_hinted_target(const GWBUF* querybuf, route_tar
             int hint_max_rlag = (int)strtol(str_val, nullptr, 10);
             if (hint_max_rlag != 0 || errno == 0)
             {
-                MXS_INFO("Hint: %s=%d", rlag_hint_tag, hint_max_rlag);
+                MXB_INFO("Hint: %s=%d", rlag_hint_tag, hint_max_rlag);
                 target = get_target_backend(BE_SLAVE, nullptr, hint_max_rlag);
                 if (!target)
                 {
-                    MXS_INFO("Was supposed to route to server with replication lag "
+                    MXB_INFO("Was supposed to route to server with replication lag "
                              "at most %d but couldn't find such a slave.", hint_max_rlag);
                 }
             }
             else
             {
-                MXS_ERROR("Hint: Could not parse value of %s: '%s' is not a valid number.",
+                MXB_ERROR("Hint: Could not parse value of %s: '%s' is not a valid number.",
                           rlag_hint_tag, str_val);
             }
         }
@@ -869,17 +869,17 @@ RWBackend* RWSplitSession::handle_slave_is_target(uint8_t cmd, uint32_t stmt_id)
             if (prev_target->in_use())
             {
                 target = prev_target;
-                MXS_INFO("%s on %s", STRPACKETTYPE(cmd), target->name());
+                MXB_INFO("%s on %s", STRPACKETTYPE(cmd), target->name());
             }
             else
             {
-                MXS_ERROR("Old COM_STMT_EXECUTE target %s not in use, cannot "
+                MXB_ERROR("Old COM_STMT_EXECUTE target %s not in use, cannot "
                           "proceed with %s", prev_target->name(), STRPACKETTYPE(cmd));
             }
         }
         else
         {
-            MXS_WARNING("Unknown statement ID %u used in %s", stmt_id, STRPACKETTYPE(cmd));
+            MXB_WARNING("Unknown statement ID %u used in %s", stmt_id, STRPACKETTYPE(cmd));
         }
     }
     else
@@ -889,7 +889,7 @@ RWBackend* RWSplitSession::handle_slave_is_target(uint8_t cmd, uint32_t stmt_id)
 
     if (!target)
     {
-        MXS_INFO("Was supposed to route to slave but finding suitable one failed.");
+        MXB_INFO("Was supposed to route to slave but finding suitable one failed.");
     }
 
     return target;
@@ -949,7 +949,7 @@ void RWSplitSession::log_master_routing_failure(bool found,
         }
     }
 
-    MXS_WARNING("[%s] Write query received from %s@%s. %s. Closing client connection.",
+    MXB_WARNING("[%s] Write query received from %s@%s. %s. Closing client connection.",
                 m_router->service()->name(),
                 m_pSession->user().c_str(),
                 m_pSession->client_remote().c_str(),
@@ -1043,7 +1043,7 @@ bool RWSplitSession::start_trx_migration(GWBUF* querybuf)
 {
     if (mxb_log_should_log(LOG_INFO) && m_trx.target())
     {
-        MXS_INFO("Transaction target '%s' is no longer valid, replaying transaction", m_trx.target()->name());
+        MXB_INFO("Transaction target '%s' is no longer valid, replaying transaction", m_trx.target()->name());
     }
 
     /**
@@ -1086,7 +1086,7 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
 {
     mxb_assert_message(target->in_use(), "Target must be in use before routing to it");
 
-    MXS_INFO("Route query to %s: %s <", target == m_current_master ? "master" : "slave", target->name());
+    MXB_INFO("Route query to %s: %s <", target == m_current_master ? "master" : "slave", target->name());
 
     uint8_t cmd = mxs_mysql_get_command(buffer.get());
 
@@ -1139,7 +1139,7 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
             // COM_STMT_FETCH commands to the same server where the COM_STMT_EXECUTE was done.
             auto& info = m_exec_map[route_info().stmt_id()];
             info.target = target;
-            MXS_INFO("%s on %s", STRPACKETTYPE(cmd), target->name());
+            MXB_INFO("%s on %s", STRPACKETTYPE(cmd), target->name());
         }
     }
     else if (cmd == MXS_COM_STMT_PREPARE)
@@ -1170,12 +1170,12 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
     {
         if (!m_trx.target())
         {
-            MXS_INFO("Transaction starting on '%s'", target->name());
+            MXB_INFO("Transaction starting on '%s'", target->name());
             m_trx.set_target(target);
         }
         else if (trx_is_starting())
         {
-            MXS_INFO("Transaction did not finish on '%s' before a new one started on '%s'",
+            MXB_INFO("Transaction did not finish on '%s' before a new one started on '%s'",
                      m_trx.target()->name(), target->name());
             m_trx.close();
             m_trx.set_target(target);

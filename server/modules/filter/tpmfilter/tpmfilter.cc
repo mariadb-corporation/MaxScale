@@ -229,7 +229,7 @@ bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& 
         // check whether the file is named pipe.
         if (ret == -1 && errno != ENOENT)
         {
-            MXS_ERROR("stat() failed on named pipe: %s", strerror(errno));
+            MXB_ERROR("stat() failed on named pipe: %s", strerror(errno));
             return false;
         }
         else if (ret == 0 && S_ISFIFO(st.st_mode))
@@ -239,7 +239,7 @@ bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& 
         }
         else
         {
-            MXS_ERROR("The file '%s' already exists and it is not a named pipe.", named_pipe.c_str());
+            MXB_ERROR("The file '%s' already exists and it is not a named pipe.", named_pipe.c_str());
             return false;
         }
     }
@@ -247,7 +247,7 @@ bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& 
     // now create the named pipe.
     if (mkfifo(named_pipe.c_str(), 0660) == -1)
     {
-        MXS_ERROR("mkfifo() failed on named pipe: %s", strerror(errno));
+        MXB_ERROR("mkfifo() failed on named pipe: %s", strerror(errno));
         return false;
     }
 
@@ -384,7 +384,7 @@ bool TpmFilter::post_configure()
 
     if (!m_file)
     {
-        MXS_ERROR("Opening output file '%s' for tpmfilter failed due to %d, %s",
+        MXB_ERROR("Opening output file '%s' for tpmfilter failed due to %d, %s",
                   m_config.filename.c_str(), errno, strerror(errno));
         return false;
     }
@@ -413,7 +413,7 @@ void TpmFilter::check_named_pipe()
 
                 if (!m_file)
                 {
-                    MXS_ERROR("Failed to open a log file for tpmfilter.");
+                    MXB_ERROR("Failed to open a log file for tpmfilter.");
                     return;
                 }
 
@@ -432,7 +432,7 @@ void TpmFilter::check_named_pipe()
 
     if (!m_shutdown && (pipe_fd == -1))
     {
-        MXS_ERROR("Failed to open the named pipe '%s': %s", m_config.named_pipe.c_str(), strerror(errno));
+        MXB_ERROR("Failed to open the named pipe '%s': %s", m_config.named_pipe.c_str(), strerror(errno));
         return;
     }
 

@@ -272,7 +272,7 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
     if (!pSession->add_variable(SV_MAXSCALE_CACHE_POPULATE, &CacheFilterSession::set_cache_populate, this))
     {
         mxb_assert(!true);
-        MXS_ERROR("Could not add MaxScale user variable '%s', dynamically "
+        MXB_ERROR("Could not add MaxScale user variable '%s', dynamically "
                   "enabling/disabling the populating of the cache is not possible.",
                   SV_MAXSCALE_CACHE_POPULATE);
     }
@@ -280,7 +280,7 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
     if (!pSession->add_variable(SV_MAXSCALE_CACHE_USE, &CacheFilterSession::set_cache_use, this))
     {
         mxb_assert(!true);
-        MXS_ERROR("Could not add MaxScale user variable '%s', dynamically "
+        MXB_ERROR("Could not add MaxScale user variable '%s', dynamically "
                   "enabling/disabling the using of the cache not possible.",
                   SV_MAXSCALE_CACHE_USE);
     }
@@ -288,7 +288,7 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
     if (!pSession->add_variable(SV_MAXSCALE_CACHE_SOFT_TTL, &CacheFilterSession::set_cache_soft_ttl, this))
     {
         mxb_assert(!true);
-        MXS_ERROR("Could not add MaxScale user variable '%s', dynamically "
+        MXB_ERROR("Could not add MaxScale user variable '%s', dynamically "
                   "setting the soft TTL not possible.",
                   SV_MAXSCALE_CACHE_SOFT_TTL);
     }
@@ -296,7 +296,7 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
     if (!pSession->add_variable(SV_MAXSCALE_CACHE_HARD_TTL, &CacheFilterSession::set_cache_hard_ttl, this))
     {
         mxb_assert(!true);
-        MXS_ERROR("Could not add MaxScale user variable '%s', dynamically "
+        MXB_ERROR("Could not add MaxScale user variable '%s', dynamically "
                   "setting the hard TTL not possible.",
                   SV_MAXSCALE_CACHE_HARD_TTL);
     }
@@ -410,14 +410,14 @@ bool CacheFilterSession::routeQuery(GWBUF* pPacket)
     case MXS_COM_STMT_PREPARE:
         if (log_decisions())
         {
-            MXS_NOTICE("COM_STMT_PREPARE, ignoring.");
+            MXB_NOTICE("COM_STMT_PREPARE, ignoring.");
         }
         break;
 
     case MXS_COM_STMT_EXECUTE:
         if (log_decisions())
         {
-            MXS_NOTICE("COM_STMT_EXECUTE, ignoring.");
+            MXB_NOTICE("COM_STMT_EXECUTE, ignoring.");
         }
         break;
 
@@ -460,7 +460,7 @@ int CacheFilterSession::client_reply_post_process(GWBUF* pData,
         break;
 
     default:
-        MXS_ERROR("Internal cache logic broken, unexpected state: %d", m_state);
+        MXB_ERROR("Internal cache logic broken, unexpected state: %d", m_state);
         mxb_assert(!true);
         prepare_response();
         m_state = CACHE_IGNORING_RESPONSE;
@@ -473,7 +473,7 @@ void CacheFilterSession::clear_cache()
 {
     if (m_sCache->clear() != CACHE_RESULT_OK)
     {
-        MXS_ERROR("Could not clear the cache, which is now in "
+        MXB_ERROR("Could not clear the cache, which is now in "
                   "inconsistent state. Caching will now be disabled.");
         m_use = false;
         m_populate = false;
@@ -486,12 +486,12 @@ void CacheFilterSession::invalidate_handler(cache_result_t result)
     {
         if (log_decisions())
         {
-            MXS_NOTICE("Cache successfully invalidated.");
+            MXB_NOTICE("Cache successfully invalidated.");
         }
     }
     else
     {
-        MXS_WARNING("Failed to invalidate individual cache entries, "
+        MXB_WARNING("Failed to invalidate individual cache entries, "
                     "the cache will now be cleared.");
         clear_cache();
     }
@@ -607,11 +607,11 @@ void CacheFilterSession::handle_expecting_nothing(const mxs::Reply& reply)
 
     if (reply.error())
     {
-        MXS_INFO("Error packet received from backend: %s", reply.error().message().c_str());
+        MXB_INFO("Error packet received from backend: %s", reply.error().message().c_str());
     }
     else
     {
-        MXS_WARNING("Received data from the backend although filter is expecting nothing.");
+        MXB_WARNING("Received data from the backend although filter is expecting nothing.");
         mxb_assert(!true);
     }
 
@@ -660,7 +660,7 @@ void CacheFilterSession::handle_storing_response(const mxs::ReplyRoute& down, co
     {
         if (log_decisions())
         {
-            MXS_NOTICE("Current resultset size exceeds maximum allowed size %s. Not caching.",
+            MXB_NOTICE("Current resultset size exceeds maximum allowed size %s. Not caching.",
                        mxb::pretty_size(m_sCache->config().max_resultset_size).c_str());
         }
 
@@ -671,7 +671,7 @@ void CacheFilterSession::handle_storing_response(const mxs::ReplyRoute& down, co
     {
         if (log_decisions())
         {
-            MXS_NOTICE("Max rows %lu reached, not caching result.", reply.rows_read());
+            MXB_NOTICE("Max rows %lu reached, not caching result.", reply.rows_read());
         }
 
         prepare_response();
@@ -681,7 +681,7 @@ void CacheFilterSession::handle_storing_response(const mxs::ReplyRoute& down, co
     {
         if (log_decisions())
         {
-            MXS_NOTICE("Result collected, rows: %lu, size: %s", reply.rows_read(),
+            MXB_NOTICE("Result collected, rows: %lu, size: %s", reply.rows_read(),
                        mxb::pretty_size(reply.size()).c_str());
         }
 
@@ -965,7 +965,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
 
                             if (log_decisions())
                             {
-                                MXS_NOTICE("%s%s", zPrefix, zSuffix);
+                                MXB_NOTICE("%s%s", zPrefix, zSuffix);
                             }
                         }
                     }
@@ -1038,14 +1038,14 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
             const char* zDecision = (action == CACHE_IGNORE) ? "IGNORE" : "CONSULT";
 
             mxb_assert(zPrimary_reason);
-            MXS_NOTICE(zFormat, zDecision, length, pSql, zPrimary_reason, zSecondary_reason);
+            MXB_NOTICE(zFormat, zDecision, length, pSql, zPrimary_reason, zSecondary_reason);
         }
     }
     else
     {
         if (log_decisions())
         {
-            MXS_NOTICE("IGNORE: Both 'use' and 'populate' are disabled.");
+            MXB_NOTICE("IGNORE: Both 'use' and 'populate' are disabled.");
         }
     }
 
@@ -1116,7 +1116,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_COM_QUERY(GWBUF* 
             }
             else
             {
-                MXS_ERROR("Could not create cache key.");
+                MXB_ERROR("Could not create cache key.");
                 m_state = CACHE_IGNORING_RESPONSE;
             }
         }
@@ -1211,7 +1211,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
         // the existing value.
         if (log_decisions())
         {
-            MXS_NOTICE("Unconditionally fetching data from the server, "
+            MXB_NOTICE("Unconditionally fetching data from the server, "
                        "refreshing cache entry.");
         }
         m_state = CACHE_EXPECTING_RESPONSE;
@@ -1222,7 +1222,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
         // update the existing value either.
         if (log_decisions())
         {
-            MXS_NOTICE("Fetching data from server, without storing to the cache.");
+            MXB_NOTICE("Fetching data from server, without storing to the cache.");
         }
         m_state = CACHE_IGNORING_RESPONSE;
     }
@@ -1301,7 +1301,7 @@ char* create_bool_error_message(const char* zName, const char* pValue_begin, con
     }
 
     int len = pValue_end - pValue_begin;
-    MXS_WARNING("Attempt to set the variable %s to the invalid value \"%.*s\".",
+    MXB_WARNING("Attempt to set the variable %s to the invalid value \"%.*s\".",
                 zName,
                 len,
                 pValue_begin);
@@ -1322,7 +1322,7 @@ char* create_uint32_error_message(const char* zName, const char* pValue_begin, c
     }
 
     int len = pValue_end - pValue_begin;
-    MXS_WARNING("Attempt to set the variable %s to the invalid value \"%.*s\".",
+    MXB_WARNING("Attempt to set the variable %s to the invalid value \"%.*s\".",
                 zName,
                 len,
                 pValue_begin);
@@ -1479,7 +1479,7 @@ bool CacheFilterSession::put_value_handler(cache_result_t result,
     }
     else
     {
-        MXS_ERROR("Could not store new cache value, deleting a possibly existing old value.");
+        MXB_ERROR("Could not store new cache value, deleting a possibly existing old value.");
 
         std::weak_ptr<CacheFilterSession> sWeak {m_sThis};
 
@@ -1513,7 +1513,7 @@ void CacheFilterSession::del_value_handler(cache_result_t result)
 {
     if (!(CACHE_RESULT_IS_OK(result) || CACHE_RESULT_IS_NOT_FOUND(result)))
     {
-        MXS_ERROR("Could not delete cache item, the value may now be stale.");
+        MXB_ERROR("Could not delete cache item, the value may now be stale.");
     }
 
     prepare_response();
@@ -1538,7 +1538,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::get_value_handler(GWBUF
                 // our responsibility now to fetch it.
                 if (log_decisions())
                 {
-                    MXS_NOTICE("Cache data is stale, fetching fresh from server.");
+                    MXB_NOTICE("Cache data is stale, fetching fresh from server.");
                 }
 
                 // As we don't use the response it must be freed.
@@ -1553,7 +1553,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::get_value_handler(GWBUF
                 // use the stale value. No point in hitting the server twice.
                 if (log_decisions())
                 {
-                    MXS_NOTICE("Cache data is stale but returning it, fresh "
+                    MXB_NOTICE("Cache data is stale but returning it, fresh "
                                "data is being fetched already.");
                 }
                 routing_action = ROUTING_ABORT;
@@ -1563,7 +1563,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::get_value_handler(GWBUF
         {
             if (log_decisions())
             {
-                MXS_NOTICE("Using fresh data from cache.");
+                MXB_NOTICE("Using fresh data from cache.");
             }
             routing_action = ROUTING_ABORT;
         }
@@ -1572,7 +1572,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::get_value_handler(GWBUF
     {
         if (log_decisions())
         {
-            MXS_NOTICE("Not found in cache, fetching data from server.");
+            MXB_NOTICE("Not found in cache, fetching data from server.");
         }
         routing_action = ROUTING_CONTINUE;
     }
@@ -1591,7 +1591,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::get_value_handler(GWBUF
         {
             if (log_decisions())
             {
-                MXS_NOTICE("Neither populating, nor refreshing, fetching data "
+                MXB_NOTICE("Neither populating, nor refreshing, fetching data "
                            "but not adding to cache.");
             }
             m_state = CACHE_IGNORING_RESPONSE;
@@ -1601,7 +1601,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::get_value_handler(GWBUF
     {
         if (log_decisions())
         {
-            MXS_NOTICE("Found in cache.");
+            MXB_NOTICE("Found in cache.");
         }
 
         m_state = CACHE_EXPECTING_NOTHING;
@@ -1627,7 +1627,7 @@ int CacheFilterSession::continue_routing(GWBUF* pPacket)
             int len;
             modutil_extract_SQL(*pPacket, &pSql, &len);
 
-            MXS_INFO("Invalidation is enabled, but the current statement could not "
+            MXB_INFO("Invalidation is enabled, but the current statement could not "
                      "be parsed. Consequently the accessed tables are not known and "
                      "hence the result cannot be cached, as it would not be known when "
                      "the result should be invalidated, stmt: %.*s", len, pSql);

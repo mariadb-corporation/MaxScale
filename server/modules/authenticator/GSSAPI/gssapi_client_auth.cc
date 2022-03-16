@@ -114,7 +114,7 @@ GSSAPIClientAuthenticator::exchange(GWBUF* read_buffer, MYSQL_session* session, 
         break;
 
     default:
-        MXS_ERROR("Unexpected authentication state: %d", static_cast<int>(m_state));
+        MXB_ERROR("Unexpected authentication state: %d", static_cast<int>(m_state));
         mxb_assert(false);
         break;
     }

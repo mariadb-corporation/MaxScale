@@ -860,7 +860,7 @@ HttpResponse cb_log_data(const HttpRequest& request)
 
         if (rows <= 0 || *end != '\0')
         {
-            MXS_ERROR("Invalid value for 'page[size]': %s", size.c_str());
+            MXB_ERROR("Invalid value for 'page[size]': %s", size.c_str());
             return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
         }
     }
@@ -903,7 +903,7 @@ HttpResponse cb_tls_reload(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
     }
 
-    MXS_NOTICE("TLS certificates successfully reloaded.");
+    MXB_NOTICE("TLS certificates successfully reloaded.");
     return HttpResponse(MHD_HTTP_NO_CONTENT);
 }
 
@@ -1714,7 +1714,7 @@ static HttpResponse handle_request(const HttpRequest& request)
             return false;
         });
 
-    MXS_DEBUG("%s %s %s",
+    MXB_DEBUG("%s %s %s",
               request.get_verb().c_str(),
               request.get_uri().c_str(),
               request.get_json_str().c_str());
@@ -1730,7 +1730,7 @@ static HttpResponse handle_request(const HttpRequest& request)
 
         if (requires_sync && skip_sync)
         {
-            MXS_NOTICE("Disabling configuration sync for: %s %s",
+            MXB_NOTICE("Disabling configuration sync for: %s %s",
                        request.get_verb().c_str(), request.get_uri().c_str());
         }
 

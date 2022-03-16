@@ -46,7 +46,7 @@ bool avro_open_binlog(const char* binlogdir, const char* file, int* dest)
     {
         if (errno != ENOENT)
         {
-            MXS_ERROR("Failed to open binlog file %s: %d, %s",
+            MXB_ERROR("Failed to open binlog file %s: %d, %s",
                       path,
                       errno,
                       mxb_strerror(errno));
@@ -58,7 +58,7 @@ bool avro_open_binlog(const char* binlogdir, const char* file, int* dest)
     {
         /* If for any reason the file's length is between 1 and 3 bytes
          * then report an error. */
-        MXS_ERROR("Binlog file %s has an invalid length.", path);
+        MXB_ERROR("Binlog file %s has an invalid length.", path);
         close(fd);
         return false;
     }
@@ -87,7 +87,7 @@ bool avro_save_conversion_state(Avro* router)
 
     if (config_file == NULL)
     {
-        MXS_ERROR("Failed to open file '%s': %d, %s",
+        MXB_ERROR("Failed to open file '%s': %d, %s",
                   filename,
                   errno,
                   mxb_strerror(errno));
@@ -113,7 +113,7 @@ bool avro_save_conversion_state(Avro* router)
 
     if (rc == -1)
     {
-        MXS_ERROR("Failed to rename file '%s' to '%s': %d, %s",
+        MXB_ERROR("Failed to rename file '%s' to '%s': %d, %s",
                   filename,
                   newname,
                   errno,
@@ -162,7 +162,7 @@ static int conv_state_handler(void* data, const char* section, const char* key, 
 
             if (len > BINLOG_FNAMELEN)
             {
-                MXS_ERROR("Provided value %s for key 'file' is too long. "
+                MXB_ERROR("Provided value %s for key 'file' is too long. "
                           "The maximum allowed length is %d.",
                           value,
                           BINLOG_FNAMELEN);
@@ -199,7 +199,7 @@ bool avro_load_conversion_state(Avro* router)
         return true;
     }
 
-    MXS_NOTICE("[%s] Loading stored conversion state: %s", router->service->name(), filename);
+    MXB_NOTICE("[%s] Loading stored conversion state: %s", router->service->name(), filename);
 
     int rc = mxb::ini::parse_file(filename, conv_state_handler, router);
 
@@ -209,7 +209,7 @@ bool avro_load_conversion_state(Avro* router)
         {
             rval = true;
             gtid_pos_t gtid = router->handler->get_gtid();
-            MXS_NOTICE(
+            MXB_NOTICE(
                 "Loaded stored binary log conversion state: File: [%s] Position: [%ld] GTID: [%lu-%lu-%lu:%lu]",
                 router->binlog_name.c_str(),
                 router->current_pos,
@@ -221,15 +221,15 @@ bool avro_load_conversion_state(Avro* router)
         break;
 
     case -1:
-        MXS_ERROR("Failed to open file '%s'. ", filename);
+        MXB_ERROR("Failed to open file '%s'. ", filename);
         break;
 
     case -2:
-        MXS_ERROR("Failed to allocate enough memory when parsing file '%s'. ", filename);
+        MXB_ERROR("Failed to allocate enough memory when parsing file '%s'. ", filename);
         break;
 
     default:
-        MXS_ERROR("Failed to parse stored conversion state '%s', error "
+        MXB_ERROR("Failed to parse stored conversion state '%s', error "
                   "on line %d. ",
                   filename,
                   rc);
@@ -293,7 +293,7 @@ bool binlog_next_file_exists(const char* binlogdir, const char* binlog)
             /* Next file in sequence doesn't exist */
             if (access(filename, R_OK) == -1)
             {
-                MXS_DEBUG("File '%s' does not yet exist.", filename);
+                MXB_DEBUG("File '%s' does not yet exist.", filename);
             }
             else
             {
@@ -327,14 +327,14 @@ static avro_binlog_end_t rotate_to_next_file_if_exists(Avro* router, uint64_t po
                      router->config().filestem.c_str(),
                      get_next_binlog(router->binlog_name.c_str())) >= (int)sizeof(next_binlog))
         {
-            MXS_ERROR("Next binlog name did not fit into the allocated buffer "
+            MXB_ERROR("Next binlog name did not fit into the allocated buffer "
                       "but was truncated, aborting: %s",
                       next_binlog);
             rval = AVRO_BINLOG_ERROR;
         }
         else
         {
-            MXS_INFO("End of binlog file [%s] at %lu. Rotating to next binlog file [%s].",
+            MXB_INFO("End of binlog file [%s] at %lu. Rotating to next binlog file [%s].",
                      router->binlog_name.c_str(),
                      pos,
                      next_binlog);
@@ -358,7 +358,7 @@ static avro_binlog_end_t rotate_to_next_file_if_exists(Avro* router, uint64_t po
  */
 static void rotate_to_file(Avro* router, uint64_t pos, const char* next_binlog)
 {
-    MXS_NOTICE("End of binlog file [%s] at %lu. Rotating to file [%s].",
+    MXB_NOTICE("End of binlog file [%s] at %lu. Rotating to file [%s].",
                router->binlog_name.c_str(),
                pos,
                next_binlog);
@@ -392,7 +392,7 @@ static GWBUF* read_event_data(Avro* router, REP_HEADER* hdr, uint64_t pos)
         {
             if (n == -1)
             {
-                MXS_ERROR("Error reading the event at %lu in %s. "
+                MXB_ERROR("Error reading the event at %lu in %s. "
                           "%s, expected %d bytes.",
                           pos,
                           router->binlog_name.c_str(),
@@ -401,7 +401,7 @@ static GWBUF* read_event_data(Avro* router, REP_HEADER* hdr, uint64_t pos)
             }
             else
             {
-                MXS_ERROR("Short read when reading the event at %lu in %s. "
+                MXB_ERROR("Short read when reading the event at %lu in %s. "
                           "Expected %d bytes got %d bytes.",
                           pos,
                           router->binlog_name.c_str(),
@@ -414,7 +414,7 @@ static GWBUF* read_event_data(Avro* router, REP_HEADER* hdr, uint64_t pos)
     }
     else
     {
-        MXS_ERROR("Failed to allocate memory for binlog entry, "
+        MXB_ERROR("Failed to allocate memory for binlog entry, "
                   "size %d at %lu.",
                   hdr->event_size,
                   pos);
@@ -458,14 +458,14 @@ bool read_header(Avro* router, unsigned long long pos, REP_HEADER* hdr, avro_bin
             break;
 
         case -1:
-            MXS_ERROR("Failed to read binlog file %s at position %llu (%s).",
+            MXB_ERROR("Failed to read binlog file %s at position %llu (%s).",
                       router->binlog_name.c_str(),
                       pos,
                       mxb_strerror(errno));
             break;
 
         default:
-            MXS_ERROR("Short read when reading the header. "
+            MXB_ERROR("Short read when reading the header. "
                       "Expected 19 bytes but got %d bytes. "
                       "Binlog file is %s, position %llu",
                       n,
@@ -485,7 +485,7 @@ bool read_header(Avro* router, unsigned long long pos, REP_HEADER* hdr, avro_bin
 
     if (hdr->event_type > MAX_EVENT_TYPE_MARIADB10)
     {
-        MXS_ERROR("Invalid MariaDB 10 event type 0x%x. Binlog file is %s, position %llu",
+        MXB_ERROR("Invalid MariaDB 10 event type 0x%x. Binlog file is %s, position %llu",
                   hdr->event_type,
                   router->binlog_name.c_str(),
                   pos);
@@ -495,7 +495,7 @@ bool read_header(Avro* router, unsigned long long pos, REP_HEADER* hdr, avro_bin
     }
     else if (hdr->event_size <= 0)
     {
-        MXS_ERROR("Event size error: size %d at %llu.", hdr->event_size, pos);
+        MXB_ERROR("Event size error: size %d at %llu.", hdr->event_size, pos);
         router->current_pos = pos;
         *rc = AVRO_BINLOG_ERROR;
         rval = false;
@@ -510,7 +510,7 @@ static bool pos_is_ok(Avro* router, const REP_HEADER& hdr, uint64_t pos)
 
     if (hdr.next_pos > 0 && hdr.next_pos < pos)
     {
-        MXS_INFO("Binlog %s: next pos %u < pos %lu, truncating to %lu",
+        MXB_INFO("Binlog %s: next pos %u < pos %lu, truncating to %lu",
                  router->binlog_name.c_str(),
                  hdr.next_pos,
                  pos,
@@ -518,7 +518,7 @@ static bool pos_is_ok(Avro* router, const REP_HEADER& hdr, uint64_t pos)
     }
     else if (hdr.next_pos > 0 && hdr.next_pos != (pos + hdr.event_size))
     {
-        MXS_INFO("Binlog %s: next pos %u != (pos %lu + event_size %u), truncating to %lu",
+        MXB_INFO("Binlog %s: next pos %u != (pos %lu + event_size %u), truncating to %lu",
                  router->binlog_name.c_str(),
                  hdr.next_pos,
                  pos,
@@ -531,7 +531,7 @@ static bool pos_is_ok(Avro* router, const REP_HEADER& hdr, uint64_t pos)
     }
     else
     {
-        MXS_ERROR("Current event type %d @ %lu has nex pos = %u : exiting",
+        MXB_ERROR("Current event type %d @ %lu has nex pos = %u : exiting",
                   hdr.event_type,
                   pos,
                   hdr.next_pos);
@@ -581,7 +581,7 @@ avro_binlog_end_t avro_read_all_events(Avro* router)
 
     if (!read_fde(router))
     {
-        MXS_ERROR("Failed to read the FDE event from the binary log: %d, %s",
+        MXB_ERROR("Failed to read the FDE event from the binary log: %d, %s",
                   errno,
                   mxb_strerror(errno));
         return AVRO_BINLOG_ERROR;
@@ -637,7 +637,7 @@ avro_binlog_end_t avro_read_all_events(Avro* router)
             // This appears to need special handling
             int annotate_len = hdr.event_size - BINLOG_EVENT_HDR_LEN
                 - (router->handler->have_checksums() ? 4 : 0);
-            MXS_INFO("Annotate_rows_event: %.*s", annotate_len, ptr);
+            MXB_INFO("Annotate_rows_event: %.*s", annotate_len, ptr);
             pos += hdr.event_size;
             router->current_pos = pos;
             gwbuf_free(result);

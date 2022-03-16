@@ -134,13 +134,13 @@ bool ListenerSpecification::do_post_validate(Params params) const
     {
         if (s_ssl_key.get(params).empty())
         {
-            MXS_ERROR("The 'ssl_key' parameter must be defined when a listener is configured with SSL.");
+            MXB_ERROR("The 'ssl_key' parameter must be defined when a listener is configured with SSL.");
             ok = false;
         }
 
         if (s_ssl_cert.get(params).empty())
         {
-            MXS_ERROR("The 'ssl_cert' parameter must be defined when a listener is configured with SSL.");
+            MXB_ERROR("The 'ssl_cert' parameter must be defined when a listener is configured with SSL.");
             ok = false;
         }
     }
@@ -241,18 +241,18 @@ bool ListenerManager::listener_is_duplicate(const SListener& listener)
     {
         if (name == other->name())
         {
-            MXS_ERROR("Listener '%s' already exists", name.c_str());
+            MXB_ERROR("Listener '%s' already exists", name.c_str());
             return true;
         }
         else if (listener->type() == Listener::Type::UNIX_SOCKET && address == other->address())
         {
-            MXS_ERROR("Listener '%s' already listens on '%s'", other->name(), address.c_str());
+            MXB_ERROR("Listener '%s' already listens on '%s'", other->name(), address.c_str());
             return true;
         }
         else if (other->port() == listener->port()
                  && (address == other->address() || is_all_iface(listener->address(), other->address())))
         {
-            MXS_ERROR("Listener '%s' already listens at [%s]:%d",
+            MXB_ERROR("Listener '%s' already listens at [%s]:%d",
                       other->name(), address.c_str(), listener->port());
             return true;
         }
@@ -408,19 +408,19 @@ bool Listener::Config::post_configure(const std::map<std::string, mxs::ConfigPar
 
     if (port > 0 && !socket.empty())
     {
-        MXS_ERROR("Creation of listener '%s' failed because both 'socket' and 'port' "
+        MXB_ERROR("Creation of listener '%s' failed because both 'socket' and 'port' "
                   "are defined. Only one of them is allowed.",
                   name().c_str());
         return false;
     }
     else if (port == 0 && socket.empty())
     {
-        MXS_ERROR("Listener '%s' is missing the port or socket parameter.", name().c_str());
+        MXB_ERROR("Listener '%s' is missing the port or socket parameter.", name().c_str());
         return false;
     }
     else if (!socket.empty() && socket[0] != '/')
     {
-        MXS_ERROR("Invalid path given for listener '%s' for parameter '%s': %s",
+        MXB_ERROR("Invalid path given for listener '%s' for parameter '%s': %s",
                   name().c_str(), CN_SOCKET, socket.c_str());
         return false;
     }
@@ -464,7 +464,7 @@ Listener::Listener(const std::string& name)
 
 Listener::~Listener()
 {
-    MXS_INFO("Destroying '%s'", m_name.c_str());
+    MXB_INFO("Destroying '%s'", m_name.c_str());
 }
 
 SListener Listener::create(const std::string& name, const mxs::ConfigParameters& params)
@@ -767,7 +767,7 @@ static int create_unix_socket(const char* path)
 {
     if (unlink(path) == -1 && errno != ENOENT)
     {
-        MXS_ERROR("Failed to unlink Unix Socket %s: %d %s", path, errno, mxb_strerror(errno));
+        MXB_ERROR("Failed to unlink Unix Socket %s: %d %s", path, errno, mxb_strerror(errno));
     }
 
     struct sockaddr_un local_addr;
@@ -775,7 +775,7 @@ static int create_unix_socket(const char* path)
 
     if (listener_socket >= 0 && chmod(path, 0777) < 0)
     {
-        MXS_ERROR("Failed to change permissions on UNIX Domain socket '%s': %d, %s",
+        MXB_ERROR("Failed to change permissions on UNIX Domain socket '%s': %d, %s",
                   path, errno, mxb_strerror(errno));
     }
 
@@ -813,7 +813,7 @@ int start_listening(const std::string& host, uint16_t port)
         if (listener_socket == -1 && host == "::")
         {
             /** Attempt to bind to the IPv4 if the default IPv6 one is used */
-            MXS_WARNING("Failed to bind on default IPv6 host '::', attempting "
+            MXB_WARNING("Failed to bind on default IPv6 host '::', attempting "
                         "to bind on IPv4 version '0.0.0.0'");
             listener_socket = open_network_socket(MXS_SOCKET_LISTENER, &server_address, "0.0.0.0", port);
         }
@@ -830,7 +830,7 @@ int start_listening(const std::string& host, uint16_t port)
          */
         if (listen(listener_socket, INT_MAX) != 0)
         {
-            MXS_ERROR("Failed to start listening on [%s]:%u: %d, %s", host.c_str(), port, errno,
+            MXB_ERROR("Failed to start listening on [%s]:%u: %d, %s", host.c_str(), port, errno,
                       mxb_strerror(errno));
             close(listener_socket);
             return -1;
@@ -887,7 +887,7 @@ static ClientConn accept_one_connection(int fd)
     }
     else if (errno != EAGAIN && errno != EWOULDBLOCK)
     {
-        MXS_ERROR("Failed to accept new client connection: %d, %s", errno, mxb_strerror(errno));
+        MXB_ERROR("Failed to accept new client connection: %d, %s", errno, mxb_strerror(errno));
     }
 
     return conn;
@@ -899,7 +899,7 @@ ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const 
     auto* session = new(std::nothrow) Session(m_shared_data, host);
     if (!session)
     {
-        MXS_OOM();
+        MXB_OOM();
         close(fd);
         return NULL;
     }
@@ -918,7 +918,7 @@ ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const 
     ClientDCB* client_dcb = ClientDCB::create(fd, host, *addr, session, std::move(client_protocol), worker);
     if (!client_dcb)
     {
-        MXS_OOM();
+        MXB_OOM();
         delete session;
     }
     else
@@ -941,7 +941,7 @@ ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const 
         }
         else if (!client_dcb->enable_events())
         {
-            MXS_ERROR("Failed to add dcb %p for fd %d to epoll set.", client_dcb, fd);
+            MXB_ERROR("Failed to add dcb %p for fd %d to epoll set.", client_dcb, fd);
             ClientDCB::close(client_dcb);
             client_dcb = NULL;
         }
@@ -971,7 +971,7 @@ bool Listener::listen_shared()
     }
     else
     {
-        MXS_ERROR("Failed to listen on [%s]:%u", address(), port());
+        MXB_ERROR("Failed to listen on [%s]:%u", address(), port());
     }
 
     return rval;
@@ -1005,7 +1005,7 @@ bool Listener::listen_unique()
     if (!rval)
     {
         close_all_fds();
-        MXS_ERROR("One or more workers failed to listen on '[%s]:%u'.", address(), port());
+        MXB_ERROR("One or more workers failed to listen on '[%s]:%u'.", address(), port());
     }
 
     return rval;
@@ -1036,7 +1036,7 @@ bool Listener::listen()
     if (rval)
     {
         m_state = STARTED;
-        MXS_NOTICE("Listening for connections at [%s]:%u", address(), port());
+        MXB_NOTICE("Listening for connections at [%s]:%u", address(), port());
     }
 
     return rval;
@@ -1139,7 +1139,7 @@ Listener::SData Listener::create_shared_data(const mxs::ConfigParameters& protoc
     }
     else
     {
-        MXS_ERROR("Failed to initialize protocol module '%s' for listener '%s'.",
+        MXB_ERROR("Failed to initialize protocol module '%s' for listener '%s'.",
                   m_config.protocol->name, m_name.c_str());
     }
 
@@ -1261,7 +1261,7 @@ void mark_auth_as_failed(const std::string& remote)
 {
     if (rate_limit.mark_auth_as_failed(remote))
     {
-        MXS_NOTICE("Host '%s' blocked for %d seconds due to too many authentication failures.",
+        MXB_NOTICE("Host '%s' blocked for %d seconds due to too many authentication failures.",
                    remote.c_str(), BLOCK_TIME);
     }
 }

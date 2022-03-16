@@ -231,7 +231,7 @@ void Writer::run()
             m_error = error;
             if (m_timer.alarm())
             {
-                MXS_SERROR("Error received during replication from '" << host << "': " << error.str);
+                MXB_SERROR("Error received during replication from '" << host << "': " << error.str);
             }
 
             m_cond.wait_for(guard, std::chrono::seconds(1), [this]() {

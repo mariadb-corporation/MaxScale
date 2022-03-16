@@ -372,7 +372,7 @@ static bool process_argument(const MODULECMD* cmd,
 
         default:
             mxb_assert(false);
-            MXS_ERROR("Undefined argument type: %0lx", type->type);
+            MXB_ERROR("Undefined argument type: %0lx", type->type);
             *err = "internal error";
             break;
         }
@@ -445,7 +445,7 @@ bool modulecmd_register_command(const char* domain,
         if (domain_has_command(dm, identifier))
         {
             modulecmd_set_error("Command registered more than once: %s::%s", domain, identifier);
-            MXS_ERROR("Command registered more than once: %s::%s", domain, identifier);
+            MXB_ERROR("Command registered more than once: %s::%s", domain, identifier);
         }
         else
         {
@@ -668,7 +668,7 @@ bool modulecmd_foreach(const char* domain_re,
                 {
                     PCRE2_UCHAR errbuf[MXS_STRERROR_BUFLEN];
                     pcre2_get_error_message(err, errbuf, sizeof(errbuf));
-                    MXS_ERROR("Failed to match command identifier with '%s': %s", ident_re, errbuf);
+                    MXB_ERROR("Failed to match command identifier with '%s': %s", ident_re, errbuf);
                     modulecmd_set_error("Failed to match command identifier with '%s': %s", ident_re, errbuf);
                     rval = false;
                 }
@@ -678,7 +678,7 @@ bool modulecmd_foreach(const char* domain_re,
         {
             PCRE2_UCHAR errbuf[MXS_STRERROR_BUFLEN];
             pcre2_get_error_message(err, errbuf, sizeof(errbuf));
-            MXS_ERROR("Failed to match command domain with '%s': %s", domain_re, errbuf);
+            MXB_ERROR("Failed to match command domain with '%s': %s", domain_re, errbuf);
             modulecmd_set_error("Failed to match command domain with '%s': %s", domain_re, errbuf);
             rval = false;
         }
@@ -733,7 +733,7 @@ const char* modulecmd_argtype_to_str(modulecmd_arg_type_t* type)
 
     default:
         mxb_assert(false);
-        MXS_ERROR("Unknown type");
+        MXB_ERROR("Unknown type");
         break;
     }
 

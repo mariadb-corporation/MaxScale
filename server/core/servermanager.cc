@@ -70,7 +70,7 @@ public:
             }
             else
             {
-                MXS_ERROR("Cannot create server '%s' at '[%s]:%d', server '%s' exists there already.",
+                MXB_ERROR("Cannot create server '%s' at '[%s]:%d', server '%s' exists there already.",
                           server->name(), other->address(), other->port(), other->name());
             }
         }
@@ -234,7 +234,7 @@ bool ServerManager::reload_tls()
 
             if (!Server::specification().validate(js.get_json()) || !server->configure(js.get_json()))
             {
-                MXS_ERROR("Failed to reload TLS certificates for '%s'", server->name());
+                MXB_ERROR("Failed to reload TLS certificates for '%s'", server->name());
                 ok = false;
             }
 

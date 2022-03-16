@@ -511,7 +511,7 @@ cache_result_t LRUStorage::do_put_value(Token* pToken,
         }
         else if (!existed)
         {
-            MXS_ERROR("Could not put a value to the storage.");
+            MXB_ERROR("Could not put a value to the storage.");
             free_node(i, InvalidatorAction::IGNORE);
         }
     }
@@ -560,7 +560,7 @@ cache_result_t LRUStorage::do_invalidate(Token* pToken, const vector<string>& wo
     {
         string s = mxb::join(words, ",");
 
-        MXS_ERROR("Could not invalidate cache entries dependent upon '%s'."
+        MXB_ERROR("Could not invalidate cache entries dependent upon '%s'."
                   "The entire cache will be cleared.", s.c_str());
 
         rv = do_clear(pToken);
@@ -774,7 +774,7 @@ bool LRUStorage::free_node_data(Node* pNode, Context context)
     if (i == m_nodes_by_key.end())
     {
         mxb_assert(!true);
-        MXS_ERROR("Item in LRU list was not found in key mapping.");
+        MXB_ERROR("Item in LRU list was not found in key mapping.");
     }
 
     cache_result_t result = CACHE_RESULT_OK;
@@ -789,7 +789,7 @@ bool LRUStorage::free_node_data(Node* pNode, Context context)
         if (CACHE_RESULT_IS_NOT_FOUND(result))
         {
             mxb_assert(!true);
-            MXS_ERROR("Item in LRU list was not found in storage.");
+            MXB_ERROR("Item in LRU list was not found in storage.");
         }
 
         if (i != m_nodes_by_key.end())
@@ -816,7 +816,7 @@ bool LRUStorage::free_node_data(Node* pNode, Context context)
     else
     {
         mxb_assert(!true);
-        MXS_ERROR("Could not remove value from storage, cannot "
+        MXB_ERROR("Could not remove value from storage, cannot "
                   "remove from LRU list or key mapping either.");
         success = false;
     }
@@ -929,7 +929,7 @@ cache_result_t LRUStorage::get_existing_node(NodesByKey::iterator& i, const GWBU
         if (CACHE_RESULT_IS_ERROR(result))
         {
             // Removal of old value of too big a value to be cached failed, we are hosed.
-            MXS_ERROR("Value is too big to be stored, and removal of old value "
+            MXB_ERROR("Value is too big to be stored, and removal of old value "
                       "failed. The cache will return stale data.");
         }
 

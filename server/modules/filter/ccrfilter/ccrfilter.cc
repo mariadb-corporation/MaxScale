@@ -123,7 +123,7 @@ bool CCRSpecification::do_post_validate(Params params) const
 
     if (ccr::global.get(params) && ccr::count.get(params) != 0)
     {
-        MXS_ERROR("'count' and 'global' cannot be used at the same time.");
+        MXB_ERROR("'count' and 'global' cannot be used at the same time.");
         rv = false;
     }
 
@@ -312,14 +312,14 @@ bool CCRSession::routeQuery(GWBUF* queue)
                     if (m_count)
                     {
                         m_hints_left = m_count;
-                        MXS_INFO("Write operation detected, next %ld queries routed to master",
+                        MXB_INFO("Write operation detected, next %ld queries routed to master",
                                  m_count);
                     }
 
                     if (m_time.count())
                     {
                         m_last_modification = now;
-                        MXS_INFO("Write operation detected, queries routed to master for %ld seconds",
+                        MXB_INFO("Write operation detected, queries routed to master for %ld seconds",
                                  m_time.count());
 
                         if (m_global)
@@ -337,7 +337,7 @@ bool CCRSession::routeQuery(GWBUF* queue)
             queue->hints.emplace_back(Hint::Type::ROUTE_TO_MASTER);
             m_hints_left--;
             filter->m_stats.n_add_count++;
-            MXS_INFO("%d queries left", m_hints_left);
+            MXB_INFO("%d queries left", m_hints_left);
         }
         else if (m_time.count())
         {
@@ -348,7 +348,7 @@ bool CCRSession::routeQuery(GWBUF* queue)
             {
                 queue->hints.emplace_back(Hint::Type::ROUTE_TO_MASTER);
                 filter->m_stats.n_add_time++;
-                MXS_INFO("%.0f seconds left", m_time.count() - dt);
+                MXB_INFO("%.0f seconds left", m_time.count() - dt);
             }
         }
     }
@@ -388,7 +388,7 @@ CCRSession::CcrHintValue CCRSession::search_ccr_hint(GWBUF* buffer)
             }
             else
             {
-                MXS_ERROR("Unknown value for hint parameter %s: '%s'.", CCR, val);
+                MXB_ERROR("Unknown value for hint parameter %s: '%s'.", CCR, val);
             }
         }
         else

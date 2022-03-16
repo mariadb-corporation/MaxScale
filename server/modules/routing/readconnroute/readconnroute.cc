@@ -197,14 +197,14 @@ mxs::RouterSession* RCR::newSession(MXS_SESSION* session, const mxs::Endpoints& 
         {
             rses = new RCRSession(this, session, candidate, endpoints, m_config.router_options.get());
 
-            MXS_INFO("New session for server %s. Connections : %ld",
+            MXB_INFO("New session for server %s. Connections : %ld",
                      candidate->target()->name(),
                      candidate->target()->stats().n_current_conns());
         }
     }
     else
     {
-        MXS_ERROR("Failed to create new routing session: Couldn't find eligible candidate server.");
+        MXB_ERROR("Failed to create new routing session: Couldn't find eligible candidate server.");
     }
 
     return rses;
@@ -325,7 +325,7 @@ static void log_closed_session(uint8_t mysql_command, mxs::Target* t)
         sprintf(msg, "Server '%s' no longer qualifies as a target server.", t->name());
     }
 
-    MXS_ERROR("Failed to route MySQL command %d to backend server. %s", mysql_command, msg);
+    MXB_ERROR("Failed to route MySQL command %d to backend server. %s", mysql_command, msg);
 }
 
 /**
@@ -381,7 +381,7 @@ bool RCRSession::routeQuery(GWBUF* queue)
         return 0;
     }
 
-    MXS_INFO("Routed [%s] to '%s' %s",
+    MXB_INFO("Routed [%s] to '%s' %s",
              STRPACKETTYPE(mysql_command),
              m_backend->target()->name(),
              queue->get_sql().c_str());

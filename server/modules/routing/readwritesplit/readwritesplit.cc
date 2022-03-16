@@ -286,7 +286,7 @@ bool RWSConfig::post_configure(const std::map<std::string, mxs::ConfigParameters
 
     if (m_v.master_reconnection && m_service->config()->disable_sescmd_history)
     {
-        MXS_ERROR("Both 'master_reconnection' and 'disable_sescmd_history' are enabled: "
+        MXB_ERROR("Both 'master_reconnection' and 'disable_sescmd_history' are enabled: "
                   "Master reconnection cannot be done without session command history.");
         rval = false;
     }

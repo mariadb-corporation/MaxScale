@@ -146,7 +146,7 @@ bool get_minor_version(const vector<CsMonitorServer*>& servers, cs::Version* pMi
                 }
                 else if (pServer->minor_version() != minor_version)
                 {
-                    MXS_ERROR("Minor version %s of '%s' is at least different than minor version %s "
+                    MXB_ERROR("Minor version %s of '%s' is at least different than minor version %s "
                               "of '%s'.",
                               cs::to_string(pServer->minor_version()), pServer->name(),
                               cs::to_string(pCurrent->minor_version()), pCurrent->name());
@@ -155,7 +155,7 @@ bool get_minor_version(const vector<CsMonitorServer*>& servers, cs::Version* pMi
             }
             else
             {
-                MXS_ERROR("Could not connect to '%s'.", pServer->name());
+                MXB_ERROR("Could not connect to '%s'.", pServer->name());
             }
         }
     }
@@ -317,7 +317,7 @@ int fetch_status_mask(const CsMonitorServer& server, size_t nServers)
     }
     else
     {
-        MXS_ERROR("Could not fetch status using REST-API from '%s': (%d) %s",
+        MXB_ERROR("Could not fetch status using REST-API from '%s': (%d) %s",
                   server.name(), status.response.code, status.response.body.c_str());
     }
 
@@ -396,7 +396,7 @@ bool create_schema(sqlite3* pDb)
 
     if (rv != SQLITE_OK)
     {
-        MXS_ERROR("Could not initialize sqlite3 database: %s", pError ? pError : "Unknown error");
+        MXB_ERROR("Could not initialize sqlite3 database: %s", pError ? pError : "Unknown error");
     }
 
     return rv == SQLITE_OK;
@@ -412,15 +412,15 @@ sqlite3* open_or_create_db(const std::string& path)
     {
         if (create_schema(pDb))
         {
-            MXS_NOTICE("sqlite3 database %s open/created and initialized.", path.c_str());
+            MXB_NOTICE("sqlite3 database %s open/created and initialized.", path.c_str());
         }
         else
         {
-            MXS_ERROR("Could not create schema in sqlite3 database %s.", path.c_str());
+            MXB_ERROR("Could not create schema in sqlite3 database %s.", path.c_str());
 
             if (unlink(path.c_str()) != 0)
             {
-                MXS_ERROR("Failed to delete database %s that could not be properly "
+                MXB_ERROR("Failed to delete database %s that could not be properly "
                           "initialized. It should be deleted manually.", path.c_str());
                 sqlite3_close_v2(pDb);
                 pDb = nullptr;
@@ -433,10 +433,10 @@ sqlite3* open_or_create_db(const std::string& path)
         {
             // Memory allocation failure is explained by the caller. Don't close the handle, as the
             // caller will still use it even if open failed!!
-            MXS_ERROR("Opening/creating the sqlite3 database %s failed: %s",
+            MXB_ERROR("Opening/creating the sqlite3 database %s failed: %s",
                       path.c_str(), sqlite3_errmsg(pDb));
         }
-        MXS_ERROR("Could not open sqlite3 database for storing information "
+        MXB_ERROR("Could not open sqlite3 database for storing information "
                   "about dynamically detected Columnstore nodes. The Columnstore "
                   "monitor will remain dependent upon statically defined "
                   "bootstrap nodes.");
@@ -478,7 +478,7 @@ CsMonitor* CsMonitor::create(const std::string& name, const std::string& module)
 
     if (!mxs_mkdir_all(path.c_str(), 0744))
     {
-        MXS_ERROR("Could not create the directory %s, MaxScale will not be "
+        MXB_ERROR("Could not create the directory %s, MaxScale will not be "
                   "able to create database for persisting connection "
                   "information of dynamically detected Columnstore nodes.",
                   path.c_str());
@@ -502,7 +502,7 @@ CsMonitor* CsMonitor::create(const std::string& name, const std::string& module)
     {
         // The handle will be null, *only* if the opening fails due to a memory
         // allocation error.
-        MXS_ALERT("sqlite3 memory allocation failed, the Columnstore monitor "
+        MXB_ALERT("sqlite3 memory allocation failed, the Columnstore monitor "
                   "cannot continue.");
     }
 
@@ -542,7 +542,7 @@ bool check_15_server_states(const char* zName,
 
                     if (servers.size() > 1)
                     {
-                        MXS_WARNING("Server '%s' configured as a single node, even though multiple "
+                        MXB_WARNING("Server '%s' configured as a single node, even though multiple "
                                     "servers has been specified.", pServer->name());
                     }
                     ++nSingle_nodes;
@@ -559,12 +559,12 @@ bool check_15_server_states(const char* zName,
             }
             else
             {
-                MXS_WARNING("Could not get DMRM_Controller IP of '%s'.", pServer->name());
+                MXB_WARNING("Could not get DMRM_Controller IP of '%s'.", pServer->name());
             }
         }
         else
         {
-            MXS_ERROR("Could not fetch config from '%s': (%d) %s",
+            MXB_ERROR("Could not fetch config from '%s': (%d) %s",
                       pServer->name(), config.response.code, config.response.body.c_str());
         }
 
@@ -574,7 +574,7 @@ bool check_15_server_states(const char* zName,
 
     if (nSingle_nodes >= 1 && servers.size() > 1)
     {
-        MXS_WARNING("Out of %d servers in total, %d are configured as single-nodes. "
+        MXB_WARNING("Out of %d servers in total, %d are configured as single-nodes. "
                     "You are likely to see multiple servers marked as being master, "
                     "which is not likely to work as intended.",
                     (int)servers.size(), nSingle_nodes);
@@ -611,7 +611,7 @@ bool CsMonitor::has_sufficient_permissions()
             }
             else
             {
-                MXS_ERROR("%s: The monitor is configured for Columnstore %s, but the cluster "
+                MXB_ERROR("%s: The monitor is configured for Columnstore %s, but the cluster "
                           "is Columnstore %s. You need specify 'version=%s' in the configuration "
                           "file.",
                           name(),
@@ -623,7 +623,7 @@ bool CsMonitor::has_sufficient_permissions()
         }
         else
         {
-            MXS_ERROR("The minor version of the servers is not identical, monitoring is not possible.");
+            MXB_ERROR("The minor version of the servers is not identical, monitoring is not possible.");
         }
     }
 
@@ -638,13 +638,13 @@ void CsMonitor::update_server_status(MonitorServer* pS)
 
     if (pServer->minor_version() == cs::CS_UNKNOWN)
     {
-        MXS_WARNING("Version of '%s' is not known, trying to find out.", pServer->name());
+        MXB_WARNING("Version of '%s' is not known, trying to find out.", pServer->name());
 
         int version_number = get_full_version(pServer);
 
         if (version_number == -1)
         {
-            MXS_ERROR("Could not find out version of '%s'.", pServer->name());
+            MXB_ERROR("Could not find out version of '%s'.", pServer->name());
         }
         else
         {
@@ -652,7 +652,7 @@ void CsMonitor::update_server_status(MonitorServer* pS)
 
             if (pServer->minor_version() != m_context.config().version)
             {
-                MXS_ERROR("Version of '%s' is different from the cluster version; server will be ignored.",
+                MXB_ERROR("Version of '%s' is different from the cluster version; server will be ignored.",
                           pServer->name());
             }
         }
@@ -697,7 +697,7 @@ void CsMonitor::update_status_of_dynamic_servers()
         {
             const auto& name = it->first;
 
-            MXS_WARNING("Could not fetch status from %s: %s", name.c_str(), status.response.body.c_str());
+            MXB_WARNING("Could not fetch status from %s: %s", name.c_str(), status.response.body.c_str());
             pServer->clear_status(SERVER_MASTER | SERVER_SLAVE | SERVER_RUNNING);
         }
         else
@@ -994,11 +994,11 @@ void CsMonitor::persist(const CsDynamicServer& node)
     char* pError = nullptr;
     if (sqlite3_exec(m_pDb, sql_upsert, nullptr, nullptr, &pError) == SQLITE_OK)
     {
-        MXS_NOTICE("Updated Columnstore node in bookkeeping: '%s'", id.c_str());
+        MXB_NOTICE("Updated Columnstore node in bookkeeping: '%s'", id.c_str());
     }
     else
     {
-        MXS_ERROR("Could not update Columnstore node ('%s') in bookkeeping: %s",
+        MXB_ERROR("Could not update Columnstore node ('%s') in bookkeeping: %s",
                   id.c_str(), pError ? pError : "Unknown error");
     }
 
@@ -1023,11 +1023,11 @@ void CsMonitor::remove_dynamic_host(const std::string& host)
     char* pError = nullptr;
     if (sqlite3_exec(m_pDb, sql_delete, nullptr, nullptr, &pError) == SQLITE_OK)
     {
-        MXS_INFO("Deleted Columnstore node %s from bookkeeping.", host.c_str());
+        MXB_INFO("Deleted Columnstore node %s from bookkeeping.", host.c_str());
     }
     else
     {
-        MXS_ERROR("Could not delete Columnstore node %s from bookkeeping: %s",
+        MXB_ERROR("Could not delete Columnstore node %s from bookkeeping: %s",
                   host.c_str(), pError ? pError : "Unknown error");
     }
 }
@@ -1547,13 +1547,13 @@ void CsMonitor::probe_cluster()
 
     if (sqlite3_exec(m_pDb, SQL_DN_SELECT, select_cb, &nodes, &pError) != SQLITE_OK)
     {
-        MXS_WARNING("Could not lookup earlier nodes: %s", pError ? pError : "Unknown error");
+        MXB_WARNING("Could not lookup earlier nodes: %s", pError ? pError : "Unknown error");
         nodes.clear();
     }
 
     if (nodes.empty())
     {
-        MXS_NOTICE("Checking cluster using bootstrap nodes.");
+        MXB_NOTICE("Checking cluster using bootstrap nodes.");
 
         for (auto* pMs : servers())
         {
@@ -1624,7 +1624,7 @@ void CsMonitor::adjust_dynamic_servers(const Hosts& hosts)
                     }
                     else
                     {
-                        MXS_ERROR("%s: Could not create server %s at %s:%d.",
+                        MXB_ERROR("%s: Could not create server %s at %s:%d.",
                                   name(), server_name.c_str(), host.c_str(), mysql_port);
                     }
                 }
@@ -1649,7 +1649,7 @@ void CsMonitor::adjust_dynamic_servers(const Hosts& hosts)
 
     if (!current_hosts.empty())
     {
-        MXS_NOTICE("Node(s) %s no longer in cluster.", mxb::join(current_hosts).c_str());
+        MXB_NOTICE("Node(s) %s no longer in cluster.", mxb::join(current_hosts).c_str());
 
         for (const auto& host : current_hosts)
         {
@@ -1671,7 +1671,7 @@ void CsMonitor::adjust_dynamic_servers(const Hosts& hosts)
         {
             if (m_obsolete_bootstraps.find(zAddress) == m_obsolete_bootstraps.end())
             {
-                MXS_WARNING("Bootstrap server '%s' of monitor '%s' is no longer part of the cluster, "
+                MXB_WARNING("Bootstrap server '%s' of monitor '%s' is no longer part of the cluster, "
                             "it should be removed. This warning will be logged once per monitor start.",
                             pMs->name(), name());
                 m_obsolete_bootstraps.insert(zAddress);
@@ -1718,7 +1718,7 @@ void CsMonitor::probe_cluster(const HostPortPairs& nodes)
 
                     if (hosts != it->second)
                     {
-                        MXS_WARNING("Node %s thinks the cluster consists of %s, while %s thinks "
+                        MXB_WARNING("Node %s thinks the cluster consists of %s, while %s thinks "
                                     "it consists of %s.",
                                     host.c_str(), mxb::join(hosts).c_str(),
                                     it->first.c_str(), mxb::join(it->second).c_str());
@@ -1730,7 +1730,7 @@ void CsMonitor::probe_cluster(const HostPortPairs& nodes)
             }
             else
             {
-                MXS_WARNING("Host %s thinks the cluster consists of %s, that is, "
+                MXB_WARNING("Host %s thinks the cluster consists of %s, that is, "
                             "it is not included in it. Taking its word for it.",
                             host.c_str(), mxb::join(hosts).c_str());
                 hosts_to_remove.push_back(host);
@@ -1738,7 +1738,7 @@ void CsMonitor::probe_cluster(const HostPortPairs& nodes)
         }
         else
         {
-            MXS_ERROR("Could not fetch cluster status information from %s.", host.c_str());
+            MXB_ERROR("Could not fetch cluster status information from %s.", host.c_str());
             hosts_to_remove.push_back(host);
         }
     }
@@ -1769,7 +1769,7 @@ void CsMonitor::probe_cluster(const HostPortPairs& nodes)
     }
     else
     {
-        MXS_NOTICE("Nodes have different opinion regarding what nodes the cluster contains. "
+        MXB_NOTICE("Nodes have different opinion regarding what nodes the cluster contains. "
                    "Figuring out whose opinion should count.");
 
         probe_fuzzy_cluster(hosts_by_host);
@@ -1813,7 +1813,7 @@ void CsMonitor::probe_fuzzy_cluster(const HostsByHost& hosts_by_host)
 
         if (revisions.size() == 1)
         {
-            MXS_ERROR("All nodes claim to be of revision %d, yet their view of the cluster "
+            MXB_ERROR("All nodes claim to be of revision %d, yet their view of the cluster "
                       "is different.", max_revision);
         }
         else
@@ -1826,7 +1826,7 @@ void CsMonitor::probe_fuzzy_cluster(const HostsByHost& hosts_by_host)
     }
     else
     {
-        MXS_ERROR("Could not fetch configs from all hosts, cannot figure out "
+        MXB_ERROR("Could not fetch configs from all hosts, cannot figure out "
                   "whose config to use.");
     }
 }
@@ -1858,7 +1858,7 @@ bool CsMonitor::check_bootstrap_servers()
 
         if (prev_bootstrap_servers == current_bootstrap_servers)
         {
-            MXS_NOTICE("Current bootstrap servers are the same as the ones used on "
+            MXB_NOTICE("Current bootstrap servers are the same as the ones used on "
                        "previous run, using persisted connection information.");
             rv = true;
         }
@@ -1866,7 +1866,7 @@ bool CsMonitor::check_bootstrap_servers()
         {
             if (!prev_bootstrap_servers.empty())
             {
-                MXS_NOTICE("Current bootstrap servers (%s) are different than the ones "
+                MXB_NOTICE("Current bootstrap servers (%s) are different than the ones "
                            "used on the previous run (%s), NOT using persistent connection "
                            "information.",
                            mxb::join(current_bootstrap_servers, ", ").c_str(),
@@ -1883,7 +1883,7 @@ bool CsMonitor::check_bootstrap_servers()
     }
     else
     {
-        MXS_WARNING("Could not lookup earlier bootstrap servers: %s", pError ? pError : "Unknown error");
+        MXB_WARNING("Could not lookup earlier bootstrap servers: %s", pError ? pError : "Unknown error");
     }
 
     return rv;
@@ -1896,7 +1896,7 @@ bool CsMonitor::remove_persisted_information()
     int rv = sqlite3_exec(m_pDb, SQL_BN_DELETE, nullptr, nullptr, &pError);
     if (rv != SQLITE_OK)
     {
-        MXS_ERROR("Could not delete persisted bootstrap nodes: %s", pError ? pError : "Unknown error");
+        MXB_ERROR("Could not delete persisted bootstrap nodes: %s", pError ? pError : "Unknown error");
     }
 
     return rv == SQLITE_OK;
@@ -1934,7 +1934,7 @@ bool CsMonitor::persist_bootstrap_servers()
         char* pError = nullptr;
         if (sqlite3_exec(m_pDb, insert, nullptr, nullptr, &pError) != SQLITE_OK)
         {
-            MXS_ERROR("Could not persist information about current bootstrap nodes: %s",
+            MXB_ERROR("Could not persist information about current bootstrap nodes: %s",
                       pError ? pError : "Unknown error");
             rv = false;
         }

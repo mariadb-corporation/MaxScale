@@ -28,17 +28,17 @@ static bool maxavro_read_sync(FILE* file, uint8_t* sync)
 
         if (ferror(file))
         {
-            MXS_ERROR("Failed to read file sync marker: %d, %s",
+            MXB_ERROR("Failed to read file sync marker: %d, %s",
                       errno,
                       mxb_strerror(errno));
         }
         else if (feof(file))
         {
-            MXS_ERROR("Short read when reading file sync marker.");
+            MXB_ERROR("Short read when reading file sync marker.");
         }
         else
         {
-            MXS_ERROR("Unspecified error when reading file sync marker.");
+            MXB_ERROR("Unspecified error when reading file sync marker.");
         }
     }
 
@@ -53,11 +53,11 @@ bool maxavro_verify_block(MAXAVRO_FILE* file)
     {
         if (ferror(file->file))
         {
-            MXS_ERROR("Failed to read file: %d %s", errno, mxb_strerror(errno));
+            MXB_ERROR("Failed to read file: %d %s", errno, mxb_strerror(errno));
         }
         else if (rc > 0 || !feof(file->file))
         {
-            MXS_ERROR("Short read when reading sync marker. Read %d bytes instead of %d",
+            MXB_ERROR("Short read when reading sync marker. Read %d bytes instead of %d",
                       rc,
                       SYNC_MARKER_SIZE);
         }
@@ -70,14 +70,14 @@ bool maxavro_verify_block(MAXAVRO_FILE* file)
         long expected = file->data_start_pos + file->buffer_size + SYNC_MARKER_SIZE;
         if (pos != expected)
         {
-            MXS_ERROR("Sync marker mismatch due to wrong file offset. file is at %ld "
+            MXB_ERROR("Sync marker mismatch due to wrong file offset. file is at %ld "
                       "when it should be at %ld.",
                       pos,
                       expected);
         }
         else
         {
-            MXS_ERROR("Sync marker mismatch.");
+            MXB_ERROR("Sync marker mismatch.");
         }
         file->last_error = MAXAVRO_ERR_IO;
         return false;
@@ -146,7 +146,7 @@ static uint8_t* read_block_data(MAXAVRO_FILE* file, long deflate_size)
                 }
                 else
                 {
-                    MXS_ERROR("Failed to inflate value: %s", zError(rc));
+                    MXB_ERROR("Failed to inflate value: %s", zError(rc));
                     MXB_FREE(buffer);
                     buffer = NULL;
                 }
@@ -185,7 +185,7 @@ bool maxavro_read_datablock_start(MAXAVRO_FILE* file)
 
         if (pos == -1)
         {
-            MXS_ERROR("Failed to read datablock start: %d, %s",
+            MXB_ERROR("Failed to read datablock start: %d, %s",
                       errno,
                       mxb_strerror(errno));
         }
@@ -209,7 +209,7 @@ bool maxavro_read_datablock_start(MAXAVRO_FILE* file)
     }
     else if (maxavro_get_error(file) != MAXAVRO_ERR_NONE)
     {
-        MXS_ERROR("Failed to read data block start.");
+        MXB_ERROR("Failed to read data block start.");
     }
     else if (feof(file->file))
     {
@@ -222,7 +222,7 @@ bool maxavro_read_datablock_start(MAXAVRO_FILE* file)
     {
         if (fseek(file->file, file->block_start_pos, SEEK_SET))
         {
-            MXS_SERROR("Failed to restore read position for " << file->filename <<
+            MXB_SERROR("Failed to restore read position for " << file->filename <<
                        " to position " << file->block_start_pos
                        << " " << mxb_strerror(errno));
         }
@@ -263,7 +263,7 @@ static char* read_schema(MAXAVRO_FILE* file)
             }
             else
             {
-                MXS_ERROR("Unknown Avro codec: %s", map->value);
+                MXB_ERROR("Unknown Avro codec: %s", map->value);
             }
         }
         map = map->next;
@@ -271,7 +271,7 @@ static char* read_schema(MAXAVRO_FILE* file)
 
     if (rval == NULL)
     {
-        MXS_ERROR("No schema found from Avro header.");
+        MXB_ERROR("No schema found from Avro header.");
     }
 
     maxavro_map_free(head);
@@ -292,7 +292,7 @@ MAXAVRO_FILE* maxavro_file_open(const char* filename)
     FILE* file = fopen(filename, "rb");
     if (!file)
     {
-        MXS_ERROR("Failed to open file '%s': %d, %s", filename, errno, strerror(errno));
+        MXB_ERROR("Failed to open file '%s': %d, %s", filename, errno, strerror(errno));
         return NULL;
     }
 
@@ -301,14 +301,14 @@ MAXAVRO_FILE* maxavro_file_open(const char* filename)
     if (fread(magic, 1, AVRO_MAGIC_SIZE, file) != AVRO_MAGIC_SIZE)
     {
         fclose(file);
-        MXS_ERROR("Failed to read file magic marker from '%s'", filename);
+        MXB_ERROR("Failed to read file magic marker from '%s'", filename);
         return NULL;
     }
 
     if (memcmp(magic, avro_magic, AVRO_MAGIC_SIZE) != 0)
     {
         fclose(file);
-        MXS_ERROR("Error: Avro magic marker bytes are not correct.");
+        MXB_ERROR("Error: Avro magic marker bytes are not correct.");
         return NULL;
     }
 
@@ -437,17 +437,17 @@ GWBUF* maxavro_file_binary_header(MAXAVRO_FILE* file)
             {
                 if (ferror(file->file))
                 {
-                    MXS_ERROR("Failed to read binary header: %d, %s",
+                    MXB_ERROR("Failed to read binary header: %d, %s",
                               errno,
                               mxb_strerror(errno));
                 }
                 else if (feof(file->file))
                 {
-                    MXS_ERROR("Short read when reading binary header.");
+                    MXB_ERROR("Short read when reading binary header.");
                 }
                 else
                 {
-                    MXS_ERROR("Unspecified error when reading binary header.");
+                    MXB_ERROR("Unspecified error when reading binary header.");
                 }
                 gwbuf_free(rval);
                 rval = NULL;
@@ -455,12 +455,12 @@ GWBUF* maxavro_file_binary_header(MAXAVRO_FILE* file)
         }
         else
         {
-            MXS_ERROR("Memory allocation failed when allocating %ld bytes.", pos);
+            MXB_ERROR("Memory allocation failed when allocating %ld bytes.", pos);
         }
     }
     else
     {
-        MXS_ERROR("Failed to read binary header: %d, %s",
+        MXB_ERROR("Failed to read binary header: %d, %s",
                   errno,
                   mxb_strerror(errno));
     }

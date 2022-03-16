@@ -104,11 +104,11 @@ std::unique_ptr<ExternalCmd> ExternalCmd::create(const string& argstr, int timeo
         {
             if (access(cmdname, F_OK) != 0)
             {
-                MXS_ERROR("Cannot find file '%s'.", cmdname);
+                MXB_ERROR("Cannot find file '%s'.", cmdname);
             }
             else
             {
-                MXS_ERROR("Cannot execute file '%s'. Missing execution permission.", cmdname);
+                MXB_ERROR("Cannot execute file '%s'. Missing execution permission.", cmdname);
             }
         }
         else
@@ -119,7 +119,7 @@ std::unique_ptr<ExternalCmd> ExternalCmd::create(const string& argstr, int timeo
     }
     else
     {
-        MXS_ERROR("Failed to parse argument string '%s' for external command.", argstr.c_str());
+        MXB_ERROR("Failed to parse argument string '%s' for external command.", argstr.c_str());
     }
 
     if (!success)
@@ -164,40 +164,40 @@ static void log_output(const char* cmd, const std::string& str)
                                0,
                                &err) == MXS_PCRE2_MATCH)
     {
-        MXS_ALERT("%s: %s", cmd, skip_prefix(str.c_str()));
+        MXB_ALERT("%s: %s", cmd, skip_prefix(str.c_str()));
     }
     else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*error[[:space:]]*[:]",
                                     str.c_str(),
                                     0,
                                     &err) == MXS_PCRE2_MATCH)
     {
-        MXS_ERROR("%s: %s", cmd, skip_prefix(str.c_str()));
+        MXB_ERROR("%s: %s", cmd, skip_prefix(str.c_str()));
     }
     else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*warning[[:space:]]*[:]",
                                     str.c_str(),
                                     0,
                                     &err) == MXS_PCRE2_MATCH)
     {
-        MXS_WARNING("%s: %s", cmd, skip_prefix(str.c_str()));
+        MXB_WARNING("%s: %s", cmd, skip_prefix(str.c_str()));
     }
     else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*notice[[:space:]]*[:]",
                                     str.c_str(),
                                     0,
                                     &err) == MXS_PCRE2_MATCH)
     {
-        MXS_NOTICE("%s: %s", cmd, skip_prefix(str.c_str()));
+        MXB_NOTICE("%s: %s", cmd, skip_prefix(str.c_str()));
     }
     else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*(info|debug)[[:space:]]*[:]",
                                     str.c_str(),
                                     0,
                                     &err) == MXS_PCRE2_MATCH)
     {
-        MXS_INFO("%s: %s", cmd, skip_prefix(str.c_str()));
+        MXB_INFO("%s: %s", cmd, skip_prefix(str.c_str()));
     }
     else
     {
         // No special format, log as notice level message
-        MXS_NOTICE("%s: %s", cmd, skip_whitespace(str.c_str()));
+        MXB_NOTICE("%s: %s", cmd, skip_whitespace(str.c_str()));
     }
 }
 
@@ -207,7 +207,7 @@ int ExternalCmd::externcmd_execute()
     int fd[2];
     if (pipe(fd) == -1)
     {
-        MXS_ERROR("Failed to open pipe: [%d] %s", errno, mxb_strerror(errno));
+        MXB_ERROR("Failed to open pipe: [%d] %s", errno, mxb_strerror(errno));
         return -1;
     }
 
@@ -224,7 +224,7 @@ int ExternalCmd::externcmd_execute()
     {
         close(fd[0]);
         close(fd[1]);
-        MXS_ERROR("Failed to execute command '%s', fork failed: [%d] %s",
+        MXB_ERROR("Failed to execute command '%s', fork failed: [%d] %s",
                   cmdname, errno, mxb_strerror(errno));
         rval = -1;
     }
@@ -258,7 +258,7 @@ int ExternalCmd::externcmd_execute()
     }
     else
     {
-        MXS_INFO("Executing command '%s' in process %d", cmdname, pid);
+        MXB_INFO("Executing command '%s' in process %d", cmdname, pid);
 
         string output;
         bool first_warning = true;
@@ -277,7 +277,7 @@ int ExternalCmd::externcmd_execute()
             switch (waitpid(pid, &exit_status, WNOHANG))
             {
             case -1:
-                MXS_ERROR("Failed to wait for child process: %d, %s", errno, mxb_strerror(errno));
+                MXB_ERROR("Failed to wait for child process: %d, %s", errno, mxb_strerror(errno));
                 again = false;
                 break;
 
@@ -288,13 +288,13 @@ int ExternalCmd::externcmd_execute()
                     t = 0;
                     if (first_warning)
                     {
-                        MXS_WARNING("Soft timeout for command '%s', sending SIGTERM", cmdname);
+                        MXB_WARNING("Soft timeout for command '%s', sending SIGTERM", cmdname);
                         kill(pid, SIGTERM);
                         first_warning = false;
                     }
                     else
                     {
-                        MXS_ERROR("Hard timeout for command '%s', sending SIGKILL", cmdname);
+                        MXB_ERROR("Hard timeout for command '%s', sending SIGKILL", cmdname);
                         kill(pid, SIGKILL);
                     }
                 }
@@ -319,7 +319,7 @@ int ExternalCmd::externcmd_execute()
                 else
                 {
                     rval = exit_status;
-                    MXS_ERROR("Command '%s' did not exit normally. Exit status: %d", cmdname, exit_status);
+                    MXB_ERROR("Command '%s' did not exit normally. Exit status: %d", cmdname, exit_status);
                 }
                 break;
             }

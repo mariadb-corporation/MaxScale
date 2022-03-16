@@ -73,13 +73,13 @@ bool cdc_add_new_user(const MODULECMD_ARG* args, json_t** output)
         {
             if (write(fd, final_data, sizeof(final_data)) == static_cast<int>(sizeof(final_data)))
             {
-                MXS_NOTICE("Added user '%s' to service '%s'", user, service->name());
+                MXB_NOTICE("Added user '%s' to service '%s'", user, service->name());
                 rval = true;
             }
             else
             {
                 const char* real_err = mxb_strerror(errno);
-                MXS_NOTICE("Failed to write to file '%s': %s", path, real_err);
+                MXB_NOTICE("Failed to write to file '%s': %s", path, real_err);
                 modulecmd_set_error("Failed to write to file '%s': %s", path, real_err);
             }
 
@@ -88,7 +88,7 @@ bool cdc_add_new_user(const MODULECMD_ARG* args, json_t** output)
         else
         {
             const char* real_err = mxb_strerror(errno);
-            MXS_NOTICE("Failed to open file '%s': %s", path, real_err);
+            MXB_NOTICE("Failed to open file '%s': %s", path, real_err);
             modulecmd_set_error("Failed to open file '%s': %s", path, real_err);
         }
     }
@@ -134,7 +134,7 @@ int CDCClientAuthenticator::authenticate(DCB* generic_dcb)
     }
     else
     {
-        MXS_DEBUG("Receiving connection from '%s'", m_user);
+        MXB_DEBUG("Receiving connection from '%s'", m_user);
 
         auth_ret = m_module.cdc_auth_check(m_user, m_auth_data);
 
@@ -148,7 +148,7 @@ int CDCClientAuthenticator::authenticate(DCB* generic_dcb)
         if (CDC_STATE_AUTH_OK == auth_ret)
         {
             dcb->session()->set_user(m_user);
-            MXS_INFO("%s: Client [%s] authenticated with user [%s]",
+            MXB_INFO("%s: Client [%s] authenticated with user [%s]",
                      dcb->service()->name(),
                      dcb->remote().c_str(),
                      m_user);
@@ -233,13 +233,13 @@ bool CDCClientAuthenticator::set_client_data(uint8_t* client_auth_packet, int cl
         }
         else
         {
-            MXS_ERROR("Authentication failed, the decoded client authentication "
+            MXB_ERROR("Authentication failed, the decoded client authentication "
                       "packet is malformed. Expected <username>:SHA1(<password>)");
         }
     }
     else
     {
-        MXS_ERROR("Authentication failed, client authentication packet length "
+        MXB_ERROR("Authentication failed, client authentication packet length "
                   "exceeds the maximum allowed length of %d bytes.",
                   CDC_USER_MAXLEN);
     }
@@ -260,7 +260,7 @@ int CDCAuthenticatorModule::set_service_user(SERVICE* service)
     std::string newpasswd = mxs::create_hex_sha1_sha1_passwd(service->config()->password.c_str());
     if (newpasswd.empty())
     {
-        MXS_ERROR("create hex_sha1_sha1_password failed for service user %s", service_user.c_str());
+        MXB_ERROR("create hex_sha1_sha1_password failed for service user %s", service_user.c_str());
         return 1;
     }
 

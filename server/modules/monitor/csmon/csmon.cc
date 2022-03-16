@@ -273,7 +273,7 @@ bool get_timeout(const char* zTimeout, std::chrono::seconds* pTimeout, json_t** 
     {
         if (unit == mxs::config::DURATION_IN_MILLISECONDS)
         {
-            MXS_WARNING("Duration specified in milliseconds, will be converted to seconds.");
+            MXB_WARNING("Duration specified in milliseconds, will be converted to seconds.");
         }
 
         *pTimeout = std::chrono::duration_cast<std::chrono::seconds>(duration);

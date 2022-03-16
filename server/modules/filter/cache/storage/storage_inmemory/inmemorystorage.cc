@@ -75,21 +75,21 @@ InMemoryStorage* InMemoryStorage::create(const char* zName,
 
     if (config.max_count != 0)
     {
-        MXS_WARNING("A maximum item count of %u specified, although 'storage_inmemory' "
+        MXB_WARNING("A maximum item count of %u specified, although 'storage_inmemory' "
                     "does not enforce such a limit.",
                     (unsigned int)config.max_count);
     }
 
     if (config.max_size != 0)
     {
-        MXS_WARNING("A maximum size of %lu specified, although 'storage_inmemory' "
+        MXB_WARNING("A maximum size of %lu specified, although 'storage_inmemory' "
                     "does not enforce such a limit.",
                     (unsigned long)config.max_size);
     }
 
     if (!arguments.empty())
     {
-        MXS_WARNING("Arguments '%s' provided, although 'storage_inmemory' does not "
+        MXB_WARNING("Arguments '%s' provided, although 'storage_inmemory' does not "
                     "accept any arguments.", arguments.c_str());
     }
 
@@ -103,7 +103,7 @@ InMemoryStorage* InMemoryStorage::create(const char* zName,
 
     default:
         mxb_assert(!true);
-        MXS_ERROR("Unknown thread model %d, creating multi-thread aware storage.",
+        MXB_ERROR("Unknown thread model %d, creating multi-thread aware storage.",
                   (int)config.thread_model);
 
     case CACHE_THREAD_MODEL_MT:
@@ -111,7 +111,7 @@ InMemoryStorage* InMemoryStorage::create(const char* zName,
         break;
     }
 
-    MXS_NOTICE("Storage module created.");
+    MXB_NOTICE("Storage module created.");
 
     return sStorage.release();
 }
@@ -327,7 +327,7 @@ cache_result_t InMemoryStorage::do_del_value(Token* pToken, const CacheKey& key)
 cache_result_t InMemoryStorage::do_invalidate(Token* pToken, const std::vector<std::string>& words)
 {
     mxb_assert(!pToken);
-    MXS_ERROR("InMemoryStorage cannot do invalidation.");
+    MXB_ERROR("InMemoryStorage cannot do invalidation.");
     mxb_assert(!true);
     return CACHE_RESULT_OUT_OF_RESOURCES;
 }

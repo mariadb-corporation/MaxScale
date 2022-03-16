@@ -181,7 +181,7 @@ PerformanceInfo SmartRouter::perf_find(const std::string& canonical)
             // The return value is the default constructed ret.
             updt_entry.set_updating(true);
 
-            MXS_SINFO("Trigger re-measure, schedule "
+            MXB_SINFO("Trigger re-measure, schedule "
                       << eviction_schedules[updt_entry.eviction_schedule()]
                       << ", perf: " << updt_entry.target()->name()
                       << ", " << updt_entry.duration() << ", "
@@ -210,7 +210,7 @@ void SmartRouter::perf_update(const std::string& canonical, PerformanceInfo perf
 
     if (perf_it != end(*pContainer))
     {
-        MXS_SINFO("Update perf: from "
+        MXB_SINFO("Update perf: from "
                   << perf_it->second.target()->name() << ", " << perf_it->second.duration()
                   << " to " << perf.target()->name() << ", " << perf.duration()
                   << ", " << show_some(canonical));
@@ -223,7 +223,7 @@ void SmartRouter::perf_update(const std::string& canonical, PerformanceInfo perf
     else
     {
         pShared_data->send_update({canonical, perf});
-        MXS_SDEBUG("Sent new perf: " << perf.target()->name() << ", " << perf.duration()
+        MXB_SDEBUG("Sent new perf: " << perf.target()->name() << ", " << perf.duration()
                                      << ", " << show_some(canonical));
     }
 }

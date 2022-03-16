@@ -223,13 +223,13 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
         }
         else
         {
-            MXS_OOM();
+            MXB_OOM();
             close(this_unit.epoll_listener_fd);
         }
     }
     else
     {
-        MXS_ALERT("Could not allocate an epoll instance.");
+        MXB_ALERT("Could not allocate an epoll instance.");
     }
 
     return this_unit.initialized;
@@ -351,7 +351,7 @@ bool RoutingWorker::start_workers()
 
         if (!pWorker->start(MAKE_STR("Worker-" << std::setw(2) << std::setfill('0') << i)))
         {
-            MXS_ALERT("Could not start routing worker %d of %d.", i, this_unit.nWorkers);
+            MXB_ALERT("Could not start routing worker %d of %d.", i, this_unit.nWorkers);
             rv = false;
             // At startup, so we don't even try to clean up.
             break;
@@ -466,12 +466,12 @@ void RoutingWorker::delete_zombies()
 
         if (can_close)
         {
-            MXS_DEBUG("Ready to close session %lu", pDcb->session() ? pDcb->session()->id() : 0);
+            MXB_DEBUG("Ready to close session %lu", pDcb->session() ? pDcb->session()->id() : 0);
             DCB::Manager::call_destroy(pDcb);
         }
         else
         {
-            MXS_DEBUG("Delaying destruction of session %lu", pDcb->session() ? pDcb->session()->id() : 0);
+            MXB_DEBUG("Delaying destruction of session %lu", pDcb->session() ? pDcb->session()->id() : 0);
             slow_zombies.push_back(pDcb);
         }
     }
@@ -626,7 +626,7 @@ RoutingWorker::pool_get_connection(SERVER* pSrv, MXS_SESSION* pSes, mxs::Compone
             {
                 // Reusing the current candidate failed. Close connection, then try with another candidate.
                 pSession->unlink_backend_connection(candidate);
-                MXS_WARNING("Failed to reuse a persistent connection.");
+                MXB_WARNING("Failed to reuse a persistent connection.");
                 if (pDcb->state() == DCB::State::POLLING)
                 {
                     pDcb->disable_events();
@@ -899,7 +899,7 @@ bool RoutingWorker::pre_run()
     }
     else
     {
-        MXS_ERROR("Could not perform thread initialization for all modules. Thread exits.");
+        MXB_ERROR("Could not perform thread initialization for all modules. Thread exits.");
         this_thread.current_worker_id = WORKER_ABSENT_ID;
     }
 
@@ -953,11 +953,11 @@ RoutingWorker* RoutingWorker::create(mxb::WatchdogNotifier* pNotifier, int epoll
         // clients that a worker with more load.
         if (epoll_ctl(pThis->m_epoll_fd, EPOLL_CTL_ADD, epoll_listener_fd, &ev) == 0)
         {
-            MXS_INFO("Epoll instance for listening sockets added to worker epoll instance.");
+            MXB_INFO("Epoll instance for listening sockets added to worker epoll instance.");
         }
         else
         {
-            MXS_ERROR("Could not add epoll instance for listening sockets to "
+            MXB_ERROR("Could not add epoll instance for listening sockets to "
                       "epoll instance of worker: %s",
                       mxb_strerror(errno));
             delete pThis;
@@ -966,7 +966,7 @@ RoutingWorker* RoutingWorker::create(mxb::WatchdogNotifier* pNotifier, int epoll
     }
     else
     {
-        MXS_OOM();
+        MXB_OOM();
     }
 
     return pThis;
@@ -1025,15 +1025,15 @@ uint32_t RoutingWorker::handle_epoll_events(uint32_t events)
 
     if (nfds == -1)
     {
-        MXS_ERROR("epoll_wait failed: %s", mxb_strerror(errno));
+        MXB_ERROR("epoll_wait failed: %s", mxb_strerror(errno));
     }
     else if (nfds == 0)
     {
-        MXS_DEBUG("No events for worker %d.", id());
+        MXB_DEBUG("No events for worker %d.", id());
     }
     else
     {
-        MXS_DEBUG("1 event for worker %d.", id());
+        MXB_DEBUG("1 event for worker %d.", id());
         POLL_DATA* pData = static_cast<POLL_DATA*>(epoll_events[0].data.ptr);
 
         actions = pData->handler(pData, this, epoll_events[0].events);
@@ -1456,7 +1456,7 @@ bool RoutingWorker::balance_workers(int threshold)
 
     if (diff_load > threshold)
     {
-        MXS_NOTICE("Difference in load (%d) between the thread with the maximum load (%d) the thread "
+        MXB_NOTICE("Difference in load (%d) between the thread with the maximum load (%d) the thread "
                    "with the minimum load (%d) exceeds the 'rebalance_threshold' value of %d, "
                    "moving work from the latter to the former.",
                    diff_load, max_load, min_load, threshold);
@@ -1472,7 +1472,7 @@ bool RoutingWorker::balance_workers(int threshold)
                                 pFrom->rebalance(pTo);
                             }, Worker::EXECUTE_QUEUED))
         {
-            MXS_ERROR("Could not post task to worker, worker load balancing will not take place.");
+            MXB_ERROR("Could not post task to worker, worker load balancing will not take place.");
         }
     }
 
@@ -1972,7 +1972,7 @@ public:
 
 void mxs_rworker_watchdog()
 {
-    MXS_INFO("MaxScale watchdog called.");
+    MXB_INFO("MaxScale watchdog called.");
     WatchdogTask task;
     RoutingWorker::execute_concurrently(task);
 }

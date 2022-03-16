@@ -53,7 +53,7 @@ public:
     {
         if (m_database.config().log_unknown_command)
         {
-            MXS_WARNING("Unknown command: %s", bsoncxx::to_json(m_doc).c_str());
+            MXB_WARNING("Unknown command: %s", bsoncxx::to_json(m_doc).c_str());
         }
 
         string command;
@@ -315,7 +315,7 @@ State OpInsertCommand::execute(GWBUF** ppNoSQL_response)
     if (m_req.documents().size() != 1)
     {
         const char* zMessage = "Currently only a single document can be insterted at a time with OP_INSERT.";
-        MXS_ERROR("%s", zMessage);
+        MXB_ERROR("%s", zMessage);
 
         throw HardError(zMessage, error::INTERNAL_ERROR);
     }

@@ -170,7 +170,7 @@ static bool api_version_match(const MXS_MODULE* mod_info, const string& filepath
         break;
 
     default:
-        MXS_ERROR("Unknown module type %i for module '%s' from '%s'.",
+        MXB_ERROR("Unknown module type %i for module '%s' from '%s'.",
                   (int)mod_info->modapi, mod_info->name, filepath.c_str());
         return false;
         break;
@@ -184,7 +184,7 @@ static bool api_version_match(const MXS_MODULE* mod_info, const string& filepath
     else
     {
         string api_type = module_type_to_string(mod_info->modapi);
-        MXS_ERROR("Module '%s' from '%s' implements wrong version of %s API. "
+        MXB_ERROR("Module '%s' from '%s' implements wrong version of %s API. "
                   "Need version %d.%d.%d, found %d.%d.%d",
                   mod_info->name, filepath.c_str(), api_type.c_str(),
                   required.major, required.minor, required.patch,
@@ -230,13 +230,13 @@ bool check_module(const MXS_MODULE* mod_info, const string& filepath, ModuleType
 
     if (mod_info->version == nullptr)
     {
-        MXS_ERROR("Module '%s' from '%s' does not define a version string.", namec, filepathc);
+        MXB_ERROR("Module '%s' from '%s' does not define a version string.", namec, filepathc);
         success = false;
     }
 
     if (mod_info->module_object == nullptr)
     {
-        MXS_ERROR("Module '%s' from '%s' does not define any API functions.", namec, filepathc);
+        MXB_ERROR("Module '%s' from '%s' does not define any API functions.", namec, filepathc);
         success = false;
     }
 
@@ -259,7 +259,7 @@ int load_module_cb(const char* fpath, const struct stat* sb, int typeflag, struc
 
                 if (res.result == LoadResult::ERR)
                 {
-                    MXS_ERROR("%s", res.error.c_str());
+                    MXB_ERROR("%s", res.error.c_str());
                     this_unit.load_all_ok = false;
                 }
             }
@@ -388,7 +388,7 @@ LoadAttempt load_module(const string& fname, mxs::ModuleType type, const string&
                 auto new_kv = std::make_pair(mod_name_low, std::move(res.module));
                 this_unit.loaded_filepaths.insert(new_kv.second->filepath);
                 this_unit.loaded_modules.insert(std::move(new_kv));
-                MXS_NOTICE("Module '%s' loaded from '%s'.", mod_info->name, fname.c_str());
+                MXB_NOTICE("Module '%s' loaded from '%s'.", mod_info->name, fname.c_str());
             }
             else
             {
@@ -697,7 +697,7 @@ const MXS_MODULE* get_module(const std::string& name, mxs::ModuleType type)
         {
             auto expected_type_str = module_type_to_string(type);
             auto found_type_str = module_type_to_string(mod_info->modapi);
-            MXS_ERROR(wrong_mod_type, name.c_str(), found_type_str, expected_type_str);
+            MXB_ERROR(wrong_mod_type, name.c_str(), found_type_str, expected_type_str);
         }
     }
     else
@@ -714,14 +714,14 @@ const MXS_MODULE* get_module(const std::string& name, mxs::ModuleType type)
             }
             else
             {
-                MXS_ERROR("Module '%s' was not found after being loaded successfully: "
+                MXB_ERROR("Module '%s' was not found after being loaded successfully: "
                           "library name and module name are different.", fname.c_str());
             }
         }
         // In some cases the error message has already been printed.
         else if (!res.error.empty())
         {
-            MXS_ERROR("%s", res.error.c_str());
+            MXB_ERROR("%s", res.error.c_str());
         }
     }
     return rval;
@@ -736,7 +736,7 @@ string module_get_effective_name(const string& name)
         {
             if (!nm.warned)
             {
-                MXS_WARNING("%s module '%s' has been deprecated, use '%s' instead.",
+                MXB_WARNING("%s module '%s' has been deprecated, use '%s' instead.",
                             module_type_to_string(nm.type), nm.from, nm.to);
                 nm.warned = true;
             }
@@ -1013,11 +1013,11 @@ QUERY_CLASSIFIER* qc_load(const char* plugin_name)
 
     if (module)
     {
-        MXS_INFO("%s loaded.", plugin_name);
+        MXB_INFO("%s loaded.", plugin_name);
     }
     else
     {
-        MXS_ERROR("Could not load %s.", plugin_name);
+        MXB_ERROR("Could not load %s.", plugin_name);
     }
 
     return (QUERY_CLASSIFIER*) module;

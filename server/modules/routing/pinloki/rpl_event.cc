@@ -361,7 +361,7 @@ RplEvent RplEvent::read_header_only(std::istream& file, long* file_pos)
     }
     else if (!file.good())
     {
-        MXS_ERROR("Error reading event at position %ld: %d, %s", *file_pos, errno, mxb_strerror(errno));
+        MXB_ERROR("Error reading event at position %ld: %d, %s", *file_pos, errno, mxb_strerror(errno));
         return maxsql::RplEvent();
     }
 
@@ -388,7 +388,7 @@ bool RplEvent::read_body(std::istream& file, long* file_pos)
     }
     else if (!file.good())
     {
-        MXS_ERROR("Error reading event at position %ld: %d, %s", *file_pos, errno, mxb_strerror(errno));
+        MXB_ERROR("Error reading event at position %ld: %d, %s", *file_pos, errno, mxb_strerror(errno));
         m_raw.clear();
         return false;
     }

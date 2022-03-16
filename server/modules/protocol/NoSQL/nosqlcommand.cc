@@ -201,7 +201,7 @@ void Command::log_back(const char* zContext, const bsoncxx::document::value& doc
 {
     if (m_database.config().should_log_back())
     {
-        MXS_NOTICE("%s: %s", zContext, bsoncxx::to_json(doc).c_str());
+        MXB_NOTICE("%s: %s", zContext, bsoncxx::to_json(doc).c_str());
     }
 }
 

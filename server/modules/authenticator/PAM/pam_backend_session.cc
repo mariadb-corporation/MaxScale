@@ -47,7 +47,7 @@ PamBackendAuthenticator::parse_password_prompt(mariadb::ByteVec& data)
         if (linebrk_pos)
         {
             int msg_len = linebrk_pos - messages;
-            MXS_INFO("'%s' sent message when authenticating %s: %.*s",
+            MXB_INFO("'%s' sent message when authenticating %s: %.*s",
                      server_name, client_data->user_and_host().c_str(), msg_len, messages);
             prompt = linebrk_pos + 1;
         }

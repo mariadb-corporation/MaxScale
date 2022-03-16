@@ -418,7 +418,7 @@ bool ensure_query_is_parsed(GWBUF* query)
 
         if (!parsed)
         {
-            MXS_ERROR("Unable to parse query, out of resources?");
+            MXB_ERROR("Unable to parse query, out of resources?");
         }
     }
 
@@ -526,7 +526,7 @@ static bool parse_query(GWBUF* querybuf)
 
     if (querybuf == NULL || query_is_parsed(querybuf))
     {
-        MXS_ERROR("Query is NULL (%p) or query is already parsed.", querybuf);
+        MXB_ERROR("Query is NULL (%p) or query is already parsed.", querybuf);
         return false;
     }
 
@@ -535,7 +535,7 @@ static bool parse_query(GWBUF* querybuf)
 
     if (pi == NULL)
     {
-        MXS_ERROR("Parsing info initialization failed.");
+        MXB_ERROR("Parsing info initialization failed.");
         succp = false;
         goto retblock;
     }
@@ -548,7 +548,7 @@ static bool parse_query(GWBUF* querybuf)
     if (len < 1 || len >= ~((size_t) 0) - 1 || (query_str = (char*) malloc(len + 1)) == NULL)
     {
         /** Free parsing info data */
-        MXS_ERROR("Length (%lu) is 0 or query string allocation failed (%p). Buffer is %lu bytes.",
+        MXB_ERROR("Length (%lu) is 0 or query string allocation failed (%p). Buffer is %lu bytes.",
                   len,
                   query_str,
                   gwbuf_link_length(querybuf));
@@ -566,7 +566,7 @@ static bool parse_query(GWBUF* querybuf)
 
     if (thd == NULL)
     {
-        MXS_ERROR("THD creation failed.");
+        MXB_ERROR("THD creation failed.");
         /** Free parsing info data */
         parsing_info_done(pi);
         succp = false;
@@ -637,7 +637,7 @@ static THD* get_or_create_thd_for_parsing(MYSQL* mysql, char* query_str)
 
     if (thd == NULL)
     {
-        MXS_ERROR("Failed to create thread context for parsing.");
+        MXB_ERROR("Failed to create thread context for parsing.");
         goto return_thd;
     }
 
@@ -647,7 +647,7 @@ static THD* get_or_create_thd_for_parsing(MYSQL* mysql, char* query_str)
 
     if (failp)
     {
-        MXS_ERROR("Call to check_embedded_connection failed.");
+        MXB_ERROR("Call to check_embedded_connection failed.");
         goto return_err_with_thd;
     }
 
@@ -657,7 +657,7 @@ static THD* get_or_create_thd_for_parsing(MYSQL* mysql, char* query_str)
     if (mysql->status != MYSQL_STATUS_READY)
     {
         set_mysql_error(mysql, CR_COMMANDS_OUT_OF_SYNC, unknown_sqlstate);
-        MXS_ERROR("Invalid status %d in embedded server.",
+        MXB_ERROR("Invalid status %d in embedded server.",
                   mysql->status);
         goto return_err_with_thd;
     }
@@ -749,14 +749,14 @@ static bool create_parse_tree(THD* thd)
 
     if (failp)
     {
-        MXS_ERROR("Failed to set database in thread context.");
+        MXB_ERROR("Failed to set database in thread context.");
     }
 
     failp = parse_sql(thd, &parser_state, NULL);
 
     if (failp)
     {
-        MXS_DEBUG("%lu [readwritesplit:create_parse_tree] failed to "
+        MXB_DEBUG("%lu [readwritesplit:create_parse_tree] failed to "
                   "create parse tree.",
                   pthread_self());
     }
@@ -958,11 +958,11 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
         {
             if (sql_command_flags[lex->sql_command] & QC_CF_IMPLICIT_COMMIT_BEGIN)
             {
-                MXS_INFO("Implicit COMMIT before executing the next command.");
+                MXB_INFO("Implicit COMMIT before executing the next command.");
             }
             else if (sql_command_flags[lex->sql_command] & QC_CF_IMPLICIT_COMMIT_END)
             {
-                MXS_INFO("Implicit COMMIT after executing the next command.");
+                MXB_INFO("Implicit COMMIT after executing the next command.");
             }
         }
 
@@ -977,7 +977,7 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
     {
         if (mxb_log_should_log(LOG_INFO))
         {
-            MXS_INFO("Disable autocommit : implicit START TRANSACTION"
+            MXB_INFO("Disable autocommit : implicit START TRANSACTION"
                      " before executing the next command.");
         }
 
@@ -1322,7 +1322,7 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
                      * belongs to this category.
                      */
                     func_qtype |= QUERY_TYPE_WRITE;
-                    MXS_DEBUG("%lu [resolve_query_type] "
+                    MXB_DEBUG("%lu [resolve_query_type] "
                               "functype FUNC_SP, stored proc "
                               "or unknown function.",
                               pthread_self());
@@ -1330,7 +1330,7 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
 
                 case Item_func::UDF_FUNC:
                     func_qtype |= QUERY_TYPE_WRITE;
-                    MXS_DEBUG("%lu [resolve_query_type] "
+                    MXB_DEBUG("%lu [resolve_query_type] "
                               "functype UDF_FUNC, user-defined "
                               "function.",
                               pthread_self());
@@ -1341,7 +1341,7 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
                     // applicable.
                     if (lex->sql_command != SQLCOM_CREATE_TABLE)
                     {
-                        MXS_DEBUG("%lu [resolve_query_type] "
+                        MXB_DEBUG("%lu [resolve_query_type] "
                                   "functype NOW_FUNC, could be "
                                   "executed in MaxScale.",
                                   pthread_self());
@@ -1370,7 +1370,7 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
                         {
                             func_qtype |= QUERY_TYPE_SYSVAR_READ;
                         }
-                        MXS_DEBUG("%lu [resolve_query_type] "
+                        MXB_DEBUG("%lu [resolve_query_type] "
                                   "functype GSYSVAR_FUNC, system "
                                   "variable read.",
                                   pthread_self());
@@ -1380,7 +1380,7 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
                 /** User-defined variable read */
                 case Item_func::GUSERVAR_FUNC:
                     func_qtype |= QUERY_TYPE_USERVAR_READ;
-                    MXS_DEBUG("%lu [resolve_query_type] "
+                    MXB_DEBUG("%lu [resolve_query_type] "
                               "functype GUSERVAR_FUNC, user "
                               "variable read.",
                               pthread_self());
@@ -1389,7 +1389,7 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
                 /** User-defined variable modification */
                 case Item_func::SUSERVAR_FUNC:
                     func_qtype |= QUERY_TYPE_USERVAR_WRITE;
-                    MXS_DEBUG("%lu [resolve_query_type] "
+                    MXB_DEBUG("%lu [resolve_query_type] "
                               "functype SUSERVAR_FUNC, user "
                               "variable write.",
                               pthread_self());
@@ -1412,14 +1412,14 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
                      * type, for example, rand(), soundex(),
                      * repeat() .
                      */
-                    MXS_DEBUG("%lu [resolve_query_type] "
+                    MXB_DEBUG("%lu [resolve_query_type] "
                               "functype UNKNOWN_FUNC, "
                               "typically some system function.",
                               pthread_self());
                     break;
 
                 default:
-                    MXS_DEBUG("%lu [resolve_query_type] "
+                    MXB_DEBUG("%lu [resolve_query_type] "
                               "Functype %d.",
                               pthread_self(),
                               ftype);
@@ -1899,7 +1899,7 @@ static parsing_info_t* parsing_info_init(void (* donefun)(void*))
 
     if (mysql == NULL)
     {
-        MXS_ERROR("Call to mysql_real_connect failed due %d, %s.",
+        MXB_ERROR("Call to mysql_real_connect failed due %d, %s.",
                   mysql_errno(mysql),
                   mysql_error(mysql));
         mxb_assert(mysql != NULL);
@@ -3285,7 +3285,7 @@ static void update_field_infos(parsing_info_t* pi,
 
             case Item_subselect::UNKNOWN_SUBS:
             default:
-                MXS_ERROR("Unknown subselect type: %d", subselect_item->substype());
+                MXB_ERROR("Unknown subselect type: %d", subselect_item->substype());
                 break;
             }
         }
@@ -3766,7 +3766,7 @@ int32_t qc_mysql_setup(qc_sql_mode_t sql_mode, const char* zArgs)
 
     if (zArgs)
     {
-        MXS_WARNING("'%s' provided as arguments, "
+        MXB_WARNING("'%s' provided as arguments, "
                     "even though no arguments are supported.",
                     zArgs);
     }
@@ -3798,14 +3798,14 @@ int32_t qc_mysql_process_init(void)
             mxb_assert(this_unit.function_name_mappings);
             this_thread.function_name_mappings = this_unit.function_name_mappings;
 
-            MXS_ERROR("mysql_library_init() failed. Error code: %d", rc);
+            MXB_ERROR("mysql_library_init() failed. Error code: %d", rc);
         }
         else
         {
 #if MYSQL_VERSION_ID >= 100000
             set_malloc_size_cb(NULL);
 #endif
-            MXS_NOTICE("Query classifier initialized.");
+            MXB_NOTICE("Query classifier initialized.");
             inited = true;
         }
     }
@@ -3828,7 +3828,7 @@ int32_t qc_mysql_thread_init(void)
 
     if (!inited)
     {
-        MXS_ERROR("mysql_thread_init() failed.");
+        MXB_ERROR("mysql_thread_init() failed.");
     }
 
     return inited ? QC_RESULT_OK : QC_RESULT_ERROR;

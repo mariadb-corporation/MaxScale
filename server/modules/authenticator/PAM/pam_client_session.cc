@@ -145,7 +145,7 @@ PamClientAuthenticator::exchange(GWBUF* buffer, MYSQL_session* session, Authenti
         break;
 
     default:
-        MXS_ERROR("Unexpected authentication state: %d", static_cast<int>(m_state));
+        MXB_ERROR("Unexpected authentication state: %d", static_cast<int>(m_state));
         mxb_assert(!true);
         break;
     }

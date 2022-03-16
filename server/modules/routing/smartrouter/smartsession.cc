@@ -77,7 +77,7 @@ SmartRouterSession* SmartRouterSession::create(SmartRouter* pRouter, MXS_SESSION
     }
     else
     {
-        MXS_ERROR("No master found for %s, smartrouter session cannot be created.",
+        MXB_ERROR("No master found for %s, smartrouter session cannot be created.",
                   pRouter->config().name().c_str());
     }
 
@@ -88,7 +88,7 @@ bool SmartRouterSession::routeQuery(GWBUF* pBuf)
 {
     bool ret = false;
 
-    MXS_SDEBUG("routeQuery() buffer size " << maxbase::pretty_size(gwbuf_length(pBuf)));
+    MXB_SDEBUG("routeQuery() buffer size " << maxbase::pretty_size(gwbuf_length(pBuf)));
 
     if (expecting_request_packets())
     {
@@ -101,7 +101,7 @@ bool SmartRouterSession::routeQuery(GWBUF* pBuf)
     else if (m_mode != Mode::Idle)
     {
         auto is_busy = !all_clusters_are_idle();
-        MXS_SERROR("routeQuery() in wrong state. clusters busy = " << std::boolalpha << is_busy);
+        MXB_SERROR("routeQuery() in wrong state. clusters busy = " << std::boolalpha << is_busy);
         mxb_assert(false);
     }
     else
@@ -113,12 +113,12 @@ bool SmartRouterSession::routeQuery(GWBUF* pBuf)
 
         if (m_qc.target_is_all(route_info.target()))
         {
-            MXS_SDEBUG("Write all");
+            MXB_SDEBUG("Write all");
             ret = write_to_all(pBuf, Mode::Query);
         }
         else if (m_qc.target_is_master(route_info.target()) || m_pSession->protocol_data()->is_trx_active())
         {
-            MXS_SDEBUG("Write to master");
+            MXB_SDEBUG("Write to master");
             ret = write_to_master(pBuf);
         }
         else
@@ -127,18 +127,18 @@ bool SmartRouterSession::routeQuery(GWBUF* pBuf)
 
             if (perf.is_valid())
             {
-                MXS_SDEBUG("Smart route to " << perf.target()->name()
+                MXB_SDEBUG("Smart route to " << perf.target()->name()
                                              << ", canonical = " << maxbase::show_some(canonical));
                 ret = write_to_target(perf.target(), pBuf);
             }
             else if (modutil_is_SQL(pBuf))
             {
-                MXS_SDEBUG("Start measurement");
+                MXB_SDEBUG("Start measurement");
                 ret = write_to_all(pBuf, Mode::MeasureQuery);
             }
             else
             {
-                MXS_SWARNING("Could not determine target (non-sql query), goes to master");
+                MXB_SWARNING("Could not determine target (non-sql query), goes to master");
                 ret = write_to_master(pBuf);
             }
         }
@@ -162,7 +162,7 @@ bool SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down
     bool last_packet_for_this_cluster = !cluster.tracker.expecting_response_packets();
     bool very_last_response_packet = !expecting_response_packets();     // last from all clusters
 
-    MXS_SDEBUG("Reply from " << std::boolalpha
+    MXB_SDEBUG("Reply from " << std::boolalpha
                              << cluster.pBackend->target()->name()
                              << " is_master=" << cluster.is_master
                              << " first_packet=" << first_response_packet
@@ -183,7 +183,7 @@ bool SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down
         switch (err_code)
         {
         case ER_CONNECTION_KILLED:      // there might be more error codes needing to be caught here
-            MXS_SERROR("clientReply(): Lost connection to " << cluster.pBackend->target()->name()
+            MXB_SERROR("clientReply(): Lost connection to " << cluster.pBackend->target()->name()
                                                             << " Error code=" << err_code
                                                             << ' ' << mxs::extract_error(pPacket));
             m_pSession->kill();
@@ -193,7 +193,7 @@ bool SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down
 
     if (cluster.tracker.state() == maxsql::PacketTracker::State::Error)
     {
-        MXS_SERROR("ProtocolTracker from state " << tracker_state_before
+        MXB_SERROR("ProtocolTracker from state " << tracker_state_before
                                                  << " to state " << cluster.tracker.state()
                                                  << ". Disconnect.");
         m_pSession->kill();
@@ -205,7 +205,7 @@ bool SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down
     if (first_response_packet)
     {
         maxbase::Duration query_dur = maxbase::Clock::now(maxbase::NowType::EPollTick) - m_measurement.start;
-        MXS_SDEBUG("Target " << cluster.pBackend->target()->name()
+        MXB_SDEBUG("Target " << cluster.pBackend->target()->name()
                              << " will be responding to the client."
                              << " First packet received in time " << query_dur);
         cluster.is_replying_to_client = true;
@@ -229,7 +229,7 @@ bool SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down
         mxb_assert(cluster.is_replying_to_client || m_pDelayed_packet);
         if (m_pDelayed_packet)
         {
-            MXS_SDEBUG("Picking up delayed packet, discarding response from "
+            MXB_SDEBUG("Picking up delayed packet, discarding response from "
                        << cluster.pBackend->target()->name());
             gwbuf_free(pPacket);
             pPacket = m_pDelayed_packet;
@@ -242,7 +242,7 @@ bool SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down
         {
             // Delay sending the last packet until all clusters have responded. The code currently
             // does not allow multiple client-queries at the same time (no query buffer)
-            MXS_SDEBUG("Delaying last packet");
+            MXB_SDEBUG("Delaying last packet");
             mxb_assert(!m_pDelayed_packet);
             m_pDelayed_packet = pPacket;
             will_reply = false;
@@ -254,7 +254,7 @@ bool SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down
     }
     else
     {
-        MXS_SDEBUG("Discarding response from " << cluster.pBackend->target()->name());
+        MXB_SDEBUG("Discarding response from " << cluster.pBackend->target()->name());
         gwbuf_free(pPacket);
     }
 
@@ -262,7 +262,7 @@ bool SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down
 
     if (will_reply)
     {
-        MXS_SDEBUG("Forward response to client");
+        MXB_SDEBUG("Forward response to client");
         rc = RouterSession::clientReply(pPacket, down, reply);
     }
 
@@ -387,7 +387,7 @@ bool SmartRouterSession::handleError(mxs::ErrorType type,
                                      const mxs::Reply& pReply)
 {
     auto err_code = mxs_mysql_get_mysql_errno(pPacket);
-    MXS_SERROR("handleError(): Lost connection to "
+    MXB_SERROR("handleError(): Lost connection to "
                << pProblem->target()->name() << " Error code=" << err_code << " "
                << mxs::extract_error(pPacket));
 

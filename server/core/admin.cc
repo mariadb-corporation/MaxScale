@@ -149,7 +149,7 @@ static bool host_to_sockaddr(const char* host, uint16_t port, struct sockaddr_st
 
     if ((rc = getaddrinfo(host, NULL, &hint, &ai)) != 0)
     {
-        MXS_ERROR("Failed to obtain address for host %s: %s", host, gai_strerror(rc));
+        MXB_ERROR("Failed to obtain address for host %s: %s", host, gai_strerror(rc));
         return false;
     }
 
@@ -185,7 +185,7 @@ std::string load_file(const std::string& file)
     }
     else
     {
-        MXS_ERROR("Failed to load file '%s': %d, %s", file.c_str(), errno, mxb_strerror(errno));
+        MXB_ERROR("Failed to load file '%s': %d, %s", file.c_str(), errno, mxb_strerror(errno));
     }
 
     return ss.str();
@@ -312,7 +312,7 @@ void admin_log_error(void* arg, const char* fmt, va_list ap)
     {
         char buf[1024];
         vsnprintf(buf, sizeof(buf), fmt, ap);
-        MXS_ERROR("REST API HTTP daemon error: %s\n", mxb::trimmed_copy(buf).c_str());
+        MXB_ERROR("REST API HTTP daemon error: %s\n", mxb::trimmed_copy(buf).c_str());
     }
 }
 
@@ -432,7 +432,7 @@ bool Client::authorize_user(const char* user, const char* method, const char* ur
     {
         if (mxs::Config::get().admin_log_auth_failures.get())
         {
-            MXS_WARNING("Authorization failed for '%s', request requires "
+            MXB_WARNING("Authorization failed for '%s', request requires "
                         "administrative privileges. Request: %s %s",
                         user, method, url);
         }
@@ -556,8 +556,8 @@ bool Client::serve_file(const std::string& url) const
 
     if (!path.empty())
     {
-        MXS_DEBUG("Client requested file: %s", path.c_str());
-        MXS_DEBUG("Request:\n%s", m_request.to_string().c_str());
+        MXB_DEBUG("Client requested file: %s", path.c_str());
+        MXB_DEBUG("Request:\n%s", m_request.to_string().c_str());
         std::string data = get_file(path);
 
         if (!data.empty())
@@ -586,7 +586,7 @@ bool Client::serve_file(const std::string& url) const
         }
         else
         {
-            MXS_DEBUG("File not found: %s", path.c_str());
+            MXB_DEBUG("File not found: %s", path.c_str());
         }
     }
 
@@ -717,7 +717,7 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
     }
 
     m_request.set_json(json);
-    MXS_DEBUG("Request:\n%s", m_request.to_string().c_str());
+    MXB_DEBUG("Request:\n%s", m_request.to_string().c_str());
 
     HttpResponse reply = is_auth_endpoint(m_request) ?
         generate_token(m_request) : resource_handle_request(m_request);
@@ -797,7 +797,7 @@ int Client::queue_response(const HttpResponse& reply)
     int rval = MHD_queue_response(m_connection, reply.get_code(), response);
     MHD_destroy_response(response);
 
-    MXS_DEBUG("Response: HTTP %d", reply.get_code());
+    MXB_DEBUG("Response: HTTP %d", reply.get_code());
 
     return rval;
 }
@@ -922,7 +922,7 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
             {
                 if (mxs::Config::get().admin_log_auth_failures.get())
                 {
-                    MXS_WARNING("Authentication failed for '%s', %s. Request: %s %s",
+                    MXB_WARNING("Authentication failed for '%s', %s. Request: %s %s",
                                 user ? user : "",
                                 pw ? "using password" : "no password",
                                 method, url);
@@ -930,7 +930,7 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
             }
             else if (authorize_user(user, method, url))
             {
-                MXS_INFO("Accept authentication from '%s', %s. Request: %s",
+                MXB_INFO("Accept authentication from '%s', %s. Request: %s",
                          user ? user : "",
                          pw ? "using password" : "no password",
                          url);
@@ -968,7 +968,7 @@ bool mxs_admin_init()
 
     if (!load_ssl_certificates())
     {
-        MXS_ERROR("Failed to load REST API TLS certificates.");
+        MXB_ERROR("Failed to load REST API TLS certificates.");
     }
     else if (host_to_sockaddr(config.admin_host.c_str(), config.admin_port, &addr))
     {
@@ -982,11 +982,11 @@ bool mxs_admin_init()
         if (this_unit.using_ssl)
         {
             options |= MHD_USE_SSL;
-            MXS_NOTICE("The REST API will be encrypted, all requests must use HTTPS.");
+            MXB_NOTICE("The REST API will be encrypted, all requests must use HTTPS.");
         }
         else if (mxs::Config::get().gui && mxs::Config::get().secure_gui)
         {
-            MXS_WARNING("The MaxScale GUI is enabled but encryption for the REST API is not enabled, "
+            MXB_WARNING("The MaxScale GUI is enabled but encryption for the REST API is not enabled, "
                         "the GUI will not be enabled. Configure `admin_ssl_key` and `admin_ssl_cert` "
                         "to enable HTTPS or add `admin_secure_gui=false` to allow use of the GUI without encryption.");
         }
@@ -1025,7 +1025,7 @@ void mxs_admin_finish()
 {
     WebSocket::shutdown();
     MHD_stop_daemon(this_unit.daemon);
-    MXS_NOTICE("Stopped MaxScale REST API");
+    MXB_NOTICE("Stopped MaxScale REST API");
 }
 
 bool mxs_admin_https_enabled()

@@ -56,7 +56,7 @@ HintRouter::HintRouter(SERVICE* pService)
     , m_config(pService->name())
 {
     HR_ENTRY();
-    MXS_NOTICE("Hint router [%s] created.", pService->name());
+    MXB_NOTICE("Hint router [%s] created.", pService->name());
 }
 
 // static

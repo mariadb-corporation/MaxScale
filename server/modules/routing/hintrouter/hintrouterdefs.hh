@@ -24,7 +24,7 @@
 #endif
 
 #ifdef DEBUG_HINTROUTER
-#define HR_DEBUG(msg, ...) MXS_NOTICE(msg, ##__VA_ARGS__)
+#define HR_DEBUG(msg, ...) MXB_NOTICE(msg, ##__VA_ARGS__)
 #define HR_ENTRY()         HR_DEBUG(__func__)
 #else
 #define HR_DEBUG(msg, ...)

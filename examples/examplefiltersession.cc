@@ -39,7 +39,7 @@ ExampleFilterSession* ExampleFilterSession::create(MXS_SESSION* pSession, SERVIC
 void ExampleFilterSession::close()
 {
     // When the session is closed, report the numbers to the log.
-    MXS_NOTICE("Session %lu routed %i queries and %i replies.", m_session_id, m_queries, m_replies);
+    MXB_NOTICE("Session %lu routed %i queries and %i replies.", m_session_id, m_queries, m_replies);
 }
 
 bool ExampleFilterSession::routeQuery(GWBUF* pPacket)

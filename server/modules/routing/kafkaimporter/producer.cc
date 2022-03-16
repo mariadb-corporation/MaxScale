@@ -117,19 +117,19 @@ bool Producer::connect()
                                     master.password.c_str(),
                                     nullptr, master.port, nullptr, 0))
             {
-                MXS_ERROR("Failed to connect to '%s': %s", master.name.c_str(), mysql_error(m_mysql));
+                MXB_ERROR("Failed to connect to '%s': %s", master.name.c_str(), mysql_error(m_mysql));
                 mysql_close(m_mysql);
                 m_mysql = nullptr;
             }
             else
             {
-                MXS_INFO("Connected to '%s'", master.name.c_str());
+                MXB_INFO("Connected to '%s'", master.name.c_str());
                 ok = true;
             }
         }
         else
         {
-            MXS_ERROR("Could not find a valid Master server to stream data into.");
+            MXB_ERROR("Could not find a valid Master server to stream data into.");
         }
     }
 
@@ -169,7 +169,7 @@ bool Producer::produce(const std::string& table, const std::string& value)
 
         if (t.prepare(m_mysql))
         {
-            MXS_INFO("Opened table '%s'", table.c_str());
+            MXB_INFO("Opened table '%s'", table.c_str());
             it = m_tables.emplace(table, std::move(t)).first;
         }
     }

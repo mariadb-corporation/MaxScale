@@ -218,7 +218,7 @@ void MariaDBError::create_response(const Command& command, DocumentBuilder& doc)
         doc.append(kvp(key::CODE_NAME, error::name(protocol_code)));
         doc.append(kvp(key::MARIADB, mariadb.extract()));
 
-        MXS_ERROR("Protocol command failed due to MariaDB error: "
+        MXB_ERROR("Protocol command failed due to MariaDB error: "
                   "json = \"%s\", code = %d, message = \"%s\", sql = \"%s\"",
                   json.c_str(), m_mariadb_code, m_mariadb_message.c_str(), sql.c_str());
     }

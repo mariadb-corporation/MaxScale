@@ -145,7 +145,7 @@ bool converter_func(Worker::Call::action_t action, Avro* router)
     if (binlog_end == AVRO_LAST_FILE && !logged)
     {
         logged = true;
-        MXS_INFO("Stopped processing file %s at position %lu. Waiting until"
+        MXB_INFO("Stopped processing file %s at position %lu. Waiting until"
                  " more data is written before continuing.",
                  router->binlog_name.c_str(),
                  router->current_pos);
@@ -208,13 +208,13 @@ bool avro_handle_convert(const MODULECMD_ARG* args, json_t** output)
     if (strcmp(args->argv[1].value.string, "start") == 0
         && conversion_task_ctl((Avro*)args->argv[0].value.service->router(), true))
     {
-        MXS_NOTICE("Started conversion for service '%s'.", args->argv[0].value.service->name());
+        MXB_NOTICE("Started conversion for service '%s'.", args->argv[0].value.service->name());
         rval = true;
     }
     else if (strcmp(args->argv[1].value.string, "stop") == 0
              && conversion_task_ctl((Avro*)args->argv[0].value.service->router(), false))
     {
-        MXS_NOTICE("Stopped conversion for service '%s'.", args->argv[0].value.service->name());
+        MXB_NOTICE("Stopped conversion for service '%s'.", args->argv[0].value.service->name());
         rval = true;
     }
 

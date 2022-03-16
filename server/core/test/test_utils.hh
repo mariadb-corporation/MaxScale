@@ -56,7 +56,7 @@ static void sigfatal_handler(int i)
     set_signal(i, SIG_DFL);
     mxb::dump_stacktrace(
         [](const char* symbol, const char* cmd) {
-            MXS_ALERT("  %s: %s", symbol, cmd);
+            MXB_ALERT("  %s: %s", symbol, cmd);
         });
     raise(i);
 }
@@ -79,7 +79,7 @@ static int set_signal(int sig, void (* handler)(int))
 
     if (err < 0)
     {
-        MXS_ERROR("Failed call sigaction() in %s due to %d, %s.",
+        MXB_ERROR("Failed call sigaction() in %s due to %d, %s.",
                   program_invocation_short_name,
                   errno,
                   mxb_strerror(errno));

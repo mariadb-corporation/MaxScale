@@ -659,7 +659,7 @@ size_t temporal_field_size(uint8_t type, const uint8_t* decimals, int length)
         return 5 + ((*decimals + 1) / 2);
 
     default:
-        MXS_ERROR("Unknown field type: %x %s", type, column_type_to_string(type));
+        MXB_ERROR("Unknown field type: %x %s", type, column_type_to_string(type));
         break;
     }
 
@@ -769,7 +769,7 @@ size_t unpack_numeric_field(uint8_t* src, uint8_t type, const uint8_t* metadata,
         break;
 
     default:
-        MXS_ERROR("Bad column type: %x %s", type, column_type_to_string(type));
+        MXB_ERROR("Bad column type: %x %s", type, column_type_to_string(type));
         break;
     }
 
@@ -860,7 +860,7 @@ RowEvent get_event_type(uint8_t event)
         return RowEvent::DELETE;
 
     default:
-        MXS_ERROR("Unexpected event type: %d (%0x)", event, event);
+        MXB_ERROR("Unexpected event type: %d (%0x)", event, event);
         return RowEvent::UNKNOWN;
     }
 }
@@ -1028,7 +1028,7 @@ int get_metadata_len(uint8_t type)
         { \
             for (long x = 0; x < i; x++) \
             { \
-                MXS_ALERT("%s", trace[x]); \
+                MXB_ALERT("%s", trace[x]); \
             } \
             raise(SIGABRT); \
         } \
@@ -1196,7 +1196,7 @@ bool json_extract_field_names(const char* filename, std::vector<Column>& columns
                             }
                             else
                             {
-                                MXS_WARNING("No \"real_type\" value defined. Treating as unknown type field.");
+                                MXB_WARNING("No \"real_type\" value defined. Treating as unknown type field.");
                             }
 
                             if ((value = json_object_get(val, "length")) && json_is_integer(value))
@@ -1205,7 +1205,7 @@ bool json_extract_field_names(const char* filename, std::vector<Column>& columns
                             }
                             else
                             {
-                                MXS_WARNING("No \"length\" value defined. Treating as default length field.");
+                                MXB_WARNING("No \"length\" value defined. Treating as default length field.");
                             }
 
                             if ((value = json_object_get(val, "unsigned")) && json_is_boolean(value))
@@ -1216,7 +1216,7 @@ bool json_extract_field_names(const char* filename, std::vector<Column>& columns
                     }
                     else
                     {
-                        MXS_ERROR("JSON value for \"name\" was not a string in "
+                        MXB_ERROR("JSON value for \"name\" was not a string in "
                                   "file '%s'.",
                                   filename);
                         rval = false;
@@ -1224,7 +1224,7 @@ bool json_extract_field_names(const char* filename, std::vector<Column>& columns
                 }
                 else
                 {
-                    MXS_ERROR("JSON value for \"fields\" was not an array of objects in "
+                    MXB_ERROR("JSON value for \"fields\" was not an array of objects in "
                               "file '%s'.",
                               filename);
                     rval = false;
@@ -1233,13 +1233,13 @@ bool json_extract_field_names(const char* filename, std::vector<Column>& columns
         }
         else
         {
-            MXS_ERROR("JSON value for \"fields\" was not an array in file '%s'.", filename);
+            MXB_ERROR("JSON value for \"fields\" was not an array in file '%s'.", filename);
         }
         json_decref(obj);
     }
     else
     {
-        MXS_ERROR("Failed to load JSON from file '%s': %s",
+        MXB_ERROR("Failed to load JSON from file '%s': %s",
                   filename,
                   obj && !arr ? "No 'fields' value in object." : err.text);
     }
@@ -1456,7 +1456,7 @@ STable Table::deserialize(const char* path)
                 }
                 else
                 {
-                    MXS_ERROR("Malformed schema file name: %s", path);
+                    MXB_ERROR("Malformed schema file name: %s", path);
                 }
             }
         }
@@ -1745,7 +1745,7 @@ uint8_t* Rpl::process_row_event_data(const Table& create,
                 if (!warn_bit)
                 {
                     warn_bit = true;
-                    MXS_WARNING("BIT is not currently supported, values are stored as 0.");
+                    MXB_WARNING("BIT is not currently supported, values are stored as 0.");
                 }
                 conv->column_int(create, i, 0);
                 sprintf(trace[i], "[%ld] BIT", i);
@@ -1831,7 +1831,7 @@ uint8_t* Rpl::process_row_event_data(const Table& create,
             sprintf(trace[i], "[%ld] %s: Not present", i, column_type_to_string(create.column_types[i]));
         }
 
-        MXS_INFO("%s", trace[i]);
+        MXB_INFO("%s", trace[i]);
     }
 
     return ptr;
@@ -1881,13 +1881,13 @@ bool Rpl::handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr)
             }
             else if (int err = res.second->errnum())
             {
-                MXS_ERROR("Failed to execute '%s' on [%s]:%d : %d, %s", query.c_str(),
+                MXB_ERROR("Failed to execute '%s' on [%s]:%d : %d, %s", query.c_str(),
                           m_server.host.c_str(), m_server.port, err, res.second->error().c_str());
             }
         }
         else
         {
-            MXS_ERROR("Failed to fetch CREATE for '%s': %s", table_ident,
+            MXB_ERROR("Failed to fetch CREATE for '%s': %s", table_ident,
                       res.first.empty() ? res.second->error().c_str() : res.first.c_str());
         }
     }
@@ -1897,7 +1897,7 @@ bool Rpl::handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr)
         mxb_assert(create->second->columns.size() > 0);
         auto id = create->second->map_table(ptr, ev_len);
         m_active_maps[id] = create->second;
-        MXS_DEBUG("Table %s mapped to %lu", create->second->id().c_str(), id);
+        MXB_DEBUG("Table %s mapped to %lu", create->second->id().c_str(), id);
 
         if (!create->second->is_open)
         {
@@ -1907,7 +1907,7 @@ bool Rpl::handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr)
     }
     else
     {
-        MXS_WARNING("Table map event for table '%s' read before the DDL statement "
+        MXB_WARNING("Table map event for table '%s' read before the DDL statement "
                     "for that table  was read. Data will not be processed for this "
                     "table until a DDL statement for it is read.",
                     table_ident);
@@ -2002,7 +2002,7 @@ bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
 
         if (ncolumns != create.columns.size())
         {
-            MXS_ERROR("Row event and table map event have different column "
+            MXB_ERROR("Row event and table map event have different column "
                       "counts for table %s, only full row image is currently "
                       "supported.", create.id().c_str());
         }
@@ -2012,7 +2012,7 @@ bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
              * beforehand so we must continue processing them until we reach the end
              * of the event. */
             int rows = 0;
-            MXS_INFO("Row Event for '%s' at %u", table_ident.c_str(), hdr->next_pos - hdr->event_size);
+            MXB_INFO("Row Event for '%s' at %u", table_ident.c_str(), hdr->next_pos - hdr->event_size);
 
             while (ptr < end)
             {
@@ -2043,13 +2043,13 @@ bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
         }
         else
         {
-            MXS_ERROR("Avro file handle was not found for table %s. See earlier"
+            MXB_ERROR("Avro file handle was not found for table %s. See earlier"
                       " errors for more details.", create.id().c_str());
         }
     }
     else
     {
-        MXS_INFO("Row event for unknown table mapped to ID %lu. Data will not "
+        MXB_INFO("Row event for unknown table mapped to ID %lu. Data will not "
                  "be processed.", table_id);
     }
 
@@ -2116,7 +2116,7 @@ void Rpl::handle_query_event(REP_HEADER* hdr, uint8_t* ptr)
 
         if (op == QUERY_OP_UPDATE || op == QUERY_OP_INSERT || op == QUERY_OP_DELETE)
         {
-            MXS_WARNING("Possible STATEMENT or MIXED format binary log. Check that "
+            MXB_WARNING("Possible STATEMENT or MIXED format binary log. Check that "
                         "'binlog_format' is set to ROW on the master.");
             warn_not_row_format = false;
         }
@@ -2187,7 +2187,7 @@ static std::string avro_sanitizer(const char* s, int l)
 
 void Rpl::parse_sql(const std::string& sql, const std::string& db)
 {
-    MXS_INFO("%s", sql.c_str());
+    MXB_INFO("%s", sql.c_str());
     parser.db = db;
     parser.tokens = tok::Tokenizer::tokenize(sql.c_str(), avro_sanitizer);
 
@@ -2226,7 +2226,7 @@ void Rpl::parse_sql(const std::string& sql, const std::string& db)
     }
     catch (const ParsingError& err)
     {
-        MXS_INFO("Parsing failed: %s (%s)", err.what(), sql.c_str());
+        MXB_INFO("Parsing failed: %s (%s)", err.what(), sql.c_str());
     }
 }
 
@@ -2573,7 +2573,7 @@ void Rpl::do_create_table_like(const std::string& old_db, const std::string& old
     }
     else
     {
-        MXS_ERROR("Could not find source table %s.%s", parser.db.c_str(), parser.table.c_str());
+        MXB_ERROR("Could not find source table %s.%s", parser.db.c_str(), parser.table.c_str());
     }
 }
 

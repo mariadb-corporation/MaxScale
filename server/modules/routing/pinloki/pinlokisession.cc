@@ -115,13 +115,13 @@ bool PinlokiSession::routeQuery(GWBUF* pPacket)
     {
     case MXS_COM_REGISTER_SLAVE:
         // Register slave (maybe grab the slave's server_id if we need it)
-        MXS_INFO("COM_REGISTER_SLAVE");
+        MXB_INFO("COM_REGISTER_SLAVE");
         response = modutil_create_ok();
         break;
 
     case MXS_COM_BINLOG_DUMP:
         // Start dumping binlogs
-        MXS_INFO("COM_BINLOG_DUMP");
+        MXB_INFO("COM_BINLOG_DUMP");
         try
         {
             pinloki::SendCallback send_cb = [this](const mxq::RplEvent& event) {
@@ -144,14 +144,14 @@ bool PinlokiSession::routeQuery(GWBUF* pPacket)
         }
         catch (const BinlogReadError& err)
         {
-            MXS_ERROR("Binlog read error: %s", err.what());
+            MXB_ERROR("Binlog read error: %s", err.what());
         }
         break;
 
     case MXS_COM_QUERY:
         {
             const auto& sql = buf.get()->get_sql();
-            MXS_DEBUG("COM_QUERY: %s", sql.c_str());
+            MXB_DEBUG("COM_QUERY: %s", sql.c_str());
             parser::parse(sql, this);
             rval = 1;
         }
@@ -166,7 +166,7 @@ bool PinlokiSession::routeQuery(GWBUF* pPacket)
         break;
 
     default:
-        MXS_ERROR("Unrecognized command %i", cmd);
+        MXB_ERROR("Unrecognized command %i", cmd);
     }
 
     if (response)
@@ -350,7 +350,7 @@ void PinlokiSession::set(const std::string& key, const std::string& value)
         {
             const char* const msg = "Replica trying to connect with "
                                     "invalid GTID (@@slave_connect_state)";
-            MXS_WARNING(msg);
+            MXB_WARNING(msg);
             buf = modutil_create_mysql_err_msg(1, 0, 1941, "HY000", msg);
         }
         else

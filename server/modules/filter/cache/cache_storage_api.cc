@@ -80,7 +80,7 @@ bool Storage::split_arguments(const std::string& argument_string,
             break;
 
         default:
-            MXS_ERROR("The provided argument string '%s' is not of the correct format.",
+            MXB_ERROR("The provided argument string '%s' is not of the correct format.",
                       argument_string.c_str());
             rv = false;
         }
@@ -106,7 +106,7 @@ bool Storage::get_host(const std::string& s, int default_port, mxb::Host* pHost)
     }
     else
     {
-        MXS_ERROR("The provided value '%s' is not valid.", s.c_str());
+        MXB_ERROR("The provided value '%s' is not valid.", s.c_str());
     }
 
     return valid;

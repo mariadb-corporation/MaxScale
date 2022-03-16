@@ -27,7 +27,7 @@ std::unique_ptr<SessionCache> SessionCache::create(Cache* pCache)
     }
     else
     {
-        MXS_ERROR("Cache storage token creation failed.");
+        MXB_ERROR("Cache storage token creation failed.");
     }
 
     return sSession_cache;

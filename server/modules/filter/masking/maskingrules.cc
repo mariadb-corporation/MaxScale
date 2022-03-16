@@ -141,7 +141,7 @@ public:
         {
             PCRE2_UCHAR errbuf[512];
             pcre2_get_error_message(errcode, errbuf, sizeof(errbuf));
-            MXS_ERROR("Regex compilation failed at %d for regex '%s': %s",
+            MXB_ERROR("Regex compilation failed at %d for regex '%s': %s",
                       (int)erroffset,
                       host.c_str(),
                       errbuf);
@@ -247,7 +247,7 @@ unique_ptr<MaskingRules::Rule::Account> create_account(const char* zAccount)
             }
             else
             {
-                MXS_ERROR("Could not trim quotes from host part of %s.", zAccount);
+                MXB_ERROR("Could not trim quotes from host part of %s.", zAccount);
                 zHost = NULL;
             }
         }
@@ -270,7 +270,7 @@ unique_ptr<MaskingRules::Rule::Account> create_account(const char* zAccount)
     }
     else
     {
-        MXS_ERROR("Could not trim quotes from user part of %s.", zAccount);
+        MXB_ERROR("Could not trim quotes from user part of %s.", zAccount);
     }
 
     return sAccount;
@@ -316,7 +316,7 @@ bool get_accounts(const char* zName,
         }
         else
         {
-            MXS_ERROR("An element in a '%s' array is not a string.", zName);
+            MXB_ERROR("An element in a '%s' array is not a string.", zName);
             success = false;
         }
 
@@ -357,7 +357,7 @@ bool create_rules_from_array(json_t* pRules, vector<unique_ptr<MaskingRules::Rul
             // Check whether we have KEY_OBFUSCATE or KEY_REPLACE
             if (!pReplace && !pObfuscate)
             {
-                MXS_ERROR("A masking rule does not contain a '%s' or '%s' key.",
+                MXB_ERROR("A masking rule does not contain a '%s' or '%s' key.",
                           KEY_OBFUSCATE,
                           KEY_REPLACE);
                 parsed = false;
@@ -389,7 +389,7 @@ bool create_rules_from_array(json_t* pRules, vector<unique_ptr<MaskingRules::Rul
         }
         else
         {
-            MXS_ERROR("Element %lu of the '%s' array is not an object.", i, KEY_RULES);
+            MXB_ERROR("Element %lu of the '%s' array is not an object.", i, KEY_RULES);
             parsed = false;
         }
 
@@ -421,7 +421,7 @@ bool create_rules_from_root(json_t* pRoot,
         }
         else
         {
-            MXS_ERROR("The masking rules object contains a `%s` key, "
+            MXB_ERROR("The masking rules object contains a `%s` key, "
                       "but it is not an array.",
                       KEY_RULES);
         }
@@ -547,7 +547,7 @@ static bool validate_user_rules(json_t* pApplies_to, json_t* pExempted)
 
     if (err)
     {
-        MXS_ERROR("A masking rule contains a '%s' key, "
+        MXB_ERROR("A masking rule contains a '%s' key, "
                   "but the value is not an array.",
                   err);
         return false;
@@ -563,13 +563,13 @@ static json_t* rule_get_object(json_t* pRule,
     // Check 'rule_type' object
     if (!pRule || !(pObj = json_object_get(pRule, rule_type)))
     {
-        MXS_ERROR("A masking rule does not contain the '%s' key.",
+        MXB_ERROR("A masking rule does not contain the '%s' key.",
                   rule_type);
         return NULL;
     }
     if (!json_is_object(pObj))
     {
-        MXS_ERROR("A masking rule contains a '%s' key, "
+        MXB_ERROR("A masking rule contains a '%s' key, "
                   "but the value is not a valid Json object.",
                   rule_type);
         return NULL;
@@ -604,14 +604,14 @@ static bool rule_check_database_options(json_t* pColumn,
     {
         if (!pColumn || !json_is_string(pColumn))
         {
-            MXS_ERROR("A masking rule '%s' does not have "
+            MXB_ERROR("A masking rule '%s' does not have "
                       "the mandatory '%s' key or it's not a valid Json string.",
                       rule_type,
                       KEY_COLUMN);
         }
         else
         {
-            MXS_ERROR("In a masking rule '%s', the keys "
+            MXB_ERROR("In a masking rule '%s', the keys "
                       "'%s' and/or '%s' are not valid Json strings.",
                       rule_type,
                       KEY_TABLE,
@@ -642,7 +642,7 @@ static json_t* rule_get_fill(json_t* pDoc)
         }
         else
         {
-            MXS_ERROR("json_string() error, cannot produce"
+            MXB_ERROR("json_string() error, cannot produce"
                       " a valid '%s' object for rule '%s'.",
                       KEY_FILL,
                       KEY_REPLACE);
@@ -796,7 +796,7 @@ bool rule_get_match_value_fill(json_t* pRule,
     json_t* pWith = json_object_get(pRule, KEY_WITH);
     if (!pWith || !json_is_object(pWith))
     {
-        MXS_ERROR("A masking '%s' rule doesn't have a valid '%s' key",
+        MXB_ERROR("A masking '%s' rule doesn't have a valid '%s' key",
                   KEY_REPLACE,
                   KEY_WITH);
         return false;
@@ -822,7 +822,7 @@ bool rule_get_match_value_fill(json_t* pRule,
         || (pTheValue && !json_is_string(pTheValue))
         || ((!pTheMatch || !json_is_string(pTheMatch))))
     {
-        MXS_ERROR("A masking '%s' rule has '%s', '%s' and/or '%s' "
+        MXB_ERROR("A masking '%s' rule has '%s', '%s' and/or '%s' "
                   "invalid Json strings.",
                   KEY_REPLACE,
                   KEY_MATCH,
@@ -862,7 +862,7 @@ bool rule_get_value_fill(json_t* pRule,
     json_t* pWith = json_object_get(pRule, KEY_WITH);
     if (!pWith || !json_is_object(pWith))
     {
-        MXS_ERROR("A masking '%s' rule doesn't have a valid '%s' key.",
+        MXB_ERROR("A masking '%s' rule doesn't have a valid '%s' key.",
                   KEY_REPLACE,
                   KEY_WITH);
         return false;
@@ -878,7 +878,7 @@ bool rule_get_value_fill(json_t* pRule,
     if ((pTheFill && !json_is_string(pTheFill))
         || (pTheValue && !json_is_string(pTheValue)))
     {
-        MXS_ERROR("A masking '%s' rule has '%s' and/or '%s' "
+        MXB_ERROR("A masking '%s' rule has '%s' and/or '%s' "
                   "invalid Json strings.",
                   KEY_REPLACE,
                   KEY_VALUE,
@@ -984,7 +984,7 @@ static pcre2_code* rule_compile_pcre2_match(const char* match_string)
     {
         PCRE2_UCHAR errbuf[512];
         pcre2_get_error_message(errcode, errbuf, sizeof(errbuf));
-        MXS_ERROR("Regex compilation failed at %d for regex '%s': %s",
+        MXB_ERROR("Regex compilation failed at %d for regex '%s': %s",
                   (int)erroffset,
                   match_string,
                   errbuf);
@@ -1261,7 +1261,7 @@ void MaskingRules::MatchRule::rewrite(LEncString& s) const
     }
     else
     {
-        MXS_ERROR("Allocation of matching data for PCRE2 failed."
+        MXB_ERROR("Allocation of matching data for PCRE2 failed."
                   " This is most likely caused by a lack of memory");
     }
 }
@@ -1306,7 +1306,7 @@ void MaskingRules::ReplaceRule::rewrite(LEncString& s) const
         }
         else
         {
-            MXS_ERROR("Length of returned value \"%s\" is %u, while length of "
+            MXB_ERROR("Length of returned value \"%s\" is %u, while length of "
                       "replacement value \"%s\" is %u, and no 'fill' value specified.",
                       s.to_string().c_str(),
                       (unsigned)s.length(),
@@ -1354,7 +1354,7 @@ unique_ptr<MaskingRules> MaskingRules::load(const char* zPath)
         }
         else
         {
-            MXS_ERROR("Loading rules file failed: (%s:%d:%d): %s",
+            MXB_ERROR("Loading rules file failed: (%s:%d:%d): %s",
                       zPath,
                       error.line,
                       error.column,
@@ -1363,7 +1363,7 @@ unique_ptr<MaskingRules> MaskingRules::load(const char* zPath)
     }
     else
     {
-        MXS_ERROR("Could not open rules file %s for reading: %s",
+        MXB_ERROR("Could not open rules file %s for reading: %s",
                   zPath,
                   mxb_strerror(errno));
     }
@@ -1387,7 +1387,7 @@ unique_ptr<MaskingRules> MaskingRules::parse(const char* zJson)
     }
     else
     {
-        MXS_ERROR("Parsing rules failed: (%d:%d): %s",
+        MXB_ERROR("Parsing rules failed: (%d:%d): %s",
                   error.line,
                   error.column,
                   error.text);

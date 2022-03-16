@@ -102,7 +102,7 @@ struct Config : mxs::config::Configuration
 
                 if (!file.good())
                 {
-                    MXS_ERROR("Failed to open log file '%s': %d, %s",
+                    MXB_ERROR("Failed to open log file '%s': %d, %s",
                               log_file.c_str(), errno, mxb_strerror(errno));
                 }
             }
@@ -289,7 +289,7 @@ void RegexSession::log_match(const std::string& old, const std::string& newsql)
 
     if (m_config.log_trace)
     {
-        MXS_INFO("%s", msg.c_str());
+        MXB_INFO("%s", msg.c_str());
     }
 }
 
@@ -305,7 +305,7 @@ void RegexSession::log_nomatch(const std::string& old)
 
     if (m_config.log_trace)
     {
-        MXS_INFO("%s", msg.c_str());
+        MXB_INFO("%s", msg.c_str());
     }
 }
 

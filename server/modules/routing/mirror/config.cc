@@ -91,7 +91,7 @@ bool MirrorSpec::do_post_validate(Params params) const
     case ExporterType::EXPORT_FILE:
         if (s_file.get(params).empty())
         {
-            MXS_ERROR("'%s' must be defined when exporter=file is used.", s_file.name().c_str());
+            MXB_ERROR("'%s' must be defined when exporter=file is used.", s_file.name().c_str());
             ok = false;
         }
         break;
@@ -99,7 +99,7 @@ bool MirrorSpec::do_post_validate(Params params) const
     case ExporterType::EXPORT_KAFKA:
         if (s_kafka_broker.get(params).empty() || s_kafka_topic.get(params).empty())
         {
-            MXS_ERROR("Both '%s' and '%s' must be defined when exporter=kafka is used.",
+            MXB_ERROR("Both '%s' and '%s' must be defined when exporter=kafka is used.",
                       s_kafka_broker.name().c_str(), s_kafka_topic.name().c_str());
             ok = false;
         }

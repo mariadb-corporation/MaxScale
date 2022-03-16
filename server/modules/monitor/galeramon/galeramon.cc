@@ -276,7 +276,7 @@ void GaleraMonitor::update_server_status(MonitorServer* monitored_server)
             if (mysql_field_count(monitored_server->con) < 2)
             {
                 mysql_free_result(result);
-                MXS_ERROR("Unexpected result for \"%s\". "
+                MXB_ERROR("Unexpected result for \"%s\". "
                           "Expected 2 columns. MySQL Version: %s",
                           cluster_member.c_str(),
                           server_string.c_str());
@@ -298,7 +298,7 @@ void GaleraMonitor::update_server_status(MonitorServer* monitored_server)
                     {
                         if (warn_erange_on_local_index)
                         {
-                            MXS_WARNING("Invalid 'wsrep_local_index' on server '%s': %s",
+                            MXB_WARNING("Invalid 'wsrep_local_index' on server '%s': %s",
                                         monitored_server->server->name(),
                                         row[1]);
                             warn_erange_on_local_index = false;
@@ -512,14 +512,14 @@ void GaleraMonitor::post_tick()
 
     if (is_cluster == 0 && m_log_no_members)
     {
-        MXS_ERROR("There are no cluster members");
+        MXB_ERROR("There are no cluster members");
         m_log_no_members = false;
     }
     else
     {
         if (is_cluster > 0 && m_log_no_members == 0)
         {
-            MXS_NOTICE("Found cluster members");
+            MXB_NOTICE("Found cluster members");
             m_log_no_members = true;
         }
     }
@@ -544,7 +544,7 @@ static bool using_xtrabackup(MonitorServer* database, const char* server_string)
         if (mysql_field_count(database->con) < 2)
         {
             mysql_free_result(result);
-            MXS_ERROR("Unexpected result for \"SHOW VARIABLES LIKE "
+            MXB_ERROR("Unexpected result for \"SHOW VARIABLES LIKE "
                       "'wsrep_sst_method'\". Expected 2 columns."
                       " MySQL Version: %s",
                       server_string);
@@ -724,7 +724,7 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
 
     if (donor_list == NULL)
     {
-        MXS_ERROR("can't execute update_sst_donor_nodes() due to memory allocation error");
+        MXB_ERROR("can't execute update_sst_donor_nodes() due to memory allocation error");
         return;
     }
 
@@ -778,7 +778,7 @@ void GaleraMonitor::update_sst_donor_nodes(int is_cluster)
             }
             else
             {
-                MXS_ERROR("Unexpected result for \"SHOW VARIABLES LIKE 'wsrep_node_name'\". "
+                MXB_ERROR("Unexpected result for \"SHOW VARIABLES LIKE 'wsrep_node_name'\". "
                           "Expected 2 columns");
             }
 
@@ -868,19 +868,19 @@ static int compare_node_priority(const void* a, const void* b)
      */
     if (!have_a && have_b)
     {
-        MXS_DEBUG("Server %s has no given priority. It will be at the beginning of the list",
+        MXB_DEBUG("Server %s has no given priority. It will be at the beginning of the list",
                   s_a->server->name());
         return -(INT_MAX - 1);
     }
     else if (have_a && !have_b)
     {
-        MXS_DEBUG("Server %s has no given priority. It will be at the beginning of the list",
+        MXB_DEBUG("Server %s has no given priority. It will be at the beginning of the list",
                   s_b->server->name());
         return INT_MAX - 1;
     }
     else if (!have_a && !have_b)
     {
-        MXS_DEBUG("Servers %s and %s have no given priority. They be at the beginning of the list",
+        MXB_DEBUG("Servers %s and %s have no given priority. They be at the beginning of the list",
                   s_a->server->name(),
                   s_b->server->name());
         return 0;

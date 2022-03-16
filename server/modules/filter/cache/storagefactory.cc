@@ -57,14 +57,14 @@ bool open_storage_module(const char* zName,
                 }
                 else
                 {
-                    MXS_ERROR("Initialization of %s failed.", path);
+                    MXB_ERROR("Initialization of %s failed.", path);
 
                     (void)dlclose(handle);
                 }
             }
             else
             {
-                MXS_ERROR("Could not obtain API object from %s.", zName);
+                MXB_ERROR("Could not obtain API object from %s.", zName);
 
                 (void)dlclose(handle);
             }
@@ -72,7 +72,7 @@ bool open_storage_module(const char* zName,
         else
         {
             const char* s = dlerror();
-            MXS_ERROR("Could not look up symbol %s from %s: %s",
+            MXB_ERROR("Could not look up symbol %s from %s: %s",
                       zName,
                       CACHE_STORAGE_ENTRY_POINT,
                       s ? s : "");
@@ -81,7 +81,7 @@ bool open_storage_module(const char* zName,
     else
     {
         const char* s = dlerror();
-        MXS_ERROR("Could not load %s: %s", zName, s ? s : "");
+        MXB_ERROR("Could not load %s: %s", zName, s ? s : "");
     }
 
     return rv;
@@ -95,7 +95,7 @@ void close_cache_storage(void* handle, StorageModule* pModule)
     if (dlclose(handle) != 0)
     {
         const char* s = dlerror();
-        MXS_ERROR("Could not close module %s: ", s ? s : "");
+        MXB_ERROR("Could not close module %s: ", s ? s : "");
     }
 }
 }
@@ -270,7 +270,7 @@ Storage* StorageFactory::create_shared_storage(const char* zName,
     if (config.invalidate != CACHE_INVALIDATE_NEVER
         && !cache_storage_has_cap(m_storage_caps, CACHE_STORAGE_CAP_INVALIDATION))
     {
-        MXS_ERROR("Invalidation is requested, but not natively supported by the "
+        MXB_ERROR("Invalidation is requested, but not natively supported by the "
                   "storage %s. As the storage is shared the invalidation cannot be "
                   "provided by the cache filter itself.", zName);
         return nullptr;
@@ -281,7 +281,7 @@ Storage* StorageFactory::create_shared_storage(const char* zName,
     if (storage_config.max_count != 0
         && !cache_storage_has_cap(m_storage_caps, CACHE_STORAGE_CAP_MAX_COUNT))
     {
-        MXS_WARNING("The storage %s is shared and the maximum number of items cannot "
+        MXB_WARNING("The storage %s is shared and the maximum number of items cannot "
                     "be specified locally; the 'max_count' setting is ignored.",
                     zName);
         storage_config.max_count = 0;
@@ -290,7 +290,7 @@ Storage* StorageFactory::create_shared_storage(const char* zName,
     if (storage_config.max_size != 0
         && !cache_storage_has_cap(m_storage_caps, CACHE_STORAGE_CAP_MAX_SIZE))
     {
-        MXS_WARNING("The storage %s is shared and the maximum size of the cache "
+        MXB_WARNING("The storage %s is shared and the maximum size of the cache "
                     "cannot be specified locally; the 'max_size' setting is ignored.",
                     zName);
         storage_config.max_size = 0;

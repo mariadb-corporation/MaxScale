@@ -290,7 +290,7 @@ public:
                     }
                     else
                     {
-                        MXS_ERROR("Failed to parse result as individual json value: '%s'", value.c_str());
+                        MXB_ERROR("Failed to parse result as individual json value: '%s'", value.c_str());
                         values.insert(value);
                     }
                 }

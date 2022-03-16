@@ -126,13 +126,13 @@ int select_info_cb(void* pData, int nColumns, char** pzColumn, char** pzNames)
     }
     else
     {
-        MXS_ERROR("The 'roles' value of '%s' is not valid.", info.mariadb_user.c_str());
+        MXB_ERROR("The 'roles' value of '%s' is not valid.", info.mariadb_user.c_str());
         ok = false;
     }
 
     if (!ok)
     {
-        MXS_WARNING("Ignoring user '%s'.", info.mariadb_user.c_str());
+        MXB_WARNING("Ignoring user '%s'.", info.mariadb_user.c_str());
     }
 
     return 0;
@@ -157,7 +157,7 @@ bool create_schema(sqlite3* pDb)
 
     if (rv != SQLITE_OK)
     {
-        MXS_ERROR("Could not initialize sqlite3 database: %s", pError ? pError : "Unknown error");
+        MXB_ERROR("Could not initialize sqlite3 database: %s", pError ? pError : "Unknown error");
         sqlite3_free(pError);
     }
 
@@ -174,15 +174,15 @@ sqlite3* open_or_create_db(const std::string& path)
     {
         if (create_schema(pDb))
         {
-            MXS_NOTICE("sqlite3 database %s open/created and initialized.", path.c_str());
+            MXB_NOTICE("sqlite3 database %s open/created and initialized.", path.c_str());
         }
         else
         {
-            MXS_ERROR("Could not create schema in sqlite3 database %s.", path.c_str());
+            MXB_ERROR("Could not create schema in sqlite3 database %s.", path.c_str());
 
             if (unlink(path.c_str()) != 0)
             {
-                MXS_ERROR("Failed to delete database %s that could not be properly "
+                MXB_ERROR("Failed to delete database %s that could not be properly "
                           "initialized. It should be deleted manually.", path.c_str());
                 sqlite3_close_v2(pDb);
                 pDb = nullptr;
@@ -195,10 +195,10 @@ sqlite3* open_or_create_db(const std::string& path)
         {
             // Memory allocation failure is explained by the caller. Don't close the handle, as the
             // caller will still use it even if open failed!!
-            MXS_ERROR("Opening/creating the sqlite3 database %s failed: %s",
+            MXB_ERROR("Opening/creating the sqlite3 database %s failed: %s",
                       path.c_str(), sqlite3_errmsg(pDb));
         }
-        MXS_ERROR("Could not open sqlite3 database for storing user information.");
+        MXB_ERROR("Could not open sqlite3 database for storing user information.");
     }
 
     return pDb;
@@ -451,12 +451,12 @@ bool role::from_json(const string& s, std::vector<role::Role>* pRoles)
         }
         else
         {
-            MXS_ERROR("'%s' is valid JSON, but not an array.", s.c_str());
+            MXB_ERROR("'%s' is valid JSON, but not an array.", s.c_str());
         }
     }
     else
     {
-        MXS_ERROR("'%s' is not valid JSON: %s", s.c_str(), json.error_msg().c_str());
+        MXB_ERROR("'%s' is not valid JSON: %s", s.c_str(), json.error_msg().c_str());
     }
 
     return rv;
@@ -623,7 +623,7 @@ unique_ptr<UserManager> UserManager::create(const string& name)
         // should be right, but thereafter someone might change them.
         if (is_accessible_by_others(path))
         {
-            MXS_ERROR("The directory '%s' is accessible by others. The nosqlprotocol "
+            MXB_ERROR("The directory '%s' is accessible by others. The nosqlprotocol "
                       "directory must only be accessible by MaxScale.",
                       path.c_str());
         }
@@ -636,7 +636,7 @@ unique_ptr<UserManager> UserManager::create(const string& name)
 
             if (is_accessible_by_others(path))
             {
-                MXS_ERROR("The file '%s' is accessible by others. The nosqlprotocol account "
+                MXB_ERROR("The file '%s' is accessible by others. The nosqlprotocol account "
                           "database must only be accessible by MaxScale.",
                           path.c_str());
             }
@@ -655,7 +655,7 @@ unique_ptr<UserManager> UserManager::create(const string& name)
                     }
                     else
                     {
-                        MXS_ERROR("Could not make '%s' usable only by MaxScale: %s",
+                        MXB_ERROR("Could not make '%s' usable only by MaxScale: %s",
                                   path.c_str(), mxb_strerror(errno));
 
                         sqlite3_close_v2(pDb);
@@ -666,14 +666,14 @@ unique_ptr<UserManager> UserManager::create(const string& name)
                 {
                     // The handle will be null, *only* if the opening fails due to a memory
                     // allocation error.
-                    MXS_ALERT("sqlite3 memory allocation failed, nosqlprotocol cannot continue.");
+                    MXB_ALERT("sqlite3 memory allocation failed, nosqlprotocol cannot continue.");
                 }
             }
         }
     }
     else
     {
-        MXS_ERROR("Could not create the directory %s, needed by the listener %s "
+        MXB_ERROR("Could not create the directory %s, needed by the listener %s "
                   "for storing nosqlprotocol user information.",
                   path.c_str(), name.c_str());
     }
@@ -739,7 +739,7 @@ bool UserManager::add_user(const string& db,
 
     if (rv != SQLITE_OK)
     {
-        MXS_ERROR("Could not add user '%s' to local database: %s",
+        MXB_ERROR("Could not add user '%s' to local database: %s",
                   mariadb_user.c_str(),
                   pError ? pError : "Unknown error");
         sqlite3_free(pError);
@@ -762,7 +762,7 @@ bool UserManager::remove_user(const string& db, const string& user)
 
     if (rv != SQLITE_OK)
     {
-        MXS_ERROR("Could not remove user '%s' from local database: %s",
+        MXB_ERROR("Could not remove user '%s' from local database: %s",
                   user.c_str(),
                   pError ? pError : "Unknown error");
         sqlite3_free(pError);
@@ -789,7 +789,7 @@ bool UserManager::get_info(const string& mariadb_user, UserInfo* pInfo) const
 
     if (rv != SQLITE_OK)
     {
-        MXS_ERROR("Could not get data for user '%s' from local database: %s",
+        MXB_ERROR("Could not get data for user '%s' from local database: %s",
                   mariadb_user.c_str(),
                   pError ? pError : "Unknown error");
         sqlite3_free(pError);
@@ -812,7 +812,7 @@ vector<UserManager::UserInfo> UserManager::get_infos() const
 
     if (rv != SQLITE_OK)
     {
-        MXS_ERROR("Could not get user data from local database: %s",
+        MXB_ERROR("Could not get user data from local database: %s",
                   pError ? pError : "Unknown error");
         sqlite3_free(pError);
     }
@@ -833,7 +833,7 @@ vector<UserManager::UserInfo> UserManager::get_infos(const std::string& db) cons
 
     if (rv != SQLITE_OK)
     {
-        MXS_ERROR("Could not get user data from local database: %s",
+        MXB_ERROR("Could not get user data from local database: %s",
                   pError ? pError : "Unknown error");
         sqlite3_free(pError);
     }
@@ -868,7 +868,7 @@ vector<UserManager::UserInfo> UserManager::get_infos(const vector<string>& maria
 
         if (rv != SQLITE_OK)
         {
-            MXS_ERROR("Could not get user data from local database: %s",
+            MXB_ERROR("Could not get user data from local database: %s",
                       pError ? pError : "Unknown error");
             sqlite3_free(pError);
         }
@@ -891,7 +891,7 @@ vector<UserManager::Account> UserManager::get_accounts(const string& db) const
 
     if (rv != SQLITE_OK)
     {
-        MXS_ERROR("Could not get user data from local database: %s",
+        MXB_ERROR("Could not get user data from local database: %s",
                   pError ? pError : "Unknown error");
         sqlite3_free(pError);
     }
@@ -927,7 +927,7 @@ bool UserManager::remove_accounts(const std::vector<Account>& accounts) const
 
         if (rv != SQLITE_OK)
         {
-            MXS_ERROR("Could not remove data from local database: %s",
+            MXB_ERROR("Could not remove data from local database: %s",
                       pError ? pError : "Unknown error");
             sqlite3_free(pError);
         }
@@ -1015,7 +1015,7 @@ bool UserManager::update(const string& db, const string& user, uint32_t what, co
 
     if (rv != SQLITE_OK)
     {
-        MXS_ERROR("Could update '%s': %s", mariadb_user.c_str(),
+        MXB_ERROR("Could update '%s': %s", mariadb_user.c_str(),
                   pError ? pError : "Unknown error");
         sqlite3_free(pError);
     }

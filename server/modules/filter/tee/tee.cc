@@ -96,11 +96,11 @@ bool TeeSpecification::do_post_validate(Params params) const
     if (!s_target.get(params) && !s_service.get(params))
     {
         // The `service` parameter is deprecated, don't mention it in the hopes that people stop using it.
-        MXS_ERROR("Parameter `target` must be defined");
+        MXB_ERROR("Parameter `target` must be defined");
     }
     else if (s_target.get(params) && s_service.get(params))
     {
-        MXS_ERROR("Both `service` and `target` cannot be defined at the same time");
+        MXB_ERROR("Both `service` and `target` cannot be defined at the same time");
     }
     else
     {

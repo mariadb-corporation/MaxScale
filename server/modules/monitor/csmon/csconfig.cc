@@ -125,14 +125,14 @@ namespace
 
 void complain_invalid(cs::Version version, const string& param)
 {
-    MXS_ERROR("When csmon is configured for Columnstore %s, "
+    MXB_ERROR("When csmon is configured for Columnstore %s, "
               "the parameter '%s' is invalid.",
               cs::to_string(version), param.c_str());
 }
 
 void complain_mandatory(cs::Version version, const string& param)
 {
-    MXS_ERROR("When csmon is configured for Columnstore %s, "
+    MXB_ERROR("When csmon is configured for Columnstore %s, "
               "the parameter '%s' is mandatory.",
               cs::to_string(version), param.c_str());
 }
@@ -158,7 +158,7 @@ bool CsConfig::post_configure(const std::map<std::string, mxs::ConfigParameters>
     }
     else
     {
-        MXS_ERROR("Could not access or create directory '%s'.", path.c_str());
+        MXB_ERROR("Could not access or create directory '%s'.", path.c_str());
         rv = false;
     }
 
@@ -196,7 +196,7 @@ string read_api_key(const string& path)
     }
     else
     {
-        MXS_NOTICE("Could not open '%s', no api key yet stored.", path.c_str());
+        MXB_NOTICE("Could not open '%s', no api key yet stored.", path.c_str());
     }
 
     return key;
@@ -214,17 +214,17 @@ bool write_api_key(const string& path, const string& key)
 
         if (out.bad())
         {
-            MXS_ERROR("Could not write new api key to '%s'.", path.c_str());
+            MXB_ERROR("Could not write new api key to '%s'.", path.c_str());
         }
         else
         {
-            MXS_NOTICE("Stored new api key in '%s'.", path.c_str());
+            MXB_NOTICE("Stored new api key in '%s'.", path.c_str());
             rv = true;
         }
     }
     else
     {
-        MXS_ERROR("Could not open '%s' for writing, the Columnstore api key can not be stored.",
+        MXB_ERROR("Could not open '%s' for writing, the Columnstore api key can not be stored.",
                   path.c_str());
     }
 
@@ -248,7 +248,7 @@ bool CsConfig::check_api_key(const string& dir)
         {
             if (stored_key.empty())
             {
-                MXS_NOTICE("No api-key specified and no stored api-key found, generating one.");
+                MXB_NOTICE("No api-key specified and no stored api-key found, generating one.");
 
                 string new_key = get_random_string(16);
 
@@ -257,14 +257,14 @@ bool CsConfig::check_api_key(const string& dir)
             }
             else
             {
-                MXS_NOTICE("Using api-key from '%s'.", path.c_str());
+                MXB_NOTICE("Using api-key from '%s'.", path.c_str());
                 this->api_key = stored_key;
             }
         }
 
         if (this->api_key != stored_key)
         {
-            MXS_NOTICE("Specified api key is different from stored one, storing the specified one.");
+            MXB_NOTICE("Specified api key is different from stored one, storing the specified one.");
             rv = write_api_key(path, this->api_key);
         }
     }
@@ -295,7 +295,7 @@ bool CsConfig::check_mandatory()
             }
             else
             {
-                MXS_ERROR("'local_address' has been specified neither for %s, nor globally.",
+                MXB_ERROR("'local_address' has been specified neither for %s, nor globally.",
                           name().c_str());
                 rv = false;
             }

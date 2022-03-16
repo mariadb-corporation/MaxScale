@@ -278,7 +278,7 @@ bool check_disk_space_exhausted(MonitorServer* pMs,
 
     if (used_percentage >= max_percentage)
     {
-        MXS_ERROR("Disk space on %s at %s is exhausted; %d%% of the the disk "
+        MXB_ERROR("Disk space on %s at %s is exhausted; %d%% of the the disk "
                   "mounted on the path %s has been used, and the limit it %d%%.",
                   pMs->server->name(),
                   pMs->server->address(),
@@ -381,7 +381,7 @@ bool Monitor::post_configure()
         m_scriptcmd = ExternalCmd::create(m_settings.script, m_settings.script_timeout.count());
         if (!m_scriptcmd)
         {
-            MXS_ERROR("Failed to initialize script '%s'.", m_settings.script.c_str());
+            MXB_ERROR("Failed to initialize script '%s'.", m_settings.script.c_str());
             ok = false;
         }
     }
@@ -461,7 +461,7 @@ bool Monitor::add_server(SERVER* server)
     }
     else
     {
-        MXS_ERROR("Server '%s' is already monitored by '%s', cannot add it to another monitor.",
+        MXB_ERROR("Server '%s' is already monitored by '%s', cannot add it to another monitor.",
                   server->name(), existing_owner.c_str());
     }
     return success;
@@ -578,7 +578,7 @@ bool Monitor::test_permissions(const string& query)
 
         if (!connection_is_ok(result))
         {
-            MXS_ERROR("[%s] Failed to connect to server '%s' ([%s]:%d) when"
+            MXB_ERROR("[%s] Failed to connect to server '%s' ([%s]:%d) when"
                       " checking monitor user credentials and permissions.",
                       name(),
                       mondb->server->name(),
@@ -607,7 +607,7 @@ bool Monitor::test_permissions(const string& query)
                 break;
             }
 
-            MXS_ERROR("[%s] Failed to execute query '%s' with user '%s'. MySQL error message: %s",
+            MXB_ERROR("[%s] Failed to execute query '%s' with user '%s'. MySQL error message: %s",
                       name(), query.c_str(), conn_settings().username.c_str(),
                       mysql_error(mondb->con));
         }
@@ -617,7 +617,7 @@ bool Monitor::test_permissions(const string& query)
             MYSQL_RES* res = mysql_use_result(mondb->con);
             if (res == NULL)
             {
-                MXS_ERROR("[%s] Result retrieval failed when checking monitor permissions: %s",
+                MXB_ERROR("[%s] Result retrieval failed when checking monitor permissions: %s",
                           name(),
                           mysql_error(mondb->con));
             }
@@ -1074,17 +1074,17 @@ int Monitor::launch_command(MonitorServer* ptr, const std::string& event_name)
 
     if (rv == 0)
     {
-        MXS_NOTICE("Executed monitor script for %s. %s", msg_part2c, msg_endc);
+        MXB_NOTICE("Executed monitor script for %s. %s", msg_part2c, msg_endc);
     }
     else if (rv == -1)
     {
         // Internal error
-        MXS_ERROR("Failed to execute monitor script for %s. %s", msg_part2c, msg_endc);
+        MXB_ERROR("Failed to execute monitor script for %s. %s", msg_part2c, msg_endc);
     }
     else
     {
         // Script returned a non-zero value
-        MXS_ERROR("Monitor script returned %d for %s. %s", rv, msg_part2c, msg_endc);
+        MXB_ERROR("Monitor script returned %d for %s. %s", rv, msg_part2c, msg_endc);
     }
     return rv;
 }
@@ -1158,7 +1158,7 @@ MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& se
                     if (connect(server.port()))
                     {
                         conn_result = ConnectResult::NEWCONN_OK;
-                        MXS_WARNING("Could not connect with extra-port to '%s', using normal port.",
+                        MXB_WARNING("Could not connect with extra-port to '%s', using normal port.",
                                     server.name());
                     }
                 }
@@ -1246,7 +1246,7 @@ void MonitorServer::fetch_session_track()
 {
     if (auto r = mxs::execute_query(con, "select @@session_track_system_variables;"))
     {
-        MXS_INFO("'session_track_system_variables' loaded from '%s', next update in %ld seconds.",
+        MXB_INFO("'session_track_system_variables' loaded from '%s', next update in %ld seconds.",
                  server->name(), session_track_update_interval.count());
         m_last_session_track_update = mxb::Clock::now();
 
@@ -1299,7 +1299,7 @@ void MonitorServer::log_connect_error(ConnectResult rval)
     mxb_assert(!Monitor::connection_is_ok(rval));
     const char TIMED_OUT[] = "Monitor timed out when connecting to server %s[%s:%d] : '%s'";
     const char REFUSED[] = "Monitor was unable to connect to server %s[%s:%d] : '%s'";
-    MXS_ERROR(rval == ConnectResult::TIMEOUT ? TIMED_OUT : REFUSED,
+    MXB_ERROR(rval == ConnectResult::TIMEOUT ? TIMED_OUT : REFUSED,
               server->name(),
               server->address(),
               server->port(),
@@ -1310,7 +1310,7 @@ void MonitorServer::log_state_change(const std::string& reason)
 {
     string prev = Target::status_to_string(mon_prev_status, server->stats().n_current_conns());
     string next = server->status_string();
-    MXS_NOTICE("Server changed state: %s[%s:%u]: %s. [%s] -> [%s]%s%s",
+    MXB_NOTICE("Server changed state: %s[%s:%u]: %s. [%s] -> [%s]%s%s",
                server->name(), server->address(), server->port(),
                get_event_name(), prev.c_str(), next.c_str(),
                reason.empty() ? "" : ": ", reason.c_str());
@@ -1329,7 +1329,7 @@ void Monitor::hangup_failed_servers()
 
 void MonitorServer::mon_report_query_error()
 {
-    MXS_ERROR("Failed to execute query on server '%s' ([%s]:%d): %s",
+    MXB_ERROR("Failed to execute query on server '%s' ([%s]:%d): %s",
               server->name(),
               server->address(),
               server->port(),
@@ -1432,7 +1432,7 @@ Monitor::get_monitored_serverlist(const std::vector<SERVER*>& servers)
         }
         else
         {
-            MXS_ERROR("Server '%s' is not monitored by monitor '%s'.", elem->name(), name());
+            MXB_ERROR("Server '%s' is not monitored by monitor '%s'.", elem->name(), name());
             ok = false;
         }
     }
@@ -1457,7 +1457,7 @@ bool Monitor::set_server_status(SERVER* srv, int bit, string* errmsg_out)
 
     if (!msrv)
     {
-        MXS_ERROR("Monitor %s requested to set status of server %s that it does not monitor.",
+        MXB_ERROR("Monitor %s requested to set status of server %s that it does not monitor.",
                   name(), srv->address());
         return false;
     }
@@ -1470,7 +1470,7 @@ bool Monitor::set_server_status(SERVER* srv, int bit, string* errmsg_out)
          * disallowed. */
         if (bit & ~(SERVER_MAINT | SERVER_DRAINING))
         {
-            MXS_ERROR(ERR_CANNOT_MODIFY);
+            MXB_ERROR(ERR_CANNOT_MODIFY);
             if (errmsg_out)
             {
                 *errmsg_out = ERR_CANNOT_MODIFY;
@@ -1520,7 +1520,7 @@ bool Monitor::clear_server_status(SERVER* srv, int bit, string* errmsg_out)
 
     if (!msrv)
     {
-        MXS_ERROR("Monitor %s requested to clear status of server %s that it does not monitor.",
+        MXB_ERROR("Monitor %s requested to clear status of server %s that it does not monitor.",
                   name(), srv->address());
         return false;
     }
@@ -1531,7 +1531,7 @@ bool Monitor::clear_server_status(SERVER* srv, int bit, string* errmsg_out)
     {
         if (bit & ~(SERVER_MAINT | SERVER_DRAINING))
         {
-            MXS_ERROR(ERR_CANNOT_MODIFY);
+            MXB_ERROR(ERR_CANNOT_MODIFY);
             if (errmsg_out)
             {
                 *errmsg_out = ERR_CANNOT_MODIFY;
@@ -1835,7 +1835,7 @@ bool MonitorWorker::start()
     {
         if (!has_sufficient_permissions())
         {
-            MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
+            MXB_ERROR("Failed to start monitor. See earlier errors for more information.");
         }
         else
         {
@@ -1850,7 +1850,7 @@ bool MonitorWorker::start()
         m_loop_called = get_time_ms() - settings().interval.count();
         if (!Worker::start(name()))
         {
-            MXS_ERROR("Failed to start worker for monitor '%s'.", name());
+            MXB_ERROR("Failed to start worker for monitor '%s'.", name());
         }
         else
         {
@@ -1929,7 +1929,7 @@ void MonitorServer::update_disk_space_status()
                 }
                 else
                 {
-                    MXS_WARNING("Disk space threshold specified for %s even though server %s at %s"
+                    MXB_WARNING("Disk space threshold specified for %s even though server %s at %s"
                                 "does not have that.",
                                 path.c_str(),
                                 pMs->server->name(),
@@ -1971,7 +1971,7 @@ void MonitorServer::update_disk_space_status()
             // Disable disk space checking for this server.
             m_ok_to_check_disk_space = false;
 
-            MXS_ERROR("Disk space cannot be checked for %s at %s, because either the "
+            MXB_ERROR("Disk space cannot be checked for %s at %s, because either the "
                       "version (%s) is too old, or the DISKS information schema plugin "
                       "has not been installed. Disk space checking has been disabled.",
                       pServer->name(),
@@ -1980,7 +1980,7 @@ void MonitorServer::update_disk_space_status()
         }
         else
         {
-            MXS_ERROR("Checking the disk space for %s at %s failed due to: (%d) %s",
+            MXB_ERROR("Checking the disk space for %s at %s failed due to: (%d) %s",
                       pServer->name(),
                       pServer->address(),
                       mysql_errno(pMs->con),
@@ -2128,7 +2128,7 @@ bool MonitorWorker::pre_run()
     }
     else
     {
-        MXS_ERROR("mysql_thread_init() failed for %s. The monitor cannot start.", name());
+        MXB_ERROR("mysql_thread_init() failed for %s. The monitor cannot start.", name());
         m_semaphore.post();
     }
 
@@ -2251,7 +2251,7 @@ void MonitorServer::add_status_request(StatusRequest request)
     // Warn if the previous request hasn't been read.
     if (previous_request != NO_CHANGE)
     {
-        MXS_WARNING(WRN_REQUEST_OVERWRITTEN);
+        MXB_WARNING(WRN_REQUEST_OVERWRITTEN);
     }
 }
 

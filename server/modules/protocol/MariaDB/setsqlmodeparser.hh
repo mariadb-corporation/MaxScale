@@ -563,7 +563,7 @@ private:
 
             if (m_pI != m_pEnd)
             {
-                MXS_INFO("Non-space data found after semi-colon: '%.*s'.",
+                MXB_INFO("Non-space data found after semi-colon: '%.*s'.",
                          (int)(m_pEnd - m_pI),
                          m_pI);
             }

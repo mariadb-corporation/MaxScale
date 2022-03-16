@@ -77,12 +77,12 @@ bool Cache::get_storage_factory(const CacheConfig& config,
         }
         else
         {
-            MXS_ERROR("Could not open storage factory '%s'.", config.storage.c_str());
+            MXB_ERROR("Could not open storage factory '%s'.", config.storage.c_str());
         }
     }
     else
     {
-        MXS_ERROR("Could not create rules.");
+        MXB_ERROR("Could not create rules.");
     }
 
     return pFactory != NULL;

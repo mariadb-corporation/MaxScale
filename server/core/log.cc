@@ -115,7 +115,7 @@ sd_journal* open_journal(const std::string& cursor)
 
     if (rc < 0)
     {
-        MXS_ERROR("Failed to open system journal: %s", mxb_strerror(-rc));
+        MXB_ERROR("Failed to open system journal: %s", mxb_strerror(-rc));
     }
     else
     {
@@ -637,7 +637,7 @@ std::function<std::string()> mxs_logs_stream(const std::string& cursor,
                    };
         }
 #else
-	MXS_ERROR("MaxScale was built without SystemD support.");
+	MXB_ERROR("MaxScale was built without SystemD support.");
 #endif
     }
     else if (cnf.maxlog.get())
@@ -651,7 +651,7 @@ std::function<std::string()> mxs_logs_stream(const std::string& cursor,
     }
     else
     {
-        MXS_ERROR("Neither `syslog` or `maxlog` is enabled, cannot stream logs.");
+        MXB_ERROR("Neither `syslog` or `maxlog` is enabled, cannot stream logs.");
     }
 
     return {};

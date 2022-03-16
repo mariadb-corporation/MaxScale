@@ -62,7 +62,7 @@ bool BinlogfilterSpecification::do_post_validate(Params params) const
 
     if (!rv)
     {
-        MXS_ERROR("Both '%s' and '%s' must be defined", REWRITE_SRC, REWRITE_DEST);
+        MXB_ERROR("Both '%s' and '%s' must be defined", REWRITE_SRC, REWRITE_DEST);
     }
 
     return rv;

@@ -92,19 +92,19 @@ bool ClientConnection::setup_ssl()
 
     if (rv == 1)
     {
-        MXS_INFO("NoSQL client from '%s' connected to service '%s' with SSL.",
+        MXB_INFO("NoSQL client from '%s' connected to service '%s' with SSL.",
                  zRemote, zService);
     }
     else
     {
         if (rv < 0)
         {
-            MXS_INFO("NoSQL client from '%s' failed to connect to service '%s' with SSL.",
+            MXB_INFO("NoSQL client from '%s' failed to connect to service '%s' with SSL.",
                      zRemote, zService);
         }
         else
         {
-            MXS_INFO("NoSQL client from '%s' is in progress of connecting to service '%s' with SSL.",
+            MXB_INFO("NoSQL client from '%s' is in progress of connecting to service '%s' with SSL.",
                      zRemote, zService);
         }
     }
@@ -226,11 +226,11 @@ int32_t ClientConnection::write(GWBUF* pMariaDB_response)
         switch (response.type())
         {
         case ComResponse::OK_PACKET:
-            MXS_ERROR("OK packet received from server when no request was in progress, ignoring.");
+            MXB_ERROR("OK packet received from server when no request was in progress, ignoring.");
             break;
 
         case ComResponse::EOF_PACKET:
-            MXS_ERROR("EOF packet received from server when no request was in progress, ignoring.");
+            MXB_ERROR("EOF packet received from server when no request was in progress, ignoring.");
             break;
 
         case ComResponse::ERR_PACKET:
@@ -242,19 +242,19 @@ int32_t ClientConnection::write(GWBUF* pMariaDB_response)
                 case ER_ACCESS_DENIED_ERROR:
                 case ER_CONNECTION_KILLED:
                     // Errors should have been logged already.
-                    MXS_INFO("ERR packet received from server when no request was in progress: (%d) %s",
+                    MXB_INFO("ERR packet received from server when no request was in progress: (%d) %s",
                              err.code(), err.message().c_str());
                     break;
 
                 default:
-                    MXS_ERROR("ERR packet received from server when no request was in progress: (%d) %s",
+                    MXB_ERROR("ERR packet received from server when no request was in progress: (%d) %s",
                               err.code(), err.message().c_str());
                 }
             }
             break;
 
         default:
-            MXS_ERROR("Unexpected %d bytes received from server when no request was in progress, ignoring.",
+            MXB_ERROR("Unexpected %d bytes received from server when no request was in progress, ignoring.",
                       gwbuf_length(pMariaDB_response));
         }
 

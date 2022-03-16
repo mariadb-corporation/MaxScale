@@ -175,7 +175,7 @@ vector<string> create_grant_or_revoke_statements(const string& user,
         break;
 
     default:
-        MXS_WARNING("Role %s granted/revoked to/from %s is ignored.",
+        MXB_WARNING("Role %s granted/revoked to/from %s is ignored.",
                     role::to_string(role.id).c_str(), user.c_str());
     }
 
@@ -346,7 +346,7 @@ private:
             {
                 ComERR err(response);
 
-                MXS_ERROR("Could create user '%s.%s'@'%s', but granting access with the "
+                MXB_ERROR("Could create user '%s.%s'@'%s', but granting access with the "
                           "statement \"%s\" failed with: (%d) \"%s\". Will now attempt to "
                           "DROP the user.",
                           m_db.c_str(),
@@ -414,7 +414,7 @@ private:
 
                 string message = ss.str();
 
-                MXS_ERROR("%s", message.c_str());
+                MXB_ERROR("%s", message.c_str());
 
                 throw SoftError(message, error::INTERNAL_ERROR);
             }
@@ -581,7 +581,7 @@ public:
                             auto& a = m_accounts[n];
                             string user = mariadb::get_account(a.db, a.user, a.host);
 
-                            MXS_WARNING("Dropping users %s succeeded, but dropping %s failed: %s",
+                            MXB_WARNING("Dropping users %s succeeded, but dropping %s failed: %s",
                                         mxb::join(users, ",").c_str(), user.c_str(), err.message().c_str());
                         }
                         break;
@@ -590,7 +590,7 @@ public:
                         {
                             auto& a = m_accounts[n];
                             string user = mariadb::get_account(a.db, a.user, a.host);
-                            MXS_WARNING("User %s apparently did not exist in the MariaDB server, even "
+                            MXB_WARNING("User %s apparently did not exist in the MariaDB server, even "
                                         "though it should according to the nosqlprotocol book-keeping.",
                                         user.c_str());
                         }
@@ -601,7 +601,7 @@ public:
                             auto& a = m_accounts[n];
                             string user = mariadb::get_account(a.db, a.user, a.host);
 
-                            MXS_ERROR("Dropping user '%s' failed: %s", user.c_str(), err.message().c_str());
+                            MXB_ERROR("Dropping user '%s' failed: %s", user.c_str(), err.message().c_str());
                         }
                     };
                 };
@@ -807,7 +807,7 @@ public:
                         }
                         // [[fallthrough]]
                     default:
-                        MXS_ERROR("Grant statement '%s' failed: %s",
+                        MXB_ERROR("Grant statement '%s' failed: %s",
                                   m_statements[nStatements].c_str(), err.message().c_str());
                     }
                 };
@@ -1009,7 +1009,7 @@ public:
                         }
                         // [[fallthrough]]
                     default:
-                        MXS_ERROR("Revoke statement '%s' failed: %s",
+                        MXB_ERROR("Revoke statement '%s' failed: %s",
                                   m_statements[nStatements].c_str(), err.message().c_str());
                     }
                 };
@@ -1756,7 +1756,7 @@ private:
         }
         else
         {
-            MXS_ERROR("The uuid '%s' of '%s' is invalid.", info.uuid.c_str(), info.mariadb_user.c_str());
+            MXB_ERROR("The uuid '%s' of '%s' is invalid.", info.uuid.c_str(), info.mariadb_user.c_str());
         }
 
         if (!info.custom_data.empty())

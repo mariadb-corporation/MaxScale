@@ -118,7 +118,7 @@ SlaveStatus::slave_io_running_t SlaveStatus::slave_io_from_string(const std::str
     }
     else if (str != NO)
     {
-        MXS_ERROR("Unexpected value for Slave_IO_Running: '%s'.", str.c_str());
+        MXB_ERROR("Unexpected value for Slave_IO_Running: '%s'.", str.c_str());
     }
     return rval;
 }

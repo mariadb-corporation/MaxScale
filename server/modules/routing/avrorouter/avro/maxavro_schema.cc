@@ -154,7 +154,7 @@ MAXAVRO_SCHEMA* maxavro_schema_alloc(const char* json)
                     }
                     else
                     {
-                        MXS_ERROR("Failed to unpack JSON Object \"name\": %s", json);
+                        MXB_ERROR("Failed to unpack JSON Object \"name\": %s", json);
                         error = true;
 
                         for (int j = 0; j < i; j++)
@@ -167,7 +167,7 @@ MAXAVRO_SCHEMA* maxavro_schema_alloc(const char* json)
             }
             else
             {
-                MXS_ERROR("Failed to unpack JSON Object \"fields\": %s", json);
+                MXB_ERROR("Failed to unpack JSON Object \"fields\": %s", json);
                 error = true;
             }
 
@@ -175,7 +175,7 @@ MAXAVRO_SCHEMA* maxavro_schema_alloc(const char* json)
         }
         else
         {
-            MXS_ERROR("Failed to read JSON schema: %s", json);
+            MXB_ERROR("Failed to read JSON schema: %s", json);
             error = true;
         }
 
@@ -187,7 +187,7 @@ MAXAVRO_SCHEMA* maxavro_schema_alloc(const char* json)
     }
     else
     {
-        MXS_ERROR("Memory allocation failed.");
+        MXB_ERROR("Memory allocation failed.");
     }
 
     return rval;

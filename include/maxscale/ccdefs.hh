@@ -74,7 +74,7 @@ namespace mxs = maxscale;
 #else
 #define MXS_EXCEPTION_GUARD(statement) \
     do {try {statement;} \
-        catch (const std::bad_alloc&) {MXS_OOM();} \
-        catch (const std::exception& x) {MXS_ERROR("Caught standard exception: %s", x.what());} \
-        catch (...) {MXS_ERROR("Caught unknown exception.");}} while (false)
+        catch (const std::bad_alloc&) {MXB_OOM();} \
+        catch (const std::exception& x) {MXB_ERROR("Caught standard exception: %s", x.what());} \
+        catch (...) {MXB_ERROR("Caught unknown exception.");}} while (false)
 #endif

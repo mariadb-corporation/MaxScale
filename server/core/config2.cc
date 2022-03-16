@@ -124,7 +124,7 @@ bool Specification::mandatory_params_defined(const std::set<std::string>& provid
 
         if (pParam->is_mandatory() && (provided.find(pParam->name()) == provided.end()))
         {
-            MXS_ERROR("%s: The mandatory parameter '%s' is not provided.",
+            MXB_ERROR("%s: The mandatory parameter '%s' is not provided.",
                       m_module.c_str(), pParam->name().c_str());
             valid = false;
         }
@@ -195,7 +195,7 @@ bool Specification::validate(const mxs::ConfigParameters& params,
                 }
                 else
                 {
-                    MXS_ERROR("%s: The parameter '%s' is unrecognized.", m_module.c_str(), name.c_str());
+                    MXB_ERROR("%s: The parameter '%s' is unrecognized.", m_module.c_str(), name.c_str());
                     valid = false;
                 }
             }
@@ -225,7 +225,7 @@ bool Specification::validate(const mxs::ConfigParameters& params,
                         else
                         {
                             // Otherwise, we report in the context of the module.
-                            MXS_ERROR("%s: The parameter '%s' is unrecognized.",
+                            MXB_ERROR("%s: The parameter '%s' is unrecognized.",
                                       kv.first.c_str(), unknown.first.c_str());
                             param_valid = false;
                         }
@@ -254,7 +254,7 @@ bool Specification::validate(const mxs::ConfigParameters& params,
                     }
                     else
                     {
-                        MXS_ERROR("The parameter '%s' is unrecognized.", key.c_str());
+                        MXB_ERROR("The parameter '%s' is unrecognized.", key.c_str());
                         valid = false;
                     }
                 }
@@ -332,7 +332,7 @@ bool Specification::validate(json_t* pParams, std::set<std::string>* pUnrecogniz
                 }
                 else
                 {
-                    MXS_ERROR("%s: The parameter '%s' is unrecognized.", m_module.c_str(), zKey);
+                    MXB_ERROR("%s: The parameter '%s' is unrecognized.", m_module.c_str(), zKey);
                     valid = false;
                 }
             }
@@ -362,7 +362,7 @@ bool Specification::validate(json_t* pParams, std::set<std::string>* pUnrecogniz
                         else
                         {
                             // Otherwise, we report in the context of the module.
-                            MXS_ERROR("%s: The parameter '%s' is unrecognized.",
+                            MXB_ERROR("%s: The parameter '%s' is unrecognized.",
                                       kv.first.c_str(), s.c_str());
                             param_valid = false;
                         }
@@ -394,7 +394,7 @@ bool Specification::validate(json_t* pParams, std::set<std::string>* pUnrecogniz
                     }
                     else
                     {
-                        MXS_ERROR("The parameter '%s' is unrecognized.", key.c_str());
+                        MXB_ERROR("The parameter '%s' is unrecognized.", key.c_str());
                         valid = false;
                     }
                 }
@@ -660,7 +660,7 @@ bool Configuration::configure(const mxs::ConfigParameters& params,
                 string message;
                 if (!pValue->set_from_string(value, &message))
                 {
-                    MXS_ERROR("%s: %s", m_pSpecification->module().c_str(), message.c_str());
+                    MXB_ERROR("%s: %s", m_pSpecification->module().c_str(), message.c_str());
                     configured = false;
                 }
             }
@@ -672,7 +672,7 @@ bool Configuration::configure(const mxs::ConfigParameters& params,
                 }
                 else
                 {
-                    MXS_ERROR("%s: The parameter '%s' is unrecognized.",
+                    MXB_ERROR("%s: The parameter '%s' is unrecognized.",
                               m_pSpecification->module().c_str(), name.c_str());
                     configured = false;
                 }
@@ -716,15 +716,15 @@ void insert_value(mxs::ConfigParameters& params, const char* zName, json_t* pVal
         break;
 
     case JSON_OBJECT:
-        MXS_WARNING("%s: Object value not supported, ignored.", zName);
+        MXB_WARNING("%s: Object value not supported, ignored.", zName);
         break;
 
     case JSON_ARRAY:
-        MXS_WARNING("%s: Array value not supported, ignored.", zName);
+        MXB_WARNING("%s: Array value not supported, ignored.", zName);
         break;
 
     case JSON_NULL:
-        MXS_WARNING("%s: NULL value not supported, ignored.", zName);
+        MXB_WARNING("%s: NULL value not supported, ignored.", zName);
         break;
     }
 }
@@ -770,7 +770,7 @@ bool Configuration::configure(json_t* json, std::set<std::string>* pUnrecognized
 
                     if (!pValue->set_from_json(value, &message))
                     {
-                        MXS_ERROR("%s: %s", m_pSpecification->module().c_str(), message.c_str());
+                        MXB_ERROR("%s: %s", m_pSpecification->module().c_str(), message.c_str());
                         configured = false;
                     }
                 }
@@ -785,7 +785,7 @@ bool Configuration::configure(json_t* json, std::set<std::string>* pUnrecognized
                 }
                 else
                 {
-                    MXS_ERROR("%s: The parameter '%s' is unrecognized.",
+                    MXB_ERROR("%s: The parameter '%s' is unrecognized.",
                               m_pSpecification->module().c_str(), key);
                     configured = false;
                 }
@@ -1312,7 +1312,7 @@ bool ParamPath::is_valid(const value_type& value) const
                  * right or the module doesn't want the directory to be created
                  * if it doesn't exist.
                  */
-                MXS_ERROR("Bad path parameter '%s' (absolute path '%s'): %d, %s",
+                MXB_ERROR("Bad path parameter '%s' (absolute path '%s'): %d, %s",
                           value.c_str(), buf.c_str(), er, mxb_strerror(er));
             }
             else if (mxs_mkdir_all(buf.c_str(), mask))
@@ -1323,7 +1323,7 @@ bool ParamPath::is_valid(const value_type& value) const
             else
             {
                 /** Failed to create the directory, errno is set in `mxs_mkdir_all` */
-                MXS_ERROR("Can't create path '%s' (absolute path '%s'): %d, %s",
+                MXB_ERROR("Can't create path '%s' (absolute path '%s'): %d, %s",
                           value.c_str(), buf.c_str(), errno, mxb_strerror(errno));
             }
         }
