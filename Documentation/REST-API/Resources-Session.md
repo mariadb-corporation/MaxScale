@@ -32,20 +32,21 @@ an external server, the operation may be expensive.
             "client": {
                 "cipher": ""
             },
-            "connected": "Fri Jul 16 09:51:12 2021",
+            "connected": "Wed Mar 16 09:21:28 2022",
             "connections": [
                 {
                     "cipher": "",
-                    "connection_id": 233,
+                    "connection_id": 9,
                     "server": "server1"
                 },
                 {
                     "cipher": "",
-                    "connection_id": 134,
+                    "connection_id": 9,
                     "server": "server2"
                 }
             ],
-            "idle": 59.600000000000001,
+            "default_database": "test",
+            "idle": 0.10000000000000001,
             "log": [],
             "queries": [],
             "remote": "::ffff:127.0.0.1",
@@ -98,20 +99,21 @@ Get all sessions.
                 "client": {
                     "cipher": ""
                 },
-                "connected": "Fri Jul 16 09:51:12 2021",
+                "connected": "Wed Mar 16 09:21:28 2022",
                 "connections": [
                     {
                         "cipher": "",
-                        "connection_id": 233,
+                        "connection_id": 9,
                         "server": "server1"
                     },
                     {
                         "cipher": "",
-                        "connection_id": 134,
+                        "connection_id": 9,
                         "server": "server2"
                     }
                 ],
-                "idle": 59.600000000000001,
+                "default_database": "test",
+                "idle": 0.10000000000000001,
                 "log": [],
                 "queries": [],
                 "remote": "::ffff:127.0.0.1",

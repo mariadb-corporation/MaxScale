@@ -24,8 +24,8 @@ file locations, configuration options and version information.
 {
     "data": {
         "attributes": {
-            "activated_at": "Fri, 16 Jul 2021 06:51:10 GMT",
-            "commit": "601a9b92f4feed5dd5a92f9e28a47d9162bd4901",
+            "activated_at": "Wed, 16 Mar 2022 09:21:18 GMT",
+            "commit": "f22c6db8f6629955dd11876facf93817b3c4f352",
             "parameters": {
                 "admin_auth": true,
                 "admin_enabled": true,
@@ -43,14 +43,14 @@ file locations, configuration options and version information.
                 "auth_connect_timeout": 10000,
                 "auth_read_timeout": 10000,
                 "auth_write_timeout": 10000,
-                "cachedir": "/tmp/build/cache/maxscale",
-                "connector_plugindir": "/tmp/build/lib64/mysql/plugin",
-                "datadir": "/tmp/build/lib/maxscale",
+                "cachedir": "/var/cache/maxscale",
+                "connector_plugindir": "/usr/lib64/mysql/plugin",
+                "datadir": "/var/lib/maxscale",
                 "debug": null,
                 "dump_last_statements": "never",
-                "execdir": "/tmp/build/bin",
-                "language": "/tmp/build/lib/maxscale",
-                "libdir": "/tmp/build/lib64/maxscale",
+                "execdir": "/usr/bin",
+                "language": "/var/lib/maxscale",
+                "libdir": "/usr/lib64/maxscale",
                 "load_persisted_configs": true,
                 "local_address": null,
                 "log_debug": false,
@@ -63,14 +63,14 @@ file locations, configuration options and version information.
                 },
                 "log_warn_super_user": false,
                 "log_warning": true,
-                "logdir": "/tmp/build/log/maxscale",
+                "logdir": "/var/log/maxscale",
                 "max_auth_errors_until_block": 10,
                 "maxlog": true,
-                "module_configdir": "/tmp/build/etc/maxscale.modules.d",
+                "module_configdir": "/etc/maxscale.modules.d",
                 "ms_timestamp": false,
                 "passive": false,
-                "persistdir": "/tmp/build/lib/maxscale/maxscale.cnf.d",
-                "piddir": "/tmp/build/run/maxscale",
+                "persistdir": "/var/lib/maxscale/maxscale.cnf.d",
+                "piddir": "/var/run/maxscale",
                 "query_classifier": "qc_sqlite",
                 "query_classifier_args": null,
                 "query_classifier_cache_size": 0,
@@ -81,19 +81,20 @@ file locations, configuration options and version information.
                 "rebalance_window": 10,
                 "retain_last_statements": 0,
                 "session_trace": 0,
+                "skip_name_resolve": false,
                 "skip_permission_checks": false,
                 "sql_mode": "default",
-                "syslog": true,
+                "syslog": false,
                 "threads": 8,
                 "users_refresh_interval": 0,
                 "users_refresh_time": 30000,
                 "writeq_high_water": 16777216,
                 "writeq_low_water": 8192
             },
-            "process_datadir": "/tmp/build/lib/maxscale/data1328009",
-            "started_at": "Fri, 16 Jul 2021 06:51:10 GMT",
-            "uptime": 284,
-            "version": "2.5.14"
+            "process_datadir": "/var/lib/maxscale/data19",
+            "started_at": "Wed, 16 Mar 2022 09:21:18 GMT",
+            "uptime": 10,
+            "version": "2.5.19"
         },
         "id": "maxscale",
         "type": "maxscale"
@@ -497,7 +498,7 @@ location where the log files are stored.
 {
     "data": {
         "attributes": {
-            "log_file": "/tmp/build/log/maxscale/maxscale.log",
+            "log_file": "/var/log/maxscale/maxscale.log",
             "log_priorities": [
                 "alert",
                 "error",
@@ -1266,6 +1267,14 @@ one to see the parameters of a module before the object is created.
                     },
                     {
                         "default_value": false,
+                        "description": "Do not resolve client IP addresses to hostnames during authentication",
+                        "mandatory": false,
+                        "modifiable": false,
+                        "name": "skip_name_resolve",
+                        "type": "bool"
+                    },
+                    {
+                        "default_value": false,
                         "description": "Skip service and monitor permission checks.",
                         "mandatory": false,
                         "modifiable": true,
@@ -1335,7 +1344,7 @@ one to see the parameters of a module before the object is created.
                         "type": "size"
                     }
                 ],
-                "version": "2.5.14"
+                "version": "2.5.19"
             },
             "id": "maxscale",
             "links": {
@@ -1544,7 +1553,7 @@ one to see the parameters of a module before the object is created.
                         "type": "string"
                     }
                 ],
-                "version": "2.5.14"
+                "version": "2.5.19"
             },
             "id": "servers",
             "links": {
@@ -2609,7 +2618,7 @@ one to see the parameters of a module before the object is created.
                         "type": "bool"
                     },
                     {
-                        "default_value": false,
+                        "default_value": true,
                         "mandatory": false,
                         "name": "append",
                         "type": "bool"

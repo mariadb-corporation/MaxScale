@@ -72,8 +72,8 @@ Get a single server.
                 "routed_packets": 0,
                 "total_connections": 1
             },
-            "triggered_at": "Fri, 16 Jul 2021 06:51:10 GMT",
-            "version_string": "10.5.10-MariaDB-1:10.5.10+maria~focal-log"
+            "triggered_at": "Wed, 16 Mar 2022 09:21:23 GMT",
+            "version_string": "10.5.13-MariaDB-1:10.5.13+maria~focal-log"
         },
         "id": "server1",
         "links": {
@@ -182,8 +182,8 @@ Response contains a resource collection with all servers.
                     "routed_packets": 0,
                     "total_connections": 1
                 },
-                "triggered_at": "Fri, 16 Jul 2021 06:51:10 GMT",
-                "version_string": "10.5.10-MariaDB-1:10.5.10+maria~focal-log"
+                "triggered_at": "Wed, 16 Mar 2022 09:21:23 GMT",
+                "version_string": "10.5.13-MariaDB-1:10.5.13+maria~focal-log"
             },
             "id": "server1",
             "links": {
@@ -284,8 +284,8 @@ Response contains a resource collection with all servers.
                     "routed_packets": 2,
                     "total_connections": 1
                 },
-                "triggered_at": "Fri, 16 Jul 2021 06:51:10 GMT",
-                "version_string": "10.5.10-MariaDB-1:10.5.10+maria~focal-log"
+                "triggered_at": "Wed, 16 Mar 2022 09:21:23 GMT",
+                "version_string": "10.5.13-MariaDB-1:10.5.13+maria~focal-log"
             },
             "id": "server2",
             "links": {

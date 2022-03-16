@@ -88,6 +88,31 @@ GET /v1/filters
     "data": [
         {
             "attributes": {
+                "module": "hintfilter",
+                "parameters": {}
+            },
+            "id": "Hint",
+            "links": {
+                "self": "http://localhost:8989/v1/filters/Hint"
+            },
+            "relationships": {
+                "services": {
+                    "data": [
+                        {
+                            "id": "Read-Connection-Router",
+                            "type": "services"
+                        }
+                    ],
+                    "links": {
+                        "related": "http://localhost:8989/v1/services/",
+                        "self": "http://localhost:8989/v1/filters/Hint/relationships/services"
+                    }
+                }
+            },
+            "type": "filters"
+        },
+        {
+            "attributes": {
                 "filter_diagnostics": {
                     "newline_replacement": " ",
                     "separator": ","
@@ -123,31 +148,6 @@ GET /v1/filters
                     "links": {
                         "related": "http://localhost:8989/v1/services/",
                         "self": "http://localhost:8989/v1/filters/QLA/relationships/services"
-                    }
-                }
-            },
-            "type": "filters"
-        },
-        {
-            "attributes": {
-                "module": "hintfilter",
-                "parameters": {}
-            },
-            "id": "Hint",
-            "links": {
-                "self": "http://localhost:8989/v1/filters/Hint"
-            },
-            "relationships": {
-                "services": {
-                    "data": [
-                        {
-                            "id": "Read-Connection-Router",
-                            "type": "services"
-                        }
-                    ],
-                    "links": {
-                        "related": "http://localhost:8989/v1/services/",
-                        "self": "http://localhost:8989/v1/filters/Hint/relationships/services"
                     }
                 }
             },
