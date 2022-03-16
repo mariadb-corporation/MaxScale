@@ -13,9 +13,11 @@
 
 #include <maxbase/format.hh>
 
+#include <unistd.h>
+#include <cstdarg>
 #include <cstdio>
 #include <maxbase/assert.hh>
-#include <maxbase/log.h>
+#include <maxbase/log.hh>
 
 namespace
 {

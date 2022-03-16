@@ -17,7 +17,6 @@
 
 #include <assert.h>
 #include <stdbool.h>
-#include <syslog.h>
 #include <unistd.h>
 #include <sstream>
 #include <functional>
@@ -32,6 +31,7 @@
 #endif
 
 #include <maxbase/log.hh>
+#include <maxbase/jansson.h>
 #include <maxbase/string.hh>
 
 typedef mxb_log_target_t mxs_log_target_t;

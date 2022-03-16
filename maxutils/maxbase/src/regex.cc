@@ -13,7 +13,7 @@
  */
 
 #include <maxbase/regex.hh>
-#include <maxbase/log.h>
+#include <maxbase/log.hh>
 #include <maxbase/assert.hh>
 
 namespace

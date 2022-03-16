@@ -20,6 +20,7 @@
 
 #include <maxbase/ccdefs.hh>
 #include <signal.h>
+#include <unistd.h>
 #include <ctime>
 #include <iostream>
 #include <thread>

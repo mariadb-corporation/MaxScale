@@ -11,7 +11,6 @@
  * Public License.
  */
 
-#include <maxbase/log.h>
 #include <maxbase/log.hh>
 
 #include <sys/time.h>

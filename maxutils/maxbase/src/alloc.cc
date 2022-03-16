@@ -14,7 +14,7 @@
 #include <maxbase/alloc.hh>
 #include <stdlib.h>
 #include <string.h>
-#include <maxbase/log.h>
+#include <maxbase/log.hh>
 
 /**
  * @brief Allocates memory; behaves exactly like `malloc`.

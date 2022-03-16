@@ -14,6 +14,7 @@
 #include <maxbase/messagequeue.hh>
 #include <cerrno>
 #include <cstring>
+#include <unistd.h>
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
 #include <maxbase/assert.hh>

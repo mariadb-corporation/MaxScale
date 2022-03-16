@@ -25,7 +25,7 @@
 
 #include <maxbase/assert.hh>
 #include <maxbase/atomic.hh>
-#include <maxbase/log.h>
+#include <maxbase/log.hh>
 #include <maxbase/string.hh>
 #include <maxbase/stopwatch.hh>
 #include <maxbase/threadpool.hh>
