@@ -16,7 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxbase/alloc.hh>
 #include <maxscale/log.hh>
 

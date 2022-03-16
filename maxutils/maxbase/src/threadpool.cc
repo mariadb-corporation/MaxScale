@@ -12,7 +12,7 @@
  */
 
 #include <maxbase/threadpool.hh>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 
 namespace maxbase
 {

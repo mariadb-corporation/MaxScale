@@ -13,7 +13,7 @@
 
 #include <maxbase/workertask.hh>
 #include <maxbase/atomic.hh>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 
 namespace maxbase
 {

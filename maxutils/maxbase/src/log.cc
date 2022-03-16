@@ -31,7 +31,7 @@
 #include <mutex>
 #include <unordered_map>
 
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxbase/logger.hh>
 
 /**

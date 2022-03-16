@@ -14,7 +14,7 @@
 #include <maxbase/threadpool.hh>
 #include <iostream>
 #include <sstream>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxbase/log.hh>
 #include <maxbase/semaphore.hh>
 #include <maxbase/string.hh>

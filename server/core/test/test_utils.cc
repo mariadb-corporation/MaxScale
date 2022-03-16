@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxscale/utils.hh>
 #include <maxbase/random.hh>
 #include <string.h>

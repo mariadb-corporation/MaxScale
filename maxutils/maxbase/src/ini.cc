@@ -13,7 +13,7 @@
 
 #include <maxbase/ini.hh>
 #include <fstream>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxbase/format.hh>
 #include <maxbase/string.hh>
 

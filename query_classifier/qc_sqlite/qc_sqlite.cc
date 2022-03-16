@@ -35,7 +35,7 @@
 #include <maxscale/query_classifier.hh>
 #include <maxscale/utils.hh>
 
-#include "builtin_functions.h"
+#include "builtin_functions.hh"
 
 using std::vector;
 

@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxbase/string.hh>
 #include <cstring>
 #include <functional>

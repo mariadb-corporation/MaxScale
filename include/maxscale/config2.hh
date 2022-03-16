@@ -22,7 +22,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxbase/atomic.hh>
 #include <maxbase/host.hh>
 #include <maxbase/log.hh>

@@ -17,7 +17,7 @@
 #include <string>
 #include <thread>
 #include <vector>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxbase/log.hh>
 #include <maxbase/stopwatch.hh>
 

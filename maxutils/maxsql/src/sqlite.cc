@@ -14,7 +14,7 @@
 #include <maxsql/sqlite.hh>
 
 #include <sqlite3.h>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxbase/format.hh>
 
 using std::string;

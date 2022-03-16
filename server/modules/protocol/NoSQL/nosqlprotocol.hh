@@ -15,5 +15,5 @@
 #define MXS_MODULE_NAME "nosqlprotocol"
 
 #include <maxscale/ccdefs.hh>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxscale/log.hh>

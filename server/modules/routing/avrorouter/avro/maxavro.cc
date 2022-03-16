@@ -15,7 +15,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include "maxavro_internal.hh"
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxscale/log.hh>
 #include <errno.h>
 

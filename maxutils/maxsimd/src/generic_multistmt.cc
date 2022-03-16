@@ -12,7 +12,7 @@
  */
 
 #include <maxsimd/multistmt.hh>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxbase/string.hh>
 #include <cstring>
 

@@ -14,7 +14,7 @@
 #include <cstring>
 #include <libxml/xpath.h>
 #include <maxbase/alloc.hh>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 
 using namespace std;
 

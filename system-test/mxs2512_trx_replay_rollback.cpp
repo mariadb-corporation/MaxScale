@@ -12,7 +12,7 @@
  */
 
 #include <iostream>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxbase/semaphore.hh>
 #include <maxtest/mariadb_func.hh>
 #include <maxtest/testconnections.hh>

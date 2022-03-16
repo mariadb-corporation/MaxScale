@@ -22,7 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxbase/log.hh>
 #include <maxbase/alloc.hh>
 #include <maxscale/buffer.hh>

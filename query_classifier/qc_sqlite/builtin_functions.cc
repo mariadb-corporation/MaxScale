@@ -11,10 +11,10 @@
  * Public License.
  */
 
-#include "builtin_functions.h"
+#include "builtin_functions.hh"
 #include <stdlib.h>
 #include <string.h>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 
 static struct
 {
@@ -594,7 +594,7 @@ bool is_builtin_readonly_function(const char* key,
 {
     mxb_assert(unit.inited);
 
-    char* value = bsearch(key, BUILTIN_FUNCTIONS, N_BUILTIN_FUNCTIONS, sizeof(char*), search_compare);
+    void* value = bsearch(key, BUILTIN_FUNCTIONS, N_BUILTIN_FUNCTIONS, sizeof(char*), search_compare);
 
     if (!value)
     {

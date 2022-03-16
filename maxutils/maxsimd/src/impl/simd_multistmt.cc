@@ -15,7 +15,7 @@
 
 #include "../multistmt_impl.hh"
 #include "simd256.hh"
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxbase/string.hh>
 #include <functional>
 #include <algorithm>

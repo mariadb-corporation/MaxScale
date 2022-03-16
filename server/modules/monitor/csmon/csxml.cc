@@ -13,7 +13,7 @@
 #include "csxml.hh"
 #include <sstream>
 #include <libxml/xpath.h>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 
 using namespace std;
 

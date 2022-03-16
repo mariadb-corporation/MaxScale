@@ -27,7 +27,7 @@
 #include <boost/spirit/home/x3/support/utility/annotate_on_success.hpp>
 #include <boost/spirit/home/x3/support/utility/error_reporting.hpp>
 
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 
 using namespace boost::spirit;
 using CMT = pinloki::ChangeMasterType;

@@ -14,7 +14,7 @@
 #include <maxbase/format.hh>
 
 #include <cstdio>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxbase/log.h>
 
 namespace

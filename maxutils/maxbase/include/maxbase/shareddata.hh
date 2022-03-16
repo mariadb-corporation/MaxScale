@@ -13,7 +13,7 @@
 #pragma once
 
 #include <maxbase/ccdefs.hh>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxbase/stopwatch.hh>
 
 #include <functional>

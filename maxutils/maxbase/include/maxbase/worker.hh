@@ -24,7 +24,7 @@
 #include <type_traits>
 #include <unordered_map>
 
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxbase/atomic.h>
 #include <maxbase/average.hh>
 #include <maxbase/messagequeue.hh>

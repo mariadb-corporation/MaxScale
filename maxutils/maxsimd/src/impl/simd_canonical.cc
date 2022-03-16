@@ -15,7 +15,7 @@
 
 #include "../canonical_impl.hh"
 #include "simd256.hh"
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 
 #include <string>
 #include <functional>

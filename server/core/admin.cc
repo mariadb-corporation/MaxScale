@@ -26,7 +26,7 @@
 #include <netdb.h>
 
 #include <maxbase/atomic.h>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxscale/config.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/threadpool.hh>

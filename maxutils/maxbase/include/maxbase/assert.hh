@@ -12,13 +12,11 @@
  */
 #pragma once
 
-#include <maxbase/cdefs.h>
+#include <maxbase/ccdefs.hh>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <maxbase/log.h>
-
-MXB_BEGIN_DECLS
+#include <maxbase/log.hh>
 
 // TODO: Provide an MXB_DEBUG with the same meaning.
 #if defined (SS_DEBUG)
@@ -59,5 +57,3 @@ MXB_BEGIN_DECLS
 #define MXB_AT_DEBUG(exp)
 
 #endif /* SS_DEBUG */
-
-MXB_END_DECLS

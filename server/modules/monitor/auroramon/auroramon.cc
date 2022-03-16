@@ -19,7 +19,7 @@
 
 #include "auroramon.hh"
 #include <mysql.h>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/mysql_utils.hh>
 

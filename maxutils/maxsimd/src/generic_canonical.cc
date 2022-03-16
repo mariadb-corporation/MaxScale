@@ -12,7 +12,7 @@
  */
 
 #include <maxsimd/canonical.hh>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 
 #include <string>
 #include <functional>

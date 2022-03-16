@@ -12,7 +12,7 @@
  */
 
 #include <maxscale/mariadb.hh>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <mysql.h>
 
 namespace

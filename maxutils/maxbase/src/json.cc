@@ -11,7 +11,7 @@
  * Public License.
  */
 #include <maxbase/json.hh>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxbase/format.hh>
 #include <maxbase/string.hh>
 #include <jansson.h>

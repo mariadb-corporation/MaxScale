@@ -14,7 +14,7 @@
 #include "table.hh"
 
 #include <maxbase/alloc.hh>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <mysqld_error.h>
 
 #include <string>

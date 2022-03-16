@@ -12,7 +12,7 @@
  */
 
 #include "internal/sql_conn_manager.hh"
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 
 using std::move;
 using LockGuard = std::lock_guard<std::mutex>;

@@ -13,7 +13,7 @@
 
 #include <iostream>
 
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxscale/http.hh>
 
 using std::string;

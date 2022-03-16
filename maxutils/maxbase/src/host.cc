@@ -17,7 +17,7 @@
 #include <algorithm>
 #include <arpa/inet.h>
 #include <netdb.h>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxbase/format.hh>
 #include <maxbase/string.hh>
 

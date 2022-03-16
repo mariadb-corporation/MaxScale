@@ -20,7 +20,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 
 using namespace maxscale;
 using namespace std;

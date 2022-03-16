@@ -20,7 +20,7 @@
 #include <utility>
 #include <thread>
 #include <curl/curl.h>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxbase/string.hh>
 using namespace std;
 

@@ -17,7 +17,7 @@
 #include <mutex>
 #include <thread>
 #include <unordered_set>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxbase/atomic.hh>
 #include <maxbase/condition_variable.hh>
 #include <maxbase/semaphore.hh>

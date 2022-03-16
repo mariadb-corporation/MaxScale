@@ -16,7 +16,7 @@
 #include <jwt-cpp/jwt.h>
 #include <random>
 
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 
 namespace
 {

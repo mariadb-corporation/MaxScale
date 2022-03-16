@@ -16,7 +16,7 @@
 #include <cstring>
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxbase/log.hh>
 #include <maxbase/string.hh>
 #include <maxbase/worker.hh>

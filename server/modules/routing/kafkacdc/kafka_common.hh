@@ -13,7 +13,7 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxscale/config2.hh>
 
 #include <librdkafka/rdkafkacpp.h>

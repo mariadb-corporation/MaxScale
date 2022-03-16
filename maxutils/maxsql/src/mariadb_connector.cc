@@ -16,7 +16,7 @@
 #include <memory>
 #include <mysql.h>
 #include <mysqld_error.h>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxbase/format.hh>
 #include <maxbase/string.hh>
 #include <maxsql/mariadb.hh>

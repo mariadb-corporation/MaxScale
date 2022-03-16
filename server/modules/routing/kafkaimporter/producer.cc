@@ -13,7 +13,7 @@
 
 #include "producer.hh"
 
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxscale/service.hh>
 #include <maxscale/mainworker.hh>
 

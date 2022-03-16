@@ -12,7 +12,7 @@
  */
 
 #include <iostream>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxbase/maxbase.hh>
 #include <maxbase/worker.hh>
 

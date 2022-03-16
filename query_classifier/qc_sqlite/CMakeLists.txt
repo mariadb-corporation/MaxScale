@@ -19,7 +19,7 @@ include_directories(${MARIADB_CONNECTOR_INCLUDE_DIR})
 # GCC thinks there is an array-bounds error in sqlite code.
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-error=array-bounds -Wno-misleading-indentation")
 
-add_library(qc_sqlite SHARED qc_sqlite.cc qc_sqlite3.c builtin_functions.c)
+add_library(qc_sqlite SHARED qc_sqlite.cc qc_sqlite3.c builtin_functions.cc)
 add_dependencies(qc_sqlite maxscale_sqlite)
 # If you feel a need to add something here, check also the handling of 'enable_maxscale'
 # in sqlite-src-3110100/configure.

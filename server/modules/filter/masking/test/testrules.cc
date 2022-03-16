@@ -14,7 +14,7 @@
 #define TESTING_MASKINGRULES
 #include "maskingrules.hh"
 #include <iostream>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 
 using namespace std;
 

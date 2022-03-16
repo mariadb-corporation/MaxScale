@@ -18,7 +18,7 @@
 #include <sstream>
 #include <string>
 
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxbase/jansson.h>
 #include <maxbase/json.hh>
 

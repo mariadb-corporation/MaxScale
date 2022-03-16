@@ -19,7 +19,7 @@
 #include <cstdint>
 #include <cstring>
 #include <vector>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxscale/hint.hh>
 #include <maxsimd/canonical.hh>
 

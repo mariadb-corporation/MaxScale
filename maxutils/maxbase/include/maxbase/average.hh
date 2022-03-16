@@ -13,8 +13,8 @@
 #pragma once
 
 #include <maxbase/ccdefs.hh>
+#include <maxbase/assert.hh>
 #include <maxbase/atomic.hh>
-#include <maxbase/assert.h>
 
 #include <vector>
 

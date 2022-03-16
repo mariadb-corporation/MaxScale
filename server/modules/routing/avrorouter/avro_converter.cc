@@ -15,7 +15,7 @@
 
 #include <limits.h>
 
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 
 namespace
 {

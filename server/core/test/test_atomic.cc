@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <thread>
 
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxbase/atomic.h>
 
 

@@ -23,7 +23,7 @@
 #include <sys/epoll.h>
 #include <sys/timerfd.h>
 
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxbase/atomic.hh>
 #include <maxbase/log.h>
 #include <maxbase/string.hh>

@@ -2,7 +2,7 @@
 #include <stdexcept>
 #include <sstream>
 
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/modutil.hh>

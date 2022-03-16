@@ -16,7 +16,7 @@
 #include <cstdlib>
 #include <sstream>
 
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxscale/config.hh>
 #include <maxscale/hint.hh>
 #include <maxscale/routingworker.hh>

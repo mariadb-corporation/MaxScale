@@ -9,7 +9,7 @@
 #include <future>
 #include <algorithm>
 
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxbase/format.hh>
 #include <maxbase/ini.hh>
 #include <maxbase/stacktrace.hh>

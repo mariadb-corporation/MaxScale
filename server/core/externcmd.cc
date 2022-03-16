@@ -20,7 +20,7 @@
 #include <fcntl.h>
 #include <thread>
 
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxbase/alloc.hh>
 #include <maxscale/pcre2.hh>
 

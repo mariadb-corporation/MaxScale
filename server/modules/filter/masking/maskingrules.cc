@@ -17,7 +17,7 @@
 #include <errno.h>
 #include <functional>
 #include <string.h>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxscale/jansson.hh>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/pcre2.hh>

@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxscale/response_distribution.hh>
 #include <cmath>
 #include <iostream>

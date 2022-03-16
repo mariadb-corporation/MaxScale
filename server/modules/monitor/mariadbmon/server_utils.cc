@@ -15,7 +15,7 @@
 #include <algorithm>
 #include <cinttypes>
 #include <maxbase/format.hh>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include "mariadbserver.hh"
 
 using std::string;

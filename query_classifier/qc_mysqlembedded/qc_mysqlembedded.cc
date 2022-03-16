@@ -64,7 +64,7 @@
 #include <pthread.h>
 
 #define json_type mxs_json_type
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxscale/log.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>

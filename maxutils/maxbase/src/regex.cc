@@ -14,7 +14,7 @@
 
 #include <maxbase/regex.hh>
 #include <maxbase/log.h>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 
 namespace
 {

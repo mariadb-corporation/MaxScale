@@ -13,7 +13,7 @@
 
 #include "xpand.hh"
 #include <mysql.h>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 
 using maxscale::Monitor;
 using maxscale::MonitorServer;

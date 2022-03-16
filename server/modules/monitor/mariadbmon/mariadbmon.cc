@@ -19,7 +19,7 @@
 #include <future>
 #include <cinttypes>
 #include <mysql.h>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxbase/format.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/mainworker.hh>

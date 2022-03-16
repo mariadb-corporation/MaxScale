@@ -14,7 +14,7 @@
 #include "internal/event.hh"
 #include <algorithm>
 #include <string.h>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxbase/atomic.h>
 
 using namespace std;

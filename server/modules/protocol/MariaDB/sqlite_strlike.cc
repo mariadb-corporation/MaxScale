@@ -18,7 +18,7 @@
 #include "sqlite_strlike.hh"
 #include <cstdint>
 #include <cstring>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 
 namespace
 {

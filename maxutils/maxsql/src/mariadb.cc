@@ -16,7 +16,7 @@
 #include <thread>
 #include <chrono>
 #include <maxbase/alloc.hh>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <maxbase/format.hh>
 
 using std::string;

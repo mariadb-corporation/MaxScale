@@ -12,7 +12,7 @@
  */
 
 #include <maxbase/string.hh>
-#include <maxbase/assert.h>
+#include <maxbase/assert.hh>
 #include <string.h>
 #include <iostream>
 
