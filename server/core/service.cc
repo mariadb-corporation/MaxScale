@@ -34,7 +34,6 @@
 #include <unordered_set>
 #include <fstream>
 
-#include <maxbase/atomic.hh>
 #include <maxbase/jansson.h>
 
 #include <maxscale/service.hh>

@@ -25,7 +25,6 @@
 #include <unordered_map>
 
 #include <maxbase/assert.hh>
-#include <maxbase/atomic.h>
 #include <maxbase/average.hh>
 #include <maxbase/messagequeue.hh>
 #include <maxbase/semaphore.hh>

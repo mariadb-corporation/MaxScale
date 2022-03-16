@@ -28,7 +28,6 @@
 #include <strings.h>
 #include <fcntl.h>
 
-#include <maxbase/atomic.h>
 #include <maxscale/jansson.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/paths.hh>

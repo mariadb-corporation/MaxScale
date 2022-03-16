@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxbase/atomic.h>
+#include <maxbase/atomic.hh>
 
 /**
  * @file atomic.c  - Implementation of atomic operations

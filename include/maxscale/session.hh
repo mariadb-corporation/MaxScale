@@ -16,7 +16,6 @@
 
 #include <time.h>
 
-#include <maxbase/atomic.h>
 #include <maxbase/jansson.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/buffer.hh>

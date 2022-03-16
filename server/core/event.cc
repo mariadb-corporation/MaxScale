@@ -15,7 +15,7 @@
 #include <algorithm>
 #include <string.h>
 #include <maxbase/assert.hh>
-#include <maxbase/atomic.h>
+#include <maxbase/atomic.hh>
 
 using namespace std;
 

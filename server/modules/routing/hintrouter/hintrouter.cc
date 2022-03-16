@@ -17,8 +17,6 @@
 #include <limits>
 #include <vector>
 
-#include <maxbase/atomic.hh>
-
 namespace
 {
 namespace cfg = mxs::config;

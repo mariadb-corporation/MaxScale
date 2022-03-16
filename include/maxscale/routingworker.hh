@@ -24,7 +24,6 @@
 #include <vector>
 #include <functional>
 
-#include <maxbase/atomic.hh>
 #include <maxbase/semaphore.hh>
 #include <maxbase/stopwatch.hh>
 #include <maxbase/watchedworker.hh>

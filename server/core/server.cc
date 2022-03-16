@@ -20,7 +20,6 @@
 #include <string>
 #include <vector>
 
-#include <maxbase/atomic.hh>
 #include <maxbase/stopwatch.hh>
 #include <maxbase/log.hh>
 

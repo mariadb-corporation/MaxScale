@@ -38,7 +38,6 @@
 #include <vector>
 #include <unordered_set>
 
-#include <maxbase/atomic.hh>
 #include <maxbase/format.hh>
 #include <maxbase/ini.hh>
 #include <maxbase/pretty_print.hh>

@@ -18,7 +18,6 @@
 #include <thread>
 #include <unordered_set>
 #include <maxbase/assert.hh>
-#include <maxbase/atomic.hh>
 #include <maxbase/condition_variable.hh>
 #include <maxbase/semaphore.hh>
 #include <maxbase/stopwatch.hh>

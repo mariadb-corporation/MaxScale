@@ -25,7 +25,6 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
-#include <maxbase/atomic.h>
 #include <maxbase/assert.hh>
 #include <maxscale/config.hh>
 #include <maxscale/paths.hh>

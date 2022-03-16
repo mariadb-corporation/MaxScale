@@ -17,7 +17,7 @@
 #include <thread>
 
 #include <maxbase/assert.hh>
-#include <maxbase/atomic.h>
+#include <maxbase/atomic.hh>
 
 
 #define NTHR 10
