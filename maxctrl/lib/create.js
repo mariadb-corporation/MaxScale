@@ -11,6 +11,7 @@
  * Public License.
  */
 require("./common.js")();
+const fs = require("fs");
 
 // Converts a key=value string into an object
 function to_obj(obj, value) {
@@ -540,7 +541,45 @@ exports.builder = function (yargs) {
         });
       }
     )
+    .command(
+      "report <file>",
+      "Create a diagnostic report and save it into a file",
+      function (yargs) {
+        return yargs
+          .epilog(
+            "The generated report contains the state of all the objects in MaxScale " +
+              "as well as all other required information needed to diagnose problems."
+          )
+          .wrap(null)
+          .usage("Usage: create report <file>");
+      },
+      function (argv) {
+        maxctrl(argv, async function (host) {
+          var endpoints = [
+            "maxscale",
+            "servers",
+            "services",
+            "monitors",
+            "listeners",
+            "filters",
+            "sessions",
+            "users",
+            "maxscale/modules",
+            "maxscale/query_classifier",
+            "maxscale/threads",
+          ];
 
+          var data = {};
+
+          for (const e of endpoints) {
+            data[e] = await getJson(host, e);
+          }
+
+          fs.writeFileSync(argv.file, JSON.stringify(data, null, 2));
+          return OK();
+        });
+      }
+    )
     .usage("Usage: create <command>")
     .help()
     .wrap(null)
