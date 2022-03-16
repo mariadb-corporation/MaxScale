@@ -694,19 +694,19 @@ Config::Config(int argc, char** argv)
 #ifndef SS_DEBUG
                     MXS_WARNING("The 'log_debug' option has no effect in release mode.");
 #endif
-                    mxs_log_set_priority_enabled(LOG_DEBUG, enable);
+                    mxb_log_set_priority_enabled(LOG_DEBUG, enable);
                 }),
     log_info(this, &s_log_info, [](bool enable) {
-                 mxs_log_set_priority_enabled(LOG_INFO, enable);
+                 mxb_log_set_priority_enabled(LOG_INFO, enable);
              }),
     log_notice(this, &s_log_notice, [](bool enable) {
-                   mxs_log_set_priority_enabled(LOG_NOTICE, enable);
+                   mxb_log_set_priority_enabled(LOG_NOTICE, enable);
                }),
     log_warning(this, &s_log_warning, [](bool enable) {
-                    mxs_log_set_priority_enabled(LOG_WARNING, enable);
+                    mxb_log_set_priority_enabled(LOG_WARNING, enable);
                 }),
     log_throttling(this, &s_log_throttling, [](MXS_LOG_THROTTLING throttling) {
-                       mxs_log_set_throttling(&throttling);
+                       mxb_log_set_throttling(&throttling);
                    }),
     dump_statements(this, &s_dump_statements, [](session_dump_statements_t when) {
                         session_set_dump_statements(when);
@@ -716,16 +716,16 @@ Config::Config(int argc, char** argv)
                       mxb_log_set_session_trace(count > 0 ? true : false);
                   }),
     ms_timestamp(this, &s_ms_timestamp, [](bool enable) {
-                     mxs_log_set_highprecision_enabled(enable);
+                     mxb_log_set_highprecision_enabled(enable);
                  }),
     retain_last_statements(this, &s_retain_last_statements, [](int32_t count) {
                                session_set_retain_last_statements(count);
                            }),
     syslog(this, &s_syslog, [](bool enable) {
-               mxs_log_set_syslog_enabled(enable);
+               mxb_log_set_syslog_enabled(enable);
            }),
     maxlog(this, &s_maxlog, [](bool enable) {
-               mxs_log_set_maxlog_enabled(enable);
+               mxb_log_set_maxlog_enabled(enable);
            }),
     auth_conn_timeout(this, &s_auth_conn_timeout),
     auth_read_timeout(this, &s_auth_read_timeout),

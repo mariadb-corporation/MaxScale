@@ -1923,8 +1923,8 @@ int main(int argc, char** argv)
         return rc;
     }
 
-    mxs_log_set_syslog_enabled(cnf.syslog.get());
-    mxs_log_set_maxlog_enabled(cnf.maxlog.get());
+    mxb_log_set_syslog_enabled(cnf.syslog.get());
+    mxb_log_set_maxlog_enabled(cnf.maxlog.get());
 
     MXB_NOTICE("syslog logging is %s.", cnf.syslog.get() ? "enabled" : "disabled");
     MXB_NOTICE("maxlog logging is %s.", cnf.maxlog.get() ? "enabled" : "disabled");
@@ -2585,7 +2585,7 @@ void set_log_augmentation(const char* value)
 
     if (!augmentation_set)
     {
-        mxs_log_set_augmentation(atoi(value));
+        mxb_log_set_augmentation(atoi(value));
 
         augmentation_set = true;
     }

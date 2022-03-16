@@ -24,12 +24,12 @@
 
 static void skygw_log_enable(int priority)
 {
-    mxs_log_set_priority_enabled(priority, true);
+    mxb_log_set_priority_enabled(priority, true);
 }
 
 static void skygw_log_disable(int priority)
 {
-    mxs_log_set_priority_enabled(priority, false);
+    mxb_log_set_priority_enabled(priority, false);
 }
 
 int main(int argc, char* argv[])
