@@ -15,7 +15,7 @@
 
 #include <string>
 
-#include <maxbase/alloc.h>
+#include <maxbase/alloc.hh>
 #include <maxscale/config.hh>
 #include <maxscale/pcre2.hh>
 

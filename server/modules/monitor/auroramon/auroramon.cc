@@ -19,7 +19,6 @@
 
 #include "auroramon.hh"
 #include <mysql.h>
-#include <maxbase/alloc.h>
 #include <maxbase/assert.h>
 #include <maxscale/modinfo.hh>
 #include <maxscale/mysql_utils.hh>

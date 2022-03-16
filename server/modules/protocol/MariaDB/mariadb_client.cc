@@ -27,7 +27,6 @@
 #include <grp.h>
 #include <pwd.h>
 
-#include <maxbase/alloc.h>
 #include <maxsql/mariadb.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/modinfo.hh>

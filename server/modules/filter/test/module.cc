@@ -12,7 +12,6 @@
  */
 
 #include "maxscale/module.hh"
-#include <maxbase/alloc.h>
 #include <string>
 #include "../../../core/internal/modules.hh"
 

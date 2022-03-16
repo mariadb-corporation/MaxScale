@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxbase/alloc.h>
+#include <maxbase/alloc.hh>
 #include <stdlib.h>
 #include <string.h>
 #include <maxbase/log.h>

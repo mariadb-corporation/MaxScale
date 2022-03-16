@@ -19,7 +19,7 @@
 #include <unordered_set>
 
 #include <maxbase/atomic.hh>
-#include <maxbase/alloc.h>
+#include <maxbase/alloc.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/protocol/mariadb/query_classifier.hh>
 #include <maxscale/protocol/mariadb/resultset.hh>

@@ -14,7 +14,7 @@
 #pragma once
 
 #include "maxavro.hh"
-#include <maxbase/alloc.h>
+#include <maxbase/alloc.hh>
 
 /**
  * Private header for maxavro

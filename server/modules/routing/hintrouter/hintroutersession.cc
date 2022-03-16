@@ -17,7 +17,6 @@
 #include <algorithm>
 #include <functional>
 
-#include <maxbase/alloc.h>
 #include "hintrouter.hh"
 
 namespace

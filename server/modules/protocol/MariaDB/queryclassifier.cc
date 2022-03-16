@@ -13,7 +13,7 @@
 
 #include <maxscale/protocol/mariadb/queryclassifier.hh>
 #include <unordered_map>
-#include <maxbase/alloc.h>
+#include <maxbase/alloc.hh>
 #include <maxsimd/multistmt.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>

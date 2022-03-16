@@ -21,7 +21,6 @@
 #include <fcntl.h>
 #include <stdlib.h>
 
-#include <maxbase/alloc.h>
 #include <maxbase/ini.hh>
 #include <maxscale/maxscale.hh>
 #include <maxscale/pcre2.hh>

@@ -16,7 +16,7 @@
 #include <openssl/hmac.h>
 #include <openssl/md5.h>
 #include <openssl/sha.h>
-#include <maxbase/alloc.h>
+#include <maxbase/alloc.hh>
 #include <maxbase/json.hh>
 #include <maxbase/worker.hh>
 #define MONGOC_INSIDE

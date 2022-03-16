@@ -14,7 +14,6 @@
 #define MXS_MODULE_NAME "cache"
 #include "cachefilter.hh"
 
-#include <maxbase/alloc.h>
 #include <maxscale/jansson.hh>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/paths.hh>

@@ -16,6 +16,7 @@
 #include <memory>
 #include <libmemcached/memcached.h>
 #include <libmemcached-1.0/strerror.h>
+#include <maxbase/alloc.hh>
 #include <maxbase/worker.hh>
 #include <maxscale/config_common.hh>
 #include <maxscale/threadpool.hh>

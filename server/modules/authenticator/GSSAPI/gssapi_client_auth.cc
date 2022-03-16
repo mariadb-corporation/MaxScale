@@ -14,8 +14,6 @@
 #include "gssapi_common.hh"
 #include "gssapi_client_auth.hh"
 
-#include <maxbase/alloc.h>
-
 #include <maxscale/protocol/mariadb/authenticator.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>

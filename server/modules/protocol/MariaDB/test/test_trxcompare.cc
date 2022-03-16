@@ -16,7 +16,7 @@
 #include <fstream>
 #include <iostream>
 #include <string>
-#include <maxbase/alloc.h>
+#include <maxbase/alloc.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/query_classifier.hh>

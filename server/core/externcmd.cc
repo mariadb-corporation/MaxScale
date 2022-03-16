@@ -21,7 +21,7 @@
 #include <thread>
 
 #include <maxbase/assert.h>
-#include <maxbase/alloc.h>
+#include <maxbase/alloc.hh>
 #include <maxscale/pcre2.hh>
 
 using std::string;

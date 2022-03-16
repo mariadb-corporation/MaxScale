@@ -13,7 +13,6 @@
  */
 
 #include <maxscale/ccdefs.hh>
-#include <maxbase/alloc.h>
 #include <maxbase/maxbase.hh>
 #include <maxbase/stacktrace.hh>
 #include <maxbase/watchdognotifier.hh>

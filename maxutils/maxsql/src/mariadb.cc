@@ -15,7 +15,7 @@
 #include <errmsg.h>
 #include <thread>
 #include <chrono>
-#include <maxbase/alloc.h>
+#include <maxbase/alloc.hh>
 #include <maxbase/assert.h>
 #include <maxbase/format.hh>
 

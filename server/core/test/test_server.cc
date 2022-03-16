@@ -22,7 +22,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <maxbase/alloc.h>
 #include <maxscale/server.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/config.hh>

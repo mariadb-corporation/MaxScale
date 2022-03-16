@@ -13,7 +13,6 @@
 
 #include "gssapi_backend_auth.hh"
 
-#include <maxbase/alloc.h>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 

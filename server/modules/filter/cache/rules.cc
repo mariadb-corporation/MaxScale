@@ -19,7 +19,7 @@
 #include <new>
 #include <vector>
 
-#include <maxbase/alloc.h>
+#include <maxbase/alloc.hh>
 #include <maxscale/config.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/mysql_utils.hh>

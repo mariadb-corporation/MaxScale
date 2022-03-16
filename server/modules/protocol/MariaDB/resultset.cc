@@ -16,7 +16,6 @@
 
 #include <numeric>
 
-#include <maxbase/alloc.h>
 #include <maxscale/protocol/mariadb/resultset.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/dcb.hh>

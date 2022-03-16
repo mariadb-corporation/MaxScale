@@ -24,6 +24,7 @@
 #include <systemd/sd-journal.h>
 #endif
 
+#include <maxbase/alloc.hh>
 #include <maxbase/log.hh>
 #include <maxbase/logger.hh>
 

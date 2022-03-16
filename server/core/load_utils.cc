@@ -25,7 +25,6 @@
 #include <algorithm>
 #include <string>
 
-#include <maxbase/alloc.h>
 #include <maxbase/format.hh>
 #include <maxscale/authenticator.hh>
 #include <maxscale/filter.hh>

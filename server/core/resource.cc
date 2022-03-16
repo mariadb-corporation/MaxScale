@@ -16,7 +16,6 @@
 #include <map>
 #include <sstream>
 
-#include <maxbase/alloc.h>
 #include <maxbase/string.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/http.hh>

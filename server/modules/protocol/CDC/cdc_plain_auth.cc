@@ -17,7 +17,6 @@
 #include "cdc_plain_auth.hh"
 
 #include <fcntl.h>
-#include <maxbase/alloc.h>
 #include <maxscale/protocol/cdc/cdc.hh>
 #include <maxscale/event.hh>
 #include <maxscale/modulecmd.hh>

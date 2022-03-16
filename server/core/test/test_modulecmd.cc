@@ -16,7 +16,6 @@
  */
 
 #include <maxbase/maxbase.hh>
-#include <maxbase/alloc.h>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/json_api.hh>

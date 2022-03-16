@@ -38,7 +38,6 @@
 #include <maxbase/jansson.h>
 
 #include <maxscale/service.hh>
-#include <maxbase/alloc.h>
 #include <maxbase/log.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/paths.hh>

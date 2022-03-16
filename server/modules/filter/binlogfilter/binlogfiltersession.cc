@@ -50,7 +50,7 @@
 
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/query_classifier.hh>
-#include <maxbase/alloc.h>
+#include <maxbase/alloc.hh>
 #include <maxscale/session.hh>
 #include <maxscale/modutil.hh>
 #include <maxbase/regex.hh>

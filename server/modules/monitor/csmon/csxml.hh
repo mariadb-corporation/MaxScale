@@ -16,7 +16,7 @@
 #include <memory>
 #include <sstream>
 #include <stdexcept>
-#include <maxbase/alloc.h>
+#include <maxbase/alloc.hh>
 
 // This is likely to be included in <maxbase/xml.hh>, hence here also
 // placed in the maxbase::xml namespace.

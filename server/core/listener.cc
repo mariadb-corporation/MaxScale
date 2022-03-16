@@ -27,7 +27,6 @@
 #include <string>
 #include <unordered_set>
 
-#include <maxbase/alloc.h>
 #include <maxbase/log.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/modutil.hh>

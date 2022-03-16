@@ -32,7 +32,6 @@
 #include <mysqld_error.h>
 #include <errmsg.h>
 
-#include <maxbase/alloc.h>
 #include <maxbase/format.hh>
 #include <maxbase/json.hh>
 #include <maxscale/http.hh>

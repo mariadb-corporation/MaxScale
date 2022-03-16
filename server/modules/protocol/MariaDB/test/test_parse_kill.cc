@@ -15,7 +15,6 @@
 #include "../detect_special_query.hh"
 #include <inttypes.h>
 #include <string>
-#include <maxbase/alloc.h>
 #include <maxbase/format.hh>
 
 using kill_type_t = MariaDBClientConnection::kill_type_t;

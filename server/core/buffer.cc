@@ -16,7 +16,6 @@
 #include <cstdlib>
 #include <sstream>
 
-#include <maxbase/alloc.h>
 #include <maxbase/assert.h>
 #include <maxscale/config.hh>
 #include <maxscale/hint.hh>

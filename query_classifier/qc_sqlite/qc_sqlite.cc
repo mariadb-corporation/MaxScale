@@ -28,7 +28,7 @@
 #include <vector>
 #include <mutex>
 
-#include <maxbase/alloc.h>
+#include <maxbase/alloc.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>

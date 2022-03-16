@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <microhttpd.h>
 
+#include <maxbase/alloc.hh>
 #include <maxscale/jansson.hh>
 #include <maxscale/utils.hh>
 #include <maxscale/http.hh>

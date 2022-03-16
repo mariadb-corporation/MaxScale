@@ -13,7 +13,6 @@
 
 #include <maxscale/ccdefs.hh>
 #include <iostream>
-#include <maxbase/alloc.h>
 #include <maxscale/paths.hh>
 #include "teststorage.hh"
 #include "testerlrustorage.hh"

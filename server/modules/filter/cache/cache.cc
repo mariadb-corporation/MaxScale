@@ -17,7 +17,6 @@
 #include <new>
 #include <set>
 #include <string>
-#include <maxbase/alloc.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/protocol/mariadb/query_classifier.hh>

@@ -15,7 +15,6 @@
 #include "gssapi_client_auth.hh"
 #include "gssapi_backend_auth.hh"
 
-#include <maxbase/alloc.h>
 #include <maxscale/protocol/mariadb/module_names.hh>
 
 using std::string;

@@ -17,7 +17,6 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <maxbase/alloc.h>
 #include <maxscale/config2.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/hint.hh>

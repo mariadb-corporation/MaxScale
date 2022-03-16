@@ -22,7 +22,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include <maxbase/alloc.h>
 #include <maxbase/assert.h>
 #include <maxbase/atomic.hh>
 #include <maxbase/host.hh>

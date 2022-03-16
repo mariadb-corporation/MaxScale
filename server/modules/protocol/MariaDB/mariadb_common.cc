@@ -19,7 +19,6 @@
 #include <maxscale/protocol/mariadb/authenticator.hh>
 
 #include <mysql.h>
-#include <maxbase/alloc.h>
 #include <maxbase/format.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/mysql_utils.hh>

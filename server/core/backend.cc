@@ -17,7 +17,6 @@
 
 #include <maxbase/atomic.hh>
 
-#include <maxbase/alloc.h>
 #include <maxscale/protocol/mariadb/mysql.hh>
 
 using namespace maxscale;

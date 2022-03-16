@@ -15,7 +15,6 @@
 #define MXS_MODULE_NAME MXS_MARIADBAUTH_AUTHENTICATOR_NAME
 
 #include "mysql_auth.hh"
-#include <maxbase/alloc.h>
 #include <maxbase/format.hh>
 #include <maxscale/authenticator.hh>
 #include <maxscale/built_in_modules.hh>

@@ -14,7 +14,7 @@
 #define MXS_MODULE_NAME "cache"
 #include "cachefiltersession.hh"
 #include <new>
-#include <maxbase/alloc.h>
+#include <maxbase/alloc.hh>
 #include <maxbase/pretty_print.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/mysql_utils.hh>

@@ -22,7 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <maxbase/alloc.h>
+#include <maxbase/alloc.hh>
 #include <maxscale/pcre2.hh>
 #include <maxbase/regex.hh>
 

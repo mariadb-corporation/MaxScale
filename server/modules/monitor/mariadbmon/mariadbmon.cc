@@ -21,7 +21,6 @@
 #include <mysql.h>
 #include <maxbase/assert.h>
 #include <maxbase/format.hh>
-#include <maxbase/alloc.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/mainworker.hh>
 #include <maxscale/modulecmd.hh>

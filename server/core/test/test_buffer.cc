@@ -24,7 +24,7 @@
 
 #include <maxbase/assert.h>
 #include <maxbase/log.hh>
-#include <maxbase/alloc.h>
+#include <maxbase/alloc.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/hint.hh>
 

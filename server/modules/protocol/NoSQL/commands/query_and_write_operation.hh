@@ -17,6 +17,7 @@
 //
 
 #include "defs.hh"
+#include <maxbase/alloc.hh>
 #include <maxbase/worker.hh>
 #include <bsoncxx/exception/exception.hpp>
 #include "../nosqlcursor.hh"

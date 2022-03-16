@@ -19,7 +19,6 @@
 #include "avrorouter.hh"
 
 #include <stdio.h>
-#include <maxbase/alloc.h>
 #include <maxscale/mainworker.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/router.hh>

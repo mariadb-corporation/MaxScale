@@ -26,7 +26,6 @@
 #include <strings.h>
 #include <mysql.h>
 
-#include <maxbase/alloc.h>
 #include <maxbase/atomic.hh>
 #include <maxbase/format.hh>
 #include <maxsql/mariadb.hh>

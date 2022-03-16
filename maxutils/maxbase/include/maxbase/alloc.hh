@@ -12,9 +12,7 @@
  */
 #pragma once
 
-#include <maxbase/cdefs.h>
-
-MXB_BEGIN_DECLS
+#include <maxbase/ccdefs.hh>
 
 /* NOTE: Do not use these functions directly, use the macros below. */
 // "caller" arg temporarily disabled so that existing code
@@ -69,5 +67,3 @@ char* mxb_strndup_a(const char* s, size_t n    /*, const char *caller*/);
  * fatal error cannot - currently - be dealt with properly.
  */
 #define MXS_ABORT_IF_FALSE(b) do {if (!(b)) {abort();}} while (false)
-
-MXB_END_DECLS

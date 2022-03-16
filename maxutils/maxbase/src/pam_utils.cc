@@ -14,7 +14,7 @@
 #include <maxbase/pam_utils.hh>
 
 #include <security/pam_appl.h>
-#include <maxbase/alloc.h>
+#include <maxbase/alloc.hh>
 #include <maxbase/assert.h>
 #include <maxbase/format.hh>
 #include <strings.h>

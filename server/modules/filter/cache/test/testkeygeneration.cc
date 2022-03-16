@@ -15,7 +15,6 @@
 #include <iostream>
 #include <fstream>
 #include <unordered_map>
-#include <maxbase/alloc.h>
 #include <maxscale/paths.hh>
 #include <maxscale/query_classifier.hh>
 #include "storagefactory.hh"

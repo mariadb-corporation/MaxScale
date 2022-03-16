@@ -17,7 +17,6 @@
 #include <sstream>
 #include <sys/time.h>
 
-#include <maxbase/alloc.h>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/json_api.hh>
 

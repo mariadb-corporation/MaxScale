@@ -14,7 +14,7 @@
 #include "rules.hh"
 #include <algorithm>
 #include <iostream>
-#include <maxbase/alloc.h>
+#include <maxbase/alloc.hh>
 #include <maxscale/config.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>

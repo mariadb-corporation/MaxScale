@@ -20,7 +20,6 @@
 #include <vector>
 #include <maxbase/log.hh>
 #include <maxbase/maxbase.hh>
-#include <maxbase/alloc.h>
 #include <maxscale/mainworker.hh>
 #include "../../../../core/internal/server.hh"
 

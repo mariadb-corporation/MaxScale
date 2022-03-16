@@ -51,7 +51,6 @@
 #include <maxbase/pretty_print.hh>
 #include <maxbase/watchdognotifier.hh>
 #include <maxsql/mariadb.hh>
-#include <maxbase/alloc.h>
 #include <maxscale/built_in_modules.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/mainworker.hh>

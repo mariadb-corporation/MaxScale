@@ -26,7 +26,7 @@
 
 #include <maxscale/pcre2.hh>
 #include <maxbase/assert.h>
-#include <maxbase/alloc.h>
+#include <maxbase/alloc.hh>
 #include <maxscale/log.hh>
 
 #include <utility>

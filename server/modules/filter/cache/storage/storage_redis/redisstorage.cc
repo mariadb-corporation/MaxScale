@@ -134,7 +134,7 @@
 #define MXS_MODULE_NAME "storage_redis"
 #include "redisstorage.hh"
 #include <hiredis.h>
-#include <maxbase/alloc.h>
+#include <maxbase/alloc.hh>
 #include <maxbase/worker.hh>
 #include <maxscale/threadpool.hh>
 

@@ -24,7 +24,7 @@
 #include <string>
 #include <sstream>
 
-#include <maxbase/alloc.h>
+#include <maxbase/alloc.hh>
 #include <maxbase/atomic.hh>
 #include <maxbase/host.hh>
 #include <maxbase/format.hh>

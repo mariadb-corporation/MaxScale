@@ -23,7 +23,6 @@
 #include <new>
 #include <sstream>
 
-#include <maxbase/alloc.h>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/modinfo.hh>

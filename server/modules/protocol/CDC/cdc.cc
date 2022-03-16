@@ -36,7 +36,6 @@
 #include <maxscale/ccdefs.hh>
 #include <cstdio>
 #include <cstring>
-#include <maxbase/alloc.h>
 #include <maxscale/protocol/cdc/cdc.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/dcb.hh>

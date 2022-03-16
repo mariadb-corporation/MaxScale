@@ -26,7 +26,7 @@
 #include <mysql.h>
 
 #include <maxsql/mariadb.hh>
-#include <maxbase/alloc.h>
+#include <maxbase/alloc.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>

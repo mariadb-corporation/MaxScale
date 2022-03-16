@@ -38,7 +38,6 @@
 #include <vector>
 #include <unordered_set>
 
-#include <maxbase/alloc.h>
 #include <maxbase/atomic.hh>
 #include <maxbase/format.hh>
 #include <maxbase/ini.hh>

@@ -13,7 +13,7 @@
 
 #include "table.hh"
 
-#include <maxbase/alloc.h>
+#include <maxbase/alloc.hh>
 #include <maxbase/assert.h>
 #include <mysqld_error.h>
 

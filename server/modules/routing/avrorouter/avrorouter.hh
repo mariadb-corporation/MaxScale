@@ -20,7 +20,6 @@
 #include <string>
 #include <vector>
 #include <mysql.h>
-#include <maxbase/alloc.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/service.hh>
 #include <maxscale/mysql_binlog.hh>

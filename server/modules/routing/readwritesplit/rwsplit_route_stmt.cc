@@ -21,7 +21,6 @@
 
 #include <mysqld_error.h>
 
-#include <maxbase/alloc.h>
 #include <maxscale/clock.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/modutil.hh>

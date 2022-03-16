@@ -44,7 +44,7 @@
 
 #include <atomic>
 
-#include <maxbase/alloc.h>
+#include <maxbase/alloc.hh>
 #include <maxbase/atomic.h>
 #include <maxbase/atomic.hh>
 #include <maxscale/clock.hh>

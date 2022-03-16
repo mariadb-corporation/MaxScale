@@ -23,7 +23,7 @@
 #include <string.h>
 
 #include <maxbase/log.hh>
-#include <maxbase/alloc.h>
+#include <maxbase/alloc.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/buffer.hh>
 

@@ -13,7 +13,6 @@
 
 #define MXS_MODULE_NAME "storage_inmemory"
 #include "inmemorystorage.hh"
-#include <maxbase/alloc.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/protocol/mariadb/query_classifier.hh>
 #include "../../cache.hh"

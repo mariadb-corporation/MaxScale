@@ -23,7 +23,7 @@
 #include <string.h>
 #include <mysql.h>
 #include <mysqld_error.h>
-#include <maxbase/alloc.h>
+#include <maxbase/alloc.hh>
 #include <maxscale/config.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/modinfo.hh>

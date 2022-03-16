@@ -13,6 +13,7 @@
 
 #include "kafkacdc.hh"
 
+#include <maxbase/alloc.hh>
 #include <maxscale/paths.hh>
 
 namespace

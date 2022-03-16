@@ -17,7 +17,6 @@
 #include <openssl/rand.h>
 #include <mysql.h>
 #include <mysqld_error.h>
-#include <maxbase/alloc.h>
 #include <maxbase/format.hh>
 #include <maxsql/mariadb.hh>
 #include <maxscale/clock.hh>
