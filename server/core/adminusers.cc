@@ -121,7 +121,7 @@ bool admin_dump_users(const Users* users, const char* fname)
             rval = true;
         }
 
-        MXS_FREE(str);
+        MXB_FREE(str);
         close(fd);
     }
 

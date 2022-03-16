@@ -91,7 +91,7 @@ bool maxavro_verify_block(MAXAVRO_FILE* file)
 
 static uint8_t* read_block_data(MAXAVRO_FILE* file, long deflate_size)
 {
-    uint8_t* temp_buffer = (uint8_t*)MXS_MALLOC(deflate_size);
+    uint8_t* temp_buffer = (uint8_t*)MXB_MALLOC(deflate_size);
     uint8_t* buffer = NULL;
 
     if (temp_buffer && fread(temp_buffer, 1, deflate_size, file->file) == (size_t)deflate_size)
@@ -109,7 +109,7 @@ static uint8_t* read_block_data(MAXAVRO_FILE* file, long deflate_size)
         case MAXAVRO_CODEC_DEFLATE:
             inflate_size = deflate_size * 2;
 
-            if ((buffer = (uint8_t*)MXS_MALLOC(inflate_size)))
+            if ((buffer = (uint8_t*)MXB_MALLOC(inflate_size)))
             {
                 z_stream stream;
                 stream.avail_in = deflate_size;
@@ -125,7 +125,7 @@ static uint8_t* read_block_data(MAXAVRO_FILE* file, long deflate_size)
                 while ((rc = inflate(&stream, Z_FINISH)) == Z_BUF_ERROR)
                 {
                     int increment = inflate_size;
-                    uint8_t* temp = (uint8_t*)MXS_REALLOC(buffer, inflate_size + increment);
+                    uint8_t* temp = (uint8_t*)MXB_REALLOC(buffer, inflate_size + increment);
 
                     if (temp)
                     {
@@ -147,7 +147,7 @@ static uint8_t* read_block_data(MAXAVRO_FILE* file, long deflate_size)
                 else
                 {
                     MXS_ERROR("Failed to inflate value: %s", zError(rc));
-                    MXS_FREE(buffer);
+                    MXB_FREE(buffer);
                     buffer = NULL;
                 }
 
@@ -163,7 +163,7 @@ static uint8_t* read_block_data(MAXAVRO_FILE* file, long deflate_size)
             break;
         }
 
-        MXS_FREE(temp_buffer);
+        MXB_FREE(temp_buffer);
     }
 
     return buffer;
@@ -191,7 +191,7 @@ bool maxavro_read_datablock_start(MAXAVRO_FILE* file)
         }
         else
         {
-            MXS_FREE(file->buffer);
+            MXB_FREE(file->buffer);
             file->buffer = read_block_data(file, bytes);
 
             if (file->buffer)
@@ -340,7 +340,7 @@ MAXAVRO_FILE* maxavro_file_open(const char* filename)
                 maxavro_schema_free(avrofile->schema);
                 error = true;
             }
-            MXS_FREE(schema);
+            MXB_FREE(schema);
         }
         else
         {
@@ -355,8 +355,8 @@ MAXAVRO_FILE* maxavro_file_open(const char* filename)
     if (error)
     {
         fclose(file);
-        MXS_FREE(avrofile);
-        MXS_FREE(my_filename);
+        MXB_FREE(avrofile);
+        MXB_FREE(my_filename);
         avrofile = NULL;
     }
 
@@ -408,10 +408,10 @@ void maxavro_file_close(MAXAVRO_FILE* file)
     if (file)
     {
         fclose(file->file);
-        MXS_FREE(file->buffer);
-        MXS_FREE(file->filename);
+        MXB_FREE(file->buffer);
+        MXB_FREE(file->filename);
         maxavro_schema_free(file->schema);
-        MXS_FREE(file);
+        MXB_FREE(file);
     }
 }
 

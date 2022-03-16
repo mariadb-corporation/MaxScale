@@ -304,8 +304,8 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
 
 CacheFilterSession::~CacheFilterSession()
 {
-    MXS_FREE(m_zUseDb);
-    MXS_FREE(m_zDefaultDb);
+    MXB_FREE(m_zUseDb);
+    MXB_FREE(m_zDefaultDb);
 
     if (m_did != 0)
     {
@@ -325,7 +325,7 @@ CacheFilterSession* CacheFilterSession::create(std::unique_ptr<SessionCache> sCa
 
     if (!db.empty())
     {
-        zDefaultDb = MXS_STRDUP(db.c_str());
+        zDefaultDb = MXB_STRDUP(db.c_str());
     }
 
     if (db.empty() || zDefaultDb)
@@ -337,7 +337,7 @@ CacheFilterSession* CacheFilterSession::create(std::unique_ptr<SessionCache> sCa
 
         if (!pCacheFilterSession)
         {
-            MXS_FREE(zDefaultDb);
+            MXB_FREE(zDefaultDb);
         }
     }
 
@@ -387,7 +387,7 @@ bool CacheFilterSession::routeQuery(GWBUF* pPacket)
         {
             mxb_assert(!m_zUseDb);
             size_t len = MYSQL_GET_PAYLOAD_LEN(pData) - 1;      // Remove the command byte.
-            m_zUseDb = (char*)MXS_MALLOC(len + 1);
+            m_zUseDb = (char*)MXB_MALLOC(len + 1);
 
             if (m_zUseDb)
             {
@@ -630,7 +630,7 @@ void CacheFilterSession::handle_expecting_use_response(const mxs::Reply& reply)
     if (reply.error())
     {
         // The USE failed which means the default database did not change
-        MXS_FREE(m_zUseDb);
+        MXB_FREE(m_zUseDb);
         m_zUseDb = NULL;
     }
     else
@@ -639,7 +639,7 @@ void CacheFilterSession::handle_expecting_use_response(const mxs::Reply& reply)
         // In case m_zUseDb could not be allocated in routeQuery(), we will
         // in fact reset the default db here. That's ok as it will prevent broken
         // entries in the cache.
-        MXS_FREE(m_zDefaultDb);
+        MXB_FREE(m_zDefaultDb);
         m_zDefaultDb = m_zUseDb;
         m_zUseDb = NULL;
     }
@@ -748,7 +748,7 @@ void CacheFilterSession::store_and_prepare_response(const mxs::ReplyRoute& down,
     mxb_assert(m_res);
 
     GWBUF* pData = gwbuf_make_contiguous(m_res);
-    MXS_ABORT_IF_NULL(pData);
+    MXB_ABORT_IF_NULL(pData);
 
     m_res = pData;
 
@@ -1293,7 +1293,7 @@ char* create_bool_error_message(const char* zName, const char* pValue_begin, con
     static const char FORMAT[] = "The variable %s can only have the values true/false/1/0";
     int n = snprintf(NULL, 0, FORMAT, zName) + 1;
 
-    char* zMessage = static_cast<char*>(MXS_MALLOC(n));
+    char* zMessage = static_cast<char*>(MXB_MALLOC(n));
 
     if (zMessage)
     {
@@ -1314,7 +1314,7 @@ char* create_uint32_error_message(const char* zName, const char* pValue_begin, c
     static const char FORMAT[] = "The variable %s can have as value 0 or a positive integer.";
     int n = snprintf(NULL, 0, FORMAT, zName) + 1;
 
-    char* zMessage = static_cast<char*>(MXS_MALLOC(n));
+    char* zMessage = static_cast<char*>(MXB_MALLOC(n));
 
     if (zMessage)
     {

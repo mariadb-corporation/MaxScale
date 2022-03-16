@@ -68,7 +68,7 @@ char* modutil_get_SQL(GWBUF* buf)
         length += (*ptr++ << 8);
         length += (*ptr++ << 16);
 
-        rval = (char*) MXS_MALLOC(length + 1);
+        rval = (char*) MXB_MALLOC(length + 1);
 
         if (rval)
         {

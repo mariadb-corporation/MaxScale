@@ -380,14 +380,14 @@ public:
 
     static void finish_field_info(QC_FIELD_INFO& info)
     {
-        MXS_FREE(info.database);
-        MXS_FREE(info.table);
-        MXS_FREE(info.column);
+        MXB_FREE(info.database);
+        MXB_FREE(info.table);
+        MXB_FREE(info.column);
     }
 
     static void finish_function_info(QC_FUNCTION_INFO& info)
     {
-        MXS_FREE(info.name);
+        MXB_FREE(info.name);
 
         std::for_each(info.fields, info.fields + info.n_fields, finish_field_info);
     }
@@ -431,8 +431,8 @@ public:
         {
             if (m_zCreated_table_name)
             {
-                *pzCreated_table_name = MXS_STRDUP(m_zCreated_table_name);
-                MXS_ABORT_IF_NULL(*pzCreated_table_name);
+                *pzCreated_table_name = MXB_STRDUP(m_zCreated_table_name);
+                MXB_ABORT_IF_NULL(*pzCreated_table_name);
             }
             rv = true;
         }
@@ -523,8 +523,8 @@ public:
 
             if (m_zPrepare_name)
             {
-                *pzPrepare_name = MXS_STRDUP(m_zPrepare_name);
-                MXS_ABORT_IF_NULL(*pzPrepare_name);
+                *pzPrepare_name = MXB_STRDUP(m_zPrepare_name);
+                MXB_ABORT_IF_NULL(*pzPrepare_name);
             }
 
             rv = true;
@@ -769,10 +769,10 @@ public:
             {
                 QC_FIELD_INFO item;
 
-                item.database = zDatabase ? MXS_STRDUP(zDatabase) : NULL;
-                item.table = zTable ? MXS_STRDUP(zTable) : NULL;
+                item.database = zDatabase ? MXB_STRDUP(zDatabase) : NULL;
+                item.table = zTable ? MXB_STRDUP(zTable) : NULL;
                 mxb_assert(zColumn);
-                item.column = MXS_STRDUP(zColumn);
+                item.column = MXB_STRDUP(zColumn);
                 item.context = context;
 
                 // We are happy if we at least could dup the column.
@@ -1551,9 +1551,9 @@ public:
             // TODO: Add exclusion?
             QC_FIELD_INFO item;
 
-            item.database = zDatabase ? MXS_STRDUP(zDatabase) : NULL;
-            item.table = zTable ? MXS_STRDUP(zTable) : NULL;
-            item.column = MXS_STRDUP(zColumn);
+            item.database = zDatabase ? MXB_STRDUP(zDatabase) : NULL;
+            item.table = zTable ? MXB_STRDUP(zTable) : NULL;
+            item.column = MXB_STRDUP(zColumn);
 
             if (item.column)
             {
@@ -1642,7 +1642,7 @@ public:
         if (i == m_function_infos.size())   // If true, the function was not present already.
         {
             mxb_assert(item.name);
-            item.name = MXS_STRDUP(item.name);
+            item.name = MXB_STRDUP(item.name);
 
             if (item.name)
             {
@@ -2144,8 +2144,8 @@ public:
             // this information already.
             if (!m_zCreated_table_name)
             {
-                m_zCreated_table_name = MXS_STRDUP(m_table_names[0]);
-                MXS_ABORT_IF_NULL(m_zCreated_table_name);
+                m_zCreated_table_name = MXB_STRDUP(m_table_names[0]);
+                MXB_ABORT_IF_NULL(m_zCreated_table_name);
             }
             else
             {
@@ -2388,7 +2388,7 @@ public:
         // this information already.
         if (!m_zPrepare_name)
         {
-            m_zPrepare_name = (char*)MXS_MALLOC(pName->n + 1);
+            m_zPrepare_name = (char*)MXB_MALLOC(pName->n + 1);
             if (m_zPrepare_name)
             {
                 memcpy(m_zPrepare_name, pName->z, pName->n);
@@ -2469,7 +2469,7 @@ public:
         // this information already.
         if (!m_zPrepare_name)
         {
-            m_zPrepare_name = (char*)MXS_MALLOC(pName->n + 1);
+            m_zPrepare_name = (char*)MXB_MALLOC(pName->n + 1);
             if (m_zPrepare_name)
             {
                 memcpy(m_zPrepare_name, pName->z, pName->n);
@@ -3005,7 +3005,7 @@ public:
         // this information already.
         if (!m_zPrepare_name)
         {
-            m_zPrepare_name = (char*)MXS_MALLOC(pName->n + 1);
+            m_zPrepare_name = (char*)MXB_MALLOC(pName->n + 1);
             if (m_zPrepare_name)
             {
                 memcpy(m_zPrepare_name, pName->z, pName->n);
@@ -3436,7 +3436,7 @@ public:
 
         if (should_collect(QC_COLLECT_DATABASES))
         {
-            char* zCopy = MXS_STRNDUP_A(pToken->z, pToken->n);
+            char* zCopy = MXB_STRNDUP_A(pToken->z, pToken->n);
             exposed_sqlite3Dequote(zCopy);
 
             m_database_names.push_back(zCopy);
@@ -3503,12 +3503,12 @@ private:
         {
             for (size_t i = 0; i < nInfos; ++i)
             {
-                MXS_FREE(pInfos[i].database);
-                MXS_FREE(pInfos[i].table);
-                MXS_FREE(pInfos[i].column);
+                MXB_FREE(pInfos[i].database);
+                MXB_FREE(pInfos[i].table);
+                MXB_FREE(pInfos[i].column);
             }
 
-            MXS_FREE(pInfos);
+            MXB_FREE(pInfos);
         }
     }
 
@@ -3518,10 +3518,10 @@ private:
         {
             for (size_t i = 0; i < nInfos; ++i)
             {
-                MXS_FREE(pInfos[i].name);
+                MXB_FREE(pInfos[i].name);
             }
 
-            MXS_FREE(pInfos);
+            MXB_FREE(pInfos);
         }
     }
 
@@ -3545,15 +3545,15 @@ private:
     {
         size_t n = strings.size();
 
-        char** pz = (char**) MXS_MALLOC((n + 1) * sizeof(char*));
-        MXS_ABORT_IF_NULL(pz);
+        char** pz = (char**) MXB_MALLOC((n + 1) * sizeof(char*));
+        MXB_ABORT_IF_NULL(pz);
 
         pz[n] = 0;
 
         for (size_t i = 0; i < n; ++i)
         {
-            pz[i] = MXS_STRDUP(strings[i]);
-            MXS_ABORT_IF_NULL(pz[i]);
+            pz[i] = MXB_STRDUP(strings[i]);
+            MXB_ABORT_IF_NULL(pz[i]);
         }
 
         return pz;
@@ -3610,7 +3610,7 @@ private:
 
         if (!zCollected_table)
         {
-            char* zCopy = MXS_STRNDUP_A(zTable, nTable);
+            char* zCopy = MXB_STRNDUP_A(zTable, nTable);
 
             m_table_names.push_back(zCopy);
 
@@ -3634,7 +3634,7 @@ private:
 
         if (!table_fullname_collected(fullname))
         {
-            char* zCopy = MXS_STRDUP_A(fullname);
+            char* zCopy = MXB_STRDUP_A(fullname);
 
             m_table_fullnames.push_back(zCopy);
         }
@@ -3651,7 +3651,7 @@ private:
 
         if (!zCollected_database)
         {
-            char* zCopy = MXS_STRNDUP_A(zDatabase, nDatabase);
+            char* zCopy = MXB_STRNDUP_A(zDatabase, nDatabase);
 
             m_database_names.push_back(zCopy);
 
@@ -3796,8 +3796,8 @@ static void enlarge_string_array(size_t n, size_t len, char*** ppzStrings, size_
     {
         int capacity = *pCapacity ? *pCapacity * 2 : 4;
 
-        *ppzStrings = (char**) MXS_REALLOC(*ppzStrings, capacity * sizeof(char**));
-        MXS_ABORT_IF_NULL(*ppzStrings);
+        *ppzStrings = (char**) MXB_REALLOC(*ppzStrings, capacity * sizeof(char**));
+        MXB_ABORT_IF_NULL(*ppzStrings);
         *pCapacity = capacity;
     }
 }

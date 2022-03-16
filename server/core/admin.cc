@@ -939,8 +939,8 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
                 m_user = user ? user : "";
                 rval = true;
             }
-            MXS_FREE(user);
-            MXS_FREE(pw);
+            MXB_FREE(user);
+            MXB_FREE(pw);
 
             if (!rval)
             {

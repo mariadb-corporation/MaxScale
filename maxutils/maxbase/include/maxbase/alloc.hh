@@ -33,16 +33,16 @@ char* mxb_strndup_a(const char* s, size_t n    /*, const char *caller*/);
 /*
  * NOTE: USE these macros instead of the functions above.
  */
-#define MXS_MALLOC(size)        mxb_malloc(size    /*, __func__*/)
-#define MXS_CALLOC(nmemb, size) mxb_calloc(nmemb, size    /*, __func__*/)
-#define MXS_REALLOC(ptr, size)  mxb_realloc(ptr, size    /*, __func__*/)
-#define MXS_FREE(ptr)           mxb_free(ptr    /*, __func__*/)
+#define MXB_MALLOC(size)        mxb_malloc(size    /*, __func__*/)
+#define MXB_CALLOC(nmemb, size) mxb_calloc(nmemb, size    /*, __func__*/)
+#define MXB_REALLOC(ptr, size)  mxb_realloc(ptr, size    /*, __func__*/)
+#define MXB_FREE(ptr)           mxb_free(ptr    /*, __func__*/)
 
-#define MXS_STRDUP(s)     mxb_strdup(s    /*, __func__*/)
-#define MXS_STRNDUP(s, n) mxb_strndup(s, n    /*, __func__*/)
+#define MXB_STRDUP(s)     mxb_strdup(s    /*, __func__*/)
+#define MXB_STRNDUP(s, n) mxb_strndup(s, n    /*, __func__*/)
 
-#define MXS_STRDUP_A(s)     mxb_strdup_a(s    /*, __func__*/)
-#define MXS_STRNDUP_A(s, n) mxb_strndup_a(s, n    /*, __func__*/)
+#define MXB_STRDUP_A(s)     mxb_strdup_a(s    /*, __func__*/)
+#define MXB_STRNDUP_A(s, n) mxb_strndup_a(s, n    /*, __func__*/)
 
 /**
  * @brief Abort the process if the pointer is NULL.
@@ -50,7 +50,7 @@ char* mxb_strndup_a(const char* s, size_t n    /*, const char *caller*/);
  * To be used in circumstances where a memory allocation failure
  * cannot - currently - be dealt with properly.
  */
-#define MXS_ABORT_IF_NULL(p) do {if (!p) {abort();}} while (false)
+#define MXB_ABORT_IF_NULL(p) do {if (!p) {abort();}} while (false)
 
 /**
  * @brief Abort the process if the provided value is non-zero.
@@ -58,7 +58,7 @@ char* mxb_strndup_a(const char* s, size_t n    /*, const char *caller*/);
  * To be used in circumstances where a memory allocation or other
  * fatal error cannot - currently - be dealt with properly.
  */
-#define MXS_ABORT_IF_TRUE(b) do {if (b) {abort();}} while (false)
+#define MXB_ABORT_IF_TRUE(b) do {if (b) {abort();}} while (false)
 
 /**
  * @brief Abort the process if the provided value is zero.
@@ -66,4 +66,4 @@ char* mxb_strndup_a(const char* s, size_t n    /*, const char *caller*/);
  * To be used in circumstances where a memory allocation or other
  * fatal error cannot - currently - be dealt with properly.
  */
-#define MXS_ABORT_IF_FALSE(b) do {if (!(b)) {abort();}} while (false)
+#define MXB_ABORT_IF_FALSE(b) do {if (!(b)) {abort();}} while (false)

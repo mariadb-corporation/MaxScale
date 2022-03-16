@@ -83,24 +83,24 @@ static int test2()
                                     &erroff,
                                     NULL);
     size_t size = 1000;
-    char* dest = (char*)MXS_MALLOC(size);
-    MXS_ABORT_IF_NULL(dest);
+    char* dest = (char*)MXB_MALLOC(size);
+    MXB_ABORT_IF_NULL(dest);
     mxs_pcre2_result_t result = mxs_pcre2_substitute(re, subject, good_replace, &dest, &size);
 
     test_assert(result == MXS_PCRE2_MATCH, "Substitution should substitute");
     test_assert(strcmp(dest, expected) == 0, "Replaced text should match expected text");
 
     size = 1000;
-    dest = (char*)MXS_REALLOC(dest, size);
+    dest = (char*)MXB_REALLOC(dest, size);
     result = mxs_pcre2_substitute(re2, subject, good_replace, &dest, &size);
     test_assert(result == MXS_PCRE2_NOMATCH, "Non-matching substitution should not substitute");
 
     size = 1000;
-    dest = (char*)MXS_REALLOC(dest, size);
+    dest = (char*)MXB_REALLOC(dest, size);
     result = mxs_pcre2_substitute(re, subject, bad_replace, &dest, &size);
     test_assert(result == MXS_PCRE2_ERROR, "Bad substitution should return an error");
 
-    MXS_FREE(dest);
+    MXB_FREE(dest);
     pcre2_code_free(re);
     pcre2_code_free(re2);
     return 0;

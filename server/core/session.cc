@@ -717,7 +717,7 @@ void Session::dump_statements() const
 
                 if (deallocate)
                 {
-                    MXS_FREE(pStmt);
+                    MXB_FREE(pStmt);
                 }
             }
 
@@ -805,7 +805,7 @@ string Session::set_variable_value(const char* name_begin,
         if (temp)
         {
             rv = temp;
-            MXS_FREE(temp);
+            MXB_FREE(temp);
         }
     }
     else
@@ -988,7 +988,7 @@ json_t* Session::QueryInfo::as_json() const
 
         if (deallocate)
         {
-            MXS_FREE(pStmt);
+            MXB_FREE(pStmt);
         }
     }
 

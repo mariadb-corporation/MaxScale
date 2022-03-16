@@ -1238,7 +1238,7 @@ char* qc_typemask_to_string(uint32_t types)
     ++len;
 
     // Then make one allocation and build the string.
-    char* s = (char*) MXS_MALLOC(len);
+    char* s = (char*) MXB_MALLOC(len);
 
     if (s)
     {
@@ -1635,7 +1635,7 @@ std::unique_ptr<json_t> qc_classify_as_json(const char* zHost, const std::string
     {
         char* zType_mask = qc_typemask_to_string(qc_get_type_mask(pBuffer));
         json_object_set_new(pAttributes, CN_TYPE_MASK, json_string(zType_mask));
-        MXS_FREE(zType_mask);
+        MXB_FREE(zType_mask);
 
         json_object_set_new(pAttributes, CN_OPERATION,
                             json_string(qc_op_to_string(qc_get_operation(pBuffer))));
@@ -1666,7 +1666,7 @@ json_t* cache_entry_as_json(const std::string& stmt, const QC_CACHE_ENTRY& entry
                         CN_PARSE_RESULT, json_string(qc_result_to_string(entry.result.status)));
     char* zType_mask = qc_typemask_to_string(entry.result.type_mask);
     json_object_set_new(pClassification, CN_TYPE_MASK, json_string(zType_mask));
-    MXS_FREE(zType_mask);
+    MXB_FREE(zType_mask);
     json_object_set_new(pClassification,
                         CN_OPERATION,
                         json_string(qc_op_to_string(entry.result.op)));

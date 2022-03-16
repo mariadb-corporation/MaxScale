@@ -706,7 +706,7 @@ string config(const xmlDoc& csXml,
     json_decref(pBody);
 
     string body(zBody);
-    MXS_FREE(zBody);
+    MXB_FREE(zBody);
 
     return body;
 }

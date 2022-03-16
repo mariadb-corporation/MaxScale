@@ -1232,7 +1232,7 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
 
             for (int i = 0; i < n_opts; i++)
             {
-                MXS_FREE(opts[i]);
+                MXB_FREE(opts[i]);
             }
 
             int rc;

@@ -222,7 +222,7 @@ const char* cache_rule_op_to_string(cache_rule_op_t op)
 
 CACHE_RULES* cache_rules_create(uint32_t debug)
 {
-    CACHE_RULES* rules = (CACHE_RULES*)MXS_CALLOC(1, sizeof(CACHE_RULES));
+    CACHE_RULES* rules = (CACHE_RULES*)MXB_CALLOC(1, sizeof(CACHE_RULES));
 
     if (rules)
     {
@@ -323,7 +323,7 @@ void cache_rules_free(CACHE_RULES* rules)
 
         cache_rule_free(rules->store_rules);
         cache_rule_free(rules->use_rules);
-        MXS_FREE(rules);
+        MXB_FREE(rules);
     }
 }
 
@@ -334,7 +334,7 @@ void cache_rules_free_array(CACHE_RULES** ppRules, int32_t nRules)
         cache_rules_free(ppRules[i]);
     }
 
-    MXS_FREE(ppRules);
+    MXB_FREE(ppRules);
 }
 
 bool cache_rules_should_store(CACHE_RULES* self, int thread_id, const char* default_db, const GWBUF* query)
@@ -481,7 +481,7 @@ bool CacheRules::create_cache_rules(CACHE_RULES** ppRules, int32_t nRules, std::
         }
     }
 
-    MXS_FREE(ppRules);
+    MXB_FREE(ppRules);
 
     return rv;
 }
@@ -611,8 +611,8 @@ static CACHE_RULE* cache_rule_create_regexp(cache_rule_attribute_t attribute,
 
         if (datas)
         {
-            rule = (CACHE_RULE*)MXS_CALLOC(1, sizeof(CACHE_RULE));
-            char* value = MXS_STRDUP(cvalue);
+            rule = (CACHE_RULE*)MXB_CALLOC(1, sizeof(CACHE_RULE));
+            char* value = MXB_STRDUP(cvalue);
 
             if (rule && value)
             {
@@ -625,8 +625,8 @@ static CACHE_RULE* cache_rule_create_regexp(cache_rule_attribute_t attribute,
             }
             else
             {
-                MXS_FREE(value);
-                MXS_FREE(rule);
+                MXB_FREE(value);
+                MXB_FREE(rule);
                 free_match_datas(n_threads, datas);
                 pcre2_code_free(code);
             }
@@ -726,8 +726,8 @@ static CACHE_RULE* cache_rule_create_simple_user(cache_rule_attribute_t attribut
             {
                 // No wildcard, no need to use regexp.
 
-                rule = (CACHE_RULE*)MXS_CALLOC(1, sizeof(CACHE_RULE));
-                char* value = (char*)MXS_MALLOC(strlen(user) + 1 + strlen(host) + 1);
+                rule = (CACHE_RULE*)MXB_CALLOC(1, sizeof(CACHE_RULE));
+                char* value = (char*)MXB_MALLOC(strlen(user) + 1 + strlen(host) + 1);
 
                 if (rule && value)
                 {
@@ -740,8 +740,8 @@ static CACHE_RULE* cache_rule_create_simple_user(cache_rule_attribute_t attribut
                 }
                 else
                 {
-                    MXS_FREE(rule);
-                    MXS_FREE(value);
+                    MXB_FREE(rule);
+                    MXB_FREE(value);
                     rule = NULL;
                 }
             }
@@ -779,8 +779,8 @@ static CACHE_RULE* cache_rule_create_simple_ctd(cache_rule_attribute_t attribute
                || (attribute == CACHE_ATTRIBUTE_DATABASE));
     mxb_assert((op == CACHE_OP_EQ) || (op == CACHE_OP_NEQ));
 
-    CACHE_RULE* rule = (CACHE_RULE*)MXS_CALLOC(1, sizeof(CACHE_RULE));
-    char* value = MXS_STRDUP(cvalue);
+    CACHE_RULE* rule = (CACHE_RULE*)MXB_CALLOC(1, sizeof(CACHE_RULE));
+    char* value = MXB_STRDUP(cvalue);
 
     if (rule && value)
     {
@@ -825,9 +825,9 @@ static CACHE_RULE* cache_rule_create_simple_ctd(cache_rule_attribute_t attribute
             {
                 if (third)      // implies also 'first' and 'second'
                 {
-                    rule->simple.column = MXS_STRDUP(third);
-                    rule->simple.table = MXS_STRDUP(second);
-                    rule->simple.database = MXS_STRDUP(first);
+                    rule->simple.column = MXB_STRDUP(third);
+                    rule->simple.table = MXB_STRDUP(second);
+                    rule->simple.database = MXB_STRDUP(first);
 
                     if (!rule->simple.column || !rule->simple.table || !rule->simple.database)
                     {
@@ -836,8 +836,8 @@ static CACHE_RULE* cache_rule_create_simple_ctd(cache_rule_attribute_t attribute
                 }
                 else if (second)    // implies also 'first'
                 {
-                    rule->simple.column = MXS_STRDUP(second);
-                    rule->simple.table = MXS_STRDUP(first);
+                    rule->simple.column = MXB_STRDUP(second);
+                    rule->simple.table = MXB_STRDUP(first);
 
                     if (!rule->simple.column || !rule->simple.table)
                     {
@@ -846,7 +846,7 @@ static CACHE_RULE* cache_rule_create_simple_ctd(cache_rule_attribute_t attribute
                 }
                 else    // only 'first'
                 {
-                    rule->simple.column = MXS_STRDUP(first);
+                    rule->simple.column = MXB_STRDUP(first);
 
                     if (!rule->simple.column)
                     {
@@ -867,8 +867,8 @@ static CACHE_RULE* cache_rule_create_simple_ctd(cache_rule_attribute_t attribute
             {
                 if (second)     // implies also 'first'
                 {
-                    rule->simple.database = MXS_STRDUP(first);
-                    rule->simple.table = MXS_STRDUP(second);
+                    rule->simple.database = MXB_STRDUP(first);
+                    rule->simple.table = MXB_STRDUP(second);
                     if (!rule->simple.database || !rule->simple.table)
                     {
                         allocation_failed = true;
@@ -876,7 +876,7 @@ static CACHE_RULE* cache_rule_create_simple_ctd(cache_rule_attribute_t attribute
                 }
                 else    // only 'first'
                 {
-                    rule->simple.table = MXS_STRDUP(first);
+                    rule->simple.table = MXB_STRDUP(first);
                     if (!rule->simple.table)
                     {
                         allocation_failed = true;
@@ -894,7 +894,7 @@ static CACHE_RULE* cache_rule_create_simple_ctd(cache_rule_attribute_t attribute
             }
             else
             {
-                rule->simple.database = MXS_STRDUP(first);
+                rule->simple.database = MXB_STRDUP(first);
                 if (!rule->simple.database)
                 {
                     allocation_failed = true;
@@ -908,18 +908,18 @@ static CACHE_RULE* cache_rule_create_simple_ctd(cache_rule_attribute_t attribute
 
         if (allocation_failed)
         {
-            MXS_FREE(rule->simple.column);
-            MXS_FREE(rule->simple.table);
-            MXS_FREE(rule->simple.database);
-            MXS_FREE(value);
-            MXS_FREE(rule);
+            MXB_FREE(rule->simple.column);
+            MXB_FREE(rule->simple.table);
+            MXB_FREE(rule->simple.database);
+            MXB_FREE(value);
+            MXB_FREE(rule);
             rule = NULL;
         }
     }
     else
     {
-        MXS_FREE(value);
-        MXS_FREE(rule);
+        MXB_FREE(value);
+        MXB_FREE(rule);
         rule = NULL;
     }
 
@@ -944,8 +944,8 @@ static CACHE_RULE* cache_rule_create_simple_query(cache_rule_attribute_t attribu
     mxb_assert(attribute == CACHE_ATTRIBUTE_QUERY);
     mxb_assert((op == CACHE_OP_EQ) || (op == CACHE_OP_NEQ));
 
-    CACHE_RULE* rule = (CACHE_RULE*)MXS_CALLOC(1, sizeof(CACHE_RULE));
-    char* value = MXS_STRDUP(cvalue);
+    CACHE_RULE* rule = (CACHE_RULE*)MXB_CALLOC(1, sizeof(CACHE_RULE));
+    char* value = MXB_STRDUP(cvalue);
 
     if (rule && value)
     {
@@ -956,8 +956,8 @@ static CACHE_RULE* cache_rule_create_simple_query(cache_rule_attribute_t attribu
     }
     else
     {
-        MXS_FREE(value);
-        MXS_FREE(rule);
+        MXB_FREE(value);
+        MXB_FREE(rule);
         rule = NULL;
     }
 
@@ -1059,13 +1059,13 @@ static void cache_rule_free(CACHE_RULE* rule)
             cache_rule_free(rule->next);
         }
 
-        MXS_FREE(rule->value);
+        MXB_FREE(rule->value);
 
         if ((rule->op == CACHE_OP_EQ) || (rule->op == CACHE_OP_NEQ))
         {
-            MXS_FREE(rule->simple.column);
-            MXS_FREE(rule->simple.table);
-            MXS_FREE(rule->simple.database);
+            MXB_FREE(rule->simple.column);
+            MXB_FREE(rule->simple.table);
+            MXB_FREE(rule->simple.database);
         }
         else if ((rule->op == CACHE_OP_LIKE) || (rule->op == CACHE_OP_UNLIKE))
         {
@@ -1073,7 +1073,7 @@ static void cache_rule_free(CACHE_RULE* rule)
             pcre2_code_free(rule->regexp.code);
         }
 
-        MXS_FREE(rule);
+        MXB_FREE(rule);
     }
 }
 
@@ -1900,7 +1900,7 @@ static bool cache_rules_create_from_json(json_t* pRoot,
     {
         int32_t nRules = json_array_size(pRoot);
 
-        CACHE_RULES** ppRules = (CACHE_RULES**)MXS_MALLOC(nRules * sizeof(CACHE_RULES*));
+        CACHE_RULES** ppRules = (CACHE_RULES**)MXB_MALLOC(nRules * sizeof(CACHE_RULES*));
 
         if (ppRules)
         {
@@ -1946,13 +1946,13 @@ static bool cache_rules_create_from_json(json_t* pRoot,
                     cache_rules_free(ppRules[j]);
                 }
 
-                MXS_FREE(ppRules);
+                MXB_FREE(ppRules);
             }
         }
     }
     else
     {
-        CACHE_RULES** ppRules = (CACHE_RULES**)MXS_MALLOC(1 * sizeof(CACHE_RULES*));
+        CACHE_RULES** ppRules = (CACHE_RULES**)MXB_MALLOC(1 * sizeof(CACHE_RULES*));
 
         if (ppRules)
         {
@@ -1969,7 +1969,7 @@ static bool cache_rules_create_from_json(json_t* pRoot,
             }
             else
             {
-                MXS_FREE(ppRules);
+                MXB_FREE(ppRules);
             }
         }
     }
@@ -2187,7 +2187,7 @@ static bool cache_rules_parse_use_element(CACHE_RULES* self, json_t* object, siz
  */
 static pcre2_match_data** alloc_match_datas(int count, pcre2_code* code)
 {
-    pcre2_match_data** datas = (pcre2_match_data**)MXS_CALLOC(count, sizeof(pcre2_match_data*));
+    pcre2_match_data** datas = (pcre2_match_data**)MXB_CALLOC(count, sizeof(pcre2_match_data*));
 
     if (datas)
     {
@@ -2209,7 +2209,7 @@ static pcre2_match_data** alloc_match_datas(int count, pcre2_code* code)
                 pcre2_match_data_free(datas[i]);
             }
 
-            MXS_FREE(datas);
+            MXB_FREE(datas);
             datas = NULL;
         }
     }
@@ -2230,5 +2230,5 @@ static void free_match_datas(int count, pcre2_match_data** datas)
         pcre2_match_data_free(datas[i]);
     }
 
-    MXS_FREE(datas);
+    MXB_FREE(datas);
 }

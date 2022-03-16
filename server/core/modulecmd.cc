@@ -58,8 +58,8 @@ static inline void prepare_error()
 {
     if (errbuf == NULL)
     {
-        errbuf = (char*)MXS_MALLOC(MODULECMD_ERRBUF_SIZE);
-        MXS_ABORT_IF_NULL(errbuf);
+        errbuf = (char*)MXB_MALLOC(MODULECMD_ERRBUF_SIZE);
+        MXB_ABORT_IF_NULL(errbuf);
         errbuf[0] = '\0';
     }
 }
@@ -93,8 +93,8 @@ static void report_argc_mismatch(const MODULECMD* cmd, int argc)
 
 static MODULECMD_DOMAIN* domain_create(const char* domain)
 {
-    MODULECMD_DOMAIN* rval = (MODULECMD_DOMAIN*)MXS_MALLOC(sizeof(*rval));
-    char* dm = MXS_STRDUP(domain);
+    MODULECMD_DOMAIN* rval = (MODULECMD_DOMAIN*)MXB_MALLOC(sizeof(*rval));
+    char* dm = MXB_STRDUP(domain);
 
     if (rval && dm)
     {
@@ -104,8 +104,8 @@ static MODULECMD_DOMAIN* domain_create(const char* domain)
     }
     else
     {
-        MXS_FREE(rval);
-        MXS_FREE(dm);
+        MXB_FREE(rval);
+        MXB_FREE(dm);
         rval = NULL;
     }
 
@@ -116,8 +116,8 @@ static void domain_free(MODULECMD_DOMAIN* dm)
 {
     if (dm)
     {
-        MXS_FREE(dm->domain);
-        MXS_FREE(dm);
+        MXB_FREE(dm->domain);
+        MXB_FREE(dm);
     }
 }
 
@@ -153,11 +153,11 @@ static MODULECMD* command_create(const char* identifier,
 {
     mxb_assert((argc && argv) || (argc == 0 && argv == NULL));
     mxb_assert(description);
-    MODULECMD* rval = (MODULECMD*)MXS_MALLOC(sizeof(*rval));
-    char* id = MXS_STRDUP(identifier);
-    char* dm = MXS_STRDUP(domain);
-    char* desc = MXS_STRDUP(description);
-    modulecmd_arg_type_t* types = (modulecmd_arg_type_t*)MXS_MALLOC(sizeof(*types) * (argc ? argc : 1));
+    MODULECMD* rval = (MODULECMD*)MXB_MALLOC(sizeof(*rval));
+    char* id = MXB_STRDUP(identifier);
+    char* dm = MXB_STRDUP(domain);
+    char* desc = MXB_STRDUP(description);
+    modulecmd_arg_type_t* types = (modulecmd_arg_type_t*)MXB_MALLOC(sizeof(*types) * (argc ? argc : 1));
 
     if (rval && id && dm && types && desc)
     {
@@ -191,11 +191,11 @@ static MODULECMD* command_create(const char* identifier,
     }
     else
     {
-        MXS_FREE(rval);
-        MXS_FREE(id);
-        MXS_FREE(dm);
-        MXS_FREE(types);
-        MXS_FREE(desc);
+        MXB_FREE(rval);
+        MXB_FREE(id);
+        MXB_FREE(dm);
+        MXB_FREE(types);
+        MXB_FREE(desc);
         rval = NULL;
     }
 
@@ -206,10 +206,10 @@ static void command_free(MODULECMD* cmd)
 {
     if (cmd)
     {
-        MXS_FREE(cmd->identifier);
-        MXS_FREE(cmd->domain);
-        MXS_FREE(cmd->arg_types);
-        MXS_FREE(cmd);
+        MXB_FREE(cmd->identifier);
+        MXB_FREE(cmd->domain);
+        MXB_FREE(cmd->arg_types);
+        MXB_FREE(cmd);
     }
 }
 
@@ -248,7 +248,7 @@ static bool process_argument(const MODULECMD* cmd,
             break;
 
         case MODULECMD_ARG_STRING:
-            if ((arg->value.string = MXS_STRDUP((char*)value)))
+            if ((arg->value.string = MXB_STRDUP((char*)value)))
             {
                 arg->type.type = MODULECMD_ARG_STRING;
                 rval = true;
@@ -387,8 +387,8 @@ static bool process_argument(const MODULECMD* cmd,
 
 static MODULECMD_ARG* modulecmd_arg_create(int argc)
 {
-    MODULECMD_ARG* arg = (MODULECMD_ARG*)MXS_MALLOC(sizeof(*arg));
-    struct arg_node* argv = (struct arg_node*)MXS_CALLOC(argc, sizeof(*argv));
+    MODULECMD_ARG* arg = (MODULECMD_ARG*)MXB_MALLOC(sizeof(*arg));
+    struct arg_node* argv = (struct arg_node*)MXB_CALLOC(argc, sizeof(*argv));
 
     if (arg && argv)
     {
@@ -397,8 +397,8 @@ static MODULECMD_ARG* modulecmd_arg_create(int argc)
     }
     else
     {
-        MXS_FREE(argv);
-        MXS_FREE(arg);
+        MXB_FREE(argv);
+        MXB_FREE(arg);
         arg = NULL;
     }
 
@@ -410,7 +410,7 @@ static void free_argument(struct arg_node* arg)
     switch (arg->type.type)
     {
     case MODULECMD_ARG_STRING:
-        MXS_FREE(arg->value.string);
+        MXB_FREE(arg->value.string);
         break;
 
     case MODULECMD_ARG_SESSION:
@@ -558,8 +558,8 @@ void modulecmd_arg_free(MODULECMD_ARG* arg)
             free_argument(&arg->argv[i]);
         }
 
-        MXS_FREE(arg->argv);
-        MXS_FREE(arg);
+        MXB_FREE(arg->argv);
+        MXB_FREE(arg);
     }
 }
 

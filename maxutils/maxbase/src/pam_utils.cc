@@ -65,7 +65,7 @@ int conversation_func(int num_msg, const struct pam_message** messages, struct p
                                      "expected '%s'.";
     // The responses are saved as an array of structures. This is unlike the input messages, which is an
     // array of pointers to struct. Each message should have an answer, even if empty.
-    auto responses = static_cast<pam_response*>(MXS_CALLOC(num_msg, sizeof(pam_response)));
+    auto responses = static_cast<pam_response*>(MXB_CALLOC(num_msg, sizeof(pam_response)));
     if (!responses)
     {
         return PAM_BUF_ERR;
@@ -113,7 +113,7 @@ int conversation_func(int num_msg, const struct pam_message** messages, struct p
                 // anything else is an error.
                 if (expected_query.empty() || query_match(expected_query))
                 {
-                    response->resp = MXS_STRDUP(pwds->password.c_str());
+                    response->resp = MXB_STRDUP(pwds->password.c_str());
                     MXB_DEBUG("PAM api asked for '%s'.", message->msg);
                     // retcode should be already 0.
                 }
@@ -172,7 +172,7 @@ int conversation_func(int num_msg, const struct pam_message** messages, struct p
 
                 if (answer)
                 {
-                    response->resp = MXS_STRDUP(answer->c_str());
+                    response->resp = MXB_STRDUP(answer->c_str());
                     MXB_DEBUG("PAM api asked for '%s'.", message->msg);
                     prompt_ind++;
                 }
@@ -201,7 +201,7 @@ int conversation_func(int num_msg, const struct pam_message** messages, struct p
     if (conv_error)
     {
         // On error, the response output should not be set.
-        MXS_FREE(responses);
+        MXB_FREE(responses);
         return PAM_CONV_ERR;
     }
     else

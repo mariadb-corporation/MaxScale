@@ -301,7 +301,7 @@ int test2()
     s = json_dumps(err, 0);
     printf("%s\n", s);
     mxb_assert(strcmp(s, "{\"errors\": [{\"detail\": \"This is an error!\"}]}") == 0);
-    MXS_FREE(s);
+    MXB_FREE(s);
 
     json_decref(err);
 
@@ -309,7 +309,7 @@ int test2()
     s = json_dumps(err, 0);
     printf("%s\n", s);
     mxb_assert(strcmp(s, "{\"errors\": [{\"detail\": \"This is an error!\"}]}") == 0);
-    MXS_FREE(s);
+    MXB_FREE(s);
 
     err = mxs_json_error_append(err, "%s", "This is another error!");
     s = json_dumps(err, 0);
@@ -317,7 +317,7 @@ int test2()
     mxb_assert(strcmp(s,
                       "{\"errors\": [{\"detail\": \"This is an error!\"}, "
                       "{\"detail\": \"This is another error!\"}]}") == 0);
-    MXS_FREE(s);
+    MXB_FREE(s);
 
     json_decref(err);
 

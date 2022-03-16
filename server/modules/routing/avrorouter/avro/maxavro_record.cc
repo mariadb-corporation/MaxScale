@@ -102,7 +102,7 @@ static json_t* read_and_pack_value(MAXAVRO_FILE* file,
             if (str)
             {
                 value = json_stringn(str, len);
-                MXS_FREE(str);
+                MXB_FREE(str);
             }
         }
         break;

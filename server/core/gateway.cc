@@ -312,7 +312,7 @@ struct CRYPTO_dynlock_value
 static struct CRYPTO_dynlock_value* ssl_create_dynlock(const char* file, int line)
 {
     struct CRYPTO_dynlock_value* lock =
-        (struct CRYPTO_dynlock_value*) MXS_MALLOC(sizeof(struct CRYPTO_dynlock_value));
+        (struct CRYPTO_dynlock_value*) MXB_MALLOC(sizeof(struct CRYPTO_dynlock_value));
     if (lock)
     {
         pthread_mutex_init(&lock->lock, NULL);
@@ -347,7 +347,7 @@ static void ssl_lock_dynlock(int mode, struct CRYPTO_dynlock_value* n, const cha
  */
 static void ssl_free_dynlock(struct CRYPTO_dynlock_value* n, const char* file, int line)
 {
-    MXS_FREE(n);
+    MXB_FREE(n);
 }
 
 #ifdef OPENSSL_1_0
@@ -3269,7 +3269,7 @@ static bool init_ssl()
 
 #ifndef OPENSSL_1_1
     int numlocks = CRYPTO_num_locks();
-    this_unit.ssl_locks = (pthread_mutex_t*)MXS_MALLOC(sizeof(pthread_mutex_t) * (numlocks + 1));
+    this_unit.ssl_locks = (pthread_mutex_t*)MXB_MALLOC(sizeof(pthread_mutex_t) * (numlocks + 1));
 
     if (this_unit.ssl_locks != NULL)
     {
@@ -3318,7 +3318,7 @@ static void finish_ssl()
         pthread_mutex_destroy(&this_unit.ssl_locks[i]);
     }
 
-    MXS_FREE(this_unit.ssl_locks);
+    MXB_FREE(this_unit.ssl_locks);
     this_unit.ssl_locks = nullptr;
 #endif
 }

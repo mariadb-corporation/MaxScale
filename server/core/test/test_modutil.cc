@@ -76,7 +76,7 @@ int test2()
     char* result = modutil_get_SQL(buffer);
     mxb_assert(strcmp(result, query) == 0);
     gwbuf_free(buffer);
-    MXS_FREE(result);
+    MXB_FREE(result);
     fprintf(stderr, "\t..done\n");
     return 0;
 }

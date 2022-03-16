@@ -123,7 +123,7 @@ string id_to_string(const bsoncxx::document::element& id)
             char* zJson = json_dumps(pJson, JSON_COMPACT);
 
             rv = zJson;
-            MXS_FREE(zJson);
+            MXB_FREE(zJson);
             json_decref(pJson);
         }
         break;

@@ -102,7 +102,7 @@ T get_content_as(xmlNode& node)
     {
         void operator()(xmlChar* pContent)
         {
-            MXS_FREE(pContent);
+            MXB_FREE(pContent);
         }
     };
 

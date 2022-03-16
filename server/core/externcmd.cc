@@ -54,7 +54,7 @@ int ExternalCmd::tokenize_args(char* dest[], int dest_size)
             else if (quoted && !escaped && *ptr == qc)      /** End of quoted string */
             {
                 *ptr = '\0';
-                dest[i++] = MXS_STRDUP(start);
+                dest[i++] = MXB_STRDUP(start);
                 read = false;
                 quoted = false;
             }
@@ -65,7 +65,7 @@ int ExternalCmd::tokenize_args(char* dest[], int dest_size)
                     *ptr = '\0';
                     if (read)   /** New token */
                     {
-                        dest[i++] = MXS_STRDUP(start);
+                        dest[i++] = MXB_STRDUP(start);
                         read = false;
                     }
                 }
@@ -87,7 +87,7 @@ int ExternalCmd::tokenize_args(char* dest[], int dest_size)
     }
     if (read)
     {
-        dest[i++] = MXS_STRDUP(start);
+        dest[i++] = MXB_STRDUP(start);
     }
     return i;
 }
@@ -115,7 +115,7 @@ std::unique_ptr<ExternalCmd> ExternalCmd::create(const string& argstr, int timeo
         {
             success = true;
         }
-        MXS_FREE(argvec[0]);
+        MXB_FREE(argvec[0]);
     }
     else
     {
@@ -360,7 +360,7 @@ int ExternalCmd::externcmd_execute()
     // Free the token array.
     for (int i = 0; i < MAX_ARGS && argvec[i]; i++)
     {
-        MXS_FREE(argvec[i]);
+        MXB_FREE(argvec[i]);
     }
     return rval;
 }

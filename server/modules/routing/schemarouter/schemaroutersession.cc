@@ -192,7 +192,7 @@ static void inspect_query(GWBUF* pPacket, uint32_t* type, qc_query_op_t* op, uin
                  (pPacket->hints.empty() ? "" : ", Hint:"),
                  (pPacket->hints.empty() ? "" : Hint::type_to_str(pPacket->hints[0].type)));
 
-        MXS_FREE(qtypestr);
+        MXB_FREE(qtypestr);
     }
 }
 
@@ -685,7 +685,7 @@ bool extract_database(GWBUF* buf, char* str)
         memset(str + plen, 0, 1);
     }
 retblock:
-    MXS_FREE(query);
+    MXB_FREE(query);
     return succp;
 }
 
@@ -810,7 +810,7 @@ bool detect_show_shards(GWBUF* query)
         }
     }
 
-    MXS_FREE(querystr);
+    MXB_FREE(querystr);
     return rval;
 }
 
@@ -1145,7 +1145,7 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
 
     /** TODO: Don't make the buffer contiguous but process it as a buffer chain */
     *buffer = gwbuf_make_contiguous(*buffer);
-    MXS_ABORT_IF_NULL(*buffer);
+    MXB_ABORT_IF_NULL(*buffer);
     GWBUF* buf = modutil_get_complete_packets(buffer);
 
     if (buf == NULL)
@@ -1270,7 +1270,7 @@ void SchemaRouterSession::query_databases()
         if (b->in_use() && !b->is_closed() && b->target()->is_usable())
         {
             GWBUF* clone = gwbuf_clone_shallow(buffer);
-            MXS_ABORT_IF_NULL(clone);
+            MXB_ABORT_IF_NULL(clone);
 
             if (!b->write(clone))
             {
@@ -1484,7 +1484,7 @@ mxs::Target* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, q
                 MXS_INFO("PREPARING NAMED %s ON SERVER %s", stmt, rval->name());
                 m_shard.add_statement(stmt, rval);
             }
-            MXS_FREE(stmt);
+            MXB_FREE(stmt);
         }
     }
     else if (op == QUERY_OP_EXECUTE)
@@ -1496,7 +1496,7 @@ mxs::Target* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, q
             rval = ps_target;
             MXS_INFO("Executing named statement %s on server %s", stmt, rval->name());
         }
-        MXS_FREE(stmt);
+        MXB_FREE(stmt);
     }
     else if (qc_query_is_type(qtype, QUERY_TYPE_DEALLOC_PREPARE))
     {
@@ -1506,7 +1506,7 @@ mxs::Target* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, q
             MXS_INFO("Closing named statement %s on server %s", stmt, rval->name());
             m_shard.remove_statement(stmt);
         }
-        MXS_FREE(stmt);
+        MXB_FREE(stmt);
     }
     else if (qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT))
     {
