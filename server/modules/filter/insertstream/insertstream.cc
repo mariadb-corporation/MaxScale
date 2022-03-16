@@ -82,7 +82,7 @@ GWBUF* convert_to_stream(GWBUF* buffer, uint8_t packet_num)
     buffer = gwbuf_consume(buffer, (modptr - dataptr) - MYSQL_HEADER_LEN);
     char* header_start = reinterpret_cast<char*>(GWBUF_DATA(buffer));
     char* store_end = dataptr = header_start + MYSQL_HEADER_LEN;
-    char* end = reinterpret_cast<char*>(buffer->end);
+    const char* end = reinterpret_cast<const char*>(buffer->data() + buffer->length());
     char* value;
     uint32_t valuesize;
 
@@ -97,7 +97,7 @@ GWBUF* convert_to_stream(GWBUF* buffer, uint8_t packet_num)
         *store_end++ = '\n';
     }
 
-    gwbuf_rtrim(buffer, buffer->end - reinterpret_cast<uint8_t*>(store_end));
+    gwbuf_rtrim(buffer, end - store_end);
     uint32_t len = gwbuf_length(buffer) - MYSQL_HEADER_LEN;
 
     *header_start++ = len;
@@ -120,18 +120,19 @@ bool only_implicit_values(GWBUF* buffer)
     bool rval = false;
     char* data = reinterpret_cast<char*>(GWBUF_DATA(buffer));
     char* ptr = mxb::strnchr_esc_mariadb(data + MYSQL_HEADER_LEN + 1, '(', gwbuf_link_length(buffer));
+    const char* buf_end = reinterpret_cast<const char*>(buffer->data() + buffer->length());
 
     if (ptr && (ptr = mxb::strnchr_esc_mariadb(ptr, ')', gwbuf_link_length(buffer) - (ptr - data))))
     {
         /** Skip the closing parenthesis and any whitespace */
         ptr++;
 
-        while (ptr < reinterpret_cast<char*>(buffer->end) && isspace(*ptr))
+        while (ptr < buf_end && isspace(*ptr))
         {
             ptr++;
         }
 
-        if (ptr >= reinterpret_cast<char*>(buffer->end) || !isalnum(*ptr))
+        if (ptr >= buf_end || !isalnum(*ptr))
         {
             /**
              * The first pair of parentheses was followed by a non-alphanumeric

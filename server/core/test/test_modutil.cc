@@ -67,12 +67,13 @@ int test2()
 
     memset(query, ';', 128);
     memset(query + 128, '\0', 1);
-    *(buffer->start) = len;
-    *(buffer->start + 1) = 0;
-    *(buffer->start + 2) = 0;
-    *(buffer->start + 3) = 1;
-    *(buffer->start + 4) = 0x03;
-    memcpy(buffer->start + 5, query, strlen(query));
+    auto ptr = buffer->data();
+    *ptr = len;
+    *(ptr + 1) = 0;
+    *(ptr + 2) = 0;
+    *(ptr + 3) = 1;
+    *(ptr + 4) = 0x03;
+    memcpy(ptr + 5, query, strlen(query));
     char* result = modutil_get_SQL(buffer);
     mxb_assert(strcmp(result, query) == 0);
     gwbuf_free(buffer);

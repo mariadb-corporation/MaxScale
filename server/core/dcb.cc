@@ -937,7 +937,7 @@ void DCB::socket_write()
     // Write until socket blocks, we run out of bytes or an error occurs.
     while (keep_writing && !m_writeq.empty())
     {
-        auto res = ::write(m_fd, m_writeq.start, m_writeq.length());
+        auto res = ::write(m_fd, m_writeq.data(), m_writeq.length());
         if (res > 0)
         {
             m_writeq.consume(res);

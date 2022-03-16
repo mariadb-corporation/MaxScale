@@ -138,8 +138,8 @@ GWBUF::GWBUF(size_t reserve_size)
     : GWBUF()
 {
     m_sbuf = std::make_shared<SHARED_BUF>(reserve_size);
-    start = m_sbuf->buf_start.get();
-    end = start;
+    m_start = m_sbuf->buf_start.get();
+    m_end = m_start;
 }
 
 GWBUF::GWBUF(const GWBUF& rhs)
@@ -175,8 +175,8 @@ GWBUF& GWBUF::operator=(GWBUF&& rhs) noexcept
 void GWBUF::move_helper(GWBUF&& rhs) noexcept
 {
     using std::exchange;
-    start = exchange(rhs.start, nullptr);
-    end = exchange(rhs.end, nullptr);
+    m_start = exchange(rhs.m_start, nullptr);
+    m_end = exchange(rhs.m_end, nullptr);
     gwbuf_type = exchange(rhs.gwbuf_type, GWBUF_TYPE_UNDEFINED);
     m_id = exchange(rhs.m_id, 0);
 
@@ -228,8 +228,8 @@ void GWBUF::clone_helper(const GWBUF& other)
     m_canonical = other.m_canonical;
     // No need to copy 'markers'.
 
-    start = other.start;
-    end = other.end;
+    m_start = other.m_start;
+    m_end = other.m_end;
     m_sbuf = other.m_sbuf;
 }
 
@@ -376,20 +376,20 @@ std::tuple<uint8_t*, size_t> GWBUF::prepare_to_write(uint64_t n_bytes)
             auto new_sbuf = std::make_shared<SHARED_BUF>(alloc_size);
 
             auto* new_buf_start = new_sbuf->buf_start.get();
-            memcpy(new_buf_start, start, old_len);
+            memcpy(new_buf_start, m_start, old_len);
             if (swap_cl_data)
             {
                 std::swap(new_sbuf->classifier_data, m_sbuf->classifier_data);
             }
 
             m_sbuf = move(new_sbuf);
-            start = new_buf_start;
-            end = start + old_len;
+            m_start = new_buf_start;
+            m_end = m_start + old_len;
         };
 
     if (m_sbuf.unique())
     {
-        if (m_sbuf->buf_end - end >= (int64_t)n_bytes)
+        if (m_sbuf->buf_end - m_end >= (int64_t)n_bytes)
         {
             // Have enough space at end of buffer.
         }
@@ -398,9 +398,9 @@ std::tuple<uint8_t*, size_t> GWBUF::prepare_to_write(uint64_t n_bytes)
             // Did not have enough space at the end, but the allocated space is enough. This can happen if
             // most of the buffer has been consumed. Make space by moving data.
             const auto buf_start = m_sbuf->buf_start.get();
-            memmove(buf_start, start, old_len);
-            start = buf_start;
-            end = start + old_len;
+            memmove(buf_start, m_start, old_len);
+            m_start = buf_start;
+            m_end = m_start + old_len;
         }
         else
         {
@@ -418,7 +418,7 @@ std::tuple<uint8_t*, size_t> GWBUF::prepare_to_write(uint64_t n_bytes)
         // Also ends up here if the shared ptr is null.
         clone_sbuf(false, new_len);
     }
-    return {end, m_sbuf->buf_end - end};
+    return {m_end, m_sbuf->buf_end - m_end};
 }
 
 void GWBUF::append(const GWBUF& buffer)
@@ -430,15 +430,15 @@ uint8_t* GWBUF::consume(uint64_t bytes)
 {
     // Consuming more than 'length' is an error.
     mxb_assert(bytes <= length());
-    start += bytes;
-    return start;
+    m_start += bytes;
+    return m_start;
 }
 
 void GWBUF::rtrim(uint64_t bytes)
 {
     // Trimming more than 'length' is an error.
     mxb_assert(bytes <= length());
-    end -= bytes;
+    m_end -= bytes;
 }
 
 void GWBUF::clear()
@@ -450,14 +450,13 @@ void GWBUF::reset()
 {
     if (m_sbuf)
     {
-        start = m_sbuf->buf_start.get();
-        end = start;
-
+        m_start = m_sbuf->buf_start.get();
+        m_end = m_start;
         m_sbuf->classifier_data.clear();
     }
     else
     {
-        mxb_assert(start == nullptr && end == nullptr);
+        mxb_assert(m_start == nullptr && m_end == nullptr);
     }
 
     hints.clear();
@@ -538,7 +537,7 @@ size_t GWBUF::copy_data(size_t offset, size_t n_bytes, uint8_t* dst) const
     {
         auto bytes_left = len - offset;
         copied_bytes = std::min(bytes_left, n_bytes);
-        memcpy(dst, start + offset, copied_bytes);
+        memcpy(dst, m_start + offset, copied_bytes);
     }
     return copied_bytes;
 }

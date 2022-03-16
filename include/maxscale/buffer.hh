@@ -89,9 +89,6 @@ class GWBUF
 public:
     using HintVector = std::vector<Hint>;
 
-    uint8_t* start {nullptr};   /*< Start of the valid data */
-    uint8_t* end {nullptr};     /*< First byte after the valid data */
-
     HintVector hints;                               /*< Hint data for this buffer */
     uint32_t   gwbuf_type {GWBUF_TYPE_UNDEFINED};   /*< buffer's data type information */
 
@@ -277,7 +274,9 @@ public:
 private:
     std::shared_ptr<SHARED_BUF> m_sbuf;     /**< The shared buffer with the real data */
 
-    uint32_t m_id {0};      /**< Buffer ID. Typically used for session command tracking. */
+    uint8_t* m_start {nullptr}; /**< Start of the valid data */
+    uint8_t* m_end {nullptr};   /**< First byte after the valid data */
+    uint32_t m_id {0};          /**< Buffer ID. Typically used for session command tracking. */
 
 #ifdef SS_DEBUG
     int m_owner {-1};       /**< Owning thread id. Used for debugging */
@@ -325,12 +324,12 @@ inline bool gwbuf_is_parsed(const GWBUF* b)
 
 inline uint8_t* GWBUF::data()
 {
-    return start;
+    return m_start;
 }
 
 inline const uint8_t* GWBUF::data() const
 {
-    return start;
+    return m_start;
 }
 
 /*< First valid, unconsumed byte in the buffer */
@@ -356,18 +355,18 @@ inline const uint8_t* GWBUF_DATA(const GWBUF* b)
 
 inline size_t GWBUF::length() const
 {
-    return end - start;
+    return m_end - m_start;
 }
 
 inline bool GWBUF::empty() const
 {
-    return start == end;
+    return m_start == m_end;
 }
 
 inline void GWBUF::write_complete(size_t n_bytes)
 {
-    end += n_bytes;
-    mxb_assert(end <= m_sbuf->buf_end);
+    m_end += n_bytes;
+    mxb_assert(m_end <= m_sbuf->buf_end);
 }
 
 inline uint32_t GWBUF::id() const
@@ -388,15 +387,9 @@ inline bool gwbuf_is_contiguous(const GWBUF* b)
     return true;
 }
 
-/*< True if all bytes in the buffer have been consumed */
-inline bool gwbuf_link_empty(const GWBUF* b)
-{
-    return b->start >= b->end;
-}
-
 inline bool GWBUF_EMPTY(const GWBUF* b)
 {
-    return gwbuf_link_empty(b);
+    return b->empty();
 }
 
 inline void gwbuf_link_rtrim(GWBUF* b, unsigned int bytes)

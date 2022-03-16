@@ -340,7 +340,7 @@ GWBUF* modutil_create_query(const char* query)
 
     if (rval)
     {
-        uint8_t* ptr = rval->start;
+        uint8_t* ptr = rval->data();
         *ptr++ = (len);
         *ptr++ = (len) >> 8;
         *ptr++ = (len) >> 16;

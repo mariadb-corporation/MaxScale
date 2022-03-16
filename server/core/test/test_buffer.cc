@@ -26,10 +26,9 @@
 #include <maxbase/log.hh>
 #include <maxbase/alloc.hh>
 #include <maxscale/buffer.hh>
-#include <maxscale/hint.hh>
 
 /*< Return the byte at offset byte from the start of the unconsumed portion of the buffer */
-#define GWBUF_DATA_CHAR(b, byte) (gwbuf_link_length(b) < ((byte) + 1) ? -1 : * (((char*)(b)->start) + 4))
+#define GWBUF_DATA_CHAR(b, byte) (gwbuf_link_length(b) < ((byte) + 1) ? -1 : * (((char*)(b)->data()) + 4))
 
 /*< Check that the data in a buffer has the SQL marker*/
 #define GWBUF_IS_SQL(b) (0x03 == GWBUF_DATA_CHAR(b, 4))
@@ -271,11 +270,11 @@ void test_consume()
 
     buffer = gwbuf_consume(buffer, 1);
     mxb_assert_message(gwbuf_length(buffer) == 9, "Buffer should be 9 bytes after consuming 1 bytes");
-    mxb_assert_message(*(buffer->start) == 2, "First byte should be 2");
+    mxb_assert_message(*(buffer->data()) == 2, "First byte should be 2");
 
     buffer = gwbuf_consume(buffer, 5);
     mxb_assert_message(gwbuf_length(buffer) == 4, "Buffer should be 4 bytes after consuming 6 bytes");
-    mxb_assert_message(*(buffer->start) == 7, "First byte should be 7");
+    mxb_assert_message(*(buffer->data()) == 7, "First byte should be 7");
     mxb_assert_message(gwbuf_consume(buffer, 4) == NULL, "Consuming all bytes should return NULL");
 
     buffer = gwbuf_append(gwbuf_alloc_and_load(5, data),
