@@ -1229,7 +1229,19 @@ Options:
   --version  Show version number  [boolean]
   --help     Show help  [boolean]
 
-Show information about the database users of the service
+Show information about the database users of the service.
+
+
+  Field  | Description
+  -----  | -----------
+  User   | The user name of the account
+  Host   | The host of the account
+  Plugin | Authentication plugin
+  TLS    | Whether TLS is required from this user
+  Super  | Does the user have a SUPER grant
+  Global | Does the user have global database access
+  Proxy  | Whether this is a proxy user
+  Role   | The default role for this user
 ```
 
 ## set
@@ -1256,13 +1268,17 @@ HTTPS/TLS Options:
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 Set options:
-  --force  Forcefully close all connections to the target server  [boolean] [default: false]
+  --force  If combined with the `maintenance` state, this forcefully closes all connections to the target server  [boolean] [default: false]
 
 Options:
   --version  Show version number  [boolean]
   --help     Show help  [boolean]
 
-If <server> is monitored by a monitor, this command should only be used to set the server into the `maintenance` state. Any other states will be overridden by the monitor on the next monitoring interval. To manually control server states, use the `stop monitor <name>` command to stop the monitor before setting the server states manually.
+If <server> is monitored by a monitor, this command should only be used to set the server into the `maintenance` or the `drain` state. Any other states will be overridden by the monitor on the next monitoring interval. To manually control server states, use the `stop monitor <name>` command to stop the monitor before setting the server states manually.
+
+When a server is set into the `drain` state, no new connections to it are allowed but existing connections are allowed to gracefully close. Servers with the `Master` status cannot be drained or set into maintenance mode. To clear a state set by this command, use the `clear server` command.
+
+To forcefully close all connections to a server, use `set server <name> maintenance --force`
 ```
 
 ## clear
@@ -1603,6 +1619,34 @@ Options:
   --help     Show help  [boolean]
 
 By default the created user will have read-only privileges. To make the user an administrative user, use the `--type=admin` option. Basic users can only perform `list` and `show` commands.
+```
+
+### create report
+
+```
+Usage: create report <file>
+
+Global Options:
+  -u, --user      Username to use  [string] [default: "admin"]
+  -p, --password  Password for the user. To input the password manually, use -p '' or --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "127.0.0.1:8989"]
+  -t, --timeout   Request timeout in plain milliseconds, e.g '-t 1000', or as duration with suffix [h|m|s|ms], e.g. '-t 10s'  [string] [default: "10000"]
+  -q, --quiet     Silence all output. Ignored while in interactive mode.  [boolean] [default: false]
+  --tsv           Print tab separated output  [boolean] [default: false]
+
+HTTPS/TLS Options:
+  -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
+  --tls-key                     Path to TLS private key  [string]
+  --tls-passphrase              Password for the TLS private key  [string]
+  --tls-cert                    Path to TLS public certificate  [string]
+  --tls-ca-cert                 Path to TLS CA certificate  [string]
+  -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
+
+Options:
+  --version  Show version number  [boolean]
+  --help     Show help  [boolean]
+
+The generated report contains the state of all the objects in MaxScale as well as all other required information needed to diagnose problems.
 ```
 
 ## destroy
