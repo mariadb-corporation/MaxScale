@@ -101,7 +101,7 @@ static int lua_qc_get_type_mask(lua_State* state)
         uint32_t type = qc_get_type_mask(buf);
         char* mask = qc_typemask_to_string(type);
         lua_pushstring(state, mask);
-        MXS_FREE(mask);
+        MXB_FREE(mask);
     }
     else
     {
@@ -525,7 +525,7 @@ bool LuaFilterSession::routeQuery(GWBUF* queue)
             current_global_query = NULL;
         }
 
-        MXS_FREE(fullquery);
+        MXB_FREE(fullquery);
     }
 
     if (!route)
