@@ -951,6 +951,14 @@ bool MariaDBMonitor::run_manual_failover(json_t** error_out)
     return execute_manual_command(func, failover_cmd, error_out);
 }
 
+bool MariaDBMonitor::schedule_async_failover(json_t** error_out)
+{
+    auto func = [this]() {
+            return manual_failover();
+        };
+    return schedule_manual_command(func, failover_cmd, error_out);
+}
+
 bool MariaDBMonitor::run_manual_rejoin(SERVER* rejoin_server, json_t** error_out)
 {
     auto func = [this, rejoin_server]() {
@@ -1222,15 +1230,27 @@ void MariaDBMonitor::flush_server_status()
     }
 }
 
+namespace
+{
+// Execution mode for commands.
+enum class ExecMode
+{
+    SYNC,   /**< Function waits for completion or error */
+    ASYNC   /**< Function only schedules the operation and will not wait */
+};
+
+const char err_passive_mode[] = "%s requested but not performed, as MaxScale is in passive mode.";
+
 /**
- * Command handler for 'switchover'
+ * Run manual switchover.
  *
- * @param args    The provided arguments.
- * @param output  Pointer where to place output object.
+ * @param mode    Execution mode
+ * @param args    The provided arguments
+ * @param output  Pointer where to place output object
  *
- * @return True, if the command was executed, false otherwise.
+ * @return True, if the command was executed/scheduled, false otherwise.
  */
-bool handle_manual_switchover(const MODULECMD_ARG* args, json_t** error_out)
+bool manual_switchover(ExecMode mode, const MODULECMD_ARG* args, json_t** error_out)
 {
     mxb_assert((args->argc >= 1) && (args->argc <= 3));
     mxb_assert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
@@ -1240,60 +1260,54 @@ bool handle_manual_switchover(const MODULECMD_ARG* args, json_t** error_out)
     bool rval = false;
     if (mxs::Config::get().passive.get())
     {
-        const char* const MSG = "Switchover requested but not performed, as MaxScale is in passive mode.";
-        PRINT_MXS_JSON_ERROR(error_out, MSG);
+        PRINT_MXS_JSON_ERROR(error_out, err_passive_mode, "Switchover");
     }
     else
     {
         Monitor* mon = args->argv[0].value.monitor;
         auto handle = static_cast<MariaDBMonitor*>(mon);
-        SERVER* promotion_server = (args->argc >= 2) ? args->argv[1].value.server : NULL;
-        SERVER* demotion_server = (args->argc == 3) ? args->argv[2].value.server : NULL;
-        rval = handle->run_manual_switchover(promotion_server, demotion_server, error_out);
+        SERVER* promotion_server = (args->argc >= 2) ? args->argv[1].value.server : nullptr;
+        SERVER* demotion_server = (args->argc == 3) ? args->argv[2].value.server : nullptr;
+
+        switch (mode)
+        {
+        case ExecMode::SYNC:
+            rval = handle->run_manual_switchover(promotion_server, demotion_server, error_out);
+            break;
+
+        case ExecMode::ASYNC:
+            rval = handle->schedule_async_switchover(promotion_server, demotion_server, error_out);
+            break;
+        }
     }
     return rval;
 }
 
 /**
+ * Command handler for 'switchover'
+ */
+bool handle_manual_switchover(const MODULECMD_ARG* args, json_t** error_out)
+{
+    return manual_switchover(ExecMode::SYNC, args, error_out);
+}
+
+/**
  * Command handler for 'async-switchover'
- *
- * @param args    The provided arguments.
- * @param output  Pointer where to place output object.
- *
- * @return True, if the command was executed, false otherwise.
  */
 bool handle_async_switchover(const MODULECMD_ARG* args, json_t** error_out)
 {
-    mxb_assert((args->argc >= 1) && (args->argc <= 3));
-    mxb_assert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
-    mxb_assert((args->argc < 2) || (MODULECMD_GET_TYPE(&args->argv[1].type) == MODULECMD_ARG_SERVER));
-    mxb_assert((args->argc < 3) || (MODULECMD_GET_TYPE(&args->argv[2].type) == MODULECMD_ARG_SERVER));
-
-    bool rval = false;
-    if (mxs::Config::get().passive.get())
-    {
-        const char* const MSG = "Switchover requested but not performed, as MaxScale is in passive mode.";
-        PRINT_MXS_JSON_ERROR(error_out, MSG);
-    }
-    else
-    {
-        Monitor* mon = args->argv[0].value.monitor;
-        auto handle = static_cast<MariaDBMonitor*>(mon);
-        SERVER* promotion_server = (args->argc >= 2) ? args->argv[1].value.server : NULL;
-        SERVER* demotion_server = (args->argc == 3) ? args->argv[2].value.server : NULL;
-        rval = handle->schedule_async_switchover(promotion_server, demotion_server, error_out);
-    }
-    return rval;
+    return manual_switchover(ExecMode::ASYNC, args, error_out);
 }
 
 /**
  * Command handler for 'failover'
  *
+ * @paran mode Execution mode
  * @param args Arguments given by user
  * @param output Json error output
  * @return True on success
  */
-bool handle_manual_failover(const MODULECMD_ARG* args, json_t** output)
+bool manual_failover(ExecMode mode, const MODULECMD_ARG* args, json_t** output)
 {
     mxb_assert(args->argc == 1);
     mxb_assert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
@@ -1301,15 +1315,42 @@ bool handle_manual_failover(const MODULECMD_ARG* args, json_t** output)
 
     if (mxs::Config::get().passive.get())
     {
-        PRINT_MXS_JSON_ERROR(output, "Failover requested but not performed, as MaxScale is in passive mode.");
+        PRINT_MXS_JSON_ERROR(output, err_passive_mode, "Failover");
     }
     else
     {
         Monitor* mon = args->argv[0].value.monitor;
         auto handle = static_cast<MariaDBMonitor*>(mon);
-        rv = handle->run_manual_failover(output);
+
+        switch (mode)
+        {
+        case ExecMode::SYNC:
+            rv = handle->run_manual_failover(output);
+            break;
+
+        case ExecMode::ASYNC:
+            rv = handle->schedule_async_failover(output);
+            break;
+        }
     }
     return rv;
+}
+
+/**
+ * Command handler for 'failover'.
+ */
+bool handle_manual_failover(const MODULECMD_ARG* args, json_t** error_out)
+{
+    return manual_failover(ExecMode::SYNC, args, error_out);
+}
+
+/**
+ * Command handler for 'async-failover'.
+ */
+bool handle_async_failover(const MODULECMD_ARG* args, json_t** error_out)
+{
+    return manual_failover(ExecMode::ASYNC, args, error_out);
+}
 }
 
 /**
@@ -1419,16 +1460,20 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 
     modulecmd_register_command(MXS_MODULE_NAME, "async-switchover", MODULECMD_TYPE_ACTIVE,
                                handle_async_switchover, MXS_ARRAY_NELEMS(switchover_argv), switchover_argv,
-                               "Schedule master switchover without waiting for completion");
+                               "Schedule master switchover. Does not wait for completion");
 
     static modulecmd_arg_type_t failover_argv[] =
     {
         {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC},
     };
 
-    modulecmd_register_command(MXS_MODULE_NAME, failover_cmd, MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXS_MODULE_NAME, "failover", MODULECMD_TYPE_ACTIVE,
                                handle_manual_failover, MXS_ARRAY_NELEMS(failover_argv), failover_argv,
                                "Perform master failover");
+
+    modulecmd_register_command(MXS_MODULE_NAME, "async-failover", MODULECMD_TYPE_ACTIVE,
+                               handle_async_failover, MXS_ARRAY_NELEMS(failover_argv), failover_argv,
+                               "Schedule master failover. Does not wait for completion.");
 
     static modulecmd_arg_type_t rejoin_argv[] =
     {

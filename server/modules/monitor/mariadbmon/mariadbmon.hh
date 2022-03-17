@@ -121,6 +121,14 @@ public:
     bool run_manual_failover(json_t** error_out);
 
     /**
+     * Perform user-activated failover. Does not wait for results, which should be fetched separately.
+     *
+     * @param error_out Json error output
+     * @return True if failover was scheduled
+     */
+    bool schedule_async_failover(json_t** error_out);
+
+    /**
      * Perform user-activated rejoin
      *
      * @param rejoin_server Server to join

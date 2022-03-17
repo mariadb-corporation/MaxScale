@@ -16,7 +16,7 @@
 
 int main(int argc, char** argv)
 {
-    const char FAILOVER_CMD[] = "maxctrl call command mysqlmon failover MySQL-Monitor";
+    const char FAILOVER_CMD[] = "maxctrl call command mariadbmon failover MySQL-Monitor";
     // interactive = strcmp(argv[argc - 1], "interactive") == 0;
     TestConnections test(argc, argv);
     test.repl->connect();
@@ -25,12 +25,13 @@ int main(int argc, char** argv)
     print_gtids(test);
 
     int node0_id = -1;
+    auto& mxs = *test.maxscale;
 
     // Part 1
     node0_id = prepare_test_1(test);
 
-    test.maxscale->ssh_output(FAILOVER_CMD);
-    test.maxscale->wait_for_monitor();
+    mxs.ssh_output(FAILOVER_CMD);
+    mxs.wait_for_monitor();
 
     check_test_1(test, node0_id);
     if (test.global_result != 0)
@@ -41,8 +42,18 @@ int main(int argc, char** argv)
     // Part 2
     prepare_test_2(test);
 
-    test.maxscale->ssh_output(FAILOVER_CMD);
-    test.maxscale->wait_for_monitor();
+    // Instead of normal manual failover, check that async-failover works.
+    mxs.maxctrl("call command mariadbmon async-failover MySQL-Monitor");
+    mxs.wait_for_monitor(2);
+    auto res = test.maxctrl("call command mariadbmon fetch-cmd-results MySQL-Monitor");
+    test.expect(res.rc == 0, "fetch-cmd-results failed: %s", res.output.c_str());
+    if (test.ok())
+    {
+        // The output is a json string. Check that it includes the success-message.
+        auto found = (res.output.find("failover completed successfully") != std::string::npos);
+        test.expect(found, "Result json did not contain expected message. Result: %s",
+                    res.output.c_str());
+    }
 
     check_test_2(test);
     if (test.global_result != 0)
