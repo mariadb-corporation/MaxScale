@@ -333,12 +333,12 @@ public:
     /**
      * Provides QC statistics of one workers
      *
-     * @param id[in]       Id of worker.
+     * @param index[in]    Index of routing worker.
      * @param pStats[out]  The QC statistics of that worker.
      *
-     * return True, if @c id referred to a worker, false otherwise.
+     * return True, if @c index referred to a worker, false otherwise.
      */
-    static bool get_qc_stats(int id, QC_CACHE_STATS* pStats);
+    static bool get_qc_stats_by_index(int index, QC_CACHE_STATS* pStats);
 
     /**
      * Provides QC statistics of all workers
@@ -356,11 +356,11 @@ public:
      * Provides QC statistics of one worker as a Json object for use in the REST-API.
      *
      * @param zHost  The name of the MaxScale host.
-     * @param id     An id of a worker.
+     * @param index  The index of a worker.
      *
-     * @return A json object if @c id refers to a worker, NULL otherwise.
+     * @return A json object if @c index refers to a worker, NULL otherwise.
      */
-    static std::unique_ptr<json_t> get_qc_stats_as_json(const char* zHost, int id);
+    static std::unique_ptr<json_t> get_qc_stats_as_json_by_index(const char* zHost, int index);
 
     using DCBs = std::unordered_set<DCB*>;
     /**

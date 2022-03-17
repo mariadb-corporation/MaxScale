@@ -1260,7 +1260,7 @@ Worker::STATISTICS RoutingWorker::get_statistics()
 }
 
 // static
-bool RoutingWorker::get_qc_stats(int id, QC_CACHE_STATS* pStats)
+bool RoutingWorker::get_qc_stats_by_index(int index, QC_CACHE_STATS* pStats)
 {
     class Task : public Worker::Task
     {
@@ -1279,7 +1279,7 @@ bool RoutingWorker::get_qc_stats(int id, QC_CACHE_STATS* pStats)
         QC_CACHE_STATS& m_stats;
     };
 
-    RoutingWorker* pWorker = RoutingWorker::get(id);
+    RoutingWorker* pWorker = RoutingWorker::get_by_index(index);
 
     if (pWorker)
     {
@@ -1306,10 +1306,10 @@ void RoutingWorker::get_qc_stats(std::vector<QC_CACHE_STATS>& all_stats)
 
         void execute(Worker& worker) override final
         {
-            int id = mxs::RoutingWorker::get_current_id();
-            mxb_assert(id >= 0);
+            int index = static_cast<RoutingWorker&>(worker).index();
+            mxb_assert(index >= 0 && index < this_unit.nWorkers);
 
-            QC_CACHE_STATS& stats = m_all_stats[id];
+            QC_CACHE_STATS& stats = m_all_stats[index];
 
             qc_get_cache_stats(&stats);
         }
@@ -1350,18 +1350,18 @@ json_t* qc_stats_to_json(const char* zHost, int id, const QC_CACHE_STATS& stats)
 }
 
 // static
-std::unique_ptr<json_t> RoutingWorker::get_qc_stats_as_json(const char* zHost, int id)
+std::unique_ptr<json_t> RoutingWorker::get_qc_stats_as_json_by_index(const char* zHost, int index)
 {
     std::unique_ptr<json_t> sStats;
 
     QC_CACHE_STATS stats;
 
-    if (get_qc_stats(id, &stats))
+    if (get_qc_stats_by_index(index, &stats))
     {
-        json_t* pJson = qc_stats_to_json(zHost, id, stats);
+        json_t* pJson = qc_stats_to_json(zHost, index, stats);
 
         stringstream self;
-        self << MXS_JSON_API_QC_STATS << id;
+        self << MXS_JSON_API_QC_STATS << index;
 
         sStats.reset(mxs_json_resource(zHost, self.str().c_str(), pJson));
     }
@@ -1861,7 +1861,6 @@ class WorkerInfoTask : public Worker::Task
 public:
     WorkerInfoTask(const char* zHost, uint32_t nThreads)
         : m_zHost(zHost)
-        , m_nOffset(RoutingWorker::get(RoutingWorker::FIRST)->id())
     {
         m_data.resize(nThreads);
     }
@@ -1904,20 +1903,18 @@ public:
         json_t* pAttr = json_object();
         json_object_set_new(pAttr, "stats", pStats);
 
-        int id = rworker.id();
+        int index = rworker.index();
         stringstream ss;
-        ss << id;
+        ss << index;
 
         json_t* pJson = json_object();
-        json_object_set_new(pJson, CN_ID, json_string(ss.str().c_str()));
+        json_object_set_new(pJson, CN_ID, json_string(ss.str().c_str())); // Index is the id for the outside.
         json_object_set_new(pJson, CN_TYPE, json_string(CN_THREADS));
         json_object_set_new(pJson, CN_ATTRIBUTES, pAttr);
         json_object_set_new(pJson, CN_LINKS, mxs_json_self_link(m_zHost, CN_THREADS, ss.str().c_str()));
 
-        mxb_assert(id >= m_nOffset);
-        int32_t i = id - m_nOffset;
-        mxb_assert((size_t)i < m_data.size());
-        m_data[i] = pJson;
+        mxb_assert((size_t)index < m_data.size());
+        m_data[index] = pJson;
     }
 
     json_t* resource()
@@ -1932,17 +1929,16 @@ public:
         return mxs_json_resource(m_zHost, MXS_JSON_API_THREADS, pArr);
     }
 
-    json_t* resource(int id)
+    json_t* resource(int index)
     {
         stringstream self;
-        self << MXS_JSON_API_THREADS << id;
-        return mxs_json_resource(m_zHost, self.str().c_str(), m_data[id]);
+        self << MXS_JSON_API_THREADS << index;
+        return mxs_json_resource(m_zHost, self.str().c_str(), m_data[index]);
     }
 
 private:
     vector<json_t*> m_data;
     const char*     m_zHost;
-    int32_t         m_nOffset { 0 };
 };
 
 class FunctionTask : public Worker::DisposableTask

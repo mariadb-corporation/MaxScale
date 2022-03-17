@@ -183,9 +183,9 @@ bool Resource::matching_variable_path(const string& path, const string& target) 
         else if (path == ":thread")
         {
             char* end;
-            int id = strtol(target.c_str(), &end, 10);
+            int index = strtol(target.c_str(), &end, 10);
 
-            if (*end == '\0' && mxs::RoutingWorker::get(id))
+            if (*end == '\0' && mxs::RoutingWorker::get_by_index(index))
             {
                 rval = true;
             }
