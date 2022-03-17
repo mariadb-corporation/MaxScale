@@ -17,7 +17,7 @@
                     ...revertGraphStyle,
                 }"
             >
-                <slot name="rect-node-content" :data="{ node }" />
+                <slot name="rect-node-content" :data="{ node, recompute }" />
             </div>
         </div>
     </div>
@@ -71,9 +71,8 @@ export default {
     watch: {
         data: {
             deep: true,
-            handler(v) {
-                this.computeLayout(v)
-                this.update()
+            handler() {
+                this.recompute()
             },
         },
         dynNodeHeightMap: {
@@ -138,6 +137,10 @@ export default {
         update() {
             this.renderNodeDivs(this.dag.descendants())
             this.drawLinks(this.dag.links())
+        },
+        recompute() {
+            this.computeLayout(this.data)
+            this.update()
         },
         /**
          * Either return dynamic node size of a node or defNodeSize
