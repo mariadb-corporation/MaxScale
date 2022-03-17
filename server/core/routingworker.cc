@@ -339,6 +339,20 @@ int RoutingWorker::get_current_id()
     return this_thread.current_worker_id;
 }
 
+int RoutingWorker::index() const
+{
+    return id() - this_unit.id_min_worker;
+}
+
+// static
+RoutingWorker* RoutingWorker::get_by_index(int index)
+{
+    mxb_assert(index >= 0);
+    mxb_assert(index < this_unit.nWorkers);
+
+    return this_unit.ppWorkers[index];
+}
+
 // static
 bool RoutingWorker::start_workers()
 {

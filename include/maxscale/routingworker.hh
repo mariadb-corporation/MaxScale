@@ -153,6 +153,22 @@ public:
     static int get_current_id();
 
     /**
+     * Return the index of the routing worker. The index will be >= 0 and
+     * < #routing threads.
+     *
+     * @return The index of the routing worker.
+     */
+    int index() const;
+
+    /**
+     * Get routing worker by index.
+     *
+     * @param index  The index of the routing worker.
+     * @return The corresponding routing worker.
+     */
+    static RoutingWorker* get_by_index(int index);
+
+    /**
      * Starts all routing workers.
      *
      * @return True, if all workers could be started.
