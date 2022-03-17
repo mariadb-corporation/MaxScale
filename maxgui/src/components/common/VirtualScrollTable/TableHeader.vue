@@ -62,10 +62,7 @@
                                 colIdx: i,
                             }"
                         >
-                            <truncate-string
-                                :text="`${header.text}`"
-                                :maxWidth="headerTxtMaxWidth({ header, i })"
-                            />
+                            {{ header.text }}
                         </slot>
 
                         <v-icon
