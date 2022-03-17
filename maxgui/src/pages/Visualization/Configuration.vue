@@ -20,11 +20,12 @@
                 :colorizingLinkFn="colorizingLinkFn"
                 :handleRevertDiagonal="handleRevertDiagonal"
             >
-                <template v-slot:rect-node-content="{ data: { node } }">
+                <template v-slot:rect-node-content="{ data: { node, recompute } }">
                     <conf-node
                         v-if="!$typy(node, 'data').isEmptyObject"
                         :node="node"
                         :nodeWidth="nodeWidth"
+                        :recompute="recompute"
                     />
                 </template>
             </dag-graph>

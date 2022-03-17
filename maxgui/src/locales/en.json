@@ -236,6 +236,7 @@
     "set": "Set",
     "refreshRate": "Refresh rate",
     "noRefresh": "No refresh",
+    "visFilters": "Visualize filters",
     "hideFilters": "Hide filters",
     "errors": {
         "requiredInput": "{inputName} is required",

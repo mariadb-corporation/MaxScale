@@ -4,29 +4,54 @@
         outlined
         class="node-card fill-height"
         :width="nodeWidth - 2"
+        :style="{ borderColor: headingColor.bg }"
     >
         <div
-            class="node-heading d-flex align-center flex-row px-3 py-1"
+            class="node-heading d-flex align-center justify-center flex-row px-3 py-1"
             :style="{ backgroundColor: headingColor.bg }"
         >
-            <router-link
-                target="_blank"
-                :to="`/dashboard/${node.data.type}/${node.data.id}`"
-                class="text-truncate rsrc-link"
-                :style="{ color: headingColor.txt }"
-            >
-                {{ node.data.id }}
-            </router-link>
-            <v-spacer />
+            <!-- Don't render service id here if the filter nodes are visualizing, render it in the body
+                 that has filters nodes point to the service node.
+            -->
+            <template v-if="!isShowingFilterNodes">
+                <router-link
+                    target="_blank"
+                    :to="`/dashboard/${nodeType}/${node.data.id}`"
+                    class="text-truncate mr-2"
+                    :style="{ color: headingColor.txt }"
+                >
+                    {{ node.data.id }}
+                </router-link>
+                <v-spacer />
+            </template>
             <span
-                class="node-type ml-2 font-weight-medium text-no-wrap text-uppercase"
+                class="node-type font-weight-medium text-no-wrap text-uppercase"
                 :style="{ color: headingColor.txt }"
             >
-                {{ $help.resourceTxtTransform(node.data.type) }}
+                {{ $help.resourceTxtTransform(nodeType) }}
             </span>
         </div>
-        <v-divider />
-        <div class="color text-navigation d-flex justify-center flex-column px-3 py-1">
+        <filter-nodes
+            v-if="isServiceWithFiltersNode"
+            v-model="isVisualizingFilters"
+            :filters="filters"
+            :nodeWidth="nodeWidth / 1.5"
+            :handleVisFilters="handleVisFilters"
+        />
+        <div
+            class="color text-navigation d-flex justify-center flex-column px-3 py-1"
+            :class="{ 'mx-5': isShowingFilterNodes }"
+            :style="{ border: isShowingFilterNodes ? `1px solid ${headingColor.bg}` : 'unset' }"
+        >
+            <template v-if="isShowingFilterNodes">
+                <router-link
+                    target="_blank"
+                    :to="`/dashboard/${node.data.type}/${node.data.id}`"
+                    class="text-truncate "
+                >
+                    {{ node.data.id }}
+                </router-link>
+            </template>
             <div
                 v-for="(value, key) in nodeBody"
                 :key="key"
@@ -47,6 +72,29 @@
                 </icon-sprite-sheet>
 
                 <truncate-string :text="`${value}`" />
+
+                <v-tooltip
+                    v-if="key === 'filters'"
+                    top
+                    transition="slide-y-transition"
+                    content-class="shadow-drop color text-navigation py-1 px-4"
+                >
+                    <template v-slot:activator="{ on }">
+                        <v-btn
+                            x-small
+                            icon
+                            class="ml-auto vis-filter-btn"
+                            depressed
+                            v-on="on"
+                            @click="handleVisFilters"
+                        >
+                            <v-icon color="primary" size="14">
+                                $vuetify.icons.reports
+                            </v-icon>
+                        </v-btn>
+                    </template>
+                    <span> {{ $t('visFilters') }}</span>
+                </v-tooltip>
             </div>
         </div>
     </v-card>
@@ -65,21 +113,32 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
+import { mapGetters, mapState } from 'vuex'
+import FilterNodes from './FilterNodes'
 
 export default {
     name: 'conf-node',
+    components: {
+        'filter-nodes': FilterNodes,
+    },
     props: {
         node: { type: Object, required: true },
         nodeWidth: { type: Number, required: true },
+        recompute: { type: Function, required: true },
+    },
+    data() {
+        return {
+            isVisualizingFilters: false,
+        }
     },
     computed: {
         ...mapState({ RELATIONSHIP_TYPES: state => state.app_config.RELATIONSHIP_TYPES }),
+        ...mapGetters({ getAllFiltersMap: 'filter/getAllFiltersMap' }),
         lineHeight() {
             return `18px`
         },
         headingColor() {
-            const { SERVICES, SERVERS, MONITORS, FILTERS, LISTENERS } = this.RELATIONSHIP_TYPES
+            const { SERVICES, SERVERS, MONITORS, LISTENERS } = this.RELATIONSHIP_TYPES
             switch (this.nodeType) {
                 case MONITORS:
                     return { bg: '#0E9BC0', txt: '#fff' }
@@ -87,8 +146,6 @@ export default {
                     return { bg: '#e7eef1', txt: '#2d9cdb' }
                 case SERVICES:
                     return { bg: '#7dd012', txt: '#fff' }
-                case FILTERS:
-                    return { bg: '#f59d34', txt: '#fff' }
                 case LISTENERS:
                     return { bg: '#424f62', txt: '#fff' }
                 default:
@@ -100,6 +157,18 @@ export default {
         },
         nodeType() {
             return this.node.data.type
+        },
+        // for node type SERVICES
+        filters() {
+            return this.$typy(this.node.data.nodeData, 'relationships.filters.data').safeArray
+        },
+        isServiceWithFiltersNode() {
+            return (
+                this.nodeType === this.RELATIONSHIP_TYPES.SERVICES && Boolean(this.filters.length)
+            )
+        },
+        isShowingFilterNodes() {
+            return this.isServiceWithFiltersNode && this.isVisualizingFilters
         },
         nodeBody() {
             const { SERVICES, SERVERS, MONITORS, FILTERS, LISTENERS } = this.RELATIONSHIP_TYPES
@@ -125,11 +194,14 @@ export default {
                 }
                 case SERVICES: {
                     const { state, router, total_connections } = this.nodeData.attributes
-                    return {
+                    let body = {
                         state,
                         router,
                         'Total Connections': total_connections,
                     }
+                    if (!this.isVisualizingFilters && this.filters.length)
+                        body.filters = this.filters.map(f => f.id).join(', ')
+                    return body
                 }
                 case FILTERS:
                     return { module: this.nodeData.attributes.module }
@@ -147,6 +219,9 @@ export default {
             }
         },
     },
+    mounted() {
+        if (this.filters.length < 4) this.isVisualizingFilters = true
+    },
     methods: {
         stateIconFrame(value) {
             const { SERVICES, SERVERS, MONITORS, LISTENERS } = this.RELATIONSHIP_TYPES
@@ -160,6 +235,13 @@ export default {
                 case LISTENERS:
                     return this.$help.listenerStateIcon(value)
             }
+        },
+        getFilterModule(id) {
+            return this.$typy(this.getAllFiltersMap.get(id), 'attributes.module').safeString
+        },
+        handleVisFilters() {
+            this.isVisualizingFilters = !this.isVisualizingFilters
+            this.recompute()
         },
     },
 }
