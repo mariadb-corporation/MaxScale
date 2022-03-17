@@ -48,6 +48,7 @@ export default {
             nodeDivData: [],
             defNodeHeight: 100,
             dynNodeHeightMap: {},
+            heightChangesCount: 0,
         }
     },
     computed: {
@@ -79,6 +80,14 @@ export default {
             deep: true,
             handler() {
                 this.computeLayout(this.data)
+                /**
+                 * Because dynNodeHeightMap is computed after the first render of `rect-node-content`,
+                 * the graph can only be centered accurately in the second render
+                 */
+                if (this.heightChangesCount === 0 || this.heightChangesCount === 1) {
+                    this.heightChangesCount += 1
+                    this.centerGraph()
+                }
                 this.update()
             },
         },
@@ -101,6 +110,17 @@ export default {
             const nodeHeight = this.$typy(this.dynNodeHeightMap, `[${nodeId}]`).safeNumber
             if (nodeHeight) return { width: this.defNodeSize.width, height: nodeHeight }
             return this.defNodeSize
+        },
+        // Vertically and horizontally Center graph
+        centerGraph() {
+            this.nodeGroupTransform = zoomIdentity
+                .translate(
+                    (this.dim.width - this.dagDim.width) / 2,
+                    (this.dim.height - this.dagDim.height) / 2
+                )
+                .scale(1)
+            // set initial transform
+            this.svg = d3Select(this.$refs.svg).call(zoom().transform, this.nodeGroupTransform)
         },
         /**
          * compute dag layout
@@ -129,20 +149,10 @@ export default {
             this.dagDim = { width, height }
         },
         initSvg() {
-            this.nodeGroupTransform = zoomIdentity
-                .translate(
-                    (this.dim.width - this.dagDim.width) / 2,
-                    (this.dim.height - this.dagDim.height) / 2
-                )
-                .scale(1)
+            this.centerGraph()
             // Draw svg dag-graph
             this.svg = d3Select(this.$refs.svg)
-                .call(zoom().transform, this.nodeGroupTransform)
-                .call(
-                    zoom().on('zoom', e => {
-                        this.nodeGroupTransform = e.transform
-                    })
-                )
+                .call(zoom().on('zoom', e => (this.nodeGroupTransform = e.transform)))
                 .on('dblclick.zoom', null)
             this.svgGroup = this.svg.select('g#dag-node-group')
         },
@@ -162,7 +172,8 @@ export default {
             })
             this.drawLinks(links)
             this.nodeDivData = nodes
-            if (this.dynNodeHeight) this.$nextTick(() => this.computeDynNodeHeight())
+            // compute node height after nodes are rendered
+            if (this.dynNodeHeight) this.$help.doubleRAF(() => this.computeDynNodeHeight())
         },
         computeDynNodeHeight() {
             const rectNode = this.$typy(this.$refs, 'rectNode').safeArray
