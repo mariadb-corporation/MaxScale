@@ -17,6 +17,7 @@
                 :nodeWidth="nodeWidth"
                 dynNodeHeight
                 revert
+                draggable
                 :colorizingLinkFn="colorizingLinkFn"
                 :handleRevertDiagonal="handleRevertDiagonal"
             >

@@ -10,12 +10,21 @@
                 ref="rectNode"
                 :key="node.data.id"
                 class="rect-node"
+                :class="{ move: draggable }"
                 :node_id="node.data.id"
                 :style="{
                     top: `${node.y}px`,
                     left: `${node.x}px`,
                     ...revertGraphStyle,
                 }"
+                v-on="
+                    draggable
+                        ? {
+                              mousedown: e => onNodeDragStart({ e, node }),
+                              mousemove: e => onNodeDragging({ e, node }),
+                          }
+                        : null
+                "
             >
                 <slot name="rect-node-content" :data="{ node, recompute }" />
             </div>
@@ -39,6 +48,7 @@ export default {
         revert: { type: Boolean, default: false },
         colorizingLinkFn: { type: Function, default: () => '' },
         handleRevertDiagonal: { type: Function, default: () => false },
+        draggable: { type: Boolean, default: false },
     },
     data() {
         return {
@@ -49,6 +59,10 @@ export default {
             defNodeHeight: 100,
             dynNodeHeightMap: {},
             heightChangesCount: 0,
+            // states for dragging conf-node
+            isDragging: false,
+            draggingNodeId: null,
+            startPos: null,
         }
     },
     computed: {
@@ -97,6 +111,9 @@ export default {
             this.initSvg()
             this.update()
         }
+    },
+    beforeDestroy() {
+        if (this.draggable) this.rmMouseUpEvt()
     },
     methods: {
         /**
@@ -171,6 +188,7 @@ export default {
             if (!this.$help.lodash.isEqual(this.dynNodeHeightMap, heightMap))
                 this.dynNodeHeightMap = heightMap
         },
+        //TODO: Reposition source and target point while dragging if source.y === target.y (horizontal straight line)
         // Repositioning nodes and links by mutating x,y value
         repositioning() {
             let nodes = this.dag.descendants(),
@@ -203,16 +221,19 @@ export default {
             const h = target.x // horizontal line from source to target
             return `M ${src.x} ${src.y} ${midPoint} H ${h} L ${target.x} ${target.y}`
         },
-        handleCreateDiagonal(data) {
-            let points = data.points
+        getPoints(data) {
+            let points = this.$help.lodash.cloneDeep(data.points)
             let shouldRevert = this.handleRevertDiagonal(data)
             if (shouldRevert) points = points.reverse()
-            return this.obtuseShape(points)
+            return points
+        },
+        handleCreateDiagonal(data) {
+            return this.obtuseShape(this.getPoints(data))
         },
         transformArrow(data) {
-            const { points } = data
-            let arrowPoint = points[points.length - 1]
+            let points = this.getPoints(data)
             let shouldRevert = this.handleRevertDiagonal(data)
+            let arrowPoint = points[points.length - 1]
             const offset = shouldRevert ? 11.5 : -11.5
             const angle = shouldRevert ? 270 : 90
             return `translate(${arrowPoint.x}, ${arrowPoint.y + offset}) rotate(${angle})`
@@ -284,6 +305,60 @@ export default {
                 .transition()
                 .duration(this.duration)
                 .remove()
+        },
+        //-------------------------draggable methods---------------------------
+        addMouseUpEvt() {
+            document.addEventListener('mouseup', this.onNodeDragEnd)
+        },
+        rmMouseUpEvt() {
+            document.removeEventListener('mouseup', this.onNodeDragEnd)
+        },
+        onNodeDragStart({ e, node }) {
+            this.draggingNodeId = node.data.id
+            this.startPos = { x: e.clientX, y: e.clientY }
+            this.addMouseUpEvt()
+        },
+        onNodeDragging({ e, node }) {
+            e.preventDefault()
+            if (this.startPos && this.draggingNodeId === node.data.id) {
+                this.isDragging = true
+                const offsetPos = { x: e.clientX - this.startPos.x, y: e.clientY - this.startPos.y }
+                this.startPos = { x: e.clientX, y: e.clientY }
+                let offsetPosX = offsetPos.x,
+                    offsetPosY = offsetPos.y
+                // change pos of the dragging node
+                if (this.revert) {
+                    offsetPosX = -offsetPos.x // graph is reverted, so minus offset
+                    offsetPosY = -offsetPos.y // graph is reverted, so minus offset
+                }
+                node.x = node.x + offsetPosX
+                node.y = node.y + offsetPosY
+
+                const dagNodes = this.dag.descendants()
+                const dagNode = dagNodes.find(d => d.data.id === this.draggingNodeId)
+                // change pos of child links
+                for (const link of dagNode.ichildLinks()) {
+                    let point = link.points[0]
+                    point.x = point.x + offsetPosX
+                    point.y = point.y + offsetPosY
+                }
+                // change pos of links to parent nodes
+                dagNode.data.parentIds.forEach(parentId => {
+                    const parentNode = dagNodes.find(d => d.data.id === parentId)
+                    const linkToParent = parentNode
+                        .childLinks()
+                        .find(link => link.target.data.id === this.draggingNodeId)
+                    let point = linkToParent.points[linkToParent.points.length - 1]
+                    point.x = point.x + offsetPosX
+                    point.y = point.y + offsetPosY
+                })
+                this.drawLinks(this.dag.links())
+            }
+        },
+        onNodeDragEnd() {
+            this.isDragging = false
+            this.startPos = null
+            this.rmMouseUpEvt()
         },
     },
 }
