@@ -32,8 +32,8 @@ Get a single monitor.
                 "primary": null,
                 "server_info": [
                     {
-                        "gtid_binlog_pos": "0-3000-9",
-                        "gtid_current_pos": "0-3000-9",
+                        "gtid_binlog_pos": "0-3000-5",
+                        "gtid_current_pos": "0-3000-5",
                         "lock_held": null,
                         "master_group": null,
                         "name": "server1",
@@ -42,8 +42,8 @@ Get a single monitor.
                         "slave_connections": []
                     },
                     {
-                        "gtid_binlog_pos": "0-3000-9",
-                        "gtid_current_pos": "0-3000-9",
+                        "gtid_binlog_pos": "0-3000-5",
+                        "gtid_current_pos": "0-3000-5",
                         "lock_held": null,
                         "master_group": null,
                         "name": "server2",
@@ -181,8 +181,8 @@ Get all monitors.
                     "primary": null,
                     "server_info": [
                         {
-                            "gtid_binlog_pos": "0-3000-9",
-                            "gtid_current_pos": "0-3000-9",
+                            "gtid_binlog_pos": "0-3000-5",
+                            "gtid_current_pos": "0-3000-5",
                             "lock_held": null,
                             "master_group": null,
                             "name": "server1",
@@ -191,8 +191,8 @@ Get all monitors.
                             "slave_connections": []
                         },
                         {
-                            "gtid_binlog_pos": "0-3000-9",
-                            "gtid_current_pos": "0-3000-9",
+                            "gtid_binlog_pos": "0-3000-5",
+                            "gtid_current_pos": "0-3000-5",
                             "lock_held": null,
                             "master_group": null,
                             "name": "server2",

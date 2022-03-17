@@ -275,9 +275,22 @@ the SQL to be executed:
 
 ```
 {
-    "sql": "SELECT * FROM test.t1"
+    "sql": "SELECT * FROM test.t1",
+    "max_rows": 1000
 }
 ```
+
+The request body must be a JSON object consisting of the following fields:
+
+- `sql`
+
+  - The SQL to be executed. If the SQL contain multiple statements, multiple
+    results are returned in the response body.
+
+- `max_rows`
+
+  - The maximum number of rows returned in the response. By default this is 1000
+    rows. Setting the value to 0 means no limit.
 
 By default, the complete result is returned in the response body. If the SQL
 query returns more than one result, the `results` array will contain all the

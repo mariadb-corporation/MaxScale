@@ -24,8 +24,8 @@ file locations, configuration options and version information.
 {
     "data": {
         "attributes": {
-            "activated_at": "Fri, 22 Oct 2021 10:23:41 GMT",
-            "commit": "425c0f20df64848e60f3fa7e08c15d8ee344def7",
+            "activated_at": "Thu, 17 Mar 2022 10:27:42 GMT",
+            "commit": "1ac7a0ddfdb5e7dc2df5d120b4aa9bf5961f0c3e",
             "config_sync": null,
             "parameters": {
                 "admin_auth": true,
@@ -44,19 +44,19 @@ file locations, configuration options and version information.
                 "auth_connect_timeout": "10000ms",
                 "auth_read_timeout": "10000ms",
                 "auth_write_timeout": "10000ms",
-                "cachedir": "/tmp/build/cache/maxscale",
+                "cachedir": "/var/cache/maxscale",
                 "config_sync_cluster": null,
                 "config_sync_interval": "5000ms",
                 "config_sync_password": "*****",
                 "config_sync_timeout": "10000ms",
                 "config_sync_user": null,
-                "connector_plugindir": "/tmp/build/lib64/maxscale/plugin",
-                "datadir": "/tmp/build/lib/maxscale",
+                "connector_plugindir": "/usr/lib64/maxscale/plugin",
+                "datadir": "/var/lib/maxscale",
                 "debug": null,
                 "dump_last_statements": "never",
-                "execdir": "/tmp/build/bin",
-                "language": "/tmp/build/lib/maxscale",
-                "libdir": "/tmp/build/lib64/maxscale",
+                "execdir": "/usr/bin",
+                "language": "/var/lib/maxscale",
+                "libdir": "/usr/lib64/maxscale",
                 "load_persisted_configs": true,
                 "local_address": null,
                 "log_debug": false,
@@ -69,17 +69,17 @@ file locations, configuration options and version information.
                 },
                 "log_warn_super_user": false,
                 "log_warning": true,
-                "logdir": "/tmp/build/log/maxscale",
+                "logdir": "/var/log/maxscale",
                 "max_auth_errors_until_block": 10,
                 "maxlog": true,
-                "module_configdir": "/tmp/build/etc/maxscale.modules.d",
+                "module_configdir": "/etc/maxscale.modules.d",
                 "ms_timestamp": false,
                 "passive": false,
-                "persistdir": "/tmp/build/lib/maxscale/maxscale.cnf.d",
-                "piddir": "/tmp/build/run/maxscale",
+                "persistdir": "/var/lib/maxscale/maxscale.cnf.d",
+                "piddir": "/var/run/maxscale",
                 "query_classifier": "qc_sqlite",
                 "query_classifier_args": null,
-                "query_classifier_cache_size": 5006872166,
+                "query_classifier_cache_size": 5003807539,
                 "query_retries": 1,
                 "query_retry_timeout": "5000ms",
                 "rebalance_period": "0ms",
@@ -87,6 +87,7 @@ file locations, configuration options and version information.
                 "rebalance_window": 10,
                 "retain_last_statements": 0,
                 "session_trace": 0,
+                "skip_name_resolve": false,
                 "skip_permission_checks": false,
                 "sql_mode": "default",
                 "syslog": false,
@@ -96,10 +97,10 @@ file locations, configuration options and version information.
                 "writeq_high_water": 16777216,
                 "writeq_low_water": 8192
             },
-            "process_datadir": "/tmp/build/lib/maxscale/data1705670",
-            "started_at": "Fri, 22 Oct 2021 10:23:41 GMT",
-            "uptime": 1,
-            "version": "6.2.0"
+            "process_datadir": "/var/lib/maxscale/data19",
+            "started_at": "Thu, 17 Mar 2022 10:27:42 GMT",
+            "uptime": 10,
+            "version": "6.2.3"
         },
         "id": "maxscale",
         "type": "maxscale"
@@ -172,12 +173,12 @@ value of `threads`.
                     "evictions": 0,
                     "hits": 0,
                     "inserts": 1,
-                    "misses": 1,
-                    "size": 32
+                    "misses": 2,
+                    "size": 368
                 },
-                "reads": 29,
+                "reads": 36,
                 "total_descriptors": 7,
-                "writes": 10
+                "writes": 13
             }
         },
         "id": "0",
@@ -227,12 +228,12 @@ Get the information for all threads. Returns a collection of threads resources.
                         "evictions": 0,
                         "hits": 0,
                         "inserts": 1,
-                        "misses": 1,
-                        "size": 32
+                        "misses": 2,
+                        "size": 368
                     },
-                    "reads": 30,
+                    "reads": 37,
                     "total_descriptors": 7,
-                    "writes": 10
+                    "writes": 13
                 }
             },
             "id": "0",
@@ -264,7 +265,7 @@ Get the information for all threads. Returns a collection of threads resources.
                         "misses": 0,
                         "size": 0
                     },
-                    "reads": 22,
+                    "reads": 26,
                     "total_descriptors": 4,
                     "writes": 0
                 }
@@ -298,7 +299,7 @@ Get the information for all threads. Returns a collection of threads resources.
                         "misses": 0,
                         "size": 0
                     },
-                    "reads": 22,
+                    "reads": 24,
                     "total_descriptors": 4,
                     "writes": 0
                 }
@@ -332,7 +333,7 @@ Get the information for all threads. Returns a collection of threads resources.
                         "misses": 0,
                         "size": 0
                     },
-                    "reads": 22,
+                    "reads": 24,
                     "total_descriptors": 4,
                     "writes": 0
                 }
@@ -366,7 +367,7 @@ Get the information for all threads. Returns a collection of threads resources.
                         "misses": 0,
                         "size": 0
                     },
-                    "reads": 22,
+                    "reads": 24,
                     "total_descriptors": 4,
                     "writes": 0
                 }
@@ -400,7 +401,7 @@ Get the information for all threads. Returns a collection of threads resources.
                         "misses": 0,
                         "size": 0
                     },
-                    "reads": 22,
+                    "reads": 25,
                     "total_descriptors": 4,
                     "writes": 0
                 }
@@ -434,7 +435,7 @@ Get the information for all threads. Returns a collection of threads resources.
                         "misses": 0,
                         "size": 0
                     },
-                    "reads": 22,
+                    "reads": 25,
                     "total_descriptors": 4,
                     "writes": 0
                 }
@@ -468,7 +469,7 @@ Get the information for all threads. Returns a collection of threads resources.
                         "misses": 0,
                         "size": 0
                     },
-                    "reads": 22,
+                    "reads": 25,
                     "total_descriptors": 4,
                     "writes": 0
                 }
@@ -512,7 +513,7 @@ location where the log files are stored.
 {
     "data": {
         "attributes": {
-            "log_file": "/tmp/build/log/maxscale/maxscale.log",
+            "log_file": "/var/log/maxscale/maxscale.log",
             "log_priorities": [
                 "alert",
                 "error",
@@ -599,22 +600,22 @@ This endpoint supports the following parameters:
         "attributes": {
             "log": [
                 {
-                    "id": "203",
-                    "message": "Service 'Read-Connection-Router' started (2/2)",
+                    "id": "46",
+                    "message": "Server changed state: server2[127.0.0.1:3001]: slave_up. [Down] -> [Slave, Running]",
                     "priority": "notice",
-                    "timestamp": "2021-07-18 04:50:52"
+                    "timestamp": "2022-03-17 10:27:47"
                 },
                 {
-                    "id": "204",
-                    "message": "Read 7 user@host entries from 'server1' for service 'Read-Connection-Router'.",
+                    "id": "47",
+                    "message": "Read 5 user@host entries from 'server1' for service 'RW-Split-Router'.",
                     "priority": "notice",
-                    "timestamp": "2021-07-18 04:50:53"
+                    "timestamp": "2022-03-17 10:27:48"
                 },
                 {
-                    "id": "205",
-                    "message": "Read 7 user@host entries from 'server1' for service 'RW-Split-Router'.",
+                    "id": "48",
+                    "message": "Read 5 user@host entries from 'server1' for service 'Read-Connection-Router'.",
                     "priority": "notice",
-                    "timestamp": "2021-07-18 04:50:53"
+                    "timestamp": "2022-03-17 10:27:48"
                 }
             ],
             "log_source": "maxlog"
@@ -624,8 +625,8 @@ This endpoint supports the following parameters:
     },
     "links": {
         "last": "http://localhost:8989/v1/maxscale/logs/data/?page[size]=3",
-        "prev": "http://localhost:8989/v1/maxscale/logs/data/?page[cursor]=200&page[size]=3",
-        "self": "http://localhost:8989/v1/maxscale/logs/data/?page[cursor]=203&page[size]=3"
+        "prev": "http://localhost:8989/v1/maxscale/logs/data/?page[cursor]=43&page[size]=3",
+        "self": "http://localhost:8989/v1/maxscale/logs/data/?page[cursor]=46&page[size]=3"
     }
 }
 ```
@@ -968,6 +969,19 @@ parameters it accepts as a module.
                     "type": "count"
                 },
                 {
+                    "default_value": "full",
+                    "description": "Type of checksum to calculate for results",
+                    "enum_values": [
+                        "full",
+                        "result_only",
+                        "no_insert_id"
+                    ],
+                    "mandatory": false,
+                    "modifiable": true,
+                    "name": "transaction_replay_checksum",
+                    "type": "enum"
+                },
+                {
                     "default_value": 1073741824,
                     "description": "Maximum size of transaction to retry",
                     "mandatory": false,
@@ -982,6 +996,23 @@ parameters it accepts as a module.
                     "modifiable": true,
                     "name": "transaction_replay_retry_on_deadlock",
                     "type": "bool"
+                },
+                {
+                    "default_value": false,
+                    "description": "Retry transaction on checksum mismatch",
+                    "mandatory": false,
+                    "modifiable": true,
+                    "name": "transaction_replay_retry_on_mismatch",
+                    "type": "bool"
+                },
+                {
+                    "default_value": "0ms",
+                    "description": "Timeout for transaction replay",
+                    "mandatory": false,
+                    "modifiable": true,
+                    "name": "transaction_replay_timeout",
+                    "type": "duration",
+                    "unit": "ms"
                 },
                 {
                     "default_value": "all",
@@ -1060,6 +1091,38 @@ parameters it accepts as a module.
                     "mandatory": false,
                     "modifiable": true,
                     "name": "log_auth_warnings",
+                    "type": "bool"
+                },
+                {
+                    "default_value": false,
+                    "description": "Log debug messages for this service (debug builds only)",
+                    "mandatory": false,
+                    "modifiable": true,
+                    "name": "log_debug",
+                    "type": "bool"
+                },
+                {
+                    "default_value": false,
+                    "description": "Log info messages for this service",
+                    "mandatory": false,
+                    "modifiable": true,
+                    "name": "log_info",
+                    "type": "bool"
+                },
+                {
+                    "default_value": false,
+                    "description": "Log notice messages for this service",
+                    "mandatory": false,
+                    "modifiable": true,
+                    "name": "log_notice",
+                    "type": "bool"
+                },
+                {
+                    "default_value": false,
+                    "description": "Log warning messages for this service",
+                    "mandatory": false,
+                    "modifiable": true,
+                    "name": "log_warning",
                     "type": "bool"
                 },
                 {
@@ -1527,7 +1590,7 @@ one to see the parameters of a module before the object is created.
                         "type": "string"
                     },
                     {
-                        "default_value": 5006872166,
+                        "default_value": 5003807539,
                         "description": "Maximum amount of memory used by query classifier cache.",
                         "mandatory": false,
                         "modifiable": true,
@@ -1591,6 +1654,14 @@ one to see the parameters of a module before the object is created.
                         "modifiable": true,
                         "name": "session_trace",
                         "type": "count"
+                    },
+                    {
+                        "default_value": false,
+                        "description": "Do not resolve client IP addresses to hostnames during authentication",
+                        "mandatory": false,
+                        "modifiable": false,
+                        "name": "skip_name_resolve",
+                        "type": "bool"
                     },
                     {
                         "default_value": false,
@@ -1663,7 +1734,7 @@ one to see the parameters of a module before the object is created.
                         "type": "size"
                     }
                 ],
-                "version": "6.2.0"
+                "version": "6.2.3"
             },
             "id": "maxscale",
             "links": {
@@ -1872,7 +1943,7 @@ one to see the parameters of a module before the object is created.
                         "type": "string"
                     }
                 ],
-                "version": "6.2.0"
+                "version": "6.2.3"
             },
             "id": "servers",
             "links": {
@@ -2389,7 +2460,15 @@ one to see the parameters of a module before the object is created.
                             "new_master",
                             "new_slave",
                             "new_synced",
-                            "new_donor"
+                            "new_donor",
+                            "relay_up",
+                            "relay_down",
+                            "lost_relay",
+                            "new_relay",
+                            "blr_up",
+                            "blr_down",
+                            "lost_blr",
+                            "new_blr"
                         ],
                         "mandatory": false,
                         "name": "events",
@@ -2891,6 +2970,38 @@ one to see the parameters of a module before the object is created.
                         "type": "bool"
                     },
                     {
+                        "default_value": false,
+                        "description": "Log debug messages for this service (debug builds only)",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "log_debug",
+                        "type": "bool"
+                    },
+                    {
+                        "default_value": false,
+                        "description": "Log info messages for this service",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "log_info",
+                        "type": "bool"
+                    },
+                    {
+                        "default_value": false,
+                        "description": "Log notice messages for this service",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "log_notice",
+                        "type": "bool"
+                    },
+                    {
+                        "default_value": false,
+                        "description": "Log warning messages for this service",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "log_warning",
+                        "type": "bool"
+                    },
+                    {
                         "default_value": 0,
                         "description": "Maximum number of connections",
                         "mandatory": false,
@@ -3204,6 +3315,19 @@ one to see the parameters of a module before the object is created.
                         "type": "count"
                     },
                     {
+                        "default_value": "full",
+                        "description": "Type of checksum to calculate for results",
+                        "enum_values": [
+                            "full",
+                            "result_only",
+                            "no_insert_id"
+                        ],
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "transaction_replay_checksum",
+                        "type": "enum"
+                    },
+                    {
                         "default_value": 1073741824,
                         "description": "Maximum size of transaction to retry",
                         "mandatory": false,
@@ -3218,6 +3342,23 @@ one to see the parameters of a module before the object is created.
                         "modifiable": true,
                         "name": "transaction_replay_retry_on_deadlock",
                         "type": "bool"
+                    },
+                    {
+                        "default_value": false,
+                        "description": "Retry transaction on checksum mismatch",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "transaction_replay_retry_on_mismatch",
+                        "type": "bool"
+                    },
+                    {
+                        "default_value": "0ms",
+                        "description": "Timeout for transaction replay",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "transaction_replay_timeout",
+                        "type": "duration",
+                        "unit": "ms"
                     },
                     {
                         "default_value": "all",
@@ -3296,6 +3437,38 @@ one to see the parameters of a module before the object is created.
                         "mandatory": false,
                         "modifiable": true,
                         "name": "log_auth_warnings",
+                        "type": "bool"
+                    },
+                    {
+                        "default_value": false,
+                        "description": "Log debug messages for this service (debug builds only)",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "log_debug",
+                        "type": "bool"
+                    },
+                    {
+                        "default_value": false,
+                        "description": "Log info messages for this service",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "log_info",
+                        "type": "bool"
+                    },
+                    {
+                        "default_value": false,
+                        "description": "Log notice messages for this service",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "log_notice",
+                        "type": "bool"
+                    },
+                    {
+                        "default_value": false,
+                        "description": "Log warning messages for this service",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "log_warning",
                         "type": "bool"
                     },
                     {
