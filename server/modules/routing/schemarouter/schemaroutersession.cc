@@ -1191,7 +1191,7 @@ void SchemaRouterSession::query_databases()
 
     GWBUF* buffer = modutil_create_query("SELECT CONCAT(s.schema_name, '.', IFNULL(t.table_name, '')) FROM information_schema.schemata s "
                                          "LEFT JOIN information_schema.tables t ON s.schema_name = t.table_schema ");
-    gwbuf_set_type(buffer, GWBUF_TYPE_COLLECT_ROWS);
+    buffer->set_type(GWBUF::TYPE_COLLECT_ROWS);
 
     for (const auto& b : m_backends)
     {

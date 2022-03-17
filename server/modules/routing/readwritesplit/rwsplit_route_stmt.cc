@@ -65,7 +65,7 @@ void RWSplitSession::retry_query(GWBUF* querybuf, int delay)
     // TODO: Make sure this is no longer needed. The only place where it might matter is when a retried query
     // is put into the query queue. This should not be possible as no retried query should be put into the
     // pool. If it does happen, there are debug assertions that catch it.
-    gwbuf_set_type(querybuf, GWBUF_TYPE_REPLAYED);
+    querybuf->set_type(GWBUF::TYPE_REPLAYED);
 
     // Route the query again later
     m_pSession->delay_routing(
@@ -1111,7 +1111,7 @@ bool RWSplitSession::handle_got_target(mxs::Buffer&& buffer, RWBackend* target, 
         }
         else if (m_config.causal_reads != CausalReads::NONE && target->is_master())
         {
-            gwbuf_set_type(buffer.get(), GWBUF_TYPE_TRACK_STATE);
+            buffer.get()->set_type(GWBUF::TYPE_TRACK_STATE);
         }
 
         if (m_wait_gtid == GTID_READ_DONE)

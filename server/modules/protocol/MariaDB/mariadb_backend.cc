@@ -350,11 +350,11 @@ void MariaDBBackendConnection::prepare_for_write(GWBUF* buffer)
     }
 
     // TODO: These probably should be stored in TrackedQuery as well
-    if (gwbuf_should_collect_result(buffer))
+    if (buffer->type_is_collect_result())
     {
         m_collect_result = true;
     }
-    m_track_state = gwbuf_should_track_state(buffer);
+    m_track_state = buffer->type_is_track_state();
 }
 
 void MariaDBBackendConnection::process_stmt_execute(GWBUF** original, uint32_t id, PSInfo& ps_info)
@@ -1496,7 +1496,7 @@ GWBUF* MariaDBBackendConnection::create_change_user_packet()
     *data++ = 0;    // Sequence.
     memcpy(data, payload.data(), payload.size());
     // COM_CHANGE_USER is a session command so the result must be collected.
-    gwbuf_set_type(buffer, GWBUF_TYPE_COLLECT_RESULT);
+    buffer->set_type(GWBUF::TYPE_COLLECT_RESULT);
 
     return buffer;
 }
@@ -2641,7 +2641,7 @@ void MariaDBBackendConnection::assign_session(MXS_SESSION* session, mxs::Compone
 MariaDBBackendConnection::TrackedQuery::TrackedQuery(GWBUF* buffer)
     : payload_len(MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buffer)))
     , command(MYSQL_GET_COMMAND(GWBUF_DATA(buffer)))
-    , collect_rows(gwbuf_should_collect_rows(buffer))
+    , collect_rows(buffer->type_is_collect_rows())
     , id(buffer->id())
 {
     if (command == MXS_COM_STMT_EXECUTE)

@@ -177,7 +177,7 @@ void GWBUF::move_helper(GWBUF&& rhs) noexcept
     using std::exchange;
     m_start = exchange(rhs.m_start, nullptr);
     m_end = exchange(rhs.m_end, nullptr);
-    gwbuf_type = exchange(rhs.gwbuf_type, GWBUF_TYPE_UNDEFINED);
+    m_type = exchange(rhs.m_type, TYPE_UNDEFINED);
     m_id = exchange(rhs.m_id, 0);
 
     hints = move(rhs.hints);
@@ -221,7 +221,7 @@ void gwbuf_free(GWBUF* buf)
 void GWBUF::clone_helper(const GWBUF& other)
 {
     hints = other.hints;
-    gwbuf_type = other.gwbuf_type;
+    m_type = other.m_type;
     m_id = other.m_id;
 
     m_sql = other.m_sql;
@@ -338,9 +338,9 @@ GWBUF* gwbuf_rtrim(GWBUF* head, uint64_t n_bytes)
     return head->empty() ? nullptr : head;
 }
 
-void gwbuf_set_type(GWBUF* buf, uint32_t type)
+void GWBUF::set_type(Type type)
 {
-    buf->gwbuf_type |= type;
+    m_type |= type;
 }
 
 void GWBUF::set_classifier_data(void* new_data, void (* deleter)(void*))
@@ -460,7 +460,7 @@ void GWBUF::reset()
     }
 
     hints.clear();
-    gwbuf_type = GWBUF_TYPE_UNDEFINED;
+    m_type = TYPE_UNDEFINED;
     m_id = 0;
 
     // TODO: do these really need to be cleared or would they be overwritten?

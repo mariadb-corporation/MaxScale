@@ -30,19 +30,6 @@ namespace maxscale
 class Buffer;
 }
 
-enum gwbuf_type_t
-{
-    GWBUF_TYPE_UNDEFINED      = 0,
-    GWBUF_TYPE_COLLECT_RESULT = (1 << 0),
-    GWBUF_TYPE_REPLAYED       = (1 << 1),
-    GWBUF_TYPE_TRACK_STATE    = (1 << 2),
-
-    // This causes the current resultset rows to be collected into mxs::Reply. They can be accessed using
-    // mxs::Reply::row_data() inside the clientReply function and they are only available for the duration of
-    // the function call. The rows should be considered a read-only view into the buffer that contains them.
-    GWBUF_TYPE_COLLECT_ROWS = (1 << 3),
-};
-
 /**
  * A structure for adding arbitrary data to a buffer.
  */
@@ -87,10 +74,24 @@ public:
 class GWBUF
 {
 public:
+
+    enum Type : uint32_t
+    {
+        TYPE_UNDEFINED      = 0,
+        TYPE_COLLECT_RESULT = (1 << 0),
+        TYPE_REPLAYED       = (1 << 1),
+        TYPE_TRACK_STATE    = (1 << 2),
+
+        // This causes the current resultset rows to be collected into mxs::Reply. They can be accessed
+        // using mxs::Reply::row_data() inside the clientReply function and they are only available for
+        // the duration of the function call. The rows should be considered a read-only view into
+        // the buffer that contains them.
+        TYPE_COLLECT_ROWS   = (1 << 3),
+    };
+
     using HintVector = std::vector<Hint>;
 
     HintVector hints;                               /*< Hint data for this buffer */
-    uint32_t   gwbuf_type {GWBUF_TYPE_UNDEFINED};   /*< buffer's data type information */
 
     const std::string& get_sql() const;
     const std::string& get_canonical() const;
@@ -141,6 +142,14 @@ public:
     size_t         length() const;
     bool           empty() const;
     uint32_t       id() const;
+
+    void set_type(Type type);
+
+    bool type_is_undefined() const;
+    bool type_is_replayed() const;
+    bool type_is_collect_result() const;
+    bool type_is_collect_rows() const;
+    bool type_is_track_state() const;
 
     /**
      * Capacity of underlying shared buffer.
@@ -274,12 +283,13 @@ public:
 private:
     std::shared_ptr<SHARED_BUF> m_sbuf;     /**< The shared buffer with the real data */
 
-    uint8_t* m_start {nullptr}; /**< Start of the valid data */
-    uint8_t* m_end {nullptr};   /**< First byte after the valid data */
-    uint32_t m_id {0};          /**< Buffer ID. Typically used for session command tracking. */
+    uint8_t* m_start {nullptr};         /**< Start of the valid data */
+    uint8_t* m_end {nullptr};           /**< First byte after the valid data */
+    uint32_t m_id {0};                  /**< Buffer ID. Typically used for session command tracking. */
+    uint32_t m_type {TYPE_UNDEFINED};   /**< Data type information */
 
 #ifdef SS_DEBUG
-    int m_owner {-1};       /**< Owning thread id. Used for debugging */
+    int m_owner {-1};   /**< Owning thread id. Used for debugging */
 #endif
 
     mutable std::string      m_sql;
@@ -290,31 +300,31 @@ private:
     void clone_helper(const GWBUF& other);
 };
 
-inline bool gwbuf_is_type_undefined(const GWBUF* b)
+inline bool GWBUF::type_is_undefined() const
 {
-    return b->gwbuf_type == 0;
+    return m_type == TYPE_UNDEFINED;
 }
 
-inline bool gwbuf_should_collect_result(const GWBUF* b)
+inline bool GWBUF::type_is_collect_result() const
 {
-    return b->gwbuf_type & GWBUF_TYPE_COLLECT_RESULT;
+    return m_type & TYPE_COLLECT_RESULT;
 }
 
-inline bool gwbuf_should_collect_rows(const GWBUF* b)
+inline bool GWBUF::type_is_collect_rows() const
 {
-    return b->gwbuf_type & GWBUF_TYPE_COLLECT_ROWS;
+    return m_type & TYPE_COLLECT_ROWS;
 }
 
 // True if the query is not initiated by the client but an internal replaying mechanism
-inline bool gwbuf_is_replayed(const GWBUF* b)
+inline bool GWBUF::type_is_replayed() const
 {
-    return b->gwbuf_type & GWBUF_TYPE_REPLAYED;
+    return m_type & TYPE_REPLAYED;
 }
 
 // Track session state change response
-inline bool gwbuf_should_track_state(const GWBUF* b)
+inline bool GWBUF::type_is_track_state() const
 {
-    return b->gwbuf_type & GWBUF_TYPE_TRACK_STATE;
+    return m_type & TYPE_TRACK_STATE;
 }
 
 inline bool gwbuf_is_parsed(const GWBUF* b)
@@ -533,14 +543,6 @@ extern size_t gwbuf_copy_data(const GWBUF* buffer, size_t offset, size_t bytes, 
  * @return Head of the buffer chain.
  */
 extern GWBUF* gwbuf_split(GWBUF** buf, size_t length);
-
-/**
- * Set given type to all buffers on the list.
- * *
- * @param buf   The shared buffer
- * @param type  Type to be added, mask of @c gwbuf_type_t values.
- */
-extern void gwbuf_set_type(GWBUF* head, uint32_t type);
 
 /**
  * Convert a chain of GWBUF structures into a single GWBUF structure
@@ -1354,9 +1356,9 @@ public:
      *
      * @param type The type to set
      */
-    void set_type(gwbuf_type_t type)
+    void set_type(GWBUF::Type type)
     {
-        gwbuf_set_type(m_pBuffer, type);
+        m_pBuffer->set_type(type);
     }
 
     /**

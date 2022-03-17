@@ -276,7 +276,7 @@ std::pair<mxs::Buffer, RWSplitSession::RoutingPlan> RWSplitSession::start_gtid_p
     m_wait_gtid = READING_GTID;
     mxs::Buffer buffer(modutil_create_query("SELECT @@gtid_current_pos"));
     buffer.add_hint(Hint::Type::ROUTE_TO_MASTER);
-    buffer.set_type(GWBUF_TYPE_COLLECT_ROWS);
+    buffer.set_type(GWBUF::TYPE_COLLECT_ROWS);
 
     m_qc.revert_update();
     m_qc.update_route_info(get_current_target(), buffer.get());
