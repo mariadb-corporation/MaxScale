@@ -131,13 +131,6 @@ int run_timer_test()
     TimerTest* pT6 = new TimerTest(&w, &rv, 500ms, cancel_at_destruct);
 
     w.execute([&]() {
-                  w.dcall(&t1, t1.delay(), &TimerTest::tick, &t1);
-                  w.dcall(&t2, t2.delay(), &TimerTest::tick, &t2);
-                  w.dcall(&t3, t3.delay(), &TimerTest::tick, &t3);
-                  w.dcall(&t4, t4.delay(), &TimerTest::tick, &t4);
-                  w.dcall(&t5, t5.delay(), &TimerTest::tick, &t5);
-                  w.dcall(pT6, pT6->delay(), &TimerTest::tick, pT6);
-
                   t1.start();
                   t2.start();
                   t3.start();
