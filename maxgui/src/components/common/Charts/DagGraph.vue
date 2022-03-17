@@ -101,28 +101,6 @@ export default {
     },
     methods: {
         /**
-         * Either return dynamic node size of a node or defNodeSize
-         * @param {Object} node - dag node
-         * @returns {Object} - { width: Number, height: Number}
-         */
-        getDynNodeSize(node) {
-            const nodeId = this.$typy(node, 'data.id').safeString
-            const nodeHeight = this.$typy(this.dynNodeHeightMap, `[${nodeId}]`).safeNumber
-            if (nodeHeight) return { width: this.defNodeSize.width, height: nodeHeight }
-            return this.defNodeSize
-        },
-        // Vertically and horizontally Center graph
-        centerGraph() {
-            this.nodeGroupTransform = zoomIdentity
-                .translate(
-                    (this.dim.width - this.dagDim.width) / 2,
-                    (this.dim.height - this.dagDim.height) / 2
-                )
-                .scale(1)
-            // set initial transform
-            this.svg = d3Select(this.$refs.svg).call(zoom().transform, this.nodeGroupTransform)
-        },
-        /**
          * compute dag layout
          * @param {Object} data - tree data
          */
@@ -147,6 +125,7 @@ export default {
 
             const { width, height } = this.layout(this.dag)
             this.dagDim = { width, height }
+            this.repositioning()
         },
         initSvg() {
             this.centerGraph()
@@ -157,23 +136,30 @@ export default {
             this.svgGroup = this.svg.select('g#dag-node-group')
         },
         update() {
-            let nodes = this.dag.descendants(),
-                links = this.dag.links()
-            nodes.forEach(d => {
-                const { width, height } = this.getDynNodeSize(d)
-                d.x = d.x - width / 2
-                d.y = d.y - height / 2
-            })
-            links.forEach(d => {
-                d.points.forEach((p, i) => {
-                    if (i === 0) p.y = p.y + this.getDynNodeSize(d.source).height / 2
-                    else p.y = p.y - this.getDynNodeSize(d.target).height / 2
-                })
-            })
-            this.drawLinks(links)
-            this.nodeDivData = nodes
-            // compute node height after nodes are rendered
-            if (this.dynNodeHeight) this.$help.doubleRAF(() => this.computeDynNodeHeight())
+            this.renderNodeDivs(this.dag.descendants())
+            this.drawLinks(this.dag.links())
+        },
+        /**
+         * Either return dynamic node size of a node or defNodeSize
+         * @param {Object} node - dag node
+         * @returns {Object} - { width: Number, height: Number}
+         */
+        getDynNodeSize(node) {
+            const nodeId = this.$typy(node, 'data.id').safeString
+            const nodeHeight = this.$typy(this.dynNodeHeightMap, `[${nodeId}]`).safeNumber
+            if (nodeHeight) return { width: this.defNodeSize.width, height: nodeHeight }
+            return this.defNodeSize
+        },
+        // Vertically and horizontally Center graph
+        centerGraph() {
+            this.nodeGroupTransform = zoomIdentity
+                .translate(
+                    (this.dim.width - this.dagDim.width) / 2,
+                    (this.dim.height - this.dagDim.height) / 2
+                )
+                .scale(1)
+            // set initial transform
+            this.svg = d3Select(this.$refs.svg).call(zoom().transform, this.nodeGroupTransform)
         },
         computeDynNodeHeight() {
             const rectNode = this.$typy(this.$refs, 'rectNode').safeArray
@@ -181,6 +167,24 @@ export default {
             rectNode.forEach(node => (heightMap[node.getAttribute('node_id')] = node.clientHeight))
             if (!this.$help.lodash.isEqual(this.dynNodeHeightMap, heightMap))
                 this.dynNodeHeightMap = heightMap
+        },
+        // Repositioning nodes and links by mutating x,y value
+        repositioning() {
+            let nodes = this.dag.descendants(),
+                links = this.dag.links()
+            // repositioning nodes so that they are drawn center
+            nodes.forEach(d => {
+                const { width, height } = this.getDynNodeSize(d)
+                d.x = d.x - width / 2
+                d.y = d.y - height / 2
+            })
+            // repositioning links so that links are drawn at the middle point of the top edge
+            links.forEach(d => {
+                d.points.forEach((p, i) => {
+                    if (i === 0) p.y = p.y + this.getDynNodeSize(d.source).height / 2
+                    else p.y = p.y - this.getDynNodeSize(d.target).height / 2
+                })
+            })
         },
         /**
          * Creates a polyline between nodes where it draws from the source point
@@ -201,6 +205,19 @@ export default {
             let shouldRevert = this.handleRevertDiagonal(data)
             if (shouldRevert) points = points.reverse()
             return this.obtuseShape(points)
+        },
+        transformArrow(data) {
+            const { points } = data
+            let arrowPoint = points[points.length - 1]
+            let shouldRevert = this.handleRevertDiagonal(data)
+            const offset = shouldRevert ? 11.5 : -11.5
+            const angle = shouldRevert ? 270 : 90
+            return `translate(${arrowPoint.x}, ${arrowPoint.y + offset}) rotate(${angle})`
+        },
+        renderNodeDivs(nodes) {
+            this.nodeDivData = nodes
+            // compute node height after nodes are rendered
+            if (this.dynNodeHeight) this.$help.doubleRAF(() => this.computeDynNodeHeight())
         },
         drawLinks(data) {
             let linkGroup = this.svgGroup.selectAll('.link-group').data(data)
@@ -264,14 +281,6 @@ export default {
                 .transition()
                 .duration(this.duration)
                 .remove()
-        },
-        transformArrow(data) {
-            const { points } = data
-            let arrowPoint = points[points.length - 1]
-            let shouldRevert = this.handleRevertDiagonal(data)
-            const offset = shouldRevert ? 11.5 : -11.5
-            const angle = shouldRevert ? 270 : 90
-            return `translate(${arrowPoint.x}, ${arrowPoint.y + offset}) rotate(${angle})`
         },
     },
 }
