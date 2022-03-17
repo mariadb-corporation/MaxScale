@@ -520,12 +520,14 @@ uint32_t session_get_session_trace()
 
 void MXS_SESSION::delay_routing(GWBUF* buffer, int seconds, std::function<bool(GWBUF*)>&& fn)
 {
-    auto session = session_get_ref(this);
+    auto session = this;
 
     auto cb = [session, fn, buffer](mxb::Worker::Call::action_t action)
     {
         if (action == mxb::Worker::Call::EXECUTE)
         {
+            mxb_assert(session->state() == MXS_SESSION::State::STARTED);
+
             // Setting the current client DCB adds the session ID to the log messages
             DCB* old_dcb = dcb_get_current();
             dcb_set_current(session->client_dcb);
@@ -545,7 +547,6 @@ void MXS_SESSION::delay_routing(GWBUF* buffer, int seconds, std::function<bool(G
             gwbuf_free(buffer);
         }
 
-        session_put_ref(session);
         return false;
     };
 
@@ -1084,6 +1085,7 @@ bool Session::start()
 
 void Session::close()
 {
+    cancel_dcalls();
     m_state = State::STOPPING;
     m_down->close();
 }
