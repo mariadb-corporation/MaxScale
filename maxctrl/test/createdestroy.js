@@ -2,6 +2,7 @@ require("../test_utils.js")();
 
 var ctrl = require("../lib/core.js");
 var opts = { extra_args: ["--quiet"] };
+const fs = require("fs");
 
 describe("Create/Destroy Commands", function () {
   before(startMaxScale);
@@ -313,6 +314,17 @@ describe("Create/Destroy Commands", function () {
     await doCommand("unlink service parent-service child-service");
     await doCommand("destroy service parent-service");
     await doCommand("destroy service child-service");
+  });
+
+  it("generates a diagnostic report", async function () {
+    if (fs.existsSync("report.txt")) {
+      fs.rmSync("report.txt");
+    }
+
+    await doCommand("create report report.txt");
+    const data = fs.readFileSync("report.txt", { encoding: "utf8" });
+    const js = JSON.parse(data);
+    expect(js.maxscale).to.be.an("object");
   });
 
   after(stopMaxScale);

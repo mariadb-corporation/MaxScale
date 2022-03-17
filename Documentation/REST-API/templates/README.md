@@ -1,17 +1,11 @@
 # Generating the REST API Documentation
 
-## TL;DR
+* Make sure you have Python3 and the venv module for it installed.
 
-Run the `regenerate.sh` script and add the changes to git with `git add
--p`. Small changes like counters or dates do not always need to be updated to
-keep the diffs smaller.
+* Install MariaDB Connector/C (i.e. the `MariaDB-devel` package) from the
+  mariadb.com repositories, needed by the Python connector.
 
-## Steps to Reproduce
+* Run the `regenerate_documentation.sh` script.
 
-* Configure with CMake: `mkdir -p /tmp/build && cd /tmp/build && cmake -DWITH_SCRIPTS=N -DWITH_MAXSCALE_CNF=N -DCMAKE_INSTALL_PREFIX=/tmp/build/ <path to MaxScale sources>`
-* Build MaxScale in `/tmp/build/` (this is important: it keeps the paths consistent regardless of who builds it): `cd /tmp/build/ && make install`
-* Create required directories: `mkdir -p {cache,run}/maxscale`
-* Start a two-node cluster on ports 3000 and 3001, you can use [this docker-compose file](../../../test/docker-compose.yml).
-* Start MaxScale using the `rest_api.cnf` that is found at the root of the build directory: `bin/maxscale -df rest_api.cnf`
-* Open a connection to MaxScale on port 4006 and execute `SELECT 1`, leave the connection open
-* Run `generate.py`
+* Add any new parts into the documentation, the counters and timestamps don't
+  necessarily need to be updated every time.

@@ -32,20 +32,20 @@ an external server, the operation may be expensive.
             "client": {
                 "cipher": ""
             },
-            "connected": "Sun Jul 18 04:50:55 2021",
+            "connected": "Thu Mar 17 10:27:52 2022",
             "connections": [
                 {
                     "cipher": "",
-                    "connection_id": 250,
+                    "connection_id": 9,
                     "server": "server1"
                 },
                 {
                     "cipher": "",
-                    "connection_id": 152,
+                    "connection_id": 9,
                     "server": "server2"
                 }
             ],
-            "idle": 2.3999999999999999,
+            "idle": 0.0,
             "log": [],
             "parameters": {
                 "log_error": false,
@@ -104,20 +104,20 @@ Get all sessions.
                 "client": {
                     "cipher": ""
                 },
-                "connected": "Sun Jul 18 04:50:55 2021",
+                "connected": "Thu Mar 17 10:27:52 2022",
                 "connections": [
                     {
                         "cipher": "",
-                        "connection_id": 250,
+                        "connection_id": 9,
                         "server": "server1"
                     },
                     {
                         "cipher": "",
-                        "connection_id": 152,
+                        "connection_id": 9,
                         "server": "server2"
                     }
                 ],
-                "idle": 2.5,
+                "idle": 0.0,
                 "log": [],
                 "parameters": {
                     "log_error": false,
