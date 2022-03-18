@@ -55,7 +55,7 @@ public:
     {
         if (m_cancel_at_destruct)
         {
-            m_worker.cancel_dcall(m_dcid);
+            cancel_dcall(m_dcid);
         }
     }
 
@@ -66,7 +66,7 @@ public:
 
     void start()
     {
-        m_dcid = m_worker.dcall(delay(), &TimerTest::tick, this);
+        m_dcid = dcall(delay(), &TimerTest::tick, this);
     }
 
     bool tick(Worker::Call::action_t action)
@@ -164,7 +164,7 @@ public:
 
     void start()
     {
-        worker()->dcall(10ms, &MoveTest::move, this);
+        dcall(10ms, &MoveTest::move, this);
     }
 
     bool move(Worker::Call::action_t action)

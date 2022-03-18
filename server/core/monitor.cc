@@ -2125,7 +2125,7 @@ bool MonitorWorker::pre_run()
         m_semaphore.post();
 
         pre_loop();
-        dcall(&m_callable, 1ms, &MonitorWorker::call_run_one_tick, this);
+        m_callable.dcall(1ms, &MonitorWorker::call_run_one_tick, this);
     }
     else
     {
@@ -2167,7 +2167,7 @@ bool MonitorWorker::call_run_one_tick()
     int64_t delay = ((ms_to_next_call <= 0) || (ms_to_next_call >= base_interval_ms)) ?
         base_interval_ms : ms_to_next_call;
 
-    dcall(&m_callable, milliseconds(delay), &MonitorWorker::call_run_one_tick, this);
+    m_callable.dcall(milliseconds(delay), &MonitorWorker::call_run_one_tick, this);
 
     return false;
 }

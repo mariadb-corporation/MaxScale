@@ -167,13 +167,13 @@ public:
     {
         if (m_instance->task_handle)
         {
-            worker.cancel_dcall(m_instance->task_handle);
+            m_instance->cancel_dcall(m_instance->task_handle);
             m_instance->task_handle = 0;
         }
 
         if (m_start)
         {
-            m_instance->task_handle = worker.dcall(m_instance, 1000ms, converter_func, m_instance);
+            m_instance->task_handle = m_instance->dcall(1000ms, converter_func, m_instance);
         }
     }
 

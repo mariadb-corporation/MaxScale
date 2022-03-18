@@ -874,13 +874,10 @@ bool Pinloki::purge_old_binlogs()
         next_purge_time = now + m_config.purge_poll_timeout();
     }
 
-    maxbase::Worker* worker = maxbase::Worker::get_current();
-    mxb_assert(worker);
-
     using namespace std::chrono;
     auto wait_ms = duration_cast<milliseconds>(next_purge_time - now);
 
-    worker->dcall(wait_ms, &Pinloki::purge_old_binlogs, this);
+    dcall(wait_ms, &Pinloki::purge_old_binlogs, this);
 
     return false;
 }
