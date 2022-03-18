@@ -3,7 +3,11 @@
         v-if="'type' in item || 'description' in item || 'unit' in item || 'default_value' in item"
         :id="`param-${item.id}_${componentId}`"
         class="pointer"
-        :class="[isTree ? 'override-td--padding--tree' : 'override-td--padding']"
+        :class="[
+            isTree ? 'override-td--padding--tree' : 'override-td--padding',
+
+            item.mandatory ? 'label-required' : '',
+        ]"
     >
         {{ item.id }}
     </div>
@@ -40,3 +44,8 @@ export default {
     },
 }
 </script>
+<style lang="scss" scoped>
+.label-required::after {
+    top: -3px;
+}
+</style>
