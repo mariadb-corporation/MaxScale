@@ -503,6 +503,8 @@ bool DCB::read_SSL()
 {
     if (m_encryption.write_want_read)
     {
+        // A write-operation was waiting for a readable socket. Now that the socket seems readable,
+        // retry the write.
         writeq_drain();
     }
 
@@ -537,13 +539,7 @@ bool DCB::basic_read_SSL()
             bytes_from_socket += ret;
             expect_more_data = (ret == read_limit);
 
-            /* If we were in a retry situation, need to clear flag and attempt write */
-            if (m_encryption.read_want_write || m_encryption.read_want_read)
-            {
-                m_encryption.read_want_write = false;
-                m_encryption.read_want_read = false;
-                writeq_drain();
-            }
+            m_encryption.read_want_write = false;
         }
         else
         {
@@ -551,20 +547,19 @@ bool DCB::basic_read_SSL()
             switch (SSL_get_error(m_encryption.handle, ret))
             {
             case SSL_ERROR_ZERO_RETURN:
-                /* react to the SSL connection being closed */
+                // SSL-connection closed.
                 trigger_hangup_event();
                 break;
 
             case SSL_ERROR_WANT_READ:
-                /* Prevent SSL I/O on connection until retried, return to poll loop */
+                // No more data can be read, return to poll. This is equivalent to EWOULDBLOCK.
                 m_encryption.read_want_write = false;
-                m_encryption.read_want_read = true;
                 break;
 
             case SSL_ERROR_WANT_WRITE:
-                /* Prevent SSL I/O on connection until retried, return to poll loop */
+                // Read-operation needs to write data but socket is not writable. Return to poll,
+                // wait for a write-ready-event and then read again.
                 m_encryption.read_want_write = true;
-                m_encryption.read_want_read = false;
                 break;
 
             default:
@@ -753,7 +748,8 @@ void DCB::writeq_drain()
     {
         if (m_encryption.read_want_write)
         {
-            /** The SSL library needs to write more data */
+            // A read-op was waiting for a writable socket. The socket may be writable now,
+            // so retry the read.
             trigger_read_event();
         }
         socket_write_SSL();
@@ -880,11 +876,11 @@ void DCB::socket_write_SSL()
         int res = SSL_write(m_encryption.handle, m_writeq.data(), writable);
         if (res > 0)
         {
-            /* Successful write */
-            m_encryption.write_want_read = false;
             m_writeq.consume(res);
             total_written += res;
+
             m_encryption.retry_write_size = 0;
+            m_encryption.write_want_read = false;
         }
         else
         {
@@ -892,24 +888,25 @@ void DCB::socket_write_SSL()
             switch (SSL_get_error(m_encryption.handle, res))
             {
             case SSL_ERROR_ZERO_RETURN:
-                /* react to the SSL connection being closed */
+                // SSL-connection closed.
                 trigger_hangup_event();
                 break;
 
             case SSL_ERROR_WANT_READ:
-                /* Prevent SSL I/O on connection until retried, return to poll loop */
+                // Write-operation needs to read data that is not yet available. Go back to poll, wait for a
+                // read-event, and then try to write again.
                 m_encryption.write_want_read = true;
                 m_encryption.retry_write_size = writable;
                 break;
 
             case SSL_ERROR_WANT_WRITE:
-                /* Prevent SSL I/O on connection until retried, return to poll loop */
+                // Write buffer is full, go back to poll and wait. Equivalent to EWOULDBLOCK.
                 m_encryption.write_want_read = false;
                 m_encryption.retry_write_size = writable;
                 break;
 
             default:
-                /* Report error(s) and shutdown the connection */
+                // Report errors and shutdown the connection.
                 if (log_errors_SSL(res) < 0)
                 {
                     trigger_hangup_event();

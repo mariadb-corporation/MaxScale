@@ -568,7 +568,6 @@ protected:
     {
         SSL*     handle = nullptr;                      /**< SSL handle for connection */
         SSLState state = SSLState::HANDSHAKE_UNKNOWN;   /**< Current state of SSL if in use */
-        bool     read_want_read = false;
         bool     read_want_write = false;
         bool     write_want_read = false;
         bool     verify_host = false;
