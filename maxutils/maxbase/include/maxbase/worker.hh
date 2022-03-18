@@ -421,6 +421,7 @@ public:
     private:
         friend class Worker;
         void register_dcall(DCall* pCall);
+        void unregister_dcall(DCall* pCall);
         void unregister_dcall(DCId id);
 
     private:
@@ -870,7 +871,7 @@ private:
         return add_dcall(new DCallFunctorWithoutCancel(pOwner, delay, next_dcall_id(), std::move(f)));
     }
 
-    bool cancel_dcall(DCId id, bool call = true);
+    void cancel_dcall(DCall* pCall, bool call = true);
 
 private:
     friend class DCall;

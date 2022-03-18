@@ -298,30 +298,31 @@ bool Worker::Callable::cancel_dcall(Worker::DCId id, bool call)
 {
     bool rv = false;
 
-    if (m_dcalls_suspended)
+    auto it = m_dcalls.find(id);
+
+    if (it != m_dcalls.end())
     {
-        // If the dcalls have been suspended, then we have to delete the call here, as
-        // the worker has no knowledge about it.
+        auto* pCall = it->second;
 
-        auto it = m_dcalls.find(id);
-
-        if (it != m_dcalls.end())
+        if (m_dcalls_suspended)
         {
-            auto* pCall = it->second;
+            // If the dcalls have been suspended, then we have to delete the call here, as
+            // the worker has no knowledge about it.
+
             if (call)
             {
                 pCall->call(Callable::CANCEL);
             }
             m_dcalls.erase(it);
             delete pCall;
-
-            rv = true;
         }
-    }
-    else
-    {
-        mxb_assert(m_pWorker);
-        rv = m_pWorker->cancel_dcall(id, call);
+        else
+        {
+            mxb_assert(m_pWorker);
+            m_pWorker->cancel_dcall(pCall, call);
+        }
+
+        rv = true;
     }
 
     return rv;
@@ -352,8 +353,8 @@ void Worker::Callable::cancel_dcalls(bool call)
         // Can't iterate; the cancel_delayed_call() will cause unregister_dcall() to be called.
         while (!m_dcalls.empty())
         {
-            auto id = m_dcalls.begin()->first;
-            m_pWorker->cancel_dcall(id, call);
+            auto* pCall = m_dcalls.begin()->second;
+            m_pWorker->cancel_dcall(pCall, call);
         }
     }
 }
@@ -391,8 +392,20 @@ void Worker::Callable::register_dcall(Worker::DCall* pCall)
     m_dcalls.emplace(pCall->id(), pCall);
 }
 
+void Worker::Callable::unregister_dcall(Worker::DCall* pCall)
+{
+    // The call need not be present. Used when it may have been canceled.
+    auto it = m_dcalls.find(pCall->id());
+
+    if (it != m_dcalls.end())
+    {
+        m_dcalls.erase(it);
+    }
+}
+
 void Worker::Callable::unregister_dcall(DCId id)
 {
+    // The call must be present. Used when it should be present.
     auto it = m_dcalls.find(id);
     mxb_assert(it != m_dcalls.end());
 
@@ -1021,7 +1034,7 @@ void Worker::tick()
         }
         else
         {
-            pCall->owner().unregister_dcall(pCall->id());
+            pCall->owner().unregister_dcall(pCall);
             delete pCall;
         }
 
@@ -1162,22 +1175,21 @@ void Worker::restore_dcall(DCall* pCall)
     }
 }
 
-bool Worker::cancel_dcall(DCId id, bool call)
+void Worker::cancel_dcall(DCall* pCall, bool call)
 {
     mxb_assert(Worker::get_current() == this || m_state == FINISHED);
 
-    DCall* pCall = remove_dcall(id);
+    remove_dcall(pCall);
 
-    if (pCall)
+    if (pCall != m_pCurrent_call)
     {
         if (call)
         {
             pCall->call(Callable::CANCEL);
         }
-        pCall->owner().unregister_dcall(pCall->id());
-        delete pCall;
     }
 
-    return pCall != nullptr;
+    pCall->owner().unregister_dcall(pCall->id());
+    delete pCall;
 }
 }
