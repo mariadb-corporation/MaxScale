@@ -947,37 +947,6 @@ private:
         return ++m_prev_dcid;
     }
 
-    /*
-    template<class D>
-    DCId dcall(Object::Reference* pReference,
-               const std::chrono::milliseconds& delay,
-               bool (* pFunction)(Worker::Call::action_t action, D data),
-               D data)
-    {
-        auto id = next_dcall_id();
-        return add_dcall(new DCallFunction<D>(pReference, delay, id, pFunction, data));
-    }
-
-    template<class T>
-    DCId dcall(Object::Reference* pReference,
-               const std::chrono::milliseconds& delay,
-               bool (T::* pMethod)(Worker::Call::action_t action),
-               T* pT)
-    {
-        auto id = next_dcall_id();
-        return add_dcall(new DCallMethodWithCancel<T>(pReference, delay, id, pMethod, pT));
-    }
-
-    DCId dcall(Object::Reference* pReference,
-               const std::chrono::milliseconds& delay,
-               std::function<bool(Worker::Call::action_t action)>&& f)
-    {
-        auto id = next_dcall_id();
-        return add_dcall(new DCallFunctorWithCancel(pReference, delay, id, std::move(f)));
-    }
-
-    class DCall
-    */
     class DCall
     {
         DCall(const DCall&) = delete;
