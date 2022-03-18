@@ -64,7 +64,7 @@ int ThrottleSession::real_routeQuery(GWBUF* buffer, bool is_delayed)
         maxbase::Worker* worker = maxbase::Worker::get_current();
         mxb_assert(worker);
         m_delayed_call_id = m_pSession->dcall(std::chrono::milliseconds(delay),
-                                              [this, buffer](mxb::Worker::Call::action_t action) {
+                                              [this, buffer](mxb::Worker::Callable::Action action) {
                                                   return delayed_routeQuery(action, buffer);
                                               });
 
@@ -107,19 +107,19 @@ int ThrottleSession::real_routeQuery(GWBUF* buffer, bool is_delayed)
     return mxs::FilterSession::routeQuery(buffer);
 }
 
-bool ThrottleSession::delayed_routeQuery(maxbase::Worker::Call::action_t action, GWBUF* buffer)
+bool ThrottleSession::delayed_routeQuery(maxbase::Worker::Callable::Action action, GWBUF* buffer)
 {
     m_delayed_call_id = 0;
     switch (action)
     {
-    case maxbase::Worker::Call::EXECUTE:
+    case maxbase::Worker::Callable::EXECUTE:
         if (!real_routeQuery(buffer, true))
         {
             m_pSession->kill();
         }
         break;
 
-    case maxbase::Worker::Call::CANCEL:
+    case maxbase::Worker::Callable::CANCEL:
         gwbuf_free(buffer);
         break;
     }

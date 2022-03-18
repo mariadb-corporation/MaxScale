@@ -272,15 +272,6 @@ private:
     class DCall;
 
 public:
-    struct Call
-    {
-        enum action_t
-        {
-            EXECUTE,    /**< Execute the call */
-            CANCEL      /**< Cancel the call */
-        };
-    };
-
     /**
      * In order to make delayed calls on a Worker, an object, derived from Worker::Callable,
      * must be provided, using which the Worker can detect whether the target for the
@@ -291,6 +282,12 @@ public:
     class Callable
     {
     public:
+        enum Action
+        {
+            EXECUTE,    /**< Execute the call */
+            CANCEL      /**< Cancel the call */
+        };
+
         Callable(Worker* pWorker)
             : m_pWorker(pWorker)
         {
@@ -320,7 +317,7 @@ public:
          */
         template<class D>
         DCId dcall(const std::chrono::milliseconds& delay,
-                   bool (* pFunction)(Call::action_t action, D data),
+                   bool (* pFunction)(Action action, D data),
                    D data)
         {
             mxb_assert(m_pWorker);
@@ -338,7 +335,7 @@ public:
          */
         template<class T>
         DCId dcall(const std::chrono::milliseconds& delay,
-                   bool (T::* pMethod)(Call::action_t action),
+                   bool (T::* pMethod)(Action action),
                    T* pT)
         {
             mxb_assert(m_pWorker);
@@ -363,7 +360,7 @@ public:
          * @return The dcall id.
          */
         DCId dcall(const std::chrono::milliseconds& delay,
-                   std::function<bool(Call::action_t action)>&& f)
+                   std::function<bool(Action action)>&& f)
         {
             mxb_assert(m_pWorker);
             return m_pWorker->dcall(this, delay, std::move(f));
@@ -812,7 +809,7 @@ private:
     template<class D>
     DCId dcall(Callable* pOwner,
                const std::chrono::milliseconds& delay,
-               bool (* pFunction)(Worker::Call::action_t action, D data),
+               bool (* pFunction)(Callable::Action action, D data),
                D data)
     {
         auto id = next_dcall_id();
@@ -822,7 +819,7 @@ private:
     template<class T>
     DCId dcall(Callable* pOwner,
                const std::chrono::milliseconds& delay,
-               bool (T::* pMethod)(Worker::Call::action_t action),
+               bool (T::* pMethod)(Callable::Action action),
                T* pT)
     {
         return add_dcall(new DCallMethodWithCancel<T>(pOwner, delay, next_dcall_id(), pMethod, pT));
@@ -839,7 +836,7 @@ private:
 
     template<class T>
     DCId dcall(const std::chrono::milliseconds& delay,
-               bool (T::* pMethod)(Worker::Call::action_t action),
+               bool (T::* pMethod)(Callable::Action action),
                T* pT)
     {
         static_assert(std::is_base_of_v<Callable, T>,
@@ -861,7 +858,7 @@ private:
 
     DCId dcall(Callable* pOwner,
                const std::chrono::milliseconds& delay,
-               std::function<bool(Worker::Call::action_t action)>&& f)
+               std::function<bool(Callable::Action action)>&& f)
     {
         return add_dcall(new DCallFunctorWithCancel(pOwner, delay, next_dcall_id(), std::move(f)));
     }
@@ -917,7 +914,7 @@ private:
             return m_at;
         }
 
-        bool call(Worker::Call::action_t action)
+        bool call(Callable::Action action)
         {
             bool rv = do_call(action);
             // We try to invoke the function as often as it was specified. If the
@@ -948,7 +945,7 @@ private:
             mxb_assert(delay.count() >= 0);
         }
 
-        virtual bool do_call(Worker::Call::action_t action) = 0;
+        virtual bool do_call(Callable::Action action) = 0;
 
     private:
         static int64_t get_at(int32_t delay, mxb::TimePoint tp)
@@ -977,7 +974,7 @@ private:
         DCallFunction(Callable* pOwner,
                       const std::chrono::milliseconds& delay,
                       DCId id,
-                      bool (*pFunction)(Worker::Call::action_t action, D data),
+                      bool (*pFunction)(Callable::Action action, D data),
                       D data)
             : DCall(pOwner, delay, id)
             , m_pFunction(pFunction)
@@ -986,13 +983,13 @@ private:
         }
 
     private:
-        bool do_call(Worker::Call::action_t action) override final
+        bool do_call(Callable::Action action) override final
         {
             return m_pFunction(action, m_data);
         }
 
     private:
-        bool (* m_pFunction)(Worker::Call::action_t, D);
+        bool (* m_pFunction)(Callable::Action, D);
         D m_data;
     };
 
@@ -1006,7 +1003,7 @@ private:
         DCallMethodWithCancel(Callable* pOwner,
                               const std::chrono::milliseconds& delay,
                               DCId id,
-                              bool (T::* pMethod)(Worker::Call::action_t),
+                              bool (T::* pMethod)(Callable::Action),
                               T* pT)
             : DCall(pOwner, delay, id)
             , m_pMethod(pMethod)
@@ -1015,13 +1012,13 @@ private:
         }
 
     private:
-        bool do_call(Worker::Call::action_t action) override final
+        bool do_call(Callable::Action action) override final
         {
             return (m_pT->*m_pMethod)(action);
         }
 
     private:
-        bool (T::* m_pMethod)(Worker::Call::action_t);
+        bool (T::* m_pMethod)(Callable::Action);
         T* m_pT;
     };
 
@@ -1044,11 +1041,11 @@ private:
         }
 
     private:
-        bool do_call(Worker::Call::action_t action) override final
+        bool do_call(Callable::Action action) override final
         {
             bool rv = false;
 
-            if (action == Call::EXECUTE)
+            if (action == Callable::EXECUTE)
             {
                 rv = (m_pT->*m_pMethod)();
             }
@@ -1070,20 +1067,20 @@ private:
         DCallFunctorWithCancel(Callable* pOwner,
                                const std::chrono::milliseconds& delay,
                                DCId id,
-                               std::function<bool (Worker::Call::action_t)> f)
+                               std::function<bool (Callable::Action)> f)
             : DCall(pOwner, delay, id)
             , m_f(std::move(f))
         {
         }
 
     private:
-        bool do_call(Worker::Call::action_t action) override
+        bool do_call(Callable::Action action) override
         {
             return m_f(action);
         }
 
     private:
-        std::function<bool(Worker::Call::action_t)> m_f;
+        std::function<bool(Callable::Action)> m_f;
     };
 
     class DCallFunctorWithoutCancel : public DCall
@@ -1102,11 +1099,11 @@ private:
         }
 
     private:
-        bool do_call(Worker::Call::action_t action) override
+        bool do_call(Callable::Action action) override
         {
             bool rv = false;
 
-            if (action == Call::EXECUTE)
+            if (action == Callable::EXECUTE)
             {
                 rv = m_f();
             }

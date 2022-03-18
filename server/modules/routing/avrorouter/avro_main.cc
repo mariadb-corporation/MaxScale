@@ -107,9 +107,9 @@ bool AvroConfig::post_configure(const std::map<std::string, mxs::ConfigParameter
     return m_router.post_configure();
 }
 
-bool converter_func(Worker::Call::action_t action, Avro* router)
+bool converter_func(Worker::Callable::Action action, Avro* router)
 {
-    if (action == Worker::Call::CANCEL)
+    if (action == Worker::Callable::CANCEL)
     {
         return false;
     }

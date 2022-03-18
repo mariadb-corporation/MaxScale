@@ -896,8 +896,8 @@ bool RoutingWorker::pre_run()
     {
         // Every second, check connection pool for expired connections. Ideally, every pooled
         // connection would set their own timer.
-        auto check_pool_cb = [this](Worker::Call::action_t action){
-                if (action == mxb::Worker::Call::action_t::EXECUTE)
+        auto check_pool_cb = [this](Callable::Action action){
+                if (action == Callable::EXECUTE)
                 {
                     pool_close_expired();
                 }
@@ -908,8 +908,8 @@ bool RoutingWorker::pre_run()
         // The normal connection availability notification is not fool-proof, as it's only sent to the
         // current worker. Every now and then, each worker should check for connections regardless since
         // some may be available.
-        auto activate_eps_cb = [this](Worker::Call::action_t action) {
-                if (action == mxb::Worker::Call::action_t::EXECUTE)
+        auto activate_eps_cb = [this](Callable::Action action) {
+                if (action == Callable::Action::EXECUTE)
                 {
                     activate_waiting_endpoints();
                 }
@@ -917,8 +917,8 @@ bool RoutingWorker::pre_run()
             };
         m_callable.dcall(5s, activate_eps_cb);
 
-        auto timeout_eps_cb = [this](Worker::Call::action_t action) {
-                if (action == mxb::Worker::Call::action_t::EXECUTE)
+        auto timeout_eps_cb = [this](Callable::Action action) {
+                if (action == Callable::Action::EXECUTE)
                 {
                     fail_timed_out_endpoints();
                 }

@@ -522,9 +522,9 @@ void MXS_SESSION::delay_routing(GWBUF* buffer, int seconds, std::function<bool(G
 {
     auto session = this;
 
-    auto cb = [session, fn, buffer](mxb::Worker::Call::action_t action)
+    auto cb = [session, fn, buffer](mxb::Worker::Callable::Action action)
     {
-        if (action == mxb::Worker::Call::EXECUTE)
+        if (action == mxb::Worker::Callable::EXECUTE)
         {
             mxb_assert(session->state() == MXS_SESSION::State::STARTED);
 
@@ -1642,11 +1642,11 @@ void Session::remove_userdata_subscriber(MXS_SESSION::EventSubscriber* obj)
     m_event_subscribers.erase(obj);
 }
 
-bool Session::pool_backends_cb(mxb::Worker::Call::action_t action)
+bool Session::pool_backends_cb(mxb::Worker::Callable::Action action)
 {
     // This should only be called by the delayed call mechanism.
     bool call_again = true;
-    if (action == Worker::Call::action_t::EXECUTE)
+    if (action == Worker::Callable::EXECUTE)
     {
         // Session has been idle for long enough, check that the connections have not had
         // any activity.

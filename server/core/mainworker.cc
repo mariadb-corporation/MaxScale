@@ -150,9 +150,9 @@ void MainWorker::post_run()
 }
 
 // static
-bool MainWorker::inc_ticks(Worker::Call::action_t action)
+bool MainWorker::inc_ticks(Worker::Callable::Action action)
 {
-    if (action == Worker::Call::EXECUTE)
+    if (action == Callable::EXECUTE)
     {
         mxb::atomic::add(&this_unit.clock_ticks, 1, mxb::atomic::RELAXED);
     }

@@ -289,7 +289,7 @@ Worker::Callable::~Callable()
         MXB_ERROR("Recipient of delayed call was deleted before delayed call was due.");
     }
 
-    // false, because the dcalls can't be called with Worker::Call::CANCEL as most
+    // False, because the dcalls can't be called with Worker::Callable::CANCEL as most
     // parts of the object to be called already has been destructed at this point.
     cancel_dcalls(false);
 }
@@ -310,7 +310,7 @@ bool Worker::Callable::cancel_dcall(Worker::DCId id, bool call)
             auto* pCall = it->second;
             if (call)
             {
-                pCall->call(Worker::Call::CANCEL);
+                pCall->call(Callable::CANCEL);
             }
             m_dcalls.erase(it);
             delete pCall;
@@ -340,7 +340,7 @@ void Worker::Callable::cancel_dcalls(bool call)
 
             if (call)
             {
-                pCall->call(Worker::Call::CANCEL);
+                pCall->call(Callable::CANCEL);
             }
             delete pCall;
         }
@@ -445,7 +445,7 @@ Worker::~Worker()
     {
         DCall* pCall = i->second;
 
-        pCall->call(Call::CANCEL);
+        pCall->call(Callable::CANCEL);
         pCall->owner().unregister_dcall(pCall->id());
         delete pCall;
     }
@@ -1009,7 +1009,7 @@ void Worker::tick()
         m_calls.erase(j);
 
         m_pCurrent_call = pCall;
-        bool repeat = pCall->call(Worker::Call::EXECUTE);
+        bool repeat = pCall->call(Callable::EXECUTE);
         m_pCurrent_call = nullptr;
 
         if (repeat)
@@ -1172,7 +1172,7 @@ bool Worker::cancel_dcall(DCId id, bool call)
     {
         if (call)
         {
-            pCall->call(Worker::Call::CANCEL);
+            pCall->call(Callable::CANCEL);
         }
         pCall->owner().unregister_dcall(pCall->id());
         delete pCall;

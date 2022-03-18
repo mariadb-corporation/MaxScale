@@ -69,11 +69,11 @@ public:
         m_dcid = dcall(delay(), &TimerTest::tick, this);
     }
 
-    bool tick(Worker::Call::action_t action)
+    bool tick(Callable::Action action)
     {
         bool rv = false;
 
-        if (action == Worker::Call::EXECUTE)
+        if (action == Callable::EXECUTE)
         {
             int64_t now = get_monotonic_time_ms();
             int64_t diff = abs(now - m_at);
@@ -167,9 +167,9 @@ public:
         dcall(10ms, &MoveTest::move, this);
     }
 
-    bool move(Worker::Call::action_t action)
+    bool move(Callable::Action action)
     {
-        if (action == Worker::Call::CANCEL)
+        if (action == Callable::CANCEL)
         {
             return false;
         }

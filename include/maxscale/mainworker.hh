@@ -107,7 +107,7 @@ private:
     bool pre_run() override;
     void post_run() override;
 
-    static bool inc_ticks(Worker::Call::action_t action);
+    static bool inc_ticks(Callable::Action action);
 
     bool balance_workers_dc();
     void order_balancing_dc();
