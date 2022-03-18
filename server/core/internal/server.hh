@@ -198,10 +198,7 @@ public:
      *
      * @return The output stream
      */
-    std::ostream& persist(std::ostream& os) const
-    {
-        return m_settings.persist(os);
-    }
+    std::ostream& persist(std::ostream& os) const;
 
     /**
      * Update server-specific monitor username. Does not affect existing monitor connections,

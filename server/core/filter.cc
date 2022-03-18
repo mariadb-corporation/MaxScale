@@ -236,6 +236,7 @@ json_t* FilterDef::json_data(const char* host) const
 
     json_object_set_new(attr, CN_MODULE, json_string(module()));
     json_object_set_new(attr, CN_PARAMETERS, parameters_to_json());
+    json_object_set_new(attr, CN_SOURCE, mxs::Config::object_source_to_json(name()));
 
     if (json_t* diag = instance()->diagnostics())
     {

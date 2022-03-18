@@ -1035,6 +1035,14 @@ done inside a re-playable transaction from affecting servers outside of the
 transaction. This behavior was added in MaxScale 6.1.4. Older versions allowed
 routing hints to override the transaction logic.
 
+### Known Limitations of Routing Hints
+
+* If a `SELECT` statement with a `maxscale route to slave` hint is received
+  while autocommit is disabled, the query will be routed to a slave server. This
+  causes some metadata locks to be acquired on the database in question which
+  will block DDL statements on the server until either the connection is closed
+  or autocommit is enabled again.
+
 ## Examples
 
 Examples of the readwritesplit router in use can be found in the

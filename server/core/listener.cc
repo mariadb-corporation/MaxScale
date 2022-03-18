@@ -644,7 +644,7 @@ std::vector<SListener> listener_find_by_service(const SERVICE* service)
 
 std::ostream& Listener::persist(std::ostream& os) const
 {
-    m_config.persist(os);
+    m_config.persist(os, {s_type.name()});
     m_shared_data->m_proto_module->getConfiguration().persist_append(os);
     return os;
 }
@@ -665,6 +665,7 @@ json_t* Listener::to_json(const char* host) const
 
     json_t* attr = json_object();
     json_object_set_new(attr, CN_STATE, json_string(state()));
+    json_object_set_new(attr, CN_SOURCE, mxs::Config::object_source_to_json(name()));
 
     auto& protocol_module = m_shared_data->m_proto_module;
 

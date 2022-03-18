@@ -625,6 +625,15 @@ namespace
 struct ThisUnit
 {
     bool mask_passwords = true;
+
+    // The set of objects that were read from the configuration files
+    std::set<std::string> static_objects {"maxscale"};
+
+    // The objects that were created at runtime or read from persisted configuration files
+    std::set<std::string> dynamic_objects;
+
+    // The names of all objects mapped to the source file they were read from.
+    std::map<std::string, std::string> source_files;
 } this_unit;
 
 void reconnect_config_manager(const std::string& ignored)
@@ -835,6 +844,68 @@ Config& Config::init(int argc, char** argv)
 Config& Config::get()
 {
     return init(0, nullptr);
+}
+
+// static
+bool Config::is_static_object(const std::string& name)
+{
+    return this_unit.static_objects.find(name) != this_unit.static_objects.end();
+}
+
+// static
+bool Config::is_dynamic_object(const std::string& name)
+{
+    return this_unit.dynamic_objects.find(name) != this_unit.dynamic_objects.end()
+           || !is_static_object(name);
+}
+
+// static
+void Config::set_object_source_file(const std::string& name, const std::string& file)
+{
+    this_unit.source_files[name] = file;
+}
+
+// static
+json_t* Config::object_source_to_json(const std::string& name)
+{
+    json_t* obj = json_object();
+    json_t* source_file = nullptr;
+    json_t* source_type = nullptr;
+
+    if (name.substr(0, 2) == "@@")
+    {
+        source_file = json_null();
+        source_type = json_string("volatile");
+    }
+    else if (!mxs::Config::get().config_sync_cluster.empty())
+    {
+        source_file = json_string(mxs::ConfigManager::get()->dynamic_config_filename().c_str());
+        source_type = json_string("cluster");
+    }
+    else if (mxs::Config::get().load_persisted_configs || is_static_object(name))
+    {
+        // We expect the file to be there but in case it isn't, use the bracket operator to be safe. This
+        // also covers the case where load_persisted_configs is disabled but the object was found in a static
+        // file.
+        mxb_assert(this_unit.source_files.find(name) != this_unit.source_files.end());
+        source_file = json_string(this_unit.source_files[name].c_str());
+        source_type = json_string(is_dynamic_object(name) ? "runtime" : "static");
+    }
+    else
+    {
+        // load_persisted_configs has been disabled which means we don't know if the object was modified, only
+        // if it originated from a config file or not. This branch should only be reached with objects that
+        // were created at runtime.
+        mxb_assert(!mxs::Config::get().load_persisted_configs && !is_static_object(name));
+        source_file = json_null();
+        source_type = json_string("runtime");
+    }
+
+    mxb_assert(source_file && source_type);
+    json_object_set_new(obj, "file", source_file);
+    json_object_set_new(obj, "type", source_type);
+
+    return obj;
 }
 
 bool Config::configure(const mxs::ConfigParameters& params, mxs::ConfigParameters* pUnrecognized)
@@ -1638,6 +1709,20 @@ bool config_load_and_process(const string& main_cfg_file,
 
         if (success)
         {
+            for (const auto& [k, v] : output)
+            {
+                mxs::Config::set_object_source_file(k, v.source_file);
+
+                if (v.source_type == ConfigSection::SourceType::RUNTIME)
+                {
+                    this_unit.dynamic_objects.insert(k);
+                }
+                else
+                {
+                    this_unit.static_objects.insert(k);
+                }
+            }
+
             if (!check_config_objects(output) || !process_config_context(output))
             {
                 success = false;

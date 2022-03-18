@@ -767,6 +767,8 @@ json_t* Server::json_attributes() const
 
     json_object_set_new(attr, "statistics", statistics);
 
+    json_object_set_new(attr, CN_SOURCE, mxs::Config::object_source_to_json(name()));
+
     // Retrieve additional server-specific attributes from monitor and combine it with the base data.
     if (auto extra = MonitorManager::monitored_server_attributes_json(this))
     {
@@ -1300,4 +1302,9 @@ mxb::TimePoint ServerEndpoint::conn_wait_start() const
 std::unique_ptr<mxs::Endpoint> Server::get_connection(mxs::Component* up, MXS_SESSION* session)
 {
     return std::unique_ptr<mxs::Endpoint>(new ServerEndpoint(up, session, this));
+}
+
+std::ostream& Server::persist(std::ostream& os) const
+{
+    return m_settings.persist(os, {s_type.name()});
 }

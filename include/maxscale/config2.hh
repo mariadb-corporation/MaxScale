@@ -1658,16 +1658,18 @@ public:
     /**
      * Persist the configuration to a stream.
      *
-     * @param out  The stream to persist to.
+     * @param out           The stream to persist to.
+     * @param force_persist Names of parameters that are always persisted
      */
-    std::ostream& persist(std::ostream& out) const;
+    std::ostream& persist(std::ostream& out, const std::set<std::string>& force_persist = {}) const;
 
     /**
      * Append the configuration to an already persisted configuration.
      *
-     * @param out  The stream to persist to.
+     * @param out           The stream to persist to.
+     * @param force_persist Names of parameters that are always persisted
      */
-    std::ostream& persist_append(std::ostream& out) const;
+    std::ostream& persist_append(std::ostream& out, const std::set<std::string>& force_persist = {}) const;
 
     /**
      * Fill the object with the param-name/param-value pairs of the configuration.

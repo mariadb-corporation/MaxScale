@@ -20,6 +20,11 @@ const server_fields = [
     description: "Server name",
   },
   {
+    name: "Source",
+    path: "attributes.source.file",
+    description: "File where the object is stored in",
+  },
+  {
     name: "Address",
     path: "attributes.parameters.address",
     description: "Address where the server listens",
@@ -113,6 +118,11 @@ const service_fields = [
     description: "Service name",
   },
   {
+    name: "Source",
+    path: "attributes.source.file",
+    description: "File where the object is stored in",
+  },
+  {
     name: "Router",
     path: "attributes.router",
     description: "Router that the service uses",
@@ -179,6 +189,11 @@ const monitor_fields = [
     name: "Monitor",
     path: "id",
     description: "Monitor name",
+  },
+  {
+    name: "Source",
+    path: "attributes.source.file",
+    description: "File where the object is stored in",
   },
   {
     name: "Module",
@@ -287,6 +302,11 @@ const filter_fields = [
     description: "Filter name",
   },
   {
+    name: "Source",
+    path: "attributes.source.file",
+    description: "File where the object is stored in",
+  },
+  {
     name: "Module",
     path: "attributes.module",
     description: "The module that the filter uses",
@@ -313,6 +333,11 @@ const listener_fields = [
     name: "Name",
     path: "id",
     description: "Listener name",
+  },
+  {
+    name: "Source",
+    path: "attributes.source.file",
+    description: "File where the object is stored in",
   },
   {
     name: "Service",

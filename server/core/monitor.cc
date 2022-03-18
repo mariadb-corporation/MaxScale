@@ -513,6 +513,7 @@ json_t* Monitor::to_json(const char* host) const
     json_object_set_new(attr, CN_MODULE, json_string(m_module.c_str()));
     json_object_set_new(attr, CN_STATE, json_string(state_string()));
     json_object_set_new(attr, CN_TICKS, json_integer(ticks()));
+    json_object_set_new(attr, CN_SOURCE, mxs::Config::object_source_to_json(name()));
 
     /** Monitor parameters */
     json_object_set_new(attr, CN_PARAMETERS, parameters_to_json());

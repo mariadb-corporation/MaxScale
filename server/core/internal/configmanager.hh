@@ -133,6 +133,27 @@ public:
      */
     mxb::Json to_json() const;
 
+    /**
+     * The filename of the dynamically created JSON config
+     *
+     * @return The path to the file that contains the config
+     */
+    std::string dynamic_config_filename() const;
+
+    /**
+     * Get the configuration version
+     *
+     * This effectively tells you how many changes have been made to MaxScale over the lifetime of the
+     * configured cluster. If the returned value is 0, no changes have been made and the configuration has
+     * been read only from the static file.
+     *
+     * @return The version of the configuration
+     */
+    int64_t version() const
+    {
+        return m_version;
+    }
+
 private:
 
     struct Exception : public std::runtime_error
@@ -166,8 +187,7 @@ private:
         return Exception(args_to_string(ss, args ...));
     }
 
-    Type        to_type(const std::string& type);
-    std::string dynamic_config_filename() const;
+    Type to_type(const std::string& type);
 
     void process_config(const mxb::Json& new_json);
     bool revert_changes();

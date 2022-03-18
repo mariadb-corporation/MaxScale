@@ -937,7 +937,7 @@ std::vector<Service*> service_filter_in_use(const SFilterDef& filter)
 std::ostream& Service::persist(std::ostream& os) const
 {
     m_router->getConfiguration().persist(os);
-    m_config.persist_append(os);
+    m_config.persist_append(os, {s_type.name()});
 
     const auto& data = *m_data;
 
@@ -1103,6 +1103,8 @@ json_t* service_attributes(const char* host, const SERVICE* svc)
     // versions always have them in the statistics object of the attributes but they are also duplicated in
     // the service attributes for backwards compatibility.
     json_object_set_new(attr, "statistics", service->stats().to_json());
+
+    json_object_set_new(attr, CN_SOURCE, mxs::Config::object_source_to_json(svc->name()));
 
     /** Add service parameters and listeners */
     json_t* params = service_parameters_to_json(service);
