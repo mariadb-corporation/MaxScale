@@ -462,19 +462,9 @@ bool mxs_mysql_is_ps_command(uint8_t cmd);
  *
  * @return The command byte
  */
-static inline uint8_t mxs_mysql_get_command(const GWBUF* buffer)
+inline uint8_t mxs_mysql_get_command(const GWBUF* buffer)
 {
-    mxb_assert(buffer);
-    if (gwbuf_link_length(buffer) > MYSQL_HEADER_LEN)
-    {
-        return GWBUF_DATA(buffer)[4];
-    }
-    else
-    {
-        uint8_t command = 0;
-        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &command);
-        return command;
-    }
+    return (*buffer)[MYSQL_HEADER_LEN];
 }
 
 /**

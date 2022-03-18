@@ -280,6 +280,8 @@ public:
     void set_owner(int owner);
 #endif
 
+    uint8_t operator[](size_t ind) const;
+
 private:
     std::shared_ptr<SHARED_BUF> m_sbuf;     /**< The shared buffer with the real data */
 

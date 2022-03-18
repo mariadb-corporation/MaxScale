@@ -153,9 +153,9 @@ private:
     bool perform_auth_exchange(mariadb::AuthenticationData& auth_data);
     void perform_check_token(AuthType auth_type);
     bool process_normal_packet(GWBUF&& buffer);
-    bool route_statement(mxs::Buffer&& buffer);
+    bool route_statement(GWBUF&& buffer);
     void finish_recording_history(const GWBUF* buffer, const mxs::Reply& reply);
-    bool record_for_history(mxs::Buffer& buffer, uint8_t cmd);
+    bool record_for_history(GWBUF& buffer, uint8_t cmd);
     void prune_history();
 
     bool start_change_user(GWBUF&& buffer);
@@ -181,7 +181,7 @@ private:
     void execute_kill(std::shared_ptr<KillInfo> info, bool send_ok);
 
     void track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf);
-    void track_current_command(const mxs::Buffer& buf);
+
     bool large_query_continues(const GWBUF& buffer) const;
     bool require_ssl() const;
 
@@ -332,7 +332,7 @@ private:
 
     int                      m_num_responses {0};   // How many responses we are waiting for
     uint32_t                 m_next_id {1};         // The next ID we'll use for a session command
-    mxs::Buffer              m_pending_cmd;         // Current session command being executed
+    GWBUF                    m_pending_cmd;         // Current session command being executed
     size_t                   m_max_sescmd_history;  // Number of stored session commands
     mariadb::QueryClassifier m_qc;
 

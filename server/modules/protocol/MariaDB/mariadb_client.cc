@@ -1135,13 +1135,13 @@ MariaDBClientConnection::process_special_queries(GWBUF& buffer)
     return rval;
 }
 
-bool MariaDBClientConnection::record_for_history(mxs::Buffer& buffer, uint8_t cmd)
+bool MariaDBClientConnection::record_for_history(GWBUF& buffer, uint8_t cmd)
 {
     bool should_record = false;
     const auto current_target = mariadb::QueryClassifier::CURRENT_TARGET_UNDEFINED;
 
     // Update the routing information. This must be done even if the command isn't added to the history.
-    const auto& info = m_qc.update_route_info(current_target, buffer.get());
+    const auto& info = m_qc.update_route_info(current_target, &buffer);
 
     switch (cmd)
     {
@@ -1152,7 +1152,7 @@ bool MariaDBClientConnection::record_for_history(mxs::Buffer& buffer, uint8_t cm
 
     case MXS_COM_STMT_EXECUTE:
         {
-            uint32_t id = mxs_mysql_extract_ps_id(buffer.get());
+            uint32_t id = mxs_mysql_extract_ps_id(&buffer);
             uint16_t params = m_qc.get_param_count(id);
 
             if (params > 0)
@@ -1179,7 +1179,7 @@ bool MariaDBClientConnection::record_for_history(mxs::Buffer& buffer, uint8_t cm
             // replay as all stored commands generate a response and none of them refer to any previous
             // commands. This means that the history can be executed in a single batch without waiting for any
             // responses.
-            uint32_t id = mxs_mysql_extract_ps_id(buffer.get());
+            uint32_t id = mxs_mysql_extract_ps_id(&buffer);
 
             auto it = std::find_if(m_session_data->history.begin(),
                                    m_session_data->history.end(),
@@ -1191,7 +1191,7 @@ bool MariaDBClientConnection::record_for_history(mxs::Buffer& buffer, uint8_t cm
             {
                 mxb_assert(it->id());
                 m_session_data->history.erase(it);
-                m_qc.ps_erase(buffer.get());
+                m_qc.ps_erase(&buffer);
                 m_session_data->exec_metadata.erase(id);
             }
         }
@@ -1221,7 +1221,7 @@ bool MariaDBClientConnection::record_for_history(mxs::Buffer& buffer, uint8_t cm
         if (cmd == MXS_COM_STMT_PREPARE || qc_query_is_type(info.type_mask(), QUERY_TYPE_PREPARE_NAMED_STMT))
         {
             // This will silence the warnings about unknown PS IDs
-            m_qc.ps_store(buffer.get(), m_next_id);
+            m_qc.ps_store(&buffer, m_next_id);
         }
 
         if (++m_next_id == MAX_SESCMD_ID)
@@ -1242,12 +1242,10 @@ bool MariaDBClientConnection::record_for_history(mxs::Buffer& buffer, uint8_t cm
  * @param buffer Buffer to route
  * @return True on success
  */
-bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
+bool MariaDBClientConnection::route_statement(GWBUF&& buffer)
 {
     bool recording = false;
-    uint8_t cmd = mxs_mysql_get_command(buffer.get());
-
-    buffer.make_contiguous();
+    uint8_t cmd = mxs_mysql_get_command(&buffer);
 
     if (m_session->capabilities() & RCAP_TYPE_SESCMD_HISTORY)
     {
@@ -1276,7 +1274,7 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
     if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING)
         && !service->config()->session_track_trx_state && !m_session->load_active)
     {
-        track_transaction_state(m_session, buffer.get());
+        track_transaction_state(m_session, &buffer);
     }
 
     // TODO: The response count and state is currently modified before we route the query to allow routers to
@@ -1288,7 +1286,7 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
     if (expecting_response)
     {
         ++m_num_responses;
-        m_session->retain_statement(buffer.get());
+        m_session->retain_statement(&buffer);
     }
 
     if (recording)
@@ -1297,7 +1295,7 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
         m_routing_state = RoutingState::RECORD_HISTORY;
     }
 
-    return m_downstream->routeQuery(buffer.release()) != 0;
+    return m_downstream->routeQuery(mxs::gwbuf_to_gwbufptr(move(buffer))) != 0;
 }
 
 void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer, const mxs::Reply& reply)
@@ -1305,7 +1303,7 @@ void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer, cons
     if (reply.is_complete())
     {
         MXB_INFO("Added %s to history with ID %u: %s (result: %s)",
-                 STRPACKETTYPE(m_pending_cmd.data()[4]), m_pending_cmd.id(),
+                 STRPACKETTYPE(m_pending_cmd[4]), m_pending_cmd.id(),
                  maxbase::show_some(m_pending_cmd.get_sql(), 200).c_str(),
                  reply.is_ok() ? "OK" : reply.error().message().c_str());
 
@@ -1317,7 +1315,7 @@ void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer, cons
         m_routing_state = RoutingState::COMPARE_RESPONSES;
         m_dcb->trigger_read_event();
         m_session_data->history_responses.emplace(m_pending_cmd.id(), reply.is_ok());
-        m_session_data->history.emplace_back(m_pending_cmd.release());
+        m_session_data->history.emplace_back(mxs::gwbuf_to_buffer(move(m_pending_cmd)));
 
         if (m_session_data->history.size() > m_max_sescmd_history)
         {
@@ -1446,7 +1444,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
             // A continuation of a recoded command, append it to the current command and route it forward
             bool is_large = large_query_continues(buffer);
             auto temp = mxs::gwbuf_to_gwbufptr(move(buffer));
-            m_pending_cmd.append(gwbuf_clone_shallow(temp));
+            m_pending_cmd.append(*temp);
             routed = m_downstream->routeQuery(temp) != 0;
 
             if (!is_large)
@@ -1462,7 +1460,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
         {
             // Local-infile routing continues until client sends an empty packet. Again, tracked by backend
             // but this time on the downstream side.
-            routed = route_statement(mxs::gwbuf_to_buffer(move(buffer)));
+            routed = route_statement(move(buffer));
             if (!session_is_load_active(m_session))
             {
                 m_routing_state = RoutingState::PACKET_START;
@@ -1969,13 +1967,6 @@ std::string MariaDBClientConnection::current_db() const
     return m_session_data->current_db;
 }
 
-void MariaDBClientConnection::track_current_command(const mxs::Buffer& buffer)
-{
-    mxb_assert(m_routing_state == RoutingState::PACKET_START);
-    const uint8_t* data = GWBUF_DATA(buffer.get());
-    m_command = MYSQL_GET_COMMAND(data);
-}
-
 const MariaDBUserCache* MariaDBClientConnection::user_account_cache()
 {
     auto users = m_session->service->user_account_cache();
@@ -2214,7 +2205,7 @@ bool MariaDBClientConnection::complete_change_user_p1()
 
     bool rval = false;
     // Failure here means a comms error -> session failure.
-    if (route_statement(mxs::gwbuf_to_buffer(move(m_change_user.client_query))))
+    if (route_statement(move(m_change_user.client_query)))
     {
         m_routing_state = RoutingState::CHANGING_USER;
         rval = true;
@@ -2664,7 +2655,7 @@ bool MariaDBClientConnection::process_normal_packet(GWBUF&& buffer)
          * In most cases we can assume that the connections are idle. */
         m_session->set_can_pool_backends(true);
         m_session->set_normal_quit();
-        success = route_statement(mxs::gwbuf_to_buffer(move(buffer)));
+        success = route_statement(move(buffer));
         break;
 
     case MXS_COM_SET_OPTION:
@@ -2684,7 +2675,7 @@ bool MariaDBClientConnection::process_normal_packet(GWBUF&& buffer)
             {
                 caps |= GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
             }
-            success = route_statement(mxs::gwbuf_to_buffer(move(buffer)));
+            success = route_statement(move(buffer));
         }
 
         break;
@@ -2704,7 +2695,7 @@ bool MariaDBClientConnection::process_normal_packet(GWBUF&& buffer)
             auto start = data + MYSQL_HEADER_LEN + 1;
             auto end = data + buffer.length();
             start_change_db(string(start, end));
-            success = route_statement(mxs::gwbuf_to_buffer(move(buffer)));
+            success = route_statement(move(buffer));
         }
         break;
 
@@ -2740,14 +2731,14 @@ bool MariaDBClientConnection::process_normal_packet(GWBUF&& buffer)
 
             if (route)
             {
-                success = route_statement(mxs::gwbuf_to_buffer(move(buffer)));
+                success = route_statement(move(buffer));
             }
         }
         break;
 
     default:
         // Not a query, just a command which does not require special handling.
-        success = route_statement(mxs::gwbuf_to_buffer(move(buffer)));
+        success = route_statement(move(buffer));
         break;
     }
 
