@@ -949,7 +949,7 @@ protected:
      */
     virtual bool immediate_tick_required();
 
-    Worker::Object m_wobject; /**< Context for own dcalls */
+    Worker::Callable m_callable; /**< Context for own dcalls */
 
 private:
     std::atomic<bool> m_thread_running; /**< Thread state. Only visible inside MonitorInstance. */

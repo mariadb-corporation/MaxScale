@@ -100,7 +100,7 @@ typedef char* (* session_variable_handler_t)(void* context,
  * Note that the first few fields (up to and including "entry_is_ready") must
  * precisely match the LIST_ENTRY structure defined in the list manager.
  */
-class MXS_SESSION : public mxb::Worker::Object
+class MXS_SESSION : public mxb::Worker::Callable
 {
 public:
     enum class State

@@ -455,11 +455,11 @@ private:
     bool try_shutdown();
 
 private:
-    Worker::Object m_wobject;   /*< Context for own dcalls */
-    SessionsById   m_sessions;  /*< A mapping of session_id->MXS_SESSION */
-    Zombies        m_zombies;   /*< DCBs to be deleted. */
-    IndexedStorage m_storage;   /*< The storage of this worker. */
-    DCBs           m_dcbs;      /*< DCBs managed by this worker. */
+    Worker::Callable m_callable;  /*< Context for own dcalls */
+    SessionsById     m_sessions;  /*< A mapping of session_id->MXS_SESSION */
+    Zombies          m_zombies;   /*< DCBs to be deleted. */
+    IndexedStorage   m_storage;   /*< The storage of this worker. */
+    DCBs             m_dcbs;      /*< DCBs managed by this worker. */
 
     struct
     {

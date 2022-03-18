@@ -27,11 +27,11 @@ namespace
 
 using namespace nosql;
 
-class ThisUnit : public mxb::Worker::Object
+class ThisUnit : public mxb::Worker::Callable
 {
 public:
     ThisUnit()
-        : mxb::Worker::Object(mxs::MainWorker::get())
+        : mxb::Worker::Callable(mxs::MainWorker::get())
     {
     }
 

@@ -278,7 +278,7 @@ int create_epoll_instance()
 }
 }
 
-Worker::Object::~Object()
+Worker::Callable::~Callable()
 {
     if (!m_dcalls.empty())
     {
@@ -294,7 +294,7 @@ Worker::Object::~Object()
     cancel_dcalls(false);
 }
 
-bool Worker::Object::cancel_dcall(Worker::DCId id, bool call)
+bool Worker::Callable::cancel_dcall(Worker::DCId id, bool call)
 {
     bool rv = false;
 
@@ -327,7 +327,7 @@ bool Worker::Object::cancel_dcall(Worker::DCId id, bool call)
     return rv;
 }
 
-void Worker::Object::cancel_dcalls(bool call)
+void Worker::Callable::cancel_dcalls(bool call)
 {
     if (m_dcalls_suspended)
     {
@@ -358,7 +358,7 @@ void Worker::Object::cancel_dcalls(bool call)
     }
 }
 
-void Worker::Object::suspend_dcalls()
+void Worker::Callable::suspend_dcalls()
 {
     mxb_assert(!m_dcalls_suspended);
 
@@ -372,7 +372,7 @@ void Worker::Object::suspend_dcalls()
     m_dcalls_suspended = true;
 }
 
-void Worker::Object::resume_dcalls()
+void Worker::Callable::resume_dcalls()
 {
     mxb_assert(m_dcalls_suspended);
 
@@ -385,13 +385,13 @@ void Worker::Object::resume_dcalls()
     m_dcalls_suspended = false;
 }
 
-void Worker::Object::register_dcall(Worker::DCall* pCall)
+void Worker::Callable::register_dcall(Worker::DCall* pCall)
 {
     mxb_assert(m_dcalls.find(pCall->id()) == m_dcalls.end());
     m_dcalls.emplace(pCall->id(), pCall);
 }
 
-void Worker::Object::unregister_dcall(DCId id)
+void Worker::Callable::unregister_dcall(DCId id)
 {
     auto it = m_dcalls.find(id);
     mxb_assert(it != m_dcalls.end());

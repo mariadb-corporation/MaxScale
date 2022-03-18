@@ -164,7 +164,7 @@ ConfigManager* ConfigManager::get()
 }
 
 ConfigManager::ConfigManager(mxs::MainWorker* main_worker)
-    : mxb::Worker::Object(main_worker)
+    : mxb::Worker::Callable(main_worker)
     , m_worker(main_worker)
     , m_status_msg(STATUS_OK)
 {

@@ -39,7 +39,7 @@ Reader::Reader(SendCallback cb, WorkerCallback worker_cb,
                const Config& conf,
                const maxsql::GtidList& start_gl,
                const std::chrono::seconds& heartbeat_interval)
-    : mxb::Worker::Object(&worker_cb())
+    : mxb::Worker::Callable(&worker_cb())
     , m_send_callback(cb)
     , m_get_worker(worker_cb)
     , m_inventory(conf)

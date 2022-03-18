@@ -48,7 +48,7 @@ namespace maxscale
 
 MainWorker::MainWorker(mxb::WatchdogNotifier* pNotifier)
     : mxb::WatchedWorker(pNotifier)
-    , m_wobject(this)
+    , m_callable(this)
 {
     mxb_assert(!this_unit.pMain);
 
@@ -124,7 +124,7 @@ bool MainWorker::pre_run()
 
     bool rval = false;
 
-    dcall(&m_wobject, 100ms, &MainWorker::inc_ticks);
+    dcall(&m_callable, 100ms, &MainWorker::inc_ticks);
 
     update_rebalancing();
 
@@ -198,7 +198,7 @@ void MainWorker::order_balancing_dc()
 {
     mxb_assert(m_rebalancing_dc == 0);
 
-    m_rebalancing_dc = dcall(&m_wobject, 1000ms, &MainWorker::balance_workers_dc, this);
+    m_rebalancing_dc = dcall(&m_callable, 1000ms, &MainWorker::balance_workers_dc, this);
 }
 
 // static
@@ -224,7 +224,7 @@ void MainWorker::start_shutdown()
 
             // Wait until RoutingWorkers have stopped before proceeding with MainWorker shudown
             auto self = MainWorker::get();
-            self->dcall(&self->m_wobject, 100ms, &MainWorker::wait_for_shutdown, self);
+            self->dcall(&self->m_callable, 100ms, &MainWorker::wait_for_shutdown, self);
         };
 
     MainWorker::get()->execute(func, EXECUTE_QUEUED);

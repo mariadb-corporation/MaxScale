@@ -23,7 +23,7 @@
 namespace maxscale
 {
 
-class ConfigManager : public mxb::Worker::Object
+class ConfigManager : public mxb::Worker::Callable
 {
 public:
 

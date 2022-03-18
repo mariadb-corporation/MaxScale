@@ -42,7 +42,7 @@ struct FileLocation
 class PinlokiSession;
 
 class Pinloki : public mxs::Router
-              , public mxb::Worker::Object
+              , public mxb::Worker::Callable
 {
 public:
     Pinloki(const Pinloki&) = delete;

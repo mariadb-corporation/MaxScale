@@ -32,7 +32,7 @@ int64_t get_monotonic_time_ms()
     return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
 
-class TimerTest : public Worker::Object
+class TimerTest : public Worker::Callable
 {
 public:
     static int s_ticks;
@@ -41,7 +41,7 @@ public:
               int* pRv,
               const std::chrono::milliseconds& delay,
               bool cancel_at_destruct = true)
-        : Worker::Object(pWorker)
+        : Worker::Callable(pWorker)
         , m_id(s_id++)
         , m_worker(*pWorker)
         , m_delay(delay)
@@ -146,11 +146,11 @@ int run_timer_test()
     return rv;
 }
 
-class MoveTest : public Worker::Object
+class MoveTest : public Worker::Callable
 {
 public:
     MoveTest(Worker* pW1, Worker* pW2, Worker* pW3)
-        : Worker::Object(pW1)
+        : Worker::Callable(pW1)
         , m_pW1(pW1)
         , m_pW2(pW2)
         , m_pW3(pW3)

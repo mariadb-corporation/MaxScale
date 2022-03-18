@@ -156,7 +156,7 @@ std::pair<std::string, std::string> get_file_name_and_size(const std::string& fi
 }
 
 Pinloki::Pinloki(SERVICE* pService)
-    : mxb::Worker::Object(mxs::MainWorker::get())
+    : mxb::Worker::Callable(mxs::MainWorker::get())
     , m_config(pService->name(), [this]() {
                    return post_configure();
                }),

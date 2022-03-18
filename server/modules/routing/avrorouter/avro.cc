@@ -36,7 +36,7 @@ Avro* Avro::create(SERVICE* service)
 }
 
 Avro::Avro(SERVICE* service)
-    : mxb::Worker::Object(mxs::MainWorker::get())
+    : mxb::Worker::Callable(mxs::MainWorker::get())
     , service(service)
     , current_pos(4)
     , binlog_fd(-1)

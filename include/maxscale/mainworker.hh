@@ -115,7 +115,7 @@ private:
     // Waits until all RoutingWorkers have stopped and then stops the MainWorker
     bool wait_for_shutdown();
 
-    Worker::Object    m_wobject;
+    Worker::Callable  m_callable;
     IndexedStorage    m_storage;
     mxb::Worker::DCId m_rebalancing_dc {0};
     mxb::TimePoint    m_last_rebalancing;

@@ -28,7 +28,7 @@ namespace pinloki
 using SendCallback = std::function<void (const maxsql::RplEvent&)>;
 using WorkerCallback = std::function<mxb::Worker& ()>;
 
-class Reader : public mxb::Worker::Object
+class Reader : public mxb::Worker::Callable
 {
 public:
     Reader(SendCallback cb,
