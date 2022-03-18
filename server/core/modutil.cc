@@ -33,18 +33,6 @@
 #include <maxscale/utils.hh>
 #include <maxscale/mysql_utils.hh>
 
-/** These are used when converting MySQL wildcards to regular expressions */
-static bool pattern_init = false;
-static pcre2_code* re_percent = NULL;
-static pcre2_code* re_single = NULL;
-static pcre2_code* re_escape = NULL;
-static const PCRE2_SPTR pattern_percent = (PCRE2_SPTR) "%";
-static const PCRE2_SPTR pattern_single = (PCRE2_SPTR) "([^\\\\]|^)_";
-static const PCRE2_SPTR pattern_escape = (PCRE2_SPTR) "[.]";
-static const char* sub_percent = ".*";
-static const char* sub_single = "$1.";
-static const char* sub_escape = "\\.";
-
 /**
  * Extract the SQL from a COM_QUERY packet and return in a NULL terminated buffer.
  * The buffer should be freed by the caller when it is no longer required.
@@ -373,61 +361,6 @@ GWBUF* modutil_create_eof(uint8_t seq)
     uint8_t eof[] = {0x5, 0x0, 0x0, seq, 0xfe, 0x0, 0x0, 0x0, 0x0};
     return gwbuf_alloc_and_load(sizeof(eof), eof);
 }
-
-/**
- * Initialize the PCRE2 patterns used when converting MySQL wildcards to PCRE syntax.
- */
-void prepare_pcre2_patterns()
-{
-    static std::mutex re_lock;
-    std::lock_guard<std::mutex> guard(re_lock);
-
-    if (!pattern_init)
-    {
-        int err;
-        size_t erroff;
-        PCRE2_UCHAR errbuf[MXS_STRERROR_BUFLEN];
-
-        if ((re_percent = pcre2_compile(pattern_percent,
-                                        PCRE2_ZERO_TERMINATED,
-                                        0,
-                                        &err,
-                                        &erroff,
-                                        NULL))
-            && (re_single = pcre2_compile(pattern_single,
-                                          PCRE2_ZERO_TERMINATED,
-                                          0,
-                                          &err,
-                                          &erroff,
-                                          NULL))
-            && (re_escape = pcre2_compile(pattern_escape,
-                                          PCRE2_ZERO_TERMINATED,
-                                          0,
-                                          &err,
-                                          &erroff,
-                                          NULL)))
-        {
-            assert(!pattern_init);
-            pattern_init = true;
-        }
-        else
-        {
-            pcre2_get_error_message(err, errbuf, sizeof(errbuf));
-            MXB_ERROR("Failed to compile PCRE2 pattern: %s", errbuf);
-        }
-
-        if (!pattern_init)
-        {
-            pcre2_code_free(re_percent);
-            pcre2_code_free(re_single);
-            pcre2_code_free(re_escape);
-            re_percent = NULL;
-            re_single = NULL;
-            re_escape = NULL;
-        }
-    }
-}
-
 
 const char* modutil_MySQL_bypass_whitespace(const char* sql, size_t len)
 {
