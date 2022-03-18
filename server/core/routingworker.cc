@@ -1959,16 +1959,16 @@ protected:
 };
 }
 
-json_t* mxs_rworker_to_json(const char* zHost, int id)
+json_t* mxs_rworker_to_json(const char* zHost, int index)
 {
-    Worker* target = RoutingWorker::get(id);
-    WorkerInfoTask task(zHost, id + 1);
+    Worker* target = RoutingWorker::get_by_index(index);
+    WorkerInfoTask task(zHost, index + 1);
     Semaphore sem;
 
     target->execute(&task, &sem, Worker::EXECUTE_AUTO);
     sem.wait();
 
-    return task.resource(id);
+    return task.resource(index);
 }
 
 json_t* mxs_rworker_list_to_json(const char* host)

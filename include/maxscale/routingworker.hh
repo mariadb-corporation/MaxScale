@@ -611,12 +611,12 @@ private:
 /**
  * @brief Convert a routing worker to JSON format
  *
- * @param host Hostname of this server
- * @param id   ID of the worker
+ * @param host  Hostname of this server
+ * @param index The index number of the worker
  *
  * @return JSON resource representing the worker
  */
-json_t* mxs_rworker_to_json(const char* host, int id);
+json_t* mxs_rworker_to_json(const char* host, int index);
 
 /**
  * Convert routing workers into JSON format
