@@ -292,45 +292,39 @@ export default {
                     await this.fetchAllFilters()
                     this.validateInfo = this.getAllFiltersInfo
                     break
-                case 'Listener':
-                    {
-                        let authenticators = this.getModuleType('Authenticator')
-                        let authenticatorId = authenticators.map(item => `${item.id}`)
-                        let protocols = this.getModuleType('Protocol')
-                        if (protocols.length) {
-                            protocols.forEach(protocol => {
-                                // add default_value for protocol param
-                                let protocolParamObj = protocol.attributes.parameters.find(
-                                    o => o.name === 'protocol'
-                                )
-                                protocolParamObj.default_value = protocol.id
-                                protocolParamObj.disabled = true
-                                /*
-                                    Transform authenticator parameter from string type to enum type,
-                                 */
-                                let authenticatorParamObj = protocol.attributes.parameters.find(
-                                    o => o.name === 'authenticator'
-                                )
-                                if (authenticatorParamObj) {
-                                    authenticatorParamObj.type = 'enum'
-                                    authenticatorParamObj.enum_values = authenticatorId
-                                    // add default_value for authenticator
-                                    authenticatorParamObj.default_value = ''
-                                }
-                            })
-                        }
-
-                        this.resourceModules = protocols
-                        await this.fetchAllListeners()
-                        this.validateInfo = this.getAllListenersInfo
-                        await this.fetchAllServices()
-                        this.setDefaultRelationship({
-                            allResourcesMap: this.getAllServicesMap,
-                            routeName: 'service',
-                            isMultiple: false,
+                case 'Listener': {
+                    let authenticators = this.getModuleType('Authenticator')
+                    let authenticatorId = authenticators.map(item => `${item.id}`)
+                    let protocols = this.getModuleType('Protocol')
+                    if (protocols.length) {
+                        protocols.forEach(protocol => {
+                            protocol.attributes.parameters = protocol.attributes.parameters.filter(
+                                o => o.name !== 'protocol' && o.name !== 'service'
+                            )
+                            //Transform authenticator parameter from string type to enum type,
+                            let authenticatorParamObj = protocol.attributes.parameters.find(
+                                o => o.name === 'authenticator'
+                            )
+                            if (authenticatorParamObj) {
+                                authenticatorParamObj.type = 'enum'
+                                authenticatorParamObj.enum_values = authenticatorId
+                                // add default_value for authenticator
+                                authenticatorParamObj.default_value = ''
+                            }
                         })
                     }
+
+                    this.resourceModules = protocols
+                    await this.fetchAllListeners()
+                    this.validateInfo = this.getAllListenersInfo
+                    await this.fetchAllServices()
+                    this.setDefaultRelationship({
+                        allResourcesMap: this.getAllServicesMap,
+                        routeName: 'service',
+                        isMultiple: false,
+                    })
                     break
+                }
             }
         },
         /**
