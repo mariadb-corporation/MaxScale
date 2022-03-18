@@ -79,6 +79,7 @@ module.exports = function () {
   // Execute a single MaxCtrl command, returns a Promise
   this.doCommand = function (command) {
     var ctrl = require("./lib/core.js");
+    process.env["MAXCTRL_WARNINGS"] = "0";
     return ctrl.execute(command.split(" "));
   };
 

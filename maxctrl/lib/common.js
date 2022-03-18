@@ -399,13 +399,12 @@ module.exports = function () {
       var res = await simpleRequest(host, resource, obj);
 
       // Don't generate warnings if the output is not a TTY. This prevents scripts from breaking.
-      if (process.stdout.isTTY && res.headers["mxs-warning"]) {
-        const ignore_file = process.env.HOME + "/.maxctrl-no-warnings";
+      if (process.stdout.isTTY && process.env["MAXCTRL_WARNINGS"] != "0" && res.headers["mxs-warning"]) {
+        console.log(colors.yellow("Warning: ") + res.headers["mxs-warning"]);
+        console.log(`To hide these warnings, run:
 
-        if (!fs.existsSync(ignore_file)) {
-          console.log(colors.yellow("Warning: ") + res.headers["mxs-warning"]);
-          console.log(`To hide these warnings, run 'touch ${ignore_file}'`);
-        }
+    export MAXCTRL_WARNINGS=0
+`);
       }
 
       return res.data ? res.data : OK();
