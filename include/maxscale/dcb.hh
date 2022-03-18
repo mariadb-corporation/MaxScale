@@ -615,9 +615,7 @@ private:
         STRICT      /**< Exactly the given amount must be read from socket */
     };
     bool basic_read(size_t maxbytes, ReadLimit limit_type);
-
-    bool read_SSL();
-    bool basic_read_SSL();
+    bool read_SSL(size_t maxbytes);
 
     void socket_write_SSL();
     void socket_write();

@@ -277,30 +277,28 @@ std::tuple<bool, GWBUF> DCB::read_impl(size_t minbytes, size_t maxbytes, ReadLim
 
     bool read_success = false;
     bool trigger_again = false;
-    if (m_encryption.state == SSLState::ESTABLISHED)
+
+    if (maxbytes > 0 && m_readq.length() >= maxbytes)
+    {
+        // Already have enough data. May have more (either in readq or in socket), so read again later.
+        // Should not happen on first read (strict limit).
+        mxb_assert(limit_type == ReadLimit::RES_LEN);
+        read_success = true;
+        trigger_again = true;
+    }
+    else if (m_encryption.state == SSLState::ESTABLISHED)
     {
         mxb_assert(limit_type == ReadLimit::RES_LEN);
-        if (read_SSL())
+        if (read_SSL(maxbytes))
         {
             read_success = true;
         }
     }
     else
     {
-        if (maxbytes > 0 && m_readq.length() >= maxbytes)
+        if (basic_read(maxbytes, limit_type))
         {
-            // Already have enough data. May have more (either in readq or in socket), so read again later.
-            // Should not happen on first read (strict limit).
-            mxb_assert(limit_type == ReadLimit::RES_LEN);
             read_success = true;
-            trigger_again = true;
-        }
-        else
-        {
-            if (basic_read(maxbytes, limit_type))
-            {
-                read_success = true;
-            }
         }
     }
 
@@ -497,9 +495,10 @@ bool DCB::basic_read(size_t maxbytes, ReadLimit limit_type)
  * structure lined with this DCB. The SSL structure should
  * be initialized and the SSL handshake should be done.
  *
+ * @param maxbytes Maximum bytes to read (0 = no limit)
  * @return True on success
  */
-bool DCB::read_SSL()
+bool DCB::read_SSL(size_t maxbytes)
 {
     if (m_encryption.write_want_read)
     {
@@ -508,21 +507,12 @@ bool DCB::read_SSL()
         writeq_drain();
     }
 
-    return basic_read_SSL();
-}
-
-/**
- * Basic read function read all data from SSL connection.
- * TODO: obey maxbytes-limit.
- *
- * @return True on success
- */
-bool DCB::basic_read_SSL()
-{
     bool keep_reading = true;
     bool expect_more_data = true;
+    bool socket_cleared = false;
     bool success = true;
     size_t bytes_from_socket = 0;
+    size_t total_readq_limit = (maxbytes > 0) ? calc_total_readq_limit(maxbytes) : 0;
 
     while (keep_reading)
     {
@@ -540,6 +530,11 @@ bool DCB::basic_read_SSL()
             expect_more_data = (ret == read_limit);
 
             m_encryption.read_want_write = false;
+
+            if (total_readq_limit > 0 && m_readq.length() >= total_readq_limit)
+            {
+                keep_reading = false;
+            }
         }
         else
         {
@@ -548,32 +543,45 @@ bool DCB::basic_read_SSL()
             {
             case SSL_ERROR_ZERO_RETURN:
                 // SSL-connection closed.
+                socket_cleared = true;
                 trigger_hangup_event();
                 break;
 
             case SSL_ERROR_WANT_READ:
                 // No more data can be read, return to poll. This is equivalent to EWOULDBLOCK.
                 m_encryption.read_want_write = false;
+                socket_cleared = true;
                 break;
 
             case SSL_ERROR_WANT_WRITE:
                 // Read-operation needs to write data but socket is not writable. Return to poll,
                 // wait for a write-ready-event and then read again.
                 m_encryption.read_want_write = true;
+                socket_cleared = true;
                 break;
 
             default:
                 success = (log_errors_SSL(ret) >= 0);
+                if (!success)
+                {
+                    socket_cleared = true;
+                }
                 break;
             }
         }
     }
 
-    if (bytes_from_socket > 0)
+    if (success)
     {
-        m_last_read = mxs_clock();
+        if (bytes_from_socket > 0)
+        {
+            m_last_read = mxs_clock();
+        }
+        if (!socket_cleared)
+        {
+            trigger_read_event();
+        }
     }
-
     return success;
 }
 
