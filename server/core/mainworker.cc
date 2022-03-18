@@ -58,8 +58,9 @@ MainWorker::MainWorker(mxb::WatchdogNotifier* pNotifier)
 
 MainWorker::~MainWorker()
 {
-    mxb_assert(this_unit.pMain);
+    m_callable.cancel_dcalls();
 
+    mxb_assert(this_unit.pMain);
     this_thread.pMain = nullptr;
     this_unit.pMain = nullptr;
 }

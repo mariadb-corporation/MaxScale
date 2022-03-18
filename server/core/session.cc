@@ -95,6 +95,7 @@ MXS_SESSION::MXS_SESSION(const std::string& host, SERVICE* service)
 
 MXS_SESSION::~MXS_SESSION()
 {
+    cancel_dcalls();
     mxs::RoutingWorker::get_current()->deregister_session(m_id);
 }
 

@@ -825,7 +825,7 @@ public:
     MonitorWorker(const MonitorWorker&) = delete;
     MonitorWorker& operator=(const MonitorWorker&) = delete;
 
-    ~MonitorWorker() override = default;
+    ~MonitorWorker();
 
     bool is_running() const override final;
 

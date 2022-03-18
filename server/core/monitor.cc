@@ -1795,6 +1795,11 @@ MonitorWorker::MonitorWorker(const string& name, const string& module)
 {
 }
 
+MonitorWorker::~MonitorWorker()
+{
+    m_callable.cancel_dcalls();
+}
+
 bool MonitorWorker::is_running() const
 {
     return Worker::state() != Worker::STOPPED && Worker::state() != Worker::FINISHED;

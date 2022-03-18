@@ -144,6 +144,7 @@ RoutingWorker::RoutingWorker(mxb::WatchdogNotifier* pNotifier)
 
 RoutingWorker::~RoutingWorker()
 {
+    m_callable.cancel_dcalls();
 }
 
 // static
