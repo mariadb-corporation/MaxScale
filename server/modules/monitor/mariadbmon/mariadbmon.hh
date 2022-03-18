@@ -138,6 +138,15 @@ public:
     bool run_manual_rejoin(SERVER* rejoin_server, json_t** error_out);
 
     /**
+     * Perform user-activated rejoin. Does not wait for results, which should be fetched separately.
+     *
+     * @param rejoin_server Server to join
+     * @param error_out Json error output
+     * @return True if rejoin was scheduled
+     */
+    bool schedule_async_rejoin(SERVER* rejoin_server, json_t** error_out);
+
+    /**
      * Perform user-activated reset-replication
      *
      * @param master_server The server to promote. If NULL, monitor will select the current master.
@@ -147,12 +156,31 @@ public:
     bool run_manual_reset_replication(SERVER* master_server, json_t** error_out);
 
     /**
-     * Perform user-activated lock release
+     * Perform user-activated reset-replication. Does not wait for results, which should be fetched
+     * separately.
+     *
+     * @param master_server The server to promote. If NULL, monitor will select the current master.
+     * @param error_out Error output
+     * @return True if operation was scheduled
+     */
+    bool schedule_reset_replication(SERVER* master_server, json_t** error_out);
+
+    /**
+     * Perform user-activated lock release.
      *
      * @param error_out Error output
      * @return True if locks are in use, even if none were released
      */
     bool run_release_locks(json_t** error_out);
+
+    /**
+     * Perform user-activated lock release. Does not wait for results, which should be fetched
+     * separately.
+     *
+     * @param error_out Error output
+     * @return True if locks are in use, even if none were released
+     */
+    bool schedule_release_locks(json_t** error_out);
 
     /**
      * Fetch results of last asynchronous command. If an async command is still running, outputs
