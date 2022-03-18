@@ -21,7 +21,7 @@
                     :keepPrimitiveValue="keepPrimitiveValue"
                     :isTree="isTree"
                     :expandAll="expandAll"
-                    @cell-hover="showCellTooltip"
+                    @cell-hover="onCellHover"
                 >
                     <template v-slot:header-append-id>
                         <span class="ml-1 color text-field-text total-row">
@@ -52,9 +52,9 @@
                 </data-table>
             </v-form>
             <parameter-tooltip
-                v-if="parameterTooltip.item"
+                v-if="parameterTooltip"
                 :parameterTooltip="parameterTooltip"
-                :activator="`#param-${parameterTooltip.item.id}_${componentId}`"
+                :activator="`#param-${parameterTooltip.id}_${componentId}`"
             />
 
             <base-dialog
@@ -121,8 +121,10 @@ PROPS:
  */
 import { mapState } from 'vuex'
 import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
+import getParamInfo from 'mixins/getParamInfo'
 export default {
     name: 'details-parameters-table',
+    mixins: [getParamInfo],
     props: {
         resourceId: { type: String, required: true },
         parameters: { type: Object, required: true },
@@ -160,9 +162,7 @@ export default {
             portValue: null,
             socketValue: null,
 
-            parameterTooltip: {
-                item: null,
-            },
+            parameterTooltip: null,
             // this is needed when using custom activator in v-tooltip.
             componentId: this.$help.lodash.uniqueId('component_tooltip_'),
             isMounting: true,
@@ -223,28 +223,14 @@ export default {
     },
     methods: {
         /**
-         * This function assign item info to parameterTooltip which will be read
-         * by v-tooltip component to show parameter info
+         *  This function assign item info to parameterTooltip which will be read by <parameter-tooltip/>
+         * @param {Object} param.e - mouseEvent
+         * @param {Object} param.item - param object
+         * @returns {Object} tooltip object
          */
-        showCellTooltip({ e, item }) {
-            if (e.type === 'mouseenter') {
-                const { id, type, description, unit, default_value } = item
-                let obj = {
-                    id,
-                }
-                // assign
-                if (type !== undefined) obj.type = type
-                if (description !== undefined) obj.description = description
-                if (unit !== undefined) obj.unit = unit
-                if (default_value !== undefined) obj.default_value = default_value
-
-                this.parameterTooltip = {
-                    item: obj,
-                }
-            } else
-                this.parameterTooltip = {
-                    item: null,
-                }
+        onCellHover({ e, item }) {
+            if (e.type === 'mouseenter') this.parameterTooltip = this.getParamInfo(item)
+            else this.parameterTooltip = null
         },
 
         /**

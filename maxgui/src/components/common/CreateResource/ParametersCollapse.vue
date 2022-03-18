@@ -13,7 +13,7 @@
                 :showAll="showAll"
                 :editableCell="editableCell"
                 :keepPrimitiveValue="keepPrimitiveValue"
-                @cell-hover="showCellTooltip"
+                @cell-hover="onCellHover"
             >
                 <template v-slot:header-append-id>
                     <span class="ml-1 color text-field-text total-row">
@@ -40,9 +40,9 @@
                 </template>
             </data-table>
             <parameter-tooltip
-                v-if="parameterTooltip.item"
+                v-if="parameterTooltip"
                 :parameterTooltip="parameterTooltip"
-                :activator="`#param-${parameterTooltip.item.id}_${componentId}`"
+                :activator="`#param-${parameterTooltip.id}_${componentId}`"
             />
         </template>
     </collapse>
@@ -72,8 +72,11 @@ PROPS:
   passing them to parameter-input for handling special input field when editting server or listener.
 - isListener: accepts boolean , if true, address parameter will not be required
 */
+import getParamInfo from 'mixins/getParamInfo'
+
 export default {
     name: 'parameters-collapse',
+    mixins: [getParamInfo],
     props: {
         parameters: { type: Array, required: true },
         // specical props to manipulate required or dependent input attribute
@@ -101,9 +104,7 @@ export default {
             portValue: null,
             socketValue: null,
 
-            parameterTooltip: {
-                item: null,
-            },
+            parameterTooltip: null,
             // this is needed when using custom activator in v-tooltip.
             componentId: this.$help.lodash.uniqueId('component_tooltip_'),
         }
@@ -133,28 +134,14 @@ export default {
 
     methods: {
         /**
-         * This function assign item info to parameterTooltip which will be read
-         * by v-tooltip component to show parameter info
+         *  This function assign item info to parameterTooltip which will be read by <parameter-tooltip/>
+         * @param {Object} param.e - mouseEvent
+         * @param {Object} param.item - param object
+         * @returns {Object} tooltip object
          */
-        showCellTooltip({ e, item }) {
-            if (e.type === 'mouseenter') {
-                const { id, type, description, unit, default_value } = item
-                let obj = {
-                    id,
-                }
-                // assign
-                if (type !== undefined) obj.type = type
-                if (description !== undefined) obj.description = description
-                if (unit !== undefined) obj.unit = unit
-                if (default_value !== undefined) obj.default_value = default_value
-
-                this.parameterTooltip = {
-                    item: obj,
-                }
-            } else
-                this.parameterTooltip = {
-                    item: null,
-                }
+        onCellHover({ e, item }) {
+            if (e.type === 'mouseenter') this.parameterTooltip = this.getParamInfo(item)
+            else this.parameterTooltip = null
         },
 
         /**

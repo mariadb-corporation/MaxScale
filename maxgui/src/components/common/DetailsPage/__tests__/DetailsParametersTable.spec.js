@@ -303,26 +303,26 @@ describe('DetailsParametersTable.vue', () => {
     it(`Should assign parameter info when hovering a cell`, async () => {
         const { wrappers: tds } = wrapper.findAll('td')
         await tds[0].trigger('mouseenter')
-        expect(wrapper.vm.$data.parameterTooltip.item).to.not.be.null
+        expect(wrapper.vm.$data.parameterTooltip).to.not.be.null
     })
 
     it(`Should assign null when hovering out a cell`, async () => {
         const { wrappers: tds } = wrapper.findAll('td')
         await tds[0].trigger('mouseenter')
-        expect(wrapper.vm.$data.parameterTooltip.item).to.not.be.null
+        expect(wrapper.vm.$data.parameterTooltip).to.not.be.null
         await tds[0].trigger('mouseleave')
-        expect(wrapper.vm.$data.parameterTooltip.item).to.be.null
+        expect(wrapper.vm.$data.parameterTooltip).to.be.null
     })
 
     it(`Should render parameter-tooltip component when a cell is hovered `, async () => {
         const { wrappers: tds } = wrapper.findAll('td')
 
         await tds[0].trigger('mouseenter')
-        expect(wrapper.vm.$data.parameterTooltip.item).to.not.be.null
+        expect(wrapper.vm.$data.parameterTooltip).to.not.be.null
 
         const parameterTooltip = wrapper.findAllComponents({ name: 'parameter-tooltip' })
         expect(parameterTooltip.length).to.be.equals(1)
-        expect(tds[0].vm.$props.item.id).to.be.equals(wrapper.vm.$data.parameterTooltip.item.id)
+        expect(tds[0].vm.$props.item.id).to.be.equals(wrapper.vm.$data.parameterTooltip.id)
     })
 
     it(`Should render total number of table row on the first row of the first column`, async () => {
