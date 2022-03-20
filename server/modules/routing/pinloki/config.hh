@@ -55,6 +55,7 @@ public:
     std::chrono::seconds net_timeout() const;
     // Automatic master selection
     bool select_master() const;
+    bool ddl_only() const;
     void disable_select_master();
 
     // File purging
@@ -132,6 +133,7 @@ private:
     std::chrono::seconds m_net_timeout;
     bool                 m_select_master;
     bool                 m_select_master_disabled {false};
+    bool                 m_ddl_only {false};
 
     int64_t             m_expire_log_minimum_files;
     wall_time::Duration m_expire_log_duration;

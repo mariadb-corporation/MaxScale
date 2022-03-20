@@ -310,6 +310,21 @@ The duration can be specified as explained
 The minimum number of log files the automatic purge keeps. At least one file
 is always kept. The default setting is 2.
 
+### `ddl_only`
+
+- **Type**: boolean
+- **Default**: false
+- **Dynamic**: No
+
+When enabled, only DDL events are written to the binary logs. This means that
+`CREATE`, `ALTER` and `DROP` events are written but `INSERT`, `UPDATE` and
+`DELETE` events are not.
+
+This mode can be used to keep a record of all the schema changes that occur on a
+database. As only the DDL events are stored, it becomes very easy to set up an
+empty server with no data in it by simply pointing it at a binlogrouter instance
+that has `ddl_only` enabled.
+
 ## New installation
 
  1. Configure and start MaxScale.

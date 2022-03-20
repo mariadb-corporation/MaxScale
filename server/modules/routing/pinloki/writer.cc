@@ -187,25 +187,42 @@ void Writer::run()
                         {
                             m_commit_on_query = true;
                         }
+
+                        m_was_ddl = gtid_event.flags & mxq::F_DDL;
                     }
                     break;
 
                 case QUERY_EVENT:
-                    file.add_event(rpl_event);
-                    if (m_commit_on_query)
+                    if (m_inventory.config().ddl_only() && !m_was_ddl)
                     {
-                        save_gtid_list(file);
-                        m_commit_on_query = false;
+                        file.rollback_txn();
                     }
-                    else if (rpl_event.is_commit())
+                    else
                     {
-                        save_gtid_list(file);
+                        file.add_event(rpl_event);
+                        if (m_commit_on_query)
+                        {
+                            save_gtid_list(file);
+                            m_commit_on_query = false;
+                        }
+                        else if (rpl_event.is_commit())
+                        {
+                            save_gtid_list(file);
+                        }
                     }
                     break;
 
                 case XID_EVENT:
-                    file.add_event(rpl_event);
-                    save_gtid_list(file);
+                    if (m_inventory.config().ddl_only())
+                    {
+                        mxb_assert_message(!m_was_ddl, "DDLs should not generate XID events");
+                        file.rollback_txn();
+                    }
+                    else
+                    {
+                        file.add_event(rpl_event);
+                        save_gtid_list(file);
+                    }
                     break;
 
                 default:

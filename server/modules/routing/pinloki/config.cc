@@ -42,6 +42,9 @@ cfg::ParamSeconds s_net_timeout(
 cfg::ParamBool s_select_master(
     &s_spec, "select_master", "Automatically select the master server", false);
 
+cfg::ParamBool s_ddl_only(
+    &s_spec, "ddl_only", "Ignore data events and only keep DDL events", false);
+
 cfg::ParamCount s_expire_log_minimum_files(
     &s_spec, "expire_log_minimum_files", "Minimum number of files the automatic log purge keeps", 2);
 
@@ -118,6 +121,11 @@ bool Config::select_master() const
     return m_select_master && !m_select_master_disabled;
 }
 
+bool Config::ddl_only() const
+{
+    return m_ddl_only;
+}
+
 void Config::disable_select_master()
 {
     m_select_master_disabled = true;
@@ -176,6 +184,7 @@ Config::Config(const std::string& name, std::function<bool()> callback)
     add_native(&Config::m_server_id, &s_server_id);
     add_native(&Config::m_net_timeout, &s_net_timeout);
     add_native(&Config::m_select_master, &s_select_master);
+    add_native(&Config::m_ddl_only, &s_ddl_only);
     add_native(&Config::m_expire_log_duration, &s_expire_log_duration);
     add_native(&Config::m_expire_log_minimum_files, &s_expire_log_minimum_files);
     add_native(&Config::m_purge_startup_delay, &s_purge_startup_delay);

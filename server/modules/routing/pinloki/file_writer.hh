@@ -38,6 +38,7 @@ public:
     void begin_txn();
     void add_event(maxsql::RplEvent& rpl_event);
     void commit_txn();
+    void rollback_txn();
 private:
     struct WritePosition
     {

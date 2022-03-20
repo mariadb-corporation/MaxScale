@@ -74,6 +74,13 @@ void FileWriter::commit_txn()
     m_tx_buffer.clear();
 }
 
+void FileWriter::rollback_txn()
+{
+    mxb_assert(m_in_transaction == true);
+    m_in_transaction = false;
+    m_tx_buffer.clear();
+}
+
 void FileWriter::add_event(maxsql::RplEvent& rpl_event)     // FIXME, move into here
 {
     auto etype = rpl_event.event_type();
