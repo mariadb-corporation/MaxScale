@@ -394,7 +394,9 @@ void Worker::Callable::register_dcall(Worker::DCall* pCall)
 
 void Worker::Callable::unregister_dcall(Worker::DCall* pCall)
 {
-    // The call need not be present. Used when it may have been canceled.
+    // When this unregister_dcall() is called, the dcall need not be present as the
+    // unregistration is done in a context where the dcall may have been cancelled
+    // already.
     auto it = m_dcalls.find(pCall->id());
 
     if (it != m_dcalls.end())
@@ -405,7 +407,8 @@ void Worker::Callable::unregister_dcall(Worker::DCall* pCall)
 
 void Worker::Callable::unregister_dcall(DCId id)
 {
-    // The call must be present. Used when it should be present.
+    // When this unregister_dcall() is called, the dcall will be present unless
+    // there is a bug in the implementation.
     auto it = m_dcalls.find(id);
     mxb_assert(it != m_dcalls.end());
 

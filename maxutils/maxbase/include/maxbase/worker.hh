@@ -273,11 +273,12 @@ private:
 
 public:
     /**
-     * In order to make delayed calls on a Worker, an object, derived from Worker::Callable,
-     * must be provided, using which the Worker can detect whether the target for the
-     * delayed call still exists at the time the delayed call should be made. Note that
-     * Worker::Callable is *not* thread-safe; delayed calls can only be made on the worker
-     * where the delayed call should be made.
+     * Delayed calls, i.e. calls that will be called after some delay, can be made on
+     * any object whose class is derived from Worker::Callable. The delayed call will be
+     * made by the worker that was provided to the constructor of Callable. However, the
+     * worker can be changed, but when the change is made, the delayed calls must be
+     * suspended. Note that Callable is *not* thread-safe; it must only be manipulated
+     * from its worker.
      */
     class Callable
     {
