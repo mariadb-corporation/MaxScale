@@ -307,12 +307,17 @@ GWBUF* RWSplitSession::parse_gtid_result(GWBUF* buffer, const mxs::Reply& reply)
     mxb_assert(!reply.error());
     GWBUF* rval = nullptr;
 
-    if (reply.is_complete())
+    if (!reply.row_data().empty())
     {
         mxb_assert(reply.row_data().size() == 1);
         mxb_assert(reply.row_data().front().size() == 1);
 
         m_gtid_pos.parse(reply.row_data().front().front());
+    }
+
+    if (reply.is_complete())
+    {
+        mxb_assert_message(reply.rows_read() == 1, "The result should only have one row");
         m_wait_gtid = GTID_READ_DONE;
         MXB_INFO("GTID probe complete, GTID is: %s", m_gtid_pos.to_string().c_str());
 

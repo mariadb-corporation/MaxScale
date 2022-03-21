@@ -784,6 +784,7 @@ void MariaDBBackendConnection::normal_read()
             thread_local mxs::ReplyRoute route;
             route.clear();
             m_upstream->clientReply(stmt, route, m_reply);
+            m_reply.clear_row_data();
         }
         else    /*< session is closing; replying to client isn't possible */
         {

@@ -680,6 +680,8 @@ public:
 
     void add_row_data(std::vector<std::string> row);
 
+    void clear_row_data();
+
     void clear();
 
     template<typename ... Args>

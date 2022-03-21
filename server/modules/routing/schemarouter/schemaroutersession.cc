@@ -1125,10 +1125,10 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
     {
         MXB_ERROR("Mapping query returned an error, closing session: %s", reply.error().message().c_str());
     }
-    else if (reply.is_complete())
+    else
     {
         bool duplicate_found = false;
-        rval = SHOWDB_FULL_RESPONSE;
+        rval = reply.is_complete() ? SHOWDB_FULL_RESPONSE : SHOWDB_PARTIAL_RESPONSE;
 
         for (const auto& row : reply.row_data())
         {
@@ -1158,10 +1158,6 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
                 MXB_INFO("<%s, %s>", target->name(), data.c_str());
             }
         }
-    }
-    else
-    {
-        rval = SHOWDB_PARTIAL_RESPONSE;
     }
 
     return rval;

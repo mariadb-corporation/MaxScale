@@ -36,7 +36,11 @@ enum gwbuf_type_t
     GWBUF_TYPE_COLLECT_RESULT = (1 << 0),
     GWBUF_TYPE_REPLAYED       = (1 << 1),
     GWBUF_TYPE_TRACK_STATE    = (1 << 2),
-    GWBUF_TYPE_COLLECT_ROWS   = (1 << 3),
+
+    // This causes the current resultset rows to be collected into mxs::Reply. They can be accessed using
+    // mxs::Reply::row_data() inside the clientReply function and they are only available for the duration of
+    // the function call. The rows should be considered a read-only view into the buffer that contains them.
+    GWBUF_TYPE_COLLECT_ROWS = (1 << 3),
 };
 
 /**

@@ -544,6 +544,11 @@ void Reply::add_row_data(std::vector<std::string> row)
     m_row_data.push_back(std::move(row));
 }
 
+void Reply::clear_row_data()
+{
+    m_row_data.clear();
+}
+
 void Reply::clear()
 {
     m_command = 0;
