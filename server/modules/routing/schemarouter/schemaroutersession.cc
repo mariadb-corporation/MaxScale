@@ -470,9 +470,9 @@ bool SchemaRouterSession::routeQuery(GWBUF* pPacket)
 
     return ret;
 }
-void SchemaRouterSession::handle_mapping_reply(SRBackend* bref, GWBUF** pPacket, const mxs::Reply& reply)
+void SchemaRouterSession::handle_mapping_reply(SRBackend* bref, const mxs::Reply& reply)
 {
-    int rc = inspect_mapping_states(bref, pPacket, reply);
+    int rc = inspect_mapping_states(bref, reply);
 
     if (rc == 1)
     {
@@ -559,7 +559,9 @@ bool SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& dow
 
     if (m_state & INIT_MAPPING)
     {
-        handle_mapping_reply(bref, &pPacket, reply);
+        handle_mapping_reply(bref, reply);
+        gwbuf_free(pPacket);
+        pPacket = nullptr;
     }
     else if (m_state & INIT_USE_DB)
     {
@@ -929,14 +931,13 @@ bool SchemaRouterSession::delay_routing()
  * @param router_cli_ses Router client session
  * @return 1 if mapping is done, 0 if it is still ongoing and -1 on error
  */
-int SchemaRouterSession::inspect_mapping_states(SRBackend* b, GWBUF** wbuf, const mxs::Reply& reply)
+int SchemaRouterSession::inspect_mapping_states(SRBackend* b, const mxs::Reply& reply)
 {
     bool mapped = true;
-    GWBUF* writebuf = *wbuf;
 
     if (!b->is_mapped())
     {
-        enum showdb_response rc = parse_mapping_response(b, &writebuf, reply);
+        enum showdb_response rc = parse_mapping_response(b, reply);
 
         if (rc == SHOWDB_FULL_RESPONSE)
         {
@@ -945,7 +946,12 @@ int SchemaRouterSession::inspect_mapping_states(SRBackend* b, GWBUF** wbuf, cons
         }
         else if (rc == SHOWDB_FATAL_ERROR)
         {
-            *wbuf = writebuf;
+            auto err = modutil_create_mysql_err_msg(
+                1, 0, SCHEMA_ERR_DUPLICATEDB, SCHEMA_ERRSTR_DUPLICATEDB,
+                ("Error: database mapping failed due to: " + reply.error().message()).c_str());
+
+            mxs::ReplyRoute route;
+            RouterSession::clientReply(err, route, reply);
             return -1;
         }
         else
@@ -981,19 +987,14 @@ int SchemaRouterSession::inspect_mapping_states(SRBackend* b, GWBUF** wbuf, cons
                 }
             }
 
-            *wbuf = writebuf;
             return -1;
         }
     }
 
-    if (b->in_use() && !b->is_mapped())
-    {
-        mapped = false;
-        MXB_DEBUG("Still waiting for reply to SHOW DATABASES from '%s'", b->name());
-    }
-
-    *wbuf = writebuf;
-    return mapped ? 1 : 0;
+    return std::all_of(
+        m_backends.begin(), m_backends.end(), [](const auto& b) {
+            return !b->in_use() | b->is_mapped();
+        });
 }
 
 /**
@@ -1116,108 +1117,51 @@ bool SchemaRouterSession::ignore_duplicate_table(const std::string& data)
  * @return 1 if a complete response was received, 0 if a partial response was received
  * and -1 if a database was found on more than one server.
  */
-enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref,
-                                                                 GWBUF** buffer,
-                                                                 const mxs::Reply& reply)
+enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref, const mxs::Reply& reply)
 {
-    bool duplicate_found = false;
-    enum showdb_response rval = SHOWDB_PARTIAL_RESPONSE;
+    enum showdb_response rval = SHOWDB_FATAL_ERROR;
 
-    if (buffer == NULL || *buffer == NULL)
+    if (reply.error())
     {
-        return SHOWDB_FATAL_ERROR;
+        MXB_ERROR("Mapping query returned an error, closing session: %s", reply.error().message().c_str());
     }
-
-    /** TODO: Don't make the buffer contiguous but process it as a buffer chain */
-    *buffer = gwbuf_make_contiguous(*buffer);
-    MXB_ABORT_IF_NULL(*buffer);
-    GWBUF* buf = modutil_get_complete_packets(buffer);
-
-    if (buf == NULL)
+    else if (reply.is_complete())
     {
-        return SHOWDB_PARTIAL_RESPONSE;
-    }
-    int n_eof = 0;
+        bool duplicate_found = false;
+        rval = SHOWDB_FULL_RESPONSE;
 
-    uint8_t* ptr = buf->start;
-
-    if (PTR_IS_ERR(ptr))
-    {
-        MXB_ERROR("Mapping query returned an error; closing session.");
-        gwbuf_free(buf);
-        return SHOWDB_FATAL_ERROR;
-    }
-
-    if (n_eof == 0)
-    {
-        /** Skip column definitions */
-        while (ptr < buf->end && !PTR_IS_EOF(ptr))
+        for (const auto& row : reply.row_data())
         {
-            ptr += gw_mysql_get_byte3(ptr) + 4;
-        }
+            mxb_assert(row.size() == 1);
 
-        if (ptr >= buf->end)
-        {
-            MXB_INFO("Malformed packet for mapping query.");
-            gwbuf_free(buf);
-            return SHOWDB_FATAL_ERROR;
-        }
-
-        n_eof++;
-        /** Skip first EOF packet */
-        ptr += gw_mysql_get_byte3(ptr) + 4;
-    }
-
-    while (ptr < buf->end && !PTR_IS_EOF(ptr))
-    {
-        int payloadlen = gw_mysql_get_byte3(ptr);
-        int packetlen = payloadlen + 4;
-        auto data = get_lenenc_str(ptr + 4);
-        mxs::Target* target = bref->target();
-
-        if (!data.empty())
-        {
-            if (!ignore_duplicate_table(data))
+            if (!row.empty() && !row[0].empty())
             {
-                if (mxs::Target* duplicate = m_shard.get_location(data))
+                const auto& data = row[0];
+                mxs::Target* target = bref->target();
+
+                if (!ignore_duplicate_table(data))
                 {
-                    duplicate_found = true;
-                    MXB_ERROR("'%s' found on servers '%s' and '%s' for user %s.",
-                              data.c_str(), target->name(), duplicate->name(),
-                              m_pSession->user_and_host().c_str());
+                    if (mxs::Target* duplicate = m_shard.get_location(data))
+                    {
+                        duplicate_found = true;
+                        MXB_ERROR("'%s' found on servers '%s' and '%s' for user %s.",
+                                  data.c_str(), target->name(), duplicate->name(),
+                                  m_pSession->user_and_host().c_str());
+                    }
                 }
-            }
 
-            if (!duplicate_found)
-            {
-                m_shard.add_location(data, target);
-            }
+                if (!duplicate_found)
+                {
+                    m_shard.add_location(data, target);
+                }
 
-            MXB_INFO("<%s, %s>", target->name(), data.c_str());
+                MXB_INFO("<%s, %s>", target->name(), data.c_str());
+            }
         }
-
-        ptr += packetlen;
-    }
-
-    if (ptr < buf->end && PTR_IS_EOF(ptr) && n_eof == 1)
-    {
-        n_eof++;
-        MXB_INFO("SHOW DATABASES fully received from %s.", bref->name());
     }
     else
     {
-        MXB_INFO("SHOW DATABASES partially received from %s.", bref->name());
-    }
-
-    gwbuf_free(buf);
-
-    if (duplicate_found)
-    {
-        rval = SHOWDB_DUPLICATE_DATABASES;
-    }
-    else if (n_eof == 2)
-    {
-        rval = SHOWDB_FULL_RESPONSE;
+        rval = SHOWDB_PARTIAL_RESPONSE;
     }
 
     return rval;
@@ -1248,16 +1192,13 @@ void SchemaRouterSession::query_databases()
 
     GWBUF* buffer = modutil_create_query("SELECT CONCAT(s.schema_name, '.', IFNULL(t.table_name, '')) FROM information_schema.schemata s "
                                          "LEFT JOIN information_schema.tables t ON s.schema_name = t.table_schema ");
-    gwbuf_set_type(buffer, GWBUF_TYPE_COLLECT_RESULT);
+    gwbuf_set_type(buffer, GWBUF_TYPE_COLLECT_ROWS);
 
     for (const auto& b : m_backends)
     {
         if (b->in_use() && !b->is_closed() && b->target()->is_usable())
         {
-            GWBUF* clone = gwbuf_clone_shallow(buffer);
-            MXB_ABORT_IF_NULL(clone);
-
-            if (!b->write(clone))
+            if (!b->write(gwbuf_clone_shallow(buffer)))
             {
                 MXB_ERROR("Failed to write mapping query to '%s'", b->name());
             }
