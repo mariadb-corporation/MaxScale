@@ -375,60 +375,6 @@ GWBUF* modutil_create_eof(uint8_t seq)
 }
 
 /**
- * Count the number of statements in a query.
- * @param buffer Buffer to analyze.
- * @return Number of statements.
- */
-int modutil_count_statements(GWBUF* buffer)
-{
-    char* start = reinterpret_cast<char*>(buffer->start + 5);
-    char* ptr = start;
-    char* end = reinterpret_cast<char*>(buffer->end);
-    int num = 1;
-
-    while (ptr < end && (ptr = mxb::strnchr_esc(ptr, ';', end - ptr)))
-    {
-        num++;
-        while (ptr < end && *ptr == ';')
-        {
-            ptr++;
-        }
-    }
-
-    ptr = end - 1;
-
-    if (ptr >= start && ptr < end)
-    {
-        while (ptr > start && isspace(*ptr))
-        {
-            ptr--;
-        }
-
-        if (*ptr == ';')
-        {
-            num--;
-        }
-    }
-
-    return num;
-}
-
-int modutil_count_packets(GWBUF* buffer)
-{
-    int packets = 0;
-    size_t offset = 0;
-    uint8_t len[3];
-
-    while (gwbuf_copy_data(buffer, offset, 3, len) == 3)
-    {
-        ++packets;
-        offset += gw_mysql_get_byte3(len) + MYSQL_HEADER_LEN;
-    }
-
-    return packets;
-}
-
-/**
  * Initialize the PCRE2 patterns used when converting MySQL wildcards to PCRE syntax.
  */
 void prepare_pcre2_patterns()

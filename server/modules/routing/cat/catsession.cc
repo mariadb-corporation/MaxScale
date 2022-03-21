@@ -100,7 +100,6 @@ bool CatSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const 
     if (send)
     {
         // Increment the packet sequence number and send it to the client
-        mxb_assert(modutil_count_packets(pPacket) > 0);
         GWBUF_DATA(pPacket)[3] = m_packet_num++;
         rc = RouterSession::clientReply(pPacket, down, reply);
     }
