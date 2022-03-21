@@ -556,7 +556,6 @@ export default {
             tr {
                 pointer-events: none !important;
                 td {
-                    padding: 0px 24px;
                     pointer-events: all !important;
                     white-space: nowrap;
                     &:last-child:not(.hide) {

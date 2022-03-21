@@ -163,7 +163,7 @@ export default {
                     padding: `0px 48px 0px ${this.cellIndex === 0 ? basePl + levelPl : '48'}px`,
                 }
             }
-            return {}
+            return { padding: this.header.padding ? this.header.padding : '0px 24px' }
         },
         // render actions slot at indexOfHoveredRow
         renderActionsSlot() {

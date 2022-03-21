@@ -18,14 +18,19 @@ import { makeServer } from '@tests/unit/mirage/api'
 import { initAllServers } from '@tests/unit/mirage/servers'
 import { initAllMonitors } from '@tests/unit/mirage/monitors'
 const expectedTableHeaders = [
-    { text: `Monitor`, value: 'groupId', autoTruncate: true },
-    { text: 'State', value: 'monitorState' },
-    { text: 'Servers', value: 'id', autoTruncate: true },
-    { text: 'Address', value: 'serverAddress', autoTruncate: true },
-    { text: 'Port', value: 'serverPort' },
-    { text: 'Connections', value: 'serverConnections', autoTruncate: true },
-    { text: 'State', value: 'serverState' },
-    { text: 'GTID', value: 'gtid' },
+    { text: `Monitor`, value: 'groupId', autoTruncate: true, padding: '0px 0px 0px 24px' },
+    { text: 'State', value: 'monitorState', padding: '0px 12px 0px 24px' },
+    { text: 'Servers', value: 'id', autoTruncate: true, padding: '0px 0px 0px 24px' },
+    { text: 'Address', value: 'serverAddress', autoTruncate: true, padding: '0px 0px 0px 24px' },
+    { text: 'Port', value: 'serverPort', padding: '0px 0px 0px 24px' },
+    {
+        text: 'Connections',
+        value: 'serverConnections',
+        autoTruncate: true,
+        padding: '0px 0px 0px 24px',
+    },
+    { text: 'State', value: 'serverState', padding: '0px 0px 0px 24px' },
+    { text: 'GTID', value: 'gtid', padding: '0px 0px 0px 24px' },
     { text: 'Services', value: 'serviceIds', autoTruncate: true },
 ]
 const expectedTableRows = [

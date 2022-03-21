@@ -50,6 +50,7 @@ headers: {
   editableCol?: boolean, if true, apply editable style for that column
   autoTruncate?: boolean, auto truncate cell value
   align?: string, "center || left || right",
+  padding: string, custom css padding for the cell
 }
 
 SLOTS available for this component:
@@ -77,7 +78,11 @@ export default {
                 this.sortDesc ? 'desc' : 'asc',
                 header.value === this.sortBy && 'active',
                 header.text === 'Action' && 'px-0',
-                this.isTree && this.hasValidChild ? 'py-0 px-12' : 'py-0 px-6',
+                this.isTree && this.hasValidChild
+                    ? 'py-0 px-12'
+                    : header.padding
+                    ? ''
+                    : 'py-0 px-6',
             ]
         },
     },
