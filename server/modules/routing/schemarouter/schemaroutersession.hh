@@ -114,12 +114,12 @@ private:
     void                 send_databases();
     bool                 send_shards();
     void                 query_databases();
-    int                  inspect_mapping_states(SRBackend* bref, GWBUF** wbuf);
-    enum showdb_response parse_mapping_response(SRBackend* bref, GWBUF** buffer);
+    int                  inspect_mapping_states(SRBackend* bref, GWBUF** wbuf, const mxs::Reply& reply);
+    enum showdb_response parse_mapping_response(SRBackend* bref, GWBUF** buffer, const mxs::Reply& reply);
     void                 route_queued_query();
     bool                 delay_routing();
     void                 synchronize_shards();
-    void                 handle_mapping_reply(SRBackend* bref, GWBUF** pPacket);
+    void                 handle_mapping_reply(SRBackend* bref, GWBUF** pPacket, const mxs::Reply& reply);
     std::string          get_cache_key() const;
     void                 write_error_to_client(int errnum, const char* mysqlstate, const char* errmsg);
 

@@ -470,9 +470,9 @@ bool SchemaRouterSession::routeQuery(GWBUF* pPacket)
 
     return ret;
 }
-void SchemaRouterSession::handle_mapping_reply(SRBackend* bref, GWBUF** pPacket)
+void SchemaRouterSession::handle_mapping_reply(SRBackend* bref, GWBUF** pPacket, const mxs::Reply& reply)
 {
-    int rc = inspect_mapping_states(bref, pPacket);
+    int rc = inspect_mapping_states(bref, pPacket, reply);
 
     if (rc == 1)
     {
@@ -559,7 +559,7 @@ bool SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& dow
 
     if (m_state & INIT_MAPPING)
     {
-        handle_mapping_reply(bref, &pPacket);
+        handle_mapping_reply(bref, &pPacket, reply);
     }
     else if (m_state & INIT_USE_DB)
     {
@@ -929,70 +929,67 @@ bool SchemaRouterSession::delay_routing()
  * @param router_cli_ses Router client session
  * @return 1 if mapping is done, 0 if it is still ongoing and -1 on error
  */
-int SchemaRouterSession::inspect_mapping_states(SRBackend* bref, GWBUF** wbuf)
+int SchemaRouterSession::inspect_mapping_states(SRBackend* b, GWBUF** wbuf, const mxs::Reply& reply)
 {
     bool mapped = true;
     GWBUF* writebuf = *wbuf;
 
-    for (const auto& b : m_backends)
+    if (!b->is_mapped())
     {
-        if (b.get() == bref && !b->is_mapped())
+        enum showdb_response rc = parse_mapping_response(b, &writebuf, reply);
+
+        if (rc == SHOWDB_FULL_RESPONSE)
         {
-            enum showdb_response rc = parse_mapping_response(b.get(), &writebuf);
+            b->set_mapped(true);
+            MXB_DEBUG("Received SHOW DATABASES reply from '%s'", b->name());
+        }
+        else if (rc == SHOWDB_FATAL_ERROR)
+        {
+            *wbuf = writebuf;
+            return -1;
+        }
+        else
+        {
+            mxb_assert(rc != SHOWDB_PARTIAL_RESPONSE);
 
-            if (rc == SHOWDB_FULL_RESPONSE)
+            if ((m_state & INIT_FAILED) == 0)
             {
-                b->set_mapped(true);
-                MXB_DEBUG("Received SHOW DATABASES reply from '%s'", b->name());
-            }
-            else if (rc == SHOWDB_FATAL_ERROR)
-            {
-                *wbuf = writebuf;
-                return -1;
-            }
-            else
-            {
-                mxb_assert(rc != SHOWDB_PARTIAL_RESPONSE);
-
-                if ((m_state & INIT_FAILED) == 0)
+                if (rc == SHOWDB_DUPLICATE_DATABASES)
                 {
-                    if (rc == SHOWDB_DUPLICATE_DATABASES)
-                    {
-                        MXB_ERROR("Duplicate tables found, closing session.");
-                    }
-                    else
-                    {
-                        MXB_ERROR("Fatal error when processing SHOW DATABASES response, closing session.");
-                    }
-
-                    /** This is the first response to the database mapping which
-                     * has duplicate database conflict. Set the initialization bitmask
-                     * to INIT_FAILED */
-                    m_state |= INIT_FAILED;
-
-                    /** Send the client an error about duplicate databases
-                     * if there is a queued query from the client. */
-                    if (m_queue.size())
-                    {
-                        auto err = modutil_create_mysql_err_msg(
-                            1, 0, SCHEMA_ERR_DUPLICATEDB, SCHEMA_ERRSTR_DUPLICATEDB,
-                            "Error: duplicate tables found on two different shards.");
-
-                        mxs::ReplyRoute route;
-                        RouterSession::clientReply(err, route, mxs::Reply());
-                    }
+                    MXB_ERROR("Duplicate tables found, closing session.");
+                }
+                else
+                {
+                    MXB_ERROR("Fatal error when processing SHOW DATABASES response, closing session.");
                 }
 
-                *wbuf = writebuf;
-                return -1;
-            }
-        }
+                /** This is the first response to the database mapping which
+                 * has duplicate database conflict. Set the initialization bitmask
+                 * to INIT_FAILED */
+                m_state |= INIT_FAILED;
 
-        if (b->in_use() && !b->is_mapped())
-        {
-            mapped = false;
-            MXB_DEBUG("Still waiting for reply to SHOW DATABASES from '%s'", b->name());
+                /** Send the client an error about duplicate databases
+                 * if there is a queued query from the client. */
+                if (m_queue.size())
+                {
+                    auto err = modutil_create_mysql_err_msg(
+                        1, 0, SCHEMA_ERR_DUPLICATEDB, SCHEMA_ERRSTR_DUPLICATEDB,
+                        "Error: duplicate tables found on two different shards.");
+
+                    mxs::ReplyRoute route;
+                    RouterSession::clientReply(err, route, mxs::Reply());
+                }
+            }
+
+            *wbuf = writebuf;
+            return -1;
         }
+    }
+
+    if (b->in_use() && !b->is_mapped())
+    {
+        mapped = false;
+        MXB_DEBUG("Still waiting for reply to SHOW DATABASES from '%s'", b->name());
     }
 
     *wbuf = writebuf;
@@ -1119,7 +1116,9 @@ bool SchemaRouterSession::ignore_duplicate_table(const std::string& data)
  * @return 1 if a complete response was received, 0 if a partial response was received
  * and -1 if a database was found on more than one server.
  */
-enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref, GWBUF** buffer)
+enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref,
+                                                                 GWBUF** buffer,
+                                                                 const mxs::Reply& reply)
 {
     bool duplicate_found = false;
     enum showdb_response rval = SHOWDB_PARTIAL_RESPONSE;
