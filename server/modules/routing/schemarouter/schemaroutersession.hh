@@ -121,6 +121,7 @@ private:
     void                 synchronize_shards();
     void                 handle_mapping_reply(SRBackend* bref, GWBUF** pPacket);
     std::string          get_cache_key() const;
+    void                 write_error_to_client(int errnum, const char* mysqlstate, const char* errmsg);
 
     /** Member variables */
     bool                     m_closed;          /**< True if session closed */

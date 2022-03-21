@@ -36,8 +36,6 @@ enum route_target get_shard_route_target(uint32_t qtype);
 bool              change_current_db(std::string& dest, Shard& shard, GWBUF* buf);
 bool              extract_database(GWBUF* buf, char* str);
 bool              detect_show_shards(GWBUF* query);
-void              write_error_to_client(MariaDBClientConnection* conn, int errnum,
-                                        const char* mysqlstate, const char* errmsg);
 
 SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session,
                                          SchemaRouter* router,
@@ -396,7 +394,7 @@ bool SchemaRouterSession::routeQuery(GWBUF* pPacket)
                     sprintf(errbuf + strlen(errbuf), " ([%" PRIu64 "]: DB change failed)", m_pSession->id());
                 }
 
-                write_error_to_client(m_client, SCHEMA_ERR_DBNOTFOUND, SCHEMA_ERRSTR_DBNOTFOUND, errbuf);
+                write_error_to_client(SCHEMA_ERR_DBNOTFOUND, SCHEMA_ERRSTR_DBNOTFOUND, errbuf);
                 return 1;
             }
 
@@ -837,21 +835,9 @@ bool SchemaRouterSession::send_shards()
     return true;
 }
 
-void
-write_error_to_client(MariaDBClientConnection* conn, int errnum, const char* mysqlstate, const char* errmsg)
+void SchemaRouterSession::write_error_to_client(int errnum, const char* mysqlstate, const char* errmsg)
 {
-    GWBUF* errbuff = modutil_create_mysql_err_msg(1, 0, errnum, mysqlstate, errmsg);
-    if (errbuff)
-    {
-        if (conn->write(errbuff) != 1)
-        {
-            MXB_ERROR("Failed to write error packet to client.");
-        }
-    }
-    else
-    {
-        MXB_ERROR("Memory allocation failed when creating error packet.");
-    }
+    set_response(modutil_create_mysql_err_msg(1, 0, errnum, mysqlstate, errmsg));
 }
 
 /**
@@ -894,7 +880,7 @@ bool SchemaRouterSession::handle_default_db()
         {
             sprintf(errmsg + strlen(errmsg), " ([%" PRIu64 "]: DB not found on connect)", m_pSession->id());
         }
-        write_error_to_client(m_client, SCHEMA_ERR_DBNOTFOUND, SCHEMA_ERRSTR_DBNOTFOUND, errmsg);
+        write_error_to_client(SCHEMA_ERR_DBNOTFOUND, SCHEMA_ERRSTR_DBNOTFOUND, errmsg);
     }
 
     return rval;

@@ -223,8 +223,7 @@ void RWSplitSession::send_readonly_error()
     auto err = modutil_create_mysql_err_msg(1, 0, ER_OPTION_PREVENTS_STATEMENT, "HY000",
                                             "The MariaDB server is running with the --read-only"
                                             " option so it cannot execute this statement");
-    mxs::ReplyRoute route;
-    RouterSession::clientReply(err, route, mxs::Reply());
+    set_response(err);
 }
 
 bool RWSplitSession::query_not_supported(GWBUF* querybuf)
@@ -264,8 +263,7 @@ bool RWSplitSession::query_not_supported(GWBUF* querybuf)
 
     if (err)
     {
-        mxs::ReplyRoute route;
-        RouterSession::clientReply(err, route, mxs::Reply());
+        set_response(err);
     }
 
     return err != nullptr;
@@ -281,9 +279,8 @@ bool RWSplitSession::reuse_prepared_stmt(const mxs::Buffer& buffer)
 
         if (it != m_ps_cache.end())
         {
-            mxs::ReplyRoute route;
             // Cannot reuse the GWBUF* stored in the ps cache.
-            RouterSession::clientReply(gwbuf_clone_shallow(it->second.get()), route, mxs::Reply());
+            set_response(gwbuf_clone_shallow(it->second.get()));
             return true;
         }
     }

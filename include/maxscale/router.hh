@@ -91,6 +91,15 @@ public:
 protected:
     RouterSession(MXS_SESSION* pSession);
 
+    /**
+     * To be called by a router that short-circuits the request processing.
+     * If this function is called (in routeQuery), the router must return
+     * without passing the request further.
+     *
+     * @param pResponse  The response to be sent to the client.
+     */
+    void set_response(GWBUF* pResponse) const;
+
 protected:
     MXS_SESSION*   m_pSession;      /*< The MXS_SESSION this router session is associated with. */
     mxs::Routable* m_pUp;

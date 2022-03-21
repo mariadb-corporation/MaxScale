@@ -457,7 +457,7 @@ uint64_t session_get_current_id()
     return session ? session->id() : 0;
 }
 
-void session_set_response(MXS_SESSION* session, SERVICE* service, mxs::Routable* up, GWBUF* buffer)
+void session_set_response(MXS_SESSION* session, mxs::Routable* up, GWBUF* buffer)
 {
     // Valid arguments.
     mxb_assert(session && up && buffer);
@@ -467,7 +467,6 @@ void session_set_response(MXS_SESSION* session, SERVICE* service, mxs::Routable*
 
     session->response.up = up;
     session->response.buffer = buffer;
-    session->response.service = service;
 }
 
 void session_set_retain_last_statements(uint32_t n)

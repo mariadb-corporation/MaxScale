@@ -171,9 +171,7 @@ bool PinlokiSession::routeQuery(GWBUF* pPacket)
 
     if (response)
     {
-        const mxs::ReplyRoute down;
-        const mxs::Reply reply;
-        mxs::RouterSession::clientReply(response, down, reply);
+        set_response(response);
         rval = 1;
     }
 

@@ -407,7 +407,6 @@ public:
     {
         mxs::Routable* up;          /*< Upward component to receive buffer. */
         GWBUF*         buffer;      /*< Buffer to deliver to up. */
-        SERVICE*       service;     /*< Service where the response originated */
     }               response;       /*< Shortcircuited response */
     session_close_t close_reason;   /*< Reason why the session was closed */
 
@@ -437,11 +436,10 @@ private:
  * in the request processing pipeline.
  *
  * @param session  The session.
- * @param service  The source of the response
- * @param up       The filter that should receive the response.
- * @param buffer   The response.
+ * @param up       The component that should receive the response.
+ * @param buffer   The response to deliver.
  */
-void session_set_response(MXS_SESSION* session, SERVICE* service, mxs::Routable* up, GWBUF* buffer);
+void session_set_response(MXS_SESSION* session, mxs::Routable* up, GWBUF* buffer);
 
 
 const char* session_state_to_string(MXS_SESSION::State);

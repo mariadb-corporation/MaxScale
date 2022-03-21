@@ -35,4 +35,9 @@ bool RouterSession::handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpo
 {
     return false;
 }
+
+void RouterSession::set_response(GWBUF* pResponse) const
+{
+    session_set_response(m_pSession, m_pUp, pResponse);
+}
 }

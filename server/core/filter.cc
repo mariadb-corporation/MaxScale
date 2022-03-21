@@ -328,7 +328,7 @@ json_t* FilterSession::diagnostics() const
 
 void FilterSession::set_response(GWBUF* pResponse) const
 {
-    session_set_response(m_pSession, m_pService, m_up, pResponse);
+    session_set_response(m_pSession, m_up, pResponse);
 }
 }
 
