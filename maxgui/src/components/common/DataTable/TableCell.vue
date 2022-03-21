@@ -45,6 +45,7 @@
             >
                 <slot :name="header.value" :data="{ item, header, cellIndex, rowIndex }" />
             </div>
+            <slot :name="`${header.value}-append`" :data="{ item, header, cellIndex, rowIndex }" />
             <!-- Actions slot -->
             <div v-if="renderActionsSlot" class="action-slot-wrapper">
                 <slot :data="{ item }" name="actions" />

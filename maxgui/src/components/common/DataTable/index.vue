@@ -78,6 +78,12 @@
                                     {{ getValue(item, header) }}
                                 </slot>
                             </template>
+                            <template :slot="`${header.value}-append`">
+                                <slot
+                                    :name="`${header.value}-append`"
+                                    :data="{ item, header, cellIndex, rowIndex }"
+                                />
+                            </template>
                             <template slot="actions">
                                 <slot name="actions" :data="{ item }" />
                             </template>

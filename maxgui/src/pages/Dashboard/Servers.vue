@@ -27,7 +27,14 @@
                 </router-link>
                 <span v-else>{{ groupId }} </span>
             </template>
-
+            <template v-slot:groupId-append="{ data: { item: { groupId } } }">
+                <span
+                    v-if="isCooperative(groupId)"
+                    class="ml-1 color text-success cooperative-indicator"
+                >
+                    Primary
+                </span>
+            </template>
             <template v-slot:monitorState="{ data: { item: { monitorState } } }">
                 <div class="d-flex align-center">
                     <icon-sprite-sheet
@@ -344,6 +351,18 @@ export default {
         setMonitorsLength(total) {
             this.monitorsLength = total
         },
+        isCooperative(id) {
+            return this.$typy(
+                this.getAllMonitorsMap.get(id),
+                'attributes.monitor_diagnostics.primary'
+            ).safeBoolean
+        },
     },
 }
 </script>
+
+<style lang="scss" scoped>
+.cooperative-indicator {
+    font-size: 0.75rem;
+}
+</style>
