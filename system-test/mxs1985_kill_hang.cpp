@@ -84,7 +84,9 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
+    test.log_printf("mxs1985");
     mxs1985(test);
+    test.log_printf("mxs3251");
     mxs3251(test);
 
     return test.global_result;
