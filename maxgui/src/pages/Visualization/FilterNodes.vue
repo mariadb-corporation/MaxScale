@@ -21,7 +21,11 @@
         </v-tooltip>
 
         <div class="filter-node-group pt-4">
-            <div v-for="filter in filters" :key="filter.id" class="d-flex align-center flex-column">
+            <div
+                v-for="filter in filters.slice().reverse()"
+                :key="filter.id"
+                class="d-flex align-center flex-column"
+            >
                 <div class="px-3 py-1 mx-auto filter-node" :style="{ width: `${nodeWidth}px` }">
                     <router-link
                         target="_blank"
