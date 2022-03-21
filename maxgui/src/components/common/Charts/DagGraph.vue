@@ -16,6 +16,7 @@
                     top: `${node.y}px`,
                     left: `${node.x}px`,
                     ...revertGraphStyle,
+                    zIndex: draggingNodeId === node.data.id ? 4 : 3,
                 }"
                 v-on="
                     draggable
@@ -52,7 +53,7 @@ export default {
     },
     data() {
         return {
-            duration: 300,
+            duration: 0,
             dagDim: { width: 0, height: 0 }, // dag-node-group dim
             nodeGroupTransform: { x: 24, y: this.dim.height / 2, k: 1 },
             nodeDivData: [],
