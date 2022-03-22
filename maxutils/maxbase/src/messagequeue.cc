@@ -31,15 +31,30 @@ using std::move;
 namespace maxbase
 {
 
-MessageQueue::MessageQueue(Handler* pHandler, int event_fd)
-    : mxb::PollData(&MessageQueue::poll_handler)
+//
+// MessageQueue
+//
+MessageQueue::MessageQueue(uint32_t (*pPoll_handler)(POLL_DATA* pData, WORKER* worker, uint32_t events))
+    : mxb::PollData(pPoll_handler)
+{
+}
+
+MessageQueue::~MessageQueue()
+{
+}
+
+//
+// EventMessageQueue
+//
+EventMessageQueue::EventMessageQueue(Handler* pHandler, int event_fd)
+    : MessageQueue(&EventMessageQueue::poll_handler)
     , m_handler(*pHandler)
     , m_event_fd(event_fd)
 {
     mxb_assert(pHandler);
 }
 
-MessageQueue::~MessageQueue()
+EventMessageQueue::~EventMessageQueue()
 {
     if (m_pWorker)
     {
@@ -49,13 +64,13 @@ MessageQueue::~MessageQueue()
 }
 
 // static
-MessageQueue* MessageQueue::create(Handler* pHandler)
+MessageQueue* EventMessageQueue::create(Handler* pHandler)
 {
-    MessageQueue* pThis = nullptr;
+    EventMessageQueue* pThis = nullptr;
     int event_fd = eventfd(0, EFD_NONBLOCK);
     if (event_fd >= 0)
     {
-        pThis = new MessageQueue(pHandler, event_fd);
+        pThis = new EventMessageQueue(pHandler, event_fd);
     }
     else
     {
@@ -65,7 +80,7 @@ MessageQueue* MessageQueue::create(Handler* pHandler)
     return pThis;
 }
 
-bool MessageQueue::post(const Message& message)
+bool EventMessageQueue::post(const Message& message)
 {
     bool rv = false;
     mxb_assert(m_pWorker);
@@ -92,7 +107,7 @@ bool MessageQueue::post(const Message& message)
     return rv;
 }
 
-bool MessageQueue::add_to_worker(Worker* pWorker)
+bool EventMessageQueue::add_to_worker(Worker* pWorker)
 {
     if (m_pWorker)
     {
@@ -108,7 +123,7 @@ bool MessageQueue::add_to_worker(Worker* pWorker)
     return m_pWorker != NULL;
 }
 
-Worker* MessageQueue::remove_from_worker()
+Worker* EventMessageQueue::remove_from_worker()
 {
     Worker* pWorker = m_pWorker;
 
@@ -121,7 +136,7 @@ Worker* MessageQueue::remove_from_worker()
     return pWorker;
 }
 
-uint32_t MessageQueue::handle_poll_events(Worker* pWorker, uint32_t events)
+uint32_t EventMessageQueue::handle_poll_events(Worker* pWorker, uint32_t events)
 {
     // Only the owning worker's thread should run this function.
     mxb_assert(Worker::get_current() == m_pWorker);
@@ -176,20 +191,20 @@ uint32_t MessageQueue::handle_poll_events(Worker* pWorker, uint32_t events)
 }
 
 // static
-uint32_t MessageQueue::poll_handler(POLL_DATA* pData, WORKER* pWorker, uint32_t events)
+uint32_t EventMessageQueue::poll_handler(POLL_DATA* pData, WORKER* pWorker, uint32_t events)
 {
-    MessageQueue* pThis = static_cast<MessageQueue*>(pData);
+    EventMessageQueue* pThis = static_cast<EventMessageQueue*>(pData);
 
     return pThis->handle_poll_events(static_cast<Worker*>(pWorker), events);
 }
 
-void MessageQueue::swap_messages_and_work()
+void EventMessageQueue::swap_messages_and_work()
 {
     Guard guard(m_messages_lock);
     m_work.swap(m_messages);
 }
 
-void MessageQueue::add_message(const MessageQueue::Message& message)
+void EventMessageQueue::add_message(const MessageQueue::Message& message)
 {
     Guard guard(m_messages_lock);
     m_messages.emplace_back(message);

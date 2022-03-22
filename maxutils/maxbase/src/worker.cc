@@ -430,7 +430,7 @@ Worker::Worker(int max_events)
 
     if (m_epoll_fd != -1)
     {
-        m_pQueue = MessageQueue::create(this);
+        m_pQueue = EventMessageQueue::create(this);
 
         if (m_pQueue)
         {

@@ -104,38 +104,19 @@ public:
     virtual void handle_message(MessageQueue& queue, const MessageQueueMessage& message) = 0;
 };
 
-
 /**
  * The class @c MessageQueue provides a cross thread message queue.
  */
-class MessageQueue : private mxb::PollData
+class MessageQueue : protected mxb::PollData
 {
 public:
-    typedef MessageQueueHandler Handler;
-    typedef MessageQueueMessage Message;
+    using Handler = MessageQueueHandler;
+    using Message = MessageQueueMessage;
+
     MessageQueue(const MessageQueue&) = delete;
     MessageQueue& operator=(const MessageQueue&) = delete;
 
-    /**
-     * Creates a @c MessageQueue with the provided handler.
-     *
-     * @param pHandler  The handler that will receive the messages sent over the
-     *                  message queue. Note that the handler *must* remain valid
-     *                  for the lifetime of the @c MessageQueue.
-     *
-     * @return A pointer to a new @c MessageQueue or NULL if an error occurred.
-     *
-     * @attention Before the message queue can be used, it must be added to
-     *            a worker.
-     */
-    static MessageQueue* create(Handler* pHandler);
-
-    /**
-     * Destructor
-     *
-     * Removes itself If still added to a worker and closes the pipe.
-     */
-    ~MessageQueue();
+    virtual ~MessageQueue();
 
     /**
      * Posts a message over the queue to the handler provided when the
@@ -151,7 +132,7 @@ public:
      * @attention Note that the message queue must have been added to a worker
      *            before a message can be posted.
      */
-    bool post(const Message& message);
+    virtual bool post(const Message& message) = 0;
 
     /**
      * Adds the message queue to a particular worker.
@@ -165,7 +146,7 @@ public:
      * @attention If the message queue is currently added to a worker, it
      *            will first be removed from that worker.
      */
-    bool add_to_worker(Worker* pWorker);
+    virtual bool add_to_worker(Worker* pWorker) = 0;
 
     /**
      * Removes the message queue from the worker it is currently added to.
@@ -173,10 +154,51 @@ public:
      * @return The worker the message queue was associated with, or NULL
      *         if it was not associated with any.
      */
-    Worker* remove_from_worker();
+    virtual Worker* remove_from_worker() = 0;
+
+protected:
+    MessageQueue(uint32_t (*pPoll_handler)(POLL_DATA* pData, WORKER* worker, uint32_t events));
+};
+
+/**
+ * The class @c EventMessageQueue provides a cross thread message queue
+ * implemented on top of @c eventfd.
+ */
+class EventMessageQueue : public MessageQueue
+{
+public:
+    EventMessageQueue(const EventMessageQueue&) = delete;
+    EventMessageQueue& operator=(const EventMessageQueue&) = delete;
+
+    /**
+     * Creates an @c EventMessageQueue with the provided handler.
+     *
+     * @param pHandler  The handler that will receive the messages sent over the
+     *                  message queue. Note that the handler *must* remain valid
+     *                  for the lifetime of the @c EventMessageQueue.
+     *
+     * @return A pointer to a new @c MessageQueue or NULL if an error occurred.
+     *
+     * @attention Before the message queue can be used, it must be added to
+     *            a worker.
+     */
+    static MessageQueue* create(Handler* pHandler);
+
+    /**
+     * Destructor
+     *
+     * Removes itself If still added to a worker and closes the eventfd.
+     */
+    ~EventMessageQueue();
+
+    bool post(const Message& message) override;
+
+    bool add_to_worker(Worker* pWorker) override;
+
+    Worker* remove_from_worker() override;
 
 private:
-    MessageQueue(Handler* pHandler, int event_fd);
+    EventMessageQueue(Handler* pHandler, int event_fd);
 
     uint32_t        handle_poll_events(Worker* pWorker, uint32_t events);
     static uint32_t poll_handler(POLL_DATA* pData, WORKER* worker, uint32_t events);
