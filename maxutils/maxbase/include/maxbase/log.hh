@@ -289,8 +289,7 @@ bool mxb_log_should_log(int priority);
         { \
             break; \
         } \
-        thread_local std::ostringstream os; \
-        os.str(std::string()); \
+        std::ostringstream os; \
         os << mxb_msg_str__; \
         mxb_log_message(CMXBLOGLEVEL__, MXB_MODULE_NAME, __FILE__, __LINE__, \
                         __func__, "%s", os.str().c_str()); \
