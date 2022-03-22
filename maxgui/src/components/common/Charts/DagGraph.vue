@@ -429,13 +429,14 @@ export default {
                 this.isDragging = true
                 const offsetPos = { x: e.clientX - this.startPos.x, y: e.clientY - this.startPos.y }
                 this.startPos = { x: e.clientX, y: e.clientY }
-                let offsetPosX = offsetPos.x,
-                    offsetPosY = offsetPos.y
+                let offsetPosX = offsetPos.x / this.nodeGroupTransform.k,
+                    offsetPosY = offsetPos.y / this.nodeGroupTransform.k
                 // change pos of the dragging node
                 if (this.revert) {
-                    offsetPosX = -offsetPos.x // graph is reverted, so minus offset
-                    offsetPosY = -offsetPos.y // graph is reverted, so minus offset
+                    offsetPosX = -offsetPosX // graph is reverted, so minus offset
+                    offsetPosY = -offsetPosY // graph is reverted, so minus offset
                 }
+
                 node.x = node.x + offsetPosX
                 node.y = node.y + offsetPosY
 
