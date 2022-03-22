@@ -283,6 +283,72 @@ bool mxb_log_should_log(int priority);
 #define MXB_DEBUG(format, ...)
 #endif
 
+#define MXB_STREAM_LOG_HELPER(CMXBLOGLEVEL__, mxb_msg_str__) \
+    do { \
+        if (!mxb_log_is_priority_enabled(CMXBLOGLEVEL__)) \
+        { \
+            break; \
+        } \
+        thread_local std::ostringstream os; \
+        os.str(std::string()); \
+        os << mxb_msg_str__; \
+        mxb_log_message(CMXBLOGLEVEL__, MXB_MODULE_NAME, __FILE__, __LINE__, \
+                        __func__, "%s", os.str().c_str()); \
+    } while (false)
+
+
+/**
+ * Log a message on the alert level
+ *
+ * These messages are never throttled and will always appear in the log. Only use this for actual fatal errors
+ * that must be logged.
+ *
+ * @param msg The std::ostream reference with the message
+ */
+#define MXB_SALERT(mxb_msg_str__) MXB_STREAM_LOG_HELPER(LOG_ALERT, mxb_msg_str__)
+
+/**
+ * Log a message on the error level
+ *
+ * @param msg The std::ostream reference with the message
+ */
+#define MXB_SERROR(mxb_msg_str__) MXB_STREAM_LOG_HELPER(LOG_ERR, mxb_msg_str__)
+
+/**
+ * Log a message on the warning level
+ *
+ * @param msg The std::ostream reference with the message
+ */
+#define MXB_SWARNING(mxb_msg_str__) MXB_STREAM_LOG_HELPER(LOG_WARNING, mxb_msg_str__)
+
+/**
+ * Log a message on the notice level
+ *
+ * @param msg The std::ostream reference with the message
+ */
+#define MXB_SNOTICE(mxb_msg_str__) MXB_STREAM_LOG_HELPER(LOG_NOTICE, mxb_msg_str__)
+
+/**
+ * Log a message on the info level
+ *
+ * @param msg The std::ostream reference with the message
+ */
+#define MXB_SINFO(mxb_msg_str__) MXB_STREAM_LOG_HELPER(LOG_INFO, mxb_msg_str__)
+
+
+/**
+ * Log a message on the debug level
+ *
+ * These messages are never included in release builds. Only use them when it's useful for debugging.
+ *
+ * @param msg The std::ostream reference with the message
+ */
+#if defined (SS_DEBUG)
+#define MXB_SDEBUG(mxb_msg_str__) MXB_STREAM_LOG_HELPER(LOG_DEBUG, mxb_msg_str__)
+#else
+#define MXB_SDEBUG(mxb_msg_str__)
+#endif
+
 /**
  * Log an out of memory error using custom message.
  *
@@ -497,29 +563,4 @@ public:
 private:
     static thread_local Func s_redirect;
 };
-
-#define MXB_STREAM_LOG_HELPER(CMXBLOGLEVEL__, mxb_msg_str__) \
-    do { \
-        if (!mxb_log_is_priority_enabled(CMXBLOGLEVEL__)) \
-        { \
-            break; \
-        } \
-        thread_local std::ostringstream os; \
-        os.str(std::string()); \
-        os << mxb_msg_str__; \
-        mxb_log_message(CMXBLOGLEVEL__, MXB_MODULE_NAME, __FILE__, __LINE__, \
-                        __func__, "%s", os.str().c_str()); \
-    } while (false)
-
-#define MXB_SALERT(mxb_msg_str__)   MXB_STREAM_LOG_HELPER(LOG_ALERT, mxb_msg_str__)
-#define MXB_SERROR(mxb_msg_str__)   MXB_STREAM_LOG_HELPER(LOG_ERR, mxb_msg_str__)
-#define MXB_SWARNING(mxb_msg_str__) MXB_STREAM_LOG_HELPER(LOG_WARNING, mxb_msg_str__)
-#define MXB_SNOTICE(mxb_msg_str__)  MXB_STREAM_LOG_HELPER(LOG_NOTICE, mxb_msg_str__)
-#define MXB_SINFO(mxb_msg_str__)    MXB_STREAM_LOG_HELPER(LOG_INFO, mxb_msg_str__)
-
-#if defined (SS_DEBUG)
-#define MXB_SDEBUG(mxb_msg_str__) MXB_STREAM_LOG_HELPER(LOG_DEBUG, mxb_msg_str__)
-#else
-#define MXB_SDEBUG(mxb_msg_str__)
-#endif
 }
