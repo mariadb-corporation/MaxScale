@@ -335,7 +335,7 @@ public:
         uint64_t sequence {0};
 
         static gtid from_string(const std::string& str);
-        void        parse(const std::string& str);
+        void        parse(std::string_view str);
         std::string to_string() const;
         bool        empty() const;
     };

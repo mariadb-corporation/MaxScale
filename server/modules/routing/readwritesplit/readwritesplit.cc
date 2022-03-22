@@ -22,6 +22,7 @@
 #include <cmath>
 #include <new>
 #include <sstream>
+#include <charconv>
 
 #include <maxscale/cn_strings.hh>
 #include <maxscale/dcb.hh>
@@ -188,18 +189,17 @@ RWSplit::gtid RWSplit::gtid::from_string(const std::string& str)
     return g;
 }
 
-void RWSplit::gtid::parse(const std::string& str)
+void RWSplit::gtid::parse(std::string_view str)
 {
-    const char* ptr = str.c_str();
-    char* end;
-    domain = strtoul(ptr, &end, 10);
-    mxb_assert(*end == '-');
-    ptr = end + 1;
-    server_id = strtoul(ptr, &end, 10);
-    mxb_assert(*end == '-');
-    ptr = end + 1;
-    sequence = strtoul(ptr, &end, 10);
-    mxb_assert(*end == '\0');
+    const char* ptr = str.begin();
+    auto res = std::from_chars(ptr, str.end(), domain, 10);
+    mxb_assert(*res.ptr == '-');
+    ptr = res.ptr + 1;
+    res = std::from_chars(ptr, str.end(), server_id, 10);
+    mxb_assert(*res.ptr == '-');
+    ptr = res.ptr + 1;
+    res = std::from_chars(ptr, str.end(), sequence, 10);
+    mxb_assert(res.ptr == str.end());
 }
 
 std::string RWSplit::gtid::to_string() const

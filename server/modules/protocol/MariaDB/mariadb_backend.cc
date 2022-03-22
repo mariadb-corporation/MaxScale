@@ -107,6 +107,16 @@ std::string get_encoded_str(Iter& it)
     return std::string(start, it);
 }
 
+std::string_view get_encoded_str_sv(Iter& it)
+{
+    uint64_t len = get_encoded_int(it);
+    auto start = it;
+    it.advance(len);
+    // TODO: Use a pointer instead of a mxs::Buffer::iterator
+    mxb_assert_message(&*start + len == &*it, "Memory must be contiguous");
+    return std::string_view(reinterpret_cast<const char*>(&*start), len);
+}
+
 void skip_encoded_str(Iter& it)
 {
     auto len = get_encoded_int(it);
@@ -2306,11 +2316,11 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
 
             if (m_collect_rows)
             {
-                std::vector<std::string> row;
+                std::vector<std::string_view> row;
 
                 for (uint64_t i = 0; i < m_reply.field_counts().back(); i++)
                 {
-                    row.push_back(get_encoded_str(it));
+                    row.push_back(get_encoded_str_sv(it));
                 }
 
                 m_reply.add_row_data(std::move(row));

@@ -1136,7 +1136,7 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
 
             if (!row.empty() && !row[0].empty())
             {
-                const auto& data = row[0];
+                std::string data(row[0]);       // TODO: use string_view here as well
                 mxs::Target* target = bref->target();
 
                 if (!ignore_duplicate_table(data))

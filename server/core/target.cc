@@ -479,7 +479,7 @@ std::string Reply::get_variable(const std::string& name) const
     return it != m_variables.end() ? it->second : "";
 }
 
-const std::vector<std::vector<std::string>>& Reply::row_data() const
+const std::vector<std::vector<std::string_view>>& Reply::row_data() const
 {
     return m_row_data;
 }
@@ -539,7 +539,7 @@ void Reply::set_server_status(uint16_t status)
     m_server_status = status;
 }
 
-void Reply::add_row_data(std::vector<std::string> row)
+void Reply::add_row_data(std::vector<std::string_view> row)
 {
     m_row_data.push_back(std::move(row));
 }

@@ -16,6 +16,7 @@
 
 #include <atomic>
 #include <string>
+#include <string_view>
 #include <mutex>
 #include <unordered_map>
 
@@ -644,13 +645,14 @@ public:
     /**
      * Get rows returned in the result
      *
-     * The rows can contain binary data. Don't rely on c_str() working correctly unless you know the result
-     * doesn't have embedded nulls in it.
+     * The rows can contain binary data and are not null-terminated. The values are valid for the duration of
+     * the clientReply call and contain the current batch of rows being routed to the client. This means that
+     * the code that uses this should not expect the whole result to be available at any one time.
      *
      * @return The rows of the resultset if it returned any. If no rows were returned, an empty array is
      *         returned. To distinguish OK packets from empty results, use is_ok().
      */
-    const std::vector<std::vector<std::string>>& row_data() const;
+    const std::vector<std::vector<std::string_view>>& row_data() const;
 
     //
     // Setters
@@ -678,7 +680,7 @@ public:
 
     void set_server_status(uint16_t status);
 
-    void add_row_data(std::vector<std::string> row);
+    void add_row_data(std::vector<std::string_view> row);
 
     void clear_row_data();
 
@@ -704,6 +706,6 @@ private:
     std::vector<uint64_t> m_field_counts;
 
     std::unordered_map<std::string, std::string> m_variables;
-    std::vector<std::vector<std::string>>        m_row_data;
+    std::vector<std::vector<std::string_view>>   m_row_data;
 };
 }
