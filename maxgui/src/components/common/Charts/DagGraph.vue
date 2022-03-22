@@ -10,13 +10,16 @@
                 ref="rectNode"
                 :key="node.data.id"
                 class="rect-node"
-                :class="{ move: draggable }"
+                :class="{
+                    move: draggable,
+                    'no-userSelect': draggingStates.isDragging,
+                }"
                 :node_id="node.data.id"
                 :style="{
                     top: `${node.y}px`,
                     left: `${node.x}px`,
                     ...revertGraphStyle,
-                    zIndex: draggingNodeId === node.data.id ? 4 : 3,
+                    zIndex: draggingStates.draggingNodeId === node.data.id ? 4 : 3,
                 }"
                 v-on="
                     draggable
@@ -62,9 +65,12 @@ export default {
             heightChangesCount: 0,
             arrowHeadHeight: 12,
             // states for dragging conf-node
-            isDragging: false,
-            draggingNodeId: null,
-            startPos: null,
+            defDraggingStates: {
+                isDragging: false,
+                draggingNodeId: null,
+                startPos: null,
+            },
+            draggingStates: null,
         }
     },
     computed: {
@@ -108,6 +114,7 @@ export default {
         },
     },
     mounted() {
+        if (this.draggable) this.setDefDraggingStates()
         if (this.data.length) {
             this.computeLayout(this.data)
             this.initSvg()
@@ -118,6 +125,9 @@ export default {
         if (this.draggable) this.rmMouseUpEvt()
     },
     methods: {
+        setDefDraggingStates() {
+            this.draggingStates = this.$help.lodash.cloneDeep(this.defDraggingStates)
+        },
         /**
          * compute dag layout
          * @param {Object} data - tree data
@@ -419,18 +429,30 @@ export default {
             document.removeEventListener('mouseup', this.onNodeDragEnd)
         },
         onNodeDragStart({ e, node }) {
-            this.draggingNodeId = node.data.id
-            this.startPos = { x: e.clientX, y: e.clientY }
+            this.draggingStates = {
+                ...this.draggingStates,
+                draggingNodeId: node.data.id,
+                startPos: { x: e.clientX, y: e.clientY },
+            }
+
             this.addMouseUpEvt()
         },
+
         onNodeDragging({ e, node }) {
             e.preventDefault()
-            if (this.startPos && this.draggingNodeId === node.data.id) {
-                this.isDragging = true
-                const offsetPos = { x: e.clientX - this.startPos.x, y: e.clientY - this.startPos.y }
-                this.startPos = { x: e.clientX, y: e.clientY }
+            const { startPos, draggingNodeId } = this.draggingStates
+            if (startPos && draggingNodeId === node.data.id) {
+                const offsetPos = { x: e.clientX - startPos.x, y: e.clientY - startPos.y }
+                // calc offset position
                 let offsetPosX = offsetPos.x / this.nodeGroupTransform.k,
                     offsetPosY = offsetPos.y / this.nodeGroupTransform.k
+                // update startPos
+                this.draggingStates = {
+                    ...this.draggingStates,
+                    isDragging: true,
+                    startPos: { x: e.clientX, y: e.clientY },
+                }
+
                 // change pos of the dragging node
                 if (this.revert) {
                     offsetPosX = -offsetPosX // graph is reverted, so minus offset
@@ -441,7 +463,7 @@ export default {
                 node.y = node.y + offsetPosY
 
                 const dagNodes = this.dag.descendants()
-                const dagNode = dagNodes.find(d => d.data.id === this.draggingNodeId)
+                const dagNode = dagNodes.find(d => d.data.id === draggingNodeId)
                 // change pos of child links
                 for (const link of dagNode.ichildLinks()) {
                     let point = link.points[0]
@@ -453,7 +475,7 @@ export default {
                     const parentNode = dagNodes.find(d => d.data.id === parentId)
                     const linkToParent = parentNode
                         .childLinks()
-                        .find(link => link.target.data.id === this.draggingNodeId)
+                        .find(link => link.target.data.id === draggingNodeId)
                     let point = linkToParent.points[linkToParent.points.length - 1]
                     point.x = point.x + offsetPosX
                     point.y = point.y + offsetPosY
@@ -462,8 +484,7 @@ export default {
             }
         },
         onNodeDragEnd() {
-            this.isDragging = false
-            this.startPos = null
+            this.setDefDraggingStates()
             this.rmMouseUpEvt()
         },
     },
