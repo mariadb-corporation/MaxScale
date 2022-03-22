@@ -60,6 +60,7 @@ export default {
             defNodeHeight: 100,
             dynNodeHeightMap: {},
             heightChangesCount: 0,
+            arrowHeadHeight: 12,
             // states for dragging conf-node
             isDragging: false,
             draggingNodeId: null,
@@ -189,7 +190,6 @@ export default {
             if (!this.$help.lodash.isEqual(this.dynNodeHeightMap, heightMap))
                 this.dynNodeHeightMap = heightMap
         },
-        //TODO: Reposition source and target point while dragging if source.y === target.y (horizontal straight line)
         // Repositioning nodes and links by mutating x,y value
         repositioning() {
             let nodes = this.dag.descendants(),
@@ -200,27 +200,135 @@ export default {
                 d.x = d.x - width / 2
                 d.y = d.y - height / 2
             })
-            // repositioning links so that links are drawn at the middle point of the top edge
+            // repositioning links so that links are drawn at the middle point of the edge
             links.forEach(d => {
-                d.points.forEach((p, i) => {
-                    if (i === 0) p.y = p.y + this.getDynNodeSize(d.source).height / 2
-                    else p.y = p.y - this.getDynNodeSize(d.target).height / 2
-                })
+                let shouldRevert = this.handleRevertDiagonal(d)
+                const src = d.points[0]
+                const target = d.points[d.points.length - 1]
+
+                const srcSize = this.getDynNodeSize(d.source)
+                const targetSize = this.getDynNodeSize(d.target)
+                if (shouldRevert) {
+                    // src becomes a target point and vice versa
+                    src.y = src.y + srcSize.height / 2 + this.arrowHeadHeight
+                    target.y = target.y - targetSize.height / 2
+                } else {
+                    src.y = src.y + srcSize.height / 2
+                    target.y = target.y - targetSize.height / 2 - this.arrowHeadHeight
+                }
             })
+        },
+
+        /**
+         * Handle override value for midPoint of param.points
+         * @param {Object} param.points - Obtuse points to be overridden
+         * @param {Boolean} param.isOpposite - is src node opposite to target node
+         */
+        setMidPoint({ points, isOpposite }) {
+            if (isOpposite)
+                points.midPoint = [points.targetX, points.srcY + (points.targetY - points.srcY) / 2]
+            else points.midPoint = [(points.srcX + points.targetX) / 2, points.targetY]
+        },
+        /**
+         * Handle override value for targetY, srcY, angle, midPoint of param.points
+         * @param {Boolean} param.shouldRevert - result of handleRevertDiagonal()
+         * @param {Object} param.src - source point
+         * @param {Object} param.target - target point
+         * @param {Object} param.sizes - {src,target} source and target node size
+         * @param {Object} param.points - Obtuse points to be overridden
+         */
+        setOppositePoints({ shouldRevert, src, target, sizes, points }) {
+            points.angle = shouldRevert ? 90 : 270
+            points.srcY = shouldRevert ? src.y + sizes.src.height : src.y - sizes.src.height
+            points.targetY = shouldRevert
+                ? target.y - sizes.target.height - this.arrowHeadHeight * 2
+                : target.y + sizes.target.height + this.arrowHeadHeight * 2
+
+            if (shouldRevert) this.setMidPoint({ points, isOpposite: true })
+        },
+        /**
+         * Handle override value for srcX, srcY, targetX, targetY, midPoint, angle, h of param.points
+         * @param {Boolean} param.shouldRevert - result of handleRevertDiagonal()
+         * @param {Object} param.src - source point
+         * @param {Object} param.target - target point
+         * @param {Object} param.sizes - {src,target} source and target node size
+         * @param {Object} param.points - Obtuse points to be overridden
+         */
+        setSideBySidePoints({ shouldRevert, src, target, sizes, points }) {
+            let isRightward = src.x > target.x + sizes.target.width,
+                isLeftward = src.x < target.x - sizes.target.width
+
+            // calc offset
+            const srcXOffset = isRightward ? -sizes.src.width / 2 : sizes.src.width / 2
+            const srcYOffset = shouldRevert ? sizes.src.height / 2 : -sizes.src.height / 2
+            const targetXOffset = isRightward
+                ? sizes.target.width / 2 + this.arrowHeadHeight - 2
+                : -sizes.target.width / 2 - this.arrowHeadHeight
+            const targetYOffset = shouldRevert
+                ? -sizes.target.height / 2 - this.arrowHeadHeight
+                : sizes.target.height / 2 + this.arrowHeadHeight
+
+            if (isRightward || isLeftward) {
+                // change pos of src point
+                points.srcX = src.x + srcXOffset
+                points.srcY = src.y + srcYOffset
+                // change pos of target point
+                points.targetX = target.x + targetXOffset
+                points.targetY = target.y + targetYOffset
+                this.setMidPoint({ points, isOpposite: false })
+                points.angle = isRightward ? 180 : 0
+                points.h = points.targetX
+            }
+        },
+        getObtusePoints(data) {
+            let shouldRevert = this.handleRevertDiagonal(data)
+            const dPoints = this.getPoints(data)
+            const src = dPoints[0]
+            const target = dPoints[dPoints.length - 1] // d3-dag could provide more than 2 points.
+            const yGap = 24
+            // set default points
+            const points = {
+                srcX: src.x,
+                srcY: src.y,
+                targetX: target.x,
+                targetY: target.y,
+                midPoint: [0, 0],
+                h: target.x, // horizontal line from source to target,
+                angle: shouldRevert ? 270 : 90,
+            }
+            this.setMidPoint({ points, isOpposite: true })
+
+            let shouldChangeConnPoint = shouldRevert
+                ? src.y - yGap <= target.y
+                : src.y + yGap >= target.y
+
+            if (shouldChangeConnPoint) {
+                // get src and target node size
+                const sizes = {
+                    src: this.getDynNodeSize(shouldRevert ? data.target : data.source),
+                    target: this.getDynNodeSize(shouldRevert ? data.source : data.target),
+                }
+                // Check if src node opposite to target node
+                const isOpposite = shouldRevert
+                    ? src.y + sizes.src.height < target.y - sizes.target.height - yGap
+                    : src.y - sizes.src.height > target.y + sizes.target.height + yGap
+
+                if (isOpposite) this.setOppositePoints({ shouldRevert, src, target, sizes, points })
+                else this.setSideBySidePoints({ shouldRevert, src, target, sizes, points })
+            }
+
+            return points
         },
         /**
          * Creates a polyline between nodes where it draws from the source point
          * to the vertical middle point (middle point between source.y and target.y) as
          * a straight line. Then it draws from that midpoint to the source point which is
          * perpendicular to the source node
-         * @param {Array} points - Points from source to target node. There could be more than 2 points
+         * @param {Object} data - Link data
          */
-        obtuseShape(points) {
-            const src = points[0]
-            const target = points[points.length - 1] // d3-dag could provide more than 2 points.
-            const midPoint = [target.x, src.y + (target.y - src.y) / 2]
-            const h = target.x // horizontal line from source to target
-            return `M ${src.x} ${src.y} ${midPoint} H ${h} L ${target.x} ${target.y}`
+        obtuseShape(data) {
+            const { srcX, srcY, midPoint, h, targetX, targetY } = this.getObtusePoints(data)
+            return `M ${srcX} ${srcY} ${midPoint} H ${h} L ${targetX} ${targetY}`
         },
         getPoints(data) {
             let points = this.$help.lodash.cloneDeep(data.points)
@@ -229,15 +337,11 @@ export default {
             return points
         },
         handleCreateDiagonal(data) {
-            return this.obtuseShape(this.getPoints(data))
+            return this.obtuseShape(data)
         },
         transformArrow(data) {
-            let points = this.getPoints(data)
-            let shouldRevert = this.handleRevertDiagonal(data)
-            let arrowPoint = points[points.length - 1]
-            const offset = shouldRevert ? 11.5 : -11.5
-            const angle = shouldRevert ? 270 : 90
-            return `translate(${arrowPoint.x}, ${arrowPoint.y + offset}) rotate(${angle})`
+            let { targetX, targetY, angle } = this.getObtusePoints(data)
+            return `translate(${targetX}, ${targetY}) rotate(${angle})`
         },
         renderNodeDivs(nodes) {
             this.nodeDivData = nodes
