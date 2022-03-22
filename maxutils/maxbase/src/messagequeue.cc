@@ -69,6 +69,27 @@ MessageQueue::~MessageQueue()
 {
 }
 
+MessageQueue* MessageQueue::create(Kind kind, Handler* pHandler)
+{
+    MessageQueue* pMq = nullptr;
+
+    switch (kind)
+    {
+    case EVENT:
+        pMq = EventMessageQueue::create(pHandler);
+        break;
+
+    case PIPE:
+        pMq = PipeMessageQueue::create(pHandler);
+        break;
+
+    default:
+        mxb_assert(!true);
+    }
+
+    return pMq;
+}
+
 //
 // EventMessageQueue
 //
@@ -90,7 +111,7 @@ EventMessageQueue::~EventMessageQueue()
 }
 
 // static
-MessageQueue* EventMessageQueue::create(Handler* pHandler)
+EventMessageQueue* EventMessageQueue::create(Handler* pHandler)
 {
     EventMessageQueue* pThis = nullptr;
     int event_fd = eventfd(0, EFD_NONBLOCK);
@@ -281,7 +302,7 @@ void PipeMessageQueue::finish()
 }
 
 // static
-MessageQueue* PipeMessageQueue::create(Handler* pHandler)
+PipeMessageQueue* PipeMessageQueue::create(Handler* pHandler)
 {
     mxb_assert(this_unit.initialized);
 

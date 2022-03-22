@@ -113,9 +113,34 @@ public:
     using Handler = MessageQueueHandler;
     using Message = MessageQueueMessage;
 
+    enum Kind
+    {
+        EVENT,
+        PIPE
+    };
+
     MessageQueue(const MessageQueue&) = delete;
     MessageQueue& operator=(const MessageQueue&) = delete;
 
+    /**
+     * Creates a @c MessageQueue with the provided handler.
+     *
+     * @param kind      What kind of message queue.
+     * @param pHandler  The handler that will receive the messages sent over the
+     *                  message queue. Note that the handler *must* remain valid
+     *                  for the lifetime of the @c EventMessageQueue.
+     *
+     * @return A pointer to a new @c MessageQueue or NULL if an error occurred.
+     *
+     * @attention Before the message queue can be used, it must be added to
+     *            a worker.
+     */
+    static MessageQueue* create(Kind kind, Handler* pHandler);
+
+
+    /**
+     * Removes itself if still added to a worker, and closes all descriptors.
+     */
     virtual ~MessageQueue();
 
     /**
@@ -161,8 +186,7 @@ protected:
 };
 
 /**
- * The class @c EventMessageQueue provides a cross thread message queue
- * implemented on top of @c eventfd.
+ * The class @c EventMessageQueue provides a message queue implemented on top of @c eventfd.
  */
 class EventMessageQueue : public MessageQueue
 {
@@ -170,25 +194,8 @@ public:
     EventMessageQueue(const EventMessageQueue&) = delete;
     EventMessageQueue& operator=(const EventMessageQueue&) = delete;
 
-    /**
-     * Creates an @c EventMessageQueue with the provided handler.
-     *
-     * @param pHandler  The handler that will receive the messages sent over the
-     *                  message queue. Note that the handler *must* remain valid
-     *                  for the lifetime of the @c EventMessageQueue.
-     *
-     * @return A pointer to a new @c MessageQueue or NULL if an error occurred.
-     *
-     * @attention Before the message queue can be used, it must be added to
-     *            a worker.
-     */
-    static MessageQueue* create(Handler* pHandler);
+    static EventMessageQueue* create(Handler* pHandler);
 
-    /**
-     * Destructor
-     *
-     * Removes itself If still added to a worker and closes the eventfd.
-     */
     ~EventMessageQueue();
 
     bool post(const Message& message) override;
@@ -227,8 +234,7 @@ private:
 
 
 /**
- * The class @c MessageQueue provides a cross thread message queue implemented
- * on top of a pipe.
+ * The class @c PipeMessageQueue provides a MessageQueue implemented on top of a pipe.
  */
 class PipeMessageQueue : public MessageQueue
 {
@@ -236,25 +242,8 @@ public:
     PipeMessageQueue(const PipeMessageQueue&) = delete;
     PipeMessageQueue& operator=(const PipeMessageQueue&) = delete;
 
-    /**
-     * Creates a @c PipeMessageQueue with the provided handler.
-     *
-     * @param pHandler  The handler that will receive the messages sent over the
-     *                  message queue. Note that the handler *must* remain valid
-     *                  for the lifetime of the @c PipeMessageQueue.
-     *
-     * @return A pointer to a new @c PipeMessageQueue or NULL if an error occurred.
-     *
-     * @attention Before the message queue can be used, it must be added to
-     *            a worker.
-     */
-    static MessageQueue* create(Handler* pHandler);
+    static PipeMessageQueue* create(Handler* pHandler);
 
-    /**
-     * Destructor
-     *
-     * Removes itself If still added to a worker and closes the pipe.
-     */
     ~PipeMessageQueue();
 
     bool post(const Message& message) override;
