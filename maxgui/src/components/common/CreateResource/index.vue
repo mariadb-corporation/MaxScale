@@ -191,12 +191,9 @@ export default {
                     let protocols = this.getModulesByType('Protocol')
                     if (protocols.length) {
                         protocols.forEach(protocol => {
-                            // add default_value for protocol param
-                            let protocolParamObj = protocol.attributes.parameters.find(
-                                o => o.name === 'protocol'
+                            protocol.attributes.parameters = protocol.attributes.parameters.filter(
+                                o => o.name !== 'protocol' && o.name !== 'service'
                             )
-                            protocolParamObj.default_value = protocol.id
-                            protocolParamObj.disabled = true
                             // Transform authenticator parameter from string type to enum type,
                             let authenticatorParamObj = protocol.attributes.parameters.find(
                                 o => o.name === 'authenticator'
@@ -316,7 +313,7 @@ export default {
                     await this.fetchAllFilters()
                     this.validateInfo = this.getAllFiltersInfo
                     break
-                case LISTENER:
+                case LISTENER: {
                     await this.fetchAllListeners()
                     this.validateInfo = this.getAllListenersInfo
                     await this.fetchAllServices()
@@ -326,6 +323,7 @@ export default {
                         isMultiple: false,
                     })
                     break
+                }
             }
         },
         /**
