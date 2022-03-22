@@ -96,10 +96,10 @@ SmartRouter::SmartRouter(SERVICE* service)
 
     auto shared_ptrs = m_updater.get_shared_data_pointers();
 
-    for (size_t id = 0; id != shared_ptrs.size(); ++id)
+    for (size_t i = 0; i != shared_ptrs.size(); ++i)
     {
-        RoutingWorker* pRworker = RoutingWorker::get(id);
-        auto pShared = shared_ptrs[id];
+        RoutingWorker* pRworker = RoutingWorker::get_by_index(i);
+        auto pShared = shared_ptrs[i];
         pRworker->execute([pRworker, pShared]() {
                               pRworker->register_epoll_tick_func(std::bind(&SharedPerformanceInfo::
                                                                            reader_ready,
@@ -161,7 +161,8 @@ PerformanceInfo SmartRouter::perf_find(const std::string& canonical)
 {
     using namespace maxbase;
 
-    auto pShared_data = m_updater.get_shared_data_by_index(mxs::RoutingWorker::get_current_id());
+    auto pWorker = mxs::RoutingWorker::get_current();
+    auto pShared_data = m_updater.get_shared_data_by_index(pWorker->index());
     auto sShared_ptr = make_shared_data_ptr(pShared_data);
 
     auto pContainer = sShared_ptr.get();
@@ -202,7 +203,8 @@ void SmartRouter::perf_update(const std::string& canonical, PerformanceInfo perf
 {
     using namespace maxbase;
 
-    auto pShared_data = m_updater.get_shared_data_by_index(mxs::RoutingWorker::get_current_id());
+    auto pWorker = mxs::RoutingWorker::get_current();
+    auto pShared_data = m_updater.get_shared_data_by_index(pWorker->index());
     auto sShared_ptr = make_shared_data_ptr(pShared_data);
 
     auto pContainer = sShared_ptr.get();
