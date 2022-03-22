@@ -859,7 +859,8 @@ void QlaInstance::LogManager::write_unified_log_entry(const string& entry)
         check_reopen_file(m_unified_filename, m_settings.log_file_data_flags, &m_sUnified_file);
     }
 
-    auto pShared_data = m_qlalog.get_shared_data_by_index(mxs::RoutingWorker::get_current_id());
+    auto pWorker = mxs::RoutingWorker::get_current();
+    auto pShared_data = m_qlalog.get_shared_data_by_index(pWorker->index());
     pShared_data->send_update({m_sUnified_file, entry, m_settings.flush_writes});
 }
 
