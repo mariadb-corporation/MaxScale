@@ -27,7 +27,14 @@
                 </router-link>
                 <span v-else>{{ groupId }} </span>
             </template>
-
+            <template v-slot:groupId-append="{ data: { item: { groupId } } }">
+                <span
+                    v-if="isCooperative(groupId)"
+                    class="ml-1 color text-success cooperative-indicator"
+                >
+                    Primary
+                </span>
+            </template>
             <template v-slot:monitorState="{ data: { item: { monitorState } } }">
                 <div class="d-flex align-center">
                     <icon-sprite-sheet
@@ -181,14 +188,29 @@ export default {
     data() {
         return {
             tableHeaders: [
-                { text: `Monitor`, value: 'groupId', autoTruncate: true },
-                { text: 'State', value: 'monitorState' },
-                { text: 'Servers', value: 'id', autoTruncate: true },
-                { text: 'Address', value: 'serverAddress', autoTruncate: true },
-                { text: 'Port', value: 'serverPort' },
-                { text: 'Connections', value: 'serverConnections', autoTruncate: true },
-                { text: 'State', value: 'serverState' },
-                { text: 'GTID', value: 'gtid' },
+                {
+                    text: `Monitor`,
+                    value: 'groupId',
+                    autoTruncate: true,
+                    padding: '0px 0px 0px 24px',
+                },
+                { text: 'State', value: 'monitorState', padding: '0px 12px 0px 24px' },
+                { text: 'Servers', value: 'id', autoTruncate: true, padding: '0px 0px 0px 24px' },
+                {
+                    text: 'Address',
+                    value: 'serverAddress',
+                    autoTruncate: true,
+                    padding: '0px 0px 0px 24px',
+                },
+                { text: 'Port', value: 'serverPort', padding: '0px 0px 0px 24px' },
+                {
+                    text: 'Connections',
+                    value: 'serverConnections',
+                    autoTruncate: true,
+                    padding: '0px 0px 0px 24px',
+                },
+                { text: 'State', value: 'serverState', padding: '0px 0px 0px 24px' },
+                { text: 'GTID', value: 'gtid', padding: '0px 0px 0px 24px' },
                 { text: 'Services', value: 'serviceIds', autoTruncate: true },
             ],
             servicesLength: 0,
@@ -318,6 +340,12 @@ export default {
         setMonitorsLength(total) {
             this.monitorsLength = total
         },
+        isCooperative(id) {
+            return this.$typy(
+                this.getAllMonitorsMap.get(id),
+                'attributes.monitor_diagnostics.primary'
+            ).safeBoolean
+        },
         /**
          * Get info of the slave servers
          * @param {String} param.masterName - master server name
@@ -361,3 +389,9 @@ export default {
     },
 }
 </script>
+
+<style lang="scss" scoped>
+.cooperative-indicator {
+    font-size: 0.75rem;
+}
+</style>

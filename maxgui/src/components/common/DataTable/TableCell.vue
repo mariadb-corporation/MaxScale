@@ -45,6 +45,7 @@
             >
                 <slot :name="header.value" :data="{ item, header, cellIndex, rowIndex }" />
             </div>
+            <slot :name="`${header.value}-append`" :data="{ item, header, cellIndex, rowIndex }" />
             <!-- Actions slot -->
             <div v-if="renderActionsSlot" class="action-slot-wrapper">
                 <slot :data="{ item }" name="actions" />
@@ -162,7 +163,7 @@ export default {
                     padding: `0px 48px 0px ${this.cellIndex === 0 ? basePl + levelPl : '48'}px`,
                 }
             }
-            return {}
+            return { padding: this.header.padding ? this.header.padding : '0px 24px' }
         },
         // render actions slot at indexOfHoveredRow
         renderActionsSlot() {

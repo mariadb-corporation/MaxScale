@@ -78,6 +78,12 @@
                                     {{ getValue(item, header) }}
                                 </slot>
                             </template>
+                            <template :slot="`${header.value}-append`">
+                                <slot
+                                    :name="`${header.value}-append`"
+                                    :data="{ item, header, cellIndex, rowIndex }"
+                                />
+                            </template>
                             <template slot="actions">
                                 <slot name="actions" :data="{ item }" />
                             </template>
@@ -550,7 +556,6 @@ export default {
             tr {
                 pointer-events: none !important;
                 td {
-                    padding: 0px 24px;
                     pointer-events: all !important;
                     white-space: nowrap;
                     &:last-child:not(.hide) {
