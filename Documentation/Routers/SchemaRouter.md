@@ -273,12 +273,12 @@ wrong results. Similarly, preparing a statement from a variable (e.g. `PREPARE s
 
 * `SHOW DATABASES` is handled by the router instead of routed to a server. The router only
 answers correctly to the basic version of the query. Any modifiers such as `LIKE` are
-ignored.
+ignored. Starting with MaxScale 7, the database names will always be in lowercase.
 
 * `SHOW TABLES` is routed to the server with the current database. If using table-level
 sharding, the results will be incomplete. Similarly, `SHOW TABLES FROM db1` is routed to
 the server with database `db1`, ignoring table sharding. Use `SHOW SHARDS` to get results
-from the router itself.
+from the router itself. Starting with MaxScale 7, the database names will always be in lowercase.
 
 * `USE db1` is routed to the server with `db1`. If the database is divided to multiple
 servers, only one server will get the command.

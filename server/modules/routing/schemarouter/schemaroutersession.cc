@@ -1074,14 +1074,17 @@ std::string get_lenenc_str(uint8_t* ptr)
     }
 }
 
-static const std::set<std::string> always_ignore =
+// We could also use a transparent comparator
+// (https://stackoverflow.com/questions/20317413/what-are-transparent-comparators) and store it as a
+// std::string but since these are constants, a string_view works just fine.
+static const std::set<std::string_view> always_ignore =
 {"mysql", "information_schema", "performance_schema", "sys"};
 
-bool SchemaRouterSession::ignore_duplicate_table(const std::string& data)
+bool SchemaRouterSession::ignore_duplicate_table(std::string_view data)
 {
     bool rval = false;
 
-    std::string db = data.substr(0, data.find("."));
+    std::string_view db = data.substr(0, data.find("."));
 
     if (always_ignore.count(db))
     {
@@ -1123,7 +1126,7 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
 
     if (reply.error())
     {
-        MXB_ERROR("Mapping query returned an error, closing session: %s", reply.error().message().c_str());
+        MXB_SERROR("Mapping query returned an error, closing session: " << reply.error().message());
     }
     else
     {
@@ -1136,7 +1139,7 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
 
             if (!row.empty() && !row[0].empty())
             {
-                std::string data(row[0]);       // TODO: use string_view here as well
+                std::string_view data = row[0];
                 mxs::Target* target = bref->target();
 
                 if (!ignore_duplicate_table(data))
@@ -1144,9 +1147,9 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
                     if (mxs::Target* duplicate = m_shard.get_location(data))
                     {
                         duplicate_found = true;
-                        MXB_ERROR("'%s' found on servers '%s' and '%s' for user %s.",
-                                  data.c_str(), target->name(), duplicate->name(),
-                                  m_pSession->user_and_host().c_str());
+                        MXB_SERROR("'" << data << "' found on servers "
+                                   << "'" << target->name() << "' and '" << duplicate->name() << "' "
+                                   << "for user " << m_pSession->user_and_host() << ".");
                     }
                 }
 
@@ -1155,7 +1158,7 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
                     m_shard.add_location(data, target);
                 }
 
-                MXB_INFO("<%s, %s>", target->name(), data.c_str());
+                MXB_SINFO("<" << target->name() << ", " << data << ">");
             }
         }
     }

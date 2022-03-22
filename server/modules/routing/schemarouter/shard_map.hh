@@ -43,7 +43,7 @@ public:
      * @param db     Database to add
      * @param target Target where database is located
      */
-    void add_location(std::string db, mxs::Target* target);
+    void add_location(std::string_view db, mxs::Target* target);
 
     /**
      * @brief Retrieve the location of a database
@@ -52,13 +52,13 @@ public:
      *
      * @return The database or NULL if no server contains the database
      */
-    mxs::Target* get_location(std::string db);
+    mxs::Target* get_location(std::string_view db);
     mxs::Target* get_location(const std::vector<std::string>& db);
 
     /**
      * Same as get_location except returns all servers that have it
      */
-    std::set<mxs::Target*> get_all_locations(std::string db);
+    std::set<mxs::Target*> get_all_locations(std::string_view db);
     std::set<mxs::Target*> get_all_locations(const std::vector<std::string>& db);
 
     void         add_statement(std::string stmt, mxs::Target* target);

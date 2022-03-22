@@ -98,7 +98,7 @@ private:
     bool         have_servers();
     bool         handle_default_db();
     void         handle_default_db_response();
-    bool         ignore_duplicate_table(const std::string& data);
+    bool         ignore_duplicate_table(std::string_view data);
     mxs::Target* get_query_target(GWBUF* buffer);
     mxs::Target* get_ps_target(GWBUF* buffer, uint32_t qtype, qc_query_op_t op);
 

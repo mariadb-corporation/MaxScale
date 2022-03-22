@@ -24,9 +24,12 @@ Shard::~Shard()
 {
 }
 
-void Shard::add_location(std::string db, mxs::Target* target)
+void Shard::add_location(std::string_view str, mxs::Target* target)
 {
-    m_map.emplace(db, target);
+    std::string db;
+    db.resize(str.size());
+    std::transform(str.begin(), str.end(), db.begin(), ::tolower);
+    m_map.emplace(std::move(db), target);
 }
 
 void Shard::add_statement(std::string stmt, mxs::Target* target)
@@ -62,15 +65,19 @@ std::set<mxs::Target*> Shard::get_all_locations(const std::vector<std::string>& 
     return targets;
 }
 
-std::set<mxs::Target*> Shard::get_all_locations(std::string table)
+std::set<mxs::Target*> Shard::get_all_locations(std::string_view table)
 {
     std::set<mxs::Target*> rval;
-    std::transform(table.begin(), table.end(), table.begin(), ::tolower);
-    bool db_only = table.find(".") == std::string::npos;
+    bool db_only = table.find(".") == std::string_view::npos;
 
     for (const auto& a : m_map)
     {
-        std::string db = db_only ? a.first.substr(0, a.first.find(".")) : a.first;
+        std::string_view db(a.first);
+
+        if (db_only)
+        {
+            db = db.substr(0, db.find("."));
+        }
 
         if (db == table)
         {
@@ -87,7 +94,7 @@ mxs::Target* Shard::get_location(const std::vector<std::string>& tables)
     return targets.empty() ? nullptr : *targets.begin();
 }
 
-mxs::Target* Shard::get_location(std::string table)
+mxs::Target* Shard::get_location(std::string_view table)
 {
     auto targets = get_all_locations(table);
     return targets.empty() ? nullptr : *targets.begin();
