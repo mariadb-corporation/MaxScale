@@ -224,4 +224,61 @@ private:
     double   m_ave_msgs_per_event {0};  /**< Average number of messages per I/O event */
 #endif
 };
+
+
+/**
+ * The class @c MessageQueue provides a cross thread message queue implemented
+ * on top of a pipe.
+ */
+class PipeMessageQueue : public MessageQueue
+{
+public:
+    PipeMessageQueue(const PipeMessageQueue&) = delete;
+    PipeMessageQueue& operator=(const PipeMessageQueue&) = delete;
+
+    /**
+     * Creates a @c PipeMessageQueue with the provided handler.
+     *
+     * @param pHandler  The handler that will receive the messages sent over the
+     *                  message queue. Note that the handler *must* remain valid
+     *                  for the lifetime of the @c PipeMessageQueue.
+     *
+     * @return A pointer to a new @c PipeMessageQueue or NULL if an error occurred.
+     *
+     * @attention Before the message queue can be used, it must be added to
+     *            a worker.
+     */
+    static MessageQueue* create(Handler* pHandler);
+
+    /**
+     * Destructor
+     *
+     * Removes itself If still added to a worker and closes the pipe.
+     */
+    ~PipeMessageQueue();
+
+    bool post(const Message& message) override;
+
+    bool add_to_worker(Worker* pWorker) override;
+
+    Worker* remove_from_worker() override;
+
+private:
+    friend class Initer;
+    static bool init();
+    static void finish();
+
+private:
+    PipeMessageQueue(Handler* pHandler, int read_fd, int write_fd);
+
+    uint32_t handle_poll_events(Worker* pWorker, uint32_t events);
+
+    static uint32_t poll_handler(POLL_DATA* pData, WORKER* worker, uint32_t events);
+
+private:
+    Handler& m_handler;
+    int      m_read_fd;
+    int      m_write_fd;
+    Worker*  m_pWorker { nullptr };
+};
 }

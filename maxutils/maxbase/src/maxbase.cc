@@ -82,6 +82,7 @@ private:
 
 Initer::component_t Initer::s_components[] =
 {
+    MAXBASE_COMPONENT(PipeMessageQueue),
     MAXBASE_COMPONENT(Worker),
 };
 
