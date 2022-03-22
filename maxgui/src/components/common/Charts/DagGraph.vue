@@ -437,7 +437,25 @@ export default {
 
             this.addMouseUpEvt()
         },
-
+        /**
+         * This helps to turn the dashed link to solid while dragging and vice versa.
+         * @param {Object} param.link - child link or parent link of a node
+         * @param {Boolean} param.isDragging - is node dragging
+         */
+        changeLinkGroupStyle({ link, isDragging }) {
+            this.svgGroup
+                .selectAll('.link-group')
+                .filter(d => {
+                    return (
+                        d.source.data.id === link.source.data.id &&
+                        d.target.data.id === link.target.data.id
+                    )
+                })
+                .style('opacity', isDragging ? 1 : 0.5)
+                .style('z-index', isDragging ? 10 : 'unset')
+                .select('path.link_line')
+                .attr('stroke-dasharray', isDragging ? null : '5')
+        },
         onNodeDragging({ e, node }) {
             e.preventDefault()
             const { startPos, draggingNodeId } = this.draggingStates
@@ -469,21 +487,35 @@ export default {
                     let point = link.points[0]
                     point.x = point.x + offsetPosX
                     point.y = point.y + offsetPosY
+                    this.changeLinkGroupStyle({ link, isDragging: true })
                 }
+                let parentLinks = []
                 // change pos of links to parent nodes
                 dagNode.data.parentIds.forEach(parentId => {
                     const parentNode = dagNodes.find(d => d.data.id === parentId)
                     const linkToParent = parentNode
                         .childLinks()
                         .find(link => link.target.data.id === draggingNodeId)
+                    parentLinks.push(linkToParent)
                     let point = linkToParent.points[linkToParent.points.length - 1]
                     point.x = point.x + offsetPosX
                     point.y = point.y + offsetPosY
+                    this.changeLinkGroupStyle({ link: linkToParent, isDragging: true })
                 })
+                // store links so that style applied to them can be reset to default after finish dragging
+                this.$set(this.draggingStates, 'relatedLinks', [
+                    ...dagNode.ichildLinks(),
+                    ...parentLinks,
+                ])
+
                 this.drawLinks(this.dag.links())
             }
         },
         onNodeDragEnd() {
+            //  reset style of links to default
+            for (const link of this.$typy(this.draggingStates, 'relatedLinks').safeArray) {
+                this.changeLinkGroupStyle({ link, isDragging: false })
+            }
             this.setDefDraggingStates()
             this.rmMouseUpEvt()
         },
