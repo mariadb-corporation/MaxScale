@@ -13,6 +13,7 @@
 #pragma once
 
 #include <maxbase/ccdefs.hh>
+#include <string_view>
 
 #if defined (PCRE2_CODE_UNIT_WIDTH)
 #error PCRE2_CODE_UNIT_WIDTH already defined. Do not define, and include <maxscale/pcre2.h>.
@@ -90,9 +91,9 @@ public:
      * @return True if the string matches the pattern
      */
     bool match(const char* str, size_t len) const;
-    bool match(const std::string& str) const
+    bool match(std::string_view str) const
     {
-        return match(str.c_str(), str.size());
+        return match(str.data(), str.size());
     }
 
     /**
@@ -114,9 +115,9 @@ public:
      * @return The matched parts of the string or an empty vector of no matches were captured.
      */
     std::vector<std::string> substr(const char* str, size_t len) const;
-    std::vector<std::string> substr(const std::string& str) const
+    std::vector<std::string> substr(std::string_view str) const
     {
-        return substr(str.c_str(), str.size());
+        return substr(str.data(), str.size());
     }
 
     /**
@@ -129,9 +130,9 @@ public:
      * @return True if the string matches the pattern
      */
     std::string replace(const char* str, size_t len, const char* replacement) const;
-    std::string replace(const std::string& str, const char* replacement) const
+    std::string replace(std::string_view str, const char* replacement) const
     {
-        return replace(str.c_str(), str.size(), replacement);
+        return replace(str.data(), str.size(), replacement);
     }
 
     /**
