@@ -1,26 +1,14 @@
 <template>
-    <page-wrapper class="d-flex flex-column">
-        <v-sheet class="pt-2 fill-height d-flex flex-column">
-            <portal to="page-header">
-                <div class="d-flex align-center">
-                    <div class="d-inline-flex align-center">
-                        <h4
-                            style="line-height: normal;"
-                            class="ml-1 mb-0 color text-navigation text-h4 text-capitalize"
-                        >
-                            {{ $t($route.name) }}
-                        </h4>
-                    </div>
-                </div>
-            </portal>
-            <v-tabs v-model="activeTab" class="tab-navigation-wrapper">
+    <page-wrapper fluid :spacerStyle="{ borderBottom: 'thin solid #e7eef1' }">
+        <portal to="page-header">
+            <v-tabs v-model="activeTab" class="tab-navigation-wrapper flex-grow-0">
                 <v-tab v-for="route in visRoutes" :key="route.path" :to="route.path">
                     {{ $t(route.name) }}
                 </v-tab>
             </v-tabs>
-            <div class="pt-5 fill-height">
-                <router-view />
-            </div>
+        </portal>
+        <v-sheet class="pt-5 fill-height d-flex flex-column">
+            <router-view />
         </v-sheet>
     </page-wrapper>
 </template>

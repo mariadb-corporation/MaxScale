@@ -1,14 +1,6 @@
 <template>
     <v-container v-if="!$typy(clusters).isEmptyObject" fluid>
-        <portal to="page-header--right">
-            <div class="d-flex align-center fill-height">
-                <refresh-rate
-                    :key="$route.name"
-                    :defRefreshRate="60"
-                    @on-count-done="discoveryClusters"
-                />
-            </div>
-        </portal>
+        <page-header-right @on-count-done="discoveryClusters" />
         <v-row>
             <v-col
                 v-for="cluster in clusters"
@@ -83,8 +75,12 @@
  * Public License.
  */
 import { mapState, mapActions, mapMutations } from 'vuex'
+import PageHeaderRight from './PageHeaderRight'
 export default {
     name: 'clusters',
+    components: {
+        'page-header-right': PageHeaderRight,
+    },
     computed: {
         ...mapState({
             clusters: state => state.visualization.clusters,

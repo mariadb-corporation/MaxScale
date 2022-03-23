@@ -1,14 +1,6 @@
 <template>
     <div class="d-flex flex-column fill-height">
-        <portal to="page-header--right">
-            <div class="d-flex align-center fill-height">
-                <refresh-rate
-                    :key="$route.name"
-                    :defRefreshRate="60"
-                    @on-count-done="fetchConfigData"
-                />
-            </div>
-        </portal>
+        <page-header-right @on-count-done="fetchConfigData" />
         <v-card ref="wrapper" v-resize.quiet="setCtrDim" class="fill-height graph-card" outlined>
             <dag-graph
                 v-if="ctrDim.height && config_graph_data.length"
@@ -49,10 +41,12 @@
  * Public License.
  */
 import { mapState, mapActions } from 'vuex'
+import PageHeaderRight from './PageHeaderRight'
 import ConfNode from './ConfNode.vue'
 export default {
     name: 'configuration',
     components: {
+        'page-header-right': PageHeaderRight,
         'conf-node': ConfNode,
     },
     data() {

@@ -1,5 +1,5 @@
 <template>
-    <page-wrapper>
+    <page-wrapper fluid>
         <page-header @on-choose-op="onChooseOp" @on-count-done="fetchCluster" />
         <v-card
             ref="graphContainer"
