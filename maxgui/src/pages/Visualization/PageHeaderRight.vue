@@ -5,6 +5,7 @@
             :style="{ borderBottom: 'thin solid #e7eef1' }"
         >
             <refresh-rate :key="$route.name" :defRefreshRate="60" v-on="$listeners" />
+            <create-resource v-if="showCreateNew" class="ml-2 d-inline-block" />
         </div>
     </portal>
 </template>
@@ -28,5 +29,8 @@
 */
 export default {
     name: 'page-header-right',
+    props: {
+        showCreateNew: { type: Boolean, default: false },
+    },
 }
 </script>
