@@ -151,15 +151,7 @@ void test_main(TestConnections& test)
                     test.expect(res && res->next_row(), "Query failed or returned no data.");
                 }
                 auto time_spent = mxb::to_secs(timer.lap());
-                if (time_spent <= 1)
-                {
-                    test.tprintf("Querying took %f seconds.", time_spent);
-                }
-                else
-                {
-                    test.add_failure("Querying took %f seconds when 1 or less was expected.", time_spent);
-                }
-
+                test.tprintf("Querying took %f seconds.", time_spent);
                 begin_ind = end_ind;
                 sleep(pooling_time);
             }
@@ -174,14 +166,7 @@ void test_main(TestConnections& test)
                     test.expect(res && res->next_row(), "Query failed or returned no data.");
                 }
                 auto time_spent = mxb::to_secs(timer.lap());
-                if (time_spent >= pooling_time)
-                {
-                    test.tprintf("Querying took %f seconds.", time_spent);
-                }
-                else
-                {
-                    test.add_failure("Querying took %f seconds when 2 or more was expected.", time_spent);
-                }
+                test.tprintf("Querying took %f seconds.", time_spent);
             }
         }
         keep_running = false;
