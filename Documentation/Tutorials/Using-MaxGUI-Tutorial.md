@@ -75,6 +75,24 @@ this is used for illustration purpose.
 
 This page visualizes MaxScale configuration and clusters.
 
+## Configuration
+
+This page visualizes MaxScale configuration as shown in the figure below.
+
+![MaxGUI MaxScale Config visualization](./images/MaxGUI-config-visualization.png)
+
+### Annotation
+
+1.  A MaxScale object (a node graph). The position of the node in the graph can
+    be changed by dragging and dropping it.
+2.  Anchor link. The detail page of each MaxScale object can be accessed by
+    clicking on the name of the node.
+3.  Filter visualization button. By default, if the number of filters used by a service
+    is larger than 3, filter nodes aren't visualized as shown in the figure. Clicking
+    this button will visualize it.
+4.  Hide filter visualization button.
+5.  Refresh rate dropdown. The frequency with which the data is refreshed.
+
 ## Clusters
 
 This page shows all monitor clusters using
