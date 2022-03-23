@@ -156,7 +156,7 @@ describe('RelationshipTable.vue with readOnly mode and not addable', () => {
                 text: '',
                 value: 'index',
                 width: '1px',
-                padding: '0px!important',
+                padding: '0px 8px',
                 sortable: false,
             },
             { text: 'Filter', value: 'id', sortable: false },
