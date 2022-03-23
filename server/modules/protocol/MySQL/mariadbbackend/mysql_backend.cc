@@ -866,7 +866,8 @@ static int gw_read_and_write(DCB* dcb)
          * format so we need to detect and skip them. */
         if (rcap_type_required(capabilities, RCAP_TYPE_SESSION_STATE_TRACKING)
             && !expecting_ps_response(proto)
-            && proto->track_state)
+            && proto->track_state
+            && proto->current_command != MXS_COM_BINLOG_DUMP)
         {
             mxs_mysql_get_session_track_info(tmp, proto);
         }
