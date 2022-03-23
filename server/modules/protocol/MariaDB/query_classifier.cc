@@ -70,7 +70,6 @@ public:
     ThisUnit()
         : classifier(nullptr)
         , qc_trx_parse_using(QC_TRX_PARSE_USING_PARSER)
-        , qc_sql_mode(QC_SQL_MODE_DEFAULT)
         , m_cache_max_size(std::numeric_limits<int64_t>::max())
     {
     }
@@ -80,7 +79,6 @@ public:
 
     QUERY_CLASSIFIER*    classifier;
     qc_trx_parse_using_t qc_trx_parse_using;
-    qc_sql_mode_t        qc_sql_mode;
 
     int64_t cache_max_size() const
     {
@@ -154,6 +152,7 @@ public:
     QC_STMT_INFO* get(const std::string& canonical_stmt)
     {
         QC_STMT_INFO* pInfo = nullptr;
+        qc_sql_mode_t sql_mode = qc_get_sql_mode();
 
         auto i = m_infos.find(canonical_stmt);
 
@@ -161,7 +160,7 @@ public:
         {
             Entry& entry = i->second;
 
-            if ((entry.sql_mode == this_unit.qc_sql_mode)
+            if ((entry.sql_mode == sql_mode)
                 && (entry.options == this_thread.options))
             {
                 mxb_assert(this_unit.classifier);
@@ -220,7 +219,7 @@ public:
             {
                 this_unit.classifier->qc_info_dup(pInfo);
 
-                m_infos.emplace(canonical_stmt, Entry(pInfo, this_unit.qc_sql_mode, this_thread.options));
+                m_infos.emplace(canonical_stmt, Entry(pInfo, qc_get_sql_mode(), this_thread.options));
 
                 ++m_stats.inserts;
                 m_stats.size += size;
@@ -498,8 +497,6 @@ bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
 
         if (rv == QC_RESULT_OK)
         {
-            this_unit.qc_sql_mode = sql_mode;
-
             int64_t cache_max_size = (cache_properties ? cache_properties->max_size : 0);
             mxb_assert(cache_max_size >= 0);
 
@@ -1369,7 +1366,11 @@ qc_sql_mode_t qc_get_sql_mode()
     QC_TRACE();
     mxb_assert(this_unit.classifier);
 
-    return this_unit.qc_sql_mode;
+    qc_sql_mode_t sql_mode = QC_SQL_MODE_DEFAULT;
+    int32_t rv = this_unit.classifier->qc_get_sql_mode(&sql_mode);
+    mxb_assert(rv == QC_RESULT_OK);
+
+    return sql_mode;
 }
 
 void qc_set_sql_mode(qc_sql_mode_t sql_mode)
@@ -1379,11 +1380,6 @@ void qc_set_sql_mode(qc_sql_mode_t sql_mode)
 
     int32_t rv = this_unit.classifier->qc_set_sql_mode(sql_mode);
     mxb_assert(rv == QC_RESULT_OK);
-
-    if (rv == QC_RESULT_OK)
-    {
-        this_unit.qc_sql_mode = sql_mode;
-    }
 }
 
 uint32_t qc_get_options()
