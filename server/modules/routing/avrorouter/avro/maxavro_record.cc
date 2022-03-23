@@ -334,10 +334,12 @@ GWBUF* maxavro_record_read_binary(MAXAVRO_FILE* file)
 
         if (rval)
         {
+            auto prev = ftell(file->file);
             fseek(file->file, file->block_start_pos, SEEK_SET);
 
             if (fread(GWBUF_DATA(rval), 1, data_size, file->file) == (size_t)data_size)
             {
+                fseek(file->file, prev, SEEK_SET);
                 memcpy(((uint8_t*) GWBUF_DATA(rval)) + data_size, file->sync, sizeof(file->sync));
                 maxavro_next_block(file);
             }

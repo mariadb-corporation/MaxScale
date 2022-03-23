@@ -33,7 +33,7 @@ def read_data():
             buf = sock.recv(4096, socket.MSG_DONTWAIT)
             if len(buf) > 0:
                 # If the request for data is rejected, an error will be sent instead of the table schema
-                if not schema_read:
+                if not schema_read and opts.format == "JSON":
                     if "err" in buf.decode().lower():
                         print(buf.decode(), file=sys.stderr)
                         exit(1)
