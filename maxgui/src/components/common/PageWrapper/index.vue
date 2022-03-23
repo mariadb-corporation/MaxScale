@@ -1,8 +1,8 @@
 <template>
-    <div class="wrapper-container d-flex flex-column fill-height">
-        <div class="d-flex ml-n1 flex-wrap">
+    <div :class="{ 'wrapper-container': !fluid }" class="d-flex flex-column fill-height">
+        <div class="d-flex flex-wrap">
             <portal-target name="page-header" />
-            <v-spacer />
+            <v-spacer :style="spacerStyle" />
             <portal-target name="page-header--right" />
         </div>
         <slot></slot>
@@ -24,5 +24,9 @@
 
 export default {
     name: 'page-wrapper',
+    props: {
+        fluid: { type: Boolean, default: false },
+        spacerStyle: { type: Object, default: () => {} },
+    },
 }
 </script>
