@@ -21,9 +21,10 @@
                 :colorizingLinkFn="colorizingLinkFn"
                 :handleRevertDiagonal="handleRevertDiagonal"
             >
-                <template v-slot:rect-node-content="{ data: { node, recompute } }">
+                <template v-slot:rect-node-content="{ data: { node, recompute, isDragging } }">
                     <conf-node
                         v-if="!$typy(node, 'data').isEmptyObject"
+                        :class="{ 'no-pointerEvent': isDragging }"
                         :node="node"
                         :nodeWidth="nodeWidth"
                         :recompute="recompute"

@@ -30,7 +30,10 @@
                         : null
                 "
             >
-                <slot name="rect-node-content" :data="{ node, recompute }" />
+                <slot
+                    name="rect-node-content"
+                    :data="{ node, recompute, isDragging: draggingStates.isDragging }"
+                />
             </div>
         </div>
     </div>
