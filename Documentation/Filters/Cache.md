@@ -50,6 +50,10 @@ All of these limitations may be addressed in forthcoming releases.
 ### Prepared Statements
 Resultsets of prepared statements are **not** cached.
 
+### Multi-statements
+Multi-statements are always sent to the backend and their result is
+**not** cached.
+
 ### Security
 The cache is **not** aware of grants.
 
