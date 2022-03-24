@@ -316,7 +316,7 @@ export default {
                 [MAINTAIN]: {
                     text: scope.$t('serverOps.actions.maintain'),
                     type: MAINTAIN,
-                    icon: ' $vuetify.icons.paused',
+                    icon: '$vuetify.icons.maintenance',
                     iconSize: 22,
                     color: 'primary',
                     info: scope.$t(`serverOps.info.maintain`),
