@@ -59,7 +59,6 @@ export default {
     },
     data() {
         return {
-            duration: 0,
             dagDim: { width: 0, height: 0 }, // dag-node-group dim
             nodeGroupTransform: { x: 24, y: this.dim.height / 2, k: 1 },
             nodeDivData: [],
@@ -361,68 +360,109 @@ export default {
             // compute node height after nodes are rendered
             if (this.dynNodeHeight) this.$help.doubleRAF(() => this.computeDynNodeHeight())
         },
+        /**
+         * @param {Object} d - link data or node data
+         * @returns {String} - color
+         */
+        colorize(d) {
+            return this.colorizingLinkFn(d) || '#0e9bc0'
+        },
+        /**
+         * @param {Object} linkGroup - linkGroup
+         * @param {String} type - enter or update
+         */
+        drawLine({ linkGroup, type }) {
+            const className = 'link_line'
+            const strokeWidth = 2.5
+            const strokeDasharray = 5
+            const diagonal = d => this.handleCreateDiagonal(d)
+            switch (type) {
+                case 'enter':
+                    linkGroup
+                        .append('path')
+                        .attr('class', className)
+                        .attr('fill', 'none')
+                        .attr('stroke-width', strokeWidth)
+                        .attr('stroke-dasharray', strokeDasharray)
+                        .attr('stroke', this.colorize)
+                        .attr('d', diagonal)
+                    break
+                case 'update':
+                    linkGroup
+                        .select(`path.${className}`)
+                        .attr('stroke', this.colorize)
+                        .attr('d', diagonal)
+                    break
+            }
+        },
+        /**
+         * @param {Object} linkGroup - linkGroup
+         * @param {String} type - enter or update
+         */
+        drawArrowHead({ linkGroup, type }) {
+            const className = 'link__arrow'
+            const strokeWidth = 3
+            const transform = d => this.transformArrow(d)
+            switch (type) {
+                case 'enter':
+                    linkGroup
+                        .append('path')
+                        .attr('class', className)
+                        .attr('stroke-width', strokeWidth)
+                        .attr('d', 'M12,0 L-5,-8 L0,0 L-5,8 Z')
+                        .attr('stroke-linecap', 'round')
+                        .attr('stroke-linejoin', 'round')
+                        .attr('fill', this.colorize)
+                        .attr('transform', transform)
+                    break
+                case 'update':
+                    linkGroup
+                        .select(`path.${className}`)
+                        .attr('fill', this.colorize)
+                        .attr('transform', transform)
+                    break
+            }
+        },
+        drawArrowLink(param) {
+            this.drawLine(param)
+            this.drawArrowHead(param)
+        },
         drawLinks(data) {
-            let linkGroup = this.svgGroup.selectAll('.link-group').data(data)
-            let linkGroupEnter = linkGroup
-                .enter()
-                .insert('g', 'g.node-rect-group') // insert after .node-rect-group
-                .attr('class', 'link-group pointer')
-                .style('opacity', 0.5)
-                .on('mouseover', function() {
-                    d3Select(this)
-                        .style('opacity', 1)
-                        .style('z-index', 10)
-                        .select('path.link_line')
-                        .attr('stroke-dasharray', null)
-                })
-                .on('mouseout', function() {
-                    d3Select(this)
-                        .style('opacity', 0.5)
-                        .style('z-index', 'unset')
-                        .select('path.link_line')
-                        .attr('stroke-dasharray', '5')
-                })
-
-            linkGroupEnter
-                .append('path')
-                .attr('class', 'link_line')
-                .attr('fill', 'none')
-                .attr('stroke-width', 2.5)
-                .attr('stroke-dasharray', '5')
-                .attr('stroke', d => this.colorizingLinkFn(d) || '#0e9bc0')
-                .attr('d', d => this.handleCreateDiagonal(d))
-            linkGroupEnter
-                .append('path')
-                .attr('class', 'link__arrow')
-                .attr('stroke-width', 3)
-                .attr('d', 'M12,0 L-5,-8 L0,0 L-5,8 Z')
-                .attr('stroke-linecap', 'round')
-                .attr('stroke-linejoin', 'round')
-                .attr('fill', d => this.colorizingLinkFn(d) || '#0e9bc0')
-                .attr('transform', d => this.transformArrow(d))
-
-            // UPDATE
-            let linkGroupUpdate = linkGroupEnter.merge(linkGroup)
-            // update link_line
-            linkGroupUpdate
-                .select('path.link_line')
-                .transition()
-                .duration(this.duration)
-                .attr('stroke', d => this.colorizingLinkFn(d) || '#0e9bc0')
-                .attr('d', d => this.handleCreateDiagonal(d))
-            // update link__arrow
-            linkGroupUpdate
-                .select('path.link__arrow')
-                .transition()
-                .duration(this.duration)
-                .attr('fill', d => this.colorizingLinkFn(d) || '#0e9bc0')
-                .attr('transform', d => this.transformArrow(d))
-            // Remove any exiting links
-            linkGroup
-                .exit()
-                .transition()
-                .duration(this.duration)
-                .remove()
+            this.svgGroup
+                .selectAll('.link-group')
+                .data(data)
+                .join(
+                    enter => {
+                        // insert after .node-rect-group
+                        const linkGroup = enter
+                            .insert('g', 'g.node-rect-group')
+                            .attr('class', 'link-group pointer')
+                            .style('opacity', 0.5)
+                            .on('mouseover', function() {
+                                d3Select(this)
+                                    .style('opacity', 1)
+                                    .style('z-index', 10)
+                                    .select('path.link_line')
+                                    .attr('stroke-dasharray', null)
+                            })
+                            .on('mouseout', function() {
+                                d3Select(this)
+                                    .style('opacity', 0.5)
+                                    .style('z-index', 'unset')
+                                    .select('path.link_line')
+                                    .attr('stroke-dasharray', '5')
+                            })
+                        this.drawArrowLink({ linkGroup, type: 'enter' })
+                        return linkGroup
+                    },
+                    // update is called when node changes it size or its position
+                    update => {
+                        const linkGroup = update
+                        this.drawArrowLink({ linkGroup, type: 'update' })
+                        return linkGroup
+                    },
+                    exit => exit.remove()
+                )
         },
         //-------------------------draggable methods---------------------------
         addMouseUpEvt() {
