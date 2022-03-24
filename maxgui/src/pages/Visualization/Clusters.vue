@@ -40,17 +40,48 @@
                                 <span class="text-uppercase">{{ $t('master') }} </span>:
                             </v-list-item-title>
                             <v-list-item-subtitle class="text-right">
+                                <icon-sprite-sheet
+                                    size="13"
+                                    class="server-state-icon mr-1"
+                                    :frame="
+                                        $help.serverStateIcon(
+                                            $typy(
+                                                cluster,
+                                                'children[0].serverData.attributes.state'
+                                            ).safeString
+                                        )
+                                    "
+                                >
+                                    status
+                                </icon-sprite-sheet>
                                 <truncate-string :text="cluster.children[0].name" />
                             </v-list-item-subtitle>
                         </v-list-item>
                         <v-list-item>
                             <v-list-item-title class="text-subtitle-2 color text-navigation">
-                                <span class="text-uppercase">{{ $tc('servers', 2) }} </span>:
+                                <span class="text-uppercase">{{ $tc('slaves', 2) }} </span>:
                             </v-list-item-title>
                             <v-list-item-subtitle class="text-right">
-                                <!-- TODO: Show server's state as chips, hover on chip will show server state-->
-                                <!-- number of slave + master -->
-                                {{ $typy(cluster, 'children[0].children.length').safeNumber + 1 }}
+                                <!-- TODO: hover on chip will show info about the server-->
+                                <v-chip
+                                    v-for="(item, stateType) in groupSlaveServersByStateType(
+                                        cluster
+                                    )"
+                                    :key="stateType"
+                                    :color="stateType"
+                                    text-color="white"
+                                    class="ml-1 lighten-1"
+                                    small
+                                >
+                                    <v-avatar
+                                        style="margin-left: -12px; border-radius: 50% 0 0;"
+                                        :class="`color bg-${stateType}`"
+                                        left
+                                    >
+                                        <strong>{{ item.servers.length }}</strong>
+                                    </v-avatar>
+                                    <span class="text-lowercase">{{ $t(item.label) }} </span>
+                                </v-chip>
                             </v-list-item-subtitle>
                         </v-list-item>
                         <!-- TODO: Determine what other information should be listed in the cluster card -->
@@ -101,6 +132,46 @@ export default {
                 path: `/visualization/clusters/${cluster.id}`,
             })
             this.SET_CURR_CLUSTER(cluster)
+        },
+        /**
+         * Group servers with the same states together.
+         * The state type is determined by using $help.serverStateIcon
+         * @param {Object} cluster
+         * @return {Object}
+         */
+        groupSlaveServersByStateType(cluster) {
+            let group = {}
+            const master = this.$typy(cluster, 'children[0]').safeObject
+            if (master) {
+                this.$typy(master, 'children').safeArray.forEach(n => {
+                    const groupName = this.getServerStateType(n.serverData.attributes.state)
+                    const label = this.labellingStateType(groupName)
+                    if (!group[groupName]) group[groupName] = { label, servers: [] }
+                    group[groupName].servers.push(n)
+                })
+            }
+            return group
+        },
+        getServerStateType(state) {
+            switch (this.$help.serverStateIcon(state)) {
+                case 0:
+                    return 'error'
+                case 1:
+                    return 'success'
+                case 2:
+                    return 'warning'
+            }
+        },
+        labellingStateType(stateType) {
+            switch (stateType) {
+                case 'error':
+                    return 'down'
+                case 'success':
+                    return 'up'
+                // warning when server is in maintenance state
+                case 'warning':
+                    return 'maintenance'
+            }
         },
     },
 }
