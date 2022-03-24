@@ -203,7 +203,6 @@ uint32_t EventMessageQueue::handle_poll_events(Worker* pWorker, uint32_t events)
             // The event count may not match the number of messages in the container since the
             // former is modified outside the mutex.
             size_t n_msgs = m_work.size();
-            mxb_assert(n_msgs < 1000);      // Should not see more in tests, adjust if needed.
             if (n_msgs == 1)
             {
                 m_single_msg_events++;
@@ -255,6 +254,7 @@ void EventMessageQueue::add_message(const MessageQueue::Message& message)
 {
     Guard guard(m_messages_lock);
     m_messages.emplace_back(message);
+    mxb_assert(m_messages.size() < 1000);   // Should not see more in tests, adjust if needed.
 }
 
 //
