@@ -334,7 +334,7 @@ std::ostream& MonitorManager::monitor_persist(const Monitor* monitor, std::ostre
 {
     auto mon = const_cast<Monitor*>(monitor);
     mon->configuration().persist(os);
-    mon->base_configuration().persist_append(os);
+    mon->base_configuration().persist_append(os, {CN_TYPE});
     return os;
 }
 
