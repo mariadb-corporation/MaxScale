@@ -521,7 +521,8 @@ int test_non_contiguous()
 
         while (pTail)
         {
-            size_t n = MYSQL_HEADER_LEN + rand() % 10;      // Between 4 and 13 bytes long chunks.
+            size_t n = MYSQL_HEADER_LEN + rand() % 10;  // Between 4 and 13 bytes long chunks.
+            n = std::min(n, pTail->length());           // Ensure not to split more than available.
 
             GWBUF* pHead = gwbuf_split(&pTail, n);
 
