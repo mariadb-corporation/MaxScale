@@ -326,116 +326,146 @@ export default {
             }
             this.update(node)
         },
+        /**
+         * @param {Object} srcNode - source node
+         * @param {Object} linkGroup - linkGroup
+         *  @param {String} type - enter, update or exit
+         */
+        drawLine({ srcNode, linkGroup, type }) {
+            const className = 'link_line'
+            const strokeWidth = 2.5
+            switch (type) {
+                case 'enter':
+                    linkGroup
+                        .append('path')
+                        .attr('class', className)
+                        .attr('fill', 'none')
+                        .attr('stroke-width', strokeWidth)
+                        .attr('stroke', d => d.data.linkColor)
+                        .attr('d', () =>
+                            this.diagonal({
+                                // start at the right edge of the rect node
+                                dest: { x: srcNode.x0, y: srcNode.y0 + this.nodeSize.width },
+                                src: { x: srcNode.x0, y: srcNode.y0 },
+                            })
+                        )
+                    break
+                case 'update':
+                    linkGroup
+                        .select(`path.${className}`)
+                        .attr('d', d => this.diagonal({ dest: d, src: d.parent }))
+                    break
+                case 'exit':
+                    linkGroup.select(`path.${className}`).attr('d', () =>
+                        this.diagonal({
+                            // end at the right edge of the rect node
+                            dest: { x: srcNode.x, y: srcNode.y + this.nodeSize.width },
+                            src: srcNode,
+                        })
+                    )
+                    break
+            }
+        },
+        /**
+         * @param {Object} srcNode - source node
+         * @param {Object} linkGroup - linkGroup
+         * @param {String} type - enter, update or exit
+         */
+        drawArrowHead({ srcNode, linkGroup, type }) {
+            const className = 'link__arrow'
+            switch (type) {
+                case 'enter':
+                    linkGroup
+                        .append('path')
+                        .attr('class', className)
+                        .attr('stroke-width', 3)
+                        .attr('d', 'M12,0 L-5,-8 L0,0 L-5,8 Z')
+                        .attr('stroke-linecap', 'round')
+                        .attr('stroke-linejoin', 'round')
+                        .attr('transform', () => {
+                            let o = {
+                                x: srcNode.x0,
+                                // start at the right edge of the rect node
+                                y: srcNode.y0 + this.nodeSize.width,
+                            }
+                            const p = this.getRotatedPoint({
+                                dest: o,
+                                src: { x: srcNode.x0, y: srcNode.y0 },
+                                numOfPoints: 10,
+                                pointIdx: 0,
+                            })
+                            return `translate(${p.position.x}, ${p.position.y})`
+                        })
+
+                    break
+                case 'update':
+                    linkGroup
+                        .select(`path.${className}`)
+                        .attr('fill', d => d.data.linkColor)
+                        .attr('transform', d => {
+                            const p = this.getRotatedPoint({
+                                dest: d,
+                                src: d.parent,
+                                numOfPoints: 10,
+                                pointIdx: 7, // show arrow at point 7
+                            })
+                            return `translate(${p.position.x}, ${p.position.y}) rotate(${p.angle})`
+                        })
+                    break
+                case 'exit':
+                    linkGroup
+                        .select(`path.${className}`)
+                        .attr('fill', 'transparent')
+                        .attr('transform', () => {
+                            const p = this.getRotatedPoint({
+                                dest: {
+                                    x: srcNode.x, // end at the right edge of the rect node
+                                    y: srcNode.y + this.nodeSize.width,
+                                },
+                                src: srcNode,
+                                numOfPoints: 10,
+                                pointIdx: 0,
+                            })
+                            return `translate(${p.position.x}, ${p.position.y})`
+                        })
+                    break
+            }
+        },
+        drawArrowLink(param) {
+            this.drawLine(param)
+            this.drawArrowHead(param)
+        },
         drawLinks({ srcNode, links }) {
             // Update the links...
-            let linkGroup = this.svgGroup.selectAll('.link-group').data(links, d => d.id)
-
-            // Enter any new links at the parent's previous position.
-            let linkGroupEnter = linkGroup
-                .enter()
-                .insert('g', 'g.node')
-                .attr('class', 'link-group')
-
-            // create link_line
-            linkGroupEnter
-                .append('path')
-                .attr('class', 'link_line')
-                .attr('fill', 'none')
-                .attr('stroke-width', 2.5)
-                .attr('stroke', d => d.data.linkColor)
-                .attr('d', () =>
-                    this.diagonal({
-                        dest: {
-                            x: srcNode.x0,
-                            // start at the right edge of the rect node
-                            y: srcNode.y0 + this.nodeSize.width,
-                        },
-                        src: { x: srcNode.x0, y: srcNode.y0 },
-                    })
-                )
-            linkGroupEnter
-                .append('path')
-                .attr('class', 'link__arrow')
-                .attr('stroke-width', 3)
-                .attr('d', 'M12,0 L-5,-8 L0,0 L-5,8 Z')
-                .attr('stroke-linecap', 'round')
-                .attr('stroke-linejoin', 'round')
-                .attr('transform', () => {
-                    let o = {
-                        x: srcNode.x0,
-                        // start at the right edge of the rect node
-                        y: srcNode.y0 + this.nodeSize.width,
+            let linkGroup
+            this.svgGroup
+                .selectAll('.link-group')
+                .data(links, d => d.id)
+                .join(
+                    enter => {
+                        // insert after .node
+                        linkGroup = enter.insert('g', 'g.node').attr('class', 'link-group')
+                        this.drawArrowLink({ srcNode, linkGroup, type: 'enter' })
+                        return linkGroup
+                    },
+                    // update is called when node changes it size
+                    update => {
+                        linkGroup = update
+                            .merge(linkGroup)
+                            .transition()
+                            .duration(this.duration)
+                        this.drawArrowLink({ srcNode, linkGroup, type: 'update' })
+                        return linkGroup
+                    },
+                    exit => {
+                        let linkGroup = exit
+                            .transition()
+                            .duration(this.duration)
+                            .remove()
+                        this.drawArrowLink({ srcNode, linkGroup, type: 'exit' })
+                        return linkGroup
                     }
-                    const p = this.getRotatedPoint({
-                        dest: o,
-                        src: { x: srcNode.x0, y: srcNode.y0 },
-                        numOfPoints: 10,
-                        pointIdx: 0,
-                    })
-                    return `translate(${p.position.x}, ${p.position.y})`
-                })
-
-            // UPDATE
-            let linkGroupUpdate = linkGroupEnter.merge(linkGroup)
-            // Transition back to the parent element position
-            // update link_line
-            linkGroupUpdate
-                .select('path.link_line')
-                .transition()
-                .duration(this.duration)
-                .attr('d', d => this.diagonal({ dest: d, src: d.parent }))
-            // update link__arrow
-            linkGroupUpdate
-                .select('path.link__arrow')
-                .transition()
-                .duration(this.duration)
-                .attr('fill', d => d.data.linkColor)
-                .attr('transform', d => {
-                    const p = this.getRotatedPoint({
-                        dest: d,
-                        src: d.parent,
-                        numOfPoints: 10,
-                        pointIdx: 7, // show arrow at point 7
-                    })
-                    return `translate(${p.position.x}, ${p.position.y}) rotate(${p.angle})`
-                })
-            // Remove any exiting links
-            let linkExit = linkGroup
-                .exit()
-                .transition()
-                .duration(this.duration)
-                .remove()
-
-            // remove link_line
-            linkExit
-                .select('path.link_line')
-                .attr('d', () =>
-                    this.diagonal({
-                        dest: {
-                            x: srcNode.x, // end at the right edge of the rect node
-                            y: srcNode.y + this.nodeSize.width,
-                        },
-                        src: srcNode,
-                    })
                 )
-                .remove()
-            // remove link__arrow
-            linkExit
-                .select('path.link__arrow')
-                .attr('fill', 'transparent')
-                .attr('transform', () => {
-                    const p = this.getRotatedPoint({
-                        dest: {
-                            x: srcNode.x, // end at the right edge of the rect node
-                            y: srcNode.y + this.nodeSize.width,
-                        },
-                        src: srcNode,
-                        numOfPoints: 10,
-                        pointIdx: 0,
-                    })
-                    return `translate(${p.position.x}, ${p.position.y})`
-                })
-                .remove()
         },
         /**
          * Update node
