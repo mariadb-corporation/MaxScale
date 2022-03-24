@@ -422,7 +422,14 @@ bool CacheFilterSession::routeQuery(GWBUF* pPacket)
         break;
 
     case MXS_COM_QUERY:
-        action = route_COM_QUERY(pPacket);
+        if (modutil_count_statements(pPacket) == 1)
+        {
+            action = route_COM_QUERY(pPacket);
+        }
+        else if (log_decisions())
+        {
+            MXB_NOTICE("Multi-statement, ignoring.");
+        }
         break;
 
     default:
@@ -1093,6 +1100,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_COM_QUERY(GWBUF* 
 {
     MXB_AT_DEBUG(uint8_t * pData = static_cast<uint8_t*>(GWBUF_DATA(pPacket)));
     mxb_assert((int)MYSQL_GET_COMMAND(pData) == MXS_COM_QUERY);
+    mxb_assert(modutil_count_statements(pPacket) == 1);
 
     routing_action_t routing_action = ROUTING_CONTINUE;
     cache_action_t cache_action = get_cache_action(pPacket);
