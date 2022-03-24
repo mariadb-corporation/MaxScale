@@ -370,11 +370,14 @@ export default {
         /**
          * @param {Object} linkGroup - linkGroup
          * @param {String} type - enter or update
+         * @param {Boolean} isInvisible - draw an invisible line with enough thickness so that
+         * mouseover event on `.link-group` can be triggered easily
          */
-        drawLine({ linkGroup, type }) {
-            const className = 'link_line'
-            const strokeWidth = 2.5
-            const strokeDasharray = 5
+        drawLine({ linkGroup, type, isInvisible }) {
+            const className = isInvisible ? 'link_line__invisible' : 'link_line'
+            const strokeWidth = isInvisible ? 12 : 2.5
+            const strokeDasharray = isInvisible ? 0 : 5
+            const stroke = isInvisible ? 'transparent' : this.colorize
             const diagonal = d => this.handleCreateDiagonal(d)
             switch (type) {
                 case 'enter':
@@ -384,13 +387,13 @@ export default {
                         .attr('fill', 'none')
                         .attr('stroke-width', strokeWidth)
                         .attr('stroke-dasharray', strokeDasharray)
-                        .attr('stroke', this.colorize)
+                        .attr('stroke', stroke)
                         .attr('d', diagonal)
                     break
                 case 'update':
                     linkGroup
                         .select(`path.${className}`)
-                        .attr('stroke', this.colorize)
+                        .attr('stroke', stroke)
                         .attr('d', diagonal)
                     break
             }
@@ -453,12 +456,20 @@ export default {
                                     .attr('stroke-dasharray', '5')
                             })
                         this.drawArrowLink({ linkGroup, type: 'enter' })
+                        /**
+                         * mouseover event on `.link-group` can only be triggered when mouseover "visiblePainted" path.
+                         * i.e. the space between dots won't trigger the event. In addition, the line is thin making
+                         * it hard to trigger the event.
+                         * So draw an invisible line with enough thickness.
+                         */
+                        this.drawLine({ linkGroup, type: 'enter', isInvisible: true })
                         return linkGroup
                     },
                     // update is called when node changes it size or its position
                     update => {
                         const linkGroup = update
                         this.drawArrowLink({ linkGroup, type: 'update' })
+                        this.drawLine({ linkGroup, type: 'update', isInvisible: true })
                         return linkGroup
                     },
                     exit => exit.remove()
