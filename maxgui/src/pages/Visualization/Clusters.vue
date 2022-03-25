@@ -40,21 +40,29 @@
                                 <span class="text-uppercase">{{ $t('master') }} </span>:
                             </v-list-item-title>
                             <v-list-item-subtitle class="text-right">
-                                <icon-sprite-sheet
-                                    size="16"
-                                    class="server-state-icon mr-1"
-                                    :frame="
-                                        $help.serverStateIcon(
-                                            $typy(
-                                                cluster,
-                                                'children[0].serverData.attributes.state'
-                                            ).safeString
-                                        )
-                                    "
+                                <cluster-server-tooltip
+                                    :servers="[$typy(cluster, 'children[0]').safeObject]"
                                 >
-                                    servers
-                                </icon-sprite-sheet>
-                                <truncate-string :text="cluster.children[0].name" />
+                                    <template v-slot:activator="{ on }">
+                                        <span class="d-inline-block" v-on="on">
+                                            <icon-sprite-sheet
+                                                size="16"
+                                                class="server-state-icon mr-1"
+                                                :frame="
+                                                    $help.serverStateIcon(
+                                                        $typy(
+                                                            cluster,
+                                                            'children[0].serverData.attributes.state'
+                                                        ).safeString
+                                                    )
+                                                "
+                                            >
+                                                servers
+                                            </icon-sprite-sheet>
+                                            <truncate-string :text="cluster.children[0].name" />
+                                        </span>
+                                    </template>
+                                </cluster-server-tooltip>
                             </v-list-item-subtitle>
                         </v-list-item>
                         <v-list-item>
@@ -62,7 +70,6 @@
                                 <span class="text-uppercase">{{ $tc('slaves', 2) }} </span>:
                             </v-list-item-title>
                             <v-list-item-subtitle class="text-right">
-                                <!-- TODO: hover on chip will show info about the server-->
                                 <v-chip
                                     v-for="(item, stateType) in groupSlaveServersByStateType(
                                         cluster
@@ -70,17 +77,25 @@
                                     :key="stateType"
                                     :color="stateType"
                                     text-color="white"
-                                    class="ml-1 lighten-1"
+                                    class="ml-1 lighten-1 d-inline-block"
                                     small
                                 >
-                                    <v-avatar
-                                        style="margin-left: -12px; border-radius: 50% 0 0;"
-                                        :class="`color bg-${stateType}`"
-                                        left
-                                    >
-                                        <strong>{{ item.servers.length }}</strong>
-                                    </v-avatar>
-                                    <span class="text-lowercase">{{ $t(item.label) }} </span>
+                                    <cluster-server-tooltip :servers="item.servers">
+                                        <template v-slot:activator="{ on }">
+                                            <div v-on="on">
+                                                <v-avatar
+                                                    style="margin-left: -12px; border-radius: 50% 0 0;"
+                                                    :class="`color bg-${stateType}`"
+                                                    left
+                                                >
+                                                    <strong>{{ item.servers.length }}</strong>
+                                                </v-avatar>
+                                                <span class="text-lowercase">
+                                                    {{ $t(item.label) }}
+                                                </span>
+                                            </div>
+                                        </template>
+                                    </cluster-server-tooltip>
                                 </v-chip>
                             </v-list-item-subtitle>
                         </v-list-item>
@@ -107,10 +122,12 @@
  */
 import { mapState, mapActions, mapMutations } from 'vuex'
 import PageHeaderRight from './PageHeaderRight'
+import ClusterServerTooltip from './ClusterServerTooltip'
 export default {
     name: 'clusters',
     components: {
         'page-header-right': PageHeaderRight,
+        'cluster-server-tooltip': ClusterServerTooltip,
     },
     computed: {
         ...mapState({
