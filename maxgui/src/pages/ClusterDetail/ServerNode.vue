@@ -13,7 +13,7 @@
                 :class="[droppableTargets.includes(node.id) ? 'node-heading__droppable' : '']"
             >
                 <icon-sprite-sheet
-                    size="13"
+                    size="16"
                     class="mr-1 server-state-icon"
                     :frame="$help.serverStateIcon(nodeAttrs.state)"
                 >

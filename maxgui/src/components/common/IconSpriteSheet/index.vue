@@ -60,8 +60,8 @@ export default {
                 },
                 servers: {
                     frames: [
-                        '$vuetify.icons.critical',
-                        '$vuetify.icons.good',
+                        '$vuetify.icons.criticalServer',
+                        '$vuetify.icons.goodServer',
                         '$vuetify.icons.maintenance',
                     ],
                     colorClasses: ['text-error', 'text-success', 'text-field-text'],
