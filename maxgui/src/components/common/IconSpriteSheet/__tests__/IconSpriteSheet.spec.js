@@ -13,7 +13,10 @@
 
 import mount from '@tests/unit/setup'
 import IconSpriteSheet from '@/components/common/IconSpriteSheet'
+import { merge } from 'utils/helpers'
+import { APP_CONFIG } from 'utils/constants'
 
+const sheets = APP_CONFIG.ICON_SHEETS
 /**
  * This function mockups defining slot content of the component by returning
  * mount function.
@@ -21,26 +24,17 @@ import IconSpriteSheet from '@/components/common/IconSpriteSheet'
  * @param {Boolean} isShallow shallow mount the component
  * @returns mount function
  */
-function mockupSlotDefining(propsData, isShallow = true) {
-    let mountOption = {
-        propsData,
-        shallow: isShallow,
-        component: IconSpriteSheet,
-        slots: {
-            default: 'status', // currently, maxgui only needs 'status' frame
-        },
-    }
-    return mount(mountOption)
-}
-
-const hardCodingStatusSheet = {
-    frames: [
-        '$vuetify.icons.critical',
-        '$vuetify.icons.good',
-        '$vuetify.icons.statusWarning',
-        '$vuetify.icons.statusInfo',
-    ],
-    colorClasses: ['text-error', 'text-success', 'text-warning', 'text-info'],
+function mockupSlotDefining(opts) {
+    return mount(
+        merge(
+            {
+                shallow: true,
+                component: IconSpriteSheet,
+                slots: { default: 'servers' },
+            },
+            opts
+        )
+    )
 }
 
 describe('IconSpriteSheet.vue', () => {
@@ -50,60 +44,83 @@ describe('IconSpriteSheet.vue', () => {
         wrapper.destroy()
     })
 
-    it(`Should choose accurately frame and color classes when
-      'default' slot is defined`, () => {
-        wrapper = mockupSlotDefining()
-        expect(wrapper.vm.sheet).to.be.deep.equals(hardCodingStatusSheet)
-    })
-
-    it(`Should render accurately status icon`, () => {
-        const indexOfFrame = hardCodingStatusSheet.frames.length - 1
-        wrapper = mockupSlotDefining({ frame: indexOfFrame })
-        expect(wrapper.vm.icon).to.be.equals(hardCodingStatusSheet.frames[indexOfFrame])
-    })
-
     it(`Should render fallback bug_report icon if there is a missing frame`, () => {
-        const indexOfFrame = hardCodingStatusSheet.frames.length
-        wrapper = mockupSlotDefining({ frame: indexOfFrame })
+        const indexOfFrame = sheets.servers.frames.length
+        wrapper = mockupSlotDefining({ propsData: { frame: indexOfFrame } })
         expect(wrapper.vm.icon).to.be.equals('bug_report')
     })
 
-    it(`Should assign accurately class to icon`, () => {
-        const indexOfFrame = hardCodingStatusSheet.frames.length - 1
-        wrapper = mockupSlotDefining({ frame: indexOfFrame })
-        expect(wrapper.vm.iconClass).to.be.equals(
-            `color ${hardCodingStatusSheet.colorClasses[indexOfFrame]}`
-        )
-    })
-
     it(`Should ignore frame color class if color props is defined`, () => {
-        const indexOfFrame = hardCodingStatusSheet.frames.length - 1
-        wrapper = mockupSlotDefining({ frame: indexOfFrame, color: 'blue' })
+        const indexOfFrame = sheets.servers.frames.length - 1
+        wrapper = mockupSlotDefining({ propsData: { frame: indexOfFrame, color: 'blue' } })
         expect(wrapper.vm.iconClass).to.be.equals('')
     })
 
     it(`Should assign accurate color to v-icon component when color props is defined`, () => {
-        const indexOfFrame = hardCodingStatusSheet.frames.length - 1
-        const isShallow = false
-        wrapper = mockupSlotDefining({ frame: indexOfFrame, color: 'blue' }, isShallow)
+        wrapper = mockupSlotDefining({
+            shallow: false,
+            propsData: { frame: sheets.servers.frames.length - 1, color: 'blue' },
+        })
         expect(wrapper.find('.blue--text').exists()).to.be.true
     })
 
     it(`Should pass accurately props to v-icon`, () => {
-        const indexOfFrame = hardCodingStatusSheet.frames.length - 1
-        const isShallow = false
+        const indexOfFrame = sheets.servers.frames.length - 1
         const passedProps = {
             frame: indexOfFrame,
             color: 'red',
             size: 13,
         }
-        wrapper = mockupSlotDefining(passedProps, isShallow)
+        wrapper = mockupSlotDefining({ shallow: false, propsData: passedProps })
         wrapper.vm.$nextTick(() => {
             const vIcon = wrapper.findComponent({ name: 'v-icon' })
             expect(vIcon.vm.$props.class).to.be.undefined
             expect(wrapper.vm.iconClass).to.be.equals('') // as color props is defined
             expect(vIcon.vm.$props.size).to.be.deep.equals(passedProps.size)
             expect(vIcon.vm.$props.color).to.be.deep.equals(passedProps.color)
+        })
+    })
+})
+
+Object.keys(sheets).forEach(sheetName => {
+    describe(`IconSpriteSheet.vue - ${sheetName} icons`, () => {
+        let wrapper
+
+        afterEach(() => {
+            wrapper.destroy()
+        })
+
+        it(`Should choose accurately frame and color classes when
+        'default' slot is defined`, () => {
+            wrapper = mockupSlotDefining({ slots: { default: sheetName } })
+            expect(wrapper.vm.sheet).to.be.deep.equals(sheets[sheetName])
+        })
+
+        const iconAndColorTests = {
+            icon: `Should render accurately ${sheetName} icon`,
+            iconClass: `Should assign accurately class to icon`,
+        }
+        Object.keys(iconAndColorTests).forEach(key => {
+            it(iconAndColorTests[key], async () => {
+                const sheet = sheets[sheetName]
+                // frame could be either string or number. For `logPriorities`, it is string
+                const frames =
+                    sheetName === 'logPriorities' ? Object.keys(sheet.frames) : sheet.frames
+
+                wrapper = mockupSlotDefining({
+                    propsData: { frame: '' },
+                    slots: { default: sheetName },
+                })
+                for (const [i, f] of frames.entries()) {
+                    const frame = sheetName === 'logPriorities' ? f : i
+                    await wrapper.setProps({ frame })
+                    const expectResult =
+                        key === 'icon'
+                            ? Object.values(sheet.frames)[i]
+                            : `color ${Object.values(sheet.colorClasses)[i]}`
+                    expect(wrapper.vm[key]).to.be.equals(expectResult)
+                }
+            })
         })
     })
 })
