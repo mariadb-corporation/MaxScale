@@ -28,7 +28,7 @@
                                 class="mr-1 rep-icon"
                                 :frame="$help.repStateIcon(slaveStat.overall_replication_state)"
                             >
-                                status
+                                replication
                             </icon-sprite-sheet>
                         </td>
                         <td>
@@ -66,7 +66,7 @@
                                     class="mr-1 rep-icon"
                                     :frame="$help.repStateIcon(value)"
                                 >
-                                    status
+                                    replication
                                 </icon-sprite-sheet>
                                 <truncate-string
                                     wrap

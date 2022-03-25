@@ -75,11 +75,11 @@
                 :onSave="confirmSave"
             />
             <icon-sprite-sheet
-                size="13"
-                class="status-icon mr-1"
+                size="16"
+                class="monitor-state-icon mr-1"
                 :frame="$help.monitorStateIcon(currState)"
             >
-                status
+                monitors
             </icon-sprite-sheet>
             <span class="resource-state color text-navigation text-body-2">
                 {{ currState }}

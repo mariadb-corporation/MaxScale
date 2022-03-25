@@ -30,8 +30,8 @@
                     </router-link>
                 </template>
                 <template v-slot:state="{ data: { item: { state } } }">
-                    <icon-sprite-sheet size="13" class="status-icon" :frame="getStatusIcon(state)">
-                        status
+                    <icon-sprite-sheet size="16" class="state-icon" :frame="getStatusIcon(state)">
+                        {{ relationshipType }}
                     </icon-sprite-sheet>
                 </template>
                 <template v-if="!readOnly" v-slot:actions="{ data: { item } }">

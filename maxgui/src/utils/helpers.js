@@ -130,7 +130,7 @@ export function repStateIcon(state) {
 export function monitorStateIcon(monitorState) {
     if (monitorState) {
         if (monitorState.includes('Running')) return 1
-        if (monitorState.includes('Stopped')) return 2
+        if (monitorState.includes('Stopped')) return 0
         else return ''
     } else return ''
 }

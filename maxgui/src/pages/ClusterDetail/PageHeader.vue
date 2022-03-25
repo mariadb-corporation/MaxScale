@@ -51,11 +51,11 @@
             </portal>
             <div class="pl-6">
                 <icon-sprite-sheet
-                    size="13"
-                    class="status-icon mr-1"
+                    size="16"
+                    class="monitor-state-icon mr-1"
                     :frame="$help.monitorStateIcon(current_cluster.state)"
                 >
-                    status
+                    monitors
                 </icon-sprite-sheet>
                 <span class="resource-state color text-navigation text-body-2">
                     {{ current_cluster.state }}

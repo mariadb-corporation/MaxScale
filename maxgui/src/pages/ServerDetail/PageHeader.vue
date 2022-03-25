@@ -86,8 +86,8 @@
                     />
                 </template>
             </confirm-dialog>
-            <icon-sprite-sheet size="13" class="status-icon mr-1" :frame="stateIconFrame">
-                status
+            <icon-sprite-sheet size="16" class="server-state-icon mr-1" :frame="stateIconFrame">
+                servers
             </icon-sprite-sheet>
             <span class="color text-navigation text-body-2 server-healthy">
                 {{ serverHealthy }}
@@ -162,7 +162,7 @@ export default {
                 case 1:
                     return this.$t('healthy')
                 default:
-                    return this.$t('warning')
+                    return this.$t('maintenance')
             }
         },
         currStateMode() {

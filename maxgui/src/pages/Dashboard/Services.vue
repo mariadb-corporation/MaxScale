@@ -13,11 +13,11 @@
         </template>
         <template v-slot:state="{ data: { item: { state } } }">
             <icon-sprite-sheet
-                size="13"
-                class="status-icon mr-1"
+                size="16"
+                class="service-state-icon mr-1"
                 :frame="$help.serviceStateIcon(state)"
             >
-                status
+                services
             </icon-sprite-sheet>
             <span>{{ state }} </span>
         </template>
@@ -29,15 +29,14 @@
             <span v-if="typeof serverIds === 'string'">{{ serverIds }} </span>
 
             <template v-else-if="serverIds.length < 3">
-                <template v-for="(serverId, i) in serverIds">
-                    <router-link
-                        :key="serverId"
-                        :to="`/dashboard/servers/${serverId}`"
-                        class="rsrc-link"
-                    >
-                        <span> {{ serverId }}{{ i !== serverIds.length - 1 ? ', ' : '' }} </span>
-                    </router-link>
-                </template>
+                <router-link
+                    v-for="(serverId, i) in serverIds"
+                    :key="serverId"
+                    :to="`/dashboard/servers/${serverId}`"
+                    class="rsrc-link"
+                >
+                    <span> {{ serverId }}{{ i !== serverIds.length - 1 ? ', ' : '' }} </span>
+                </router-link>
             </template>
 
             <v-menu
@@ -61,15 +60,14 @@
                 </template>
 
                 <v-sheet class="pa-4">
-                    <template v-for="serverId in serverIds">
-                        <router-link
-                            :key="serverId"
-                            :to="`/dashboard/servers/${serverId}`"
-                            class="text-body-2 d-block rsrc-link"
-                        >
-                            <span>{{ serverId }} </span>
-                        </router-link>
-                    </template>
+                    <router-link
+                        v-for="serverId in serverIds"
+                        :key="serverId"
+                        :to="`/dashboard/servers/${serverId}`"
+                        class="text-body-2 d-block rsrc-link"
+                    >
+                        <span>{{ serverId }} </span>
+                    </router-link>
                 </v-sheet>
             </v-menu>
         </template>

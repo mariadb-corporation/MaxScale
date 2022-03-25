@@ -13,11 +13,11 @@
         </template>
         <template v-slot:state="{ data: { item: { state } } }">
             <icon-sprite-sheet
-                size="13"
-                class="status-icon mr-1"
+                size="16"
+                class="listener-state-icon mr-1"
                 :frame="$help.listenerStateIcon(state)"
             >
-                status
+                listeners
             </icon-sprite-sheet>
             <span>{{ state }} </span>
         </template>
@@ -27,15 +27,14 @@
         </template>
 
         <template v-slot:serviceIds="{ data: { item: { serviceIds } } }">
-            <template v-for="serviceId in serviceIds">
-                <router-link
-                    :key="serviceId"
-                    :to="`/dashboard/services/${serviceId}`"
-                    class="rsrc-link"
-                >
-                    <span> {{ serviceId }} </span>
-                </router-link>
-            </template>
+            <router-link
+                v-for="serviceId in serviceIds"
+                :key="serviceId"
+                :to="`/dashboard/services/${serviceId}`"
+                class="rsrc-link"
+            >
+                <span> {{ serviceId }} </span>
+            </router-link>
         </template>
     </data-table>
 </template>

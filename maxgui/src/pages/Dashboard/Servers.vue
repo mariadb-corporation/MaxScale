@@ -39,11 +39,11 @@
                 <div class="d-flex align-center">
                     <icon-sprite-sheet
                         v-if="monitorState"
-                        size="13"
-                        class="status-icon mr-1"
+                        size="16"
+                        class="monitor-state-icon mr-1"
                         :frame="$help.monitorStateIcon(monitorState)"
                     >
-                        status
+                        monitors
                     </icon-sprite-sheet>
                     <span>{{ monitorState }} </span>
                 </div>
@@ -108,11 +108,11 @@
                             v-on="on"
                         >
                             <icon-sprite-sheet
-                                size="13"
-                                class="mr-1 status-icon"
+                                size="16"
+                                class="mr-1 server-state-icon"
                                 :frame="$help.serverStateIcon(serverState)"
                             >
-                                status
+                                servers
                             </icon-sprite-sheet>
                             {{ serverState }}
                         </div>

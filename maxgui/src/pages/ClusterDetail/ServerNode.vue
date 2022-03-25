@@ -14,10 +14,10 @@
             >
                 <icon-sprite-sheet
                     size="13"
-                    class="server-state-icon mr-1"
+                    class="mr-1 server-state-icon"
                     :frame="$help.serverStateIcon(nodeAttrs.state)"
                 >
-                    status
+                    servers
                 </icon-sprite-sheet>
                 <router-link
                     target="_blank"

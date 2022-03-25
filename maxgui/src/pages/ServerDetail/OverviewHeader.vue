@@ -133,7 +133,7 @@ export default {
                 case 1:
                     return 'text-success'
                 default:
-                    return 'text-warning'
+                    return 'text-field-text'
             }
         },
         getTopOverviewInfo: function() {

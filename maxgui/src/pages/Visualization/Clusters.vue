@@ -17,7 +17,7 @@
                                 size="20"
                                 :frame="$help.monitorStateIcon(cluster.state)"
                             >
-                                status
+                                monitors
                             </icon-sprite-sheet>
                         </v-list-item-avatar>
                         <v-list-item-content class="py-4">
@@ -41,7 +41,7 @@
                             </v-list-item-title>
                             <v-list-item-subtitle class="text-right">
                                 <icon-sprite-sheet
-                                    size="13"
+                                    size="16"
                                     class="server-state-icon mr-1"
                                     :frame="
                                         $help.serverStateIcon(
@@ -52,7 +52,7 @@
                                         )
                                     "
                                 >
-                                    status
+                                    servers
                                 </icon-sprite-sheet>
                                 <truncate-string :text="cluster.children[0].name" />
                             </v-list-item-subtitle>
@@ -159,7 +159,7 @@ export default {
                 case 1:
                     return 'success'
                 case 2:
-                    return 'warning'
+                    return 'field-text' // color for maintenance state
             }
         },
         labellingStateType(stateType) {
@@ -168,8 +168,8 @@ export default {
                     return 'down'
                 case 'success':
                     return 'up'
-                // warning when server is in maintenance state
-                case 'warning':
+                // field-text when server is in maintenance state
+                case 'field-text':
                     return 'maintenance'
             }
         },

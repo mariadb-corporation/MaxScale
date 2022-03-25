@@ -92,11 +92,11 @@
                 :onSave="confirmSave"
             />
             <icon-sprite-sheet
-                size="13"
-                class="status-icon mr-1"
+                size="16"
+                class="service-state-icon mr-1"
                 :frame="$help.serviceStateIcon(serviceState)"
             >
-                status
+                services
             </icon-sprite-sheet>
             <span class="service-state color text-navigation text-body-2">
                 {{ serviceState }}

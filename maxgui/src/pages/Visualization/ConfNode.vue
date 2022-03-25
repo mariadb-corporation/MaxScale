@@ -65,10 +65,10 @@
                 <icon-sprite-sheet
                     v-if="key === 'state'"
                     size="13"
-                    class="status-icon mr-1"
+                    class="state-icon mr-1"
                     :frame="stateIconFrame(value)"
                 >
-                    status
+                    {{ nodeType }}
                 </icon-sprite-sheet>
 
                 <truncate-string :text="`${value}`" />

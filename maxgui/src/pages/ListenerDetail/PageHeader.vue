@@ -39,11 +39,11 @@
                 :onSave="confirmSave"
             />
             <icon-sprite-sheet
-                size="13"
-                class="status-icon mr-1"
+                size="16"
+                class="listener-state-icon mr-1"
                 :frame="$help.listenerStateIcon(currentListener.attributes.state)"
             >
-                status
+                listeners
             </icon-sprite-sheet>
             <span class="resource-state color text-navigation text-body-2">
                 {{ currentListener.attributes.state }}

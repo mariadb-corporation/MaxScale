@@ -38,14 +38,41 @@ export default {
         return {
             emptyIcon: 'bug_report', // icon to be shown if there is a missing "frame"
             sheets: {
-                status: {
+                monitors: {
+                    frames: ['$vuetify.icons.stopped', '$vuetify.icons.statusOk'],
+                    colorClasses: ['text-field-text', 'text-success'],
+                },
+                services: {
                     frames: [
                         '$vuetify.icons.statusError',
                         '$vuetify.icons.statusOk',
-                        '$vuetify.icons.statusWarning',
-                        '$vuetify.icons.statusInfo',
+                        '$vuetify.icons.stopped',
                     ],
-                    colorClasses: ['text-error', 'text-success', 'text-warning', 'text-info'],
+                    colorClasses: ['text-error', 'text-success', 'text-field-text'],
+                },
+                listeners: {
+                    frames: [
+                        '$vuetify.icons.statusError',
+                        '$vuetify.icons.statusOk',
+                        '$vuetify.icons.stopped',
+                    ],
+                    colorClasses: ['text-error', 'text-success', 'text-field-text'],
+                },
+                servers: {
+                    frames: [
+                        '$vuetify.icons.statusError',
+                        '$vuetify.icons.statusOk',
+                        '$vuetify.icons.maintenance',
+                    ],
+                    colorClasses: ['text-error', 'text-success', 'text-field-text'],
+                },
+                replication: {
+                    frames: [
+                        '$vuetify.icons.stopped',
+                        '$vuetify.icons.statusOk',
+                        '$vuetify.icons.statusWarning',
+                    ],
+                    colorClasses: ['text-field-text', 'text-success', 'text-warning'],
                 },
                 logPriorities: {
                     frames: {
