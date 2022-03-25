@@ -577,9 +577,6 @@ export default {
                     border-bottom: thin solid $table-border;
                 }
             }
-            .v-data-table__editable-cell {
-                padding: 2px 10px;
-            }
         }
     }
     .v-data-footer {

@@ -126,8 +126,6 @@ export default {
                     (this.cellIndex < this.colsHasRowSpan
                         ? `${this.item.groupId}-rowspan-cell`
                         : `${this.item.groupId}-cell`),
-                // for editable feature
-                this.editableCell && this.header.editableCol && 'v-data-table__editable-cell',
                 // for action slots
                 this.header.value === 'action' && 'pr-3',
                 // for tree view feature
@@ -162,7 +160,7 @@ export default {
                 return {
                     padding: `0px 48px 0px ${this.cellIndex === 0 ? basePl + levelPl : '48'}px`,
                 }
-            }
+            } else if (this.editableCell && this.header.editableCol) return { padding: '2px 10px' }
             return { padding: this.header.padding ? this.header.padding : '0px 24px' }
         },
         // render actions slot at indexOfHoveredRow
