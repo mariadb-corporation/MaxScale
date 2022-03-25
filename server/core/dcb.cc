@@ -162,7 +162,7 @@ static int dcb_set_socket_option(int sockfd, int level, int optname, void* optva
 static int upstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userdata);
 static int downstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userdata);
 
-static mxb::WORKER* get_dcb_owner()
+static mxb::Worker* get_dcb_owner()
 {
     /** The DCB is owned by the thread that allocates it */
     mxb_assert(RoutingWorker::get_current_id() != -1);
@@ -216,7 +216,7 @@ DCB::~DCB()
         SSL_free(m_encryption.handle);
     }
 
-    POLL_DATA::owner = reinterpret_cast<mxb::WORKER*>(0xdeadbeef);
+    POLL_DATA::owner = reinterpret_cast<mxb::Worker*>(0xdeadbeef);
 }
 
 void DCB::clear()
@@ -1405,7 +1405,7 @@ uint32_t DCB::event_handler(DCB* dcb, uint32_t events)
 }
 
 // static
-uint32_t DCB::poll_handler(POLL_DATA* data, mxb::WORKER* worker, uint32_t events)
+uint32_t DCB::poll_handler(POLL_DATA* data, mxb::Worker* worker, uint32_t events)
 {
     uint32_t rval = 0;
     DCB* dcb = (DCB*)data;

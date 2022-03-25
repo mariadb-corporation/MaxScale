@@ -1029,7 +1029,7 @@ void RoutingWorker::epoll_tick()
  * @return What actions were performed.
  */
 // static
-uint32_t RoutingWorker::epoll_instance_handler(POLL_DATA* pData, WORKER* pWorker, uint32_t events)
+uint32_t RoutingWorker::epoll_instance_handler(POLL_DATA* pData, Worker* pWorker, uint32_t events)
 {
     RoutingWorker* pThis = static_cast<RoutingWorker*>(pData);
     mxb_assert(pThis == pWorker);

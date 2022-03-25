@@ -626,7 +626,7 @@ private:
 
     static void free(DCB* dcb);
 
-    static uint32_t poll_handler(POLL_DATA* data, mxb::WORKER* worker, uint32_t events);
+    static uint32_t poll_handler(POLL_DATA* data, mxb::Worker* worker, uint32_t events);
     static uint32_t event_handler(DCB* dcb, uint32_t events);
     uint32_t        process_events(uint32_t events);
 

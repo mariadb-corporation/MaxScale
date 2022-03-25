@@ -1043,7 +1043,7 @@ bool Listener::listen()
     return rval;
 }
 
-uint32_t Listener::poll_handler(POLL_DATA* data, mxb::WORKER* worker, uint32_t events)
+uint32_t Listener::poll_handler(POLL_DATA* data, mxb::Worker* worker, uint32_t events)
 {
     Listener* listener = static_cast<Listener*>(data);
     listener->accept_connections();

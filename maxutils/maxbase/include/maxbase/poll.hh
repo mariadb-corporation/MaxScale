@@ -28,9 +28,8 @@ constexpr uint32_t ERROR = 0x10;
 }
 
 struct POLL_DATA;
-struct WORKER
-{
-};
+class Worker;
+
 /**
  * Pointer to function that knows how to handle events for a particular
  * MXB_POLL_DATA structure.
@@ -41,12 +40,12 @@ struct WORKER
  *
  * @return A combination of mxb_poll_action_t enumeration values.
  */
-using poll_handler_t = uint32_t (*)(POLL_DATA* data, WORKER* worker, uint32_t events);
+using poll_handler_t = uint32_t (*)(POLL_DATA* data, Worker* worker, uint32_t events);
 
 struct POLL_DATA
 {
     poll_handler_t handler; /*< Handler for this particular kind of mxb_poll_data. */
-    WORKER*        owner;   /*< Owning worker. */
+    Worker*        owner;   /*< Owning worker. */
 };
 
 class PollData : public POLL_DATA

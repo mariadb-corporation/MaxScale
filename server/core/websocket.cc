@@ -108,7 +108,7 @@ void WebSocket::shutdown()
 }
 
 // static
-uint32_t WebSocket::poll_handler(POLL_DATA* data, mxb::WORKER* worker, uint32_t events)
+uint32_t WebSocket::poll_handler(POLL_DATA* data, mxb::Worker* worker, uint32_t events)
 {
     WebSocket* ws = static_cast<WebSocket*>(data);
     bool ok = false;

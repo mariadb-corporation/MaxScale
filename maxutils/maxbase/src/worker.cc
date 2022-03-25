@@ -253,9 +253,9 @@ uint32_t WorkerTimer::handle(Worker* pWorker, uint32_t events)
 }
 
 // static
-uint32_t WorkerTimer::handler(POLL_DATA* pThis, WORKER* pWorker, uint32_t events)
+uint32_t WorkerTimer::handler(POLL_DATA* pThis, Worker* pWorker, uint32_t events)
 {
-    return static_cast<WorkerTimer*>(pThis)->handle(static_cast<Worker*>(pWorker), events);
+    return static_cast<WorkerTimer*>(pThis)->handle(pWorker, events);
 }
 
 namespace

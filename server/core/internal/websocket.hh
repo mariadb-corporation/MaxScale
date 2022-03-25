@@ -66,7 +66,7 @@ private:
     };
 
     WebSocket(int fd, MHD_UpgradeResponseHandle* urh, std::function<std::string ()> cb);
-    static uint32_t poll_handler(POLL_DATA* data, mxb::WORKER* worker, uint32_t events);
+    static uint32_t poll_handler(POLL_DATA* data, mxb::Worker* worker, uint32_t events);
     static void     close(WebSocket* ws);
 
     bool send();

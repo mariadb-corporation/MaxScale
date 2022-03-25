@@ -134,7 +134,7 @@ void Reader::set_in_high_water(bool in_high_water)
     m_in_high_water = in_high_water;
 }
 
-uint32_t Reader::epoll_update(struct mxb::POLL_DATA* data, mxb::WORKER* worker, uint32_t events)
+uint32_t Reader::epoll_update(struct mxb::POLL_DATA* data, mxb::Worker* worker, uint32_t events)
 {
     Reader* self = static_cast<PollData*>(data)->reader;
     self->notify_concrete_reader(events);

@@ -236,7 +236,7 @@ protected:
 private:
     uint32_t handle(Worker* pWorker, uint32_t events);
 
-    static uint32_t handler(POLL_DATA* pThis, WORKER* pWorker, uint32_t events);
+    static uint32_t handler(POLL_DATA* pThis, Worker* pWorker, uint32_t events);
 
 private:
     int     m_fd;       /**< The timerfd descriptor. */
@@ -250,8 +250,7 @@ private:
  * associated with file descriptors. Internally Worker has a thread
  * and an epoll-instance of its own.
  */
-class Worker : public WORKER
-             , private MessageQueue::Handler
+class Worker : private MessageQueue::Handler
 {
     Worker(const Worker&) = delete;
     Worker& operator=(const Worker&) = delete;

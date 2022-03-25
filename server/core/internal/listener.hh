@@ -333,7 +333,7 @@ private:
     }
 
     // Handler for EPOLL_IN events
-    static uint32_t poll_handler(POLL_DATA* data, mxb::WORKER* worker, uint32_t events);
+    static uint32_t poll_handler(POLL_DATA* data, mxb::Worker* worker, uint32_t events);
 
     static bool read_connection_init_sql(const std::string& filepath,
                                          mxs::ListenerData::ConnectionInitSql* output);

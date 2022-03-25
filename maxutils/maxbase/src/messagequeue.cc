@@ -60,7 +60,7 @@ namespace maxbase
 //
 // MessageQueue
 //
-MessageQueue::MessageQueue(uint32_t (*pPoll_handler)(POLL_DATA* pData, WORKER* worker, uint32_t events))
+MessageQueue::MessageQueue(uint32_t (*pPoll_handler)(POLL_DATA* pData, Worker* worker, uint32_t events))
     : mxb::PollData(pPoll_handler)
 {
 }
@@ -237,11 +237,11 @@ uint32_t EventMessageQueue::handle_poll_events(Worker* pWorker, uint32_t events)
 }
 
 // static
-uint32_t EventMessageQueue::poll_handler(POLL_DATA* pData, WORKER* pWorker, uint32_t events)
+uint32_t EventMessageQueue::poll_handler(POLL_DATA* pData, Worker* pWorker, uint32_t events)
 {
     EventMessageQueue* pThis = static_cast<EventMessageQueue*>(pData);
 
-    return pThis->handle_poll_events(static_cast<Worker*>(pWorker), events);
+    return pThis->handle_poll_events(pWorker, events);
 }
 
 void EventMessageQueue::swap_messages_and_work()
@@ -541,11 +541,11 @@ uint32_t PipeMessageQueue::handle_poll_events(Worker* pWorker, uint32_t events)
 }
 
 // static
-uint32_t PipeMessageQueue::poll_handler(POLL_DATA* pData, WORKER* pWorker, uint32_t events)
+uint32_t PipeMessageQueue::poll_handler(POLL_DATA* pData, Worker* pWorker, uint32_t events)
 {
     PipeMessageQueue* pThis = static_cast<PipeMessageQueue*>(pData);
 
-    return pThis->handle_poll_events(static_cast<Worker*>(pWorker), events);
+    return pThis->handle_poll_events(pWorker, events);
 }
 
 }
