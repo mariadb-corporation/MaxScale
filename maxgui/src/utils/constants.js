@@ -22,6 +22,54 @@ export const APP_CONFIG = Object.freeze({
 |  |  |  |  /  _____  \\   /  .  \\  .----)   |   |  '----. /  _____  \\  |  '----.|  |____
 |__|  |__| /__/     \\__\\ /__/ \\__\\ |_______/     \\______|/__/     \\__\\ |_______||_______|
 `,
+    ICON_SHEETS: {
+        monitors: {
+            frames: ['$vuetify.icons.stopped', '$vuetify.icons.good'],
+            colorClasses: ['text-field-text', 'text-success'],
+        },
+        services: {
+            frames: ['$vuetify.icons.critical', '$vuetify.icons.good', '$vuetify.icons.stopped'],
+            colorClasses: ['text-error', 'text-success', 'text-field-text'],
+        },
+        listeners: {
+            frames: ['$vuetify.icons.critical', '$vuetify.icons.good', '$vuetify.icons.stopped'],
+            colorClasses: ['text-error', 'text-success', 'text-field-text'],
+        },
+        servers: {
+            frames: [
+                '$vuetify.icons.criticalServer',
+                '$vuetify.icons.goodServer',
+                '$vuetify.icons.maintenance',
+            ],
+            colorClasses: ['text-error', 'text-success', 'text-field-text'],
+        },
+        replication: {
+            frames: [
+                '$vuetify.icons.stopped',
+                '$vuetify.icons.good',
+                '$vuetify.icons.statusWarning',
+            ],
+            colorClasses: ['text-field-text', 'text-success', 'text-warning'],
+        },
+        logPriorities: {
+            frames: {
+                alert: '$vuetify.icons.alertWarning',
+                error: '$vuetify.icons.critical',
+                warning: '$vuetify.icons.statusInfo',
+                notice: '$vuetify.icons.reports',
+                info: '$vuetify.icons.statusInfo',
+                debug: 'bug_report',
+            },
+            colorClasses: {
+                alert: 'text-error',
+                error: 'text-error',
+                warning: 'text-warning',
+                notice: 'text-info',
+                info: 'text-info',
+                debug: 'text-accent',
+            },
+        },
+    },
     RESOURCE_FORM_TYPES: Object.freeze({
         SERVICE: 'Service',
         SERVER: 'Server',

@@ -22,6 +22,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { mapState } from 'vuex'
 export default {
     name: 'icon-sprite-sheet',
     props: {
@@ -37,68 +38,13 @@ export default {
     data() {
         return {
             emptyIcon: 'bug_report', // icon to be shown if there is a missing "frame"
-            sheets: {
-                monitors: {
-                    frames: ['$vuetify.icons.stopped', '$vuetify.icons.good'],
-                    colorClasses: ['text-field-text', 'text-success'],
-                },
-                services: {
-                    frames: [
-                        '$vuetify.icons.critical',
-                        '$vuetify.icons.good',
-                        '$vuetify.icons.stopped',
-                    ],
-                    colorClasses: ['text-error', 'text-success', 'text-field-text'],
-                },
-                listeners: {
-                    frames: [
-                        '$vuetify.icons.critical',
-                        '$vuetify.icons.good',
-                        '$vuetify.icons.stopped',
-                    ],
-                    colorClasses: ['text-error', 'text-success', 'text-field-text'],
-                },
-                servers: {
-                    frames: [
-                        '$vuetify.icons.criticalServer',
-                        '$vuetify.icons.goodServer',
-                        '$vuetify.icons.maintenance',
-                    ],
-                    colorClasses: ['text-error', 'text-success', 'text-field-text'],
-                },
-                replication: {
-                    frames: [
-                        '$vuetify.icons.stopped',
-                        '$vuetify.icons.good',
-                        '$vuetify.icons.statusWarning',
-                    ],
-                    colorClasses: ['text-field-text', 'text-success', 'text-warning'],
-                },
-                logPriorities: {
-                    frames: {
-                        alert: '$vuetify.icons.alertWarning',
-                        error: '$vuetify.icons.critical',
-                        warning: '$vuetify.icons.statusInfo',
-                        notice: '$vuetify.icons.reports',
-                        info: '$vuetify.icons.statusInfo',
-                        debug: 'bug_report',
-                    },
-                    colorClasses: {
-                        alert: 'text-error',
-                        error: 'text-error',
-                        warning: 'text-warning',
-                        notice: 'text-info',
-                        info: 'text-info',
-                        debug: 'text-accent',
-                    },
-                },
-            },
         }
     },
     computed: {
+        ...mapState({ ICON_SHEETS: state => state.app_config.ICON_SHEETS }),
         sheet() {
             const name = this.$slots.default ? this.$slots.default[0].text.trim() : ''
-            const sheet = this.sheets[name] || {}
+            const sheet = this.ICON_SHEETS[name] || {}
             const frames = this.frames || sheet.frames || []
             const colorClasses = this.colorClasses || sheet.colorClasses || []
 
