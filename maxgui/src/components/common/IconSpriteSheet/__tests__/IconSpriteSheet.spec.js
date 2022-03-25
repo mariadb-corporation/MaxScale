@@ -35,8 +35,8 @@ function mockupSlotDefining(propsData, isShallow = true) {
 
 const hardCodingStatusSheet = {
     frames: [
-        '$vuetify.icons.statusError',
-        '$vuetify.icons.statusOk',
+        '$vuetify.icons.critical',
+        '$vuetify.icons.good',
         '$vuetify.icons.statusWarning',
         '$vuetify.icons.statusInfo',
     ],

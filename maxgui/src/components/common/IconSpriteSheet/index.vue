@@ -39,29 +39,29 @@ export default {
             emptyIcon: 'bug_report', // icon to be shown if there is a missing "frame"
             sheets: {
                 monitors: {
-                    frames: ['$vuetify.icons.stopped', '$vuetify.icons.statusOk'],
+                    frames: ['$vuetify.icons.stopped', '$vuetify.icons.good'],
                     colorClasses: ['text-field-text', 'text-success'],
                 },
                 services: {
                     frames: [
-                        '$vuetify.icons.statusError',
-                        '$vuetify.icons.statusOk',
+                        '$vuetify.icons.critical',
+                        '$vuetify.icons.good',
                         '$vuetify.icons.stopped',
                     ],
                     colorClasses: ['text-error', 'text-success', 'text-field-text'],
                 },
                 listeners: {
                     frames: [
-                        '$vuetify.icons.statusError',
-                        '$vuetify.icons.statusOk',
+                        '$vuetify.icons.critical',
+                        '$vuetify.icons.good',
                         '$vuetify.icons.stopped',
                     ],
                     colorClasses: ['text-error', 'text-success', 'text-field-text'],
                 },
                 servers: {
                     frames: [
-                        '$vuetify.icons.statusError',
-                        '$vuetify.icons.statusOk',
+                        '$vuetify.icons.critical',
+                        '$vuetify.icons.good',
                         '$vuetify.icons.maintenance',
                     ],
                     colorClasses: ['text-error', 'text-success', 'text-field-text'],
@@ -69,7 +69,7 @@ export default {
                 replication: {
                     frames: [
                         '$vuetify.icons.stopped',
-                        '$vuetify.icons.statusOk',
+                        '$vuetify.icons.good',
                         '$vuetify.icons.statusWarning',
                     ],
                     colorClasses: ['text-field-text', 'text-success', 'text-warning'],
@@ -77,7 +77,7 @@ export default {
                 logPriorities: {
                     frames: {
                         alert: '$vuetify.icons.alertWarning',
-                        error: '$vuetify.icons.statusError',
+                        error: '$vuetify.icons.critical',
                         warning: '$vuetify.icons.statusInfo',
                         notice: '$vuetify.icons.reports',
                         info: '$vuetify.icons.statusInfo',
