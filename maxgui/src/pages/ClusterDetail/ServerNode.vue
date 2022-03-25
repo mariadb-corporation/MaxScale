@@ -12,13 +12,15 @@
                 class="node-heading d-flex align-center flex-row px-3 py-1"
                 :class="[droppableTargets.includes(node.id) ? 'node-heading__droppable' : '']"
             >
-                <icon-sprite-sheet
+                <v-icon
                     size="16"
                     class="mr-1 server-state-icon"
-                    :frame="$help.serverStateIcon(nodeAttrs.state)"
+                    :color="isMaster ? 'navigation' : 'accent'"
                 >
-                    servers
-                </icon-sprite-sheet>
+                    {{
+                        isMaster ? '$vuetify.icons.primaryServer' : '$vuetify.icons.secondaryServer'
+                    }}
+                </v-icon>
                 <router-link
                     target="_blank"
                     :to="`/dashboard/servers/${node.id}`"
@@ -110,6 +112,13 @@
                 <span class="sbm mr-2 font-weight-bold">
                     {{ $t('state') }}
                 </span>
+                <icon-sprite-sheet
+                    size="16"
+                    class="mr-1 server-state-icon"
+                    :frame="$help.serverStateIcon(nodeAttrs.state)"
+                >
+                    servers
+                </icon-sprite-sheet>
                 <truncate-string :text="`${nodeAttrs.state}`" />
                 <v-spacer />
                 <span v-if="!node.data.isMaster" class="ml-1">
@@ -235,8 +244,11 @@ export default {
                 this.secondSlideCommonInfo,
             ]
         },
+        isMaster() {
+            return this.node.data.isMaster
+        },
         extraInfo() {
-            if (this.node.data.isMaster) return this.masterExtraInfo
+            if (this.isMaster) return this.masterExtraInfo
             else return this.slaveExtraInfo
         },
         extraInfoSlides() {
