@@ -124,7 +124,7 @@ export default {
                     last_sql_error,
                     connection_name,
                 } = slave_conn
-                let srcRep = {}
+                let srcRep = { name: serverId }
                 // show connection_name only when multi-source replication is in use
                 if (slave_connections.length > 1) srcRep.connection_name = connection_name
 
@@ -140,7 +140,6 @@ export default {
                             slave_io_running !== 'Yes' ? slave_io_running : slave_sql_running
                     }
                 } else srcRep.replication_state = 'Lagging'
-                srcRep.server_id = serverId
                 // only show last_io_error and last_sql_error when replication_state === 'Stopped'
                 if (srcRep.replication_state === 'Stopped')
                     srcRep = {
