@@ -138,8 +138,8 @@ RoutingWorker::RoutingWorker(mxb::WatchdogNotifier* pNotifier)
     , m_callable(this)
     , m_pool_handler(this)
 {
-    POLL_DATA::handler = &RoutingWorker::epoll_instance_handler;
-    POLL_DATA::owner = this;
+    PollData::handler = &RoutingWorker::epoll_instance_handler;
+    PollData::owner = this;
 }
 
 RoutingWorker::~RoutingWorker()
@@ -262,7 +262,7 @@ void RoutingWorker::finish()
 }
 
 // static
-bool RoutingWorker::add_shared_fd(int fd, uint32_t events, POLL_DATA* pData)
+bool RoutingWorker::add_shared_fd(int fd, uint32_t events, PollData* pData)
 {
     bool rv = true;
 
@@ -970,7 +970,7 @@ RoutingWorker* RoutingWorker::create(mxb::WatchdogNotifier* pNotifier, int epoll
     {
         struct epoll_event ev;
         ev.events = EPOLLIN;
-        POLL_DATA* pData = pThis;
+        PollData* pData = pThis;
         ev.data.ptr = pData;    // Necessary for pointer adjustment, otherwise downcast will not work.
 
         // The shared epoll instance descriptor is *not* added using EPOLLET (edge-triggered)
@@ -1029,7 +1029,7 @@ void RoutingWorker::epoll_tick()
  * @return What actions were performed.
  */
 // static
-uint32_t RoutingWorker::epoll_instance_handler(POLL_DATA* pData, Worker* pWorker, uint32_t events)
+uint32_t RoutingWorker::epoll_instance_handler(PollData* pData, Worker* pWorker, uint32_t events)
 {
     RoutingWorker* pThis = static_cast<RoutingWorker*>(pData);
     mxb_assert(pThis == pWorker);
@@ -1064,7 +1064,7 @@ uint32_t RoutingWorker::handle_epoll_events(uint32_t events)
     else
     {
         MXB_DEBUG("1 event for worker %d.", id());
-        POLL_DATA* pData = static_cast<POLL_DATA*>(epoll_events[0].data.ptr);
+        PollData* pData = static_cast<PollData*>(epoll_events[0].data.ptr);
 
         actions = pData->handler(pData, this, epoll_events[0].events);
     }

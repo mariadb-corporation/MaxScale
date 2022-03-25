@@ -39,7 +39,7 @@ namespace maxscale
 
 class RoutingWorker : public mxb::WatchedWorker
                     , public BackendDCB::Manager
-                    , private mxb::POLL_DATA
+                    , private mxb::PollData
 {
     RoutingWorker(const RoutingWorker&) = delete;
     RoutingWorker& operator=(const RoutingWorker&) = delete;
@@ -95,7 +95,7 @@ public:
      *
      * @return True, if the descriptor could be added, false otherwise.
      */
-    static bool add_shared_fd(int fd, uint32_t events, POLL_DATA* pData);
+    static bool add_shared_fd(int fd, uint32_t events, PollData* pData);
 
     /**
      * Remove a file descriptor from the epoll instance shared between all workers.
@@ -498,7 +498,7 @@ private:
     void activate_waiting_endpoints();
     void fail_timed_out_endpoints();
 
-    static uint32_t epoll_instance_handler(POLL_DATA* data, Worker* worker, uint32_t events);
+    static uint32_t epoll_instance_handler(PollData* data, Worker* worker, uint32_t events);
     uint32_t        handle_epoll_events(uint32_t events);
 
     class ConnPoolEntry

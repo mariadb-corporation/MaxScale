@@ -182,7 +182,7 @@ public:
     virtual Worker* remove_from_worker() = 0;
 
 protected:
-    MessageQueue(uint32_t (*pPoll_handler)(POLL_DATA* pData, Worker* worker, uint32_t events));
+    MessageQueue(uint32_t (*pPoll_handler)(PollData* pData, Worker* worker, uint32_t events));
 };
 
 /**
@@ -208,7 +208,7 @@ private:
     EventMessageQueue(Handler* pHandler, int event_fd);
 
     uint32_t        handle_poll_events(Worker* pWorker, uint32_t events);
-    static uint32_t poll_handler(POLL_DATA* pData, Worker* worker, uint32_t events);
+    static uint32_t poll_handler(PollData* pData, Worker* worker, uint32_t events);
     void            swap_messages_and_work();
     void            add_message(const Message& message);
 
@@ -262,7 +262,7 @@ private:
 
     uint32_t handle_poll_events(Worker* pWorker, uint32_t events);
 
-    static uint32_t poll_handler(POLL_DATA* pData, Worker* worker, uint32_t events);
+    static uint32_t poll_handler(PollData* pData, Worker* worker, uint32_t events);
 
 private:
     Handler& m_handler;

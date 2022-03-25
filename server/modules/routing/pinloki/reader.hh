@@ -44,14 +44,14 @@ public:
     void send_events();
 
 private:
-    static uint32_t epoll_update(struct mxb::POLL_DATA* data, mxb::Worker* worker, uint32_t events);
+    static uint32_t epoll_update(struct mxb::PollData* data, mxb::Worker* worker, uint32_t events);
     void            start_reading();
     bool            poll_start_reading();
     void            notify_concrete_reader(uint32_t events);
 
     bool generate_heartbeats();
 
-    struct PollData : public mxb::POLL_DATA
+    struct PollData : public mxb::PollData
     {
         PollData() = default;
         PollData(Reader* reader, mxb::Worker* worker);

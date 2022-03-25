@@ -175,7 +175,7 @@ DCB::DCB(int fd,
          MXS_SESSION* session,
          Handler* handler,
          Manager* manager)
-    : POLL_DATA{&DCB::poll_handler, get_dcb_owner()}
+    : PollData(&DCB::poll_handler, get_dcb_owner())
     , m_uid(this_unit.uid_generator.fetch_add(1, std::memory_order_relaxed))
     , m_fd(fd)
     , m_role(role)
@@ -216,7 +216,7 @@ DCB::~DCB()
         SSL_free(m_encryption.handle);
     }
 
-    POLL_DATA::owner = reinterpret_cast<mxb::Worker*>(0xdeadbeef);
+    PollData::owner = reinterpret_cast<mxb::Worker*>(0xdeadbeef);
 }
 
 void DCB::clear()
@@ -1405,7 +1405,7 @@ uint32_t DCB::event_handler(DCB* dcb, uint32_t events)
 }
 
 // static
-uint32_t DCB::poll_handler(POLL_DATA* data, mxb::Worker* worker, uint32_t events)
+uint32_t DCB::poll_handler(PollData* data, mxb::Worker* worker, uint32_t events)
 {
     uint32_t rval = 0;
     DCB* dcb = (DCB*)data;
