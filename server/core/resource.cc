@@ -912,11 +912,11 @@ HttpResponse cb_thread_rebalance(const HttpRequest& request)
     string thread = request.uri_part(2);
     mxb_assert(!thread.empty());    // Should have been checked already.
 
-    long wid;
-    MXB_AT_DEBUG(bool rv = ) mxb::get_long(thread, &wid);
+    long idx;
+    MXB_AT_DEBUG(bool rv = ) mxb::get_long(thread, &idx);
     mxb_assert(rv);
 
-    mxs::RoutingWorker* worker = mxs::RoutingWorker::get(wid);
+    mxs::RoutingWorker* worker = mxs::RoutingWorker::get_by_index(idx);
     mxb_assert(worker);
 
     if (runtime_thread_rebalance(*worker,
