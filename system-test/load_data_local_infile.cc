@@ -7,36 +7,13 @@
 
 
 #include <maxtest/testconnections.hh>
+#include <maxtest/mariadb_connector.hh>
 
-void create_data_file(char* filename, size_t size)
-{
-    int fd, i = 0;
-    snprintf(filename, size, "local_infile_%u", i++);
-    while ((fd = open(filename, O_CREAT | O_RDWR | O_EXCL, 0755)) == -1)
-    {
-        snprintf(filename, size, "local_infile_%u", i++);
-    }
+using std::string;
 
-    const size_t maxsize = 1024 * 1024 * 50;
-    size_t filesize = 0;
-    i = 0;
+const char filename[] = "local_infile.dat";
 
-    while (filesize < maxsize)
-    {
-        char buffer[1024];
-        sprintf(buffer, "%d,'%x','%x'\n", i, i << (10 + i), i << (5 + i));
-        int written = write(fd, buffer, strlen(buffer));
-        if (written <= 0)
-        {
-            break;
-        }
-        i++;
-        filesize += written;
-    }
-
-    close(fd);
-}
-
+void create_datafile(TestConnections& test, size_t datasize);
 void test_main(TestConnections& test);
 
 int main(int argc, char* argv[])
@@ -47,46 +24,88 @@ int main(int argc, char* argv[])
 
 void test_main(TestConnections& test)
 {
-    char filename[1024];
-    test.tprintf("Generation file to load\n");
-    create_data_file(filename, sizeof(filename));
+    create_datafile(test, 1024 * 1024 * 50);
 
-    /** Set max packet size and create test table */
-    test.tprintf("Connect to Maxscale\n");
-    test.maxscale->connect_maxscale();
-    test.tprintf("Setting max_allowed_packet, creating table\n");
-    test.add_result(execute_query(test.maxscale->conn_rwsplit,
-                                  "set global max_allowed_packet=(1048576 * 60)"),
-                    "Setting max_allowed_packet failed.");
-    test.add_result(execute_query(test.maxscale->conn_rwsplit,
-                                  "DROP TABLE IF EXISTS test.dump"),
-                    "Dropping table failed.");
-    test.add_result(execute_query(test.maxscale->conn_rwsplit,
-                                  "CREATE TABLE test.dump(a int, b varchar(80), c varchar(80))"),
-                    "Creating table failed.");
-    test.tprintf("Closing connection to Maxscale\n");
-    test.maxscale->close_maxscale_connections();
+    const char table_name[] = "test.dump";
+    const char set_max_packet[] = "set global max_allowed_packet=(%s)";
+    auto& mxs = *test.maxscale;
+    auto conn = mxs.open_rwsplit_connection2();
 
-    /** Reconnect, load the data and then read it */
-    test.tprintf("Re-connect to Maxscale\n");
-    test.maxscale->connect_maxscale();
-    char query[1024 + sizeof(filename)];
-    snprintf(query,
-             sizeof(query),
-             "LOAD DATA LOCAL INFILE '%s' INTO TABLE test.dump FIELDS TERMINATED BY ','",
-             filename);
-    test.tprintf("Loading data\n");
-    test.add_result(execute_query(test.maxscale->conn_rwsplit, "%s", query), "Loading data failed.");
-    test.tprintf("Reading data\n");
-    test.add_result(execute_query(test.maxscale->conn_rwsplit, "SELECT * FROM test.dump"),
-                    "Reading data failed.");
-    test.maxscale->close_maxscale_connections();
-    test.tprintf("Cecking if Maxscale alive\n");
-    test.check_maxscale_alive();
+    // Modifying a global variable. Backup its value.
+    string max_packet_old = conn->simple_query("select @@global.max_allowed_packet");
+    if (test.ok())
+    {
+        test.tprintf("Set max packet size and create a test table.");
+        conn->cmd_f(set_max_packet, "1048576 * 60");
+        conn->cmd_f("DROP TABLE IF EXISTS %s", table_name);
+        conn->cmd_f("CREATE TABLE %s (a int, b varchar(80), c varchar(80))", table_name);
 
-    test.maxscale->connect();
-    execute_query(test.maxscale->conn_rwsplit, "DROP TABLE test.dump");
-    test.maxscale->disconnect();
+        if (test.ok())
+        {
+            test.tprintf("Reconnect and load the data to server.");
+            auto data_conn = mxs.open_rwsplit_connection2();
+            data_conn->cmd_f("LOAD DATA LOCAL INFILE '%s' INTO TABLE %s FIELDS TERMINATED BY ','",
+                             filename, table_name);
+            if (test.ok())
+            {
+                test.tprintf("Load data done, waiting for slave sync.");
+                test.repl->sync_slaves();
+                test.tprintf("Slaves synced, check the number of rows in the table.");
+                string query = (string)"SELECT count(*) FROM " + table_name;
+                auto count_str = data_conn->simple_query(query);
+                if (count_str.empty())
+                {
+                    test.add_failure("Could not read row count.");
+                }
+                else
+                {
+                    auto count = std::stol(count_str);
+                    test.tprintf("Select returned %li rows.", count);
+                    test.expect(count > 1000000, "Only %li columns found, expected more.", count);
+                }
+            }
+        }
+        conn->cmd_f("DROP TABLE %s", table_name);
+        conn->cmd_f(set_max_packet, max_packet_old.c_str());
+    }
 
     unlink(filename);
+}
+
+void create_datafile(TestConnections& test, size_t datasize)
+{
+    unlink(filename);
+    int fd = open(filename, O_CREAT | O_RDWR | O_EXCL, 0755);
+    if (fd >= 0)
+    {
+        test.tprintf("File '%s' opened. Generating %zu bytes of data.", filename, datasize);
+        string data;
+        data.reserve(datasize);
+
+        size_t i = 1;
+        while (data.length() < datasize)
+        {
+            char line[128];
+            sprintf(line, "%zu,'%zx','%zx'\n", i, i << (10 + i), i << (5 + i));
+            data.append(line);
+            i++;
+        }
+
+        test.tprintf("Data generation complete, writing to file.");
+        auto written = write(fd, data.c_str(), data.length());
+        close(fd);
+        if (written == (long)data.length())
+        {
+            test.tprintf("Write complete.");
+        }
+        else
+        {
+            test.add_failure("Write failed. Return value %ld. Error %i: %s",
+                             written, errno, mxb_strerror(errno));
+        }
+    }
+    else
+    {
+        test.tprintf("Failed to open file '%s'. Error %i: %s", filename, errno, mxb_strerror(errno));
+    }
 }
