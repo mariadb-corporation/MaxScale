@@ -1242,7 +1242,7 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
 
                     std::stringstream ss;
                     ss << "Unknown prepared statement handler (" << ps_id << ") given to MaxScale for "
-                       << STRPACKETTYPE(cmd) << " by '" << m_session->user_and_host() << "'";
+                       << STRPACKETTYPE(cmd) << " by " << m_session->user_and_host();
 
                     // Only send the error if the client expects a response. If an unknown COM_STMT_CLOSE is
                     // sent, don't respond to it.
