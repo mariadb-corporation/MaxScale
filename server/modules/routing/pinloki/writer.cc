@@ -60,6 +60,7 @@ Writer::Writer(const mxq::Connection::ConnectionDetails& details, InventoryWrite
         }
     }
 
+    std::lock_guard<std::mutex> guard(m_lock);
     m_thread = std::thread(&Writer::run, this);
     mxb::set_thread_name(m_thread, "Writer");
 }
@@ -115,6 +116,8 @@ bool Writer::has_master_changed(const mxq::Connection& conn)
 
 void Writer::run()
 {
+    std::unique_lock<std::mutex> guard(m_lock);
+    guard.unlock();
     mxb::LogScope scope(m_inventory.config().name().c_str());
     bool log_host_warning = true;
 
