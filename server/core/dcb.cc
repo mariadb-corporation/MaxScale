@@ -175,7 +175,7 @@ DCB::DCB(int fd,
          MXS_SESSION* session,
          Handler* handler,
          Manager* manager)
-    : PollData(&DCB::poll_handler, get_dcb_owner())
+    : PollData(get_dcb_owner())
     , m_uid(this_unit.uid_generator.fetch_add(1, std::memory_order_relaxed))
     , m_fd(fd)
     , m_role(role)
@@ -1378,37 +1378,34 @@ uint32_t DCB::process_events(uint32_t events)
     return rc;
 }
 
-// static
-uint32_t DCB::event_handler(DCB* dcb, uint32_t events)
+uint32_t DCB::event_handler(uint32_t events)
 {
-    this_thread.current_dcb = dcb;
-    uint32_t rv = dcb->process_events(events);
+    this_thread.current_dcb = this;
+    uint32_t rv = process_events(events);
 
     // When all I/O events have been handled, we will immediately
     // process an added fake event. As the handling of a fake event
     // may lead to the addition of another fake event we loop until
     // there is no fake event or the dcb has been closed.
 
-    while ((dcb->m_open) && (dcb->m_triggered_event != 0))
+    while ((m_open) && (m_triggered_event != 0))
     {
-        events = dcb->m_triggered_event;
-        dcb->m_triggered_event = 0;
+        events = m_triggered_event;
+        m_triggered_event = 0;
 
-        dcb->m_is_fake_event = true;
-        rv |= dcb->process_events(events);
-        dcb->m_is_fake_event = false;
+        m_is_fake_event = true;
+        rv |= process_events(events);
+        m_is_fake_event = false;
     }
 
-    this_thread.current_dcb = NULL;
+    this_thread.current_dcb = nullptr;
 
     return rv;
 }
 
-// static
-uint32_t DCB::poll_handler(PollData* data, mxb::Worker* worker, uint32_t events)
+uint32_t DCB::handle_poll_events(mxb::Worker* worker, uint32_t events)
 {
     uint32_t rval = 0;
-    DCB* dcb = (DCB*)data;
 
     /**
      * Fake hangup events (e.g. from monitors) can cause a DCB to be closed
@@ -1419,9 +1416,9 @@ uint32_t DCB::poll_handler(PollData* data, mxb::Worker* worker, uint32_t events)
      *
      * @see FakeEventTask()
      */
-    if (dcb->m_open)
+    if (m_open)
     {
-        rval = DCB::event_handler(dcb, events);
+        rval = event_handler(events);
     }
 
     return rval;
@@ -1453,7 +1450,7 @@ public:
         {
             mxb_assert(m_dcb->owner == RoutingWorker::get_current());
             m_dcb->m_is_fake_event = true;
-            DCB::event_handler(m_dcb, m_ev);
+            m_dcb->handle_poll_events(m_dcb->owner, m_ev);
             m_dcb->m_is_fake_event = false;
         }
     }

@@ -332,8 +332,7 @@ private:
         return m_type == Type::UNIQUE_TCP ? *m_local_fd : m_shared_fd;
     }
 
-    // Handler for EPOLL_IN events
-    static uint32_t poll_handler(PollData* data, mxb::Worker* worker, uint32_t events);
+    uint32_t handle_poll_events(mxb::Worker* worker, uint32_t events) override;
 
     static bool read_connection_init_sql(const std::string& filepath,
                                          mxs::ListenerData::ConnectionInitSql* output);

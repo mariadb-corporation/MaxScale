@@ -455,8 +455,7 @@ mxs::config::Specification* Listener::specification()
 }
 
 Listener::Listener(const std::string& name)
-    : PollData{Listener::poll_handler}
-    , m_config(name, this)
+    : m_config(name, this)
     , m_name(name)
     , m_state(CREATED)
 {
@@ -1043,10 +1042,9 @@ bool Listener::listen()
     return rval;
 }
 
-uint32_t Listener::poll_handler(PollData* data, mxb::Worker* worker, uint32_t events)
+uint32_t Listener::handle_poll_events(mxb::Worker* worker, uint32_t events)
 {
-    Listener* listener = static_cast<Listener*>(data);
-    listener->accept_connections();
+    accept_connections();
     return mxb::poll_action::ACCEPT;
 }
 

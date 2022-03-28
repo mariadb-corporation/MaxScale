@@ -63,7 +63,6 @@ WebSocket::WebSocket(int fd, MHD_UpgradeResponseHandle* urh, std::function<std::
     , m_urh(urh)
     , m_cb(cb)
 {
-    this->handler = &WebSocket::poll_handler;
     setnonblocking(m_fd);
 }
 
@@ -107,15 +106,13 @@ void WebSocket::shutdown()
     this_unit.connections.clear();
 }
 
-// static
-uint32_t WebSocket::poll_handler(PollData* data, mxb::Worker* worker, uint32_t events)
+uint32_t WebSocket::handle_poll_events(mxb::Worker* worker, uint32_t events)
 {
-    WebSocket* ws = static_cast<WebSocket*>(data);
     bool ok = false;
 
     // We only expect EPOLLOUT events delivered as a result of the socket being empty again. All other
     // events are treated as errors.
-    if ((events & EPOLLOUT) && ws->send())
+    if ((events & EPOLLOUT) && send())
     {
         ok = true;
     }
@@ -123,7 +120,7 @@ uint32_t WebSocket::poll_handler(PollData* data, mxb::Worker* worker, uint32_t e
     if (!ok)
     {
         // Something went wrong, close the connection
-        WebSocket::close(ws);
+        WebSocket::close(this);
     }
 
     return events;

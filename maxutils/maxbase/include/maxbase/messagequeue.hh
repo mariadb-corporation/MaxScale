@@ -182,7 +182,7 @@ public:
     virtual Worker* remove_from_worker() = 0;
 
 protected:
-    MessageQueue(uint32_t (*pPoll_handler)(PollData* pData, Worker* worker, uint32_t events));
+    MessageQueue();
 };
 
 /**
@@ -207,10 +207,9 @@ public:
 private:
     EventMessageQueue(Handler* pHandler, int event_fd);
 
-    uint32_t        handle_poll_events(Worker* pWorker, uint32_t events);
-    static uint32_t poll_handler(PollData* pData, Worker* worker, uint32_t events);
-    void            swap_messages_and_work();
-    void            add_message(const Message& message);
+    uint32_t handle_poll_events(Worker* pWorker, uint32_t events) override;
+    void     swap_messages_and_work();
+    void     add_message(const Message& message);
 
     using MessageVector = std::vector<Message>;
 
@@ -260,9 +259,7 @@ private:
 private:
     PipeMessageQueue(Handler* pHandler, int read_fd, int write_fd);
 
-    uint32_t handle_poll_events(Worker* pWorker, uint32_t events);
-
-    static uint32_t poll_handler(PollData* pData, Worker* worker, uint32_t events);
+    uint32_t handle_poll_events(Worker* pWorker, uint32_t events) override;
 
 private:
     Handler& m_handler;

@@ -138,7 +138,6 @@ RoutingWorker::RoutingWorker(mxb::WatchdogNotifier* pNotifier)
     , m_callable(this)
     , m_pool_handler(this)
 {
-    PollData::handler = &RoutingWorker::epoll_instance_handler;
     PollData::owner = this;
 }
 
@@ -1020,31 +1019,13 @@ void RoutingWorker::epoll_tick()
 }
 
 /**
- * Callback for events occurring on the shared epoll instance.
- *
- * @param pData   Will point to a Worker instance.
- * @param wid     The worker id.
- * @param events  The events.
- *
- * @return What actions were performed.
- */
-// static
-uint32_t RoutingWorker::epoll_instance_handler(PollData* pData, Worker* pWorker, uint32_t events)
-{
-    RoutingWorker* pThis = static_cast<RoutingWorker*>(pData);
-    mxb_assert(pThis == pWorker);
-
-    return pThis->handle_epoll_events(events);
-}
-
-/**
  * Handler for events occurring in the shared epoll instance.
  *
  * @param events  The events.
  *
  * @return What actions were performed.
  */
-uint32_t RoutingWorker::handle_epoll_events(uint32_t events)
+uint32_t RoutingWorker::handle_poll_events(Worker* pWorker, uint32_t events)
 {
     struct epoll_event epoll_events[1];
 
@@ -1066,7 +1047,7 @@ uint32_t RoutingWorker::handle_epoll_events(uint32_t events)
         MXB_DEBUG("1 event for worker %d.", id());
         PollData* pData = static_cast<PollData*>(epoll_events[0].data.ptr);
 
-        actions = pData->handler(pData, this, epoll_events[0].events);
+        actions = pData->handle_poll_events(this, epoll_events[0].events);
     }
 
     return actions;

@@ -49,19 +49,14 @@ public:
     {
     }
 
-    PollData(poll_handler_t h)
-        : handler(h)
+    PollData(Worker* o)
+        : owner(o)
     {
     }
 
-    PollData(poll_handler_t h, Worker* o)
-        : handler(h)
-        , owner(o)
-    {
-    }
+    virtual uint32_t handle_poll_events(Worker* worker, uint32_t events) = 0;
 
-    poll_handler_t handler { nullptr} ; /*< Handler for this particular kind of mxb_poll_data. */
-    Worker*        owner { nullptr };   /*< Owning worker. */
+    Worker* owner { nullptr };   /*< Owning worker. */
 };
 
 }

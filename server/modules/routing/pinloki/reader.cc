@@ -30,7 +30,7 @@ namespace pinloki
 {
 
 Reader::PollData::PollData(Reader* reader, mxb::Worker* worker)
-    : mxb::PollData{Reader::epoll_update, worker}
+    : mxb::PollData(worker)
     , reader(reader)
 {
 }

@@ -498,8 +498,7 @@ private:
     void activate_waiting_endpoints();
     void fail_timed_out_endpoints();
 
-    static uint32_t epoll_instance_handler(PollData* data, Worker* worker, uint32_t events);
-    uint32_t        handle_epoll_events(uint32_t events);
+    uint32_t handle_poll_events(Worker* worker, uint32_t events) override;
 
     class ConnPoolEntry
     {

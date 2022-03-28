@@ -626,9 +626,9 @@ private:
 
     static void free(DCB* dcb);
 
-    static uint32_t poll_handler(PollData* data, mxb::Worker* worker, uint32_t events);
-    static uint32_t event_handler(DCB* dcb, uint32_t events);
-    uint32_t        process_events(uint32_t events);
+    uint32_t handle_poll_events(mxb::Worker* worker, uint32_t events) override;
+    uint32_t event_handler(uint32_t events);
+    uint32_t process_events(uint32_t events);
 
     class FakeEventTask;
     friend class FakeEventTask;

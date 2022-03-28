@@ -56,6 +56,11 @@ private:
         PollData() = default;
         PollData(Reader* reader, mxb::Worker* worker);
         Reader* reader;
+
+        uint32_t handle_poll_events(mxb::Worker* worker, uint32_t events) override
+        {
+            return reader->epoll_update(this, worker, events);
+        }
     };
 
     std::unique_ptr<FileReader> m_sFile_reader;

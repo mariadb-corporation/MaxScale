@@ -178,7 +178,6 @@ WorkerTimer::WorkerTimer(Worker* pWorker)
     : m_fd(create_timerfd())
     , m_pWorker(pWorker)
 {
-    PollData::handler = handler;
     PollData::owner = m_pWorker;
 
     if (m_fd != -1)
@@ -235,7 +234,7 @@ void WorkerTimer::cancel()
     start(0);
 }
 
-uint32_t WorkerTimer::handle(Worker* pWorker, uint32_t events)
+uint32_t WorkerTimer::handle_poll_events(Worker* pWorker, uint32_t events)
 {
     mxb_assert(pWorker == m_pWorker);
     mxb_assert(events & EPOLLIN);
@@ -250,12 +249,6 @@ uint32_t WorkerTimer::handle(Worker* pWorker, uint32_t events)
     tick();
 
     return poll_action::READ;
-}
-
-// static
-uint32_t WorkerTimer::handler(PollData* pThis, Worker* pWorker, uint32_t events)
-{
-    return static_cast<WorkerTimer*>(pThis)->handle(pWorker, events);
 }
 
 namespace
@@ -984,7 +977,7 @@ void Worker::poll_waitevents()
             m_statistics.maxqtime = std::max(m_statistics.maxqtime, qtime);
 
             PollData* data = (PollData*)events[i].data.ptr;
-            uint32_t actions = data->handler(data, this, events[i].events);
+            uint32_t actions = data->handle_poll_events(this, events[i].events);
 
             m_statistics.n_accept += bool(actions & poll_action::ACCEPT);
             m_statistics.n_read += bool(actions & poll_action::READ);

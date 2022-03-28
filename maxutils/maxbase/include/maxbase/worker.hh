@@ -234,9 +234,7 @@ protected:
     virtual void tick() = 0;
 
 private:
-    uint32_t handle(Worker* pWorker, uint32_t events);
-
-    static uint32_t handler(PollData* pThis, Worker* pWorker, uint32_t events);
+    uint32_t handle_poll_events(Worker* pWorker, uint32_t events) override;
 
 private:
     int     m_fd;       /**< The timerfd descriptor. */
