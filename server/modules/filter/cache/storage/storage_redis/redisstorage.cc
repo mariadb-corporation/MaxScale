@@ -492,6 +492,7 @@ public:
             {
                 MXS_ERROR("Expected status message in the context of %s, "
                           "but received a %s.", zContext, redis_type_to_string(reply.type()));
+                rv = REDIS_ERR;
             }
         }
         else
@@ -513,6 +514,9 @@ public:
         {
             if (!expect_status(zValue, zContext))
             {
+                MXS_ERROR("Expected %lu status messages in the context of %s, "
+                          "but reply #%lu was something else (see above).",
+                          n, zContext, i + 1);
                 rv = false;
             }
         }
@@ -898,62 +902,70 @@ private:
         if (m_redis.expect_status("OK", "MULTI"))
         {
             // All commands before EXEC should only return a status of QUEUED.
-            m_redis.expect_n_status(n + 1, "QUEUED", "queued command");
-
-            // The reply to EXEC
-            Redis::Reply reply;
-            rc = m_redis.getReply(&reply);
-
-            if (rc == REDIS_OK)
+            if (m_redis.expect_n_status(n + 1, "QUEUED", "queued command (put)"))
             {
-                if (reply.is_nil())
+                // The reply to EXEC
+                Redis::Reply reply;
+                rc = m_redis.getReply(&reply);
+
+                if (rc == REDIS_OK)
                 {
-                    // This *may* happen if WATCH is used, but since we are not, it should not.
-                    mxb_assert(!true);
-                    action = RedisAction::RETRY;
+                    if (reply.is_nil())
+                    {
+                        // This *may* happen if WATCH is used, but since we are not, it should not.
+                        mxb_assert(!true);
+                        action = RedisAction::RETRY;
+                    }
+                    else
+                    {
+                        // The reply will now contain the actual responses to the commands
+                        // issued after MULTI.
+                        mxb_assert(reply.is_array());
+                        mxb_assert(reply.elements() == n + 1);
+
+                        Redis::Reply element;
+
+#ifdef SS_DEBUG
+                        for (size_t i = 0; i < n; ++i)
+                        {
+                            element = reply.element(i);
+                            mxb_assert(element.is_integer());
+                        }
+#endif
+
+                        // Then the SET
+                        element = reply.element(n);
+                        mxb_assert(element.is_status());
+
+                        if (!element.is_status("OK"))
+                        {
+                            MXS_ERROR("Failed when storing cache value to redis, expected 'OK' but "
+                                      "received '%s'.", reply.str());
+                            action = RedisAction::ERROR;
+                        }
+                    }
                 }
                 else
                 {
-                    // The reply will now contain the actual responses to the commands
-                    // issued after MULTI.
-                    mxb_assert(reply.is_array());
-                    mxb_assert(reply.elements() == n + 1);
-
-                    Redis::Reply element;
-
-#ifdef SS_DEBUG
-                    for (size_t i = 0; i < n; ++i)
-                    {
-                        element = reply.element(i);
-                        mxb_assert(element.is_integer());
-                    }
-#endif
-
-                    // Then the SET
-                    element = reply.element(n);
-                    mxb_assert(element.is_status());
-
-                    if (!element.is_status("OK"))
-                    {
-                        MXS_ERROR("Failed when storing cache value to redis, expected 'OK' but "
-                                  "received '%s'.", reply.str());
-                        action = RedisAction::ERROR;
-                    }
+                    MXS_ERROR("Failed fatally when reading reply to EXEC: %s, %s",
+                              redis_error_to_string(rc).c_str(),
+                              m_redis.errstr());
+                    action = RedisAction::ERROR;
                 }
             }
             else
             {
-                MXS_WARNING("Failed fatally when reading reply to EXEC: %s, %s",
-                            redis_error_to_string(rc).c_str(),
-                            m_redis.errstr());
+                MXS_ERROR("Failed when reading response to MULTI: %s, %s",
+                          redis_error_to_string(rc).c_str(),
+                          m_redis.errstr());
                 action = RedisAction::ERROR;
             }
         }
         else
         {
-            MXS_ERROR("Failed when reading response to MULTI: %s, %s",
-                      redis_error_to_string(rc).c_str(),
-                      m_redis.errstr());
+            MXS_ERROR("Did not receive from Redis as many status replies as expected when "
+                      "attempting to store data; the state of the Redis cache is now not known "
+                      "and it will be cleared.");
             action = RedisAction::ERROR;
         }
 
@@ -1092,48 +1104,57 @@ private:
                 if (m_redis.expect_status("OK", "MULTI"))
                 {
                     // All commands before EXEC should only return a status of QUEUED.
-                    m_redis.expect_n_status(srem_argvs.size() + 1, "QUEUED", "queued command");
-
-                    // The reply to EXEC
-                    Redis::Reply reply;
-                    rc = m_redis.getReply(&reply);
-
-                    if (rc == REDIS_OK)
+                    if (m_redis.expect_n_status(srem_argvs.size() + 1,
+                                                "QUEUED", "queued command (invalidate)"))
                     {
-                        if (reply.is_nil())
+                        // The reply to EXEC
+                        Redis::Reply reply;
+                        rc = m_redis.getReply(&reply);
+
+                        if (rc == REDIS_OK)
                         {
-                            // This *may* happen if WATCH is used, but since we are not, it should not.
-                            mxb_assert(!true);
-                            action = RedisAction::RETRY;
+                            if (reply.is_nil())
+                            {
+                                // This *may* happen if WATCH is used, but since we are not, it should not.
+                                mxb_assert(!true);
+                                action = RedisAction::RETRY;
+                            }
+                            else
+                            {
+                                // The reply will not contain the actual responses to the commands
+                                // issued after MULTI.
+                                mxb_assert(reply.is_array());
+                                mxb_assert(reply.elements() == srem_argvs.size() + 1);
+
+#ifdef SS_DEBUG
+                                Redis::Reply element;
+                                // Then we handle the replies to the "SREM" commands.
+                                for (size_t i = 0; i < srem_argvs.size(); ++i)
+                                {
+                                    element = reply.element(i);
+                                    mxb_assert(element.is_integer());
+                                }
+
+                                // Finally the DEL itself.
+                                element = reply.element(srem_argvs.size());
+                                mxb_assert(element.is_integer());
+#endif
+                            }
                         }
                         else
                         {
-                            // The reply will not contain the actual responses to the commands
-                            // issued after MULTI.
-                            mxb_assert(reply.is_array());
-                            mxb_assert(reply.elements() == srem_argvs.size() + 1);
-
-#ifdef SS_DEBUG
-                            Redis::Reply element;
-                            // Then we handle the replies to the "SREM" commands.
-                            for (size_t i = 0; i < srem_argvs.size(); ++i)
-                            {
-                                element = reply.element(i);
-                                mxb_assert(element.is_integer());
-                            }
-
-                            // Finally the DEL itself.
-                            element = reply.element(srem_argvs.size());
-                            mxb_assert(element.is_integer());
-#endif
+                            MXS_ERROR("Could not read EXEC reply from redis, the cache is now "
+                                      "in an unknown state: %s, %s",
+                                      redis_error_to_string(rc).c_str(),
+                                      m_redis.errstr());
+                            action = RedisAction::ERROR;
                         }
                     }
                     else
                     {
-                        MXS_ERROR("Could not read EXEC reply from redis, the cache is now "
-                                  "in an unknown state: %s, %s",
-                                  redis_error_to_string(rc).c_str(),
-                                  m_redis.errstr());
+                        MXS_ERROR("Did not receive from Redis as many status replies as expected when "
+                                  "attempting to invalidate data; the state of the Redis cache is now "
+                                  "not known and it will be cleared.");
                         action = RedisAction::ERROR;
                     }
                 }
