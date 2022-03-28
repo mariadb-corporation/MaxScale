@@ -1072,6 +1072,7 @@ private:
                 rc = m_redis.appendCommand("MULTI");
                 mxb_assert(rc == REDIS_OK);
 
+                size_t nExpected = 0;
                 // Delete the relevant keys from the sets.
                 for (size_t i = 0; i < srem_argvs.size(); ++i)
                 {
@@ -1086,6 +1087,7 @@ private:
                                                                      ppSrem_argv,
                                                                      srem_argvlen.data());
                         mxb_assert(rc == REDIS_OK);
+                        ++nExpected;
                     }
                 }
 
@@ -1095,6 +1097,7 @@ private:
                                                ppDel_argv,
                                                del_argvlen.data());
                 mxb_assert(rc == REDIS_OK);
+                ++nExpected;
 
                 // This will actually send everything.
                 rc = m_redis.appendCommand("EXEC");
@@ -1104,8 +1107,7 @@ private:
                 if (m_redis.expect_status("OK", "MULTI"))
                 {
                     // All commands before EXEC should only return a status of QUEUED.
-                    if (m_redis.expect_n_status(srem_argvs.size() + 1,
-                                                "QUEUED", "queued command (invalidate)"))
+                    if (m_redis.expect_n_status(nExpected, "QUEUED", "queued command (invalidate)"))
                     {
                         // The reply to EXEC
                         Redis::Reply reply;
