@@ -145,7 +145,14 @@ export default {
                 let url = `/monitors/${id}/${opParams}`,
                     method = 'put',
                     message
-                const { STOP, START, DESTROY, SWITCHOVER } = rootState.app_config.MONITOR_OP_TYPES
+                const {
+                    STOP,
+                    START,
+                    DESTROY,
+                    SWITCHOVER,
+                    RESET_REP,
+                    RELEASE_LOCKS,
+                } = rootState.app_config.MONITOR_OP_TYPES
                 switch (type) {
                     case DESTROY:
                         method = 'delete'
@@ -158,7 +165,9 @@ export default {
                     case START:
                         message = [`Monitor ${id} is started`]
                         break
-                    case SWITCHOVER: {
+                    case SWITCHOVER:
+                    case RESET_REP:
+                    case RELEASE_LOCKS: {
                         method = 'post'
                         const { moduleType, masterId } = opParams
                         url = `/maxscale/modules/${moduleType}/${type}?${id}`
@@ -171,6 +180,8 @@ export default {
                 if (res.status === 204) {
                     switch (type) {
                         case SWITCHOVER:
+                        case RESET_REP:
+                        case RELEASE_LOCKS:
                             await dispatch('checkAsyncCmdRes', {
                                 monitorModule: opParams.moduleType,
                                 monitorId: id,
@@ -316,7 +327,14 @@ export default {
             }, [])
         },
         getMonitorOps: (state, getters, rootState) => {
-            const { STOP, START, DESTROY, SWITCHOVER } = rootState.app_config.MONITOR_OP_TYPES
+            const {
+                STOP,
+                START,
+                DESTROY,
+                SWITCHOVER,
+                RESET_REP,
+                RELEASE_LOCKS,
+            } = rootState.app_config.MONITOR_OP_TYPES
             // scope is needed to access $t
             return ({ currState, scope }) => ({
                 [STOP]: {
@@ -348,6 +366,22 @@ export default {
                 [SWITCHOVER]: {
                     text: scope.$t('monitorOps.actions.switchover'),
                     type: SWITCHOVER,
+                    color: 'primary',
+                    disabled: false,
+                },
+                [RESET_REP]: {
+                    text: scope.$t('monitorOps.actions.resetRep'),
+                    type: RESET_REP,
+                    icon: '$vuetify.icons.reload',
+                    iconSize: 18,
+                    color: 'primary',
+                    disabled: false,
+                },
+                [RELEASE_LOCKS]: {
+                    text: scope.$t('monitorOps.actions.releaseLocks'),
+                    type: RELEASE_LOCKS,
+                    icon: 'lock_open',
+                    iconSize: 18,
                     color: 'primary',
                     disabled: false,
                 },

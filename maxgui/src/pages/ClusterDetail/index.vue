@@ -159,9 +159,14 @@ export default {
         },
         confDlgSaveTxt() {
             const { MAINTAIN } = this.SERVER_OP_TYPES
+            const { RESET_REP, RELEASE_LOCKS } = this.MONITOR_OP_TYPES
             switch (this.confDlgType) {
                 case 'switchoverPromote':
                     return 'promote'
+                case RESET_REP:
+                    return 'reset'
+                case RELEASE_LOCKS:
+                    return 'release'
                 case MAINTAIN:
                     return 'set'
                 default:
@@ -323,7 +328,7 @@ export default {
             this.$set(this.clusterNodeHeightMap, b, temp)
         },
         async onConfirm() {
-            const { SWITCHOVER, STOP, START } = this.MONITOR_OP_TYPES
+            const { SWITCHOVER, STOP, START, RESET_REP, RELEASE_LOCKS } = this.MONITOR_OP_TYPES
             const { MAINTAIN, CLEAR, DRAIN } = this.SERVER_OP_TYPES
             let payload = {
                 type: this.opType,
@@ -331,6 +336,8 @@ export default {
             }
             switch (this.opType) {
                 case SWITCHOVER:
+                case RESET_REP:
+                case RELEASE_LOCKS:
                     await this.manipulateMonitor({
                         ...payload,
                         id: this.current_cluster.id,

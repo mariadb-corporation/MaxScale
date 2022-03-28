@@ -242,6 +242,8 @@
     "noRefresh": "No refresh",
     "visFilters": "Visualize filters",
     "hideFilters": "Hide filters",
+    "reset": "Reset",
+    "release": "Release",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
@@ -274,7 +276,9 @@
         "leavePage": "Are you sure you want to leave?",
         "addToFavorite": "Add the following statements to favorite?",
         "exeStatements": "Execute the following statement? | Execute the following statements?",
-        "switchoverPromote": "Promote <b>{targetId}</b> as a new master?"
+        "switchoverPromote": "Promote <b>{targetId}</b> as a new master?",
+        "async-reset-replication": "Are you sure you want to reset replication?",
+        "async-release-locks": "Are you sure you want to release locks?"
     },
     "info": {
         "switchover": "Swap the running master with a designated slave",
@@ -311,7 +315,9 @@
             "stop": "Stop monitor",
             "start": "Start monitor",
             "destroy": "Destroy monitor",
-            "switchover": "Switchover"
+            "switchover": "Switchover",
+            "resetRep": "Reset Replication",
+            "releaseLocks": "Release Locks"
         }
     },
     "$vuetify": {

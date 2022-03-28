@@ -157,9 +157,11 @@ export const APP_CONFIG = Object.freeze({
         DELETE: 'delete',
     }),
     MONITOR_OP_TYPES: Object.freeze({
-        SWITCHOVER: 'switchover',
+        SWITCHOVER: 'async-switchover',
         STOP: 'stop',
         START: 'start',
         DESTROY: 'destroy',
+        RESET_REP: 'async-reset-replication',
+        RELEASE_LOCKS: 'async-release-locks',
     }),
 })

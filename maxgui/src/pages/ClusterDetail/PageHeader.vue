@@ -6,34 +6,45 @@
             </router-link>
         </template>
         <template v-slot:setting-menu>
-            <details-icon-group-wrapper multiIcons>
-                <template v-slot:body>
-                    <v-tooltip
-                        v-for="op in [
-                            monitorOps[MONITOR_OP_TYPES.STOP],
-                            monitorOps[MONITOR_OP_TYPES.START],
-                        ]"
+            <v-list class="color bg-color-background py-0">
+                <template
+                    v-for="(op, i) in [
+                        monitorOps[MONITOR_OP_TYPES.STOP],
+                        monitorOps[MONITOR_OP_TYPES.START],
+                        { divider: true },
+                        monitorOps[MONITOR_OP_TYPES.RESET_REP],
+                        monitorOps[MONITOR_OP_TYPES.RELEASE_LOCKS],
+                    ]"
+                >
+                    <v-divider v-if="op.divider" :key="`divider-${i}`" />
+                    <v-list-item
+                        v-else
                         :key="op.text"
-                        bottom
-                        transition="slide-y-transition"
-                        content-class="shadow-drop color text-navigation py-1 px-4"
+                        dense
+                        link
+                        :disabled="op.disabled"
+                        class="px-2"
+                        @click="$emit('on-choose-op', { op, target: current_cluster })"
                     >
-                        <template v-slot:activator="{ on }">
-                            <v-btn
-                                :class="`${op.type}-btn`"
-                                text
-                                :color="op.color"
-                                :disabled="op.disabled"
-                                v-on="on"
-                                @click="$emit('on-choose-op', { op, target: current_cluster })"
-                            >
-                                <v-icon :size="op.iconSize"> {{ op.icon }} </v-icon>
-                            </v-btn>
-                        </template>
-                        <span>{{ op.text }} </span>
-                    </v-tooltip>
+                        <v-list-item-title
+                            class="d-flex color text-text align-center node-op-item font-weight-regular"
+                            :class="{ 'node-op-item--disabled': op.disabled }"
+                        >
+                            <div class="d-inline-block text-center mr-1" style="width:22px">
+                                <v-icon
+                                    v-if="op.icon"
+                                    class="node-op-item__icon"
+                                    :color="op.color"
+                                    :size="op.iconSize"
+                                >
+                                    {{ op.icon }}
+                                </v-icon>
+                            </div>
+                            <span class="node-op-item__text">{{ op.text }}</span>
+                        </v-list-item-title>
+                    </v-list-item>
                 </template>
-            </details-icon-group-wrapper>
+            </v-list>
         </template>
         <template v-slot:append>
             <portal to="page-header--right">
@@ -104,3 +115,18 @@ export default {
     },
 }
 </script>
+
+<style lang="scss" scoped>
+::v-deep.node-op-item {
+    &--disabled {
+        .node-op-item__icon {
+            svg {
+                color: rgba(0, 0, 0, 0.26) !important;
+            }
+        }
+        .node-op-item__text {
+            color: rgba(0, 0, 0, 0.26) !important;
+        }
+    }
+}
+</style>
