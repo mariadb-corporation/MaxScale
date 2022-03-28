@@ -10,6 +10,24 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+/**
+ * @param {Object} param.meta -
+ * @returns {Object} - {isRunning, isCancelled}
+ */
+function getAsyncCmdRunningStates({ meta, cmdName }) {
+    let isRunning = false,
+        isCancelled = false
+    const cmd = cmdName.replace('async-', '')
+    const states = [`${cmd} is still running`, `${cmd} is still pending`]
+    for (const e of meta.errors) {
+        const isNotDone = states.some(s => e.detail.includes(s))
+        const hasCancelledTxt = e.detail.includes('cancelled')
+        if (isNotDone) isRunning = isNotDone
+        if (hasCancelledTxt) isCancelled = hasCancelledTxt
+    }
+    return { isRunning, isCancelled }
+}
 export default {
     namespaced: true,
     state: {
@@ -183,6 +201,7 @@ export default {
                         case RESET_REP:
                         case RELEASE_LOCKS:
                             await dispatch('checkAsyncCmdRes', {
+                                cmdName: type,
                                 monitorModule: opParams.moduleType,
                                 monitorId: id,
                                 successCb: callback,
@@ -241,11 +260,12 @@ export default {
         /**
          * This function should be called right after an async cmd action is called
          * in order to show async cmd status message on snackbar.
+         * @param {String} payload.cmdName - async command name
          * @param {String} payload.monitorModule Monitor module
          * @param {String} payload.monitorId Monitor id
          * @param {Function} successCb - callback function after successfully performing an async cmd
          */
-        async checkAsyncCmdRes({ dispatch }, { monitorModule, monitorId, successCb }) {
+        async checkAsyncCmdRes({ dispatch }, { cmdName, monitorModule, monitorId, successCb }) {
             try {
                 const { status, data: { meta } = {} } = await this.$http.get(
                     `/maxscale/modules/${monitorModule}/fetch-cmd-results?${monitorId}`
@@ -256,6 +276,7 @@ export default {
                         await dispatch('handleAsyncCmdDone', { meta, successCb })
                     else
                         await dispatch('handleAsyncCmdPending', {
+                            cmdName,
                             meta,
                             monitorModule,
                             monitorId,
@@ -277,27 +298,34 @@ export default {
 
         /**
          * This handles calling checkAsyncCmdRes every 2500ms until receive success msg
-         * @param {Object} meta - meta error object
+         * @param {String} payload.cmdName - async command name
+         * @param {Object} payload.meta - meta error object
          * @param {String} payload.monitorModule Monitor module
          * @param {String} payload.monitorId Monitor id
-         * @param {Function} successCb - callback function after successfully performing an async cmd
+         * @param {Function} payload.successCb - callback function after successfully performing an async cmd
          */
         async handleAsyncCmdPending(
             { commit, dispatch },
-            { meta, monitorModule, monitorId, successCb }
+            { cmdName, meta, monitorModule, monitorId, successCb }
         ) {
-            let detail = meta.errors[0].detail
-            if (detail.includes('running') || detail.includes('pending')) {
+            const { isRunning, isCancelled } = getAsyncCmdRunningStates({ meta, cmdName })
+            if (isRunning && !isCancelled) {
                 commit(
                     'SET_SNACK_BAR_MESSAGE',
-                    // Don't show `No manual commands are available`, shows the latter part.
-                    { text: [detail.slice(detail.indexOf(',') + 2)], type: 'warning' },
+                    // Remove `No manual commands are available`, shows only the latter part.
+                    {
+                        text: meta.errors.map(e =>
+                            e.detail.replace('No manual command results are available, ', '')
+                        ),
+                        type: 'warning',
+                    },
                     { root: true }
                 )
                 // loop fetch until receive success meta
                 await this.vue.$help.delay(2500).then(
                     async () =>
                         await dispatch('checkAsyncCmdRes', {
+                            cmdName,
                             monitorModule,
                             monitorId,
                             successCb,
