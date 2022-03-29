@@ -154,8 +154,8 @@ export default {
         },
         /**
          * @param {String} param.id - id of the monitor to be manipulated
-         * @param {String} param.type - type of operation: destroy, stop, start
-         * @param {String|Object} param.opParams - operation params. Either a string or an object of params
+         * @param {String} param.type - type of operation: check MONITOR_OP_TYPES
+         * @param {String|Object} param.opParams - operation params. For async call, it's an object
          * @param {Function} param.callback callback function after successfully updated
          */
         async manipulateMonitor({ dispatch, commit, rootState }, { id, type, opParams, callback }) {
@@ -187,9 +187,8 @@ export default {
                     case RESET_REP:
                     case RELEASE_LOCKS: {
                         method = 'post'
-                        const { moduleType, masterId } = opParams
-                        url = `/maxscale/modules/${moduleType}/${type}?${id}`
-                        if (masterId) url += `&${masterId}`
+                        const { moduleType, params } = opParams
+                        url = `/maxscale/modules/${moduleType}/${type}?${id}${params}`
                         break
                     }
                 }

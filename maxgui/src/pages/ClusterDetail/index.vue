@@ -356,6 +356,25 @@ export default {
             }
             this.resetConfDlgStates()
         },
+        async handleCallAsyncCmd() {
+            const { SWITCHOVER } = this.MONITOR_OP_TYPES
+            let payload = {
+                type: this.confDlg.opType,
+                callback: this.fetchCluster,
+                id: this.current_cluster.id,
+                opParams: {
+                    moduleType: this.current_cluster.module,
+                    params: '',
+                },
+            }
+            switch (this.confDlg.opType) {
+                case SWITCHOVER:
+                    payload.opParams.params = `&${this.draggingStates.draggingNodeId}`
+                    break
+                default:
+            }
+            await this.manipulateMonitor(payload)
+        },
         async onConfirm() {
             const { SWITCHOVER, STOP, START, RESET_REP, RELEASE_LOCKS } = this.MONITOR_OP_TYPES
             const { MAINTAIN, CLEAR, DRAIN } = this.SERVER_OP_TYPES
@@ -367,15 +386,7 @@ export default {
                 case SWITCHOVER:
                 case RESET_REP:
                 case RELEASE_LOCKS:
-                    await this.manipulateMonitor({
-                        ...payload,
-                        id: this.current_cluster.id,
-                        //TODO: replace opParams obj with params string
-                        opParams: {
-                            moduleType: this.current_cluster.module,
-                            masterId: this.draggingStates.draggingNodeId,
-                        },
-                    })
+                    await this.handleCallAsyncCmd()
                     break
                 case STOP:
                 case START:

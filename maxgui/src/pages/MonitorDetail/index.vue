@@ -156,7 +156,10 @@ export default {
             let payload = {
                 id: this.monitorId,
                 type: this.MONITOR_OP_TYPES.SWITCHOVER,
-                opParams: { moduleType: this.monitorModule, masterId },
+                opParams: {
+                    moduleType: this.monitorModule,
+                    params: `&${masterId}`,
+                },
                 callback: this.fetchMonitor,
             }
             await this.manipulateMonitor(payload)

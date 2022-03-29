@@ -154,7 +154,10 @@ describe('MonitorDetail index', () => {
             manipulateMonitorSpy.should.have.been.calledOnceWith({
                 id: wrapper.vm.monitorId,
                 type: wrapper.vm.MONITOR_OP_TYPES.SWITCHOVER,
-                opParams: { moduleType: wrapper.vm.monitorModule, masterId: dummyMasterId },
+                opParams: {
+                    moduleType: wrapper.vm.monitorModule,
+                    params: `&${dummyMasterId}`,
+                },
                 callback: wrapper.vm.fetchMonitor,
             })
         })
