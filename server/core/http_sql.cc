@@ -18,6 +18,8 @@
 #include "internal/service.hh"
 #include "internal/sql_conn_manager.hh"
 
+#include <arpa/inet.h>
+
 #include <maxbase/json.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/cn_strings.hh>
@@ -250,6 +252,23 @@ construct_result_response(json_t* resultdata, const string& host, const std::str
     HttpResponse response(MHD_HTTP_OK, rval);
     return response;
 }
+
+bool is_zero_address(const std::string& ip)
+{
+    if (ip.find(":") == std::string::npos)
+    {
+        // There's only one way to express the zero address for IPv4.
+        return ip == "0.0.0.0";
+    }
+    else
+    {
+        // IPv6 has multiple ways of indicating the zero address. Converting it into the binary form allows
+        // them all to be detected.
+        in6_addr addr;
+        decltype(addr.s6_addr) zero = {};
+        return inet_pton(AF_INET6, ip.c_str(), &addr) == 1 && memcmp(addr.s6_addr, zero, sizeof(zero)) == 0;
+    }
+}
 }
 
 namespace
@@ -394,6 +413,14 @@ HttpResponse connect(const HttpRequest& request)
     else
     {
         return create_error("Target '" + target + "' not found");
+    }
+
+    if (is_zero_address(config.host))
+    {
+        // By default listeners listen on the "zero address" that accepts connections from any network
+        // interface. The address is only valid for the listening side and using it on the connecting side is
+        // wrong.
+        config.host = "127.0.0.1";
     }
 
     bool persist = request.get_option("persist") == "yes";

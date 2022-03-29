@@ -1855,17 +1855,35 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, bool 
                 [this, info, ref, origin, send_ok]() {
                     for (const auto& a : info->targets)
                     {
-                        if (LocalClient* client = LocalClient::create(info->session, a.first))
-                        {
-                            client->connect();
-                            // TODO: There can be multiple connections to the same server. Currently only one
-                            // connection per server is killed.
-                            MXB_INFO("KILL on '%s': %s", a.first->name(), a.second.c_str());
-                            client->queue_query(modutil_create_query(a.second.c_str()));
-                            client->queue_query(mysql_create_com_quit(NULL, 0));
+                        std::unique_ptr<LocalClient> client(LocalClient::create(info->session, a.first));
 
-                            mxb_assert(ref->state() != MXS_SESSION::State::STOPPING);
-                            add_local_client(client);
+                        if (client)
+                        {
+                            if (client->connect())
+                            {
+                                // TODO: There can be multiple connections to the same server. Currently only
+                                // one connection per server is killed.
+                                MXB_INFO("KILL on '%s': %s", a.first->name(), a.second.c_str());
+
+                                if (!client->queue_query(modutil_create_query(a.second.c_str()))
+                                    || !client->queue_query(mysql_create_com_quit(NULL, 0)))
+                                {
+                                    MXB_INFO("Failed to route all KILL queries to '%s'", a.first->name());
+                                }
+                                else
+                                {
+                                    mxb_assert(ref->state() != MXS_SESSION::State::STOPPING);
+                                    add_local_client(client.release());
+                                }
+                            }
+                            else
+                            {
+                                MXB_INFO("Failed to connect LocalClient to '%s'", a.first->name());
+                            }
+                        }
+                        else
+                        {
+                            MXB_INFO("Failed to create LocalClient to '%s'", a.first->name());
                         }
                     }
 
@@ -1881,6 +1899,11 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, bool 
                                 if (m_dcb->is_open() && send_ok)
                                 {
                                     write_ok_packet(1);
+                                }
+                                else
+                                {
+                                    MXB_INFO("Not sending OK packet. Client is %s connected.",
+                                             m_dcb->is_open() ? "still" : "not");
                                 }
 
                                 session_put_ref(ref);
