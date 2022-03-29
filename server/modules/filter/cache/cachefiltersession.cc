@@ -1067,7 +1067,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
 
 void CacheFilterSession::update_table_names(GWBUF* pPacket)
 {
-    mxb_assert(m_tables.empty());
+    // In case of BEGIN INSERT ...; INSERT ...; COMMIT m_tables may already contain data.
 
     const bool fullnames = true;
     std::vector<std::string> tables = qc_get_table_names(pPacket, fullnames);

@@ -107,7 +107,7 @@ void test_main(TestConnections& test)
         expect_primary_maxscale->wait_for_monitor(mxs_switch_ticks);
     }
 
-    // If ok so far, do a rolling sweep through all four monitors by having each monitor release it's
+    // If ok so far, do a rolling sweep through all four monitors by having each monitor release its
     // locks in turn.
     if (test.ok())
     {
@@ -171,13 +171,16 @@ const MonitorInfo* get_primary_monitor(TestConnections& test)
             return found;
         };
 
-    const MonitorInfo* rval = find_primary();
-    if (!rval)
+    // Primary monitor selection can take a few tries. Perhaps a monitor or server was slow to react to
+    // freed locks. Or perhaps the locks were split even between the two monitors running in a single
+    // MaxScale. In any case, wait a little and try again, as the situation should eventually get sorted.
+    const MonitorInfo* rval = nullptr;
+    for (int i = 0; !rval && i < 4; i++)
     {
-        // Did not find a single primary monitor. This happens sometimes, perhaps due to monitor or server
-        // being slow to react to freed locks. In any case, give MaxScale some more time to detect the
-        // situation.
-        sleep(5);
+        if (i > 0)
+        {
+            sleep(4);
+        }
         rval = find_primary();
     }
 
