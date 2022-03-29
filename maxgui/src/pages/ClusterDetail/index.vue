@@ -165,7 +165,7 @@ export default {
         },
         confDlgSaveTxt() {
             const { MAINTAIN } = this.SERVER_OP_TYPES
-            const { RESET_REP, RELEASE_LOCKS } = this.MONITOR_OP_TYPES
+            const { RESET_REP, RELEASE_LOCKS, FAILOVER } = this.MONITOR_OP_TYPES
             switch (this.confDlg.type) {
                 case 'switchoverPromote':
                     return 'promote'
@@ -173,6 +173,8 @@ export default {
                     return 'reset'
                 case RELEASE_LOCKS:
                     return 'release'
+                case FAILOVER:
+                    return 'perform'
                 case MAINTAIN:
                     return 'set'
                 default:
@@ -376,7 +378,14 @@ export default {
             await this.manipulateMonitor(payload)
         },
         async onConfirm() {
-            const { SWITCHOVER, STOP, START, RESET_REP, RELEASE_LOCKS } = this.MONITOR_OP_TYPES
+            const {
+                SWITCHOVER,
+                STOP,
+                START,
+                RESET_REP,
+                RELEASE_LOCKS,
+                FAILOVER,
+            } = this.MONITOR_OP_TYPES
             const { MAINTAIN, CLEAR, DRAIN } = this.SERVER_OP_TYPES
             let payload = {
                 type: this.confDlg.opType,
@@ -386,6 +395,7 @@ export default {
                 case SWITCHOVER:
                 case RESET_REP:
                 case RELEASE_LOCKS:
+                case FAILOVER:
                     await this.handleCallAsyncCmd()
                     break
                 case STOP:

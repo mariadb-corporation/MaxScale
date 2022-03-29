@@ -260,7 +260,6 @@ export default {
             const ops = this.getServerOps({ currStateMode, scope: this })
             return [ops[MAINTAIN], ops[CLEAR], ops[DRAIN]]
         },
-        //TODO: add cluster control operations .e.g. reset-replication, release-locks, rejoin
         nodeOps() {
             return [...this.serverOps]
         },

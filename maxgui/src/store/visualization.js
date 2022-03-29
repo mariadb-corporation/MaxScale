@@ -107,6 +107,7 @@ export default {
                     module,
                     linkColor: '#0e9bc0',
                     children: [], // contains a master server data
+                    monitorData: monitor.attributes,
                 }
                 if (masterName)
                     root.children.push({

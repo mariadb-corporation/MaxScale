@@ -7,15 +7,7 @@
         </template>
         <template v-slot:setting-menu>
             <v-list class="color bg-color-background py-0">
-                <template
-                    v-for="(op, i) in [
-                        monitorOps[MONITOR_OP_TYPES.STOP],
-                        monitorOps[MONITOR_OP_TYPES.START],
-                        { divider: true },
-                        monitorOps[MONITOR_OP_TYPES.RESET_REP],
-                        monitorOps[MONITOR_OP_TYPES.RELEASE_LOCKS],
-                    ]"
-                >
+                <template v-for="(op, i) in clusterOps">
                     <v-divider v-if="op.divider" :key="`divider-${i}`" />
                     <v-list-item
                         v-else
@@ -111,6 +103,20 @@ export default {
         ...mapGetters({ getMonitorOps: 'monitor/getMonitorOps' }),
         monitorOps() {
             return this.getMonitorOps({ currState: this.current_cluster.state, scope: this })
+        },
+        clusterOps() {
+            const { monitorData: { parameters = {} } = {} } = this.current_cluster
+            let ops = [
+                this.monitorOps[this.MONITOR_OP_TYPES.STOP],
+                this.monitorOps[this.MONITOR_OP_TYPES.START],
+                { divider: true },
+                this.monitorOps[this.MONITOR_OP_TYPES.RESET_REP],
+                this.monitorOps[this.MONITOR_OP_TYPES.RELEASE_LOCKS],
+            ]
+            // only add the failover option when auto_failover is false
+            if (!this.$typy(parameters, 'auto_failover').safeBoolean)
+                ops.push(this.monitorOps[this.MONITOR_OP_TYPES.FAILOVER])
+            return ops
         },
     },
 }

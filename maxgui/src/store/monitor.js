@@ -170,6 +170,7 @@ export default {
                     SWITCHOVER,
                     RESET_REP,
                     RELEASE_LOCKS,
+                    FAILOVER,
                 } = rootState.app_config.MONITOR_OP_TYPES
                 switch (type) {
                     case DESTROY:
@@ -185,7 +186,8 @@ export default {
                         break
                     case SWITCHOVER:
                     case RESET_REP:
-                    case RELEASE_LOCKS: {
+                    case RELEASE_LOCKS:
+                    case FAILOVER: {
                         method = 'post'
                         const { moduleType, params } = opParams
                         url = `/maxscale/modules/${moduleType}/${type}?${id}${params}`
@@ -199,6 +201,7 @@ export default {
                         case SWITCHOVER:
                         case RESET_REP:
                         case RELEASE_LOCKS:
+                        case FAILOVER:
                             await dispatch('checkAsyncCmdRes', {
                                 cmdName: type,
                                 monitorModule: opParams.moduleType,
@@ -361,6 +364,7 @@ export default {
                 SWITCHOVER,
                 RESET_REP,
                 RELEASE_LOCKS,
+                FAILOVER,
             } = rootState.app_config.MONITOR_OP_TYPES
             // scope is needed to access $t
             return ({ currState, scope }) => ({
@@ -393,6 +397,7 @@ export default {
                 [SWITCHOVER]: {
                     text: scope.$t('monitorOps.actions.switchover'),
                     type: SWITCHOVER,
+                    //TODO: Add switchover icon
                     color: 'primary',
                     disabled: false,
                 },
@@ -408,8 +413,14 @@ export default {
                     text: scope.$t('monitorOps.actions.releaseLocks'),
                     type: RELEASE_LOCKS,
                     icon: 'lock_open',
-                    iconSize: 18,
+                    iconSize: 20,
                     color: 'primary',
+                    disabled: false,
+                },
+                [FAILOVER]: {
+                    text: scope.$t('monitorOps.actions.failover'),
+                    type: FAILOVER,
+                    //TODO: Add failover icon
                     disabled: false,
                 },
             })

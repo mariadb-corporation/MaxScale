@@ -244,6 +244,7 @@
     "hideFilters": "Hide filters",
     "reset": "Reset",
     "release": "Release",
+    "perform": "Perform",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
@@ -278,7 +279,8 @@
         "exeStatements": "Execute the following statement? | Execute the following statements?",
         "switchoverPromote": "Promote <b>{targetId}</b> as a new master?",
         "async-reset-replication": "Are you sure you want to reset replication?",
-        "async-release-locks": "Are you sure you want to release locks?"
+        "async-release-locks": "Are you sure you want to release locks?",
+        "async-failover": "Are you sure you want to perform master failover?"
     },
     "info": {
         "switchover": "Swap the running master with a designated slave",
@@ -317,7 +319,8 @@
             "destroy": "Destroy monitor",
             "switchover": "Switchover",
             "resetRep": "Reset Replication",
-            "releaseLocks": "Release Locks"
+            "releaseLocks": "Release Locks",
+            "failover": "Failover"
         }
     },
     "$vuetify": {
