@@ -46,6 +46,13 @@ public:
     bool ok() const;
 
     /**
+     * Request all files to be rotated
+     *
+     * The actual effect of the rotation depends on the RowEventHandler implementation.
+     */
+    void rotate();
+
+    /**
      * Destroys the Replicator and stops the processing of data
      */
     ~Replicator();

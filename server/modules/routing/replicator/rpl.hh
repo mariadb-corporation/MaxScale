@@ -302,6 +302,8 @@ public:
         return m_handler->load_latest_gtid();
     }
 
+    void rotate_files();
+
 private:
     SRowEventHandler  m_handler;
     SERVICE*          m_service;

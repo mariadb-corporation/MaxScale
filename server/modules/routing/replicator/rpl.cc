@@ -2125,6 +2125,14 @@ void Rpl::handle_query_event(REP_HEADER* hdr, uint8_t* ptr)
     parse_sql(sql, db);
 }
 
+void Rpl::rotate_files()
+{
+    for (const auto& t : m_created_tables)
+    {
+        save_and_replace_table_create(t.second);
+    }
+}
+
 void Rpl::handle_event(REP_HEADER hdr, uint8_t* ptr)
 {
     if (m_binlog_checksum)

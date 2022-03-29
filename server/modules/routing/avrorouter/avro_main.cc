@@ -287,6 +287,13 @@ static bool avro_handle_purge(const MODULECMD_ARG* args, json_t** output)
            && do_unlink_with_pattern("/%s/*.avsc", inst->config().avrodir.c_str()); // .avsc files
 }
 
+static bool avro_handle_rotate(const MODULECMD_ARG* args, json_t** output)
+{
+    Avro* inst = (Avro*)args->argv[0].value.service->router();
+
+    return inst->rotate();
+}
+
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -327,6 +334,20 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                                args_purge,
                                "Purge created Avro files and reset conversion state. "
                                "NOTE: MaxScale must be restarted after this call.");
+
+    static modulecmd_arg_type_t args_rotate[] =
+    {
+        {MODULECMD_ARG_SERVICE | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
+         "The avrorouter service"}
+    };
+
+    modulecmd_register_command(MXB_MODULE_NAME,
+                               "rotate",
+                               MODULECMD_TYPE_ACTIVE,
+                               avro_handle_rotate,
+                               1,
+                               args_rotate,
+                               "Rotate all avro files");
 
     static MXS_MODULE info =
     {

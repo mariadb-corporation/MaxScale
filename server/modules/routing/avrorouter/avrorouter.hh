@@ -132,6 +132,19 @@ public:
         return m_config;
     }
 
+    bool rotate()
+    {
+        bool ok = false;
+
+        if (m_replicator)
+        {
+            ok = true;
+            m_replicator->rotate();
+        }
+
+        return ok;
+    }
+
     bool post_configure();
 
     SERVICE*    service;    /*< Pointer to the service using this router */
