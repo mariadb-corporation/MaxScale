@@ -25,7 +25,7 @@
                     <server-node
                         v-if="!$typy(node, 'data').isEmptyObject"
                         :node="node"
-                        :droppableTargets="droppableTargets"
+                        :droppableTargets="draggingStates.droppableTargets"
                         :bodyWrapperClass="nodeTxtWrapperClassName"
                         :expandOnMount="expandOnMount"
                         @get-expanded-node="handleExpandedNode"
@@ -38,18 +38,18 @@
             </tree-graph>
         </v-card>
         <confirm-dialog
-            v-model="isConfDlgOpened"
-            :title="confDlgTitle"
-            :type="confDlgType"
+            v-model="confDlg.isOpened"
+            :title="confDlg.title"
+            :type="confDlg.type"
             :saveText="confDlgSaveTxt"
-            :item="targetNode"
-            :smallInfo="smallInfo"
+            :item="confDlg.targetNode"
+            :smallInfo="confDlg.smallInfo"
             :closeImmediate="true"
             :onSave="onConfirm"
         >
-            <template v-if="confDlgType === SERVER_OP_TYPES.MAINTAIN" v-slot:body-append>
+            <template v-if="confDlg.type === SERVER_OP_TYPES.MAINTAIN" v-slot:body-append>
                 <v-checkbox
-                    v-model="forceClosing"
+                    v-model="confDlg.forceClosing"
                     class="small mt-2 mb-4"
                     :label="$t('forceClosing')"
                     color="primary"
@@ -87,12 +87,14 @@ export default {
         return {
             ctrDim: {},
             // states for controlling drag behaviors
-            isDroppable: false,
-            droppableTargets: [],
-            opType: '',
-            initialNodeInnerHTML: null,
-            draggingNodeId: null,
-            droppingNodeId: null,
+            defDraggingStates: {
+                isDroppable: false,
+                droppableTargets: [],
+                initialNodeInnerHTML: null,
+                draggingNodeId: null,
+                droppingNodeId: null,
+            },
+            draggingStates: {},
             //states for tree-graph
             expandedNodes: [],
             defClusterNodeHeight: 119,
@@ -101,14 +103,18 @@ export default {
             //states for server-node
             nodeTxtWrapperClassName: 'node-text-wrapper',
             // states for confirm-dialog
-            isConfDlgOpened: false,
-            confDlgTitle: '',
-            confDlgType: '',
-            targetNode: null,
-            smallInfo: '',
-            forceClosing: false,
-            // states for server options
-            opParams: '',
+            defConfDlg: {
+                opType: '',
+                isOpened: false,
+                title: '',
+                type: '',
+                targetNode: null,
+                smallInfo: '',
+                // states for server options
+                opParams: '',
+                forceClosing: false,
+            },
+            confDlg: {},
         }
     },
     computed: {
@@ -160,7 +166,7 @@ export default {
         confDlgSaveTxt() {
             const { MAINTAIN } = this.SERVER_OP_TYPES
             const { RESET_REP, RELEASE_LOCKS } = this.MONITOR_OP_TYPES
-            switch (this.confDlgType) {
+            switch (this.confDlg.type) {
                 case 'switchoverPromote':
                     return 'promote'
                 case RESET_REP:
@@ -170,11 +176,13 @@ export default {
                 case MAINTAIN:
                     return 'set'
                 default:
-                    return this.confDlgType
+                    return this.confDlg.type
             }
         },
     },
     async created() {
+        this.resetDraggingStates()
+        this.resetConfDlgStates()
         if (this.$typy(this.current_cluster).isEmptyObject) await this.fetchCluster()
     },
     mounted() {
@@ -208,6 +216,12 @@ export default {
         handleAssignNodeHeightMap({ height, nodeId }) {
             this.$set(this.clusterNodeHeightMap, nodeId, height)
         },
+        resetDraggingStates() {
+            this.draggingStates = this.$help.lodash.cloneDeep(this.defDraggingStates)
+        },
+        resetConfDlgStates() {
+            this.confDlg = this.$help.lodash.cloneDeep(this.defConfDlg)
+        },
         /**
          * This helps to store the current innerHTML of the dragging node to initialNodeInnerHTML
          */
@@ -218,7 +232,7 @@ export default {
                 const nodeTxtWrapper = cloneEle[0].getElementsByClassName(
                     this.nodeTxtWrapperClassName
                 )
-                this.initialNodeInnerHTML = nodeTxtWrapper[0].innerHTML
+                this.draggingStates.initialNodeInnerHTML = nodeTxtWrapper[0].innerHTML
             }
         },
         /**
@@ -227,10 +241,10 @@ export default {
          */
         detectDroppableTargets(node) {
             if (node.isMaster) {
-                this.droppableTargets = []
+                this.draggingStates.droppableTargets = []
             } else {
                 //switchover: dragging a slave to a master
-                this.droppableTargets = [node.masterServerName]
+                this.draggingStates.droppableTargets = [node.masterServerName]
             }
         },
         /**
@@ -249,7 +263,7 @@ export default {
                         nodeTxtWrapper[0].innerHTML = this.$t('info.switchoverPromote')
                         break
                     default:
-                        nodeTxtWrapper[0].innerHTML = this.initialNodeInnerHTML
+                        nodeTxtWrapper[0].innerHTML = this.draggingStates.initialNodeInnerHTML
                         break
                 }
             }
@@ -260,12 +274,12 @@ export default {
          * @param {Object} droppingNode - dropping node
          */
         detectOperationType({ draggingNode, droppingNode }) {
-            if (draggingNode.isMaster) this.opType = ''
+            if (draggingNode.isMaster) this.confDlg.opType = ''
             else if (droppingNode.isMaster) {
                 const { SWITCHOVER } = this.MONITOR_OP_TYPES
-                this.opType = SWITCHOVER
+                this.confDlg.opType = SWITCHOVER
             }
-            this.changeNodeTxt(this.opType)
+            this.changeNodeTxt(this.confDlg.opType)
         },
         onNodeSwapStart(e) {
             document.body.classList.add('cursor--all-move')
@@ -283,77 +297,92 @@ export default {
             this.onCancelSwap()
         },
         onCancelSwap() {
-            this.isDroppable = false
+            this.draggingStates.isDroppable = false
         },
         onMove(e, cb) {
-            this.draggingNodeId = e.dragged.getAttribute('node_id')
-            const draggingNode = this.graphDataHash[this.draggingNodeId]
+            this.draggingStates.draggingNodeId = e.dragged.getAttribute('node_id')
+            const draggingNode = this.graphDataHash[this.draggingStates.draggingNodeId]
 
             const dropEle = e.related // drop target node element
             // listen on the target element
             dropEle.addEventListener('mouseleave', this.onNodeSwapLeave)
-
-            this.droppingNodeId = dropEle.getAttribute('node_id')
-            const droppingNode = this.graphDataHash[this.droppingNodeId]
-            this.isDroppable = this.droppableTargets.includes(this.droppingNodeId)
-            if (this.isDroppable) {
+            const droppingNodeId = dropEle.getAttribute('node_id')
+            const droppingNode = this.graphDataHash[droppingNodeId]
+            const isDroppable = this.draggingStates.droppableTargets.includes(droppingNodeId)
+            this.draggingStates = {
+                ...this.draggingStates,
+                droppingNodeId,
+                isDroppable,
+            }
+            if (isDroppable) {
                 this.detectOperationType({ draggingNode, droppingNode })
             } else this.onCancelSwap()
             // return false to cancel automatically swap by sortable.js
             cb(false)
         },
         onNodeSwapEnd() {
-            if (this.isDroppable) {
+            if (this.draggingStates.isDroppable) {
                 const { SWITCHOVER } = this.MONITOR_OP_TYPES
-                switch (this.opType) {
+                switch (this.confDlg.opType) {
                     case SWITCHOVER:
-                        this.confDlgType = 'switchoverPromote'
-                        this.confDlgTitle = this.$t('monitorOps.actions.switchover')
-                        this.targetNode = { id: this.draggingNodeId }
+                        this.confDlg.type = 'switchoverPromote'
+                        this.confDlg.title = this.$t('monitorOps.actions.switchover')
+                        this.confDlg.targetNode = { id: this.draggingStates.draggingNodeId }
                         break
                 }
-                this.isConfDlgOpened = true
+                this.confDlg.isOpened = true
             }
-            this.droppableTargets = []
+            this.draggingStates.droppableTargets = []
             document.body.classList.remove('cursor--all-move')
         },
         /**
          * Swap height of draggingNodeId with droppingNodeId
          */
         swapNodeHeight() {
-            const a = this.draggingNodeId,
-                b = this.droppingNodeId,
+            const a = this.draggingStates.draggingNodeId,
+                b = this.draggingStates.droppingNodeId,
                 temp = this.clusterNodeHeightMap[a]
             this.$set(this.clusterNodeHeightMap, a, this.clusterNodeHeightMap[b])
             this.$set(this.clusterNodeHeightMap, b, temp)
+        },
+        //Reset states after confirming an action
+        async handleResetStates() {
+            const { SWITCHOVER } = this.MONITOR_OP_TYPES
+            switch (this.confDlg.opType) {
+                case SWITCHOVER:
+                    this.swapNodeHeight()
+                    this.resetDraggingStates()
+                    break
+            }
+            this.resetConfDlgStates()
         },
         async onConfirm() {
             const { SWITCHOVER, STOP, START, RESET_REP, RELEASE_LOCKS } = this.MONITOR_OP_TYPES
             const { MAINTAIN, CLEAR, DRAIN } = this.SERVER_OP_TYPES
             let payload = {
-                type: this.opType,
+                type: this.confDlg.opType,
                 callback: this.fetchCluster,
             }
-            switch (this.opType) {
+            switch (this.confDlg.opType) {
                 case SWITCHOVER:
                 case RESET_REP:
                 case RELEASE_LOCKS:
                     await this.manipulateMonitor({
                         ...payload,
                         id: this.current_cluster.id,
+                        //TODO: replace opParams obj with params string
                         opParams: {
                             moduleType: this.current_cluster.module,
-                            masterId: this.draggingNodeId,
+                            masterId: this.draggingStates.draggingNodeId,
                         },
                     })
-                    this.swapNodeHeight()
                     break
                 case STOP:
                 case START:
                     await this.manipulateMonitor({
                         ...payload,
                         id: this.current_cluster.id,
-                        opParams: this.opParams,
+                        opParams: this.confDlg.opParams,
                     })
                     break
                 case DRAIN:
@@ -361,21 +390,25 @@ export default {
                 case MAINTAIN:
                     await this.setOrClearServerState({
                         ...payload,
-                        id: this.targetNode.id,
-                        opParams: this.opParams,
-                        forceClosing: this.forceClosing,
+                        id: this.confDlg.targetNode.id,
+                        opParams: this.confDlg.opParams,
+                        forceClosing: this.confDlg.forceClosing,
                     })
                     break
             }
+            this.handleResetStates()
         },
         onChooseOp({ op: { type, text, info, params }, target: { id } }) {
-            this.confDlgType = type
-            this.opType = type
-            this.confDlgTitle = text
-            this.opParams = params
-            this.targetNode = { id }
-            this.smallInfo = info
-            this.isConfDlgOpened = true
+            this.confDlg = {
+                ...this.confDlg,
+                type,
+                opType: type,
+                title: text,
+                opParams: params,
+                targetNode: { id },
+                smallInfo: info,
+                isOpened: true,
+            }
         },
     },
 }
