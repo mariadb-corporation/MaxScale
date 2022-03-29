@@ -807,7 +807,7 @@ export function getRepStats(serverInfo) {
             last_sql_error,
             connection_name,
         } = slave_conn
-        let srcRep = {}
+        let srcRep = { name: serverInfo.name }
         // show connection_name only when multi-source replication is in use
         if (serverInfo.slave_connections.length > 1) srcRep.connection_name = connection_name
 
@@ -823,7 +823,6 @@ export function getRepStats(serverInfo) {
                     slave_io_running !== 'Yes' ? slave_io_running : slave_sql_running
             }
         } else srcRep.replication_state = 'Lagging'
-        srcRep.server_id = serverInfo.name
         // only show last_io_error and last_sql_error when replication_state === 'Stopped'
         if (srcRep.replication_state === 'Stopped')
             srcRep = {
