@@ -311,7 +311,7 @@ export default {
             this.setDefNodeTxt()
             this.detectDroppableTargets(node)
         },
-        onNodeDragging(e, cb) {
+        onNodeDragging(e) {
             this.draggingStates.draggingNodeId = e.dragged.getAttribute('node_id')
             const draggingNode = this.graphDataHash[this.draggingStates.draggingNodeId]
 
@@ -329,8 +329,6 @@ export default {
             if (isDroppable) {
                 this.detectOperationType({ draggingNode, droppingNode })
             } else this.onCancelDrag()
-            // return false to cancel automatically swap by sortable.js
-            cb(false)
         },
         onNodeDragEnd() {
             if (this.draggingStates.isDroppable) {

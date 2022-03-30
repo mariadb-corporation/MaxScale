@@ -77,10 +77,8 @@ export default {
                         preventOnFilter: false,
                         onStart: e => vnode.context.$emit('on-node-drag-start', e),
                         onMove: e => {
-                            let isDroppable = true
-                            // emit on-node-dragging and provide callback to assign return value
-                            vnode.context.$emit('on-node-dragging', e, v => (isDroppable = v))
-                            return isDroppable
+                            vnode.context.$emit('on-node-dragging', e)
+                            return false // cancel drop
                         },
                         onEnd: e => vnode.context.$emit('on-node-drag-end', e),
                     }
