@@ -21,45 +21,6 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 
-#define PTR_IS_EOF(b) (b[0] == 0x05 && b[1] == 0x0 && b[2] == 0x0 && b[4] == 0xfe)
-#define PTR_IS_ERR(b) (b[4] == 0xff)
-
-/**
- * Check if a GWBUF structure is a MySQL COM_QUERY packet
- *
- * @param       buf     Buffer to check
- * @return      True if GWBUF is a COM_QUERY packet
- */
-inline bool modutil_is_SQL(GWBUF* buf)
-{
-    unsigned char* ptr;
-
-    if (gwbuf_link_length(buf) < 5)
-    {
-        return 0;
-    }
-    ptr = GWBUF_DATA(buf);
-    return ptr[4] == 0x03;          // COM_QUERY
-}
-
-/**
- * Check if a GWBUF structure is a MySQL COM_STMT_PREPARE packet
- *
- * @param       buf     Buffer to check
- * @return      True if GWBUF is a COM_STMT_PREPARE packet
- */
-inline bool modutil_is_SQL_prepare(GWBUF* buf)
-{
-    unsigned char* ptr;
-
-    if (gwbuf_link_length(buf) < 5)
-    {
-        return 0;
-    }
-    ptr = GWBUF_DATA(buf);
-    return ptr[4] == 0x16;          // COM_STMT_PREPARE
-}
-
 extern char* modutil_get_SQL(GWBUF*);
 
 GWBUF* modutil_get_next_MySQL_packet(GWBUF** p_readbuf);

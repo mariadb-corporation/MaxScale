@@ -673,6 +673,27 @@ uint32_t get_packet_length(const uint8_t* buffer)
     return MYSQL_HEADER_LEN + header.pl_length;
 }
 
+bool is_com_query(const GWBUF& buf)
+{
+    return buf.length() > MYSQL_HEADER_LEN && buf[MYSQL_HEADER_LEN] == MXS_COM_QUERY;
+}
+
+bool is_com_prepare(const GWBUF& buf)
+{
+    return buf.length() > MYSQL_HEADER_LEN && buf[MYSQL_HEADER_LEN] == MXS_COM_STMT_PREPARE;
+}
+
+bool is_com_query_or_prepare(const GWBUF& buf)
+{
+    bool rval = false;
+    if (buf.length() > MYSQL_HEADER_LEN)
+    {
+        auto cmd = buf[MYSQL_HEADER_LEN];
+        rval = (cmd == MXS_COM_QUERY || cmd == MXS_COM_STMT_PREPARE);
+    }
+    return rval;
+}
+
 BackendAuthData::BackendAuthData(const char* srv_name)
     : servername(srv_name)
 {

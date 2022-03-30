@@ -131,7 +131,7 @@ bool SmartRouterSession::routeQuery(GWBUF* pBuf)
                                              << ", canonical = " << maxbase::show_some(canonical));
                 ret = write_to_target(perf.target(), pBuf);
             }
-            else if (modutil_is_SQL(pBuf))
+            else if (mariadb::is_com_query(*pBuf))
             {
                 MXB_SDEBUG("Start measurement");
                 ret = write_to_all(pBuf, Mode::MeasureQuery);

@@ -1134,7 +1134,7 @@ bool ServerEndpoint::routeQuery(GWBUF* buffer)
 
     uint32_t type_mask = 0;
 
-    if (modutil_is_SQL(buffer) || modutil_is_SQL_prepare(buffer))
+    if (mariadb::is_com_query_or_prepare(*buffer))
     {
         type_mask = qc_get_type_mask(buffer);
     }

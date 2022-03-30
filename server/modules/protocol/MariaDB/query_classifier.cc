@@ -419,7 +419,7 @@ public:
         {
             m_canonical = m_pStmt->get_canonical();
 
-            if (modutil_is_SQL_prepare(pStmt))
+            if (mariadb::is_com_prepare(*pStmt))
             {
                 // P as in prepare, and appended so as not to cause a
                 // need for copying the data.

@@ -278,7 +278,7 @@ CCRSession* CCRSession::create(MXS_SESSION* session, SERVICE* service, CCRFilter
 
 bool CCRSession::routeQuery(GWBUF* queue)
 {
-    if (modutil_is_SQL(queue))
+    if (mariadb::is_com_query(*queue))
     {
         auto filter = &this->m_instance;
         time_t now = time(NULL);

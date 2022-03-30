@@ -789,7 +789,7 @@ bool detect_show_shards(GWBUF* query)
         return false;
     }
 
-    if (!modutil_is_SQL(query) && !modutil_is_SQL_prepare(query))
+    if (!mariadb::is_com_query_or_prepare(*query))
     {
         return false;
     }

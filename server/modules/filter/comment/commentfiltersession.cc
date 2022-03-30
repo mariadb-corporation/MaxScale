@@ -45,7 +45,7 @@ CommentFilterSession* CommentFilterSession::create(MXS_SESSION* pSession,
 
 bool CommentFilterSession::routeQuery(GWBUF* pPacket)
 {
-    if (modutil_is_SQL(pPacket))
+    if (mariadb::is_com_query(*pPacket))
     {
         const auto& sql = pPacket->get_sql();
         string comment = parseComment(m_inject);

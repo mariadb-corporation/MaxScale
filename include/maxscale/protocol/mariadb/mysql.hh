@@ -221,6 +221,21 @@ uint8_t* copy_chars(uint8_t* dest, const char* src, size_t n);
 uint8_t* set_bytes(uint8_t* dest, uint8_t val, size_t n);
 
 uint32_t get_packet_length(const uint8_t* buffer);
+
+/**
+ * Check if GWBUF is a COM_QUERY packet.
+ */
+bool is_com_query(const GWBUF& buf);
+
+/**
+ * Check if GWBUF is a COM_STMT_PREPARE packet.
+ */
+bool is_com_prepare(const GWBUF& buf);
+
+/**
+ * Check if GWBUF is a COM_QUERY or COM_STMT_PREPARE packet.
+ */
+bool is_com_query_or_prepare(const GWBUF& buf);
 }
 
 /** MySQL protocol constants */
