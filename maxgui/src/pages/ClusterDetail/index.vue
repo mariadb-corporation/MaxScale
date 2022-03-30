@@ -29,6 +29,7 @@
                     <!-- Render server-node only when `data` object is passed from tree-graph -->
                     <server-node
                         v-if="!$typy(node, 'data').isEmptyObject"
+                        :key="`${uniqueKey}-${node.id}`"
                         :node="node"
                         :droppableTargets="draggingStates.droppableTargets"
                         :bodyWrapperClass="nodeTxtWrapperClassName"
@@ -91,6 +92,8 @@ export default {
     },
     data() {
         return {
+            // a key for triggering a re-render on server-node
+            uniqueKey: this.$help.uuidv1(),
             ctrDim: {},
             // states for controlling drag behaviors
             defDraggingStates: {
@@ -344,20 +347,24 @@ export default {
             this.draggingStates.droppableTargets = []
             document.body.classList.remove('cursor--all-move')
         },
-        //Swap height of draggingNodeId with droppingNodeId
-        swapNodeHeight() {
-            const a = this.draggingStates.draggingNodeId,
-                b = this.draggingStates.droppingNodeId,
-                temp = this.clusterNodeHeightMap[a]
-            this.$set(this.clusterNodeHeightMap, a, this.clusterNodeHeightMap[b])
-            this.$set(this.clusterNodeHeightMap, b, temp)
+        /**
+         * A node can be expanded or collapsed by the user's interaction, so the
+         * height of each node is dynamic.
+         * This method should be called when the order of the nodes has changed.
+         * e.g. after a switchover or a rejoin action.
+         * This helps to get the accurate height of each node because
+         * the `clusterNodeHeightMap` state won't be updated if the `server-node`
+         * is not re-rendered.
+         */
+        triggerRerenderNodes() {
+            this.uniqueKey = this.$help.uuidv1()
         },
         //Reset states after confirming an action
         async handleResetStates() {
             const { SWITCHOVER } = this.MONITOR_OP_TYPES
             switch (this.confDlg.opType) {
                 case SWITCHOVER:
-                    this.swapNodeHeight()
+                    this.triggerRerenderNodes()
                     this.resetDraggingStates()
                     break
             }
