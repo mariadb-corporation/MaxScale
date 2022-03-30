@@ -68,18 +68,17 @@ bool Avro::post_configure()
 
         auto worker = mxs::MainWorker::get();
         worker->execute(
-            [this, cnf, block_size, codec]() {
-                SRowEventHandler hndl(new AvroConverter(cnf.service, cnf.statedir, block_size, codec));
-                m_replicator = cdc::Replicator::start(cnf, std::move(hndl));
-                mxb_assert(m_replicator);
-            },
-            mxs::RoutingWorker::EXECUTE_QUEUED);
+            [this, cnf, block_size, codec, max_size = m_config.max_file_size]() {
+            SRowEventHandler hndl(new AvroConverter(cnf.service, cnf.statedir, block_size, codec, max_size));
+            m_replicator = cdc::Replicator::start(cnf, std::move(hndl));
+            mxb_assert(m_replicator);
+        }, mxs::RoutingWorker::EXECUTE_QUEUED);
     }
     else
     {
         handler.reset(
             new Rpl(service,
-                    SRowEventHandler(new AvroConverter(service, m_config.avrodir, block_size, codec)),
+                    SRowEventHandler(new AvroConverter(service, m_config.avrodir, block_size, codec, 0)),
                     m_config.match.code(), m_config.exclude.code()));
 
         char filename[BINLOG_FNAMELEN + 1];

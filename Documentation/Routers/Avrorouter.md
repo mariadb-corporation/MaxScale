@@ -222,6 +222,26 @@ size type parameter which means that it can also be defined with an SI suffix.
 Refer to the [Configuration Guide](../Getting-Started/Configuration-Guide.md)
 for more details about size type parameters and how to use them.
 
+##### `max_file_size`
+
+- **Type**: [size](../Getting-Started/Configuration-Guide.md#sizes)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: 0
+
+If the size of a single Avro data file exceeds this limit, the avrorouter will
+rotate to a new file. This is done by closing the existing file and creating a
+new one with the next version number. By default the avrorouter does not rotate
+files based on their size. Setting the value to 0 disables file rotation based on
+size.
+
+This uses the size of the file as reported by the operating system. The check
+for the file size is done after a transaction has been processed which means
+that large transactions can still cause the file size to exceed the given limit.
+
+File rotation only works with the direct replication mode. The legacy file based
+replication mode does not support this.
+
 ##### Example configuration
 
 ```

@@ -2133,6 +2133,17 @@ void Rpl::rotate_files()
     }
 }
 
+void Rpl::try_rotate_files()
+{
+    for (const auto& t : m_created_tables)
+    {
+        if (t.second->is_open && m_handler->needs_rotate(*t.second))
+        {
+            save_and_replace_table_create(t.second);
+        }
+    }
+}
+
 void Rpl::handle_event(REP_HEADER hdr, uint8_t* ptr)
 {
     if (m_binlog_checksum)

@@ -95,6 +95,7 @@ public:
     mxs::config::RegexValue exclude;
     mxs_avro_codec_type     codec;
     bool                    cooperative_replication;
+    int64_t                 max_file_size;
 
 protected:
     bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;

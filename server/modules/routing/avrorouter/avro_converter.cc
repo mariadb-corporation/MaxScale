@@ -14,6 +14,7 @@
 #include "avro_converter.hh"
 
 #include <limits.h>
+#include <sys/stat.h>
 
 #include <maxbase/assert.hh>
 
@@ -98,7 +99,7 @@ AvroTable* avro_table_alloc(const char* filepath,
         return NULL;
     }
 
-    AvroTable* table = new(std::nothrow) AvroTable(avro_file, avro_writer_iface, avro_schema);
+    AvroTable* table = new(std::nothrow) AvroTable(avro_file, avro_writer_iface, avro_schema, filepath);
 
     if (!table)
     {
@@ -133,11 +134,13 @@ static const char* codec_to_string(enum mxs_avro_codec_type type)
 AvroConverter::AvroConverter(SERVICE* service,
                              std::string avrodir,
                              uint64_t block_size,
-                             mxs_avro_codec_type codec)
+                             mxs_avro_codec_type codec,
+                             int64_t max_size)
     : m_avrodir(avrodir)
     , m_block_size(block_size)
     , m_codec(codec)
     , m_service(service)
+    , m_max_size(max_size)
 {
 }
 
@@ -310,4 +313,26 @@ void AvroConverter::set_active(const Table& create, int i)
                                                    NULL);
     mxb_assert(rc == 0);
     avro_value_set_branch(&m_union_value, 1, &m_field);
+}
+
+bool AvroConverter::needs_rotate(const Table& create) const
+{
+    bool rval = false;
+
+    if (m_max_size > 0)
+    {
+        if (auto it = m_open_tables.find(create.id()); it != m_open_tables.end())
+        {
+            if (struct stat st; stat(it->second->filename.c_str(), &st) == 0)
+            {
+                rval = st.st_size >= m_max_size;
+            }
+            else
+            {
+                MXB_INFO("Call to stat() failed: %d, %s", errno, mxb_strerror(errno));
+            }
+        }
+    }
+
+    return rval;
 }

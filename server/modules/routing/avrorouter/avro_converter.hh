@@ -18,10 +18,11 @@
 
 struct AvroTable
 {
-    AvroTable(avro_file_writer_t file, avro_value_iface_t* iface, avro_schema_t schema)
+    AvroTable(avro_file_writer_t file, avro_value_iface_t* iface, avro_schema_t schema, const char* filepath)
         : avro_file(file)
         , avro_writer_iface(iface)
         , avro_schema(schema)
+        , filename(filepath)
     {
     }
 
@@ -36,6 +37,7 @@ struct AvroTable
     avro_file_writer_t  avro_file;          /*< Current Avro data file */
     avro_value_iface_t* avro_writer_iface;  /*< Avro C API writer interface */
     avro_schema_t       avro_schema;        /*< Native Avro schema of the table */
+    std::string         filename;
 };
 
 typedef std::shared_ptr<AvroTable>                  SAvroTable;
@@ -45,7 +47,8 @@ typedef std::unordered_map<std::string, SAvroTable> AvroTables;
 class AvroConverter : public RowEventHandler
 {
 public:
-    AvroConverter(SERVICE* service, std::string avrodir, uint64_t block_size, mxs_avro_codec_type codec);
+    AvroConverter(SERVICE* service, std::string avrodir, uint64_t block_size, mxs_avro_codec_type codec,
+                  int64_t max_size);
     bool create_table(const Table& create) override final;
     bool open_table(const Table& create) override final;
     bool prepare_table(const Table& create) override final;
@@ -60,6 +63,7 @@ public:
     void column_string(const Table& create, int i, const std::string& value) override final;
     void column_bytes(const Table& create, int i, uint8_t* value, int len) override final;
     void column_null(const Table& create, int i) override final;
+    bool needs_rotate(const Table& create) const override final;
 
 private:
     avro_value_iface_t* m_writer_iface;
@@ -72,6 +76,7 @@ private:
     uint64_t            m_block_size;
     mxs_avro_codec_type m_codec;
     SERVICE*            m_service;
+    int64_t             m_max_size;
 
     void set_active(const Table& create, int i);
 };

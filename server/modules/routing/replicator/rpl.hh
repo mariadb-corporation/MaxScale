@@ -201,6 +201,12 @@ public:
         return gtid_pos_t();
     }
 
+    // Whether a rotation is needed for this table. Called after each transaction.
+    virtual bool needs_rotate(const Table& create) const
+    {
+        return false;
+    }
+
     // A table was created or altered
     virtual bool create_table(const Table& create) = 0;
 
@@ -303,6 +309,8 @@ public:
     }
 
     void rotate_files();
+
+    void try_rotate_files();
 
 private:
     SRowEventHandler  m_handler;

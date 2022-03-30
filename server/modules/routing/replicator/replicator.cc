@@ -527,6 +527,8 @@ bool Replicator::Imp::process_one_event(SQL::Event& event)
         m_rpl.flush();
         m_gtid_position[m_current_gtid.domain] = m_current_gtid;
         save_gtid_state();
+
+        m_rpl.try_rotate_files();
     }
 
     return rval;
