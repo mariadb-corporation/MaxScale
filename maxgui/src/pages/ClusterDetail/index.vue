@@ -20,6 +20,7 @@
                 :noDragNodes="noDragNodes"
                 :expandedNodes="expandedNodes"
                 :nodeDivHeightMap="clusterNodeHeightMap"
+                :cloneClass="draggingStates.nodeCloneClass"
                 @on-node-drag-start="onNodeDragStart"
                 @on-node-dragging="onNodeDragging"
                 @on-node-drag-end="onNodeDragEnd"
@@ -98,6 +99,7 @@ export default {
                 initialNodeInnerHTML: null,
                 draggingNodeId: null,
                 droppingNodeId: null,
+                nodeCloneClass: 'drag-node-clone',
             },
             draggingStates: {},
             //states for tree-graph
@@ -233,7 +235,7 @@ export default {
          * This helps to store the current innerHTML of the dragging node to initialNodeInnerHTML
          */
         setDefNodeTxt() {
-            let cloneEle = document.getElementsByClassName('rect-node-clone')
+            let cloneEle = document.getElementsByClassName(this.draggingStates.nodeCloneClass)
 
             if (cloneEle.length) {
                 const nodeTxtWrapper = cloneEle[0].getElementsByClassName(
@@ -259,7 +261,7 @@ export default {
          * @param {String} type - operation type
          */
         changeNodeTxt(type) {
-            let cloneEle = document.getElementsByClassName('rect-node-clone')
+            let cloneEle = document.getElementsByClassName(this.draggingStates.nodeCloneClass)
             if (cloneEle.length) {
                 let nodeTxtWrapper = cloneEle[0].getElementsByClassName(
                     this.nodeTxtWrapperClassName
@@ -288,6 +290,17 @@ export default {
             }
             this.changeNodeTxt(this.confDlg.opType)
         },
+        /**
+         * This helps to change the dragging node's innerHTML back
+         * to its initial value. i.e. `initialNodeInnerHTML`
+         */
+        onDraggingMouseLeave() {
+            this.changeNodeTxt()
+            this.onCancelDrag()
+        },
+        onCancelDrag() {
+            this.draggingStates.isDroppable = false
+        },
         onNodeDragStart(e) {
             document.body.classList.add('cursor--all-move')
             let nodeId = e.item.getAttribute('node_id')
@@ -295,24 +308,13 @@ export default {
             this.setDefNodeTxt()
             this.detectDroppableTargets(node)
         },
-        /**
-         * This helps to change the dragging node's innerHTML back
-         * to its initial value. i.e. `initialNodeInnerHTML`
-         */
-        onNodeSwapLeave() {
-            this.changeNodeTxt()
-            this.onCancelSwap()
-        },
-        onCancelSwap() {
-            this.draggingStates.isDroppable = false
-        },
         onNodeDragging(e, cb) {
             this.draggingStates.draggingNodeId = e.dragged.getAttribute('node_id')
             const draggingNode = this.graphDataHash[this.draggingStates.draggingNodeId]
 
             const dropEle = e.related // drop target node element
             // listen on the target element
-            dropEle.addEventListener('mouseleave', this.onNodeSwapLeave)
+            dropEle.addEventListener('mouseleave', this.onDraggingMouseLeave)
             const droppingNodeId = dropEle.getAttribute('node_id')
             const droppingNode = this.graphDataHash[droppingNodeId]
             const isDroppable = this.draggingStates.droppableTargets.includes(droppingNodeId)
@@ -323,7 +325,7 @@ export default {
             }
             if (isDroppable) {
                 this.detectOperationType({ draggingNode, droppingNode })
-            } else this.onCancelSwap()
+            } else this.onCancelDrag()
             // return false to cancel automatically swap by sortable.js
             cb(false)
         },
@@ -342,9 +344,7 @@ export default {
             this.draggingStates.droppableTargets = []
             document.body.classList.remove('cursor--all-move')
         },
-        /**
-         * Swap height of draggingNodeId with droppingNodeId
-         */
+        //Swap height of draggingNodeId with droppingNodeId
         swapNodeHeight() {
             const a = this.draggingStates.draggingNodeId,
                 b = this.draggingStates.droppingNodeId,

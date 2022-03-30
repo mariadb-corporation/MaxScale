@@ -74,7 +74,7 @@ export default {
                         chosenClass: 'rect-node-chosen',
                         animation: 200,
                         forceFallback: true,
-                        fallbackClass: 'rect-node-clone',
+                        fallbackClass: vnode.context.$props.cloneClass,
                         filter: '.no-drag',
                         preventOnFilter: false,
                         swapThreshold: 0.2,
@@ -97,6 +97,7 @@ export default {
         dim: { type: Object, required: true },
         draggable: { type: Boolean, default: false },
         draggableGroup: { type: Object, default: () => ({ name: 'tree-graph' }) },
+        cloneClass: { type: String, default: 'drag-node-clone' },
         noDragNodes: { type: Array, default: () => [] }, // list of node ids that are not draggable
         nodeSize: { type: Object, default: () => ({ width: 320, height: 100 }) },
         layoutConf: { type: Object, default: () => {} },
@@ -568,7 +569,7 @@ export default {
         width: 0;
         position: absolute;
         z-index: 3;
-        .rect-node:not(.rect-node-clone) {
+        .rect-node:not(.drag-node-clone) {
             position: absolute;
             background: transparent;
             .node__circle {
@@ -603,7 +604,7 @@ export default {
     background: #f2fcff !important;
     opacity: 0.6;
 }
-.rect-node-clone {
+.drag-node-clone {
     opacity: 1 !important;
 }
 </style>
