@@ -21,8 +21,8 @@
                 :expandedNodes="expandedNodes"
                 :nodeDivHeightMap="clusterNodeHeightMap"
                 :cloneClass="draggingStates.nodeCloneClass"
-                @on-node-drag-start="onNodeDragStart"
-                @on-node-dragging="onNodeDragging"
+                @on-node-drag-start="onNodeDragStart({ e: $event, from: 'tree' })"
+                @on-node-dragging="onNodeDragging({ e: $event, from: 'tree' })"
                 @on-node-drag-end="onNodeDragEnd"
             >
                 <template v-slot:rect-node-content="{ data: { node } }">
@@ -42,7 +42,18 @@
                     />
                 </template>
             </tree-graph>
-            <!-- TODO: Add joinable-servers component -->
+            <joinable-servers
+                :data="joinableServerNodes"
+                :draggableGroup="{ name: 'joinable-servers' }"
+                :cloneClass="draggingStates.nodeCloneClass"
+                :bodyWrapperClass="nodeTxtWrapperClassName"
+                :droppableTargets="draggingStates.droppableTargets"
+                :dim="ctrDim"
+                @on-choose-op="onChooseOp"
+                @on-drag-start="onNodeDragStart({ e: $event, from: 'standaloneNode' })"
+                @on-dragging="onNodeDragging({ e: $event, from: 'standaloneNode' })"
+                @on-drag-end="onNodeDragEnd"
+            />
         </v-card>
         <confirm-dialog
             v-model="confDlg.isOpened"
@@ -80,15 +91,16 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState, mapActions } from 'vuex'
+import { mapState, mapActions, mapGetters } from 'vuex'
 import PageHeader from './PageHeader.vue'
 import ServerNode from './ServerNode.vue'
-
+import JoinableServers from './JoinableServers'
 export default {
     name: 'cluster',
     components: {
         'page-header': PageHeader,
         'server-node': ServerNode,
+        'joinable-servers': JoinableServers,
     },
     data() {
         return {
@@ -128,6 +140,7 @@ export default {
         }
     },
     computed: {
+        ...mapGetters({ genSlaveNode: 'visualization/genSlaveNode' }),
         ...mapState({
             current_cluster: state => state.visualization.current_cluster,
             MONITOR_OP_TYPES: state => state.app_config.MONITOR_OP_TYPES,
@@ -136,7 +149,7 @@ export default {
         graphData() {
             return this.$typy(this.current_cluster, 'children[0]').safeObjectOrEmpty
         },
-        graphDataHash() {
+        treeHash() {
             let hash = {}
             const getAllItemsPerChildren = item => {
                 hash[item.id] = item
@@ -166,16 +179,13 @@ export default {
             }
         },
         expandOnMount() {
-            if (
-                this.$vuetify.breakpoint.height >= 1080 &&
-                Object.keys(this.graphDataHash).length <= 4
-            )
+            if (this.$vuetify.breakpoint.height >= 1080 && Object.keys(this.treeHash).length <= 4)
                 return true
             return false
         },
         confDlgSaveTxt() {
             const { MAINTAIN } = this.SERVER_OP_TYPES
-            const { RESET_REP, RELEASE_LOCKS, FAILOVER, SWITCHOVER } = this.MONITOR_OP_TYPES
+            const { RESET_REP, RELEASE_LOCKS, FAILOVER, REJOIN, SWITCHOVER } = this.MONITOR_OP_TYPES
             switch (this.confDlg.type) {
                 case SWITCHOVER:
                     return 'promote'
@@ -185,11 +195,34 @@ export default {
                     return 'release'
                 case FAILOVER:
                     return 'perform'
+                case REJOIN:
+                    return 'rejoin'
                 case MAINTAIN:
                     return 'set'
                 default:
                     return this.confDlg.type
             }
+        },
+        masterNode() {
+            return this.$typy(this.current_cluster, 'children[0]').safeObject
+        },
+        joinableServerNodes() {
+            const serverInfo = this.$typy(
+                this.current_cluster,
+                'monitorData.monitor_diagnostics.server_info'
+            ).safeArray
+            let joinableServers = serverInfo.filter(
+                s =>
+                    s.name !== this.masterNode.name &&
+                    this.masterNode.children.every(n => n.name !== s.name)
+            )
+            return joinableServers.map(server => ({
+                id: server.name,
+                data: this.genSlaveNode({ server }),
+            }))
+        },
+        standaloneNodeHash() {
+            return this.$help.lodash.keyBy(this.joinableServerNodes, 'id')
         },
     },
     async created() {
@@ -255,8 +288,8 @@ export default {
             if (node.isMaster) {
                 this.draggingStates.droppableTargets = []
             } else {
-                //switchover: dragging a slave to a master
-                this.draggingStates.droppableTargets = [node.masterServerName]
+                //switchover or rejoin: dragging a slave to a master
+                this.draggingStates.droppableTargets = [this.masterNode.name]
             }
         },
         /**
@@ -269,10 +302,11 @@ export default {
                 let nodeTxtWrapper = cloneEle[0].getElementsByClassName(
                     this.nodeTxtWrapperClassName
                 )
-                const { SWITCHOVER } = this.MONITOR_OP_TYPES
+                const { SWITCHOVER, REJOIN } = this.MONITOR_OP_TYPES
                 switch (type) {
                     case SWITCHOVER:
-                        nodeTxtWrapper[0].innerHTML = this.$t(`monitorOps.info.${SWITCHOVER}`)
+                    case REJOIN:
+                        nodeTxtWrapper[0].innerHTML = this.$t(`monitorOps.info.${type}`)
                         break
                     default:
                         nodeTxtWrapper[0].innerHTML = this.draggingStates.initialNodeInnerHTML
@@ -282,14 +316,21 @@ export default {
         },
         /**
          *
-         * @param {Object} draggingNode - dragging node
-         * @param {Object} droppingNode - dropping node
+         * @param {Object} param.draggingNode - dragging node
+         * @param {Object} param.droppingNode - dropping node
+         * @param {String} param.from - from either tree-graph (tree) or joinable-servers (standaloneNode)
          */
-        detectOperationType({ draggingNode, droppingNode }) {
+        detectOperationType({ draggingNode, droppingNode, from }) {
             if (draggingNode.isMaster) this.confDlg.opType = ''
             else if (droppingNode.isMaster) {
-                const { SWITCHOVER } = this.MONITOR_OP_TYPES
-                this.confDlg.opType = SWITCHOVER
+                const { SWITCHOVER, REJOIN } = this.MONITOR_OP_TYPES
+                switch (from) {
+                    case 'tree':
+                        this.confDlg.opType = SWITCHOVER
+                        break
+                    case 'standaloneNode':
+                        this.confDlg.opType = REJOIN
+                }
             }
             this.changeNodeTxt(this.confDlg.opType)
         },
@@ -304,37 +345,48 @@ export default {
         onCancelDrag() {
             this.draggingStates.isDroppable = false
         },
-        onNodeDragStart(e) {
+        /**
+         * @param {Object} param.e - drag start event
+         * @param {String} param.from - from either tree-graph (tree) or joinable-servers (standaloneNode)
+         */
+        onNodeDragStart({ e, from }) {
             document.body.classList.add('cursor--all-move')
-            let nodeId = e.item.getAttribute('node_id')
-            const node = this.graphDataHash[nodeId]
+            const nodeId = e.item.getAttribute('node_id'),
+                node = this[`${from}Hash`][nodeId]
             this.setDefNodeTxt()
             this.detectDroppableTargets(node)
         },
-        onNodeDragging(e) {
-            this.draggingStates.draggingNodeId = e.dragged.getAttribute('node_id')
-            const draggingNode = this.graphDataHash[this.draggingStates.draggingNodeId]
-
+        /**
+         * @param {Object} param.e - dragging event
+         * @param {String} param.from - from either tree-graph (tree) or joinable-servers (standaloneNode)
+         */
+        onNodeDragging({ e, from }) {
+            const draggingNodeId = e.dragged.getAttribute('node_id')
+            this.draggingStates.draggingNodeId = draggingNodeId
+            const draggingNode = this[`${from}Hash`][draggingNodeId]
             const dropEle = e.related // drop target node element
-            // listen on the target element
-            dropEle.addEventListener('mouseleave', this.onDraggingMouseLeave)
             const droppingNodeId = dropEle.getAttribute('node_id')
-            const droppingNode = this.graphDataHash[droppingNodeId]
             const isDroppable = this.draggingStates.droppableTargets.includes(droppingNodeId)
+
+            if (isDroppable) {
+                // listen on the target element
+                dropEle.addEventListener('mouseleave', this.onDraggingMouseLeave)
+                const droppingNode = this.treeHash[droppingNodeId]
+                this.detectOperationType({ draggingNode, droppingNode, from })
+            } else this.onCancelDrag()
+
             this.draggingStates = {
                 ...this.draggingStates,
                 droppingNodeId,
                 isDroppable,
             }
-            if (isDroppable) {
-                this.detectOperationType({ draggingNode, droppingNode })
-            } else this.onCancelDrag()
         },
         onNodeDragEnd() {
             if (this.draggingStates.isDroppable) {
-                const { SWITCHOVER } = this.MONITOR_OP_TYPES
+                const { SWITCHOVER, REJOIN } = this.MONITOR_OP_TYPES
                 switch (this.confDlg.opType) {
                     case SWITCHOVER:
+                    case REJOIN:
                         this.confDlg.type = this.confDlg.opType
                         this.confDlg.title = this.$t(`monitorOps.actions.${this.confDlg.opType}`)
                         this.confDlg.targetNode = { id: this.draggingStates.draggingNodeId }
@@ -369,7 +421,7 @@ export default {
             this.resetConfDlgStates()
         },
         async handleCallAsyncCmd() {
-            const { SWITCHOVER } = this.MONITOR_OP_TYPES
+            const { SWITCHOVER, REJOIN } = this.MONITOR_OP_TYPES
             let payload = {
                 type: this.confDlg.opType,
                 callback: this.fetchCluster,
@@ -381,6 +433,7 @@ export default {
             }
             switch (this.confDlg.opType) {
                 case SWITCHOVER:
+                case REJOIN:
                     payload.opParams.params = `&${this.draggingStates.draggingNodeId}`
                     break
                 default:
@@ -395,6 +448,7 @@ export default {
                 RESET_REP,
                 RELEASE_LOCKS,
                 FAILOVER,
+                REJOIN,
             } = this.MONITOR_OP_TYPES
             const { MAINTAIN, CLEAR, DRAIN } = this.SERVER_OP_TYPES
             let payload = {
@@ -406,6 +460,7 @@ export default {
                 case RESET_REP:
                 case RELEASE_LOCKS:
                 case FAILOVER:
+                case REJOIN:
                     await this.handleCallAsyncCmd()
                     break
                 case STOP:

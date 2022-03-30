@@ -245,6 +245,7 @@
     "reset": "Reset",
     "release": "Release",
     "perform": "Perform",
+    "rejoin": "Rejoin",
     "rejoinableNodes": "Rejoinable nodes",
     "errors": {
         "requiredInput": "{inputName} is required",
@@ -281,7 +282,8 @@
         "async-switchover": "Promote <b>{targetId}</b> as a new master?",
         "async-reset-replication": "Are you sure you want to reset replication?",
         "async-release-locks": "Are you sure you want to release locks?",
-        "async-failover": "Are you sure you want to perform master failover?"
+        "async-failover": "Are you sure you want to perform master failover?",
+        "async-rejoin": "Rejoin <b>{targetId}</b> to this cluster?"
     },
     "info": {
         "switchover": "Swap the running master with a designated slave",
@@ -320,10 +322,12 @@
             "async-switchover": "Master switchover",
             "async-reset-replication": "Reset Replication",
             "async-release-locks": "Release Locks",
-            "async-failover": "Master failover"
+            "async-failover": "Master failover",
+            "async-rejoin": "Rejoin"
         },
         "info": {
-            "async-switchover": "Promote as Master (Switchover)"
+            "async-switchover": "Promote as Master (Switchover)",
+            "async-rejoin": "Rejoin this server to the cluster"
         }
     },
     "$vuetify": {

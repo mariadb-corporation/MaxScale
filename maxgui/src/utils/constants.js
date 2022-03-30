@@ -164,5 +164,6 @@ export const APP_CONFIG = Object.freeze({
         RESET_REP: 'async-reset-replication',
         RELEASE_LOCKS: 'async-release-locks',
         FAILOVER: 'async-failover',
+        REJOIN: 'async-rejoin',
     }),
 })

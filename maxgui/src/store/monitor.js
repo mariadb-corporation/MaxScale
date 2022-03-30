@@ -171,6 +171,7 @@ export default {
                     RESET_REP,
                     RELEASE_LOCKS,
                     FAILOVER,
+                    REJOIN,
                 } = rootState.app_config.MONITOR_OP_TYPES
                 switch (type) {
                     case DESTROY:
@@ -187,7 +188,8 @@ export default {
                     case SWITCHOVER:
                     case RESET_REP:
                     case RELEASE_LOCKS:
-                    case FAILOVER: {
+                    case FAILOVER:
+                    case REJOIN: {
                         method = 'post'
                         const { moduleType, params } = opParams
                         url = `/maxscale/modules/${moduleType}/${type}?${id}${params}`
@@ -202,6 +204,7 @@ export default {
                         case RESET_REP:
                         case RELEASE_LOCKS:
                         case FAILOVER:
+                        case REJOIN:
                             await dispatch('checkAsyncCmdRes', {
                                 cmdName: type,
                                 monitorModule: opParams.moduleType,
@@ -365,6 +368,7 @@ export default {
                 RESET_REP,
                 RELEASE_LOCKS,
                 FAILOVER,
+                REJOIN,
             } = rootState.app_config.MONITOR_OP_TYPES
             // scope is needed to access $t
             return ({ currState, scope }) => ({
@@ -421,6 +425,12 @@ export default {
                     text: scope.$t(`monitorOps.actions.${FAILOVER}`),
                     type: FAILOVER,
                     //TODO: Add failover icon
+                    disabled: false,
+                },
+                [REJOIN]: {
+                    text: scope.$t(`monitorOps.actions.${REJOIN}`),
+                    type: REJOIN,
+                    //TODO: Add rejoin icon
                     disabled: false,
                 },
             })

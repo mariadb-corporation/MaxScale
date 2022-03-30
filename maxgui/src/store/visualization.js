@@ -89,6 +89,27 @@ export default {
                 return rootGetters['server/getAllServersMap'].get(id)
             }
         },
+        genSlaveNode: (state, getters) => {
+            /**
+             *
+             * @param {object} param.server - server object in monitor_diagnostics.server_info
+             * @param {String} param.masterName - master server name
+             * @param {Array} param.connectionsToMaster - slave_connections to master
+             * @returns
+             */
+            return ({ server, masterName, connectionsToMaster = [] }) => ({
+                id: server.name,
+                name: server.name,
+                serverData: getters.getServerData(server.name),
+                isMaster: false,
+                masterServerName: masterName,
+                server_info: {
+                    ...server,
+                    slave_connections: connectionsToMaster,
+                },
+                linkColor: '#0e9bc0',
+            })
+        },
         getMariadbmonCluster: (state, getters) => {
             return monitor => {
                 const {
@@ -124,18 +145,9 @@ export default {
                             conn => conn.master_server_name === masterName
                         )
                         if (connectionsToMaster.length)
-                            root.children[0].children.push({
-                                id: server.name,
-                                name: server.name,
-                                serverData: getters.getServerData(server.name),
-                                isMaster: false,
-                                masterServerName: masterName,
-                                server_info: {
-                                    ...server,
-                                    slave_connections: connectionsToMaster,
-                                },
-                                linkColor: '#0e9bc0',
-                            })
+                            root.children[0].children.push(
+                                getters.genSlaveNode({ server, masterName, connectionsToMaster })
+                            )
                     })
                 return root
             }
