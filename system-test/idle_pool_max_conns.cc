@@ -35,7 +35,7 @@ void test_main(TestConnections& test)
 
     const string basic_uname = "basic";
     const string basic_pass = "cisab";
-    const int pooling_time = 2;
+    const int pooling_time = 1;
 
     auto* admin_conn = repl.backend(0)->admin_connection();
     auto basic_user = admin_conn->create_user(basic_uname, "%", basic_pass);
@@ -104,8 +104,8 @@ void test_main(TestConnections& test)
         // which checks the number continuously.
         std::thread conn_count_check_thread(check_conn_counts);
 
-        // Make 300 sessions. No backend should have more than ~100 connections at any given time.
-        const int n_sessions = 300;
+        // Make 900 sessions. No backend should have more than ~100 connections at any given time.
+        const int n_sessions = 900;
         const string basic_q = "select rand();";
         std::vector<std::unique_ptr<mxt::MariaDB>> sessions;
 
@@ -132,41 +132,62 @@ void test_main(TestConnections& test)
 
         if (test.ok())
         {
-            test.tprintf("%i sessions created and queried. Wait a little, so that all backend "
-                         "connections get pooled.", n_sessions);
+            test.tprintf("%i sessions created and queried.", n_sessions);
             sleep(pooling_time);
 
-            // Query sessions in batches such that no waiting should be necessary within a batch.
+            // Query sessions in batches such that wait time is limited within a batch.
             auto begin_ind = 0;
+            const int simult_sessions = 3 * max_expected_conns; // 3 slaves, assume they are used evenly.
+
             while (begin_ind < n_sessions)
             {
-                int end_ind = std::min(begin_ind + max_expected_conns, n_sessions);
+                int end_ind = std::min(begin_ind + simult_sessions, n_sessions);
 
-                test.tprintf("Query sessions %i -- %i. This should be fast and not require waiting.",
+                test.tprintf("Query sessions %i -- %i. This should be fast and not require much waiting.",
                              begin_ind + 1, end_ind);
+
                 mxb::StopWatch timer;
                 for (int i = begin_ind; i < end_ind; i++)
                 {
                     auto res = sessions[i]->query(basic_q);
                     test.expect(res && res->next_row(), "Query failed or returned no data.");
                 }
-                auto time_spent = mxb::to_secs(timer.lap());
-                test.tprintf("Querying took %f seconds.", time_spent);
+                auto time_spent = timer.lap();
+                auto time_spent_s = mxb::to_secs(time_spent);
+
+                if (time_spent <= 3s) // Usually closer to 2s but need to have some slack.
+                {
+                    test.tprintf("Querying took %f seconds.", time_spent_s);
+                }
+                else
+                {
+                    test.add_failure("Querying took %f seconds when 3 or less was expected.", time_spent_s);
+                }
+
                 begin_ind = end_ind;
                 sleep(pooling_time);
             }
 
             if (test.ok())
             {
-                test.tprintf("Query all sessions. This will be slooooow.");
+                test.tprintf("Query all sessions. This can take a few seconds.");
                 mxb::StopWatch timer;
                 for (int i = 0; i < n_sessions; i++)
                 {
                     auto res = sessions[i]->query(basic_q);
                     test.expect(res && res->next_row(), "Query failed or returned no data.");
                 }
-                auto time_spent = mxb::to_secs(timer.lap());
-                test.tprintf("Querying took %f seconds.", time_spent);
+                auto time_spent = timer.lap();
+                auto time_spent_s = mxb::to_secs(time_spent);
+
+                if (time_spent <= 6s)
+                {
+                    test.tprintf("Querying took %f seconds.", time_spent_s);
+                }
+                else
+                {
+                    test.add_failure("Querying took %f seconds when 6 or less was expected.", time_spent_s);
+                }
             }
         }
         keep_running = false;

@@ -15,7 +15,9 @@ router=readwritesplit
 servers=###server_line###
 user=maxskysql
 password=skysql
-idle_session_pool_time=2
+idle_session_pool_time=500ms
+lazy_connect=1
+max_slave_connections=1
 
 [RW-Split-Listener]
 type=listener
