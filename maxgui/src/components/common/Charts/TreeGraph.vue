@@ -55,9 +55,9 @@ import { zoom, zoomIdentity } from 'd3-zoom'
 import Sortable from 'sortablejs'
 /*
 If draggable props is true, this component emits the following events
-@on-node-dragStart: e: Event. Starts dragging a rect-node
-@on-node-move: e: Event, callback: (v: bool):void. Move a node in the list
-@on-node-dragend: e: Event. Node dragging ended
+@on-node-drag-start: e: Event. Starts dragging a rect-node
+@on-node-dragging: e: Event, callback: (v: bool):void. If the callback returns true, it accepts the new position
+@on-node-drag-end: e: Event. Dragging ended
 */
 export default {
     name: 'tree-graph',
@@ -67,6 +67,7 @@ export default {
                 if (binding.value) {
                     const options = {
                         swap: true,
+                        group: vnode.context.$props.draggableGroup,
                         handle: '.drag-handle',
                         draggable: '.draggable-rect-node',
                         ghostClass: 'rect-node-ghost',
@@ -77,18 +78,14 @@ export default {
                         filter: '.no-drag',
                         preventOnFilter: false,
                         swapThreshold: 0.2,
-                        onStart: e => {
-                            vnode.context.$emit('on-node-dragStart', e)
-                        },
+                        onStart: e => vnode.context.$emit('on-node-drag-start', e),
                         onMove: e => {
                             let isDroppable = true
-                            // emit on-node-move and provide callback to assign return value
-                            vnode.context.$emit('on-node-move', e, v => (isDroppable = v))
+                            // emit on-node-dragging and provide callback to assign return value
+                            vnode.context.$emit('on-node-dragging', e, v => (isDroppable = v))
                             return isDroppable
                         },
-                        onEnd: e => {
-                            vnode.context.$emit('on-node-dragend', e)
-                        },
+                        onEnd: e => vnode.context.$emit('on-node-drag-end', e),
                     }
                     Sortable.create(el, options)
                 }
@@ -99,6 +96,7 @@ export default {
         data: { type: Object, required: true },
         dim: { type: Object, required: true },
         draggable: { type: Boolean, default: false },
+        draggableGroup: { type: Object, default: () => ({ name: 'tree-graph' }) },
         noDragNodes: { type: Array, default: () => [] }, // list of node ids that are not draggable
         nodeSize: { type: Object, default: () => ({ width: 320, height: 100 }) },
         layoutConf: { type: Object, default: () => {} },

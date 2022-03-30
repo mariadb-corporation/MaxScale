@@ -13,12 +13,16 @@
                 :dim="ctrDim"
                 :nodeSize="nodeSize"
                 draggable
+                :draggableGroup="{
+                    name: 'tree-graph',
+                    put: ['joinable-servers'], // allow nodes on joinable-servers to be dragged here
+                }"
                 :noDragNodes="noDragNodes"
                 :expandedNodes="expandedNodes"
                 :nodeDivHeightMap="clusterNodeHeightMap"
-                @on-node-dragStart="onNodeSwapStart"
-                @on-node-move="onMove"
-                @on-node-dragend="onNodeSwapEnd"
+                @on-node-drag-start="onNodeDragStart"
+                @on-node-dragging="onNodeDragging"
+                @on-node-drag-end="onNodeDragEnd"
             >
                 <template v-slot:rect-node-content="{ data: { node } }">
                     <!-- Render server-node only when `data` object is passed from tree-graph -->
@@ -36,6 +40,7 @@
                     />
                 </template>
             </tree-graph>
+            <!-- TODO: Add joinable-servers component -->
         </v-card>
         <confirm-dialog
             v-model="confDlg.isOpened"
@@ -283,7 +288,7 @@ export default {
             }
             this.changeNodeTxt(this.confDlg.opType)
         },
-        onNodeSwapStart(e) {
+        onNodeDragStart(e) {
             document.body.classList.add('cursor--all-move')
             let nodeId = e.item.getAttribute('node_id')
             const node = this.graphDataHash[nodeId]
@@ -301,7 +306,7 @@ export default {
         onCancelSwap() {
             this.draggingStates.isDroppable = false
         },
-        onMove(e, cb) {
+        onNodeDragging(e, cb) {
             this.draggingStates.draggingNodeId = e.dragged.getAttribute('node_id')
             const draggingNode = this.graphDataHash[this.draggingStates.draggingNodeId]
 
@@ -322,7 +327,7 @@ export default {
             // return false to cancel automatically swap by sortable.js
             cb(false)
         },
-        onNodeSwapEnd() {
+        onNodeDragEnd() {
             if (this.draggingStates.isDroppable) {
                 const { SWITCHOVER } = this.MONITOR_OP_TYPES
                 switch (this.confDlg.opType) {
