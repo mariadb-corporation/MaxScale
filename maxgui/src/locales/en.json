@@ -245,6 +245,7 @@
     "reset": "Reset",
     "release": "Release",
     "perform": "Perform",
+    "rejoinableNodes": "Rejoinable nodes",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
