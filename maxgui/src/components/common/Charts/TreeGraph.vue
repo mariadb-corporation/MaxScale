@@ -24,7 +24,7 @@
                 class="rect-node"
                 :node_id="node.id"
                 :class="[
-                    draggable ? 'draggable-rect-node drag-handle' : '',
+                    draggable ? 'draggable-rect-node' : '',
                     noDragNodes.includes(node.id) ? 'no-drag' : '',
                 ]"
                 :style="{
@@ -68,16 +68,13 @@ export default {
                     const options = {
                         swap: true,
                         group: vnode.context.$props.draggableGroup,
-                        handle: '.drag-handle',
                         draggable: '.draggable-rect-node',
                         ghostClass: 'rect-node-ghost',
-                        chosenClass: 'rect-node-chosen',
-                        animation: 200,
+                        animation: 0,
                         forceFallback: true,
                         fallbackClass: vnode.context.$props.cloneClass,
                         filter: '.no-drag',
                         preventOnFilter: false,
-                        swapThreshold: 0.2,
                         onStart: e => vnode.context.$emit('on-node-drag-start', e),
                         onMove: e => {
                             let isDroppable = true
