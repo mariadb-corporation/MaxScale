@@ -175,9 +175,9 @@ export default {
         },
         confDlgSaveTxt() {
             const { MAINTAIN } = this.SERVER_OP_TYPES
-            const { RESET_REP, RELEASE_LOCKS, FAILOVER } = this.MONITOR_OP_TYPES
+            const { RESET_REP, RELEASE_LOCKS, FAILOVER, SWITCHOVER } = this.MONITOR_OP_TYPES
             switch (this.confDlg.type) {
-                case 'switchoverPromote':
+                case SWITCHOVER:
                     return 'promote'
                 case RESET_REP:
                     return 'reset'
@@ -272,7 +272,7 @@ export default {
                 const { SWITCHOVER } = this.MONITOR_OP_TYPES
                 switch (type) {
                     case SWITCHOVER:
-                        nodeTxtWrapper[0].innerHTML = this.$t('info.switchoverPromote')
+                        nodeTxtWrapper[0].innerHTML = this.$t(`monitorOps.info.${SWITCHOVER}`)
                         break
                     default:
                         nodeTxtWrapper[0].innerHTML = this.draggingStates.initialNodeInnerHTML
@@ -337,8 +337,8 @@ export default {
                 const { SWITCHOVER } = this.MONITOR_OP_TYPES
                 switch (this.confDlg.opType) {
                     case SWITCHOVER:
-                        this.confDlg.type = 'switchoverPromote'
-                        this.confDlg.title = this.$t('monitorOps.actions.switchover')
+                        this.confDlg.type = this.confDlg.opType
+                        this.confDlg.title = this.$t(`monitorOps.actions.${this.confDlg.opType}`)
                         this.confDlg.targetNode = { id: this.draggingStates.draggingNodeId }
                         break
                 }

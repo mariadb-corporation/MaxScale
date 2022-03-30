@@ -277,7 +277,7 @@
         "leavePage": "Are you sure you want to leave?",
         "addToFavorite": "Add the following statements to favorite?",
         "exeStatements": "Execute the following statement? | Execute the following statements?",
-        "switchoverPromote": "Promote <b>{targetId}</b> as a new master?",
+        "async-switchover": "Promote <b>{targetId}</b> as a new master?",
         "async-reset-replication": "Are you sure you want to reset replication?",
         "async-release-locks": "Are you sure you want to release locks?",
         "async-failover": "Are you sure you want to perform master failover?"
@@ -295,7 +295,6 @@
         "alterTableSuccessfully": "Alter table successfully",
         "exeActionSuccessfully": "Successfully {action}",
         "reconnSuccessfully": "Reconnection was successful",
-        "switchoverPromote": "Promote as Master (Switchover)",
         "refreshRate": "Click to change refresh rate"
     },
     "serverOps": {
@@ -317,10 +316,13 @@
             "stop": "Stop monitor",
             "start": "Start monitor",
             "destroy": "Destroy monitor",
-            "switchover": "Switchover",
-            "resetRep": "Reset Replication",
-            "releaseLocks": "Release Locks",
-            "failover": "Failover"
+            "async-switchover": "Master switchover",
+            "async-reset-replication": "Reset Replication",
+            "async-release-locks": "Release Locks",
+            "async-failover": "Master failover"
+        },
+        "info": {
+            "async-switchover": "Promote as Master (Switchover)"
         }
     },
     "$vuetify": {
