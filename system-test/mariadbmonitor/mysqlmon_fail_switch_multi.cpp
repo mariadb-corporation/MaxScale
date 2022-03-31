@@ -42,7 +42,7 @@ int main(int argc, char** argv)
     // Advance gtid:s a bit to so gtid variables are updated.
     MYSQL* maxconn = test.maxscale->open_rwsplit_connection();
     generate_traffic_and_check(test, maxconn, 1);
-    test.repl->sync_slaves(0);
+    test.repl->sync_slaves();
     get_output(test);
     print_gtids(test);
 

@@ -182,7 +182,7 @@ bool ReplicationCluster::check_replication()
             if (repl_set_up)
             {
                 // Replication should be ok, but test it by writing an event to master.
-                if (master->admin_connection()->try_cmd("flush tables;") && sync_slaves(0))
+                if (master->admin_connection()->try_cmd("flush tables;") && sync_slaves())
                 {
                     res = true;
                 }
@@ -353,7 +353,13 @@ bool ReplicationCluster::good_slave_thread_status(MariaDBServer* slave, MariaDBS
     return rval;
 }
 
-bool ReplicationCluster::sync_slaves(int master_node_ind)
+bool ReplicationCluster::sync_slaves()
+{
+    // Wait a maximum of 10 seconds for sync.
+    return sync_slaves(0, 10);
+}
+
+bool ReplicationCluster::sync_slaves(int master_node_ind, int time_limit_s)
 {
     struct Gtid
     {
@@ -457,7 +463,7 @@ bool ReplicationCluster::sync_slaves(int master_node_ind)
         int expected_catchups = waiting_catchup.size();
         int successful_catchups = 0;
         mxb::StopWatch timer;
-        auto limit = mxb::from_secs(10);    // Wait a maximum of 10 seconds for sync.
+        auto limit = mxb::from_secs(time_limit_s);
 
         while (!waiting_catchup.empty() && timer.split() < limit)
         {

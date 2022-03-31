@@ -1,19 +1,21 @@
 [maxscale]
 threads=###threads###
-log_info=1
+log_info=0
 
-[MySQL-Monitor]
+[MariaDB-Monitor]
 type=monitor
 module=mysqlmon
 servers=###server_line###
-user=maxskysql
-password=skysql
+user=mariadbmon
+password=mariadbmon
 monitor_interval=1000
+replication_user=repl
+replication_password=repl
 
 [RW-Split-Router]
 type=service
 router=readwritesplit
-servers=###server_line###
+servers=server1,server2
 user=maxskysql
 password=skysql
 max_slave_connections=1
