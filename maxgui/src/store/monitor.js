@@ -401,7 +401,8 @@ export default {
                 [SWITCHOVER]: {
                     text: scope.$t(`monitorOps.actions.${SWITCHOVER}`),
                     type: SWITCHOVER,
-                    //TODO: Add switchover icon
+                    icon: '$vuetify.icons.switchover',
+                    iconSize: 24,
                     color: 'primary',
                     disabled: false,
                 },
@@ -409,7 +410,7 @@ export default {
                     text: scope.$t(`monitorOps.actions.${RESET_REP}`),
                     type: RESET_REP,
                     icon: '$vuetify.icons.reload',
-                    iconSize: 18,
+                    iconSize: 20,
                     color: 'primary',
                     disabled: false,
                 },
@@ -417,14 +418,15 @@ export default {
                     text: scope.$t(`monitorOps.actions.${RELEASE_LOCKS}`),
                     type: RELEASE_LOCKS,
                     icon: 'lock_open',
-                    iconSize: 20,
+                    iconSize: 24,
                     color: 'primary',
                     disabled: false,
                 },
                 [FAILOVER]: {
                     text: scope.$t(`monitorOps.actions.${FAILOVER}`),
                     type: FAILOVER,
-                    //TODO: Add failover icon
+                    icon: '$vuetify.icons.failover',
+                    iconSize: 24,
                     disabled: false,
                 },
                 [REJOIN]: {

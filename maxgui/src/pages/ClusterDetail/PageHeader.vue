@@ -22,7 +22,7 @@
                             class="d-flex color text-text align-center node-op-item font-weight-regular"
                             :class="{ 'node-op-item--disabled': op.disabled }"
                         >
-                            <div class="d-inline-block text-center mr-1" style="width:22px">
+                            <div class="d-inline-block text-center mr-2" style="width:24px">
                                 <v-icon
                                     v-if="op.icon"
                                     class="node-op-item__icon"
