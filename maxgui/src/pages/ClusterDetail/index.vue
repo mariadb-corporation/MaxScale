@@ -412,11 +412,13 @@ export default {
         },
         //Reset states after confirming an action
         async handleResetStates() {
-            const { SWITCHOVER } = this.MONITOR_OP_TYPES
+            const { SWITCHOVER, FAILOVER, REJOIN } = this.MONITOR_OP_TYPES
             switch (this.confDlg.opType) {
                 case SWITCHOVER:
+                case REJOIN:
+                case FAILOVER:
                     this.triggerRerenderNodes()
-                    this.resetDraggingStates()
+                    if (this.confDlg.opType !== FAILOVER) this.resetDraggingStates()
                     break
             }
             this.resetConfDlgStates()
