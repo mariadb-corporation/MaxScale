@@ -28,9 +28,16 @@ export backend_box=${backend_box:-"centos_7_"$provider}
 mdbci destroy --force test_vm
 
 cp ${script_dir}/test_vm.json $HOME/${mdbci_config_name}_vms/
-test_vm_box="ubuntu_bionic_"$provider
+
+if [ "$provider" == "aws" ]
+then
+    test_vm_box=${test_vm_box:-"ubuntu_bionic_gcp"}
+else
+    test_vm_box=${test_vm_box:-"ubuntu_bionic_"$provider}
+fi
+
 me=`whoami`
-sed -i "s/###test_vm_box###/${test_vm_box}/"  $HOME/${mdbci_config_name}_vms/test_vm.json 
+sed -i "s/###test_vm_box###/${test_vm_box}/"  $HOME/${mdbci_config_name}_vms/test_vm.json
 sed -i "s/###test_vm_user###/${me}/" $HOME/${mdbci_config_name}_vms/test_vm.json
 
 mdbci generate test_vm --template test_vm.json --override
