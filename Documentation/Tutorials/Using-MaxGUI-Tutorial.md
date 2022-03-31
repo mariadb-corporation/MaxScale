@@ -87,11 +87,12 @@ This page visualizes MaxScale configuration as shown in the figure below.
     be changed by dragging and dropping it.
 2.  Anchor link. The detail page of each MaxScale object can be accessed by
     clicking on the name of the node.
-3.  Filter visualization button. By default, if the number of filters used by a service
-    is larger than 3, filter nodes aren't visualized as shown in the figure. Clicking
-    this button will visualize it.
+3.  Filter visualization button. By default, if the number of filters used by a
+    service is larger than 3, filter nodes aren't visualized as shown in the
+    figure. Clicking this button will visualize them.
 4.  Hide filter visualization button.
 5.  Refresh rate dropdown. The frequency with which the data is refreshed.
+6.  Create a new MaxScale object button.
 
 ## Clusters
 
@@ -121,10 +122,18 @@ the figure below.
 6.  Anchor link of the server. Opening the detail page of the server in a new
     tab.
 7.  Collapse its children nodes.
-8.  Monitor manipulation operations button. Showing a dropdown with the
+8.  Rejoin node. When the `auto_rejoin` parameter is disabled, the node can be
+    manually rejoined by dragging it on top of the primary server.
+9.  Monitor manipulation operations button. Showing a dropdown with the
     following operations:
     - Stop monitor.
     - Start monitor.
+    - Reset Replication.
+    - Release Locks.
+    - Master failover. Manually performing a master failover. This option is
+      visible only when the `auto_failover` parameter is disabled.
+10. Refresh rate dropdown. The frequency with which the data is refreshed.
+11. Create a new MaxScale object button.
 
 # Settings
 
