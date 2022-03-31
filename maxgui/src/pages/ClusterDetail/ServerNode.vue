@@ -10,12 +10,12 @@
         <template v-slot:node-heading>
             <div
                 class="node-heading d-flex align-center flex-row px-3 py-1"
-                :class="[droppableTargets.includes(node.id) ? 'node-heading__droppable' : '']"
+                :class="{ 'node-heading__droppable': isDroppableNode }"
             >
                 <v-icon
                     size="16"
                     class="mr-1 server-state-icon"
-                    :color="isMaster ? 'navigation' : 'accent'"
+                    :color="isDroppableNode ? 'background' : isMaster ? 'navigation' : 'accent'"
                 >
                     {{
                         isMaster ? '$vuetify.icons.primaryServer' : '$vuetify.icons.secondaryServer'
@@ -179,8 +179,11 @@ export default {
             getCurrStateMode: 'server/getCurrStateMode',
             getServerOps: 'server/getServerOps',
         }),
+        isDroppableNode() {
+            return this.droppableTargets.includes(this.node.id)
+        },
         iconColor() {
-            return this.droppableTargets.includes(this.node.id) ? 'background' : 'primary'
+            return this.isDroppableNode ? 'background' : 'primary'
         },
         lineHeight() {
             return `18px`
