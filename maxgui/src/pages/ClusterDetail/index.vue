@@ -43,6 +43,7 @@
                 </template>
             </tree-graph>
             <joinable-servers
+                v-if="joinableServerNodes.length"
                 :data="joinableServerNodes"
                 :draggableGroup="{ name: 'joinable-servers' }"
                 :cloneClass="draggingStates.nodeCloneClass"
