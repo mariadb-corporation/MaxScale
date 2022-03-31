@@ -56,6 +56,7 @@ public:
         int  timeout {0};
         bool multiquery {true};
         bool auto_reconnect {false};
+        bool proxy_protocol {false};
 
         bool        clear_sql_mode {false};
         std::string charset;

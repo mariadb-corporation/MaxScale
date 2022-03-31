@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <set>
 #include <maxbase/string.hh>
+#include <maxsql/mariadb.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/secrets.hh>
@@ -559,6 +560,11 @@ bool XpandMonitor::refresh_using_persisted_nodes(std::set<string>& ips_checked)
 
                 MYSQL* pHub_con = mysql_init(NULL);
 
+                if (using_proxy_protocol())
+                {
+                    mxq::set_proxy_header(pHub_con);
+                }
+
                 if (mysql_real_connect(pHub_con, host.c_str(),
                                        username.c_str(), dec_password.c_str(),
                                        nullptr,
@@ -1007,6 +1013,14 @@ bool XpandMonitor::check_cluster_membership(MYSQL* pHub_con,
     }
 
     return rv;
+}
+
+bool XpandMonitor::using_proxy_protocol() const
+{
+    auto srv = servers();
+    return std::any_of(srv.begin(), srv.end(), [](auto s){
+        return s->server->proxy_protocol();
+    });
 }
 
 void XpandMonitor::populate_from_bootstrap_servers()

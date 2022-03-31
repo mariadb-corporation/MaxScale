@@ -64,6 +64,8 @@ public:
         std::string ssl_key;
         std::string ssl_cipher;
         bool        ssl_verify_server_cert = false;
+
+        bool proxy_protocol = false;
     };
 
     Connection(const ConnectionDetails& details);

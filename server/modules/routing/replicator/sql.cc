@@ -13,6 +13,8 @@
 
 #include "sql.hh"
 
+#include <maxsql/mariadb.hh>
+
 SQL::SQL(MYSQL* mysql, const cdc::Server& server)
     : m_mysql(mysql)
     , m_server(server)
@@ -47,6 +49,11 @@ std::pair<std::string, std::unique_ptr<SQL>> SQL::connect(const std::vector<cdc:
 
         mysql_optionsv(mysql, MYSQL_OPT_CONNECT_TIMEOUT, &connect_timeout);
         mysql_optionsv(mysql, MYSQL_OPT_READ_TIMEOUT, &read_timeout);
+
+        if (server.proxy_protocol)
+        {
+            mxq::set_proxy_header(mysql);
+        }
 
         if (!mysql_real_connect(mysql, server.host.c_str(), server.user.c_str(), server.password.c_str(),
                                 nullptr, server.port, nullptr, 0))

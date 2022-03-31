@@ -409,6 +409,7 @@ MariaDBUserManager::load_users_from_backends(string&& conn_user, string&& conn_p
     {
         // Different backends may have different ssl settings so need to update.
         sett.ssl = srv->ssl_config();
+        sett.proxy_protocol = srv->proxy_protocol();
 
         if (con.open_extra(srv->address(), srv->port(), srv->extra_port()))
         {

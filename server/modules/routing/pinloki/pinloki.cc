@@ -489,6 +489,7 @@ maxsql::Connection::ConnectionDetails Pinloki::generate_details()
                 m_master_config.port = srv->port();
                 details.user = m_master_config.user = m_service->config()->user;
                 details.password = m_master_config.password = m_service->config()->password;
+                details.proxy_protocol = srv->proxy_protocol();
                 auto ssl = srv->ssl_config();
 
                 if (ssl.enabled)

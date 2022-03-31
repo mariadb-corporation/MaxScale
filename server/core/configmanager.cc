@@ -1205,6 +1205,7 @@ void ConfigManager::connect()
         cfg.password = mxs::decrypt_password(config.config_sync_password);
         cfg.timeout = config.config_sync_timeout.count();
         cfg.ssl = server->ssl_config();
+        cfg.proxy_protocol = server->proxy_protocol();
 
         if (!m_conn.open(server->address(), server->port()))
         {

@@ -50,16 +50,16 @@ std::vector<cdc::Server> service_to_servers(SERVICE* service)
     // Since this isn't a worker thread, execute it on one
     mxs::MainWorker::get()->call(
         [&]() {
-            for (auto s : service->reachable_servers())
+        for (auto s : service->reachable_servers())
+        {
+            if (s->is_master() || status_is_blr(s->status()))
             {
-                if (s->is_master() || status_is_blr(s->status()))
-                {
-                    // TODO: per-server credentials aren't exposed in the public class
-                    const auto& cfg = *service->config();
-                    servers.push_back({s->address(), s->port(), cfg.user, cfg.password});
-                }
+                // TODO: per-server credentials aren't exposed in the public class
+                const auto& cfg = *service->config();
+                servers.push_back({s->address(), s->port(), cfg.user, cfg.password, s->proxy_protocol()});
             }
-        }, mxs::RoutingWorker::EXECUTE_AUTO);
+        }
+    }, mxs::RoutingWorker::EXECUTE_AUTO);
 
     return servers;
 }

@@ -18,6 +18,8 @@
 #include <iostream>
 #include <unistd.h>
 
+#include <maxsql/mariadb.hh>
+
 namespace maxsql
 {
 
@@ -219,6 +221,11 @@ void Connection::connect()
         {
             mysql_optionsv(m_conn, MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &yes);
         }
+    }
+
+    if (m_details.proxy_protocol)
+    {
+        mxq::set_proxy_header(m_conn);
     }
 
     if (mysql_real_connect(m_conn,

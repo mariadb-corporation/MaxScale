@@ -75,4 +75,15 @@ void log_statement(int rc, MYSQL* conn, const std::string& query);
  * the MariaDB extended ones.
  */
 uint64_t mysql_get_server_capabilities(MYSQL* conn);
+
+/**
+ * Causes a PROXY UNKNOWN header to be sent when the connection is created
+ *
+ * If a server has proxy protocol enabled, internal connections to it should construct a valid proxy protocol
+ * header. A valid header cannot be created with connector-c as the source address and port are unknown at the
+ * time of creation. To still comply with the specification, a PROXY UNKNOWN header can be used.
+ *
+ * @param conn The connection to use
+ */
+void set_proxy_header(MYSQL* conn);
 }

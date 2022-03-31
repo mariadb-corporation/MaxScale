@@ -27,6 +27,7 @@ struct Server
     int         port;       // Port where the server is listening
     std::string user;       // Username used for the connection
     std::string password;   // Password for the user
+    bool        proxy_protocol {false};
 };
 
 struct Config

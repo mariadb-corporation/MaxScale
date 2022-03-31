@@ -16,6 +16,7 @@
 #include <maxbase/assert.hh>
 #include <maxscale/service.hh>
 #include <maxscale/mainworker.hh>
+#include <maxsql/mariadb.hh>
 
 namespace kafkaimporter
 {
@@ -70,26 +71,27 @@ Producer::ConnectionInfo Producer::find_master() const
 
     mxs::MainWorker::get()->call(
         [this, &rval]() {
-            SERVER* best = nullptr;
-            rval.user = m_service->config()->user;
-            rval.password = m_service->config()->password;
+        SERVER* best = nullptr;
+        rval.user = m_service->config()->user;
+        rval.password = m_service->config()->password;
 
-            for (SERVER* s : m_service->reachable_servers())
+        for (SERVER* s : m_service->reachable_servers())
+        {
+            if (s->is_master() && (!best || s->rank() < best->rank()))
             {
-                if (s->is_master() && (!best || s->rank() < best->rank()))
-                {
-                    best = s;
-                }
+                best = s;
             }
+        }
 
-            if (best)
-            {
-                rval.ok = true;
-                rval.name = best->name();
-                rval.host = best->address();
-                rval.port = best->port();
-            }
-        }, mxb::Worker::EXECUTE_AUTO);
+        if (best)
+        {
+            rval.ok = true;
+            rval.name = best->name();
+            rval.host = best->address();
+            rval.port = best->port();
+            rval.proxy_protocol = best->proxy_protocol();
+        }
+    }, mxb::Worker::EXECUTE_AUTO);
 
     return rval;
 }
@@ -112,6 +114,11 @@ bool Producer::connect()
             mysql_optionsv(m_mysql, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
             mysql_optionsv(m_mysql, MYSQL_OPT_READ_TIMEOUT, &timeout);
             mysql_optionsv(m_mysql, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
+
+            if (master.proxy_protocol)
+            {
+                mxq::set_proxy_header(m_mysql);
+            }
 
             if (!mysql_real_connect(m_mysql, master.host.c_str(), master.user.c_str(),
                                     master.password.c_str(),

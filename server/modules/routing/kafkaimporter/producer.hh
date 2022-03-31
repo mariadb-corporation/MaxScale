@@ -50,6 +50,7 @@ private:
         std::string name;
         std::string host;
         int         port;
+        bool        proxy_protocol;
     };
 
     ConnectionInfo find_master() const;

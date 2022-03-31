@@ -52,6 +52,7 @@ struct ConnectionConfig
     std::string    password;
     std::string    db;
     int64_t        timeout = 10;
+    bool           proxy_protocol = false;
     mxb::SSLConfig ssl;
 };
 

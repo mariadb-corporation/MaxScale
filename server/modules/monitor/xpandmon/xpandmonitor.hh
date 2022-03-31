@@ -115,6 +115,7 @@ private:
     bool check_cluster_membership(MYSQL* pHub_con,
                                   std::map<int, XpandMembership>* pMemberships);
 
+    bool using_proxy_protocol() const;
     void populate_from_bootstrap_servers();
 
     void add_server(SERVER* pServer);

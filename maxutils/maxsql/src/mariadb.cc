@@ -227,4 +227,12 @@ uint64_t mysql_get_server_capabilities(MYSQL* conn)
     mariadb_get_infov(conn, MARIADB_CONNECTION_EXTENDED_SERVER_CAPABILITIES, &extra_caps);
     return base_caps | (extra_caps << 32);
 }
+
+void set_proxy_header(MYSQL* conn)
+{
+    // Older versions of connector-c assume that the buffer is static. Luckily this doesn't matter as
+    // we have to use a static one anyways as we don't know the IP or the port we're connecting from.
+    static const char fake_header[] = "PROXY UNKNOWN\r\n";
+    mysql_optionsv(conn, MARIADB_OPT_PROXY_HEADER, fake_header, sizeof(fake_header) - 1);
+}
 }

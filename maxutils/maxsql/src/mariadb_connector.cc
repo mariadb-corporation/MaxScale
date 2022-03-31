@@ -166,6 +166,11 @@ bool MariaDB::open(const std::string& host, int port, const std::string& db)
         mysql_optionsv(newconn, MYSQL_SET_CHARSET_NAME, m_settings.charset.c_str());
     }
 
+    if (m_settings.proxy_protocol)
+    {
+        mxq::set_proxy_header(newconn);
+    }
+
     const char* userc = m_settings.user.c_str();
     const char* passwdc = m_settings.password.c_str();
     const char* dbc = db.c_str();

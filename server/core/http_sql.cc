@@ -373,6 +373,7 @@ HttpResponse connect(const HttpRequest& request)
         config.host = server->address();
         config.port = server->port();
         config.ssl = server->ssl_config();
+        config.proxy_protocol = server->proxy_protocol();
     }
     else if (Service* service = Service::find(target))
     {
@@ -640,6 +641,7 @@ int64_t create_connection(const ConnectionConfig& config, std::string* err)
     sett.password = config.password;
     sett.timeout = config.timeout;
     sett.ssl = config.ssl;
+    sett.proxy_protocol = config.proxy_protocol;
 
     if (conn.open(config.host, config.port, config.db))
     {
