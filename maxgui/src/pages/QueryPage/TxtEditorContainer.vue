@@ -21,7 +21,7 @@
                         class="editor__content"
                         :minPercent="minQueryPanePct"
                         split="vert"
-                        :disable="isChartMaximized || !showVisChart"
+                        :disable="chartOpt.isMaximized || !showVisChart"
                     >
                         <!-- Editor pane contains editor and chart pane -->
                         <template slot="pane-left">
@@ -37,14 +37,9 @@
                         </template>
                         <template slot="pane-right">
                             <chart-container
+                                v-model="chartOpt"
+                                :containerHeight="chartContainerHeight"
                                 class="chart-pane"
-                                :selectedChart="selectedChart"
-                                :containerChartHeight="containerChartHeight"
-                                :chartData="chartData"
-                                :axisLabels="axisLabels"
-                                :xAxisType="xAxisType"
-                                :isChartMaximized="isChartMaximized"
-                                @is-chart-maximized="isChartMaximized = $event"
                             />
                         </template>
                     </split-pane>
@@ -62,13 +57,7 @@
             </split-pane>
         </template>
         <template slot="pane-right">
-            <visualize-sidebar
-                class="visualize-sidebar"
-                @selected-chart="selectedChart = $event"
-                @get-chart-data="chartData = $event"
-                @get-axis-labels="axisLabels = $event"
-                @x-axis-type="xAxisType = $event"
-            />
+            <visualize-sidebar v-model="chartOpt" class="visualize-sidebar" />
         </template>
     </split-pane>
 </template>
@@ -113,13 +102,15 @@ export default {
             minQueryPanePct: 0,
             mouseDropDOM: null, // mouse drop DOM node
             mouseDropWidget: null, // mouse drop widget while dragging to editor
-            // chart-container states
-            selectedChart: '',
-            chartData: {},
-            axisLabels: { x: '', y: '' },
-            xAxisType: '',
-            isChartMaximized: false,
             maxVisSidebarPx: 250,
+            // visualize-sidebar and chart-container state
+            chartOpt: {
+                type: '',
+                data: {},
+                axisLabels: { x: '', y: '' },
+                xAxisType: '',
+                isMaximized: false,
+            },
         }
     },
     computed: {
@@ -132,10 +123,10 @@ export default {
             getDbCmplList: 'query/getDbCmplList',
         }),
         showVisChart() {
-            const datasets = this.$typy(this.chartData, 'datasets').safeArray
-            return this.selectedChart !== 'No Visualization' && datasets.length
+            const datasets = this.$typy(this.chartOpt.data, 'datasets').safeArray
+            return this.chartOpt.type && datasets.length
         },
-        containerChartHeight() {
+        chartContainerHeight() {
             return (this.dim.height * this.editorPct) / 100
         },
         maxVisSidebarPct() {
@@ -161,7 +152,7 @@ export default {
         },
     },
     watch: {
-        isChartMaximized(v) {
+        'chartOpt.isMaximized'(v) {
             if (v) this.queryPanePct = this.minQueryPanePct
             else this.queryPanePct = 50
         },

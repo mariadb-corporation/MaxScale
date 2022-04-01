@@ -34,20 +34,20 @@
                         text
                         depressed
                         v-on="on"
-                        @click="$emit('is-chart-maximized', !isChartMaximized)"
+                        @click="chartOpt.isMaximized = !chartOpt.isMaximized"
                     >
                         <v-icon size="18" color="accent-dark">
-                            fullscreen{{ isChartMaximized ? '_exit' : '' }}
+                            fullscreen{{ chartOpt.isMaximized ? '_exit' : '' }}
                         </v-icon>
                     </v-btn>
                 </template>
-                <span>{{ isChartMaximized ? $t('minimize') : $t('maximize') }}</span>
+                <span>{{ chartOpt.isMaximized ? $t('minimize') : $t('maximize') }}</span>
             </v-tooltip>
         </div>
 
         <div ref="chartWrapper" :key="chartHeight" class="chart-wrapper">
             <line-chart
-                v-if="selectedChart === SQL_CHART_TYPES.LINE"
+                v-if="type === SQL_CHART_TYPES.LINE"
                 id="query-chart"
                 class="line-chart"
                 :style="{
@@ -59,7 +59,7 @@
                 :options="lineChartOptions"
             />
             <scatter-chart
-                v-else-if="selectedChart === SQL_CHART_TYPES.SCATTER"
+                v-else-if="type === SQL_CHART_TYPES.SCATTER"
                 id="query-chart"
                 class="scatter-chart"
                 :style="{
@@ -70,7 +70,7 @@
                 :options="scatterChartOptions"
             />
             <vert-bar-chart
-                v-else-if="selectedChart === SQL_CHART_TYPES.BAR_VERT"
+                v-else-if="type === SQL_CHART_TYPES.BAR_VERT"
                 id="query-chart"
                 class="vert-bar-chart"
                 :style="{
@@ -81,7 +81,7 @@
                 :options="vertBarChartOptions"
             />
             <horiz-bar-chart
-                v-else-if="selectedChart === SQL_CHART_TYPES.BAR_HORIZ"
+                v-else-if="type === SQL_CHART_TYPES.BAR_HORIZ"
                 id="query-chart"
                 class="vert-bar-chart"
                 :style="{
@@ -113,12 +113,8 @@ import { objectTooltip } from '@/components/common/Charts/customTooltips.js'
 export default {
     name: 'chart-container',
     props: {
-        selectedChart: { type: String, default: '' },
-        containerChartHeight: { type: Number, default: 0 },
-        chartData: { type: Object, default: () => {} },
-        axisLabels: { type: Object, default: () => {} },
-        xAxisType: { type: String, required: true },
-        isChartMaximized: { type: Boolean, required: true },
+        value: { type: Object, required: true },
+        containerHeight: { type: Number, default: 0 },
     },
     data() {
         return {
@@ -129,6 +125,26 @@ export default {
     },
     computed: {
         ...mapState({ SQL_CHART_TYPES: state => state.app_config.SQL_CHART_TYPES }),
+        chartOpt: {
+            get() {
+                return this.value
+            },
+            set(value) {
+                this.$emit('input', value)
+            },
+        },
+        chartData() {
+            return this.chartOpt.data
+        },
+        xAxisType() {
+            return this.chartOpt.xAxisType
+        },
+        axisLabels() {
+            return this.chartOpt.axisLabels
+        },
+        type() {
+            return this.chartOpt.type
+        },
         isTimeChart() {
             return this.xAxisType === 'time'
         },
@@ -145,10 +161,10 @@ export default {
             return '0px'
         },
         chartHeight() {
-            switch (this.selectedChart) {
+            switch (this.type) {
                 case this.SQL_CHART_TYPES.BAR_HORIZ:
                     if (this.autoSkipXTick)
-                        return this.containerChartHeight - (this.chartToolHeight + 12)
+                        return this.containerHeight - (this.chartToolHeight + 12)
                     /** When there is too many data points,
                      * first, get min value between "overflow" height (this.chartData.labels.length * 15)
                      * and max height threshold 15000. However, when there is too little data points,
@@ -156,12 +172,12 @@ export default {
                      * should be chosen to make chart fit to its container
                      */
                     return Math.max(
-                        this.containerChartHeight - (this.chartToolHeight + 12),
+                        this.containerHeight - (this.chartToolHeight + 12),
                         Math.min(this.chartData.labels.length * 15, 15000)
                     )
                 default:
                     // 10px of scrollbar height plus border
-                    return this.containerChartHeight - (this.chartToolHeight + 12)
+                    return this.containerHeight - (this.chartToolHeight + 12)
             }
         },
         chartOptions() {
@@ -367,7 +383,7 @@ export default {
             return v
         },
         getDefFileName() {
-            return `MaxScale ${this.selectedChart} Chart - ${this.$help.dateFormat({
+            return `MaxScale ${this.type} Chart - ${this.$help.dateFormat({
                 value: new Date(),
                 formatType: 'DATE_RFC2822',
             })}`
