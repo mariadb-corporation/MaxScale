@@ -1,5 +1,5 @@
 [maxscale]
-threads=###threads###
+threads=1
 log_info=0
 
 [MariaDB-Monitor]

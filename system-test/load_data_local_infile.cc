@@ -8,6 +8,7 @@
 
 #include <maxtest/testconnections.hh>
 #include <maxtest/mariadb_connector.hh>
+#include <maxbase/stopwatch.hh>
 
 using std::string;
 
@@ -49,7 +50,45 @@ void test_main(TestConnections& test)
         }
         if (test.ok())
         {
+            // The last load should take 20 seconds. MaxScale is only running 1 routing thread for
+            // this test. Check that MaxScale is still responsive for other clients while processing
+            // the load.
+
+            std::atomic_bool keep_running {true};
+            auto test_func = [&test, &keep_running]() {
+                // Sleep a little to ensure LOAD DATA has begun. It takes roughly 2s to generate the
+                // 200MB test data array, and 20s to run the LOAD DATA.
+                std::this_thread::sleep_for(2s);
+                mxb::Duration max_query_time = 0s;
+                test.tprintf("Starting queries during LOAD DATA.");
+
+                int i = 0;
+                while (keep_running && test.ok())
+                {
+                    mxb::StopWatch timer;
+                    auto test_conn = test.maxscale->open_rwsplit_connection2();
+                    auto res = test_conn->simple_query("select rand();");
+                    test.expect(!res.empty(), "Query during LOAD DATA failed.");
+                    auto dur = timer.split();
+                    max_query_time = std::max(max_query_time, dur);
+                    std::this_thread::sleep_for(0.2s);
+                    i++;
+                }
+
+                auto max_dur_s = mxb::to_secs(max_query_time);
+                test.tprintf("Queried %i times during LOAD DATA. Max query duration: %f seconds.",
+                             i, max_dur_s);
+                // The following may need tuning if tester machine network or speed changes significantly.
+                // The idea is to detect any big changes in MaxScale behavior.
+                test.expect(i > 50 && i < 300, "Unexpected number of queries: %i.", i);
+                test.expect(max_dur_s > 0.1 && max_dur_s < 5, "Unexpected max query duration: %f.",
+                            max_dur_s);
+            };
+
+            std::thread tester_thread(test_func);
             test_load_data(test, 200000000, 5000000, 60);   // 200 MB
+            keep_running = false;
+            tester_thread.join();
         }
     }
     mxs.maxctrl("call command mariadbmon reset-replication MariaDB-Monitor server1");
@@ -71,12 +110,16 @@ void test_load_data(TestConnections& test, size_t datasize, size_t expected_rows
         {
             test.tprintf("Test table created. Reconnect and load the data to server.");
             auto data_conn = mxs.open_rwsplit_connection2();
-
+            mxb::StopWatch timer;
             data_conn->cmd_f("LOAD DATA LOCAL INFILE '%s' INTO TABLE %s FIELDS TERMINATED BY ',';",
                              filename, table_name);
             if (test.ok())
             {
                 test.tprintf("Load data done, waiting for slave sync.");
+                auto dur_s = mxb::to_secs(timer.split());
+                test.expect(dur_s < wait_limit_s, "LOAD DATA took %f seconds, when less than %d was "
+                                                  "expected.", dur_s, wait_limit_s);
+
                 test.repl->sync_slaves(0, wait_limit_s);
                 test.tprintf("Slaves synced, check the number of rows in the table.");
                 string query = (string)"SELECT count(*) FROM " + table_name;
@@ -88,7 +131,7 @@ void test_load_data(TestConnections& test, size_t datasize, size_t expected_rows
                 else
                 {
                     auto count = std::stol(count_str);
-                    test.tprintf("Select returned %li rows.", count);
+                    test.tprintf("Row count is %li.", count);
                     test.expect(count >= (long)expected_rows,
                                 "Only %li columns found, expected at least %zu.", count, expected_rows);
                 }
