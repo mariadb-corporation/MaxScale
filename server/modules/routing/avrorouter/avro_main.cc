@@ -86,6 +86,10 @@ static cfg::ParamBool s_cooperative_replication(
 static cfg::ParamSize s_max_file_size(
     &s_spec, "max_file_size", "Rotate to a new file when file size exceeds this limit", 0);
 
+static cfg::ParamSeconds s_max_data_age(
+    &s_spec, "max_data_age", "Remove files with data older than this",
+    cfg::NO_INTERPRETATION, 0s);
+
 AvroConfig::AvroConfig(SERVICE* service, Avro& router)
     : mxs::config::Configuration(service->name(), &s_spec)
     , m_router(router)
@@ -104,6 +108,7 @@ AvroConfig::AvroConfig(SERVICE* service, Avro& router)
     add_native(&AvroConfig::codec, &s_codec);
     add_native(&AvroConfig::cooperative_replication, &s_cooperative_replication);
     add_native(&AvroConfig::max_file_size, &s_max_file_size);
+    add_native(&AvroConfig::max_data_age, &s_max_data_age);
 }
 
 bool AvroConfig::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)

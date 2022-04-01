@@ -242,6 +242,26 @@ that large transactions can still cause the file size to exceed the given limit.
 File rotation only works with the direct replication mode. The legacy file based
 replication mode does not support this.
 
+##### `max_data_age`
+
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: 0s
+
+When enabled, the avrorouter will automatically purge any files that only have
+data that is older than the given limit. This means that all data files with at
+least one event that is newer than the configured limit will not be removed,
+even if the age of all the other events is above the limit. The purge operation
+is only done when a file rotation takes place (either manual or automatic) or
+when a schema change is detected.
+
+This parameter is best combined with `max_file_size` to provide automatic
+removal of stale data.
+
+Automatic file purging only works with the direct replication mode. The legacy
+file based replication mode does not support this.
+
 ##### Example configuration
 
 ```

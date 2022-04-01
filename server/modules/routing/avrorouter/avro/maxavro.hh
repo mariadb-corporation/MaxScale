@@ -146,6 +146,7 @@ GWBUF*  maxavro_record_read_binary(MAXAVRO_FILE* file);
 bool maxavro_record_seek(MAXAVRO_FILE* file, uint64_t offset);
 bool maxavro_record_set_pos(MAXAVRO_FILE* file, long pos);
 bool maxavro_next_block(MAXAVRO_FILE* file);
+bool maxavro_to_last_block(MAXAVRO_FILE* file);
 
 /** Get binary format header */
 GWBUF* maxavro_file_binary_header(MAXAVRO_FILE* file);

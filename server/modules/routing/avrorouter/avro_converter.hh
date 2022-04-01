@@ -48,7 +48,7 @@ class AvroConverter : public RowEventHandler
 {
 public:
     AvroConverter(SERVICE* service, std::string avrodir, uint64_t block_size, mxs_avro_codec_type codec,
-                  int64_t max_size);
+                  int64_t max_size, int64_t max_age);
     bool create_table(const Table& create) override final;
     bool open_table(const Table& create) override final;
     bool prepare_table(const Table& create) override final;
@@ -77,6 +77,8 @@ private:
     mxs_avro_codec_type m_codec;
     SERVICE*            m_service;
     int64_t             m_max_size;
+    int64_t             m_max_age;
 
+    void purge_old_files(std::string id);
     void set_active(const Table& create, int i);
 };

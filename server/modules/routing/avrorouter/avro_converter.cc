@@ -15,6 +15,9 @@
 
 #include <limits.h>
 #include <sys/stat.h>
+#include <glob.h>
+
+#include <tuple>
 
 #include <maxbase/assert.hh>
 
@@ -41,6 +44,24 @@ int rowevent_to_enum_offset(RowEvent event)
         mxb_assert(!true);
         return 0;
     }
+}
+
+std::pair<bool, int64_t> get_file_size(const char* filename)
+{
+    bool ok = false;
+    int64_t size = 0;
+
+    if (struct stat st; stat(filename, &st) == 0)
+    {
+        size = st.st_size;
+        ok = true;
+    }
+    else
+    {
+        MXB_INFO("Call to stat() failed for '%s': %d, %s", filename, errno, mxb_strerror(errno));
+    }
+
+    return {ok, size};
 }
 }
 
@@ -135,12 +156,14 @@ AvroConverter::AvroConverter(SERVICE* service,
                              std::string avrodir,
                              uint64_t block_size,
                              mxs_avro_codec_type codec,
-                             int64_t max_size)
+                             int64_t max_size,
+                             int64_t max_age)
     : m_avrodir(avrodir)
     , m_block_size(block_size)
     , m_codec(codec)
     , m_service(service)
     , m_max_size(max_size)
+    , m_max_age(max_age)
 {
 }
 
@@ -176,6 +199,11 @@ bool AvroConverter::open_table(const Table& create)
         {
             m_open_tables[create.id()] = avro_table;
             rval = true;
+
+            if (m_max_age > 0)
+            {
+                purge_old_files(create.id());
+            }
         }
         else
         {
@@ -323,16 +351,70 @@ bool AvroConverter::needs_rotate(const Table& create) const
     {
         if (auto it = m_open_tables.find(create.id()); it != m_open_tables.end())
         {
-            if (struct stat st; stat(it->second->filename.c_str(), &st) == 0)
+            if (auto [ok, size] = get_file_size(it->second->filename.c_str()); ok)
             {
-                rval = st.st_size >= m_max_size;
-            }
-            else
-            {
-                MXB_INFO("Call to stat() failed: %d, %s", errno, mxb_strerror(errno));
+                rval = size >= m_max_size;
             }
         }
     }
 
     return rval;
+}
+
+void AvroConverter::purge_old_files(std::string id)
+{
+    std::string path = m_avrodir + "/" + id + ".*.avro";
+    glob_t files;
+
+    if (glob(path.c_str(), 0, NULL, &files) == 0)
+    {
+        // The files are sorted and the last one is always the newest one. No point in checking it since it
+        // was just created.
+        for (size_t i = 0; i < files.gl_pathc - 1; i++)
+        {
+            int64_t newest = 0;
+            time_t now = time(nullptr);
+
+            if (MAXAVRO_FILE* file = maxavro_file_open(files.gl_pathv[i]))
+            {
+                maxavro_to_last_block(file);
+
+                // Check the timestamps from the last block, helps avoid processing the whole file.
+                while (json_t* rec = maxavro_record_read_json(file))
+                {
+                    newest = mxb::Json(rec, mxb::Json::RefType::STEAL).get_int("timestamp");
+                }
+
+                maxavro_file_close(file);
+            }
+
+            if (int64_t age = now - newest; newest > 0 && age > m_max_age)
+            {
+                std::string schema(files.gl_pathv[i]);
+                schema.replace(schema.length() - 2, 2, "sc");
+
+                if (mxb_log_should_log(LOG_INFO))
+                {
+                    auto bytes = get_file_size(files.gl_pathv[i]).second
+                        + get_file_size(schema.c_str()).second;
+
+                    MXB_INFO("Removing files '%s' and '%s' (%ld bytes in total), data is %ld seconds old",
+                             files.gl_pathv[i], schema.c_str(), bytes, age);
+                }
+
+                if (unlink(files.gl_pathv[i]) != 0)
+                {
+                    MXB_ERROR("Failed to remove data file '%s': %d, %s",
+                              files.gl_pathv[i], errno, mxb_strerror(errno));
+                }
+                else if (unlink(schema.c_str()) != 0)
+                {
+                    MXB_ERROR("Failed to remove schema file '%s': %d, %s",
+                              schema.c_str(), errno, mxb_strerror(errno));
+                }
+            }
+        }
+    }
+
+    globfree(&files);
 }

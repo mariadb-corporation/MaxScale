@@ -245,6 +245,48 @@ bool maxavro_next_block(MAXAVRO_FILE* file)
 }
 
 /**
+ * @brief Seek to last data block
+ *
+ * @param file File to seek
+ *
+ * @return True if the last block was reached successfully
+ */
+bool maxavro_to_last_block(MAXAVRO_FILE* file)
+{
+    bool ok = false;
+    long pos = 0;
+
+    while (file->last_error == MAXAVRO_ERR_NONE)
+    {
+        uint64_t records, bytes;
+
+        if (maxavro_read_integer_from_file(file, &records)
+            && maxavro_read_integer_from_file(file, &bytes))
+        {
+            fseek(file->file, bytes + SYNC_MARKER_SIZE, SEEK_CUR);
+
+            if (int c = fgetc(file->file); c != EOF)
+            {
+                ungetc(c, file->file);
+                pos = ftell(file->file);
+            }
+            else
+            {
+                fseek(file->file, pos, SEEK_SET);
+                ok = maxavro_read_datablock_start(file);
+                break;
+            }
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    return ok;
+}
+
+/**
  * @brief Seek to a position in the Avro file
  *
  * This moves the current position of the file, skipping data blocks if necessary.
