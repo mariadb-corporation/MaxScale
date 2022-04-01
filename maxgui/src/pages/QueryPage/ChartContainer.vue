@@ -47,7 +47,7 @@
 
         <div ref="chartWrapper" :key="chartHeight" class="chart-wrapper">
             <line-chart
-                v-if="selectedChart === 'Line'"
+                v-if="selectedChart === SQL_CHART_TYPES.LINE"
                 id="query-chart"
                 class="line-chart"
                 :style="{
@@ -59,7 +59,7 @@
                 :options="lineChartOptions"
             />
             <scatter-chart
-                v-else-if="selectedChart === 'Scatter'"
+                v-else-if="selectedChart === SQL_CHART_TYPES.SCATTER"
                 id="query-chart"
                 class="scatter-chart"
                 :style="{
@@ -70,7 +70,7 @@
                 :options="scatterChartOptions"
             />
             <vert-bar-chart
-                v-else-if="selectedChart === 'Bar - Vertical'"
+                v-else-if="selectedChart === SQL_CHART_TYPES.BAR_VERT"
                 id="query-chart"
                 class="vert-bar-chart"
                 :style="{
@@ -81,7 +81,7 @@
                 :options="vertBarChartOptions"
             />
             <horiz-bar-chart
-                v-else-if="selectedChart === 'Bar - Horizontal'"
+                v-else-if="selectedChart === SQL_CHART_TYPES.BAR_HORIZ"
                 id="query-chart"
                 class="vert-bar-chart"
                 :style="{
@@ -108,6 +108,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { mapState } from 'vuex'
 import { objectTooltip } from '@/components/common/Charts/customTooltips.js'
 export default {
     name: 'chart-container',
@@ -127,6 +128,7 @@ export default {
         }
     },
     computed: {
+        ...mapState({ SQL_CHART_TYPES: state => state.app_config.SQL_CHART_TYPES }),
         isTimeChart() {
             return this.xAxisType === 'time'
         },
@@ -144,7 +146,7 @@ export default {
         },
         chartHeight() {
             switch (this.selectedChart) {
-                case 'Bar - Horizontal':
+                case this.SQL_CHART_TYPES.BAR_HORIZ:
                     if (this.autoSkipXTick)
                         return this.containerChartHeight - (this.chartToolHeight + 12)
                     /** When there is too many data points,

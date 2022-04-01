@@ -82,6 +82,12 @@ export const APP_CONFIG = Object.freeze({
         10000,
         50000,
     ].map(value => ({ text: value, value })),
+    SQL_CHART_TYPES: Object.freeze({
+        LINE: 'Line',
+        SCATTER: 'Scatter',
+        BAR_VERT: 'Bar - Vertical',
+        BAR_HORIZ: 'Bar - Horizontal',
+    }),
     QUERY_LOG_TYPES: Object.freeze({
         USER_LOGS: i18n.t('userQueryLogs'),
         ACTION_LOGS: i18n.t('actionLogs'),

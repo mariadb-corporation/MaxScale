@@ -4,7 +4,7 @@
         <label class="field__label color text-small-text"> {{ $t('graph') }}</label>
         <v-select
             v-model="selectedChart"
-            :items="chartTypes"
+            :items="Object.values(SQL_CHART_TYPES)"
             outlined
             class="std mariadb-select-input error--text__bottom"
             :menu-props="{
@@ -16,7 +16,7 @@
             :height="36"
             hide-details="auto"
         />
-        <div v-if="selectedChart !== $t('noVisualization')" class="mt-4">
+        <div v-if="selectedChart" class="mt-4">
             <label class="field__label color text-small-text"> {{ $t('selectResultSet') }}</label>
             <v-select
                 v-model="resSet"
@@ -92,17 +92,9 @@
 import { mapGetters, mapState } from 'vuex'
 export default {
     name: 'visualize-sidebar',
-
     data() {
         return {
-            selectedChart: this.$t('noVisualization'),
-            chartTypes: [
-                this.$t('noVisualization'),
-                'Line',
-                'Scatter',
-                'Bar - Vertical',
-                'Bar - Horizontal',
-            ],
+            selectedChart: '',
             resSet: null,
             axis: {
                 x: '',
@@ -116,6 +108,7 @@ export default {
     computed: {
         ...mapState({
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
+            SQL_CHART_TYPES: state => state.app_config.SQL_CHART_TYPES,
         }),
         ...mapGetters({
             getPrvwDataRes: 'query/getPrvwDataRes',
@@ -169,36 +162,35 @@ export default {
         },
         xAxisFields() {
             if (this.$typy(this.resSet, 'fields').isEmptyArray) return []
+            const { LINE, SCATTER, BAR_VERT, BAR_HORIZ } = this.SQL_CHART_TYPES
             switch (this.selectedChart) {
-                case 'Bar - Horizontal':
+                case BAR_HORIZ:
                     return this.numericFields
                 // linear, category or time cartesian axes
-                case 'Scatter':
-                case 'Line':
-                case 'Bar - Vertical':
+                case SCATTER:
+                case LINE:
+                case BAR_VERT:
                 default:
                     return [this.numberSign, ...this.resSet.fields]
             }
         },
         yAxisFields() {
             if (this.$typy(this.resSet, 'fields').isEmptyArray) return []
+            const { LINE, SCATTER, BAR_VERT, BAR_HORIZ } = this.SQL_CHART_TYPES
             switch (this.selectedChart) {
-                case 'Line':
-                case 'Scatter':
-                case 'Bar - Vertical':
+                case LINE:
+                case SCATTER:
+                case BAR_VERT:
                     return this.numericFields
                 // linear, category or time cartesian axes
-                case 'Bar - Horizontal':
+                case BAR_HORIZ:
                 default:
                     return [this.numberSign, ...this.resSet.fields]
             }
         },
         supportTrendLine() {
-            return (
-                this.selectedChart === 'Line' ||
-                this.selectedChart === 'Scatter' ||
-                this.selectedChart.includes('Bar')
-            )
+            const { LINE, SCATTER, BAR_VERT, BAR_HORIZ } = this.SQL_CHART_TYPES
+            return [LINE, SCATTER, BAR_VERT, BAR_HORIZ].includes(this.selectedChart)
         },
     },
     watch: {
@@ -256,8 +248,9 @@ export default {
                 index: indexOfOpacity,
                 newChar: '0.2',
             })
+            const { LINE, SCATTER, BAR_VERT, BAR_HORIZ } = this.SQL_CHART_TYPES
             switch (chartType) {
-                case 'Line':
+                case LINE:
                     {
                         dataset = {
                             ...dataset,
@@ -272,7 +265,7 @@ export default {
                         }
                     }
                     break
-                case 'Scatter': {
+                case SCATTER: {
                     dataset = {
                         ...dataset,
                         borderWidth: 1,
@@ -283,8 +276,8 @@ export default {
                     }
                     break
                 }
-                case 'Bar - Vertical':
-                case 'Bar - Horizontal': {
+                case BAR_VERT:
+                case BAR_HORIZ: {
                     dataset = {
                         ...dataset,
                         barPercentage: 0.5,
@@ -351,7 +344,7 @@ export default {
                     columns: this.resSet.fields,
                     rows: this.resSet.data,
                 })
-
+                const { BAR_HORIZ } = this.SQL_CHART_TYPES
                 for (const [i, row] of dataRows.entries()) {
                     const rowNumber = i + 1
                     const isXAxisARowNum = axis.x === this.numberSign
@@ -368,7 +361,7 @@ export default {
                     })
 
                     switch (chartType) {
-                        case 'Bar - Horizontal':
+                        case BAR_HORIZ:
                             labels.push(yAxisVal)
                             break
                         default:
@@ -384,7 +377,7 @@ export default {
                 }
 
                 switch (chartType) {
-                    case 'Bar - Horizontal':
+                    case BAR_HORIZ:
                         labelAxisId = 'y'
                         break
                     default:
