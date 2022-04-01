@@ -21,7 +21,7 @@
                         class="editor__content"
                         :minPercent="minQueryPanePct"
                         split="vert"
-                        :disable="chartOpt.isMaximized || !showVisChart"
+                        :disable="isChartMaximized || !showVisChart"
                     >
                         <!-- Editor pane contains editor and chart pane -->
                         <template slot="pane-left">
@@ -37,9 +37,11 @@
                         </template>
                         <template slot="pane-right">
                             <chart-container
+                                v-if="!$typy(chartOpt, 'data.datasets').isEmptyArray"
                                 v-model="chartOpt"
                                 :containerHeight="chartContainerHeight"
                                 class="chart-pane"
+                                @close-chart="setDefChartOptState"
                             />
                         </template>
                     </split-pane>
@@ -104,13 +106,14 @@ export default {
             mouseDropWidget: null, // mouse drop widget while dragging to editor
             maxVisSidebarPx: 250,
             // visualize-sidebar and chart-container state
-            chartOpt: {
+            defChartOpt: {
                 type: '',
                 data: {},
                 axisLabels: { x: '', y: '' },
                 xAxisType: '',
                 isMaximized: false,
             },
+            chartOpt: null,
         }
     },
     computed: {
@@ -123,8 +126,11 @@ export default {
             getDbCmplList: 'query/getDbCmplList',
         }),
         showVisChart() {
-            const datasets = this.$typy(this.chartOpt.data, 'datasets').safeArray
-            return this.chartOpt.type && datasets.length
+            const datasets = this.$typy(this.chartOpt, 'data.datasets').safeArray
+            return Boolean(this.$typy(this.chartOpt, 'type').safeString && datasets.length)
+        },
+        isChartMaximized() {
+            return this.$typy(this.chartOpt, 'isMaximized').safeBoolean
         },
         chartContainerHeight() {
             return (this.dim.height * this.editorPct) / 100
@@ -152,7 +158,7 @@ export default {
         },
     },
     watch: {
-        'chartOpt.isMaximized'(v) {
+        isChartMaximized(v) {
             if (v) this.queryPanePct = this.minQueryPanePct
             else this.queryPanePct = 50
         },
@@ -175,11 +181,17 @@ export default {
             this.handleSetVisSidebar(v)
         },
     },
+    created() {
+        this.setDefChartOptState()
+    },
     methods: {
         ...mapMutations({
             SET_QUERY_TXT: 'query/SET_QUERY_TXT',
             SET_SELECTED_QUERY_TXT: 'query/SET_SELECTED_QUERY_TXT',
         }),
+        setDefChartOptState() {
+            this.chartOpt = this.$help.lodash.cloneDeep(this.defChartOpt)
+        },
         handleSetMinEditorPct() {
             this.minEditorPct = this.$help.pxToPct({ px: 26, containerPx: this.dim.height })
         },

@@ -1,5 +1,5 @@
 <template>
-    <div v-if="!$typy(chartData, 'datasets').isEmptyArray" class="chart-container fill-height">
+    <div class="chart-container fill-height">
         <div ref="chartTool" class="d-flex pt-2 pr-3">
             <v-spacer />
             <v-tooltip
@@ -8,14 +8,7 @@
                 content-class="shadow-drop color text-navigation py-1 px-4"
             >
                 <template v-slot:activator="{ on }">
-                    <v-btn
-                        x-small
-                        text
-                        depressed
-                        color="accent-dark"
-                        v-on="on"
-                        @click="exportToJpeg"
-                    >
+                    <v-btn small icon depressed color="accent-dark" v-on="on" @click="exportToJpeg">
                         <v-icon size="16" color="accent-dark">
                             file_download
                         </v-icon>
@@ -30,8 +23,8 @@
             >
                 <template v-slot:activator="{ on }">
                     <v-btn
-                        x-small
-                        text
+                        small
+                        icon
                         depressed
                         v-on="on"
                         @click="chartOpt.isMaximized = !chartOpt.isMaximized"
@@ -42,6 +35,26 @@
                     </v-btn>
                 </template>
                 <span>{{ chartOpt.isMaximized ? $t('minimize') : $t('maximize') }}</span>
+            </v-tooltip>
+            <v-tooltip
+                top
+                transition="slide-y-transition"
+                content-class="shadow-drop color text-navigation py-1 px-4"
+            >
+                <template v-slot:activator="{ on }">
+                    <v-btn
+                        small
+                        icon
+                        depressed
+                        color="accent-dark"
+                        class="close-chart"
+                        v-on="on"
+                        @click="$emit('close-chart')"
+                    >
+                        <v-icon size="12" color="accent-dark"> $vuetify.icons.close</v-icon>
+                    </v-btn>
+                </template>
+                <span>{{ $t('close') }}</span>
             </v-tooltip>
         </div>
 
@@ -108,6 +121,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+/*
+@close-chart. Emit when close-chart button is clicked
+*/
 import { mapState } from 'vuex'
 import { objectTooltip } from '@/components/common/Charts/customTooltips.js'
 export default {
