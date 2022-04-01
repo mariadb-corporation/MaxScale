@@ -297,7 +297,11 @@ export default {
          * @param {Function} successCb - callback function after successfully switchover
          */
         async handleAsyncCmdDone({ commit }, { meta, successCb }) {
-            commit('SET_SNACK_BAR_MESSAGE', { text: [meta], type: 'success' }, { root: true })
+            commit(
+                'SET_SNACK_BAR_MESSAGE',
+                { text: [this.vue.$help.capitalizeFirstLetter(meta)], type: 'success' },
+                { root: true }
+            )
             if (this.vue.$help.isFunction(successCb)) await successCb()
         },
 
@@ -320,7 +324,9 @@ export default {
                     // Remove `No manual commands are available`, shows only the latter part.
                     {
                         text: meta.errors.map(e =>
-                            e.detail.replace('No manual command results are available, ', '')
+                            this.vue.$help.capitalizeFirstLetter(
+                                e.detail.replace('No manual command results are available, ', '')
+                            )
                         ),
                         type: 'warning',
                     },
