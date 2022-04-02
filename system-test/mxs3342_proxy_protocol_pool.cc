@@ -10,6 +10,7 @@ int main(int argc, char** argv)
 
     std::string ip = test.maxscale->ip();
     test.repl->execute_query_all_nodes(("SET GLOBAL proxy_protocol_networks='" + ip + "'").c_str());
+    test.maxscale->wait_for_monitor();
 
     Connection node = test.repl->get_connection(0);
     test.expect(node.connect(), "Connection should work: %s", node.error());
@@ -23,7 +24,7 @@ int main(int argc, char** argv)
         connections.emplace_back(test.maxscale->rwsplit());
         Connection& c = connections.back();
         c.set_credentials("bob", "bob");
-        test.expect(c.connect(), "Connection should work: %s", c.error());
+        test.expect(c.connect(), "Readwritesplit connection should work: %s", c.error());
     }
 
     // Wait for some time to make sure the connection is fully established in
