@@ -949,6 +949,9 @@ add_test_executable(mxs1687_avro_ha.cc mxs1687_avro_ha mxs1687_avro_ha LABELS av
 # MXS-3580: Avrorouter multidomain gtid support.
 add_test_executable(avro_gtid.cc avro_gtid avro_gtid LABELS avrorouter REPL_BACKEND)
 
+# MXS-4010: Avrorouter file rotation
+add_test_executable(mxs4010_avro_rotate.cc mxs4010_avro_rotate mxs4010_avro_rotate LABELS avrorouter REPL_BACKEND)
+
 ############################################
 # END: avrorouter tests                    #
 ############################################
