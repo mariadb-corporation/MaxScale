@@ -19,6 +19,7 @@
 #include "avrorouter.hh"
 
 #include <stdio.h>
+#include <maxbase/format.hh>
 #include <maxscale/mainworker.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/router.hh>
@@ -113,26 +114,26 @@ mxs::RouterSession* Avro::newSession(MXS_SESSION* session, const Endpoints& endp
 
 json_t* Avro::diagnostics() const
 {
-    const Avro* router_inst = this;
-
     json_t* rval = json_object();
 
-    char pathbuf[PATH_MAX + 1];
-    snprintf(pathbuf, sizeof(pathbuf), "%s/%s", router_inst->config().avrodir.c_str(), AVRO_PROGRESS_FILE);
+    std::string path = config().avrodir + "/" + AVRO_PROGRESS_FILE;
+    json_object_set_new(rval, "infofile", json_string(path.c_str()));
+    json_object_set_new(rval, "avrodir", json_string(config().avrodir.c_str()));
+    json_object_set_new(rval, "binlogdir", json_string(config().binlogdir.c_str()));
+    json_object_set_new(rval, "binlog_name", json_string(binlog_name.c_str()));
+    json_object_set_new(rval, "binlog_pos", json_integer(current_pos));
 
-    json_object_set_new(rval, "infofile", json_string(pathbuf));
-    json_object_set_new(rval, "avrodir", json_string(router_inst->config().avrodir.c_str()));
-    json_object_set_new(rval, "binlogdir", json_string(router_inst->config().binlogdir.c_str()));
-    json_object_set_new(rval, "binlog_name", json_string(router_inst->binlog_name.c_str()));
-    json_object_set_new(rval, "binlog_pos", json_integer(router_inst->current_pos));
-
-    if (router_inst->handler)
+    if (handler)
     {
-        gtid_pos_t gtid = router_inst->handler->get_gtid();
-        snprintf(pathbuf, sizeof(pathbuf), "%lu-%lu-%lu", gtid.domain, gtid.server_id, gtid.seq);
-        json_object_set_new(rval, "gtid", json_string(pathbuf));
+        gtid_pos_t gtid = handler->get_gtid();
+        path = mxb::string_printf("%lu-%lu-%lu", gtid.domain, gtid.server_id, gtid.seq);
+        json_object_set_new(rval, "gtid", json_string(path.c_str()));
         json_object_set_new(rval, "gtid_timestamp", json_integer(gtid.timestamp));
         json_object_set_new(rval, "gtid_event_number", json_integer(gtid.event_num));
+    }
+    else if (m_replicator)
+    {
+        json_object_set_new(rval, "gtid", json_string(m_replicator->gtid_pos().c_str()));
     }
 
     return rval;

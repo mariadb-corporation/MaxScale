@@ -87,6 +87,12 @@ public:
 
     void rotate();
 
+    std::string gtid_pos() const
+    {
+        std::lock_guard guard(m_lock);
+        return gtid_list_to_string(m_gtid_position);
+    }
+
     ~Imp();
 
 private:
@@ -119,7 +125,7 @@ private:
     bool                 m_implicit_commit {false}; // Commit after next query event
     Rpl                  m_rpl;                     // Class that handles the replicated events
 
-    std::mutex              m_lock;
+    mutable std::mutex      m_lock;
     std::condition_variable m_cv;
 
     // NOTE: must be declared last
@@ -242,6 +248,7 @@ void Replicator::Imp::update_gtid()
     {
         // Implementation loaded a GTID, discard the one read from file.
         m_rpl.set_gtid(impl_gtid);
+        std::lock_guard guard(m_lock);
         m_gtid_position = parse_gtid_list(impl_gtid.to_string());
     }
     else if (!m_gtid_position.empty())
@@ -410,6 +417,7 @@ bool Replicator::Imp::load_gtid_state()
 
         if (!gtid.empty())
         {
+            std::lock_guard guard(m_lock);
             m_gtid_position = parse_gtid_list(gtid);
             MXB_NOTICE("Continuing from GTID '%s'", gtid_list_to_string(m_gtid_position).c_str());
         }
@@ -525,7 +533,9 @@ bool Replicator::Imp::process_one_event(SQL::Event& event)
     if (commit)
     {
         m_rpl.flush();
+        std::unique_lock guard(m_lock);
         m_gtid_position[m_current_gtid.domain] = m_current_gtid;
+        guard.unlock();
         save_gtid_state();
 
         m_rpl.try_rotate_files();
@@ -587,6 +597,11 @@ bool Replicator::ok() const
 void Replicator::rotate()
 {
     m_imp->rotate();
+}
+
+std::string Replicator::gtid_pos() const
+{
+    return m_imp->gtid_pos();
 }
 
 Replicator::~Replicator()

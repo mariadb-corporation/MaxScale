@@ -53,6 +53,13 @@ public:
     void rotate();
 
     /**
+     * Get current GTID position
+     *
+     * @return The current GTID position or an empty string if no position has been reached
+     */
+    std::string gtid_pos() const;
+
+    /**
      * Destroys the Replicator and stops the processing of data
      */
     ~Replicator();
