@@ -229,7 +229,7 @@ export default {
     async created() {
         this.resetDraggingStates()
         this.resetConfDlgStates()
-        if (this.$typy(this.current_cluster).isEmptyObject) await this.fetchCluster()
+        await this.fetchCluster()
     },
     mounted() {
         this.$nextTick(() => this.setCtrDim())
