@@ -28,6 +28,18 @@
 namespace HttpSql
 {
 
+struct ConnectionConfig
+{
+    std::string    host;
+    int            port;
+    std::string    user;
+    std::string    password;
+    std::string    db;
+    int64_t        timeout = 10;
+    bool           proxy_protocol = false;
+    mxb::SSLConfig ssl;
+};
+
 class ConnectionManager
 {
 public:
@@ -38,7 +50,7 @@ public:
 
     struct Connection
     {
-        Connection(mxq::MariaDB&& new_conn);
+        Connection(mxq::MariaDB&& new_conn, const ConnectionConfig& cnf);
         ~Connection();
         void release();
 
@@ -49,6 +61,7 @@ public:
         int64_t          current_query_id {0};
         mxb::TimePoint   last_query_time;
         int64_t          last_max_rows {0};
+        ConnectionConfig config;
     };
 
     /**
@@ -67,7 +80,7 @@ public:
      * @param conn Existing Connector-C connection
      * @return Id of added connection
      */
-    int64_t add(mxq::MariaDB&& conn);
+    int64_t add(mxq::MariaDB&& conn, const ConnectionConfig& cnf);
 
     /**
      * Erase a connection from the map.

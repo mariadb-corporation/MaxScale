@@ -18,6 +18,7 @@
 
 #include "httprequest.hh"
 #include "httpresponse.hh"
+#include "sql_conn_manager.hh"
 
 #include <maxsql/mariadb_connector.hh>
 #include <maxscale/server.hh>
@@ -27,6 +28,7 @@ namespace HttpSql
 
 HttpResponse connect(const HttpRequest& request);
 HttpResponse reconnect(const HttpRequest& request);
+HttpResponse clone(const HttpRequest& request);
 HttpResponse show_connection(const HttpRequest& request);
 HttpResponse show_all_connections(const HttpRequest& request);
 HttpResponse query(const HttpRequest& request);
@@ -43,18 +45,6 @@ void stop_cleanup();
 //
 
 std::vector<int64_t> get_connections();
-
-struct ConnectionConfig
-{
-    std::string    host;
-    int            port;
-    std::string    user;
-    std::string    password;
-    std::string    db;
-    int64_t        timeout = 10;
-    bool           proxy_protocol = false;
-    mxb::SSLConfig ssl;
-};
 
 int64_t create_connection(const ConnectionConfig& config, std::string* err);
 }

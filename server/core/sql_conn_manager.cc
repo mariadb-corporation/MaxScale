@@ -37,9 +37,9 @@ ConnectionManager::Connection* ConnectionManager::get_connection(int64_t id)
     return rval;
 }
 
-int64_t ConnectionManager::add(mxq::MariaDB&& conn)
+int64_t ConnectionManager::add(mxq::MariaDB&& conn, const ConnectionConfig& cnf)
 {
-    auto elem = std::make_unique<Connection>(move(conn));
+    auto elem = std::make_unique<Connection>(move(conn), cnf);
 
     LockGuard guard(m_connection_lock);
     int64_t id = m_next_id++;
@@ -202,9 +202,10 @@ ConnectionManager::Connection::~Connection()
     mxb_assert(!busy);
 }
 
-ConnectionManager::Connection::Connection(mxq::MariaDB&& new_conn)
+ConnectionManager::Connection::Connection(mxq::MariaDB&& new_conn, const ConnectionConfig& cnf)
     : conn(move(new_conn))
     , last_query_time(mxb::Clock::now())
+    , config(cnf)
 {
 }
 

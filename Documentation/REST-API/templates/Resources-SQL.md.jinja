@@ -268,6 +268,33 @@ Missing or invalid connection token:
 
 `Status: 403 Forbidden`
 
+### Clone an existing SQL connection
+
+```
+POST /v1/sql/:id/clone
+```
+
+Clones an existing connection. This is done by opening a new connection using
+the credentials and configuration from the given connection.
+
+#### Request Parameters
+
+This endpoint supports the same request parameters as the `POST /v1/sql`
+endpoint.
+
+#### Response
+
+The response is identical to the one in the `POST /v1/sql` endpoint. In
+addition, this endpoint can return the following responses.
+
+Connection is already in use:
+
+`Status: 503 Service Unavailable`
+
+Missing or invalid connection token:
+
+`Status: 400 Bad Request`
+
 ### Execute SQL query
 
 ```

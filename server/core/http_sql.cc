@@ -484,6 +484,48 @@ HttpResponse reconnect(const HttpRequest& request)
     return HttpResponse(cb);
 }
 
+HttpResponse clone(const HttpRequest& request)
+{
+    auto [id, err] = get_connection_id(request, request.uri_part(1));
+
+    if (!id)
+    {
+        return create_error(err);
+    }
+
+    bool persist = request.get_option("persist") == "yes";
+    int max_age = atoi(request.get_option("max-age").c_str());
+
+    auto cb = [id, host = string(request.host()), persist, max_age]() {
+        HttpResponse response;
+
+        if (auto managed_conn = this_unit.manager.get_connection(id))
+        {
+            std::string err;
+            int64_t new_id = create_connection(managed_conn->config, &err);
+            if (new_id > 0)
+            {
+                response = create_connect_response(host, new_id, persist, max_age);
+            }
+            else
+            {
+                response = HttpResponse(MHD_HTTP_BAD_REQUEST, mxs_json_error("%s", err.c_str()));
+            }
+
+            managed_conn->release();
+        }
+        else
+        {
+            response = create_error(mxb::string_printf("ID %li not found or is busy.", id),
+                                    MHD_HTTP_SERVICE_UNAVAILABLE);
+        }
+
+        return response;
+    };
+
+    return HttpResponse(cb);
+}
+
 // static
 HttpResponse show_connection(const HttpRequest& request)
 {
@@ -648,7 +690,7 @@ int64_t create_connection(const ConnectionConfig& config, std::string* err)
 
     if (conn.open(config.host, config.port, config.db))
     {
-        id = this_unit.manager.add(move(conn));
+        id = this_unit.manager.add(move(conn), config);
     }
     else
     {

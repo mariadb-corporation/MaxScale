@@ -159,6 +159,31 @@ describe("Query API ", function () {
       expect(token.exp - token.iat).to.equal(500);
       await c.delete(res.data.links.self + "?token=" + res.data.meta.token);
     });
+
+    it("clones a connection", async function () {
+      var res1 = await c.post(base_url + "/sql/", { ...db_credentials, target: "server1" });
+      var res2 = await c.post(
+        base_url + "/sql/" + res1.data.data.id + "/clone" + "?token=" + res1.data.meta.token
+      );
+      expect(res1.data.data.id).to.be.a("string");
+      expect(res2.data.data.id).to.be.a("string");
+      expect(res1.data.data.id).to.not.equal(res2.data.data.id);
+
+      const query = "SELECT 1";
+
+      var rset = await c.post(res1.data.data.links.related + "?token=" + res1.data.meta.token, {
+        sql: query,
+      });
+      check_resultset(rset.data, query);
+
+      rset = await c.post(res2.data.data.links.related + "?token=" + res2.data.meta.token, {
+        sql: query,
+      });
+      check_resultset(rset.data, query);
+
+      await c.delete(res1.data.links.self + "?token=" + res1.data.meta.token);
+      await c.delete(res2.data.links.self + "?token=" + res2.data.meta.token);
+    });
   });
 
   describe("Cookies", function () {
