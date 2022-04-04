@@ -44,20 +44,21 @@ describe("Query API ", function () {
       conn = res.data;
       expect(conn).to.be.an("object");
       expect(conn.data.id).to.be.a("string");
+      expect(conn.data.attributes.thread_id).to.be.a("number");
       expect(conn.meta.token).to.be.a("string");
       expect(jwt.decode(conn.meta.token)).to.be.an("object");
     });
 
     it("gets one connection", async function () {
       var res = await c.get(base_url + "/sql/" + conn.data.id);
-      expect(res.data.data).to.be.an("object").that.has.keys("id", "links", "type");
+      expect(res.data.data).to.be.an("object").that.has.keys("id", "links", "type", "attributes");
       expect(res.data.data.id).to.equal(conn.data.id);
     });
 
     it("gets all connections", async function () {
       var res = await c.get(base_url + "/sql");
       expect(res.data.data).to.be.an("array");
-      expect(res.data.data[0]).to.be.an("object").that.has.keys("id", "links", "type");
+      expect(res.data.data[0]).to.be.an("object").that.has.keys("id", "links", "type", "attributes");
     });
 
     it("executes one query", async function () {
@@ -134,14 +135,14 @@ describe("Query API ", function () {
     it("reconnects", async function () {
       var query = "SELECT @@pseudo_thread_id";
       var res = await c.post(conn.data.links.related + "?token=" + conn.meta.token, { sql: query });
-      var first_id = res.data.data.attributes.results[0].data[0][0]
-      expect(first_id).to.be.a("number")
+      var first_id = res.data.data.attributes.results[0].data[0][0];
+      expect(first_id).to.be.a("number");
 
       await c.post(conn.data.links.self + "reconnect/?token=" + conn.meta.token, { sql: query });
 
       res = await c.post(conn.data.links.related + "?token=" + conn.meta.token, { sql: query });
-      var second_id = res.data.data.attributes.results[0].data[0][0]
-      expect(second_id).to.be.a("number")
+      var second_id = res.data.data.attributes.results[0].data[0][0];
+      expect(second_id).to.be.a("number");
 
       expect(second_id).to.not.equal(first_id);
     });

@@ -21,6 +21,7 @@
 #include <thread>
 #include <vector>
 
+#include <maxbase/jansson.hh>
 #include <maxbase/stopwatch.hh>
 #include <maxsql/mariadb_connector.hh>
 
@@ -40,6 +41,8 @@ public:
         Connection(mxq::MariaDB&& new_conn);
         ~Connection();
         void release();
+
+        json_t* to_json() const;
 
         std::atomic_bool busy {false};
         mxq::MariaDB     conn;
@@ -78,6 +81,8 @@ public:
     bool is_connection(int64_t conn_id) const;
 
     std::vector<int64_t> get_connections();
+
+    json_t* connection_to_json(int64_t conn_id);
 
     void start_cleanup_thread();
     void stop_cleanup_thread();

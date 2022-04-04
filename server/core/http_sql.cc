@@ -274,8 +274,15 @@ bool is_zero_address(const std::string& ip)
 namespace
 {
 
-json_t* connection_json_data(const std::string& host, const std::string& id_str)
+struct ThisUnit
 {
+    HttpSql::ConnectionManager manager;
+};
+ThisUnit this_unit;
+
+json_t* connection_json_data(const std::string& host, int64_t id)
+{
+    std::string id_str = std::to_string(id);
     json_t* data = json_object();
     json_t* self = mxs_json_self_link(host.c_str(), COLLECTION_NAME.c_str(), id_str.c_str());
     std::string self_link = json_string_value(json_object_get(self, "self"));
@@ -285,14 +292,15 @@ json_t* connection_json_data(const std::string& host, const std::string& id_str)
     json_object_set_new(data, CN_TYPE, json_string(COLLECTION_NAME.c_str()));
     json_object_set_new(data, CN_ID, json_string(id_str.c_str()));
     json_object_set_new(data, CN_LINKS, self);
+    json_object_set_new(data, CN_ATTRIBUTES, this_unit.manager.connection_to_json(id));
 
     return data;
 }
 
-json_t* one_connection_to_json(const std::string& host, const std::string& id_str)
+json_t* one_connection_to_json(const std::string& host, int64_t id)
 {
-    std::string self = COLLECTION_NAME + "/" + id_str;
-    return mxs_json_resource(host.c_str(), self.c_str(), connection_json_data(host, id_str));
+    std::string self = COLLECTION_NAME + "/" + std::to_string(id);
+    return mxs_json_resource(host.c_str(), self.c_str(), connection_json_data(host, id));
 }
 
 json_t* all_connections_to_json(const std::string& host, const std::vector<int64_t>& connections)
@@ -301,7 +309,7 @@ json_t* all_connections_to_json(const std::string& host, const std::vector<int64
 
     for (auto id : connections)
     {
-        json_array_append_new(arr, connection_json_data(host, std::to_string(id)));
+        json_array_append_new(arr, connection_json_data(host, id));
     }
 
     return mxs_json_resource(host.c_str(), COLLECTION_NAME.c_str(), arr);
@@ -313,7 +321,7 @@ HttpResponse create_connect_response(const std::string& host, int64_t id, bool p
     std::string id_str = std::to_string(id);
     auto token = mxs::jwt::create(TOKEN_ISSUER, id_str, max_age);
 
-    json_t* data = one_connection_to_json(host, id_str);
+    json_t* data = one_connection_to_json(host, id);
     HttpResponse response(MHD_HTTP_CREATED, data);
     response.add_header(MHD_HTTP_HEADER_LOCATION, host + COLLECTION_NAME + "/" + id_str);
 
@@ -328,12 +336,6 @@ HttpResponse create_connect_response(const std::string& host, int64_t id, bool p
 
     return response;
 }
-
-struct ThisUnit
-{
-    HttpSql::ConnectionManager manager;
-};
-ThisUnit this_unit;
 }
 
 //
@@ -485,7 +487,8 @@ HttpResponse reconnect(const HttpRequest& request)
 // static
 HttpResponse show_connection(const HttpRequest& request)
 {
-    return HttpResponse(MHD_HTTP_OK, one_connection_to_json(request.host(), request.uri_part(1)));
+    int64_t id = std::stol(request.uri_part(1));    // Validated to be an integer before this call
+    return HttpResponse(MHD_HTTP_OK, one_connection_to_json(request.host(), id));
 }
 
 // static

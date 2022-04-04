@@ -446,6 +446,11 @@ bool MariaDB::is_open() const
     return m_conn != nullptr;
 }
 
+uint32_t MariaDB::thread_id() const
+{
+    return mysql_thread_id(m_conn);
+}
+
 bool MariaDB::ping()
 {
     bool rval = false;

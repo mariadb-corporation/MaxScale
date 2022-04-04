@@ -98,6 +98,13 @@ std::vector<int64_t> ConnectionManager::get_connections()
     return conns;
 }
 
+json_t* ConnectionManager::connection_to_json(int64_t conn_id)
+{
+    LockGuard guard(m_connection_lock);
+    auto it = m_connections.find(conn_id);
+    return it != m_connections.end() ? it->second->to_json() : nullptr;
+}
+
 void ConnectionManager::cleanup_thread_func()
 {
     // TODO: make configurable?
@@ -204,5 +211,14 @@ ConnectionManager::Connection::Connection(mxq::MariaDB&& new_conn)
 void ConnectionManager::Connection::release()
 {
     busy.store(false, std::memory_order_release);
+}
+
+json_t* ConnectionManager::Connection::to_json() const
+{
+    auto idle = std::chrono::duration_cast<std::chrono::seconds>(mxb::Clock::now() - last_query_time);
+    json_t* obj = json_object();
+    json_object_set_new(obj, "thread_id", json_integer(conn.thread_id()));
+    json_object_set_new(obj, "seconds_idle", json_integer(idle.count()));
+    return obj;
 }
 }

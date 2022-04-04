@@ -25,7 +25,7 @@ In addition to request parameters, the token can be stored in cookies in which
 case they are automatically used by the REST API. For more information about
 token storage in cookies, see the documentation for `POST /v1/sql`.
 
-##  Request Parameters
+## Request Parameters
 
 All of the endpoints that operate on a single connection support the following
 request parameters. The `GET /v1/sql` and `GET /v1/sql/:id` endpoints are an
@@ -163,7 +163,7 @@ must be either given in the `token` parameter of a request or it must be stored
 in the cookies. If both a `token` parameter and a cookie exist at the same time,
 the `token` parameter will be used instead of the cookie.
 
-####  Request Parameters
+#### Request Parameters
 
 This endpoint supports the following request parameters.
 
@@ -199,6 +199,10 @@ Connection was opened:
 {
     "data": {
         "id": "5",
+        "attributes": {
+            "thread_id": 12,
+            "seconds_idle": 5
+        }
         "links": {
                  // The "related" endpoint is the URL to the query endpoint for this connection.
             "related": "http://localhost:8989/v1/sql/5/queries/",
@@ -391,7 +395,7 @@ responses.
 }
 ```
 
-####  Request Parameters
+#### Request Parameters
 
 This endpoint supports the following request parameters.
 

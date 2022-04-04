@@ -197,6 +197,15 @@ public:
     VersionInfo version_info() const;
     bool        is_open() const;
 
+    /**
+     * Get thread ID of this connection
+     *
+     * The connection must be open when this function is called.
+     *
+     * @return The thread ID of the connection
+     */
+    uint32_t thread_id() const;
+
 private:
     void clear_errors();
     bool run_query(const std::string& query, const std::function<bool()>& result_handler);
