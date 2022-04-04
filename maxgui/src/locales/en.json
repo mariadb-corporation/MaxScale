@@ -320,7 +320,7 @@
             "destroy": "Destroy monitor",
             "async-switchover": "Master switchover",
             "async-reset-replication": "Reset Replication",
-            "async-release-locks": "Release Locks",
+            "async-release-locks": "Release ownership",
             "async-failover": "Master failover",
             "async-rejoin": "Rejoin"
         },

@@ -105,14 +105,20 @@ export default {
             return this.getMonitorOps({ currState: this.current_cluster.state, scope: this })
         },
         clusterOps() {
-            const { monitorData: { parameters = {} } = {} } = this.current_cluster
+            const {
+                monitorData: {
+                    monitor_diagnostics: { primary = false } = {},
+                    parameters = {},
+                } = {},
+            } = this.current_cluster
             let ops = [
                 this.monitorOps[this.MONITOR_OP_TYPES.STOP],
                 this.monitorOps[this.MONITOR_OP_TYPES.START],
                 { divider: true },
                 this.monitorOps[this.MONITOR_OP_TYPES.RESET_REP],
-                this.monitorOps[this.MONITOR_OP_TYPES.RELEASE_LOCKS],
             ]
+            // only add the release_locks option when this cluster is a primary one
+            if (primary) ops.push(this.monitorOps[this.MONITOR_OP_TYPES.RELEASE_LOCKS])
             // only add the failover option when auto_failover is false
             if (!this.$typy(parameters, 'auto_failover').safeBoolean)
                 ops.push(this.monitorOps[this.MONITOR_OP_TYPES.FAILOVER])
