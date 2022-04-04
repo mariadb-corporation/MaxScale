@@ -428,11 +428,11 @@ void XpandMonitor::tick()
         break;
 
     case http::Async::READY:
-        update_server_statuses();
         make_health_check();
         break;
     }
 
+    update_server_statuses();
     flush_server_status();
     process_state_changes();
     hangup_failed_servers();
