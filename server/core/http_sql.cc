@@ -432,17 +432,17 @@ HttpResponse connect(const HttpRequest& request)
 
     return HttpResponse(
         [config, persist, host, max_age]() {
-            std::string err;
-            int64_t new_id = create_connection(config, &err);
-            if (new_id > 0)
-            {
-                return create_connect_response(host, new_id, persist, max_age);
-            }
-            else
-            {
-                return HttpResponse(MHD_HTTP_BAD_REQUEST, mxs_json_error("%s", err.c_str()));
-            }
-        });
+        std::string err;
+        int64_t new_id = create_connection(config, &err);
+        if (new_id > 0)
+        {
+            return create_connect_response(host, new_id, persist, max_age);
+        }
+        else
+        {
+            return HttpResponse(MHD_HTTP_BAD_REQUEST, mxs_json_error("%s", err.c_str()));
+        }
+    });
 }
 
 HttpResponse reconnect(const HttpRequest& request)
@@ -457,29 +457,29 @@ HttpResponse reconnect(const HttpRequest& request)
     }
 
     auto cb = [id, host = string(request.host())]() {
-            HttpResponse response;
+        HttpResponse response;
 
-            if (auto managed_conn = this_unit.manager.get_connection(id))
+        if (auto managed_conn = this_unit.manager.get_connection(id))
+        {
+            if (managed_conn->conn.reconnect())
             {
-                if (managed_conn->conn.reconnect())
-                {
-                    response = HttpResponse(MHD_HTTP_NO_CONTENT);
-                }
-                else
-                {
-                    response = create_error(managed_conn->conn.error(), MHD_HTTP_SERVICE_UNAVAILABLE);
-                }
-
-                managed_conn->release();
+                response = HttpResponse(MHD_HTTP_NO_CONTENT);
             }
             else
             {
-                response = create_error(mxb::string_printf("ID %li not found or is busy.", id),
-                                        MHD_HTTP_SERVICE_UNAVAILABLE);
+                response = create_error(managed_conn->conn.error(), MHD_HTTP_SERVICE_UNAVAILABLE);
             }
 
-            return response;
-        };
+            managed_conn->release();
+        }
+        else
+        {
+            response = create_error(mxb::string_printf("ID %li not found or is busy.", id),
+                                    MHD_HTTP_SERVICE_UNAVAILABLE);
+        }
+
+        return response;
+    };
 
     return HttpResponse(cb);
 }
@@ -528,48 +528,48 @@ HttpResponse query(const HttpRequest& request)
     string self = request.get_uri();
 
     auto exec_query_cb = [id, max_rows, sql = move(sql), host = move(host), self = move(self)]() {
-            auto managed_conn = this_unit.manager.get_connection(id);
-            if (managed_conn)
+        auto managed_conn = this_unit.manager.get_connection(id);
+        if (managed_conn)
+        {
+            if (managed_conn->last_max_rows != max_rows)
             {
-                if (managed_conn->last_max_rows != max_rows)
-                {
-                    std::string limit = max_rows ? std::to_string(max_rows) : "DEFAULT";
-                    managed_conn->conn.cmd("SET sql_select_limit=" + limit);
-                    managed_conn->last_max_rows = max_rows ? max_rows : std::numeric_limits<int64_t>::max();
-                }
-
-                int64_t query_id = ++managed_conn->current_query_id;
-                auto time_before = mxb::Clock::now();
-                managed_conn->conn.streamed_query(sql);
-                auto time_after = mxb::Clock::now();
-                auto exec_time = time_after - time_before;
-                managed_conn->last_query_time = time_after;
-
-                json_t* result_data = generate_json_representation(managed_conn->conn,
-                                                                   managed_conn->last_max_rows);
-                managed_conn->release();
-                // 'managed_conn' is now effectively back in storage and should not be used.
-
-                string id_str = mxb::string_printf("%li-%li", id, query_id);
-                string self_id = self;
-                self_id.append("/").append(id_str);
-                HttpResponse response = construct_result_response(result_data,
-                                                                  host, self_id, id_str, exec_time);
-                response.set_code(MHD_HTTP_CREATED);
-
-                // Add the request SQL into the initial response
-                json_t* attr = mxs_json_pointer(response.get_response(), "/data/attributes");
-                mxb_assert(attr);
-                json_object_set_new(attr, "sql", json_string(sql.c_str()));
-
-                return response;
+                std::string limit = max_rows ? std::to_string(max_rows) : "DEFAULT";
+                managed_conn->conn.cmd("SET sql_select_limit=" + limit);
+                managed_conn->last_max_rows = max_rows ? max_rows : std::numeric_limits<int64_t>::max();
             }
-            else
-            {
-                string errmsg = mxb::string_printf("ID %li not found or is busy.", id);
-                return create_error(errmsg, MHD_HTTP_SERVICE_UNAVAILABLE);
-            }
-        };
+
+            int64_t query_id = ++managed_conn->current_query_id;
+            auto time_before = mxb::Clock::now();
+            managed_conn->conn.streamed_query(sql);
+            auto time_after = mxb::Clock::now();
+            auto exec_time = time_after - time_before;
+            managed_conn->last_query_time = time_after;
+
+            json_t* result_data = generate_json_representation(managed_conn->conn,
+                                                               managed_conn->last_max_rows);
+            managed_conn->release();
+            // 'managed_conn' is now effectively back in storage and should not be used.
+
+            string id_str = mxb::string_printf("%li-%li", id, query_id);
+            string self_id = self;
+            self_id.append("/").append(id_str);
+            HttpResponse response = construct_result_response(result_data,
+                                                              host, self_id, id_str, exec_time);
+            response.set_code(MHD_HTTP_CREATED);
+
+            // Add the request SQL into the initial response
+            json_t* attr = mxs_json_pointer(response.get_response(), "/data/attributes");
+            mxb_assert(attr);
+            json_object_set_new(attr, "sql", json_string(sql.c_str()));
+
+            return response;
+        }
+        else
+        {
+            string errmsg = mxb::string_printf("ID %li not found or is busy.", id);
+            return create_error(errmsg, MHD_HTTP_SERVICE_UNAVAILABLE);
+        }
+    };
     return HttpResponse(std::move(exec_query_cb));
 }
 
@@ -587,19 +587,19 @@ HttpResponse disconnect(const HttpRequest& request)
 
     return HttpResponse(
         [id]() {
-            if (this_unit.manager.erase(id))
-            {
-                HttpResponse response(MHD_HTTP_NO_CONTENT);
-                std::string id_str = std::to_string(id);
-                response.remove_split_cookie(CONN_ID_BODY + id_str, CONN_ID_SIG + id_str);
-                return response;
-            }
-            else
-            {
-                string error_msg = mxb::string_printf("Connection %li not found or is busy.", id);
-                return create_error(error_msg, MHD_HTTP_NOT_FOUND);
-            }
-        });
+        if (this_unit.manager.erase(id))
+        {
+            HttpResponse response(MHD_HTTP_NO_CONTENT);
+            std::string id_str = std::to_string(id);
+            response.remove_split_cookie(CONN_ID_BODY + id_str, CONN_ID_SIG + id_str);
+            return response;
+        }
+        else
+        {
+            string error_msg = mxb::string_printf("Connection %li not found or is busy.", id);
+            return create_error(error_msg, MHD_HTTP_NOT_FOUND);
+        }
+    });
 }
 
 //

@@ -113,8 +113,8 @@ void ConnectionManager::cleanup_thread_func()
     const auto check_interval = mxb::from_secs(5 * 60);
 
     auto should_stop_waiting = [this]() {
-            return !m_keep_running.load(std::memory_order_acquire);
-        };
+        return !m_keep_running.load(std::memory_order_acquire);
+    };
 
     std::vector<int64_t> suspect_idle_ids;
 
