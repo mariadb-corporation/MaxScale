@@ -33,7 +33,7 @@ The major differences between the new and old binlog router are:
  * The list of servers where the database users for authentication are loaded
    must be explicitly configured with the `cluster`, `servers` or
    `targets` parameter. Alternatively, the users can be read from a file. See
-   [user_accounts_file](../Getting-Started/Configuration-Guide.md/#user_accounts_file)
+   [user_accounts_file](../Getting-Started/Configuration-Guide.md#user_accounts_file)
    for more information.
 
  * The old binlog router had both `server_id` and `master_id`, the new only
