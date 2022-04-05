@@ -15,7 +15,7 @@ import mount from '@tests/unit/setup'
 import ConnectionManager from '@/pages/QueryPage/ConnectionManager'
 import { itemSelectMock } from '@tests/unit/utils'
 
-const dummy_cnct_resources = {
+const dummy_sql_conns = {
     1: { id: '1', name: 'server_0', type: 'servers' },
     2: { id: '2', name: 'server_1', type: 'servers' },
 }
@@ -27,11 +27,11 @@ const mountFactory = opts =>
         ...opts,
     })
 
-// To have an active connection, curr_cnct_resource and cnct_resources should have value
+// To have an active connection, active_sql_conn and sql_conns should have value
 function mockActiveConnState() {
     return {
-        cnct_resources: () => dummy_cnct_resources,
-        curr_cnct_resource: () => dummy_cnct_resources['1'],
+        sql_conns: () => dummy_sql_conns,
+        active_sql_conn: () => dummy_sql_conns['1'],
     }
 }
 
@@ -133,11 +133,11 @@ describe(`ConnectionManager - methods and computed properties tests `, () => {
         wrapper = mountFactory({
             computed: {
                 //stub availableConnOpts so that  server_1 is available to use
-                availableConnOpts: () => Object.values(dummy_cnct_resources),
+                availableConnOpts: () => Object.values(dummy_sql_conns),
                 pre_select_conn_rsrc: () => preSelectConnRsrcStub,
             },
             methods: {
-                SET_CURR_CNCT_RESOURCE: () => null,
+                SET_ACTIVE_SQL_CONN: () => null,
                 updateRoute: () => null,
                 handleDispatchInitialFetch: () => null,
             },
@@ -155,10 +155,10 @@ describe(`ConnectionManager - methods and computed properties tests `, () => {
         fnSpy.should.have.been.calledOnce
         fnSpy.restore()
     })
-    it(`Should assign curr_cnct_resource value to chosenConn if there is an active connection
+    it(`Should assign active_sql_conn value to chosenConn if there is an active connection
       bound to the worksheet`, () => {
         wrapper = mountFactory({ computed: { ...mockActiveConnState() } })
-        expect(wrapper.vm.chosenConn).to.be.deep.equals(wrapper.vm.curr_cnct_resource)
+        expect(wrapper.vm.chosenConn).to.be.deep.equals(wrapper.vm.active_sql_conn)
     })
     it(`Should assign an empty object to chosenConn if there is no active connection
       bound to the worksheet`, () => {
@@ -167,16 +167,16 @@ describe(`ConnectionManager - methods and computed properties tests `, () => {
     })
     it(`Should return accurate value for usedConnections computed property`, () => {
         wrapper = mountFactory({
-            computed: { worksheets_arr: () => [{ curr_cnct_resource: dummy_cnct_resources['1'] }] },
+            computed: { worksheets_arr: () => [{ active_sql_conn: dummy_sql_conns['1'] }] },
         })
-        expect(wrapper.vm.usedConnections).to.be.deep.equals([dummy_cnct_resources['1'].id])
+        expect(wrapper.vm.usedConnections).to.be.deep.equals([dummy_sql_conns['1'].id])
     })
     it(`Should not disabled current connection that is bound to current worksheet
       in connOptions`, () => {
         wrapper = mountFactory({ computed: { ...mockActiveConnState() } })
         expect(wrapper.vm.connOptions[0]).to.be.deep.equals({
-            // first obj in mockActiveConnState is used as curr_cnct_resource
-            ...dummy_cnct_resources['1'],
+            // first obj in mockActiveConnState is used as active_sql_conn
+            ...dummy_sql_conns['1'],
             disabled: false,
         })
     })
@@ -185,11 +185,11 @@ describe(`ConnectionManager - methods and computed properties tests `, () => {
         wrapper = mountFactory({
             computed: {
                 ...mockActiveConnState(),
-                usedConnections: () => [dummy_cnct_resources['2'].id],
+                usedConnections: () => [dummy_sql_conns['2'].id],
             },
         })
         expect(wrapper.vm.connOptions[1]).to.be.deep.equals({
-            ...dummy_cnct_resources['2'],
+            ...dummy_sql_conns['2'],
             disabled: true,
         })
     })
@@ -202,7 +202,7 @@ describe(`ConnectionManager - methods and computed properties tests `, () => {
         })
         // mock unlinkConn call
         wrapper.vm.unlinkConn(wrapper.vm.connOptions[0])
-        expect(wrapper.vm.connToBeDel).to.be.deep.equals({ id: dummy_cnct_resources['1'].name })
+        expect(wrapper.vm.connToBeDel).to.be.deep.equals({ id: dummy_sql_conns['1'].name })
     })
 })
 
@@ -213,19 +213,19 @@ describe(`ConnectionManager - connection list dropdown tests`, () => {
         wrapper = mountFactory({
             shallow: false,
             computed: { ...mockActiveConnState() },
-            methods: { SET_CURR_CNCT_RESOURCE: () => null, initialFetch: () => null },
+            methods: { SET_ACTIVE_SQL_CONN: () => null, initialFetch: () => null },
         })
         await itemSelectMock(wrapper, wrapper.vm.connOptions[1], '.conn-dropdown')
         onSelectConnSpy.should.have.been.calledOnce
         onSelectConnSpy.restore()
     })
-    it(`Should call SET_CURR_CNCT_RESOURCE and updateRoute with accurate arguments
+    it(`Should call SET_ACTIVE_SQL_CONN and updateRoute with accurate arguments
       when onChangeChosenConn is called`, () => {
         let updateRouteArgs, setCurrCnctResourceArgs, handleDispatchInitialFetchArgs
         wrapper = mountFactory({
             computed: { ...mockActiveConnState() },
             methods: {
-                SET_CURR_CNCT_RESOURCE: v => (setCurrCnctResourceArgs = v),
+                SET_ACTIVE_SQL_CONN: v => (setCurrCnctResourceArgs = v),
                 updateRoute: v => (updateRouteArgs = v),
                 handleDispatchInitialFetch: v => (handleDispatchInitialFetchArgs = v),
             },

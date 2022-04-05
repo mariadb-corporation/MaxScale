@@ -42,7 +42,7 @@ export default {
     computed: {
         ...mapState({
             active_wke_id: state => state.query.active_wke_id,
-            curr_cnct_resource: state => state.query.curr_cnct_resource,
+            active_sql_conn: state => state.query.active_sql_conn,
         }),
         ...mapGetters({
             getQueryErrMsgObj: 'query/getQueryErrMsgObj',
@@ -68,7 +68,7 @@ export default {
             disconnect: 'query/disconnect',
         }),
         async deleteConn() {
-            await this.disconnect({ id: this.curr_cnct_resource.id })
+            await this.disconnect({ id: this.active_sql_conn.id })
         },
     },
 }

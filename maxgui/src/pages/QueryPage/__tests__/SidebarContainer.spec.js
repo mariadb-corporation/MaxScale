@@ -27,7 +27,7 @@ const mountFactory = opts =>
 function mockShowingDbListTree() {
     return {
         getLoadingDbTree: () => false,
-        curr_cnct_resource: () => ({ id: '1', name: 'server_0', type: 'servers' }),
+        active_sql_conn: () => ({ id: '1', name: 'server_0', type: 'servers' }),
     }
 }
 function mockLoadingDbListTree() {

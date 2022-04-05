@@ -14,7 +14,7 @@
 import mount from '@tests/unit/setup'
 import QueryPage from '@/pages/QueryPage'
 
-const cnct_resources_mock = {
+const sql_conns_mock = {
     1: {
         id: '1',
         name: 'Read-Write-Listener',
@@ -65,7 +65,7 @@ describe('QueryPage leaving tests', () => {
             component: QueryPage,
             computed: {
                 // stub active connection
-                cnct_resources: () => cnct_resources_mock,
+                sql_conns: () => sql_conns_mock,
             },
             methods: stubModuleMethods,
         })
@@ -78,11 +78,11 @@ describe('QueryPage leaving tests', () => {
             component: QueryPage,
             computed: {
                 // stub for having no active connection
-                cnct_resources: () => ({}),
+                sql_conns: () => ({}),
             },
             methods: stubModuleMethods,
         })
-        expect(wrapper.vm.cnct_resources).to.be.empty
+        expect(wrapper.vm.sql_conns).to.be.empty
         mockBeforeRouteLeave(wrapper)
         expect(wrapper.vm.$data.isConfDlgOpened).to.be.false
     })
@@ -98,7 +98,7 @@ describe('QueryPage - handle disconnect connections when leaving page', () => {
             component: QueryPage,
             computed: {
                 // stub active connection
-                cnct_resources: () => cnct_resources_mock,
+                sql_conns: () => sql_conns_mock,
             },
             methods: stubModuleMethods,
         })

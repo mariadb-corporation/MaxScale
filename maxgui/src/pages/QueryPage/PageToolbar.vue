@@ -2,7 +2,7 @@
     <div ref="pageToolbar" class="page-toolbar d-flex align-center flex-grow-1">
         <div ref="leftBtns" class="d-flex align-center left-buttons pl-2">
             <v-btn
-                :disabled="!Object.keys(cnct_resources).length"
+                :disabled="!Object.keys(sql_conns).length"
                 small
                 class="float-left add-wke-btn"
                 icon
@@ -163,7 +163,7 @@ export default {
     computed: {
         ...mapState({
             is_fullscreen: state => state.query.is_fullscreen,
-            cnct_resources: state => state.query.cnct_resources,
+            sql_conns: state => state.query.sql_conns,
             worksheets_arr: state => state.query.worksheets_arr,
             query_txt: state => state.query.query_txt,
             selected_query_txt: state => state.query.selected_query_txt,

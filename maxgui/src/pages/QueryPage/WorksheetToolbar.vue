@@ -234,7 +234,7 @@ export default {
         ...mapState({
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             is_fullscreen: state => state.query.is_fullscreen,
-            curr_cnct_resource: state => state.query.curr_cnct_resource,
+            active_sql_conn: state => state.query.active_sql_conn,
             active_db: state => state.query.active_db,
             query_confirm_flag: state => state.persisted.query_confirm_flag,
             show_vis_sidebar: state => state.query.show_vis_sidebar,
@@ -256,7 +256,7 @@ export default {
             )
         },
         hasActiveConn() {
-            return this.$typy(this.curr_cnct_resource, 'id').isDefined
+            return this.$typy(this.active_sql_conn, 'id').isDefined
         },
     },
     methods: {

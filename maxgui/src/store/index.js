@@ -44,12 +44,7 @@ const store = new Vuex.Store({
         plugins,
         createPersistedState({
             key: 'maxgui',
-            paths: [
-                'persisted',
-                'query.worksheets_arr',
-                'query.cnct_resources',
-                'user.logged_in_user',
-            ],
+            paths: ['persisted', 'query.worksheets_arr', 'query.sql_conns', 'user.logged_in_user'],
         }),
     ],
     state: {
@@ -191,7 +186,7 @@ let initialState = Vue.prototype.$help.lodash.cloneDeep(store.state)
  * A workaround to get fresh initial states because below states are stored in localStorage
  */
 initialState.query.worksheets_arr = [defWorksheetState()]
-initialState.query.cnct_resources = {}
+initialState.query.sql_conns = {}
 initialState.user.logged_in_user = {}
 /** for state hydration*/
 export function resetState() {

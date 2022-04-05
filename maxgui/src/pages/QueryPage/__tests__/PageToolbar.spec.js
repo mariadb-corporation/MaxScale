@@ -24,8 +24,8 @@ const mountFactory = opts =>
         ...opts,
     })
 
-// stub curr_cnct_resource
-const dummy_curr_cnct_resource = { id: '1', name: 'server_0', type: 'servers' }
+// stub active_sql_conn
+const dummy_active_sql_conn = { id: '1', name: 'server_0', type: 'servers' }
 async function clickAddBtnMock(wrapper) {
     await wrapper.find('.add-wke-btn').trigger('click') // click + button
 }
@@ -62,7 +62,7 @@ describe('PageToolbar - Add new worksheet tests', () => {
         let handleAddNewWkeCallCount = 0
         let wrapper = mountFactory({
             computed: {
-                cnct_resources: () => ({ [dummy_curr_cnct_resource.id]: dummy_curr_cnct_resource }),
+                sql_conns: () => ({ [dummy_active_sql_conn.id]: dummy_active_sql_conn }),
             },
             methods: {
                 // stubs vuex actions

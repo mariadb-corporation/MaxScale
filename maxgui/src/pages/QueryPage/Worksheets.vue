@@ -17,7 +17,7 @@
                     active-class="tab-btn--active"
                 >
                     <v-tooltip
-                        :disabled="!Boolean(wke.curr_cnct_resource.name)"
+                        :disabled="!Boolean(wke.active_sql_conn.name)"
                         top
                         transition="slide-x-transition"
                         content-class="shadow-drop"
@@ -66,7 +66,7 @@
                         </template>
                         <span class="color text-text py-2 px-4">
                             {{ $t('connectedTo') }}
-                            {{ $typy(wke, 'curr_cnct_resource.name').safeString }}
+                            {{ $typy(wke, 'active_sql_conn.name').safeString }}
                         </span>
                     </v-tooltip>
                 </v-tab>
@@ -128,7 +128,7 @@ export default {
         ...mapState({
             worksheets_arr: state => state.query.worksheets_arr,
             active_wke_id: state => state.query.active_wke_id,
-            curr_cnct_resource: state => state.query.curr_cnct_resource,
+            active_sql_conn: state => state.query.active_sql_conn,
             query_results_map: state => state.query.query_results_map,
             is_querying_map: state => state.query.is_querying_map,
         }),

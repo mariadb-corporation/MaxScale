@@ -138,7 +138,7 @@ export default {
         ...mapState({
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             curr_query_mode: state => state.query.curr_query_mode,
-            curr_cnct_resource: state => state.query.curr_cnct_resource,
+            active_sql_conn: state => state.query.active_sql_conn,
         }),
         ...mapGetters({
             getPrvwDataRes: 'query/getPrvwDataRes',
@@ -149,7 +149,7 @@ export default {
             getActiveTreeNode: 'query/getActiveTreeNode',
         }),
         validConn() {
-            return Boolean(this.getActiveTreeNode.id && this.curr_cnct_resource.id)
+            return Boolean(this.getActiveTreeNode.id && this.active_sql_conn.id)
         },
         isPrwDataLoading() {
             return (

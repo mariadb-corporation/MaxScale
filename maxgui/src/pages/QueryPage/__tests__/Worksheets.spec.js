@@ -39,7 +39,7 @@ function stubCnctWke(wrapper) {
             worksheets_arr: () => [
                 {
                     ...wrapper.vm.worksheets_arr[0],
-                    curr_cnct_resource: {
+                    active_sql_conn: {
                         id: '0',
                         name: 'server_0',
                         type: 'servers',

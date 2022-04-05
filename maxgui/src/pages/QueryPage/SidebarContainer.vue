@@ -150,7 +150,7 @@ export default {
         ...mapState({
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             SQL_NODE_TYPES: state => state.app_config.SQL_NODE_TYPES,
-            curr_cnct_resource: state => state.query.curr_cnct_resource,
+            active_sql_conn: state => state.query.active_sql_conn,
             is_sidebar_collapsed: state => state.query.is_sidebar_collapsed,
             search_schema: state => state.query.search_schema,
             engines: state => state.query.engines,
@@ -172,7 +172,7 @@ export default {
             },
         },
         isConnecting() {
-            return !this.$typy(this.curr_cnct_resource, 'id').safeString || this.getLoadingDbTree
+            return !this.$typy(this.active_sql_conn, 'id').safeString || this.getLoadingDbTree
         },
         stmtI18nPluralization() {
             const statementCounts = (this.sql.match(/;/g) || []).length

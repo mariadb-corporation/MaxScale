@@ -132,8 +132,8 @@ export default {
     },
     computed: {
         ...mapState({
-            cnct_resources: state => state.query.cnct_resources,
-            curr_cnct_resource: state => state.query.curr_cnct_resource,
+            sql_conns: state => state.query.sql_conns,
+            active_sql_conn: state => state.query.active_sql_conn,
             pre_select_conn_rsrc: state => state.query.pre_select_conn_rsrc,
             worksheets_arr: state => state.query.worksheets_arr,
             active_wke_id: state => state.query.active_wke_id,
@@ -147,14 +147,14 @@ export default {
          */
         usedConnections() {
             return this.worksheets_arr.reduce((acc, wke) => {
-                const connId = this.$typy(wke, 'curr_cnct_resource.id').safeString
+                const connId = this.$typy(wke, 'active_sql_conn.id').safeString
                 if (connId) acc.push(connId)
                 return acc
             }, [])
         },
         connOptions() {
-            return Object.values(this.cnct_resources).map(cnctRsrc =>
-                this.curr_cnct_resource.id === cnctRsrc.id
+            return Object.values(this.sql_conns).map(cnctRsrc =>
+                this.active_sql_conn.id === cnctRsrc.id
                     ? { ...cnctRsrc, disabled: false }
                     : { ...cnctRsrc, disabled: this.usedConnections.includes(cnctRsrc.id) }
             )
@@ -171,12 +171,12 @@ export default {
          * Watcher to handle multi-worksheets or after creating a connection.
          * It's set to trigger immediately after creating so it works also as a created hook
          */
-        curr_cnct_resource: {
+        active_sql_conn: {
             deep: true,
             immediate: true,
             async handler(v) {
                 /**
-                 * chosenConn is component'state, so when curr_cnct_resource query's module state
+                 * chosenConn is component'state, so when active_sql_conn query's module state
                  * is changed by changing worksheet, chosenConn needs to be updated by calling assignActiveConn
                  */
                 if (!this.$help.lodash.isEqual(v, this.chosenConn)) {
@@ -208,7 +208,7 @@ export default {
             updateRoute: 'query/updateRoute',
         }),
         ...mapMutations({
-            SET_CURR_CNCT_RESOURCE: 'query/SET_CURR_CNCT_RESOURCE',
+            SET_ACTIVE_SQL_CONN: 'query/SET_ACTIVE_SQL_CONN',
         }),
         /**
          * Check if there is an available connection (connection that has not been bound to a worksheet),
@@ -224,26 +224,26 @@ export default {
             } else this.openConnDialog()
         },
         /**
-         * Dispatching initalFetch when connection is valid, curr_cnct_resource
+         * Dispatching initalFetch when connection is valid, active_sql_conn
          * state is defined
-         * @param {Object} curr_cnct_resource  curr_cnct_resource
+         * @param {Object} active_sql_conn  active_sql_conn
          */
-        async handleDispatchInitialFetch(curr_cnct_resource) {
-            if (curr_cnct_resource.id) await this.initialFetch(curr_cnct_resource)
+        async handleDispatchInitialFetch(active_sql_conn) {
+            if (active_sql_conn.id) await this.initialFetch(active_sql_conn)
         },
         /**
          * Function is called after chosenConn is updated
          */
         async onChangeChosenConn(chosenConn) {
-            // update curr_cnct_resource module state
-            this.SET_CURR_CNCT_RESOURCE({ payload: chosenConn, active_wke_id: this.active_wke_id })
+            // update active_sql_conn module state
+            this.SET_ACTIVE_SQL_CONN({ payload: chosenConn, active_wke_id: this.active_wke_id })
             // handle navigate to the corresponding nested route
             this.updateRoute(this.active_wke_id)
             // populate data
             await this.handleDispatchInitialFetch(chosenConn)
         },
         assignActiveConn() {
-            if (this.curr_cnct_resource) this.chosenConn = this.curr_cnct_resource
+            if (this.active_sql_conn) this.chosenConn = this.active_sql_conn
             else this.chosenConn = {}
         },
         openConnDialog() {
@@ -258,19 +258,19 @@ export default {
              *  When creating new connection, if current worksheet has been bound to
              *  a connection already, after successful connecting, dispatch initialFetch
              *  to reload schemas tree and other related components. Otherwise,
-             *  after creating a connection, curr_cnct_resource watcher will handle
+             *  after creating a connection, active_sql_conn watcher will handle
              *  calling handleDispatchInitialFetch
              */
-            const hasConnectionAlready = Boolean(this.curr_cnct_resource.id)
+            const hasConnectionAlready = Boolean(this.active_sql_conn.id)
             await this.openConnect(opts)
             // handle navigate to the corresponding nested route
             this.updateRoute(this.active_wke_id)
             if (hasConnectionAlready && !this.conn_err_state)
-                await this.initialFetch(this.curr_cnct_resource)
+                await this.initialFetch(this.active_sql_conn)
         },
         async confirmDelConn() {
             // store the id before deleting to check if there is a need to update route
-            const currCnctResourceId = this.curr_cnct_resource.id
+            const currCnctResourceId = this.active_sql_conn.id
             await this.disconnect({ showSnackbar: true, id: this.targetConn.id })
             // update route
             if (currCnctResourceId === this.targetConn.id) this.updateRoute(this.active_wke_id)

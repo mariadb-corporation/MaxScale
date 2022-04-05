@@ -18,7 +18,7 @@ import queryHelper from './queryHelper'
 function connStates() {
     return {
         conn_err_state: false,
-        curr_cnct_resource: {},
+        active_sql_conn: {},
     }
 }
 /**
@@ -183,7 +183,7 @@ export default {
         // worksheet states
         worksheets_arr: [defWorksheetState()], // persisted
         active_wke_id: '',
-        cnct_resources: {},
+        sql_conns: {},
         ...memStates(),
         /**
          * Below is standalone wke states. The value
@@ -200,8 +200,18 @@ export default {
     mutations: {
         ...memStatesMutationCreator(),
         //Toolbar mutations
+        SET_ACTIVE_DB(state, { payload, active_wke_id }) {
+            patch_wke_property(state, { obj: { active_db: payload }, scope: this, active_wke_id })
+        },
         SET_FULLSCREEN(state, payload) {
             state.is_fullscreen = payload
+        },
+        SET_SHOW_VIS_SIDEBAR(state, payload) {
+            patch_wke_property(state, {
+                obj: { show_vis_sidebar: payload },
+                scope: this,
+                active_wke_id: state.active_wke_id,
+            })
         },
 
         // connection related mutations
@@ -217,6 +227,25 @@ export default {
         },
         SET_PRE_SELECT_CONN_RSRC(state, payload) {
             state.pre_select_conn_rsrc = payload
+        },
+        SET_RC_TARGET_NAMES_MAP(state, payload) {
+            state.rc_target_names_map = payload
+        },
+        SET_ACTIVE_SQL_CONN(state, { payload, active_wke_id }) {
+            patch_wke_property(state, {
+                obj: { active_sql_conn: payload },
+                scope: this,
+                active_wke_id,
+            })
+        },
+        SET_SQL_CONNS(state, payload) {
+            state.sql_conns = payload
+        },
+        ADD_SQL_CONN(state, payload) {
+            this.vue.$set(state.sql_conns, payload.id, payload)
+        },
+        DELETE_SQL_CONN(state, payload) {
+            this.vue.$delete(state.sql_conns, payload.id)
         },
 
         // Sidebar tree schema mutations
@@ -268,37 +297,6 @@ export default {
         },
         SET_ENGINES(state, payload) {
             state.engines = payload
-        },
-        // Toolbar mutations
-        SET_RC_TARGET_NAMES_MAP(state, payload) {
-            state.rc_target_names_map = payload
-        },
-
-        SET_CURR_CNCT_RESOURCE(state, { payload, active_wke_id }) {
-            patch_wke_property(state, {
-                obj: { curr_cnct_resource: payload },
-                scope: this,
-                active_wke_id,
-            })
-        },
-        SET_CNCT_RESOURCES(state, payload) {
-            state.cnct_resources = payload
-        },
-        ADD_CNCT_RESOURCE(state, payload) {
-            this.vue.$set(state.cnct_resources, payload.id, payload)
-        },
-        DELETE_CNCT_RESOURCE(state, payload) {
-            this.vue.$delete(state.cnct_resources, payload.id)
-        },
-        SET_ACTIVE_DB(state, { payload, active_wke_id }) {
-            patch_wke_property(state, { obj: { active_db: payload }, scope: this, active_wke_id })
-        },
-        SET_SHOW_VIS_SIDEBAR(state, payload) {
-            patch_wke_property(state, {
-                obj: { show_vis_sidebar: payload },
-                scope: this,
-                active_wke_id: state.active_wke_id,
-            })
         },
 
         // Result tables data mutations
@@ -362,14 +360,14 @@ export default {
                         { root: true }
                     )
                     const connId = res.data.data.id
-                    const curr_cnct_resource = {
+                    const active_sql_conn = {
                         id: connId,
                         attributes: res.data.data.attributes,
                         name: body.target,
                         type: resourceType,
                     }
-                    commit('ADD_CNCT_RESOURCE', curr_cnct_resource)
-                    commit('SET_CURR_CNCT_RESOURCE', { payload: curr_cnct_resource, active_wke_id })
+                    commit('ADD_SQL_CONN', active_sql_conn)
+                    commit('SET_ACTIVE_SQL_CONN', { payload: active_sql_conn, active_wke_id })
                     if (body.db) await dispatch('useDb', body.db)
                     commit('SET_CONN_ERR_STATE', { payload: false, active_wke_id })
                 }
@@ -392,7 +390,7 @@ export default {
                             },
                             { root: true }
                         )
-                    commit('DELETE_CNCT_RESOURCE', state.cnct_resources[cnctId])
+                    commit('DELETE_SQL_CONN', state.sql_conns[cnctId])
                     dispatch('resetWkeStates', cnctId)
                 }
             } catch (e) {
@@ -402,7 +400,7 @@ export default {
         },
         async disconnectAll({ state, dispatch }) {
             try {
-                for (const id of Object.keys(state.cnct_resources)) {
+                for (const id of Object.keys(state.sql_conns)) {
                     await dispatch('disconnect', { showSnackbar: false, id })
                 }
             } catch (e) {
@@ -411,9 +409,9 @@ export default {
             }
         },
         async reconnect({ state, commit, dispatch }) {
-            const curr_cnct_resource = state.curr_cnct_resource
+            const active_sql_conn = state.active_sql_conn
             try {
-                let res = await this.$queryHttp.post(`/sql/${curr_cnct_resource.id}/reconnect`)
+                let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/reconnect`)
                 if (res.status === 204) {
                     commit(
                         'SET_SNACK_BAR_MESSAGE',
@@ -423,7 +421,7 @@ export default {
                         },
                         { root: true }
                     )
-                    await dispatch('initialFetch', curr_cnct_resource)
+                    await dispatch('initialFetch', active_sql_conn)
                 } else
                     commit(
                         'SET_SNACK_BAR_MESSAGE',
@@ -441,9 +439,9 @@ export default {
         },
         clearConn({ commit, dispatch, state }) {
             try {
-                const curr_cnct_resource = state.curr_cnct_resource
-                commit('DELETE_CNCT_RESOURCE', curr_cnct_resource)
-                dispatch('resetWkeStates', curr_cnct_resource.id)
+                const active_sql_conn = state.active_sql_conn
+                commit('DELETE_SQL_CONN', active_sql_conn)
+                dispatch('resetWkeStates', active_sql_conn.id)
             } catch (e) {
                 const logger = this.vue.$logger('store-query-clearConn')
                 logger.error(e)
@@ -462,26 +460,26 @@ export default {
                 const clientConnIds = queryHelper.getClientConnIds()
                 if (resConnIds.length === 0) {
                     dispatch('resetAllWkeStates')
-                    commit('SET_CNCT_RESOURCES', {})
+                    commit('SET_SQL_CONNS', {})
                 } else {
                     const validConnIds = clientConnIds.filter(id => resConnIds.includes(id))
-                    const validCnctResources = Object.keys(state.cnct_resources)
+                    const validSqlConns = Object.keys(state.sql_conns)
                         .filter(id => validConnIds.includes(id))
                         .reduce(
                             (acc, id) => ({
                                 ...acc,
                                 [id]: {
-                                    ...state.cnct_resources[id],
+                                    ...state.sql_conns[id],
                                     attributes: resConnMap[id].attributes, // update attributes
                                 },
                             }),
                             {}
                         )
-                    const invalidCnctIds = Object.keys(state.cnct_resources).filter(
-                        id => !(id in validCnctResources)
+                    const invalidCnctIds = Object.keys(state.sql_conns).filter(
+                        id => !(id in validSqlConns)
                     )
                     dispatch('deleteInvalidConn', invalidCnctIds)
-                    commit('SET_CNCT_RESOURCES', validCnctResources)
+                    commit('SET_SQL_CONNS', validSqlConns)
                 }
                 if (!silentValidation) commit('SET_IS_VALIDATING_CONN', false)
             } catch (e) {
@@ -512,13 +510,13 @@ export default {
                      * dispatch SET_PRE_SELECT_CONN_RSRC to open connection dialog
                      */
                     const targetWke = state.worksheets_arr.find(
-                        w => w.curr_cnct_resource.name === paramId
+                        w => w.active_sql_conn.name === paramId
                     )
                     if (targetWke) commit('SET_ACTIVE_WKE_ID', targetWke.id)
                     else {
                         // Use a blank wke if there is one, otherwise create a new one
                         const blankWke = state.worksheets_arr.find(
-                            wke => this.vue.$typy(wke, 'curr_cnct_resource').isEmptyObject
+                            wke => this.vue.$typy(wke, 'active_sql_conn').isEmptyObject
                         )
                         if (blankWke) commit('SET_ACTIVE_WKE_ID', blankWke.id)
                         else dispatch('addNewWs')
@@ -540,7 +538,7 @@ export default {
          * This function must be called in the following cases:
          * 1. When $route changes. e.g. The use edits url or enter page with an absolute link
          * 2. When active_wke_id is changed. e.g. The user creates new worksheet or navigate between worksheets
-         * 3. When curr_cnct_resource is changed. e.g. The user selects connection in the dropdown or opens new one
+         * 3. When active_sql_conn is changed. e.g. The user selects connection in the dropdown or opens new one
          * 4. When the connection is unlinked from the worksheet
          * @param {String} wkeId - worksheet id
          */
@@ -548,7 +546,7 @@ export default {
             let from = this.router.app.$route.path,
                 to = `/query/blank_wke/${wkeId}`
             const targetWke = state.worksheets_arr.find(w => w.id === wkeId)
-            const { type, name } = targetWke.curr_cnct_resource
+            const { type, name } = targetWke.active_sql_conn
             if (name) to = `/query/${type}/${name}`
             if (from !== to) this.router.push(to)
         },
@@ -591,7 +589,7 @@ export default {
          * @returns {Object} { dbTree, cmpList }
          */
         async getDbs({ state, rootState }) {
-            const curr_cnct_resource = state.curr_cnct_resource
+            const active_sql_conn = state.active_sql_conn
             try {
                 const {
                     SQL_NODE_TYPES: { SCHEMA, TABLES, SPS },
@@ -600,7 +598,7 @@ export default {
                 let sql = 'SELECT * FROM information_schema.SCHEMATA'
                 if (!rootState.persisted.query_show_sys_schemas_flag)
                     sql += ` WHERE SCHEMA_NAME NOT IN(${SYS_S.map(db => `'${db}'`).join(',')})`
-                const res = await this.$queryHttp.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                const res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql,
                 })
                 let cmpList = []
@@ -662,7 +660,7 @@ export default {
          * @returns {Object} { dbName, gch, cmpList }
          */
         async getDbGrandChild({ state, rootState }, node) {
-            const curr_cnct_resource = state.curr_cnct_resource
+            const active_sql_conn = state.active_sql_conn
             try {
                 let dbName, grandChildNodeType, rowName, query
                 const {
@@ -686,7 +684,7 @@ export default {
                         query = `SELECT ROUTINE_NAME, CREATED FROM information_schema.ROUTINES WHERE ROUTINE_TYPE = 'PROCEDURE' AND ROUTINE_SCHEMA = '${dbName}';`
                         break
                 }
-                const res = await this.$queryHttp.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                const res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql: query,
                 })
                 const dataRows = this.vue.$help.getObjectRows({
@@ -753,7 +751,7 @@ export default {
          * @returns {Object} { dbName, tblName, gch, cmpList }
          */
         async getTableGrandChild({ state, rootState }, node) {
-            const curr_cnct_resource = state.curr_cnct_resource
+            const active_sql_conn = state.active_sql_conn
             try {
                 const dbName = node.id.split('.')[0]
                 const tblName = node.id.split('.')[1]
@@ -776,7 +774,7 @@ export default {
                         query = `SELECT COLUMN_NAME, COLUMN_TYPE, COLUMN_KEY, PRIVILEGES FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = "${dbName}" AND TABLE_NAME = "${tblName}";`
                         break
                 }
-                const res = await this.$queryHttp.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                const res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql: query,
                 })
 
@@ -929,7 +927,7 @@ export default {
          * @param {String} tblId - Table id (database_name.table_name).
          */
         async fetchPrvw({ state, rootState, commit, dispatch }, { tblId, prvwMode }) {
-            const curr_cnct_resource = state.curr_cnct_resource
+            const active_sql_conn = state.active_sql_conn
             const active_wke_id = state.active_wke_id
             const request_sent_time = new Date().valueOf()
             try {
@@ -955,7 +953,7 @@ export default {
                         break
                 }
 
-                let res = await this.$queryHttp.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql,
                     max_rows: rootState.persisted.query_max_rows,
                 })
@@ -976,7 +974,7 @@ export default {
                         name: queryName,
                         sql,
                         res,
-                        connection_name: curr_cnct_resource.name,
+                        connection_name: active_sql_conn.name,
                         queryType: rootState.app_config.QUERY_LOG_TYPES.ACTION_LOGS,
                     },
                     { root: true }
@@ -998,7 +996,7 @@ export default {
          */
         async fetchQueryResult({ state, commit, dispatch, rootState }, query) {
             const active_wke_id = state.active_wke_id
-            const curr_cnct_resource = state.curr_cnct_resource
+            const active_sql_conn = state.active_sql_conn
             const request_sent_time = new Date().valueOf()
 
             try {
@@ -1011,7 +1009,7 @@ export default {
                     },
                 })
 
-                let res = await this.$queryHttp.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql: query,
                     max_rows: rootState.persisted.query_max_rows,
                 })
@@ -1035,7 +1033,7 @@ export default {
                         startTime: now,
                         sql: query,
                         res,
-                        connection_name: curr_cnct_resource.name,
+                        connection_name: active_sql_conn.name,
                         queryType: rootState.app_config.QUERY_LOG_TYPES.USER_LOGS,
                     },
                     { root: true }
@@ -1053,13 +1051,13 @@ export default {
          * @param {String} db - database name
          */
         async useDb({ state, commit, dispatch, rootState }, db) {
-            const curr_cnct_resource = state.curr_cnct_resource
+            const active_sql_conn = state.active_sql_conn
             const active_wke_id = state.active_wke_id
             try {
                 const now = new Date().valueOf()
                 const escapedDb = this.vue.$help.escapeIdentifiers(db)
                 const sql = `USE ${escapedDb};`
-                let res = await this.$queryHttp.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql,
                 })
                 let queryName = `Change default database to ${escapedDb}`
@@ -1082,7 +1080,7 @@ export default {
                         name: queryName,
                         sql,
                         res,
-                        connection_name: curr_cnct_resource.name,
+                        connection_name: active_sql_conn.name,
                         queryType: rootState.app_config.QUERY_LOG_TYPES.ACTION_LOGS,
                     },
                     { root: true }
@@ -1093,11 +1091,11 @@ export default {
             }
         },
         async updateActiveDb({ state, commit }) {
-            const curr_cnct_resource = state.curr_cnct_resource
+            const active_sql_conn = state.active_sql_conn
             const active_db = state.active_db
             const active_wke_id = state.active_wke_id
             try {
-                let res = await this.$queryHttp.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql: 'SELECT DATABASE()',
                 })
                 const resActiveDb = this.vue
@@ -1112,12 +1110,12 @@ export default {
             }
         },
         async queryCharsetCollationMap({ state, commit }) {
-            const curr_cnct_resource = state.curr_cnct_resource
+            const active_sql_conn = state.active_sql_conn
             try {
                 const sql =
                     // eslint-disable-next-line vue/max-len
                     'SELECT character_set_name, collation_name, is_default FROM information_schema.collations'
-                let res = await this.$queryHttp.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql,
                 })
                 let charsetCollationMap = new Map()
@@ -1140,12 +1138,12 @@ export default {
             }
         },
         async queryDefDbCharsetMap({ state, commit }) {
-            const curr_cnct_resource = state.curr_cnct_resource
+            const active_sql_conn = state.active_sql_conn
             try {
                 const sql =
                     // eslint-disable-next-line vue/max-len
                     'SELECT schema_name, default_character_set_name FROM information_schema.schemata'
-                let res = await this.$queryHttp.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql,
                 })
                 let defDbCharsetMap = new Map()
@@ -1162,9 +1160,9 @@ export default {
             }
         },
         async queryEngines({ state, commit }) {
-            const curr_cnct_resource = state.curr_cnct_resource
+            const active_sql_conn = state.active_sql_conn
             try {
-                let res = await this.$queryHttp.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql: 'SELECT engine FROM information_schema.ENGINES',
                 })
                 commit('SET_ENGINES', res.data.data.attributes.results[0].data.flat())
@@ -1174,7 +1172,7 @@ export default {
             }
         },
         async queryTblCreationInfo({ state, commit }, node) {
-            const curr_cnct_resource = state.curr_cnct_resource
+            const active_sql_conn = state.active_sql_conn
             const active_wke_id = state.active_wke_id
             try {
                 commit('UPDATE_TBL_CREATION_INFO_MAP', {
@@ -1187,13 +1185,13 @@ export default {
                 const schemas = node.id.split('.')
                 const db = schemas[0]
                 const tblOptsData = await queryHelper.queryTblOptsData({
-                    curr_cnct_resource,
+                    active_sql_conn,
                     nodeId: node.id,
                     vue: this.vue,
                     $queryHttp: this.$queryHttp,
                 })
                 const colsOptsData = await queryHelper.queryColsOptsData({
-                    curr_cnct_resource,
+                    active_sql_conn,
                     nodeId: node.id,
                     $queryHttp: this.$queryHttp,
                 })
@@ -1241,12 +1239,12 @@ export default {
             { state, rootState, dispatch, commit },
             { sql, action, showSnackbar = true }
         ) {
-            const curr_cnct_resource = state.curr_cnct_resource
+            const active_sql_conn = state.active_sql_conn
             const active_wke_id = state.active_wke_id
             const request_sent_time = new Date().valueOf()
             try {
                 let stmt_err_msg_obj = {}
-                let res = await this.$queryHttp.post(`/sql/${curr_cnct_resource.id}/queries`, {
+                let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql,
                     max_rows: rootState.persisted.query_max_rows,
                 })
@@ -1280,7 +1278,7 @@ export default {
                         name: queryAction,
                         sql,
                         res,
-                        connection_name: curr_cnct_resource.name,
+                        connection_name: active_sql_conn.name,
                         queryType: rootState.app_config.QUERY_LOG_TYPES.ACTION_LOGS,
                     },
                     { root: true }
@@ -1328,7 +1326,7 @@ export default {
          * clear the state of the worksheet having that connection to its initial state
          */
         resetWkeStates({ state, commit, dispatch }, cnctId) {
-            const targetWke = state.worksheets_arr.find(wke => wke.curr_cnct_resource.id === cnctId)
+            const targetWke = state.worksheets_arr.find(wke => wke.active_sql_conn.id === cnctId)
             if (targetWke) {
                 dispatch('releaseMemory', targetWke.id)
                 const idx = state.worksheets_arr.indexOf(targetWke)
@@ -1346,7 +1344,7 @@ export default {
                  * if connection id to be deleted is equal to current connected
                  * resource of active worksheet, update standalone wke states
                  */
-                if (state.curr_cnct_resource.id === cnctId) commit('UPDATE_SA_WKE_STATES', wke)
+                if (state.active_sql_conn.id === cnctId) commit('UPDATE_SA_WKE_STATES', wke)
             }
         },
         /**

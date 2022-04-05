@@ -51,7 +51,7 @@ export default {
     computed: {
         ...mapState({
             active_wke_id: state => state.query.active_wke_id,
-            cnct_resources: state => state.query.cnct_resources,
+            sql_conns: state => state.query.sql_conns,
         }),
         ...mapGetters({
             getActiveWke: 'query/getActiveWke',
@@ -88,8 +88,7 @@ export default {
              * or there is no active connections or it's a redirection from '/query' to its nested route
              *
              */
-            if (Object.keys(this.cnct_resources).length === 0 || from.path === '/query')
-                this.leavePage()
+            if (Object.keys(this.sql_conns).length === 0 || from.path === '/query') this.leavePage()
             else
                 switch (to.path) {
                     case '/login':
