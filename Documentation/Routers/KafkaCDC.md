@@ -81,6 +81,9 @@ of:
 All remaining fields contains data from the table. In the example event this
 would be the fields `id` and `data`.
 
+The sending of these schema objects is optional and can be disabled using
+`send_schema=false`.
+
 DML events (`INSERT`, `UPDATE`, `DELETE`) are streamed as JSON objects that
 follow the format specified in the DDL event. The objects are in the following
 format (example created by `INSERT INTO test.t1 VALUES (1)`):
@@ -224,6 +227,21 @@ servers and the event is only processed once. This feature does not provide
 exactly-once semantics for the Kafka event delivery. However, it does provide
 high-availability for the `kafkacdc` instances which allows automated failover
 between multiple MaxScale instances.
+
+### `send_schema`
+
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: true
+
+Send JSON schema object into the stream whenever the table schema changes. These
+events, as described [here](#overview), can be used to detect whenever the
+format of the data being sent changes.
+
+If this information in these schema change events is not needed or the code that
+processes the Kafka stream can't handle them, they can be disabled with this
+parameter.
 
 ### `kafka_ssl`
 

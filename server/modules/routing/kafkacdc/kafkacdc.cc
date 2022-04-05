@@ -63,6 +63,10 @@ cfg::ParamBool s_cooperative_replication(
     &s_spec, "cooperative_replication", "Cooperate with other instances replicating from the same cluster",
     false, cfg::Param::AT_RUNTIME);
 
+cfg::ParamBool s_send_schema(
+    &s_spec, "send_schema", "Add JSON schema events into the stream when table schema changes",
+    true, cfg::Param::AT_RUNTIME);
+
 cfg::ParamRegex s_match(
     &s_spec, "match", "Only include data from tables that match this pattern",
     "", cfg::Param::AT_RUNTIME);
@@ -204,7 +208,7 @@ public:
     {
         bool rval = true;
 
-        if (table_matches(table))
+        if (m_config.send_schema && table_matches(table))
         {
             json_t* js = table.to_json();
             auto gtid = table.gtid.to_string();
@@ -433,6 +437,7 @@ KafkaCDC::Config::Config(const std::string& name, KafkaCDC* router)
     add_native(&Config::gtid, &s_gtid);
     add_native(&Config::server_id, &s_server_id);
     add_native(&Config::cooperative_replication, &s_cooperative_replication);
+    add_native(&Config::send_schema, &s_send_schema);
     add_native(&Config::match, &s_match);
     add_native(&Config::exclude, &s_exclude);
     add_native(&Config::ssl, &s_kafka.kafka_ssl);

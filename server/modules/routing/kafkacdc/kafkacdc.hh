@@ -47,6 +47,7 @@ public:
         std::string gtid;
         int64_t     server_id;
         bool        cooperative_replication;
+        bool        send_schema;
 
         mxs::config::RegexValue match;
         mxs::config::RegexValue exclude;
