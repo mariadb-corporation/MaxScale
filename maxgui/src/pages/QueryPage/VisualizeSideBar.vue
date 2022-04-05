@@ -3,8 +3,8 @@
         <h5 class="mb-4">{{ $t('visualization') }}</h5>
         <label class="field__label color text-small-text"> {{ $t('graph') }}</label>
         <v-select
-            v-model="selectedChart"
-            :items="chartTypes"
+            v-model="chartOpt.type"
+            :items="Object.values(SQL_CHART_TYPES)"
             outlined
             class="std mariadb-select-input error--text__bottom"
             :menu-props="{
@@ -16,7 +16,7 @@
             :height="36"
             hide-details="auto"
         />
-        <div v-if="selectedChart !== $t('noVisualization')" class="mt-4">
+        <div v-if="chartOpt.type" class="mt-4">
             <label class="field__label color text-small-text"> {{ $t('selectResultSet') }}</label>
             <v-select
                 v-model="resSet"
@@ -92,17 +92,9 @@
 import { mapGetters, mapState } from 'vuex'
 export default {
     name: 'visualize-sidebar',
-
+    props: { value: { type: Object, required: true } },
     data() {
         return {
-            selectedChart: this.$t('noVisualization'),
-            chartTypes: [
-                this.$t('noVisualization'),
-                'Line',
-                'Scatter',
-                'Bar - Vertical',
-                'Bar - Horizontal',
-            ],
             resSet: null,
             axis: {
                 x: '',
@@ -116,12 +108,21 @@ export default {
     computed: {
         ...mapState({
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
+            SQL_CHART_TYPES: state => state.app_config.SQL_CHART_TYPES,
         }),
         ...mapGetters({
             getPrvwDataRes: 'query/getPrvwDataRes',
             getResults: 'query/getResults',
             getActiveTreeNode: 'query/getActiveTreeNode',
         }),
+        chartOpt: {
+            get() {
+                return this.value
+            },
+            set(value) {
+                this.$emit('input', value)
+            },
+        },
         resultSets() {
             let resSets = []
 
@@ -169,41 +170,39 @@ export default {
         },
         xAxisFields() {
             if (this.$typy(this.resSet, 'fields').isEmptyArray) return []
-            switch (this.selectedChart) {
-                case 'Bar - Horizontal':
+            const { LINE, SCATTER, BAR_VERT, BAR_HORIZ } = this.SQL_CHART_TYPES
+            switch (this.chartOpt.type) {
+                case BAR_HORIZ:
                     return this.numericFields
                 // linear, category or time cartesian axes
-                case 'Scatter':
-                case 'Line':
-                case 'Bar - Vertical':
+                case SCATTER:
+                case LINE:
+                case BAR_VERT:
                 default:
                     return [this.numberSign, ...this.resSet.fields]
             }
         },
         yAxisFields() {
             if (this.$typy(this.resSet, 'fields').isEmptyArray) return []
-            switch (this.selectedChart) {
-                case 'Line':
-                case 'Scatter':
-                case 'Bar - Vertical':
+            const { LINE, SCATTER, BAR_VERT, BAR_HORIZ } = this.SQL_CHART_TYPES
+            switch (this.chartOpt.type) {
+                case LINE:
+                case SCATTER:
+                case BAR_VERT:
                     return this.numericFields
                 // linear, category or time cartesian axes
-                case 'Bar - Horizontal':
+                case BAR_HORIZ:
                 default:
                     return [this.numberSign, ...this.resSet.fields]
             }
         },
         supportTrendLine() {
-            return (
-                this.selectedChart === 'Line' ||
-                this.selectedChart === 'Scatter' ||
-                this.selectedChart.includes('Bar')
-            )
+            const { LINE, SCATTER, BAR_VERT, BAR_HORIZ } = this.SQL_CHART_TYPES
+            return [LINE, SCATTER, BAR_VERT, BAR_HORIZ].includes(this.chartOpt.type)
         },
     },
     watch: {
-        selectedChart(v) {
-            this.$emit('selected-chart', v)
+        'chartOpt.type'() {
             this.clearAxisVal()
         },
         resSet: {
@@ -214,12 +213,12 @@ export default {
         },
         axis: {
             deep: true,
-            handler(v) {
-                this.genChartData({ axis: v, chartType: this.selectedChart })
+            handler() {
+                this.genChartData()
             },
         },
         showTrendline() {
-            this.genChartData({ axis: this.axis, chartType: this.selectedChart })
+            this.genChartData()
         },
     },
     deactivated() {
@@ -235,7 +234,7 @@ export default {
                 if (!this.$help.lodash.isEqual(v, oV)) {
                     this.clearAxisVal()
                     this.resSet = null
-                    this.genChartData({ axis: this.axis, chartType: this.selectedChart })
+                    this.genChartData()
                 }
             })
         },
@@ -245,7 +244,7 @@ export default {
         clearAxisVal() {
             this.axis = { x: '', y: '' }
         },
-        genDataset({ colorIndex, data, chartType }) {
+        genDataset({ colorIndex, data }) {
             const lineColor = this.$help.dynamicColors(colorIndex)
             let dataset = {
                 data,
@@ -256,8 +255,9 @@ export default {
                 index: indexOfOpacity,
                 newChar: '0.2',
             })
-            switch (chartType) {
-                case 'Line':
+            const { LINE, SCATTER, BAR_VERT, BAR_HORIZ } = this.SQL_CHART_TYPES
+            switch (this.chartOpt.type) {
+                case LINE:
                     {
                         dataset = {
                             ...dataset,
@@ -272,7 +272,7 @@ export default {
                         }
                     }
                     break
-                case 'Scatter': {
+                case SCATTER: {
                     dataset = {
                         ...dataset,
                         borderWidth: 1,
@@ -283,8 +283,8 @@ export default {
                     }
                     break
                 }
-                case 'Bar - Vertical':
-                case 'Bar - Horizontal': {
+                case BAR_VERT:
+                case BAR_HORIZ: {
                     dataset = {
                         ...dataset,
                         barPercentage: 0.5,
@@ -322,53 +322,54 @@ export default {
         },
 
         /** This mutates sorting chart data for linear axes
-         * @param {Object} chartData - ChartData object
+         * @param {Object} data - ChartData object
          * @param {String} labelAxisId - axis id: x or y
          * @param {Boolean} isDate - if data is date string
          */
-        sortingChartData({ chartData, labelAxisId, isDate = false }) {
-            chartData.labels.sort((a, b) => (isDate ? this.$moment(a) - this.$moment(b) : a - b))
-            chartData.datasets[0].data.sort((a, b) =>
+        sortingChartData({ data, labelAxisId, isDate = false }) {
+            data.labels.sort((a, b) => (isDate ? this.$moment(a) - this.$moment(b) : a - b))
+            data.datasets[0].data.sort((a, b) =>
                 isDate
                     ? this.$moment(a[labelAxisId]) - this.$moment(b[labelAxisId])
                     : a[labelAxisId] - b[labelAxisId]
             )
         },
 
-        genChartData({ axis, chartType }) {
-            let xAxisType = 'category'
-            let labelAxisId = 'x'
-            let axisLabels = { x: '', y: '' }
-            let chartData = {
-                labels: [],
-                datasets: [],
-            }
-            if (axis.x && axis.y) {
-                axisLabels = { x: axis.x, y: axis.y }
+        genChartData() {
+            const { x, y } = this.axis
+            let xAxisType = 'category',
+                labelAxisId = 'x',
+                axisLabels = { x: '', y: '' },
+                data = {
+                    labels: [],
+                    datasets: [],
+                }
+            if (x && y) {
+                axisLabels = { x, y }
                 let dataPoints = []
                 let labels = []
                 const dataRows = this.$help.getObjectRows({
                     columns: this.resSet.fields,
                     rows: this.resSet.data,
                 })
-
+                const { BAR_HORIZ } = this.SQL_CHART_TYPES
                 for (const [i, row] of dataRows.entries()) {
                     const rowNumber = i + 1
-                    const isXAxisARowNum = axis.x === this.numberSign
-                    const isYAxisARowNum = axis.y === this.numberSign
-                    const xAxisVal = isXAxisARowNum ? rowNumber : row[axis.x]
-                    const yAxisVal = isYAxisARowNum ? rowNumber : row[axis.y]
+                    const isXAxisARowNum = x === this.numberSign
+                    const isYAxisARowNum = y === this.numberSign
+                    const xAxisVal = isXAxisARowNum ? rowNumber : row[x]
+                    const yAxisVal = isYAxisARowNum ? rowNumber : row[y]
 
                     dataPoints.push({
                         dataPointObj: row,
                         x: xAxisVal,
                         y: yAxisVal,
-                        xLabel: axis.x,
-                        yLabel: axis.y,
+                        xLabel: x,
+                        yLabel: y,
                     })
 
-                    switch (chartType) {
-                        case 'Bar - Horizontal':
+                    switch (this.chartOpt.type) {
+                        case BAR_HORIZ:
                             labels.push(yAxisVal)
                             break
                         default:
@@ -376,15 +377,15 @@ export default {
                     }
                 }
 
-                const dataset = this.genDataset({ colorIndex: 0, data: dataPoints, chartType })
+                const dataset = this.genDataset({ colorIndex: 0, data: dataPoints })
 
-                chartData = {
+                data = {
                     labels,
                     datasets: [dataset],
                 }
 
-                switch (chartType) {
-                    case 'Bar - Horizontal':
+                switch (this.chartOpt.type) {
+                    case BAR_HORIZ:
                         labelAxisId = 'y'
                         break
                     default:
@@ -396,17 +397,14 @@ export default {
 
                 switch (xAxisType) {
                     case 'linear':
-                        this.sortingChartData({ chartData, labelAxisId })
+                        this.sortingChartData({ data, labelAxisId })
                         break
                     case 'time':
-                        this.sortingChartData({ chartData, labelAxisId, isDate: true })
+                        this.sortingChartData({ data, labelAxisId, isDate: true })
                         break
                 }
             }
-
-            this.$emit('get-chart-data', chartData)
-            this.$emit('get-axis-labels', axisLabels)
-            this.$emit('x-axis-type', xAxisType)
+            this.chartOpt = { ...this.chartOpt, data, axisLabels, xAxisType }
         },
     },
 }

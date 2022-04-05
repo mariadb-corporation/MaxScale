@@ -24,14 +24,19 @@
                     <v-icon size="20" color="navigation"> $vuetify.icons.close</v-icon>
                 </v-btn>
             </v-card-title>
-            <v-card-text class="v-card-text_padding">
-                <slot name="body"></slot>
-                <v-divider v-if="hasFormDivider" class="divider" />
+            <v-card-text class="px-0 pb-12">
+                <div class="card-text-padding-x">
+                    <slot name="body" />
+                </div>
+
+                <v-divider v-if="hasFormDivider" class="my-6" />
+
                 <v-form
                     ref="form"
                     v-model="isFormValid"
                     :lazy-validation="lazyValidation"
-                    class="mt-4"
+                    class="card-text-padding-x"
+                    :class="{ 'mt-4': !hasFormDivider }"
                 >
                     <slot name="form-body"></slot>
                 </v-form>
@@ -214,24 +219,18 @@ export default {
         top: 18px;
         right: 18px;
     }
-    $paddingLeft: 62px;
+    $paddingX: 62px;
     .v-card-title_padding {
-        padding: 52px $paddingLeft 16px;
+        padding: 52px $paddingX 16px;
         h3 {
             word-break: break-word;
         }
     }
-    .v-card-text_padding {
-        padding: 0px $paddingLeft 48px;
+    .card-text-padding-x {
+        padding: 0px $paddingX;
     }
     .v-card-actions_padding {
-        padding: 30px $paddingLeft 36px;
-    }
-    .divider {
-        max-width: calc(100% + 124px);
-        width: calc(100% + 124px);
-
-        margin: 24px 0px 24px -62px;
+        padding: 30px $paddingX 36px;
     }
 }
 </style>

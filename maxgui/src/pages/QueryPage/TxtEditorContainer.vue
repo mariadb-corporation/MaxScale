@@ -37,14 +37,11 @@
                         </template>
                         <template slot="pane-right">
                             <chart-container
+                                v-if="!$typy(chartOpt, 'data.datasets').isEmptyArray"
+                                v-model="chartOpt"
+                                :containerHeight="chartContainerHeight"
                                 class="chart-pane"
-                                :selectedChart="selectedChart"
-                                :containerChartHeight="containerChartHeight"
-                                :chartData="chartData"
-                                :axisLabels="axisLabels"
-                                :xAxisType="xAxisType"
-                                :isChartMaximized="isChartMaximized"
-                                @is-chart-maximized="isChartMaximized = $event"
+                                @close-chart="setDefChartOptState"
                             />
                         </template>
                     </split-pane>
@@ -62,13 +59,7 @@
             </split-pane>
         </template>
         <template slot="pane-right">
-            <visualize-sidebar
-                class="visualize-sidebar"
-                @selected-chart="selectedChart = $event"
-                @get-chart-data="chartData = $event"
-                @get-axis-labels="axisLabels = $event"
-                @x-axis-type="xAxisType = $event"
-            />
+            <visualize-sidebar v-model="chartOpt" class="visualize-sidebar" />
         </template>
     </split-pane>
 </template>
@@ -113,13 +104,16 @@ export default {
             minQueryPanePct: 0,
             mouseDropDOM: null, // mouse drop DOM node
             mouseDropWidget: null, // mouse drop widget while dragging to editor
-            // chart-container states
-            selectedChart: '',
-            chartData: {},
-            axisLabels: { x: '', y: '' },
-            xAxisType: '',
-            isChartMaximized: false,
             maxVisSidebarPx: 250,
+            // visualize-sidebar and chart-container state
+            defChartOpt: {
+                type: '',
+                data: {},
+                axisLabels: { x: '', y: '' },
+                xAxisType: '',
+                isMaximized: false,
+            },
+            chartOpt: null,
         }
     },
     computed: {
@@ -132,10 +126,13 @@ export default {
             getDbCmplList: 'query/getDbCmplList',
         }),
         showVisChart() {
-            const datasets = this.$typy(this.chartData, 'datasets').safeArray
-            return this.selectedChart !== 'No Visualization' && datasets.length
+            const datasets = this.$typy(this.chartOpt, 'data.datasets').safeArray
+            return Boolean(this.$typy(this.chartOpt, 'type').safeString && datasets.length)
         },
-        containerChartHeight() {
+        isChartMaximized() {
+            return this.$typy(this.chartOpt, 'isMaximized').safeBoolean
+        },
+        chartContainerHeight() {
             return (this.dim.height * this.editorPct) / 100
         },
         maxVisSidebarPct() {
@@ -184,11 +181,17 @@ export default {
             this.handleSetVisSidebar(v)
         },
     },
+    created() {
+        this.setDefChartOptState()
+    },
     methods: {
         ...mapMutations({
             SET_QUERY_TXT: 'query/SET_QUERY_TXT',
             SET_SELECTED_QUERY_TXT: 'query/SET_SELECTED_QUERY_TXT',
         }),
+        setDefChartOptState() {
+            this.chartOpt = this.$help.lodash.cloneDeep(this.defChartOpt)
+        },
         handleSetMinEditorPct() {
             this.minEditorPct = this.$help.pxToPct({ px: 26, containerPx: this.dim.height })
         },
