@@ -86,6 +86,17 @@ static thread_local struct
     DCB* current_dcb;       /** The DCB currently being handled by event handlers. */
 } this_thread;
 
+/*
+ * Unclear which is the optimal read buffer size. LibUV uses 64 kB, so try that here too. This
+ * requires 6 GB of memory with 100k GWBUFs in flight. We want to minimize the number of small
+ * reads, as even a zero-size read takes 2-3 us. 30 kB read seems to take ~30 us. With larger
+ * reads the time increases somewhat linearly, although fluctuations are significant.
+ *
+ * TODO: Think how this will affect long-term stored GWBUFs (e.g. session commands). They will now
+ * consume much more memory.
+ */
+const size_t BASE_READ_BUFFER_SIZE = 64 * 1024;
+
 void set_SSL_mode_bits(SSL* ssl)
 {
     /*
@@ -397,29 +408,17 @@ static int dcb_read_no_bytes_available(DCB* dcb, int fd, int nreadtotal)
 bool DCB::basic_read(size_t maxbytes, ReadLimit limit_type)
 {
     bool keep_reading = true;
-    bool expect_more_data = true;
     bool socket_cleared = false;
     bool success = true;
     size_t bytes_from_socket = 0;
-    size_t total_readq_limit = 0;
     bool strict_limit = (limit_type == ReadLimit::STRICT);
-    if (strict_limit)
-    {
-        mxb_assert(maxbytes > 0);
-        total_readq_limit = maxbytes;
-    }
-    else if (maxbytes > 0)
-    {
-        // If the read limit is not strict (most cases), allow reading more than what was asked for.
-        // This increases the likelihood of clearing the socket and not having to manually trigger another
-        // read.
-        total_readq_limit = calc_total_readq_limit(maxbytes);
-    }
+    mxb_assert(!strict_limit || maxbytes > 0);      // In strict mode a maxbytes limit is mandatory.
 
     while (keep_reading)
     {
         auto [ptr, read_limit] = strict_limit ? calc_read_limit_strict(maxbytes) :
-            calc_read_limit(expect_more_data);
+            m_readq.prepare_to_write(BASE_READ_BUFFER_SIZE);
+
         auto ret = ::read(m_fd, ptr, read_limit);
         m_stats.n_reads++;
         if (ret > 0)
@@ -428,16 +427,12 @@ bool DCB::basic_read(size_t maxbytes, ReadLimit limit_type)
             bytes_from_socket += ret;
             if (ret < (int64_t)read_limit)
             {
-                // Likely no more data is available and next read will give an error or eof. No need to
-                // enlarge buffer as much as before.
-                expect_more_data = false;
+                // According to epoll documentation (questions and answers-section), the socket is now
+                // clear. No need to keep reading.
+                keep_reading = false;
+                socket_cleared = true;
             }
-            else
-            {
-                expect_more_data = true;
-            }
-
-            if (total_readq_limit > 0 && m_readq.length() >= total_readq_limit)
+            else if (maxbytes > 0 && m_readq.length() >= maxbytes)
             {
                 keep_reading = false;
             }
@@ -474,7 +469,7 @@ bool DCB::basic_read(size_t maxbytes, ReadLimit limit_type)
         }
     }
 
-    mxb_assert(maxbytes == 0 || limit_type == ReadLimit::RES_LEN || m_readq.length() <= maxbytes);
+    mxb_assert(!strict_limit || m_readq.length() <= maxbytes);      // Strict mode must limit readq length.
 
     if (success)
     {
@@ -937,11 +932,17 @@ void DCB::socket_write()
     // Write until socket blocks, we run out of bytes or an error occurs.
     while (keep_writing && !m_writeq.empty())
     {
-        auto res = ::write(m_fd, m_writeq.data(), m_writeq.length());
+        auto writable_bytes = m_writeq.length();
+        auto res = ::write(m_fd, m_writeq.data(), writable_bytes);
         if (res > 0)
         {
             m_writeq.consume(res);
             total_written += res;
+
+            // Either writeq is consumed or socket could not accept all data. In either case,
+            // stop writing.
+            mxb_assert(m_writeq.empty() || (res < (int64_t)writable_bytes));
+            keep_writing = false;
         }
         else if (res == 0)
         {
@@ -984,8 +985,8 @@ void DCB::socket_write()
 
 std::tuple<uint8_t*, size_t> DCB::calc_read_limit(bool expect_more)
 {
-    // The guess is tricky. Higher values mean less reallocations but also more wasted memory.
-    const size_t base_read_size_limit = expect_more ? 4096 : 128;
+    // TODO: check if OpenSSL has some internal max read limit.
+    const size_t base_read_size_limit = expect_more ? BASE_READ_BUFFER_SIZE : 128;
     return m_readq.prepare_to_write(base_read_size_limit);
 }
 
