@@ -1,5 +1,5 @@
 /**
- * @file mxs365.cpp Load data with LOAD DATA LOCAL INFILE
+ * Test LOAD DATA LOCAL INFILE.
  *
  * 1. Create a 50Mb test file
  * 2. Load and read it through MaxScale
@@ -7,88 +7,179 @@
 
 
 #include <maxtest/testconnections.hh>
+#include <maxtest/mariadb_connector.hh>
+#include <maxbase/stopwatch.hh>
 
-void create_data_file(char* filename, size_t size)
-{
-    int fd, i = 0;
-    snprintf(filename, size, "local_infile_%u", i++);
-    while ((fd = open(filename, O_CREAT | O_RDWR | O_EXCL, 0755)) == -1)
-    {
-        snprintf(filename, size, "local_infile_%u", i++);
-    }
+using std::string;
 
-    const size_t maxsize = 1024 * 1024 * 50;
-    size_t filesize = 0;
-    i = 0;
+const char filename[] = "local_infile.dat";
 
-    while (filesize < maxsize)
-    {
-        char buffer[1024];
-        sprintf(buffer, "%d,'%x','%x'\n", i, i << (10 + i), i << (5 + i));
-        int written = write(fd, buffer, strlen(buffer));
-        if (written <= 0)
-        {
-            break;
-        }
-        i++;
-        filesize += written;
-    }
-
-    close(fd);
-}
+bool create_datafile(TestConnections& test, size_t datasize);
+void test_main(TestConnections& test);
+void test_load_data(TestConnections& test, size_t datasize, size_t expected_rows, int wait_limit_s);
 
 int main(int argc, char* argv[])
 {
+    TestConnections test;
+    return test.run_test(argc, argv, test_main);
+}
 
-    TestConnections* test = new TestConnections(argc, argv);
-    char filename[1024];
-    test->tprintf("Generation file to load\n");
-    test->reset_timeout();
-    create_data_file(filename, sizeof(filename));
+void test_main(TestConnections& test)
+{
+    auto& mxs = *test.maxscale;
+    auto& repl = *test.repl;
 
-    /** Set max packet size and create test table */
-    test->reset_timeout();
-    test->tprintf("Connect to Maxscale\n");
-    test->maxscale->connect_maxscale();
-    test->tprintf("Setting max_allowed_packet, creating table\n");
-    test->add_result(execute_query(test->maxscale->conn_rwsplit,
-                                   "set global max_allowed_packet=(1048576 * 60)"),
-                     "Setting max_allowed_packet failed.");
-    test->add_result(execute_query(test->maxscale->conn_rwsplit,
-                                   "DROP TABLE IF EXISTS test.dump"),
-                     "Dropping table failed.");
-    test->add_result(execute_query(test->maxscale->conn_rwsplit,
-                                   "CREATE TABLE test.dump(a int, b varchar(80), c varchar(80))"),
-                     "Creating table failed.");
-    test->tprintf("Closing connection to Maxscale\n");
-    test->maxscale->close_maxscale_connections();
+    // This test involves inserting large blocks of data. To speed up the test, use only one slave,
+    // as this is not a replication speed test.
+    repl.ping_or_open_admin_connections();
+    for (int i = 2; i < 4; i++)
+    {
+        auto admin_conn = repl.backend(i)->admin_connection();
+        admin_conn->cmd("stop slave; reset slave all;");
+    }
+    mxs.wait_for_monitor();
+    mxs.check_print_servers_status({mxt::ServerInfo::master_st, mxt::ServerInfo::slave_st,
+                                    mxt::ServerInfo::RUNNING, mxt::ServerInfo::RUNNING});
 
-    /** Reconnect, load the data and then read it */
-    test->tprintf("Re-connect to Maxscale\n");
-    test->reset_timeout();
-    test->maxscale->connect_maxscale();
-    char query[1024 + sizeof(filename)];
-    snprintf(query,
-             sizeof(query),
-             "LOAD DATA LOCAL INFILE '%s' INTO TABLE test.dump FIELDS TERMINATED BY ','",
-             filename);
-    test->tprintf("Loading data\n");
-    test->reset_timeout();
-    test->add_result(execute_query(test->maxscale->conn_rwsplit, "%s", query), "Loading data failed.");
-    test->tprintf("Reading data\n");
-    test->reset_timeout();
-    test->add_result(execute_query(test->maxscale->conn_rwsplit, "SELECT * FROM test.dump"),
-                     "Reading data failed.");
-    test->maxscale->close_maxscale_connections();
-    test->tprintf("Cecking if Maxscale alive\n");
-    test->check_maxscale_alive();
-    int rval = test->global_result;
+    if (test.ok())
+    {
+        test_load_data(test, 1000000, 20000, 5);    // 1 MB
+        if (test.ok())
+        {
+            test_load_data(test, 20000000, 500000, 10);     // 20 MB
+        }
+        if (test.ok())
+        {
+            // The last load should take 20 seconds. MaxScale is only running 1 routing thread for
+            // this test. Check that MaxScale is still responsive for other clients while processing
+            // the load.
 
-    test->maxscale->connect();
-    execute_query(test->maxscale->conn_rwsplit, "DROP TABLE test.dump");
-    test->maxscale->disconnect();
+            std::atomic_bool keep_running {true};
+            auto test_func = [&test, &keep_running]() {
+                // Sleep a little to ensure LOAD DATA has begun. It takes roughly 2s to generate the
+                // 200MB test data array, and 20s to run the LOAD DATA.
+                std::this_thread::sleep_for(2s);
+                mxb::Duration max_query_time = 0s;
+                test.tprintf("Starting queries during LOAD DATA.");
 
-    delete test;
+                int i = 0;
+                while (keep_running && test.ok())
+                {
+                    mxb::StopWatch timer;
+                    auto test_conn = test.maxscale->open_rwsplit_connection2();
+                    auto res = test_conn->simple_query("select rand();");
+                    test.expect(!res.empty(), "Query during LOAD DATA failed.");
+                    auto dur = timer.split();
+                    max_query_time = std::max(max_query_time, dur);
+                    std::this_thread::sleep_for(0.2s);
+                    i++;
+                }
+
+                auto max_dur_s = mxb::to_secs(max_query_time);
+                test.tprintf("Queried %i times during LOAD DATA. Max query duration: %f seconds.",
+                             i, max_dur_s);
+                // The following may need tuning if tester machine network or speed changes significantly.
+                // The idea is to detect any big changes in MaxScale behavior.
+                test.expect(i > 50 && i < 300, "Unexpected number of queries: %i.", i);
+                test.expect(max_dur_s > 0.1 && max_dur_s < 5, "Unexpected max query duration: %f.",
+                            max_dur_s);
+            };
+
+            std::thread tester_thread(test_func);
+            test_load_data(test, 200000000, 5000000, 60);   // 200 MB
+            keep_running = false;
+            tester_thread.join();
+        }
+    }
+    mxs.maxctrl("call command mariadbmon reset-replication MariaDB-Monitor server1");
+    mxs.sleep_and_wait_for_monitor(1, 1);
+    mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
+}
+
+void test_load_data(TestConnections& test, size_t datasize, size_t expected_rows, int wait_limit_s)
+{
+    const char table_name[] = "test.dump";
+    if (create_datafile(test, datasize))
+    {
+        auto& mxs = *test.maxscale;
+        auto conn = mxs.open_rwsplit_connection2();
+        conn->cmd_f("DROP TABLE IF EXISTS %s;", table_name);
+        conn->cmd_f("CREATE TABLE %s (a int, b varchar(80), c varchar(80));", table_name);
+
+        if (test.ok())
+        {
+            test.tprintf("Test table created. Reconnect and load the data to server.");
+            auto data_conn = mxs.open_rwsplit_connection2();
+            mxb::StopWatch timer;
+            data_conn->cmd_f("LOAD DATA LOCAL INFILE '%s' INTO TABLE %s FIELDS TERMINATED BY ',';",
+                             filename, table_name);
+            if (test.ok())
+            {
+                test.tprintf("Load data done, waiting for slave sync.");
+                auto dur_s = mxb::to_secs(timer.split());
+                test.expect(dur_s < wait_limit_s, "LOAD DATA took %f seconds, when less than %d was "
+                                                  "expected.", dur_s, wait_limit_s);
+
+                test.repl->sync_slaves(0, wait_limit_s);
+                test.tprintf("Slaves synced, check the number of rows in the table.");
+                string query = (string)"SELECT count(*) FROM " + table_name;
+                auto count_str = data_conn->simple_query(query);
+                if (count_str.empty())
+                {
+                    test.add_failure("Could not read row count.");
+                }
+                else
+                {
+                    auto count = std::stol(count_str);
+                    test.tprintf("Row count is %li.", count);
+                    test.expect(count >= (long)expected_rows,
+                                "Only %li columns found, expected at least %zu.", count, expected_rows);
+                }
+            }
+        }
+        conn->cmd_f("DROP TABLE %s", table_name);
+        test.tprintf("Test table dropped.");
+    }
     unlink(filename);
+}
+
+bool create_datafile(TestConnections& test, size_t datasize)
+{
+    bool rval = false;
+    unlink(filename);
+    int fd = open(filename, O_CREAT | O_RDWR | O_EXCL, 0755);
+    if (fd >= 0)
+    {
+        test.tprintf("File '%s' opened. Generating %zu bytes of data.", filename, datasize);
+        string data;
+        data.reserve(datasize);
+
+        size_t i = 1;
+        while (data.length() < datasize)
+        {
+            char line[128];
+            sprintf(line, "%zu,'%zx','%zx'\n", i, i << (10 + i), i << (5 + i));
+            data.append(line);
+            i++;
+        }
+
+        test.tprintf("Data generation complete, writing to file.");
+        auto written = write(fd, data.c_str(), data.length());
+        close(fd);
+        if (written == (long)data.length())
+        {
+            test.tprintf("Write complete.");
+            rval = true;
+        }
+        else
+        {
+            test.add_failure("Write failed. Return value %ld. Error %i: %s",
+                             written, errno, mxb_strerror(errno));
+        }
+    }
+    else
+    {
+        test.add_failure("Failed to open file '%s'. Error %i: %s", filename, errno, mxb_strerror(errno));
+    }
     return rval;
 }

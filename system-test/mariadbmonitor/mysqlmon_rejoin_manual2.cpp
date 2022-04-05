@@ -29,7 +29,7 @@ int main(int argc, char** argv)
     basic_test(test);
     // Advance gtid:s a bit to so gtid variables are updated.
     generate_traffic_and_check(test, maxconn, 10);
-    test.repl->sync_slaves(0);
+    test.repl->sync_slaves();
 
     cout << LINE << "\n";
     print_gtids(test);
