@@ -460,12 +460,9 @@ bool mxs_mysql_is_ps_command(uint8_t cmd);
  *
  * @param buffer Buffer containing a complete MySQL packet
  *
- * @return The command byte
+ * @return The command byte, or MXS_COM_UNDEFINED if packet does not have a payload.
  */
-inline uint8_t mxs_mysql_get_command(const GWBUF* buffer)
-{
-    return (*buffer)[MYSQL_HEADER_LEN];
-}
+uint8_t mxs_mysql_get_command(const GWBUF* buffer);
 
 /**
  * @brief Get the total size of the first packet
