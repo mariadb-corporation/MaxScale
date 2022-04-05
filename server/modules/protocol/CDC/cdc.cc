@@ -314,3 +314,8 @@ bool CDCClientConnection::clientReply(GWBUF* buffer, maxscale::ReplyRoute& down,
 {
     return write(buffer);
 }
+
+bool CDCClientConnection::safe_to_restart() const
+{
+    return true;
+}

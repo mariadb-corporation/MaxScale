@@ -1159,7 +1159,7 @@ bool Session::routeQuery(GWBUF* buffer)
 {
     if (is_idle())
     {
-        if (m_restart)
+        if (m_restart && m_client_conn->safe_to_restart())
         {
             do_restart();
             m_restart = false;

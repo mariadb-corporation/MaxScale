@@ -64,6 +64,11 @@ public:
     void hangup(DCB* dcb) override
     {
     }
+
+    bool safe_to_restart() const override
+    {
+        return true;
+    }
 };
 
 bool Session::Endpoint::routeQuery(GWBUF* buffer)

@@ -2143,6 +2143,11 @@ bool MariaDBClientConnection::is_idle() const
     return in_routing_state();
 }
 
+bool MariaDBClientConnection::safe_to_restart() const
+{
+    return !m_session_data->is_trx_active() && !m_session_data->is_trx_ending();
+}
+
 bool MariaDBClientConnection::start_change_user(GWBUF&& buffer)
 {
     // Parse the COM_CHANGE_USER-packet. The packet is somewhat similar to a typical handshake response.

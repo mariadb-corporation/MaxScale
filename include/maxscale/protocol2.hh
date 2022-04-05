@@ -218,6 +218,17 @@ public:
     virtual bool in_routing_state() const = 0;
 
     /**
+     * Can the session be safely restarted?
+     *
+     * A session restart causes the router and filter sessions to be recreated which means backend connections
+     * are also recreated. If the connection is in a state which cannot be safely restored, the implementation
+     * for this should return false.
+     *
+     * @return Whether the session can be safely restarted
+     */
+    virtual bool safe_to_restart() const = 0;
+
+    /**
      * Called when the session starts to stop
      *
      * This can be used to do any preparatory work that needs to be done before the actual shutdown is

@@ -257,6 +257,11 @@ private:
             return true;
         }
 
+        bool safe_to_restart() const override
+        {
+            return true;
+        }
+
         bool clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override
         {
             return write(buffer);

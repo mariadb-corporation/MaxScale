@@ -43,6 +43,11 @@ public:
         return true;
     }
 
+    bool safe_to_restart() const override
+    {
+        return true;
+    }
+
     void setup_session(const std::string& user, const std::vector<uint8_t>& password);
     bool start_session();
 

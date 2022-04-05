@@ -97,6 +97,8 @@ public:
 
     bool clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
+    bool safe_to_restart() const override;
+
 private:
     int m_state {CDC_STATE_WAIT_FOR_AUTH};      /*< CDC protocol state */
 
