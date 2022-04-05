@@ -153,7 +153,7 @@ export default {
             }, [])
         },
         connOptions() {
-            return this.cnct_resources.map(cnctRsrc =>
+            return Object.values(this.cnct_resources).map(cnctRsrc =>
                 this.curr_cnct_resource.id === cnctRsrc.id
                     ? { ...cnctRsrc, disabled: false }
                     : { ...cnctRsrc, disabled: this.usedConnections.includes(cnctRsrc.id) }

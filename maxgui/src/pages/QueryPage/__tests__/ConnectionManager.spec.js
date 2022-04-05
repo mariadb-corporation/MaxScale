@@ -15,10 +15,10 @@ import mount from '@tests/unit/setup'
 import ConnectionManager from '@/pages/QueryPage/ConnectionManager'
 import { itemSelectMock } from '@tests/unit/utils'
 
-const dummy_cnct_resources = [
-    { id: '1', name: 'server_0', type: 'servers' },
-    { id: '2', name: 'server_1', type: 'servers' },
-]
+const dummy_cnct_resources = {
+    1: { id: '1', name: 'server_0', type: 'servers' },
+    2: { id: '2', name: 'server_1', type: 'servers' },
+}
 
 const mountFactory = opts =>
     mount({
@@ -31,7 +31,7 @@ const mountFactory = opts =>
 function mockActiveConnState() {
     return {
         cnct_resources: () => dummy_cnct_resources,
-        curr_cnct_resource: () => dummy_cnct_resources[0],
+        curr_cnct_resource: () => dummy_cnct_resources['1'],
     }
 }
 
@@ -133,7 +133,7 @@ describe(`ConnectionManager - methods and computed properties tests `, () => {
         wrapper = mountFactory({
             computed: {
                 //stub availableConnOpts so that  server_1 is available to use
-                availableConnOpts: () => dummy_cnct_resources,
+                availableConnOpts: () => Object.values(dummy_cnct_resources),
                 pre_select_conn_rsrc: () => preSelectConnRsrcStub,
             },
             methods: {
@@ -143,7 +143,7 @@ describe(`ConnectionManager - methods and computed properties tests `, () => {
             },
         })
         fnSpy.should.have.been.calledOnceWith(
-            dummy_cnct_resources.find(cnn => cnn.name === preSelectConnRsrcStub.id)
+            wrapper.vm.availableConnOpts.find(cnn => cnn.name === preSelectConnRsrcStub.id)
         )
         fnSpy.restore()
     })
@@ -167,16 +167,16 @@ describe(`ConnectionManager - methods and computed properties tests `, () => {
     })
     it(`Should return accurate value for usedConnections computed property`, () => {
         wrapper = mountFactory({
-            computed: { worksheets_arr: () => [{ curr_cnct_resource: dummy_cnct_resources[0] }] },
+            computed: { worksheets_arr: () => [{ curr_cnct_resource: dummy_cnct_resources['1'] }] },
         })
-        expect(wrapper.vm.usedConnections).to.be.deep.equals([dummy_cnct_resources[0].id])
+        expect(wrapper.vm.usedConnections).to.be.deep.equals([dummy_cnct_resources['1'].id])
     })
     it(`Should not disabled current connection that is bound to current worksheet
       in connOptions`, () => {
         wrapper = mountFactory({ computed: { ...mockActiveConnState() } })
         expect(wrapper.vm.connOptions[0]).to.be.deep.equals({
             // first obj in mockActiveConnState is used as curr_cnct_resource
-            ...dummy_cnct_resources[0],
+            ...dummy_cnct_resources['1'],
             disabled: false,
         })
     })
@@ -185,11 +185,11 @@ describe(`ConnectionManager - methods and computed properties tests `, () => {
         wrapper = mountFactory({
             computed: {
                 ...mockActiveConnState(),
-                usedConnections: () => [dummy_cnct_resources[1].id],
+                usedConnections: () => [dummy_cnct_resources['2'].id],
             },
         })
         expect(wrapper.vm.connOptions[1]).to.be.deep.equals({
-            ...dummy_cnct_resources[1],
+            ...dummy_cnct_resources['2'],
             disabled: true,
         })
     })
@@ -202,7 +202,7 @@ describe(`ConnectionManager - methods and computed properties tests `, () => {
         })
         // mock unlinkConn call
         wrapper.vm.unlinkConn(wrapper.vm.connOptions[0])
-        expect(wrapper.vm.connToBeDel).to.be.deep.equals({ id: dummy_cnct_resources[0].name })
+        expect(wrapper.vm.connToBeDel).to.be.deep.equals({ id: dummy_cnct_resources['1'].name })
     })
 })
 

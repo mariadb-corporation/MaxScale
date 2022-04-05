@@ -183,7 +183,7 @@ export default {
         // worksheet states
         worksheets_arr: [defWorksheetState()], // persisted
         active_wke_id: '',
-        cnct_resources: [],
+        cnct_resources: {},
         ...memStates(),
         /**
          * Below is standalone wke states. The value
@@ -285,11 +285,10 @@ export default {
             state.cnct_resources = payload
         },
         ADD_CNCT_RESOURCE(state, payload) {
-            state.cnct_resources.push(payload)
+            this.vue.$set(state.cnct_resources, payload.id, payload)
         },
         DELETE_CNCT_RESOURCE(state, payload) {
-            const idx = state.cnct_resources.indexOf(payload)
-            state.cnct_resources.splice(idx, 1)
+            this.vue.$delete(state.cnct_resources, payload.id)
         },
         SET_ACTIVE_DB(state, { payload, active_wke_id }) {
             patch_wke_property(state, { obj: { active_db: payload }, scope: this, active_wke_id })
@@ -382,7 +381,6 @@ export default {
         },
         async disconnect({ state, commit, dispatch }, { showSnackbar, id: cnctId }) {
             try {
-                const targetCnctResource = state.cnct_resources.find(rsrc => rsrc.id === cnctId)
                 let res = await this.$queryHttp.delete(`/sql/${cnctId}`)
                 if (res.status === 204) {
                     if (showSnackbar)
@@ -394,7 +392,7 @@ export default {
                             },
                             { root: true }
                         )
-                    commit('DELETE_CNCT_RESOURCE', targetCnctResource)
+                    commit('DELETE_CNCT_RESOURCE', state.cnct_resources[cnctId])
                     dispatch('resetWkeStates', cnctId)
                 }
             } catch (e) {
@@ -404,12 +402,8 @@ export default {
         },
         async disconnectAll({ state, dispatch }) {
             try {
-                const cnctResources = this.vue.$help.lodash.cloneDeep(state.cnct_resources)
-                for (let i = 0; i < cnctResources.length; i++) {
-                    await dispatch('disconnect', {
-                        showSnackbar: false,
-                        id: cnctResources[i].id,
-                    })
+                for (const id of Object.keys(state.cnct_resources)) {
+                    await dispatch('disconnect', { showSnackbar: false, id })
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-query-disconnectAll')
@@ -468,30 +462,25 @@ export default {
                 const clientConnIds = queryHelper.getClientConnIds()
                 if (resConnIds.length === 0) {
                     dispatch('resetAllWkeStates')
-                    commit('SET_CNCT_RESOURCES', [])
+                    commit('SET_CNCT_RESOURCES', {})
                 } else {
                     const validConnIds = clientConnIds.filter(id => resConnIds.includes(id))
-                    let validCnctResources = state.cnct_resources.filter(rsrc =>
-                        validConnIds.includes(rsrc.id)
+                    const validCnctResources = Object.keys(state.cnct_resources)
+                        .filter(id => validConnIds.includes(id))
+                        .reduce(
+                            (acc, id) => ({
+                                ...acc,
+                                [id]: {
+                                    ...state.cnct_resources[id],
+                                    attributes: resConnMap[id].attributes, // update attributes
+                                },
+                            }),
+                            {}
+                        )
+                    const invalidCnctIds = Object.keys(state.cnct_resources).filter(
+                        id => !(id in validCnctResources)
                     )
-                    // update connection attributes
-                    validCnctResources = validCnctResources.map(rsrc => ({
-                        ...rsrc,
-                        attributes: resConnMap[rsrc.id].attributes,
-                    }))
-                    const invalidCnctResources = state.cnct_resources.filter(
-                        rsrc => !validCnctResources.includes(rsrc)
-                    )
-                    if (state.curr_cnct_resource.id) {
-                        let activeConnState = validConnIds.includes(state.curr_cnct_resource.id)
-                        if (!activeConnState) {
-                            this.vue.$help.deleteCookie(
-                                `conn_id_body_${state.curr_cnct_resource.id}`
-                            )
-                            dispatch('resetWkeStates', state.curr_cnct_resource.id)
-                        }
-                    }
-                    dispatch('deleteInvalidConn', invalidCnctResources)
+                    dispatch('deleteInvalidConn', invalidCnctIds)
                     commit('SET_CNCT_RESOURCES', validCnctResources)
                 }
                 if (!silentValidation) commit('SET_IS_VALIDATING_CONN', false)
@@ -501,9 +490,9 @@ export default {
                 logger.error(e)
             }
         },
-        deleteInvalidConn({ dispatch }, invalidCnctResources) {
+        deleteInvalidConn({ dispatch }, invalidCnctIds) {
             try {
-                invalidCnctResources.forEach(id => {
+                invalidCnctIds.forEach(id => {
                     this.vue.$help.deleteCookie(`conn_id_body_${id}`)
                     dispatch('resetWkeStates', id)
                 })

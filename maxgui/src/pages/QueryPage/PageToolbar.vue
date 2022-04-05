@@ -2,7 +2,7 @@
     <div ref="pageToolbar" class="page-toolbar d-flex align-center flex-grow-1">
         <div ref="leftBtns" class="d-flex align-center left-buttons pl-2">
             <v-btn
-                :disabled="!cnct_resources.length"
+                :disabled="!Object.keys(cnct_resources).length"
                 small
                 class="float-left add-wke-btn"
                 icon

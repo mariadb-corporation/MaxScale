@@ -14,13 +14,13 @@
 import mount from '@tests/unit/setup'
 import QueryPage from '@/pages/QueryPage'
 
-const cnct_resources_mock = [
-    {
+const cnct_resources_mock = {
+    1: {
         id: '1',
         name: 'Read-Write-Listener',
         type: 'listeners',
     },
-]
+}
 const from_route_mock = { name: 'queryEditor', path: '/query/listeners/Read-Write-Listener' }
 const to_route_mock = { name: 'settings', path: '/settings' }
 function mockBeforeRouteLeave(wrapper) {
@@ -78,7 +78,7 @@ describe('QueryPage leaving tests', () => {
             component: QueryPage,
             computed: {
                 // stub for having no active connection
-                cnct_resources: () => [],
+                cnct_resources: () => ({}),
             },
             methods: stubModuleMethods,
         })

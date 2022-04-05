@@ -88,7 +88,8 @@ export default {
              * or there is no active connections or it's a redirection from '/query' to its nested route
              *
              */
-            if (this.cnct_resources.length === 0 || from.path === '/query') this.leavePage()
+            if (Object.keys(this.cnct_resources).length === 0 || from.path === '/query')
+                this.leavePage()
             else
                 switch (to.path) {
                     case '/login':

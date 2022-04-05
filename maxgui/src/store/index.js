@@ -191,7 +191,7 @@ let initialState = Vue.prototype.$help.lodash.cloneDeep(store.state)
  * A workaround to get fresh initial states because below states are stored in localStorage
  */
 initialState.query.worksheets_arr = [defWorksheetState()]
-initialState.query.cnct_resources = []
+initialState.query.cnct_resources = {}
 initialState.user.logged_in_user = {}
 /** for state hydration*/
 export function resetState() {
