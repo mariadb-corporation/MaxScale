@@ -1091,6 +1091,45 @@ void Session::close()
     m_down->close();
 }
 
+void Session::restart()
+{
+    m_restart = true;
+}
+
+// static
+void Session::restart_all()
+{
+    dcb_foreach([](DCB* dcb, void* data){
+        if (dcb->role() == DCB::Role::CLIENT)
+        {
+            static_cast<Session*>(dcb->session())->restart();
+        }
+
+        return true;
+    }, nullptr);
+}
+
+bool Session::do_restart()
+{
+    bool ok = false;
+
+    // TODO: This assumes that the session never has delayed calls of its own. This needs to be verified to
+    // work with the case where the client protocol is executing a KILL command and is waiting for the
+    // responses from the backends.
+    cancel_dcalls();
+
+    auto down = static_cast<Service&>(m_listener_data->m_service).get_connection(this, this);
+
+    if (down->connect())
+    {
+        m_down->close();
+        m_down = std::move(down);
+        ok = true;
+    }
+
+    return ok;
+}
+
 void Session::append_session_log(const std::string& log)
 {
     m_log.push_front(log);
@@ -1118,11 +1157,20 @@ void Session::dump_session_log()
 
 bool Session::routeQuery(GWBUF* buffer)
 {
-    if (m_rebuild_chain && is_idle())
+    if (is_idle())
     {
-        m_filters = std::move(m_pending_filters);
-        m_rebuild_chain = false;
-        setup_routing_chain();
+        if (m_restart)
+        {
+            do_restart();
+            m_restart = false;
+        }
+
+        if (m_rebuild_chain)
+        {
+            m_filters = std::move(m_pending_filters);
+            m_rebuild_chain = false;
+            setup_routing_chain();
+        }
     }
 
     auto rv = m_head->routeQuery(buffer);

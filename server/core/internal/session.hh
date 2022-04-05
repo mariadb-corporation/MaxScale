@@ -113,6 +113,12 @@ public:
     bool start() override;
     void close() override;
 
+    // Flags the session for a restart. Causes the router and filter sessions to be recreated without the
+    // client connection being affected.
+    void restart();
+
+    static void restart_all();
+
     // Links a client DCB to a session
     void set_client_dcb(ClientDCB* dcb);
 
@@ -286,6 +292,7 @@ private:
     void deliver_response();
 
     void setup_routing_chain();
+    bool do_restart();
 
     class SessionRoutable : public mxs::Routable
     {
@@ -347,6 +354,7 @@ private:
     mxs::Routable*  m_head;
     mxs::Routable*  m_tail;
 
+    bool       m_restart = false;
     bool       m_rebuild_chain = false;
     FilterList m_pending_filters;
 

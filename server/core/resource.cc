@@ -1144,6 +1144,29 @@ HttpResponse cb_alter_session(const HttpRequest& request)
     return rval;
 }
 
+HttpResponse cb_restart_session(const HttpRequest& request)
+{
+    HttpResponse rval(MHD_HTTP_NOT_FOUND);
+
+    if (Session* session = session_get_by_id(atoi(request.uri_part(1).c_str())))
+    {
+        session->worker()->execute([session]() {
+            session->restart();
+            session_put_ref(session);
+        }, mxb::Worker::EXECUTE_AUTO);
+
+        rval = HttpResponse(MHD_HTTP_OK);
+    }
+
+    return rval;
+}
+
+HttpResponse cb_restart_all_sessions(const HttpRequest& request)
+{
+    Session::restart_all();
+    return HttpResponse(MHD_HTTP_OK);
+}
+
 HttpResponse cb_delete_user(const HttpRequest& request)
 {
     string user = request.last_uri_part();
@@ -1418,6 +1441,10 @@ public:
         m_post.emplace_back(cb_thread_rebalance, "maxscale", "threads", ":thread", "rebalance");
         m_post.emplace_back(cb_threads_rebalance, "maxscale", "threads", "rebalance");
         m_post.emplace_back(cb_reload_users, "services", ":service", "reload");
+
+        /** Session manipulation */
+        m_post.emplace_back(cb_restart_session, "sessions", ":session", "restart");
+        m_post.emplace_back(cb_restart_all_sessions, "sessions", "restart");
 
         /** Update resources */
         m_patch.emplace_back(REQ_BODY | REQ_SYNC, cb_alter_server, "servers", ":server");
