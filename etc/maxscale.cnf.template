@@ -26,19 +26,37 @@ protocol=MariaDBBackend
 # This will keep MaxScale aware of the state of the servers.
 # MariaDB Monitor documentation:
 # https://mariadb.com/kb/en/maxscale-6-monitors/
+#
+# Create the monitor user with:
+#
+#  CREATE USER 'monitor_user'@'%' IDENTIFIED BY 'monitor_pw';
+#  GRANT REPLICATION CLIENT, FILE, SUPER, RELOAD, PROCESS, SHOW DATABASES, EVENT ON *.* TO 'monitor_user'@'%';
+#
 
 [MariaDB-Monitor]
 type=monitor
 module=mariadbmon
 servers=server1
-user=myuser
-password=mypwd
+user=monitor_user
+password=monitor_pw
 monitor_interval=2000
 
 # Service definitions
 #
 # Service Definition for a read-only service and
 # a read/write splitting service.
+#
+# Create the service user with:
+#
+#  CREATE USER 'service_user'@'%' IDENTIFIED BY 'service_pw';
+#  GRANT SELECT ON mysql.user TO 'service_user'@'%';
+#  GRANT SELECT ON mysql.db TO 'service_user'@'%';
+#  GRANT SELECT ON mysql.tables_priv TO 'service_user'@'%';
+#  GRANT SELECT ON mysql.columns_priv TO 'service_user'@'%';
+#  GRANT SELECT ON mysql.procs_priv TO 'service_user'@'%';
+#  GRANT SELECT ON mysql.proxies_priv TO 'service_user'@'%';
+#  GRANT SELECT ON mysql.roles_mapping TO 'service_user'@'%';
+#  GRANT SHOW DATABASES ON *.* TO 'service_user'@'%';
 #
 
 # ReadConnRoute documentation:
@@ -48,8 +66,8 @@ monitor_interval=2000
 type=service
 router=readconnroute
 servers=server1
-user=myuser
-password=mypwd
+user=service_user
+password=service_pw
 router_options=slave
 
 # ReadWriteSplit documentation:
@@ -59,8 +77,8 @@ router_options=slave
 type=service
 router=readwritesplit
 servers=server1
-user=myuser
-password=mypwd
+user=service_user
+password=service_pw
 
 # Listener definitions for the services
 #
