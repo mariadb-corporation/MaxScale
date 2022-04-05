@@ -321,6 +321,9 @@ add_test_executable(mxs321.cpp mxs321 replication LABELS maxscale readwritesplit
 # Load huge file with 'LOAD DATA LOCAL INFILE'. MXS-365.
 add_test_executable_ex(NAME load_data_local_infile SOURCE load_data_local_infile.cc
         CONFIG load_data_local_infile.cnf VMS repl_backend)
+# SSL-version of load_data_local_infile
+add_test_executable_ex(NAME load_data_local_infile_ssl ORIG_NAME load_data_local_infile
+        CONFIG load_data_local_infile.cnf VMS repl_backend LABELS BACKEND_SSL LISTENER_SSL)
 
 # Test users with different level privileges: database, table, column and procedure.
 # MXS-37, MXS-3303, MXS-1958, MXS-3630
