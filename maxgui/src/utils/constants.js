@@ -70,6 +70,10 @@ export const APP_CONFIG = Object.freeze({
             },
         },
     },
+    QUERY_CONN_BINDING_TYPES: Object.freeze({
+        WORKSHEET: 'WORKSHEET',
+        BACKGROUND: 'BACKGROUND', // used to stop the running query
+    }),
     RESOURCE_FORM_TYPES: Object.freeze({
         SERVICE: 'Service',
         SERVER: 'Server',

@@ -346,7 +346,7 @@ export default {
                 logger.error(e)
             }
         },
-        async openConnect({ state, dispatch, commit }, { body, resourceType }) {
+        async openConnect({ state, dispatch, commit, rootState }, { body, resourceType }) {
             const active_wke_id = state.active_wke_id
             try {
                 let res = await this.$queryHttp.post(`/sql?persist=yes&max-age=86400`, body)
@@ -365,6 +365,7 @@ export default {
                         attributes: res.data.data.attributes,
                         name: body.target,
                         type: resourceType,
+                        binding_type: rootState.app_config.QUERY_CONN_BINDING_TYPES.WORKSHEET,
                     }
                     commit('ADD_SQL_CONN', active_sql_conn)
                     commit('SET_ACTIVE_SQL_CONN', { payload: active_sql_conn, active_wke_id })
