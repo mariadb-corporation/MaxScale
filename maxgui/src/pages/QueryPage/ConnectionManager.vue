@@ -138,10 +138,16 @@ export default {
             worksheets_arr: state => state.query.worksheets_arr,
             active_wke_id: state => state.query.active_wke_id,
             conn_err_state: state => state.query.conn_err_state,
+            QUERY_CONN_BINDING_TYPES: state => state.app_config.QUERY_CONN_BINDING_TYPES,
         }),
         ...mapGetters({
             getDbTreeData: 'query/getDbTreeData',
         }),
+        wkeConns() {
+            return Object.values(this.sql_conns).filter(
+                conn => conn.binding_type === this.QUERY_CONN_BINDING_TYPES.WORKSHEET
+            )
+        },
         /**
          * @returns connection ids that are bound to worksheets
          */
@@ -153,7 +159,7 @@ export default {
             }, [])
         },
         connOptions() {
-            return Object.values(this.sql_conns).map(cnctRsrc =>
+            return this.wkeConns.map(cnctRsrc =>
                 this.active_sql_conn.id === cnctRsrc.id
                     ? { ...cnctRsrc, disabled: false }
                     : { ...cnctRsrc, disabled: this.usedConnections.includes(cnctRsrc.id) }

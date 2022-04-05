@@ -378,9 +378,34 @@ export default {
                 commit('SET_CONN_ERR_STATE', { payload: true, active_wke_id })
             }
         },
+        /**
+         *  Clone a connection to allow it run in the background
+         * @param {Object} conn_to_be_cloned - connection to be cloned
+         */
+        async openBgConn({ commit, rootState }, conn_to_be_cloned) {
+            try {
+                let res = await this.$queryHttp.post(
+                    `/sql/${conn_to_be_cloned.id}/clone?persist=yes&max-age=86400`
+                )
+                if (res.status === 201) {
+                    const connId = res.data.data.id
+                    const conn = {
+                        id: connId,
+                        attributes: res.data.data.attributes,
+                        name: conn_to_be_cloned.name,
+                        type: conn_to_be_cloned.type,
+                        binding_type: rootState.app_config.QUERY_CONN_BINDING_TYPES.BACKGROUND,
+                    }
+                    commit('ADD_SQL_CONN', conn)
+                }
+            } catch (e) {
+                const logger = this.vue.$logger('store-query-openBgConn')
+                logger.error(e)
+            }
+        },
         async disconnect({ state, commit, dispatch }, { showSnackbar, id: cnctId }) {
             try {
-                let res = await this.$queryHttp.delete(`/sql/${cnctId}`)
+                const res = await this.$queryHttp.delete(`/sql/${cnctId}`)
                 if (res.status === 204) {
                     if (showSnackbar)
                         commit(
@@ -396,6 +421,27 @@ export default {
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-query-disconnect')
+                logger.error(e)
+            }
+        },
+        /**
+         * Disconnect the "BACKGROUND" connection of the current active_sql_conn
+         * @param {Object} active_sql_conn - active_sql_conn
+         */
+        async disconnectBgConn({ dispatch, rootState, state }, active_sql_conn) {
+            try {
+                // find BACKGROUND connections of the current active sql connection
+                const bgCnns = Object.values(state.sql_conns).filter(
+                    cnn =>
+                        cnn.name === active_sql_conn.name &&
+                        cnn.binding_type ===
+                            rootState.app_config.QUERY_CONN_BINDING_TYPES.BACKGROUND
+                )
+                for (const conn of bgCnns) {
+                    await dispatch('disconnect', { id: conn.id })
+                }
+            } catch (e) {
+                const logger = this.vue.$logger('store-query-deleteBgConn')
                 logger.error(e)
             }
         },
@@ -1010,6 +1056,14 @@ export default {
                     },
                 })
 
+                /**
+                 * dispatch openBgConn before running the user's query to prevent concurrent
+                 * querying of the same connection.
+                 * This "BACKGROUND" connection must be disconnected after finnish the user's query.
+                 * i.e. dispatch disconnectBgConn
+                 */
+                await dispatch('openBgConn', active_sql_conn)
+
                 let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql: query,
                     max_rows: rootState.persisted.query_max_rows,
@@ -1039,6 +1093,8 @@ export default {
                     },
                     { root: true }
                 )
+
+                await dispatch('disconnectBgConn', active_sql_conn)
             } catch (e) {
                 commit('UPDATE_QUERY_RESULTS_MAP', {
                     id: active_wke_id,
