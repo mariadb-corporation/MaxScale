@@ -187,7 +187,8 @@ function(add_test_executable_ex)
 
   # Add test name, config file(s) and label(s) to the total test definitions variable,
   # which will be written to test_info.cc.
-  set(new_def "{\"${name}\", \"${cnf_file_path_total}\", \"${vms_upper}\"}")
+  set(combined_labels ${vms_upper} ${labels})
+  set(new_def "{\"${name}\", \"${cnf_file_path_total}\", \"${combined_labels}\"}")
   set(TEST_DEFINITIONS "${TEST_DEFINITIONS}${new_def}," CACHE INTERNAL "")
 
   if ("${n_source_file}" EQUAL 1)
