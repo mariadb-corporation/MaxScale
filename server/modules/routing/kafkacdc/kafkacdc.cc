@@ -498,7 +498,10 @@ KafkaCDC::KafkaCDC(SERVICE* pService)
 json_t* KafkaCDC::diagnostics() const
 {
     mxb_assert(m_replicator);
-    return json_pack("{s:s}", "status", m_replicator->ok() ? "ok" : "error");
+    mxb::Json js(mxb::Json::Type::OBJECT);
+    js.set_string("status", m_replicator->ok() ? "ok" : "error");
+    js.set_string("gtid", m_replicator->gtid_pos());
+    return js.release();
 }
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()

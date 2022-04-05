@@ -399,6 +399,15 @@ public:
     void reset(json_t* obj = nullptr);
 
     /**
+     * Release the current JSON object
+     *
+     * This is the same as calling get_json() followed by a call to reset().
+     *
+     * @return The JSON object that is currently held.
+     */
+    json_t* release();
+
+    /**
      * Check if two JSON values are equal
      *
      * Note that this is a strict equality comparison. In terms of JavaScript, this is the `===` operator, not

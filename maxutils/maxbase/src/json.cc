@@ -538,6 +538,12 @@ void Json::reset(json_t* obj)
     m_errormsg.clear();
 }
 
+json_t* Json::release()
+{
+    m_errormsg.clear();
+    return std::exchange(m_obj, nullptr);
+}
+
 bool Json::equal(const Json& other) const
 {
     return valid() == other.valid() && (!valid() || json_equal(m_obj, other.m_obj));
