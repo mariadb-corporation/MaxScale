@@ -19,6 +19,53 @@ namespace maxscale
 namespace mock
 {
 
+class MockClientConnection : public mxs::ClientConnectionBase
+{
+public:
+
+    MockClientConnection(DCB* dcb)
+    {
+        set_dcb(dcb);
+    }
+
+    bool init_connection() override
+    {
+        return true;
+    }
+
+    void finish_connection() override
+    {
+    }
+
+    bool clientReply(GWBUF* buffer, ReplyRoute& down, const mxs::Reply& reply) override
+    {
+        gwbuf_free(buffer);
+        return true;
+    }
+
+    void ready_for_reading(DCB* dcb) override
+    {
+    }
+
+    void write_ready(DCB* dcb) override
+    {
+    }
+
+    int32_t write(GWBUF* buffer)override
+    {
+        gwbuf_free(buffer);
+        return 0;
+    }
+
+    void error(DCB* dcb) override
+    {
+    }
+
+    void hangup(DCB* dcb) override
+    {
+    }
+};
+
 bool Session::Endpoint::routeQuery(GWBUF* buffer)
 {
     return m_session.routeQuery(buffer);
@@ -46,6 +93,7 @@ Session::Session(Client* pClient, SListenerData listener_data)
 
     m_state = MXS_SESSION::State::CREATED;
     client_dcb = &m_client_dcb;
+    set_client_connection(new MockClientConnection(&m_client_dcb));
     set_protocol_data(std::make_unique<MYSQL_session>());
 }
 
