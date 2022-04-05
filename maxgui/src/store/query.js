@@ -365,6 +365,7 @@ export default {
                     const connId = res.data.data.id
                     const curr_cnct_resource = {
                         id: connId,
+                        attributes: res.data.data.attributes,
                         name: body.target,
                         type: resourceType,
                     }
@@ -438,6 +439,7 @@ export default {
                         },
                         { root: true }
                     )
+                await dispatch('validatingConn', { silentValidation: true })
             } catch (e) {
                 const logger = this.vue.$logger('store-query-reconnect')
                 logger.error(e)
@@ -453,20 +455,30 @@ export default {
                 logger.error(e)
             }
         },
-        async validatingConn({ state, commit, dispatch }) {
+        /**
+         *
+         * @param {Boolean} param.silentValidation - silent validation (without calling SET_IS_VALIDATING_CONN)
+         */
+        async validatingConn({ state, commit, dispatch }, { silentValidation = false } = {}) {
             try {
-                commit('SET_IS_VALIDATING_CONN', true)
+                if (!silentValidation) commit('SET_IS_VALIDATING_CONN', true)
                 const res = await this.$queryHttp.get(`/sql/`)
-                const resConnIds = res.data.data.map(conn => conn.id)
+                const resConnMap = this.vue.$help.lodash.keyBy(res.data.data, 'id')
+                const resConnIds = Object.keys(resConnMap)
                 const clientConnIds = queryHelper.getClientConnIds()
                 if (resConnIds.length === 0) {
                     dispatch('resetAllWkeStates')
                     commit('SET_CNCT_RESOURCES', [])
                 } else {
                     const validConnIds = clientConnIds.filter(id => resConnIds.includes(id))
-                    const validCnctResources = state.cnct_resources.filter(rsrc =>
+                    let validCnctResources = state.cnct_resources.filter(rsrc =>
                         validConnIds.includes(rsrc.id)
                     )
+                    // update connection attributes
+                    validCnctResources = validCnctResources.map(rsrc => ({
+                        ...rsrc,
+                        attributes: resConnMap[rsrc.id].attributes,
+                    }))
                     const invalidCnctResources = state.cnct_resources.filter(
                         rsrc => !validCnctResources.includes(rsrc)
                     )
@@ -482,9 +494,9 @@ export default {
                     dispatch('deleteInvalidConn', invalidCnctResources)
                     commit('SET_CNCT_RESOURCES', validCnctResources)
                 }
-                commit('SET_IS_VALIDATING_CONN', false)
+                if (!silentValidation) commit('SET_IS_VALIDATING_CONN', false)
             } catch (e) {
-                commit('SET_IS_VALIDATING_CONN', false)
+                if (!silentValidation) commit('SET_IS_VALIDATING_CONN', false)
                 const logger = this.vue.$logger('store-query-validatingConn')
                 logger.error(e)
             }
