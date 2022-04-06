@@ -527,6 +527,14 @@ export default {
                     )
                     dispatch('deleteInvalidConn', invalidCnctIds)
                     commit('SET_SQL_CONNS', validSqlConns)
+                    // update active_sql_conn attributes
+                    if (state.active_sql_conn.id) {
+                        const activeSqlConn = validSqlConns[state.active_sql_conn.id]
+                        commit('SET_ACTIVE_SQL_CONN', {
+                            payload: activeSqlConn,
+                            active_wke_id: state.active_wke_id,
+                        })
+                    }
                 }
                 if (!silentValidation) commit('SET_IS_VALIDATING_CONN', false)
             } catch (e) {
