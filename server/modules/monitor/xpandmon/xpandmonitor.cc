@@ -567,6 +567,8 @@ bool XpandMonitor::refresh_using_persisted_nodes(std::set<string>& ips_checked)
     MXB_NOTICE("Attempting to find a Xpand bootstrap node from one of the nodes "
                "used during the previous run of MaxScale.");
 
+    mxb_assert(!m_is_group_change);
+
     bool refreshed = false;
 
     HostPortPairs nodes;
@@ -646,6 +648,8 @@ bool XpandMonitor::refresh_using_persisted_nodes(std::set<string>& ips_checked)
     {
         MXB_ERROR("Could not look up persisted nodes: %s", pError ? pError : "Unknown error");
     }
+
+    notify_of_group_change(false);
 
     return refreshed;
 }
