@@ -219,6 +219,16 @@ json_t* generate_json_representation(mxq::MariaDB& conn, int64_t max_rows)
                     have_more = res->next_row();
                     rows_limit_reached = (rows_read == max_rows);
                 }
+
+                auto error = conn.get_error_result();
+
+                if (error->error_num)
+                {
+                    json_object_set_new(resultset, "errno", json_integer(error->error_num));
+                    json_object_set_new(resultset, "message", json_string(error->error_msg.c_str()));
+                    json_object_set_new(resultset, "sqlstate", json_string(error->sqlstate.c_str()));
+                }
+
                 json_object_set_new(resultset, "data", rows);
                 json_object_set_new(resultset, "complete", json_boolean(!have_more));
                 json_array_append_new(resultset_arr, resultset);
