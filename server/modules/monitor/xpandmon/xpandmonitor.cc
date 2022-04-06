@@ -440,6 +440,27 @@ void XpandMonitor::tick()
     write_journal_if_needed();
 }
 
+int XpandMonitor::query(MYSQL* pCon, const char* zQuery)
+{
+    int rv = mysql_query(pCon, zQuery);
+
+    if (rv != 0)
+    {
+        if (xpand::is_group_change_error(pCon))
+        {
+            m_is_group_change = true;
+            MXB_INFO("%s: Group change detected on %s: %s", name(), mysql_get_host_info(pCon), mysql_error(pCon));
+        }
+        else
+        {
+            MXB_ERROR("%s: Could not execute '%s' on %s: %s",
+                      name(), zQuery, mysql_get_host_info(pCon), mysql_error(pCon));
+        }
+    }
+
+    return rv;
+}
+
 void XpandMonitor::choose_hub(xpand::Softfailed softfailed)
 {
     mxb_assert(!m_pHub_con);
@@ -447,10 +468,14 @@ void XpandMonitor::choose_hub(xpand::Softfailed softfailed)
     set<string> ips;
 
     // First we check the dynamic servers, in case there are,
-    if (!choose_dynamic_hub(softfailed, ips))
+    choose_dynamic_hub(softfailed, ips);
+
+    if (!m_pHub_con && !m_is_group_change)
     {
-        // then we check the bootstrap servers, and
-        if (!choose_bootstrap_hub(softfailed, ips))
+        // Then we check the bootstrap servers, and
+        choose_bootstrap_hub(softfailed, ips);
+
+        if (!m_pHub_con && !m_is_group_change)
         {
             // finally, if all else fails - in practise we will only get here at
             // startup (no dynamic servers) if the bootstrap servers cannot be
@@ -468,46 +493,66 @@ void XpandMonitor::choose_hub(xpand::Softfailed softfailed)
         MXB_NOTICE("%s: Monitoring Xpand cluster state using node %s:%d.",
                    name(), m_pHub_server->address(), m_pHub_server->port());
     }
-    else
+    else if (!m_is_group_change)
     {
         MXB_ERROR("%s: Could not connect to any server or no server that could "
                   "be connected to was part of the quorum.", name());
     }
 }
 
-bool XpandMonitor::choose_dynamic_hub(xpand::Softfailed softfailed, std::set<string>& ips_checked)
+void XpandMonitor::choose_dynamic_hub(xpand::Softfailed softfailed, std::set<string>& ips_checked)
 {
+    bool was_group_change = m_is_group_change;
+    m_is_group_change = false;
+
     for (auto& kv : m_nodes_by_id)
     {
         XpandNode& node = kv.second;
 
-        if (node.can_be_used_as_hub(name(), conn_settings(), softfailed))
+        auto rv = node.ping_or_connect(name(), conn_settings(), softfailed);
+
+        if (rv != xpand::Result::ERROR)
         {
             m_pHub_con = node.release_connection();
             m_pHub_server = node.server();
+
+            if (rv == xpand::Result::GROUP_CHANGE)
+            {
+                m_is_group_change = true;
+            }
         }
 
         ips_checked.insert(node.ip());
 
-        if (m_pHub_con)
+        if (m_pHub_con || m_is_group_change)
         {
             break;
         }
     }
 
-    return m_pHub_con != nullptr;
+    notify_of_group_change(was_group_change);
 }
 
-bool XpandMonitor::choose_bootstrap_hub(xpand::Softfailed softfailed, std::set<string>& ips_checked)
+void XpandMonitor::choose_bootstrap_hub(xpand::Softfailed softfailed, std::set<string>& ips_checked)
 {
+    bool was_group_change = m_is_group_change;
+    m_is_group_change = false;
+
     for (auto* pMs : servers())
     {
         if (ips_checked.find(pMs->server->address()) == ips_checked.end())
         {
-            if (xpand::ping_or_connect_to_hub(name(), conn_settings(), softfailed, *pMs))
+            auto rv = xpand::ping_or_connect_to_hub(name(), conn_settings(), softfailed, *pMs);
+
+            if (rv != xpand::Result::ERROR)
             {
                 m_pHub_con = pMs->con;
                 m_pHub_server = pMs->server;
+
+                if (rv == xpand::Result::GROUP_CHANGE)
+                {
+                    m_is_group_change = true;
+                }
             }
             else if (pMs->con)
             {
@@ -517,13 +562,13 @@ bool XpandMonitor::choose_bootstrap_hub(xpand::Softfailed softfailed, std::set<s
             pMs->con = nullptr;
         }
 
-        if (m_pHub_con)
+        if (m_pHub_con || m_is_group_change)
         {
             break;
         }
     }
 
-    return m_pHub_con != nullptr;
+    notify_of_group_change(was_group_change);
 }
 
 bool XpandMonitor::refresh_using_persisted_nodes(std::set<string>& ips_checked)
@@ -624,7 +669,7 @@ bool XpandMonitor::refresh_nodes(MYSQL* pHub_con)
             "FROM system.nodeinfo AS ni "
             "LEFT JOIN system.softfailed_nodes AS sn ON ni.nodeid = sn.nodeid";
 
-        if (mysql_query(pHub_con, ZQUERY) == 0)
+        if (query(pHub_con, ZQUERY) == 0)
         {
             MYSQL_RES* pResult = mysql_store_result(pHub_con);
 
@@ -768,11 +813,6 @@ bool XpandMonitor::refresh_nodes(MYSQL* pHub_con)
                             name(), ZQUERY, mysql_get_host_info(pHub_con));
             }
         }
-        else
-        {
-            MXB_ERROR("%s: Could not execute '%s' on %s: %s",
-                      name(), ZQUERY, mysql_get_host_info(pHub_con), mysql_error(pHub_con));
-        }
 
         // Since we are here, the call above to check_cluster_membership() succeeded. As that
         // function may change the content of m_nodes_by_ids, we must always update the urls,
@@ -892,6 +932,18 @@ void XpandMonitor::persist_bootstrap_servers()
     }
 }
 
+void XpandMonitor::notify_of_group_change(bool was_group_change) const
+{
+    if (was_group_change && !m_is_group_change)
+    {
+        MXB_NOTICE("Group change now finished.");
+    }
+    else if (!was_group_change && m_is_group_change)
+    {
+        MXB_NOTICE("Group change detected.");
+    }
+}
+
 void XpandMonitor::check_cluster(xpand::Softfailed softfailed)
 {
     if (m_pHub_con)
@@ -906,19 +958,33 @@ void XpandMonitor::check_cluster(xpand::Softfailed softfailed)
 
     if (m_pHub_con)
     {
-        refresh_nodes();
+        if (!m_is_group_change)
+        {
+            refresh_nodes();
+        }
     }
 }
 
 void XpandMonitor::check_hub(xpand::Softfailed softfailed)
 {
+    m_is_group_change = false;
+
     mxb_assert(m_pHub_con);
     mxb_assert(m_pHub_server);
 
-    if (!xpand::ping_or_connect_to_hub(name(), conn_settings(), softfailed, *m_pHub_server, &m_pHub_con))
+    switch (xpand::ping_or_connect_to_hub(name(), conn_settings(), softfailed, *m_pHub_server, &m_pHub_con))
     {
+    case xpand::Result::OK:
+        break;
+
+    case xpand::Result::ERROR:
         mysql_close(m_pHub_con);
         m_pHub_con = nullptr;
+        break;
+
+    case xpand::Result::GROUP_CHANGE:
+        m_is_group_change = true;
+        break;
     }
 }
 
@@ -932,7 +998,7 @@ bool XpandMonitor::check_cluster_membership(MYSQL* pHub_con,
 
     const char ZQUERY[] = "SELECT nid, status, instance, substate FROM system.membership";
 
-    if (mysql_query(pHub_con, ZQUERY) == 0)
+    if (query(pHub_con, ZQUERY) == 0)
     {
         MYSQL_RES* pResult = mysql_store_result(pHub_con);
 
@@ -1006,11 +1072,6 @@ bool XpandMonitor::check_cluster_membership(MYSQL* pHub_con,
             MXB_WARNING("%s: No result returned for '%s'.", name(), ZQUERY);
         }
     }
-    else
-    {
-        MXB_ERROR("%s: Could not execute '%s' on %s: %s",
-                  name(), ZQUERY, mysql_get_host_info(pHub_con), mysql_error(pHub_con));
-    }
 
     return rv;
 }
@@ -1081,28 +1142,35 @@ void XpandMonitor::update_server_statuses()
     {
         pMs->stash_current_status();
 
-        auto it = find_if(m_nodes_by_id.begin(), m_nodes_by_id.end(),
-                          [pMs](const std::pair<int, XpandNode>& element) -> bool {
-                              const XpandNode& info = element.second;
-                              return pMs->server->address() == info.ip();
-                          });
-
-        if (it != m_nodes_by_id.end())
+        if (m_is_group_change)
         {
-            const XpandNode& info = it->second;
+            pMs->clear_pending_status(SERVER_MASTER | SERVER_RUNNING);
+        }
+        else
+        {
+            auto it = find_if(m_nodes_by_id.begin(), m_nodes_by_id.end(),
+                              [pMs](const std::pair<int, XpandNode>& element) -> bool {
+                                  const XpandNode& info = element.second;
+                                  return pMs->server->address() == info.ip();
+                              });
 
-            if (info.is_running())
+            if (it != m_nodes_by_id.end())
             {
-                pMs->set_pending_status(SERVER_MASTER | SERVER_RUNNING);
+                const XpandNode& info = it->second;
+
+                if (info.is_running())
+                {
+                    pMs->set_pending_status(SERVER_MASTER | SERVER_RUNNING);
+                }
+                else
+                {
+                    pMs->clear_pending_status(SERVER_MASTER | SERVER_RUNNING);
+                }
             }
             else
             {
                 pMs->clear_pending_status(SERVER_MASTER | SERVER_RUNNING);
             }
-        }
-        else
-        {
-            pMs->clear_pending_status(SERVER_MASTER | SERVER_RUNNING);
         }
     }
 }
@@ -1367,7 +1435,7 @@ bool XpandMonitor::perform_operation(Operation operation,
 
             sprintf(zQuery, ZQUERY_FORMAT, zOperation, id);
 
-            if (mysql_query(m_pHub_con, zQuery) == 0)
+            if (query(m_pHub_con, zQuery) == 0)
             {
                 MXB_NOTICE("%s: %s performed on node %d (%s).",
                            name(), zOperation, id, pServer->address());

@@ -14,6 +14,7 @@
 
 #include "xpandmon.hh"
 #include <string>
+#include <mysql.h>
 #include <maxscale/monitor.hh>
 #include <maxscale/server.hh>
 
@@ -44,6 +45,13 @@ enum class Softfailed
 {
     ACCEPT,
     REJECT
+};
+
+enum class Result
+{
+    OK,
+    ERROR,
+    GROUP_CHANGE
 };
 
 /**
@@ -96,11 +104,11 @@ bool is_being_softfailed(const char* zName, MYSQL* pCon);
  *
  * @note Upon return @c *ppCon will be non-NULL.
  */
-bool ping_or_connect_to_hub(const char* zName,
-                            const mxs::MonitorServer::ConnectionSettings& settings,
-                            Softfailed softfailed,
-                            SERVER& server,
-                            MYSQL** ppCon);
+Result ping_or_connect_to_hub(const char* zName,
+                              const mxs::MonitorServer::ConnectionSettings& settings,
+                              Softfailed softfailed,
+                              SERVER& server,
+                              MYSQL** ppCon);
 
 /**
  * Ping or create connection to server and check whether it can be used
@@ -113,11 +121,37 @@ bool ping_or_connect_to_hub(const char* zName,
  *
  * @return True, if the server can be used as hub, false otherwise.
  */
-inline bool ping_or_connect_to_hub(const char* zName,
-                                   const mxs::MonitorServer::ConnectionSettings& settings,
-                                   Softfailed softfailed,
-                                   mxs::MonitorServer& ms)
+inline Result ping_or_connect_to_hub(const char* zName,
+                                     const mxs::MonitorServer::ConnectionSettings& settings,
+                                     Softfailed softfailed,
+                                     mxs::MonitorServer& ms)
 {
     return ping_or_connect_to_hub(zName, settings, softfailed, *ms.server, &ms.con);
 }
+
+/**
+ * Does the error message refer to a group change error.
+ *
+ * @param zError  Error message as returned by mysql_error().
+ *
+ * @return True if error is a group change error, false otherwise.
+ */
+bool is_group_change_error(const char* zError);
+inline bool is_group_change_error(const std::string& error)
+{
+    return is_group_change_error(error.c_str());
+}
+
+/**
+ * Is the last error a group change error.
+ *
+ * @param pCon  Valid MYSQL handle.
+ *
+ * @return True if the last error is a group change error, false otherwise.
+ */
+inline bool is_group_change_error(MYSQL* pCon)
+{
+    return is_group_change_error(mysql_error(pCon));
+}
+
 }

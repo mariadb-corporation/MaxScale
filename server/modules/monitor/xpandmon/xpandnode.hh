@@ -202,9 +202,9 @@ public:
         m_persister.unpersist(*this);
     }
 
-    bool can_be_used_as_hub(const char* zName,
-                            const mxs::MonitorServer::ConnectionSettings& settings,
-                            xpand::Softfailed softfailed);
+    xpand::Result ping_or_connect(const char* zName,
+                                  const mxs::MonitorServer::ConnectionSettings& settings,
+                                  xpand::Softfailed softfailed);
 
     SERVER* server() const
     {

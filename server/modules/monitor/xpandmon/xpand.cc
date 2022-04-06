@@ -157,8 +157,16 @@ bool xpand::is_part_of_the_quorum(const char* zName, MYSQL* pCon)
     }
     else
     {
-        MXB_ERROR("%s: Could not execute '%s' on %s: %s",
-                  zName, ZQUERY, mysql_get_host_info(pCon), mysql_error(pCon));
+        if (is_group_change_error(pCon))
+        {
+            MXB_INFO("%s: Could not execute '%s' on %s: %s",
+                     zName, ZQUERY, mysql_get_host_info(pCon), mysql_error(pCon));
+        }
+        else
+        {
+            MXB_ERROR("%s: Could not execute '%s' on %s: %s",
+                      zName, ZQUERY, mysql_get_host_info(pCon), mysql_error(pCon));
+        }
     }
 
     return rv;
@@ -202,17 +210,17 @@ bool xpand::is_being_softfailed(const char* zName, MYSQL* pCon)
     return rv;
 }
 
-bool xpand::ping_or_connect_to_hub(const char* zName,
-                                   const MonitorServer::ConnectionSettings& settings,
-                                   Softfailed softfailed,
-                                   SERVER& server,
-                                   MYSQL** ppCon)
+xpand::Result xpand::ping_or_connect_to_hub(const char* zName,
+                                            const MonitorServer::ConnectionSettings& settings,
+                                            Softfailed softfailed,
+                                            SERVER& server,
+                                            MYSQL** ppCon)
 {
-    bool connected = false;
+    Result rv = Result::ERROR;
     std::string err;
-    MonitorServer::ConnectResult rv = MonitorServer::ping_or_connect_to_db(settings, server, ppCon, &err);
+    MonitorServer::ConnectResult rv2 = MonitorServer::ping_or_connect_to_db(settings, server, ppCon, &err);
 
-    if (Monitor::connection_is_ok(rv))
+    if (Monitor::connection_is_ok(rv2))
     {
         if (xpand::is_part_of_the_quorum(zName, *ppCon))
         {
@@ -224,15 +232,27 @@ bool xpand::ping_or_connect_to_hub(const char* zName,
             }
             else
             {
-                connected = true;
+                rv = Result::OK;
             }
         }
     }
     else
     {
-        MXB_ERROR("%s: Could either not ping or create connection to %s:%d: %s",
-                  zName, server.address(), server.port(), err.c_str());
+        if (is_group_change_error(err))
+        {
+            rv = Result::GROUP_CHANGE;
+        }
+        else
+        {
+            MXB_ERROR("%s: Could either not ping or create connection to %s:%d: %s",
+                      zName, server.address(), server.port(), err.c_str());
+        }
     }
 
-    return connected;
+    return rv;
+}
+
+bool xpand::is_group_change_error(const char* zError)
+{
+    return strstr(zError, "Group change") != NULL;
 }

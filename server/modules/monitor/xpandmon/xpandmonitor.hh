@@ -98,16 +98,20 @@ private:
 
     void tick() override;
 
+    int query(MYSQL* pCon, const char* zQuery);
+
     void check_bootstrap_servers();
     bool remove_persisted_information();
     void persist_bootstrap_servers();
+
+    void notify_of_group_change(bool was_group_change) const;
 
     void check_cluster(xpand::Softfailed softfailed);
     void check_hub(xpand::Softfailed softfailed);
     void choose_hub(xpand::Softfailed softfailed);
 
-    bool choose_dynamic_hub(xpand::Softfailed softfailed, std::set<std::string>& ips_checked);
-    bool choose_bootstrap_hub(xpand::Softfailed softfailed, std::set<std::string>& ips_checked);
+    void choose_dynamic_hub(xpand::Softfailed softfailed, std::set<std::string>& ips_checked);
+    void choose_bootstrap_hub(xpand::Softfailed softfailed, std::set<std::string>& ips_checked);
     bool refresh_using_persisted_nodes(std::set<std::string>& ips_checked);
 
     bool refresh_nodes();
@@ -143,9 +147,14 @@ private:
                            json_t** ppError);
 
 
-    bool should_check_cluster() const
+    bool is_time_for_cluster_check() const
     {
         return now() - m_last_cluster_check > m_config.cluster_monitor_interval();
+    }
+
+    bool should_check_cluster() const
+    {
+        return m_is_group_change || is_time_for_cluster_check();
     }
 
     void trigger_cluster_check()
@@ -181,4 +190,5 @@ private:
     MYSQL*                   m_pHub_con {nullptr};
     sqlite3*                 m_pDb {nullptr};
     std::vector<SERVER*>     m_cluster_servers;
+    bool                     m_is_group_change {false};
 };
