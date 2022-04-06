@@ -20,6 +20,10 @@ using namespace std;
 class XpandNode
 {
 public:
+    XpandNode()
+    {
+    }
+
     XpandNode(const string& id, const string& ip)
         : m_id(id)
         , m_ip(ip)
@@ -152,7 +156,17 @@ int main(int argc, char** argv)
         show_nodes(direct_nodes);
 
         // Remove one node from the Cluster before MaxScale starts.
-        drop_node(c, direct_nodes.back());
+        XpandNode node;
+        for (const auto& n : direct_nodes)
+        {
+            if (n.ip() != c.host())
+            {
+                node = n;
+                break;
+            }
+        }
+
+        drop_node(c, node);
         --nDirect;
 
         show_nodes(get_nodes(c));
@@ -176,7 +190,7 @@ int main(int argc, char** argv)
         test.expect(nVia_maxscale == nDirect, "MaxScale sees %d servers, %d expected", nVia_maxscale, nDirect);
 
         // Add the node back.
-        add_node(c, direct_nodes.back().ip());
+        add_node(c, node.ip());
         ++nDirect;
 
         show_nodes(get_nodes(c));
