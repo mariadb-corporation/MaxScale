@@ -75,7 +75,7 @@ Result query(const char* zName, MYSQL* pCon, const char* zQuery);
  *
  * @return True, if the node is part of the quorum, false otherwise.
  */
-bool is_part_of_the_quorum(const char* zName, MYSQL* pCon);
+std::pair<Result, bool> is_part_of_the_quorum(const char* zName, MYSQL* pCon);
 
 /**
  * Is a particular Xpand node part of the quorum.
@@ -85,7 +85,7 @@ bool is_part_of_the_quorum(const char* zName, MYSQL* pCon);
  *
  * @return True, if the node is part of the quorum, false otherwise.
  */
-inline bool is_part_of_the_quorum(const char* zName, mxs::MonitorServer& ms)
+inline std::pair<Result, bool> is_part_of_the_quorum(const char* zName, mxs::MonitorServer& ms)
 {
     mxb_assert(ms.con);
 
@@ -100,7 +100,7 @@ inline bool is_part_of_the_quorum(const char* zName, mxs::MonitorServer& ms)
  *
  * @return True, if the node is being softfailed, false otherwise.
  */
-bool is_being_softfailed(const char* zName, MYSQL* pCon);
+std::pair<Result, bool> is_being_softfailed(const char* zName, MYSQL* pCon);
 
 /**
  * Ping or create connection to server and check whether it can be used

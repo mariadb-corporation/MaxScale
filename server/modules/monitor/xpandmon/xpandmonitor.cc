@@ -581,7 +581,8 @@ bool XpandMonitor::refresh_using_persisted_nodes(std::set<string>& ips_checked)
 
         auto it = nodes.begin();
 
-        while (!refreshed && (it != nodes.end()))
+        xpand::Result rv = xpand::Result::OK;
+        while (!refreshed && (rv != xpand::Result::GROUP_CHANGE) && (it != nodes.end()))
         {
             const auto& node = *it;
 
@@ -606,17 +607,23 @@ bool XpandMonitor::refresh_using_persisted_nodes(std::set<string>& ips_checked)
                                        nullptr,
                                        port, nullptr, 0))
                 {
-                    if (xpand::is_part_of_the_quorum(name(), pHub_con))
+                    bool is_part_of_the_quorum;
+                    std::tie(rv, is_part_of_the_quorum) = xpand::is_part_of_the_quorum(name(), pHub_con);
+
+                    if (rv == xpand::Result::OK)
                     {
-                        if (refresh_nodes(pHub_con))
+                        if (is_part_of_the_quorum)
                         {
-                            MXB_NOTICE("Cluster nodes refreshed.");
-                            refreshed = true;
+                            if (refresh_nodes(pHub_con))
+                            {
+                                MXB_NOTICE("Cluster nodes refreshed.");
+                                refreshed = true;
+                            }
                         }
-                    }
-                    else
-                    {
-                        MXB_WARNING("%s:%d is not part of the quorum, ignoring.", host.c_str(), port);
+                        else
+                        {
+                            MXB_WARNING("%s:%d is not part of the quorum, ignoring.", host.c_str(), port);
+                        }
                     }
                 }
                 else
@@ -628,6 +635,11 @@ bool XpandMonitor::refresh_using_persisted_nodes(std::set<string>& ips_checked)
             }
 
             ++it;
+        }
+
+        if (rv == xpand::Result::GROUP_CHANGE)
+        {
+            m_is_group_change = true;
         }
     }
     else

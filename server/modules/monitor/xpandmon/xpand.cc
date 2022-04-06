@@ -120,13 +120,15 @@ xpand::Result xpand::query(const char* zName, MYSQL* pCon, const char* zQuery)
     return rv;
 }
 
-bool xpand::is_part_of_the_quorum(const char* zName, MYSQL* pCon)
+std::pair<xpand::Result, bool> xpand::is_part_of_the_quorum(const char* zName, MYSQL* pCon)
 {
-    bool rv = false;
+    std::pair<xpand::Result, bool> rv = { xpand::Result::ERROR, false };
 
     const char ZQUERY[] = "SELECT status FROM system.membership WHERE nid = gtmnid()";
 
-    if (xpand::query(zName, pCon, ZQUERY) == xpand::Result::OK)
+    rv.first = xpand::query(zName, pCon, ZQUERY);
+
+    if (rv.first == xpand::Result::OK)
     {
         MYSQL_RES* pResult = mysql_store_result(pCon);
 
@@ -142,7 +144,7 @@ bool xpand::is_part_of_the_quorum(const char* zName, MYSQL* pCon)
                 switch (status)
                 {
                 case xpand::Status::QUORUM:
-                    rv = true;
+                    rv.second = true;
                     break;
 
                 case xpand::Status::STATIC:
@@ -181,13 +183,15 @@ bool xpand::is_part_of_the_quorum(const char* zName, MYSQL* pCon)
     return rv;
 }
 
-bool xpand::is_being_softfailed(const char* zName, MYSQL* pCon)
+std::pair<xpand::Result, bool> xpand::is_being_softfailed(const char* zName, MYSQL* pCon)
 {
-    bool rv = false;
+    std::pair<Result, bool> rv = { xpand::Result::ERROR, false };
 
     const char ZQUERY[] = "SELECT nodeid FROM system.softfailed_nodes WHERE nodeid = gtmnid()";
 
-    if (xpand::query(zName, pCon, ZQUERY) == xpand::Result::OK)
+    rv.first = xpand::query(zName, pCon, ZQUERY);
+
+    if (rv.first == xpand::Result::OK)
     {
         MYSQL_RES* pResult = mysql_store_result(pCon);
 
@@ -199,7 +203,7 @@ bool xpand::is_being_softfailed(const char* zName, MYSQL* pCon)
             if (row)
             {
                 // If a row is found, it is because the node is being softfailed.
-                rv = true;
+                rv.second = true;
             }
 
             mysql_free_result(pResult);
@@ -226,13 +230,22 @@ xpand::Result xpand::ping_or_connect_to_hub(const char* zName,
 
     if (Monitor::connection_is_ok(rv2))
     {
-        if (xpand::is_part_of_the_quorum(zName, *ppCon))
+        bool is_part_of_the_quorum;
+        std::tie(rv, is_part_of_the_quorum) = xpand::is_part_of_the_quorum(zName, *ppCon);
+
+        if (rv == Result::OK && is_part_of_the_quorum)
         {
-            if ((softfailed == Softfailed::REJECT) && xpand::is_being_softfailed(zName, *ppCon))
+            if (softfailed == Softfailed::REJECT)
             {
-                MXB_NOTICE("%s: The Xpand node %s used as hub is part of the quorum, "
-                           "but it is being softfailed. Switching to another node.",
-                           zName, server.address());
+                bool is_being_softfailed;
+                std::tie(rv, is_being_softfailed) = xpand::is_being_softfailed(zName, *ppCon);
+
+                if (rv == Result::OK && is_being_softfailed)
+                {
+                    MXB_NOTICE("%s: The Xpand node %s used as hub is part of the quorum, "
+                               "but it is being softfailed. Switching to another node.",
+                               zName, server.address());
+                }
             }
             else
             {
