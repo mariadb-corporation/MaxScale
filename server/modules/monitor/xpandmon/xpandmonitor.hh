@@ -98,7 +98,7 @@ private:
 
     void tick() override;
 
-    int query(MYSQL* pCon, const char* zQuery);
+    bool query(MYSQL* pCon, const char* zQuery);
 
     void check_bootstrap_servers();
     bool remove_persisted_information();

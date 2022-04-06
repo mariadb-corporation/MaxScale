@@ -440,25 +440,16 @@ void XpandMonitor::tick()
     write_journal_if_needed();
 }
 
-int XpandMonitor::query(MYSQL* pCon, const char* zQuery)
+bool XpandMonitor::query(MYSQL* pCon, const char* zQuery)
 {
-    int rv = mysql_query(pCon, zQuery);
+    auto rv = xpand::query(name(), pCon, zQuery);
 
-    if (rv != 0)
+    if (rv == xpand::Result::GROUP_CHANGE)
     {
-        if (xpand::is_group_change_error(pCon))
-        {
-            m_is_group_change = true;
-            MXB_INFO("%s: Group change detected on %s: %s", name(), mysql_get_host_info(pCon), mysql_error(pCon));
-        }
-        else
-        {
-            MXB_ERROR("%s: Could not execute '%s' on %s: %s",
-                      name(), zQuery, mysql_get_host_info(pCon), mysql_error(pCon));
-        }
+        m_is_group_change = true;
     }
 
-    return rv;
+    return rv == xpand::Result::OK;
 }
 
 void XpandMonitor::choose_hub(xpand::Softfailed softfailed)
@@ -669,7 +660,7 @@ bool XpandMonitor::refresh_nodes(MYSQL* pHub_con)
             "FROM system.nodeinfo AS ni "
             "LEFT JOIN system.softfailed_nodes AS sn ON ni.nodeid = sn.nodeid";
 
-        if (query(pHub_con, ZQUERY) == 0)
+        if (query(pHub_con, ZQUERY))
         {
             MYSQL_RES* pResult = mysql_store_result(pHub_con);
 
@@ -998,7 +989,7 @@ bool XpandMonitor::check_cluster_membership(MYSQL* pHub_con,
 
     const char ZQUERY[] = "SELECT nid, status, instance, substate FROM system.membership";
 
-    if (query(pHub_con, ZQUERY) == 0)
+    if (query(pHub_con, ZQUERY))
     {
         MYSQL_RES* pResult = mysql_store_result(pHub_con);
 
@@ -1435,7 +1426,7 @@ bool XpandMonitor::perform_operation(Operation operation,
 
             sprintf(zQuery, ZQUERY_FORMAT, zOperation, id);
 
-            if (query(m_pHub_con, zQuery) == 0)
+            if (query(m_pHub_con, zQuery))
             {
                 MXB_NOTICE("%s: %s performed on node %d (%s).",
                            name(), zOperation, id, pServer->address());

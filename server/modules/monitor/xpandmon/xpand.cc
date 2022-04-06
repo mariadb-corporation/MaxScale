@@ -98,13 +98,35 @@ xpand::SubState xpand::substate_from_string(const std::string& substate)
     }
 }
 
+xpand::Result xpand::query(const char* zName, MYSQL* pCon, const char* zQuery)
+{
+    Result rv = Result::OK;
+
+    if (mysql_query(pCon, zQuery) != 0)
+    {
+        if (is_group_change_error(pCon))
+        {
+            MXB_INFO("%s: Group change detected on %s: %s", zName, mysql_get_host_info(pCon), mysql_error(pCon));
+            rv = Result::GROUP_CHANGE;
+        }
+        else
+        {
+            MXB_ERROR("%s: Could not execute '%s' on %s: %s",
+                      zName, zQuery, mysql_get_host_info(pCon), mysql_error(pCon));
+            rv = Result::ERROR;
+        }
+    }
+
+    return rv;
+}
+
 bool xpand::is_part_of_the_quorum(const char* zName, MYSQL* pCon)
 {
     bool rv = false;
 
     const char ZQUERY[] = "SELECT status FROM system.membership WHERE nid = gtmnid()";
 
-    if (mysql_query(pCon, ZQUERY) == 0)
+    if (xpand::query(zName, pCon, ZQUERY) == xpand::Result::OK)
     {
         MYSQL_RES* pResult = mysql_store_result(pCon);
 
@@ -155,19 +177,6 @@ bool xpand::is_part_of_the_quorum(const char* zName, MYSQL* pCon)
                         zName, ZQUERY, mysql_get_host_info(pCon));
         }
     }
-    else
-    {
-        if (is_group_change_error(pCon))
-        {
-            MXB_INFO("%s: Could not execute '%s' on %s: %s",
-                     zName, ZQUERY, mysql_get_host_info(pCon), mysql_error(pCon));
-        }
-        else
-        {
-            MXB_ERROR("%s: Could not execute '%s' on %s: %s",
-                      zName, ZQUERY, mysql_get_host_info(pCon), mysql_error(pCon));
-        }
-    }
 
     return rv;
 }
@@ -178,7 +187,7 @@ bool xpand::is_being_softfailed(const char* zName, MYSQL* pCon)
 
     const char ZQUERY[] = "SELECT nodeid FROM system.softfailed_nodes WHERE nodeid = gtmnid()";
 
-    if (mysql_query(pCon, ZQUERY) == 0)
+    if (xpand::query(zName, pCon, ZQUERY) == xpand::Result::OK)
     {
         MYSQL_RES* pResult = mysql_store_result(pCon);
 
@@ -200,11 +209,6 @@ bool xpand::is_being_softfailed(const char* zName, MYSQL* pCon)
             MXB_WARNING("%s: No result returned for '%s' on %s.",
                         zName, ZQUERY, mysql_get_host_info(pCon));
         }
-    }
-    else
-    {
-        MXB_ERROR("%s: Could not execute '%s' on %s: %s",
-                  zName, ZQUERY, mysql_get_host_info(pCon), mysql_error(pCon));
     }
 
     return rv;

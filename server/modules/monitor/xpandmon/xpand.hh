@@ -55,6 +55,19 @@ enum class Result
 };
 
 /**
+ * Wrapped mysql_query().
+ *
+ * @param zName   Name of the monitor.
+ * @param pCon    Valid MYSQL handle.
+ * @paran zQuery  The query.
+ *
+ * @return OK, if the query succeeded.
+ *         GROUP_CHANGE if the query failed with a Group Change error.
+ *         ERROR otherwise.
+ */
+Result query(const char* zName, MYSQL* pCon, const char* zQuery);
+
+/**
  * Is a particular Xpand node part of the quorum.
  *
  * @param zName   The name of the Xpand monitor instance.
