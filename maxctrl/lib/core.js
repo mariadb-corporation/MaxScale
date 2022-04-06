@@ -65,7 +65,7 @@ function configParser(filename) {
   // We require a .cnf suffix because 1) it makes the format clear and
   // 2) it makes it easy to introduce other formats.
   if (filename.slice(-4) != ".cnf") {
-    throw Error("EINVAL: " + filename + " does not have a '.cnf' suffix");
+    throw Error("Error: " + filename + " does not have a '.cnf' suffix");
   }
 
   var stats;
@@ -84,7 +84,7 @@ function configParser(filename) {
   // As the file may contain a password, we are picky about the bits.
   if ((stats.mode & 31) != 0) {
     throw Error(
-      "EACCESS: " +
+      "Error: " +
         filename +
         " exists, but can be accessed by group and world." +
         " Remove all rights from everyone else but owner"
@@ -95,7 +95,7 @@ function configParser(filename) {
   var config = ini.parse(content);
 
   if (!config.maxctrl) {
-    throw Error("EINVAL: " + filename + " does not have a [maxctrl] section");
+    throw Error("Error: " + filename + " does not have a [maxctrl] section");
   }
 
   return config.maxctrl;
