@@ -98,6 +98,12 @@ function configParser(filename) {
     throw Error("Error: " + filename + " does not have a [maxctrl] section");
   }
 
+  const bad_values = Object.keys(config.maxctrl).filter((k) => k.startsWith("-"));
+
+  if (bad_values.length > 0) {
+    throw Error("Error: Option names must be defined without hyphens: " + bad_values.join(", "));
+  }
+
   return config.maxctrl;
 }
 
