@@ -290,7 +290,8 @@ The request body must be a JSON object consisting of the following fields:
 - `max_rows`
 
   - The maximum number of rows returned in the response. By default this is 1000
-    rows. Setting the value to 0 means no limit.
+    rows. Setting the value to 0 means no limit. Any extra rows in the result
+    will be discarded.
 
 By default, the complete result is returned in the response body. If the SQL
 query returns more than one result, the `results` array will contain all the
@@ -390,19 +391,6 @@ responses.
     }
 }
 ```
-
-####  Request Parameters
-
-This endpoint supports the following request parameters.
-
-- `page[size]`
-
-  - limit the number of rows read from the resultset. By default there is no
-    limit. The value must be a positive number. If the number of rows returned
-    by a resultset exceeds the given limit, the rest of the result will be
-    available at the URL stored in `data.links.next` as well as in the
-    `Location` header. If links do not exist, the result was smaller than the
-    given limit.
 
 #### Response
 
