@@ -764,49 +764,54 @@ void test_conflicts(TestConnections& test)
     reset(test);
 }
 
-void test_server_state(TestConnections& test)
+
+void test_one_server_state(TestConnections& test, const std::string& state)
 {
     int version = 0;
 
-    test.tprintf("Setting maintenance mode should be synced to both MaxScales");
-    test.check_maxctrl("set server server2 maintenance");
+    const auto log = [&](const char* msg){
+        test.tprintf("    %s", msg);
+    };
+
+    log("Setting state should be synced to both MaxScales");
+    test.check_maxctrl("set server server2 " + state);
     test.maxscale->sleep_and_wait_for_monitor(2, 2);
     ++version;
 
     expect_sync(test, version, 2);
     expect_equal(test, "servers/server2", "/data/attributes/state");
 
-    test.tprintf("Clearing maintenance mode should be synced to both MaxScales");
-    test.check_maxctrl("clear server server2 maintenance");
+    log("Clearing state should be synced to both MaxScales");
+    test.check_maxctrl("clear server server2 " + state);
     test.maxscale->sleep_and_wait_for_monitor(2, 2);
     ++version;
 
     expect_sync(test, version, 2);
     expect_equal(test, "servers/server2", "/data/attributes/state");
 
-    test.tprintf("Stop the second MaxScale and set server into maintenance");
+    log("Stop the second MaxScale and set server state");
     test.maxscale2->stop();
 
-    test.check_maxctrl("set server server3 maintenance");
+    test.check_maxctrl("set server server3 " + state);
     test.maxscale->sleep_and_wait_for_monitor(2, 2);
     ++version;
 
-    test.tprintf("Start the second MaxScale: it should pick up the state change");
+    log("Start the second MaxScale: it should pick up the state change");
     test.maxscale2->start();
 
     expect_sync(test, version, 2);
     expect_equal(test, "servers/server3", "/data/attributes/state");
 
-    test.tprintf("Clear maintenance on second MaxScale: it should picked up by the first one");
-    test.maxscale2->maxctrl("clear server server3 maintenance");
+    log("Clear state on second MaxScale: it should picked up by the first one");
+    test.maxscale2->maxctrl("clear server server3 " + state);
     test.maxscale2->sleep_and_wait_for_monitor(2, 2);
     ++version;
 
     expect_sync(test, version, 2);
     expect_equal(test, "servers/server3", "/data/attributes/state");
 
-    test.tprintf("Set maintenance mode with --skip-sync: only first MaxScale should be affected");
-    test.check_maxctrl("set server --skip-sync server4 maintenance");
+    log("Set state with --skip-sync: only first MaxScale should be affected");
+    test.check_maxctrl("set server --skip-sync server4 " + state);
     test.maxscale->sleep_and_wait_for_monitor(2, 2);
     auto state1 = get(api1, "servers/server4", "/data/attributes/state");
     auto state2 = get(api2, "servers/server4", "/data/attributes/state");
@@ -814,14 +819,23 @@ void test_server_state(TestConnections& test)
     test.expect(state1.get_string() != state2.get_string(),
                 "Servers should be in different states but both are in '%s'", state1.get_string().c_str());
 
-    test.tprintf("Clear maintenance without --skip-sync");
-    test.check_maxctrl("clear server server4 maintenance");
+    log("Clear state without --skip-sync");
+    test.check_maxctrl("clear server server4 " + state);
     ++version;
 
     expect_sync(test, version, 2);
     expect_equal(test, "servers/server4", "/data/attributes/state");
 
     reset(test);
+}
+
+void test_server_state(TestConnections& test)
+{
+    test.tprintf("  Testing state: maintenance");
+    test_one_server_state(test, "maintenance");
+
+    test.tprintf("  Testing state: drain");
+    test_one_server_state(test, "drain");
 }
 
 int main(int argc, char** argv)

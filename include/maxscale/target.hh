@@ -190,6 +190,23 @@ public:
     enum : int64_t {RLAG_UNDEFINED = -1};       // Default replication lag value
     enum : int64_t {PING_UNDEFINED = -1};       // Default ping value
 
+    //
+    // NOTE: Do not modify these values or the order in which they are evaluated (see
+    // mxs::Target::status_to_string for more details). The system tests (possibly other software as well)
+    // rely on both the state names as well as the order in which they appear.
+    //
+    static constexpr std::string_view MAINTENANCE {"Maintenance"};
+    static constexpr std::string_view DRAINED {"Drained"};
+    static constexpr std::string_view DRAINING {"Draining"};
+    static constexpr std::string_view MASTER  {"Master"};
+    static constexpr std::string_view RELAY  {"Relay Master"};
+    static constexpr std::string_view SLAVE  {"Slave"};
+    static constexpr std::string_view SYNCED {"Synced"};
+    static constexpr std::string_view AUTH_ERR {"Auth Error"};
+    static constexpr std::string_view RUNNING {"Running"};
+    static constexpr std::string_view DOWN {"Down"};
+    static constexpr std::string_view BLR {"Binlog Relay"};
+
     virtual ~Target() = default;
 
     /**

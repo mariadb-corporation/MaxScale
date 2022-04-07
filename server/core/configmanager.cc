@@ -1016,14 +1016,25 @@ void ConfigManager::update_object(const std::string& name, const std::string& ty
             if (auto state = m_tmp.at("data/attributes/state"))
             {
                 std::string err;
+                auto str = state.get_string();
 
-                if (state.get_string().find("Maintenance") != std::string::npos)
+                if (str.find(mxs::Target::MAINTENANCE) != std::string::npos)
                 {
                     MonitorManager::set_server_status(server, SERVER_MAINT, &err);
                 }
                 else
                 {
                     MonitorManager::clear_server_status(server, SERVER_MAINT, &err);
+                }
+
+                if (str.find(mxs::Target::DRAINED) != std::string::npos
+                    || str.find(mxs::Target::DRAINING) != std::string::npos)
+                {
+                    MonitorManager::set_server_status(server, SERVER_DRAINING, &err);
+                }
+                else
+                {
+                    MonitorManager::clear_server_status(server, SERVER_DRAINING, &err);
                 }
             }
         }

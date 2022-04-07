@@ -42,10 +42,11 @@ std::string Target::status_to_string(uint64_t flags, int n_connections)
     std::string separator;
 
     // Helper function.
-    auto concatenate_if = [&result, &separator](bool condition, const std::string& desc) {
+    auto concatenate_if = [&result, &separator](bool condition, const std::string_view& desc) {
         if (condition)
         {
-            result += separator + desc;
+            result += separator;
+            result += desc;
             separator = ", ";
         }
     };
@@ -54,56 +55,50 @@ std::string Target::status_to_string(uint64_t flags, int n_connections)
     // the REST API they should not be changed suddenly. Strictly speaking, even the combinations
     // should not change, but this is more dependant on the monitors and have already changed.
     // Also, system tests compare to these strings so the output must stay constant for now.
-    const std::string maintenance = "Maintenance";
-    const std::string drained = "Drained";
-    const std::string draining = "Draining";
-    const std::string master = "Master";
-    const std::string relay = "Relay Master";
-    const std::string slave = "Slave";
-    const std::string synced = "Synced";
-    const std::string auth_err = "Auth Error";
-    const std::string running = "Running";
-    const std::string down = "Down";
-    const std::string blr = "Binlog Relay";
+
+    //
+    // NOTE: Do NOT change the order in which the values are evaluated. The system tests (possibly other
+    // software as well) rely on both the state names as well as the order in which they appear.
+    //
 
     // Maintenance/Draining is usually set by user so is printed first.
     // Draining in the presence of Maintenance has no effect, so we only
     // print either one of those, with Maintenance taking precedence.
     if (status_is_in_maint(flags))
     {
-        concatenate_if(true, maintenance);
+        concatenate_if(true, MAINTENANCE);
     }
     else if (status_is_draining(flags))
     {
         if (n_connections == 0)
         {
-            concatenate_if(true, drained);
+            concatenate_if(true, DRAINED);
         }
         else
         {
-            concatenate_if(true, draining);
+            concatenate_if(true, DRAINING);
         }
     }
 
     // Master cannot be a relay or a slave.
     if (status_is_master(flags))
     {
-        concatenate_if(true, master);
+        concatenate_if(true, MASTER);
     }
     else
     {
         // Relays are typically slaves as well.
-        concatenate_if(status_is_relay(flags), relay);
-        concatenate_if(status_is_slave(flags), slave);
-        concatenate_if(status_is_blr(flags), blr);
+        concatenate_if(status_is_relay(flags), RELAY);
+        concatenate_if(status_is_slave(flags), SLAVE);
+        concatenate_if(status_is_blr(flags), BLR);
     }
 
     // The following Galera and Cluster bits may be combined with master/slave.
-    concatenate_if(status_is_joined(flags), synced);
+    concatenate_if(status_is_joined(flags), SYNCED);
 
-    concatenate_if(flags & SERVER_AUTH_ERROR, auth_err);
-    concatenate_if(status_is_running(flags), running);
-    concatenate_if(status_is_down(flags), down);
+    concatenate_if(flags & SERVER_AUTH_ERROR, AUTH_ERR);
+    concatenate_if(status_is_running(flags), RUNNING);
+    concatenate_if(status_is_down(flags), DOWN);
 
     return result;
 }
