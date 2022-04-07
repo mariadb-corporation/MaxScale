@@ -194,3 +194,7 @@ SET STATEMENT max_statement_time = 60 FOR INSERT INTO t (f) VALUES (current_time
 # "transaction" is always parsed as a registered keyword. It should be parsed as an
 # identifier if it cannot be used as a keyword.
 SELECT uuid FROM Transaction LIMIT 1;
+
+# MXS-4080
+# "sequence" is always parsed as a keyword.
+DELETE FROM obj_stat_log_seq WHERE sequence < 6000;
