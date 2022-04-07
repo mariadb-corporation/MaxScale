@@ -12,6 +12,14 @@
  */
 require("./common.js")();
 
+const EXPLAIN_RELOADING =
+  "When a session is reloaded, it internally restarts the MaxScale session. " +
+  "This means that new connections are created and taken into use before the old connections are discarded. " +
+  "The session will use the latest configuration of the service the listener it used pointed to. This means " +
+  "that the behavior of the session can change as a result of a reload if the configuration has changed. " +
+  "If the reloading fails, the old configuration will remain in use. The external session ID of the connection " +
+  "will remain the same as well as any statistics or session level alterations that were done before the reload.";
+
 exports.command = "reload <command>";
 exports.desc = "Reload objects";
 exports.handler = function () {};
@@ -40,6 +48,34 @@ exports.builder = function (yargs) {
       function (argv) {
         maxctrl(argv, function (host) {
           return doRequest(host, "maxscale/tls/reload", { method: "POST" });
+        });
+      }
+    )
+    .command(
+      "session <id>",
+      "Reload the configuration of a session",
+      function (yargs) {
+        return yargs
+          .epilog("This command reloads the configuration of a session. " + EXPLAIN_RELOADING)
+          .usage("Usage: reload session <id>");
+      },
+      function (argv) {
+        maxctrl(argv, function (host) {
+          return doRequest(host, "sessions/" + argv.id + "/restart", { method: "POST" });
+        });
+      }
+    )
+    .command(
+      "sessions",
+      "Reload the configuration of all sessions",
+      function (yargs) {
+        return yargs
+          .epilog("This command reloads the configuration of all sessions. " + EXPLAIN_RELOADING)
+          .usage("Usage: reload sessions");
+      },
+      function (argv) {
+        maxctrl(argv, function (host) {
+          return doRequest(host, "sessions/restart", { method: "POST" });
         });
       }
     )

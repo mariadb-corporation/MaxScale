@@ -122,4 +122,8 @@ module.exports = function () {
     conn.end();
     conn = null;
   };
+
+  this.getConnectionId = function () {
+    return conn.threadId;
+  };
 };
