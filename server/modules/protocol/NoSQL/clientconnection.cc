@@ -280,6 +280,11 @@ bool ClientConnection::is_movable() const
     return true;
 }
 
+bool ClientConnection::is_idle() const
+{
+    return !m_nosql.is_busy();
+}
+
 void ClientConnection::setup_session(const string& user, const vector<uint8_t>& password)
 {
     auto& auth_data = *m_session_data.auth_data;

@@ -66,6 +66,7 @@ private:
     json_t* diagnostics() const override;
     void set_dcb(DCB* dcb) override;
     bool is_movable() const override;
+    bool is_idle() const override;
 
 private:
     GWBUF* handle_one_packet(GWBUF* pPacket);
