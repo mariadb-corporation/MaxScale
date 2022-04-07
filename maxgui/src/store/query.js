@@ -1112,6 +1112,31 @@ export default {
                 logger.error(e)
             }
         },
+        async stopQuery({ state, commit, getters }) {
+            try {
+                const {
+                    data: { data: { attributes: { results = [] } = {} } = {} } = {},
+                } = await this.$queryHttp.post(`/sql/${getters.getBgConn.id}/queries`, {
+                    sql: `KILL QUERY ${state.active_sql_conn.attributes.thread_id}`,
+                })
+
+                if (results.length && results[0].errno)
+                    commit(
+                        'SET_SNACK_BAR_MESSAGE',
+                        {
+                            text: [
+                                'Failed to stop the query',
+                                ...Object.keys(results[0]).map(key => `${key}: ${results[0][key]}`),
+                            ],
+                            type: 'error',
+                        },
+                        { root: true }
+                    )
+            } catch (e) {
+                const logger = this.vue.$logger(`store-query-stopQuery`)
+                logger.error(e)
+            }
+        },
         /**
          * @param {String} db - database name
          */
@@ -1439,6 +1464,15 @@ export default {
         },
     },
     getters: {
+        getBgConn: (state, getters, rootState) => {
+            const bgConns = Object.values(state.sql_conns).filter(
+                conn =>
+                    conn.name === state.active_sql_conn.name &&
+                    conn.binding_type === rootState.app_config.QUERY_CONN_BINDING_TYPES.BACKGROUND
+            )
+            if (bgConns.length) return bgConns[0]
+            return {}
+        },
         getActiveWke: state => {
             return state.worksheets_arr.find(wke => wke.id === state.active_wke_id)
         },

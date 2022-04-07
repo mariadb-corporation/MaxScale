@@ -81,11 +81,12 @@
                         </template>
                     </max-rows-input>
                 </v-form>
-                <!-- Run section-->
+                <!-- Run/Stop buttons-->
                 <v-tooltip
                     top
                     transition="slide-y-transition"
                     content-class="shadow-drop color text-navigation py-1 px-4"
+                    :disabled="getLoadingQueryResult"
                 >
                     <template v-slot:activator="{ on }">
                         <v-btn
@@ -94,15 +95,23 @@
                             depressed
                             small
                             color="accent-dark"
-                            :loading="getLoadingQueryResult"
-                            :disabled="shouldDisableExecute"
+                            :disabled="getLoadingQueryResult ? false : shouldDisableExecute"
                             v-on="on"
-                            @click="() => handleRun(selected_query_txt ? 'selected' : 'all')"
+                            @click="
+                                () =>
+                                    getLoadingQueryResult
+                                        ? stopQuery()
+                                        : handleRun(selected_query_txt ? 'selected' : 'all')
+                            "
                         >
                             <v-icon size="16" class="mr-2">
-                                $vuetify.icons.running
+                                {{
+                                    `$vuetify.icons.${
+                                        getLoadingQueryResult ? 'stopped' : 'running'
+                                    }`
+                                }}
                             </v-icon>
-                            {{ $t('run') }}
+                            {{ getLoadingQueryResult ? $t('stop') : $t('run') }}
                         </v-btn>
                     </template>
                     <span style="white-space: pre;" class="d-inline-block text-center">
@@ -268,6 +277,7 @@ export default {
         }),
         ...mapActions({
             fetchQueryResult: 'query/fetchQueryResult',
+            stopQuery: 'query/stopQuery',
             useDb: 'query/useDb',
         }),
         async handleSelectDb(db) {
