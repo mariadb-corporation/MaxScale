@@ -315,6 +315,7 @@ private:
         uint64_t deletes = 0;       /*< How many times an existing key in the cache was deleted. */
         uint64_t evictions = 0;     /*< How many times an item has been evicted from the cache. */
         uint64_t invalidations = 0; /*< How many times an item has been invalidated. */
+        uint64_t cleared = 0;       /*< How many times the cache has been cleared. */
     };
 
     using SInvalidator = std::unique_ptr<Invalidator>;

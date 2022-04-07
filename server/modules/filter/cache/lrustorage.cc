@@ -583,6 +583,12 @@ cache_result_t LRUStorage::do_clear(Token* pToken)
     mxb_assert(!m_pHead);
     mxb_assert(!m_pTail);
 
+    m_nodes_by_key.clear();
+
+    m_stats.size = 0;
+    m_stats.items = 0;
+    ++m_stats.cleared;
+
     return m_pStorage->clear(pToken);
 }
 
@@ -1071,4 +1077,5 @@ void LRUStorage::Stats::fill(json_t* pObject) const
     set_integer(pObject, "deletes", deletes);
     set_integer(pObject, "evictions", evictions);
     set_integer(pObject, "invalidations", invalidations);
+    set_integer(pObject, "cleared", cleared);
 }
