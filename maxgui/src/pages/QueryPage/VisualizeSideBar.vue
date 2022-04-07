@@ -302,13 +302,13 @@ export default {
             const { x, y } = this.axis
             let xAxisType = 'category',
                 labelAxisId = 'x',
-                axisLabels = { x: '', y: '' },
+                scaleLabels = { x: '', y: '' },
                 data = {
                     labels: [],
                     datasets: [],
                 }
             if (x && y) {
-                axisLabels = { x, y }
+                scaleLabels = { x, y }
                 let dataPoints = []
                 let labels = []
                 const dataRows = this.$help.getObjectRows({
@@ -364,7 +364,7 @@ export default {
                         break
                 }
             }
-            this.chartOpt = { ...this.chartOpt, data, axisLabels, xAxisType }
+            this.chartOpt = { ...this.chartOpt, data, scaleLabels, xAxisType }
         },
     },
 }

@@ -109,7 +109,7 @@ export default {
             defChartOpt: {
                 type: '',
                 data: {},
-                axisLabels: { x: '', y: '' },
+                scaleLabels: { x: '', y: '' },
                 xAxisType: '',
                 isMaximized: false,
             },

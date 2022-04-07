@@ -155,8 +155,8 @@ export default {
         xAxisType() {
             return this.chartOpt.xAxisType
         },
-        axisLabels() {
-            return this.chartOpt.axisLabels
+        scaleLabels() {
+            return this.chartOpt.scaleLabels
         },
         type() {
             return this.chartOpt.type
@@ -248,7 +248,7 @@ export default {
                         {
                             scaleLabel: {
                                 display: true,
-                                labelString: this.axisLabels.x,
+                                labelString: this.scaleLabels.x,
                                 fontSize: 14,
                                 lineHeight: 1,
                                 padding: {
@@ -263,7 +263,7 @@ export default {
                         {
                             scaleLabel: {
                                 display: true,
-                                labelString: this.axisLabels.y,
+                                labelString: this.scaleLabels.y,
                                 fontSize: 14,
                                 padding: {
                                     bottom: 16,
