@@ -196,13 +196,7 @@ export default {
                 },
                 { text: 'State', value: 'monitorState', padding: '0px 12px 0px 24px' },
                 { text: 'Servers', value: 'id', autoTruncate: true, padding: '0px 0px 0px 24px' },
-                {
-                    text: 'Address',
-                    value: 'serverAddress',
-                    autoTruncate: true,
-                    padding: '0px 0px 0px 24px',
-                },
-                { text: 'Port', value: 'serverPort', padding: '0px 0px 0px 24px' },
+                { text: 'Address', value: 'serverAddress', padding: '0px 0px 0px 24px' },
                 {
                     text: 'Connections',
                     value: 'serverConnections',
@@ -238,7 +232,7 @@ export default {
                         id,
                         attributes: {
                             state: serverState,
-                            parameters: { address: serverAddress, port: serverPort, socket },
+                            parameters: { address, port, socket },
                             statistics: { connections: serverConnections },
                             gtid_current_pos: gtid,
                         },
@@ -257,15 +251,12 @@ export default {
 
                     let row = {
                         id,
-                        serverAddress,
-                        serverPort,
+                        serverAddress: socket ? socket : `${address}:${port}`,
                         serverConnections,
                         serverState,
                         serviceIds,
                         gtid,
                     }
-                    // show socket in address column if server is using socket
-                    if (serverAddress === null && serverPort === null) row.serverAddress = socket
 
                     if (this.getAllMonitorsMap.size && monitorsData.length) {
                         // The monitorsData is always an array with one element -> get monitor at index 0
@@ -315,7 +306,6 @@ export default {
                     rows.push({
                         id: '',
                         serverAddress: '',
-                        serverPort: '',
                         serverConnections: '',
                         serverState: '',
                         serviceIds: '',
