@@ -152,8 +152,8 @@ export default {
         chartData() {
             return this.chartOpt.data
         },
-        xAxisType() {
-            return this.chartOpt.xAxisType
+        axesType() {
+            return this.chartOpt.axesType
         },
         scaleLabels() {
             return this.chartOpt.scaleLabels
@@ -162,10 +162,10 @@ export default {
             return this.chartOpt.type
         },
         isTimeChart() {
-            return this.xAxisType === 'time'
+            return this.axesType.x === 'time'
         },
         isLinear() {
-            return this.xAxisType === 'linear'
+            return this.axesType.x === 'linear'
         },
         autoSkipXTick() {
             return this.isLinear || this.isTimeChart
@@ -285,7 +285,7 @@ export default {
                 scales: {
                     xAxes: [
                         {
-                            type: this.xAxisType,
+                            type: this.axesType.x,
                             bounds: 'ticks',
                             ticks: {
                                 autoSkip: this.autoSkipXTick,
@@ -312,7 +312,7 @@ export default {
                 scales: {
                     xAxes: [
                         {
-                            type: this.xAxisType,
+                            type: this.axesType.x,
                             bounds: 'ticks',
                             ticks: {
                                 autoSkip: this.autoSkipXTick,

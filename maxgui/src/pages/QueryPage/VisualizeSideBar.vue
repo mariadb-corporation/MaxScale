@@ -300,7 +300,7 @@ export default {
 
         genChartData() {
             const { x, y } = this.axis
-            let xAxisType = 'category',
+            let axesType = { x: 'category', y: '' },
                 labelAxisId = 'x',
                 scaleLabels = { x: '', y: '' },
                 data = {
@@ -342,11 +342,13 @@ export default {
                     default:
                         labelAxisId = 'x'
                 }
+                /* TODO: detect y-axis type. Perhaps providing 2 more inputs to let the user choose type of axis
+                 * instead of checking the first value to decide the type
+                 */
+                if (this.isLinearAxes(dataset.data[0][labelAxisId])) axesType.x = 'linear'
+                if (this.isTimeAxes(dataset.data[0][labelAxisId])) axesType.x = 'time'
 
-                if (this.isLinearAxes(dataset.data[0][labelAxisId])) xAxisType = 'linear'
-                else if (this.isTimeAxes(dataset.data[0][labelAxisId])) xAxisType = 'time'
-
-                switch (xAxisType) {
+                switch (axesType.x) {
                     case 'linear':
                         this.sortingChartData({ data, labelAxisId })
                         break
@@ -355,7 +357,7 @@ export default {
                         break
                 }
             }
-            this.chartOpt = { ...this.chartOpt, data, scaleLabels, xAxisType }
+            this.chartOpt = { ...this.chartOpt, data, scaleLabels, axesType }
         },
     },
 }

@@ -110,7 +110,7 @@ export default {
                 type: '',
                 data: {},
                 scaleLabels: { x: '', y: '' },
-                xAxisType: '',
+                axesType: { x: 'category', y: '' },
                 isMaximized: false,
             },
             chartOpt: null,
