@@ -939,7 +939,7 @@ void XpandMonitor::persist_bootstrap_servers()
     }
 }
 
-void XpandMonitor::notify_of_group_change(bool was_group_change) const
+void XpandMonitor::notify_of_group_change(bool was_group_change)
 {
     if (was_group_change && !m_is_group_change)
     {
@@ -948,6 +948,17 @@ void XpandMonitor::notify_of_group_change(bool was_group_change) const
     else if (!was_group_change && m_is_group_change)
     {
         MXB_NOTICE("Group change detected.");
+
+        set_volatile_down();
+    }
+}
+
+void XpandMonitor::set_volatile_down()
+{
+    for (auto& kv : m_nodes_by_id)
+    {
+        XpandNode& node = kv.second;
+        node.set_running(false, XpandNode::APPROACH_OVERRIDE);
     }
 }
 
@@ -974,6 +985,7 @@ void XpandMonitor::check_cluster(xpand::Softfailed softfailed)
 
 void XpandMonitor::check_hub(xpand::Softfailed softfailed)
 {
+    bool was_group_change = m_is_group_change;
     m_is_group_change = false;
 
     mxb_assert(m_pHub_con);
@@ -993,6 +1005,8 @@ void XpandMonitor::check_hub(xpand::Softfailed softfailed)
         m_is_group_change = true;
         break;
     }
+
+    notify_of_group_change(was_group_change);
 }
 
 bool XpandMonitor::check_cluster_membership(MYSQL* pHub_con,
@@ -1149,35 +1163,28 @@ void XpandMonitor::update_server_statuses()
     {
         pMs->stash_current_status();
 
-        if (m_is_group_change)
-        {
-            pMs->clear_pending_status(SERVER_MASTER | SERVER_RUNNING);
-        }
-        else
-        {
-            auto it = find_if(m_nodes_by_id.begin(), m_nodes_by_id.end(),
-                              [pMs](const std::pair<int, XpandNode>& element) -> bool {
-                                  const XpandNode& info = element.second;
-                                  return pMs->server->address() == info.ip();
-                              });
+        auto it = find_if(m_nodes_by_id.begin(), m_nodes_by_id.end(),
+                          [pMs](const std::pair<int, XpandNode>& element) -> bool {
+                              const XpandNode& info = element.second;
+                              return pMs->server->address() == info.ip();
+                          });
 
-            if (it != m_nodes_by_id.end())
+        if (it != m_nodes_by_id.end())
+        {
+            const XpandNode& info = it->second;
+
+            if (info.is_running())
             {
-                const XpandNode& info = it->second;
-
-                if (info.is_running())
-                {
-                    pMs->set_pending_status(SERVER_MASTER | SERVER_RUNNING);
-                }
-                else
-                {
-                    pMs->clear_pending_status(SERVER_MASTER | SERVER_RUNNING);
-                }
+                pMs->set_pending_status(SERVER_MASTER | SERVER_RUNNING);
             }
             else
             {
                 pMs->clear_pending_status(SERVER_MASTER | SERVER_RUNNING);
             }
+        }
+        else
+        {
+            pMs->clear_pending_status(SERVER_MASTER | SERVER_RUNNING);
         }
     }
 }
@@ -1325,6 +1332,12 @@ bool XpandMonitor::check_http()
         break;
 
     case http::Async::READY:
+        if (m_is_group_change)
+        {
+            // This should be unnecessary, but won't hurt.
+            set_volatile_down();
+        }
+        else
         {
             mxb_assert(m_health_urls == m_http.urls());
             // There are as many responses as there are nodes,

@@ -106,7 +106,8 @@ xpand::Result xpand::query(const char* zName, MYSQL* pCon, const char* zQuery)
     {
         if (is_group_change_error(pCon))
         {
-            MXB_INFO("%s: Group change detected on %s: %s", zName, mysql_get_host_info(pCon), mysql_error(pCon));
+            MXB_INFO("%s: Group change detected on %s: %s",
+                     zName, mysql_get_host_info(pCon), mysql_error(pCon));
             rv = Result::GROUP_CHANGE;
         }
         else

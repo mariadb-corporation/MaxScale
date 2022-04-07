@@ -104,7 +104,8 @@ private:
     bool remove_persisted_information();
     void persist_bootstrap_servers();
 
-    void notify_of_group_change(bool was_group_change) const;
+    void notify_of_group_change(bool was_group_change);
+    void set_volatile_down();
 
     void check_cluster(xpand::Softfailed softfailed);
     void check_hub(xpand::Softfailed softfailed);
