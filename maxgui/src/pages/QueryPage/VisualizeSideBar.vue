@@ -47,7 +47,7 @@
                         </label>
                         <v-select
                             v-model="axis[axisName]"
-                            :items="axisName === 'y' ? yAxisFields : xAxisFields"
+                            :items="axisFields"
                             outlined
                             class="std mariadb-select-input error--text__bottom"
                             :menu-props="{
@@ -100,7 +100,6 @@ export default {
                 x: '',
                 y: '',
             },
-            numberSign: '#',
             showTrendline: false,
             rmResultSetsWatcher: null,
         }
@@ -156,45 +155,9 @@ export default {
             }
             return resSets
         },
-        numericFields() {
-            let indices = []
-            this.resSet.data[0].forEach((cell, i) => {
-                if (this.IsNumericCell(cell)) indices.push(i)
-            })
-            // show numeric fields only
-            let fields = [
-                this.numberSign,
-                ...this.resSet.fields.filter((_, i) => indices.includes(i)),
-            ]
-            return fields
-        },
-        xAxisFields() {
+        axisFields() {
             if (this.$typy(this.resSet, 'fields').isEmptyArray) return []
-            const { LINE, SCATTER, BAR_VERT, BAR_HORIZ } = this.SQL_CHART_TYPES
-            switch (this.chartOpt.type) {
-                case BAR_HORIZ:
-                    return this.numericFields
-                // linear, category or time cartesian axes
-                case SCATTER:
-                case LINE:
-                case BAR_VERT:
-                default:
-                    return [this.numberSign, ...this.resSet.fields]
-            }
-        },
-        yAxisFields() {
-            if (this.$typy(this.resSet, 'fields').isEmptyArray) return []
-            const { LINE, SCATTER, BAR_VERT, BAR_HORIZ } = this.SQL_CHART_TYPES
-            switch (this.chartOpt.type) {
-                case LINE:
-                case SCATTER:
-                case BAR_VERT:
-                    return this.numericFields
-                // linear, category or time cartesian axes
-                case BAR_HORIZ:
-                default:
-                    return [this.numberSign, ...this.resSet.fields]
-            }
+            return this.resSet.fields
         },
         supportTrendLine() {
             const { LINE, SCATTER, BAR_VERT, BAR_HORIZ } = this.SQL_CHART_TYPES
@@ -353,12 +316,9 @@ export default {
                     rows: this.resSet.data,
                 })
                 const { BAR_HORIZ } = this.SQL_CHART_TYPES
-                for (const [i, row] of dataRows.entries()) {
-                    const rowNumber = i + 1
-                    const isXAxisARowNum = x === this.numberSign
-                    const isYAxisARowNum = y === this.numberSign
-                    const xAxisVal = isXAxisARowNum ? rowNumber : row[x]
-                    const yAxisVal = isYAxisARowNum ? rowNumber : row[y]
+                for (const row of dataRows) {
+                    const xAxisVal = row[x]
+                    const yAxisVal = row[y]
 
                     dataPoints.push({
                         dataPointObj: row,
