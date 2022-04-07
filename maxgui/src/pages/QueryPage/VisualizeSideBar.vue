@@ -290,7 +290,7 @@ export default {
          * @param {Boolean} isDate - if data is date string
          */
         sortingChartData({ data, labelAxisId, isDate = false }) {
-            data.labels.sort((a, b) => (isDate ? this.$moment(a) - this.$moment(b) : a - b))
+            data.xLabels.sort((a, b) => (isDate ? this.$moment(a) - this.$moment(b) : a - b))
             data.datasets[0].data.sort((a, b) =>
                 isDate
                     ? this.$moment(a[labelAxisId]) - this.$moment(b[labelAxisId])
@@ -304,13 +304,13 @@ export default {
                 labelAxisId = 'x',
                 scaleLabels = { x: '', y: '' },
                 data = {
-                    labels: [],
+                    xLabels: [],
+                    yLabels: [],
                     datasets: [],
                 }
             if (x && y) {
                 scaleLabels = { x, y }
                 let dataPoints = []
-                let labels = []
                 const dataRows = this.$help.getObjectRows({
                     columns: this.resSet.fields,
                     rows: this.resSet.data,
@@ -327,22 +327,13 @@ export default {
                         xLabel: x,
                         yLabel: y,
                     })
-
-                    switch (this.chartOpt.type) {
-                        case BAR_HORIZ:
-                            labels.push(yAxisVal)
-                            break
-                        default:
-                            labels.push(xAxisVal)
-                    }
+                    data.xLabels.push(xAxisVal)
+                    data.yLabels.push(yAxisVal)
                 }
 
                 const dataset = this.genDataset({ colorIndex: 0, data: dataPoints })
 
-                data = {
-                    labels,
-                    datasets: [dataset],
-                }
+                data.datasets = [dataset]
 
                 switch (this.chartOpt.type) {
                     case BAR_HORIZ:

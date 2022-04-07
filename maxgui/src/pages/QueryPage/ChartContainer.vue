@@ -172,8 +172,8 @@ export default {
         },
         minWidth() {
             if (this.autoSkipXTick) return 'unset'
-            if (this.$typy(this.chartData, 'labels').isDefined)
-                return `${Math.min(this.chartData.labels.length * 15, 15000)}px`
+            if (this.$typy(this.chartData, 'xLabels').isDefined)
+                return `${Math.min(this.chartData.xLabels.length * 15, 15000)}px`
             return '0px'
         },
         chartHeight() {
@@ -182,14 +182,14 @@ export default {
                     if (this.autoSkipXTick)
                         return this.containerHeight - (this.chartToolHeight + 12)
                     /** When there is too many data points,
-                     * first, get min value between "overflow" height (this.chartData.labels.length * 15)
+                     * first, get min value between "overflow" height (this.chartData.yLabels.length * 15)
                      * and max height threshold 15000. However, when there is too little data points,
                      * the "overflow" height is smaller than container height, container height
                      * should be chosen to make chart fit to its container
                      */
                     return Math.max(
                         this.containerHeight - (this.chartToolHeight + 12),
-                        Math.min(this.chartData.labels.length * 15, 15000)
+                        Math.min(this.chartData.yLabels.length * 15, 15000)
                     )
                 default:
                     // 10px of scrollbar height plus border
@@ -256,7 +256,6 @@ export default {
                                 },
                                 fontColor: '#424f62',
                             },
-                            beginAtZero: true,
                         },
                     ],
                     yAxes: [
@@ -268,9 +267,6 @@ export default {
                                 padding: {
                                     bottom: 16,
                                 },
-                            },
-                            ticks: {
-                                beginAtZero: true,
                             },
                         },
                     ],
