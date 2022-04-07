@@ -1486,8 +1486,8 @@ public:
         m_put.emplace_back(cb_start_service, "services", ":service", "start");
         m_put.emplace_back(cb_stop_listener, "listeners", ":listener", "stop");
         m_put.emplace_back(cb_start_listener, "listeners", ":listener", "start");
-        m_put.emplace_back(cb_set_server, "servers", ":server", "set");
-        m_put.emplace_back(cb_clear_server, "servers", ":server", "clear");
+        m_put.emplace_back(REQ_SYNC, cb_set_server, "servers", ":server", "set");
+        m_put.emplace_back(REQ_SYNC, cb_clear_server, "servers", ":server", "clear");
 
         m_delete.emplace_back(REQ_SYNC, cb_delete_server, "servers", ":server");
         m_delete.emplace_back(REQ_SYNC, cb_delete_monitor, "monitors", ":monitor");

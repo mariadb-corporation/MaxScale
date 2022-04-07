@@ -1012,6 +1012,20 @@ void ConfigManager::update_object(const std::string& name, const std::string& ty
             {
                 throw error("Failed to update server '", name, "'");
             }
+
+            if (auto state = m_tmp.at("data/attributes/state"))
+            {
+                std::string err;
+
+                if (state.get_string().find("Maintenance") != std::string::npos)
+                {
+                    MonitorManager::set_server_status(server, SERVER_MAINT, &err);
+                }
+                else
+                {
+                    MonitorManager::clear_server_status(server, SERVER_MAINT, &err);
+                }
+            }
         }
         else
         {
@@ -1092,7 +1106,7 @@ void ConfigManager::update_object(const std::string& name, const std::string& ty
 void ConfigManager::remove_extra_data(json_t* data)
 {
     static const std::unordered_set<std::string> keys_to_keep {
-        CN_PARAMETERS, CN_MODULE, CN_ROUTER
+        CN_PARAMETERS, CN_MODULE, CN_ROUTER, CN_STATE
     };
 
     json_t* attr = json_object_get(data, CN_ATTRIBUTES);

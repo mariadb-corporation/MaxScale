@@ -764,6 +764,66 @@ void test_conflicts(TestConnections& test)
     reset(test);
 }
 
+void test_server_state(TestConnections& test)
+{
+    int version = 0;
+
+    test.tprintf("Setting maintenance mode should be synced to both MaxScales");
+    test.check_maxctrl("set server server2 maintenance");
+    test.maxscale->sleep_and_wait_for_monitor(2, 2);
+    ++version;
+
+    expect_sync(test, version, 2);
+    expect_equal(test, "servers/server2", "/data/attributes/state");
+
+    test.tprintf("Clearing maintenance mode should be synced to both MaxScales");
+    test.check_maxctrl("clear server server2 maintenance");
+    test.maxscale->sleep_and_wait_for_monitor(2, 2);
+    ++version;
+
+    expect_sync(test, version, 2);
+    expect_equal(test, "servers/server2", "/data/attributes/state");
+
+    test.tprintf("Stop the second MaxScale and set server into maintenance");
+    test.maxscale2->stop();
+
+    test.check_maxctrl("set server server3 maintenance");
+    test.maxscale->sleep_and_wait_for_monitor(2, 2);
+    ++version;
+
+    test.tprintf("Start the second MaxScale: it should pick up the state change");
+    test.maxscale2->start();
+
+    expect_sync(test, version, 2);
+    expect_equal(test, "servers/server3", "/data/attributes/state");
+
+    test.tprintf("Clear maintenance on second MaxScale: it should picked up by the first one");
+    test.maxscale2->maxctrl("clear server server3 maintenance");
+    test.maxscale2->sleep_and_wait_for_monitor(2, 2);
+    ++version;
+
+    expect_sync(test, version, 2);
+    expect_equal(test, "servers/server3", "/data/attributes/state");
+
+    test.tprintf("Set maintenance mode with --skip-sync: only first MaxScale should be affected");
+    test.check_maxctrl("set server --skip-sync server4 maintenance");
+    test.maxscale->sleep_and_wait_for_monitor(2, 2);
+    auto state1 = get(api1, "servers/server4", "/data/attributes/state");
+    auto state2 = get(api2, "servers/server4", "/data/attributes/state");
+
+    test.expect(state1.get_string() != state2.get_string(),
+                "Servers should be in different states but both are in '%s'", state1.get_string().c_str());
+
+    test.tprintf("Clear maintenance without --skip-sync");
+    test.check_maxctrl("clear server server4 maintenance");
+    ++version;
+
+    expect_sync(test, version, 2);
+    expect_equal(test, "servers/server4", "/data/attributes/state");
+
+    reset(test);
+}
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -787,6 +847,9 @@ int main(int argc, char** argv)
 
     test.log_printf("6. test_conflicts");
     test_conflicts(test);
+
+    test.log_printf("7. test_server_state");
+    test_server_state(test);
 
     return test.global_result;
 }
