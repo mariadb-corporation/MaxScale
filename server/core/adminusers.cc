@@ -79,6 +79,12 @@ namespace
 {
 bool admin_dump_users(const Users* users, const char* fname)
 {
+    if (!mxs::Config::get().config_sync_cluster.empty())
+    {
+        // Don't dump users when config sync is enabled, they are stored in the cluster configuration file
+        return true;
+    }
+
     if (access(mxs::datadir(), F_OK) != 0)
     {
         if (mkdir(mxs::datadir(), S_IRWXU) != 0 && errno != EEXIST)
@@ -504,4 +510,23 @@ bool admin_user_is_pam_account(const std::string& username, const std::string& p
         MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE, "%s", pam_res.error.c_str());
     }
     return false;
+}
+
+mxb::Json admin_raw_users()
+{
+    return mxb::Json(rest_users.to_json(), mxb::Json::RefType::STEAL);
+}
+
+bool admin_load_raw_users(const mxb::Json& json)
+{
+    bool ok = false;
+    Users users;
+
+    if (users.load_json(json.get_json()))
+    {
+        rest_users = std::move(users);
+        ok = true;
+    }
+
+    return ok;
 }

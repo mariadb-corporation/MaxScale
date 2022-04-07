@@ -220,8 +220,18 @@ std::string get_diff(const mxb::Json& js_a, const mxb::Json& js_b)
         --end.second;
     }
 
-    std::string a_diff(start.first, end.first.base());
-    std::string b_diff(start.second, end.second.base());
+    std::string a_diff;
+    std::string b_diff;
+
+    if (std::distance(start.first, end.first.base()) > 0)
+    {
+        a_diff.assign(start.first, end.first.base());
+    }
+
+    if (std::distance(start.second, end.second.base()) > 0)
+    {
+        b_diff.assign(start.second, end.second.base());
+    }
 
     return a_diff + " != " + b_diff;
 }
@@ -838,6 +848,76 @@ void test_server_state(TestConnections& test)
     test_one_server_state(test, "drain");
 }
 
+void test_admin_users(TestConnections& test)
+{
+    auto test_login = [&](std::string user, std::string pw){
+        return test.maxscale->maxctrl("-u " + user + " -p " + pw + " show maxscale").rc == 0
+               && test.maxscale2->maxctrl("-u " + user + " -p " + pw + " show maxscale").rc == 0;
+    };
+
+    auto login_ok = [&](std::string user, std::string pw){
+        test.expect(test_login(user, pw), "Login failed for %s:%s", user.c_str(), pw.c_str());
+    };
+
+    auto login_err = [&](std::string user, std::string pw){
+        test.expect(!test_login(user, pw), "Login did not fail for %s:%s", user.c_str(), pw.c_str());
+    };
+
+    int version = 0;
+    test.tprintf("Create a new user, should work on both MaxScales");
+    test.check_maxctrl("create user bob bob");
+    expect_sync(test, ++version, 2);
+    expect_equal(test, "users/inet/bob", "/data");
+    login_ok("admin", "mariadb");
+    login_ok("bob", "bob");
+    login_err("bob", "bob2");
+
+    test.tprintf("Change the password on the second MaxScale, first one should work");
+    test.maxscale2->maxctrl("alter user bob bob2");
+    expect_sync(test, ++version, 2);
+    expect_equal(test, "users/inet/bob", "/data");
+    login_ok("admin", "mariadb");
+    login_ok("bob", "bob2");
+    login_err("bob", "bob");
+
+    test.tprintf("Change password with --skip-sync on the first MaxScale, only first one should work");
+    test.maxscale2->maxctrl("alter user bob bob3 --skip-sync");
+    sleep(2);   // Should work, sync interval is 100ms for this test
+
+    test.expect(test.maxscale->maxctrl("-u bob -p bob3 show maxscale").rc == 0,
+                "Login should work on first MaxScale with new password");
+    test.expect(test.maxscale2->maxctrl("-u bob -p bob3 show maxscale").rc != 0,
+                "Login should fail on second MaxScale with new password");
+    test.expect(test.maxscale2->maxctrl("-u bob -p bob2 show maxscale").rc == 0,
+                "Login should work on second MaxScale with old password");
+
+    login_ok("admin", "mariadb");
+    login_err("bob", "bob2");
+    login_err("bob", "bob");
+
+    test.tprintf("Change the password without --skip-sync, login to both MaxScale should now work");
+    test.maxscale2->maxctrl("alter user bob bob4");
+    expect_sync(test, ++version, 2);
+    expect_equal(test, "users/inet/bob", "/data");
+    login_ok("admin", "mariadb");
+    login_ok("bob", "bob4");
+    login_err("bob", "bob3");
+    login_err("bob", "bob2");
+    login_err("bob", "bob");
+
+    test.tprintf("Delete user on first MaxScale, login should fail on both");
+    test.check_maxctrl("destroy user bob");
+    expect_sync(test, ++version, 2);
+    expect_equal(test, "users/inet", "/data");
+    login_ok("admin", "mariadb");
+    login_err("bob", "bob4");
+    login_err("bob", "bob3");
+    login_err("bob", "bob2");
+    login_err("bob", "bob");
+
+    reset(test);
+}
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -864,6 +944,9 @@ int main(int argc, char** argv)
 
     test.log_printf("7. test_server_state");
     test_server_state(test);
+
+    test.log_printf("8. test_admin_users");
+    test_admin_users(test);
 
     return test.global_result;
 }

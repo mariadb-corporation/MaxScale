@@ -58,7 +58,7 @@ public:
     Users& operator=(const Users& rhs);
     Users& operator=(Users&& rhs) noexcept;
 
-    void load_json(json_t* json);
+    bool load_json(json_t* json);
     bool add(const std::string& user, const std::string& password, user_account_type perm);
     bool remove(const std::string& user);
     bool get(const std::string& user, UserInfo* output = NULL) const;

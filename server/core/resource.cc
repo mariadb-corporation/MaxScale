@@ -1424,7 +1424,7 @@ public:
         m_post.emplace_back(REQ_BODY | REQ_SYNC, cb_create_service_listener,
                             "services", ":service", "listeners");
         m_post.emplace_back(REQ_BODY | REQ_SYNC, cb_create_listener, "listeners");
-        m_post.emplace_back(REQ_BODY, cb_create_user, "users", "inet");
+        m_post.emplace_back(REQ_BODY | REQ_SYNC, cb_create_user, "users", "inet");
         // For backward compatibility.
         m_post.emplace_back(REQ_BODY, cb_create_user, "users", "unix");
 
@@ -1455,7 +1455,7 @@ public:
         m_patch.emplace_back(REQ_BODY | REQ_SYNC, cb_alter_maxscale, "maxscale", "logs");   // Deprecated
         m_patch.emplace_back(REQ_BODY | REQ_SYNC, cb_alter_maxscale, "maxscale");
         m_patch.emplace_back(REQ_BODY | REQ_SYNC, cb_alter_qc, "maxscale", "query_classifier");
-        m_patch.emplace_back(REQ_BODY, cb_alter_user, "users", "inet", ":inetuser");
+        m_patch.emplace_back(REQ_BODY | REQ_SYNC, cb_alter_user, "users", "inet", ":inetuser");
         m_patch.emplace_back(REQ_BODY, cb_alter_session, "sessions", ":session");
 
         /** Update resource relationships directly */
@@ -1497,7 +1497,7 @@ public:
         m_delete.emplace_back(REQ_SYNC, cb_delete_service_listener,
                               "services", ":service", "listeners", ":listener");
 
-        m_delete.emplace_back(cb_delete_user, "users", "inet", ":inetuser");
+        m_delete.emplace_back(REQ_SYNC, cb_delete_user, "users", "inet", ":inetuser");
 
         /** SQL connection destruction */
         m_delete.emplace_back(cb_sql_disconnect, "sql", ":connection_id");

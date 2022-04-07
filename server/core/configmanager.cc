@@ -26,6 +26,7 @@
 #include "internal/servermanager.hh"
 #include "internal/monitormanager.hh"
 #include "internal/modules.hh"
+#include "internal/adminusers.hh"
 
 #include <set>
 #include <fstream>
@@ -35,6 +36,7 @@ using namespace std::chrono;
 
 namespace
 {
+const char CN_ADMIN_USERS[] = "admin_users";
 const char CN_CHECKSUM[] = "checksum";
 const char CN_CLUSTER_NAME[] = "cluster_name";
 const char CN_CONFIG[] = "config";
@@ -151,6 +153,12 @@ std::string sql_update_status(const std::string& cluster, int64_t version, const
        << "(nodes, CONCAT('$.', JSON_QUOTE('" << hostname() << "')), '" << escape_for_sql(status) << "') "
        << "WHERE version = " << version << " AND cluster = '" << escape_for_sql(cluster) << "'";
     return ss.str();
+}
+
+bool is_noop_chage(const mxb::Json& lhs, const mxb::Json& rhs)
+{
+    return lhs.get_object(CN_CONFIG) == rhs.get_object(CN_CONFIG)
+           && lhs.get_object(CN_ADMIN_USERS) == rhs.get_object(CN_ADMIN_USERS);
 }
 }
 
@@ -446,7 +454,7 @@ bool ConfigManager::commit()
     {
         mxb::Json config = create_config(m_version + 1);
 
-        if (config.get_object(CN_CONFIG) == m_current_config.get_object(CN_CONFIG))
+        if (is_noop_chage(config, m_current_config))
         {
             MXB_INFO("Resulting configuration is the same as current configuration, ignoring update.");
             rollback();
@@ -587,6 +595,7 @@ mxb::Json ConfigManager::create_config(int64_t version)
 
     rval.set_object(CN_CONFIG, arr);
     rval.set_int(CN_VERSION, version);
+    rval.set_object(CN_ADMIN_USERS, admin_raw_users());
 
     mxb_assert(!m_cluster.empty());
     rval.set_string(CN_CLUSTER_NAME, m_cluster);
@@ -693,6 +702,14 @@ void ConfigManager::process_config(const mxb::Json& new_json)
         if (added.find(name) == added.end() || to_type(type) == Type::SERVICES)
         {
             update_object(name, type, obj);
+        }
+    }
+
+    if (auto users = new_json.get_object(CN_ADMIN_USERS))
+    {
+        if (!admin_load_raw_users(users))
+        {
+            throw error("Failed to load admin users");
         }
     }
 }

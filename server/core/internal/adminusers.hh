@@ -60,3 +60,19 @@ json_t* admin_user_to_json(const char* host, const char* user);
  */
 bool admin_user_is_pam_account(const std::string& username, const std::string& password,
                                mxs::user_account_type min_acc_type = mxs::USER_ACCOUNT_BASIC);
+
+/**
+ * Get the raw admin users data
+ *
+ * @return The raw JSON that would be stored on disk
+ */
+mxb::Json admin_raw_users();
+
+/**
+ * Load raw admin user JSON
+ *
+ * @param json JSON to load
+ *
+ * @return True if the users were loaded and saved on disk successfully
+ */
+bool admin_load_raw_users(const mxb::Json& json);

@@ -219,8 +219,9 @@ bool Users::is_admin(const std::unordered_map<std::string, UserInfo>::value_type
     return value.second.permissions == USER_ACCOUNT_ADMIN;
 }
 
-void Users::load_json(json_t* json)
+bool Users::load_json(json_t* json)
 {
+    bool ok = true;
     // This function is always called in a single-threaded context
     size_t i;
     json_t* value;
@@ -243,8 +244,11 @@ void Users::load_json(json_t* json)
         else
         {
             MXB_ERROR("Corrupt JSON value in users file: %s", mxs::json_dump(value).c_str());
+            ok = false;
         }
     }
+
+    return ok;
 }
 
 std::string Users::hash(const std::string& password)
