@@ -244,6 +244,11 @@ const session_fields = [
     description: "Client host address",
   },
   {
+    name: "Port",
+    path: "attributes.port",
+    description: "Client network port",
+  },
+  {
     name: "Database",
     path: "attributes.database",
     description: "Current default database of the connection",

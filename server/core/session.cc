@@ -330,6 +330,7 @@ json_t* Session::as_json_resource(const char* host, bool rdns) const
     }
 
     json_object_set_new(attr, "remote", json_string(result_address.c_str()));
+    json_object_set_new(attr, "port", json_integer(client_dcb->port()));
 
     struct tm result;
     char buf[60];
