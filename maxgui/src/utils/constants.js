@@ -88,6 +88,11 @@ export const APP_CONFIG = Object.freeze({
         BAR_VERT: 'Bar - Vertical',
         BAR_HORIZ: 'Bar - Horizontal',
     }),
+    SQL_CHART_AXIS_TYPES: Object.freeze({
+        CATEGORY: 'category', // string data type
+        LINEAR: 'linear', // numerical data type
+        TIME: 'time',
+    }),
     QUERY_LOG_TYPES: Object.freeze({
         USER_LOGS: i18n.t('userQueryLogs'),
         ACTION_LOGS: i18n.t('actionLogs'),

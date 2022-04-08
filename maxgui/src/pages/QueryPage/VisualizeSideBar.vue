@@ -1,7 +1,7 @@
 <template>
     <div class="pa-4">
         <h5 class="mb-4">{{ $t('visualization') }}</h5>
-        <label class="field__label color text-small-text"> {{ $t('graph') }}</label>
+        <label class="field__label color text-small-text label-required"> {{ $t('graph') }}</label>
         <v-select
             v-model="chartOpt.type"
             :items="Object.values(SQL_CHART_TYPES)"
@@ -17,7 +17,9 @@
             hide-details="auto"
         />
         <div v-if="chartOpt.type" class="mt-4">
-            <label class="field__label color text-small-text"> {{ $t('selectResultSet') }}</label>
+            <label class="field__label color text-small-text label-required">
+                {{ $t('selectResultSet') }}
+            </label>
             <v-select
                 v-model="resSet"
                 :items="resultSets"
@@ -36,29 +38,61 @@
                 return-object
             />
             <template v-if="resSet">
-                <!-- Don't show axis inputs if result set is empty -->
+                <!-- Don't show scaleLabels inputs if result set is empty -->
                 <div v-if="$typy(resSet, 'data').isEmptyArray" class="mt-4 color text-small-text">
                     {{ $t('emptySet') }}
                 </div>
                 <template v-else>
-                    <div v-for="(_, axisName) in axis" :key="axisName" class="mt-2">
-                        <label class="field__label color text-small-text text-capitalize">
-                            {{ axisName }} axis
-                        </label>
-                        <v-select
-                            v-model="axis[axisName]"
-                            :items="axisFields"
-                            outlined
-                            class="std mariadb-select-input error--text__bottom"
-                            :menu-props="{
-                                contentClass: 'mariadb-select-v-menu',
-                                bottom: true,
-                                offsetY: true,
-                            }"
-                            dense
-                            :height="36"
-                            hide-details="auto"
-                        />
+                    <div v-for="(_, axisId) in scaleLabels" :key="axisId">
+                        <div class="mt-2">
+                            <label
+                                class="field__label color text-small-text text-capitalize label-required"
+                            >
+                                {{ axisId }} axis
+                            </label>
+                            <v-select
+                                v-model="scaleLabels[axisId]"
+                                :items="axisFields"
+                                outlined
+                                class="std mariadb-select-input error--text__bottom"
+                                :menu-props="{
+                                    contentClass: 'mariadb-select-v-menu',
+                                    bottom: true,
+                                    offsetY: true,
+                                }"
+                                dense
+                                :height="36"
+                                hide-details="auto"
+                            />
+                        </div>
+                        <div class="mt-2">
+                            <label
+                                class="field__label color text-small-text text-capitalize label-required"
+                            >
+                                {{ axisId }} axis type
+                            </label>
+                            <v-select
+                                v-model="axesType[axisId]"
+                                :items="Object.values(SQL_CHART_AXIS_TYPES)"
+                                outlined
+                                class="std mariadb-select-input error--text__bottom"
+                                :menu-props="{
+                                    contentClass: 'mariadb-select-v-menu',
+                                    bottom: true,
+                                    offsetY: true,
+                                }"
+                                dense
+                                :height="36"
+                                hide-details="auto"
+                            >
+                                <template v-slot:selection="{ item }">
+                                    {{ labelingAxisType(item) }}
+                                </template>
+                                <template v-slot:item="{ item }">
+                                    {{ labelingAxisType(item) }}
+                                </template>
+                            </v-select>
+                        </div>
                     </div>
                 </template>
                 <v-checkbox
@@ -96,10 +130,8 @@ export default {
     data() {
         return {
             resSet: null,
-            axis: {
-                x: '',
-                y: '',
-            },
+            scaleLabels: { x: '', y: '' }, // scaleLabels inputs
+            axesType: { x: '', y: '' }, // axesType inputs
             showTrendline: false,
             rmResultSetsWatcher: null,
         }
@@ -108,6 +140,7 @@ export default {
         ...mapState({
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             SQL_CHART_TYPES: state => state.app_config.SQL_CHART_TYPES,
+            SQL_CHART_AXIS_TYPES: state => state.app_config.SQL_CHART_AXIS_TYPES,
         }),
         ...mapGetters({
             getPrvwDataRes: 'query/getPrvwDataRes',
@@ -166,15 +199,21 @@ export default {
     },
     watch: {
         'chartOpt.type'() {
-            this.clearAxisVal()
+            this.clearAxes()
         },
         resSet: {
             deep: true,
             handler() {
-                this.clearAxisVal()
+                this.clearAxes()
             },
         },
-        axis: {
+        scaleLabels: {
+            deep: true,
+            handler() {
+                this.genChartData()
+            },
+        },
+        axesType: {
             deep: true,
             handler() {
                 this.genChartData()
@@ -195,7 +234,7 @@ export default {
             // store watcher to rmResultSetsWatcher and use it for removing the watcher
             this.rmResultSetsWatcher = this.$watch('resultSets', (v, oV) => {
                 if (!this.$help.lodash.isEqual(v, oV)) {
-                    this.clearAxisVal()
+                    this.clearAxes()
                     this.resSet = null
                     this.genChartData()
                 }
@@ -204,8 +243,20 @@ export default {
         cloneRes(res) {
             return JSON.parse(JSON.stringify(res))
         },
-        clearAxisVal() {
-            this.axis = { x: '', y: '' }
+        clearAxes() {
+            this.scaleLabels = { x: '', y: '' }
+            this.axesType = { x: '', y: '' }
+        },
+        labelingAxisType(axisType) {
+            const { LINEAR, CATEGORY } = this.SQL_CHART_AXIS_TYPES
+            switch (axisType) {
+                case LINEAR:
+                    return `${axisType} (Numerical data)`
+                case CATEGORY:
+                    return `${axisType} (String data)`
+                default:
+                    return axisType
+            }
         },
         genDataset({ colorIndex, data }) {
             const lineColor = this.$help.dynamicColors(colorIndex)
@@ -273,89 +324,75 @@ export default {
                 }
             return dataset
         },
-        // parse value to float number and check if it is number
-        IsNumericCell(cell) {
-            return this.$typy(parseFloat(cell)).isNumber
-        },
-        isLinearAxes(axisVal) {
-            return this.IsNumericCell(axisVal)
-        },
-        isTimeAxes(axisVal) {
-            return this.$moment(axisVal).isValid()
-        },
 
-        /** This mutates sorting chart data for linear axes
+        /** This mutates sorting chart data for LINEAR or TIME axis
          * @param {Object} data - ChartData object
-         * @param {String} labelAxisId - axis id: x or y
-         * @param {Boolean} isDate - if data is date string
+         * @param {String} axisId - axis id: x or y
+         * @param {String} axisType - LINEAR or TIME axis
          */
-        sortingChartData({ data, labelAxisId, isDate = false }) {
-            data.xLabels.sort((a, b) => (isDate ? this.$moment(a) - this.$moment(b) : a - b))
-            data.datasets[0].data.sort((a, b) =>
-                isDate
-                    ? this.$moment(a[labelAxisId]) - this.$moment(b[labelAxisId])
-                    : a[labelAxisId] - b[labelAxisId]
-            )
+        sortingChartData({ data, axisId, axisType }) {
+            const { LINEAR, TIME } = this.SQL_CHART_AXIS_TYPES
+            switch (axisType) {
+                case LINEAR:
+                    data.xLabels.sort((a, b) => a - b)
+                    data.datasets[0].data.sort((a, b) => a[axisId] - b[axisId])
+                    break
+                case TIME:
+                    data.xLabels.sort((a, b) => this.$moment(a) - this.$moment(b))
+                    data.datasets[0].data.sort(
+                        (a, b) => this.$moment(a[axisId]) - this.$moment(b[axisId])
+                    )
+                    break
+            }
         },
 
         genChartData() {
-            const { x, y } = this.axis
-            let axesType = { x: 'category', y: '' },
-                labelAxisId = 'x',
-                scaleLabels = { x: '', y: '' },
+            let axesType = this.axesType,
+                scaleLabels = this.scaleLabels,
                 data = {
                     xLabels: [],
                     yLabels: [],
                     datasets: [],
                 }
-            if (x && y) {
-                scaleLabels = { x, y }
+            if (scaleLabels.x && scaleLabels.y && axesType.x && axesType.y) {
                 let dataPoints = []
                 const dataRows = this.$help.getObjectRows({
                     columns: this.resSet.fields,
                     rows: this.resSet.data,
                 })
-                const { BAR_HORIZ } = this.SQL_CHART_TYPES
+
                 for (const row of dataRows) {
-                    const xAxisVal = row[x]
-                    const yAxisVal = row[y]
+                    const xAxisVal = row[scaleLabels.x]
+                    const yAxisVal = row[scaleLabels.y]
 
                     dataPoints.push({
                         dataPointObj: row,
                         x: xAxisVal,
                         y: yAxisVal,
-                        xLabel: x,
-                        yLabel: y,
+                        // TODO: Rename xLabel->scaleLabelX, yLabel->scaleLabelY. Used by chart-container objectTooltip
+                        xLabel: scaleLabels.x,
+                        yLabel: scaleLabels.y,
                     })
                     data.xLabels.push(xAxisVal)
                     data.yLabels.push(yAxisVal)
                 }
 
                 const dataset = this.genDataset({ colorIndex: 0, data: dataPoints })
-
                 data.datasets = [dataset]
-
+                // handle sorting chart data for LINEAR or TIME axis
+                const { BAR_HORIZ } = this.SQL_CHART_TYPES
+                let axisIdToBeSorted = 'x'
+                // For vertical graphs, sort only the X axis, but for horizontal, sort the Y axis
                 switch (this.chartOpt.type) {
                     case BAR_HORIZ:
-                        labelAxisId = 'y'
-                        break
-                    default:
-                        labelAxisId = 'x'
-                }
-                /* TODO: detect y-axis type. Perhaps providing 2 more inputs to let the user choose type of axis
-                 * instead of checking the first value to decide the type
-                 */
-                if (this.isLinearAxes(dataset.data[0][labelAxisId])) axesType.x = 'linear'
-                if (this.isTimeAxes(dataset.data[0][labelAxisId])) axesType.x = 'time'
-
-                switch (axesType.x) {
-                    case 'linear':
-                        this.sortingChartData({ data, labelAxisId })
-                        break
-                    case 'time':
-                        this.sortingChartData({ data, labelAxisId, isDate: true })
+                        axisIdToBeSorted = 'y'
                         break
                 }
+                this.sortingChartData({
+                    data,
+                    axisId: axisIdToBeSorted,
+                    axisType: axesType[axisIdToBeSorted],
+                })
             }
             this.chartOpt = { ...this.chartOpt, data, scaleLabels, axesType }
         },
