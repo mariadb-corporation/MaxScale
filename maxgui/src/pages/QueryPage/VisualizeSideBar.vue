@@ -102,8 +102,28 @@
                     color="primary"
                     class="mt-2 show-trendline"
                     hide-details
-                    :label="$t('showTrendline')"
-                />
+                >
+                    <template v-slot:label>
+                        <label class="v-label">{{ $t('showTrendline') }}</label>
+                        <v-tooltip
+                            top
+                            transition="slide-y-transition"
+                            content-class="shadow-drop color text-navigation py-1 px-4"
+                        >
+                            <template v-slot:activator="{ on }">
+                                <v-icon
+                                    class="ml-1 material-icons-outlined pointer"
+                                    size="16"
+                                    color="#9DB4BB"
+                                    v-on="on"
+                                >
+                                    info
+                                </v-icon>
+                            </template>
+                            <span>{{ $t('info.showTrendline') }}</span>
+                        </v-tooltip>
+                    </template>
+                </v-checkbox>
             </template>
             <!-- TODO: add more graph configurations -->
         </div>

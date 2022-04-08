@@ -264,7 +264,8 @@
         "exeStatementsInfo": "This action is irreversible, so please review the above statement.\nYou can also manually change the SQL statement in the editor above. | This action is irreversible, so please review the above statements.\nYou can also manually change the SQL statements in the editor above.",
         "alterTableSuccessfully": "Alter table successfully",
         "exeActionSuccessfully": "Successfully {action}",
-        "reconnSuccessfully": "Reconnection was successful"
+        "reconnSuccessfully": "Reconnection was successful",
+        "showTrendline": "The trend line can only be computed for numerical data on both axes"
     },
 
     "$vuetify": {
