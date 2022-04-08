@@ -98,3 +98,40 @@ similar to how the filter relationship for services behaves.
 Session is modified:
 
 `Status: 204 No Content`
+
+### Restart a Session
+
+```
+POST /v1/sessions/:id/restart
+```
+
+This endpoint causes the session to re-read the configuration from the
+service. As a result of this, all backend connections will be closed and then
+opened again. All router and filter sessions will be created again which means
+that for modules that perform something whenever a new module session is opened,
+this behaves as if a new session was started.
+
+This endpoint can be used to apply configuration changes that were done after
+the session was started. This can be useful for situations where the client
+connections live for a long time and connections are not recycled often enough.
+
+#### Response
+
+Session is was restarted:
+
+`Status: 204 No Content`
+
+### Restart all Sessions
+
+```
+POST /v1/sessions/restart
+```
+
+This endpoint does the same thing as the `/v1/sessions/:id/restart` endpoint
+except that it applies to all sessions.
+
+#### Response
+
+Session is was restarted:
+
+`Status: 204 No Content`
