@@ -7,6 +7,29 @@ const fs = require("fs");
 describe("Create/Destroy Commands", function () {
   before(startMaxScale);
 
+  // The other test cases modify the runtime configuration. Run the session destroy tests
+  // so that we don't restart MaxScale before it.
+  it("destroys session", async function () {
+    await createConnection();
+    var id = getConnectionId();
+    await doCommand("destroy session " + id);
+    await doQuery("SELECT").should.be.rejected;
+    await closeConnection();
+  });
+
+  it("destroys session with TTL", async function () {
+    await createConnection();
+    var id = getConnectionId();
+    await doCommand("destroy session " + id + " --ttl 1");
+    await doQuery("SELECT 1");
+    await doQuery("SELECT SLEEP(3)").should.be.rejected;
+    await closeConnection();
+  });
+
+  it("does not destroy unknown session", async function () {
+    await doCommand("destroy session 123456").should.be.rejected;
+  });
+
   it("create monitor", function () {
     return verifyCommand(
       "create monitor my-monitor mysqlmon user=maxuser password=maxpwd",

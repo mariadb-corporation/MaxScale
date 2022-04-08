@@ -126,4 +126,8 @@ module.exports = function () {
   this.getConnectionId = function () {
     return conn.threadId;
   };
+
+  this.doQuery = async function (sql, opts) {
+    return conn.query(sql, opts ? opts : {});
+  };
 };

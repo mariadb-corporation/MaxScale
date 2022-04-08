@@ -1167,6 +1167,32 @@ HttpResponse cb_restart_all_sessions(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_OK);
 }
 
+HttpResponse cb_delete_session(const HttpRequest& request)
+{
+    HttpResponse rval(MHD_HTTP_NOT_FOUND);
+    int ttl = atoi(request.get_option("ttl").c_str());
+
+    if (Session* session = session_get_by_id(atoi(request.uri_part(1).c_str())))
+    {
+        session->worker()->execute([session, ttl]() {
+            if (ttl > 0)
+            {
+                session->set_ttl(ttl);
+            }
+            else
+            {
+                session->kill();
+            }
+
+            session_put_ref(session);
+        }, mxb::Worker::EXECUTE_AUTO);
+
+        rval = HttpResponse(MHD_HTTP_OK);
+    }
+
+    return rval;
+}
+
 HttpResponse cb_delete_user(const HttpRequest& request)
 {
     string user = request.last_uri_part();
@@ -1498,6 +1524,7 @@ public:
                               "services", ":service", "listeners", ":listener");
 
         m_delete.emplace_back(REQ_SYNC, cb_delete_user, "users", "inet", ":inetuser");
+        m_delete.emplace_back(cb_delete_session, "sessions", ":session");
 
         /** SQL connection destruction */
         m_delete.emplace_back(cb_sql_disconnect, "sql", ":connection_id");

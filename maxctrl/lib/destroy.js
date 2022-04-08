@@ -152,6 +152,30 @@ exports.builder = function (yargs) {
         });
       }
     )
+    .command(
+      "session <id>",
+      "Close a session",
+      function (yargs) {
+        return yargs
+          .group(["ttl"], "Destroy options:")
+          .option("ttl", {
+            describe: "Give session this many seconds to gracefully close",
+            type: "number",
+            default: 0,
+          })
+          .epilog(
+            "This causes the client session with the given ID to be closed. If the --ttl " +
+              "option is used, the session is given that many seconds to gracefully stop. " +
+              "If no TTL value is given, the session is closed immediately."
+          )
+          .usage("Usage: destroy session <id>");
+      },
+      function (argv) {
+        maxctrl(argv, function (host) {
+          return doRequest(host, "sessions/" + argv.id + "?ttl=" + argv.ttl, { method: "DELETE" });
+        });
+      }
+    )
     .usage("Usage: destroy <command>")
     .help()
     .wrap(null)
