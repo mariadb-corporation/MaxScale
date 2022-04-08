@@ -56,6 +56,7 @@ const char INET_USERS_FILE_NAME[] = "passwd";
 const char ADMIN_ERR_FILEOPEN[] = "Unable to create password file";
 const char ADMIN_ERR_DUPLICATE[] = "Duplicate username specified";
 const char ADMIN_ERR_USERNOTFOUND[] = "User not found";
+const char ADMIN_ERR_LAST_USER[] = "Cannot delete last user";
 }
 
 const char* ADMIN_SUCCESS = nullptr;
@@ -161,7 +162,12 @@ const char* admin_alter_user(Users* pusers, const char* fname, const char* uname
 
 const char* admin_remove_user(Users* users, const char* fname, const char* uname)
 {
-    if (!users->remove(uname))
+    if (users->is_last_user(uname))
+    {
+        MXS_ERROR("Cannot delete the last user %s. ", uname);
+        return ADMIN_ERR_LAST_USER;
+    }
+    else if (!users->remove(uname))
     {
         MXS_ERROR("Couldn't find user %s. Removing user failed.", uname);
         return ADMIN_ERR_USERNOTFOUND;

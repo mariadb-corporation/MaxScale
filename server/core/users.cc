@@ -202,6 +202,12 @@ json_t* Users::to_json() const
     return arr;
 }
 
+bool Users::is_last_user(const std::string& user) const
+{
+    Guard guard(m_lock);
+    return m_data.size() == 1 && m_data.find(user) != m_data.end();
+}
+
 bool Users::add_hashed(const std::string& user, const std::string& password, user_account_type perm)
 {
     Guard guard(m_lock);

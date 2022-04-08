@@ -70,6 +70,7 @@ public:
     json_t* diagnostics() const;
     bool    empty() const;
     json_t* to_json() const;
+    bool    is_last_user(const std::string& user) const;
 
     /**
      * Return a copy of the data.
