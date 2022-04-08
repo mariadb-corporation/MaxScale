@@ -178,7 +178,7 @@ WorkerTimer::WorkerTimer(Worker* pWorker)
     : m_fd(create_timerfd())
     , m_pWorker(pWorker)
 {
-    PollData::owner = m_pWorker;
+    Pollable::owner = m_pWorker;
 
     if (m_fd != -1)
     {
@@ -504,7 +504,7 @@ void Worker::gen_random_bytes(uint8_t* pOutput, size_t nBytes)
     }
 }
 
-bool Worker::add_fd(int fd, uint32_t events, PollData* pData)
+bool Worker::add_fd(int fd, uint32_t events, Pollable* pData)
 {
     bool rv = true;
 
@@ -976,8 +976,8 @@ void Worker::poll_waitevents()
             ++m_statistics.qtimes[std::min(qtime, STATISTICS::N_QUEUE_TIMES)];
             m_statistics.maxqtime = std::max(m_statistics.maxqtime, qtime);
 
-            PollData* data = (PollData*)events[i].data.ptr;
-            uint32_t actions = data->handle_poll_events(this, events[i].events);
+            Pollable* pPollable = static_cast<Pollable*>(events[i].data.ptr);
+            uint32_t actions = pPollable->handle_poll_events(this, events[i].events);
 
             m_statistics.n_accept += bool(actions & poll_action::ACCEPT);
             m_statistics.n_read += bool(actions & poll_action::READ);

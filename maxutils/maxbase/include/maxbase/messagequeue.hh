@@ -107,7 +107,7 @@ public:
 /**
  * The class @c MessageQueue provides a cross thread message queue.
  */
-class MessageQueue : protected mxb::PollData
+class MessageQueue : protected mxb::Pollable
 {
 public:
     using Handler = MessageQueueHandler;

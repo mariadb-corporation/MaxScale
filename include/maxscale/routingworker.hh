@@ -39,7 +39,7 @@ namespace maxscale
 
 class RoutingWorker : public mxb::WatchedWorker
                     , public BackendDCB::Manager
-                    , private mxb::PollData
+                    , private mxb::Pollable
 {
     RoutingWorker(const RoutingWorker&) = delete;
     RoutingWorker& operator=(const RoutingWorker&) = delete;
@@ -95,7 +95,7 @@ public:
      *
      * @return True, if the descriptor could be added, false otherwise.
      */
-    static bool add_shared_fd(int fd, uint32_t events, PollData* pData);
+    static bool add_shared_fd(int fd, uint32_t events, Pollable* pData);
 
     /**
      * Remove a file descriptor from the epoll instance shared between all workers.

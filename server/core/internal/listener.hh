@@ -27,7 +27,7 @@ class ListenerManager;
  * The Listener class is used to link a network port to a service. It defines the name of the
  * protocol module that should be loaded as well as the authenticator that is used.
  */
-class Listener : public mxb::PollData
+class Listener : public mxb::Pollable
 {
 public:
     using SData = std::shared_ptr<const mxs::ListenerData>;

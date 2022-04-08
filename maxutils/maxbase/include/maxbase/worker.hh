@@ -196,7 +196,7 @@ private:
  * too many WorkerTimer instances. In order to be used, a WorkerTimer
  * needs a Worker instance in whose context the timer is triggered.
  */
-class WorkerTimer : private PollData
+class WorkerTimer : private Pollable
 {
     WorkerTimer(const WorkerTimer&) = delete;
     WorkerTimer& operator=(const WorkerTimer&) = delete;
@@ -585,7 +585,7 @@ public:
      *
      * @return True, if the descriptor could be added, false otherwise.
      */
-    bool add_fd(int fd, uint32_t events, PollData* pData);
+    bool add_fd(int fd, uint32_t events, Pollable* pData);
 
     /**
      * Remove a file descriptor from the worker's epoll instance.

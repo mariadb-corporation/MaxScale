@@ -29,8 +29,8 @@
 namespace pinloki
 {
 
-Reader::PollData::PollData(Reader* reader, mxb::Worker* worker)
-    : mxb::PollData(worker)
+Reader::Pollable::Pollable(Reader* reader, mxb::Worker* worker)
+    : mxb::Pollable(worker)
     , reader(reader)
 {
 }
@@ -68,7 +68,7 @@ void Reader::start()
 void Reader::start_reading()
 {
     m_sFile_reader.reset(new FileReader(m_start_gtid_list, &m_inventory));
-    m_reader_poll_data = PollData(this, &m_get_worker());
+    m_reader_poll_data = Pollable(this, &m_get_worker());
     m_get_worker().add_fd(m_sFile_reader->fd(), EPOLLIN, &m_reader_poll_data);
 
     send_events();
@@ -134,9 +134,9 @@ void Reader::set_in_high_water(bool in_high_water)
     m_in_high_water = in_high_water;
 }
 
-uint32_t Reader::epoll_update(struct mxb::PollData* data, mxb::Worker* worker, uint32_t events)
+uint32_t Reader::epoll_update(struct mxb::Pollable* data, mxb::Worker* worker, uint32_t events)
 {
-    Reader* self = static_cast<PollData*>(data)->reader;
+    Reader* self = static_cast<Pollable*>(data)->reader;
     self->notify_concrete_reader(events);
 
     return 0;

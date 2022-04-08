@@ -44,17 +44,17 @@ public:
     void send_events();
 
 private:
-    static uint32_t epoll_update(struct mxb::PollData* data, mxb::Worker* worker, uint32_t events);
+    static uint32_t epoll_update(struct mxb::Pollable* data, mxb::Worker* worker, uint32_t events);
     void            start_reading();
     bool            poll_start_reading();
     void            notify_concrete_reader(uint32_t events);
 
     bool generate_heartbeats();
 
-    struct PollData : public mxb::PollData
+    struct Pollable : public mxb::Pollable
     {
-        PollData() = default;
-        PollData(Reader* reader, mxb::Worker* worker);
+        Pollable() = default;
+        Pollable(Reader* reader, mxb::Worker* worker);
         Reader* reader;
 
         uint32_t handle_poll_events(mxb::Worker* worker, uint32_t events) override
@@ -69,7 +69,7 @@ private:
     WorkerCallback  m_get_worker;
     bool            m_in_high_water = false;
     InventoryReader m_inventory;
-    PollData        m_reader_poll_data;
+    Pollable        m_reader_poll_data;
     maxbase::Timer  m_timer {10s};
 
     // Related to delayed start

@@ -48,7 +48,7 @@ class SSLContext;
  * A wrapper for a socket descriptor within MaxScale. For each client
  * session there will be one ClientDCB and several BackendDCBs.
  */
-class DCB : public mxb::PollData
+class DCB : public mxb::Pollable
 {
 public:
     static const int FD_CLOSED = -1;

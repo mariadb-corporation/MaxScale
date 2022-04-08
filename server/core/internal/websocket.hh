@@ -23,7 +23,7 @@
 
 // A class that handles the framing and sending of WebSocket messages.
 // The WebSocket protocol can be found here: https://tools.ietf.org/html/rfc6455#section-5.2
-class WebSocket : public mxb::PollData
+class WebSocket : public mxb::Pollable
                 , public mxb::Worker::Callable
 {
 public:
