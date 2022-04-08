@@ -369,9 +369,8 @@ export default {
                         dataPointObj: row,
                         x: xAxisVal,
                         y: yAxisVal,
-                        // TODO: Rename xLabel->scaleLabelX, yLabel->scaleLabelY. Used by chart-container objectTooltip
-                        xLabel: scaleLabels.x,
-                        yLabel: scaleLabels.y,
+                        scaleLabelX: scaleLabels.x,
+                        scaleLabelY: scaleLabels.y,
                     })
                     data.xLabels.push(xAxisVal)
                     data.yLabels.push(yAxisVal)
