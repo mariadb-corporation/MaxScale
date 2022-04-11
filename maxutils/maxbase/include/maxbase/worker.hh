@@ -573,32 +573,24 @@ public:
     }
 
     /**
-     * Add a file descriptor to the epoll instance of the worker.
+     * Add a Pollable to the epoll instance of the worker.
      *
-     * @param fd      The file descriptor to be added.
-     * @param events  Mask of epoll event types.
-     * @param pData   The poll data associated with the descriptor:
-     *
-     *                 data->handler  : Handler that knows how to deal with events
-     *                                  for this particular type of 'struct mxs_poll_data'.
-     *                 data->thread.id: Will be updated by the worker.
-     *
-     * @attention The provided file descriptor must be non-blocking.
-     * @attention @c pData must remain valid until the file descriptor is
-     *            removed from the worker.
+     * @param events     Mask of epoll event types.
+     * @param pPollable  The pollable instance. *Must* remain valid
+     *                   until the pollable is removed.
      *
      * @return True, if the descriptor could be added, false otherwise.
      */
-    bool add_fd(int fd, uint32_t events, Pollable* pData);
+    bool add_pollable(uint32_t events, Pollable* pPollable);
 
     /**
-     * Remove a file descriptor from the worker's epoll instance.
+     * Remove a Pollable from the worker's epoll instance.
      *
-     * @param fd  The file descriptor to be removed.
+     * @param pPollable  The pollable instance. *Must* remain valid
      *
      * @return True on success, false on failure.
      */
-    bool remove_fd(int fd);
+    bool remove_pollable(Pollable* pPollable);
 
     /**
      * Main function of worker.

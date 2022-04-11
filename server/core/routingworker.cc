@@ -144,7 +144,7 @@ RoutingWorker::RoutingWorker(mxb::WatchdogNotifier* pNotifier)
 
 RoutingWorker::~RoutingWorker()
 {
-    remove_fd(this_unit.epoll_listener_fd);
+    remove_pollable(this);
     m_callable.cancel_dcalls();
 }
 
@@ -972,7 +972,7 @@ RoutingWorker* RoutingWorker::create(mxb::WatchdogNotifier* pNotifier, int epoll
         // because we want it to be level-triggered. That way, as long as there is a single
         // active (accept() can be called) listening socket, epoll_wait() will return an event
         // for it.
-        if (pThis->add_fd(epoll_listener_fd, EPOLLIN, pThis))
+        if (pThis->add_pollable(EPOLLIN, pThis))
         {
             MXB_INFO("Epoll instance for listening sockets added to worker epoll instance.");
         }

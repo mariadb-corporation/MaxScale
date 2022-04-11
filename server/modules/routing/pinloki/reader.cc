@@ -70,7 +70,7 @@ void Reader::start_reading()
 {
     m_sFile_reader.reset(new FileReader(m_start_gtid_list, &m_inventory));
     m_reader_poll_data = Pollable(this, &m_get_worker(), m_sFile_reader->fd());
-    m_get_worker().add_fd(m_reader_poll_data.poll_fd(), EPOLLIN, &m_reader_poll_data);
+    m_get_worker().add_pollable(EPOLLIN, &m_reader_poll_data);
 
     send_events();
 

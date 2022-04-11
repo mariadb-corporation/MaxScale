@@ -43,7 +43,7 @@ void WebSocket::create(int fd, MHD_UpgradeResponseHandle* urh, std::function<std
     std::unique_ptr<WebSocket> ws(new WebSocket(fd, urh, cb));
 
     // Send the initial payload and then add it to the worker to see when the socket drains
-    if (ws->send() && worker->add_fd(fd, EVENTS, ws.get()))
+    if (ws->send() && worker->add_pollable(EVENTS, ws.get()))
     {
         worker->call(
             [&]() {
@@ -76,7 +76,7 @@ WebSocket::~WebSocket()
         cancel_dcall(id);
     }
 
-    worker->remove_fd(m_fd);
+    worker->remove_pollable(this);
 
     // Send the Close command. If it fails then it fails but at least we tried.
     uint8_t buf[2] = {0x88};

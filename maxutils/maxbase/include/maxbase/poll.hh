@@ -41,6 +41,11 @@ public:
     {
     }
 
+    /**
+     * The file descriptor to add to the epoll-set.
+     *
+     * @return A *non-blocking* file descriptor.
+     */
     virtual int poll_fd() const = 0;
 
     virtual uint32_t handle_poll_events(Worker* worker, uint32_t events) = 0;

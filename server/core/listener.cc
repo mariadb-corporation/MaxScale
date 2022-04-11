@@ -579,7 +579,7 @@ bool Listener::stop()
             if (execute_and_check([this]() {
                                       mxb_assert(*m_local_fd != -1);
                                       auto worker = mxs::RoutingWorker::get_current();
-                                      return worker->remove_fd(*m_local_fd);
+                                      return worker->remove_pollable(this);
                                   }))
             {
                 m_state = STOPPED;
@@ -611,7 +611,7 @@ bool Listener::start()
             if (execute_and_check([this]() {
                                       mxb_assert(*m_local_fd != -1);
                                       auto worker = mxs::RoutingWorker::get_current();
-                                      return worker->add_fd(*m_local_fd, EPOLLIN, this);
+                                      return worker->add_pollable(EPOLLIN, this);
                                   }))
             {
                 m_state = STARTED;
@@ -988,7 +988,7 @@ bool Listener::listen_unique()
             {
                 // Set the worker-local fd to the unique value
                 *m_local_fd = fd;
-                if (mxs::RoutingWorker::get_current()->add_fd(*m_local_fd, EPOLLIN, this))
+                if (mxs::RoutingWorker::get_current()->add_pollable(EPOLLIN, this))
                 {
                     rval = true;
                 }

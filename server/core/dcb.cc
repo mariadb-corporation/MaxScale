@@ -1523,7 +1523,7 @@ bool DCB::enable_events()
     RoutingWorker* worker = static_cast<RoutingWorker*>(this->owner);
     mxb_assert(worker == RoutingWorker::get_current());
 
-    if (worker->add_fd(m_fd, THIS_UNIT::poll_events, this))
+    if (worker->add_pollable(THIS_UNIT::poll_events, this))
     {
         m_state = State::POLLING;
         // Add old manually triggered events from before event disabling. epoll seems to trigger on its own
@@ -1554,7 +1554,7 @@ bool DCB::disable_events()
         // Remove any manually added read events, then remove fd from epoll.
         m_triggered_event_old = m_triggered_event;
         m_triggered_event = 0;
-        if (!worker->remove_fd(m_fd))
+        if (!worker->remove_pollable(this))
         {
             rv = false;
         }

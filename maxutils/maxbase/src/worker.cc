@@ -182,7 +182,7 @@ WorkerTimer::WorkerTimer(Worker* pWorker)
 
     if (m_fd != -1)
     {
-        if (!m_pWorker->add_fd(m_fd, EPOLLIN | EPOLLET, this))
+        if (!m_pWorker->add_pollable(EPOLLIN | EPOLLET, this))
         {
             MXB_ALERT("Could not add timer descriptor to worker, system will not work.");
             ::close(m_fd);
@@ -196,7 +196,7 @@ WorkerTimer::~WorkerTimer()
 {
     if (m_fd != -1)
     {
-        if (!m_pWorker->remove_fd(m_fd))
+        if (!m_pWorker->remove_pollable(this))
         {
             MXB_ERROR("Could not remove timer fd from worker.");
         }
@@ -504,9 +504,11 @@ void Worker::gen_random_bytes(uint8_t* pOutput, size_t nBytes)
     }
 }
 
-bool Worker::add_fd(int fd, uint32_t events, Pollable* pData)
+bool Worker::add_pollable(uint32_t events, Pollable* pData)
 {
     bool rv = true;
+
+    int fd = pData->poll_fd();
 
     struct epoll_event ev;
 
@@ -529,9 +531,11 @@ bool Worker::add_fd(int fd, uint32_t events, Pollable* pData)
     return rv;
 }
 
-bool Worker::remove_fd(int fd)
+bool Worker::remove_pollable(Pollable* pPollable)
 {
     bool rv = true;
+
+    int fd = pPollable->poll_fd();
 
     struct epoll_event ev = {};
 

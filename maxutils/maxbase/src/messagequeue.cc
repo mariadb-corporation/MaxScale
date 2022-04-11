@@ -103,7 +103,7 @@ EventMessageQueue::~EventMessageQueue()
 {
     if (m_pWorker)
     {
-        m_pWorker->remove_fd(m_event_fd);
+        m_pWorker->remove_pollable(this);
     }
     close(m_event_fd);
 }
@@ -156,11 +156,11 @@ bool EventMessageQueue::add_to_worker(Worker* pWorker)
 {
     if (m_pWorker)
     {
-        m_pWorker->remove_fd(m_event_fd);
+        m_pWorker->remove_pollable(this);
         m_pWorker = nullptr;
     }
 
-    if (pWorker->add_fd(m_event_fd, EPOLLIN, this))
+    if (pWorker->add_pollable(EPOLLIN, this))
     {
         m_pWorker = pWorker;
     }
@@ -174,7 +174,7 @@ Worker* EventMessageQueue::remove_from_worker()
 
     if (m_pWorker)
     {
-        m_pWorker->remove_fd(m_event_fd);
+        m_pWorker->remove_pollable(this);
         m_pWorker = NULL;
     }
 
@@ -265,7 +265,7 @@ PipeMessageQueue::~PipeMessageQueue()
 {
     if (m_pWorker)
     {
-        m_pWorker->remove_fd(m_read_fd);
+        m_pWorker->remove_pollable(this);
     }
 
     close(m_read_fd);
@@ -453,11 +453,11 @@ bool PipeMessageQueue::add_to_worker(Worker* pWorker)
 {
     if (m_pWorker)
     {
-        m_pWorker->remove_fd(m_read_fd);
+        m_pWorker->remove_pollable(this);
         m_pWorker = NULL;
     }
 
-    if (pWorker->add_fd(m_read_fd, EPOLLIN | EPOLLET, this))
+    if (pWorker->add_pollable(EPOLLIN | EPOLLET, this))
     {
         m_pWorker = pWorker;
     }
@@ -471,7 +471,7 @@ Worker* PipeMessageQueue::remove_from_worker()
 
     if (m_pWorker)
     {
-        m_pWorker->remove_fd(m_read_fd);
+        m_pWorker->remove_pollable(this);
         m_pWorker = NULL;
     }
 
