@@ -293,7 +293,7 @@ public:
         json_t* to_json() const;
 
     private:
-        using NumType = std::atomic_int64_t;
+        using NumType = std::atomic<int64_t>;
 
         NumType m_n_current_conns {0};  /**< Current number of connections */
         NumType m_n_total_conns {0};    /**< Total cumulative number of connections */
