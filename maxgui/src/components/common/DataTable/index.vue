@@ -195,7 +195,7 @@ export default {
         dense: { type: Boolean, default: false },
         noDataText: { type: String },
         fixedHeader: { type: Boolean, default: false },
-        height: { type: String, default: 'unset' },
+        height: { type: [String, Number], default: 'unset' },
         // add border left to td
         tdBorderLeft: { type: Boolean, default: false },
         // For editable feature
