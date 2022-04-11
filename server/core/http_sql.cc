@@ -205,22 +205,34 @@ json_t* generate_json_representation(mxq::MariaDB& conn, int64_t max_rows)
                 auto res = conn.get_resultset();
                 auto fields = res->fields();
                 json_t* resultset = json_object();
-                json_object_set_new(resultset, "fields", generate_column_info(fields));
                 json_t* rows = json_array();
-
                 int64_t rows_read = 0;
-                bool have_more = res->next_row();
-                bool rows_limit_reached = (rows_read == max_rows);
-                while (have_more && !rows_limit_reached)
-                {
-                    json_array_append_new(rows, generate_resultdata_row(res.get(), fields));
-                    rows_read++;
 
-                    have_more = res->next_row();
-                    rows_limit_reached = (rows_read == max_rows);
+                // We have to read the whole resultset in order to find whether it ended with an error
+                while (res->next_row())
+                {
+                    if (rows_read++ < max_rows)
+                    {
+                        json_array_append_new(rows, generate_resultdata_row(res.get(), fields));
+                    }
                 }
-                json_object_set_new(resultset, "data", rows);
-                json_object_set_new(resultset, "complete", json_boolean(!have_more));
+
+                auto error = conn.get_error_result();
+
+                if (error->error_num)
+                {
+                    json_object_set_new(resultset, "errno", json_integer(error->error_num));
+                    json_object_set_new(resultset, "message", json_string(error->error_msg.c_str()));
+                    json_object_set_new(resultset, "sqlstate", json_string(error->sqlstate.c_str()));
+                    json_decref(rows);
+                }
+                else
+                {
+                    json_object_set_new(resultset, "data", rows);
+                    json_object_set_new(resultset, "fields", generate_column_info(fields));
+                    json_object_set_new(resultset, "complete", json_boolean(rows_read < max_rows));
+                }
+
                 json_array_append_new(resultset_arr, resultset);
             }
             break;
