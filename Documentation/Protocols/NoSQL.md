@@ -1898,10 +1898,11 @@ the MongoDB® client library. If the id is provided explicitly, by assigning a
 value to the `_id` field, the value must be an `ObjectId`, a string or an
 integer.
 
-# Limitations
+# Compatibility
 
-Currently, the generated SQL must fit in one `COM_QUERY` packet, that is,
-it can at most be 16777210 bytes.
+Currently 30% of the tests in the
+[MongoDB® core](https://github.com/mongodb/mongo/tree/master/jstests/core)
+test-suite pass.
 
 # Example
 
