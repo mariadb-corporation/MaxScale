@@ -144,6 +144,7 @@ RoutingWorker::RoutingWorker(mxb::WatchdogNotifier* pNotifier)
 
 RoutingWorker::~RoutingWorker()
 {
+    remove_fd(this_unit.epoll_listener_fd);
     m_callable.cancel_dcalls();
 }
 
@@ -967,20 +968,11 @@ RoutingWorker* RoutingWorker::create(mxb::WatchdogNotifier* pNotifier, int epoll
 
     if (pThis)
     {
-        struct epoll_event ev;
-        ev.events = EPOLLIN;
-        Pollable* pData = pThis;
-        ev.data.ptr = pData;    // Necessary for pointer adjustment, otherwise downcast will not work.
-
         // The shared epoll instance descriptor is *not* added using EPOLLET (edge-triggered)
         // because we want it to be level-triggered. That way, as long as there is a single
         // active (accept() can be called) listening socket, epoll_wait() will return an event
-        // for it. It must be like that because each worker will call accept() just once before
-        // calling epoll_wait() again. The end result is that as long as the load of different
-        // workers is roughly the same, the client connections will be distributed evenly across
-        // the workers. If the load is not the same, then a worker with less load will get more
-        // clients that a worker with more load.
-        if (epoll_ctl(pThis->m_epoll_fd, EPOLL_CTL_ADD, epoll_listener_fd, &ev) == 0)
+        // for it.
+        if (pThis->add_fd(epoll_listener_fd, EPOLLIN, pThis))
         {
             MXB_INFO("Epoll instance for listening sockets added to worker epoll instance.");
         }
