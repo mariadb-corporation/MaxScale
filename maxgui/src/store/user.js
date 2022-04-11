@@ -17,10 +17,7 @@ export default {
     state: {
         logged_in_user: {},
         login_err_msg: '',
-        current_network_user: null,
-        all_network_users: [],
-        all_unix_accounts: [],
-        all_users: [],
+        all_inet_users: [],
     },
     mutations: {
         /**
@@ -34,23 +31,12 @@ export default {
         SET_LOGIN_ERR_MSG(state, errMsg) {
             state.login_err_msg = errMsg
         },
-        // ------------------- Network users
-        SET_CURRENT_NETWORK_USER(state, obj) {
-            state.current_network_user = obj
-        },
-        SET_ALL_NETWORK_USERS(state, arr) {
-            state.all_network_users = arr
-        },
-        // ------------------- Unix accounts
-        SET_ALL_UNIX_ACCOUNTS(state, arr) {
-            state.all_unix_accounts = arr
-        },
-        // ------------------- All users
-        SET_ALL_USERS(state, arr) {
-            state.all_users = arr
-        },
         CLEAR_USER(state) {
             state.logged_in_user = null
+        },
+        // ------------------- maxscale users
+        SET_ALL_INET_USERS(state, arr) {
+            state.all_inet_users = arr
         },
     },
     actions: {
@@ -115,188 +101,62 @@ export default {
             this.vue.$help.deleteAllCookies()
             localStorage.setItem('maxgui', JSON.stringify({ persisted: persistedState }))
         },
-        // --------------------------------------------------- Network users -------------------------------------
-        async fetchCurrentNetworkUser({ dispatch, commit, state }) {
-            try {
-                let res = await this.$http.get(`/users/inet/${state.logged_in_user.username}`)
-                // response ok
-                if (res.status === 200 && res.data.data) {
-                    let data = res.data.data
-                    commit('SET_CURRENT_NETWORK_USER', data)
-                    if (data.attributes.account === 'admin') {
-                        await dispatch('fetchAllNetworkUsers')
-                        await dispatch('fetchAllUNIXAccounts')
-                        await dispatch('fetchAllUsers')
-                    }
-                }
-            } catch (e) {
-                const logger = this.vue.$logger('store-user-fetchCurrentNetworkUser')
-                logger.error(e)
-            }
-        },
+        // ------------------------------------------------ Inet (network) users ---------------------------------
         async fetchAllNetworkUsers({ commit }) {
             try {
-                let res = await this.$http.get(`/users/inet`)
+                const res = await this.$http.get(`/users/inet`)
                 // response ok
-                if (res.status === 200 && res.data.data) {
-                    commit('SET_ALL_NETWORK_USERS', res.data.data)
-                }
+                if (res.status === 200) commit('SET_ALL_INET_USERS', res.data.data)
             } catch (e) {
                 const logger = this.vue.$logger('store-user-fetchAllNetworkUsers')
                 logger.error(e)
             }
         },
         /**Only admin accounts can perform POST, PUT, DELETE and PATCH requests
-         * @param {Object} data data object
-         * @param {String} data.mode Mode to perform async request POST or Patch
-         * @param {String} data.id the username
-         * @param {String} data.password The password for this user
-         * @param {String} data.role Set to admin for administrative users and basic to read-only users
+         * @param {String} payload.mode - post, patch or delete
+         * @param {String} payload.id - inet user id. Required for all modes
+         * @param {String} payload.password - inet user's password. Required for mode `post` or `patch`
+         * @param {String} payload.role - admin or basic. Required for mode `post`
+         * @param {Function} payload.callback - callback function after receiving 204 (response ok)
          */
-        async createOrUpdateNetworkUser({ commit, dispatch }, data) {
+        async manageInetUser({ commit }, payload) {
             try {
                 let res
                 let message
-                switch (data.mode) {
+                switch (payload.mode) {
                     case 'post':
-                        {
-                            const payload = {
-                                data: {
-                                    id: data.id,
-                                    type: 'inet',
-                                    attributes: { password: data.password, account: data.role },
-                                },
-                            }
-                            res = await this.$http.post(`/users/inet`, payload)
-                            message = [`Network User ${data.id} is created`]
-                        }
+                        res = await this.$http.post(`/users/inet`, {
+                            data: {
+                                id: payload.id,
+                                type: 'inet',
+                                attributes: { password: payload.password, account: payload.role },
+                            },
+                        })
+                        message = [`Network User ${payload.id} is created`]
                         break
                     case 'patch':
-                        {
-                            const payload = {
-                                data: {
-                                    attributes: { password: data.password },
-                                },
-                            }
-                            res = await this.$http.patch(`/users/inet/${data.id}`, payload)
-                            message = [`Network User ${data.id} is updated`]
-                        }
+                        res = await this.$http.patch(`/users/inet/${payload.id}`, {
+                            data: {
+                                attributes: { password: payload.password },
+                            },
+                        })
+                        message = [`Network User ${payload.id} is updated`]
+                        break
+                    case 'delete':
+                        res = await this.$http.delete(`/users/inet/${payload.id}`)
+                        message = [`Network user ${payload.id} is deleted`]
                         break
                 }
-                // response ok
                 if (res.status === 204) {
                     commit(
                         'SET_SNACK_BAR_MESSAGE',
-                        {
-                            text: message,
-                            type: 'success',
-                        },
+                        { text: message, type: 'success' },
                         { root: true }
                     )
-                    await dispatch('fetchAllNetworkUsers')
+                    if (this.vue.$help.isFunction(payload.callback)) await payload.callback()
                 }
             } catch (e) {
-                const logger = this.vue.$logger('store-user-createOrUpdateNetworkUser')
-                logger.error(e)
-            }
-        },
-        /**
-         * @param {String} id id of the network user
-         */
-        async deleteNetworkUserById({ dispatch, commit }, id) {
-            try {
-                let res = await this.$http.delete(`/users/inet/${id}`)
-                // response ok
-                if (res.status === 204) {
-                    await dispatch('fetchAllNetworkUsers')
-                    commit(
-                        'SET_SNACK_BAR_MESSAGE',
-                        {
-                            text: [`Network user ${id} is deleted`],
-                            type: 'success',
-                        },
-                        { root: true }
-                    )
-                }
-            } catch (e) {
-                const logger = this.vue.$logger('store-user-deleteNetworkUserById')
-                logger.error(e)
-            }
-        },
-        // --------------------------------------------------- Unix accounts -------------------------------------
-        async fetchAllUNIXAccounts({ commit }) {
-            try {
-                let res = await this.$http.get(`/users/unix`)
-                // response ok
-                if (res.status === 200 && res.data.data) {
-                    commit('SET_ALL_UNIX_ACCOUNTS', res.data.data)
-                }
-            } catch (e) {
-                const logger = this.vue.$logger('store-user-fetchAllUNIXAccounts')
-                logger.error(e)
-            }
-        },
-        async enableUNIXAccount({ commit, dispatch }, { id, role }) {
-            try {
-                let res = await this.$http.get(`/users/unix`, {
-                    data: {
-                        id: id,
-                        type: 'unix',
-                        attributes: {
-                            account: role,
-                        },
-                    },
-                })
-                // response ok
-                if (res.status === 204) {
-                    commit(
-                        'SET_SNACK_BAR_MESSAGE',
-                        {
-                            text: [`UNIX account ${id} is enabled`],
-                            type: 'success',
-                        },
-                        { root: true }
-                    )
-                    await dispatch('fetchAllUNIXAccounts')
-                }
-            } catch (e) {
-                const logger = this.vue.$logger('store-user-enableUNIXAccount')
-                logger.error(e)
-            }
-        },
-        /**
-         * @param {String} id id of the UNIX user
-         */
-        async disableUNIXAccount({ dispatch, commit }, id) {
-            try {
-                let res = await this.$http.delete(`/users/unix/${id}`)
-                // response ok
-                if (res.status === 204) {
-                    await dispatch('fetchAllUNIXAccounts')
-                    commit(
-                        'SET_SNACK_BAR_MESSAGE',
-                        {
-                            text: [`UNIX account ${id} is disabled`],
-                            type: 'success',
-                        },
-                        { root: true }
-                    )
-                }
-            } catch (e) {
-                const logger = this.vue.$logger('store-user-disableUNIXAccount')
-                logger.error(e)
-            }
-        },
-        // --------------------------------------------------- All users -----------------------------------------
-        async fetchAllUsers({ commit }) {
-            try {
-                let res = await this.$http.get(`/users`)
-                // response ok
-                if (res.status === 200 && res.data.data) {
-                    commit('SET_ALL_USERS', res.data.data)
-                }
-            } catch (e) {
-                const logger = this.vue.$logger('store-user-fetchAllUsers')
+                const logger = this.vue.$logger('store-user-manageInetUser')
                 logger.error(e)
             }
         },
