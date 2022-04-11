@@ -30,6 +30,7 @@
 #include <maxscale/utils.hh>
 #include <maxscale/statistics.hh>
 
+#include "internal/listener.hh"
 #include "internal/modules.hh"
 #include "internal/server.hh"
 #include "internal/session.hh"
@@ -261,25 +262,24 @@ void RoutingWorker::finish()
 }
 
 // static
-bool RoutingWorker::add_shared_fd(int fd, uint32_t events, Pollable* pData)
+bool RoutingWorker::add_listener_fd(int fd, Listener* pListener)
 {
     bool rv = true;
 
-    // This must be level-triggered. Since this is intended for listening
-    // sockets and each worker will call accept() just once before going
-    // back the epoll_wait(), using EPOLLET would mean that if there are
-    // more clients to be accepted than there are threads returning from
-    // epoll_wait() for an event, then some clients would be accepted only
-    // when a new client has connected, thus causing a new EPOLLIN event.
-    events &= ~EPOLLET;
+    // This must be level-triggered (i.e. the default). Since this is
+    // intended for listening sockets and each worker will call accept()
+    // just once before going back the epoll_wait(), using EPOLLET would
+    // mean that if there are more clients to be accepted than there are
+    // threads returning from epoll_wait() for an event, then some clients
+    // would be accepted only when a new client has connected, thus causing
+    // a new EPOLLIN event.
+    uint32_t events = EPOLLIN;
+    Pollable* pPollable = pListener;
 
     struct epoll_event ev;
 
     ev.events = events;
-    ev.data.ptr = pData;
-
-    // The main worker takes ownership of all shared fds
-    pData->owner = MainWorker::get();
+    ev.data.ptr = pPollable;
 
     if (epoll_ctl(this_unit.epoll_listener_fd, EPOLL_CTL_ADD, fd, &ev) != 0)
     {
@@ -291,7 +291,7 @@ bool RoutingWorker::add_shared_fd(int fd, uint32_t events, Pollable* pData)
 }
 
 // static
-bool RoutingWorker::remove_shared_fd(int fd)
+bool RoutingWorker::remove_listener_fd(int fd)
 {
     bool rv = true;
 
@@ -1044,10 +1044,10 @@ uint32_t RoutingWorker::handle_poll_events(Worker* pWorker, uint32_t events)
     }
     else
     {
-        MXB_DEBUG("1 event for worker %d.", id());
-        Pollable* pData = static_cast<Pollable*>(epoll_events[0].data.ptr);
+        MXB_DEBUG("1 event for routing worker %d.", id());
+        Pollable* pPollable = static_cast<Pollable*>(epoll_events[0].data.ptr);
 
-        actions = pData->handle_poll_events(this, epoll_events[0].events);
+        actions = pPollable->handle_poll_events(this, epoll_events[0].events);
     }
 
     return actions;

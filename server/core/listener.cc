@@ -588,7 +588,7 @@ bool Listener::stop()
         }
         else
         {
-            if (mxs::RoutingWorker::remove_shared_fd(m_shared_fd))
+            if (mxs::RoutingWorker::remove_listener_fd(m_shared_fd))
             {
                 m_state = STOPPED;
                 rval = true;
@@ -620,7 +620,7 @@ bool Listener::start()
         }
         else
         {
-            if (mxs::RoutingWorker::add_shared_fd(m_shared_fd, EPOLLIN, this))
+            if (mxs::RoutingWorker::add_listener_fd(m_shared_fd, this))
             {
                 m_state = STARTED;
                 rval = true;
@@ -957,7 +957,7 @@ bool Listener::listen_shared()
 
     if (fd != -1)
     {
-        if (mxs::RoutingWorker::add_shared_fd(fd, EPOLLIN, this))
+        if (mxs::RoutingWorker::add_listener_fd(fd, this))
         {
             // All workers share the same fd, assign it here
             m_shared_fd = fd;

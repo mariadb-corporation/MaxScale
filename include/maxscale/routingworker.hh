@@ -32,6 +32,7 @@
 #include <maxscale/query_classifier.hh>
 #include <maxscale/session.hh>
 
+class Listener;
 class ServerEndpoint;
 
 namespace maxscale
@@ -79,15 +80,14 @@ public:
     static void finish();
 
     /**
-     * Add a file descriptor to the epoll instance shared between all workers.
-     * Events occuring on the provided file descriptor will be handled by all
-     * workers. This is primarily intended for listening sockets where the
-     * only event is EPOLLIN, signaling that accept() can be used on the listening
-     * socket for creating a connected socket to a client.
+     * Add a listener file descriptor to the epoll instance shared between
+     * all workers. Events occuring on the provided file descriptor will be
+     * handled by all workers. The only event polled for is EPOLLIN which
+     * signals that accept() can be used on the listening socket for creating
+     * a connected socket to a client.
      *
-     * @param fd      The file descriptor to be added.
-     * @param events  Mask of epoll event types.
-     * @param pData   The poll data associated with the descriptor:
+     * @param fd         The file descriptor to be added.
+     * @param pListener  The listener poll data associated with the descriptor:
      *
      *                  data->handler  : Handler that knows how to deal with events
      *                                   for this particular type of 'struct mxs_poll_data'.
@@ -95,7 +95,7 @@ public:
      *
      * @return True, if the descriptor could be added, false otherwise.
      */
-    static bool add_shared_fd(int fd, uint32_t events, Pollable* pData);
+    static bool add_listener_fd(int fd, Listener* pListener);
 
     /**
      * Remove a file descriptor from the epoll instance shared between all workers.
@@ -104,7 +104,7 @@ public:
      *
      * @return True on success, false on failure.
      */
-    static bool remove_shared_fd(int fd);
+    static bool remove_listener_fd(int fd);
 
     /**
      * Return a reference to the session registry of this worker.
