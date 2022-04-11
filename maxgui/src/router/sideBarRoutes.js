@@ -17,6 +17,7 @@ const Logs = () => import(/* webpackChunkName: "sidebar-routes-logs" */ 'pages/L
 const QueryPage = () => import(/* webpackChunkName: "query-page" */ 'pages/QueryPage')
 const QueryView = () => import(/* webpackChunkName: "query-view" */ 'pages/QueryPage/QueryView')
 const Visualization = () => import(/* webpackChunkName: "visualization" */ 'pages/Visualization')
+const Users = () => import(/* webpackChunkName: "users" */ 'pages/Users')
 import tabRoutes from './tabRoutes'
 import visRoutes from './visRoutes'
 
@@ -52,30 +53,6 @@ export default [
         children: visRoutes,
     },
     {
-        path: '/settings',
-        component: Settings,
-        meta: {
-            requiresAuth: true,
-            layout: 'app-layout',
-            size: 22,
-            icon: '$vuetify.icons.settings',
-        },
-        name: 'settings',
-        label: 'settings',
-    },
-    {
-        path: '/logs',
-        component: Logs,
-        meta: {
-            requiresAuth: true,
-            layout: 'app-layout',
-            size: 22,
-            icon: '$vuetify.icons.logs',
-        },
-        name: 'logsArchive',
-        label: 'logsArchive',
-    },
-    {
         path: '/query',
         component: QueryPage,
         meta: {
@@ -100,5 +77,41 @@ export default [
                 }),
             },
         ],
+    },
+    {
+        path: '/users',
+        component: Users,
+        meta: {
+            requiresAuth: true,
+            layout: 'app-layout',
+            size: 22,
+            icon: '$vuetify.icons.users',
+        },
+        name: 'users',
+        label: 'users',
+    },
+    {
+        path: '/logs',
+        component: Logs,
+        meta: {
+            requiresAuth: true,
+            layout: 'app-layout',
+            size: 22,
+            icon: '$vuetify.icons.logs',
+        },
+        name: 'logsArchive',
+        label: 'logsArchive',
+    },
+    {
+        path: '/settings',
+        component: Settings,
+        meta: {
+            requiresAuth: true,
+            layout: 'app-layout',
+            size: 22,
+            icon: '$vuetify.icons.settings',
+        },
+        name: 'settings',
+        label: 'settings',
     },
 ]
