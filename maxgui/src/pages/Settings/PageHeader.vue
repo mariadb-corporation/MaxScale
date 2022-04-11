@@ -5,7 +5,7 @@
                 <div class="d-inline-flex align-center">
                     <h4
                         style="line-height: normal;"
-                        class="ml-1 mb-0 color text-navigation text-h4 text-capitalize"
+                        class="mb-0 color text-navigation text-h4 text-capitalize"
                     >
                         {{ $route.name }}
                     </h4>
