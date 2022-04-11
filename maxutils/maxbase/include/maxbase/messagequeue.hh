@@ -207,6 +207,10 @@ public:
 private:
     EventMessageQueue(Handler* pHandler, int event_fd);
 
+    int poll_fd() const override
+    {
+        return m_event_fd;
+    }
     uint32_t handle_poll_events(Worker* pWorker, uint32_t events) override;
     void     swap_messages_and_work();
     void     add_message(const Message& message);
@@ -259,6 +263,10 @@ private:
 private:
     PipeMessageQueue(Handler* pHandler, int read_fd, int write_fd);
 
+    int poll_fd() const override
+    {
+        return m_read_fd;
+    }
     uint32_t handle_poll_events(Worker* pWorker, uint32_t events) override;
 
 private:

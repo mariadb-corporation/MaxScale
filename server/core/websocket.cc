@@ -106,6 +106,11 @@ void WebSocket::shutdown()
     this_unit.connections.clear();
 }
 
+int WebSocket::poll_fd() const
+{
+    return m_fd;
+}
+
 uint32_t WebSocket::handle_poll_events(mxb::Worker* worker, uint32_t events)
 {
     bool ok = false;

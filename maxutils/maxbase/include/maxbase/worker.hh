@@ -234,6 +234,10 @@ protected:
     virtual void tick() = 0;
 
 private:
+    int poll_fd() const override
+    {
+        return m_fd;
+    }
     uint32_t handle_poll_events(Worker* pWorker, uint32_t events) override;
 
 private:

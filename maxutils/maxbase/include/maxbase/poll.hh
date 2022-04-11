@@ -41,6 +41,8 @@ public:
     {
     }
 
+    virtual int poll_fd() const = 0;
+
     virtual uint32_t handle_poll_events(Worker* worker, uint32_t events) = 0;
 
     Worker* owner { nullptr };   /*< Owning worker. */

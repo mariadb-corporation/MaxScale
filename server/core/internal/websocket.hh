@@ -66,6 +66,8 @@ private:
     };
 
     WebSocket(int fd, MHD_UpgradeResponseHandle* urh, std::function<std::string ()> cb);
+
+    int         poll_fd() const override;
     uint32_t    handle_poll_events(mxb::Worker* worker, uint32_t events) override;
     static void close(WebSocket* ws);
 

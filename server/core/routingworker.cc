@@ -1010,6 +1010,11 @@ void RoutingWorker::epoll_tick()
     }
 }
 
+int RoutingWorker::poll_fd() const
+{
+    return this_unit.epoll_listener_fd;
+}
+
 /**
  * Handler for events occurring in the shared epoll instance.
  *

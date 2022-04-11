@@ -1403,6 +1403,11 @@ uint32_t DCB::event_handler(uint32_t events)
     return rv;
 }
 
+int DCB::poll_fd() const
+{
+    return m_fd;
+}
+
 uint32_t DCB::handle_poll_events(mxb::Worker* worker, uint32_t events)
 {
     uint32_t rval = 0;

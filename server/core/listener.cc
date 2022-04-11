@@ -957,15 +957,16 @@ bool Listener::listen_shared()
 
     if (fd != -1)
     {
-        if (mxs::RoutingWorker::add_listener_fd(fd, this))
+        // All workers share the same fd, assign it here
+        m_shared_fd = fd;
+        if (mxs::RoutingWorker::add_listener_fd(m_shared_fd, this))
         {
-            // All workers share the same fd, assign it here
-            m_shared_fd = fd;
             rval = true;
             m_state = STARTED;
         }
         else
         {
+            m_shared_fd = -1;
             close(fd);
         }
     }
@@ -985,14 +986,15 @@ bool Listener::listen_unique()
 
             if (fd != -1)
             {
-                if (mxs::RoutingWorker::get_current()->add_fd(fd, EPOLLIN, this))
+                // Set the worker-local fd to the unique value
+                *m_local_fd = fd;
+                if (mxs::RoutingWorker::get_current()->add_fd(*m_local_fd, EPOLLIN, this))
                 {
-                    // Set the worker-local fd to the unique value
-                    *m_local_fd = fd;
                     rval = true;
                 }
                 else
                 {
+                    *m_local_fd = -1;
                     close(fd);
                 }
             }
@@ -1040,6 +1042,11 @@ bool Listener::listen()
     }
 
     return rval;
+}
+
+int Listener::poll_fd() const
+{
+    return fd();
 }
 
 uint32_t Listener::handle_poll_events(mxb::Worker* worker, uint32_t events)
