@@ -620,9 +620,7 @@ private:
     void socket_write_SSL();
     void socket_write();
 
-    std::tuple<uint8_t*, size_t> calc_read_limit(bool expect_more);
     std::tuple<uint8_t*, size_t> calc_read_limit_strict(size_t maxbytes);
-    size_t                       calc_total_readq_limit(size_t maxbytes);
 
     std::tuple<bool, GWBUF> read_impl(size_t minbytes, size_t maxbytes, ReadLimit limit_type);
 

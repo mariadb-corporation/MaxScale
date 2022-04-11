@@ -503,15 +503,23 @@ bool DCB::socket_read_SSL(size_t maxbytes)
     }
 
     bool keep_reading = true;
-    bool expect_more_data = true;
     bool socket_cleared = false;
     bool success = true;
     size_t bytes_from_socket = 0;
-    size_t total_readq_limit = (maxbytes > 0) ? calc_total_readq_limit(maxbytes) : 0;
+
+    // OpenSSL has an internal buffer limit of 16 kB (16384), and will never return more data in a single
+    // read.
+    const uint64_t openssl_read_limit = 16 * 1024;
 
     while (keep_reading)
     {
-        auto [ptr, alloc_limit] = calc_read_limit(expect_more_data);
+        // On first iteration, reserve plenty of space, similar to normal read. On successive iterations,
+        // less space is enough as OpenSSL cannot fill the entire buffer at once anyway. This saves on
+        // reallocations when reading multiple 16 kB blocks in succession. GWBUF will still
+        // double its size when it needs to reallocate.
+        auto [ptr, alloc_limit] = (bytes_from_socket == 0) ? m_readq.prepare_to_write(BASE_READ_BUFFER_SIZE) :
+            m_readq.prepare_to_write(openssl_read_limit);
+
         // In theory, the readq could be larger than INT_MAX bytes.
         int read_limit = std::min(alloc_limit, (size_t)INT_MAX);
 
@@ -522,11 +530,10 @@ bool DCB::socket_read_SSL(size_t maxbytes)
         {
             m_readq.write_complete(ret);
             bytes_from_socket += ret;
-            expect_more_data = (ret == read_limit);
 
             m_encryption.read_want_write = false;
 
-            if (total_readq_limit > 0 && m_readq.length() >= total_readq_limit)
+            if (maxbytes > 0 && m_readq.length() >= maxbytes)
             {
                 keep_reading = false;
             }
@@ -983,13 +990,6 @@ void DCB::socket_write()
     }
 }
 
-std::tuple<uint8_t*, size_t> DCB::calc_read_limit(bool expect_more)
-{
-    // TODO: check if OpenSSL has some internal max read limit.
-    const size_t base_read_size_limit = expect_more ? BASE_READ_BUFFER_SIZE : 128;
-    return m_readq.prepare_to_write(base_read_size_limit);
-}
-
 std::tuple<uint8_t*, size_t> DCB::calc_read_limit_strict(size_t maxbytes)
 {
     // Should only be called when have a valid read limit and the limit is not yet reached.
@@ -999,13 +999,6 @@ std::tuple<uint8_t*, size_t> DCB::calc_read_limit_strict(size_t maxbytes)
     auto max_read_limit = maxbytes - m_readq.length();
     auto [ptr, _1] = m_readq.prepare_to_write(max_read_limit);
     return {ptr, max_read_limit};
-}
-
-size_t DCB::calc_total_readq_limit(size_t maxbytes)
-{
-    // A more complicated calculation may be added later.
-    mxb_assert(maxbytes > 0);
-    return maxbytes + 4096;
 }
 
 bool DCB::add_callback(Reason reason,
