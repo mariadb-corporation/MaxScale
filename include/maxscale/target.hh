@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2026-03-29
+ * Change Date: 2026-04-08
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -288,7 +288,7 @@ public:
         json_t* to_json() const;
 
     private:
-        using NumType = std::atomic_int64_t;
+        using NumType = std::atomic<int64_t>;
 
         NumType m_n_current_conns {0};  /**< Current number of connections */
         NumType m_n_total_conns {0};    /**< Total cumulative number of connections */
