@@ -248,6 +248,7 @@
     "rejoinableNodes": "Rejoinable nodes",
     "newPass": "New password",
     "role": "Role",
+    "addUser": "Add user",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",

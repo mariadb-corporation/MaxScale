@@ -12,21 +12,25 @@
                 </div>
             </div>
         </portal>
-        <v-sheet class="d-flex flex-column fill-height">
-            <div class="d-flex mb-2">
-                <v-spacer />
+        <portal to="page-header--right">
+            <div class="d-flex align-center">
+                <global-search class="mr-4" />
                 <v-btn
+                    width="160"
                     outlined
+                    height="36"
                     rounded
-                    class="text-capitalize px-4"
+                    class="text-capitalize px-8 font-weight-medium"
                     depressed
                     small
-                    color="accent"
+                    color="accent-dark"
                     @click="actionHandler({ type: 'add' })"
                 >
-                    {{ $t('add') }}
+                    + {{ $t('addUser') }}
                 </v-btn>
             </div>
+        </portal>
+        <v-sheet class="d-flex flex-column fill-height mt-12">
             <div ref="tableWrapper" class="fill-height">
                 <data-table
                     :headers="tableHeaders"
