@@ -246,6 +246,8 @@
     "perform": "Perform",
     "rejoin": "Rejoin",
     "rejoinableNodes": "Rejoinable nodes",
+    "newPass": "New password",
+    "role": "Role",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
@@ -328,6 +330,13 @@
         "info": {
             "async-switchover": "Promote as Master (Switchover)",
             "async-rejoin": "Rejoin this server to the cluster"
+        }
+    },
+    "userOps": {
+        "actions": {
+            "delete": "Delete user",
+            "update": "Update user",
+            "add": "Add user"
         }
     },
     "$vuetify": {

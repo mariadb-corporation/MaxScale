@@ -181,4 +181,5 @@ export const APP_CONFIG = Object.freeze({
         FAILOVER: 'async-failover',
         REJOIN: 'async-rejoin',
     }),
+    USER_ROLES: Object.freeze({ ADMIN: 'admin', BASIC: 'basic' }),
 })

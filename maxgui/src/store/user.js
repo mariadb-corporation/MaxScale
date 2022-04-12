@@ -113,9 +113,9 @@ export default {
             }
         },
         /**Only admin accounts can perform POST, PUT, DELETE and PATCH requests
-         * @param {String} payload.mode - post, patch or delete
+         * @param {String} payload.mode - add, update or delete
          * @param {String} payload.id - inet user id. Required for all modes
-         * @param {String} payload.password - inet user's password. Required for mode `post` or `patch`
+         * @param {String} payload.password - inet user's password. Required for mode `add` or `update`
          * @param {String} payload.role - admin or basic. Required for mode `post`
          * @param {Function} payload.callback - callback function after receiving 204 (response ok)
          */
@@ -124,7 +124,7 @@ export default {
                 let res
                 let message
                 switch (payload.mode) {
-                    case 'post':
+                    case 'add':
                         res = await this.$http.post(`/users/inet`, {
                             data: {
                                 id: payload.id,
@@ -134,7 +134,7 @@ export default {
                         })
                         message = [`Network User ${payload.id} is created`]
                         break
-                    case 'patch':
+                    case 'update':
                         res = await this.$http.patch(`/users/inet/${payload.id}`, {
                             data: {
                                 attributes: { password: payload.password },

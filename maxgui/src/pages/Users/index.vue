@@ -22,7 +22,7 @@
                     depressed
                     small
                     color="accent"
-                    @click="addUser"
+                    @click="actionHandler({ type: 'add' })"
                 >
                     {{ $t('add') }}
                 </v-btn>
@@ -39,15 +39,22 @@
                     fixedHeader
                 >
                     <template v-slot:actions="{ data: { item } }">
-                        <v-btn icon @click="editUser(item)">
+                        <v-btn icon @click="actionHandler({ type: 'update', user: item })">
                             <v-icon size="18" color="primary"> $vuetify.icons.edit </v-icon>
                         </v-btn>
-                        <v-btn icon @click="onDelete(item)">
+                        <v-btn icon @click="actionHandler({ type: 'delete', user: item })">
                             <v-icon size="18" color="error"> $vuetify.icons.delete </v-icon>
                         </v-btn>
                     </template>
                 </data-table>
             </div>
+            <user-dialog
+                v-model="userDlg.isOpened"
+                :title="userDlg.title"
+                :type="userDlg.type"
+                :user.sync="userDlg.user"
+                :onSave="confirmSave"
+            />
         </v-sheet>
     </page-wrapper>
 </template>
@@ -66,7 +73,11 @@
  * Public License.
  */
 import { mapState, mapActions } from 'vuex'
+import UserDialog from './UserDialog'
 export default {
+    components: {
+        'user-dialog': UserDialog,
+    },
     data() {
         return {
             tableHeaders: [
@@ -75,6 +86,12 @@ export default {
                 { text: 'Type', value: 'type' },
             ],
             tableHeight: 0,
+            userDlg: {
+                isOpened: false,
+                title: '',
+                type: '',
+                user: { id: '', password: '', role: '' },
+            },
         }
     },
     computed: {
@@ -89,6 +106,12 @@ export default {
                 rows.push({ id, role: account, type })
             }
             return rows
+        },
+    },
+    watch: {
+        'userDlg.isOpened'(v) {
+            // clear userDlg data when dlg is closed
+            if (!v) this.userDlg = this.$options.data().userDlg
         },
     },
     async created() {
@@ -106,14 +129,24 @@ export default {
                 if (tableHeight) this.tableHeight = tableHeight - 4 // 4px offset
             })
         },
-        onDelete() {
-            //TODO: open confirm delete dialog
+        /**
+         * @param {String} param.type - delete||update||add
+         * @param {Object} param.user - user object
+         */
+        actionHandler({ type, user }) {
+            this.userDlg = {
+                isOpened: true,
+                type,
+                title: this.$t(`userOps.actions.${type}`),
+                user: { ...this.userDlg.user, ...user },
+            }
         },
-        editUser() {
-            //TODO: open user dialog
-        },
-        addUser() {
-            //TODO: open user dialog
+        async confirmSave() {
+            await this.manageInetUser({
+                mode: this.userDlg.type,
+                ...this.userDlg.user,
+                callback: this.fetchAllNetworkUsers,
+            })
         },
     },
 }
