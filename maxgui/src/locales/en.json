@@ -297,7 +297,8 @@
         "alterTableSuccessfully": "Alter table successfully",
         "exeActionSuccessfully": "Successfully {action}",
         "reconnSuccessfully": "Reconnection was successful",
-        "refreshRate": "Click to change refresh rate"
+        "refreshRate": "Click to change refresh rate",
+        "showTrendline": "The trend line can only be computed for numerical data on both axes"
     },
     "serverOps": {
         "actions": {

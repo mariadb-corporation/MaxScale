@@ -119,7 +119,9 @@ export function objectTooltip({
             if (key !== 'x' && key !== 'y') {
                 //bold x,y axes value
                 const boldClass = `${
-                    key === dataPoint.xLabel || key === dataPoint.yLabel ? 'font-weight-black' : ''
+                    key === dataPoint.scaleLabelX || key === dataPoint.scaleLabelY
+                        ? 'font-weight-black'
+                        : ''
                 }`
                 innerHtml += `
                 <tr>

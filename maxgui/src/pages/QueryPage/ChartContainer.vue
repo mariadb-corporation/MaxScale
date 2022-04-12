@@ -62,47 +62,43 @@
             <line-chart
                 v-if="type === SQL_CHART_TYPES.LINE"
                 id="query-chart"
-                class="line-chart"
                 :style="{
                     minHeight: `${chartHeight}px`,
-                    minWidth: minWidth,
+                    minWidth,
                 }"
                 hasVertCrossHair
                 :chartData="chartData"
-                :options="lineChartOptions"
+                :options="chartOptions"
             />
             <scatter-chart
                 v-else-if="type === SQL_CHART_TYPES.SCATTER"
                 id="query-chart"
-                class="scatter-chart"
                 :style="{
                     minHeight: `${chartHeight}px`,
-                    minWidth: minWidth,
+                    minWidth,
                 }"
                 :chartData="chartData"
-                :options="scatterChartOptions"
+                :options="chartOptions"
             />
             <vert-bar-chart
                 v-else-if="type === SQL_CHART_TYPES.BAR_VERT"
                 id="query-chart"
-                class="vert-bar-chart"
                 :style="{
                     minHeight: `${chartHeight}px`,
-                    minWidth: minWidth,
+                    minWidth,
                 }"
                 :chartData="chartData"
-                :options="vertBarChartOptions"
+                :options="chartOptions"
             />
             <horiz-bar-chart
                 v-else-if="type === SQL_CHART_TYPES.BAR_HORIZ"
                 id="query-chart"
-                class="vert-bar-chart"
                 :style="{
                     minHeight: `${chartHeight}px`,
-                    minWidth: 'unset',
+                    minWidth,
                 }"
                 :chartData="chartData"
-                :options="horizBarChartOptions"
+                :options="chartOptions"
             />
         </div>
     </div>
@@ -140,7 +136,10 @@ export default {
         }
     },
     computed: {
-        ...mapState({ SQL_CHART_TYPES: state => state.app_config.SQL_CHART_TYPES }),
+        ...mapState({
+            SQL_CHART_TYPES: state => state.app_config.SQL_CHART_TYPES,
+            SQL_CHART_AXIS_TYPES: state => state.app_config.SQL_CHART_AXIS_TYPES,
+        }),
         chartOpt: {
             get() {
                 return this.value
@@ -152,49 +151,35 @@ export default {
         chartData() {
             return this.chartOpt.data
         },
-        xAxisType() {
-            return this.chartOpt.xAxisType
+        axesType() {
+            return this.chartOpt.axesType
         },
-        axisLabels() {
-            return this.chartOpt.axisLabels
+        scaleLabels() {
+            return this.chartOpt.scaleLabels
         },
         type() {
             return this.chartOpt.type
         },
-        isTimeChart() {
-            return this.xAxisType === 'time'
-        },
-        isLinear() {
-            return this.xAxisType === 'linear'
-        },
-        autoSkipXTick() {
-            return this.isLinear || this.isTimeChart
-        },
         minWidth() {
-            if (this.autoSkipXTick) return 'unset'
-            if (this.$typy(this.chartData, 'labels').isDefined)
-                return `${Math.min(this.chartData.labels.length * 15, 15000)}px`
+            if (this.autoSkipTick(this.axesType.x) || this.type === this.SQL_CHART_TYPES.BAR_HORIZ)
+                return 'unset'
+            if (this.$typy(this.chartData, 'xLabels').isDefined)
+                return `${Math.min(this.chartData.xLabels.length * 15, 15000)}px`
             return '0px'
         },
         chartHeight() {
-            switch (this.type) {
-                case this.SQL_CHART_TYPES.BAR_HORIZ:
-                    if (this.autoSkipXTick)
-                        return this.containerHeight - (this.chartToolHeight + 12)
-                    /** When there is too many data points,
-                     * first, get min value between "overflow" height (this.chartData.labels.length * 15)
-                     * and max height threshold 15000. However, when there is too little data points,
-                     * the "overflow" height is smaller than container height, container height
-                     * should be chosen to make chart fit to its container
-                     */
-                    return Math.max(
-                        this.containerHeight - (this.chartToolHeight + 12),
-                        Math.min(this.chartData.labels.length * 15, 15000)
-                    )
-                default:
-                    // 10px of scrollbar height plus border
-                    return this.containerHeight - (this.chartToolHeight + 12)
-            }
+            if (this.autoSkipTick(this.axesType.y))
+                return this.containerHeight - (this.chartToolHeight + 12)
+            /** When there is too many data points,
+             * first, get min value between "overflow" height (this.chartData.yLabels.length * 15)
+             * and max height threshold 15000. However, when there is too little data points,
+             * the "overflow" height is smaller than container height, container height
+             * should be chosen to make chart fit to its container
+             */
+            return Math.max(
+                this.containerHeight - (this.chartToolHeight + 12),
+                Math.min(this.$typy(this.chartData, 'yLabels').safeArray.length * 15, 15000)
+            )
         },
         chartOptions() {
             const componentScope = this
@@ -210,6 +195,7 @@ export default {
                 responsive: true,
                 maintainAspectRatio: false,
                 hover: {
+                    mode: 'nearest',
                     onHover: (e, el) => {
                         e.target.style.cursor = el[0] ? 'pointer' : 'default'
                     },
@@ -217,6 +203,7 @@ export default {
                     intersect: false,
                 },
                 tooltips: {
+                    mode: 'nearest',
                     enabled: false,
                     intersect: false,
                     position: 'cursor',
@@ -246,9 +233,10 @@ export default {
                 scales: {
                     xAxes: [
                         {
+                            type: this.axesType.x,
                             scaleLabel: {
                                 display: true,
-                                labelString: this.axisLabels.x,
+                                labelString: this.scaleLabels.x,
                                 fontSize: 14,
                                 lineHeight: 1,
                                 padding: {
@@ -256,123 +244,26 @@ export default {
                                 },
                                 fontColor: '#424f62',
                             },
-                            beginAtZero: true,
+                            ticks: this.getAxisTicks({ axisId: 'x', axisType: this.axesType.x }),
                         },
                     ],
                     yAxes: [
                         {
+                            type: this.axesType.y,
                             scaleLabel: {
                                 display: true,
-                                labelString: this.axisLabels.y,
+                                labelString: this.scaleLabels.y,
                                 fontSize: 14,
                                 padding: {
                                     bottom: 16,
                                 },
+                                fontColor: '#424f62',
                             },
-                            ticks: {
-                                beginAtZero: true,
-                            },
+                            ticks: this.getAxisTicks({ axisId: 'y', axisType: this.axesType.y }),
                         },
                     ],
                 },
             }
-        },
-        lineChartOptions() {
-            let lineOptions = {
-                showLines: true,
-                hover: {
-                    mode: this.isLinear ? 'nearest' : 'index',
-                },
-                tooltips: {
-                    mode: this.isLinear ? 'nearest' : 'index',
-                },
-                scales: {
-                    xAxes: [
-                        {
-                            type: this.xAxisType,
-                            bounds: 'ticks',
-                            ticks: {
-                                autoSkip: this.autoSkipXTick,
-                                autoSkipPadding: 15,
-                                maxRotation: this.autoSkipXTick ? 0 : 90,
-                                minRotation: this.autoSkipXTick ? 0 : 90,
-                                //truncate tick
-                                callback: this.truncateLabel,
-                            },
-                        },
-                    ],
-                },
-            }
-            return this.$help.lodash.deepMerge(this.chartOptions, lineOptions)
-        },
-        scatterChartOptions() {
-            return this.$help.lodash.deepMerge(this.chartOptions, {
-                hover: {
-                    mode: 'nearest',
-                },
-                tooltips: {
-                    mode: 'nearest',
-                },
-                scales: {
-                    xAxes: [
-                        {
-                            type: this.xAxisType,
-                            bounds: 'ticks',
-                            ticks: {
-                                autoSkip: this.autoSkipXTick,
-                                autoSkipPadding: 15,
-                                maxRotation: this.autoSkipXTick ? 0 : 90,
-                                minRotation: this.autoSkipXTick ? 0 : 90,
-                            },
-                        },
-                    ],
-                },
-            })
-        },
-        vertBarChartOptions() {
-            return this.$help.lodash.deepMerge(this.chartOptions, {
-                hover: {
-                    mode: 'index',
-                },
-                tooltips: {
-                    mode: 'index',
-                },
-                scales: {
-                    xAxes: [
-                        {
-                            ticks: {
-                                autoSkip: this.autoSkipXTick,
-                                autoSkipPadding: 15,
-                                maxRotation: this.autoSkipXTick ? 0 : 90,
-                                minRotation: this.autoSkipXTick ? 0 : 90,
-                                callback: this.truncateLabel,
-                            },
-                        },
-                    ],
-                },
-            })
-        },
-        horizBarChartOptions() {
-            return this.$help.lodash.deepMerge(this.chartOptions, {
-                hover: {
-                    mode: 'index',
-                },
-                tooltips: {
-                    mode: 'index',
-                },
-                scales: {
-                    yAxes: [
-                        {
-                            ticks: {
-                                autoSkip: this.autoSkipXTick,
-                                autoSkipPadding: 15,
-                                callback: this.truncateLabel,
-                                reverse: true,
-                            },
-                        },
-                    ],
-                },
-            })
         },
     },
     watch: {
@@ -389,6 +280,43 @@ export default {
         this.removeTooltip()
     },
     methods: {
+        /**
+         * Check if provided axisType is either LINEAR OR TIME type.
+         * @param {String} param.axisType - SQL_CHART_AXIS_TYPES
+         * @returns {Boolean} - should autoSkip the tick
+         */
+        autoSkipTick(axisType) {
+            const { LINEAR, TIME } = this.SQL_CHART_AXIS_TYPES
+            return axisType === LINEAR || axisType === TIME
+        },
+        /**
+         * Get the ticks object
+         * @param {String} param.axisType - SQL_CHART_AXIS_TYPES
+         * @param {String} param.axisId- x or y
+         * @returns {Object} - ticks object
+         */
+        getAxisTicks({ axisId, axisType }) {
+            const { CATEGORY } = this.SQL_CHART_AXIS_TYPES
+            const { LINE, SCATTER, BAR_VERT, BAR_HORIZ } = this.SQL_CHART_TYPES
+            const autoSkip = this.autoSkipTick(this.axesType[axisType])
+            let ticks = { autoSkip, callback: this.truncateLabel, beginAtZero: true }
+            if (autoSkip) {
+                ticks.autoSkipPadding = 15
+            }
+            switch (this.type) {
+                case LINE:
+                case SCATTER:
+                case BAR_VERT:
+                case BAR_HORIZ:
+                    // only rotate tick label for the X axis and CATEGORY axis type
+                    if (axisId === 'x' && axisType === CATEGORY) {
+                        ticks.maxRotation = this.autoSkipTick(this.axesType[axisType]) ? 0 : 90
+                        ticks.minRotation = this.autoSkipTick(this.axesType[axisType]) ? 0 : 90
+                    }
+                    break
+            }
+            return ticks
+        },
         removeTooltip() {
             let tooltipEl = document.getElementById(this.uniqueTooltipId)
             if (tooltipEl) tooltipEl.remove()
