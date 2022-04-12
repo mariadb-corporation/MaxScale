@@ -214,6 +214,13 @@ then
         echo "export CC=/usr/bin/gcc-10" >> ~/.bashrc
         echo "export CXX=/usr/bin/g++-10" >> ~/.bashrc
     fi
+    sudo zypper -n install gcc11 gcc11-c++
+    if [ $? == 0 ]
+    then
+        echo "export CC=/usr/bin/gcc-11" >> ~/.bashrc
+        echo "export CXX=/usr/bin/g++-11" >> ~/.bashrc
+    fi
+
 fi
 
 # Methods allow to compare software versions according to semantic versioning
