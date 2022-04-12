@@ -175,7 +175,7 @@ DCB::DCB(int fd,
          MXS_SESSION* session,
          Handler* handler,
          Manager* manager)
-    : Pollable(get_dcb_owner())
+    : m_owner(get_dcb_owner())
     , m_uid(this_unit.uid_generator.fetch_add(1, std::memory_order_relaxed))
     , m_fd(fd)
     , m_role(role)
@@ -215,8 +215,6 @@ DCB::~DCB()
     {
         SSL_free(m_encryption.handle);
     }
-
-    Pollable::owner = reinterpret_cast<mxb::Worker*>(0xdeadbeef);
 }
 
 void DCB::clear()
@@ -282,7 +280,7 @@ std::tuple<bool, GWBUF> DCB::read_strict(size_t minbytes, size_t maxbytes)
 
 std::tuple<bool, GWBUF> DCB::read_impl(size_t minbytes, size_t maxbytes, ReadLimit limit_type)
 {
-    mxb_assert(this->owner == RoutingWorker::get_current());
+    mxb_assert(polling_worker() == RoutingWorker::get_current());
     mxb_assert(m_fd != FD_CLOSED);
     mxb_assert(maxbytes >= minbytes || maxbytes == 0);
 
@@ -689,7 +687,9 @@ bool DCB::writeq_append(GWBUF* queue)
 
 bool DCB::writeq_append(GWBUF&& data)
 {
-    mxb_assert(this->owner == RoutingWorker::get_current());
+    // polling_worker() can not be used here, the last backend write takes place
+    // when the DCB has already been removed from the epoll-set.
+    mxb_assert(m_owner == RoutingWorker::get_current());
 
     // This can be slow in a situation where data is queued faster than it can be sent.
     m_writeq.merge_back(move(data));
@@ -747,7 +747,9 @@ bool DCB::write_parameter_check()
 
 void DCB::writeq_drain()
 {
-    mxb_assert(this->owner == RoutingWorker::get_current());
+    // polling_worker() can not be used here, the last backend drain takes place
+    // when the DCB has already been removed from the epoll-set.
+    mxb_assert(m_owner == RoutingWorker::get_current());
 
     if (m_encryption.handle)
     {
@@ -805,14 +807,13 @@ void DCB::destroy()
 {
 #if defined (SS_DEBUG)
     RoutingWorker* current = RoutingWorker::get_current();
-    RoutingWorker* owner = static_cast<RoutingWorker*>(this->owner);
-    if (current && (current != owner))
+    if (current && (current != m_owner))
     {
         MXB_ALERT("dcb_final_close(%p) called by %d, owned by %d.",
                   this,
                   current->id(),
-                  owner->id());
-        mxb_assert(owner == current);
+                  m_owner->id());
+        mxb_assert(m_owner == current);
     }
 #endif
     mxb_assert(!m_open);
@@ -1266,7 +1267,7 @@ private:
 
 uint32_t DCB::process_events(uint32_t events)
 {
-    mxb_assert(static_cast<RoutingWorker*>(this->owner) == RoutingWorker::get_current());
+    mxb_assert(polling_worker() == RoutingWorker::get_current());
 
     uint32_t rc = mxb::poll_action::NOP;
 
@@ -1453,9 +1454,9 @@ public:
             && m_dcb->uid() == m_uid)           // it really is the one (not another one that just
                                                 // happened to get the same address).
         {
-            mxb_assert(m_dcb->owner == RoutingWorker::get_current());
+            mxb_assert(m_dcb->m_owner == RoutingWorker::get_current());
             m_dcb->m_is_fake_event = true;
-            m_dcb->handle_poll_events(m_dcb->owner, m_ev);
+            m_dcb->handle_poll_events(m_dcb->m_owner, m_ev);
             m_dcb->m_is_fake_event = false;
         }
     }
@@ -1470,7 +1471,7 @@ void DCB::add_event(uint32_t ev)
 {
     if (this == this_thread.current_dcb)
     {
-        mxb_assert(this->owner == RoutingWorker::get_current());
+        mxb_assert(m_owner == RoutingWorker::get_current());
         // If the fake event is added to the current DCB, we arrange for
         // it to be handled immediately in DCB::event_handler() when the handling
         // of the current events are done...
@@ -1485,8 +1486,7 @@ void DCB::add_event(uint32_t ev)
 
         if (task)
         {
-            RoutingWorker* worker = static_cast<RoutingWorker*>(this->owner);
-            worker->execute(std::unique_ptr<FakeEventTask>(task), Worker::EXECUTE_QUEUED);
+            m_owner->execute(std::unique_ptr<FakeEventTask>(task), Worker::EXECUTE_QUEUED);
         }
         else
         {
@@ -1520,10 +1520,9 @@ bool DCB::enable_events()
     mxb_assert(m_state == State::CREATED || m_state == State::NOPOLLING);
 
     bool rv = false;
-    RoutingWorker* worker = static_cast<RoutingWorker*>(this->owner);
-    mxb_assert(worker == RoutingWorker::get_current());
+    mxb_assert(m_owner == RoutingWorker::get_current());
 
-    if (worker->add_pollable(THIS_UNIT::poll_events, this))
+    if (m_owner->add_pollable(THIS_UNIT::poll_events, this))
     {
         m_state = State::POLLING;
         // Add old manually triggered events from before event disabling. epoll seems to trigger on its own
@@ -1541,8 +1540,7 @@ bool DCB::disable_events()
     mxb_assert(m_fd != FD_CLOSED);
 
     bool rv = true;
-    RoutingWorker* worker = static_cast<RoutingWorker*>(this->owner);
-    mxb_assert(worker == RoutingWorker::get_current());
+    mxb_assert(m_owner == RoutingWorker::get_current());
 
     // We unconditionally set the state, even if the actual removal might fail.
     m_state = State::NOPOLLING;
@@ -1554,7 +1552,7 @@ bool DCB::disable_events()
         // Remove any manually added read events, then remove fd from epoll.
         m_triggered_event_old = m_triggered_event;
         m_triggered_event = 0;
-        if (!worker->remove_pollable(this))
+        if (!m_owner->remove_pollable(this))
         {
             rv = false;
         }
@@ -1875,8 +1873,7 @@ void DCB::close(DCB* dcb)
 #if defined (SS_DEBUG)
     mxb_assert(dcb->m_state != State::DISCONNECTED && dcb->m_fd != FD_CLOSED && dcb->m_manager);
     auto* current = RoutingWorker::get_current();
-    auto* owner = static_cast<RoutingWorker*>(dcb->owner);
-    mxb_assert(current && current == owner);
+    mxb_assert(current && current == dcb->m_owner);
 #endif
 
     if (dcb->m_open)

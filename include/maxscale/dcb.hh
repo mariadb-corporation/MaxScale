@@ -485,6 +485,11 @@ public:
         return m_is_fake_event;
     }
 
+    mxb::Worker* owner() const
+    {
+        return m_owner;
+    }
+
     /**
      * Sets the owner of the DCB.
      *
@@ -497,7 +502,9 @@ public:
     void set_owner(mxb::Worker* worker)
     {
         mxb_assert(m_state != State::POLLING);
-        this->owner = worker;
+        // Can't be polled, when owner is changed.
+        mxb_assert(this->polling_worker() == nullptr);
+        m_owner = worker;
 #ifdef SS_DEBUG
         int wid = worker ? worker->id() : -1;
         m_writeq.set_owner(wid);
@@ -574,6 +581,7 @@ protected:
         int      retry_write_size = 0;
     };
 
+    mxb::Worker*   m_owner { nullptr };
     const uint64_t m_uid;   /**< Unique identifier for this DCB */
     int            m_fd;    /**< The descriptor */
 

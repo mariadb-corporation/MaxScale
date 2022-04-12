@@ -178,8 +178,6 @@ WorkerTimer::WorkerTimer(Worker* pWorker)
     : m_fd(create_timerfd())
     , m_pWorker(pWorker)
 {
-    Pollable::owner = m_pWorker;
-
     if (m_fd != -1)
     {
         if (!m_pWorker->add_pollable(EPOLLIN | EPOLLET, this))
@@ -504,23 +502,23 @@ void Worker::gen_random_bytes(uint8_t* pOutput, size_t nBytes)
     }
 }
 
-bool Worker::add_pollable(uint32_t events, Pollable* pData)
+bool Worker::add_pollable(uint32_t events, Pollable* pPollable)
 {
     bool rv = true;
 
-    int fd = pData->poll_fd();
+    int fd = pPollable->poll_fd();
 
     struct epoll_event ev;
 
     ev.events = events;
-    ev.data.ptr = pData;
-
-    pData->owner = this;
+    ev.data.ptr = pPollable;
 
     if (epoll_ctl(m_epoll_fd, EPOLL_CTL_ADD, fd, &ev) == 0)
     {
         mxb::atomic::add(&m_nCurrent_descriptors, 1, mxb::atomic::RELAXED);
         mxb::atomic::add(&m_nTotal_descriptors, 1, mxb::atomic::RELAXED);
+
+        pPollable->set_polling_worker(this);
     }
     else
     {
@@ -542,6 +540,8 @@ bool Worker::remove_pollable(Pollable* pPollable)
     if (epoll_ctl(m_epoll_fd, EPOLL_CTL_DEL, fd, &ev) == 0)
     {
         mxb::atomic::add(&m_nCurrent_descriptors, -1, mxb::atomic::RELAXED);
+
+        pPollable->set_polling_worker(nullptr);
     }
     else
     {

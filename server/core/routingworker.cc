@@ -139,7 +139,6 @@ RoutingWorker::RoutingWorker(mxb::WatchdogNotifier* pNotifier)
     , m_callable(this)
     , m_pool_handler(this)
 {
-    Pollable::owner = this;
 }
 
 RoutingWorker::~RoutingWorker()
@@ -431,7 +430,7 @@ RoutingWorker::SessionsById& RoutingWorker::session_registry()
 
 void RoutingWorker::destroy(DCB* pDcb)
 {
-    mxb_assert(pDcb->owner == this);
+    mxb_assert(pDcb->owner() == this);
 
     m_zombies.push_back(pDcb);
 }

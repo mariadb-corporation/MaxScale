@@ -2146,7 +2146,7 @@ void MariaDBClientConnection::wakeup()
 
 bool MariaDBClientConnection::is_movable() const
 {
-    mxb_assert(mxs::RoutingWorker::get_current() == m_dcb->owner);
+    mxb_assert(mxs::RoutingWorker::get_current() == m_dcb->polling_worker());
     return m_auth_state != AuthState::TRY_AGAIN;
 }
 

@@ -54,8 +54,10 @@ private:
     struct Pollable : public mxb::Pollable
     {
         Pollable() = default;
-        Pollable(Reader* reader, mxb::Worker* worker, int fd);
-        Reader* reader;
+        Pollable(Reader* reader, int fd);
+
+        Reader* reader { nullptr };
+        int     fd { -1 };
 
         int poll_fd() const override
         {
@@ -65,8 +67,6 @@ private:
         {
             return reader->epoll_update(this, worker, events);
         }
-
-        int fd { -1 };
     };
 
     std::unique_ptr<FileReader> m_sFile_reader;

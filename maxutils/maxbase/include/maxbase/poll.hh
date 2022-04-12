@@ -32,13 +32,16 @@ class Worker;
 class Pollable
 {
 public:
+    Pollable(const Pollable&) = delete;
+    Pollable& operator=(const Pollable&) = delete;
+
     Pollable()
     {
     }
 
-    Pollable(Worker* o)
-        : owner(o)
+    Worker* polling_worker() const
     {
+        return m_pPolling_worker;
     }
 
     /**
@@ -50,7 +53,14 @@ public:
 
     virtual uint32_t handle_poll_events(Worker* worker, uint32_t events) = 0;
 
-    Worker* owner { nullptr };   /*< Owning worker. */
+private:
+    friend class Worker;
+    void set_polling_worker(Worker* pWorker)
+    {
+        m_pPolling_worker = pWorker;
+    }
+
+    Worker* m_pPolling_worker { nullptr };   /*< Owning worker. */
 };
 
 }

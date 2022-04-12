@@ -144,7 +144,7 @@ void MXS_SESSION::set_protocol_data(std::unique_ptr<ProtocolData> new_data)
 void Session::link_backend_connection(mxs::BackendConnection* conn)
 {
     auto dcb = conn->dcb();
-    mxb_assert(dcb->owner == m_client_conn->dcb()->owner);
+    mxb_assert(dcb->owner() == m_client_conn->dcb()->owner());
     mxb_assert(dcb->role() == DCB::Role::BACKEND);
 
     mxb::atomic::add(&refcount, 1);

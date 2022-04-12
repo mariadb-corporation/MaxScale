@@ -29,9 +29,8 @@
 namespace pinloki
 {
 
-Reader::Pollable::Pollable(Reader* reader, mxb::Worker* worker, int fd)
-    : mxb::Pollable(worker)
-    , reader(reader)
+Reader::Pollable::Pollable(Reader* reader, int fd)
+    : reader(reader)
     , fd(fd)
 {
 }
@@ -69,7 +68,8 @@ void Reader::start()
 void Reader::start_reading()
 {
     m_sFile_reader.reset(new FileReader(m_start_gtid_list, &m_inventory));
-    m_reader_poll_data = Pollable(this, &m_get_worker(), m_sFile_reader->fd());
+    m_reader_poll_data.reader = this;
+    m_reader_poll_data.fd = m_sFile_reader->fd();
     m_get_worker().add_pollable(EPOLLIN, &m_reader_poll_data);
 
     send_events();
