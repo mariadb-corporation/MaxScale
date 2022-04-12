@@ -902,6 +902,36 @@ long time_in_100ms_ticks(maxbase::TimePoint tp)
 }
 }
 
+TimePoint Worker::deliver_events(uint64_t cycle_start,
+                                 TimePoint loop_now,
+                                 Pollable* pPollable,
+                                 uint32_t events)
+{
+    /** Calculate event queue statistics */
+    int64_t started = time_in_100ms_ticks(loop_now);
+    int64_t qtime = started - cycle_start;
+
+    ++m_statistics.qtimes[std::min(qtime, STATISTICS::N_QUEUE_TIMES)];
+    m_statistics.maxqtime = std::max(m_statistics.maxqtime, qtime);
+
+    uint32_t actions = pPollable->handle_poll_events(this, events);
+
+    m_statistics.n_accept += bool(actions & poll_action::ACCEPT);
+    m_statistics.n_read += bool(actions & poll_action::READ);
+    m_statistics.n_write += bool(actions & poll_action::WRITE);
+    m_statistics.n_hup += bool(actions & poll_action::HUP);
+    m_statistics.n_error += bool(actions & poll_action::ERROR);
+
+    /** Calculate event execution statistics */
+    loop_now = maxbase::Clock::now();
+    qtime = time_in_100ms_ticks(loop_now) - started;
+
+    ++m_statistics.exectimes[std::min(qtime, STATISTICS::N_QUEUE_TIMES)];
+    m_statistics.maxexectime = std::max(m_statistics.maxexectime, qtime);
+
+    return loop_now;
+}
+
 /**
  * The main polling loop
  */
@@ -973,28 +1003,9 @@ void Worker::poll_waitevents()
 
         for (int i = 0; i < nfds; i++)
         {
-            /** Calculate event queue statistics */
-            int64_t started = time_in_100ms_ticks(loop_now);
-            int64_t qtime = started - cycle_start;
-
-            ++m_statistics.qtimes[std::min(qtime, STATISTICS::N_QUEUE_TIMES)];
-            m_statistics.maxqtime = std::max(m_statistics.maxqtime, qtime);
-
             Pollable* pPollable = static_cast<Pollable*>(events[i].data.ptr);
-            uint32_t actions = pPollable->handle_poll_events(this, events[i].events);
 
-            m_statistics.n_accept += bool(actions & poll_action::ACCEPT);
-            m_statistics.n_read += bool(actions & poll_action::READ);
-            m_statistics.n_write += bool(actions & poll_action::WRITE);
-            m_statistics.n_hup += bool(actions & poll_action::HUP);
-            m_statistics.n_error += bool(actions & poll_action::ERROR);
-
-            /** Calculate event execution statistics */
-            loop_now = maxbase::Clock::now();
-            qtime = time_in_100ms_ticks(loop_now) - started;
-
-            ++m_statistics.exectimes[std::min(qtime, STATISTICS::N_QUEUE_TIMES)];
-            m_statistics.maxexectime = std::max(m_statistics.maxexectime, qtime);
+            loop_now = deliver_events(cycle_start, loop_now, pPollable, events[i].events);
         }
 
         if (!m_lcalls.empty())
