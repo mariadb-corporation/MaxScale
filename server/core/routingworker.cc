@@ -263,9 +263,11 @@ void RoutingWorker::finish()
 }
 
 // static
-bool RoutingWorker::add_listener_fd(int fd, Listener* pListener)
+bool RoutingWorker::add_listener(Listener* pListener)
 {
     bool rv = true;
+
+    int fd = pListener->poll_fd();
 
     // This must be level-triggered (i.e. the default). Since this is
     // intended for listening sockets and each worker will call accept()
@@ -292,9 +294,11 @@ bool RoutingWorker::add_listener_fd(int fd, Listener* pListener)
 }
 
 // static
-bool RoutingWorker::remove_listener_fd(int fd)
+bool RoutingWorker::remove_listener(Listener* pListener)
 {
     bool rv = true;
+
+    int fd = pListener->poll_fd();
 
     struct epoll_event ev = {};
 

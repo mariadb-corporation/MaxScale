@@ -80,31 +80,22 @@ public:
     static void finish();
 
     /**
-     * Add a listener file descriptor to the epoll instance shared between
-     * all workers. Events occuring on the provided file descriptor will be
-     * handled by all workers. The only event polled for is EPOLLIN which
-     * signals that accept() can be used on the listening socket for creating
-     * a connected socket to a client.
+     * Add a Listener to the routing workers.
      *
-     * @param fd         The file descriptor to be added.
-     * @param pListener  The listener poll data associated with the descriptor:
-     *
-     *                  data->handler  : Handler that knows how to deal with events
-     *                                   for this particular type of 'struct mxs_poll_data'.
-     *                  data->thread.id: 0
+     * @param pListener  The listener to be added.
      *
      * @return True, if the descriptor could be added, false otherwise.
      */
-    static bool add_listener_fd(int fd, Listener* pListener);
+    static bool add_listener(Listener* pListener);
 
     /**
-     * Remove a file descriptor from the epoll instance shared between all workers.
+     * Remove a Listener from the routing workers.
      *
-     * @param fd  The file descriptor to be removed.
+     * @param pListener  The lister to be removed.
      *
      * @return True on success, false on failure.
      */
-    static bool remove_listener_fd(int fd);
+    static bool remove_listener(Listener* pListener);
 
     /**
      * Return a reference to the session registry of this worker.
