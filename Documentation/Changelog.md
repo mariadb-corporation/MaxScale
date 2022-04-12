@@ -1,5 +1,19 @@
 # Changelog
 
+## MariaDB MaxScale 6.3
+
+* Nosqlprotocol now supports both SSL and authentication.
+* A large number of client connections can now share a smaller number of
+  backend connections.
+* MaxGUI now shows which MaxScale node is in control when cooperative monitoring
+  is enabled.
+* Filtering can now be used in the KafkaCDC router.
+* The user is now informed if runtime changes are made to configuration objects
+  that are defined in static configuration files.
+
+For more details, please refer to:
+* [MariaDB MaxScale 6.3.0 Release Notes](Release-Notes/MaxScale-6.3.0-Release-Notes.md)
+
 ## MariaDB MaxScale 6.2
 
 * Significant improvements and feature additions to MaxGUI
