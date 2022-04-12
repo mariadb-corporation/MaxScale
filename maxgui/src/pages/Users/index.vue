@@ -24,9 +24,9 @@
                     depressed
                     small
                     color="accent-dark"
-                    @click="actionHandler({ type: 'add' })"
+                    @click="actionHandler({ type: USER_ADMIN_ACTIONS.ADD })"
                 >
-                    + {{ $t('addUser') }}
+                    + {{ userAdminActions[USER_ADMIN_ACTIONS.ADD].text }}
                 </v-btn>
             </div>
         </portal>
@@ -43,12 +43,28 @@
                     fixedHeader
                 >
                     <template v-slot:actions="{ data: { item } }">
-                        <v-btn icon @click="actionHandler({ type: 'update', user: item })">
-                            <v-icon size="18" color="primary"> $vuetify.icons.edit </v-icon>
-                        </v-btn>
-                        <v-btn icon @click="actionHandler({ type: 'delete', user: item })">
-                            <v-icon size="18" color="error"> $vuetify.icons.delete </v-icon>
-                        </v-btn>
+                        <v-tooltip
+                            v-for="action in Object.values(userAdminActions).filter(
+                                item => item.type !== USER_ADMIN_ACTIONS.ADD
+                            )"
+                            :key="action.text"
+                            top
+                            transition="slide-y-transition"
+                            content-class="shadow-drop color text-navigation py-1 px-4"
+                        >
+                            <template v-slot:activator="{ on }">
+                                <v-btn
+                                    icon
+                                    v-on="on"
+                                    @click="actionHandler({ type: action.type, user: item })"
+                                >
+                                    <v-icon size="18" :color="action.color">
+                                        {{ action.icon }}
+                                    </v-icon>
+                                </v-btn>
+                            </template>
+                            <span>{{ action.text }}</span>
+                        </v-tooltip>
                     </template>
                 </data-table>
             </div>
@@ -76,7 +92,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState, mapActions } from 'vuex'
+import { mapState, mapActions, mapGetters } from 'vuex'
 import UserDialog from './UserDialog'
 export default {
     components: {
@@ -102,7 +118,9 @@ export default {
         ...mapState({
             search_keyword: 'search_keyword',
             all_inet_users: state => state.user.all_inet_users,
+            USER_ADMIN_ACTIONS: state => state.app_config.USER_ADMIN_ACTIONS,
         }),
+        ...mapGetters({ getUserAdminActions: 'user/getUserAdminActions' }),
         tableRows() {
             let rows = []
             for (const user of this.all_inet_users) {
@@ -110,6 +128,9 @@ export default {
                 rows.push({ id, role: account, type })
             }
             return rows
+        },
+        userAdminActions() {
+            return this.getUserAdminActions({ scope: this })
         },
     },
     watch: {

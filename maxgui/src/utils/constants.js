@@ -182,4 +182,5 @@ export const APP_CONFIG = Object.freeze({
         REJOIN: 'async-rejoin',
     }),
     USER_ROLES: Object.freeze({ ADMIN: 'admin', BASIC: 'basic' }),
+    USER_ADMIN_ACTIONS: Object.freeze({ DELETE: 'delete', UPDATE: 'update', ADD: 'add' }),
 })

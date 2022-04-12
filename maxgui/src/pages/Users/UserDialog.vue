@@ -2,17 +2,17 @@
     <base-dialog v-bind="{ ...$attrs }" :saveText="type" v-on="$listeners">
         <template v-slot:form-body>
             <p
-                v-if="type === 'delete'"
+                v-if="type === USER_ADMIN_ACTIONS.DELETE"
                 class="confirmations-text"
-                v-html="$t(`confirmations.${type}`, { targetId: currUser.id })"
+                v-html="$t(`confirmations.${USER_ADMIN_ACTIONS.DELETE}`, { targetId: currUser.id })"
             />
-            <div v-if="type === 'update'" class="d-flex align-center mb-2">
+            <div v-if="type === USER_ADMIN_ACTIONS.UPDATE" class="d-flex align-center mb-2">
                 <v-icon size="20" class="mr-1">$vuetify.icons.user </v-icon>
                 <span>{{ currUser.id }}</span>
             </div>
-            <template v-if="type === 'update' || type === 'add'">
+            <template v-if="type === USER_ADMIN_ACTIONS.UPDATE || type === USER_ADMIN_ACTIONS.ADD">
                 <v-text-field
-                    v-if="type === 'add'"
+                    v-if="type === USER_ADMIN_ACTIONS.ADD"
                     v-model="currUser.id"
                     :rules="rule($t('username'))"
                     class="std error--text__bottom mb-4"
@@ -27,7 +27,7 @@
                     hide-details="auto"
                 />
                 <label
-                    v-if="type === 'update'"
+                    v-if="type === USER_ADMIN_ACTIONS.UPDATE"
                     class="field__label color text-small-text label-required"
                 >
                     {{ $t('newPass') }}
@@ -38,13 +38,13 @@
                     :type="isPwdVisible ? 'text' : 'password'"
                     class="std std-password error--text__bottom"
                     autocomplete="new-password"
-                    :autofocus="type === 'update'"
+                    :autofocus="type === USER_ADMIN_ACTIONS.UPDATE"
                     single-line
                     dense
                     :height="36"
                     outlined
                     required
-                    :placeholder="$t(type === 'add' ? 'password' : '')"
+                    :placeholder="$t(type === USER_ADMIN_ACTIONS.ADD ? 'password' : '')"
                     hide-details="auto"
                 >
                     <v-icon slot="append" size="20" @click="isPwdVisible = !isPwdVisible">
@@ -52,7 +52,7 @@
                     </v-icon>
                 </v-text-field>
 
-                <template v-if="type === 'add'">
+                <template v-if="type === USER_ADMIN_ACTIONS.ADD">
                     <v-select
                         v-model="currUser.role"
                         :items="Object.values(USER_ROLES)"
@@ -93,7 +93,7 @@ export default {
     name: 'user-dialog',
     inheritAttrs: false,
     props: {
-        type: { type: String, required: true }, // delete, add or update
+        type: { type: String, required: true }, // check USER_ADMIN_ACTIONS
         user: { type: Object, default: null },
     },
     data() {
@@ -102,7 +102,10 @@ export default {
         }
     },
     computed: {
-        ...mapState({ USER_ROLES: state => state.app_config.USER_ROLES }),
+        ...mapState({
+            USER_ROLES: state => state.app_config.USER_ROLES,
+            USER_ADMIN_ACTIONS: state => state.app_config.USER_ADMIN_ACTIONS,
+        }),
         currUser: {
             get() {
                 return this.user

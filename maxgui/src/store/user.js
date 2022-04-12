@@ -119,12 +119,13 @@ export default {
          * @param {String} payload.role - admin or basic. Required for mode `post`
          * @param {Function} payload.callback - callback function after receiving 204 (response ok)
          */
-        async manageInetUser({ commit }, payload) {
+        async manageInetUser({ commit, rootState }, payload) {
             try {
                 let res
                 let message
+                const { ADD, UPDATE, DELETE } = rootState.app_config.USER_ADMIN_ACTIONS
                 switch (payload.mode) {
-                    case 'add':
+                    case ADD:
                         res = await this.$http.post(`/users/inet`, {
                             data: {
                                 id: payload.id,
@@ -134,7 +135,7 @@ export default {
                         })
                         message = [`Network User ${payload.id} is created`]
                         break
-                    case 'update':
+                    case UPDATE:
                         res = await this.$http.patch(`/users/inet/${payload.id}`, {
                             data: {
                                 attributes: { password: payload.password },
@@ -142,7 +143,7 @@ export default {
                         })
                         message = [`Network User ${payload.id} is updated`]
                         break
-                    case 'delete':
+                    case DELETE:
                         res = await this.$http.delete(`/users/inet/${payload.id}`)
                         message = [`Network user ${payload.id} is deleted`]
                         break
@@ -159,6 +160,33 @@ export default {
                 const logger = this.vue.$logger('store-user-manageInetUser')
                 logger.error(e)
             }
+        },
+    },
+    getters: {
+        getUserAdminActions: (state, getters, rootState) => {
+            const { DELETE, UPDATE, ADD } = rootState.app_config.USER_ADMIN_ACTIONS
+            // scope is needed to access $t
+            return ({ scope }) => ({
+                [UPDATE]: {
+                    text: scope.$t(`userOps.actions.${UPDATE}`),
+                    type: UPDATE,
+                    icon: '$vuetify.icons.edit',
+                    iconSize: 18,
+                    color: 'primary',
+                },
+                [DELETE]: {
+                    text: scope.$t(`userOps.actions.${DELETE}`),
+                    type: DELETE,
+                    icon: ' $vuetify.icons.delete',
+                    iconSize: 18,
+                    color: 'error',
+                },
+                [ADD]: {
+                    text: scope.$t(`userOps.actions.${ADD}`),
+                    type: ADD,
+                    color: 'accent-dark',
+                },
+            })
         },
     },
 }
