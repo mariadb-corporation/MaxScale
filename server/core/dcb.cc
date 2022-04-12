@@ -539,33 +539,28 @@ bool DCB::read_SSL(size_t maxbytes)
         else
         {
             keep_reading = false;
+            socket_cleared = true;
+
             switch (SSL_get_error(m_encryption.handle, ret))
             {
             case SSL_ERROR_ZERO_RETURN:
                 // SSL-connection closed.
-                socket_cleared = true;
                 trigger_hangup_event();
                 break;
 
             case SSL_ERROR_WANT_READ:
                 // No more data can be read, return to poll. This is equivalent to EWOULDBLOCK.
                 m_encryption.read_want_write = false;
-                socket_cleared = true;
                 break;
 
             case SSL_ERROR_WANT_WRITE:
                 // Read-operation needs to write data but socket is not writable. Return to poll,
                 // wait for a write-ready-event and then read again.
                 m_encryption.read_want_write = true;
-                socket_cleared = true;
                 break;
 
             default:
                 success = (log_errors_SSL(ret) >= 0);
-                if (!success)
-                {
-                    socket_cleared = true;
-                }
                 break;
             }
         }
