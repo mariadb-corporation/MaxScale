@@ -541,6 +541,24 @@ bool Worker::remove_pollable(Pollable* pPollable)
     {
         mxb::atomic::add(&m_nCurrent_descriptors, -1, mxb::atomic::RELAXED);
 
+        if (!m_scheduled_polls.empty())
+        {
+            auto it = m_scheduled_polls.find(fd);
+            if (it != m_scheduled_polls.end())
+            {
+                m_scheduled_polls.erase(it);
+            }
+        }
+
+        if (!m_pending_polls.empty())
+        {
+            auto it = m_pending_polls.find(fd);
+            if (it != m_pending_polls.end())
+            {
+                m_pending_polls.erase(it);
+            }
+        }
+
         pPollable->set_polling_worker(nullptr);
     }
     else
@@ -914,6 +932,7 @@ TimePoint Worker::deliver_events(uint64_t cycle_start,
     ++m_statistics.qtimes[std::min(qtime, STATISTICS::N_QUEUE_TIMES)];
     m_statistics.maxqtime = std::max(m_statistics.maxqtime, qtime);
 
+    int fd = pPollable->poll_fd();
     uint32_t actions = pPollable->handle_poll_events(this, events);
 
     m_statistics.n_accept += bool(actions & poll_action::ACCEPT);
@@ -921,6 +940,14 @@ TimePoint Worker::deliver_events(uint64_t cycle_start,
     m_statistics.n_write += bool(actions & poll_action::WRITE);
     m_statistics.n_hup += bool(actions & poll_action::HUP);
     m_statistics.n_error += bool(actions & poll_action::ERROR);
+
+    if (actions & poll_action::INTERRUPTED)
+    {
+        m_statistics.n_interrupted += 1;
+
+        PendingPoll pending_poll = { events, pPollable };
+        m_pending_polls.emplace(fd, pending_poll);
+    }
 
     /** Calculate event execution statistics */
     loop_now = maxbase::Clock::now();
@@ -955,6 +982,13 @@ void Worker::poll_waitevents()
         int timeout = duration_cast<milliseconds>(m_load.about_to_wait(now)).count();
         // Don't allow a 0 timeout as that would cause fast looping for 1ms
         timeout = std::max(timeout, 1);
+
+        if (!m_pending_polls.empty())
+        {
+            // But we want it to return immediately if we know there are pending
+            // polls to handle.
+            timeout = 0;
+        }
         int nfds = epoll_wait(m_epoll_fd, events, m_max_events, timeout);
 
         m_epoll_tick_now = mxb::Clock::now();
@@ -997,6 +1031,10 @@ void Worker::poll_waitevents()
             ++m_statistics.n_fds[std::min(nfds - 1, STATISTICS::MAXNFDS - 1)];
         }
 
+        mxb_assert(m_scheduled_polls.empty());
+
+        m_scheduled_polls.swap(m_pending_polls);
+
         // Set loop_now before the loop, and inside the loop
         // just before looping back to the top.
         auto loop_now = m_epoll_tick_now;
@@ -1004,8 +1042,32 @@ void Worker::poll_waitevents()
         for (int i = 0; i < nfds; i++)
         {
             Pollable* pPollable = static_cast<Pollable*>(events[i].data.ptr);
+            int fd = pPollable->poll_fd();
 
             loop_now = deliver_events(cycle_start, loop_now, pPollable, events[i].events);
+
+            auto it = m_scheduled_polls.find(fd);
+            if (it != m_scheduled_polls.end())
+            {
+                // If there was a new event for the file descriptor, then
+                // we have already called the handler, so it had better be
+                // removed from the scheduled polls.
+                m_scheduled_polls.erase(it);
+            }
+        }
+
+        // Can't just iterate over it, in case the callback removes
+        // pollables from the worker.
+        while (!m_scheduled_polls.empty())
+        {
+            auto it = m_scheduled_polls.begin();
+            PendingPoll pending_poll = it->second;
+            m_scheduled_polls.erase(it);
+
+            auto* pPollable = pending_poll.pPollable;
+            auto events = pending_poll.events;
+
+            loop_now = deliver_events(cycle_start, loop_now, pPollable, events);
         }
 
         if (!m_lcalls.empty())

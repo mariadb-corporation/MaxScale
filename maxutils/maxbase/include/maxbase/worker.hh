@@ -48,17 +48,18 @@ struct WORKER_STATISTICS
     static const int     MAXNFDS = 10;
     static const int64_t N_QUEUE_TIMES = 30;
 
-    int64_t n_read = 0;     /*< Number of read events   */
-    int64_t n_write = 0;    /*< Number of write events  */
-    int64_t n_error = 0;    /*< Number of error events  */
-    int64_t n_hup = 0;      /*< Number of hangup events */
-    int64_t n_accept = 0;   /*< Number of accept events */
-    int64_t n_polls = 0;    /*< Number of poll cycles   */
-    int64_t n_pollev = 0;   /*< Number of polls returning events */
-    int64_t evq_avg = 0;    /*< Average event queue length */
-    int64_t evq_max = 0;    /*< Maximum event queue length */
-    int64_t maxqtime = 0;
-    int64_t maxexectime = 0;
+    int64_t n_read = 0;        /*< Number of read events   */
+    int64_t n_write = 0;       /*< Number of write events  */
+    int64_t n_error = 0;       /*< Number of error events  */
+    int64_t n_hup = 0;         /*< Number of hangup events */
+    int64_t n_accept = 0;      /*< Number of accept events */
+    int64_t n_polls = 0;       /*< Number of poll cycles   */
+    int64_t n_pollev = 0;      /*< Number of polls returning events */
+    int64_t n_interrupted = 0; /*< Number of times handling of events has been interrupted */
+    int64_t evq_avg = 0;       /*< Average event queue length */
+    int64_t evq_max = 0;       /*< Maximum event queue length */
+    int64_t maxqtime = 0;      /*< Maximum duration from epoll_wait() -> handling. */
+    int64_t maxexectime = 0;   /*< Maximum duration of event handling (callback). */
 
     std::array<int64_t, MAXNFDS>            n_fds {};   /*< Number of wakeups with particular n_fds value */
     std::array<uint32_t, N_QUEUE_TIMES + 1> qtimes {};
@@ -1156,10 +1157,17 @@ private:
 
     void run(mxb::Semaphore* pSem);
 
-    typedef DelegatingTimer<Worker>             PrivateTimer;
-    typedef std::multimap<int64_t, DCall*>      DCallsByTime;
-    typedef std::unordered_map<DCId, DCall*>    DCallsById;
-    typedef std::vector<std::function<void ()>> LCalls;
+    struct PendingPoll
+    {
+        uint32_t  events;
+        Pollable* pPollable;
+    };
+
+    using PrivateTimer = DelegatingTimer<Worker>;
+    using DCallsByTime = std::multimap<int64_t, DCall*>;
+    using DCallsById   = std::unordered_map<DCId, DCall*>;
+    using PendingPolls = std::unordered_map<int, PendingPoll>;
+    using LCalls       = std::vector<std::function<void ()>>;
 
     const int32_t m_id;                        /*< The id of the worker. */
     uint32_t      m_max_events;                /*< Maximum numer of events in each epoll_wait call. */
@@ -1180,5 +1188,7 @@ private:
     TimePoint     m_epoll_tick_now;            /*< TimePoint when epoll_tick() was called */
     DCId          m_prev_dcid {NO_CALL};       /*< Previous delayed call id. */
     LCalls        m_lcalls;                    /*< Calls to be made before return to epoll_wait(). */
+    PendingPolls  m_scheduled_polls;           /*< Calls to be made during current epoll_wait(). */
+    PendingPolls  m_pending_polls;             /*< Calls to be made at next epoll_wait(). */
 };
 }
