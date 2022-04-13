@@ -3,7 +3,7 @@
         :toggleOnClick="() => (showParameters = !showParameters)"
         :isContentVisible="showParameters"
         :title="`${$tc('parameters', 2)}`"
-        :editable="isTableEditable"
+        :editable="isAdmin && isTableEditable"
         :isEditing="editableCell"
         :onEdit="() => (editableCell = true)"
         :doneEditingCb="() => (showConfirmDialog = true)"
@@ -119,7 +119,7 @@ PROPS:
 - overridingModuleParams props allows to override parameters in module_parameters. This props is only used
   in case module_prameters doesn't include type info for nested object. e.g. log_throttling parameter
  */
-import { mapState } from 'vuex'
+import { mapState, mapGetters } from 'vuex'
 import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
 import getParamInfo from 'mixins/getParamInfo'
 export default {
@@ -174,10 +174,11 @@ export default {
             module_parameters: 'module_parameters',
             search_keyword: 'search_keyword',
         }),
-        isLoading: function() {
+        ...mapGetters({ isAdmin: 'user/isAdmin' }),
+        isLoading() {
             return this.isMounting ? true : this.overlay_type === OVERLAY_TRANSPARENT_LOADING
         },
-        treeParams: function() {
+        treeParams() {
             const {
                 lodash: { cloneDeep },
                 objToTree,
@@ -190,7 +191,7 @@ export default {
             })
         },
 
-        parametersTableRow: function() {
+        parametersTableRow() {
             const {
                 lodash: { cloneDeep },
             } = this.$help
@@ -200,11 +201,11 @@ export default {
             return treeParamsClone
         },
 
-        hasChanged: function() {
+        hasChanged() {
             if (this.changedParams.length > 0 && this.isValid) return true
             else return false
         },
-        moduleParams: function() {
+        moduleParams() {
             return this.overridingModuleParams
                 ? this.overridingModuleParams
                 : this.module_parameters
@@ -214,7 +215,7 @@ export default {
         },
     },
     watch: {
-        showConfirmDialog: function(val) {
+        showConfirmDialog(val) {
             if (val && this.editableCell) this.$refs.form.validate()
         },
     },
