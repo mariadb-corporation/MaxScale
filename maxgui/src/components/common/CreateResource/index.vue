@@ -1,5 +1,5 @@
 <template>
-    <div>
+    <div v-if="isAdmin">
         <v-btn
             width="160"
             outlined
@@ -158,6 +158,7 @@ export default {
             all_services: state => state.service.all_services,
         }),
         ...mapGetters({
+            isAdmin: 'user/isAdmin',
             getModulesByType: 'maxscale/getModulesByType',
 
             getAllServicesMap: 'service/getAllServicesMap',

@@ -22,7 +22,9 @@
                     </truncate-string>
 
                     <v-menu
-                        v-if="$slots['setting-menu-list-item'] || $slots['setting-menu']"
+                        v-if="
+                            isAdmin && ($slots['setting-menu-list-item'] || $slots['setting-menu'])
+                        "
                         transition="slide-y-transition"
                         offset-y
                         content-class="setting-menu"
@@ -55,13 +57,14 @@
     </div>
 </template>
 <script>
-import { mapState } from 'vuex'
+import { mapState, mapGetters } from 'vuex'
 import goBack from 'mixins/goBack'
 export default {
     name: 'details-page-title',
     mixins: [goBack],
     computed: {
         ...mapState(['prev_route']),
+        ...mapGetters({ isAdmin: 'user/isAdmin' }),
     },
 }
 </script>

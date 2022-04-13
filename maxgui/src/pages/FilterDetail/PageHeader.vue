@@ -28,9 +28,9 @@
         </template>
         <template v-slot:append>
             <portal to="page-header--right">
-                <global-search class="mr-4 d-inline-block" />
+                <global-search class="d-inline-block" />
                 <create-resource
-                    class="d-inline-block"
+                    class="ml-4 d-inline-block"
                     :defRelationshipObj="{
                         id: $route.params.id,
                         type: RELATIONSHIP_TYPES.FILTERS,

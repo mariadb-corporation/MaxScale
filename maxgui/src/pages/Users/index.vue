@@ -14,14 +14,14 @@
         </portal>
         <portal to="page-header--right">
             <div class="d-flex align-center">
-                <global-search class="mr-4" />
+                <global-search />
                 <v-btn
                     v-if="isAdmin"
                     width="160"
                     outlined
                     height="36"
                     rounded
-                    class="text-capitalize px-8 font-weight-medium"
+                    class="ml-4 text-capitalize px-8 font-weight-medium"
                     depressed
                     small
                     color="accent-dark"
