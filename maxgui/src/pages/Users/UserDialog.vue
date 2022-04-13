@@ -11,6 +11,15 @@
                 <span>{{ currUser.id }}</span>
             </div>
             <template v-if="type === USER_ADMIN_ACTIONS.UPDATE || type === USER_ADMIN_ACTIONS.ADD">
+                <!-- [DOM] Password forms should have (optionally hidden) username fields for accessibility:
+                     (More info: https://goo.gl/9p2vKq) -->
+                <input
+                    v-if="type === USER_ADMIN_ACTIONS.UPDATE"
+                    hidden
+                    name="username"
+                    autocomplete="username"
+                    :value="currUser.id"
+                />
                 <v-text-field
                     v-if="type === USER_ADMIN_ACTIONS.ADD"
                     v-model="currUser.id"
