@@ -66,7 +66,7 @@ public:
     class QueryInfo
     {
     public:
-        QueryInfo(const std::shared_ptr<GWBUF>& sQuery);
+        explicit QueryInfo(GWBUF query);
 
         json_t* as_json() const;
 
@@ -75,9 +75,9 @@ public:
             return m_complete;
         }
 
-        const std::shared_ptr<GWBUF>& query() const
+        const GWBUF& query() const
         {
-            return m_sQuery;
+            return m_query;
         }
 
         timespec time_completed() const
@@ -96,7 +96,7 @@ public:
         };
 
     private:
-        std::shared_ptr<GWBUF>  m_sQuery;           /*< The packet, COM_QUERY *or* something else. */
+        GWBUF                   m_query;            /*< The packet, COM_QUERY *or* something else. */
         timespec                m_received;         /*< When was it received. */
         timespec                m_completed;        /*< When was it completed. */
         std::vector<ServerInfo> m_server_infos;     /*< When different servers responded. */
@@ -131,7 +131,7 @@ public:
     std::string set_variable_value(const char* name_begin, const char* name_end,
                                    const char* value_begin, const char* value_end) override;
     bool remove_variable(const char* name, void** context) override;
-    void retain_statement(GWBUF* pBuffer) override;
+    void retain_statement(const GWBUF& buffer) override;
     void dump_statements() const override;
     void book_server_response(SERVER* pServer, bool final_response) override;
     void book_last_as_complete();

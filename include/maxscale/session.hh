@@ -327,9 +327,9 @@ public:
     /**
      * @brief Retain provided statement, if configured to do so.
      *
-     * @param buffer   Buffer assumed to contain a full statement.
+     * @param buffer Buffer assumed to contain a full statement.
      */
-    virtual void retain_statement(GWBUF* pBuffer) = 0;
+    virtual void retain_statement(const GWBUF& buffer) = 0;
 
     /**
      * @brief Dump the last statements, if statements have been retained.

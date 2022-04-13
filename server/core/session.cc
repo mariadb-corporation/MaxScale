@@ -654,23 +654,21 @@ void Session::set_client_dcb(ClientDCB* dcb)
 namespace
 {
 
-bool get_cmd_and_stmt(GWBUF* pBuffer, const char** ppCmd, char** ppStmt, int* pLen)
+void get_cmd_and_stmt(const GWBUF& buffer, const char** ppCmd, const char** ppStmt, int* pLen)
 {
     *ppCmd = nullptr;
     *ppStmt = nullptr;
     *pLen = 0;
 
-    const auto& sql = pBuffer->get_sql();
+    const auto& sql = buffer.get_sql();
 
     if (!sql.empty())
     {
-        auto cmd = mxs_mysql_get_command(pBuffer);
+        auto cmd = mxs_mysql_get_command(&buffer);
         *ppCmd = STRPACKETTYPE(cmd);
-        *ppStmt = const_cast<char*>(sql.c_str());
+        *ppStmt = sql.c_str();
         *pLen = sql.length();
     }
-
-    return false;
 }
 }
 
@@ -692,16 +690,16 @@ void Session::dump_statements() const
         for (auto i = m_last_queries.rbegin(); i != m_last_queries.rend(); ++i)
         {
             const QueryInfo& info = *i;
-            GWBUF* pBuffer = info.query().get();
+            const auto& buffer = info.query();
             timespec ts = info.time_completed();
             struct tm* tm = localtime(&ts.tv_sec);
             char timestamp[20];
             strftime(timestamp, 20, "%Y-%m-%d %H:%M:%S", tm);
 
             const char* pCmd;
-            char* pStmt;
+            const char* pStmt;
             int len;
-            bool deallocate = get_cmd_and_stmt(pBuffer, &pCmd, &pStmt, &len);
+            get_cmd_and_stmt(buffer, &pCmd, &pStmt, &len);
 
             if (pStmt)
             {
@@ -715,11 +713,6 @@ void Session::dump_statements() const
                     // log the session id ourselves.
 
                     MXB_NOTICE("(%" PRIu64 ") Stmt %d(%s): %.*s", id(), n, timestamp, len, pStmt);
-                }
-
-                if (deallocate)
-                {
-                    MXB_FREE(pStmt);
                 }
             }
 
@@ -843,20 +836,16 @@ bool Session::remove_variable(const char* name, void** context)
     return removed;
 }
 
-void Session::retain_statement(GWBUF* pBuffer)
+void Session::retain_statement(const GWBUF& buffer)
 {
     if (m_retain_last_statements)
     {
         mxb_assert(m_last_queries.size() <= m_retain_last_statements);
-
-        std::shared_ptr<GWBUF> sBuffer(gwbuf_clone_shallow(pBuffer), std::default_delete<GWBUF>());
-
-        m_last_queries.push_front(QueryInfo(sBuffer));
-
-        if (m_last_queries.size() > m_retain_last_statements)
+        if (m_last_queries.size() >= m_retain_last_statements)
         {
             m_last_queries.pop_back();
         }
+        m_last_queries.emplace_front(buffer.deep_clone());
 
         if (m_last_queries.size() == 1)
         {
@@ -943,8 +932,8 @@ void Session::reset_server_bookkeeping()
     }
 }
 
-Session::QueryInfo::QueryInfo(const std::shared_ptr<GWBUF>& sQuery)
-    : m_sQuery(sQuery)
+Session::QueryInfo::QueryInfo(GWBUF query)
+    : m_query(std::move(query))
 {
     clock_gettime(CLOCK_REALTIME_COARSE, &m_received);
     m_completed.tv_sec = 0;
@@ -975,9 +964,9 @@ json_t* Session::QueryInfo::as_json() const
     json_t* pQuery = json_object();
 
     const char* pCmd;
-    char* pStmt;
+    const char* pStmt;
     int len;
-    bool deallocate = get_cmd_and_stmt(m_sQuery.get(), &pCmd, &pStmt, &len);
+    get_cmd_and_stmt(m_query, &pCmd, &pStmt, &len);
 
     if (pCmd)
     {
@@ -987,11 +976,6 @@ json_t* Session::QueryInfo::as_json() const
     if (pStmt)
     {
         json_object_set_new(pQuery, "statement", json_stringn(pStmt, len));
-
-        if (deallocate)
-        {
-            MXB_FREE(pStmt);
-        }
     }
 
     char iso_time[ISO_TIME_LEN + 1];

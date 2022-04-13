@@ -109,8 +109,7 @@ uint32_t get_prepare_type(GWBUF* buffer)
     if (mxs_mysql_get_command(buffer) == MXS_COM_STMT_PREPARE)
     {
 #ifdef SS_DEBUG
-        GWBUF stmt(*buffer);
-        stmt.ensure_unique();
+        GWBUF stmt = buffer->deep_clone();
         stmt.data()[4] = MXS_COM_QUERY;
         mxb_assert(qc_get_type_mask(&stmt) == (qc_get_type_mask(buffer) & ~QUERY_TYPE_PREPARE_STMT));
 #endif

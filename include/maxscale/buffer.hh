@@ -116,7 +116,9 @@ public:
     GWBUF& operator=(GWBUF&& rhs) noexcept;
 
     /**
-     * Shallow-clones the source buffer.
+     * Shallow-clones the source buffer. In general, should not be used to create long-term copies as this
+     * prevents freeing the underlying data. GWBUFs traveling along the routing chain are best
+     * recycled when written to a socket. Any existing shallow copies prevent this from happening.
      */
     explicit GWBUF(const GWBUF& rhs);
 
@@ -124,6 +126,14 @@ public:
      * Shallow-clones the source buffer.
      */
     GWBUF& operator=(const GWBUF& rhs);
+
+    /*
+     * Deep-clones the source buffer. Only allocates minimal capacity. Is best used when the GWBUF is
+     * stored for later use.
+     *
+     * @return Cloned buffer
+     */
+    GWBUF deep_clone() const;
 
     /**
      * Set classifier data. Can only be set once.
@@ -307,6 +317,7 @@ private:
 
     void move_helper(GWBUF&& other) noexcept;
     void clone_helper(const GWBUF& other);
+    void shallow_clone_helper(const GWBUF& other);
 };
 
 inline bool GWBUF::type_is_undefined() const

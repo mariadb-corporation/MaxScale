@@ -145,14 +145,14 @@ GWBUF::GWBUF(size_t reserve_size)
 GWBUF::GWBUF(const GWBUF& rhs)
     : GWBUF()
 {
-    clone_helper(rhs);
+    shallow_clone_helper(rhs);
 }
 
 GWBUF& GWBUF::operator=(const GWBUF& rhs)
 {
     if (this != &rhs)
     {
-        clone_helper(rhs);
+        shallow_clone_helper(rhs);
     }
     return *this;
 }
@@ -185,6 +185,14 @@ void GWBUF::move_helper(GWBUF&& rhs) noexcept
     m_sql = move(rhs.m_sql);
     m_canonical = move(rhs.m_canonical);
     m_markers = move(rhs.m_markers);
+}
+
+GWBUF GWBUF::deep_clone() const
+{
+    GWBUF rval;
+    rval.clone_helper(*this);
+    rval.append(*this);
+    return rval;
 }
 
 /**
@@ -227,6 +235,11 @@ void GWBUF::clone_helper(const GWBUF& other)
     m_sql = other.m_sql;
     m_canonical = other.m_canonical;
     // No need to copy 'markers'.
+}
+
+void GWBUF::shallow_clone_helper(const GWBUF& other)
+{
+    clone_helper(other);
 
     m_start = other.m_start;
     m_end = other.m_end;

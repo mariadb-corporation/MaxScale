@@ -1287,7 +1287,7 @@ bool MariaDBClientConnection::route_statement(GWBUF&& buffer)
     if (expecting_response)
     {
         ++m_num_responses;
-        m_session->retain_statement(&buffer);
+        m_session->retain_statement(buffer);
     }
 
     if (recording)
