@@ -44,9 +44,12 @@
                 >
                     <template v-slot:actions="{ data: { item } }">
                         <v-tooltip
-                            v-for="action in Object.values(userAdminActions).filter(
-                                item => item.type !== USER_ADMIN_ACTIONS.ADD
-                            )"
+                            v-for="action in [
+                                userAdminActions[USER_ADMIN_ACTIONS.UPDATE],
+                                ...(logged_in_user.name === item.id
+                                    ? []
+                                    : [userAdminActions[USER_ADMIN_ACTIONS.DELETE]]),
+                            ]"
                             :key="action.text"
                             top
                             transition="slide-y-transition"
