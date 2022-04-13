@@ -66,6 +66,16 @@
                             <span>{{ action.text }}</span>
                         </v-tooltip>
                     </template>
+                    <template v-for="h in tableHeaders" v-slot:[`${h.value}`]="{ data: { item } }">
+                        <span
+                            :key="h.value"
+                            :class="{
+                                'font-weight-bold': logged_in_user.name === item.id, // Bold active user
+                            }"
+                        >
+                            {{ item[h.value] }}
+                        </span>
+                    </template>
                 </data-table>
             </div>
             <user-dialog
@@ -119,6 +129,7 @@ export default {
             search_keyword: 'search_keyword',
             all_inet_users: state => state.user.all_inet_users,
             USER_ADMIN_ACTIONS: state => state.app_config.USER_ADMIN_ACTIONS,
+            logged_in_user: state => state.user.logged_in_user,
         }),
         ...mapGetters({ getUserAdminActions: 'user/getUserAdminActions' }),
         tableRows() {
