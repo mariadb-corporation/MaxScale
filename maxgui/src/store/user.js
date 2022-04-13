@@ -40,7 +40,7 @@ export default {
         },
     },
     actions: {
-        async login({ commit }, { rememberMe, auth }) {
+        async login({ commit, dispatch }, { rememberMe, auth }) {
             try {
                 /* Using $authHttp instance, instead of using $http as it's configured to have global interceptor*/
                 this.$refreshAxiosToken()
@@ -55,6 +55,7 @@ export default {
                         isLoggedIn: Boolean(this.vue.$help.getCookie('token_body')),
                     })
                     this.router.push(this.router.app.$route.query.redirect || '/dashboard/servers')
+                    await dispatch('fetchLoggedInUserAttrs')
                 }
             } catch (e) {
                 let errMsg = ''
@@ -102,6 +103,20 @@ export default {
             localStorage.setItem('maxgui', JSON.stringify({ persisted: persistedState }))
         },
         // ------------------------------------------------ Inet (network) users ---------------------------------
+        async fetchLoggedInUserAttrs({ commit, state }) {
+            try {
+                const res = await this.$http.get(`/users/inet/${state.logged_in_user.name}`)
+                // response ok
+                if (res.status === 200)
+                    commit('SET_LOGGED_IN_USER', {
+                        ...state.logged_in_user,
+                        attributes: res.data.data.attributes,
+                    })
+            } catch (e) {
+                const logger = this.vue.$logger('store-user-fetchLoggedInUserAttrs')
+                logger.error(e)
+            }
+        },
         async fetchAllNetworkUsers({ commit }) {
             try {
                 const res = await this.$http.get(`/users/inet`)
@@ -163,6 +178,10 @@ export default {
         },
     },
     getters: {
+        getLoggedInUserRole: state => {
+            const { attributes: { account = '' } = {} } = state.logged_in_user
+            return account
+        },
         getUserAdminActions: (state, getters, rootState) => {
             const { DELETE, UPDATE, ADD } = rootState.app_config.USER_ADMIN_ACTIONS
             // scope is needed to access $t
