@@ -1050,7 +1050,7 @@ int Listener::poll_fd() const
     return fd();
 }
 
-uint32_t Listener::handle_poll_events(mxb::Worker* worker, uint32_t events)
+uint32_t Listener::handle_poll_events(mxb::Worker* worker, uint32_t events, Pollable::Context)
 {
     accept_connections();
     return mxb::poll_action::ACCEPT;

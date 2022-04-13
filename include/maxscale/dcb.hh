@@ -635,7 +635,7 @@ private:
     static void free(DCB* dcb);
 
     int      poll_fd() const override;
-    uint32_t handle_poll_events(mxb::Worker* worker, uint32_t events) override;
+    uint32_t handle_poll_events(mxb::Worker* worker, uint32_t events, Pollable::Context context) override;
     uint32_t event_handler(uint32_t events);
     uint32_t process_events(uint32_t events);
 

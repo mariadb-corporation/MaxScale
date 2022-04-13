@@ -232,11 +232,10 @@ void WorkerTimer::cancel()
     start(0);
 }
 
-uint32_t WorkerTimer::handle_poll_events(Worker* pWorker, uint32_t events)
+uint32_t WorkerTimer::handle_poll_events(Worker* pWorker, uint32_t events, Pollable::Context)
 {
     mxb_assert(pWorker == m_pWorker);
-    mxb_assert(events & EPOLLIN);
-    mxb_assert((events & ~EPOLLIN) == 0);
+    mxb_assert(((events & EPOLLIN) != 0) && ((events & ~EPOLLIN) == 0));
 
     // Read all events
     uint64_t expirations;
@@ -931,7 +930,8 @@ long time_in_100ms_ticks(maxbase::TimePoint tp)
 TimePoint Worker::deliver_events(uint64_t cycle_start,
                                  TimePoint loop_now,
                                  Pollable* pPollable,
-                                 uint32_t events)
+                                 uint32_t events,
+                                 Pollable::Context context)
 {
     mxb_assert(pPollable->is_shared() || pPollable->polling_worker() == this);
 
@@ -943,7 +943,7 @@ TimePoint Worker::deliver_events(uint64_t cycle_start,
     m_statistics.maxqtime = std::max(m_statistics.maxqtime, qtime);
 
     int fd = pPollable->poll_fd();
-    uint32_t actions = pPollable->handle_poll_events(this, events);
+    uint32_t actions = pPollable->handle_poll_events(this, events, context);
 
     m_statistics.n_accept += bool(actions & poll_action::ACCEPT);
     m_statistics.n_read += bool(actions & poll_action::READ);
@@ -1054,7 +1054,7 @@ void Worker::poll_waitevents()
             Pollable* pPollable = static_cast<Pollable*>(events[i].data.ptr);
             int fd = pPollable->poll_fd();
 
-            loop_now = deliver_events(cycle_start, loop_now, pPollable, events[i].events);
+            loop_now = deliver_events(cycle_start, loop_now, pPollable, events[i].events, Pollable::NEW_CALL);
 
             auto it = m_scheduled_polls.find(fd);
             if (it != m_scheduled_polls.end())
@@ -1077,7 +1077,7 @@ void Worker::poll_waitevents()
             auto* pPollable = pending_poll.pPollable;
             auto events = pending_poll.events;
 
-            loop_now = deliver_events(cycle_start, loop_now, pPollable, events);
+            loop_now = deliver_events(cycle_start, loop_now, pPollable, events, Pollable::REPEATED_CALL);
         }
 
         if (!m_lcalls.empty())

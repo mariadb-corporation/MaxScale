@@ -239,7 +239,7 @@ private:
     {
         return m_fd;
     }
-    uint32_t handle_poll_events(Worker* pWorker, uint32_t events) override;
+    uint32_t handle_poll_events(Worker* pWorker, uint32_t events, Pollable::Context context) override;
 
 private:
     int     m_fd;       /**< The timerfd descriptor. */
@@ -1140,7 +1140,8 @@ private:
     TimePoint deliver_events(uint64_t cycle_start,
                              TimePoint loop_now,
                              Pollable* pPollable,
-                             uint32_t events);
+                             uint32_t events,
+                             Pollable::Context context);
 
     void poll_waitevents();
 

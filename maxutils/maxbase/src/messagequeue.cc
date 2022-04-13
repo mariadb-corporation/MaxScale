@@ -181,12 +181,11 @@ Worker* EventMessageQueue::remove_from_worker()
     return pWorker;
 }
 
-uint32_t EventMessageQueue::handle_poll_events(Worker* pWorker, uint32_t events)
+uint32_t EventMessageQueue::handle_poll_events(Worker* pWorker, uint32_t events, Pollable::Context)
 {
-    // Only the owning worker's thread should run this function.
-    mxb_assert(Worker::get_current() == m_pWorker);
-    // We only expect EPOLLIN events since that was subscribed to.
-    mxb_assert(events == EPOLLIN);
+    mxb_assert(pWorker == m_pWorker);
+    mxb_assert(((events & EPOLLIN) != 0) && ((events & ~EPOLLIN) == 0));
+
     uint32_t rc = poll_action::NOP;
 
     if (events & EPOLLIN)
@@ -478,13 +477,11 @@ Worker* PipeMessageQueue::remove_from_worker()
     return pWorker;
 }
 
-uint32_t PipeMessageQueue::handle_poll_events(Worker* pWorker, uint32_t events)
+uint32_t PipeMessageQueue::handle_poll_events(Worker* pWorker, uint32_t events, Pollable::Context)
 {
     uint32_t rc = poll_action::NOP;
 
     mxb_assert(pWorker == m_pWorker);
-
-    // We only expect EPOLLIN events.
     mxb_assert(((events & EPOLLIN) != 0) && ((events & ~EPOLLIN) == 0));
 
     if (events & EPOLLIN)

@@ -1409,8 +1409,10 @@ int DCB::poll_fd() const
     return m_fd;
 }
 
-uint32_t DCB::handle_poll_events(mxb::Worker* worker, uint32_t events)
+uint32_t DCB::handle_poll_events(mxb::Worker* worker, uint32_t events, Pollable::Context context)
 {
+    mxb_assert(worker == m_owner);
+
     uint32_t rval = 0;
 
     /**
@@ -1456,7 +1458,7 @@ public:
         {
             mxb_assert(m_dcb->m_owner == RoutingWorker::get_current());
             m_dcb->m_is_fake_event = true;
-            m_dcb->handle_poll_events(m_dcb->m_owner, m_ev);
+            m_dcb->handle_poll_events(m_dcb->m_owner, m_ev, Pollable::NEW_CALL);
             m_dcb->m_is_fake_event = false;
         }
     }

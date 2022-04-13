@@ -1025,8 +1025,10 @@ int RoutingWorker::poll_fd() const
  *
  * @return What actions were performed.
  */
-uint32_t RoutingWorker::handle_poll_events(Worker* pWorker, uint32_t events)
+uint32_t RoutingWorker::handle_poll_events(mxb::Worker* pWorker, uint32_t events, Pollable::Context context)
 {
+    mxb_assert(pWorker == this);
+
     struct epoll_event epoll_events[1];
 
     // We extract just one event
@@ -1047,7 +1049,7 @@ uint32_t RoutingWorker::handle_poll_events(Worker* pWorker, uint32_t events)
         MXB_DEBUG("1 event for routing worker %d.", id());
         Pollable* pPollable = static_cast<Pollable*>(epoll_events[0].data.ptr);
 
-        actions = pPollable->handle_poll_events(this, epoll_events[0].events);
+        actions = pPollable->handle_poll_events(this, epoll_events[0].events, Pollable::NEW_CALL);
     }
 
     return actions;

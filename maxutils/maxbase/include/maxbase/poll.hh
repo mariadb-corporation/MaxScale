@@ -40,6 +40,12 @@ public:
         SHARED  // The Pollable may be added to multiple workers.
     };
 
+    enum Context
+    {
+        NEW_CALL,     // Due to event returned from epoll_wait().
+        REPEATED_CALL // Due to previous event handling having returned poll_action::INTERRUPTED
+    };
+
     Pollable(const Pollable&) = delete;
     Pollable& operator=(const Pollable&) = delete;
 
@@ -78,8 +84,10 @@ public:
     /**
      * Handle events that have occurred on the @c Pollable's file descriptor.
      *
-     * @param worker  The worker polling the @c Pollable.
-     * @param events  The events of the @c Pollable's file descriptor.
+     * @param worker   The calling worker. If the Pollable is UNIQUE, then
+     *                 will be same as that returned by @c polling_worker().
+     * @param context  Whether it is a new or repeated call.
+     * @param events   The events of the @c Pollable's file descriptor.
      *
      * @return A mask of @c poll_action values.
      *
@@ -93,7 +101,7 @@ public:
      *       is called again, irrespective of any additional bits set in the
      *       returned value.
      */
-    virtual uint32_t handle_poll_events(Worker* worker, uint32_t events) = 0;
+    virtual uint32_t handle_poll_events(Worker* pWorker, uint32_t events, Context context) = 0;
 
 private:
     friend class Worker;

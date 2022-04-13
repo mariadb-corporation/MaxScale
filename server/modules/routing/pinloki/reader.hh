@@ -63,7 +63,7 @@ private:
         {
             return fd;
         }
-        uint32_t handle_poll_events(mxb::Worker* worker, uint32_t events) override
+        uint32_t handle_poll_events(mxb::Worker* worker, uint32_t events, Pollable::Context) override
         {
             return reader->epoll_update(this, worker, events);
         }

@@ -490,7 +490,7 @@ private:
     void fail_timed_out_endpoints();
 
     int poll_fd() const override;
-    uint32_t handle_poll_events(Worker* worker, uint32_t events) override;
+    uint32_t handle_poll_events(Worker* worker, uint32_t events, Pollable::Context context) override;
 
     class ConnPoolEntry
     {

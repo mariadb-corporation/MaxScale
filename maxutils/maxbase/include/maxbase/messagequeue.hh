@@ -211,7 +211,7 @@ private:
     {
         return m_event_fd;
     }
-    uint32_t handle_poll_events(Worker* pWorker, uint32_t events) override;
+    uint32_t handle_poll_events(Worker* pWorker, uint32_t events, Pollable::Context context) override;
     void     swap_messages_and_work();
     void     add_message(const Message& message);
 
@@ -267,7 +267,7 @@ private:
     {
         return m_read_fd;
     }
-    uint32_t handle_poll_events(Worker* pWorker, uint32_t events) override;
+    uint32_t handle_poll_events(Worker* pWorker, uint32_t events, Pollable::Context context) override;
 
 private:
     Handler& m_handler;
