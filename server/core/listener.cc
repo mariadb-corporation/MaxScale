@@ -455,7 +455,8 @@ mxs::config::Specification* Listener::specification()
 }
 
 Listener::Listener(const std::string& name)
-    : m_config(name, this)
+    : mxb::Pollable(mxb::Pollable::SHARED)
+    , m_config(name, this)
     , m_name(name)
     , m_state(CREATED)
 {

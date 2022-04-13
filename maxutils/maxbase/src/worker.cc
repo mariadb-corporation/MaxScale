@@ -504,6 +504,8 @@ void Worker::gen_random_bytes(uint8_t* pOutput, size_t nBytes)
 
 bool Worker::add_pollable(uint32_t events, Pollable* pPollable)
 {
+    mxb_assert(pPollable->is_shared() || pPollable->polling_worker() == nullptr);
+
     bool rv = true;
 
     int fd = pPollable->poll_fd();
@@ -518,7 +520,10 @@ bool Worker::add_pollable(uint32_t events, Pollable* pPollable)
         mxb::atomic::add(&m_nCurrent_descriptors, 1, mxb::atomic::RELAXED);
         mxb::atomic::add(&m_nTotal_descriptors, 1, mxb::atomic::RELAXED);
 
-        pPollable->set_polling_worker(this);
+        if (pPollable->is_unique())
+        {
+            pPollable->set_polling_worker(this);
+        }
     }
     else
     {
@@ -559,7 +564,10 @@ bool Worker::remove_pollable(Pollable* pPollable)
             }
         }
 
-        pPollable->set_polling_worker(nullptr);
+        if (pPollable->is_unique())
+        {
+            pPollable->set_polling_worker(nullptr);
+        }
     }
     else
     {
@@ -925,6 +933,8 @@ TimePoint Worker::deliver_events(uint64_t cycle_start,
                                  Pollable* pPollable,
                                  uint32_t events)
 {
+    mxb_assert(pPollable->is_shared() || pPollable->polling_worker() == this);
+
     /** Calculate event queue statistics */
     int64_t started = time_in_100ms_ticks(loop_now);
     int64_t qtime = started - cycle_start;

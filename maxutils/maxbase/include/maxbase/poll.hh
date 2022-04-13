@@ -34,11 +34,33 @@ class Worker;
 class Pollable
 {
 public:
+    enum Kind
+    {
+        UNIQUE, // The Pollable can be added to at most 1 worker.
+        SHARED  // The Pollable may be added to multiple workers.
+    };
+
     Pollable(const Pollable&) = delete;
     Pollable& operator=(const Pollable&) = delete;
 
-    Pollable()
+    Pollable(Kind kind = UNIQUE)
+        : m_kind(kind)
     {
+    }
+
+    Kind kind() const
+    {
+        return m_kind;
+    }
+
+    bool is_unique() const
+    {
+        return m_kind == UNIQUE;
+    }
+
+    bool is_shared() const
+    {
+        return m_kind == SHARED;
     }
 
     Worker* polling_worker() const
@@ -80,7 +102,8 @@ private:
         m_pPolling_worker = pWorker;
     }
 
-    Worker* m_pPolling_worker { nullptr };   /*< Owning worker. */
+    const Kind m_kind;
+    Worker*    m_pPolling_worker { nullptr };   /*< Owning worker. */
 };
 
 }
