@@ -56,6 +56,7 @@
                         <span>{{ $t('openQueryEditor') }}</span>
                     </v-tooltip>
                     <v-menu
+                        v-if="isAdmin"
                         transition="slide-y-transition"
                         offset-y
                         nudge-left="100%"
@@ -178,6 +179,7 @@ export default {
         ...mapGetters({
             getCurrStateMode: 'server/getCurrStateMode',
             getServerOps: 'server/getServerOps',
+            isAdmin: 'user/isAdmin',
         }),
         isDroppableNode() {
             return this.droppableTargets.includes(this.node.id)

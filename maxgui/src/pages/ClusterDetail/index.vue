@@ -12,7 +12,7 @@
                 :data="graphData"
                 :dim="ctrDim"
                 :nodeSize="nodeSize"
-                draggable
+                :draggable="isAdmin"
                 :draggableGroup="{
                     name: 'tree-graph',
                     put: ['joinable-servers'], // allow nodes on joinable-servers to be dragged here
@@ -50,6 +50,7 @@
                 :bodyWrapperClass="nodeTxtWrapperClassName"
                 :droppableTargets="draggingStates.droppableTargets"
                 :dim="ctrDim"
+                :draggable="isAdmin"
                 @on-choose-op="onChooseOp"
                 @on-drag-start="onNodeDragStart({ e: $event, from: 'standaloneNode' })"
                 @on-dragging="onNodeDragging({ e: $event, from: 'standaloneNode' })"
@@ -141,7 +142,7 @@ export default {
         }
     },
     computed: {
-        ...mapGetters({ genSlaveNode: 'visualization/genSlaveNode' }),
+        ...mapGetters({ genSlaveNode: 'visualization/genSlaveNode', isAdmin: 'user/isAdmin' }),
         ...mapState({
             current_cluster: state => state.visualization.current_cluster,
             MONITOR_OP_TYPES: state => state.app_config.MONITOR_OP_TYPES,

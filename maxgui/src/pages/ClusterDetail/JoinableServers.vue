@@ -7,8 +7,8 @@
         </div>
         <v-divider />
         <div
-            v-draggable
-            class="joinable-node-wrapper px-3 pt-2"
+            v-draggable="draggable"
+            class="joinable-node-wrapper px-3 pt-2 pb-1"
             :style="{
                 maxHeight: `${dim.height / 1.5}px`,
             }"
@@ -21,7 +21,8 @@
                 :droppableTargets="droppableTargets"
                 :bodyWrapperClass="bodyWrapperClass"
                 :node_id="node.id"
-                class="mb-2 move"
+                class="mb-2"
+                :class="{ 'joinable-node--draggable move': draggable }"
                 v-on="$listeners"
             />
         </div>
@@ -64,6 +65,7 @@ export default {
                      */
                     swap: true,
                     group: vnode.context.$props.draggableGroup,
+                    draggable: '.joinable-node--draggable',
                     ghostClass: 'node-ghost',
                     animation: 0,
                     forceFallback: true,
@@ -86,6 +88,7 @@ export default {
         cloneClass: { type: String, required: true },
         droppableTargets: { type: Array, required: true },
         dim: { type: Object, required: true },
+        draggable: { type: Boolean, default: false },
     },
 }
 </script>
