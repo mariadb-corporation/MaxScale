@@ -16,6 +16,7 @@
             <div class="d-flex align-center">
                 <global-search class="mr-4" />
                 <v-btn
+                    v-if="isAdmin"
                     width="160"
                     outlined
                     height="36"
@@ -42,11 +43,11 @@
                     :height="tableHeight"
                     fixedHeader
                 >
-                    <template v-slot:actions="{ data: { item } }">
+                    <template v-if="isAdmin" v-slot:actions="{ data: { item } }">
                         <v-tooltip
                             v-for="action in [
                                 userAdminActions[USER_ADMIN_ACTIONS.UPDATE],
-                                ...(logged_in_user.name === item.id
+                                ...(isLoggedInUser(item)
                                     ? []
                                     : [userAdminActions[USER_ADMIN_ACTIONS.DELETE]]),
                             ]"
@@ -73,7 +74,7 @@
                         <span
                             :key="h.value"
                             :class="{
-                                'font-weight-bold': logged_in_user.name === item.id, // Bold active user
+                                'font-weight-bold': isLoggedInUser(item), // Bold active user
                             }"
                         >
                             {{ item[h.value] }}
@@ -134,7 +135,10 @@ export default {
             USER_ADMIN_ACTIONS: state => state.app_config.USER_ADMIN_ACTIONS,
             logged_in_user: state => state.user.logged_in_user,
         }),
-        ...mapGetters({ getUserAdminActions: 'user/getUserAdminActions' }),
+        ...mapGetters({
+            getUserAdminActions: 'user/getUserAdminActions',
+            isAdmin: 'user/isAdmin',
+        }),
         tableRows() {
             let rows = []
             for (const user of this.all_inet_users) {
@@ -162,6 +166,9 @@ export default {
             fetchAllNetworkUsers: 'user/fetchAllNetworkUsers',
             manageInetUser: 'user/manageInetUser',
         }),
+        isLoggedInUser(item) {
+            return this.$typy(this.logged_in_user, 'name').safeString === item.id
+        },
         setTableHeight() {
             this.$nextTick(() => {
                 const tableHeight = this.$typy(this.$refs, 'tableWrapper.clientHeight').safeNumber

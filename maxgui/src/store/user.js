@@ -179,8 +179,11 @@ export default {
     },
     getters: {
         getLoggedInUserRole: state => {
-            const { attributes: { account = '' } = {} } = state.logged_in_user
+            const { attributes: { account = '' } = {} } = state.logged_in_user || {}
             return account
+        },
+        isAdmin: (state, getters, rootState) => {
+            return getters.getLoggedInUserRole === rootState.app_config.USER_ROLES.ADMIN
         },
         getUserAdminActions: (state, getters, rootState) => {
             const { DELETE, UPDATE, ADD } = rootState.app_config.USER_ADMIN_ACTIONS
