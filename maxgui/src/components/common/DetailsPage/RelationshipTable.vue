@@ -4,8 +4,8 @@
         :isContentVisible="showTable"
         :title="`${$tc(relationshipType, 2)}`"
         :titleInfo="tableRowsData.length"
-        :onAddClick="readOnly && !addable ? null : () => onAdd()"
-        :addBtnText="readOnly && !addable ? '' : addBtnText"
+        :onAddClick="isAdmin && !readOnly && addable ? onAdd : null"
+        :addBtnText="isAdmin && !readOnly && addable ? addBtnText : ''"
     >
         <template v-slot:content>
             <data-table
@@ -34,7 +34,7 @@
                         {{ relationshipType }}
                     </icon-sprite-sheet>
                 </template>
-                <template v-if="!readOnly" v-slot:actions="{ data: { item } }">
+                <template v-if="isAdmin && !readOnly" v-slot:actions="{ data: { item } }">
                     <v-btn icon @click="onDelete(item)">
                         <v-icon size="20" color="error">
                             $vuetify.icons.unlink
@@ -94,7 +94,7 @@ isFilterDrag will be only added to event data object if relationshipType props =
 This callback event is emitted only when relationshipType props === 'listeners'
 */
 import { OVERLAY_TRANSPARENT_LOADING } from 'store/overlayTypes'
-import { mapState } from 'vuex'
+import { mapState, mapGetters } from 'vuex'
 
 export default {
     name: 'relationship-table',
@@ -137,19 +137,20 @@ export default {
             overlay_type: 'overlay_type',
             search_keyword: 'search_keyword',
         }),
-        isLoading: function() {
+        ...mapGetters({ isAdmin: 'user/isAdmin' }),
+        isLoading() {
             return this.isMounting ? true : this.overlay_type === OVERLAY_TRANSPARENT_LOADING
         },
-        logger: function() {
+        logger() {
             return this.$logger('relationship-table')
         },
-        tableRowsData: function() {
+        tableRowsData() {
             // add index number for filters table only
             if (this.relationshipType === 'filters')
                 this.tableRows.forEach((row, i) => (row.index = i))
             return this.tableRows
         },
-        addBtnText: function() {
+        addBtnText() {
             let pluralizationNum = 2
             if (this.relationshipType === 'listeners') pluralizationNum = 1
             return `${this.$t('addEntity', {
