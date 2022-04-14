@@ -12,7 +12,7 @@
                             ref="sessionsChart"
                             :styles="chartStyle"
                             :chart-data="{ datasets: sessions_datasets }"
-                            :options="chartOptionsWithOutCallBack"
+                            :options="streamOpts"
                         />
                     </v-sheet>
                 </template>
@@ -32,7 +32,7 @@
                             :chart-data="{
                                 datasets: server_connections_datasets,
                             }"
-                            :options="chartOptionsWithOutCallBack"
+                            :options="streamOpts"
                         />
                     </v-sheet>
                 </template>
@@ -53,7 +53,7 @@
                                 datasets: threads_datasets,
                             }"
                             :options="
-                                $help.lodash.deepMerge(mainChartOptions, {
+                                $help.lodash.deepMerge(streamOpts, {
                                     scales: {
                                         yAxes: [
                                             {
@@ -88,39 +88,14 @@
  * Public License.
  */
 import { mapActions, mapState } from 'vuex'
-
 export default {
     name: 'graphs',
-
+    props: {
+        refreshRate: { type: Number, required: true },
+    },
     data() {
         return {
             chartStyle: { height: '70px', position: 'relative' },
-            chartOptionsWithOutCallBack: {
-                plugins: {
-                    streaming: {
-                        duration: 20000,
-                        refresh: 10000,
-                        delay: 10000,
-                    },
-                },
-            },
-            mainChartOptions: {
-                plugins: {
-                    streaming: {
-                        duration: 20000,
-                        refresh: 10000,
-                        delay: 10000,
-
-                        /*  delay of 10000 ms, so upcoming values are known before plotting a line
-                            delay value can be larger but not smaller than refresh value to
-                            remain realtime streaming data.
-                            this onRefresh callback will be called every
-                            10000 ms to update connections and sessions chart
-                        */
-                        onRefresh: this.updateChart,
-                    },
-                },
-            },
         }
     },
     computed: {
@@ -136,6 +111,16 @@ export default {
             all_sessions: state => state.all_sessions,
             sessions_datasets: state => state.sessions_datasets,
         }),
+        streamOpts() {
+            return {
+                plugins: {
+                    streaming: {
+                        duration: this.refreshRate * 2000,
+                        delay: (this.refreshRate + 1) * 1000,
+                    },
+                },
+            }
+        },
     },
 
     methods: {
@@ -244,34 +229,20 @@ export default {
                 }
             })
         },
-
-        async updateChart() {
+        /**
+         * Method  to be called by parent component to update the chart
+         * @param {Number} timestamp
+         */
+        async updateChart(timestamp) {
             const { sessionsChart, connectionsChart, threadsChart } = this.$refs
             if (sessionsChart && connectionsChart && threadsChart) {
-                //  LOOP polling
-                await Promise.all([
-                    this.fetchAllServers(),
-                    this.fetchAllMonitors(),
-                    this.fetchAllSessions(),
-                    this.fetchAllServices(),
-                    this.fetchThreadStats(),
-                ])
-                const timestamp = Date.now()
-
                 this.updateServerConnectionsDatasets(connectionsChart, timestamp)
                 this.updateSessionsDatasets(sessionsChart, timestamp)
                 this.updateThreadsDatasets(threadsChart, timestamp)
-
                 await Promise.all([
-                    sessionsChart.$data._chart.update({
-                        preservation: true,
-                    }),
-                    threadsChart.$data._chart.update({
-                        preservation: true,
-                    }),
-                    connectionsChart.$data._chart.update({
-                        preservation: true,
-                    }),
+                    sessionsChart.$data._chart.update({ preservation: true }),
+                    threadsChart.$data._chart.update({ preservation: true }),
+                    connectionsChart.$data._chart.update({ preservation: true }),
                 ])
             }
         },

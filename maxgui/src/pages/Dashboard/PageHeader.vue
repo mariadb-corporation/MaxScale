@@ -94,7 +94,8 @@
             </v-menu>
         </portal>
         <portal to="page-header--right">
-            <global-search class="d-inline-block" />
+            <slot name="refresh-rate" />
+            <global-search class="ml-4 d-inline-block" />
             <create-resource class="ml-4 d-inline-block" :defFormType="defFormType" />
         </portal>
     </div>

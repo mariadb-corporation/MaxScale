@@ -1,8 +1,12 @@
 <template>
     <page-wrapper>
         <v-sheet>
-            <page-header />
-            <graphs />
+            <page-header>
+                <template v-slot:refresh-rate>
+                    <refresh-rate v-model="refreshRate" @on-count-done="onCountDone" />
+                </template>
+            </page-header>
+            <graphs ref="graphs" :refreshRate="refreshRate" />
             <tab-nav />
         </v-sheet>
     </page-wrapper>
@@ -35,36 +39,18 @@ export default {
     },
     data() {
         return {
-            loop: true,
+            refreshRate: 10,
         }
     },
     async created() {
-        await Promise.all([
-            this.fetchMaxScaleOverviewInfo(),
-            // below fetches will be looped in graphs component
-            this.fetchThreadStats(),
-            this.fetchAllServers(),
-            this.fetchAllMonitors(),
-            this.fetchAllSessions(),
-            this.fetchAllServices(),
-        ])
-
+        await this.fetchMaxScaleOverviewInfo()
+        await this.fetchAll()
+        // Generate datasets
         await Promise.all([
             this.genSessionDataSets(),
             this.genServersConnectionsDataSets(),
             this.genThreadsDataSets(),
         ])
-
-        while (this.loop) {
-            await Promise.all([
-                this.fetchAllListeners(),
-                this.fetchAllFilters(),
-                this.$help.delay(10000),
-            ])
-        }
-    },
-    beforeDestroy() {
-        this.loop = false
     },
     methods: {
         ...mapActions({
@@ -86,6 +72,23 @@ export default {
 
             fetchAllFilters: 'filter/fetchAllFilters',
         }),
+        async fetchAll() {
+            await Promise.all([
+                this.fetchThreadStats(),
+                this.fetchAllServers(),
+                this.fetchAllMonitors(),
+                this.fetchAllSessions(),
+                this.fetchAllServices(),
+                this.fetchAllListeners(),
+                this.fetchAllFilters(),
+            ])
+        },
+        async onCountDone() {
+            const timestamp = Date.now()
+            await this.fetchAll()
+            // Update charts
+            await this.$refs.graphs.updateChart(timestamp)
+        },
     },
 }
 </script>
