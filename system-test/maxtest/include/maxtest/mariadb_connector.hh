@@ -100,7 +100,7 @@ public:
     ~ScopedUser();
 
     void grant(const std::string& grant);
-    void grant_f(const char* grant_fmt, ...);
+    void grant_f(const char* grant_fmt, ...) mxb_attribute((format (printf, 2, 3)));;
 
 private:
     std::string   m_user_host;      /**< user@host */
