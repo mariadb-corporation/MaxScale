@@ -326,8 +326,9 @@ add_test_executable_ex(NAME load_data_local_infile_ssl ORIG_NAME load_data_local
         CONFIG load_data_local_infile.cnf VMS repl_backend LABELS BACKEND_SSL LISTENER_SSL)
 
 # Test users with different level privileges: database, table, column and procedure.
-# MXS-37, MXS-3303, MXS-1958, MXS-3630
-add_test_executable(client_privileges.cc client_privileges replication LABELS LIGHT REPL_BACKEND)
+# MXS-37, MXS-3303, MXS-1958, MXS-3630, MXS-4093
+add_test_executable_ex(NAME client_privileges SOURCE client_privileges.cc CONFIG client_privileges.cnf
+        VMS repl_backend)
 
 # Open connection, execute 'change user', close connection in the loop
 add_test_executable(mxs548_short_session_change_user.cpp mxs548_short_session_change_user mxs548 LABELS MySQLProtocol readwritesplit REPL_BACKEND)

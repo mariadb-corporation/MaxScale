@@ -37,10 +37,10 @@ const char new_user[] = "new_user";
 const char new_pass[] = "new_pass";
 }
 
-void test_logins(TestConnections& test, bool expect_success);
+void test_login(TestConnections& test, const string& user, const string& pass, const string& query,
+                bool expected);
+
 void test_main(TestConnections& test);
-bool test_user_full(TestConnections& test, const string& ip, int port,
-                    const string& user, const string& pass, const string& query);
 
 int main(int argc, char* argv[])
 {
@@ -50,73 +50,123 @@ int main(int argc, char* argv[])
 
 void test_main(TestConnections& test)
 {
-    auto& mxs = *test.maxscale;
-    auto& repl = *test.repl;
-    auto conn = mxs.open_rwsplit_connection2_nodb();
+    auto conn = test.maxscale->open_rwsplit_connection2_nodb();
 
-    auto db_scopeuser = conn->create_user(db_user, "%", db_pass);
-    auto table_scopeuser = conn->create_user(table_user, "%", table_pass);
-    auto column_scopeuser = conn->create_user(column_user, "%", column_pass);
-    auto process_scopeuser = conn->create_user(process_user, "%", process_pass);
-    auto table_insert_scopeuser = conn->create_user(table_insert_user, "%", table_insert_pass);
-    repl.sync_slaves();
+    auto maybe_drop_user = [&](const char* user) {
+        conn->cmd_f("DROP USER IF EXISTS '%s'@'%%'", user);
+    };
+
+    maybe_drop_user(db_user);
+    maybe_drop_user(table_user);
+    maybe_drop_user(column_user);
+    maybe_drop_user(process_user);
+    maybe_drop_user(table_insert_user);
+
+    // Create a database, a table, a column and a stored procedure.
+    conn->cmd_f("CREATE OR REPLACE DATABASE %s;", db);
+    conn->cmd_f("CREATE TABLE %s (c1 INT, c2 INT);", table);
+    conn->cmd_f("INSERT INTO %s VALUES (1, 2);", table);
+    conn->cmd_f("CREATE PROCEDURE %s () "
+                "BEGIN "
+                "SELECT rand(); "
+                "END; ",
+                proc);
+    test.repl->sync_slaves();
 
     if (test.ok())
     {
-        test.tprintf("Users created.");
-        // Create a database, a table, a column and a stored procedure.
-        conn->cmd_f("CREATE OR REPLACE DATABASE %s;", db);
-        conn->cmd_f("CREATE TABLE %s (c1 INT, c2 INT);", table);
-        conn->cmd_f("INSERT INTO %s VALUES (1, 2);", table);
-        conn->cmd_f("CREATE PROCEDURE %s () "
-                    "BEGIN "
-                    "SELECT rand(); "
-                    "END; ",
-                    proc);
-        repl.sync_slaves();
+        test.tprintf("Database and table created.");
+
+        // None of the users have been created so login should fail.
+        test_login(test, db_user, db_pass, "", false);
+        test_login(test, table_user, table_pass, "", false);
+        test_login(test, column_user, column_pass, "", false);
+        test_login(test, process_user, process_pass, "", false);
+        test_login(test, table_insert_user, table_insert_pass, "", false);
 
         if (test.ok())
         {
-            // Check that logging in fails, as none of the users have privs.
-            test_logins(test, false);
-        }
-
-        if (test.ok())
-        {
-            string db_grant = mxb::string_printf("SELECT ON %s.*", db);
-            db_scopeuser.grant(db_grant);
-            table_scopeuser.grant_f("SELECT ON %s", table);
-            column_scopeuser.grant_f("SELECT (c2) ON %s", table);
-            process_scopeuser.grant_f("EXECUTE ON PROCEDURE %s", proc);
-            table_insert_scopeuser.grant_f("INSERT ON %s", table);
-            repl.sync_slaves();
-
-            if (test.ok())
+            const char query_fmt[] = "SELECT %s from %s;";
+            string select_query = mxb::string_printf(query_fmt, "*", table);
             {
-                // Restart MaxScale to reload users.
-                mxs.restart();
-                mxs.wait_for_monitor();
-
-                test_logins(test, true);
+                // Test db_user.
+                auto db_scopeuser = conn->create_user(db_user, "%", db_pass);
+                sleep(1);
+                test_login(test, db_user, db_pass, select_query, false);
+                // Add grant, login should work.
+                db_scopeuser.grant_f("SELECT ON %s.*", db);
+                sleep(1);
+                test_login(test, db_user, db_pass, select_query, true);
             }
 
+            {
+                // Test table_user.
+                auto table_scopeuser = conn->create_user(table_user, "%", table_pass);
+                sleep(1);
+                test_login(test, table_user, table_pass, select_query, false);
+                // Add grant, login should work.
+                table_scopeuser.grant_f("SELECT ON %s", table);
+                sleep(1);
+                test_login(test, table_user, table_pass, select_query, true);
+            }
+
+            {
+                // Test column_user.
+                auto column_scopeuser = conn->create_user(column_user, "%", column_pass);
+                sleep(1);
+                string col_select_query = mxb::string_printf(query_fmt, "c2", table);
+                test_login(test, column_user, column_pass, col_select_query, false);
+                // Add grant, login should work.
+                column_scopeuser.grant_f("SELECT (c2) ON %s", table);
+                sleep(1);
+                test_login(test, column_user, column_pass, col_select_query, true);
+            }
+
+            {
+                // Test process_user.
+                auto process_scopeuser = conn->create_user(process_user, "%", process_pass);
+                sleep(1);
+                string call_query = mxb::string_printf("CALL %s();", proc);
+                test_login(test, process_user, process_pass, call_query, false);
+                // Add grant, login should work.
+                process_scopeuser.grant_f("EXECUTE ON PROCEDURE %s", proc);
+                sleep(1);
+                test_login(test, process_user, process_pass, call_query, true);
+            }
+
+            {
+                // Test table_insert_user.
+                auto table_insert_scopeuser = conn->create_user(table_insert_user, "%", table_insert_pass);
+                sleep(1);
+                string insert_query = mxb::string_printf(
+                    "INSERT INTO %s VALUES (1000 * rand(), 1000 * rand());", table);
+                test_login(test, table_insert_user, table_insert_pass, insert_query, false);
+                // Add grant, login should work.
+                table_insert_scopeuser.grant_f("INSERT ON %s", table);
+                sleep(1);
+                test_login(test, table_insert_user, table_insert_pass, insert_query, true);
+            }
+
+
             if (test.ok())
             {
+                auto& repl = *test.repl;
+                auto& mxs = *test.maxscale;
+
                 // All ok so far. Test user account refreshing. First, generate a user not yet
                 // known to MaxScale.
                 auto master_conn = test.repl->backend(0)->open_connection();
                 auto new_scopeuser = master_conn->create_user(new_user, "%", new_pass);
-                new_scopeuser.grant(db_grant);
-                repl.sync_slaves();
+                new_scopeuser.grant_f("SELECT ON %s.*", db);
+                sleep(1);
+
                 // Should be able to login and query without reloading users.
-                bool login_ok = test_user_full(test, mxs.ip(), mxs.rwsplit_port, new_user, new_pass,
-                                               "sElEcT rand();");
-                test.expect(login_ok, "Login to a new user failed.");
+                test_login(test, new_user, new_pass, "sElEcT rand();", true);
 
                 // Change the password of the user. Login again with old password. Should work,
                 // although the query should fail. Tests MXS-3630.
                 master_conn->cmd_f("ALTER USER '%s' identified by '%s';", new_user, "different_pass");
-                repl.sync_slaves();
+                sleep(1);
 
                 auto test_conn = mxs.try_open_rwsplit_connection(new_user, new_pass);
                 test.expect(test_conn->is_open(), "Logging in with old password failed.");
@@ -136,58 +186,51 @@ void test_main(TestConnections& test)
     }
 }
 
-bool test_user_full(TestConnections& test, const string& ip, int port,
-                    const string& user, const string& pass, const string& query)
+void test_login(TestConnections& test, const string& user, const string& pass, const string& query,
+                bool expected)
 {
-    bool rval = false;
-    MYSQL* conn = open_conn_db(port, ip, db, user, pass);
-    if (mysql_errno(conn) == 0)
-    {
-        // Query should work.
-        if (test.try_query(conn, "%s", query.c_str()) == 0)
-        {
-            rval = true;
-        }
-    }
-    mysql_close(conn);
-    return rval;
-}
-
-void test_logins(TestConnections& test, bool expect_success)
-{
+    bool login_ok = false;
+    bool query_ok = false;
     int port = test.maxscale->rwsplit_port;
     auto ip = test.maxscale->ip4();
 
-    auto test_user = [&](const string& user, const string& pass, const string& query) {
-            return test_user_full(test, ip, port, user, pass, query);
-        };
+    MYSQL* conn = open_conn_db(port, ip, db, user, pass);
+    if (mysql_errno(conn) == 0)
+    {
+        login_ok = true;
+        if (query.empty() || test.try_query(conn, "%s", query.c_str()) == 0)
+        {
+            query_ok = true;
+        }
+    }
+    mysql_close(conn);
 
-
-    const char query_fmt[] = "SELECT %s from %s;";
-    string query = mxb::string_printf(query_fmt, "*", table);
-
-    auto report_error = [&test](const char* user, bool result, bool expected) {
-            const char* result_str = result ? "succeeded" : "failed";
-            const char* expected_str = expected ? "success" : "failure";
-            test.expect(result == expected, "User %s login and query %s when %s was expected.",
-                        user, result_str, expected_str);
-        };
-
-    bool ret = test_user(db_user, db_pass, query);
-    report_error(db_user, ret, expect_success);
-
-    ret = test_user(table_user, table_pass, query);
-    report_error(table_user, ret, expect_success);
-
-    query = mxb::string_printf(query_fmt, "c2", table);
-    ret = test_user(column_user, column_pass, query);
-    report_error(column_user, ret, expect_success);
-
-    query = mxb::string_printf("CALL %s();", proc);
-    ret = test_user(process_user, process_pass, query);
-    report_error(process_user, ret, expect_success);
-
-    query = mxb::string_printf("INSERT INTO %s VALUES (1000 * rand(), 1000 * rand());", table);
-    ret = test_user(table_insert_user, table_insert_pass, query);
-    report_error(table_insert_user, ret, expect_success);
+    if (expected)
+    {
+        if (login_ok && query_ok)
+        {
+            test.tprintf("Login and/or query for user %s succeeded as expected.", user.c_str());
+        }
+        else
+        {
+            test.add_failure("Login or query for user %s failed when success was expected.", user.c_str());
+        }
+    }
+    else
+    {
+        // If failure is expected, then even a partial success is a test fail.
+        const char err_fmt[] = "%s for user %s succeeded when failure was expected.";
+        if (!login_ok)
+        {
+            test.tprintf("Login for user %s failed as expected.", user.c_str());
+        }
+        else
+        {
+            test.add_failure(err_fmt, "Login", user.c_str());
+            if (!query.empty())
+            {
+                test.expect(!query_ok, err_fmt, "Query", user.c_str());
+            }
+        }
+    }
 }
