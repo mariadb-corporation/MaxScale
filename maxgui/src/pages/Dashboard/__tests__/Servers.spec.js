@@ -21,8 +21,7 @@ const expectedTableHeaders = [
     { text: `Monitor`, value: 'groupId', autoTruncate: true, padding: '0px 0px 0px 24px' },
     { text: 'State', value: 'monitorState', padding: '0px 12px 0px 24px' },
     { text: 'Servers', value: 'id', autoTruncate: true, padding: '0px 0px 0px 24px' },
-    { text: 'Address', value: 'serverAddress', autoTruncate: true, padding: '0px 0px 0px 24px' },
-    { text: 'Port', value: 'serverPort', padding: '0px 0px 0px 24px' },
+    { text: 'Address', value: 'serverAddress', padding: '0px 0px 0px 24px' },
     {
         text: 'Connections',
         value: 'serverConnections',
@@ -36,8 +35,7 @@ const expectedTableHeaders = [
 const expectedTableRows = [
     {
         id: 'server_0',
-        serverAddress: '127.0.0.1',
-        serverPort: 4000,
+        serverAddress: '127.0.0.1:4000',
         serverConnections: 0,
         serverState: 'Master, Running',
         serviceIds: ['Read-Only-Service', 'Read-Write-Service'],
@@ -60,8 +58,7 @@ const expectedTableRows = [
     },
     {
         id: 'server_1_with_longgggggggggggggggggggggggggggggggggg_name',
-        serverAddress: '127.0.0.1',
-        serverPort: 4001,
+        serverAddress: '127.0.0.1:4001',
         serverConnections: 0,
         serverState: 'Slave, Running',
         serviceIds: ['Read-Only-Service'],
@@ -84,8 +81,7 @@ const expectedTableRows = [
     },
     {
         id: 'server_2',
-        serverAddress: '127.0.0.1',
-        serverPort: 4002,
+        serverAddress: '127.0.0.1:4002',
         serverConnections: 0,
         serverState: 'Down',
         serviceIds: 'No services',

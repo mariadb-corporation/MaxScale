@@ -50,6 +50,9 @@ describe('Dashboard TabNav', () => {
             shallow: false,
             component: TabNav,
             computed: mockupComputed,
+            stubs: {
+                'refresh-rate': "<div class='refresh-rate'></div>",
+            },
         })
         axiosStub = sinon.stub(wrapper.vm.$store.$http, 'get').resolves(
             Promise.resolve({

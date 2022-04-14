@@ -16,8 +16,8 @@ import ConnectionManager from '@/pages/QueryPage/ConnectionManager'
 import { itemSelectMock } from '@tests/unit/utils'
 
 const dummy_sql_conns = {
-    1: { id: '1', name: 'server_0', type: 'servers' },
-    2: { id: '2', name: 'server_1', type: 'servers' },
+    1: { id: '1', name: 'server_0', type: 'servers', binding_type: 'WORKSHEET' },
+    2: { id: '2', name: 'server_1', type: 'servers', binding_type: 'WORKSHEET' },
 }
 
 const mountFactory = opts =>
@@ -32,6 +32,7 @@ function mockActiveConnState() {
     return {
         sql_conns: () => dummy_sql_conns,
         active_sql_conn: () => dummy_sql_conns['1'],
+        wkeConns: () => Object.values(dummy_sql_conns),
     }
 }
 
@@ -180,8 +181,7 @@ describe(`ConnectionManager - methods and computed properties tests `, () => {
             disabled: false,
         })
     })
-    it(`Should disabled connections that are bound to in active worksheet
-      in connOptions`, () => {
+    it(`Should disabled connections that are bound to a worksheet in connOptions`, () => {
         wrapper = mountFactory({
             computed: {
                 ...mockActiveConnState(),
@@ -193,13 +193,8 @@ describe(`ConnectionManager - methods and computed properties tests `, () => {
             disabled: true,
         })
     })
-
     it(`Should return accurate value for connToBeDel computed property`, () => {
-        wrapper = mountFactory({
-            computed: {
-                ...mockActiveConnState(),
-            },
-        })
+        wrapper = mountFactory({ computed: { ...mockActiveConnState() } })
         // mock unlinkConn call
         wrapper.vm.unlinkConn(wrapper.vm.connOptions[0])
         expect(wrapper.vm.connToBeDel).to.be.deep.equals({ id: dummy_sql_conns['1'].name })

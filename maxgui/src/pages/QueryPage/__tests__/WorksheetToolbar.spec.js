@@ -76,7 +76,13 @@ describe('WorksheetToolbar - use-db-btn, run-btn and visualize-btn common tests'
     let wrapper
     const btns = ['use-db-btn', 'run-btn', 'visualize-btn']
     btns.forEach(btn => {
-        it(`Should disable ${btn} if there is a running query`, () => {
+        let des = `Should disable ${btn} if there is a running query`,
+            btnClassName = `.${btn}`
+        if (btn === 'run-btn') {
+            des = `Should render 'stop-btn' if there is a running query`
+            btnClassName = '.stop-btn'
+        }
+        it(des, () => {
             wrapper = mountFactory({
                 computed: {
                     query_txt: () => 'SELECT 1',
@@ -86,8 +92,12 @@ describe('WorksheetToolbar - use-db-btn, run-btn and visualize-btn common tests'
                     isMaxRowsValid: () => true,
                 },
             })
-            const btnComponent = wrapper.find(`.${btn}`)
-            expect(btnComponent.element.disabled).to.be.true
+            if (btn === 'run-btn') {
+                expect(wrapper.find('.stop-btn').exists()).to.be.equal(true)
+            } else {
+                const btnComponent = wrapper.find(btnClassName)
+                expect(btnComponent.element.disabled).to.be.true
+            }
         })
     })
     btns.forEach(btn => {
@@ -144,14 +154,14 @@ describe('WorksheetToolbar - Use database button tests', () => {
     //TODO: Add test for changing active db dbListMenu
 })
 
-describe('WorksheetToolbar - Run button tests', () => {
+describe('WorksheetToolbar - Run/Stop button tests', () => {
     let wrapper
     it(`Should disable the button if query_txt is empty`, () => {
         wrapper = mountFactory({ computed: { query_txt: () => '' } })
         const btn = wrapper.find('.run-btn')
         expect(btn.element.disabled).to.be.true
     })
-    it(`Should disable run-btn if query result is still loading`, () => {
+    it(`Should render stop-btn if query result is loading`, () => {
         wrapper = mountFactory({
             computed: {
                 query_txt: () => 'SELECT 1',
@@ -161,8 +171,7 @@ describe('WorksheetToolbar - Run button tests', () => {
                 isMaxRowsValid: () => true,
             },
         })
-        const btnComponent = wrapper.find(`.run-btn`)
-        expect(btnComponent.element.disabled).to.be.true
+        expect(wrapper.find('.stop-btn').exists()).to.be.equal(true)
     })
     const runModes = ['all', 'selected']
     const getConditionsToRun = (mode = 'all') => ({

@@ -33,7 +33,7 @@ const computedFactory = (computed = {}) =>
 
 /**
  * @param {Object} payload.wrapper - mounted component
- * @param {String} payload.status - status: Healthy, Unhealthy, Warning
+ * @param {String} payload.status - status: Healthy, Unhealthy, Maintenance
  * @param {Number} payload.dummyIconFrameIndex - index value for stateIconFrame stub
  */
 const serverStatusTestAssertions = ({ wrapper, status, dummyIconFrameIndex }) => {
@@ -93,7 +93,7 @@ describe('ServerDetail - PageHeader: render assertions', () => {
     })
 
     describe('Server healthy status tests', () => {
-        const expectStatuses = ['Unhealthy', 'Healthy', 'Warning']
+        const expectStatuses = ['Unhealthy', 'Healthy', 'Maintenance']
         expectStatuses.forEach((status, dummyIconFrameIndex) =>
             serverStatusTestAssertions({
                 wrapper,

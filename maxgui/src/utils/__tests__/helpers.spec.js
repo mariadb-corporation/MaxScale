@@ -102,7 +102,7 @@ describe('helpers unit tests', () => {
 
     describe('monitorStateIcon assertions', () => {
         const dummyServiceStates = ['Running', 'Stopped', 'Unknown']
-        const expectedReturn = [1, 2, '']
+        const expectedReturn = [1, 0, '']
         dummyServiceStates.forEach((state, i) => {
             let des = `Should return ${expectedReturn[i]} when state is ${state}`
             if (state === 'Unknown')

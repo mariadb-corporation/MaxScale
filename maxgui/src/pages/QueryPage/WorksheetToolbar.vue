@@ -91,7 +91,8 @@
                     <template v-slot:activator="{ on }">
                         <v-btn
                             outlined
-                            class="run-btn ml-2 text-capitalize px-2 font-weight-medium"
+                            class="ml-2 text-capitalize px-2 font-weight-medium"
+                            :class="[getLoadingQueryResult ? 'stop-btn' : 'run-btn']"
                             depressed
                             small
                             color="accent-dark"

@@ -37,7 +37,7 @@ describe('ConfirmDialog.vue', () => {
         await wrapper.setProps({ type: 'destroy', item: { id: 'Monitor', type: 'monitors' } })
         let span = wrapper.find('.confirmations-text').html()
         // check include correct span value
-        expect(span).to.be.include('Are you sure you want to destroy Monitor?')
+        expect(span).to.be.include('Are you sure you want to destroy <b>Monitor</b>?')
     })
     it(`Should not render confirmation text when item is not defined`, async () => {
         await wrapper.setProps({ type: 'destroy', item: null })

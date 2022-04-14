@@ -54,8 +54,12 @@ describe('ServiceDetail - OverviewHeader', () => {
     })
     it(`Should emit update-chart event`, async () => {
         let count = 0
-        wrapper.vm.$on('update-chart', () => {
-            count++
+        wrapper = wrapper = mount({
+            shallow: false,
+            component: OverviewHeader,
+            propsData: defaultProps,
+            // update-chart uses listeners instead of emit
+            listeners: { 'update-chart': () => count++ },
         })
         //mockup update chart
         await wrapper.vm.updateChart()
