@@ -25,10 +25,10 @@
                         </v-icon>
                         <span class="mr-1 color text-navigation">
                             {{ $t('refreshRate') }}:
-                            <template v-if="refreshRate >= 0">
+                            <template v-if="refreshCount >= 0">
                                 {{
-                                    $tc('seconds', refreshRate === 1 ? 1 : 2, {
-                                        value: refreshRate,
+                                    $tc('seconds', refreshCount === 1 ? 1 : 2, {
+                                        value: refreshCount,
                                     })
                                 }}
                             </template>
@@ -77,29 +77,36 @@ export default {
     name: 'refresh-rate',
     mixins: [asyncEmit],
     props: {
-        defRefreshRate: { type: Number, default: 10 },
+        value: { type: Number, required: true },
     },
     data() {
         return {
-            refreshRate: null,
+            refreshCount: 10,
+            chosenRefreshRate: 10,
+            seconds: [5, 10, 20, 30, 60, 120, 300],
         }
     },
     computed: {
+        refreshRate: {
+            get() {
+                return this.value
+            },
+            set(value) {
+                this.$emit('input', value)
+            },
+        },
         refreshRateOpts() {
             return [
-                { label: this.$tc('seconds', 2, { value: 10 }), value: 10 },
-                { label: this.$tc('seconds', 2, { value: 20 }), value: 20 },
-                { label: this.$tc('seconds', 2, { value: 30 }), value: 30 },
-                { label: this.$tc('seconds', 2, { value: 60 }), value: 60 },
-                { label: this.$tc('seconds', 2, { value: 120 }), value: 120 },
-                { label: this.$tc('seconds', 2, { value: 300 }), value: 300 },
+                ...this.seconds.map(s => ({
+                    label: this.$tc('seconds', 2, { value: s }),
+                    value: s,
+                })),
                 { label: this.$t('noRefresh'), value: -1 },
             ]
         },
     },
     mounted() {
-        this.refreshRate = this.defRefreshRate
-        this.storeRefreshRateTmp()
+        this.refreshCount = this.refreshRate
         this.workerInit()
     },
     beforeDestroy() {
@@ -110,10 +117,10 @@ export default {
             this.workerTimer && this.workerTimer.terminate()
         },
         async updateCountTime() {
-            if (this.refreshRate > 0) this.refreshRate = this.refreshRate - 1
-            else if (this.refreshRate === 0) {
+            if (this.refreshCount > 0) this.refreshCount = this.refreshCount - 1
+            else if (this.refreshCount === 0) {
                 await this.asyncEmit('on-count-done')
-                this.refreshRate = this.refreshRateTmp
+                this.refreshCount = this.refreshRate
             }
         },
         workerInit() {
@@ -123,12 +130,9 @@ export default {
                 await this.updateCountTime()
             }
         },
-        storeRefreshRateTmp() {
-            this.refreshRateTmp = this.refreshRate
-        },
         onSelectRefreshRate(item) {
             this.refreshRate = item.value
-            this.storeRefreshRateTmp()
+            this.refreshCount = this.refreshRate
         },
     },
 }

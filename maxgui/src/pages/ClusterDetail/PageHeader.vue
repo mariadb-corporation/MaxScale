@@ -41,7 +41,7 @@
         <template v-slot:append>
             <portal to="page-header--right">
                 <div class="d-flex align-center fill-height">
-                    <refresh-rate :defRefreshRate="60" v-on="$listeners" />
+                    <refresh-rate v-model="refreshRate" v-on="$listeners" />
                     <create-resource
                         class="ml-2 d-inline-block"
                         :defFormType="RESOURCE_FORM_TYPES.SERVER"
@@ -93,6 +93,11 @@ import { mapState, mapGetters } from 'vuex'
 
 export default {
     name: 'page-header',
+    data() {
+        return {
+            refreshRate: 60,
+        }
+    },
     computed: {
         ...mapState({
             current_cluster: state => state.visualization.current_cluster,

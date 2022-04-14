@@ -4,7 +4,7 @@
             class="d-flex align-center fill-height"
             :style="{ borderBottom: 'thin solid #e7eef1' }"
         >
-            <refresh-rate :key="$route.name" :defRefreshRate="60" v-on="$listeners" />
+            <refresh-rate :key="$route.name" v-model="refreshRate" v-on="$listeners" />
             <create-resource v-if="showCreateNew" class="ml-2 d-inline-block" />
         </div>
     </portal>
@@ -31,6 +31,11 @@ export default {
     name: 'page-header-right',
     props: {
         showCreateNew: { type: Boolean, default: false },
+    },
+    data() {
+        return {
+            refreshRate: 60,
+        }
     },
 }
 </script>
