@@ -13,7 +13,7 @@
 
 import mount from '@tests/unit/setup'
 import TabNav from '@/pages/Dashboard/TabNav'
-import tabRoutes from 'router/tabRoutes'
+import { dashboardTabRoutes } from 'router/routes'
 
 import {
     dummy_all_sessions,
@@ -79,7 +79,7 @@ describe('Dashboard TabNav', () => {
         const { wrappers: aTags } = wrapper.findAll('a')
         expect(aTags.length).to.be.equals(5)
         aTags.forEach((aTag, i) => {
-            const { text: tabText, name: routeName } = tabRoutes[i]
+            const { text: tabText, name: routeName } = dashboardTabRoutes[i]
             const content = aTag.text().replace(/\s{2,}/g, ' ')
             expect(content).to.be.equals(`${tabText} (${wrapper.vm.getTotal(routeName)})`)
         })
@@ -93,7 +93,7 @@ describe('Dashboard TabNav', () => {
     it(`Should pass tab route.path as id to v-tab-item`, () => {
         const { wrappers: vTabItems } = wrapper.findAllComponents({ name: 'v-tab-item' })
         vTabItems.forEach((tabItem, i) => {
-            expect(tabItem.vm.$props.id).to.be.equals(tabRoutes[i].path)
+            expect(tabItem.vm.$props.id).to.be.equals(dashboardTabRoutes[i].path)
         })
     })
 })

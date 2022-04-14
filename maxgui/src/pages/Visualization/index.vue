@@ -2,7 +2,7 @@
     <page-wrapper fluid :spacerStyle="{ borderBottom: 'thin solid #e7eef1' }">
         <portal to="page-header">
             <v-tabs v-model="activeTab" class="tab-navigation-wrapper flex-grow-0">
-                <v-tab v-for="route in visRoutes" :key="route.path" :to="route.path">
+                <v-tab v-for="route in visTabRoutes" :key="route.path" :to="route.path">
                     {{ $t(route.name) }}
                 </v-tab>
             </v-tabs>
@@ -26,8 +26,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import visRoutes from 'router/visRoutes'
-
+import { visTabRoutes } from 'router/routes'
 export default {
     name: 'visualization',
     data() {
@@ -36,8 +35,8 @@ export default {
         }
     },
     computed: {
-        visRoutes() {
-            return visRoutes
+        visTabRoutes() {
+            return visTabRoutes
         },
     },
 }

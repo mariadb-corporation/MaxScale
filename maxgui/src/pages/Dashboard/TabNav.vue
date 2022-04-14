@@ -1,13 +1,18 @@
 <template>
     <v-tabs v-model="activeTab" class="tab-navigation-wrapper">
-        <v-tab v-for="route in tabRoutes" :key="route.path" :to="route.path">
+        <v-tab v-for="route in dashboardTabRoutes" :key="route.path" :to="route.path">
             {{ $tc(route.text, 2) }}
             <span class="field-text-info color text-field-text">
                 ({{ getTotal(route.name) }})
             </span>
         </v-tab>
         <v-tabs-items v-model="activeTab">
-            <v-tab-item v-for="route in tabRoutes" :id="route.path" :key="route.name" class="pt-2">
+            <v-tab-item
+                v-for="route in dashboardTabRoutes"
+                :id="route.path"
+                :key="route.name"
+                class="pt-2"
+            >
                 <!-- Only render view if tab is active -->
                 <router-view v-if="activeTab === route.path" />
             </v-tab-item>
@@ -29,7 +34,7 @@
  * Public License.
  */
 import { mapState } from 'vuex'
-import tabRoutes from 'router/tabRoutes'
+import { dashboardTabRoutes } from 'router/routes'
 
 export default {
     name: 'tab-nav',
@@ -37,7 +42,7 @@ export default {
     data() {
         return {
             activeTab: null,
-            tabRoutes: tabRoutes,
+            dashboardTabRoutes: dashboardTabRoutes,
         }
     },
     computed: {
