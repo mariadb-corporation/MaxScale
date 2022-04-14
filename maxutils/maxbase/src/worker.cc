@@ -1136,19 +1136,21 @@ void Worker::poll_waitevents()
 
         for (int i = 0; i < nfds; i++)
         {
+            uint32_t pollable_events = events[i].events;
             Pollable* pPollable = static_cast<Pollable*>(events[i].data.ptr);
             int fd = pPollable->poll_fd();
 
-            loop_now = deliver_events(cycle_start, loop_now, pPollable, events[i].events, Pollable::NEW_CALL);
-
             auto it = m_scheduled_polls.find(fd);
+
             if (it != m_scheduled_polls.end())
             {
-                // If there was a new event for the file descriptor, then
-                // we have already called the handler, so it had better be
-                // removed from the scheduled polls.
+                // Ok, so there were events for this Pollable already. We'll merge
+                // them and remove it from the scheduled calls.
+                pollable_events |= it->second.events;
                 m_scheduled_polls.erase(it);
             }
+
+            loop_now = deliver_events(cycle_start, loop_now, pPollable, pollable_events, Pollable::NEW_CALL);
         }
 
         // Can't just iterate over it, in case the callback removes
