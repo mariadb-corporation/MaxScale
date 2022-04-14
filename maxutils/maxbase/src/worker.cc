@@ -34,6 +34,7 @@
 
 using std::function;
 using std::vector;
+using std::string;
 using std::stringstream;
 using namespace std::chrono;
 
@@ -78,10 +79,94 @@ typedef struct worker_message
     intptr_t arg1;  /*< Message specific first argument. */
     intptr_t arg2;  /*< Message specific second argument. */
 } WORKER_MESSAGE;
+
 }
 
 namespace maxbase
 {
+
+string epoll_events_to_string(EPOLL_EVENTS events)
+{
+    vector<string> rv;
+
+    if (events & EPOLLIN)
+    {
+        rv.push_back("EPOLLIN");
+    }
+
+    if (events & EPOLLPRI)
+    {
+        rv.push_back("EPOLLPRI");
+    }
+
+    if (events & EPOLLOUT)
+    {
+        rv.push_back("EPOLLOUT");
+    }
+
+    if (events & EPOLLRDNORM)
+    {
+        rv.push_back("EPOLLRDNORM");
+    }
+
+    if (events & EPOLLRDBAND)
+    {
+        rv.push_back("EPOLLRDBAND");
+    }
+
+    if (events & EPOLLWRNORM)
+    {
+        rv.push_back("EPOLLWRNORM");
+    }
+
+    if (events & EPOLLWRBAND)
+    {
+        rv.push_back("EPOLLWRBAND");
+    }
+
+    if (events & EPOLLMSG)
+    {
+        rv.push_back("EPOLLMSG");
+    }
+
+    if (events & EPOLLERR)
+    {
+        rv.push_back("EPOLLERR");
+    }
+
+    if (events & EPOLLHUP)
+    {
+        rv.push_back("EPOLLHUP");
+    }
+
+    if (events & EPOLLRDHUP)
+    {
+        rv.push_back("EPOLLRDHUP");
+    }
+
+    if (events & EPOLLEXCLUSIVE)
+    {
+        rv.push_back("EPOLLEXCLUSIVE");
+    }
+
+    if (events & EPOLLWAKEUP)
+    {
+        rv.push_back("EPOLLWAKEUP");
+    }
+
+    if (events & EPOLLONESHOT)
+    {
+        rv.push_back("EPOLLONESHOT");
+    }
+
+    if (events & EPOLLET)
+    {
+        rv.push_back("EPOLLET");
+    }
+
+    return mxb::join(rv, "|");
+}
+
 
 const int WORKER_STATISTICS::MAXNFDS;
 const int64_t WORKER_STATISTICS::N_QUEUE_TIMES;

@@ -13,9 +13,20 @@
 #pragma once
 
 #include <maxbase/ccdefs.hh>
+#include <sys/epoll.h>
 
 namespace maxbase
 {
+
+/**
+ * For development and debugging, a function that converts a bitmask of epoll
+ * events to a string with the corresponding information, e.g. "EPOLLIN|EPOLLOUT".
+ *
+ * @param events  A bitmask of EPOLLIN, EPOLLOUT, etc.
+ *
+ * @return  A '|' separated string of "EPOLLIN", "EPOLLOUT", etc..
+ */
+std::string epoll_events_to_string(EPOLL_EVENTS events);
 
 namespace poll_action
 {
