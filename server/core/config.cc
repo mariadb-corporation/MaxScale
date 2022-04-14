@@ -85,6 +85,7 @@ constexpr char CN_ADMIN_SSL_CA_CERT[] = "admin_ssl_ca_cert";
 constexpr char CN_ADMIN_SSL_CERT[] = "admin_ssl_cert";
 constexpr char CN_ADMIN_SSL_KEY[] = "admin_ssl_key";
 constexpr char CN_ADMIN_SSL_VERSION[] = "admin_ssl_version";
+constexpr char CN_ALWAYS_READ_VIA_EPOLL[] = "always_read_via_epoll";
 constexpr char CN_AUTO[] = "auto";
 constexpr char CN_DEBUG[] = "debug";
 constexpr char CN_DUMP_LAST_STATEMENTS[] = "dump_last_statements";
@@ -97,6 +98,7 @@ constexpr char CN_LOG_THROTTLING[] = "log_throttling";
 constexpr char CN_LOG_WARNING[] = "log_warning";
 constexpr char CN_LOG_WARN_SUPER_USER[] = "log_warn_super_user";
 constexpr char CN_MAX_AUTH_ERRORS_UNTIL_BLOCK[] = "max_auth_errors_until_block";
+constexpr char CN_MAX_READ_AMOUNT[] = "max_read_amount";
 constexpr char CN_MS_TIMESTAMP[] = "ms_timestamp";
 constexpr char CN_PASSIVE[] = "passive";
 constexpr char CN_PERSIST_RUNTIME_CHANGES[] = "persist_runtime_changes";
@@ -114,6 +116,8 @@ constexpr char CN_WRITEQ_LOW_WATER[] = "writeq_low_water";
 constexpr char CN_SERVER[] = "server";
 
 static uint64_t DEFAULT_QC_CACHE_SIZE = get_total_memory() * 0.15;
+static int64_t DEFAULT_MAX_READ_AMOUNT = 0;
+
 }
 
 namespace maxscale
@@ -615,6 +619,19 @@ config::ParamString Config::s_debug(
     CN_DEBUG,
     "Debug options",
     "");
+
+config::ParamBool Config::s_always_read_via_epoll(
+    &Config::s_specification,
+    CN_ALWAYS_READ_VIA_EPOLL,
+    "Specifies whether control should always be returned to epoll_wait() after a read.",
+    false);
+
+config::ParamSize Config::s_max_read_amount(
+    &Config::s_specification,
+    CN_MAX_READ_AMOUNT,
+    "Maximum amount of data read before return to epoll_wait.",
+    DEFAULT_MAX_READ_AMOUNT);
+
 }
 
 namespace
@@ -795,6 +812,8 @@ Config::Config(int argc, char** argv)
     add_native(&Config::gui, &s_gui);
     add_native(&Config::secure_gui, &s_secure_gui);
     add_native(&Config::debug, &s_debug);
+    add_native(&Config::always_read_via_epoll, &s_always_read_via_epoll);
+    add_native(&Config::max_read_amount, &s_max_read_amount);
 
     /* get release string */
     if (!get_release_string(this->release_string))
