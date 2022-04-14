@@ -405,6 +405,14 @@ static int dcb_read_no_bytes_available(DCB* dcb, int fd, int nreadtotal)
  */
 bool DCB::socket_read(size_t maxbytes, ReadLimit limit_type)
 {
+    mxs::Config& global_config = mxs::Config::get();
+
+    if (global_config.max_read_amount != 0 && m_read_amount > global_config.max_read_amount)
+    {
+        m_interrupted = true;
+        return true;
+    }
+
     bool keep_reading = true;
     bool socket_cleared = false;
     bool success = true;
@@ -480,6 +488,8 @@ bool DCB::socket_read(size_t maxbytes, ReadLimit limit_type)
             trigger_read_event();   // Edge-triggered, so add to ready list as more data may be available.
         }
     }
+
+    m_read_amount += bytes_from_socket;
     return success;
 }
 
@@ -1331,7 +1341,18 @@ uint32_t DCB::process_events(uint32_t events)
         }
         if (1 == return_code)
         {
+            m_interrupted = false;
+            m_read_amount = 0;
             m_handler->ready_for_reading(this);
+
+            if (m_interrupted)
+            {
+                // If 'max_read_byte' has been specified, but 'always_read_via_epoll' is false,
+                // then there may be a fake EPOLLIN event that must be removed.
+                m_triggered_event &= ~EPOLLIN;
+
+                rc |= mxb::poll_action::INTERRUPTED;
+            }
         }
         else if (-1 == return_code)
         {
@@ -1499,7 +1520,14 @@ void DCB::add_event(uint32_t ev)
 
 void DCB::trigger_read_event()
 {
-    add_event(EPOLLIN);
+    if (mxs::Config::get().always_read_via_epoll)
+    {
+        m_interrupted = true;
+    }
+    else
+    {
+        add_event(EPOLLIN);
+    }
 }
 
 void DCB::trigger_hangup_event()

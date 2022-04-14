@@ -615,7 +615,9 @@ protected:
 private:
     friend class Manager;
 
-    bool m_open {true};     /**< Is dcb still open, i.e. close() not called? */
+    bool    m_open {true};           /**< Is dcb still open, i.e. close() not called? */
+    bool    m_interrupted { false }; /**< Was the reading interrupted? */
+    int64_t m_read_amount { 0 };     /**< How much has been read in one poll handling callback? */
 
     enum class ReadLimit
     {
