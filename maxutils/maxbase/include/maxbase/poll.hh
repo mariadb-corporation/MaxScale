@@ -37,7 +37,7 @@ constexpr uint32_t WRITE = 0x04;
 constexpr uint32_t HUP = 0x08;
 constexpr uint32_t ERROR = 0x10;
 
-constexpr uint32_t INTERRUPTED = 0x20;
+constexpr uint32_t INCOMPLETE_READ = 0x20;
 }
 
 class Worker;
@@ -54,7 +54,7 @@ public:
     enum Context
     {
         NEW_CALL,     // Due to event returned from epoll_wait().
-        REPEATED_CALL // Due to previous event handling having returned poll_action::INTERRUPTED
+        REPEATED_CALL // Due to previous event handling having returned poll_action::INCOMPLETE_READ
     };
 
     Pollable(const Pollable&) = delete;
@@ -102,10 +102,10 @@ public:
      *
      * @return A mask of @c poll_action values.
      *
-     * @note If @c poll_action::INTERRUPTED is set in the returned value, then
+     * @note If @c poll_action::INCOMPLETE_READ is set in the returned value, then
      *       @c handle_poll_events will be called again, irrespective of whether
      *       any new events have occurred on the file descriptor. If
-     *       @c INTERRUPTED is returned, then it is the responsibility of
+     *       @c INCOMPLETE_READ is returned, then it is the responsibility of
      *       the @c Pollable to store sufficient context to know where it
      *       should proceed, when @c handle_poll_events is called again.
      *       The value of @c events will not change if @c handle_poll_events

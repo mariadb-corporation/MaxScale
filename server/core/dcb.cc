@@ -409,7 +409,7 @@ bool DCB::socket_read(size_t maxbytes, ReadLimit limit_type)
 
     if (global_config.max_read_amount != 0 && m_read_amount > global_config.max_read_amount)
     {
-        m_interrupted = true;
+        m_incomplete_read = true;
         return true;
     }
 
@@ -1341,17 +1341,17 @@ uint32_t DCB::process_events(uint32_t events)
         }
         if (1 == return_code)
         {
-            m_interrupted = false;
+            m_incomplete_read = false;
             m_read_amount = 0;
             m_handler->ready_for_reading(this);
 
-            if (m_interrupted)
+            if (m_incomplete_read)
             {
                 // If 'max_read_byte' has been specified, but 'always_read_via_epoll' is false,
                 // then there may be a fake EPOLLIN event that must be removed.
                 m_triggered_event &= ~EPOLLIN;
 
-                rc |= mxb::poll_action::INTERRUPTED;
+                rc |= mxb::poll_action::INCOMPLETE_READ;
             }
         }
         else if (-1 == return_code)
@@ -1522,7 +1522,7 @@ void DCB::trigger_read_event()
 {
     if (mxs::Config::get().always_read_via_epoll)
     {
-        m_interrupted = true;
+        m_incomplete_read = true;
     }
     else
     {

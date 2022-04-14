@@ -639,12 +639,12 @@ bool Worker::remove_pollable(Pollable* pPollable)
             }
         }
 
-        if (!m_pending_polls.empty())
+        if (!m_incomplete_polls.empty())
         {
-            auto it = m_pending_polls.find(fd);
-            if (it != m_pending_polls.end())
+            auto it = m_incomplete_polls.find(fd);
+            if (it != m_incomplete_polls.end())
             {
-                m_pending_polls.erase(it);
+                m_incomplete_polls.erase(it);
             }
         }
 
@@ -1036,12 +1036,12 @@ TimePoint Worker::deliver_events(uint64_t cycle_start,
     m_statistics.n_hup += bool(actions & poll_action::HUP);
     m_statistics.n_error += bool(actions & poll_action::ERROR);
 
-    if (actions & poll_action::INTERRUPTED)
+    if (actions & poll_action::INCOMPLETE_READ)
     {
-        m_statistics.n_interrupted += 1;
+        m_statistics.n_incomplete_read += 1;
 
-        PendingPoll pending_poll = { events, pPollable };
-        m_pending_polls.emplace(fd, pending_poll);
+        PendingPoll pending_poll = { EPOLLIN, pPollable };
+        m_incomplete_polls.emplace(fd, pending_poll);
     }
 
     /** Calculate event execution statistics */
@@ -1078,7 +1078,7 @@ void Worker::poll_waitevents()
         // Don't allow a 0 timeout as that would cause fast looping for 1ms
         timeout = std::max(timeout, 1);
 
-        if (!m_pending_polls.empty())
+        if (!m_incomplete_polls.empty())
         {
             // But we want it to return immediately if we know there are pending
             // polls to handle.
@@ -1128,7 +1128,7 @@ void Worker::poll_waitevents()
 
         mxb_assert(m_scheduled_polls.empty());
 
-        m_scheduled_polls.swap(m_pending_polls);
+        m_scheduled_polls.swap(m_incomplete_polls);
 
         // Set loop_now before the loop, and inside the loop
         // just before looping back to the top.
