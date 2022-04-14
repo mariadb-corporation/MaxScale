@@ -22,12 +22,12 @@ export default {
             const { id, type, description, unit, default_value, modifiable, mandatory } = item
             return {
                 id,
-                type,
-                description,
-                unit,
-                default_value,
-                modifiable,
-                mandatory,
+                ...(type && { type }),
+                ...(description && { description }),
+                ...(unit && { unit }),
+                ...(default_value !== undefined && { default_value }),
+                ...(modifiable !== undefined && { modifiable }),
+                ...(mandatory !== undefined && { mandatory }),
             }
         },
     },
