@@ -483,9 +483,11 @@ mariadb::AuthByteVec mariadb::AuthenticatorModule::generate_token(const std::str
 bool UserEntry::operator==(const UserEntry& rhs) const
 {
     return username == rhs.username && host_pattern == rhs.host_pattern && plugin == rhs.plugin
-           && password == rhs.password && auth_string == rhs.auth_string && ssl == rhs.ssl
-           && global_db_priv == rhs.global_db_priv && proxy_priv == rhs.proxy_priv && is_role == rhs.is_role
-           && default_role == rhs.default_role;
+           && password == rhs.password && auth_string == rhs.auth_string
+           && ssl == rhs.ssl
+           && super_priv == rhs.super_priv && global_db_priv == rhs.global_db_priv
+           && proxy_priv == rhs.proxy_priv
+           && is_role == rhs.is_role && default_role == rhs.default_role;
 }
 
 bool UserEntry::host_pattern_is_more_specific(const UserEntry& lhs, const UserEntry& rhs)
