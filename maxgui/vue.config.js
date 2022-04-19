@@ -176,6 +176,9 @@ module.exports = {
     },
 
     productionSourceMap: false,
+    css: {
+        extract: { ignoreOrder: true },
+    },
 }
 function addStyleResource(rule) {
     rule.use('style-resource')
