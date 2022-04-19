@@ -105,6 +105,11 @@ export default {
             ]
         },
     },
+    watch: {
+        refreshRate() {
+            this.refreshCount = this.refreshRate
+        },
+    },
     mounted() {
         this.refreshCount = this.refreshRate
         this.workerInit()

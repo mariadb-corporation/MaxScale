@@ -90,14 +90,10 @@
 @on-count-done. Emit event after amount of time from <refresh-rate/>
 */
 import { mapState, mapGetters } from 'vuex'
-
+import refreshRate from 'mixins/refreshRate'
 export default {
     name: 'page-header',
-    data() {
-        return {
-            refreshRate: 60,
-        }
-    },
+    mixins: [refreshRate],
     computed: {
         ...mapState({
             current_cluster: state => state.visualization.current_cluster,

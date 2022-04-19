@@ -27,15 +27,12 @@
 /*
 @on-count-done: e: Event. The event is emitted from the `refresh-rate` component.
 */
+import refreshRate from 'mixins/refreshRate'
 export default {
     name: 'page-header-right',
+    mixins: [refreshRate],
     props: {
         showCreateNew: { type: Boolean, default: false },
-    },
-    data() {
-        return {
-            refreshRate: 60,
-        }
     },
 }
 </script>

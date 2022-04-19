@@ -29,6 +29,7 @@ import { mapActions } from 'vuex'
 import TabNav from './TabNav'
 import PageHeader from './PageHeader'
 import Graphs from './Graphs'
+import refreshRate from 'mixins/refreshRate'
 
 export default {
     name: 'dashboard',
@@ -37,11 +38,7 @@ export default {
         PageHeader,
         Graphs,
     },
-    data() {
-        return {
-            refreshRate: 10,
-        }
-    },
+    mixins: [refreshRate],
     async created() {
         await this.fetchMaxScaleOverviewInfo()
         await this.fetchAll()

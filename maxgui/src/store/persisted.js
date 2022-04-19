@@ -11,10 +11,12 @@
  * Public License.
  */
 import { addDaysToNow } from 'utils/helpers'
+import { APP_CONFIG } from 'utils/constants'
 // Place here any states need to be persisted without being cleared when logging out
 export default {
     namespaced: true,
     state: {
+        refresh_rate_by_route_group: APP_CONFIG.DEF_REFRESH_RATE_BY_GROUP,
         // QUery toolbar's states
         query_max_rows: 10000,
         query_confirm_flag: 1,
@@ -24,6 +26,9 @@ export default {
         query_show_sys_schemas_flag: 1,
     },
     mutations: {
+        UPDATE_REFRESH_RATE_BY_ROUTE_GROUP(state, { group, payload }) {
+            state.refresh_rate_by_route_group[group] = payload
+        },
         SET_QUERY_MAX_ROW(state, payload) {
             state.query_max_rows = payload
         },

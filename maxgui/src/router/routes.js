@@ -10,6 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { APP_CONFIG } from 'utils/constants'
 const Login = () => import(/* webpackChunkName: "login" */ 'pages/Login')
 const NotFound404 = () => import(/* webpackChunkName: "not-found-page" */ 'pages/NotFound404')
 //Dashboard views
@@ -42,6 +43,7 @@ const Listener = () => import(/* webpackChunkName: "listener-detail" */ 'pages/L
 const Filter = () => import(/* webpackChunkName: "filter-detail" */ 'pages/FilterDetail')
 const Cluster = () => import(/* webpackChunkName: "cluster-detail" */ 'pages/ClusterDetail')
 
+const { DASHBOARD, VISUALIZATION, CLUSTER } = APP_CONFIG.ROUTE_GROUP
 export const dashboardTabRoutes = [
     // Tab Routes
     {
@@ -50,6 +52,7 @@ export const dashboardTabRoutes = [
         meta: {
             requiresAuth: true,
             layout: 'app-layout',
+            group: DASHBOARD,
         },
         name: 'servers',
         text: 'servers',
@@ -61,6 +64,7 @@ export const dashboardTabRoutes = [
         meta: {
             requiresAuth: true,
             layout: 'app-layout',
+            group: DASHBOARD,
         },
         name: 'sessions',
         text: 'current sessions',
@@ -72,6 +76,7 @@ export const dashboardTabRoutes = [
         meta: {
             requiresAuth: true,
             layout: 'app-layout',
+            group: DASHBOARD,
         },
         name: 'services',
         text: 'services',
@@ -83,6 +88,7 @@ export const dashboardTabRoutes = [
         meta: {
             requiresAuth: true,
             layout: 'app-layout',
+            group: DASHBOARD,
         },
         name: 'listeners',
         text: 'listeners',
@@ -94,6 +100,7 @@ export const dashboardTabRoutes = [
         meta: {
             requiresAuth: true,
             layout: 'app-layout',
+            group: DASHBOARD,
         },
         name: 'filters',
         text: 'filters',
@@ -108,6 +115,7 @@ export const visTabRoutes = [
         meta: {
             requiresAuth: true,
             layout: 'app-layout',
+            group: VISUALIZATION,
         },
         name: 'configuration',
         text: 'configuration',
@@ -118,6 +126,7 @@ export const visTabRoutes = [
         meta: {
             requiresAuth: true,
             layout: 'app-layout',
+            group: VISUALIZATION,
         },
         name: 'clusters',
         text: 'clusters',
@@ -135,6 +144,7 @@ export const sideBarRoutes = [
             size: 22,
             icon: '$vuetify.icons.tachometer',
             redirect: '/dashboard/servers',
+            group: DASHBOARD,
         },
         name: 'dashboard',
         label: 'dashboards',
@@ -150,6 +160,7 @@ export const sideBarRoutes = [
             size: 22,
             icon: '$vuetify.icons.reports',
             redirect: '/visualization/configuration',
+            group: VISUALIZATION,
         },
         name: 'visualization',
         label: 'visualization',
@@ -314,6 +325,7 @@ export const routes = [
         meta: {
             requiresAuth: true,
             layout: 'app-layout',
+            group: CLUSTER,
         },
         name: 'cluster',
     },
