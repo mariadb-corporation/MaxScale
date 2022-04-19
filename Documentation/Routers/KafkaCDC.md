@@ -190,6 +190,23 @@ would appear as `test.t1`. The behavior is the same even if the database or the
 table name contains a period. This means that an event for the `test.table`
 table in the `my.data` database would appear as `my.data.test.table`.
 
+Here is an example configuration that only sends events for tables from the
+`db1` database. The `accounts` and `users` tables in the `db1` database are
+filtered out using the `exclude` parameter.
+
+```
+[Kafka-CDC]
+type=service
+router=kafkacdc
+servers=server1
+user=maxuser
+password=maxpwd
+bootstrap_servers=127.0.0.1:9092
+topic=my-cdc-topic
+match=db1[.]
+exclude=db1[.](accounts|users)
+```
+
 ### `exclude`
 
 - **Type**: [regex](../Getting-Started/Configuration-Guide.md#regular-expressions)
