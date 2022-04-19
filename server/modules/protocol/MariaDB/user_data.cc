@@ -1803,6 +1803,7 @@ UserDatabase::PatternType UserDatabase::parse_pattern_type(const std::string& ho
 bool UserDatabase::equal_contents(const UserDatabase& rhs) const
 {
     return m_users == rhs.m_users
+           && m_database_wc_grants == rhs.m_database_wc_grants
            && m_database_grants == rhs.m_database_grants
            && m_roles_mapping == rhs.m_roles_mapping
            && m_database_names == rhs.m_database_names;
