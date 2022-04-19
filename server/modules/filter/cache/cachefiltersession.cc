@@ -262,7 +262,6 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
     , m_clear_cache(false)
     , m_user_specific(m_sCache->config().users == CACHE_USERS_ISOLATED)
     , m_processing(false)
-    , m_did(0)
 {
     m_key.data_hash = 0;
     m_key.full_hash = 0;
@@ -306,12 +305,6 @@ CacheFilterSession::~CacheFilterSession()
 {
     MXB_FREE(m_zUseDb);
     MXB_FREE(m_zDefaultDb);
-
-    if (m_did != 0)
-    {
-        Worker::get_current()->cancel_dcall(m_did);
-        m_did = 0;
-    }
 }
 
 // static
@@ -1659,26 +1652,20 @@ void CacheFilterSession::ready_for_another_call()
     {
         Worker* pWorker = Worker::get_current();
 
-        m_did = pWorker->dcall(0, [this](Worker::Call::action_t action) {
-                m_did = 0;
-
-                if (action == Worker::Call::EXECUTE)
+        pWorker->lcall([this]() {
+                // We may already be processing, if a packet arrived from the client
+                // and processed, before the delayed call got handled.
+                if (!m_processing)
                 {
-                    // We may already be processing, if a packet arrived from the client
-                    // and processed, before the delayed call got handled.
-                    if (!m_processing)
+                    if (!m_queued_packets.empty())
                     {
-                        if (!m_queued_packets.empty())
-                        {
-                            GWBUF* pPacket = m_queued_packets.front().release();
-                            mxb_assert(pPacket);
-                            m_queued_packets.pop_front();
+                        GWBUF* pPacket = m_queued_packets.front().release();
+                        mxb_assert(pPacket);
+                        m_queued_packets.pop_front();
 
-                            routeQuery(pPacket);
-                        }
+                        routeQuery(pPacket);
                     }
                 }
-                return false;
             });
     }
 }
