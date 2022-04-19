@@ -814,6 +814,21 @@ public:
      */
     bool cancel_dcall(DCId id);
 
+    /**
+     * Loop call; the provided function will be called right before the
+     * control returns back to epoll_wait(). Note that it is far more efficient
+     * to call lcall() than dcall() with a 0 delay.
+     *
+     * @param f  A function.
+     *
+     * @note All loop-calls are processed before the control returns back to
+     *       epoll_wait(). That is, if a loop call adds another loop call, which
+     *       adds a loop call, ad infinitum, the system will hang.
+     *       Safe usage is e.g. to add a loop call to clientReply() from a filter
+     *       that short-circuits the routeQuery() handling.
+     */
+    void lcall(std::function<void ()>&& f);
+
 protected:
     const int m_epoll_fd;               /*< The epoll file descriptor. */
     state_t   m_state {STOPPED};        /*< The state of the worker */
@@ -1184,9 +1199,10 @@ private:
 
     void run(mxb::Semaphore* pSem);
 
-    typedef DelegatingTimer<Worker>          PrivateTimer;
-    typedef std::multimap<int64_t, DCall*>   DCallsByTime;
-    typedef std::unordered_map<DCId, DCall*> DCallsById;
+    typedef DelegatingTimer<Worker>             PrivateTimer;
+    typedef std::multimap<int64_t, DCall*>      DCallsByTime;
+    typedef std::unordered_map<DCId, DCall*>    DCallsById;
+    typedef std::vector<std::function<void ()>> LCalls;
 
     uint32_t      m_max_events;                /*< Maximum numer of events in each epoll_wait call. */
     STATISTICS    m_statistics;                /*< Worker statistics. */
@@ -1204,5 +1220,6 @@ private:
     RandomEngine  m_random_engine;             /*< Random engine for this worker (this thread). */
     TimePoint     m_epoll_tick_now;            /*< TimePoint when epoll_tick() was called */
     DCId          m_prev_dcid {NO_CALL};       /*< Previous delayed call id. */
+    LCalls        m_lcalls;                    /*< Calls to be made before return to epoll_wait(). */
 };
 }
