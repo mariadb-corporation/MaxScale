@@ -21,6 +21,9 @@ If duplicate tables are expected, use the
 duplicate tables are allowed. To disable the duplicate database detection, use
 `ignore_tables_regex=.*`.
 
+Schemarouter compares table and database names case-insensitively. This means
+that the tables `test.t1` and `test.T1` are assumed to refer to the same table.
+
 The main limitation of SchemaRouter is that aside from session variable writes
 and some specific queries, a query can only target one server. This means that
 queries which depend on results from multiple servers give incorrect results.
