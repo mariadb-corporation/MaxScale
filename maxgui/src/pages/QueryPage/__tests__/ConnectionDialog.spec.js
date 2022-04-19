@@ -111,10 +111,9 @@ describe(`ConnectionDialog - child component's data communication tests `, () =>
     })
 })
 describe(`ConnectionDialog - dialog open/close side-effect tests`, () => {
-    let wrapper, handleFetchRsrcsSpy, handleChooseDefRsrcSpy
+    let wrapper, handleFetchRsrcsSpy
     beforeEach(() => {
         handleFetchRsrcsSpy = sinon.spy(ConnectionDialog.methods, 'handleFetchRsrcs')
-        handleChooseDefRsrcSpy = sinon.spy(ConnectionDialog.methods, 'handleChooseDefRsrc')
         wrapper = mountFactory({
             methods: {
                 fetchRcTargetNames: () => null,
@@ -123,15 +122,12 @@ describe(`ConnectionDialog - dialog open/close side-effect tests`, () => {
     })
     afterEach(() => {
         handleFetchRsrcsSpy.restore()
-        handleChooseDefRsrcSpy.restore()
     })
     it(`Should choose listeners as the default resource when dialog is opened`, () => {
         expect(wrapper.vm.resourceType).to.be.equals('listeners')
     })
-    it(`Should call handleFetchRsrcs and handleChooseDefRsrc when dialog is opened`, async () => {
+    it(`Should call handleFetchRsrcs when dialog is opened`, () => {
         handleFetchRsrcsSpy.should.have.been.calledOnceWith(wrapper.vm.$data.resourceTypes[0])
-        await wrapper.vm.$nextTick()
-        handleChooseDefRsrcSpy.should.have.been.calledOnceWith(wrapper.vm.$data.resourceTypes[0])
     })
     it(`Should reset to initial state after closing dialog`, async () => {
         const initialData = wrapper.vm.$data

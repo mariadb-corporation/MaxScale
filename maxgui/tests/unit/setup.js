@@ -61,6 +61,13 @@ export default options => {
         attachTo: '#app',
         ...opts,
     }
+    //TODO: Add tests for basic user.
+    store.commit('user/SET_LOGGED_IN_USER', {
+        name: 'admin',
+        rememberMe: false,
+        isLoggedIn: true,
+        attributes: { account: 'admin' },
+    })
     return doMount(options.shallow, options.component, mountOptions)
 }
 export const router = new Router({ routes: routes })

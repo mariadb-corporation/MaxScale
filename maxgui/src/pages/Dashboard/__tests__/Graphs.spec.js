@@ -15,21 +15,13 @@ import mount from '@tests/unit/setup'
 import Graphs from '@/pages/Dashboard/Graphs'
 
 import { dummy_all_servers } from '@tests/unit/utils'
-import store from 'store'
-
 describe('Graphs index', () => {
-    let wrapper, axiosStub
+    let wrapper
 
     beforeEach(() => {
-        axiosStub = sinon.stub(store.$http, 'get').resolves(
-            Promise.resolve({
-                data: {},
-            })
-        )
         wrapper = mount({
             shallow: false,
             component: Graphs,
-
             computed: {
                 sessions_datasets: () => [
                     {
@@ -69,27 +61,14 @@ describe('Graphs index', () => {
             },
         })
     })
-
-    afterEach(() => {
-        axiosStub.restore()
-    })
-
-    it(`Should update graphs by first sending requests in parallel to
-      get all servers, monitors, sessions, services and maxscale threads`, async () => {
-        // this prevent fetch loop in line-chart-stream
-        await wrapper.setData({
-            chartOptionsWithOutCallBack: null,
-            mainChartOptions: null,
-        })
+    it(`Should call corresponding methods when updateChart is called`, () => {
+        let spies = [
+            'updateServerConnectionsDatasets',
+            'updateSessionsDatasets',
+            'updateThreadsDatasets',
+        ].map(fn => sinon.spy(wrapper.vm, fn))
         //mockup update chart
-        await wrapper.vm.updateChart()
-
-        await axiosStub.getCall(0).should.have.been.calledWith('/servers')
-        await axiosStub.getCall(1).should.have.been.calledWith('/monitors')
-        await axiosStub.getCall(2).should.have.been.calledWith('/sessions')
-        await axiosStub.getCall(3).should.have.been.calledWith('/services')
-        await axiosStub.lastCall.should.have.been.calledWith(
-            '/maxscale/threads?fields[threads]=stats'
-        )
+        wrapper.vm.updateChart()
+        spies.forEach(spy => spy.should.have.been.calledOnce)
     })
 })

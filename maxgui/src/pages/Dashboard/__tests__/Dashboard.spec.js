@@ -14,60 +14,52 @@
 import mount from '@tests/unit/setup'
 import Dashboard from '@/pages/Dashboard'
 
-import store from 'store'
-
-describe('Dashboard index', () => {
-    let wrapper, axiosStub
-
-    beforeEach(() => {
-        axiosStub = sinon.stub(store.$http, 'get').resolves(
-            Promise.resolve({
-                data: {},
-            })
-        )
-        wrapper = mount({
+describe('Dashboard', () => {
+    it(`Should call fetchMaxScaleOverviewInfo and fetchAll`, () => {
+        let count = 0,
+            fetchAllCount = 0
+        let wrapper = mount({
             shallow: true,
             component: Dashboard,
+            methods: { fetchMaxScaleOverviewInfo: () => count++, fetchAll: () => fetchAllCount++ },
         })
-    })
-
-    afterEach(() => {
-        axiosStub.restore()
-        wrapper.setData({
-            loop: false,
-        })
+        expect(count).to.be.equals(1)
+        wrapper.vm.$nextTick(() => expect(fetchAllCount).to.be.equals(1))
         wrapper.destroy()
     })
-
-    it(`Should send requests in parallel to get maxscale overview info,
-      maxscale threads, all servers, monitors, sessions, services,
-      listeners and filters`, async () => {
-        await axiosStub.firstCall.should.have.been.calledWith(
-            '/maxscale?fields[maxscale]=version,commit,started_at,activated_at,uptime'
-        )
-        await axiosStub.secondCall.should.have.been.calledWith(
-            '/maxscale/threads?fields[threads]=stats'
-        )
-        await axiosStub.thirdCall.should.have.been.calledWith('/servers')
-        await axiosStub.getCall(3).should.have.been.calledWith('/monitors')
-        await axiosStub.getCall(4).should.have.been.calledWith('/sessions')
-        await axiosStub.getCall(5).should.have.been.calledWith('/services')
-
-        await wrapper.vm.$nextTick(async () => {
-            await axiosStub.should.have.been.calledWith('/listeners')
-            await axiosStub.should.have.been.calledWith('/filters')
+    describe('Dashboard child components rendering tests', () => {
+        let wrapper
+        before(() => {
+            wrapper = mount({
+                shallow: true,
+                component: Dashboard,
+                methods: { fetchMaxScaleOverviewInfo: () => null, fetchAll: () => null },
+            })
         })
+        const components = ['page-wrapper', 'page-header', 'graphs']
+        components.forEach(name =>
+            it(`Should render ${name} component`, () => {
+                expect(wrapper.findComponent({ name }).exists()).to.be.true
+            })
+        )
     })
 
-    it(`Should render page-wrapper component`, () => {
-        expect(wrapper.findComponent({ name: 'page-wrapper' }).exists()).to.be.true
-    })
-
-    it(`Should render page-header component`, () => {
-        expect(wrapper.findComponent({ name: 'page-header' }).exists()).to.be.true
-    })
-
-    it(`Should render graphs component`, () => {
-        expect(wrapper.findComponent({ name: 'graphs' }).exists()).to.be.true
+    describe('Dashboard - method tests', () => {
+        it(`Should call fetchAll and updateChart when onCountDone is called`, async () => {
+            const wrapper = mount({
+                shallow: false,
+                component: Dashboard,
+                methods: { fetchMaxScaleOverviewInfo: () => null, fetchAll: () => null },
+                stubs: {
+                    'refresh-rate': "<div class='refresh-rate'></div>",
+                    'page-header': "<div class='page-header'></div>",
+                },
+            })
+            const fetchAllSpy = sinon.spy(wrapper.vm, 'fetchAll')
+            const updateChartSpy = sinon.spy(wrapper.vm.$refs.graphs, 'updateChart')
+            await wrapper.vm.onCountDone()
+            fetchAllSpy.should.have.been.called
+            updateChartSpy.should.have.been.called
+        })
     })
 })
