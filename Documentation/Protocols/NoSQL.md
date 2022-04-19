@@ -280,7 +280,7 @@ by nosqlprotocol. The following table lists the commands and what role they
 require.
 
 Command | Role
---------------
+--------|-----
 [createUser](#createUser) | `userAdmin`
 [dropUser](#dropUser) | `userAdmin`
 [grantRolesToUser](#grantRolesToUser) | `userAdmin`
