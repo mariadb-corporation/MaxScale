@@ -12,6 +12,8 @@
  */
 
 #include "mariadbmon.hh"
+#include "maxbase/format.hh"
+#include <maxbase/http.hh>
 #include <maxscale/modulecmd.hh>
 
 using maxscale::Monitor;
@@ -33,12 +35,16 @@ const char switchover_cmd[] = "switchover";
 const char rejoin_cmd[] = "rejoin";
 const char reset_repl_cmd[] = "reset-replication";
 const char release_locks_cmd[] = "release-locks";
+const char cs_add_node_cmd[] = "cs-add-node";
 
 bool manual_switchover(ExecMode mode, const MODULECMD_ARG* args, json_t** error_out);
 bool manual_failover(ExecMode mode, const MODULECMD_ARG* args, json_t** output);
 bool manual_rejoin(ExecMode mode, const MODULECMD_ARG* args, json_t** output);
 bool manual_reset_replication(ExecMode mode, const MODULECMD_ARG* args, json_t** output);
 bool release_locks(ExecMode mode, const MODULECMD_ARG* args, json_t** output);
+
+std::tuple<MariaDBMonitor*, string, string> read_args(const MODULECMD_ARG& args);
+std::tuple<bool, std::chrono::seconds>      get_timeout(const string& timeout_str, json_t** output);
 
 /**
  * Command handlers. These are called by the rest-api.
@@ -112,6 +118,19 @@ bool handle_fetch_cmd_result(const MODULECMD_ARG* args, json_t** output)
     auto mariamon = static_cast<MariaDBMonitor*>(mon);
     mariamon->fetch_cmd_result(output);
     return true;    // result fetch always works, even if there is nothing to return
+}
+
+bool handle_async_cs_add_node(const MODULECMD_ARG* args, json_t** output)
+{
+    bool rval = false;
+    auto [mon, host, timeout_str] = read_args(*args);
+    auto [to_ok, timeout] = get_timeout(timeout_str, output);
+
+    if (to_ok)
+    {
+        rval = mon->schedule_cs_add_node(host, timeout, output);
+    }
+    return rval;
 }
 
 /**
@@ -301,6 +320,46 @@ bool release_locks(ExecMode mode, const MODULECMD_ARG* args, json_t** output)
     }
     return rv;
 }
+
+std::tuple<MariaDBMonitor*, string, string> read_args(const MODULECMD_ARG& args)
+{
+    mxb_assert(MODULECMD_GET_TYPE(&args.argv[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(args.argc <= 1 || MODULECMD_GET_TYPE(&args.argv[1].type) == MODULECMD_ARG_STRING);
+    mxb_assert(args.argc <= 2 || MODULECMD_GET_TYPE(&args.argv[2].type) == MODULECMD_ARG_STRING);
+
+    MariaDBMonitor* mon = static_cast<MariaDBMonitor*>(args.argv[0].value.monitor);
+    string text1 = args.argc >= 2 ? args.argv[1].value.string : "";
+    string text2 = args.argc >= 3 ? args.argv[2].value.string : "";
+
+    return {mon, text1, text2};
+}
+
+std::tuple<bool, std::chrono::seconds> get_timeout(const string& timeout_str, json_t** output)
+{
+    std::chrono::milliseconds duration;
+    mxs::config::DurationUnit unit;
+    std::chrono::seconds timeout = 0s;
+
+    bool rv = get_suffixed_duration(timeout_str.c_str(), &duration, &unit);
+    if (rv)
+    {
+        if (unit == mxs::config::DURATION_IN_MILLISECONDS)
+        {
+            MXB_WARNING("Duration specified in milliseconds, will be converted to seconds.");
+        }
+
+        timeout = std::chrono::duration_cast<std::chrono::seconds>(duration);
+    }
+    else
+    {
+        PRINT_MXS_JSON_ERROR(output,
+                             "Timeout must be specified with a 's', 'm', or 'h' suffix. 'ms' is accepted "
+                             "but the time will be converted to seconds.");
+        rv = false;
+    }
+
+    return {rv, timeout};
+}
 }
 
 void register_monitor_commands()
@@ -390,6 +449,18 @@ void register_monitor_commands()
                                handle_fetch_cmd_result,
                                MXS_ARRAY_NELEMS(fetch_cmd_result_argv), fetch_cmd_result_argv,
                                "Fetch result of the last scheduled command.");
+
+    const modulecmd_arg_type_t csmon_add_node_argv[] =
+    {
+        { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
+        { MODULECMD_ARG_STRING, "Hostname/IP of node to add to ColumnStore cluster" },
+        { MODULECMD_ARG_STRING, "Timeout." }
+    };
+
+    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-add-node", MODULECMD_TYPE_ACTIVE,
+                               handle_async_cs_add_node,
+                               MXS_ARRAY_NELEMS(csmon_add_node_argv), csmon_add_node_argv,
+                               "Add a node to a ColumnStore cluster. Does not wait for completion.");
 }
 
 bool MariaDBMonitor::run_manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out)
@@ -571,4 +642,148 @@ bool MariaDBMonitor::fetch_cmd_result(json_t** output)
         break;
     }
     return true;
+}
+
+bool MariaDBMonitor::schedule_cs_add_node(const std::string& host, std::chrono::seconds timeout,
+                                          json_t** error_out)
+{
+    auto func = [this, host, timeout]() {
+        return manual_cs_add_node(host, timeout);
+    };
+    return schedule_manual_command(func, cs_add_node_cmd, error_out);
+}
+
+namespace cs_commands
+{
+enum class Scope
+{
+    CLUSTER,
+    NODE
+};
+
+enum class Action
+{
+    ADD_NODE
+};
+
+string create_rest_url(const string& host, int64_t port, const string& rest_base, Scope scope, Action action)
+{
+    auto scope_to_string = [](Scope scope) {
+        switch (scope)
+        {
+        case Scope::CLUSTER:
+            return "/cluster/";
+
+        case Scope::NODE:
+            return "/node/";
+        }
+        return "";
+    };
+
+    auto action_to_string = [](Action action) {
+        switch (action)
+        {
+        case Action::ADD_NODE:
+            return "node";
+        }
+        return "";
+    };
+
+    return mxb::string_printf("https://%s:%li%s%s%s", host.c_str(), port, rest_base.c_str(),
+                              scope_to_string(scope), action_to_string(action));
+}
+
+string create_rest_body(const std::string& node, const std::chrono::seconds& timeout)
+{
+    const char fmt[] = R"({"timeout": %li, "node": "%s"})";
+    return mxb::string_printf(fmt, timeout.count(), node.c_str());
+}
+
+mxb::http::Config create_http_config(const mxb::http::Config& base, const std::chrono::seconds& timeout)
+{
+    auto rval = base;
+
+    // We set the timeout to larger than the timeout specified to the
+    // ColumnStore daemon, so that the timeout surely expires first in
+    // the daemon and only then in the HTTP library.
+    rval.timeout = timeout + std::chrono::seconds(mxb::http::DEFAULT_TIMEOUT);
+    return rval;
+}
+
+std::tuple<bool, string> check_response(const mxb::http::Response& resp)
+{
+    bool rval = false;
+    string err_str;
+
+    if (resp.is_success())
+    {
+        rval = true;
+    }
+    else if (resp.is_client_error())
+    {
+        err_str = mxb::string_printf("HTTP client error %d: %s", resp.code, resp.body.c_str());
+    }
+    else if (resp.is_fatal())
+    {
+        err_str = mxb::string_printf("REST-API call failed. Error %d: %s. %s", resp.code,
+                                     mxb::http::Response::to_string(resp.code), resp.body.c_str());
+    }
+    else
+    {
+        if (resp.is_server_error())
+        {
+            err_str = mxb::string_printf("Server error %d: %s.", resp.code,
+                                         mxb::http::Response::to_string(resp.code));
+        }
+        else
+        {
+            err_str = mxb::string_printf("Unexpected response from server. Error %d: %s.",
+                                         resp.code, mxb::http::Response::to_string(resp.code));
+        }
+
+        // TODO: Handle the json text in the response
+    }
+
+    return {rval, err_str};
+}
+}
+
+MariaDBMonitor::ManualCommand::Result
+MariaDBMonitor::manual_cs_add_node(const std::string& host, std::chrono::seconds timeout)
+{
+    mxb::http::Response response;
+    auto& srvs = servers();
+    if (srvs.empty())
+    {
+        response.code = mxb::http::Response::ERROR;
+        response.body = "No servers specified.";
+    }
+    else
+    {
+        // Send the command to the first server. TODO: send to master instead?
+        string url = cs_commands::create_rest_url(
+            srvs.front()->server->address(), m_settings.cs_admin_port, m_settings.cs_admin_base_path,
+            cs_commands::Scope::CLUSTER, cs_commands::Action::ADD_NODE);
+
+        string body = cs_commands::create_rest_body(host, timeout);
+        auto http_config = cs_commands::create_http_config(m_http_config, timeout);
+
+        response = mxb::http::put(url, body, http_config);
+    }
+
+    auto [ok, err_str] = cs_commands::check_response(response);
+
+    ManualCommand::Result rval;
+    if (ok)
+    {
+        rval.success = true;
+    }
+    else
+    {
+        string errmsg = mxb::string_printf("Could not add node %s to the ColumnStore cluster: %s",
+                                           host.c_str(), err_str.c_str());
+        rval.errors = mxs_json_error_append(rval.errors, "%s", errmsg.c_str());
+        MXB_ERROR("%s", errmsg.c_str());
+    }
+    return rval;
 }

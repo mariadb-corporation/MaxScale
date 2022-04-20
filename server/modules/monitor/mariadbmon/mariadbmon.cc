@@ -228,6 +228,17 @@ cfg::ParamInteger s_script_max_rlag(
     "Replication lag limit at which the script is run",
     -1, cfg::Param::AT_RUNTIME);
 
+cfg::ParamCount s_cs_admin_port(
+    &s_spec, "cs_admin_port", "Port of the ColumnStore administrative daemon.", 8640);
+
+cfg::ParamString s_cs_admin_base_path(&s_spec, "cs_admin_base_path",
+    "The base path to be used when accessing the ColumnStore administrative daemon. "
+    "If, for instance, a daemon URL is https://localhost:8640/cmapi/0.4.0/node/start "
+    "then the admin_base_path is \"/cmapi/0.4.0\".", "/cmapi/0.4.0");
+
+cfg::ParamString s_cs_admin_api_key(&s_spec, "cs_admin_api_key",
+    "The API key used in communication with the ColumnStore admin daemon.", "");
+
 template<class Params>
 bool Spec::do_post_validate(Params params) const
 {
@@ -416,6 +427,9 @@ MariaDBMonitor::Settings::Settings(const std::string& name, MariaDBMonitor* moni
     add_native(&Settings::shared, &Shared::replication_ssl, &s_replication_master_ssl);
     add_native(&Settings::shared, &Shared::replication_user, &s_replication_user);
     add_native(&Settings::shared, &Shared::replication_password, &s_replication_password);
+    add_native(&Settings::cs_admin_port, &s_cs_admin_port);
+    add_native(&Settings::cs_admin_base_path, &s_cs_admin_base_path);
+    add_native(&Settings::cs_admin_api_key, &s_cs_admin_api_key);
 }
 
 bool MariaDBMonitor::Settings::post_configure(const std::map<std::string,
@@ -472,6 +486,13 @@ bool MariaDBMonitor::post_configure()
         {
             m_excluded_servers.push_back(static_cast<MariaDBServer*>(srv));
         }
+
+        m_http_config.headers["x-api-key"] = m_settings.cs_admin_api_key;
+        m_http_config.headers["content-type"] = "application/json";
+
+        // The CS daemon uses a self-signed certificate.
+        m_http_config.ssl_verifypeer = false;
+        m_http_config.ssl_verifyhost = false;
     }
 
     return ok;

@@ -19,6 +19,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include <maxbase/http.hh>
 #include <maxbase/stopwatch.hh>
 #include <maxbase/threadpool.hh>
 #include <maxscale/monitor.hh>
@@ -191,6 +192,16 @@ public:
      */
     bool fetch_cmd_result(json_t** output);
 
+    /**
+     * Perform user-activated ColumnStore add node. Does not wait for results, which should be fetched
+     * separately.
+     *
+     * @param host The host to add
+     * @param timeout Timeout in seconds
+     * @param error_out Error output
+     * @return True if operation was scheduled
+     */
+    bool schedule_cs_add_node(const std::string& host, std::chrono::seconds timeout, json_t** error_out);
 
     bool is_cluster_owner() const override;
 
@@ -434,13 +445,17 @@ private:
 
         MariaDBServer::SharedSettings shared;   /* Settings required by MariaDBServer objects */
 
+        int64_t     cs_admin_port;      /* ColumnStore admin port. Assumed same on all servers. */
+        std::string cs_admin_base_path; /* ColumnStore rest-api base path */
+        std::string cs_admin_api_key;   /* ColumnStore rest-api key */
+
     private:
         MariaDBMonitor* m_monitor;
     };
 
-    Settings m_settings;
-
-    ServerArray m_excluded_servers;
+    Settings          m_settings;
+    ServerArray       m_excluded_servers;
+    mxb::http::Config m_http_config;    /* Http-configuration. Used for ColumnStore commands. */
 
     // Base methods
     MariaDBMonitor(const std::string& name, const std::string& module);
@@ -505,6 +520,9 @@ private:
     void                  handle_low_disk_space_master();
     void                  handle_auto_failover();
     void                  handle_auto_rejoin();
+
+    // ColumnStore operations
+    ManualCommand::Result manual_cs_add_node(const std::string& host, std::chrono::seconds timeout);
 
     const MariaDBServer* slave_receiving_events(const MariaDBServer* demotion_target,
                                                 maxbase::Duration* event_age_out,
