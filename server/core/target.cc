@@ -409,10 +409,14 @@ std::string Reply::to_string() const
     case ReplyState::PREPARE:
         return "PREPARE";
 
-    default:
-        mxb_assert(!true);
-        return "UNKNOWN";
+    case ReplyState::LOAD_DATA:
+        return "LOAD_DATA";
+
+    case ReplyState::LOAD_DATA_END:
+        return "LOAD_DATA_END";
     }
+
+    return "UNKNOWN";
 }
 
 uint8_t Reply::command() const
