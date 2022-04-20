@@ -17,6 +17,7 @@
 #include <maxscale/protocol/mariadb/resultset.hh>
 #include <maxscale/json.hh>
 #include <maxscale/modutil.hh>
+#include <maxscale/secrets.hh>
 
 #include <fstream>
 #include <sys/types.h>
@@ -495,7 +496,8 @@ maxsql::Connection::ConnectionDetails Pinloki::generate_details()
                 m_master_config.host = srv->address();
                 m_master_config.port = srv->port();
                 details.user = m_master_config.user = m_pService->config()->user;
-                details.password = m_master_config.password = m_pService->config()->password;
+                auto pw = mxs::decrypt_password(m_pService->config()->password);
+                details.password = m_master_config.password = pw;
 
                 if (auto ssl = srv->ssl().config())
                 {

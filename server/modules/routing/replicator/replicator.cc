@@ -28,6 +28,7 @@
 #include <maxscale/query_classifier.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/routingworker.hh>
+#include <maxscale/secrets.hh>
 
 // Private headers
 #include "sql.hh"
@@ -47,16 +48,18 @@ std::vector<cdc::Server> service_to_servers(SERVICE* service)
     // Since this isn't a worker thread, execute it on one
     mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN)->call(
         [&]() {
-            for (auto s : service->reachable_servers())
+        // TODO: per-server credentials aren't exposed in the public class
+        const auto& cfg = *service->config();
+        auto pw = mxs::decrypt_password(cfg.password);
+
+        for (auto s : service->reachable_servers())
+        {
+            if (s->is_master())
             {
-                if (s->is_master())
-                {
-                    // TODO: per-server credentials aren't exposed in the public class
-                    const auto& cfg = *service->config();
-                    servers.push_back({s->address(), s->port(), cfg.user, cfg.password});
-                }
+                servers.push_back({s->address(), s->port(), cfg.user, pw});
             }
-        }, mxs::RoutingWorker::EXECUTE_AUTO);
+        }
+    }, mxs::RoutingWorker::EXECUTE_AUTO);
 
     return servers;
 }
