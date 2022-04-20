@@ -679,7 +679,7 @@ void BufferObject::clear()
 }
 
 SHARED_BUF::SHARED_BUF(size_t len)
-    : buf_start(std::make_unique<uint8_t[]>(len))
+    : buf_start(new uint8_t[len])   // Don't use make_unique here, it zero-inits the buffer
     , buf_end(buf_start.get() + len)
 {
 }
