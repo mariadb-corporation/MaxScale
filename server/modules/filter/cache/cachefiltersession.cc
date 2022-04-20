@@ -339,99 +339,101 @@ CacheFilterSession* CacheFilterSession::create(std::unique_ptr<SessionCache> sCa
 
 bool CacheFilterSession::routeQuery(GWBUF* pPacket)
 {
+    int rv = 1;
+
     if (m_processing)
     {
         m_queued_packets.push_back(pPacket);
-        return 1;
     }
     else
     {
-        m_processing = true;
+        routing_action_t action = ROUTING_CONTINUE;
 
-        // The following is necessary for the case that the delayed call
-        // made in read_for_another_call() arrives *after* a routeQuery()
-        // call made due to the client having sent more data. With this
-        // it is ensured that the packets are handled in the right order.
-        if (!m_queued_packets.empty())
+        reset_response_state();
+        m_state = CACHE_IGNORING_RESPONSE;
+
+        if (!session_is_load_active(m_pSession))
         {
-            m_queued_packets.push_back(pPacket);
-            pPacket = m_queued_packets.front().release();
-            m_queued_packets.pop_front();
-        }
-    }
+            m_processing = true;
 
-    uint8_t* pData = static_cast<uint8_t*>(GWBUF_DATA(pPacket));
-
-    // All of these should be guaranteed by RCAP_TYPE_TRANSACTION_TRACKING
-    mxb_assert(gwbuf_is_contiguous(pPacket));
-    mxb_assert(gwbuf_link_length(pPacket) >= MYSQL_HEADER_LEN + 1);
-    mxb_assert(MYSQL_GET_PAYLOAD_LEN(pData) + MYSQL_HEADER_LEN == gwbuf_link_length(pPacket));
-
-    routing_action_t action = ROUTING_CONTINUE;
-
-    reset_response_state();
-    m_state = CACHE_IGNORING_RESPONSE;
-
-    int rv = 1;
-
-    switch ((int)MYSQL_GET_COMMAND(pData))
-    {
-    case MXS_COM_INIT_DB:
-        {
-            mxb_assert(!m_zUseDb);
-            size_t len = MYSQL_GET_PAYLOAD_LEN(pData) - 1;      // Remove the command byte.
-            m_zUseDb = (char*)MXB_MALLOC(len + 1);
-
-            if (m_zUseDb)
+            // The following is necessary for the case that the delayed call
+            // made in read_for_another_call() arrives *after* a routeQuery()
+            // call made due to the client having sent more data. With this
+            // it is ensured that the packets are handled in the right order.
+            if (!m_queued_packets.empty())
             {
-                memcpy(m_zUseDb, (char*)(pData + MYSQL_HEADER_LEN + 1), len);
-                m_zUseDb[len] = 0;
-                m_state = CACHE_EXPECTING_USE_RESPONSE;
+                m_queued_packets.push_back(pPacket);
+                pPacket = m_queued_packets.front().release();
+                m_queued_packets.pop_front();
             }
-            else
+
+            uint8_t* pData = static_cast<uint8_t*>(GWBUF_DATA(pPacket));
+
+            // All of these should be guaranteed by RCAP_TYPE_TRANSACTION_TRACKING
+            mxb_assert(gwbuf_is_contiguous(pPacket));
+            mxb_assert(gwbuf_link_length(pPacket) >= MYSQL_HEADER_LEN + 1);
+            mxb_assert(MYSQL_GET_PAYLOAD_LEN(pData) + MYSQL_HEADER_LEN == gwbuf_link_length(pPacket));
+
+            switch ((int)MYSQL_GET_COMMAND(pData))
             {
-                // Memory allocation failed. We need to remove the default database to
-                // prevent incorrect cache entries, since we won't know what the
-                // default db is. But we only need to do that if "USE <db>" really
-                // succeeds. The right thing will happen by itself in
-                // handle_expecting_use_response(); if OK is returned, default_db will
-                // become NULL, if ERR, default_db will not be changed.
+            case MXS_COM_INIT_DB:
+                {
+                    mxb_assert(!m_zUseDb);
+                    size_t len = MYSQL_GET_PAYLOAD_LEN(pData) - 1;      // Remove the command byte.
+                    m_zUseDb = (char*)MXB_MALLOC(len + 1);
+
+                    if (m_zUseDb)
+                    {
+                        memcpy(m_zUseDb, (char*)(pData + MYSQL_HEADER_LEN + 1), len);
+                        m_zUseDb[len] = 0;
+                        m_state = CACHE_EXPECTING_USE_RESPONSE;
+                    }
+                    else
+                    {
+                        // Memory allocation failed. We need to remove the default database to
+                        // prevent incorrect cache entries, since we won't know what the
+                        // default db is. But we only need to do that if "USE <db>" really
+                        // succeeds. The right thing will happen by itself in
+                        // handle_expecting_use_response(); if OK is returned, default_db will
+                        // become NULL, if ERR, default_db will not be changed.
+                    }
+                }
+                break;
+
+            case MXS_COM_STMT_PREPARE:
+                if (log_decisions())
+                {
+                    MXS_NOTICE("COM_STMT_PREPARE, ignoring.");
+                }
+                break;
+
+            case MXS_COM_STMT_EXECUTE:
+                if (log_decisions())
+                {
+                    MXS_NOTICE("COM_STMT_EXECUTE, ignoring.");
+                }
+                break;
+
+            case MXS_COM_QUERY:
+                if (modutil_count_statements(pPacket) == 1)
+                {
+                    action = route_COM_QUERY(pPacket);
+                }
+                else if (log_decisions())
+                {
+                    MXS_NOTICE("Multi-statement, ignoring.");
+                }
+                break;
+
+            default:
+                break;
             }
         }
-        break;
 
-    case MXS_COM_STMT_PREPARE:
-        if (log_decisions())
+        if (action == ROUTING_CONTINUE)
         {
-            MXS_NOTICE("COM_STMT_PREPARE, ignoring.");
+            rv = continue_routing(pPacket);
         }
-        break;
-
-    case MXS_COM_STMT_EXECUTE:
-        if (log_decisions())
-        {
-            MXS_NOTICE("COM_STMT_EXECUTE, ignoring.");
-        }
-        break;
-
-    case MXS_COM_QUERY:
-        if (modutil_count_statements(pPacket) == 1)
-        {
-            action = route_COM_QUERY(pPacket);
-        }
-        else if (log_decisions())
-        {
-            MXS_NOTICE("Multi-statement, ignoring.");
-        }
-        break;
-
-    default:
-        break;
-    }
-
-    if (action == ROUTING_CONTINUE)
-    {
-        rv = continue_routing(pPacket);
     }
 
     return rv;
