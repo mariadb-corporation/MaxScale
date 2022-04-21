@@ -196,6 +196,7 @@ bool MonitorSpec::do_post_validate(Params params) const
 class ThisUnit
 {
 public:
+    static constexpr seconds variables_update_interval = 10min;
 
     /**
      * Mark a monitor as the monitor of the server. A server may only be monitored by one monitor.
@@ -627,7 +628,7 @@ bool Monitor::test_permissions(const string& query)
                 mysql_free_result(res);
             }
 
-            mondb->maybe_fetch_session_track();
+            mondb->maybe_fetch_variables();
             mondb->fetch_uptime();
         }
     }
@@ -1236,32 +1237,62 @@ ConnectResult MonitorServer::ping_or_connect()
     return res;
 }
 
-static constexpr seconds session_track_update_interval = 10min;
-
-bool MonitorServer::should_fetch_session_track()
+bool MonitorServer::should_fetch_variables()
 {
     bool rval = false;
     // Only fetch variables from real servers.
     return is_database()
-           && (mxb::Clock::now() - m_last_session_track_update) > session_track_update_interval;
+           && (mxb::Clock::now() - m_last_variables_update) > this_unit.variables_update_interval;
 }
 
 /**
- * Fetch 'session_track_system_variables' from the server and store it in the SERVER object.
+ * Fetch 'session_track_system_variables' and others from the server. The values are
+ * stored in the SERVER object.
  */
-void MonitorServer::fetch_session_track()
+bool MonitorServer::fetch_variables()
 {
-    if (auto r = mxs::execute_query(con, "select @@session_track_system_variables;"))
-    {
-        MXB_INFO("'session_track_system_variables' loaded from '%s', next update in %ld seconds.",
-                 server->name(), session_track_update_interval.count());
-        m_last_session_track_update = mxb::Clock::now();
+    bool rv = false;
 
-        if (r->next_row() && r->get_col_count() > 0)
+    auto variables = server->tracked_variables();
+
+    string query("SELECT @@session_track_system_variables");
+    for (const auto& variable : variables)
+    {
+        query += ", " + variable;
+    }
+
+    string err_msg;
+    unsigned int err;
+    if (auto r = mxs::execute_query(con, query, &err_msg, &err))
+    {
+        MXB_INFO("'session_track_system_variables' et. al. loaded from '%s', next update in %ld seconds.",
+                 server->name(), this_unit.variables_update_interval.count());
+        m_last_variables_update = mxb::Clock::now();
+
+        if (r->next_row())
         {
-            server->set_session_track_system_variables(r->get_string(0));
+            mxb_assert((size_t)r->get_col_count() == 1 + variables.size());
+
+            int i = 0;
+            server->set_session_track_system_variables(r->get_string(i++));
+
+            Server::Variables values;
+            for (const auto& variable : variables)
+            {
+                values[variable] = r->get_string(i++);
+            }
+
+            server->set_variables(std::move(values));
+
+            rv = true;
         }
     }
+    else
+    {
+        MXB_ERROR("Fetching server variables failed: (%d), %s", err, err_msg.c_str());
+    }
+
+    return rv;
 }
 
 void MonitorServer::fetch_uptime()
@@ -2060,7 +2091,7 @@ void MonitorWorkerSimple::tick()
 
         if (connection_is_ok(rval))
         {
-            pMs->maybe_fetch_session_track();
+            pMs->maybe_fetch_variables();
             pMs->fetch_uptime();
             pMs->clear_pending_status(SERVER_AUTH_ERROR);
             pMs->set_pending_status(SERVER_RUNNING);
@@ -2215,7 +2246,7 @@ MonitorServer::MonitorServer(SERVER* server, const SharedSettings& shared)
     , m_shared(shared)
 {
     // Initialize 'm_last_session_track_update' so that an update is performed 1s after monitor start.
-    m_last_session_track_update = mxb::Clock::now() - session_track_update_interval + 1s;
+    m_last_variables_update = mxb::Clock::now() - this_unit.variables_update_interval + 1s;
 }
 
 MonitorServer::~MonitorServer()
@@ -2272,12 +2303,14 @@ bool MonitorServer::is_database() const
     return server->info().is_database();
 }
 
-void MonitorServer::maybe_fetch_session_track()
+bool MonitorServer::maybe_fetch_variables()
 {
-    if (should_fetch_session_track())
+    bool rv = false;
+    if (should_fetch_variables())
     {
-        fetch_session_track();
+        rv = fetch_variables();
     }
+    return rv;
 }
 
 const MonitorServer::EventList& MonitorServer::new_custom_events() const

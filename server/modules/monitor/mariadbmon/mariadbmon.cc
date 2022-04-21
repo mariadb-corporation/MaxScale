@@ -653,8 +653,8 @@ void MariaDBMonitor::tick()
 
     // Concurrently query all servers for their status.
     auto update_task = [should_update_disk_space, first_tick](MariaDBServer* server) {
-            server->update_server(should_update_disk_space, first_tick);
-        };
+        server->update_server(should_update_disk_space, first_tick);
+    };
     execute_task_all_servers(update_task);
 
     update_cluster_lock_status();

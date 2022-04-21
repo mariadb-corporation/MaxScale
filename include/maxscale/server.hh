@@ -15,6 +15,8 @@
 #include <maxscale/ccdefs.hh>
 
 #include <mutex>
+#include <map>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <maxscale/config_common.hh>
@@ -276,6 +278,65 @@ public:
      * @return Variable value
      */
     virtual std::string get_session_track_system_variables() const = 0;
+
+    /**
+     * Track value of server variable.
+     *
+     * @param variable  The variable to track. It will be directly used in a
+     *                  SELECT statement, so should include everything needed,
+     *                  e.g. @c @@global.session_track_system_variables.
+     *
+     * @return @c True, if the variable was added to the variables to be
+     *         tracked, @c false if it was already present.
+     */
+    virtual bool track_variable(std::string variable) = 0;
+
+    /**
+     * Stop tracking the value of server variable.
+     *
+     * @param variable  The variable to track. Should be exactly like it was
+     *                  when @c track_variable() was called.
+     *
+     * @return   @c True, if the variable was really removed, @c false if it
+     *           was not present.
+     */
+    virtual bool untrack_variable(std::string variable) = 0;
+
+    /**
+     * Tracked variables.
+     *
+     * @return  The currently tracked variables.
+     */
+    virtual std::set<std::string> tracked_variables() const = 0;
+
+    using Variables = std::map<std::string, std::string>;
+    /**
+     * Returns a map of server variables and their values. The content
+     * of the map depends upon which variables the relevant monitor was
+     * instructed to fetch. Note that @c session_track_system_variables
+     * that is always fetchd, is not returned in this map but by
+     * @c get_session_track_system_variables().
+     *
+     * @return Map of server variables and their values.
+     */
+    virtual Variables get_variables() const = 0;
+
+    /**
+     * Get value of particular variable.
+     *
+     * @param variable  The variable.
+     *
+     * @return  The variable's value. Empty string if it has not been fethced.
+     */
+    virtual std::string get_variable_value(const std::string& variable) const = 0;
+
+    /**
+     * Set the variables as fetched from the MariaDB server. Should
+     * be called only by the monitor.
+     *
+     * @param variables  The fetched variables and their values.
+     */
+    virtual void set_variables(Variables&& variables) = 0;
 
     /**
      * Set server uptime

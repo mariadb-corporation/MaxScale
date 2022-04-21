@@ -20,6 +20,7 @@
 
 #include <map>
 #include <mutex>
+#include <set>
 #include <maxscale/config.hh>
 #include <maxscale/config2.hh>
 #include <maxscale/server.hh>
@@ -299,6 +300,12 @@ public:
     std::string get_session_track_system_variables() const override;
     void        set_uptime(int64_t uptime) override;
     int64_t     get_uptime() const override;
+    bool        track_variable(std::string variable) override;
+    bool        untrack_variable(std::string variable) override;
+    std::set<std::string> tracked_variables() const override;
+    Variables   get_variables() const override;
+    std::string get_variable_value(const std::string& variable) const override;
+    void        set_variables(Variables&& variables) override;
 
     uint64_t gtid_pos(uint32_t domain) const override;
     void     set_gtid_list(const std::vector<std::pair<uint32_t, uint64_t>>& positions) override;
@@ -431,6 +438,10 @@ private:
     std::string m_session_track_system_variables;
     // Uptime in seconds, updated by monitors
     std::atomic<int64_t> m_uptime {0};
+    // The variables to track.
+    std::set<std::string> m_tracked_variables;
+    // Additional server variables
+    Variables m_variables;
     // Lock that protects m_variables
     mutable std::mutex m_var_lock;
 

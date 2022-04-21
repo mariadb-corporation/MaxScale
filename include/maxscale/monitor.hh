@@ -248,9 +248,12 @@ public:
     ConnectResult ping_or_connect();
 
     /**
-     * Fetch 'session_track_system_variables' from the server if it has not been fetched recently.
+     * Fetch 'session_track_system_variables' and other variables from the server, if they have not
+     * been fetched recently.
+     *
+     * @return  True, if the variables were fetched, false otherwise.
      */
-    void maybe_fetch_session_track();
+    bool maybe_fetch_variables();
 
     /**
      * Update the Uptime status variable of the server
@@ -333,13 +336,13 @@ private:
     std::atomic_int m_status_request {NO_CHANGE};       /**< Status change request from admin */
     bool            m_ok_to_check_disk_space {true};    /**< Set to false if check fails */
 
-    mxb::TimePoint m_last_session_track_update;
+    mxb::TimePoint m_last_variables_update;
 
     // Latest connection error
     std::string m_latest_error;
 
-    bool should_fetch_session_track();
-    void fetch_session_track();
+    bool should_fetch_variables();
+    bool fetch_variables();
 };
 
 /**

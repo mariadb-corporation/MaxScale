@@ -619,6 +619,12 @@ void Server::set_session_track_system_variables(std::string&& value)
     m_session_track_system_variables = std::move(value);
 }
 
+void Server::set_variables(Variables&& variables)
+{
+    std::lock_guard<std::mutex> guard(m_var_lock);
+    m_variables = std::move(variables);
+}
+
 void Server::set_uptime(int64_t uptime)
 {
     m_uptime.store(uptime, std::memory_order_relaxed);
@@ -633,6 +639,40 @@ std::string Server::get_session_track_system_variables() const
 {
     std::lock_guard<std::mutex> guard(m_var_lock);
     return m_session_track_system_variables;
+}
+
+bool Server::track_variable(std::string variable)
+{
+    std::lock_guard<std::mutex> guard(m_var_lock);
+    auto p = m_tracked_variables.emplace(std::move(variable));
+    return p.second;
+}
+
+bool Server::untrack_variable(std::string variable)
+{
+    std::lock_guard<std::mutex> guard(m_var_lock);
+    return m_tracked_variables.erase(variable) != 0;
+}
+
+std::set<std::string> Server::tracked_variables() const
+{
+    std::lock_guard<std::mutex> guard(m_var_lock);
+    return m_tracked_variables;
+}
+
+Server::Variables Server::get_variables() const
+{
+    std::lock_guard<std::mutex> guard(m_var_lock);
+    return m_variables;
+}
+
+std::string Server::get_variable_value(const std::string& variable) const
+{
+    std::lock_guard<std::mutex> guard(m_var_lock);
+
+    auto it = m_variables.find(variable);
+
+    return it != m_variables.end() ? it->second : "";
 }
 
 uint64_t Server::status_from_string(const char* str)

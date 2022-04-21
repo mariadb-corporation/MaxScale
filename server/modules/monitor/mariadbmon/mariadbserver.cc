@@ -2254,7 +2254,7 @@ void MariaDBServer::update_server(bool time_to_update_disk_space, bool first_tic
 
     if (mxs::Monitor::connection_is_ok(conn_status))
     {
-        mon_srv->maybe_fetch_session_track();
+        mon_srv->maybe_fetch_variables();
         mon_srv->fetch_uptime();
         set_status(SERVER_RUNNING);
         const bool new_connection = (conn_status == ConnectResult::NEWCONN_OK);
