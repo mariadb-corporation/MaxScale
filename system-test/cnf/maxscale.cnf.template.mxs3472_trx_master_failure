@@ -10,7 +10,7 @@ module=mysqlmon
 servers=###server_line###
 user=maxskysql
 password=skysql
-monitor_interval=1000
+monitor_interval=1000ms
 
 [RW-Split-Router]
 type=service
@@ -18,7 +18,7 @@ router=readwritesplit
 cluster=MariaDB-Monitor
 user=maxskysql
 password=skysql
-delayed_retry_timeout=60
+delayed_retry_timeout=60s
 transaction_replay=true
 transaction_replay_attempts=5
 

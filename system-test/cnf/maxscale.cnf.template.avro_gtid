@@ -10,7 +10,7 @@ module=mariadbmon
 servers=###server_line###
 user=mariadbmon
 password=mariadbmon
-monitor_interval=2000
+monitor_interval=2000ms
 replication_user=repl
 replication_password=repl
 

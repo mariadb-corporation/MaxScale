@@ -32,7 +32,7 @@ module=mysqlmon
 servers=server1,server2
 user=maxskysql
 password=skysql
-monitor_interval=1000
+monitor_interval=1000ms
 
 [hybridizer]
 type=filter

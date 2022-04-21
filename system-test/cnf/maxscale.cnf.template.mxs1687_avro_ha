@@ -39,7 +39,7 @@ module=mysqlmon
 servers=A1,A2,A3
 user=maxskysql
 password=skysql
-monitor_interval=1000
+monitor_interval=1000ms
 cooperative_monitoring_locks=majority_of_all
 
 [B-Monitor]
@@ -48,7 +48,7 @@ module=mysqlmon
 servers=B1,B2,B3
 user=maxskysql
 password=skysql
-monitor_interval=1000
+monitor_interval=1000ms
 cooperative_monitoring_locks=majority_of_all
 
 [A-avro]

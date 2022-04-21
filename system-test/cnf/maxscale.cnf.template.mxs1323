@@ -1,8 +1,8 @@
 [maxscale]
 threads=###threads###
 log_info=1
-auth_read_timeout=1
-auth_connect_timeout=1
+auth_read_timeout=1s
+auth_connect_timeout=1s
 
 [MySQL-Monitor]
 type=monitor
@@ -10,9 +10,9 @@ module=mysqlmon
 servers= server1,server2
 user=maxskysql
 password= skysql
-monitor_interval=1000
-backend_read_timeout=1
-backend_connect_timeout=1
+monitor_interval=1000ms
+backend_read_timeout=1s
+backend_connect_timeout=1s
 
 [RW-Split-Router]
 type=service
@@ -33,7 +33,7 @@ address=###node_server_IP_1###
 port=###node_server_port_1###
 protocol=MySQLBackend
 persistpoolmax=10
-persistmaxtime=300
+persistmaxtime=300s
 
 [server2]
 type=server
@@ -41,4 +41,4 @@ address=###node_server_IP_2###
 port=###node_server_port_2###
 protocol=MySQLBackend
 persistpoolmax=10
-persistmaxtime=300
+persistmaxtime=300s

@@ -14,10 +14,10 @@ module=xpandmon
 servers=server1
 user=xpandmon
 password=xpandmon
-monitor_interval=2000
-backend_connect_timeout=5
-backend_read_timeout=5
-backend_write_timeout=5
+monitor_interval=2000ms
+backend_connect_timeout=5s
+backend_read_timeout=5s
+backend_write_timeout=5s
 
 [RWSplit-Router]
 type=service

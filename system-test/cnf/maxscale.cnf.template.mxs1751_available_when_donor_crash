@@ -7,7 +7,7 @@ module=galeramon
 servers=server1,server2,server3
 user=galeramon
 password=galeramon
-monitor_interval=100
+monitor_interval=100ms
 available_when_donor=true
 
 [RW-Split-Router]

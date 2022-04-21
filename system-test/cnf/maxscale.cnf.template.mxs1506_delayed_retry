@@ -8,9 +8,9 @@ module=mysqlmon
 servers=server1,server2
 user=maxskysql
 password=skysql
-monitor_interval=1000
-backend_read_timeout=1
-backend_connect_timeout=1
+monitor_interval=1000ms
+backend_read_timeout=1s
+backend_connect_timeout=1s
 
 [RW-Split-Router]
 type=service
@@ -21,7 +21,7 @@ password=skysql
 master_failure_mode=fail_on_write
 master_reconnection=true
 delayed_retry=true
-delayed_retry_timeout=15
+delayed_retry_timeout=15s
 
 [RW-Split-Listener]
 type=listener

@@ -8,7 +8,7 @@ module=mysqlmon
 servers=server1,server2,server3,server4
 user=maxskysql
 password=skysql
-monitor_interval=100
+monitor_interval=100ms
 
 [RW-Split-Router]
 type=service
@@ -58,25 +58,25 @@ type=server
 address=###node_server_IP_1###
 port=###node_server_port_1###
 persistpoolmax=1
-persistmaxtime=3660
+persistmaxtime=3660s
 
 [server2]
 type=server
 address=###node_server_IP_2###
 port=###node_server_port_2###
 persistpoolmax=5
-persistmaxtime=15
+persistmaxtime=15s
 
 [server3]
 type=server
 address=###node_server_IP_3###
 port=###node_server_port_3###
 persistpoolmax=10
-persistmaxtime=15
+persistmaxtime=15s
 
 [server4]
 type=server
 address=###node_server_IP_4###
 port=###node_server_port_4###
 persistpoolmax=30
-persistmaxtime=10
+persistmaxtime=10s

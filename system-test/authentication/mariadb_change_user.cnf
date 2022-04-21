@@ -7,7 +7,7 @@ module=mariadbmon
 servers=###server_line###
 user=mariadbmon
 password=mariadbmon
-monitor_interval=1000
+monitor_interval=1000ms
 
 [RW-Split-Router]
 type=service

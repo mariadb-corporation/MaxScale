@@ -12,7 +12,7 @@ servers = galera1, galera2, galera3, galera4
 user = maxskysql
 password = skysql
 use_priority=true
-monitor_interval = 1000
+monitor_interval = 1000ms
 #root_node_as_master=false
 
 [RW-Split-Router]

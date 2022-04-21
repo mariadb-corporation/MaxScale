@@ -17,7 +17,7 @@ router=readwritesplit
 servers=###server_line###
 user=maxskysql
 password=skysql
-max_slave_replication_lag=1
+max_slave_replication_lag=1s
 
 [RW-Split-Listener]
 type=listener

@@ -10,7 +10,7 @@ module=mariadbmon
 servers=###server_line###
 user=maxskysql
 password=skysql
-monitor_interval=1000
+monitor_interval=1000ms
 
 [RWS]
 type=service

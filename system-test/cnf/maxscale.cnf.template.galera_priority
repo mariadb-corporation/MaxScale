@@ -11,7 +11,7 @@ servers=server1,server2,server3,server4
 user=galeramon
 password=galeramon
 use_priority=true
-monitor_interval=1000
+monitor_interval=1000ms
 root_node_as_master=false
 
 [RW-Split-Router]

@@ -1,13 +1,13 @@
 [maxscale]
 threads=###threads###
-users_refresh_time=0
+users_refresh_time=0s
 
 [mysql-monitor]
 type=monitor
 module=mysqlmon
 user=maxskysql
 password=skysql
-monitor_interval=1000
+monitor_interval=1000ms
 
 [rwsplit-service]
 type=service

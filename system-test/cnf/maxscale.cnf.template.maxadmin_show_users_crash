@@ -1,6 +1,6 @@
 [maxscale]
 threads=###threads###
-auth_connect_timeout=1
+auth_connect_timeout=1s
 
 [MySQL-Monitor]
 type=monitor
@@ -8,8 +8,8 @@ module=mysqlmon
 servers=server1
 user=maxskysql
 password=skysql
-monitor_interval=1000
-backend_connect_timeout=1
+monitor_interval=1000ms
+backend_connect_timeout=1s
 
 [RW-Split-Router]
 type=service

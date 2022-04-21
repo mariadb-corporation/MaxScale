@@ -6,7 +6,7 @@ type=server
 address=###node_server_IP_1###
 port=###node_server_port_1###
 persistpoolmax=10
-persistmaxtime=300
+persistmaxtime=300s
 
 [MariaDB-Monitor]
 type=monitor
@@ -14,7 +14,7 @@ module=mariadbmon
 servers=server1
 user=maxskysql
 password=skysql
-monitor_interval=5000
+monitor_interval=5000ms
 
 [RW-Split-Router]
 type=service

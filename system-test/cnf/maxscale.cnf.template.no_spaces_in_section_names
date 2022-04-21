@@ -31,7 +31,7 @@ module=mysqlmon
 servers=server 1,server 2,server 3,server 4
 user=maxskysql
 password=skysql
-monitor_interval=1000
+monitor_interval=1000ms
 
 [RW Split Router]
 type=service

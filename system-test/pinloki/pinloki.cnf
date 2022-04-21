@@ -9,7 +9,7 @@ module=mariadbmon
 servers=###server_line###, pinloki
 user=maxskysql
 password=skysql
-monitor_interval=1000
+monitor_interval=1000ms
 auto_failover=true
 
 [pinloki-service]

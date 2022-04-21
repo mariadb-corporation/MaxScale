@@ -17,7 +17,7 @@ user=maxskysql
 password=skysql
 auth_all_servers=1
 ignore_tables_regex=.*
-refresh_interval=5
+refresh_interval=5s
 
 [Sharding-Listener]
 type=listener

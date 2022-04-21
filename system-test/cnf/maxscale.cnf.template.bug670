@@ -4,7 +4,7 @@ threads=###threads###
 [MySQL-Monitor]
 type=monitor
 module=mysqlmon
-monitor_interval=10000
+monitor_interval=10000ms
 servers=server1,server2,server3,server4
 user=skysql
 password=skysql
