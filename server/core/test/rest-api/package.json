@@ -9,7 +9,8 @@
   "author": "",
   "license": "SEE LICENSE IN ../../../../LICENSE.txt",
   "dependencies": {
-    "ajv": "^5.5.2",
+    "ajv": "^8.11.0",
+    "ajv-formats": "^2.1.1",
     "chai": "^3.5.0",
     "chai-as-promised": "^6.0.0",
     "mariadb": "^2.5.5",

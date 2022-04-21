@@ -1,6 +1,7 @@
 var json_api_schema = {
-    "title": "JSON API Schema",
-    "description": "This is a schema for responses in the JSON API format. For more, see http://jsonapi.org",
+    "$schema": "http://json-schema.org/draft-06/schema#",
+    "title": "JSON:API Schema",
+    "description": "This is a schema for responses in the JSON:API format. For more, see http://jsonapi.org",
     "oneOf": [
         {
             "$ref": "#/definitions/success"
@@ -12,6 +13,7 @@ var json_api_schema = {
             "$ref": "#/definitions/info"
         }
     ],
+
     "definitions": {
         "success": {
             "type": "object",
@@ -93,6 +95,7 @@ var json_api_schema = {
             },
             "additionalProperties": false
         },
+
         "meta": {
             "description": "Non-standard meta-information that can not be represented as an attribute or relationship.",
             "type": "object",
@@ -119,7 +122,7 @@ var json_api_schema = {
             ]
         },
         "resource": {
-            "description": "\"Resource objects\" appear in a JSON API document to represent resources.",
+            "description": "\"Resource objects\" appear in a JSON:API document to represent resources.",
             "type": "object",
             "required": [
                 "type",
@@ -147,14 +150,13 @@ var json_api_schema = {
             },
             "additionalProperties": false
         },
-        "links": {
+        "relationshipLinks": {
             "description": "A resource object **MAY** contain references to other resource objects (\"relationships\"). Relationships may be to-one or to-many. Relationships can be specified by including a member in a resource's links object.",
             "type": "object",
             "properties": {
                 "self": {
                     "description": "A `self` member, whose value is a URL for the relationship itself (a \"relationship URL\"). This URL allows the client to directly manipulate the relationship. For example, it would allow a client to remove an `author` from an `article` without deleting the people resource itself.",
-                    "type": "string",
-                    "format": "uri"
+                    "$ref": "#/definitions/link"
                 },
                 "related": {
                     "$ref": "#/definitions/link"
@@ -162,13 +164,19 @@ var json_api_schema = {
             },
             "additionalProperties": true
         },
+        "links": {
+            "type": "object",
+            "additionalProperties": {
+                "$ref": "#/definitions/link"
+            }
+        },
         "link": {
             "description": "A link **MUST** be represented as either: a string containing the link's URL or a link object.",
             "oneOf": [
                 {
                     "description": "A string containing the link's URL.",
                     "type": "string",
-                    "format": "uri"
+                    "format": "uri-reference"
                 },
                 {
                     "type": "object",
@@ -179,7 +187,7 @@ var json_api_schema = {
                         "href": {
                             "description": "A string containing the link's URL.",
                             "type": "string",
-                            "format": "uri"
+                            "format": "uri-reference"
                         },
                         "meta": {
                             "$ref": "#/definitions/meta"
@@ -188,24 +196,34 @@ var json_api_schema = {
                 }
             ]
         },
+
         "attributes": {
             "description": "Members of the attributes object (\"attributes\") represent information about the resource object in which it's defined.",
             "type": "object",
             "patternProperties": {
-                "^(?!relationships$|links$)\\w[-\\w_]*$": {
+                "^[a-zA-Z0-9](?:[-\\w]*[a-zA-Z0-9])?$": {
                     "description": "Attributes may contain any valid JSON value."
                 }
             },
+            "not": {
+                "anyOf": [
+                    {"required": ["relationships"]},
+                    {"required": ["links"]},
+                    {"required": ["id"]},
+                    {"required": ["type"]}
+                ]
+            },
             "additionalProperties": false
         },
+
         "relationships": {
             "description": "Members of the relationships object (\"relationships\") represent references from the resource object in which it's defined to other resource objects.",
             "type": "object",
             "patternProperties": {
-                "^\\w[-\\w_]*$": {
+                "^[a-zA-Z0-9](?:[-\\w]*[a-zA-Z0-9])?$": {
                     "properties": {
                         "links": {
-                            "$ref": "#/definitions/links"
+                            "$ref": "#/definitions/relationshipLinks"
                         },
                         "data": {
                             "description": "Member, whose value represents \"resource linkage\".",
@@ -223,22 +241,16 @@ var json_api_schema = {
                         }
                     },
                     "anyOf": [
-                        {
-                            "required": [
-                                "data"
-                            ]
-                        },
-                        {
-                            "required": [
-                                "meta"
-                            ]
-                        },
-                        {
-                            "required": [
-                                "links"
-                            ]
-                        }
+                        {"required": ["data"]},
+                        {"required": ["meta"]},
+                        {"required": ["links"]}
                     ],
+                    "not": {
+                        "anyOf": [
+                            {"required": ["id"]},
+                            {"required": ["type"]}
+                        ]
+                    },
                     "additionalProperties": false
                 }
             },
@@ -293,53 +305,34 @@ var json_api_schema = {
                 "first": {
                     "description": "The first page of data",
                     "oneOf": [
-                        {
-                            "type": "string",
-                            "format": "uri"
-                        },
-                        {
-                            "type": "null"
-                        }
+                        { "$ref": "#/definitions/link" },
+                        { "type": "null" }
                     ]
                 },
                 "last": {
                     "description": "The last page of data",
                     "oneOf": [
-                        {
-                            "type": "string",
-                            "format": "uri"
-                        },
-                        {
-                            "type": "null"
-                        }
+                        { "$ref": "#/definitions/link" },
+                        { "type": "null" }
                     ]
                 },
                 "prev": {
                     "description": "The previous page of data",
                     "oneOf": [
-                        {
-                            "type": "string",
-                            "format": "uri"
-                        },
-                        {
-                            "type": "null"
-                        }
+                        { "$ref": "#/definitions/link" },
+                        { "type": "null" }
                     ]
                 },
                 "next": {
                     "description": "The next page of data",
                     "oneOf": [
-                        {
-                            "type": "string",
-                            "format": "uri"
-                        },
-                        {
-                            "type": "null"
-                        }
+                        { "$ref": "#/definitions/link" },
+                        { "type": "null" }
                     ]
                 }
             }
         },
+
         "jsonapi": {
             "description": "An object describing the server's implementation",
             "type": "object",
@@ -353,6 +346,7 @@ var json_api_schema = {
             },
             "additionalProperties": false
         },
+
         "error": {
             "type": "object",
             "properties": {
@@ -417,7 +411,11 @@ module.exports = function() {
     this.should = chai.should()
     this.expect = chai.expect
     this.Ajv = require("ajv")
-    this.ajv = new Ajv({$data: true, allErrors: true, extendRefs: true, verbose: true})
+    this.ajv = new Ajv({$data: true, allErrors: true, verbose: true, strict: false})
+    const addFormats = require("ajv-formats")
+    addFormats(this.ajv)
+    const draft6MetaSchema = require("ajv/dist/refs/json-schema-draft-06.json")
+    this.ajv.addMetaSchema(draft6MetaSchema)
     this.validate_func = ajv.compile(json_api_schema)
     this.validate = validate_json
     this.credentials = "admin:mariadb"
