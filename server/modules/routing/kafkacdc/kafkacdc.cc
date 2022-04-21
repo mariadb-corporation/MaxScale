@@ -333,7 +333,7 @@ private:
     std::string             m_key;
     const KafkaCDC::Config& m_config;
     SProducer               m_producer;
-    json_t*                 m_obj;
+    json_t*                 m_obj = nullptr;
     int                     m_timeout = 10000;
 
     KafkaEventHandler(SProducer producer, const KafkaCDC::Config& config)
