@@ -110,12 +110,12 @@ cfg::ParamBool s_auto_failover(
 cfg::ParamSeconds s_failover_timeout(
     &s_spec, CN_FAILOVER_TIMEOUT,
     "Timeout for failover",
-    cfg::INTERPRET_AS_SECONDS, 90s, cfg::Param::AT_RUNTIME);
+    90s, cfg::Param::AT_RUNTIME);
 
 cfg::ParamSeconds s_switchover_timeout(
     &s_spec, CN_SWITCHOVER_TIMEOUT,
     "Timeout for switchover",
-    cfg::INTERPRET_AS_SECONDS, 90s, cfg::Param::AT_RUNTIME);
+    90s, cfg::Param::AT_RUNTIME);
 
 cfg::ParamString s_replication_user(
     &s_spec, CN_REPLICATION_USER,
@@ -140,7 +140,7 @@ cfg::ParamBool s_verify_master_failure(
 cfg::ParamSeconds s_master_failure_timeout(
     &s_spec, CN_MASTER_FAILURE_TIMEOUT,
     "Master failure timeout",
-    cfg::INTERPRET_AS_SECONDS, 10s, cfg::Param::AT_RUNTIME);
+    10s, cfg::Param::AT_RUNTIME);
 
 cfg::ParamBool s_auto_rejoin(
     &s_spec, CN_AUTO_REJOIN,

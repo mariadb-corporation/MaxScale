@@ -21,6 +21,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <vector>
 #include <maxbase/assert.hh>
 #include <maxbase/atomic.hh>
@@ -783,33 +784,30 @@ public:
     ParamDuration(Specification* pSpecification,
                   const char* zName,
                   const char* zDescription,
-                  mxs::config::DurationInterpretation interpretation,
                   Param::Modifiable modifiable = Param::Modifiable::AT_STARTUP)
         : ParamDuration(pSpecification, zName, zDescription, modifiable, Param::MANDATORY,
-                        interpretation, DurationType::UNSIGNED, value_type())
+                        DurationType::UNSIGNED, value_type())
     {
     }
 
     ParamDuration(Specification* pSpecification,
                   const char* zName,
                   const char* zDescription,
-                  mxs::config::DurationInterpretation interpretation,
                   value_type default_value,
                   Param::Modifiable modifiable = Param::Modifiable::AT_STARTUP)
         : ParamDuration(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL,
-                        interpretation, DurationType::UNSIGNED, default_value)
+                        DurationType::UNSIGNED, default_value)
     {
     }
 
     ParamDuration(Specification* pSpecification,
                   const char* zName,
                   const char* zDescription,
-                  mxs::config::DurationInterpretation interpretation,
                   value_type default_value,
                   DurationType duration_type,
                   Param::Modifiable modifiable = Param::Modifiable::AT_STARTUP)
         : ParamDuration(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL,
-                        interpretation, duration_type, default_value)
+                        duration_type, default_value)
     {
     }
 
@@ -830,19 +828,16 @@ private:
                   const char* zDescription,
                   Param::Modifiable modifiable,
                   Param::Kind kind,
-                  mxs::config::DurationInterpretation interpretation,
                   DurationType duration_type,
                   value_type default_value)
         : ConcreteParam<ParamDuration<T>, T>(pSpecification, zName, zDescription,
                                              modifiable, kind, default_value)
-        , m_interpretation(interpretation)
         , m_duration_type(duration_type)
     {
     }
 
 private:
-    mxs::config::DurationInterpretation m_interpretation;
-    DurationType                        m_duration_type;
+    DurationType m_duration_type;
 };
 
 using ParamMilliseconds = ParamDuration<std::chrono::milliseconds>;
@@ -2692,38 +2687,30 @@ bool ParamDuration<T>::from_string(const std::string& value_as_string,
         ++str;
     }
 
-    bool valid = get_suffixed_duration(str, m_interpretation, &duration, &unit);
+    bool valid = get_suffixed_duration(str, &duration, &unit);
 
     if (valid)
     {
-        if (unit == mxs::config::DURATION_IN_DEFAULT)
+        if constexpr (std::is_same_v<T, std::chrono::seconds>)
         {
-            if (pMessage)
+            if (unit == mxs::config::DURATION_IN_MILLISECONDS)
             {
-                *pMessage = "Specifying durations without a suffix denoting the unit has been deprecated ";
-                *pMessage += "and will be removed in Maxscale 2.7.0: ";
-                *pMessage += value_as_string;
-                *pMessage += ". Use the suffixes 'h' (hour), 'm' (minute) 's' (second) or ";
-                *pMessage += "'ms' (milliseconds).";
-            }
-        }
-        else if (unit == mxs::config::DURATION_IN_MILLISECONDS && m_interpretation == INTERPRET_AS_SECONDS)
-        {
-            if (duration < std::chrono::seconds(1) && duration > std::chrono::seconds(0))
-            {
-                if (pMessage)
+                if (duration < std::chrono::seconds(1) && duration > std::chrono::seconds(0))
                 {
-                    *pMessage = "Cannot set '" + this->name() + "' to " + value_as_string
-                        + ": value must be defined in seconds.";
-                }
+                    if (pMessage)
+                    {
+                        *pMessage = "Cannot set '" + this->name() + "' to " + value_as_string
+                            + ": value must be defined in seconds.";
+                    }
 
-                valid = false;
-            }
-            else if (duration.count() % 1000 && pMessage)
-            {
-                std::chrono::seconds sec = std::chrono::duration_cast<std::chrono::seconds>(duration);
-                *pMessage = "Ignoring fractional part of '" + value_as_string + " for '" + this->name()
-                    + "': value converted to " + std::to_string(sec.count()) + "s.";
+                    valid = false;
+                }
+                else if (duration.count() % 1000 && pMessage)
+                {
+                    std::chrono::seconds sec = std::chrono::duration_cast<std::chrono::seconds>(duration);
+                    *pMessage = "Ignoring fractional part of '" + value_as_string + " for '" + this->name()
+                        + "': value converted to " + std::to_string(sec.count()) + "s.";
+                }
             }
         }
 

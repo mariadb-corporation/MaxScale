@@ -135,7 +135,7 @@ static cfg::ParamCount s_persistpoolmax(
 
 static cfg::ParamSeconds s_persistmaxtime(
     &s_spec, CN_PERSISTMAXTIME, "Maximum time that a connection can be in the pool",
-    cfg::INTERPRET_AS_SECONDS, 0s, AT_RUNTIME);
+    0s, AT_RUNTIME);
 
 static cfg::ParamBool s_proxy_protocol(
     &s_spec, CN_PROXY_PROTOCOL, "Enable proxy protocol", false, AT_RUNTIME);

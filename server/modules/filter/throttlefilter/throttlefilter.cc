@@ -29,15 +29,15 @@ cfg::ParamInteger s_max_qps(
 cfg::ParamMilliseconds s_throttling_duration(
     &s_spec, "throttling_duration",
     "How long a session is allowed to be throttled before MaxScale disconnects the session",
-    cfg::INTERPRET_AS_MILLISECONDS, cfg::Param::AT_RUNTIME);
+    cfg::Param::AT_RUNTIME);
 
 cfg::ParamMilliseconds s_sampling_duration(
     &s_spec, "sampling_duration", "The window of time over which QPS is measured",
-    cfg::INTERPRET_AS_MILLISECONDS, milliseconds(250), cfg::Param::AT_RUNTIME);
+    milliseconds(250), cfg::Param::AT_RUNTIME);
 
 cfg::ParamMilliseconds s_continuous_duration(
     &s_spec, "continuous_duration", "Continuous throttling window",
-    cfg::INTERPRET_AS_MILLISECONDS, milliseconds(2000), cfg::Param::AT_RUNTIME);
+    milliseconds(2000), cfg::Param::AT_RUNTIME);
 }
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()

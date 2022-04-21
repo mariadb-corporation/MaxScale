@@ -88,7 +88,7 @@ static cfg::ParamSize s_max_file_size(
 
 static cfg::ParamSeconds s_max_data_age(
     &s_spec, "max_data_age", "Remove files with data older than this",
-    cfg::NO_INTERPRETATION, 0s);
+    0s);
 
 AvroConfig::AvroConfig(SERVICE* service, Avro& router)
     : mxs::config::Configuration(service->name(), &s_spec)

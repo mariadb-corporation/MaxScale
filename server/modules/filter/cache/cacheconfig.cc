@@ -39,7 +39,6 @@ config::ParamDuration<std::chrono::milliseconds> CacheConfig::s_hard_ttl(
     "Hard time to live; the maximum amount of time the cached result is "
     "used before it is discarded and the result is fetched from the backend. "
     "See also 'soft_ttl'.",
-    mxs::config::INTERPRET_AS_SECONDS,
     std::chrono::milliseconds {0}
     );
 
@@ -49,7 +48,6 @@ config::ParamDuration<std::chrono::milliseconds> CacheConfig::s_soft_ttl(
     "Soft time to live; the maximum amount of time the cached result is "
     "used before the first client querying for the result is used for refreshing "
     "the cached data from the backend. See also 'hard_ttl'.",
-    mxs::config::INTERPRET_AS_SECONDS,
     std::chrono::milliseconds {0}
     );
 
@@ -179,7 +177,6 @@ config::ParamDuration<std::chrono::milliseconds> CacheConfig::s_timeout(
     &s_specification,
     "timeout",
     "The timeout when performing operations to distributed storages.",
-    mxs::config::NO_INTERPRETATION,
     CACHE_DEFAULT_TIMEOUT
     );
 

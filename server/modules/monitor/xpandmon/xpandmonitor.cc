@@ -49,7 +49,6 @@ config::ParamDuration<milliseconds>
 cluster_monitor_interval(&specification,
                          "cluster_monitor_interval",
                          "How frequently the Xpand monitor should perform a cluster check.",
-                         mxs::config::INTERPRET_AS_MILLISECONDS,
                          milliseconds(DEFAULT_CLUSTER_MONITOR_INTERVAL));
 
 config::ParamCount

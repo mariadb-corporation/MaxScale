@@ -267,7 +267,7 @@ bool get_timeout(const char* zTimeout, std::chrono::seconds* pTimeout, json_t** 
 
     std::chrono::milliseconds duration;
     mxs::config::DurationUnit unit;
-    rv = get_suffixed_duration(zTimeout, mxs::config::NO_INTERPRETATION, &duration, &unit);
+    rv = get_suffixed_duration(zTimeout, &duration, &unit);
 
     if (rv)
     {

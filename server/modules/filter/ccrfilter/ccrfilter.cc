@@ -79,7 +79,6 @@ config::ParamSeconds time(
     &specification,
     "time",
     "The time window during which queries are routed to the master.",
-    mxs::config::INTERPRET_AS_SECONDS,
     std::chrono::seconds {60}, mxs::config::Param::AT_RUNTIME);
 
 config::ParamBool global(

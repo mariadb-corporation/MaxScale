@@ -48,7 +48,7 @@ cfg::ParamBool s_refresh_databases(
 
 cfg::ParamSeconds s_refresh_interval(
     &s_spec, "refresh_interval", "How often to refresh the database mapping information",
-    cfg::INTERPRET_AS_SECONDS, std::chrono::seconds(300), cfg::Param::AT_RUNTIME);
+    std::chrono::seconds(300), cfg::Param::AT_RUNTIME);
 
 cfg::ParamBool s_debug(
     &s_spec, "debug", "Enable debug mode",

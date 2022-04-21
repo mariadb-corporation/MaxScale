@@ -317,7 +317,6 @@ config::ParamSeconds Config::s_auth_conn_timeout(
     &Config::s_specification,
     CN_AUTH_CONNECT_TIMEOUT,
     "Connection timeout for fetching user accounts.",
-    mxs::config::INTERPRET_AS_SECONDS,
     std::chrono::seconds(DEFAULT_AUTH_CONNECT_TIMEOUT),
     config::Param::Modifiable::AT_RUNTIME);
 
@@ -325,7 +324,6 @@ config::ParamSeconds Config::s_auth_read_timeout(
     &Config::s_specification,
     CN_AUTH_READ_TIMEOUT,
     "Read timeout for fetching user accounts (deprecated).",
-    mxs::config::INTERPRET_AS_SECONDS,
     std::chrono::seconds(DEFAULT_AUTH_READ_TIMEOUT),
     config::Param::Modifiable::AT_RUNTIME);
 
@@ -333,7 +331,6 @@ config::ParamSeconds Config::s_auth_write_timeout(
     &Config::s_specification,
     CN_AUTH_WRITE_TIMEOUT,
     "Write timeout for for fetching user accounts (deprecated).",
-    mxs::config::INTERPRET_AS_SECONDS,
     std::chrono::seconds(DEFAULT_AUTH_WRITE_TIMEOUT),
     config::Param::Modifiable::AT_RUNTIME);
 
@@ -377,7 +374,6 @@ config::ParamSeconds Config::s_query_retry_timeout(
     &Config::s_specification,
     CN_QUERY_RETRY_TIMEOUT,
     "The total timeout in seconds for any retried queries.",
-    mxs::config::INTERPRET_AS_SECONDS,
     std::chrono::seconds(DEFAULT_QUERY_RETRY_TIMEOUT),
     config::Param::Modifiable::AT_RUNTIME);
 
@@ -385,7 +381,6 @@ Config::ParamUsersRefreshTime Config::s_users_refresh_time(
     &Config::s_specification,
     CN_USERS_REFRESH_TIME,
     "How often the users can be refreshed.",
-    mxs::config::INTERPRET_AS_SECONDS,
     std::chrono::seconds(USERS_REFRESH_TIME_DEFAULT),
     config::Param::Modifiable::AT_RUNTIME);
 
@@ -393,7 +388,6 @@ config::ParamSeconds Config::s_users_refresh_interval(
     &Config::s_specification,
     CN_USERS_REFRESH_INTERVAL,
     "How often the users will be refreshed.",
-    mxs::config::INTERPRET_AS_SECONDS,
     std::chrono::seconds(0),
     config::Param::Modifiable::AT_RUNTIME);
 
@@ -436,7 +430,6 @@ config::ParamDuration<std::chrono::milliseconds> Config::s_rebalance_period(
     &Config::s_specification,
     CN_REBALANCE_PERIOD,
     "How often should the load of the worker threads be checked and rebalancing be made.",
-    mxs::config::NO_INTERPRETATION,
     std::chrono::milliseconds(0),
     config::Param::Modifiable::AT_RUNTIME);
 
@@ -591,14 +584,12 @@ config::ParamSeconds Config::s_config_sync_timeout(
     &Config::s_specification,
     CN_CONFIG_SYNC_TIMEOUT,
     "Timeout for the configuration synchronization operations.",
-    mxs::config::INTERPRET_AS_SECONDS,
     std::chrono::seconds(10), mxs::config::Param::AT_RUNTIME);
 
 config::ParamMilliseconds Config::s_config_sync_interval(
     &Config::s_specification,
     CN_CONFIG_SYNC_INTERVAL,
     "How often to synchronize the configuration.",
-    mxs::config::NO_INTERPRETATION,
     std::chrono::seconds(5), mxs::config::Param::AT_RUNTIME);
 
 config::ParamBool Config::s_log_warn_super_user(
@@ -1235,7 +1226,6 @@ static bool get_milliseconds(const char* zName,
                              const char* zValue,
                              const char* zDisplay_value,
                              std::chrono::milliseconds* pMilliseconds);
-static void log_duration_suffix_warning(const char* zName, const char* zValue);
 
 int create_new_service(ConfigSection* obj);
 int create_new_server(ConfigSection* obj);
@@ -3029,7 +3019,6 @@ bool get_suffixed_size(const char* value, uint64_t* dest)
 }
 
 bool get_suffixed_duration(const char* zValue,
-                           mxs::config::DurationInterpretation interpretation,
                            milliseconds* pDuration,
                            mxs::config::DurationUnit* pUnit)
 {
@@ -3044,7 +3033,7 @@ bool get_suffixed_duration(const char* zValue,
     uint64_t value = strtoll(zValue, &zEnd, 10);
 
     milliseconds duration;
-    mxs::config::DurationUnit unit = mxs::config::DURATION_IN_DEFAULT;
+    mxs::config::DurationUnit unit;
 
     switch (*zEnd)
     {
@@ -3083,27 +3072,8 @@ bool get_suffixed_duration(const char* zValue,
         ++zEnd;
         break;
 
-    case 0:
-        switch (interpretation)
-        {
-        case mxs::config::INTERPRET_AS_SECONDS:
-        case mxs::config::INTERPRET_AS_SECONDS_RELAXED:
-            duration = std::chrono::duration_cast<milliseconds>(seconds(value));
-            break;
-
-        case mxs::config::INTERPRET_AS_MILLISECONDS:
-            duration = milliseconds(value);
-            break;
-
-        case mxs::config::NO_INTERPRETATION:
-            // A suffix is required.
-            rval = false;
-            break;
-        }
-        break;
-
     default:
-        break;
+        rval = false;
     }
 
     if (rval)
@@ -3129,14 +3099,6 @@ bool get_suffixed_duration(const char* zValue,
     return rval;
 }
 
-static void log_duration_suffix_warning(const char* zName, const char* zValue)
-{
-    MXB_INFO("Specifying durations without a suffix denoting the unit "
-             "is strongly discouraged as it will be deprecated in the "
-             "future: %s=%s. Use the suffixes 'h' (hour), 'm' (minute), "
-             "'s' (second) or 'ms' (milliseconds).", zName, zValue);
-}
-
 static bool get_milliseconds(const char* zName,
                              const char* zValue,
                              const char* zDisplay_value,
@@ -3153,11 +3115,6 @@ static bool get_milliseconds(const char* zName,
     milliseconds milliseconds;
     if (get_suffixed_duration(zValue, &milliseconds, &unit))
     {
-        if (unit == mxs::config::DURATION_IN_DEFAULT)
-        {
-            log_duration_suffix_warning(zName, zDisplay_value);
-        }
-
         *pMilliseconds = milliseconds;
         valid = true;
     }

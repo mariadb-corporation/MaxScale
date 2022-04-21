@@ -68,7 +68,6 @@ config::ParamSeconds RCR::Config::s_max_replication_lag(
     &s_specification,
     "max_replication_lag",
     "Maximum acceptable replication lag",
-    config::INTERPRET_AS_SECONDS,
     std::chrono::seconds(0),
     config::Param::AT_RUNTIME
     );

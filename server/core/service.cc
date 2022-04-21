@@ -151,11 +151,11 @@ cfg::ParamCount s_max_connections(
 
 cfg::ParamSeconds s_connection_timeout(
     &s_spec, "connection_timeout", "Connection idle timeout",
-    cfg::INTERPRET_AS_SECONDS, std::chrono::seconds(0), cfg::Param::AT_RUNTIME);
+    std::chrono::seconds(0), cfg::Param::AT_RUNTIME);
 
 cfg::ParamSeconds s_net_write_timeout(
     &s_spec, "net_write_timeout", "Network write timeout",
-    cfg::INTERPRET_AS_SECONDS, std::chrono::seconds(0), cfg::Param::AT_RUNTIME);
+    std::chrono::seconds(0), cfg::Param::AT_RUNTIME);
 
 cfg::ParamBool s_auth_all_servers(
     &s_spec, "auth_all_servers", "Retrieve users from all backend servers instead of only one",
@@ -198,7 +198,7 @@ cfg::ParamEnum<int64_t> s_rank(
 
 cfg::ParamSeconds s_connection_keepalive(
     &s_spec, "connection_keepalive", "How ofted idle connections are pinged",
-    cfg::INTERPRET_AS_SECONDS, std::chrono::seconds(300), cfg::Param::AT_RUNTIME);
+    std::chrono::seconds(300), cfg::Param::AT_RUNTIME);
 
 cfg::ParamBool s_prune_sescmd_history(
     &s_spec, "prune_sescmd_history", "Prune old session command history if the limit is exceeded",
@@ -214,7 +214,7 @@ cfg::ParamCount s_max_sescmd_history(
 
 cfg::ParamMilliseconds s_idle_session_pool_time(
     &s_spec, "idle_session_pool_time", "Put connections into pool after session has been idle for this long",
-    cfg::INTERPRET_AS_SECONDS_RELAXED, std::chrono::milliseconds(-1),
+    std::chrono::milliseconds(-1),
     cfg::ParamMilliseconds::DurationType::SIGNED, cfg::Param::AT_RUNTIME);
 
 cfg::ParamPath s_user_accounts_file(

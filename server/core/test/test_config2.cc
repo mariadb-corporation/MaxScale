@@ -61,20 +61,17 @@ config::ParamCount
 config::ParamDuration<std::chrono::seconds>
 param_duration_1(&specification,
                  "duration_parameter_1",
-                 "Specifies the duration of something.",
-                 mxs::config::INTERPRET_AS_SECONDS);
+                 "Specifies the duration of something.");
 
 config::ParamDuration<std::chrono::milliseconds>
 param_duration_2(&specification,
                  "duration_parameter_2",
-                 "Specifies the duration of something.",
-                 mxs::config::INTERPRET_AS_MILLISECONDS);
+                 "Specifies the duration of something.");
 
 config::ParamDuration<std::chrono::seconds>
 param_duration_3(&specification,
                  "duration_parameter_3",
                  "Specifies the duration of something.",
-                 mxs::config::INTERPRET_AS_SECONDS,
                  std::chrono::seconds(-1),
                  config::ParamSeconds::DurationType::SIGNED);
 

@@ -102,7 +102,6 @@ mxs::config::ParamSeconds Configuration::s_cursor_timeout(
     &nosqlprotocol::specification,
     "cursor_timeout",
     "How long can a cursor be idle, that is, not accessed, before it is automatically closed.",
-    mxs::config::NO_INTERPRETATION,
     std::chrono::seconds(Configuration::CURSOR_TIMEOUT_DEFAULT));
 
 mxs::config::ParamBool Configuration::s_log_unknown_command(

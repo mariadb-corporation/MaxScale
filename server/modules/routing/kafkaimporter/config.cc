@@ -55,7 +55,7 @@ cfg::ParamEnum<IDType> s_table_name_in(
 
 cfg::ParamSeconds s_timeout(
     &s_spec, "timeout", "Connection and read timeout for network communication",
-    cfg::INTERPRET_AS_SECONDS, std::chrono::seconds(5), cfg::Param::AT_RUNTIME);
+    std::chrono::seconds(5), cfg::Param::AT_RUNTIME);
 
 KafkaCommonConfig s_kafka(&s_spec);
 

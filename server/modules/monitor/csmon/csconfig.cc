@@ -103,7 +103,6 @@ config::ParamDuration<std::chrono::milliseconds> cluster_monitor_interval(
     &specification,
     "cluster_monitor_interval",
     "With what interval the cluster configuration should be probed.",
-    mxs::config::INTERPRET_AS_MILLISECONDS,
     DEFAULT_CLUSTER_MONITOR_INTERVAL);
 }
 

@@ -115,19 +115,19 @@ cfg::ParamPassword s_password(
 
 cfg::ParamMilliseconds s_monitor_interval(
     &s_spec, CN_MONITOR_INTERVAL, "How often the servers are monitored",
-    cfg::INTERPRET_AS_MILLISECONDS, 2000ms, cfg::Param::AT_RUNTIME);
+    2000ms, cfg::Param::AT_RUNTIME);
 
 cfg::ParamSeconds s_backend_connect_timeout(
     &s_spec, CN_BACKEND_CONNECT_TIMEOUT, "Connection timeout for monitor connections",
-    cfg::INTERPRET_AS_SECONDS, 3s, cfg::Param::AT_RUNTIME);
+    3s, cfg::Param::AT_RUNTIME);
 
 cfg::ParamSeconds s_backend_read_timeout(
     &s_spec, CN_BACKEND_READ_TIMEOUT, "Read timeout for monitor connections",
-    cfg::INTERPRET_AS_SECONDS, 3s, cfg::Param::AT_RUNTIME);
+    3s, cfg::Param::AT_RUNTIME);
 
 cfg::ParamSeconds s_backend_write_timeout(
     &s_spec, CN_BACKEND_WRITE_TIMEOUT, "Write timeout for monitor connections",
-    cfg::INTERPRET_AS_SECONDS, 3s, cfg::Param::AT_RUNTIME);
+    3s, cfg::Param::AT_RUNTIME);
 
 cfg::ParamCount s_backend_connect_attempts(
     &s_spec, CN_BACKEND_CONNECT_ATTEMPTS, "Number of connection attempts to make to a server",
@@ -135,7 +135,7 @@ cfg::ParamCount s_backend_connect_attempts(
 
 cfg::ParamSeconds s_journal_max_age(
     &s_spec, CN_JOURNAL_MAX_AGE, "The time the on-disk cached server states are valid for",
-    cfg::INTERPRET_AS_SECONDS, 28800s, cfg::Param::AT_RUNTIME);
+    28800s, cfg::Param::AT_RUNTIME);
 
 cfg::ParamString s_disk_space_threshold(
     &s_spec, CN_DISK_SPACE_THRESHOLD, "Disk space threshold",
@@ -143,7 +143,7 @@ cfg::ParamString s_disk_space_threshold(
 
 cfg::ParamMilliseconds s_disk_space_check_interval(
     &s_spec, CN_DISK_SPACE_CHECK_INTERVAL, "How often the disk space is checked",
-    cfg::INTERPRET_AS_MILLISECONDS, 0ms, cfg::Param::AT_RUNTIME);
+    0ms, cfg::Param::AT_RUNTIME);
 
 cfg::ParamString s_script(
     &s_spec, CN_SCRIPT, "Script to run whenever an event occurs",
@@ -151,7 +151,7 @@ cfg::ParamString s_script(
 
 cfg::ParamSeconds s_script_timeout(
     &s_spec, CN_SCRIPT_TIMEOUT, "Timeout for the script",
-    cfg::INTERPRET_AS_SECONDS, 90s, cfg::Param::AT_RUNTIME);
+    90s, cfg::Param::AT_RUNTIME);
 
 cfg::ParamEnumMask<mxs_monitor_event_t> s_events(
     &s_spec, CN_EVENTS, "Events that cause the script to be called",

@@ -149,7 +149,7 @@ static cfg::ParamEnum<CausalReads> s_causal_reads(
 
 static cfg::ParamSeconds s_max_slave_replication_lag(
     &s_spec, "max_slave_replication_lag", "Maximum allowed slave replication lag",
-    cfg::INTERPRET_AS_SECONDS, std::chrono::seconds(0),
+    std::chrono::seconds(0),
     cfg::Param::AT_RUNTIME);
 
 static cfg::ParamCount s_max_slave_connections(
@@ -178,7 +178,7 @@ static cfg::ParamBool s_master_accept_reads(
 
 static cfg::ParamSeconds s_causal_reads_timeout(
     &s_spec, "causal_reads_timeout", "Timeout for the slave synchronization",
-    cfg::INTERPRET_AS_SECONDS, 10s, cfg::Param::AT_RUNTIME);
+    10s, cfg::Param::AT_RUNTIME);
 
 static cfg::ParamBool s_master_reconnection(
     &s_spec, "master_reconnection", "Reconnect to master",
@@ -190,7 +190,7 @@ static cfg::ParamBool s_delayed_retry(
 
 static cfg::ParamSeconds s_delayed_retry_timeout(
     &s_spec, "delayed_retry_timeout", "Timeout for delayed_retry",
-    cfg::INTERPRET_AS_SECONDS, 10s, cfg::Param::AT_RUNTIME);
+    10s, cfg::Param::AT_RUNTIME);
 
 static cfg::ParamBool s_transaction_replay(
     &s_spec, "transaction_replay", "Retry failed transactions",
@@ -202,7 +202,7 @@ static cfg::ParamSize s_transaction_replay_max_size(
 
 static cfg::ParamSeconds s_transaction_replay_timeout(
     &s_spec, "transaction_replay_timeout", "Timeout for transaction replay",
-    cfg::NO_INTERPRETATION, 0s, cfg::Param::AT_RUNTIME);
+    0s, cfg::Param::AT_RUNTIME);
 
 static cfg::ParamCount s_transaction_replay_attempts(
     &s_spec, "transaction_replay_attempts", "Maximum number of times to retry a transaction",

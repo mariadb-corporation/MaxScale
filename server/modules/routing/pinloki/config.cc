@@ -37,7 +37,7 @@ cfg::ParamCount s_server_id(
     &s_spec, "server_id", "Server ID sent to both slaves and the master", 1234);
 
 cfg::ParamSeconds s_net_timeout(
-    &s_spec, "net_timeout", "Network timeout", cfg::INTERPRET_AS_SECONDS, 10s);
+    &s_spec, "net_timeout", "Network timeout", 10s);
 
 cfg::ParamBool s_select_master(
     &s_spec, "select_master", "Automatically select the master server", false);
@@ -50,16 +50,16 @@ cfg::ParamCount s_expire_log_minimum_files(
 
 cfg::ParamDuration<wall_time::Duration> s_expire_log_duration(
     &s_spec, "expire_log_duration", "Duration after which unmodified log files are purged",
-    cfg::NO_INTERPRETATION, 0s);
+    0s);
 
 /* Undocumented config items (for test purposes) */
 cfg::ParamDuration<wall_time::Duration> s_purge_startup_delay(
     &s_spec, "purge_startup_delay", "Purge waits this long after a MaxScale startup",
-    cfg::NO_INTERPRETATION, 2min);
+    2min);
 
 cfg::ParamDuration<wall_time::Duration> s_purge_poll_timeout(
     &s_spec, "purge_poll_timeout", "Purge timeout/poll when expire_log_minimum_files files exist",
-    cfg::NO_INTERPRETATION, 2min);
+    2min);
 }
 
 namespace pinloki
