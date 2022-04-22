@@ -1146,6 +1146,7 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
                 {
                     if (mxs::Target* duplicate = m_shard.get_location(data))
                     {
+                        rval = SHOWDB_DUPLICATE_DATABASES;
                         duplicate_found = true;
                         MXB_SERROR("'" << data << "' found on servers "
                                    << "'" << target->name() << "' and '" << duplicate->name() << "' "
