@@ -71,25 +71,15 @@ uint64_t get_encoded_int(Iter& it)
     switch (len)
     {
     case 0xfc:
-        len = *it++;
-        len |= ((uint64_t)*it++) << 8;
+        len = mariadb::get_byte2(it);
         break;
 
     case 0xfd:
-        len = *it++;
-        len |= ((uint64_t)*it++) << 8;
-        len |= ((uint64_t)*it++) << 16;
+        len = mariadb::get_byte3(it);
         break;
 
     case 0xfe:
-        len = *it++;
-        len |= ((uint64_t)*it++) << 8;
-        len |= ((uint64_t)*it++) << 16;
-        len |= ((uint64_t)*it++) << 24;
-        len |= ((uint64_t)*it++) << 32;
-        len |= ((uint64_t)*it++) << 40;
-        len |= ((uint64_t)*it++) << 48;
-        len |= ((uint64_t)*it++) << 56;
+        len = mariadb::get_byte8(it);
         break;
 
     default:
@@ -2122,11 +2112,9 @@ GWBUF* MariaDBBackendConnection::process_packets(GWBUF** result)
             break;
         }
 
-        // Extract packet length and command byte
-        uint32_t len = *it++;
-        len |= (*it++) << 8;
-        len |= (*it++) << 16;
-        ++it;   // Skip the sequence
+        // Extract packet length
+        uint32_t len = mariadb::get_header(it).pl_length;
+        it += 4;
 
         if (bytes_left < len + MYSQL_HEADER_LEN)
         {
@@ -2255,13 +2243,13 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
             set_reply_state(ReplyState::RSET_ROWS);
 
             ++it;
-            uint16_t warnings = *it++;
-            warnings |= *it++ << 8;
+            uint16_t warnings = mariadb::get_byte2(it);
+            it += 2;
 
             m_reply.set_num_warnings(warnings);
 
-            uint16_t status = *it++;
-            status |= *it << 8;
+            uint16_t status = mariadb::get_byte2(it);
+            it += 2;
 
             m_reply.set_server_status(status);
 
@@ -2284,13 +2272,13 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
         {
             // Genuine EOF packet
             ++it;
-            uint16_t warnings = *it++;
-            warnings |= *it++ << 8;
+            uint16_t warnings = mariadb::get_byte2(it);
+            it += 2;
 
             m_reply.set_num_warnings(warnings);
 
-            uint16_t status = *it++;
-            status |= *it << 8;
+            uint16_t status = mariadb::get_byte2(it);
+            it += 2;
 
             m_reply.set_server_status(status);
             set_reply_state((status & SERVER_MORE_RESULTS_EXIST) == 0 ? ReplyState::DONE : ReplyState::START);
@@ -2347,8 +2335,8 @@ void MariaDBBackendConnection::process_ok_packet(Iter it, Iter end)
     ++it;                   // Skip the command byte
     skip_encoded_int(it);   // Affected rows
     skip_encoded_int(it);   // Last insert ID
-    uint16_t status = *it++;
-    status |= (*it++) << 8;
+    uint16_t status = mariadb::get_byte2(it);
+    it += 2;
 
     m_reply.set_server_status(status);
 
@@ -2359,8 +2347,8 @@ void MariaDBBackendConnection::process_ok_packet(Iter it, Iter end)
     }
 
     // Two bytes of warnings
-    uint16_t warnings = *it++;
-    warnings |= (*it++) << 8;
+    uint16_t warnings = mariadb::get_byte2(it);
+    it += 2;
     m_reply.set_num_warnings(warnings);
 
     if (rcap_type_required(m_session->capabilities(), RCAP_TYPE_SESSION_STATE_TRACKING)
@@ -2454,14 +2442,9 @@ void MariaDBBackendConnection::process_ps_response(Iter it, Iter end)
 
     // Modifying the ID here is convenient but it doesn't seem right as the iterators should be const
     // iterators. This could be fixed later if a more suitable place is found.
-    stmt_id |= *it;
-    *it++ = internal_id;
-    stmt_id |= *it << 8;
-    *it++ = internal_id >> 8;
-    stmt_id |= *it << 16;
-    *it++ = internal_id >> 16;
-    stmt_id |= *it << 24;
-    *it++ = internal_id >> 24;
+    stmt_id = mariadb::get_byte4(it);
+    mariadb::set_byte4(it, internal_id);
+    it += 4;
 
     auto& ps_map = m_ps_map[internal_id];
     ps_map.real_id = stmt_id;
@@ -2469,12 +2452,12 @@ void MariaDBBackendConnection::process_ps_response(Iter it, Iter end)
              internal_id, stmt_id, m_dcb->server()->name());
 
     // Columns
-    uint16_t columns = *it++;
-    columns += *it++ << 8;
+    uint16_t columns = mariadb::get_byte2(it);
+    it += 2;
 
     // Parameters
-    uint16_t params = *it++;
-    params += *it++ << 8;
+    uint16_t params = mariadb::get_byte2(it);
+    it += 2;
 
     ps_map.n_params = params;
 
@@ -2613,9 +2596,9 @@ void MariaDBBackendConnection::process_result_start(Iter it, Iter end)
  */
 void MariaDBBackendConnection::update_error(Iter it, Iter end)
 {
-    uint16_t code = 0;
-    code |= (*it++);
-    code |= (*it++) << 8;
+    uint16_t code = mariadb::get_byte2(it);
+    it += 2;
+
     ++it;
     auto sql_state_begin = it;
     it += 5;
