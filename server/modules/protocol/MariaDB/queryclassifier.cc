@@ -208,7 +208,8 @@ public:
         bool     route_to_last_used = false;
     };
 
-    PSManager()
+    PSManager(Log log)
+        : m_log(log)
     {
     }
 
@@ -253,7 +254,10 @@ public:
         }
         else if (id != MARIADB_PS_DIRECT_EXEC_ID)
         {
-            MXS_WARNING("Using unknown prepared statement with ID %u", id);
+            if (m_log == Log::ALL)
+            {
+                MXS_WARNING("Using unknown prepared statement with ID %u", id);
+            }
         }
 
         return rval;
@@ -268,7 +272,7 @@ public:
         {
             rval = &it->second;
         }
-        else
+        else if (m_log == Log::ALL)
         {
             MXS_WARNING("Using unknown prepared statement with ID '%s'", id.c_str());
         }
@@ -280,7 +284,10 @@ public:
     {
         if (m_text_ps.erase(id) == 0)
         {
-            MXS_WARNING("Closing unknown prepared statement with ID '%s'", id.c_str());
+            if (m_log == Log::ALL)
+            {
+                MXS_WARNING("Closing unknown prepared statement with ID '%s'", id.c_str());
+            }
         }
     }
 
@@ -288,7 +295,10 @@ public:
     {
         if (m_binary_ps.erase(id) == 0)
         {
-            MXS_WARNING("Closing unknown prepared statement with ID %u", id);
+            if (m_log == Log::ALL)
+            {
+                MXS_WARNING("Closing unknown prepared statement with ID %u", id);
+            }
         }
     }
 
@@ -336,6 +346,7 @@ private:
 private:
     BinaryPSMap m_binary_ps;
     TextPSMap   m_text_ps;
+    Log         m_log;
 };
 
 //
@@ -344,12 +355,14 @@ private:
 
 QueryClassifier::QueryClassifier(Handler* pHandler,
                                  MXS_SESSION* pSession,
-                                 mxs_target_t use_sql_variables_in)
+                                 mxs_target_t use_sql_variables_in,
+                                 Log log)
     : m_pHandler(pHandler)
     , m_pSession(pSession)
     , m_use_sql_variables_in(use_sql_variables_in)
     , m_multi_statements_allowed(are_multi_statements_allowed(pSession))
-    , m_sPs_manager(new PSManager)
+    , m_sPs_manager(new PSManager(log))
+    , m_log(log)
 {
 }
 
@@ -516,13 +529,16 @@ uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype)
          */
         if (qc_query_is_type(qtype, QUERY_TYPE_READ))
         {
-            MXS_WARNING("The query can't be routed to all "
-                        "backend servers because it includes SELECT and "
-                        "SQL variable modifications which is not supported. "
-                        "Set use_sql_variables_in=master or split the "
-                        "query to two, where SQL variable modifications "
-                        "are done in the first and the SELECT in the "
-                        "second one.");
+            if (m_log == Log::ALL)
+            {
+                MXS_WARNING("The query can't be routed to all "
+                            "backend servers because it includes SELECT and "
+                            "SQL variable modifications which is not supported. "
+                            "Set use_sql_variables_in=master or split the "
+                            "query to two, where SQL variable modifications "
+                            "are done in the first and the SELECT in the "
+                            "second one.");
+            }
 
             target = TARGET_MASTER;
         }
