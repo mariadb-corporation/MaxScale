@@ -286,8 +286,8 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
         auto main_worker = mxs::MainWorker::get();
         auto server = dcb->server();
         main_worker->execute([server]() {
-                                 MonitorManager::set_server_status(server, SERVER_MAINT);
-                             }, mxb::Worker::EXECUTE_AUTO);
+            MonitorManager::set_server_status(server, SERVER_MAINT);
+        }, mxb::Worker::EXECUTE_AUTO);
 
         MXB_ERROR("Server %s has been put into maintenance mode due to the server blocking connections "
                   "from MaxScale. Run 'mysqladmin -h %s -P %d flush-hosts' on this server before taking "
@@ -991,12 +991,12 @@ bool MariaDBBackendConnection::compare_responses()
     if (ok && !found && !m_ids_to_check.empty())
     {
         data->history_info[this].response_cb = [this]() {
-                if (!compare_responses())
-                {
-                    do_handle_error(m_dcb, create_response_mismatch_error(),
-                                    mxs::ErrorType::PERMANENT);
-                }
-            };
+            if (!compare_responses())
+            {
+                do_handle_error(m_dcb, create_response_mismatch_error(),
+                                mxs::ErrorType::PERMANENT);
+            }
+        };
     }
 
     return ok;
@@ -1423,51 +1423,51 @@ GWBUF* MariaDBBackendConnection::create_change_user_packet()
 {
     const auto& client_auth_data = *m_auth_data.client_data->auth_data;
     auto make_auth_token = [this, &client_auth_data] {
-            std::vector<uint8_t> rval;
-            const string& hex_hash2 = client_auth_data.user_entry.entry.password;
-            if (hex_hash2.empty())
+        std::vector<uint8_t> rval;
+        const string& hex_hash2 = client_auth_data.user_entry.entry.password;
+        if (hex_hash2.empty())
+        {
+            m_current_auth_token.clear();
+            return rval;        // Empty password -> empty token
+        }
+
+        // Need to compute the value of:
+        // SHA1(scramble || SHA1(SHA1(password))) ⊕ SHA1(password)
+
+        // SHA1(SHA1(password)) is in the user entry and needs to be converted to binary form.
+        if (hex_hash2.length() == 2 * SHA_DIGEST_LENGTH)
+        {
+            uint8_t hash2[SHA_DIGEST_LENGTH];
+            mxs::hex2bin(hex_hash2.c_str(), hex_hash2.length(), hash2);
+
+            // Calculate SHA1(CONCAT(scramble, hash2) */
+            uint8_t concat_hash[SHA_DIGEST_LENGTH];
+            gw_sha1_2_str(m_auth_data.scramble, MYSQL_SCRAMBLE_LEN, hash2, SHA_DIGEST_LENGTH,
+                          concat_hash);
+
+            // SHA1(password) was sent by client and is in binary form.
+            auto& hash1 = client_auth_data.backend_token;
+            if (hash1.size() == SHA_DIGEST_LENGTH)
             {
-                m_current_auth_token.clear();
-                return rval;    // Empty password -> empty token
+                m_current_auth_token = hash1;
+                // Compute the XOR */
+                uint8_t new_token[SHA_DIGEST_LENGTH];
+                mxs::bin_bin_xor(concat_hash, hash1.data(), SHA_DIGEST_LENGTH, new_token);
+                rval.assign(new_token, new_token + SHA_DIGEST_LENGTH);
             }
-
-            // Need to compute the value of:
-            // SHA1(scramble || SHA1(SHA1(password))) ⊕ SHA1(password)
-
-            // SHA1(SHA1(password)) is in the user entry and needs to be converted to binary form.
-            if (hex_hash2.length() == 2 * SHA_DIGEST_LENGTH)
-            {
-                uint8_t hash2[SHA_DIGEST_LENGTH];
-                mxs::hex2bin(hex_hash2.c_str(), hex_hash2.length(), hash2);
-
-                // Calculate SHA1(CONCAT(scramble, hash2) */
-                uint8_t concat_hash[SHA_DIGEST_LENGTH];
-                gw_sha1_2_str(m_auth_data.scramble, MYSQL_SCRAMBLE_LEN, hash2, SHA_DIGEST_LENGTH,
-                              concat_hash);
-
-                // SHA1(password) was sent by client and is in binary form.
-                auto& hash1 = client_auth_data.backend_token;
-                if (hash1.size() == SHA_DIGEST_LENGTH)
-                {
-                    m_current_auth_token = hash1;
-                    // Compute the XOR */
-                    uint8_t new_token[SHA_DIGEST_LENGTH];
-                    mxs::bin_bin_xor(concat_hash, hash1.data(), SHA_DIGEST_LENGTH, new_token);
-                    rval.assign(new_token, new_token + SHA_DIGEST_LENGTH);
-                }
-            }
-            return rval;
-        };
+        }
+        return rval;
+    };
 
     auto mses = m_auth_data.client_data;
     std::vector<uint8_t> payload;
     payload.reserve(200);   // Enough for most cases.
 
     auto insert_stringz = [&payload](const std::string& str) {
-            auto n = str.length() + 1;
-            auto zstr = str.c_str();
-            payload.insert(payload.end(), zstr, zstr + n);
-        };
+        auto n = str.length() + 1;
+        auto zstr = str.c_str();
+        payload.insert(payload.end(), zstr, zstr + n);
+    };
 
     // Command byte COM_CHANGE_USER 0x11 */
     payload.push_back(MXS_COM_CHANGE_USER);
@@ -2174,7 +2174,7 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
         MXB_ERROR("Response to LOAD DATA LOCAL INFILE read before the upload was complete: "
                   "cmd: 0x%02hhx, len: %u, server: %s", cmd, len, m_server.name());
         mxb_assert(!true);
-    /** Fallthrough */
+        /** Fallthrough */
 
     case ReplyState::LOAD_DATA_END:
         MXB_INFO("Load data ended on '%s'", m_server.name());
