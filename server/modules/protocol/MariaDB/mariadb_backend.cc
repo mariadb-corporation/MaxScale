@@ -2155,6 +2155,7 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
                       cmd, len, m_server.name());
             m_session->dump_statements();
             m_session->dump_session_log();
+            m_session->kill();
             mxb_assert(!true);
         }
         break;
@@ -2185,6 +2186,7 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
                       cmd, len, m_server.name());
             m_session->dump_statements();
             m_session->dump_session_log();
+            m_session->kill();
             mxb_assert(!true);
         }
         break;
