@@ -654,15 +654,13 @@ std::string extract_error(const GWBUF* buffer)
     return rval;
 }
 
-GWBUF* truncate_packets(GWBUF* b, uint64_t packets)
+GWBUF* truncate_packets(GWBUF* buffer, uint64_t packets)
 {
-    mxs::Buffer buffer(b);
-
-    auto it = buffer.begin();
-    size_t total_bytes = buffer.length();
+    auto it = buffer->begin();
+    size_t total_bytes = buffer->length();
     size_t bytes_used = 0;
 
-    while (it != buffer.end())
+    while (it != buffer->end())
     {
         size_t bytes_left = total_bytes - bytes_used;
 
@@ -686,17 +684,17 @@ GWBUF* truncate_packets(GWBUF* b, uint64_t packets)
 
         bytes_used += len + MYSQL_HEADER_LEN;
 
-        mxb_assert(it != buffer.end());
-        it.advance(len);
+        mxb_assert(it != buffer->end());
+        it += len;
 
         if (--packets == 0)
         {
             // Trim off the extra data at the end
-            buffer.erase(it, buffer.end());
+            buffer->rtrim(std::distance(it, buffer->end()));
             break;
         }
     }
 
-    return buffer.release();
+    return buffer;
 }
 }

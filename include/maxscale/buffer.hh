@@ -86,10 +86,13 @@ public:
         // using mxs::Reply::row_data() inside the clientReply function and they are only available for
         // the duration of the function call. The rows should be considered a read-only view into
         // the buffer that contains them.
-        TYPE_COLLECT_ROWS   = (1 << 3),
+        TYPE_COLLECT_ROWS = (1 << 3),
     };
 
     using HintVector = std::vector<Hint>;
+
+    using iterator = uint8_t*;
+    using const_iterator = const uint8_t*;
 
     HintVector hints;                               /*< Hint data for this buffer */
 
@@ -137,6 +140,10 @@ public:
      */
     void* get_classifier_data() const;
 
+    iterator       begin();
+    iterator       end();
+    const_iterator begin() const;
+    const_iterator end() const;
     const uint8_t* data() const;
     uint8_t*       data();
     size_t         length() const;
@@ -342,6 +349,26 @@ inline uint8_t* GWBUF::data()
 inline const uint8_t* GWBUF::data() const
 {
     return m_start;
+}
+
+inline uint8_t* GWBUF::begin()
+{
+    return m_start;
+}
+
+inline uint8_t* GWBUF::end()
+{
+    return m_end;
+}
+
+inline const uint8_t* GWBUF::begin() const
+{
+    return m_start;
+}
+
+inline const uint8_t* GWBUF::end() const
+{
+    return m_end;
 }
 
 /*< First valid, unconsumed byte in the buffer */

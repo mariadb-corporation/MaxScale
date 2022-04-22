@@ -47,15 +47,15 @@ void skip_encoded_int(Iter& it)
     switch (*it)
     {
     case 0xfc:
-        it.advance(3);
+        it += 3;
         break;
 
     case 0xfd:
-        it.advance(4);
+        it += 4;
         break;
 
     case 0xfe:
-        it.advance(9);
+        it += 9;
         break;
 
     default:
@@ -103,7 +103,7 @@ std::string get_encoded_str(Iter& it)
 {
     uint64_t len = get_encoded_int(it);
     auto start = it;
-    it.advance(len);
+    it += len;
     return std::string(start, it);
 }
 
@@ -111,16 +111,20 @@ std::string_view get_encoded_str_sv(Iter& it)
 {
     uint64_t len = get_encoded_int(it);
     auto start = it;
-    it.advance(len);
-    // TODO: Use a pointer instead of a mxs::Buffer::iterator
+    it += len;
+
+    // TODO: Change this to std::contiguous_iterator_tag in C++20
+    static_assert(std::is_same_v<std::iterator_traits<Iter>::iterator_category,
+                                 std::random_access_iterator_tag>);
     mxb_assert_message(&*start + len == &*it, "Memory must be contiguous");
+
     return std::string_view(reinterpret_cast<const char*>(&*start), len);
 }
 
 void skip_encoded_str(Iter& it)
 {
     auto len = get_encoded_int(it);
-    it.advance(len);
+    it += len;
 }
 
 struct AddressInfo
@@ -2103,12 +2107,12 @@ uint32_t MariaDBBackendConnection::create_capabilities(bool with_ssl, uint64_t c
 
 GWBUF* MariaDBBackendConnection::process_packets(GWBUF** result)
 {
-    mxs::Buffer buffer(*result);
-    auto it = buffer.begin();
-    size_t total_bytes = buffer.length();
+    GWBUF* buffer = *result;
+    auto it = buffer->begin();
+    size_t total_bytes = buffer->length();
     size_t bytes_used = 0;
 
-    while (it != buffer.end())
+    while (it != buffer->end())
     {
         size_t bytes_left = total_bytes - bytes_used;
 
@@ -2132,9 +2136,8 @@ GWBUF* MariaDBBackendConnection::process_packets(GWBUF** result)
 
         bytes_used += len + MYSQL_HEADER_LEN;
 
-        mxb_assert(it != buffer.end());
-        auto end = it;
-        end.advance(len);
+        mxb_assert(it != buffer->end());
+        auto end = it + len;
 
         // Ignore the tail end of a large packet large packet. Only resultsets can generate packets this large
         // and we don't care what the contents are and thus it is safe to ignore it.
@@ -2154,7 +2157,6 @@ GWBUF* MariaDBBackendConnection::process_packets(GWBUF** result)
         }
     }
 
-    buffer.release();
     return gwbuf_split(result, bytes_used);
 }
 
@@ -2382,7 +2384,7 @@ void MariaDBBackendConnection::process_ok_packet(Iter it, Iter end)
             switch (type)
             {
             case SESSION_TRACK_STATE_CHANGE:
-                it.advance(total_size);
+                it += total_size;
                 break;
 
             case SESSION_TRACK_SCHEMA:
@@ -2412,7 +2414,7 @@ void MariaDBBackendConnection::process_ok_packet(Iter it, Iter end)
 
             default:
                 mxb_assert(!true);
-                it.advance(total_size);
+                it += total_size;
                 MXB_WARNING("Received unexpecting session track type: %lu", type);
                 break;
             }
@@ -2616,7 +2618,7 @@ void MariaDBBackendConnection::update_error(Iter it, Iter end)
     code |= (*it++) << 8;
     ++it;
     auto sql_state_begin = it;
-    it.advance(5);
+    it += 5;
     auto sql_state_end = it;
     auto message_begin = sql_state_end;
     auto message_end = end;

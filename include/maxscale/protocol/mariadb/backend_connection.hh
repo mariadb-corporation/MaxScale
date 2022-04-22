@@ -23,7 +23,7 @@ class MariaDBUserCache;
 class MariaDBBackendConnection : public mxs::BackendConnection
 {
 public:
-    using Iter = mxs::Buffer::iterator;
+    using Iter = GWBUF::iterator;
 
     static std::unique_ptr<MariaDBBackendConnection>
     create(MXS_SESSION* session, mxs::Component* component, SERVER& server);
@@ -183,7 +183,7 @@ private:
     void     process_result_start(Iter it, Iter end);
     void     process_ps_response(Iter it, Iter end);
     void     process_ok_packet(Iter it, Iter end);
-    void     update_error(mxs::Buffer::iterator it, mxs::Buffer::iterator end);
+    void     update_error(Iter it, Iter end);
     void     set_reply_state(mxs::ReplyState state);
 
     const MariaDBUserCache* user_account_cache();
