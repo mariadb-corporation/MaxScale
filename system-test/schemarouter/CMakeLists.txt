@@ -45,3 +45,8 @@ add_test_executable_ex(NAME mxs2631_ignore_system_tables SOURCE mxs2631_ignore_s
 # MXS-2972: Caching of shards must take servers into notice
 add_test_executable_ex(NAME mxs2972_shard_caching SOURCE mxs2972_shard_caching.cc
         CONFIG mxs2972_shard_caching.cnf VMS repl_backend LABELS schemarouter)
+
+# MXS-4092: Table mapping SQL doesn't use DISTINCT
+# https://jira.mariadb.org/browse/MXS-4092
+add_test_executable_ex(NAME mxs4092_distinct_tables SOURCE mxs4092_distinct_tables.cc
+        CONFIG mxs4092_distinct_tables.cnf VMS repl_backend LABELS schemarouter)
