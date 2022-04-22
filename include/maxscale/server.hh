@@ -265,21 +265,6 @@ public:
     virtual mxb::SSLConfig ssl_config() const = 0;
 
     /**
-     * Set value of 'session_track_system_variables'.
-     *
-     * @param value Value found in the MariaDB Server
-     */
-    virtual void set_session_track_system_variables(std::string&& value) = 0;
-
-    /**
-     * Get server variable 'session_track_system_variables'.
-     *
-     * @param key Variable name to get
-     * @return Variable value
-     */
-    virtual std::string get_session_track_system_variables() const = 0;
-
-    /**
      * Track value of server variable.
      *
      * @param variable  The variable to track. It will be directly used in a

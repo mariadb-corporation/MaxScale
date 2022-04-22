@@ -35,6 +35,13 @@
 
 using namespace maxscale;
 
+namespace
+{
+
+const char* CN_SESSION_TRACK_SYSTEM_VARIABLES = "session_track_system_variables";
+
+}
+
 /**
  * The entry points for the read/write query splitting router module.
  *
@@ -50,7 +57,7 @@ using namespace maxscale;
 
 bool RWSplit::check_causal_reads(SERVER* server) const
 {
-    auto var = server->get_session_track_system_variables();
+    auto var = server->get_variable_value(CN_SESSION_TRACK_SYSTEM_VARIABLES);
     return var.empty() || var == "*" || var.find("last_gtid") != std::string::npos;
 }
 
@@ -306,6 +313,7 @@ bool RWSConfig::post_configure(const std::map<std::string, mxs::ConfigParameters
 
 RWSplit* RWSplit::create(SERVICE* service)
 {
+    service->track_variable(CN_SESSION_TRACK_SYSTEM_VARIABLES);
     return new RWSplit(service);
 }
 

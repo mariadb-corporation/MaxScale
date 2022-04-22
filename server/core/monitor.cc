@@ -1246,50 +1246,56 @@ bool MonitorServer::should_fetch_variables()
 }
 
 /**
- * Fetch 'session_track_system_variables' and others from the server. The values are
- * stored in the SERVER object.
+ * Fetch variables from the server. The values are stored in the SERVER object.
  */
 bool MonitorServer::fetch_variables()
 {
-    bool rv = false;
+    bool rv = true;
 
     auto variables = server->tracked_variables();
 
-    string query("SELECT @@session_track_system_variables");
-    for (const auto& variable : variables)
+    if (!variables.empty())
     {
-        query += ", " + variable;
-    }
+        string query = "SHOW GLOBAL VARIABLES WHERE VARIABLE_NAME IN ("
+            + mxb::join(variables, ",", "'") + ")";
 
-    string err_msg;
-    unsigned int err;
-    if (auto r = mxs::execute_query(con, query, &err_msg, &err))
-    {
-        MXB_INFO("'session_track_system_variables' et. al. loaded from '%s', next update in %ld seconds.",
-                 server->name(), this_unit.variables_update_interval.count());
-        m_last_variables_update = mxb::Clock::now();
-
-        if (r->next_row())
+        string err_msg;
+        unsigned int err;
+        if (auto r = mxs::execute_query(con, query, &err_msg, &err))
         {
-            mxb_assert((size_t)r->get_col_count() == 1 + variables.size());
+            m_last_variables_update = mxb::Clock::now();
 
-            int i = 0;
-            server->set_session_track_system_variables(r->get_string(i++));
-
-            Server::Variables values;
-            for (const auto& variable : variables)
+            set<string> found;
+            Server::Variables variable_values;
+            while (r->next_row())
             {
-                values[variable] = r->get_string(i++);
+                mxb_assert(r->get_col_count() == 2);
+
+                auto variable = r->get_string(0);
+                variable_values[variable] = r->get_string(1);
+
+                variables.erase(variable);
+                found.insert(variable);
             }
 
-            server->set_variables(std::move(values));
+            server->set_variables(std::move(variable_values));
 
-            rv = true;
+            MXB_INFO("%s loaded from '%s', next update in %ld seconds.",
+                     !found.empty() ? mxb::join(found, ", ", "'").c_str() : "''",
+                     server->name(), this_unit.variables_update_interval.count());
+
+            if (!variables.empty())
+            {
+                MXB_INFO("Variable(s) %s were not found.", mxb::join(variables, ", ", "'").c_str());
+                mxb_assert(!true); // Suggests typo in variable name.
+            }
         }
-    }
-    else
-    {
-        MXB_ERROR("Fetching server variables failed: (%d), %s", err, err_msg.c_str());
+        else
+        {
+            MXB_ERROR("Fetching server variables failed: (%d), %s", err, err_msg.c_str());
+            mxb_assert(!true); // Suggests error in SQL
+            rv = false;
+        }
     }
 
     return rv;

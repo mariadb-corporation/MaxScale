@@ -296,8 +296,6 @@ public:
 
     mxb::SSLConfig ssl_config() const override;
 
-    void        set_session_track_system_variables(std::string&& value) override;
-    std::string get_session_track_system_variables() const override;
     void        set_uptime(int64_t uptime) override;
     int64_t     get_uptime() const override;
     bool        track_variable(std::string variable) override;

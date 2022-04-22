@@ -1693,6 +1693,14 @@ void Service::targets_updated()
     {
         manager->set_backends(data.servers);
     }
+
+    for (auto* server : data.servers)
+    {
+        for (const auto& variable : m_tracked_variables)
+        {
+            server->track_variable(variable);
+        }
+    }
 }
 
 void Service::propagate_target_update()
@@ -1949,6 +1957,13 @@ void SERVICE::set_custom_version_suffix(const string& custom_version_suffix)
 Router* SERVICE::router() const
 {
     return m_router.get();
+}
+
+void SERVICE::track_variables(const std::set<std::string>& variables)
+{
+    mxb_assert(MainWorker::is_main_worker());
+
+    m_tracked_variables.insert(variables.begin(), variables.end());
 }
 
 void Service::wakeup_sessions_waiting_userdata()

@@ -295,8 +295,29 @@ public:
 
     mxs::Router* router() const;
 
+    /**
+     * The service should track these variables.
+     *
+     * @param variables  The variables to be tracked.
+     */
+    void track_variables(const std::set<std::string>& variables);
+
+    /**
+     * The service should track this variables.
+     *
+     * @param variable  The variable to be tracked.
+     */
+    void track_variable(const std::string& variable)
+    {
+        std::set<std::string> variables { variable };
+        track_variables(variables);
+    }
+
+
 protected:
     friend class Configuration;
+
+    std::set<std::string> m_tracked_variables;
 
     SERVICE(const std::string& name,
             const std::string& router_name)

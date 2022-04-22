@@ -613,12 +613,6 @@ void Server::set_charset(uint8_t charset)
     m_charset = charset;
 }
 
-void Server::set_session_track_system_variables(std::string&& value)
-{
-    std::lock_guard<std::mutex> guard(m_var_lock);
-    m_session_track_system_variables = std::move(value);
-}
-
 void Server::set_variables(Variables&& variables)
 {
     std::lock_guard<std::mutex> guard(m_var_lock);
@@ -633,12 +627,6 @@ void Server::set_uptime(int64_t uptime)
 int64_t Server::get_uptime() const
 {
     return m_uptime.load(std::memory_order_relaxed);
-}
-
-std::string Server::get_session_track_system_variables() const
-{
-    std::lock_guard<std::mutex> guard(m_var_lock);
-    return m_session_track_system_variables;
 }
 
 bool Server::track_variable(std::string variable)
