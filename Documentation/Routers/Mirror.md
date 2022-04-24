@@ -175,7 +175,7 @@ module=mariadbmon
 servers=server1,server2
 user=maxuser
 password=maxpwd
-monitor_interval=2000
+monitor_interval=2s
 
 [Mirror-Router]
 type=service

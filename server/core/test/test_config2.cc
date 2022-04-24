@@ -235,13 +235,13 @@ int test_duration(config::Duration<std::chrono::seconds>& value)
 {
     static const TestEntry<config::Duration<std::chrono::seconds>::value_type> entries[] =
     {
-        {"1",      true, std::chrono::seconds {1   }},
         {"1ms",    false},
-        {"1001ms", true, std::chrono::seconds {1   }},
-        {"1s",     true, std::chrono::seconds {1   }},
-        {"1m",     true, std::chrono::seconds {60  }},
+        {"1001ms", true, std::chrono::seconds {1}},
+        {"1s",     true, std::chrono::seconds {1}},
+        {"1m",     true, std::chrono::seconds {60}},
         {"1h",     true, std::chrono::seconds {3600}},
 
+        {"1",      false},
         {"1x",     false},
         {"a",      false},
         {"-",      false},
@@ -255,12 +255,12 @@ int test_duration(config::Duration<std::chrono::milliseconds>& value)
 {
     static const TestEntry<config::Duration<std::chrono::milliseconds>::value_type> entries[] =
     {
-        {"1",      true, std::chrono::milliseconds {1      }},
         {"1ms",    true, std::chrono::milliseconds {1      }},
         {"1s",     true, std::chrono::milliseconds {1000   }},
         {"1m",     true, std::chrono::milliseconds {60000  }},
         {"1h",     true, std::chrono::milliseconds {3600000}},
 
+        {"1",      false},
         {"1x",     false},
         {"a",      false},
         {"-",      false},
@@ -274,20 +274,20 @@ int test_signed_duration(config::Duration<std::chrono::seconds>& value)
 {
     static const TestEntry<config::Duration<std::chrono::seconds>::value_type> entries[] =
     {
-        {"-1",      true,  std::chrono::seconds      {-1   }},
         {"-1ms",    false},
-        {"-1001ms", true,  std::chrono::seconds      {-1   }},
-        {"-1s",     true,  std::chrono::seconds      {-1   }},
-        {"-1m",     true,  std::chrono::seconds      {-60  }},
-        {"-1h",     true,  std::chrono::seconds      {-3600}},
+        {"-1001ms", true, std::chrono::seconds      {-1}},
+        {"-1s",     true, std::chrono::seconds      {-1}},
+        {"-1m",     true, std::chrono::seconds      {-60}},
+        {"-1h",     true, std::chrono::seconds      {-3600}},
 
-        {"1",       true,  std::chrono::seconds      {1    }},
-        {"1ms",     false, },
-        {"1001ms",  true,  std::chrono::seconds      {1    }},
-        {"1s",      true,  std::chrono::seconds      {1    }},
-        {"1m",      true,  std::chrono::seconds      {60   }},
-        {"1h",      true,  std::chrono::seconds      {3600 }},
+        {"1ms",     false,},
+        {"1001ms",  true, std::chrono::seconds      {1}},
+        {"1s",      true, std::chrono::seconds      {1}},
+        {"1m",      true, std::chrono::seconds      {60}},
+        {"1h",      true, std::chrono::seconds      {3600}},
 
+        {"-1",      false},
+        {"1",       false},
         {"1x",      false},
         {"a",       false},
         {"-",       false},

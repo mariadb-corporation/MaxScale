@@ -44,8 +44,8 @@ module=xpandmon
 servers=Bootstrap1, Bootstrap2
 user=monitor_user
 password=monitor_password
-monitor_interval=2000
-cluster_monitor_interval=60000
+monitor_interval=2s
+cluster_monitor_interval=60s
 ```
 
 The mandatory parameters are the object type, the monitor module to use, the

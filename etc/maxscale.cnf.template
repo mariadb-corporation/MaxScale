@@ -39,7 +39,7 @@ module=mariadbmon
 servers=server1
 user=monitor_user
 password=monitor_pw
-monitor_interval=2000
+monitor_interval=2s
 
 # Service definitions
 #

@@ -311,7 +311,7 @@ version=1.5
 servers=CsNode1,CsNode2
 user=myuser
 password=mypwd
-monitor_interval=5000
+monitor_interval=5s
 api_key=somekey1234
 ```
 

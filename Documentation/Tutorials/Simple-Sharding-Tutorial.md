@@ -71,7 +71,7 @@ module=mariadbmon
 servers=accounts_west,accounts_east
 user=monitoruser
 password=7SP1Zcsow8TG+9EkEBVEbaKa
-monitor_interval=1000
+monitor_interval=1s
 ```
 
 After this we have a fully working configuration and we can move on to starting MariaDB MaxScale.

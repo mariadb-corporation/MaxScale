@@ -42,7 +42,7 @@ module=mariadbmon
 servers=server1,server2,server3,server4
 user=maxuser
 password=maxpwd
-monitor_interval=5000
+monitor_interval=5s
 
 [RW-Split-Router]
 type=service

@@ -334,7 +334,7 @@ module=mariadbmon
 servers=server1
 user=maxuser
 password=maxpwd
-monitor_interval=5000
+monitor_interval=5s
 
 # The MariaDB-to-Kafka CDC service
 [Kafka-CDC]

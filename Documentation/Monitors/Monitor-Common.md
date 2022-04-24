@@ -342,7 +342,7 @@ module=mariadbmon
 servers=C1N1,C1N2,C1N3
 user=maxscale
 password=password
-monitor_interval=10000
+monitor_interval=10s
 script=/path/to/maxscale_monitor_alert_script.sh --initiator=$INITIATOR --parent=$PARENT --children=$CHILDREN --event=$EVENT --node_list=$NODELIST --list=$LIST --master_list=$MASTERLIST --slave_list=$SLAVELIST --synced_list=$SYNCEDLIST
 ```
 

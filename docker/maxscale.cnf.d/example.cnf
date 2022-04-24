@@ -31,7 +31,7 @@ module=mariadbmon
 servers=server1,server2,server3
 user=maxuser
 password=maxpwd
-monitor_interval=2000
+monitor_interval=2s
 
 # Service definitions
 # Service Definition for a read-only service and a read/write splitting service.
