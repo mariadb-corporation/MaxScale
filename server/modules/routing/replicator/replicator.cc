@@ -30,6 +30,7 @@
 #include <maxscale/query_classifier.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/routingworker.hh>
+#include <maxscale/secrets.hh>
 
 // Private headers
 #include "sql.hh"
@@ -50,16 +51,23 @@ std::vector<cdc::Server> service_to_servers(SERVICE* service)
     // Since this isn't a worker thread, execute it on one
     mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN)->call(
         [&]() {
-            for (auto s : service->reachable_servers())
+        // TODO: per-server credentials aren't exposed in the public class
+        const auto& cfg = *service->config();
+        auto pw = mxs::decrypt_password(cfg.password);
+
+        for (auto s : service->reachable_servers())
+        {
+            if (s->is_master())
             {
                 if (s->is_master() || status_is_blr(s->status()))
                 {
                     // TODO: per-server credentials aren't exposed in the public class
                     const auto& cfg = *service->config();
-                    servers.push_back({s->address(), s->port(), cfg.user, cfg.password});
+                    servers.push_back({s->address(), s->port(), cfg.user, pw});
                 }
             }
-        }, mxs::RoutingWorker::EXECUTE_AUTO);
+        }
+    }, mxs::RoutingWorker::EXECUTE_AUTO);
 
     return servers;
 }
@@ -251,11 +259,11 @@ bool Replicator::Imp::is_owner() const
     {
         mxs::MainWorker::get()->call(
             [&]() {
-                if (const auto* cluster = m_cnf.service->cluster())
-                {
-                    is_owner = cluster->is_running() && cluster->is_cluster_owner();
-                }
-            }, mxs::MainWorker::EXECUTE_AUTO);
+            if (const auto* cluster = m_cnf.service->cluster())
+            {
+                is_owner = cluster->is_running() && cluster->is_cluster_owner();
+            }
+        }, mxs::MainWorker::EXECUTE_AUTO);
     }
 
     return is_owner;
@@ -483,7 +491,7 @@ bool Replicator::Imp::process_one_event(SQL::Event& event)
             commit = true;
         }
 
-    /* fallthrough */
+        /* fallthrough */
     case USER_VAR_EVENT:
         if (m_implicit_commit)
         {
