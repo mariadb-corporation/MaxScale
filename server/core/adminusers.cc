@@ -197,7 +197,7 @@ static json_t* admin_user_json_data(const char* host,
 
     std::string self = MXS_JSON_API_USERS;
     self += type;
-    json_object_set_new(entry, CN_RELATIONSHIPS, mxs_json_self_link(host, self.c_str(), user));
+    json_object_set_new(entry, CN_LINKS, mxs_json_self_link(host, self.c_str(), user));
 
     return entry;
 }

@@ -17,6 +17,7 @@
 #include <maxscale/protocol/mariadb/resultset.hh>
 #include <maxscale/json.hh>
 #include <maxscale/modutil.hh>
+#include <maxscale/secrets.hh>
 
 #include <fstream>
 #include <sys/types.h>
@@ -157,8 +158,8 @@ std::pair<std::string, std::string> get_file_name_and_size(const std::string& fi
 
 Pinloki::Pinloki(SERVICE* pService)
     : m_config(pService->name(), [this]() {
-                   return post_configure();
-               }),
+    return post_configure();
+}),
     m_service(pService),
     m_inventory(m_config)
 {
@@ -491,7 +492,8 @@ maxsql::Connection::ConnectionDetails Pinloki::generate_details()
                 m_master_config.host = srv->address();
                 m_master_config.port = srv->port();
                 details.user = m_master_config.user = m_service->config()->user;
-                details.password = m_master_config.password = m_service->config()->password;
+                auto pw = mxs::decrypt_password(m_pService->config()->password);
+                details.password = m_master_config.password = pw;
                 auto ssl = srv->ssl_config();
 
                 if (ssl.enabled)
