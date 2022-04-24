@@ -993,8 +993,8 @@ int SchemaRouterSession::inspect_mapping_states(SRBackend* b, const mxs::Reply& 
 
     return std::all_of(
         m_backends.begin(), m_backends.end(), [](const auto& b) {
-            return !b->in_use() | b->is_mapped();
-        });
+        return !b->in_use() | b->is_mapped();
+    });
 }
 
 /**
@@ -1190,7 +1190,7 @@ void SchemaRouterSession::query_databases()
     m_state |= INIT_MAPPING;
     m_state &= ~INIT_UNINT;
 
-    GWBUF* buffer = modutil_create_query("SELECT CONCAT(s.schema_name, '.', IFNULL(t.table_name, '')) FROM information_schema.schemata s "
+    GWBUF* buffer = modutil_create_query("SELECT DISTINCT CONCAT(s.schema_name, '.', IFNULL(t.table_name, '')) FROM information_schema.schemata s "
                                          "LEFT JOIN information_schema.tables t ON s.schema_name = t.table_schema ");
     buffer->set_type(GWBUF::TYPE_COLLECT_ROWS);
 

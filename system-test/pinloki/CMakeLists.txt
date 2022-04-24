@@ -50,6 +50,10 @@ add_test_executable_ex(NAME pinloki_upgrade SOURCE pinloki_upgrade.cc
 add_test_executable_ex(NAME pinloki_hang SOURCE pinloki_hang.cc
   CONFIG pinloki.cnf VMS repl_backend LABELS pinloki)
 
+# MXS-4103: Pinloki doesn't decrypt passwords with select_master=true
+add_test_executable_ex(NAME pinloki_passwords SOURCE pinloki_passwords.cc
+  CONFIG pinloki_passwords.cnf VMS repl_backend LABELS pinloki)
+
 # Test pinloki with galera
 #add_test_executable_ex(NAME pinloki_galera SOURCE pinloki_galera.cc
 #  CONFIG pinloki_galera.cnf VMS repl_backend LABELS pinloki)

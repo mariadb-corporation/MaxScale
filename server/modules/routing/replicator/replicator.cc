@@ -266,11 +266,11 @@ bool Replicator::Imp::is_owner() const
     {
         mxs::MainWorker::get()->call(
             [&]() {
-                if (const auto* cluster = m_cnf.service->cluster())
-                {
-                    is_owner = cluster->is_running() && cluster->is_cluster_owner();
-                }
-            }, mxs::MainWorker::EXECUTE_AUTO);
+            if (const auto* cluster = m_cnf.service->cluster())
+            {
+                is_owner = cluster->is_running() && cluster->is_cluster_owner();
+            }
+        }, mxs::MainWorker::EXECUTE_AUTO);
     }
 
     return is_owner;
@@ -495,7 +495,7 @@ bool Replicator::Imp::process_one_event(SQL::Event& event)
             commit = true;
         }
 
-    /* fallthrough */
+        /* fallthrough */
     case USER_VAR_EVENT:
         if (m_implicit_commit)
         {
