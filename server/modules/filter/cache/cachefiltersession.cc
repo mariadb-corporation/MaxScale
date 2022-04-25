@@ -404,14 +404,14 @@ bool CacheFilterSession::routeQuery(GWBUF* pPacket)
             case MXS_COM_STMT_PREPARE:
                 if (log_decisions())
                 {
-                    MXS_NOTICE("COM_STMT_PREPARE, ignoring.");
+                    MXB_NOTICE("COM_STMT_PREPARE, ignoring.");
                 }
                 break;
 
             case MXS_COM_STMT_EXECUTE:
                 if (log_decisions())
                 {
-                    MXS_NOTICE("COM_STMT_EXECUTE, ignoring.");
+                    MXB_NOTICE("COM_STMT_EXECUTE, ignoring.");
                 }
                 break;
 
