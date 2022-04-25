@@ -492,7 +492,7 @@ maxsql::Connection::ConnectionDetails Pinloki::generate_details()
                 m_master_config.host = srv->address();
                 m_master_config.port = srv->port();
                 details.user = m_master_config.user = m_service->config()->user;
-                auto pw = mxs::decrypt_password(m_pService->config()->password);
+                auto pw = mxs::decrypt_password(m_service->config()->password);
                 details.password = m_master_config.password = pw;
                 auto ssl = srv->ssl_config();
 
