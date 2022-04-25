@@ -65,14 +65,15 @@ public:
     Users& operator=(const Users& rhs);
     Users& operator=(Users&& rhs) noexcept;
 
-    bool load_json(json_t* json);
-    bool add(const std::string& user, const std::string& password, user_account_type perm);
-    bool remove(const std::string& user);
-    bool get(const std::string& user, UserInfo* output = NULL) const;
-    bool authenticate(const std::string& user, const std::string& password);
-    int  admin_count() const;
-    bool check_permissions(const std::string& user, const std::string& password,
-                           user_account_type perm) const;
+    bool                  load_json(json_t* json);
+    bool                  add(const std::string& user, const std::string& password, user_account_type perm);
+    bool                  remove(const std::string& user);
+    bool                  get(const std::string& user, UserInfo* output = NULL) const;
+    std::vector<UserInfo> get_all() const;
+    bool                  authenticate(const std::string& user, const std::string& password);
+    int                   admin_count() const;
+    bool                  check_permissions(const std::string& user, const std::string& password,
+                                            user_account_type perm) const;
     bool    set_permissions(const std::string& user, user_account_type perm);
     json_t* diagnostics() const;
     bool    empty() const;

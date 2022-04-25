@@ -187,60 +187,33 @@ const char* admin_remove_user(Users* users, const char* fname, const char* uname
     return ADMIN_SUCCESS;
 }
 }
-static json_t* admin_user_json_data(const char* host,
-                                    const char* user,
-                                    enum user_account_type account)
+static json_t* admin_user_json_data(const char* host, const mxs::UserInfo& user)
 {
-    const char* type = CN_INET;
+    std::string path = MXS_JSON_API_USERS;
+    path += CN_INET;
 
     json_t* entry = json_object();
-    json_object_set_new(entry, CN_ID, json_string(user));
-    json_object_set_new(entry, CN_TYPE, json_string(type));
 
-    json_t* param = json_object();
-    json_object_set_new(param, CN_ACCOUNT, json_string(account_type_to_str(account)));
-    json_object_set_new(entry, CN_ATTRIBUTES, param);
-
-    std::string self = MXS_JSON_API_USERS;
-    self += type;
-    json_object_set_new(entry, CN_LINKS, mxs_json_self_link(host, self.c_str(), user));
+    json_object_set_new(entry, CN_ID, json_string(user.name.c_str()));
+    json_object_set_new(entry, CN_TYPE, json_string(CN_INET));
+    json_object_set_new(entry, CN_ATTRIBUTES, user.to_json(mxs::UserInfo::NO_PW));
+    json_object_set_new(entry, CN_LINKS, mxs_json_self_link(host, path.c_str(), user.name.c_str()));
 
     return entry;
 }
 
-namespace
+json_t* admin_user_to_json(const char* host, const char* name)
 {
-void user_types_to_json(Users* users, json_t* arr, const char* host)
-{
-    json_t* json = users->diagnostics();
-    size_t index;
-    json_t* value;
-
-    json_array_foreach(json, index, value)
-    {
-        const char* user = json_string_value(json_object_get(value, CN_NAME));
-        enum user_account_type account = json_to_account_type(json_object_get(value, CN_ACCOUNT));
-        json_array_append_new(arr, admin_user_json_data(host, user, account));
-    }
-
-    json_decref(json);
-}
-}
-
-json_t* admin_user_to_json(const char* host, const char* user)
-{
-    user_account_type account = USER_ACCOUNT_BASIC;
-    if (admin_user_is_inet_admin(user, nullptr))
-    {
-        account = USER_ACCOUNT_ADMIN;
-    }
+    mxs::UserInfo user;
+    MXB_AT_DEBUG(bool ok = ) rest_users.get(name, &user);
+    mxb_assert(ok);
 
     std::string path = MXS_JSON_API_USERS;
     path += CN_INET;
     path += "/";
-    path += user;
+    path += name;
 
-    return mxs_json_resource(host, path.c_str(), admin_user_json_data(host, user, account));
+    return mxs_json_resource(host, path.c_str(), admin_user_json_data(host, user));
 }
 
 json_t* admin_all_users_to_json(const char* host)
@@ -249,9 +222,9 @@ json_t* admin_all_users_to_json(const char* host)
     std::string path = MXS_JSON_API_USERS;
     path += CN_INET;
 
-    if (!rest_users.empty())
+    for (const auto& user : rest_users.get_all())
     {
-        user_types_to_json(&rest_users, arr, host);
+        json_array_append_new(arr, admin_user_json_data(host, user));
     }
 
     return mxs_json_resource(host, path.c_str(), arr);
