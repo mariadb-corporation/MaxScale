@@ -744,6 +744,241 @@ public:
      */
     static Worker* get_current();
 
+    /**
+     * Push a function for delayed execution.
+     *
+     * @param delay      The delay in milliseconds.
+     * @param pFunction  The function to call.
+     *
+     * @return A unique identifier for the delayed call. Using that identifier
+     *         the call can be cancelled.
+     *
+     * @attention When invoked, if @c action is @c Worker::Call::EXECUTE, the
+     *            function should perform the delayed call and return @true, if
+     *            the function should be called again. If the function returns
+     *            @c false, it will not be called again.
+     *
+     *            If @c action is @c Worker::Call::CANCEL, then the function
+     *            should perform whatever canceling actions are needed. In that
+     *            case the return value is ignored and the function will not
+     *            be called again.
+     */
+    DCId dcall(int32_t delay, bool (* pFunction)(Worker::Call::action_t action))
+    {
+        return add_dcall(new DCallFunctionVoid(delay, next_dcall_id(), pFunction));
+    }
+
+    DCId dcall(const std::chrono::milliseconds& delay,
+               bool (* pFunction)(Worker::Call::action_t action))
+    {
+        int32_t ms = delay.count();
+        return dcall(ms, pFunction);
+    }
+
+    /**
+     * Push a function for delayed execution.
+     *
+     * @param delay      The delay in milliseconds.
+     * @param pFunction  The function to call.
+     * @param data       The data to be provided to the function when invoked.
+     *
+     * @return A unique identifier for the delayed call. Using that identifier
+     *         the call can be cancelled.
+     *
+     * @attention When invoked, if @c action is @c Worker::Call::EXECUTE, the
+     *            function should perform the delayed call and return @true, if
+     *            the function should be called again. If the function returns
+     *            @c false, it will not be called again.
+     *
+     *            If @c action is @c Worker::Call::CANCEL, then the function
+     *            should perform whatever canceling actions are needed. In that
+     *            case the return value is ignored and the function will not
+     *            be called again.
+     */
+    template<class D>
+    DCId dcall(int32_t delay,
+               bool (* pFunction)(Worker::Call::action_t action, D data),
+               D data)
+    {
+        return add_dcall(new DCallFunction<D>(delay, next_dcall_id(), pFunction, data));
+    }
+
+    template<class D>
+    DCId dcall(const std::chrono::milliseconds& delay,
+               bool (* pFunction)(Worker::Call::action_t action, D data),
+               D data)
+    {
+        int32_t ms = delay.count();
+        return dcall(ms, pFunction, data);
+    }
+
+    /**
+     * Push a member function for delayed execution.
+     *
+     * @param delay    The delay in milliseconds.
+     * @param pMethod  The member function to call.
+     *
+     * @return A unique identifier for the delayed call. Using that identifier
+     *         the call can be cancelled.
+     *
+     * @attention When invoked, if @c action is @c Worker::Call::EXECUTE, the
+     *            function should perform the delayed call and return @true, if
+     *            the function should be called again. If the function returns
+     *            @c false, it will not be called again.
+     *
+     *            If @c action is @c Worker::Call::CANCEL, then the function
+     *            should perform whatever canceling actions are needed. In that
+     *            case the return value is ignored and the function will not
+     *            be called again.
+     */
+    template<class T>
+    DCId dcall(int32_t delay,
+               bool (T::* pMethod)(Worker::Call::action_t action),
+               T* pT)
+    {
+        return add_dcall(new DCallMethodWithCancel<T>(delay, next_dcall_id(), pMethod, pT));
+    }
+
+    template<class T>
+    DCId dcall(const std::chrono::milliseconds& delay,
+               bool (T::* pMethod)(Worker::Call::action_t action),
+               T* pT)
+    {
+        int32_t ms = delay.count();
+        return dcall(ms, pMethod, pT);
+    }
+
+    template<class T>
+    DCId dcall(int32_t delay,
+               bool (T::* pMethod)(void),
+               T* pT)
+    {
+        return add_dcall(new DCallMethodWithoutCancel<T>(delay, next_dcall_id(), pMethod, pT));
+    }
+
+    template<class T>
+    DCId dcall(const std::chrono::milliseconds& delay,
+               bool (T::* pMethod)(void),
+               T* pT)
+    {
+        int32_t ms = delay.count();
+        return dcall(ms, pMethod, pT);
+    }
+
+    /**
+     * Push a member function for delayed execution.
+     *
+     * @param delay    The delay in milliseconds.
+     * @param pMethod  The member function to call.
+     * @param data     The data to be provided to the function when invoked.
+     *
+     * @return A unique identifier for the delayed call. Using that identifier
+     *         the call can be cancelled.
+     *
+     * @attention When invoked, if @c action is @c Worker::Call::EXECUTE, the
+     *            function should perform the delayed call and return @true, if
+     *            the function should be called again. If the function returns
+     *            @c false, it will not be called again.
+     *
+     *            If @c action is @c Worker::Call::CANCEL, then the function
+     *            should perform whatever canceling actions are needed. In that
+     *            case the return value is ignored and the function will not
+     *            be called again.
+     */
+    template<class T, class D>
+    DCId dcall(int32_t delay,
+               bool (T::* pMethod)(Worker::Call::action_t action, D data),
+               T* pT,
+               D data)
+    {
+        return add_dcall(new DCallMethod<T, D>(delay,
+                                               next_dcall_id(),
+                                               pMethod,
+                                               pT,
+                                               data));
+    }
+
+    template<class T, class D>
+    DCId dcall(const std::chrono::milliseconds& delay,
+               bool (T::* pMethod)(Worker::Call::action_t action, D data),
+               T* pT,
+               D data)
+    {
+        int32_t ms = delay.count();
+        return dcall(ms, pMethod, pT, data);
+    }
+
+    /**
+     * Push a general-purpose function wrapper for delayed execution.
+     *
+     * @param delay    The delay in milliseconds.
+     * @param f        The function wrapper.
+     *
+     * @return A unique identifier for the delayed call. Using that identifier
+     *         the call can be cancelled.
+     *
+     * @attention When invoked, if @c action is @c Worker::Call::EXECUTE, the
+     *            function should perform the delayed call and return @true, if
+     *            the function should be called again. If the function returns
+     *            @c false, it will not be called again.
+     *
+     *            If @c action is @c Worker::Call::CANCEL, then the function
+     *            should perform whatever canceling actions are needed. In that
+     *            case the return value is ignored and the function will not
+     *            be called again.
+     */
+    DCId dcall(int32_t delay,
+               std::function<bool(Worker::Call::action_t action)>&& f)
+    {
+        return add_dcall(new DCallFunctorWithCancel(delay, next_dcall_id(), std::move(f)));
+    }
+
+    DCId dcall(const std::chrono::milliseconds& delay,
+               std::function<bool(Worker::Call::action_t action)>&& f)
+    {
+        return add_dcall(new DCallFunctorWithCancel(delay.count(), next_dcall_id(), std::move(f)));
+    }
+
+    DCId dcall(int32_t delay,
+               std::function<bool(void)>&& f)
+    {
+        return add_dcall(new DCallFunctorWithoutCancel(delay, next_dcall_id(), std::move(f)));
+    }
+
+    DCId dcall(const std::chrono::milliseconds& delay,
+               std::function<bool(void)>&& f)
+    {
+        return add_dcall(new DCallFunctorWithoutCancel(delay.count(), next_dcall_id(), std::move(f)));
+    }
+
+    /**
+     * Cancel delayed call.
+     *
+     * When this function is called, the delayed call in question will be called
+     * *synchronously* with the @c action argument being @c Worker::Call::CANCEL.
+     * That is, when this function returns, the function has been canceled.
+     *
+     * @param id  The id that was returned when the delayed call was scheduled.
+     *
+     * @return True, if the id represented an existing delayed call.
+     */
+    bool cancel_dcall(DCId id);
+
+    /**
+     * Loop call; the provided function will be called right before the
+     * control returns back to epoll_wait(). Note that it is far more efficient
+     * to call lcall() than dcall() with a 0 delay.
+     *
+     * @param f  A function.
+     *
+     * @note All loop-calls are processed before the control returns back to
+     *       epoll_wait(). That is, if a loop call adds another loop call, which
+     *       adds a loop call, ad infinitum, the system will hang.
+     *       Safe usage is e.g. to add a loop call to clientReply() from a filter
+     *       that short-circuits the routeQuery() handling.
+     */
+    void lcall(std::function<void ()>&& f);
+
 protected:
     const int m_epoll_fd;               /*< The epoll file descriptor. */
     state_t   m_state {STOPPED};        /*< The state of the worker */
@@ -1143,9 +1378,10 @@ private:
 
     void run(mxb::Semaphore* pSem);
 
-    typedef DelegatingTimer<Worker>          PrivateTimer;
-    typedef std::multimap<int64_t, DCall*>   DCallsByTime;
-    typedef std::unordered_map<DCId, DCall*> DCallsById;
+    typedef DelegatingTimer<Worker>             PrivateTimer;
+    typedef std::multimap<int64_t, DCall*>      DCallsByTime;
+    typedef std::unordered_map<DCId, DCall*>    DCallsById;
+    typedef std::vector<std::function<void ()>> LCalls;
 
     const int32_t m_id;                        /*< The id of the worker. */
     uint32_t      m_max_events;                /*< Maximum numer of events in each epoll_wait call. */
@@ -1165,5 +1401,6 @@ private:
     RandomEngine  m_random_engine;             /*< Random engine for this worker (this thread). */
     TimePoint     m_epoll_tick_now;            /*< TimePoint when epoll_tick() was called */
     DCId          m_prev_dcid {NO_CALL};       /*< Previous delayed call id. */
+    LCalls        m_lcalls;                    /*< Calls to be made before return to epoll_wait(). */
 };
 }

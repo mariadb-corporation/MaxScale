@@ -31,10 +31,6 @@ public:
 
     ~ManipulateIndexes()
     {
-        if (m_dcid)
-        {
-            session().cancel_dcall(m_dcid);
-        }
     }
 
     string generate_sql() override final
@@ -268,16 +264,11 @@ private:
         mxb_assert(m_action == Action::CREATING_TABLE);
         m_action = Action::CREATING_DATABASE;
 
-        mxb_assert(m_dcid == 0);
-        m_dcid = session().dcall(0ms, [this]() {
-                m_dcid = 0;
-
+        worker().lcall([this]() {
                 ostringstream ss;
                 ss << "CREATE DATABASE `" << m_database.name() << "`";
 
                 send_downstream(ss.str());
-
-                return false;
             });
     }
 
@@ -286,14 +277,10 @@ private:
         mxb_assert(m_action != Action::CREATING_TABLE);
         m_action = Action::CREATING_TABLE;
 
-        mxb_assert(m_dcid == 0);
-        m_dcid = session().dcall(0ms, [this]() {
-                m_dcid = 0;
-
+        worker().lcall([this]() {
                 auto statement = nosql::table_create_statement(table(), m_database.config().id_length);
-                send_downstream(statement);
 
-                return false;
+                send_downstream(statement);
             });
     }
 
@@ -306,7 +293,6 @@ private:
 
     TableAction m_table_action { TableAction::ERROR_IF_MISSING };
     Action      m_action       { NORMAL_ACTION };
-    uint32_t    m_dcid         { 0 };
 };
 
 
@@ -333,10 +319,6 @@ public:
 
     ~Create()
     {
-        if (m_dcid)
-        {
-            session().cancel_dcall(m_dcid);
-        }
     }
 
     string generate_sql() override
@@ -511,16 +493,11 @@ public:
         mxb_assert(m_action == Action::CREATING_TABLE);
         m_action = Action::CREATING_DATABASE;
 
-        mxb_assert(m_dcid == 0);
-        m_dcid = session().dcall(0ms, [this]() {
-                m_dcid = 0;
-
+        worker().lcall([this]() {
                 ostringstream ss;
                 ss << "CREATE DATABASE `" << m_database.name() << "`";
 
                 send_downstream(ss.str());
-
-                return false;
             });
     }
 
@@ -529,13 +506,8 @@ public:
         mxb_assert(m_action == Action::CREATING_DATABASE);
         m_action = Action::CREATING_TABLE;
 
-        mxb_assert(m_dcid == 0);
-        m_dcid = session().dcall(0ms, [this]() {
-                m_dcid = 0;
-
+        worker().lcall([this]() {
                 send_downstream(m_statement);
-
-                return false;
             });
     }
 
@@ -546,9 +518,8 @@ private:
         CREATING_DATABASE
     };
 
-    Action   m_action { Action::CREATING_TABLE };
-    string   m_statement;
-    uint32_t m_dcid { 0 };
+    Action m_action { Action::CREATING_TABLE };
+    string m_statement;
 };
 
 

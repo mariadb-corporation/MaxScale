@@ -65,12 +65,6 @@ namespace nosql
 Command::~Command()
 {
     free_request();
-
-    if (m_dcid != 0)
-    {
-        session().cancel_dcall(m_dcid);
-        m_dcid = 0;
-    }
 }
 
 bool Command::is_admin() const
@@ -133,14 +127,8 @@ void Command::send_downstream(const string& sql)
 
 void Command::send_downstream_via_loop(const string& sql)
 {
-    mxb_assert(m_dcid == 0);
-
-    m_dcid = session().dcall(0ms, [this, sql]() {
-            m_dcid = 0;
-
+    m_database.context().worker().lcall([this, sql]() {
             send_downstream(sql);
-
-            return false;
         });
 }
 

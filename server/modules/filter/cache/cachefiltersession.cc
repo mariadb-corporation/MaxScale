@@ -263,7 +263,6 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
     , m_clear_cache(false)
     , m_user_specific(m_sCache->config().users == CACHE_USERS_ISOLATED)
     , m_processing(false)
-    , m_did(0)
 {
     m_key.data_hash = 0;
     m_key.full_hash = 0;
@@ -307,12 +306,6 @@ CacheFilterSession::~CacheFilterSession()
 {
     MXB_FREE(m_zUseDb);
     MXB_FREE(m_zDefaultDb);
-
-    if (m_did != 0)
-    {
-        m_pSession->cancel_dcall(m_did);
-        m_did = 0;
-    }
 }
 
 // static
@@ -1664,9 +1657,7 @@ void CacheFilterSession::ready_for_another_call()
     {
         Worker* pWorker = Worker::get_current();
 
-        m_did = m_pSession->dcall(0ms, [this]() {
-                m_did = 0;
-
+        pWorker->lcall([this]() {
                 // We may already be processing, if a packet arrived from the client
                 // and processed, before the delayed call got handled.
                 if (!m_processing)
@@ -1680,7 +1671,6 @@ void CacheFilterSession::ready_for_another_call()
                         routeQuery(pPacket);
                     }
                 }
-                return false;
             });
     }
 }

@@ -196,5 +196,4 @@ private:
     bool                    m_user_specific;  /**< Whether a user specific cache should be used. */
     std::deque<mxs::Buffer> m_queued_packets; /**< Queued statements, waiting for current to finish. */
     bool                    m_processing;     /**< Is query processing on-going. */
-    uint32_t                m_did;            /**< Delayed call id. */
 };

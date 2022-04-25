@@ -1000,6 +1000,21 @@ void Worker::poll_waitevents()
             m_statistics.maxexectime = std::max(m_statistics.maxexectime, qtime);
         }
 
+        if (!m_lcalls.empty())
+        {
+            // We can't just iterate, because a loop-call may add another loop-call,
+            // which may cause the vector to be reallocated.
+            int i = 0;
+            do
+            {
+                std::function<void ()>& f = m_lcalls[i++];
+                f();
+            }
+            while (m_lcalls.begin() + i != m_lcalls.end());
+
+            m_lcalls.clear();
+        }
+
         call_epoll_tick();
     }   /*< while(1) */
 }
@@ -1134,6 +1149,13 @@ Worker::DCall* Worker::remove_dcall(DCId id)
     }
 
     return pCall;
+}
+
+void Worker::lcall(std::function<void ()>&& f)
+{
+    m_lcalls.emplace_back(std::move(f));
+}
+
 }
 
 void Worker::remove_dcall(DCall* pCall)
