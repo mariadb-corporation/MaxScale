@@ -1156,8 +1156,6 @@ void Worker::lcall(std::function<void ()>&& f)
     m_lcalls.emplace_back(std::move(f));
 }
 
-}
-
 void Worker::remove_dcall(DCall* pCall)
 {
     // Prevent re-entrancy problems if delayed calls are suspended from
