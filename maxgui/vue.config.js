@@ -176,9 +176,7 @@ module.exports = {
     },
 
     productionSourceMap: false,
-    css: {
-        extract: { ignoreOrder: true },
-    },
+    ...(process.env.NODE_ENV === 'production' ? { css: { extract: { ignoreOrder: true } } } : {}),
 }
 function addStyleResource(rule) {
     rule.use('style-resource')
