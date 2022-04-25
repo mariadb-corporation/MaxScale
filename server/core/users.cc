@@ -23,9 +23,13 @@
 #include <maxscale/cn_strings.hh>
 #include <maxscale/jansson.hh>
 #include <maxscale/users.hh>
+#include <maxscale/http.hh>
 
 namespace
 {
+constexpr char CN_CREATED[] = "created";
+constexpr char CN_LAST_UPDATE[] = "last_update";
+constexpr char CN_LAST_LOGIN[] = "last_login";
 
 const char STR_BASIC[] = "basic";
 const char STR_ADMIN[] = "admin";
@@ -37,6 +41,11 @@ constexpr const char* ADMIN_SALT = "$6$MXS";
 constexpr const char* OLD_ADMIN_SALT = "$1$MXS";
 
 using Guard = std::lock_guard<std::mutex>;
+
+json_t* date_or_null(time_t date)
+{
+    return date ? json_string(http_to_date(date).c_str()) : json_null();
+}
 }
 
 namespace maxscale
@@ -71,7 +80,8 @@ Users& Users::operator=(Users&& rhs) noexcept
 
 bool Users::add(const std::string& user, const std::string& password, user_account_type perm)
 {
-    return add_hashed(user, hash(password), perm);
+    time_t now = time(nullptr);
+    return add_hashed(user, hash(password), perm, now, 0);
 }
 
 bool Users::remove(const std::string& user)
@@ -215,10 +225,11 @@ bool Users::is_last_user(const std::string& user) const
     return m_data.size() == 1 && m_data.find(user) != m_data.end();
 }
 
-bool Users::add_hashed(const std::string& user, const std::string& password, user_account_type perm)
+bool Users::add_hashed(const std::string& user, const std::string& password, user_account_type perm,
+                       time_t created, time_t updated)
 {
     Guard guard(m_lock);
-    return m_data.insert(std::make_pair(user, UserInfo(user, password, perm))).second;
+    return m_data.emplace(user, UserInfo(user, password, perm, created, updated)).second;
 }
 
 bool Users::is_admin(const std::unordered_map<std::string, UserInfo>::value_type& value)
@@ -238,15 +249,22 @@ bool Users::load_json(json_t* json)
         json_t* name = json_object_get(value, CN_NAME);
         json_t* type = json_object_get(value, CN_ACCOUNT);
         json_t* password = json_object_get(value, CN_PASSWORD);
+        json_t* created = json_object_get(value, CN_CREATED);
+        json_t* updated = json_object_get(value, CN_LAST_UPDATE);
 
         if (name && json_is_string(name)
             && type && json_is_string(type)
             && password && json_is_string(password)
             && json_to_account_type(type) != USER_ACCOUNT_UNKNOWN)
         {
+            time_t created_at = json_is_string(created) ? http_from_date(json_string_value(created)) : 0;
+            time_t updated_at = json_is_string(updated) ? http_from_date(json_string_value(updated)) : 0;
+
             add_hashed(json_string_value(name),
                        json_string_value(password),
-                       json_to_account_type(type));
+                       json_to_account_type(type),
+                       created_at,
+                       updated_at);
         }
         else
         {
@@ -339,6 +357,9 @@ json_t* mxs::UserInfo::to_json(IncludePW include_pw) const
 
     json_object_set_new(obj, CN_NAME, json_string(name.c_str()));
     json_object_set_new(obj, CN_ACCOUNT, json_string(account_type_to_str(permissions)));
+    json_object_set_new(obj, CN_CREATED, date_or_null(created));
+    json_object_set_new(obj, CN_LAST_UPDATE, date_or_null(last_update));
+    json_object_set_new(obj, CN_LAST_LOGIN, date_or_null(last_login));
 
     if (include_pw == WITH_PW)
     {

@@ -36,10 +36,13 @@ enum user_account_type
 struct UserInfo
 {
     UserInfo() = default;
-    UserInfo(std::string user, std::string pw, user_account_type perm)
+    UserInfo(std::string user, std::string pw, user_account_type perm,
+             time_t created_at, time_t updated_at)
         : name(user)
         , password(pw)
         , permissions(perm)
+        , created(created_at)
+        , last_update(updated_at)
     {
     }
 
@@ -51,6 +54,9 @@ struct UserInfo
     std::string       name;
     std::string       password;
     user_account_type permissions {USER_ACCOUNT_BASIC};
+    time_t            created = 0;
+    time_t            last_update = 0;
+    time_t            last_login = 0;
 };
 
 
@@ -90,7 +96,8 @@ public:
 private:
     static bool is_admin(const UserMap::value_type& value);
 
-    bool        add_hashed(const std::string& user, const std::string& password, user_account_type perm);
+    bool add_hashed(const std::string& user, const std::string& password, user_account_type perm,
+                    time_t created, time_t updated);
     std::string hash(const std::string& password);
     std::string old_hash(const std::string& password);
 
