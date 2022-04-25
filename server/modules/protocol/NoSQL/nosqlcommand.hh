@@ -143,11 +143,10 @@ protected:
 
     mxs::RoutingWorker& worker() const;
 
-    Database&         m_database;
-    GWBUF*            m_pRequest;
-    const int32_t     m_request_id;
-    std::string       m_last_statement;
-    mxb::Worker::DCId m_dcid {0};
+    Database&     m_database;
+    GWBUF*        m_pRequest;
+    const int32_t m_request_id;
+    std::string   m_last_statement;
 
 private:
     void log_back(const char* zContext, const bsoncxx::document::value& doc) const;
