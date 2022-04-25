@@ -5,6 +5,7 @@
         :data="tableRows"
         :sortDesc="true"
         sortBy="connected"
+        showActionsOnHover
     >
         <template v-slot:header-append-serviceIds>
             <span class="ml-1 color text-field-text"> ({{ servicesLength }}) </span>
@@ -12,19 +13,38 @@
         <template v-slot:serviceIds="{ data: { item: { serviceIds } } }">
             <span v-if="typeof serviceIds === 'string'">{{ serviceIds }}</span>
             <template v-else>
-                <template v-for="serviceId in serviceIds">
-                    <router-link
-                        :key="serviceId"
-                        :to="`/dashboard/services/${serviceId}`"
-                        class="rsrc-link"
-                    >
-                        <span>{{ serviceId }} </span>
-                    </router-link>
-                </template>
+                <router-link
+                    v-for="serviceId in serviceIds"
+                    :key="serviceId"
+                    :to="`/dashboard/services/${serviceId}`"
+                    class="rsrc-link"
+                >
+                    <span>{{ serviceId }} </span>
+                </router-link>
             </template>
         </template>
         <template v-slot:connected="{ data: { item: { connected } } }">
             <span> {{ $help.dateFormat({ value: connected }) }} </span>
+        </template>
+        <template v-if="isAdmin" v-slot:actions="{ data: { item } }">
+            <v-tooltip
+                top
+                transition="slide-y-transition"
+                content-class="shadow-drop color text-navigation py-1 px-4"
+            >
+                <template v-slot:activator="{ on }">
+                    <v-btn
+                        icon
+                        v-on="on"
+                        @click="killSession({ id: item.id, callback: fetchAllSessions })"
+                    >
+                        <v-icon size="18" color="error">
+                            $vuetify.icons.unlink
+                        </v-icon>
+                    </v-btn>
+                </template>
+                <span>{{ $t('killSession') }}</span>
+            </v-tooltip>
         </template>
     </data-table>
 </template>
@@ -42,7 +62,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
+import { mapState, mapGetters, mapActions } from 'vuex'
 
 export default {
     name: 'sessions',
@@ -64,8 +84,8 @@ export default {
             search_keyword: 'search_keyword',
             all_sessions: state => state.session.all_sessions,
         }),
-
-        tableRows: function() {
+        ...mapGetters({ isAdmin: 'user/isAdmin' }),
+        tableRows() {
             let rows = []
             let allServiceNames = []
             this.all_sessions.forEach(session => {
@@ -97,6 +117,10 @@ export default {
         },
     },
     methods: {
+        ...mapActions({
+            killSession: 'session/killSession',
+            fetchAllSessions: 'session/fetchAllSessions',
+        }),
         setServicesLength(total) {
             this.servicesLength = total
         },

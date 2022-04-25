@@ -249,6 +249,7 @@
     "newPass": "New password",
     "role": "Role",
     "addUser": "Add user",
+    "killSession": "Kill session",
     "errors": {
         "requiredInput": "{inputName} is required",
         "duplicatedValue": "{inputValue} already exists",
@@ -301,7 +302,8 @@
         "exeActionSuccessfully": "Successfully {action}",
         "reconnSuccessfully": "Reconnection was successful",
         "refreshRate": "Click to change refresh rate",
-        "showTrendline": "The trend line can only be computed for numerical data on both axes"
+        "showTrendline": "The trend line can only be computed for numerical data on both axes",
+        "killSessionSuccessfully": "Kill session successfully"
     },
     "serverOps": {
         "actions": {

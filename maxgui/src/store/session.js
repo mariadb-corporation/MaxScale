@@ -62,5 +62,26 @@ export default {
                 logger.error(e)
             }
         },
+
+        /**
+         * @param {String} param.id - id of the session
+         * @param {Function} param.callback callback function after successfully delete
+         */
+        async killSession({ commit }, { id, callback }) {
+            try {
+                const res = await this.$http.delete(`/sessions/${id}`)
+                if (res.status === 200) {
+                    commit(
+                        'SET_SNACK_BAR_MESSAGE',
+                        { text: [this.i18n.t('info.killSessionSuccessfully')], type: 'success' },
+                        { root: true }
+                    )
+                    if (this.vue.$help.isFunction(callback)) await callback()
+                }
+            } catch (e) {
+                const logger = this.vue.$logger('store-sessions-killSession')
+                logger.error(e)
+            }
+        },
     },
 }
