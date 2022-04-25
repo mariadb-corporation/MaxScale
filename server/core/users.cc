@@ -107,6 +107,20 @@ bool Users::get(const std::string& user, UserInfo* output) const
     return rval;
 }
 
+std::vector<UserInfo> Users::get_all() const
+{
+    std::vector<UserInfo> rval;
+    Guard guard(m_lock);
+    rval.reserve(m_data.size());
+
+    for (const auto& [k, v] : m_data)
+    {
+        rval.push_back(v);
+    }
+
+    return rval;
+}
+
 bool Users::authenticate(const std::string& user, const std::string& password)
 {
     bool rval = false;
@@ -162,12 +176,9 @@ json_t* Users::diagnostics() const
     Guard guard(m_lock);
     json_t* rval = json_array();
 
-    for (const auto& elem : m_data)
+    for (const auto& [key, val] : m_data)
     {
-        json_t* obj = json_object();
-        json_object_set_new(obj, CN_NAME, json_string(elem.first.c_str()));
-        json_object_set_new(obj, CN_ACCOUNT, json_string(account_type_to_str(elem.second.permissions)));
-        json_array_append_new(rval, obj);
+        json_array_append_new(rval, val.to_json(UserInfo::NO_PW));
     }
 
     return rval;
@@ -190,13 +201,9 @@ json_t* Users::to_json() const
     json_t* arr = json_array();
     Guard guard(m_lock);
 
-    for (const auto& elem : m_data)
+    for (const auto& [key, val] : m_data)
     {
-        json_t* obj = json_object();
-        json_object_set_new(obj, CN_NAME, json_string(elem.first.c_str()));
-        json_object_set_new(obj, CN_ACCOUNT, json_string(account_type_to_str(elem.second.permissions)));
-        json_object_set_new(obj, CN_PASSWORD, json_string(elem.second.password.c_str()));
-        json_array_append_new(arr, obj);
+        json_array_append_new(arr, val.to_json(UserInfo::WITH_PW));
     }
 
     return arr;
@@ -211,7 +218,7 @@ bool Users::is_last_user(const std::string& user) const
 bool Users::add_hashed(const std::string& user, const std::string& password, user_account_type perm)
 {
     Guard guard(m_lock);
-    return m_data.insert(std::make_pair(user, UserInfo(password, perm))).second;
+    return m_data.insert(std::make_pair(user, UserInfo(user, password, perm))).second;
 }
 
 bool Users::is_admin(const std::unordered_map<std::string, UserInfo>::value_type& value)
@@ -324,4 +331,19 @@ mxs::user_account_type json_to_account_type(json_t* json)
     }
 
     return mxs::USER_ACCOUNT_UNKNOWN;
+}
+
+json_t* mxs::UserInfo::to_json(IncludePW include_pw) const
+{
+    json_t* obj = json_object();
+
+    json_object_set_new(obj, CN_NAME, json_string(name.c_str()));
+    json_object_set_new(obj, CN_ACCOUNT, json_string(account_type_to_str(permissions)));
+
+    if (include_pw == WITH_PW)
+    {
+        json_object_set_new(obj, CN_PASSWORD, json_string(password.c_str()));
+    }
+
+    return obj;
 }

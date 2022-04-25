@@ -36,12 +36,19 @@ enum user_account_type
 struct UserInfo
 {
     UserInfo() = default;
-    UserInfo(std::string pw, user_account_type perm)
-        : password(pw)
+    UserInfo(std::string user, std::string pw, user_account_type perm)
+        : name(user)
+        , password(pw)
         , permissions(perm)
     {
     }
 
+    enum IncludePW { WITH_PW, NO_PW };
+
+    // Convert user to JSON: use WITH_PW to include the password in the output.
+    json_t* to_json(IncludePW include_pw) const;
+
+    std::string       name;
     std::string       password;
     user_account_type permissions {USER_ACCOUNT_BASIC};
 };
