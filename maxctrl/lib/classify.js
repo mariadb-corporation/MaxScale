@@ -43,6 +43,11 @@ const classify_fields = [
     path: "attributes.functions",
     description: "Functions that are used by the query",
   },
+  {
+    name: "Canonical",
+    path: "attributes.canonical",
+    description: "The canonical form of the query",
+  },
 ];
 
 exports.command = "classify <statement>";
