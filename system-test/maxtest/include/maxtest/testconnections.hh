@@ -15,6 +15,7 @@
 #include <maxtest/replication_cluster.hh>
 #include <maxtest/maxscales.hh>
 #include <maxtest/test_dir.hh>
+#include <maxtest/mariadb_connector.hh>
 
 typedef std::set<std::string> StringSet;
 
