@@ -33,6 +33,7 @@ import SubMenu from './SubMenu'
 import FilterList from './FilterList'
 import RepTooltip from './RepTooltip'
 import RefreshRate from './RefreshRate'
+import SessionsTable from './SessionsTable'
 
 export default {
     'page-wrapper': PageWrapper,
@@ -55,4 +56,5 @@ export default {
     'filter-list': FilterList,
     'rep-tooltip': RepTooltip,
     'refresh-rate': RefreshRate,
+    'sessions-table': SessionsTable,
 }

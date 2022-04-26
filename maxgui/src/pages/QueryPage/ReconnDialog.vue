@@ -10,7 +10,7 @@
         @on-cancel="deleteConn"
     >
         <template v-slot:form-body>
-            <table v-if="showReconnDialog" class="err-tbl-code pa-4">
+            <table v-if="showReconnDialog" class="tbl-code pa-4">
                 <tr v-for="(v, key) in getQueryErrMsgObj" :key="key">
                     <td>
                         <b>{{ key }}</b>

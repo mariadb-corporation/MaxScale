@@ -11,7 +11,7 @@
         v-on="$listeners"
     >
         <template v-slot:body-prepend>
-            <table v-if="hasSavingErr" class="err-tbl-code pa-4">
+            <table v-if="hasSavingErr" class="tbl-code pa-4">
                 <tr>
                     <td><b>sql</b></td>
                     <td>{{ currSql }}</td>
