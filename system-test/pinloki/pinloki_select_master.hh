@@ -12,6 +12,13 @@ public:
         test.expect(master.connect(), "Master connection should work: %s", master.error());
         test.expect(slave.connect(), "Slave connection should work: %s", slave.error());
 
+        // Use the latest GTID in case the binlogs have been purged and the complete history is not available
+        auto gtid = master.field("SELECT @@gtid_current_pos");
+
+        maxscale.query("STOP SLAVE");
+        maxscale.query("SET GLOBAL gtid_slave_pos = '" + gtid + "'");
+        maxscale.query("START SLAVE");
+
         sync(master, maxscale);
 
         slave.query("STOP SLAVE; RESET SLAVE ALL;");
