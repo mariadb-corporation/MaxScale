@@ -29,6 +29,9 @@ const computedFactory = (computed = {}) =>
             currentService: dummy_all_services[0],
         },
         computed,
+        stubs: {
+            'refresh-rate': "<div class='refresh-rate'></div>",
+        },
     })
 
 /**
@@ -60,6 +63,9 @@ describe('ServiceDetail - PageHeader', () => {
             component: PageHeader,
             propsData: {
                 currentService: dummy_all_services[0],
+            },
+            stubs: {
+                'refresh-rate': "<div class='refresh-rate'></div>",
             },
         })
 

@@ -88,6 +88,9 @@ const shallowMountOptions = {
     shallow: true,
     component: ServiceDetail,
     computed: defaultComputed,
+    stubs: {
+        'refresh-rate': "<div class='refresh-rate'></div>",
+    },
 }
 
 describe('ServiceDetail index', () => {
@@ -186,7 +189,7 @@ describe('ServiceDetail index', () => {
     describe('Props passes to child components test assertions', () => {
         before(() => {
             wrapper = mount(shallowMountOptions)
-            sinon.stub(wrapper.vm, 'fetchServiceAndSession').returns(
+            sinon.stub(wrapper.vm, 'fetchAll').returns(
                 Promise.resolve({
                     data: {},
                 })
@@ -295,7 +298,7 @@ describe('ServiceDetail index', () => {
 
         beforeEach(() => {
             wrapper = mount(shallowMountOptions)
-            sinon.stub(wrapper.vm, 'fetchServiceAndSession').returns(
+            sinon.stub(wrapper.vm, 'fetchAll').returns(
                 Promise.resolve({
                     data: {},
                 })

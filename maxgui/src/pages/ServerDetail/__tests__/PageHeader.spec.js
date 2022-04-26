@@ -29,6 +29,9 @@ const computedFactory = (computed = {}) =>
             currentServer: dummy_all_servers[0],
         },
         computed,
+        stubs: {
+            'refresh-rate': "<div class='refresh-rate'></div>",
+        },
     })
 
 /**
@@ -71,6 +74,9 @@ describe('ServerDetail - PageHeader: render assertions', () => {
             component: PageHeader,
             propsData: {
                 currentServer: dummy_all_servers[0],
+            },
+            stubs: {
+                'refresh-rate': "<div class='refresh-rate'></div>",
             },
         })
     })
@@ -133,6 +139,9 @@ describe(`ServerDetail - PageHeader: child component's data communication tests 
             propsData: {
                 currentServer: dummy_all_servers[0],
             },
+            stubs: {
+                'refresh-rate': "<div class='refresh-rate'></div>",
+            },
         })
     })
 
@@ -185,6 +194,9 @@ describe('ServerDetail - PageHeader: Action tests', () => {
             component: PageHeader,
             propsData: {
                 currentServer: dummy_all_servers[0],
+            },
+            stubs: {
+                'refresh-rate': "<div class='refresh-rate'></div>",
             },
         })
 

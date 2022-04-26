@@ -1,7 +1,11 @@
 <template>
     <page-wrapper>
         <v-sheet v-if="!$help.lodash.isEmpty(current_server)" class="pl-6">
-            <page-header :currentServer="current_server" :onEditSucceeded="dispatchFetchServer" />
+            <page-header
+                :currentServer="current_server"
+                :onEditSucceeded="dispatchFetchServer"
+                @on-count-done="fetchAll"
+            />
             <overview-header
                 :currentServer="current_server"
                 :getRelationshipData="getRelationshipData"
@@ -117,7 +121,6 @@ export default {
                 { text: 'Connected', value: 'connected' },
                 { text: 'IDLE (s)', value: 'idle' },
             ],
-            isLoopFetch: true,
         }
     },
     computed: {
@@ -165,37 +168,25 @@ export default {
         async should_refresh_resource(val) {
             if (val) {
                 this.SET_REFRESH_RESOURCE(false)
-                await this.initialFetch()
+                await this.fetchAll()
             }
         },
-        async currentActiveTab(val, oldVal) {
+        async currentActiveTab(val) {
             switch (val) {
-                case 0:
-                    // ignore when component is first created
-                    if (oldVal !== null) {
-                        await this.initialFetch()
-                    }
-                    break
                 // when active tab is Parameters & Diagnostics
                 case 1:
                     await this.fetchModuleParameters('servers')
                     break
             }
         },
-        async isLoopFetch(val) {
-            if (val) await this.loopFetch()
-        },
         // re-fetch when the route changes
         async $route() {
-            await this.initialFetch()
+            await this.fetchAll()
             if (this.currentActiveTab === 1) await this.fetchModuleParameters('servers')
         },
     },
     async created() {
-        await this.initialFetch()
-    },
-    beforeDestroy() {
-        this.isLoopFetch = false
+        await this.fetchAll()
     },
     methods: {
         ...mapMutations({
@@ -212,25 +203,13 @@ export default {
             fetchAllSessions: 'session/fetchAllSessions',
             killSession: 'session/killSession',
         }),
-        async loopFetch() {
-            while (this.isLoopFetch) {
-                /*
-                    Sessions, Stats and Monitor diagnostics should be
-                    fetched together as their data point changes over time
-                */
-                await Promise.all([
-                    this.dispatchFetchServer(),
-                    this.fetchAllSessions(),
-                    this.fetchMonitorDiagnostics(),
-                    this.$help.delay(10000),
-                ])
-            }
-        },
-        async initialFetch() {
+        async fetchAll() {
             await this.dispatchFetchServer()
-            await this.serviceTableRowProcessing()
-            // loopFetch should go last
-            await this.loopFetch()
+            await Promise.all([
+                this.serviceTableRowProcessing(),
+                this.fetchAllSessions(),
+                this.fetchMonitorDiagnostics(),
+            ])
         },
         async fetchMonitorDiagnostics() {
             const { relationships: { monitors = {} } = {} } = this.current_server

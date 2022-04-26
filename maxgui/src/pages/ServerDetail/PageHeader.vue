@@ -58,7 +58,8 @@
         </template>
         <template v-slot:append>
             <portal to="page-header--right">
-                <global-search class="d-inline-block" />
+                <refresh-rate v-model="refreshRate" v-on="$listeners" />
+                <global-search class="ml-4 d-inline-block" />
                 <create-resource
                     class="ml-4 d-inline-block"
                     :defRelationshipObj="{
@@ -116,10 +117,11 @@
 
 import { mapActions, mapGetters, mapState } from 'vuex'
 import goBack from 'mixins/goBack'
+import refreshRate from 'mixins/refreshRate'
 
 export default {
     name: 'page-header',
-    mixins: [goBack],
+    mixins: [goBack, refreshRate],
     props: {
         onEditSucceeded: { type: Function, required: true },
         currentServer: { type: Object, required: true },

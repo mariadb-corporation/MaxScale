@@ -52,26 +52,6 @@ describe('ServiceDetail - OverviewHeader', () => {
         })
         await wrapper.destroy()
     })
-    it(`Should emit update-chart event`, async () => {
-        let count = 0
-        wrapper = wrapper = mount({
-            shallow: false,
-            component: OverviewHeader,
-            propsData: defaultProps,
-            // update-chart uses listeners instead of emit
-            listeners: { 'update-chart': () => count++ },
-        })
-        //mockup update chart
-        await wrapper.vm.updateChart()
-        expect(count).to.be.equals(1)
-    })
-
-    it(`Should call updateChart after 10s`, async () => {
-        await clock.tick(1000)
-        expect(updateChartSpy).to.not.have.been.called
-        await clock.tick(9000)
-        expect(updateChartSpy).to.have.been.calledOnce
-    })
 
     describe('outlined-overview-card render assertions', () => {
         const {

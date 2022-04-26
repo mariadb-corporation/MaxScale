@@ -1,15 +1,17 @@
 <template>
     <page-wrapper>
         <v-sheet v-if="!$help.lodash.isEmpty(current_service)" class="pl-6">
-            <page-header :currentService="current_service" :onEditSucceeded="fetchService" />
-            <!--
-                @update-chart is emitted every 10s
-            -->
+            <page-header :currentService="current_service" :onEditSucceeded="fetchService">
+                <template v-slot:refresh-rate>
+                    <refresh-rate v-model="refreshRate" @on-count-done="onCountDone" />
+                </template>
+            </page-header>
             <overview-header
+                ref="overviewHeader"
                 :currentService="current_service"
                 :serviceConnectionsDatasets="service_connections_datasets"
                 :serviceConnectionInfo="serviceConnectionInfo"
-                @update-chart="fetchServiceAndSession"
+                :refreshRate="refreshRate"
             />
 
             <v-tabs v-model="currentActiveTab" class="tab-navigation-wrapper">
@@ -117,6 +119,7 @@
 import { mapActions, mapMutations, mapState } from 'vuex'
 import OverviewHeader from './OverviewHeader'
 import PageHeader from './PageHeader'
+import refreshRate from 'mixins/refreshRate'
 
 export default {
     name: 'service-detail',
@@ -124,6 +127,7 @@ export default {
         PageHeader,
         OverviewHeader,
     },
+    mixins: [refreshRate],
     data() {
         return {
             currentActiveTab: null,
@@ -183,7 +187,7 @@ export default {
         async should_refresh_resource(val) {
             if (val) {
                 this.SET_REFRESH_RESOURCE(false)
-                await this.initialFetch()
+                await this.fetchAll()
             }
         },
         async currentActiveTab(val) {
@@ -192,12 +196,14 @@ export default {
         },
         // re-fetch when the route changes
         async $route() {
-            await this.initialFetch()
+            await this.fetchAll()
             if (this.currentActiveTab === 0) await this.fetchModuleParameters(this.routerModule)
         },
     },
     async created() {
-        await this.initialFetch()
+        await this.fetchAll()
+        // Generate datasets
+        this.genServiceConnectionsDataSets()
     },
     methods: {
         ...mapActions({
@@ -216,11 +222,10 @@ export default {
             SET_REFRESH_RESOURCE: 'SET_REFRESH_RESOURCE',
         }),
 
-        async initialFetch() {
+        async fetchAll() {
             await this.fetchService()
-            await this.genServiceConnectionsDataSets()
-            await this.fetchServiceAndSession()
             await Promise.all([
+                this.fetchSessionsFilterByService(this.serviceId),
                 this.processingRelationshipTable('servers'),
                 this.processingRelationshipTable('filters'),
                 this.processingRelationshipTable('listeners'),
@@ -230,18 +235,11 @@ export default {
         async fetchService() {
             await this.fetchServiceById(this.serviceId)
         },
-
-        /**
-         * This function fetch current connection, session and service router_diagnostics
-         */
-        async fetchServiceAndSession() {
-            // fetching connections chart info should be at the same time with fetchSessionsFilterByService
-            await Promise.all([
-                this.fetchService(),
-                this.fetchSessionsFilterByService(this.serviceId),
-            ])
+        async onCountDone() {
+            await this.fetchAll()
+            const timestamp = Date.now()
+            await this.$refs.overviewHeader.updateChart(timestamp)
         },
-
         /**
          * This function get relationship data based on relationship type i.e. servers, listeners.
          * It loops through id array to send sequential requests to get relationship state

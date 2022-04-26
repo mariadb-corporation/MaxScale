@@ -46,7 +46,14 @@
                             ref="serviceConnectionsChart"
                             :styles="{ height: '70px' }"
                             :chartData="{ datasets: serviceConnectionsDatasets }"
-                            :options="options"
+                            :options="{
+                                plugins: {
+                                    streaming: {
+                                        duration: refreshRate * 2000,
+                                        delay: (refreshRate + 1) * 1000,
+                                    },
+                                },
+                            }"
                         />
                     </v-sheet>
                 </template>
@@ -68,46 +75,26 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import asyncEmit from 'mixins/asyncEmit'
 export default {
     name: 'overview-header',
-    mixins: [asyncEmit],
     props: {
         currentService: { type: Object, required: true },
         serviceConnectionsDatasets: { type: Array, required: true },
         serviceConnectionInfo: { type: Object, required: true },
+        refreshRate: { type: Number, required: true },
     },
-    data() {
-        return {
-            options: {
-                plugins: {
-                    streaming: {
-                        duration: 20000,
-                        refresh: 10000, // onRefresh callback will be called every 10000 ms
-                        /* delay of 10000 ms, so upcoming values are known before plotting a line
-                      delay value can be larger but not smaller than refresh value to remain realtime streaming data */
-                        delay: 10000,
-                        onRefresh: this.updateChart,
-                    },
-                },
-            },
-        }
-    },
-
     methods: {
-        async updateChart() {
+        async updateChart(timeStamp) {
             const { serviceConnectionsChart } = this.$refs
             if (serviceConnectionsChart) {
-                await this.asyncEmit('update-chart')
                 const { connections } = this.serviceConnectionInfo
                 serviceConnectionsChart.chartData.datasets.forEach(function(dataset) {
                     dataset.data.push({
-                        x: Date.now(),
+                        x: timeStamp,
                         y: connections,
                     })
                 })
-
-                serviceConnectionsChart.$data._chart.update({
+                await serviceConnectionsChart.$data._chart.update({
                     preservation: true,
                 })
             }

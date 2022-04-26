@@ -129,6 +129,9 @@ const mountOptions = {
         monitor_diagnostics: () => dummy_monitor_diagnostics,
         all_sessions: () => dummy_all_sessions,
     },
+    stubs: {
+        'refresh-rate': "<div class='refresh-rate'></div>",
+    },
 }
 
 describe('ServerDetail index', () => {
