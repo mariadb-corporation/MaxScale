@@ -238,6 +238,21 @@ const list_users_fields = [
     path: "attributes.account",
     description: "User privileges",
   },
+  {
+    name: "Created",
+    path: "attributes.created",
+    description: "When the user was created",
+  },
+  {
+    name: "Last Updated",
+    path: "attributes.last_update",
+    description: "The last time the account password was updated",
+  },
+  {
+    name: "Last Login",
+    path: "attributes.last_login",
+    description: "The last time the user logged in",
+  },
 ];
 
 const list_commands_fields = [

@@ -184,7 +184,7 @@ module.exports = function () {
     var table = getTable(header);
 
     arr.forEach((row) => {
-      table.push(row);
+      table.push(row.map((val) => (val ? val : "")));
     });
     return tableToString(table);
   };
