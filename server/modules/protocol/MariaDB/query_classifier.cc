@@ -63,6 +63,7 @@ const char CN_HITS[] = "hits";
 const char CN_OPERATION[] = "operation";
 const char CN_PARSE_RESULT[] = "parse_result";
 const char CN_TYPE_MASK[] = "type_mask";
+const char CN_CANONICAL[] = "canonical";
 
 class ThisUnit
 {
@@ -1640,6 +1641,8 @@ std::unique_ptr<json_t> qc_classify_as_json(const char* zHost, const std::string
 
         append_field_info(pAttributes, pBuffer);
         append_function_info(pAttributes, pBuffer);
+
+        json_object_set_new(pAttributes, CN_CANONICAL, json_string(pBuffer->get_canonical().c_str()));
     }
 
     json_t* pSelf = json_object();

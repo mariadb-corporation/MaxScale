@@ -22,6 +22,17 @@ import os
 
 schema_read = False
 
+
+def read_line(sel, sock):
+    line = bytearray()
+
+    while line.find(b'\n') == -1:
+        events = sel.select(timeout=int(opts.read_timeout) if int(opts.read_timeout) > 0 else None)
+        line += sock.recv(4096, socket.MSG_DONTWAIT)
+
+    return line;
+
+
 def read_data():
     global schema_read
     sel = selectors.DefaultSelector()
@@ -29,12 +40,11 @@ def read_data():
 
     while True:
         try:
-            events = sel.select(timeout=int(opts.read_timeout) if int(opts.read_timeout) > 0 else None)
-            buf = sock.recv(4096, socket.MSG_DONTWAIT)
+            buf = read_line(sel, sock)
             if len(buf) > 0:
                 # If the request for data is rejected, an error will be sent instead of the table schema
                 if not schema_read and opts.format == "JSON":
-                    if "err" in buf.decode().lower():
+                    if buf[0:3] == b"ERR":
                         print(buf.decode(), file=sys.stderr)
                         exit(1)
                     else:
