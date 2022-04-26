@@ -1140,14 +1140,19 @@ void Worker::poll_waitevents()
             Pollable* pPollable = static_cast<Pollable*>(events[i].data.ptr);
             int fd = pPollable->poll_fd();
 
-            auto it = m_scheduled_polls.find(fd);
-
-            if (it != m_scheduled_polls.end())
+            // Lookup from empty unordered map is an order of magnitude more expensive
+            // than checking whether it is empty.
+            if (!m_scheduled_polls.empty())
             {
-                // Ok, so there were events for this Pollable already. We'll merge
-                // them and remove it from the scheduled calls.
-                pollable_events |= it->second.events;
-                m_scheduled_polls.erase(it);
+                auto it = m_scheduled_polls.find(fd);
+
+                if (it != m_scheduled_polls.end())
+                {
+                    // Ok, so there were events for this Pollable already. We'll merge
+                    // them and remove it from the scheduled calls.
+                    pollable_events |= it->second.events;
+                    m_scheduled_polls.erase(it);
+                }
             }
 
             loop_now = deliver_events(cycle_start, loop_now, pPollable, pollable_events, Pollable::NEW_CALL);
