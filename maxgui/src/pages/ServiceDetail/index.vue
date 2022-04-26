@@ -77,14 +77,21 @@
                                 />
                             </v-col>
                             <v-col class="py-0 my-0" cols="6">
-                                <details-readonly-table
+                                <sessions-table
                                     ref="sessions-table"
-                                    :tdBorderLeft="false"
-                                    :title="`${$tc('currentSessions', 2)}`"
-                                    :titleInfo="sessionsTableRows.length"
-                                    :noDataText="$t('noEntity', { entityName: $tc('sessions', 2) })"
-                                    :tableData="sessionsTableRows"
-                                    :customTableHeaders="sessionsTableHeader"
+                                    :search="search_keyword"
+                                    :collapsible="true"
+                                    :delayLoading="true"
+                                    :rows="sessionsTableRows"
+                                    :headers="sessionsTableHeader"
+                                    :sortDesc="true"
+                                    sortBy="connected"
+                                    @confirm-kill="
+                                        killSession({
+                                            id: $event.id,
+                                            callback: fetchSessionsFilterByService(serviceId),
+                                        })
+                                    "
                                 />
                             </v-col>
                         </v-row>
@@ -138,6 +145,7 @@ export default {
     },
     computed: {
         ...mapState({
+            search_keyword: 'search_keyword',
             should_refresh_resource: 'should_refresh_resource',
             current_service: state => state.service.current_service,
             current_service_diagnostics: state => state.service.current_service_diagnostics,
@@ -146,17 +154,19 @@ export default {
             sessions_by_service: state => state.session.sessions_by_service,
             RESOURCE_FORM_TYPES: state => state.app_config.RESOURCE_FORM_TYPES,
         }),
-
-        routerDiagnostics: function() {
+        serviceId() {
+            return this.$route.params.id
+        },
+        routerDiagnostics() {
             const {
                 attributes: { router_diagnostics = {} } = {},
             } = this.current_service_diagnostics
             return router_diagnostics
         },
-        routerModule: function() {
+        routerModule() {
             return this.current_service.attributes.router
         },
-        sessionsTableRows: function() {
+        sessionsTableRows() {
             return this.sessions_by_service.map(
                 ({ id, attributes: { idle, connected, user, remote } }) => ({
                     id,
@@ -168,18 +178,18 @@ export default {
         },
     },
     watch: {
-        should_refresh_resource: async function(val) {
+        async should_refresh_resource(val) {
             if (val) {
                 this.SET_REFRESH_RESOURCE(false)
                 await this.initialFetch()
             }
         },
-        currentActiveTab: async function(val) {
+        async currentActiveTab(val) {
             // when active tab is Parameters & Relationships
             if (val === 0) await this.fetchModuleParameters(this.routerModule)
         },
         // re-fetch when the route changes
-        $route: async function() {
+        async $route() {
             await this.initialFetch()
             if (this.currentActiveTab === 0) await this.fetchModuleParameters(this.routerModule)
         },
@@ -199,6 +209,7 @@ export default {
             updateServiceParameters: 'service/updateServiceParameters',
             fetchSessionsFilterByService: 'session/fetchSessionsFilterByService',
             fetchAllFilters: 'filter/fetchAllFilters',
+            killSession: 'session/killSession',
         }),
         ...mapMutations({
             SET_FORM_TYPE: 'SET_FORM_TYPE',
@@ -217,19 +228,18 @@ export default {
         },
         // reuse functions for fetch loop or after finish editing
         async fetchService() {
-            await this.fetchServiceById(this.$route.params.id)
+            await this.fetchServiceById(this.serviceId)
         },
 
         /**
          * This function fetch current connection, session and service router_diagnostics
          */
         async fetchConnSessDiag() {
-            const serviceId = this.$route.params.id
             // fetching connections chart info should be at the same time with fetchSessionsFilterByService
             await Promise.all([
-                this.fetchServiceConnections(serviceId),
-                this.fetchSessionsFilterByService(serviceId),
-                this.fetchServiceDiagnostics(serviceId),
+                this.fetchServiceConnections(this.serviceId),
+                this.fetchSessionsFilterByService(this.serviceId),
+                this.fetchServiceDiagnostics(this.serviceId),
             ])
         },
 

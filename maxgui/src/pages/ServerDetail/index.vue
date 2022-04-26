@@ -36,14 +36,18 @@
                                 </v-row>
                             </v-col>
                             <v-col class="py-0 ma-0" cols="8">
-                                <details-readonly-table
+                                <sessions-table
                                     ref="sessions-table"
-                                    :tdBorderLeft="false"
-                                    :title="`${$tc('currentSessions', 2)}`"
-                                    :titleInfo="sessionsTableRow.length"
-                                    :noDataText="$t('noEntity', { entityName: $tc('sessions', 2) })"
-                                    :tableData="sessionsTableRow"
-                                    :customTableHeaders="sessionsTableHeader"
+                                    :search="search_keyword"
+                                    :collapsible="true"
+                                    :delayLoading="true"
+                                    :rows="sessionsTableRow"
+                                    :headers="sessionsTableHeader"
+                                    :sortDesc="true"
+                                    sortBy="connected"
+                                    @confirm-kill="
+                                        killSession({ id: $event.id, callback: fetchAllSessions })
+                                    "
                                 />
                             </v-col>
                         </v-row>
@@ -100,7 +104,6 @@ export default {
         PageHeader,
         OverviewHeader,
     },
-
     data() {
         return {
             currentActiveTab: null,
@@ -127,14 +130,13 @@ export default {
             monitor_diagnostics: state => state.monitor.monitor_diagnostics,
             all_sessions: state => state.session.all_sessions,
         }),
-
-        monitorDiagnostics: function() {
+        monitorDiagnostics() {
             const {
                 attributes: { monitor_diagnostics: { server_info = [] } = {} } = {},
             } = this.monitor_diagnostics
             return server_info.find(server => server.name === this.$route.params.id) || {}
         },
-        sessionsTableRow: function() {
+        sessionsTableRow() {
             let tableRows = []
             this.all_sessions.forEach(session => {
                 const {
@@ -159,13 +161,13 @@ export default {
         },
     },
     watch: {
-        should_refresh_resource: async function(val) {
+        async should_refresh_resource(val) {
             if (val) {
                 this.SET_REFRESH_RESOURCE(false)
                 await this.initialFetch()
             }
         },
-        currentActiveTab: async function(val, oldVal) {
+        async currentActiveTab(val, oldVal) {
             switch (val) {
                 case 0:
                     // ignore when component is first created
@@ -179,11 +181,11 @@ export default {
                     break
             }
         },
-        isLoopFetch: async function(val) {
+        async isLoopFetch(val) {
             if (val) await this.loopFetch()
         },
         // re-fetch when the route changes
-        $route: async function() {
+        async $route() {
             await this.initialFetch()
             if (this.currentActiveTab === 1) await this.fetchModuleParameters('servers')
         },
@@ -208,6 +210,7 @@ export default {
             updateServerParameters: 'server/updateServerParameters',
             fetchMonitorDiagnosticsById: 'monitor/fetchMonitorDiagnosticsById',
             fetchAllSessions: 'session/fetchAllSessions',
+            killSession: 'session/killSession',
         }),
         async loopFetch() {
             while (this.isLoopFetch) {

@@ -1,11 +1,11 @@
 <template>
-    <data-table
+    <sessions-table
         :search="search_keyword"
+        :rows="tableRows"
         :headers="tableHeaders"
-        :data="tableRows"
         :sortDesc="true"
         sortBy="connected"
-        showActionsOnHover
+        @confirm-kill="killSession({ id: $event.id, callback: fetchAllSessions })"
     >
         <template v-slot:header-append-serviceIds>
             <span class="ml-1 color text-field-text"> ({{ servicesLength }}) </span>
@@ -23,30 +23,7 @@
                 </router-link>
             </template>
         </template>
-        <template v-slot:connected="{ data: { item: { connected } } }">
-            <span> {{ $help.dateFormat({ value: connected }) }} </span>
-        </template>
-        <template v-if="isAdmin" v-slot:actions="{ data: { item } }">
-            <v-tooltip
-                top
-                transition="slide-y-transition"
-                content-class="shadow-drop color text-navigation py-1 px-4"
-            >
-                <template v-slot:activator="{ on }">
-                    <v-btn
-                        icon
-                        v-on="on"
-                        @click="killSession({ id: item.id, callback: fetchAllSessions })"
-                    >
-                        <v-icon size="18" color="error">
-                            $vuetify.icons.unlink
-                        </v-icon>
-                    </v-btn>
-                </template>
-                <span>{{ $t('killSession') }}</span>
-            </v-tooltip>
-        </template>
-    </data-table>
+    </sessions-table>
 </template>
 
 <script>
@@ -105,7 +82,7 @@ export default {
                 rows.push({
                     id: id,
                     user: `${user}@${remote}`,
-                    connected: connected,
+                    connected: this.$help.dateFormat({ value: connected }),
                     idle: idle,
                     serviceIds: serviceIds,
                 })
