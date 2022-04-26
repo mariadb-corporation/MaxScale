@@ -32,7 +32,7 @@ const expectedTableRows = [
     {
         id: '1000002',
         user: 'maxskysql@::ffff:127.0.0.1',
-        connected: 'Thu Aug 13 14:06:17 2020',
+        connected: '14:06:17 08.13.2020',
         idle: 55.5,
         serviceIds: ['RCR-Router'],
     },
@@ -64,21 +64,22 @@ describe('Dashboard Sessions tab', () => {
         expect(wrapper.vm.tableRows).to.be.deep.equals(expectedTableRows)
     })
 
-    it(`Should pass expected table headers to data-table`, () => {
-        const dataTable = wrapper.findComponent({ name: 'data-table' })
-        expect(wrapper.vm.tableHeaders).to.be.deep.equals(expectedTableHeaders)
-        expect(dataTable.vm.$props.headers).to.be.deep.equals(expectedTableHeaders)
+    it(`Should pass expected table headers to sessions-table`, () => {
+        const sessionsTable = wrapper.findComponent({ name: 'sessions-table' })
+        expect(sessionsTable.vm.$props.headers).to.be.deep.equals(expectedTableHeaders)
     })
 
     it(`Should navigate to service detail page when a service is clicked`, async () => {
         const sessionId = dummy_all_sessions[0].id
         const serviceId = dummy_all_sessions[0].relationships.services.data[0].id
+        const dataTable = wrapper.findComponent({ name: 'sessions-table' })
         const aTag = findAnchorLinkInTable({
-            wrapper: wrapper,
+            wrapper: dataTable,
             rowId: sessionId,
             cellIndex: expectedTableHeaders.findIndex(item => item.value === 'serviceIds'),
         })
         await aTag.trigger('click')
+        await wrapper.vm.$nextTick()
         expect(wrapper.vm.$route.path).to.be.equals(`/dashboard/services/${serviceId}`)
     })
 

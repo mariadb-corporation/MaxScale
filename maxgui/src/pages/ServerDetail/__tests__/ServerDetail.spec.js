@@ -11,21 +11,9 @@
  * Public License.
  */
 import store from 'store'
-
 import mount, { router } from '@tests/unit/setup'
 import ServerDetail from '@/pages/ServerDetail'
-
 import { dummy_all_servers, testRelationshipUpdate } from '@tests/unit/utils'
-
-const dummy_server_stats = {
-    active_operations: 0,
-    adaptive_avg_select_time: '0ns',
-    connections: 0,
-    max_connections: 0,
-    persistent_connections: 0,
-    routed_packets: 0,
-    total_connections: 0,
-}
 
 const dummy_monitor_diagnostics = {
     attributes: {
@@ -138,7 +126,6 @@ const mountOptions = {
     component: ServerDetail,
     computed: {
         current_server: () => dummy_all_servers[0], // id: row_server_0
-        current_server_stats: () => dummy_server_stats,
         monitor_diagnostics: () => dummy_monitor_diagnostics,
         all_sessions: () => dummy_all_sessions,
     },
@@ -167,8 +154,8 @@ describe('ServerDetail index', () => {
     })
 
     it(`Should send request to get current server, relationships
-      services state then server statistics and all sessions
-      if current active tab is 'Statistics & Sessions'`, async () => {
+      services state then all sessions if current active tab is
+       'Statistics & Sessions'`, async () => {
         await wrapper.vm.$nextTick(async () => {
             let {
                 id,
@@ -186,11 +173,6 @@ describe('ServerDetail index', () => {
                 )
                 ++count
             })
-
-            await axiosGetStub.should.have.been.calledWith(
-                `/servers/${id}?fields[servers]=statistics`
-            )
-            ++count
             await axiosGetStub.should.have.been.calledWith(`/sessions`)
             ++count
             axiosGetStub.should.have.callCount(count)
@@ -246,35 +228,28 @@ describe('ServerDetail index', () => {
         expect(statsTable.exists()).to.be.true
         const { title, tableData, isTree } = statsTable.vm.$props
         expect(title).to.be.equals('statistics')
-        expect(tableData).to.be.deep.equals(dummy_server_stats)
+        expect(tableData).to.be.deep.equals(wrapper.vm.serverStats)
         expect(isTree).to.be.true
     })
 
     it(`Should pass necessary props value to 'CURRENT SESSIONS' table`, () => {
-        const sessionsTable = wrapper.findComponent({ ref: 'sessions-table' })
+        const sessionsTable = wrapper.findComponent({ name: 'sessions-table' })
         expect(sessionsTable.exists()).to.be.true
-        const {
-            title,
-            titleInfo,
-            tdBorderLeft,
-            noDataText,
-            tableData,
-            customTableHeaders,
-        } = sessionsTable.vm.$props
-
-        const { sessionsTableRow, sessionsTableHeader } = wrapper.vm
-
-        expect(title).to.be.equals('current sessions')
-        expect(titleInfo).to.be.equals(sessionsTableRow.length)
-        expect(tdBorderLeft).to.be.false
-        expect(noDataText).to.be.equals('No sessions')
-        expect(tableData).to.be.deep.equals(sessionsTableRow)
-        expect(customTableHeaders).to.be.deep.equals(sessionsTableHeader)
+        const { search, sortDesc, sortBy } = sessionsTable.vm.$attrs
+        const { collapsible, delayLoading, rows, headers } = sessionsTable.vm.$props
+        const { search_keyword, sessionsTableRow, sessionsTableHeader } = wrapper.vm
+        expect(search).to.be.equals(search_keyword)
+        expect(rows).to.be.eql(sessionsTableRow)
+        expect(headers).to.be.eql(sessionsTableHeader)
+        expect(collapsible).to.be.true
+        expect(delayLoading).to.be.true
+        expect(sortDesc).to.be.true
+        expect(sortBy).to.be.equals('connected')
     })
 
     it(`Should use accurate table headers for 'CURRENT SESSIONS' table`, () => {
-        const sessionsTable = wrapper.findComponent({ ref: 'sessions-table' })
-        expect(sessionsTable.vm.$props.customTableHeaders).to.be.deep.equals(EXPECT_SESSIONS_HEADER)
+        const sessionsTable = wrapper.findComponent({ name: 'sessions-table' })
+        expect(sessionsTable.vm.$props.headers).to.be.deep.equals(EXPECT_SESSIONS_HEADER)
     })
 
     it(`Should compute sessions for this server to accurate data format`, () => {

@@ -17,8 +17,6 @@ export default {
         all_services: [],
         current_service: {},
         service_connections_datasets: [],
-        service_connection_info: {},
-        current_service_diagnostics: {},
     },
     mutations: {
         SET_ALL_SERVICES(state, payload) {
@@ -30,12 +28,6 @@ export default {
         SET_SERVICE_CONNECTIONS_DATASETS(state, payload) {
             state.service_connections_datasets = payload
         },
-        SET_SERVICE_CONNECTIONS_INFO(state, payload) {
-            state.service_connection_info = payload
-        },
-        SET_CURRENT_SERVICE_DIAGNOSTICS(state, payload) {
-            state.current_service_diagnostics = payload
-        },
     },
     actions: {
         async fetchServiceById({ commit }, id) {
@@ -46,19 +38,6 @@ export default {
                 }
             } catch (e) {
                 const logger = this.vue.$logger('store-service-fetchServiceById')
-                logger.error(e)
-            }
-        },
-        async fetchServiceDiagnostics({ commit }, serviceId) {
-            try {
-                let res = await this.$http.get(
-                    `/services/${serviceId}?fields[services]=router_diagnostics`
-                )
-                if (res.data.data) {
-                    commit('SET_CURRENT_SERVICE_DIAGNOSTICS', Object.freeze(res.data.data))
-                }
-            } catch (e) {
-                const logger = this.vue.$logger('store-service-fetchServiceDiagnostics')
                 logger.error(e)
             }
         },
@@ -83,24 +62,6 @@ export default {
                 if (res.data.data) commit('SET_ALL_SERVICES', res.data.data)
             } catch (e) {
                 const logger = this.vue.$logger('store-services-fetchAllServices')
-                logger.error(e)
-            }
-        },
-
-        async fetchServiceConnections({ commit }, id) {
-            try {
-                let res = await this.$http.get(
-                    `/services/${id}?fields[services]=connections,total_connections`
-                )
-                if (res.data.data) {
-                    let { attributes: { connections, total_connections } = {} } = res.data.data
-                    commit('SET_SERVICE_CONNECTIONS_INFO', {
-                        total_connections: total_connections,
-                        connections: connections,
-                    })
-                }
-            } catch (e) {
-                const logger = this.vue.$logger('store-service-fetchServiceConnections')
                 logger.error(e)
             }
         },

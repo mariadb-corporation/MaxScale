@@ -21,7 +21,7 @@
                                         <details-readonly-table
                                             ref="statistics-table"
                                             :title="`${$tc('statistics', 2)}`"
-                                            :tableData="current_server_stats"
+                                            :tableData="serverStats"
                                             isTree
                                         />
                                     </v-col>
@@ -37,7 +37,6 @@
                             </v-col>
                             <v-col class="py-0 ma-0" cols="8">
                                 <sessions-table
-                                    ref="sessions-table"
                                     :search="search_keyword"
                                     :collapsible="true"
                                     :delayLoading="true"
@@ -126,10 +125,12 @@ export default {
             should_refresh_resource: 'should_refresh_resource',
             search_keyword: 'search_keyword',
             current_server: state => state.server.current_server,
-            current_server_stats: state => state.server.current_server_stats,
             monitor_diagnostics: state => state.monitor.monitor_diagnostics,
             all_sessions: state => state.session.all_sessions,
         }),
+        serverStats() {
+            return this.$typy(this.current_server, 'attributes.statistics').safeObjectOrEmpty
+        },
         monitorDiagnostics() {
             const {
                 attributes: { monitor_diagnostics: { server_info = [] } = {} } = {},
@@ -205,7 +206,6 @@ export default {
             getResourceState: 'getResourceState',
             fetchModuleParameters: 'fetchModuleParameters',
             fetchServerById: 'server/fetchServerById',
-            fetchServerStatsById: 'server/fetchServerStatsById',
             updateServerRelationship: 'server/updateServerRelationship',
             updateServerParameters: 'server/updateServerParameters',
             fetchMonitorDiagnosticsById: 'monitor/fetchMonitorDiagnosticsById',
@@ -219,8 +219,8 @@ export default {
                     fetched together as their data point changes over time
                 */
                 await Promise.all([
+                    this.dispatchFetchServer(),
                     this.fetchAllSessions(),
-                    this.fetchServerStatsById(this.$route.params.id),
                     this.fetchMonitorDiagnostics(),
                     this.$help.delay(10000),
                 ])

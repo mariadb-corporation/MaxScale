@@ -62,18 +62,14 @@ const EXPECT_SESSIONS_HEADER = [
 ]
 
 const routerDiagnosticsResStub = {
-    attributes: {
-        router_diagnostics: {
-            queries: 0,
-            replayed_transactions: 0,
-            ro_transactions: 0,
-            route_all: 0,
-            route_master: 0,
-            route_slave: 0,
-            rw_transactions: 0,
-            server_query_statistics: [],
-        },
-    },
+    queries: 0,
+    replayed_transactions: 0,
+    ro_transactions: 0,
+    route_all: 0,
+    route_master: 0,
+    route_slave: 0,
+    rw_transactions: 0,
+    server_query_statistics: [],
 }
 
 const toServicePage = async () => {
@@ -84,9 +80,9 @@ const toServicePage = async () => {
 const defaultComputed = {
     current_service: () => dummy_all_services[0], // id: row_server_0
     service_connections_datasets: () => dummy_service_connection_datasets,
-    service_connection_info: () => dummy_service_connection_info,
+    serviceConnectionInfo: () => dummy_service_connection_info,
     sessions_by_service: () => dummy_sessions_by_service,
-    current_service_diagnostics: () => routerDiagnosticsResStub,
+    routerDiagnostics: () => routerDiagnosticsResStub,
 }
 const shallowMountOptions = {
     shallow: true,
@@ -129,19 +125,11 @@ describe('ServiceDetail index', () => {
             } = dummy_all_services[0]
 
             await axiosGetStub.should.have.been.calledWith(`/services/${id}`)
-            // connections
-            await axiosGetStub.should.have.been.calledWith(
-                `/services/${id}?fields[services]=connections,total_connections`
-            )
             // sessions
             await axiosGetStub.should.have.been.calledWith(
                 `/sessions?filter=/relationships/services/data/0/id="${id}"`
             )
-            // diagnostics
-            await axiosGetStub.should.have.been.calledWith(
-                `/services/${id}?fields[services]=router_diagnostics`
-            )
-            let count = 4
+            let count = 2
             await serversData.forEach(async server => {
                 await axiosGetStub.should.have.been.calledWith(
                     `/servers/${server.id}?fields[servers]=state`
@@ -198,7 +186,7 @@ describe('ServiceDetail index', () => {
     describe('Props passes to child components test assertions', () => {
         before(() => {
             wrapper = mount(shallowMountOptions)
-            sinon.stub(wrapper.vm, 'fetchConnSessDiag').returns(
+            sinon.stub(wrapper.vm, 'fetchServiceAndSession').returns(
                 Promise.resolve({
                     data: {},
                 })
@@ -228,38 +216,23 @@ describe('ServiceDetail index', () => {
         })
 
         it(`Should pass necessary props to 'CURRENT SESSIONS' table`, () => {
-            const sessionsTable = wrapper.findComponent({
-                ref: 'sessions-table',
-            })
+            const sessionsTable = wrapper.findComponent({ name: 'sessions-table' })
             expect(sessionsTable.exists()).to.be.true
-            const {
-                tdBorderLeft,
-                title,
-                titleInfo,
-                noDataText,
-                tableData,
-                customTableHeaders,
-            } = sessionsTable.vm.$props
-            const {
-                $data: { sessionsTableHeader },
-                sessionsTableRows,
-            } = wrapper.vm
-
-            expect(tdBorderLeft).to.be.false
-            expect(title).to.be.equals('current sessions')
-            expect(titleInfo).to.be.equals(sessionsTableRows.length)
-            expect(noDataText).to.be.equals('No sessions')
-            expect(tableData).to.be.equals(sessionsTableRows)
-            expect(customTableHeaders).to.be.equals(sessionsTableHeader)
+            const { search, sortDesc, sortBy } = sessionsTable.vm.$attrs
+            const { collapsible, delayLoading, rows, headers } = sessionsTable.vm.$props
+            const { search_keyword, sessionsTableRows, sessionsTableHeader } = wrapper.vm
+            expect(search).to.be.equals(search_keyword)
+            expect(rows).to.be.eql(sessionsTableRows)
+            expect(headers).to.be.eql(sessionsTableHeader)
+            expect(collapsible).to.be.true
+            expect(delayLoading).to.be.true
+            expect(sortDesc).to.be.true
+            expect(sortBy).to.be.equals('connected')
         })
 
         it(`Should use accurate table headers for 'CURRENT SESSIONS' table`, () => {
-            const sessionsTable = wrapper.findComponent({
-                ref: 'sessions-table',
-            })
-            expect(sessionsTable.vm.$props.customTableHeaders).to.be.deep.equals(
-                EXPECT_SESSIONS_HEADER
-            )
+            const sessionsTable = wrapper.findComponent({ name: 'sessions-table' })
+            expect(sessionsTable.vm.$props.headers).to.be.deep.equals(EXPECT_SESSIONS_HEADER)
         })
 
         it(`Should compute sessions for this service with accurate data format`, () => {
@@ -286,9 +259,7 @@ describe('ServiceDetail index', () => {
         })
 
         it(`Should compute router diagnostics with accurate data format`, () => {
-            expect(wrapper.vm.routerDiagnostics).to.be.deep.equals(
-                routerDiagnosticsResStub.attributes.router_diagnostics
-            )
+            expect(wrapper.vm.routerDiagnostics).to.be.deep.equals(routerDiagnosticsResStub)
         })
 
         it(`Should pass necessary props to details-parameters-table`, () => {
@@ -324,7 +295,7 @@ describe('ServiceDetail index', () => {
 
         beforeEach(() => {
             wrapper = mount(shallowMountOptions)
-            sinon.stub(wrapper.vm, 'fetchConnSessDiag').returns(
+            sinon.stub(wrapper.vm, 'fetchServiceAndSession').returns(
                 Promise.resolve({
                     data: {},
                 })

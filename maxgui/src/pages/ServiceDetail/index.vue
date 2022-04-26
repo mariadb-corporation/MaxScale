@@ -8,8 +8,8 @@
             <overview-header
                 :currentService="current_service"
                 :serviceConnectionsDatasets="service_connections_datasets"
-                :serviceConnectionInfo="service_connection_info"
-                @update-chart="fetchConnSessDiag"
+                :serviceConnectionInfo="serviceConnectionInfo"
+                @update-chart="fetchServiceAndSession"
             />
 
             <v-tabs v-model="currentActiveTab" class="tab-navigation-wrapper">
@@ -78,7 +78,6 @@
                             </v-col>
                             <v-col class="py-0 my-0" cols="6">
                                 <sessions-table
-                                    ref="sessions-table"
                                     :search="search_keyword"
                                     :collapsible="true"
                                     :delayLoading="true"
@@ -148,20 +147,23 @@ export default {
             search_keyword: 'search_keyword',
             should_refresh_resource: 'should_refresh_resource',
             current_service: state => state.service.current_service,
-            current_service_diagnostics: state => state.service.current_service_diagnostics,
             service_connections_datasets: state => state.service.service_connections_datasets,
-            service_connection_info: state => state.service.service_connection_info,
             sessions_by_service: state => state.session.sessions_by_service,
             RESOURCE_FORM_TYPES: state => state.app_config.RESOURCE_FORM_TYPES,
         }),
         serviceId() {
             return this.$route.params.id
         },
+        serviceConnectionInfo() {
+            const { total_connections, connections } = this.$typy(
+                this.current_service,
+                'attributes.statistics'
+            ).safeObjectOrEmpty
+            return { total_connections, connections }
+        },
         routerDiagnostics() {
-            const {
-                attributes: { router_diagnostics = {} } = {},
-            } = this.current_service_diagnostics
-            return router_diagnostics
+            return this.$typy(this.current_service, 'attributes.router_diagnostics')
+                .safeObjectOrEmpty
         },
         routerModule() {
             return this.current_service.attributes.router
@@ -202,8 +204,6 @@ export default {
             getResourceState: 'getResourceState',
             fetchModuleParameters: 'fetchModuleParameters',
             fetchServiceById: 'service/fetchServiceById',
-            fetchServiceDiagnostics: 'service/fetchServiceDiagnostics',
-            fetchServiceConnections: 'service/fetchServiceConnections',
             genServiceConnectionsDataSets: 'service/genDataSets',
             updateServiceRelationship: 'service/updateServiceRelationship',
             updateServiceParameters: 'service/updateServiceParameters',
@@ -219,7 +219,7 @@ export default {
         async initialFetch() {
             await this.fetchService()
             await this.genServiceConnectionsDataSets()
-            await this.fetchConnSessDiag()
+            await this.fetchServiceAndSession()
             await Promise.all([
                 this.processingRelationshipTable('servers'),
                 this.processingRelationshipTable('filters'),
@@ -234,12 +234,11 @@ export default {
         /**
          * This function fetch current connection, session and service router_diagnostics
          */
-        async fetchConnSessDiag() {
+        async fetchServiceAndSession() {
             // fetching connections chart info should be at the same time with fetchSessionsFilterByService
             await Promise.all([
-                this.fetchServiceConnections(this.serviceId),
+                this.fetchService(),
                 this.fetchSessionsFilterByService(this.serviceId),
-                this.fetchServiceDiagnostics(this.serviceId),
             ])
         },
 
