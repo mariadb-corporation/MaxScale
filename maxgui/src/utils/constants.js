@@ -75,9 +75,15 @@ export const APP_CONFIG = Object.freeze({
         DASHBOARD: 'dashboard',
         VISUALIZATION: 'visualization',
         CLUSTER: 'cluster',
+        DETAIL: 'detail',
     }),
     // key names must be taken from ROUTE_GROUP values
-    DEF_REFRESH_RATE_BY_GROUP: Object.freeze({ dashboard: 10, visualization: 60, cluster: 60 }),
+    DEF_REFRESH_RATE_BY_GROUP: Object.freeze({
+        dashboard: 10,
+        visualization: 60,
+        cluster: 60,
+        detail: 10,
+    }),
     QUERY_CONN_BINDING_TYPES: Object.freeze({
         WORKSHEET: 'WORKSHEET',
         BACKGROUND: 'BACKGROUND', // used to stop the running query

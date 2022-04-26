@@ -43,7 +43,7 @@ const Listener = () => import(/* webpackChunkName: "listener-detail" */ 'pages/L
 const Filter = () => import(/* webpackChunkName: "filter-detail" */ 'pages/FilterDetail')
 const Cluster = () => import(/* webpackChunkName: "cluster-detail" */ 'pages/ClusterDetail')
 
-const { DASHBOARD, VISUALIZATION, CLUSTER } = APP_CONFIG.ROUTE_GROUP
+const { DASHBOARD, VISUALIZATION, CLUSTER, DETAIL } = APP_CONFIG.ROUTE_GROUP
 export const dashboardTabRoutes = [
     // Tab Routes
     {
@@ -280,6 +280,7 @@ export const routes = [
         meta: {
             requiresAuth: true,
             layout: 'app-layout',
+            group: DETAIL,
         },
         name: 'service',
     },
@@ -289,6 +290,7 @@ export const routes = [
         meta: {
             requiresAuth: true,
             layout: 'app-layout',
+            group: DETAIL,
         },
         name: 'server',
     },
@@ -298,6 +300,7 @@ export const routes = [
         meta: {
             requiresAuth: true,
             layout: 'app-layout',
+            group: DETAIL,
         },
         name: 'monitor',
     },
@@ -307,6 +310,7 @@ export const routes = [
         meta: {
             requiresAuth: true,
             layout: 'app-layout',
+            group: DETAIL,
         },
         name: 'listener',
     },
@@ -316,6 +320,7 @@ export const routes = [
         meta: {
             requiresAuth: true,
             layout: 'app-layout',
+            group: DETAIL,
         },
         name: 'filter',
     },
