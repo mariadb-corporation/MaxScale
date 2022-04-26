@@ -7,63 +7,61 @@
         :onAddClick="isAdmin && !readOnly && addable ? onAdd : null"
         :addBtnText="isAdmin && !readOnly && addable ? addBtnText : ''"
     >
-        <template v-slot:content>
-            <data-table
-                :search="search_keyword"
-                :headers="tableHeader"
-                :data="tableRowsData"
-                :noDataText="$t('noEntity', { entityName: $tc(relationshipType, 2) })"
-                sortBy=""
-                :loading="isLoading"
-                :showActionsOnHover="!readOnly"
-                :draggable="relationshipType === 'filters'"
-                :hasOrderNumber="relationshipType === 'filters'"
-                @on-drag-end="filterDragReorder"
-            >
-                <template v-slot:id="{ data: { item: { id } } }">
-                    <router-link
-                        :key="id"
-                        :to="`/dashboard/${relationshipType}/${id}`"
-                        class="rsrc-link"
-                    >
-                        {{ id }}
-                    </router-link>
-                </template>
-                <template v-slot:state="{ data: { item: { state } } }">
-                    <icon-sprite-sheet size="16" class="state-icon" :frame="getStatusIcon(state)">
-                        {{ relationshipType }}
-                    </icon-sprite-sheet>
-                </template>
-                <template v-if="isAdmin && !readOnly" v-slot:actions="{ data: { item } }">
-                    <v-btn icon @click="onDelete(item)">
-                        <v-icon size="20" color="error">
-                            $vuetify.icons.unlink
-                        </v-icon>
-                    </v-btn>
-                </template>
-            </data-table>
-            <!-- Avaiable dialogs for editable table -->
-            <confirm-dialog
-                v-if="!readOnly"
-                v-model="isConfDlgOpened"
-                :title="dialogTitle"
-                :type="deleteDialogType"
-                :item="Array.isArray(targetItem) ? {} : targetItem"
-                :onSave="confirmDelete"
-            />
-            <select-dialog
-                v-if="!readOnly"
-                v-model="isSelectDlgOpened"
-                :title="dialogTitle"
-                mode="add"
-                multiple
-                :entityName="relationshipType"
-                :itemsList="itemsList"
-                :onSave="confirmAdd"
-                @selected-items="targetItem = $event"
-                @on-open="getAllEntities"
-            />
-        </template>
+        <data-table
+            :search="search_keyword"
+            :headers="tableHeader"
+            :data="tableRowsData"
+            :noDataText="$t('noEntity', { entityName: $tc(relationshipType, 2) })"
+            sortBy=""
+            :loading="isLoading"
+            :showActionsOnHover="!readOnly"
+            :draggable="relationshipType === 'filters'"
+            :hasOrderNumber="relationshipType === 'filters'"
+            @on-drag-end="filterDragReorder"
+        >
+            <template v-slot:id="{ data: { item: { id } } }">
+                <router-link
+                    :key="id"
+                    :to="`/dashboard/${relationshipType}/${id}`"
+                    class="rsrc-link"
+                >
+                    {{ id }}
+                </router-link>
+            </template>
+            <template v-slot:state="{ data: { item: { state } } }">
+                <icon-sprite-sheet size="16" class="state-icon" :frame="getStatusIcon(state)">
+                    {{ relationshipType }}
+                </icon-sprite-sheet>
+            </template>
+            <template v-if="isAdmin && !readOnly" v-slot:actions="{ data: { item } }">
+                <v-btn icon @click="onDelete(item)">
+                    <v-icon size="20" color="error">
+                        $vuetify.icons.unlink
+                    </v-icon>
+                </v-btn>
+            </template>
+        </data-table>
+        <!-- Avaiable dialogs for editable table -->
+        <confirm-dialog
+            v-if="!readOnly"
+            v-model="isConfDlgOpened"
+            :title="dialogTitle"
+            :type="deleteDialogType"
+            :item="Array.isArray(targetItem) ? {} : targetItem"
+            :onSave="confirmDelete"
+        />
+        <select-dialog
+            v-if="!readOnly"
+            v-model="isSelectDlgOpened"
+            :title="dialogTitle"
+            mode="add"
+            multiple
+            :entityName="relationshipType"
+            :itemsList="itemsList"
+            :onSave="confirmAdd"
+            @selected-items="targetItem = $event"
+            @on-open="getAllEntities"
+        />
     </collapse>
 </template>
 

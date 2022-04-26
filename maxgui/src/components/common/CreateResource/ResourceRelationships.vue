@@ -6,17 +6,15 @@
         :isContentVisible="showContent"
         :title="`${$tc(relationshipsType, multiple ? 2 : 1)}`"
     >
-        <template v-slot:content>
-            <select-dropdown
-                v-model="selectedItems"
-                :defaultItems="defaultItems"
-                :items="items"
-                :entityName="relationshipsType"
-                :multiple="multiple"
-                :clearable="clearable"
-                :required="required"
-            />
-        </template>
+        <select-dropdown
+            v-model="selectedItems"
+            :defaultItems="defaultItems"
+            :items="items"
+            :entityName="relationshipsType"
+            :multiple="multiple"
+            :clearable="clearable"
+            :required="required"
+        />
     </collapse>
 </template>
 
