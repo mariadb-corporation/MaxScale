@@ -85,6 +85,7 @@ public:
     bool    empty() const;
     json_t* to_json() const;
     bool    is_last_user(const std::string& user) const;
+    bool    change_password(const char* user, const char* password);
 
     /**
      * Return a copy of the data.

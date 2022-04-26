@@ -153,7 +153,7 @@ const char* admin_add_user(Users* pusers, const char* fname, const char* uname, 
 
 const char* admin_alter_user(Users* pusers, const char* fname, const char* uname, const char* password)
 {
-    if (!users_change_password(pusers, uname, password))
+    if (!pusers->change_password(uname, password))
     {
         return ADMIN_ERR_USERNOTFOUND;
     }

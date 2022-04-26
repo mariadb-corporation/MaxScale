@@ -134,13 +134,19 @@ std::vector<UserInfo> Users::get_all() const
 bool Users::authenticate(const std::string& user, const std::string& password)
 {
     bool rval = false;
-    UserInfo info;
+    Guard guard(m_lock);
 
-    if (get(user, &info))
+    if (auto it = m_data.find(user); it != m_data.end())
     {
+        const auto& stored = it->second.password;
         // The second character tell us which hashing function to use
-        auto crypted = info.password[1] == ADMIN_SALT[1] ? hash(password) : old_hash(password);
-        rval = info.password == crypted;
+        auto crypted = stored[1] == ADMIN_SALT[1] ? hash(password) : old_hash(password);
+
+        if (stored == crypted)
+        {
+            rval = true;
+            it->second.last_login = time(nullptr);
+        }
     }
 
     return rval;
@@ -305,15 +311,24 @@ std::string Users::old_hash(const std::string& password)
 {
     return mxs::crypt(password, OLD_ADMIN_SALT);
 }
+
+bool Users::change_password(const char* user, const char* password)
+{
+    bool rval = false;
+    Guard guard(m_lock);
+
+    if (auto it = m_data.find(user); it != m_data.end())
+    {
+        rval = true;
+        it->second.password = hash(password);
+        it->second.last_update = time(nullptr);
+    }
+
+    return rval;
+}
 }
 
 using mxs::Users;
-
-bool users_change_password(Users* users, const char* user, const char* password)
-{
-    mxs::UserInfo info;
-    return users->get(user, &info) && users->remove(user) && users->add(user, password, info.permissions);
-}
 
 bool users_is_admin(Users* users, const char* user, const char* password)
 {
