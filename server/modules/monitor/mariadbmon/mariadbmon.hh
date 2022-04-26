@@ -203,6 +203,17 @@ public:
      */
     bool schedule_cs_add_node(const std::string& host, std::chrono::seconds timeout, json_t** error_out);
 
+    /**
+     * Perform user-activated ColumnStore remove node. Does not wait for results, which should be fetched
+     * separately.
+     *
+     * @param host The host to remove
+     * @param timeout Timeout in seconds
+     * @param error_out Error output
+     * @return True if operation was scheduled
+     */
+    bool schedule_cs_remove_node(const std::string& host, std::chrono::seconds timeout, json_t** error_out);
+
     bool is_cluster_owner() const override;
 
     mxs::config::Configuration& configuration() override final;
@@ -523,6 +534,17 @@ private:
 
     // ColumnStore operations
     ManualCommand::Result manual_cs_add_node(const std::string& host, std::chrono::seconds timeout);
+    ManualCommand::Result manual_cs_remove_node(const std::string& host, std::chrono::seconds timeout);
+
+    enum class HttpCmd
+    {
+        GET, PUT, DELETE
+    };
+    using RestDataFields = std::vector<std::pair<std::string, std::string>>;
+    using CsRestResult = std::tuple<bool, std::string, mxb::Json>;
+    CsRestResult run_cs_rest_cmd(HttpCmd httcmd, const std::string& rest_cmd, const RestDataFields& data,
+                                 std::chrono::seconds cs_timeout);
+    static CsRestResult check_cs_rest_result(const mxb::http::Response& resp);
 
     const MariaDBServer* slave_receiving_events(const MariaDBServer* demotion_target,
                                                 maxbase::Duration* event_age_out,

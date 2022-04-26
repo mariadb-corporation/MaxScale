@@ -36,6 +36,7 @@ const char rejoin_cmd[] = "rejoin";
 const char reset_repl_cmd[] = "reset-replication";
 const char release_locks_cmd[] = "release-locks";
 const char cs_add_node_cmd[] = "cs-add-node";
+const char cs_remove_node_cmd[] = "cs-remove-node";
 
 bool manual_switchover(ExecMode mode, const MODULECMD_ARG* args, json_t** error_out);
 bool manual_failover(ExecMode mode, const MODULECMD_ARG* args, json_t** output);
@@ -129,6 +130,19 @@ bool handle_async_cs_add_node(const MODULECMD_ARG* args, json_t** output)
     if (to_ok)
     {
         rval = mon->schedule_cs_add_node(host, timeout, output);
+    }
+    return rval;
+}
+
+bool handle_async_cs_remove_node(const MODULECMD_ARG* args, json_t** output)
+{
+    bool rval = false;
+    auto [mon, host, timeout_str] = read_args(*args);
+    auto [to_ok, timeout] = get_timeout(timeout_str, output);
+
+    if (to_ok)
+    {
+        rval = mon->schedule_cs_remove_node(host, timeout, output);
     }
     return rval;
 }
@@ -461,6 +475,11 @@ void register_monitor_commands()
                                handle_async_cs_add_node,
                                MXS_ARRAY_NELEMS(csmon_add_node_argv), csmon_add_node_argv,
                                "Add a node to a ColumnStore cluster. Does not wait for completion.");
+
+    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-remove-node", MODULECMD_TYPE_ACTIVE,
+                               handle_async_cs_remove_node,
+                               MXS_ARRAY_NELEMS(csmon_add_node_argv), csmon_add_node_argv,
+                               "Remove a node from a ColumnStore cluster. Does not wait for completion.");
 }
 
 bool MariaDBMonitor::run_manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out)
@@ -653,71 +672,33 @@ bool MariaDBMonitor::schedule_cs_add_node(const std::string& host, std::chrono::
     return schedule_manual_command(func, cs_add_node_cmd, error_out);
 }
 
-namespace cs_commands
+bool MariaDBMonitor::schedule_cs_remove_node(const std::string& host, std::chrono::seconds timeout,
+                                             json_t** error_out)
 {
-enum class Scope
-{
-    CLUSTER,
-    NODE
-};
-
-enum class Action
-{
-    ADD_NODE
-};
-
-string create_rest_url(const string& host, int64_t port, const string& rest_base, Scope scope, Action action)
-{
-    auto scope_to_string = [](Scope scope) {
-        switch (scope)
-        {
-        case Scope::CLUSTER:
-            return "/cluster/";
-
-        case Scope::NODE:
-            return "/node/";
-        }
-        return "";
+    auto func = [this, host, timeout]() {
+        return manual_cs_remove_node(host, timeout);
     };
-
-    auto action_to_string = [](Action action) {
-        switch (action)
-        {
-        case Action::ADD_NODE:
-            return "node";
-        }
-        return "";
-    };
-
-    return mxb::string_printf("https://%s:%li%s%s%s", host.c_str(), port, rest_base.c_str(),
-                              scope_to_string(scope), action_to_string(action));
+    return schedule_manual_command(func, cs_remove_node_cmd, error_out);
 }
 
-string create_rest_body(const std::string& node, const std::chrono::seconds& timeout)
-{
-    const char fmt[] = R"({"timeout": %li, "node": "%s"})";
-    return mxb::string_printf(fmt, timeout.count(), node.c_str());
-}
-
-mxb::http::Config create_http_config(const mxb::http::Config& base, const std::chrono::seconds& timeout)
-{
-    auto rval = base;
-
-    // We set the timeout to larger than the timeout specified to the
-    // ColumnStore daemon, so that the timeout surely expires first in
-    // the daemon and only then in the HTTP library.
-    rval.timeout = timeout + std::chrono::seconds(mxb::http::DEFAULT_TIMEOUT);
-    return rval;
-}
-
-std::tuple<bool, string> check_response(const mxb::http::Response& resp)
+MariaDBMonitor::CsRestResult MariaDBMonitor::check_cs_rest_result(const mxb::http::Response& resp)
 {
     bool rval = false;
     string err_str;
+    mxb::Json json_data;
 
     if (resp.is_success())
     {
-        rval = true;
+        // The response body should be json text. Parse it.
+        if (json_data.load_string(resp.body))
+        {
+            rval = true;
+        }
+        else
+        {
+            err_str = mxb::string_printf("REST-API call succeeded yet returned data was not JSON. %s",
+                                         json_data.error_msg().c_str());
+        }
     }
     else if (resp.is_client_error())
     {
@@ -728,62 +709,114 @@ std::tuple<bool, string> check_response(const mxb::http::Response& resp)
         err_str = mxb::string_printf("REST-API call failed. Error %d: %s. %s", resp.code,
                                      mxb::http::Response::to_string(resp.code), resp.body.c_str());
     }
+    else if (resp.is_server_error())
+    {
+        err_str = mxb::string_printf("Server error %d: %s.", resp.code,
+                                     mxb::http::Response::to_string(resp.code));
+    }
     else
     {
-        if (resp.is_server_error())
-        {
-            err_str = mxb::string_printf("Server error %d: %s.", resp.code,
-                                         mxb::http::Response::to_string(resp.code));
-        }
-        else
-        {
-            err_str = mxb::string_printf("Unexpected response from server. Error %d: %s.",
-                                         resp.code, mxb::http::Response::to_string(resp.code));
-        }
-
-        // TODO: Handle the json text in the response
+        err_str = mxb::string_printf("Unexpected response from server. Error %d: %s.",
+                                     resp.code, mxb::http::Response::to_string(resp.code));
     }
 
-    return {rval, err_str};
-}
+    return {rval, err_str, json_data};
 }
 
 MariaDBMonitor::ManualCommand::Result
 MariaDBMonitor::manual_cs_add_node(const std::string& host, std::chrono::seconds timeout)
 {
-    mxb::http::Response response;
-    auto& srvs = servers();
-    if (srvs.empty())
-    {
-        response.code = mxb::http::Response::ERROR;
-        response.body = "No servers specified.";
-    }
-    else
-    {
-        // Send the command to the first server. TODO: send to master instead?
-        string url = cs_commands::create_rest_url(
-            srvs.front()->server->address(), m_settings.cs_admin_port, m_settings.cs_admin_base_path,
-            cs_commands::Scope::CLUSTER, cs_commands::Action::ADD_NODE);
-
-        string body = cs_commands::create_rest_body(host, timeout);
-        auto http_config = cs_commands::create_http_config(m_http_config, timeout);
-
-        response = mxb::http::put(url, body, http_config);
-    }
-
-    auto [ok, err_str] = cs_commands::check_response(response);
+    RestDataFields input = {{"timeout", std::to_string(timeout.count())},
+                            {"node", mxb::string_printf("\"%s\"", host.c_str())}};
+    auto [ok, rest_error, rest_output] = run_cs_rest_cmd(HttpCmd::PUT, "node", input, timeout);
 
     ManualCommand::Result rval;
     if (ok)
     {
+        // TODO: check output data
         rval.success = true;
     }
     else
     {
         string errmsg = mxb::string_printf("Could not add node %s to the ColumnStore cluster: %s",
-                                           host.c_str(), err_str.c_str());
+                                           host.c_str(), rest_error.c_str());
         rval.errors = mxs_json_error_append(rval.errors, "%s", errmsg.c_str());
         MXB_ERROR("%s", errmsg.c_str());
     }
     return rval;
+}
+
+MariaDBMonitor::ManualCommand::Result
+MariaDBMonitor::manual_cs_remove_node(const std::string& host, std::chrono::seconds timeout)
+{
+    RestDataFields input = {{"timeout", std::to_string(timeout.count())},
+                            {"node", mxb::string_printf("\"%s\"", host.c_str())}};
+    auto [ok, rest_error, rest_output] = run_cs_rest_cmd(HttpCmd::DELETE, "node", input, timeout);
+
+    ManualCommand::Result rval;
+    if (ok)
+    {
+        // TODO: check output data
+        rval.success = true;
+    }
+    else
+    {
+        string errmsg = mxb::string_printf("Could not remove node %s from the ColumnStore cluster: %s",
+                                           host.c_str(), rest_error.c_str());
+        rval.errors = mxs_json_error_append(rval.errors, "%s", errmsg.c_str());
+        MXB_ERROR("%s", errmsg.c_str());
+    }
+    return rval;
+}
+
+MariaDBMonitor::CsRestResult
+MariaDBMonitor::run_cs_rest_cmd(HttpCmd httcmd, const std::string& rest_cmd, const RestDataFields& data,
+                                std::chrono::seconds cs_timeout)
+{
+    auto& srvs = servers();
+    if (srvs.empty())
+    {
+        return {false, "No valid server to send ColumnStore REST-API command found", mxb::Json()};
+    }
+    else
+    {
+        // Send the command to the first server. TODO: send to master instead?
+        string url = mxb::string_printf("https://%s:%li%s/cluster/%s",
+                                        srvs.front()->server->address(), m_settings.cs_admin_port,
+                                        m_settings.cs_admin_base_path.c_str(), rest_cmd.c_str());
+        string body = "{";
+        string sep;
+        for (const auto& elem : data)
+        {
+            body.append(sep).append("\"").append(elem.first).append("\": ").append(elem.second);
+            sep = ", ";
+        }
+        body += "}";
+
+        // Set the timeout to larger than the timeout specified to the ColumnStore daemon. The timeout surely
+        // expires first in the daemon and only then in the HTTP library.
+        mxb::http::Config http_config = m_http_config;
+        http_config.timeout = cs_timeout + std::chrono::seconds(mxb::http::DEFAULT_TIMEOUT);
+
+        mxb::http::Response response;
+
+        switch (httcmd)
+        {
+        case HttpCmd::GET:
+            response = mxb::http::get(url, http_config);
+            break;
+
+        case HttpCmd::PUT:
+            response = mxb::http::put(url, body, http_config);
+            break;
+
+        case HttpCmd::DELETE:
+            // TODO: add delete to mxb::http
+            // response = mxb::http::delete(url, body, http_config);
+            mxb_assert(!true);
+            break;
+        }
+
+        return check_cs_rest_result(response);
+    }
 }
