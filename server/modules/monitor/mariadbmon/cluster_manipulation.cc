@@ -63,7 +63,7 @@ MariaDBMonitor::manual_switchover(SERVER* new_master, SERVER* current_master)
     mxb_assert(m_manual_cmd.exec_state == ManualCommand::ExecState::RUNNING);
 
     ManualCommand::Result rval;
-    auto error_out = &rval.errors;
+    auto error_out = &rval.output;
     if (!lock_status_is_ok())
     {
         print_no_locks_error(error_out);
@@ -102,7 +102,7 @@ MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_failover()
     mxb_assert(m_manual_cmd.exec_state == ManualCommand::ExecState::RUNNING);
 
     ManualCommand::Result rval;
-    auto output = &rval.errors;
+    auto output = &rval.output;
     if (!lock_status_is_ok())
     {
         print_no_locks_error(output);
@@ -139,7 +139,7 @@ MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_rejoin(SERVER* rejo
     mxb_assert(m_manual_cmd.exec_state == ManualCommand::ExecState::RUNNING);
 
     ManualCommand::Result rval;
-    auto output = &rval.errors;
+    auto output = &rval.output;
     if (!lock_status_is_ok())
     {
         print_no_locks_error(output);
@@ -240,7 +240,7 @@ MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_reset_replication(S
     mxb_assert(m_manual_cmd.exec_state == ManualCommand::ExecState::RUNNING);
 
     ManualCommand::Result rval;
-    auto error_out = &rval.errors;
+    auto error_out = &rval.output;
     MariaDBServer* new_master = NULL;
     if (master_server)
     {

@@ -214,6 +214,14 @@ public:
      */
     bool schedule_cs_remove_node(const std::string& host, std::chrono::seconds timeout, json_t** error_out);
 
+    /**
+     * Get ColumnStore cluster status. Does not wait for results, which should be fetched separately.
+     *
+     * @param output Output
+     * @return True if operation was scheduled
+     */
+    bool schedule_cs_get_status(json_t** output);
+
     bool is_cluster_owner() const override;
 
     mxs::config::Configuration& configuration() override final;
@@ -298,7 +306,7 @@ private:
             void deep_copy_from(const Result& rhs);
 
             bool    success {false};
-            json_t* errors {nullptr};
+            json_t* output {nullptr};
         };
         using CmdMethod = std::function<Result (void)>;
         enum class ExecState
@@ -535,6 +543,7 @@ private:
     // ColumnStore operations
     ManualCommand::Result manual_cs_add_node(const std::string& host, std::chrono::seconds timeout);
     ManualCommand::Result manual_cs_remove_node(const std::string& host, std::chrono::seconds timeout);
+    ManualCommand::Result manual_cs_get_status();
 
     enum class HttpCmd
     {

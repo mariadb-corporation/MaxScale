@@ -37,6 +37,7 @@ const char reset_repl_cmd[] = "reset-replication";
 const char release_locks_cmd[] = "release-locks";
 const char cs_add_node_cmd[] = "cs-add-node";
 const char cs_remove_node_cmd[] = "cs-remove-node";
+const char cs_get_status_cmd[] = "cs-get-status";
 
 bool manual_switchover(ExecMode mode, const MODULECMD_ARG* args, json_t** error_out);
 bool manual_failover(ExecMode mode, const MODULECMD_ARG* args, json_t** output);
@@ -145,6 +146,12 @@ bool handle_async_cs_remove_node(const MODULECMD_ARG* args, json_t** output)
         rval = mon->schedule_cs_remove_node(host, timeout, output);
     }
     return rval;
+}
+
+bool handle_async_cs_get_status(const MODULECMD_ARG* args, json_t** output)
+{
+    auto* mon = static_cast<MariaDBMonitor*>(args->argv[0].value.monitor);
+    return mon->schedule_cs_get_status(output);
 }
 
 /**
@@ -480,6 +487,11 @@ void register_monitor_commands()
                                handle_async_cs_remove_node,
                                MXS_ARRAY_NELEMS(csmon_add_node_argv), csmon_add_node_argv,
                                "Remove a node from a ColumnStore cluster. Does not wait for completion.");
+
+    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-get-status", MODULECMD_TYPE_ACTIVE,
+                               handle_async_cs_get_status,
+                               MXS_ARRAY_NELEMS(fetch_cmd_result_argv), fetch_cmd_result_argv,
+                               "Get ColumnStore cluster status. Does not wait for completion.");
 }
 
 bool MariaDBMonitor::run_manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out)
@@ -569,7 +581,7 @@ MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_release_locks()
     mxb_assert(m_manual_cmd.exec_state == ManualCommand::ExecState::RUNNING);
 
     ManualCommand::Result rval;
-    auto error_out = &rval.errors;
+    auto error_out = &rval.output;
 
     bool success = false;
     if (server_locks_in_use())
@@ -645,13 +657,14 @@ bool MariaDBMonitor::fetch_cmd_result(json_t** output)
         break;
 
     case ExecState::DONE:
-        if (cmd_result.success)
+        // If command has its own output, return that. Otherwise report success or error.
+        if (cmd_result.output)
+        {
+            *output = cmd_result.output;
+        }
+        else if (cmd_result.success)
         {
             *output = json_sprintf("%s completed successfully.", current_cmd_name.c_str());
-        }
-        else if (cmd_result.errors)
-        {
-            *output = cmd_result.errors;
         }
         else
         {
@@ -679,6 +692,14 @@ bool MariaDBMonitor::schedule_cs_remove_node(const std::string& host, std::chron
         return manual_cs_remove_node(host, timeout);
     };
     return schedule_manual_command(func, cs_remove_node_cmd, error_out);
+}
+
+bool MariaDBMonitor::schedule_cs_get_status(json_t** output)
+{
+    auto func = [this]() {
+        return manual_cs_get_status();
+    };
+    return schedule_manual_command(func, cs_get_status_cmd, output);
 }
 
 MariaDBMonitor::CsRestResult MariaDBMonitor::check_cs_rest_result(const mxb::http::Response& resp)
@@ -740,7 +761,7 @@ MariaDBMonitor::manual_cs_add_node(const std::string& host, std::chrono::seconds
     {
         string errmsg = mxb::string_printf("Could not add node %s to the ColumnStore cluster: %s",
                                            host.c_str(), rest_error.c_str());
-        rval.errors = mxs_json_error_append(rval.errors, "%s", errmsg.c_str());
+        rval.output = mxs_json_error_append(rval.output, "%s", errmsg.c_str());
         MXB_ERROR("%s", errmsg.c_str());
     }
     return rval;
@@ -763,7 +784,27 @@ MariaDBMonitor::manual_cs_remove_node(const std::string& host, std::chrono::seco
     {
         string errmsg = mxb::string_printf("Could not remove node %s from the ColumnStore cluster: %s",
                                            host.c_str(), rest_error.c_str());
-        rval.errors = mxs_json_error_append(rval.errors, "%s", errmsg.c_str());
+        rval.output = mxs_json_error_append(rval.output, "%s", errmsg.c_str());
+        MXB_ERROR("%s", errmsg.c_str());
+    }
+    return rval;
+}
+
+MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_cs_get_status()
+{
+    auto [ok, rest_error, rest_output] = run_cs_rest_cmd(HttpCmd::GET, "status", {}, 0s);
+
+    ManualCommand::Result rval;
+    if (ok)
+    {
+        rval.output = rest_output.release();
+        rval.success = true;
+    }
+    else
+    {
+        string errmsg = mxb::string_printf("Could not fetch status from the ColumnStore cluster: %s",
+                                           rest_error.c_str());
+        rval.output = mxs_json_error_append(rval.output, "%s", errmsg.c_str());
         MXB_ERROR("%s", errmsg.c_str());
     }
     return rval;

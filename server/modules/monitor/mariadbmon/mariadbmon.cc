@@ -747,7 +747,7 @@ void MariaDBMonitor::process_state_changes()
             lock.lock();
             m_manual_cmd.exec_state.store(ExecState::DONE, mo_release);
             // Remove any previous saved errors and replace with new ones.
-            json_decref(m_manual_cmd.cmd_result.errors);
+            json_decref(m_manual_cmd.cmd_result.output);
             m_manual_cmd.cmd_result = cmd_result;
             lock.unlock();
             m_manual_cmd.cmd_complete_notifier.notify_one();
@@ -914,7 +914,7 @@ bool MariaDBMonitor::execute_manual_command(ManualCommand::CmdMethod command, co
         // There should not be any existing errors in the error output.
         mxb_assert(*error_out == nullptr);
         rval = res.success;
-        *error_out = res.errors;
+        *error_out = res.output;
     }
     return rval;
 }
@@ -1083,7 +1083,7 @@ bool MariaDBMonitor::ClusterLocksInfo::time_to_update() const
 
 MariaDBMonitor::~MariaDBMonitor()
 {
-    json_decref(m_manual_cmd.cmd_result.errors);
+    json_decref(m_manual_cmd.cmd_result.output);
 }
 
 bool MariaDBMonitor::cluster_ops_configured() const
@@ -1094,10 +1094,8 @@ bool MariaDBMonitor::cluster_ops_configured() const
 
 void MariaDBMonitor::ManualCommand::Result::deep_copy_from(const MariaDBMonitor::ManualCommand::Result& rhs)
 {
-    // If command succeeded, errors should be empty.
-    mxb_assert(!(rhs.success && rhs.errors));
     success = rhs.success;
-    errors = json_deep_copy(rhs.errors);
+    output = json_deep_copy(rhs.output);
 }
 
 namespace journal_fields
