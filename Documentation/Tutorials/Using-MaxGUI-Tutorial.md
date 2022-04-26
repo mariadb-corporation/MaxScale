@@ -236,3 +236,15 @@ A SQL editor tool to run queries and perform other SQL operations.
     `Show confirmation before executing the statements` and
     `Show system schemas`.
 24. Maximize Query Editor window.
+
+# How to kill a session
+
+A session can be killed easily on the "Current Sessions" table which can be
+found on the [Dashboard](#dashboard), Server detail, and Service detail page.
+
+![MaxGUI MaxScale kill session](./images/MaxGUI-kill-session.png)
+
+## Annotation
+
+1. Kill session button. This button is shown on the mouseover event.
+2. Confirm killing the session dialog.
