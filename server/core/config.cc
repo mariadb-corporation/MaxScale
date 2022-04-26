@@ -2218,12 +2218,11 @@ std::unordered_set<CONFIG_CONTEXT*> get_spec_dependencies(const std::vector<CONF
     {
         if (obj->m_parameters.contains(p.second->name()))
         {
-            auto t = p.second->type();
+            std::string val = obj->m_parameters.get_string(p.second->name());
 
-            if (t == "service" || t == "server" || t == "target")
+            for (const auto& dep : p.second->get_dependencies(val))
             {
-                std::string v = obj->m_parameters.get_string(p.second->name());
-                rval.insert(name_to_object(objects, obj, v));
+                rval.insert(name_to_object(objects, obj, dep));
             }
         }
     }

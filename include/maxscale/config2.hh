@@ -377,6 +377,21 @@ public:
      */
     virtual json_t* to_json() const;
 
+    /**
+     * @brief Get the names of any objects that this parameter depends on
+     *
+     * By default parameters do not depend on any objects. This function is only used during startup when
+     * objects are being created from the configuration files and the order in which they are constructed is
+     * being resolved. Changes done at runtime do not need to know the dependencies as the objects either
+     * exist or do not.
+     *
+     * @param value The parameter value as a string
+     *
+     * @return The list of names of objects (servers, services etc.) that must be constructed before this
+     *         parameter can be configured
+     */
+    virtual std::vector<std::string> get_dependencies(const std::string& value) const;
+
 protected:
     Param(Specification* pSpecification,
           const char* zName,
@@ -1249,6 +1264,8 @@ public:
     json_t* to_json(value_type value) const;
     bool    from_json(const json_t* pJson, value_type* pValue,
                       std::string* pMessage = nullptr) const;
+
+    std::vector<std::string> get_dependencies(const std::string& value) const override;
 };
 
 /**
@@ -1277,6 +1294,8 @@ public:
     json_t* to_json(value_type value) const;
     bool    from_json(const json_t* pJson, value_type* pValue,
                       std::string* pMessage = nullptr) const;
+
+    std::vector<std::string> get_dependencies(const std::string& value) const override;
 };
 
 /**
@@ -1305,6 +1324,8 @@ public:
     json_t* to_json(value_type value) const;
     bool    from_json(const json_t* pJson, value_type* pValue,
                       std::string* pMessage = nullptr) const;
+
+    std::vector<std::string> get_dependencies(const std::string& value) const override;
 };
 
 /**
