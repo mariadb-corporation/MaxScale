@@ -1072,8 +1072,6 @@ set_tests_properties(bug471_big PROPERTIES TIMEOUT 3600)
 ############################################
 
 
-<<<<<<< HEAD
-=======
 ##############################################
 # BEGIN: DUMMY test to create GUI demo setup #
 ##############################################
@@ -1085,9 +1083,6 @@ add_test_executable_notest(gui_demo_galera.cpp gui_demo_galera gui_demo_galera L
 # BEGIN: DUMMY test to create GUI demo setup #
 ##############################################
 
-
-
->>>>>>> put gui_demo to proper place
 
 ###############################
 # DO NOT ADD TESTS AFTER THIS #
