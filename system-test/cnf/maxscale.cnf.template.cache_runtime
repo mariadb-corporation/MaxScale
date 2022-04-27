@@ -20,8 +20,8 @@ monitor_interval=1000ms
 type=filter
 module=cache
 enabled=false
-hard_ttl=16
-soft_ttl=8
+hard_ttl=16s
+soft_ttl=8s
 debug=31
 
 [RWS]
