@@ -37,7 +37,7 @@ export default {
     },
     data() {
         return {
-            emptyIcon: 'bug_report', // icon to be shown if there is a missing "frame"
+            emptyIcon: 'mdi-bug', // icon to be shown if there is a missing "frame"
         }
     },
     computed: {

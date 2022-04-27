@@ -36,7 +36,7 @@
                     </span>
 
                     <v-icon
-                        :class="[isProfileOpened ? 'arrow-up' : 'arrow-down']"
+                        :class="[isProfileOpened ? 'rotate-up' : 'rotate-down']"
                         size="14"
                         class="mr-0 ml-1 "
                         left

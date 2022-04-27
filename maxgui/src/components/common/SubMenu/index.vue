@@ -23,7 +23,7 @@
             >
                 <v-list-item-title class="color text-text" v-text="text" />
                 <v-icon size="24">
-                    arrow_right
+                    mdi-menu-right
                 </v-icon>
             </v-list-item>
             <div v-else v-on="on" @click="activator ? (isOpened = true) : (menuOpen = true)">

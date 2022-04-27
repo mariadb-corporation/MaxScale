@@ -126,7 +126,7 @@
                             required
                         >
                             <v-icon slot="append" size="20" @click="isPwdVisible = !isPwdVisible">
-                                {{ isPwdVisible ? 'visibility_off' : 'visibility' }}
+                                {{ isPwdVisible ? 'mdi-eye-off' : 'mdi-eye' }}
                             </v-icon>
                         </v-text-field>
                     </v-col>

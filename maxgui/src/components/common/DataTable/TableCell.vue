@@ -13,7 +13,7 @@
             class="color text-field-text"
             size="16"
         >
-            drag_handle
+            mdi-drag-horizontal-variant
         </v-icon>
 
         <div :style="{ ...itemWrapperAlign }" class="fill-height d-flex align-center relative">
@@ -27,11 +27,11 @@
                 @click="$emit('toggle-node', item)"
             >
                 <v-icon
-                    :class="[item.expanded === true ? 'arrow-down' : 'arrow-right']"
+                    :class="[item.expanded ? 'rotate-down' : 'rotate-right']"
                     size="24"
                     color="deep-ocean"
                 >
-                    $expand
+                    mdi-chevron-down
                 </v-icon>
             </v-btn>
 

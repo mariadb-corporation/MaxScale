@@ -42,9 +42,9 @@
                 </span>
             </div>
             <v-spacer />
-            <v-btn dark class="ml-4 mr-0" icon @click="snackbar_message.status = false">
+            <v-btn class="ml-4 mr-0" icon @click="snackbar_message.status = false">
                 <v-icon size="24">
-                    close
+                    mdi-close
                 </v-icon>
             </v-btn>
         </div>

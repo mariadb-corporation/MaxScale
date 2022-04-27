@@ -15,7 +15,7 @@
                 @click="openConfigDialog"
             >
                 <v-icon size="14" color="accent-dark">
-                    file_download
+                    mdi-download
                 </v-icon>
             </v-btn>
             <base-dialog

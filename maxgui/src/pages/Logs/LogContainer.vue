@@ -11,8 +11,8 @@
             @click="setVirtualListToBottom"
         >
             {{ $t('newMessagesAvailable') }}!
-            <v-icon class="arrow-down" size="32">
-                $expand
+            <v-icon class="rotate-down" size="32">
+                mdi-chevron-down
             </v-icon>
         </v-btn>
         <virtual-list

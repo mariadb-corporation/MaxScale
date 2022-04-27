@@ -72,7 +72,7 @@
                             color="accent-dark"
                             :class="{ 'rotate-icon__vert': !isVertTable }"
                         >
-                            rotate_90_degrees_ccw
+                            mdi-format-rotate-90
                         </v-icon>
                     </v-btn>
                 </template>
@@ -365,8 +365,5 @@ export default {
 }
 .table-tools {
     width: 100%;
-}
-.rotate-icon__vert {
-    transform: rotate(90deg);
 }
 </style>

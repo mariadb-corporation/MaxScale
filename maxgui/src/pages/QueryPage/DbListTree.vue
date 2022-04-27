@@ -47,7 +47,7 @@
                     x-small
                     @click="e => handleOpenCtxMenu({ e, item })"
                 >
-                    <v-icon size="12" color="deep-ocean">more_horiz</v-icon>
+                    <v-icon size="12" color="deep-ocean">mdi-dots-horizontal</v-icon>
                 </v-btn>
             </template>
         </m-treeview>

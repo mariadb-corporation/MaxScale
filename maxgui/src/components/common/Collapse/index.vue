@@ -19,11 +19,11 @@
                 >
                     <v-btn icon class="arrow-toggle" @click="toggleOnClick">
                         <v-icon
-                            :class="[isContentVisible ? 'arrow-down' : 'arrow-right']"
+                            :class="[isContentVisible ? 'rotate-down' : 'rotate-right']"
                             size="32"
                             color="deep-ocean"
                         >
-                            $expand
+                            mdi-chevron-down
                         </v-icon>
                     </v-btn>
                 </slot>

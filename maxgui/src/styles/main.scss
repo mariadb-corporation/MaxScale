@@ -13,8 +13,6 @@
 @import 'constants.scss';
 @import 'class_colors';
 @import 'helpers.scss';
-// Fonts
-@import 'fonts/material-icons';
 // Vuetify helper variables
 @import 'variables.scss';
 @import 'queryEditor.scss';
@@ -47,22 +45,22 @@ html {
     margin: 0 auto;
 }
 
-.arrow-toggle {
-    .arrow {
-        transition: 0.3s cubic-bezier(0.25, 0.8, 0.5, 1);
-        &-left {
-            transform: rotate(90deg);
-        }
-        &-up {
-            transform: rotate(180deg);
-        }
-        &-right {
-            transform: rotate(-90deg);
-        }
-        &-down {
-            transform: rotate(0deg);
-        }
+.rotate {
+    &-left {
+        transform: rotate(90deg);
     }
+    &-up {
+        transform: rotate(180deg);
+    }
+    &-right {
+        transform: rotate(-90deg);
+    }
+    &-down {
+        transform: rotate(0deg);
+    }
+}
+.rotate-icon__vert {
+    transform: rotate(90deg);
 }
 // Vuetify custom
 

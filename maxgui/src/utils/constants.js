@@ -58,7 +58,7 @@ export const APP_CONFIG = Object.freeze({
                 warning: '$vuetify.icons.statusInfo',
                 notice: '$vuetify.icons.reports',
                 info: '$vuetify.icons.statusInfo',
-                debug: 'bug_report',
+                debug: 'mdi-bug',
             },
             colorClasses: {
                 alert: 'text-error',

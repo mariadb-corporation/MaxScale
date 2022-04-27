@@ -8,7 +8,7 @@
                 icon
                 @click="addNewWs"
             >
-                <v-icon size="18" color="deep-ocean">add</v-icon>
+                <v-icon size="18" color="deep-ocean">mdi-plus</v-icon>
             </v-btn>
         </div>
 
@@ -30,7 +30,7 @@
                         @click="openFavoriteDialog"
                     >
                         <v-icon size="20">
-                            bookmark
+                            mdi-bookmark
                         </v-icon>
                     </v-btn>
                 </template>
@@ -79,8 +79,8 @@
                         v-on="on"
                         @click="SET_FULLSCREEN(!is_fullscreen)"
                     >
-                        <v-icon size="20" color="accent-dark">
-                            fullscreen{{ is_fullscreen ? '_exit' : '' }}
+                        <v-icon size="22" color="accent-dark">
+                            mdi-fullscreen{{ is_fullscreen ? '-exit' : '' }}
                         </v-icon>
                     </v-btn>
                 </template>

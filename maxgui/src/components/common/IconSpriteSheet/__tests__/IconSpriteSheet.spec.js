@@ -44,10 +44,10 @@ describe('IconSpriteSheet.vue', () => {
         wrapper.destroy()
     })
 
-    it(`Should render fallback bug_report icon if there is a missing frame`, () => {
+    it(`Should render fallback mdi-bug icon if there is a missing frame`, () => {
         const indexOfFrame = sheets.servers.frames.length
         wrapper = mockupSlotDefining({ propsData: { frame: indexOfFrame } })
-        expect(wrapper.vm.icon).to.be.equals('bug_report')
+        expect(wrapper.vm.icon).to.be.equals('mdi-bug')
     })
 
     it(`Should ignore frame color class if color props is defined`, () => {

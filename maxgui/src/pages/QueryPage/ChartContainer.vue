@@ -10,7 +10,7 @@
                 <template v-slot:activator="{ on }">
                     <v-btn small icon depressed color="accent-dark" v-on="on" @click="exportToJpeg">
                         <v-icon size="16" color="accent-dark">
-                            file_download
+                            mdi-download
                         </v-icon>
                     </v-btn>
                 </template>
@@ -30,7 +30,7 @@
                         @click="chartOpt.isMaximized = !chartOpt.isMaximized"
                     >
                         <v-icon size="18" color="accent-dark">
-                            fullscreen{{ chartOpt.isMaximized ? '_exit' : '' }}
+                            mdi-fullscreen{{ chartOpt.isMaximized ? '-exit' : '' }}
                         </v-icon>
                     </v-btn>
                 </template>

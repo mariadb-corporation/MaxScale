@@ -51,14 +51,14 @@
                                     @click="SET_IS_SIDEBAR_COLLAPSED(!is_sidebar_collapsed)"
                                 >
                                     <v-icon
-                                        size="16"
+                                        size="22"
                                         color="deep-ocean"
                                         class="collapse-icon"
-                                        :class="{
-                                            'collapse-icon--active': is_sidebar_collapsed,
-                                        }"
+                                        :class="[
+                                            is_sidebar_collapsed ? 'rotate-right' : 'rotate-left',
+                                        ]"
                                     >
-                                        double_arrow
+                                        mdi-chevron-double-down
                                     </v-icon>
                                 </v-btn>
                             </template>
@@ -285,12 +285,6 @@ export default {
     .db-tb-list__title {
         font-size: 12px;
         margin-right: auto;
-    }
-    .collapse-icon {
-        transform: rotate(-180deg);
-        &--active {
-            transform: rotate(0deg);
-        }
     }
     ::v-deep .std.filter-objects {
         input {

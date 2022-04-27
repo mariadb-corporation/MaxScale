@@ -8,11 +8,11 @@
         <template v-slot:arrow-toggle="{ toggleOnClick, isContentVisible }">
             <v-btn icon small class="arrow-toggle" @click="toggleOnClick">
                 <v-icon
-                    :class="[isContentVisible ? 'arrow-down' : 'arrow-right']"
+                    :class="[isContentVisible ? 'rotate-down' : 'rotate-right']"
                     size="28"
                     color="deep-ocean"
                 >
-                    $expand
+                    mdi-chevron-down
                 </v-icon>
             </v-btn>
         </template>

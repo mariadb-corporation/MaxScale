@@ -26,9 +26,9 @@
                     <v-icon
                         size="24"
                         color="accent-dark"
-                        :class="{ 'filter-list-toggle--active': value }"
+                        :class="[value ? 'rotate-up' : 'rotate-down']"
                     >
-                        arrow_drop_down
+                        mdi-menu-down
                     </v-icon>
                 </v-btn>
             </template>

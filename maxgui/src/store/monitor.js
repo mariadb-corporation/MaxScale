@@ -423,7 +423,7 @@ export default {
                 [RELEASE_LOCKS]: {
                     text: scope.$t(`monitorOps.actions.${RELEASE_LOCKS}`),
                     type: RELEASE_LOCKS,
-                    icon: 'lock_open',
+                    icon: 'mdi-lock-open-outline',
                     iconSize: 24,
                     color: 'primary',
                     disabled: false,

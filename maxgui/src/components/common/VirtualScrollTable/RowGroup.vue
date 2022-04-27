@@ -9,11 +9,11 @@
         >
             <v-btn width="24" height="24" class="arrow-toggle" icon @click="toggleRowGroup">
                 <v-icon
-                    :class="[isCollapsed ? 'arrow-right' : 'arrow-down']"
+                    :class="[isCollapsed ? 'rotate-right' : 'rotate-down']"
                     size="24"
                     color="deep-ocean"
                 >
-                    $expand
+                    mdi-chevron-down
                 </v-icon>
             </v-btn>
             <slot name="row-content-prepend"></slot>

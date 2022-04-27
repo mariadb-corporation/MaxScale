@@ -56,8 +56,8 @@
             color="#e3e6ea"
             @click="toggleExpand(node)"
         >
-            <v-icon :class="[isExpanded ? 'arrow-up' : 'arrow-down']" size="20" color="primary">
-                $expand
+            <v-icon :class="[isExpanded ? 'rotate-up' : 'rotate-down']" size="20" color="primary">
+                mdi-chevron-down
             </v-icon>
         </v-btn>
     </div>

@@ -117,7 +117,7 @@
                                     color="#9DB4BB"
                                     v-on="on"
                                 >
-                                    info
+                                    mdi-information-outline
                                 </v-icon>
                             </template>
                             <span>{{ $t('info.showTrendline') }}</span>
