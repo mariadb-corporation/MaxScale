@@ -148,6 +148,12 @@ bool handle_async_cs_remove_node(const MODULECMD_ARG* args, json_t** output)
     return rval;
 }
 
+bool handle_cs_get_status(const MODULECMD_ARG* args, json_t** output)
+{
+    auto* mon = static_cast<MariaDBMonitor*>(args->argv[0].value.monitor);
+    return mon->run_cs_get_status(output);
+}
+
 bool handle_async_cs_get_status(const MODULECMD_ARG* args, json_t** output)
 {
     auto* mon = static_cast<MariaDBMonitor*>(args->argv[0].value.monitor);
@@ -495,6 +501,11 @@ void register_monitor_commands()
                                MXS_ARRAY_NELEMS(csmon_remove_node_argv), csmon_remove_node_argv,
                                "Remove a node from a ColumnStore cluster. Does not wait for completion.");
 
+    modulecmd_register_command(MXB_MODULE_NAME, "cs-get-status", MODULECMD_TYPE_ACTIVE,
+                               handle_cs_get_status,
+                               MXS_ARRAY_NELEMS(fetch_cmd_result_argv), fetch_cmd_result_argv,
+                               "Get ColumnStore cluster status.");
+
     modulecmd_register_command(MXB_MODULE_NAME, "async-cs-get-status", MODULECMD_TYPE_ACTIVE,
                                handle_async_cs_get_status,
                                MXS_ARRAY_NELEMS(fetch_cmd_result_argv), fetch_cmd_result_argv,
@@ -701,6 +712,14 @@ bool MariaDBMonitor::schedule_cs_remove_node(const std::string& host, std::chron
     return schedule_manual_command(func, cs_remove_node_cmd, error_out);
 }
 
+bool MariaDBMonitor::run_cs_get_status(json_t** output)
+{
+    auto func = [this]() {
+        return manual_cs_get_status();
+    };
+    return execute_manual_command(func, cs_get_status_cmd, output);
+}
+
 bool MariaDBMonitor::schedule_cs_get_status(json_t** output)
 {
     auto func = [this]() {
@@ -713,7 +732,7 @@ MariaDBMonitor::CsRestResult MariaDBMonitor::check_cs_rest_result(const mxb::htt
 {
     bool rval = false;
     string err_str;
-    mxb::Json json_data;
+    mxb::Json json_data(mxb::Json::Type::UNDEFINED);
 
     if (resp.is_success())
     {
@@ -728,46 +747,51 @@ MariaDBMonitor::CsRestResult MariaDBMonitor::check_cs_rest_result(const mxb::htt
                                          json_data.error_msg().c_str());
         }
     }
-    else if (resp.is_client_error())
-    {
-        err_str = mxb::string_printf("HTTP client error %d: %s", resp.code, resp.body.c_str());
-    }
-    else if (resp.is_fatal())
-    {
-        err_str = mxb::string_printf("REST-API call failed. Error %d: %s. %s", resp.code,
-                                     mxb::http::Response::to_string(resp.code), resp.body.c_str());
-    }
-    else if (resp.is_server_error())
-    {
-        err_str = mxb::string_printf("Server error %d: %s.", resp.code,
-                                     mxb::http::Response::to_string(resp.code));
-    }
     else
     {
-        err_str = mxb::string_printf("Unexpected response from server. Error %d: %s.",
-                                     resp.code, mxb::http::Response::to_string(resp.code));
+        auto rc_desc = mxb::http::Response::to_string(resp.code);
+
+        if (resp.is_fatal())
+        {
+            err_str = mxb::string_printf("REST-API call failed. Error %d: %s", resp.code, rc_desc);
+        }
+        else
+        {
+            err_str = mxb::string_printf("Error %d: %s", resp.code, rc_desc);
+        }
+
+        // The response body is json, try parse it and get CS error information.
+        mxb::Json cs_error;
+        if (cs_error.load_string(resp.body))
+        {
+            auto cs_err_desc = cs_error.get_string("error");
+            if (!cs_err_desc.empty())
+            {
+                err_str.append(" ColumnStore error: ").append(cs_err_desc);
+            }
+        }
     }
 
     return {rval, err_str, json_data};
 }
 
 MariaDBMonitor::ManualCommand::Result
-MariaDBMonitor::manual_cs_add_node(const std::string& host, std::chrono::seconds timeout)
+MariaDBMonitor::manual_cs_add_node(const std::string& node_host, std::chrono::seconds timeout)
 {
     RestDataFields input = {{"timeout", std::to_string(timeout.count())},
-                            {"node", mxb::string_printf("\"%s\"", host.c_str())}};
+                            {"node", mxb::string_printf("\"%s\"", node_host.c_str())}};
     auto [ok, rest_error, rest_output] = run_cs_rest_cmd(HttpCmd::PUT, "node", input, timeout);
 
     ManualCommand::Result rval;
     if (ok)
     {
-        // TODO: check output data
         rval.success = true;
+        rval.output = rest_output.release();
     }
     else
     {
-        string errmsg = mxb::string_printf("Could not add node %s to the ColumnStore cluster: %s",
-                                           host.c_str(), rest_error.c_str());
+        string errmsg = mxb::string_printf("Could not add node '%s' to the ColumnStore cluster. %s",
+                                           node_host.c_str(), rest_error.c_str());
         rval.output = mxs_json_error_append(rval.output, "%s", errmsg.c_str());
         MXB_ERROR("%s", errmsg.c_str());
     }
@@ -775,22 +799,22 @@ MariaDBMonitor::manual_cs_add_node(const std::string& host, std::chrono::seconds
 }
 
 MariaDBMonitor::ManualCommand::Result
-MariaDBMonitor::manual_cs_remove_node(const std::string& host, std::chrono::seconds timeout)
+MariaDBMonitor::manual_cs_remove_node(const std::string& node_host, std::chrono::seconds timeout)
 {
     RestDataFields input = {{"timeout", std::to_string(timeout.count())},
-                            {"node", mxb::string_printf("\"%s\"", host.c_str())}};
+                            {"node", mxb::string_printf("\"%s\"", node_host.c_str())}};
     auto [ok, rest_error, rest_output] = run_cs_rest_cmd(HttpCmd::DELETE, "node", input, timeout);
 
     ManualCommand::Result rval;
     if (ok)
     {
-        // TODO: check output data
         rval.success = true;
+        rval.output = rest_output.release();
     }
     else
     {
-        string errmsg = mxb::string_printf("Could not remove node %s from the ColumnStore cluster: %s",
-                                           host.c_str(), rest_error.c_str());
+        string errmsg = mxb::string_printf("Could not remove node '%s' from the ColumnStore cluster: %s",
+                                           node_host.c_str(), rest_error.c_str());
         rval.output = mxs_json_error_append(rval.output, "%s", errmsg.c_str());
         MXB_ERROR("%s", errmsg.c_str());
     }
@@ -804,8 +828,8 @@ MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_cs_get_status()
     ManualCommand::Result rval;
     if (ok)
     {
-        rval.output = rest_output.release();
         rval.success = true;
+        rval.output = rest_output.release();
     }
     else
     {
@@ -824,7 +848,8 @@ MariaDBMonitor::run_cs_rest_cmd(HttpCmd httcmd, const std::string& rest_cmd, con
     auto& srvs = servers();
     if (srvs.empty())
     {
-        return {false, "No valid server to send ColumnStore REST-API command found", mxb::Json()};
+        return {false, "No valid server to send ColumnStore REST-API command found",
+                mxb::Json(mxb::Json::Type::UNDEFINED)};
     }
     else
     {

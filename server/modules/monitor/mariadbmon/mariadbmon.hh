@@ -215,6 +215,14 @@ public:
     bool schedule_cs_remove_node(const std::string& host, std::chrono::seconds timeout, json_t** error_out);
 
     /**
+     * Get ColumnStore cluster status.
+     *
+     * @param output Output
+     * @return True if status was fetched
+     */
+    bool run_cs_get_status(json_t** output);
+
+    /**
      * Get ColumnStore cluster status. Does not wait for results, which should be fetched separately.
      *
      * @param output Output
@@ -541,8 +549,8 @@ private:
     void                  handle_auto_rejoin();
 
     // ColumnStore operations
-    ManualCommand::Result manual_cs_add_node(const std::string& host, std::chrono::seconds timeout);
-    ManualCommand::Result manual_cs_remove_node(const std::string& host, std::chrono::seconds timeout);
+    ManualCommand::Result manual_cs_add_node(const std::string& node_host, std::chrono::seconds timeout);
+    ManualCommand::Result manual_cs_remove_node(const std::string& node_host, std::chrono::seconds timeout);
     ManualCommand::Result manual_cs_get_status();
 
     enum class HttpCmd
