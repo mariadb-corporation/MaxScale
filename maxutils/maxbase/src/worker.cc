@@ -87,82 +87,76 @@ namespace maxbase
 
 string epoll_events_to_string(EPOLL_EVENTS events)
 {
+
+#define CHECK_EPOLL_EVENT(EVENT)\
+        if (events & EVENT)\
+        {\
+           rv.push_back(#EVENT);\
+        }
+
     vector<string> rv;
 
-    if (events & EPOLLIN)
-    {
-        rv.push_back("EPOLLIN");
-    }
+#if defined(EPOLLIN)
+    CHECK_EPOLL_EVENT(EPOLLIN);
+#endif
 
-    if (events & EPOLLPRI)
-    {
-        rv.push_back("EPOLLPRI");
-    }
+#if defined(EPOLLPRI)
+    CHECK_EPOLL_EVENT(EPOLLPRI);
+#endif
 
-    if (events & EPOLLOUT)
-    {
-        rv.push_back("EPOLLOUT");
-    }
+#if defined(EPOLLOUT)
+    CHECK_EPOLL_EVENT(EPOLLOUT);
+#endif
 
-    if (events & EPOLLRDNORM)
-    {
-        rv.push_back("EPOLLRDNORM");
-    }
+#if defined(EPOLLRDNORM)
+    CHECK_EPOLL_EVENT(EPOLLRDNORM);
+#endif
 
-    if (events & EPOLLRDBAND)
-    {
-        rv.push_back("EPOLLRDBAND");
-    }
+#if defined(EPOLLRDBAND)
+    CHECK_EPOLL_EVENT(EPOLLRDBAND);
+#endif
 
-    if (events & EPOLLWRNORM)
-    {
-        rv.push_back("EPOLLWRNORM");
-    }
+#if defined(EPOLLWRNORM)
+    CHECK_EPOLL_EVENT(EPOLLWRNORM);
+#endif
 
-    if (events & EPOLLWRBAND)
-    {
-        rv.push_back("EPOLLWRBAND");
-    }
+#if defined(EPOLLWRBAND)
+    CHECK_EPOLL_EVENT(EPOLLWRBAND);
+#endif
 
-    if (events & EPOLLMSG)
-    {
-        rv.push_back("EPOLLMSG");
-    }
+#if defined(EPOLLMSG)
+    CHECK_EPOLL_EVENT(EPOLLMSG);
+#endif
 
-    if (events & EPOLLERR)
-    {
-        rv.push_back("EPOLLERR");
-    }
+#if defined(EPOLLERR)
+    CHECK_EPOLL_EVENT(EPOLLERR);
+#endif
 
-    if (events & EPOLLHUP)
-    {
-        rv.push_back("EPOLLHUP");
-    }
+#if defined(EPOLLHUP)
+    CHECK_EPOLL_EVENT(EPOLLHUP);
+#endif
 
-    if (events & EPOLLRDHUP)
-    {
-        rv.push_back("EPOLLRDHUP");
-    }
+#if defined(EPOLLRDHUP)
+    CHECK_EPOLL_EVENT(EPOLLRDHUP);
+#endif
 
-    if (events & EPOLLEXCLUSIVE)
-    {
-        rv.push_back("EPOLLEXCLUSIVE");
-    }
+#if defined(EPOLLEXCLUSIVE)
+    CHECK_EPOLL_EVENT(EPOLLEXCLUSIVE);
+#endif
 
-    if (events & EPOLLWAKEUP)
-    {
-        rv.push_back("EPOLLWAKEUP");
-    }
+#if defined(EPOLLWAKEUP)
+    CHECK_EPOLL_EVENT(EPOLLWAKEUP);
+#endif
 
-    if (events & EPOLLONESHOT)
-    {
-        rv.push_back("EPOLLONESHOT");
-    }
+#if defined(EPOLLONESHOT)
+    CHECK_EPOLL_EVENT(EPOLLONESHOT);
+#endif
 
-    if (events & EPOLLET)
-    {
-        rv.push_back("EPOLLET");
-    }
+#if defined(EPOLLET)
+    CHECK_EPOLL_EVENT(EPOLLET);
+#endif
+
+#undef CHECK_EPOLL_EVENT
 
     return mxb::join(rv, "|");
 }
