@@ -204,8 +204,39 @@ describe("Authentication", function () {
       return request.post(base_url + "/users/inet", { json: user }).should.be.rejected;
     });
 
-    it("get created user", function () {
-      return request.get(base_url + "/users/inet/user1").should.be.fulfilled;
+    it("get created user", async function () {
+      const res = await request.get(base_url + "/users/inet/user1");
+      const attr = res.data.attributes;
+      expect(attr.created).to.not.be.null;
+      expect(attr.last_update).to.be.null;
+      expect(attr.last_login).to.be.null;
+    });
+
+    it("last_login timestamp is updated", async function () {
+      await request.get(base_url + "/users", { auth: { username: "user1", password: "pw1" } });
+      const res = await request.get(base_url + "/users/inet/user1");
+      expect(res.data.attributes.last_login).to.not.be.null;
+
+      // Do another request, the login timestamp should be updated
+      await new Promise((res) => setTimeout(res, 1500));
+      await request.get(base_url + "/users", { auth: { username: "user1", password: "pw1" } });
+      const res2 = await request.get(base_url + "/users/inet/user1");
+      expect(res2.data.attributes.last_login).to.not.be.null;
+      expect(res2.data.attributes.last_login).to.not.equal(res.data.attributes.last_login);
+    });
+
+    it("last_update timestamp is updated", async function () {
+      const payload = { data: { attributes: { password: "pw2" } } };
+      await request.patch(base_url + "/users/inet/user1", { json: payload });
+      const res = await request.get(base_url + "/users/inet/user1");
+      expect(res.data.attributes.last_update).to.not.be.null;
+
+      // Sleep for a while and PATCH it again, the timestamp should change
+      await new Promise((res) => setTimeout(res, 1500));
+      payload.data.attributes.password = "pw1";
+      await request.patch(base_url + "/users/inet/user1", { json: payload });
+      const res2 = await request.get(base_url + "/users/inet/user1");
+      expect(res2.data.attributes.last_update).to.not.equal(res.data.attributes.last_update);
     });
 
     it("get non-existent user", function () {
