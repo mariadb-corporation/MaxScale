@@ -153,7 +153,8 @@ size_t header_callback(char* ptr, size_t size, size_t nmemb, void* userdata)
 enum class CurlOp
 {
     GET,
-    PUT
+    PUT,
+    DELETE
 };
 
 CURL* get_easy_curl(CurlOp op,
@@ -175,6 +176,10 @@ CURL* get_easy_curl(CurlOp op,
             // checked_curl_setopt(pCurl, CURLOPT_PUT, 1) cannot be used as it expects
             // a file to be uploaded.
             checked_curl_setopt(pCurl, CURLOPT_CUSTOMREQUEST, "PUT");
+        }
+        else if (op == CurlOp::DELETE)
+        {
+            checked_curl_setopt(pCurl, CURLOPT_CUSTOMREQUEST, "DELETE");
         }
 
         if (!config.ssl_verifypeer)
@@ -742,9 +747,9 @@ Response execute(CurlOp op,
     {
     case CURLE_OK:
         {
-            long code = 0;      // needs to be a long
-            curl_easy_getinfo(pCurl, CURLINFO_RESPONSE_CODE, &code);
-            res.code = code;
+            long resp_code = 0;     // needs to be a long
+            curl_easy_getinfo(pCurl, CURLINFO_RESPONSE_CODE, &resp_code);
+            res.code = resp_code;
         }
         break;
 
@@ -823,6 +828,15 @@ vector<Response> put(const std::vector<std::string>& urls,
                      const Config& config)
 {
     return execute(CurlOp::PUT, urls, body, user, password, config);
+}
+
+Response del(const std::string& url,
+             const std::string& body,
+             const std::string& user,
+             const std::string& password,
+             const Config& config)
+{
+    return execute(CurlOp::DELETE, url, body, user, password, config);
 }
 
 const char* to_string(Async::status_t status)

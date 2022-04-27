@@ -256,6 +256,30 @@ inline Responses put(const std::vector<std::string>& urls,
 }
 
 /**
+ * Do a HTTP DELETE.
+ *
+ * @param url       The URL to DELETE.
+ * @param body      The body of the DELETE (optional)
+ * @param user      Username to use (optional).
+ * @param password  Password for the user (optional).
+ * @param config    The config to use (optional)
+ *
+ * @note The @c url is assumed to be escaped in case it contain arguments
+ *       that must be escaped.
+ *
+ * @return A @c Response.
+ */
+Response del(const std::string& url,
+             const std::string& body,
+             const std::string& user, const std::string& password,
+             const Config& config = Config());
+
+inline Response del(const std::string& url, const std::string& body, const Config& config = Config())
+{
+    return del(url, body, "", "", config);
+}
+
+/**
  * @class mxb::http::Async
  *
  * Class for performing multiple HTTP GETs concurrently and asynchronously.

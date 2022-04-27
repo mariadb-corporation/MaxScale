@@ -483,9 +483,16 @@ void register_monitor_commands()
                                MXS_ARRAY_NELEMS(csmon_add_node_argv), csmon_add_node_argv,
                                "Add a node to a ColumnStore cluster. Does not wait for completion.");
 
+    const modulecmd_arg_type_t csmon_remove_node_argv[] =
+    {
+        { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
+        { MODULECMD_ARG_STRING, "Hostname/IP of node to remove from ColumnStore cluster" },
+        { MODULECMD_ARG_STRING, "Timeout." }
+    };
+
     modulecmd_register_command(MXB_MODULE_NAME, "async-cs-remove-node", MODULECMD_TYPE_ACTIVE,
                                handle_async_cs_remove_node,
-                               MXS_ARRAY_NELEMS(csmon_add_node_argv), csmon_add_node_argv,
+                               MXS_ARRAY_NELEMS(csmon_remove_node_argv), csmon_remove_node_argv,
                                "Remove a node from a ColumnStore cluster. Does not wait for completion.");
 
     modulecmd_register_command(MXB_MODULE_NAME, "async-cs-get-status", MODULECMD_TYPE_ACTIVE,
@@ -852,9 +859,7 @@ MariaDBMonitor::run_cs_rest_cmd(HttpCmd httcmd, const std::string& rest_cmd, con
             break;
 
         case HttpCmd::DELETE:
-            // TODO: add delete to mxb::http
-            // response = mxb::http::delete(url, body, http_config);
-            mxb_assert(!true);
+            response = mxb::http::del(url, body, http_config);
             break;
         }
 
