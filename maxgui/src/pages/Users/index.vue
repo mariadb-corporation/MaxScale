@@ -118,6 +118,9 @@ export default {
                 { text: 'Username', value: 'id' },
                 { text: 'Role', value: 'role' },
                 { text: 'Type', value: 'type' },
+                { text: 'Created', value: 'created' },
+                { text: 'Last Updated', value: 'last_update' },
+                { text: 'Last Login', value: 'last_login' },
             ],
             tableHeight: 0,
             userDlg: {
@@ -142,8 +145,19 @@ export default {
         tableRows() {
             let rows = []
             for (const user of this.all_inet_users) {
-                const { id, type, attributes: { account } = {} } = user
-                rows.push({ id, role: account, type })
+                const {
+                    id,
+                    type,
+                    attributes: { account, created, last_update, last_login } = {},
+                } = user
+                rows.push({
+                    id,
+                    role: account,
+                    type,
+                    created: created ? this.$help.dateFormat({ value: created }) : '',
+                    last_update: last_update ? this.$help.dateFormat({ value: last_update }) : '',
+                    last_login: last_login ? this.$help.dateFormat({ value: last_login }) : '',
+                })
             }
             return rows
         },
