@@ -170,3 +170,11 @@ bool mxs_admin_https_enabled();
  * validation of the headers which means this is meant only for testing purposes.
  */
 bool mxs_admin_enable_cors();
+
+/**
+ * @brief Reload administrative interface TLS certificates
+ *
+ * @return True if the certificates were reloaded successfully. False if the reloading fails in which case the
+ *         old certificates remain in use.
+ */
+bool mxs_admin_reload_tls();

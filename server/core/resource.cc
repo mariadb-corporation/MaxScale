@@ -25,6 +25,7 @@
 #include <maxscale/modulecmd.hh>
 #include <maxscale/routingworker.hh>
 
+#include "internal/admin.hh"
 #include "internal/adminusers.hh"
 #include "internal/config.hh"
 #include "internal/config_runtime.hh"
@@ -897,8 +898,7 @@ HttpResponse cb_flush(const HttpRequest& request)
 
 HttpResponse cb_tls_reload(const HttpRequest& request)
 {
-    // TODO: Reload REST API certificates as well
-    if (!ServerManager::reload_tls() || !Listener::reload_tls())
+    if (!ServerManager::reload_tls() || !Listener::reload_tls() || !mxs_admin_reload_tls())
     {
         return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
     }

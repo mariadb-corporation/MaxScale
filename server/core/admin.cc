@@ -24,6 +24,7 @@
 #include <microhttpd.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <gnutls/abstract.h>
 
 #include <maxbase/assert.hh>
 #include <maxscale/config.hh>
@@ -77,17 +78,39 @@ const std::string TOKEN_ISSUER = "maxscale";
 const std::string TOKEN_BODY = "token_body";
 const std::string TOKEN_SIG = "token_sig";
 
+// Wrapper for managing GnuTLS certificates and keys
+struct Creds
+{
+public:
+    static std::unique_ptr<Creds> create(const std::string& cert_file, const std::string& key_file);
+
+    void set(gnutls_pcert_st** pcert,
+             unsigned int* pcert_length,
+             gnutls_privkey_t* pkey);
+
+    ~Creds();
+
+private:
+    Creds(gnutls_privkey_t pkey, gnutls_pcert_st pcert, unsigned int num_pcert);
+
+    gnutls_privkey_t m_pkey;
+    gnutls_pcert_st  m_pcert;
+    unsigned int     m_num_pcert = 1000;    // Limit of how many certs to read
+};
+
 static struct ThisUnit
 {
     struct MHD_Daemon* daemon = nullptr;
-    std::string        ssl_key;
     std::string        ssl_version;
-    std::string        ssl_cert;
     std::string        ssl_ca;
     bool               using_ssl = false;
     bool               log_daemon_errors = true;
     bool               cors = false;
     std::atomic<bool>  running {true};
+
+    std::mutex             lock;
+    std::unique_ptr<Creds> creds;
+    std::unique_ptr<Creds> next_creds;
 
     std::unordered_map<std::string, std::string> files;
 } this_unit;
@@ -275,6 +298,71 @@ static const char* get_ssl_version(const mxb::ssl_version::Version ssl_version)
     return "";
 }
 
+// static
+std::unique_ptr<Creds> Creds::create(const std::string& cert_file, const std::string& key_file)
+{
+    std::unique_ptr<Creds> rval;
+
+    auto cert = load_file(cert_file.c_str());
+    gnutls_datum_t data;
+    data.data = reinterpret_cast<uint8_t*>(cert.data());
+    data.size = cert.size();
+    gnutls_pcert_st pcert;
+    unsigned int num_pcert = 1000;      // The maximum number of certificates that are read from the file
+
+    int rc = gnutls_pcert_list_import_x509_raw(&pcert, &num_pcert, &data, GNUTLS_X509_FMT_PEM, 0);
+
+    if (rc == 0)
+    {
+        gnutls_privkey_t pkey;
+        gnutls_privkey_init(&pkey);
+
+        auto key = load_file(key_file.c_str());
+        data.data = reinterpret_cast<uint8_t*>(key.data());
+        data.size = key.size();
+        rc = gnutls_privkey_import_x509_raw(pkey, &data, GNUTLS_X509_FMT_PEM, nullptr, 0);
+
+        if (rc == 0)
+        {
+            rval.reset(new Creds(pkey, pcert, num_pcert));
+        }
+        else
+        {
+            MXB_ERROR("Failed to load REST API TLS private key: %s", gnutls_strerror(rc));
+            gnutls_privkey_deinit(pkey);
+            gnutls_pcert_deinit(&pcert);
+        }
+    }
+    else
+    {
+        MXB_ERROR("Failed to load REST API TLS public certificate: %s", gnutls_strerror(rc));
+    }
+
+    return rval;
+}
+
+void Creds::set(gnutls_pcert_st** pcert,
+                unsigned int* pcert_length,
+                gnutls_privkey_t* pkey)
+{
+    *pcert = &m_pcert;
+    *pcert_length = m_num_pcert;
+    *pkey = m_pkey;
+}
+
+Creds::Creds(gnutls_privkey_t pkey, gnutls_pcert_st pcert, unsigned int num_pcert)
+    : m_pkey(pkey)
+    , m_pcert(pcert)
+    , m_num_pcert(num_pcert)
+{
+}
+
+Creds::~Creds()
+{
+    gnutls_privkey_deinit(m_pkey);
+    gnutls_pcert_deinit(&m_pcert);
+}
+
 static bool load_ssl_certificates()
 {
     bool rval = true;
@@ -285,8 +373,7 @@ static bool load_ssl_certificates()
 
     if (!key.empty() && !cert.empty())
     {
-        this_unit.ssl_key = load_file(key.c_str());
-        this_unit.ssl_cert = load_file(cert.c_str());
+        rval = false;
         this_unit.ssl_version = get_ssl_version(config.admin_ssl_version);
 
         if (!ca.empty())
@@ -294,12 +381,16 @@ static bool load_ssl_certificates()
             this_unit.ssl_ca = load_file(ca.c_str());
         }
 
-        rval = !this_unit.ssl_key.empty() && !this_unit.ssl_cert.empty()
-            && (ca.empty() || !this_unit.ssl_ca.empty());
-
-        if (rval)
+        if (auto creds = Creds::create(cert, key))
         {
-            this_unit.using_ssl = true;
+            std::lock_guard guard(this_unit.lock);
+            this_unit.creds = std::move(creds);
+
+            if (ca.empty() || !this_unit.ssl_ca.empty())
+            {
+                this_unit.using_ssl = true;
+                rval = true;
+            }
         }
     }
 
@@ -961,6 +1052,27 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
     return rval;
 }
 
+int cert_callback(gnutls_session_t session,
+                  const gnutls_datum_t* req_ca_dn,
+                  int nreqs,
+                  const gnutls_pk_algorithm_t* pk_algos,
+                  int pk_algos_length,
+                  gnutls_pcert_st** pcert,
+                  unsigned int* pcert_length,
+                  gnutls_privkey_t* pkey)
+{
+    std::lock_guard guard(this_unit.lock);
+    mxb_assert(this_unit.creds);
+
+    if (this_unit.next_creds)
+    {
+        this_unit.creds.reset(this_unit.next_creds.release());
+    }
+
+    this_unit.creds->set(pcert, pcert_length, pkey);
+    return 0;
+}
+
 bool mxs_admin_init()
 {
     struct sockaddr_storage addr;
@@ -999,8 +1111,7 @@ bool mxs_admin_init()
                                             MHD_OPTION_NOTIFY_COMPLETED, close_client, NULL,
                                             MHD_OPTION_SOCK_ADDR, &addr,
                                             !this_unit.using_ssl ? MHD_OPTION_END :
-                                            MHD_OPTION_HTTPS_MEM_KEY, this_unit.ssl_key.c_str(),
-                                            MHD_OPTION_HTTPS_MEM_CERT, this_unit.ssl_cert.c_str(),
+                                            MHD_OPTION_HTTPS_CERT_CALLBACK, cert_callback,
                                             MHD_OPTION_HTTPS_PRIORITIES, this_unit.ssl_version.c_str(),
                                             this_unit.ssl_ca.empty() ? MHD_OPTION_END :
                                             MHD_OPTION_HTTPS_MEM_TRUST, this_unit.ssl_ca.c_str(),
@@ -1036,4 +1147,28 @@ bool mxs_admin_https_enabled()
 bool mxs_admin_enable_cors()
 {
     return this_unit.cors = true;
+}
+
+bool mxs_admin_reload_tls()
+{
+    bool rval = true;
+    mxb_assert(mxs::MainWorker::is_main_worker());
+    const auto& config = mxs::Config::get();
+    const auto& cert = config.admin_ssl_cert;
+    const auto& key = config.admin_ssl_key;
+
+    if (!cert.empty() && !key.empty())
+    {
+        if (auto creds = Creds::create(cert, key))
+        {
+            std::lock_guard guard(this_unit.lock);
+            this_unit.next_creds = std::move(creds);
+        }
+        else
+        {
+            rval = false;
+        }
+    }
+
+    return rval;
 }

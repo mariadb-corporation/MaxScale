@@ -278,7 +278,14 @@ message is ignored.
 POST /v1/maxscale/tls/reload
 ```
 
-Reloads all TLS certificates for listeners and servers.
+Reloads all TLS certificates for listeners and servers as well as the REST API
+itself. If the reloading fails, the old certificates will remain in use for the
+objects that failed to reload.
+
+The reloading is not transactional: if a single listener or server fails to
+reload its certificates, the remaining ones are not reloaded. This means that a
+failed reload can partially reload certificates. The REST API certificates are
+only reloaded if all other certificate reloads were successful.
 
 #### Response
 
