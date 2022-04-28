@@ -254,7 +254,9 @@ export default {
         ...mapGetters({
             getIsQuerying: 'query/getIsQuerying',
             getLoadingQueryResult: 'query/getLoadingQueryResult',
+            getIsStoppingQuery: 'query/getIsStoppingQuery',
             getDbNodes: 'query/getDbNodes',
+            getBgConn: 'query/getBgConn',
         }),
         //Prevent parallel querying
         shouldDisableExecute() {
@@ -268,6 +270,14 @@ export default {
         hasActiveConn() {
             return this.$typy(this.active_sql_conn, 'id').isDefined
         },
+        isQueryKilled() {
+            return !this.getLoadingQueryResult && !this.getIsStoppingQuery
+        },
+    },
+    watch: {
+        async isQueryKilled(v) {
+            if (v) await this.disconnectBgConn(this.getBgConn)
+        },
     },
     methods: {
         ...mapMutations({
@@ -280,6 +290,7 @@ export default {
             fetchQueryResult: 'query/fetchQueryResult',
             stopQuery: 'query/stopQuery',
             useDb: 'query/useDb',
+            disconnectBgConn: 'query/disconnectBgConn',
         }),
         async handleSelectDb(db) {
             await this.useDb(db)

@@ -104,6 +104,7 @@ function memStates() {
         prvw_data_map: {},
         prvw_data_details_map: {},
         query_results_map: {},
+        is_stopping_query_map: {},
     }
 }
 
@@ -152,6 +153,7 @@ function memStatesMutationCreator() {
                     case 'is_querying_map':
                     case 'curr_editor_mode_map':
                     case 'lost_cnn_err_msg_obj_map':
+                    case 'is_stopping_query_map':
                         state[key] = { ...state[key], [id]: payload }
                         break
                     default:
@@ -1101,8 +1103,6 @@ export default {
                     },
                     { root: true }
                 )
-
-                await dispatch('disconnectBgConn', active_sql_conn)
             } catch (e) {
                 commit('UPDATE_QUERY_RESULTS_MAP', {
                     id: active_wke_id,
@@ -1113,11 +1113,14 @@ export default {
             }
         },
         async stopQuery({ state, commit, getters }) {
+            const active_sql_conn = state.active_sql_conn
+            const active_wke_id = state.active_wke_id
             try {
+                commit('UPDATE_IS_STOPPING_QUERY_MAP', { id: active_wke_id, payload: true })
                 const {
                     data: { data: { attributes: { results = [] } = {} } = {} } = {},
                 } = await this.$queryHttp.post(`/sql/${getters.getBgConn.id}/queries`, {
-                    sql: `KILL QUERY ${state.active_sql_conn.attributes.thread_id}`,
+                    sql: `KILL QUERY ${active_sql_conn.attributes.thread_id}`,
                 })
 
                 if (results.length && results[0].errno)
@@ -1136,6 +1139,7 @@ export default {
                 const logger = this.vue.$logger(`store-query-stopQuery`)
                 logger.error(e)
             }
+            commit('UPDATE_IS_STOPPING_QUERY_MAP', { id: active_wke_id, payload: false })
         },
         /**
          * @param {String} db - database name
@@ -1505,6 +1509,7 @@ export default {
             const { loading_query_result = false } = getters.getQueryResult
             return loading_query_result
         },
+        getIsStoppingQuery: state => state.is_stopping_query_map[state.active_wke_id] || false,
         getResults: (state, getters) => {
             const { results = {} } = getters.getQueryResult
             return results
