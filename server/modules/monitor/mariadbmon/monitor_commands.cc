@@ -38,6 +38,10 @@ const char release_locks_cmd[] = "release-locks";
 const char cs_add_node_cmd[] = "cs-add-node";
 const char cs_remove_node_cmd[] = "cs-remove-node";
 const char cs_get_status_cmd[] = "cs-get-status";
+const char cs_start_cluster_cmd[] = "cs-start-cluster";
+const char cs_stop_cluster_cmd[] = "cs-stop-cluster";
+const char cs_set_readonly_cmd[] = "cs-set-readonly";
+const char cs_set_readwrite_cmd[] = "cs-set-readwrite";
 
 bool manual_switchover(ExecMode mode, const MODULECMD_ARG* args, json_t** error_out);
 bool manual_failover(ExecMode mode, const MODULECMD_ARG* args, json_t** output);
@@ -158,6 +162,52 @@ bool handle_async_cs_get_status(const MODULECMD_ARG* args, json_t** output)
 {
     auto* mon = static_cast<MariaDBMonitor*>(args->argv[0].value.monitor);
     return mon->schedule_cs_get_status(output);
+}
+
+bool async_cs_run_cmd_with_timeout(const std::function<bool(MariaDBMonitor*, std::chrono::seconds)>& func,
+                                   const MODULECMD_ARG* args, json_t** output)
+{
+    bool rval = false;
+    auto* mon = static_cast<MariaDBMonitor*>(args->argv[0].value.monitor);
+    string timeout_str = args->argv[1].value.string;
+    auto [to_ok, timeout] = get_timeout(timeout_str, output);
+    if (to_ok)
+    {
+        rval = func(mon, timeout);
+    }
+    return rval;
+}
+
+bool handle_async_cs_start_cluster(const MODULECMD_ARG* args, json_t** output)
+{
+    auto func = [output](MariaDBMonitor* mon, std::chrono::seconds timeout) {
+        return mon->schedule_cs_start_cluster(timeout, output);
+    };
+    return async_cs_run_cmd_with_timeout(func, args, output);
+}
+
+bool handle_async_cs_stop_cluster(const MODULECMD_ARG* args, json_t** output)
+{
+    auto func = [output](MariaDBMonitor* mon, std::chrono::seconds timeout) {
+        return mon->schedule_cs_stop_cluster(timeout, output);
+    };
+    return async_cs_run_cmd_with_timeout(func, args, output);
+}
+
+bool handle_async_cs_set_readonly(const MODULECMD_ARG* args, json_t** output)
+{
+    auto func = [output](MariaDBMonitor* mon, std::chrono::seconds timeout) {
+        return mon->schedule_cs_set_readonly(timeout, output);
+    };
+    return async_cs_run_cmd_with_timeout(func, args, output);
+}
+
+bool handle_async_cs_set_readwrite(const MODULECMD_ARG* args, json_t** output)
+{
+    auto func = [output](MariaDBMonitor* mon, std::chrono::seconds timeout) {
+        return mon->schedule_cs_set_readwrite(timeout, output);
+    };
+    return async_cs_run_cmd_with_timeout(func, args, output);
 }
 
 /**
@@ -481,7 +531,7 @@ void register_monitor_commands()
     {
         { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
         { MODULECMD_ARG_STRING, "Hostname/IP of node to add to ColumnStore cluster" },
-        { MODULECMD_ARG_STRING, "Timeout." }
+        { MODULECMD_ARG_STRING, "Timeout" }
     };
 
     modulecmd_register_command(MXB_MODULE_NAME, "async-cs-add-node", MODULECMD_TYPE_ACTIVE,
@@ -493,7 +543,7 @@ void register_monitor_commands()
     {
         { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
         { MODULECMD_ARG_STRING, "Hostname/IP of node to remove from ColumnStore cluster" },
-        { MODULECMD_ARG_STRING, "Timeout." }
+        { MODULECMD_ARG_STRING, "Timeout" }
     };
 
     modulecmd_register_command(MXB_MODULE_NAME, "async-cs-remove-node", MODULECMD_TYPE_ACTIVE,
@@ -510,6 +560,32 @@ void register_monitor_commands()
                                handle_async_cs_get_status,
                                MXS_ARRAY_NELEMS(fetch_cmd_result_argv), fetch_cmd_result_argv,
                                "Get ColumnStore cluster status. Does not wait for completion.");
+
+    const modulecmd_arg_type_t csmon_cmd_timeout_argv[] =
+    {
+        { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
+        { MODULECMD_ARG_STRING, "Timeout" }
+    };
+
+    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-start-cluster", MODULECMD_TYPE_ACTIVE,
+                               handle_async_cs_start_cluster,
+                               MXS_ARRAY_NELEMS(csmon_cmd_timeout_argv), csmon_cmd_timeout_argv,
+                               "Start ColumnStore cluster. Does not wait for completion.");
+
+    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-stop-cluster", MODULECMD_TYPE_ACTIVE,
+                               handle_async_cs_stop_cluster,
+                               MXS_ARRAY_NELEMS(csmon_cmd_timeout_argv), csmon_cmd_timeout_argv,
+                               "Stop ColumnStore cluster. Does not wait for completion.");
+
+    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-set-readonly", MODULECMD_TYPE_ACTIVE,
+                               handle_async_cs_set_readonly,
+                               MXS_ARRAY_NELEMS(csmon_cmd_timeout_argv), csmon_cmd_timeout_argv,
+                               "Set ColumnStore cluster read-only. Does not wait for completion.");
+
+    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-set-readwrite", MODULECMD_TYPE_ACTIVE,
+                               handle_async_cs_set_readwrite,
+                               MXS_ARRAY_NELEMS(csmon_cmd_timeout_argv), csmon_cmd_timeout_argv,
+                               "Set ColumnStore cluster readwrite. Does not wait for completion.");
 }
 
 bool MariaDBMonitor::run_manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out)
@@ -728,6 +804,38 @@ bool MariaDBMonitor::schedule_cs_get_status(json_t** output)
     return schedule_manual_command(func, cs_get_status_cmd, output);
 }
 
+bool MariaDBMonitor::schedule_cs_start_cluster(std::chrono::seconds timeout, json_t** error_out)
+{
+    auto func = [this, timeout]() {
+        return manual_cs_start_cluster(timeout);
+    };
+    return schedule_manual_command(func, cs_start_cluster_cmd, error_out);
+}
+
+bool MariaDBMonitor::schedule_cs_stop_cluster(std::chrono::seconds timeout, json_t** error_out)
+{
+    auto func = [this, timeout]() {
+        return manual_cs_stop_cluster(timeout);
+    };
+    return schedule_manual_command(func, cs_stop_cluster_cmd, error_out);
+}
+
+bool MariaDBMonitor::schedule_cs_set_readonly(std::chrono::seconds timeout, json_t** error_out)
+{
+    auto func = [this, timeout]() {
+        return manual_cs_set_readonly(timeout);
+    };
+    return schedule_manual_command(func, cs_set_readonly_cmd, error_out);
+}
+
+bool MariaDBMonitor::schedule_cs_set_readwrite(std::chrono::seconds timeout, json_t** error_out)
+{
+    auto func = [this, timeout]() {
+        return manual_cs_set_readwrite(timeout);
+    };
+    return schedule_manual_command(func, cs_set_readwrite_cmd, error_out);
+}
+
 MariaDBMonitor::CsRestResult MariaDBMonitor::check_cs_rest_result(const mxb::http::Response& resp)
 {
     bool rval = false;
@@ -834,6 +942,90 @@ MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_cs_get_status()
     else
     {
         string errmsg = mxb::string_printf("Could not fetch status from the ColumnStore cluster: %s",
+                                           rest_error.c_str());
+        rval.output = mxs_json_error_append(rval.output, "%s", errmsg.c_str());
+        MXB_ERROR("%s", errmsg.c_str());
+    }
+    return rval;
+}
+
+MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_cs_start_cluster(std::chrono::seconds timeout)
+{
+    RestDataFields input = {{"timeout", std::to_string(timeout.count())}};
+    auto [ok, rest_error, rest_output] = run_cs_rest_cmd(HttpCmd::PUT, "start", input, timeout);
+
+    ManualCommand::Result rval;
+    if (ok)
+    {
+        rval.success = true;
+        rval.output = rest_output.release();
+    }
+    else
+    {
+        string errmsg = mxb::string_printf("Could not start ColumnStore cluster: %s", rest_error.c_str());
+        rval.output = mxs_json_error_append(rval.output, "%s", errmsg.c_str());
+        MXB_ERROR("%s", errmsg.c_str());
+    }
+    return rval;
+}
+
+MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_cs_stop_cluster(std::chrono::seconds timeout)
+{
+    RestDataFields input = {{"timeout", std::to_string(timeout.count())}};
+    auto [ok, rest_error, rest_output] = run_cs_rest_cmd(HttpCmd::PUT, "shutdown", input, timeout);
+
+    ManualCommand::Result rval;
+    if (ok)
+    {
+        rval.success = true;
+        rval.output = rest_output.release();
+    }
+    else
+    {
+        string errmsg = mxb::string_printf("Could not stop ColumnStore cluster: %s", rest_error.c_str());
+        rval.output = mxs_json_error_append(rval.output, "%s", errmsg.c_str());
+        MXB_ERROR("%s", errmsg.c_str());
+    }
+    return rval;
+}
+
+MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_cs_set_readonly(std::chrono::seconds timeout)
+{
+    RestDataFields input = {{"timeout", std::to_string(timeout.count())},
+                            {"mode", "\"readonly\""}};
+    auto [ok, rest_error, rest_output] = run_cs_rest_cmd(HttpCmd::PUT, "mode-set", input, timeout);
+
+    ManualCommand::Result rval;
+    if (ok)
+    {
+        rval.success = true;
+        rval.output = rest_output.release();
+    }
+    else
+    {
+        string errmsg = mxb::string_printf("Could not set ColumnStore cluster to read-only mode: %s",
+                                           rest_error.c_str());
+        rval.output = mxs_json_error_append(rval.output, "%s", errmsg.c_str());
+        MXB_ERROR("%s", errmsg.c_str());
+    }
+    return rval;
+}
+
+MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_cs_set_readwrite(std::chrono::seconds timeout)
+{
+    RestDataFields input = {{"timeout", std::to_string(timeout.count())},
+                            {"mode", "\"readwrite\""}};
+    auto [ok, rest_error, rest_output] = run_cs_rest_cmd(HttpCmd::PUT, "mode-set", input, timeout);
+
+    ManualCommand::Result rval;
+    if (ok)
+    {
+        rval.success = true;
+        rval.output = rest_output.release();
+    }
+    else
+    {
+        string errmsg = mxb::string_printf("Could not set ColumnStore cluster to read-write mode: %s",
                                            rest_error.c_str());
         rval.output = mxs_json_error_append(rval.output, "%s", errmsg.c_str());
         MXB_ERROR("%s", errmsg.c_str());
