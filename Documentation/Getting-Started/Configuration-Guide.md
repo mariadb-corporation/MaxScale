@@ -152,7 +152,6 @@ runtime and can only be defined in a configuration file:
 * `connector_plugindir`
 * `datadir`
 * `debug`
-* `debug`
 * `execdir`
 * `language`
 * `libdir`
