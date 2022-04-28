@@ -340,9 +340,16 @@ public:
         CURRENT_TARGET_SLAVE        /**< Current target is a slave */
     };
 
+    enum class Log
+    {
+        ALL,    // Log all warnings and errors
+        NONE,   // Log nothing
+    };
+
     QueryClassifier(Handler* pHandler,
                     MXS_SESSION* pSession,
-                    mxs_target_t use_sql_variables_in);
+                    mxs_target_t use_sql_variables_in,
+                    Log log = Log::ALL);
 
     /**
      * @brief Return the current route info. A call to update_route_info()
@@ -507,5 +514,7 @@ private:
 
     uint32_t m_prev_ps_id = 0;      /**< For direct PS execution, storest latest prepared PS ID.
                                      * https://mariadb.com/kb/en/library/com_stmt_execute/#statement-id **/
+
+    Log m_log = Log::ALL;
 };
 }
