@@ -1018,6 +1018,7 @@ add_test_executable(mxs2441_galera_slaves.cpp mxs2441_galera_slaves mxs2441_gale
 # END: Galera tests                        #
 ############################################
 
+
 ############################################
 # BEGIN: tests for Xpand monitor           #
 ############################################
@@ -1037,6 +1038,18 @@ add_test_executable(xpand_alter_cluster.cpp xpand_alter_cluster xpand_alter_clus
 ############################################
 # END: tests for Xpand monitor             #
 ############################################
+
+
+##############################################
+# BEGIN: DUMMY test to create GUI demo setup #
+##############################################
+
+add_test_executable_notest(gui_demo.cpp gui_demo gui_demo LABELS gui_demo REPL_BACKEND)
+
+##############################################
+# END: DUMMY test to create GUI demo setup   #
+##############################################
+
 
 ###############################
 # DO NOT ADD TESTS AFTER THIS #
