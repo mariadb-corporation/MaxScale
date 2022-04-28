@@ -646,9 +646,6 @@ add_test_executable(temporal_tables.cpp temporal_tables replication LABELS readw
 # Test routing hints (mainly about how readwritesplit deals with them)
 add_test_executable(test_hints.cpp test_hints hints2 LABELS hintfilter readwritesplit LIGHT REPL_BACKEND)
 
-# Run MaxCtrl test suite
-# add_test_executable(test_maxctrl.cpp test_maxctrl maxctrl LABELS REPL_BACKEND)
-
 # start sysbench against RWSplit for infinite execution
 add_test_executable_notest(long_sysbench.cpp long_sysbench replication LABELS readwritesplit REPL_BACKEND)
 
