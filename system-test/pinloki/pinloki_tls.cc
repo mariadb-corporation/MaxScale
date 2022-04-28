@@ -23,6 +23,9 @@ public:
             + test.maxscale->access_homedir()
             + "/certs/ca.pem'";
 
+        auto gtid = master.field("SELECT @@gtid_current_pos");
+        maxscale.query("SET GLOBAL gtid_slave_pos = '" + gtid + "'");
+
         test.expect(maxscale.query(change_master), "CHANGE MASTER failed: %s", maxscale.error());
         test.expect(maxscale.query("START SLAVE"), "START SLAVE failed: %s", maxscale.error());
         sync(master, maxscale);
@@ -39,6 +42,22 @@ public:
         test.expect(master.query("DROP TABLE test.t1"), "DROP failed: %s", maxscale.error());
         sync_all();
         check_gtid();
+
+        // MXS-4096: SSL values in SHOW SLAVE STATUS are empty
+        auto c = test.maxscale->open_rwsplit_connection2();
+
+        for (auto query : {"SHOW SLAVE STATUS", "SHOW ALL SLAVES STATUS"})
+        {
+            auto res = c->query(query);
+            test.expect(res.get(), "'%s' failed: %s", query, c->error());
+            test.expect(res->next_row(), "'%s' should have one row", query);
+
+            auto ssl = res->get_string("Master_SSL_Allowed");
+            auto ca = res->get_string("Master_SSL_CA_File");
+
+            test.expect(ssl == "Yes", "%s: Master_SSL_Allowed should be Yes not %s", query, ssl.c_str());
+            test.expect(!ca.empty(), "%s: Master_SSL_CA_File should not be empty.", query);
+        }
     }
 };
 

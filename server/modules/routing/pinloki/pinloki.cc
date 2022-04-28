@@ -653,24 +653,24 @@ GWBUF* Pinloki::show_slave_status(bool all) const
     rset->add_column("Until_Condition", "None");
     rset->add_column("Until_Log_File", "");
     rset->add_column("Until_Log_Pos", "0");
-    rset->add_column("Master_SSL_Allowed", "No");   // TODO
-    rset->add_column("Master_SSL_CA_File", "");
-    rset->add_column("Master_SSL_CA_Path", "");
-    rset->add_column("Master_SSL_Cert", "");
-    rset->add_column("Master_SSL_Cipher", "");
-    rset->add_column("Master_SSL_Key", "");
+    rset->add_column("Master_SSL_Allowed", m_master_config.ssl ? "Yes" : "No");
+    rset->add_column("Master_SSL_CA_File", m_master_config.ssl_ca.c_str());
+    rset->add_column("Master_SSL_CA_Path", m_master_config.ssl_capath.c_str());
+    rset->add_column("Master_SSL_Cert", m_master_config.ssl_cert.c_str());
+    rset->add_column("Master_SSL_Cipher", m_master_config.ssl_cipher.c_str());
+    rset->add_column("Master_SSL_Key", m_master_config.ssl_key.c_str());
     // Should set Seconds_Behind_Master to null if state != State::Connected,
     // but that is not (yet) supported by ResultSet.
     rset->add_column("Seconds_Behind_Master", "0");
-    rset->add_column("Master_SSL_Verify_Server_Cert", "No");
+    rset->add_column("Master_SSL_Verify_Server_Cert", m_master_config.ssl_verify_server_cert ? "Yes" : "No");
     rset->add_column("Last_IO_Errno", "0");
     rset->add_column("Last_IO_Error", "");
     rset->add_column("Last_SQL_Errno", "0");
     rset->add_column("Last_SQL_Error", "");
     rset->add_column("Replicate_Ignore_Server_Ids", "");
     rset->add_column("Master_Server_Id", std::to_string(m_inventory.master_id()));
-    rset->add_column("Master_SSL_Crl", "");
-    rset->add_column("Master_SSL_Crlpath", "");
+    rset->add_column("Master_SSL_Crl", m_master_config.ssl_crl.c_str());
+    rset->add_column("Master_SSL_Crlpath", m_master_config.ssl_crlpath.c_str());
     rset->add_column("Using_Gtid", "Slave_Pos");
     rset->add_column("Gtid_IO_Pos", gtid_io_pos().to_string());
     rset->add_column("Replicate_Do_Domain_Ids", "");
