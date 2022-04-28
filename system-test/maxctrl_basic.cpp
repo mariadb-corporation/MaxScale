@@ -4,6 +4,60 @@
 
 #include <maxtest/testconnections.hh>
 
+void test_reload_tls(TestConnections& test)
+{
+    const char* home = test.maxscale->access_homedir();
+    int rc = test.maxscale->ssh_node_f(true, "sed -i "
+                                             " -e '/maxscale/ a admin_ssl_key=%s/certs/server-key.pem'"
+                                             " -e '/maxscale/ a admin_ssl_cert=%s/certs/server-cert.pem'"
+                                             " /etc/maxscale.cnf", home, home);
+    test.expect(rc == 0, "Failed to enable encryption for the REST API");
+    test.maxscale->restart();
+
+    test.tprintf("TLS reload sanity check");
+    test.expect(test.maxctrl("-s -n false list servers").rc == 0, "`list servers` should work");
+    test.expect(test.maxctrl("list servers").rc != 0, "Command without --secure should fail");
+
+    test.expect(test.maxctrl("-s -n false reload tls").rc == 0, "`reload tls` should work");
+    test.expect(test.maxctrl("-s -n false list servers").rc == 0, "`list servers` should work");
+
+    if (test.ok())
+    {
+        test.tprintf("TLS reload stress test");
+        std::vector<std::thread> threads;
+        std::atomic<bool> running {true};
+
+        for (int i = 0; i < 10; i++)
+        {
+            threads.emplace_back([&](){
+                int num = 0;
+                while (running)
+                {
+                    ++num;
+                    auto res = test.maxscale->ssh_output("maxctrl -s -n false list servers", false);
+                    test.expect(res.rc == 0, "`list servers` should not fail: %d, %s", res.rc,
+                                res.output.c_str());
+                }
+
+                test.tprintf("Executed %d commands", num);
+            });
+        }
+
+        for (int i = 0; i < 20; i++)
+        {
+            auto res = test.maxctrl("-s -n false reload tls");
+            test.expect(res.rc == 0, "`reload tls` should work: %d, %s", res.rc, res.output.c_str());
+        }
+
+        running = false;
+
+        for (auto& t : threads)
+        {
+            t.join();
+        }
+    }
+}
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -100,6 +154,10 @@ int main(int argc, char** argv)
                  "when running commands from the root directory.");
     rc = test.maxscale->ssh_node_f(false, "cd / && maxctrl list servers");
     test.expect(rc == 0, "Failed to execute a command from the root directory");
+
+    // Also checks that MaxCtrl works correctly when the REST API uses encryption.
+    test.tprintf("MXS-4041: Reloading of REST API TLS certificates");
+    test_reload_tls(test);
 
     test.check_maxscale_alive();
     return test.global_result;
