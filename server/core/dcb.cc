@@ -1503,6 +1503,20 @@ private:
     uint64_t m_uid;     /**< DCB UID guarantees we deliver the event to the correct DCB */
 };
 
+void DCB::add_event_via_loop(uint32_t ev)
+{
+    FakeEventTask* task = new(std::nothrow) FakeEventTask(this, ev);
+
+    if (task)
+    {
+        m_owner->execute(std::unique_ptr<FakeEventTask>(task), Worker::EXECUTE_QUEUED);
+    }
+    else
+    {
+        MXB_OOM();
+    }
+}
+
 void DCB::add_event(uint32_t ev)
 {
     if (this == this_thread.current_dcb)
@@ -1517,17 +1531,7 @@ void DCB::add_event(uint32_t ev)
     else
     {
         // ... otherwise we post the fake event using the messaging mechanism.
-
-        FakeEventTask* task = new(std::nothrow) FakeEventTask(this, ev);
-
-        if (task)
-        {
-            m_owner->execute(std::unique_ptr<FakeEventTask>(task), Worker::EXECUTE_QUEUED);
-        }
-        else
-        {
-            MXB_OOM();
-        }
+        add_event_via_loop(ev);
     }
 }
 
@@ -1535,7 +1539,17 @@ void DCB::trigger_read_event()
 {
     if (mxs::Config::get().always_read_via_epoll)
     {
-        m_incomplete_read = true;
+        if (this == this_thread.current_dcb)
+        {
+            // We can do this only if we are in the middle of handling epoll events
+            // for this DCB...
+            m_incomplete_read = true;
+        }
+        else
+        {
+            // ...otherwise we have to deliver the event directly via the loop.
+            add_event_via_loop(EPOLLIN);
+        }
     }
     else
     {

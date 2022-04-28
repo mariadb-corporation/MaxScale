@@ -646,6 +646,7 @@ private:
 
     void call_callback(Reason reason);
 
+    void add_event_via_loop(uint32_t ev);
     void add_event(uint32_t ev);
     bool write_parameter_check();
 };
