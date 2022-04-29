@@ -138,7 +138,7 @@ export default {
         ...mapState({
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             curr_query_mode: state => state.query.curr_query_mode,
-            active_sql_conn: state => state.query.active_sql_conn,
+            active_sql_conn: state => state.queryConn.active_sql_conn,
         }),
         ...mapGetters({
             getPrvwDataRes: 'query/getPrvwDataRes',

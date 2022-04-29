@@ -132,12 +132,12 @@ export default {
     },
     computed: {
         ...mapState({
-            sql_conns: state => state.query.sql_conns,
-            active_sql_conn: state => state.query.active_sql_conn,
-            pre_select_conn_rsrc: state => state.query.pre_select_conn_rsrc,
+            sql_conns: state => state.queryConn.sql_conns,
+            active_sql_conn: state => state.queryConn.active_sql_conn,
+            conn_err_state: state => state.queryConn.conn_err_state,
+            pre_select_conn_rsrc: state => state.queryConn.pre_select_conn_rsrc,
             worksheets_arr: state => state.query.worksheets_arr,
             active_wke_id: state => state.query.active_wke_id,
-            conn_err_state: state => state.query.conn_err_state,
             QUERY_CONN_BINDING_TYPES: state => state.app_config.QUERY_CONN_BINDING_TYPES,
         }),
         ...mapGetters({
@@ -208,13 +208,13 @@ export default {
     },
     methods: {
         ...mapActions({
-            openConnect: 'query/openConnect',
-            disconnect: 'query/disconnect',
+            openConnect: 'queryConn/openConnect',
+            disconnect: 'queryConn/disconnect',
             initialFetch: 'query/initialFetch',
             updateRoute: 'query/updateRoute',
         }),
         ...mapMutations({
-            SET_ACTIVE_SQL_CONN: 'query/SET_ACTIVE_SQL_CONN',
+            SET_ACTIVE_SQL_CONN: 'queryConn/SET_ACTIVE_SQL_CONN',
         }),
         /**
          * Check if there is an available connection (connection that has not been bound to a worksheet),

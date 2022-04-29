@@ -12,15 +12,7 @@
  */
 import { uniqBy, uniqueId, pickBy } from 'utils/helpers'
 import queryHelper from './queryHelper'
-/**
- * @returns Initial connection related states
- */
-function connStates() {
-    return {
-        conn_err_state: false,
-        active_sql_conn: {},
-    }
-}
+import { connStatesToBeSynced } from './queryConn'
 /**
  * @returns Initial sidebar tree schema related states
  */
@@ -64,7 +56,6 @@ function toolbarStates() {
  */
 function saWkeStates() {
     return {
-        ...connStates(),
         ...sidebarStates(),
         ...editorStates(),
         ...resultStates(),
@@ -80,6 +71,7 @@ export function defWorksheetState() {
         id: uniqueId(`${new Date().getUTCMilliseconds()}_`),
         name: 'WORKSHEET',
         ...saWkeStates(),
+        ...connStatesToBeSynced(),
     }
 }
 /**
@@ -109,30 +101,16 @@ function memStates() {
 }
 
 /**
- * This helps to update standalone worksheet state
- * @param {Object} state  vuex state
- * @param {Object} obj  can be a standalone key/value pair state or saWkeStates
- */
-function update_standalone_wke_state(state, obj) {
-    Object.keys(obj).forEach(key => {
-        state[key] = obj[key]
-    })
-}
-
-/**
- * This function helps to update partial modification of a wke object
- * and update standalone wke states
- * @param {Object} state - module state object
- * @param {Object} payload.obj - partial modification of a wke object
+ * This function helps to synchronize the active wke in worksheets_arr with
+ * flat states (wkeSyncStates) in the module
  * @param {Object} payload.scope - scope aka (this)
+ * @param {Object} queryState - query module state object
+ * @param {Object} payload.data - partial modification of a wke object
  * @param {Object} payload.active_wke_id - active_wke_id
  */
-function patch_wke_property(state, { obj, scope, active_wke_id }) {
-    const idx = state.worksheets_arr.findIndex(wke => wke.id === active_wke_id)
-    state.worksheets_arr = scope.vue.$help.immutableUpdate(state.worksheets_arr, {
-        [idx]: { $set: { ...state.worksheets_arr[idx], ...obj } },
-    })
-    update_standalone_wke_state(state, obj)
+function patch_wke_property({ scope, queryState, data, active_wke_id }) {
+    queryHelper.sync_to_worksheets_arr({ scope, queryState, data, active_wke_id })
+    queryHelper.mutateFlatStates({ moduleState: queryState, data })
 }
 
 /**
@@ -171,12 +149,8 @@ function memStatesMutationCreator() {
 export default {
     namespaced: true,
     state: {
-        // connection related states
-        is_validating_conn: true,
-        pre_select_conn_rsrc: null,
         // Toolbar states
         is_fullscreen: false,
-        rc_target_names_map: {},
         // editor states
         charset_collation_map: new Map(),
         def_db_charset_map: new Map(),
@@ -185,7 +159,6 @@ export default {
         // worksheet states
         worksheets_arr: [defWorksheetState()], // persisted
         active_wke_id: '',
-        sql_conns: {},
         ...memStates(),
         /**
          * Below is standalone wke states. The value
@@ -203,81 +176,56 @@ export default {
         ...memStatesMutationCreator(),
         //Toolbar mutations
         SET_ACTIVE_DB(state, { payload, active_wke_id }) {
-            patch_wke_property(state, { obj: { active_db: payload }, scope: this, active_wke_id })
+            patch_wke_property({
+                scope: this,
+                queryState: state,
+                data: { active_db: payload },
+                active_wke_id,
+            })
         },
         SET_FULLSCREEN(state, payload) {
             state.is_fullscreen = payload
         },
         SET_SHOW_VIS_SIDEBAR(state, payload) {
-            patch_wke_property(state, {
-                obj: { show_vis_sidebar: payload },
+            patch_wke_property({
                 scope: this,
+                queryState: state,
+                data: { show_vis_sidebar: payload },
                 active_wke_id: state.active_wke_id,
             })
         },
-
-        // connection related mutations
-        SET_IS_VALIDATING_CONN(state, payload) {
-            state.is_validating_conn = payload
-        },
-        SET_CONN_ERR_STATE(state, { payload, active_wke_id }) {
-            patch_wke_property(state, {
-                obj: { conn_err_state: payload },
-                scope: this,
-                active_wke_id,
-            })
-        },
-        SET_PRE_SELECT_CONN_RSRC(state, payload) {
-            state.pre_select_conn_rsrc = payload
-        },
-        SET_RC_TARGET_NAMES_MAP(state, payload) {
-            state.rc_target_names_map = payload
-        },
-        SET_ACTIVE_SQL_CONN(state, { payload, active_wke_id }) {
-            patch_wke_property(state, {
-                obj: { active_sql_conn: payload },
-                scope: this,
-                active_wke_id,
-            })
-        },
-        SET_SQL_CONNS(state, payload) {
-            state.sql_conns = payload
-        },
-        ADD_SQL_CONN(state, payload) {
-            this.vue.$set(state.sql_conns, payload.id, payload)
-        },
-        DELETE_SQL_CONN(state, payload) {
-            this.vue.$delete(state.sql_conns, payload.id)
-        },
-
         // Sidebar tree schema mutations
         SET_IS_SIDEBAR_COLLAPSED(state, payload) {
-            patch_wke_property(state, {
-                obj: { is_sidebar_collapsed: payload },
+            patch_wke_property({
                 scope: this,
+                queryState: state,
+                data: { is_sidebar_collapsed: payload },
                 active_wke_id: state.active_wke_id,
             })
         },
         SET_SEARCH_SCHEMA(state, payload) {
-            patch_wke_property(state, {
-                obj: { search_schema: payload },
+            patch_wke_property({
                 scope: this,
+                queryState: state,
+                data: { search_schema: payload },
                 active_wke_id: state.active_wke_id,
             })
         },
         SET_EXPANDED_NODES(state, payload) {
-            patch_wke_property(state, {
-                obj: { expanded_nodes: payload },
+            patch_wke_property({
                 scope: this,
+                queryState: state,
+                data: { expanded_nodes: payload },
                 active_wke_id: state.active_wke_id,
             })
         },
 
         // editor mutations
         SET_QUERY_TXT(state, payload) {
-            patch_wke_property(state, {
-                obj: { query_txt: payload },
+            patch_wke_property({
                 scope: this,
+                queryState: state,
+                data: { query_txt: payload },
                 active_wke_id: state.active_wke_id,
             })
         },
@@ -285,9 +233,10 @@ export default {
             state.selected_query_txt = payload
         },
         SET_CURR_DDL_COL_SPEC(state, payload) {
-            patch_wke_property(state, {
-                obj: { curr_ddl_alter_spec: payload },
+            patch_wke_property({
                 scope: this,
+                queryState: state,
+                data: { curr_ddl_alter_spec: payload },
                 active_wke_id: state.active_wke_id,
             })
         },
@@ -303,9 +252,10 @@ export default {
 
         // Result tables data mutations
         SET_CURR_QUERY_MODE(state, payload) {
-            patch_wke_property(state, {
-                obj: { curr_query_mode: payload },
+            patch_wke_property({
                 scope: this,
+                queryState: state,
+                data: { curr_query_mode: payload },
                 active_wke_id: state.active_wke_id,
             })
         },
@@ -325,237 +275,13 @@ export default {
             state.active_wke_id = payload
         },
         UPDATE_SA_WKE_STATES(state, wke) {
-            const reservedKeys = ['id', 'name']
-            update_standalone_wke_state(
-                state,
-                pickBy(wke, (v, key) => !reservedKeys.includes(key))
-            )
+            queryHelper.mutateFlatStates({
+                moduleState: state,
+                data: pickBy(wke, (v, key) => Object.keys(saWkeStates()).includes(key)),
+            })
         },
     },
     actions: {
-        async fetchRcTargetNames({ state, commit }, resourceType) {
-            try {
-                let res = await this.$queryHttp.get(`/${resourceType}?fields[${resourceType}]=id`)
-                if (res.data.data) {
-                    const names = res.data.data.map(({ id, type }) => ({ id, type }))
-                    commit('SET_RC_TARGET_NAMES_MAP', {
-                        ...state.rc_target_names_map,
-                        [resourceType]: names,
-                    })
-                }
-            } catch (e) {
-                const logger = this.vue.$logger('store-query-fetchRcTargetNames')
-                logger.error(e)
-            }
-        },
-        async openConnect({ state, dispatch, commit, rootState }, { body, resourceType }) {
-            const active_wke_id = state.active_wke_id
-            try {
-                let res = await this.$queryHttp.post(`/sql?persist=yes&max-age=86400`, body)
-                if (res.status === 201) {
-                    commit(
-                        'SET_SNACK_BAR_MESSAGE',
-                        {
-                            text: [this.i18n.t('info.connSuccessfully')],
-                            type: 'success',
-                        },
-                        { root: true }
-                    )
-                    const connId = res.data.data.id
-                    const active_sql_conn = {
-                        id: connId,
-                        attributes: res.data.data.attributes,
-                        name: body.target,
-                        type: resourceType,
-                        binding_type: rootState.app_config.QUERY_CONN_BINDING_TYPES.WORKSHEET,
-                    }
-                    commit('ADD_SQL_CONN', active_sql_conn)
-                    commit('SET_ACTIVE_SQL_CONN', { payload: active_sql_conn, active_wke_id })
-                    if (body.db) await dispatch('useDb', body.db)
-                    commit('SET_CONN_ERR_STATE', { payload: false, active_wke_id })
-                }
-            } catch (e) {
-                const logger = this.vue.$logger('store-query-openConnect')
-                logger.error(e)
-                commit('SET_CONN_ERR_STATE', { payload: true, active_wke_id })
-            }
-        },
-        /**
-         *  Clone a connection to allow it run in the background
-         * @param {Object} conn_to_be_cloned - connection to be cloned
-         */
-        async openBgConn({ commit, rootState }, conn_to_be_cloned) {
-            try {
-                let res = await this.$queryHttp.post(
-                    `/sql/${conn_to_be_cloned.id}/clone?persist=yes&max-age=86400`
-                )
-                if (res.status === 201) {
-                    const connId = res.data.data.id
-                    const conn = {
-                        id: connId,
-                        attributes: res.data.data.attributes,
-                        name: conn_to_be_cloned.name,
-                        type: conn_to_be_cloned.type,
-                        binding_type: rootState.app_config.QUERY_CONN_BINDING_TYPES.BACKGROUND,
-                    }
-                    commit('ADD_SQL_CONN', conn)
-                }
-            } catch (e) {
-                const logger = this.vue.$logger('store-query-openBgConn')
-                logger.error(e)
-            }
-        },
-        async disconnect({ state, commit, dispatch }, { showSnackbar, id: cnctId }) {
-            try {
-                const res = await this.$queryHttp.delete(`/sql/${cnctId}`)
-                if (res.status === 204) {
-                    if (showSnackbar)
-                        commit(
-                            'SET_SNACK_BAR_MESSAGE',
-                            {
-                                text: [this.i18n.t('info.disconnSuccessfully')],
-                                type: 'success',
-                            },
-                            { root: true }
-                        )
-                    commit('DELETE_SQL_CONN', state.sql_conns[cnctId])
-                    dispatch('resetWkeStates', cnctId)
-                }
-            } catch (e) {
-                const logger = this.vue.$logger('store-query-disconnect')
-                logger.error(e)
-            }
-        },
-        /**
-         * Disconnect the "BACKGROUND" connection of the current active_sql_conn
-         * @param {Object} active_sql_conn - active_sql_conn
-         */
-        async disconnectBgConn({ dispatch, rootState, state }, active_sql_conn) {
-            try {
-                // find BACKGROUND connections of the current active sql connection
-                const bgCnns = Object.values(state.sql_conns).filter(
-                    cnn =>
-                        cnn.name === active_sql_conn.name &&
-                        cnn.binding_type ===
-                            rootState.app_config.QUERY_CONN_BINDING_TYPES.BACKGROUND
-                )
-                for (const conn of bgCnns) {
-                    await dispatch('disconnect', { id: conn.id })
-                }
-            } catch (e) {
-                const logger = this.vue.$logger('store-query-deleteBgConn')
-                logger.error(e)
-            }
-        },
-        async disconnectAll({ state, dispatch }) {
-            try {
-                for (const id of Object.keys(state.sql_conns)) {
-                    await dispatch('disconnect', { showSnackbar: false, id })
-                }
-            } catch (e) {
-                const logger = this.vue.$logger('store-query-disconnectAll')
-                logger.error(e)
-            }
-        },
-        async reconnect({ state, commit, dispatch }) {
-            const active_sql_conn = state.active_sql_conn
-            try {
-                let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/reconnect`)
-                if (res.status === 204) {
-                    commit(
-                        'SET_SNACK_BAR_MESSAGE',
-                        {
-                            text: [this.i18n.t('info.reconnSuccessfully')],
-                            type: 'success',
-                        },
-                        { root: true }
-                    )
-                    await dispatch('initialFetch', active_sql_conn)
-                } else
-                    commit(
-                        'SET_SNACK_BAR_MESSAGE',
-                        {
-                            text: [this.i18n.t('errors.reconnFailed')],
-                            type: 'error',
-                        },
-                        { root: true }
-                    )
-                await dispatch('validatingConn', { silentValidation: true })
-            } catch (e) {
-                const logger = this.vue.$logger('store-query-reconnect')
-                logger.error(e)
-            }
-        },
-        clearConn({ commit, dispatch, state }) {
-            try {
-                const active_sql_conn = state.active_sql_conn
-                commit('DELETE_SQL_CONN', active_sql_conn)
-                dispatch('resetWkeStates', active_sql_conn.id)
-            } catch (e) {
-                const logger = this.vue.$logger('store-query-clearConn')
-                logger.error(e)
-            }
-        },
-        /**
-         *
-         * @param {Boolean} param.silentValidation - silent validation (without calling SET_IS_VALIDATING_CONN)
-         */
-        async validatingConn({ state, commit, dispatch }, { silentValidation = false } = {}) {
-            try {
-                if (!silentValidation) commit('SET_IS_VALIDATING_CONN', true)
-                const res = await this.$queryHttp.get(`/sql/`)
-                const resConnMap = this.vue.$help.lodash.keyBy(res.data.data, 'id')
-                const resConnIds = Object.keys(resConnMap)
-                const clientConnIds = queryHelper.getClientConnIds()
-                if (resConnIds.length === 0) {
-                    dispatch('resetAllWkeStates')
-                    commit('SET_SQL_CONNS', {})
-                } else {
-                    const validConnIds = clientConnIds.filter(id => resConnIds.includes(id))
-                    const validSqlConns = Object.keys(state.sql_conns)
-                        .filter(id => validConnIds.includes(id))
-                        .reduce(
-                            (acc, id) => ({
-                                ...acc,
-                                [id]: {
-                                    ...state.sql_conns[id],
-                                    attributes: resConnMap[id].attributes, // update attributes
-                                },
-                            }),
-                            {}
-                        )
-                    const invalidCnctIds = Object.keys(state.sql_conns).filter(
-                        id => !(id in validSqlConns)
-                    )
-                    dispatch('deleteInvalidConn', invalidCnctIds)
-                    commit('SET_SQL_CONNS', validSqlConns)
-                    // update active_sql_conn attributes
-                    if (state.active_sql_conn.id) {
-                        const activeSqlConn = validSqlConns[state.active_sql_conn.id]
-                        commit('SET_ACTIVE_SQL_CONN', {
-                            payload: activeSqlConn,
-                            active_wke_id: state.active_wke_id,
-                        })
-                    }
-                }
-                if (!silentValidation) commit('SET_IS_VALIDATING_CONN', false)
-            } catch (e) {
-                if (!silentValidation) commit('SET_IS_VALIDATING_CONN', false)
-                const logger = this.vue.$logger('store-query-validatingConn')
-                logger.error(e)
-            }
-        },
-        deleteInvalidConn({ dispatch }, invalidCnctIds) {
-            try {
-                invalidCnctIds.forEach(id => {
-                    this.vue.$help.deleteCookie(`conn_id_body_${id}`)
-                    dispatch('resetWkeStates', id)
-                })
-            } catch (e) {
-                const logger = this.vue.$logger('store-query-deleteInvalidConn')
-                logger.error(e)
-            }
-        },
         chooseActiveWke({ state, commit, dispatch }) {
             const { type = 'blank_wke', id: paramId } = this.router.app.$route.params
             if (paramId) {
@@ -577,7 +303,11 @@ export default {
                         )
                         if (blankWke) commit('SET_ACTIVE_WKE_ID', blankWke.id)
                         else dispatch('addNewWs')
-                        commit('SET_PRE_SELECT_CONN_RSRC', { type, id: paramId })
+                        commit(
+                            'queryConn/SET_PRE_SELECT_CONN_RSRC',
+                            { type, id: paramId },
+                            { root: true }
+                        )
                     }
                 }
             } else if (state.worksheets_arr.length) {
@@ -645,8 +375,8 @@ export default {
          * @param {Object} payload.state  query module state
          * @returns {Object} { dbTree, cmpList }
          */
-        async getDbs({ state, rootState }) {
-            const active_sql_conn = state.active_sql_conn
+        async getDbs({ rootState }) {
+            const active_sql_conn = rootState.queryConn.active_sql_conn
             try {
                 const {
                     SQL_NODE_TYPES: { SCHEMA, TABLES, SPS },
@@ -716,8 +446,8 @@ export default {
          * @param {Object} node - node child of db node object. Either type TABLES or SPS
          * @returns {Object} { dbName, gch, cmpList }
          */
-        async getDbGrandChild({ state, rootState }, node) {
-            const active_sql_conn = state.active_sql_conn
+        async getDbGrandChild({ rootState }, node) {
+            const active_sql_conn = rootState.queryConn.active_sql_conn
             try {
                 let dbName, grandChildNodeType, rowName, query
                 const {
@@ -807,8 +537,8 @@ export default {
          * @param {Object} node - node object. Either type `Triggers` or `Columns`
          * @returns {Object} { dbName, tblName, gch, cmpList }
          */
-        async getTableGrandChild({ state, rootState }, node) {
-            const active_sql_conn = state.active_sql_conn
+        async getTableGrandChild({ rootState }, node) {
+            const active_sql_conn = rootState.queryConn.active_sql_conn
             try {
                 const dbName = node.id.split('.')[0]
                 const tblName = node.id.split('.')[1]
@@ -984,7 +714,7 @@ export default {
          * @param {String} tblId - Table id (database_name.table_name).
          */
         async fetchPrvw({ state, rootState, commit, dispatch }, { tblId, prvwMode }) {
-            const active_sql_conn = state.active_sql_conn
+            const active_sql_conn = rootState.queryConn.active_sql_conn
             const active_wke_id = state.active_wke_id
             const request_sent_time = new Date().valueOf()
             try {
@@ -1053,7 +783,7 @@ export default {
          */
         async fetchQueryResult({ state, commit, dispatch, rootState }, query) {
             const active_wke_id = state.active_wke_id
-            const active_sql_conn = state.active_sql_conn
+            const active_sql_conn = rootState.queryConn.active_sql_conn
             const request_sent_time = new Date().valueOf()
 
             try {
@@ -1072,7 +802,7 @@ export default {
                  * This "BACKGROUND" connection must be disconnected after finnish the user's query.
                  * i.e. dispatch disconnectBgConn
                  */
-                await dispatch('openBgConn', active_sql_conn)
+                await dispatch('queryConn/openBgConn', active_sql_conn, { root: true })
 
                 let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql: query,
@@ -1112,16 +842,19 @@ export default {
                 logger.error(e)
             }
         },
-        async stopQuery({ state, commit, getters }) {
-            const active_sql_conn = state.active_sql_conn
+        async stopQuery({ state, commit, rootGetters, rootState }) {
+            const active_sql_conn = rootState.queryConn.active_sql_conn
             const active_wke_id = state.active_wke_id
             try {
                 commit('UPDATE_IS_STOPPING_QUERY_MAP', { id: active_wke_id, payload: true })
                 const {
                     data: { data: { attributes: { results = [] } = {} } = {} } = {},
-                } = await this.$queryHttp.post(`/sql/${getters.getBgConn.id}/queries`, {
-                    sql: `KILL QUERY ${active_sql_conn.attributes.thread_id}`,
-                })
+                } = await this.$queryHttp.post(
+                    `/sql/${rootGetters['queryConn/getBgConn'].id}/queries`,
+                    {
+                        sql: `KILL QUERY ${active_sql_conn.attributes.thread_id}`,
+                    }
+                )
 
                 if (results.length && results[0].errno)
                     commit(
@@ -1145,7 +878,7 @@ export default {
          * @param {String} db - database name
          */
         async useDb({ state, commit, dispatch, rootState }, db) {
-            const active_sql_conn = state.active_sql_conn
+            const active_sql_conn = rootState.queryConn.active_sql_conn
             const active_wke_id = state.active_wke_id
             try {
                 const now = new Date().valueOf()
@@ -1184,8 +917,8 @@ export default {
                 logger.error(e)
             }
         },
-        async updateActiveDb({ state, commit }) {
-            const active_sql_conn = state.active_sql_conn
+        async updateActiveDb({ state, commit, rootState }) {
+            const active_sql_conn = rootState.queryConn.active_sql_conn
             const active_db = state.active_db
             const active_wke_id = state.active_wke_id
             try {
@@ -1203,8 +936,8 @@ export default {
                 logger.error(e)
             }
         },
-        async queryCharsetCollationMap({ state, commit }) {
-            const active_sql_conn = state.active_sql_conn
+        async queryCharsetCollationMap({ rootState, commit }) {
+            const active_sql_conn = rootState.queryConn.active_sql_conn
             try {
                 const sql =
                     // eslint-disable-next-line vue/max-len
@@ -1231,8 +964,8 @@ export default {
                 logger.error(e)
             }
         },
-        async queryDefDbCharsetMap({ state, commit }) {
-            const active_sql_conn = state.active_sql_conn
+        async queryDefDbCharsetMap({ rootState, commit }) {
+            const active_sql_conn = rootState.queryConn.active_sql_conn
             try {
                 const sql =
                     // eslint-disable-next-line vue/max-len
@@ -1253,8 +986,8 @@ export default {
                 logger.error(e)
             }
         },
-        async queryEngines({ state, commit }) {
-            const active_sql_conn = state.active_sql_conn
+        async queryEngines({ rootState, commit }) {
+            const active_sql_conn = rootState.queryConn.active_sql_conn
             try {
                 let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql: 'SELECT engine FROM information_schema.ENGINES',
@@ -1265,8 +998,8 @@ export default {
                 logger.error(e)
             }
         },
-        async queryTblCreationInfo({ state, commit }, node) {
-            const active_sql_conn = state.active_sql_conn
+        async queryTblCreationInfo({ state, commit, rootState }, node) {
+            const active_sql_conn = rootState.queryConn.active_sql_conn
             const active_wke_id = state.active_wke_id
             try {
                 commit('UPDATE_TBL_CREATION_INFO_MAP', {
@@ -1333,7 +1066,7 @@ export default {
             { state, rootState, dispatch, commit },
             { sql, action, showSnackbar = true }
         ) {
-            const active_sql_conn = state.active_sql_conn
+            const active_sql_conn = rootState.queryConn.active_sql_conn
             const active_wke_id = state.active_wke_id
             const request_sent_time = new Date().valueOf()
             try {
@@ -1406,7 +1139,7 @@ export default {
             for (const [idx, targetWke] of state.worksheets_arr.entries()) {
                 const wke = {
                     ...targetWke,
-                    ...connStates(),
+                    ...connStatesToBeSynced(),
                     ...sidebarStates(),
                     ...resultStates(),
                     ...toolbarStates(),
@@ -1419,7 +1152,7 @@ export default {
          * Call this action when disconnect a connection to
          * clear the state of the worksheet having that connection to its initial state
          */
-        resetWkeStates({ state, commit, dispatch }, cnctId) {
+        resetWkeStates({ state, commit, dispatch, rootState }, cnctId) {
             const targetWke = state.worksheets_arr.find(wke => wke.active_sql_conn.id === cnctId)
             if (targetWke) {
                 dispatch('releaseMemory', targetWke.id)
@@ -1427,7 +1160,7 @@ export default {
                 // reset everything to initial state except editorStates()
                 const wke = {
                     ...targetWke,
-                    ...connStates(),
+                    ...connStatesToBeSynced(),
                     ...sidebarStates(),
                     ...resultStates(),
                     ...toolbarStates(),
@@ -1438,7 +1171,10 @@ export default {
                  * if connection id to be deleted is equal to current connected
                  * resource of active worksheet, update standalone wke states
                  */
-                if (state.active_sql_conn.id === cnctId) commit('UPDATE_SA_WKE_STATES', wke)
+                if (rootState.queryConn.active_sql_conn.id === cnctId) {
+                    commit('UPDATE_SA_WKE_STATES', wke)
+                    commit('queryConn/UPDATE_SYNC_STATES', wke, { root: true })
+                }
             }
         },
         /**
@@ -1468,15 +1204,6 @@ export default {
         },
     },
     getters: {
-        getBgConn: (state, getters, rootState) => {
-            const bgConns = Object.values(state.sql_conns).filter(
-                conn =>
-                    conn.name === state.active_sql_conn.name &&
-                    conn.binding_type === rootState.app_config.QUERY_CONN_BINDING_TYPES.BACKGROUND
-            )
-            if (bgConns.length) return bgConns[0]
-            return {}
-        },
         getActiveWke: state => {
             return state.worksheets_arr.find(wke => wke.id === state.active_wke_id)
         },

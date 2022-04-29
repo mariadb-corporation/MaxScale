@@ -21,6 +21,7 @@ import filter from './filter'
 import session from './session'
 import listener from './listener'
 import query, { defWorksheetState } from './query'
+import queryConn from './queryConn'
 import persisted from './persisted'
 import visualization from './visualization'
 import { APP_CONFIG } from 'utils/constants'
@@ -44,7 +45,12 @@ const store = new Vuex.Store({
         plugins,
         createPersistedState({
             key: 'maxgui',
-            paths: ['persisted', 'query.worksheets_arr', 'query.sql_conns', 'user.logged_in_user'],
+            paths: [
+                'persisted',
+                'query.worksheets_arr',
+                'queryConn.sql_conns',
+                'user.logged_in_user',
+            ],
         }),
     ],
     state: {
@@ -175,6 +181,7 @@ const store = new Vuex.Store({
         session,
         user,
         query,
+        queryConn,
         persisted,
         visualization,
     },
@@ -186,7 +193,7 @@ let initialState = Vue.prototype.$help.lodash.cloneDeep(store.state)
  * A workaround to get fresh initial states because below states are stored in localStorage
  */
 initialState.query.worksheets_arr = [defWorksheetState()]
-initialState.query.sql_conns = {}
+initialState.queryConn.sql_conns = {}
 initialState.user.logged_in_user = {}
 /** for state hydration*/
 export function resetState() {

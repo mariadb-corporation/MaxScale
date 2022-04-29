@@ -150,7 +150,7 @@ export default {
         ...mapState({
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             SQL_NODE_TYPES: state => state.app_config.SQL_NODE_TYPES,
-            active_sql_conn: state => state.query.active_sql_conn,
+            active_sql_conn: state => state.queryConn.active_sql_conn,
             is_sidebar_collapsed: state => state.query.is_sidebar_collapsed,
             search_schema: state => state.query.search_schema,
             engines: state => state.query.engines,

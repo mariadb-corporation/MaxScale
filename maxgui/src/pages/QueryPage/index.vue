@@ -51,7 +51,7 @@ export default {
     computed: {
         ...mapState({
             active_wke_id: state => state.query.active_wke_id,
-            sql_conns: state => state.query.sql_conns,
+            sql_conns: state => state.queryConn.sql_conns,
         }),
         ...mapGetters({
             getActiveWke: 'query/getActiveWke',
@@ -70,6 +70,7 @@ export default {
                 if (v) {
                     this.updateRoute(v)
                     this.UPDATE_SA_WKE_STATES(this.getActiveWke)
+                    this.SYNC_CONN_STATES(this.getActiveWke)
                 }
             },
         },
@@ -113,11 +114,12 @@ export default {
         ...mapMutations({
             SET_SNACK_BAR_MESSAGE: 'SET_SNACK_BAR_MESSAGE',
             UPDATE_SA_WKE_STATES: 'query/UPDATE_SA_WKE_STATES',
+            SYNC_CONN_STATES: 'queryConn/SYNC_CONN_STATES',
         }),
         ...mapActions({
-            validatingConn: 'query/validatingConn',
-            disconnectAll: 'query/disconnectAll',
-            clearConn: 'query/clearConn',
+            validatingConn: 'queryConn/validatingConn',
+            disconnectAll: 'queryConn/disconnectAll',
+            clearConn: 'queryConn/clearConn',
             updateRoute: 'query/updateRoute',
             chooseActiveWke: 'query/chooseActiveWke',
             handleAutoClearQueryHistory: 'persisted/handleAutoClearQueryHistory',

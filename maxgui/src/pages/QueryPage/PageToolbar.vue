@@ -163,7 +163,7 @@ export default {
     computed: {
         ...mapState({
             is_fullscreen: state => state.query.is_fullscreen,
-            sql_conns: state => state.query.sql_conns,
+            sql_conns: state => state.queryConn.sql_conns,
             worksheets_arr: state => state.query.worksheets_arr,
             query_txt: state => state.query.query_txt,
             selected_query_txt: state => state.query.selected_query_txt,

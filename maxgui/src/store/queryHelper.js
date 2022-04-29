@@ -214,10 +214,35 @@ async function queryColsOptsData({ active_sql_conn, nodeId, $queryHttp }) {
     return colsOptsRes.data.data.attributes.results[0]
 }
 
+/**
+ * This helps to mutate flat state
+ * @param {Object} moduleState  module state to be mutated
+ * @param {Object} data  key/value state, can be more than one key
+ */
+function mutateFlatStates({ moduleState, data }) {
+    Object.keys(data).forEach(key => (moduleState[key] = data[key]))
+}
+
+/**
+ * This function helps to synchronize the active wke in worksheets_arr with provided data
+ * @param {Object} payload.scope - scope aka (this)
+ * @param {Object} payload.queryState - query module state object that has worksheets_arr
+ * @param {Object} payload.data - partial modification of a wke in worksheets_arr
+ * @param {Object} payload.active_wke_id - active_wke_id
+ */
+function sync_to_worksheets_arr({ scope, queryState, data, active_wke_id }) {
+    const worksheets_arr = queryState.worksheets_arr
+    const idx = worksheets_arr.findIndex(wke => wke.id === active_wke_id)
+    queryState.worksheets_arr = scope.vue.$help.immutableUpdate(worksheets_arr, {
+        [idx]: { $set: { ...worksheets_arr[idx], ...data } },
+    })
+}
 export default {
     getClientConnIds,
     updateDbChild,
     updateTblChild,
     queryTblOptsData,
     queryColsOptsData,
+    mutateFlatStates,
+    sync_to_worksheets_arr,
 }

@@ -42,7 +42,7 @@ export default {
     computed: {
         ...mapState({
             active_wke_id: state => state.query.active_wke_id,
-            active_sql_conn: state => state.query.active_sql_conn,
+            active_sql_conn: state => state.queryConn.active_sql_conn,
         }),
         ...mapGetters({
             getQueryErrMsgObj: 'query/getQueryErrMsgObj',
@@ -64,8 +64,8 @@ export default {
             UPDATE_LOST_CNN_ERR_MSG_OBJ_MAP: 'query/UPDATE_LOST_CNN_ERR_MSG_OBJ_MAP',
         }),
         ...mapActions({
-            reconnect: 'query/reconnect',
-            disconnect: 'query/disconnect',
+            reconnect: 'queryConn/reconnect',
+            disconnect: 'queryConn/disconnect',
         }),
         async deleteConn() {
             await this.disconnect({ id: this.active_sql_conn.id })

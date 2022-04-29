@@ -244,7 +244,7 @@ export default {
         ...mapState({
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             is_fullscreen: state => state.query.is_fullscreen,
-            active_sql_conn: state => state.query.active_sql_conn,
+            active_sql_conn: state => state.queryConn.active_sql_conn,
             active_db: state => state.query.active_db,
             query_confirm_flag: state => state.persisted.query_confirm_flag,
             show_vis_sidebar: state => state.query.show_vis_sidebar,
@@ -256,7 +256,7 @@ export default {
             getLoadingQueryResult: 'query/getLoadingQueryResult',
             getIsStoppingQuery: 'query/getIsStoppingQuery',
             getDbNodes: 'query/getDbNodes',
-            getBgConn: 'query/getBgConn',
+            getBgConn: 'queryConn/getBgConn',
         }),
         //Prevent parallel querying
         shouldDisableExecute() {
@@ -290,7 +290,7 @@ export default {
             fetchQueryResult: 'query/fetchQueryResult',
             stopQuery: 'query/stopQuery',
             useDb: 'query/useDb',
-            disconnectBgConn: 'query/disconnectBgConn',
+            disconnectBgConn: 'queryConn/disconnectBgConn',
         }),
         async handleSelectDb(db) {
             await this.useDb(db)
