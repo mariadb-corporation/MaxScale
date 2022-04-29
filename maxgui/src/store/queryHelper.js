@@ -12,7 +12,7 @@
  */
 import { immutableUpdate } from 'utils/helpers'
 import { APP_CONFIG } from 'utils/constants'
-// private functions
+
 /**
  * @private
  * @param {String} payload.dbName - Database name to be found
@@ -31,8 +31,8 @@ const getDbIdx = ({ dbName, db_tree }) => db_tree.findIndex(db => db.name === db
 const getIdxOfDbChildNode = ({ dbIdx, db_tree, childType }) =>
     db_tree[dbIdx].children.findIndex(dbChildrenNode => dbChildrenNode.type === childType)
 
-// Public functions
 /**
+ * @public
  * @param {String} prefixName - prefix name of the connection cookie. i.e. conn_id_body_
  * @returns {Array} an array of connection ids found from cookies
  */
@@ -49,6 +49,7 @@ function getClientConnIds(prefixName = 'conn_id_body_') {
 }
 
 /**
+ * @public
  * Use this function to update database node children. i.e. Populating children for
  * Tables||Stored Procedures node
  * @param {Array} payload.db_tree - Array of tree node to be updated
@@ -72,6 +73,7 @@ function updateDbChild({ db_tree, dbName, childType, gch }) {
 }
 
 /**
+ * @public
  * Use this function to update table node children. i.e. Populating children for
  * `Columns` node or `Triggers` node
  * @param {Array} payload.db_tree - Array of tree node to be updated
@@ -121,6 +123,7 @@ function updateTblChild({ db_tree, dbName, tblName, gch, childType }) {
 }
 
 /**
+ * @public
  * @param {Object} active_sql_conn - current connecting resource
  * @param {String} nodeId - node id .i.e schema_name.tbl_name
  * @param {Object} vue - vue instance
@@ -147,6 +150,7 @@ WHERE table_schema = "${db}" AND table_name = "${tblName}";`
     return tblOptsRows[0]
 }
 /**
+ * @public
  * @param {Object} active_sql_conn - current connecting resource
  * @param {String} nodeId - node id .i.e schema_name.tbl_name
  * @param {Object} $queryHttp - $queryHttp axios instance
@@ -215,6 +219,7 @@ async function queryColsOptsData({ active_sql_conn, nodeId, $queryHttp }) {
 }
 
 /**
+ * @public
  * This helps to mutate flat state
  * @param {Object} moduleState  module state to be mutated
  * @param {Object} data  key/value state, can be more than one key
@@ -224,31 +229,55 @@ function mutateFlatStates({ moduleState, data }) {
 }
 
 /**
+ * @private
  * This function helps to synchronize the active wke in worksheets_arr with provided data
  * @param {Object} payload.scope - scope aka (this)
- * @param {Object} payload.queryState - query module state object that has worksheets_arr
  * @param {Object} payload.data - partial modification of a wke in worksheets_arr
  * @param {Object} payload.active_wke_id - active_wke_id
  */
-function sync_to_worksheets_arr({ scope, queryState, data, active_wke_id }) {
-    const worksheets_arr = queryState.worksheets_arr
+function sync_to_worksheets_arr({ scope, data, active_wke_id }) {
+    const worksheets_arr = scope.state.query.worksheets_arr
     const idx = worksheets_arr.findIndex(wke => wke.id === active_wke_id)
-    queryState.worksheets_arr = scope.vue.$help.immutableUpdate(worksheets_arr, {
+    scope.state.query.worksheets_arr = scope.vue.$help.immutableUpdate(worksheets_arr, {
         [idx]: { $set: { ...worksheets_arr[idx], ...data } },
     })
 }
 /**
+ * @private
  * This function mutates (payload.data) to the provided mutateStateModule
  * then synchronizes it to the active wke in worksheets_arr with
  * @param {Object} payload.scope - scope aka (this)
  * @param {Object} payload.mutateStateModule - state module to be mutated
- * @param {Object} queryState - query module state object that has worksheets_arr to sync
  * @param {Object} payload.data - partial modification of a wke object
  * @param {Object} payload.active_wke_id - active_wke_id
  */
-function mutate_sync_wke({ scope, mutateStateModule, queryState, data, active_wke_id }) {
+function mutate_sync_wke({ scope, mutateStateModule, data, active_wke_id }) {
     mutateFlatStates({ moduleState: mutateStateModule, data })
-    sync_to_worksheets_arr({ scope, queryState, data, active_wke_id })
+    sync_to_worksheets_arr({ scope, data, active_wke_id })
+}
+
+/**
+ * @public
+ * This function helps to generate vuex mutations for states are
+ * stored in memory, i.e. states return from memStates().
+ * The name of mutation follows this pattern UPDATE_STATE_NAME. e.g. mutation
+ * for is_querying_map state is UPDATE_IS_QUERYING_MAP
+ * @returns {Object} - returns vuex mutations
+ */
+function syncedStateMutationsCreator(statesToBeSynced) {
+    let mutations = {}
+    Object.keys(statesToBeSynced).forEach(key => {
+        // Use function instead of arrow func in order to access `this.vue`
+        mutations[`SET_${key.toUpperCase()}`] = function(state, { payload, active_wke_id }) {
+            mutate_sync_wke({
+                scope: this,
+                mutateStateModule: state,
+                data: { [key]: payload },
+                active_wke_id,
+            })
+        }
+    })
+    return mutations
 }
 
 export default {
@@ -258,6 +287,5 @@ export default {
     queryTblOptsData,
     queryColsOptsData,
     mutateFlatStates,
-    sync_to_worksheets_arr,
-    mutate_sync_wke,
+    syncedStateMutationsCreator,
 }

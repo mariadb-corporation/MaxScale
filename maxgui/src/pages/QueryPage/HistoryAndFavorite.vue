@@ -209,6 +209,7 @@ export default {
             curr_query_mode: state => state.query.curr_query_mode,
             query_history: state => state.persisted.query_history,
             query_favorite: state => state.persisted.query_favorite,
+            active_wke_id: state => state.query.active_wke_id,
         }),
         activeView: {
             get() {
@@ -219,7 +220,7 @@ export default {
                     this.curr_query_mode === this.SQL_QUERY_MODES.HISTORY ||
                     this.curr_query_mode === this.SQL_QUERY_MODES.FAVORITE
                 )
-                    this.SET_CURR_QUERY_MODE(value)
+                    this.SET_CURR_QUERY_MODE({ payload: value, active_wke_id: this.active_wke_id })
             },
         },
         queryLogTypes() {

@@ -121,6 +121,7 @@ export default {
             show_vis_sidebar: state => state.query.show_vis_sidebar,
             query_txt: state => state.query.query_txt,
             is_sidebar_collapsed: state => state.query.is_sidebar_collapsed,
+            active_wke_id: state => state.query.active_wke_id,
         }),
         ...mapGetters({
             getDbCmplList: 'query/getDbCmplList',
@@ -146,7 +147,7 @@ export default {
                 return this.query_txt
             },
             set(value) {
-                this.SET_QUERY_TXT(value)
+                this.SET_QUERY_TXT({ payload: value, active_wke_id: this.active_wke_id })
             },
         },
         resultPaneDim() {

@@ -142,7 +142,9 @@
                             :color="show_vis_sidebar ? 'primary' : 'accent-dark'"
                             :disabled="!hasActiveConn || getIsQuerying"
                             v-on="on"
-                            @click="SET_SHOW_VIS_SIDEBAR(!show_vis_sidebar)"
+                            @click="
+                                SET_SHOW_VIS_SIDEBAR({ payload: !show_vis_sidebar, active_wke_id })
+                            "
                         >
                             <v-icon
                                 size="16"
@@ -250,6 +252,7 @@ export default {
             show_vis_sidebar: state => state.query.show_vis_sidebar,
             query_txt: state => state.query.query_txt,
             selected_query_txt: state => state.query.selected_query_txt,
+            active_wke_id: state => state.query.active_wke_id,
         }),
         ...mapGetters({
             getIsQuerying: 'query/getIsQuerying',
@@ -321,7 +324,10 @@ export default {
          * @param {String} mode Mode to execute query: All or selected
          */
         async onRun(mode) {
-            this.SET_CURR_QUERY_MODE(this.SQL_QUERY_MODES.QUERY_VIEW)
+            this.SET_CURR_QUERY_MODE({
+                payload: this.SQL_QUERY_MODES.QUERY_VIEW,
+                active_wke_id: this.active_wke_id,
+            })
             switch (mode) {
                 case 'all':
                     if (this.query_txt) await this.fetchQueryResult(this.query_txt)

@@ -161,79 +161,14 @@ export default {
     },
     mutations: {
         ...memStatesMutationCreator(),
-        // TODO: Create MutationCreator for mutation using mutate_sync_wke
+        ...queryHelper.syncedStateMutationsCreator(wkeStatesToBeSynced()),
         //Toolbar mutations
-        SET_ACTIVE_DB(state, { payload, active_wke_id }) {
-            queryHelper.mutate_sync_wke({
-                scope: this,
-                mutateStateModule: state,
-                queryState: state,
-                data: { active_db: payload },
-                active_wke_id,
-            })
-        },
         SET_FULLSCREEN(state, payload) {
             state.is_fullscreen = payload
         },
-        SET_SHOW_VIS_SIDEBAR(state, payload) {
-            queryHelper.mutate_sync_wke({
-                scope: this,
-                mutateStateModule: state,
-                queryState: state,
-                data: { show_vis_sidebar: payload },
-                active_wke_id: state.active_wke_id,
-            })
-        },
-        // Sidebar tree schema mutations
-        SET_IS_SIDEBAR_COLLAPSED(state, payload) {
-            queryHelper.mutate_sync_wke({
-                scope: this,
-                mutateStateModule: state,
-                queryState: state,
-                data: { is_sidebar_collapsed: payload },
-                active_wke_id: state.active_wke_id,
-            })
-        },
-        SET_SEARCH_SCHEMA(state, payload) {
-            queryHelper.mutate_sync_wke({
-                scope: this,
-                mutateStateModule: state,
-                queryState: state,
-                data: { search_schema: payload },
-                active_wke_id: state.active_wke_id,
-            })
-        },
-        SET_EXPANDED_NODES(state, payload) {
-            queryHelper.mutate_sync_wke({
-                scope: this,
-                mutateStateModule: state,
-                queryState: state,
-                data: { expanded_nodes: payload },
-                active_wke_id: state.active_wke_id,
-            })
-        },
-
         // editor mutations
-        SET_QUERY_TXT(state, payload) {
-            queryHelper.mutate_sync_wke({
-                scope: this,
-                mutateStateModule: state,
-                queryState: state,
-                data: { query_txt: payload },
-                active_wke_id: state.active_wke_id,
-            })
-        },
         SET_SELECTED_QUERY_TXT(state, payload) {
             state.selected_query_txt = payload
-        },
-        SET_CURR_DDL_COL_SPEC(state, payload) {
-            queryHelper.mutate_sync_wke({
-                scope: this,
-                mutateStateModule: state,
-                queryState: state,
-                data: { curr_ddl_alter_spec: payload },
-                active_wke_id: state.active_wke_id,
-            })
         },
         SET_CHARSET_COLLATION_MAP(state, payload) {
             state.charset_collation_map = payload
@@ -243,17 +178,6 @@ export default {
         },
         SET_ENGINES(state, payload) {
             state.engines = payload
-        },
-
-        // Result tables data mutations
-        SET_CURR_QUERY_MODE(state, payload) {
-            queryHelper.mutate_sync_wke({
-                scope: this,
-                mutateStateModule: state,
-                queryState: state,
-                data: { curr_query_mode: payload },
-                active_wke_id: state.active_wke_id,
-            })
         },
         // worksheet mutations
         ADD_NEW_WKE(state) {
@@ -270,7 +194,12 @@ export default {
         SET_ACTIVE_WKE_ID(state, payload) {
             state.active_wke_id = payload
         },
-
+        /**
+         * When active_wke_id is changed, call this to sync properties from worksheets_arr
+         * back to wkeStatesToBeSynced in this module
+         * @param {Object} state - vuex state
+         * @param {Object} wke - wke object
+         */
         SYNC_WKE_STATES(state, wke) {
             queryHelper.mutateFlatStates({
                 moduleState: state,

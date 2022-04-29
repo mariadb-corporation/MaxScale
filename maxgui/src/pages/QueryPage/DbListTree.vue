@@ -259,7 +259,7 @@ export default {
             UPDATE_DB_TREE_MAP: 'query/UPDATE_DB_TREE_MAP',
             SET_EXPANDED_NODES: 'query/SET_EXPANDED_NODES',
             UPDATE_CURR_EDITOR_MODE_MAP: 'query/UPDATE_CURR_EDITOR_MODE_MAP',
-            SET_CURR_DDL_COL_SPEC: 'query/SET_CURR_DDL_COL_SPEC',
+            SET_CURR_DDL_ALTER_SPEC: 'query/SET_CURR_DDL_ALTER_SPEC',
             UPDATE_TBL_CREATION_INFO_MAP: 'query/UPDATE_TBL_CREATION_INFO_MAP',
         }),
         filter(item, search, textKey) {
@@ -281,8 +281,16 @@ export default {
                         nodes.sort((a, b) => a.level - b.level)
                         // Auto collapse all expanded nodes if schema node is collapsed
                         let validLevels = nodes.map(node => node.level)
-                        if (validLevels[0] === 0) this.SET_EXPANDED_NODES(nodes)
-                        else this.SET_EXPANDED_NODES([])
+                        if (validLevels[0] === 0)
+                            this.SET_EXPANDED_NODES({
+                                payload: nodes,
+                                active_wke_id: this.active_wke_id,
+                            })
+                        else
+                            this.SET_EXPANDED_NODES({
+                                payload: [],
+                                active_wke_id: this.active_wke_id,
+                            })
                     }
                 },
                 { deep: true }
@@ -418,7 +426,10 @@ export default {
                             id: this.active_wke_id,
                             payload: this.SQL_EDITOR_MODES.DDL_EDITOR,
                         })
-                        this.SET_CURR_DDL_COL_SPEC(this.SQL_DDL_ALTER_SPECS.COLUMNS)
+                        this.SET_CURR_DDL_ALTER_SPEC({
+                            payload: this.SQL_DDL_ALTER_SPECS.COLUMNS,
+                            active_wke_id: this.active_wke_id,
+                        })
                         this.$emit('alter-tbl', alterActiveNode)
                     }
                     break

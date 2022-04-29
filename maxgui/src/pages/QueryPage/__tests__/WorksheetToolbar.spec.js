@@ -249,7 +249,11 @@ describe('WorksheetToolbar - visualize-btn tests', () => {
         let setShowVisSidebarCallCount = 0
         let argVal
         wrapper = mountFactory({
-            computed: { hasActiveConn: () => true, getIsQuerying: () => false },
+            computed: {
+                hasActiveConn: () => true,
+                getIsQuerying: () => false,
+                active_wke_id: () => 'wke_123',
+            },
             methods: {
                 SET_SHOW_VIS_SIDEBAR: val => {
                     setShowVisSidebarCallCount++
@@ -259,6 +263,9 @@ describe('WorksheetToolbar - visualize-btn tests', () => {
         })
         wrapper.find('.visualize-btn').trigger('click')
         expect(setShowVisSidebarCallCount).to.be.equals(1)
-        expect(argVal).to.be.equals(!wrapper.vm.show_vis_sidebar)
+        expect(argVal).to.be.eql({
+            payload: !wrapper.vm.show_vis_sidebar,
+            active_wke_id: 'wke_123',
+        })
     })
 })

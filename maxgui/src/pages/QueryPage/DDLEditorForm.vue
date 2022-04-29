@@ -81,6 +81,7 @@ export default {
         ...mapState({
             SQL_DDL_ALTER_SPECS: state => state.app_config.SQL_DDL_ALTER_SPECS,
             curr_ddl_alter_spec: state => state.query.curr_ddl_alter_spec,
+            active_wke_id: state => state.query.active_wke_id,
         }),
         ...mapGetters({
             getTblCreationInfo: 'query/getTblCreationInfo',
@@ -109,7 +110,10 @@ export default {
                 return this.curr_ddl_alter_spec
             },
             set(value) {
-                this.SET_CURR_DDL_COL_SPEC(value)
+                this.SET_CURR_DDL_ALTER_SPEC({
+                    payload: value,
+                    active_wke_id: this.active_wke_id,
+                })
             },
         },
         tabDim() {
@@ -139,7 +143,7 @@ export default {
     },
     methods: {
         ...mapMutations({
-            SET_CURR_DDL_COL_SPEC: 'query/SET_CURR_DDL_COL_SPEC',
+            SET_CURR_DDL_ALTER_SPEC: 'query/SET_CURR_DDL_ALTER_SPEC',
         }),
         setHeaderHeight() {
             if (!this.$refs.header) return
