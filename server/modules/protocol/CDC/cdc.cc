@@ -245,6 +245,11 @@ int32_t CDCClientConnection::write(GWBUF* buffer)
     return m_dcb->writeq_append(buffer);
 }
 
+bool CDCClientConnection::write(GWBUF&& buffer)
+{
+    return m_dcb->writeq_append(std::move(buffer));
+}
+
 void CDCClientConnection::error(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);

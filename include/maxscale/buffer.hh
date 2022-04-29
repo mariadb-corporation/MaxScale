@@ -112,6 +112,14 @@ public:
      */
     explicit GWBUF(size_t reserve_size);
 
+    /**
+     * Create a buffer with the given data.
+     *
+     * @param data Pointer to data. The contents are copied.
+     * @param datasize Size of the data
+     */
+    explicit GWBUF(const uint8_t* data, size_t datasize);
+
     GWBUF(GWBUF&& rhs) noexcept;
     GWBUF& operator=(GWBUF&& rhs) noexcept;
 

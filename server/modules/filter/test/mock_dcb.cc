@@ -57,5 +57,10 @@ int32_t Dcb::Protocol::write(GWBUF* pData)
 
     return rv;
 }
+
+bool Dcb::Protocol::write(GWBUF&& data)
+{
+    return write(mxs::gwbuf_to_gwbufptr(std::move(data)));
+}
 }
 }

@@ -44,7 +44,7 @@ public:
     MariaDBClientAuthenticator(bool log_pw_mismatch);
     ~MariaDBClientAuthenticator() override = default;
 
-    ExchRes exchange(GWBUF* buffer, MYSQL_session* session, AuthenticationData& auth_data) override;
+    ExchRes exchange(GWBUF&& buffer, MYSQL_session* session, AuthenticationData& auth_data) override;
     AuthRes authenticate(MYSQL_session* session, AuthenticationData& auth_data) override;
 
 private:

@@ -142,6 +142,12 @@ GWBUF::GWBUF(size_t reserve_size)
     m_end = m_start;
 }
 
+GWBUF::GWBUF(const uint8_t* data, size_t datasize)
+    : GWBUF()
+{
+    append(data, datasize);
+}
+
 GWBUF::GWBUF(const GWBUF& rhs)
     : GWBUF()
 {

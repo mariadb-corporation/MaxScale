@@ -63,6 +63,7 @@ private:
 private:
     // mxs::ProtocolConnection
     int32_t write(GWBUF* buffer) override;
+    bool    write(GWBUF&& buffer) override;
     json_t* diagnostics() const override;
     void set_dcb(DCB* dcb) override;
     bool is_movable() const override;

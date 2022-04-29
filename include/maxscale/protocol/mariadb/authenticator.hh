@@ -185,7 +185,7 @@ public:
         Status status {Status::FAIL};   /**< Authentication exchange status */
 
         /** Packet that is sent to the client. Protocol code will set the sequence number. */
-        mxs::Buffer packet;
+        GWBUF packet;
     };
 
 
@@ -218,7 +218,7 @@ public:
      * @param auth_data Authentication data to read/modify
      * @return Authentication status and reply buffer
      */
-    virtual ExchRes exchange(GWBUF* input, MYSQL_session* ses, AuthenticationData& auth_data) = 0;
+    virtual ExchRes exchange(GWBUF&& input, MYSQL_session* ses, AuthenticationData& auth_data) = 0;
 
     /**
      * Check client token against the password.

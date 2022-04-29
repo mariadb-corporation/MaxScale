@@ -22,14 +22,13 @@ class GSSAPIClientAuthenticator : public mariadb::ClientAuthenticator
 public:
     GSSAPIClientAuthenticator(const std::string& service_principal);
 
-    ExchRes exchange(GWBUF* buffer, MYSQL_session* session, AuthenticationData& auth_data) override;
+    ExchRes exchange(GWBUF&& buffer, MYSQL_session* session, AuthenticationData& auth_data) override;
     AuthRes authenticate(MYSQL_session* session, AuthenticationData& auth_data) override;
 
 private:
-    void store_client_token(MYSQL_session* session, GWBUF* buffer);
-    bool validate_gssapi_token(AuthenticationData& auth_data);
-
-    mxs::Buffer create_auth_change_packet();
+    void  store_client_token(MYSQL_session* session, const GWBUF& buffer);
+    bool  validate_gssapi_token(AuthenticationData& auth_data);
+    GWBUF create_auth_change_packet();
 
     enum class State
     {

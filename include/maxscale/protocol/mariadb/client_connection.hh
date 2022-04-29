@@ -44,6 +44,7 @@ public:
     void hangup(DCB* dcb) override;
 
     int32_t write(GWBUF* buffer) override;
+    bool    write(GWBUF&& buffer) override;
 
     bool    init_connection() override;
     void    finish_connection() override;

@@ -264,6 +264,11 @@ int32_t ClientConnection::write(GWBUF* pMariaDB_response)
     return rv;
 }
 
+bool ClientConnection::write(GWBUF&& buffer)
+{
+    return write(mxs::gwbuf_to_gwbufptr(move(buffer)));
+}
+
 json_t* ClientConnection::diagnostics() const
 {
     return nullptr;

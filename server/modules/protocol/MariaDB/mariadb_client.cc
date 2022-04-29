@@ -1598,6 +1598,11 @@ int32_t MariaDBClientConnection::write(GWBUF* queue)
     return m_dcb->writeq_append(queue);
 }
 
+bool MariaDBClientConnection::write(GWBUF&& buffer)
+{
+    return m_dcb->writeq_append(move(buffer));
+}
+
 void MariaDBClientConnection::write_ready(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);
@@ -2454,11 +2459,12 @@ bool MariaDBClientConnection::perform_auth_exchange(mariadb::AuthenticationData&
 {
     mxb_assert(m_auth_state == AuthState::START_EXCHANGE || m_auth_state == AuthState::CONTINUE_EXCHANGE);
 
-    mxs::Buffer read_buffer;
+    GWBUF buffer;
     // Nothing to read on first exchange-call.
     if (m_auth_state == AuthState::CONTINUE_EXCHANGE)
     {
-        auto [read_ok, buffer] = read_protocol_packet();
+        bool read_ok;
+        std::tie(read_ok, buffer) = read_protocol_packet();
         if (buffer.empty())
         {
             if (read_ok)
@@ -2473,17 +2479,14 @@ bool MariaDBClientConnection::perform_auth_exchange(mariadb::AuthenticationData&
                 return true;
             }
         }
-        else
-        {
-            read_buffer = mxs::gwbuf_to_buffer(move(buffer));
-        }
     }
 
-    auto res = m_authenticator->exchange(read_buffer.get(), m_session_data, auth_data);
+    auto res = m_authenticator->exchange(move(buffer), m_session_data, auth_data);
     if (!res.packet.empty())
     {
+        mxb_assert(res.packet.is_unique());
         res.packet.data()[MYSQL_SEQ_OFFSET] = m_next_sequence;
-        write(res.packet.release());
+        write(move(res.packet));
     }
 
     bool state_machine_continue = true;

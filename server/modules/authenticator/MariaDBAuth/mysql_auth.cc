@@ -97,14 +97,14 @@ mariadb::AuthByteVec MariaDBAuthenticatorModule::generate_token(const std::strin
 }
 
 // Helper function for generating an AuthSwitchRequest packet.
-static GWBUF* gen_auth_switch_request_packet(MYSQL_session* client_data)
+static GWBUF gen_auth_switch_request_packet(const MYSQL_session* client_data)
 {
     /**
      * The AuthSwitchRequest packet:
      * 4 bytes     - Header
      * 0xfe        - Command byte
      * string[NUL] - Auth plugin name
-     * string[EOF] - Scramble
+     * string[NUL] - Scramble
      */
     const char plugin[] = DEFAULT_MYSQL_AUTH_PLUGIN;
 
@@ -112,15 +112,15 @@ static GWBUF* gen_auth_switch_request_packet(MYSQL_session* client_data)
      * byte in the end. */
     unsigned int payloadlen = 1 + sizeof(plugin) + MYSQL_SCRAMBLE_LEN + 1;
     unsigned int buflen = MYSQL_HEADER_LEN + payloadlen;
-    GWBUF* buffer = gwbuf_alloc(buflen);
-    uint8_t* bufdata = GWBUF_DATA(buffer);
+    GWBUF buffer(buflen);
+    auto bufdata = buffer.data();
     bufdata = mariadb::write_header(bufdata, payloadlen, 0);// protocol will set sequence
     *bufdata++ = MYSQL_REPLY_AUTHSWITCHREQUEST;             // AuthSwitchRequest command
-    memcpy(bufdata, plugin, sizeof(plugin));
-    bufdata += sizeof(plugin);
-    memcpy(bufdata, client_data->scramble, MYSQL_SCRAMBLE_LEN);
-    bufdata += GW_MYSQL_SCRAMBLE_SIZE;
-    *bufdata = '\0';
+    bufdata = mariadb::copy_chars(bufdata, plugin, sizeof(plugin));
+    bufdata = mariadb::copy_bytes(bufdata, client_data->scramble, MYSQL_SCRAMBLE_LEN);
+    *bufdata++ = '\0';
+    buffer.write_complete(bufdata - buffer.data());
+    mxb_assert(buffer.length() == buflen);
     return buffer;
 }
 
@@ -130,7 +130,7 @@ MariaDBClientAuthenticator::MariaDBClientAuthenticator(bool log_pw_mismatch)
 }
 
 mariadb::ClientAuthenticator::ExchRes
-MariaDBClientAuthenticator::exchange(GWBUF* buf, MYSQL_session* session, AuthenticationData& auth_data)
+MariaDBClientAuthenticator::exchange(GWBUF&& buf, MYSQL_session* session, AuthenticationData& auth_data)
 {
     using ExchRes = mariadb::ClientAuthenticator::ExchRes;
     ExchRes rval;
@@ -144,8 +144,8 @@ MariaDBClientAuthenticator::exchange(GWBUF* buf, MYSQL_session* session, Authent
         if (auth_data.plugin == DEFAULT_MYSQL_AUTH_PLUGIN || auth_data.plugin.empty())
         {
             // Correct plugin, token should have been read by protocol code.
-            m_state = State::CHECK_TOKEN;
             rval.status = ExchRes::Status::READY;
+            m_state = State::CHECK_TOKEN;
         }
         else
         {
@@ -154,13 +154,9 @@ MariaDBClientAuthenticator::exchange(GWBUF* buf, MYSQL_session* session, Authent
                      "switch to '%s'.",
                      session->user_and_host().c_str(),
                      auth_data.plugin.c_str(), DEFAULT_MYSQL_AUTH_PLUGIN);
-            GWBUF* switch_packet = gen_auth_switch_request_packet(session);
-            if (switch_packet)
-            {
-                rval.packet.reset(switch_packet);
-                m_state = State::AUTHSWITCH_SENT;
-                rval.status = ExchRes::Status::INCOMPLETE;
-            }
+            rval.packet = gen_auth_switch_request_packet(session);
+            rval.status = ExchRes::Status::INCOMPLETE;
+            m_state = State::AUTHSWITCH_SENT;
         }
         break;
 
@@ -168,16 +164,16 @@ MariaDBClientAuthenticator::exchange(GWBUF* buf, MYSQL_session* session, Authent
         {
             // Client is replying to an AuthSwitch request. The packet should contain
             // the authentication token.
-            if (gwbuf_length(buf) == MYSQL_HEADER_LEN + MYSQL_SCRAMBLE_LEN)
+            if (buf.length() == MYSQL_HEADER_LEN + MYSQL_SCRAMBLE_LEN)
             {
                 auto& auth_token = auth_data.client_token;
                 auth_token.clear();
                 auth_token.resize(MYSQL_SCRAMBLE_LEN);
-                gwbuf_copy_data(buf, MYSQL_HEADER_LEN, MYSQL_SCRAMBLE_LEN, auth_token.data());
+                buf.copy_data(MYSQL_HEADER_LEN, MYSQL_SCRAMBLE_LEN, auth_token.data());
                 // Assume that correct authenticator is now used. If this is not the case,
                 // authentication will fail.
-                m_state = State::CHECK_TOKEN;
                 rval.status = ExchRes::Status::READY;
+                m_state = State::CHECK_TOKEN;
             }
         }
         break;

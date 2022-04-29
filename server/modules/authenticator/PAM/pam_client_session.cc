@@ -34,16 +34,14 @@ namespace
  * @param output Password output
  * @return True on success, false if packet didn't have a valid header
  */
-bool store_client_password(GWBUF* buffer, mariadb::AuthByteVec* output)
+bool store_client_password(const GWBUF& buffer, mariadb::AuthByteVec* output)
 {
     bool rval = false;
-    uint8_t header[MYSQL_HEADER_LEN];
-
-    if (gwbuf_copy_data(buffer, 0, MYSQL_HEADER_LEN, header) == MYSQL_HEADER_LEN)
+    if (buffer.length() >= MYSQL_HEADER_LEN)
     {
-        size_t plen = mariadb::get_byte3(header);
+        size_t plen = mariadb::get_header(buffer.data()).pl_length;
         output->resize(plen);
-        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, plen, output->data());
+        buffer.copy_data(MYSQL_HEADER_LEN, plen, output->data());
         rval = true;
     }
     return rval;
@@ -62,7 +60,7 @@ bool store_client_password(GWBUF* buffer, mariadb::AuthByteVec* output)
  * @see
  * https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::AuthSwitchRequest
  */
-Buffer PamClientAuthenticator::create_auth_change_packet() const
+GWBUF PamClientAuthenticator::create_auth_change_packet() const
 {
     bool dialog = !m_settings.cleartext_plugin;
     /**
@@ -92,12 +90,11 @@ Buffer PamClientAuthenticator::create_auth_change_packet() const
         memcpy(pData, CLEAR_PW.c_str(), CLEAR_PW_SIZE);
     }
 
-    Buffer buffer(bufdata, buflen);
-    return buffer;
+    return GWBUF(bufdata, buflen);
 }
 
 mariadb::ClientAuthenticator::ExchRes
-PamClientAuthenticator::exchange(GWBUF* buffer, MYSQL_session* session, AuthenticationData& auth_data)
+PamClientAuthenticator::exchange(GWBUF&& buffer, MYSQL_session* session, AuthenticationData& auth_data)
 {
     using ExchRes = mariadb::ClientAuthenticator::ExchRes;
     ExchRes rval;
@@ -107,13 +104,9 @@ PamClientAuthenticator::exchange(GWBUF* buffer, MYSQL_session* session, Authenti
     case State::INIT:
         {
             // TODO: what if authenticator was already correct? Could this part be skipped?
-            Buffer authbuf = create_auth_change_packet();
-            if (authbuf.length())
-            {
-                m_state = State::ASKED_FOR_PW;
-                rval.packet = std::move(authbuf);
-                rval.status = ExchRes::Status::INCOMPLETE;
-            }
+            rval.packet = create_auth_change_packet();
+            rval.status = ExchRes::Status::INCOMPLETE;
+            m_state = State::ASKED_FOR_PW;
         }
         break;
 
@@ -123,15 +116,15 @@ PamClientAuthenticator::exchange(GWBUF* buffer, MYSQL_session* session, Authenti
         {
             if (m_settings.mode == AuthMode::PW)
             {
-                m_state = State::PW_RECEIVED;
                 rval.status = ExchRes::Status::READY;
+                m_state = State::PW_RECEIVED;
             }
             else
             {
                 // Generate prompt for 2FA.
-                m_state = State::ASKED_FOR_2FA;
                 rval.packet = create_2fa_prompt_packet();
                 rval.status = ExchRes::Status::INCOMPLETE;
+                m_state = State::ASKED_FOR_2FA;
             }
         }
         break;
@@ -139,8 +132,8 @@ PamClientAuthenticator::exchange(GWBUF* buffer, MYSQL_session* session, Authenti
     case State::ASKED_FOR_2FA:
         if (store_client_password(buffer, &session->auth_data->client_token_2fa))
         {
-            m_state = State::PW_RECEIVED;
             rval.status = ExchRes::Status::READY;
+            m_state = State::PW_RECEIVED;
         }
         break;
 
@@ -240,7 +233,7 @@ PamClientAuthenticator::PamClientAuthenticator(AuthSettings settings, const Pass
 {
 }
 
-Buffer PamClientAuthenticator::create_2fa_prompt_packet() const
+GWBUF PamClientAuthenticator::create_2fa_prompt_packet() const
 {
     /**
      * 4 bytes     - Header
@@ -253,6 +246,5 @@ Buffer PamClientAuthenticator::create_2fa_prompt_packet() const
     uint8_t* pData = mariadb::write_header(bufdata, plen, 0);
     *pData++ = DIALOG_ECHO_DISABLED;    // Equivalent to server 2FA prompt
     memcpy(pData, TWO_FA_QUERY.c_str(), TWO_FA_QUERY.length());
-    Buffer buffer(bufdata, buflen);
-    return buffer;
+    return GWBUF(bufdata, buflen);
 }

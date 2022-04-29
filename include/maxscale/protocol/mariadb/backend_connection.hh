@@ -36,6 +36,7 @@ public:
     void hangup(DCB* dcb) override;
 
     int32_t write(GWBUF* buffer) override;
+    bool    write(GWBUF&& buffer) override;
 
     void     finish_connection() override;
     uint64_t can_reuse(MXS_SESSION* session) const override;

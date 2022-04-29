@@ -232,6 +232,11 @@ private:
             return m_owner.write(pBuffer);
         }
 
+        bool write(GWBUF&& buffer) override
+        {
+            return write(mxs::gwbuf_to_gwbufptr(std::move(buffer)));
+        }
+
         json_t* diagnostics() const override
         {
             return nullptr;

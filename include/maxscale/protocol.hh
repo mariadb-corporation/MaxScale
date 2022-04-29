@@ -49,6 +49,7 @@ public:
      * @return 1 on success, 0 on error
      */
     virtual int32_t write(GWBUF* buffer) = 0;
+    virtual bool    write(GWBUF&& buffer) = 0;
 
     /**
      * Print connection diagnostics to json.

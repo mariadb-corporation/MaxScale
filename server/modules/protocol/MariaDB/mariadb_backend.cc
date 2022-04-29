@@ -1334,6 +1334,11 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
     return rc;
 }
 
+bool MariaDBBackendConnection::write(GWBUF&& buffer)
+{
+    return write(mxs::gwbuf_to_gwbufptr(move(buffer)));
+}
+
 /**
  * Error event handler.
  * Create error message, pass it to router's error handler and if error

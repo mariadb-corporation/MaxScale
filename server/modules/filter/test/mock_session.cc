@@ -57,6 +57,11 @@ public:
         return 0;
     }
 
+    bool write(GWBUF&& buffer)override
+    {
+        return true;
+    }
+
     void error(DCB* dcb) override
     {
     }

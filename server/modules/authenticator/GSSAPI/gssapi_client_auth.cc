@@ -40,7 +40,7 @@ GSSAPIClientAuthenticator::GSSAPIClientAuthenticator(const std::string& service_
  * https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::AuthSwitchRequest
  * @see https://web.mit.edu/kerberos/krb5-1.5/krb5-1.5.4/doc/krb5-user/What-is-a-Kerberos-Principal_003f.html
  */
-mxs::Buffer GSSAPIClientAuthenticator::create_auth_change_packet()
+GWBUF GSSAPIClientAuthenticator::create_auth_change_packet()
 {
     const char auth_plugin_name[] = "auth_gssapi_client";
     const int auth_plugin_name_len = sizeof(auth_plugin_name);
@@ -62,7 +62,7 @@ mxs::Buffer GSSAPIClientAuthenticator::create_auth_change_packet()
     data = mariadb::copy_chars(data, auth_plugin_name, auth_plugin_name_len);
     data = mariadb::copy_chars(data, m_service_principal.c_str(), principal_name_len);
     *data = '\0';   // No mechanisms
-    return {bufdata, buflen};
+    return GWBUF(bufdata, buflen);
 }
 
 /**
@@ -73,19 +73,19 @@ mxs::Buffer GSSAPIClientAuthenticator::create_auth_change_packet()
  *
  * @param buffer Buffer containing the key
  */
-void GSSAPIClientAuthenticator::store_client_token(MYSQL_session* session, GWBUF* buffer)
+void GSSAPIClientAuthenticator::store_client_token(MYSQL_session* session, const GWBUF& buffer)
 {
     // Buffer is known to be complete.
-    auto* data = gwbuf_link_data(buffer);
+    auto* data = buffer.data();
     auto header = mariadb::get_header(data);
     size_t plen = header.pl_length;
     auto& token = session->auth_data->client_token;
     token.resize(plen);
-    gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, plen, token.data());
+    buffer.copy_data(MYSQL_HEADER_LEN, plen, token.data());
 }
 
 mariadb::ClientAuthenticator::ExchRes
-GSSAPIClientAuthenticator::exchange(GWBUF* read_buffer, MYSQL_session* session, AuthenticationData& auth_data)
+GSSAPIClientAuthenticator::exchange(GWBUF&& buffer, MYSQL_session* session, AuthenticationData& auth_data)
 {
     using ExchRes = mariadb::ClientAuthenticator::ExchRes;
     ExchRes rval;
@@ -93,24 +93,18 @@ GSSAPIClientAuthenticator::exchange(GWBUF* read_buffer, MYSQL_session* session, 
     switch (m_state)
     {
     case State::INIT:
-        {
-            /** We need to send the authentication switch packet to change the
-             * authentication to something other than the 'mysql_native_password'
-             * method */
-            auto buffer = create_auth_change_packet();
-            if (buffer.length())
-            {
-                rval.packet = std::move(buffer);
-                m_state = State::DATA_SENT;
-                rval.status = ExchRes::Status::INCOMPLETE;
-            }
-            break;
-        }
+        /** We need to send the authentication switch packet to change the
+         * authentication to something other than the 'mysql_native_password'
+         * method */
+        rval.packet = create_auth_change_packet();
+        rval.status = ExchRes::Status::INCOMPLETE;
+        m_state = State::DATA_SENT;
+        break;
 
     case State::DATA_SENT:
-        store_client_token(session, read_buffer);
-        m_state = State::TOKEN_READY;
+        store_client_token(session, buffer);
         rval.status = ExchRes::Status::READY;
+        m_state = State::TOKEN_READY;
         break;
 
     default:
