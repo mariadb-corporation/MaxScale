@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-require("./common.js")();
+const { maxctrl, helpMsg, _, doRequest } = require("./common.js");
 var colors = require("colors/safe");
 var flat = require("flat");
 
@@ -43,10 +43,10 @@ function removeUnwanted(a) {
 
   var res = _.pick(a, _.concat(["id", "attributes.parameters"], relationships));
 
-  for (r of relationships) {
+  for (const r of relationships) {
     var rel = _.get(res, r, []);
 
-    for (o of rel) {
+    for (const o of rel) {
       delete o.type;
     }
   }
@@ -74,7 +74,7 @@ function getChangedObjects(src, dest) {
     var changed_keys = _.pickBy(flat_ours, (v, k) => !_.isEqual(flat(b)[k], v));
     var res = {};
 
-    for (k of Object.keys(changed_keys)) {
+    for (const k of Object.keys(changed_keys)) {
       res[k] = {
         ours: _.has(flat_ours, k) ? flat_ours[k] : null,
         theirs: _.has(flat_theirs, k) ? flat_theirs[k] : null,
@@ -98,12 +98,12 @@ async function getDiffs(a, b) {
   var src = {};
   var dest = {};
 
-  for (i of collections) {
+  for (const i of collections) {
     dest[i] = await doRequest(b, i);
     src[i] = await doRequest(a, i);
   }
 
-  for (i of endpoints) {
+  for (const i of endpoints) {
     // Treating the resource endpoints as arrays allows the same functions to be used
     // to compare individual resources and resource collections
     dest[i] = await doRequest(b, i);
@@ -112,11 +112,11 @@ async function getDiffs(a, b) {
     src[i].data = [src[i].data];
   }
 
-  for (i of dest.services.data) {
+  for (const i of dest.services.data) {
     dest["services/" + i.id + "/listeners"] = { data: i.attributes.listeners };
   }
 
-  for (i of src.services.data) {
+  for (const i of src.services.data) {
     src["services/" + i.id + "/listeners"] = { data: i.attributes.listeners };
   }
 
@@ -132,28 +132,28 @@ async function getModifiableParams(host) {
 
 async function syncDiffs(host, src, dest) {
   // Delete old services
-  for (i of getDifference(dest.services, src.services)) {
+  for (const i of getDifference(dest.services, src.services)) {
     // If the service has listeners, delete those first. Otherwise the deletion will fail.
     if (i.attributes.listeners) {
-      for (j of i.attributes.listeners) {
+      for (const j of i.attributes.listeners) {
         await doRequest(host, "services/" + i.id + "/listeners/" + j.id, { method: "DELETE" });
       }
     }
 
-    var body = { method: "PATCH", data: _.set({}, "data.relationships", {}) };
+    const body = { method: "PATCH", data: _.set({}, "data.relationships", {}) };
     await doRequest(host, "services/" + i.id, body);
     await doRequest(host, "services/" + i.id, { method: "DELETE" });
   }
 
   // Delete old monitors
-  for (i of getDifference(dest.monitors, src.monitors)) {
-    var body = { method: "PATCH", data: _.set({}, "data.relationships", {}) };
+  for (const i of getDifference(dest.monitors, src.monitors)) {
+    const body = { method: "PATCH", data: _.set({}, "data.relationships", {}) };
     await doRequest(host, "monitors/" + i.id, body);
     await doRequest(host, "monitors/" + i.id, { method: "DELETE" });
   }
 
   // Delete old servers
-  for (i of getDifference(dest.servers, src.servers)) {
+  for (const i of getDifference(dest.servers, src.servers)) {
     // The servers must be unlinked from all services and monitors before they can be deleted
     await doRequest(host, "servers/" + i.id, {
       method: "PATCH",
@@ -163,7 +163,7 @@ async function syncDiffs(host, src, dest) {
   }
 
   // Add new servers first, this way other objects can directly define their relationships
-  for (i of getDifference(src.servers, dest.servers)) {
+  for (const i of getDifference(src.servers, dest.servers)) {
     // Create the servers without relationships, those are generated when services and
     // monitors are handled
     var newserv = _.pick(i, ["id", "type", "attributes.parameters"]);
@@ -171,12 +171,12 @@ async function syncDiffs(host, src, dest) {
   }
 
   // Add new monitors
-  for (i of getDifference(src.monitors, dest.monitors)) {
+  for (const i of getDifference(src.monitors, dest.monitors)) {
     await doRequest(host, "monitors", { method: "POST", data: { data: i } });
   }
 
   // Add new services
-  for (i of getDifference(src.services, dest.services)) {
+  for (const i of getDifference(src.services, dest.services)) {
     // We must omit the listeners as they haven't been created yet
     await doRequest(host, "services", {
       method: "POST",
@@ -187,7 +187,7 @@ async function syncDiffs(host, src, dest) {
     // diff with the service we created that would otherwise be necessary to do if we were to use the
     // normal listener creation code.
     if (i.attributes.listeners) {
-      for (j of i.attributes.listeners) {
+      for (const j of i.attributes.listeners) {
         await doRequest(host, "services/" + i.id + "/listeners", { method: "POST", data: { data: j } });
       }
     }
@@ -198,11 +198,11 @@ async function syncDiffs(host, src, dest) {
   var unwanted_keys = _.concat(collections, endpoints);
   var relevant_keys = _.uniq(_.difference(all_keys, unwanted_keys));
 
-  for (i of relevant_keys) {
-    for (j of getDifference(dest[i], src[i])) {
+  for (const i of relevant_keys) {
+    for (const j of getDifference(dest[i], src[i])) {
       await doRequest(host, i + "/" + j.id, { method: "DELETE" });
     }
-    for (j of getDifference(src[i], dest[i])) {
+    for (const j of getDifference(src[i], dest[i])) {
       await doRequest(host, i, { method: "POST", data: { data: j } });
     }
   }
@@ -210,8 +210,8 @@ async function syncDiffs(host, src, dest) {
   // PATCH all remaining resource collections in src from dest apart from the
   // user resource, as it requires passwords to be entered, and filters, that
   // cannot currently be patched.
-  for (i of _.difference(collections, ["users", "filters"])) {
-    for (j of src[i].data) {
+  for (const i of _.difference(collections, ["users", "filters"])) {
+    for (const j of src[i].data) {
       await doRequest(host, i + "/" + j.id, { method: "PATCH", data: { data: j } });
     }
   }
@@ -219,8 +219,8 @@ async function syncDiffs(host, src, dest) {
   var params = await getModifiableParams(host);
 
   // Do the same for individual resources
-  for (i of endpoints) {
-    for (j of src[i].data) {
+  for (const i of endpoints) {
+    for (const j of src[i].data) {
       j.attributes.parameters = _.pickBy(j.attributes.parameters, (v, k) => params.has(k));
       await doRequest(host, i, { method: "PATCH", data: { data: j } });
     }

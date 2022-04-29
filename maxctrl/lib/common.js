@@ -14,12 +14,17 @@
 var axios = require("axios");
 var colors = require("colors/safe");
 var Table = require("cli-table");
-var consoleLib = require("console");
 var os = require("os");
 var fs = require("fs");
 var https = require("https");
 var readlineSync = require("readline-sync");
 var utils = require("./utils.js");
+const _ = require("lodash-getpath");
+
+// The program arguments, used by multiple functions
+let argv = {};
+
+let helpMsg = "At least one command is required, see output of `--help` for more information.";
 
 function normalizeWhitespace(table) {
   table.forEach((v) => {
@@ -41,468 +46,424 @@ function normalizeWhitespace(table) {
   });
 }
 
-module.exports = function () {
-  this._ = require("lodash-getpath");
+// The main entry point into the library. This function is used to do
+// cluster health checks and to propagate the commands to multiple
+// servers.
+async function maxctrl(argv_in, cb) {
+  // Store these globally.
+  // TODO: Is there a neater way of doing this?
+  argv = argv_in;
 
-  // The main entry point into the library. This function is used to do
-  // cluster health checks and to propagate the commands to multiple
-  // servers.
-  this.maxctrl = async function (argv, cb) {
-    // No password given, ask it from the command line
-    if (argv.p == "") {
-      if (process.stdin.isTTY) {
-        argv.p = readlineSync.question("Enter password: ", {
-          hideEchoBack: true,
-        });
-      } else {
-        var line = fs.readFileSync(0);
-        argv.p = line.toString().trim();
-      }
-    }
-
-    // Split the hostnames, separated by commas
-    argv.hosts = argv.hosts.split(",");
-
-    this.argv = argv;
-
-    if (!argv.hosts || argv.hosts.length < 1) {
-      argv.reject("No hosts defined");
-    }
-
-    try {
-      await pingCluster(argv.hosts);
-      var rval = [];
-
-      for (i of argv.hosts) {
-        if (argv.hosts.length > 1) {
-          rval.push(colors.yellow(i));
-        }
-
-        rval.push(await cb(i));
-      }
-
-      argv.resolve(argv.quiet ? undefined : rval.join(os.EOL));
-    } catch (err) {
-      argv.reject(err);
-    }
-  };
-
-  this.parseValue = function (value) {
-    if (typeof value == "string" && value.length == 0) {
-      return value;
-    }
-
-    if (value == "true") {
-      // JSON true
-      return true;
-    } else if (value == "false") {
-      // JSON false
-      return false;
-    }
-
-    var n = Number(value);
-
-    if (!Number.isNaN(n)) {
-      return n;
-    }
-
-    try {
-      const v = JSON.parse(value);
-      if ((typeof v === "object" && typeof v !== "null") || Array.isArray(v)) {
-        return v;
-      }
-    } catch {
-      // Not a JSON object or an array treat it as a string
-    }
-
-    return value;
-  };
-
-  // Filter and format a JSON API resource from JSON to a table
-  this.filterResource = function (res, fields) {
-    table = [];
-
-    res.data.forEach(function (i) {
-      row = [];
-
-      fields.forEach(function (p) {
-        var v = _.getPath(i, p.path, "");
-
-        if (Array.isArray(v)) {
-          v = v.join(", ");
-        }
-
-        row.push(v);
+  // No password given, ask it from the command line
+  if (argv.p == "") {
+    if (process.stdin.isTTY) {
+      argv.p = readlineSync.question("Enter password: ", {
+        hideEchoBack: true,
       });
-
-      table.push(row);
-    });
-
-    return table;
-  };
-
-  // Convert a table that was generated from JSON into a string
-  this.tableToString = function (table) {
-    if (this.argv.tsv) {
-      // Convert whitespace into spaces to prevent breaking the TSV format
-      normalizeWhitespace(table);
-    }
-
-    str = table.toString();
-
-    if (this.argv.tsv) {
-      str = utils.strip_colors(str);
-
-      // Trim trailing whitespace that cli-table generates
-      str = str
-        .split(os.EOL)
-        .map((s) =>
-          s
-            .split("\t")
-            .map((s) => s.trim())
-            .join("\t")
-        )
-        .join(os.EOL);
-    }
-    return str;
-  };
-
-  // Get a resource as raw collection; a matrix of strings
-  this.getRawCollection = async function (host, resource, fields) {
-    var res = await getJson(host, resource);
-    return filterResource(res, fields);
-  };
-
-  // Convert the raw matrix of strings into a formatted string
-  this.rawCollectionAsTable = function (arr, fields) {
-    var header = [];
-
-    fields.forEach(function (i) {
-      header.push(i.name);
-    });
-
-    var table = getTable(header);
-
-    arr.forEach((row) => {
-      table.push(row.map((val) => (val ? val : "")));
-    });
-    return tableToString(table);
-  };
-
-  // Request a resource collection and format it as a string
-  this.getTransposedCollection = async function (host, resource, fields) {
-    var arr = await getRawCollection(host, resource, fields);
-    var table = getTable([]);
-
-    for (var i = 0; i < fields.length; i++) {
-      var row = [colors.cyan(fields[i].name)].concat(arr.map((v) => v[i]));
-      table.push(row);
-    }
-
-    return tableToString(table);
-  };
-
-  // Request a resource collection and format it as a string
-  this.getCollection = async function (host, resource, fields) {
-    var res = await getRawCollection(host, resource, fields);
-    return rawCollectionAsTable(res, fields);
-  };
-
-  // Request a part of a resource as a collection and return it as a string
-  this.getSubCollection = async function (host, resource, subres, fields) {
-    var res = await doRequest(host, resource);
-    var header = [];
-
-    fields.forEach(function (i) {
-      header.push(i.name);
-    });
-
-    var table = getTable(header);
-
-    _.getPath(res.data, subres, []).forEach(function (i) {
-      row = [];
-
-      fields.forEach(function (p) {
-        var v = _.getPath(i, p.path, "");
-
-        if (Array.isArray(v) && typeof v[0] != "object") {
-          v = v.join(", ");
-        } else if (typeof v == "object") {
-          v = JSON.stringify(v, null, 4);
-        }
-        row.push(v);
-      });
-
-      table.push(row);
-    });
-
-    return tableToString(table);
-  };
-
-  // Format and filter a JSON object into a string by using a key-value list
-  this.formatResource = function (fields, data) {
-    var table = getList();
-
-    var separator;
-    var max_length;
-
-    if (this.argv.tsv) {
-      separator = ", ";
-      max_length = Number.MAX_SAFE_INTEGER;
     } else {
-      separator = "\n";
-      var max_field_length = 0;
-      fields.forEach(function (i) {
-        var k = i.name;
-        if (k.length > max_field_length) {
-          max_field_length = k.length;
-        }
-      });
-      max_field_length += 7; // Borders etc.
+      var line = fs.readFileSync(0);
+      argv.p = line.toString().trim();
+    }
+  }
 
-      max_length = process.stdout.columns - max_field_length;
-      if (max_length < 30) {
-        // Ignore excessively narrow terminals.
-        max_length = 30;
+  // Split the hostnames, separated by commas
+  argv.hosts = argv.hosts.split(",");
+
+  if (!argv.hosts || argv.hosts.length < 1) {
+    argv.reject("No hosts defined");
+  }
+
+  try {
+    await pingCluster(argv.hosts);
+    var rval = [];
+
+    for (const i of argv.hosts) {
+      if (argv.hosts.length > 1) {
+        rval.push(colors.yellow(i));
       }
+
+      rval.push(await cb(i));
     }
 
-    fields.forEach(function (i) {
-      var k = i.name;
-      var path = i.path;
-      var v = _.getPath(data, path, "");
+    argv.resolve(argv.quiet ? undefined : rval.join(os.EOL));
+  } catch (err) {
+    argv.reject(err);
+  }
+}
+
+function parseValue(value) {
+  if (typeof value == "string" && value.length == 0) {
+    return value;
+  }
+
+  if (value == "true") {
+    // JSON true
+    return true;
+  } else if (value == "false") {
+    // JSON false
+    return false;
+  }
+
+  var n = Number(value);
+
+  if (!Number.isNaN(n)) {
+    return n;
+  }
+
+  try {
+    const v = JSON.parse(value);
+    if (typeof v === "object" || Array.isArray(v)) {
+      return v;
+    }
+  } catch {
+    // Not a JSON object or an array treat it as a string
+  }
+
+  return value;
+}
+
+// Filter and format a JSON API resource from JSON to a table
+function filterResource(res, fields) {
+  let table = [];
+
+  res.data.forEach(function (i) {
+    let row = [];
+
+    fields.forEach(function (p) {
+      var v = _.getPath(i, p.path, "");
+
+      if (Array.isArray(v)) {
+        v = v.join(", ");
+      }
+
+      row.push(v);
+    });
+
+    table.push(row);
+  });
+
+  return table;
+}
+
+// Convert a table that was generated from JSON into a string
+function tableToString(table) {
+  if (argv.tsv) {
+    // Convert whitespace into spaces to prevent breaking the TSV format
+    normalizeWhitespace(table);
+  }
+
+  let str = table.toString();
+
+  if (argv.tsv) {
+    str = utils.strip_colors(str);
+
+    // Trim trailing whitespace that cli-table generates
+    str = str
+      .split(os.EOL)
+      .map((s) =>
+        s
+          .split("\t")
+          .map((s) => s.trim())
+          .join("\t")
+      )
+      .join(os.EOL);
+  }
+  return str;
+}
+
+// Get a resource as raw collection; a matrix of strings
+async function getRawCollection(host, resource, fields) {
+  var res = await getJson(host, resource);
+  return filterResource(res, fields);
+}
+
+// Convert the raw matrix of strings into a formatted string
+function rawCollectionAsTable(arr, fields) {
+  var header = [];
+
+  fields.forEach(function (i) {
+    header.push(i.name);
+  });
+
+  var table = getTable(header);
+
+  arr.forEach((row) => {
+    table.push(row.map((val) => (val ? val : "")));
+  });
+  return tableToString(table);
+}
+
+// Request a resource collection and format it as a string
+async function getTransposedCollection(host, resource, fields) {
+  var arr = await getRawCollection(host, resource, fields);
+  var table = getTable([]);
+
+  for (var i = 0; i < fields.length; i++) {
+    var row = [colors.cyan(fields[i].name)].concat(arr.map((v) => v[i]));
+    table.push(row);
+  }
+
+  return tableToString(table);
+}
+
+// Request a resource collection and format it as a string
+async function getCollection(host, resource, fields) {
+  var res = await getRawCollection(host, resource, fields);
+  return rawCollectionAsTable(res, fields);
+}
+
+// Request a part of a resource as a collection and return it as a string
+async function getSubCollection(host, resource, subres, fields) {
+  var res = await doRequest(host, resource);
+  var header = [];
+
+  fields.forEach(function (i) {
+    header.push(i.name);
+  });
+
+  var table = getTable(header);
+
+  _.getPath(res.data, subres, []).forEach(function (i) {
+    let row = [];
+
+    fields.forEach(function (p) {
+      var v = _.getPath(i, p.path, "");
 
       if (Array.isArray(v) && typeof v[0] != "object") {
-        if (separator == "\n") {
-          var s = "";
-          v.forEach(function (part) {
-            if (s.length) {
-              s = s + "\n";
-            }
-            if (part.length > max_length) {
-              part = part.substr(0, max_length - 3);
-              part = part + "...";
-            }
-            s = s + part;
-          });
-          v = s;
-        } else {
-          v = v.join(separator);
-          if (v.length > max_length) {
-            v = v.substr(0, max_length - 3);
-            v = v + "...";
-          }
-        }
+        v = v.join(", ");
       } else if (typeof v == "object") {
-        // We ignore max_length here.
         v = JSON.stringify(v, null, 4);
       }
-
-      var o = {};
-      o[k] = v;
-      table.push(o);
+      row.push(v);
     });
 
-    return tableToString(table);
-  };
+    table.push(row);
+  });
 
-  // Request a single resource and format it with a key-value list
-  this.getResource = async function (host, resource, fields) {
-    var res = await doRequest(host, resource);
-    return formatResource(fields, res.data);
-  };
+  return tableToString(table);
+}
 
-  // Perform a getResource on a collection of resources and return it in string format
-  this.getCollectionAsResource = async function (host, resource, fields) {
-    var res = await doRequest(host, resource);
-    return res.data.map((i) => formatResource(fields, i)).join("\n");
-  };
+// Format and filter a JSON object into a string by using a key-value list
+function formatResource(fields, data) {
+  var table = getList();
 
-  // Perform a PATCH on a resource
-  this.updateValue = function (host, resource, key, value) {
-    var body = {};
-    _.set(body, key, value);
-    return doRequest(host, resource, { method: "PATCH", data: body });
-  };
+  var separator;
+  var max_length;
 
-  // Helper for converting endpoints to acutal URLs
-  this.getUri = function (host, endpoint) {
-    var base = this.argv.secure ? "https://" : "http://";
+  if (argv.tsv) {
+    separator = ", ";
+    max_length = Number.MAX_SAFE_INTEGER;
+  } else {
+    separator = "\n";
+    var max_field_length = 0;
+    fields.forEach(function (i) {
+      var k = i.name;
+      if (k.length > max_field_length) {
+        max_field_length = k.length;
+      }
+    });
+    max_field_length += 7; // Borders etc.
 
-    if (this.argv["skip-sync"]) {
-      endpoint += endpoint.includes("?") ? "&" : "?";
-      endpoint += "sync=false";
+    max_length = process.stdout.columns - max_field_length;
+    if (max_length < 30) {
+      // Ignore excessively narrow terminals.
+      max_length = 30;
+    }
+  }
+
+  fields.forEach(function (i) {
+    var k = i.name;
+    var path = i.path;
+    var v = _.getPath(data, path, "");
+
+    if (Array.isArray(v) && typeof v[0] != "object") {
+      if (separator == "\n") {
+        var s = "";
+        v.forEach(function (part) {
+          if (s.length) {
+            s = s + "\n";
+          }
+          if (part.length > max_length) {
+            part = part.substr(0, max_length - 3);
+            part = part + "...";
+          }
+          s = s + part;
+        });
+        v = s;
+      } else {
+        v = v.join(separator);
+        if (v.length > max_length) {
+          v = v.substr(0, max_length - 3);
+          v = v + "...";
+        }
+      }
+    } else if (typeof v == "object") {
+      // We ignore max_length here.
+      v = JSON.stringify(v, null, 4);
     }
 
-    return base + host + "/v1/" + endpoint;
-  };
+    var o = {};
+    o[k] = v;
+    table.push(o);
+  });
 
-  // Return an OK message
-  this.OK = function () {
-    return Promise.resolve(colors.green("OK"));
-  };
+  return tableToString(table);
+}
 
-  // Set TLS certificates
-  this.setTlsCerts = function (args) {
-    agentOptions = {};
-    if (this.argv["tls-key"]) {
-      agentOptions.key = fs.readFileSync(this.argv["tls-key"]);
-    }
+// Request a single resource and format it with a key-value list
+async function getResource(host, resource, fields) {
+  var res = await doRequest(host, resource);
+  return formatResource(fields, res.data);
+}
 
-    if (this.argv["tls-cert"]) {
-      agentOptions.cert = fs.readFileSync(this.argv["tls-cert"]);
-    }
+// Perform a getResource on a collection of resources and return it in string format
+async function getCollectionAsResource(host, resource, fields) {
+  var res = await doRequest(host, resource);
+  return res.data.map((i) => formatResource(fields, i)).join("\n");
+}
 
-    if (this.argv["tls-ca-cert"]) {
-      agentOptions.ca = fs.readFileSync(this.argv["tls-ca-cert"]);
-    }
+// Perform a PATCH on a resource
+function updateValue(host, resource, key, value) {
+  var body = {};
+  _.set(body, key, value);
+  return doRequest(host, resource, { method: "PATCH", data: body });
+}
 
-    if (this.argv["tls-passphrase"]) {
-      agentOptions.passphrase = this.argv["tls-passphrase"];
-    }
+// Return an OK message
+function OK() {
+  return Promise.resolve(colors.green("OK"));
+}
 
-    if (!this.argv["tls-verify-server-cert"]) {
-      agentOptions.rejectUnauthorized = false;
-    }
+function simpleRequest(host, resource, obj) {
+  let args = obj || {};
+  args.url = getUri(host, resource);
+  args.auth = { username: argv.u, password: argv.p };
+  args.timeout = argv.timeout;
 
-    if (Object.keys(agentOptions).length > 0) {
-      args.httpsAgent = new https.Agent(agentOptions);
-    }
-  };
+  // This prevents http_proxy from interfering with maxctrl if no_proxy is not defined. There's really
+  // no practical reason to use a proxy with localhost so this shouldn't have any negative side-effects.
+  if (host.startsWith("127.0.0.1") || host.startsWith("localhost")) {
+    args.proxy = false;
+  }
 
-  this.simpleRequest = function (host, resource, obj) {
-    args = obj || {};
-    args.url = getUri(host, resource);
-    args.auth = { username: argv.u, password: argv.p };
-    args.timeout = this.argv.timeout;
+  try {
+    setTlsCerts(args);
+  } catch (err) {
+    return error("Failed to set TLS certificates: " + JSON.stringify(err, null, 4));
+  }
 
-    // This prevents http_proxy from interfering with maxctrl if no_proxy is not defined. There's really
-    // no practical reason to use a proxy with localhost so this shouldn't have any negative side-effects.
-    if (host.startsWith("127.0.0.1") || host.startsWith("localhost")) {
-      args.proxy = false;
-    }
+  return axios(args);
+}
 
-    try {
-      setTlsCerts(args);
-    } catch (err) {
-      return error("Failed to set TLS certificates: " + JSON.stringify(err, null, 4));
-    }
+// Helper for executing requests and handling their responses, returns a
+// promise that is fulfilled when all requests successfully complete. The
+// promise is rejected if any of the requests fails.
+async function doRequest(host, resource, obj) {
+  try {
+    var res = await simpleRequest(host, resource, obj);
 
-    return axios(args);
-  };
-
-  // Helper for executing requests and handling their responses, returns a
-  // promise that is fulfilled when all requests successfully complete. The
-  // promise is rejected if any of the requests fails.
-  this.doRequest = async function (host, resource, obj) {
-    try {
-      var res = await simpleRequest(host, resource, obj);
-
-      // Don't generate warnings if the output is not a TTY. This prevents scripts from breaking.
-      if (process.stdout.isTTY && process.env["MAXCTRL_WARNINGS"] != "0" && res.headers["mxs-warning"]) {
-        console.log(colors.yellow("Warning: ") + res.headers["mxs-warning"]);
-        console.log(`To hide these warnings, run:
+    // Don't generate warnings if the output is not a TTY. This prevents scripts from breaking.
+    if (process.stdout.isTTY && process.env["MAXCTRL_WARNINGS"] != "0" && res.headers["mxs-warning"]) {
+      console.log(colors.yellow("Warning: ") + res.headers["mxs-warning"]);
+      console.log(`To hide these warnings, run:
 
     export MAXCTRL_WARNINGS=0
 `);
+    }
+
+    return res.data ? res.data : OK();
+  } catch (err) {
+    if (err.response) {
+      var extra = "";
+      if (err.response.data) {
+        extra = os.EOL + JSON.stringify(err.response.data, null, 4);
       }
 
-      return res.data ? res.data : OK();
-    } catch (err) {
-      if (err.response) {
-        var extra = "";
-        if (err.response.data) {
-          extra = os.EOL + JSON.stringify(err.response.data, null, 4);
-        }
+      let host = err.config.url.replace(resource, "").replace("/v1/", "");
 
-        var host = err.config.url.replace(resource, "").replace("/v1/", "");
-
-        return error(
-          "Server at " +
-            host +
-            " responded with " +
-            err.response.status +
-            " " +
-            err.response.statusText +
-            " to `" +
-            err.config.method.toUpperCase() +
-            " " +
-            resource +
-            "`" +
-            extra
-        );
-      } else if (err.code == "ECONNREFUSED") {
-        return error("Could not connect to MaxScale");
-      } else if (err.code == "ESOCKETTIMEDOUT") {
-        return error("Connection to MaxScale timed out");
-      } else if (err.message) {
-        return error(err.message);
-      } else {
-        return error("Undefined error: " + JSON.stringify(err, null, 4));
-      }
+      return error(
+        "Server at " +
+          host +
+          " responded with " +
+          err.response.status +
+          " " +
+          err.response.statusText +
+          " to `" +
+          err.config.method.toUpperCase() +
+          " " +
+          resource +
+          "`" +
+          extra
+      );
+    } else if (err.code == "ECONNREFUSED") {
+      return error("Could not connect to MaxScale");
+    } else if (err.code == "ESOCKETTIMEDOUT") {
+      return error("Connection to MaxScale timed out");
+    } else if (err.message) {
+      return error(err.message);
+    } else {
+      return error("Undefined error: " + JSON.stringify(err, null, 4));
     }
-  };
+  }
+}
 
-  // Perform a request and return the resulting JSON as a promise
-  this.getJson = function (host, resource) {
-    return doRequest(host, resource);
-  };
+// Perform a request and return the resulting JSON as a promise
+function getJson(host, resource) {
+  return doRequest(host, resource);
+}
 
-  // Return an error message as a rejected promise
-  this.error = function (err) {
-    return Promise.reject(colors.red("Error: ") + err);
-  };
+// Return an error message as a rejected promise
+function error(err) {
+  return Promise.reject(colors.red("Error: ") + err);
+}
 
-  // Prints a warning for live users, piped output into scripts won't contain these
-  this.warning = function (msg) {
-    if (!this.argv.tsv && process.stdout.isTTY) {
-      console.log(colors.yellow("Warning: ") + msg);
-    }
-  };
+// Prints a warning for live users, piped output into scripts won't contain these
+function warning(msg) {
+  if (!argv.tsv && process.stdout.isTTY) {
+    console.log(colors.yellow("Warning: ") + msg);
+  }
+}
 
-  this.rDnsOption = {
-    shortname: "rdns",
-    optionOn: "rdns=true",
-    definition: {
-      describe: "Perform a reverse DNS lookup on client IPs",
-      type: "boolean",
-      default: false,
-    },
-  };
-
-  this.fieldDescriptions = function (fields) {
-    var t = new Table({
-      chars: {
-        top: " ",
-        "top-mid": "",
-        "top-left": "",
-        "top-right": "",
-        left: " ",
-        right: "",
-        "left-mid": "",
-        mid: "",
-        "mid-mid": "",
-        "right-mid": "",
-        middle: "|",
-        bottom: "",
-        "bottom-mid": "",
-        "bottom-left": "",
-        "bottom-right": "",
-      },
-    });
-
-    t.push(["Field", "Description"]);
-    t.push(["-----", "-----------"]);
-
-    for (f of fields) {
-      t.push([f.name, f.description]);
-    }
-
-    return "\n\n" + t.toString();
-  };
-
-  this.helpMsg = "At least one command is required, see output of `--help` for more information.";
+let rDnsOption = {
+  shortname: "rdns",
+  optionOn: "rdns=true",
+  definition: {
+    describe: "Perform a reverse DNS lookup on client IPs",
+    type: "boolean",
+    default: false,
+  },
 };
+
+function fieldDescriptions(fields) {
+  var t = new Table({
+    chars: {
+      top: " ",
+      "top-mid": "",
+      "top-left": "",
+      "top-right": "",
+      left: " ",
+      right: "",
+      "left-mid": "",
+      mid: "",
+      "mid-mid": "",
+      "right-mid": "",
+      middle: "|",
+      bottom: "",
+      "bottom-mid": "",
+      "bottom-left": "",
+      "bottom-right": "",
+    },
+  });
+
+  t.push(["Field", "Description"]);
+  t.push(["-----", "-----------"]);
+
+  for (const f of fields) {
+    t.push([f.name, f.description]);
+  }
+
+  return "\n\n" + t.toString();
+}
 
 //
 // The following are mainly for internal use
@@ -538,7 +499,7 @@ function getList() {
     style: { head: ["cyan"] },
   };
 
-  if (this.argv.tsv) {
+  if (argv.tsv) {
     opts = _.assign(opts, tsvopts);
   }
 
@@ -547,13 +508,13 @@ function getList() {
 
 // Creates a table-like array for output. The parameter is an array of header names
 function getTable(headobj) {
-  for (i = 0; i < headobj.length; i++) {
+  for (var i = 0; i < headobj.length; i++) {
     headobj[i] = colors.cyan(headobj[i]);
   }
 
   var opts;
 
-  if (this.argv.tsv) {
+  if (argv.tsv) {
     opts = _.assign(opts, tsvopts);
   } else {
     opts = {
@@ -569,7 +530,7 @@ function pingCluster(hosts) {
 
   if (hosts.length > 1) {
     hosts.forEach(function (i) {
-      args = {};
+      let args = {};
       args.url = getUri(i, "");
       args.auth = { username: argv.u, password: argv.p };
       setTlsCerts(args);
@@ -579,3 +540,69 @@ function pingCluster(hosts) {
 
   return Promise.all(promises);
 }
+
+// Helper for converting endpoints to acutal URLs
+function getUri(host, endpoint) {
+  var base = argv.secure ? "https://" : "http://";
+
+  if (argv["skip-sync"]) {
+    endpoint += endpoint.includes("?") ? "&" : "?";
+    endpoint += "sync=false";
+  }
+
+  return base + host + "/v1/" + endpoint;
+}
+
+// Set TLS certificates
+function setTlsCerts(args) {
+  let agentOptions = {};
+  if (argv["tls-key"]) {
+    agentOptions.key = fs.readFileSync(argv["tls-key"]);
+  }
+
+  if (argv["tls-cert"]) {
+    agentOptions.cert = fs.readFileSync(argv["tls-cert"]);
+  }
+
+  if (argv["tls-ca-cert"]) {
+    agentOptions.ca = fs.readFileSync(argv["tls-ca-cert"]);
+  }
+
+  if (argv["tls-passphrase"]) {
+    agentOptions.passphrase = argv["tls-passphrase"];
+  }
+
+  if (!argv["tls-verify-server-cert"]) {
+    agentOptions.rejectUnauthorized = false;
+  }
+
+  if (Object.keys(agentOptions).length > 0) {
+    args.httpsAgent = new https.Agent(agentOptions);
+  }
+}
+
+module.exports = {
+  _,
+  helpMsg,
+  rDnsOption,
+  maxctrl,
+  parseValue,
+  filterResource,
+  tableToString,
+  getRawCollection,
+  rawCollectionAsTable,
+  getTransposedCollection,
+  getCollection,
+  getSubCollection,
+  formatResource,
+  getResource,
+  getCollectionAsResource,
+  updateValue,
+  OK,
+  simpleRequest,
+  doRequest,
+  getJson,
+  error,
+  warning,
+  fieldDescriptions,
+};

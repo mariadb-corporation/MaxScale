@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-require("./common.js")();
+const { maxctrl, _, warning, parseValue, doRequest, getJson, OK, helpMsg } = require("./common.js");
 const fs = require("fs");
 
 // Converts a key=value string into an object
@@ -174,7 +174,7 @@ exports.builder = function (yargs) {
         }
 
         if (argv.services) {
-          for (i = 0; i < argv.services.length; i++) {
+          for (let i = 0; i < argv.services.length; i++) {
             _.set(server, "data.relationships.services.data[" + i + "]", {
               id: argv.services[i],
               type: "services",
@@ -183,7 +183,7 @@ exports.builder = function (yargs) {
         }
 
         if (argv.monitors) {
-          for (i = 0; i < argv.monitors.length; i++) {
+          for (let i = 0; i < argv.monitors.length; i++) {
             _.set(server, "data.relationships.monitors.data[" + i + "]", {
               id: argv.monitors[i],
               type: "monitors",
@@ -252,7 +252,7 @@ exports.builder = function (yargs) {
         monitor.data.attributes.parameters = argv.params.reduce(to_obj, {});
 
         if (argv.servers) {
-          for (i = 0; i < argv.servers.length; i++) {
+          for (let i = 0; i < argv.servers.length; i++) {
             _.set(monitor, "data.relationships.servers.data[" + i + "]", {
               id: argv.servers[i],
               type: "servers",
@@ -320,7 +320,7 @@ exports.builder = function (yargs) {
         maxctrl(argv, function (host) {
           checkName(argv.name);
 
-          err = validateParams(argv, argv.params);
+          let err = validateParams(argv, argv.params);
           if (err) {
             return Promise.reject(err);
           }
@@ -336,7 +336,7 @@ exports.builder = function (yargs) {
           };
 
           if (argv.servers) {
-            for (i = 0; i < argv.servers.length; i++) {
+            for (let i = 0; i < argv.servers.length; i++) {
               _.set(service, "data.relationships.servers.data[" + i + "]", {
                 id: argv.servers[i],
                 type: "servers",
@@ -345,7 +345,7 @@ exports.builder = function (yargs) {
           }
 
           if (argv.services) {
-            for (i = 0; i < argv.services.length; i++) {
+            for (let i = 0; i < argv.services.length; i++) {
               _.set(service, "data.relationships.services.data[" + i + "]", {
                 id: argv.services[i],
                 type: "services",
@@ -358,7 +358,7 @@ exports.builder = function (yargs) {
           }
 
           if (argv.filters) {
-            for (i = 0; i < argv.filters.length; i++) {
+            for (let i = 0; i < argv.filters.length; i++) {
               _.set(service, "data.relationships.filters.data[" + i + "]", {
                 id: argv.filters[i],
                 type: "filters",

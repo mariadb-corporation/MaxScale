@@ -15,6 +15,7 @@ var fs = require("fs");
 var ini = require("ini");
 var os = require("os");
 var yargs = require("yargs");
+const { maxctrl, error } = require("./common.js");
 
 // Note: The version.js file is generated at configuation time. If you are
 // building in-source, manually create the file
@@ -186,10 +187,13 @@ function program() {
           switch (suffix) {
             case "h":
               duration *= 24;
+            //fallthrough
             case "m":
               duration *= 60;
+            //fallthrough
             case "s":
               duration *= 1000;
+            //fallthrough
             case "ms":
               break;
 
@@ -307,7 +311,7 @@ function program() {
         return askQuestion(argv);
       } else {
         maxctrl(argv, function () {
-          msg = "Unknown command " + JSON.stringify(argv._);
+          let msg = "Unknown command " + JSON.stringify(argv._);
           return error(msg + ". See output of `--help` for a list of commands.");
         });
       }
@@ -315,7 +319,7 @@ function program() {
 }
 
 function doCommand(argv) {
-  return new Promise(async function (resolve, reject) {
+  return new Promise(function (resolve, reject) {
     try {
       program().parse(argv, { resolve: resolve, reject: reject }, function (err, argv, output) {
         // This callback only receives input if no command was called and Yargs encountered some sort of
@@ -351,7 +355,7 @@ async function readCommands(argv, options) {
     .map((str) => str.trim())
     .filter((val) => val);
 
-  for (line of input) {
+  for (const line of input) {
     try {
       rval.push(await doCommand(options + " " + line));
     } catch (e) {
@@ -391,10 +395,12 @@ async function askQuestion(argv) {
   const _ = require("lodash");
   const parse = require("shell-quote").parse;
 
-  while (true) {
+  let running = true;
+
+  while (running) {
     try {
       const answers = await inquirer.prompt(question);
-      cmd = answers.maxctrl;
+      let cmd = answers.maxctrl;
 
       const opts = parse(cmd).map((v) => v.replace(/=.*/, ""));
       const conflicting = _.intersection(opts, keys);
@@ -405,12 +411,12 @@ async function askQuestion(argv) {
       }
 
       if (cmd.toLowerCase() == "exit" || cmd.toLowerCase() == "quit") {
-        break;
-      }
-
-      const output = await doCommand(options + " " + cmd);
-      if (output) {
-        console.log(output);
+        running = false;
+      } else {
+        const output = await doCommand(options + " " + cmd);
+        if (output) {
+          console.log(output);
+        }
       }
     } catch (err) {
       console.log(err ? err : "An undefined error has occurred");

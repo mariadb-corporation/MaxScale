@@ -11,4 +11,4 @@
  * Public License.
  */
 
-exports.version = "@MAXSCALE_VERSION@"
+exports.version = "@MAXSCALE_VERSION@";

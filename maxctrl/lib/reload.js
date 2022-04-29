@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-require("./common.js")();
+const { maxctrl, doRequest, helpMsg } = require("./common.js");
 
 const EXPLAIN_RELOADING =
   "When a session is reloaded, it internally restarts the MaxScale session. " +
@@ -42,7 +42,9 @@ exports.builder = function (yargs) {
       "Reload TLS certificates",
       function (yargs) {
         return yargs
-          .epilog("This command reloads the TLS certificates for all listeners and servers as well as the REST API in MaxScale.")
+          .epilog(
+            "This command reloads the TLS certificates for all listeners and servers as well as the REST API in MaxScale."
+          )
           .usage("Usage: reload service <service>");
       },
       function (argv) {

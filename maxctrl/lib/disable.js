@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-require("./common.js")();
+const { maxctrl, error, updateValue, helpMsg } = require("./common.js");
 
 const log_levels = ["debug", "info", "notice", "warning"];
 

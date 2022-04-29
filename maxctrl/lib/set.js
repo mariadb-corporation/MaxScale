@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-require("./common.js")();
+const { maxctrl, doRequest, helpMsg } = require("./common.js");
 
 exports.command = "set <command>";
 exports.desc = "Set object state";
@@ -19,7 +19,8 @@ exports.builder = function (yargs) {
   yargs
     .group(["force"], "Set options:")
     .option("force", {
-      describe: "If combined with the `maintenance` state, this forcefully closes all connections to the target server",
+      describe:
+        "If combined with the `maintenance` state, this forcefully closes all connections to the target server",
       type: "boolean",
       default: false,
     })

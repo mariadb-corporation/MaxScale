@@ -11,7 +11,18 @@
  * Public License.
  */
 
-require("./common.js")();
+const {
+  maxctrl,
+  helpMsg,
+  error,
+  getJson,
+  fieldDescriptions,
+  filterResource,
+  rawCollectionAsTable,
+  getCollection,
+  getSubCollection,
+  rDnsOption,
+} = require("./common.js");
 
 const list_servers_fields = [
   {
@@ -405,8 +416,8 @@ exports.builder = function (yargs) {
       function (argv) {
         maxctrl(argv, function (host) {
           var resource = "sessions";
-          if (argv[this.rDnsOption.shortname]) {
-            resource += "?" + this.rDnsOption.optionOn;
+          if (argv[rDnsOption.shortname]) {
+            resource += "?" + rDnsOption.optionOn;
           }
           return getCollection(host, resource, list_sessions_fields);
         });

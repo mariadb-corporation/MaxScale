@@ -11,7 +11,20 @@
  * Public License.
  */
 
-require("./common.js")();
+const {
+  maxctrl,
+  helpMsg,
+  fieldDescriptions,
+  getJson,
+  formatResource,
+  getResource,
+  getCollectionAsResource,
+  rDnsOption,
+  getTransposedCollection,
+  getSubCollection,
+  getCollection,
+  rawCollectionAsTable,
+} = require("./common.js");
 
 const server_fields = [
   {
@@ -670,7 +683,7 @@ exports.builder = function (yargs) {
       function (argv) {
         maxctrl(argv, function (host) {
           return getJson(host, "servers").then((res) => {
-            for (s of res.data) {
+            for (let s of res.data) {
               if (s.attributes.state_details) {
                 s.attributes.state += ", " + s.attributes.state_details;
               }
@@ -775,8 +788,8 @@ exports.builder = function (yargs) {
       function (argv) {
         maxctrl(argv, function (host) {
           var resource = "sessions/" + argv.session;
-          if (argv[this.rDnsOption.shortname]) {
-            resource += "?" + this.rDnsOption.optionOn;
+          if (argv[rDnsOption.shortname]) {
+            resource += "?" + rDnsOption.optionOn;
           }
           return getResource(host, resource, session_fields);
         });
@@ -800,8 +813,8 @@ exports.builder = function (yargs) {
       function (argv) {
         maxctrl(argv, function (host) {
           var resource = "sessions/";
-          if (argv[this.rDnsOption.shortname]) {
-            resource += "?" + this.rDnsOption.optionOn;
+          if (argv[rDnsOption.shortname]) {
+            resource += "?" + rDnsOption.optionOn;
           }
           return getCollectionAsResource(host, resource, session_fields);
         });

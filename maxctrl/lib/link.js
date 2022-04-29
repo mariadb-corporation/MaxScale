@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-require("./common.js")();
+const { maxctrl, _, error, doRequest, getJson, helpMsg } = require("./common.js");
 
 function addServer(argv, path, targets) {
   maxctrl(argv, function (host) {
@@ -36,7 +36,7 @@ function addServer(argv, path, targets) {
         var services = _.get(res, "data.relationships.services.data", []);
         var monitors = _.get(res, "data.relationships.monitors.data", []);
 
-        for (i of targets) {
+        for (const i of targets) {
           if (srvs.data.find((e) => e.id == i)) {
             servers.push({ id: i, type: "servers" });
           } else if (mons.data.find((e) => e.id == i)) {

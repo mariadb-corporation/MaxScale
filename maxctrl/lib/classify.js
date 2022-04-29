@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-require("./common.js")();
+const { maxctrl, formatResource, doRequest } = require("./common.js");
 
 const classify_fields = [
   {
@@ -71,10 +71,11 @@ exports.builder = function (yargs) {
   yargs
     .usage("Usage: classify <statement>")
     .epilog(
-      "Classify the statement using MaxScale and display the result. " +
-        'The possible values for "Parse result", "Type mask" and "Operation" ' +
-        "can be looked up in " +
-        "https://github.com/mariadb-corporation/MaxScale/blob/2.3/include/maxscale/query_classifier.h"
+      `
+Classify the statement using MaxScale and display the result.
+The possible values for "Parse result", "Type mask" and "Operation"
+can be looked up in https://github.com/mariadb-corporation/MaxScale/blob/2.3/include/maxscale/query_classifier.h
+`
     )
     .help()
     .wrap(null);

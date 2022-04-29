@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-require("./common.js")();
+const { maxctrl, _, helpMsg, doRequest } = require("./common.js");
 var utils = require("./utils.js");
 
 exports.command = "api <command>";

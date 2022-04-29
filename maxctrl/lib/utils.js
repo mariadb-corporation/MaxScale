@@ -11,9 +11,9 @@
  * Public License.
  */
 
-var colors = require("colors/safe");
-
 module.exports.strip_colors = function (input) {
   // Based on the regex found in: https://github.com/jonschlinkert/strip-color
+  // Try and make sense of this regex to fix the ESLint warning
+  // eslint-disable-next-line no-control-regex
   return input.replace(/\x1B\[[(?);]{0,2}(;?\d)*./g, "");
 };

@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-require("./common.js")();
+const { maxctrl, error, _, helpMsg, parseValue, updateValue, doRequest } = require("./common.js");
 
 const param_type_msg =
   "The parameters should be given in the `key=value` format. This command also supports the legacy method \n" +

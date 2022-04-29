@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-require("./common.js")();
+const { maxctrl, helpMsg, doRequest, OK } = require("./common.js");
 
 exports.command = "stop <command>";
 exports.desc = "Stop objects";
