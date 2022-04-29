@@ -69,7 +69,7 @@ export default {
             handler(v) {
                 if (v) {
                     this.updateRoute(v)
-                    this.UPDATE_SA_WKE_STATES(this.getActiveWke)
+                    this.SYNC_WKE_STATES(this.getActiveWke)
                     this.SYNC_CONN_STATES(this.getActiveWke)
                 }
             },
@@ -113,7 +113,7 @@ export default {
     methods: {
         ...mapMutations({
             SET_SNACK_BAR_MESSAGE: 'SET_SNACK_BAR_MESSAGE',
-            UPDATE_SA_WKE_STATES: 'query/UPDATE_SA_WKE_STATES',
+            SYNC_WKE_STATES: 'query/SYNC_WKE_STATES',
             SYNC_CONN_STATES: 'queryConn/SYNC_CONN_STATES',
         }),
         ...mapActions({

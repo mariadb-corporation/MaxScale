@@ -51,12 +51,24 @@ export default {
         SET_PRE_SELECT_CONN_RSRC(state, payload) {
             state.pre_select_conn_rsrc = payload
         },
-        //dependent state mutations
-        SET_ACTIVE_SQL_CONN(state, payload) {
-            state.active_sql_conn = payload
+        // TODO: Create MutationCreator for mutation using mutate_sync_wke
+        SET_ACTIVE_SQL_CONN(state, { queryState, payload, active_wke_id }) {
+            queryHelper.mutate_sync_wke({
+                scope: this,
+                mutateStateModule: state,
+                queryState,
+                data: { active_sql_conn: payload },
+                active_wke_id,
+            })
         },
-        SET_CONN_ERR_STATE(state, payload) {
-            state.conn_err_state = payload
+        SET_CONN_ERR_STATE(state, { queryState, payload, active_wke_id }) {
+            queryHelper.mutate_sync_wke({
+                scope: this,
+                mutateStateModule: state,
+                queryState,
+                data: { conn_err_state: payload },
+                active_wke_id,
+            })
         },
         /**
          * When active_wke_id is changed, call this to sync states from worksheets_arr
@@ -130,11 +142,9 @@ export default {
                     // update active_sql_conn attributes
                     if (state.active_sql_conn.id) {
                         const active_sql_conn = validSqlConns[state.active_sql_conn.id]
-                        commit('SET_ACTIVE_SQL_CONN', active_sql_conn)
-                        queryHelper.sync_to_worksheets_arr({
-                            scope: this,
+                        commit('SET_ACTIVE_SQL_CONN', {
                             queryState: rootState.query,
-                            data: { active_sql_conn },
+                            payload: active_sql_conn,
                             active_wke_id,
                         })
                     }
@@ -166,29 +176,24 @@ export default {
                         binding_type: rootState.app_config.QUERY_CONN_BINDING_TYPES.WORKSHEET,
                     }
                     commit('ADD_SQL_CONN', active_sql_conn)
-                    commit('SET_ACTIVE_SQL_CONN', active_sql_conn)
-                    queryHelper.sync_to_worksheets_arr({
-                        scope: this,
+                    commit('SET_ACTIVE_SQL_CONN', {
                         queryState: rootState.query,
-                        data: { active_sql_conn },
+                        payload: active_sql_conn,
                         active_wke_id,
                     })
 
                     if (body.db) await dispatch('query/useDb', body.db, { root: true })
-                    commit('SET_CONN_ERR_STATE', false)
-                    queryHelper.sync_to_worksheets_arr({
-                        scope: this,
+                    commit('SET_CONN_ERR_STATE', {
                         queryState: rootState.query,
-                        data: { conn_err_state: false },
+                        payload: false,
                         active_wke_id,
                     })
                 }
             } catch (e) {
                 this.vue.$logger('store-query-openConnect').error(e)
-                queryHelper.sync_to_worksheets_arr({
-                    scope: this,
+                commit('SET_CONN_ERR_STATE', {
                     queryState: rootState.query,
-                    data: { conn_err_state: true },
+                    payload: true,
                     active_wke_id,
                 })
             }

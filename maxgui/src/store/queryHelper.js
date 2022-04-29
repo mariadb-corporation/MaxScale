@@ -237,6 +237,20 @@ function sync_to_worksheets_arr({ scope, queryState, data, active_wke_id }) {
         [idx]: { $set: { ...worksheets_arr[idx], ...data } },
     })
 }
+/**
+ * This function mutates (payload.data) to the provided mutateStateModule
+ * then synchronizes it to the active wke in worksheets_arr with
+ * @param {Object} payload.scope - scope aka (this)
+ * @param {Object} payload.mutateStateModule - state module to be mutated
+ * @param {Object} queryState - query module state object that has worksheets_arr to sync
+ * @param {Object} payload.data - partial modification of a wke object
+ * @param {Object} payload.active_wke_id - active_wke_id
+ */
+function mutate_sync_wke({ scope, mutateStateModule, queryState, data, active_wke_id }) {
+    mutateFlatStates({ moduleState: mutateStateModule, data })
+    sync_to_worksheets_arr({ scope, queryState, data, active_wke_id })
+}
+
 export default {
     getClientConnIds,
     updateDbChild,
@@ -245,4 +259,5 @@ export default {
     queryColsOptsData,
     mutateFlatStates,
     sync_to_worksheets_arr,
+    mutate_sync_wke,
 }

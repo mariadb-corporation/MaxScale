@@ -52,9 +52,9 @@ function toolbarStates() {
 }
 
 /**
- * @returns Return initial standalone worksheet states
+ * @returns Return initial worksheet synchronized states
  */
-function saWkeStates() {
+function wkeStatesToBeSynced() {
     return {
         ...sidebarStates(),
         ...editorStates(),
@@ -70,7 +70,7 @@ export function defWorksheetState() {
     return {
         id: uniqueId(`${new Date().getUTCMilliseconds()}_`),
         name: 'WORKSHEET',
-        ...saWkeStates(),
+        ...wkeStatesToBeSynced(),
         ...connStatesToBeSynced(),
     }
 }
@@ -98,19 +98,6 @@ function memStates() {
         query_results_map: {},
         is_stopping_query_map: {},
     }
-}
-
-/**
- * This function helps to synchronize the active wke in worksheets_arr with
- * flat states (wkeSyncStates) in the module
- * @param {Object} payload.scope - scope aka (this)
- * @param {Object} queryState - query module state object
- * @param {Object} payload.data - partial modification of a wke object
- * @param {Object} payload.active_wke_id - active_wke_id
- */
-function patch_wke_property({ scope, queryState, data, active_wke_id }) {
-    queryHelper.sync_to_worksheets_arr({ scope, queryState, data, active_wke_id })
-    queryHelper.mutateFlatStates({ moduleState: queryState, data })
 }
 
 /**
@@ -170,14 +157,16 @@ export default {
          * is changed in worksheets_arr then causes other properties also
          * have to recompute.
          */
-        ...saWkeStates(),
+        ...wkeStatesToBeSynced(),
     },
     mutations: {
         ...memStatesMutationCreator(),
+        // TODO: Create MutationCreator for mutation using mutate_sync_wke
         //Toolbar mutations
         SET_ACTIVE_DB(state, { payload, active_wke_id }) {
-            patch_wke_property({
+            queryHelper.mutate_sync_wke({
                 scope: this,
+                mutateStateModule: state,
                 queryState: state,
                 data: { active_db: payload },
                 active_wke_id,
@@ -187,8 +176,9 @@ export default {
             state.is_fullscreen = payload
         },
         SET_SHOW_VIS_SIDEBAR(state, payload) {
-            patch_wke_property({
+            queryHelper.mutate_sync_wke({
                 scope: this,
+                mutateStateModule: state,
                 queryState: state,
                 data: { show_vis_sidebar: payload },
                 active_wke_id: state.active_wke_id,
@@ -196,24 +186,27 @@ export default {
         },
         // Sidebar tree schema mutations
         SET_IS_SIDEBAR_COLLAPSED(state, payload) {
-            patch_wke_property({
+            queryHelper.mutate_sync_wke({
                 scope: this,
+                mutateStateModule: state,
                 queryState: state,
                 data: { is_sidebar_collapsed: payload },
                 active_wke_id: state.active_wke_id,
             })
         },
         SET_SEARCH_SCHEMA(state, payload) {
-            patch_wke_property({
+            queryHelper.mutate_sync_wke({
                 scope: this,
+                mutateStateModule: state,
                 queryState: state,
                 data: { search_schema: payload },
                 active_wke_id: state.active_wke_id,
             })
         },
         SET_EXPANDED_NODES(state, payload) {
-            patch_wke_property({
+            queryHelper.mutate_sync_wke({
                 scope: this,
+                mutateStateModule: state,
                 queryState: state,
                 data: { expanded_nodes: payload },
                 active_wke_id: state.active_wke_id,
@@ -222,8 +215,9 @@ export default {
 
         // editor mutations
         SET_QUERY_TXT(state, payload) {
-            patch_wke_property({
+            queryHelper.mutate_sync_wke({
                 scope: this,
+                mutateStateModule: state,
                 queryState: state,
                 data: { query_txt: payload },
                 active_wke_id: state.active_wke_id,
@@ -233,8 +227,9 @@ export default {
             state.selected_query_txt = payload
         },
         SET_CURR_DDL_COL_SPEC(state, payload) {
-            patch_wke_property({
+            queryHelper.mutate_sync_wke({
                 scope: this,
+                mutateStateModule: state,
                 queryState: state,
                 data: { curr_ddl_alter_spec: payload },
                 active_wke_id: state.active_wke_id,
@@ -252,8 +247,9 @@ export default {
 
         // Result tables data mutations
         SET_CURR_QUERY_MODE(state, payload) {
-            patch_wke_property({
+            queryHelper.mutate_sync_wke({
                 scope: this,
+                mutateStateModule: state,
                 queryState: state,
                 data: { curr_query_mode: payload },
                 active_wke_id: state.active_wke_id,
@@ -274,10 +270,11 @@ export default {
         SET_ACTIVE_WKE_ID(state, payload) {
             state.active_wke_id = payload
         },
-        UPDATE_SA_WKE_STATES(state, wke) {
+
+        SYNC_WKE_STATES(state, wke) {
             queryHelper.mutateFlatStates({
                 moduleState: state,
-                data: pickBy(wke, (v, key) => Object.keys(saWkeStates()).includes(key)),
+                data: pickBy(wke, (v, key) => Object.keys(wkeStatesToBeSynced()).includes(key)),
             })
         },
     },
@@ -1172,8 +1169,8 @@ export default {
                  * resource of active worksheet, update standalone wke states
                  */
                 if (rootState.queryConn.active_sql_conn.id === cnctId) {
-                    commit('UPDATE_SA_WKE_STATES', wke)
-                    commit('queryConn/UPDATE_SYNC_STATES', wke, { root: true })
+                    commit('SYNC_WKE_STATES', wke)
+                    commit('queryConn/SYNC_CONN_STATES', wke, { root: true })
                 }
             }
         },
