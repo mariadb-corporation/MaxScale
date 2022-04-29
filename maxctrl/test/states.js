@@ -1,4 +1,4 @@
-require("../test_utils.js")();
+const { startMaxScale, stopMaxScale, doCommand, verifyCommand, axios, host } = require("../test_utils.js");
 
 describe("Set/Clear Commands", function () {
   before(async function () {

@@ -1,4 +1,4 @@
-require("../test_utils.js")();
+const { startMaxScale, stopMaxScale, doCommand } = require("../test_utils.js");
 
 describe("Unknown Commands", function () {
   before(startMaxScale);

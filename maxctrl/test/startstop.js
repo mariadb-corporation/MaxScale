@@ -1,4 +1,12 @@
-require("../test_utils.js")();
+const {
+  startMaxScale,
+  stopMaxScale,
+  doCommand,
+  verifyCommand,
+  createConnection,
+  closeConnection,
+  isConnectionOk,
+} = require("../test_utils.js");
 
 describe("Start/Stop Commands", function () {
   before(startMaxScale);
@@ -62,7 +70,7 @@ describe("Start/Stop Commands", function () {
     await createConnection();
     var res = await verifyCommand("stop maxscale --force", "services");
 
-    for (i of res.data) {
+    for (const i of res.data) {
       i.attributes.state.should.equal("Stopped");
     }
 

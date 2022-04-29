@@ -1,4 +1,4 @@
-require("../test_utils.js")();
+const { startMaxScale, stopMaxScale, doCommand } = require("../test_utils.js");
 
 describe("API", function () {
   before(startMaxScale);
@@ -13,28 +13,28 @@ describe("API", function () {
 
   it("gets resource with path", function () {
     return doCommand("api get servers data[0].id").then((res) => {
-      js = JSON.parse(res);
+      let js = JSON.parse(res);
       js.should.include("server", "Value should start with 'server'");
     });
   });
 
   it("sums zero integer values", function () {
     return doCommand("api get servers data[].attributes.statistics.connections --sum").then((res) => {
-      js = JSON.parse(res);
+      let js = JSON.parse(res);
       js.should.equal(0);
     });
   });
 
   it("sums non-zero integer values", function () {
     return doCommand("api get --sum maxscale/threads data[].attributes.stats.reads").then((res) => {
-      js = JSON.parse(res);
+      let js = JSON.parse(res);
       js.should.be.a("number");
     });
   });
 
   it("does not sum string values", function () {
     return doCommand("api get servers data[].id --sum").then((res) => {
-      js = JSON.parse(res);
+      let js = JSON.parse(res);
       js.should.be.an("array").that.has.lengthOf(4).which.includes("server1");
     });
   });

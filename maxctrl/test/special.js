@@ -1,4 +1,4 @@
-require("../test_utils.js")();
+const { startMaxScale, stopMaxScale, createConnection, closeConnection } = require("../test_utils.js");
 
 describe("Library invocation", function () {
   before(startMaxScale);
@@ -75,6 +75,6 @@ describe("Error handling", function () {
   var ctrl = require("../lib/core.js");
 
   it("reject on connection failure", function () {
-      return ctrl.execute("list servers".split(" ")).should.be.rejected;
+    return ctrl.execute("list servers".split(" ")).should.be.rejected;
   });
 });

@@ -1,4 +1,4 @@
-require("../test_utils.js")();
+const { startMaxScale, stopMaxScale, doCommand, verifyCommand, expect } = require("../test_utils.js");
 
 describe("Link/Unlink Commands", function () {
   before(startMaxScale);

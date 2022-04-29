@@ -1,7 +1,15 @@
-require("../test_utils.js")();
+const {
+  startMaxScale,
+  stopMaxScale,
+  doCommand,
+  verifyCommand,
+  createConnection,
+  getConnectionId,
+  doQuery,
+  closeConnection,
+  expect,
+} = require("../test_utils.js");
 
-var ctrl = require("../lib/core.js");
-var opts = { extra_args: ["--quiet"] };
 const fs = require("fs");
 
 describe("Create/Destroy Commands", function () {

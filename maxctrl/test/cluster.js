@@ -1,4 +1,11 @@
-require("../test_utils.js")();
+const {
+  startDoubleMaxScale,
+  stopDoubleMaxScale,
+  doCommand,
+  verifyCommand,
+  secondary_host,
+  primary_host,
+} = require("../test_utils.js");
 var cluster = require("../lib/cluster.js");
 var stripAnsi = require("strip-ansi");
 
@@ -206,7 +213,7 @@ describe("Cluster Sync", function () {
 
   it("sync after service alteration", async function () {
     await doCommand("alter service RW-Split-Router enable_root_user true --hosts " + secondary_host);
-    res = await verifyCommand(
+    let res = await verifyCommand(
       "cluster sync " + secondary_host + " --hosts " + primary_host,
       "services/RW-Split-Router"
     );
@@ -229,7 +236,7 @@ describe("Cluster Sync", function () {
     await doCommand("create listener test-service my-listener-3 6001 --hosts " + secondary_host);
     await doCommand("cluster sync " + secondary_host + " --hosts " + primary_host);
     await doCommand("show service test-service --hosts " + primary_host);
-    res = await doCommand("list listeners test-service --tsv --hosts " + primary_host);
+    let res = await doCommand("list listeners test-service --tsv --hosts " + primary_host);
     res.should.not.be.empty;
   });
 

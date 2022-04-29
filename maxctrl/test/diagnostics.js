@@ -1,4 +1,12 @@
-require("../test_utils.js")();
+const {
+  startMaxScale,
+  stopMaxScale,
+  doCommand,
+  createConnection,
+  closeConnection,
+} = require("../test_utils.js");
+
+const _ = require("lodash");
 
 var tests = [
   "list servers",
@@ -72,7 +80,7 @@ describe("Diagnostic Commands", function () {
 describe("MXS-1656: `list servers` with GTIDs", function () {
   before(startMaxScale);
 
-  doCheck = function () {
+  let doCheck = function () {
     return doCommand("list servers --tsv").then((res) => {
       // Check that at least 5 columns are returned with the last column consisting of
       // empty strings. This is because the test setup uses file and position based

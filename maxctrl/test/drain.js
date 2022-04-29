@@ -1,4 +1,4 @@
-require("../test_utils.js")();
+const { startMaxScale, stopMaxScale, doCommand, sleepFor } = require("../test_utils.js");
 
 describe("Draining servers", function () {
   before(startMaxScale);

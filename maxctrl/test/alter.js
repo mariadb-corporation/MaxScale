@@ -1,4 +1,4 @@
-require("../test_utils.js")();
+const { startMaxScale, stopMaxScale, doCommand, verifyCommand } = require("../test_utils.js");
 
 describe("Alter Commands", function () {
   before(startMaxScale);
@@ -187,7 +187,7 @@ describe("Alter Commands", function () {
   it("alters filter", function () {
     return verifyCommand("alter filter QLA match match1", "filters/QLA").then(function (res) {
       res.data.attributes.parameters.match.should.equal("match1");
-    })
+    });
   });
 
   it("alters filter with multiple parameters", function () {
@@ -196,7 +196,7 @@ describe("Alter Commands", function () {
     ) {
       res.data.attributes.parameters.match.should.equal("match2");
       res.data.attributes.parameters.exclude.should.equal("exclude2");
-    })
+    });
   });
 
   it("will not alter non-existent filter parameter", function () {

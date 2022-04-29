@@ -1,4 +1,4 @@
-require("../test_utils.js")();
+const { startMaxScale, stopMaxScale, doCommand } = require("../test_utils.js");
 
 describe("Classify Commands", function () {
   before(startMaxScale);
@@ -8,6 +8,7 @@ describe("Classify Commands", function () {
   });
 
   it("classifies query with function", function () {
+    // eslint-disable-next-line quotes
     return doCommand('--tsv classify SELECT\tspecial_function("hello",5)').should.eventually.match(
       /special_function/
     );

@@ -1,4 +1,4 @@
-require("../test_utils.js")();
+const { startMaxScale, stopMaxScale, doCommand, verifyCommand } = require("../test_utils.js");
 
 describe("Enable/Disable Commands", function () {
   before(startMaxScale);
