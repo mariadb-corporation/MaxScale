@@ -300,14 +300,14 @@ std::tuple<bool, GWBUF> DCB::read_impl(size_t minbytes, size_t maxbytes, ReadLim
     else if (m_encryption.state == SSLState::ESTABLISHED)
     {
         mxb_assert(limit_type == ReadLimit::RES_LEN);
-        if (read_SSL(maxbytes))
+        if (socket_read_SSL(maxbytes))
         {
             read_success = true;
         }
     }
     else
     {
-        if (basic_read(maxbytes, limit_type))
+        if (socket_read(maxbytes, limit_type))
         {
             read_success = true;
         }
@@ -405,7 +405,7 @@ static int dcb_read_no_bytes_available(DCB* dcb, int fd, int nreadtotal)
  *
  * @param maxbytes Maximum bytes to read (0 = no limit)
  */
-bool DCB::basic_read(size_t maxbytes, ReadLimit limit_type)
+bool DCB::socket_read(size_t maxbytes, ReadLimit limit_type)
 {
     bool keep_reading = true;
     bool socket_cleared = false;
@@ -493,7 +493,7 @@ bool DCB::basic_read(size_t maxbytes, ReadLimit limit_type)
  * @param maxbytes Maximum bytes to read (0 = no limit)
  * @return True on success
  */
-bool DCB::read_SSL(size_t maxbytes)
+bool DCB::socket_read_SSL(size_t maxbytes)
 {
     if (m_encryption.write_want_read)
     {

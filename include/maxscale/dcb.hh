@@ -614,8 +614,8 @@ private:
         RES_LEN,    /**< Maxbytes only affects the returned data. Socket can be read for more. */
         STRICT      /**< Exactly the given amount must be read from socket */
     };
-    bool basic_read(size_t maxbytes, ReadLimit limit_type);
-    bool read_SSL(size_t maxbytes);
+    bool socket_read(size_t maxbytes, ReadLimit limit_type);
+    bool socket_read_SSL(size_t maxbytes);
 
     void socket_write_SSL();
     void socket_write();
