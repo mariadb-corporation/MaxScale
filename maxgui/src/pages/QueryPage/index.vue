@@ -69,8 +69,8 @@ export default {
             handler(v) {
                 if (v) {
                     this.updateRoute(v)
-                    this.SYNC_WKE_STATES(this.getActiveWke)
-                    this.SYNC_CONN_STATES(this.getActiveWke)
+                    this.SYNC_WKE_TO_QUERY_MODULE(this.getActiveWke)
+                    this.SYNC_WKE_TO_QUERY_CONN_MODULE(this.getActiveWke)
                 }
             },
         },
@@ -113,8 +113,8 @@ export default {
     methods: {
         ...mapMutations({
             SET_SNACK_BAR_MESSAGE: 'SET_SNACK_BAR_MESSAGE',
-            SYNC_WKE_STATES: 'query/SYNC_WKE_STATES',
-            SYNC_CONN_STATES: 'queryConn/SYNC_CONN_STATES',
+            SYNC_WKE_TO_QUERY_MODULE: 'query/SYNC_WKE_TO_QUERY_MODULE',
+            SYNC_WKE_TO_QUERY_CONN_MODULE: 'queryConn/SYNC_WKE_TO_QUERY_CONN_MODULE',
         }),
         ...mapActions({
             validatingConn: 'queryConn/validatingConn',

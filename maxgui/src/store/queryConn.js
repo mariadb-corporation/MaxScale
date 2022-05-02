@@ -10,7 +10,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { pickBy } from 'utils/helpers'
 import queryHelper from './queryHelper'
 import { sidebarStates, resultStates, toolbarStates } from './query'
 /**
@@ -72,6 +71,14 @@ export default {
         ...memStates(),
     },
     mutations: {
+        ...queryHelper.syncedStateMutationsCreator(connStatesToBeSynced()),
+        ...queryHelper.memStatesMutationCreator({
+            mutationTypesMap: connMemStateMutationTypeMap(),
+        }),
+        ...queryHelper.syncWkeToFlatStateMutationCreator({
+            statesToBeSynced: connStatesToBeSynced(),
+            suffix: 'query_conn',
+        }),
         SET_IS_VALIDATING_CONN(state, payload) {
             state.is_validating_conn = payload
         },
@@ -89,22 +96,6 @@ export default {
         },
         SET_PRE_SELECT_CONN_RSRC(state, payload) {
             state.pre_select_conn_rsrc = payload
-        },
-        ...queryHelper.syncedStateMutationsCreator(connStatesToBeSynced()),
-        ...queryHelper.memStatesMutationCreator({
-            mutationTypesMap: connMemStateMutationTypeMap(),
-        }),
-        /**
-         * When active_wke_id is changed, call this to sync properties from worksheets_arr
-         * back to connStatesToBeSynced in this module
-         * @param {Object} state - vuex state
-         * @param {Object} wke - wke object
-         */
-        SYNC_CONN_STATES(state, wke) {
-            queryHelper.mutateFlatStates({
-                moduleState: state,
-                data: pickBy(wke, (v, key) => Object.keys(connStatesToBeSynced()).includes(key)),
-            })
         },
     },
     actions: {
@@ -331,8 +322,8 @@ export default {
                  * resource of active worksheet, sync wke states to flat states
                  */
                 if (state.queryConn.active_sql_conn.id === cnctId) {
-                    commit('query/SYNC_WKE_STATES', wke, { root: true })
-                    commit('SYNC_CONN_STATES', wke)
+                    commit('query/SYNC_WKE_TO_QUERY_MODULE', wke, { root: true })
+                    commit('SYNC_WKE_TO_QUERY_CONN_MODULE', wke)
                 }
             }
         },

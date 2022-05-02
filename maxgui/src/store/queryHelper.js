@@ -219,12 +219,12 @@ async function queryColsOptsData({ active_sql_conn, nodeId, $queryHttp }) {
 }
 
 /**
- * @public
+ * @private
  * This helps to mutate flat state
  * @param {Object} moduleState  module state to be mutated
  * @param {Object} data  key/value state, can be more than one key
  */
-function mutateFlatStates({ moduleState, data }) {
+function mutate_flat_states({ moduleState, data }) {
     Object.keys(data).forEach(key => (moduleState[key] = data[key]))
 }
 
@@ -252,7 +252,7 @@ function sync_to_worksheets_arr({ scope, data, active_wke_id }) {
  * @param {Object} payload.active_wke_id - active_wke_id
  */
 function mutate_sync_wke({ scope, mutateStateModule, data, active_wke_id }) {
-    mutateFlatStates({ moduleState: mutateStateModule, data })
+    mutate_flat_states({ moduleState: mutateStateModule, data })
     sync_to_worksheets_arr({ scope, data, active_wke_id })
 }
 
@@ -262,24 +262,54 @@ function mutate_sync_wke({ scope, mutateStateModule, data, active_wke_id }) {
  * stored in memory, i.e. states return from memStates().
  * The name of mutation follows this pattern SET_STATE_NAME.
  * e.g. Mutation for active_sql_conn state is SET_ACTIVE_SQL_CONN
+ * @param {Object} statesToBeSynced
  * @returns {Object} - returns vuex mutations
  */
 function syncedStateMutationsCreator(statesToBeSynced) {
-    let mutations = {}
-    Object.keys(statesToBeSynced).forEach(key => {
-        // Use function instead of arrow func in order to access `this.vue`
-        mutations[`SET_${key.toUpperCase()}`] = function(state, { payload, active_wke_id }) {
-            mutate_sync_wke({
-                scope: this,
-                mutateStateModule: state,
-                data: { [key]: payload },
-                active_wke_id,
-            })
-        }
-    })
-    return mutations
+    return Object.keys(statesToBeSynced).reduce(
+        (mutations, key) => ({
+            ...mutations,
+            [`SET_${key.toUpperCase()}`]: function(state, { payload, active_wke_id }) {
+                mutate_sync_wke({
+                    scope: this,
+                    mutateStateModule: state,
+                    data: { [key]: payload },
+                    active_wke_id,
+                })
+            },
+        }),
+        {}
+    )
 }
 /**
+ * @public
+ * This function helps to generate a mutation to sync wke properties to flat states
+ * The name of mutation follows this pattern SYNC_WKE_TO_suffix.
+ * e.g. Mutation for query module is SYNC_WKE_TO_QUERY_MODULE
+ * @param {Object} param.statesToBeSynced
+ * @param {String} param.suffix - suffix for the mutation.
+ * @returns {Object} - returns vuex mutation
+ */
+function syncWkeToFlatStateMutationCreator({ statesToBeSynced, suffix }) {
+    return {
+        /**
+         * Sync wke properties to flat states
+         * @param {Object} state - vuex state
+         * @param {Object} wke - wke object
+         */
+        [`SYNC_WKE_TO_${suffix.toUpperCase()}_MODULE`]: function(state, wke) {
+            mutate_flat_states({
+                moduleState: state,
+                data: this.vue.$help.lodash.pickBy(wke, (v, key) =>
+                    Object.keys(statesToBeSynced).includes(key)
+                ),
+            })
+        },
+    }
+}
+
+/**
+ * @public
  * Mutations creator for states storing in hash map structure (storing in memory).
  * The state uses worksheet's id as key. This helps to preserve multiple worksheet's data in memory.
  * The name of mutation follows this pattern SET_STATE_NAME or PATCH_STATE_NAME.
@@ -288,10 +318,10 @@ function syncedStateMutationsCreator(statesToBeSynced) {
  * @returns {Object} - returns mutations for provided keys from mutationTypesMap
  */
 function memStatesMutationCreator({ mutationTypesMap }) {
-    return Object.keys(mutationTypesMap).reduce((obj, stateName) => {
+    return Object.keys(mutationTypesMap).reduce((mutations, stateName) => {
         const mutationType = mutationTypesMap[stateName]
         return {
-            ...obj,
+            ...mutations,
             // Use function instead of arrow func in order to access `this.vue`
             // if payload is not provided, they id (worksheet id) key will be removed from the state
             [`${mutationType}_${stateName.toUpperCase()}`]: function(state, { id, payload }) {
@@ -314,6 +344,7 @@ function memStatesMutationCreator({ mutationTypesMap }) {
     }, {})
 }
 /**
+ * @public
  * This helps to commit mutations provided by mutationTypesMap to delete the states storing in memory for a worksheet
  * @param {Object} param.namespace - module namespace. e.g. query, queryConn
  * @param {Function} param.commit - vuex commit function
@@ -335,8 +366,8 @@ export default {
     updateTblChild,
     queryTblOptsData,
     queryColsOptsData,
-    mutateFlatStates,
     syncedStateMutationsCreator,
+    syncWkeToFlatStateMutationCreator,
     memStatesMutationCreator,
     releaseMemory,
 }

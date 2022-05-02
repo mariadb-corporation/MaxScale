@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { uniqBy, uniqueId, pickBy } from 'utils/helpers'
+import { uniqBy, uniqueId } from 'utils/helpers'
 import queryHelper from './queryHelper'
 import { connStatesToBeSynced, connMemStateMutationTypeMap } from './queryConn'
 /**
@@ -136,6 +136,10 @@ export default {
             mutationTypesMap: queryMemStateMutationTypeMap(),
         }),
         ...queryHelper.syncedStateMutationsCreator(wkeStatesToBeSynced()),
+        ...queryHelper.syncWkeToFlatStateMutationCreator({
+            statesToBeSynced: wkeStatesToBeSynced(),
+            suffix: 'query',
+        }),
         //Toolbar mutations
         SET_FULLSCREEN(state, payload) {
             state.is_fullscreen = payload
@@ -167,18 +171,6 @@ export default {
         },
         SET_ACTIVE_WKE_ID(state, payload) {
             state.active_wke_id = payload
-        },
-        /**
-         * When active_wke_id is changed, call this to sync properties from worksheets_arr
-         * back to wkeStatesToBeSynced in this module
-         * @param {Object} state - vuex state
-         * @param {Object} wke - wke object
-         */
-        SYNC_WKE_STATES(state, wke) {
-            queryHelper.mutateFlatStates({
-                moduleState: state,
-                data: pickBy(wke, (v, key) => Object.keys(wkeStatesToBeSynced()).includes(key)),
-            })
         },
     },
     actions: {
