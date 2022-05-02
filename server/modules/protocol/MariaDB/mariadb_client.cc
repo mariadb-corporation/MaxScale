@@ -2768,9 +2768,9 @@ bool MariaDBClientConnection::process_normal_packet(GWBUF&& buffer)
     return success;
 }
 
-void MariaDBClientConnection::write_ok_packet(int sequence, uint8_t affected_rows, const char* message)
+void MariaDBClientConnection::write_ok_packet(int sequence, uint8_t affected_rows)
 {
-    write(mxs_mysql_create_ok(sequence, affected_rows, message));
+    write(mariadb::create_ok_packet(sequence, affected_rows));
 }
 
 bool MariaDBClientConnection::send_mysql_err_packet(int mysql_errno, const char* sqlstate_msg,

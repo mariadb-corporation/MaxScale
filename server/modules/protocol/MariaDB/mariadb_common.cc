@@ -162,83 +162,6 @@ void encode_leint(uint8_t* ptr, size_t prefix_size, size_t value)
     }
 }
 
-GWBUF* mxs_mysql_create_ok(int sequence, uint8_t affected_rows, const char* message)
-{
-    uint8_t* outbuf = NULL;
-    uint32_t mysql_payload_size = 0;
-    uint8_t mysql_packet_header[4];
-    uint8_t* mysql_payload = NULL;
-    uint8_t field_count = 0;
-    uint8_t insert_id = 0;
-    uint8_t mysql_server_status[2];
-    uint8_t mysql_warning_counter[2];
-    GWBUF* buf;
-
-
-    mysql_payload_size =
-        sizeof(field_count)
-        + sizeof(affected_rows)
-        + sizeof(insert_id)
-        + sizeof(mysql_server_status)
-        + sizeof(mysql_warning_counter);
-
-    size_t msglen = 0;
-    size_t prefix_size = 0;
-
-    if (message)
-    {
-        msglen = strlen(message);
-        prefix_size = leint_prefix_bytes(msglen);
-        mysql_payload_size += msglen + prefix_size;
-    }
-
-    // allocate memory for packet header + payload
-    if ((buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size)) == NULL)
-    {
-        return 0;
-    }
-    outbuf = GWBUF_DATA(buf);
-
-    // write packet header with packet number
-    mariadb::set_byte3(mysql_packet_header, mysql_payload_size);
-    mysql_packet_header[3] = sequence;
-
-    // write header
-    memcpy(outbuf, mysql_packet_header, sizeof(mysql_packet_header));
-
-    mysql_payload = outbuf + sizeof(mysql_packet_header);
-
-    mysql_server_status[0] = 2;
-    mysql_server_status[1] = 0;
-    mysql_warning_counter[0] = 0;
-    mysql_warning_counter[1] = 0;
-
-    // write data
-    memcpy(mysql_payload, &field_count, sizeof(field_count));
-    mysql_payload = mysql_payload + sizeof(field_count);
-
-    memcpy(mysql_payload, &affected_rows, sizeof(affected_rows));
-    mysql_payload = mysql_payload + sizeof(affected_rows);
-
-    memcpy(mysql_payload, &insert_id, sizeof(insert_id));
-    mysql_payload = mysql_payload + sizeof(insert_id);
-
-    memcpy(mysql_payload, mysql_server_status, sizeof(mysql_server_status));
-    mysql_payload = mysql_payload + sizeof(mysql_server_status);
-
-    memcpy(mysql_payload, mysql_warning_counter, sizeof(mysql_warning_counter));
-    mysql_payload = mysql_payload + sizeof(mysql_warning_counter);
-
-    if (message)
-    {
-        encode_leint(mysql_payload, prefix_size, msglen);
-        mysql_payload += prefix_size;
-        memcpy(mysql_payload, message, msglen);
-    }
-
-    return buf;
-}
-
 /**
  * @brief Computes the size of the response to the DB initial handshake
  *
@@ -473,12 +396,14 @@ bool MYSQL_session::is_trx_active() const
     return trx_state & TrxState::TRX_ACTIVE;
 }
 
-uint64_t mariadb::AuthenticatorModule::capabilities() const
+namespace mariadb
+{
+uint64_t AuthenticatorModule::capabilities() const
 {
     return 0;
 }
 
-mariadb::AuthByteVec mariadb::AuthenticatorModule::generate_token(const std::string& password)
+mariadb::AuthByteVec AuthenticatorModule::generate_token(const std::string& password)
 {
     // Simply write the password as is. This works for PAM and GSSApi (in theory).
     return mariadb::AuthByteVec(password.begin(), password.end());
@@ -533,7 +458,7 @@ bool UserEntry::host_pattern_is_more_specific(const UserEntry& lhs, const UserEn
  * @return Result structure. Success, if reading succeeded. Also returns success if the entire packet was
  * not yet available and the function should be called again later.
  */
-std::tuple<bool, GWBUF> mariadb::read_protocol_packet(DCB* dcb)
+std::tuple<bool, GWBUF> read_protocol_packet(DCB* dcb)
 {
     const int MAX_PACKET_SIZE = MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN;
 
@@ -581,12 +506,11 @@ std::tuple<bool, GWBUF> mariadb::read_protocol_packet(DCB* dcb)
     return {read_ok, move(buffer)};
 }
 
-namespace mariadb
-{
-void set_byte2(uint8_t* buffer, uint16_t val)
+uint8_t* set_byte2(uint8_t* buffer, uint16_t val)
 {
     uint16_t le16 = htole16(val);
     memcpy(buffer, &le16, 2);
+    return buffer + 2;
 }
 
 void set_byte3(uint8_t* buffer, uint32_t val)
@@ -709,5 +633,32 @@ AuthSwitchReqContents parse_auth_switch_request(const mxs::Buffer& input)
     data.resize(datalen);
     gwbuf_copy_data(input.get(), MYSQL_HEADER_LEN, datalen, data.data());
     return packet_parser::parse_auth_switch_request(data);
+}
+
+GWBUF create_ok_packet(uint8_t sequence, uint8_t affected_rows)
+{
+    mxb_assert(affected_rows < 0xFB);
+
+    /* Basic ok packet is
+     * 4 bytes header
+     * 1 byte 0
+     * 1 byte affected rows (assuming that value is < 0xFB)
+     * 1 byte insert id = 0
+     * 2 bytes server status
+     * 2 bytes warning counter
+     * Total 4 + 7
+     */
+
+    const uint32_t pl_size = 7;
+    const uint32_t total_size = MYSQL_HEADER_LEN + pl_size;
+    GWBUF buffer(total_size);
+    auto ptr = mariadb::write_header(buffer.data(), pl_size, sequence);
+    *ptr++ = 0;
+    *ptr++ = affected_rows;
+    *ptr++ = 0;
+    ptr = mariadb::set_byte2(ptr, 2);   // autocommit is on
+    ptr = mariadb::set_byte2(ptr, 0);   // no warnings
+    buffer.write_complete(ptr - buffer.data());
+    return buffer;
 }
 }

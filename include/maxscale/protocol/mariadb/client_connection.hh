@@ -207,7 +207,7 @@ private:
     int    send_auth_error(int packet_number, const char* mysql_message);
     int    send_standard_error(int packet_number, int error_number, const char* error_message);
     GWBUF* create_standard_error(int sequence, int error_number, const char* msg);
-    void   write_ok_packet(int sequence, uint8_t affected_rows = 0, const char* message = nullptr);
+    void   write_ok_packet(int sequence, uint8_t affected_rows = 0);
 
     /**
      * Send an error packet to the client.

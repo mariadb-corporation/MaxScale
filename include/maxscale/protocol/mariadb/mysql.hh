@@ -137,7 +137,7 @@ namespace mariadb
  * may be required.
  */
 
-void     set_byte2(uint8_t* buffer, uint16_t val);
+uint8_t* set_byte2(uint8_t* buffer, uint16_t val);
 void     set_byte3(uint8_t* buffer, uint32_t val);
 void     set_byte4(uint8_t* buffer, uint32_t val);
 void     set_byte8(uint8_t* buffer, uint64_t val);
@@ -236,6 +236,8 @@ bool is_com_prepare(const GWBUF& buf);
  * Check if GWBUF is a COM_QUERY or COM_STMT_PREPARE packet.
  */
 bool is_com_query_or_prepare(const GWBUF& buf);
+
+GWBUF create_ok_packet(uint8_t sequence, uint8_t affected_rows);
 }
 
 /** MySQL protocol constants */
@@ -414,7 +416,6 @@ inline static const char* const USERS_RECENTLY_UPDATED_FMT = "User accounts have
 
 GWBUF* mysql_create_com_quit(GWBUF* bufparam, int sequence);
 GWBUF* mysql_create_custom_error(int sequence, int affected_rows, uint16_t errnum, const char* errmsg);
-GWBUF* mxs_mysql_create_ok(int sequence, uint8_t affected_rows, const char* message);
 
 void init_response_status(GWBUF* buf, uint8_t cmd, int* npackets, size_t* nbytes);
 

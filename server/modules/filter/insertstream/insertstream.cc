@@ -335,7 +335,8 @@ bool InsertStreamSession::routeQuery(GWBUF* queue)
     if (send_ok)
     {
         mxs::ReplyRoute route;
-        rc = FilterSession::clientReply(mxs_mysql_create_ok(1, 0, NULL), route, mxs::Reply());
+        rc = FilterSession::clientReply(mxs::gwbuf_to_gwbufptr(mariadb::create_ok_packet(1, 0)),
+                                        route, mxs::Reply());
     }
 
     if (send_error)
