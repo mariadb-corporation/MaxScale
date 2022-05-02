@@ -483,7 +483,7 @@ describe(`DbListTree - computed and other method tests`, () => {
                 getAlteredActiveNode: () => ({ id: 'mock_altered_active_node' }),
             },
         })
-        let fnSpy = sinon.spy(wrapper.vm, 'UPDATE_TBL_CREATION_INFO_MAP')
+        let fnSpy = sinon.spy(wrapper.vm, 'PATCH_TBL_CREATION_INFO_MAP')
         wrapper.vm.handleEmitQueryOpt({ item: prvw_node, opt: mockQueryOpts[0] })
         fnSpy.should.have.been.calledWithExactly({
             id: wrapper.vm.active_wke_id,

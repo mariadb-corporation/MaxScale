@@ -174,9 +174,9 @@ export default {
     },
     methods: {
         ...mapMutations({
-            UPDATE_EXE_STMT_RESULT_MAP: 'query/UPDATE_EXE_STMT_RESULT_MAP',
-            UPDATE_TBL_CREATION_INFO_MAP: 'query/UPDATE_TBL_CREATION_INFO_MAP',
-            UPDATE_CURR_EDITOR_MODE_MAP: 'query/UPDATE_CURR_EDITOR_MODE_MAP',
+            PATCH_EXE_STMT_RESULT_MAP: 'query/PATCH_EXE_STMT_RESULT_MAP',
+            PATCH_TBL_CREATION_INFO_MAP: 'query/PATCH_TBL_CREATION_INFO_MAP',
+            SET_CURR_EDITOR_MODE_MAP: 'query/SET_CURR_EDITOR_MODE_MAP',
         }),
         ...mapActions({
             exeStmtAction: 'query/exeStmtAction',
@@ -197,13 +197,13 @@ export default {
         },
         closeDDLEditor() {
             // Clear altered active node
-            this.UPDATE_TBL_CREATION_INFO_MAP({
+            this.PATCH_TBL_CREATION_INFO_MAP({
                 id: this.active_wke_id,
                 payload: {
                     altered_active_node: null,
                 },
             })
-            this.UPDATE_CURR_EDITOR_MODE_MAP({
+            this.SET_CURR_EDITOR_MODE_MAP({
                 id: this.active_wke_id,
                 payload: this.SQL_EDITOR_MODES.TXT_EDITOR,
             })
@@ -482,7 +482,7 @@ export default {
                 action: `Apply changes to ${escape(dbName)}.${escape(table_name)}`,
             })
             if (!this.isAlterFailed)
-                this.UPDATE_TBL_CREATION_INFO_MAP({
+                this.PATCH_TBL_CREATION_INFO_MAP({
                     id: this.active_wke_id,
                     payload: {
                         data: this.$help.lodash.cloneDeep(this.formData),
@@ -490,7 +490,7 @@ export default {
                 })
         },
         clearAlterResult() {
-            this.UPDATE_EXE_STMT_RESULT_MAP({ id: this.active_wke_id })
+            this.PATCH_EXE_STMT_RESULT_MAP({ id: this.active_wke_id })
         },
     },
 }

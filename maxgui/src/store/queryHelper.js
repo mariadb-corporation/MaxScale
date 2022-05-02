@@ -260,8 +260,8 @@ function mutate_sync_wke({ scope, mutateStateModule, data, active_wke_id }) {
  * @public
  * This function helps to generate vuex mutations for states are
  * stored in memory, i.e. states return from memStates().
- * The name of mutation follows this pattern UPDATE_STATE_NAME. e.g. mutation
- * for is_querying_map state is UPDATE_IS_QUERYING_MAP
+ * The name of mutation follows this pattern SET_STATE_NAME.
+ * e.g. Mutation for active_sql_conn state is SET_ACTIVE_SQL_CONN
  * @returns {Object} - returns vuex mutations
  */
 function syncedStateMutationsCreator(statesToBeSynced) {
@@ -279,6 +279,40 @@ function syncedStateMutationsCreator(statesToBeSynced) {
     })
     return mutations
 }
+/**
+ * Mutations creator for states storing in hash map structure (storing in memory).
+ * The state uses worksheet's id as key. This helps to preserve multiple worksheet's data in memory.
+ * The name of mutation follows this pattern SET_STATE_NAME or PATCH_STATE_NAME.
+ * e.g. Mutation for is_querying_map state is SET_IS_QUERYING_MAP
+ * @param {Object} param.mutationTypesMap - mutation type keys map for states storing in memory. Either SET or PATCH
+ * @returns {Object} - returns mutations for provided keys from mutationTypesMap
+ */
+function memStatesMutationCreator({ mutationTypesMap }) {
+    return Object.keys(mutationTypesMap).reduce((obj, stateName) => {
+        const mutationType = mutationTypesMap[stateName]
+        return {
+            ...obj,
+            // Use function instead of arrow func in order to access `this.vue`
+            // if payload is not provided, they id (worksheet id) key will be removed from the state
+            [`${mutationType}_${stateName.toUpperCase()}`]: function(state, { id, payload }) {
+                if (!payload) this.vue.$delete(state[stateName], id)
+                else {
+                    switch (mutationType) {
+                        case 'SET':
+                            state[stateName] = { ...state[stateName], [id]: payload }
+                            break
+                        case 'PATCH':
+                            state[stateName] = {
+                                ...state[stateName],
+                                ...{ [id]: { ...state[stateName][id], ...payload } },
+                            }
+                            break
+                    }
+                }
+            },
+        }
+    }, {})
+}
 
 export default {
     getClientConnIds,
@@ -288,4 +322,5 @@ export default {
     queryColsOptsData,
     mutateFlatStates,
     syncedStateMutationsCreator,
+    memStatesMutationCreator,
 }

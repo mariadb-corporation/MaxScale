@@ -225,14 +225,14 @@ export default {
                 if (v.length) {
                     const activeNodes = this.minimizeNodes(v)
                     if (this.$typy(this.getAlteredActiveNode, 'id').safeString) {
-                        this.UPDATE_TBL_CREATION_INFO_MAP({
+                        this.PATCH_TBL_CREATION_INFO_MAP({
                             id: this.active_wke_id,
                             payload: {
                                 altered_active_node: activeNodes[0],
                             },
                         })
                     } else
-                        this.UPDATE_DB_TREE_MAP({
+                        this.PATCH_DB_TREE_MAP({
                             id: this.active_wke_id,
                             payload: {
                                 active_tree_node: activeNodes[0],
@@ -256,11 +256,11 @@ export default {
     },
     methods: {
         ...mapMutations({
-            UPDATE_DB_TREE_MAP: 'query/UPDATE_DB_TREE_MAP',
+            PATCH_DB_TREE_MAP: 'query/PATCH_DB_TREE_MAP',
             SET_EXPANDED_NODES: 'query/SET_EXPANDED_NODES',
-            UPDATE_CURR_EDITOR_MODE_MAP: 'query/UPDATE_CURR_EDITOR_MODE_MAP',
+            SET_CURR_EDITOR_MODE_MAP: 'query/SET_CURR_EDITOR_MODE_MAP',
             SET_CURR_DDL_ALTER_SPEC: 'query/SET_CURR_DDL_ALTER_SPEC',
-            UPDATE_TBL_CREATION_INFO_MAP: 'query/UPDATE_TBL_CREATION_INFO_MAP',
+            PATCH_TBL_CREATION_INFO_MAP: 'query/PATCH_TBL_CREATION_INFO_MAP',
         }),
         filter(item, search, textKey) {
             return item[textKey].indexOf(search) > -1
@@ -346,7 +346,7 @@ export default {
              */
             if (this.$typy(this.getAlteredActiveNode, 'id').safeString)
                 // Clear altered active node
-                this.UPDATE_TBL_CREATION_INFO_MAP({
+                this.PATCH_TBL_CREATION_INFO_MAP({
                     id: this.active_wke_id,
                     payload: {
                         altered_active_node: null,
@@ -416,13 +416,13 @@ export default {
                             type: item.type,
                             level: item.level,
                         }
-                        this.UPDATE_TBL_CREATION_INFO_MAP({
+                        this.PATCH_TBL_CREATION_INFO_MAP({
                             id: this.active_wke_id,
                             payload: {
                                 altered_active_node: alterActiveNode,
                             },
                         })
-                        this.UPDATE_CURR_EDITOR_MODE_MAP({
+                        this.SET_CURR_EDITOR_MODE_MAP({
                             id: this.active_wke_id,
                             payload: this.SQL_EDITOR_MODES.DDL_EDITOR,
                         })
@@ -452,7 +452,7 @@ export default {
             const {
                 TXT_EDITOR: { INSERT, QUERY },
             } = this.SQL_NODE_CTX_OPT_TYPES
-            this.UPDATE_CURR_EDITOR_MODE_MAP({
+            this.SET_CURR_EDITOR_MODE_MAP({
                 id: this.active_wke_id,
                 payload: this.SQL_EDITOR_MODES.TXT_EDITOR,
             })

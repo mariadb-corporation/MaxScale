@@ -302,16 +302,16 @@ describe(`SidebarContainer - methods tests`, () => {
         })
         wrapper.vm.exeStmtAction.restore()
     })
-    it(`Should call UPDATE_EXE_STMT_RESULT_MAP mutation when
+    it(`Should call PATCH_EXE_STMT_RESULT_MAP mutation when
       clearExeStatementsResult is called`, () => {
         const mockActive_wke_id = 'wke_abcd'
         wrapper = mountFactory({
             computed: { active_wke_id: () => mockActive_wke_id },
-            methods: { UPDATE_EXE_STMT_RESULT_MAP: () => null },
+            methods: { PATCH_EXE_STMT_RESULT_MAP: () => null },
         })
-        sinon.spy(wrapper.vm, 'UPDATE_EXE_STMT_RESULT_MAP')
+        sinon.spy(wrapper.vm, 'PATCH_EXE_STMT_RESULT_MAP')
         wrapper.vm.clearExeStatementsResult() // trigger the method
-        wrapper.vm.UPDATE_EXE_STMT_RESULT_MAP.should.have.been.calledWith({ id: mockActive_wke_id })
-        wrapper.vm.UPDATE_EXE_STMT_RESULT_MAP.restore()
+        wrapper.vm.PATCH_EXE_STMT_RESULT_MAP.should.have.been.calledWith({ id: mockActive_wke_id })
+        wrapper.vm.PATCH_EXE_STMT_RESULT_MAP.restore()
     })
 })

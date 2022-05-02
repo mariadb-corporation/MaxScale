@@ -196,7 +196,7 @@ export default {
             SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE',
             SET_IS_SIDEBAR_COLLAPSED: 'query/SET_IS_SIDEBAR_COLLAPSED',
             SET_SEARCH_SCHEMA: 'query/SET_SEARCH_SCHEMA',
-            UPDATE_EXE_STMT_RESULT_MAP: 'query/UPDATE_EXE_STMT_RESULT_MAP',
+            PATCH_EXE_STMT_RESULT_MAP: 'query/PATCH_EXE_STMT_RESULT_MAP',
         }),
         ...mapActions({
             clearDataPreview: 'query/clearDataPreview',
@@ -275,7 +275,7 @@ export default {
             await this.exeStmtAction({ sql: this.sql, action: this.actionName })
         },
         clearExeStatementsResult() {
-            this.UPDATE_EXE_STMT_RESULT_MAP({ id: this.active_wke_id })
+            this.PATCH_EXE_STMT_RESULT_MAP({ id: this.active_wke_id })
         },
     },
 }

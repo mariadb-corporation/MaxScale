@@ -78,7 +78,9 @@ export function defWorksheetState() {
  * Below states are stored in hash map structure.
  * Using worksheet's id as key. This helps to preserve
  * multiple worksheet's data in memory.
- * Use `memStatesMutationCreator` to create corresponding mutations
+ * Use `queryHelper.memStatesMutationCreator` to create corresponding mutations
+ * Some keys will have mutation name starts with either `SET` or `PATCH`
+ * prefix. Check getMemStateMutationTypes for more info
  * @returns {Object} - returns states that are stored in memory
  */
 function memStates() {
@@ -99,40 +101,18 @@ function memStates() {
         is_stopping_query_map: {},
     }
 }
-
-/**
- * This function helps to generate vuex mutations for states are
- * stored in memory, i.e. states return from memStates().
- * The name of mutation follows this pattern UPDATE_STATE_NAME. e.g. mutation
- * for is_querying_map state is UPDATE_IS_QUERYING_MAP
- * @returns {Object} - returns vuex mutations
- */
-function memStatesMutationCreator() {
-    let mutations = {}
-    Object.keys(memStates()).forEach(key => {
-        // Use function instead of arrow func in order to access `this.vue`
-        mutations[`UPDATE_${key.toUpperCase()}`] = function(state, { id, payload }) {
-            if (!payload) this.vue.$delete(state[key], id)
-            else {
-                switch (key) {
-                    case 'is_querying_map':
-                    case 'curr_editor_mode_map':
-                    case 'lost_cnn_err_msg_obj_map':
-                    case 'is_stopping_query_map':
-                        state[key] = { ...state[key], [id]: payload }
-                        break
-                    default:
-                        state[key] = {
-                            ...state[key],
-                            ...{ [id]: { ...state[key][id], ...payload } },
-                        }
-                        break
-                }
-            }
-        }
-    })
-    return mutations
+function getMemStateMutationTypes() {
+    const keysWithPrefixSet = [
+        'is_querying_map',
+        'lost_cnn_err_msg_obj_map',
+        'curr_editor_mode_map',
+        'is_stopping_query_map',
+    ]
+    return Object.keys(memStates()).reduce((res, key) => {
+        return { ...res, [key]: keysWithPrefixSet.includes(key) ? 'SET' : 'PATCH' }
+    }, {})
 }
+
 export default {
     namespaced: true,
     state: {
@@ -160,7 +140,7 @@ export default {
         ...wkeStatesToBeSynced(),
     },
     mutations: {
-        ...memStatesMutationCreator(),
+        ...queryHelper.memStatesMutationCreator({ mutationTypesMap: getMemStateMutationTypes() }),
         ...queryHelper.syncedStateMutationsCreator(wkeStatesToBeSynced()),
         //Toolbar mutations
         SET_FULLSCREEN(state, payload) {
@@ -577,7 +557,7 @@ export default {
                     db_tree: getters.getDbTreeData,
                     cmpList: getters.getDbCmplList,
                 })
-                commit('UPDATE_DB_TREE_MAP', {
+                commit('PATCH_DB_TREE_MAP', {
                     id: active_wke_id,
                     payload: {
                         data: new_db_tree,
@@ -593,7 +573,7 @@ export default {
             const active_wke_id = state.active_wke_id
             const expanded_nodes = this.vue.$help.lodash.cloneDeep(state.expanded_nodes)
             try {
-                commit('UPDATE_DB_TREE_MAP', {
+                commit('PATCH_DB_TREE_MAP', {
                     id: active_wke_id,
                     payload: {
                         loading_db_tree: true,
@@ -616,7 +596,7 @@ export default {
                             if (completionList.length) completionList = new_cmp_list
                         }
                     }
-                    commit('UPDATE_DB_TREE_MAP', {
+                    commit('PATCH_DB_TREE_MAP', {
                         id: active_wke_id,
                         payload: {
                             loading_db_tree: false,
@@ -626,7 +606,7 @@ export default {
                     })
                 }
             } catch (e) {
-                commit('UPDATE_DB_TREE_MAP', {
+                commit('PATCH_DB_TREE_MAP', {
                     id: active_wke_id,
                     payload: {
                         loading_db_tree: false,
@@ -644,7 +624,7 @@ export default {
             const active_wke_id = state.active_wke_id
             const request_sent_time = new Date().valueOf()
             try {
-                commit(`UPDATE_${prvwMode}_MAP`, {
+                commit(`PATCH_${prvwMode}_MAP`, {
                     id: active_wke_id,
                     payload: {
                         request_sent_time,
@@ -672,7 +652,7 @@ export default {
                 })
                 const now = new Date().valueOf()
                 const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
-                commit(`UPDATE_${prvwMode}_MAP`, {
+                commit(`PATCH_${prvwMode}_MAP`, {
                     id: active_wke_id,
                     payload: {
                         data: Object.freeze(res.data.data),
@@ -693,7 +673,7 @@ export default {
                     { root: true }
                 )
             } catch (e) {
-                commit(`UPDATE_${prvwMode}_MAP`, {
+                commit(`PATCH_${prvwMode}_MAP`, {
                     id: active_wke_id,
                     payload: {
                         [`loading_${prvwMode.toLowerCase()}`]: false,
@@ -713,7 +693,7 @@ export default {
             const request_sent_time = new Date().valueOf()
 
             try {
-                commit('UPDATE_QUERY_RESULTS_MAP', {
+                commit('PATCH_QUERY_RESULTS_MAP', {
                     id: active_wke_id,
                     payload: {
                         request_sent_time,
@@ -737,7 +717,7 @@ export default {
                 const now = new Date().valueOf()
                 const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
 
-                commit('UPDATE_QUERY_RESULTS_MAP', {
+                commit('PATCH_QUERY_RESULTS_MAP', {
                     id: active_wke_id,
                     payload: {
                         results: Object.freeze(res.data.data),
@@ -760,7 +740,7 @@ export default {
                     { root: true }
                 )
             } catch (e) {
-                commit('UPDATE_QUERY_RESULTS_MAP', {
+                commit('PATCH_QUERY_RESULTS_MAP', {
                     id: active_wke_id,
                     payload: { loading_query_result: false },
                 })
@@ -772,7 +752,7 @@ export default {
             const active_sql_conn = rootState.queryConn.active_sql_conn
             const active_wke_id = state.active_wke_id
             try {
-                commit('UPDATE_IS_STOPPING_QUERY_MAP', { id: active_wke_id, payload: true })
+                commit('SET_IS_STOPPING_QUERY_MAP', { id: active_wke_id, payload: true })
                 const {
                     data: { data: { attributes: { results = [] } = {} } = {} } = {},
                 } = await this.$queryHttp.post(
@@ -798,7 +778,7 @@ export default {
                 const logger = this.vue.$logger(`store-query-stopQuery`)
                 logger.error(e)
             }
-            commit('UPDATE_IS_STOPPING_QUERY_MAP', { id: active_wke_id, payload: false })
+            commit('SET_IS_STOPPING_QUERY_MAP', { id: active_wke_id, payload: false })
         },
         /**
          * @param {String} db - database name
@@ -928,7 +908,7 @@ export default {
             const active_sql_conn = rootState.queryConn.active_sql_conn
             const active_wke_id = state.active_wke_id
             try {
-                commit('UPDATE_TBL_CREATION_INFO_MAP', {
+                commit('PATCH_TBL_CREATION_INFO_MAP', {
                     id: active_wke_id,
                     payload: {
                         loading_tbl_creation_info: true,
@@ -948,7 +928,7 @@ export default {
                     nodeId: node.id,
                     $queryHttp: this.$queryHttp,
                 })
-                commit(`UPDATE_TBL_CREATION_INFO_MAP`, {
+                commit(`PATCH_TBL_CREATION_INFO_MAP`, {
                     id: active_wke_id,
                     payload: {
                         data: {
@@ -959,7 +939,7 @@ export default {
                     },
                 })
             } catch (e) {
-                commit('UPDATE_TBL_CREATION_INFO_MAP', {
+                commit('PATCH_TBL_CREATION_INFO_MAP', {
                     id: active_wke_id,
                     payload: {
                         loading_tbl_creation_info: false,
@@ -1005,7 +985,7 @@ export default {
                 const errMsgs = results.filter(res => this.vue.$typy(res, 'errno').isDefined)
                 // if multi statement mode, it'll still return only an err msg obj
                 if (errMsgs.length) stmt_err_msg_obj = errMsgs[0]
-                commit('UPDATE_EXE_STMT_RESULT_MAP', {
+                commit('PATCH_EXE_STMT_RESULT_MAP', {
                     id: active_wke_id,
                     payload: {
                         data: res.data.data.attributes,
@@ -1037,7 +1017,7 @@ export default {
                     { root: true }
                 )
             } catch (e) {
-                commit('UPDATE_EXE_STMT_RESULT_MAP', {
+                commit('PATCH_EXE_STMT_RESULT_MAP', {
                     id: active_wke_id,
                     payload: {
                         result: this.vue.$help.getErrorsArr(e),
@@ -1057,8 +1037,9 @@ export default {
             })
         },
         releaseMemory({ commit }, wkeId) {
-            Object.keys(memStates()).forEach(key => {
-                commit(`UPDATE_${key.toUpperCase()}`, { id: wkeId })
+            const mutationTypesMap = getMemStateMutationTypes()
+            Object.keys(mutationTypesMap).forEach(key => {
+                commit(`${mutationTypesMap[key]}_${key.toUpperCase()}`, { id: wkeId })
             })
         },
         /**
@@ -1067,7 +1048,7 @@ export default {
          * This ensure sub-tabs in Data Preview tab are generated with fresh data
          */
         clearDataPreview({ state, commit }) {
-            commit(`UPDATE_PRVW_DATA_MAP`, {
+            commit(`PATCH_PRVW_DATA_MAP`, {
                 id: state.active_wke_id,
                 payload: {
                     loading_prvw_data: false,
@@ -1076,7 +1057,7 @@ export default {
                     total_duration: 0,
                 },
             })
-            commit(`UPDATE_PRVW_DATA_DETAILS_MAP`, {
+            commit(`PATCH_PRVW_DATA_DETAILS_MAP`, {
                 id: state.active_wke_id,
                 payload: {
                     loading_prvw_data_details: false,
