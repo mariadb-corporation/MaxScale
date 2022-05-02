@@ -39,6 +39,24 @@ function getBlankWke(targetWke) {
         name: 'WORKSHEET',
     }
 }
+/**
+ * Below states are stored in hash map structure.
+ * Using worksheet's id as key. This helps to preserve
+ * multiple worksheet's data in memory.
+ * Use `queryHelper.memStatesMutationCreator` to create corresponding mutations
+ * Some keys will have mutation name starts with either `SET` or `PATCH`
+ * prefix. Check connMemStateMutationTypeMap for more info
+ * @returns {Object} - returns states that are stored in memory
+ */
+function memStates() {
+    return {
+        is_querying_map: {},
+        lost_cnn_err_msg_obj_map: {},
+    }
+}
+export function connMemStateMutationTypeMap() {
+    return Object.keys(memStates()).reduce((res, key) => ({ ...res, [key]: 'SET' }), {})
+}
 export default {
     namespaced: true,
     state: {
@@ -51,6 +69,7 @@ export default {
          * Mutations are created by queryHelper.syncedStateMutationsCreator(connStatesToBeSynced())
          */
         ...connStatesToBeSynced(),
+        ...memStates(),
     },
     mutations: {
         SET_IS_VALIDATING_CONN(state, payload) {
@@ -72,6 +91,9 @@ export default {
             state.pre_select_conn_rsrc = payload
         },
         ...queryHelper.syncedStateMutationsCreator(connStatesToBeSynced()),
+        ...queryHelper.memStatesMutationCreator({
+            mutationTypesMap: connMemStateMutationTypeMap(),
+        }),
         /**
          * When active_wke_id is changed, call this to sync properties from worksheets_arr
          * back to connStatesToBeSynced in this module
@@ -295,12 +317,12 @@ export default {
          * Call this action when disconnect a connection to
          * clear the state of the worksheet having that connection to its initial state
          */
-        resetWkeStates({ state, commit, dispatch, rootState }, cnctId) {
+        resetWkeStates({ state, commit, rootState, dispatch }, cnctId) {
             const targetWke = rootState.query.worksheets_arr.find(
                 wke => wke.active_sql_conn.id === cnctId
             )
             if (targetWke) {
-                dispatch('releaseMemory', targetWke.id)
+                dispatch('query/releaseQueryModulesMem', targetWke.id, { root: true })
                 const idx = rootState.query.worksheets_arr.indexOf(targetWke)
                 const wke = getBlankWke(targetWke)
                 commit('query/UPDATE_WKE', { idx, wke }, { root: true })
@@ -331,6 +353,12 @@ export default {
             )
             if (bgConns.length) return bgConns[0]
             return {}
+        },
+        getIsQuerying: (state, getters, rootState) => {
+            return state.is_querying_map[rootState.query.active_wke_id] || false
+        },
+        getLostCnnErrMsgObj: (state, getters, rootState) => {
+            return state.lost_cnn_err_msg_obj_map[rootState.query.active_wke_id] || {}
         },
     },
 }

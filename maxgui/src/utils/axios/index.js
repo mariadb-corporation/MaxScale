@@ -109,7 +109,7 @@ function http(store) {
 function updateIsQueryingMap({ store, value }) {
     const active_wke_id = store.state.query.active_wke_id
     if (active_wke_id)
-        store.commit('query/SET_IS_QUERYING_MAP', {
+        store.commit('queryConn/SET_IS_QUERYING_MAP', {
             id: active_wke_id,
             payload: value,
         })
@@ -128,7 +128,7 @@ function analyzeRes({ res, store }) {
     })
     if (lostCnnErrMsgs.length) {
         const active_wke_id = store.state.query.active_wke_id
-        store.commit('query/SET_LOST_CNN_ERR_MSG_OBJ_MAP', {
+        store.commit('queryConn/SET_LOST_CNN_ERR_MSG_OBJ_MAP', {
             id: active_wke_id,
             payload: lostCnnErrMsgs[0],
         })

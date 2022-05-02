@@ -11,7 +11,7 @@
     >
         <template v-slot:form-body>
             <table v-if="showReconnDialog" class="tbl-code pa-4">
-                <tr v-for="(v, key) in getQueryErrMsgObj" :key="key">
+                <tr v-for="(v, key) in getLostCnnErrMsgObj" :key="key">
                     <td>
                         <b>{{ key }}</b>
                     </td>
@@ -45,10 +45,10 @@ export default {
             active_sql_conn: state => state.queryConn.active_sql_conn,
         }),
         ...mapGetters({
-            getQueryErrMsgObj: 'query/getQueryErrMsgObj',
+            getLostCnnErrMsgObj: 'queryConn/getLostCnnErrMsgObj',
         }),
         queryErrMsg() {
-            return this.$typy(this.getQueryErrMsgObj, 'message').safeString
+            return this.$typy(this.getLostCnnErrMsgObj, 'message').safeString
         },
         showReconnDialog: {
             get() {
@@ -61,7 +61,7 @@ export default {
     },
     methods: {
         ...mapMutations({
-            SET_LOST_CNN_ERR_MSG_OBJ_MAP: 'query/SET_LOST_CNN_ERR_MSG_OBJ_MAP',
+            SET_LOST_CNN_ERR_MSG_OBJ_MAP: 'queryConn/SET_LOST_CNN_ERR_MSG_OBJ_MAP',
         }),
         ...mapActions({
             reconnect: 'queryConn/reconnect',

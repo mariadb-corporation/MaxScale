@@ -105,7 +105,7 @@ export default {
             active_wke_id: state => state.query.active_wke_id,
         }),
         ...mapGetters({
-            getIsQuerying: 'query/getIsQuerying',
+            getIsQuerying: 'queryConn/getIsQuerying',
             getLoadingQueryResult: 'query/getLoadingQueryResult',
             getLoadingPrvw: 'query/getLoadingPrvw',
         }),

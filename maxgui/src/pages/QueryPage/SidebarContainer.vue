@@ -165,7 +165,7 @@ export default {
         }),
         ...mapGetters({
             getLoadingDbTree: 'query/getLoadingDbTree',
-            getIsQuerying: 'query/getIsQuerying',
+            getIsQuerying: 'queryConn/getIsQuerying',
             getExeStmtResultMap: 'query/getExeStmtResultMap',
         }),
         searchSchema: {

@@ -12,7 +12,7 @@
  */
 import { uniqBy, uniqueId, pickBy } from 'utils/helpers'
 import queryHelper from './queryHelper'
-import { connStatesToBeSynced } from './queryConn'
+import { connStatesToBeSynced, connMemStateMutationTypeMap } from './queryConn'
 /**
  * @returns Initial sidebar tree schema related states
  */
@@ -80,14 +80,11 @@ export function defWorksheetState() {
  * multiple worksheet's data in memory.
  * Use `queryHelper.memStatesMutationCreator` to create corresponding mutations
  * Some keys will have mutation name starts with either `SET` or `PATCH`
- * prefix. Check getMemStateMutationTypes for more info
+ * prefix. Check queryMemStateMutationTypeMap for more info
  * @returns {Object} - returns states that are stored in memory
  */
 function memStates() {
     return {
-        // connection related states
-        is_querying_map: {},
-        lost_cnn_err_msg_obj_map: {},
         // sidebar states
         db_tree_map: {},
         exe_stmt_result_map: {},
@@ -101,13 +98,8 @@ function memStates() {
         is_stopping_query_map: {},
     }
 }
-function getMemStateMutationTypes() {
-    const keysWithPrefixSet = [
-        'is_querying_map',
-        'lost_cnn_err_msg_obj_map',
-        'curr_editor_mode_map',
-        'is_stopping_query_map',
-    ]
+function queryMemStateMutationTypeMap() {
+    const keysWithPrefixSet = ['curr_editor_mode_map', 'is_stopping_query_map']
     return Object.keys(memStates()).reduce((res, key) => {
         return { ...res, [key]: keysWithPrefixSet.includes(key) ? 'SET' : 'PATCH' }
     }, {})
@@ -140,7 +132,9 @@ export default {
         ...wkeStatesToBeSynced(),
     },
     mutations: {
-        ...queryHelper.memStatesMutationCreator({ mutationTypesMap: getMemStateMutationTypes() }),
+        ...queryHelper.memStatesMutationCreator({
+            mutationTypesMap: queryMemStateMutationTypeMap(),
+        }),
         ...queryHelper.syncedStateMutationsCreator(wkeStatesToBeSynced()),
         //Toolbar mutations
         SET_FULLSCREEN(state, payload) {
@@ -273,7 +267,8 @@ export default {
         },
         handleDeleteWke({ state, commit, dispatch }, wkeIdx) {
             const targetWke = state.worksheets_arr[wkeIdx]
-            dispatch('releaseMemory', targetWke.id)
+            // release memory states of query and queryConn modules
+            dispatch('releaseQueryModulesMem', targetWke.id)
             commit('DELETE_WKE', wkeIdx)
         },
         /**
@@ -1036,12 +1031,6 @@ export default {
                 wke: newWke,
             })
         },
-        releaseMemory({ commit }, wkeId) {
-            const mutationTypesMap = getMemStateMutationTypes()
-            Object.keys(mutationTypesMap).forEach(key => {
-                commit(`${mutationTypesMap[key]}_${key.toUpperCase()}`, { id: wkeId })
-            })
-        },
         /**
          * This action clears prvw_data and prvw_data_details to empty object.
          * Call this action when user selects option in the sidebar.
@@ -1067,16 +1056,24 @@ export default {
                 },
             })
         },
+        releaseQueryModulesMem({ commit }, wke_id) {
+            queryHelper.releaseMemory({
+                namespace: 'query',
+                commit,
+                wke_id,
+                mutationTypesMap: queryMemStateMutationTypeMap(),
+            })
+            queryHelper.releaseMemory({
+                namespace: 'queryConn',
+                commit,
+                wke_id,
+                mutationTypesMap: connMemStateMutationTypeMap(),
+            })
+        },
     },
     getters: {
         getActiveWke: state => {
             return state.worksheets_arr.find(wke => wke.id === state.active_wke_id)
-        },
-        getIsQuerying: state => {
-            return state.is_querying_map[state.active_wke_id] || false
-        },
-        getQueryErrMsgObj: state => {
-            return state.lost_cnn_err_msg_obj_map[state.active_wke_id] || {}
         },
         // sidebar getters
         getCurrDbTree: state => state.db_tree_map[state.active_wke_id] || {},

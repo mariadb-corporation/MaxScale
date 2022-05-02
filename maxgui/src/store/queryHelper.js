@@ -313,7 +313,22 @@ function memStatesMutationCreator({ mutationTypesMap }) {
         }
     }, {})
 }
-
+/**
+ * This helps to commit mutations provided by mutationTypesMap to delete the states storing in memory for a worksheet
+ * @param {Object} param.namespace - module namespace. e.g. query, queryConn
+ * @param {Function} param.commit - vuex commit function
+ * @param {String} param.wke_id - worksheet id
+ * @param {Object} param.mutationTypesMap - mutation type keys map for states storing in memory. Either SET or PATCH
+ */
+function releaseMemory({ namespace, commit, wke_id, mutationTypesMap }) {
+    Object.keys(mutationTypesMap).forEach(key => {
+        commit(
+            `${namespace}/${mutationTypesMap[key]}_${key.toUpperCase()}`,
+            { id: wke_id },
+            { root: true }
+        )
+    })
+}
 export default {
     getClientConnIds,
     updateDbChild,
@@ -323,4 +338,5 @@ export default {
     mutateFlatStates,
     syncedStateMutationsCreator,
     memStatesMutationCreator,
+    releaseMemory,
 }

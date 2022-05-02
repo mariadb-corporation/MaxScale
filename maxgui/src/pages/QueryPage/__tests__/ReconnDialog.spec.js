@@ -38,7 +38,7 @@ describe('ReconnDialog', () => {
         expect(wrapper.vm.showReconnDialog).to.be.false
         wrapper = mountFactory({
             computed: {
-                getQueryErrMsgObj: () => dummy_conn_err_obj,
+                getLostCnnErrMsgObj: () => dummy_conn_err_obj,
             },
         })
         expect(wrapper.vm.showReconnDialog).to.be.true

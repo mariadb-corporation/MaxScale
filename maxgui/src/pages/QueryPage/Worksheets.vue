@@ -130,7 +130,7 @@ export default {
             active_wke_id: state => state.query.active_wke_id,
             active_sql_conn: state => state.queryConn.active_sql_conn,
             query_results_map: state => state.query.query_results_map,
-            is_querying_map: state => state.query.is_querying_map,
+            is_querying_map: state => state.queryConn.is_querying_map,
         }),
         activeWkeID: {
             get() {
