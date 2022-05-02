@@ -12,6 +12,7 @@
  */
 import { pickBy } from 'utils/helpers'
 import queryHelper from './queryHelper'
+import { sidebarStates, resultStates, toolbarStates } from './query'
 /**
  * @returns Initial connection related states
  */
@@ -22,6 +23,22 @@ export function connStatesToBeSynced() {
     }
 }
 
+/**
+ * This function resets all properties of the provided targetWke object to its initial states
+ * except states that stores editor data (editorStates)
+ * @param {Object} targetWke - wke to be emptied
+ * @returns {Object} - a worksheet object
+ */
+function getBlankWke(targetWke) {
+    return {
+        ...targetWke,
+        ...connStatesToBeSynced(),
+        ...sidebarStates(),
+        ...resultStates(),
+        ...toolbarStates(),
+        name: 'WORKSHEET',
+    }
+}
 export default {
     namespaced: true,
     state: {
@@ -98,7 +115,7 @@ export default {
                 const resConnIds = Object.keys(resConnMap)
                 const clientConnIds = queryHelper.getClientConnIds()
                 if (resConnIds.length === 0) {
-                    dispatch('query/resetAllWkeStates', {}, { root: true })
+                    dispatch('resetAllWkeStates')
                     commit('SET_SQL_CONNS', {})
                 } else {
                     const validConnIds = clientConnIds.filter(id => resConnIds.includes(id))
@@ -120,7 +137,7 @@ export default {
                     //deleteInvalidConn
                     invalidCnctIds.forEach(id => {
                         this.vue.$help.deleteCookie(`conn_id_body_${id}`)
-                        dispatch('query/resetWkeStates', id, { root: true })
+                        dispatch('resetWkeStates', id)
                     })
 
                     commit('SET_SQL_CONNS', validSqlConns)
@@ -205,7 +222,7 @@ export default {
                             { root: true }
                         )
                     commit('DELETE_SQL_CONN', state.sql_conns[cnctId])
-                    dispatch('query/resetWkeStates', cnctId, { root: true })
+                    dispatch('resetWkeStates', cnctId)
                 }
             } catch (e) {
                 this.vue.$logger('store-query-disconnect').error(e)
@@ -269,9 +286,39 @@ export default {
             try {
                 const active_sql_conn = state.active_sql_conn
                 commit('DELETE_SQL_CONN', active_sql_conn)
-                dispatch('query/resetWkeStates', active_sql_conn.id, { root: true })
+                dispatch('resetWkeStates', active_sql_conn.id)
             } catch (e) {
                 this.vue.$logger('store-query-clearConn').error(e)
+            }
+        },
+        /**
+         * Call this action when disconnect a connection to
+         * clear the state of the worksheet having that connection to its initial state
+         */
+        resetWkeStates({ state, commit, dispatch, rootState }, cnctId) {
+            const targetWke = rootState.query.worksheets_arr.find(
+                wke => wke.active_sql_conn.id === cnctId
+            )
+            if (targetWke) {
+                dispatch('releaseMemory', targetWke.id)
+                const idx = rootState.query.worksheets_arr.indexOf(targetWke)
+                const wke = getBlankWke(targetWke)
+                commit('query/UPDATE_WKE', { idx, wke }, { root: true })
+                /**
+                 * if connection id to be deleted is equal to current connected
+                 * resource of active worksheet, sync wke states to flat states
+                 */
+                if (state.queryConn.active_sql_conn.id === cnctId) {
+                    commit('query/SYNC_WKE_STATES', wke, { root: true })
+                    commit('SYNC_CONN_STATES', wke)
+                }
+            }
+        },
+        // Reset all when there is no active connections
+        resetAllWkeStates({ rootState, commit }) {
+            for (const [idx, targetWke] of rootState.query.worksheets_arr.entries()) {
+                const wke = getBlankWke(targetWke)
+                commit('query/UPDATE_WKE', { idx, wke }, { root: true })
             }
         },
     },

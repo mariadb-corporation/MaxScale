@@ -16,7 +16,7 @@ import { connStatesToBeSynced } from './queryConn'
 /**
  * @returns Initial sidebar tree schema related states
  */
-function sidebarStates() {
+export function sidebarStates() {
     return {
         is_sidebar_collapsed: false,
         search_schema: '',
@@ -27,7 +27,7 @@ function sidebarStates() {
 /**
  * @returns Initial editor related states
  */
-function editorStates() {
+export function editorStates() {
     return {
         query_txt: '',
         curr_ddl_alter_spec: '',
@@ -36,7 +36,7 @@ function editorStates() {
 /**
  * @returns Initial result related states
  */
-function resultStates() {
+export function resultStates() {
     return {
         curr_query_mode: 'QUERY_VIEW',
     }
@@ -44,7 +44,7 @@ function resultStates() {
 /**
  * @returns Initial toolbar related states
  */
-function toolbarStates() {
+export function toolbarStates() {
     return {
         // toolbar's states
         show_vis_sidebar: false,
@@ -1060,48 +1060,6 @@ export default {
             Object.keys(memStates()).forEach(key => {
                 commit(`UPDATE_${key.toUpperCase()}`, { id: wkeId })
             })
-        },
-        resetAllWkeStates({ state, commit }) {
-            for (const [idx, targetWke] of state.worksheets_arr.entries()) {
-                const wke = {
-                    ...targetWke,
-                    ...connStatesToBeSynced(),
-                    ...sidebarStates(),
-                    ...resultStates(),
-                    ...toolbarStates(),
-                    name: 'WORKSHEET',
-                }
-                commit('UPDATE_WKE', { idx, wke })
-            }
-        },
-        /**
-         * Call this action when disconnect a connection to
-         * clear the state of the worksheet having that connection to its initial state
-         */
-        resetWkeStates({ state, commit, dispatch, rootState }, cnctId) {
-            const targetWke = state.worksheets_arr.find(wke => wke.active_sql_conn.id === cnctId)
-            if (targetWke) {
-                dispatch('releaseMemory', targetWke.id)
-                const idx = state.worksheets_arr.indexOf(targetWke)
-                // reset everything to initial state except editorStates()
-                const wke = {
-                    ...targetWke,
-                    ...connStatesToBeSynced(),
-                    ...sidebarStates(),
-                    ...resultStates(),
-                    ...toolbarStates(),
-                    name: 'WORKSHEET',
-                }
-                commit('UPDATE_WKE', { idx, wke })
-                /**
-                 * if connection id to be deleted is equal to current connected
-                 * resource of active worksheet, update standalone wke states
-                 */
-                if (rootState.queryConn.active_sql_conn.id === cnctId) {
-                    commit('SYNC_WKE_STATES', wke)
-                    commit('queryConn/SYNC_CONN_STATES', wke, { root: true })
-                }
-            }
         },
         /**
          * This action clears prvw_data and prvw_data_details to empty object.
