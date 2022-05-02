@@ -1365,6 +1365,7 @@ uint32_t DCB::process_events(uint32_t events)
                 m_triggered_event &= ~EPOLLIN;
 
                 rc |= mxb::poll_action::INCOMPLETE_READ;
+                m_incomplete_read = false;
             }
         }
         else if (-1 == return_code)
