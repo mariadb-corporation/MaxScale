@@ -52,12 +52,12 @@
                                     class="ml-1 del-wke-btn"
                                     icon
                                     x-small
-                                    :disabled="is_querying_map[wke.id]"
+                                    :disabled="is_conn_busy_map[wke.id]"
                                     @click="handleDeleteWke(worksheets_arr.indexOf(wke))"
                                 >
                                     <v-icon
                                         size="8"
-                                        :color="is_querying_map[wke.id] ? '' : 'error'"
+                                        :color="is_conn_busy_map[wke.id] ? '' : 'error'"
                                     >
                                         $vuetify.icons.close
                                     </v-icon>
@@ -130,7 +130,7 @@ export default {
             active_wke_id: state => state.query.active_wke_id,
             active_sql_conn: state => state.queryConn.active_sql_conn,
             query_results_map: state => state.query.query_results_map,
-            is_querying_map: state => state.queryConn.is_querying_map,
+            is_conn_busy_map: state => state.queryConn.is_conn_busy_map,
         }),
         activeWkeID: {
             get() {

@@ -2,7 +2,7 @@
     <div class="fill-height">
         <v-tabs v-model="activeTab" :height="24" class="tab-navigation-wrapper">
             <v-tab
-                :disabled="getIsQuerying && !getLoadingQueryResult"
+                :disabled="getIsConnBusy && !getLoadingQueryResult"
                 color="primary"
                 :href="`#${SQL_QUERY_MODES.QUERY_VIEW}`"
             >
@@ -10,7 +10,7 @@
             </v-tab>
             <v-tab
                 :disabled="
-                    getIsQuerying &&
+                    getIsConnBusy &&
                         !getLoadingPrvw(SQL_QUERY_MODES.PRVW_DATA) &&
                         !getLoadingPrvw(SQL_QUERY_MODES.PRVW_DATA_DETAILS)
                 "
@@ -105,7 +105,7 @@ export default {
             active_wke_id: state => state.query.active_wke_id,
         }),
         ...mapGetters({
-            getIsQuerying: 'queryConn/getIsQuerying',
+            getIsConnBusy: 'queryConn/getIsConnBusy',
             getLoadingQueryResult: 'query/getLoadingQueryResult',
             getLoadingPrvw: 'query/getLoadingPrvw',
         }),

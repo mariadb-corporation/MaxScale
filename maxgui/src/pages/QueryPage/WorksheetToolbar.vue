@@ -6,7 +6,7 @@
         class="wke-toolbar"
         :class="{ 'ml-0': is_fullscreen }"
     >
-        <connection-manager :disabled="getIsQuerying" />
+        <connection-manager :disabled="getIsConnBusy" />
         <!-- Use database section-->
 
         <v-menu
@@ -30,7 +30,7 @@
                             depressed
                             small
                             color="accent-dark"
-                            :disabled="!hasActiveConn || getIsQuerying"
+                            :disabled="!hasActiveConn || getIsConnBusy"
                             v-bind="attrs"
                             v-on="{ ...tooltip, ...menu }"
                         >
@@ -140,7 +140,7 @@
                             depressed
                             small
                             :color="show_vis_sidebar ? 'primary' : 'accent-dark'"
-                            :disabled="!hasActiveConn || getIsQuerying"
+                            :disabled="!hasActiveConn || getIsConnBusy"
                             v-on="on"
                             @click="
                                 SET_SHOW_VIS_SIDEBAR({ payload: !show_vis_sidebar, active_wke_id })
@@ -255,7 +255,7 @@ export default {
             active_wke_id: state => state.query.active_wke_id,
         }),
         ...mapGetters({
-            getIsQuerying: 'queryConn/getIsQuerying',
+            getIsConnBusy: 'queryConn/getIsConnBusy',
             getLoadingQueryResult: 'query/getLoadingQueryResult',
             getIsStoppingQuery: 'query/getIsStoppingQuery',
             getDbNodes: 'query/getDbNodes',
@@ -266,7 +266,7 @@ export default {
             return (
                 !this.query_txt ||
                 !this.hasActiveConn ||
-                (this.getIsQuerying && this.getLoadingQueryResult) ||
+                (this.getIsConnBusy && this.getLoadingQueryResult) ||
                 !this.isMaxRowsValid
             )
         },

@@ -29,7 +29,7 @@ describe(`WorksheetToolbar - child component's data communication tests`, () => 
     it('Should pass accurate data to connection-manager', () => {
         wrapper = mountFactory()
         const cnnMan = wrapper.findComponent({ name: 'connection-manager' })
-        expect(cnnMan.vm.$props.disabled).to.be.equals(wrapper.vm.getIsQuerying)
+        expect(cnnMan.vm.$props.disabled).to.be.equals(wrapper.vm.getIsConnBusy)
     })
     it(`Should pass accurate data to confirm running query dialog via props`, () => {
         // shallow mount so that confirm-dialog in connection-manager will be stubbed
@@ -87,7 +87,7 @@ describe('WorksheetToolbar - use-db-btn, run-btn and visualize-btn common tests'
                 computed: {
                     query_txt: () => 'SELECT 1',
                     hasActiveConn: () => true,
-                    getIsQuerying: () => true,
+                    getIsConnBusy: () => true,
                     getLoadingQueryResult: () => true,
                     isMaxRowsValid: () => true,
                 },
@@ -106,7 +106,7 @@ describe('WorksheetToolbar - use-db-btn, run-btn and visualize-btn common tests'
                 computed: {
                     query_txt: () => 'SELECT 1',
                     hasActiveConn: () => false,
-                    getIsQuerying: () => false,
+                    getIsConnBusy: () => false,
                     getLoadingQueryResult: () => false,
                     isMaxRowsValid: () => true,
                 },
@@ -121,7 +121,7 @@ describe('WorksheetToolbar - use-db-btn, run-btn and visualize-btn common tests'
                 computed: {
                     query_txt: () => 'SELECT 1',
                     hasActiveConn: () => true,
-                    getIsQuerying: () => false,
+                    getIsConnBusy: () => false,
                     getLoadingQueryResult: () => false,
                     isMaxRowsValid: () => true,
                 },
@@ -166,7 +166,7 @@ describe('WorksheetToolbar - Run/Stop button tests', () => {
             computed: {
                 query_txt: () => 'SELECT 1',
                 hasActiveConn: () => true,
-                getIsQuerying: () => true,
+                getIsConnBusy: () => true,
                 getLoadingQueryResult: () => true,
                 isMaxRowsValid: () => true,
             },
@@ -178,7 +178,7 @@ describe('WorksheetToolbar - Run/Stop button tests', () => {
         query_txt: () => 'SELECT 1; SELECT 2;',
         selected_query_txt: () => (mode === 'selected' ? 'SELECT 2;' : ''),
         hasActiveConn: () => true,
-        getIsQuerying: () => false,
+        getIsConnBusy: () => false,
         getLoadingQueryResult: () => false,
     })
     runModes.forEach(mode => {
@@ -251,7 +251,7 @@ describe('WorksheetToolbar - visualize-btn tests', () => {
         wrapper = mountFactory({
             computed: {
                 hasActiveConn: () => true,
-                getIsQuerying: () => false,
+                getIsConnBusy: () => false,
                 active_wke_id: () => 'wke_123',
             },
             methods: {

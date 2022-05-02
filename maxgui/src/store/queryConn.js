@@ -50,7 +50,7 @@ function getBlankWke(targetWke) {
  */
 function memStates() {
     return {
-        is_querying_map: {},
+        is_conn_busy_map: {},
         lost_cnn_err_msg_obj_map: {},
     }
 }
@@ -119,7 +119,7 @@ export default {
                     })
                 }
             } catch (e) {
-                this.vue.$logger('store-query-fetchRcTargetNames').error(e)
+                this.vue.$logger('store-queryConn-fetchRcTargetNames').error(e)
             }
         },
         /**
@@ -170,7 +170,7 @@ export default {
                     }
                 }
             } catch (e) {
-                this.vue.$logger('store-query-validatingConn').error(e)
+                this.vue.$logger('store-queryConn-validatingConn').error(e)
             }
             if (!silentValidation) commit('SET_IS_VALIDATING_CONN', false)
         },
@@ -202,7 +202,7 @@ export default {
                     commit('SET_CONN_ERR_STATE', { payload: false, active_wke_id })
                 }
             } catch (e) {
-                this.vue.$logger('store-query-openConnect').error(e)
+                this.vue.$logger('store-queryConn-openConnect').error(e)
                 commit('SET_CONN_ERR_STATE', { payload: true, active_wke_id })
             }
         },
@@ -227,7 +227,7 @@ export default {
                     commit('ADD_SQL_CONN', conn)
                 }
             } catch (e) {
-                this.vue.$logger('store-query-openBgConn').error(e)
+                this.vue.$logger('store-queryConn-openBgConn').error(e)
             }
         },
         async disconnect({ state, commit, dispatch }, { showSnackbar, id: cnctId }) {
@@ -247,7 +247,7 @@ export default {
                     dispatch('resetWkeStates', cnctId)
                 }
             } catch (e) {
-                this.vue.$logger('store-query-disconnect').error(e)
+                this.vue.$logger('store-queryConn-disconnect').error(e)
             }
         },
         /**
@@ -265,7 +265,7 @@ export default {
                 )
                 for (const conn of bgCnns) await dispatch('disconnect', { id: conn.id })
             } catch (e) {
-                this.vue.$logger('store-query-deleteBgConn').error(e)
+                this.vue.$logger('store-queryConn-deleteBgConn').error(e)
             }
         },
         async disconnectAll({ state, dispatch }) {
@@ -273,7 +273,7 @@ export default {
                 for (const id of Object.keys(state.sql_conns))
                     await dispatch('disconnect', { showSnackbar: false, id })
             } catch (e) {
-                this.vue.$logger('store-query-disconnectAll').error(e)
+                this.vue.$logger('store-queryConn-disconnectAll').error(e)
             }
         },
         async reconnect({ state, commit, dispatch }) {
@@ -301,7 +301,7 @@ export default {
                     )
                 await dispatch('validatingConn', { silentValidation: true })
             } catch (e) {
-                this.vue.$logger('store-query-reconnect').error(e)
+                this.vue.$logger('store-queryConn-reconnect').error(e)
             }
         },
         clearConn({ commit, dispatch, state }) {
@@ -310,7 +310,7 @@ export default {
                 commit('DELETE_SQL_CONN', active_sql_conn)
                 dispatch('resetWkeStates', active_sql_conn.id)
             } catch (e) {
-                this.vue.$logger('store-query-clearConn').error(e)
+                this.vue.$logger('store-queryConn-clearConn').error(e)
             }
         },
         /**
@@ -354,8 +354,8 @@ export default {
             if (bgConns.length) return bgConns[0]
             return {}
         },
-        getIsQuerying: (state, getters, rootState) => {
-            return state.is_querying_map[rootState.query.active_wke_id] || false
+        getIsConnBusy: (state, getters, rootState) => {
+            return state.is_conn_busy_map[rootState.query.active_wke_id] || false
         },
         getLostCnnErrMsgObj: (state, getters, rootState) => {
             return state.lost_cnn_err_msg_obj_map[rootState.query.active_wke_id] || {}

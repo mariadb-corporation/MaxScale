@@ -109,7 +109,7 @@ function http(store) {
 function updateIsQueryingMap({ store, value }) {
     const active_wke_id = store.state.query.active_wke_id
     if (active_wke_id)
-        store.commit('queryConn/SET_IS_QUERYING_MAP', {
+        store.commit('queryConn/SET_IS_CONN_BUSY_MAP', {
             id: active_wke_id,
             payload: value,
         })

@@ -283,7 +283,7 @@ function syncedStateMutationsCreator(statesToBeSynced) {
  * Mutations creator for states storing in hash map structure (storing in memory).
  * The state uses worksheet's id as key. This helps to preserve multiple worksheet's data in memory.
  * The name of mutation follows this pattern SET_STATE_NAME or PATCH_STATE_NAME.
- * e.g. Mutation for is_querying_map state is SET_IS_QUERYING_MAP
+ * e.g. Mutation for is_conn_busy_map state is SET_IS_CONN_BUSY_MAP
  * @param {Object} param.mutationTypesMap - mutation type keys map for states storing in memory. Either SET or PATCH
  * @returns {Object} - returns mutations for provided keys from mutationTypesMap
  */

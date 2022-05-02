@@ -2,7 +2,7 @@
     <div
         class="fill-height"
         :class="{
-            'not-allowed': getIsQuerying && !getLoadingDbTree,
+            'not-allowed': getIsConnBusy && !getLoadingDbTree,
         }"
     >
         <div class="db-tb-list" :class="[is_sidebar_collapsed ? 'pa-1' : 'pa-3']">
@@ -165,7 +165,7 @@ export default {
         }),
         ...mapGetters({
             getLoadingDbTree: 'query/getLoadingDbTree',
-            getIsQuerying: 'queryConn/getIsQuerying',
+            getIsConnBusy: 'queryConn/getIsConnBusy',
             getExeStmtResultMap: 'query/getExeStmtResultMap',
         }),
         searchSchema: {
