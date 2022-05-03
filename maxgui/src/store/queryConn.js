@@ -11,8 +11,6 @@
  * Public License.
  */
 import queryHelper from './queryHelper'
-import { resultStates, toolbarStates } from './query'
-import { sidebarStatesToBeSynced } from './schemaSidebar'
 /**
  * @returns Initial connection related states
  */
@@ -20,23 +18,6 @@ export function connStatesToBeSynced() {
     return {
         active_sql_conn: {},
         conn_err_state: false,
-    }
-}
-
-/**
- * This function resets all properties of the provided targetWke object to its initial states
- * except states that stores editor data (editorStates)
- * @param {Object} targetWke - wke to be emptied
- * @returns {Object} - a worksheet object
- */
-function getBlankWke(targetWke) {
-    return {
-        ...targetWke,
-        ...connStatesToBeSynced(),
-        ...sidebarStatesToBeSynced(),
-        ...resultStates(),
-        ...toolbarStates(),
-        name: 'WORKSHEET',
     }
 }
 /**
@@ -317,17 +298,18 @@ export default {
             )
             if (targetWke) {
                 dispatch('query/releaseQueryModulesMem', targetWke.id, { root: true })
-                const idx = rootState.query.worksheets_arr.indexOf(targetWke)
-                const wke = getBlankWke(targetWke)
-                commit('query/UPDATE_WKE', { idx, wke }, { root: true })
+                commit('query/REFRESH_WKE', targetWke, { root: true })
                 /**
                  * if connection id to be deleted is equal to current connected
                  * resource of active worksheet, sync wke states to flat states
                  */
-                if (state.queryConn.active_sql_conn.id === cnctId) {
-                    commit('query/SYNC_WKE_TO_QUERY_MODULE', wke, { root: true })
-                    commit('SYNC_WKE_TO_QUERY_CONN_MODULE', wke)
-                    commit('schemaSidebar/SYNC_WKE_TO_SCHEMA_SIDEBAR_MODULE', wke, {
+                if (state.active_sql_conn.id === cnctId) {
+                    const freshWke = rootState.query.worksheets_arr.find(
+                        wke => wke.id === targetWke.id
+                    )
+                    commit('query/SYNC_WKE_TO_QUERY_MODULE', freshWke, { root: true })
+                    commit('SYNC_WKE_TO_QUERY_CONN_MODULE', freshWke)
+                    commit('schemaSidebar/SYNC_WKE_TO_SCHEMA_SIDEBAR_MODULE', freshWke, {
                         root: true,
                     })
                 }
@@ -335,9 +317,8 @@ export default {
         },
         // Reset all when there is no active connections
         resetAllWkeStates({ rootState, commit }) {
-            for (const [idx, targetWke] of rootState.query.worksheets_arr.entries()) {
-                const wke = getBlankWke(targetWke)
-                commit('query/UPDATE_WKE', { idx, wke }, { root: true })
+            for (const targetWke of rootState.query.worksheets_arr) {
+                commit('query/REFRESH_WKE', targetWke, { root: true })
             }
         },
     },

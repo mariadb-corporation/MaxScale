@@ -17,7 +17,7 @@ import { sidebarStatesToBeSynced, schemaSidebarMemStateMutationTypeMap } from '.
 /**
  * @returns Initial editor related states
  */
-export function editorStates() {
+function editorStates() {
     return {
         query_txt: '',
         curr_ddl_alter_spec: '',
@@ -26,7 +26,7 @@ export function editorStates() {
 /**
  * @returns Initial result related states
  */
-export function resultStates() {
+function resultStates() {
     return {
         curr_query_mode: 'QUERY_VIEW',
     }
@@ -34,7 +34,7 @@ export function resultStates() {
 /**
  * @returns Initial toolbar related states
  */
-export function toolbarStates() {
+function toolbarStates() {
     return {
         // toolbar's states
         show_vis_sidebar: false,
@@ -158,6 +158,25 @@ export default {
         },
         SET_ACTIVE_WKE_ID(state, payload) {
             state.active_wke_id = payload
+        },
+        /**
+         * This mutation resets all properties of the provided targetWke object to its initial states
+         * except states that stores editor data (editorStates)
+         * @param {Object} targetWke - wke to be reset
+         */
+        REFRESH_WKE(state, targetWke) {
+            const idx = state.worksheets_arr.indexOf(targetWke)
+            const wke = {
+                ...targetWke,
+                ...connStatesToBeSynced(),
+                ...sidebarStatesToBeSynced(),
+                ...resultStates(),
+                ...toolbarStates(),
+                name: 'WORKSHEET',
+            }
+            state.worksheets_arr = this.vue.$help.immutableUpdate(state.worksheets_arr, {
+                [idx]: { $set: wke },
+            })
         },
     },
     actions: {
