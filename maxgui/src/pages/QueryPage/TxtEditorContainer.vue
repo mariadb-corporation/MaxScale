@@ -118,7 +118,7 @@ export default {
     },
     computed: {
         ...mapState({
-            show_vis_sidebar: state => state.query.show_vis_sidebar,
+            show_vis_sidebar: state => state.queryResult.show_vis_sidebar,
             query_txt: state => state.editor.query_txt,
             is_sidebar_collapsed: state => state.schemaSidebar.is_sidebar_collapsed,
             active_wke_id: state => state.query.active_wke_id,

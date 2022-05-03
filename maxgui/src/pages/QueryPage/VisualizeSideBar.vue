@@ -163,8 +163,8 @@ export default {
             SQL_CHART_AXIS_TYPES: state => state.app_config.SQL_CHART_AXIS_TYPES,
         }),
         ...mapGetters({
-            getPrvwDataRes: 'query/getPrvwDataRes',
-            getResults: 'query/getResults',
+            getPrvwDataRes: 'queryResult/getPrvwDataRes',
+            getResults: 'queryResult/getResults',
             getActiveTreeNode: 'schemaSidebar/getActiveTreeNode',
         }),
         chartOpt: {

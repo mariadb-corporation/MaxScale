@@ -193,14 +193,14 @@ export default {
     },
     methods: {
         ...mapMutations({
-            SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE',
+            SET_CURR_QUERY_MODE: 'queryResult/SET_CURR_QUERY_MODE',
             SET_IS_SIDEBAR_COLLAPSED: 'schemaSidebar/SET_IS_SIDEBAR_COLLAPSED',
             SET_SEARCH_SCHEMA: 'schemaSidebar/SET_SEARCH_SCHEMA',
             PATCH_EXE_STMT_RESULT_MAP: 'schemaSidebar/PATCH_EXE_STMT_RESULT_MAP',
         }),
         ...mapActions({
-            clearDataPreview: 'query/clearDataPreview',
-            fetchPrvw: 'query/fetchPrvw',
+            clearDataPreview: 'queryResult/clearDataPreview',
+            fetchPrvw: 'queryResult/fetchPrvw',
             updateTreeNodes: 'schemaSidebar/updateTreeNodes',
             useDb: 'schemaSidebar/useDb',
             reloadTreeNodes: 'schemaSidebar/reloadTreeNodes',

@@ -206,7 +206,7 @@ export default {
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             QUERY_LOG_TYPES: state => state.app_config.QUERY_LOG_TYPES,
             SQL_RES_TBL_CTX_OPT_TYPES: state => state.app_config.SQL_RES_TBL_CTX_OPT_TYPES,
-            curr_query_mode: state => state.query.curr_query_mode,
+            curr_query_mode: state => state.queryResult.curr_query_mode,
             query_history: state => state.persisted.query_history,
             query_favorite: state => state.persisted.query_favorite,
             active_wke_id: state => state.query.active_wke_id,
@@ -326,7 +326,7 @@ export default {
     },
     methods: {
         ...mapMutations({
-            SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE',
+            SET_CURR_QUERY_MODE: 'queryResult/SET_CURR_QUERY_MODE',
             SET_QUERY_HISTORY: 'persisted/SET_QUERY_HISTORY',
             SET_QUERY_FAVORITE: 'persisted/SET_QUERY_FAVORITE',
         }),

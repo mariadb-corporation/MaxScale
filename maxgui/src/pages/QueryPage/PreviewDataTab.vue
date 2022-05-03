@@ -137,16 +137,16 @@ export default {
     computed: {
         ...mapState({
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
-            curr_query_mode: state => state.query.curr_query_mode,
+            curr_query_mode: state => state.queryResult.curr_query_mode,
             active_sql_conn: state => state.queryConn.active_sql_conn,
             active_wke_id: state => state.query.active_wke_id,
         }),
         ...mapGetters({
-            getPrvwDataRes: 'query/getPrvwDataRes',
-            getPrvwSentTime: 'query/getPrvwSentTime',
-            getPrvwExeTime: 'query/getPrvwExeTime',
-            getPrvwTotalDuration: 'query/getPrvwTotalDuration',
-            getLoadingPrvw: 'query/getLoadingPrvw',
+            getPrvwDataRes: 'queryResult/getPrvwDataRes',
+            getPrvwSentTime: 'queryResult/getPrvwSentTime',
+            getPrvwExeTime: 'queryResult/getPrvwExeTime',
+            getPrvwTotalDuration: 'queryResult/getPrvwTotalDuration',
+            getLoadingPrvw: 'queryResult/getLoadingPrvw',
             getActiveTreeNode: 'schemaSidebar/getActiveTreeNode',
         }),
         validConn() {
@@ -182,10 +182,10 @@ export default {
     },
     methods: {
         ...mapMutations({
-            SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE',
+            SET_CURR_QUERY_MODE: 'queryResult/SET_CURR_QUERY_MODE',
         }),
         ...mapActions({
-            fetchPrvw: 'query/fetchPrvw',
+            fetchPrvw: 'queryResult/fetchPrvw',
         }),
         setHeaderHeight() {
             if (!this.$refs.header) return

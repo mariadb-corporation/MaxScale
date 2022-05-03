@@ -58,7 +58,7 @@ export default {
         ...queryHelper.syncedStateMutationsCreator(sidebarStatesToBeSynced()),
         ...queryHelper.syncWkeToFlatStateMutationCreator({
             statesToBeSynced: sidebarStatesToBeSynced(),
-            suffix: 'schema_sidebar',
+            suffix: 'SCHEMA_SIDEBAR',
         }),
     },
     actions: {

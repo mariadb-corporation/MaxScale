@@ -297,7 +297,7 @@ function syncWkeToFlatStateMutationCreator({ statesToBeSynced, suffix }) {
          * @param {Object} state - vuex state
          * @param {Object} wke - wke object
          */
-        [`SYNC_WKE_TO_${suffix.toUpperCase()}_MODULE`]: function(state, wke) {
+        [`SYNC_WKE_TO_${suffix}_MODULE`]: function(state, wke) {
             mutate_flat_states({
                 moduleState: state,
                 data: this.vue.$help.lodash.pickBy(wke, (v, key) =>

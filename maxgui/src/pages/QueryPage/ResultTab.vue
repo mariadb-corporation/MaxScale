@@ -152,11 +152,11 @@ export default {
             active_wke_id: state => state.query.active_wke_id,
         }),
         ...mapGetters({
-            getLoadingQueryResult: 'query/getLoadingQueryResult',
-            getResults: 'query/getResults',
-            getQueryRequestSentTime: 'query/getQueryRequestSentTime',
-            getQueryExeTime: 'query/getQueryExeTime',
-            getQueryTotalDuration: 'query/getQueryTotalDuration',
+            getLoadingQueryResult: 'queryResult/getLoadingQueryResult',
+            getResults: 'queryResult/getResults',
+            getQueryRequestSentTime: 'queryResult/getQueryRequestSentTime',
+            getQueryExeTime: 'queryResult/getQueryExeTime',
+            getQueryTotalDuration: 'queryResult/getQueryTotalDuration',
         }),
         queryTxt() {
             return this.$typy(this.getResults, 'attributes.sql').safeObject

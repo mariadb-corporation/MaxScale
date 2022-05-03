@@ -55,7 +55,7 @@ export default {
         ...queryHelper.syncedStateMutationsCreator(connStatesToBeSynced()),
         ...queryHelper.syncWkeToFlatStateMutationCreator({
             statesToBeSynced: connStatesToBeSynced(),
-            suffix: 'query_conn',
+            suffix: 'QUERY_CONN',
         }),
         SET_IS_VALIDATING_CONN(state, payload) {
             state.is_validating_conn = payload

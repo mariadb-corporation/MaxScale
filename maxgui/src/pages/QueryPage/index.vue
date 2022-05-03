@@ -74,6 +74,7 @@ export default {
                     this.SYNC_WKE_TO_QUERY_CONN_MODULE(this.getActiveWke)
                     this.SYNC_WKE_TO_SCHEMA_SIDEBAR_MODULE(this.getActiveWke)
                     this.SYNC_WKE_TO_EDITOR_MODULE(this.getActiveWke)
+                    this.SYNC_WKE_TO_QUERY_RESULT_MODULE(this.getActiveWke)
                 }
             },
         },
@@ -120,6 +121,7 @@ export default {
             SYNC_WKE_TO_QUERY_CONN_MODULE: 'queryConn/SYNC_WKE_TO_QUERY_CONN_MODULE',
             SYNC_WKE_TO_SCHEMA_SIDEBAR_MODULE: 'schemaSidebar/SYNC_WKE_TO_SCHEMA_SIDEBAR_MODULE',
             SYNC_WKE_TO_EDITOR_MODULE: 'editor/SYNC_WKE_TO_EDITOR_MODULE',
+            SYNC_WKE_TO_QUERY_RESULT_MODULE: 'queryResult/SYNC_WKE_TO_QUERY_RESULT_MODULE',
         }),
         ...mapActions({
             validatingConn: 'queryConn/validatingConn',

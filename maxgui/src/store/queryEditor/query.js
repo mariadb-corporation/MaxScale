@@ -15,34 +15,7 @@ import queryHelper from './queryHelper'
 import { connStatesToBeSynced, connMemStateMutationTypeMap } from './queryConn'
 import { sidebarStatesToBeSynced, schemaSidebarMemStateMutationTypeMap } from './schemaSidebar'
 import { editorStatesToBeSynced, editorMemStateMutationTypeMap } from './editor'
-
-/**
- * @returns Initial result related states
- */
-function resultStates() {
-    return {
-        curr_query_mode: 'QUERY_VIEW',
-    }
-}
-/**
- * @returns Initial toolbar related states
- */
-function toolbarStates() {
-    return {
-        // toolbar's states
-        show_vis_sidebar: false,
-    }
-}
-
-/**
- * @returns Return initial worksheet synchronized states
- */
-function wkeStatesToBeSynced() {
-    return {
-        ...resultStates(),
-        ...toolbarStates(),
-    }
-}
+import { resultStatesToBeSynced, queryResultMemStateMutationTypeMap } from './queryResult'
 
 /**
  * @returns Return a new worksheet state with unique id
@@ -51,35 +24,11 @@ export function defWorksheetState() {
     return {
         id: uniqueId(`${new Date().getUTCMilliseconds()}_`),
         name: 'WORKSHEET',
-        ...wkeStatesToBeSynced(),
         ...connStatesToBeSynced(),
         ...sidebarStatesToBeSynced(),
         ...editorStatesToBeSynced(),
+        ...resultStatesToBeSynced(),
     }
-}
-/**
- * Below states are stored in hash map structure.
- * Using worksheet's id as key. This helps to preserve
- * multiple worksheet's data in memory.
- * Use `queryHelper.memStatesMutationCreator` to create corresponding mutations
- * Some keys will have mutation name starts with either `SET` or `PATCH`
- * prefix. Check queryMemStateMutationTypeMap for more info
- * @returns {Object} - returns states that are stored in memory
- */
-function memStates() {
-    return {
-        // results states
-        prvw_data_map: {},
-        prvw_data_details_map: {},
-        query_results_map: {},
-        is_stopping_query_map: {},
-    }
-}
-function queryMemStateMutationTypeMap() {
-    const keysWithPrefixSet = ['is_stopping_query_map']
-    return Object.keys(memStates()).reduce((res, key) => {
-        return { ...res, [key]: keysWithPrefixSet.includes(key) ? 'SET' : 'PATCH' }
-    }, {})
 }
 
 export default {
@@ -90,28 +39,8 @@ export default {
         // worksheet states
         worksheets_arr: [defWorksheetState()], // persisted
         active_wke_id: '',
-        ...memStates(),
-        /**
-         * Below is standalone wke states. The value
-         * of each state is replicated from current active
-         * worksheet in persisted worksheets_arr.
-         * Using this to reduce unnecessary recomputation instead of
-         * directly accessing value in worksheets_arr because vuex getters
-         * or vue.js's computed properties will recompute when a property
-         * is changed in worksheets_arr then causes other properties also
-         * have to recompute.
-         */
-        ...wkeStatesToBeSynced(),
     },
     mutations: {
-        ...queryHelper.memStatesMutationCreator({
-            mutationTypesMap: queryMemStateMutationTypeMap(),
-        }),
-        ...queryHelper.syncedStateMutationsCreator(wkeStatesToBeSynced()),
-        ...queryHelper.syncWkeToFlatStateMutationCreator({
-            statesToBeSynced: wkeStatesToBeSynced(),
-            suffix: 'query',
-        }),
         //Toolbar mutations
         SET_FULLSCREEN(state, payload) {
             state.is_fullscreen = payload
@@ -142,8 +71,7 @@ export default {
                 ...targetWke,
                 ...connStatesToBeSynced(),
                 ...sidebarStatesToBeSynced(),
-                ...resultStates(),
-                ...toolbarStates(),
+                ...resultStatesToBeSynced(),
                 name: 'WORKSHEET',
             }
             state.worksheets_arr = this.vue.$help.immutableUpdate(state.worksheets_arr, {
@@ -234,195 +162,6 @@ export default {
             commit('DELETE_WKE', wkeIdx)
         },
         /**
-         * @param {String} tblId - Table id (database_name.table_name).
-         */
-        async fetchPrvw({ state, rootState, commit, dispatch }, { tblId, prvwMode }) {
-            const active_sql_conn = rootState.queryConn.active_sql_conn
-            const active_wke_id = state.active_wke_id
-            const request_sent_time = new Date().valueOf()
-            try {
-                commit(`PATCH_${prvwMode}_MAP`, {
-                    id: active_wke_id,
-                    payload: {
-                        request_sent_time,
-                        total_duration: 0,
-                        [`loading_${prvwMode.toLowerCase()}`]: true,
-                    },
-                })
-                let sql
-                const escapedTblId = this.vue.$help.escapeIdentifiers(tblId)
-                let queryName
-                switch (prvwMode) {
-                    case rootState.app_config.SQL_QUERY_MODES.PRVW_DATA:
-                        sql = `SELECT * FROM ${escapedTblId} LIMIT 1000;`
-                        queryName = `Preview ${escapedTblId} data`
-                        break
-                    case rootState.app_config.SQL_QUERY_MODES.PRVW_DATA_DETAILS:
-                        sql = `DESCRIBE ${escapedTblId};`
-                        queryName = `View ${escapedTblId} details`
-                        break
-                }
-
-                let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
-                    sql,
-                    max_rows: rootState.persisted.query_max_rows,
-                })
-                const now = new Date().valueOf()
-                const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
-                commit(`PATCH_${prvwMode}_MAP`, {
-                    id: active_wke_id,
-                    payload: {
-                        data: Object.freeze(res.data.data),
-                        total_duration: parseFloat(total_duration),
-                        [`loading_${prvwMode.toLowerCase()}`]: false,
-                    },
-                })
-                dispatch(
-                    'persisted/pushQueryLog',
-                    {
-                        startTime: now,
-                        name: queryName,
-                        sql,
-                        res,
-                        connection_name: active_sql_conn.name,
-                        queryType: rootState.app_config.QUERY_LOG_TYPES.ACTION_LOGS,
-                    },
-                    { root: true }
-                )
-            } catch (e) {
-                commit(`PATCH_${prvwMode}_MAP`, {
-                    id: active_wke_id,
-                    payload: {
-                        [`loading_${prvwMode.toLowerCase()}`]: false,
-                    },
-                })
-                const logger = this.vue.$logger(`store-query-fetchPrvw`)
-                logger.error(e)
-            }
-        },
-        /**
-         * @param {String} query - SQL query string
-         */
-        async fetchQueryResult({ state, commit, dispatch, rootState }, query) {
-            const active_wke_id = state.active_wke_id
-            const active_sql_conn = rootState.queryConn.active_sql_conn
-            const request_sent_time = new Date().valueOf()
-
-            try {
-                commit('PATCH_QUERY_RESULTS_MAP', {
-                    id: active_wke_id,
-                    payload: {
-                        request_sent_time,
-                        total_duration: 0,
-                        loading_query_result: true,
-                    },
-                })
-
-                /**
-                 * dispatch openBgConn before running the user's query to prevent concurrent
-                 * querying of the same connection.
-                 * This "BACKGROUND" connection must be disconnected after finnish the user's query.
-                 * i.e. dispatch disconnectBgConn
-                 */
-                await dispatch('queryConn/openBgConn', active_sql_conn, { root: true })
-
-                let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
-                    sql: query,
-                    max_rows: rootState.persisted.query_max_rows,
-                })
-                const now = new Date().valueOf()
-                const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
-
-                commit('PATCH_QUERY_RESULTS_MAP', {
-                    id: active_wke_id,
-                    payload: {
-                        results: Object.freeze(res.data.data),
-                        total_duration: parseFloat(total_duration),
-                        loading_query_result: false,
-                    },
-                })
-
-                const USE_REG = /(use|drop database)\s/i
-                if (query.match(USE_REG))
-                    await dispatch('schemaSidebar/updateActiveDb', {}, { root: true })
-                dispatch(
-                    'persisted/pushQueryLog',
-                    {
-                        startTime: now,
-                        sql: query,
-                        res,
-                        connection_name: active_sql_conn.name,
-                        queryType: rootState.app_config.QUERY_LOG_TYPES.USER_LOGS,
-                    },
-                    { root: true }
-                )
-            } catch (e) {
-                commit('PATCH_QUERY_RESULTS_MAP', {
-                    id: active_wke_id,
-                    payload: { loading_query_result: false },
-                })
-                const logger = this.vue.$logger(`store-query-fetchQueryResult`)
-                logger.error(e)
-            }
-        },
-        async stopQuery({ state, commit, rootGetters, rootState }) {
-            const active_sql_conn = rootState.queryConn.active_sql_conn
-            const active_wke_id = state.active_wke_id
-            try {
-                commit('SET_IS_STOPPING_QUERY_MAP', { id: active_wke_id, payload: true })
-                const {
-                    data: { data: { attributes: { results = [] } = {} } = {} } = {},
-                } = await this.$queryHttp.post(
-                    `/sql/${rootGetters['queryConn/getBgConn'].id}/queries`,
-                    {
-                        sql: `KILL QUERY ${active_sql_conn.attributes.thread_id}`,
-                    }
-                )
-
-                if (results.length && results[0].errno)
-                    commit(
-                        'SET_SNACK_BAR_MESSAGE',
-                        {
-                            text: [
-                                'Failed to stop the query',
-                                ...Object.keys(results[0]).map(key => `${key}: ${results[0][key]}`),
-                            ],
-                            type: 'error',
-                        },
-                        { root: true }
-                    )
-            } catch (e) {
-                const logger = this.vue.$logger(`store-query-stopQuery`)
-                logger.error(e)
-            }
-            commit('SET_IS_STOPPING_QUERY_MAP', { id: active_wke_id, payload: false })
-        },
-        /**
-         * This action clears prvw_data and prvw_data_details to empty object.
-         * Call this action when user selects option in the sidebar.
-         * This ensure sub-tabs in Data Preview tab are generated with fresh data
-         */
-        clearDataPreview({ state, commit }) {
-            commit(`PATCH_PRVW_DATA_MAP`, {
-                id: state.active_wke_id,
-                payload: {
-                    loading_prvw_data: false,
-                    data: {},
-                    request_sent_time: 0,
-                    total_duration: 0,
-                },
-            })
-            commit(`PATCH_PRVW_DATA_DETAILS_MAP`, {
-                id: state.active_wke_id,
-                payload: {
-                    loading_prvw_data_details: false,
-                    data: {},
-                    request_sent_time: 0,
-                    total_duration: 0,
-                },
-            })
-        },
-        /**
          * TODO: DRY this
          * Release memory for target wke when delete a worksheet or disconnect a
          * connection from a worksheet
@@ -430,10 +169,10 @@ export default {
          */
         releaseQueryModulesMem({ commit }, wke_id) {
             queryHelper.releaseMemory({
-                namespace: 'query',
+                namespace: 'queryResult',
                 commit,
                 wke_id,
-                mutationTypesMap: queryMemStateMutationTypeMap(),
+                mutationTypesMap: queryResultMemStateMutationTypeMap(),
             })
             queryHelper.releaseMemory({
                 namespace: 'queryConn',
@@ -458,59 +197,6 @@ export default {
     getters: {
         getActiveWke: state => {
             return state.worksheets_arr.find(wke => wke.id === state.active_wke_id)
-        },
-        // Query result getters
-        getQueryResult: state => state.query_results_map[state.active_wke_id] || {},
-        getLoadingQueryResult: (state, getters) => {
-            const { loading_query_result = false } = getters.getQueryResult
-            return loading_query_result
-        },
-        getIsStoppingQuery: state => state.is_stopping_query_map[state.active_wke_id] || false,
-        getResults: (state, getters) => {
-            const { results = {} } = getters.getQueryResult
-            return results
-        },
-        getQueryRequestSentTime: (state, getters) => {
-            const { request_sent_time = 0 } = getters.getQueryResult
-            return request_sent_time
-        },
-        getQueryExeTime: (state, getters) => {
-            if (getters.getLoadingQueryResult) return -1
-            const { attributes } = getters.getResults
-            if (attributes) return parseFloat(attributes.execution_time.toFixed(4))
-            return 0
-        },
-        getQueryTotalDuration: (state, getters) => {
-            const { total_duration = 0 } = getters.getQueryResult
-            return total_duration
-        },
-        // preview data getters
-        getPrvwData: state => mode => {
-            let map = state[`${mode.toLowerCase()}_map`]
-            if (map) return map[state.active_wke_id] || {}
-            return {}
-        },
-        getLoadingPrvw: (state, getters) => mode => {
-            return getters.getPrvwData(mode)[`loading_${mode.toLowerCase()}`] || false
-        },
-        getPrvwDataRes: (state, getters) => mode => {
-            const { data: { attributes: { results = [] } = {} } = {} } = getters.getPrvwData(mode)
-            if (results.length) return results[0]
-            return {}
-        },
-        getPrvwExeTime: (state, getters) => mode => {
-            if (state[`loading_${mode.toLowerCase()}`]) return -1
-            const { data: { attributes } = {} } = getters.getPrvwData(mode)
-            if (attributes) return parseFloat(attributes.execution_time.toFixed(4))
-            return 0
-        },
-        getPrvwSentTime: (state, getters) => mode => {
-            const { request_sent_time = 0 } = getters.getPrvwData(mode)
-            return request_sent_time
-        },
-        getPrvwTotalDuration: (state, getters) => mode => {
-            const { total_duration = 0 } = getters.getPrvwData(mode)
-            return total_duration
         },
     },
 }

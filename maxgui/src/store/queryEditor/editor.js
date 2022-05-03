@@ -58,7 +58,7 @@ export default {
         ...queryHelper.syncedStateMutationsCreator(editorStatesToBeSynced()),
         ...queryHelper.syncWkeToFlatStateMutationCreator({
             statesToBeSynced: editorStatesToBeSynced(),
-            suffix: 'editor',
+            suffix: 'EDITOR',
         }),
         SET_SELECTED_QUERY_TXT(state, payload) {
             state.selected_query_txt = payload
