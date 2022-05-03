@@ -120,11 +120,11 @@ export default {
         ...mapState({
             show_vis_sidebar: state => state.query.show_vis_sidebar,
             query_txt: state => state.query.query_txt,
-            is_sidebar_collapsed: state => state.query.is_sidebar_collapsed,
+            is_sidebar_collapsed: state => state.schemaSidebar.is_sidebar_collapsed,
             active_wke_id: state => state.query.active_wke_id,
         }),
         ...mapGetters({
-            getDbCmplList: 'query/getDbCmplList',
+            getDbCmplList: 'schemaSidebar/getDbCmplList',
         }),
         showVisChart() {
             const datasets = this.$typy(this.chartOpt, 'data.datasets').safeArray

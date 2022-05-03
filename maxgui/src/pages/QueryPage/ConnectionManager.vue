@@ -141,7 +141,7 @@ export default {
             QUERY_CONN_BINDING_TYPES: state => state.app_config.QUERY_CONN_BINDING_TYPES,
         }),
         ...mapGetters({
-            getDbTreeData: 'query/getDbTreeData',
+            getDbTreeData: 'schemaSidebar/getDbTreeData',
         }),
         wkeConns() {
             return Object.values(this.sql_conns).filter(
@@ -210,7 +210,7 @@ export default {
         ...mapActions({
             openConnect: 'queryConn/openConnect',
             disconnect: 'queryConn/disconnect',
-            initialFetch: 'query/initialFetch',
+            initialFetch: 'schemaSidebar/initialFetch',
             updateRoute: 'query/updateRoute',
         }),
         ...mapMutations({

@@ -67,10 +67,10 @@ export default {
             SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
             show_vis_sidebar: state => state.query.show_vis_sidebar,
             query_txt: state => state.query.query_txt,
-            is_sidebar_collapsed: state => state.query.is_sidebar_collapsed,
+            is_sidebar_collapsed: state => state.schemaSidebar.is_sidebar_collapsed,
         }),
         ...mapGetters({
-            getDbCmplList: 'query/getDbCmplList',
+            getDbCmplList: 'schemaSidebar/getDbCmplList',
             getCurrEditorMode: 'query/getCurrEditorMode',
         }),
         isTxtEditor() {

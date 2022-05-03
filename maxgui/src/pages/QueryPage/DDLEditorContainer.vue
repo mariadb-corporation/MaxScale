@@ -104,7 +104,7 @@ export default {
             getLoadingTblCreationInfo: 'query/getLoadingTblCreationInfo',
             getTblCreationInfo: 'query/getTblCreationInfo',
             getExeStmtResultMap: 'query/getExeStmtResultMap',
-            getDbCmplList: 'query/getDbCmplList',
+            getDbCmplList: 'schemaSidebar/getDbCmplList',
         }),
         formDim() {
             // title height: 36, border thickness: 2
@@ -174,12 +174,12 @@ export default {
     },
     methods: {
         ...mapMutations({
-            PATCH_EXE_STMT_RESULT_MAP: 'query/PATCH_EXE_STMT_RESULT_MAP',
+            PATCH_EXE_STMT_RESULT_MAP: 'schemaSidebar/PATCH_EXE_STMT_RESULT_MAP',
             PATCH_TBL_CREATION_INFO_MAP: 'query/PATCH_TBL_CREATION_INFO_MAP',
             SET_CURR_EDITOR_MODE_MAP: 'query/SET_CURR_EDITOR_MODE_MAP',
         }),
         ...mapActions({
-            exeStmtAction: 'query/exeStmtAction',
+            exeStmtAction: 'schemaSidebar/exeStmtAction',
         }),
         //Watcher to work with multiple worksheets which are kept alive
         addInitialDataWatcher() {

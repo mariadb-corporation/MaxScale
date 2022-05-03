@@ -165,7 +165,7 @@ export default {
         ...mapGetters({
             getPrvwDataRes: 'query/getPrvwDataRes',
             getResults: 'query/getResults',
-            getActiveTreeNode: 'query/getActiveTreeNode',
+            getActiveTreeNode: 'schemaSidebar/getActiveTreeNode',
         }),
         chartOpt: {
             get() {

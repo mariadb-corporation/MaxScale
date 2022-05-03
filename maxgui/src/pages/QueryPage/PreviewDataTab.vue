@@ -147,7 +147,7 @@ export default {
             getPrvwExeTime: 'query/getPrvwExeTime',
             getPrvwTotalDuration: 'query/getPrvwTotalDuration',
             getLoadingPrvw: 'query/getLoadingPrvw',
-            getActiveTreeNode: 'query/getActiveTreeNode',
+            getActiveTreeNode: 'schemaSidebar/getActiveTreeNode',
         }),
         validConn() {
             return Boolean(this.getActiveTreeNode.id && this.active_sql_conn.id)

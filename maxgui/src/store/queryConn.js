@@ -11,7 +11,8 @@
  * Public License.
  */
 import queryHelper from './queryHelper'
-import { sidebarStates, resultStates, toolbarStates } from './query'
+import { resultStates, toolbarStates } from './query'
+import { sidebarStatesToBeSynced } from './schemaSidebar'
 /**
  * @returns Initial connection related states
  */
@@ -32,7 +33,7 @@ function getBlankWke(targetWke) {
     return {
         ...targetWke,
         ...connStatesToBeSynced(),
-        ...sidebarStates(),
+        ...sidebarStatesToBeSynced(),
         ...resultStates(),
         ...toolbarStates(),
         name: 'WORKSHEET',
@@ -189,7 +190,7 @@ export default {
                     commit('ADD_SQL_CONN', active_sql_conn)
                     commit('SET_ACTIVE_SQL_CONN', { payload: active_sql_conn, active_wke_id })
 
-                    if (body.db) await dispatch('query/useDb', body.db, { root: true })
+                    if (body.db) await dispatch('schemaSidebar/useDb', body.db, { root: true })
                     commit('SET_CONN_ERR_STATE', { payload: false, active_wke_id })
                 }
             } catch (e) {
@@ -280,7 +281,9 @@ export default {
                         },
                         { root: true }
                     )
-                    await dispatch('query/initialFetch', active_sql_conn, { root: true })
+                    await dispatch('schemaSidebar/initialFetch', active_sql_conn, {
+                        root: true,
+                    })
                 } else
                     commit(
                         'SET_SNACK_BAR_MESSAGE',
@@ -324,6 +327,9 @@ export default {
                 if (state.queryConn.active_sql_conn.id === cnctId) {
                     commit('query/SYNC_WKE_TO_QUERY_MODULE', wke, { root: true })
                     commit('SYNC_WKE_TO_QUERY_CONN_MODULE', wke)
+                    commit('schemaSidebar/SYNC_WKE_TO_SCHEMA_SIDEBAR_MODULE', wke, {
+                        root: true,
+                    })
                 }
             }
         },

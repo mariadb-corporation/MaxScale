@@ -129,14 +129,14 @@ export default {
             SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
             SQL_NODE_TYPES: state => state.app_config.SQL_NODE_TYPES,
             SQL_NODE_CTX_OPT_TYPES: state => state.app_config.SQL_NODE_CTX_OPT_TYPES,
-            expanded_nodes: state => state.query.expanded_nodes,
+            expanded_nodes: state => state.schemaSidebar.expanded_nodes,
             active_wke_id: state => state.query.active_wke_id,
-            active_db: state => state.query.active_db,
-            search_schema: state => state.query.search_schema,
+            active_db: state => state.schemaSidebar.active_db,
+            search_schema: state => state.schemaSidebar.search_schema,
         }),
         ...mapGetters({
-            getDbTreeData: 'query/getDbTreeData',
-            getActiveTreeNode: 'query/getActiveTreeNode',
+            getDbTreeData: 'schemaSidebar/getDbTreeData',
+            getActiveTreeNode: 'schemaSidebar/getActiveTreeNode',
             getAlteredActiveNode: 'query/getAlteredActiveNode',
         }),
         nodesHaveCtxMenu() {
@@ -256,8 +256,8 @@ export default {
     },
     methods: {
         ...mapMutations({
-            PATCH_DB_TREE_MAP: 'query/PATCH_DB_TREE_MAP',
-            SET_EXPANDED_NODES: 'query/SET_EXPANDED_NODES',
+            PATCH_DB_TREE_MAP: 'schemaSidebar/PATCH_DB_TREE_MAP',
+            SET_EXPANDED_NODES: 'schemaSidebar/SET_EXPANDED_NODES',
             SET_CURR_EDITOR_MODE_MAP: 'query/SET_CURR_EDITOR_MODE_MAP',
             SET_CURR_DDL_ALTER_SPEC: 'query/SET_CURR_DDL_ALTER_SPEC',
             PATCH_TBL_CREATION_INFO_MAP: 'query/PATCH_TBL_CREATION_INFO_MAP',

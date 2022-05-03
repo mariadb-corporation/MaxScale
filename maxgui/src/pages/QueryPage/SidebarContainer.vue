@@ -156,17 +156,17 @@ export default {
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             SQL_NODE_TYPES: state => state.app_config.SQL_NODE_TYPES,
             active_sql_conn: state => state.queryConn.active_sql_conn,
-            is_sidebar_collapsed: state => state.query.is_sidebar_collapsed,
-            search_schema: state => state.query.search_schema,
+            is_sidebar_collapsed: state => state.schemaSidebar.is_sidebar_collapsed,
+            search_schema: state => state.schemaSidebar.search_schema,
             engines: state => state.query.engines,
             charset_collation_map: state => state.query.charset_collation_map,
             def_db_charset_map: state => state.query.def_db_charset_map,
             active_wke_id: state => state.query.active_wke_id,
         }),
         ...mapGetters({
-            getLoadingDbTree: 'query/getLoadingDbTree',
+            getLoadingDbTree: 'schemaSidebar/getLoadingDbTree',
             getIsConnBusy: 'queryConn/getIsConnBusy',
-            getExeStmtResultMap: 'query/getExeStmtResultMap',
+            getExeStmtResultMap: 'schemaSidebar/getExeStmtResultMap',
         }),
         searchSchema: {
             get() {
@@ -194,21 +194,21 @@ export default {
     methods: {
         ...mapMutations({
             SET_CURR_QUERY_MODE: 'query/SET_CURR_QUERY_MODE',
-            SET_IS_SIDEBAR_COLLAPSED: 'query/SET_IS_SIDEBAR_COLLAPSED',
-            SET_SEARCH_SCHEMA: 'query/SET_SEARCH_SCHEMA',
-            PATCH_EXE_STMT_RESULT_MAP: 'query/PATCH_EXE_STMT_RESULT_MAP',
+            SET_IS_SIDEBAR_COLLAPSED: 'schemaSidebar/SET_IS_SIDEBAR_COLLAPSED',
+            SET_SEARCH_SCHEMA: 'schemaSidebar/SET_SEARCH_SCHEMA',
+            PATCH_EXE_STMT_RESULT_MAP: 'schemaSidebar/PATCH_EXE_STMT_RESULT_MAP',
         }),
         ...mapActions({
             clearDataPreview: 'query/clearDataPreview',
             fetchPrvw: 'query/fetchPrvw',
-            updateTreeNodes: 'query/updateTreeNodes',
-            useDb: 'query/useDb',
-            reloadTreeNodes: 'query/reloadTreeNodes',
+            updateTreeNodes: 'schemaSidebar/updateTreeNodes',
+            useDb: 'schemaSidebar/useDb',
+            reloadTreeNodes: 'schemaSidebar/reloadTreeNodes',
             queryTblCreationInfo: 'query/queryTblCreationInfo',
             queryCharsetCollationMap: 'query/queryCharsetCollationMap',
             queryEngines: 'query/queryEngines',
             queryDefDbCharsetMap: 'query/queryDefDbCharsetMap',
-            exeStmtAction: 'query/exeStmtAction',
+            exeStmtAction: 'schemaSidebar/exeStmtAction',
         }),
         async reloadSchema() {
             await this.reloadTreeNodes()

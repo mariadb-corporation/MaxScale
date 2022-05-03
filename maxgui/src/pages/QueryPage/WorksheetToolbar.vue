@@ -247,7 +247,7 @@ export default {
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             is_fullscreen: state => state.query.is_fullscreen,
             active_sql_conn: state => state.queryConn.active_sql_conn,
-            active_db: state => state.query.active_db,
+            active_db: state => state.schemaSidebar.active_db,
             query_confirm_flag: state => state.persisted.query_confirm_flag,
             show_vis_sidebar: state => state.query.show_vis_sidebar,
             query_txt: state => state.query.query_txt,
@@ -258,7 +258,7 @@ export default {
             getIsConnBusy: 'queryConn/getIsConnBusy',
             getLoadingQueryResult: 'query/getLoadingQueryResult',
             getIsStoppingQuery: 'query/getIsStoppingQuery',
-            getDbNodes: 'query/getDbNodes',
+            getDbNodes: 'schemaSidebar/getDbNodes',
             getBgConn: 'queryConn/getBgConn',
         }),
         //Prevent parallel querying
@@ -292,7 +292,7 @@ export default {
         ...mapActions({
             fetchQueryResult: 'query/fetchQueryResult',
             stopQuery: 'query/stopQuery',
-            useDb: 'query/useDb',
+            useDb: 'schemaSidebar/useDb',
             disconnectBgConn: 'queryConn/disconnectBgConn',
         }),
         async handleSelectDb(db) {

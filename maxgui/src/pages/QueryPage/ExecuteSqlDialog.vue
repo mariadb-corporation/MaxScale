@@ -90,7 +90,7 @@ export default {
             SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
         }),
         ...mapGetters({
-            getDbCmplList: 'query/getDbCmplList',
+            getDbCmplList: 'schemaSidebar/getDbCmplList',
             getCurrEditorMode: 'query/getCurrEditorMode',
         }),
         isTxtEditor() {

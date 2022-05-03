@@ -71,6 +71,7 @@ export default {
                     this.updateRoute(v)
                     this.SYNC_WKE_TO_QUERY_MODULE(this.getActiveWke)
                     this.SYNC_WKE_TO_QUERY_CONN_MODULE(this.getActiveWke)
+                    this.SYNC_WKE_TO_SCHEMA_SIDEBAR_MODULE(this.getActiveWke)
                 }
             },
         },
@@ -115,6 +116,7 @@ export default {
             SET_SNACK_BAR_MESSAGE: 'SET_SNACK_BAR_MESSAGE',
             SYNC_WKE_TO_QUERY_MODULE: 'query/SYNC_WKE_TO_QUERY_MODULE',
             SYNC_WKE_TO_QUERY_CONN_MODULE: 'queryConn/SYNC_WKE_TO_QUERY_CONN_MODULE',
+            SYNC_WKE_TO_SCHEMA_SIDEBAR_MODULE: 'schemaSidebar/SYNC_WKE_TO_SCHEMA_SIDEBAR_MODULE',
         }),
         ...mapActions({
             validatingConn: 'queryConn/validatingConn',
