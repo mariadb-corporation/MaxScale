@@ -45,18 +45,14 @@ export default {
         is_validating_conn: true,
         rc_target_names_map: {},
         pre_select_conn_rsrc: null,
-        /**
-         * states to be synced to worksheets_arr.
-         * Mutations are created by queryHelper.syncedStateMutationsCreator(connStatesToBeSynced())
-         */
-        ...connStatesToBeSynced(),
         ...memStates(),
+        ...connStatesToBeSynced(),
     },
     mutations: {
-        ...queryHelper.syncedStateMutationsCreator(connStatesToBeSynced()),
         ...queryHelper.memStatesMutationCreator({
             mutationTypesMap: connMemStateMutationTypeMap(),
         }),
+        ...queryHelper.syncedStateMutationsCreator(connStatesToBeSynced()),
         ...queryHelper.syncWkeToFlatStateMutationCreator({
             statesToBeSynced: connStatesToBeSynced(),
             suffix: 'query_conn',

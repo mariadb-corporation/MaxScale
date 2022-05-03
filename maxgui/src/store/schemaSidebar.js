@@ -46,8 +46,8 @@ export function schemaSidebarMemStateMutationTypeMap() {
 export default {
     namespaced: true,
     state: {
-        ...sidebarStatesToBeSynced(),
         ...memStates(),
+        ...sidebarStatesToBeSynced(),
     },
     mutations: {
         ...queryHelper.memStatesMutationCreator({

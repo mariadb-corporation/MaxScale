@@ -80,11 +80,11 @@ export default {
     computed: {
         ...mapState({
             SQL_DDL_ALTER_SPECS: state => state.app_config.SQL_DDL_ALTER_SPECS,
-            curr_ddl_alter_spec: state => state.query.curr_ddl_alter_spec,
+            curr_ddl_alter_spec: state => state.editor.curr_ddl_alter_spec,
             active_wke_id: state => state.query.active_wke_id,
         }),
         ...mapGetters({
-            getTblCreationInfo: 'query/getTblCreationInfo',
+            getTblCreationInfo: 'editor/getTblCreationInfo',
         }),
         initialData() {
             return this.$typy(this.getTblCreationInfo, 'data').safeObjectOrEmpty
@@ -143,7 +143,7 @@ export default {
     },
     methods: {
         ...mapMutations({
-            SET_CURR_DDL_ALTER_SPEC: 'query/SET_CURR_DDL_ALTER_SPEC',
+            SET_CURR_DDL_ALTER_SPEC: 'editor/SET_CURR_DDL_ALTER_SPEC',
         }),
         setHeaderHeight() {
             if (!this.$refs.header) return

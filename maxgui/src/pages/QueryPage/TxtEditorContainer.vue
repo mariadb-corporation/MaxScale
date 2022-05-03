@@ -119,7 +119,7 @@ export default {
     computed: {
         ...mapState({
             show_vis_sidebar: state => state.query.show_vis_sidebar,
-            query_txt: state => state.query.query_txt,
+            query_txt: state => state.editor.query_txt,
             is_sidebar_collapsed: state => state.schemaSidebar.is_sidebar_collapsed,
             active_wke_id: state => state.query.active_wke_id,
         }),
@@ -187,8 +187,8 @@ export default {
     },
     methods: {
         ...mapMutations({
-            SET_QUERY_TXT: 'query/SET_QUERY_TXT',
-            SET_SELECTED_QUERY_TXT: 'query/SET_SELECTED_QUERY_TXT',
+            SET_QUERY_TXT: 'editor/SET_QUERY_TXT',
+            SET_SELECTED_QUERY_TXT: 'editor/SET_SELECTED_QUERY_TXT',
         }),
         setDefChartOptState() {
             this.chartOpt = this.$help.lodash.cloneDeep(this.defChartOpt)

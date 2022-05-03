@@ -101,9 +101,9 @@ export default {
             active_wke_id: state => state.query.active_wke_id,
         }),
         ...mapGetters({
-            getLoadingTblCreationInfo: 'query/getLoadingTblCreationInfo',
-            getTblCreationInfo: 'query/getTblCreationInfo',
-            getExeStmtResultMap: 'query/getExeStmtResultMap',
+            getLoadingTblCreationInfo: 'editor/getLoadingTblCreationInfo',
+            getTblCreationInfo: 'editor/getTblCreationInfo',
+            getExeStmtResultMap: 'schemaSidebar/getExeStmtResultMap',
             getDbCmplList: 'schemaSidebar/getDbCmplList',
         }),
         formDim() {
@@ -175,8 +175,8 @@ export default {
     methods: {
         ...mapMutations({
             PATCH_EXE_STMT_RESULT_MAP: 'schemaSidebar/PATCH_EXE_STMT_RESULT_MAP',
-            PATCH_TBL_CREATION_INFO_MAP: 'query/PATCH_TBL_CREATION_INFO_MAP',
-            SET_CURR_EDITOR_MODE_MAP: 'query/SET_CURR_EDITOR_MODE_MAP',
+            PATCH_TBL_CREATION_INFO_MAP: 'editor/PATCH_TBL_CREATION_INFO_MAP',
+            SET_CURR_EDITOR_MODE_MAP: 'editor/SET_CURR_EDITOR_MODE_MAP',
         }),
         ...mapActions({
             exeStmtAction: 'schemaSidebar/exeStmtAction',

@@ -165,8 +165,8 @@ export default {
             is_fullscreen: state => state.query.is_fullscreen,
             sql_conns: state => state.queryConn.sql_conns,
             worksheets_arr: state => state.query.worksheets_arr,
-            query_txt: state => state.query.query_txt,
-            selected_query_txt: state => state.query.selected_query_txt,
+            query_txt: state => state.editor.query_txt,
+            selected_query_txt: state => state.editor.selected_query_txt,
         }),
     },
     mounted() {

@@ -22,6 +22,7 @@ import session from './session'
 import listener from './listener'
 import query, { defWorksheetState } from './query'
 import queryConn from './queryConn'
+import editor from './editor'
 import schemaSidebar from './schemaSidebar'
 import persisted from './persisted'
 import visualization from './visualization'
@@ -183,6 +184,7 @@ const store = new Vuex.Store({
         user,
         query,
         queryConn,
+        editor,
         schemaSidebar,
         persisted,
         visualization,

@@ -49,7 +49,7 @@ export default {
             is_validating_conn: state => state.queryConn.is_validating_conn,
         }),
         ...mapGetters({
-            getCurrEditorMode: 'query/getCurrEditorMode',
+            getCurrEditorMode: 'editor/getCurrEditorMode',
         }),
         isTxtEditor() {
             return this.getCurrEditorMode === this.SQL_EDITOR_MODES.TXT_EDITOR

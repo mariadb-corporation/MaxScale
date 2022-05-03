@@ -69,9 +69,11 @@ export default {
             handler(v) {
                 if (v) {
                     this.updateRoute(v)
+                    //TODO: DRY this
                     this.SYNC_WKE_TO_QUERY_MODULE(this.getActiveWke)
                     this.SYNC_WKE_TO_QUERY_CONN_MODULE(this.getActiveWke)
                     this.SYNC_WKE_TO_SCHEMA_SIDEBAR_MODULE(this.getActiveWke)
+                    this.SYNC_WKE_TO_EDITOR_MODULE(this.getActiveWke)
                 }
             },
         },
@@ -117,6 +119,7 @@ export default {
             SYNC_WKE_TO_QUERY_MODULE: 'query/SYNC_WKE_TO_QUERY_MODULE',
             SYNC_WKE_TO_QUERY_CONN_MODULE: 'queryConn/SYNC_WKE_TO_QUERY_CONN_MODULE',
             SYNC_WKE_TO_SCHEMA_SIDEBAR_MODULE: 'schemaSidebar/SYNC_WKE_TO_SCHEMA_SIDEBAR_MODULE',
+            SYNC_WKE_TO_EDITOR_MODULE: 'editor/SYNC_WKE_TO_EDITOR_MODULE',
         }),
         ...mapActions({
             validatingConn: 'queryConn/validatingConn',

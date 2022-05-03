@@ -91,7 +91,7 @@ export default {
         }),
         ...mapGetters({
             getDbCmplList: 'schemaSidebar/getDbCmplList',
-            getCurrEditorMode: 'query/getCurrEditorMode',
+            getCurrEditorMode: 'editor/getCurrEditorMode',
         }),
         isTxtEditor() {
             return this.getCurrEditorMode === this.SQL_EDITOR_MODES.TXT_EDITOR

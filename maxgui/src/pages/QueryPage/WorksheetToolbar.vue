@@ -250,8 +250,8 @@ export default {
             active_db: state => state.schemaSidebar.active_db,
             query_confirm_flag: state => state.persisted.query_confirm_flag,
             show_vis_sidebar: state => state.query.show_vis_sidebar,
-            query_txt: state => state.query.query_txt,
-            selected_query_txt: state => state.query.selected_query_txt,
+            query_txt: state => state.editor.query_txt,
+            selected_query_txt: state => state.editor.selected_query_txt,
             active_wke_id: state => state.query.active_wke_id,
         }),
         ...mapGetters({

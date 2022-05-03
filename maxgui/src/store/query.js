@@ -14,15 +14,8 @@ import { uniqueId } from 'utils/helpers'
 import queryHelper from './queryHelper'
 import { connStatesToBeSynced, connMemStateMutationTypeMap } from './queryConn'
 import { sidebarStatesToBeSynced, schemaSidebarMemStateMutationTypeMap } from './schemaSidebar'
-/**
- * @returns Initial editor related states
- */
-function editorStates() {
-    return {
-        query_txt: '',
-        curr_ddl_alter_spec: '',
-    }
-}
+import { editorStatesToBeSynced, editorMemStateMutationTypeMap } from './editor'
+
 /**
  * @returns Initial result related states
  */
@@ -46,7 +39,6 @@ function toolbarStates() {
  */
 function wkeStatesToBeSynced() {
     return {
-        ...editorStates(),
         ...resultStates(),
         ...toolbarStates(),
     }
@@ -62,6 +54,7 @@ export function defWorksheetState() {
         ...wkeStatesToBeSynced(),
         ...connStatesToBeSynced(),
         ...sidebarStatesToBeSynced(),
+        ...editorStatesToBeSynced(),
     }
 }
 /**
@@ -75,9 +68,6 @@ export function defWorksheetState() {
  */
 function memStates() {
     return {
-        // editor states
-        curr_editor_mode_map: {},
-        tbl_creation_info_map: {},
         // results states
         prvw_data_map: {},
         prvw_data_details_map: {},
@@ -86,7 +76,7 @@ function memStates() {
     }
 }
 function queryMemStateMutationTypeMap() {
-    const keysWithPrefixSet = ['curr_editor_mode_map', 'is_stopping_query_map']
+    const keysWithPrefixSet = ['is_stopping_query_map']
     return Object.keys(memStates()).reduce((res, key) => {
         return { ...res, [key]: keysWithPrefixSet.includes(key) ? 'SET' : 'PATCH' }
     }, {})
@@ -97,11 +87,6 @@ export default {
     state: {
         // Toolbar states
         is_fullscreen: false,
-        // editor states
-        charset_collation_map: new Map(),
-        def_db_charset_map: new Map(),
-        engines: [],
-        selected_query_txt: '',
         // worksheet states
         worksheets_arr: [defWorksheetState()], // persisted
         active_wke_id: '',
@@ -131,19 +116,6 @@ export default {
         SET_FULLSCREEN(state, payload) {
             state.is_fullscreen = payload
         },
-        // editor mutations
-        SET_SELECTED_QUERY_TXT(state, payload) {
-            state.selected_query_txt = payload
-        },
-        SET_CHARSET_COLLATION_MAP(state, payload) {
-            state.charset_collation_map = payload
-        },
-        SET_DEF_DB_CHARSET_MAP(state, payload) {
-            state.def_db_charset_map = payload
-        },
-        SET_ENGINES(state, payload) {
-            state.engines = payload
-        },
         // worksheet mutations
         ADD_NEW_WKE(state) {
             state.worksheets_arr.push(defWorksheetState())
@@ -161,7 +133,7 @@ export default {
         },
         /**
          * This mutation resets all properties of the provided targetWke object to its initial states
-         * except states that stores editor data (editorStates)
+         * except states that stores editor data (editorStatesToBeSynced)
          * @param {Object} targetWke - wke to be reset
          */
         REFRESH_WKE(state, targetWke) {
@@ -328,7 +300,6 @@ export default {
                 logger.error(e)
             }
         },
-
         /**
          * @param {String} query - SQL query string
          */
@@ -426,121 +397,6 @@ export default {
             }
             commit('SET_IS_STOPPING_QUERY_MAP', { id: active_wke_id, payload: false })
         },
-        async queryCharsetCollationMap({ rootState, commit }) {
-            const active_sql_conn = rootState.queryConn.active_sql_conn
-            try {
-                const sql =
-                    // eslint-disable-next-line vue/max-len
-                    'SELECT character_set_name, collation_name, is_default FROM information_schema.collations'
-                let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
-                    sql,
-                })
-                let charsetCollationMap = new Map()
-                const data = this.vue.$typy(res, 'data.data.attributes.results[0].data').safeArray
-                data.forEach(row => {
-                    const charset = row[0]
-                    const collation = row[1]
-                    const isDefCollation = row[2] === 'Yes'
-                    let charsetObj = charsetCollationMap.get(charset) || {
-                        collations: [],
-                    }
-                    if (isDefCollation) charsetObj.defCollation = collation
-                    charsetObj.collations.push(collation)
-                    charsetCollationMap.set(charset, charsetObj)
-                })
-                commit('SET_CHARSET_COLLATION_MAP', charsetCollationMap)
-            } catch (e) {
-                const logger = this.vue.$logger('store-query-queryCharsetCollationMap')
-                logger.error(e)
-            }
-        },
-        async queryDefDbCharsetMap({ rootState, commit }) {
-            const active_sql_conn = rootState.queryConn.active_sql_conn
-            try {
-                const sql =
-                    // eslint-disable-next-line vue/max-len
-                    'SELECT schema_name, default_character_set_name FROM information_schema.schemata'
-                let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
-                    sql,
-                })
-                let defDbCharsetMap = new Map()
-                const data = this.vue.$typy(res, 'data.data.attributes.results[0].data').safeArray
-                data.forEach(row => {
-                    const schema_name = row[0]
-                    const default_character_set_name = row[1]
-                    defDbCharsetMap.set(schema_name, default_character_set_name)
-                })
-                commit('SET_DEF_DB_CHARSET_MAP', defDbCharsetMap)
-            } catch (e) {
-                const logger = this.vue.$logger('store-query-queryDefDbCharsetMap')
-                logger.error(e)
-            }
-        },
-        async queryEngines({ rootState, commit }) {
-            const active_sql_conn = rootState.queryConn.active_sql_conn
-            try {
-                let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
-                    sql: 'SELECT engine FROM information_schema.ENGINES',
-                })
-                commit('SET_ENGINES', res.data.data.attributes.results[0].data.flat())
-            } catch (e) {
-                const logger = this.vue.$logger('store-query-queryEngines')
-                logger.error(e)
-            }
-        },
-        async queryTblCreationInfo({ state, commit, rootState }, node) {
-            const active_sql_conn = rootState.queryConn.active_sql_conn
-            const active_wke_id = state.active_wke_id
-            try {
-                commit('PATCH_TBL_CREATION_INFO_MAP', {
-                    id: active_wke_id,
-                    payload: {
-                        loading_tbl_creation_info: true,
-                        altered_active_node: node,
-                    },
-                })
-                const schemas = node.id.split('.')
-                const db = schemas[0]
-                const tblOptsData = await queryHelper.queryTblOptsData({
-                    active_sql_conn,
-                    nodeId: node.id,
-                    vue: this.vue,
-                    $queryHttp: this.$queryHttp,
-                })
-                const colsOptsData = await queryHelper.queryColsOptsData({
-                    active_sql_conn,
-                    nodeId: node.id,
-                    $queryHttp: this.$queryHttp,
-                })
-                commit(`PATCH_TBL_CREATION_INFO_MAP`, {
-                    id: active_wke_id,
-                    payload: {
-                        data: {
-                            table_opts_data: { dbName: db, ...tblOptsData },
-                            cols_opts_data: colsOptsData,
-                        },
-                        loading_tbl_creation_info: false,
-                    },
-                })
-            } catch (e) {
-                commit('PATCH_TBL_CREATION_INFO_MAP', {
-                    id: active_wke_id,
-                    payload: {
-                        loading_tbl_creation_info: false,
-                    },
-                })
-                commit(
-                    'SET_SNACK_BAR_MESSAGE',
-                    {
-                        text: this.vue.$help.getErrorsArr(e),
-                        type: 'error',
-                    },
-                    { root: true }
-                )
-                const logger = this.vue.$logger(`store-query-queryTblCreationInfo`)
-                logger.error(e)
-            }
-        },
         /**
          * This action clears prvw_data and prvw_data_details to empty object.
          * Call this action when user selects option in the sidebar.
@@ -566,6 +422,12 @@ export default {
                 },
             })
         },
+        /**
+         * TODO: DRY this
+         * Release memory for target wke when delete a worksheet or disconnect a
+         * connection from a worksheet
+         * @param {String} param.wke_id - worksheet id.
+         */
         releaseQueryModulesMem({ commit }, wke_id) {
             queryHelper.releaseMemory({
                 namespace: 'query',
@@ -584,6 +446,12 @@ export default {
                 commit,
                 wke_id,
                 mutationTypesMap: schemaSidebarMemStateMutationTypeMap(),
+            })
+            queryHelper.releaseMemory({
+                namespace: 'editor',
+                commit,
+                wke_id,
+                mutationTypesMap: editorMemStateMutationTypeMap(),
             })
         },
     },
@@ -643,18 +511,6 @@ export default {
         getPrvwTotalDuration: (state, getters) => mode => {
             const { total_duration = 0 } = getters.getPrvwData(mode)
             return total_duration
-        },
-        //editor mode getter
-        getCurrEditorMode: state => state.curr_editor_mode_map[state.active_wke_id] || 'TXT_EDITOR',
-        // tbl_creation_info_map getters
-        getTblCreationInfo: state => state.tbl_creation_info_map[state.active_wke_id] || {},
-        getLoadingTblCreationInfo: (state, getters) => {
-            const { loading_tbl_creation_info = true } = getters.getTblCreationInfo
-            return loading_tbl_creation_info
-        },
-        getAlteredActiveNode: (state, getters) => {
-            const { altered_active_node = {} } = getters.getTblCreationInfo
-            return altered_active_node
         },
     },
 }

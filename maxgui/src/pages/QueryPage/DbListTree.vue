@@ -137,7 +137,7 @@ export default {
         ...mapGetters({
             getDbTreeData: 'schemaSidebar/getDbTreeData',
             getActiveTreeNode: 'schemaSidebar/getActiveTreeNode',
-            getAlteredActiveNode: 'query/getAlteredActiveNode',
+            getAlteredActiveNode: 'editor/getAlteredActiveNode',
         }),
         nodesHaveCtxMenu() {
             const { SCHEMA, TABLE, SP, COL, TRIGGER } = this.SQL_NODE_TYPES
@@ -258,9 +258,9 @@ export default {
         ...mapMutations({
             PATCH_DB_TREE_MAP: 'schemaSidebar/PATCH_DB_TREE_MAP',
             SET_EXPANDED_NODES: 'schemaSidebar/SET_EXPANDED_NODES',
-            SET_CURR_EDITOR_MODE_MAP: 'query/SET_CURR_EDITOR_MODE_MAP',
-            SET_CURR_DDL_ALTER_SPEC: 'query/SET_CURR_DDL_ALTER_SPEC',
-            PATCH_TBL_CREATION_INFO_MAP: 'query/PATCH_TBL_CREATION_INFO_MAP',
+            SET_CURR_EDITOR_MODE_MAP: 'editor/SET_CURR_EDITOR_MODE_MAP',
+            SET_CURR_DDL_ALTER_SPEC: 'editor/SET_CURR_DDL_ALTER_SPEC',
+            PATCH_TBL_CREATION_INFO_MAP: 'editor/PATCH_TBL_CREATION_INFO_MAP',
         }),
         filter(item, search, textKey) {
             return item[textKey].indexOf(search) > -1

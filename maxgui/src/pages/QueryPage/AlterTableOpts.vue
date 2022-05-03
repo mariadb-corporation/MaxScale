@@ -136,9 +136,9 @@ export default {
     },
     computed: {
         ...mapState({
-            charset_collation_map: state => state.query.charset_collation_map,
-            engines: state => state.query.engines,
-            def_db_charset_map: state => state.query.def_db_charset_map,
+            charset_collation_map: state => state.editor.charset_collation_map,
+            engines: state => state.editor.engines,
+            def_db_charset_map: state => state.editor.def_db_charset_map,
         }),
         tableOptsData: {
             get() {

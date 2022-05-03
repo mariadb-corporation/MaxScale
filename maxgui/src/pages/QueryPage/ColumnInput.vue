@@ -140,7 +140,7 @@ export default {
     },
     computed: {
         ...mapGetters({
-            getTblCreationInfo: 'query/getTblCreationInfo',
+            getTblCreationInfo: 'editor/getTblCreationInfo',
         }),
         initialCellData() {
             return this.$typy(

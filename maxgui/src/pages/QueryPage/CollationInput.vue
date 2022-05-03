@@ -53,7 +53,7 @@ export default {
     },
     computed: {
         ...mapState({
-            charset_collation_map: state => state.query.charset_collation_map,
+            charset_collation_map: state => state.editor.charset_collation_map,
         }),
         collation: {
             get() {
