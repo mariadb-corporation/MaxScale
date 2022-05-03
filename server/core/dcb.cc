@@ -1360,8 +1360,8 @@ uint32_t DCB::process_events(uint32_t events)
 
             if (m_incomplete_read)
             {
-                // If 'max_read_amount' has been specified, but 'always_read_via_epoll' is false,
-                // then there may be a fake EPOLLIN event that must be removed.
+                // If 'max_read_amount' has been specified, there may be a fake EPOLLIN event
+                // that now must be removed.
                 m_triggered_event &= ~EPOLLIN;
 
                 rc |= mxb::poll_action::INCOMPLETE_READ;
@@ -1538,24 +1538,7 @@ void DCB::add_event(uint32_t ev)
 
 void DCB::trigger_read_event()
 {
-    if (mxs::Config::get().always_read_via_epoll)
-    {
-        if (this == this_thread.current_dcb)
-        {
-            // We can do this only if we are in the middle of handling epoll events
-            // for this DCB...
-            m_incomplete_read = true;
-        }
-        else
-        {
-            // ...otherwise we have to deliver the event directly via the loop.
-            add_event_via_loop(EPOLLIN);
-        }
-    }
-    else
-    {
-        add_event(EPOLLIN);
-    }
+    add_event(EPOLLIN);
 }
 
 void DCB::trigger_hangup_event()

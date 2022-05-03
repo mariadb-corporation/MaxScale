@@ -212,7 +212,6 @@ public:
     bool         gui;                           /**< Enable admin GUI */
     bool         secure_gui;                    /**< Serve GUI only over HTTPS */
     std::string  debug;
-    bool         always_read_via_epoll;         /**< Always return to epoll_wait() after a read. */
     int64_t      max_read_amount;               /**< Max amount read before return to epoll_wait. */
 
     // The following will not be configured via the configuration mechanism.
@@ -313,7 +312,6 @@ private:
     static config::ParamBool                            s_gui;
     static config::ParamBool                            s_secure_gui;
     static config::ParamString                          s_debug;
-    static config::ParamBool                            s_always_read_via_epoll;
     static config::ParamSize                            s_max_read_amount;
 };
 }

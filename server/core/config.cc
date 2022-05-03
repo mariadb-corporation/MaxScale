@@ -85,7 +85,6 @@ constexpr char CN_ADMIN_SSL_CA_CERT[] = "admin_ssl_ca_cert";
 constexpr char CN_ADMIN_SSL_CERT[] = "admin_ssl_cert";
 constexpr char CN_ADMIN_SSL_KEY[] = "admin_ssl_key";
 constexpr char CN_ADMIN_SSL_VERSION[] = "admin_ssl_version";
-constexpr char CN_ALWAYS_READ_VIA_EPOLL[] = "always_read_via_epoll";
 constexpr char CN_AUTO[] = "auto";
 constexpr char CN_DEBUG[] = "debug";
 constexpr char CN_DUMP_LAST_STATEMENTS[] = "dump_last_statements";
@@ -620,12 +619,6 @@ config::ParamString Config::s_debug(
     "Debug options",
     "");
 
-config::ParamBool Config::s_always_read_via_epoll(
-    &Config::s_specification,
-    CN_ALWAYS_READ_VIA_EPOLL,
-    "Specifies whether control should always be returned to epoll_wait() after a read.",
-    false);
-
 config::ParamSize Config::s_max_read_amount(
     &Config::s_specification,
     CN_MAX_READ_AMOUNT,
@@ -812,7 +805,6 @@ Config::Config(int argc, char** argv)
     add_native(&Config::gui, &s_gui);
     add_native(&Config::secure_gui, &s_secure_gui);
     add_native(&Config::debug, &s_debug);
-    add_native(&Config::always_read_via_epoll, &s_always_read_via_epoll);
     add_native(&Config::max_read_amount, &s_max_read_amount);
 
     /* get release string */
