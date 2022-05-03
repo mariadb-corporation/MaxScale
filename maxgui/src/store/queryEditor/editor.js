@@ -31,7 +31,13 @@ export function editorStatesToBeSynced() {
  */
 function memStates() {
     return {
-        curr_editor_mode_map: {},
+        curr_editor_mode_map: {}, // each key holds a string value. Check SQL_EDITOR_MODES
+        /**
+         * each key holds these properties:
+         * altered_active_node?: object
+         * loading_tbl_creation_info?: boolean
+         * data:{ table_opts_data?: object, cols_opts_data?: object }
+         */
         tbl_creation_info_map: {},
     }
 }
@@ -48,6 +54,17 @@ export default {
         def_db_charset_map: new Map(),
         engines: [],
         ...memStates(),
+        /**
+         * Below is flat wke states. The value
+         * of each state is replicated from the current active
+         * worksheet in persisted worksheets_arr.
+         * Using this to reduce unnecessary recomputation instead of
+         * directly accessing the value in worksheets_arr because vuex getters
+         * or vue.js computed properties will recompute when a property
+         * is changed in worksheets_arr then causes other properties also
+         * have to recompute. A better method would be to create relational
+         * keys between modules, but for now, stick with the old approach.
+         */
         ...editorStatesToBeSynced(),
     },
     mutations: {

@@ -31,8 +31,8 @@ export function connStatesToBeSynced() {
  */
 function memStates() {
     return {
-        is_conn_busy_map: {},
-        lost_cnn_err_msg_obj_map: {},
+        is_conn_busy_map: {}, // each key holds a boolean value.
+        lost_cnn_err_msg_obj_map: {}, // each key holds an object value receives from api.
     }
 }
 export const mutationTypesMap = Object.keys(memStates()).reduce(
@@ -47,6 +47,17 @@ export default {
         rc_target_names_map: {},
         pre_select_conn_rsrc: null,
         ...memStates(),
+        /**
+         * Below is flat wke states. The value
+         * of each state is replicated from the current active
+         * worksheet in persisted worksheets_arr.
+         * Using this to reduce unnecessary recomputation instead of
+         * directly accessing the value in worksheets_arr because vuex getters
+         * or vue.js computed properties will recompute when a property
+         * is changed in worksheets_arr then causes other properties also
+         * have to recompute. A better method would be to create relational
+         * keys between modules, but for now, stick with the old approach.
+         */
         ...connStatesToBeSynced(),
     },
     mutations: {

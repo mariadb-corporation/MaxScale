@@ -31,10 +31,31 @@ export function resultStatesToBeSynced() {
  */
 function memStates() {
     return {
+        /**
+         * each key holds these properties:
+         * request_sent_time?: number
+         * total_duration?: number
+         * loading_prvw_data?: boolean,
+         * data? object
+         */
         prvw_data_map: {},
+        /**
+         * each key holds these properties:
+         * request_sent_time?: number
+         * total_duration?: number
+         * loading_prvw_data_details?: boolean,
+         * data? object
+         */
         prvw_data_details_map: {},
+        /**
+         * each key holds these properties:
+         * request_sent_time?: number
+         * total_duration?: number
+         * loading_query_result?: boolean,
+         * results? object. TODO: rename results to data
+         */
         query_results_map: {},
-        is_stopping_query_map: {},
+        is_stopping_query_map: {}, // each key holds a boolean value
     }
 }
 const keysWithPrefixSet = ['is_stopping_query_map']
@@ -45,6 +66,17 @@ export default {
     namespaced: true,
     state: {
         ...memStates(),
+        /**
+         * Below is flat wke states. The value
+         * of each state is replicated from the current active
+         * worksheet in persisted worksheets_arr.
+         * Using this to reduce unnecessary recomputation instead of
+         * directly accessing the value in worksheets_arr because vuex getters
+         * or vue.js computed properties will recompute when a property
+         * is changed in worksheets_arr then causes other properties also
+         * have to recompute. A better method would be to create relational
+         * keys between modules, but for now, stick with the old approach.
+         */
         ...resultStatesToBeSynced(),
     },
     mutations: {
@@ -217,24 +249,8 @@ export default {
          * This ensure sub-tabs in Data Preview tab are generated with fresh data
          */
         clearDataPreview({ state, commit }) {
-            commit(`PATCH_PRVW_DATA_MAP`, {
-                id: state.active_wke_id,
-                payload: {
-                    loading_prvw_data: false,
-                    data: {},
-                    request_sent_time: 0,
-                    total_duration: 0,
-                },
-            })
-            commit(`PATCH_PRVW_DATA_DETAILS_MAP`, {
-                id: state.active_wke_id,
-                payload: {
-                    loading_prvw_data_details: false,
-                    data: {},
-                    request_sent_time: 0,
-                    total_duration: 0,
-                },
-            })
+            commit(`PATCH_PRVW_DATA_MAP`, { id: state.active_wke_id })
+            commit(`PATCH_PRVW_DATA_DETAILS_MAP`, { id: state.active_wke_id })
         },
     },
     getters: {
