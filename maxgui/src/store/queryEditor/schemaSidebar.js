@@ -39,9 +39,10 @@ function memStates() {
         exe_stmt_result_map: {},
     }
 }
-export function schemaSidebarMemStateMutationTypeMap() {
-    return Object.keys(memStates()).reduce((res, key) => ({ ...res, [key]: 'PATCH' }), {})
-}
+export const mutationTypesMap = Object.keys(memStates()).reduce(
+    (res, key) => ({ ...res, [key]: 'PATCH' }),
+    {}
+)
 function genNodeKey(scope) {
     return scope.vue.$help.lodash.uniqueId('node_key_')
 }
@@ -52,9 +53,7 @@ export default {
         ...sidebarStatesToBeSynced(),
     },
     mutations: {
-        ...queryHelper.memStatesMutationCreator({
-            mutationTypesMap: schemaSidebarMemStateMutationTypeMap(),
-        }),
+        ...queryHelper.memStatesMutationCreator(mutationTypesMap),
         ...queryHelper.syncedStateMutationsCreator(sidebarStatesToBeSynced()),
         ...queryHelper.syncWkeToFlatStateMutationCreator(sidebarStatesToBeSynced()),
     },

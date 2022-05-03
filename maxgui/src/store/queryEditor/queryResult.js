@@ -37,12 +37,10 @@ function memStates() {
         is_stopping_query_map: {},
     }
 }
-export function queryResultMemStateMutationTypeMap() {
-    const keysWithPrefixSet = ['is_stopping_query_map']
-    return Object.keys(memStates()).reduce((res, key) => {
-        return { ...res, [key]: keysWithPrefixSet.includes(key) ? 'SET' : 'PATCH' }
-    }, {})
-}
+const keysWithPrefixSet = ['is_stopping_query_map']
+export const mutationTypesMap = Object.keys(memStates()).reduce((res, key) => {
+    return { ...res, [key]: keysWithPrefixSet.includes(key) ? 'SET' : 'PATCH' }
+}, {})
 export default {
     namespaced: true,
     state: {
@@ -50,9 +48,7 @@ export default {
         ...resultStatesToBeSynced(),
     },
     mutations: {
-        ...queryHelper.memStatesMutationCreator({
-            mutationTypesMap: queryResultMemStateMutationTypeMap(),
-        }),
+        ...queryHelper.memStatesMutationCreator(mutationTypesMap),
         ...queryHelper.syncedStateMutationsCreator(resultStatesToBeSynced()),
         ...queryHelper.syncWkeToFlatStateMutationCreator(resultStatesToBeSynced()),
     },

@@ -12,11 +12,11 @@
  */
 import { uniqueId } from 'utils/helpers'
 import queryHelper from './queryHelper'
-import { connStatesToBeSynced, connMemStateMutationTypeMap } from './queryConn'
-import { sidebarStatesToBeSynced, schemaSidebarMemStateMutationTypeMap } from './schemaSidebar'
-import { editorStatesToBeSynced, editorMemStateMutationTypeMap } from './editor'
-import { resultStatesToBeSynced, queryResultMemStateMutationTypeMap } from './queryResult'
-
+import { connStatesToBeSynced } from './queryConn'
+import { sidebarStatesToBeSynced } from './schemaSidebar'
+import { editorStatesToBeSynced } from './editor'
+import { resultStatesToBeSynced } from './queryResult'
+import memStateModuleMutations from './memStateModuleMutations'
 /**
  * @returns Return a new worksheet state with unique id
  */
@@ -162,35 +162,18 @@ export default {
             commit('DELETE_WKE', wkeIdx)
         },
         /**
-         * TODO: DRY this
          * Release memory for target wke when delete a worksheet or disconnect a
          * connection from a worksheet
          * @param {String} param.wke_id - worksheet id.
          */
         releaseQueryModulesMem({ commit }, wke_id) {
-            queryHelper.releaseMemory({
-                namespace: 'queryResult',
-                commit,
-                wke_id,
-                mutationTypesMap: queryResultMemStateMutationTypeMap(),
-            })
-            queryHelper.releaseMemory({
-                namespace: 'queryConn',
-                commit,
-                wke_id,
-                mutationTypesMap: connMemStateMutationTypeMap(),
-            })
-            queryHelper.releaseMemory({
-                namespace: 'schemaSidebar',
-                commit,
-                wke_id,
-                mutationTypesMap: schemaSidebarMemStateMutationTypeMap(),
-            })
-            queryHelper.releaseMemory({
-                namespace: 'editor',
-                commit,
-                wke_id,
-                mutationTypesMap: editorMemStateMutationTypeMap(),
+            Object.keys(memStateModuleMutations).forEach(namespace => {
+                queryHelper.releaseMemory({
+                    namespace,
+                    commit,
+                    wke_id,
+                    mutationTypesMap: memStateModuleMutations[namespace],
+                })
             })
         },
     },

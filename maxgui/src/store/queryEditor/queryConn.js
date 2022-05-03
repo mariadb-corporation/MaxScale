@@ -26,7 +26,7 @@ export function connStatesToBeSynced() {
  * multiple worksheet's data in memory.
  * Use `queryHelper.memStatesMutationCreator` to create corresponding mutations
  * Some keys will have mutation name starts with either `SET` or `PATCH`
- * prefix. Check connMemStateMutationTypeMap for more info
+ * prefix. Check mutationTypesMap for more info
  * @returns {Object} - returns states that are stored in memory
  */
 function memStates() {
@@ -35,9 +35,10 @@ function memStates() {
         lost_cnn_err_msg_obj_map: {},
     }
 }
-export function connMemStateMutationTypeMap() {
-    return Object.keys(memStates()).reduce((res, key) => ({ ...res, [key]: 'SET' }), {})
-}
+export const mutationTypesMap = Object.keys(memStates()).reduce(
+    (res, key) => ({ ...res, [key]: 'SET' }),
+    {}
+)
 export default {
     namespaced: true,
     state: {
@@ -49,9 +50,7 @@ export default {
         ...connStatesToBeSynced(),
     },
     mutations: {
-        ...queryHelper.memStatesMutationCreator({
-            mutationTypesMap: connMemStateMutationTypeMap(),
-        }),
+        ...queryHelper.memStatesMutationCreator(mutationTypesMap),
         ...queryHelper.syncedStateMutationsCreator(connStatesToBeSynced()),
         ...queryHelper.syncWkeToFlatStateMutationCreator(connStatesToBeSynced()),
         SET_IS_VALIDATING_CONN(state, payload) {

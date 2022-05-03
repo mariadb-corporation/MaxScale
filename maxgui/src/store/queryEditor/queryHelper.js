@@ -314,7 +314,7 @@ function syncWkeToFlatStateMutationCreator(statesToBeSynced) {
  * @param {Object} param.mutationTypesMap - mutation type keys map for states storing in memory. Either SET or PATCH
  * @returns {Object} - returns mutations for provided keys from mutationTypesMap
  */
-function memStatesMutationCreator({ mutationTypesMap }) {
+function memStatesMutationCreator(mutationTypesMap) {
     return Object.keys(mutationTypesMap).reduce((mutations, stateName) => {
         const mutationType = mutationTypesMap[stateName]
         return {

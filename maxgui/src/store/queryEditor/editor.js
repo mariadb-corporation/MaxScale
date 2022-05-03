@@ -26,7 +26,7 @@ export function editorStatesToBeSynced() {
  * multiple worksheet's data in memory.
  * Use `queryHelper.memStatesMutationCreator` to create corresponding mutations
  * Some keys will have mutation name starts with either `SET` or `PATCH`
- * prefix. Check editorMemStateMutationTypeMap for more info
+ * prefix. Check mutationTypesMap for more info
  * @returns {Object} - returns states that are stored in memory
  */
 function memStates() {
@@ -35,12 +35,11 @@ function memStates() {
         tbl_creation_info_map: {},
     }
 }
-export function editorMemStateMutationTypeMap() {
-    const keysWithPrefixSet = ['curr_editor_mode_map']
-    return Object.keys(memStates()).reduce((res, key) => {
-        return { ...res, [key]: keysWithPrefixSet.includes(key) ? 'SET' : 'PATCH' }
-    }, {})
-}
+const keysWithPrefixSet = ['curr_editor_mode_map']
+export const mutationTypesMap = Object.keys(memStates()).reduce((res, key) => {
+    return { ...res, [key]: keysWithPrefixSet.includes(key) ? 'SET' : 'PATCH' }
+}, {})
+
 export default {
     namespaced: true,
     state: {
@@ -52,9 +51,7 @@ export default {
         ...editorStatesToBeSynced(),
     },
     mutations: {
-        ...queryHelper.memStatesMutationCreator({
-            mutationTypesMap: editorMemStateMutationTypeMap(),
-        }),
+        ...queryHelper.memStatesMutationCreator(mutationTypesMap),
         ...queryHelper.syncedStateMutationsCreator(editorStatesToBeSynced()),
         ...queryHelper.syncWkeToFlatStateMutationCreator(editorStatesToBeSynced()),
         SET_SELECTED_QUERY_TXT(state, payload) {
