@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { uniqBy, uniqueId } from 'utils/helpers'
+import { uniqBy } from 'utils/helpers'
 import queryHelper from './queryHelper'
 /**
  * @returns Initial sidebar tree schema related states
@@ -42,7 +42,9 @@ function memStates() {
 export function schemaSidebarMemStateMutationTypeMap() {
     return Object.keys(memStates()).reduce((res, key) => ({ ...res, [key]: 'PATCH' }), {})
 }
-
+function genNodeKey(scope) {
+    return scope.vue.$help.lodash.uniqueId('node_key_')
+}
 export default {
     namespaced: true,
     state: {
@@ -107,7 +109,7 @@ export default {
                     })
                     dataRows.forEach(row => {
                         db_tree.push({
-                            key: uniqueId('node_key_'),
+                            key: genNodeKey(this),
                             type: SCHEMA,
                             name: row.SCHEMA_NAME,
                             id: row.SCHEMA_NAME,
@@ -117,7 +119,7 @@ export default {
                             isSys: SYS_S.includes(row.SCHEMA_NAME.toLowerCase()),
                             children: [
                                 {
-                                    key: uniqueId('node_key_'),
+                                    key: genNodeKey(this),
                                     type: TABLES,
                                     name: TABLES,
                                     // only use to identify active node
@@ -127,7 +129,7 @@ export default {
                                     children: [],
                                 },
                                 {
-                                    key: uniqueId('node_key_'),
+                                    key: genNodeKey(this),
                                     type: SPS,
                                     name: SPS,
                                     // only use to identify active node
@@ -192,7 +194,7 @@ export default {
                 let cmpList = []
                 dataRows.forEach(row => {
                     let grandChildNode = {
-                        key: uniqueId('node_key_'),
+                        key: genNodeKey(this),
                         type: grandChildNodeType,
                         name: row[rowName],
                         id: `${dbName}.${row[rowName]}`,
@@ -206,7 +208,7 @@ export default {
                         grandChildNode.canBeHighlighted = true
                         grandChildNode.children = [
                             {
-                                key: uniqueId('node_key_'),
+                                key: genNodeKey(this),
                                 type: COLS,
                                 name: COLS,
                                 // only use to identify active node
@@ -216,7 +218,7 @@ export default {
                                 level: 3,
                             },
                             {
-                                key: uniqueId('node_key_'),
+                                key: genNodeKey(this),
                                 type: TRIGGERS,
                                 name: TRIGGERS,
                                 // only use to identify active node
@@ -283,7 +285,7 @@ export default {
 
                 dataRows.forEach(row => {
                     gch.push({
-                        key: uniqueId('node_key_'),
+                        key: genNodeKey(this),
                         type: grandChildNodeType,
                         name: row[rowName],
                         id: `${tblName}.${row[rowName]}`,

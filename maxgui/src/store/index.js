@@ -20,10 +20,7 @@ import monitor from './monitor'
 import filter from './filter'
 import session from './session'
 import listener from './listener'
-import query, { defWorksheetState } from './query'
-import queryConn from './queryConn'
-import editor from './editor'
-import schemaSidebar from './schemaSidebar'
+import queryEditorModules, { getDefWorksheetState } from './queryEditor'
 import persisted from './persisted'
 import visualization from './visualization'
 import { APP_CONFIG } from 'utils/constants'
@@ -182,10 +179,7 @@ const store = new Vuex.Store({
         service,
         session,
         user,
-        query,
-        queryConn,
-        editor,
-        schemaSidebar,
+        ...queryEditorModules,
         persisted,
         visualization,
     },
@@ -196,7 +190,7 @@ let initialState = Vue.prototype.$help.lodash.cloneDeep(store.state)
 /**
  * A workaround to get fresh initial states because below states are stored in localStorage
  */
-initialState.query.worksheets_arr = [defWorksheetState()]
+initialState.query.worksheets_arr = [getDefWorksheetState()]
 initialState.queryConn.sql_conns = {}
 initialState.user.logged_in_user = {}
 /** for state hydration*/
