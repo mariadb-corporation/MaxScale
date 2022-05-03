@@ -41,7 +41,7 @@ export default {
     name: 'reconn-dialog',
     computed: {
         ...mapState({
-            active_wke_id: state => state.query.active_wke_id,
+            active_wke_id: state => state.wke.active_wke_id,
             active_sql_conn: state => state.queryConn.active_sql_conn,
         }),
         ...mapGetters({

@@ -245,14 +245,14 @@ export default {
     computed: {
         ...mapState({
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
-            is_fullscreen: state => state.query.is_fullscreen,
+            is_fullscreen: state => state.wke.is_fullscreen,
             active_sql_conn: state => state.queryConn.active_sql_conn,
             active_db: state => state.schemaSidebar.active_db,
             query_confirm_flag: state => state.persisted.query_confirm_flag,
             show_vis_sidebar: state => state.queryResult.show_vis_sidebar,
             query_txt: state => state.editor.query_txt,
             selected_query_txt: state => state.editor.selected_query_txt,
-            active_wke_id: state => state.query.active_wke_id,
+            active_wke_id: state => state.wke.active_wke_id,
         }),
         ...mapGetters({
             getIsConnBusy: 'queryConn/getIsConnBusy',

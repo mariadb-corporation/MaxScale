@@ -1,4 +1,4 @@
-import query, { defWorksheetState } from './query'
+import wke, { defWorksheetState } from './wke'
 import queryConn from './queryConn'
 import editor from './editor'
 import schemaSidebar from './schemaSidebar'
@@ -7,4 +7,4 @@ import queryResult from './queryResult'
 export function getDefWorksheetState() {
     return defWorksheetState()
 }
-export default { query, queryConn, editor, schemaSidebar, queryResult }
+export default { wke, queryConn, editor, schemaSidebar, queryResult }

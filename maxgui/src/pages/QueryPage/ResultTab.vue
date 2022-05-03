@@ -93,12 +93,10 @@
                                 v-on="$listeners"
                             />
                             <div v-else :style="{ height: `${dynDim.height - headerHeight}px` }">
-                                <template v-for="(v, key) in resSet">
-                                    <div :key="key">
-                                        <b>{{ key }}:</b>
-                                        <span class="d-inline-block ml-4">{{ v }}</span>
-                                    </div>
-                                </template>
+                                <div v-for="(v, key) in resSet" :key="key">
+                                    <b>{{ key }}:</b>
+                                    <span class="d-inline-block ml-4">{{ v }}</span>
+                                </div>
                             </div>
                         </template>
                     </keep-alive>
@@ -149,7 +147,7 @@ export default {
     },
     computed: {
         ...mapState({
-            active_wke_id: state => state.query.active_wke_id,
+            active_wke_id: state => state.wke.active_wke_id,
         }),
         ...mapGetters({
             getLoadingQueryResult: 'queryResult/getLoadingQueryResult',

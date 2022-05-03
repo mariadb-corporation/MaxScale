@@ -54,10 +54,7 @@ export default {
             mutationTypesMap: queryResultMemStateMutationTypeMap(),
         }),
         ...queryHelper.syncedStateMutationsCreator(resultStatesToBeSynced()),
-        ...queryHelper.syncWkeToFlatStateMutationCreator({
-            statesToBeSynced: resultStatesToBeSynced(),
-            suffix: 'QUERY_RESULT',
-        }),
+        ...queryHelper.syncWkeToFlatStateMutationCreator(resultStatesToBeSynced()),
     },
     actions: {
         /**
@@ -65,7 +62,7 @@ export default {
          */
         async fetchPrvw({ rootState, commit, dispatch }, { tblId, prvwMode }) {
             const active_sql_conn = rootState.queryConn.active_sql_conn
-            const active_wke_id = rootState.query.active_wke_id
+            const active_wke_id = rootState.wke.active_wke_id
             const request_sent_time = new Date().valueOf()
             try {
                 commit(`PATCH_${prvwMode}_MAP`, {
@@ -129,7 +126,7 @@ export default {
          * @param {String} query - SQL query string
          */
         async fetchQueryResult({ commit, dispatch, rootState }, query) {
-            const active_wke_id = rootState.query.active_wke_id
+            const active_wke_id = rootState.wke.active_wke_id
             const active_sql_conn = rootState.queryConn.active_sql_conn
             const request_sent_time = new Date().valueOf()
             try {
@@ -190,7 +187,7 @@ export default {
         },
         async stopQuery({ commit, rootGetters, rootState }) {
             const active_sql_conn = rootState.queryConn.active_sql_conn
-            const active_wke_id = rootState.query.active_wke_id
+            const active_wke_id = rootState.wke.active_wke_id
             try {
                 commit('SET_IS_STOPPING_QUERY_MAP', { id: active_wke_id, payload: true })
                 const {
@@ -246,13 +243,13 @@ export default {
     },
     getters: {
         getQueryResult: (state, getters, rootState) =>
-            state.query_results_map[rootState.query.active_wke_id] || {},
+            state.query_results_map[rootState.wke.active_wke_id] || {},
         getLoadingQueryResult: (state, getters) => {
             const { loading_query_result = false } = getters.getQueryResult
             return loading_query_result
         },
         getIsStoppingQuery: (state, getters, rootState) =>
-            state.is_stopping_query_map[rootState.query.active_wke_id] || false,
+            state.is_stopping_query_map[rootState.wke.active_wke_id] || false,
         getResults: (state, getters) => {
             const { results = {} } = getters.getQueryResult
             return results
@@ -274,7 +271,7 @@ export default {
         // preview data getters
         getPrvwData: (state, getters, rootState) => mode => {
             let map = state[`${mode.toLowerCase()}_map`]
-            if (map) return map[rootState.query.active_wke_id] || {}
+            if (map) return map[rootState.wke.active_wke_id] || {}
             return {}
         },
         getLoadingPrvw: (state, getters) => mode => {

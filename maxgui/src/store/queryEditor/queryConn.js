@@ -53,10 +53,7 @@ export default {
             mutationTypesMap: connMemStateMutationTypeMap(),
         }),
         ...queryHelper.syncedStateMutationsCreator(connStatesToBeSynced()),
-        ...queryHelper.syncWkeToFlatStateMutationCreator({
-            statesToBeSynced: connStatesToBeSynced(),
-            suffix: 'QUERY_CONN',
-        }),
+        ...queryHelper.syncWkeToFlatStateMutationCreator(connStatesToBeSynced()),
         SET_IS_VALIDATING_CONN(state, payload) {
             state.is_validating_conn = payload
         },
@@ -100,7 +97,7 @@ export default {
         ) {
             if (!silentValidation) commit('SET_IS_VALIDATING_CONN', true)
             try {
-                const active_wke_id = rootState.query.active_wke_id
+                const active_wke_id = rootState.wke.active_wke_id
                 const res = await this.$queryHttp.get(`/sql/`)
                 const resConnMap = this.vue.$help.lodash.keyBy(res.data.data, 'id')
                 const resConnIds = Object.keys(resConnMap)
@@ -144,7 +141,7 @@ export default {
             if (!silentValidation) commit('SET_IS_VALIDATING_CONN', false)
         },
         async openConnect({ dispatch, commit, rootState }, { body, resourceType }) {
-            const active_wke_id = rootState.query.active_wke_id
+            const active_wke_id = rootState.wke.active_wke_id
             try {
                 const res = await this.$queryHttp.post(`/sql?persist=yes&max-age=86400`, body)
                 if (res.status === 201) {
@@ -289,32 +286,31 @@ export default {
          * clear the state of the worksheet having that connection to its initial state
          */
         resetWkeStates({ state, commit, rootState, dispatch }, cnctId) {
-            const targetWke = rootState.query.worksheets_arr.find(
+            const targetWke = rootState.wke.worksheets_arr.find(
                 wke => wke.active_sql_conn.id === cnctId
             )
             if (targetWke) {
-                dispatch('query/releaseQueryModulesMem', targetWke.id, { root: true })
-                commit('query/REFRESH_WKE', targetWke, { root: true })
+                dispatch('wke/releaseQueryModulesMem', targetWke.id, { root: true })
+                commit('wke/REFRESH_WKE', targetWke, { root: true })
                 /**
                  * if connection id to be deleted is equal to current connected
                  * resource of active worksheet, sync wke states to flat states
                  */
                 if (state.active_sql_conn.id === cnctId) {
-                    const freshWke = rootState.query.worksheets_arr.find(
+                    const freshWke = rootState.wke.worksheets_arr.find(
                         wke => wke.id === targetWke.id
                     )
-                    commit('query/SYNC_WKE_TO_QUERY_MODULE', freshWke, { root: true })
-                    commit('SYNC_WKE_TO_QUERY_CONN_MODULE', freshWke)
-                    commit('schemaSidebar/SYNC_WKE_TO_SCHEMA_SIDEBAR_MODULE', freshWke, {
-                        root: true,
-                    })
+                    commit('wke/SYNC_WITH_WKE', freshWke, { root: true })
+                    commit('SYNC_WITH_WKE', freshWke)
+                    commit('schemaSidebar/SYNC_WITH_WKE', freshWke, { root: true })
+                    commit('editor/SYNC_WITH_WKE', freshWke, { root: true })
                 }
             }
         },
         // Reset all when there is no active connections
         resetAllWkeStates({ rootState, commit }) {
-            for (const targetWke of rootState.query.worksheets_arr) {
-                commit('query/REFRESH_WKE', targetWke, { root: true })
+            for (const targetWke of rootState.wke.worksheets_arr) {
+                commit('wke/REFRESH_WKE', targetWke, { root: true })
             }
         },
     },
@@ -329,10 +325,10 @@ export default {
             return {}
         },
         getIsConnBusy: (state, getters, rootState) => {
-            return state.is_conn_busy_map[rootState.query.active_wke_id] || false
+            return state.is_conn_busy_map[rootState.wke.active_wke_id] || false
         },
         getLostCnnErrMsgObj: (state, getters, rootState) => {
-            return state.lost_cnn_err_msg_obj_map[rootState.query.active_wke_id] || {}
+            return state.lost_cnn_err_msg_obj_map[rootState.wke.active_wke_id] || {}
         },
     },
 }

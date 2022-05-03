@@ -107,7 +107,7 @@ function http(store) {
 }
 
 function updateIsQueryingMap({ store, value }) {
-    const active_wke_id = store.state.query.active_wke_id
+    const active_wke_id = store.state.wke.active_wke_id
     if (active_wke_id)
         store.commit('queryConn/SET_IS_CONN_BUSY_MAP', {
             id: active_wke_id,
@@ -127,7 +127,7 @@ function analyzeRes({ res, store }) {
         return store.state.app_config.MARIADB_NET_ERRNO.includes(errno)
     })
     if (lostCnnErrMsgs.length) {
-        const active_wke_id = store.state.query.active_wke_id
+        const active_wke_id = store.state.wke.active_wke_id
         store.commit('queryConn/SET_LOST_CNN_ERR_MSG_OBJ_MAP', {
             id: active_wke_id,
             payload: lostCnnErrMsgs[0],

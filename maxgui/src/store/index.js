@@ -46,7 +46,7 @@ const store = new Vuex.Store({
             key: 'maxgui',
             paths: [
                 'persisted',
-                'query.worksheets_arr',
+                'wke.worksheets_arr',
                 'queryConn.sql_conns',
                 'user.logged_in_user',
             ],
@@ -190,7 +190,7 @@ let initialState = Vue.prototype.$help.lodash.cloneDeep(store.state)
 /**
  * A workaround to get fresh initial states because below states are stored in localStorage
  */
-initialState.query.worksheets_arr = [getDefWorksheetState()]
+initialState.wke.worksheets_arr = [getDefWorksheetState()]
 initialState.queryConn.sql_conns = {}
 initialState.user.logged_in_user = {}
 /** for state hydration*/

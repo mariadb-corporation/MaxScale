@@ -81,7 +81,7 @@ export default {
         ...mapState({
             SQL_DDL_ALTER_SPECS: state => state.app_config.SQL_DDL_ALTER_SPECS,
             curr_ddl_alter_spec: state => state.editor.curr_ddl_alter_spec,
-            active_wke_id: state => state.query.active_wke_id,
+            active_wke_id: state => state.wke.active_wke_id,
         }),
         ...mapGetters({
             getTblCreationInfo: 'editor/getTblCreationInfo',

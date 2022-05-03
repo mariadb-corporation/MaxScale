@@ -161,7 +161,7 @@ export default {
             engines: state => state.editor.engines,
             charset_collation_map: state => state.editor.charset_collation_map,
             def_db_charset_map: state => state.editor.def_db_charset_map,
-            active_wke_id: state => state.query.active_wke_id,
+            active_wke_id: state => state.wke.active_wke_id,
         }),
         ...mapGetters({
             getLoadingDbTree: 'schemaSidebar/getLoadingDbTree',

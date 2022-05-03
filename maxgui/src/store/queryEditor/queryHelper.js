@@ -236,9 +236,9 @@ function mutate_flat_states({ moduleState, data }) {
  * @param {Object} payload.active_wke_id - active_wke_id
  */
 function sync_to_worksheets_arr({ scope, data, active_wke_id }) {
-    const worksheets_arr = scope.state.query.worksheets_arr
+    const worksheets_arr = scope.state.wke.worksheets_arr
     const idx = worksheets_arr.findIndex(wke => wke.id === active_wke_id)
-    scope.state.query.worksheets_arr = scope.vue.$help.immutableUpdate(worksheets_arr, {
+    scope.state.wke.worksheets_arr = scope.vue.$help.immutableUpdate(worksheets_arr, {
         [idx]: { $set: { ...worksheets_arr[idx], ...data } },
     })
 }
@@ -284,20 +284,17 @@ function syncedStateMutationsCreator(statesToBeSynced) {
 /**
  * @public
  * This function helps to generate a mutation to sync wke properties to flat states
- * The name of mutation follows this pattern SYNC_WKE_TO_suffix.
- * e.g. Mutation for query module is SYNC_WKE_TO_QUERY_MODULE
- * @param {Object} param.statesToBeSynced
- * @param {String} param.suffix - suffix for the mutation.
+ * @param {Object} statesToBeSynced
  * @returns {Object} - returns vuex mutation
  */
-function syncWkeToFlatStateMutationCreator({ statesToBeSynced, suffix }) {
+function syncWkeToFlatStateMutationCreator(statesToBeSynced) {
     return {
         /**
          * Sync wke properties to flat states
          * @param {Object} state - vuex state
          * @param {Object} wke - wke object
          */
-        [`SYNC_WKE_TO_${suffix}_MODULE`]: function(state, wke) {
+        SYNC_WITH_WKE: function(state, wke) {
             mutate_flat_states({
                 moduleState: state,
                 data: this.vue.$help.lodash.pickBy(wke, (v, key) =>

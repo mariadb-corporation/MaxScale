@@ -139,7 +139,7 @@ export default {
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             curr_query_mode: state => state.queryResult.curr_query_mode,
             active_sql_conn: state => state.queryConn.active_sql_conn,
-            active_wke_id: state => state.query.active_wke_id,
+            active_wke_id: state => state.wke.active_wke_id,
         }),
         ...mapGetters({
             getPrvwDataRes: 'queryResult/getPrvwDataRes',

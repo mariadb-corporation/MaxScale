@@ -136,8 +136,8 @@ export default {
             active_sql_conn: state => state.queryConn.active_sql_conn,
             conn_err_state: state => state.queryConn.conn_err_state,
             pre_select_conn_rsrc: state => state.queryConn.pre_select_conn_rsrc,
-            worksheets_arr: state => state.query.worksheets_arr,
-            active_wke_id: state => state.query.active_wke_id,
+            worksheets_arr: state => state.wke.worksheets_arr,
+            active_wke_id: state => state.wke.active_wke_id,
             QUERY_CONN_BINDING_TYPES: state => state.app_config.QUERY_CONN_BINDING_TYPES,
         }),
         ...mapGetters({
@@ -211,7 +211,7 @@ export default {
             openConnect: 'queryConn/openConnect',
             disconnect: 'queryConn/disconnect',
             initialFetch: 'schemaSidebar/initialFetch',
-            updateRoute: 'query/updateRoute',
+            updateRoute: 'wke/updateRoute',
         }),
         ...mapMutations({
             SET_ACTIVE_SQL_CONN: 'queryConn/SET_ACTIVE_SQL_CONN',

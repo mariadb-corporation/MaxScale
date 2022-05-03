@@ -56,10 +56,7 @@ export default {
             mutationTypesMap: schemaSidebarMemStateMutationTypeMap(),
         }),
         ...queryHelper.syncedStateMutationsCreator(sidebarStatesToBeSynced()),
-        ...queryHelper.syncWkeToFlatStateMutationCreator({
-            statesToBeSynced: sidebarStatesToBeSynced(),
-            suffix: 'SCHEMA_SIDEBAR',
-        }),
+        ...queryHelper.syncWkeToFlatStateMutationCreator(sidebarStatesToBeSynced()),
     },
     actions: {
         /**
@@ -71,12 +68,12 @@ export default {
             dispatch('changeWkeName', chosenConn.name)
         },
         changeWkeName({ commit, rootState, rootGetters }, name) {
-            let newWke = this.vue.$help.lodash.cloneDeep(rootGetters['query/getActiveWke'])
+            let newWke = this.vue.$help.lodash.cloneDeep(rootGetters['wke/getActiveWke'])
             newWke.name = name
             commit(
-                'query/UPDATE_WKE',
+                'wke/UPDATE_WKE',
                 {
-                    idx: rootState.query.worksheets_arr.indexOf(rootGetters['query/getActiveWke']),
+                    idx: rootState.wke.worksheets_arr.indexOf(rootGetters['wke/getActiveWke']),
                     wke: newWke,
                 },
                 { root: true }
@@ -352,7 +349,7 @@ export default {
             }
         },
         async updateTreeNodes({ commit, dispatch, rootState, getters }, node) {
-            const active_wke_id = rootState.query.active_wke_id
+            const active_wke_id = rootState.wke.active_wke_id
             try {
                 const { new_db_tree, new_cmp_list } = await dispatch('getTreeData', {
                     node,
@@ -371,7 +368,7 @@ export default {
             }
         },
         async reloadTreeNodes({ commit, dispatch, state, rootState }) {
-            const active_wke_id = rootState.query.active_wke_id
+            const active_wke_id = rootState.wke.active_wke_id
             const expanded_nodes = this.vue.$help.lodash.cloneDeep(state.expanded_nodes)
             try {
                 commit('PATCH_DB_TREE_MAP', {
@@ -421,7 +418,7 @@ export default {
          */
         async useDb({ commit, dispatch, rootState }, db) {
             const active_sql_conn = rootState.queryConn.active_sql_conn
-            const active_wke_id = rootState.query.active_wke_id
+            const active_wke_id = rootState.wke.active_wke_id
             try {
                 const now = new Date().valueOf()
                 const escapedDb = this.vue.$help.escapeIdentifiers(db)
@@ -461,7 +458,7 @@ export default {
         async updateActiveDb({ state, commit, rootState }) {
             const active_sql_conn = rootState.queryConn.active_sql_conn
             const active_db = state.active_db
-            const active_wke_id = rootState.query.active_wke_id
+            const active_wke_id = rootState.wke.active_wke_id
             try {
                 let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql: 'SELECT DATABASE()',
@@ -488,7 +485,7 @@ export default {
          */
         async exeStmtAction({ rootState, dispatch, commit }, { sql, action, showSnackbar = true }) {
             const active_sql_conn = rootState.queryConn.active_sql_conn
-            const active_wke_id = rootState.query.active_wke_id
+            const active_wke_id = rootState.wke.active_wke_id
             const request_sent_time = new Date().valueOf()
             try {
                 let stmt_err_msg_obj = {}
@@ -545,7 +542,7 @@ export default {
     getters: {
         // sidebar getters
         getCurrDbTree: (state, getters, rootState) =>
-            state.db_tree_map[rootState.query.active_wke_id] || {},
+            state.db_tree_map[rootState.wke.active_wke_id] || {},
         getActiveTreeNode: (state, getters) => {
             return getters.getCurrDbTree.active_tree_node || {}
         },
@@ -563,6 +560,6 @@ export default {
         },
         // exe_stmt_result_map getters
         getExeStmtResultMap: (state, getters, rootState) =>
-            state.exe_stmt_result_map[rootState.query.active_wke_id] || {},
+            state.exe_stmt_result_map[rootState.wke.active_wke_id] || {},
     },
 }

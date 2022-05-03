@@ -45,7 +45,7 @@ export default {
         ...mapState({
             QUERY_SHORTCUT_KEYS: state => state.app_config.QUERY_SHORTCUT_KEYS,
             SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
-            is_fullscreen: state => state.query.is_fullscreen,
+            is_fullscreen: state => state.wke.is_fullscreen,
             is_validating_conn: state => state.queryConn.is_validating_conn,
         }),
         ...mapGetters({

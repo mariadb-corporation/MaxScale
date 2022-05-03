@@ -162,9 +162,9 @@ export default {
     },
     computed: {
         ...mapState({
-            is_fullscreen: state => state.query.is_fullscreen,
+            is_fullscreen: state => state.wke.is_fullscreen,
             sql_conns: state => state.queryConn.sql_conns,
-            worksheets_arr: state => state.query.worksheets_arr,
+            worksheets_arr: state => state.wke.worksheets_arr,
             query_txt: state => state.editor.query_txt,
             selected_query_txt: state => state.editor.selected_query_txt,
         }),
@@ -179,10 +179,10 @@ export default {
     },
     methods: {
         ...mapMutations({
-            SET_FULLSCREEN: 'query/SET_FULLSCREEN',
+            SET_FULLSCREEN: 'wke/SET_FULLSCREEN',
         }),
         ...mapActions({
-            addNewWs: 'query/addNewWs',
+            addNewWs: 'wke/addNewWs',
             pushQueryFavorite: 'persisted/pushQueryFavorite',
         }),
         openFavoriteDialog() {

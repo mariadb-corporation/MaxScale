@@ -56,10 +56,7 @@ export default {
             mutationTypesMap: editorMemStateMutationTypeMap(),
         }),
         ...queryHelper.syncedStateMutationsCreator(editorStatesToBeSynced()),
-        ...queryHelper.syncWkeToFlatStateMutationCreator({
-            statesToBeSynced: editorStatesToBeSynced(),
-            suffix: 'EDITOR',
-        }),
+        ...queryHelper.syncWkeToFlatStateMutationCreator(editorStatesToBeSynced()),
         SET_SELECTED_QUERY_TXT(state, payload) {
             state.selected_query_txt = payload
         },
@@ -135,7 +132,7 @@ export default {
         },
         async queryTblCreationInfo({ commit, rootState }, node) {
             const active_sql_conn = rootState.queryConn.active_sql_conn
-            const active_wke_id = rootState.query.active_wke_id
+            const active_wke_id = rootState.wke.active_wke_id
             try {
                 commit('PATCH_TBL_CREATION_INFO_MAP', {
                     id: active_wke_id,
@@ -190,10 +187,10 @@ export default {
     getters: {
         //editor mode getter
         getCurrEditorMode: (state, getters, rootState) =>
-            state.curr_editor_mode_map[rootState.query.active_wke_id] || 'TXT_EDITOR',
+            state.curr_editor_mode_map[rootState.wke.active_wke_id] || 'TXT_EDITOR',
         // tbl_creation_info_map getters
         getTblCreationInfo: (state, getters, rootState) =>
-            state.tbl_creation_info_map[rootState.query.active_wke_id] || {},
+            state.tbl_creation_info_map[rootState.wke.active_wke_id] || {},
         getLoadingTblCreationInfo: (state, getters) => {
             const { loading_tbl_creation_info = true } = getters.getTblCreationInfo
             return loading_tbl_creation_info

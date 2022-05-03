@@ -98,7 +98,7 @@ export default {
     computed: {
         ...mapState({
             SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
-            active_wke_id: state => state.query.active_wke_id,
+            active_wke_id: state => state.wke.active_wke_id,
         }),
         ...mapGetters({
             getLoadingTblCreationInfo: 'editor/getLoadingTblCreationInfo',

@@ -50,11 +50,11 @@ export default {
     },
     computed: {
         ...mapState({
-            active_wke_id: state => state.query.active_wke_id,
+            active_wke_id: state => state.wke.active_wke_id,
             sql_conns: state => state.queryConn.sql_conns,
         }),
         ...mapGetters({
-            getActiveWke: 'query/getActiveWke',
+            getActiveWke: 'wke/getActiveWke',
         }),
     },
     watch: {
@@ -70,11 +70,10 @@ export default {
                 if (v) {
                     this.updateRoute(v)
                     //TODO: DRY this
-                    this.SYNC_WKE_TO_QUERY_MODULE(this.getActiveWke)
-                    this.SYNC_WKE_TO_QUERY_CONN_MODULE(this.getActiveWke)
-                    this.SYNC_WKE_TO_SCHEMA_SIDEBAR_MODULE(this.getActiveWke)
-                    this.SYNC_WKE_TO_EDITOR_MODULE(this.getActiveWke)
-                    this.SYNC_WKE_TO_QUERY_RESULT_MODULE(this.getActiveWke)
+                    this.SYNC_WKE_TO_QUERY_CONN(this.getActiveWke)
+                    this.SYNC_WKE_TO_SCHEMA_SIDEBAR(this.getActiveWke)
+                    this.SYNC_WKE_TO_EDITOR(this.getActiveWke)
+                    this.SYNC_WKE_TO_QUERY_RESULT(this.getActiveWke)
                 }
             },
         },
@@ -117,18 +116,17 @@ export default {
     methods: {
         ...mapMutations({
             SET_SNACK_BAR_MESSAGE: 'SET_SNACK_BAR_MESSAGE',
-            SYNC_WKE_TO_QUERY_MODULE: 'query/SYNC_WKE_TO_QUERY_MODULE',
-            SYNC_WKE_TO_QUERY_CONN_MODULE: 'queryConn/SYNC_WKE_TO_QUERY_CONN_MODULE',
-            SYNC_WKE_TO_SCHEMA_SIDEBAR_MODULE: 'schemaSidebar/SYNC_WKE_TO_SCHEMA_SIDEBAR_MODULE',
-            SYNC_WKE_TO_EDITOR_MODULE: 'editor/SYNC_WKE_TO_EDITOR_MODULE',
-            SYNC_WKE_TO_QUERY_RESULT_MODULE: 'queryResult/SYNC_WKE_TO_QUERY_RESULT_MODULE',
+            SYNC_WKE_TO_QUERY_RESULT: 'queryResult/SYNC_WITH_WKE',
+            SYNC_WKE_TO_QUERY_CONN: 'queryConn/SYNC_WITH_WKE',
+            SYNC_WKE_TO_SCHEMA_SIDEBAR: 'schemaSidebar/SYNC_WITH_WKE',
+            SYNC_WKE_TO_EDITOR: 'editor/SYNC_WITH_WKE',
         }),
         ...mapActions({
             validatingConn: 'queryConn/validatingConn',
             disconnectAll: 'queryConn/disconnectAll',
             clearConn: 'queryConn/clearConn',
-            updateRoute: 'query/updateRoute',
-            chooseActiveWke: 'query/chooseActiveWke',
+            updateRoute: 'wke/updateRoute',
+            chooseActiveWke: 'wke/chooseActiveWke',
             handleAutoClearQueryHistory: 'persisted/handleAutoClearQueryHistory',
         }),
         async onLeave() {
