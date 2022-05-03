@@ -1242,15 +1242,12 @@ Listener::read_connection_init_sql(const string& filepath, ListenerData::Connect
         if (file_ok)
         {
             // Construct a buffer with all the queries. The protocol can send the entire buffer as is.
-            mxs::Buffer total_buf;
+            GWBUF total_buf;
             for (const auto& query : queries)
             {
-                auto querybuf = modutil_create_query(query.c_str());
-                total_buf.append(querybuf);
+                total_buf.append(mariadb::create_query(query));
             }
-            auto total_len = total_buf.length();
-            output->buffer_contents.resize(total_len);
-            gwbuf_copy_data(total_buf.get(), 0, total_len, output->buffer_contents.data());
+            output->buffer_contents = move(total_buf);
         }
     }
     return file_ok;

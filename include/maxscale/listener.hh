@@ -15,6 +15,7 @@
 #include <maxscale/ccdefs.hh>
 #include <unordered_map>
 #include <maxscale/authenticator.hh>
+#include <maxscale/buffer.hh>
 #include <maxscale/protocol/mariadb/query_classifier.hh>
 #include <maxscale/ssl.hh>
 
@@ -52,7 +53,7 @@ public:
         ConnectionInitSql(const ConnectionInitSql& rhs) = default;
 
         std::vector<std::string> queries;
-        std::vector<uint8_t>     buffer_contents;
+        GWBUF                    buffer_contents;
     };
 
     struct UserCreds

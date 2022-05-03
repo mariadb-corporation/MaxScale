@@ -1590,19 +1590,13 @@ bool MariaDBBackendConnection::send_proxy_protocol_header()
         }
         else
         {
-            GWBUF* headerbuf = gwbuf_alloc_and_load(strlen(proxy_header), proxy_header);
-            if (headerbuf)
+            auto ptr = reinterpret_cast<uint8_t*>(proxy_header);
+            auto len = strlen(proxy_header);
+            MXB_INFO("Sending proxy-protocol header '%.*s' to server '%s'.",
+                     (int)len - 2, proxy_header, m_server.name());
+            if (m_dcb->writeq_append(GWBUF(ptr, len)))
             {
-                MXB_INFO("Sending proxy-protocol header '%.*s' to server '%s'.",
-                         (int)strlen(proxy_header) - 2, proxy_header, m_server.name());
-                if (m_dcb->writeq_append(headerbuf))
-                {
-                    success = true;
-                }
-                else
-                {
-                    gwbuf_free(headerbuf);
-                }
+                success = true;
             }
         }
     }
@@ -3022,8 +3016,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::send_connect
             {
                 // Send all the initialization queries in one packet. The server should respond with one
                 // OK-packet per query.
-                GWBUF* buffer = gwbuf_alloc_and_load(query_contents.size(), query_contents.data());
-                m_dcb->writeq_append(buffer);
+                m_dcb->writeq_append(GWBUF(query_contents));
                 m_init_query_status.ok_packets_expected = init_query_data.queries.size();
                 m_init_query_status.ok_packets_received = 0;
                 m_init_query_status.state = InitQueryStatus::State::RECEIVING;

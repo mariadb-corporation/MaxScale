@@ -238,6 +238,8 @@ bool is_com_prepare(const GWBUF& buf);
 bool is_com_query_or_prepare(const GWBUF& buf);
 
 GWBUF create_ok_packet(uint8_t sequence, uint8_t affected_rows);
+
+GWBUF create_query(const std::string& query);
 }
 
 /** MySQL protocol constants */

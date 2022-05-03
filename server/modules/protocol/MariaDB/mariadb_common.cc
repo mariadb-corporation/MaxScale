@@ -661,4 +661,23 @@ GWBUF create_ok_packet(uint8_t sequence, uint8_t affected_rows)
     buffer.write_complete(ptr - buffer.data());
     return buffer;
 }
+
+/**
+ * Create a COM_QUERY packet from a string.
+ *
+ * @param query Query to create.
+ * @return Result GWBUF
+ */
+GWBUF create_query(const string& query)
+{
+    size_t plen = query.length() + 1;       // Query plus the command byte
+    size_t total_len = MYSQL_HEADER_LEN + plen;
+    GWBUF rval(total_len);
+    auto ptr = mariadb::write_header(rval.data(), plen, 0);
+    *ptr++ = MXS_COM_QUERY;
+    ptr = mariadb::copy_chars(ptr, query.c_str(), query.length());
+    rval.write_complete(ptr - rval.data());
+    mxb_assert(rval.length() == total_len);
+    return rval;
+}
 }
