@@ -51,6 +51,8 @@ int main(int argc, char** argv)
 
     // Execute read, should return a slave server ID
     test.add_result(mysql_stmt_prepare(stmt, read_query, strlen(read_query)), "Failed to prepare");
+    // Sleep for a while to make sure all servers have processed the COM_STMT_PREPARE
+    sleep(1);
     test.add_result(mysql_stmt_execute(stmt), "Failed to execute");
     test.add_result(mysql_stmt_bind_result(stmt, bind), "Failed to bind result");
     test.add_result(mysql_stmt_fetch(stmt), "Failed to fetch result");
