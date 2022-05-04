@@ -160,7 +160,7 @@ private:
     void   read_com_ping_response();
     void   do_handle_error(DCB* dcb, const std::string& errmsg,
                            mxs::ErrorType type = mxs::ErrorType::TRANSIENT);
-    void prepare_for_write(GWBUF* buffer);
+    void prepare_for_write(const GWBUF& buffer);
     void process_stmt_execute(GWBUF** buffer, uint32_t id, PSInfo& info);
     void pin_history_responses();
 
@@ -203,7 +203,7 @@ private:
     // Contains the necessary information required to track queries
     struct TrackedQuery
     {
-        explicit TrackedQuery(GWBUF* buffer);
+        explicit TrackedQuery(const GWBUF& buffer);
 
         uint32_t payload_len = 0;
         uint8_t  command = 0;

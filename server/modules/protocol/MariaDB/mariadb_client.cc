@@ -1216,7 +1216,9 @@ bool MariaDBClientConnection::record_for_history(GWBUF& buffer, uint8_t cmd)
     if (should_record)
     {
         buffer.set_id(m_next_id);
-        m_pending_cmd = buffer;     // Keep a copy for the session command history
+        // Keep a copy for the session command history. The buffer originates from the dcb, so deep clone
+        // it to minimize memory use. Also saves an allocation when reading the server reply.
+        m_pending_cmd = buffer.deep_clone();
         should_record = true;
 
         if (cmd == MXS_COM_STMT_PREPARE || qc_query_is_type(info.type_mask(), QUERY_TYPE_PREPARE_NAMED_STMT))
@@ -1316,7 +1318,7 @@ void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer, cons
         m_routing_state = RoutingState::COMPARE_RESPONSES;
         m_dcb->trigger_read_event();
         m_session_data->history_responses.emplace(m_pending_cmd.id(), reply.is_ok());
-        m_session_data->history.emplace_back(mxs::gwbuf_to_buffer(move(m_pending_cmd)));
+        m_session_data->history.emplace_back(move(m_pending_cmd));
 
         if (m_session_data->history.size() > m_max_sescmd_history)
         {
@@ -1444,9 +1446,8 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
         {
             // A continuation of a recoded command, append it to the current command and route it forward
             bool is_large = large_query_continues(buffer);
-            auto temp = mxs::gwbuf_to_gwbufptr(move(buffer));
-            m_pending_cmd.append(*temp);
-            routed = m_downstream->routeQuery(temp) != 0;
+            m_pending_cmd.append(buffer);
+            routed = m_downstream->routeQuery(mxs::gwbuf_to_gwbufptr(move(buffer))) != 0;
 
             if (!is_large)
             {

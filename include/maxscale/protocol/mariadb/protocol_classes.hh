@@ -126,7 +126,7 @@ public:
     mariadb::UserSearchSettings user_search_settings;
 
     // History of all commands that modify the session state
-    std::deque<mxs::Buffer> history;
+    std::deque<GWBUF> history;
 
     // The responses to the executed commands, contains the ID and the result
     std::map<uint32_t, bool> history_responses;

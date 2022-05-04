@@ -339,10 +339,10 @@ void ClientConnection::prepare_session(const string& user, const vector<uint8_t>
     // is started. That way it will be executed on all servers, irrespective
     // of when a connection to a particular server is created.
     uint32_t id = 1;
-    GWBUF* pStmt = modutil_create_query("set names utf8mb4 collate utf8mb4_bin");
-    pStmt->set_id(id);
+    GWBUF stmt = mariadb::create_query("set names utf8mb4 collate utf8mb4_bin");
+    stmt.set_id(id);
 
-    m_session_data.history.push_back(mxs::Buffer(pStmt));
+    m_session_data.history.push_back(move(stmt));
     m_session_data.history_responses.insert(std::make_pair(id, true));
 
     setup_session(user, password);

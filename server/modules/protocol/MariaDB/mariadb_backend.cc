@@ -330,7 +330,7 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
  *
  * @param buffer Buffer that will be written
  */
-void MariaDBBackendConnection::prepare_for_write(GWBUF* buffer)
+void MariaDBBackendConnection::prepare_for_write(const GWBUF& buffer)
 {
     TrackedQuery query(buffer);
 
@@ -344,11 +344,11 @@ void MariaDBBackendConnection::prepare_for_write(GWBUF* buffer)
     }
 
     // TODO: These probably should be stored in TrackedQuery as well
-    if (buffer->type_is_collect_result())
+    if (buffer.type_is_collect_result())
     {
         m_collect_result = true;
     }
-    m_track_state = buffer->type_is_track_state();
+    m_track_state = buffer.type_is_track_state();
 }
 
 void MariaDBBackendConnection::process_stmt_execute(GWBUF** original, uint32_t id, PSInfo& ps_info)
@@ -817,10 +817,9 @@ void MariaDBBackendConnection::send_history()
 
     if (!client_data->history.empty())
     {
-        for (const auto& a : client_data->history)
+        for (const auto& history_query : client_data->history)
         {
-            mxs::Buffer buffer = a;
-            TrackedQuery query(buffer.get());
+            TrackedQuery query(history_query);
 
             if (m_reply.state() == ReplyState::DONE && m_track_queue.empty())
             {
@@ -832,10 +831,10 @@ void MariaDBBackendConnection::send_history()
             }
 
             MXB_INFO("Execute %s on '%s': %s", STRPACKETTYPE(query.command),
-                     m_server.name(), buffer.get_sql().c_str());
+                     m_server.name(), history_query.get_sql().c_str());
 
-            m_dcb->writeq_append(buffer.release());
-            m_history_responses.push_back(a.id());
+            m_dcb->writeq_append(GWBUF(history_query));
+            m_history_responses.push_back(history_query.id());
         }
     }
 }
@@ -1204,7 +1203,7 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
                 }
             }
 
-            prepare_for_write(queue);
+            prepare_for_write(*queue);
 
             if (mxs_mysql_is_ps_command(cmd))
             {
@@ -2624,16 +2623,16 @@ void MariaDBBackendConnection::assign_session(MXS_SESSION* session, mxs::Compone
     m_authenticator = client_data->auth_data->be_auth_module->create_backend_authenticator(m_auth_data);
 }
 
-MariaDBBackendConnection::TrackedQuery::TrackedQuery(GWBUF* buffer)
-    : payload_len(MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buffer)))
-    , command(MYSQL_GET_COMMAND(GWBUF_DATA(buffer)))
-    , collect_rows(buffer->type_is_collect_rows())
-    , id(buffer->id())
+MariaDBBackendConnection::TrackedQuery::TrackedQuery(const GWBUF& buffer)
+    : payload_len(MYSQL_GET_PAYLOAD_LEN(buffer.data()))
+    , command(MYSQL_GET_COMMAND(buffer.data()))
+    , collect_rows(buffer.type_is_collect_rows())
+    , id(buffer.id())
 {
     if (command == MXS_COM_STMT_EXECUTE)
     {
         // Extract the flag byte after the statement ID
-        uint8_t flags = GWBUF_DATA(buffer)[MYSQL_PS_ID_OFFSET + MYSQL_PS_ID_SIZE];
+        uint8_t flags = buffer[MYSQL_PS_ID_OFFSET + MYSQL_PS_ID_SIZE];
 
         // Any non-zero flag value means that we have an open cursor
         opening_cursor = flags != 0;
