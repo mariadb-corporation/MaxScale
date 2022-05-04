@@ -310,10 +310,7 @@ export default {
                     const freshWke = rootState.wke.worksheets_arr.find(
                         wke => wke.id === targetWke.id
                     )
-                    commit('wke/SYNC_WITH_WKE', freshWke, { root: true })
-                    commit('SYNC_WITH_WKE', freshWke)
-                    commit('schemaSidebar/SYNC_WITH_WKE', freshWke, { root: true })
-                    commit('editor/SYNC_WITH_WKE', freshWke, { root: true })
+                    dispatch('wke/handleSyncWke', freshWke, { root: true })
                 }
             }
         },

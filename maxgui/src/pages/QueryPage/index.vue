@@ -53,9 +53,7 @@ export default {
             active_wke_id: state => state.wke.active_wke_id,
             sql_conns: state => state.queryConn.sql_conns,
         }),
-        ...mapGetters({
-            getActiveWke: 'wke/getActiveWke',
-        }),
+        ...mapGetters({ getActiveWke: 'wke/getActiveWke' }),
     },
     watch: {
         $route: {
@@ -69,11 +67,7 @@ export default {
             handler(v) {
                 if (v) {
                     this.updateRoute(v)
-                    //TODO: DRY this
-                    this.SYNC_WKE_TO_QUERY_CONN(this.getActiveWke)
-                    this.SYNC_WKE_TO_SCHEMA_SIDEBAR(this.getActiveWke)
-                    this.SYNC_WKE_TO_EDITOR(this.getActiveWke)
-                    this.SYNC_WKE_TO_QUERY_RESULT(this.getActiveWke)
+                    this.handleSyncWke(this.getActiveWke)
                 }
             },
         },
@@ -114,19 +108,14 @@ export default {
         }
     },
     methods: {
-        ...mapMutations({
-            SET_SNACK_BAR_MESSAGE: 'SET_SNACK_BAR_MESSAGE',
-            SYNC_WKE_TO_QUERY_RESULT: 'queryResult/SYNC_WITH_WKE',
-            SYNC_WKE_TO_QUERY_CONN: 'queryConn/SYNC_WITH_WKE',
-            SYNC_WKE_TO_SCHEMA_SIDEBAR: 'schemaSidebar/SYNC_WITH_WKE',
-            SYNC_WKE_TO_EDITOR: 'editor/SYNC_WITH_WKE',
-        }),
+        ...mapMutations({ SET_SNACK_BAR_MESSAGE: 'SET_SNACK_BAR_MESSAGE' }),
         ...mapActions({
             validatingConn: 'queryConn/validatingConn',
             disconnectAll: 'queryConn/disconnectAll',
             clearConn: 'queryConn/clearConn',
             updateRoute: 'wke/updateRoute',
             chooseActiveWke: 'wke/chooseActiveWke',
+            handleSyncWke: 'wke/handleSyncWke',
             handleAutoClearQueryHistory: 'persisted/handleAutoClearQueryHistory',
         }),
         async onLeave() {

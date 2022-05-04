@@ -162,6 +162,15 @@ export default {
             commit('DELETE_WKE', wkeIdx)
         },
         /**
+         * @param {Object} param.wke - worksheet object to be sync to flat states
+         */
+        handleSyncWke({ commit }, wke) {
+            commit('editor/SYNC_WITH_WKE', wke, { root: true })
+            commit('queryConn/SYNC_WITH_WKE', wke, { root: true })
+            commit('queryResult/SYNC_WITH_WKE', wke, { root: true })
+            commit('schemaSidebar/SYNC_WITH_WKE', wke, { root: true })
+        },
+        /**
          * Release memory for target wke when delete a worksheet or disconnect a
          * connection from a worksheet
          * @param {String} param.wke_id - worksheet id.
