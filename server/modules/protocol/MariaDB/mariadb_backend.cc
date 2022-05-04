@@ -2954,15 +2954,13 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::authenticate
     else
     {
         // Something else, likely AuthSwitch or a message to the authentication plugin.
-        using AuthRes = mariadb::BackendAuthenticator::AuthRes;
-        mxs::Buffer output;
-        auto res = m_authenticator->exchange(mxs::gwbuf_to_buffer(move(buffer)), &output);
-        if (!output.empty())
+        auto res = m_authenticator->exchange(move(buffer));
+        if (!res.output.empty())
         {
-            m_dcb->writeq_append(output.release());
+            m_dcb->writeq_append(move(res.output));
         }
 
-        rval = (res == AuthRes::SUCCESS) ? StateMachineRes::IN_PROGRESS : StateMachineRes::ERROR;
+        rval = res.success ? StateMachineRes::IN_PROGRESS : StateMachineRes::ERROR;
     }
 
     return rval;

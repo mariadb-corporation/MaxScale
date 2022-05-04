@@ -278,9 +278,9 @@ AuthRes MariaDBClientAuthenticator::authenticate(MYSQL_session* session, Authent
 }
 
 mariadb::BackendAuthenticator::AuthRes
-MariaDBBackendSession::exchange(const mxs::Buffer& input, mxs::Buffer* output)
+MariaDBBackendSession::exchange(GWBUF&& input)
 {
-    auto rval = AuthRes::FAIL;
+    AuthRes rval;
     // Protocol catches Ok and Error-packets, so the only expected packet here is AuthSwitch-request.
     switch (m_state)
     {
@@ -295,10 +295,10 @@ MariaDBBackendSession::exchange(const mxs::Buffer& input, mxs::Buffer* output)
                 {
                     // Looks ok. The server has sent a new scramble. Save it and generate a response.
                     memcpy(m_shared_data.scramble, parse_res.plugin_data.data(), MYSQL_SCRAMBLE_LEN);
-                    int old_seqno = MYSQL_GET_PACKET_NO(GWBUF_DATA(input.get()));
-                    *output = generate_auth_response(old_seqno + 1);
+                    auto old_seqno = MYSQL_GET_PACKET_NO(input.data());
+                    rval.output = generate_auth_response(old_seqno + 1);
                     m_state = State::PW_SENT;
-                    rval = AuthRes::SUCCESS;
+                    rval.success = true;
                 }
                 else
                 {
@@ -327,17 +327,18 @@ MariaDBBackendSession::exchange(const mxs::Buffer& input, mxs::Buffer* output)
     return rval;
 }
 
-mxs::Buffer MariaDBBackendSession::generate_auth_response(int seqno)
+GWBUF MariaDBBackendSession::generate_auth_response(uint8_t seqno)
 {
-    int pload_len = SHA_DIGEST_LENGTH;
-    mxs::Buffer buffer(MYSQL_HEADER_LEN + pload_len);
-    uint8_t* data = buffer.data();
-    mariadb::set_byte3(data, pload_len);
-    data[3] = seqno;
+    size_t pload_len = SHA_DIGEST_LENGTH;
+    size_t total_len = MYSQL_HEADER_LEN + pload_len;
+    GWBUF rval(total_len);
+    auto ptr = mariadb::write_header(rval.data(), pload_len, seqno);
     auto& sha_pw = m_shared_data.client_data->auth_data->backend_token;
     const uint8_t* curr_passwd = sha_pw.empty() ? null_client_sha1 : sha_pw.data();
-    mxs_mysql_calculate_hash(m_shared_data.scramble, curr_passwd, data + MYSQL_HEADER_LEN);
-    return buffer;
+    mxs_mysql_calculate_hash(m_shared_data.scramble, curr_passwd, ptr);
+    ptr += SHA_DIGEST_LENGTH;
+    rval.write_complete(ptr - rval.data());
+    return rval;
 }
 
 MariaDBBackendSession::MariaDBBackendSession(mariadb::BackendAuthData& shared_data)

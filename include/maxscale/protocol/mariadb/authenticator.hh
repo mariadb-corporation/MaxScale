@@ -248,11 +248,11 @@ struct BackendAuthData
 class BackendAuthenticator
 {
 public:
-    // Return values for authenticate-functions. TODO: change to bool if no more values needed
-    enum class AuthRes
+    // Return value of the exchange-function.
+    struct AuthRes
     {
-        SUCCESS,    /**< Authentication was successful */
-        FAIL,       /**< Authentication failed */
+        bool  success {false};  /**< Authentication/exchange success? */
+        GWBUF output;           /**< Packet to send to backend */
     };
 
     BackendAuthenticator(const BackendAuthenticator&) = delete;
@@ -266,10 +266,9 @@ public:
      * and return status.
      *
      * @param input Packet from backend
-     * @param output Output for a packet that will be sent to backend
-     * @return Authentication status
+     * @return Result structure
      */
-    virtual AuthRes exchange(const mxs::Buffer& input, mxs::Buffer* output) = 0;
+    virtual AuthRes exchange(GWBUF&& input) = 0;
 
 protected:
     // Common error message formats, used in several authenticators.

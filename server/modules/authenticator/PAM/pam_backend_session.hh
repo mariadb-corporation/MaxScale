@@ -24,7 +24,7 @@ public:
     PamBackendAuthenticator& operator=(const PamBackendAuthenticator&) = delete;
     PamBackendAuthenticator(mariadb::BackendAuthData& shared_data, AuthMode mode);
 
-    AuthRes exchange(const mxs::Buffer& input, mxs::Buffer* output) override;
+    AuthRes exchange(GWBUF&& input) override;
 
 private:
     enum class PromptType
@@ -34,8 +34,8 @@ private:
         TWO_FA
     };
 
-    PromptType  parse_password_prompt(mariadb::ByteVec& data);
-    mxs::Buffer generate_pw_packet(PromptType pw_type) const;
+    PromptType parse_password_prompt(mariadb::ByteVec& data);
+    GWBUF      generate_pw_packet(PromptType pw_type) const;
 
     enum class State
     {
@@ -45,7 +45,7 @@ private:
         ERROR,
     };
 
-    const mariadb::BackendAuthData& m_shared_data;  /**< Data shared with backend connection */
+    const mariadb::BackendAuthData& m_shared_data;      /**< Data shared with backend connection */
     const AuthMode                  m_mode {AuthMode::PW};
 
     State   m_state {State::EXPECT_AUTHSWITCH}; /**< Authentication state */

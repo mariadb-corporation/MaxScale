@@ -90,7 +90,7 @@ PamBackendAuthenticator::parse_password_prompt(mariadb::ByteVec& data)
  *
  * @return Packet with password
  */
-mxs::Buffer PamBackendAuthenticator::generate_pw_packet(PromptType pw_type) const
+GWBUF PamBackendAuthenticator::generate_pw_packet(PromptType pw_type) const
 {
     const auto& source = (pw_type == PromptType::PASSWORD) ?
         m_shared_data.client_data->auth_data->backend_token :
@@ -98,20 +98,19 @@ mxs::Buffer PamBackendAuthenticator::generate_pw_packet(PromptType pw_type) cons
 
     auto auth_token_len = source.size();
     size_t buflen = MYSQL_HEADER_LEN + auth_token_len;
-    mxs::Buffer rval(buflen);
+    GWBUF rval(buflen);
     auto* ptr = rval.data();
-    mariadb::set_byte3(ptr, auth_token_len);
-    ptr += 3;
-    *ptr++ = m_sequence;
+    ptr = mariadb::write_header(ptr, auth_token_len, m_sequence);
     if (auth_token_len > 0)
     {
-        memcpy(ptr, source.data(), auth_token_len);
+        ptr = mariadb::copy_bytes(ptr, source.data(), auth_token_len);
     }
+    rval.write_complete(ptr - rval.data());
     return rval;
 }
 
 mariadb::BackendAuthenticator::AuthRes
-PamBackendAuthenticator::exchange(const mxs::Buffer& input, mxs::Buffer* output)
+PamBackendAuthenticator::exchange(GWBUF&& input)
 {
     /**
      * The server PAM plugin sends data usually once, at the moment it gets a prompt-type message
@@ -140,16 +139,16 @@ PamBackendAuthenticator::exchange(const mxs::Buffer& input, mxs::Buffer* output)
     const int min_readable_buflen = MYSQL_HEADER_LEN + 1 + 1;
     // The buffer should be of reasonable size. Large buffers likely mean that the auth scheme is complicated.
     const int MAX_BUFLEN = 2000;
-    const int buflen = input.length();
+    const auto buflen = input.length();
     if (buflen <= min_readable_buflen || buflen > MAX_BUFLEN)
     {
-        MXB_ERROR("Received packet of size %i from '%s' during authentication. Expected packet size is "
+        MXB_ERROR("Received packet of size %lu from '%s' during authentication. Expected packet size is "
                   "between %i and %i.", buflen, srv_name, min_readable_buflen, MAX_BUFLEN);
-        return AuthRes::FAIL;
+        return {false, GWBUF()};
     }
 
-    m_sequence = MYSQL_GET_PACKET_NO(GWBUF_DATA(input.get())) + 1;
-    auto rval = AuthRes::FAIL;
+    m_sequence = MYSQL_GET_PACKET_NO(input.data()) + 1;
+    AuthRes rval;
 
     switch (m_state)
     {
@@ -166,9 +165,9 @@ PamBackendAuthenticator::exchange(const mxs::Buffer& input, mxs::Buffer* output)
                     if (parse_res.plugin_data.empty())
                     {
                         // Just the AuthSwitchRequest, this is ok. The server now expects a password.
-                        *output = generate_pw_packet(PromptType::PASSWORD);
+                        rval.output = generate_pw_packet(PromptType::PASSWORD);
                         m_state = State::EXCHANGING;
-                        rval = AuthRes::SUCCESS;
+                        rval.success = true;
                     }
                     else
                     {
@@ -176,17 +175,17 @@ PamBackendAuthenticator::exchange(const mxs::Buffer& input, mxs::Buffer* output)
                         if (pw_type != PromptType::FAIL)
                         {
                             // Got a password prompt, send answer.
-                            *output = generate_pw_packet(pw_type);
+                            rval.output = generate_pw_packet(pw_type);
                             m_state = State::EXCHANGING;
-                            rval = AuthRes::SUCCESS;
+                            rval.success = true;
                         }
                     }
                 }
                 else if (parse_res.plugin_name == CLEAR_PW)
                 {
-                    *output = generate_pw_packet(PromptType::PASSWORD);
+                    rval.output = generate_pw_packet(PromptType::PASSWORD);
                     m_state = State::EXCHANGE_DONE;     // Server should not ask for anything else.
-                    rval = AuthRes::SUCCESS;
+                    rval.success = true;
                 }
                 else
                 {
@@ -212,13 +211,13 @@ PamBackendAuthenticator::exchange(const mxs::Buffer& input, mxs::Buffer* output)
             data.reserve(input.length());   // reserve some extra to ensure no further allocations needed.
             size_t datalen = input.length() - MYSQL_HEADER_LEN;
             data.resize(datalen);
-            gwbuf_copy_data(input.get(), MYSQL_HEADER_LEN, datalen, data.data());
+            input.copy_data(MYSQL_HEADER_LEN, datalen, data.data());
 
             auto pw_type = parse_password_prompt(data);
             if (pw_type != PromptType::FAIL)
             {
-                *output = generate_pw_packet(pw_type);
-                rval = AuthRes::SUCCESS;
+                rval.output = generate_pw_packet(pw_type);
+                rval.success = true;
             }
         }
         break;
@@ -235,7 +234,7 @@ PamBackendAuthenticator::exchange(const mxs::Buffer& input, mxs::Buffer* output)
         break;
     }
 
-    if (rval != AuthRes::SUCCESS)
+    if (!rval.success)
     {
         m_state = State::ERROR;
     }

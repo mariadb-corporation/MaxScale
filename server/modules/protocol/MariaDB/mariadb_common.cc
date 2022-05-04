@@ -625,13 +625,13 @@ BackendAuthData::BackendAuthData(const char* srv_name)
 {
 }
 
-AuthSwitchReqContents parse_auth_switch_request(const mxs::Buffer& input)
+AuthSwitchReqContents parse_auth_switch_request(const GWBUF& input)
 {
     int datalen = input.length() - MYSQL_HEADER_LEN;
     mxb_assert(datalen >= 0);
     packet_parser::ByteVec data;
     data.resize(datalen);
-    gwbuf_copy_data(input.get(), MYSQL_HEADER_LEN, datalen, data.data());
+    input.copy_data(MYSQL_HEADER_LEN, datalen, data.data());
     return packet_parser::parse_auth_switch_request(data);
 }
 

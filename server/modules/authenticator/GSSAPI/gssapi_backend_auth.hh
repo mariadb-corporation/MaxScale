@@ -19,10 +19,10 @@ class GSSAPIBackendAuthenticator : public mariadb::BackendAuthenticator
 {
 public:
     GSSAPIBackendAuthenticator(const mariadb::BackendAuthData& shared_data);
-    AuthRes exchange(const mxs::Buffer& input, mxs::Buffer* output) override;
+    AuthRes exchange(GWBUF&& input) override;
 
 private:
-    mxs::Buffer generate_auth_token_packet() const;
+    GWBUF generate_auth_token_packet() const;
 
     enum class State
     {

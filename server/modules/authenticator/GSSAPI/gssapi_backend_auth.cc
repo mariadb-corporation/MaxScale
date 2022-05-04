@@ -21,18 +21,19 @@
  *
  * @return Packet with password
  */
-mxs::Buffer GSSAPIBackendAuthenticator::generate_auth_token_packet() const
+GWBUF GSSAPIBackendAuthenticator::generate_auth_token_packet() const
 {
     const auto& auth_token = m_shared_data.client_data->auth_data->backend_token;
     auto auth_token_len = auth_token.size();
     size_t buflen = MYSQL_HEADER_LEN + auth_token_len;
-    mxs::Buffer rval(buflen);
+    GWBUF rval(buflen);
     auto* ptr = rval.data();
     ptr = mariadb::write_header(ptr, auth_token_len, m_sequence);
     if (auth_token_len > 0)
     {
-        memcpy(ptr, auth_token.data(), auth_token_len);
+        ptr = mariadb::copy_bytes(ptr, auth_token.data(), auth_token_len);
     }
+    rval.write_complete(ptr - rval.data());
     return rval;
 }
 
@@ -42,22 +43,22 @@ GSSAPIBackendAuthenticator::GSSAPIBackendAuthenticator(const mariadb::BackendAut
 }
 
 mariadb::BackendAuthenticator::AuthRes
-GSSAPIBackendAuthenticator::exchange(const mxs::Buffer& input, mxs::Buffer* output)
+GSSAPIBackendAuthenticator::exchange(GWBUF&& input)
 {
     const char plugin_name[] = "auth_gssapi_client";
     const char* srv_name = m_shared_data.servername;
     // Smallest buffer that is parsed, header + principal name (0-term).
     const int min_readable_buflen = MYSQL_HEADER_LEN + 2;
-    const int buflen = input.length();
+    const auto buflen = input.length();
     if (buflen <= min_readable_buflen)
     {
-        MXB_ERROR("Received packet of size %i from '%s' during authentication. Expected packet size is "
+        MXB_ERROR("Received packet of size %lu from '%s' during authentication. Expected packet size is "
                   "at least %i.", buflen, srv_name, min_readable_buflen);
-        return AuthRes::FAIL;
+        return {false, GWBUF()};
     }
 
-    m_sequence = MYSQL_GET_PACKET_NO(GWBUF_DATA(input.get())) + 1;
-    auto rval = AuthRes::FAIL;
+    m_sequence = MYSQL_GET_PACKET_NO(input.data()) + 1;
+    AuthRes rval;
 
     switch (m_state)
     {
@@ -75,9 +76,9 @@ GSSAPIBackendAuthenticator::exchange(const mxs::Buffer& input, mxs::Buffer* outp
                 else if (!parse_res.plugin_data.empty())
                 {
                     // Principal name sent by server is in parse result, but it's not required.
-                    *output = generate_auth_token_packet();
+                    rval.output = generate_auth_token_packet();
                     m_state = State::TOKEN_SENT;
-                    rval = AuthRes::SUCCESS;
+                    rval.success = true;
                 }
                 else
                 {
@@ -104,7 +105,7 @@ GSSAPIBackendAuthenticator::exchange(const mxs::Buffer& input, mxs::Buffer* outp
         break;
     }
 
-    if (rval != AuthRes::SUCCESS)
+    if (!rval.success)
     {
         m_state = State::ERROR;
     }

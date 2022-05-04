@@ -66,10 +66,10 @@ public:
     MariaDBBackendSession(mariadb::BackendAuthData& shared_data);
     ~MariaDBBackendSession() = default;
 
-    AuthRes exchange(const mxs::Buffer& input, mxs::Buffer* output) override;
+    AuthRes exchange(GWBUF&& input) override;
 
 private:
-    mxs::Buffer generate_auth_response(int seqno);
+    GWBUF generate_auth_response(uint8_t seqno);
 
     /** Authentication states */
     enum class State
