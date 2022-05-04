@@ -10,25 +10,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { uniqueId } from 'utils/helpers'
 import queryHelper from './queryHelper'
 import allMemStatesModules from './allMemStatesModules'
-
+import init, { defWorksheetState } from './initQueryEditorState'
 queryHelper.syncStateCreator('editor')
-
-/**
- * @returns Return a new worksheet state with unique id
- */
-export function defWorksheetState() {
-    return {
-        id: uniqueId(`${new Date().getUTCMilliseconds()}_`),
-        name: 'WORKSHEET',
-        ...queryHelper.syncStateCreator('editor'),
-        ...queryHelper.syncStateCreator('queryConn'),
-        ...queryHelper.syncStateCreator('queryResult'),
-        ...queryHelper.syncStateCreator('schemaSidebar'),
-    }
-}
 
 export default {
     namespaced: true,
@@ -36,7 +21,7 @@ export default {
         // Toolbar states
         is_fullscreen: false,
         // worksheet states
-        worksheets_arr: [defWorksheetState()], // persisted
+        worksheets_arr: init.get_def_worksheets_arr, // persisted
         active_wke_id: '',
     },
     mutations: {
@@ -134,13 +119,12 @@ export default {
             if (name) to = `/query/${type}/${name}`
             if (from !== to) this.router.push(to)
         },
-        addNewWs({ commit, state }) {
+        addNewWs({ commit, state, dispatch }) {
             try {
                 commit('ADD_NEW_WKE')
-                commit(
-                    'SET_ACTIVE_WKE_ID',
-                    state.worksheets_arr[state.worksheets_arr.length - 1].id
-                )
+                const new_active_wke_id = state.worksheets_arr[state.worksheets_arr.length - 1].id
+                commit('SET_ACTIVE_WKE_ID', new_active_wke_id)
+                dispatch('querySession/handleAddNewSession', new_active_wke_id, { root: true })
             } catch (e) {
                 const logger = this.vue.$logger('store-query-addNewWs')
                 logger.error(e)
@@ -159,6 +143,7 @@ export default {
             // release memory states of query and queryConn modules
             dispatch('releaseQueryModulesMem', targetWke.id)
             commit('DELETE_WKE', wkeIdx)
+            dispatch('querySession/deleteAllSessionsByWkeId', targetWke.id, { root: true })
         },
         /**
          * @param {Object} param.wke - worksheet object to be sync to flat states

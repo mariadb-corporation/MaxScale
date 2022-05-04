@@ -20,7 +20,7 @@ import monitor from './monitor'
 import filter from './filter'
 import session from './session'
 import listener from './listener'
-import queryEditorModules, { getDefWorksheetState } from './queryEditor'
+import queryEditorModules from './queryEditor'
 import persisted from './persisted'
 import visualization from './visualization'
 import { APP_CONFIG } from 'utils/constants'
@@ -48,6 +48,8 @@ const store = new Vuex.Store({
                 'persisted',
                 'wke.worksheets_arr',
                 'queryConn.sql_conns',
+                'querySession.query_sessions',
+                'querySession.active_session_by_wke_id_map',
                 'user.logged_in_user',
             ],
         }),
@@ -186,13 +188,16 @@ const store = new Vuex.Store({
 })
 export default store
 
-let initialState = Vue.prototype.$help.lodash.cloneDeep(store.state)
 /**
- * A workaround to get fresh initial states because below states are stored in localStorage
+ * A workaround to get fresh initial state for active_session_by_wke_id_map
  */
-initialState.wke.worksheets_arr = [getDefWorksheetState()]
-initialState.queryConn.sql_conns = {}
-initialState.user.logged_in_user = {}
+const querySession = store.state.querySession
+querySession.active_session_by_wke_id_map = querySession.query_sessions.reduce((acc, s) => {
+    acc[s.wke_id_fk] = s.id
+    return acc
+}, {})
+let initialState = Vue.prototype.$help.lodash.cloneDeep(store.state)
+
 /** for state hydration*/
 export function resetState() {
     store.replaceState(initialState)
