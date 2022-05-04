@@ -52,7 +52,7 @@ function memStates() {
          * request_sent_time?: number
          * total_duration?: number
          * loading_query_result?: boolean,
-         * results? object. TODO: rename results to data
+         * data? object.
          */
         query_results_map: {},
         is_stopping_query_map: {}, // each key holds a boolean value
@@ -185,7 +185,7 @@ export default {
                 commit('PATCH_QUERY_RESULTS_MAP', {
                     id: active_wke_id,
                     payload: {
-                        results: Object.freeze(res.data.data),
+                        data: Object.freeze(res.data.data),
                         total_duration: parseFloat(total_duration),
                         loading_query_result: false,
                     },
@@ -248,9 +248,9 @@ export default {
          * Call this action when user selects option in the sidebar.
          * This ensure sub-tabs in Data Preview tab are generated with fresh data
          */
-        clearDataPreview({ state, commit }) {
-            commit(`PATCH_PRVW_DATA_MAP`, { id: state.active_wke_id })
-            commit(`PATCH_PRVW_DATA_DETAILS_MAP`, { id: state.active_wke_id })
+        clearDataPreview({ rootState, commit }) {
+            commit(`PATCH_PRVW_DATA_MAP`, { id: rootState.wke.active_wke_id })
+            commit(`PATCH_PRVW_DATA_DETAILS_MAP`, { id: rootState.wke.active_wke_id })
         },
     },
     getters: {
@@ -263,8 +263,8 @@ export default {
         getIsStoppingQuery: (state, getters, rootState) =>
             state.is_stopping_query_map[rootState.wke.active_wke_id] || false,
         getResults: (state, getters) => {
-            const { results = {} } = getters.getQueryResult
-            return results
+            const { data = {} } = getters.getQueryResult
+            return data
         },
         getQueryRequestSentTime: (state, getters) => {
             const { request_sent_time = 0 } = getters.getQueryResult
