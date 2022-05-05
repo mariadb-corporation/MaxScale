@@ -9,6 +9,11 @@ maturity="`cd ../../ && cmake -P ./VERSION.cmake -L|grep 'MAXSCALE_MATURITY'|sed
 
 VERSION="${major}.${minor}.${patch}"
 
+# For version 6, this is just the major version. For other versions, it
+# is $major.$minor. Needs to be updated whenever a new major release is
+# out or if the versioning scheme for MaxScale changes.
+upgrade_version="$major"
+
 cat <<EOF > MaxScale-$VERSION-Release-Notes.md
 # MariaDB MaxScale ${VERSION} Release Notes
 
@@ -18,7 +23,7 @@ This document describes the changes in release ${VERSION}, when compared to the
 previous release in the same series.
 
 If you are upgrading from an older major version of MaxScale, please read the
-[upgrading document](../Upgrading/Upgrading-To-MaxScale-$major.$minor.md) for
+[upgrading document](../Upgrading/Upgrading-To-MaxScale-${upgrade_version}.md) for
 this MaxScale version.
 
 For any problems you encounter, please consider submitting a bug
