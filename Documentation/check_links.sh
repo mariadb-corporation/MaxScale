@@ -22,7 +22,12 @@ function check_file() {
     do
         if [ ! -f "$i" ]
         then
-            echo "Link $i in $file is not correct!"
+            # Using double bracets changes how the matching works.
+            # See the documentation for the '==' operator: https://tldp.org/LDP/abs/html/comparison-ops.html
+            if [[ $i != http* ]]
+            then
+                echo "Link $i in $file is not correct!"
+            fi
         fi
     done
 }
