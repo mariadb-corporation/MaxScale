@@ -308,7 +308,8 @@ function syncWkeToFlatStateMutationCreator(statesToBeSynced) {
 /**
  * @public
  * Mutations creator for states storing in hash map structure (storing in memory).
- * The state uses worksheet's id as key. This helps to preserve multiple worksheet's data in memory.
+ * The state uses worksheet id as key or session id. This helps to preserve multiple worksheet's
+ * data or session's data in memory.
  * The name of mutation follows this pattern SET_STATE_NAME or PATCH_STATE_NAME.
  * e.g. Mutation for is_conn_busy_map state is SET_IS_CONN_BUSY_MAP
  * @param {Object} param.mutationTypesMap - mutation type keys map for states storing in memory. Either SET or PATCH
@@ -319,8 +320,10 @@ function memStatesMutationCreator(mutationTypesMap) {
         const mutationType = mutationTypesMap[stateName]
         return {
             ...mutations,
-            // Use function instead of arrow func in order to access `this.vue`
-            // if payload is not provided, they id (worksheet id) key will be removed from the state
+            /**
+             * if payload is not provided, the id (wke_id or session_id) key will be removed from the map
+             * @param {String} param.id - wke_id or session_id
+             */
             [`${mutationType}_${stateName.toUpperCase()}`]: function(state, { id, payload }) {
                 if (!payload) this.vue.$delete(state[stateName], id)
                 else {
@@ -343,18 +346,15 @@ function memStatesMutationCreator(mutationTypesMap) {
 /**
  * @public
  * This helps to commit mutations provided by mutationTypesMap to delete the states storing in memory for a worksheet
- * @param {Object} param.namespace - module namespace. e.g. query, queryConn
+ * or session.
+ * @param {Object} param.namespace - module namespace. i.e. editor, queryConn, queryResult, schemaSidebar
  * @param {Function} param.commit - vuex commit function
- * @param {String} param.wke_id - worksheet id
+ * @param {String} param.id - wke_id or session_id
  * @param {Object} param.mutationTypesMap - mutation type keys map for states storing in memory. Either SET or PATCH
  */
-function releaseMemory({ namespace, commit, wke_id, mutationTypesMap }) {
+function releaseMemory({ namespace, commit, id, mutationTypesMap }) {
     Object.keys(mutationTypesMap).forEach(key => {
-        commit(
-            `${namespace}/${mutationTypesMap[key]}_${key.toUpperCase()}`,
-            { id: wke_id },
-            { root: true }
-        )
+        commit(`${namespace}/${mutationTypesMap[key]}_${key.toUpperCase()}`, { id }, { root: true })
     })
 }
 export default {

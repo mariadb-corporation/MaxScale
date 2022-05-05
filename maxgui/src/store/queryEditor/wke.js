@@ -180,7 +180,7 @@ export default {
                 queryHelper.releaseMemory({
                     namespace,
                     commit,
-                    wke_id,
+                    id: wke_id,
                     mutationTypesMap: memStateModuleMutations[namespace],
                 })
             })
