@@ -17,7 +17,6 @@ import queryHelper from './queryHelper'
 export function connStatesToBeSynced() {
     return {
         active_sql_conn: {},
-        conn_err_state: false,
     }
 }
 /**
@@ -44,6 +43,7 @@ export default {
     state: {
         sql_conns: {}, // persisted
         is_validating_conn: true,
+        conn_err_state: false,
         rc_target_names_map: {},
         pre_select_conn_rsrc: null,
         ...memStates(),
@@ -66,6 +66,9 @@ export default {
         ...queryHelper.syncWkeToFlatStateMutationCreator(connStatesToBeSynced()),
         SET_IS_VALIDATING_CONN(state, payload) {
             state.is_validating_conn = payload
+        },
+        SET_CONN_ERR_STATE(state, payload) {
+            state.conn_err_state = payload
         },
         SET_SQL_CONNS(state, payload) {
             state.sql_conns = payload
@@ -175,11 +178,11 @@ export default {
                     commit('SET_ACTIVE_SQL_CONN', { payload: active_sql_conn, active_wke_id })
 
                     if (body.db) await dispatch('schemaSidebar/useDb', body.db, { root: true })
-                    commit('SET_CONN_ERR_STATE', { payload: false, active_wke_id })
+                    commit('SET_CONN_ERR_STATE', false)
                 }
             } catch (e) {
                 this.vue.$logger('store-queryConn-openConnect').error(e)
-                commit('SET_CONN_ERR_STATE', { payload: true, active_wke_id })
+                commit('SET_CONN_ERR_STATE', true)
             }
         },
         /**
