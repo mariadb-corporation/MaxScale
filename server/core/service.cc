@@ -200,6 +200,9 @@ cfg::ParamSeconds s_connection_keepalive(
     &s_spec, "connection_keepalive", "How ofted idle connections are pinged",
     std::chrono::seconds(300), cfg::Param::AT_RUNTIME);
 
+cfg::server::DurationDependency<std::chrono::seconds> s_dep_connection_keepalive(
+    "wait_timeout", &s_connection_keepalive, cfg::server::Dependency::MIN, 80);
+
 cfg::ParamBool s_prune_sescmd_history(
     &s_spec, "prune_sescmd_history", "Prune old session command history if the limit is exceeded",
     true, cfg::Param::AT_RUNTIME);
