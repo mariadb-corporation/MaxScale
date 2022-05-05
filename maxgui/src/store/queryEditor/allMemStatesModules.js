@@ -1,6 +1,8 @@
-import { memStates as queryConn } from './queryConn'
-import { memStates as schemaSidebar } from './schemaSidebar'
-import { memStates as editor } from './editor'
-import { memStates as queryResult } from './queryResult'
+import queryHelper from './queryHelper'
 
-export default { editor, queryConn, queryResult, schemaSidebar }
+const modules = ['editor', 'queryConn', 'queryResult', 'schemaSidebar']
+
+export default modules.reduce((acc, m) => {
+    acc[m] = queryHelper.memStateCreator(m)
+    return acc
+}, {})

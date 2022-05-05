@@ -15,39 +15,18 @@ import queryHelper from './queryHelper'
 
 const statesToBeSynced = queryHelper.syncStateCreator('schemaSidebar')
 
-/**
- * @returns {Object} - returns states that are stored in memory
- */
-export function memStates() {
-    return {
-        /**
-         * each key holds these properties:
-         * loading_db_tree?: boolean
-         * db_completion_list?: array,
-         * data? array. Contains schemas array
-         * active_tree_node? object. Contains active node in the schemas array
-         */
-        db_tree_map: {},
-        /**
-         * each key holds these properties:
-         * data? object. Contains res.data.data.attributes of a query
-         * stmt_err_msg_obj? object.
-         * result?: array. error msg array.
-         */
-        exe_stmt_result_map: {},
-    }
-}
+const memStates = queryHelper.memStateCreator('schemaSidebar')
 function genNodeKey(scope) {
     return scope.vue.$help.lodash.uniqueId('node_key_')
 }
 export default {
     namespaced: true,
     state: {
-        ...memStates(),
+        ...memStates,
         ...statesToBeSynced,
     },
     mutations: {
-        ...queryHelper.memStatesMutationCreator(memStates()),
+        ...queryHelper.memStatesMutationCreator(memStates),
         ...queryHelper.syncedStateMutationsCreator({
             statesToBeSynced,
             persistedArrayPath: 'wke.worksheets_arr',

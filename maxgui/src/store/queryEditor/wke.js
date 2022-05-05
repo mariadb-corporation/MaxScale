@@ -180,7 +180,7 @@ export default {
                     namespace,
                     commit,
                     id: wke_id,
-                    memStates: allMemStatesModules[namespace](),
+                    memStates: allMemStatesModules[namespace],
                 })
             })
         },

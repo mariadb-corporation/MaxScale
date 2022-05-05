@@ -227,7 +227,6 @@ async function queryColsOptsData({ active_sql_conn, nodeId, $queryHttp }) {
 function mutate_flat_states({ moduleState, data }) {
     Object.keys(data).forEach(key => (moduleState[key] = data[key]))
 }
-
 /**
  * @private
  * This function helps to synchronize persistedObj in the persisted array. e.g. worksheets_arr with provided data
@@ -260,6 +259,7 @@ function syncToPersistedObj({ scope, data, id, persistedArrayPath }) {
 }
 
 /**
+ * @public
  * The value of each state is replicated from the persisted object in the
  * persisted array. e.g. worksheets_arr
  * Using this to reduce unnecessary recomputation instead of
@@ -290,7 +290,6 @@ function syncStateCreator(namespace) {
             return null
     }
 }
-
 /**
  * @public
  * This function helps to generate vuex mutations for states to by mutated to
@@ -334,6 +333,83 @@ function syncedStateMutationsCreator({ statesToBeSynced, persistedArrayPath }) {
     }
 }
 
+/**
+ * @public
+ * Below states are stored in hash map structure.
+ * The state uses worksheet id as key or session id. This helps to preserve
+ * multiple worksheet's data or session's data in memory.
+ * Use `memStatesMutationCreator` to create corresponding mutations
+ * @param {String} namespace -  module namespace. i.e. editor, queryConn, queryResult, schemaSidebar
+ * @returns {Object} - returns states that are stored in memory
+ */
+function memStateCreator(namespace) {
+    switch (namespace) {
+        case 'editor':
+            return {
+                curr_editor_mode_map: {}, // each key holds a string value. Check SQL_EDITOR_MODES
+                /**
+                 * each key holds these properties:
+                 * altered_active_node?: object
+                 * loading_tbl_creation_info?: boolean
+                 * data:{ table_opts_data?: object, cols_opts_data?: object }
+                 */
+                tbl_creation_info_map: {},
+            }
+        case 'queryConn':
+            return {
+                is_conn_busy_map: {}, // each key holds a boolean value.
+                lost_cnn_err_msg_obj_map: {}, // each key holds an object value receives from api.
+            }
+        case 'queryResult':
+            return {
+                /**
+                 * each key holds these properties:
+                 * request_sent_time?: number
+                 * total_duration?: number
+                 * loading_prvw_data?: boolean,
+                 * data? object
+                 */
+                prvw_data_map: {},
+                /**
+                 * each key holds these properties:
+                 * request_sent_time?: number
+                 * total_duration?: number
+                 * loading_prvw_data_details?: boolean,
+                 * data? object
+                 */
+                prvw_data_details_map: {},
+                /**
+                 * each key holds these properties:
+                 * request_sent_time?: number
+                 * total_duration?: number
+                 * loading_query_result?: boolean,
+                 * data? object.
+                 */
+                query_results_map: {},
+                is_stopping_query_map: {}, // each key holds a boolean value
+            }
+        case 'schemaSidebar':
+            return {
+                /**
+                 * each key holds these properties:
+                 * loading_db_tree?: boolean
+                 * db_completion_list?: array,
+                 * data? array. Contains schemas array
+                 * active_tree_node? object. Contains active node in the schemas array
+                 */
+                db_tree_map: {},
+                /**
+                 * each key holds these properties:
+                 * data? object. Contains res.data.data.attributes of a query
+                 * stmt_err_msg_obj? object.
+                 * result?: array. error msg array.
+                 */
+                exe_stmt_result_map: {},
+            }
+        default:
+            return null
+    }
+}
 /**
  * @public
  * Mutations creator for states storing in hash map structure (storing in memory).
@@ -386,6 +462,7 @@ export default {
     queryColsOptsData,
     syncStateCreator,
     syncedStateMutationsCreator,
+    memStateCreator,
     memStatesMutationCreator,
     releaseMemory,
 }

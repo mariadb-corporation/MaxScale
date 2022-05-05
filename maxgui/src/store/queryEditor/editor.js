@@ -13,26 +13,7 @@
 import queryHelper from './queryHelper'
 
 const statesToBeSynced = queryHelper.syncStateCreator('editor')
-/**
- * TODO: create memStatesCreator
- * @returns {Object} - returns states that are stored in memory
- */
-export function memStates() {
-    return {
-        /**
-         * each key holds these properties:
-         * value?: string. Check SQL_EDITOR_MODES
-         */
-        curr_editor_mode_map: {},
-        /**
-         * each key holds these properties:
-         * altered_active_node?: object
-         * loading_tbl_creation_info?: boolean
-         * data:{ table_opts_data?: object, cols_opts_data?: object }
-         */
-        tbl_creation_info_map: {},
-    }
-}
+const memStates = queryHelper.memStateCreator('editor')
 
 export default {
     namespaced: true,
@@ -41,11 +22,11 @@ export default {
         charset_collation_map: new Map(),
         def_db_charset_map: new Map(),
         engines: [],
-        ...memStates(),
+        ...memStates,
         ...statesToBeSynced,
     },
     mutations: {
-        ...queryHelper.memStatesMutationCreator(memStates()),
+        ...queryHelper.memStatesMutationCreator(memStates),
         ...queryHelper.syncedStateMutationsCreator({
             statesToBeSynced,
             persistedArrayPath: 'wke.worksheets_arr',

@@ -13,23 +13,7 @@
 import queryHelper from './queryHelper'
 
 const statesToBeSynced = queryHelper.syncStateCreator('queryConn')
-/**
- * @returns {Object} - returns states that are stored in memory
- */
-export function memStates() {
-    return {
-        /**
-         * each key holds these properties:
-         * value?: boolean
-         */
-        is_conn_busy_map: {},
-        /**
-         * each key holds these properties:
-         * value?: object.  object value receives from api.
-         */
-        lost_cnn_err_msg_obj_map: {},
-    }
-}
+const memStates = queryHelper.memStateCreator('queryConn')
 
 export default {
     namespaced: true,
@@ -39,11 +23,11 @@ export default {
         conn_err_state: false,
         rc_target_names_map: {},
         pre_select_conn_rsrc: null,
-        ...memStates(),
+        ...memStates,
         ...statesToBeSynced,
     },
     mutations: {
-        ...queryHelper.memStatesMutationCreator(memStates()),
+        ...queryHelper.memStatesMutationCreator(memStates),
         ...queryHelper.syncedStateMutationsCreator({
             statesToBeSynced,
             persistedArrayPath: 'wke.worksheets_arr',
