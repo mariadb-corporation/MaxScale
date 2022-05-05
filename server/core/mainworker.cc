@@ -22,11 +22,16 @@
 #include <maxscale/routingworker.hh>
 
 #include "internal/admin.hh"
+#include "internal/config_runtime.hh"
+#include "internal/configmanager.hh"
 #include "internal/http_sql.hh"
+#include "internal/listener.hh"
 #include "internal/modules.hh"
 #include "internal/monitormanager.hh"
-#include "internal/listener.hh"
-#include "internal/configmanager.hh"
+#include "internal/service.hh"
+
+using std::string;
+using std::vector;
 
 namespace
 {
@@ -41,6 +46,15 @@ thread_local struct ThisThread
 {
     maxscale::MainWorker* pMain = nullptr;
 } this_thread;
+
+bool configure_one_parameter(Service* pService, const std::string& key, json_t* pValue)
+{
+    json_t* pJson = json_pack("{s: {s: {s: {s: o}}}}",
+                              "data", "attributes", "parameters", key.c_str(), pValue);
+    bool ok = runtime_alter_service_from_json(pService, pJson);
+    json_decref(pJson);
+    return ok;
+}
 }
 
 namespace maxscale
@@ -138,6 +152,14 @@ bool MainWorker::pre_run()
         rval = true;
     }
 
+    if (rval)
+    {
+        m_callable.dcall(5s, [this]() {
+                check_dependencies_dc();
+                return true;
+            });
+    }
+
     return rval;
 }
 
@@ -203,6 +225,57 @@ void MainWorker::order_balancing_dc()
     mxb_assert(m_rebalancing_dc == 0);
 
     m_rebalancing_dc = m_callable.dcall(1000ms, &MainWorker::balance_workers_dc, this);
+}
+
+void MainWorker::check_dependencies_dc()
+{
+    // TODO: Only static service dependencies for now.
+    auto dependencies = Service::specification()->server_dependencies();
+    auto services = Service::get_all();
+
+    for (auto* pService : services)
+    {
+        auto servers = pService->reachable_servers();
+
+        for (const auto* pDependency : dependencies)
+        {
+            const string& variable = pDependency->server_variable();
+            vector<string> values;
+
+            for (const auto* pServer : servers)
+            {
+                auto value = pServer->get_variable_value(variable);
+
+                if (!value.empty())
+                {
+                    values.push_back(value);
+                }
+                else
+                {
+                    MXB_INFO("Service '%s' depends on server variable '%s', but it has not "
+                             "been fetched from the server %s.",
+                             pService->name(),
+                             variable.c_str(),
+                             pServer->name());
+                }
+            }
+
+            string parameter = pDependency->parameter().name();
+
+            if (!values.empty())
+            {
+                // TODO: Would be better to collect all settings and then make one
+                // TODO: call to Service::configure().
+                configure_one_parameter(pService, parameter, pDependency->apply_json(values));
+            }
+            else
+            {
+                MXB_INFO("No values found, not adjusting %s.%s.",
+                         pService->name(),
+                         parameter.c_str());
+            }
+        }
+    }
 }
 
 // static

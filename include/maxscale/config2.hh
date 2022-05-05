@@ -1661,9 +1661,8 @@ public:
         m_parameter.specification().insert(this);
     }
 
-    ~Dependency()
+    virtual ~Dependency()
     {
-        m_parameter.specification().remove(this);
     }
 
     /**
@@ -1691,6 +1690,40 @@ public:
     }
 
     /**
+     * Coalesces the values and applies the formatting.
+     *
+     * @param values  Vector of variable values.
+     *
+     * @return Formatted value that can be used with Type::set_from_string().
+     */
+    std::string apply(const std::vector<std::string>& values) const
+    {
+        return format(coalesce(values));
+    }
+
+    /**
+     * Coalesces the values and applies the formatting.
+     *
+     * @param values  Vector of variable values.
+     *
+     * @return Formatted value that can be used with Type::set_from_json();
+     */
+    json_t* apply_json(const std::vector<std::string>& values) const
+    {
+        return format_json(coalesce(values));
+    }
+
+    /**
+     * Format the value of a server variable for use with a MaxScale parameter.
+     *
+     * @param value  The variable value as returned by the server.
+     *
+     * @return The value formatted for @c Type::set_from_string(); right kind of
+     *         content with right kind of suffix.
+     */
+    virtual std::string format(const std::string& value) const = 0;
+
+    /**
      * Format the value of a server variable for use with a MaxScale parameter.
      *
      * @param value  The variable value as returned by the server.
@@ -1698,7 +1731,7 @@ public:
      * @return The value formatted for @c Type::set_from_json(); right kind of
      *         json_t* with the right kind of content.
      */
-    virtual json_t* format(const std::string& value) const = 0;
+    virtual json_t* format_json(const std::string& value) const = 0;
 
     /**
      * Coalesce several values, obtained from different servers, to a single
@@ -1720,25 +1753,26 @@ namespace server
 {
 
 template<class value_type>
-inline json_t* format_server_value_to_parameter_value(const std::string& value);
+inline std::string format_server_value_to_parameter_string(const std::string& value);
+
+template<class value_type>
+inline json_t* format_server_value_to_parameter_json(const std::string& value);
 
 template<>
-inline json_t* format_server_value_to_parameter_value<std::chrono::seconds>(const std::string& value)
+inline std::string format_server_value_to_parameter_string<std::chrono::seconds>(const std::string& value)
 {
-    // When MaxScale duration parameters, regardless of type, are converted to a string,
-    // they will be returned in milliseconds. To ensure that comparisons work, a server
-    // value in seconds is formatted as milliseconds.
+    // When MaxScale duration parameters, regardless of unit, are converted to a string,
+    // the unit will be milliseconds. To ensure that comparisons work, a server/ value in
+    // seconds is formatted as milliseconds.
     long ms = 1000 * strtol(value.c_str(), nullptr, 10);
 
-    std::string s = std::to_string(ms) + "ms";
-    return json_string(s.c_str());
+    return std::to_string(ms) + "ms";
 }
 
 template<>
-inline json_t* format_server_value_to_parameter_value<std::chrono::milliseconds>(const std::string& value)
+inline json_t* format_server_value_to_parameter_json<std::chrono::seconds>(const std::string& value)
 {
-    std::string s = value + "ms";
-    return json_string(s.c_str());
+    return json_string(format_server_value_to_parameter_string<std::chrono::seconds>(value).c_str());
 }
 
 template<class ParamType>
@@ -1751,9 +1785,14 @@ public:
     {
     }
 
-    json_t* format(const std::string& value) const override
+    std::string format(const std::string& value) const override
     {
-        return format_server_value_to_parameter_value<typename ParamType::value_type>(value);
+        return format_server_value_to_parameter_string<typename ParamType::value_type>(value);
+    }
+
+    json_t* format_json(const std::string& value) const override
+    {
+        return format_server_value_to_parameter_json<typename ParamType::value_type>(value);
     }
 };
 
@@ -1766,7 +1805,7 @@ public:
  * Further, the final value may be a certain percentage of the selected or calculated
  * value.
  */
-template<class ParamType>
+template<class ParamType, int nPercent = 100>
 class NumberDependency : public ConcreteDependency<ParamType>
 {
 public:
@@ -1775,12 +1814,12 @@ public:
     NumberDependency(const char* zServer_variable,
                      const ParamType* pParameter,
                      Dependency::Approach approach,
-                     size_t percent = 100)
+                     int percent = 100)
         : Base(zServer_variable, pParameter)
         , m_approach(approach)
         , m_percent(percent)
     {
-        mxb_assert(percent >= 0);
+        mxb_assert(m_percent >= 0);
     }
 
     std::string coalesce(const std::vector<std::string>& values) const override
@@ -1824,7 +1863,7 @@ public:
 
 private:
     Dependency::Approach m_approach;
-    size_t               m_percent;
+    int                  m_percent;
 };
 
 
@@ -1835,17 +1874,12 @@ private:
  * is a duration.
  */
 
-template<class ParamType, class ServerDurationType = typename ParamType::value_type>
-class DurationDependency : public NumberDependency<ParamType>
+template<class StdChronoDuration, int nPercent = 100>
+class DurationDependency : public NumberDependency<ParamDuration<StdChronoDuration>, nPercent>
 {
 public:
-    using Base = NumberDependency<ParamType>;
+    using Base = NumberDependency<ParamDuration<StdChronoDuration>, nPercent>;
     using Base::Base;
-
-    json_t* format(const std::string& value) const override
-    {
-        return format_server_value_to_parameter_value<ServerDurationType>(value);
-    }
 };
 }
 

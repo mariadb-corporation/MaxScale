@@ -112,6 +112,8 @@ private:
     bool balance_workers_dc();
     void order_balancing_dc();
 
+    void check_dependencies_dc();
+
     // Waits until all RoutingWorkers have stopped and then stops the MainWorker
     bool wait_for_shutdown();
 
