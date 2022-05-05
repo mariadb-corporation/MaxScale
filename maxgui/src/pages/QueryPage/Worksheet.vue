@@ -14,6 +14,7 @@
             />
         </template>
         <template slot="pane-right">
+            <session-tabs />
             <keep-alive>
                 <txt-editor-container
                     v-if="isTxtEditor"
@@ -44,12 +45,14 @@ import SidebarContainer from './SidebarContainer'
 import { mapGetters, mapState } from 'vuex'
 import DDLEditorContainer from './DDLEditorContainer.vue'
 import TxtEditorContainer from './TxtEditorContainer.vue'
+import SessionTabs from './SessionTabs'
 export default {
     name: 'worksheet',
     components: {
         SidebarContainer,
         'txt-editor-container': TxtEditorContainer,
         'ddl-editor-container': DDLEditorContainer,
+        'session-tabs': SessionTabs,
     },
     props: {
         ctrDim: { type: Object, required: true },

@@ -1,0 +1,53 @@
+<template>
+    <div class="session-toolbar d-flex align-center flex-grow-1">
+        <div ref="leftBtns" class="d-flex align-center left-buttons pl-2">
+            <v-btn
+                v-show="!$typy(active_sql_conn).isEmptyObject"
+                small
+                class="float-left add-wke-btn"
+                icon
+                @click="handleAddNewSession(active_wke_id)"
+            >
+                <v-icon size="18" color="deep-ocean">mdi-plus</v-icon>
+            </v-btn>
+        </div>
+    </div>
+</template>
+<script>
+/*
+ * Copyright (c) 2020 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2026-04-08
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
+
+import { mapActions, mapState } from 'vuex'
+export default {
+    name: 'session-toolbar',
+    computed: {
+        ...mapState({
+            active_sql_conn: state => state.queryConn.active_sql_conn,
+            active_wke_id: state => state.wke.active_wke_id,
+        }),
+    },
+    mounted() {
+        this.$nextTick(() => this.$emit('get-total-btn-width', this.$refs.leftBtns.clientWidth))
+    },
+    methods: {
+        ...mapActions({ handleAddNewSession: 'querySession/handleAddNewSession' }),
+    },
+}
+</script>
+<style lang="scss" scoped>
+.session-toolbar {
+    border-top: 1px solid $table-border;
+    border-bottom: 1px solid $table-border;
+    border-right: 1px solid $table-border;
+}
+</style>
