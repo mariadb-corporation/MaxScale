@@ -18,6 +18,7 @@
 #include <chrono>
 #include <iostream>
 #include <map>
+#include <numeric>
 #include <set>
 #include <sstream>
 #include <string>
@@ -37,8 +38,14 @@ namespace config
 {
 
 class Configuration;
+class Dependency;
 class Param;
 class Type;
+
+namespace server
+{
+class Dependency;
+}
 
 // An instance of Specification specifies what parameters a particular module expects
 // and of what type they are.
@@ -56,6 +63,7 @@ public:
         PROTOCOL
     };
 
+    using ServerDependencies = std::set<server::Dependency*>;
     using ParamsByName = std::map<std::string, Param*>;     // We want to have them ordered by name.
     using const_iterator = ParamsByName::const_iterator;
     using value_type = ParamsByName::value_type;
@@ -182,6 +190,14 @@ public:
      */
     json_t* to_json() const;
 
+    /**
+     * @return Server dependencies of this specification.
+     */
+    const ServerDependencies& server_dependencies() const
+    {
+        return m_server_dependencies;
+    }
+
 protected:
 
     /**
@@ -218,17 +234,21 @@ protected:
 
 private:
     friend Param;
-
     void insert(Param* pParam);
     void remove(Param* pParam);
+
+    friend server::Dependency;
+    void insert(server::Dependency* pDependency);
+    void remove(server::Dependency* pDependency);
 
     bool mandatory_params_defined(const std::set<std::string>& provided) const;
 
 private:
-    std::string  m_module;
-    Kind         m_kind;
-    ParamsByName m_params;
-    std::string  m_prefix;
+    std::string        m_module;
+    Kind               m_kind;
+    ParamsByName       m_params;
+    std::string        m_prefix;
+    ServerDependencies m_server_dependencies;
 };
 
 
@@ -252,6 +272,14 @@ public:
     };
 
     ~Param();
+
+    /**
+     * @return The specification of this parameter.
+     */
+    Specification& specification() const
+    {
+        return m_specification;
+    }
 
     /**
      * @return The name of the parameter.
@@ -1600,6 +1628,226 @@ private:
  * ParamBitMask
  */
 using ParamBitMask = ParamCount;
+
+/**
+ * server::Dependency
+ *
+ * An instance of Dependency describes the dependency between a parameter and
+ * some server variable.
+ */
+class server::Dependency
+{
+public:
+    // The approach to be used when collapsing the variable value of
+    // several servers, to a single value to be used in MaxScale.
+    enum Approach
+    {
+        AVG, // The average of all values.
+        MIN, // The minium value.
+        MAX  // The maximum value.
+    };
+
+    /**
+     * Constructor
+     *
+     * @param zServer_variable  The global server variable that affects a MaxScale parameter.
+     * @param pParameter        The MaxScale parameter affected by the server variable.
+     */
+    Dependency(const char* zServer_variable,
+               const Param* pParameter)
+        : m_server_variable(zServer_variable)
+        , m_parameter(*pParameter)
+    {
+        m_parameter.specification().insert(this);
+    }
+
+    ~Dependency()
+    {
+        m_parameter.specification().remove(this);
+    }
+
+    /**
+     * @return The specification this dependency relates to.
+     */
+    Specification& specification() const
+    {
+        return m_parameter.specification();
+    }
+
+    /**
+     * @return The global server variable of this dependency.
+     */
+    const std::string& server_variable() const
+    {
+        return m_server_variable;
+    }
+
+    /**
+     * @return The parameter dependent on the server variable.
+     */
+    const Param& parameter() const
+    {
+        return m_parameter;
+    }
+
+    /**
+     * Format the value of a server variable for use with a MaxScale parameter.
+     *
+     * @param value  The variable value as returned by the server.
+     *
+     * @return The value formatted for @c Type::set_from_json(); right kind of
+     *         json_t* with the right kind of content.
+     */
+    virtual json_t* format(const std::string& value) const = 0;
+
+    /**
+     * Coalesce several values, obtained from different servers, to a single
+     * value appropriate for the parameter in question. The way the values are
+     * coalesced depends upon the server variable and the parameter.
+     *
+     * @param  values Vector of variable values.
+     *
+     * @return The coalesced value.
+     */
+    virtual std::string coalesce(const std::vector<std::string>& values) const = 0;
+
+private:
+    const std::string m_server_variable;
+    const Param&      m_parameter;
+};
+
+namespace server
+{
+
+template<class value_type>
+inline json_t* format_server_value_to_parameter_value(const std::string& value);
+
+template<>
+inline json_t* format_server_value_to_parameter_value<std::chrono::seconds>(const std::string& value)
+{
+    // When MaxScale duration parameters, regardless of type, are converted to a string,
+    // they will be returned in milliseconds. To ensure that comparisons work, a server
+    // value in seconds is formatted as milliseconds.
+    long ms = 1000 * strtol(value.c_str(), nullptr, 10);
+
+    std::string s = std::to_string(ms) + "ms";
+    return json_string(s.c_str());
+}
+
+template<>
+inline json_t* format_server_value_to_parameter_value<std::chrono::milliseconds>(const std::string& value)
+{
+    std::string s = value + "ms";
+    return json_string(s.c_str());
+}
+
+template<class ParamType>
+class ConcreteDependency : public Dependency
+{
+public:
+    ConcreteDependency(const char* zServer_variable,
+                       const ParamType* pParameter)
+        : Dependency(zServer_variable, pParameter)
+    {
+    }
+
+    json_t* format(const std::string& value) const override
+    {
+        return format_server_value_to_parameter_value<typename ParamType::value_type>(value);
+    }
+};
+
+/**
+ * NumberDependency
+ *
+ * A NumberDependency describes a dependency on a server variable whose value
+ * can be treated as a number. When the values of different servers are coalesced,
+ * the value returned can be the smallest or largest value, or the calculated average.
+ * Further, the final value may be a certain percentage of the selected or calculated
+ * value.
+ */
+template<class ParamType>
+class NumberDependency : public ConcreteDependency<ParamType>
+{
+public:
+    using Base = ConcreteDependency<ParamType>;
+
+    NumberDependency(const char* zServer_variable,
+                     const ParamType* pParameter,
+                     Dependency::Approach approach,
+                     size_t percent = 100)
+        : Base(zServer_variable, pParameter)
+        , m_approach(approach)
+        , m_percent(percent)
+    {
+        mxb_assert(percent >= 0);
+    }
+
+    std::string coalesce(const std::vector<std::string>& values) const override
+    {
+        std::string rv;
+        std::vector<int> numbers;
+        std::transform(values.begin(), values.end(), std::back_inserter(numbers), [](const std::string& s) {
+                return strtol(s.c_str(), nullptr, 0);
+            });
+
+        if (numbers.size() != 0)
+        {
+            int v = 0;
+
+            switch (m_approach)
+            {
+            case Dependency::AVG:
+                v = std::accumulate(numbers.begin(), numbers.end(), 0) / numbers.size();
+                break;
+
+            case Dependency::MIN:
+                v = *std::min_element(numbers.begin(), numbers.end());
+                break;
+
+            case Dependency::MAX:
+                v = *std::max_element(numbers.begin(), numbers.end());
+                break;
+            }
+
+            if (m_percent != 100)
+            {
+                v *= m_percent;
+                v /= 100;
+            }
+
+            rv = std::to_string(v);
+        }
+
+        return rv;
+    }
+
+private:
+    Dependency::Approach m_approach;
+    size_t               m_percent;
+};
+
+
+/**
+ * DurationDependency
+ *
+ * A DurationDependency describes a dependency on a server variable whose value
+ * is a duration.
+ */
+
+template<class ParamType, class ServerDurationType = typename ParamType::value_type>
+class DurationDependency : public NumberDependency<ParamType>
+{
+public:
+    using Base = NumberDependency<ParamType>;
+    using Base::Base;
+
+    json_t* format(const std::string& value) const override
+    {
+        return format_server_value_to_parameter_value<ServerDurationType>(value);
+    }
+};
+}
 
 /**
  * An instance of the class Configuration specifies the configuration of a particular

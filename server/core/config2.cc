@@ -434,6 +434,20 @@ void Specification::remove(Param* pParam)
     m_params.erase(it);
 }
 
+void Specification::insert(server::Dependency* pDependency)
+{
+    mxb_assert(m_server_dependencies.find(pDependency) == m_server_dependencies.end());
+
+    m_server_dependencies.insert(pDependency);
+}
+
+void Specification::remove(server::Dependency* pDependency)
+{
+    mxb_assert(m_server_dependencies.find(pDependency) != m_server_dependencies.end());
+
+    m_server_dependencies.erase(pDependency);
+}
+
 json_t* Specification::to_json() const
 {
     json_t* pSpecification = json_array();
