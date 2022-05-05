@@ -67,7 +67,6 @@ export default {
             statesToBeSynced,
             persistedArrayPath: 'wke.worksheets_arr',
         }),
-        ...queryHelper.syncPersistedObjToFlatStateMutationCreator(statesToBeSynced),
     },
     actions: {
         /**

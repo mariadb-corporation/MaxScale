@@ -302,29 +302,22 @@ function syncStateCreator(namespace) {
  * @returns {Object} - returns vuex mutations
  */
 function syncedStateMutationsCreator({ statesToBeSynced, persistedArrayPath }) {
-    return Object.keys(statesToBeSynced).reduce(
-        (mutations, key) => ({
-            ...mutations,
-            [`SET_${key.toUpperCase()}`]: function(state, { payload, id }) {
-                const data = {
-                    [key]: payload,
-                }
-                // First mutating flat states then sync it to persistedObj
-                mutate_flat_states({ moduleState: state, data })
-                syncToPersistedObj({ scope: this, data, id, persistedArrayPath })
-            },
-        }),
-        {}
-    )
-}
-/**
- * @public
- * This function helps to generate a mutation to sync persistedObj to flat states (statesToBeSynced)
- * @param {Object} statesToBeSynced
- * @returns {Object} - returns vuex mutation
- */
-function syncPersistedObjToFlatStateMutationCreator(statesToBeSynced) {
     return {
+        // Generate mutation for each key
+        ...Object.keys(statesToBeSynced).reduce(
+            (mutations, key) => ({
+                ...mutations,
+                [`SET_${key.toUpperCase()}`]: function(state, { payload, id }) {
+                    const data = {
+                        [key]: payload,
+                    }
+                    // First mutating flat states then sync it to persistedObj
+                    mutate_flat_states({ moduleState: state, data })
+                    syncToPersistedObj({ scope: this, data, id, persistedArrayPath })
+                },
+            }),
+            {}
+        ),
         /**
          * Sync persistedObj to flat states
          * @param {Object} state - vuex state
@@ -401,7 +394,6 @@ export default {
     queryColsOptsData,
     syncStateCreator,
     syncedStateMutationsCreator,
-    syncPersistedObjToFlatStateMutationCreator,
     memStatesMutationCreator,
     releaseMemory,
 }

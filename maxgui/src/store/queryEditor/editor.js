@@ -55,7 +55,6 @@ export default {
             statesToBeSynced,
             persistedArrayPath: 'wke.worksheets_arr',
         }),
-        ...queryHelper.syncPersistedObjToFlatStateMutationCreator(statesToBeSynced),
         SET_SELECTED_QUERY_TXT(state, payload) {
             state.selected_query_txt = payload
         },

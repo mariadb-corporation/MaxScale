@@ -49,7 +49,6 @@ export default {
             statesToBeSynced,
             persistedArrayPath: 'wke.worksheets_arr',
         }),
-        ...queryHelper.syncPersistedObjToFlatStateMutationCreator(statesToBeSynced),
         SET_IS_VALIDATING_CONN(state, payload) {
             state.is_validating_conn = payload
         },
