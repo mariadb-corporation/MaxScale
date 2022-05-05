@@ -2334,6 +2334,33 @@ error log file. By default, MariaDB MaxScale will log to a file in
 
 The current limitations of MaxScale are listed in the [Limitations](../About/Limitations.md) document.
 
+# Performance Optimization
+
+* Tune `query_classifier_cache_size` to allow maximal use of the query
+  classifier cache. Increase the value and/or system memory until the set of
+  unique SQL patterns fits into memory. By default at most 15% of the system
+  memory is used for this cache. To detect if the SQL statements fit into
+  memory, monitor the `QC cache evictions` value in `maxctrl show threads` to
+  see how many evictions take place. If it keeps increasing, increase the size
+  of the query classifier cache. Using the query classifier cache with a CPU
+  bound workload gives a roughly 20% improvement in performance compared to when
+  it is turned off.
+
+* A faster CPU with more CPU cores is better. This is true for most applications
+  but especially for MaxScale as it is mostly limited by the speed of the
+  CPU. Using `threads=auto` is recommended (the default starting with MaxScale
+  6).
+
+* Network throughput between the client, MaxScale and the database nodes governs
+  how much traffic can be handled. The client-to-MaxScale network is likely to
+  be saturated first: having multiple MaxScales in front of the cluster is an
+  easy way of solving this problem.
+
+* Certain MaxScale modules store data on disk. A faster disk improves their
+  performance but depending on the module, this might not be a big enough of a
+  problem to worry about. Filters like the `qlafilter` that write information to
+  disk for every SQL query can cause performance bottlenecks.
+
 # Troubleshooting
 
 For a list of common problems and their solutions, read the
