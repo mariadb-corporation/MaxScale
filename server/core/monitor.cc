@@ -196,7 +196,8 @@ bool MonitorSpec::do_post_validate(Params params) const
 class ThisUnit
 {
 public:
-    static constexpr seconds variables_update_interval = 10min;
+    // TODO: Consider dropping this altogether and simply fetch the variables at each monitor tick.
+    static constexpr seconds variables_update_interval = 10s;
 
     /**
      * Mark a monitor as the monitor of the server. A server may only be monitored by one monitor.
