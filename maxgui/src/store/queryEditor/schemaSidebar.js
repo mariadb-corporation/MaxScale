@@ -12,17 +12,8 @@
  */
 import { uniqBy } from 'utils/helpers'
 import queryHelper from './queryHelper'
-/**
- * @returns Initial sidebar tree schema related states
- */
-export function sidebarStatesToBeSynced() {
-    return {
-        is_sidebar_collapsed: false,
-        search_schema: '',
-        active_db: '',
-        expanded_nodes: [],
-    }
-}
+
+const statesToBeSynced = queryHelper.syncStateCreator('schemaSidebar')
 
 /**
  * Below states are stored in hash map structure.
@@ -63,26 +54,15 @@ export default {
     namespaced: true,
     state: {
         ...memStates(),
-        /**
-         * Below is flat wke states. The value
-         * of each state is replicated from the current active
-         * worksheet in persisted worksheets_arr.
-         * Using this to reduce unnecessary recomputation instead of
-         * directly accessing the value in worksheets_arr because vuex getters
-         * or vue.js computed properties will recompute when a property
-         * is changed in worksheets_arr then causes other properties also
-         * have to recompute. A better method would be to create relational
-         * keys between modules, but for now, stick with the old approach.
-         */
-        ...sidebarStatesToBeSynced(),
+        ...statesToBeSynced,
     },
     mutations: {
         ...queryHelper.memStatesMutationCreator(mutationTypesMap),
         ...queryHelper.syncedStateMutationsCreator({
-            statesToBeSynced: sidebarStatesToBeSynced(),
+            statesToBeSynced,
             persistedArrayPath: 'wke.worksheets_arr',
         }),
-        ...queryHelper.syncPersistedObjToFlatStateMutationCreator(sidebarStatesToBeSynced()),
+        ...queryHelper.syncPersistedObjToFlatStateMutationCreator(statesToBeSynced),
     },
     actions: {
         /**

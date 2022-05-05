@@ -11,14 +11,8 @@
  * Public License.
  */
 import queryHelper from './queryHelper'
-/**
- * @returns Initial connection related states
- */
-export function connStatesToBeSynced() {
-    return {
-        active_sql_conn: {},
-    }
-}
+
+const statesToBeSynced = queryHelper.syncStateCreator('queryConn')
 /**
  * Below states are stored in hash map structure.
  * Using worksheet's id as key. This helps to preserve
@@ -47,26 +41,15 @@ export default {
         rc_target_names_map: {},
         pre_select_conn_rsrc: null,
         ...memStates(),
-        /**
-         * Below is flat wke states. The value
-         * of each state is replicated from the current active
-         * worksheet in persisted worksheets_arr.
-         * Using this to reduce unnecessary recomputation instead of
-         * directly accessing the value in worksheets_arr because vuex getters
-         * or vue.js computed properties will recompute when a property
-         * is changed in worksheets_arr then causes other properties also
-         * have to recompute. A better method would be to create relational
-         * keys between modules, but for now, stick with the old approach.
-         */
-        ...connStatesToBeSynced(),
+        ...statesToBeSynced,
     },
     mutations: {
         ...queryHelper.memStatesMutationCreator(mutationTypesMap),
         ...queryHelper.syncedStateMutationsCreator({
-            statesToBeSynced: connStatesToBeSynced(),
+            statesToBeSynced,
             persistedArrayPath: 'wke.worksheets_arr',
         }),
-        ...queryHelper.syncPersistedObjToFlatStateMutationCreator(connStatesToBeSynced()),
+        ...queryHelper.syncPersistedObjToFlatStateMutationCreator(statesToBeSynced),
         SET_IS_VALIDATING_CONN(state, payload) {
             state.is_validating_conn = payload
         },

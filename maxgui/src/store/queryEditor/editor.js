@@ -11,15 +11,8 @@
  * Public License.
  */
 import queryHelper from './queryHelper'
-/**
- * @returns Initial editor related states
- */
-export function editorStatesToBeSynced() {
-    return {
-        query_txt: '',
-        curr_ddl_alter_spec: '',
-    }
-}
+
+const statesToBeSynced = queryHelper.syncStateCreator('editor')
 /**
  * Below states are stored in hash map structure.
  * Using worksheet's id as key. This helps to preserve
@@ -54,26 +47,15 @@ export default {
         def_db_charset_map: new Map(),
         engines: [],
         ...memStates(),
-        /**
-         * Below is flat wke states. The value
-         * of each state is replicated from the current active
-         * worksheet in persisted worksheets_arr.
-         * Using this to reduce unnecessary recomputation instead of
-         * directly accessing the value in worksheets_arr because vuex getters
-         * or vue.js computed properties will recompute when a property
-         * is changed in worksheets_arr then causes other properties also
-         * have to recompute. A better method would be to create relational
-         * keys between modules, but for now, stick with the old approach.
-         */
-        ...editorStatesToBeSynced(),
+        ...statesToBeSynced,
     },
     mutations: {
         ...queryHelper.memStatesMutationCreator(mutationTypesMap),
         ...queryHelper.syncedStateMutationsCreator({
-            statesToBeSynced: editorStatesToBeSynced(),
+            statesToBeSynced,
             persistedArrayPath: 'wke.worksheets_arr',
         }),
-        ...queryHelper.syncPersistedObjToFlatStateMutationCreator(editorStatesToBeSynced()),
+        ...queryHelper.syncPersistedObjToFlatStateMutationCreator(statesToBeSynced),
         SET_SELECTED_QUERY_TXT(state, payload) {
             state.selected_query_txt = payload
         },

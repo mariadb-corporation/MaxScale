@@ -12,11 +12,10 @@
  */
 import { uniqueId } from 'utils/helpers'
 import queryHelper from './queryHelper'
-import { connStatesToBeSynced } from './queryConn'
-import { sidebarStatesToBeSynced } from './schemaSidebar'
-import { editorStatesToBeSynced } from './editor'
-import { resultStatesToBeSynced } from './queryResult'
 import memStateModuleMutations from './memStateModuleMutations'
+
+queryHelper.syncStateCreator('editor')
+
 /**
  * @returns Return a new worksheet state with unique id
  */
@@ -24,10 +23,10 @@ export function defWorksheetState() {
     return {
         id: uniqueId(`${new Date().getUTCMilliseconds()}_`),
         name: 'WORKSHEET',
-        ...connStatesToBeSynced(),
-        ...sidebarStatesToBeSynced(),
-        ...editorStatesToBeSynced(),
-        ...resultStatesToBeSynced(),
+        ...queryHelper.syncStateCreator('editor'),
+        ...queryHelper.syncStateCreator('queryConn'),
+        ...queryHelper.syncStateCreator('queryResult'),
+        ...queryHelper.syncStateCreator('schemaSidebar'),
     }
 }
 
@@ -62,16 +61,16 @@ export default {
         },
         /**
          * This mutation resets all properties of the provided targetWke object to its initial states
-         * except states that stores editor data (editorStatesToBeSynced)
+         * except states that stores editor data
          * @param {Object} targetWke - wke to be reset
          */
         REFRESH_WKE(state, targetWke) {
             const idx = state.worksheets_arr.indexOf(targetWke)
             const wke = {
                 ...targetWke,
-                ...connStatesToBeSynced(),
-                ...sidebarStatesToBeSynced(),
-                ...resultStatesToBeSynced(),
+                ...queryHelper.syncStateCreator('queryConn'),
+                ...queryHelper.syncStateCreator('queryResult'),
+                ...queryHelper.syncStateCreator('schemaSidebar'),
                 name: 'WORKSHEET',
             }
             state.worksheets_arr = this.vue.$help.immutableUpdate(state.worksheets_arr, {

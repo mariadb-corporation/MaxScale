@@ -260,6 +260,38 @@ function syncToPersistedObj({ scope, data, id, persistedArrayPath }) {
 }
 
 /**
+ * The value of each state is replicated from the persisted object in the
+ * persisted array. e.g. worksheets_arr
+ * Using this to reduce unnecessary recomputation instead of
+ * directly accessing the value in the persisted array because vuex getters
+ * or vue.js computed properties will recompute when a property
+ * is changed in persisted array then causes other properties also
+ * have to recompute. A better method would be to create relational
+ * keys between modules, but for now, stick with the old approach.
+ * @param {String} namespace -  module namespace. i.e. editor, queryConn, queryResult, schemaSidebar
+ * @returns {Object} - return flat state for the provided namespace module
+ */
+function syncStateCreator(namespace) {
+    switch (namespace) {
+        case 'editor':
+            return { query_txt: '', curr_ddl_alter_spec: '' }
+        case 'queryConn':
+            return { active_sql_conn: {} }
+        case 'queryResult':
+            return { curr_query_mode: 'QUERY_VIEW', show_vis_sidebar: false }
+        case 'schemaSidebar':
+            return {
+                is_sidebar_collapsed: false,
+                search_schema: '',
+                active_db: '',
+                expanded_nodes: [],
+            }
+        default:
+            return null
+    }
+}
+
+/**
  * @public
  * This function helps to generate vuex mutations for states to by mutated to
  * flat states and synced to persistedObj.
@@ -367,6 +399,7 @@ export default {
     updateTblChild,
     queryTblOptsData,
     queryColsOptsData,
+    syncStateCreator,
     syncedStateMutationsCreator,
     syncPersistedObjToFlatStateMutationCreator,
     memStatesMutationCreator,

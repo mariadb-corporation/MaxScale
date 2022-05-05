@@ -11,15 +11,8 @@
  * Public License.
  */
 import queryHelper from './queryHelper'
-/**
- * @returns Initial result related states
- */
-export function resultStatesToBeSynced() {
-    return {
-        curr_query_mode: 'QUERY_VIEW',
-        show_vis_sidebar: false,
-    }
-}
+
+const statesToBeSynced = queryHelper.syncStateCreator('queryResult')
 /**
  * Below states are stored in hash map structure.
  * Using worksheet's id as key. This helps to preserve
@@ -66,26 +59,15 @@ export default {
     namespaced: true,
     state: {
         ...memStates(),
-        /**
-         * Below is flat wke states. The value
-         * of each state is replicated from the current active
-         * worksheet in persisted worksheets_arr.
-         * Using this to reduce unnecessary recomputation instead of
-         * directly accessing the value in worksheets_arr because vuex getters
-         * or vue.js computed properties will recompute when a property
-         * is changed in worksheets_arr then causes other properties also
-         * have to recompute. A better method would be to create relational
-         * keys between modules, but for now, stick with the old approach.
-         */
-        ...resultStatesToBeSynced(),
+        ...statesToBeSynced,
     },
     mutations: {
         ...queryHelper.memStatesMutationCreator(mutationTypesMap),
         ...queryHelper.syncedStateMutationsCreator({
-            statesToBeSynced: resultStatesToBeSynced(),
+            statesToBeSynced,
             persistedArrayPath: 'wke.worksheets_arr',
         }),
-        ...queryHelper.syncPersistedObjToFlatStateMutationCreator(resultStatesToBeSynced()),
+        ...queryHelper.syncPersistedObjToFlatStateMutationCreator(statesToBeSynced),
     },
     actions: {
         /**
