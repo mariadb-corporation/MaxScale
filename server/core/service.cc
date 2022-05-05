@@ -426,6 +426,12 @@ Service* Service::create(const char* name, json_t* params)
     return create(name, params, unknown);
 }
 
+std::vector<Service*> Service::get_all()
+{
+    mxb_assert(MainWorker::is_main_worker());
+    return this_unit.services;
+}
+
 static std::string get_version_string(const mxs::ConfigParameters& params)
 {
     std::string version_string = params.get_string(CN_VERSION_STRING);

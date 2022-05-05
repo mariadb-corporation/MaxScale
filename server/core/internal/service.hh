@@ -79,6 +79,17 @@ public:
     static Service* create(const char* name, json_t* params);
 
     /**
+     * Get all services.
+     *
+     * @return All current services.
+     *
+     * @note Only to be called from MainWorker. The returned vector is safe to use
+     *       only from within the current epoll callback; must not be saved from
+     *       one callback to the next.
+     */
+    static std::vector<Service*> get_all();
+
+    /**
      * Stop a service
      *
      * This calls stop() on all the listeners that point to this service.
