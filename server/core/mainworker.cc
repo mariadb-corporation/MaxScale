@@ -53,6 +53,11 @@ MainWorker::MainWorker(mxb::WatchdogNotifier* pNotifier)
     mxb_assert(!this_unit.pMain);
 
     this_unit.pMain = this;
+    // Actually, pMain should be set in pre_run() and cleared in post_run(),
+    // but when set here and cleared in the destructor, we will appear to be
+    // running in the MainWorker also when MainWorker::run() has returned, which
+    // is conceptually ok as the main worker runs in the main thread that stays
+    // around until the program ends.
     this_thread.pMain = this;
 }
 
@@ -121,18 +126,16 @@ void MainWorker::update_rebalancing()
 
 bool MainWorker::pre_run()
 {
-    this_thread.pMain = this;
-
     bool rval = false;
-
-    m_callable.dcall(100ms, &MainWorker::inc_ticks);
-
-    update_rebalancing();
 
     if (modules_thread_init() && qc_thread_init(QC_INIT_SELF))
     {
-        rval = true;
         qc_use_local_cache(false);
+
+        m_callable.dcall(100ms, &MainWorker::inc_ticks);
+        update_rebalancing();
+
+        rval = true;
     }
 
     return rval;
