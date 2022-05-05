@@ -2843,7 +2843,6 @@ can add a filter to a service and combine multiple filters in one service.
 * [Regular Expression Filter](../Filters/Regex-Filter.md)
 * [Tee Filter](../Filters/Tee-Filter.md)
 * [Top Filter](../Filters/Top-N-Filter.md)
-* [Database Firewall Filter](../Filters/Database-Firewall-Filter.md)
 * [Query Redirection Filter](../Filters/Named-Server-Filter.md)
 
 # Encrypting Passwords
