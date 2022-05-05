@@ -130,7 +130,7 @@ export default {
                 }
             },
             set(value) {
-                this.SET_CURR_QUERY_MODE({ payload: value, active_wke_id: this.active_wke_id })
+                this.SET_CURR_QUERY_MODE({ payload: value, id: this.active_wke_id })
             },
         },
     },

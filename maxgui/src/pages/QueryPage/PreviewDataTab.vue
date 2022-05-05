@@ -167,7 +167,7 @@ export default {
                     this.curr_query_mode === this.SQL_QUERY_MODES.PRVW_DATA ||
                     this.curr_query_mode === this.SQL_QUERY_MODES.PRVW_DATA_DETAILS
                 )
-                    this.SET_CURR_QUERY_MODE({ payload: value, active_wke_id: this.active_wke_id })
+                    this.SET_CURR_QUERY_MODE({ payload: value, id: this.active_wke_id })
             },
         },
     },

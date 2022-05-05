@@ -62,8 +62,11 @@ export default {
     },
     mutations: {
         ...queryHelper.memStatesMutationCreator(mutationTypesMap),
-        ...queryHelper.syncedStateMutationsCreator(connStatesToBeSynced()),
-        ...queryHelper.syncWkeToFlatStateMutationCreator(connStatesToBeSynced()),
+        ...queryHelper.syncedStateMutationsCreator({
+            statesToBeSynced: connStatesToBeSynced(),
+            persistedArrayPath: 'wke.worksheets_arr',
+        }),
+        ...queryHelper.syncPersistedObjToFlatStateMutationCreator(connStatesToBeSynced()),
         SET_IS_VALIDATING_CONN(state, payload) {
             state.is_validating_conn = payload
         },
@@ -145,7 +148,10 @@ export default {
                     // update active_sql_conn attributes
                     if (state.active_sql_conn.id) {
                         const active_sql_conn = validSqlConns[state.active_sql_conn.id]
-                        commit('SET_ACTIVE_SQL_CONN', { payload: active_sql_conn, active_wke_id })
+                        commit('SET_ACTIVE_SQL_CONN', {
+                            payload: active_sql_conn,
+                            id: active_wke_id,
+                        })
                     }
                 }
             } catch (e) {
@@ -175,7 +181,7 @@ export default {
                         binding_type: rootState.app_config.QUERY_CONN_BINDING_TYPES.WORKSHEET,
                     }
                     commit('ADD_SQL_CONN', active_sql_conn)
-                    commit('SET_ACTIVE_SQL_CONN', { payload: active_sql_conn, active_wke_id })
+                    commit('SET_ACTIVE_SQL_CONN', { payload: active_sql_conn, id: active_wke_id })
 
                     if (body.db) await dispatch('schemaSidebar/useDb', body.db, { root: true })
                     commit('SET_CONN_ERR_STATE', false)

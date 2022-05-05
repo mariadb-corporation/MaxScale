@@ -230,7 +230,7 @@ describe(`ConnectionManager - connection list dropdown tests`, () => {
         expect(updateRouteArgs).to.be.deep.equals(wrapper.vm.active_wke_id)
         expect(setCurrCnctResourceArgs).to.be.deep.equals({
             payload: selectConn,
-            active_wke_id: wrapper.vm.active_wke_id,
+            id: wrapper.vm.active_wke_id,
         })
         expect(handleDispatchInitialFetchArgs).to.be.deep.equals(selectConn)
     })

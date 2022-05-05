@@ -284,12 +284,12 @@ export default {
                         if (validLevels[0] === 0)
                             this.SET_EXPANDED_NODES({
                                 payload: nodes,
-                                active_wke_id: this.active_wke_id,
+                                id: this.active_wke_id,
                             })
                         else
                             this.SET_EXPANDED_NODES({
                                 payload: [],
-                                active_wke_id: this.active_wke_id,
+                                id: this.active_wke_id,
                             })
                     }
                 },
@@ -428,7 +428,7 @@ export default {
                         })
                         this.SET_CURR_DDL_ALTER_SPEC({
                             payload: this.SQL_DDL_ALTER_SPECS.COLUMNS,
-                            active_wke_id: this.active_wke_id,
+                            id: this.active_wke_id,
                         })
                         this.$emit('alter-tbl', alterActiveNode)
                     }

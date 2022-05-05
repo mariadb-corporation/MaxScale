@@ -326,7 +326,7 @@ export default {
         async onRun(mode) {
             this.SET_CURR_QUERY_MODE({
                 payload: this.SQL_QUERY_MODES.QUERY_VIEW,
-                active_wke_id: this.active_wke_id,
+                id: this.active_wke_id,
             })
             switch (mode) {
                 case 'all':

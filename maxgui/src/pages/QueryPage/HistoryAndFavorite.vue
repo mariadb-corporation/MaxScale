@@ -220,7 +220,7 @@ export default {
                     this.curr_query_mode === this.SQL_QUERY_MODES.HISTORY ||
                     this.curr_query_mode === this.SQL_QUERY_MODES.FAVORITE
                 )
-                    this.SET_CURR_QUERY_MODE({ payload: value, active_wke_id: this.active_wke_id })
+                    this.SET_CURR_QUERY_MODE({ payload: value, id: this.active_wke_id })
             },
         },
         queryLogTypes() {

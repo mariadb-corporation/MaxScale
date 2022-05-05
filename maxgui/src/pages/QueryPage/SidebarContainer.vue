@@ -51,7 +51,7 @@
                                     @click="
                                         SET_IS_SIDEBAR_COLLAPSED({
                                             payload: !is_sidebar_collapsed,
-                                            active_wke_id,
+                                            id: active_wke_id,
                                         })
                                     "
                                 >
@@ -173,7 +173,7 @@ export default {
                 return this.search_schema
             },
             set(value) {
-                this.SET_SEARCH_SCHEMA({ payload: value, active_wke_id: this.active_wke_id })
+                this.SET_SEARCH_SCHEMA({ payload: value, id: this.active_wke_id })
             },
         },
         isConnecting() {
@@ -215,7 +215,7 @@ export default {
         },
         async handleGetNodeData({ SQL_QUERY_MODE, schemaId }) {
             this.clearDataPreview()
-            this.SET_CURR_QUERY_MODE({ payload: SQL_QUERY_MODE, active_wke_id: this.active_wke_id })
+            this.SET_CURR_QUERY_MODE({ payload: SQL_QUERY_MODE, id: this.active_wke_id })
             switch (SQL_QUERY_MODE) {
                 case this.SQL_QUERY_MODES.PRVW_DATA:
                 case this.SQL_QUERY_MODES.PRVW_DATA_DETAILS:

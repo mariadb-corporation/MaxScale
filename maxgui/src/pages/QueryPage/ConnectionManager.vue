@@ -242,7 +242,7 @@ export default {
          */
         async onChangeChosenConn(chosenConn) {
             // update active_sql_conn module state
-            this.SET_ACTIVE_SQL_CONN({ payload: chosenConn, active_wke_id: this.active_wke_id })
+            this.SET_ACTIVE_SQL_CONN({ payload: chosenConn, id: this.active_wke_id })
             // handle navigate to the corresponding nested route
             this.updateRoute(this.active_wke_id)
             // populate data

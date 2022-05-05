@@ -78,8 +78,11 @@ export default {
     },
     mutations: {
         ...queryHelper.memStatesMutationCreator(mutationTypesMap),
-        ...queryHelper.syncedStateMutationsCreator(sidebarStatesToBeSynced()),
-        ...queryHelper.syncWkeToFlatStateMutationCreator(sidebarStatesToBeSynced()),
+        ...queryHelper.syncedStateMutationsCreator({
+            statesToBeSynced: sidebarStatesToBeSynced(),
+            persistedArrayPath: 'wke.worksheets_arr',
+        }),
+        ...queryHelper.syncPersistedObjToFlatStateMutationCreator(sidebarStatesToBeSynced()),
     },
     actions: {
         /**
@@ -461,7 +464,7 @@ export default {
                         { root: true }
                     )
                     queryName = `Failed to change default database to ${escapedDb}`
-                } else commit('SET_ACTIVE_DB', { payload: db, active_wke_id })
+                } else commit('SET_ACTIVE_DB', { payload: db, id: active_wke_id })
                 dispatch(
                     'persisted/pushQueryLog',
                     {
@@ -489,9 +492,9 @@ export default {
                 const resActiveDb = this.vue
                     .$typy(res, 'data.data.attributes.results[0].data')
                     .safeArray.flat()[0]
-                if (!resActiveDb) commit('SET_ACTIVE_DB', { payload: '', active_wke_id })
+                if (!resActiveDb) commit('SET_ACTIVE_DB', { payload: '', id: active_wke_id })
                 else if (active_db !== resActiveDb)
-                    commit('SET_ACTIVE_DB', { payload: resActiveDb, active_wke_id })
+                    commit('SET_ACTIVE_DB', { payload: resActiveDb, id: active_wke_id })
             } catch (e) {
                 this.vue.$logger('store-schemaSidebar-updateActiveDb').error(e)
             }

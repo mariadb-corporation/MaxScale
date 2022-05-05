@@ -165,10 +165,10 @@ export default {
          * @param {Object} param.wke - worksheet object to be sync to flat states
          */
         handleSyncWke({ commit }, wke) {
-            commit('editor/SYNC_WITH_WKE', wke, { root: true })
-            commit('queryConn/SYNC_WITH_WKE', wke, { root: true })
-            commit('queryResult/SYNC_WITH_WKE', wke, { root: true })
-            commit('schemaSidebar/SYNC_WITH_WKE', wke, { root: true })
+            commit('editor/SYNC_WITH_PERSISTED_OBJ', wke, { root: true })
+            commit('queryConn/SYNC_WITH_PERSISTED_OBJ', wke, { root: true })
+            commit('queryResult/SYNC_WITH_PERSISTED_OBJ', wke, { root: true })
+            commit('schemaSidebar/SYNC_WITH_PERSISTED_OBJ', wke, { root: true })
         },
         /**
          * Release memory for target wke when delete a worksheet or disconnect a

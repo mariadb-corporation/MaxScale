@@ -69,8 +69,11 @@ export default {
     },
     mutations: {
         ...queryHelper.memStatesMutationCreator(mutationTypesMap),
-        ...queryHelper.syncedStateMutationsCreator(editorStatesToBeSynced()),
-        ...queryHelper.syncWkeToFlatStateMutationCreator(editorStatesToBeSynced()),
+        ...queryHelper.syncedStateMutationsCreator({
+            statesToBeSynced: editorStatesToBeSynced(),
+            persistedArrayPath: 'wke.worksheets_arr',
+        }),
+        ...queryHelper.syncPersistedObjToFlatStateMutationCreator(editorStatesToBeSynced()),
         SET_SELECTED_QUERY_TXT(state, payload) {
             state.selected_query_txt = payload
         },

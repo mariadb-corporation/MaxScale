@@ -110,10 +110,7 @@ export default {
                 return this.curr_ddl_alter_spec
             },
             set(value) {
-                this.SET_CURR_DDL_ALTER_SPEC({
-                    payload: value,
-                    active_wke_id: this.active_wke_id,
-                })
+                this.SET_CURR_DDL_ALTER_SPEC({ payload: value, id: this.active_wke_id })
             },
         },
         tabDim() {

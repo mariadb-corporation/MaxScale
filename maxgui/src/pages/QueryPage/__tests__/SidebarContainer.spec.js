@@ -229,7 +229,7 @@ describe(`SidebarContainer - methods tests`, () => {
         const mockParam = { SQL_QUERY_MODE: 'PRVW_DATA', schemaId: 'test.t1' }
         wrapper.vm.handleGetNodeData(mockParam)
         expect(clearDataPreviewCallCount).to.be.equals(1)
-        expect(queryModeParam).to.be.eql({ payload: mockParam.SQL_QUERY_MODE, active_wke_id })
+        expect(queryModeParam).to.be.eql({ payload: mockParam.SQL_QUERY_MODE, id: active_wke_id })
         expect(fetchPrvwParams).to.be.deep.equals({
             tblId: mockParam.schemaId,
             prvwMode: mockParam.SQL_QUERY_MODE,

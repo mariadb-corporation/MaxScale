@@ -147,7 +147,7 @@ export default {
                 return this.query_txt
             },
             set(value) {
-                this.SET_QUERY_TXT({ payload: value, active_wke_id: this.active_wke_id })
+                this.SET_QUERY_TXT({ payload: value, id: this.active_wke_id })
             },
         },
         resultPaneDim() {

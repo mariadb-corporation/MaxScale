@@ -230,52 +230,56 @@ function mutate_flat_states({ moduleState, data }) {
 
 /**
  * @private
- * This function helps to synchronize the active wke in worksheets_arr with provided data
- * @param {Object} payload.scope - scope aka (this)
- * @param {Object} payload.data - partial modification of a wke in worksheets_arr
- * @param {Object} payload.active_wke_id - active_wke_id
+ * This function helps to synchronize persistedObj in the persisted array. e.g. worksheets_arr with provided data
+ * @param {Object} param.scope - Mutation scope.
+ * @param {Object} param.data - partial modification of a persistedObj in the persisted array
+ * @param {Object} param.id - id of a persistedObj in the persisted array
+ * @param {String} param.persistedArrayPath - module path to persisted array state .e.g. `wke.worksheets_arr`
  */
-function sync_to_worksheets_arr({ scope, data, active_wke_id }) {
-    const worksheets_arr = scope.state.wke.worksheets_arr
-    const idx = worksheets_arr.findIndex(wke => wke.id === active_wke_id)
-    scope.state.wke.worksheets_arr = scope.vue.$help.immutableUpdate(worksheets_arr, {
-        [idx]: { $set: { ...worksheets_arr[idx], ...data } },
-    })
-}
-/**
- * @private
- * This function mutates (payload.data) to the provided mutateStateModule
- * then synchronizes it to the active wke in worksheets_arr with
- * @param {Object} payload.scope - scope aka (this)
- * @param {Object} payload.mutateStateModule - state module to be mutated
- * @param {Object} payload.data - partial modification of a wke object
- * @param {Object} payload.active_wke_id - active_wke_id
- */
-function mutate_sync_wke({ scope, mutateStateModule, data, active_wke_id }) {
-    mutate_flat_states({ moduleState: mutateStateModule, data })
-    sync_to_worksheets_arr({ scope, data, active_wke_id })
+function syncToPersistedObj({ scope, data, id, persistedArrayPath }) {
+    const {
+        state,
+        vue: {
+            $help: {
+                lodash: { objectSet },
+                immutableUpdate,
+            },
+            $typy,
+        },
+    } = scope
+    const persistedArray = $typy(state, persistedArrayPath).safeArray
+    const idx = persistedArray.findIndex(obj => obj.id === id)
+    objectSet(
+        state, //obj
+        persistedArrayPath, //path
+        //new value
+        immutableUpdate(persistedArray, {
+            [idx]: { $set: { ...persistedArray[idx], ...data } },
+        })
+    )
 }
 
 /**
  * @public
- * This function helps to generate vuex mutations for states are
- * stored in memory, i.e. states return from memStates().
+ * This function helps to generate vuex mutations for states to by mutated to
+ * flat states and synced to persistedObj.
  * The name of mutation follows this pattern SET_STATE_NAME.
  * e.g. Mutation for active_sql_conn state is SET_ACTIVE_SQL_CONN
- * @param {Object} statesToBeSynced
+ * @param {Object} param.statesToBeSynced. states to be mutated and synced
+ * @param {String} param.persistedArrayPath - module path to persisted array state .e.g. `wke.worksheets_arr`
  * @returns {Object} - returns vuex mutations
  */
-function syncedStateMutationsCreator(statesToBeSynced) {
+function syncedStateMutationsCreator({ statesToBeSynced, persistedArrayPath }) {
     return Object.keys(statesToBeSynced).reduce(
         (mutations, key) => ({
             ...mutations,
-            [`SET_${key.toUpperCase()}`]: function(state, { payload, active_wke_id }) {
-                mutate_sync_wke({
-                    scope: this,
-                    mutateStateModule: state,
-                    data: { [key]: payload },
-                    active_wke_id,
-                })
+            [`SET_${key.toUpperCase()}`]: function(state, { payload, id }) {
+                const data = {
+                    [key]: payload,
+                }
+                // First mutating flat states then sync it to persistedObj
+                mutate_flat_states({ moduleState: state, data })
+                syncToPersistedObj({ scope: this, data, id, persistedArrayPath })
             },
         }),
         {}
@@ -283,21 +287,21 @@ function syncedStateMutationsCreator(statesToBeSynced) {
 }
 /**
  * @public
- * This function helps to generate a mutation to sync wke properties to flat states
+ * This function helps to generate a mutation to sync persistedObj to flat states (statesToBeSynced)
  * @param {Object} statesToBeSynced
  * @returns {Object} - returns vuex mutation
  */
-function syncWkeToFlatStateMutationCreator(statesToBeSynced) {
+function syncPersistedObjToFlatStateMutationCreator(statesToBeSynced) {
     return {
         /**
-         * Sync wke properties to flat states
+         * Sync persistedObj to flat states
          * @param {Object} state - vuex state
-         * @param {Object} wke - wke object
+         * @param {Object} persistedObj - persisted object.
          */
-        SYNC_WITH_WKE: function(state, wke) {
+        SYNC_WITH_PERSISTED_OBJ: function(state, persistedObj) {
             mutate_flat_states({
                 moduleState: state,
-                data: this.vue.$help.lodash.pickBy(wke, (v, key) =>
+                data: this.vue.$help.lodash.pickBy(persistedObj, (v, key) =>
                     Object.keys(statesToBeSynced).includes(key)
                 ),
             })
@@ -364,7 +368,7 @@ export default {
     queryTblOptsData,
     queryColsOptsData,
     syncedStateMutationsCreator,
-    syncWkeToFlatStateMutationCreator,
+    syncPersistedObjToFlatStateMutationCreator,
     memStatesMutationCreator,
     releaseMemory,
 }

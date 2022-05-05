@@ -21,6 +21,7 @@ export const isEqual = require('lodash/isEqual')
 export const xorWith = require('lodash/xorWith')
 export const uniqueId = require('lodash/uniqueId')
 export const get = require('lodash/get')
+export const objectSet = require('lodash/set')
 export const unionBy = require('lodash/unionBy')
 export const pick = require('lodash/pick')
 export const pickBy = require('lodash/pickBy')
@@ -39,6 +40,7 @@ export const lodash = {
     xorWith,
     uniqueId,
     objectGet: get,
+    objectSet,
     unionBy,
     pick,
     pickBy,
