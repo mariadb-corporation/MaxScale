@@ -41,7 +41,7 @@ int main(int argc, char* argv[])
             else
             {
                 const char* expected = "Query execution was interrupted";
-                test.expect(!ok && strstr(a.error(), expected),
+                test.expect(strstr(a.error(), expected),
                             "Query should fail with '%s' but it failed with '%s'",
                             expected, a.error());
             }
