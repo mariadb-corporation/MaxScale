@@ -258,7 +258,7 @@ export default {
         ...mapMutations({
             PATCH_DB_TREE_MAP: 'schemaSidebar/PATCH_DB_TREE_MAP',
             SET_EXPANDED_NODES: 'schemaSidebar/SET_EXPANDED_NODES',
-            SET_CURR_EDITOR_MODE_MAP: 'editor/SET_CURR_EDITOR_MODE_MAP',
+            PATCH_CURR_EDITOR_MODE_MAP: 'editor/PATCH_CURR_EDITOR_MODE_MAP',
             SET_CURR_DDL_ALTER_SPEC: 'editor/SET_CURR_DDL_ALTER_SPEC',
             PATCH_TBL_CREATION_INFO_MAP: 'editor/PATCH_TBL_CREATION_INFO_MAP',
         }),
@@ -422,9 +422,9 @@ export default {
                                 altered_active_node: alterActiveNode,
                             },
                         })
-                        this.SET_CURR_EDITOR_MODE_MAP({
+                        this.PATCH_CURR_EDITOR_MODE_MAP({
                             id: this.active_wke_id,
-                            payload: this.SQL_EDITOR_MODES.DDL_EDITOR,
+                            payload: { value: this.SQL_EDITOR_MODES.DDL_EDITOR },
                         })
                         this.SET_CURR_DDL_ALTER_SPEC({
                             payload: this.SQL_DDL_ALTER_SPECS.COLUMNS,
@@ -452,9 +452,9 @@ export default {
             const {
                 TXT_EDITOR: { INSERT, QUERY },
             } = this.SQL_NODE_CTX_OPT_TYPES
-            this.SET_CURR_EDITOR_MODE_MAP({
+            this.PATCH_CURR_EDITOR_MODE_MAP({
                 id: this.active_wke_id,
-                payload: this.SQL_EDITOR_MODES.TXT_EDITOR,
+                payload: { value: this.SQL_EDITOR_MODES.TXT_EDITOR },
             })
             switch (opt.type) {
                 case QUERY:

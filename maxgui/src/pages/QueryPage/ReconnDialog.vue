@@ -55,13 +55,13 @@ export default {
                 return Boolean(this.queryErrMsg)
             },
             set() {
-                this.SET_LOST_CNN_ERR_MSG_OBJ_MAP({ id: this.active_wke_id })
+                this.PATCH_LOST_CNN_ERR_MSG_OBJ_MAP({ id: this.active_wke_id })
             },
         },
     },
     methods: {
         ...mapMutations({
-            SET_LOST_CNN_ERR_MSG_OBJ_MAP: 'queryConn/SET_LOST_CNN_ERR_MSG_OBJ_MAP',
+            PATCH_LOST_CNN_ERR_MSG_OBJ_MAP: 'queryConn/PATCH_LOST_CNN_ERR_MSG_OBJ_MAP',
         }),
         ...mapActions({
             reconnect: 'queryConn/reconnect',

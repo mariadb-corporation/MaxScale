@@ -14,17 +14,16 @@ import queryHelper from './queryHelper'
 
 const statesToBeSynced = queryHelper.syncStateCreator('editor')
 /**
- * Below states are stored in hash map structure.
- * Using worksheet's id as key. This helps to preserve
- * multiple worksheet's data in memory.
- * Use `queryHelper.memStatesMutationCreator` to create corresponding mutations
- * Some keys will have mutation name starts with either `SET` or `PATCH`
- * prefix. Check mutationTypesMap for more info
+ * TODO: create memStatesCreator
  * @returns {Object} - returns states that are stored in memory
  */
-function memStates() {
+export function memStates() {
     return {
-        curr_editor_mode_map: {}, // each key holds a string value. Check SQL_EDITOR_MODES
+        /**
+         * each key holds these properties:
+         * value?: string. Check SQL_EDITOR_MODES
+         */
+        curr_editor_mode_map: {},
         /**
          * each key holds these properties:
          * altered_active_node?: object
@@ -34,10 +33,6 @@ function memStates() {
         tbl_creation_info_map: {},
     }
 }
-const keysWithPrefixSet = ['curr_editor_mode_map']
-export const mutationTypesMap = Object.keys(memStates()).reduce((res, key) => {
-    return { ...res, [key]: keysWithPrefixSet.includes(key) ? 'SET' : 'PATCH' }
-}, {})
 
 export default {
     namespaced: true,
@@ -50,7 +45,7 @@ export default {
         ...statesToBeSynced,
     },
     mutations: {
-        ...queryHelper.memStatesMutationCreator(mutationTypesMap),
+        ...queryHelper.memStatesMutationCreator(memStates()),
         ...queryHelper.syncedStateMutationsCreator({
             statesToBeSynced,
             persistedArrayPath: 'wke.worksheets_arr',
@@ -184,8 +179,11 @@ export default {
     },
     getters: {
         //editor mode getter
-        getCurrEditorMode: (state, getters, rootState) =>
-            state.curr_editor_mode_map[rootState.wke.active_wke_id] || 'TXT_EDITOR',
+        getCurrEditorMode: (state, getters, rootState) => {
+            const { value = 'TXT_EDITOR' } =
+                state.curr_editor_mode_map[rootState.wke.active_wke_id] || {}
+            return value
+        },
         // tbl_creation_info_map getters
         getTblCreationInfo: (state, getters, rootState) =>
             state.tbl_creation_info_map[rootState.wke.active_wke_id] || {},

@@ -16,15 +16,9 @@ import queryHelper from './queryHelper'
 const statesToBeSynced = queryHelper.syncStateCreator('schemaSidebar')
 
 /**
- * Below states are stored in hash map structure.
- * Using worksheet's id as key. This helps to preserve
- * multiple worksheet's data in memory.
- * Use `queryHelper.memStatesMutationCreator` to create corresponding mutations
- * Some keys will have mutation name starts with either `SET` or `PATCH`
- * prefix. Check schemaSidebarMemStateMutationTypeMap for more info
  * @returns {Object} - returns states that are stored in memory
  */
-function memStates() {
+export function memStates() {
     return {
         /**
          * each key holds these properties:
@@ -43,10 +37,6 @@ function memStates() {
         exe_stmt_result_map: {},
     }
 }
-export const mutationTypesMap = Object.keys(memStates()).reduce(
-    (res, key) => ({ ...res, [key]: 'PATCH' }),
-    {}
-)
 function genNodeKey(scope) {
     return scope.vue.$help.lodash.uniqueId('node_key_')
 }
@@ -57,7 +47,7 @@ export default {
         ...statesToBeSynced,
     },
     mutations: {
-        ...queryHelper.memStatesMutationCreator(mutationTypesMap),
+        ...queryHelper.memStatesMutationCreator(memStates()),
         ...queryHelper.syncedStateMutationsCreator({
             statesToBeSynced,
             persistedArrayPath: 'wke.worksheets_arr',

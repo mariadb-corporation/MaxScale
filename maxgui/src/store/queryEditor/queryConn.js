@@ -14,24 +14,23 @@ import queryHelper from './queryHelper'
 
 const statesToBeSynced = queryHelper.syncStateCreator('queryConn')
 /**
- * Below states are stored in hash map structure.
- * Using worksheet's id as key. This helps to preserve
- * multiple worksheet's data in memory.
- * Use `queryHelper.memStatesMutationCreator` to create corresponding mutations
- * Some keys will have mutation name starts with either `SET` or `PATCH`
- * prefix. Check mutationTypesMap for more info
  * @returns {Object} - returns states that are stored in memory
  */
-function memStates() {
+export function memStates() {
     return {
-        is_conn_busy_map: {}, // each key holds a boolean value.
-        lost_cnn_err_msg_obj_map: {}, // each key holds an object value receives from api.
+        /**
+         * each key holds these properties:
+         * value?: boolean
+         */
+        is_conn_busy_map: {},
+        /**
+         * each key holds these properties:
+         * value?: object.  object value receives from api.
+         */
+        lost_cnn_err_msg_obj_map: {},
     }
 }
-export const mutationTypesMap = Object.keys(memStates()).reduce(
-    (res, key) => ({ ...res, [key]: 'SET' }),
-    {}
-)
+
 export default {
     namespaced: true,
     state: {
@@ -44,7 +43,7 @@ export default {
         ...statesToBeSynced,
     },
     mutations: {
-        ...queryHelper.memStatesMutationCreator(mutationTypesMap),
+        ...queryHelper.memStatesMutationCreator(memStates()),
         ...queryHelper.syncedStateMutationsCreator({
             statesToBeSynced,
             persistedArrayPath: 'wke.worksheets_arr',
@@ -323,10 +322,12 @@ export default {
             return {}
         },
         getIsConnBusy: (state, getters, rootState) => {
-            return state.is_conn_busy_map[rootState.wke.active_wke_id] || false
+            const { value = false } = state.is_conn_busy_map[rootState.wke.active_wke_id] || {}
+            return value
         },
         getLostCnnErrMsgObj: (state, getters, rootState) => {
-            return state.lost_cnn_err_msg_obj_map[rootState.wke.active_wke_id] || {}
+            const { value = {} } = state.lost_cnn_err_msg_obj_map[rootState.wke.active_wke_id] || {}
+            return value
         },
     },
 }

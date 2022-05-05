@@ -176,7 +176,7 @@ export default {
         ...mapMutations({
             PATCH_EXE_STMT_RESULT_MAP: 'schemaSidebar/PATCH_EXE_STMT_RESULT_MAP',
             PATCH_TBL_CREATION_INFO_MAP: 'editor/PATCH_TBL_CREATION_INFO_MAP',
-            SET_CURR_EDITOR_MODE_MAP: 'editor/SET_CURR_EDITOR_MODE_MAP',
+            PATCH_CURR_EDITOR_MODE_MAP: 'editor/PATCH_CURR_EDITOR_MODE_MAP',
         }),
         ...mapActions({
             exeStmtAction: 'schemaSidebar/exeStmtAction',
@@ -203,9 +203,9 @@ export default {
                     altered_active_node: null,
                 },
             })
-            this.SET_CURR_EDITOR_MODE_MAP({
+            this.PATCH_CURR_EDITOR_MODE_MAP({
                 id: this.active_wke_id,
-                payload: this.SQL_EDITOR_MODES.TXT_EDITOR,
+                payload: { value: this.SQL_EDITOR_MODES.TXT_EDITOR },
             })
         },
         revertChanges() {

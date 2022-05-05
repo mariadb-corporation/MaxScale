@@ -339,33 +339,26 @@ function syncedStateMutationsCreator({ statesToBeSynced, persistedArrayPath }) {
  * Mutations creator for states storing in hash map structure (storing in memory).
  * The state uses worksheet id as key or session id. This helps to preserve multiple worksheet's
  * data or session's data in memory.
- * The name of mutation follows this pattern SET_STATE_NAME or PATCH_STATE_NAME.
- * e.g. Mutation for is_conn_busy_map state is SET_IS_CONN_BUSY_MAP
- * @param {Object} param.mutationTypesMap - mutation type keys map for states storing in memory. Either SET or PATCH
- * @returns {Object} - returns mutations for provided keys from mutationTypesMap
+ * The name of mutation follows this pattern PATCH_STATE_NAME.
+ * e.g. Mutation for is_conn_busy_map state is PATCH_IS_CONN_BUSY_MAP
+ * @param {Object} param.memStates - memStates storing in memory
+ * @returns {Object} - returns mutations for provided memStates
  */
-function memStatesMutationCreator(mutationTypesMap) {
-    return Object.keys(mutationTypesMap).reduce((mutations, stateName) => {
-        const mutationType = mutationTypesMap[stateName]
+function memStatesMutationCreator(memStates) {
+    return Object.keys(memStates).reduce((mutations, stateName) => {
         return {
             ...mutations,
             /**
              * if payload is not provided, the id (wke_id or session_id) key will be removed from the map
              * @param {String} param.id - wke_id or session_id
+             * @param {Object} param.payload - always an object
              */
-            [`${mutationType}_${stateName.toUpperCase()}`]: function(state, { id, payload }) {
+            [`PATCH_${stateName.toUpperCase()}`]: function(state, { id, payload }) {
                 if (!payload) this.vue.$delete(state[stateName], id)
                 else {
-                    switch (mutationType) {
-                        case 'SET':
-                            state[stateName] = { ...state[stateName], [id]: payload }
-                            break
-                        case 'PATCH':
-                            state[stateName] = {
-                                ...state[stateName],
-                                ...{ [id]: { ...state[stateName][id], ...payload } },
-                            }
-                            break
+                    state[stateName] = {
+                        ...state[stateName],
+                        ...{ [id]: { ...state[stateName][id], ...payload } },
                     }
                 }
             },
@@ -374,16 +367,15 @@ function memStatesMutationCreator(mutationTypesMap) {
 }
 /**
  * @public
- * This helps to commit mutations provided by mutationTypesMap to delete the states storing in memory for a worksheet
- * or session.
+ * This helps to commit mutations to release data storing in memory
  * @param {Object} param.namespace - module namespace. i.e. editor, queryConn, queryResult, schemaSidebar
  * @param {Function} param.commit - vuex commit function
  * @param {String} param.id - wke_id or session_id
- * @param {Object} param.mutationTypesMap - mutation type keys map for states storing in memory. Either SET or PATCH
+ * @param {Object} param.memStates - memStates storing in memory
  */
-function releaseMemory({ namespace, commit, id, mutationTypesMap }) {
-    Object.keys(mutationTypesMap).forEach(key => {
-        commit(`${namespace}/${mutationTypesMap[key]}_${key.toUpperCase()}`, { id }, { root: true })
+function releaseMemory({ namespace, commit, id, memStates }) {
+    Object.keys(memStates).forEach(key => {
+        commit(`${namespace}/PATCH_${key.toUpperCase()}`, { id }, { root: true })
     })
 }
 export default {

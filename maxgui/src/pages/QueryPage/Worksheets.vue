@@ -52,12 +52,16 @@
                                     class="ml-1 del-wke-btn"
                                     icon
                                     x-small
-                                    :disabled="is_conn_busy_map[wke.id]"
+                                    :disabled="$typy(is_conn_busy_map[wke.id], 'value').safeBoolean"
                                     @click="handleDeleteWke(worksheets_arr.indexOf(wke))"
                                 >
                                     <v-icon
                                         size="8"
-                                        :color="is_conn_busy_map[wke.id] ? '' : 'error'"
+                                        :color="
+                                            $typy(is_conn_busy_map[wke.id], 'value').safeBoolean
+                                                ? ''
+                                                : 'error'
+                                        "
                                     >
                                         $vuetify.icons.close
                                     </v-icon>

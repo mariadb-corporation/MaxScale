@@ -12,7 +12,7 @@
  */
 import { uniqueId } from 'utils/helpers'
 import queryHelper from './queryHelper'
-import memStateModuleMutations from './memStateModuleMutations'
+import allMemStatesModules from './allMemStatesModules'
 
 queryHelper.syncStateCreator('editor')
 
@@ -175,12 +175,12 @@ export default {
          * @param {String} param.wke_id - worksheet id.
          */
         releaseQueryModulesMem({ commit }, wke_id) {
-            Object.keys(memStateModuleMutations).forEach(namespace => {
+            Object.keys(allMemStatesModules).forEach(namespace => {
                 queryHelper.releaseMemory({
                     namespace,
                     commit,
                     id: wke_id,
-                    mutationTypesMap: memStateModuleMutations[namespace],
+                    memStates: allMemStatesModules[namespace](),
                 })
             })
         },

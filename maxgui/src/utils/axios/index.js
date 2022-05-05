@@ -109,9 +109,9 @@ function http(store) {
 function updateIsQueryingMap({ store, value }) {
     const active_wke_id = store.state.wke.active_wke_id
     if (active_wke_id)
-        store.commit('queryConn/SET_IS_CONN_BUSY_MAP', {
+        store.commit('queryConn/PATCH_IS_CONN_BUSY_MAP', {
             id: active_wke_id,
-            payload: value,
+            payload: { value },
         })
 }
 /**
@@ -128,9 +128,9 @@ function analyzeRes({ res, store }) {
     })
     if (lostCnnErrMsgs.length) {
         const active_wke_id = store.state.wke.active_wke_id
-        store.commit('queryConn/SET_LOST_CNN_ERR_MSG_OBJ_MAP', {
+        store.commit('queryConn/PATCH_LOST_CNN_ERR_MSG_OBJ_MAP', {
             id: active_wke_id,
-            payload: lostCnnErrMsgs[0],
+            payload: { value: lostCnnErrMsgs[0] },
         })
     }
 }

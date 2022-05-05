@@ -14,15 +14,9 @@ import queryHelper from './queryHelper'
 
 const statesToBeSynced = queryHelper.syncStateCreator('queryResult')
 /**
- * Below states are stored in hash map structure.
- * Using worksheet's id as key. This helps to preserve
- * multiple worksheet's data in memory.
- * Use `queryHelper.memStatesMutationCreator` to create corresponding mutations
- * Some keys will have mutation name starts with either `SET` or `PATCH`
- * prefix. Check queryResultMemStateMutationTypeMap for more info
  * @returns {Object} - returns states that are stored in memory
  */
-function memStates() {
+export function memStates() {
     return {
         /**
          * each key holds these properties:
@@ -48,13 +42,13 @@ function memStates() {
          * data? object.
          */
         query_results_map: {},
-        is_stopping_query_map: {}, // each key holds a boolean value
+        /**
+         * each key holds these properties:
+         * value?: boolean
+         */
+        is_stopping_query_map: {},
     }
 }
-const keysWithPrefixSet = ['is_stopping_query_map']
-export const mutationTypesMap = Object.keys(memStates()).reduce((res, key) => {
-    return { ...res, [key]: keysWithPrefixSet.includes(key) ? 'SET' : 'PATCH' }
-}, {})
 export default {
     namespaced: true,
     state: {
@@ -62,7 +56,7 @@ export default {
         ...statesToBeSynced,
     },
     mutations: {
-        ...queryHelper.memStatesMutationCreator(mutationTypesMap),
+        ...queryHelper.memStatesMutationCreator(memStates()),
         ...queryHelper.syncedStateMutationsCreator({
             statesToBeSynced,
             persistedArrayPath: 'wke.worksheets_arr',
@@ -201,7 +195,10 @@ export default {
             const active_sql_conn = rootState.queryConn.active_sql_conn
             const active_wke_id = rootState.wke.active_wke_id
             try {
-                commit('SET_IS_STOPPING_QUERY_MAP', { id: active_wke_id, payload: true })
+                commit('PATCH_IS_STOPPING_QUERY_MAP', {
+                    id: active_wke_id,
+                    payload: { value: true },
+                })
                 const {
                     data: { data: { attributes: { results = [] } = {} } = {} } = {},
                 } = await this.$queryHttp.post(
@@ -225,7 +222,7 @@ export default {
             } catch (e) {
                 this.vue.$logger(`store-queryResult-stopQuery`).error(e)
             }
-            commit('SET_IS_STOPPING_QUERY_MAP', { id: active_wke_id, payload: false })
+            commit('PATCH_IS_STOPPING_QUERY_MAP', { id: active_wke_id, payload: { value: false } })
         },
         /**
          * This action clears prvw_data and prvw_data_details to empty object.
@@ -244,8 +241,10 @@ export default {
             const { loading_query_result = false } = getters.getQueryResult
             return loading_query_result
         },
-        getIsStoppingQuery: (state, getters, rootState) =>
-            state.is_stopping_query_map[rootState.wke.active_wke_id] || false,
+        getIsStoppingQuery: (state, getters, rootState) => {
+            const { value = false } = state.is_stopping_query_map[rootState.wke.active_wke_id] || {}
+            return value
+        },
         getResults: (state, getters) => {
             const { data = {} } = getters.getQueryResult
             return data
