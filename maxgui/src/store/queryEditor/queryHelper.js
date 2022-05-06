@@ -454,6 +454,19 @@ function releaseMemory({ namespace, commit, id, memStates }) {
         commit(`${namespace}/PATCH_${key.toUpperCase()}`, { id }, { root: true })
     })
 }
+
+function getSessionByConnId({ rootState, conn_id }) {
+    return (
+        rootState.querySession.query_sessions.find(
+            s => s.active_sql_conn && s.active_sql_conn.id === conn_id
+        ) || {}
+    )
+}
+
+function getWkeBySession({ rootState, session }) {
+    // use the session obj to get target wke to have its state reset
+    return rootState.wke.worksheets_arr.find(w => w.id === session.wke_id_fk) || {}
+}
 export default {
     getClientConnIds,
     updateDbChild,
@@ -465,4 +478,6 @@ export default {
     memStateCreator,
     memStatesMutationCreator,
     releaseMemory,
+    getSessionByConnId,
+    getWkeBySession,
 }

@@ -84,7 +84,7 @@ export default {
                 const resConnIds = Object.keys(resConnMap)
                 const clientConnIds = queryHelper.getClientConnIds()
                 if (resConnIds.length === 0) {
-                    dispatch('resetAllWkeStates')
+                    dispatch('resetAllStates')
                     commit('SET_SQL_CONNS', {})
                 } else {
                     const validConnIds = clientConnIds.filter(id => resConnIds.includes(id))
@@ -106,7 +106,7 @@ export default {
                     //deleteInvalidConn
                     invalidCnctIds.forEach(id => {
                         this.vue.$help.deleteCookie(`conn_id_body_${id}`)
-                        dispatch('resetWkeStates', id)
+                        dispatch('resetSessionStates', id)
                     })
 
                     commit('SET_SQL_CONNS', validSqlConns)
@@ -187,9 +187,14 @@ export default {
                 this.vue.$logger('store-queryConn-cloneConn').error(e)
             }
         },
-        async disconnect({ state, commit, dispatch }, { showSnackbar, id: cnctId }) {
+        /**
+         * This handles deleting a clone connection.
+         * @param {Boolean} param.showSnackbar - should show success message or not
+         * @param {Number} param.id - connection id to be deleted
+         */
+        async disconnectClone({ state, commit, dispatch }, { showSnackbar, id }) {
             try {
-                const res = await this.$queryHttp.delete(`/sql/${cnctId}`)
+                const res = await this.$queryHttp.delete(`/sql/${id}`)
                 if (res.status === 204) {
                     if (showSnackbar)
                         commit(
@@ -200,9 +205,57 @@ export default {
                             },
                             { root: true }
                         )
-                    commit('DELETE_SQL_CONN', state.sql_conns[cnctId])
-                    dispatch('resetWkeStates', cnctId)
+                    dispatch('resetWkeStates', id)
+                    dispatch('resetSessionStates', id)
+                    commit('DELETE_SQL_CONN', state.sql_conns[id])
                 }
+            } catch (e) {
+                this.vue.$logger('store-queryConn-disconnectClone').error(e)
+            }
+        },
+        /**
+         * This handles deleting a connection. If the target connection is the default connection
+         * of a worksheet, then all of its clone connections (session tabs)will be also deleted. Otherwise,
+         * it will find the default connection using `clone_of_conn_id` attribute and delete them all.
+         * This action is meant to be used by `connection-manager` component to "unlink" a resource connection
+         * from the worksheet. It's also be used by the `disconnectAll` action to delete all connection when
+         * leaving the page.
+         * @param {Boolean} param.showSnackbar - should show success message or not
+         * @param {Number} param.id - connection id that is bound to the first session tab
+         */
+        async disconnect(
+            { state, commit, dispatch, rootState },
+            { showSnackbar, id: wkeBoundCnnId }
+        ) {
+            try {
+                const sessionConnIds = Object.values(state.sql_conns)
+                    .filter(
+                        c =>
+                            c.clone_of_conn_id === wkeBoundCnnId &&
+                            c.binding_type === rootState.app_config.QUERY_CONN_BINDING_TYPES.SESSION
+                    )
+                    .map(c => c.id)
+                const cnnIdsToBeDeleted = [wkeBoundCnnId, ...sessionConnIds]
+
+                dispatch('resetWkeStates', wkeBoundCnnId)
+
+                const allRes = await Promise.all(
+                    cnnIdsToBeDeleted.map(id => {
+                        commit('DELETE_SQL_CONN', state.sql_conns[id])
+                        dispatch('resetSessionStates', id)
+                        return this.$http.delete(`/sql/${id}`)
+                    })
+                )
+
+                if (allRes.every(promise => promise.status === 204) && showSnackbar)
+                    commit(
+                        'SET_SNACK_BAR_MESSAGE',
+                        {
+                            text: [this.i18n.t('info.disconnSuccessfully')],
+                            type: 'success',
+                        },
+                        { root: true }
+                    )
             } catch (e) {
                 this.vue.$logger('store-queryConn-disconnect').error(e)
             }
@@ -248,46 +301,46 @@ export default {
         clearConn({ commit, dispatch, state }) {
             try {
                 const active_sql_conn = state.active_sql_conn
+                dispatch('resetSessionStates', active_sql_conn.id)
                 commit('DELETE_SQL_CONN', active_sql_conn)
-                dispatch('resetWkeStates', active_sql_conn.id)
             } catch (e) {
                 this.vue.$logger('store-queryConn-clearConn').error(e)
             }
         },
         /**
-         * Call this action when disconnect a connection to
-         * clear the state of the worksheet having that connection to its initial state
+         * wke cleanup
+         * release memStates that uses wke id as key,
+         * refresh wke state to its initial state.
+         * Call this function when the disconnect the connection in `connection-manager` component
+         * @param {String} wkeBoundCnnId - connection id that is bound to the first session tab
          */
-        resetWkeStates({ state, commit, rootState, dispatch }, cnctId) {
-            const targetSession = rootState.querySession.query_sessions.find(
-                s => this.vue.$typy(s, 'active_sql_conn.id').safeString === cnctId
-            )
-            const targetWke = rootState.wke.worksheets_arr.find(
-                w => w.id === this.vue.$typy(targetSession, 'wke_id_fk').safeString
-            )
-
+        resetWkeStates({ commit, rootState, dispatch }, wkeBoundCnnId) {
+            const defSession = queryHelper.getSessionByConnId({ rootState, conn_id: wkeBoundCnnId })
+            const targetWke = queryHelper.getWkeBySession({ rootState, session: defSession })
             if (targetWke) {
                 dispatch('wke/releaseQueryModulesMem', targetWke.id, { root: true })
                 commit('wke/REFRESH_WKE', targetWke, { root: true })
-                commit('querySession/REFRESH_SESSIONS_OF_A_WKE', targetWke, { root: true })
-                /**
-                 * if connection id to be deleted is equal to current connected
-                 * resource of active worksheet, sync wke states to flat states
-                 */
-                if (state.active_sql_conn.id === cnctId) {
-                    const freshWke = rootState.wke.worksheets_arr.find(
-                        wke => wke.id === targetWke.id
-                    )
-                    const freshSession = rootState.querySession.query_sessions.find(
-                        s => s.id === targetSession.id
-                    )
-                    dispatch('wke/handleSyncWke', freshWke, { root: true })
-                    dispatch('querySession/handleSyncSession', freshSession, { root: true })
-                }
+                const freshWke = rootState.wke.worksheets_arr.find(wke => wke.id === targetWke.id)
+                dispatch('wke/handleSyncWke', freshWke, { root: true })
             }
         },
+        /**
+         * sessions cleanup
+         * release memStates that uses session id as key,
+         * refresh targetSession to its initial state
+         */
+        resetSessionStates({ rootState, commit, dispatch }, conn_id) {
+            const targetSession = queryHelper.getSessionByConnId({ rootState, conn_id })
+            dispatch('querySession/releaseQueryModulesMem', targetSession.id, { root: true })
+            commit('querySession/REFRESH_SESSION_OF_A_WKE', targetSession, { root: true })
+            const freshSession = rootState.querySession.query_sessions.find(
+                s => s.id === targetSession.id
+            )
+            dispatch('querySession/handleSyncSession', freshSession, { root: true })
+        },
+
         // Reset all when there is no active connections
-        resetAllWkeStates({ rootState, commit }) {
+        resetAllStates({ rootState, commit }) {
             for (const targetWke of rootState.wke.worksheets_arr) {
                 commit('wke/REFRESH_WKE', targetWke, { root: true })
                 commit('querySession/REFRESH_SESSIONS_OF_A_WKE', targetWke, { root: true })

@@ -53,7 +53,6 @@ export default {
             const idx = state.worksheets_arr.indexOf(targetWke)
             const wke = {
                 ...targetWke,
-                ...queryHelper.syncStateCreator('queryConn'),
                 ...queryHelper.syncStateCreator('queryResult'),
                 ...queryHelper.syncStateCreator('schemaSidebar'),
                 name: 'WORKSHEET',
@@ -170,6 +169,7 @@ export default {
             // release module memory states
             dispatch('releaseQueryModulesMem', targetWke.id)
             commit('DELETE_WKE', wkeIdx)
+            dispatch('querySession/deleteAllSessionsByWkeId', targetWke.id, { root: true })
         },
         /**
          * @param {Object} param.wke - worksheet object to be sync to flat states
@@ -184,11 +184,10 @@ export default {
          * connection from a worksheet
          * @param {String} param.wke_id - worksheet id.
          */
-        releaseQueryModulesMem({ commit, dispatch }, wke_id) {
+        releaseQueryModulesMem({ commit }, wke_id) {
             /**
              * TODO: once queryResult, editor are synced to querySession
-             *  release memory only for schemaSidebar here. Other modules
-             * are released by querySession/deleteAllSessionsByWkeId
+             *  release memory only for schemaSidebar here.
              */
             Object.keys(allMemStatesModules).forEach(namespace => {
                 if (namespace !== 'queryConn')
@@ -199,7 +198,6 @@ export default {
                         memStates: allMemStatesModules[namespace],
                     })
             })
-            dispatch('querySession/deleteAllSessionsByWkeId', wke_id, { root: true })
         },
     },
     getters: {

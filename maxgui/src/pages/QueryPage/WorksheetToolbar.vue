@@ -285,7 +285,7 @@ export default {
                     clone_of_conn_id: this.active_sql_conn.id,
                     binding_type: this.QUERY_CONN_BINDING_TYPES.BACKGROUND,
                 })
-                await this.disconnect({ id: bgConn.id })
+                await this.disconnectClone({ id: bgConn.id })
             }
         },
     },
@@ -300,7 +300,7 @@ export default {
             fetchQueryResult: 'queryResult/fetchQueryResult',
             stopQuery: 'queryResult/stopQuery',
             useDb: 'schemaSidebar/useDb',
-            disconnect: 'queryConn/disconnect',
+            disconnectClone: 'queryConn/disconnectClone',
         }),
         async handleSelectDb(db) {
             await this.useDb(db)
