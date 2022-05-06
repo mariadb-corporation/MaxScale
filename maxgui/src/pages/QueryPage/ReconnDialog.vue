@@ -46,6 +46,7 @@ export default {
         }),
         ...mapGetters({
             getLostCnnErrMsgObj: 'queryConn/getLostCnnErrMsgObj',
+            getActiveSessionId: 'querySession/getActiveSessionId',
         }),
         queryErrMsg() {
             return this.$typy(this.getLostCnnErrMsgObj, 'message').safeString
@@ -55,7 +56,7 @@ export default {
                 return Boolean(this.queryErrMsg)
             },
             set() {
-                this.PATCH_LOST_CNN_ERR_MSG_OBJ_MAP({ id: this.active_wke_id })
+                this.PATCH_LOST_CNN_ERR_MSG_OBJ_MAP({ id: this.getActiveSessionId })
             },
         },
     },

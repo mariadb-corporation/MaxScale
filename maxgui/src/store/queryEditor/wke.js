@@ -64,7 +64,7 @@ export default {
         },
     },
     actions: {
-        chooseActiveWke({ state, commit, dispatch }) {
+        chooseActiveWke({ state, commit, dispatch, rootState }) {
             const { type = 'blank_wke', id: paramId } = this.router.app.$route.params
             if (paramId) {
                 if (type !== 'blank_wke') {
@@ -74,17 +74,41 @@ export default {
                      * Otherwise, find an empty worksheet(has not been bound to a connection), set it as active and
                      * dispatch SET_PRE_SELECT_CONN_RSRC to open connection dialog
                      */
-                    const targetWke = state.worksheets_arr.find(
-                        w => w.active_sql_conn.name === paramId
+                    const targetSession = rootState.querySession.query_sessions.find(
+                        s => this.vue.$typy(s, 'active_sql_conn.name').safeString === paramId
                     )
-                    if (targetWke) commit('SET_ACTIVE_WKE_ID', targetWke.id)
-                    else {
+                    const targetWke = state.worksheets_arr.find(
+                        w => w.id === this.vue.$typy(targetSession, 'wke_id_fk').safeString
+                    )
+                    if (targetWke) {
+                        commit('SET_ACTIVE_WKE_ID', targetWke.id)
+                        commit(
+                            'querySession/SET_ACTIVE_SESSION_BY_WKE_ID_MAP',
+                            {
+                                id: targetWke.id,
+                                payload: targetSession.id,
+                            },
+                            { root: true }
+                        )
+                    } else {
+                        const blankSession = rootState.querySession.query_sessions.find(
+                            s => this.vue.$typy(s, 'active_sql_conn').isEmptyObject
+                        )
                         // Use a blank wke if there is one, otherwise create a new one
                         const blankWke = state.worksheets_arr.find(
-                            wke => this.vue.$typy(wke, 'active_sql_conn').isEmptyObject
+                            wke => wke.id === this.vue.$typy(blankSession, 'wke_id_fk').safeString
                         )
-                        if (blankWke) commit('SET_ACTIVE_WKE_ID', blankWke.id)
-                        else dispatch('addNewWs')
+                        if (blankWke) {
+                            commit('SET_ACTIVE_WKE_ID', blankWke.id)
+                            commit(
+                                'querySession/SET_ACTIVE_SESSION_BY_WKE_ID_MAP',
+                                {
+                                    id: blankWke.id,
+                                    payload: blankSession.id,
+                                },
+                                { root: true }
+                            )
+                        } else dispatch('addNewWs')
                         commit(
                             'queryConn/SET_PRE_SELECT_CONN_RSRC',
                             { type, id: paramId },
@@ -111,11 +135,13 @@ export default {
          * 4. When the connection is unlinked from the worksheet
          * @param {String} wkeId - worksheet id
          */
-        updateRoute({ state }, wkeId) {
+        updateRoute({ state, rootState }, wkeId) {
             let from = this.router.app.$route.path,
                 to = `/query/blank_wke/${wkeId}`
             const targetWke = state.worksheets_arr.find(w => w.id === wkeId)
-            const { type, name } = targetWke.active_sql_conn
+            const sessionId = rootState.querySession.active_session_by_wke_id_map[targetWke.id]
+            const session = rootState.querySession.query_sessions.find(s => s.id === sessionId)
+            const { type, name } = this.vue.$typy(session, 'active_sql_conn').safeObjectOrEmpty
             if (name) to = `/query/${type}/${name}`
             if (from !== to) this.router.push(to)
         },
@@ -126,8 +152,7 @@ export default {
                 commit('SET_ACTIVE_WKE_ID', new_active_wke_id)
                 dispatch('querySession/handleAddNewSession', new_active_wke_id, { root: true })
             } catch (e) {
-                const logger = this.vue.$logger('store-query-addNewWs')
-                logger.error(e)
+                this.vue.$logger('store-wke-addNewWs').error(e)
                 commit(
                     'SET_SNACK_BAR_MESSAGE',
                     {
@@ -140,17 +165,15 @@ export default {
         },
         handleDeleteWke({ state, commit, dispatch }, wkeIdx) {
             const targetWke = state.worksheets_arr[wkeIdx]
-            // release memory states of query and queryConn modules
+            // release module memory states
             dispatch('releaseQueryModulesMem', targetWke.id)
             commit('DELETE_WKE', wkeIdx)
-            dispatch('querySession/deleteAllSessionsByWkeId', targetWke.id, { root: true })
         },
         /**
          * @param {Object} param.wke - worksheet object to be sync to flat states
          */
         handleSyncWke({ commit }, wke) {
             commit('editor/SYNC_WITH_PERSISTED_OBJ', wke, { root: true })
-            commit('queryConn/SYNC_WITH_PERSISTED_OBJ', wke, { root: true })
             commit('queryResult/SYNC_WITH_PERSISTED_OBJ', wke, { root: true })
             commit('schemaSidebar/SYNC_WITH_PERSISTED_OBJ', wke, { root: true })
         },
@@ -159,15 +182,22 @@ export default {
          * connection from a worksheet
          * @param {String} param.wke_id - worksheet id.
          */
-        releaseQueryModulesMem({ commit }, wke_id) {
+        releaseQueryModulesMem({ commit, dispatch }, wke_id) {
+            /**
+             * TODO: once queryResult, editor are synced to querySession
+             *  release memory only for schemaSidebar here. Other modules
+             * are released by querySession/deleteAllSessionsByWkeId
+             */
             Object.keys(allMemStatesModules).forEach(namespace => {
-                queryHelper.releaseMemory({
-                    namespace,
-                    commit,
-                    id: wke_id,
-                    memStates: allMemStatesModules[namespace],
-                })
+                if (namespace !== 'queryConn')
+                    queryHelper.releaseMemory({
+                        namespace,
+                        commit,
+                        id: wke_id,
+                        memStates: allMemStatesModules[namespace],
+                    })
             })
+            dispatch('querySession/deleteAllSessionsByWkeId', wke_id, { root: true })
         },
     },
     getters: {

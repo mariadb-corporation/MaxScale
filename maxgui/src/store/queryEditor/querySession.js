@@ -114,7 +114,11 @@ export default {
          */
         releaseQueryModulesMem({ commit }, session_id) {
             Object.keys(allMemStatesModules).forEach(namespace => {
-                // Only 'editor', 'queryConn', 'queryResult' modules have memStates keyed by session_id
+                /**
+                 * Only 'editor', 'queryConn', 'queryResult' modules have memStates keyed by session_id
+                 * TODO: once queryResult, editor are synced to querySession,
+                 * release it here
+                 */
                 if (namespace === 'queryConn')
                     queryHelper.releaseMemory({
                         namespace,

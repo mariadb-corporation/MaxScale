@@ -139,9 +139,11 @@ export default {
             worksheets_arr: state => state.wke.worksheets_arr,
             active_wke_id: state => state.wke.active_wke_id,
             QUERY_CONN_BINDING_TYPES: state => state.app_config.QUERY_CONN_BINDING_TYPES,
+            query_sessions: state => state.querySession.query_sessions,
         }),
         ...mapGetters({
             getDbTreeData: 'schemaSidebar/getDbTreeData',
+            getActiveSessionId: 'querySession/getActiveSessionId',
         }),
         wkeConns() {
             return Object.values(this.sql_conns).filter(
@@ -149,11 +151,11 @@ export default {
             )
         },
         /**
-         * @returns connection ids that are bound to worksheets
+         * @returns connection ids that are bound to session tabs
          */
         usedConnections() {
-            return this.worksheets_arr.reduce((acc, wke) => {
-                const connId = this.$typy(wke, 'active_sql_conn.id').safeString
+            return this.query_sessions.reduce((acc, s) => {
+                const connId = this.$typy(s, 'active_sql_conn.id').safeString
                 if (connId) acc.push(connId)
                 return acc
             }, [])
@@ -242,7 +244,7 @@ export default {
          */
         async onChangeChosenConn(chosenConn) {
             // update active_sql_conn module state
-            this.SET_ACTIVE_SQL_CONN({ payload: chosenConn, id: this.active_wke_id })
+            this.SET_ACTIVE_SQL_CONN({ payload: chosenConn, id: this.getActiveSessionId })
             // handle navigate to the corresponding nested route
             this.updateRoute(this.active_wke_id)
             // populate data

@@ -17,7 +17,7 @@
                     active-class="tab-btn--active"
                 >
                     <v-tooltip
-                        :disabled="!Boolean(wke.active_sql_conn.name)"
+                        :disabled="!$typy(getBoundConnByWkeId(wke.id), 'name').safeBoolean"
                         top
                         transition="slide-x-transition"
                         content-class="shadow-drop"
@@ -52,13 +52,17 @@
                                     class="ml-1 del-wke-btn"
                                     icon
                                     x-small
-                                    :disabled="$typy(is_conn_busy_map[wke.id], 'value').safeBoolean"
+                                    :disabled="
+                                        $typy(is_conn_busy_map[getActiveSessionId], 'value')
+                                            .safeBoolean
+                                    "
                                     @click="handleDeleteWke(worksheets_arr.indexOf(wke))"
                                 >
                                     <v-icon
                                         size="8"
                                         :color="
-                                            $typy(is_conn_busy_map[wke.id], 'value').safeBoolean
+                                            $typy(is_conn_busy_map[getActiveSessionId], 'value')
+                                                .safeBoolean
                                                 ? ''
                                                 : 'error'
                                         "
@@ -107,7 +111,7 @@
  * Public License.
  */
 
-import { mapActions, mapMutations, mapState } from 'vuex'
+import { mapActions, mapGetters, mapMutations, mapState } from 'vuex'
 import Worksheet from './Worksheet'
 import WorksheetToolbar from './WorksheetToolbar'
 import PageToolbar from './PageToolbar.vue'
@@ -135,6 +139,10 @@ export default {
             active_sql_conn: state => state.queryConn.active_sql_conn,
             query_results_map: state => state.queryResult.query_results_map,
             is_conn_busy_map: state => state.queryConn.is_conn_busy_map,
+        }),
+        ...mapGetters({
+            getActiveSessionId: 'querySession/getActiveSessionId',
+            getBoundConnByWkeId: 'queryConn/getBoundConnByWkeId',
         }),
         activeWkeID: {
             get() {

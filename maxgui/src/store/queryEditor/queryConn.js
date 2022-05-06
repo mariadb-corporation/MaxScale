@@ -30,7 +30,7 @@ export default {
         ...queryHelper.memStatesMutationCreator(memStates),
         ...queryHelper.syncedStateMutationsCreator({
             statesToBeSynced,
-            persistedArrayPath: 'wke.worksheets_arr',
+            persistedArrayPath: 'querySession.query_sessions',
         }),
         SET_IS_VALIDATING_CONN(state, payload) {
             state.is_validating_conn = payload
@@ -73,12 +73,12 @@ export default {
          * @param {Boolean} param.silentValidation - silent validation (without calling SET_IS_VALIDATING_CONN)
          */
         async validatingConn(
-            { state, commit, dispatch, rootState },
+            { state, commit, dispatch, rootGetters },
             { silentValidation = false } = {}
         ) {
             if (!silentValidation) commit('SET_IS_VALIDATING_CONN', true)
             try {
-                const active_wke_id = rootState.wke.active_wke_id
+                const active_session_id = rootGetters['querySession/getActiveSessionId']
                 const res = await this.$queryHttp.get(`/sql/`)
                 const resConnMap = this.vue.$help.lodash.keyBy(res.data.data, 'id')
                 const resConnIds = Object.keys(resConnMap)
@@ -115,7 +115,7 @@ export default {
                         const active_sql_conn = validSqlConns[state.active_sql_conn.id]
                         commit('SET_ACTIVE_SQL_CONN', {
                             payload: active_sql_conn,
-                            id: active_wke_id,
+                            id: active_session_id,
                         })
                     }
                 }
@@ -124,8 +124,8 @@ export default {
             }
             if (!silentValidation) commit('SET_IS_VALIDATING_CONN', false)
         },
-        async openConnect({ dispatch, commit, rootState }, { body, resourceType }) {
-            const active_wke_id = rootState.wke.active_wke_id
+        async openConnect({ dispatch, commit, rootState, rootGetters }, { body, resourceType }) {
+            const active_session_id = rootGetters['querySession/getActiveSessionId']
             try {
                 const res = await this.$queryHttp.post(`/sql?persist=yes&max-age=86400`, body)
                 if (res.status === 201) {
@@ -146,7 +146,10 @@ export default {
                         binding_type: rootState.app_config.QUERY_CONN_BINDING_TYPES.WORKSHEET,
                     }
                     commit('ADD_SQL_CONN', active_sql_conn)
-                    commit('SET_ACTIVE_SQL_CONN', { payload: active_sql_conn, id: active_wke_id })
+                    commit('SET_ACTIVE_SQL_CONN', {
+                        payload: active_sql_conn,
+                        id: active_session_id,
+                    })
 
                     if (body.db) await dispatch('schemaSidebar/useDb', body.db, { root: true })
                     commit('SET_CONN_ERR_STATE', false)
@@ -270,12 +273,17 @@ export default {
          * clear the state of the worksheet having that connection to its initial state
          */
         resetWkeStates({ state, commit, rootState, dispatch }, cnctId) {
-            const targetWke = rootState.wke.worksheets_arr.find(
-                wke => wke.active_sql_conn.id === cnctId
+            const targetSession = rootState.querySession.query_sessions.find(
+                s => this.vue.$typy(s, 'active_sql_conn.id').safeString === cnctId
             )
+            const targetWke = rootState.wke.worksheets_arr.find(
+                w => w.id === this.vue.$typy(targetSession, 'wke_id_fk').safeString
+            )
+
             if (targetWke) {
                 dispatch('wke/releaseQueryModulesMem', targetWke.id, { root: true })
                 commit('wke/REFRESH_WKE', targetWke, { root: true })
+                commit('querySession/REFRESH_SESSIONS_OF_A_WKE', targetWke, { root: true })
                 /**
                  * if connection id to be deleted is equal to current connected
                  * resource of active worksheet, sync wke states to flat states
@@ -284,7 +292,11 @@ export default {
                     const freshWke = rootState.wke.worksheets_arr.find(
                         wke => wke.id === targetWke.id
                     )
+                    const freshSession = rootState.querySession.query_sessions.find(
+                        s => s.id === targetSession.id
+                    )
                     dispatch('wke/handleSyncWke', freshWke, { root: true })
+                    dispatch('querySession/handleSyncSession', freshSession, { root: true })
                 }
             }
         },
@@ -292,6 +304,7 @@ export default {
         resetAllWkeStates({ rootState, commit }) {
             for (const targetWke of rootState.wke.worksheets_arr) {
                 commit('wke/REFRESH_WKE', targetWke, { root: true })
+                commit('querySession/REFRESH_SESSIONS_OF_A_WKE', targetWke, { root: true })
             }
         },
     },
@@ -305,13 +318,29 @@ export default {
             if (bgConns.length) return bgConns[0]
             return {}
         },
-        getIsConnBusy: (state, getters, rootState) => {
-            const { value = false } = state.is_conn_busy_map[rootState.wke.active_wke_id] || {}
+        getIsConnBusy: (state, getters, rootState, rootGetters) => {
+            const { value = false } =
+                state.is_conn_busy_map[rootGetters['querySession/getActiveSessionId']] || {}
             return value
         },
-        getLostCnnErrMsgObj: (state, getters, rootState) => {
-            const { value = {} } = state.lost_cnn_err_msg_obj_map[rootState.wke.active_wke_id] || {}
+        getLostCnnErrMsgObj: (state, getters, rootState, rootGetters) => {
+            const { value = {} } =
+                state.lost_cnn_err_msg_obj_map[rootGetters['querySession/getActiveSessionId']] || {}
             return value
+        },
+        getBoundConnByWkeId: (state, getters, rootState) => {
+            return wke_id => {
+                const sessions_in_wke = rootState.querySession.query_sessions.filter(
+                    s => s.wke_id_fk === wke_id
+                )
+                let wkeBoundConn = {}
+                for (const s of sessions_in_wke)
+                    if (s.active_sql_conn.id) {
+                        wkeBoundConn = s.active_sql_conn
+                        break
+                    }
+                return wkeBoundConn
+            }
         },
     },
 }

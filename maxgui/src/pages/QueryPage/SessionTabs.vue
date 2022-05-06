@@ -30,10 +30,17 @@
                         class="ml-1 del-session-btn"
                         icon
                         x-small
-                        :disabled="is_conn_busy_map[active_wke_id]"
+                        :disabled="$typy(is_conn_busy_map[session.id], 'value').safeBoolean"
                         @click="handleDisconnectSession(session)"
                     >
-                        <v-icon size="8" :color="is_conn_busy_map[active_wke_id] ? '' : 'error'">
+                        <v-icon
+                            size="8"
+                            :color="
+                                $typy(is_conn_busy_map[session.id], 'value').safeBoolean
+                                    ? ''
+                                    : 'error'
+                            "
+                        >
                             $vuetify.icons.close
                         </v-icon>
                     </v-btn>
@@ -75,6 +82,7 @@ export default {
         }),
         ...mapGetters({
             getActiveSessionId: 'querySession/getActiveSessionId',
+            getActiveSession: 'querySession/getActiveSession',
         }),
         activeSessionId: {
             get() {
@@ -91,11 +99,22 @@ export default {
             return this.query_sessions.filter(s => s.wke_id_fk === this.active_wke_id)
         },
     },
+    watch: {
+        getActiveSessionId: {
+            immediate: true,
+            handler(v) {
+                if (v) this.handleSyncSession(this.getActiveSession)
+            },
+        },
+    },
     methods: {
         ...mapMutations({
             SET_ACTIVE_SESSION_BY_WKE_ID_MAP: 'querySession/SET_ACTIVE_SESSION_BY_WKE_ID_MAP',
         }),
-        ...mapActions({ handleDeleteSession: 'querySession/handleDeleteSession' }),
+        ...mapActions({
+            handleDeleteSession: 'querySession/handleDeleteSession',
+            handleSyncSession: 'querySession/handleSyncSession',
+        }),
         async handleDisconnectSession(session) {
             await this.handleDeleteSession(this.query_sessions.indexOf(session))
         },
