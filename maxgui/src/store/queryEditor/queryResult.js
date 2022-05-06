@@ -111,12 +111,19 @@ export default {
                 })
 
                 /**
-                 * dispatch openBgConn before running the user's query to prevent concurrent
+                 * dispatch cloneConn before running the user's query to prevent concurrent
                  * querying of the same connection.
                  * This "BACKGROUND" connection must be disconnected after finnish the user's query.
                  * i.e. dispatch disconnectBgConn
                  */
-                await dispatch('queryConn/openBgConn', active_sql_conn, { root: true })
+                await dispatch(
+                    'queryConn/cloneConn',
+                    {
+                        conn_to_be_cloned: active_sql_conn,
+                        binding_type: rootState.app_config.QUERY_CONN_BINDING_TYPES.BACKGROUND,
+                    },
+                    { root: true }
+                )
 
                 let res = await this.$queryHttp.post(`/sql/${active_sql_conn.id}/queries`, {
                     sql: query,
@@ -164,14 +171,15 @@ export default {
                     id: active_wke_id,
                     payload: { value: true },
                 })
+                const bgConn = rootGetters['queryConn/getCloneConn']({
+                    clone_of_conn_id: active_sql_conn.id,
+                    binding_type: rootState.app_config.QUERY_CONN_BINDING_TYPES.BACKGROUND,
+                })
                 const {
                     data: { data: { attributes: { results = [] } = {} } = {} } = {},
-                } = await this.$queryHttp.post(
-                    `/sql/${rootGetters['queryConn/getBgConn'].id}/queries`,
-                    {
-                        sql: `KILL QUERY ${active_sql_conn.attributes.thread_id}`,
-                    }
-                )
+                } = await this.$queryHttp.post(`/sql/${bgConn.id}/queries`, {
+                    sql: `KILL QUERY ${active_sql_conn.attributes.thread_id}`,
+                })
                 if (results.length && results[0].errno)
                     commit(
                         'SET_SNACK_BAR_MESSAGE',

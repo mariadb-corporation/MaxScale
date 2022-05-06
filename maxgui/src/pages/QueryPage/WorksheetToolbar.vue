@@ -253,13 +253,14 @@ export default {
             query_txt: state => state.editor.query_txt,
             selected_query_txt: state => state.editor.selected_query_txt,
             active_wke_id: state => state.wke.active_wke_id,
+            QUERY_CONN_BINDING_TYPES: state => state.app_config.QUERY_CONN_BINDING_TYPES,
         }),
         ...mapGetters({
             getIsConnBusy: 'queryConn/getIsConnBusy',
             getLoadingQueryResult: 'queryResult/getLoadingQueryResult',
             getIsStoppingQuery: 'queryResult/getIsStoppingQuery',
             getDbNodes: 'schemaSidebar/getDbNodes',
-            getBgConn: 'queryConn/getBgConn',
+            getCloneConn: 'queryConn/getCloneConn',
         }),
         //Prevent parallel querying
         shouldDisableExecute() {
@@ -279,7 +280,13 @@ export default {
     },
     watch: {
         async isQueryKilled(v) {
-            if (v) await this.disconnectBgConn(this.getBgConn)
+            if (v) {
+                const bgConn = this.getCloneConn({
+                    clone_of_conn_id: this.active_sql_conn.id,
+                    binding_type: this.QUERY_CONN_BINDING_TYPES.BACKGROUND,
+                })
+                await this.disconnect({ id: bgConn.id })
+            }
         },
     },
     methods: {
@@ -293,7 +300,7 @@ export default {
             fetchQueryResult: 'queryResult/fetchQueryResult',
             stopQuery: 'queryResult/stopQuery',
             useDb: 'schemaSidebar/useDb',
-            disconnectBgConn: 'queryConn/disconnectBgConn',
+            disconnect: 'queryConn/disconnect',
         }),
         async handleSelectDb(db) {
             await this.useDb(db)
