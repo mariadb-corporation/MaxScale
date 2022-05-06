@@ -6,7 +6,7 @@
                 small
                 class="float-left add-wke-btn"
                 icon
-                @click="addNewWs"
+                @click="addWke"
             >
                 <v-icon size="18" color="deep-ocean">mdi-plus</v-icon>
             </v-btn>
@@ -185,6 +185,9 @@ export default {
             addNewWs: 'wke/addNewWs',
             pushQueryFavorite: 'persisted/pushQueryFavorite',
         }),
+        async addWke() {
+            await this.addNewWs()
+        },
         openFavoriteDialog() {
             if (this.query_txt) {
                 this.favorite.date = new Date().valueOf()

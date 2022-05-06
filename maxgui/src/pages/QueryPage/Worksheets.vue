@@ -17,7 +17,7 @@
                     active-class="tab-btn--active"
                 >
                     <v-tooltip
-                        :disabled="!$typy(getBoundConnByWkeId(wke.id), 'name').safeBoolean"
+                        :disabled="!$typy(getWkeDefConnByWkeId(wke.id), 'name').safeBoolean"
                         top
                         transition="slide-x-transition"
                         content-class="shadow-drop"
@@ -142,7 +142,7 @@ export default {
         }),
         ...mapGetters({
             getActiveSessionId: 'querySession/getActiveSessionId',
-            getBoundConnByWkeId: 'queryConn/getBoundConnByWkeId',
+            getWkeDefConnByWkeId: 'queryConn/getWkeDefConnByWkeId',
         }),
         activeWkeID: {
             get() {

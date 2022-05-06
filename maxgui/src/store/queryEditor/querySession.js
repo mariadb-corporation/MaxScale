@@ -72,15 +72,46 @@ export default {
         },
     },
     actions: {
-        handleAddNewSession({ commit, state }, wke_id) {
+        /**
+         * This action add new session to the provided worksheet id.
+         * First, it clones the connection of the current active worksheet then
+         * add a new session, set it as the active session and finally set the clone connection as
+         * the active connection.
+         * @param {String} param.wke_id - worksheet id
+         */
+        async handleAddNewSession({ commit, state, dispatch, rootState, rootGetters }, wke_id) {
             try {
+                const conn_to_be_cloned = rootGetters['queryConn/getWkeDefConnByWkeId'](wke_id)
+                let sessionConn
+                if (conn_to_be_cloned.id) {
+                    await dispatch(
+                        'queryConn/cloneConn',
+                        {
+                            conn_to_be_cloned,
+                            binding_type: rootState.app_config.QUERY_CONN_BINDING_TYPES.SESSION,
+                            getCloneObjRes: obj => (sessionConn = obj),
+                        },
+                        { root: true }
+                    )
+                }
+
                 commit('ADD_NEW_SESSION', wke_id)
                 const newSessionId = state.query_sessions[state.query_sessions.length - 1].id
                 commit('SET_ACTIVE_SESSION_BY_WKE_ID_MAP', {
                     id: wke_id,
                     payload: newSessionId,
                 })
-                //TODO: bind connection
+
+                if (sessionConn)
+                    // Switch to use new clone connection
+                    commit(
+                        'queryConn/SET_ACTIVE_SQL_CONN',
+                        {
+                            payload: sessionConn,
+                            id: newSessionId,
+                        },
+                        { root: true }
+                    )
             } catch (e) {
                 this.vue.$logger('store-querySession-handleAddNewSession').error(e)
                 commit(

@@ -6,7 +6,7 @@
                 small
                 class="float-left add-wke-btn"
                 icon
-                @click="handleAddNewSession(active_wke_id)"
+                @click="addSession"
             >
                 <v-icon size="18" color="deep-ocean">mdi-plus</v-icon>
             </v-btn>
@@ -41,6 +41,9 @@ export default {
     },
     methods: {
         ...mapActions({ handleAddNewSession: 'querySession/handleAddNewSession' }),
+        async addSession() {
+            await this.handleAddNewSession(this.active_wke_id)
+        },
     },
 }
 </script>

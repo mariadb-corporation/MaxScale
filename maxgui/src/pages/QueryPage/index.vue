@@ -58,8 +58,8 @@ export default {
     watch: {
         $route: {
             immediate: true,
-            handler() {
-                this.chooseActiveWke()
+            async handler() {
+                await this.chooseActiveWke()
             },
         },
         active_wke_id: {

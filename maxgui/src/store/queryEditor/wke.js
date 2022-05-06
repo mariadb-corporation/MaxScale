@@ -64,7 +64,7 @@ export default {
         },
     },
     actions: {
-        chooseActiveWke({ state, commit, dispatch, rootState }) {
+        async chooseActiveWke({ state, commit, dispatch, rootState }) {
             const { type = 'blank_wke', id: paramId } = this.router.app.$route.params
             if (paramId) {
                 if (type !== 'blank_wke') {
@@ -108,7 +108,7 @@ export default {
                                 },
                                 { root: true }
                             )
-                        } else dispatch('addNewWs')
+                        } else await dispatch('addNewWs')
                         commit(
                             'queryConn/SET_PRE_SELECT_CONN_RSRC',
                             { type, id: paramId },
@@ -145,12 +145,14 @@ export default {
             if (name) to = `/query/${type}/${name}`
             if (from !== to) this.router.push(to)
         },
-        addNewWs({ commit, state, dispatch }) {
+        async addNewWs({ commit, state, dispatch }) {
             try {
                 commit('ADD_NEW_WKE')
                 const new_active_wke_id = state.worksheets_arr[state.worksheets_arr.length - 1].id
                 commit('SET_ACTIVE_WKE_ID', new_active_wke_id)
-                dispatch('querySession/handleAddNewSession', new_active_wke_id, { root: true })
+                await dispatch('querySession/handleAddNewSession', new_active_wke_id, {
+                    root: true,
+                })
             } catch (e) {
                 this.vue.$logger('store-wke-addNewWs').error(e)
                 commit(

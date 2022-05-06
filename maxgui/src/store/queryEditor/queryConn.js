@@ -163,8 +163,9 @@ export default {
          *  Clone a connection
          * @param {Object} param.conn_to_be_cloned - connection to be cloned
          * @param {String} param.binding_type - binding_type. Check QUERY_CONN_BINDING_TYPES
+         * @param {Function} param.getCloneObjRes - get the result of the clone object
          */
-        async cloneConn({ commit }, { conn_to_be_cloned, binding_type }) {
+        async cloneConn({ commit }, { conn_to_be_cloned, binding_type, getCloneObjRes }) {
             try {
                 const res = await this.$queryHttp.post(
                     `/sql/${conn_to_be_cloned.id}/clone?persist=yes&max-age=86400`
@@ -179,6 +180,7 @@ export default {
                         clone_of_conn_id: conn_to_be_cloned.id,
                         binding_type,
                     }
+                    if (this.vue.$help.isFunction(getCloneObjRes)) getCloneObjRes(conn)
                     commit('ADD_SQL_CONN', conn)
                 }
             } catch (e) {
@@ -293,6 +295,7 @@ export default {
         },
     },
     getters: {
+        // return the first found object, so it only works for BACKGROUND connection for now
         getCloneConn: state => {
             /**
              * @param {Number} - active connection id that was cloned
@@ -314,18 +317,18 @@ export default {
                 state.lost_cnn_err_msg_obj_map[rootGetters['querySession/getActiveSessionId']] || {}
             return value
         },
-        getBoundConnByWkeId: (state, getters, rootState) => {
+        getWkeDefConnByWkeId: (state, getters, rootState) => {
+            const query_sessions = rootState.querySession.query_sessions
             return wke_id => {
-                const sessions_in_wke = rootState.querySession.query_sessions.filter(
-                    s => s.wke_id_fk === wke_id
-                )
-                let wkeBoundConn = {}
-                for (const s of sessions_in_wke)
-                    if (s.active_sql_conn.id) {
-                        wkeBoundConn = s.active_sql_conn
-                        break
-                    }
-                return wkeBoundConn
+                const def_session =
+                    query_sessions.find(
+                        s =>
+                            s.wke_id_fk === wke_id &&
+                            s.active_sql_conn &&
+                            s.active_sql_conn.binding_type ===
+                                rootState.app_config.QUERY_CONN_BINDING_TYPES.WORKSHEET
+                    ) || {}
+                return def_session.active_sql_conn || {}
             }
         },
     },
