@@ -5,16 +5,17 @@
 #### Use webpack dev-server with https
 
 When admin_secure_gui=true under the [maxscale] section of the MaxScale
-configuration file, jwt token will be sent over https only.
-Note: MaxScale also needs to be set up to use TLS/SSL.
-Check the [Configuration Guide](../Documentation/Getting-Started/Configuration-Guide.md#admin_ssl_key)
+configuration file, jwt token will be sent over https only. Note: MaxScale also
+needs to be set up to use TLS/SSL. Check the
+[Configuration Guide](../Documentation/Getting-Started/Configuration-Guide.md#admin_ssl_key)
 
-By default, when compiles and hot-reloads for development,
-maxgui is configured to be hosted without using https.
+By default, when compiles and hot-reloads for development, maxgui is configured
+to be hosted without using https.
 
 To use https in development for testing purpose, create `dev-certs` directory
-with local ssl certificates. The certificates can be created using [mkcert](https://github.com/FiloSottile/mkcert).
-Then add the following properties to `devServer` in `vue.config.js`:
+with local ssl certificates. The certificates can be created using
+[mkcert](https://github.com/FiloSottile/mkcert). Then add the following
+properties to `devServer` in `vue.config.js`:
 
 ```
 https: {
@@ -26,15 +27,15 @@ public: 'https://localhost:8000/',
 
 #### Disable CORS when sending request to MaxScale REST API
 
-CORS is bypassed by using proxy in webpack devServer.
-Check `vue.config.js` file, `devServer` section for more configuration
+CORS is bypassed by using proxy in webpack devServer. Check `vue.config.js`
+file, `devServer` section for more configuration
 
 #### Config build path
 
 Add .env.local file that contains `buildPath=dataDir`
 
-`dataDir` indicates your maxscale's Data directory absolute path.
-e.g. `/home/user/maxscale/share/maxscale/`
+`dataDir` indicates your maxscale's Data directory absolute path. e.g.
+`/home/user/maxscale/share/maxscale/`
 
 After compiling and minifying for production, the GUI can be accessed via
 http://`admin_host`:`admin_port`
@@ -80,10 +81,9 @@ npm run test:unit
 
 ## App translation
 
-Create a json file in `src/locales`. For example: `es.json`
-Copy everything in `src/locales/en.json` file and paste to `es.json`
-then translate it.
-Change the value of VUE_APP_I18N_LOCALE in `.env` file to the desire locale.
+Create a json file in `src/locales`. For example: `es.json` Copy everything in
+`src/locales/en.json` file and paste to `es.json` then translate it. Change the
+value of VUE_APP_I18N_LOCALE in `.env` file to the desire locale.
 
 #### browserslist
 
@@ -98,15 +98,14 @@ See [Configuration Reference](https://cli.vuejs.org/config/).
 
 ### State
 
-Avoiding naming state with one word. This makes things hard
-to differentiate between component state and vuex state.
-Names of state should be written in underscore-case notation.
-e.g. search_keyword instead of searchKeyword
+Avoiding naming state with one word. This makes things hard to differentiate
+between component state and vuex state. Names of state should be written in
+underscore-case notation. e.g. search_keyword instead of searchKeyword
 
 ### Mutations
 
-Mutations should be written as constants. e.g. SET_OVERLAY_TYPE
-Prefix of mutations can be as follows:
+Mutations should be written as constants. e.g. SET_OVERLAY_TYPE Prefix of
+mutations can be as follows:
 
 -   SET\_
 -   ADD\_
@@ -114,17 +113,34 @@ Prefix of mutations can be as follows:
 
 ### Actions
 
-Actions should be written with prefix starts with a verb. e.g. fetch,
-create, destroy,...
-For actions that involves id, after action verb, use 'ById' to
+Actions should be written with prefix starts with a verb. e.g. fetch, create,
+destroy,... For actions that involves id, after action verb, use 'ById' to
 describe the use of id.For examples:
 
--   fetchServerById, this action gets a server data
-    by id.
+-   fetchServerById, this action gets a server data by id.
 -   fetchAllServers, this actions gets all servers data
 
 ### Getters
 
-Use getters only when data needs to be manipulated, processed before
-returning. Getter should be written with prefix starts with 'get'.
-e.g. getServersMap
+Use getters only when data needs to be manipulated, processed before returning.
+Getter should be written with prefix starts with 'get'. e.g. getServersMap
+
+## Query Editor state structure
+
+The image below illustrates the state structure of the query editor. It is
+implemented to have a flat Vuex store architecture without the need for using a
+unique key for each module.
+
+![Query Editor state structure diagram](./images/query_editor_states_diagram.png)
+
+`statesToBeSynced` are implemented as flat states to avoid nested state trees so
+that it can be easier to keep data up to date and synchronized. In addition,
+directly accessing and mutating nested objects are expensive for Vue.js as one
+key is modified, and all computed methods that reference other keys will have to
+be recompute. These kinds of states will be synchronized to a persisted array of
+objects that are stored in localStorage and will be wiped out when the users
+logout.
+
+`memStates` are implemented to store large data that are needed during a user's
+usage session. e.g. query result data, schemas data. These data are stored in
+memory and will be erased when the user refreshes the browser.
