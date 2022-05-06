@@ -256,6 +256,9 @@ describe(`SidebarContainer - methods tests`, () => {
             },
             methods: {
                 queryTblCreationInfo: param => (queryTblCreationInfoParam = param),
+                queryEngines: () => null,
+                queryCharsetCollationMap: () => null,
+                queryDefDbCharsetMap: () => null,
             },
         })
         const mockNode = { key: 'node_key_20', type: 'Table', name: 't1', id: 'test.t1' }
