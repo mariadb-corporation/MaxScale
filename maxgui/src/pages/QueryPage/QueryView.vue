@@ -74,15 +74,15 @@ export default {
             switch (e.srcKey) {
                 case 'win-ctrl-s':
                 case 'mac-cmd-s':
-                    wkes.pageToolbar.openFavoriteDialog()
+                    wkes.onCtrlS()
                     break
                 case 'win-ctrl-enter':
                 case 'mac-cmd-enter':
-                    wkes.wkeToolbar.handleRun('selected')
+                    wkes.onCtrlEnter()
                     break
                 case 'win-ctrl-shift-enter':
                 case 'mac-cmd-shift-enter':
-                    wkes.wkeToolbar.handleRun('all')
+                    wkes.onCtrlShiftEnter()
                     break
             }
         },

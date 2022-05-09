@@ -218,6 +218,12 @@ export default {
             const { loading_query_result = false } = getters.getQueryResult
             return loading_query_result
         },
+        getLoadingQueryResultBySessionId: state => {
+            return session_id => {
+                const { loading_query_result = false } = state.query_results_map[session_id] || {}
+                return loading_query_result
+            }
+        },
         getResults: (state, getters) => {
             const { data = {} } = getters.getQueryResult
             return data
@@ -236,10 +242,11 @@ export default {
             const { total_duration = 0 } = getters.getQueryResult
             return total_duration
         },
-        getIsStoppingQuery: (state, getters, rootState, rootGetters) => {
-            const { value = false } =
-                state.is_stopping_query_map[rootGetters['querySession/getActiveSessionId']] || {}
-            return value
+        getIsStoppingQueryBySessionId: state => {
+            return session_id => {
+                const { value = false } = state.is_stopping_query_map[session_id] || {}
+                return value
+            }
         },
         // preview data getters
         getPrvwData: (state, getters, rootState, rootGetters) => mode => {

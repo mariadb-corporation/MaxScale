@@ -62,152 +62,6 @@
                 </v-list-item>
             </v-list>
         </v-menu>
-
-        <v-spacer></v-spacer>
-        <portal-target name="wke-toolbar-right">
-            <div class="d-flex">
-                <v-form v-model="isMaxRowsValid">
-                    <max-rows-input
-                        :style="{ maxWidth: '180px' }"
-                        :height="28"
-                        hide-details="auto"
-                        :hasFieldsetBorder="false"
-                        @change="SET_QUERY_MAX_ROW($event)"
-                    >
-                        <template v-slot:prepend-inner>
-                            <label class="field__label color text-small-text">
-                                {{ $t('maxRows') }}
-                            </label>
-                        </template>
-                    </max-rows-input>
-                </v-form>
-                <!-- Run/Stop buttons-->
-                <v-tooltip
-                    top
-                    transition="slide-y-transition"
-                    content-class="shadow-drop color text-navigation py-1 px-4"
-                    :disabled="getLoadingQueryResult"
-                >
-                    <template v-slot:activator="{ on }">
-                        <v-btn
-                            outlined
-                            class="ml-2 text-capitalize px-2 font-weight-medium"
-                            :class="[getLoadingQueryResult ? 'stop-btn' : 'run-btn']"
-                            depressed
-                            small
-                            color="accent-dark"
-                            :disabled="getLoadingQueryResult ? false : shouldDisableExecute"
-                            v-on="on"
-                            @click="
-                                () =>
-                                    getLoadingQueryResult
-                                        ? stopQuery()
-                                        : handleRun(selected_query_txt ? 'selected' : 'all')
-                            "
-                        >
-                            <v-icon size="16" class="mr-2">
-                                {{
-                                    `$vuetify.icons.${
-                                        getLoadingQueryResult ? 'stopped' : 'running'
-                                    }`
-                                }}
-                            </v-icon>
-                            {{ getLoadingQueryResult ? $t('stop') : $t('run') }}
-                        </v-btn>
-                    </template>
-                    <span style="white-space: pre;" class="d-inline-block text-center">
-                        {{
-                            selected_query_txt
-                                ? `${$t('runStatements', {
-                                      quantity: $t('selected'),
-                                  })}\nCmd/Ctrl + Enter`
-                                : `${$t('runStatements', {
-                                      quantity: $t('all'),
-                                  })}\nCmd/Ctrl + Shift + Enter`
-                        }}
-                    </span>
-                </v-tooltip>
-                <!-- Visualize section-->
-                <v-tooltip
-                    top
-                    transition="slide-y-transition"
-                    content-class="shadow-drop color text-navigation py-1 px-4"
-                >
-                    <template v-slot:activator="{ on }">
-                        <v-btn
-                            class="ml-2 visualize-btn"
-                            :outlined="!show_vis_sidebar"
-                            depressed
-                            small
-                            :color="show_vis_sidebar ? 'primary' : 'accent-dark'"
-                            :disabled="!hasActiveConn || getIsConnBusy"
-                            v-on="on"
-                            @click="
-                                SET_SHOW_VIS_SIDEBAR({
-                                    payload: !show_vis_sidebar,
-                                    id: getActiveSessionId,
-                                })
-                            "
-                        >
-                            <v-icon
-                                size="16"
-                                :color="
-                                    hasActiveConn
-                                        ? show_vis_sidebar
-                                            ? 'background'
-                                            : 'accent-dark'
-                                        : ''
-                                "
-                            >
-                                $vuetify.icons.reports
-                            </v-icon>
-                        </v-btn>
-                    </template>
-                    <span class="text-capitalize">
-                        {{
-                            $t('visualizedConfig', {
-                                action: show_vis_sidebar ? $t('hide') : $t('show'),
-                            })
-                        }}
-                    </span>
-                </v-tooltip>
-                <confirm-dialog
-                    v-if="query_confirm_flag"
-                    v-model="isConfDlgOpened"
-                    :title="$t('confirmations.runQuery')"
-                    type="run"
-                    minBodyWidth="768px"
-                    :closeImmediate="true"
-                    :onSave="confirmRunning"
-                >
-                    <template v-slot:body-prepend>
-                        <div class="mb-4 readonly-sql-code-wrapper pa-2">
-                            <readonly-query-editor
-                                :value="
-                                    activeRunMode === 'selected' ? selected_query_txt : query_txt
-                                "
-                                class="readonly-editor fill-height"
-                                readOnly
-                                :options="{
-                                    fontSize: 10,
-                                    contextmenu: false,
-                                }"
-                            />
-                        </div>
-                    </template>
-                    <template v-slot:action-prepend>
-                        <v-checkbox
-                            v-model="dontShowConfirm"
-                            class="pa-0 ma-0"
-                            :label="$t('dontAskMeAgain')"
-                            color="primary"
-                            hide-details
-                        />
-                        <v-spacer />
-                    </template>
-                </confirm-dialog>
-            </div>
-        </portal-target>
     </v-toolbar>
 </template>
 
@@ -224,129 +78,33 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
-import { mapActions, mapState, mapMutations, mapGetters } from 'vuex'
+// TODO: Get rid of this component, the functionalities in this component will be handled later in a new UI design,
+import { mapActions, mapState, mapGetters } from 'vuex'
 import ConnectionManager from './ConnectionManager'
-import QueryEditor from '@/components/QueryEditor'
-import MaxRowsInput from './MaxRowsInput.vue'
 
 export default {
     name: 'worksheet-toolbar',
-    components: {
-        ConnectionManager,
-        'readonly-query-editor': QueryEditor,
-        'max-rows-input': MaxRowsInput,
-    },
-    data() {
-        return {
-            dontShowConfirm: false,
-            activeRunMode: 'all',
-            isConfDlgOpened: false,
-            isMaxRowsValid: true,
-        }
-    },
+    components: { ConnectionManager },
     computed: {
         ...mapState({
-            SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             is_fullscreen: state => state.wke.is_fullscreen,
             active_sql_conn: state => state.queryConn.active_sql_conn,
             active_db: state => state.schemaSidebar.active_db,
-            query_confirm_flag: state => state.persisted.query_confirm_flag,
-            show_vis_sidebar: state => state.queryResult.show_vis_sidebar,
-            query_txt: state => state.editor.query_txt,
-            selected_query_txt: state => state.editor.selected_query_txt,
-            QUERY_CONN_BINDING_TYPES: state => state.app_config.QUERY_CONN_BINDING_TYPES,
         }),
         ...mapGetters({
             getIsConnBusy: 'queryConn/getIsConnBusy',
-            getLoadingQueryResult: 'queryResult/getLoadingQueryResult',
-            getIsStoppingQuery: 'queryResult/getIsStoppingQuery',
             getDbNodes: 'schemaSidebar/getDbNodes',
-            getCloneConn: 'queryConn/getCloneConn',
-            getActiveSessionId: 'querySession/getActiveSessionId',
         }),
-        //Prevent parallel querying
-        shouldDisableExecute() {
-            return (
-                !this.query_txt ||
-                !this.hasActiveConn ||
-                (this.getIsConnBusy && this.getLoadingQueryResult) ||
-                !this.isMaxRowsValid
-            )
-        },
         hasActiveConn() {
             return this.$typy(this.active_sql_conn, 'id').isDefined
         },
-        isQueryKilled() {
-            return !this.getLoadingQueryResult && !this.getIsStoppingQuery
-        },
-    },
-    watch: {
-        async isQueryKilled(v) {
-            if (v) {
-                const bgConn = this.getCloneConn({
-                    clone_of_conn_id: this.active_sql_conn.id,
-                    binding_type: this.QUERY_CONN_BINDING_TYPES.BACKGROUND,
-                })
-                await this.disconnectClone({ id: bgConn.id })
-            }
-        },
     },
     methods: {
-        ...mapMutations({
-            SET_CURR_QUERY_MODE: 'queryResult/SET_CURR_QUERY_MODE',
-            SET_QUERY_CONFIRM_FLAG: 'persisted/SET_QUERY_CONFIRM_FLAG',
-            SET_SHOW_VIS_SIDEBAR: 'queryResult/SET_SHOW_VIS_SIDEBAR',
-            SET_QUERY_MAX_ROW: 'persisted/SET_QUERY_MAX_ROW',
-        }),
         ...mapActions({
-            fetchQueryResult: 'queryResult/fetchQueryResult',
-            stopQuery: 'queryResult/stopQuery',
             useDb: 'schemaSidebar/useDb',
-            disconnectClone: 'queryConn/disconnectClone',
         }),
         async handleSelectDb(db) {
             await this.useDb(db)
-        },
-        /**
-         * Only open dialog when its corresponding query text exists
-         */
-        shouldOpenDialog(mode) {
-            return (
-                (mode === 'selected' && this.selected_query_txt) ||
-                (mode === 'all' && this.query_txt)
-            )
-        },
-        async handleRun(mode) {
-            if (!this.shouldDisableExecute)
-                if (!this.query_confirm_flag) await this.onRun(mode)
-                else if (this.shouldOpenDialog(mode)) {
-                    this.activeRunMode = mode
-                    this.dontShowConfirm = false // clear checkbox state
-                    this.isConfDlgOpened = true
-                }
-        },
-        async confirmRunning() {
-            if (this.dontShowConfirm) this.SET_QUERY_CONFIRM_FLAG(0)
-            await this.onRun(this.activeRunMode)
-        },
-        /**
-         * @param {String} mode Mode to execute query: All or selected
-         */
-        async onRun(mode) {
-            this.SET_CURR_QUERY_MODE({
-                payload: this.SQL_QUERY_MODES.QUERY_VIEW,
-                id: this.getActiveSessionId,
-            })
-            switch (mode) {
-                case 'all':
-                    if (this.query_txt) await this.fetchQueryResult(this.query_txt)
-                    break
-                case 'selected':
-                    if (this.selected_query_txt)
-                        await this.fetchQueryResult(this.selected_query_txt)
-                    break
-            }
         },
     },
 }

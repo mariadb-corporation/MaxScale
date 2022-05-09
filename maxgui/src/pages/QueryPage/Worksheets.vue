@@ -81,18 +81,19 @@
             </v-tabs>
             <page-toolbar ref="pageToolbar" @get-total-btn-width="pageToolbarBtnWidth = $event" />
         </div>
-        <worksheet-toolbar ref="wkeToolbar" />
+        <worksheet-toolbar />
         <keep-alive>
             <worksheet
                 v-if="activeWkeID"
+                ref="wke"
                 :key="activeWkeID"
                 :ctrDim="ctrDim"
                 :style="{
                     height: `calc(100% - ${wkeNavHeight + 45}px)`,
                 }"
-                @onCtrlEnter="() => $refs.wkeToolbar.handleRun('selected')"
-                @onCtrlShiftEnter="() => $refs.wkeToolbar.handleRun('all')"
-                @onCtrlS="() => $refs.pageToolbar.openFavoriteDialog()"
+                @onCtrlEnter="onCtrlEnter"
+                @onCtrlShiftEnter="onCtrlShiftEnter"
+                @onCtrlS="onCtrlS"
             />
         </keep-alive>
     </div>
@@ -160,6 +161,17 @@ export default {
         ...mapActions({
             handleDeleteWke: 'wke/handleDeleteWke',
         }),
+        onCtrlEnter() {
+            this.$refs.wke.$refs[`sessionToolbar-${this.getActiveSessionId}`][0].handleRun(
+                'selected'
+            )
+        },
+        onCtrlShiftEnter() {
+            this.$refs.wke.$refs[`sessionToolbar-${this.getActiveSessionId}`][0].handleRun('all')
+        },
+        onCtrlS() {
+            this.$refs.pageToolbar.openFavoriteDialog()
+        },
     },
 }
 </script>

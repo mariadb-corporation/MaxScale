@@ -405,6 +405,12 @@ export default {
                 state.is_conn_busy_map[rootGetters['querySession/getActiveSessionId']] || {}
             return value
         },
+        getIsConnBusyBySessionId: state => {
+            return session_id => {
+                const { value = false } = state.is_conn_busy_map[session_id] || {}
+                return value
+            }
+        },
         getLostCnnErrMsgObj: (state, getters, rootState, rootGetters) => {
             const { value = {} } =
                 state.lost_cnn_err_msg_obj_map[rootGetters['querySession/getActiveSessionId']] || {}

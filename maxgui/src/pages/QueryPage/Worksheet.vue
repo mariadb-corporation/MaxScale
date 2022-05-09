@@ -14,16 +14,28 @@
             />
         </template>
         <template slot="pane-right">
-            <session-tabs />
-            <keep-alive>
-                <txt-editor-container
-                    v-if="isTxtEditor"
-                    ref="txtEditor"
-                    :dim="txtEditorDim"
-                    v-on="$listeners"
-                />
-                <ddl-editor-container v-else ref="ddlEditor" :dim="ddlEditorDim" />
-            </keep-alive>
+            <div class="d-flex flex-column fill-height">
+                <div class="d-flex flex-column">
+                    <session-tabs />
+                    <!-- sessionToolbar ref is needed here so that its parent can call method in it  -->
+                    <div
+                        v-for="session in getSessionsOfActiveWke"
+                        v-show="session.id === getActiveSessionId"
+                        :key="`${session.id}`"
+                    >
+                        <session-toolbar :ref="`sessionToolbar-${session.id}`" :session="session" />
+                    </div>
+                </div>
+                <keep-alive>
+                    <txt-editor-container
+                        v-if="isTxtEditor"
+                        ref="txtEditor"
+                        :dim="txtEditorDim"
+                        v-on="$listeners"
+                    />
+                    <ddl-editor-container v-else ref="ddlEditor" :dim="ddlEditorDim" />
+                </keep-alive>
+            </div>
         </template>
     </split-pane>
 </template>
@@ -46,6 +58,8 @@ import { mapGetters, mapState } from 'vuex'
 import DDLEditorContainer from './DDLEditorContainer.vue'
 import TxtEditorContainer from './TxtEditorContainer.vue'
 import SessionTabs from './SessionTabs'
+import SessionToolbar from './SessionToolbar'
+
 export default {
     name: 'worksheet',
     components: {
@@ -53,6 +67,7 @@ export default {
         'txt-editor-container': TxtEditorContainer,
         'ddl-editor-container': DDLEditorContainer,
         'session-tabs': SessionTabs,
+        'session-toolbar': SessionToolbar,
     },
     props: {
         ctrDim: { type: Object, required: true },
@@ -75,6 +90,8 @@ export default {
         ...mapGetters({
             getDbCmplList: 'schemaSidebar/getDbCmplList',
             getCurrEditorMode: 'editor/getCurrEditorMode',
+            getSessionsOfActiveWke: 'querySession/getSessionsOfActiveWke',
+            getActiveSessionId: 'querySession/getActiveSessionId',
         }),
         isTxtEditor() {
             return this.getCurrEditorMode === this.SQL_EDITOR_MODES.TXT_EDITOR
