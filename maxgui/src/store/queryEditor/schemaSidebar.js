@@ -517,9 +517,6 @@ export default {
         getDbTreeData: (state, getters) => {
             return getters.getCurrDbTree.data || []
         },
-        getDbNodes: (state, getters) => {
-            return getters.getDbTreeData.map(node => ({ name: node.name, id: node.id }))
-        },
         getLoadingDbTree: (state, getters) => getters.getCurrDbTree.loading_db_tree || false,
         getDbCmplList: (state, getters) => {
             if (getters.getCurrDbTree.db_completion_list)

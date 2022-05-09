@@ -61,25 +61,33 @@ VTreeviewNode.mixin({
                     },
                     on: {
                         click: e => {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            if (this.openOnClick && this.hasChildren) {
-                                this.checkChildren().then(this.open)
-                            } else if (this.activatable && !this.disabled) {
-                                this.isActive = !this.isActive
-                                this.treeview.updateActive(this.key, this.isActive)
-                                this.treeview.emitActive()
-                            }
-                            // canBeHighlighted
-                            if (this.item.canBeHighlighted) {
-                                //persist highlighting active node when toggle node
-                                this.isActive = true
-                                this.treeview.updateActive(this.key, this.isActive)
-                                this.treeview.emitActive()
-                            }
-                            this.treeview.emitClick(this.item)
+                            clearTimeout(this.clickTimeout)
+                            this.clickTimeout = setTimeout(() => {
+                                if (!this.isDblclick) {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    if (this.openOnClick && this.hasChildren) {
+                                        this.checkChildren().then(this.open)
+                                    } else if (this.activatable && !this.disabled) {
+                                        this.isActive = !this.isActive
+                                        this.treeview.updateActive(this.key, this.isActive)
+                                        this.treeview.emitActive()
+                                    }
+                                    // canBeHighlighted
+                                    if (this.item.canBeHighlighted) {
+                                        //persist highlighting active node when toggle node
+                                        this.isActive = true
+                                        this.treeview.updateActive(this.key, this.isActive)
+                                        this.treeview.emitActive()
+                                    }
+                                    this.treeview.emitClick(this.item)
+                                }
+                            }, 200)
                         },
                         dblclick: () => {
+                            this.isDblclick = true
+                            clearTimeout(this.dblclickTimeout)
+                            this.dblclickTimeout = setTimeout(() => (this.isDblclick = false), 200)
                             this.treeview.emitDblclick(this.item)
                         },
                         contextmenu: e => {

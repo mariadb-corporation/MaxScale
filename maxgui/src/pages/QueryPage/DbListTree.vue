@@ -17,6 +17,7 @@
             @item:click="onNodeClick"
             @item:contextmenu="onContextMenu"
             @item:hovered="hoveredItem = $event"
+            @item:dblclick="onNodeDblClick"
         >
             <template v-slot:label="{ item }">
                 <div
@@ -520,6 +521,9 @@ export default {
                     SQL_QUERY_MODE: this.SQL_QUERY_MODES.PRVW_DATA,
                     schemaId: this.activeNodes[0].id,
                 })
+        },
+        onNodeDblClick(item) {
+            if (item.type === this.SQL_NODE_TYPES.SCHEMA) this.$emit('use-db', item.id)
         },
         onContextMenu({ e, item }) {
             if (this.nodesHaveCtxMenu.includes(item.type)) this.handleOpenCtxMenu({ e, item })
