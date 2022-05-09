@@ -273,6 +273,13 @@ public:
 
     bool log_is_enabled(int level) const override final;
 
+    /**
+     * Check server dependencies and update parameters.
+     *
+     * @note Only to be called from MainWorker.
+     */
+    void check_server_dependencies();
+
 private:
 
     struct Data

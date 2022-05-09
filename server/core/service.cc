@@ -53,6 +53,7 @@
 #include <maxscale/config2.hh>
 
 #include "internal/config.hh"
+#include "internal/config_runtime.hh"
 #include "internal/filter.hh"
 #include "internal/listener.hh"
 #include "internal/modules.hh"
@@ -68,6 +69,7 @@
 
 using std::string;
 using std::set;
+using std::vector;
 using namespace maxscale;
 using LockGuard = std::lock_guard<std::mutex>;
 using UniqueLock = std::unique_lock<std::mutex>;
@@ -2010,6 +2012,69 @@ void Service::unmark_for_wakeup(mxs::ClientConnection* session)
 bool Service::log_is_enabled(int level) const
 {
     return m_log_level.load(std::memory_order_relaxed) & (1 << level);
+}
+
+namespace
+{
+
+bool configure_one_parameter(Service* service, const std::string& key, json_t* value)
+{
+    json_t* json = json_pack("{s: {s: {s: {s: o}}}}",
+                             "data", "attributes", "parameters", key.c_str(), value);
+    bool ok = runtime_alter_service_from_json(service, json);
+    json_decref(json);
+    return ok;
+}
+}
+
+void Service::check_server_dependencies()
+{
+    mxb_assert(MainWorker::is_main_worker());
+
+    // TODO: At this point any variables needed by routers/filters could
+    // TODO: be included.
+    auto dependencies = Service::specification()->server_dependencies();
+
+    auto servers = reachable_servers();
+
+    for (const auto* dependency : dependencies)
+    {
+        const string& variable = dependency->server_variable();
+        vector<string> values;
+
+        for (const auto* server : servers)
+        {
+            auto value = server->get_variable_value(variable);
+
+            if (!value.empty())
+            {
+                values.push_back(value);
+            }
+            else
+            {
+                MXB_INFO("Service '%s' depends on server variable '%s', but it has not "
+                         "been fetched from the server %s.",
+                         name(), variable.c_str(), server->name());
+            }
+        }
+
+        string parameter = dependency->parameter().name();
+
+        if (!values.empty())
+        {
+            // TODO: Would be better to collect all settings and then make one
+            // TODO: call to Service::configure().
+            if (!configure_one_parameter(this, parameter, dependency->apply_json(values)))
+            {
+                MXB_WARNING("Could not set '%s.%s' using the value '%s'.",
+                            name(), parameter.c_str(), dependency->apply(values).c_str());
+            }
+        }
+        else
+        {
+            MXB_INFO("No values found, not adjusting '%s.%s'.", name(), parameter.c_str());
+        }
+    }
 }
 
 bool Service::check_update_user_account_manager(mxs::ProtocolModule* protocol_module, const string& listener)
