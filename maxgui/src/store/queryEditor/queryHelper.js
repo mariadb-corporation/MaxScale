@@ -346,7 +346,11 @@ function memStateCreator(namespace) {
     switch (namespace) {
         case 'editor':
             return {
-                curr_editor_mode_map: {}, // each key holds a string value. Check SQL_EDITOR_MODES
+                /**
+                 * each key holds these properties:
+                 * value?: string. Check SQL_EDITOR_MODES
+                 */
+                curr_editor_mode_map: {},
                 /**
                  * each key holds these properties:
                  * altered_active_node?: object
@@ -357,8 +361,16 @@ function memStateCreator(namespace) {
             }
         case 'queryConn':
             return {
-                is_conn_busy_map: {}, // each key holds a boolean value.
-                lost_cnn_err_msg_obj_map: {}, // each key holds an object value receives from api.
+                /**
+                 * each key holds these properties:
+                 * value?: boolean
+                 */
+                is_conn_busy_map: {},
+                /**
+                 * each key holds these properties:
+                 * value?: object
+                 */
+                lost_cnn_err_msg_obj_map: {},
             }
         case 'queryResult':
             return {
@@ -386,7 +398,11 @@ function memStateCreator(namespace) {
                  * data? object.
                  */
                 query_results_map: {},
-                is_stopping_query_map: {}, // each key holds a boolean value
+                /**
+                 * each key holds these properties:
+                 * value?: boolean
+                 */
+                is_stopping_query_map: {},
             }
         case 'schemaSidebar':
             return {

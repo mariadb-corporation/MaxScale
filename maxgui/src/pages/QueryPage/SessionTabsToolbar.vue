@@ -1,5 +1,5 @@
 <template>
-    <div class="session-toolbar d-flex align-center flex-grow-1">
+    <div class="session-tabs-toolbar d-flex align-center flex-grow-1">
         <div ref="leftBtns" class="d-flex align-center left-buttons pl-2">
             <v-btn
                 v-show="!$typy(active_sql_conn).isEmptyObject"
@@ -28,19 +28,23 @@
  */
 
 import { mapActions, mapState } from 'vuex'
+
 export default {
-    name: 'session-toolbar',
+    name: 'session-tabs-toolbar',
     computed: {
         ...mapState({
             active_sql_conn: state => state.queryConn.active_sql_conn,
             active_wke_id: state => state.wke.active_wke_id,
         }),
     },
+
     mounted() {
         this.$nextTick(() => this.$emit('get-total-btn-width', this.$refs.leftBtns.clientWidth))
     },
     methods: {
-        ...mapActions({ handleAddNewSession: 'querySession/handleAddNewSession' }),
+        ...mapActions({
+            handleAddNewSession: 'querySession/handleAddNewSession',
+        }),
         async addSession() {
             await this.handleAddNewSession(this.active_wke_id)
         },
@@ -48,7 +52,7 @@ export default {
 }
 </script>
 <style lang="scss" scoped>
-.session-toolbar {
+.session-tabs-toolbar {
     border-top: 1px solid $table-border;
     border-bottom: 1px solid $table-border;
     border-right: 1px solid $table-border;

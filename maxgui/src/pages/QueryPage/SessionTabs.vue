@@ -1,5 +1,5 @@
 <template>
-    <div v-if="sessionTabs.length" class="d-flex flex-row">
+    <div class="d-flex flex-row">
         <v-tabs
             v-model="activeSessionId"
             show-arrows
@@ -9,7 +9,7 @@
             :style="{ maxWidth: `calc(100% - ${sessionToolbarWidth + 1}px)` }"
         >
             <v-tab
-                v-for="session in sessionTabs"
+                v-for="session in getSessionsOfActiveWke"
                 :key="`${session.id}`"
                 :href="`#${session.id}`"
                 class="pa-0 tab-btn text-none"
@@ -47,7 +47,7 @@
                 </div>
             </v-tab>
         </v-tabs>
-        <session-toolbar @get-total-btn-width="sessionToolbarWidth = $event" />
+        <session-tabs-toolbar @get-total-btn-width="sessionToolbarWidth = $event" />
     </div>
 </template>
 
@@ -65,10 +65,10 @@
  * Public License.
  */
 import { mapActions, mapState, mapMutations, mapGetters } from 'vuex'
-import SessionToolbar from './SessionToolbar.vue'
+import SessionTabsToolbar from './SessionTabsToolbar.vue'
 export default {
     name: 'session-tabs',
-    components: { 'session-toolbar': SessionToolbar },
+    components: { 'session-tabs-toolbar': SessionTabsToolbar },
     data() {
         return {
             sessionToolbarWidth: 0,
@@ -83,6 +83,7 @@ export default {
         ...mapGetters({
             getActiveSessionId: 'querySession/getActiveSessionId',
             getActiveSession: 'querySession/getActiveSession',
+            getSessionsOfActiveWke: 'querySession/getSessionsOfActiveWke',
         }),
         activeSessionId: {
             get() {
@@ -94,9 +95,6 @@ export default {
                     id: this.active_wke_id,
                 })
             },
-        },
-        sessionTabs() {
-            return this.query_sessions.filter(s => s.wke_id_fk === this.active_wke_id)
         },
     },
     watch: {
