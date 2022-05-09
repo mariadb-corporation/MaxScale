@@ -81,7 +81,6 @@
             </v-tabs>
             <page-toolbar @get-total-btn-width="pageToolbarBtnWidth = $event" />
         </div>
-        <worksheet-toolbar />
         <keep-alive>
             <worksheet
                 v-if="activeWkeID"
@@ -89,7 +88,7 @@
                 :key="activeWkeID"
                 :ctrDim="ctrDim"
                 :style="{
-                    height: `calc(100% - ${wkeNavHeight + 45}px)`,
+                    height: `calc(100% - ${wkeNavHeight}px)`,
                 }"
                 @onCtrlEnter="onCtrlEnter"
                 @onCtrlShiftEnter="onCtrlShiftEnter"
@@ -114,14 +113,12 @@
 
 import { mapActions, mapGetters, mapMutations, mapState } from 'vuex'
 import Worksheet from './Worksheet'
-import WorksheetToolbar from './WorksheetToolbar'
 import PageToolbar from './PageToolbar.vue'
 
 export default {
     name: 'worksheets',
     components: {
         Worksheet,
-        WorksheetToolbar,
         PageToolbar,
     },
     props: {
@@ -155,9 +152,7 @@ export default {
         },
     },
     methods: {
-        ...mapMutations({
-            SET_ACTIVE_WKE_ID: 'wke/SET_ACTIVE_WKE_ID',
-        }),
+        ...mapMutations({ SET_ACTIVE_WKE_ID: 'wke/SET_ACTIVE_WKE_ID' }),
         ...mapActions({
             handleDeleteWke: 'wke/handleDeleteWke',
         }),

@@ -285,7 +285,7 @@ export default {
 <style lang="scss" scoped>
 .db-tb-list {
     border: 1px solid $table-border;
-    border-top: none;
+    border-right: none;
     width: 100%;
     height: 100%;
     .db-tb-list__title {

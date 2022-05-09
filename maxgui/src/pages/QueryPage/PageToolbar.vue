@@ -13,6 +13,7 @@
         </div>
         <v-spacer />
         <div ref="rightBtns" class="d-flex align-center right-buttons pr-2">
+            <connection-manager :disabled="getIsConnBusy" class="mr-2" />
             <v-tooltip
                 top
                 transition="slide-y-transition"
@@ -72,12 +73,15 @@
  * Public License.
  */
 
-import { mapActions, mapMutations, mapState } from 'vuex'
+import { mapActions, mapMutations, mapState, mapGetters } from 'vuex'
 import QueryConfigDialog from './QueryConfigDialog'
+import ConnectionManager from './ConnectionManager'
+
 export default {
     name: 'page-toolbar',
     components: {
         'query-config-dialog': QueryConfigDialog,
+        ConnectionManager,
     },
     data() {
         return {
@@ -90,6 +94,7 @@ export default {
             is_fullscreen: state => state.wke.is_fullscreen,
             sql_conns: state => state.queryConn.sql_conns,
         }),
+        ...mapGetters({ getIsConnBusy: 'queryConn/getIsConnBusy' }),
     },
     mounted() {
         this.$nextTick(() =>

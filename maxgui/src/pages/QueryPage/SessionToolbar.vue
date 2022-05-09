@@ -131,7 +131,7 @@
         <v-form v-model="isMaxRowsValid">
             <max-rows-input
                 :style="{ maxWidth: '180px' }"
-                :height="28"
+                :height="30"
                 hide-details="auto"
                 :hasFieldsetBorder="false"
                 @change="SET_QUERY_MAX_ROW($event)"
@@ -378,8 +378,8 @@ export default {
 </script>
 <style lang="scss" scoped>
 .session-toolbar {
-    border-bottom: 1px solid $table-border;
-    border-right: 1px solid $table-border;
+    border: 1px solid $table-border;
+    border-top: none;
     width: 100%;
     .icon-group {
         height: 30px;
