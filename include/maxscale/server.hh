@@ -267,9 +267,9 @@ public:
     /**
      * Track value of server variable.
      *
-     * @param variable  The variable to track. It will be directly used in a
-     *                  SELECT statement, so should include everything needed,
-     *                  e.g. @c @@global.session_track_system_variables.
+     * @param variable  The variable to track. It will as quoted be used in a
+     *                  'SHOW GLOBAL VARIABLES WHERE VARIABLE_NAME IN (...)'
+     *                  statement, so should be just the name without quotes.
      *
      * @return @c True, if the variable was added to the variables to be
      *         tracked, @c false if it was already present.

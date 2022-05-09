@@ -266,7 +266,11 @@ void MainWorker::check_dependencies_dc()
             {
                 // TODO: Would be better to collect all settings and then make one
                 // TODO: call to Service::configure().
-                configure_one_parameter(pService, parameter, pDependency->apply_json(values));
+                if (!configure_one_parameter(pService, parameter, pDependency->apply_json(values)))
+                {
+                    MXB_WARNING("Could not set '%s.%s' using the value '%s'.",
+                                pService->name(), parameter.c_str(), pDependency->apply(values).c_str());
+                }
             }
             else
             {

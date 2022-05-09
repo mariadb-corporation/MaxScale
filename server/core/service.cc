@@ -1703,9 +1703,18 @@ void Service::targets_updated()
         manager->set_backends(data.servers);
     }
 
+    auto tracked_variables = m_tracked_variables;
+
+    // TODO: At this point any variables needed by routers/filters could
+    // TODO: be included.
+    for (auto* dependency : Service::specification()->server_dependencies())
+    {
+        tracked_variables.insert(dependency->server_variable());
+    }
+
     for (auto* server : data.servers)
     {
-        for (const auto& variable : m_tracked_variables)
+        for (const auto& variable : tracked_variables)
         {
             server->track_variable(variable);
         }
