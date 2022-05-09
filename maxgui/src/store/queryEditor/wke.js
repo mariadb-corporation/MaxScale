@@ -83,7 +83,10 @@ export default {
                             'querySession/SET_ACTIVE_SESSION_BY_WKE_ID_MAP',
                             {
                                 id: targetWke.id,
-                                payload: targetSession.id,
+                                payload:
+                                    rootState.querySession.active_session_by_wke_id_map[
+                                        targetWke.id
+                                    ],
                             },
                             { root: true }
                         )

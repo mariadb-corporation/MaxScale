@@ -188,15 +188,7 @@ const store = new Vuex.Store({
 })
 export default store
 
-/**
- * A workaround to get fresh initial state for active_session_by_wke_id_map
- */
-const querySession = store.state.querySession
-querySession.active_session_by_wke_id_map = querySession.query_sessions.reduce((acc, s) => {
-    acc[s.wke_id_fk] = s.id
-    return acc
-}, {})
-let initialState = Vue.prototype.$help.lodash.cloneDeep(store.state)
+const initialState = Vue.prototype.$help.lodash.cloneDeep(store.state)
 
 /** for state hydration*/
 export function resetState() {
