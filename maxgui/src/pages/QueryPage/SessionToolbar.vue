@@ -94,6 +94,38 @@
                     }}
                 </span>
             </v-tooltip>
+            <v-tooltip
+                top
+                transition="slide-y-transition"
+                content-class="shadow-drop color text-navigation py-1 px-4"
+            >
+                <template v-slot:activator="{ on }">
+                    <v-btn
+                        class="save-to-fav-btn"
+                        icon
+                        small
+                        color="accent-dark"
+                        :disabled="!query_txt"
+                        v-on="on"
+                        @click="openFavoriteDialog"
+                    >
+                        <v-icon size="20">
+                            mdi-bookmark
+                        </v-icon>
+                    </v-btn>
+                </template>
+                <span style="white-space: pre;" class="d-inline-block text-center">
+                    {{
+                        selected_query_txt
+                            ? `${$t('saveStatementsToFavorite', {
+                                  quantity: $t('selected'),
+                              })}\nCmd/Ctrl + S`
+                            : `${$t('saveStatementsToFavorite', {
+                                  quantity: $t('all'),
+                              })}\nCmd/Ctrl + S`
+                    }}
+                </span>
+            </v-tooltip>
         </div>
         <v-spacer />
         <v-form v-model="isMaxRowsValid">
@@ -112,18 +144,17 @@
             </max-rows-input>
         </v-form>
         <confirm-dialog
-            v-if="query_confirm_flag"
-            v-model="isConfDlgOpened"
-            :title="$t('confirmations.runQuery')"
-            type="run"
+            v-model="confDlg.isOpened"
+            :title="confDlg.title"
+            :type="confDlg.type"
             minBodyWidth="768px"
             :closeImmediate="true"
-            :onSave="confirmRunning"
+            :onSave="confDlg.onSave"
         >
             <template v-slot:body-prepend>
                 <div class="mb-4 readonly-sql-code-wrapper pa-2">
                     <readonly-query-editor
-                        :value="activeRunMode === 'selected' ? selected_query_txt : query_txt"
+                        :value="confDlg.sqlTxt"
                         class="readonly-editor fill-height"
                         readOnly
                         :options="{
@@ -132,8 +163,26 @@
                         }"
                     />
                 </div>
+                <template v-if="confDlg.isSavingFavoriteQuery">
+                    <label class="field__label color text-small-text label-required">
+                        {{ $t('name') }}
+                    </label>
+                    <v-text-field
+                        v-model="favorite.name"
+                        type="text"
+                        :rules="[
+                            val => !!val || $t('errors.requiredInput', { inputName: $t('name') }),
+                        ]"
+                        class="std error--text__bottom mb-2"
+                        dense
+                        :height="36"
+                        hide-details="auto"
+                        outlined
+                        required
+                    />
+                </template>
             </template>
-            <template v-slot:action-prepend>
+            <template v-if="!confDlg.isSavingFavoriteQuery" v-slot:action-prepend>
                 <v-checkbox
                     v-model="dontShowConfirm"
                     class="pa-0 ma-0"
@@ -174,8 +223,16 @@ export default {
         return {
             dontShowConfirm: false,
             activeRunMode: 'all',
-            isConfDlgOpened: false,
+            confDlg: {
+                isOpened: false,
+                title: this.$t('confirmations.runQuery'),
+                type: 'run',
+                sqlTxt: '',
+                isSavingFavoriteQuery: false,
+                onSave: () => null,
+            },
             isMaxRowsValid: true,
+            favorite: { date: '', name: '' },
         }
     },
     computed: {
@@ -231,6 +288,7 @@ export default {
             fetchQueryResult: 'queryResult/fetchQueryResult',
             stopQuery: 'queryResult/stopQuery',
             disconnectClone: 'queryConn/disconnectClone',
+            pushQueryFavorite: 'persisted/pushQueryFavorite',
         }),
         ...mapMutations({
             SET_CURR_QUERY_MODE: 'queryResult/SET_CURR_QUERY_MODE',
@@ -253,7 +311,18 @@ export default {
                 else if (this.shouldOpenDialog(mode)) {
                     this.activeRunMode = mode
                     this.dontShowConfirm = false // clear checkbox state
-                    this.isConfDlgOpened = true
+                    this.confDlg = {
+                        ...this.confDlg,
+                        isOpened: true,
+                        title: this.$t('confirmations.runQuery'),
+                        type: 'run',
+                        isSavingFavoriteQuery: false,
+                        sqlTxt:
+                            this.activeRunMode === 'selected'
+                                ? this.selected_query_txt
+                                : this.query_txt,
+                        onSave: this.confirmRunning,
+                    }
                 }
         },
         async confirmRunning() {
@@ -277,6 +346,32 @@ export default {
                         await this.fetchQueryResult(this.selected_query_txt)
                     break
             }
+        },
+        openFavoriteDialog() {
+            if (this.query_txt) {
+                this.favorite.date = new Date().valueOf()
+                this.favorite.name = `Favorite statements - ${this.$help.dateFormat({
+                    value: this.favorite.date,
+                    formatType: 'DATE_RFC2822',
+                })}`
+                this.confDlg = {
+                    ...this.confDlg,
+                    isOpened: true,
+                    title: this.$t('confirmations.addToFavorite'),
+                    type: 'add',
+                    isSavingFavoriteQuery: true,
+                    sqlTxt: this.selected_query_txt ? this.selected_query_txt : this.query_txt,
+                    onSave: this.addToFavorite,
+                }
+            }
+        },
+        addToFavorite() {
+            let payload = {
+                sql: this.query_txt,
+                ...this.favorite,
+            }
+            if (this.selected_query_txt) payload.sql = this.selected_query_txt
+            this.pushQueryFavorite(payload)
         },
     },
 }

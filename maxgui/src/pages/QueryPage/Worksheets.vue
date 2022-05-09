@@ -79,7 +79,7 @@
                     </v-tooltip>
                 </v-tab>
             </v-tabs>
-            <page-toolbar ref="pageToolbar" @get-total-btn-width="pageToolbarBtnWidth = $event" />
+            <page-toolbar @get-total-btn-width="pageToolbarBtnWidth = $event" />
         </div>
         <worksheet-toolbar />
         <keep-alive>
@@ -170,7 +170,9 @@ export default {
             this.$refs.wke.$refs[`sessionToolbar-${this.getActiveSessionId}`][0].handleRun('all')
         },
         onCtrlS() {
-            this.$refs.pageToolbar.openFavoriteDialog()
+            this.$refs.wke.$refs[
+                `sessionToolbar-${this.getActiveSessionId}`
+            ][0].openFavoriteDialog()
         },
     },
 }

@@ -11,41 +11,8 @@
                 <v-icon size="18" color="deep-ocean">mdi-plus</v-icon>
             </v-btn>
         </div>
-
         <v-spacer />
         <div ref="rightBtns" class="d-flex align-center right-buttons pr-2">
-            <v-tooltip
-                top
-                transition="slide-y-transition"
-                content-class="shadow-drop color text-navigation py-1 px-4"
-            >
-                <template v-slot:activator="{ on }">
-                    <v-btn
-                        class="save-to-fav-btn"
-                        icon
-                        small
-                        color="accent-dark"
-                        :disabled="!query_txt"
-                        v-on="on"
-                        @click="openFavoriteDialog"
-                    >
-                        <v-icon size="20">
-                            mdi-bookmark
-                        </v-icon>
-                    </v-btn>
-                </template>
-                <span style="white-space: pre;" class="d-inline-block text-center">
-                    {{
-                        selected_query_txt
-                            ? `${$t('saveStatementsToFavorite', {
-                                  quantity: $t('selected'),
-                              })}\nCmd/Ctrl + S`
-                            : `${$t('saveStatementsToFavorite', {
-                                  quantity: $t('all'),
-                              })}\nCmd/Ctrl + S`
-                    }}
-                </span>
-            </v-tooltip>
             <v-tooltip
                 top
                 transition="slide-y-transition"
@@ -89,42 +56,6 @@
         </div>
 
         <query-config-dialog v-model="queryConfigDialog" />
-
-        <confirm-dialog
-            v-model="isConfDlgOpened"
-            :title="$t('confirmations.addToFavorite')"
-            type="add"
-            minBodyWidth="768px"
-            :onSave="addToFavorite"
-        >
-            <template v-slot:body-prepend>
-                <div class="mb-4 readonly-sql-code-wrapper pa-2">
-                    <readonly-query-editor
-                        :value="selected_query_txt ? selected_query_txt : query_txt"
-                        class="readonly-editor fill-height"
-                        readOnly
-                        :options="{
-                            fontSize: 10,
-                            contextmenu: false,
-                        }"
-                    />
-                </div>
-                <label class="field__label color text-small-text label-required">
-                    {{ $t('name') }}
-                </label>
-                <v-text-field
-                    v-model="favorite.name"
-                    type="text"
-                    :rules="[val => !!val || $t('errors.requiredInput', { inputName: $t('name') })]"
-                    class="std error--text__bottom mb-2"
-                    dense
-                    :height="36"
-                    hide-details="auto"
-                    outlined
-                    required
-                />
-            </template>
-        </confirm-dialog>
     </div>
 </template>
 <script>
@@ -143,20 +74,14 @@
 
 import { mapActions, mapMutations, mapState } from 'vuex'
 import QueryConfigDialog from './QueryConfigDialog'
-import QueryEditor from '@/components/QueryEditor'
 export default {
     name: 'page-toolbar',
     components: {
         'query-config-dialog': QueryConfigDialog,
-        'readonly-query-editor': QueryEditor,
     },
     data() {
         return {
             queryConfigDialog: false,
-            favorite: {
-                date: '',
-                name: '',
-            },
             isConfDlgOpened: false,
         }
     },
@@ -164,9 +89,6 @@ export default {
         ...mapState({
             is_fullscreen: state => state.wke.is_fullscreen,
             sql_conns: state => state.queryConn.sql_conns,
-            worksheets_arr: state => state.wke.worksheets_arr,
-            query_txt: state => state.editor.query_txt,
-            selected_query_txt: state => state.editor.selected_query_txt,
         }),
     },
     mounted() {
@@ -178,33 +100,10 @@ export default {
         )
     },
     methods: {
-        ...mapMutations({
-            SET_FULLSCREEN: 'wke/SET_FULLSCREEN',
-        }),
-        ...mapActions({
-            addNewWs: 'wke/addNewWs',
-            pushQueryFavorite: 'persisted/pushQueryFavorite',
-        }),
+        ...mapMutations({ SET_FULLSCREEN: 'wke/SET_FULLSCREEN' }),
+        ...mapActions({ addNewWs: 'wke/addNewWs' }),
         async addWke() {
             await this.addNewWs()
-        },
-        openFavoriteDialog() {
-            if (this.query_txt) {
-                this.favorite.date = new Date().valueOf()
-                this.favorite.name = `Favorite statements - ${this.$help.dateFormat({
-                    value: this.favorite.date,
-                    formatType: 'DATE_RFC2822',
-                })}`
-                this.isConfDlgOpened = true
-            }
-        },
-        addToFavorite() {
-            let payload = {
-                sql: this.query_txt,
-                ...this.favorite,
-            }
-            if (this.selected_query_txt) payload.sql = this.selected_query_txt
-            this.pushQueryFavorite(payload)
         },
     },
 }
