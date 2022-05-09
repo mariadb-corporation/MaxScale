@@ -124,9 +124,16 @@ export default {
             }
             if (!silentValidation) commit('SET_IS_VALIDATING_CONN', false)
         },
+        /**
+         * @param {Object} param.body - request body
+         * @param {String} param.resourceType - services, servers or listeners.
+         */
         async openConnect({ dispatch, commit, rootState, rootGetters }, { body, resourceType }) {
+            // activeWkeSessions length always >=1 as the default session will be always created on startup
+            const activeWkeSessions = rootGetters['querySession/getSessionsOfActiveWke']
             const active_session_id = rootGetters['querySession/getActiveSessionId']
             try {
+                // create the connection
                 const res = await this.$queryHttp.post(`/sql?persist=yes&max-age=86400`, body)
                 if (res.status === 201) {
                     commit(
@@ -138,18 +145,51 @@ export default {
                         { root: true }
                     )
                     const connId = res.data.data.id
-                    const active_sql_conn = {
+                    const sql_conn = {
                         id: connId,
                         attributes: res.data.data.attributes,
                         name: body.target,
                         type: resourceType,
                         binding_type: rootState.app_config.QUERY_CONN_BINDING_TYPES.WORKSHEET,
                     }
-                    commit('ADD_SQL_CONN', active_sql_conn)
-                    commit('SET_ACTIVE_SQL_CONN', {
-                        payload: active_sql_conn,
-                        id: active_session_id,
+                    commit('ADD_SQL_CONN', sql_conn)
+                    // sync the first session tab to persisted obj
+                    const defSession = activeWkeSessions.find(s => s.count === 1)
+                    queryHelper.syncToPersistedObj({
+                        scope: this,
+                        data: { active_sql_conn: sql_conn },
+                        id: defSession.id,
+                        persistedArrayPath: 'querySession.query_sessions',
                     })
+                    // check if there are other session tabs, clone it to other session tabs
+                    const otherSessions = activeWkeSessions.filter(s => s.id !== defSession.id)
+                    if (otherSessions.length) {
+                        // clone the connection and bind it to all other session tabs
+                        for (const s of otherSessions) {
+                            let cloneConnObj
+                            await dispatch('cloneConn', {
+                                conn_to_be_cloned: sql_conn,
+                                binding_type: rootState.app_config.QUERY_CONN_BINDING_TYPES.SESSION,
+                                getCloneObjRes: obj => (cloneConnObj = obj),
+                            })
+                            // sync it
+                            if (s.id !== active_session_id)
+                                queryHelper.syncToPersistedObj({
+                                    scope: this,
+                                    data: { active_sql_conn: cloneConnObj },
+                                    id: s.id,
+                                    persistedArrayPath: 'querySession.query_sessions',
+                                })
+                            // bind the connection to the active session tab, this will also sync it
+                            else {
+                                commit('SET_ACTIVE_SQL_CONN', { payload: cloneConnObj, id: s.id })
+                                commit('PATCH_IS_CONN_BUSY_MAP', {
+                                    id: active_session_id,
+                                    payload: { value: false },
+                                })
+                            }
+                        }
+                    } else commit('SET_ACTIVE_SQL_CONN', { payload: sql_conn, id: defSession.id })
 
                     if (body.db) await dispatch('schemaSidebar/useDb', body.db, { root: true })
                     commit('SET_CONN_ERR_STATE', false)

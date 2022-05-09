@@ -183,5 +183,8 @@ export default {
         getActiveSession: (state, getters) => {
             return state.query_sessions.find(s => s.id === getters.getActiveSessionId)
         },
+        getSessionsOfActiveWke: (state, getters, rootState) => {
+            return state.query_sessions.filter(s => s.wke_id_fk === rootState.wke.active_wke_id)
+        },
     },
 }

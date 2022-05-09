@@ -228,14 +228,14 @@ function mutate_flat_states({ moduleState, data }) {
     Object.keys(data).forEach(key => (moduleState[key] = data[key]))
 }
 /**
- * @private
+ * @public
  * This function helps to synchronize persistedObj in the persisted array. e.g. worksheets_arr with provided data
  * @param {Object} param.scope - Mutation scope.
  * @param {Object} param.data - partial modification of a persistedObj in the persisted array
  * @param {Object} param.id - id of a persistedObj in the persisted array
  * @param {String} param.persistedArrayPath - module path to persisted array state .e.g. `wke.worksheets_arr`
  */
-function syncToPersistedObj({ scope, data, id, persistedArrayPath }) {
+export function syncToPersistedObj({ scope, data, id, persistedArrayPath }) {
     const {
         state,
         vue: {
@@ -480,4 +480,5 @@ export default {
     releaseMemory,
     getSessionByConnId,
     getWkeBySession,
+    syncToPersistedObj,
 }
