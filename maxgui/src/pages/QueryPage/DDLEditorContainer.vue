@@ -105,6 +105,7 @@ export default {
             getTblCreationInfo: 'editor/getTblCreationInfo',
             getExeStmtResultMap: 'schemaSidebar/getExeStmtResultMap',
             getDbCmplList: 'schemaSidebar/getDbCmplList',
+            getActiveSessionId: 'querySession/getActiveSessionId',
         }),
         formDim() {
             // title height: 36, border thickness: 2
@@ -198,13 +199,13 @@ export default {
         closeDDLEditor() {
             // Clear altered active node
             this.PATCH_TBL_CREATION_INFO_MAP({
-                id: this.active_wke_id,
+                id: this.getActiveSessionId,
                 payload: {
                     altered_active_node: null,
                 },
             })
             this.PATCH_CURR_EDITOR_MODE_MAP({
-                id: this.active_wke_id,
+                id: this.getActiveSessionId,
                 payload: { value: this.SQL_EDITOR_MODES.TXT_EDITOR },
             })
         },
@@ -483,7 +484,7 @@ export default {
             })
             if (!this.isAlterFailed)
                 this.PATCH_TBL_CREATION_INFO_MAP({
-                    id: this.active_wke_id,
+                    id: this.getActiveSessionId,
                     payload: {
                         data: this.$help.lodash.cloneDeep(this.formData),
                     },

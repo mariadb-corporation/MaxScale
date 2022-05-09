@@ -8,8 +8,6 @@ export function defWorksheetState() {
     return {
         id: uniqueId(`WORKSHEET_${new Date().getUTCMilliseconds()}_`),
         name: 'WORKSHEET',
-        ...queryHelper.syncStateCreator('editor'),
-        ...queryHelper.syncStateCreator('queryResult'),
         ...queryHelper.syncStateCreator('schemaSidebar'),
     }
 }
@@ -23,6 +21,8 @@ export function defSessionState(wke_id) {
         wke_id_fk: wke_id,
         count: 1,
         ...queryHelper.syncStateCreator('queryConn'),
+        ...queryHelper.syncStateCreator('editor'),
+        ...queryHelper.syncStateCreator('queryResult'),
     }
 }
 

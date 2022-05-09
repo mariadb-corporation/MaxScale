@@ -143,7 +143,10 @@
                             :disabled="!hasActiveConn || getIsConnBusy"
                             v-on="on"
                             @click="
-                                SET_SHOW_VIS_SIDEBAR({ payload: !show_vis_sidebar, active_wke_id })
+                                SET_SHOW_VIS_SIDEBAR({
+                                    payload: !show_vis_sidebar,
+                                    id: getActiveSessionId,
+                                })
                             "
                         >
                             <v-icon
@@ -252,7 +255,6 @@ export default {
             show_vis_sidebar: state => state.queryResult.show_vis_sidebar,
             query_txt: state => state.editor.query_txt,
             selected_query_txt: state => state.editor.selected_query_txt,
-            active_wke_id: state => state.wke.active_wke_id,
             QUERY_CONN_BINDING_TYPES: state => state.app_config.QUERY_CONN_BINDING_TYPES,
         }),
         ...mapGetters({
@@ -261,6 +263,7 @@ export default {
             getIsStoppingQuery: 'queryResult/getIsStoppingQuery',
             getDbNodes: 'schemaSidebar/getDbNodes',
             getCloneConn: 'queryConn/getCloneConn',
+            getActiveSessionId: 'querySession/getActiveSessionId',
         }),
         //Prevent parallel querying
         shouldDisableExecute() {
@@ -333,7 +336,7 @@ export default {
         async onRun(mode) {
             this.SET_CURR_QUERY_MODE({
                 payload: this.SQL_QUERY_MODES.QUERY_VIEW,
-                id: this.active_wke_id,
+                id: this.getActiveSessionId,
             })
             switch (mode) {
                 case 'all':

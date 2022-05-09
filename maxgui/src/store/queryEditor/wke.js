@@ -13,7 +13,6 @@
 import queryHelper from './queryHelper'
 import allMemStatesModules from './allMemStatesModules'
 import init, { defWorksheetState } from './initQueryEditorState'
-queryHelper.syncStateCreator('editor')
 
 export default {
     namespaced: true,
@@ -53,7 +52,6 @@ export default {
             const idx = state.worksheets_arr.indexOf(targetWke)
             const wke = {
                 ...targetWke,
-                ...queryHelper.syncStateCreator('queryResult'),
                 ...queryHelper.syncStateCreator('schemaSidebar'),
                 name: 'WORKSHEET',
             }
@@ -175,8 +173,6 @@ export default {
          * @param {Object} param.wke - worksheet object to be sync to flat states
          */
         handleSyncWke({ commit }, wke) {
-            commit('editor/SYNC_WITH_PERSISTED_OBJ', wke, { root: true })
-            commit('queryResult/SYNC_WITH_PERSISTED_OBJ', wke, { root: true })
             commit('schemaSidebar/SYNC_WITH_PERSISTED_OBJ', wke, { root: true })
         },
         /**
@@ -185,12 +181,9 @@ export default {
          * @param {String} param.wke_id - worksheet id.
          */
         releaseQueryModulesMem({ commit }, wke_id) {
-            /**
-             * TODO: once queryResult, editor are synced to querySession
-             *  release memory only for schemaSidebar here.
-             */
+            //release memory only for schemaSidebar here.
             Object.keys(allMemStatesModules).forEach(namespace => {
-                if (namespace !== 'queryConn')
+                if (namespace === 'schemaSidebar')
                     queryHelper.releaseMemory({
                         namespace,
                         commit,

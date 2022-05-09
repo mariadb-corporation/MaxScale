@@ -29,7 +29,7 @@ export default {
         ...queryHelper.memStatesMutationCreator(memStates),
         ...queryHelper.syncedStateMutationsCreator({
             statesToBeSynced,
-            persistedArrayPath: 'wke.worksheets_arr',
+            persistedArrayPath: 'querySession.query_sessions',
         }),
         SET_SELECTED_QUERY_TXT(state, payload) {
             state.selected_query_txt = payload
@@ -104,12 +104,12 @@ export default {
                 this.vue.$logger('store-editor-queryEngines').error(e)
             }
         },
-        async queryTblCreationInfo({ commit, rootState }, node) {
+        async queryTblCreationInfo({ commit, rootState, rootGetters }, node) {
             const active_sql_conn = rootState.queryConn.active_sql_conn
-            const active_wke_id = rootState.wke.active_wke_id
+            const active_session_id = rootGetters['querySession/getActiveSessionId']
             try {
                 commit('PATCH_TBL_CREATION_INFO_MAP', {
-                    id: active_wke_id,
+                    id: active_session_id,
                     payload: {
                         loading_tbl_creation_info: true,
                         altered_active_node: node,
@@ -129,7 +129,7 @@ export default {
                     $queryHttp: this.$queryHttp,
                 })
                 commit(`PATCH_TBL_CREATION_INFO_MAP`, {
-                    id: active_wke_id,
+                    id: active_session_id,
                     payload: {
                         data: {
                             table_opts_data: { dbName: db, ...tblOptsData },
@@ -140,7 +140,7 @@ export default {
                 })
             } catch (e) {
                 commit('PATCH_TBL_CREATION_INFO_MAP', {
-                    id: active_wke_id,
+                    id: active_session_id,
                     payload: {
                         loading_tbl_creation_info: false,
                     },
@@ -160,14 +160,14 @@ export default {
     },
     getters: {
         //editor mode getter
-        getCurrEditorMode: (state, getters, rootState) => {
+        getCurrEditorMode: (state, getters, rootState, rootGetters) => {
             const { value = 'TXT_EDITOR' } =
-                state.curr_editor_mode_map[rootState.wke.active_wke_id] || {}
+                state.curr_editor_mode_map[rootGetters['querySession/getActiveSessionId']] || {}
             return value
         },
         // tbl_creation_info_map getters
-        getTblCreationInfo: (state, getters, rootState) =>
-            state.tbl_creation_info_map[rootState.wke.active_wke_id] || {},
+        getTblCreationInfo: (state, getters, rootState, rootGetters) =>
+            state.tbl_creation_info_map[rootGetters['querySession/getActiveSessionId']] || {},
         getLoadingTblCreationInfo: (state, getters) => {
             const { loading_tbl_creation_info = true } = getters.getTblCreationInfo
             return loading_tbl_creation_info

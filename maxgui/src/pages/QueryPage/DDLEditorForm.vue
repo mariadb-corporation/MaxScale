@@ -81,10 +81,10 @@ export default {
         ...mapState({
             SQL_DDL_ALTER_SPECS: state => state.app_config.SQL_DDL_ALTER_SPECS,
             curr_ddl_alter_spec: state => state.editor.curr_ddl_alter_spec,
-            active_wke_id: state => state.wke.active_wke_id,
         }),
         ...mapGetters({
             getTblCreationInfo: 'editor/getTblCreationInfo',
+            getActiveSessionId: 'querySession/getActiveSessionId',
         }),
         initialData() {
             return this.$typy(this.getTblCreationInfo, 'data').safeObjectOrEmpty
@@ -110,7 +110,7 @@ export default {
                 return this.curr_ddl_alter_spec
             },
             set(value) {
-                this.SET_CURR_DDL_ALTER_SPEC({ payload: value, id: this.active_wke_id })
+                this.SET_CURR_DDL_ALTER_SPEC({ payload: value, id: this.getActiveSessionId })
             },
         },
         tabDim() {

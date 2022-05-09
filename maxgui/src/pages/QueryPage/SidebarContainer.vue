@@ -167,6 +167,7 @@ export default {
             getLoadingDbTree: 'schemaSidebar/getLoadingDbTree',
             getIsConnBusy: 'queryConn/getIsConnBusy',
             getExeStmtResultMap: 'schemaSidebar/getExeStmtResultMap',
+            getActiveSessionId: 'querySession/getActiveSessionId',
         }),
         searchSchema: {
             get() {
@@ -215,7 +216,7 @@ export default {
         },
         async handleGetNodeData({ SQL_QUERY_MODE, schemaId }) {
             this.clearDataPreview()
-            this.SET_CURR_QUERY_MODE({ payload: SQL_QUERY_MODE, id: this.active_wke_id })
+            this.SET_CURR_QUERY_MODE({ payload: SQL_QUERY_MODE, id: this.getActiveSessionId })
             switch (SQL_QUERY_MODE) {
                 case this.SQL_QUERY_MODES.PRVW_DATA:
                 case this.SQL_QUERY_MODES.PRVW_DATA_DETAILS:

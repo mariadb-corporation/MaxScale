@@ -64,6 +64,7 @@ export default {
                 const session = {
                     ...state.query_sessions[i],
                     ...queryHelper.syncStateCreator('queryConn'),
+                    ...queryHelper.syncStateCreator('queryResult'),
                 }
                 state.query_sessions = this.vue.$help.immutableUpdate(state.query_sessions, {
                     [i]: { $set: session },
@@ -82,6 +83,7 @@ export default {
                     $set: {
                         ...state.query_sessions[idx],
                         ...queryHelper.syncStateCreator('queryConn'),
+                        ...queryHelper.syncStateCreator('queryResult'),
                     },
                 },
             })
@@ -154,6 +156,8 @@ export default {
          */
         handleSyncSession({ commit }, session) {
             commit('queryConn/SYNC_WITH_PERSISTED_OBJ', session, { root: true })
+            commit('queryResult/SYNC_WITH_PERSISTED_OBJ', session, { root: true })
+            commit('editor/SYNC_WITH_PERSISTED_OBJ', session, { root: true })
         },
         /**
          * Release memory for target wke when delete a session
@@ -161,12 +165,8 @@ export default {
          */
         releaseQueryModulesMem({ commit }, session_id) {
             Object.keys(allMemStatesModules).forEach(namespace => {
-                /**
-                 * Only 'editor', 'queryConn', 'queryResult' modules have memStates keyed by session_id
-                 * TODO: once queryResult, editor are synced to querySession,
-                 * release it here
-                 */
-                if (namespace === 'queryConn')
+                // Only 'editor', 'queryConn', 'queryResult' modules have memStates keyed by session_id
+                if (namespace !== 'schemaSidebar')
                     queryHelper.releaseMemory({
                         namespace,
                         commit,

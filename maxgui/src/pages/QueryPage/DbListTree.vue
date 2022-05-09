@@ -138,6 +138,7 @@ export default {
             getDbTreeData: 'schemaSidebar/getDbTreeData',
             getActiveTreeNode: 'schemaSidebar/getActiveTreeNode',
             getAlteredActiveNode: 'editor/getAlteredActiveNode',
+            getActiveSessionId: 'querySession/getActiveSessionId',
         }),
         nodesHaveCtxMenu() {
             const { SCHEMA, TABLE, SP, COL, TRIGGER } = this.SQL_NODE_TYPES
@@ -226,7 +227,7 @@ export default {
                     const activeNodes = this.minimizeNodes(v)
                     if (this.$typy(this.getAlteredActiveNode, 'id').safeString) {
                         this.PATCH_TBL_CREATION_INFO_MAP({
-                            id: this.active_wke_id,
+                            id: this.getActiveSessionId,
                             payload: {
                                 altered_active_node: activeNodes[0],
                             },
@@ -347,7 +348,7 @@ export default {
             if (this.$typy(this.getAlteredActiveNode, 'id').safeString)
                 // Clear altered active node
                 this.PATCH_TBL_CREATION_INFO_MAP({
-                    id: this.active_wke_id,
+                    id: this.getActiveSessionId,
                     payload: {
                         altered_active_node: null,
                     },
@@ -417,18 +418,18 @@ export default {
                             level: item.level,
                         }
                         this.PATCH_TBL_CREATION_INFO_MAP({
-                            id: this.active_wke_id,
+                            id: this.getActiveSessionId,
                             payload: {
                                 altered_active_node: alterActiveNode,
                             },
                         })
                         this.PATCH_CURR_EDITOR_MODE_MAP({
-                            id: this.active_wke_id,
+                            id: this.getActiveSessionId,
                             payload: { value: this.SQL_EDITOR_MODES.DDL_EDITOR },
                         })
                         this.SET_CURR_DDL_ALTER_SPEC({
                             payload: this.SQL_DDL_ALTER_SPECS.COLUMNS,
-                            id: this.active_wke_id,
+                            id: this.getActiveSessionId,
                         })
                         this.$emit('alter-tbl', alterActiveNode)
                     }
@@ -453,7 +454,7 @@ export default {
                 TXT_EDITOR: { INSERT, QUERY },
             } = this.SQL_NODE_CTX_OPT_TYPES
             this.PATCH_CURR_EDITOR_MODE_MAP({
-                id: this.active_wke_id,
+                id: this.getActiveSessionId,
                 payload: { value: this.SQL_EDITOR_MODES.TXT_EDITOR },
             })
             switch (opt.type) {

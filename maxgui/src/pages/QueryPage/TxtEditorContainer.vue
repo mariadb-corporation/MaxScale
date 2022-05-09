@@ -121,10 +121,10 @@ export default {
             show_vis_sidebar: state => state.queryResult.show_vis_sidebar,
             query_txt: state => state.editor.query_txt,
             is_sidebar_collapsed: state => state.schemaSidebar.is_sidebar_collapsed,
-            active_wke_id: state => state.wke.active_wke_id,
         }),
         ...mapGetters({
             getDbCmplList: 'schemaSidebar/getDbCmplList',
+            getActiveSessionId: 'querySession/getActiveSessionId',
         }),
         showVisChart() {
             const datasets = this.$typy(this.chartOpt, 'data.datasets').safeArray
@@ -147,7 +147,7 @@ export default {
                 return this.query_txt
             },
             set(value) {
-                this.SET_QUERY_TXT({ payload: value, id: this.active_wke_id })
+                this.SET_QUERY_TXT({ payload: value, id: this.getActiveSessionId })
             },
         },
         resultPaneDim() {

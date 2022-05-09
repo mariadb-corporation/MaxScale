@@ -24,20 +24,20 @@ export default {
         ...queryHelper.memStatesMutationCreator(memStates),
         ...queryHelper.syncedStateMutationsCreator({
             statesToBeSynced,
-            persistedArrayPath: 'wke.worksheets_arr',
+            persistedArrayPath: 'querySession.query_sessions',
         }),
     },
     actions: {
         /**
          * @param {String} tblId - Table id (database_name.table_name).
          */
-        async fetchPrvw({ rootState, commit, dispatch }, { tblId, prvwMode }) {
+        async fetchPrvw({ rootState, commit, dispatch, rootGetters }, { tblId, prvwMode }) {
             const active_sql_conn = rootState.queryConn.active_sql_conn
-            const active_wke_id = rootState.wke.active_wke_id
+            const active_session_id = rootGetters['querySession/getActiveSessionId']
             const request_sent_time = new Date().valueOf()
             try {
                 commit(`PATCH_${prvwMode}_MAP`, {
-                    id: active_wke_id,
+                    id: active_session_id,
                     payload: {
                         request_sent_time,
                         total_duration: 0,
@@ -64,7 +64,7 @@ export default {
                 const now = new Date().valueOf()
                 const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
                 commit(`PATCH_${prvwMode}_MAP`, {
-                    id: active_wke_id,
+                    id: active_session_id,
                     payload: {
                         data: Object.freeze(res.data.data),
                         total_duration: parseFloat(total_duration),
@@ -85,7 +85,7 @@ export default {
                 )
             } catch (e) {
                 commit(`PATCH_${prvwMode}_MAP`, {
-                    id: active_wke_id,
+                    id: active_session_id,
                     payload: {
                         [`loading_${prvwMode.toLowerCase()}`]: false,
                     },
@@ -96,13 +96,13 @@ export default {
         /**
          * @param {String} query - SQL query string
          */
-        async fetchQueryResult({ commit, dispatch, rootState }, query) {
-            const active_wke_id = rootState.wke.active_wke_id
+        async fetchQueryResult({ commit, dispatch, rootState, rootGetters }, query) {
             const active_sql_conn = rootState.queryConn.active_sql_conn
             const request_sent_time = new Date().valueOf()
+            const active_session_id = rootGetters['querySession/getActiveSessionId']
             try {
                 commit('PATCH_QUERY_RESULTS_MAP', {
-                    id: active_wke_id,
+                    id: active_session_id,
                     payload: {
                         request_sent_time,
                         total_duration: 0,
@@ -133,7 +133,7 @@ export default {
                 const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
 
                 commit('PATCH_QUERY_RESULTS_MAP', {
-                    id: active_wke_id,
+                    id: active_session_id,
                     payload: {
                         data: Object.freeze(res.data.data),
                         total_duration: parseFloat(total_duration),
@@ -157,7 +157,7 @@ export default {
                 )
             } catch (e) {
                 commit('PATCH_QUERY_RESULTS_MAP', {
-                    id: active_wke_id,
+                    id: active_session_id,
                     payload: { loading_query_result: false },
                 })
                 this.vue.$logger(`store-queryResult-fetchQueryResult`).error(e)
@@ -165,10 +165,10 @@ export default {
         },
         async stopQuery({ commit, rootGetters, rootState }) {
             const active_sql_conn = rootState.queryConn.active_sql_conn
-            const active_wke_id = rootState.wke.active_wke_id
+            const active_session_id = rootGetters['querySession/getActiveSessionId']
             try {
                 commit('PATCH_IS_STOPPING_QUERY_MAP', {
-                    id: active_wke_id,
+                    id: active_session_id,
                     payload: { value: true },
                 })
                 const bgConn = rootGetters['queryConn/getCloneConn']({
@@ -195,28 +195,28 @@ export default {
             } catch (e) {
                 this.vue.$logger(`store-queryResult-stopQuery`).error(e)
             }
-            commit('PATCH_IS_STOPPING_QUERY_MAP', { id: active_wke_id, payload: { value: false } })
+            commit('PATCH_IS_STOPPING_QUERY_MAP', {
+                id: active_session_id,
+                payload: { value: false },
+            })
         },
         /**
          * This action clears prvw_data and prvw_data_details to empty object.
          * Call this action when user selects option in the sidebar.
          * This ensure sub-tabs in Data Preview tab are generated with fresh data
          */
-        clearDataPreview({ rootState, commit }) {
-            commit(`PATCH_PRVW_DATA_MAP`, { id: rootState.wke.active_wke_id })
-            commit(`PATCH_PRVW_DATA_DETAILS_MAP`, { id: rootState.wke.active_wke_id })
+        clearDataPreview({ commit, rootGetters }) {
+            const active_session_id = rootGetters['querySession/getActiveSessionId']
+            commit(`PATCH_PRVW_DATA_MAP`, { id: active_session_id })
+            commit(`PATCH_PRVW_DATA_DETAILS_MAP`, { id: active_session_id })
         },
     },
     getters: {
-        getQueryResult: (state, getters, rootState) =>
-            state.query_results_map[rootState.wke.active_wke_id] || {},
+        getQueryResult: (state, getters, rootState, rootGetters) =>
+            state.query_results_map[rootGetters['querySession/getActiveSessionId']] || {},
         getLoadingQueryResult: (state, getters) => {
             const { loading_query_result = false } = getters.getQueryResult
             return loading_query_result
-        },
-        getIsStoppingQuery: (state, getters, rootState) => {
-            const { value = false } = state.is_stopping_query_map[rootState.wke.active_wke_id] || {}
-            return value
         },
         getResults: (state, getters) => {
             const { data = {} } = getters.getQueryResult
@@ -236,10 +236,15 @@ export default {
             const { total_duration = 0 } = getters.getQueryResult
             return total_duration
         },
+        getIsStoppingQuery: (state, getters, rootState, rootGetters) => {
+            const { value = false } =
+                state.is_stopping_query_map[rootGetters['querySession/getActiveSessionId']] || {}
+            return value
+        },
         // preview data getters
-        getPrvwData: (state, getters, rootState) => mode => {
+        getPrvwData: (state, getters, rootState, rootGetters) => mode => {
             let map = state[`${mode.toLowerCase()}_map`]
-            if (map) return map[rootState.wke.active_wke_id] || {}
+            if (map) return map[rootGetters['querySession/getActiveSessionId']] || {}
             return {}
         },
         getLoadingPrvw: (state, getters) => mode => {

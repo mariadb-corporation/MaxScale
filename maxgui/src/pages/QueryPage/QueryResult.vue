@@ -102,12 +102,12 @@ export default {
         ...mapState({
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             curr_query_mode: state => state.queryResult.curr_query_mode,
-            active_wke_id: state => state.wke.active_wke_id,
         }),
         ...mapGetters({
             getIsConnBusy: 'queryConn/getIsConnBusy',
             getLoadingQueryResult: 'queryResult/getLoadingQueryResult',
             getLoadingPrvw: 'queryResult/getLoadingPrvw',
+            getActiveSessionId: 'querySession/getActiveSessionId',
         }),
         componentDynDim() {
             /*
@@ -130,7 +130,7 @@ export default {
                 }
             },
             set(value) {
-                this.SET_CURR_QUERY_MODE({ payload: value, id: this.active_wke_id })
+                this.SET_CURR_QUERY_MODE({ payload: value, id: this.getActiveSessionId })
             },
         },
     },

@@ -177,7 +177,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState, mapMutations } from 'vuex'
+import { mapState, mapMutations, mapGetters } from 'vuex'
 import ResultDataTable from './ResultDataTable'
 export default {
     name: 'history-and-favorite',
@@ -209,7 +209,9 @@ export default {
             curr_query_mode: state => state.queryResult.curr_query_mode,
             query_history: state => state.persisted.query_history,
             query_favorite: state => state.persisted.query_favorite,
-            active_wke_id: state => state.wke.active_wke_id,
+        }),
+        ...mapGetters({
+            getActiveSessionId: 'querySession/getActiveSessionId',
         }),
         activeView: {
             get() {
@@ -220,7 +222,7 @@ export default {
                     this.curr_query_mode === this.SQL_QUERY_MODES.HISTORY ||
                     this.curr_query_mode === this.SQL_QUERY_MODES.FAVORITE
                 )
-                    this.SET_CURR_QUERY_MODE({ payload: value, id: this.active_wke_id })
+                    this.SET_CURR_QUERY_MODE({ payload: value, id: this.getActiveSessionId })
             },
         },
         queryLogTypes() {
