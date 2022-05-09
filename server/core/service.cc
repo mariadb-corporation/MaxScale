@@ -2021,8 +2021,17 @@ bool configure_one_parameter(Service* service, const std::string& key, json_t* v
 {
     json_t* json = json_pack("{s: {s: {s: {s: o}}}}",
                              "data", "attributes", "parameters", key.c_str(), value);
+
+    // Ensure the saving of runtime changes is disabled.
+    auto& config = mxs::Config::get();
+    bool persist_runtime_changes = std::exchange(config.persist_runtime_changes, false);
+
     bool ok = runtime_alter_service_from_json(service, json);
     json_decref(json);
+
+    // Restore the situation.
+    config.persist_runtime_changes = persist_runtime_changes;
+
     return ok;
 }
 }
