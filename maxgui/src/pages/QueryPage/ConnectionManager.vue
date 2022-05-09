@@ -11,7 +11,7 @@
                 bottom: true,
                 offsetY: true,
             }"
-            :height="31"
+            :height="28"
             hide-details
             item-text="name"
             return-object

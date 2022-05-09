@@ -1,5 +1,5 @@
 <template>
-    <div class="session-toolbar d-flex align-center">
+    <div class="session-toolbar d-flex align-center" :style="{ height: '28px' }">
         <div class="d-inline-flex justify-center align-center icon-group">
             <!-- Run/Stop buttons-->
             <v-tooltip
@@ -128,10 +128,10 @@
             </v-tooltip>
         </div>
         <v-spacer />
-        <v-form v-model="isMaxRowsValid">
+        <v-form v-model="isMaxRowsValid" class="fill-height d-flex align-center mr-3">
             <max-rows-input
                 :style="{ maxWidth: '180px' }"
-                :height="30"
+                :height="26"
                 hide-details="auto"
                 :hasFieldsetBorder="false"
                 @change="SET_QUERY_MAX_ROW($event)"
@@ -378,16 +378,16 @@ export default {
 </script>
 <style lang="scss" scoped>
 .session-toolbar {
-    border: 1px solid $table-border;
-    border-top: none;
+    border-left: 1px solid $table-border;
+    border-bottom: 1px solid $table-border;
     width: 100%;
     .icon-group {
-        height: 30px;
+        height: 28px;
         ::v-deep .v-btn {
             min-width: unset !important;
             padding: 0px !important;
-            width: 30px;
-            height: 30px;
+            width: 28px;
+            height: 28px;
             border-radius: 0px !important;
             &:hover {
                 border-radius: 0px !important;

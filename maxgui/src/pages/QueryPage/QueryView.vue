@@ -2,7 +2,7 @@
     <div
         v-resize.quiet="setCtrDim"
         v-shortkey="QUERY_SHORTCUT_KEYS"
-        class="fill-height"
+        class="fill-height query-view-wrapper"
         @shortkey="isTxtEditor ? handleShortkey($event) : null"
     >
         <div
@@ -92,17 +92,25 @@ export default {
 
 <style lang="scss" scoped>
 $header-height: 50px;
-.query-view {
-    background: #ffffff;
-    &--fullscreen {
-        padding: 0px !important;
-        width: 100%;
-        height: calc(100% - #{$header-height});
-        margin-left: -90px;
-        margin-top: -24px;
-        z-index: 7;
-        position: fixed;
-        overflow: hidden;
+$app-sidebar-width: 50px;
+.query-view-wrapper {
+    // ignore root padding
+    margin-left: -36px;
+    margin-top: -24px;
+    width: calc(100% + 72px);
+    height: calc(100% + 48px);
+    .query-view {
+        background: #ffffff;
+        &--fullscreen {
+            padding: 0px !important;
+            width: 100%;
+            height: calc(100% + #{$header-height});
+            margin-left: -#{$app-sidebar-width};
+            margin-top: -#{$header-height};
+            z-index: 7;
+            position: fixed;
+            overflow: hidden;
+        }
     }
 }
 </style>

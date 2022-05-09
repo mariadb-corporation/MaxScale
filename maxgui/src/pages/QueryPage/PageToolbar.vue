@@ -1,6 +1,6 @@
 <template>
     <div ref="pageToolbar" class="page-toolbar d-flex align-center flex-grow-1">
-        <div ref="leftBtns" class="d-flex align-center left-buttons pl-2">
+        <div ref="leftBtns" class="d-flex align-center left-buttons pl-2 fill-height">
             <v-btn
                 :disabled="!Object.keys(sql_conns).length"
                 small
@@ -12,8 +12,8 @@
             </v-btn>
         </div>
         <v-spacer />
-        <div ref="rightBtns" class="d-flex align-center right-buttons pr-2">
-            <connection-manager :disabled="getIsConnBusy" class="mr-2" />
+        <div ref="rightBtns" class="d-flex align-center right-buttons pr-2 fill-height">
+            <connection-manager :disabled="getIsConnBusy" class="mx-2" />
             <v-tooltip
                 top
                 transition="slide-y-transition"
@@ -113,9 +113,3 @@ export default {
     },
 }
 </script>
-<style lang="scss" scoped>
-.page-toolbar {
-    border-right: 1px solid $table-border;
-    border-top: 1px solid $table-border;
-}
-</style>

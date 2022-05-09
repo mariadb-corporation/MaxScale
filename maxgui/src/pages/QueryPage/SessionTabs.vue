@@ -4,7 +4,7 @@
             v-model="activeSessionId"
             show-arrows
             hide-slider
-            :height="32"
+            :height="30"
             class="tab-navigation--btn-style session-navigation flex-grow-0"
             :style="{ maxWidth: `calc(100% - ${sessionToolbarWidth + 1}px)` }"
         >

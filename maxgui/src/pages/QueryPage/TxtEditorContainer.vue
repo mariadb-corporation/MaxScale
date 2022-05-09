@@ -275,11 +275,19 @@ export default {
 .visualize-sidebar,
 .query-result,
 .chart-pane {
-    border: 1px solid $table-border;
     width: 100%;
     height: 100%;
 }
 .editor {
-    border-top: none;
+    border-bottom: 1px solid $table-border;
+}
+.visualize-sidebar,
+.chart-pane,
+.query-result,
+.editor {
+    border-left: 1px solid $table-border;
+}
+.chart-pane {
+    border-bottom: 1px solid $table-border;
 }
 </style>

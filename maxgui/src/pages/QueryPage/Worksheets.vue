@@ -1,5 +1,5 @@
 <template>
-    <div class="fill-height worksheet-wrapper">
+    <div class="d-flex flex-column fill-height worksheet-wrapper">
         <div class="d-flex flex-row">
             <v-tabs
                 v-model="activeWkeID"
@@ -7,7 +7,10 @@
                 hide-slider
                 :height="wkeNavHeight"
                 class="tab-navigation--btn-style wke-navigation flex-grow-0"
-                :style="{ maxWidth: `calc(100% - ${pageToolbarBtnWidth + 1}px)` }"
+                :style="{
+                    maxWidth: `calc(100% - ${pageToolbarBtnWidth + 1}px)`,
+                    height: `${wkeNavHeight}px`,
+                }"
             >
                 <v-tab
                     v-for="wke in worksheets_arr"
@@ -87,9 +90,6 @@
                 ref="wke"
                 :key="activeWkeID"
                 :ctrDim="ctrDim"
-                :style="{
-                    height: `calc(100% - ${wkeNavHeight}px)`,
-                }"
                 @onCtrlEnter="onCtrlEnter"
                 @onCtrlShiftEnter="onCtrlShiftEnter"
                 @onCtrlS="onCtrlS"
@@ -174,8 +174,6 @@ export default {
 </script>
 <style lang="scss" scoped>
 .wke-navigation {
-    border-left: 1px solid $table-border !important;
-    border-top: 1px solid $table-border !important;
     .tab-btn {
         &:first-of-type {
             border-left: none !important;
