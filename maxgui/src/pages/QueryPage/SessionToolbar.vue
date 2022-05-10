@@ -272,16 +272,11 @@ export default {
             )
         },
     },
-    watch: {
-        async isQueryKilled(v) {
-            if (v) {
-                const bgConn = this.getCloneConn({
-                    clone_of_conn_id: this.session.active_sql_conn.id,
-                    binding_type: this.QUERY_CONN_BINDING_TYPES.BACKGROUND,
-                })
-                await this.disconnectClone({ id: bgConn.id })
-            }
-        },
+    deactivated() {
+        if (this.rmIsQueryKilledWatcher) this.rmIsQueryKilledWatcher()
+    },
+    activated() {
+        this.addIsQueryKilledWatcher()
     },
     methods: {
         ...mapActions({
@@ -296,6 +291,17 @@ export default {
             SET_SHOW_VIS_SIDEBAR: 'queryResult/SET_SHOW_VIS_SIDEBAR',
             SET_QUERY_MAX_ROW: 'persisted/SET_QUERY_MAX_ROW',
         }),
+        addIsQueryKilledWatcher() {
+            this.rmIsQueryKilledWatcher = this.$watch('isQueryKilled', async (v, oV) => {
+                if (v !== oV && v) {
+                    const bgConn = this.getCloneConn({
+                        clone_of_conn_id: this.session.active_sql_conn.id,
+                        binding_type: this.QUERY_CONN_BINDING_TYPES.BACKGROUND,
+                    })
+                    if (bgConn.id) await this.disconnectClone({ id: bgConn.id })
+                }
+            })
+        },
         /**
          * Only open dialog when its corresponding query text exists
          */

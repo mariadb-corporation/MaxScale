@@ -19,7 +19,7 @@
                     <session-tabs />
                     <!-- sessionToolbar ref is needed here so that its parent can call method in it  -->
                     <div
-                        v-for="session in getSessionsOfActiveWke"
+                        v-for="session in query_sessions"
                         v-show="session.id === getActiveSessionId"
                         :key="`${session.id}`"
                     >
@@ -86,11 +86,11 @@ export default {
             show_vis_sidebar: state => state.queryResult.show_vis_sidebar,
             query_txt: state => state.editor.query_txt,
             is_sidebar_collapsed: state => state.schemaSidebar.is_sidebar_collapsed,
+            query_sessions: state => state.querySession.query_sessions,
         }),
         ...mapGetters({
             getDbCmplList: 'schemaSidebar/getDbCmplList',
             getCurrEditorMode: 'editor/getCurrEditorMode',
-            getSessionsOfActiveWke: 'querySession/getSessionsOfActiveWke',
             getActiveSessionId: 'querySession/getActiveSessionId',
         }),
         isTxtEditor() {
