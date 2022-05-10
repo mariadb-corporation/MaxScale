@@ -171,7 +171,7 @@ from Kafka.
 The
 [server_id](https://mariadb.com/kb/en/replication-and-binary-log-system-variables/#server_id)
 used when replicating from the master in direct replication mode. The default
-value is 1234. This parameter was added in MaxScale 6.0.
+value is 1234. This parameter was added in MaxScale 2.5.7.
 
 ### `match`
 

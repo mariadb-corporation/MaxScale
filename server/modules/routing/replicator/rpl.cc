@@ -987,6 +987,48 @@ bool bit_is_set(uint8_t* ptr, int columns, int current_column)
     return (*ptr) & (1 << current_column);
 }
 
+constexpr bool all_bits_set(const uint8_t* ptr, int columns)
+{
+    for (; columns > 8; columns -= 8)
+    {
+        if (*ptr++ != 0xff)
+        {
+            return false;
+        }
+    }
+
+    uint8_t mask = 0xff >> (8 - columns);
+    return columns == 0 || (*ptr & mask) == mask;
+}
+
+constexpr bool test_bit_mask()
+{
+    constexpr uint8_t case1[1] = {0xff};
+    static_assert(all_bits_set(case1, 8));
+    static_assert(all_bits_set(case1, 3));
+    static_assert(all_bits_set(case1, 1));
+
+    constexpr uint8_t case2[2] = {0xff, 0b01111111};
+    static_assert(all_bits_set(case2, 11));
+    static_assert(all_bits_set(case2, 15));
+    static_assert(!all_bits_set(case2, 16));
+
+    constexpr uint8_t case3[1] = {0b0111};
+    static_assert(all_bits_set(case3, 1));
+    static_assert(all_bits_set(case3, 3));
+    static_assert(!all_bits_set(case3, 4));
+
+    constexpr uint8_t case4[1] = {0b1011};
+    static_assert(all_bits_set(case4, 1));
+    static_assert(all_bits_set(case4, 2));
+    static_assert(!all_bits_set(case4, 3));
+    static_assert(!all_bits_set(case4, 4));
+
+    return true;
+}
+
+static_assert(test_bit_mask(), "Bitmask test failed");
+
 /**
  * @brief Get the length of the metadata for a particular field
  *
@@ -1998,13 +2040,17 @@ bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
             return true;
         }
 
-        const auto& create = *it->second;
+        auto& create = *it->second;
 
-        if (ncolumns != create.columns.size())
+        if (ncolumns != create.columns.size() || !all_bits_set(col_present, ncolumns))
         {
-            MXS_ERROR("Row event and table map event have different column "
-                      "counts for table %s, only full row image is currently "
-                      "supported.", create.id().c_str());
+            if (create.warn_partial_image)
+            {
+                MXS_ERROR("Row event and table map event have different column "
+                          "counts for table %s, only full row image is currently "
+                          "supported.", create.id().c_str());
+                create.warn_partial_image = false;
+            }
         }
         else if (m_handler->prepare_table(create))
         {

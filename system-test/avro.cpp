@@ -27,6 +27,12 @@ int main(int argc, char* argv[])
     execute_query(test.repl->nodes[0], "GRANT CREATE TEMPORARY TABLES ON *.* TO test");
     execute_query(test.repl->nodes[0], "DROP USER test");
 
+    // MXS-4120: Crash with seqence tables
+    execute_query(test.repl->nodes[0], "CREATE SEQUENCE test.my_sequence START WITH 1 INCREMENT BY 2");
+    execute_query(test.repl->nodes[0], "SELECT NEXT VALUE FOR test.my_sequence");
+    execute_query(test.repl->nodes[0], "SELECT NEXT VALUE FOR test.my_sequence");
+    execute_query(test.repl->nodes[0], "SELECT NEXT VALUE FOR test.my_sequence");
+
     create_t1(test.repl->nodes[0]);
     insert_into_t1(test.repl->nodes[0], 3);
     execute_query(test.repl->nodes[0], "FLUSH LOGS");
@@ -74,6 +80,7 @@ int main(int argc, char* argv[])
     }
 
     execute_query(test.repl->nodes[0], "DROP TABLE test.t1");
+    execute_query(test.repl->nodes[0], "DROP SEQUENCE test.my_sequence");
 
     return test.global_result;
 }
