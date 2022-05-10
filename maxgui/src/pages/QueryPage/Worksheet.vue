@@ -18,13 +18,7 @@
                 <div class="d-flex flex-column">
                     <session-tabs />
                     <!-- sessionToolbar ref is needed here so that its parent can call method in it  -->
-                    <div
-                        v-for="session in query_sessions"
-                        v-show="session.id === getActiveSessionId"
-                        :key="`${session.id}`"
-                    >
-                        <session-toolbar :ref="`sessionToolbar-${session.id}`" :session="session" />
-                    </div>
+                    <session-toolbar ref="sessionToolbar" />
                 </div>
                 <keep-alive>
                     <txt-editor-container

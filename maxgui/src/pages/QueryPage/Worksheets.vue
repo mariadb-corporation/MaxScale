@@ -179,18 +179,20 @@ export default {
                     break
             }
         },
-        getSessionToolbar() {
-            return this.$typy(this.$refs, `wke.$refs[sessionToolbar-${this.getActiveSessionId}][0]`)
-                .safeObject
+        getSessionBtns() {
+            return this.$typy(
+                this.$refs,
+                `wke.$refs.sessionToolbar.$refs[sessionBtns-${this.getActiveSessionId}][0]`
+            ).safeObject
         },
         onCtrlEnter() {
-            this.getSessionToolbar().handleRun('selected')
+            this.getSessionBtns().handleRun('selected')
         },
         onCtrlShiftEnter() {
-            this.getSessionToolbar().handleRun('all')
+            this.getSessionBtns().handleRun('all')
         },
         onCtrlS() {
-            this.getSessionToolbar().openFavoriteDialog()
+            this.getSessionBtns().openFavoriteDialog()
         },
     },
 }
