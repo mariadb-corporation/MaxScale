@@ -28,12 +28,12 @@ describe("Alter Commands", function () {
   });
 
   it("alters server with multiple parameters", function () {
-    return verifyCommand("alter server server1 port 1234 address 1.2.3.4", "servers/server1").then(function (
-      res
-    ) {
-      res.data.attributes.parameters.port.should.equal(1234);
-      res.data.attributes.parameters.address.should.equal("1.2.3.4");
-    });
+    return verifyCommand("alter server server1 port 1234 address 127.0.0.1", "servers/server1").then(
+      function (res) {
+        res.data.attributes.parameters.port.should.equal(1234);
+        res.data.attributes.parameters.address.should.equal("127.0.0.1");
+      }
+    );
   });
 
   it("will not alter server with bad parameters", function () {
