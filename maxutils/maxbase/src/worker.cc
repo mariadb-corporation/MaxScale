@@ -282,7 +282,7 @@ Worker::Callable::~Callable()
 {
     if (!m_dcalls.empty())
     {
-        // Before MaxScale 7, if the target of a delayed call was deleted before the
+        // Before MaxScale 22.8, if the target of a delayed call was deleted before the
         // delayed call was due, it would have resulted in a random crash, so it should
         // be a very rare occurrence. If we ever see this, then we know that some
         // unexplained crash may have been caused by this.

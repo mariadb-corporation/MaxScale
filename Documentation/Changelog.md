@@ -1,9 +1,9 @@
 # Changelog
 
-## MariaDB MaxScale 7
+## MariaDB MaxScale 22.8
 
 For more details, please refer to:
-* [MariaDB MaxScale 7.0.0 Release Notes](Release-Notes/MaxScale-7.0.0-Release-Notes.md)
+* [MariaDB MaxScale 22.8.0 Release Notes](Release-Notes/MaxScale-22.8.0-Release-Notes.md)
 * MariaDB-Monitor settings `ignore_external_masters`, `detect_replication_lag`
   `detect_standalone_master`, `detect_stale_master` and `detect_stale_slave`
   have been removed. The first two were ineffective, the latter three are
