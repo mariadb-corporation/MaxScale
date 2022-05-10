@@ -1,5 +1,9 @@
 <template>
-    <div class="d-flex flex-column fill-height worksheet-wrapper">
+    <div
+        v-shortkey="QUERY_SHORTCUT_KEYS"
+        class="d-flex flex-column fill-height worksheet-wrapper"
+        @shortkey="isTxtEditor ? wkeShortKeyHandler($event) : null"
+    >
         <div class="d-flex flex-row">
             <v-tabs
                 v-model="activeWkeID"
@@ -129,6 +133,8 @@ export default {
     },
     computed: {
         ...mapState({
+            QUERY_SHORTCUT_KEYS: state => state.app_config.QUERY_SHORTCUT_KEYS,
+            SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
             worksheets_arr: state => state.wke.worksheets_arr,
             active_wke_id: state => state.wke.active_wke_id,
             active_sql_conn: state => state.queryConn.active_sql_conn,
@@ -138,6 +144,7 @@ export default {
             getActiveSessionId: 'querySession/getActiveSessionId',
             getWkeDefConnByWkeId: 'queryConn/getWkeDefConnByWkeId',
             isWkeLoadingQueryResult: 'queryResult/isWkeLoadingQueryResult',
+            getCurrEditorMode: 'editor/getCurrEditorMode',
         }),
         activeWkeID: {
             get() {
@@ -147,24 +154,43 @@ export default {
                 if (v) this.SET_ACTIVE_WKE_ID(v)
             },
         },
+        isTxtEditor() {
+            return this.getCurrEditorMode === this.SQL_EDITOR_MODES.TXT_EDITOR
+        },
     },
     methods: {
         ...mapMutations({ SET_ACTIVE_WKE_ID: 'wke/SET_ACTIVE_WKE_ID' }),
         ...mapActions({
             handleDeleteWke: 'wke/handleDeleteWke',
         }),
+        wkeShortKeyHandler(e) {
+            switch (e.srcKey) {
+                case 'win-ctrl-s':
+                case 'mac-cmd-s':
+                    this.onCtrlS()
+                    break
+                case 'win-ctrl-enter':
+                case 'mac-cmd-enter':
+                    this.onCtrlEnter()
+                    break
+                case 'win-ctrl-shift-enter':
+                case 'mac-cmd-shift-enter':
+                    this.onCtrlShiftEnter()
+                    break
+            }
+        },
+        getSessionToolbar() {
+            return this.$typy(this.$refs, `wke.$refs[sessionToolbar-${this.getActiveSessionId}][0]`)
+                .safeObject
+        },
         onCtrlEnter() {
-            this.$refs.wke.$refs[`sessionToolbar-${this.getActiveSessionId}`][0].handleRun(
-                'selected'
-            )
+            this.getSessionToolbar().handleRun('selected')
         },
         onCtrlShiftEnter() {
-            this.$refs.wke.$refs[`sessionToolbar-${this.getActiveSessionId}`][0].handleRun('all')
+            this.getSessionToolbar().handleRun('all')
         },
         onCtrlS() {
-            this.$refs.wke.$refs[
-                `sessionToolbar-${this.getActiveSessionId}`
-            ][0].openFavoriteDialog()
+            this.getSessionToolbar().openFavoriteDialog()
         },
     },
 }

@@ -1,17 +1,12 @@
 <template>
-    <div
-        v-resize.quiet="setCtrDim"
-        v-shortkey="QUERY_SHORTCUT_KEYS"
-        class="fill-height query-view-wrapper"
-        @shortkey="isTxtEditor ? handleShortkey($event) : null"
-    >
+    <div v-resize.quiet="setCtrDim" class="fill-height query-view-wrapper">
         <div
             ref="paneContainer"
             class="query-view d-flex flex-column fill-height"
             :class="{ 'query-view--fullscreen': is_fullscreen }"
         >
             <v-card v-if="is_validating_conn" class="fill-height" loading />
-            <worksheets v-else ref="wkesRef" :ctrDim="ctrDim" />
+            <worksheets v-else :ctrDim="ctrDim" />
         </div>
     </div>
 </template>
@@ -29,7 +24,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState, mapGetters } from 'vuex'
+import { mapState } from 'vuex'
 import Worksheets from './Worksheets.vue'
 export default {
     name: 'query-view',
@@ -43,17 +38,9 @@ export default {
     },
     computed: {
         ...mapState({
-            QUERY_SHORTCUT_KEYS: state => state.app_config.QUERY_SHORTCUT_KEYS,
-            SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
             is_fullscreen: state => state.wke.is_fullscreen,
             is_validating_conn: state => state.queryConn.is_validating_conn,
         }),
-        ...mapGetters({
-            getCurrEditorMode: 'editor/getCurrEditorMode',
-        }),
-        isTxtEditor() {
-            return this.getCurrEditorMode === this.SQL_EDITOR_MODES.TXT_EDITOR
-        },
     },
     watch: {
         is_fullscreen() {
@@ -68,23 +55,6 @@ export default {
         setCtrDim() {
             const { width, height } = this.$refs.paneContainer.getBoundingClientRect()
             this.ctrDim = { width, height }
-        },
-        handleShortkey(e) {
-            const wkes = this.$refs.wkesRef.$refs
-            switch (e.srcKey) {
-                case 'win-ctrl-s':
-                case 'mac-cmd-s':
-                    wkes.onCtrlS()
-                    break
-                case 'win-ctrl-enter':
-                case 'mac-cmd-enter':
-                    wkes.onCtrlEnter()
-                    break
-                case 'win-ctrl-shift-enter':
-                case 'mac-cmd-shift-enter':
-                    wkes.onCtrlShiftEnter()
-                    break
-            }
         },
     },
 }
