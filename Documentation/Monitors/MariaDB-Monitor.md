@@ -978,6 +978,13 @@ the field value is *null*. Lock information for individual servers is listed in
 the server-specific field **lock_held**. Again, *null* indicates that locks are
 not in use or the lock status is unknown.
 
+If multiple MaxScale instances end up in a situation where none of them gets the
+needed number of servers, they try again at a random point in time. Eventually,
+one MaxScale will end up receiving all of the servers. The time it takes for
+this to occur depends on multiple factors but it is estimated that the time to
+resolve conflicts is low enough that no additional special treatment for
+conflicts is needed.
+
 ### Releasing locks
 
 Monitor cooperation depends on the server locks. The locks are

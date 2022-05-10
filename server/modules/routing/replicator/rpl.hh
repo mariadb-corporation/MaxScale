@@ -172,6 +172,9 @@ struct Table
     Bytes column_types;
     Bytes null_bitmap;
     Bytes column_metadata;
+
+    // Whether the partial row image error has been logged for this table
+    bool warn_partial_image = true;
 };
 
 // Containers for the replication events
