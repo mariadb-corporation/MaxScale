@@ -20,7 +20,7 @@
                     active-class="tab-btn--active"
                 >
                     <v-tooltip
-                        :disabled="!$typy(getWkeDefConnByWkeId(wke.id), 'name').safeBoolean"
+                        :disabled="!$typy(getWkeDefConnByWkeId(wke.id), 'name').safeString"
                         top
                         transition="slide-x-transition"
                         content-class="shadow-drop"
@@ -74,7 +74,7 @@
                         </template>
                         <span class="color text-text py-2 px-4">
                             {{ $t('connectedTo') }}
-                            {{ $typy(wke, 'active_sql_conn.name').safeString }}
+                            {{ $typy(getWkeDefConnByWkeId(wke.id), 'name').safeString }}
                         </span>
                     </v-tooltip>
                 </v-tab>
