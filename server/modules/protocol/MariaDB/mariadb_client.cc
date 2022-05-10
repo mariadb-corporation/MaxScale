@@ -1872,14 +1872,14 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, bool 
                     auto wait_for_conns = [this, ref, send_ok](mxb::Worker::Call::action_t action){
                             bool rv = true;
 
-                            if (action == mxb::Worker::Call::CANCEL || !have_local_clients())
+                            if (action == mxb::Worker::Call::CANCEL || !this->have_local_clients())
                             {
                                 // Check if the DCB is still open. If MaxScale is shutting down, the DCB is
                                 // already closed when this callback is called and an error about a write to a
                                 // closed DCB would be logged.
                                 if (m_dcb->is_open() && send_ok)
                                 {
-                                    write_ok_packet(1);
+                                    this->write_ok_packet(1);
                                 }
                                 else
                                 {
