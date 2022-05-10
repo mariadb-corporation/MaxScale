@@ -23,6 +23,14 @@
                         <span class="tab-name d-inline-block text-truncate" style="max-width:88px">
                             {{ session.name }}
                         </span>
+                        <v-progress-circular
+                            v-if="getLoadingQueryResultBySessionId(session.id)"
+                            class="ml-2"
+                            size="16"
+                            width="2"
+                            color="primary"
+                            indeterminate
+                        />
                     </div>
                     <!-- Prevent the deletion of the first session -->
                     <v-btn
@@ -83,6 +91,7 @@ export default {
             getActiveSessionId: 'querySession/getActiveSessionId',
             getActiveSession: 'querySession/getActiveSession',
             getSessionsOfActiveWke: 'querySession/getSessionsOfActiveWke',
+            getLoadingQueryResultBySessionId: 'queryResult/getLoadingQueryResultBySessionId',
         }),
         activeSessionId: {
             get() {

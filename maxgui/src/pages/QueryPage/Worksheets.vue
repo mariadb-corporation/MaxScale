@@ -38,17 +38,14 @@
                                     >
                                         {{ wke.name }}
                                     </span>
-                                    <template v-for="(value, name) in query_results_map">
-                                        <v-progress-circular
-                                            v-if="wke.id === name && value.loading_query_result"
-                                            :key="name"
-                                            class="ml-2"
-                                            size="16"
-                                            width="2"
-                                            color="primary"
-                                            indeterminate
-                                        />
-                                    </template>
+                                    <v-progress-circular
+                                        v-if="isWkeLoadingQueryResult(wke.id)"
+                                        class="ml-2"
+                                        size="16"
+                                        width="2"
+                                        color="primary"
+                                        indeterminate
+                                    />
                                 </div>
                                 <v-btn
                                     v-if="worksheets_arr.length > 1"
@@ -135,12 +132,12 @@ export default {
             worksheets_arr: state => state.wke.worksheets_arr,
             active_wke_id: state => state.wke.active_wke_id,
             active_sql_conn: state => state.queryConn.active_sql_conn,
-            query_results_map: state => state.queryResult.query_results_map,
             is_conn_busy_map: state => state.queryConn.is_conn_busy_map,
         }),
         ...mapGetters({
             getActiveSessionId: 'querySession/getActiveSessionId',
             getWkeDefConnByWkeId: 'queryConn/getWkeDefConnByWkeId',
+            isWkeLoadingQueryResult: 'queryResult/isWkeLoadingQueryResult',
         }),
         activeWkeID: {
             get() {

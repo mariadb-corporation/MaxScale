@@ -224,6 +224,24 @@ export default {
                 return loading_query_result
             }
         },
+        isWkeLoadingQueryResult: (state, getters, rootState, rootGetters) => {
+            return wke_id => {
+                const sessionIds = rootGetters['querySession/getSessionsByWkeId'](wke_id).map(
+                    s => s.id
+                )
+                let isLoading = false
+                for (const key of Object.keys(state.query_results_map)) {
+                    if (sessionIds.includes(key)) {
+                        const { loading_query_result = false } = state.query_results_map[key] || {}
+                        if (loading_query_result) {
+                            isLoading = true
+                            break
+                        }
+                    }
+                }
+                return isLoading
+            }
+        },
         getResults: (state, getters) => {
             const { data = {} } = getters.getQueryResult
             return data

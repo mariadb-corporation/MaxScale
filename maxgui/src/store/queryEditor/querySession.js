@@ -188,5 +188,8 @@ export default {
         getSessionsOfActiveWke: (state, getters, rootState) => {
             return state.query_sessions.filter(s => s.wke_id_fk === rootState.wke.active_wke_id)
         },
+        getSessionsByWkeId: state => {
+            return wke_id => state.query_sessions.filter(s => s.wke_id_fk === wke_id)
+        },
     },
 }
