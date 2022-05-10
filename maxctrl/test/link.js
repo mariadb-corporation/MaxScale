@@ -84,5 +84,33 @@ describe("Link/Unlink Commands", function () {
     });
   });
 
+  it("link monitor to a service", async function () {
+    await doCommand("create service RCR-test readconnroute user=maxuser password=maxpwd");
+    var res = await verifyCommand("link service RCR-test MariaDB-Monitor", "services/RCR-test");
+    expect(res.data.relationships.monitors.data[0].id).to.equal("MariaDB-Monitor");
+  });
+
+  it("linking a server to a service with a monitor fails", async function () {
+    await doCommand("link service RCR-test server1").should.be.rejected;
+  });
+
+  it("unlinking an unknown server doesn't remove the monitor", async function () {
+    var res = await verifyCommand("unlink service RCR-test server1", "services/RCR-test");
+    expect(res.data.relationships.monitors.data[0].id).to.equal("MariaDB-Monitor");
+  });
+
+  it("unlink monitor from a service", async function () {
+    await doCommand("unlink service RCR-test MariaDB-Monitor");
+    await doCommand("destroy service RCR-test");
+  });
+
+  it("link services and servers to a service", async function () {
+    await doCommand("link service Read-Connection-Router RW-Split-Router server1 server2");
+  });
+
+  it("unlink services and servers from a service", async function () {
+    await doCommand("unlink service Read-Connection-Router RW-Split-Router server1 server2");
+  });
+
   after(stopMaxScale);
 });
