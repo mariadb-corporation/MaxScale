@@ -78,7 +78,6 @@ export default {
         ...mapState({
             is_conn_busy_map: state => state.queryConn.is_conn_busy_map,
             active_wke_id: state => state.wke.active_wke_id,
-            query_sessions: state => state.querySession.query_sessions,
         }),
         ...mapGetters({
             getActiveSessionId: 'querySession/getActiveSessionId',
@@ -114,7 +113,7 @@ export default {
             handleSyncSession: 'querySession/handleSyncSession',
         }),
         async handleDisconnectSession(session) {
-            await this.handleDeleteSession(this.query_sessions.indexOf(session))
+            await this.handleDeleteSession(session)
         },
     },
 }

@@ -34,8 +34,8 @@ export default {
             const newSession = { ...defSessionState(wke_id), name, count }
             state.query_sessions.push(newSession)
         },
-        DELETE_SESSION(state, idx) {
-            state.query_sessions.splice(idx, 1)
+        DELETE_SESSION(state, id) {
+            state.query_sessions = state.query_sessions.filter(s => s.id !== id)
         },
         UPDATE_SESSION(state, { idx, session }) {
             state.query_sessions = this.vue.$help.immutableUpdate(state.query_sessions, {
@@ -139,15 +139,17 @@ export default {
                 )
             }
         },
-        handleDeleteSession({ state, commit, dispatch }, idx) {
-            const targetSession = state.query_sessions[idx]
-            dispatch('releaseQueryModulesMem', targetSession.id)
-            commit('DELETE_SESSION', idx)
+        async handleDeleteSession({ state, commit, dispatch }, session) {
+            const targetSession = state.query_sessions.find(s => s.id === session.id)
+            const { id: connId } = targetSession.active_sql_conn || {}
+            // also send request to delete the bound connection and release memory
+            if (connId) await dispatch('queryConn/disconnectClone', { id: connId }, { root: true })
+            commit('DELETE_SESSION', session.id)
         },
-        deleteAllSessionsByWkeId({ state, dispatch, commit }, wke_id) {
+        async deleteAllSessionsByWkeId({ state, dispatch, commit }, wke_id) {
             for (const session of state.query_sessions)
                 if (session.wke_id_fk === wke_id) {
-                    dispatch('handleDeleteSession', state.query_sessions.indexOf(session))
+                    await dispatch('handleDeleteSession', session)
                     commit('SET_ACTIVE_SESSION_BY_WKE_ID_MAP', { id: wke_id })
                 }
         },
