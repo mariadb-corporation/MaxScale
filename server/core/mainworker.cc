@@ -14,6 +14,7 @@
 #include <maxscale/mainworker.hh>
 
 #include <signal.h>
+#include <vector>
 #ifdef HAVE_SYSTEMD
 #include <systemd/sd-daemon.h>
 #endif
@@ -141,10 +142,28 @@ bool MainWorker::pre_run()
 
     if (rval)
     {
-        m_callable.dcall(5s, [this]() {
-                check_dependencies_dc();
-                return true;
-            });
+        if (Config::get().auto_tune == Config::AutoTune::ALL)
+        {
+            const auto& server_dependencies = Service::specification()->server_dependencies();
+            std::vector<std::string> parameters;
+
+            for (const auto* pDependency : server_dependencies)
+            {
+                parameters.push_back(pDependency->parameter().name());
+            }
+
+            MXB_NOTICE("'auto_tune' is enabled, the following parameters will be auto tuned: %s",
+                       mxb::join(parameters, ", ", "'").c_str());
+
+            m_callable.dcall(5s, [this]() {
+                    check_dependencies_dc();
+                    return true;
+                });
+        }
+        else
+        {
+            MXB_INFO("'auto_tune' is disabled, no auto tuning will be performed.");
+        }
     }
 
     return rval;

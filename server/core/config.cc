@@ -86,6 +86,7 @@ constexpr char CN_ADMIN_SSL_CERT[] = "admin_ssl_cert";
 constexpr char CN_ADMIN_SSL_KEY[] = "admin_ssl_key";
 constexpr char CN_ADMIN_SSL_VERSION[] = "admin_ssl_version";
 constexpr char CN_AUTO[] = "auto";
+constexpr char CN_AUTO_TUNE[] = "auto_tune";
 constexpr char CN_DEBUG[] = "debug";
 constexpr char CN_DUMP_LAST_STATEMENTS[] = "dump_last_statements";
 constexpr char CN_LOAD_PERSISTED_CONFIGS[] = "load_persisted_configs";
@@ -230,6 +231,18 @@ bool Config::Specification::validate(json_t* pJson, std::set<std::string>* pUnre
 }
 
 Config::Specification Config::s_specification("maxscale", config::Specification::GLOBAL);
+
+config::ParamEnum<Config::AutoTune> Config::s_auto_tune(
+    &Config::s_specification,
+    CN_AUTO_TUNE,
+    "Specifies whether a MaxScale parameter whose value depends on a specific global server "
+    "variable, should automatically be updated to match the variable's current value.",
+    {
+        {Config::AutoTune::NONE, "none"},
+        {Config::AutoTune::ALL, "all"}
+    },
+    Config::AutoTune::NONE,
+    config::Param::Modifiable::AT_STARTUP);
 
 config::ParamBool Config::s_log_debug(
     &Config::s_specification,
@@ -779,6 +792,7 @@ Config::Config(int argc, char** argv)
     substitute_variables(false),
     promoted_at(0)
 {
+    add_native(&Config::auto_tune, &s_auto_tune);
     add_native<ParamThreadsCount, Config, ThreadsCount>(&Config::n_threads, &s_n_threads);
     add_native(&Config::qc_name, &s_qc_name);
     add_native(&Config::qc_args, &s_qc_args);

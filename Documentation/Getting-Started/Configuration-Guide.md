@@ -148,6 +148,7 @@ runtime and can only be defined in a configuration file:
 * `admin_ssl_cert`
 * `admin_ssl_key`
 * `admin_ssl_version`
+* `auto_tune`
 * `cachedir`
 * `connector_plugindir`
 * `datadir`
@@ -167,8 +168,8 @@ runtime and can only be defined in a configuration file:
 * `query_classifier_args`
 * `query_classifier`
 * `query_retries`
-* `sql_mode`
 * `sharedir`
+* `sql_mode`
 * `substitute_variables`
 * `threads`
 
@@ -370,6 +371,32 @@ passed on to the next module in the processing chain as if the filter was not th
 The global settings, in a section named `[MaxScale]`, allow various parameters
 that affect MariaDB MaxScale as a whole to be tuned. This section must be
 defined in the root configuration file which by default is `/etc/maxscale.cnf`.
+
+### `auto_tune`
+
+- **Type**: enum
+- **Values**: `none`, `all`
+- **Default**: `none`
+- **Mandatory**: No
+- **Dynamic**: No
+
+Specifies whether MaxScale should set or not set all MaxScale parameters that
+can be automatically set based upon the value of some server variable.
+
+The current auto tunable parameters are:
+
+|MaxScale Parameter|Server Variable Dependency|
+|------------------|--------------------------|
+|[connection_keepalive](#connection_keepalive)|80% of the smallest [`wait_timeout`](https://mariadb.com/docs/reference/mdb/system-variables/wait_timeout/) value of each server used by the service|
+
+The values of the server variables are collected by monitors, which means that
+if the servers of a service are not monitored by a monitor, then the parameters
+of that service will not be auto tuned.
+
+Note that even if `auto_tune` is set to `all`, the auto tunable parameters
+can still be set in the configuration file and modified with _maxctrl_.
+However, the specified value will be overwritten at the next auto tuning
+round, but only if the servers of the service are monitored by a monitor.
 
 ### `threads`
 
@@ -1780,6 +1807,12 @@ maxctrl alter service MyService retain_last_statements 5
 ```
 
 ### `connection_keepalive`
+
+- **Type**: [duration](#durations)
+- **Default**: 300s
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Auto tune**: [Yes](#auto_tune)
 
 Keep idle connections alive by sending pings to backend servers. This feature
 was introduced in MaxScale 2.5.0 where it was changed from a

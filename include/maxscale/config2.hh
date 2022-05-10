@@ -38,7 +38,6 @@ namespace config
 {
 
 class Configuration;
-class Dependency;
 class Param;
 class Type;
 
