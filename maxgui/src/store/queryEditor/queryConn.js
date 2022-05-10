@@ -189,8 +189,10 @@ export default {
                                 })
                             }
                         }
-                    } else commit('SET_ACTIVE_SQL_CONN', { payload: sql_conn, id: defSession.id })
-
+                    }
+                    // set active conn once sessions are bound to cloned connections to avoid concurrent query
+                    if (active_session_id === defSession.id)
+                        commit('SET_ACTIVE_SQL_CONN', { payload: sql_conn, id: defSession.id })
                     if (body.db) await dispatch('schemaSidebar/useDb', body.db, { root: true })
                     commit('SET_CONN_ERR_STATE', false)
                 }
