@@ -5,13 +5,48 @@
             v-show="session.id === getActiveSessionId"
             :key="`${session.id}`"
         >
-            <!-- sessionBtns ref is needed here so that its parent can call method in it  -->
             <session-btns
-                :ref="`sessionBtns-${session.id}`"
-                :isMaxRowsValid="isMaxRowsValid"
                 :session="session"
+                @on-stop-query="stopQuery"
+                @on-run="handleRun(selected_query_txt ? 'selected' : 'all')"
+                @on-visualize="
+                    SET_SHOW_VIS_SIDEBAR({
+                        payload: !show_vis_sidebar,
+                        id: getActiveSessionId,
+                    })
+                "
             />
         </div>
+        <v-tooltip
+            top
+            transition="slide-y-transition"
+            content-class="shadow-drop color text-navigation py-1 px-4"
+        >
+            <template v-slot:activator="{ on }">
+                <v-btn
+                    class="save-to-fav-btn"
+                    icon
+                    small
+                    color="accent-dark"
+                    :disabled="!query_txt"
+                    v-on="on"
+                    @click="openFavoriteDialog"
+                >
+                    <v-icon size="20"> mdi-bookmark </v-icon>
+                </v-btn>
+            </template>
+            <span style="white-space: pre;" class="d-inline-block text-center">
+                {{
+                    selected_query_txt
+                        ? `${$t('saveStatementsToFavorite', {
+                              quantity: $t('selected'),
+                          })}\nCmd/Ctrl + S`
+                        : `${$t('saveStatementsToFavorite', {
+                              quantity: $t('all'),
+                          })}\nCmd/Ctrl + S`
+                }}
+            </span>
+        </v-tooltip>
         <v-spacer />
         <v-form v-model="isMaxRowsValid" class="fill-height d-flex align-center mr-3">
             <max-rows-input
@@ -28,6 +63,56 @@
                 </template>
             </max-rows-input>
         </v-form>
+        <confirm-dialog
+            v-model="confDlg.isOpened"
+            :title="confDlg.title"
+            :type="confDlg.type"
+            minBodyWidth="768px"
+            :closeImmediate="true"
+            :onSave="confDlg.onSave"
+        >
+            <template v-slot:body-prepend>
+                <div class="mb-4 readonly-sql-code-wrapper pa-2">
+                    <readonly-query-editor
+                        :value="confDlg.sqlTxt"
+                        class="readonly-editor fill-height"
+                        readOnly
+                        :options="{
+                            fontSize: 10,
+                            contextmenu: false,
+                        }"
+                    />
+                </div>
+                <template v-if="confDlg.isSavingFavoriteQuery">
+                    <label class="field__label color text-small-text label-required">
+                        {{ $t('name') }}
+                    </label>
+                    <v-text-field
+                        v-model="favorite.name"
+                        type="text"
+                        :rules="[
+                            val => !!val || $t('errors.requiredInput', { inputName: $t('name') }),
+                        ]"
+                        class="std error--text__bottom mb-2"
+                        dense
+                        :height="36"
+                        hide-details="auto"
+                        outlined
+                        required
+                    />
+                </template>
+            </template>
+            <template v-if="!confDlg.isSavingFavoriteQuery" v-slot:action-prepend>
+                <v-checkbox
+                    v-model="dontShowConfirm"
+                    class="pa-0 ma-0"
+                    :label="$t('dontAskMeAgain')"
+                    color="primary"
+                    hide-details
+                />
+                <v-spacer />
+            </template>
+        </confirm-dialog>
     </div>
 </template>
 <script>
@@ -44,31 +129,148 @@
  * Public License.
  */
 
-import { mapMutations, mapState, mapGetters } from 'vuex'
+import { mapMutations, mapState, mapGetters, mapActions } from 'vuex'
 import MaxRowsInput from './MaxRowsInput.vue'
 import SessionBtns from './SessionBtns'
+import QueryEditor from '@/components/QueryEditor'
 
 export default {
     name: 'session-toolbar',
     components: {
         'max-rows-input': MaxRowsInput,
         'session-btns': SessionBtns,
+        'readonly-query-editor': QueryEditor,
     },
     data() {
         return {
-            isMaxRowsValid: true,
+            dontShowConfirm: false,
+            activeRunMode: 'all',
+            confDlg: {
+                isOpened: false,
+                title: this.$t('confirmations.runQuery'),
+                type: 'run',
+                sqlTxt: '',
+                isSavingFavoriteQuery: false,
+                onSave: () => null,
+            },
+            favorite: { date: '', name: '' },
         }
     },
     computed: {
         ...mapState({
             query_sessions: state => state.querySession.query_sessions,
+            show_vis_sidebar: state => state.queryResult.show_vis_sidebar,
+            query_confirm_flag: state => state.persisted.query_confirm_flag,
+            query_txt: state => state.editor.query_txt,
+            selected_query_txt: state => state.editor.selected_query_txt,
+            SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
+            is_max_rows_valid: state => state.queryResult.is_max_rows_valid,
         }),
         ...mapGetters({
             getActiveSessionId: 'querySession/getActiveSessionId',
+            getShouldDisableExecuteMap: 'queryResult/getShouldDisableExecuteMap',
         }),
+        isMaxRowsValid: {
+            get() {
+                return this.is_max_rows_valid
+            },
+            set(v) {
+                if (v) this.SET_IS_MAX_ROWS_VALID(v)
+            },
+        },
     },
     methods: {
-        ...mapMutations({ SET_QUERY_MAX_ROW: 'persisted/SET_QUERY_MAX_ROW' }),
+        ...mapActions({
+            stopQuery: 'queryResult/stopQuery',
+        }),
+        ...mapActions({
+            fetchQueryResult: 'queryResult/fetchQueryResult',
+            pushQueryFavorite: 'persisted/pushQueryFavorite',
+        }),
+        ...mapMutations({
+            SET_QUERY_MAX_ROW: 'persisted/SET_QUERY_MAX_ROW',
+            SET_CURR_QUERY_MODE: 'queryResult/SET_CURR_QUERY_MODE',
+            SET_QUERY_CONFIRM_FLAG: 'persisted/SET_QUERY_CONFIRM_FLAG',
+            SET_SHOW_VIS_SIDEBAR: 'queryResult/SET_SHOW_VIS_SIDEBAR',
+            SET_IS_MAX_ROWS_VALID: 'queryResult/SET_IS_MAX_ROWS_VALID',
+        }),
+        /**
+         * Only open dialog when its corresponding query text exists
+         */
+        shouldOpenDialog(mode) {
+            return (
+                (mode === 'selected' && this.selected_query_txt) ||
+                (mode === 'all' && this.query_txt)
+            )
+        },
+        async handleRun(mode) {
+            if (!this.getShouldDisableExecuteMap[this.getActiveSessionId])
+                if (!this.query_confirm_flag) await this.onRun(mode)
+                else if (this.shouldOpenDialog(mode)) {
+                    this.activeRunMode = mode
+                    this.dontShowConfirm = false // clear checkbox state
+                    this.confDlg = {
+                        ...this.confDlg,
+                        isOpened: true,
+                        title: this.$t('confirmations.runQuery'),
+                        type: 'run',
+                        isSavingFavoriteQuery: false,
+                        sqlTxt:
+                            this.activeRunMode === 'selected'
+                                ? this.selected_query_txt
+                                : this.query_txt,
+                        onSave: this.confirmRunning,
+                    }
+                }
+        },
+        async confirmRunning() {
+            if (this.dontShowConfirm) this.SET_QUERY_CONFIRM_FLAG(0)
+            await this.onRun(this.activeRunMode)
+        },
+        /**
+         * @param {String} mode Mode to execute query: All or selected
+         */
+        async onRun(mode) {
+            this.SET_CURR_QUERY_MODE({
+                payload: this.SQL_QUERY_MODES.QUERY_VIEW,
+                id: this.getActiveSessionId,
+            })
+            switch (mode) {
+                case 'all':
+                    if (this.query_txt) await this.fetchQueryResult(this.query_txt)
+                    break
+                case 'selected':
+                    if (this.selected_query_txt)
+                        await this.fetchQueryResult(this.selected_query_txt)
+                    break
+            }
+        },
+        openFavoriteDialog() {
+            if (this.query_txt) {
+                this.favorite.date = new Date().valueOf()
+                this.favorite.name = `Favorite statements - ${this.$help.dateFormat({
+                    value: this.favorite.date,
+                    formatType: 'DATE_RFC2822',
+                })}`
+                this.confDlg = {
+                    ...this.confDlg,
+                    isOpened: true,
+                    title: this.$t('confirmations.addToFavorite'),
+                    type: 'add',
+                    isSavingFavoriteQuery: true,
+                    sqlTxt: this.selected_query_txt ? this.selected_query_txt : this.query_txt,
+                    onSave: this.addToFavorite,
+                }
+            }
+        },
+        addToFavorite() {
+            let payload = {
+                sql: this.query_txt,
+                ...this.favorite,
+            }
+            if (this.selected_query_txt) payload.sql = this.selected_query_txt
+            this.pushQueryFavorite(payload)
+        },
     },
 }
 </script>

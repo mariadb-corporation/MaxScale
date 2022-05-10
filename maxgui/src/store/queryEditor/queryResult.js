@@ -19,6 +19,7 @@ export default {
     state: {
         ...memStates,
         ...statesToBeSynced,
+        is_max_rows_valid: true,
     },
     mutations: {
         ...queryHelper.memStatesMutationCreator(memStates),
@@ -26,6 +27,9 @@ export default {
             statesToBeSynced,
             persistedArrayPath: 'querySession.query_sessions',
         }),
+        SET_IS_MAX_ROWS_VALID(state, payload) {
+            state.is_max_rows_valid = payload
+        },
     },
     actions: {
         /**
@@ -293,6 +297,17 @@ export default {
         getPrvwTotalDuration: (state, getters) => mode => {
             const { total_duration = 0 } = getters.getPrvwData(mode)
             return total_duration
+        },
+        getShouldDisableExecuteMap: (state, getters, rootState, rootGetters) => {
+            return rootState.querySession.query_sessions.reduce((acc, s) => {
+                acc[s.id] =
+                    !rootState.editor.query_txt ||
+                    !rootState.queryConn.active_sql_conn.id ||
+                    (rootGetters['queryConn/getIsConnBusyBySessionId'](s.id) &&
+                        getters.getLoadingQueryResultBySessionId(s.id)) ||
+                    !state.is_max_rows_valid
+                return acc
+            }, {})
         },
     },
 }
