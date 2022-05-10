@@ -5,7 +5,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2026-04-08
+ * Change Date: 2026-05-03
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -1895,14 +1895,14 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, bool 
                     auto wait_for_conns = [this, ref, send_ok](mxb::Worker::Callable::Action action){
                             bool rv = true;
 
-                            if (action == mxb::Worker::Callable::CANCEL || !have_local_clients())
+                            if (action == mxb::Worker::Callable::CANCEL || !this->have_local_clients())
                             {
                                 // Check if the DCB is still open. If MaxScale is shutting down, the DCB is
                                 // already closed when this callback is called and an error about a write to a
                                 // closed DCB would be logged.
                                 if (m_dcb->is_open() && send_ok)
                                 {
-                                    write_ok_packet(1);
+                                    this->write_ok_packet(1);
                                 }
                                 else
                                 {
