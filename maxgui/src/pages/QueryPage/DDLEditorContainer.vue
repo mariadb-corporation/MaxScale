@@ -11,8 +11,8 @@
             class="relative fill-height color border-right-table-border border-bottom-table-border"
         >
             <!-- Only render the portal when component is activated otherwise it has function reference issue -->
-            <portal v-if="activated" to="wke-toolbar-right">
-                <alter-table-toolbar
+            <portal v-if="activated" to="alter-table-btns">
+                <alter-table-btns
                     :disableRevert="!hasChanged"
                     :disableApply="!hasValidChanges"
                     @on-revert="revertChanges"
@@ -74,13 +74,13 @@
  */
 import { mapActions, mapGetters, mapMutations, mapState } from 'vuex'
 import DDLEditorForm from './DDLEditorForm.vue'
-import AlterTableToolbar from './AlterTableToolbar.vue'
+import AlterTableBtns from './AlterTableBtns.vue'
 import ExecuteSqlDialog from './ExecuteSqlDialog.vue'
 export default {
     name: 'ddl-editor-container',
     components: {
         'ddl-editor-form': DDLEditorForm,
-        'alter-table-toolbar': AlterTableToolbar,
+        'alter-table-btns': AlterTableBtns,
         'execute-sql-dialog': ExecuteSqlDialog,
     },
     props: {

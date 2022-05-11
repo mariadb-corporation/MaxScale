@@ -1,8 +1,8 @@
 <template>
-    <div class="session-toolbar d-flex align-center" :style="{ height: '28px' }">
+    <div class="session-toolbar d-flex align-center">
         <div
             v-for="session in query_sessions"
-            v-show="session.id === getActiveSessionId"
+            v-show="session.id === getActiveSessionId && isTxtEditor"
             :key="`${session.id}`"
         >
             <session-btns
@@ -17,52 +17,55 @@
                 "
             />
         </div>
-        <v-tooltip
-            top
-            transition="slide-y-transition"
-            content-class="shadow-drop color text-navigation py-1 px-4"
-        >
-            <template v-slot:activator="{ on }">
-                <v-btn
-                    class="save-to-fav-btn"
-                    icon
-                    small
-                    color="accent-dark"
-                    :disabled="!query_txt"
-                    v-on="on"
-                    @click="openFavoriteDialog"
-                >
-                    <v-icon size="20"> mdi-bookmark </v-icon>
-                </v-btn>
-            </template>
-            <span style="white-space: pre;" class="d-inline-block text-center">
-                {{
-                    selected_query_txt
-                        ? `${$t('saveStatementsToFavorite', {
-                              quantity: $t('selected'),
-                          })}\nCmd/Ctrl + S`
-                        : `${$t('saveStatementsToFavorite', {
-                              quantity: $t('all'),
-                          })}\nCmd/Ctrl + S`
-                }}
-            </span>
-        </v-tooltip>
-        <v-spacer />
-        <v-form v-model="isMaxRowsValid" class="fill-height d-flex align-center mr-3">
-            <max-rows-input
-                :style="{ maxWidth: '180px' }"
-                :height="26"
-                hide-details="auto"
-                :hasFieldsetBorder="false"
-                @change="SET_QUERY_MAX_ROW($event)"
+        <portal-target v-if="isDDLEditor" name="alter-table-btns" class="fill-height" />
+        <template v-if="isTxtEditor">
+            <v-tooltip
+                top
+                transition="slide-y-transition"
+                content-class="shadow-drop color text-navigation py-1 px-4"
             >
-                <template v-slot:prepend-inner>
-                    <label class="field__label color text-small-text">
-                        {{ $t('maxRows') }}
-                    </label>
+                <template v-slot:activator="{ on }">
+                    <v-btn
+                        class="save-to-fav-btn"
+                        icon
+                        small
+                        color="accent-dark"
+                        :disabled="!query_txt"
+                        v-on="on"
+                        @click="openFavoriteDialog"
+                    >
+                        <v-icon size="20"> mdi-bookmark </v-icon>
+                    </v-btn>
                 </template>
-            </max-rows-input>
-        </v-form>
+                <span style="white-space: pre;" class="d-inline-block text-center">
+                    {{
+                        selected_query_txt
+                            ? `${$t('saveStatementsToFavorite', {
+                                  quantity: $t('selected'),
+                              })}\nCmd/Ctrl + S`
+                            : `${$t('saveStatementsToFavorite', {
+                                  quantity: $t('all'),
+                              })}\nCmd/Ctrl + S`
+                    }}
+                </span>
+            </v-tooltip>
+            <v-spacer />
+            <v-form v-model="isMaxRowsValid" class="fill-height d-flex align-center mr-3">
+                <max-rows-input
+                    :style="{ maxWidth: '180px' }"
+                    :height="26"
+                    hide-details="auto"
+                    :hasFieldsetBorder="false"
+                    @change="SET_QUERY_MAX_ROW($event)"
+                >
+                    <template v-slot:prepend-inner>
+                        <label class="field__label color text-small-text">
+                            {{ $t('maxRows') }}
+                        </label>
+                    </template>
+                </max-rows-input>
+            </v-form>
+        </template>
         <confirm-dialog
             v-model="confDlg.isOpened"
             :title="confDlg.title"
@@ -165,10 +168,12 @@ export default {
             selected_query_txt: state => state.editor.selected_query_txt,
             SQL_QUERY_MODES: state => state.app_config.SQL_QUERY_MODES,
             is_max_rows_valid: state => state.queryResult.is_max_rows_valid,
+            SQL_EDITOR_MODES: state => state.app_config.SQL_EDITOR_MODES,
         }),
         ...mapGetters({
             getActiveSessionId: 'querySession/getActiveSessionId',
             getShouldDisableExecuteMap: 'queryResult/getShouldDisableExecuteMap',
+            getCurrEditorMode: 'editor/getCurrEditorMode',
         }),
         isMaxRowsValid: {
             get() {
@@ -177,6 +182,12 @@ export default {
             set(v) {
                 if (v) this.SET_IS_MAX_ROWS_VALID(v)
             },
+        },
+        isTxtEditor() {
+            return this.getCurrEditorMode === this.SQL_EDITOR_MODES.TXT_EDITOR
+        },
+        isDDLEditor() {
+            return this.getCurrEditorMode === this.SQL_EDITOR_MODES.DDL_EDITOR
         },
     },
     methods: {
@@ -279,5 +290,6 @@ export default {
     border-left: 1px solid $table-border;
     border-bottom: 1px solid $table-border;
     width: 100%;
+    height: 28px;
 }
 </style>

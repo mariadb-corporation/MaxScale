@@ -1,5 +1,5 @@
 <template>
-    <div>
+    <div class="d-inline-flex justify-center align-center icon-group">
         <v-tooltip
             top
             transition="slide-y-transition"
@@ -7,16 +7,15 @@
         >
             <template v-slot:activator="{ on }">
                 <v-btn
-                    outlined
-                    class="revert-btn text-capitalize px-2 font-weight-medium"
-                    depressed
-                    small
+                    text
                     color="accent-dark"
                     :disabled="disableRevert"
                     v-on="on"
                     @click="$emit('on-revert')"
                 >
-                    {{ $t('revert') }}
+                    <v-icon size="16">
+                        $vuetify.icons.reload
+                    </v-icon>
                 </v-btn>
             </template>
             <span style="white-space: pre;" class="d-inline-block text-center">
@@ -30,16 +29,15 @@
         >
             <template v-slot:activator="{ on }">
                 <v-btn
-                    outlined
-                    class="ml-2 apply-btn text-capitalize px-2 font-weight-medium"
-                    depressed
-                    small
+                    text
                     color="accent-dark"
                     :disabled="disableApply"
                     v-on="on"
                     @click="$emit('on-apply')"
                 >
-                    {{ $t('apply') }}
+                    <v-icon size="16">
+                        $vuetify.icons.running
+                    </v-icon>
                 </v-btn>
             </template>
             <span style="white-space: pre;" class="d-inline-block text-center">
@@ -63,7 +61,7 @@
  * Public License.
  */
 export default {
-    name: 'alter-table-toolbar',
+    name: 'alter-table-btns',
     props: {
         disableApply: { type: Boolean, required: true },
         disableRevert: { type: Boolean, required: true },
@@ -72,6 +70,19 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.icon-group {
+    height: 28px;
+    ::v-deep .v-btn {
+        min-width: unset !important;
+        padding: 0px !important;
+        width: 28px;
+        height: 28px;
+        border-radius: 0px !important;
+        &:hover {
+            border-radius: 0px !important;
+        }
+    }
+}
 ::v-deep.apply-btn {
     .v-progress-circular {
         height: 16px !important;
