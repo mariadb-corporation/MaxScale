@@ -139,9 +139,8 @@ export default {
                 )
             }
         },
-        async handleDeleteSession({ state, commit, dispatch }, session) {
-            const targetSession = state.query_sessions.find(s => s.id === session.id)
-            const { id: connId } = targetSession.active_sql_conn || {}
+        async handleDeleteSession({ commit, dispatch }, session) {
+            const { id: connId } = session.active_sql_conn || {}
             // also send request to delete the bound connection and release memory
             if (connId) await dispatch('queryConn/disconnectClone', { id: connId }, { root: true })
             commit('DELETE_SESSION', session.id)
@@ -183,7 +182,7 @@ export default {
             return state.active_session_by_wke_id_map[rootState.wke.active_wke_id]
         },
         getActiveSession: (state, getters) => {
-            return state.query_sessions.find(s => s.id === getters.getActiveSessionId)
+            return state.query_sessions.find(s => s.id === getters.getActiveSessionId) || {}
         },
         getSessionsOfActiveWke: (state, getters, rootState) => {
             return state.query_sessions.filter(s => s.wke_id_fk === rootState.wke.active_wke_id)
@@ -191,11 +190,11 @@ export default {
         getSessionsByWkeId: state => {
             return wke_id => state.query_sessions.filter(s => s.wke_id_fk === wke_id)
         },
-        getActiveSessionByConnId: state => {
+        getSessionByConnId: state => {
             return conn_id =>
                 state.query_sessions.find(
                     s => s.active_sql_conn && s.active_sql_conn.id === conn_id
-                )
+                ) || {}
         },
     },
 }

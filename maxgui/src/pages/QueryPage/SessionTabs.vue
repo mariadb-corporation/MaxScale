@@ -105,13 +105,11 @@ export default {
             },
         },
     },
-    watch: {
-        getActiveSessionId: {
-            immediate: true,
-            handler(v) {
-                if (v) this.handleSyncSession(this.getActiveSession)
-            },
-        },
+    activated() {
+        this.addGetActiveSessionIdWatcher()
+    },
+    deactivated() {
+        this.rmGetActiveSessionIdWatcher()
     },
     methods: {
         ...mapMutations({
@@ -121,6 +119,15 @@ export default {
             handleDeleteSession: 'querySession/handleDeleteSession',
             handleSyncSession: 'querySession/handleSyncSession',
         }),
+        addGetActiveSessionIdWatcher() {
+            this.rmGetActiveSessionIdWatcher = this.$watch(
+                'getActiveSessionId',
+                v => {
+                    if (v) this.handleSyncSession(this.getActiveSession)
+                },
+                { immediate: true }
+            )
+        },
         async handleDisconnectSession(session) {
             await this.handleDeleteSession(session)
         },

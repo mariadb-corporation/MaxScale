@@ -234,7 +234,10 @@ export default {
          * @param {Boolean} param.showSnackbar - should show success message or not
          * @param {Number} param.id - connection id to be deleted
          */
-        async disconnectClone({ state, commit, dispatch }, { showSnackbar, id }) {
+        async disconnectClone(
+            { state, commit, dispatch, rootState, rootGetters },
+            { showSnackbar, id }
+        ) {
             try {
                 const res = await this.$http.delete(`/sql/${id}`)
                 if (res.status === 204) {
@@ -247,7 +250,10 @@ export default {
                             },
                             { root: true }
                         )
-                    dispatch('resetWkeStates', id)
+                    const session = rootGetters['querySession/getSessionByConnId'](id)
+                    const { active_sql_conn: { binding_type } = {} } = session
+                    if (binding_type === rootState.app_config.QUERY_CONN_BINDING_TYPES.WORKSHEET)
+                        dispatch('resetWkeStates', id)
                     dispatch('resetSessionStates', id)
                     commit('DELETE_SQL_CONN', state.sql_conns[id])
                 }
@@ -356,9 +362,9 @@ export default {
          * Call this function when the disconnect the connection in `connection-manager` component
          * @param {String} wkeBoundCnnId - connection id that is bound to the first session tab
          */
-        resetWkeStates({ commit, rootState, dispatch }, wkeBoundCnnId) {
-            const defSession = queryHelper.getSessionByConnId({ rootState, conn_id: wkeBoundCnnId })
-            const targetWke = queryHelper.getWkeBySession({ rootState, session: defSession })
+        resetWkeStates({ commit, rootState, dispatch, rootGetters }, wkeBoundCnnId) {
+            const defSession = rootGetters['querySession/getSessionByConnId'](wkeBoundCnnId)
+            const targetWke = rootGetters['wke/getWkeBySession'](defSession)
             if (targetWke) {
                 dispatch('wke/releaseQueryModulesMem', targetWke.id, { root: true })
                 commit('wke/REFRESH_WKE', targetWke, { root: true })
@@ -371,8 +377,8 @@ export default {
          * release memStates that uses session id as key,
          * refresh targetSession to its initial state
          */
-        resetSessionStates({ rootState, commit, dispatch }, conn_id) {
-            const targetSession = queryHelper.getSessionByConnId({ rootState, conn_id })
+        resetSessionStates({ rootState, commit, dispatch, rootGetters }, conn_id) {
+            const targetSession = rootGetters['querySession/getSessionByConnId'](conn_id)
             dispatch('querySession/releaseQueryModulesMem', targetSession.id, { root: true })
             commit('querySession/REFRESH_SESSION_OF_A_WKE', targetSession, { root: true })
             const freshSession = rootState.querySession.query_sessions.find(

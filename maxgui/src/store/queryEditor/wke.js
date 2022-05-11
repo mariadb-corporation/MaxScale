@@ -32,8 +32,8 @@ export default {
         ADD_NEW_WKE(state) {
             state.worksheets_arr.push(defWorksheetState())
         },
-        DELETE_WKE(state, idx) {
-            state.worksheets_arr.splice(idx, 1)
+        DELETE_WKE(state, id) {
+            state.worksheets_arr = state.worksheets_arr.filter(wke => wke.id !== id)
         },
         UPDATE_WKE(state, { idx, wke }) {
             state.worksheets_arr = this.vue.$help.immutableUpdate(state.worksheets_arr, {
@@ -165,12 +165,11 @@ export default {
                 )
             }
         },
-        handleDeleteWke({ state, commit, dispatch }, wkeIdx) {
-            const targetWke = state.worksheets_arr[wkeIdx]
+        async handleDeleteWke({ commit, dispatch }, id) {
             // release module memory states
-            dispatch('releaseQueryModulesMem', targetWke.id)
-            commit('DELETE_WKE', wkeIdx)
-            dispatch('querySession/deleteAllSessionsByWkeId', targetWke.id, { root: true })
+            dispatch('releaseQueryModulesMem', id)
+            await dispatch('querySession/deleteAllSessionsByWkeId', id, { root: true })
+            commit('DELETE_WKE', id)
         },
         /**
          * @param {Object} param.wke - worksheet object to be sync to flat states
@@ -198,7 +197,10 @@ export default {
     },
     getters: {
         getActiveWke: state => {
-            return state.worksheets_arr.find(wke => wke.id === state.active_wke_id)
+            return state.worksheets_arr.find(wke => wke.id === state.active_wke_id) || {}
+        },
+        getWkeBySession: state => {
+            return session => state.worksheets_arr.find(w => w.id === session.wke_id_fk) || {}
         },
     },
 }

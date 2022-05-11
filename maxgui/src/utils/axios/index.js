@@ -114,7 +114,7 @@ function http(store) {
  */
 function patchIsConnBusyMap({ store, value, sql_conn_id }) {
     const { id: active_session_id } =
-        store.getters['querySession/getActiveSessionByConnId'](sql_conn_id) || {}
+        store.getters['querySession/getSessionByConnId'](sql_conn_id) || {}
     if (active_session_id)
         store.commit('queryConn/PATCH_IS_CONN_BUSY_MAP', {
             id: active_session_id,
@@ -136,7 +136,7 @@ function analyzeRes({ res, store, sql_conn_id }) {
     })
     if (lostCnnErrMsgs.length) {
         const { id: active_session_id } =
-            store.getters['querySession/getActiveSessionByConnId'](sql_conn_id) || {}
+            store.getters['querySession/getSessionByConnId'](sql_conn_id) || {}
         store.commit('queryConn/PATCH_LOST_CNN_ERR_MSG_OBJ_MAP', {
             id: active_session_id,
             payload: { value: lostCnnErrMsgs[0] },
