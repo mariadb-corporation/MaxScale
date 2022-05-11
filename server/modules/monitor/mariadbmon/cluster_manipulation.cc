@@ -575,6 +575,16 @@ int MariaDBMonitor::redirect_slaves_ex(GeneralOpData& general, OperationType typ
     redirection_helper(redirect_to_promo_target, demotion_target, promotion_target, redirected_to_promo);
     redirection_helper(redirect_to_demo_target, promotion_target, demotion_target, redirected_to_demo);
 
+    // Redirection may have caused errors. Since redirect_slaves_ex is only ran when failover/switchover
+    // is considered a success, remove any errors from the output. The errors have already been written to
+    // log.
+    auto& err_out = *general.error_out;
+    if (err_out)
+    {
+        json_decref(err_out);
+        err_out = nullptr;
+    }
+
     if (fails == 0 && conflicts == 0)
     {
         MXS_NOTICE("All redirects successful.");
