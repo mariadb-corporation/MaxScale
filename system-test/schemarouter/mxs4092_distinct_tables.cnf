@@ -1,0 +1,27 @@
+[maxscale]
+threads=###threads###
+
+###server###
+
+[MariaDB-Monitor]
+type=monitor
+module=mysqlmon
+servers=###server_line###
+user=maxskysql
+password=skysql
+
+[Sharding-router]
+type=service
+router=schemarouter
+cluster=MariaDB-Monitor
+user=maxskysql
+password=skysql
+# Needed to ignore the `test` database itself. Note that the pattern isn't a
+# regex parameter in 2.5 and must not be surrounded with / characters.
+ignore_tables_regex=^test[.]$
+
+[Sharding-Listener]
+type=listener
+service=Sharding-router
+protocol=mariadb
+port=4006
