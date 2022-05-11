@@ -57,9 +57,9 @@ port = 4009
 type = filter
 module = throttlefilter
 max_qps = 500
-throttling_duration = 10000
-sampling_duration = 250
-continuous_duration = 2000
+throttling_duration = 10000ms
+sampling_duration = 250ms
+continuous_duration = 2000ms
 
 [server1]
 type = server

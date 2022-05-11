@@ -704,9 +704,9 @@ password=mariadbmon
 monitor_interval=1s
 replication_user=repl
 replication_password=repl
-backend_connect_timeout=5
-backend_read_timeout=5
-backend_write_timeout=5)";
+backend_connect_timeout=5s
+backend_read_timeout=5s
+backend_write_timeout=5s)";
     replace_text("###mariadb_monitor###", basic_mariadbmon);
 
     const string basic_rwsplit_svc =

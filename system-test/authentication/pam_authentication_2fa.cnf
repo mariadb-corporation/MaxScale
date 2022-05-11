@@ -1,7 +1,7 @@
 [maxscale]
 threads=###threads###
 log_info=1
-users_refresh_time=2
+users_refresh_time=2s
 
 [MySQL-Monitor]
 type=monitor
