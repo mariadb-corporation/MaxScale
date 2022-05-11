@@ -13,6 +13,7 @@
 
 const {
   maxctrl,
+  _,
   helpMsg,
   error,
   getJson,
@@ -79,9 +80,9 @@ const list_services_fields = [
     description: "Total connection count",
   },
   {
-    name: "Servers",
+    name: "Targets",
     path: "relationships.servers.data[].id",
-    description: "Servers that the service uses",
+    description: "Targets that the service uses",
   },
 ];
 
@@ -358,8 +359,16 @@ exports.builder = function (yargs) {
           .usage("Usage: list services");
       },
       function (argv) {
-        maxctrl(argv, function (host) {
-          return getCollection(host, "services", list_services_fields);
+        maxctrl(argv, async function (host) {
+          var res = await getJson(host, "services");
+
+          for (var s of res.data) {
+            var srv = _.get(s, "relationships.servers.data", []);
+            var svc = _.get(s, "relationships.services.data", []);
+            _.set(s, "relationships.servers.data", srv.concat(svc));
+          }
+
+          return rawCollectionAsTable(filterResource(res, list_services_fields), list_services_fields);
         });
       }
     )
