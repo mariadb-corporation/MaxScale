@@ -228,7 +228,7 @@ public:
     /**
      * execute_cmd_ex with query retry OFF.
      */
-    bool execute_cmd_no_retry(const std::string& cmd,
+    bool execute_cmd_no_retry(const std::string& cmd, const std::string& masked_cmd,
                               std::string* errmsg_out = NULL, unsigned int* errno_out = NULL);
 
     /**
@@ -620,15 +620,23 @@ private:
                          json_t** error_out);
 
     bool remove_slave_conns(GeneralOpData& op, const SlaveStatusArray& conns_to_remove);
-    bool execute_cmd_ex(const std::string& cmd, QueryRetryMode mode,
-                        std::string* errmsg_out = NULL, unsigned int* errno_out = NULL);
 
+    bool execute_cmd_ex(const std::string& cmd, const std::string& masked_cmd, QueryRetryMode mode,
+                        std::string* errmsg_out = NULL, unsigned int* errno_out = NULL);
+    bool execute_cmd_time_limit(const std::string& cmd, const std::string& masked_cmd,
+                                maxbase::Duration time_limit, std::string* errmsg_out);
     bool execute_cmd_time_limit(const std::string& cmd, maxbase::Duration time_limit,
                                 std::string* errmsg_out);
 
-    bool        set_read_only(ReadOnlySetting value, maxbase::Duration time_limit, json_t** error_out);
-    bool        merge_slave_conns(GeneralOpData& op, const SlaveStatusArray& conns_to_merge);
-    std::string generate_change_master_cmd(const SlaveStatus::Settings& conn_settings);
+    bool set_read_only(ReadOnlySetting value, maxbase::Duration time_limit, json_t** error_out);
+    bool merge_slave_conns(GeneralOpData& op, const SlaveStatusArray& conns_to_merge);
+
+    struct ChangeMasterCmd
+    {
+        std::string real_cmd;   /**< Real command sent to server */
+        std::string masked_cmd; /**< Version with masked credentials */
+    };
+    ChangeMasterCmd generate_change_master_cmd(const SlaveStatus::Settings& conn_settings);
 
     bool update_enabled_events();
 

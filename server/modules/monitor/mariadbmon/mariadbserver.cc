@@ -89,11 +89,12 @@ std::unique_ptr<QueryResult> MariaDBServer::execute_query(const string& query, s
  * Execute a query which does not return data. If the query returns data, an error is returned.
  *
  * @param cmd The query
+ * @param masked_cmd Optional logged version of the query
  * @param mode Retry a failed query using the global query retry settings or not
  * @param errmsg_out Error output.
  * @return True on success, false on error or if query returned data
  */
-bool MariaDBServer::execute_cmd_ex(const string& cmd, QueryRetryMode mode,
+bool MariaDBServer::execute_cmd_ex(const string& cmd, const std::string& masked_cmd, QueryRetryMode mode,
                                    std::string* errmsg_out, unsigned int* errno_out)
 {
     auto conn = con;
@@ -107,6 +108,7 @@ bool MariaDBServer::execute_cmd_ex(const string& cmd, QueryRetryMode mode,
         query_success = (maxsql::mysql_query_ex(conn, cmd, 0, 0) == 0);
     }
 
+    auto& logged_query = masked_cmd.empty() ? cmd : masked_cmd;
     bool rval = false;
     if (query_success)
     {
@@ -124,7 +126,7 @@ bool MariaDBServer::execute_cmd_ex(const string& cmd, QueryRetryMode mode,
                 {
                     results_errmsg = string_printf("Query '%s' on '%s' returned %d columns and %d rows "
                                                    "of data when none was expected.",
-                                                   cmd.c_str(), name(), cols, rows);
+                                                   logged_query.c_str(), name(), cols, rows);
                 }
             }
         }
@@ -140,7 +142,7 @@ bool MariaDBServer::execute_cmd_ex(const string& cmd, QueryRetryMode mode,
         if (errmsg_out)
         {
             *errmsg_out = string_printf("Query '%s' failed on '%s': '%s' (%i).",
-                                        cmd.c_str(), name(), mysql_error(conn), mysql_errno(conn));
+                                        logged_query.c_str(), name(), mysql_error(conn), mysql_errno(conn));
         }
         if (errno_out)
         {
@@ -152,13 +154,13 @@ bool MariaDBServer::execute_cmd_ex(const string& cmd, QueryRetryMode mode,
 
 bool MariaDBServer::execute_cmd(const std::string& cmd, std::string* errmsg_out)
 {
-    return execute_cmd_ex(cmd, QueryRetryMode::ENABLED, errmsg_out);
+    return execute_cmd_ex(cmd, "", QueryRetryMode::ENABLED, errmsg_out);
 }
 
-bool MariaDBServer::execute_cmd_no_retry(const std::string& cmd,
+bool MariaDBServer::execute_cmd_no_retry(const std::string& cmd, const std::string& masked_cmd,
                                          std::string* errmsg_out, unsigned int* errno_out)
 {
-    return execute_cmd_ex(cmd, QueryRetryMode::DISABLED, errmsg_out, errno_out);
+    return execute_cmd_ex(cmd, masked_cmd, QueryRetryMode::DISABLED, errmsg_out, errno_out);
 }
 
 /**
@@ -174,7 +176,13 @@ bool MariaDBServer::execute_cmd_no_retry(const std::string& cmd,
  * @return True, if successful.
  */
 bool MariaDBServer::execute_cmd_time_limit(const std::string& cmd, maxbase::Duration time_limit,
-                                           std::string* errmsg_out)
+                                           string* errmsg_out)
+{
+    return execute_cmd_time_limit(cmd, "", time_limit, errmsg_out);
+}
+
+bool MariaDBServer::execute_cmd_time_limit(const string& cmd, const string& masked_cmd,
+                                           maxbase::Duration time_limit, string* errmsg_out)
 {
     StopWatch timer;
     string max_stmt_time;
@@ -190,7 +198,15 @@ bool MariaDBServer::execute_cmd_time_limit(const std::string& cmd, maxbase::Dura
         }
     }
 
-    const string command = max_stmt_time + cmd;
+    string complete_cmd = max_stmt_time;
+    complete_cmd.append(cmd);
+
+    string complete_masked_cmd;
+    if (!masked_cmd.empty())
+    {
+        complete_masked_cmd.append(max_stmt_time).append(masked_cmd);
+    }
+
     // If a query lasts less than 1s, sleep so that at most 1 query/s is sent.
     // This prevents busy-looping when faced with some network errors.
     const Duration min_query_time {1s};
@@ -203,7 +219,7 @@ bool MariaDBServer::execute_cmd_time_limit(const std::string& cmd, maxbase::Dura
         StopWatch query_timer;
         string error_msg;
         unsigned int errornum = 0;
-        cmd_success = execute_cmd_no_retry(command, &error_msg, &errornum);
+        cmd_success = execute_cmd_no_retry(complete_cmd, complete_masked_cmd, &error_msg, &errornum);
         auto query_time = query_timer.lap();
 
         // Check if there is time to retry.
@@ -226,8 +242,9 @@ bool MariaDBServer::execute_cmd_time_limit(const std::string& cmd, maxbase::Dura
                 else
                 {
                     // Timed out because of max_statement_time.
+                    auto& logged_query = complete_masked_cmd.empty() ? complete_cmd : complete_masked_cmd;
                     MXS_WARNING("Query '%s' timed out on '%s'. %s",
-                                command.c_str(), name(), retrying.c_str());
+                                logged_query.c_str(), name(), retrying.c_str());
                 }
 
                 if (query_time < min_query_time)
@@ -2066,8 +2083,9 @@ bool MariaDBServer::create_start_slave(GeneralOpData& op, const SlaveStatus::Set
     bool success = false;
 
     SlaveStatus::Settings new_settings(conn_settings.name, conn_settings.master_endpoint, name());
-    string change_master = generate_change_master_cmd(new_settings);
-    bool conn_created = execute_cmd_time_limit(change_master, time_remaining, &error_msg);
+    auto change_master = generate_change_master_cmd(new_settings);
+    bool conn_created = execute_cmd_time_limit(change_master.real_cmd, change_master.masked_cmd,
+                                               time_remaining, &error_msg);
     time_remaining -= timer.restart();
     if (conn_created)
     {
@@ -2100,27 +2118,32 @@ bool MariaDBServer::create_start_slave(GeneralOpData& op, const SlaveStatus::Set
  * @param conn_settings Existing slave connection settings to emulate
  * @return Generated query
  */
-string MariaDBServer::generate_change_master_cmd(const SlaveStatus::Settings& conn_settings)
+MariaDBServer::ChangeMasterCmd
+MariaDBServer::generate_change_master_cmd(const SlaveStatus::Settings& conn_settings)
 {
-    string change_cmd;
-    change_cmd += string_printf("CHANGE MASTER '%s' TO MASTER_HOST = '%s', MASTER_PORT = %i, ",
-                                conn_settings.name.c_str(),
-                                conn_settings.master_endpoint.host().c_str(),
-                                conn_settings.master_endpoint.port());
-    change_cmd += "MASTER_USE_GTID = current_pos, ";
+    string cmd_begin = string_printf("CHANGE MASTER '%s' TO MASTER_HOST = '%s', MASTER_PORT = %i, ",
+                                     conn_settings.name.c_str(),
+                                     conn_settings.master_endpoint.host().c_str(),
+                                     conn_settings.master_endpoint.port());
+    cmd_begin += "MASTER_USE_GTID = current_pos, ";
     if (m_settings.replication_ssl)
     {
-        change_cmd += "MASTER_SSL = 1, ";
+        cmd_begin += "MASTER_SSL = 1, ";    // Leave out if not set to preserve existing setting.
     }
-    change_cmd += string_printf("MASTER_USER = '%s', ", m_settings.replication_user.c_str());
-    const char MASTER_PW[] = "MASTER_PASSWORD = '%s';";
-#if defined (SS_DEBUG)
-    string change_cmd_nopw = change_cmd;
-    change_cmd_nopw += string_printf(MASTER_PW, "******");
-    MXS_DEBUG("Change master command is '%s'.", change_cmd_nopw.c_str());
-#endif
-    change_cmd += string_printf(MASTER_PW, m_settings.replication_password.c_str());
-    return change_cmd;
+
+    // Mask user & pw for the masked version.
+    const char user_pw[] = "MASTER_USER = '%s', MASTER_PASSWORD = '%s';";
+    string cleartext_cmd = cmd_begin;
+    cleartext_cmd += mxb::string_printf(user_pw, m_settings.replication_user.c_str(),
+                                        m_settings.replication_password.c_str());
+    const char mask[] = "******";
+    string masked_cmd = move(cmd_begin);
+    masked_cmd += mxb::string_printf(user_pw, mask, mask);
+
+    ChangeMasterCmd rval;
+    rval.real_cmd = move(cleartext_cmd);
+    rval.masked_cmd = move(masked_cmd);
+    return rval;
 }
 
 bool
@@ -2140,10 +2163,11 @@ MariaDBServer::redirect_existing_slave_conn(GeneralOpData& op, const SlaveStatus
     {
         SlaveStatus::Settings modified_settings = conn_settings;
         modified_settings.master_endpoint = EndPoint(new_master->server);
-        string change_master = generate_change_master_cmd(modified_settings);
+        auto change_master = generate_change_master_cmd(modified_settings);
 
         string error_msg;
-        bool changed = execute_cmd_time_limit(change_master, time_remaining, &error_msg);
+        bool changed = execute_cmd_time_limit(change_master.real_cmd, change_master.masked_cmd,
+                                              time_remaining, &error_msg);
         time_remaining -= timer.restart();
         if (changed)
         {
@@ -2163,7 +2187,6 @@ MariaDBServer::redirect_existing_slave_conn(GeneralOpData& op, const SlaveStatus
         }
         else
         {
-            // TODO: This may currently print out passwords.
             PRINT_MXS_JSON_ERROR(error_out,
                                  "%s could not be redirected to %s: %s",
                                  conn_settings.to_string().c_str(),
