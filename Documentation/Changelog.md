@@ -12,6 +12,7 @@
   that are defined in static configuration files.
 
 For more details, please refer to:
+* [MariaDB MaxScale 6.3.1 Release Notes](Release-Notes/MaxScale-6.3.1-Release-Notes.md)
 * [MariaDB MaxScale 6.3.0 Release Notes](Release-Notes/MaxScale-6.3.0-Release-Notes.md)
 
 ## MariaDB MaxScale 6.2
