@@ -93,6 +93,7 @@ static mxs::Endpoint* get_root_master(const Endpoints& endpoints)
             if (!master_host)
             {
                 // No master found yet
+                best_rank = rank;
                 master_host = e;
             }
             else if (rank < best_rank)
