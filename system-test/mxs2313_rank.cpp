@@ -122,6 +122,26 @@ void test_readconnroute(TestConnections& test, std::vector<std::string> ids)
     do_test(1);
     unblock_wait(0);
     do_test(0);
+
+    std::cout << "MXS-4132: Rank of the first server is ignored with router_options=master" << std::endl;
+
+    test.check_maxctrl("alter service Read-Connection-Router router_options master");
+    test.check_maxctrl("stop monitor MySQL-Monitor");
+    test.check_maxctrl("set server server2 master");
+    test.check_maxctrl("set server server3 master");
+    test.check_maxctrl("set server server4 master");
+    test.check_maxctrl("alter server server2 rank secondary");
+
+    do_test(0);
+    test.check_maxctrl("clear server server1 master");
+    do_test(1);
+    test.check_maxctrl("clear server server2 master");
+    do_test(2);
+    test.check_maxctrl("clear server server3 master");
+    do_test(3);
+
+    test.check_maxctrl("alter service Read-Connection-Router router_options running");
+    test.check_maxctrl("start monitor MySQL-Monitor");
 }
 
 void test_hints(TestConnections& test, std::vector<std::string> ids)
