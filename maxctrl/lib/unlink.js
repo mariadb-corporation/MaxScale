@@ -38,7 +38,7 @@ function removeServer(argv, path, targets) {
       if (_.has(res, "data.relationships.services.data")) {
         _.set(res, "data.relationships.services.data", services);
       }
-      if (_.has("data.relationships.monitors.data")) {
+      if (_.has(res, "data.relationships.monitors.data")) {
         _.set(res, "data.relationships.monitors.data", monitors);
       }
       delete res.data.attributes;
