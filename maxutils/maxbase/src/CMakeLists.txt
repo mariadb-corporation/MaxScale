@@ -21,6 +21,7 @@ add_library(maxbase STATIC
   pretty_print.cc
   random.cc
   regex.cc
+  secrets.cc
   semaphore.cc
   shareddata.cc
   ssl.cc

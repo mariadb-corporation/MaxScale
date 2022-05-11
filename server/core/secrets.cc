@@ -19,7 +19,6 @@
 #include <sys/stat.h>
 #include <openssl/aes.h>
 #include <openssl/err.h>
-#include <openssl/evp.h>
 #include <openssl/ossl_typ.h>
 #include <openssl/rand.h>
 
@@ -27,6 +26,8 @@
 #include <maxscale/paths.hh>
 #include <maxscale/utils.hh>
 #include <maxscale/version.hh>
+#include <maxbase/secrets.hh>
+
 #include "internal/secrets.hh"
 
 using std::string;
@@ -43,13 +44,6 @@ struct ThisUnit
 };
 ThisUnit this_unit;
 
-enum class ProcessingMode
-{
-    ENCRYPT,
-    DECRYPT,
-    DECRYPT_IGNORE_ERRORS
-};
-
 const char field_desc[] = "description";
 const char field_version[] = "maxscale_version";
 const char field_cipher[] = "encryption_cipher";
@@ -61,81 +55,21 @@ const char desc[] = "MaxScale encryption/decryption key";
 #define STRINGIFY2(X) STRINGIFY(X)
 const char CIPHER_NAME[] = STRINGIFY2(SECRETS_CIPHER);
 
-void print_openSSL_errors(const char* operation);
+using ProcessingMode = mxb::Cipher::Mode;
 
-/**
- * Encrypt or decrypt the input buffer to output buffer.
- *
- * @param key Encryption key
- * @param mode Encrypting or decrypting
- * @param input Input buffer
- * @param input_len Input length
- * @param output Output buffer
- * @param output_len Produced output length is written here
- * @return True on success
- */
 bool encrypt_or_decrypt(const uint8_t* key, const uint8_t* iv, ProcessingMode mode,
                         const uint8_t* input, int input_len, uint8_t* output, int* output_len)
 {
-    auto ctx = EVP_CIPHER_CTX_new();
-    int enc = (mode == ProcessingMode::ENCRYPT) ? AES_ENCRYPT : AES_DECRYPT;
-    bool ignore_errors = (mode == ProcessingMode::DECRYPT_IGNORE_ERRORS);
-    bool ok = false;
+    mxb::Cipher cipher(secrets_cipher(), key, iv);
+    bool ok = cipher.encrypt_or_decrypt(mode, input, input_len, output, output_len);
 
-    if (EVP_CipherInit_ex(ctx, secrets_cipher(), nullptr, key, iv, enc) == 1 || ignore_errors)
-    {
-        int output_written = 0;
-        if (EVP_CipherUpdate(ctx, output, &output_written, input, input_len) == 1 || ignore_errors)
-        {
-            int total_output_len = output_written;
-            if (EVP_CipherFinal_ex(ctx, output + total_output_len, &output_written) == 1 || ignore_errors)
-            {
-                total_output_len += output_written;
-                *output_len = total_output_len;
-                ok = true;
-            }
-        }
-    }
-
-    EVP_CIPHER_CTX_free(ctx);
     if (!ok)
     {
         const char* operation = (mode == ProcessingMode::ENCRYPT) ? "when encrypting password" :
             "when decrypting password";
-        print_openSSL_errors(operation);
+        cipher.log_errors(operation);
     }
     return ok;
-}
-
-void print_openSSL_errors(const char* operation)
-{
-    // It's unclear how thread(unsafe) OpenSSL error functions are. Minimize such possibilities by
-    // using a local buffer.
-    constexpr size_t bufsize = 256;     // Should be enough according to some googling.
-    char buf[bufsize];
-    buf[0] = '\0';
-
-    auto errornum = ERR_get_error();
-    auto errornum2 = ERR_get_error();
-    ERR_error_string_n(errornum, buf, bufsize);
-
-    if (errornum2 == 0)
-    {
-        // One error.
-        MXB_ERROR("OpenSSL error %s. %s", operation, buf);
-    }
-    else
-    {
-        // Multiple errors, print all as separate messages.
-        MXB_ERROR("Multiple OpenSSL errors %s. Detailed messages below.", operation);
-        MXB_ERROR("%s", buf);
-        while (errornum2 != 0)
-        {
-            ERR_error_string_n(errornum2, buf, bufsize);
-            MXB_ERROR("%s", buf);
-            errornum2 = ERR_get_error();
-        }
-    }
 }
 }
 
