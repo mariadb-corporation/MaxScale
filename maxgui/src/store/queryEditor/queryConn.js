@@ -106,7 +106,7 @@ export default {
                     //deleteInvalidConn
                     invalidCnctIds.forEach(id => {
                         this.vue.$help.deleteCookie(`conn_id_body_${id}`)
-                        dispatch('resetSessionStates', id)
+                        dispatch('querySession/resetSessionStates', id, { root: true })
                     })
 
                     commit('SET_SQL_CONNS', validSqlConns)
@@ -231,32 +231,12 @@ export default {
         },
         /**
          * This handles deleting a clone connection.
-         * @param {Boolean} param.showSnackbar - should show success message or not
          * @param {Number} param.id - connection id to be deleted
          */
-        async disconnectClone(
-            { state, commit, dispatch, rootState, rootGetters },
-            { showSnackbar, id }
-        ) {
+        async disconnectClone({ state, commit }, { id }) {
             try {
                 const res = await this.$http.delete(`/sql/${id}`)
-                if (res.status === 204) {
-                    if (showSnackbar)
-                        commit(
-                            'SET_SNACK_BAR_MESSAGE',
-                            {
-                                text: [this.i18n.t('info.disconnSuccessfully')],
-                                type: 'success',
-                            },
-                            { root: true }
-                        )
-                    const session = rootGetters['querySession/getSessionByConnId'](id)
-                    const { active_sql_conn: { binding_type } = {} } = session
-                    if (binding_type === rootState.app_config.QUERY_CONN_BINDING_TYPES.WORKSHEET)
-                        dispatch('resetWkeStates', id)
-                    dispatch('resetSessionStates', id)
-                    commit('DELETE_SQL_CONN', state.sql_conns[id])
-                }
+                if (res.status === 204) commit('DELETE_SQL_CONN', state.sql_conns[id])
             } catch (e) {
                 this.vue.$logger('store-queryConn-disconnectClone').error(e)
             }
@@ -285,12 +265,12 @@ export default {
                     .map(c => c.id)
                 const cnnIdsToBeDeleted = [wkeBoundCnnId, ...sessionConnIds]
 
-                dispatch('resetWkeStates', wkeBoundCnnId)
+                dispatch('wke/resetWkeStates', wkeBoundCnnId, { root: true })
 
                 const allRes = await Promise.all(
                     cnnIdsToBeDeleted.map(id => {
                         commit('DELETE_SQL_CONN', state.sql_conns[id])
-                        dispatch('resetSessionStates', id)
+                        dispatch('querySession/resetSessionStates', id, { root: true })
                         return this.$http.delete(`/sql/${id}`)
                     })
                 )
@@ -349,42 +329,11 @@ export default {
         clearConn({ commit, dispatch, state }) {
             try {
                 const active_sql_conn = state.active_sql_conn
-                dispatch('resetSessionStates', active_sql_conn.id)
+                dispatch('querySession/resetSessionStates', active_sql_conn.id, { root: true })
                 commit('DELETE_SQL_CONN', active_sql_conn)
             } catch (e) {
                 this.vue.$logger('store-queryConn-clearConn').error(e)
             }
-        },
-        /**
-         * wke cleanup
-         * release memStates that uses wke id as key,
-         * refresh wke state to its initial state.
-         * Call this function when the disconnect the connection in `connection-manager` component
-         * @param {String} wkeBoundCnnId - connection id that is bound to the first session tab
-         */
-        resetWkeStates({ commit, rootState, dispatch, rootGetters }, wkeBoundCnnId) {
-            const defSession = rootGetters['querySession/getSessionByConnId'](wkeBoundCnnId)
-            const targetWke = rootGetters['wke/getWkeBySession'](defSession)
-            if (targetWke) {
-                dispatch('wke/releaseQueryModulesMem', targetWke.id, { root: true })
-                commit('wke/REFRESH_WKE', targetWke, { root: true })
-                const freshWke = rootState.wke.worksheets_arr.find(wke => wke.id === targetWke.id)
-                dispatch('wke/handleSyncWke', freshWke, { root: true })
-            }
-        },
-        /**
-         * sessions cleanup
-         * release memStates that uses session id as key,
-         * refresh targetSession to its initial state
-         */
-        resetSessionStates({ rootState, commit, dispatch, rootGetters }, conn_id) {
-            const targetSession = rootGetters['querySession/getSessionByConnId'](conn_id)
-            dispatch('querySession/releaseQueryModulesMem', targetSession.id, { root: true })
-            commit('querySession/REFRESH_SESSION_OF_A_WKE', targetSession, { root: true })
-            const freshSession = rootState.querySession.query_sessions.find(
-                s => s.id === targetSession.id
-            )
-            dispatch('querySession/handleSyncSession', freshSession, { root: true })
         },
 
         // Reset all when there is no active connections

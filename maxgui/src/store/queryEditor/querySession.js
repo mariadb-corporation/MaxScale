@@ -142,7 +142,10 @@ export default {
         async handleDeleteSession({ commit, dispatch }, session) {
             const { id: connId } = session.active_sql_conn || {}
             // also send request to delete the bound connection and release memory
-            if (connId) await dispatch('queryConn/disconnectClone', { id: connId }, { root: true })
+            if (connId) {
+                await dispatch('queryConn/disconnectClone', { id: connId }, { root: true })
+                dispatch('resetSessionStates', connId)
+            }
             commit('DELETE_SESSION', session.id)
         },
         async deleteAllSessionsByWkeId({ state, dispatch, commit }, wke_id) {
@@ -175,6 +178,20 @@ export default {
                         memStates: allMemStatesModules[namespace],
                     })
             })
+        },
+        /**
+         * sessions cleanup
+         * release memStates that uses session id as key,
+         * refresh targetSession to its initial state
+         */
+        resetSessionStates({ rootState, commit, dispatch, getters }, conn_id) {
+            const targetSession = getters.getSessionByConnId(conn_id)
+            dispatch('releaseQueryModulesMem', targetSession.id)
+            commit('REFRESH_SESSION_OF_A_WKE', targetSession)
+            const freshSession = rootState.querySession.query_sessions.find(
+                s => s.id === targetSession.id
+            )
+            dispatch('handleSyncSession', freshSession)
         },
     },
     getters: {
