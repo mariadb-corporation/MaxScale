@@ -191,5 +191,11 @@ export default {
         getSessionsByWkeId: state => {
             return wke_id => state.query_sessions.filter(s => s.wke_id_fk === wke_id)
         },
+        getActiveSessionByConnId: state => {
+            return conn_id =>
+                state.query_sessions.find(
+                    s => s.active_sql_conn && s.active_sql_conn.id === conn_id
+                )
+        },
     },
 }

@@ -57,7 +57,7 @@ export default {
     actions: {
         async fetchRcTargetNames({ state, commit }, resourceType) {
             try {
-                const res = await this.$queryHttp.get(`/${resourceType}?fields[${resourceType}]=id`)
+                const res = await this.$http.get(`/${resourceType}?fields[${resourceType}]=id`)
                 if (res.data.data) {
                     const names = res.data.data.map(({ id, type }) => ({ id, type }))
                     commit('SET_RC_TARGET_NAMES_MAP', {
@@ -79,7 +79,7 @@ export default {
             if (!silentValidation) commit('SET_IS_VALIDATING_CONN', true)
             try {
                 const active_session_id = rootGetters['querySession/getActiveSessionId']
-                const res = await this.$queryHttp.get(`/sql/`)
+                const res = await this.$http.get(`/sql/`)
                 const resConnMap = this.vue.$help.lodash.keyBy(res.data.data, 'id')
                 const resConnIds = Object.keys(resConnMap)
                 const clientConnIds = queryHelper.getClientConnIds()
@@ -134,7 +134,7 @@ export default {
             const active_session_id = rootGetters['querySession/getActiveSessionId']
             try {
                 // create the connection
-                const res = await this.$queryHttp.post(`/sql?persist=yes&max-age=86400`, body)
+                const res = await this.$http.post(`/sql?persist=yes&max-age=86400`, body)
                 if (res.status === 201) {
                     commit(
                         'SET_SNACK_BAR_MESSAGE',
@@ -236,7 +236,7 @@ export default {
          */
         async disconnectClone({ state, commit, dispatch }, { showSnackbar, id }) {
             try {
-                const res = await this.$queryHttp.delete(`/sql/${id}`)
+                const res = await this.$http.delete(`/sql/${id}`)
                 if (res.status === 204) {
                     if (showSnackbar)
                         commit(
