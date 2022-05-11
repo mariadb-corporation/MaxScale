@@ -19,7 +19,6 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Bug fixes
 
-* [MXS-4110](https://jira.mariadb.org/browse/MXS-4110) Schemarouter does not ignore the sys schema
 * [MXS-4109](https://jira.mariadb.org/browse/MXS-4109) The /user/inet endpoint fails schema validation
 * [MXS-4103](https://jira.mariadb.org/browse/MXS-4103) Binlogrouter doesn't decrypt passwords
 * [MXS-4096](https://jira.mariadb.org/browse/MXS-4096) Binlog Routers SHOW SLAVE STATUS does not show SSL information
