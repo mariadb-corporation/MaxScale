@@ -28,7 +28,6 @@ public:
     {
         ENCRYPT,
         DECRYPT,
-        DECRYPT_IGNORE_ERRORS
     };
 
     Cipher(const Cipher&) = delete;

@@ -40,7 +40,6 @@ namespace
 struct ThisUnit
 {
     ByteVec key;    /**< Password decryption key, assigned at startup */
-    ByteVec iv;     /**< Decryption init vector, assigned at startup. Only used with old-format keys */
 };
 ThisUnit this_unit;
 
@@ -116,8 +115,6 @@ ReadKeyResult secrets_readkeys(const string& filepath)
         if (filesize == binary_total_len)
         {
             old_format = true;
-            MXB_WARNING("File format of '%s' is deprecated. Please generate a new encryption key ('maxkeys') "
-                        "and re-encrypt passwords ('maxpasswd').", filepathc);
         }
 
         auto filemode = filestats.st_mode;
@@ -153,31 +150,10 @@ ReadKeyResult secrets_readkeys(const string& filepath)
 
     if (old_format)
     {
-        errno = 0;
-        std::ifstream file(filepath, std::ios_base::binary);
-        if (file.is_open())
-        {
-            // Read all data from file.
-            char readbuf[binary_total_len];
-            file.read(readbuf, binary_total_len);
-            if (file.good())
-            {
-                // Success, copy contents to key structure.
-                rval.key.assign(readbuf, readbuf + binary_key_len);
-                rval.iv.assign(readbuf + binary_key_len, readbuf + binary_total_len);
-                rval.ok = true;
-            }
-            else
-            {
-                MXB_ERROR("Read from secrets file %s failed. Read %li, expected %i bytes. Error %d, %s.",
-                          filepathc, file.gcount(), binary_total_len, errno, mxb_strerror(errno));
-            }
-        }
-        else
-        {
-            MXB_ERROR("Could not open secrets file '%s'. Error %d, %s.",
-                      filepathc, errno, mxb_strerror(errno));
-        }
+        MXB_ERROR("File format of '%s' is using a pre-2.5 format that is no longer suported. "
+                  "Please generate a new encryption key ('maxkeys') and re-encrypt "
+                  "passwords ('maxpasswd').", filepathc);
+        return rval;
     }
     else
     {
@@ -238,8 +214,7 @@ string decrypt_password(const string& input)
         auto is_hex = std::all_of(input.begin(), input.end(), isxdigit);
         if (is_hex)
         {
-            const auto& iv = this_unit.iv;
-            rval = iv.empty() ? ::decrypt_password(key, input) : decrypt_password_old(key, iv, input);
+            rval = ::decrypt_password(key, input);
         }
         else
         {
@@ -248,49 +223,6 @@ string decrypt_password(const string& input)
     }
     return rval;
 }
-}
-
-/**
- * Decrypt passwords encrypted with an old (pre 2.5) .secrets-file. The decryption also depends on whether
- * the password was encrypted using maxpasswd 2.4 or 2.5.
- *
- * @param key Encryption key
- * @param iv Init vector
- * @param input Encrypted password in hex form
- * @return Decrypted password or empty on error
- */
-string decrypt_password_old(const ByteVec& key, const ByteVec& iv, const std::string& input)
-{
-    string rval;
-    // Convert to binary.
-    size_t hex_len = input.length();
-    auto bin_len = hex_len / 2;
-    unsigned char encrypted_bin[bin_len];
-    mxs::hex2bin(input.c_str(), hex_len, encrypted_bin);
-
-    unsigned char plain[bin_len];   // Decryption output cannot be longer than input data.
-    int decrypted_len = 0;
-    if (encrypt_or_decrypt(key.data(), iv.data(), ProcessingMode::DECRYPT_IGNORE_ERRORS, encrypted_bin,
-                           bin_len, plain, &decrypted_len))
-    {
-        if (decrypted_len > 0)
-        {
-            // Success, password was encrypted using 2.5. Decrypted data should be text.
-            auto output_data = reinterpret_cast<const char*>(plain);
-            rval.assign(output_data, decrypted_len);
-        }
-        else
-        {
-            // Failure, password was likely encrypted in 2.4. Try to decrypt using 2.4 code.
-            AES_KEY aeskey;
-            AES_set_decrypt_key(key.data(), 8 * key.size(), &aeskey);
-            auto iv_copy = iv;
-            memset(plain, '\0', bin_len);
-            AES_cbc_encrypt(encrypted_bin, plain, bin_len, &aeskey, iv_copy.data(), AES_DECRYPT);
-            rval = reinterpret_cast<const char*>(plain);
-        }
-    }
-    return rval;
 }
 
 string decrypt_password(const ByteVec& key, const std::string& input)
@@ -323,34 +255,6 @@ string decrypt_password(const ByteVec& key, const std::string& input)
         }
     }
 
-    return rval;
-}
-
-/**
- * Encrypt a password that can be stored in the MaxScale configuration file.
- *
- * @param key Encryption key and init vector
- * @param input The plaintext password to encrypt.
- * @return The encrypted password, or empty on failure.
- */
-string encrypt_password_old(const ByteVec& key, const ByteVec& iv, const string& input)
-{
-    string rval;
-    // Output can be a block length longer than input.
-    auto input_len = input.length();
-    unsigned char encrypted_bin[input_len + AES_BLOCK_SIZE];
-
-    // Although input is text, interpret as binary.
-    auto input_data = reinterpret_cast<const uint8_t*>(input.c_str());
-    int encrypted_len = 0;
-    if (encrypt_or_decrypt(key.data(), iv.data(), ProcessingMode::ENCRYPT,
-                           input_data, input_len, encrypted_bin, &encrypted_len))
-    {
-        int hex_len = 2 * encrypted_len;
-        char hex_output[hex_len + 1];
-        mxs::bin2hex(encrypted_bin, encrypted_len, hex_output);
-        rval.assign(hex_output, hex_len);
-    }
     return rval;
 }
 
@@ -390,7 +294,7 @@ string encrypt_password(const ByteVec& key, const string& input)
 
 bool load_encryption_keys()
 {
-    mxb_assert(this_unit.key.empty() && this_unit.iv.empty());
+    mxb_assert(this_unit.key.empty());
 
     string path(mxs::datadir());
     path.append("/").append(SECRETS_FILENAME);
@@ -401,7 +305,6 @@ bool load_encryption_keys()
         {
             MXB_NOTICE("Using encrypted passwords. Encryption key read from '%s'.", path.c_str());
             this_unit.key = move(ret.key);
-            this_unit.iv = move(ret.iv);
         }
         else
         {

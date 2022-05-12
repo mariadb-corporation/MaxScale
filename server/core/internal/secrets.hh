@@ -46,17 +46,13 @@ int secrets_keylen();
 int secrets_ivlen();
 
 bool        load_encryption_keys();
-std::string encrypt_password_old(const ByteVec& key, const ByteVec& iv, const std::string& input);
 std::string encrypt_password(const ByteVec& key, const std::string& input);
-
-std::string decrypt_password_old(const ByteVec& key, const ByteVec& iv, const std::string& input);
 std::string decrypt_password(const ByteVec& key, const std::string& input);
 
 struct ReadKeyResult
 {
     bool    ok {false};
     ByteVec key;
-    ByteVec iv;
 };
 
 ReadKeyResult secrets_readkeys(const std::string& filepath);

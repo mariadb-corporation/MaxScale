@@ -24,16 +24,15 @@ bool Cipher::encrypt_or_decrypt(Mode mode, const uint8_t* input, int input_len,
                                 uint8_t* output, int* output_len)
 {
     int enc = (mode == Mode::ENCRYPT) ? AES_ENCRYPT : AES_DECRYPT;
-    bool ignore_errors = (mode == Mode::DECRYPT_IGNORE_ERRORS);
     bool ok = false;
 
-    if (EVP_CipherInit_ex(m_ctx, m_cipher, nullptr, m_key, m_iv, enc) == 1 || ignore_errors)
+    if (EVP_CipherInit_ex(m_ctx, m_cipher, nullptr, m_key, m_iv, enc) == 1)
     {
         int output_written = 0;
-        if (EVP_CipherUpdate(m_ctx, output, &output_written, input, input_len) == 1 || ignore_errors)
+        if (EVP_CipherUpdate(m_ctx, output, &output_written, input, input_len) == 1)
         {
             int total_output_len = output_written;
-            if (EVP_CipherFinal_ex(m_ctx, output + total_output_len, &output_written) == 1 || ignore_errors)
+            if (EVP_CipherFinal_ex(m_ctx, output + total_output_len, &output_written) == 1)
             {
                 total_output_len += output_written;
                 *output_len = total_output_len;
