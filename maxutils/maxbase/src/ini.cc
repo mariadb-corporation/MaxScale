@@ -172,14 +172,28 @@ map_result::ParseResult parse_config_text_to_map(const std::string& config_text)
 
 std::string config_map_to_string(const map_result::Configuration& input)
 {
+    // Order the sections according to original line number. This preserves order of elemenents.
+    using MapValue = map_result::Configuration::value_type;
+    std::vector<const MapValue*> ordered_elems;
+    ordered_elems.reserve(input.size());
+    for (auto& section : input)
+    {
+        ordered_elems.push_back(&section);
+    }
+
+    auto compare = [](const MapValue* lhs, const MapValue* rhs) {
+        return lhs->second.lineno < rhs->second.lineno;
+    };
+    std::sort(ordered_elems.begin(), ordered_elems.end(), compare);
+
     string rval;
     rval.reserve(2000);
 
-    for (auto& section : input)
+    for (auto* section : ordered_elems)
     {
-        rval.append("[").append(section.first).append("]\n");
+        rval.append("[").append(section->first).append("]\n");
 
-        auto& kvs = section.second.key_values;
+        auto& kvs = section->second.key_values;
         for (auto& kv : kvs)
         {
             rval.append(kv.first).append("=").append(kv.second.value).append("\n");
