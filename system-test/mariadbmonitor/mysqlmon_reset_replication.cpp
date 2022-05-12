@@ -92,7 +92,7 @@ void test_main(TestConnections& test)
     {
         // Use the reset-replication command to magically fix the situation.
         test.tprintf("Running reset-replication to fix the situation.");
-        test.maxctrl("call command mariadbmon reset-replication MySQL-Monitor server2");
+        test.maxctrl("call command mariadbmon reset-replication MariaDB-Monitor server2");
         mxs.wait_for_monitor();
         // Add another event to force gtid forward.
         maxconn = mxs.open_rwsplit_connection2();
@@ -116,7 +116,7 @@ void test_main(TestConnections& test)
 
         // Finally, switchover back and erase table
         test.tprintf("Running switchover.");
-        mxs.maxctrl("call command mariadbmon switchover MySQL-Monitor");
+        mxs.maxctrl("call command mariadbmon switchover MariaDB-Monitor");
         mxs.wait_for_monitor();
         status = mxs.get_servers();
         status.print();

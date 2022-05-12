@@ -93,7 +93,7 @@ void run(TestConnections& test)
         test.maxctrl("call command mariadbmon async-switchover MySQL-Monitor server1");
         // Wait a bit so switch completes, then fetch results.
         mxs.wait_for_monitor(2);
-        auto res = test.maxctrl("call command mariadbmon fetch-cmd-results MySQL-Monitor");
+        auto res = test.maxctrl("call command mariadbmon fetch-cmd-result MySQL-Monitor");
         const char cmdname[] = "fetch-cmd-results";
         test.expect(res.rc == 0, "%s failed: %s", cmdname, res.output.c_str());
         if (test.ok())

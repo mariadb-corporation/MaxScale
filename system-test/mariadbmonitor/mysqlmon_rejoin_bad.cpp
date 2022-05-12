@@ -130,9 +130,9 @@ int main(int argc, char** argv)
     }
 
     cout << "Reseting cluster...\n";
-    string reset_cmd = "maxctrl call command mysqlmon reset-replication MySQL-Monitor server1";
+    string reset_cmd = "maxctrl call command mariadbmon reset-replication MariaDB-Monitor server1";
     test.maxscale->ssh_output(reset_cmd);
-    test.maxscale->wait_for_monitor(1);
+    test.maxscale->sleep_and_wait_for_monitor(1, 2);
     test.expect(get_master_server_id(test) == 1, "server1 is not the master when it should. "
                                                  "reset-replication must have failed.");
     return test.global_result;

@@ -17,7 +17,7 @@ backend_write_timeout=10s
 auto_failover=true
 auto_rejoin=true
 switchover_on_low_disk_space=true
-disk_space_check_interval=2000
+disk_space_check_interval=2s
 disk_space_threshold=/:90
 
 [RW-Split-Router]

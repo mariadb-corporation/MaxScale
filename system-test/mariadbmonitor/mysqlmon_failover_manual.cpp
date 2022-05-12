@@ -45,8 +45,8 @@ int main(int argc, char** argv)
     // Instead of normal manual failover, check that async-failover works.
     mxs.maxctrl("call command mariadbmon async-failover MySQL-Monitor");
     mxs.wait_for_monitor(2);
-    auto res = test.maxctrl("call command mariadbmon fetch-cmd-results MySQL-Monitor");
-    test.expect(res.rc == 0, "fetch-cmd-results failed: %s", res.output.c_str());
+    auto res = test.maxctrl("call command mariadbmon fetch-cmd-result MySQL-Monitor");
+    test.expect(res.rc == 0, "fetch-cmd-result failed: %s", res.output.c_str());
     if (test.ok())
     {
         // The output is a json string. Check that it includes the success-message.
