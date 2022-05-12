@@ -253,6 +253,7 @@ public:
     bool schedule_cs_set_readonly(std::chrono::seconds timeout, json_t** error_out);
     bool schedule_cs_set_readwrite(std::chrono::seconds timeout, json_t** error_out);
 
+    bool schedule_rebuild_server(SERVER* target, SERVER* source, json_t** error_out);
     bool is_cluster_owner() const override;
 
     mxs::config::Configuration& configuration() override final;
@@ -499,6 +500,9 @@ private:
         std::string cs_admin_base_path; /* ColumnStore rest-api base path */
         std::string cs_admin_api_key;   /* ColumnStore rest-api key */
 
+        std::string ssh_user;           /**< SSH username for accessing servers */
+        std::string ssh_keyfile;        /**< SSH keyfile for accessing server */
+
     private:
         MariaDBMonitor* m_monitor;
     };
@@ -567,6 +571,7 @@ private:
     ManualCommand::Result manual_rejoin(SERVER* rejoin_cand_srv);
     ManualCommand::Result manual_reset_replication(SERVER* master_server);
     ManualCommand::Result manual_release_locks();
+    ManualCommand::Result manual_rebuild_server(SERVER* target, SERVER* source);
     void                  handle_low_disk_space_master();
     void                  handle_auto_failover();
     void                  handle_auto_rejoin();

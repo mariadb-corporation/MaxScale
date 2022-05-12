@@ -42,6 +42,7 @@ const char cs_start_cluster_cmd[] = "cs-start-cluster";
 const char cs_stop_cluster_cmd[] = "cs-stop-cluster";
 const char cs_set_readonly_cmd[] = "cs-set-readonly";
 const char cs_set_readwrite_cmd[] = "cs-set-readwrite";
+const char rebuild_server_cmd[] = "rebuild-server";
 
 bool manual_switchover(ExecMode mode, const MODULECMD_ARG* args, json_t** error_out);
 bool manual_failover(ExecMode mode, const MODULECMD_ARG* args, json_t** output);
@@ -208,6 +209,14 @@ bool handle_async_cs_set_readwrite(const MODULECMD_ARG* args, json_t** output)
         return mon->schedule_cs_set_readwrite(timeout, output);
     };
     return async_cs_run_cmd_with_timeout(func, args, output);
+}
+
+bool handle_async_rebuild_server(const MODULECMD_ARG* args, json_t** output)
+{
+    auto* mon = static_cast<MariaDBMonitor*>(args->argv[0].value.monitor);
+    SERVER* target = args->argv[1].value.server;
+    SERVER* source = args->argv[2].value.server;
+    return mon->schedule_rebuild_server(target, source, output);
 }
 
 /**
@@ -586,6 +595,18 @@ void register_monitor_commands()
                                handle_async_cs_set_readwrite,
                                MXS_ARRAY_NELEMS(csmon_cmd_timeout_argv), csmon_cmd_timeout_argv,
                                "Set ColumnStore cluster readwrite. Does not wait for completion.");
+
+    const modulecmd_arg_type_t rebuild_server_argv[] =
+    {
+        { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
+        { MODULECMD_ARG_SERVER, "Target server" },
+        { MODULECMD_ARG_SERVER, "Source server" }
+    };
+
+    modulecmd_register_command(MXB_MODULE_NAME, "rebuild-server", MODULECMD_TYPE_ACTIVE,
+                               handle_async_rebuild_server,
+                               MXS_ARRAY_NELEMS(rebuild_server_argv), rebuild_server_argv,
+                               "Rebuild a server with mariabackup. Does not wait for completion.");
 }
 
 bool MariaDBMonitor::run_manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out)
@@ -1082,4 +1103,63 @@ MariaDBMonitor::run_cs_rest_cmd(HttpCmd httcmd, const std::string& rest_cmd, con
 
         return check_cs_rest_result(response);
     }
+}
+
+bool MariaDBMonitor::schedule_rebuild_server(SERVER* target, SERVER* source, json_t** error_out)
+{
+    auto func = [this, target, source]() {
+        return manual_rebuild_server(target, source);
+    };
+    return schedule_manual_command(func, rebuild_server_cmd, error_out);
+}
+
+MariaDBMonitor::ManualCommand::Result
+MariaDBMonitor::manual_rebuild_server(SERVER* target_srv, SERVER* source_srv)
+{
+    auto* target = get_server(target_srv);
+    auto* source = get_server(source_srv);
+
+    ManualCommand::Result rval;
+
+    bool target_ok = true;
+    bool source_ok = true;
+    bool ssh_settings_ok = true;
+    const char wrong_state_fmt[] = "Server '%s' is already a %s, cannot rebuild it.";
+
+    // The following do not actually prevent rebuilding, they are just safeguards against user errors.
+    if (target->is_master())
+    {
+        PRINT_MXS_JSON_ERROR(&rval.output, wrong_state_fmt, target->name(), "master");
+        target_ok = false;
+    }
+    else if (target->is_relay_master())
+    {
+        PRINT_MXS_JSON_ERROR(&rval.output, wrong_state_fmt, target->name(), "relay");
+        target_ok = false;
+    }
+    else if (target->is_slave())
+    {
+        PRINT_MXS_JSON_ERROR(&rval.output, wrong_state_fmt, target->name(), "slave");
+        target_ok = false;
+    }
+
+    if (!source->is_slave() && !source->is_master())
+    {
+        PRINT_MXS_JSON_ERROR(&rval.output,
+                             "Server '%s' is neither a master or slave, cannot use it as source.",
+                             source->name());
+        source_ok = false;
+    }
+
+    if (m_settings.ssh_user.empty())
+    {
+        PRINT_MXS_JSON_ERROR(&rval.output,
+                             "'%s' is not set. %s requires ssh access to servers.",
+                             CONFIG_SSH_USER, rebuild_server_cmd);
+    }
+    if (target_ok && source_ok)
+    {
+        rval.success = true;
+    }
+    return rval;
 }

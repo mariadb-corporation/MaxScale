@@ -239,6 +239,11 @@ cfg::ParamString s_cs_admin_base_path(&s_spec, "cs_admin_base_path",
 cfg::ParamString s_cs_admin_api_key(&s_spec, "cs_admin_api_key",
     "The API key used in communication with the ColumnStore admin daemon.", "");
 
+cfg::ParamString s_ssh_user(&s_spec, CONFIG_SSH_USER, "SSH username. Used for accessing servers.", "");
+
+cfg::ParamPath s_ssh_keyfile(&s_spec, "ssh_keyfile", "SSH keyfile. Used for accessing servers.",
+                             cfg::ParamPath::R | cfg::ParamPath::F, "");
+
 template<class Params>
 bool Spec::do_post_validate(Params params) const
 {
@@ -430,6 +435,8 @@ MariaDBMonitor::Settings::Settings(const std::string& name, MariaDBMonitor* moni
     add_native(&Settings::cs_admin_port, &s_cs_admin_port);
     add_native(&Settings::cs_admin_base_path, &s_cs_admin_base_path);
     add_native(&Settings::cs_admin_api_key, &s_cs_admin_api_key);
+    add_native(&Settings::ssh_user, &s_ssh_user);
+    add_native(&Settings::ssh_keyfile, &s_ssh_keyfile);
 }
 
 bool MariaDBMonitor::Settings::post_configure(const std::map<std::string,

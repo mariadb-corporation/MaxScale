@@ -46,6 +46,7 @@ extern const int PORT_UNKNOWN;
 extern const char* const CN_HANDLE_EVENTS;
 extern const char* SERVER_LOCK_NAME;
 extern const char* MASTER_LOCK_NAME;
+constexpr char CONFIG_SSH_USER[] = "ssh_user";
 
 // Helper class for concatenating strings with a delimiter.
 class DelimitedPrinter
