@@ -70,6 +70,16 @@ public:
     mxb::Json v1_servers() const;
 
     /**
+     * @return The JSON object corresponding to /v1/services/:id:
+     */
+    mxb::Json v1_services(const std::string& id) const;
+
+    /**
+     * @return The JSON object corresponding to /v1/services.
+     */
+    mxb::Json v1_services() const;
+
+    /**
      * POST request to /v1/maxscale/modules/:module:/:command:?instance[&param...]
      *
      * @param module    Module name.

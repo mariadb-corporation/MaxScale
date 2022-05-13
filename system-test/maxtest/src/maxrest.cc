@@ -50,6 +50,20 @@ mxb::Json MaxRest::v1_servers() const
     return curl_get("servers");
 }
 
+mxb::Json MaxRest::v1_services(const string& id) const
+{
+    string path("services");
+    path += "/";
+    path += id;
+
+    return curl_get(path);
+}
+
+mxb::Json MaxRest::v1_services() const
+{
+    return curl_get("services");
+}
+
 void MaxRest::v1_maxscale_modules(const string& module,
                                   const string& command,
                                   const string& instance,
