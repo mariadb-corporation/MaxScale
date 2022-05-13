@@ -15,6 +15,7 @@
 #include <maxbase/ccdefs.hh>
 
 #include <cstring>
+#include <vector>
 
 #include <openssl/evp.h>
 
@@ -23,6 +24,14 @@ namespace maxbase
 class Cipher
 {
 public:
+
+    enum AesMode
+    {
+        AES_CTR,
+        AES_CBC,
+        AES_GCM,    // TODO: Implement
+        AES_CCM,    // TODO: Implement
+    };
 
     Cipher(const Cipher&) = delete;
     Cipher& operator=(const Cipher&) = delete;
@@ -33,11 +42,56 @@ public:
     /**
      * Creates a new Cipher
      *
+     * @param mode The AES cipher mode to use
+     * @param bits How many bits to use for keys. Must be one of 128, 192 or 256.
+     */
+    Cipher(AesMode mode, size_t bits);
+
+    /**
+     * Creates a new Cipher using a custom EVP cipher
+     *
      * @param cipher The EVP cipher to use
+     *
+     * @note Use this if there's no constant for the given cipher.
      */
     Cipher(const EVP_CIPHER* cipher);
 
     ~Cipher();
+
+    /**
+     * Get cipher block size
+     *
+     * @return Block size in bytes
+     */
+    size_t block_size() const;
+
+    /**
+     * Get cipher IV size
+     *
+     * @return IV size in bytes
+     */
+    size_t iv_size() const;
+
+    /**
+     * Get cipher key size
+     *
+     * @return Key size inin bytes
+     */
+    size_t key_size() const;
+
+    /**
+     * Creates a new encryption key
+     *
+     * @return The new encryption key
+     */
+    std::vector<uint8_t> new_key() const;
+
+    /**
+     * Creates a new initialization vector
+     *
+     * @return The new initialization vector
+     */
+    std::vector<uint8_t> new_iv() const;
 
     /**
      * Encrypt the input buffer to output buffer.
@@ -77,7 +131,7 @@ public:
      *
      * @param operation The operation being taken, logged as a part of the error
      */
-    void log_errors(const char* operation);
+    static void log_errors(const char* operation);
 
 private:
 

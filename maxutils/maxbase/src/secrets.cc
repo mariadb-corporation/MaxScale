@@ -13,11 +13,83 @@
 
 #include <maxbase/secrets.hh>
 #include <maxbase/log.hh>
+#include <maxbase/assert.hh>
+#include <maxbase/alloc.hh>
+
+#include <tuple>
+#include <initializer_list>
 
 #include <openssl/err.h>
+#include <openssl/rand.h>
 
 #define ENCRYPTING 1
 #define DECRYPTING 0
+
+namespace
+{
+
+using CipherFn = const EVP_CIPHER * (*)(void);
+
+constexpr CipherFn get_cipher_fn(mxb::Cipher::AesMode mode, size_t bits)
+{
+    using Mode = mxb::Cipher::AesMode;
+
+    const std::initializer_list<std::tuple<Mode, size_t, CipherFn>> ciphers =
+    {
+        {Mode::AES_CTR, 128, EVP_aes_128_ctr},
+        {Mode::AES_CTR, 192, EVP_aes_192_ctr},
+        {Mode::AES_CTR, 256, EVP_aes_256_ctr},
+
+        {Mode::AES_CBC, 128, EVP_aes_128_cbc},
+        {Mode::AES_CBC, 192, EVP_aes_192_cbc},
+        {Mode::AES_CBC, 256, EVP_aes_256_cbc},
+
+        {Mode::AES_GCM, 128, EVP_aes_128_gcm},
+        {Mode::AES_GCM, 192, EVP_aes_192_gcm},
+        {Mode::AES_GCM, 256, EVP_aes_256_gcm},
+
+        {Mode::AES_CCM, 128, EVP_aes_128_ccm},
+        {Mode::AES_CCM, 192, EVP_aes_192_ccm},
+        {Mode::AES_CCM, 256, EVP_aes_256_ccm},
+    };
+
+    for (const auto& [m, b, fn] : ciphers)
+    {
+        if (m == mode && bits == b)
+        {
+            return fn;
+        }
+    }
+
+    return nullptr;
+}
+
+static_assert(get_cipher_fn(mxb::Cipher::AES_CTR, 128) == EVP_aes_128_ctr);
+static_assert(get_cipher_fn(mxb::Cipher::AES_CBC, 256) == EVP_aes_256_cbc);
+static_assert(get_cipher_fn(mxb::Cipher::AES_GCM, 192) == EVP_aes_192_gcm);
+static_assert(get_cipher_fn(mxb::Cipher::AES_CCM, 128) == EVP_aes_128_ccm);
+
+const EVP_CIPHER* get_cipher(mxb::Cipher::AesMode mode, size_t bits)
+{
+    auto fn = get_cipher_fn(mode, bits);
+    mxb_assert_message(fn, "Unknown cipher");
+    MXB_ABORT_IF_NULL(fn);
+    return fn();
+}
+
+std::vector<uint8_t> random_bytes(int size)
+{
+    std::vector<uint8_t> key(size);
+
+    // Generate random bytes using OpenSSL.
+    if (RAND_bytes(key.data(), size) != 1)
+    {
+        key.clear();
+    }
+
+    return key;
+}
+}
 
 namespace maxbase
 {
@@ -61,7 +133,7 @@ bool Cipher::decrypt(const uint8_t* key, const uint8_t* iv,
     return encrypt_or_decrypt(m_cipher, DECRYPTING, key, iv, in, in_len, out, out_len);
 }
 
-
+// static
 void Cipher::log_errors(const char* operation)
 {
     // It's unclear how thread(unsafe) OpenSSL error functions are. Minimize such possibilities by
@@ -93,6 +165,11 @@ void Cipher::log_errors(const char* operation)
     }
 }
 
+Cipher::Cipher(AesMode mode, size_t bits)
+    : Cipher(get_cipher(mode, bits))
+{
+}
+
 Cipher::Cipher(const EVP_CIPHER* cipher)
     : m_ctx(EVP_CIPHER_CTX_new())
     , m_cipher(cipher)
@@ -102,5 +179,44 @@ Cipher::Cipher(const EVP_CIPHER* cipher)
 Cipher::~Cipher()
 {
     EVP_CIPHER_CTX_free(m_ctx);
+}
+
+std::vector<uint8_t> Cipher::new_key() const
+{
+    auto key = random_bytes(key_size());
+
+    if (key.empty())
+    {
+        log_errors("when creating new encryption key");
+    }
+
+    return key;
+}
+
+std::vector<uint8_t> Cipher::new_iv() const
+{
+    auto iv = random_bytes(iv_size());
+
+    if (iv.empty())
+    {
+        log_errors("when creating new initialization vector");
+    }
+
+    return iv;
+}
+
+size_t Cipher::block_size() const
+{
+    return EVP_CIPHER_block_size(m_cipher);
+}
+
+size_t Cipher::iv_size() const
+{
+    return EVP_CIPHER_iv_length(m_cipher);
+}
+
+size_t Cipher::key_size() const
+{
+    return EVP_CIPHER_key_length(m_cipher);
 }
 }
