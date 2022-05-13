@@ -16,9 +16,6 @@
 #include <cstdio>
 #include <getopt.h>
 #include <unistd.h>
-#include <openssl/err.h>
-#include <openssl/evp.h>
-#include <openssl/rand.h>
 
 #include <maxbase/log.hh>
 #include <maxscale/paths.hh>
@@ -35,8 +32,6 @@ struct option options[] =
 };
 
 const string default_user = "maxscale";
-
-ByteVec generate_encryption_key();
 
 void print_usage(const char* executable, const char* default_directory)
 {
@@ -109,24 +104,10 @@ int main(int argc, char** argv)
     }
 
     int rval = EXIT_FAILURE;
-    auto new_key = generate_encryption_key();
+    auto new_key = mxb::Cipher(SECRETS_CIPHER_MODE, SECRETS_CIPHER_BITS).new_key();
     if (!new_key.empty() && secrets_write_keys(new_key, filepath, username))
     {
         rval = EXIT_SUCCESS;
     }
     return rval;
-}
-
-ByteVec generate_encryption_key()
-{
-    int keylen = EVP_CIPHER_key_length(secrets_cipher());
-    ByteVec key(keylen);
-    // Generate random bytes using OpenSSL.
-    if (RAND_bytes(key.data(), keylen) != 1)
-    {
-        auto errornum = ERR_get_error();
-        printf("OpenSSL RAND_bytes() failed. %s.\n", ERR_error_string(errornum, nullptr));
-        key.clear();
-    }
-    return key;
 }

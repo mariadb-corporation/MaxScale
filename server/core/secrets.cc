@@ -39,7 +39,8 @@ namespace
 
 struct ThisUnit
 {
-    ByteVec key;    /**< Password decryption key, assigned at startup */
+    ByteVec     key;/**< Password decryption key, assigned at startup */
+    mxb::Cipher cipher {SECRETS_CIPHER_MODE, SECRETS_CIPHER_BITS};
 };
 ThisUnit this_unit;
 
@@ -49,42 +50,8 @@ const char field_cipher[] = "encryption_cipher";
 const char field_key[] = "encryption_key";
 const char desc[] = "MaxScale encryption/decryption key";
 
-#define SECRETS_CIPHER EVP_aes_256_cbc
-#define STRINGIFY(X)  #X
-#define STRINGIFY2(X) STRINGIFY(X)
-const char CIPHER_NAME[] = STRINGIFY2(SECRETS_CIPHER);
-
-using ProcessingMode = mxb::Cipher::Mode;
-
-bool encrypt_or_decrypt(const uint8_t* key, const uint8_t* iv, ProcessingMode mode,
-                        const uint8_t* input, int input_len, uint8_t* output, int* output_len)
-{
-    mxb::Cipher cipher(secrets_cipher(), key, iv);
-    bool ok = cipher.encrypt_or_decrypt(mode, input, input_len, output, output_len);
-
-    if (!ok)
-    {
-        const char* operation = (mode == ProcessingMode::ENCRYPT) ? "when encrypting password" :
-            "when decrypting password";
-        cipher.log_errors(operation);
-    }
-    return ok;
-}
-}
-
-const EVP_CIPHER* secrets_cipher()
-{
-    return SECRETS_CIPHER();
-}
-
-int secrets_keylen()
-{
-    return EVP_CIPHER_key_length(secrets_cipher());
-}
-
-int secrets_ivlen()
-{
-    return EVP_CIPHER_iv_length(secrets_cipher());
+// Note: this must be EVP_aes_256_cbc, otherwise the code discards the key as invalid.
+const char CIPHER_NAME[] = "EVP_aes_256_cbc";
 }
 
 /**
@@ -100,9 +67,11 @@ ReadKeyResult secrets_readkeys(const string& filepath)
     ReadKeyResult rval;
     auto filepathc = filepath.c_str();
 
-    const int binary_key_len = secrets_keylen();
-    const int binary_iv_len = secrets_ivlen();
+    // Old files stored their data as the concatenation of the private key (32 bytes) and the IV (16 bytes).
+    const int binary_key_len = EVP_CIPHER_key_length(EVP_aes_256_cbc());
+    const int binary_iv_len = EVP_CIPHER_iv_length(EVP_aes_256_cbc());
     const int binary_total_len = binary_key_len + binary_iv_len;
+    mxb_assert(binary_total_len == 32 + 16);
 
     // Before opening the file, check its size and permissions.
     struct stat filestats { 0 };
@@ -232,7 +201,7 @@ string decrypt_password(const ByteVec& key, const std::string& input)
 
     // Extract IV.
     auto ptr = input.data();
-    int iv_bin_len = secrets_ivlen();
+    int iv_bin_len = this_unit.cipher.iv_size();
     int iv_hex_len = 2 * iv_bin_len;
     uint8_t iv_bin[iv_bin_len];
     if (total_hex_len >= iv_hex_len)
@@ -246,12 +215,16 @@ string decrypt_password(const ByteVec& key, const std::string& input)
 
         uint8_t decrypted[encrypted_bin_len];   // Decryption output cannot be longer than input data.
         int decrypted_len = 0;
-        if (encrypt_or_decrypt(key.data(), iv_bin, ProcessingMode::DECRYPT, encrypted_bin, encrypted_bin_len,
-                               decrypted, &decrypted_len))
+        if (this_unit.cipher.decrypt(key.data(), iv_bin, encrypted_bin, encrypted_bin_len,
+                                     decrypted, &decrypted_len))
         {
             // Decrypted data should be text.
             auto output_data = reinterpret_cast<const char*>(decrypted);
             rval.assign(output_data, decrypted_len);
+        }
+        else
+        {
+            this_unit.cipher.log_errors("when decrypting password");
         }
     }
 
@@ -262,33 +235,37 @@ string encrypt_password(const ByteVec& key, const string& input)
 {
     string rval;
     // Generate random IV.
-    auto ivlen = secrets_ivlen();
-    unsigned char iv_bin[ivlen];
-    if (RAND_bytes(iv_bin, ivlen) != 1)
+    auto iv = this_unit.cipher.new_iv();
+
+    if (iv.empty())
     {
-        printf("OpenSSL RAND_bytes() failed. %s.\n", ERR_error_string(ERR_get_error(), nullptr));
         return rval;
     }
 
     // Output can be a block length longer than input.
     auto input_len = input.length();
-    unsigned char encrypted_bin[input_len + EVP_CIPHER_block_size(secrets_cipher())];
+    unsigned char encrypted_bin[input_len + this_unit.cipher.block_size()];
 
     // Although input is text, interpret as binary.
     auto input_data = reinterpret_cast<const uint8_t*>(input.c_str());
     int encrypted_len = 0;
-    if (encrypt_or_decrypt(key.data(), iv_bin, ProcessingMode::ENCRYPT,
-                           input_data, input_len, encrypted_bin, &encrypted_len))
+
+    if (this_unit.cipher.encrypt(key.data(), iv.data(), input_data, input_len, encrypted_bin, &encrypted_len))
     {
         // Form one string with IV in front.
-        int iv_hex_len = 2 * ivlen;
+        int iv_hex_len = 2 * iv.size();
         int encrypted_hex_len = 2 * encrypted_len;
         int total_hex_len = iv_hex_len + encrypted_hex_len;
         char hex_output[total_hex_len + 1];
-        mxs::bin2hex(iv_bin, ivlen, hex_output);
+        mxs::bin2hex(iv.data(), iv.size(), hex_output);
         mxs::bin2hex(encrypted_bin, encrypted_len, hex_output + iv_hex_len);
         rval.assign(hex_output, total_hex_len);
     }
+    else
+    {
+        this_unit.cipher.log_errors("when encrypting password");
+    }
+
     return rval;
 }
 

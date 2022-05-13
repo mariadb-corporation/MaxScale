@@ -17,33 +17,16 @@
  */
 
 #include <maxscale/secrets.hh>
+#include <maxbase/secrets.hh>
 #include <memory>
 
 using ByteVec = std::vector<uint8_t>;
 
-struct evp_cipher_st;
 extern const char* const SECRETS_FILENAME;
 
-/**
- * Returns the cipher used for password encryption.
- *
- * @return Cipher
- */
-const evp_cipher_st* secrets_cipher();
-
-/**
- * Returns encryption key length.
- *
- * @return Encryption key length
- */
-int secrets_keylen();
-
-/**
- * Returns initialization vector length.
- *
- * @return initialization vector length
- */
-int secrets_ivlen();
+// Don't change these: they must be 256-bit AES CBC to support passwords created with MaxScale 2.5.
+constexpr auto SECRETS_CIPHER_MODE = mxb::Cipher::AES_CBC;
+constexpr size_t SECRETS_CIPHER_BITS = 256;
 
 bool        load_encryption_keys();
 std::string encrypt_password(const ByteVec& key, const std::string& input);
