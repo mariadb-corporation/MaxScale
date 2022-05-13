@@ -24,12 +24,6 @@ class Cipher
 {
 public:
 
-    enum class Mode
-    {
-        ENCRYPT,
-        DECRYPT,
-    };
-
     Cipher(const Cipher&) = delete;
     Cipher& operator=(const Cipher&) = delete;
 
@@ -40,47 +34,43 @@ public:
      * Creates a new Cipher
      *
      * @param cipher The EVP cipher to use
-     * @param key    The encryption key
-     * @param iv     The initialization vector
      */
-    Cipher(const EVP_CIPHER* cipher, const uint8_t* key, const uint8_t* iv)
-        : m_ctx(EVP_CIPHER_CTX_new())
-        , m_cipher(cipher)
-    {
-        memcpy(m_key, key, EVP_CIPHER_key_length(cipher));
-        memcpy(m_iv, iv, EVP_CIPHER_iv_length(cipher));
-    }
+    Cipher(const EVP_CIPHER* cipher);
 
-    ~Cipher()
-    {
-        EVP_CIPHER_CTX_free(m_ctx);
-    }
+    ~Cipher();
 
     /**
-     * Encrypt or decrypt the input buffer to output buffer.
+     * Encrypt the input buffer to output buffer.
      *
-     * @param mode Encrypting or decrypting
-     * @param input Input buffer
-     * @param input_len Input length
-     * @param output Output buffer
+     * @param key        Encryption key to use, must be of the right size for the given cipher
+     * @param iv         Initialization vector
+     * @param input      Input buffer
+     * @param input_len  Input length
+     * @param output     Output buffer
      * @param output_len Produced output length is written here
      *
      * @return True on success
      */
-    bool encrypt_or_decrypt(Mode mode, const uint8_t* input, int input_len,
-                            uint8_t* output, int* output_len);
+    bool encrypt(const uint8_t* key, const uint8_t* iv,
+                 const uint8_t* in, int in_len,
+                 uint8_t* out, int* out_len);
 
-    // Helper for encrypting
-    bool encrypt(const uint8_t* in, int in_len, uint8_t* out, int* out_len)
-    {
-        return encrypt_or_decrypt(Mode::ENCRYPT, in, in_len, out, out_len);
-    }
 
-    // Helper for decrypting
-    bool decrypt(const uint8_t* in, int in_len, uint8_t* out, int* out_len)
-    {
-        return encrypt_or_decrypt(Mode::DECRYPT, in, in_len, out, out_len);
-    }
+    /**
+     * Decrypt the input buffer to output buffer.
+     *
+     * @param key        Encryption key to use, must be of the right size for the given cipher
+     * @param iv         Initialization vector
+     * @param input      Input buffer
+     * @param input_len  Input length
+     * @param output     Output buffer
+     * @param output_len Produced output length is written here
+     *
+     * @return True on success
+     */
+    bool decrypt(const uint8_t* key, const uint8_t* iv,
+                 const uint8_t* in, int in_len,
+                 uint8_t* out, int* out_len);
 
     /**
      * Log encryption errors
@@ -90,9 +80,13 @@ public:
     void log_errors(const char* operation);
 
 private:
+
+    bool encrypt_or_decrypt(const EVP_CIPHER* cipher, int enc,
+                            const uint8_t* key, const uint8_t* iv,
+                            const uint8_t* input, int input_len,
+                            uint8_t* output, int* output_len);
+
     EVP_CIPHER_CTX*   m_ctx;
     const EVP_CIPHER* m_cipher;
-    uint8_t           m_key[EVP_MAX_KEY_LENGTH];
-    uint8_t           m_iv[EVP_MAX_IV_LENGTH];
 };
 }

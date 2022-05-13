@@ -14,19 +14,22 @@
 #include <maxbase/secrets.hh>
 #include <maxbase/log.hh>
 
-#include <openssl/aes.h>
 #include <openssl/err.h>
+
+#define ENCRYPTING 1
+#define DECRYPTING 0
 
 namespace maxbase
 {
 
-bool Cipher::encrypt_or_decrypt(Mode mode, const uint8_t* input, int input_len,
+bool Cipher::encrypt_or_decrypt(const EVP_CIPHER* cipher, int enc,
+                                const uint8_t* key, const uint8_t* iv,
+                                const uint8_t* input, int input_len,
                                 uint8_t* output, int* output_len)
 {
-    int enc = (mode == Mode::ENCRYPT) ? AES_ENCRYPT : AES_DECRYPT;
     bool ok = false;
 
-    if (EVP_CipherInit_ex(m_ctx, m_cipher, nullptr, m_key, m_iv, enc) == 1)
+    if (EVP_CipherInit_ex(m_ctx, cipher, nullptr, key, iv, enc) == 1)
     {
         int output_written = 0;
         if (EVP_CipherUpdate(m_ctx, output, &output_written, input, input_len) == 1)
@@ -43,6 +46,21 @@ bool Cipher::encrypt_or_decrypt(Mode mode, const uint8_t* input, int input_len,
 
     return ok;
 }
+
+bool Cipher::encrypt(const uint8_t* key, const uint8_t* iv,
+                     const uint8_t* in, int in_len,
+                     uint8_t* out, int* out_len)
+{
+    return encrypt_or_decrypt(m_cipher, ENCRYPTING, key, iv, in, in_len, out, out_len);
+}
+
+bool Cipher::decrypt(const uint8_t* key, const uint8_t* iv,
+                     const uint8_t* in, int in_len,
+                     uint8_t* out, int* out_len)
+{
+    return encrypt_or_decrypt(m_cipher, DECRYPTING, key, iv, in, in_len, out, out_len);
+}
+
 
 void Cipher::log_errors(const char* operation)
 {
@@ -73,5 +91,16 @@ void Cipher::log_errors(const char* operation)
             errornum2 = ERR_get_error();
         }
     }
+}
+
+Cipher::Cipher(const EVP_CIPHER* cipher)
+    : m_ctx(EVP_CIPHER_CTX_new())
+    , m_cipher(cipher)
+{
+}
+
+Cipher::~Cipher()
+{
+    EVP_CIPHER_CTX_free(m_ctx);
 }
 }
