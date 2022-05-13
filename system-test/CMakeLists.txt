@@ -902,6 +902,9 @@ add_test_executable(mxs3924_sescmd_retry.cc mxs3924_sescmd_retry mxs3924_sescmd_
 add_test_executable_ex(NAME idle_pool_max_conns SOURCE idle_pool_max_conns.cc CONFIG idle_pool_max_conns.cnf
         VMS repl_backend)
 
+# Auto_tune
+add_test_executable(auto_tune.cpp auto_tune auto_tune LABELS REPL_BACKEND)
+
 ############################################
 # END: Normal tests                        #
 ############################################
