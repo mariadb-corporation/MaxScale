@@ -343,7 +343,9 @@ void RWSplitSession::manage_transactions(RWBackend* backend, GWBUF* writebuf, co
         // Never add something we should ignore into the transaction. The checksum is calculated from the
         // response that is sent upstream via clientReply and this is implied by `should_ignore_response()`
         // being false.
-        if (!backend->should_ignore_response() && m_wait_gtid != READING_GTID)
+        if (!backend->should_ignore_response()
+            && m_wait_gtid != READING_GTID
+            && m_wait_gtid != GTID_READ_DONE)
         {
             int64_t size = m_trx.size() + m_current_query.length();
 
