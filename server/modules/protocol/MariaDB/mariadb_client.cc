@@ -1185,8 +1185,8 @@ bool MariaDBClientConnection::record_for_history(GWBUF& buffer, uint8_t cmd)
             auto it = std::find_if(m_session_data->history.begin(),
                                    m_session_data->history.end(),
                                    [&](const auto& a) {
-                                       return a.id() == id;
-                                   });
+                return a.id() == id;
+            });
 
             if (it != m_session_data->history.end())
             {
@@ -1845,84 +1845,84 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, bool 
     auto origin = mxs::RoutingWorker::get_current();
 
     auto func = [this, info, ref, origin, send_ok]() {
-            // First, gather the list of servers where the KILL should be sent
-            mxs::RoutingWorker::execute_concurrently(
-                [info, ref]() {
-                    dcb_foreach_local(info->cb, info.get());
-                });
+        // First, gather the list of servers where the KILL should be sent
+        mxs::RoutingWorker::execute_concurrently(
+            [info, ref]() {
+            dcb_foreach_local(info->cb, info.get());
+        });
 
-            // TODO: This doesn't handle the case where a session is moved from one worker to another while
-            // this was being executed on the MainWorker.
+        // TODO: This doesn't handle the case where a session is moved from one worker to another while
+        // this was being executed on the MainWorker.
 
-            // Then move execution back to the original worker to keep all connections on the same thread
-            origin->call(
-                [this, info, ref, origin, send_ok]() {
-                    for (const auto& a : info->targets)
+        // Then move execution back to the original worker to keep all connections on the same thread
+        origin->call(
+            [this, info, ref, origin, send_ok]() {
+            for (const auto& a : info->targets)
+            {
+                std::unique_ptr<LocalClient> client(LocalClient::create(info->session, a.first));
+
+                if (client)
+                {
+                    if (client->connect())
                     {
-                        std::unique_ptr<LocalClient> client(LocalClient::create(info->session, a.first));
+                        // TODO: There can be multiple connections to the same server. Currently only
+                        // one connection per server is killed.
+                        MXB_INFO("KILL on '%s': %s", a.first->name(), a.second.c_str());
 
-                        if (client)
+                        if (!client->queue_query(modutil_create_query(a.second.c_str()))
+                            || !client->queue_query(mysql_create_com_quit(NULL, 0)))
                         {
-                            if (client->connect())
-                            {
-                                // TODO: There can be multiple connections to the same server. Currently only
-                                // one connection per server is killed.
-                                MXB_INFO("KILL on '%s': %s", a.first->name(), a.second.c_str());
-
-                                if (!client->queue_query(modutil_create_query(a.second.c_str()))
-                                    || !client->queue_query(mysql_create_com_quit(NULL, 0)))
-                                {
-                                    MXB_INFO("Failed to route all KILL queries to '%s'", a.first->name());
-                                }
-                                else
-                                {
-                                    mxb_assert(ref->state() != MXS_SESSION::State::STOPPING);
-                                    add_local_client(client.release());
-                                }
-                            }
-                            else
-                            {
-                                MXB_INFO("Failed to connect LocalClient to '%s'", a.first->name());
-                            }
+                            MXB_INFO("Failed to route all KILL queries to '%s'", a.first->name());
                         }
                         else
                         {
-                            MXB_INFO("Failed to create LocalClient to '%s'", a.first->name());
+                            mxb_assert(ref->state() != MXS_SESSION::State::STOPPING);
+                            add_local_client(client.release());
                         }
                     }
+                    else
+                    {
+                        MXB_INFO("Failed to connect LocalClient to '%s'", a.first->name());
+                    }
+                }
+                else
+                {
+                    MXB_INFO("Failed to create LocalClient to '%s'", a.first->name());
+                }
+            }
 
-                    // Now wait for the COM_QUIT to close the connections.
-                    auto wait_for_conns = [this, ref, send_ok](mxb::Worker::Callable::Action action){
-                            bool rv = true;
+            // Now wait for the COM_QUIT to close the connections.
+            auto wait_for_conns = [this, ref, send_ok](mxb::Worker::Callable::Action action){
+                bool rv = true;
 
-                            if (action == mxb::Worker::Callable::CANCEL || !this->have_local_clients())
-                            {
-                                // Check if the DCB is still open. If MaxScale is shutting down, the DCB is
-                                // already closed when this callback is called and an error about a write to a
-                                // closed DCB would be logged.
-                                if (m_dcb->is_open() && send_ok)
-                                {
-                                    this->write_ok_packet(1);
-                                }
-                                else
-                                {
-                                    MXB_INFO("Not sending OK packet. Client is %s connected.",
-                                             m_dcb->is_open() ? "still" : "not");
-                                }
+                if (action == mxb::Worker::Callable::CANCEL || !this->have_local_clients())
+                {
+                    // Check if the DCB is still open. If MaxScale is shutting down, the DCB is
+                    // already closed when this callback is called and an error about a write to a
+                    // closed DCB would be logged.
+                    if (m_dcb->is_open() && send_ok)
+                    {
+                        this->write_ok_packet(1);
+                    }
+                    else
+                    {
+                        MXB_INFO("Not sending OK packet. Client is %s connected.",
+                                 m_dcb->is_open() ? "still" : "not");
+                    }
 
-                                session_put_ref(ref);
-                                MXB_INFO("All KILL commands finished");
-                                rv = false;
-                            }
+                    session_put_ref(ref);
+                    MXB_INFO("All KILL commands finished");
+                    rv = false;
+                }
 
-                            return rv;
-                        };
+                return rv;
+            };
 
-                    // TODO: Polling for this is slow. A callback in the LocalClient's destructor would be
-                    // better as it would close the connection as soon as possible.
-                    ref->dcall(100ms, wait_for_conns);
-                }, mxs::RoutingWorker::EXECUTE_AUTO);
-        };
+            // TODO: Polling for this is slow. A callback in the LocalClient's destructor would be
+            // better as it would close the connection as soon as possible.
+            ref->dcall(100ms, wait_for_conns);
+        }, mxs::RoutingWorker::EXECUTE_AUTO);
+    };
 
     mxs::MainWorker::get()->execute(func, mxb::Worker::EXECUTE_QUEUED);
 }
@@ -1930,14 +1930,15 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, bool 
 std::string kill_query_prefix(MariaDBClientConnection::kill_type_t type)
 {
     using Type = MariaDBClientConnection::kill_type_t;
-    const char* hard = (type & Type::KT_HARD) ? "HARD " : (type & Type::KT_SOFT) ? "SOFT " : "";
-    const char* query = (type & Type::KT_QUERY) ? "QUERY " : "";
+    const char* hard = type & Type::KT_HARD ? "HARD " : (type & Type::KT_SOFT ? "SOFT " : "");
+    const char* query = type & Type::KT_QUERY ? "QUERY " : "";
     std::stringstream ss;
     ss << "KILL " << hard << query;
     return ss.str();
 }
 
-void MariaDBClientConnection::mxs_mysql_execute_kill(uint64_t target_id, MariaDBClientConnection::kill_type_t type)
+void MariaDBClientConnection::mxs_mysql_execute_kill(uint64_t target_id,
+                                                     MariaDBClientConnection::kill_type_t type)
 {
     auto str = kill_query_prefix(type);
     auto info = std::make_shared<ConnKillInfo>(target_id, str, m_session, 0);
@@ -2956,8 +2957,8 @@ void MariaDBClientConnection::add_local_client(LocalClient* client)
 {
     // Prune stale LocalClients before adding the new one
     auto it = std::remove_if(m_local_clients.begin(), m_local_clients.end(), [](const auto& client) {
-                                 return !client->is_open();
-                             });
+        return !client->is_open();
+    });
 
     m_local_clients.erase(it, m_local_clients.end());
 
