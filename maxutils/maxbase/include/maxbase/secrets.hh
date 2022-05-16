@@ -142,6 +142,20 @@ public:
      */
     static void log_errors(const char* operation);
 
+    /**
+     * Get latest encryption errors
+     *
+     * @return The human-readable error message
+     */
+    static std::string get_errors();
+
+    /**
+     * Prints the human-readable identifier for the cipher
+     *
+     * @return The human-readable name of the cipher
+     */
+    std::string to_string() const;
+
 private:
 
     bool encrypt_or_decrypt(const EVP_CIPHER* cipher, int enc,

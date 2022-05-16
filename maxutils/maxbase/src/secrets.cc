@@ -15,6 +15,7 @@
 #include <maxbase/log.hh>
 #include <maxbase/assert.hh>
 #include <maxbase/alloc.hh>
+#include <maxbase/string.hh>
 
 #include <tuple>
 #include <initializer_list>
@@ -167,33 +168,24 @@ bool Cipher::decrypt(const uint8_t* key, const uint8_t* iv,
 // static
 void Cipher::log_errors(const char* operation)
 {
-    // It's unclear how thread(unsafe) OpenSSL error functions are. Minimize such possibilities by
-    // using a local buffer.
-    constexpr size_t bufsize = 256;     // Should be enough according to some googling.
-    char buf[bufsize];
-    buf[0] = '\0';
+    MXB_ERROR("OpenSSL error %s. %s", operation, get_errors().c_str());
+}
 
-    auto errornum = ERR_get_error();
-    auto errornum2 = ERR_get_error();
-    ERR_error_string_n(errornum, buf, bufsize);
+// static
+std::string Cipher::get_errors()
+{
+    std::vector<std::string> errors;
 
-    if (errornum2 == 0)
+    while (auto errornum = ERR_get_error())
     {
-        // One error.
-        MXB_ERROR("OpenSSL error %s. %s", operation, buf);
+        // It's unclear how thread(un)safe OpenSSL error functions are. Minimize such possibilities by
+        // using a local buffer. The 256 bytes should be enough according to some googling.
+        char buf[256] {0};
+        ERR_error_string_n(errornum, buf, sizeof(buf));
+        errors.push_back(buf);
     }
-    else
-    {
-        // Multiple errors, print all as separate messages.
-        MXB_ERROR("Multiple OpenSSL errors %s. Detailed messages below.", operation);
-        MXB_ERROR("%s", buf);
-        while (errornum2 != 0)
-        {
-            ERR_error_string_n(errornum2, buf, bufsize);
-            MXB_ERROR("%s", buf);
-            errornum2 = ERR_get_error();
-        }
-    }
+
+    return mxb::join(errors, "; ");
 }
 
 Cipher::Cipher(AesMode mode, size_t bits)
@@ -283,5 +275,31 @@ size_t Cipher::encrypted_size(size_t len) const
         mxb_assert(!true);
         return len;
     }
+}
+
+std::string Cipher::to_string()const
+{
+    std::string mode;
+
+    switch (EVP_CIPHER_mode(m_cipher))
+    {
+    case EVP_CIPH_CBC_MODE:
+        mode = "AES_CBC_";
+        break;
+
+    case EVP_CIPH_CTR_MODE:
+        mode = "AES_CTR_";
+        break;
+
+    case EVP_CIPH_GCM_MODE:
+        mode = "AES_GCM_";
+        break;
+
+    default:
+        mode = "UNKNOWN_";
+        break;
+    }
+
+    return mode + std::to_string(key_size() * 8);
 }
 }

@@ -45,3 +45,7 @@ add_test(test_threadpool test_threadpool)
 add_executable(test_ini_parser test_ini_parser.cc)
 target_link_libraries(test_ini_parser maxbase)
 add_test(test_ini_parser test_ini_parser)
+
+add_executable(test_encryption test_encryption.cc)
+target_link_libraries(test_encryption maxbase crypto)
+add_test(test_encryption test_encryption)
