@@ -88,6 +88,7 @@ fi
 if [ ! -f "@MAXSCALE_CONFDIR@/maxscale.cnf" ]
 then
     cp @MAXSCALE_CONFDIR@/maxscale.cnf.template @MAXSCALE_CONFDIR@/maxscale.cnf
+    mkdir -p @MAXSCALE_CONFDIR@/maxscale.cnf.d/
 fi
 
 # If no logrotate config file is found, create one
