@@ -2322,11 +2322,11 @@ bool runtime_thread_rebalance(mxs::RoutingWorker& from,
 
     if (sessions.empty() || mxb::get_int(sessions, &nSessions))
     {
-        int wid_to = -1;
+        int windex_to = -1;
 
-        if (!recipient.empty() && mxb::get_int(recipient, &wid_to))
+        if (!recipient.empty() && mxb::get_int(recipient, &windex_to))
         {
-            mxs::RoutingWorker* pTo = mxs::RoutingWorker::get(wid_to);
+            mxs::RoutingWorker* pTo = mxs::RoutingWorker::get_by_index(windex_to);
 
             if (pTo)
             {
