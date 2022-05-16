@@ -232,16 +232,12 @@ bool Config::Specification::validate(json_t* pJson, std::set<std::string>* pUnre
 
 Config::Specification Config::s_specification("maxscale", config::Specification::GLOBAL);
 
-config::ParamEnum<Config::AutoTune> Config::s_auto_tune(
+Config::ParamAutoTune Config::s_auto_tune(
     &Config::s_specification,
     CN_AUTO_TUNE,
     "Specifies whether a MaxScale parameter whose value depends on a specific global server "
     "variable, should automatically be updated to match the variable's current value.",
-    {
-        {Config::AutoTune::NONE, "none"},
-        {Config::AutoTune::ALL, "all"}
-    },
-    Config::AutoTune::NONE,
+    ",", // Delimiter
     config::Param::Modifiable::AT_STARTUP);
 
 config::ParamBool Config::s_log_debug(
@@ -1002,6 +998,74 @@ bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& 
         if (whw <= wlw)
         {
             MXB_ERROR("Invalid configuration, writeq_high_water should be greater than writeq_low_water.");
+            rv = false;
+        }
+    }
+
+    return rv;
+}
+
+bool Config::ParamAutoTune::from_string(const std::string& value_as_string,
+                                        value_type* pValue,
+                                        std::string* pMessage) const
+{
+    value_type value;
+    bool rv = ParamStringList::from_string(value_as_string, &value, pMessage);
+
+    if (rv)
+    {
+        string message;
+        std::vector<std::string> unknowns;
+        auto dependencies = Service::specification()->server_dependencies();
+
+        bool all_specified = false;
+        bool some_specified = false;
+
+        for (const auto& parameter : *pValue)
+        {
+            if (parameter == CN_ALL)
+            {
+                all_specified = true;
+            }
+            else
+            {
+                bool found = false;
+                auto it = std::find_if(dependencies.begin(),
+                                       dependencies.end(),
+                                       [parameter](const auto* pDependency) {
+                                           return pDependency->parameter().name() == parameter;
+                                       });
+
+                if (it != dependencies.end())
+                {
+                    some_specified = true;
+                }
+                else
+                {
+                    unknowns.push_back(parameter);
+                }
+            }
+        }
+
+        if (all_specified && some_specified)
+        {
+            message = "If 'all' is specified for 'auto_tune', then no specific parameters can be specified.";
+        }
+        else if (!unknowns.empty())
+        {
+            message = "Unknown auto tunable parameter(s): " + mxb::join(unknowns, ",", "'");
+        }
+
+        if (message.empty())
+        {
+            *pValue = std::move(value);
+        }
+        else
+        {
+            if (pMessage)
+            {
+                *pMessage = std::move(message);
+            }
             rv = false;
         }
     }

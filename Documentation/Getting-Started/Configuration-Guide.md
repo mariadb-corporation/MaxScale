@@ -374,14 +374,15 @@ defined in the root configuration file which by default is `/etc/maxscale.cnf`.
 
 ### `auto_tune`
 
-- **Type**: enum
-- **Values**: `none`, `all`
-- **Default**: `none`
+- **Type**: string list
+- **Values**: `all` or list of auto tunable parameters, separated by `,`
+- **Default**: No
 - **Mandatory**: No
 - **Dynamic**: No
 
-Specifies whether MaxScale should set or not set all MaxScale parameters that
-can be automatically set based upon the value of some server variable.
+An _auto tunable_ parameter is a parameter whose value can be derived from a
+particular server variable. With this parameter it can be specified whether
+`all` or a specific set of parameters should automatically be set.
 
 The current auto tunable parameters are:
 

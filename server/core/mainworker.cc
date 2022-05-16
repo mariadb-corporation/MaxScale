@@ -142,18 +142,29 @@ bool MainWorker::pre_run()
 
     if (rval)
     {
-        if (Config::get().auto_tune == Config::AutoTune::ALL)
-        {
-            const auto& server_dependencies = Service::specification()->server_dependencies();
-            std::vector<std::string> parameters;
+        const auto& auto_tune = Config::get().auto_tune;
 
-            for (const auto* pDependency : server_dependencies)
+        if (!auto_tune.empty())
+        {
+            if (auto_tune.size() == 1 && auto_tune.front() == CN_ALL)
             {
-                parameters.push_back(pDependency->parameter().name());
+                const auto& server_dependencies = Service::specification()->server_dependencies();
+
+                for (const auto* pDependency : server_dependencies)
+                {
+                    m_tunables.insert(pDependency->parameter().name());
+                }
+            }
+            else
+            {
+                for (const auto& parameter : auto_tune)
+                {
+                    m_tunables.insert(parameter);
+                }
             }
 
-            MXB_NOTICE("'auto_tune' is enabled, the following parameters will be auto tuned: %s",
-                       mxb::join(parameters, ", ", "'").c_str());
+            MXB_NOTICE("The following parameters will be auto tuned: %s",
+                       mxb::join(m_tunables, ", ", "'").c_str());
 
             m_callable.dcall(5s, [this]() {
                     check_dependencies_dc();
@@ -162,7 +173,7 @@ bool MainWorker::pre_run()
         }
         else
         {
-            MXB_INFO("'auto_tune' is disabled, no auto tuning will be performed.");
+            MXB_INFO("No 'auto_tune' parameters specified, no auto tuning will be performed.");
         }
     }
 
@@ -239,7 +250,7 @@ void MainWorker::check_dependencies_dc()
 
     for (auto* pService : services)
     {
-        pService->check_server_dependencies();
+        pService->check_server_dependencies(m_tunables);
     }
 }
 

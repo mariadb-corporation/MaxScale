@@ -32,12 +32,6 @@ public:
     using seconds = std::chrono::seconds;
     using milliseconds = std::chrono::milliseconds;
 
-    enum class AutoTune
-    {
-        NONE,
-        ALL
-    };
-
     /**
      * Initialize the config object. To be called *once* at program startup.
      *
@@ -88,6 +82,16 @@ public:
      * @return A JSON object that contains the source type and the file the object was read from
      */
     static json_t* object_source_to_json(const std::string& name);
+
+    class ParamAutoTune : public config::ParamStringList
+    {
+    public:
+        using config::ParamStringList::ParamStringList;
+
+        bool from_string(const std::string& value_as_string,
+                         value_type* pValue,
+                         std::string* pMessage) const;
+    };
 
     class ParamUsersRefreshTime : public config::ParamSeconds
     {
@@ -190,7 +194,8 @@ public:
     config::Bool         skip_name_resolve;         /**< Reverse DNS lookups */
 
     // NON-modifiable automatically configured parameters.
-    AutoTune      auto_tune;                    /**< Whether dependent parmas are auto-updated. */
+    ParamAutoTune::value_type auto_tune;        /**< Vector of parameter names. */
+
     int64_t       n_threads;                    /**< Number of polling threads */
     std::string   qc_name;                      /**< The name of the query classifier to load */
     std::string   qc_args;                      /**< Arguments for the query classifieer */
@@ -263,7 +268,7 @@ private:
 
     static Specification s_specification;
 
-    static config::ParamEnum<AutoTune>                  s_auto_tune;
+    static ParamAutoTune                                s_auto_tune;
     static config::ParamBool                            s_log_debug;
     static config::ParamBool                            s_log_info;
     static config::ParamBool                            s_log_notice;

@@ -276,9 +276,11 @@ public:
     /**
      * Check server dependencies and update parameters.
      *
+     * @param parameters  The parameters that should be tuned.
+     *
      * @note Only to be called from MainWorker.
      */
-    void check_server_dependencies();
+    void check_server_dependencies(const std::set<std::string>& parameters);
 
 private:
 

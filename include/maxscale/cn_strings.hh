@@ -21,6 +21,7 @@
 constexpr char CN_ACCOUNT[] = "account";
 constexpr char CN_ADDRESS[] = "address";
 constexpr char CN_ADMIN_LOG_AUTH_FAILURES[] = "admin_log_auth_failures";
+constexpr char CN_ALL[] = "all";
 constexpr char CN_ATTRIBUTES[] = "attributes";
 constexpr char CN_AUTHENTICATOR[] = "authenticator";
 constexpr char CN_AUTHENTICATOR_OPTIONS[] = "authenticator_options";

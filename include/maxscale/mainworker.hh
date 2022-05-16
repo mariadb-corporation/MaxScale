@@ -13,6 +13,7 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
+#include <set>
 #include <unordered_set>
 #include <maxbase/stopwatch.hh>
 #include <maxbase/watchedworker.hh>
@@ -117,9 +118,10 @@ private:
     // Waits until all RoutingWorkers have stopped and then stops the MainWorker
     bool wait_for_shutdown();
 
-    Worker::Callable  m_callable;
-    IndexedStorage    m_storage;
-    mxb::Worker::DCId m_rebalancing_dc {0};
-    mxb::TimePoint    m_last_rebalancing;
+    Worker::Callable      m_callable;
+    IndexedStorage        m_storage;
+    mxb::Worker::DCId     m_rebalancing_dc {0};
+    mxb::TimePoint        m_last_rebalancing;
+    std::set<std::string> m_tunables; // Tunable parameters
 };
 }

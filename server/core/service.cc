@@ -2036,7 +2036,7 @@ bool configure_one_parameter(Service* service, const std::string& key, json_t* v
 }
 }
 
-void Service::check_server_dependencies()
+void Service::check_server_dependencies(const std::set<std::string>& parameters)
 {
     mxb_assert(MainWorker::is_main_worker());
 
@@ -2048,40 +2048,43 @@ void Service::check_server_dependencies()
 
     for (const auto* dependency : dependencies)
     {
-        const string& variable = dependency->server_variable();
-        vector<string> values;
-
-        for (const auto* server : servers)
+        if (parameters.find(dependency->parameter().name()) != parameters.end())
         {
-            auto value = server->get_variable_value(variable);
+            const string& variable = dependency->server_variable();
+            vector<string> values;
 
-            if (!value.empty())
+            for (const auto* server : servers)
             {
-                values.push_back(value);
+                auto value = server->get_variable_value(variable);
+
+                if (!value.empty())
+                {
+                    values.push_back(value);
+                }
+                else
+                {
+                    MXB_INFO("Service '%s' depends on server variable '%s', but it has not "
+                             "been fetched from the server %s.",
+                             name(), variable.c_str(), server->name());
+                }
+            }
+
+            string parameter = dependency->parameter().name();
+
+            if (!values.empty())
+            {
+                // TODO: Would be better to collect all settings and then make one
+                // TODO: call to Service::configure().
+                if (!configure_one_parameter(this, parameter, dependency->apply_json(values)))
+                {
+                    MXB_WARNING("Could not set '%s.%s' using the value '%s'.",
+                                name(), parameter.c_str(), dependency->apply(values).c_str());
+                }
             }
             else
             {
-                MXB_INFO("Service '%s' depends on server variable '%s', but it has not "
-                         "been fetched from the server %s.",
-                         name(), variable.c_str(), server->name());
+                MXB_INFO("No values found, not adjusting '%s.%s'.", name(), parameter.c_str());
             }
-        }
-
-        string parameter = dependency->parameter().name();
-
-        if (!values.empty())
-        {
-            // TODO: Would be better to collect all settings and then make one
-            // TODO: call to Service::configure().
-            if (!configure_one_parameter(this, parameter, dependency->apply_json(values)))
-            {
-                MXB_WARNING("Could not set '%s.%s' using the value '%s'.",
-                            name(), parameter.c_str(), dependency->apply(values).c_str());
-            }
-        }
-        else
-        {
-            MXB_INFO("No values found, not adjusting '%s.%s'.", name(), parameter.c_str());
         }
     }
 }
