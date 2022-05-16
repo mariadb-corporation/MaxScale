@@ -942,7 +942,7 @@ int SchemaRouterSession::inspect_mapping_states(SRBackend* b, const mxs::Reply& 
         if (rc == SHOWDB_FULL_RESPONSE)
         {
             b->set_mapped(true);
-            MXB_DEBUG("Received SHOW DATABASES reply from '%s'", b->name());
+            MXB_DEBUG("Received SHOW DATABASES reply from '%s' (%lu rows)", b->name(), reply.rows_read());
         }
         else if (rc == SHOWDB_FATAL_ERROR)
         {
@@ -954,10 +954,12 @@ int SchemaRouterSession::inspect_mapping_states(SRBackend* b, const mxs::Reply& 
             RouterSession::clientReply(err, route, reply);
             return -1;
         }
+        else if (rc == SHOWDB_PARTIAL_RESPONSE)
+        {
+            MXB_INFO("Partial response from '%s'(%lu rows)", b->name(), reply.rows_read());
+        }
         else
         {
-            mxb_assert(rc != SHOWDB_PARTIAL_RESPONSE);
-
             if ((m_state & INIT_FAILED) == 0)
             {
                 if (rc == SHOWDB_DUPLICATE_DATABASES)
