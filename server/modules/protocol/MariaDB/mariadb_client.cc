@@ -1910,7 +1910,13 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, bool 
                                  m_dcb->is_open() ? "still" : "not");
                     }
 
-                    session_put_ref(ref);
+                    // Releasing the session reference inside the DCall would cause it to delete the DCall
+                    // while it is being called. To avoid this, release the reference when the DCall finishes
+                    // by using a `lcall`.
+                    ref->worker()->lcall([ref](){
+                        session_put_ref(ref);
+                    });
+
                     MXB_INFO("All KILL commands finished");
                     rv = false;
                 }
