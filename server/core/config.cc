@@ -1870,21 +1870,11 @@ std::unordered_set<ConfigSection*> get_spec_dependencies(const std::vector<Confi
     {
         if (obj->m_parameters.contains(p.second->name()))
         {
-            // TODO: This way of expressing dependencies is fragile. The parameter itself should express what
-            // it depends on based on the given configuration object.
-            auto t = p.second->type();
+            std::string val = obj->m_parameters.get_string(p.second->name());
 
-            if (t == "service" || t == "server" || t == "target")
+            for (const auto& dep : p.second->get_dependencies(val))
             {
-                std::string v = obj->m_parameters.get_string(p.second->name());
-                rval.insert(name_to_object(objects, obj, v));
-            }
-            else if (t == "serverlist")
-            {
-                for (const auto& v : mxb::strtok(obj->m_parameters.get_string(p.second->name()), ","))
-                {
-                    rval.insert(name_to_object(objects, obj, v));
-                }
+                rval.insert(name_to_object(objects, obj, dep));
             }
         }
     }

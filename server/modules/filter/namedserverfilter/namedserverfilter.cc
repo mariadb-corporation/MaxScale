@@ -73,6 +73,24 @@ private:
     }
 };
 
+class ParamHintTarget : public cfg::ParamString
+{
+public:
+    using cfg::ParamString::ParamString;
+
+    std::vector<std::string> get_dependencies(const std::string& value) const override final
+    {
+        std::vector<std::string> deps;
+
+        if (value != "->master" && value != "->slave" && value != "->all")
+        {
+            deps = config_break_list_string(value);
+        }
+
+        return deps;
+    }
+};
+
 Specification s_spec(MXB_MODULE_NAME, cfg::Specification::FILTER);
 
 ParamString s_user(&s_spec, "user", "Only divert queries from this user", "", su);
@@ -87,89 +105,89 @@ cfg::ParamEnumMask<uint32_t> s_options(&s_spec, "options", "Regular expression o
 // Legacy parameters
 const char regex_desc[] = "Regular expression to match";
 ParamString s_match(&s_spec, "match", regex_desc, "");
-ParamString s_server(&s_spec, "server", "Server to divert matching queries", "");
+ParamHintTarget s_server(&s_spec, "server", "Server to divert matching queries", "");
 
 // Indexed parameters
 const char target_desc[] = "Target to divert matching queries";
 ParamString s_match01(&s_spec, "match01", regex_desc, "", su);
-ParamString s_target01(&s_spec, "target01", target_desc, "", su);
+ParamHintTarget s_target01(&s_spec, "target01", target_desc, "", su);
 
 ParamString s_match02(&s_spec, "match02", regex_desc, "", su);
-ParamString s_target02(&s_spec, "target02", target_desc, "", su);
+ParamHintTarget s_target02(&s_spec, "target02", target_desc, "", su);
 
 ParamString s_match03(&s_spec, "match03", regex_desc, "", su);
-ParamString s_target03(&s_spec, "target03", target_desc, "", su);
+ParamHintTarget s_target03(&s_spec, "target03", target_desc, "", su);
 
 ParamString s_match04(&s_spec, "match04", regex_desc, "", su);
-ParamString s_target04(&s_spec, "target04", target_desc, "", su);
+ParamHintTarget s_target04(&s_spec, "target04", target_desc, "", su);
 
 ParamString s_match05(&s_spec, "match05", regex_desc, "", su);
-ParamString s_target05(&s_spec, "target05", target_desc, "", su);
+ParamHintTarget s_target05(&s_spec, "target05", target_desc, "", su);
 
 ParamString s_match06(&s_spec, "match06", regex_desc, "", su);
-ParamString s_target06(&s_spec, "target06", target_desc, "", su);
+ParamHintTarget s_target06(&s_spec, "target06", target_desc, "", su);
 
 ParamString s_match07(&s_spec, "match07", regex_desc, "", su);
-ParamString s_target07(&s_spec, "target07", target_desc, "", su);
+ParamHintTarget s_target07(&s_spec, "target07", target_desc, "", su);
 
 ParamString s_match08(&s_spec, "match08", regex_desc, "", su);
-ParamString s_target08(&s_spec, "target08", target_desc, "", su);
+ParamHintTarget s_target08(&s_spec, "target08", target_desc, "", su);
 
 ParamString s_match09(&s_spec, "match09", regex_desc, "", su);
-ParamString s_target09(&s_spec, "target09", target_desc, "", su);
+ParamHintTarget s_target09(&s_spec, "target09", target_desc, "", su);
 
 ParamString s_match10(&s_spec, "match10", regex_desc, "", su);
-ParamString s_target10(&s_spec, "target10", target_desc, "", su);
+ParamHintTarget s_target10(&s_spec, "target10", target_desc, "", su);
 
 ParamString s_match11(&s_spec, "match11", regex_desc, "", su);
-ParamString s_target11(&s_spec, "target11", target_desc, "", su);
+ParamHintTarget s_target11(&s_spec, "target11", target_desc, "", su);
 
 ParamString s_match12(&s_spec, "match12", regex_desc, "", su);
-ParamString s_target12(&s_spec, "target12", target_desc, "", su);
+ParamHintTarget s_target12(&s_spec, "target12", target_desc, "", su);
 
 ParamString s_match13(&s_spec, "match13", regex_desc, "", su);
-ParamString s_target13(&s_spec, "target13", target_desc, "", su);
+ParamHintTarget s_target13(&s_spec, "target13", target_desc, "", su);
 
 ParamString s_match14(&s_spec, "match14", regex_desc, "", su);
-ParamString s_target14(&s_spec, "target14", target_desc, "", su);
+ParamHintTarget s_target14(&s_spec, "target14", target_desc, "", su);
 
 ParamString s_match15(&s_spec, "match15", regex_desc, "", su);
-ParamString s_target15(&s_spec, "target15", target_desc, "", su);
+ParamHintTarget s_target15(&s_spec, "target15", target_desc, "", su);
 
 ParamString s_match16(&s_spec, "match16", regex_desc, "", su);
-ParamString s_target16(&s_spec, "target16", target_desc, "", su);
+ParamHintTarget s_target16(&s_spec, "target16", target_desc, "", su);
 
 ParamString s_match17(&s_spec, "match17", regex_desc, "", su);
-ParamString s_target17(&s_spec, "target17", target_desc, "", su);
+ParamHintTarget s_target17(&s_spec, "target17", target_desc, "", su);
 
 ParamString s_match18(&s_spec, "match18", regex_desc, "", su);
-ParamString s_target18(&s_spec, "target18", target_desc, "", su);
+ParamHintTarget s_target18(&s_spec, "target18", target_desc, "", su);
 
 ParamString s_match19(&s_spec, "match19", regex_desc, "", su);
-ParamString s_target19(&s_spec, "target19", target_desc, "", su);
+ParamHintTarget s_target19(&s_spec, "target19", target_desc, "", su);
 
 ParamString s_match20(&s_spec, "match20", regex_desc, "", su);
-ParamString s_target20(&s_spec, "target20", target_desc, "", su);
+ParamHintTarget s_target20(&s_spec, "target20", target_desc, "", su);
 
 ParamString s_match21(&s_spec, "match21", regex_desc, "", su);
-ParamString s_target21(&s_spec, "target21", target_desc, "", su);
+ParamHintTarget s_target21(&s_spec, "target21", target_desc, "", su);
 
 ParamString s_match22(&s_spec, "match22", regex_desc, "", su);
-ParamString s_target22(&s_spec, "target22", target_desc, "", su);
+ParamHintTarget s_target22(&s_spec, "target22", target_desc, "", su);
 
 ParamString s_match23(&s_spec, "match23", regex_desc, "", su);
-ParamString s_target23(&s_spec, "target23", target_desc, "", su);
+ParamHintTarget s_target23(&s_spec, "target23", target_desc, "", su);
 
 ParamString s_match24(&s_spec, "match24", regex_desc, "", su);
-ParamString s_target24(&s_spec, "target24", target_desc, "", su);
+ParamHintTarget s_target24(&s_spec, "target24", target_desc, "", su);
 
 ParamString s_match25(&s_spec, "match25", regex_desc, "", su);
-ParamString s_target25(&s_spec, "target25", target_desc, "", su);
+ParamHintTarget s_target25(&s_spec, "target25", target_desc, "", su);
 
 struct MatchAndTarget
 {
     ParamString* match {nullptr};
-    ParamString* target {nullptr};
+    ParamHintTarget* target {nullptr};
 };
 std::vector<MatchAndTarget> s_match_target_specs = {
     {&s_match01, &s_target01}, {&s_match02, &s_target02},
@@ -217,7 +235,7 @@ bool Specification::do_post_validate(Params params) const
             ok = false;
         }
 
-        if (!SERVER::find_by_unique_name(legacy_target))
+        if (!mxs::Target::find(legacy_target))
         {
             MXB_ERROR("'%s' is not a valid value for '%s'",
                       legacy_target.c_str(), s_server.name().c_str());
@@ -250,7 +268,7 @@ bool Specification::do_post_validate(Params params) const
 
             if (targets.size() == 1)
             {
-                if (!SERVER::find_by_unique_name(targets[0])
+                if (!mxs::Target::find(targets[0])
                     && targets[0] != "->master"
                     && targets[0] != "->slave"
                     && targets[0] != "->all")
@@ -264,7 +282,7 @@ bool Specification::do_post_validate(Params params) const
             {
                 for (const auto& t : targets)
                 {
-                    if (!SERVER::find_by_unique_name(t))
+                    if (!mxs::Target::find(t))
                     {
                         MXB_ERROR("'%s' is not a valid value for '%s': %s",
                                   targets[0].c_str(), a.target->name().c_str(), target.c_str());
@@ -653,7 +671,7 @@ bool RegexToServers::add_targets(const std::string& target, bool legacy_mode)
     {
         for (const auto& elem : targets_array)
         {
-            mxb_assert(SERVER::find_by_unique_name(elem));
+            mxb_assert(mxs::Target::find(elem));
             m_targets.push_back(elem);
         }
     }
@@ -661,7 +679,7 @@ bool RegexToServers::add_targets(const std::string& target, bool legacy_mode)
     {
         /* The string is either a server name or a special reserved id */
         auto& only_elem = targets_array[0];
-        if (SERVER::find_by_unique_name(only_elem))
+        if (mxs::Target::find(only_elem))
         {
             m_targets.push_back(only_elem);
         }

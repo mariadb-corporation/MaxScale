@@ -80,12 +80,16 @@ The hint which is attached to the queries matching the regular expression define
 *matchXY*. If a compatible router is used in the service the query will be routed
 accordingly. The target can be one of the following:
 
- * a server name (adds a `HINT_ROUTE_TO_NAMED_SERVER` hint)
+ * a server or service name (adds a `HINT_ROUTE_TO_NAMED_SERVER` hint)
  * a list of server names, comma-separated (adds several
  `HINT_ROUTE_TO_NAMED_SERVER` hints)
  * `->master` (adds a `HINT_ROUTE_TO_MASTER` hint)
  * `->slave` (adds a `HINT_ROUTE_TO_SLAVE` hint)
  * `->all` (adds a `HINT_ROUTE_TO_ALL` hint)
+
+The support for service names was added in MaxScale 6.3.2. Older
+versions of MaxScale did not accept service names in the `target`
+parameters.
 
 ```
 target01=MyServer2

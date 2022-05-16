@@ -574,6 +574,11 @@ json_t* Param::to_json() const
     return pJson;
 }
 
+std::vector<std::string> Param::get_dependencies(const std::string& value) const
+{
+    return {};
+}
+
 /**
  * class Configuration
  */
@@ -1528,9 +1533,20 @@ bool ParamServer::from_json(const json_t* pJson, value_type* pValue,
     return rv;
 }
 
+std::vector<std::string> ParamServer::get_dependencies(const std::string& value) const
+{
+    return {value};
+}
+
 /**
  * ParamServerList
  */
+
+std::vector<std::string> ParamServerList::get_dependencies(const std::string& value) const
+{
+    return mxb::strtok(value, ",");
+}
+
 std::string ParamServerList::type() const
 {
     return "serverlist";
@@ -1795,6 +1811,11 @@ bool ParamTarget::from_json(const json_t* pJson, value_type* pValue,
     return rv;
 }
 
+std::vector<std::string> ParamTarget::get_dependencies(const std::string& value) const
+{
+    return {value};
+}
+
 /**
  * ParamService
  */
@@ -1846,6 +1867,11 @@ bool ParamService::from_json(const json_t* pJson, value_type* pValue,
     }
 
     return rv;
+}
+
+std::vector<std::string> ParamService::get_dependencies(const std::string& value) const
+{
+    return {value};
 }
 
 /**
