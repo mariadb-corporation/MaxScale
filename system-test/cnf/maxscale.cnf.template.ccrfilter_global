@@ -17,7 +17,7 @@ monitor_interval=1000ms
 [ccrfilter]
 type=filter
 module=ccrfilter
-time=10
+time=10s
 global=true
 
 # RWSplit
