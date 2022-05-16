@@ -29,7 +29,7 @@ public:
     {
         AES_CTR,
         AES_CBC,
-        AES_GCM,    // TODO: Implement
+        AES_GCM,
         AES_CCM,    // TODO: Implement
     };
 
@@ -127,6 +127,15 @@ public:
                  uint8_t* out, int* out_len);
 
     /**
+     * Calculate the amount of bytes needed to store the given value
+     *
+     * @param size The size of the plaintext data
+     *
+     * @return The size of the ciphertext data including any padding or embedded AEAD verification tags
+     */
+    size_t encrypted_size(size_t size) const;
+
+    /**
      * Log encryption errors
      *
      * @param operation The operation being taken, logged as a part of the error
@@ -139,6 +148,8 @@ private:
                             const uint8_t* key, const uint8_t* iv,
                             const uint8_t* input, int input_len,
                             uint8_t* output, int* output_len);
+
+    void set_aad(const uint8_t* ptr, size_t len);
 
     EVP_CIPHER_CTX*   m_ctx;
     const EVP_CIPHER* m_cipher;

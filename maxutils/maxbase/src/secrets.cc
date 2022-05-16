@@ -28,6 +28,9 @@
 namespace
 {
 
+constexpr const int GCM_AAD_OFFSET = 12;
+constexpr const int GCM_AAD_SIZE = 4;
+
 using CipherFn = const EVP_CIPHER * (*)(void);
 
 constexpr CipherFn get_cipher_fn(mxb::Cipher::AesMode mode, size_t bits)
@@ -100,9 +103,24 @@ bool Cipher::encrypt_or_decrypt(const EVP_CIPHER* cipher, int enc,
                                 uint8_t* output, int* output_len)
 {
     bool ok = false;
+    int mode = EVP_CIPHER_mode(cipher);
+    bool is_gcm = mode == EVP_CIPH_GCM_MODE;
 
     if (EVP_CipherInit_ex(m_ctx, cipher, nullptr, key, iv, enc) == 1)
     {
+        if (is_gcm)
+        {
+            // Use the last 4 bytes of the IV as the Additional Authenticated Data
+            set_aad(iv + GCM_AAD_OFFSET, GCM_AAD_SIZE);
+            mxb_assert(EVP_CIPHER_iv_length(cipher) == 12);
+        }
+
+        if (is_gcm && enc == DECRYPTING)
+        {
+            EVP_CIPHER_CTX_ctrl(m_ctx, EVP_CTRL_GCM_SET_TAG, 16, (void*)(input + input_len - 16));
+            input_len -= 16;
+        }
+
         int output_written = 0;
         if (EVP_CipherUpdate(m_ctx, output, &output_written, input, input_len) == 1)
         {
@@ -110,6 +128,13 @@ bool Cipher::encrypt_or_decrypt(const EVP_CIPHER* cipher, int enc,
             if (EVP_CipherFinal_ex(m_ctx, output + total_output_len, &output_written) == 1)
             {
                 total_output_len += output_written;
+
+                if (is_gcm && enc == ENCRYPTING)
+                {
+                    EVP_CIPHER_CTX_ctrl(m_ctx, EVP_CTRL_GCM_GET_TAG, 16, output + total_output_len);
+                    total_output_len += 16;
+                }
+
                 *output_len = total_output_len;
                 ok = true;
             }
@@ -117,6 +142,12 @@ bool Cipher::encrypt_or_decrypt(const EVP_CIPHER* cipher, int enc,
     }
 
     return ok;
+}
+
+void Cipher::set_aad(const uint8_t* ptr, size_t len)
+{
+    int dummy;
+    EVP_CipherUpdate(m_ctx, nullptr, &dummy, ptr, len);
 }
 
 bool Cipher::encrypt(const uint8_t* key, const uint8_t* iv,
@@ -212,11 +243,45 @@ size_t Cipher::block_size() const
 
 size_t Cipher::iv_size() const
 {
-    return EVP_CIPHER_iv_length(m_cipher);
+    size_t sz = EVP_CIPHER_iv_length(m_cipher);
+
+    if (EVP_CIPHER_mode(m_cipher) == EVP_CIPH_GCM_MODE)
+    {
+        // Store the AAD in the last 4 bytes of the IV. As the AES-GCM mode is limited to a 12-byte IV, this
+        // is a convenient way of having extra verification.
+        sz += 4;
+        mxb_assert_message(sz == 16, "AES-GCM IV must be 16 bytes");
+    }
+
+    return sz;
 }
 
 size_t Cipher::key_size() const
 {
     return EVP_CIPHER_key_length(m_cipher);
+}
+
+size_t Cipher::encrypted_size(size_t len) const
+{
+    switch (EVP_CIPHER_mode(m_cipher))
+    {
+    case EVP_CIPH_CBC_MODE:
+        {
+            // The data is padded to a multiple of the block size. If data is already a multiple of a block
+            // size, an extra block is added.
+            size_t bs = block_size();
+            return ((len + bs) / bs) * bs;
+        }
+
+    case EVP_CIPH_CTR_MODE:
+        return len;
+
+    case EVP_CIPH_GCM_MODE:
+        return len + 16;
+
+    default:
+        mxb_assert(!true);
+        return len;
+    }
 }
 }
