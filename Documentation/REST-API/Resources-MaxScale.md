@@ -24,8 +24,8 @@ file locations, configuration options and version information.
 {
     "data": {
         "attributes": {
-            "activated_at": "Wed, 16 Mar 2022 09:21:18 GMT",
-            "commit": "f22c6db8f6629955dd11876facf93817b3c4f352",
+            "activated_at": "Tue, 17 May 2022 03:19:15 GMT",
+            "commit": "3b3ad559a989f36a0597aa73a26275abf5ebfbb4",
             "parameters": {
                 "admin_auth": true,
                 "admin_enabled": true,
@@ -92,9 +92,9 @@ file locations, configuration options and version information.
                 "writeq_low_water": 8192
             },
             "process_datadir": "/var/lib/maxscale/data19",
-            "started_at": "Wed, 16 Mar 2022 09:21:18 GMT",
+            "started_at": "Tue, 17 May 2022 03:19:15 GMT",
             "uptime": 10,
-            "version": "2.5.19"
+            "version": "2.5.20"
         },
         "id": "maxscale",
         "type": "maxscale"
@@ -1344,7 +1344,7 @@ one to see the parameters of a module before the object is created.
                         "type": "size"
                     }
                 ],
-                "version": "2.5.19"
+                "version": "2.5.20"
             },
             "id": "maxscale",
             "links": {
@@ -1553,7 +1553,7 @@ one to see the parameters of a module before the object is created.
                         "type": "string"
                     }
                 ],
-                "version": "2.5.19"
+                "version": "2.5.20"
             },
             "id": "servers",
             "links": {
