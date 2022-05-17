@@ -1182,7 +1182,8 @@ are attempted and still fail, then most likely one of the commands the monitor
 issued to a server failed or timed out. The log should explain which query failed.
 To print out all queries sent to the servers, start MaxScale with
 `--debug=enable-statement-logging`. This setting prints all queries sent to the
-backends by monitors and authenticators.
+backends by monitors and authenticators. The printed queries may include
+usernames and passwords.
 
 A typical reason for failure is that a command such as `STOP SLAVE` takes longer than the
 `backend_read_timeout` of the monitor, causing the connection to break. As of 2.3, the
