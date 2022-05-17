@@ -112,6 +112,10 @@ Get a single monitor.
                 "user": "maxuser",
                 "verify_master_failure": true
             },
+            "source": {
+                "file": "/etc/maxscale.cnf",
+                "type": "static"
+            },
             "state": "Running",
             "ticks": 3
         },
@@ -260,6 +264,10 @@ Get all monitors.
                     "switchover_timeout": 90,
                     "user": "maxuser",
                     "verify_master_failure": true
+                },
+                "source": {
+                    "file": "/etc/maxscale.cnf",
+                    "type": "static"
                 },
                 "state": "Running",
                 "ticks": 3

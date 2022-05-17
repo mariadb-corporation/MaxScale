@@ -52,6 +52,10 @@ Get a single service.
                             "type": "listener",
                             "user_mapping_file": null
                         },
+                        "source": {
+                            "file": "/etc/maxscale.cnf",
+                            "type": "static"
+                        },
                         "state": "Running"
                     },
                     "id": "Read-Connection-Listener",
@@ -78,7 +82,7 @@ Get a single service.
                 "connection_timeout": "0ms",
                 "disable_sescmd_history": false,
                 "enable_root_user": false,
-                "idle_session_pool_time": "-1000ms",
+                "idle_session_pool_time": "-1ms",
                 "localhost_match_wildcard_host": true,
                 "log_auth_warnings": true,
                 "log_debug": false,
@@ -110,7 +114,11 @@ Get a single service.
                 "queries": 0,
                 "server_query_statistics": []
             },
-            "started": "Thu Mar 17 10:27:42 2022",
+            "source": {
+                "file": "/etc/maxscale.cnf",
+                "type": "static"
+            },
+            "started": "Tue May 17 03:24:41 2022",
             "state": "Started",
             "statistics": {
                 "active_operations": 0,
@@ -276,6 +284,10 @@ Get all services.
                                 "type": "listener",
                                 "user_mapping_file": null
                             },
+                            "source": {
+                                "file": "/etc/maxscale.cnf",
+                                "type": "static"
+                            },
                             "state": "Running"
                         },
                         "id": "Read-Connection-Listener",
@@ -302,7 +314,7 @@ Get all services.
                     "connection_timeout": "0ms",
                     "disable_sescmd_history": false,
                     "enable_root_user": false,
-                    "idle_session_pool_time": "-1000ms",
+                    "idle_session_pool_time": "-1ms",
                     "localhost_match_wildcard_host": true,
                     "log_auth_warnings": true,
                     "log_debug": false,
@@ -334,7 +346,11 @@ Get all services.
                     "queries": 0,
                     "server_query_statistics": []
                 },
-                "started": "Thu Mar 17 10:27:42 2022",
+                "source": {
+                    "file": "/etc/maxscale.cnf",
+                    "type": "static"
+                },
+                "started": "Tue May 17 03:24:41 2022",
                 "state": "Started",
                 "statistics": {
                     "active_operations": 0,
@@ -479,6 +495,10 @@ Get all services.
                                 "type": "listener",
                                 "user_mapping_file": null
                             },
+                            "source": {
+                                "file": "/etc/maxscale.cnf",
+                                "type": "static"
+                            },
                             "state": "Running"
                         },
                         "id": "RW-Split-Listener",
@@ -509,7 +529,7 @@ Get all services.
                     "delayed_retry_timeout": "10000ms",
                     "disable_sescmd_history": false,
                     "enable_root_user": false,
-                    "idle_session_pool_time": "-1000ms",
+                    "idle_session_pool_time": "-1ms",
                     "lazy_connect": false,
                     "localhost_match_wildcard_host": true,
                     "log_auth_warnings": true,
@@ -584,7 +604,11 @@ Get all services.
                         }
                     ]
                 },
-                "started": "Thu Mar 17 10:27:42 2022",
+                "source": {
+                    "file": "/etc/maxscale.cnf",
+                    "type": "static"
+                },
+                "started": "Tue May 17 03:24:41 2022",
                 "state": "Started",
                 "statistics": {
                     "active_operations": 0,

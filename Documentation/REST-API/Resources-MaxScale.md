@@ -24,8 +24,8 @@ file locations, configuration options and version information.
 {
     "data": {
         "attributes": {
-            "activated_at": "Thu, 17 Mar 2022 10:27:42 GMT",
-            "commit": "1ac7a0ddfdb5e7dc2df5d120b4aa9bf5961f0c3e",
+            "activated_at": "Tue, 17 May 2022 03:24:41 GMT",
+            "commit": "cdf2dd2884c6fdcaf2b42adebe28466836aa8d83",
             "config_sync": null,
             "parameters": {
                 "admin_auth": true,
@@ -98,9 +98,9 @@ file locations, configuration options and version information.
                 "writeq_low_water": 8192
             },
             "process_datadir": "/var/lib/maxscale/data19",
-            "started_at": "Thu, 17 Mar 2022 10:27:42 GMT",
+            "started_at": "Tue, 17 May 2022 03:24:41 GMT",
             "uptime": 10,
-            "version": "6.2.3"
+            "version": "6.3.0"
         },
         "id": "maxscale",
         "type": "maxscale"
@@ -1069,7 +1069,7 @@ parameters it accepts as a module.
                     "type": "bool"
                 },
                 {
-                    "default_value": "-1000ms",
+                    "default_value": "-1ms",
                     "description": "Put connections into pool after session has been idle for this long",
                     "mandatory": false,
                     "modifiable": true,
@@ -1734,7 +1734,7 @@ one to see the parameters of a module before the object is created.
                         "type": "size"
                     }
                 ],
-                "version": "6.2.3"
+                "version": "6.3.0"
             },
             "id": "maxscale",
             "links": {
@@ -1776,6 +1776,14 @@ one to see the parameters of a module before the object is created.
                         "mandatory": false,
                         "modifiable": true,
                         "name": "extra_port",
+                        "type": "count"
+                    },
+                    {
+                        "default_value": 0,
+                        "description": "Maximum routing connections",
+                        "mandatory": false,
+                        "modifiable": true,
+                        "name": "max_routing_connections",
                         "type": "count"
                     },
                     {
@@ -1943,7 +1951,7 @@ one to see the parameters of a module before the object is created.
                         "type": "string"
                     }
                 ],
-                "version": "6.2.3"
+                "version": "6.3.0"
             },
             "id": "servers",
             "links": {
@@ -2031,6 +2039,26 @@ one to see the parameters of a module before the object is created.
                         "attributes": {
                             "arg_max": 1,
                             "arg_min": 1,
+                            "description": "Release any held server locks for 1 minute. Does not wait for completion.",
+                            "method": "POST",
+                            "parameters": [
+                                {
+                                    "description": "Monitor name",
+                                    "required": true,
+                                    "type": "MONITOR"
+                                }
+                            ]
+                        },
+                        "id": "async-release-locks",
+                        "links": {
+                            "self": "http://localhost:8989/v1/modules/mariadbmon/async-release-locks/"
+                        },
+                        "type": "module_command"
+                    },
+                    {
+                        "attributes": {
+                            "arg_max": 1,
+                            "arg_min": 1,
                             "description": "Release any held server locks for 1 minute.",
                             "method": "POST",
                             "parameters": [
@@ -2044,6 +2072,31 @@ one to see the parameters of a module before the object is created.
                         "id": "release-locks",
                         "links": {
                             "self": "http://localhost:8989/v1/modules/mariadbmon/release-locks/"
+                        },
+                        "type": "module_command"
+                    },
+                    {
+                        "attributes": {
+                            "arg_max": 2,
+                            "arg_min": 1,
+                            "description": "Delete slave connections, delete binary logs and set up replication (dangerous). Does not wait for completion.",
+                            "method": "POST",
+                            "parameters": [
+                                {
+                                    "description": "Monitor name",
+                                    "required": true,
+                                    "type": "MONITOR"
+                                },
+                                {
+                                    "description": "Master server (optional)",
+                                    "required": false,
+                                    "type": "[SERVER]"
+                                }
+                            ]
+                        },
+                        "id": "async-reset-replication",
+                        "links": {
+                            "self": "http://localhost:8989/v1/modules/mariadbmon/async-reset-replication/"
                         },
                         "type": "module_command"
                     },
@@ -2076,6 +2129,31 @@ one to see the parameters of a module before the object is created.
                         "attributes": {
                             "arg_max": 2,
                             "arg_min": 2,
+                            "description": "Rejoin server to a cluster. Does not wait for completion.",
+                            "method": "POST",
+                            "parameters": [
+                                {
+                                    "description": "Monitor name",
+                                    "required": true,
+                                    "type": "MONITOR"
+                                },
+                                {
+                                    "description": "Joining server",
+                                    "required": true,
+                                    "type": "SERVER"
+                                }
+                            ]
+                        },
+                        "id": "async-rejoin",
+                        "links": {
+                            "self": "http://localhost:8989/v1/modules/mariadbmon/async-rejoin/"
+                        },
+                        "type": "module_command"
+                    },
+                    {
+                        "attributes": {
+                            "arg_max": 2,
+                            "arg_min": 2,
                             "description": "Rejoin server to a cluster",
                             "method": "POST",
                             "parameters": [
@@ -2094,6 +2172,26 @@ one to see the parameters of a module before the object is created.
                         "id": "rejoin",
                         "links": {
                             "self": "http://localhost:8989/v1/modules/mariadbmon/rejoin/"
+                        },
+                        "type": "module_command"
+                    },
+                    {
+                        "attributes": {
+                            "arg_max": 1,
+                            "arg_min": 1,
+                            "description": "Schedule master failover. Does not wait for completion.",
+                            "method": "POST",
+                            "parameters": [
+                                {
+                                    "description": "Monitor name",
+                                    "required": true,
+                                    "type": "MONITOR"
+                                }
+                            ]
+                        },
+                        "id": "async-failover",
+                        "links": {
+                            "self": "http://localhost:8989/v1/modules/mariadbmon/async-failover/"
                         },
                         "type": "module_command"
                     },
@@ -2121,7 +2219,7 @@ one to see the parameters of a module before the object is created.
                         "attributes": {
                             "arg_max": 3,
                             "arg_min": 1,
-                            "description": "Schedule master switchover without waiting for completion",
+                            "description": "Schedule master switchover. Does not wait for completion",
                             "method": "POST",
                             "parameters": [
                                 {
@@ -2945,7 +3043,7 @@ one to see the parameters of a module before the object is created.
                         "type": "bool"
                     },
                     {
-                        "default_value": "-1000ms",
+                        "default_value": "-1ms",
                         "description": "Put connections into pool after session has been idle for this long",
                         "mandatory": false,
                         "modifiable": true,
@@ -3415,7 +3513,7 @@ one to see the parameters of a module before the object is created.
                         "type": "bool"
                     },
                     {
-                        "default_value": "-1000ms",
+                        "default_value": "-1ms",
                         "description": "Put connections into pool after session has been idle for this long",
                         "mandatory": false,
                         "modifiable": true,
