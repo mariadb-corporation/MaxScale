@@ -2334,6 +2334,7 @@ int32_t qc_mysql_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt)
                         qc_sql_mode_t sql_mode = this_thread.sql_mode;
                         const char* p = preparable_stmt;
                         const char* end = preparable_stmt + preparable_stmt_len;
+                        bool replacement = false;
                         while (p < end)
                         {
                             if (*p == '?')
@@ -2355,6 +2356,7 @@ int32_t qc_mysql_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt)
                                             ++p;
                                         }
 
+                                        replacement = true;
                                         *s = '0';
                                     }
                                     else if (c == '\'' || c == '\"')
@@ -2366,6 +2368,7 @@ int32_t qc_mysql_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt)
                                             ++p;
                                         }
 
+                                        replacement = true;
                                         *s = '0';
                                     }
                                 }
@@ -2387,7 +2390,12 @@ int32_t qc_mysql_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt)
                             ++s;
                         }
 
-                        *s = 0;
+                        if (replacement)
+                        {
+                            // If something has been replaced, then we stash a NULL at the
+                            // end so that parsing will stop at the right spot.
+                            *s = 0;
+                        }
                     }
 
                     pi->preparable_stmt = preperable_packet;
