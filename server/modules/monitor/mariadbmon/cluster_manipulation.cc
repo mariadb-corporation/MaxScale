@@ -578,11 +578,11 @@ int MariaDBMonitor::redirect_slaves_ex(GeneralOpData& general, OperationType typ
     // Redirection may have caused errors. Since redirect_slaves_ex is only ran when failover/switchover
     // is considered a success, remove any errors from the output. The errors have already been written to
     // log.
-    auto& err_out = *general.error_out;
-    if (err_out)
+    json_t** error_out = general.error_out;
+    if (error_out && *error_out)
     {
-        json_decref(err_out);
-        err_out = nullptr;
+        json_decref(*error_out);
+        *error_out = nullptr;
     }
 
     if (fails == 0 && conflicts == 0)
