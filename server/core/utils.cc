@@ -72,23 +72,23 @@ const char hex_lower[] = "0123456789abcdef";
 HexLookupTable init_hex_lookup_table() noexcept
 {
     auto char_val = [](char c) -> uint8_t {
-            if (c >= '0' && c <= '9')
-            {
-                return c - '0';
-            }
-            else if (c >= 'A' && c <= 'F')
-            {
-                return c - 'A' + 10;
-            }
-            else if (c >= 'a' && c <= 'f')
-            {
-                return c - 'a' + 10;
-            }
-            else
-            {
-                return '\177';
-            }
-        };
+        if (c >= '0' && c <= '9')
+        {
+            return c - '0';
+        }
+        else if (c >= 'A' && c <= 'F')
+        {
+            return c - 'A' + 10;
+        }
+        else if (c >= 'a' && c <= 'f')
+        {
+            return c - 'a' + 10;
+        }
+        else
+        {
+            return '\177';
+        }
+    };
 
     HexLookupTable rval;
     for (size_t i = 0; i < rval.size(); i++)
@@ -291,8 +291,8 @@ char* bin2hex(const uint8_t* in, unsigned int len, char* out)
 
     for (; in != in_end; ++in)
     {
-        *out++ = hex_upper[((uint8_t) * in) >> 4];
-        *out++ = hex_upper[((uint8_t) * in) & 0x0F];
+        *out++ = hex_upper[((uint8_t) *in) >> 4];
+        *out++ = hex_upper[((uint8_t) *in) & 0x0F];
     }
     *out = '\0';
 
@@ -642,6 +642,18 @@ std::string to_hex(uint8_t value)
     out += hex_lower[value >> 4];
     out += hex_lower[value & 0x0F];
     return out;
+}
+
+std::vector<uint8_t> from_hex(const std::string& str)
+{
+    std::vector<uint8_t> data;
+    if (str.size() % 2 == 0)
+    {
+        data.resize(str.size() / 2);
+        hex2bin(str.c_str(), str.size(), data.data());
+    }
+
+    return data;
 }
 
 int get_kernel_version()

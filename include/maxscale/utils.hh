@@ -488,6 +488,15 @@ std::string to_hex(Iter begin, Iter end)
 }
 
 /**
+ * Decode hexadecimal data
+ *
+ * @param str Hex string to decode
+ *
+ * @return Decoded data
+ */
+std::vector<uint8_t> from_hex(const std::string& str);
+
+/**
  * Encode data as Base64
  *
  * @param ptr Pointer to data to convert
