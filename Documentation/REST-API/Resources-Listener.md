@@ -47,6 +47,10 @@ MaxScale.
                 "type": "listener",
                 "user_mapping_file": null
             },
+            "source": {
+                "file": "/etc/maxscale.cnf",
+                "type": "static"
+            },
             "state": "Running"
         },
         "id": "RW-Split-Listener",
@@ -112,6 +116,10 @@ Get all listeners.
                     "type": "listener",
                     "user_mapping_file": null
                 },
+                "source": {
+                    "file": "/etc/maxscale.cnf",
+                    "type": "static"
+                },
                 "state": "Running"
             },
             "id": "Read-Connection-Listener",
@@ -155,6 +163,10 @@ Get all listeners.
                     "ssl_version": "MAX",
                     "type": "listener",
                     "user_mapping_file": null
+                },
+                "source": {
+                    "file": "/etc/maxscale.cnf",
+                    "type": "static"
                 },
                 "state": "Running"
             },

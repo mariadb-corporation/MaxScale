@@ -36,6 +36,7 @@ Get a single server.
                 "address": "127.0.0.1",
                 "disk_space_threshold": null,
                 "extra_port": 0,
+                "max_routing_connections": 0,
                 "monitorpw": null,
                 "monitoruser": null,
                 "persistmaxtime": "0ms",
@@ -59,6 +60,10 @@ Get a single server.
             "replication_lag": 0,
             "server_id": 3000,
             "slave_connections": [],
+            "source": {
+                "file": "/etc/maxscale.cnf",
+                "type": "static"
+            },
             "state": "Master, Running",
             "state_details": null,
             "statistics": {
@@ -282,6 +287,7 @@ Response contains a resource collection with all servers.
                     "address": "127.0.0.1",
                     "disk_space_threshold": null,
                     "extra_port": 0,
+                    "max_routing_connections": 0,
                     "monitorpw": null,
                     "monitoruser": null,
                     "persistmaxtime": "0ms",
@@ -305,6 +311,10 @@ Response contains a resource collection with all servers.
                 "replication_lag": 0,
                 "server_id": 3000,
                 "slave_connections": [],
+                "source": {
+                    "file": "/etc/maxscale.cnf",
+                    "type": "static"
+                },
                 "state": "Master, Running",
                 "state_details": null,
                 "statistics": {
@@ -507,6 +517,7 @@ Response contains a resource collection with all servers.
                     "address": "127.0.0.1",
                     "disk_space_threshold": null,
                     "extra_port": 0,
+                    "max_routing_connections": 0,
                     "monitorpw": null,
                     "monitoruser": null,
                     "persistmaxtime": "0ms",
@@ -543,6 +554,10 @@ Response contains a resource collection with all servers.
                         "slave_sql_running": "Yes"
                     }
                 ],
+                "source": {
+                    "file": "/etc/maxscale.cnf",
+                    "type": "static"
+                },
                 "state": "Slave, Running",
                 "state_details": null,
                 "statistics": {

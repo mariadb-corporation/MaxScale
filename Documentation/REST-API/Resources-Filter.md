@@ -43,6 +43,10 @@ GET /v1/filters/:name
                 "source": null,
                 "use_canonical_form": false,
                 "user": null
+            },
+            "source": {
+                "file": "/etc/maxscale.cnf",
+                "type": "static"
             }
         },
         "id": "QLA",
@@ -91,6 +95,10 @@ GET /v1/filters
                 "module": "hintfilter",
                 "parameters": {
                     "module": "hintfilter"
+                },
+                "source": {
+                    "file": "/etc/maxscale.cnf",
+                    "type": "static"
                 }
             },
             "id": "Hint",
@@ -133,6 +141,10 @@ GET /v1/filters
                     "source": null,
                     "use_canonical_form": false,
                     "user": null
+                },
+                "source": {
+                    "file": "/etc/maxscale.cnf",
+                    "type": "static"
                 }
             },
             "id": "QLA",
