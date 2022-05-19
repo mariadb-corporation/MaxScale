@@ -29,6 +29,7 @@
 #define MYSQL_YACC
 #define MYSQL_LEX012
 #define MYSQL_SERVER
+#define DBUG_OFF
 #if defined (MYSQL_CLIENT)
 #undef MYSQL_CLIENT
 #endif
