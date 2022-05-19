@@ -16,6 +16,7 @@
 #include <maxscale/config2.hh>
 #include <maxscale/session.hh>
 #include <maxscale/query_classifier.hh>
+#include <maxscale/key_manager.hh>
 #include <maxbase/ssl.hh>
 
 namespace maxscale
@@ -226,6 +227,9 @@ public:
     std::string  debug;
     int64_t      max_read_amount;               /**< Max amount read before return to epoll_wait. */
 
+    mxs::KeyManager::Type key_manager;
+    std::string           key_manager_options;
+
     // The following will not be configured via the configuration mechanism.
     bool config_check;                              /**< Only check config */
     char release_string[RELEASE_STR_LENGTH];        /**< The release name string of the system */
@@ -327,5 +331,7 @@ private:
     static config::ParamBool                            s_secure_gui;
     static config::ParamString                          s_debug;
     static config::ParamSize                            s_max_read_amount;
+    static config::ParamEnum<mxs::KeyManager::Type>     s_key_manager;
+    static config::ParamString                          s_key_manager_options;
 };
 }

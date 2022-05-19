@@ -206,7 +206,8 @@ namespace maxscale
 // static
 bool KeyManager::init()
 {
-    Type type = Type::NONE;
+    const auto& cnf = mxs::Config::get();
+    Type type = cnf.key_manager;
     mxs::ConfigParameters opts;
 
     if (type == Type::NONE)
@@ -214,7 +215,25 @@ bool KeyManager::init()
         return true;
     }
 
-    auto keystore = mxs::datadir() + "/keystore"s;
+    for (std::string tok : mxb::strtok(cnf.key_manager_options, ","))
+    {
+        auto pos = tok.find('=');
+
+        if (pos == std::string::npos)
+        {
+            MXB_ERROR("Invalid option string value: %s", tok.c_str());
+            return false;
+        }
+
+        opts.set(mxb::trimmed_copy(tok.substr(0, pos)), mxb::trimmed_copy(tok.substr(pos + 1)));
+    }
+
+    auto keystore = opts.get_string("keystore");
+
+    if (keystore.empty())
+    {
+        keystore = mxs::datadir() + "/keystore"s;
+    }
 
     std::unique_ptr<MasterKey> master_key;
 

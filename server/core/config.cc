@@ -52,6 +52,7 @@
 #include <maxscale/secrets.hh>
 #include <maxscale/utils.hh>
 #include <maxscale/version.hh>
+#include <maxscale/key_manager.hh>
 
 #include "internal/adminusers.hh"
 #include "internal/config.hh"
@@ -642,6 +643,19 @@ config::ParamSize Config::s_max_read_amount(
     "Maximum amount of data read before return to epoll_wait.",
     DEFAULT_MAX_READ_AMOUNT);
 
+config::ParamEnum<mxs::KeyManager::Type> Config::s_key_manager(
+    &Config::s_specification, "key_manager", "Key manager type",
+    {
+        {mxs::KeyManager::Type::NONE, "none"},
+        {mxs::KeyManager::Type::FILE, "file"},
+    },
+    mxs::KeyManager::Type::NONE
+    );
+
+config::ParamString Config::s_key_manager_options(
+    &Config::s_specification, "key_manager_options",
+    "Comma-separated key-value list of options for the key manager", ""
+    );
 }
 
 namespace
@@ -824,6 +838,8 @@ Config::Config(int argc, char** argv)
     add_native(&Config::secure_gui, &s_secure_gui);
     add_native(&Config::debug, &s_debug);
     add_native(&Config::max_read_amount, &s_max_read_amount);
+    add_native(&Config::key_manager, &s_key_manager);
+    add_native(&Config::key_manager_options, &s_key_manager_options);
 
     /* get release string */
     if (!get_release_string(this->release_string))
