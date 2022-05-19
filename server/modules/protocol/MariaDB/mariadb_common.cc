@@ -617,30 +617,6 @@ DCB::ReadResult mariadb::read_protocol_packet(DCB* dcb)
 
 namespace mariadb
 {
-void set_byte2(uint8_t* buffer, uint16_t val)
-{
-    uint16_t le16 = htole16(val);
-    memcpy(buffer, &le16, 2);
-}
-
-void set_byte3(uint8_t* buffer, uint32_t val)
-{
-    set_byte2(buffer, val);
-    buffer[2] = (val >> 16);
-}
-
-void set_byte4(uint8_t* buffer, uint32_t val)
-{
-    uint32_t le32 = htole32(val);
-    memcpy(buffer, &le32, 4);
-}
-
-void set_byte8(uint8_t* buffer, uint64_t val)
-{
-    uint64_t le64 = htole64(val);
-    memcpy(buffer, &le64, 8);
-}
-
 uint8_t* write_header(uint8_t* buffer, uint32_t pl_size, uint8_t seq)
 {
     mxb_assert(pl_size <= 0xFFFFFF);
@@ -664,34 +640,6 @@ uint8_t* set_bytes(uint8_t* dest, uint8_t val, size_t n)
 {
     memset(dest, val, n);
     return dest + n;
-}
-
-uint16_t get_byte2(const uint8_t* buffer)
-{
-    uint16_t le16;
-    memcpy(&le16, buffer, 2);
-    return le16toh(le16);
-}
-
-uint32_t get_byte3(const uint8_t* buffer)
-{
-    uint32_t low = get_byte2(buffer);
-    uint32_t high = buffer[2];
-    return low | (high << 16);
-}
-
-uint32_t get_byte4(const uint8_t* buffer)
-{
-    uint32_t le32;
-    memcpy(&le32, buffer, 4);
-    return le32toh(le32);
-}
-
-uint64_t get_byte8(const uint8_t* buffer)
-{
-    uint64_t le64;
-    memcpy(&le64, buffer, 8);
-    return le64toh(le64);
 }
 
 HeaderData get_header(const uint8_t* buffer)
