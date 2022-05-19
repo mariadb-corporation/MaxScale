@@ -22,6 +22,7 @@ add_library(maxscale-common SHARED
   json.cc
   json_api.cc
   jwt.cc
+  key_manager.cc
   listener.cc
   load_utils.cc
   log.cc
