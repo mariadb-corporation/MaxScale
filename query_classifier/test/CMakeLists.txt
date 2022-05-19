@@ -1,12 +1,15 @@
+add_executable(compare compare.cc testreader.cc)
+
 # Include the embedded library headers
 if (BUILD_QC_MYSQLEMBEDDED)
   find_package(MySQL)
 
   subdirs(MYSQL_INCLUDE_DIR_ALL ${MYSQL_EMBEDDED_INCLUDE_DIR})
+  # Include the embedded library headers
+  target_include_directories(compare BEFORE PUBLIC ${MYSQL_EMBEDDED_INCLUDE_DIR}/..)
   foreach(DIR ${MYSQL_INCLUDE_DIR_ALL})
-    include_directories(${DIR})
+    target_include_directories(compare BEFORE PUBLIC ${DIR})
   endforeach()
-  include_directories(${MYSQL_EMBEDDED_INCLUDE_DIR}/..)
 
   if(${ERRMSG} MATCHES "ERRMSG-NOTFOUND")
     message(FATAL_ERROR "The errmsg.sys file was not found, please define the path with -DERRMSG=<path>")
@@ -19,7 +22,6 @@ if (BUILD_QC_MYSQLEMBEDDED)
   endif()
 endif()
 
-add_executable(compare compare.cc testreader.cc)
 target_link_libraries(compare maxscale-common)
 
 add_executable(qc_cache qc_cache.cc)
