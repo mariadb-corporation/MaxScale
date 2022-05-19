@@ -121,6 +121,10 @@ add_test_executable_ex(NAME mysqlmon_fail_switch_multi SOURCE mysqlmon_fail_swit
 add_test_executable_ex(NAME mariadbmon_master_slave_conditions SOURCE master_slave_conditions.cc
         CONFIG master_slave_conditions.cnf VMS repl_backend LABELS mysqlmon)
 
+# promotion_sql_file and demotion_sql_file
+add_test_executable_ex(NAME mariadbmon_prom_dem_files SOURCE mariadbmon_prom_dem_files.cc
+        CONFIG mariadbmon_prom_dem_files.cnf VMS repl_backend LABELS mysqlmon)
+
 # Two MaxScales with cooperative monitoring. Does not really break replication but mark as such anyway
 # to move test exec to a separate MV.
 add_test_executable_ex(NAME cooperative_monitoring SOURCE cooperative_monitoring.cc
