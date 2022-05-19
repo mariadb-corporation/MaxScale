@@ -22,7 +22,11 @@ int main(int argc, char* argv[])
     test.tprintf("Configure the connection to time out if it's inactive for 10 seconds");
     test.expect(conn.query("SET wait_timeout=10"), "SET should work: %s", conn.error());
 
-    sleep(20);
+    for (int i = 0; i < 20; i++)
+    {
+        sleep(1);
+        test.expect(conn.query("SELECT 1"), "SELECT should work: %s", conn.error());
+    }
 
     test.expect(conn.query("INSERT INTO test.t1 VALUES (1)"), "INSERT should work: %s", conn.error());
     test.expect(conn.query("SELECT 1"), "SELECT should work: %s", conn.error());
@@ -55,7 +59,11 @@ int main(int argc, char* argv[])
     test.tprintf("Check that connection keepalive works on the upper level as well");
     test.expect(conn2.query("SET wait_timeout=10"), "SET should work: %s", conn2.error());
 
-    sleep(20);
+    for (int i = 0; i < 20; i++)
+    {
+        sleep(1);
+        test.expect(conn2.query("SELECT 1"), "SELECT should work: %s", conn.error());
+    }
 
     test.expect(conn2.query("INSERT INTO test.t1 VALUES (1)"), "INSERT should work: %s", conn2.error());
     test.expect(conn2.query("SELECT 1"), "SELECT should work: %s", conn2.error());
