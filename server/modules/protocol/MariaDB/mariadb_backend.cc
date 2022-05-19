@@ -293,7 +293,8 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
  */
 void MariaDBBackendConnection::prepare_for_write(GWBUF* buffer)
 {
-    if (!gwbuf_is_ignorable(buffer))
+    if ((m_session->capabilities() & RCAP_TYPE_REQUEST_TRACKING)
+        && !gwbuf_is_ignorable(buffer))
     {
         track_query(TrackedQuery(buffer));
     }
