@@ -1384,7 +1384,7 @@ void MariaDBBackendConnection::ping()
         && m_reply.command() != MXS_COM_STMT_SEND_LONG_DATA
         && m_ignore_replies == 0)
     {
-        MXS_INFO("Pinging '%s', idle for %ld seconds", m_server.name(), seconds_idle());
+        MXS_INFO("Pinging '%s', idle for %ld seconds", m_server.name(), m_dcb->seconds_idle());
 
         // TODO: Think of a better mechanism for the pings, the ignorable ping mechanism isn't pretty.
         write(modutil_create_ignorable_ping());
@@ -1394,19 +1394,6 @@ void MariaDBBackendConnection::ping()
 bool MariaDBBackendConnection::can_close() const
 {
     return m_state == State::ROUTING || m_state == State::FAILED;
-}
-
-int64_t MariaDBBackendConnection::seconds_idle() const
-{
-    int64_t idle = 0;
-
-    // Only treat the connection as idle if there's no buffered data
-    if (!m_dcb->writeq() && !m_dcb->readq())
-    {
-        idle = MXS_CLOCK_TO_SEC(mxs_clock() - std::max(m_dcb->last_read(), m_dcb->last_write()));
-    }
-
-    return idle;
 }
 
 json_t* MariaDBBackendConnection::diagnostics() const

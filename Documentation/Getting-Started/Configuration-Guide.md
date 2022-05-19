@@ -1651,6 +1651,11 @@ The parameter value is the interval in seconds between each keepalive ping. A
 keepalive ping will be sent to a backend server if the connection has been idle
 for longer than the configured keepalive interval.
 
+Starting with MaxScale 2.5.21, the keepalive pings are not sent if the client
+has been idle for longer than the configured value of
+`connection_keepalive`. Older versions of MaxScale sent the keepalive pings
+regardless of the client state.
+
 This parameter only takes effect in top-level services. A top-level service is
 the service where the listener that the client connected to points (i.e. the
 value of `service` in the listener). If a service defines other services in its

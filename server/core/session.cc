@@ -1541,11 +1541,14 @@ void Session::tick(int64_t idle)
 
     if (auto interval = service->config()->connection_keepalive)
     {
-        for (const auto& a : backend_connections())
+        if (client_connection()->dcb()->seconds_idle() < interval)
         {
-            if (a->seconds_idle() > interval)
+            for (const auto& a : backend_connections())
             {
-                a->ping();
+                if (a->dcb()->seconds_idle() > interval)
+                {
+                    a->ping();
+                }
             }
         }
     }

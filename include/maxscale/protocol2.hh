@@ -271,13 +271,6 @@ public:
      */
     virtual bool can_close() const = 0;
 
-    /**
-     * How many seconds has the connection been idle
-     *
-     * @return Number of seconds the connection has been idle
-     */
-    virtual int64_t seconds_idle() const = 0;
-
     virtual const BackendDCB* dcb() const = 0;
     virtual BackendDCB*       dcb() = 0;
 };
