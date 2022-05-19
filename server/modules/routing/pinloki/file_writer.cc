@@ -176,6 +176,17 @@ bool FileWriter::open_for_appending(const maxsql::Rotate& rotate, const maxsql::
                                 | std::ios_base::binary);
         m_current_pos.file.seekp(0, std::ios_base::end);
         m_current_pos.write_pos = m_current_pos.file.tellp();
+
+        if (auto encrypt = maxsql::RplEvent::read_event(log_file, &file_pos))
+        {
+            // File has more events after the FDE.
+            if (encrypt.event_type() == START_ENCRYPTION_EVENT)
+            {
+                const auto& cnf = m_inventory.config();
+                m_encrypt = mxq::create_encryption_ctx(cnf.key_id(), cnf.encryption_cipher(),
+                                                       m_current_pos.name, encrypt);
+            }
+        }
     }
 
     return m_ignore_preamble;

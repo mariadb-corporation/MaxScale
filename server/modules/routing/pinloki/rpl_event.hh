@@ -18,9 +18,13 @@
 #include <array>
 
 #include <maxbase/secrets.hh>
+#include <maxbase/exception.hh>
 
 namespace maxsql
 {
+
+DEFINE_EXCEPTION(EncryptionError);
+
 struct Rotate
 {
     bool        is_fake;
@@ -201,6 +205,14 @@ std::vector<char> create_rotate_event(const std::string& file_name,
 
 std::vector<char> create_binlog_checkpoint(const std::string& file_name, uint32_t server_id,
                                            uint32_t curr_pos);
+
+std::vector<char> create_start_encryption_event(uint32_t server_id, uint32_t key_version,
+                                                uint32_t current_pos);
+
+std::unique_ptr<mxq::EncryptCtx> create_encryption_ctx(const std::string& key_id,
+                                                       mxb::Cipher::AesMode cipher,
+                                                       const std::string& filename,
+                                                       const mxq::RplEvent& event);
 
 enum class Verbosity {Name, Some, All};
 std::string   dump_rpl_msg(const RplEvent& rpl_event, Verbosity v);

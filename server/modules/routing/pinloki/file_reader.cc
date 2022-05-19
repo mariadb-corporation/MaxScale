@@ -193,6 +193,15 @@ maxsql::RplEvent FileReader::fetch_event()
             return event;
         }
 
+        if (event.event_type() == START_ENCRYPTION_EVENT)
+        {
+            const auto& cnf = m_inventory.config();
+            m_encrypt = mxq::create_encryption_ctx(cnf.key_id(), cnf.encryption_cipher(),
+                                                   m_read_pos.name, event);
+            // TODO: This recursion seems a little stupid. Figure out if there's a better way.
+            return fetch_event();
+        }
+
         if (event.event_type() == GTID_EVENT)
         {
             auto gtid_event = event.gtid_event();
@@ -232,9 +241,12 @@ maxsql::RplEvent FileReader::fetch_event()
         else if (event.event_type() == STOP_EVENT || event.event_type() == ROTATE_EVENT)
         {
             m_skip_gtid = false;
+
+            // End of file: reset encryption in preparation for the next file.
+            m_encrypt.reset();
         }
     }
-    while(m_skip_gtid);
+    while (m_skip_gtid);
 
     return event;
 }
@@ -266,6 +278,7 @@ maxsql::RplEvent FileReader::fetch_event_internal()
     {
         if (rpl.event_type() != GTID_LIST_EVENT
             && rpl.event_type() != FORMAT_DESCRIPTION_EVENT
+            && rpl.event_type() != START_ENCRYPTION_EVENT
             && rpl.event_type() != BINLOG_CHECKPOINT_EVENT)
         {
             m_generating_preamble = false;

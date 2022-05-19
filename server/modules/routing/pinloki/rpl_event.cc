@@ -21,11 +21,19 @@
 #include <iostream>
 #include <iomanip>
 
+#include <openssl/rand.h>
+#include <maxscale/utils.hh>
+#include <maxscale/key_manager.hh>
+
 using namespace std::literals::chrono_literals;
 using namespace std::literals::string_literals;
 
 namespace
 {
+
+// Offset of the event length in the binlog event header
+constexpr int RPL_EV_LEN_OFFSET = 9;
+
 std::string get_rotate_name(const char* ptr, size_t len)
 {
     // 19 byte header and 8 bytes of constant data
@@ -46,6 +54,43 @@ std::string get_rotate_name(const char* ptr, size_t len)
     }
 
     return given;
+}
+
+std::vector<char> create_header(uint32_t payload_len,
+                                uint32_t ts,
+                                uint8_t event_type,
+                                uint32_t server_id,
+                                uint32_t next_pos,
+                                uint16_t flags)
+{
+
+    std::vector<char> data(mxq::RPL_HEADER_LEN + payload_len);
+    uint8_t* ptr = (uint8_t*)&data[0];
+
+    // Timestamp
+    mariadb::set_byte4(ptr, ts);
+    ptr += 4;
+
+    // Event type
+    *ptr++ = event_type;
+
+    // server_id
+    mariadb::set_byte4(ptr, server_id);
+    ptr += 4;
+
+    // Event length
+    mariadb::set_byte4(ptr, data.size());
+    ptr += 4;
+
+    // Next pos
+    mariadb::set_byte4(ptr, next_pos);
+    ptr += 4;
+
+    // Flags
+    mariadb::set_byte2(ptr, flags);
+    ptr += 2;
+
+    return data;
 }
 }
 
@@ -440,30 +485,9 @@ std::vector<char> create_rotate_event(const std::string& file_name,
                                       uint32_t pos,
                                       Kind kind)
 {
-    std::vector<char> data(RPL_HEADER_LEN + file_name.size() + 12);
-    uint8_t* ptr = (uint8_t*)&data[0];
-
-    // Timestamp, hm.
-    mariadb::set_byte4(ptr, 0);
-    ptr += 4;
-
-    // This is a rotate event
-    *ptr++ = ROTATE_EVENT;
-
-    // server_id
-    mariadb::set_byte4(ptr, server_id);
-    ptr += 4;
-
-    // Event length
-    mariadb::set_byte4(ptr, data.size());
-    ptr += 4;
-
-    mariadb::set_byte4(ptr, pos);
-    ptr += 4;
-
-    // Flags
-    mariadb::set_byte2(ptr, kind == Kind::Artificial ? LOG_EVENT_ARTIFICIAL_F : 0);
-    ptr += 2;
+    std::vector<char> data = create_header(file_name.size() + 12, 0, ROTATE_EVENT, server_id, pos,
+                                           kind == Kind::Artificial ? LOG_EVENT_ARTIFICIAL_F : 0);
+    uint8_t* ptr = (uint8_t*)data.data() + RPL_HEADER_LEN;
 
     // PAYLOAD
     // The position in the new file. Always sizeof magic.
@@ -518,6 +542,32 @@ std::vector<char> create_binlog_checkpoint(const std::string& file_name, uint32_
     // The binlog name  (not null-terminated)
     memcpy(ptr, file_name.c_str(), file_name.size());
     ptr += file_name.size();
+
+    // Checksum of the whole event
+    mariadb::set_byte4(ptr, crc32(0, (uint8_t*)data.data(), data.size() - 4));
+
+    return data;
+}
+
+std::vector<char> create_start_encryption_event(uint32_t server_id, uint32_t key_version,
+                                                uint32_t current_pos)
+{
+    const uint32_t PAYLOAD_LEN = 1 + 4 + 12 + 4;
+    uint32_t next_pos = current_pos + RPL_HEADER_LEN + PAYLOAD_LEN;
+    std::vector<char> data = create_header(PAYLOAD_LEN, 0, START_ENCRYPTION_EVENT, server_id, next_pos, 0);
+    uint8_t* ptr = (uint8_t*)data.data() + RPL_HEADER_LEN;
+
+    // PAYLOAD
+    // Encryption scheme, always 1 for binlogs
+    *ptr++ = 1;
+
+    // Key version
+    mariadb::set_byte4(ptr, key_version);
+    ptr += 4;
+
+    // 12 byte nonce
+    RAND_bytes(ptr, 12);
+    ptr += 12;
 
     // Checksum of the whole event
     mariadb::set_byte4(ptr, crc32(0, (uint8_t*)data.data(), data.size() - 4));
@@ -588,6 +638,44 @@ std::vector<char> EncryptCtx::encrypt_event(std::vector<char> input, uint32_t po
     mxb_assert(decrypt_event(output, pos) == input);
 
     return output;
+}
+
+std::unique_ptr<mxq::EncryptCtx> create_encryption_ctx(const std::string& key_id,
+                                                       mxb::Cipher::AesMode cipher,
+                                                       const std::string& filename,
+                                                       const mxq::RplEvent& event)
+{
+    std::unique_ptr<mxq::EncryptCtx> rval;
+
+    if (key_id.empty())
+    {
+        MXB_THROW(EncryptionError,
+                  "Encrypted binlog '" << filename <<
+                  "' found but 'encryption_key_id' is not configured");
+    }
+    else if (mxs::KeyManager* key_manager = mxs::key_manager())
+    {
+        auto start_encryption = event.start_encryption_event();
+        auto [ok, key] = key_manager->key(key_id, start_encryption.key_version);
+
+        if (!ok)
+        {
+            MXB_THROW(EncryptionError,
+                      "Version " << start_encryption.key_version
+                                 << " of key '" << key_id
+                                 << "' was not found, cannot "
+                                 << "open encrypted binlog '" << filename << "'");
+        }
+
+        rval = std::make_unique<mxq::EncryptCtx>(cipher, key, start_encryption.iv);
+    }
+    else
+    {
+        MXB_THROW(EncryptionError,
+                  "Encrypted binlog '" << filename << "' found but key manager is not configured");
+    }
+
+    return rval;
 }
 }
 
