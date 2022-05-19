@@ -45,6 +45,18 @@ cfg::ParamBool s_select_master(
 cfg::ParamBool s_ddl_only(
     &s_spec, "ddl_only", "Ignore data events and only keep DDL events", false);
 
+cfg::ParamString s_encryption_key_id(
+    &s_spec, "encryption_key_id", "Key ID used for binlog encryption", "");
+
+cfg::ParamEnum<mxb::Cipher::AesMode> s_encryption_cipher(
+    &s_spec, "encryption_cipher", "Binlog encryption algorithm",
+    {
+        {mxb::Cipher::AES_CBC, "AES_CBC"},
+        {mxb::Cipher::AES_CTR, "AES_CTR"},
+        {mxb::Cipher::AES_GCM, "AES_GCM"},
+    },
+    mxb::Cipher::AES_GCM);
+
 cfg::ParamCount s_expire_log_minimum_files(
     &s_spec, "expire_log_minimum_files", "Minimum number of files the automatic log purge keeps", 2);
 
@@ -152,6 +164,16 @@ wall_time::Duration Config::purge_poll_timeout() const
     return m_purge_poll_timeout;
 }
 
+const std::string& Config::key_id() const
+{
+    return m_encryption_key_id;
+}
+
+mxb::Cipher::AesMode Config::encryption_cipher() const
+{
+    return m_encryption_cipher;
+}
+
 std::string gen_uuid()
 {
     char uuid_str[36 + 1];
@@ -185,6 +207,8 @@ Config::Config(const std::string& name, std::function<bool()> callback)
     add_native(&Config::m_net_timeout, &s_net_timeout);
     add_native(&Config::m_select_master, &s_select_master);
     add_native(&Config::m_ddl_only, &s_ddl_only);
+    add_native(&Config::m_encryption_key_id, &s_encryption_key_id);
+    add_native(&Config::m_encryption_cipher, &s_encryption_cipher);
     add_native(&Config::m_expire_log_duration, &s_expire_log_duration);
     add_native(&Config::m_expire_log_minimum_files, &s_expire_log_minimum_files);
     add_native(&Config::m_purge_startup_delay, &s_purge_startup_delay);

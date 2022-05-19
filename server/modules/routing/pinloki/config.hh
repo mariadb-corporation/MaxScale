@@ -20,6 +20,7 @@
 #include <maxbase/stopwatch.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/config2.hh>
+#include <maxscale/key_manager.hh>
 
 #include <string>
 
@@ -57,6 +58,10 @@ public:
     bool select_master() const;
     bool ddl_only() const;
     void disable_select_master();
+
+    const std::string& key_id() const;
+
+    mxb::Cipher::AesMode encryption_cipher() const;
 
     // File purging
     int32_t             expire_log_minimum_files() const;
@@ -134,6 +139,8 @@ private:
     bool                 m_select_master;
     bool                 m_select_master_disabled {false};
     bool                 m_ddl_only {false};
+    std::string          m_encryption_key_id;
+    mxb::Cipher::AesMode m_encryption_cipher;
 
     int64_t             m_expire_log_minimum_files;
     wall_time::Duration m_expire_log_duration;
