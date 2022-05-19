@@ -524,6 +524,71 @@ std::vector<char> create_binlog_checkpoint(const std::string& file_name, uint32_
 
     return data;
 }
+
+std::vector<char> EncryptCtx::decrypt_event(std::vector<char> input, uint32_t pos)
+{
+    std::vector<char> output(input.size());
+    uint8_t* in = reinterpret_cast<uint8_t*>(input.data());
+    uint8_t* out = reinterpret_cast<uint8_t*>(output.data());
+
+    // Store the event length and replace it with the encrypted timestamp
+    uint32_t len = mariadb::get_byte4(in + RPL_EV_LEN_OFFSET);
+    mariadb::set_byte4(in + RPL_EV_LEN_OFFSET, mariadb::get_byte4(in));
+
+    // The first four bytes of the IV are the current event position
+    mariadb::set_byte4(iv.data(), pos);
+
+    int output_len = 0;
+    bool ok = cipher.decrypt(key.data(), iv.data(), in + 4, input.size() - 4, out + 4, &output_len);
+
+    if (!ok)
+    {
+        MXB_THROW(EncryptionError, "Failed to decrypt event: " << cipher.get_errors());
+    }
+
+    // Restore the unencrypted length in the correct place
+    mariadb::set_byte4(out, mariadb::get_byte4(out + RPL_EV_LEN_OFFSET));
+    mariadb::set_byte4(out + RPL_EV_LEN_OFFSET, output_len + 4);
+    output.resize(output_len + 4);
+    return output;
+}
+
+std::vector<char> EncryptCtx::encrypt_event(std::vector<char> input, uint32_t pos)
+{
+    // The length isn't encrypted which means we subtract that from the overall length. However, we still need
+    // to store it so we add it back into the resulting length once we know how long the encrypted data is.
+    // This means that for example with AES-CBC, the data is always multiple of 16 + 4 bytes length.
+    size_t enc_len = cipher.encrypted_size(input.size() - 4) + 4;
+    std::vector<char> output(enc_len);
+    uint8_t* in = reinterpret_cast<uint8_t*>(input.data());
+    uint8_t* out = reinterpret_cast<uint8_t*>(output.data());
+
+    // Replace the event length with the timestamp
+    MXB_AT_DEBUG(uint32_t len = mariadb::get_byte4(in + RPL_EV_LEN_OFFSET));
+    uint32_t timestamp = mariadb::get_byte4(in);
+    mariadb::set_byte4(in + RPL_EV_LEN_OFFSET, timestamp);
+
+    // The first four bytes of the IV are the current event position
+    mariadb::set_byte4(iv.data(), pos);
+
+    int output_len = 0;
+    bool ok = cipher.encrypt(key.data(), iv.data(), in + 4, input.size() - 4, out + 4, &output_len);
+
+    if (!ok)
+    {
+        MXB_THROW(EncryptionError, "Failed to encrypt event: " << cipher.get_errors());
+    }
+
+    // Move the timestamp back to the correct place and store the encrypted length in event length offset
+    mariadb::set_byte4(out, mariadb::get_byte4(out + RPL_EV_LEN_OFFSET));
+    mariadb::set_byte4(out + RPL_EV_LEN_OFFSET, output_len + 4);
+
+    MXB_AT_DEBUG(mariadb::set_byte4(in, timestamp));
+    MXB_AT_DEBUG(mariadb::set_byte4(in + RPL_EV_LEN_OFFSET, len));
+    mxb_assert(decrypt_event(output, pos) == input);
+
+    return output;
+}
 }
 
 std::string to_string(mariadb_rpl_event ev)

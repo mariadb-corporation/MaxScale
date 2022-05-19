@@ -64,5 +64,7 @@ private:
 
     bool              m_in_transaction = false;
     std::vector<char> m_tx_buffer;
+
+    std::unique_ptr<mxq::EncryptCtx> m_encrypt;
 };
 }

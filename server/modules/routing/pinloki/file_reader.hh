@@ -83,5 +83,7 @@ private:
     std::vector<GtidPosition> m_catchup;
     std::set<uint32_t>        m_active_domains;
     bool                      m_skip_gtid = false;
+
+    std::unique_ptr<mxq::EncryptCtx> m_encrypt;
 };
 }

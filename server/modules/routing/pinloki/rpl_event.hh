@@ -17,6 +17,8 @@
 #include <cstring>
 #include <array>
 
+#include <maxbase/secrets.hh>
+
 namespace maxsql
 {
 struct Rotate
@@ -169,6 +171,26 @@ inline bool operator==(const RplEvent& lhs, const RplEvent& rhs)
     return lhs.buffer_size() == rhs.buffer_size()
            && std::memcmp(lhs.pBuffer(), rhs.pBuffer(), lhs.buffer_size()) == 0;
 }
+
+// Encryption context for handling encrypted binlogs
+struct EncryptCtx
+{
+    EncryptCtx(mxb::Cipher::AesMode mode,
+               const std::vector<uint8_t>& enc_key,
+               const std::array<uint8_t, 16>& enc_iv)
+        : cipher(mode, enc_key.size() * 8)
+        , key(enc_key)
+        , iv(enc_iv)
+    {
+    }
+
+    mxb::Cipher             cipher;
+    std::vector<uint8_t>    key;
+    std::array<uint8_t, 16> iv;
+
+    std::vector<char> decrypt_event(std::vector<char> input, uint32_t pos);
+    std::vector<char> encrypt_event(std::vector<char> input, uint32_t pos);
+};
 
 enum class Kind {Real, Artificial};
 
