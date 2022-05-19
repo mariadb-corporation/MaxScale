@@ -31,7 +31,13 @@ public:
 
     enum class Type
     {
-        NONE,   // No key manager
+        // No key manager
+        NONE,
+
+        // File based key manager, stores keys locally on disk. Relatively unsafe, use only if you trust file
+        // system security. Read https://mariadb.com/kb/en/file-key-management-encryption-plugin/ for more
+        // information.
+        FILE
     };
 
     // An abstract class for handling the encryption of the keystore file.

@@ -82,6 +82,122 @@ bool save_file(std::string file, std::vector<uint8_t> data)
 
     return ok;
 }
+
+std::vector<uint8_t> load_hex_file(std::string file)
+{
+    std::vector<uint8_t> data = load_file(file);
+
+    if (!data.empty())
+    {
+        std::string str(data.begin(), data.end());
+        mxb::trim(str);
+        data = mxs::from_hex(str);
+
+        if (data.empty())
+        {
+            MXB_ERROR("File '%s' does not contain a valid hex string.", file.c_str());
+        }
+    }
+
+    return data;
+}
+
+bool save_hex_file(std::string file, std::vector<uint8_t> data)
+{
+    auto hex = mxs::to_hex(data.begin(), data.end());
+    return save_file(file, {hex.begin(), hex.end()});
+}
+
+class FileKey : public mxs::KeyManager::MasterKey
+{
+public:
+    static constexpr const char CN_KEYFILE[] = "keyfile";
+
+    static std::unique_ptr<mxs::KeyManager::MasterKey> create(const mxs::ConfigParameters& options)
+    {
+        std::unique_ptr<mxs::KeyManager::MasterKey> rv;
+
+        if (auto keyfile = options.get_string(CN_KEYFILE); !keyfile.empty())
+        {
+            if (auto key = load_hex_file(keyfile); !key.empty())
+            {
+                switch (key.size())
+                {
+                case 16:
+                case 24:
+                case 32:
+                    rv.reset(new FileKey(std::move(key)));
+                    break;
+
+                default:
+                    MXB_ERROR("Invalid key size (%ld bytes), expected 16, 24 or 32 bytes.", key.size());
+                    break;
+                }
+            }
+            else
+            {
+                MXB_ERROR("Failed to open keyfile '%s'.", keyfile.c_str());
+            }
+        }
+        else
+        {
+            MXB_ERROR("Missing required '%s' parameter.", CN_KEYFILE);
+        }
+
+        return rv;
+    }
+
+    std::pair<bool, std::vector<uint8_t>> decrypt(std::vector<uint8_t> input) override final
+    {
+        bool ok = false;
+        std::vector<uint8_t> output;
+        size_t iv_len = m_cipher.iv_size();
+
+        if (input.size() >= iv_len + m_cipher.encrypted_size(1))
+        {
+            output.resize(input.size() - iv_len);
+
+            int out_len = 0;
+            ok = m_cipher.decrypt(m_key.data(), input.data(),
+                                  input.data() + iv_len, input.size() - iv_len,
+                                  output.data(), &out_len);
+
+            output.resize(out_len);
+        }
+
+        return {ok, output};
+    }
+
+    std::pair<bool, std::vector<uint8_t>> encrypt(std::vector<uint8_t> input) override final
+    {
+        auto output = m_cipher.new_iv();
+        size_t iv_size = m_cipher.iv_size();
+        mxb_assert(output.size() == iv_size);
+
+        // Append the encrypted data to the IV
+        output.resize(m_cipher.encrypted_size(input.size()) + iv_size);
+
+        int out_len = 0;
+        bool ok = m_cipher.encrypt(m_key.data(), output.data(),
+                                   input.data(), input.size(),
+                                   output.data() + iv_size, &out_len);
+
+        // The resulting size should be the same as the one we pre-calculated.
+        mxb_assert((size_t)out_len == output.size() - iv_size);
+
+        return {ok, output};
+    }
+
+private:
+    FileKey(std::vector<uint8_t> key)
+        : m_key(std::move(key))
+        , m_cipher(mxb::Cipher::AES_GCM, m_key.size() * 8)
+    {
+    }
+
+    std::vector<uint8_t> m_key;
+    mxb::Cipher          m_cipher;
+};
 }
 
 namespace maxscale
@@ -104,6 +220,10 @@ bool KeyManager::init()
 
     switch (type)
     {
+    case Type::FILE:
+        master_key = FileKey::create(opts);
+        break;
+
     default:
         mxb_assert(!true);
         break;
