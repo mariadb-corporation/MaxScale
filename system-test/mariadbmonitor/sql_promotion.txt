@@ -1,0 +1,3 @@
+SET GLOBAL wait_timeout=123;
+SET GLOBAL lock_wait_timeout=456;
+SET GLOBAL innodb_lock_wait_timeout=789;
