@@ -280,6 +280,26 @@ GtidListEvent RplEvent::gtid_list() const
     return GtidListEvent(std::move(gtids));
 }
 
+StartEncryptionEvent RplEvent::start_encryption_event() const
+{
+    StartEncryptionEvent event;
+    const uint8_t* ptr = (uint8_t*)pBody();
+
+    // START_ENCRYPTION_EVENT:
+    //
+    // key schema  [1]
+    // key version [4]
+    // IV          [12]
+
+    event.key_version = mariadb::get_byte4(ptr + 1);
+
+    // Store the 12 byte IV in the event at an offset of 4 bytes: the first part will be substituted with the
+    // current position of each encrypted binlog event.
+    memcpy(event.iv.data() + 4, ptr + 5, 12);
+
+    return event;
+}
+
 std::ostream& operator<<(std::ostream& os, const GtidListEvent& ev)
 {
     os << ev.gtid_list;

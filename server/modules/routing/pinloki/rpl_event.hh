@@ -15,6 +15,7 @@
 
 #include "maria_rpl_event.hh"
 #include <cstring>
+#include <array>
 
 namespace maxsql
 {
@@ -46,6 +47,12 @@ struct GtidListEvent
     }
 
     GtidList gtid_list;
+};
+
+struct StartEncryptionEvent
+{
+    uint32_t                key_version;
+    std::array<uint8_t, 16> iv;
 };
 
 class RplEvent
@@ -124,10 +131,12 @@ public:
     const char*  pBody() const;
     unsigned int checksum() const;
 
-    Rotate        rotate() const;
-    GtidEvent     gtid_event() const;
-    GtidListEvent gtid_list() const;
-    bool          is_commit() const;
+    Rotate               rotate() const;
+    GtidEvent            gtid_event() const;
+    GtidListEvent        gtid_list() const;
+    StartEncryptionEvent start_encryption_event() const;
+    bool                 is_commit() const;
+
 
     /** For the writer */
     void       set_next_pos(uint32_t next_pos);
