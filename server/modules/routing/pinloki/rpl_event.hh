@@ -25,6 +25,8 @@ namespace maxsql
 
 DEFINE_EXCEPTION(EncryptionError);
 
+struct EncryptCtx;
+
 struct Rotate
 {
     bool        is_fake;
@@ -94,6 +96,16 @@ public:
      *                   is_empty() == true and *file_pos is unchanged.
      */
     static RplEvent read_event(std::istream& file, long* file_pos);
+
+    /**
+     * Reads one event and decrypts it if needed
+     *
+     * @param file File to read from
+     * @param enc  Encryption context to use
+     *
+     * @return The event if one was successfully read
+     */
+    static RplEvent read_event(std::istream& file, const std::unique_ptr<mxq::EncryptCtx>& enc);
 
     /**
      * @brief  read_header_only. Use read_body() to get the full event.

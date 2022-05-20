@@ -66,10 +66,17 @@ private:
         int           next_pos;
     };
 
-    void              open(const std::string& file_name);
-    void              set_inotify_fd();
-    std::vector<char> fetch_raw();
-    maxsql::RplEvent  fetch_event_internal();
+    void             open(const std::string& file_name);
+    void             set_inotify_fd();
+    maxsql::RplEvent fetch_event_internal();
+
+
+    std::vector<GtidPosition> find_gtid_position(const std::vector<maxsql::Gtid>& gtids);
+    long                      search_gtid_in_file(std::ifstream& file,
+                                                  const std::unique_ptr<mxq::EncryptCtx>& encrypt,
+                                                  long file_pos, const maxsql::Gtid& gtid);
+    bool search_file(const std::string& file_name, const maxsql::Gtid& gtid,
+                     GtidPosition* ret_pos, bool first_file);
 
     int                    m_inotify_fd;
     int                    m_inotify_descriptor = -1;

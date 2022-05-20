@@ -66,7 +66,7 @@ FileReader::FileReader(const maxsql::GtidList& gtid_list, const InventoryReader*
     if (gtid_list.gtids().size() > 0)
     {
         // Get a sorted list of GtidPositions
-        m_catchup = find_gtid_position(gtid_list.gtids(), m_inventory);
+        m_catchup = find_gtid_position(gtid_list.gtids());
 
         // The first one is the position from which to start reading.
         const auto& gtid_pos = m_catchup.front();
@@ -154,34 +154,6 @@ void FileReader::fd_notify(uint32_t events)
     }
 }
 
-std::vector<char> FileReader::fetch_raw()
-{
-    std::vector<char> raw(HEADER_LEN);
-
-    m_read_pos.file.clear();
-    m_read_pos.file.seekg(m_read_pos.next_pos);
-    m_read_pos.file.read(raw.data(), HEADER_LEN);
-
-    if (m_read_pos.file.tellg() != m_read_pos.next_pos + HEADER_LEN)
-    {
-        // Partial, or no header. Wait for more via inotify.
-        return std::vector<char>();
-    }
-
-    auto event_length = maxsql::RplEvent::get_event_length(raw);
-
-    raw.resize(event_length);
-    m_read_pos.file.read(raw.data() + HEADER_LEN, event_length - HEADER_LEN);
-
-    if (m_read_pos.file.tellg() != m_read_pos.next_pos + event_length)
-    {
-        // Wait for more via inotify.
-        return std::vector<char>();
-    }
-
-    return raw;
-}
-
 maxsql::RplEvent FileReader::fetch_event()
 {
     maxsql::RplEvent event;
@@ -265,21 +237,18 @@ maxsql::RplEvent FileReader::fetch_event_internal()
         return mxq::RplEvent(std::move(vec));
     }
 
-    auto raw = fetch_raw();
+    m_read_pos.file.clear();
+    m_read_pos.file.seekg(m_read_pos.next_pos);
+    maxsql::RplEvent rpl = mxq::RplEvent::read_event(m_read_pos.file, m_encrypt);
 
-    if (raw.empty())
+    if (rpl.is_empty())
     {
+        mxb_assert(!m_read_pos.file.good());
         return maxsql::RplEvent();
     }
 
-    size_t event_len = raw.size();
-
-    if (m_encrypt)
-    {
-        raw = m_encrypt->decrypt_event(raw, m_read_pos.next_pos);
-    }
-
-    maxsql::RplEvent rpl(std::move(raw));
+    // The next event always starts at the position the previous one ends
+    m_read_pos.next_pos = m_read_pos.file.tellg();
 
     if (m_generating_preamble)
     {
@@ -292,15 +261,8 @@ maxsql::RplEvent FileReader::fetch_event_internal()
             if (m_initial_gtid_file_pos)
             {
                 m_read_pos.next_pos = m_initial_gtid_file_pos;
-
-                auto raw = fetch_raw();
-
-                if (raw.empty())
-                {
-                    return maxsql::RplEvent();
-                }
-
-                rpl = maxsql::RplEvent(std::move(raw));
+                m_read_pos.file.seekg(m_read_pos.next_pos);
+                rpl = mxq::RplEvent::read_event(m_read_pos.file, m_encrypt);
             }
         }
     }
@@ -333,10 +295,7 @@ maxsql::RplEvent FileReader::fetch_event_internal()
         // need to read from. It contains the "logical" next position of the unencrypted event which means it
         // can't be used and the real even length is used instead. This works because the resulting binlog
         // will have no gaps as the events are appended to the file.
-        mxb_assert(m_read_pos.next_pos + event_len == rpl.next_event_pos() || m_encrypt.get());
-
-        m_read_pos.next_pos += event_len;
-        MXB_SDEBUG("Next position at " << m_read_pos.next_pos);
+        mxb_assert((uint32_t)m_read_pos.next_pos == rpl.next_event_pos() || m_encrypt.get());
     }
 
     return rpl;

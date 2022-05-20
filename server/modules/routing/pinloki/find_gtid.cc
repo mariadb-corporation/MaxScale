@@ -15,6 +15,7 @@
 #include "inventory.hh"
 #include "pinloki.hh"
 #include "rpl_event.hh"
+#include "file_reader.hh"
 #include <maxbase/log.hh>
 #include <maxscale/routingworker.hh>
 #include <fstream>
@@ -43,20 +44,14 @@ inline bool operator<(const GtidPosition& lhs, const GtidPosition& rhs)
     return lhs_num < rhs_num || (lhs_num == rhs_num && lhs.file_pos < rhs.file_pos);
 }
 
-bool search_file(const std::string& file_name,
-                 const maxsql::Gtid& gtid,
-                 GtidPosition* pos,
-                 bool search_in_file);
-
-std::vector<GtidPosition> find_gtid_position(const std::vector<maxsql::Gtid>& gtids,
-                                             const InventoryReader& inv)
+std::vector<GtidPosition> FileReader::find_gtid_position(const std::vector<maxsql::Gtid>& gtids)
 {
     mxb::WatchdogNotifier::Workaround workaround(mxs::RoutingWorker::get_current());
 
     std::vector<GtidPosition> ret;
     // Simple linear search. If there can be a lot of files, make this a binary search, or
     // if it really becomes slow, create an index
-    const auto& file_names = inv.file_names();
+    const auto& file_names = m_inventory.file_names();
 
     // Search in reverse because the gtid is likely be one of the latest files, and
     // the search can stop as soon as the gtid is greater than the gtid list in the file,
@@ -89,48 +84,31 @@ std::vector<GtidPosition> find_gtid_position(const std::vector<maxsql::Gtid>& gt
  * @param from_pos
  * @return position, or 0 if not found
  */
-long search_gtid_in_file(std::ifstream& file, long file_pos, const maxsql::Gtid& gtid)
+long FileReader::search_gtid_in_file(std::ifstream& file, const std::unique_ptr<mxq::EncryptCtx>& encrypt,
+                                     long file_pos, const maxsql::Gtid& gtid)
 {
-    long found_pos = 0;
-
-    while (!found_pos)
+    for (long pos = file.tellg();
+         maxsql::RplEvent rpl = maxsql::RplEvent::read_event(file, encrypt);
+         pos = file.tellg())
     {
-        auto this_pos = file_pos;
-
-        maxsql::RplEvent rpl = maxsql::RplEvent::read_header_only(file, &file_pos);
-        if (rpl.is_empty())
+        if (rpl.event_type() == GTID_EVENT)
         {
-            break;
-        }
-
-        if (rpl.event_type() != GTID_EVENT)
-        {
-            file_pos = rpl.next_event_pos();
-        }
-        else
-        {
-            rpl.read_body(file, &file_pos);
-            if (rpl.is_empty())
-            {
-                break;
-            }
-
             maxsql::GtidEvent event = rpl.gtid_event();
-            if (event.gtid.domain_id() == gtid.domain_id()
-                && event.gtid.sequence_nr() == gtid.sequence_nr())
+
+            if (event.gtid.domain_id() == gtid.domain_id() && event.gtid.sequence_nr() == gtid.sequence_nr())
             {
-                found_pos = this_pos;
+                return pos;
             }
         }
     }
 
-    return found_pos;
+    return 0;
 }
 
-bool search_file(const std::string& file_name,
-                 const maxsql::Gtid& gtid,
-                 GtidPosition* ret_pos,
-                 bool first_file)
+bool FileReader::search_file(const std::string& file_name,
+                             const maxsql::Gtid& gtid,
+                             GtidPosition* ret_pos,
+                             bool first_file)
 {
     std::ifstream file {file_name, std::ios_base::in | std::ios_base::binary};
 
@@ -143,28 +121,31 @@ bool search_file(const std::string& file_name,
     enum GtidListResult {NotFound, GtidInThisFile, GtidInPriorFile};
     GtidListResult result = NotFound;
     long file_pos = PINLOKI_MAGIC.size();
+    std::unique_ptr<mxq::EncryptCtx> encrypt;
+
+    if (mxq::RplEvent fde = maxsql::RplEvent::read_event(file, &file_pos);
+        fde.event_type() == FORMAT_DESCRIPTION_EVENT)
+    {
+        if (mxq::RplEvent enc = maxsql::RplEvent::read_event(file, &file_pos);
+            enc.event_type() == START_ENCRYPTION_EVENT)
+        {
+            const auto& cnf = m_inventory.config();
+            encrypt = mxq::create_encryption_ctx(cnf.key_id(), cnf.encryption_cipher(), file_name, enc);
+            mxb_assert((size_t)file.tellg() == 4 + fde.buffer_size() + enc.buffer_size());
+        }
+    }
 
     while (result == NotFound)
     {
-        maxsql::RplEvent rpl = maxsql::RplEvent::read_header_only(file, &file_pos);
+        maxsql::RplEvent rpl = mxq::RplEvent::read_event(file, encrypt);
 
-        if (rpl.is_empty())
+        if (!rpl)
         {
             break;
         }
 
-        if (rpl.event_type() != GTID_LIST_EVENT)
+        if (rpl.event_type() == GTID_LIST_EVENT)
         {
-            file_pos = rpl.next_event_pos();
-        }
-        else
-        {
-            rpl.read_body(file, &file_pos);
-            if (rpl.is_empty())
-            {
-                break;
-            }
-
             maxsql::GtidListEvent event = rpl.gtid_list();
 
             uint32_t highest_seq = 0;
@@ -205,7 +186,7 @@ bool search_file(const std::string& file_name,
         }
 
         file.clear();
-        file_pos = search_gtid_in_file(file, file_pos, gtid);
+        file_pos = search_gtid_in_file(file, encrypt, file_pos, gtid);
         if (file_pos)
         {
             success = true;

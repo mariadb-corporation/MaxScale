@@ -474,6 +474,40 @@ bool RplEvent::read_body(std::istream& file, long* file_pos)
     return true;
 }
 
+mxq::RplEvent RplEvent::read_event(std::istream& file, const std::unique_ptr<mxq::EncryptCtx>& enc)
+{
+    std::vector<char> raw(RPL_HEADER_LEN);
+
+    long pos = file.tellg();
+    file.read(raw.data(), RPL_HEADER_LEN);
+
+    if (file.tellg() != pos + RPL_HEADER_LEN)
+    {
+        // Partial, or no header. Wait for more via inotify.
+        return mxq::RplEvent();
+    }
+
+    auto event_length = maxsql::RplEvent::get_event_length(raw);
+
+    raw.resize(event_length);
+    file.read(raw.data() + RPL_HEADER_LEN, event_length - RPL_HEADER_LEN);
+
+    if (file.tellg() != pos + event_length)
+    {
+        // Wait for more via inotify.
+        return mxq::RplEvent();
+    }
+
+    size_t event_len = raw.size();
+
+    if (enc)
+    {
+        raw = enc->decrypt_event(raw, pos);
+    }
+
+    return mxq::RplEvent(std::move(raw));
+}
+
 std::ostream& operator<<(std::ostream& os, const RplEvent& rpl_msg)
 {
     os << dump_rpl_msg(rpl_msg, Verbosity::All);
