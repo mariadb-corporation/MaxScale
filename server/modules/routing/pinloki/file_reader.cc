@@ -272,6 +272,13 @@ maxsql::RplEvent FileReader::fetch_event_internal()
         return maxsql::RplEvent();
     }
 
+    size_t event_len = raw.size();
+
+    if (m_encrypt)
+    {
+        raw = m_encrypt->decrypt_event(raw, m_read_pos.next_pos);
+    }
+
     maxsql::RplEvent rpl(std::move(raw));
 
     if (m_generating_preamble)
@@ -322,7 +329,14 @@ maxsql::RplEvent FileReader::fetch_event_internal()
     }
     else
     {
-        m_read_pos.next_pos = rpl.next_event_pos();
+        // If this is an encrypted binlog, the next position of the event is not the file offset from where we
+        // need to read from. It contains the "logical" next position of the unencrypted event which means it
+        // can't be used and the real even length is used instead. This works because the resulting binlog
+        // will have no gaps as the events are appended to the file.
+        mxb_assert(m_read_pos.next_pos + event_len == rpl.next_event_pos() || m_encrypt.get());
+
+        m_read_pos.next_pos += event_len;
+        MXB_SDEBUG("Next position at " << m_read_pos.next_pos);
     }
 
     return rpl;
