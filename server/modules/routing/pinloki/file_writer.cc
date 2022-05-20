@@ -158,7 +158,18 @@ bool FileWriter::open_for_appending(const maxsql::Rotate& rotate, const maxsql::
 
     auto last_file_name = last_string(file_names);
 
-    std::ifstream log_file(last_file_name);
+    if (open_binlog(last_file_name))
+    {
+        m_ignore_preamble = true;
+    }
+
+    return m_ignore_preamble;
+}
+
+bool FileWriter::open_binlog(const std::string& file_name)
+{
+    std::ifstream log_file(file_name);
+
     if (!log_file)
     {
         return false;
@@ -167,11 +178,12 @@ bool FileWriter::open_for_appending(const maxsql::Rotate& rotate, const maxsql::
     // Read the first event which is always a format event
     long file_pos = pinloki::PINLOKI_MAGIC.size();
     maxsql::RplEvent event = maxsql::RplEvent::read_event(log_file, &file_pos);
+    bool rv = false;
 
-    if (event == fmt_event)
+    if (event.event_type() == FORMAT_DESCRIPTION_EVENT)
     {
-        m_ignore_preamble = true;
-        m_current_pos.name = last_file_name;
+        rv = true;
+        m_current_pos.name = file_name;
         m_current_pos.file.open(m_current_pos.name, std::ios_base::in | std::ios_base::out
                                 | std::ios_base::binary);
         m_current_pos.file.seekp(0, std::ios_base::end);
@@ -189,7 +201,7 @@ bool FileWriter::open_for_appending(const maxsql::Rotate& rotate, const maxsql::
         }
     }
 
-    return m_ignore_preamble;
+    return rv;
 }
 
 void FileWriter::perform_rotate(const maxsql::Rotate& rotate)
