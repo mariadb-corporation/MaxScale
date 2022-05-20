@@ -378,6 +378,9 @@ static Keyword aKeywordTable[] = {
   { "NULL",             "TK_NULL",         ALWAYS                 },
   { "OF",               "TK_OF",           ALWAYS                 },
   { "OFFSET",           "TK_OFFSET",       ALWAYS                 },
+#ifdef MAXSCALE
+  { "OLD_PASSWORD",     "TK_OLD_PASSWORD", ALWAYS                 },
+#endif
   { "ON",               "TK_ON",           ALWAYS                 },
   { "ONLY",             "TK_ONLY",         ALWAYS                 },
 #ifdef MAXSCALE

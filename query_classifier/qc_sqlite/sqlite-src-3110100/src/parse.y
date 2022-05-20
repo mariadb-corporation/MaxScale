@@ -130,8 +130,9 @@ extern void maxscalePrivileges(Parse*, int kind);
 extern void maxscaleRenameTable(Parse*, SrcList* pTables);
 extern void maxscaleReset(Parse*, int what);
 extern void maxscaleSet(Parse*, int scope, mxs_set_t kind, ExprList*);
-extern void maxscaleSetVariable(Parse*, int scope, Expr*);
+extern void maxscaleSetPassword(Parse*);
 extern void maxscaleSetTransaction(Parse*, int scope, int access_mode);
+extern void maxscaleSetVariable(Parse*, int scope, Expr*);
 extern void maxscaleShow(Parse*, MxsShow* pShow);
 extern void maxscaleTruncate(Parse*, Token* pDatabase, Token* pName);
 extern void maxscaleUse(Parse*, Token*);
@@ -644,7 +645,7 @@ columnid(A) ::= nm(X). {
   NAMES NEXT
   NO
   NOWAIT
-  OF OFFSET OPEN ONLY
+  OF OFFSET OLD_PASSWORD OPEN ONLY
   PARTITIONS PASSWORD PREVIOUS
   QUERY QUICK
   RAISE RECURSIVE /*REINDEX*/ RELEASE /*RENAME*/ /*REPLACE*/ RESET RESTRICT ROLE ROLLBACK ROLLUP ROW REPEATABLE RESUME
@@ -3264,6 +3265,22 @@ variable_assignments(A) ::= variable_assignments(X) COMMA variable_assignment(Y)
 
 cmd ::= SET variable_assignments(Y). {
   maxscaleSet(pParse, 0, MXS_SET_VARIABLES, Y);
+}
+
+user ::= STRING.
+user ::= STRING VARIABLE. // 'user'@'host' will be parsed as STRING VARIABLE
+
+for_user ::= FOR user.
+
+for_user_opt ::= .
+for_user_opt ::= for_user.
+
+password_value ::= PASSWORD LP STRING RP.
+password_value ::= OLD_PASSWORD LP STRING RP.
+password_value ::= STRING.
+
+cmd ::= SET PASSWORD for_user_opt EQ password_value. {
+  maxscaleSetPassword(pParse);
 }
 
 %type trx_access_mode {int}

@@ -3115,6 +3115,14 @@ public:
         exposed_sqlite3ExprListDelete(pParse->db, pList);
     }
 
+    void maxscaleSetPassword(Parse* pParse)
+    {
+        m_status = QC_QUERY_PARSED;
+        // Not a session write because that would break replication - see MXS-2713.
+        m_type_mask |= QUERY_TYPE_WRITE;
+        m_operation = QUERY_OP_SET;
+    }
+
     void maxscaleSetVariable(Parse* pParse, int scope, Expr* pExpr)
     {
         switch (pExpr->op)
@@ -3763,8 +3771,9 @@ extern void maxscalePrivileges(Parse*, int kind);
 extern void maxscaleRenameTable(Parse*, SrcList* pTables);
 extern void maxscaleReset(Parse*, int what);
 extern void maxscaleSet(Parse*, int scope, mxs_set_t kind, ExprList*);
-extern void maxscaleSetVariable(Parse* pParse, int scope, Expr* pExpr);
+extern void maxscaleSetPassword(Parse*);
 extern void maxscaleSetTransaction(Parse*, int scope, int access_mode);
+extern void maxscaleSetVariable(Parse* pParse, int scope, Expr* pExpr);
 extern void maxscaleShow(Parse*, MxsShow* pShow);
 extern void maxscaleTruncate(Parse*, Token* pDatabase, Token* pName);
 extern void maxscaleUse(Parse*, Token*);
@@ -4861,6 +4870,16 @@ void maxscaleSet(Parse* pParse, int scope, mxs_set_t kind, ExprList* pList)
     mxb_assert(pInfo);
 
     QC_EXCEPTION_GUARD(pInfo->maxscaleSet(pParse, scope, kind, pList));
+}
+
+void maxscaleSetPassword(Parse* pParse)
+{
+    QC_TRACE();
+
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    mxb_assert(pInfo);
+
+    QC_EXCEPTION_GUARD(pInfo->maxscaleSetPassword(pParse));
 }
 
 void maxscaleSetVariable(Parse* pParse, int scope, Expr* pExpr)
