@@ -36,12 +36,14 @@ Reader::Pollable::Pollable(Reader* reader, int fd)
 }
 
 Reader::Reader(SendCallback cb, WorkerCallback worker_cb,
+               AbortCallback abort_cb,
                const Config& conf,
                const maxsql::GtidList& start_gl,
                const std::chrono::seconds& heartbeat_interval)
     : mxb::Worker::Callable(&worker_cb())
     , m_send_callback(cb)
     , m_get_worker(worker_cb)
+    , m_abort_cb(abort_cb)
     , m_inventory(conf)
     , m_start_gtid_list(start_gl)
     , m_heartbeat_interval(heartbeat_interval)
@@ -99,6 +101,7 @@ bool Reader::poll_start_reading()
         catch (const mxb::Exception& err)
         {
             MXB_ERROR("Failed to start reading: %s", err.what());
+            m_abort_cb();
         }
     }
     else
@@ -152,27 +155,35 @@ void Reader::notify_concrete_reader(uint32_t events)
 
 void Reader::send_events()
 {
-    maxsql::RplEvent event;
-    maxbase::Timer timer(1ms);
-    bool timer_alarm = false;
-    while (!m_in_high_water
-           && !(timer_alarm = timer.alarm())
-           && (event = m_sFile_reader->fetch_event()))
+    try
     {
-        m_send_callback(event);
-        m_last_event = maxbase::Clock::now();
+        maxsql::RplEvent event;
+        maxbase::Timer timer(1ms);
+        bool timer_alarm = false;
+        while (!m_in_high_water
+               && !(timer_alarm = timer.alarm())
+               && (event = m_sFile_reader->fetch_event()))
+        {
+            m_send_callback(event);
+            m_last_event = maxbase::Clock::now();
+        }
+
+        if (timer_alarm)
+        {
+            auto callback = [this, ref = get_ref()]() {
+                if (auto r = ref.lock())
+                {
+                    send_events();
+                }
+            };
+
+            m_get_worker().execute(callback, mxs::RoutingWorker::EXECUTE_QUEUED);
+        }
     }
-
-    if (timer_alarm)
+    catch (const std::exception& err)
     {
-        auto callback = [this, ref = get_ref()]() {
-            if (auto r = ref.lock())
-            {
-                send_events();
-            }
-        };
-
-        m_get_worker().execute(callback, mxs::RoutingWorker::EXECUTE_QUEUED);
+        MXB_ERROR("Binlog error: %s", err.what());
+        m_abort_cb();
     }
 }
 

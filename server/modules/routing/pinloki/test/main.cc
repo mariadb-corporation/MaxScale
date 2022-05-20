@@ -72,6 +72,7 @@ void prog_main(const maxsql::GtidList& gtid_list, const std::string& host,
             return true;
         }, [&worker]() -> mxb::Worker& {
             return worker;
+        }, [](){
         }, config(), gtid_list, 30s);
 
         worker.start("Reader");

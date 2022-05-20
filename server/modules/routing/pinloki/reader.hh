@@ -27,12 +27,14 @@ namespace pinloki
 
 using SendCallback = std::function<void (const maxsql::RplEvent&)>;
 using WorkerCallback = std::function<mxb::Worker& ()>;
+using AbortCallback = std::function<void ()>;
 
 class Reader : public mxb::Worker::Callable
 {
 public:
     Reader(SendCallback cb,
            WorkerCallback worker_cb,
+           AbortCallback abort_cb,
            const Config& conf,
            const maxsql::GtidList& start_gl,
            const std::chrono::seconds& heartbeat_interval);
@@ -78,6 +80,7 @@ private:
 
     SendCallback    m_send_callback;
     WorkerCallback  m_get_worker;
+    AbortCallback   m_abort_cb;
     bool            m_in_high_water = false;
     InventoryReader m_inventory;
     Pollable        m_reader_poll_data;

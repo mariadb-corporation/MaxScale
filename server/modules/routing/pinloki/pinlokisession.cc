@@ -130,9 +130,12 @@ bool PinlokiSession::routeQuery(GWBUF* pPacket)
             pinloki::WorkerCallback worker_cb = [this]() -> mxb::Worker& {
                 return *m_pSession->worker();
             };
+            pinloki::AbortCallback abort_cb = [this](){
+                this->m_pSession->kill();
+            };
 
             m_reader = std::make_unique<Reader>(
-                send_cb, worker_cb, m_router->inventory()->config(),
+                send_cb, worker_cb, abort_cb, m_router->inventory()->config(),
                 m_gtid_list, std::chrono::seconds(m_heartbeat_period));
             m_reader->start();
             rval = 1;
