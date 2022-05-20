@@ -92,8 +92,8 @@ GtidList::GtidList(const std::vector<Gtid>&& gtids)
 {
     sort();
     m_is_valid = std::all_of(begin(m_gtids), end(m_gtids), [](const Gtid& gtid) {
-                                 return gtid.is_valid();
-                             });
+        return gtid.is_valid();
+    });
 }
 
 void GtidList::clear()
@@ -105,8 +105,8 @@ void GtidList::clear()
 void GtidList::replace(const Gtid& gtid)
 {
     auto ite = std::find_if(begin(m_gtids), end(m_gtids), [&gtid](const Gtid& rhs) {
-                                return gtid.domain_id() == rhs.domain_id();
-                            });
+        return gtid.domain_id() == rhs.domain_id();
+    });
 
     if (ite != end(m_gtids) && ite->domain_id() == gtid.domain_id())
     {
@@ -119,8 +119,8 @@ void GtidList::replace(const Gtid& gtid)
     }
 
     m_is_valid = std::all_of(begin(m_gtids), end(m_gtids), [](const Gtid& gtid) {
-                                 return gtid.is_valid();
-                             });
+        return gtid.is_valid();
+    });
 }
 
 std::string GtidList::to_string() const
@@ -144,8 +144,8 @@ GtidList GtidList::from_string(const std::string& str)
 void GtidList::sort()
 {
     std::sort(begin(m_gtids), end(m_gtids), [](const Gtid& lhs, const Gtid& rhs) {
-                  return lhs.domain_id() < rhs.domain_id();
-              });
+        return lhs.domain_id() < rhs.domain_id();
+    });
 }
 
 bool GtidList::is_included(const GtidList& other) const
@@ -154,8 +154,8 @@ bool GtidList::is_included(const GtidList& other) const
     {
         auto it = std::find_if(
             m_gtids.begin(), m_gtids.end(), [&](const Gtid& g) {
-                return g.domain_id() == gtid.domain_id();
-            });
+            return g.domain_id() == gtid.domain_id();
+        });
 
         if (it == m_gtids.end() || it->sequence_nr() < gtid.sequence_nr())
         {
