@@ -3087,6 +3087,18 @@ public:
         }
     }
 
+    void maxscaleOracleAssign(Parse* pParse, Token* pVariable, Expr* pValue)
+    {
+        mxb_assert(this_thread.initialized);
+
+        m_status = QC_QUERY_PARSED;
+        m_type_mask |= QUERY_TYPE_SESSION_WRITE;
+        m_type_mask |= QUERY_TYPE_GSYSVAR_WRITE;
+        m_operation = QUERY_OP_SET;
+
+        exposed_sqlite3ExprDelete(pParse->db, pValue);
+    }
+
     void maxscaleSet(Parse* pParse, int scope, mxs_set_t kind, ExprList* pList)
     {
         mxb_assert(this_thread.initialized);
@@ -3765,6 +3777,7 @@ extern void maxscaleHandler(Parse*, mxs_handler_t, SrcList* pFullName, Token* pN
 extern void maxscaleLoadData(Parse*, SrcList* pFullName, int local);
 extern void maxscaleLock(Parse*, mxs_lock_t, SrcList*);
 extern void maxscaleOptimize(Parse* pParse, SrcList*);
+extern void maxscaleOracleAssign(Parse*, Token* pVariable, Expr* pValue);
 extern void maxscaleKill(Parse* pParse, MxsKill* pKill);
 extern void maxscalePrepare(Parse*, Token* pName, Expr* pStmt);
 extern void maxscalePrivileges(Parse*, int kind);
@@ -4860,6 +4873,16 @@ void maxscaleReset(Parse* pParse, int what)
     mxb_assert(pInfo);
 
     QC_EXCEPTION_GUARD(pInfo->maxscaleReset(pParse, what));
+}
+
+void maxscaleOracleAssign(Parse* pParse, Token* pVariable, Expr* pValue)
+{
+    QC_TRACE();
+
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    mxb_assert(pInfo);
+
+    QC_EXCEPTION_GUARD(pInfo->maxscaleOracleAssign(pParse, pVariable, pValue));
 }
 
 void maxscaleSet(Parse* pParse, int scope, mxs_set_t kind, ExprList* pList)

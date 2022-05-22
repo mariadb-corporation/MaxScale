@@ -124,6 +124,7 @@ extern void maxscaleHandler(Parse*, mxs_handler_t, SrcList* pFullName, Token* pN
 extern void maxscaleLoadData(Parse*, SrcList* pFullName, int local);
 extern void maxscaleLock(Parse*, mxs_lock_t, SrcList*);
 extern void maxscaleOptimize(Parse*, SrcList*);
+extern void maxscaleOracleAssign(Parse*, Token* pVariable, Expr* pValue);
 extern void maxscaleKill(Parse*, MxsKill*);
 extern void maxscalePrepare(Parse*, Token* pName, Expr* pStmt);
 extern void maxscalePrivileges(Parse*, int kind);
@@ -3663,10 +3664,7 @@ kill(A) ::= KILL kill_hardness_opt(X) kill_user_type_opt(Y) USER STRING(Z). {
 //////////////////////// ORACLE Assignment ////////////////////////////////////
 //
 oracle_assignment ::= id(X) EQ expr(Y). {
-    Expr* pX = sqlite3PExpr(pParse, TK_ID, 0, 0, &X);
-    Expr* pExpr = sqlite3PExpr(pParse, TK_EQ, pX, Y.pExpr, 0);
-    ExprList* pExprList = sqlite3ExprListAppend(pParse, 0, pExpr);
-    maxscaleSet(pParse, 0, MXS_SET_VARIABLES, pExprList);
+    maxscaleOracleAssign(pParse, &X, Y.pExpr);
 }
 
 //////////////////////// ORACLE CREATE SEQUENCE ////////////////////////////////////
