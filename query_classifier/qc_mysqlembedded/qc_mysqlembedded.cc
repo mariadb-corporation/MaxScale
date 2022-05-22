@@ -792,8 +792,106 @@ enum set_type_t
     SET_TYPE_PASSWORD,
     SET_TYPE_ROLE,
     SET_TYPE_DEFAULT_ROLE,
-    SET_TYPE_UNKNOWN
+    SET_TYPE_UNKNOWN,
+    SET_TYPE_TRANSACTION,
 };
+
+set_type_t get_set_type2(const char* s)
+{
+    set_type_t rv = SET_TYPE_UNKNOWN;
+
+    while (isspace(*s))
+    {
+        ++s;
+    }
+
+    const char* token = s;
+
+    while (!isspace(*s) && (*s != 0) && (*s != '='))
+    {
+        ++s;
+    }
+
+    if (s - token == 4)     // Might be "role"
+    {
+        if (strncasecmp(token, "role", 4) == 0)
+        {
+            // YES it was!
+            rv = SET_TYPE_ROLE;
+        }
+    }
+    else if (s - token == 5)    // Might be "names"
+    {
+        if (strncasecmp(token, "names", 5) == 0)
+        {
+            // YES it was!
+            rv = SET_TYPE_NAMES;
+        }
+    }
+    else if (s - token == 6)    // Might be "global"
+    {
+        if (strncasecmp(token, "global", 6) == 0)
+        {
+            rv = get_set_type2(s);
+        }
+    }
+    else if (s - token == 7)    // Might be "default" || "session"
+    {
+        if (strncasecmp(token, "default", 7) == 0)
+        {
+            // YES it was!
+            while (isspace(*s))
+            {
+                ++s;
+            }
+
+            token = s;
+
+            while (!isspace(*s) && (*s != 0) && (*s != '='))
+            {
+                ++s;
+            }
+
+            if (s - token == 4) // Might be "role"
+            {
+                if (strncasecmp(token, "role", 4) == 0)
+                {
+                    rv = SET_TYPE_DEFAULT_ROLE;
+                }
+            }
+        }
+        else if (strncasecmp(token, "session", 7) == 0)
+        {
+            rv = get_set_type2(s);
+        }
+    }
+    else if (s - token == 8)    // Might be "password
+    {
+        if (strncasecmp(token, "password", 8) == 0)
+        {
+            // YES it was!
+            rv = SET_TYPE_PASSWORD;
+        }
+    }
+    else if (s - token == 9)    // Might be "character"
+    {
+        if (strncasecmp(token, "character", 9) == 0)
+        {
+            // YES it was!
+            rv = SET_TYPE_CHARACTER;
+        }
+    }
+    else if (s - token == 11)   // Might be "transaction"
+    {
+        if (strncasecmp(token, "transaction", 11) == 0)
+        {
+            // YES it was!
+            rv = SET_TYPE_TRANSACTION;
+        }
+    }
+
+    return rv;
+}
 
 set_type_t get_set_type(const char* s)
 {
@@ -817,77 +915,7 @@ set_type_t get_set_type(const char* s)
     {
         if (strncasecmp(token, "set", 3) == 0)
         {
-            // YES it was!
-            while (isspace(*s))
-            {
-                ++s;
-            }
-
-            token = s;
-
-            while (!isspace(*s) && (*s != 0) && (*s != '='))
-            {
-                ++s;
-            }
-
-            if (s - token == 4)     // Might be "role"
-            {
-                if (strncasecmp(token, "role", 4) == 0)
-                {
-                    // YES it was!
-                    rv = SET_TYPE_ROLE;
-                }
-            }
-            else if (s - token == 5)    // Might be "names"
-            {
-                if (strncasecmp(token, "names", 5) == 0)
-                {
-                    // YES it was!
-                    rv = SET_TYPE_NAMES;
-                }
-            }
-            else if (s - token == 7)    // Might be "default"
-            {
-                if (strncasecmp(token, "default", 7) == 0)
-                {
-                    // YES it was!
-                    while (isspace(*s))
-                    {
-                        ++s;
-                    }
-
-                    token = s;
-
-                    while (!isspace(*s) && (*s != 0) && (*s != '='))
-                    {
-                        ++s;
-                    }
-
-                    if (s - token == 4) // Might be "role"
-                    {
-                        if (strncasecmp(token, "role", 4) == 0)
-                        {
-                            rv = SET_TYPE_DEFAULT_ROLE;
-                        }
-                    }
-                }
-            }
-            else if (s - token == 8)    // Might be "password
-            {
-                if (strncasecmp(token, "password", 8) == 0)
-                {
-                    // YES it was!
-                    rv = SET_TYPE_PASSWORD;
-                }
-            }
-            else if (s - token == 9)    // Might be "character"
-            {
-                if (strncasecmp(token, "character", 9) == 0)
-                {
-                    // YES it was!
-                    rv = SET_TYPE_CHARACTER;
-                }
-            }
+            rv = get_set_type2(s);
         }
     }
 
@@ -986,111 +1014,144 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
         type |= QUERY_TYPE_BEGIN_TRX;
     }
 
-    if (lex->option_type == OPT_GLOBAL)
+    if (lex->sql_command == SQLCOM_SHOW_STATUS)
     {
-        /**
-         * SHOW syntax http://dev.mysql.com/doc/refman/5.6/en/show.html
-         */
-        if (lex->sql_command == SQLCOM_SHOW_VARIABLES)
+        if (lex->option_type == OPT_GLOBAL)
         {
-            type |= QUERY_TYPE_GSYSVAR_READ;
-        }
-        /**
-         * SET syntax http://dev.mysql.com/doc/refman/5.6/en/set-statement.html
-         */
-        else if (lex->sql_command == SQLCOM_SET_OPTION)
-        {
-            type |= QUERY_TYPE_SESSION_WRITE;
-            type |= QUERY_TYPE_GSYSVAR_WRITE;
-        }
-
-        /*
-         * SHOW GLOBAL STATUS - Route to master
-         */
-        else if (lex->sql_command == SQLCOM_SHOW_STATUS)
-        {
+            // Force to master.
             type = QUERY_TYPE_WRITE;
         }
-        /**
-         * REVOKE ALL, ASSIGN_TO_KEYCACHE,
-         * PRELOAD_KEYS, FLUSH, RESET, CREATE|ALTER|DROP SERVER
-         */
-
         else
         {
-            type |= QUERY_TYPE_GSYSVAR_WRITE;
+            type = QUERY_TYPE_READ;
         }
 
         goto return_qtype;
     }
-    else if (lex->option_type == OPT_SESSION)
+
+    if (lex->sql_command == SQLCOM_SHOW_VARIABLES)
     {
-        bool do_return = true;
-        /**
-         * SHOW syntax http://dev.mysql.com/doc/refman/5.6/en/show.html
-         */
-        if (lex->sql_command == SQLCOM_SHOW_VARIABLES)
+        if (lex->option_type == OPT_GLOBAL)
+        {
+            type |= QUERY_TYPE_GSYSVAR_READ;
+        }
+        else
         {
             type |= QUERY_TYPE_SYSVAR_READ;
         }
+
+        goto return_qtype;
+    }
+
+    if (lex->option_type == OPT_GLOBAL && lex->sql_command != SQLCOM_SET_OPTION)
+    {
         /**
-         * SET syntax http://dev.mysql.com/doc/refman/5.6/en/set-statement.html
+         * REVOKE ALL, ASSIGN_TO_KEYCACHE,
+         * PRELOAD_KEYS, FLUSH, RESET, CREATE|ALTER|DROP SERVER
          */
-        else if (lex->sql_command == SQLCOM_SET_OPTION)
+        type |= QUERY_TYPE_GSYSVAR_WRITE;
+
+        goto return_qtype;
+    }
+
+    if (lex->sql_command == SQLCOM_SET_OPTION)
+    {
+        switch (get_set_type(pi->pi_query_plain_str))
         {
-            switch (get_set_type(pi->pi_query_plain_str))
+        case SET_TYPE_PASSWORD:
+            type |= QUERY_TYPE_WRITE;
+            break;
+
+        case SET_TYPE_DEFAULT_ROLE:
+            type |= QUERY_TYPE_WRITE;
+            break;
+
+        case SET_TYPE_NAMES:
             {
-            case SET_TYPE_PASSWORD:
-                type |= QUERY_TYPE_WRITE;
-                break;
+                type |= QUERY_TYPE_SESSION_WRITE;
 
-            case SET_TYPE_DEFAULT_ROLE:
-                type |= QUERY_TYPE_WRITE;
-                break;
+                List_iterator<set_var_base> ilist(lex->var_list);
 
-            case SET_TYPE_UNKNOWN:
+                while (set_var_base* var = ilist++)
                 {
-                    type |= QUERY_TYPE_SESSION_WRITE;
-                    /** Either user- or system variable write */
-                    List_iterator<set_var_base> ilist(lex->var_list);
-                    size_t n = 0;
-
-                    while (set_var_base* var = ilist++)
-                    {
-                        if (var->is_system())
-                        {
-                            type |= QUERY_TYPE_GSYSVAR_WRITE;
-                        }
-                        else
-                        {
-                            type |= QUERY_TYPE_USERVAR_WRITE;
-                        }
-                        ++n;
-                    }
-
-                    if (n == 0)
+                    if (var->is_system())
                     {
                         type |= QUERY_TYPE_GSYSVAR_WRITE;
                     }
                 }
-                break;
-
-            default:
-                type |= QUERY_TYPE_SESSION_WRITE;
             }
-        }
-        else
-        {
-            // This will cause the type of a statement like
-            // "SET STATEMENT ... FOR XYZ" to be the type
-            // of XYZ.
-            do_return = false;
+            break;
+
+        case SET_TYPE_TRANSACTION:
+            {
+                type |= QUERY_TYPE_SESSION_WRITE;
+
+                if (lex->option_type == SHOW_OPT_GLOBAL)
+                {
+                    type |= QUERY_TYPE_GSYSVAR_WRITE;
+                }
+                else
+                {
+                    if (lex->option_type != SHOW_OPT_SESSION)
+                    {
+                        type |= QUERY_TYPE_NEXT_TRX;
+                    }
+
+                    List_iterator<set_var_base> ilist(lex->var_list);
+
+                    while (set_var* var = static_cast<set_var*>(ilist++))
+                    {
+                        mxb_assert(var);
+                        var->update(thd);
+
+                        if (thd->tx_read_only)
+                        {
+                            if (strcasestr(pi->pi_query_plain_str, "write"))
+                            {
+                                type |= QUERY_TYPE_READWRITE;
+                            }
+                            else
+                            {
+                                type |= QUERY_TYPE_READONLY;
+                            }
+                        }
+                    }
+                }
+            }
+            break;
+
+        case SET_TYPE_UNKNOWN:
+            {
+                type |= QUERY_TYPE_SESSION_WRITE;
+                /** Either user- or system variable write */
+                List_iterator<set_var_base> ilist(lex->var_list);
+                size_t n = 0;
+
+                while (set_var_base* var = ilist++)
+                {
+                    if (var->is_system())
+                    {
+                        type |= QUERY_TYPE_GSYSVAR_WRITE;
+                    }
+                    else
+                    {
+                        type |= QUERY_TYPE_USERVAR_WRITE;
+                    }
+                    ++n;
+                }
+
+                if (n == 0)
+                {
+                    type |= QUERY_TYPE_GSYSVAR_WRITE;
+                }
+            }
+            break;
+
+        default:
+            type |= QUERY_TYPE_SESSION_WRITE;
         }
 
-        if (do_return)
-        {
-            goto return_qtype;
-        }
+        goto return_qtype;
     }
 
     /**
@@ -1221,6 +1282,14 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
         {
             type |= QUERY_TYPE_WRITE;
         }
+        break;
+
+    case SQLCOM_XA_START:
+        type |= QUERY_TYPE_BEGIN_TRX;
+        break;
+
+    case SQLCOM_XA_END:
+        type |= QUERY_TYPE_COMMIT;
         break;
 
     default:
@@ -1751,9 +1820,14 @@ int32_t qc_mysql_get_table_names(GWBUF* querybuf, int32_t fullnames, std::vector
                     && (strcmp(qcme_string_get(tbl->db), "skygw_virtual") != 0)
                     && (strcmp(qcme_string_get(tbl->table_name), "*") != 0))
                 {
-                    s = qcme_string_get(tbl->db);
-                    s += ".";
-                    s += qcme_string_get(tbl->table_name);
+                    std::string db = qcme_string_get(tbl->db);
+
+                    if (!db.empty())
+                    {
+                        s = db;
+                        s += ".";
+                        s += qcme_string_get(tbl->table_name);
+                    }
                 }
             }
 
@@ -2107,7 +2181,8 @@ int32_t qc_mysql_get_operation(GWBUF* querybuf, int32_t* operation)
     {
         if (ensure_query_is_parsed(querybuf))
         {
-            LEX* lex = get_lex(querybuf);
+            parsing_info_t* pi = get_pinfo(querybuf);
+            LEX* lex = get_lex(pi);
 
             if (lex)
             {
@@ -2206,7 +2281,15 @@ int32_t qc_mysql_get_operation(GWBUF* querybuf, int32_t* operation)
                         break;
 
                     case SQLCOM_SET_OPTION:
-                        *operation = QUERY_OP_SET;
+                        switch (get_set_type(pi->pi_query_plain_str))
+                        {
+                        case SET_TYPE_TRANSACTION:
+                            *operation = QUERY_OP_SET_TRANSACTION;
+                            break;
+
+                        default:
+                            *operation = QUERY_OP_SET;
+                        }
                         break;
 
                     case SQLCOM_SHOW_CREATE:
