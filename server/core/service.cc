@@ -155,6 +155,9 @@ cfg::ParamSeconds s_connection_timeout(
     &s_spec, "connection_timeout", "Connection idle timeout",
     std::chrono::seconds(0), cfg::Param::AT_RUNTIME);
 
+cfg::server::DurationDependency<std::chrono::seconds> s_dep_connection_timeout(
+    "wait_timeout", &s_connection_timeout, cfg::server::Dependency::MIN);
+
 cfg::ParamSeconds s_net_write_timeout(
     &s_spec, "net_write_timeout", "Network write timeout",
     std::chrono::seconds(0), cfg::Param::AT_RUNTIME);

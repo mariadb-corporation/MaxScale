@@ -388,7 +388,8 @@ The current auto tunable parameters are:
 
 |MaxScale Parameter|Server Variable Dependency|
 |------------------|--------------------------|
-|[connection_keepalive](#connection_keepalive)|80% of the smallest [`wait_timeout`](https://mariadb.com/docs/reference/mdb/system-variables/wait_timeout/) value of each server used by the service|
+|[connection_keepalive](#connection_keepalive)|80% of the smallest [`wait_timeout`](https://mariadb.com/docs/reference/mdb/system-variables/wait_timeout/) value of the servers used by the service|
+|[connection_timeout](#connection_timeout)|The smallest [`wait_timeout`](https://mariadb.com/docs/reference/mdb/system-variables/wait_timeout/) value of the servers used by the service|
 
 The values of the server variables are collected by monitors, which means that
 if the servers of a service are not monitored by a monitor, then the parameters
@@ -1727,6 +1728,12 @@ Debug messages are only enabled for debug builds. Enabling `log_debug` in a
 release build does nothing.
 
 ### `connection_timeout`
+
+- **Type**: [duration](#durations)
+- **Default**: 0s
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Auto tune**: [Yes](#auto_tune)
 
 The connection_timeout parameter is used to disconnect sessions to MariaDB
 MaxScale that have been idle for too long. The session timeouts are disabled by
