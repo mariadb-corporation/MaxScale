@@ -165,23 +165,29 @@ static const char* map_function_name(NAME_MAPPING* function_name_mappings, const
 
 #define MYSQL_COM_QUERY_HEADER_SIZE 5   /*< 3 bytes size, 1 sequence, 1 command */
 #define MAX_QUERYBUF_SIZE           2048
-typedef struct parsing_info_st : public QC_STMT_INFO
+class parsing_info_t : public QC_STMT_INFO
 {
-    void* pi_handle;            /*< parsing info object pointer */
-    char* pi_query_plain_str;   /*< query as plain string */
-    void (* pi_done_fp)(void*); /*< clean-up function for parsing info */
-    QC_FIELD_INFO*    field_infos;
-    size_t            field_infos_len;
-    size_t            field_infos_capacity;
-    QC_FUNCTION_INFO* function_infos;
-    size_t            function_infos_len;
-    size_t            function_infos_capacity;
-    GWBUF*            preparable_stmt;
-    qc_parse_result_t result;
-    int32_t           type_mask;
-    NAME_MAPPING*     function_name_mappings;
-    char*             created_table_name;
-} parsing_info_t;
+public:
+    parsing_info_t(const parsing_info_t&) = delete;
+    parsing_info_t& operator=(const parsing_info_t&) = delete;
+
+    parsing_info_t(GWBUF* querybuf);
+    ~parsing_info_t();
+
+    MYSQL*            pi_handle { nullptr } ;            /*< parsing info object pointer */
+    char*             pi_query_plain_str { nullptr };   /*< query as plain string */
+    QC_FIELD_INFO*    field_infos { nullptr };
+    size_t            field_infos_len { 0 };
+    size_t            field_infos_capacity { 0 };
+    QC_FUNCTION_INFO* function_infos { 0 };
+    size_t            function_infos_len { 0 };
+    size_t            function_infos_capacity { 0 };
+    GWBUF*            preparable_stmt { 0 };
+    qc_parse_result_t result { QC_QUERY_INVALID };
+    int32_t           type_mask { 0 };
+    NAME_MAPPING*     function_name_mappings { 0 };
+    std::string       created_table_name;
+};
 
 #define QTYPE_LESS_RESTRICTIVE_THAN_WRITE(t) (t < QUERY_TYPE_WRITE ? true : false)
 
@@ -192,8 +198,7 @@ static uint32_t      resolve_query_type(parsing_info_t*, THD* thd);
 static bool          skygw_stmt_causes_implicit_commit(LEX* lex, int* autocommit_stmt);
 
 static int             is_autocommit_stmt(LEX* lex);
-static parsing_info_t* parsing_info_init(void (* donefun)(void*));
-static void            parsing_info_set_plain_str(void* ptr, char* str);
+static parsing_info_t* parsing_info_init(GWBUF* querybuf);
 /** Free THD context and close MYSQL */
 static void        parsing_info_done(void* ptr);
 static TABLE_LIST* skygw_get_affected_tables(void* lexptr);
@@ -374,6 +379,89 @@ static thread_local struct
     0
 };
 
+
+parsing_info_t::parsing_info_t(GWBUF* querybuf)
+{
+    MYSQL* mysql = mysql_init(NULL);
+    mxb_assert(mysql);
+
+    /** Set methods and authentication to mysql */
+    mysql_options(mysql, MYSQL_READ_DEFAULT_GROUP, "libmysqld_skygw");
+    mysql_options(mysql, MYSQL_OPT_USE_EMBEDDED_CONNECTION, NULL);
+
+    const char* user = "skygw";
+    const char* db = "skygw";
+
+    mysql->methods = &embedded_methods;
+    mysql->user = mxs_my_strdup(user, MYF(0));
+    mysql->db = mxs_my_strdup(db, MYF(0));
+    mysql->passwd = NULL;
+
+    /** Set handle and free function to parsing info struct */
+    this->pi_handle = mysql;
+    mxb_assert(this_thread.function_name_mappings);
+    this->function_name_mappings = this_thread.function_name_mappings;
+
+    auto* data = GWBUF_DATA(querybuf);
+    auto len = MYSQL_GET_PAYLOAD_LEN(data) - 1;      /*< distract 1 for packet type byte */
+
+    this->pi_query_plain_str = static_cast<char*>(malloc(len + 1));
+
+    memcpy(this->pi_query_plain_str, &data[5], len);
+    memset(&this->pi_query_plain_str[len], 0, 1);
+}
+
+parsing_info_t::~parsing_info_t()
+{
+    MYSQL* mysql = this->pi_handle;
+
+    if (mysql->thd != NULL)
+    {
+        auto* thd = (THD*) mysql->thd;
+        thd->end_statement();
+        thd->cleanup_after_query();
+        (*mysql->methods->free_embedded_thd)(mysql);
+        mysql->thd = NULL;
+    }
+
+    mysql_close(mysql);
+
+    /** Free plain text query string */
+    if (this->pi_query_plain_str != NULL)
+    {
+        free(this->pi_query_plain_str);
+    }
+
+    for (size_t i = 0; i < this->field_infos_len; ++i)
+    {
+        free(this->field_infos[i].database);
+        free(this->field_infos[i].table);
+        free(this->field_infos[i].column);
+    }
+    free(this->field_infos);
+
+    for (size_t i = 0; i < this->function_infos_len; ++i)
+    {
+        QC_FUNCTION_INFO& fi = this->function_infos[i];
+
+        free(fi.name);
+
+        for (size_t j = 0; j < fi.n_fields; ++j)
+        {
+            QC_FIELD_INFO& field = fi.fields[j];
+
+            free(field.database);
+            free(field.table);
+            free(field.column);
+        }
+        free(fi.fields);
+    }
+    free(this->function_infos);
+
+    gwbuf_free(this->preparable_stmt);
+}
+
+
 /**
  * Ensures that the query is parsed. If it is not already parsed, it
  * will be parsed.
@@ -533,47 +621,11 @@ static bool parse_query(GWBUF* querybuf)
     }
 
     /** Create parsing info */
-    pi = parsing_info_init(parsing_info_done);
-
-    if (pi == NULL)
-    {
-        MXB_ERROR("Parsing info initialization failed.");
-        succp = false;
-        goto retblock;
-    }
-
-    /** Extract query and copy it to different buffer */
-    data = (uint8_t*) GWBUF_DATA(querybuf);
-    len = MYSQL_GET_PAYLOAD_LEN(data) - 1;      /*< distract 1 for packet type byte */
-
-
-    if (len < 1 || len >= ~((size_t) 0) - 1 || (query_str = (char*) malloc(len + 1)) == NULL)
-    {
-        /** Free parsing info data */
-        MXB_ERROR("Length (%lu) is 0 or query string allocation failed (%p). Buffer is %lu bytes.",
-                  len,
-                  query_str,
-                  gwbuf_link_length(querybuf));
-        parsing_info_done(pi);
-        succp = false;
-        goto retblock;
-    }
-
-    memcpy(query_str, &data[5], len);
-    memset(&query_str[len], 0, 1);
-    parsing_info_set_plain_str(pi, query_str);
+    pi = parsing_info_init(querybuf);
 
     /** Get one or create new THD object to be use in parsing */
-    thd = get_or_create_thd_for_parsing((MYSQL*) pi->pi_handle, query_str);
-
-    if (thd == NULL)
-    {
-        MXB_ERROR("THD creation failed.");
-        /** Free parsing info data */
-        parsing_info_done(pi);
-        succp = false;
-        goto retblock;
-    }
+    thd = get_or_create_thd_for_parsing((MYSQL*) pi->pi_handle, pi->pi_query_plain_str);
+    mxb_assert(thd);
 
     /**
      * Create parse_tree inside thd.
@@ -587,9 +639,7 @@ static bool parse_query(GWBUF* querybuf)
     /** Add complete parsing info struct to the query buffer */
     querybuf->set_classifier_data(pi, parsing_info_done);
 
-    succp = true;
-retblock:
-    return succp;
+    return true;
 }
 
 /**
@@ -793,8 +843,8 @@ enum set_type_t
     SET_TYPE_PASSWORD,
     SET_TYPE_ROLE,
     SET_TYPE_DEFAULT_ROLE,
-    SET_TYPE_UNKNOWN,
     SET_TYPE_TRANSACTION,
+    SET_TYPE_UNKNOWN,
 };
 
 set_type_t get_set_type2(const char* s)
@@ -1879,19 +1929,16 @@ int32_t qc_mysql_get_created_table_name(GWBUF* querybuf, std::string_view* table
         auto* pi = get_pinfo(querybuf);
         mxb_assert(pi);
 
-        if (!pi->created_table_name)
+        if (pi->created_table_name.empty())
         {
             if (lex->create_last_non_select_table
                 && qcme_string_get(lex->create_last_non_select_table->table_name))
             {
-                pi->created_table_name = strdup(qcme_string_get(lex->create_last_non_select_table->table_name));
+                pi->created_table_name = qcme_string_get(lex->create_last_non_select_table->table_name);
             }
         }
 
-        if (pi->created_table_name)
-        {
-            *table_name = pi->created_table_name;
-        }
+        *table_name = pi->created_table_name;
     }
 
     return QC_RESULT_OK;
@@ -1968,56 +2015,11 @@ int32_t qc_mysql_query_has_clause(GWBUF* buf, int32_t* has_clause)
  * Create parsing information; initialize mysql handle, allocate parsing info
  * struct and set handle and free function pointer to it.
  *
- * @param donefun       pointer to free function
- *
  * @return pointer to parsing information
  */
-static parsing_info_t* parsing_info_init(void (* donefun)(void*))
+static parsing_info_t* parsing_info_init(GWBUF* querybuf)
 {
-    parsing_info_t* pi = NULL;
-    MYSQL* mysql;
-    const char* user = "skygw";
-    const char* db = "skygw";
-
-    mxb_assert(donefun != NULL);
-
-    /** Get server handle */
-    mysql = mysql_init(NULL);
-
-    if (mysql == NULL)
-    {
-        MXB_ERROR("Call to mysql_real_connect failed due %d, %s.",
-                  mysql_errno(mysql),
-                  mysql_error(mysql));
-        mxb_assert(mysql != NULL);
-        goto retblock;
-    }
-
-    /** Set methods and authentication to mysql */
-    mysql_options(mysql, MYSQL_READ_DEFAULT_GROUP, "libmysqld_skygw");
-    mysql_options(mysql, MYSQL_OPT_USE_EMBEDDED_CONNECTION, NULL);
-    mysql->methods = &embedded_methods;
-    mysql->user = mxs_my_strdup(user, MYF(0));
-    mysql->db = mxs_my_strdup(db, MYF(0));
-    mysql->passwd = NULL;
-
-    pi = (parsing_info_t*) calloc(1, sizeof(parsing_info_t));
-
-    if (pi == NULL)
-    {
-        mysql_close(mysql);
-        goto retblock;
-    }
-
-    /** Set handle and free function to parsing info struct */
-    pi->pi_handle = mysql;
-    pi->pi_done_fp = donefun;
-    pi->result = QC_QUERY_INVALID;
-    mxb_assert(this_thread.function_name_mappings);
-    pi->function_name_mappings = this_thread.function_name_mappings;
-
-retblock:
-    return pi;
+    return new parsing_info_t(querybuf);
 }
 
 /**
@@ -2031,67 +2033,7 @@ retblock:
  */
 static void parsing_info_done(void* ptr)
 {
-    parsing_info_t* pi;
-    THD* thd;
-
-    if (ptr)
-    {
-        pi = (parsing_info_t*) ptr;
-
-        if (pi->pi_handle != NULL)
-        {
-            MYSQL* mysql = (MYSQL*) pi->pi_handle;
-
-            if (mysql->thd != NULL)
-            {
-                thd = (THD*) mysql->thd;
-                thd->end_statement();
-                thd->cleanup_after_query();
-                (*mysql->methods->free_embedded_thd)(mysql);
-                mysql->thd = NULL;
-            }
-
-            mysql_close(mysql);
-        }
-
-        /** Free plain text query string */
-        if (pi->pi_query_plain_str != NULL)
-        {
-            free(pi->pi_query_plain_str);
-        }
-
-        for (size_t i = 0; i < pi->field_infos_len; ++i)
-        {
-            free(pi->field_infos[i].database);
-            free(pi->field_infos[i].table);
-            free(pi->field_infos[i].column);
-        }
-        free(pi->field_infos);
-
-        for (size_t i = 0; i < pi->function_infos_len; ++i)
-        {
-            QC_FUNCTION_INFO& fi = pi->function_infos[i];
-
-            free(fi.name);
-
-            for (size_t j = 0; j < fi.n_fields; ++j)
-            {
-                QC_FIELD_INFO& field = fi.fields[j];
-
-                free(field.database);
-                free(field.table);
-                free(field.column);
-            }
-            free(fi.fields);
-        }
-        free(pi->function_infos);
-
-        gwbuf_free(pi->preparable_stmt);
-
-        free(pi->created_table_name);
-
-        free(pi);
-    }
+    delete static_cast<parsing_info_t*>(ptr);
 }
 
 /**
