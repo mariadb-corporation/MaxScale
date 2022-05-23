@@ -171,9 +171,10 @@ bool foreach_table(QueryClassifier& qc,
     {
         std::string table;
 
-        if (t.find('.') == std::string::npos)
+        if (t.find('.') == std::string_view::npos)
         {
-            table = qc_mysql_get_current_db(pSession) + '.' + t;
+            table = qc_mysql_get_current_db(pSession) + '.';
+            table.append(t);
         }
         else
         {
@@ -744,9 +745,10 @@ void QueryClassifier::check_create_tmp_table(GWBUF* querybuf, uint32_t type)
 
         for (const auto& t : qc_get_table_names(querybuf, true))
         {
-            if (strchr(t.c_str(), '.') == NULL)
+            if (t.find('.') == std::string_view::npos)
             {
-                table = qc_mysql_get_current_db(session()) + "." + t;
+                table = qc_mysql_get_current_db(session()) + ".";
+                table.append(t);
             }
             else
             {

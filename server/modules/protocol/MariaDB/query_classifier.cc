@@ -717,12 +717,12 @@ bool qc_is_drop_table_query(GWBUF* query)
     return (is_drop_table != 0) ? true : false;
 }
 
-std::vector<std::string> qc_get_table_names(GWBUF* query, bool fullnames)
+std::vector<std::string_view> qc_get_table_names(GWBUF* query, bool fullnames)
 {
     QC_TRACE();
     mxb_assert(this_unit.classifier);
 
-    std::vector<std::string> names;
+    std::vector<std::string_view> names;
 
     QCInfoCacheScope scope(query);
     this_unit.classifier->qc_get_table_names(query, fullnames, &names);
@@ -774,12 +774,12 @@ void qc_get_function_info(GWBUF* query, const QC_FUNCTION_INFO** infos, size_t* 
     *n_infos = n;
 }
 
-std::vector<std::string> qc_get_database_names(GWBUF* query)
+std::vector<std::string_view> qc_get_database_names(GWBUF* query)
 {
     QC_TRACE();
     mxb_assert(this_unit.classifier);
 
-    std::vector<std::string> names;
+    std::vector<std::string_view> names;
 
     QCInfoCacheScope scope(query);
     this_unit.classifier->qc_get_database_names(query, &names);

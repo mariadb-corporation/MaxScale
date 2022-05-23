@@ -1053,7 +1053,7 @@ void MariaDBClientConnection::handle_use_database(GWBUF& read_buffer)
     auto databases = qc_get_database_names(&read_buffer);
     if (!databases.empty())
     {
-        start_change_db(move(databases[0]));
+        start_change_db(string(databases[0]));
     }
 }
 

@@ -565,14 +565,14 @@ bool compare_get_table_names(QUERY_CLASSIFIER* pClassifier1,
     int n1 = 0;
     int n2 = 0;
 
-    std::vector<std::string> rv1;
+    std::vector<std::string_view> rv1;
     pClassifier1->qc_get_table_names(pCopy1, full, &rv1);
-    std::vector<std::string> rv2;
+    std::vector<std::string_view> rv2;
     pClassifier2->qc_get_table_names(pCopy2, full, &rv2);
 
     // The order need not be the same, so let's compare a set.
-    std::set<string> names1(rv1.begin(), rv1.end());
-    std::set<string> names2(rv2.begin(), rv2.end());
+    std::set<std::string_view> names1(rv1.begin(), rv1.end());
+    std::set<std::string_view> names2(rv2.begin(), rv2.end());
 
     stringstream ss;
     ss << HEADING;
@@ -697,8 +697,8 @@ bool compare_get_database_names(QUERY_CLASSIFIER* pClassifier1,
     bool success = false;
     const char HEADING[] = "qc_get_database_names    : ";
 
-    std::vector<std::string> rv1;
-    std::vector<std::string> rv2;
+    std::vector<std::string_view> rv1;
+    std::vector<std::string_view> rv2;
     pClassifier1->qc_get_database_names(pCopy1, &rv1);
     pClassifier2->qc_get_database_names(pCopy2, &rv2);
 

@@ -1416,18 +1416,33 @@ void SchemaRouterSession::send_databases()
 
 mxs::Target* SchemaRouterSession::get_query_target(GWBUF* buffer)
 {
-    auto tables = qc_get_table_names(buffer, true);
+    auto table_views = qc_get_table_names(buffer, true);
+
+    // We get string_views, but we may need to modify elements so we need to
+    // copy them over to a vector<string>.
+    std::vector<std::string> tables;
+    tables.reserve(table_views.size());
+
+    for (auto sv : table_views)
+    {
+        tables.emplace_back(std::string(sv));
+    }
+
     mxs::Target* rval = NULL;
 
+    table_views.clear();
     for (auto& t : tables)
     {
         if (t.find('.') == std::string::npos)
         {
             t = m_current_db + '.' + t;
         }
+
+        // Then we need to copy the modified strings back to our vector<string_view>.
+        table_views.emplace_back(std::string_view(t));
     }
 
-    if ((rval = m_shard.get_location(tables)))
+    if ((rval = m_shard.get_location(table_views)))
     {
         MXB_INFO("Query targets table on server '%s'", rval->name());
     }

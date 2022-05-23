@@ -53,14 +53,14 @@ public:
      *
      * @return The database or NULL if no server contains the database
      */
-    mxs::Target* get_location(std::string db);
-    mxs::Target* get_location(const std::vector<std::string>& db);
+    mxs::Target* get_location(std::string_view db);
+    mxs::Target* get_location(const std::vector<std::string_view>& db);
 
     /**
      * Same as get_location except returns all servers that have it
      */
-    std::set<mxs::Target*> get_all_locations(std::string db);
-    std::set<mxs::Target*> get_all_locations(const std::vector<std::string>& db);
+    std::set<mxs::Target*> get_all_locations(std::string_view db);
+    std::set<mxs::Target*> get_all_locations(const std::vector<std::string_view>& db);
 
     void         add_statement(std::string stmt, mxs::Target* target);
     void         add_statement(uint32_t id, mxs::Target* target);

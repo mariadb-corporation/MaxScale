@@ -423,7 +423,7 @@ static bool should_skip_query(const BinlogConfig::Values& config,
         // Not a transaction management related command
         for (const auto& t : tables)
         {
-            std::string name = t.find('.') != std::string::npos ? t : db + '.' + t;
+            std::string name = t.find('.') != std::string_view::npos ? std::string(t) : db + '.' + std::string(t);
 
             if (should_skip(config, name))
             {

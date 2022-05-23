@@ -452,7 +452,7 @@ public:
         return rv;
     }
 
-    bool get_table_names(int32_t fullnames, std::vector<std::string>* pTables) const
+    bool get_table_names(int32_t fullnames, std::vector<std::string_view>* pTables) const
     {
         bool rv = false;
 
@@ -486,7 +486,7 @@ public:
         return rv;
     }
 
-    bool get_database_names(std::vector<std::string>* pNames) const
+    bool get_database_names(std::vector<std::string_view>* pNames) const
     {
         bool rv = false;
 
@@ -4967,10 +4967,10 @@ static int32_t        qc_sqlite_get_type_mask(GWBUF* query, uint32_t* typemask);
 static int32_t        qc_sqlite_get_operation(GWBUF* query, int32_t* op);
 static int32_t        qc_sqlite_get_created_table_name(GWBUF* query, std::string_view* name);
 static int32_t        qc_sqlite_is_drop_table_query(GWBUF* query, int32_t* is_drop_table);
-static int32_t        qc_sqlite_get_table_names(GWBUF* query, int32_t fullnames, char*** names, int* tblsize);
+static int32_t        qc_sqlite_get_table_names(GWBUF* query, int32_t fullnames, std::vector<std::string_view>* pNames);
 static int32_t        qc_sqlite_get_canonical(GWBUF* query, char** canonical);
 static int32_t        qc_sqlite_query_has_clause(GWBUF* query, int32_t* has_clause);
-static int32_t        qc_sqlite_get_database_names(GWBUF* query, char*** names, int* sizep);
+static int32_t        qc_sqlite_get_database_names(GWBUF* query, std::vector<std::string_view>* pNames);
 static int32_t        qc_sqlite_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt);
 static void           qc_sqlite_set_server_version(uint64_t version);
 static void           qc_sqlite_get_server_version(uint64_t* version);
@@ -5368,7 +5368,7 @@ static int32_t qc_sqlite_is_drop_table_query(GWBUF* pStmt, int32_t* pIs_drop_tab
     return rv;
 }
 
-static int32_t qc_sqlite_get_table_names(GWBUF* pStmt, int32_t fullnames, std::vector<std::string>* pTables)
+static int32_t qc_sqlite_get_table_names(GWBUF* pStmt, int32_t fullnames, std::vector<std::string_view>* pTables)
 {
     QC_TRACE();
     int32_t rv = QC_RESULT_ERROR;
@@ -5425,7 +5425,7 @@ static int32_t qc_sqlite_query_has_clause(GWBUF* pStmt, int32_t* pHas_clause)
     return rv;
 }
 
-static int32_t qc_sqlite_get_database_names(GWBUF* pStmt, std::vector<std::string>* pNames)
+static int32_t qc_sqlite_get_database_names(GWBUF* pStmt, std::vector<std::string_view>* pNames)
 {
     QC_TRACE();
     int32_t rv = QC_RESULT_ERROR;

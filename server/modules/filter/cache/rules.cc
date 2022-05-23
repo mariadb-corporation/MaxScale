@@ -42,6 +42,21 @@ inline int get_current_thread_id()
     return current_thread_id;
 }
 
+namespace
+{
+
+inline bool sv_case_eq(std::string_view lhs, const char* zRhs)
+{
+    return lhs.length() == strlen(zRhs) ? strncasecmp(lhs.data(), zRhs, lhs.length()) == 0 : false;
+}
+
+inline bool sv_case_eq(const char* zLhs, std::string_view rhs)
+{
+    return sv_case_eq(rhs, zLhs);
+}
+
+}
+
 static const char KEY_ATTRIBUTE[] = "attribute";
 static const char KEY_OP[] = "op";
 static const char KEY_STORE[] = "store";
@@ -86,7 +101,7 @@ static bool cache_rule_attribute_get(struct cache_attribute_mapping* mapping,
 
 static bool cache_rule_op_get(const char* s, cache_rule_op_t* op);
 
-static bool        cache_rule_compare(CACHE_RULE* rule, int thread_id, const std::string& value);
+static bool        cache_rule_compare(CACHE_RULE* rule, int thread_id, const std::string_view& value);
 static bool        cache_rule_compare_n(CACHE_RULE* rule, int thread_id, const char* value, size_t length);
 static CACHE_RULE* cache_rule_create_regexp(cache_rule_attribute_t attribute,
                                             cache_rule_op_t op,
@@ -1086,13 +1101,13 @@ static void cache_rule_free(CACHE_RULE* rule)
  *
  * @return True if the value matches, false otherwise.
  */
-static bool cache_rule_compare(CACHE_RULE* self, int thread_id, const std::string& value)
+static bool cache_rule_compare(CACHE_RULE* self, int thread_id, const std::string_view& value)
 {
     bool rv;
 
     if (!value.empty())
     {
-        rv = cache_rule_compare_n(self, thread_id, value.c_str(), value.length());
+        rv = cache_rule_compare_n(self, thread_id, value.data(), value.length());
     }
     else
     {
@@ -1172,7 +1187,7 @@ static bool cache_rule_matches_column_regexp(CACHE_RULE* self,
     mxb_assert(self->attribute == CACHE_ATTRIBUTE_COLUMN);
     mxb_assert((self->op == CACHE_OP_LIKE) || (self->op == CACHE_OP_UNLIKE));
 
-    const char* default_database = NULL;
+    std::string_view default_database;
 
     int n_databases;
     auto databases = qc_get_database_names((GWBUF*)query);
@@ -1182,30 +1197,33 @@ static bool cache_rule_matches_column_regexp(CACHE_RULE* self,
         // If no databases have been mentioned, then we can assume that all
         // tables and columns that are not explcitly qualified refer to the
         // default database.
-        default_database = default_db;
+        if (default_db)
+        {
+            default_database = default_db;
+        }
     }
     else if ((default_db == NULL) && (databases.size() == 1))
     {
         // If there is no default database and exactly one database has been
         // explicitly mentioned, then we can assume all tables and columns that
         // are not explicitly qualified refer to that database.
-        default_database = databases[0].c_str();
+        default_database = databases[0];
     }
 
-    size_t default_database_len = default_database ? strlen(default_database) : 0;
+    size_t default_database_len = default_database.length();
 
     auto tables = qc_get_table_names((GWBUF*)query, false);
 
-    const char* default_table = NULL;
+    std::string_view default_table;
 
     if (tables.size() == 1)
     {
         // Only if we have exactly one table can we assume anything
         // about a table that has not been mentioned explicitly.
-        default_table = tables[0].c_str();
+        default_table = tables[0];
     }
 
-    size_t default_table_len = default_table ? strlen(default_table) : 0;
+    size_t default_table_len = default_table.length();
 
     const QC_FIELD_INFO* infos;
     size_t n_infos;
@@ -1220,12 +1238,12 @@ static bool cache_rule_matches_column_regexp(CACHE_RULE* self,
         const QC_FIELD_INFO* info = (infos + i);
 
         size_t database_len;
-        const char* database;
+        std::string_view database;
 
         if (info->database)
         {
             database = info->database;
-            database_len = strlen(info->database);
+            database_len = database.length();
         }
         else
         {
@@ -1234,12 +1252,12 @@ static bool cache_rule_matches_column_regexp(CACHE_RULE* self,
         }
 
         size_t table_len;
-        const char* table;
+        std::string_view table;
 
         if (info->table)
         {
             table = info->table;
-            table_len = strlen(info->table);
+            table_len = table.length();
         }
         else
         {
@@ -1250,15 +1268,15 @@ static bool cache_rule_matches_column_regexp(CACHE_RULE* self,
         char buffer[database_len + 1 + table_len + 1 + strlen(info->column) + 1];
         buffer[0] = 0;
 
-        if (database)
+        if (!database.empty())
         {
-            strcat(buffer, database);
+            strncat(buffer, database.data(), database.length());
             strcat(buffer, ".");
         }
 
-        if (table)
+        if (!table.empty())
         {
-            strcat(buffer, table);
+            strncat(buffer, table.data(), table.length());
             strcat(buffer, ".");
         }
 
@@ -1290,7 +1308,7 @@ static bool cache_rule_matches_column_simple(CACHE_RULE* self, const char* defau
     const char* rule_table = self->simple.table;
     const char* rule_database = self->simple.database;
 
-    const char* default_database = NULL;
+    std::string_view default_database;
 
     auto databases = qc_get_database_names((GWBUF*)query);
 
@@ -1299,25 +1317,28 @@ static bool cache_rule_matches_column_simple(CACHE_RULE* self, const char* defau
         // If no databases have been mentioned, then we can assume that all
         // tables and columns that are not explcitly qualified refer to the
         // default database.
-        default_database = default_db;
+        if (default_db)
+        {
+            default_database = default_db;
+        }
     }
     else if ((default_db == NULL) && (databases.size() == 1))
     {
         // If there is no default database and exactly one database has been
         // explicitly mentioned, then we can assume all tables and columns that
         // are not explicitly qualified refer to that database.
-        default_database = databases[0].c_str();
+        default_database = databases[0];
     }
 
     auto tables = qc_get_table_names((GWBUF*)query, false);
 
-    const char* default_table = NULL;
+    std::string_view default_table;
 
     if (tables.size() == 1)
     {
         // Only if we have exactly one table can we assume anything
         // about a table that has not been mentioned explicitly.
-        default_table = tables[0].c_str();
+        default_table = tables[0];
     }
 
     const QC_FIELD_INFO* infos;
@@ -1336,20 +1357,19 @@ static bool cache_rule_matches_column_simple(CACHE_RULE* self, const char* defau
         {
             if (rule_table)
             {
-                const char* check_table = info->table ? info->table : default_table;
+                std::string_view check_table = info->table ? info->table : default_table;
 
-                if (check_table)
+                if (!check_table.empty())
                 {
-                    if (strcasecmp(check_table, rule_table) == 0)
+                    if (sv_case_eq(check_table, rule_table))
                     {
                         if (rule_database)
                         {
-                            const char* check_database =
-                                info->database ? info->database : default_database;
+                            std::string_view check_database = info->database ? info->database : default_database;
 
-                            if (check_database)
+                            if (!check_database.empty())
                             {
-                                if (strcasecmp(check_database, rule_database) == 0)
+                                if (sv_case_eq(check_database, rule_database))
                                 {
                                     // The column, table and database matched.
                                     matches = true;
@@ -1473,7 +1493,7 @@ static bool cache_rule_matches_database(CACHE_RULE* self,
     {
         auto pos = name.find('.');
 
-        if (pos != std::string::npos)
+        if (pos != std::string_view::npos)
         {
             matches = cache_rule_compare(self, thread_id, name.substr(0, pos));
         }
@@ -1554,7 +1574,7 @@ static bool cache_rule_matches_table_regexp(CACHE_RULE* self,
 
                 if (default_db)
                 {
-                    matches = cache_rule_compare(self, thread_id, db + '.' + name);
+                    matches = cache_rule_compare(self, thread_id, db + '.' + std::string(name));
                 }
                 else
                 {
@@ -1620,14 +1640,12 @@ static bool cache_rule_matches_table_simple(CACHE_RULE* self, const char* defaul
 
             if (!database.empty())
             {
-                matches =
-                    (strcasecmp(self->simple.database, database.c_str()) == 0)
-                    && (strcasecmp(self->simple.table, table.c_str()) == 0);
+                matches = sv_case_eq(self->simple.database, database) && sv_case_eq(self->simple.table, table);
             }
         }
         else
         {
-            matches = (strcasecmp(self->simple.table, name.c_str()) == 0);
+            matches = sv_case_eq(self->simple.table, name);
         }
 
         if (self->op == CACHE_OP_NEQ)

@@ -144,7 +144,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_get_table_names)(GWBUF* stmt, int32_t full_names, std::vector<std::string>* names);
+    int32_t (* qc_get_table_names)(GWBUF* stmt, int32_t full_names, std::vector<std::string_view>* names);
 
     /**
      * Reports whether the statement has a where clause.
@@ -168,7 +168,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_get_database_names)(GWBUF* stmt, std::vector<std::string>* names);
+    int32_t (* qc_get_database_names)(GWBUF* stmt, std::vector<std::string_view>* names);
 
     /**
      * Reports KILL information.

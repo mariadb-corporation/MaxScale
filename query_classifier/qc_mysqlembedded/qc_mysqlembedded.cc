@@ -80,7 +80,7 @@
 #include <stdarg.h>
 #include <set>
 
-using std::set;
+using namespace std;
 
 #if MYSQL_VERSION_MAJOR >= 10 && MYSQL_VERSION_MINOR >= 2
 #define CTE_SUPPORTED
@@ -174,19 +174,22 @@ public:
     parsing_info_t(GWBUF* querybuf);
     ~parsing_info_t();
 
-    MYSQL*            pi_handle { nullptr } ;            /*< parsing info object pointer */
-    char*             pi_query_plain_str { nullptr };   /*< query as plain string */
-    QC_FIELD_INFO*    field_infos { nullptr };
-    size_t            field_infos_len { 0 };
-    size_t            field_infos_capacity { 0 };
-    QC_FUNCTION_INFO* function_infos { 0 };
-    size_t            function_infos_len { 0 };
-    size_t            function_infos_capacity { 0 };
-    GWBUF*            preparable_stmt { 0 };
-    qc_parse_result_t result { QC_QUERY_INVALID };
-    int32_t           type_mask { 0 };
-    NAME_MAPPING*     function_name_mappings { 0 };
-    std::string       created_table_name;
+    MYSQL*              pi_handle { nullptr } ;            /*< parsing info object pointer */
+    char*               pi_query_plain_str { nullptr };   /*< query as plain string */
+    QC_FIELD_INFO*      field_infos { nullptr };
+    size_t              field_infos_len { 0 };
+    size_t              field_infos_capacity { 0 };
+    QC_FUNCTION_INFO*   function_infos { 0 };
+    size_t              function_infos_len { 0 };
+    size_t              function_infos_capacity { 0 };
+    GWBUF*              preparable_stmt { 0 };
+    qc_parse_result_t   result { QC_QUERY_INVALID };
+    int32_t             type_mask { 0 };
+    NAME_MAPPING*       function_name_mappings { 0 };
+    string              created_table_name;
+    vector<string>      database_names;
+    vector<string>      table_names;
+    vector<string>      full_table_names;
 };
 
 #define QTYPE_LESS_RESTRICTIVE_THAN_WRITE(t) (t < QUERY_TYPE_WRITE ? true : false)
@@ -1835,7 +1838,7 @@ static bool is_show_command(int sql_command)
     return rv;
 }
 
-int32_t qc_mysql_get_table_names(GWBUF* querybuf, int32_t fullnames, std::vector<std::string>* tables)
+int32_t qc_mysql_get_table_names(GWBUF* querybuf, int32_t fullnames, vector<string_view>* tables)
 {
     LEX* lex;
     TABLE_LIST* tbl;
@@ -1845,72 +1848,94 @@ int32_t qc_mysql_get_table_names(GWBUF* querybuf, int32_t fullnames, std::vector
         return QC_RESULT_OK;
     }
 
-    if ((lex = get_lex(querybuf)) == NULL)
+    auto* pi = get_pinfo(querybuf);
+
+    if (pi->table_names.empty() && pi->full_table_names.empty())
     {
-        return QC_RESULT_OK;
-    }
-
-    if (lex->describe || (is_show_command(lex->sql_command) && !(lex->sql_command == SQLCOM_SHOW_FIELDS)))
-    {
-        return QC_RESULT_OK;
-    }
-
-    lex->current_select = lex->all_selects_list;
-
-    while (lex->current_select)
-    {
-        tbl = skygw_get_affected_tables(lex);
-
-        while (tbl)
+        if ((lex = get_lex(querybuf)) == NULL)
         {
-            std::string s;
+            return QC_RESULT_OK;
+        }
 
-            if (fullnames)
+        if (lex->describe || (is_show_command(lex->sql_command) && !(lex->sql_command == SQLCOM_SHOW_FIELDS)))
+        {
+            return QC_RESULT_OK;
+        }
+
+        lex->current_select = lex->all_selects_list;
+
+        while (lex->current_select)
+        {
+            tbl = skygw_get_affected_tables(lex);
+
+            while (tbl)
             {
+                string name;
+                string fullname;
+
                 if (qcme_string_get(tbl->db)
                     && (strcmp(qcme_string_get(tbl->db), "skygw_virtual") != 0)
                     && (strcmp(qcme_string_get(tbl->table_name), "*") != 0))
                 {
-                    std::string db = qcme_string_get(tbl->db);
+                    string db = qcme_string_get(tbl->db);
 
                     if (!db.empty())
                     {
-                        s = db;
-                        s += ".";
-                        s += qcme_string_get(tbl->table_name);
+                        fullname = db;
+                        fullname += ".";
+                        fullname += qcme_string_get(tbl->table_name);
                     }
                 }
-            }
 
-            if (s.empty())
-            {
                 // Sometimes the tablename is "*"; we exclude that.
                 if (strcmp(qcme_string_get(tbl->table_name), "*") != 0)
                 {
-                    s = qcme_string_get(tbl->table_name);
+                    name = qcme_string_get(tbl->table_name);
                 }
-            }
 
-            if (!s.empty())
-            {
-                if (std::find(tables->begin(), tables->end(), s) == tables->end())
+                if (!name.empty())
                 {
-                    tables->push_back(s);
+                    if (fullname.empty())
+                    {
+                        fullname = name;
+                    }
+
+                    auto end = pi->table_names.end();
+                    if (find(pi->table_names.begin(), end, name) == end)
+                    {
+                        pi->table_names.push_back(name);
+                    }
+
+                    end = pi->full_table_names.end();
+                    if (find(pi->full_table_names.begin(), end, fullname) == end)
+                    {
+                        pi->full_table_names.push_back(fullname);
+                    }
                 }
-            }
 
-            tbl = tbl->next_local;
-        }   /*< while (tbl) */
+                tbl = tbl->next_local;
+            }   /*< while (tbl) */
 
-        lex->current_select = lex->current_select->next_select_in_list();
-    }   /*< while(lex->current_select) */
+            lex->current_select = lex->current_select->next_select_in_list();
+        }   /*< while(lex->current_select) */
+    }
+
+    tables->clear();
+    if (fullnames)
+    {
+        copy(pi->full_table_names.begin(), pi->full_table_names.end(), back_inserter(*tables));
+    }
+    else
+    {
+        copy(pi->table_names.begin(), pi->table_names.end(), back_inserter(*tables));
+    }
 
     return QC_RESULT_OK;
 }
 
-int32_t qc_mysql_get_created_table_name(GWBUF* querybuf, std::string_view* table_name)
+int32_t qc_mysql_get_created_table_name(GWBUF* querybuf, string_view* table_name)
 {
-    *table_name = std::string_view {};
+    *table_name = string_view {};
 
     if (querybuf == NULL)
     {
@@ -2051,74 +2076,82 @@ static void parsing_info_set_plain_str(void* ptr, char* str)
     pi->pi_query_plain_str = str;
 }
 
-int32_t qc_mysql_get_database_names(GWBUF* querybuf, std::vector<std::string>* pNames)
+int32_t qc_mysql_get_database_names(GWBUF* querybuf, vector<string_view>* pNames)
 {
     if (!querybuf || !ensure_query_is_parsed(querybuf))
     {
         return QC_RESULT_OK;
     }
 
-    LEX* lex = get_lex(querybuf);
+    auto* pi = get_pinfo(querybuf);
 
-    if (!lex)
+    if (pi->database_names.empty())
     {
-        return QC_RESULT_OK;
-    }
+        LEX* lex = get_lex(querybuf);
 
-    if (lex->describe || (is_show_command(lex->sql_command)
-                          && !(lex->sql_command == SQLCOM_SHOW_TABLES)
-                          && !(lex->sql_command == SQLCOM_SHOW_FIELDS)))
-    {
-        return QC_RESULT_OK;
-    }
-
-    if (lex->sql_command == SQLCOM_CHANGE_DB || lex->sql_command == SQLCOM_SHOW_TABLES)
-    {
-        SELECT_LEX* select_lex = qcme_get_first_select_lex(lex);
-        if (qcme_string_get(select_lex->db)
-            && (strcmp(qcme_string_get(select_lex->db), "skygw_virtual") != 0))
+        if (!lex)
         {
-            pNames->push_back(qcme_string_get(select_lex->db));
+            return QC_RESULT_OK;
         }
-    }
-    else
-    {
-        lex->current_select = lex->all_selects_list;
 
-        while (lex->current_select)
+        if (lex->describe || (is_show_command(lex->sql_command)
+                              && !(lex->sql_command == SQLCOM_SHOW_TABLES)
+                              && !(lex->sql_command == SQLCOM_SHOW_FIELDS)))
         {
-            TABLE_LIST* tbl = lex->current_select->table_list.first;
+            return QC_RESULT_OK;
+        }
 
-            while (tbl)
+        if (lex->sql_command == SQLCOM_CHANGE_DB || lex->sql_command == SQLCOM_SHOW_TABLES)
+        {
+            SELECT_LEX* select_lex = qcme_get_first_select_lex(lex);
+            if (qcme_string_get(select_lex->db)
+                && (strcmp(qcme_string_get(select_lex->db), "skygw_virtual") != 0))
             {
-                if (lex->sql_command == SQLCOM_SHOW_FIELDS)
-                {
-                    // If we are describing, we want the actual table, not the information_schema.
-                    if (tbl->schema_select_lex)
-                    {
-                        tbl = tbl->schema_select_lex->table_list.first;
-                    }
-                }
-
-                // The database is sometimes an empty string. So as not to return
-                // an array of empty strings, we need to check for that possibility.
-                if ((strcmp(qcme_string_get(tbl->db), "skygw_virtual") != 0)
-                    && (*qcme_string_get(tbl->db) != 0))
-                {
-                    auto str = qcme_string_get(tbl->db);
-
-                    if (std::find(pNames->begin(), pNames->end(), str) == pNames->end())
-                    {
-                        pNames->push_back(str);
-                    }
-                }
-
-                tbl = tbl->next_local;
+                pi->database_names.push_back(qcme_string_get(select_lex->db));
             }
+        }
+        else
+        {
+            lex->current_select = lex->all_selects_list;
 
-            lex->current_select = lex->current_select->next_select_in_list();
+            while (lex->current_select)
+            {
+                TABLE_LIST* tbl = lex->current_select->table_list.first;
+
+                while (tbl)
+                {
+                    if (lex->sql_command == SQLCOM_SHOW_FIELDS)
+                    {
+                        // If we are describing, we want the actual table, not the information_schema.
+                        if (tbl->schema_select_lex)
+                        {
+                            tbl = tbl->schema_select_lex->table_list.first;
+                        }
+                    }
+
+                    // The database is sometimes an empty string. So as not to return
+                    // an array of empty strings, we need to check for that possibility.
+                    if ((strcmp(qcme_string_get(tbl->db), "skygw_virtual") != 0)
+                        && (*qcme_string_get(tbl->db) != 0))
+                    {
+                        auto str = qcme_string_get(tbl->db);
+
+                        if (find(pi->database_names.begin(), pi->database_names.end(), str) == pi->database_names.end())
+                        {
+                            pi->database_names.push_back(str);
+                        }
+                    }
+
+                    tbl = tbl->next_local;
+                }
+
+                lex->current_select = lex->current_select->next_select_in_list();
+            }
         }
     }
+
+    pNames->clear();
+    copy(pi->database_names.begin(), pi->database_names.end(), back_inserter(*pNames));
 
     return QC_RESULT_OK;
 }

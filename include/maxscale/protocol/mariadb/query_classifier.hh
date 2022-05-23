@@ -287,7 +287,7 @@ std::string_view qc_get_created_table_name(GWBUF* stmt);
  *
  * @return Vector of strings
  */
-std::vector<std::string> qc_get_database_names(GWBUF* stmt);
+std::vector<std::string_view> qc_get_database_names(GWBUF* stmt);
 
 /**
  * Returns the information associated with a KILL command.
@@ -360,7 +360,7 @@ GWBUF* qc_get_preparable_stmt(GWBUF* stmt);
  * @note The returned array and the strings pointed to @b must be freed
  *       by the caller.
  */
-std::vector<std::string> qc_get_table_names(GWBUF* stmt, bool fullnames);
+std::vector<std::string_view> qc_get_table_names(GWBUF* stmt, bool fullnames);
 
 /**
  * Returns a bitmask specifying the type(s) of the statement. The result

@@ -42,7 +42,7 @@ void Shard::add_statement(uint32_t id, mxs::Target* target)
     m_binary_map[id] = target;
 }
 
-std::set<mxs::Target*> Shard::get_all_locations(const std::vector<std::string>& tables)
+std::set<mxs::Target*> Shard::get_all_locations(const std::vector<std::string_view>& tables)
 {
     if (tables.empty())
     {
@@ -64,9 +64,10 @@ std::set<mxs::Target*> Shard::get_all_locations(const std::vector<std::string>& 
     return targets;
 }
 
-std::set<mxs::Target*> Shard::get_all_locations(std::string table)
+std::set<mxs::Target*> Shard::get_all_locations(std::string_view table_view)
 {
     std::set<mxs::Target*> rval;
+    std::string table(table_view);
     std::transform(table.begin(), table.end(), table.begin(), ::tolower);
     std::string db;
     std::string tbl;
@@ -97,13 +98,13 @@ std::set<mxs::Target*> Shard::get_all_locations(std::string table)
     return rval;
 }
 
-mxs::Target* Shard::get_location(const std::vector<std::string>& tables)
+mxs::Target* Shard::get_location(const std::vector<std::string_view>& tables)
 {
     auto targets = get_all_locations(tables);
     return targets.empty() ? nullptr : *targets.begin();
 }
 
-mxs::Target* Shard::get_location(std::string table)
+mxs::Target* Shard::get_location(std::string_view table)
 {
     auto targets = get_all_locations(std::move(table));
     return targets.empty() ? nullptr : *targets.begin();
