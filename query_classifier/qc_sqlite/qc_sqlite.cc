@@ -423,7 +423,7 @@ public:
         return rv;
     }
 
-    bool get_created_table_name(char** pzCreated_table_name) const
+    bool get_created_table_name(std::string_view* pCreated_table_name) const
     {
         bool rv = false;
 
@@ -431,8 +431,7 @@ public:
         {
             if (m_zCreated_table_name)
             {
-                *pzCreated_table_name = MXB_STRDUP(m_zCreated_table_name);
-                MXB_ABORT_IF_NULL(*pzCreated_table_name);
+                *pCreated_table_name = std::string_view(m_zCreated_table_name);
             }
             rv = true;
         }
@@ -4966,7 +4965,7 @@ static void           qc_sqlite_thread_end(void);
 static int32_t        qc_sqlite_parse(GWBUF* query, uint32_t collect, int32_t* result);
 static int32_t        qc_sqlite_get_type_mask(GWBUF* query, uint32_t* typemask);
 static int32_t        qc_sqlite_get_operation(GWBUF* query, int32_t* op);
-static int32_t        qc_sqlite_get_created_table_name(GWBUF* query, char** name);
+static int32_t        qc_sqlite_get_created_table_name(GWBUF* query, std::string_view* name);
 static int32_t        qc_sqlite_is_drop_table_query(GWBUF* query, int32_t* is_drop_table);
 static int32_t        qc_sqlite_get_table_names(GWBUF* query, int32_t fullnames, char*** names, int* tblsize);
 static int32_t        qc_sqlite_get_canonical(GWBUF* query, char** canonical);
@@ -5311,19 +5310,19 @@ static int32_t qc_sqlite_get_operation(GWBUF* pStmt, int32_t* pOp)
     return rv;
 }
 
-static int32_t qc_sqlite_get_created_table_name(GWBUF* pStmt, char** pzCreated_table_name)
+static int32_t qc_sqlite_get_created_table_name(GWBUF* pStmt, std::string_view* pCreated_table_name)
 {
     QC_TRACE();
     int32_t rv = QC_RESULT_ERROR;
     mxb_assert(this_unit.initialized);
     mxb_assert(this_thread.initialized);
 
-    *pzCreated_table_name = NULL;
+    *pCreated_table_name = std::string_view {};
     QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, QC_COLLECT_TABLES);
 
     if (pInfo)
     {
-        if (pInfo->get_created_table_name(pzCreated_table_name))
+        if (pInfo->get_created_table_name(pCreated_table_name))
         {
             rv = QC_RESULT_OK;
         }

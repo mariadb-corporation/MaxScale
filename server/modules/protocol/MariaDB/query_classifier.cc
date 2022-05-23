@@ -691,12 +691,12 @@ qc_query_op_t qc_get_operation(GWBUF* query)
     return (qc_query_op_t)op;
 }
 
-char* qc_get_created_table_name(GWBUF* query)
+std::string_view qc_get_created_table_name(GWBUF* query)
 {
     QC_TRACE();
     mxb_assert(this_unit.classifier);
 
-    char* name = NULL;
+    std::string_view name;
 
     QCInfoCacheScope scope(query);
     this_unit.classifier->qc_get_created_table_name(query, &name);

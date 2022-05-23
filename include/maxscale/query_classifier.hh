@@ -119,7 +119,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_get_created_table_name)(GWBUF* stmt, char** name);
+    int32_t (* qc_get_created_table_name)(GWBUF* stmt, std::string_view* name);
 
     /**
      * Reports whether a statement is a "DROP TABLE ..." statement.

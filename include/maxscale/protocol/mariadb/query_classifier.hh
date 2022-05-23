@@ -273,11 +273,11 @@ void qc_get_function_info(GWBUF* stmt, const QC_FUNCTION_INFO** infos, size_t* n
  *
  * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
  *
- * @return The name of the created table or NULL if the statement
+ * @return The name of the created table or an empty string if the statement
  *         does not create a table or a memory allocation failed.
  *         The string must be freed by the caller.
  */
-char* qc_get_created_table_name(GWBUF* stmt);
+std::string_view qc_get_created_table_name(GWBUF* stmt);
 
 /**
  * Returns the databases accessed by the statement. Note that a

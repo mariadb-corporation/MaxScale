@@ -180,6 +180,7 @@ typedef struct parsing_info_st : public QC_STMT_INFO
     qc_parse_result_t result;
     int32_t           type_mask;
     NAME_MAPPING*     function_name_mappings;
+    char*             created_table_name;
 } parsing_info_t;
 
 #define QTYPE_LESS_RESTRICTIVE_THAN_WRITE(t) (t < QUERY_TYPE_WRITE ? true : false)
@@ -1857,9 +1858,9 @@ int32_t qc_mysql_get_table_names(GWBUF* querybuf, int32_t fullnames, std::vector
     return QC_RESULT_OK;
 }
 
-int32_t qc_mysql_get_created_table_name(GWBUF* querybuf, char** table_name)
+int32_t qc_mysql_get_created_table_name(GWBUF* querybuf, std::string_view* table_name)
 {
-    *table_name = NULL;
+    *table_name = std::string_view {};
 
     if (querybuf == NULL)
     {
@@ -1875,10 +1876,21 @@ int32_t qc_mysql_get_created_table_name(GWBUF* querybuf, char** table_name)
 
     if (lex && (lex->sql_command == SQLCOM_CREATE_TABLE))
     {
-        if (lex->create_last_non_select_table
-            && qcme_string_get(lex->create_last_non_select_table->table_name))
+        auto* pi = get_pinfo(querybuf);
+        mxb_assert(pi);
+
+        if (!pi->created_table_name)
         {
-            *table_name = strdup(qcme_string_get(lex->create_last_non_select_table->table_name));
+            if (lex->create_last_non_select_table
+                && qcme_string_get(lex->create_last_non_select_table->table_name))
+            {
+                pi->created_table_name = strdup(qcme_string_get(lex->create_last_non_select_table->table_name));
+            }
+        }
+
+        if (pi->created_table_name)
+        {
+            *table_name = pi->created_table_name;
         }
     }
 
@@ -2075,6 +2087,8 @@ static void parsing_info_done(void* ptr)
         free(pi->function_infos);
 
         gwbuf_free(pi->preparable_stmt);
+
+        free(pi->created_table_name);
 
         free(pi);
     }
