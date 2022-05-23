@@ -1804,7 +1804,7 @@ public:
  * Further, the final value may be a certain percentage of the selected or calculated
  * value.
  */
-template<class ParamType, int nPercent = 100>
+template<class ParamType>
 class NumberDependency : public ConcreteDependency<ParamType>
 {
 public:
@@ -1873,11 +1873,11 @@ private:
  * is a duration.
  */
 
-template<class StdChronoDuration, int nPercent = 100>
-class DurationDependency : public NumberDependency<ParamDuration<StdChronoDuration>, nPercent>
+template<class StdChronoDuration>
+class DurationDependency : public NumberDependency<ParamDuration<StdChronoDuration>>
 {
 public:
-    using Base = NumberDependency<ParamDuration<StdChronoDuration>, nPercent>;
+    using Base = NumberDependency<ParamDuration<StdChronoDuration>>;
     using Base::Base;
 };
 }
