@@ -1215,61 +1215,28 @@ static const qc_query_type_t QUERY_TYPES[] =
 static const int N_QUERY_TYPES = sizeof(QUERY_TYPES) / sizeof(QUERY_TYPES[0]);
 static const int QUERY_TYPE_MAX_LEN = 29;   // strlen("QUERY_TYPE_PREPARE_NAMED_STMT");
 
-char* qc_typemask_to_string(uint32_t types)
+std::string qc_typemask_to_string(uint32_t types)
 {
-    int len = 0;
+    std::string rv;
 
-    // First calculate how much space will be needed.
     for (int i = 0; i < N_QUERY_TYPES; ++i)
     {
-        if (types & QUERY_TYPES[i])
+        qc_query_type_t type = QUERY_TYPES[i];
+
+        if (types & type)
         {
-            if (len != 0)
+            if (!rv.empty())
             {
-                ++len;      // strlen("|");
+                rv += "|";
             }
 
-            len += QUERY_TYPE_MAX_LEN;
+            struct type_name_info info = type_to_type_name_info(type);
+
+            rv += info.name;
         }
     }
 
-    ++len;
-
-    // Then make one allocation and build the string.
-    char* s = (char*) MXB_MALLOC(len);
-
-    if (s)
-    {
-        if (len > 1)
-        {
-            char* p = s;
-
-            for (int i = 0; i < N_QUERY_TYPES; ++i)
-            {
-                qc_query_type_t type = QUERY_TYPES[i];
-
-                if (types & type)
-                {
-                    if (p != s)
-                    {
-                        strcpy(p, "|");
-                        ++p;
-                    }
-
-                    struct type_name_info info = type_to_type_name_info(type);
-
-                    strcpy(p, info.name);
-                    p += info.name_len;
-                }
-            }
-        }
-        else
-        {
-            *s = 0;
-        }
-    }
-
-    return s;
+    return rv;
 }
 
 static uint32_t qc_get_trx_type_mask_using_qc(GWBUF* stmt)
@@ -1630,9 +1597,8 @@ std::unique_ptr<json_t> qc_classify_as_json(const char* zHost, const std::string
 
     if (result != QC_QUERY_INVALID)
     {
-        char* zType_mask = qc_typemask_to_string(qc_get_type_mask(pBuffer));
-        json_object_set_new(pAttributes, CN_TYPE_MASK, json_string(zType_mask));
-        MXB_FREE(zType_mask);
+        std::string type_mask = qc_typemask_to_string(qc_get_type_mask(pBuffer));
+        json_object_set_new(pAttributes, CN_TYPE_MASK, json_string(type_mask.c_str()));
 
         json_object_set_new(pAttributes, CN_OPERATION,
                             json_string(qc_op_to_string(qc_get_operation(pBuffer))));
@@ -1663,9 +1629,8 @@ json_t* cache_entry_as_json(const std::string& stmt, const QC_CACHE_ENTRY& entry
     json_t* pClassification = json_object();
     json_object_set_new(pClassification,
                         CN_PARSE_RESULT, json_string(qc_result_to_string(entry.result.status)));
-    char* zType_mask = qc_typemask_to_string(entry.result.type_mask);
-    json_object_set_new(pClassification, CN_TYPE_MASK, json_string(zType_mask));
-    MXB_FREE(zType_mask);
+    std::string type_mask = qc_typemask_to_string(entry.result.type_mask);
+    json_object_set_new(pClassification, CN_TYPE_MASK, json_string(type_mask.c_str()));
     json_object_set_new(pClassification,
                         CN_OPERATION,
                         json_string(qc_op_to_string(entry.result.op)));

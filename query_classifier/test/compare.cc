@@ -396,9 +396,7 @@ bool compare_get_type(QUERY_CLASSIFIER* pClassifier1,
 
     if (rv1 == rv2)
     {
-        char* types = qc_typemask_to_string(rv1);
-        ss << "Ok : " << types;
-        free(types);
+        ss << "Ok : " << qc_typemask_to_string(rv1);
         success = true;
     }
     else
@@ -427,8 +425,8 @@ bool compare_get_type(QUERY_CLASSIFIER* pClassifier1,
             rv2b &= ~(uint32_t)QUERY_TYPE_LOCAL_READ;
         }
 
-        char* types1 = qc_typemask_to_string(rv1);
-        char* types2 = qc_typemask_to_string(rv2);
+        auto types1 = qc_typemask_to_string(rv1);
+        auto types2 = qc_typemask_to_string(rv2);
 
         if (rv1b == rv2b)
         {
@@ -439,8 +437,6 @@ bool compare_get_type(QUERY_CLASSIFIER* pClassifier1,
         {
             ss << "ERR: " << types1 << " != " << types2;
         }
-        free(types1);
-        free(types2);
     }
 
     report(success, ss.str());

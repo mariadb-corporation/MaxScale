@@ -93,9 +93,8 @@ static int lua_get_type_mask(lua_State* state)
     if (data.buffer)
     {
         uint32_t type = qc_get_type_mask(data.buffer);
-        char* mask = qc_typemask_to_string(type);
-        lua_pushstring(state, mask);
-        MXB_FREE(mask);
+        std::string mask = qc_typemask_to_string(type);
+        lua_pushstring(state, mask.c_str());
     }
     else
     {

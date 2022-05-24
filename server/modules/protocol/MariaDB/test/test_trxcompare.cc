@@ -89,26 +89,21 @@ public:
             if ((m_verbosity & VERBOSITY_SUCCESSFUL)
                 || ((m_verbosity & VERBOSITY_SUCCESSFUL_TRANSACTIONAL) && (type_mask_qc != 0)))
             {
-                char* zType_mask = qc_typemask_to_string(type_mask_qc);
+                string type_mask_qc_str = qc_typemask_to_string(type_mask_qc);
 
-                cout << zStmt << ": " << zType_mask << endl;
-
-                MXB_FREE(zType_mask);
+                cout << zStmt << ": " << type_mask_qc_str << endl;
             }
         }
         else
         {
             if (m_verbosity & VERBOSITY_FAILED)
             {
-                char* zType_mask_qc = qc_typemask_to_string(type_mask_qc);
-                char* zType_mask_parser = qc_typemask_to_string(type_mask_parser);
+                string type_mask_qc_str = qc_typemask_to_string(type_mask_qc);
+                string type_mask_parser_str = qc_typemask_to_string(type_mask_parser);
 
                 cout << zStmt << "\n"
-                     << "  QC    : " << zType_mask_qc << "\n"
-                     << "  PARSER: " << zType_mask_parser << endl;
-
-                MXB_FREE(zType_mask_qc);
-                MXB_FREE(zType_mask_parser);
+                     << "  QC    : " << type_mask_qc_str << "\n"
+                     << "  PARSER: " << type_mask_parser_str << endl;
             }
 
             rc = EXIT_FAILURE;

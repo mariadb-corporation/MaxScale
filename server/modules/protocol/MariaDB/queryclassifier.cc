@@ -619,7 +619,7 @@ void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype)
         int len = 0;
         std::string sqldata;
         const char* sql = "<non-SQL>";
-        char* qtypestr = qc_typemask_to_string(qtype);
+        std::string qtypestr = qc_typemask_to_string(qtype);
 
         if (qc_mysql_is_ps_command(command))
         {
@@ -642,7 +642,7 @@ void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype)
         const char* autocommit = mariases->is_autocommit ? "[enabled]" : "[disabled]";
         const char* transaction = mariases->is_trx_active() ? "[open]" : "[not open]";
         uint32_t plen = MYSQL_GET_PACKET_LEN(querybuf);
-        const char* querytype = qtypestr == NULL ? "N/A" : qtypestr;
+        const char* querytype = qtypestr.empty() ? "N/A" : qtypestr.c_str();
         const char* hint = querybuf->hints.empty() ? "" : ", Hint:";
         const char* hint_type = querybuf->hints.empty() ? "" : Hint::type_to_str(querybuf->hints[0].type);
 
@@ -657,8 +657,6 @@ void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype)
                  sql,
                  hint,
                  hint_type);
-
-        MXB_FREE(qtypestr);
     }
     else if (m_route_info.load_data_state() == QueryClassifier::LOAD_DATA_END)
     {

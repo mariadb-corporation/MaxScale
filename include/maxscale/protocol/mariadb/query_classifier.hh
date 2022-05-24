@@ -436,11 +436,9 @@ bool qc_query_has_clause(GWBUF* stmt);
  *
  * @param typemask  A bit mask of query types.
  *
- * @return The corresponding string or NULL if the allocation fails.
- *
- * @note The returned string is dynamically allocated and @b must be freed.
+ * @return The corresponding string.
  */
-char* qc_typemask_to_string(uint32_t typemask);
+std::string qc_typemask_to_string(uint32_t typemask);
 
 /**
  * Gets the options of the *calling* thread.

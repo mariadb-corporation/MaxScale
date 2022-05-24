@@ -515,19 +515,19 @@ void test_set_transaction(Tester& tester)
                            qc_op_to_string(QUERY_OP_SET_TRANSACTION), qc_op_to_string(op));
 
                     auto type = tester.get_type(sql);
-                    char* type_str = qc_typemask_to_string(type);
+                    auto type_str = qc_typemask_to_string(type);
 
                     expect(type & QUERY_TYPE_SESSION_WRITE, "Query should be QUERY_TYPE_SESSION_WRITE");
 
                     if (scope == "")
                     {
                         expect(type & QUERY_TYPE_NEXT_TRX,
-                               "%s should be QUERY_TYPE_NEXT_TRX: %s", sql.c_str(), type_str);
+                               "%s should be QUERY_TYPE_NEXT_TRX: %s", sql.c_str(), type_str.c_str());
                     }
                     else if (scope == "GLOBAL")
                     {
                         expect(type & QUERY_TYPE_GSYSVAR_WRITE,
-                               "%s should be QUERY_TYPE_GSYSVAR_WRITE: %s", sql.c_str(), type_str);
+                               "%s should be QUERY_TYPE_GSYSVAR_WRITE: %s", sql.c_str(), type_str.c_str());
                     }
 
                     if (scope != "GLOBAL" && v.find(trx) != std::string::npos)
@@ -535,22 +535,20 @@ void test_set_transaction(Tester& tester)
                         if (trx == "READ ONLY")
                         {
                             expect(type & QUERY_TYPE_READONLY,
-                                   "%s should be QUERY_TYPE_READONLY: %s", sql.c_str(), type_str);
+                                   "%s should be QUERY_TYPE_READONLY: %s", sql.c_str(), type_str.c_str());
                         }
                         else
                         {
                             expect(type & QUERY_TYPE_READWRITE,
-                                   "%s should be QUERY_TYPE_READWRITE: %s", sql.c_str(), type_str);
+                                   "%s should be QUERY_TYPE_READWRITE: %s", sql.c_str(), type_str.c_str());
                         }
                     }
                     else
                     {
                         expect((type & (QUERY_TYPE_READONLY | QUERY_TYPE_READWRITE)) == 0,
                                "%s should not be QUERY_TYPE_READONLY or QUERY_TYPE_READWRITE: %s",
-                               sql.c_str(), type_str);
+                               sql.c_str(), type_str.c_str());
                     }
-
-                    free(type_str);
                 }
             }
         }
@@ -577,14 +575,11 @@ int main(int argc, char** argv)
                    qc_op_to_string(expected_op), qc_op_to_string(op), sql.c_str());
 
             auto type = tester.get_type(sql);
-            char* type_str = qc_typemask_to_string(type);
-            char* expected_type_str = qc_typemask_to_string(expected_type);
+            auto type_str = qc_typemask_to_string(type);
+            auto expected_type_str = qc_typemask_to_string(expected_type);
 
             expect(type == expected_type, "Expected %s, got %s for: %s",
-                   expected_type_str, type_str, sql.c_str());
-
-            free(type_str);
-            free(expected_type_str);
+                   expected_type_str.c_str(), type_str.c_str(), sql.c_str());
         }
 
         test_kill(tester);

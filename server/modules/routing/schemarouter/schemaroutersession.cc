@@ -180,7 +180,6 @@ static void inspect_query(GWBUF* pPacket, uint32_t* type, qc_query_op_t* op, uin
     {
         const char* sql;
         int sql_len;
-        char* qtypestr = qc_typemask_to_string(*type);
         int rc = modutil_extract_SQL(*pPacket, &sql, &sql_len);
 
         MXB_INFO("> Command: %s, stmt: %.*s %s%s",
@@ -189,8 +188,6 @@ static void inspect_query(GWBUF* pPacket, uint32_t* type, qc_query_op_t* op, uin
                  rc ? sql : "",
                  (pPacket->hints.empty() ? "" : ", Hint:"),
                  (pPacket->hints.empty() ? "" : Hint::type_to_str(pPacket->hints[0].type)));
-
-        MXB_FREE(qtypestr);
     }
 }
 
