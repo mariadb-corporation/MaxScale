@@ -51,6 +51,23 @@ public:
         virtual std::pair<bool, std::vector<uint8_t>> encrypt(std::vector<uint8_t> input) = 0;
     };
 
+    // Base implementation of a MasterKey that provides generic AES-GCM encryption.
+    class MasterKeyBase : public MasterKey
+    {
+    public:
+        virtual ~MasterKeyBase() = default;
+
+        MasterKeyBase(std::vector<uint8_t> key);
+
+        std::pair<bool, std::vector<uint8_t>> decrypt(std::vector<uint8_t> input) override;
+
+        std::pair<bool, std::vector<uint8_t>> encrypt(std::vector<uint8_t> input) override;
+
+    protected:
+        std::vector<uint8_t> m_key;
+        mxb::Cipher          m_cipher;
+    };
+
     /**
      * Initialize the key manager
      *
