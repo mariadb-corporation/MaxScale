@@ -69,6 +69,21 @@ public:
     bool         remove_statement(std::string stmt);
     bool         remove_statement(uint32_t id);
 
+    void add_statement(std::string_view stmt, mxs::Target* target)
+    {
+        return add_statement(std::string(stmt), target);
+    }
+
+    mxs::Target* get_statement(std::string_view stmt)
+    {
+        return get_statement(std::string(stmt));
+    }
+
+    bool remove_statement(std::string_view stmt)
+    {
+        return remove_statement(std::string(stmt));
+    }
+
     /**
      * @brief Check if shard contains stale information
      *

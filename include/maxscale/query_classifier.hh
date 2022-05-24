@@ -190,7 +190,7 @@ struct QUERY_CLASSIFIER
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_get_prepare_name)(GWBUF* stmt, char** name);
+    int32_t (* qc_get_prepare_name)(GWBUF* stmt, std::string_view* name);
 
     /**
      * Reports field information.

@@ -500,7 +500,7 @@ bool compare_get_created_table_name(QUERY_CLASSIFIER* pClassifier1,
 
     if (rv1 == rv2)
     {
-        ss << "Ok : '" << (!rv1.empty() ? rv1 : "'");
+        ss << "Ok : '" << rv1 << "'";
         success = true;
     }
     else
@@ -728,28 +728,25 @@ bool compare_get_prepare_name(QUERY_CLASSIFIER* pClassifier1,
     bool success = false;
     const char HEADING[] = "qc_get_prepare_name      : ";
 
-    char* rv1;
+    std::string_view rv1;
     pClassifier1->qc_get_prepare_name(pCopy1, &rv1);
-    char* rv2;
+    std::string_view rv2;
     pClassifier2->qc_get_prepare_name(pCopy2, &rv2);
 
     stringstream ss;
     ss << HEADING;
 
-    if ((!rv1 && !rv2) || (rv1 && rv2 && (strcmp(rv1, rv2) == 0)))
+    if (rv1 == rv2)
     {
-        ss << "Ok : " << (rv1 ? rv1 : "NULL");
+        ss << "Ok : '" << rv1 << "'";
         success = true;
     }
     else
     {
-        ss << "ERR: " << (rv1 ? rv1 : "NULL") << " != " << (rv2 ? rv2 : "NULL");
+        ss << "ERR: '" << rv1 << "' != '" << rv2 << "'";
     }
 
     report(success, ss.str());
-
-    free(rv1);
-    free(rv2);
 
     return success;
 }

@@ -1466,36 +1466,35 @@ mxs::Target* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, q
         GWBUF* pStmt = qc_get_preparable_stmt(buffer);
         if (pStmt)
         {
-            char* stmt = qc_get_prepare_name(buffer);
+            std::string_view stmt = qc_get_prepare_name(buffer);
 
             if ((rval = m_shard.get_location(qc_get_table_names(pStmt, true))))
             {
-                MXB_INFO("PREPARING NAMED %s ON SERVER %s", stmt, rval->name());
+                MXB_INFO("PREPARING NAMED %.*s ON SERVER %s", (int)stmt.length(), stmt.data(), rval->name());
                 m_shard.add_statement(stmt, rval);
             }
-            MXB_FREE(stmt);
         }
     }
     else if (op == QUERY_OP_EXECUTE)
     {
-        char* stmt = qc_get_prepare_name(buffer);
+        std::string_view stmt = qc_get_prepare_name(buffer);
         mxs::Target* ps_target = m_shard.get_statement(stmt);
         if (ps_target)
         {
             rval = ps_target;
-            MXB_INFO("Executing named statement %s on server %s", stmt, rval->name());
+            MXB_INFO("Executing named statement %.*s on server %s",
+                     (int)stmt.length(), stmt.data(), rval->name());
         }
-        MXB_FREE(stmt);
     }
     else if (qc_query_is_type(qtype, QUERY_TYPE_DEALLOC_PREPARE))
     {
-        char* stmt = qc_get_prepare_name(buffer);
+        std::string_view stmt = qc_get_prepare_name(buffer);
         if ((rval = m_shard.get_statement(stmt)))
         {
-            MXB_INFO("Closing named statement %s on server %s", stmt, rval->name());
+            MXB_INFO("Closing named statement %.*s on server %s",
+                     (int)stmt.length(), stmt.data(), rval->name());
             m_shard.remove_statement(stmt);
         }
-        MXB_FREE(stmt);
     }
     else if (qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT))
     {

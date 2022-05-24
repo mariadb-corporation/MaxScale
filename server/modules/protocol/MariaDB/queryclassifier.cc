@@ -131,16 +131,7 @@ uint32_t get_prepare_type(GWBUF* buffer)
 
 std::string get_text_ps_id(GWBUF* buffer)
 {
-    std::string rval;
-    char* name = qc_get_prepare_name(buffer);
-
-    if (name)
-    {
-        rval = name;
-        MXB_FREE(name);
-    }
-
-    return rval;
+    return std::string(qc_get_prepare_name(buffer));
 }
 
 bool relates_to_previous_stmt(GWBUF* pBuffer)

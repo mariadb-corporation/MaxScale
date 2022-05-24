@@ -512,18 +512,19 @@ public:
         return rv;
     }
 
-    bool get_prepare_name(char** pzPrepare_name) const
+    bool get_prepare_name(std::string_view* pPrepare_name) const
     {
         bool rv = false;
 
         if (is_valid())
         {
-            *pzPrepare_name = NULL;
-
             if (m_zPrepare_name)
             {
-                *pzPrepare_name = MXB_STRDUP(m_zPrepare_name);
-                MXB_ABORT_IF_NULL(*pzPrepare_name);
+                *pPrepare_name = m_zPrepare_name;
+            }
+            else
+            {
+                *pPrepare_name = std::string_view {};
             }
 
             rv = true;
@@ -5481,19 +5482,18 @@ static int32_t qc_sqlite_get_kill_info(GWBUF* pStmt, QC_KILL* pKill)
     return rv;
 }
 
-static int32_t qc_sqlite_get_prepare_name(GWBUF* pStmt, char** pzPrepare_name)
+static int32_t qc_sqlite_get_prepare_name(GWBUF* pStmt, std::string_view* pPrepare_name)
 {
     QC_TRACE();
     int32_t rv = QC_RESULT_ERROR;
     mxb_assert(this_unit.initialized);
     mxb_assert(this_thread.initialized);
 
-    *pzPrepare_name = NULL;
     QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, QC_COLLECT_ESSENTIALS);
 
     if (pInfo)
     {
-        if (pInfo->get_prepare_name(pzPrepare_name))
+        if (pInfo->get_prepare_name(pPrepare_name))
         {
             rv = QC_RESULT_OK;
         }

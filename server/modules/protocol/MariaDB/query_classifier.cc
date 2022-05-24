@@ -800,12 +800,12 @@ QC_KILL qc_get_kill_info(GWBUF* query)
     return rval;
 }
 
-char* qc_get_prepare_name(GWBUF* query)
+std::string_view qc_get_prepare_name(GWBUF* query)
 {
     QC_TRACE();
     mxb_assert(this_unit.classifier);
 
-    char* name = NULL;
+    std::string_view name;
 
     QCInfoCacheScope scope(query);
     this_unit.classifier->qc_get_prepare_name(query, &name);

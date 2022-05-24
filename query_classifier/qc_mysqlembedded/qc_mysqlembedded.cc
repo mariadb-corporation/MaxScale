@@ -190,6 +190,7 @@ public:
     vector<string>      database_names;
     vector<string>      table_names;
     vector<string>      full_table_names;
+    string              prepare_name;
 };
 
 #define QTYPE_LESS_RESTRICTIVE_THAN_WRITE(t) (t < QUERY_TYPE_WRITE ? true : false)
@@ -2325,36 +2326,36 @@ int32_t qc_mysql_get_operation(GWBUF* querybuf, int32_t* operation)
     return QC_RESULT_OK;
 }
 
-int32_t qc_mysql_get_prepare_name(GWBUF* stmt, char** namep)
+int32_t qc_mysql_get_prepare_name(GWBUF* stmt, std::string_view* namep)
 {
-    char* name = NULL;
+    *namep = std::string_view {};
 
     if (stmt)
     {
         if (ensure_query_is_parsed(stmt))
         {
-            LEX* lex = get_lex(stmt);
+            auto* pi = get_pinfo(stmt);
 
-            if (!lex->describe)
+            if (pi->prepare_name.empty())
             {
-                if ((lex->sql_command == SQLCOM_PREPARE)
-                    || (lex->sql_command == SQLCOM_EXECUTE)
-                    || (lex->sql_command == SQLCOM_DEALLOCATE_PREPARE))
+                LEX* lex = get_lex(stmt);
+
+                if (!lex->describe)
                 {
-                    // LEX_STRING or LEX_CSTRING
-                    const auto& prepared_stmt_name = qcme_get_prepared_stmt_name(lex);
-                    name = (char*)malloc(prepared_stmt_name.length + 1);
-                    if (name)
+                    if ((lex->sql_command == SQLCOM_PREPARE)
+                        || (lex->sql_command == SQLCOM_EXECUTE)
+                        || (lex->sql_command == SQLCOM_DEALLOCATE_PREPARE))
                     {
-                        memcpy(name, prepared_stmt_name.str, prepared_stmt_name.length);
-                        name[prepared_stmt_name.length] = 0;
+                        // LEX_STRING or LEX_CSTRING
+                        const auto& prepared_stmt_name = qcme_get_prepared_stmt_name(lex);
+                        pi->prepare_name.assign(prepared_stmt_name.str, prepared_stmt_name.length);
                     }
                 }
             }
+
+            *namep = pi->prepare_name;
         }
     }
-
-    *namep = name;
 
     return QC_RESULT_OK;
 }
