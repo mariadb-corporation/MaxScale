@@ -238,6 +238,7 @@ Config::ParamAutoTune Config::s_auto_tune(
     "Specifies whether a MaxScale parameter whose value depends on a specific global server "
     "variable, should automatically be updated to match the variable's current value.",
     ",", // Delimiter
+    {},
     config::Param::Modifiable::AT_STARTUP);
 
 config::ParamBool Config::s_log_debug(
