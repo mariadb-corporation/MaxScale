@@ -191,6 +191,7 @@ public:
     vector<string>      table_names;
     vector<string>      full_table_names;
     string              prepare_name;
+    string              canonical;
 };
 
 #define QTYPE_LESS_RESTRICTIVE_THAN_WRITE(t) (t < QUERY_TYPE_WRITE ? true : false)
@@ -385,6 +386,7 @@ static thread_local struct
 
 
 parsing_info_t::parsing_info_t(GWBUF* querybuf)
+    : canonical(querybuf->get_canonical())
 {
     MYSQL* mysql = mysql_init(NULL);
     mxb_assert(mysql);

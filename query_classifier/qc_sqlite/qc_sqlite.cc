@@ -3715,6 +3715,7 @@ public:
     qc_sql_mode_t    m_sql_mode;                            // The current sql_mode.
     QC_NAME_MAPPING* m_pFunction_name_mappings;             // How function names should be mapped.
     QC_KILL          m_kill;
+    std::string      m_canonical;                           // The canonical version of the statement.
 };
 
 extern "C"
@@ -4002,6 +4003,10 @@ static bool parse_query(GWBUF* query, uint32_t collect)
                     if (pInfo)
                     {
                         query->set_classifier_data(pInfo, buffer_object_free);
+
+                        // TODO: Asking GWBUF for its canonical version is a bit ass-backwards,
+                        // TODO: but sorting that out is for later.
+                        pInfo->m_canonical = query->get_canonical();
                     }
                 }
 
