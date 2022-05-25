@@ -301,8 +301,6 @@ public:
 
         size += m_function_infos.capacity() * sizeof(QC_FUNCTION_INFO);
         for_each(m_function_infos.begin(), m_function_infos.end(), [&size](const QC_FUNCTION_INFO& info) {
-                size += strlen(info.name) + 1;
-
                 size += info.n_fields * sizeof(QC_FIELD_INFO);
             });
 
@@ -357,11 +355,6 @@ public:
         }
 
         return pInfo;
-    }
-
-    static void finish_function_info(QC_FUNCTION_INFO& info)
-    {
-        MXB_FREE(info.name);
     }
 
     bool is_valid() const
@@ -1566,13 +1559,13 @@ public:
     }
 
     int update_function_info(const QcAliases* pAliases,
-                             const char* name,
+                             const char* zName,
                              const Expr* pExpr,
                              const ExprList* pEList,
                              const ExprList* pExclude)
 
     {
-        mxb_assert(name);
+        mxb_assert(zName);
         mxb_assert((!pExpr && !pEList) || (pExpr && !pEList) || (!pExpr && pEList));
 
         if (!(m_collect & QC_COLLECT_FUNCTIONS) || (m_collected & QC_COLLECT_FUNCTIONS))
@@ -1582,16 +1575,14 @@ public:
             return -1;
         }
 
-        name = map_function_name(m_pFunction_name_mappings, name);
-
-        QC_FUNCTION_INFO item = {(char*)name};
+        zName = map_function_name(m_pFunction_name_mappings, zName);
 
         size_t i;
         for (i = 0; i < m_function_infos.size(); ++i)
         {
             QC_FUNCTION_INFO& function_info = m_function_infos[i];
 
-            if (strcasecmp(item.name, function_info.name) == 0)
+            if (sv_case_eq(zName, function_info.name))
             {
                 break;
             }
@@ -1599,17 +1590,15 @@ public:
 
         if (i == m_function_infos.size())   // If true, the function was not present already.
         {
-            mxb_assert(item.name);
-            item.name = MXB_STRDUP(item.name);
+            std::string_view name = get_string_view("function", zName);
 
-            if (item.name)
-            {
-                m_function_infos.reserve(m_function_infos.size() + 1);
-                m_function_field_usage.reserve(m_function_field_usage.size() + 1);
+            QC_FUNCTION_INFO item { name, nullptr, 0 };
 
-                m_function_infos.push_back(item);
-                m_function_field_usage.resize(m_function_field_usage.size() + 1);
-            }
+            m_function_infos.reserve(m_function_infos.size() + 1);
+            m_function_field_usage.reserve(m_function_field_usage.size() + 1);
+
+            m_function_infos.push_back(item);
+            m_function_field_usage.resize(m_function_field_usage.size() + 1);
         }
 
         if (pExpr || pEList)
@@ -3463,9 +3452,6 @@ private:
         std::for_each(m_database_names.begin(), m_database_names.end(), mxb_free);
         free(m_zPrepare_name);
         gwbuf_free(m_pPreparable_stmt);
-        std::for_each(m_function_infos.begin(), m_function_infos.end(), finish_function_info);
-
-        // Data in m_function_field_usage is freed in finish_function_info().
     }
 
 private:
@@ -3477,19 +3463,6 @@ private:
     static void free_field_infos(QC_FIELD_INFO* pInfos, size_t nInfos)
     {
         MXB_FREE(pInfos);
-    }
-
-    static void free_function_infos(QC_FUNCTION_INFO* pInfos, size_t nInfos)
-    {
-        if (pInfos)
-        {
-            for (size_t i = 0; i < nInfos; ++i)
-            {
-                MXB_FREE(pInfos[i].name);
-            }
-
-            MXB_FREE(pInfos);
-        }
     }
 
     static void free_string_array(char** pzArray)
@@ -3628,50 +3601,49 @@ private:
         return zCollected_database;
     }
 
+    std::string_view get_string_view(const char* zContext, const char* zNeedle)
+    {
+        std::string_view rv;
+
+        auto i = m_canonical.find(zNeedle);
+
+        if (i != std::string::npos)
+        {
+            rv = std::string_view(&m_canonical[i], strlen(zNeedle));
+        }
+        else
+        {
+            // Ok, let's try case-insensitively.
+            char* pMatch = strcasestr(const_cast<char*>(m_canonical.c_str()), zNeedle);
+
+            if (pMatch)
+            {
+                rv = std::string_view(pMatch, strlen(zNeedle));
+            }
+            else
+            {
+                complain_about_missing(zContext, zNeedle);
+                rv = maxscale_unknown;
+            }
+        }
+
+        return rv;
+    }
+
     void populate_field_info(QC_FIELD_INFO& info, const char* zDatabase, const char* zTable, const char* zColumn)
     {
         if (zDatabase)
         {
-            auto i = m_canonical.find(zDatabase);
-
-            if (i != std::string::npos)
-            {
-                info.database = std::string_view(&m_canonical[i], strlen(zDatabase));
-            }
-            else
-            {
-                complain_about_missing("database", zDatabase);
-                info.database = maxscale_unknown;
-            }
+            info.database = get_string_view("database", zDatabase);
         }
 
         if (zTable)
         {
-            auto i = m_canonical.find(zTable);
-
-            if (i != std::string::npos)
-            {
-                info.table = std::string_view(&m_canonical[i], strlen(zTable));
-            }
-            else
-            {
-                complain_about_missing("table", zTable);
-                info.table = maxscale_unknown;
-            }
+            info.table = get_string_view("table", zTable);
         }
 
         mxb_assert(zColumn);
-        auto i = m_canonical.find(zColumn);
-
-        if (i != std::string::npos)
-        {
-            info.column = std::string_view(&m_canonical[i], strlen(zColumn));
-        }
-        else
-        {
-            complain_about_missing("column", zColumn);
-            info.column = maxscale_unknown;
-        }
+        info.column = get_string_view("column", zColumn);
     }
 
     void complain_about_missing(const char* zWhat, const char* zKey)

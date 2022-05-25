@@ -1573,7 +1573,7 @@ void append_function_info(json_t* pParams, GWBUF* pBuffer)
     std::for_each(begin, begin + n, [pFunctions](const QC_FUNCTION_INFO& info) {
                       json_t* pFunction = json_object();
 
-                      json_object_set_new(pFunction, CN_NAME, json_string(info.name));
+                      json_object_set_new(pFunction, CN_NAME, json_stringn(info.name.data(), info.name.length()));
 
                       append_field_info(pFunction, CN_ARGUMENTS, info.fields, info.fields + info.n_fields);
 

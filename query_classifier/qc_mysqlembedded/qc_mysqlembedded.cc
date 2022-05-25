@@ -179,50 +179,49 @@ public:
     parsing_info_t(GWBUF* querybuf);
     ~parsing_info_t();
 
+    std::string_view get_string_view(const char* zContext, const char* zNeedle)
+    {
+        std::string_view rv;
+
+        auto i = this->canonical.find(zNeedle);
+
+        if (i != std::string::npos)
+        {
+            rv = std::string_view(&this->canonical[i], strlen(zNeedle));
+        }
+        else
+        {
+            // Ok, let's try case-insensitively.
+            char* pMatch = strcasestr(const_cast<char*>(this->canonical.c_str()), zNeedle);
+
+            if (pMatch)
+            {
+                rv = std::string_view(pMatch, strlen(zNeedle));
+            }
+            else
+            {
+                complain_about_missing(zContext, zNeedle);
+                rv = maxscale_unknown;
+            }
+        }
+
+        return rv;
+    }
+
     void populate_field_info(QC_FIELD_INFO& info, const char* zDatabase, const char* zTable, const char* zColumn)
     {
         if (zDatabase)
         {
-            auto i = this->canonical.find(zDatabase);
-
-            if (i != std::string::npos)
-            {
-                info.database = std::string_view(&this->canonical[i], strlen(zDatabase));
-            }
-            else
-            {
-                complain_about_missing("database", zDatabase);
-                info.database = maxscale_unknown;
-            }
+            info.database = get_string_view("database", zDatabase);
         }
 
         if (zTable)
         {
-            auto i = this->canonical.find(zTable);
-
-            if (i != std::string::npos)
-            {
-                info.table = std::string_view(&this->canonical[i], strlen(zTable));
-            }
-            else
-            {
-                complain_about_missing("table", zTable);
-                info.table = maxscale_unknown;
-            }
+            info.table = get_string_view("table", zTable);
         }
 
         mxb_assert(zColumn);
-        auto i = this->canonical.find(zColumn);
-
-        if (i != std::string::npos)
-        {
-            info.column = std::string_view(&this->canonical[i], strlen(zColumn));
-        }
-        else
-        {
-            complain_about_missing("column", zColumn);
-            info.column = maxscale_unknown;
-        }
+        info.column = get_string_view("column", zColumn);
     }
 
     void complain_about_missing(const char* zWhat, const char* zKey)
@@ -502,8 +501,6 @@ parsing_info_t::~parsing_info_t()
     for (size_t i = 0; i < this->function_infos_len; ++i)
     {
         QC_FUNCTION_INFO& fi = this->function_infos[i];
-
-        free(fi.name);
 
         for (size_t j = 0; j < fi.n_fields; ++j)
         {
@@ -2886,42 +2883,41 @@ static void add_function_field_usage(parsing_info_t* pi,
     }
 }
 
-static QC_FUNCTION_INFO* get_function_info(parsing_info_t* info, const char* name)
+static QC_FUNCTION_INFO* get_function_info(parsing_info_t* pi, const char* zName)
 {
     QC_FUNCTION_INFO* function_info = NULL;
 
     size_t i;
-    for (i = 0; i < info->function_infos_len; ++i)
+    for (i = 0; i < pi->function_infos_len; ++i)
     {
-        function_info = info->function_infos + i;
+        function_info = pi->function_infos + i;
 
-        if (strcasecmp(name, function_info->name) == 0)
+        if (sv_case_eq(zName, function_info->name))
         {
             break;
         }
     }
 
-    if (i == info->function_infos_len)
+    if (i == pi->function_infos_len)
     {
         // Not found
 
-        if (info->function_infos_len == info->function_infos_capacity)
+        if (pi->function_infos_len == pi->function_infos_capacity)
         {
-            size_t capacity = info->function_infos_capacity ? 2 * info->function_infos_capacity : 8;
+            size_t capacity = pi->function_infos_capacity ? 2 * pi->function_infos_capacity : 8;
             QC_FUNCTION_INFO* function_infos =
-                (QC_FUNCTION_INFO*)realloc(info->function_infos,
+                (QC_FUNCTION_INFO*)realloc(pi->function_infos,
                                            capacity * sizeof(QC_FUNCTION_INFO));
             assert(function_infos);
 
-            info->function_infos = function_infos;
-            info->function_infos_capacity = capacity;
+            pi->function_infos = function_infos;
+            pi->function_infos_capacity = capacity;
         }
 
-        function_info = &info->function_infos[info->function_infos_len++];
+        std::string_view name = pi->get_string_view("function", zName);
 
-        function_info->name = strdup(name);
-        function_info->fields = NULL;
-        function_info->n_fields = 0;
+        pi->function_infos[pi->function_infos_len] = QC_FUNCTION_INFO { name, nullptr, 0 };
+        function_info = &pi->function_infos[pi->function_infos_len++];
     }
 
     return function_info;
@@ -2929,22 +2925,20 @@ static QC_FUNCTION_INFO* get_function_info(parsing_info_t* info, const char* nam
 
 static QC_FUNCTION_INFO* add_function_info(parsing_info_t* pi,
                                            st_select_lex* select,
-                                           const char* name,
+                                           const char* zName,
                                            Item** items,
                                            int n_items)
 {
-    mxb_assert(name);
+    mxb_assert(zName);
 
     QC_FUNCTION_INFO* function_info = NULL;
 
-    name = map_function_name(pi->function_name_mappings, name);
-
-    QC_FUNCTION_INFO item = {(char*)name};
+    zName = map_function_name(pi->function_name_mappings, zName);
 
     size_t i;
     for (i = 0; i < pi->function_infos_len; ++i)
     {
-        if (strcasecmp(name, pi->function_infos[i].name) == 0)
+        if (sv_case_eq(zName, pi->function_infos[i].name))
         {
             function_info = &pi->function_infos[i];
             break;
@@ -2970,11 +2964,10 @@ static QC_FUNCTION_INFO* add_function_info(parsing_info_t* pi,
             pi->function_infos_capacity = capacity;
         }
 
-        function_info = &pi->function_infos[pi->function_infos_len++];
+        std::string_view name = pi->get_string_view("function", zName);
 
-        function_info->name = strdup(name);
-        function_info->fields = NULL;
-        function_info->n_fields = 0;
+        pi->function_infos[pi->function_infos_len] = QC_FUNCTION_INFO { name, nullptr, 0 };
+        function_info = &pi->function_infos[pi->function_infos_len++];
     }
 
     add_function_field_usage(pi, select, items, n_items, function_info);

@@ -14,6 +14,7 @@
 #include <maxscale/protocol/mariadb/queryclassifier.hh>
 #include <unordered_map>
 #include <maxbase/alloc.hh>
+#include <maxbase/string.hh>
 #include <maxsimd/multistmt.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
@@ -142,7 +143,7 @@ bool relates_to_previous_stmt(GWBUF* pBuffer)
 
     for (size_t i = 0; i < n_infos; ++i)
     {
-        if (strcasecmp(infos[i].name, "FOUND_ROWS") == 0)
+        if (mxb::sv_case_eq(infos[i].name, "FOUND_ROWS"))
         {
             return true;
         }

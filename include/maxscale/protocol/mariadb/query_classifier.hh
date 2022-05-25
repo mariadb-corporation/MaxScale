@@ -156,9 +156,9 @@ struct QC_FIELD_INFO
  */
 struct QC_FUNCTION_INFO
 {
-    char*          name;    /** Name of function. */
-    QC_FIELD_INFO* fields;  /** What fields the function accesses. */
-    uint32_t       n_fields;/** The number of fields in @c fields. */
+    std::string_view name;    /** Name of function. */
+    QC_FIELD_INFO*   fields;  /** What fields the function accesses. */
+    uint32_t         n_fields;/** The number of fields in @c fields. */
 };
 
 /**
