@@ -470,18 +470,18 @@ nosqlprotocol.on_unknown_command=return_error
 
 ## `user`
 
-   * Type: string
-   * Mandatory: false
-   * Default: ""
+- **Type**: string
+- **Mandatory**: No
+- **Default**: `""`
 
 Specifies the _user_ to be used when connecting to the backend, if the MongoDB®
 client is not authenticated.
 
 ## `password`
 
-   * Type: string
-   * Mandatory: false
-   * Default: ""
+- **Type**: string
+- **Mandatory**: No
+- **Default**: `""`
 
 Specifies the _password_ to be used when connecting to the backend, is the MongoDB®
 client is not authenticated. Note that the same _user_/_password_ combination will be
@@ -489,16 +489,16 @@ used for all unauthenticated MongoDB® clients connecting to the same listener p
 
 ## `authentication_required`
 
-    * Type: boolean
-    * Mandatory: false
-    * Default: `false`
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Default**: `false`
 
 Specifies whether the client always must authenticate. If authentication is required,
 it does not matter whether `user` and `password` have been specified, the client must
 authenticate.
 
 Authentication should not be required before users have been created with
-(createUser)[#createUser] or added with (mxsAddUser)[#mxsAddUser],
+[createUser](#createUser) or added with [mxsAddUser](#mxsAddUser),
 with authentication being optional and authorization being disabled.
 
 NOTE: All client activity is _always_ subject to authorization performed by the
@@ -506,9 +506,9 @@ MariaDB server.
 
 ## `authorization_enabled`
 
-    * Type: boolean
-    * Mandatory: false
-    * Default: `false`
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Default**: `false`
 
 Specifies whether nosqlprotocol itself should perform authorization in the context
 of the commands [mxsAddUser](#mxsAddUser), [mxsRemoveUser](#mxsRemoveUser) and
@@ -521,9 +521,9 @@ MariaDB server.
 
 ## `host`
 
-   * Type: string
-   * Mandatory: false
-   * Default: "%"
+- **Type**: string
+- **Mandatory**: No
+- **Default**: `"%"`
 
 Specifies the _host_ to be used when a MariaDB user is created via nosqlprotocol.
 By default all users are created as `...@'%'`, which means that it is possible to
@@ -535,10 +535,10 @@ MaxScale.
 
 ## `on_unknown_command`
 
-   * Type: enumeration
-   * Mandatory: false
-   * Values: `return_error`, `return_empty`
-   * Default: `return_error`
+- **Type**: enumeration
+- **Mandatory**: No
+- **Values**: `return_error`, `return_empty`
+- **Default**: `return_error`
 
 Specifies what should happen in case a clients sends an unrecognized command.
 
@@ -549,9 +549,9 @@ Enumeration values:
 
 ## `log_unknown_command`
 
-   * Type: boolean
-   * Mandatory: false
-   * Default: `false`
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Default**: `false`
 
 Specifies whether an unknown command should be logged. This is primarily
 for debugging purposes, to find out whether a client uses a command that
@@ -559,9 +559,9 @@ currently is not supported.
 
 ## `auto_create_databases`
 
-   * Type: boolean
-   * Mandatory: false
-   * Default: `true`
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Default**: `true`
 
 Specifies whether databases should automatically be created, as needed.
 
@@ -570,9 +570,9 @@ Note that setting this parameter to `true`, without also setting
 
 ## `auto_create_tables`
 
-   * Type: boolean
-   * Mandatory: false
-   * Default: `true`
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Default**: `true`
 
 Specifies whether tables should automatically be created, as needed.
 
@@ -582,19 +582,19 @@ must also be set to `true`.
 
 ## `id_length`
 
-   * Type: count
-   * Mandatory: false
-   * Range: `[35, 2048]`
-   * Default: `35`
+- **Type**: count
+- **Mandatory**: No
+- **Range**: `[35, 2048]`
+- **Default*: `35`
 
 Specifies the length of the id column in tables that are automatically created.
 
 ## `ordered_insert_behavior`
 
-   * Type: enumeration
-   * Mandatory: false
-   * Values: `atomic`, `default`
-   * Default: `default`
+- **Type**: enumeration
+- **Mandatory**: No
+- **Values**: `atomic`, `default`
+- **Default**: `default`
 
 Enumeration values:
 
@@ -613,19 +613,19 @@ document) is used, has an impact on the performance. Please see the discussion a
 
 ## `cursor_timeout`
 
-   * Type: duration
-   * Mandatory: false
-   * Default: 60s
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Mandatory**: No
+- **Default**: `60s`
 
 Specifies how long a cursor can be idle, that is, not accessed, before it is
 automatically closed.
 
 ## `debug`
 
-   * Type: enumeration (multiple values separated by `,` can be specified)
-   * Mandatory: false
-   * Values: `none`, `in`, `out`, `back`
-   * Default `none`
+- **Type**: enumeration (multiple values separated by `,` can be specified)
+- **Mandatory**: No
+- **Values**: `none`, `in`, `out`, `back`
+- **Default**: `none`
 
 Specifies what should be logged as _notice_ messages.
 
