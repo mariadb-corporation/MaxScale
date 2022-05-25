@@ -43,6 +43,11 @@ public:
     void set_in_high_water(bool in_high_water);
     void send_events();
 
+    std::weak_ptr<bool> get_ref()
+    {
+        return m_ref;
+    }
+
 private:
     static uint32_t epoll_update(struct MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
     void            start_reading();
@@ -75,5 +80,11 @@ private:
     mxb::Worker::DCId                     m_heartbeat_dcid = 0;
     std::chrono::seconds                  m_heartbeat_interval;
     std::chrono::steady_clock::time_point m_last_event;
+
+    // Used to detect whether the session is still alive when callbacks are executed. This could be a
+    // MXS_SESSION reference as well but the code is used in tests where this isn't easily available.
+    //
+    // TODO: replace with `lcall` once the code has been merged
+    std::shared_ptr<bool> m_ref;
 };
 }

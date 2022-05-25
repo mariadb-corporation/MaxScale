@@ -1358,11 +1358,14 @@ void Session::tick(int64_t idle)
 
     if (auto interval = svc_config.connection_keepalive.count())
     {
-        for (const auto& a : backend_connections())
+        if (client_connection()->dcb()->seconds_idle() < interval)
         {
-            if (a->seconds_idle() > interval && a->is_idle())
+            for (const auto& a : backend_connections())
             {
-                a->ping();
+                if (a->dcb()->seconds_idle() > interval && a->is_idle())
+                {
+                    a->ping();
+                }
             }
         }
     }
