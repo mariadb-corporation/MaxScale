@@ -20,6 +20,7 @@
 #include <vector>
 
 #include <maxbase/alloc.hh>
+#include <maxbase/string.hh>
 #include <maxscale/config.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/mysql_utils.hh>
@@ -28,6 +29,8 @@
 #include <maxscale/session.hh>
 
 #include "cachefilter.hh"
+
+using mxb::sv_case_eq;
 
 static int next_thread_id = 0;
 static thread_local int current_thread_id = -1;
@@ -40,21 +43,6 @@ inline int get_current_thread_id()
     }
 
     return current_thread_id;
-}
-
-namespace
-{
-
-inline bool sv_case_eq(std::string_view lhs, const char* zRhs)
-{
-    return lhs.length() == strlen(zRhs) ? strncasecmp(lhs.data(), zRhs, lhs.length()) == 0 : false;
-}
-
-inline bool sv_case_eq(const char* zLhs, std::string_view rhs)
-{
-    return sv_case_eq(rhs, zLhs);
-}
-
 }
 
 static const char KEY_ATTRIBUTE[] = "attribute";

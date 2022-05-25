@@ -57,6 +57,28 @@ namespace maxbase
 {
 
 /**
+ * Compare various std::string_view and some other string for case-sensitive equality.
+ *
+ * @return True, if equal, false otherwise.
+ */
+
+inline bool sv_eq(std::string_view lhs, std::string_view rhs)
+{
+    return lhs == rhs;
+}
+
+/**
+ * Compare std::string_view and some other string for case-insensitive equality.
+ *
+ * @return True, if equal, false otherwise.
+ */
+
+inline bool sv_case_eq(std::string_view lhs, std::string_view rhs)
+{
+    return lhs.length() == rhs.length() && strncasecmp(lhs.data(), rhs.data(), lhs.length()) == 0;
+}
+
+/**
  * Left trim a string.
  *
  * @param str String to trim.
