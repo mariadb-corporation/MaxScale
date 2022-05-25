@@ -18,6 +18,7 @@
 #include <functional>
 #include <string.h>
 #include <maxbase/assert.hh>
+#include <maxbase/string.hh>
 #include <maxscale/jansson.hh>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/pcre2.hh>
@@ -430,12 +431,12 @@ bool create_rules_from_root(json_t* pRoot,
     return parsed;
 }
 
-inline bool is_same_name(const std::string& s, const char* zS)
+inline bool is_same_name(std::string lhs, std::string_view rhs)
 {
-    return strcasecmp(s.c_str(), zS) == 0;
+    return mxb::sv_case_eq(lhs, rhs);
 }
 
-inline bool is_same_name(const std::string& lhs, const LEncString& rhs)
+inline bool is_same_name(std::string lhs, const LEncString& rhs)
 {
     return rhs.case_eq(lhs);
 }
@@ -1091,11 +1092,11 @@ bool MaskingRules::Rule::matches(const QC_FIELD_INFO& field,
                                  const char* zUser,
                                  const char* zHost) const
 {
-    const char* zColumn = field.column;
-    const char* zTable = field.table;
-    const char* zDatabase = field.database;
+    std::string_view column = field.column;
+    std::string_view table = field.table;
+    std::string_view database = field.database;
 
-    mxb_assert(zColumn);
+    mxb_assert(!column.empty());
 
     // If the resultset does not contain table and database names, as will
     // be the case in e.g. "SELECT * FROM table UNION SELECT * FROM table",
@@ -1103,9 +1104,9 @@ bool MaskingRules::Rule::matches(const QC_FIELD_INFO& field,
     // Otherwise it would be easy to bypass a table/database rule.
 
     bool match =
-        is_same_name(m_column, zColumn)
-        && (m_table.empty() || !zTable || is_same_name(m_table, zTable))
-        && (m_database.empty() || !zDatabase || is_same_name(m_database, zDatabase));
+        is_same_name(m_column, column)
+        && (m_table.empty() || table.empty() || is_same_name(m_table, table))
+        && (m_database.empty() || database.empty() || is_same_name(m_database, database));
 
     if (match)
     {

@@ -657,7 +657,7 @@ bool MaskingFilterSession::is_variable_defined(GWBUF* pPacket, const char* zUser
     auto pred = [this, zUser, zHost](const QC_FIELD_INFO& field_info) {
             bool rv = false;
 
-            if (strcmp(field_info.column, "*") == 0)
+            if (field_info.column ==  "*")
             {
                 // If "*" is used, then we must block if there is any rule for the current user.
                 rv = m_config.sRules->has_rule_for(zUser, zHost);
@@ -682,11 +682,9 @@ bool MaskingFilterSession::is_variable_defined(GWBUF* pPacket, const char* zUser
 
     if (i != end)
     {
-        const char* zColumn = i->column;
-
         std::stringstream ss;
 
-        if (strcmp(zColumn, "*") == 0)
+        if (i->column == "*")
         {
             ss << "'*' is used in the definition of a variable and there are masking rules "
                << "for '" << zUser << "'@'" << zHost << "', access is denied.";
@@ -728,7 +726,7 @@ bool MaskingFilterSession::is_union_or_subquery_used(GWBUF* pPacket, const char*
 
             if (field_info.context & mask)
             {
-                if (strcmp(field_info.column, "*") == 0)
+                if (field_info.column == "*")
                 {
                     // If "*" is used, then we must block if there is any rule for the current user.
                     rv = m_config.sRules->has_rule_for(zUser, zHost);
@@ -754,33 +752,33 @@ bool MaskingFilterSession::is_union_or_subquery_used(GWBUF* pPacket, const char*
 
     if (i != end)
     {
-        const char* zColumn = i->column;
+        std::string_view column = i->column;
 
         std::stringstream ss;
 
         if (m_config.check_unions && (i->context & QC_FIELD_UNION))
         {
-            if (strcmp(zColumn, "*") == 0)
+            if (column == "*")
             {
                 ss << "'*' is used in the second or subsequent SELECT of a UNION and there are "
                    << "masking rules for '" << zUser << "'@'" << zHost << "', access is denied.";
             }
             else
             {
-                ss << "The field " << zColumn << " that should be masked for '" << zUser << "'@'" << zHost
+                ss << "The field " << column << " that should be masked for '" << zUser << "'@'" << zHost
                    << "' is used in the second or subsequent SELECT of a UNION, access is denied.";
             }
         }
         else if (m_config.check_subqueries && (i->context & QC_FIELD_SUBQUERY))
         {
-            if (strcmp(zColumn, "*") == 0)
+            if (column == "*")
             {
                 ss << "'*' is used in a subquery and there are masking rules for '"
                    << zUser << "'@'" << zHost << "', access is denied.";
             }
             else
             {
-                ss << "The field " << zColumn << " that should be masked for '"
+                ss << "The field " << column << " that should be masked for '"
                    << zUser << "'@'" << zHost << "' is used in a subquery, access is denied.";
             }
         }

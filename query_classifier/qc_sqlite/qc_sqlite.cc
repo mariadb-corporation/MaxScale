@@ -29,6 +29,7 @@
 #include <mutex>
 
 #include <maxbase/alloc.hh>
+#include <maxbase/string.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
@@ -38,6 +39,7 @@
 #include "builtin_functions.hh"
 
 using std::vector;
+using mxb::sv_case_eq;
 
 // #define QC_TRACE_ENABLED
 #undef QC_TRACE_ENABLED
@@ -56,6 +58,9 @@ using std::vector;
             MXB_ERROR("Caught standard exception: %s", x.what()); pInfo->m_status = QC_QUERY_INVALID;} \
         catch (...) { \
             MXB_ERROR("Caught unknown exception."); pInfo->m_status = QC_QUERY_INVALID;}} while (false)
+
+// Used if an idenifier is not found in the canonical string.
+static const std::string maxscale_unknown("maxscale_unknown");
 
 static inline bool qc_info_was_tokenized(qc_parse_result_t status)
 {
@@ -257,25 +262,6 @@ public:
         }
     }
 
-    static int32_t size_of_fields(const QC_FIELD_INFO& info)
-    {
-        int32_t size = 0;
-
-        if (info.database)
-        {
-            size += strlen(info.database) + 1;
-        }
-
-        if (info.table)
-        {
-            size += strlen(info.table) + 1;
-        }
-
-        size += strlen(info.column) + 1;
-
-        return size;
-    }
-
     int32_t calculate_size() const
     {
         using std::for_each;
@@ -312,17 +298,12 @@ public:
         }
 
         size += m_field_infos.capacity() * sizeof(QC_FIELD_INFO);
-        for_each(m_field_infos.begin(), m_field_infos.end(), [&size](const QC_FIELD_INFO& info) {
-                size += size_of_fields(info);
-            });
 
         size += m_function_infos.capacity() * sizeof(QC_FUNCTION_INFO);
         for_each(m_function_infos.begin(), m_function_infos.end(), [&size](const QC_FUNCTION_INFO& info) {
                 size += strlen(info.name) + 1;
 
-                for_each(info.fields, info.fields + info.n_fields, [&size](const QC_FIELD_INFO& field_info) {
-                        size += size_of_fields(field_info);
-                    });
+                size += info.n_fields * sizeof(QC_FIELD_INFO);
             });
 
         using V = vector<QC_FIELD_INFO>;
@@ -378,18 +359,9 @@ public:
         return pInfo;
     }
 
-    static void finish_field_info(QC_FIELD_INFO& info)
-    {
-        MXB_FREE(info.database);
-        MXB_FREE(info.table);
-        MXB_FREE(info.column);
-    }
-
     static void finish_function_info(QC_FUNCTION_INFO& info)
     {
         MXB_FREE(info.name);
-
-        std::for_each(info.fields, info.fields + info.n_fields, finish_field_info);
     }
 
     bool is_valid() const
@@ -695,22 +667,22 @@ public:
         {
             bool rv = false;
 
-            if (strcasecmp(m_zColumn, t.column) == 0)
+            if (sv_case_eq(m_zColumn, t.column))
             {
-                if (!m_zTable && !t.table)
+                if (!m_zTable && t.table.empty())
                 {
-                    mxb_assert(!m_zDatabase && !t.database);
+                    mxb_assert(!m_zDatabase && t.database.empty());
                     rv = true;
                 }
-                else if (m_zTable && t.table && (strcasecmp(m_zTable, t.table) == 0))
+                else if (m_zTable && !t.table.empty() && sv_case_eq(m_zTable, t.table))
                 {
-                    if (!m_zDatabase && !t.database)
+                    if (!m_zDatabase && t.database.empty())
                     {
                         rv = true;
                     }
                     else if (m_zDatabase
-                             && t.database
-                             && (strcasecmp(m_zDatabase, t.database) == 0))
+                             && !t.database.empty()
+                             && sv_case_eq(m_zDatabase, t.database))
                     {
                         rv = true;
                     }
@@ -769,18 +741,10 @@ public:
             {
                 QC_FIELD_INFO item;
 
-                item.database = zDatabase ? MXB_STRDUP(zDatabase) : NULL;
-                item.table = zTable ? MXB_STRDUP(zTable) : NULL;
-                mxb_assert(zColumn);
-                item.column = MXB_STRDUP(zColumn);
+                populate_field_info(item, zDatabase, zTable, zColumn);
                 item.context = context;
 
-                // We are happy if we at least could dup the column.
-
-                if (item.column)
-                {
-                    m_field_infos.push_back(item);
-                }
+                m_field_infos.push_back(item);
             }
         }
         else
@@ -1532,11 +1496,11 @@ public:
         }
     }
 
-    static void update_function_fields(const QcAliases* pAliases,
-                                       const char* zDatabase,
-                                       const char* zTable,
-                                       const char* zColumn,
-                                       vector<QC_FIELD_INFO>& fields)
+    void update_function_fields(const QcAliases* pAliases,
+                                const char* zDatabase,
+                                const char* zTable,
+                                const char* zColumn,
+                                vector<QC_FIELD_INFO>& fields)
     {
         mxb_assert(zColumn);
 
@@ -1551,21 +1515,15 @@ public:
             // TODO: Add exclusion?
             QC_FIELD_INFO item;
 
-            item.database = zDatabase ? MXB_STRDUP(zDatabase) : NULL;
-            item.table = zTable ? MXB_STRDUP(zTable) : NULL;
-            item.column = MXB_STRDUP(zColumn);
-
-            if (item.column)
-            {
-                fields.push_back(item);
-            }
+            populate_field_info(item, zDatabase, zTable, zColumn);
+            fields.push_back(item);
         }
     }
 
-    static void update_function_fields(const QcAliases* pAliases,
-                                       const Expr* pExpr,
-                                       const ExprList* pExclude,
-                                       vector<QC_FIELD_INFO>& fields)
+    void update_function_fields(const QcAliases* pAliases,
+                                const Expr* pExpr,
+                                const ExprList* pExclude,
+                                vector<QC_FIELD_INFO>& fields)
     {
         const char* zDatabase;
         const char* zTable;
@@ -1594,10 +1552,10 @@ public:
         }
     }
 
-    static void update_function_fields(const QcAliases* pAliases,
-                                       const ExprList* pEList,
-                                       const ExprList* pExclude,
-                                       vector<QC_FIELD_INFO>& fields)
+    void update_function_fields(const QcAliases* pAliases,
+                                const ExprList* pEList,
+                                const ExprList* pExclude,
+                                vector<QC_FIELD_INFO>& fields)
     {
         for (int i = 0; i < pEList->nExpr; ++i)
         {
@@ -3505,7 +3463,6 @@ private:
         std::for_each(m_database_names.begin(), m_database_names.end(), mxb_free);
         free(m_zPrepare_name);
         gwbuf_free(m_pPreparable_stmt);
-        std::for_each(m_field_infos.begin(), m_field_infos.end(), finish_field_info);
         std::for_each(m_function_infos.begin(), m_function_infos.end(), finish_function_info);
 
         // Data in m_function_field_usage is freed in finish_function_info().
@@ -3519,17 +3476,7 @@ private:
 
     static void free_field_infos(QC_FIELD_INFO* pInfos, size_t nInfos)
     {
-        if (pInfos)
-        {
-            for (size_t i = 0; i < nInfos; ++i)
-            {
-                MXB_FREE(pInfos[i].database);
-                MXB_FREE(pInfos[i].table);
-                MXB_FREE(pInfos[i].column);
-            }
-
-            MXB_FREE(pInfos);
-        }
+        MXB_FREE(pInfos);
     }
 
     static void free_function_infos(QC_FUNCTION_INFO* pInfos, size_t nInfos)
@@ -3680,6 +3627,61 @@ private:
 
         return zCollected_database;
     }
+
+    void populate_field_info(QC_FIELD_INFO& info, const char* zDatabase, const char* zTable, const char* zColumn)
+    {
+        if (zDatabase)
+        {
+            auto i = m_canonical.find(zDatabase);
+
+            if (i != std::string::npos)
+            {
+                info.database = std::string_view(&m_canonical[i], strlen(zDatabase));
+            }
+            else
+            {
+                complain_about_missing("database", zDatabase);
+                info.database = maxscale_unknown;
+            }
+        }
+
+        if (zTable)
+        {
+            auto i = m_canonical.find(zTable);
+
+            if (i != std::string::npos)
+            {
+                info.table = std::string_view(&m_canonical[i], strlen(zTable));
+            }
+            else
+            {
+                complain_about_missing("table", zTable);
+                info.table = maxscale_unknown;
+            }
+        }
+
+        mxb_assert(zColumn);
+        auto i = m_canonical.find(zColumn);
+
+        if (i != std::string::npos)
+        {
+            info.column = std::string_view(&m_canonical[i], strlen(zColumn));
+        }
+        else
+        {
+            complain_about_missing("column", zColumn);
+            info.column = maxscale_unknown;
+        }
+    }
+
+    void complain_about_missing(const char* zWhat, const char* zKey)
+    {
+        MXB_ERROR("The %s '%s' is not found in the canonical statement '%s' created from "
+                  "the statement '%.*s'.",
+                  zWhat, zKey, m_canonical.c_str(), (int)m_nQuery, m_pQuery);
+        m_status = QC_QUERY_PARTIALLY_PARSED;
+    }
+
 
 public:
     // TODO: Make these private once everything's been updated.

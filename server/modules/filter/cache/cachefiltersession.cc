@@ -101,6 +101,12 @@ inline bool uses_name(const char* zName, const char** pzNames, size_t nNames)
     return bsearch(zName, pzNames, nNames, sizeof(const char*), compare_name) != NULL;
 }
 
+inline bool uses_name(std::string_view name, const char** pzNames, size_t nNames)
+{
+    // TODO: Turn the char* array into a std::string_view map.
+    return bsearch(std::string(name).c_str(), pzNames, nNames, sizeof(const char*), compare_name) != NULL;
+}
+
 bool uses_non_cacheable_function(GWBUF* pPacket)
 {
     bool rv = false;

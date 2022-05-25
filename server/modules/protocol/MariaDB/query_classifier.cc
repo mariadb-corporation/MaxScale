@@ -1530,20 +1530,20 @@ void append_field_info(json_t* pParent,
     std::for_each(begin, end, [pFields](const QC_FIELD_INFO& info) {
                       std::string name;
 
-                      if (info.database)
+                      if (!info.database.empty())
                       {
                           name += info.database;
                           name += '.';
-                          mxb_assert(info.table);
+                          mxb_assert(!info.table.empty());
                       }
 
-                      if (info.table)
+                      if (!info.table.empty())
                       {
                           name += info.table;
                           name += '.';
                       }
 
-                      mxb_assert(info.column);
+                      mxb_assert(!info.column.empty());
 
                       name += info.column;
 

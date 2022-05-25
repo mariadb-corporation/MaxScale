@@ -66,6 +66,7 @@
 
 #define json_type mxs_json_type
 #include <maxbase/assert.hh>
+#include <maxbase/string.hh>
 #include <maxscale/log.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
@@ -81,6 +82,7 @@
 #include <set>
 
 using namespace std;
+using mxb::sv_case_eq;
 
 #if MYSQL_VERSION_MAJOR >= 10 && MYSQL_VERSION_MINOR >= 2
 #define CTE_SUPPORTED
@@ -96,6 +98,9 @@ my_bool _db_my_assert(const char *file, int line, const char *msg)
 }
 
 }
+
+// Used if an idenifier is not found in the canonical string.
+const std::string maxscale_unknown("maxscale_unknown");
 
 #if defined (CTE_SUPPORTED)
 // We need to be able to access private data of With_element that has no
@@ -173,6 +178,60 @@ public:
 
     parsing_info_t(GWBUF* querybuf);
     ~parsing_info_t();
+
+    void populate_field_info(QC_FIELD_INFO& info, const char* zDatabase, const char* zTable, const char* zColumn)
+    {
+        if (zDatabase)
+        {
+            auto i = this->canonical.find(zDatabase);
+
+            if (i != std::string::npos)
+            {
+                info.database = std::string_view(&this->canonical[i], strlen(zDatabase));
+            }
+            else
+            {
+                complain_about_missing("database", zDatabase);
+                info.database = maxscale_unknown;
+            }
+        }
+
+        if (zTable)
+        {
+            auto i = this->canonical.find(zTable);
+
+            if (i != std::string::npos)
+            {
+                info.table = std::string_view(&this->canonical[i], strlen(zTable));
+            }
+            else
+            {
+                complain_about_missing("table", zTable);
+                info.table = maxscale_unknown;
+            }
+        }
+
+        mxb_assert(zColumn);
+        auto i = this->canonical.find(zColumn);
+
+        if (i != std::string::npos)
+        {
+            info.column = std::string_view(&this->canonical[i], strlen(zColumn));
+        }
+        else
+        {
+            complain_about_missing("column", zColumn);
+            info.column = maxscale_unknown;
+        }
+    }
+
+    void complain_about_missing(const char* zWhat, const char* zKey)
+    {
+        MXB_ERROR("The %s '%s' is not found in the canonical statement '%s' created from "
+                  "the statement '%s'.",
+                  zWhat, zKey, this->canonical.c_str(), this->pi_query_plain_str);
+        this->result = QC_QUERY_PARTIALLY_PARSED;
+    }
 
     MYSQL*              pi_handle { nullptr } ;            /*< parsing info object pointer */
     char*               pi_query_plain_str { nullptr };   /*< query as plain string */
@@ -438,12 +497,6 @@ parsing_info_t::~parsing_info_t()
         free(this->pi_query_plain_str);
     }
 
-    for (size_t i = 0; i < this->field_infos_len; ++i)
-    {
-        free(this->field_infos[i].database);
-        free(this->field_infos[i].table);
-        free(this->field_infos[i].column);
-    }
     free(this->field_infos);
 
     for (size_t i = 0; i < this->function_infos_len; ++i)
@@ -455,10 +508,6 @@ parsing_info_t::~parsing_info_t()
         for (size_t j = 0; j < fi.n_fields; ++j)
         {
             QC_FIELD_INFO& field = fi.fields[j];
-
-            free(field.database);
-            free(field.table);
-            free(field.column);
         }
         free(fi.fields);
     }
@@ -644,6 +693,13 @@ static bool parse_query(GWBUF* querybuf)
 
     /** Add complete parsing info struct to the query buffer */
     querybuf->set_classifier_data(pi, parsing_info_done);
+
+    // By calling qc_mysql_get_field_info() now, the result will be
+    // QC_QUERY_PARTIALLY_PARSED, if some field is not found in the
+    // canonical string.
+    const QC_FIELD_INFO* infos;
+    uint32_t n_infos;
+    qc_mysql_get_field_info(querybuf, &infos, &n_infos);
 
     return true;
 }
@@ -2564,7 +2620,7 @@ static void unalias_names(st_select_lex* select,
     }
 }
 
-static void add_field_info(parsing_info_t* info,
+static void add_field_info(parsing_info_t* pi,
                            const char* database,
                            const char* table,
                            const char* column,
@@ -2572,29 +2628,42 @@ static void add_field_info(parsing_info_t* info,
 {
     mxb_assert(column);
 
-    QC_FIELD_INFO item = {(char*)database, (char*)table, (char*)column};
+    QC_FIELD_INFO item;
+
+    if (database)
+    {
+        item.database = database;
+    }
+
+    if (table)
+    {
+        item.table = table;
+    }
+
+    if (column)
+    {
+        item.column = column;
+    }
 
     size_t i;
-    for (i = 0; i < info->field_infos_len; ++i)
+    for (i = 0; i < pi->field_infos_len; ++i)
     {
-        QC_FIELD_INFO* field_info = info->field_infos + i;
+        QC_FIELD_INFO* field_info = pi->field_infos + i;
 
-        if (strcasecmp(item.column, field_info->column) == 0)
+        if (sv_case_eq(item.column, field_info->column))
         {
-            if (!item.table && !field_info->table)
+            if (item.table.empty() && field_info->table.empty())
             {
-                mxb_assert(!item.database && !field_info->database);
+                mxb_assert(item.database.empty() && field_info->database.empty());
                 break;
             }
-            else if (item.table && field_info->table && (strcmp(item.table, field_info->table) == 0))
+            else if (!item.table.empty() && sv_case_eq(item.table, field_info->table))
             {
-                if (!item.database && !field_info->database)
+                if (item.database.empty() && field_info->database.empty())
                 {
                     break;
                 }
-                else if (item.database
-                         && field_info->database
-                         && (strcmp(item.database, field_info->database) == 0))
+                else if (!item.database.empty() && sv_case_eq(item.database, field_info->database))
                 {
                     break;
                 }
@@ -2604,7 +2673,7 @@ static void add_field_info(parsing_info_t* info,
 
     QC_FIELD_INFO* field_infos = NULL;
 
-    if (i == info->field_infos_len)     // If true, the field was not present already.
+    if (i == pi->field_infos_len)     // If true, the field was not present already.
     {
         // If only a column is specified, but not a table or database and we
         // have a list of expressions that should be excluded, we check if the column
@@ -2612,19 +2681,19 @@ static void add_field_info(parsing_info_t* info,
         // a statement like "select a as d from x where d = 2".
         if (!(column && !table && !database && excludep && should_exclude(column, excludep)))
         {
-            if (info->field_infos_len < info->field_infos_capacity)
+            if (pi->field_infos_len < pi->field_infos_capacity)
             {
-                field_infos = info->field_infos;
+                field_infos = pi->field_infos;
             }
             else
             {
-                size_t capacity = info->field_infos_capacity ? 2 * info->field_infos_capacity : 8;
-                field_infos = (QC_FIELD_INFO*)realloc(info->field_infos, capacity * sizeof(QC_FIELD_INFO));
+                size_t capacity = pi->field_infos_capacity ? 2 * pi->field_infos_capacity : 8;
+                field_infos = (QC_FIELD_INFO*)realloc(pi->field_infos, capacity * sizeof(QC_FIELD_INFO));
 
                 if (field_infos)
                 {
-                    info->field_infos = field_infos;
-                    info->field_infos_capacity = capacity;
+                    pi->field_infos = field_infos;
+                    pi->field_infos_capacity = capacity;
                 }
             }
         }
@@ -2633,21 +2702,13 @@ static void add_field_info(parsing_info_t* info,
     // If field_infos is NULL, then the field was found and has already been noted.
     if (field_infos)
     {
-        item.database = item.database ? strdup(item.database) : NULL;
-        item.table = item.table ? strdup(item.table) : NULL;
-        mxb_assert(item.column);
-        item.column = strdup(item.column);
+        pi->populate_field_info(item, database, table, column);
 
-        // We are happy if we at least could dup the column.
-
-        if (item.column)
-        {
-            field_infos[info->field_infos_len++] = item;
-        }
+        field_infos[pi->field_infos_len++] = item;
     }
 }
 
-static void add_field_info(parsing_info_t* info,
+static void add_field_info(parsing_info_t* pi,
                            st_select_lex* select,
                            const char* database,
                            const char* table,
@@ -2658,10 +2719,11 @@ static void add_field_info(parsing_info_t* info,
 
     unalias_names(select, database, table, &database, &table);
 
-    add_field_info(info, database, table, column, excludep);
+    add_field_info(pi, database, table, column, excludep);
 }
 
-static void add_function_field_usage(const char* database,
+static void add_function_field_usage(parsing_info_t* pi,
+                                     const char* database,
                                      const char* table,
                                      const char* column,
                                      QC_FUNCTION_INFO* fi)
@@ -2673,19 +2735,19 @@ static void add_function_field_usage(const char* database,
     {
         QC_FIELD_INFO& field = fi->fields[i];
 
-        if (strcasecmp(field.column, column) == 0)
+        if (sv_case_eq(field.column, column))
         {
-            if (!field.table && !table)
+            if (field.table.empty() && !table)
             {
                 found = true;
             }
-            else if (field.table && table && (strcasecmp(field.table, table) == 0))
+            else if (!field.table.empty() && table && sv_case_eq(field.table, table))
             {
-                if (!field.database && !database)
+                if (field.database.empty() && !database)
                 {
                     found = true;
                 }
-                else if (field.database && database && (strcasecmp(field.database, database) == 0))
+                else if (!field.database.empty() && database && sv_case_eq(field.database, database))
                 {
                     found = true;
                 }
@@ -2703,19 +2765,19 @@ static void add_function_field_usage(const char* database,
 
         if (fields)
         {
-            // Ignore potential alloc failures
-            QC_FIELD_INFO& field = fields[fi->n_fields];
-            field.database = database ? strdup(database) : NULL;
-            field.table = table ? strdup(table) : NULL;
-            field.column = strdup(column);
-
             fi->fields = fields;
+
+            QC_FIELD_INFO field;
+            pi->populate_field_info(field, database, table, column);
+
+            fi->fields[fi->n_fields] = field;
             ++fi->n_fields;
         }
     }
 }
 
-static void add_function_field_usage(st_select_lex* select,
+static void add_function_field_usage(parsing_info_t* pi,
+                                     st_select_lex* select,
                                      Item_field* item,
                                      QC_FUNCTION_INFO* fi)
 {
@@ -2765,12 +2827,13 @@ static void add_function_field_usage(st_select_lex* select,
         column = strndup(s1, l1);
     }
 
-    add_function_field_usage(database, table, column, fi);
+    add_function_field_usage(pi, database, table, column, fi);
 
     free(column);
 }
 
-static void add_function_field_usage(st_select_lex* select,
+static void add_function_field_usage(parsing_info_t* pi,
+                                     st_select_lex* select,
                                      Item** items,
                                      int n_items,
                                      QC_FUNCTION_INFO* fi)
@@ -2782,7 +2845,7 @@ static void add_function_field_usage(st_select_lex* select,
         switch (item->type())
         {
         case Item::FIELD_ITEM:
-            add_function_field_usage(select, static_cast<Item_field*>(item), fi);
+            add_function_field_usage(pi, select, static_cast<Item_field*>(item), fi);
             break;
 
         default:
@@ -2796,7 +2859,7 @@ static void add_function_field_usage(st_select_lex* select,
                     memcpy(tmp, s->ptr(), len);
                     tmp[len] = 0;
 
-                    add_function_field_usage(nullptr, nullptr, tmp, fi);
+                    add_function_field_usage(pi, nullptr, nullptr, tmp, fi);
                 }
             }
             else
@@ -2807,7 +2870,8 @@ static void add_function_field_usage(st_select_lex* select,
     }
 }
 
-static void add_function_field_usage(st_select_lex* select,
+static void add_function_field_usage(parsing_info_t* pi,
+                                     st_select_lex* select,
                                      st_select_lex* sub_select,
                                      QC_FUNCTION_INFO* fi)
 {
@@ -2817,7 +2881,7 @@ static void add_function_field_usage(st_select_lex* select,
     {
         if (item->type() == Item::FIELD_ITEM)
         {
-            add_function_field_usage(select, static_cast<Item_field*>(item), fi);
+            add_function_field_usage(pi, select, static_cast<Item_field*>(item), fi);
         }
     }
 }
@@ -2863,7 +2927,7 @@ static QC_FUNCTION_INFO* get_function_info(parsing_info_t* info, const char* nam
     return function_info;
 }
 
-static QC_FUNCTION_INFO* add_function_info(parsing_info_t* info,
+static QC_FUNCTION_INFO* add_function_info(parsing_info_t* pi,
                                            st_select_lex* select,
                                            const char* name,
                                            Item** items,
@@ -2873,16 +2937,16 @@ static QC_FUNCTION_INFO* add_function_info(parsing_info_t* info,
 
     QC_FUNCTION_INFO* function_info = NULL;
 
-    name = map_function_name(info->function_name_mappings, name);
+    name = map_function_name(pi->function_name_mappings, name);
 
     QC_FUNCTION_INFO item = {(char*)name};
 
     size_t i;
-    for (i = 0; i < info->function_infos_len; ++i)
+    for (i = 0; i < pi->function_infos_len; ++i)
     {
-        if (strcasecmp(name, info->function_infos[i].name) == 0)
+        if (strcasecmp(name, pi->function_infos[i].name) == 0)
         {
-            function_info = &info->function_infos[i];
+            function_info = &pi->function_infos[i];
             break;
         }
     }
@@ -2891,29 +2955,29 @@ static QC_FUNCTION_INFO* add_function_info(parsing_info_t* info,
 
     if (!function_info)
     {
-        if (info->function_infos_len < info->function_infos_capacity)
+        if (pi->function_infos_len < pi->function_infos_capacity)
         {
-            function_infos = info->function_infos;
+            function_infos = pi->function_infos;
         }
         else
         {
-            size_t capacity = info->function_infos_capacity ? 2 * info->function_infos_capacity : 8;
-            function_infos = (QC_FUNCTION_INFO*)realloc(info->function_infos,
+            size_t capacity = pi->function_infos_capacity ? 2 * pi->function_infos_capacity : 8;
+            function_infos = (QC_FUNCTION_INFO*)realloc(pi->function_infos,
                                                         capacity * sizeof(QC_FUNCTION_INFO));
             assert(function_infos);
 
-            info->function_infos = function_infos;
-            info->function_infos_capacity = capacity;
+            pi->function_infos = function_infos;
+            pi->function_infos_capacity = capacity;
         }
 
-        function_info = &info->function_infos[info->function_infos_len++];
+        function_info = &pi->function_infos[pi->function_infos_len++];
 
         function_info->name = strdup(name);
         function_info->fields = NULL;
         function_info->n_fields = 0;
     }
 
-    add_function_field_usage(select, items, n_items, function_info);
+    add_function_field_usage(pi, select, items, n_items, function_info);
 
     return function_info;
 }
@@ -3317,7 +3381,7 @@ static void update_field_infos(parsing_info_t* pi,
 
                             if (item->type() == Item::FIELD_ITEM)
                             {
-                                add_function_field_usage(select, static_cast<Item_field*>(item), fi);
+                                add_function_field_usage(pi, select, static_cast<Item_field*>(item), fi);
                             }
                         }
                     }
@@ -3332,7 +3396,7 @@ static void update_field_infos(parsing_info_t* pi,
                         if (subselect_item->substype() == Item_subselect::IN_SUBS)
                         {
                             assert(fi);
-                            add_function_field_usage(select, ssl, fi);
+                            add_function_field_usage(pi, select, ssl, fi);
                         }
                     }
 #else
@@ -3609,7 +3673,7 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
 
                 if (item->type() == Item::FIELD_ITEM)
                 {
-                    add_function_field_usage(lex->current_select, static_cast<Item_field*>(item), fi);
+                    add_function_field_usage(pi, lex->current_select, static_cast<Item_field*>(item), fi);
                 }
 
                 item = ilist++;
@@ -3652,7 +3716,7 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
             {
                 if (item->type() == Item::FIELD_ITEM)
                 {
-                    add_function_field_usage(lex->current_select, static_cast<Item_field*>(item), fi);
+                    add_function_field_usage(pi, lex->current_select, static_cast<Item_field*>(item), fi);
                 }
             }
         }
@@ -3676,7 +3740,7 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
 
                     if (item->type() == Item::FIELD_ITEM)
                     {
-                        add_function_field_usage(lex->current_select, static_cast<Item_field*>(item), fi);
+                        add_function_field_usage(pi, lex->current_select, static_cast<Item_field*>(item), fi);
                     }
 
                     item = ilist++;

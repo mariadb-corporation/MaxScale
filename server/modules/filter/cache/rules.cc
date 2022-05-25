@@ -1225,10 +1225,10 @@ static bool cache_rule_matches_column_regexp(CACHE_RULE* self,
     {
         const QC_FIELD_INFO* info = (infos + i);
 
-        size_t database_len;
         std::string_view database;
+        size_t database_len;
 
-        if (info->database)
+        if (!info->database.empty())
         {
             database = info->database;
             database_len = database.length();
@@ -1242,7 +1242,7 @@ static bool cache_rule_matches_column_regexp(CACHE_RULE* self,
         size_t table_len;
         std::string_view table;
 
-        if (info->table)
+        if (!info->table.empty())
         {
             table = info->table;
             table_len = table.length();
@@ -1253,7 +1253,7 @@ static bool cache_rule_matches_column_regexp(CACHE_RULE* self,
             table_len = default_table_len;
         }
 
-        char buffer[database_len + 1 + table_len + 1 + strlen(info->column) + 1];
+        char buffer[database_len + 1 + table_len + 1 + info->column.length() + 1];
         buffer[0] = 0;
 
         if (!database.empty())
@@ -1268,7 +1268,7 @@ static bool cache_rule_matches_column_regexp(CACHE_RULE* self,
             strcat(buffer, ".");
         }
 
-        strcat(buffer, info->column);
+        strncat(buffer, info->column.data(), info->column.length());
 
         matches = cache_rule_compare(self, thread_id, buffer);
 
@@ -1341,11 +1341,11 @@ static bool cache_rule_matches_column_simple(CACHE_RULE* self, const char* defau
     {
         const QC_FIELD_INFO* info = (infos + i);
 
-        if ((strcasecmp(info->column, rule_column) == 0) || strcmp(rule_column, "*") == 0)
+        if (sv_case_eq(info->column, rule_column) || strcmp(rule_column, "*") == 0)
         {
             if (rule_table)
             {
-                std::string_view check_table = info->table ? info->table : default_table;
+                std::string_view check_table = !info->table.empty() ? info->table : default_table;
 
                 if (!check_table.empty())
                 {
@@ -1353,7 +1353,7 @@ static bool cache_rule_matches_column_simple(CACHE_RULE* self, const char* defau
                     {
                         if (rule_database)
                         {
-                            std::string_view check_database = info->database ? info->database : default_database;
+                            std::string_view check_database = !info->database.empty() ? info->database : default_database;
 
                             if (!check_database.empty())
                             {
@@ -1608,8 +1608,8 @@ static bool cache_rule_matches_table_simple(CACHE_RULE* self, const char* defaul
 
     for (const auto& name : qc_get_table_names((GWBUF*)query, fullnames))
     {
-        std::string database;
-        std::string table;
+        std::string_view database;
+        std::string_view table;
 
         if (fullnames)
         {

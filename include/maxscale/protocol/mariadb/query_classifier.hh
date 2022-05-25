@@ -145,10 +145,10 @@ typedef enum qc_field_context
 
 struct QC_FIELD_INFO
 {
-    char*    database;  /** Present if the field is of the form "a.b.c", NULL otherwise. */
-    char*    table;     /** Present if the field is of the form "a.b", NULL otherwise. */
-    char*    column;    /** Always present. */
-    uint32_t context;   /** The context in which the field appears. */
+    std::string_view database;  /** Present if the field is of the form "a.b.c", empty otherwise. */
+    std::string_view table;     /** Present if the field is of the form "a.b", empty otherwise. */
+    std::string_view column;    /** Always present. */
+    uint32_t         context;   /** The context in which the field appears. */
 };
 
 /**

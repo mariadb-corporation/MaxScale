@@ -749,45 +749,28 @@ bool compare_get_prepare_name(QUERY_CLASSIFIER* pClassifier1,
 
 bool operator==(const QC_FIELD_INFO& lhs, const QC_FIELD_INFO& rhs)
 {
-    bool rv = false;
-    if (lhs.column && rhs.column && (strcasecmp(lhs.column, rhs.column) == 0))
-    {
-        if (!lhs.table && !rhs.table)
-        {
-            rv = true;
-        }
-        else if (lhs.table && rhs.table && (strcmp(lhs.table, rhs.table) == 0))
-        {
-            if (!lhs.database && !rhs.database)
-            {
-                rv = true;
-            }
-            else if (lhs.database && rhs.database && (strcmp(lhs.database, rhs.database) == 0))
-            {
-                rv = true;
-            }
-        }
-    }
-
-    return rv;
+    return
+        lhs.column == rhs.column
+        && lhs.table == rhs.table
+        && lhs.database == rhs.database;
 }
 
 ostream& operator<<(ostream& out, const QC_FIELD_INFO& x)
 {
-    if (x.database)
+    if (!x.database.empty())
     {
         out << x.database;
         out << ".";
-        mxb_assert(x.table);
+        mxb_assert(!x.table.empty());
     }
 
-    if (x.table)
+    if (!x.table.empty())
     {
         out << x.table;
         out << ".";
     }
 
-    mxb_assert(x.column);
+    mxb_assert(!x.column.empty());
     out << x.column;
 
     return out;
@@ -797,9 +780,9 @@ class QcFieldInfo
 {
 public:
     QcFieldInfo(const QC_FIELD_INFO& info)
-        : m_database(info.database ? info.database : "")
-        , m_table(info.table ? info.table : "")
-        , m_column(info.column ? info.column : "")
+        : m_database(info.database)
+        , m_table(info.table)
+        , m_column(info.column)
         , m_context(info.context)
     {
     }
@@ -887,10 +870,10 @@ public:
     }
 
 private:
-    std::string m_database;
-    std::string m_table;
-    std::string m_column;
-    uint32_t    m_context;
+    std::string_view m_database;
+    std::string_view m_table;
+    std::string_view m_column;
+    uint32_t         m_context;
 };
 
 ostream& operator<<(ostream& out, const QcFieldInfo& x)
@@ -1039,17 +1022,17 @@ public:
         {
             const QC_FIELD_INFO& name = m_pFields[i];
 
-            if (name.database)
+            if (!name.database.empty())
             {
                 out << name.database << ".";
             }
 
-            if (name.table)
+            if (!name.table.empty())
             {
                 out << name.table << ".";
             }
 
-            mxb_assert(name.column);
+            mxb_assert(!name.column.empty());
 
             out << name.column;
 
@@ -1093,13 +1076,13 @@ private:
     {
         string s;
 
-        if (field.database)
+        if (!field.database.empty())
         {
             s += field.database;
             s += ".";
         }
 
-        if (field.table)
+        if (!field.table.empty())
         {
             s += field.table;
             s += ".";
