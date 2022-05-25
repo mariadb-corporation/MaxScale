@@ -44,6 +44,7 @@ Reader::Reader(SendCallback cb, WorkerCallback worker_cb,
     , m_start_gtid_list(start_gl)
     , m_heartbeat_interval(heartbeat_interval)
     , m_last_event(std::chrono::steady_clock::now())
+    , m_ref(std::make_shared<bool>(true))
 {
 }
 
@@ -164,9 +165,12 @@ void Reader::send_events()
 
     if (timer_alarm)
     {
-        auto callback = [this]() {
+        auto callback = [this, ref = get_ref()]() {
+            if (auto r = ref.lock())
+            {
                 send_events();
-            };
+            }
+        };
 
         m_get_worker().execute(callback, mxs::RoutingWorker::EXECUTE_QUEUED);
     }

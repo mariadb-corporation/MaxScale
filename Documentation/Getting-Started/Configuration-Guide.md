@@ -1702,6 +1702,14 @@ versions a value without a unit may be rejected. Note that since the granularity
 of the timeout is seconds, a timeout specified in milliseconds will be rejected,
 even if the duration is longer than a second.
 
+The value of `connection_timeout` should be lower than the lowest `wait_timeout`
+value on the backend servers. This way idle clients are disconnected by MaxScale
+before the backend servers have to close them. Any client-side idle timeouts
+(e.g. maximum lifetime for connection pools) should be lower than both
+`connection_timeout` and `wait_timeout`. This way the client application will
+end up closing the connection itself which most of the time results in better
+and more helpful error messages.
+
 **Warning:** If a connection is idle for longer than the configured connection
 timeout, it will be forcefully disconnected and a warning will be logged in the
 MaxScale log file.
@@ -1785,6 +1793,11 @@ milliseconds will be rejected, even if the duration is longer than a second.
 The parameter value is the interval in seconds between each keepalive ping. A
 keepalive ping will be sent to a backend server if the connection has been idle
 for longer than the configured keepalive interval.
+
+Starting with MaxScale 2.5.21, the keepalive pings are not sent if the client
+has been idle for longer than the configured value of
+`connection_keepalive`. Older versions of MaxScale sent the keepalive pings
+regardless of the client state.
 
 This parameter only takes effect in top-level services. A top-level service is
 the service where the listener that the client connected to points (i.e. the

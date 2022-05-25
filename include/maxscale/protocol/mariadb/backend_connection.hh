@@ -45,7 +45,6 @@ public:
     void    ping() override;
     bool    can_close() const override;
     bool    is_idle() const override;
-    int64_t seconds_idle() const override;
     json_t* diagnostics() const override;
 
     void              set_dcb(DCB* dcb) override;
