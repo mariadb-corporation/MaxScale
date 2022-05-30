@@ -26,6 +26,10 @@
 // Always build the file key manager
 #include "internal/key_manager_file.hh"
 
+#ifdef BUILD_KMIP_KEY_MANAGER
+#include "internal/key_manager_kmip.hh"
+#endif
+
 namespace
 {
 struct ThisUnit
@@ -149,6 +153,14 @@ bool KeyManager::init()
     {
     case Type::FILE:
         master_key = FileKey::create(opts);
+        break;
+
+    case Type::KMIP:
+#ifdef BUILD_KMIP_KEY_MANAGER
+        master_key = KMIPKey::create(opts);
+#else
+        MXB_ERROR("KMIP key manager is not included in this MaxScale installation.");
+#endif
         break;
 
     default:

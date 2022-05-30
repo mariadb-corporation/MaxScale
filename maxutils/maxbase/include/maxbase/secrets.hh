@@ -21,6 +21,16 @@
 
 namespace maxbase
 {
+
+/**
+ * Get latest OpenSSL errors
+ *
+ * The OpenSSL errors are thread-specific so make sure to call this on the right thread.
+ *
+ * @return The human-readable error message
+ */
+std::string get_openssl_errors();
+
 class Cipher
 {
 public:

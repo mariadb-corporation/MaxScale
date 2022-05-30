@@ -89,6 +89,15 @@ elseif(WITH_UBSAN AND UBSAN_FOUND)
   target_link_libraries(maxscale-common ${UBSAN_LIBRARIES})
 endif()
 
+if (BUILD_KMIP_KEY_MANAGER)
+  include(${CMAKE_SOURCE_DIR}/cmake/BuildLibKMIP.cmake)
+  add_dependencies(maxscale-common libkmip)
+  add_compile_definitions(BUILD_KMIP_KEY_MANAGER)
+  target_link_libraries(maxscale-common ${LIBKMIP_LIBRARIES})
+  target_sources(maxscale-common PRIVATE key_manager_kmip.cc)
+  target_include_directories(maxscale-common PUBLIC ${LIBKMIP_INCLUDE_DIR})
+endif()
+
 find_library(HAVE_LIBDL NAMES dl)
 if (HAVE_LIBDL)
   # libdl just exposes libc functionality on most systems.  This means that if

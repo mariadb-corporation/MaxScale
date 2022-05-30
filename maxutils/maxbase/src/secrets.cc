@@ -98,6 +98,22 @@ std::vector<uint8_t> random_bytes(int size)
 namespace maxbase
 {
 
+std::string get_openssl_errors()
+{
+    std::vector<std::string> errors;
+
+    while (auto errornum = ERR_get_error())
+    {
+        // It's unclear how thread(un)safe OpenSSL error functions are. Minimize such possibilities by
+        // using a local buffer. The 256 bytes should be enough according to some googling.
+        char buf[256] {0};
+        ERR_error_string_n(errornum, buf, sizeof(buf));
+        errors.push_back(buf);
+    }
+
+    return mxb::join(errors, "; ");
+}
+
 bool Cipher::encrypt_or_decrypt(const EVP_CIPHER* cipher, int enc,
                                 const uint8_t* key, const uint8_t* iv,
                                 const uint8_t* input, int input_len,
@@ -174,18 +190,7 @@ void Cipher::log_errors(const char* operation)
 // static
 std::string Cipher::get_errors()
 {
-    std::vector<std::string> errors;
-
-    while (auto errornum = ERR_get_error())
-    {
-        // It's unclear how thread(un)safe OpenSSL error functions are. Minimize such possibilities by
-        // using a local buffer. The 256 bytes should be enough according to some googling.
-        char buf[256] {0};
-        ERR_error_string_n(errornum, buf, sizeof(buf));
-        errors.push_back(buf);
-    }
-
-    return mxb::join(errors, "; ");
+    return get_openssl_errors();
 }
 
 Cipher::Cipher(AesMode mode, size_t bits)

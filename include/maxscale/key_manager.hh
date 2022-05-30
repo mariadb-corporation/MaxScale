@@ -37,7 +37,10 @@ public:
         // File based key manager, stores keys locally on disk. Relatively unsafe, use only if you trust file
         // system security. Read https://mariadb.com/kb/en/file-key-management-encryption-plugin/ for more
         // information.
-        FILE
+        FILE,
+
+        // KMIP key manager, reads keys from a remote KMIP server.
+        KMIP,
     };
 
     // An abstract class for handling the encryption of the keystore file.
