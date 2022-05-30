@@ -241,7 +241,7 @@ cfg::ParamString s_cs_admin_api_key(&s_spec, "cs_admin_api_key",
 
 cfg::ParamString s_ssh_user(&s_spec, CONFIG_SSH_USER, "SSH username. Used for accessing servers.", "");
 
-cfg::ParamPath s_ssh_keyfile(&s_spec, "ssh_keyfile", "SSH keyfile. Used for accessing servers.",
+cfg::ParamPath s_ssh_keyfile(&s_spec, CONFIG_SSH_KEYFILE, "SSH keyfile. Used for accessing servers.",
                              cfg::ParamPath::R | cfg::ParamPath::F, "");
 
 template<class Params>

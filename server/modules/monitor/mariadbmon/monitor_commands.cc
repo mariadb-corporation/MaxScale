@@ -12,9 +12,10 @@
  */
 
 #include "mariadbmon.hh"
-#include "maxbase/format.hh"
+#include <maxbase/format.hh>
 #include <maxbase/http.hh>
 #include <maxscale/modulecmd.hh>
+#include "ssh_utils.hh"
 
 using maxscale::Monitor;
 using maxscale::MonitorServer;
@@ -1121,45 +1122,75 @@ MariaDBMonitor::manual_rebuild_server(SERVER* target_srv, SERVER* source_srv)
 
     ManualCommand::Result rval;
 
+    if (rebuild_check_preconds(target, source, &rval.output))
+    {
+        // Ok so far. Initiate SSH-sessions to both servers.
+        auto init_ssh = [this, &rval](MariaDBServer* server) {
+            auto [ses, errmsg_con] = ssh_util::init_ssh_session(server->server->address(),
+                                                                m_settings.ssh_user, m_settings.ssh_keyfile);
+            if (!ses)
+            {
+                PRINT_MXS_JSON_ERROR(&rval.output, "SSH connection to %s failed. %s",
+                                     server->name(), errmsg_con.c_str());
+            }
+            return ses;
+        };
+
+        auto target_ses = init_ssh(target);
+        auto source_ses = init_ssh(source);
+
+        if (target_ses && source_ses)
+        {
+            rval.success = true;
+        }
+    }
+
+    return rval;
+}
+
+bool MariaDBMonitor::rebuild_check_preconds(MariaDBServer* target, MariaDBServer* source, json_t** error_out)
+{
     bool target_ok = true;
     bool source_ok = true;
-    bool ssh_settings_ok = true;
+    bool settings_ok = true;
     const char wrong_state_fmt[] = "Server '%s' is already a %s, cannot rebuild it.";
 
     // The following do not actually prevent rebuilding, they are just safeguards against user errors.
     if (target->is_master())
     {
-        PRINT_MXS_JSON_ERROR(&rval.output, wrong_state_fmt, target->name(), "master");
+        PRINT_MXS_JSON_ERROR(error_out, wrong_state_fmt, target->name(), "master");
         target_ok = false;
     }
     else if (target->is_relay_master())
     {
-        PRINT_MXS_JSON_ERROR(&rval.output, wrong_state_fmt, target->name(), "relay");
+        PRINT_MXS_JSON_ERROR(error_out, wrong_state_fmt, target->name(), "relay");
         target_ok = false;
     }
     else if (target->is_slave())
     {
-        PRINT_MXS_JSON_ERROR(&rval.output, wrong_state_fmt, target->name(), "slave");
+        PRINT_MXS_JSON_ERROR(error_out, wrong_state_fmt, target->name(), "slave");
         target_ok = false;
     }
 
     if (!source->is_slave() && !source->is_master())
     {
-        PRINT_MXS_JSON_ERROR(&rval.output,
-                             "Server '%s' is neither a master or slave, cannot use it as source.",
+        PRINT_MXS_JSON_ERROR(error_out, "Server '%s' is neither a master or slave, cannot use it as source.",
                              source->name());
         source_ok = false;
     }
 
+    const char settings_err_fmt[] = "'%s' is not set. %s requires ssh access to servers.";
     if (m_settings.ssh_user.empty())
     {
-        PRINT_MXS_JSON_ERROR(&rval.output,
-                             "'%s' is not set. %s requires ssh access to servers.",
-                             CONFIG_SSH_USER, rebuild_server_cmd);
+        PRINT_MXS_JSON_ERROR(error_out, settings_err_fmt, CONFIG_SSH_USER, rebuild_server_cmd);
+        settings_ok = false;
     }
-    if (target_ok && source_ok)
+    if (m_settings.ssh_keyfile.empty())
     {
-        rval.success = true;
+        // TODO: perhaps allow no authentication
+        PRINT_MXS_JSON_ERROR(error_out, settings_err_fmt, CONFIG_SSH_KEYFILE, rebuild_server_cmd);
+        settings_ok = false;
     }
-    return rval;
+
+    return target_ok && source_ok && settings_ok;
 }

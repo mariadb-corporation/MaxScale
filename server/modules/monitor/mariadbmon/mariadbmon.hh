@@ -641,6 +641,9 @@ private:
     bool     server_is_rejoin_suspect(MariaDBServer* rejoin_cand, json_t** output);
     uint32_t do_rejoin(const ServerArray& joinable_servers, json_t** output);
 
+    // Server rebuild methods
+    bool rebuild_check_preconds(MariaDBServer* target, MariaDBServer* source, json_t** error_out);
+
     bool check_sql_files();
     void enforce_read_only_on_slaves();
     void enforce_writable_on_master();
