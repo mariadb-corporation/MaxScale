@@ -59,9 +59,6 @@ using mxb::sv_case_eq;
         catch (...) { \
             MXB_ERROR("Caught unknown exception."); pInfo->m_status = QC_QUERY_INVALID;}} while (false)
 
-// Used if an idenifier is not found in the canonical string.
-static const std::string maxscale_unknown("maxscale_unknown");
-
 static inline bool qc_info_was_tokenized(qc_parse_result_t status)
 {
     return status == QC_QUERY_TOKENIZED;
@@ -3605,32 +3602,55 @@ private:
     {
         std::string_view rv;
 
+        const char* pMatch = nullptr;
+        size_t n = strlen(zNeedle);
+
         auto i = m_canonical.find(zNeedle);
 
         if (i != std::string::npos)
         {
-            rv = std::string_view(&m_canonical[i], strlen(zNeedle));
+            pMatch = &m_canonical[i];
         }
         else
         {
             // Ok, let's try case-insensitively.
-            char* pMatch = strcasestr(const_cast<char*>(m_canonical.c_str()), zNeedle);
+            pMatch = strcasestr(const_cast<char*>(m_canonical.c_str()), zNeedle);
 
-            if (pMatch)
-            {
-                rv = std::string_view(pMatch, strlen(zNeedle));
-            }
-            else
+            if (!pMatch)
             {
                 complain_about_missing(zContext, zNeedle);
-                rv = maxscale_unknown;
+
+                std::string_view needle(zNeedle);
+
+                for (const auto& scratch_buffer : m_scratch_buffers)
+                {
+                    if (sv_case_eq(std::string_view(scratch_buffer.data(), scratch_buffer.size()), needle))
+                    {
+                        pMatch = scratch_buffer.data();
+                        break;
+                    }
+                }
+
+                if (!pMatch)
+                {
+                    m_scratch_buffers.emplace_back(needle.begin(), needle.end());
+
+                    const auto& scratch_buffer = m_scratch_buffers.back();
+
+                    pMatch = scratch_buffer.data();
+                }
             }
         }
+
+        rv = std::string_view(pMatch, n);
 
         return rv;
     }
 
-    void populate_field_info(QC_FIELD_INFO& info, const char* zDatabase, const char* zTable, const char* zColumn)
+    void populate_field_info(QC_FIELD_INFO& info,
+                             const char* zDatabase,
+                             const char* zTable,
+                             const char* zColumn)
     {
         if (zDatabase)
         {
@@ -3648,10 +3668,15 @@ private:
 
     void complain_about_missing(const char* zWhat, const char* zKey)
     {
-        MXB_ERROR("The %s '%s' is not found in the canonical statement '%s' created from "
-                  "the statement '%.*s'.",
-                  zWhat, zKey, m_canonical.c_str(), (int)m_nQuery, m_pQuery);
-        m_status = QC_QUERY_PARTIALLY_PARSED;
+        // As a failure to find a symbol in the canonical statement is not necessarily
+        // an indication of a canonicalization bug, unconditional logging can't really
+        // be done. In debug we log a warning so that it is possible to become aware
+        // of problems.
+#if defined(SS_DEBUG)
+        MXB_WARNING("The %s '%s' is not found in the canonical statement '%s' created from "
+                    "the statement '%.*s'.",
+                    zWhat, zKey, m_canonical.c_str(), (int)m_nQuery, m_pQuery);
+#endif
     }
 
 
@@ -3690,6 +3715,8 @@ public:
     QC_NAME_MAPPING* m_pFunction_name_mappings;             // How function names should be mapped.
     QC_KILL          m_kill;
     std::string      m_canonical;                           // The canonical version of the statement.
+
+    std::vector<vector<char>> m_scratch_buffers; // Scratch buffers if string not found from canonical.
 };
 
 extern "C"

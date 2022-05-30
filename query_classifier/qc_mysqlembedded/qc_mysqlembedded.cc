@@ -99,9 +99,6 @@ my_bool _db_my_assert(const char *file, int line, const char *msg)
 
 }
 
-// Used if an idenifier is not found in the canonical string.
-const std::string maxscale_unknown("maxscale_unknown");
-
 #if defined (CTE_SUPPORTED)
 // We need to be able to access private data of With_element that has no
 // public access methods. So, we use this very questionable method of
@@ -183,32 +180,53 @@ public:
     {
         std::string_view rv;
 
+        const char* pMatch = nullptr;
+        size_t n = strlen(zNeedle);
+
         auto i = this->canonical.find(zNeedle);
 
         if (i != std::string::npos)
         {
-            rv = std::string_view(&this->canonical[i], strlen(zNeedle));
+            pMatch = &this->canonical[i];
         }
         else
         {
             // Ok, let's try case-insensitively.
-            char* pMatch = strcasestr(const_cast<char*>(this->canonical.c_str()), zNeedle);
+            pMatch = strcasestr(const_cast<char*>(this->canonical.c_str()), zNeedle);
 
-            if (pMatch)
-            {
-                rv = std::string_view(pMatch, strlen(zNeedle));
-            }
-            else
+            if (!pMatch)
             {
                 complain_about_missing(zContext, zNeedle);
-                rv = maxscale_unknown;
+
+                std::string_view needle(zNeedle);
+
+                for (const auto& scratch : this->scratchs)
+                {
+                    if (sv_case_eq(std::string_view(scratch.data(), scratch.size()), needle))
+                    {
+                        pMatch = scratch.data();
+                        break;
+                    }
+                }
+
+                if (!pMatch)
+                {
+                    this->scratchs.emplace_back(needle.begin(), needle.end());
+
+                    const auto& scratch = this->scratchs.back();
+
+                    pMatch = scratch.data();
+                }
             }
         }
+
+        rv = std::string_view(pMatch, n);
 
         return rv;
     }
 
-    void populate_field_info(QC_FIELD_INFO& info, const char* zDatabase, const char* zTable, const char* zColumn)
+    void populate_field_info(QC_FIELD_INFO& info,
+                             const char* zDatabase, const char* zTable, const char* zColumn)
     {
         if (zDatabase)
         {
@@ -226,30 +244,37 @@ public:
 
     void complain_about_missing(const char* zWhat, const char* zKey)
     {
-        MXB_ERROR("The %s '%s' is not found in the canonical statement '%s' created from "
-                  "the statement '%s'.",
-                  zWhat, zKey, this->canonical.c_str(), this->pi_query_plain_str);
-        this->result = QC_QUERY_PARTIALLY_PARSED;
+        int priority;
+#if defined(SS_DEBUG)
+        priority = LOG_ERR;
+#else
+        priority = LOG_INFO;
+#endif
+        MXB_LOG_MESSAGE(priority,
+                        "The %s '%s' is not found in the canonical statement '%s' created from "
+                        "the statement '%s'.",
+                        zWhat, zKey, this->canonical.c_str(), this->pi_query_plain_str);
     }
 
-    MYSQL*              pi_handle { nullptr } ;            /*< parsing info object pointer */
-    char*               pi_query_plain_str { nullptr };   /*< query as plain string */
-    QC_FIELD_INFO*      field_infos { nullptr };
-    size_t              field_infos_len { 0 };
-    size_t              field_infos_capacity { 0 };
-    QC_FUNCTION_INFO*   function_infos { 0 };
-    size_t              function_infos_len { 0 };
-    size_t              function_infos_capacity { 0 };
-    GWBUF*              preparable_stmt { 0 };
-    qc_parse_result_t   result { QC_QUERY_INVALID };
-    int32_t             type_mask { 0 };
-    NAME_MAPPING*       function_name_mappings { 0 };
-    string              created_table_name;
-    vector<string>      database_names;
-    vector<string>      table_names;
-    vector<string>      full_table_names;
-    string              prepare_name;
-    string              canonical;
+    MYSQL*               pi_handle { nullptr } ;            /*< parsing info object pointer */
+    char*                pi_query_plain_str { nullptr };   /*< query as plain string */
+    QC_FIELD_INFO*       field_infos { nullptr };
+    size_t               field_infos_len { 0 };
+    size_t               field_infos_capacity { 0 };
+    QC_FUNCTION_INFO*    function_infos { 0 };
+    size_t               function_infos_len { 0 };
+    size_t               function_infos_capacity { 0 };
+    GWBUF*               preparable_stmt { 0 };
+    qc_parse_result_t    result { QC_QUERY_INVALID };
+    int32_t              type_mask { 0 };
+    NAME_MAPPING*        function_name_mappings { 0 };
+    string               created_table_name;
+    vector<string>       database_names;
+    vector<string>       table_names;
+    vector<string>       full_table_names;
+    string               prepare_name;
+    string               canonical;
+    vector<vector<char>> scratchs;
 };
 
 #define QTYPE_LESS_RESTRICTIVE_THAN_WRITE(t) (t < QUERY_TYPE_WRITE ? true : false)
