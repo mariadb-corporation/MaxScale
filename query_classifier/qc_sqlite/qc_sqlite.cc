@@ -39,6 +39,8 @@
 #include "builtin_functions.hh"
 
 using std::vector;
+using std::string_view;
+using std::string;
 using mxb::sv_case_eq;
 
 // #define QC_TRACE_ENABLED
@@ -121,14 +123,14 @@ static QC_NAME_MAPPING function_name_mappings_oracle[] =
 
 struct QcAliasValue
 {
-    QcAliasValue(const char* zD, const char* zT)
+    QcAliasValue(const char* zD, std::string t)
         : zDatabase(zD)
-        , zTable(zT)
+        , table(t)
     {
     }
 
     const char* zDatabase;
-    const char* zTable;
+    string      table;
 };
 
 typedef std::map<std::string, QcAliasValue> QcAliases;
@@ -269,16 +271,8 @@ public:
             size += strlen(z) + 1;
         };
 
-        size += m_table_names.capacity() * sizeof(char*);
-        for_each(m_table_names.begin(), m_table_names.end(), add_string_size);
-
-        size += m_table_fullnames.capacity() * sizeof(char*);
-        for_each(m_table_fullnames.begin(), m_table_fullnames.end(), add_string_size);
-
-        if (m_zCreated_table_name)
-        {
-            add_string_size(m_zCreated_table_name);
-        }
+        size += m_table_names.capacity() * sizeof(string_view);
+        size += m_table_fullnames.capacity() * sizeof(string_view);
 
         size += m_database_names.capacity() * sizeof(char*);
         for_each(m_database_names.begin(), m_database_names.end(), add_string_size);
@@ -385,15 +379,15 @@ public:
         return rv;
     }
 
-    bool get_created_table_name(std::string_view* pCreated_table_name) const
+    bool get_created_table_name(string_view* pCreated_table_name) const
     {
         bool rv = false;
 
         if (is_valid())
         {
-            if (m_zCreated_table_name)
+            if (!m_created_table_name.empty())
             {
-                *pCreated_table_name = std::string_view(m_zCreated_table_name);
+                *pCreated_table_name = m_created_table_name;
             }
             rv = true;
         }
@@ -414,7 +408,7 @@ public:
         return rv;
     }
 
-    bool get_table_names(int32_t fullnames, std::vector<std::string_view>* pTables) const
+    bool get_table_names(int32_t fullnames, vector<string_view>* pTables) const
     {
         bool rv = false;
 
@@ -448,7 +442,7 @@ public:
         return rv;
     }
 
-    bool get_database_names(std::vector<std::string_view>* pNames) const
+    bool get_database_names(vector<string_view>* pNames) const
     {
         bool rv = false;
 
@@ -474,7 +468,7 @@ public:
         return rv;
     }
 
-    bool get_prepare_name(std::string_view* pPrepare_name) const
+    bool get_prepare_name(string_view* pPrepare_name) const
     {
         bool rv = false;
 
@@ -486,7 +480,7 @@ public:
             }
             else
             {
-                *pPrepare_name = std::string_view {};
+                *pPrepare_name = string_view {};
             }
 
             rv = true;
@@ -633,7 +627,7 @@ public:
                 const QcAliasValue& value = i->second;
 
                 zDatabase = value.zDatabase;
-                zTable = value.zTable;
+                zTable = value.table.c_str();
             }
         }
     }
@@ -643,11 +637,11 @@ public:
     class MatchFieldName : public std::unary_function<T, bool>
     {
     public:
-        MatchFieldName(const char* zDatabase,
-                       const char* zTable,
+        MatchFieldName(string_view database,
+                       string_view table,
                        const char* zColumn)
-            : m_zDatabase(zDatabase)
-            , m_zTable(zTable)
+            : m_database(database)
+            , m_table(table)
             , m_zColumn(zColumn)
         {
             mxb_assert(zColumn);
@@ -659,20 +653,20 @@ public:
 
             if (sv_case_eq(m_zColumn, t.column))
             {
-                if (!m_zTable && t.table.empty())
+                if (m_table.empty() && t.table.empty())
                 {
-                    mxb_assert(!m_zDatabase && t.database.empty());
+                    mxb_assert(m_database.empty() && t.database.empty());
                     rv = true;
                 }
-                else if (m_zTable && !t.table.empty() && sv_case_eq(m_zTable, t.table))
+                else if (!m_table.empty() && !t.table.empty() && sv_case_eq(m_table, t.table))
                 {
-                    if (!m_zDatabase && t.database.empty())
+                    if (m_database.empty() && t.database.empty())
                     {
                         rv = true;
                     }
-                    else if (m_zDatabase
+                    else if (!m_database.empty()
                              && !t.database.empty()
-                             && sv_case_eq(m_zDatabase, t.database))
+                             && sv_case_eq(m_database, t.database))
                     {
                         rv = true;
                     }
@@ -683,8 +677,8 @@ public:
         }
 
     private:
-        const char* m_zDatabase;
-        const char* m_zTable;
+        string_view m_database;
+        string_view m_table;
         const char* m_zColumn;
     };
 
@@ -753,7 +747,7 @@ public:
         if (should_collect_table || should_collect_database)
         {
             const char* zCollected_database = NULL;
-            const char* zCollected_table = NULL;
+            string_view collected_table;
 
             size_t nDatabase = zDatabase ? strlen(zDatabase) : 0;
             size_t nTable = zTable ? strlen(zTable) : 0;
@@ -774,7 +768,7 @@ public:
                     strcpy(table, zTable);
                     exposed_sqlite3Dequote(table);
 
-                    zCollected_table = update_table_names(database, nDatabase, table, nTable);
+                    collected_table = update_table_names(database, nDatabase, table, nTable);
                 }
             }
 
@@ -783,9 +777,9 @@ public:
                 zCollected_database = update_database_names(database, nDatabase);
             }
 
-            if (pAliases && zCollected_table && zAlias)
+            if (pAliases && !collected_table.empty() && zAlias)
             {
-                QcAliasValue value(zCollected_database, zCollected_table);
+                QcAliasValue value(zCollected_database, string(collected_table));
 
                 pAliases->insert(QcAliases::value_type(zAlias, value));
             }
@@ -1587,7 +1581,7 @@ public:
 
         if (i == m_function_infos.size())   // If true, the function was not present already.
         {
-            std::string_view name = get_string_view("function", zName);
+            string_view name = get_string_view("function", zName);
 
             QC_FUNCTION_INFO item { name, nullptr, 0 };
 
@@ -2086,15 +2080,14 @@ public:
         {
             // If information is collected in several passes, then we may
             // this information already.
-            if (!m_zCreated_table_name)
+            if (m_created_table_name.empty())
             {
-                m_zCreated_table_name = MXB_STRDUP(m_table_names[0]);
-                MXB_ABORT_IF_NULL(m_zCreated_table_name);
+                m_created_table_name = m_table_names[0];
             }
             else
             {
                 mxb_assert(m_collect != m_collected);
-                mxb_assert(strcmp(m_zCreated_table_name, m_table_names[0]) == 0);
+                mxb_assert(m_created_table_name == m_table_names[0]);
             }
         }
     }
@@ -3426,7 +3419,6 @@ private:
         , m_type_mask(QUERY_TYPE_UNKNOWN)
         , m_operation(QUERY_OP_UNDEFINED)
         , m_has_clause(false)
-        , m_zCreated_table_name(NULL)
         , m_is_drop_table(false)
         , m_keyword_1(0)
         ,               // Sqlite3 starts numbering tokens from 1, so 0 means
@@ -3443,9 +3435,6 @@ private:
     {
         mxb_assert(m_refs == 0);
 
-        std::for_each(m_table_names.begin(), m_table_names.end(), mxb_free);
-        std::for_each(m_table_fullnames.begin(), m_table_fullnames.end(), mxb_free);
-        free(m_zCreated_table_name);
         std::for_each(m_database_names.begin(), m_database_names.end(), mxb_free);
         free(m_zPrepare_name);
         gwbuf_free(m_pPreparable_stmt);
@@ -3496,30 +3485,22 @@ private:
         return pz;
     }
 
-    const char* table_name_collected(const char* zTable, size_t nTable)
+    string_view table_name_collected(const char* pTable, size_t nTable)
     {
-        size_t i = 0;
+        string_view table(pTable, nTable);
 
-        while ((i < m_table_names.size())
-               && (strlen(m_table_names[i]) != nTable
-                   || (strncmp(m_table_names[i], zTable, nTable) != 0)))
-        {
-            ++i;
-        }
+        auto it = std::find(m_table_names.begin(), m_table_names.end(), table);
 
-        return (i != m_table_names.size()) ? m_table_names[i] : NULL;
+        return it != m_table_names.end() ? *it : string_view {};
     }
 
-    const char* table_fullname_collected(const char* zTable)
+    string_view table_fullname_collected(const char* zTable)
     {
-        size_t i = 0;
+        string_view table(zTable);
 
-        while ((i < m_table_fullnames.size()) && (strcmp(m_table_fullnames[i], zTable) != 0))
-        {
-            ++i;
-        }
+        auto it = std::find(m_table_fullnames.begin(), m_table_fullnames.end(), table);
 
-        return (i != m_table_fullnames.size()) ? m_table_fullnames[i] : NULL;
+        return it != m_table_fullnames.end() ? *it : string_view {};
     }
 
     const char* database_name_collected(const char* zDatabase, size_t nDatabase)
@@ -3536,22 +3517,20 @@ private:
         return (i != m_database_names.size()) ? m_database_names[i] : NULL;
     }
 
-    const char* update_table_names(const char* zDatabase,
+    string_view update_table_names(const char* zDatabase,
                                    size_t nDatabase,
                                    const char* zTable,
                                    size_t nTable)
     {
         mxb_assert(zTable && nTable);
 
-        const char* zCollected_table = table_name_collected(zTable, nTable);
+        string_view collected_table = table_name_collected(zTable, nTable);
 
-        if (!zCollected_table)
+        if (collected_table.empty())
         {
-            char* zCopy = MXB_STRNDUP_A(zTable, nTable);
+            collected_table = get_string_view("table", std::string(zTable, nTable).c_str());
 
-            m_table_names.push_back(zCopy);
-
-            zCollected_table = zCopy;
+            m_table_names.push_back(collected_table);
         }
 
         char fullname[nDatabase + 1 + nTable + 1];
@@ -3569,14 +3548,12 @@ private:
 
         strncat(fullname, zTable, nTable);
 
-        if (!table_fullname_collected(fullname))
+        if (table_fullname_collected(fullname).empty())
         {
-            char* zCopy = MXB_STRDUP_A(fullname);
-
-            m_table_fullnames.push_back(zCopy);
+            m_table_fullnames.push_back(get_string_view("table", fullname));
         }
 
-        return zCollected_table;
+        return collected_table;
     }
 
     const char* update_database_names(const char* zDatabase, size_t nDatabase)
@@ -3598,9 +3575,9 @@ private:
         return zCollected_database;
     }
 
-    std::string_view get_string_view(const char* zContext, const char* zNeedle)
+    string_view get_string_view(const char* zContext, const char* zNeedle)
     {
-        std::string_view rv;
+        string_view rv;
 
         const char* pMatch = nullptr;
         size_t n = strlen(zNeedle);
@@ -3620,11 +3597,11 @@ private:
             {
                 complain_about_missing(zContext, zNeedle);
 
-                std::string_view needle(zNeedle);
+                string_view needle(zNeedle);
 
                 for (const auto& scratch_buffer : m_scratch_buffers)
                 {
-                    if (sv_case_eq(std::string_view(scratch_buffer.data(), scratch_buffer.size()), needle))
+                    if (sv_case_eq(string_view(scratch_buffer.data(), scratch_buffer.size()), needle))
                     {
                         pMatch = scratch_buffer.data();
                         break;
@@ -3642,7 +3619,7 @@ private:
             }
         }
 
-        rv = std::string_view(pMatch, n);
+        rv = string_view(pMatch, n);
 
         return rv;
     }
@@ -3694,10 +3671,12 @@ public:
     uint32_t      m_type_mask;                              // The type mask of the query.
     qc_query_op_t m_operation;                              // The operation in question.
     bool          m_has_clause;                             // Has WHERE or HAVING.
-    vector<char*> m_table_names;                            // Vector of table names used in the query.
-    vector<char*> m_table_fullnames;                        // Vector of qualified table names used in the
+
+    vector<string_view> m_table_names;                      // Vector of table names used in the query.
+    vector<string_view> m_table_fullnames;                  // Vector of qualified table names used in the
                                                             // query.
-    char*                         m_zCreated_table_name;    // The name of a created table.
+
+    string_view                   m_created_table_name;     // The name of a created table.
     bool                          m_is_drop_table;          // Is the query a DROP TABLE.
     vector<char*>                 m_database_names;         // Vector of database names used in the query.
     int                           m_keyword_1;              // The first encountered keyword.
@@ -3716,7 +3695,7 @@ public:
     QC_KILL          m_kill;
     std::string      m_canonical;                           // The canonical version of the statement.
 
-    std::vector<vector<char>> m_scratch_buffers; // Scratch buffers if string not found from canonical.
+    vector<vector<char>> m_scratch_buffers; // Scratch buffers if string not found from canonical.
 };
 
 extern "C"
@@ -4972,12 +4951,12 @@ static void           qc_sqlite_thread_end(void);
 static int32_t        qc_sqlite_parse(GWBUF* query, uint32_t collect, int32_t* result);
 static int32_t        qc_sqlite_get_type_mask(GWBUF* query, uint32_t* typemask);
 static int32_t        qc_sqlite_get_operation(GWBUF* query, int32_t* op);
-static int32_t        qc_sqlite_get_created_table_name(GWBUF* query, std::string_view* name);
+static int32_t        qc_sqlite_get_created_table_name(GWBUF* query, string_view* name);
 static int32_t        qc_sqlite_is_drop_table_query(GWBUF* query, int32_t* is_drop_table);
-static int32_t        qc_sqlite_get_table_names(GWBUF* query, int32_t fullnames, std::vector<std::string_view>* pNames);
+static int32_t        qc_sqlite_get_table_names(GWBUF* query, int32_t fullnames, vector<string_view>* pNames);
 static int32_t        qc_sqlite_get_canonical(GWBUF* query, char** canonical);
 static int32_t        qc_sqlite_query_has_clause(GWBUF* query, int32_t* has_clause);
-static int32_t        qc_sqlite_get_database_names(GWBUF* query, std::vector<std::string_view>* pNames);
+static int32_t        qc_sqlite_get_database_names(GWBUF* query, vector<string_view>* pNames);
 static int32_t        qc_sqlite_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt);
 static void           qc_sqlite_set_server_version(uint64_t version);
 static void           qc_sqlite_get_server_version(uint64_t* version);
@@ -5317,14 +5296,14 @@ static int32_t qc_sqlite_get_operation(GWBUF* pStmt, int32_t* pOp)
     return rv;
 }
 
-static int32_t qc_sqlite_get_created_table_name(GWBUF* pStmt, std::string_view* pCreated_table_name)
+static int32_t qc_sqlite_get_created_table_name(GWBUF* pStmt, string_view* pCreated_table_name)
 {
     QC_TRACE();
     int32_t rv = QC_RESULT_ERROR;
     mxb_assert(this_unit.initialized);
     mxb_assert(this_thread.initialized);
 
-    *pCreated_table_name = std::string_view {};
+    *pCreated_table_name = string_view {};
     QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, QC_COLLECT_TABLES);
 
     if (pInfo)
@@ -5375,7 +5354,7 @@ static int32_t qc_sqlite_is_drop_table_query(GWBUF* pStmt, int32_t* pIs_drop_tab
     return rv;
 }
 
-static int32_t qc_sqlite_get_table_names(GWBUF* pStmt, int32_t fullnames, std::vector<std::string_view>* pTables)
+static int32_t qc_sqlite_get_table_names(GWBUF* pStmt, int32_t fullnames, vector<string_view>* pTables)
 {
     QC_TRACE();
     int32_t rv = QC_RESULT_ERROR;
@@ -5432,7 +5411,7 @@ static int32_t qc_sqlite_query_has_clause(GWBUF* pStmt, int32_t* pHas_clause)
     return rv;
 }
 
-static int32_t qc_sqlite_get_database_names(GWBUF* pStmt, std::vector<std::string_view>* pNames)
+static int32_t qc_sqlite_get_database_names(GWBUF* pStmt, vector<string_view>* pNames)
 {
     QC_TRACE();
     int32_t rv = QC_RESULT_ERROR;
@@ -5488,7 +5467,7 @@ static int32_t qc_sqlite_get_kill_info(GWBUF* pStmt, QC_KILL* pKill)
     return rv;
 }
 
-static int32_t qc_sqlite_get_prepare_name(GWBUF* pStmt, std::string_view* pPrepare_name)
+static int32_t qc_sqlite_get_prepare_name(GWBUF* pStmt, string_view* pPrepare_name)
 {
     QC_TRACE();
     int32_t rv = QC_RESULT_ERROR;
