@@ -23,6 +23,9 @@
 #include <fstream>
 #include <unistd.h>
 
+// Always build the file key manager
+#include "internal/key_manager_file.hh"
+
 namespace
 {
 struct ThisUnit
@@ -31,11 +34,6 @@ struct ThisUnit
 };
 
 ThisUnit this_unit;
-
-// The implementations are in header-only files to keep the builds simpler. This way CMake can add definitions
-// for the parts of the systems we want to build in case some key managers require lots of dependencies.
-#include "internal/key_manager_file.hh"
-
 }
 
 namespace maxscale
@@ -57,7 +55,24 @@ KeyManager::MasterKeyBase::decrypt(std::vector<uint8_t> input)
                               input.data() + iv_len, input.size() - iv_len,
                               output.data(), &out_len);
 
+        if (!ok)
+        {
+            auto err = m_cipher.get_errors();
+
+            if (err.empty())
+            {
+                // If decrypt() fails but no error is stored, we know GCM verification failed.
+                err = "Data verification failure";
+            }
+
+            MXB_ERROR("Decryption failure: %s", err.c_str());
+        }
+
         output.resize(out_len);
+    }
+    else
+    {
+        MXB_ERROR("Cannot decrypt: input too small");
     }
 
     return {ok, output};
@@ -77,6 +92,11 @@ KeyManager::MasterKeyBase::encrypt(std::vector<uint8_t> input)
     bool ok = m_cipher.encrypt(m_key.data(), output.data(),
                                input.data(), input.size(),
                                output.data() + iv_size, &out_len);
+
+    if (!ok)
+    {
+        MXB_ERROR("Encryption failure: %s", m_cipher.get_errors().c_str());
+    }
 
     // The resulting size should be the same as the one we pre-calculated.
     mxb_assert((size_t)out_len == output.size() - iv_size);
@@ -253,6 +273,12 @@ bool KeyManager::load_keys()
     else if (!err.empty())
     {
         MXB_ERROR("Failed to load keys: %s", err.c_str());
+    }
+    else
+    {
+        // No data and no errors, the file did not exist.
+        mxb_assert(access(m_keystore.c_str(), F_OK) != 0 && errno == ENOENT);
+        ok = true;
     }
 
     return ok;
