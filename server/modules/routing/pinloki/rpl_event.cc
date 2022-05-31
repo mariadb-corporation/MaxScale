@@ -687,7 +687,7 @@ std::unique_ptr<mxq::EncryptCtx> create_encryption_ctx(const std::string& key_id
                   "Encrypted binlog '" << filename <<
                   "' found but 'encryption_key_id' is not configured");
     }
-    else if (mxs::KeyManager* key_manager = mxs::key_manager())
+    else if (auto key_manager = mxs::key_manager())
     {
         auto start_encryption = event.start_encryption_event();
         auto [ok, key] = key_manager->key(key_id, start_encryption.key_version);

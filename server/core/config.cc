@@ -649,12 +649,14 @@ config::ParamEnum<mxs::KeyManager::Type> Config::s_key_manager(
         {mxs::KeyManager::Type::FILE, "file"},
         {mxs::KeyManager::Type::KMIP, "kmip"},
     },
-    mxs::KeyManager::Type::NONE
+    mxs::KeyManager::Type::NONE,
+    config::Param::AT_RUNTIME
     );
 
 config::ParamString Config::s_key_manager_options(
     &Config::s_specification, "key_manager_options",
-    "Comma-separated key-value list of options for the key manager", ""
+    "Comma-separated key-value list of options for the key manager", "",
+    config::Param::AT_RUNTIME
     );
 }
 
@@ -2320,6 +2322,14 @@ static bool process_config_context(ConfigSectionMap& context)
         return rval;
     };
     std::sort(objects.begin(), objects.end(), compare);
+
+    // Configure the encryption key manager before any objects are created. This makes sure that it is
+    // correctly configured if any of the objects requires decryption or encryption while it is being created.
+    if (!mxs::KeyManager::configure())
+    {
+        MXB_ERROR("Key manager initialization failed.");
+        return false;
+    }
 
     /**
      * Build the servers first to keep them in configuration file order. As

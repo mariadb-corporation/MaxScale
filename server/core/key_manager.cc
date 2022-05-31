@@ -34,7 +34,8 @@ namespace
 {
 struct ThisUnit
 {
-    std::unique_ptr<mxs::KeyManager> manager;
+    std::mutex                       lock;
+    std::shared_ptr<mxs::KeyManager> manager;
 };
 
 ThisUnit this_unit;
@@ -116,14 +117,26 @@ KeyManager::MasterKeyBase::MasterKeyBase(std::vector<uint8_t> key)
 
 
 // static
-bool KeyManager::init()
+bool KeyManager::configure()
 {
+    std::lock_guard guard(this_unit.lock);
     const auto& cnf = mxs::Config::get();
     Type type = cnf.key_manager;
     mxs::ConfigParameters opts;
 
     if (type == Type::NONE)
     {
+        if (this_unit.manager)
+        {
+            MXB_ERROR("The key manager cannot be disabled at runtime once enabled.");
+        }
+
+        return !this_unit.manager;
+    }
+    else if (this_unit.manager && this_unit.manager->m_type == type
+             && this_unit.manager->m_options == cnf.key_manager_options)
+    {
+        // No change in key manager type or options.
         return true;
     }
 
@@ -173,9 +186,26 @@ bool KeyManager::init()
 
     if (master_key)
     {
-        rv.reset(new KeyManager(std::move(master_key), std::move(keystore)));
+        rv.reset(new KeyManager(type, cnf.key_manager_options, std::move(master_key), std::move(keystore)));
 
-        if (rv->load_keys())
+        if (this_unit.manager)
+        {
+            // Copy the current keys that are in memory to the new key manager and re-encrypt them with
+            // the new key.
+
+            rv->m_keys = this_unit.manager->m_keys;
+
+            // NOTE: This is not crash-safe and it is possible that the configuration stored in the runtime
+            // files and the key used to encrypt the file are different if a crash happens before save_keys()
+            // has re-encrypted the keys.
+            if (rv->save_keys())
+            {
+                ok = true;
+                this_unit.manager = std::move(rv);
+                MXB_NOTICE("Keystore successfully encrypted with new configuration");
+            }
+        }
+        else if (rv->load_keys())
         {
             ok = true;
             this_unit.manager = std::move(rv);
@@ -185,14 +215,18 @@ bool KeyManager::init()
     return ok;
 }
 
-KeyManager* key_manager()
+std::shared_ptr<KeyManager> key_manager()
 {
-    return this_unit.manager.get();
+    std::lock_guard guard(this_unit.lock);
+    return this_unit.manager;
 }
 
-KeyManager::KeyManager(std::unique_ptr<MasterKey> master_key, std::string keystore)
+KeyManager::KeyManager(Type type, std::string options, std::unique_ptr<MasterKey> master_key,
+                       std::string keystore)
     : m_master_key(std::move(master_key))
     , m_keystore(std::move(keystore))
+    , m_type(type)
+    , m_options(std::move(options))
 {
 }
 

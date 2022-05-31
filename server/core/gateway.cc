@@ -2050,13 +2050,6 @@ int main(int argc, char** argv)
         return rc;
     }
 
-    if (!mxs::KeyManager::init())
-    {
-        log_startup_error("Key manager initialization failed.");
-        rc = MAXSCALE_SHUTDOWN;
-        return rc;
-    }
-
     /** Load the admin users */
     rest_users_init();
 

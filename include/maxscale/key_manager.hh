@@ -72,11 +72,11 @@ public:
     };
 
     /**
-     * Initialize the key manager
+     * Configure the key manager
      *
-     * @return True if the key manager was successful initialized
+     * @return True if the key manager was successful configured
      */
-    static bool init();
+    static bool configure();
 
     /**
      * Get the latest version of this key
@@ -112,7 +112,7 @@ private:
     // Keys mapped to their versions
     using KeyMap = std::map<uint32_t, std::vector<uint8_t>>;
 
-    KeyManager(std::unique_ptr<MasterKey> master_key, std::string keystore);
+    KeyManager(Type type, std::string options, std::unique_ptr<MasterKey> master_key, std::string keystore);
     bool load_keys();
     bool save_keys();
     bool rotate_key(KeyMap& keymap);
@@ -120,13 +120,15 @@ private:
     std::map<std::string, KeyMap> m_keys;       // Keymaps mapped to key IDs
     std::unique_ptr<MasterKey>    m_master_key; // MasterKey implementation
     std::string                   m_keystore;   // Path to the keystore file
+    Type                          m_type;       // Key manager type
+    std::string                   m_options;    // The raw key manager options
     std::mutex                    m_lock;       // Protects m_keys
 };
 
 /**
  * Get the global key manager
  *
- * @return The global key manager if one is configured, otherwise nullptr.
+ * @return The global key manager if one is configured, otherwise an empty shared_ptr.
  */
-KeyManager* key_manager();
+std::shared_ptr<KeyManager> key_manager();
 }
