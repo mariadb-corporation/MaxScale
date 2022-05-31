@@ -266,19 +266,10 @@ public:
 
         int32_t size = sizeof(*this);
 
-        auto add_string_size = [&size](const char* z) {
-            size += strlen(z) + 1;
-        };
-
         size += m_table_names.capacity() * sizeof(string_view);
         size += m_table_fullnames.capacity() * sizeof(string_view);
 
         size += m_database_names.capacity() * sizeof(char*);
-
-        if (m_zPrepare_name)
-        {
-            add_string_size(m_zPrepare_name);
-        }
 
         if (m_pPreparable_stmt)
         {
@@ -472,14 +463,7 @@ public:
 
         if (is_valid())
         {
-            if (m_zPrepare_name)
-            {
-                *pPrepare_name = m_zPrepare_name;
-            }
-            else
-            {
-                *pPrepare_name = string_view {};
-            }
+            *pPrepare_name = m_prepare_name;
 
             rv = true;
         }
@@ -2326,19 +2310,14 @@ public:
 
         // If information is collected in several passes, then we may
         // this information already.
-        if (!m_zPrepare_name)
+        if (m_prepare_name.empty())
         {
-            m_zPrepare_name = (char*)MXB_MALLOC(pName->n + 1);
-            if (m_zPrepare_name)
-            {
-                memcpy(m_zPrepare_name, pName->z, pName->n);
-                m_zPrepare_name[pName->n] = 0;
-            }
+            m_prepare_name = get_string_view("prepare_name", string(pName->z, pName->n).c_str());
         }
         else
         {
             mxb_assert(m_collect != m_collected);
-            mxb_assert(strncmp(m_zPrepare_name, pName->z, pName->n) == 0);
+            mxb_assert(sv_case_eq(m_prepare_name, string_view(pName->z, pName->n)));
         }
     }
 
@@ -2407,19 +2386,14 @@ public:
 
         // If information is collected in several passes, then we may
         // this information already.
-        if (!m_zPrepare_name)
+        if (m_prepare_name.empty())
         {
-            m_zPrepare_name = (char*)MXB_MALLOC(pName->n + 1);
-            if (m_zPrepare_name)
-            {
-                memcpy(m_zPrepare_name, pName->z, pName->n);
-                m_zPrepare_name[pName->n] = 0;
-            }
+            m_prepare_name = get_string_view("prepare_name", string(pName->z, pName->n).c_str());
         }
         else
         {
             mxb_assert(m_collect != m_collected);
-            mxb_assert(strncmp(m_zPrepare_name, pName->z, pName->n) == 0);
+            mxb_assert(sv_case_eq(m_prepare_name, string_view(pName->z, pName->n)));
         }
     }
 
@@ -2943,14 +2917,9 @@ public:
 
         // If information is collected in several passes, then we may
         // this information already.
-        if (!m_zPrepare_name)
+        if (m_prepare_name.empty())
         {
-            m_zPrepare_name = (char*)MXB_MALLOC(pName->n + 1);
-            if (m_zPrepare_name)
-            {
-                memcpy(m_zPrepare_name, pName->z, pName->n);
-                m_zPrepare_name[pName->n] = 0;
-            }
+            m_prepare_name = get_string_view("prepare_name", string(pName->z, pName->n).c_str());
 
             if (pStmt->op == TK_STRING)
             {
@@ -2982,7 +2951,7 @@ public:
         else
         {
             mxb_assert(m_collect != m_collected);
-            mxb_assert(strncmp(m_zPrepare_name, pName->z, pName->n) == 0);
+            mxb_assert(sv_case_eq(m_prepare_name, string_view(pName->z, pName->n)));
         }
 
         exposed_sqlite3ExprDelete(pParse->db, pStmt);
@@ -3426,11 +3395,8 @@ private:
         , m_operation(QUERY_OP_UNDEFINED)
         , m_has_clause(false)
         , m_is_drop_table(false)
-        , m_keyword_1(0)
-        ,               // Sqlite3 starts numbering tokens from 1, so 0 means
-        m_keyword_2(0)
-        ,               // that we have not seen a keyword.
-        m_zPrepare_name(NULL)
+        , m_keyword_1(0) // Sqlite3 starts numbering tokens from 1, so 0 means
+        , m_keyword_2(0) // that we have not seen a keyword.
         , m_pPreparable_stmt(NULL)
         , m_sql_mode(this_thread.sql_mode)
         , m_pFunction_name_mappings(this_thread.pFunction_name_mappings)
@@ -3440,8 +3406,6 @@ private:
     ~QcSqliteInfo()
     {
         mxb_assert(m_refs == 0);
-
-        free(m_zPrepare_name);
         gwbuf_free(m_pPreparable_stmt);
     }
 
@@ -3678,7 +3642,7 @@ public:
     vector<string_view>           m_database_names;         // Vector of database names used in the query.
     int                           m_keyword_1;              // The first encountered keyword.
     int                           m_keyword_2;              // The second encountered keyword.
-    char*                         m_zPrepare_name;          // The name of a prepared statement.
+    string_view                   m_prepare_name;           // The name of a prepared statement.
     GWBUF*                        m_pPreparable_stmt;       // The preparable statement.
     vector<QC_FIELD_INFO>         m_field_infos;            // Vector of fields used by the statement.
     vector<QC_FUNCTION_INFO>      m_function_infos;         // Vector of functions used by the statement.
