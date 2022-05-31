@@ -260,16 +260,11 @@ public:
         }
     }
 
-    int32_t calculate_size() const
+    void calculate_size()
     {
         using std::for_each;
 
         int32_t size = sizeof(*this);
-
-        size += m_table_names.capacity() * sizeof(string_view);
-        size += m_table_fullnames.capacity() * sizeof(string_view);
-
-        size += m_database_names.capacity() * sizeof(char*);
 
         if (m_pPreparable_stmt)
         {
@@ -277,31 +272,46 @@ public:
             size += gwbuf_length(m_pPreparable_stmt);
         }
 
+        // m_canonical not to be shrink_to_fit(). Not needed and should actaully be
+        // shrunk, all string_views would be invalidated.
+        size += m_canonical.size();
+
+        m_table_names.shrink_to_fit();
+        size += m_table_names.capacity() * sizeof(string_view);
+
+        m_table_fullnames.shrink_to_fit();
+        size += m_table_fullnames.capacity() * sizeof(string_view);
+
+        m_field_infos.shrink_to_fit();
         size += m_field_infos.capacity() * sizeof(QC_FIELD_INFO);
 
+        m_function_infos.shrink_to_fit();
         size += m_function_infos.capacity() * sizeof(QC_FUNCTION_INFO);
         for_each(m_function_infos.begin(), m_function_infos.end(), [&size](const QC_FUNCTION_INFO& info) {
                 size += info.n_fields * sizeof(QC_FIELD_INFO);
             });
 
-        using V = vector<QC_FIELD_INFO>;
-        size += m_function_field_usage.capacity() * sizeof(V);
-        for_each(m_function_field_usage.begin(), m_function_field_usage.end(), [&size](const V& v) {
+        using VQFI = vector<QC_FIELD_INFO>;
+        m_function_field_usage.shrink_to_fit();
+        size += m_function_field_usage.capacity() * sizeof(VQFI);
+        for_each(m_function_field_usage.begin(), m_function_field_usage.end(), [&size](VQFI& v) {
+                v.shrink_to_fit();
                 size += v.capacity() * sizeof(QC_FIELD_INFO);
-                // Data in m_function_field_usage resides in m_function_infos, so it has already
-                // been accounted for.
             });
 
-        return size;
+        using VC = vector<char>;
+        m_scratch_buffers.shrink_to_fit();
+        size += m_scratch_buffers.capacity() * sizeof(VC);
+        for_each(m_scratch_buffers.begin(), m_scratch_buffers.end(), [&size](VC& v) {
+                v.shrink_to_fit();
+                size += v.capacity() * sizeof(char);
+            });
+
+        m_size = size;
     }
 
     int32_t size() const
     {
-        if (m_size == 0)
-        {
-            m_size = calculate_size();
-        }
-
         return m_size;
     }
 
@@ -3389,17 +3399,17 @@ private:
         , m_status_cap(QC_QUERY_PARSED)
         , m_collect(cllct)
         , m_collected(0)
+        , m_sql_mode(this_thread.sql_mode)
+        , m_pFunction_name_mappings(this_thread.pFunction_name_mappings)
+        , m_keyword_1(0) // Sqlite3 starts numbering tokens from 1, so 0 means
+        , m_keyword_2(0) // that we have not seen a keyword.
         , m_pQuery(NULL)
         , m_nQuery(0)
         , m_type_mask(QUERY_TYPE_UNKNOWN)
         , m_operation(QUERY_OP_UNDEFINED)
         , m_has_clause(false)
         , m_is_drop_table(false)
-        , m_keyword_1(0) // Sqlite3 starts numbering tokens from 1, so 0 means
-        , m_keyword_2(0) // that we have not seen a keyword.
         , m_pPreparable_stmt(NULL)
-        , m_sql_mode(this_thread.sql_mode)
-        , m_pFunction_name_mappings(this_thread.pFunction_name_mappings)
     {
     }
 
@@ -3620,43 +3630,37 @@ private:
 
 public:
     // TODO: Make these private once everything's been updated.
-    mutable int32_t   m_size;                   // The total amount of memory used.
-    int32_t           m_refs;                   // The reference count.
-    qc_parse_result_t m_status;                 // The validity of the information in this structure.
-    qc_parse_result_t m_status_cap;             // The cap on 'm_status', it won't be set to higher than this.
-    uint32_t          m_collect;                // What information should be collected.
-    uint32_t          m_collected;              // What information has been collected.
-    const char*       m_pQuery;                 // The query passed to sqlite.
-    size_t            m_nQuery;                 // The length of the query.
-
-    uint32_t      m_type_mask;                              // The type mask of the query.
-    qc_query_op_t m_operation;                              // The operation in question.
-    bool          m_has_clause;                             // Has WHERE or HAVING.
-
-    vector<string_view> m_table_names;                      // Vector of table names used in the query.
-    vector<string_view> m_table_fullnames;                  // Vector of qualified table names used in the
-                                                            // query.
-
-    string_view                   m_created_table_name;     // The name of a created table.
-    bool                          m_is_drop_table;          // Is the query a DROP TABLE.
-    vector<string_view>           m_database_names;         // Vector of database names used in the query.
-    int                           m_keyword_1;              // The first encountered keyword.
-    int                           m_keyword_2;              // The second encountered keyword.
-    string_view                   m_prepare_name;           // The name of a prepared statement.
-    GWBUF*                        m_pPreparable_stmt;       // The preparable statement.
-    vector<QC_FIELD_INFO>         m_field_infos;            // Vector of fields used by the statement.
-    vector<QC_FUNCTION_INFO>      m_function_infos;         // Vector of functions used by the statement.
-    vector<vector<QC_FIELD_INFO>> m_function_field_usage;   // Vector of vector fields used by functions
-                                                            // of the statement. Data referred to from
-                                                            // m_function_infos
-    size_t           m_function_infos_len;                  // The used entries in function_infos.
-    size_t           m_function_infos_capacity;             // The capacity of the function_infos array.
-    qc_sql_mode_t    m_sql_mode;                            // The current sql_mode.
-    QC_NAME_MAPPING* m_pFunction_name_mappings;             // How function names should be mapped.
-    QC_KILL          m_kill;
-    string           m_canonical;                           // The canonical version of the statement.
-
-    vector<vector<char>> m_scratch_buffers; // Scratch buffers if string not found from canonical.
+    mutable int32_t               m_size;                    // The total amount of memory used.
+    int32_t                       m_refs;                    // The reference count.
+    qc_parse_result_t             m_status;                  // The validity of the information.
+    qc_parse_result_t             m_status_cap;              // The cap on 'm_status'.
+    uint32_t                      m_collect;                 // What information should be collected.
+    uint32_t                      m_collected;               // What information has been collected.
+    qc_sql_mode_t                 m_sql_mode;                // The current sql_mode.
+    QC_NAME_MAPPING*              m_pFunction_name_mappings; // How function names should be mapped.
+    int                           m_keyword_1;               // The first encountered keyword.
+    int                           m_keyword_2;               // The second encountered keyword.
+    const char*                   m_pQuery;                  // The query passed to sqlite.
+    size_t                        m_nQuery;                  // The length of the query.
+    uint32_t                      m_type_mask;               // The type mask of the query.
+    qc_query_op_t                 m_operation;               // The operation in question.
+    bool                          m_has_clause;              // Has WHERE or HAVING.
+    string_view                   m_created_table_name;      // The name of a created table.
+    bool                          m_is_drop_table;           // Is the query a DROP TABLE.
+    string_view                   m_prepare_name;            // The name of a prepared statement.
+    GWBUF*                        m_pPreparable_stmt;        // The preparable statement.
+    QC_KILL                       m_kill;
+    string                        m_canonical;               // The canonical version of the statement.
+    vector<string_view>           m_database_names;          // Vector of database names used in the query.
+    vector<string_view>           m_table_names;             // Vector of table names used in the query.
+    vector<string_view>           m_table_fullnames;         // Vector of qualified table names used in the
+                                                             // query.
+    vector<QC_FIELD_INFO>         m_field_infos;             // Vector of fields used by the statement.
+    vector<QC_FUNCTION_INFO>      m_function_infos;          // Vector of functions used by the statement.
+    vector<vector<QC_FIELD_INFO>> m_function_field_usage;    // Vector of vector fields used by functions
+                                                             // of the statement. Data referred to from
+                                                             // m_function_infos
+    vector<vector<char>>          m_scratch_buffers;         // Buffers if string not found from canonical.
 };
 
 extern "C"
@@ -3934,9 +3938,6 @@ static bool parse_query(GWBUF* query, uint32_t collect)
 
                     // And turn off logging. Any parsing issues were logged on the first round.
                     suppress_logging = true;
-
-                    // And reset the size so that it will be recalculated.
-                    pInfo->m_size = 0;
                 }
                 else
                 {
@@ -3971,6 +3972,8 @@ static bool parse_query(GWBUF* query, uint32_t collect)
                     }
 
                     pInfo->m_collected = pInfo->m_collect;
+
+                    pInfo->calculate_size();
 
                     parsed = true;
 
