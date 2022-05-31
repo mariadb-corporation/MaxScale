@@ -143,14 +143,14 @@ public:
         }
     }
 
-    QC_STMT_INFO* peek(const std::string& canonical_stmt) const
+    QC_STMT_INFO* peek(std::string_view canonical_stmt) const
     {
         auto i = m_infos.find(canonical_stmt);
 
         return i != m_infos.end() ? i->second.pInfo : nullptr;
     }
 
-    QC_STMT_INFO* get(const std::string& canonical_stmt)
+    QC_STMT_INFO* get(std::string_view canonical_stmt)
     {
         QC_STMT_INFO* pInfo = nullptr;
         qc_sql_mode_t sql_mode = qc_get_sql_mode();
@@ -187,7 +187,7 @@ public:
         return pInfo;
     }
 
-    void insert(const std::string& canonical_stmt, QC_STMT_INFO* pInfo)
+    void insert(std::string_view canonical_stmt, QC_STMT_INFO* pInfo)
     {
         mxb_assert(peek(canonical_stmt) == nullptr);
         mxb_assert(this_unit.classifier);
@@ -205,7 +205,7 @@ public:
          */
         cache_max_size *= 0.65;
 
-        int64_t size = entry_size(canonical_stmt, pInfo);
+        int64_t size = entry_size(pInfo);
 
         if (size < max_entry_size && size <= cache_max_size)
         {
@@ -235,14 +235,14 @@ public:
 
     void get_stats(QC_CACHE_STATS* pStats)
     {
-        * pStats = m_stats;
+        *pStats = m_stats;
     }
 
     void get_state(std::map<std::string, QC_CACHE_ENTRY>& state) const
     {
         for (const auto& info : m_infos)
         {
-            const std::string& stmt = info.first;
+            std::string stmt = std::string(info.first);
             const Entry& entry = info.second;
 
             auto it = state.find(stmt);
@@ -289,19 +289,19 @@ private:
         int64_t       hits;
     };
 
-    typedef std::unordered_map<std::string, Entry> InfosByStmt;
+    typedef std::unordered_map<std::string_view, Entry> InfosByStmt;
 
-    int64_t entry_size(const std::string& canonical, const QC_STMT_INFO* pInfo)
+    int64_t entry_size(const QC_STMT_INFO* pInfo)
     {
         const int64_t map_entry_overhead = 4 * sizeof(void *);
-        const int64_t constant_overhead = sizeof(std::string) + sizeof(Entry) + map_entry_overhead;
+        const int64_t constant_overhead = sizeof(std::string_view) + sizeof(Entry) + map_entry_overhead;
 
-        return constant_overhead + canonical.size() + this_unit.classifier->qc_info_size(pInfo);
+        return constant_overhead + this_unit.classifier->qc_info_size(pInfo);
     }
 
     int64_t entry_size(const InfosByStmt::value_type& entry)
     {
-        return entry_size(entry.first, entry.second.pInfo);
+        return entry_size(entry.second.pInfo);
     }
 
     void erase(InfosByStmt::iterator& i)
@@ -318,7 +318,7 @@ private:
         ++m_stats.evictions;
     }
 
-    bool erase(const std::string& canonical_stmt)
+    bool erase(std::string_view canonical_stmt)
     {
         bool erased = false;
 
@@ -418,7 +418,7 @@ public:
 
         if (use_cached_result() && has_not_been_parsed(m_pStmt))
         {
-            m_canonical = m_pStmt->get_canonical();
+            m_canonical = m_pStmt->get_canonical(); // Not from the QC, but from GWBUF.
 
             if (mariadb::is_com_prepare(*pStmt))
             {
@@ -445,7 +445,13 @@ public:
         {   // Cache for the first time
             auto pInfo = static_cast<QC_STMT_INFO*>(m_pStmt->get_classifier_data());
             mxb_assert(pInfo);
-            this_thread.pInfo_cache->insert(m_canonical, pInfo);
+
+            // Now from QC and this will have the trailing ":P" in case the GWBUF
+            // contained a COM_STMT_PREPARE.
+            std::string_view canonical = this_unit.classifier->qc_info_get_canonical(pInfo);
+            mxb_assert(m_canonical == canonical);
+
+            this_thread.pInfo_cache->insert(canonical, pInfo);
         }
         else if (!exclude)
         {   // The size might have changed

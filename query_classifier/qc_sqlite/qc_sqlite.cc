@@ -3969,6 +3969,8 @@ static bool parse_query(GWBUF* query, uint32_t collect)
                             // containing the same statement have a different canonical string.
                             pInfo->m_canonical.append(":P");
                         }
+
+                        pInfo->m_canonical.shrink_to_fit();
                     }
                 }
 
