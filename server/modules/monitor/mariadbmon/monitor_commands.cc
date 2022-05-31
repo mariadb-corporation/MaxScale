@@ -45,6 +45,9 @@ const char cs_set_readonly_cmd[] = "cs-set-readonly";
 const char cs_set_readwrite_cmd[] = "cs-set-readwrite";
 const char rebuild_server_cmd[] = "rebuild-server";
 
+// Assume simple commands complete in a reasonable time.
+const std::chrono::milliseconds ssh_base_timeout = 5s;
+
 bool manual_switchover(ExecMode mode, const MODULECMD_ARG* args, json_t** error_out);
 bool manual_failover(ExecMode mode, const MODULECMD_ARG* args, json_t** output);
 bool manual_rejoin(ExecMode mode, const MODULECMD_ARG* args, json_t** output);
@@ -53,6 +56,8 @@ bool release_locks(ExecMode mode, const MODULECMD_ARG* args, json_t** output);
 
 std::tuple<MariaDBMonitor*, string, string> read_args(const MODULECMD_ARG& args);
 std::tuple<bool, std::chrono::seconds>      get_timeout(const string& timeout_str, json_t** output);
+
+std::string check_rebuild_tools(MariaDBServer* server, ssh::Session& ssh);
 
 /**
  * Command handlers. These are called by the rest-api.
@@ -1127,7 +1132,8 @@ MariaDBMonitor::manual_rebuild_server(SERVER* target_srv, SERVER* source_srv)
         // Ok so far. Initiate SSH-sessions to both servers.
         auto init_ssh = [this, &rval](MariaDBServer* server) {
             auto [ses, errmsg_con] = ssh_util::init_ssh_session(server->server->address(),
-                                                                m_settings.ssh_user, m_settings.ssh_keyfile);
+                                                                m_settings.ssh_user, m_settings.ssh_keyfile,
+                                                                ssh_base_timeout);
             if (!ses)
             {
                 PRINT_MXS_JSON_ERROR(&rval.output, "SSH connection to %s failed. %s",
@@ -1141,7 +1147,27 @@ MariaDBMonitor::manual_rebuild_server(SERVER* target_srv, SERVER* source_srv)
 
         if (target_ses && source_ses)
         {
-            rval.success = true;
+            bool have_tools = true;
+
+            // Check installed tools.
+            auto target_tools = check_rebuild_tools(target, *target_ses);
+            auto source_tools = check_rebuild_tools(source, *source_ses);
+
+            if (!target_tools.empty())
+            {
+                have_tools = false;
+                rval.output = mxs_json_error_append(rval.output, "%s", target_tools.c_str());
+            }
+            if (!source_tools.empty() != 0)
+            {
+                have_tools = false;
+                rval.output = mxs_json_error_append(rval.output, "%s", source_tools.c_str());
+            }
+
+            if (have_tools)
+            {
+                rval.success = true;
+            }
         }
     }
 
@@ -1193,4 +1219,55 @@ bool MariaDBMonitor::rebuild_check_preconds(MariaDBServer* target, MariaDBServer
     }
 
     return target_ok && source_ok && settings_ok;
+}
+
+namespace
+{
+std::string check_rebuild_tools(MariaDBServer* server, ssh::Session& ssh)
+{
+    const char socat_cmd[] = "socat -V";
+    const char pigz_cmd[] = "pigz -V";
+    const char mbu_cmd[] = "mariabackup -v";
+
+    auto socat_res = ssh_util::run_cmd(ssh, socat_cmd, ssh_base_timeout);
+    auto pigz_res = ssh_util::run_cmd(ssh, pigz_cmd, ssh_base_timeout);
+    auto mbu_res = ssh_util::run_cmd(ssh, mbu_cmd, ssh_base_timeout);
+
+    string rval;
+    if (socat_res.rc != 0 || pigz_res.rc != 0 || mbu_res.rc != 0)
+    {
+        // At least one is missing.
+        auto append_error = [&rval, server](const ssh_util::CmdResult& res, const char* tool,
+                                            const char* cmd){
+            if (res.rc != 0)
+            {
+                string errmsg = mxb::string_printf("'%s' lacks '%s', which is required for server rebuild. "
+                                                   "Command '%s' failed with error %i",
+                                                   server->name(), tool, cmd, res.rc);
+
+                if (res.error_output.empty())
+                {
+                    errmsg.append(".");
+                }
+                else
+                {
+                    errmsg.append(": '").append(res.error_output).append("'.");
+                }
+                MXB_ERROR("%s", errmsg.c_str());
+
+                // Append the error message to the total message, as that message will be printed to json.
+                if (!rval.empty())
+                {
+                    rval.append(" ");
+                }
+                rval.append(errmsg);
+            }
+        };
+        append_error(socat_res, "socat", socat_cmd);
+        append_error(pigz_res, "pigz", pigz_cmd);
+        append_error(mbu_res, "mariabackup", mbu_cmd);
+    }
+
+    return rval;
+}
 }

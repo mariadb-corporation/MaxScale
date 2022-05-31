@@ -47,7 +47,8 @@ namespace ssh_util
 {
 
 std::tuple<SSession, std::string>
-init_ssh_session(const string& host, const string& user, const string& keyfile)
+init_ssh_session(const string& host, const string& user, const string& keyfile,
+                 std::chrono::milliseconds timeout)
 {
     auto [privkey, key_errmsg] = read_private_key(keyfile);
     if (!privkey)
@@ -65,6 +66,12 @@ init_ssh_session(const string& host, const string& user, const string& keyfile)
         auto ses = std::make_unique<ssh::Session>();
         ses->setOption(SSH_OPTIONS_HOST, host.c_str());
         ses->setOption(SSH_OPTIONS_USER, user.c_str());
+        long timeout_ms = timeout.count();
+        long timeout_s = timeout_ms / 1000;
+        long timeout_us = 1000 * (timeout_ms % 1000);
+        ses->setOption(SSH_OPTIONS_TIMEOUT, &timeout_s);
+        ses->setOption(SSH_OPTIONS_TIMEOUT_USEC, &timeout_us);
+
         ses->connect();
 
         int pubkey_res = ses->isServerKnown();

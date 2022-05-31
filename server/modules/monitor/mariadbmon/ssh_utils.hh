@@ -34,10 +34,12 @@ using SSession = std::shared_ptr<ssh::Session>;
  * @param host Host address
  * @param user Username
  * @param keyfile Private key file
+ * @param timeout Connection timeout
  * @return If success, the session. On error, an error message.
  */
 std::tuple<SSession, std::string>
-init_ssh_session(const std::string& host, const std::string& user, const std::string& keyfile);
+init_ssh_session(const std::string& host, const std::string& user, const std::string& keyfile,
+                 std::chrono::milliseconds timeout);
 
 struct CmdResult
 {
