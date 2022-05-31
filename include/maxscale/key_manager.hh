@@ -102,7 +102,7 @@ public:
     /**
      * Rotate an encryption key
      *
-     * @param id The identifier for the key to be rotated
+     * @param id The identifier for the key to be rotated. If the key is empty, all keys are rotated.
      *
      * @return True if key rotation was successful
      */
@@ -116,6 +116,7 @@ private:
     bool load_keys();
     bool save_keys();
     bool rotate_key(KeyMap& keymap);
+    bool rotate_all_keys();
 
     std::map<std::string, KeyMap> m_keys;       // Keymaps mapped to key IDs
     std::unique_ptr<MasterKey>    m_master_key; // MasterKey implementation

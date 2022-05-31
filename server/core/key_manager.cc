@@ -39,6 +39,13 @@ struct ThisUnit
 };
 
 ThisUnit this_unit;
+
+std::vector<uint8_t> new_key()
+{
+    // Currently hard-coded to always generate 256-bit keys. The AES mode itself doesn't matter in this case
+    // as we just want a key of a certain length.
+    return mxb::Cipher(mxb::Cipher::AES_CBC, 256).new_key();
+}
 }
 
 namespace maxscale
@@ -263,18 +270,56 @@ bool KeyManager::rotate_key(KeyMap& keymap)
 {
     bool ok = false;
 
-    // Currently hard-coded to always generate 256-bit keys. The AES mode itself doesn't matter in this case
-    // as we just want a key of a certain length.
-    // TODO: Make new_key() a static function?
-    auto key = mxb::Cipher(mxb::Cipher::AES_CBC, 256).new_key();
-
-    if (!key.empty())
+    if (auto key = new_key(); !key.empty())
     {
         uint32_t version = keymap.empty() ? 0 : keymap.rbegin()->first;
-        MXB_AT_DEBUG(auto inserted = ) keymap.emplace(version + 1, std::move(key));
+        auto inserted = keymap.emplace(version + 1, std::move(key));
         mxb_assert(inserted.second);
 
-        ok = save_keys();
+        if (save_keys())
+        {
+            ok = true;
+        }
+        else
+        {
+            // Failed to save the key, erase it from the keymap.
+            keymap.erase(inserted.first);
+        }
+    }
+
+    return ok;
+}
+
+bool KeyManager::rotate_all_keys()
+{
+    bool ok = true;
+    auto new_keys = m_keys;
+
+    for (auto& [id, keymap] : new_keys)
+    {
+        if (auto key = new_key(); !key.empty())
+        {
+            uint32_t version = keymap.empty() ? 0 : keymap.rbegin()->first;
+            MXB_AT_DEBUG(auto inserted = ) keymap.emplace(version + 1, std::move(key));
+            mxb_assert(inserted.second);
+        }
+        else
+        {
+            ok = false;
+            break;
+        }
+    }
+
+    if (ok)
+    {
+        auto old_keys = std::move(m_keys);
+        m_keys = std::move(new_keys);
+
+        if (!save_keys())
+        {
+            m_keys = std::move(old_keys);
+            ok = false;
+        }
     }
 
     return ok;
@@ -283,7 +328,7 @@ bool KeyManager::rotate_key(KeyMap& keymap)
 bool KeyManager::rotate(const std::string& id)
 {
     std::lock_guard guard(m_lock);
-    return rotate_key(m_keys[id]);
+    return id.empty() ? rotate_all_keys() : rotate_key(m_keys[id]);
 }
 
 bool KeyManager::load_keys()
