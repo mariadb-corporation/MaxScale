@@ -58,6 +58,7 @@ std::tuple<MariaDBMonitor*, string, string> read_args(const MODULECMD_ARG& args)
 std::tuple<bool, std::chrono::seconds>      get_timeout(const string& timeout_str, json_t** output);
 
 std::string check_rebuild_tools(MariaDBServer* server, ssh::Session& ssh);
+bool        check_free_listen_port(ssh::Session& ses, MariaDBServer* server, int port, json_t** error_out);
 
 /**
  * Command handlers. These are called by the rest-api.
@@ -1166,7 +1167,11 @@ MariaDBMonitor::manual_rebuild_server(SERVER* target_srv, SERVER* source_srv)
 
             if (have_tools)
             {
-                rval.success = true;
+                int port = 4444;    // TODO: configurable
+                if (check_free_listen_port(*source_ses, source, port, &rval.output))
+                {
+                    rval.success = true;
+                }
             }
         }
     }
@@ -1269,5 +1274,80 @@ std::string check_rebuild_tools(MariaDBServer* server, ssh::Session& ssh)
     }
 
     return rval;
+}
+
+bool check_free_listen_port(ssh::Session& ses, MariaDBServer* server, int port, json_t** error_out)
+{
+    bool success = true;
+
+    auto get_port_pids = [&success, &ses, server, port, error_out]() {
+        std::vector<int> pids;
+        // lsof needs to be ran as sudo to see ports, even from the same user. This part could be made
+        // optional if users are not willing to give MaxScale sudo-privs.
+        auto port_pid_cmd = mxb::string_printf("sudo lsof -i:%i | tr -s ' ' | cut --fields=2 --delimiter=' ' "
+                                               "| tail -n+2", port);
+        auto port_info = ssh_util::run_cmd(ses, port_pid_cmd, ssh_base_timeout);
+        if (port_info.rc == 0)
+        {
+            if (!port_info.output.empty())
+            {
+                auto lines = mxb::strtok(port_info.output, "\n");
+                for (auto& line : lines)
+                {
+                    int pid = 0;
+                    if (mxb::get_int(line.c_str(), &pid))
+                    {
+                        pids.push_back(pid);
+                    }
+                    else
+                    {
+                        PRINT_MXS_JSON_ERROR(error_out, "Could not parse pid from text '%s'.", line.c_str());
+                        success = false;
+                    }
+                }
+            }
+        }
+        else
+        {
+            PRINT_MXS_JSON_ERROR(error_out, "Could not fetch pid of process using port %i on %s. "
+                                            "Command '%s' failed. %s", port, server->name(),
+                                 port_pid_cmd.c_str(), port_info.error_output.c_str());
+            success = false;
+        }
+        return pids;
+    };
+
+    auto pids = get_port_pids();
+    if (success)
+    {
+        for (auto pid : pids)
+        {
+            MXB_WARNING("Port %i on %s is used by process %i, trying to kill it.", port, server->name(), pid);
+            auto kill_cmd = mxb::string_printf("kill -s SIGKILL %i", pid);
+            auto kill_res = ssh_util::run_cmd(ses, kill_cmd, ssh_base_timeout);
+            if (kill_res.rc != 0)
+            {
+                PRINT_MXS_JSON_ERROR(error_out, "Failed to kill process %i on %s. Command '%s' failed. %s",
+                                     pid, server->name(), kill_cmd.c_str(), kill_res.error_output.c_str());
+                success = false;
+            }
+        }
+
+        if (success && !pids.empty())
+        {
+            // Sleep a little in case the kill takes a while to take effect. Then check the port again.
+            sleep(1);
+            auto pids2 = get_port_pids();
+            if (success && !pids2.empty())
+            {
+                PRINT_MXS_JSON_ERROR(error_out, "Port %i is still in use on %s. Cannot use it as rebuild "
+                                                "source.",
+                                     port, server->name());
+                success = false;
+            }
+        }
+    }
+
+    return success;
 }
 }
