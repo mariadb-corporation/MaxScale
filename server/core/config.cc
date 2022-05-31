@@ -119,7 +119,6 @@ constexpr char CN_SERVER[] = "server";
 
 static uint64_t DEFAULT_QC_CACHE_SIZE = get_total_memory() * 0.15;
 static int64_t DEFAULT_MAX_READ_AMOUNT = 0;
-
 }
 
 namespace maxscale
@@ -239,7 +238,7 @@ Config::ParamAutoTune Config::s_auto_tune(
     CN_AUTO_TUNE,
     "Specifies whether a MaxScale parameter whose value depends on a specific global server "
     "variable, should automatically be updated to match the variable's current value.",
-    ",", // Delimiter
+    ",",    // Delimiter
     {},
     config::Param::Modifiable::AT_STARTUP);
 
@@ -741,56 +740,56 @@ Config::Config(int argc, char** argv)
     , argv(argv, argv + argc)
     , log_debug(this, &s_log_debug, [](bool enable) {
 #ifndef SS_DEBUG
-                    MXB_WARNING("The 'log_debug' option has no effect in release mode.");
+    MXB_WARNING("The 'log_debug' option has no effect in release mode.");
 #endif
-                    mxb_log_set_priority_enabled(LOG_DEBUG, enable);
-                }),
+    mxb_log_set_priority_enabled(LOG_DEBUG, enable);
+}),
     log_info(this, &s_log_info, [](bool enable) {
-                 mxb_log_set_priority_enabled(LOG_INFO, enable);
-             }),
+    mxb_log_set_priority_enabled(LOG_INFO, enable);
+}),
     log_notice(this, &s_log_notice, [](bool enable) {
-                   mxb_log_set_priority_enabled(LOG_NOTICE, enable);
-               }),
+    mxb_log_set_priority_enabled(LOG_NOTICE, enable);
+}),
     log_warning(this, &s_log_warning, [](bool enable) {
-                    mxb_log_set_priority_enabled(LOG_WARNING, enable);
-                }),
+    mxb_log_set_priority_enabled(LOG_WARNING, enable);
+}),
     log_throttling(this, &s_log_throttling, [](MXB_LOG_THROTTLING throttling) {
-                       mxb_log_set_throttling(&throttling);
-                   }),
+    mxb_log_set_throttling(&throttling);
+}),
     dump_statements(this, &s_dump_statements, [](session_dump_statements_t when) {
-                        session_set_dump_statements(when);
-                    }),
+    session_set_dump_statements(when);
+}),
     session_trace(this, &s_session_trace, [](int32_t count) {
-                      session_set_session_trace(count);
-                      mxb_log_set_session_trace(count > 0 ? true : false);
-                  }),
+    session_set_session_trace(count);
+    mxb_log_set_session_trace(count > 0 ? true : false);
+}),
     ms_timestamp(this, &s_ms_timestamp, [](bool enable) {
-                     mxb_log_set_highprecision_enabled(enable);
-                 }),
+    mxb_log_set_highprecision_enabled(enable);
+}),
     retain_last_statements(this, &s_retain_last_statements, [](int32_t count) {
-                               session_set_retain_last_statements(count);
-                           }),
+    session_set_retain_last_statements(count);
+}),
     syslog(this, &s_syslog, [](bool enable) {
-               mxb_log_set_syslog_enabled(enable);
-           }),
+    mxb_log_set_syslog_enabled(enable);
+}),
     maxlog(this, &s_maxlog, [](bool enable) {
-               mxb_log_set_maxlog_enabled(enable);
-           }),
+    mxb_log_set_maxlog_enabled(enable);
+}),
     auth_conn_timeout(this, &s_auth_conn_timeout),
     auth_read_timeout(this, &s_auth_read_timeout),
     auth_write_timeout(this, &s_auth_write_timeout),
     skip_permission_checks(this, &s_skip_permission_checks),
     passive(this, &s_passive, [](bool value) {
-                if (Config::get().passive.get() && !value)
-                {
-                    // If we were passive, but no longer are, we register the time.
-                    Config::get().promoted_at = mxs_clock();
-                }
-            }),
+    if (Config::get().passive.get() && !value)
+    {
+        // If we were passive, but no longer are, we register the time.
+        Config::get().promoted_at = mxs_clock();
+    }
+}),
     qc_cache_max_size(this, &s_qc_cache_max_size, [](int64_t size) {
-                          Config::get().qc_cache_properties.max_size = size;
-                          qc_set_cache_properties(&Config::get().qc_cache_properties);
-                      }),
+    Config::get().qc_cache_properties.max_size = size;
+    qc_set_cache_properties(&Config::get().qc_cache_properties);
+}),
     admin_log_auth_failures(this, &s_admin_log_auth_failures),
     query_retries(this, &s_query_retries),
     query_retry_timeout(this, &s_query_retry_timeout),
@@ -801,9 +800,9 @@ Config::Config(int argc, char** argv)
     max_auth_errors_until_block(this, &s_max_auth_errors_until_block),
     rebalance_threshold(this, &s_rebalance_threshold),
     rebalance_period(this, &s_rebalance_period, [](const std::chrono::milliseconds&) {
-                         mxb_assert(MainWorker::get());
-                         MainWorker::get()->update_rebalancing();
-                     }),
+    mxb_assert(MainWorker::get());
+    MainWorker::get()->update_rebalancing();
+}),
     rebalance_window(this, &s_rebalance_window),
     skip_name_resolve(this, &s_skip_name_resolve),
     config_check(false),
@@ -1058,8 +1057,8 @@ bool Config::ParamAutoTune::from_string(const std::string& value_as_string,
                 auto it = std::find_if(dependencies.begin(),
                                        dependencies.end(),
                                        [parameter](const auto* pDependency) {
-                                           return pDependency->parameter().name() == parameter;
-                                       });
+                    return pDependency->parameter().name() == parameter;
+                });
 
                 if (it != dependencies.end())
                 {
@@ -1409,19 +1408,19 @@ bool config_add_to_context(const std::string& source_file, ConfigSection::Source
 {
     using Type = ConfigSection::SourceType;
     auto type_to_str = [](Type type) {
-            switch (type)
-            {
-            case Type::MAIN:
-                return "main";
+        switch (type)
+        {
+        case Type::MAIN:
+            return "main";
 
-            case Type::ADDITIONAL:
-                return "additional";
+        case Type::ADDITIONAL:
+            return "additional";
 
-            case Type::RUNTIME:
-                return "runtime";
-            }
-            return "";
-        };
+        case Type::RUNTIME:
+            return "runtime";
+        }
+        return "";
+    };
 
     int errors = 0;
 
@@ -1476,8 +1475,8 @@ bool config_add_to_context(const std::string& source_file, ConfigSection::Source
                 ConfigSection new_ctxt(header, source_type, source_file, section.second.lineno);
 
                 auto is_url_char = [](char c) {
-                        return isalnum(c) || c == '_' || c == '.' || c == '~' || c == '-';
-                    };
+                    return isalnum(c) || c == '_' || c == '.' || c == '~' || c == '-';
+                };
                 if (!std::all_of(new_ctxt.m_name.begin(), new_ctxt.m_name.end(), is_url_char))
                 {
                     MXB_WARNING("Configuration section name '%s' in %s file '%s' contains URL-unsafe "
@@ -1952,10 +1951,10 @@ ConfigSection* name_to_object(const std::vector<ConfigSection*>& objects,
     fix_object_name(name);
 
     auto equal_name = [&](ConfigSection* c) {
-            std::string s = c->m_name;
-            fix_object_name(s);
-            return s == name;
-        };
+        std::string s = c->m_name;
+        fix_object_name(s);
+        return s == name;
+    };
 
     auto it = std::find_if(objects.begin(), objects.end(), equal_name);
 
@@ -2220,8 +2219,8 @@ bool resolve_dependencies(std::vector<ConfigSection*>& objects)
             if (group.size() > 1)
             {
                 auto join = [](std::string total, ConfigSection* c) {
-                        return total + " -> " + c->m_name;
-                    };
+                    return total + " -> " + c->m_name;
+                };
 
                 std::string first = group[0]->m_name;
                 std::string str_group = std::accumulate(std::next(group.begin()), group.end(), first, join);
@@ -2286,40 +2285,40 @@ static bool process_config_context(ConfigSectionMap& context)
     // order, at least to some extent. TODO: Think more of how the ordering should work with runtime
     // modified and created objects.
     auto compare = [](const ConfigSection* lhs, const ConfigSection* rhs) {
-            bool rval = false;
-            // 1. Objects in main config file go first, then dir files, then runtime files.
-            using Type = ConfigSection::SourceType;
-            auto type_lhs = lhs->source_type;
-            auto type_rhs = rhs->source_type;
-            if (type_lhs != type_rhs)
+        bool rval = false;
+        // 1. Objects in main config file go first, then dir files, then runtime files.
+        using Type = ConfigSection::SourceType;
+        auto type_lhs = lhs->source_type;
+        auto type_rhs = rhs->source_type;
+        if (type_lhs != type_rhs)
+        {
+            if (type_lhs == Type::MAIN || (type_lhs == Type::ADDITIONAL && type_rhs == Type::RUNTIME))
             {
-                if (type_lhs == Type::MAIN || (type_lhs == Type::ADDITIONAL && type_rhs == Type::RUNTIME))
+                rval = true;
+            }
+        }
+        else
+        {
+            // 2. Same file type. Order by file name.
+            int comp_res = lhs->source_file.compare(rhs->source_file);
+            if (comp_res != 0)
+            {
+                if (comp_res < 0)
                 {
                     rval = true;
                 }
             }
             else
             {
-                // 2. Same file type. Order by file name.
-                int comp_res = lhs->source_file.compare(rhs->source_file);
-                if (comp_res != 0)
+                // 3. Same file. Order by line number.
+                if (lhs->source_lineno < rhs->source_lineno)
                 {
-                    if (comp_res < 0)
-                    {
-                        rval = true;
-                    }
-                }
-                else
-                {
-                    // 3. Same file. Order by line number.
-                    if (lhs->source_lineno < rhs->source_lineno)
-                    {
-                        rval = true;
-                    }
+                    rval = true;
                 }
             }
-            return rval;
-        };
+        }
+        return rval;
+    };
     std::sort(objects.begin(), objects.end(), compare);
 
     /**
