@@ -14,6 +14,7 @@
 #include <maxscale/key_manager.hh>
 
 #include <maxbase/json.hh>
+#include <maxbase/filesystem.hh>
 #include <maxbase/secrets.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/utils.hh>
@@ -31,81 +32,40 @@ struct ThisUnit
 
 ThisUnit this_unit;
 
-std::vector<uint8_t> load_file(std::string file)
-{
-    std::vector<uint8_t> data;
-    std::ifstream infile(file, std::ios_base::ate);
-
-    if (infile)
-    {
-        data.resize(infile.tellg());
-        infile.seekg(0, std::ios_base::beg);
-
-        if (!infile.read(reinterpret_cast<char*>(data.data()), data.size()))
-        {
-            MXB_ERROR("Failed to read from file '%s': %d, %s", file.c_str(), errno, mxb_strerror(errno));
-            data.clear();
-        }
-    }
-    else if (errno != ENOENT)
-    {
-        MXB_ERROR("Failed to open file '%s': %d, %s", file.c_str(), errno, mxb_strerror(errno));
-    }
-
-    return data;
-}
-
-bool save_file(std::string file, std::vector<uint8_t> data)
-{
-    bool ok = false;
-    std::string tmp = file + ".tmp";
-    std::ofstream outfile(tmp);
-
-    if (outfile && outfile.write(reinterpret_cast<char*>(data.data()), data.size()))
-    {
-        outfile.close();
-
-        if (rename(tmp.c_str(), file.c_str()) == 0)
-        {
-            ok = true;
-        }
-        else
-        {
-            MXB_ERROR("Failed to rename '%s' to '%s': %d, %s",
-                      tmp.c_str(), file.c_str(), errno, mxb_strerror(errno));
-        }
-    }
-    else
-    {
-        MXB_ERROR("Write to file '%s' failed: %d, %s", tmp.c_str(), errno, mxb_strerror(errno));
-    }
-
-    return ok;
-}
 
 std::vector<uint8_t> load_hex_file(std::string file)
 {
-    std::vector<uint8_t> data = load_file(file);
+    std::vector<uint8_t> rval;
+    auto [str, err] = mxb::load_file<std::string>(file);
 
-    if (!data.empty())
+    if (!str.empty())
     {
-        std::string str(data.begin(), data.end());
         mxb::trim(str);
-        data = mxs::from_hex(str);
+        rval = mxs::from_hex(str);
 
-        if (data.empty())
+        if (rval.empty())
         {
             MXB_ERROR("File '%s' does not contain a valid hex string.", file.c_str());
         }
     }
+    else if (!err.empty())
+    {
+        MXB_ERROR("%s", err.c_str());
+    }
 
-    return data;
+    return rval;
 }
 
 bool save_hex_file(std::string file, std::vector<uint8_t> data)
 {
-    auto hex = mxs::to_hex(data.begin(), data.end());
-    return save_file(file, {hex.begin(), hex.end()});
+    auto err = mxb::save_file(file, mxs::to_hex(data.begin(), data.end()));
+
+    if (!err.empty())
+    {
+        MXB_ERROR("%s", err.c_str());
+    }
+
+    return err.empty();
 }
 
 class FileKey : public mxs::KeyManager::MasterKey
@@ -335,7 +295,7 @@ bool KeyManager::rotate(const std::string& id)
 bool KeyManager::load_keys()
 {
     bool ok = false;
-    auto encrypted = load_file(m_keystore);
+    auto [encrypted, err] = mxb::load_file<std::vector<uint8_t>>(m_keystore);
 
     if (!encrypted.empty())
     {
@@ -361,6 +321,10 @@ bool KeyManager::load_keys()
                 }
             }
         }
+    }
+    else if (!err.empty())
+    {
+        MXB_ERROR("Failed to load keys: %s", err.c_str());
     }
 
     return ok;
@@ -391,7 +355,13 @@ bool KeyManager::save_keys()
 
     if (ok)
     {
-        ok = save_file(m_keystore, ciphertext);
+        auto err = mxb::save_file(m_keystore, ciphertext.data(), ciphertext.size());
+
+        if (!err.empty())
+        {
+            ok = false;
+            MXB_ERROR("Failed to save keystore: %s", err.c_str());
+        }
     }
 
     return ok;

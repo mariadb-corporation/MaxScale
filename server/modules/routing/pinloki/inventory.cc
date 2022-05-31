@@ -14,6 +14,8 @@
 #include "inventory.hh"
 #include "config.hh"
 
+#include <maxbase/filesystem.hh>
+
 #include <fstream>
 #include <algorithm>
 #include <unistd.h>
@@ -25,20 +27,7 @@ namespace
 {
 std::vector<std::string> read_inventory_file(const Config& config)
 {
-    std::ifstream ifs(config.inventory_file_path());
-    std::vector<std::string> file_names;
-
-    while (ifs.good())
-    {
-        std::string name;
-        ifs >> name;
-        if (ifs.good())
-        {
-            file_names.push_back(name);
-        }
-    }
-
-    return file_names;
+    return mxb::strtok(mxb::load_file<std::string>(config.inventory_file_path()).first, "\n");
 }
 
 maxsql::GtidList read_rpl_state(const Config& config)
@@ -65,22 +54,9 @@ maxsql::GtidList read_requested_rpl_state(const Config& config)
 
 void save_gtid(const maxsql::GtidList& gtids, const std::string& filename)
 {
-    std::string tmp = filename + ".tmp";
-
-    if (auto ofs = std::ofstream(tmp))
+    if (auto err = mxb::save_file(filename, gtids.to_string()); !err.empty())
     {
-        ofs << gtids;
-        ofs.close();
-
-        if (rename(tmp.c_str(), filename.c_str()) != 0)
-        {
-            MXB_THROW(BinlogWriteError,
-                      "Could not rename to " << filename << ": " << errno << ", " << mxb_strerror(errno));
-        }
-    }
-    else
-    {
-        MXB_THROW(BinlogWriteError, "Could not open " << tmp << ": " << errno << ", " << mxb_strerror(errno));
+        MXB_THROW(BinlogWriteError, err);
     }
 }
 }
@@ -124,15 +100,12 @@ void InventoryWriter::pop_front(const std::string& file_name)
 
 void InventoryWriter::persist()
 {
-    std::string tmp = m_config.inventory_file_path() + ".tmp";
-    std::ofstream ofs(tmp, std::ios_base::trunc);
+    auto err = mxb::save_file(m_config.inventory_file_path(), mxb::join(m_file_names, "\n"));
 
-    for (const auto& file : m_file_names)
+    if (!err.empty())
     {
-        ofs << file << '\n';
+        MXB_ERROR("%s", err.c_str());
     }
-
-    rename(tmp.c_str(), m_config.inventory_file_path().c_str());
 }
 
 std::vector<std::string> InventoryWriter::file_names() const

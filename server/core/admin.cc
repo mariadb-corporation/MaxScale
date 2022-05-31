@@ -27,6 +27,7 @@
 #include <gnutls/abstract.h>
 
 #include <maxbase/assert.hh>
+#include <maxbase/filesystem.hh>
 #include <maxscale/config.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/threadpool.hh>
@@ -37,7 +38,6 @@
 #include "internal/jwt.hh"
 
 using std::string;
-using std::ifstream;
 
 namespace
 {
@@ -197,23 +197,6 @@ static bool host_to_sockaddr(const char* host, uint16_t port, struct sockaddr_st
     return true;
 }
 
-std::string load_file(const std::string& file)
-{
-    std::ostringstream ss;
-    std::ifstream infile(file);
-
-    if (infile)
-    {
-        ss << infile.rdbuf();
-    }
-    else
-    {
-        MXB_ERROR("Failed to load file '%s': %d, %s", file.c_str(), errno, mxb_strerror(errno));
-    }
-
-    return ss.str();
-}
-
 std::string get_file(const std::string& file)
 {
     std::string rval;
@@ -222,7 +205,7 @@ std::string get_file(const std::string& file)
     {
         if (this_unit.files.find(file) == this_unit.files.end())
         {
-            this_unit.files[file] = load_file(file);
+            this_unit.files[file] = mxb::load_file<std::string>(file).first;
         }
 
         rval = this_unit.files[file];
@@ -303,9 +286,9 @@ std::unique_ptr<Creds> Creds::create(const std::string& cert_file, const std::st
 {
     std::unique_ptr<Creds> rval;
 
-    auto cert = load_file(cert_file.c_str());
+    auto cert = mxb::load_file<std::vector<uint8_t>>(cert_file.c_str()).first;
     gnutls_datum_t data;
-    data.data = reinterpret_cast<uint8_t*>(cert.data());
+    data.data = cert.data();
     data.size = cert.size();
     gnutls_pcert_st pcert;
     unsigned int num_pcert = 1000;      // The maximum number of certificates that are read from the file
@@ -317,8 +300,8 @@ std::unique_ptr<Creds> Creds::create(const std::string& cert_file, const std::st
         gnutls_privkey_t pkey;
         gnutls_privkey_init(&pkey);
 
-        auto key = load_file(key_file.c_str());
-        data.data = reinterpret_cast<uint8_t*>(key.data());
+        auto key = mxb::load_file<std::vector<uint8_t>>(key_file.c_str()).first;
+        data.data = key.data();
         data.size = key.size();
         rc = gnutls_privkey_import_x509_raw(pkey, &data, GNUTLS_X509_FMT_PEM, nullptr, 0);
 
@@ -378,7 +361,7 @@ static bool load_ssl_certificates()
 
         if (!ca.empty())
         {
-            this_unit.ssl_ca = load_file(ca.c_str());
+            this_unit.ssl_ca = mxb::load_file<std::string>(ca.c_str()).first;
         }
 
         if (auto creds = Creds::create(cert, key))

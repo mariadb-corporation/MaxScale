@@ -34,6 +34,7 @@
 #include <maxscale/router.hh>
 #include <maxscale/users.hh>
 #include <maxbase/format.hh>
+#include <maxbase/filesystem.hh>
 
 #include "internal/adminusers.hh"
 #include "internal/config.hh"
@@ -2415,65 +2416,36 @@ bool runtime_remove_config(const char* name)
 bool runtime_save_config(const char* name, const std::string& config)
 {
     bool rval = false;
-    std::string filename = mxs::config_persistdir() + "/"s + name + ".cnf.tmp";
+    std::string filename = mxs::config_persistdir() + "/"s + name + ".cnf";
+    bool new_file = access(filename.c_str(), F_OK) != 0 && errno == ENOENT;
 
-    if (unlink(filename.c_str()) == -1 && errno != ENOENT)
+    if (auto err = mxb::save_file(filename, config); !err.empty())
     {
-        MXB_ERROR("Failed to remove temporary configuration at '%s': %d, %s",
-                  filename.c_str(), errno, mxb_strerror(errno));
-        return false;
-    }
-
-    int fd = open(filename.c_str(), O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-
-    if (fd == -1)
-    {
-        MXB_ERROR("Failed to open file '%s' when serializing '%s': %d, %s",
-                  filename.c_str(), name, errno, mxb_strerror(errno));
-        return false;
-    }
-
-    if (write(fd, config.c_str(), config.size()) == -1)
-    {
-        MXB_ERROR("Failed to serialize file '%s': %d, %s", filename.c_str(), errno, mxb_strerror(errno));
+        MXB_ERROR("Failed to save config: %s", err.c_str());
     }
     else
     {
-        // Remove the .tmp suffix
-        auto final_filename = filename.substr(0, filename.size() - 4);
-        bool new_file = access(final_filename.c_str(), F_OK) != 0 && errno == ENOENT;
+        if (mxs::Config::get().load_persisted_configs)
+        {
+            mxs::Config::set_object_source_file(name, filename);
 
-        if (rename(filename.c_str(), final_filename.c_str()) == -1)
-        {
-            MXB_ERROR("Failed to rename temporary configuration at '%s': %d, %s",
-                      filename.c_str(), errno, mxb_strerror(errno));
-        }
-        else
-        {
-            if (mxs::Config::get().load_persisted_configs)
+            if (mxs::Config::is_static_object(name))
             {
-                mxs::Config::set_object_source_file(name, final_filename);
+                auto msg = mxb::string_printf("Saving runtime modifications to '%s' in '%s'. "
+                                              "The modified values will override the values found "
+                                              "in the static configuration files.",
+                                              name, filename.c_str());
+                runtime_add_warning(msg);
 
-                if (mxs::Config::is_static_object(name))
+                if (new_file)
                 {
-                    auto msg = mxb::string_printf("Saving runtime modifications to '%s' in '%s'. "
-                                                  "The modified values will override the values found "
-                                                  "in the static configuration files.",
-                                                  name, final_filename.c_str());
-                    runtime_add_warning(msg);
-
-                    if (new_file)
-                    {
-                        MXB_WARNING("%s", msg.c_str());
-                    }
+                    MXB_WARNING("%s", msg.c_str());
                 }
             }
-
-            rval = true;
         }
-    }
 
-    close(fd);
+        rval = true;
+    }
 
     return rval;
 }

@@ -19,6 +19,7 @@
 #include <maxscale/secrets.hh>
 #include <maxscale/utils.hh>
 #include <maxbase/json.hh>
+#include <maxbase/filesystem.hh>
 
 #include "internal/config.hh"
 #include "internal/configmanager.hh"
@@ -526,15 +527,9 @@ mxb::Json ConfigManager::to_json() const
 
 void ConfigManager::save_config(const std::string& payload)
 {
-    std::string filename = dynamic_config_filename();
-    std::string tmpname = filename + ".tmp";
-    std::ofstream file(tmpname);
-
-    if (!file.write(payload.c_str(), payload.size()) || !file.flush()
-        || rename(tmpname.c_str(), filename.c_str()) != 0)
+    if (auto err = mxb::save_file(dynamic_config_filename(), payload); !err.empty())
     {
-        MXB_WARNING("Failed to save configuration at '%s': %d, %s",
-                    filename.c_str(), errno, mxb_strerror(errno));
+        MXB_WARNING("Failed to save configuration: %s", err.c_str());
     }
 }
 

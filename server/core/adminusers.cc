@@ -26,6 +26,7 @@
 #include <maxscale/cn_strings.hh>
 #include <maxscale/users.hh>
 #include <maxbase/pam_utils.hh>
+#include <maxbase/filesystem.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/utils.hh>
@@ -97,42 +98,16 @@ bool admin_dump_users(const Users* users, const char* fname)
         }
     }
 
-    bool rval = false;
     std::string path = std::string(mxs::datadir()) + "/" + fname;
-    std::string tmppath = path + ".tmp";
+    auto str = mxb::Json(users->to_json(), mxb::Json::RefType::STEAL).to_string(mxb::Json::Format::COMPACT);
+    auto err = mxb::save_file(path, str);
 
-    int fd = open(tmppath.c_str(), O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
-
-    if (fd == -1)
+    if (!err.empty())
     {
-        MXB_ERROR("Failed to create '%s': %d, %s", tmppath.c_str(), errno, mxb_strerror(errno));
-    }
-    else
-    {
-        json_t* json = users->to_json();
-        char* str = json_dumps(json, 0);
-        json_decref(json);
-
-        if (write(fd, str, strlen(str)) == -1)
-        {
-            MXB_ERROR("Failed to dump admin users to '%s': %d, %s",
-                      tmppath.c_str(), errno, mxb_strerror(errno));
-        }
-        else if (rename(tmppath.c_str(), path.c_str()) == -1)
-        {
-            MXB_ERROR("Failed to rename to '%s': %d, %s",
-                      path.c_str(), errno, mxb_strerror(errno));
-        }
-        else
-        {
-            rval = true;
-        }
-
-        MXB_FREE(str);
-        close(fd);
+        MXB_ERROR("Failed to save admin users: %s", err.c_str());
     }
 
-    return rval;
+    return err.empty();
 }
 
 const char* admin_add_user(Users* pusers, const char* fname, const char* uname, const char* password,
