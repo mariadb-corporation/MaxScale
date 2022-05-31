@@ -524,6 +524,19 @@ public:
         return rv;
     }
 
+    bool get_canonical(string_view* pCanonical) const
+    {
+        bool rv = false;
+
+        if (is_valid())
+        {
+            *pCanonical = m_canonical;
+            rv = true;
+        }
+
+        return rv;
+    }
+
     // PUBLIC for now at least.
 
     /**
@@ -3949,6 +3962,13 @@ static bool parse_query(GWBUF* query, uint32_t collect)
                         // TODO: Asking GWBUF for its canonical version is a bit ass-backwards,
                         // TODO: but sorting that out is for later.
                         pInfo->m_canonical = query->get_canonical();
+
+                        if (command == MXS_COM_STMT_PREPARE)
+                        {
+                            // This is to ensure that a COM_QUERY and a COM_STMT_PREPARE
+                            // containing the same statement have a different canonical string.
+                            pInfo->m_canonical.append(":P");
+                        }
                     }
                 }
 
@@ -4918,7 +4938,6 @@ static int32_t        qc_sqlite_get_operation(GWBUF* query, int32_t* op);
 static int32_t        qc_sqlite_get_created_table_name(GWBUF* query, string_view* name);
 static int32_t        qc_sqlite_is_drop_table_query(GWBUF* query, int32_t* is_drop_table);
 static int32_t        qc_sqlite_get_table_names(GWBUF* query, int32_t fullnames, vector<string_view>* pNames);
-static int32_t        qc_sqlite_get_canonical(GWBUF* query, char** canonical);
 static int32_t        qc_sqlite_query_has_clause(GWBUF* query, int32_t* has_clause);
 static int32_t        qc_sqlite_get_database_names(GWBUF* query, vector<string_view>* pNames);
 static int32_t        qc_sqlite_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt);
@@ -4932,6 +4951,7 @@ static uint32_t       qc_sqlite_get_options();
 static int32_t        qc_sqlite_set_options(uint32_t options);
 static QC_STMT_RESULT qc_sqlite_get_result_from_info(const QC_STMT_INFO* pInfo);
 static int32_t        qc_sqlite_info_size(const QC_STMT_INFO* pInfo);
+static string_view    qc_sqlite_info_get_canonical(const QC_STMT_INFO* pInfo);
 
 
 static bool get_key_and_value(char* arg, const char** pkey, const char** pvalue)
@@ -5665,6 +5685,21 @@ int32_t qc_sqlite_info_size(const QC_STMT_INFO* pInfo)
     return static_cast<const QcSqliteInfo*>(pInfo)->size();
 }
 
+string_view qc_sqlite_info_get_canonical(const QC_STMT_INFO* pInfo)
+{
+    QC_TRACE();
+    mxb_assert(this_unit.initialized);
+    mxb_assert(this_thread.initialized);
+
+    string_view canonical;
+
+    MXB_AT_DEBUG(auto rv =) static_cast<const QcSqliteInfo*>(pInfo)->get_canonical(&canonical);
+    mxb_assert(rv);
+
+    return canonical;
+}
+
+
 /**
  * EXPORTS
  */
@@ -5705,6 +5740,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         qc_sqlite_get_result_from_info,
         qc_sqlite_get_current_stmt,
         qc_sqlite_info_size,
+        qc_sqlite_info_get_canonical,
     };
 
     static MXS_MODULE info =

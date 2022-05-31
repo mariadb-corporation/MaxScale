@@ -205,9 +205,9 @@ struct QUERY_CLASSIFIER
     int32_t (* qc_get_field_info)(GWBUF* stmt, const QC_FIELD_INFO** infos, uint32_t* n_infos);
 
     /**
-     * The canonical version of a statement.
+     * Reports function information.
      *
-     * @param stmt  A COM_QUERY or COM_STMT_PREPARE packet.
+     * @param stmt    A COM_QUERY or COM_STMT_PREPARE packet.
      * @param infos   On return, array of function infos, if @c QC_RESULT_OK is returned.
      * @param n_infos On return, the size of @c infos, if @c QC_RESULT_OK is returned.
      *
@@ -334,6 +334,20 @@ struct QUERY_CLASSIFIER
      * @return The total amount of memory used by @ info.
      */
     int32_t (* qc_info_size)(const QC_STMT_INFO* info);
+
+    /**
+     * Get canonical statement
+     *
+     * @param info  The info whose canonical statement should be returned.
+     *
+     * @attention - The string_view refers to data that remains valid only as long
+     *              as @c info remains valid.
+     *            - If @c info is of a COM_STMT_PREPARE, then the canonical string will
+     *              be suffixed by ":P".
+     *
+     * @return The canonical statement.
+     */
+    std::string_view (* qc_info_get_canonical)(const QC_STMT_INFO* info);
 };
 
 /**
