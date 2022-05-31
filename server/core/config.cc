@@ -648,6 +648,7 @@ config::ParamEnum<mxs::KeyManager::Type> Config::s_key_manager(
         {mxs::KeyManager::Type::NONE, "none"},
         {mxs::KeyManager::Type::FILE, "file"},
         {mxs::KeyManager::Type::KMIP, "kmip"},
+        {mxs::KeyManager::Type::VAULT, "vault"},
     },
     mxs::KeyManager::Type::NONE,
     config::Param::AT_RUNTIME

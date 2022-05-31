@@ -41,6 +41,9 @@ public:
 
         // KMIP key manager, reads keys from a remote KMIP server.
         KMIP,
+
+        // HashiCorp Vault key manager, reads keys from a Vault server.
+        VAULT,
     };
 
     // An abstract class for handling the encryption of the keystore file.

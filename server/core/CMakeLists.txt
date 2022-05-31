@@ -98,6 +98,23 @@ if (BUILD_KMIP_KEY_MANAGER)
   target_include_directories(maxscale-common PUBLIC ${LIBKMIP_INCLUDE_DIR})
 endif()
 
+if (BUILD_VAULT_KEY_MANAGER)
+  include(${CMAKE_SOURCE_DIR}/cmake/BuildLibVault.cmake)
+  if (LIBVAULT_FOUND)
+    add_dependencies(maxscale-common libvault)
+    add_compile_definitions(BUILD_VAULT_KEY_MANAGER)
+    target_link_libraries(maxscale-common ${LIBVAULT_LIBRARIES})
+    target_sources(maxscale-common PRIVATE key_manager_vault.cc)
+    target_include_directories(maxscale-common PUBLIC ${LIBVAULT_INCLUDE_DIR})
+
+    # The libvault header uses pragmas unknown to GCC which cause warnings and
+    # due to -Werror, these cause the build to fail.
+    set_source_files_properties(key_manager_vault.cc PROPERTIES COMPILE_FLAGS -Wno-unknown-pragmas)
+  else()
+    message(STATUS "Will not build libvault, compiler is too old")
+  endif()
+endif()
+
 find_library(HAVE_LIBDL NAMES dl)
 if (HAVE_LIBDL)
   # libdl just exposes libc functionality on most systems.  This means that if

@@ -30,6 +30,10 @@
 #include "internal/key_manager_kmip.hh"
 #endif
 
+#ifdef BUILD_VAULT_KEY_MANAGER
+#include "internal/key_manager_vault.hh"
+#endif
+
 namespace
 {
 struct ThisUnit
@@ -180,6 +184,14 @@ bool KeyManager::configure()
         master_key = KMIPKey::create(opts);
 #else
         MXB_ERROR("KMIP key manager is not included in this MaxScale installation.");
+#endif
+        break;
+
+    case Type::VAULT:
+#ifdef BUILD_VAULT_KEY_MANAGER
+        master_key = VaultKey::create(opts);
+#else
+        MXB_ERROR("Vault key manager is not included in this MaxScale installation.");
 #endif
         break;
 

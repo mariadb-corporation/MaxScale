@@ -156,10 +156,10 @@ then
     grep "release [67]" /etc/redhat-release
     if [ $? -eq 0 ]
     then
-        sudo yum -y install devtoolset-7-gcc-c++
-        sudo yum -y install devtoolset-7-libasan-devel
+        sudo yum -y install devtoolset-9-gcc-c++
+        sudo yum -y install devtoolset-9-libasan-devel
         # Enable it by default
-        echo "source /opt/rh/devtoolset-7/enable" >> ~/.bashrc
+        echo "source /opt/rh/devtoolset-9/enable" >> ~/.bashrc
     else
         # CentOS 8 only needs ASAN
         sudo yum -y install libasan-devel
