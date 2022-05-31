@@ -116,24 +116,23 @@ static QC_NAME_MAPPING function_name_mappings_oracle[] =
 /**
  * Stores alias information. The key in the mapping is the alias name,
  * and an instance of this struct contains the actual table/database.
- *
- * zDatabase and zTable point to memory that belongs to QcSqliteInfo
- * so they can be simply copied in all contexts.
  */
 
 struct QcAliasValue
 {
-    QcAliasValue(const char* zD, std::string t)
-        : zDatabase(zD)
+    QcAliasValue() = default;
+
+    QcAliasValue(string d, string t)
+        : database(d)
         , table(t)
     {
     }
 
-    const char* zDatabase;
-    string      table;
+    string database;
+    string table;
 };
 
-typedef std::map<std::string, QcAliasValue> QcAliases;
+using QcAliases = std::map<string, QcAliasValue>;
 
 /**
  * The state of qc_sqlite.
@@ -275,7 +274,6 @@ public:
         size += m_table_fullnames.capacity() * sizeof(string_view);
 
         size += m_database_names.capacity() * sizeof(char*);
-        for_each(m_database_names.begin(), m_database_names.end(), add_string_size);
 
         if (m_zPrepare_name)
         {
@@ -626,7 +624,7 @@ public:
             {
                 const QcAliasValue& value = i->second;
 
-                zDatabase = value.zDatabase;
+                zDatabase = value.database.c_str();
                 zTable = value.table.c_str();
             }
         }
@@ -746,7 +744,7 @@ public:
 
         if (should_collect_table || should_collect_database)
         {
-            const char* zCollected_database = NULL;
+            string_view collected_database;
             string_view collected_table;
 
             size_t nDatabase = zDatabase ? strlen(zDatabase) : 0;
@@ -774,14 +772,19 @@ public:
 
             if (should_collect_database)
             {
-                zCollected_database = update_database_names(database, nDatabase);
+                collected_database = update_database_names(database, nDatabase);
             }
 
             if (pAliases && !collected_table.empty() && zAlias)
             {
-                QcAliasValue value(zCollected_database, string(collected_table));
+                // This is a bit odd. However, for whatever reason the compiler gets
+                // confused by anything less odd.
+                std::pair<string, QcAliasValue> item;
+                item.first = string(zAlias);
+                item.second.database = string(collected_database);
+                item.second.table = string(collected_table);
 
-                pAliases->insert(QcAliases::value_type(zAlias, value));
+                pAliases->insert(item);
             }
         }
     }
@@ -3393,10 +3396,13 @@ public:
 
         if (should_collect(QC_COLLECT_DATABASES))
         {
-            char* zCopy = MXB_STRNDUP_A(pToken->z, pToken->n);
-            exposed_sqlite3Dequote(zCopy);
+            char copy[pToken->n + 1];
+            strncpy(copy, pToken->z, pToken->n);
+            copy[pToken->n] = 0;
 
-            m_database_names.push_back(zCopy);
+            exposed_sqlite3Dequote(copy);
+
+            m_database_names.push_back(get_string_view("database", copy));
         }
     }
 
@@ -3435,7 +3441,6 @@ private:
     {
         mxb_assert(m_refs == 0);
 
-        std::for_each(m_database_names.begin(), m_database_names.end(), mxb_free);
         free(m_zPrepare_name);
         gwbuf_free(m_pPreparable_stmt);
     }
@@ -3503,18 +3508,13 @@ private:
         return it != m_table_fullnames.end() ? *it : string_view {};
     }
 
-    const char* database_name_collected(const char* zDatabase, size_t nDatabase)
+    string_view database_name_collected(const char* zDatabase, size_t nDatabase)
     {
-        size_t i = 0;
+        string_view database(zDatabase, nDatabase);
 
-        while ((i < m_database_names.size())
-               && (strlen(m_database_names[i]) != nDatabase
-                   || (strncmp(m_database_names[i], zDatabase, nDatabase) != 0)))
-        {
-            ++i;
-        }
+        auto it = std::find(m_database_names.begin(), m_database_names.end(), database);
 
-        return (i != m_database_names.size()) ? m_database_names[i] : NULL;
+        return it != m_database_names.end() ? *it : string_view {};
     }
 
     string_view update_table_names(const char* zDatabase,
@@ -3528,7 +3528,7 @@ private:
 
         if (collected_table.empty())
         {
-            collected_table = get_string_view("table", std::string(zTable, nTable).c_str());
+            collected_table = get_string_view("table", string(zTable, nTable).c_str());
 
             m_table_names.push_back(collected_table);
         }
@@ -3556,23 +3556,20 @@ private:
         return collected_table;
     }
 
-    const char* update_database_names(const char* zDatabase, size_t nDatabase)
+    string_view update_database_names(const char* zDatabase, size_t nDatabase)
     {
-        mxb_assert(zDatabase);
-        mxb_assert(strlen(zDatabase) != 0);
+        mxb_assert(zDatabase && nDatabase);
 
-        const char* zCollected_database = database_name_collected(zDatabase, nDatabase);
+        string_view collected_database = database_name_collected(zDatabase, nDatabase);
 
-        if (!zCollected_database)
+        if (collected_database.empty())
         {
-            char* zCopy = MXB_STRNDUP_A(zDatabase, nDatabase);
+            collected_database = get_string_view("database", string(zDatabase, nDatabase).c_str());
 
-            m_database_names.push_back(zCopy);
-
-            zCollected_database = zCopy;
+            m_database_names.push_back(collected_database);
         }
 
-        return zCollected_database;
+        return collected_database;
     }
 
     string_view get_string_view(const char* zContext, const char* zNeedle)
@@ -3584,7 +3581,7 @@ private:
 
         auto i = m_canonical.find(zNeedle);
 
-        if (i != std::string::npos)
+        if (i != string::npos)
         {
             pMatch = &m_canonical[i];
         }
@@ -3678,7 +3675,7 @@ public:
 
     string_view                   m_created_table_name;     // The name of a created table.
     bool                          m_is_drop_table;          // Is the query a DROP TABLE.
-    vector<char*>                 m_database_names;         // Vector of database names used in the query.
+    vector<string_view>           m_database_names;         // Vector of database names used in the query.
     int                           m_keyword_1;              // The first encountered keyword.
     int                           m_keyword_2;              // The second encountered keyword.
     char*                         m_zPrepare_name;          // The name of a prepared statement.
@@ -3693,7 +3690,7 @@ public:
     qc_sql_mode_t    m_sql_mode;                            // The current sql_mode.
     QC_NAME_MAPPING* m_pFunction_name_mappings;             // How function names should be mapped.
     QC_KILL          m_kill;
-    std::string      m_canonical;                           // The canonical version of the statement.
+    string           m_canonical;                           // The canonical version of the statement.
 
     vector<vector<char>> m_scratch_buffers; // Scratch buffers if string not found from canonical.
 };
