@@ -920,6 +920,16 @@ HttpResponse cb_encryption_rotate(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_NO_CONTENT);
 }
 
+HttpResponse cb_encryption_reload(const HttpRequest& request)
+{
+    if (!mxs::KeyManager::configure(true))
+    {
+        return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
+    }
+
+    return HttpResponse(MHD_HTTP_NO_CONTENT);
+}
+
 HttpResponse cb_thread_rebalance(const HttpRequest& request)
 {
     string thread = request.uri_part(2);
@@ -1478,6 +1488,7 @@ public:
         m_post.emplace_back(cb_flush, "maxscale", "logs", "flush");
         m_post.emplace_back(cb_tls_reload, "maxscale", "tls", "reload");
         m_post.emplace_back(cb_encryption_rotate, "maxscale", "encryption", "rotate");
+        m_post.emplace_back(cb_encryption_reload, "maxscale", "encryption", "reload");
         m_post.emplace_back(cb_thread_rebalance, "maxscale", "threads", ":thread", "rebalance");
         m_post.emplace_back(cb_threads_rebalance, "maxscale", "threads", "rebalance");
         m_post.emplace_back(cb_reload_users, "services", ":service", "reload");

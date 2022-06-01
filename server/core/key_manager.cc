@@ -128,7 +128,7 @@ KeyManager::MasterKeyBase::MasterKeyBase(std::vector<uint8_t> key)
 
 
 // static
-bool KeyManager::configure()
+bool KeyManager::configure(bool force)
 {
     std::lock_guard guard(this_unit.lock);
     const auto& cnf = mxs::Config::get();
@@ -144,7 +144,7 @@ bool KeyManager::configure()
 
         return !this_unit.manager;
     }
-    else if (this_unit.manager && this_unit.manager->m_type == type
+    else if (!force && this_unit.manager && this_unit.manager->m_type == type
              && this_unit.manager->m_options == cnf.key_manager_options)
     {
         // No change in key manager type or options.

@@ -77,9 +77,11 @@ public:
     /**
      * Configure the key manager
      *
+     * @param force Force reloading even if configuration has not changed
+     *
      * @return True if the key manager was successful configured
      */
-    static bool configure();
+    static bool configure(bool force = false);
 
     /**
      * Get the latest version of this key
